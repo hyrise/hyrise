@@ -16,7 +16,12 @@ namespace hyrise {
 template <typename PointedType>
 class BufferPtr {
  public:
+  // Used to mark the BufferPtr as freshly allocated after allocation
+  struct alloc_tag {
+  }
+
   using pointer = PointedType*;
+
   using reference = typename add_reference<PointedType>::type;
   using element_type = PointedType;
   using value_type = std::remove_cv_t<PointedType>;
@@ -60,9 +65,16 @@ class BufferPtr {
     unswizzle(ptr);
   }
 
-  explicit BufferPtr(const FramePtr frame, const PtrOrOffset ptr_or_offset)
+  explicit BufferPtr(const FramePtr& frame, const PtrOrOffset ptr_or_offset)
       : _frame(frame), _ptr_or_offset(ptr_or_offset) {
     assert_not_overflow();
+  }
+
+  ~BufferPtr() {
+    // This pointer has an unswizzled pointer. We need to unpin it!
+    if (_frame && _ptr != nullptr) {
+      get_buffer_manager().unpin(_frame);
+    }
   }
 
   pointer operator->() const {
@@ -71,9 +83,6 @@ class BufferPtr {
 
   reference operator*() const {
     pointer p = this->get();
-    if (!p) {
-      Fail("Dereferencing null pointer");
-    }
     reference r = *p;
     return r;
   }
@@ -113,10 +122,14 @@ class BufferPtr {
     return *this;
   }
 
-  BufferPtr& operator=(const BufferPtr& ptr) {
-    _frame = ptr._frame;
-    _ptr_or_offset = ptr._ptr_or_offset;
+  BufferPtr& operator=(BufferPtr other) {
+    swap(*this, other);
     return *this;
+  }
+
+  friend void swap(BufferPtr& first, BufferPtr& second) {
+    std::swap(first._frame, second._frame);
+    std::swap(first._ptr_or_offset, second._ptr_or_offset);
   }
 
   BufferPtr& operator=(pointer from) {
@@ -125,9 +138,8 @@ class BufferPtr {
   }
 
   template <typename T2>
-  BufferPtr& operator=(const BufferPtr<T2>& ptr) {
-    _frame = ptr._frame;
-    _ptr_or_offset = ptr._ptr_or_offset;
+  BufferPtr& operator=(const BufferPtr<T2>& other) {
+    swap(*this, other);
     return *this;
   }
 
@@ -141,7 +153,7 @@ class BufferPtr {
   }
 
   inline friend bool operator==(const BufferPtr& ptr1, const BufferPtr& ptr2) noexcept {
-    return ptr1._frame == ptr2._frame && ptr1._ptr_or_offset == ptr2._ptr_or_offset;
+    return ptr1.get() != ptr2.get();
   }
 
   inline friend bool operator==(pointer ptr1, const BufferPtr& ptr2) noexcept {
@@ -149,7 +161,7 @@ class BufferPtr {
   }
 
   inline friend bool operator!=(const BufferPtr& ptr1, const BufferPtr& ptr2) noexcept {
-    return ptr1._frame != ptr2._frame || ptr1._ptr_or_offset != ptr2._ptr_or_offset;
+    return ptr1.get() != ptr2.get();
   }
 
   BufferPtr& operator++(void) noexcept {
@@ -182,24 +194,22 @@ class BufferPtr {
 
   void* get_pointer(const AccessIntent access_intent = AccessIntent::Read) const {
     if (_frame) {
-      const auto frame = make_resident(access_intent);
-      return frame->data + _ptr_or_offset;
+      // TODO: Assert pinned      DebugAssert(_frame->is_pinned(), "Frame not pinned");
+      return _frame->data + _ptr_or_offset;
     } else {
       return (void*)_ptr_or_offset;
     }
   }
 
   pointer pin(FramePinGuard& guard) {
-    auto frame = guard.get_frame();
-    if (!frame) {
-      frame = make_resident(guard.get_access_intent());
-      guard.pin(frame);
-    }
-    return reinterpret_cast<pointer>(frame->data + _ptr_or_offset);
+    make_resident(guard.get_access_intent());
+    guard.pin(_frame);
+    // DebugAssert(frame == _frame, "Frame mismatch");
+    return reinterpret_cast<pointer>(_frame->data + _ptr_or_offset);
   }
 
-  FramePtr make_resident(const AccessIntent access_intent) const {
-    return get_buffer_manager_memory_resource()->make_resident(_frame, access_intent);
+  void make_resident(const AccessIntent access_intent) {
+    _frame = get_buffer_manager_memory_resource()->make_resident(_frame, access_intent);
   }
 
   PtrOrOffset get_offset() const {
@@ -208,6 +218,10 @@ class BufferPtr {
 
   FramePtr get_frame() const {
     return _frame;
+  }
+
+  size_t get_frame_ref_count() const {
+    return _frame->_internal_ref_count();
   }
 
   static BufferPtr pointer_to(reference ref) {
@@ -261,8 +275,17 @@ class BufferPtr {
       }
     } else {
       _frame = nullptr;
-      _ptr_or_offset = 0;
+      _ptr = 0;
     }
+  }
+
+  void pin_and_unswizzle(const FramePtr& frame, const PtrOrOffset offset) {
+    if (frame == nullptr) {
+      return;
+    }
+    _frame = get_buffer_manager_memory_resource()->make_resident(frame, AccessIntent::Read);
+    _ptr_or_offset = reinterpret_cast<std::uintptr_t>(_frame->data + offset);
+    get_buffer_manager_memory_resource()->pin(_frame);
   }
 };
 
@@ -283,22 +306,12 @@ inline BufferPtr<T> operator+(std::ptrdiff_t diff, const BufferPtr<T>& right) {
 
 template <class T, class T2>
 inline std::ptrdiff_t operator-(const BufferPtr<T>& ptr1, const BufferPtr<T2>& ptr2) {
-  return ptr1.get_offset() - ptr2.get_offset();
+  return ptr1.get() - ptr2.get();
 }
 
 template <class T1, class T2>
 inline bool operator<=(const BufferPtr<T1>& ptr1, const BufferPtr<T2>& ptr2) {
   return ptr1.get() <= ptr2.get();
-}
-
-template <class T>
-inline void swap(BufferPtr<T>& ptr1, BufferPtr<T>& ptr2) {
-  auto ptr1_frame = ptr1._frame;
-  auto ptr1_offset = ptr1._ptr_or_offset;
-  ptr1._frame = ptr2._frame;
-  ptr1._ptr_or_offset = ptr2._ptr_or_offset;
-  ptr2._frame = ptr1_frame;
-  ptr2._ptr_or_offset = ptr1_offset;
 }
 
 }  // namespace hyrise

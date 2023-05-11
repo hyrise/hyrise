@@ -93,37 +93,37 @@ void MetricsSampler::export_metrics() {
 }
 
 void MetricsSampler::to_json(nlohmann::json& json, Duration timestamp, const BufferManager::Metrics& metrics) {
-  json = {
-      {"timestamp", timestamp.count()},
-      {"current_bytes_used", metrics.current_bytes_used_dram},
-      {"current_pins", metrics.current_pins_dram},
-      {"total_allocated_bytes", metrics.total_allocated_bytes_dram},
+  // json = {
+  //     {"timestamp", timestamp.count()},
+  //     {"current_bytes_used", metrics.current_bytes_used_dram},
+  //     {"current_pins", metrics.current_pins_dram},
+  //     {"total_allocated_bytes", metrics.total_allocated_bytes_dram},
 
-      {"num_allocs", metrics.num_allocs},
-      {"num_deallocs", metrics.num_deallocs},
+  //     {"num_allocs", metrics.num_allocs},
+  //     {"num_deallocs", metrics.num_deallocs},
 
-      {"total_hits_dram", metrics.total_hits_dram},
-      {"total_hits_numa", metrics.total_hits_numa},
-      {"total_misses_dram", metrics.total_misses_dram},
-      {"total_misses_numa", metrics.total_misses_numa},
+  //     {"total_hits_dram", metrics.total_hits_dram},
+  //     {"total_hits_numa", metrics.total_hits_numa},
+  //     {"total_misses_dram", metrics.total_misses_dram},
+  //     {"total_misses_numa", metrics.total_misses_numa},
 
-      {"total_bytes_copied_from_ssd_to_dram", metrics.total_bytes_copied_from_ssd_to_dram},
-      {"total_bytes_copied_from_ssd_to_numa", metrics.total_bytes_copied_from_ssd_to_numa},
-      {"total_bytes_copied_from_numa_to_dram", metrics.total_bytes_copied_from_numa_to_dram},
-      {"total_bytes_copied_from_dram_to_numa", metrics.total_bytes_copied_from_dram_to_numa},
-      {"total_bytes_copied_from_dram_to_ssd", metrics.total_bytes_copied_from_dram_to_ssd},
-      {"total_bytes_copied_from_numa_to_ssd", metrics.total_bytes_copied_from_numa_to_ssd},
-      {"total_bytes_copied_to_ssd", metrics.total_bytes_copied_to_ssd},
-      {"total_bytes_copied_from_ssd", metrics.total_bytes_copied_from_ssd},
+  //     {"total_bytes_copied_from_ssd_to_dram", metrics.total_bytes_copied_from_ssd_to_dram},
+  //     {"total_bytes_copied_from_ssd_to_numa", metrics.total_bytes_copied_from_ssd_to_numa},
+  //     {"total_bytes_copied_from_numa_to_dram", metrics.total_bytes_copied_from_numa_to_dram},
+  //     {"total_bytes_copied_from_dram_to_numa", metrics.total_bytes_copied_from_dram_to_numa},
+  //     {"total_bytes_copied_from_dram_to_ssd", metrics.total_bytes_copied_from_dram_to_ssd},
+  //     {"total_bytes_copied_from_numa_to_ssd", metrics.total_bytes_copied_from_numa_to_ssd},
+  //     {"total_bytes_copied_to_ssd", metrics.total_bytes_copied_to_ssd},
+  //     {"total_bytes_copied_from_ssd", metrics.total_bytes_copied_from_ssd},
 
-      {"num_madvice_free_calls_numa", metrics.num_madvice_free_calls_numa},
-      {"num_madvice_free_calls_dram", metrics.num_madvice_free_calls_dram},
+  //     {"num_madvice_free_calls_numa", metrics.num_madvice_free_calls_numa},
+  //     {"num_madvice_free_calls_dram", metrics.num_madvice_free_calls_dram},
 
-  };
+  // };
 }
 
 void MetricsSampler::sample() {
-  _metrics.push_back(_buffer_manager->metrics());
+  // _metrics.push_back(_buffer_manager->metrics());
 }
 
 }  // namespace hyrise

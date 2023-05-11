@@ -21,7 +21,7 @@ namespace hyrise {
 class BufferManagerBenchmarkMemoryManager : public benchmark::MemoryManager {
  public:
   void Start() override {
-    _metrics_snapshot = _buffer_manager->metrics();
+    // _metrics_snapshot = _buffer_manager->metrics();
   }
 
   void Stop(Result& result) override {

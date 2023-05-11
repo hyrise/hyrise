@@ -131,9 +131,9 @@ std::unique_ptr<RangeFilter<T>> RangeFilter<T>::build_filter(const pmr_vector<T>
 
   DebugAssert(max_ranges_count > 0, "Number of ranges to create needs to be larger zero.");
   auto dictionary_pin_guard = FramePinGuard{};
-  DebugAssert(std::is_sorted(dictionary.cbegin().get_ptr().pin(dictionary_pin_guard),
-                             dictionary.cend().get_ptr().pin(dictionary_pin_guard)),
-              "Dictionary must be sorted in ascending order.");
+  auto dictionary_begin = dictionary.begin().get_ptr().pin(dictionary_pin_guard);
+  auto dictionary_end = dictionary_begin + dictionary.size();
+  DebugAssert(std::is_sorted(dictionary_begin, dictionary_end), "Dictionary must be sorted in ascending order.");
 
   if (dictionary.empty()) {
     // Empty dictionaries will, e.g., occur in segments with only NULLs - or empty segments.

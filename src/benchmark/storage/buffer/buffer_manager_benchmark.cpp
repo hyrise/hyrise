@@ -59,29 +59,29 @@ static void BM_allocate_with_buffer_manager(benchmark::State& state, const Buffe
   }
 
   state.counters["total_bytes_copied_from_ssd_to_dram"] = benchmark::Counter(
-      static_cast<double>(Hyrise::get().buffer_manager.metrics().total_bytes_copied_from_ssd_to_dram),
+      static_cast<double>(Hyrise::get().buffer_manager.metrics()->total_bytes_copied_from_ssd_to_dram),
       benchmark::Counter::Flags::kDefaults, benchmark::Counter::OneK::kIs1024);
   state.counters["total_bytes_copied_from_ssd_to_numa"] = benchmark::Counter(
-      static_cast<double>(Hyrise::get().buffer_manager.metrics().total_bytes_copied_from_ssd_to_numa),
+      static_cast<double>(Hyrise::get().buffer_manager.metrics()->total_bytes_copied_from_ssd_to_numa),
       benchmark::Counter::Flags::kDefaults, benchmark::Counter::OneK::kIs1024);
   state.counters["total_bytes_copied_from_numa_to_dram"] = benchmark::Counter(
-      static_cast<double>(Hyrise::get().buffer_manager.metrics().total_bytes_copied_from_numa_to_dram),
+      static_cast<double>(Hyrise::get().buffer_manager.metrics()->total_bytes_copied_from_numa_to_dram),
       benchmark::Counter::Flags::kDefaults, benchmark::Counter::OneK::kIs1024);
   state.counters["total_bytes_copied_from_dram_to_numa"] = benchmark::Counter(
-      static_cast<double>(Hyrise::get().buffer_manager.metrics().total_bytes_copied_from_dram_to_numa),
+      static_cast<double>(Hyrise::get().buffer_manager.metrics()->total_bytes_copied_from_dram_to_numa),
       benchmark::Counter::Flags::kDefaults, benchmark::Counter::OneK::kIs1024);
   state.counters["total_bytes_copied_from_dram_to_ssd"] = benchmark::Counter(
-      static_cast<double>(Hyrise::get().buffer_manager.metrics().total_bytes_copied_from_dram_to_ssd),
+      static_cast<double>(Hyrise::get().buffer_manager.metrics()->total_bytes_copied_from_dram_to_ssd),
       benchmark::Counter::Flags::kDefaults, benchmark::Counter::OneK::kIs1024);
   state.counters["total_bytes_copied_from_numa_to_ssd"] = benchmark::Counter(
-      static_cast<double>(Hyrise::get().buffer_manager.metrics().total_bytes_copied_from_numa_to_ssd),
+      static_cast<double>(Hyrise::get().buffer_manager.metrics()->total_bytes_copied_from_numa_to_ssd),
       benchmark::Counter::Flags::kDefaults, benchmark::Counter::OneK::kIs1024);
 
   state.counters["total_bytes_copied_to_ssd"] =
-      benchmark::Counter(static_cast<double>(Hyrise::get().buffer_manager.metrics().total_bytes_copied_to_ssd),
+      benchmark::Counter(static_cast<double>(Hyrise::get().buffer_manager.metrics()->total_bytes_copied_to_ssd),
                          benchmark::Counter::Flags::kDefaults, benchmark::Counter::OneK::kIs1024);
   state.counters["total_bytes_copied_from_ssd"] =
-      benchmark::Counter(static_cast<double>(Hyrise::get().buffer_manager.metrics().total_bytes_copied_from_ssd),
+      benchmark::Counter(static_cast<double>(Hyrise::get().buffer_manager.metrics()->total_bytes_copied_from_ssd),
                          benchmark::Counter::Flags::kDefaults, benchmark::Counter::OneK::kIs1024);
 }
 

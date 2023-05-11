@@ -91,6 +91,30 @@ TEST_F(BufferPtrTest, TestArithmetic) {
   EXPECT_EQ((decrementAssignPtr).get_offset(), 12);
 }
 
+TEST_F(BufferPtrTest, TestGetPointerBranchless) {
+  int some_random_value = 3;
+
+  // Test for a valid outside ptr
+  EXPECT_EQ(PtrInt(&some_random_value).get_pointer(), (void*)&some_random_value);
+
+  // Test a real nullptr
+  EXPECT_EQ(PtrInt(nullptr).get_pointer(), nullptr);
+
+  auto frame1 =
+      make_frame(PageID{0}, PageSizeType::KiB8, PageType::Dram, reinterpret_cast<std::byte*>(&some_random_value));
+  frame1->set_resident();
+  // Test for a valid buffer ptr with frame
+  EXPECT_EQ(PtrInt(frame1, 0).get_pointer(), (void*)&some_random_value);
+
+  // Test for a valid buffer ptr with frame and offset
+  EXPECT_EQ(PtrInt(frame1, 3).get_pointer(), (void*)(&some_random_value + 3));
+
+  auto frame2 = make_frame(PageID{0}, PageSizeType::KiB8, PageType::Dram, nullptr);
+  frame2->set_resident();
+  // Test for a valid buffer ptr with frame, but data is null
+  EXPECT_EQ(PtrInt(frame2, 2).get_pointer(), nullptr);
+}
+
 TEST_F(BufferPtrTest, TestComparisons) {
   EXPECT_TRUE(PtrInt(create_frame(PageID{4}, PageSizeType::KiB8), 8) <
               PtrInt(create_frame(PageID{4}, PageSizeType::KiB8), 12));
@@ -171,7 +195,7 @@ TEST_F(BufferPtrTest, TestGetPageIDAndOffset) {
   // EXPECT_EQ(ptr.get_size_type(), PageSizeType::KiB16);
 }
 
-// TODO: Work with outside ptr
+// TODO: Work with outside ptr, test swap
 
 TEST_F(BufferPtrTest, TestPointerTraits) {
   // TODO: static_assert(std::is_same<std::pointer_traits<PtrInt>::pointer, int32_t*>::value, typeid(std::pointer_traits<PtrInt>::pointer).name());
@@ -191,4 +215,9 @@ TEST_F(BufferPtrTest, TestPointerTraits) {
   // }
 }
 
+TEST_F(BufferPtrTest, TestPointerTraits2) {
+  pmr_vector<int> vec{{1, 2, 3, 4, 5}, BufferPoolAllocator<int>()};
+  auto ptr = vec.begin();
+  auto pr2 = vec.cbegin();
+}
 }  // namespace hyrise

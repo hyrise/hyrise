@@ -27,6 +27,9 @@ class BufferPoolAllocator {
 
   BufferPoolAllocator(MemoryResource* memory_resource) : _memory_resource(memory_resource) {}
 
+  BufferPoolAllocator(MemoryResource* memory_resource, std::shared_ptr<BufferPoolAllocatorObserver> observer)
+      : _memory_resource(memory_resource), _observer(observer) {}
+
   BufferPoolAllocator(boost::container::pmr::memory_resource* resource) : _memory_resource(nullptr) {
     Fail("The current BufferPoolAllocator cannot take a boost memory_resource");
   }
@@ -64,6 +67,7 @@ class BufferPoolAllocator {
       const auto frame = ptr.get_frame();
       observer->on_allocate(frame);
     }
+    DebugAssert(ptr->get_frame_ref_count() == 1, "Allocated a frame with a ref count != 1");
     return ptr;
   }
 
@@ -80,7 +84,7 @@ class BufferPoolAllocator {
   }
 
   BufferPoolAllocator select_on_container_copy_construction() const noexcept {
-    return BufferPoolAllocator(_memory_resource);
+    return BufferPoolAllocator(_memory_resource, _observer.lock());
   }
 
   void register_observer(std::shared_ptr<BufferPoolAllocatorObserver> observer) {

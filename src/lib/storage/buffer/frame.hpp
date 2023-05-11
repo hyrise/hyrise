@@ -85,24 +85,26 @@ class Frame {
  private:
   // Friend function used by the FramePtr intrusive_ptr to increase the ref_count. This functions should not be called directly.
   friend void intrusive_ptr_add_ref(Frame* frame) {
-    frame->_ref_count.fetch_add(1, std::memory_order_acq_rel);
+    DebugAssert(frame != nullptr, "Frame is nullptr");
+    frame->_ref_count.fetch_add(1, std::memory_order_release);
   }
 
   // Friend function used by the FramePtr intrusive_ptr to decrease the ref_count. This functions also avoids circular dependencies between the sibling frame.This functions should not be called directly.
   friend void intrusive_ptr_release(Frame* frame) {
-    const auto prev_ref_count = frame->_ref_count.fetch_sub(1, std::memory_order_acq_rel);
-    if (prev_ref_count == 1) {
+    DebugAssert(frame != nullptr, "Frame is nullptr");
+    // const auto prev_ref_count = frame->_ref_count.fetch_sub(1, std::memory_order_release);
+    if (frame->_ref_count.fetch_sub(1, std::memory_order_release) == 1) {
       // Source: https://www.boost.org/doc/libs/1_61_0/doc/html/atomic/usage_examples.html
-      // boost::atomic_thread_fence(boost::memory_order_acquire);
+      std::atomic_thread_fence(std::memory_order_acquire);
       delete frame;
     }
 
-    if (prev_ref_count == 2 && frame->sibling_frame && frame->sibling_frame->sibling_frame == frame) {
-      // TODO: Thread safety?
-      auto sibling_frame = frame->sibling_frame;
-      frame->sibling_frame.reset();
-      sibling_frame->sibling_frame.reset();
-    }
+    // if (prev_ref_count == 2 && frame->sibling_frame && frame->sibling_frame->sibling_frame == frame) {
+    //   // TODO: Thread safety?
+    //   auto sibling_frame = frame->sibling_frame;
+    //   frame->sibling_frame.reset();
+    //   sibling_frame->sibling_frame.reset();
+    // }
   }
 
   // Current reference count of the frame

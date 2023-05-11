@@ -10,6 +10,8 @@
 namespace hyrise {
 
 void gather_segment_meta_data(const std::shared_ptr<Table>& meta_table, const MemoryUsageCalculationMode mode) {
+  auto allocator = PolymorphicAllocator<pmr_string>{get_monotonic_buffer_resource()};
+  auto pin_guard = AllocatorPinGuard{allocator};
   for (const auto& [table_name, table] : Hyrise::get().storage_manager.tables()) {
     const auto chunk_count = table->chunk_count();
     for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
@@ -23,18 +25,21 @@ void gather_segment_meta_data(const std::shared_ptr<Table>& meta_table, const Me
       for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
         const auto& segment = chunk->get_segment(column_id);
 
-        const auto data_type = pmr_string(data_type_to_string.left.at(table->column_data_type(column_id)).begin(), data_type_to_string.left.at(table->column_data_type(column_id)).end());
+        const auto data_type =
+            pmr_string(data_type_to_string.left.at(table->column_data_type(column_id)).begin(),
+                       data_type_to_string.left.at(table->column_data_type(column_id)).end(), allocator);
 
         const auto estimated_size = segment->memory_usage(mode);
         auto encoding = NULL_VALUE;
         auto vector_compression = NULL_VALUE;
         if (const auto& encoded_segment = std::dynamic_pointer_cast<AbstractEncodedSegment>(segment)) {
-          encoding = pmr_string(encoding_type_to_string.left.at(encoded_segment->encoding_type()).begin(), encoding_type_to_string.left.at(encoded_segment->encoding_type()).end());
+          encoding = pmr_string(encoding_type_to_string.left.at(encoded_segment->encoding_type()).begin(),
+                                encoding_type_to_string.left.at(encoded_segment->encoding_type()).end(), allocator);
 
           if (encoded_segment->compressed_vector_type()) {
             std::stringstream sstream;
             sstream << *encoded_segment->compressed_vector_type();
-            vector_compression = pmr_string(sstream.str().begin(), sstream.str().end());
+            vector_compression = pmr_string(sstream.str().begin(), sstream.str().end(), allocator);
           }
         }
 
@@ -42,23 +47,27 @@ void gather_segment_meta_data(const std::shared_ptr<Table>& meta_table, const Me
 
         if (mode == MemoryUsageCalculationMode::Full) {
           const auto distinct_value_count = static_cast<int64_t>(get_distinct_value_count(segment));
-          meta_table->append({pmr_string(table_name.begin(), table_name.end()), static_cast<int32_t>(chunk_id), static_cast<int32_t>(column_id),
-                              pmr_string(table->column_name(column_id).begin(), table->column_name(column_id).end()), data_type, distinct_value_count, encoding,
-                              vector_compression, static_cast<int64_t>(estimated_size),
-                              static_cast<int64_t>(access_counter[SegmentAccessCounter::AccessType::Point]),
-                              static_cast<int64_t>(access_counter[SegmentAccessCounter::AccessType::Sequential]),
-                              static_cast<int64_t>(access_counter[SegmentAccessCounter::AccessType::Monotonic]),
-                              static_cast<int64_t>(access_counter[SegmentAccessCounter::AccessType::Random]),
-                              static_cast<int64_t>(access_counter[SegmentAccessCounter::AccessType::Dictionary])});
+          meta_table->append(
+              {pmr_string(table_name.begin(), table_name.end(), allocator), static_cast<int32_t>(chunk_id),
+               static_cast<int32_t>(column_id),
+               pmr_string(table->column_name(column_id).begin(), table->column_name(column_id).end(), allocator),
+               data_type, distinct_value_count, encoding, vector_compression, static_cast<int64_t>(estimated_size),
+               static_cast<int64_t>(access_counter[SegmentAccessCounter::AccessType::Point]),
+               static_cast<int64_t>(access_counter[SegmentAccessCounter::AccessType::Sequential]),
+               static_cast<int64_t>(access_counter[SegmentAccessCounter::AccessType::Monotonic]),
+               static_cast<int64_t>(access_counter[SegmentAccessCounter::AccessType::Random]),
+               static_cast<int64_t>(access_counter[SegmentAccessCounter::AccessType::Dictionary])});
         } else {
-          meta_table->append({pmr_string(table_name.begin(), table_name.end()), static_cast<int32_t>(chunk_id), static_cast<int32_t>(column_id),
-                              pmr_string(table->column_name(column_id).begin(), table->column_name(column_id).end()), data_type, encoding, vector_compression,
-                              static_cast<int64_t>(estimated_size),
-                              static_cast<int64_t>(access_counter[SegmentAccessCounter::AccessType::Point]),
-                              static_cast<int64_t>(access_counter[SegmentAccessCounter::AccessType::Sequential]),
-                              static_cast<int64_t>(access_counter[SegmentAccessCounter::AccessType::Monotonic]),
-                              static_cast<int64_t>(access_counter[SegmentAccessCounter::AccessType::Random]),
-                              static_cast<int64_t>(access_counter[SegmentAccessCounter::AccessType::Dictionary])});
+          meta_table->append(
+              {pmr_string(table_name.begin(), table_name.end(), allocator), static_cast<int32_t>(chunk_id),
+               static_cast<int32_t>(column_id),
+               pmr_string(table->column_name(column_id).begin(), table->column_name(column_id).end(), allocator),
+               data_type, encoding, vector_compression, static_cast<int64_t>(estimated_size),
+               static_cast<int64_t>(access_counter[SegmentAccessCounter::AccessType::Point]),
+               static_cast<int64_t>(access_counter[SegmentAccessCounter::AccessType::Sequential]),
+               static_cast<int64_t>(access_counter[SegmentAccessCounter::AccessType::Monotonic]),
+               static_cast<int64_t>(access_counter[SegmentAccessCounter::AccessType::Random]),
+               static_cast<int64_t>(access_counter[SegmentAccessCounter::AccessType::Dictionary])});
         }
       }
     }

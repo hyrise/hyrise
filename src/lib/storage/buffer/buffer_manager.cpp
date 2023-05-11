@@ -525,10 +525,13 @@ void BufferManager::pin(FramePtr frame) {
 }
 
 std::pair<FramePtr, std::ptrdiff_t> BufferManager::unswizzle(const void* ptr) {
+  // TODO: Unswizzle might be called with end() pointer and therefore going to the next page.
+  // or set referenced use add_to_victionqeue to add it to the end of the queue
   if (_dram_buffer_pools.enabled) {
     for (auto& buffer_pool : _dram_buffer_pools._buffer_pools) {
       const auto unswizzled = buffer_pool->unswizzle(ptr);
       if (unswizzled.first) {
+        unswizzled.first->set_referenced();
         return unswizzled;
       }
     }
@@ -537,6 +540,7 @@ std::pair<FramePtr, std::ptrdiff_t> BufferManager::unswizzle(const void* ptr) {
     for (auto& buffer_pool : _numa_buffer_pools._buffer_pools) {
       const auto unswizzled = buffer_pool->unswizzle(ptr);
       if (unswizzled.first) {
+        unswizzled.first->set_referenced();
         return unswizzled;
       }
     }

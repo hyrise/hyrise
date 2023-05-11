@@ -567,4 +567,21 @@ TEST_F(BufferManagerTest, TestAllocateAndDeallocateWithDramSSDMode) {
   GTEST_SKIP();
 }
 
+TEST_F(BufferManagerTest, TestVectorBeginEnd) {
+  // auto allocator = PolymorphicAllocator<size_t>{get_buffer_manager_memory_resource()};
+  // // 8192 * 4 == Page32KB
+  // auto vector = pmr_vector<int32_t>(8192, allocator);
+  // auto begin = vector.begin();
+  // auto end = vector.end();
+
+  // auto begin_ptr = begin.get_ptr().operator->();
+  // auto end_ptr = end.get_ptr().operator->();
+
+  // auto begin_ptr2 = BufferPtr<int32_t>(begin_ptr);
+  // auto end_ptr2 = BufferPtr<int32_t>(end_ptr);
+
+  // std::sort(begin_ptr2, end_ptr2);
+  // EXPECT_NE(begin_ptr2, end_ptr2);
+}
+
 }  // namespace hyrise

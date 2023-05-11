@@ -65,11 +65,18 @@ class DictionaryEncoder : public SegmentEncoder<DictionaryEncoder<Encoding>> {
     auto dictionary = std::make_shared<pmr_vector<T>>(dense_values.cbegin(), dense_values.cend(), allocator);
     auto dictionary_pin_guard = FramePinGuard{AccessIntent::Write};
 
-    std::sort(dictionary->begin().get_ptr().pin(dictionary_pin_guard),
-              dictionary->end().get_ptr().pin(dictionary_pin_guard));
+    // TODO: End can land outside of a page if the vector is exactly the page site.. This a temp fix only, potential solution is to never use the last bytes of a page
+    T* dict_begin_raw = dictionary->begin().get_ptr().pin(dictionary_pin_guard);
+    T* dict_end_raw = dict_begin_raw + dictionary->size();
+    std::sort(dict_begin_raw, dict_end_raw);
 
-    // TODO: Improve speed of this
-    dictionary->erase(std::unique(dictionary->begin(), dictionary->end()), dictionary->cend());
+    auto dictionary_begin = decltype(dictionary->begin())(dictionary->begin().get_ptr().pin(dictionary_pin_guard));
+    auto dictionary_end = dictionary_begin + dictionary->size();
+    auto dictionary_cend =
+        decltype(dictionary->begin())(dictionary->begin().get_ptr().pin(dictionary_pin_guard)) + dictionary->size();
+    // TODO: Verify what is passed to the vec_itetrator. does it swizzle?!
+
+    dictionary->erase(std::unique(dictionary_begin, dictionary_end), dictionary_cend);
     dictionary->shrink_to_fit();
 
     const auto null_value_id = static_cast<uint32_t>(dictionary->size());

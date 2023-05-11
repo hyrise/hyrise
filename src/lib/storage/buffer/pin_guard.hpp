@@ -26,8 +26,6 @@ class FramePinGuard : public Noncopyable {
     if (!_frame) {
       _frame = frame;
       get_buffer_manager_memory_resource()->pin(_frame);
-    } else {
-      Fail("Cannot pin two different frames");
     }
   }
 
@@ -86,8 +84,12 @@ class AllocatorPinGuard : public Noncopyable {
   AllocatorPinGuard(Allocator& allocator) : _observer(std::make_shared<Observer>()) {
     if constexpr (std::is_same_v<Allocator, BufferPoolAllocator<typename Allocator::value_type>>) {
       allocator.register_observer(_observer);
+
     } else if constexpr (std::is_same_v<Allocator, boost::container::scoped_allocator_adaptor<
                                                        BufferPoolAllocator<typename Allocator::value_type>>>) {
+      allocator.outer_allocator().register_observer(_observer);
+    } else if constexpr (std::is_base_of_v<Allocator, boost::container::scoped_allocator_adaptor<
+                                                          BufferPoolAllocator<typename Allocator::value_type>>>) {
       allocator.outer_allocator().register_observer(_observer);
     } else {
       Fail("AllocatorPinGuard is not implemented for given allocator");

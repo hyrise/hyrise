@@ -33,13 +33,11 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
                           null_values.cend().get_ptr().pin(null_value_pin_guard)};
       functor(begin, end);
     } else {
-      const auto values = _segment.values();
-      auto value_pin_guard = FramePinGuard{};
+      auto values_pin_guard = FramePinGuard{_segment.values()};
+      const auto& values = _segment.values();
 
-      auto begin = NonNullIterator{values.cbegin().get_ptr().pin(value_pin_guard),
-                                   values.cbegin().get_ptr().pin(value_pin_guard)};
-      auto end =
-          NonNullIterator{values.cbegin().get_ptr().pin(value_pin_guard), values.cend().get_ptr().pin(value_pin_guard)};
+      auto begin = NonNullIterator{values.cbegin().get_ptr().get(), values.cbegin().get_ptr().get()};
+      auto end = NonNullIterator{values.cbegin().get_ptr().get(), values.cend().get_ptr().get()};
       functor(begin, end);
     }
   }
