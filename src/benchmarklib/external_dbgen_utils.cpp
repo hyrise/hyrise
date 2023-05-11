@@ -17,7 +17,7 @@ void generate_csv_tables_with_external_dbgen(const std::string& dbgen_path, cons
 
   // Check if table data has already been generated (and converted to .bin by the FileBasedTableGenerator).
   if (!std::filesystem::exists(tables_path + "customer.bin")) {
-    Timer timer;
+    auto timer = Timer{};
     std::cout << "- Creating table data by calling external dbgen" << std::flush;
 
     std::filesystem::create_directory(tables_path);
