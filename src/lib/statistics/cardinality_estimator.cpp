@@ -419,12 +419,41 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_predicate_node(
   // TODO(anybody) Complex predicates are not processed right now and statistics objects are forwarded.
   //               That implies estimating a selectivity of 1 for such predicates.
   if (!operator_scan_predicates) {
-    // We might not have resolved the predicate because it contains subqueries. Unfortunately, we do not know the
-    // values of predicates on uncorrelated subquery results before query execution. However, if the predicate has an
-    // equals or between condition, it acts as a filter comparable to a semi-join with the join key of the subquery
-    // result (see examples below). We obtain such predicates with subquery results from the JoinToPredicateRewriteRule.
-    // This rule also checks that all preconditions are met to ensure correct query results. Thus, we do not check them
-    // here. For more information about this query rewrite, see `join_to_predicate_rewrite_rule.hpp`.
+    // We can obtain predicates with subquery results from the JoinToPredicateRewriteRule, which turns (semi-)joins into
+    // predicates. OperatorScanPredicate::from_expression(...) cannot resolve these predicates. They act as a filter
+    // comparable to a semi-join with the join key of the subquery result (see examples below). The optimizer rule
+    // checks that all preconditions are met to ensure correct query results. Especially, it guarantees that the
+    // subqueries return a single row. Thus, we do not check this here (also, the TableScan operator checks this during
+    // execution). For more information about this query rewrite, see `join_to_predicate_rewrite_rule.hpp`.
+    // In the following, we only check if the predicates look the way they should after the mentioned optimizer rule has
+    // reformulated them. If this is the case, we estimate their cardinality in the same way we do for the original,
+    // not rewritten semi-joins.
+    // The JoinToPredicateRewriteRule creates query plans that look loke this:
+    //
+    // Case (i): An equals predicate on a unique column guarantees to emit a single tuple, where we scan another table
+    // for the resulting join key:
+    //
+    //                 [ Predicate n_regionkey = <subquery> ]
+    //                 /                             |
+    //                /                    [ Projection r_regionkey ]
+    //               |                               |
+    //               |                   [ Predicate r_name = 'ASIA' ]
+    //               |                               |
+    //   [ StoredTableNode nation ]       [ StoredTableNode region ]
+    //
+    // Case (ii): A between predicate on a columns with an order dependency on the join key guarantees to emit the
+    // minimal and maximal join key. We scan the other table by these min/max values:
+    //
+    //              [ Predicate ws_sold_date_sk BETWEEN <subquery_a> AND <subquery_b> ]
+    //                /                                     |                |
+    //               |                  [ Projection MIN(d_date_sk)]    [ Projection MAX(d_date_sk)]
+    //               |                                      |                |
+    //               |                          [ Aggregate MIN(d_date_sk), MAX(d_date_sk)]
+    //               |                                             |
+    //               |                                 [ Predicate d_year = 2000]
+    //               |                                             |
+    //   [ StoredTableNode web_sales ]                [ StoredTableNode date_dim ]
+    //
     const auto predicate_expression = std::dynamic_pointer_cast<AbstractPredicateExpression>(predicate);
     if (!predicate_expression) {
       return input_table_statistics;
@@ -437,6 +466,8 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_predicate_node(
     const auto predicate_condition = predicate_expression->predicate_condition;
 
     // Case (i): Binary predicate with column = <subquery>. Equivalent to a semi-join with a table containing one row.
+    // The assumption is that a predicate before filters for one tuple from a unique column. This was checked by the
+    // optimizer rule.
     // Example query:
     //     SELECT n_name FROM nation WHERE n_regionkey = (SELECT r_regionkey FROM region WHERE r_name = 'ASIA');
     // We can get the statistics directly from the LQPSubqueryExpression.
@@ -524,7 +555,9 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_predicate_node(
       if (subquery_origin_node->type == LQPNodeType::Aggregate) {
         const auto& node_expressions = subquery_origin_node->node_expressions;
         // Check that the AggregateNode only aggregates the min and max join key. By checking the number of node
-        // expressions, we also ensure the values are not grouped by any column.
+        // expressions, we also ensure the values are not grouped by any column: If the AggregateNode has two node
+        // expressions, one is the MIN(...) and one is the MAX(...), there cannot be another node expression for a
+        // GROUP BY column.
         if (node_expressions.size() != 2 || !find_expression_idx(*lower_bound_aggregate_expression, node_expressions) ||
             !find_expression_idx(*upper_bound_aggregate_expression, node_expressions)) {
           return input_table_statistics;
