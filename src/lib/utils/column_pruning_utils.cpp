@@ -26,9 +26,9 @@ std::vector<std::optional<ColumnID>> column_ids_after_pruning(const size_t origi
   return column_id_mapping;
 }
 
-std::vector<std::optional<ChunkID>> chunk_ids_after_pruning(const size_t original_table_chunk_count,
+std::unordered_map<ChunkID, ChunkID> chunk_ids_after_pruning(const size_t original_table_chunk_count,
                                                             const std::vector<ChunkID>& pruned_chunk_ids) {
-  std::vector<std::optional<ChunkID>> chunk_id_mapping(original_table_chunk_count);
+  auto chunk_id_mapping = std::unordered_map<ChunkID, ChunkID>{};
   std::vector<bool> chunk_pruned_bitvector(original_table_chunk_count);
 
   // Fill the bitvector

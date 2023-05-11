@@ -36,7 +36,7 @@ std::shared_ptr<const Table> IndexScan::_on_execute() {
 
   _validate_input();
 
-  auto chunk_id_mapping = std::vector<std::optional<ChunkID>>{};
+  auto chunk_id_mapping = std::unordered_map<ChunkID, ChunkID>{};
   auto pruned_chunk_ids_set = std::unordered_set<ChunkID>{};
 
   // If the input operator is of the type GetTable, pruning must be considered.
@@ -69,7 +69,7 @@ std::shared_ptr<const Table> IndexScan::_on_execute() {
   const auto append_matches = [&](const auto& begin, const auto& end) {
     for (auto current_iter = begin; current_iter != end; ++current_iter) {
       if (included_chunk_ids_set.contains((*current_iter).chunk_id)) {
-        matches_out->emplace_back(RowID{*chunk_id_mapping[(*current_iter).chunk_id], (*current_iter).chunk_offset});
+        matches_out->emplace_back(RowID{chunk_id_mapping[(*current_iter).chunk_id], (*current_iter).chunk_offset});
       }
     }
   };

@@ -31,22 +31,22 @@ TEST_F(PruningUtilsTest, ColumnIDMapping) {
 TEST_F(PruningUtilsTest, ChunkIDMapping) {
   auto actual_chunk_mapping = chunk_ids_after_pruning(6, {ChunkID{0}, ChunkID{1}, ChunkID{2}});
   auto expected_chunk_mapping =
-      std::vector<std::optional<ChunkID>>{std::nullopt, std::nullopt, std::nullopt, ChunkID{0}, ChunkID{1}, ChunkID{2}};
+      std::unordered_map<ChunkID, ChunkID>{{ChunkID{3}, ChunkID{0}}, {ChunkID{4}, ChunkID{1}}, {ChunkID{5}, ChunkID{2}}};
   EXPECT_EQ(actual_chunk_mapping, expected_chunk_mapping);
 
   actual_chunk_mapping = chunk_ids_after_pruning(6, {ChunkID{2}, ChunkID{3}});
   expected_chunk_mapping =
-      std::vector<std::optional<ChunkID>>{ChunkID{0}, ChunkID{1}, std::nullopt, std::nullopt, ChunkID{2}, ChunkID{3}};
+      std::unordered_map<ChunkID, ChunkID>{{ChunkID{0}, ChunkID{0}}, {ChunkID{1}, ChunkID{1}}, {ChunkID{4}, ChunkID{2}}, {ChunkID{5}, ChunkID{3}}};
   EXPECT_EQ(actual_chunk_mapping, expected_chunk_mapping);
 
   actual_chunk_mapping = chunk_ids_after_pruning(6, {ChunkID{5}});
   expected_chunk_mapping =
-      std::vector<std::optional<ChunkID>>{ChunkID{0}, ChunkID{1}, ChunkID{2}, ChunkID{3}, ChunkID{4}, std::nullopt};
+      std::unordered_map<ChunkID, ChunkID>{{ChunkID{0}, ChunkID{0}}, {ChunkID{1}, ChunkID{1}}, {ChunkID{2}, ChunkID{2}}, {ChunkID{3}, ChunkID{3}}, {ChunkID{4}, ChunkID{4}}};
   EXPECT_EQ(actual_chunk_mapping, expected_chunk_mapping);
 
   actual_chunk_mapping = chunk_ids_after_pruning(6, {ChunkID{0}, ChunkID{2}, ChunkID{4}});
   expected_chunk_mapping =
-      std::vector<std::optional<ChunkID>>{std::nullopt, ChunkID{0}, std::nullopt, ChunkID{1}, std::nullopt, ChunkID{2}};
+      std::unordered_map<ChunkID, ChunkID>{{ChunkID{1}, ChunkID{0}}, {ChunkID{3}, ChunkID{1}}, {ChunkID{5}, ChunkID{2}}};
   EXPECT_EQ(actual_chunk_mapping, expected_chunk_mapping);
 }
 
