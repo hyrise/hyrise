@@ -178,12 +178,12 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& input_table,
 
       // Check all rows in the old poslist and put them in pos_list_out if they are visible.
       referenced_table = ref_segment_in->referenced_table();
-      DebugAssert(referenced_table->uses_mvcc(), "Trying to use Validate on a table that has no MVCC data.");
+      DebugAssert(referenced_table->uses_mvcc(), "Trying to use Validate on a table that has no MVCC data");
 
       if (!entirely_visible_chunks_table) {
         entirely_visible_chunks_table = referenced_table;
       } else {
-        Assert(entirely_visible_chunks_table == referenced_table, "Input table references more than one table.");
+        Assert(entirely_visible_chunks_table == referenced_table, "Input table references more than once table");
       }
 
       const auto& pos_list_in = ref_segment_in->pos_list();
@@ -199,7 +199,7 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& input_table,
         } else {
           auto temp_pos_list = RowIDPosList{};
           temp_pos_list.guarantee_single_chunk();
-          for (const auto& row_id : *pos_list_in) {
+          for (auto row_id : *pos_list_in) {
             if (hyrise::is_row_visible(our_tid, snapshot_commit_id, row_id.chunk_offset, *mvcc_data)) {
               temp_pos_list.emplace_back(row_id);
             }
