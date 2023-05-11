@@ -435,24 +435,24 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_predicate_node(
     //
     //                 [ Predicate n_regionkey = <subquery> ]
     //                 /                             |
-    //                /                    [ Projection r_regionkey ]
+    //                /                  [ Projection r_regionkey ]
     //               |                               |
-    //               |                   [ Predicate r_name = 'ASIA' ]
+    //               |                  [ Predicate r_name = 'ASIA' ]
     //               |                               |
-    //   [ StoredTableNode nation ]       [ StoredTableNode region ]
+    //   [ StoredTableNode nation ]      [ StoredTableNode region ]
     //
     // Case (ii): A between predicate on a columns with an order dependency on the join key guarantees to emit the
     // minimal and maximal join key. We scan the other table by these min/max values:
     //
     //              [ Predicate ws_sold_date_sk BETWEEN <subquery_a> AND <subquery_b> ]
     //                /                                     |                |
-    //               |                  [ Projection MIN(d_date_sk)]    [ Projection MAX(d_date_sk)]
+    //               |                  [ Projection MIN(d_date_sk ) ]  [ Projection MAX(d_date_sk) ]
     //               |                                      |                |
-    //               |                          [ Aggregate MIN(d_date_sk), MAX(d_date_sk)]
+    //               |                          [ Aggregate MIN(d_date_sk), MAX(d_date_sk) ]
     //               |                                             |
-    //               |                                 [ Predicate d_year = 2000]
+    //               |                                  [ Predicate d_year = 2000 ]
     //               |                                             |
-    //   [ StoredTableNode web_sales ]                [ StoredTableNode date_dim ]
+    //   [ StoredTableNode web_sales ]                  [ StoredTableNode date_dim ]
     //
     const auto predicate_expression = std::dynamic_pointer_cast<AbstractPredicateExpression>(predicate);
     if (!predicate_expression) {
