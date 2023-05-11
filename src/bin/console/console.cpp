@@ -52,9 +52,9 @@
 #include "visualization/lqp_visualizer.hpp"
 #include "visualization/pqp_visualizer.hpp"
 
-#define ANSI_COLOR_RED "\x1B[31m"    // NOLINT
-#define ANSI_COLOR_GREEN "\x1B[32m"  // NOLINT
-#define ANSI_COLOR_RESET "\x1B[0m"   // NOLINT
+#define ANSI_COLOR_RED "\x1B[31m"               // NOLINT
+#define ANSI_COLOR_GREEN "\x1B[32m"             // NOLINT
+#define ANSI_COLOR_RESET "\x1B[0m"              // NOLINT
 
 #define ANSI_COLOR_RED_RL "\001\x1B[31m\002"    // NOLINT
 #define ANSI_COLOR_GREEN_RL "\001\x1B[32m\002"  // NOLINT

@@ -1,8 +1,5 @@
 #include "optimizer.hpp"
 
-#include <memory>
-#include <unordered_set>
-
 #include "cost_estimation/cost_estimator_logical.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_subquery_expression.hpp"
@@ -167,13 +164,17 @@ void validate_lqp_with_uncorrelated_subqueries(const std::shared_ptr<const Abstr
 
 namespace hyrise {
 
+constexpr OptimizerRuleMetrics::OptimizerRuleMetrics(const std::string& init_rule_name,
+                                                     const std::chrono::nanoseconds init_duration)
+    : rule_name{init_rule_name}, duration{init_duration} {}
+
 /**
  * Some optimizer rules affect each other, as noted below. Sometimes, a later rule enables a new optimization for an
  * earlier rule. In the future, it might make sense to bring back iterative groups of rules, but we should keep
  * optimization costs reasonable.
  */
 std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
-  auto optimizer = std::make_shared<Optimizer>();
+  const auto optimizer = std::make_shared<Optimizer>();
 
   optimizer->add_rule(std::make_unique<ExpressionReductionRule>());
 
@@ -271,12 +272,11 @@ std::shared_ptr<AbstractLQPNode> Optimizer::optimize(
   }
 
   for (const auto& rule : _rules) {
-    Timer rule_timer{};
+    auto rule_timer = Timer{};
     rule->apply_to_plan(root_node);
-    auto rule_duration = rule_timer.lap();
 
     if (rule_durations) {
-      rule_durations->emplace_back(OptimizerRuleMetrics{rule->name(), rule_duration});
+      rule_durations->emplace_back(rule->name(), rule_timer.lap());
     }
 
     if constexpr (HYRISE_DEBUG) {
@@ -285,7 +285,7 @@ std::shared_ptr<AbstractLQPNode> Optimizer::optimize(
   }
 
   // Remove LogicalPlanRootNode
-  auto optimized_node = root_node->left_input();
+  const auto optimized_node = root_node->left_input();
   root_node->set_left_input(nullptr);
 
   return optimized_node;
