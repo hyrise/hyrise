@@ -217,10 +217,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_in
   const auto table_name = stored_table_node->table_name;
   const auto table = Hyrise::get().storage_manager.get_table(table_name);
 
-  // The distinction is helpful because the IndexScan uses non-pruned ChunkIDs while the TableScan may use pruned
-  // ChunkIDs. The Chunks referred to are the same.
-  std::vector<ChunkID> indexed_chunks_for_index_scan;
-  std::vector<ChunkID> excluded_chunks_from_table_scan;
+  std::vector<ChunkID> indexed_chunks;
 
   auto pruned_table_chunk_id = ChunkID{0};
   auto pruned_chunk_ids_iter = pruned_chunk_ids.cbegin();
@@ -243,8 +240,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_in
 
     // Check if chunk is indexed.
     if (indexed_chunk_ids.find(chunk_id) != indexed_chunk_ids.end()) {
-      indexed_chunks_for_index_scan.emplace_back(chunk_id);
-      excluded_chunks_from_table_scan.emplace_back(pruned_table_chunk_id);
+      indexed_chunks.emplace_back(pruned_table_chunk_id);
     }
     ++pruned_table_chunk_id;
   }
@@ -256,8 +252,8 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_in
 
   const auto table_scan = _translate_predicate_node_to_table_scan(node, input_operator);
 
-  index_scan->included_chunk_ids = indexed_chunks_for_index_scan;
-  table_scan->excluded_chunk_ids = excluded_chunks_from_table_scan;
+  index_scan->included_chunk_ids = indexed_chunks;
+  table_scan->excluded_chunk_ids = indexed_chunks;
 
   // set lqp node
   index_scan->lqp_node = node;

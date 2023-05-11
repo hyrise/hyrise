@@ -52,7 +52,7 @@ std::shared_ptr<const Table> IndexScan::_on_execute() {
     pruned_chunk_ids_set = std::unordered_set<ChunkID>{pruned_chunk_ids.begin(), pruned_chunk_ids.end()};
   } else {
     chunk_id_mapping = chunk_ids_after_pruning(_in_table->chunk_count(), std::vector<ChunkID>{});
-    Fail("I hope this do not happen.");
+    Fail("I hope this does not happen.");
   }
 
   const auto included_chunk_ids_set = std::unordered_set<ChunkID>(included_chunk_ids.begin(), included_chunk_ids.end());
@@ -68,8 +68,10 @@ std::shared_ptr<const Table> IndexScan::_on_execute() {
 
   const auto append_matches = [&](const auto& begin, const auto& end) {
     for (auto current_iter = begin; current_iter != end; ++current_iter) {
-      if (included_chunk_ids_set.contains((*current_iter).chunk_id)) {
-        matches_out->emplace_back(RowID{chunk_id_mapping[(*current_iter).chunk_id], (*current_iter).chunk_offset});
+      const auto mapped_chunk_id = chunk_id_mapping.find((*current_iter).chunk_id);
+
+      if (mapped_chunk_id != chunk_id_mapping.end() && included_chunk_ids_set.contains(mapped_chunk_id->second)) {
+        matches_out->emplace_back(RowID{mapped_chunk_id->second, (*current_iter).chunk_offset});
       }
     }
   };
