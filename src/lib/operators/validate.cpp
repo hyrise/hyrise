@@ -199,7 +199,7 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& input_table,
         } else {
           auto temp_pos_list = RowIDPosList{};
           temp_pos_list.guarantee_single_chunk();
-          for (const auto& row_id : *pos_list_in) {
+          for (const auto row_id : *pos_list_in) {
             if (hyrise::is_row_visible(our_tid, snapshot_commit_id, row_id.chunk_offset, *mvcc_data)) {
               temp_pos_list.emplace_back(row_id);
             }
