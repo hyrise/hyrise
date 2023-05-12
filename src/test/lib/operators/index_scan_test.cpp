@@ -46,11 +46,14 @@ class OperatorsIndexScanTest : public BaseTest {
     int_int_7->create_partial_hash_index(_column_id, _chunk_ids);
     int_int_5->create_partial_hash_index(_column_id, _chunk_ids_partly_compressed);
 
-    _int_int = std::make_shared<TableWrapper>(std::move(int_int_7));
+    Hyrise::get().storage_manager.add_table("int_int_7", int_int_7);
+    Hyrise::get().storage_manager.add_table("int_int_5", int_int_5);
+
+    _int_int = std::make_shared<GetTable>("int_int_7");
     _int_int->never_clear_output();
     _int_int->execute();
 
-    _int_int_small_chunk = std::make_shared<TableWrapper>(std::move(int_int_5));
+    _int_int_small_chunk = std::make_shared<GetTable>("int_int_5");
     _int_int_small_chunk->never_clear_output();
     _int_int_small_chunk->execute();
 
@@ -86,8 +89,8 @@ class OperatorsIndexScanTest : public BaseTest {
     ASSERT_EQ(expected.size(), 0u);
   }
 
-  std::shared_ptr<TableWrapper> _int_int;
-  std::shared_ptr<TableWrapper> _int_int_small_chunk;
+  std::shared_ptr<GetTable> _int_int;
+  std::shared_ptr<GetTable> _int_int_small_chunk;
   std::vector<ChunkID> _chunk_ids;
   std::vector<ChunkID> _chunk_ids_partly_compressed;
   ColumnID _column_id;
@@ -114,7 +117,7 @@ TEST_F(OperatorsIndexScanTest, SingleColumnScanOnDataTable) {
 
     scan_small_chunk->execute();
 
-    auto table = scan->get_output();
+    // auto table = scan->get_output();
 
     this->ASSERT_COLUMN_EQ(scan->get_output(), ColumnID{1u}, test.second);
     this->ASSERT_COLUMN_EQ(scan_small_chunk->get_output(), ColumnID{1u}, test.second);

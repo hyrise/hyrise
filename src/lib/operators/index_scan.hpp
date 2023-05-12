@@ -38,8 +38,6 @@ class IndexScan : public AbstractReadOnlyOperator {
       std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& /*copied_ops*/) const override;
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
 
-  void _validate_input();
-
  private:
   ColumnID _indexed_column_id;
   const PredicateCondition _predicate_condition;

@@ -34,26 +34,21 @@ const std::string& IndexScan::name() const {
 std::shared_ptr<const Table> IndexScan::_on_execute() {
   _in_table = left_input_table();
 
-  _validate_input();
-
   auto chunk_id_mapping = std::unordered_map<ChunkID, ChunkID>{};
   auto pruned_chunk_ids_set = std::unordered_set<ChunkID>{};
 
   // If the input operator is of the type GetTable, pruning must be considered.
   const auto& input_get_table = dynamic_pointer_cast<const GetTable>(left_input());
-  if (input_get_table) {
-    // If columns have been pruned, calculate the ColumnID that was originally indexed.
-    const auto& pruned_column_ids = input_get_table->pruned_column_ids();
-    _indexed_column_id = column_id_before_pruning(_indexed_column_id, pruned_column_ids);
+  Assert(input_get_table, "IndexScan needs a GetTable operator as input.");
 
-    // If chunks have been pruned, calculate a mapping that maps the pruned ChunkIDs to the original ones.
-    const auto& pruned_chunk_ids = input_get_table->pruned_chunk_ids();
-    chunk_id_mapping = chunk_ids_after_pruning(_in_table->chunk_count() + pruned_chunk_ids.size(), pruned_chunk_ids);
-    pruned_chunk_ids_set = std::unordered_set<ChunkID>{pruned_chunk_ids.begin(), pruned_chunk_ids.end()};
-  } else {
-    chunk_id_mapping = chunk_ids_after_pruning(_in_table->chunk_count(), std::vector<ChunkID>{});
-    Fail("I hope this does not happen.");
-  }
+  // If columns have been pruned, calculate the ColumnID that was originally indexed.
+  const auto& pruned_column_ids = input_get_table->pruned_column_ids();
+  _indexed_column_id = column_id_before_pruning(_indexed_column_id, pruned_column_ids);
+
+  // If chunks have been pruned, calculate a mapping that maps the pruned ChunkIDs to the original ones.
+  const auto& pruned_chunk_ids = input_get_table->pruned_chunk_ids();
+  chunk_id_mapping = chunk_ids_after_pruning(_in_table->chunk_count() + pruned_chunk_ids.size(), pruned_chunk_ids);
+  pruned_chunk_ids_set = std::unordered_set<ChunkID>{pruned_chunk_ids.begin(), pruned_chunk_ids.end()};
 
   // Remove all values from the mapping not present in the included ChunkIDs.
   for (auto iterator = chunk_id_mapping.begin(); iterator != chunk_id_mapping.end();) {
@@ -146,12 +141,5 @@ std::shared_ptr<AbstractOperator> IndexScan::_on_deep_copy(
 }
 
 void IndexScan::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
-
-void IndexScan::_validate_input() {
-  Assert(_predicate_condition != PredicateCondition::Like, "Predicate condition not supported by index scan.");
-  Assert(_predicate_condition != PredicateCondition::NotLike, "Predicate condition not supported by index scan.");
-
-  Assert(_in_table->type() == TableType::Data, "IndexScan only supports persistent tables right now.");
-}
 
 }  // namespace hyrise
