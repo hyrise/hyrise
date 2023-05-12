@@ -55,7 +55,15 @@ std::shared_ptr<const Table> IndexScan::_on_execute() {
     Fail("I hope this does not happen.");
   }
 
-  const auto included_chunk_ids_set = std::unordered_set<ChunkID>(included_chunk_ids.begin(), included_chunk_ids.end());
+  // Remove all values from the mapping not present in the included ChunkIDs.
+  for (auto iterator = chunk_id_mapping.begin(); iterator != chunk_id_mapping.end();) {
+    if (!std::binary_search(included_chunk_ids.begin(), included_chunk_ids.end(), iterator->second)) {
+      iterator = chunk_id_mapping.erase(iterator);
+    } else {
+      ++iterator;
+      }
+  }
+
 
   _out_table = std::make_shared<Table>(_in_table->column_definitions(), TableType::References);
   auto matches_out = std::make_shared<RowIDPosList>();
@@ -70,7 +78,7 @@ std::shared_ptr<const Table> IndexScan::_on_execute() {
     for (auto current_iter = begin; current_iter != end; ++current_iter) {
       const auto mapped_chunk_id = chunk_id_mapping.find((*current_iter).chunk_id);
 
-      if (mapped_chunk_id != chunk_id_mapping.end() && included_chunk_ids_set.contains(mapped_chunk_id->second)) {
+      if (mapped_chunk_id != chunk_id_mapping.end()) {
         matches_out->emplace_back(mapped_chunk_id->second, (*current_iter).chunk_offset);
       }
     }
