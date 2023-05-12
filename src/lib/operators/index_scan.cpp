@@ -71,7 +71,7 @@ std::shared_ptr<const Table> IndexScan::_on_execute() {
       const auto mapped_chunk_id = chunk_id_mapping.find((*current_iter).chunk_id);
 
       if (mapped_chunk_id != chunk_id_mapping.end() && included_chunk_ids_set.contains(mapped_chunk_id->second)) {
-        matches_out->emplace_back(RowID{mapped_chunk_id->second, (*current_iter).chunk_offset});
+        matches_out->emplace_back(mapped_chunk_id->second, (*current_iter).chunk_offset);
       }
     }
   };

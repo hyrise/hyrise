@@ -217,7 +217,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_in
   const auto table_name = stored_table_node->table_name;
   const auto table = Hyrise::get().storage_manager.get_table(table_name);
 
-  std::vector<ChunkID> indexed_chunks;
+  auto indexed_chunks = std::vector<ChunkID>{};
 
   auto pruned_table_chunk_id = ChunkID{0};
   auto pruned_chunk_ids_iter = pruned_chunk_ids.cbegin();
