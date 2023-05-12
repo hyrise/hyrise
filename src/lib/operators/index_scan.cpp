@@ -56,9 +56,8 @@ std::shared_ptr<const Table> IndexScan::_on_execute() {
       iterator = chunk_id_mapping.erase(iterator);
     } else {
       ++iterator;
-      }
+    }
   }
-
 
   _out_table = std::make_shared<Table>(_in_table->column_definitions(), TableType::References);
   auto matches_out = std::make_shared<RowIDPosList>();
