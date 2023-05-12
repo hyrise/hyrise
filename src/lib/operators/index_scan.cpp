@@ -118,7 +118,7 @@ std::shared_ptr<const Table> IndexScan::_on_execute() {
   }
 
   const auto in_table_column_count = _in_table->column_count();
-  for (const auto matches : matches_out_per_chunk) {
+  for (const auto& matches : matches_out_per_chunk) {
     auto segments = Segments{};
     segments.reserve(in_table_column_count);
 
