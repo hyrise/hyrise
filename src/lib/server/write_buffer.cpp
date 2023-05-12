@@ -52,7 +52,7 @@ template <typename SocketType>
 void WriteBuffer<SocketType>::flush(const size_t bytes_required) {
   Assert(bytes_required <= size(), "Cannot flush more byte than available");
   const auto bytes_to_send = bytes_required ? bytes_required : size();
-  size_t bytes_sent;
+  auto bytes_sent = size_t{0};
 
   boost::system::error_code error_code;
   if (std::distance(&*_start_position, &*_current_position) < 0) {

@@ -119,7 +119,7 @@ class BinaryWriter {
    * ²: This field is only written if the vector compression is FixedWidthInteger
    */
   template <typename T>
-  static void _write_segment(const DictionarySegment<T>& dictionary_segment, bool column_is_nullable,
+  static void _write_segment(const DictionarySegment<T>& dictionary_segment, bool /*column_is_nullable*/,
                              std::ofstream& ofstream);
 
   /**
@@ -144,7 +144,7 @@ class BinaryWriter {
    */
   template <typename T>
   static void _write_segment(const FixedStringDictionarySegment<T>& fixed_string_dictionary_segment,
-                             bool column_is_nullable, std::ofstream& ofstream);
+                             bool /*column_is_nullable*/, std::ofstream& ofstream);
 
   /**
    * RunLengthSegments are dumped with the following layout:
@@ -161,7 +161,7 @@ class BinaryWriter {
    * The type of the column can be found in the global header of the file.
    */
   template <typename T>
-  static void _write_segment(const RunLengthSegment<T>& run_length_segment, bool column_is_nullable,
+  static void _write_segment(const RunLengthSegment<T>& run_length_segment, bool /*column_is_nullable*/,
                              std::ofstream& ofstream);
 
   /**
@@ -188,7 +188,7 @@ class BinaryWriter {
    * ³: This field is only written if the vector compression is FixedWidthInteger
    */
   template <typename T>
-  static void _write_segment(const FrameOfReferenceSegment<T>& frame_of_reference_segment, bool column_is_nullable,
+  static void _write_segment(const FrameOfReferenceSegment<T>& frame_of_reference_segment, bool /*column_is_nullable*/,
                              std::ofstream& ofstream);
 
   /**
@@ -220,7 +220,7 @@ class BinaryWriter {
    * ³: This field is only written if the vector compression is BitPacking
    */
   template <typename T>
-  static void _write_segment(const LZ4Segment<T>& lz4_segment, bool column_is_nullable, std::ofstream& ofstream);
+  static void _write_segment(const LZ4Segment<T>& lz4_segment, bool /*column_is_nullable*/, std::ofstream& ofstream);
 
   template <typename T>
   static CompressedVectorTypeID _compressed_vector_type_id(const AbstractEncodedSegment& abstract_encoded_segment);

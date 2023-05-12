@@ -367,7 +367,7 @@ void SQLPipelineStatement::_precheck_ddl_operators(const std::shared_ptr<Abstrac
     }
     case OperatorType::Import: {
       const auto import = std::dynamic_pointer_cast<Import>(pqp);
-      std::ifstream file(import->filename);
+      const auto file = std::ifstream{import->filename};
       AssertInput(file.good(), "There is no file '" + import->filename + "'.");
       break;
     }

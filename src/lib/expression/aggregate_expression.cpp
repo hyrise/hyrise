@@ -121,7 +121,7 @@ size_t AggregateExpression::_shallow_hash() const {
   return boost::hash_value(static_cast<size_t>(aggregate_function));
 }
 
-bool AggregateExpression::_on_is_nullable_on_lqp(const AbstractLQPNode& lqp) const {
+bool AggregateExpression::_on_is_nullable_on_lqp(const AbstractLQPNode& /*lqp*/) const {
   // Aggregates (except COUNT and COUNT DISTINCT) will return NULL when executed on an
   // empty group - thus they are always nullable
   return aggregate_function != AggregateFunction::Count && aggregate_function != AggregateFunction::CountDistinct;

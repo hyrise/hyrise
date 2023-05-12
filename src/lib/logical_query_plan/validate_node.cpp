@@ -6,7 +6,7 @@ namespace hyrise {
 
 ValidateNode::ValidateNode() : AbstractLQPNode(LQPNodeType::Validate) {}
 
-std::string ValidateNode::description(const DescriptionMode mode) const {
+std::string ValidateNode::description(const DescriptionMode /*mode*/) const {
   return "[Validate]";
 }
 
@@ -14,11 +14,11 @@ UniqueColumnCombinations ValidateNode::unique_column_combinations() const {
   return _forward_left_unique_column_combinations();
 }
 
-std::shared_ptr<AbstractLQPNode> ValidateNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
+std::shared_ptr<AbstractLQPNode> ValidateNode::_on_shallow_copy(LQPNodeMapping& /*node_mapping*/) const {
   return ValidateNode::make();
 }
 
-bool ValidateNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
+bool ValidateNode::_on_shallow_equals(const AbstractLQPNode& /*rhs*/, const LQPNodeMapping& /*node_mapping*/) const {
   return true;
 }
 

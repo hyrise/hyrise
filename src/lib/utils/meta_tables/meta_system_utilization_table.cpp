@@ -63,7 +63,7 @@ std::shared_ptr<Table> MetaSystemUtilizationTable::_on_generate() const {
   * Returns the load average values for 1min, 5min, and 15min.
  */
 MetaSystemUtilizationTable::LoadAvg MetaSystemUtilizationTable::_get_load_avg() {
-  std::array<double, 3> load_avg{};
+  auto load_avg = std::array<double, 3>{};
   const int nelem = getloadavg(load_avg.data(), 3);
   Assert(nelem == 3, "Failed to read load averages");
   return {static_cast<float>(load_avg[0]), static_cast<float>(load_avg[1]), static_cast<float>(load_avg[2])};
@@ -85,8 +85,8 @@ uint64_t MetaSystemUtilizationTable::_get_total_time() {
 */
 uint64_t MetaSystemUtilizationTable::_get_system_cpu_time() {
 #ifdef __linux__
-  std::ifstream stat_file;
-  std::string cpu_line;
+  auto stat_file = std::ifstream{};
+  auto cpu_line = std::string{};
   try {
     stat_file.open("/proc/stat", std::ifstream::in);
 
@@ -112,7 +112,7 @@ uint64_t MetaSystemUtilizationTable::_get_system_cpu_time() {
 #endif
 
 #ifdef __APPLE__
-  host_cpu_load_info_data_t cpu_info;
+  auto cpu_info = host_cpu_load_info_data_t{};
   mach_msg_type_number_t count = HOST_CPU_LOAD_INFO_COUNT;
   const auto ret =
       host_statistics(mach_host_self(), HOST_CPU_LOAD_INFO, reinterpret_cast<host_info_t>(&cpu_info), &count);
@@ -169,12 +169,12 @@ uint64_t MetaSystemUtilizationTable::_get_process_cpu_time() {
  */
 MetaSystemUtilizationTable::SystemMemoryUsage MetaSystemUtilizationTable::_get_system_memory_usage() {
 #ifdef __linux__
-  std::ifstream meminfo_file;
-  MetaSystemUtilizationTable::SystemMemoryUsage memory_usage{};
+  auto meminfo_file = std::ifstream{};
+  auto memory_usage = MetaSystemUtilizationTable::SystemMemoryUsage{};
   try {
     meminfo_file.open("/proc/meminfo", std::ifstream::in);
 
-    std::string meminfo_line;
+    auto meminfo_line = std::string{};
     while (std::getline(meminfo_file, meminfo_line)) {
       if (meminfo_line.starts_with("MemFree")) {
         memory_usage.free_memory = _parse_value_string(meminfo_line)[0] * 1024;
@@ -191,14 +191,14 @@ MetaSystemUtilizationTable::SystemMemoryUsage MetaSystemUtilizationTable::_get_s
 #endif
 
 #ifdef __APPLE__
-  int64_t physical_memory;
-  size_t size = sizeof(physical_memory);
+  auto physical_memory = int64_t{0};
+  auto size = sizeof(physical_memory);
   auto ret = sysctlbyname("hw.memsize", &physical_memory, &size, nullptr, 0);
   Assert(ret == 0, "Failed to call sysctl hw.memsize");
 
   // see reference: https://stackoverflow.com/a/1911863
-  vm_size_t page_size;
-  vm_statistics64_data_t vm_statistics;
+  auto page_size = vm_size_t{};
+  auto vm_statistics = vm_statistics64_data_t{};
   mach_msg_type_number_t count = sizeof(vm_statistics) / sizeof(natural_t);
   ret = host_page_size(mach_host_self(), &page_size);
   Assert(ret == KERN_SUCCESS, "Failed to get page size");
@@ -222,12 +222,12 @@ MetaSystemUtilizationTable::SystemMemoryUsage MetaSystemUtilizationTable::_get_s
  */
 MetaSystemUtilizationTable::ProcessMemoryUsage MetaSystemUtilizationTable::_get_process_memory_usage() {
 #ifdef __linux__
-  std::ifstream self_status_file;
-  MetaSystemUtilizationTable::ProcessMemoryUsage memory_usage{};
+  auto self_status_file = std::ifstream{};
+  auto memory_usage = MetaSystemUtilizationTable::ProcessMemoryUsage{};
   try {
     self_status_file.open("/proc/self/status", std::ifstream::in);
 
-    std::string self_status_line;
+    auto self_status_line = std::string{};
     while (std::getline(self_status_file, self_status_line)) {
       if (self_status_line.starts_with("VmSize")) {
         memory_usage.virtual_memory = _parse_value_string(self_status_line)[0] * 1024;
@@ -286,8 +286,8 @@ std::optional<size_t> MetaSystemUtilizationTable::_get_allocated_memory() {
   if (HYRISE_DEBUG) {
     // Check that jemalloc was built with statistics support
 
-    bool stats_enabled;
-    size_t stats_enabled_size{sizeof(stats_enabled)};
+    auto stats_enabled = false;
+    auto stats_enabled_size = sizeof(stats_enabled);
 
     auto error_code = mallctl("config.stats", &stats_enabled, &stats_enabled_size, nullptr, 0);
     Assert(!error_code, "Cannot check if jemalloc was built with --stats_enabled");
@@ -297,13 +297,13 @@ std::optional<size_t> MetaSystemUtilizationTable::_get_allocated_memory() {
   // Before retrieving the statistics, we need to update jemalloc's epoch to get current values. See the mallctl
   // documentation for details.
   {
-    uint64_t epoch = 1;
+    auto epoch = uint64_t{1};
     auto epoch_size = sizeof(epoch);
     auto error_code = mallctl("epoch", &epoch, &epoch_size, &epoch, epoch_size);
     Assert(!error_code, "Setting epoch failed");
   }
 
-  size_t allocated;
+  auto allocated = size_t{0};
   auto allocated_size = sizeof(allocated);
 
   auto error_code = mallctl("stats.allocated", &allocated, &allocated_size, nullptr, 0);
@@ -319,12 +319,12 @@ std::optional<size_t> MetaSystemUtilizationTable::_get_allocated_memory() {
 
 #ifdef __linux__
 std::vector<int64_t> MetaSystemUtilizationTable::_parse_value_string(std::string& input_string) {
-  std::stringstream input_stream;
+  auto input_stream = std::stringstream{};
   input_stream << input_string;
-  std::vector<int64_t> output_values;
+  auto output_values = std::vector<int64_t>{};
 
-  std::string token;
-  int64_t value;
+  auto token = std::string{};
+  auto value = int64_t{0};
   while (!input_stream.eof()) {
     input_stream >> token;
     if (std::stringstream(token) >> value) {

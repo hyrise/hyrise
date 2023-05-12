@@ -2,7 +2,6 @@
 
 #include <readline/history.h>
 #include <readline/readline.h>
-#include <sys/stat.h>
 
 #include <chrono>
 #include <csetjmp>
@@ -11,11 +10,7 @@
 #include <ctime>
 #include <filesystem>
 #include <iomanip>
-#include <iostream>
-#include <memory>
 #include <regex>
-#include <string>
-#include <vector>
 
 #include <boost/algorithm/string/join.hpp>
 
@@ -52,13 +47,13 @@
 #include "visualization/lqp_visualizer.hpp"
 #include "visualization/pqp_visualizer.hpp"
 
-#define ANSI_COLOR_RED "\x1B[31m"               // NOLINT
-#define ANSI_COLOR_GREEN "\x1B[32m"             // NOLINT
-#define ANSI_COLOR_RESET "\x1B[0m"              // NOLINT
+#define ANSI_COLOR_RED "\x1B[31m"    // NOLINT(cppcoreguidelines-macro-usage)
+#define ANSI_COLOR_GREEN "\x1B[32m"  // NOLINT(cppcoreguidelines-macro-usage)
+#define ANSI_COLOR_RESET "\x1B[0m"   // NOLINT(cppcoreguidelines-macro-usage)
 
-#define ANSI_COLOR_RED_RL "\001\x1B[31m\002"    // NOLINT
-#define ANSI_COLOR_GREEN_RL "\001\x1B[32m\002"  // NOLINT
-#define ANSI_COLOR_RESET_RL "\001\x1B[0m\002"   // NOLINT
+#define ANSI_COLOR_RED_RL "\001\x1B[31m\002"    // NOLINT(cppcoreguidelines-macro-usage)
+#define ANSI_COLOR_GREEN_RL "\001\x1B[32m\002"  // NOLINT(cppcoreguidelines-macro-usage)
+#define ANSI_COLOR_RESET_RL "\001\x1B[0m\002"   // NOLINT(cppcoreguidelines-macro-usage)
 
 namespace {
 
@@ -79,7 +74,7 @@ std::string current_timestamp() {
   auto time = std::time(nullptr);
   const auto local_time = *std::localtime(&time);  // NOLINT(concurrency-mt-unsafe) - not called concurrently
 
-  std::ostringstream oss;
+  auto oss = std::ostringstream{};
   oss << std::put_time(&local_time, "%Y-%m-%d %H:%M:%S");
   return oss.str();
 }
@@ -88,15 +83,15 @@ std::string current_timestamp() {
 // If remove_rl_codes_only is true, then it only removes the Readline specific escape sequences '\001' and '\002'
 std::string remove_coloring(const std::string& input, bool remove_rl_codes_only = false) {
   // matches any characters that need to be escaped in RegEx except for '|'
-  std::regex special_chars{R"([-[\]{}()*+?.,\^$#\s])"};
-  std::string sequences = "\x1B[31m|\x1B[32m|\x1B[0m|\001|\002";
+  const auto special_chars = std::regex{R"([-[\]{}()*+?.,\^$#\s])"};
+  auto sequences = std::string{"\x1B[31m|\x1B[32m|\x1B[0m|\001|\002"};
   if (remove_rl_codes_only) {
     sequences = "\001|\002";
   }
-  std::string sanitized_sequences = std::regex_replace(sequences, special_chars, R"(\$&)");
+  const auto sanitized_sequences = std::regex_replace(sequences, special_chars, R"(\$&)");
 
   // Remove coloring commands and escape sequences before writing to logfile
-  std::regex expression{"(" + sanitized_sequences + ")"};
+  const auto expression = std::regex{"(" + sanitized_sequences + ")"};
   return std::regex_replace(input, expression, "");
 }
 
@@ -104,10 +99,10 @@ std::vector<std::string> tokenize(std::string input) {
   boost::algorithm::trim<std::string>(input);
 
   // Remove whitespace duplicates to not get empty tokens after boost::algorithm::split
-  auto both_are_spaces = [](char left, char right) { return (left == right) && (left == ' '); };
+  const auto both_are_spaces = [](char left, char right) { return (left == right) && (left == ' '); };
   input.erase(std::unique(input.begin(), input.end(), both_are_spaces), input.end());
 
-  std::vector<std::string> tokens;
+  auto tokens = std::vector<std::string>{};
   boost::algorithm::split(tokens, input, boost::is_space());
 
   return tokens;
@@ -129,7 +124,8 @@ Console::Console()
       _lqp_cache(std::make_shared<SQLLogicalPlanCache>()) {
   // Init readline basics, tells readline to use our custom command completion function
   rl_attempted_completion_function = &Console::_command_completion;
-  rl_completer_word_break_characters = const_cast<char*>(" \t\n\"\\'`@$><=;|&{(");  // NOLINT (legacy API)
+  // NOLINTNEXTLINE(cppcoreguidelines-pro-type-const-cast)
+  rl_completer_word_break_characters = const_cast<char*>(" \t\n\"\\'`@$><=;|&{(");
 
   // Set Hyrise caches
   Hyrise::get().default_pqp_cache = _pqp_cache;
@@ -148,8 +144,8 @@ Console::Console()
   register_command("script", std::bind(&Console::_exec_script, this, std::placeholders::_1));
   register_command("print", std::bind(&Console::_print_table, this, std::placeholders::_1));
   register_command("visualize", std::bind(&Console::_visualize, this, std::placeholders::_1));
-  register_command("txinfo", std::bind(&Console::_print_transaction_info, this, std::placeholders::_1));
-  register_command("pwd", std::bind(&Console::_print_current_working_directory, this, std::placeholders::_1));
+  register_command("txinfo", std::bind(&Console::_print_transaction_info, this));
+  register_command("pwd", std::bind(&Console::_print_current_working_directory, this));
   register_command("setting", std::bind(&Console::_change_runtime_setting, this, std::placeholders::_1));
   register_command("load_plugin", std::bind(&Console::_load_plugin, this, std::placeholders::_1));
   register_command("unload_plugin", std::bind(&Console::_unload_plugin, this, std::placeholders::_1));
@@ -168,7 +164,7 @@ Console::~Console() {
 }
 
 int Console::read() {
-  char* buffer;
+  char* buffer = nullptr;
 
   // Prompt user for input
   buffer = readline(_prompt.c_str());
@@ -176,7 +172,7 @@ int Console::read() {
     return ReturnCode::Quit;
   }
 
-  std::string input(buffer);
+  auto input = std::string{buffer};
   boost::algorithm::trim<std::string>(input);
 
   // Only save non-empty commands to history
@@ -219,7 +215,7 @@ int Console::_eval(const std::string& input) {
     }
 
     // Regard query as complete if input is valid and not already in multiline
-    hsql::SQLParserResult parse_result;
+    auto parse_result = hsql::SQLParserResult{};
     hsql::SQLParser::parse(input, &parse_result);
     if (parse_result.isValid()) {
       return _eval_sql(input);
@@ -228,7 +224,7 @@ int Console::_eval(const std::string& input) {
 
   // Regard query as complete if last character is semicolon, regardless of multiline or not
   if (input.back() == ';') {
-    int return_code = _eval_sql(_multiline_input + input);
+    const auto return_code = _eval_sql(_multiline_input + input);
     _multiline_input = "";
     return return_code;
   }
@@ -240,24 +236,24 @@ int Console::_eval(const std::string& input) {
 }
 
 int Console::_eval_command(const CommandFunction& func, const std::string& command) {
-  std::string cmd = command;
+  auto cmd = command;
   if (command.back() == ';') {
     cmd = command.substr(0, command.size() - 1);
   }
   boost::algorithm::trim<std::string>(cmd);
 
-  size_t first = cmd.find(' ');
-  size_t last = cmd.find('\n');
+  const auto first = cmd.find(' ');
+  const auto last = cmd.find('\n');
 
   // If no whitespace is found, zero arguments are provided
   if (std::string::npos == first) {
     return static_cast<int>(func(""));
   }
 
-  std::string args = cmd.substr(first + 1, last - (first + 1));
+  auto args = cmd.substr(first + 1, last - (first + 1));
 
   // Remove whitespace duplicates in args
-  auto both_are_spaces = [](char left, char right) { return (left == right) && (left == ' '); };
+  const auto both_are_spaces = [](char left, char right) { return (left == right) && (left == ' '); };
   args.erase(std::unique(args.begin(), args.end(), both_are_spaces), args.end());
 
   return static_cast<int>(func(args));
@@ -305,7 +301,7 @@ int Console::_eval_sql(const std::string& sql) {
   // Failed (i.e., conflicted) pipelines should be impossible in the single-user console
   Assert(pipeline_status == SQLPipelineStatus::Success, "Unexpected pipeline status");
 
-  auto row_count = table ? table->row_count() : 0;
+  const auto row_count = table ? table->row_count() : 0;
 
   // Print result (to Console and logfile)
   if (table) {
@@ -315,7 +311,7 @@ int Console::_eval_sql(const std::string& sql) {
   out("===\n");
   out(std::to_string(row_count) + " rows total\n");
 
-  std::ostringstream stream;
+  auto stream = std::ostringstream{};
   stream << _sql_pipeline->metrics();
 
   out(stream.str());
@@ -347,7 +343,7 @@ void Console::load_history(const std::string& history_file) {
   _history_file = history_file;
 
   // Check if history file exist, create empty history file if not
-  std::ifstream file(_history_file);
+  const auto file = std::ifstream{_history_file};
   if (!file.good()) {
     out("Creating history file: " + _history_file + "\n");
     if (write_history(_history_file.c_str()) != 0) {
@@ -371,17 +367,17 @@ void Console::out(const std::string& output, bool console_print) {
 }
 
 void Console::out(const std::shared_ptr<const Table>& table, const PrintFlags flags) {
-  int size_y;
-  int size_x;
+  auto size_y = int{0};
+  auto size_x = int{0};
   rl_get_screen_size(&size_y, &size_x);
 
-  std::stringstream stream;
+  auto stream = std::stringstream{};
   Print::print(table, flags, stream);
 
-  bool fits_on_one_page = true;
-  auto stream_backup = stream.str();
-  std::string line;
-  size_t line_count = 0;
+  auto fits_on_one_page = true;
+  const auto stream_backup = stream.str();
+  auto line = std::string{};
+  auto line_count = size_t{0};
   while (std::getline(stream, line, '\n')) {
     ++line_count;
     if (line.length() > static_cast<uint64_t>(size_x) || line_count > static_cast<uint64_t>(size_y) - 2) {
@@ -421,7 +417,7 @@ int Console::_help(const std::string& /*args*/) {
   // Split the encoding options in lines of 120 and add padding. For each input line, it takes up to 120 characters
   // and replaces the following space(s) with a new line. `(?: +|$)` is a non-capturing group that matches either
   // a non-zero number of spaces or the end of the line.
-  auto line_wrap = std::regex{"(.{1,120})(?: +|$)"};
+  const auto line_wrap = std::regex{"(.{1,120})(?: +|$)"};
   encoding_options =
       regex_replace(encoding_options, line_wrap, "$1\n                                                    ");
   // Remove the 49 spaces and the new line added at the end
@@ -433,12 +429,12 @@ int Console::_help(const std::string& /*args*/) {
   out("  generate_tpcc NUM_WAREHOUSES [CHUNK_SIZE] - Generate all TPC-C tables\n");
   out("  generate_tpch SCALE_FACTOR [CHUNK_SIZE] - Generate all TPC-H tables\n");
   out("  generate_tpcds SCALE_FACTOR [CHUNK_SIZE] - Generate all TPC-DS tables\n");
-  out("  load FILEPATH [TABLENAME [ENCODING]]    - Load table from disk specified by filepath FILEPATH, store it with name TABLENAME\n");  // NOLINT
+  out("  load FILEPATH [TABLENAME [ENCODING]]    - Load table from disk specified by filepath FILEPATH, store it with name TABLENAME\n");  // NOLINT(whitespace/line_length)
   out("                                               The import type is chosen by the type of FILEPATH.\n");
   out("                                                 Supported types: '.bin', '.csv', '.tbl'\n");
-  out("                                               If no table name is specified, the filename without extension is used\n");  // NOLINT
-  out(encoding_options + "\n");  // NOLINT
-  out("  export TABLENAME FILEPATH               - Export table named TABLENAME from storage manager to filepath FILEPATH\n");  // NOLINT
+  out("                                               If no table name is specified, the filename without extension is used\n");  // NOLINT(whitespace/line_length)
+  out(encoding_options + "\n");
+  out("  export TABLENAME FILEPATH               - Export table named TABLENAME from storage manager to filepath FILEPATH\n");  // NOLINT(whitespace/line_length)
   out("                                               The export type is chosen by the type of FILEPATH.\n");
   out("                                                 Supported types: '.bin', '.csv'\n");
   out("  script SCRIPTFILE                       - Execute script specified by SCRIPTFILE\n");
@@ -447,8 +443,8 @@ int Console::_help(const std::string& /*args*/) {
   out("                                               Options\n");
   out("                                                - {exec, noexec} Execute the query before visualization.\n");
   out("                                                                 Default: exec\n");
-  out("                                                - {lqp, unoptlqp, pqp, joins} Type of plan to visualize. unoptlqp gives the\n");  // NOLINT
-  out("                                                                       unoptimized lqp; joins visualized the join graph.\n");  // NOLINT
+  out("                                                - {lqp, unoptlqp, pqp, joins} Type of plan to visualize. unoptlqp gives the\n");  // NOLINT(whitespace/line_length)
+  out("                                                                       unoptimized lqp; joins visualized the join graph.\n");  // NOLINT(whitespace/line_length)
   out("                                                                       Default: pqp\n");
   out("                                              SQL\n");
   out("                                                - Optional, a query to visualize. If not specified, the last\n");
@@ -456,7 +452,7 @@ int Console::_help(const std::string& /*args*/) {
   out("  txinfo                                  - Print information on the current transaction\n");
   out("  pwd                                     - Print current working directory\n");
   out("  load_plugin FILE                        - Load and start plugin stored at FILE\n");
-  out("  unload_plugin NAME                      - Stop and unload the plugin libNAME.so/dylib (also clears the query cache)\n");  // NOLINT
+  out("  unload_plugin NAME                      - Stop and unload the plugin libNAME.so/dylib (also clears the query cache)\n");  // NOLINT(whitespace/line_length)
   out("  quit                                    - Exit the HYRISE Console\n");
   out("  help                                    - Show this message\n\n");
   out("  setting [property] [value]              - Change a runtime setting\n\n");
@@ -472,13 +468,13 @@ int Console::_generate_tpcc(const std::string& args) {
   if (arguments.empty() || arguments.size() > 2) {
     // clang-format off
     out("Usage: ");
-    out("  generate_tpcc NUM_WAREHOUSES [CHUNK_SIZE]   Generate TPC-C tables with the specified number of warehouses. \n");  // NOLINT
-    out("                                              Chunk size is " + std::to_string(Chunk::DEFAULT_SIZE) + " by default. \n");  // NOLINT
+    out("  generate_tpcc NUM_WAREHOUSES [CHUNK_SIZE]   Generate TPC-C tables with the specified number of warehouses. \n");  // NOLINT(whitespace/line_length)
+    out("                                              Chunk size is " + std::to_string(Chunk::DEFAULT_SIZE) + " by default. \n");  // NOLINT(whitespace/line_length)
     // clang-format on
     return ReturnCode::Error;
   }
 
-  auto num_warehouses = std::stoull(arguments.at(0));
+  const auto num_warehouses = std::stoull(arguments.at(0));
 
   auto chunk_size = Chunk::DEFAULT_SIZE;
   if (arguments.size() > 1) {
@@ -498,12 +494,12 @@ int Console::_generate_tpch(const std::string& args) {
     // clang-format off
     out("Usage: ");
     out("  generate_tpch SCALE_FACTOR [CHUNK_SIZE]   Generate TPC-H tables with the specified scale factor. \n");
-    out("                                            Chunk size is " + std::to_string(Chunk::DEFAULT_SIZE) + " by default. \n");  // NOLINT
+    out("                                            Chunk size is " + std::to_string(Chunk::DEFAULT_SIZE) + " by default. \n");  // NOLINT(whitespace/line_length)
     // clang-format on
     return ReturnCode::Error;
   }
 
-  auto scale_factor = std::stof(arguments.at(0));
+  const auto scale_factor = std::stof(arguments.at(0));
 
   auto chunk_size = Chunk::DEFAULT_SIZE;
   if (arguments.size() > 1) {
@@ -527,7 +523,7 @@ int Console::_generate_tpcds(const std::string& args) {
     return ReturnCode::Error;
   }
 
-  auto scale_factor = static_cast<uint32_t>(std::stoul(arguments.at(0)));
+  const auto scale_factor = static_cast<uint32_t>(std::stoul(arguments.at(0)));
 
   auto chunk_size = Chunk::DEFAULT_SIZE;
   if (arguments.size() > 1) {
@@ -541,7 +537,7 @@ int Console::_generate_tpcds(const std::string& args) {
 }
 
 int Console::_load_table(const std::string& args) {
-  std::vector<std::string> arguments = trim_and_split(args);
+  const auto arguments = trim_and_split(args);
 
   if (arguments.empty() || arguments.size() > 3) {
     out("Usage:\n");
@@ -559,14 +555,14 @@ int Console::_load_table(const std::string& args) {
   }
 
   try {
-    auto importer = std::make_shared<Import>(filepath, tablename, Chunk::DEFAULT_SIZE);
+    const auto importer = std::make_shared<Import>(filepath, tablename, Chunk::DEFAULT_SIZE);
     importer->execute();
   } catch (const std::exception& exception) {
     out("Error: Exception thrown while importing table:\n  " + std::string(exception.what()) + "\n");
     return ReturnCode::Error;
   }
 
-  const std::string encoding = arguments.size() == 3 ? arguments.at(2) : "Unencoded";
+  const auto encoding = arguments.size() == 3 ? arguments.at(2) : "Unencoded";
 
   const auto encoding_type = magic_enum::enum_cast<EncodingType>(encoding);
   if (!encoding_type) {
@@ -576,7 +572,7 @@ int Console::_load_table(const std::string& args) {
 
   // Check if the specified encoding can be used
   const auto& table = Hyrise::get().storage_manager.get_table(tablename);
-  bool supported = true;
+  auto supported = true;
   for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
     if (!encoding_supports_data_type(*encoding_type, table->column_data_type(column_id))) {
       out("Encoding \"" + encoding + "\" not supported for column \"" + table->column_name(column_id) +
@@ -587,7 +583,7 @@ int Console::_load_table(const std::string& args) {
 
   if (supported) {
     out("Encoding \"" + tablename + "\" using " + encoding + "\n");
-    std::vector<ChunkID> immutable_chunks;
+    auto immutable_chunks = std::vector<ChunkID>{};
     for (ChunkID chunk_id(0); chunk_id < table->chunk_count(); ++chunk_id) {
       if (!table->get_chunk(chunk_id)->is_mutable()) {
         immutable_chunks.emplace_back(chunk_id);
@@ -600,7 +596,7 @@ int Console::_load_table(const std::string& args) {
 }
 
 int Console::_export_table(const std::string& args) {
-  std::vector<std::string> arguments = trim_and_split(args);
+  const auto arguments = trim_and_split(args);
 
   if (arguments.size() != 2) {
     out("Usage:\n");
@@ -608,13 +604,13 @@ int Console::_export_table(const std::string& args) {
     return ReturnCode::Error;
   }
 
-  const std::string& tablename = arguments.at(0);
-  const std::string& filepath = arguments.at(1);
+  const auto& tablename = arguments.at(0);
+  const auto& filepath = arguments.at(1);
 
   const auto& storage_manager = Hyrise::get().storage_manager;
   const auto& meta_table_manager = Hyrise::get().meta_table_manager;
 
-  std::shared_ptr<AbstractOperator> table_operator = nullptr;
+  auto table_operator = std::shared_ptr<AbstractOperator>{};
   if (MetaTableManager::is_meta_table_name(tablename)) {
     if (!meta_table_manager.has_table(tablename)) {
       out("Error: MetaTable does not exist in MetaTableManager\n");
@@ -644,7 +640,7 @@ int Console::_export_table(const std::string& args) {
 }
 
 int Console::_print_table(const std::string& args) {
-  std::vector<std::string> arguments = trim_and_split(args);
+  const auto arguments = trim_and_split(args);
 
   if (arguments.size() != 1) {
     out("Usage:\n");
@@ -652,7 +648,7 @@ int Console::_print_table(const std::string& args) {
     return ReturnCode::Error;
   }
 
-  const std::string& tablename = arguments.at(0);
+  const auto& tablename = arguments.at(0);
 
   const auto& storage_manager = Hyrise::get().storage_manager;
   if (!storage_manager.has_table(tablename)) {
@@ -660,7 +656,7 @@ int Console::_print_table(const std::string& args) {
     return ReturnCode::Error;
   }
 
-  auto get_table = std::make_shared<GetTable>(tablename);
+  const auto get_table = std::make_shared<GetTable>(tablename);
   get_table->execute();
 
   out(get_table->get_output(), PrintFlags::Mvcc);
@@ -676,7 +672,7 @@ int Console::_visualize(const std::string& input) {
    *    - a sql query can either be specified or not. If it isn't, the last previously executed query is visualized
    */
 
-  std::vector<std::string> input_words;
+  auto input_words = std::vector<std::string>{};
   boost::algorithm::split(input_words, input, boost::is_any_of(" \n"));
 
   constexpr auto EXEC = "exec";
@@ -736,7 +732,7 @@ int Console::_visualize(const std::string& input) {
   switch (plan_type) {
     case PlanType::LQP:
     case PlanType::UnoptLQP: {
-      std::vector<std::shared_ptr<AbstractLQPNode>> lqp_roots;
+      auto lqp_roots = std::vector<std::shared_ptr<AbstractLQPNode>>{};
 
       const auto& lqps = (plan_type == PlanType::LQP) ? _sql_pipeline->get_optimized_logical_plans()
                                                       : _sql_pipeline->get_unoptimized_logical_plans();
@@ -747,7 +743,7 @@ int Console::_visualize(const std::string& input) {
         lqp_roots.emplace_back(lqp);
       }
 
-      LQPVisualizer visualizer;
+      auto visualizer = LQPVisualizer{};
       visualizer.visualize(lqp_roots, img_filename);
     } break;
 
@@ -760,7 +756,7 @@ int Console::_visualize(const std::string& input) {
         _explicitly_created_transaction_context = _sql_pipeline->transaction_context();
       }
 
-      PQPVisualizer visualizer;
+      auto visualizer = PQPVisualizer{};
       visualizer.visualize(_sql_pipeline->get_physical_plans(), img_filename);
     } break;
 
@@ -782,7 +778,7 @@ int Console::_visualize(const std::string& input) {
         }
       }
 
-      JoinGraphVisualizer visualizer;
+      auto visualizer = JoinGraphVisualizer{};
       visualizer.visualize(join_graphs, img_filename);
     } break;
   }
@@ -803,7 +799,7 @@ int Console::_visualize(const std::string& input) {
     return ReturnCode::Ok;
   }
 
-  auto cmd = scripts_dir + "/planviz/imgcat.sh " + img_filename;
+  const auto cmd = scripts_dir + "/planviz/imgcat.sh " + img_filename;
   ret = system(cmd.c_str());
   Assert(ret == 0, "Printing the image using ./scripts/imgcat.sh failed.");
   // NOLINTEND(concurrency-mt-unsafe)
@@ -812,8 +808,8 @@ int Console::_visualize(const std::string& input) {
 }
 
 int Console::_change_runtime_setting(const std::string& input) {
-  auto property = input.substr(0, input.find_first_of(" \n"));
-  auto value = input.substr(input.find_first_of(" \n") + 1, input.size());
+  const auto property = input.substr(0, input.find_first_of(" \n"));
+  const auto value = input.substr(input.find_first_of(" \n") + 1, input.size());
 
   if (property == "scheduler") {
     if (value == "on") {
@@ -836,28 +832,23 @@ int Console::_change_runtime_setting(const std::string& input) {
 int Console::_exec_script(const std::string& script_file) {
   auto filepath = script_file;
   boost::algorithm::trim(filepath);
-  std::ifstream script(filepath);
-
-  const auto is_regular_file = [](const std::string& path) {
-    struct stat path_stat {};
-    stat(path.c_str(), &path_stat);
-    return S_ISREG(path_stat.st_mode);  // NOLINT
-  };
+  auto script = std::ifstream{filepath};
 
   if (!script.good()) {
     out("Error: Script file '" + filepath + "' does not exist.\n");
     return ReturnCode::Error;
   }
 
-  if (!is_regular_file(filepath)) {
+  if (!std::filesystem::is_regular_file(filepath)) {
     out("Error: '" + filepath + "' is not a regular file.\n");
     return ReturnCode::Error;
   }
 
   out("Executing script file: " + filepath + "\n");
   _verbose = true;
-  std::string command;
-  int return_code = ReturnCode::Ok;
+  auto command = std::string{};
+  // TODO(anyone): Use std::to_underlying(ReturnCode::Ok) once we use C++23.
+  auto return_code = magic_enum::enum_underlying(ReturnCode::Ok);
   while (std::getline(script, command)) {
     return_code = _eval(command);
     if (return_code == ReturnCode::Error || return_code == ReturnCode::Quit) {
@@ -888,7 +879,7 @@ void Console::handle_signal(int sig) {
   }
 }
 
-int Console::_print_transaction_info(const std::string& input) {
+int Console::_print_transaction_info() {
   if (!_explicitly_created_transaction_context) {
     out("Console is in auto-commit mode. Type `begin` to start a manual transaction.\n");
     return ReturnCode::Error;
@@ -901,13 +892,13 @@ int Console::_print_transaction_info(const std::string& input) {
   return ReturnCode::Ok;
 }
 
-int Console::_print_current_working_directory(const std::string& /*args*/) {
+int Console::_print_current_working_directory() {
   out(std::filesystem::current_path().string() + "\n");
   return ReturnCode::Ok;
 }
 
 int Console::_load_plugin(const std::string& args) {
-  auto arguments = trim_and_split(args);
+  const auto arguments = trim_and_split(args);
 
   if (arguments.size() != 1) {
     out("Usage:\n");
@@ -915,9 +906,9 @@ int Console::_load_plugin(const std::string& args) {
     return ReturnCode::Error;
   }
 
-  const std::string& plugin_path_str = arguments.at(0);
+  const auto& plugin_path_str = arguments.at(0);
 
-  const std::filesystem::path plugin_path(plugin_path_str);
+  const auto plugin_path = std::filesystem::path{plugin_path_str};
   const auto plugin_name = plugin_name_from_path(plugin_path);
 
   Hyrise::get().plugin_manager.load_plugin(plugin_path);
@@ -928,7 +919,7 @@ int Console::_load_plugin(const std::string& args) {
 }
 
 int Console::_unload_plugin(const std::string& input) {
-  auto arguments = trim_and_split(input);
+  const auto arguments = trim_and_split(input);
 
   if (arguments.size() != 1) {
     out("Usage:\n");
@@ -936,7 +927,7 @@ int Console::_unload_plugin(const std::string& input) {
     return ReturnCode::Error;
   }
 
-  const std::string& plugin_name = arguments.at(0);
+  const auto& plugin_name = arguments.at(0);
 
   Hyrise::get().plugin_manager.unload_plugin(plugin_name);
 
@@ -952,15 +943,15 @@ int Console::_unload_plugin(const std::string& input) {
 
 // GNU readline interface to our commands
 
-char** Console::_command_completion(const char* text, int start, int end) {
+char** Console::_command_completion(const char* text, const int start, const int /*end*/) {
   char** completion_matches = nullptr;
 
-  std::string input(rl_line_buffer);
+  const auto input = std::string{rl_line_buffer};
 
   const auto tokens = tokenize(input);
 
   // Choose completion function depending on the input.
-  const std::string& first_word = tokens[0];
+  const auto& first_word = tokens[0];
   if (first_word == "visualize") {
     // Completion only for three words, "visualize", and at most two options
     if (tokens.size() <= 3) {
@@ -1001,6 +992,7 @@ char* Console::_command_generator(const char* text, int state, const std::vector
     const auto& command = *it;
     if (command.find(text) != std::string::npos) {
       auto completion = new char[command.size()];  // NOLINT (legacy API)
+      // NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg,hicpp-vararg)
       static_cast<void>(snprintf(completion, command.size() + 1, "%s", command.c_str()));
       return completion;
     }
@@ -1050,7 +1042,8 @@ int main(int argc, char** argv) {
   // Timestamp dump only to logfile
   console.out("--- Session start --- " + current_timestamp() + "\n", false);
 
-  int return_code = Return::Ok;
+  // TODO(anyone): Use std::to_underlying(ReturnCode::Ok) once we use C++23.
+  auto return_code = magic_enum::enum_underlying(Return::Ok);
 
   // Display Usage if too many arguments are provided
   if (argc > 2) {

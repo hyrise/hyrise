@@ -14,8 +14,8 @@ class IntervalExpression : public AbstractExpression {
   IntervalExpression(const int64_t init_duration, const DatetimeComponent init_unit);
 
   std::shared_ptr<AbstractExpression> _on_deep_copy(
-      std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const override;
-  std::string description(const DescriptionMode mode) const override;
+      std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& /*copied_ops*/) const override;
+  std::string description(const DescriptionMode /*mode*/) const override;
 
   DataType data_type() const override;
 

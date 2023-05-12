@@ -16,10 +16,9 @@ namespace {
 
 using namespace hyrise;  // NOLINT(build/namespaces)
 
-bool contains_any_column_id(const std::vector<ColumnID>& search_columns, const std::vector<ColumnID>& columns) {
-  return std::any_of(search_columns.cbegin(), search_columns.cend(), [&](const auto& search_column_id) {
-    return std::find(columns.cbegin(), columns.cend(), search_column_id) != columns.cend();
-  });
+bool contains_any_column_id(const std::set<ColumnID>& search_columns, const std::vector<ColumnID>& columns) {
+  return std::any_of(columns.cbegin(), columns.cend(),
+                     [&](const auto& column_id) { return search_columns.contains(column_id); });
 }
 
 }  // namespace
@@ -70,7 +69,7 @@ const std::vector<ColumnID>& StoredTableNode::pruned_column_ids() const {
   return _pruned_column_ids;
 }
 
-std::string StoredTableNode::description(const DescriptionMode mode) const {
+std::string StoredTableNode::description(const DescriptionMode /*mode*/) const {
   const auto stored_table = Hyrise::get().storage_manager.get_table(table_name);
 
   std::ostringstream stream;
@@ -187,14 +186,14 @@ size_t StoredTableNode::_on_shallow_hash() const {
   return hash;
 }
 
-std::shared_ptr<AbstractLQPNode> StoredTableNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
+std::shared_ptr<AbstractLQPNode> StoredTableNode::_on_shallow_copy(LQPNodeMapping& /*node_mapping*/) const {
   const auto copy = make(table_name);
   copy->set_pruned_chunk_ids(_pruned_chunk_ids);
   copy->set_pruned_column_ids(_pruned_column_ids);
   return copy;
 }
 
-bool StoredTableNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
+bool StoredTableNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& /*node_mapping*/) const {
   const auto& stored_table_node = static_cast<const StoredTableNode&>(rhs);
   return table_name == stored_table_node.table_name && _pruned_chunk_ids == stored_table_node._pruned_chunk_ids &&
          _pruned_column_ids == stored_table_node._pruned_column_ids;

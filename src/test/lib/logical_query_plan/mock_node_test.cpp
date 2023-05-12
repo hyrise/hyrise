@@ -22,8 +22,7 @@ class MockNodeTest : public BaseTest {
         MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Float, "b"}}, "mock_name");
   }
 
-  std::shared_ptr<MockNode> _mock_node_a;
-  std::shared_ptr<MockNode> _mock_node_b;
+  std::shared_ptr<MockNode> _mock_node_a, _mock_node_b;
 };
 
 TEST_F(MockNodeTest, Description) {

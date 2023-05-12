@@ -10,15 +10,15 @@
 #include <utility>
 #include <vector>
 
-#include <tsl/robin_map.h>  // NOLINT
-#include <tsl/robin_set.h>  // NOLINT
 #include <boost/container/pmr/monotonic_buffer_resource.hpp>
 #include <boost/container/pmr/polymorphic_allocator.hpp>
 #include <boost/container/scoped_allocator.hpp>
 #include <boost/container/small_vector.hpp>
 #include <boost/container_hash/hash.hpp>
-#include <bytell_hash_map.hpp>
-#include <uninitialized_vector.hpp>
+
+#include "bytell_hash_map.hpp"
+#include "tsl/robin_set.h"
+#include "uninitialized_vector.hpp"
 
 #include "abstract_aggregate_operator.hpp"
 #include "abstract_read_only_operator.hpp"
@@ -144,10 +144,6 @@ class AggregateHash : public AbstractAggregateOperator {
 
   const std::string& name() const override;
 
-  // write the aggregated output for a given aggregate column
-  template <typename ColumnDataType, AggregateFunction aggregate_function>
-  void write_aggregate_output(ColumnID aggregate_index);
-
   enum class OperatorSteps : uint8_t {
     GroupByKeyPartitioning,
     Aggregating,
@@ -174,11 +170,10 @@ class AggregateHash : public AbstractAggregateOperator {
 
   void _on_cleanup() override;
 
-  template <typename ColumnDataType>
-  void _write_aggregate_output(boost::hana::basic_type<ColumnDataType> type, ColumnID column_index,
-                               AggregateFunction aggregate_function);
-
   void _write_groupby_output(RowIDPosList& pos_list);
+
+  template <typename ColumnDataType, AggregateFunction aggregate_function>
+  void _write_aggregate_output(ColumnID aggregate_index);
 
   template <typename ColumnDataType, AggregateFunction aggregate_function, typename AggregateKey>
   void _aggregate_segment(ChunkID chunk_id, ColumnID column_index, const AbstractSegment& abstract_segment,

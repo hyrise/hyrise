@@ -59,8 +59,7 @@ std::vector<std::shared_ptr<AbstractExpression>> JoinNode::output_expressions() 
    */
 
   const auto& left_expressions = left_input()->output_expressions();
-  const auto output_both_inputs =
-      join_mode != JoinMode::Semi && join_mode != JoinMode::AntiNullAsTrue && join_mode != JoinMode::AntiNullAsFalse;
+  const auto output_both_inputs = !is_semi_or_anti_join(join_mode);
   if (!output_both_inputs) {
     return left_expressions;
   }
@@ -112,15 +111,15 @@ UniqueColumnCombinations JoinNode::_output_unique_column_combinations(
 
   const auto join_predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(join_predicates().front());
   if (!join_predicate || join_predicate->predicate_condition != PredicateCondition::Equals) {
-    // Also, no guarantees implemented yet for other join predicates than _equals() (Equi Join).
+    // Also, no guarantees implemented yet for other join predicates than equals_() (Equi Join).
     return UniqueColumnCombinations{};
   }
 
   // Check uniqueness of join columns.
-  bool left_operand_is_unique =
+  const auto left_operand_is_unique =
       !left_unique_column_combinations.empty() &&
       contains_matching_unique_column_combination(left_unique_column_combinations, {join_predicate->left_operand()});
-  bool right_operand_is_unique =
+  const auto right_operand_is_unique =
       !right_unique_column_combinations.empty() &&
       contains_matching_unique_column_combination(right_unique_column_combinations, {join_predicate->right_operand()});
 
@@ -234,7 +233,7 @@ bool JoinNode::is_column_nullable(const ColumnID column_id) const {
     return left_input()->is_column_nullable(column_id);
   }
 
-  ColumnID right_column_id =
+  const auto right_column_id =
       static_cast<ColumnID>(column_id - static_cast<ColumnID::base_type>(left_input_column_count));
   return right_input()->is_column_nullable(right_column_id);
 }

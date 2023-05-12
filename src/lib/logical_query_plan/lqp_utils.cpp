@@ -428,8 +428,8 @@ std::vector<std::shared_ptr<AbstractLQPNode>> lqp_find_leaves(const std::shared_
   return nodes;
 }
 
-ExpressionUnorderedSet find_column_expressions(const AbstractLQPNode& lqp_node,
-                                               const std::vector<ColumnID>& column_ids) {
+template <typename ColumnIDs>
+ExpressionUnorderedSet find_column_expressions(const AbstractLQPNode& lqp_node, const ColumnIDs& column_ids) {
   DebugAssert(lqp_node.type == LQPNodeType::StoredTable || lqp_node.type == LQPNodeType::StaticTable ||
                   lqp_node.type == LQPNodeType::Mock,
               "Did not expect other node types than StoredTableNode, StaticTableNode and MockNode.");
@@ -456,6 +456,11 @@ ExpressionUnorderedSet find_column_expressions(const AbstractLQPNode& lqp_node,
   return column_expressions;
 }
 
+template ExpressionUnorderedSet find_column_expressions(const AbstractLQPNode& lqp_node,
+                                                        const std::set<ColumnID>& column_ids);
+template ExpressionUnorderedSet find_column_expressions(const AbstractLQPNode& lqp_node,
+                                                        const std::vector<ColumnID>& column_ids);
+
 bool contains_matching_unique_column_combination(const UniqueColumnCombinations& unique_column_combinations,
                                                  const ExpressionUnorderedSet& expressions) {
   DebugAssert(!unique_column_combinations.empty(), "Invalid input: Set of UCCs should not be empty.");
@@ -476,7 +481,7 @@ bool contains_matching_unique_column_combination(const UniqueColumnCombinations&
 
 FunctionalDependencies fds_from_unique_column_combinations(const std::shared_ptr<const AbstractLQPNode>& lqp,
                                                            const UniqueColumnCombinations& unique_column_combinations) {
-  Assert(!unique_column_combinations.empty(), "Did not expect empty vector of UCCs.");
+  Assert(!unique_column_combinations.empty(), "Did not expect empty set of UCCs.");
 
   auto fds = FunctionalDependencies{};
 
@@ -542,10 +547,10 @@ void remove_invalid_fds(const std::shared_ptr<const AbstractLQPNode>& lqp, Funct
     }
 
     /**
-    * Remove FDs with determinant expressions that are
-    *  a) not part of the node's output expressions
-    *  b) nullable
-    */
+     * Remove FDs with determinant expressions that are
+     *  a) not part of the node's output expressions
+     *  b) nullable
+     */
     for (const auto& fd_determinant_expression : fd.determinants) {
       if (!output_expressions_set.contains(fd_determinant_expression)) {
         return true;

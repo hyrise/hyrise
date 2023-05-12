@@ -56,7 +56,7 @@ class Projection : public AbstractReadOnlyOperator {
 
   std::shared_ptr<AbstractOperator> _on_deep_copy(
       const std::shared_ptr<AbstractOperator>& copied_left_input,
-      const std::shared_ptr<AbstractOperator>& copied_right_input,
+      const std::shared_ptr<AbstractOperator>& /*copied_right_input*/,
       std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const override;
 
   ExpressionUnorderedSet _determine_forwarded_columns(const TableType table_type) const;

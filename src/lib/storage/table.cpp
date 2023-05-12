@@ -22,6 +22,33 @@
 #include "utils/assert.hpp"
 #include "value_segment.hpp"
 
+namespace {
+
+using namespace hyrise;  // NOLINT(build/namespaces)
+
+// Checks if the two vectors have common elements, e.g., lhs = [0, 2] and rhs = [2, 1, 3]. We expect very short
+// vectors, so we use a simple but quadratic solution. For larger vectors, we could create sets and check set
+// containment.
+bool columns_intersect(const std::vector<ColumnID>& lhs, const std::vector<ColumnID>& rhs) {
+  for (const auto column_id : lhs) {
+    if (std::find(rhs.cbegin(), rhs.cend(), column_id) != rhs.cend()) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool columns_intersect(const std::set<ColumnID>& lhs, const std::set<ColumnID>& rhs) {
+  for (const auto column_id : lhs) {
+    if (rhs.contains(column_id)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+}  // namespace
+
 namespace hyrise {
 
 std::shared_ptr<Table> Table::create_dummy_table(const TableColumnDefinitions& column_definitions) {
@@ -51,6 +78,7 @@ Table::Table(const TableColumnDefinitions& column_definitions, const TableType t
 
   if constexpr (HYRISE_DEBUG) {
     const auto chunk_count = _chunks.size();
+    const auto num_columns = column_count();
     for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
       const auto chunk = get_chunk(chunk_id);
       if (!chunk) {
@@ -60,9 +88,9 @@ Table::Table(const TableColumnDefinitions& column_definitions, const TableType t
       Assert(chunk->size() > 0 || (type == TableType::Data && chunk_id == chunk_count - 1 && chunk->is_mutable()),
              "Empty chunk other than mutable chunk at the end was found");
       Assert(chunk->has_mvcc_data() == (_use_mvcc == UseMvcc::Yes), "Supply MvccData for Chunks iff Table uses MVCC");
-      Assert(chunk->column_count() == column_count(), "Invalid Chunk column count");
+      Assert(chunk->column_count() == num_columns, "Invalid Chunk column count");
 
-      for (auto column_id = ColumnID{0}; column_id < column_count(); ++column_id) {
+      for (auto column_id = ColumnID{0}; column_id < num_columns; ++column_id) {
         Assert(chunk->get_segment(column_id)->data_type() == column_data_type(column_id), "Invalid Segment DataType");
       }
     }
@@ -91,7 +119,7 @@ const std::string& Table::column_name(const ColumnID column_id) const {
 }
 
 std::vector<std::string> Table::column_names() const {
-  std::vector<std::string> names;
+  auto names = std::vector<std::string>{};
   names.reserve(_column_definitions.size());
   for (const auto& column_definition : _column_definitions) {
     names.emplace_back(column_definition.name);
@@ -105,7 +133,7 @@ DataType Table::column_data_type(const ColumnID column_id) const {
 }
 
 std::vector<DataType> Table::column_data_types() const {
-  std::vector<DataType> types;
+  auto types = std::vector<DataType>{};
   types.reserve(_column_definitions.size());
   for (const auto& column_definition : _column_definitions) {
     types.emplace_back(column_definition.data_type);
@@ -119,7 +147,7 @@ bool Table::column_is_nullable(const ColumnID column_id) const {
 }
 
 std::vector<bool> Table::columns_are_nullable() const {
-  std::vector<bool> nullable(column_count());
+  auto nullable = std::vector<bool>(column_count());
   for (auto column_id = ColumnID{0}; column_id < column_count(); ++column_id) {
     nullable[column_id] = _column_definitions[column_id].nullable;
   }
@@ -149,7 +177,7 @@ void Table::append(const std::vector<AllTypeVariant>& values) {
 }
 
 void Table::append_mutable_chunk() {
-  Segments segments;
+  auto segments = Segments{};
   for (const auto& column_definition : _column_definitions) {
     resolve_data_type(column_definition.data_type, [&](auto type) {
       using ColumnDataType = typename decltype(type)::type;
@@ -158,7 +186,7 @@ void Table::append_mutable_chunk() {
     });
   }
 
-  std::shared_ptr<MvccData> mvcc_data;
+  auto mvcc_data = std::shared_ptr<MvccData>{};
   if (_use_mvcc == UseMvcc::Yes) {
     mvcc_data = std::make_shared<MvccData>(_target_chunk_size, MvccData::MAX_COMMIT_ID);
   }
@@ -171,7 +199,7 @@ uint64_t Table::row_count() const {
     return *_cached_row_count;
   }
 
-  uint64_t row_count = 0;
+  auto row_count = uint64_t{0};
   const auto chunk_count = _chunks.size();
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk = get_chunk(chunk_id);
@@ -193,7 +221,7 @@ uint64_t Table::row_count() const {
 }
 
 bool Table::empty() const {
-  return row_count() == 0u;
+  return row_count() == 0;
 }
 
 ChunkID Table::chunk_count() const {
@@ -284,6 +312,7 @@ void Table::append_chunk(const Segments& segments, std::shared_ptr<MvccData> mvc
 std::vector<AllTypeVariant> Table::get_row(size_t row_idx) const {
   PerformanceWarning("get_row() used");
   const auto chunk_count = _chunks.size();
+  const auto num_columns = column_count();
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk = get_chunk(chunk_id);
     if (!chunk) {
@@ -291,9 +320,9 @@ std::vector<AllTypeVariant> Table::get_row(size_t row_idx) const {
     }
 
     if (row_idx < chunk->size()) {
-      auto row = std::vector<AllTypeVariant>(column_count());
+      auto row = std::vector<AllTypeVariant>(num_columns);
 
-      for (auto column_id = ColumnID{0}; column_id < column_count(); ++column_id) {
+      for (auto column_id = ColumnID{0}; column_id < num_columns; ++column_id) {
         row[column_id] = chunk->get_segment(column_id)->operator[](static_cast<ChunkOffset>(row_idx));
       }
 
@@ -369,43 +398,117 @@ void Table::create_chunk_index(const std::vector<ColumnID>& column_ids, const st
     Assert(!chunk->is_mutable(), "Cannot index mutable chunk.");
     chunk->create_index<Index>(column_ids);
   }
-  ChunkIndexStatistics indexes_statistics = {column_ids, name, chunk_index_type};
-  _chunk_indexes_statistics.emplace_back(indexes_statistics);
+  _chunk_indexes_statistics.emplace_back(ChunkIndexStatistics{column_ids, name, chunk_index_type});
+}
+
+void Table::add_soft_key_constraint(const TableKeyConstraint& table_key_constraint) {
+  Assert(_type == TableType::Data, "TableKeyConstraints are not tracked for reference tables across the PQP.");
+
+  // Check validity of specified columns.
+  const auto column_count = this->column_count();
+  for (const auto& column_id : table_key_constraint.columns()) {
+    Assert(column_id < column_count, "ColumnID out of range.");
+
+    // PRIMARY KEY requires non-nullable columns.
+    if (table_key_constraint.key_type() == KeyConstraintType::PRIMARY_KEY) {
+      Assert(!column_is_nullable(column_id), "Column must be non-nullable to comply with PRIMARY KEY.");
+    }
+  }
+
+  const auto append_lock = acquire_append_mutex();
+
+  for (const auto& existing_constraint : _table_key_constraints) {
+    // Ensure that no other PRIMARY KEY is defined.
+    Assert(existing_constraint.key_type() == KeyConstraintType::UNIQUE ||
+               table_key_constraint.key_type() == KeyConstraintType::UNIQUE,
+           "Another primary TableKeyConstraint exists for this table.");
+
+    // Ensure there is only one key constraint per column(s). Theoretically, there could be two unique constraints
+    // {a, b} and {b, c}, but for now we prohibit these cases.
+    Assert(!columns_intersect(existing_constraint.columns(), table_key_constraint.columns()),
+           "Another TableKeyConstraint for the same column(s) has already been defined.");
+  }
+
+  _table_key_constraints.insert(table_key_constraint);
 }
 
 const TableKeyConstraints& Table::soft_key_constraints() const {
   return _table_key_constraints;
 }
 
-void Table::add_soft_key_constraint(const TableKeyConstraint& table_key_constraint) {
-  Assert(_type == TableType::Data, "Key constraints are not tracked for reference tables across the PQP.");
+void Table::add_soft_foreign_key_constraint(const ForeignKeyConstraint& foreign_key_constraint) {
+  Assert(_type == TableType::Data, "ForeignKeyConstraints are not tracked for reference tables across the PQP.");
 
-  // Check validity of specified columns
-  for (const auto& column_id : table_key_constraint.columns()) {
-    Assert(column_id < column_count(), "ColumnID out of range");
+  Assert(&*foreign_key_constraint.foreign_key_table() == this, "ForeignKeyConstraint is added to the wrong table.");
 
-    // PRIMARY KEY requires non-nullable columns
-    if (table_key_constraint.key_type() == KeyConstraintType::PRIMARY_KEY) {
-      Assert(!column_is_nullable(column_id), "Column must be non-nullable to comply with PRIMARY KEY.");
-    }
+  // Check validity of specified columns.
+  const auto column_count = this->column_count();
+  for (const auto& column_id : foreign_key_constraint.foreign_key_columns()) {
+    Assert(column_id < column_count, "ColumnID out of range.");
   }
 
-  {
-    auto scoped_lock = acquire_append_mutex();
+  const auto referenced_table = foreign_key_constraint.primary_key_table();
+  Assert(referenced_table && &*referenced_table != this, "ForeignKeyConstraint must reference another existing table.");
 
-    for (const auto& existing_constraint : _table_key_constraints) {
-      // Ensure that no other PRIMARY KEY is defined
-      Assert(existing_constraint.key_type() == KeyConstraintType::UNIQUE ||
-                 table_key_constraint.key_type() == KeyConstraintType::UNIQUE,
-             "Another primary key already exists for this table.");
-
-      // Ensure there is only one key constraint per column set.
-      Assert(table_key_constraint.columns() != existing_constraint.columns(),
-             "Another key constraint for the same column set has already been defined.");
-    }
-
-    _table_key_constraints.insert(table_key_constraint);
+  // Check validity of key columns from other table.
+  const auto referenced_table_column_count = referenced_table->column_count();
+  for (const auto& column_id : foreign_key_constraint.primary_key_columns()) {
+    Assert(column_id < referenced_table_column_count, "ColumnID out of range.");
   }
+
+  const auto append_lock = acquire_append_mutex();
+  for (const auto& existing_constraint : _foreign_key_constraints) {
+    // Do not allow intersecting foreign key constraints. Though a table may have unlimited inclusion dependencies for
+    // the same columns (and especially the existence of [a] in [x] and [b] in [y] does not mean [a, b] in [x, y]
+    // holds), it is reasonable to assume disjoint (soft) foreign keys for now.
+    Assert(!columns_intersect(existing_constraint.foreign_key_columns(), foreign_key_constraint.foreign_key_columns()),
+           "ForeignKeyConstraint for required columns has already been set.");
+  }
+  _foreign_key_constraints.insert(foreign_key_constraint);
+  const auto referenced_table_append_lock = referenced_table->acquire_append_mutex();
+  referenced_table->_referenced_foreign_key_constraints.insert(foreign_key_constraint);
+}
+
+const ForeignKeyConstraints& Table::soft_foreign_key_constraints() const {
+  return _foreign_key_constraints;
+}
+
+const ForeignKeyConstraints& Table::referenced_foreign_key_constraints() const {
+  return _referenced_foreign_key_constraints;
+}
+
+void Table::add_soft_order_constraint(const TableOrderConstraint& table_order_constraint) {
+  Assert(_type == TableType::Data, "TableOrderConstraints are not tracked for reference tables across the PQP.");
+
+  // Check validity of columns.
+  const auto column_count = this->column_count();
+  for (const auto& column_id : table_order_constraint.ordering_columns()) {
+    Assert(column_id < column_count, "ColumnID out of range.");
+  }
+
+  // Check validity of ordered columns.
+  for (const auto& column_id : table_order_constraint.ordered_columns()) {
+    Assert(column_id < column_count, "ColumnID out of range.");
+  }
+
+  const auto append_lock = acquire_append_mutex();
+  for (const auto& existing_constraint : _table_order_constraints) {
+    // Do not allow intersecting key constraints. Though they can be valid, we are pessimistic for now and notice if we
+    // run into intricate cases.
+    const auto ordering_columns_invalid =
+        columns_intersect(existing_constraint.ordering_columns(), table_order_constraint.ordering_columns()) &&
+        existing_constraint.ordered_columns() == table_order_constraint.ordered_columns();
+    const auto ordered_columns_invalid =
+        columns_intersect(existing_constraint.ordered_columns(), table_order_constraint.ordered_columns()) &&
+        existing_constraint.ordering_columns() == table_order_constraint.ordering_columns();
+    Assert(!ordering_columns_invalid && !ordered_columns_invalid,
+           "TableOrderConstraint for required columns has already been set.");
+  }
+  _table_order_constraints.insert(table_order_constraint);
+}
+
+const TableOrderConstraints& Table::soft_order_constraints() const {
+  return _table_order_constraints;
 }
 
 const std::vector<ColumnID>& Table::value_clustered_by() const {
@@ -488,15 +591,15 @@ size_t Table::memory_usage(const MemoryUsageCalculationMode mode) const {
 }
 
 void Table::create_partial_hash_index(const ColumnID column_id, const std::vector<ChunkID>& chunk_ids) {
-  std::shared_ptr<PartialHashIndex> table_index = nullptr;
-  std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>> chunks_to_index;
-
   if (chunk_ids.empty()) {
     Fail("Creating a partial hash index with no chunks being indexed is not supported.");
   }
 
+  auto table_index = std::shared_ptr<PartialHashIndex>{};
+  auto chunks_to_index = std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>{};
+
   chunks_to_index.reserve(chunk_ids.size());
-  for (const auto& chunk_id : chunk_ids) {
+  for (const auto chunk_id : chunk_ids) {
     const auto& chunk = get_chunk(chunk_id);
     Assert(chunk, "Requested index on deleted chunk.");
     Assert(!chunk->is_mutable(), "Cannot index mutable chunk.");
@@ -507,8 +610,7 @@ void Table::create_partial_hash_index(const ColumnID column_id, const std::vecto
 
   _table_indexes.emplace_back(table_index);
 
-  auto table_indexes_statistics = TableIndexStatistics{{column_id}, chunks_to_index};
-  _table_indexes_statistics.emplace_back(table_indexes_statistics);
+  _table_indexes_statistics.emplace_back(TableIndexStatistics{{column_id}, chunks_to_index});
 }
 
 template void Table::create_chunk_index<GroupKeyIndex>(const std::vector<ColumnID>& column_ids,

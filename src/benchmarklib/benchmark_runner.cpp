@@ -194,8 +194,9 @@ void BenchmarkRunner::run() {
       if (result.successful_runs.empty()) {
         continue;
       }
-      Assert(result.verification_passed.load(), "Verification result should have been set");
-      any_verification_failed |= !(*result.verification_passed.load());
+      const auto verification_status = result.verification_passed.load();
+      Assert(verification_status, "Verification result should have been set");
+      any_verification_failed |= !(*verification_status);
     }
 
     Assert(!any_verification_failed, "Verification failed");
