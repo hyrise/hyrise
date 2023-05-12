@@ -7,8 +7,7 @@
 namespace hyrise {
 
 struct OptimizerRuleMetrics {
-  explicit constexpr OptimizerRuleMetrics(const std::string& init_rule_name,
-                                          const std::chrono::nanoseconds init_duration);
+  explicit OptimizerRuleMetrics(const std::string& init_rule_name, const std::chrono::nanoseconds init_duration);
   std::string rule_name;
   std::chrono::nanoseconds duration;
 };

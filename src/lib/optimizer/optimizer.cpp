@@ -164,8 +164,8 @@ void validate_lqp_with_uncorrelated_subqueries(const std::shared_ptr<const Abstr
 
 namespace hyrise {
 
-constexpr OptimizerRuleMetrics::OptimizerRuleMetrics(const std::string& init_rule_name,
-                                                     const std::chrono::nanoseconds init_duration)
+OptimizerRuleMetrics::OptimizerRuleMetrics(const std::string& init_rule_name,
+                                           const std::chrono::nanoseconds init_duration)
     : rule_name{init_rule_name}, duration{init_duration} {}
 
 /**
