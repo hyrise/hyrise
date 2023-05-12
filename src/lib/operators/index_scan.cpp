@@ -101,26 +101,39 @@ std::shared_ptr<const Table> IndexScan::_on_execute() {
     return _out_table;
   }
 
-  const auto first_chunk_id = (*matches_out)[0].chunk_id;
-  auto single_chunk_guaranteed = true;
+  // Split the output RowIDPosList per Chunk.
+
+  auto matches_out_per_chunk = std::vector<std::shared_ptr<RowIDPosList>>{};
+  auto first_pos_list = std::make_shared<RowIDPosList>();
+  first_pos_list->guarantee_single_chunk();
+  matches_out_per_chunk.emplace_back(first_pos_list);
+
+  auto current_chunk_id = (*matches_out)[0].chunk_id;
   for (const auto match : *matches_out) {
-    if (match.chunk_id != first_chunk_id) {
-      single_chunk_guaranteed = false;
+    if (match.chunk_id == current_chunk_id) {
+      matches_out_per_chunk.back()->emplace_back(match);
+    } else {
+      auto new_chunk_matches_out = std::make_shared<RowIDPosList>();
+
+      new_chunk_matches_out->guarantee_single_chunk();
+      new_chunk_matches_out->emplace_back(match);
+
+      matches_out_per_chunk.emplace_back(new_chunk_matches_out);
+      current_chunk_id = match.chunk_id;
     }
   }
 
-  if (single_chunk_guaranteed) {
-    matches_out->guarantee_single_chunk();
-  }
-
   const auto in_table_column_count = _in_table->column_count();
-  auto segments = Segments{};
-  segments.reserve(in_table_column_count);
-  for (auto column_id = ColumnID{0}; column_id < in_table_column_count; ++column_id) {
-    segments.emplace_back(std::make_shared<ReferenceSegment>(_in_table, column_id, matches_out));
-  }
+  for (const auto matches : matches_out_per_chunk) {
+    auto segments = Segments{};
+    segments.reserve(in_table_column_count);
 
-  _out_table->append_chunk(segments, nullptr);
+    for (auto column_id = ColumnID{0}; column_id < in_table_column_count; ++column_id) {
+      segments.emplace_back(std::make_shared<ReferenceSegment>(_in_table, column_id, matches));
+    }
+
+    _out_table->append_chunk(segments, nullptr);
+  }
 
   return _out_table;
 }
