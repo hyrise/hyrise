@@ -33,7 +33,7 @@ BufferPtr<void> MonotonicBufferResource::allocate_from_current(std::size_t align
   const auto buffer_pos = _current_buffer_pos + aligner;
   _current_buffer_pos = buffer_pos + bytes;
   _current_buffer_size -= aligner + bytes;
-  return BufferPtr<void>(_current_frame, buffer_pos);
+  return BufferPtr<void>(_current_frame, buffer_pos, typename BufferPtr<void>::AllocTag{});
 }
 
 BufferPtr<void> MonotonicBufferResource::allocate(std::size_t bytes, std::size_t alignment) {

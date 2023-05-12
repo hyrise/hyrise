@@ -569,7 +569,7 @@ BufferPtr<void> BufferManager::allocate(std::size_t bytes, std::size_t align) {
   }
 
   _metrics->num_allocs++;
-  return BufferPtr<void>(frame, 0);
+  return BufferPtr<void>(frame, 0, typename BufferPtr<void>::AllocTag{});
 }
 
 void BufferManager::deallocate(BufferPtr<void> ptr, std::size_t bytes, std::size_t align) {

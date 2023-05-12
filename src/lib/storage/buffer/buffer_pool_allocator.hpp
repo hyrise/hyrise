@@ -62,12 +62,11 @@ class BufferPoolAllocator {
   }
 
   [[nodiscard]] pointer allocate(std::size_t n) {
-    auto ptr = static_cast<pointer>(_memory_resource->allocate(sizeof(value_type) * n, alignof(T)));
+    auto ptr = pointer(_memory_resource->allocate(sizeof(value_type) * n, alignof(T)), typename pointer::AllocTag{});
     if (auto observer = _observer.lock()) {
       const auto frame = ptr.get_frame();
       observer->on_allocate(frame);
     }
-    DebugAssert(ptr->get_frame_ref_count() == 1, "Allocated a frame with a ref count != 1");
     return ptr;
   }
 

@@ -17,8 +17,7 @@ template <typename PointedType>
 class BufferPtr {
  public:
   // Used to mark the BufferPtr as freshly allocated after allocation
-  struct alloc_tag {
-  }
+  struct AllocTag {};
 
   using pointer = PointedType*;
 
@@ -28,6 +27,7 @@ class BufferPtr {
   using difference_type = std::ptrdiff_t;
   using iterator_category = std::random_access_iterator_tag;
   using PtrOrOffset = std::uintptr_t;
+  // using IsConst = std::is_const<PointedType>::value;
 
   template <typename U>
   friend class BufferPtr;
@@ -49,31 +49,39 @@ class BufferPtr {
 
   BufferPtr(pointer ptr = 0) {
     unswizzle(ptr);
+    pin_and_set_ptr();
   }
 
   BufferPtr(const BufferPtr& other) : _frame(other._frame), _ptr_or_offset(other._ptr_or_offset) {
     assert_not_overflow();
+    pin_and_set_ptr();
   }
 
   template <typename U>
   BufferPtr(const BufferPtr<U>& other) : _frame(other._frame), _ptr_or_offset(other._ptr_or_offset) {
     assert_not_overflow();
+    pin_and_set_ptr();
   }
 
   template <typename T>
   BufferPtr(T* ptr) {
     unswizzle(ptr);
+    pin_and_set_ptr();
   }
 
-  explicit BufferPtr(const FramePtr& frame, const PtrOrOffset ptr_or_offset)
-      : _frame(frame), _ptr_or_offset(ptr_or_offset) {
-    assert_not_overflow();
+  template <typename U>
+  BufferPtr(const BufferPtr<U>& other, const AllocTag& tag)
+      : _frame(other._frame), _ptr_or_offset(other._ptr_or_offset) {
+    // Fail("implement me");
   }
+
+  explicit BufferPtr(const FramePtr& frame, const size_t offset, const AllocTag& tag)
+      : _frame(frame), _ptr_or_offset(reinterpret_cast<std::uintptr_t>(frame->data + offset)) {}
 
   ~BufferPtr() {
     // This pointer has an unswizzled pointer. We need to unpin it!
-    if (_frame && _ptr != nullptr) {
-      get_buffer_manager().unpin(_frame);
+    if (_frame && _ptr_or_offset != 0 && _frame->is_pinned()) {
+      get_buffer_manager_memory_resource()->unpin(_frame);  // TODO: Depends on const vs not const
     }
   }
 
@@ -88,12 +96,11 @@ class BufferPtr {
   }
 
   reference operator[](std::ptrdiff_t idx) {
-    return get(AccessIntent::Write)[idx];
+    return get()[idx];
   }
 
   const reference operator[](std::ptrdiff_t idx) const {
-    // TODO:mark dirty?
-    return get(AccessIntent::Read)[idx];
+    return get()[idx];
   }
 
   bool operator!() const {
@@ -101,13 +108,13 @@ class BufferPtr {
   }
 
   BufferPtr operator+(difference_type offset) const noexcept {
-    auto new_ptr = BufferPtr(_frame, _ptr_or_offset);
+    auto new_ptr = BufferPtr(*this);
     new_ptr.inc_offset(offset * difference_type(sizeof(PointedType)));
     return new_ptr;
   }
 
   BufferPtr operator-(difference_type offset) const noexcept {
-    auto new_ptr = BufferPtr(_frame, _ptr_or_offset);
+    auto new_ptr = BufferPtr(*this);
     new_ptr.dec_offset(offset * difference_type(sizeof(PointedType)));
     return new_ptr;
   }
@@ -148,8 +155,8 @@ class BufferPtr {
     return _frame || _ptr_or_offset;
   }
 
-  pointer get(const AccessIntent access_intent = AccessIntent::Read) const {
-    return static_cast<pointer>(this->get_pointer(access_intent));
+  pointer get() const {
+    return static_cast<pointer>(this->get_pointer());
   }
 
   inline friend bool operator==(const BufferPtr& ptr1, const BufferPtr& ptr2) noexcept {
@@ -170,7 +177,7 @@ class BufferPtr {
   }
 
   BufferPtr operator++(int) noexcept {
-    const auto temp = BufferPtr(_frame, _ptr_or_offset);
+    const auto temp = BufferPtr(*this);
     inc_offset(difference_type(sizeof(PointedType)));
     return temp;
   }
@@ -192,13 +199,8 @@ class BufferPtr {
     return ptr1.get() < ptr2;
   }
 
-  void* get_pointer(const AccessIntent access_intent = AccessIntent::Read) const {
-    if (_frame) {
-      // TODO: Assert pinned      DebugAssert(_frame->is_pinned(), "Frame not pinned");
-      return _frame->data + _ptr_or_offset;
-    } else {
-      return (void*)_ptr_or_offset;
-    }
+  void* get_pointer() const {
+    return (void*)_ptr_or_offset;
   }
 
   pointer pin(FramePinGuard& guard) {
@@ -249,14 +251,14 @@ class BufferPtr {
   }
 
   void assert_not_overflow() {
-    if constexpr (!std::is_same_v<value_type, void>) {
-      if (_frame == nullptr) {
-        return;
-      }
-      DebugAssert(_ptr_or_offset <= (bytes_for_size_type(_frame->size_type) + sizeof(PointedType)),
-                  "BufferPtr overflow detected! " + std::to_string(static_cast<size_t>(_ptr_or_offset)) + " >" +
-                      std::to_string(bytes_for_size_type(_frame->size_type) + sizeof(PointedType)));
-    }
+    // if constexpr (!std::is_same_v<value_type, void>) {
+    //   if (_frame == nullptr) {
+    //     return;
+    //   }
+    //   DebugAssert(_ptr_or_offset <= (bytes_for_size_type(_frame->size_type) + sizeof(PointedType)),
+    //               "BufferPtr overflow detected! " + std::to_string(static_cast<size_t>(_ptr_or_offset)) + " >" +
+    //                   std::to_string(bytes_for_size_type(_frame->size_type) + sizeof(PointedType)));
+    // }
   }
 
   template <typename T>
@@ -275,16 +277,16 @@ class BufferPtr {
       }
     } else {
       _frame = nullptr;
-      _ptr = 0;
+      _ptr_or_offset = 0;
     }
   }
 
-  void pin_and_unswizzle(const FramePtr& frame, const PtrOrOffset offset) {
-    if (frame == nullptr) {
+  void pin_and_set_ptr() {
+    if (_frame == nullptr) {
       return;
     }
-    _frame = get_buffer_manager_memory_resource()->make_resident(frame, AccessIntent::Read);
-    _ptr_or_offset = reinterpret_cast<std::uintptr_t>(_frame->data + offset);
+    _frame = get_buffer_manager_memory_resource()->make_resident(_frame, AccessIntent::Read);
+    _ptr_or_offset = reinterpret_cast<std::uintptr_t>(_frame->data + _ptr_or_offset);
     get_buffer_manager_memory_resource()->pin(_frame);
   }
 };

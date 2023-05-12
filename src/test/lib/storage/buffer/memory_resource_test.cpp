@@ -29,7 +29,7 @@ class LogResource : public MemoryResource {
     auto allocated_dram_frame =
         make_frame(PageID{allocations.size()}, find_fitting_page_size_type(bytes), PageType::Dram);
     allocations.emplace_back(allocated_dram_frame, bytes, alignment);
-    return BufferPtr<void>(allocated_dram_frame, 0);
+    return BufferPtr<void>(allocated_dram_frame, 0, typename BufferPtr<void>::AllocTag{});
   }
 
   void deallocate(BufferPtr<void> p, const std::size_t bytes, const std::size_t alignment) override {

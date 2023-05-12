@@ -112,7 +112,7 @@ TEST_F(BufferPoolAllocatorTest, TestConstructorWithMemoryResource) {
     BufferPtr<void> allocate(const std::size_t bytes, const std::size_t alignment) override {
       auto allocated_dram_frame =
           make_frame(PageID{allocations.size()}, find_fitting_page_size_type(bytes), PageType::Dram);
-      auto ptr = BufferPtr<void>(allocated_dram_frame, 0);
+      auto ptr = BufferPtr<void>(allocated_dram_frame, 0, typename BufferPtr<void>::AllocTag{});
       allocations.emplace_back(ptr, bytes, alignment);
       return ptr;
     }

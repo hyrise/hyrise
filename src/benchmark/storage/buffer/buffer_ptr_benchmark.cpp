@@ -8,6 +8,11 @@
 
 namespace hyrise {
 
+struct PointerObserver {
+  virtual void observer(void* ptr) = 0;
+  virtual void unregister(void* ptr) = 0;
+};
+
 template <int GetPointer>
 struct TestPointer {
   using PointedType = int;
@@ -18,7 +23,18 @@ struct TestPointer {
   using difference_type = std::ptrdiff_t;
   using iterator_category = std::random_access_iterator_tag;
 
-  explicit TestPointer(FramePtr frame, std::uintptr_t offset) : frame(frame), ptr_or_offset(offset) {}
+  explicit TestPointer(FramePtr frame, std::uintptr_t offset, PointerObserver* observer = nullptr)
+      : frame(frame), ptr_or_offset(offset), observer(observer) {
+    if constexpr (GetPointer == 4) {
+      observer->observer(*this);
+    }
+  }
+
+  ~TestPointer() {
+    if constexpr (GetPointer == 4) {
+      observer->unregister(*this);
+    }
+  }
 
   TestPointer& operator++(void) noexcept {
     ptr_or_offset += sizeof(value_type);
@@ -59,7 +75,7 @@ struct TestPointer {
       return static_cast<pointer>(get_pointer_likely());
     } else if constexpr (GetPointer == 2) {
       return static_cast<pointer>(get_pointer_dummy__branchless());
-    } else if constexpr (GetPointer == 3) {
+    } else if constexpr (GetPointer == 3 || GetPointer == 4) {
       return static_cast<pointer>(get_raw_pointer());
     } else {
       Fail("Invalid GetPointer");
@@ -78,6 +94,12 @@ struct TestPointer {
     }
   }
 
+  void* get_pointer_dummy__branchless() const {
+    uintptr_t pointer = ptr_or_offset;
+    uintptr_t offset = (uintptr_t)frame->data ? pointer : 0;
+    return reinterpret_cast<void*>((uintptr_t)frame->data + offset);
+  }
+
   void* get_pointer_likely() const {
     if (frame) {
       if (frame->data) {
@@ -88,12 +110,6 @@ struct TestPointer {
     } else {
       return reinterpret_cast<void*>(ptr_or_offset);
     }
-  }
-
-  void* get_pointer_dummy__branchless() const {
-    void* pointer = reinterpret_cast<void*>(ptr_or_offset);
-    pointer = reinterpret_cast<void*>((uintptr_t)frame->data + (uintptr_t)pointer * (frame->data != nullptr));
-    return pointer;
   }
 
   void* get_raw_pointer() const {
@@ -115,6 +131,7 @@ struct TestPointer {
 
   FramePtr frame;
   std::uintptr_t ptr_or_offset;
+  PointerObserver* observer;
 };
 
 template <int T>
@@ -127,8 +144,16 @@ inline bool operator>=(const TestPointer<T>& ptr1, const TestPointer<T>& ptr2) {
   return ptr1.get() >= ptr2.get();
 }
 
+struct PointerObserverImpl : PointerObserver {
+  void observer(TestPointer<4>* p) {
+    p->ptr_or_offset = (std::uintptr_t)p->frame->data + p->ptr_or_offset;
+  }
+
+  void unregister(TestPointer<4>* p) {}
+};
+
 static void BM_pointer_sort_simple_frame(benchmark::State& state) {
-  std::array<typename TestPointer<0>::value_type, 5000> array;
+  alignas(512) std::array<typename TestPointer<0>::value_type, 5000> array;
   auto dummy = make_frame(PageID{0}, PageSizeType::KiB32, PageType::Dram, reinterpret_cast<std::byte*>(array.data()));
 
   std::iota(array.begin(), array.end(), 1);
@@ -144,7 +169,7 @@ static void BM_pointer_sort_simple_frame(benchmark::State& state) {
 }
 
 static void BM_pointer_sort_simple_raw(benchmark::State& state) {
-  std::array<typename TestPointer<0>::value_type, 5000> array;
+  alignas(512) std::array<typename TestPointer<0>::value_type, 5000> array;
   auto dummy = make_frame(PageID{0}, PageSizeType::KiB32, PageType::Dram, nullptr);
 
   std::iota(array.begin(), array.end(), 1);
@@ -160,7 +185,7 @@ static void BM_pointer_sort_simple_raw(benchmark::State& state) {
 }
 
 static void BM_pointer_sort_simple_likley_frame(benchmark::State& state) {
-  std::array<typename TestPointer<1>::value_type, 5000> array;
+  alignas(512) std::array<typename TestPointer<1>::value_type, 5000> array;
   auto dummy = make_frame(PageID{0}, PageSizeType::KiB32, PageType::Dram, reinterpret_cast<std::byte*>(array.data()));
 
   std::iota(array.begin(), array.end(), 1);
@@ -176,7 +201,7 @@ static void BM_pointer_sort_simple_likley_frame(benchmark::State& state) {
 }
 
 static void BM_pointer_sort_simple_likley_raw(benchmark::State& state) {
-  std::array<typename TestPointer<1>::value_type, 5000> array;
+  alignas(512) std::array<typename TestPointer<1>::value_type, 5000> array;
   auto dummy = make_frame(PageID{0}, PageSizeType::KiB32, PageType::Dram, nullptr);
 
   std::iota(array.begin(), array.end(), 1);
@@ -192,7 +217,7 @@ static void BM_pointer_sort_simple_likley_raw(benchmark::State& state) {
 }
 
 static void BM_pointer_sort_branchless_frame(benchmark::State& state) {
-  std::array<typename TestPointer<2>::value_type, 5000> array;
+  alignas(512) std::array<typename TestPointer<2>::value_type, 5000> array;
 
   auto dummy = make_frame(PageID{0}, PageSizeType::KiB32, PageType::Dram, reinterpret_cast<std::byte*>(array.data()));
 
@@ -209,7 +234,7 @@ static void BM_pointer_sort_branchless_frame(benchmark::State& state) {
 }
 
 static void BM_pointer_sort_branchless_raw(benchmark::State& state) {
-  std::array<typename TestPointer<2>::value_type, 5000> array;
+  alignas(512) std::array<typename TestPointer<2>::value_type, 5000> array;
 
   auto dummy = make_frame(PageID{0}, PageSizeType::KiB32, PageType::Dram, nullptr);
 
@@ -226,7 +251,7 @@ static void BM_pointer_sort_branchless_raw(benchmark::State& state) {
 }
 
 static void BM_pointer_sort_raw(benchmark::State& state) {
-  std::array<typename TestPointer<3>::value_type, 5000> array;
+  alignas(512) std::array<typename TestPointer<3>::value_type, 5000> array;
 
   std::iota(array.begin(), array.end(), 1);
 
