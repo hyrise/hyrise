@@ -481,11 +481,11 @@ int Console::_generate_tpcc(const std::string& args) {
     return ReturnCode::Error;
   }
 
-  const auto num_warehouses = std::stoull(arguments.at(0));
+  const auto num_warehouses = boost::lexical_cast<size_t>(arguments[0]);
 
   auto chunk_size = Chunk::DEFAULT_SIZE;
   if (arguments.size() > 1) {
-    chunk_size = ChunkOffset{boost::lexical_cast<ChunkOffset::base_type>(arguments.at(1))};
+    chunk_size = ChunkOffset{boost::lexical_cast<ChunkOffset::base_type>(arguments[1])};
   }
 
   out("Generating all TPCC tables (this might take a while) ...\n");
@@ -506,11 +506,11 @@ int Console::_generate_tpch(const std::string& args) {
     return ReturnCode::Error;
   }
 
-  const auto scale_factor = std::stof(arguments.at(0));
+  const auto scale_factor = boost::lexical_cast<float>(arguments[0]);
 
   auto chunk_size = Chunk::DEFAULT_SIZE;
   if (arguments.size() > 1) {
-    chunk_size = ChunkOffset{boost::lexical_cast<ChunkOffset::base_type>(arguments.at(1))};
+    chunk_size = ChunkOffset{boost::lexical_cast<ChunkOffset::base_type>(arguments[1])};
   }
 
   out("Generating all TPCH tables (this might take a while) ...\n");
@@ -530,11 +530,11 @@ int Console::_generate_tpcds(const std::string& args) {
     return ReturnCode::Error;
   }
 
-  const auto scale_factor = static_cast<uint32_t>(std::stoul(arguments.at(0)));
+  const auto scale_factor = boost::lexical_cast<uint32_t>(arguments[0]);
 
   auto chunk_size = Chunk::DEFAULT_SIZE;
   if (arguments.size() > 1) {
-    chunk_size = ChunkOffset{boost::lexical_cast<ChunkOffset::base_type>(arguments.at(1))};
+    chunk_size = ChunkOffset{boost::lexical_cast<ChunkOffset::base_type>(arguments[1])};
   }
 
   out("Generating all TPC-DS tables (this might take a while) ...\n");
@@ -554,15 +554,17 @@ int Console::_generate_ssb(const std::string& args) {
     return ReturnCode::Error;
   }
 
-  const auto scale_factor = std::stof(arguments.at(0));
+  const auto scale_factor = boost::lexical_cast<float>(arguments[0]);
 
   auto chunk_size = Chunk::DEFAULT_SIZE;
   if (arguments.size() > 1) {
-    chunk_size = ChunkOffset{boost::lexical_cast<ChunkOffset::base_type>(arguments.at(1))};
+    chunk_size = ChunkOffset{boost::lexical_cast<ChunkOffset::base_type>(arguments[1])};
   }
 
   // Try to find dbgen binary.
-  const auto ssb_dbgen_path = std::filesystem::canonical(_path).remove_filename() / "third_party/ssb-dbgen";
+  const auto executable_path = std::filesystem::canonical(_path).remove_filename();
+  const auto ssb_dbgen_path = executable_path / "third_party/ssb-dbgen";
+  const auto csv_meta_path = executable_path / "../resources/benchmark/ssb/schema";
   if (!std::filesystem::exists(ssb_dbgen_path / "dbgen")) {
     out(std::string{"SSB dbgen not found at "} + ssb_dbgen_path.string() + "\n");
     return ReturnCode::Error;
@@ -574,7 +576,7 @@ int Console::_generate_ssb(const std::string& args) {
   std::filesystem::create_directories(ssb_data_path.str());
 
   out("Generating all SSB tables (this might take a while) ...\n");
-  SSBTableGenerator{ssb_dbgen_path.string(), ssb_data_path.str(), scale_factor, chunk_size}.generate_and_store();
+  SSBTableGenerator{ssb_dbgen_path, csv_meta_path, ssb_data_path.str(), scale_factor, chunk_size}.generate_and_store();
 
   return ReturnCode::Ok;
 }
