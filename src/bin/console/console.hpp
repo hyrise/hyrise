@@ -131,13 +131,11 @@ class Console : public Singleton<Console> {
   int _load_plugin(const std::string& args);
   int _unload_plugin(const std::string& input);
 
+  int _reset();
+  void _rollback();
+
   // Creates the pipelines and returns whether is was successful (true) or not (false)
   bool _initialize_pipeline(const std::string& sql);
-
-  // Checks whether the execution of the SQLPipeline has been rolled back and displays information accordingly.
-  // If rollback == true, the explicit context is deleted.
-  // Returns true if rollbacked, else false
-  bool _handle_rollback();
 
   // GNU readline interface to our commands
   static char** _command_completion(const char* text, const int start, const int /*end*/);

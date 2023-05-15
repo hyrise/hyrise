@@ -22,7 +22,6 @@ SSBTableGenerator::SSBTableGenerator(const std::string& dbgen_path, const std::s
       _scale_factor{scale_factor} {}
 
 std::unordered_map<std::string, BenchmarkTableInfo> SSBTableGenerator::generate() {
-  std::cout << "SSBTableGenerator " << _dbgen_path << " " << _path << std::endl;
   generate_csv_tables_with_external_dbgen(_dbgen_path, ssb_table_names, _csv_meta_path, _path, _scale_factor, "-T a");
 
   // Having generated the .csv files, call the FileBasedTableGenerator just as if those files were user-provided.
