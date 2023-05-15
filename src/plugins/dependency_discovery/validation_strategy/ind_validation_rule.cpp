@@ -50,18 +50,32 @@ ValidationStatus perform_set_based_inclusion_check(const std::shared_ptr<const T
                                                    const std::shared_ptr<const Table>& included_table,
                                                    const ColumnID included_column_id) {
   const auto& including_values = collect_values<T>(including_table, including_column_id);
-  const auto& included_values = collect_values<T>(included_table, included_column_id);
-  if (included_values.size() > including_values.size()) {
-    return ValidationStatus::Invalid;
-  }
 
-  for (const auto& value : included_values) {
-    if (!including_values.contains(value)) {
-      return ValidationStatus::Invalid;
+  auto abort = false;
+  const auto chunk_count = included_table->chunk_count();
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+    if (abort) {
+      break;
     }
+    const auto& chunk = included_table->get_chunk(chunk_id);
+    if (!chunk) {
+      continue;
+    }
+
+    const auto& segment = chunk->get_segment(included_column_id);
+
+    segment_with_iterators<T>(*segment, [&](auto it, const auto end) {
+      while (it != end) {
+        if (!it->is_null() && !including_values.contains(it->value())) {
+          abort = true;
+          return;
+        }
+        ++it;
+      }
+    });
   }
 
-  return ValidationStatus::Valid;
+  return abort ? ValidationStatus::Invalid : ValidationStatus::Valid;
 }
 
 }  // namespace
