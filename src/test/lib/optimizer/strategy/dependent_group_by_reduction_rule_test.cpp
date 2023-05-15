@@ -82,9 +82,9 @@ TEST_F(DependentGroupByReductionRuleTest, SimpleCases) {
   {
     const auto lqp = PredicateNode::make(equals_(column_a_0, 17), stored_table_node_a);
 
-    const auto actual_lqp = apply_rule(rule, lqp);
     const auto expected_lqp = lqp->deep_copy();
-    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+    apply_rule(rule, lqp);
+    EXPECT_LQP_EQ(lqp, expected_lqp);
   }
 
   // Early out for LQP where table does not have a unique column combination.
@@ -92,9 +92,9 @@ TEST_F(DependentGroupByReductionRuleTest, SimpleCases) {
     const auto lqp =
         AggregateNode::make(expression_vector(column_d_0), expression_vector(sum_(column_d_0)), stored_table_node_d);
 
-    const auto actual_lqp = apply_rule(rule, lqp);
     const auto expected_lqp = lqp->deep_copy();
-    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+    apply_rule(rule, lqp);
+    EXPECT_LQP_EQ(lqp, expected_lqp);
   }
 }
 
@@ -112,8 +112,8 @@ TEST_F(DependentGroupByReductionRuleTest, SingleKeyReduction) {
         stored_table_node_a));
     // clang-format on
 
-    const auto actual_lqp = apply_rule(rule, lqp);
-    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+    apply_rule(rule, lqp);
+    EXPECT_LQP_EQ(lqp, expected_lqp);
   }
   {
     // clang-format off
@@ -127,9 +127,9 @@ TEST_F(DependentGroupByReductionRuleTest, SingleKeyReduction) {
         stored_table_node_a));
     // clang-format on
 
-    const auto actual_lqp = apply_rule(rule, lqp);
+    apply_rule(rule, lqp);
 
-    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+    EXPECT_LQP_EQ(lqp, expected_lqp);
   }
 }
 
@@ -141,10 +141,10 @@ TEST_F(DependentGroupByReductionRuleTest, IncompleteKey) {
     stored_table_node_b);
   // clang-format on
 
-  const auto actual_lqp = apply_rule(rule, lqp);
   const auto expected_lqp = lqp->deep_copy();
+  apply_rule(rule, lqp);
 
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  EXPECT_LQP_EQ(lqp, expected_lqp);
 }
 
 // Test that a group by with the full (multi-column) UCC is not altered.
@@ -155,10 +155,10 @@ TEST_F(DependentGroupByReductionRuleTest, FullKeyGroupBy) {
     stored_table_node_b);
   // clang-format on
 
-  const auto actual_lqp = apply_rule(rule, lqp);
   const auto expected_lqp = lqp->deep_copy();
+  apply_rule(rule, lqp);
 
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  EXPECT_LQP_EQ(lqp, expected_lqp);
 }
 
 // Test adaption of multi-column but inconsecutive column order of the primary key columns (table_c with UCC {0,2}).
@@ -174,9 +174,9 @@ TEST_F(DependentGroupByReductionRuleTest, FullInconsecutiveKeyGroupBy) {
       stored_table_node_c));
   // clang-format on
 
-  const auto actual_lqp = apply_rule(rule, lqp);
+  apply_rule(rule, lqp);
 
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  EXPECT_LQP_EQ(lqp, expected_lqp);
 }
 
 // Test whether we remove the correct columns after joining (one column of a can be moved, none of b). No projection
@@ -198,9 +198,9 @@ TEST_F(DependentGroupByReductionRuleTest, JoinSingleKeyPrimaryKey) {
         stored_table_node_b)));
   // clang-format on
 
-  const auto actual_lqp = apply_rule(rule, lqp);
+  apply_rule(rule, lqp);
 
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  EXPECT_LQP_EQ(lqp, expected_lqp);
 }
 
 // Test that the plan stays the same (no alias, no projection) for a table with a primary key but no removable columns.
@@ -212,9 +212,9 @@ TEST_F(DependentGroupByReductionRuleTest, AggregateButNoChanges) {
   // clang-format on
 
   const auto expected_lqp = lqp->deep_copy();
-  const auto actual_lqp = apply_rule(rule, lqp);
+  apply_rule(rule, lqp);
 
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  EXPECT_LQP_EQ(lqp, expected_lqp);
 }
 
 // A simple aggregate follows an optimized aggregate, column order of root node should not change. Thus, no projection.
@@ -231,9 +231,9 @@ TEST_F(DependentGroupByReductionRuleTest, SimpleAggregateFollowsAdaptedAggregate
       stored_table_node_a));
   // clang-format on
 
-  const auto actual_lqp = apply_rule(rule, lqp);
+  apply_rule(rule, lqp);
 
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  EXPECT_LQP_EQ(lqp, expected_lqp);
 }
 
 // A sort follows an optimized aggregate. Operator following the aggregate does not change the column order itself, but
@@ -249,12 +249,12 @@ TEST_F(DependentGroupByReductionRuleTest, SortFollowsAggregate) {
   ProjectionNode::make(expression_vector(column_a_0, column_a_1, sum_(column_a_0)),
     SortNode::make(expression_vector(column_a_0), std::vector<SortMode>{SortMode::Ascending},
       AggregateNode::make(expression_vector(column_a_0), expression_vector(sum_(column_a_0), any_(column_a_1)),
-        stored_table_node_a)));  // NOLINT
+        stored_table_node_a)));
   // clang-format on
 
-  const auto actual_lqp = apply_rule(rule, lqp);
+  apply_rule(rule, lqp);
 
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  EXPECT_LQP_EQ(lqp, expected_lqp);
 }
 
 // When a primary key column is nullable after an outer join, check that we do not modify the aggregate.
@@ -267,10 +267,10 @@ TEST_F(DependentGroupByReductionRuleTest, NoAdaptionForNullableColumns) {
       stored_table_node_b));
   // clang-format on
 
-  const auto actual_lqp = apply_rule(rule, lqp);
   const auto expected_lqp = lqp->deep_copy();
+  apply_rule(rule, lqp);
 
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  EXPECT_LQP_EQ(lqp, expected_lqp);
 }
 
 // Check that we reduce using the shortest UCCs (in terms of the number of columns).
@@ -286,9 +286,9 @@ TEST_F(DependentGroupByReductionRuleTest, ShortConstraintsFirst) {
       stored_table_node_e));
   // clang-format on
 
-  const auto actual_lqp = apply_rule(rule, lqp);
+  apply_rule(rule, lqp);
 
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  EXPECT_LQP_EQ(lqp, expected_lqp);
 }
 
 // Check whether we can reduce the group-by list twice.
@@ -317,9 +317,9 @@ TEST_F(DependentGroupByReductionRuleTest, MultiKeyReduction) {
       mock_node));
   // clang-format on
 
-  const auto actual_lqp = apply_rule(rule, lqp);
+  apply_rule(rule, lqp);
 
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  EXPECT_LQP_EQ(lqp, expected_lqp);
 }
 
 }  // namespace hyrise

@@ -63,6 +63,7 @@ TEST_P(JoinToPredicateRewriteRuleJoinModeTest, PerformRewrite) {
       GetParam() == JoinMode::Cross ? JoinNode::make(GetParam()) : JoinNode::make(GetParam(), equals_(a, u));
   join_node->set_left_input(node_a);
   join_node->set_right_input(PredicateNode::make(equals_(v, 0), node_b));
+
   // clang-format off
   const auto lqp =
   ProjectionNode::make(expression_vector(b),
@@ -77,16 +78,17 @@ TEST_P(JoinToPredicateRewriteRuleJoinModeTest, PerformRewrite) {
       node_a));
   // clang-format on
 
-  const auto annotated_lqp = apply_rule(std::make_shared<ColumnPruningRule>(), lqp->deep_copy());
-  const auto actual_lqp = apply_rule(rule, annotated_lqp);
-  expected_lqp = std::static_pointer_cast<ProjectionNode>(
-      apply_rule(std::make_shared<ColumnPruningRule>(), expected_lqp->deep_copy()));
-
-  if (GetParam() == JoinMode::Inner || GetParam() == JoinMode::Semi) {
-    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
-  } else {
-    EXPECT_LQP_EQ(actual_lqp, annotated_lqp->deep_copy());
+  if (GetParam() != JoinMode::Inner && GetParam() != JoinMode::Semi) {
+    expected_lqp = std::static_pointer_cast<ProjectionNode>(lqp->deep_copy());
   }
+
+  // Run ColumnPruningRule to annotate the prunable input sides.
+  apply_rule(std::make_shared<ColumnPruningRule>(), lqp);
+  apply_rule(std::make_shared<ColumnPruningRule>(), expected_lqp);
+
+  apply_rule(rule, lqp);
+
+  EXPECT_LQP_EQ(lqp, expected_lqp);
 }
 
 TEST_F(JoinToPredicateRewriteRuleTest, MissingPredicate) {
@@ -103,9 +105,11 @@ TEST_F(JoinToPredicateRewriteRuleTest, MissingPredicate) {
       node_a, node_b));
   // clang-format on
 
-  const auto annotated_lqp = apply_rule(std::make_shared<ColumnPruningRule>(), lqp);
-  const auto actual_lqp = apply_rule(rule, annotated_lqp);
-  EXPECT_LQP_EQ(actual_lqp, lqp->deep_copy());
+  apply_rule(std::make_shared<ColumnPruningRule>(), lqp);
+  const auto expected_lqp = lqp->deep_copy();
+
+  apply_rule(rule, lqp);
+  EXPECT_LQP_EQ(lqp, expected_lqp);
 }
 
 TEST_F(JoinToPredicateRewriteRuleTest, MissingUccOnPredicateColumn) {
@@ -122,9 +126,11 @@ TEST_F(JoinToPredicateRewriteRuleTest, MissingUccOnPredicateColumn) {
       PredicateNode::make(equals_(v, 0), node_b)));
   // clang-format on
 
-  const auto annotated_lqp = apply_rule(std::make_shared<ColumnPruningRule>(), lqp);
-  const auto actual_lqp = apply_rule(rule, annotated_lqp);
-  EXPECT_LQP_EQ(actual_lqp, lqp->deep_copy());
+  apply_rule(std::make_shared<ColumnPruningRule>(), lqp);
+  const auto expected_lqp = lqp->deep_copy();
+
+  apply_rule(rule, lqp);
+  EXPECT_LQP_EQ(lqp, expected_lqp);
 }
 
 TEST_F(JoinToPredicateRewriteRuleTest, MissingUccOnJoinColumn) {
@@ -141,9 +147,11 @@ TEST_F(JoinToPredicateRewriteRuleTest, MissingUccOnJoinColumn) {
       PredicateNode::make(equals_(v, 0), node_b)));
   // clang-format on
 
-  const auto annotated_lqp = apply_rule(std::make_shared<ColumnPruningRule>(), lqp);
-  const auto actual_lqp = apply_rule(rule, annotated_lqp);
-  EXPECT_LQP_EQ(actual_lqp, lqp->deep_copy());
+  apply_rule(std::make_shared<ColumnPruningRule>(), lqp);
+  const auto expected_lqp = lqp->deep_copy();
+
+  apply_rule(rule, lqp);
+  EXPECT_LQP_EQ(lqp, expected_lqp);
 }
 
 TEST_F(JoinToPredicateRewriteRuleTest, NoUnusedJoinSide) {
@@ -161,9 +169,11 @@ TEST_F(JoinToPredicateRewriteRuleTest, NoUnusedJoinSide) {
       PredicateNode::make(equals_(v, 0), node_b)));
   // clang-format on
 
-  const auto annotated_lqp = apply_rule(std::make_shared<ColumnPruningRule>(), lqp);
-  const auto actual_lqp = apply_rule(rule, annotated_lqp);
-  EXPECT_LQP_EQ(actual_lqp, lqp->deep_copy());
+  apply_rule(std::make_shared<ColumnPruningRule>(), lqp);
+  const auto expected_lqp = lqp->deep_copy();
+
+  apply_rule(rule, lqp);
+  EXPECT_LQP_EQ(lqp, expected_lqp);
 }
 
 TEST_F(JoinToPredicateRewriteRuleTest, Union) {
@@ -182,9 +192,11 @@ TEST_F(JoinToPredicateRewriteRuleTest, Union) {
       UnionNode::make(SetOperationMode::Positions, node_b, node_b))));
   // clang-format on
 
-  const auto annotated_lqp = apply_rule(std::make_shared<ColumnPruningRule>(), lqp);
-  const auto actual_lqp = apply_rule(rule, annotated_lqp);
-  EXPECT_LQP_EQ(actual_lqp, lqp->deep_copy());
+  apply_rule(std::make_shared<ColumnPruningRule>(), lqp);
+  const auto expected_lqp = lqp->deep_copy();
+
+  apply_rule(rule, lqp);
+  EXPECT_LQP_EQ(lqp, expected_lqp);
 }
 
 }  // namespace hyrise

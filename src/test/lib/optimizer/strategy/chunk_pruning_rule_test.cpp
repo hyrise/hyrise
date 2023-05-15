@@ -69,12 +69,14 @@ class ChunkPruningRuleTest : public StrategyBaseTest {
 TEST_F(ChunkPruningRuleTest, SimplePruningTest) {
   const auto stored_table_node = StoredTableNode::make("compressed");
 
-  const auto predicate_node = PredicateNode::make(greater_than_(lqp_column_(stored_table_node, ColumnID{0}), 200));
-  predicate_node->set_left_input(stored_table_node);
+  // clang-format off
+  const auto lqp =
+  PredicateNode::make(greater_than_(lqp_column_(stored_table_node, ColumnID{0}), 200),
+    stored_table_node);
+  // clang-format on
 
-  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, predicate_node);
+  apply_rule(_rule, lqp);
 
-  EXPECT_EQ(actual_lqp, predicate_node);
   const auto expected_chunk_ids = std::vector<ChunkID>{ChunkID{1}};
   EXPECT_EQ(stored_table_node->pruned_chunk_ids(), expected_chunk_ids);
 
@@ -98,12 +100,14 @@ TEST_F(ChunkPruningRuleTest, SimpleChunkPruningTestWithColumnPruning) {
   const auto stored_table_node = StoredTableNode::make("compressed");
   stored_table_node->set_pruned_column_ids({ColumnID{0}});
 
-  const auto predicate_node = PredicateNode::make(less_than_(lqp_column_(stored_table_node, ColumnID{1}), 400.0f));
-  predicate_node->set_left_input(stored_table_node);
+  // clang-format off
+  const auto lqp =
+  PredicateNode::make(less_than_(lqp_column_(stored_table_node, ColumnID{1}), 400.0f),
+    stored_table_node);
+  // clang-format on
 
-  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, predicate_node);
+  apply_rule(_rule, lqp);
 
-  EXPECT_EQ(actual_lqp, predicate_node);
   const auto expected_chunk_ids = std::vector<ChunkID>{ChunkID{0}};
   EXPECT_EQ(stored_table_node->pruned_chunk_ids(), expected_chunk_ids);
 }
@@ -128,8 +132,7 @@ TEST_F(ChunkPruningRuleTest, MultipleOutputs1) {
       common));
   // clang-format on
 
-  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, lqp);
-  EXPECT_EQ(actual_lqp, lqp);
+  apply_rule(_rule, lqp);
   const auto expected_chunk_ids = std::vector<ChunkID>{ChunkID{0}, ChunkID{2}};
   EXPECT_EQ(stored_table_node->pruned_chunk_ids(), expected_chunk_ids);
 }
@@ -154,8 +157,7 @@ TEST_F(ChunkPruningRuleTest, MultipleOutputs2) {
       common));
   // clang-format on
 
-  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, lqp);
-  EXPECT_EQ(actual_lqp, lqp);
+  apply_rule(_rule, lqp);
   const auto expected_chunk_ids = std::vector<ChunkID>{ChunkID{0}, ChunkID{2}};
   EXPECT_EQ(stored_table_node->pruned_chunk_ids(), expected_chunk_ids);
 }
@@ -167,9 +169,8 @@ TEST_F(ChunkPruningRuleTest, BetweenPruningTest) {
       PredicateNode::make(between_inclusive_(lqp_column_(stored_table_node, ColumnID{1}), 350.0f, 351.0f));
   predicate_node->set_left_input(stored_table_node);
 
-  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, predicate_node);
+  apply_rule(_rule, predicate_node);
 
-  EXPECT_EQ(actual_lqp, predicate_node);
   const auto expected_chunk_ids = std::vector<ChunkID>{ChunkID{0}};
   EXPECT_EQ(stored_table_node->pruned_chunk_ids(), expected_chunk_ids);
 }
@@ -186,9 +187,8 @@ TEST_F(ChunkPruningRuleTest, NoStatisticsAvailable) {
   const auto predicate_node = PredicateNode::make(greater_than_(lqp_column_(stored_table_node, ColumnID{0}), 200));
   predicate_node->set_left_input(stored_table_node);
 
-  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, predicate_node);
+  apply_rule(_rule, predicate_node);
 
-  EXPECT_EQ(actual_lqp, predicate_node);
   const auto expected_chunk_ids = std::vector<ChunkID>{};
   EXPECT_EQ(stored_table_node->pruned_chunk_ids(), expected_chunk_ids);
 }
@@ -203,9 +203,8 @@ TEST_F(ChunkPruningRuleTest, TwoOperatorPruningTest) {
       PredicateNode::make(less_than_equals_(lqp_column_(stored_table_node, ColumnID{1}), 400.0f));
   predicate_node_1->set_left_input(predicate_node_0);
 
-  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, predicate_node_1);
+  apply_rule(_rule, predicate_node_1);
 
-  EXPECT_EQ(actual_lqp, predicate_node_1);
   const auto expected_chunk_ids = std::vector<ChunkID>{ChunkID{0}, ChunkID{1}};
   EXPECT_EQ(stored_table_node->pruned_chunk_ids(), expected_chunk_ids);
 }
@@ -223,9 +222,8 @@ TEST_F(ChunkPruningRuleTest, IntersectionPruningTest) {
   union_node->set_left_input(predicate_node_0);
   union_node->set_right_input(predicate_node_1);
 
-  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, union_node);
+  apply_rule(_rule, union_node);
 
-  EXPECT_EQ(actual_lqp, union_node);
   const auto expected_chunk_ids = std::vector<ChunkID>{ChunkID{1}};
   EXPECT_EQ(stored_table_node->pruned_chunk_ids(), expected_chunk_ids);
 }
@@ -236,9 +234,8 @@ TEST_F(ChunkPruningRuleTest, ComparatorEdgeCasePruningTest_GreaterThan) {
   const auto predicate_node = PredicateNode::make(greater_than_(lqp_column_(stored_table_node, ColumnID{0}), 12345));
   predicate_node->set_left_input(stored_table_node);
 
-  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, predicate_node);
+  apply_rule(_rule, predicate_node);
 
-  EXPECT_EQ(actual_lqp, predicate_node);
   const auto expected_chunk_ids = std::vector<ChunkID>{ChunkID{0}, ChunkID{1}};
   EXPECT_EQ(stored_table_node->pruned_chunk_ids(), expected_chunk_ids);
 }
@@ -249,9 +246,8 @@ TEST_F(ChunkPruningRuleTest, ComparatorEdgeCasePruningTest_Equals) {
   const auto predicate_node = PredicateNode::make(equals_(lqp_column_(stored_table_node, ColumnID{1}), 458.7f));
   predicate_node->set_left_input(stored_table_node);
 
-  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, predicate_node);
+  apply_rule(_rule, predicate_node);
 
-  EXPECT_EQ(actual_lqp, predicate_node);
   const auto expected_chunk_ids = std::vector<ChunkID>{ChunkID{0}};
   EXPECT_EQ(stored_table_node->pruned_chunk_ids(), expected_chunk_ids);
 }
@@ -262,9 +258,8 @@ TEST_F(ChunkPruningRuleTest, RangeFilterTest) {
   const auto predicate_node = PredicateNode::make(equals_(lqp_column_(stored_table_node, ColumnID{0}), 50));
   predicate_node->set_left_input(stored_table_node);
 
-  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, predicate_node);
+  apply_rule(_rule, predicate_node);
 
-  EXPECT_EQ(actual_lqp, predicate_node);
   const auto expected_chunk_ids = std::vector<ChunkID>{ChunkID{0}, ChunkID{1}};
   EXPECT_EQ(stored_table_node->pruned_chunk_ids(), expected_chunk_ids);
 }
@@ -275,9 +270,8 @@ TEST_F(ChunkPruningRuleTest, LotsOfRangesFilterTest) {
   const auto predicate_node = PredicateNode::make(equals_(lqp_column_(stored_table_node, ColumnID{0}), 2500));
   predicate_node->set_left_input(stored_table_node);
 
-  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, predicate_node);
+  apply_rule(_rule, predicate_node);
 
-  EXPECT_EQ(actual_lqp, predicate_node);
   const auto expected_chunk_ids = std::vector<ChunkID>{ChunkID{0}};
   EXPECT_EQ(stored_table_node->pruned_chunk_ids(), expected_chunk_ids);
 }
@@ -288,9 +282,8 @@ TEST_F(ChunkPruningRuleTest, RunLengthSegmentPruningTest) {
   const auto predicate_node = PredicateNode::make(equals_(lqp_column_(stored_table_node, ColumnID{0}), 2));
   predicate_node->set_left_input(stored_table_node);
 
-  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, predicate_node);
+  apply_rule(_rule, predicate_node);
 
-  EXPECT_EQ(actual_lqp, predicate_node);
   const auto expected_chunk_ids = std::vector<ChunkID>{ChunkID{0}};
   EXPECT_EQ(stored_table_node->pruned_chunk_ids(), expected_chunk_ids);
 }
@@ -301,9 +294,8 @@ TEST_F(ChunkPruningRuleTest, GetTablePruningTest) {
   const auto predicate_node = PredicateNode::make(greater_than_(lqp_column_(stored_table_node, ColumnID{0}), 200));
   predicate_node->set_left_input(stored_table_node);
 
-  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, predicate_node);
+  apply_rule(_rule, predicate_node);
 
-  EXPECT_EQ(actual_lqp, predicate_node);
   const auto expected_chunk_ids = std::vector<ChunkID>{ChunkID{1}};
   EXPECT_EQ(stored_table_node->pruned_chunk_ids(), expected_chunk_ids);
 
@@ -324,9 +316,8 @@ TEST_F(ChunkPruningRuleTest, StringPruningTest) {
   const auto predicate_node = PredicateNode::make(equals_(lqp_column_(stored_table_node, ColumnID{0}), "zzz"));
   predicate_node->set_left_input(stored_table_node);
 
-  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, predicate_node);
+  apply_rule(_rule, predicate_node);
 
-  EXPECT_EQ(actual_lqp, predicate_node);
   const auto expected_chunk_ids = std::vector<ChunkID>{ChunkID{0}};
   EXPECT_EQ(stored_table_node->pruned_chunk_ids(), expected_chunk_ids);
 }
@@ -337,9 +328,8 @@ TEST_F(ChunkPruningRuleTest, FixedStringPruningTest) {
   const auto predicate_node = PredicateNode::make(equals_(lqp_column_(stored_table_node, ColumnID{0}), "zzz"));
   predicate_node->set_left_input(stored_table_node);
 
-  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, predicate_node);
+  apply_rule(_rule, predicate_node);
 
-  EXPECT_EQ(actual_lqp, predicate_node);
   const auto expected_chunk_ids = std::vector<ChunkID>{ChunkID{0}};
   EXPECT_EQ(stored_table_node->pruned_chunk_ids(), expected_chunk_ids);
 }
@@ -359,9 +349,7 @@ TEST_F(ChunkPruningRuleTest, PrunePastNonFilteringNodes) {
           stored_table_node))));
   // clang-format on
 
-  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
-
-  EXPECT_EQ(actual_lqp, input_lqp);
+  apply_rule(_rule, input_lqp);
 
   const auto expected_chunk_ids = std::vector<ChunkID>{ChunkID{1}};
   EXPECT_EQ(stored_table_node->pruned_chunk_ids(), expected_chunk_ids);
@@ -384,9 +372,7 @@ TEST_F(ChunkPruningRuleTest, PrunePastJoinNodes) {
 
   // clang-format on
 
-  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
-
-  EXPECT_EQ(actual_lqp, input_lqp);
+  apply_rule(_rule, input_lqp);
 
   const auto expected_chunk_ids_table_1 = std::vector<ChunkID>{ChunkID{0}};
   EXPECT_EQ(stored_table_node_1->pruned_chunk_ids(), expected_chunk_ids_table_1);
@@ -409,9 +395,8 @@ TEST_F(ChunkPruningRuleTest, ValueOutOfRange) {
     stored_table_node);
   // clang-format on
 
-  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+  apply_rule(_rule, input_lqp);
 
-  EXPECT_EQ(actual_lqp, input_lqp);
   const auto expected_chunk_ids = std::vector<ChunkID>{};
   EXPECT_EQ(stored_table_node->pruned_chunk_ids(), expected_chunk_ids);
 }
@@ -441,11 +426,9 @@ TEST_F(ChunkPruningRuleTest, PredicateWithUncorrelatedSubquery) {
       stored_table_node_2));
   // clang-format on
 
-  const auto actual_lqp_1 = StrategyBaseTest::apply_rule(_rule, input_lqp_1);
-  const auto actual_lqp_2 = StrategyBaseTest::apply_rule(_rule, input_lqp_2);
+  apply_rule(_rule, input_lqp_1);
+  apply_rule(_rule, input_lqp_2);
 
-  EXPECT_EQ(actual_lqp_1, input_lqp_1);
-  EXPECT_EQ(actual_lqp_2, input_lqp_2);
   const auto expected_chunk_ids = std::vector<ChunkID>{ChunkID{1}};
   EXPECT_EQ(stored_table_node_1->pruned_chunk_ids(), expected_chunk_ids);
   EXPECT_EQ(stored_table_node_2->pruned_chunk_ids(), expected_chunk_ids);
@@ -474,8 +457,7 @@ TEST_F(ChunkPruningRuleTest, PredicateWithCorrelatedSubquery) {
       stored_table_node_1));
   // clang-format on
 
-  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
-  EXPECT_EQ(actual_lqp, input_lqp);
+  apply_rule(_rule, input_lqp);
   const auto expected_chunk_ids = std::vector<ChunkID>{ChunkID{0}};
   EXPECT_EQ(stored_table_node_1->pruned_chunk_ids(), expected_chunk_ids);
 }

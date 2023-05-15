@@ -1,9 +1,3 @@
-#include <memory>
-#include <optional>
-#include <string>
-#include <utility>
-#include <vector>
-
 #include "base_test.hpp"
 #include "lib/optimizer/strategy/strategy_base_test.hpp"
 #include "utils/assert.hpp"
@@ -63,12 +57,12 @@ class IndexScanRuleTest : public StrategyBaseTest {
 TEST_F(IndexScanRuleTest, NoIndexScanWithoutIndex) {
   generate_mock_statistics();
 
-  auto predicate_node_0 = PredicateNode::make(greater_than_(a, 10));
-  predicate_node_0->set_left_input(stored_table_node);
+  const auto predicate_node = PredicateNode::make(greater_than_(a, 10));
+  predicate_node->set_left_input(stored_table_node);
 
-  EXPECT_EQ(predicate_node_0->scan_type, ScanType::TableScan);
-  auto reordered = StrategyBaseTest::apply_rule(rule, predicate_node_0);
-  EXPECT_EQ(predicate_node_0->scan_type, ScanType::TableScan);
+  EXPECT_EQ(predicate_node->scan_type, ScanType::TableScan);
+  apply_rule(rule, predicate_node);
+  EXPECT_EQ(predicate_node->scan_type, ScanType::TableScan);
 }
 
 TEST_F(IndexScanRuleTest, NoIndexScanWithIndexOnOtherColumn) {
@@ -76,12 +70,12 @@ TEST_F(IndexScanRuleTest, NoIndexScanWithIndexOnOtherColumn) {
 
   generate_mock_statistics();
 
-  auto predicate_node_0 = PredicateNode::make(greater_than_(a, 10));
-  predicate_node_0->set_left_input(stored_table_node);
+  const auto predicate_node = PredicateNode::make(greater_than_(a, 10));
+  predicate_node->set_left_input(stored_table_node);
 
-  EXPECT_EQ(predicate_node_0->scan_type, ScanType::TableScan);
-  auto reordered = StrategyBaseTest::apply_rule(rule, predicate_node_0);
-  EXPECT_EQ(predicate_node_0->scan_type, ScanType::TableScan);
+  EXPECT_EQ(predicate_node->scan_type, ScanType::TableScan);
+  apply_rule(rule, predicate_node);
+  EXPECT_EQ(predicate_node->scan_type, ScanType::TableScan);
 }
 
 TEST_F(IndexScanRuleTest, NoIndexScanWithMultiSegmentIndex) {
@@ -89,23 +83,23 @@ TEST_F(IndexScanRuleTest, NoIndexScanWithMultiSegmentIndex) {
 
   generate_mock_statistics();
 
-  auto predicate_node_0 = PredicateNode::make(greater_than_(c, 10));
-  predicate_node_0->set_left_input(stored_table_node);
+  const auto predicate_node = PredicateNode::make(greater_than_(c, 10));
+  predicate_node->set_left_input(stored_table_node);
 
-  EXPECT_EQ(predicate_node_0->scan_type, ScanType::TableScan);
-  auto reordered = StrategyBaseTest::apply_rule(rule, predicate_node_0);
-  EXPECT_EQ(predicate_node_0->scan_type, ScanType::TableScan);
+  EXPECT_EQ(predicate_node->scan_type, ScanType::TableScan);
+  apply_rule(rule, predicate_node);
+  EXPECT_EQ(predicate_node->scan_type, ScanType::TableScan);
 }
 
 TEST_F(IndexScanRuleTest, NoIndexScanWithTwoColumnPredicate) {
   generate_mock_statistics();
 
-  auto predicate_node_0 = PredicateNode::make(greater_than_(c, b));
-  predicate_node_0->set_left_input(stored_table_node);
+  const auto predicate_node = PredicateNode::make(greater_than_(c, b));
+  predicate_node->set_left_input(stored_table_node);
 
-  EXPECT_EQ(predicate_node_0->scan_type, ScanType::TableScan);
-  auto reordered = StrategyBaseTest::apply_rule(rule, predicate_node_0);
-  EXPECT_EQ(predicate_node_0->scan_type, ScanType::TableScan);
+  EXPECT_EQ(predicate_node->scan_type, ScanType::TableScan);
+  apply_rule(rule, predicate_node);
+  EXPECT_EQ(predicate_node->scan_type, ScanType::TableScan);
 }
 
 TEST_F(IndexScanRuleTest, NoIndexScanWithHighSelectivity) {
@@ -113,12 +107,12 @@ TEST_F(IndexScanRuleTest, NoIndexScanWithHighSelectivity) {
 
   generate_mock_statistics(80'000);
 
-  auto predicate_node_0 = PredicateNode::make(greater_than_(c, 10));
-  predicate_node_0->set_left_input(stored_table_node);
+  const auto predicate_node = PredicateNode::make(greater_than_(c, 10));
+  predicate_node->set_left_input(stored_table_node);
 
-  EXPECT_EQ(predicate_node_0->scan_type, ScanType::TableScan);
-  auto reordered = StrategyBaseTest::apply_rule(rule, predicate_node_0);
-  EXPECT_EQ(predicate_node_0->scan_type, ScanType::TableScan);
+  EXPECT_EQ(predicate_node->scan_type, ScanType::TableScan);
+  apply_rule(rule, predicate_node);
+  EXPECT_EQ(predicate_node->scan_type, ScanType::TableScan);
 }
 
 TEST_F(IndexScanRuleTest, NoIndexScanIfNotGroupKey) {
@@ -126,12 +120,12 @@ TEST_F(IndexScanRuleTest, NoIndexScanIfNotGroupKey) {
 
   generate_mock_statistics(1'000'000);
 
-  auto predicate_node_0 = PredicateNode::make(greater_than_(c, 10));
-  predicate_node_0->set_left_input(stored_table_node);
+  const auto predicate_node = PredicateNode::make(greater_than_(c, 10));
+  predicate_node->set_left_input(stored_table_node);
 
-  EXPECT_EQ(predicate_node_0->scan_type, ScanType::TableScan);
-  auto reordered = StrategyBaseTest::apply_rule(rule, predicate_node_0);
-  EXPECT_EQ(predicate_node_0->scan_type, ScanType::TableScan);
+  EXPECT_EQ(predicate_node->scan_type, ScanType::TableScan);
+  apply_rule(rule, predicate_node);
+  EXPECT_EQ(predicate_node->scan_type, ScanType::TableScan);
 }
 
 TEST_F(IndexScanRuleTest, IndexScanWithIndex) {
@@ -139,12 +133,12 @@ TEST_F(IndexScanRuleTest, IndexScanWithIndex) {
 
   generate_mock_statistics(1'000'000);
 
-  auto predicate_node_0 = PredicateNode::make(greater_than_(c, 19'900));
-  predicate_node_0->set_left_input(stored_table_node);
+  const auto predicate_node = PredicateNode::make(greater_than_(c, 19'900));
+  predicate_node->set_left_input(stored_table_node);
 
-  EXPECT_EQ(predicate_node_0->scan_type, ScanType::TableScan);
-  auto reordered = StrategyBaseTest::apply_rule(rule, predicate_node_0);
-  EXPECT_EQ(predicate_node_0->scan_type, ScanType::IndexScan);
+  EXPECT_EQ(predicate_node->scan_type, ScanType::TableScan);
+  apply_rule(rule, predicate_node);
+  EXPECT_EQ(predicate_node->scan_type, ScanType::IndexScan);
 }
 
 TEST_F(IndexScanRuleTest, IndexScanWithIndexPrunedColumn) {
@@ -153,12 +147,12 @@ TEST_F(IndexScanRuleTest, IndexScanWithIndexPrunedColumn) {
 
   generate_mock_statistics(1'000'000);
 
-  auto predicate_node_0 = PredicateNode::make(greater_than_(c, 19'900));
-  predicate_node_0->set_left_input(stored_table_node);
+  const auto predicate_node = PredicateNode::make(greater_than_(c, 19'900));
+  predicate_node->set_left_input(stored_table_node);
 
-  EXPECT_EQ(predicate_node_0->scan_type, ScanType::TableScan);
-  auto reordered = StrategyBaseTest::apply_rule(rule, predicate_node_0);
-  EXPECT_EQ(predicate_node_0->scan_type, ScanType::IndexScan);
+  EXPECT_EQ(predicate_node->scan_type, ScanType::TableScan);
+  apply_rule(rule, predicate_node);
+  EXPECT_EQ(predicate_node->scan_type, ScanType::IndexScan);
 }
 
 TEST_F(IndexScanRuleTest, IndexScanOnlyOnOutputOfStoredTableNode) {
@@ -166,13 +160,13 @@ TEST_F(IndexScanRuleTest, IndexScanOnlyOnOutputOfStoredTableNode) {
 
   generate_mock_statistics(1'000'000);
 
-  auto predicate_node_0 = PredicateNode::make(greater_than_(c, 19'900));
+  const auto predicate_node_0 = PredicateNode::make(greater_than_(c, 19'900));
   predicate_node_0->set_left_input(stored_table_node);
 
-  auto predicate_node_1 = PredicateNode::make(less_than_(b, 15));
+  const auto predicate_node_1 = PredicateNode::make(less_than_(b, 15));
   predicate_node_1->set_left_input(predicate_node_0);
 
-  auto reordered = StrategyBaseTest::apply_rule(rule, predicate_node_1);
+  apply_rule(rule, predicate_node_1);
   EXPECT_EQ(predicate_node_0->scan_type, ScanType::IndexScan);
   EXPECT_EQ(predicate_node_1->scan_type, ScanType::TableScan);
 }

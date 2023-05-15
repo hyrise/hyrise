@@ -12,11 +12,9 @@ class AbstractRule;
 class StrategyBaseTest : public BaseTest {
  protected:
   /**
-   * Helper method for applying a single rule to an LQP. Creates the temporary LogicalPlanRootNode and returns its input
-   * after applying the rule
+   * Helper method for applying a single rule to an LQP. Creates the temporary LogicalPlanRootNode and applies the rule.
    */
-  void apply_rule(const std::shared_ptr<AbstractRule>& rule,
-                                              const std::shared_ptr<AbstractLQPNode>& input);
+  void apply_rule(const std::shared_ptr<AbstractRule>& rule, const std::shared_ptr<AbstractLQPNode>& input);
 };
 
 }  // namespace hyrise

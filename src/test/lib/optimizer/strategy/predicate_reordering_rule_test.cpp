@@ -48,7 +48,7 @@ class PredicateReorderingTest : public StrategyBaseTest {
 
 TEST_F(PredicateReorderingTest, SimpleReorderingTest) {
   // clang-format off
-  const auto input_lqp =
+  const auto lqp =
   PredicateNode::make(greater_than_(a, 50),
     PredicateNode::make(greater_than_(a, 10),
       node));
@@ -58,13 +58,13 @@ TEST_F(PredicateReorderingTest, SimpleReorderingTest) {
       node));
   // clang-format on
 
-  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  apply_rule(_rule, lqp);
+  EXPECT_LQP_EQ(lqp, expected_lqp);
 }
 
 TEST_F(PredicateReorderingTest, MoreComplexReorderingTest) {
   // clang-format off
-  const auto input_lqp =
+  const auto lqp =
   PredicateNode::make(greater_than_(a, 99),
     PredicateNode::make(greater_than_(b, 55),
       PredicateNode::make(greater_than_(c, 100),
@@ -76,14 +76,14 @@ TEST_F(PredicateReorderingTest, MoreComplexReorderingTest) {
         node)));
   // clang-format on
 
-  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+  apply_rule(_rule, lqp);
 
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  EXPECT_LQP_EQ(lqp, expected_lqp);
 }
 
 TEST_F(PredicateReorderingTest, ComplexReorderingTest) {
   // clang-format off
-  const auto input_lqp =
+  const auto lqp =
   PredicateNode::make(equals_(a, 95),
     PredicateNode::make(greater_than_(b, 55),
       PredicateNode::make(greater_than_(b, 40),
@@ -103,32 +103,32 @@ TEST_F(PredicateReorderingTest, ComplexReorderingTest) {
               node))))));
   // clang-format on
 
-  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  apply_rule(_rule, lqp);
+  EXPECT_LQP_EQ(lqp, expected_lqp);
 }
 
 TEST_F(PredicateReorderingTest, SameOrderingForStoredTable) {
-  std::shared_ptr<Table> table_a = load_table("resources/test_data/tbl/int_float4.tbl", ChunkOffset{2});
+  const auto table_a = load_table("resources/test_data/tbl/int_float4.tbl", ChunkOffset{2});
   Hyrise::get().storage_manager.add_table("table_a", std::move(table_a));
 
-  auto stored_table_node = StoredTableNode::make("table_a");
+  const auto stored_table_node = StoredTableNode::make("table_a");
 
   {
     // clang-format off
-    const auto input_lqp =
+    const auto lqp =
     PredicateNode::make(less_than_(lqp_column_(stored_table_node, ColumnID{0}), 40),
       PredicateNode::make(less_than_(lqp_column_(stored_table_node, ColumnID{0}), 20),
         stored_table_node));
     // clang-format on
-    const auto expected_lqp = input_lqp->deep_copy();
+    const auto expected_lqp = lqp->deep_copy();
 
-    const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+    apply_rule(_rule, lqp);
 
-    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+    EXPECT_LQP_EQ(lqp, expected_lqp);
   }
   {
     // clang-format off
-    const auto input_lqp =
+    const auto lqp =
     PredicateNode::make(less_than_(lqp_column_(stored_table_node, ColumnID{0}), 20),
       PredicateNode::make(less_than_(lqp_column_(stored_table_node, ColumnID{0}), 400),
         stored_table_node));
@@ -139,40 +139,42 @@ TEST_F(PredicateReorderingTest, SameOrderingForStoredTable) {
         stored_table_node));
     // clang-format on
 
-    const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+    apply_rule(_rule, lqp);
 
-    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+    EXPECT_LQP_EQ(lqp, expected_lqp);
   }
 }
 
 TEST_F(PredicateReorderingTest, PredicatesAsRightInput) {
   /**
-     * Check that Reordering predicates works if a predicate chain is both on the left and right side of a node.
-     * This is particularly interesting because the PredicateReorderingRule needs to re-attach the ordered chain of
-     * predicates to the output (the cross node in this case). This test checks whether the attachment happens as the
-     * correct input.
-     *
-     *             _______Cross________
-     *            /                    \
-     *  Predicate(a > 80)     Predicate(a > 90)
-     *           |                     |
-     *  Predicate(a > 60)     Predicate(a > 50)
-     *           |                     |
-     *        Table_0         Predicate(a > 30)
-     *                                 |
-     *                              Table_1
-     */
+   * Check that Reordering predicates works if a predicate chain is both on the left and right side of a node.
+   * This is particularly interesting because the PredicateReorderingRule needs to re-attach the ordered chain of
+   * predicates to the output (the cross node in this case). This test checks whether the attachment happens as the
+   * correct input.
+   *
+   *             _______Cross________
+   *            /                    \
+   *  Predicate(a > 80)     Predicate(a > 90)
+   *           |                     |
+   *  Predicate(a > 60)     Predicate(a > 50)
+   *           |                     |
+   *        Table_0         Predicate(a > 30)
+   *                                 |
+   *                              Table_1
+   */
 
   /**
-     * The mocked table has one column of int32_ts with the value range 0..100
-     */
-  auto table_0 = create_mock_node_with_statistics(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, 100.0f,
-                                                  {GenericHistogram<int32_t>::with_single_bin(0, 100, 100.0f, 100.0f)});
-  auto table_1 = create_mock_node_with_statistics(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, 100.0f,
-                                                  {GenericHistogram<int32_t>::with_single_bin(0, 100, 100.0f, 100.0f)});
+   * The mocked table has one column of int32_ts with the value range 0..100
+   */
+  const auto table_0 =
+      create_mock_node_with_statistics(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, 100.0f,
+                                       {GenericHistogram<int32_t>::with_single_bin(0, 100, 100.0f, 100.0f)});
+  const auto table_1 =
+      create_mock_node_with_statistics(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, 100.0f,
+                                       {GenericHistogram<int32_t>::with_single_bin(0, 100, 100.0f, 100.0f)});
 
   // clang-format off
-  const auto input_lqp =
+  const auto lqp =
   JoinNode::make(JoinMode::Cross,
     PredicateNode::make(greater_than_(lqp_column_(table_0, ColumnID{0}), 80),
       PredicateNode::make(greater_than_(lqp_column_(table_0, ColumnID{0}), 60),
@@ -193,8 +195,8 @@ TEST_F(PredicateReorderingTest, PredicatesAsRightInput) {
           table_1))));
   // clang-format on
 
-  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  apply_rule(_rule, lqp);
+  EXPECT_LQP_EQ(lqp, expected_lqp);
 }
 
 TEST_F(PredicateReorderingTest, PredicatesWithMultipleOutputs) {
@@ -230,7 +232,7 @@ TEST_F(PredicateReorderingTest, PredicatesWithMultipleOutputs) {
     PredicateNode::make(greater_than_(lqp_column_(table_node, ColumnID{0}), 5),
       table_node));
 
-  const auto input_lqp =
+  const auto lqp =
   UnionNode::make(SetOperationMode::Positions,
     PredicateNode::make(greater_than_(lqp_column_(table_node, ColumnID{0}), 90),
       sub_lqp),
@@ -248,13 +250,13 @@ TEST_F(PredicateReorderingTest, PredicatesWithMultipleOutputs) {
     expected_sub_lqp);
   // clang-format on
 
-  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  apply_rule(_rule, lqp);
+  EXPECT_LQP_EQ(lqp, expected_lqp);
 }
 
 TEST_F(PredicateReorderingTest, SimpleValidateReorderingTest) {
   // clang-format off
-  const auto input_lqp =
+  const auto lqp =
   PredicateNode::make(greater_than_(a, 60),
     ValidateNode::make(
       node));
@@ -265,8 +267,8 @@ TEST_F(PredicateReorderingTest, SimpleValidateReorderingTest) {
       node));
   // clang-format on
 
-  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  apply_rule(_rule, lqp);
+  EXPECT_LQP_EQ(lqp, expected_lqp);
 }
 
 }  // namespace hyrise
