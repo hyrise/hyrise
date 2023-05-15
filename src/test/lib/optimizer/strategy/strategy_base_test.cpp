@@ -12,7 +12,7 @@
 
 namespace hyrise {
 
-std::shared_ptr<AbstractLQPNode> StrategyBaseTest::apply_rule(const std::shared_ptr<AbstractRule>& rule,
+void StrategyBaseTest::apply_rule(const std::shared_ptr<AbstractRule>& rule,
                                                               const std::shared_ptr<AbstractLQPNode>& input) {
   // Add explicit root node
   const auto root_node = LogicalPlanRootNode::make();
@@ -26,10 +26,7 @@ std::shared_ptr<AbstractLQPNode> StrategyBaseTest::apply_rule(const std::shared_
   rule->apply_to_plan(root_node);
 
   // Remove LogicalPlanRootNode
-  const auto optimized_node = root_node->left_input();
   root_node->set_left_input(nullptr);
-
-  return optimized_node;
 }
 
 }  // namespace hyrise
