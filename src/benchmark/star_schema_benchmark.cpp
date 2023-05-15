@@ -22,7 +22,6 @@ using namespace hyrise;  // NOLINT(build/namespaces)
 
 int main(int argc, char* argv[]) {
   auto cli_options = BenchmarkRunner::get_basic_cli_options("Hyrise Star Schema Benchmark");
-  const auto DEFAULT_QUERY_PATH = "resources/benchmark/ssb/queries";
 
   // clang-format off
   cli_options.add_options()
@@ -68,10 +67,12 @@ int main(int argc, char* argv[]) {
   // to include both generators.
 
   // Try to find dbgen binary.
-  const auto ssb_dbgen_path =
-      std::filesystem::canonical(std::string{argv[0]}).remove_filename() / "third_party/ssb-dbgen";
+  const auto executable_path = std::filesystem::canonical(std::string{argv[0]}).remove_filename();
+  const auto ssb_dbgen_path = executable_path / "third_party/ssb-dbgen";
   Assert(std::filesystem::exists(ssb_dbgen_path / "dbgen"),
          std::string{"SSB dbgen not found at "} + ssb_dbgen_path.c_str());
+  const auto query_path = executable_path / "../resources/benchmark/ssb/queries";
+  const auto csv_meta_path = executable_path / "../resources/benchmark/ssb/schema";
 
   // Create the ssb_data directory (if needed) and generate the ssb_data/sf-... path.
   auto ssb_data_path_str = std::stringstream{};
@@ -84,10 +85,11 @@ int main(int argc, char* argv[]) {
   std::cout << "- Storing SSB tables in " << ssb_data_path << std::endl;
 
   // Create the table generator and item runner.
-  auto table_generator = std::make_unique<SSBTableGenerator>(ssb_dbgen_path, ssb_data_path, scale_factor, config);
+  auto table_generator =
+      std::make_unique<SSBTableGenerator>(ssb_dbgen_path, csv_meta_path, ssb_data_path, scale_factor, config);
 
   auto benchmark_item_runner = std::make_unique<FileBasedBenchmarkItemRunner>(
-      config, DEFAULT_QUERY_PATH, std::unordered_set<std::string>{}, query_subset);
+      config, query_path, std::unordered_set<std::string>{}, query_subset);
 
   auto benchmark_runner =
       std::make_shared<BenchmarkRunner>(*config, std::move(benchmark_item_runner), std::move(table_generator), context);
