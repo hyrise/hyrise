@@ -40,7 +40,8 @@ class JoinToSemiJoinRuleTest : public StrategyBaseTest {
   }
 
   std::shared_ptr<JoinToSemiJoinRule> rule;
-  std::shared_ptr<MockNode> node_a, node_b;
+  std::shared_ptr<MockNode> node_a;
+  std::shared_ptr<MockNode> node_b;
   std::shared_ptr<LQPColumnExpression> a, b, c, u, v, w;
 };
 
@@ -232,7 +233,7 @@ TEST_F(JoinToSemiJoinRuleTest, DoNotTouchInnerJoinWithoutMatchingUcc) {
    * Based on the InnerJoinToSemiJoin test.
    *
    * We define a multi-column UCC (column0, column1), but only a single Equals-predicate for the inner join
-   * (a == column0). Hence, the resulting unique column combination does not match the expressions of the single Equals-
+   * (a == column0). Hence, the resulting unique column combination does not match the expressions of the single equals
    * predicate and we should not see a semi join reformulation.
    */
 

@@ -1,8 +1,9 @@
+#include "strategy_base_test.hpp"
+
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/union_node.hpp"
 #include "optimizer/strategy/stored_table_column_alignment_rule.hpp"
-#include "strategy_base_test.hpp"
 
 namespace hyrise {
 
@@ -28,7 +29,8 @@ class StoredTableColumnAlignmentRuleTest : public StrategyBaseTest {
 
   std::shared_ptr<StoredTableColumnAlignmentRule> _rule;
   std::shared_ptr<AbstractLQPNode> _union_node;
-  std::shared_ptr<StoredTableNode> _stored_table_node_left, _stored_table_node_right;
+  std::shared_ptr<StoredTableNode> _stored_table_node_left;
+  std::shared_ptr<StoredTableNode> _stored_table_node_right;
 };
 
 TEST_F(StoredTableColumnAlignmentRuleTest, EqualTableEqualChunksEqualColumns) {
@@ -80,7 +82,7 @@ TEST_F(StoredTableColumnAlignmentRuleTest, DifferentTableEqualChunksDifferentCol
 }
 
 TEST_F(StoredTableColumnAlignmentRuleTest, CoverSubqueries) {
-  // Prepare root & subquery LQP
+  // Prepare root & subquery LQP.
   const auto stn_subquery = std::static_pointer_cast<StoredTableNode>(_stored_table_node_left->deep_copy());
   const auto column_c = lqp_column_(stn_subquery, ColumnID{2});
   const auto projection_subquery = ProjectionNode::make(expression_vector(column_c), stn_subquery);
@@ -88,14 +90,14 @@ TEST_F(StoredTableColumnAlignmentRuleTest, CoverSubqueries) {
 
   _lqp = ProjectionNode::make(expression_vector(subquery), _union_node);
 
-  // Set pruned column ids
+  // Set pruned ColumnIDs.
   const auto pruned_column_set_a = std::vector{ColumnID{0}};
   _stored_table_node_left->set_pruned_column_ids(pruned_column_set_a);
   _stored_table_node_right->set_pruned_column_ids(pruned_column_set_a);
   const auto pruned_column_set_a_b = std::vector{ColumnID{0}, ColumnID{1}};
   stn_subquery->set_pruned_column_ids(pruned_column_set_a_b);
 
-  // Prerequisites
+  // Prerequisites.
   ASSERT_EQ(_stored_table_node_left->pruned_column_ids(), pruned_column_set_a);
   ASSERT_EQ(_stored_table_node_right->pruned_column_ids(), pruned_column_set_a);
   ASSERT_EQ(stn_subquery->pruned_column_ids(), pruned_column_set_a_b);  // differs

@@ -1,9 +1,5 @@
 #include "strategy_base_test.hpp"
 
-#include <memory>
-#include <string>
-#include <utility>
-
 #include "cost_estimation/cost_estimator_logical.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/logical_plan_root_node.hpp"

@@ -1,4 +1,4 @@
-#include "lib/optimizer/strategy/strategy_base_test.hpp"
+#include "strategy_base_test.hpp"
 
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
@@ -54,7 +54,8 @@ class InExpressionRewriteRuleTest : public StrategyBaseTest {
  public:
   // Can't use EXPECT_LQP_EQ for disjunction rewrites for multiple elements, because ExpressionUnorderedSet produces
   // a non-deterministic order of predicates
-  bool check_disjunction(std::shared_ptr<AbstractLQPNode> lqp, std::shared_ptr<AbstractExpression> expected_column, std::vector<int> expected_values) {
+  bool check_disjunction(std::shared_ptr<AbstractLQPNode> lqp, std::shared_ptr<AbstractExpression> expected_column,
+                         std::vector<int> expected_values) {
     auto values_found_in_predicates = std::vector<int>{};
 
     // Checks that a given node is a predicate of the form `col_a = x` where x is an int and will be added to
@@ -92,14 +93,15 @@ class InExpressionRewriteRuleTest : public StrategyBaseTest {
   std::shared_ptr<InExpressionRewriteRule> rule;
 
   std::shared_ptr<MockNode> node, many_row_node;
-  std::shared_ptr<AbstractExpression> col_a, col_b, col_c, col_large, single_element_in_expression,
-      two_element_functional_in_expression, five_element_in_expression, five_element_not_in_expression,
-      hundred_element_in_expression, hundred_element_in_expression_large_input, duplicate_element_in_expression,
+  std::shared_ptr<LQPColumnExpression> col_a, col_b, col_c, col_large;
+  std::shared_ptr<InExpression> single_element_in_expression, two_element_functional_in_expression,
+      five_element_in_expression, five_element_not_in_expression, hundred_element_in_expression,
+      hundred_element_in_expression_large_input, duplicate_element_in_expression,
       different_types_on_left_and_right_side_expression, different_types_on_right_side_expression, null_in_expression;
 };
 
 TEST_F(InExpressionRewriteRuleTest, ExpressionEvaluatorStrategy) {
-  // With the ExpressionEvaluator strategy chosen, no modifications should be made
+  // With the ExpressionEvaluator strategy chosen, no modifications should be made.
   rule->strategy = InExpressionRewriteRule::Strategy::ExpressionEvaluator;
 
   {

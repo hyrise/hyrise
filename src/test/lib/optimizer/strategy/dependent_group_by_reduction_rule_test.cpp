@@ -294,15 +294,15 @@ TEST_F(DependentGroupByReductionRuleTest, ShortConstraintsFirst) {
 TEST_F(DependentGroupByReductionRuleTest, MultiKeyReduction) {
   // Since this is a special FD-scenario that can not be generated from UniqueConstraints and StoredTableNodes at the
   // moment, we have to use a custom MockNode:
-  auto mock_node = MockNode::make(MockNode::ColumnDefinitions{
+  const auto mock_node = MockNode::make(MockNode::ColumnDefinitions{
       {DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}, {DataType::Int, "d"}, {DataType::Int, "e"}});
-  auto a = mock_node->get_column("a");
-  auto b = mock_node->get_column("b");
-  auto c = mock_node->get_column("c");
-  auto d = mock_node->get_column("d");
-  auto e = mock_node->get_column("e");
-  auto fd_a = FunctionalDependency{{a}, {b}};
-  auto fd_c = FunctionalDependency{{c}, {d}};
+  const auto a = mock_node->get_column("a");
+  const auto b = mock_node->get_column("b");
+  const auto c = mock_node->get_column("c");
+  const auto d = mock_node->get_column("d");
+  const auto e = mock_node->get_column("e");
+  const auto fd_a = FunctionalDependency{{a}, {b}};
+  const auto fd_c = FunctionalDependency{{c}, {d}};
   mock_node->set_non_trivial_functional_dependencies({fd_a, fd_c});
 
   // clang-format off

@@ -1,5 +1,4 @@
-#include "base_test.hpp"
-#include "lib/optimizer/strategy/strategy_base_test.hpp"
+#include "strategy_base_test.hpp"
 
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_functional.hpp"
@@ -36,7 +35,9 @@ class PredicateReorderingTest : public StrategyBaseTest {
   }
 
   std::shared_ptr<MockNode> node;
-  std::shared_ptr<LQPColumnExpression> a, b, c;
+  std::shared_ptr<LQPColumnExpression> a;
+  std::shared_ptr<LQPColumnExpression> b;
+  std::shared_ptr<LQPColumnExpression> c;
   std::shared_ptr<PredicateReorderingRule> _rule;
 };
 
@@ -85,7 +86,6 @@ TEST_F(PredicateReorderingTest, ComplexReorderingTest) {
           PredicateNode::make(greater_than_equals_(a, 90),
             PredicateNode::make(less_than_(c, 500),
               node))))));
-
 
   const auto expected_lqp =
   PredicateNode::make(greater_than_(b, 40),
@@ -141,7 +141,7 @@ TEST_F(PredicateReorderingTest, SameOrderingForStoredTable) {
 
 TEST_F(PredicateReorderingTest, PredicatesAsRightInput) {
   /**
-   * Check that Reordering predicates works if a predicate chain is both on the left and right side of a node.
+   * Check that reordering predicates works if a predicate chain is both on the left and right side of a node.
    * This is particularly interesting because the PredicateReorderingRule needs to re-attach the ordered chain of
    * predicates to the output (the cross node in this case). This test checks whether the attachment happens as the
    * correct input.
@@ -158,7 +158,7 @@ TEST_F(PredicateReorderingTest, PredicatesAsRightInput) {
    */
 
   /**
-   * The mocked table has one column of int32_ts with the value range 0..100
+   * The mocked table has one column of int32_ts with the value range 0..100.
    */
   const auto table_0 =
       create_mock_node_with_statistics(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, 100.0f,
@@ -195,28 +195,25 @@ TEST_F(PredicateReorderingTest, PredicatesAsRightInput) {
 
 TEST_F(PredicateReorderingTest, PredicatesWithMultipleOutputs) {
   /**
-     * If a PredicateNode has multiple outputs, it should only be considered for reordering with lower predicates.
-     */
-  /**
-     *        ____Union___
-     *       /            \
-     * Predicate(a > 90)  |
-     *       \            /
-     *      Predicate(a > 10)
-     *             |
-     *      Predicate(a > 5)
-     *             |
-     *           Table
-     *
-     * Predicate_a has a lower selectivity than Predicate_b - but since Predicate_b has two outputs, Predicate_a cannot
-     * be reordered since it does not belong to the predicate chain (Predicate_b and Predicate_c). However, Predicate_b
-     * and Predicate_c can be reordered inside their chain.
-     */
-
-  /**
-     * The mocked table has one column of int32_ts with the value range 0..100
-     */
-  auto table_node =
+   * If a PredicateNode has multiple outputs, it should only be considered for reordering with lower predicates.
+   *
+   *        ____Union___
+   *       /            \
+   * Predicate(a > 90)  |
+   *       \            /
+   *      Predicate(a > 10)
+   *             |
+   *      Predicate(a > 5)
+   *             |
+   *           Table
+   *
+   * Predicate_a has a lower selectivity than Predicate_b - but since Predicate_b has two outputs, Predicate_a cannot
+   * be reordered since it does not belong to the predicate chain (Predicate_b and Predicate_c). However, Predicate_b
+   * and Predicate_c can be reordered inside their chain.
+   *
+   * The mocked table has one column of int32_ts with the value range 0..100.
+   */
+  const auto table_node =
       create_mock_node_with_statistics(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, 100.0f,
                                        {GenericHistogram<int32_t>::with_single_bin(0, 100, 100.0f, 100.0f)});
 

@@ -1,5 +1,4 @@
-#include "base_test.hpp"
-#include "lib/optimizer/strategy/strategy_base_test.hpp"
+#include "strategy_base_test.hpp"
 
 #include "expression/expression_functional.hpp"
 #include "hyrise.hpp"

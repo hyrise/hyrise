@@ -1,4 +1,4 @@
-#include "lib/optimizer/strategy/strategy_base_test.hpp"
+#include "strategy_base_test.hpp"
 
 #include "logical_query_plan/join_node.hpp"
 #include "optimizer/strategy/semi_join_reduction_rule.hpp"
@@ -35,7 +35,9 @@ class SemiJoinReductionRuleTest : public StrategyBaseTest {
     }
   }
 
-  std::shared_ptr<MockNode> _node_a, _node_b, _node_c;
+  std::shared_ptr<MockNode> _node_a;
+  std::shared_ptr<MockNode> _node_b;
+  std::shared_ptr<MockNode> _node_c;
   std::shared_ptr<LQPColumnExpression> _a_a, _a_b, _b_a, _b_b, _c_a;
   std::shared_ptr<SemiJoinReductionRule> _rule{std::make_shared<SemiJoinReductionRule>()};
 };
@@ -73,7 +75,7 @@ TEST_F(SemiJoinReductionRuleTest, CreateSimpleReduction) {
 }
 
 TEST_F(SemiJoinReductionRuleTest, CreateSimpleReductionRightSide) {
-  // Same as CreateSimpleReduction, but with reversed sides
+  // Same as CreateSimpleReduction, but with reversed sides.
 
   // clang-format off
   _lqp =
@@ -137,7 +139,7 @@ TEST_F(SemiJoinReductionRuleTest, ReductionOnlyForEquals) {
   // Similar to CreateSimpleReduction, but with one equals and one non-equals expression. Only the equals expression
   // should lead to a reduction being created.
 
-  auto predicates = std::vector<std::shared_ptr<AbstractExpression>>{less_than_(_a_a, _b_a), equals_(_b_a, _a_a)};
+  const auto predicates = std::vector<std::shared_ptr<AbstractExpression>>{less_than_(_a_a, _b_a), equals_(_b_a, _a_a)};
 
   // clang-format off
   _lqp =
@@ -179,7 +181,7 @@ TEST_F(SemiJoinReductionRuleTest, NoReductionForNonBeneficial) {
 }
 
 TEST_F(SemiJoinReductionRuleTest, TraverseRightInput) {
-  // On the right side of the semi join reduction, we should traverse below joins so that the cardinality is reduced
+  // On the right side of the semi join reduction, we should traverse below joins so that the cardinality is reduced.
 
   // clang-format off
   _lqp =
@@ -208,7 +210,7 @@ TEST_F(SemiJoinReductionRuleTest, TraverseRightInput) {
 }
 
 TEST_F(SemiJoinReductionRuleTest, NoReductionForAntiJoin) {
-  // Same as CreateSimpleReduction, but with an anti join that must not be touched
+  // Same as CreateSimpleReduction, but with an anti join that must not be touched.
 
   // clang-format off
   _lqp =

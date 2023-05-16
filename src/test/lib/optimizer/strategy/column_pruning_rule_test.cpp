@@ -46,7 +46,8 @@ class ColumnPruningRuleTest : public StrategyBaseTest {
   }
 
   std::shared_ptr<ColumnPruningRule> rule;
-  std::shared_ptr<MockNode> node_abc, node_uvw;
+  std::shared_ptr<MockNode> node_abc;
+  std::shared_ptr<MockNode> node_uvw;
   std::shared_ptr<LQPColumnExpression> a, b, c, u, v, w;
 };
 
@@ -58,11 +59,8 @@ TEST_F(ColumnPruningRuleTest, NoUnion) {
       JoinNode::make(JoinMode::Inner, greater_than_(v, a),
         node_abc,
         SortNode::make(expression_vector(w), std::vector<SortMode>{SortMode::Ascending},
-          node_uvw))));
+          node_uvw))))->deep_copy();
   // clang-format on
-
-  // Create deep copy so we can set pruned ColumnIDs on node_abc below without manipulating the input LQP.
-  _lqp = _lqp->deep_copy();
 
   const auto pruned_node_abc = pruned(node_abc, {ColumnID{1}});
   const auto pruned_a = pruned_node_abc->get_column("a");
@@ -94,11 +92,8 @@ TEST_F(ColumnPruningRuleTest, WithUnion) {
         PredicateNode::make(greater_than_(a, 5),
           node_abc),
         PredicateNode::make(greater_than_(b, 5),
-          node_abc)));
+          node_abc)))->deep_copy();
     // clang-format on
-
-    // Create deep copy so we can set pruned ColumnIDs on node_abc below without manipulating the input LQP.
-    _lqp = _lqp->deep_copy();
 
     const auto pruned_node_abc = pruned(node_abc, {ColumnID{2}});
     const auto pruned_a = pruned_node_abc->get_column("a");
@@ -130,11 +125,13 @@ TEST_F(ColumnPruningRuleTest, WithMultipleProjections) {
         PredicateNode::make(greater_than_(mul_(a, 2), 5),
           ProjectionNode::make(expression_vector(a, b, mul_(a, 2), c),
             node_abc)))));
+  // clang-format on
 
   const auto pruned_node_abc = pruned(node_abc, {ColumnID{2}});
   const auto pruned_a = pruned_node_abc->get_column("a");
   const auto pruned_b = pruned_node_abc->get_column("b");
 
+  // clang-format off
   const auto expected_lqp =
   ProjectionNode::make(expression_vector(pruned_a),
     PredicateNode::make(greater_than_(mul_(pruned_a, pruned_b), 5),
@@ -156,10 +153,12 @@ TEST_F(ColumnPruningRuleTest, ProjectionDoesNotRecompute) {
     PredicateNode::make(greater_than_(add_(a, 2), 5),
       ProjectionNode::make(expression_vector(add_(a, 2)),
         node_abc)));
+  // clang-format on
 
   const auto pruned_node_abc = pruned(node_abc, {ColumnID{1}, ColumnID{2}});
   const auto pruned_a = pruned_node_abc->get_column("a");
 
+  // clang-format off
   const auto expected_lqp =
   ProjectionNode::make(expression_vector(add_(add_(pruned_a, 2), 1)),
     PredicateNode::make(greater_than_(add_(pruned_a, 2), 5),
@@ -170,7 +169,6 @@ TEST_F(ColumnPruningRuleTest, ProjectionDoesNotRecompute) {
   _apply_rule(rule, _lqp);
 
   // We can be sure that the top projection node does not recompute a+2 because a is not available.
-
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
@@ -187,12 +185,14 @@ TEST_F(ColumnPruningRuleTest, Diamond) {
         sub_lqp),
       PredicateNode::make(less_than_(add_(b, 3), 10),
         sub_lqp)));
+  // clang-format on
 
-  // Column c should be removed even below the UnionNode
+  // Column c should be removed even below the UnionNode.
   const auto pruned_node_abc = pruned(node_abc, {ColumnID{2}});
   const auto pruned_a = pruned_node_abc->get_column("a");
   const auto pruned_b = pruned_node_abc->get_column("b");
 
+  // clang-format off
   const auto expected_sub_lqp =
   ProjectionNode::make(expression_vector(add_(pruned_a, 2), add_(pruned_b, 3)),
     pruned_node_abc);
@@ -219,10 +219,12 @@ TEST_F(ColumnPruningRuleTest, SimpleAggregate) {
   AggregateNode::make(expression_vector(), expression_vector(sum_(add_(a, 2))),
     ProjectionNode::make(expression_vector(a, b, add_(a, 2)),
       node_abc));
+  // clang-format on
 
   const auto pruned_node_abc = pruned(node_abc, {ColumnID{1}, ColumnID{2}});
   const auto pruned_a = pruned_node_abc->get_column("a");
 
+  // clang-format off
   const auto expected_lqp =
   AggregateNode::make(expression_vector(), expression_vector(sum_(add_(pruned_a, 2))),
     ProjectionNode::make(expression_vector(add_(pruned_a, 2)),
@@ -240,10 +242,12 @@ TEST_F(ColumnPruningRuleTest, UngroupedCountStar) {
   AggregateNode::make(expression_vector(), expression_vector(count_star_(node_abc)),
     ProjectionNode::make(expression_vector(a, b, add_(a, 2)),
       node_abc));
+  // clang-format on
 
   const auto pruned_node_abc = pruned(node_abc, {ColumnID{1}, ColumnID{2}});
   const auto pruned_a = pruned_node_abc->get_column("a");
 
+  // clang-format off
   const auto expected_lqp =
   AggregateNode::make(expression_vector(), expression_vector(count_star_(pruned_node_abc)),
     ProjectionNode::make(expression_vector(pruned_a),
@@ -261,10 +265,12 @@ TEST_F(ColumnPruningRuleTest, UngroupedCountStarAndSum) {
   AggregateNode::make(expression_vector(), expression_vector(count_star_(node_abc), sum_(b)),
     ProjectionNode::make(expression_vector(a, b, add_(a, 2)),
       node_abc));
+  // clang-format on
 
   const auto pruned_node_abc = pruned(node_abc, {ColumnID{0}, ColumnID{2}});
   const auto pruned_b = pruned_node_abc->get_column("b");
 
+  // clang-format off
   const auto expected_lqp =
   AggregateNode::make(expression_vector(), expression_vector(count_star_(pruned_node_abc), sum_(pruned_b)),
     ProjectionNode::make(expression_vector(pruned_b),
@@ -282,11 +288,13 @@ TEST_F(ColumnPruningRuleTest, GroupedCountStar) {
   AggregateNode::make(expression_vector(b, a), expression_vector(count_star_(node_abc)),
     ProjectionNode::make(expression_vector(a, b, add_(a, 2)),
       node_abc));
+  // clang-format on
 
   const auto pruned_node_abc = pruned(node_abc, {ColumnID{2}});
   const auto pruned_a = pruned_node_abc->get_column("a");
   const auto pruned_b = pruned_node_abc->get_column("b");
 
+  // clang-format off
   const auto expected_lqp =
   AggregateNode::make(expression_vector(pruned_b, pruned_a), expression_vector(count_star_(pruned_node_abc)),
     ProjectionNode::make(expression_vector(pruned_a, pruned_b),

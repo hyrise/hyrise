@@ -72,7 +72,7 @@ TEST_F(PredicateMergeRuleTest, MergeUnionBelowPredicateBelowUnion) {
       sub_lqp));
 
   const auto expected_lqp =
-  PredicateNode::make(and_(or_(less_than_(a_b, 8), greater_than_(a_b, 12)), and_(equals_(a_a, 10), or_(less_than_(a_b, 15), greater_than_(a_b, 5)))),  // NOLINT
+  PredicateNode::make(and_(or_(less_than_(a_b, 8), greater_than_(a_b, 12)), and_(equals_(a_a, 10), or_(less_than_(a_b, 15), greater_than_(a_b, 5)))),  // NOLINT(whitespace/line_length)
     node_a);
   // clang-format on
 
@@ -343,7 +343,7 @@ TEST_F(PredicateMergeRuleTest, NoRewriteSimplePredicate) {
 }
 
 TEST_F(PredicateMergeRuleTest, NoRewritePredicateChains) {
-  // Pure predicate chains won't be merged since this is unlikely to improve the performance.
+  // Pure predicate chains will not be merged since this is unlikely to improve the performance.
   // clang-format off
   _lqp =
   PredicateNode::make(equals_(a_a, 5),

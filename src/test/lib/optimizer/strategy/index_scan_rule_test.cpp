@@ -1,5 +1,4 @@
-#include "base_test.hpp"
-#include "lib/optimizer/strategy/strategy_base_test.hpp"
+#include "strategy_base_test.hpp"
 #include "utils/assert.hpp"
 
 #include "expression/abstract_expression.hpp"
@@ -51,7 +50,9 @@ class IndexScanRuleTest : public StrategyBaseTest {
   std::shared_ptr<IndexScanRule> rule;
   std::shared_ptr<StoredTableNode> stored_table_node;
   std::shared_ptr<Table> table;
-  std::shared_ptr<LQPColumnExpression> a, b, c;
+  std::shared_ptr<LQPColumnExpression> a;
+  std::shared_ptr<LQPColumnExpression> b;
+  std::shared_ptr<LQPColumnExpression> c;
 };
 
 TEST_F(IndexScanRuleTest, NoIndexScanWithoutIndex) {

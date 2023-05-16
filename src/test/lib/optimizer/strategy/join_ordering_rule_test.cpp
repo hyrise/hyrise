@@ -11,10 +11,9 @@
 #include "statistics/table_statistics.hpp"
 
 /**
- * We can't actually test much about the JoinOrderingRule, since it is highly dependent on the underlying algorithms
+ * We cannott actually test much about the JoinOrderingRule, since it is highly dependent on the underlying algorithms
  * which are separately tested.
  */
-
 namespace hyrise {
 
 using namespace expression_functional;  // NOLINT(build/namespaces)

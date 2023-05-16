@@ -1,5 +1,3 @@
-#include <numeric>
-
 #include "strategy_base_test.hpp"
 
 #include "expression/expression_functional.hpp"
@@ -43,7 +41,8 @@ class JoinPredicateOrderingRuleTest : public StrategyBaseTest {
   }
 
   std::shared_ptr<JoinPredicateOrderingRule> _rule;
-  std::shared_ptr<MockNode> node_a, node_b;
+  std::shared_ptr<MockNode> node_a;
+  std::shared_ptr<MockNode> node_b;
   std::shared_ptr<LQPColumnExpression> a_x, a_y, a_z, b_x, b_y, b_z;
 };
 
@@ -88,7 +87,7 @@ TEST_F(JoinPredicateOrderingRuleTest, AntiNonEqualsJoin) {
 
   const auto non_equals_predicates = expression_vector(greater_than_(a_y, b_y), less_than_(a_z, b_z));
 
-  for (const auto& join_mode : {JoinMode::Inner, JoinMode::Left, JoinMode::Right, JoinMode::FullOuter}) {
+  for (const auto join_mode : {JoinMode::Inner, JoinMode::Left, JoinMode::Right, JoinMode::FullOuter}) {
     // Might need to adjust this as soon as we can estimate cardinalities for non-equals join predicates.
     const auto expected_lqp = JoinNode::make(join_mode, non_equals_predicates, node_a, node_b);
 
@@ -97,7 +96,7 @@ TEST_F(JoinPredicateOrderingRuleTest, AntiNonEqualsJoin) {
     EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 
-  for (const auto& join_mode : {JoinMode::Semi, JoinMode::AntiNullAsTrue, JoinMode::AntiNullAsFalse}) {
+  for (const auto join_mode : {JoinMode::Semi, JoinMode::AntiNullAsTrue, JoinMode::AntiNullAsFalse}) {
     _lqp = JoinNode::make(join_mode, non_equals_predicates, node_a, node_b);
     EXPECT_THROW(_apply_rule(_rule, _lqp), std::logic_error);
   }

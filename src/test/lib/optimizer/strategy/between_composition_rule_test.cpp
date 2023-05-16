@@ -1,10 +1,4 @@
-#include <memory>
-#include <string>
-#include <vector>
-
-#include "base_test.hpp"
-#include "lib/optimizer/strategy/strategy_base_test.hpp"
-#include "utils/assert.hpp"
+#include "strategy_base_test.hpp"
 
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
@@ -15,6 +9,7 @@
 #include "logical_query_plan/validate_node.hpp"
 #include "optimizer/strategy/between_composition_rule.hpp"
 #include "statistics/table_statistics.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 
@@ -37,8 +32,12 @@ class BetweenCompositionRuleTest : public StrategyBaseTest {
     _b_a = _node_b->get_column("a");
   }
 
-  std::shared_ptr<MockNode> _node_a, _node_b;
-  std::shared_ptr<LQPColumnExpression> _a_a, _a_b, _a_c, _b_a;
+  std::shared_ptr<MockNode> _node_a;
+  std::shared_ptr<MockNode> _node_b;
+  std::shared_ptr<LQPColumnExpression> _a_a;
+  std::shared_ptr<LQPColumnExpression> _a_b;
+  std::shared_ptr<LQPColumnExpression> _a_c;
+  std::shared_ptr<LQPColumnExpression> _b_a;
   std::shared_ptr<BetweenCompositionRule> _rule;
 };
 

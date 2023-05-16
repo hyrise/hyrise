@@ -1,9 +1,10 @@
+#include "strategy_base_test.hpp"
+
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "optimizer/strategy/null_scan_removal_rule.hpp"
-#include "strategy_base_test.hpp"
 
 namespace hyrise {
 
@@ -28,21 +29,23 @@ class NullScanRemovalRuleTest : public StrategyBaseTest {
 
   std::shared_ptr<MockNode> mock_node;
   std::shared_ptr<NullScanRemovalRule> rule;
-  std::shared_ptr<LQPColumnExpression> mock_node_column, nullable_table_node_column, table_node_column;
-  std::shared_ptr<StoredTableNode> nullable_table_node, table_node;
+  std::shared_ptr<LQPColumnExpression> mock_node_column;
+  std::shared_ptr<LQPColumnExpression> nullable_table_node_column;
+  std::shared_ptr<LQPColumnExpression> table_node_column;
+  std::shared_ptr<StoredTableNode> nullable_table_node;
+  std::shared_ptr<StoredTableNode> table_node;
 };
 
 TEST_F(NullScanRemovalRuleTest, LQPNodeTypeIsNotPredicate) {
   // The rule can't apply on a node that is not of type Predicate.
-  _lqp = mock_node;
-  const auto expected_lqp = mock_node->deep_copy();
+  _lqp = mock_node->deep_copy();
   _apply_rule(rule, _lqp);
 
-  EXPECT_LQP_EQ(_lqp, expected_lqp);
+  EXPECT_LQP_EQ(_lqp, mock_node);
 }
 
 TEST_F(NullScanRemovalRuleTest, PredicateIsNotNullExpression) {
-  // The rule can't apply on a predicate that is not a null expression.
+  // The rule cannot apply to a predicate that is not a null expression.
   _lqp = PredicateNode::make(equals_(mock_node_column, 42), mock_node);
   const auto expected_lqp = _lqp->deep_copy();
   _apply_rule(rule, _lqp);
@@ -60,7 +63,7 @@ TEST_F(NullScanRemovalRuleTest, PredicateConditionIsNotNull) {
 }
 
 TEST_F(NullScanRemovalRuleTest, PredicateOperandIsNotLQPColumnExpression) {
-  // The rule can't apply where the predicate operand is not a LQP Column expression.
+  // The rule cannot apply if the predicate operand is not a LQP Column expression.
   _lqp = PredicateNode::make(is_not_null_(42), mock_node);
   const auto expected_lqp = _lqp->deep_copy();
   _apply_rule(rule, _lqp);
@@ -69,7 +72,7 @@ TEST_F(NullScanRemovalRuleTest, PredicateOperandIsNotLQPColumnExpression) {
 }
 
 TEST_F(NullScanRemovalRuleTest, LQPColumnOriginalNodeIsNotStoredTableNode) {
-  // The rule can't apply where the original node of the LQP Column expression is not a storage table node.
+  // The rule can't apply if the original node of the LQP Column expression is not a storage table node.
   _lqp = PredicateNode::make(is_not_null_(mock_node_column), mock_node);
   const auto expected_lqp = _lqp->deep_copy();
   _apply_rule(rule, _lqp);
@@ -78,7 +81,7 @@ TEST_F(NullScanRemovalRuleTest, LQPColumnOriginalNodeIsNotStoredTableNode) {
 }
 
 TEST_F(NullScanRemovalRuleTest, TableColumnDefinitionIsNullable) {
-  // The rule can't apply, if the column is not nullable
+  // The rule cannot apply if the column is not nullable.
   _lqp = PredicateNode::make(is_not_null_(nullable_table_node_column), nullable_table_node);
   const auto expected_lqp = _lqp->deep_copy();
   _apply_rule(rule, _lqp);
@@ -87,13 +90,13 @@ TEST_F(NullScanRemovalRuleTest, TableColumnDefinitionIsNullable) {
 }
 
 TEST_F(NullScanRemovalRuleTest, TableColumnDefinitionIsNotNullable) {
-  // All needed conditions to remove the node are matched:
-  // 1. The node must be of type Predicate
-  // 2. The predicate must be a null expression
-  // 3. The predicate condition must be is not null
-  // 4. The predicate operand needs to be an LQP Column expression
-  // 5. The original node of the LQP Column expression needs to be a storage table node
-  // 6. The column (referenced by the LQP Column expression) is not nullable
+  // All required conditions to remove the node are matched:
+  //   1. The node must be of type Predicate.
+  //   2. The predicate must be a IsNullExpression.
+  //   3. The predicate condition must be PredicateCondition::IsNotNull.
+  //   4. The predicate operand needs to be an LQPColumnExpression.
+  //   5. The original node of the LQPColumnExpression needs to be a StoredTableNode.
+  //   6. The column (referenced by the LQPColumnExpression) is not nullable.
   _lqp = PredicateNode::make(is_not_null_(table_node_column), table_node);
   const auto expected_lqp = table_node->deep_copy();
   _apply_rule(rule, _lqp);

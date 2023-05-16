@@ -29,15 +29,19 @@ class PredicateSplitUpRuleTest : public StrategyBaseTest {
     rule = std::make_shared<PredicateSplitUpRule>();
   }
 
-  std::shared_ptr<MockNode> node_a, node_b;
+  std::shared_ptr<MockNode> node_a;
+  std::shared_ptr<MockNode> node_b;
   std::shared_ptr<LQPColumnExpression> a_a, a_b, a_c, a_d, b_a, b_b;
   std::shared_ptr<PredicateSplitUpRule> rule;
 };
 
 TEST_F(PredicateSplitUpRuleTest, SplitUpConjunctionInPredicateNode) {
-  // SELECT * FROM (
-  //   SELECT a, b FROM a WHERE a = b AND a = 3
-  // ) WHERE (a = 5 AND b > 7) AND 13 = 13
+  // SELECT *
+  //   FROM (
+  //      SELECT a, b
+  //        FROM a
+  //       WHERE a = b AND a = 3)
+  //  WHERE (a = 5 AND b > 7) AND 13 = 13
   // clang-format off
   _lqp =
   PredicateNode::make(and_(equals_(a_a, 5), greater_than_(a_b, 7)),
@@ -85,7 +89,7 @@ TEST_F(PredicateSplitUpRuleTest, SplitUpComplexDisjunctionInPredicateNode) {
   // SELECT * FROM a WHERE b = 7 OR a < 3 OR a >= 5 OR 9 < b
   // clang-format off
   _lqp =
-  PredicateNode::make(or_(equals_(a_b, value_(7)), or_(less_than_(a_a, value_(3)), or_(greater_than_equals_(a_a, value_(5)), less_than_(9, a_b)))),  // NOLINT
+  PredicateNode::make(or_(equals_(a_b, value_(7)), or_(less_than_(a_a, value_(3)), or_(greater_than_equals_(a_a, value_(5)), less_than_(9, a_b)))),  // NOLINT(whitespace/line_length)
     node_a);
 
   const auto expected_lqp =
@@ -131,7 +135,7 @@ TEST_F(PredicateSplitUpRuleTest, SplitUpNotLike) {
 }
 
 TEST_F(PredicateSplitUpRuleTest, SplitUpNotLikeDoesNotApply1) {
-  // SELECT * FROM a WHERE c < 'foo' OR c >= 'bar' - looks like SplitUpNotLike, but the optimization does not apply
+  // SELECT * FROM a WHERE c < 'foo' OR c >= 'bar' - looks like SplitUpNotLike, but the optimization does not apply.
   // clang-format off
   _lqp =
   PredicateNode::make(or_(less_than_(a_c, value_("foo")), greater_than_equals_(a_c, value_("bar"))),
@@ -151,7 +155,7 @@ TEST_F(PredicateSplitUpRuleTest, SplitUpNotLikeDoesNotApply1) {
 }
 
 TEST_F(PredicateSplitUpRuleTest, SplitUpNotLikeDoesNotApply2) {
-  // SELECT * FROM a WHERE c < 'foo' OR d >= 'fop' - looks like SplitUpNotLike, but the optimization does not apply
+  // SELECT * FROM a WHERE c < 'foo' OR d >= 'fop' - looks like SplitUpNotLike, but the optimization does not apply.
   // clang-format off
   _lqp =
   PredicateNode::make(or_(less_than_(a_c, value_("foo")), greater_than_equals_(a_d, value_("fop"))),
@@ -172,7 +176,7 @@ TEST_F(PredicateSplitUpRuleTest, SplitUpNotLikeDoesNotApply2) {
 
 TEST_F(PredicateSplitUpRuleTest, SplitUpMutuallyExclusiveInts) {
   // SELECT * FROM a WHERE a < 5 OR b >= 8 - should identify the conditions as mutually exclusive and use
-  // SetOperationMode::All
+  // SetOperationMode::All.
   // clang-format off
   _lqp =
   PredicateNode::make(or_(less_than_(a_a, value_(5)), greater_than_equals_(a_a, value_(8))),
@@ -215,11 +219,16 @@ TEST_F(PredicateSplitUpRuleTest, SplitBelowProjection) {
 }
 
 TEST_F(PredicateSplitUpRuleTest, HandleDiamondLQPWithCorrelatedParameters) {
-  // SELECT * FROM (
-  //   SELECT a FROM a, b WHERE a.a > b.a OR a.b > b.b
-  // ) r JOIN (
-  //   SELECT b FROM a, b WHERE a.a > b.a OR a.b > b.b
-  // ) s ON r.a = s.b
+  // SELECT *
+  //   FROM (
+  //       SELECT a
+  //         FROM a, b
+  //        WHERE a.a > b.a OR a.b > b.b) r
+  //     JOIN (
+  //       SELECT b
+  //         FROM a, b
+  //        WHERE a.a > b.a OR a.b > b.b) s
+  //       ON r.a = s.b
 
   const auto parameter0 = correlated_parameter_(ParameterID{0}, b_a);
   const auto parameter1 = correlated_parameter_(ParameterID{1}, b_b);
@@ -284,9 +293,13 @@ TEST_F(PredicateSplitUpRuleTest, SplitUpSimpleNestedConjunctionsAndDisjunctions)
 }
 
 TEST_F(PredicateSplitUpRuleTest, SplitUpComplexNestedConjunctionsAndDisjunctions) {
-  // SELECT * FROM (
-  //   SELECT a, b FROM a WHERE a = b AND a = 3
-  // ) WHERE ((a > 10 OR a < 8) AND (b <= 7 OR 11 = b)) OR ((a = 5 AND b > 7) AND 13 = 13)
+  // SELECT *
+  //   FROM (
+  //       SELECT a, b
+  //         FROM a
+  //        WHERE a = b AND a = 3)
+  //  WHERE ((a > 10 OR a < 8) AND (b <= 7 OR 11 = b))
+  //     OR ((a = 5 AND b > 7) AND 13 = 13)
   // clang-format off
   _lqp =
   PredicateNode::make(or_(and_(or_(greater_than_(a_a, value_(10)), less_than_(a_a, value_(8))), or_(less_than_equals_(a_b, 7), equals_(value_(11), a_b))), and_(and_(equals_(a_a, 5), greater_than_(a_b, 7)), equals_(13, 13))),  // NOLINT(whitespace/line_length)
@@ -327,12 +340,7 @@ TEST_F(PredicateSplitUpRuleTest, SplitUpComplexNestedConjunctionsAndDisjunctions
 
 TEST_F(PredicateSplitUpRuleTest, NoRewriteSimplePredicate) {
   // SELECT * FROM a WHERE a < 10
-
-  // clang-format off
-  _lqp =
-  PredicateNode::make(less_than_(a_a, value_(10)),
-    node_a);
-  // clang-format on
+  _lqp = PredicateNode::make(less_than_(a_a, value_(10)), node_a);
 
   const auto expected_lqp = _lqp->deep_copy();
 
