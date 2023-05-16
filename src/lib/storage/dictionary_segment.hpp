@@ -22,6 +22,8 @@ class DictionarySegment : public BaseDictionarySegment {
   explicit DictionarySegment(const std::shared_ptr<const pmr_vector<T>>& dictionary,
                              const std::shared_ptr<const BaseCompressedVector>& attribute_vector);
 
+  ~DictionarySegment();
+  
   // returns an underlying dictionary
   std::shared_ptr<const pmr_vector<T>> dictionary() const;
 

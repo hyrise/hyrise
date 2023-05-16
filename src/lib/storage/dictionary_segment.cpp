@@ -25,6 +25,13 @@ DictionarySegment<T>::DictionarySegment(const std::shared_ptr<const pmr_vector<T
   Assert(_dictionary->size() < std::numeric_limits<ValueID::base_type>::max(), "Input segment too big");
 }
 
+// TODO(nikriek): Build destructor
+
+template <typename T>
+DictionarySegment<T>::~DictionarySegment() {
+  Fail("TODO");
+}
+
 template <typename T>
 AllTypeVariant DictionarySegment<T>::operator[](const ChunkOffset chunk_offset) const {
   PerformanceWarning("operator[] used");

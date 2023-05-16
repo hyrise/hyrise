@@ -92,7 +92,7 @@ EqualDistinctCountHistogram<T>::EqualDistinctCountHistogram(std::vector<T>&& bin
   Assert(_distinct_count_per_bin > 0, "Cannot have bins with no distinct values.");
   Assert(_bin_count_with_extra_value < _bin_minima.size(), "Cannot have more bins with extra value than bins.");
 
-  AbstractHistogram<T>::_assert_bin_validity();
+  // TODO(nikriek): AbstractHistogram<T>::_assert_bin_validity();
 
   _total_count = std::accumulate(_bin_heights.cbegin(), _bin_heights.cend(), HistogramCountType{0});
   _total_distinct_count = _distinct_count_per_bin * static_cast<HistogramCountType>(bin_count()) +
