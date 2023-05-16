@@ -6,7 +6,6 @@
 #include <utility>
 #include <variant>
 #include "storage/buffer/buffer_manager.hpp"
-#include "storage/buffer/pin_guard.hpp"
 #include "storage/buffer/types.hpp"
 
 #include "utils/assert.hpp"
@@ -26,7 +25,6 @@ class BufferPtr {
   using value_type = std::remove_cv_t<PointedType>;
   using difference_type = std::ptrdiff_t;
   using iterator_category = std::random_access_iterator_tag;
-  using PtrOrOffset = std::uintptr_t;
   // using IsConst = std::is_const<PointedType>::value;
 
   template <typename U>
@@ -48,42 +46,30 @@ class BufferPtr {
   // Segment ptr uses pointer swizzlhttps://github.com/boostorg/interprocess/blob/4403b201bef142f07cdc43f67bf6477da5e07fe3/include/boost/interprocess/detail/intersegment_ptr.hpp#L611
 
   BufferPtr(pointer ptr = 0) {
-    unswizzle(ptr);
-    pin_and_set_ptr();
+    find_frame_and_offset(ptr);
   }
 
-  BufferPtr(const BufferPtr& other) : _frame(other._frame), _ptr_or_offset(other._ptr_or_offset) {
-    assert_not_overflow();
-    pin_and_set_ptr();
-  }
+  BufferPtr(const BufferPtr& other) : _frame(other._frame), _ptr_or_offset(other._ptr_or_offset) {}
 
   template <typename U>
-  BufferPtr(const BufferPtr<U>& other) : _frame(other._frame), _ptr_or_offset(other._ptr_or_offset) {
-    assert_not_overflow();
-    pin_and_set_ptr();
-  }
+  BufferPtr(const BufferPtr<U>& other) : _frame(other._frame), _ptr_or_offset(other._ptr_or_offset) {}
+
+  BufferPtr(BufferPtr&& other) : _frame(std::move(other._frame)), _ptr_or_offset(std::move(other._ptr_or_offset)) {}
+
+  template <typename U>
+  BufferPtr(BufferPtr<U>&& other) : _frame(std::move(other._frame)), _ptr_or_offset(std::move(other._ptr_or_offset)) {}
 
   template <typename T>
   BufferPtr(T* ptr) {
-    unswizzle(ptr);
-    pin_and_set_ptr();
+    find_frame_and_offset(ptr);
   }
 
   template <typename U>
   BufferPtr(const BufferPtr<U>& other, const AllocTag& tag)
-      : _frame(other._frame), _ptr_or_offset(other._ptr_or_offset) {
-    // Fail("implement me");
-  }
+      : _frame(other._frame), _ptr_or_offset(other._ptr_or_offset) {}
 
   explicit BufferPtr(const FramePtr& frame, const size_t offset, const AllocTag& tag)
-      : _frame(frame), _ptr_or_offset(reinterpret_cast<std::uintptr_t>(frame->data + offset)) {}
-
-  ~BufferPtr() {
-    // This pointer has an unswizzled pointer. We need to unpin it!
-    if (_frame && _ptr_or_offset != 0 && _frame->is_pinned()) {
-      get_buffer_manager_memory_resource()->unpin(_frame);  // TODO: Depends on const vs not const
-    }
-  }
+      : _frame(frame), _ptr_or_offset(offset) {}
 
   pointer operator->() const {
     return get();
@@ -104,7 +90,7 @@ class BufferPtr {
   }
 
   bool operator!() const {
-    return !_frame && !_ptr_or_offset;
+    return !_frame->data && !_ptr_or_offset;
   }
 
   BufferPtr operator+(difference_type offset) const noexcept {
@@ -140,7 +126,7 @@ class BufferPtr {
   }
 
   BufferPtr& operator=(pointer from) {
-    unswizzle(from);
+    find_frame_and_offset(from);
     return *this;
   }
 
@@ -151,16 +137,19 @@ class BufferPtr {
   }
 
   explicit operator bool() const noexcept {
-    // TODO: Load frame
-    return _frame || _ptr_or_offset;
+    return _frame->data || _ptr_or_offset;
   }
 
   pointer get() const {
-    return static_cast<pointer>(this->get_pointer());
+    if (_frame->data) {
+      return reinterpret_cast<pointer>(_frame->data + _ptr_or_offset);
+    } else {
+      return reinterpret_cast<pointer>(_ptr_or_offset);
+    }
   }
 
   inline friend bool operator==(const BufferPtr& ptr1, const BufferPtr& ptr2) noexcept {
-    return ptr1.get() != ptr2.get();
+    return ptr1.get() == ptr2.get();
   }
 
   inline friend bool operator==(pointer ptr1, const BufferPtr& ptr2) noexcept {
@@ -199,23 +188,8 @@ class BufferPtr {
     return ptr1.get() < ptr2;
   }
 
-  void* get_pointer() const {
-    return (void*)_ptr_or_offset;
-  }
-
-  pointer pin(FramePinGuard& guard) {
-    make_resident(guard.get_access_intent());
-    guard.pin(_frame);
-    // DebugAssert(frame == _frame, "Frame mismatch");
-    return reinterpret_cast<pointer>(_frame->data + _ptr_or_offset);
-  }
-
   void make_resident(const AccessIntent access_intent) {
     _frame = get_buffer_manager_memory_resource()->make_resident(_frame, access_intent);
-  }
-
-  PtrOrOffset get_offset() const {
-    return _ptr_or_offset;
   }
 
   FramePtr get_frame() const {
@@ -230,9 +204,8 @@ class BufferPtr {
     return BufferPtr(&ref);
   }
 
- private:
   FramePtr _frame;
-  PtrOrOffset _ptr_or_offset = 0;
+  std::uintptr_t _ptr_or_offset = 0;
 
   template <class T1, class T2>
   friend bool operator!=(const BufferPtr<T1>& ptr1, const BufferPtr<T2>& ptr2);
@@ -242,52 +215,26 @@ class BufferPtr {
 
   void inc_offset(difference_type bytes) noexcept {
     _ptr_or_offset += bytes;
-    assert_not_overflow();
   }
 
   void dec_offset(difference_type bytes) noexcept {
     _ptr_or_offset -= bytes;
-    assert_not_overflow();
-  }
-
-  void assert_not_overflow() {
-    // if constexpr (!std::is_same_v<value_type, void>) {
-    //   if (_frame == nullptr) {
-    //     return;
-    //   }
-    //   DebugAssert(_ptr_or_offset <= (bytes_for_size_type(_frame->size_type) + sizeof(PointedType)),
-    //               "BufferPtr overflow detected! " + std::to_string(static_cast<size_t>(_ptr_or_offset)) + " >" +
-    //                   std::to_string(bytes_for_size_type(_frame->size_type) + sizeof(PointedType)));
-    // }
   }
 
   template <typename T>
-  void unswizzle(T* ptr) {
+  void find_frame_and_offset(T* ptr) {
+    _ptr_or_offset = reinterpret_cast<std::uintptr_t>(ptr);
     if (ptr) {
-      const auto [frame, offset] = get_buffer_manager_memory_resource()->unswizzle(reinterpret_cast<const void*>(ptr));
-      if (frame) {
-        assert_not_overflow();
-        _frame = frame;
+      const auto [frame, offset] =
+          get_buffer_manager_memory_resource()->find_frame_and_offset(reinterpret_cast<const void*>(ptr));
+      _frame = frame;
+      if (frame->page_id != INVALID_PAGE_ID) {
         _ptr_or_offset = offset;
-        return;
-      } else {
-        _frame = nullptr;
-        _ptr_or_offset = reinterpret_cast<PtrOrOffset>(ptr);
-        return;
       }
-    } else {
-      _frame = nullptr;
-      _ptr_or_offset = 0;
-    }
-  }
-
-  void pin_and_set_ptr() {
-    if (_frame == nullptr) {
       return;
+    } else {
+      _frame = DummyFrame();
     }
-    _frame = get_buffer_manager_memory_resource()->make_resident(_frame, AccessIntent::Read);
-    _ptr_or_offset = reinterpret_cast<std::uintptr_t>(_frame->data + _ptr_or_offset);
-    get_buffer_manager_memory_resource()->pin(_frame);
   }
 };
 

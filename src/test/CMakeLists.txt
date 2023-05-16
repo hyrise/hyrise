@@ -173,6 +173,7 @@ set(
     lib/statistics/table_statistics_test.cpp
     lib/storage/any_segment_iterable_test.cpp
     lib/storage/buffer/buffer_ptr_test.cpp
+    lib/storage/buffer/swizzle_test.cpp
     lib/storage/buffer/memory_resource_test.cpp
     lib/storage/buffer/buffer_manager_test.cpp
     lib/storage/buffer/frame_test.cpp

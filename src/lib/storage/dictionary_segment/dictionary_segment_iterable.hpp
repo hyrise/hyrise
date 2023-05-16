@@ -28,17 +28,15 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
     _segment.access_counter[SegmentAccessCounter::AccessType::Dictionary] += _segment.size();
 
     resolve_compressed_vector_type(*_segment.attribute_vector(), [&](const auto& vector) {
-      using CompressedVectorIterator = decltype(vector.cbegin().get_ptr().get());
-      using DictionaryIteratorType = decltype(_dictionary->cbegin().get_ptr().get());
-      auto dictionary_pin_guard = FramePinGuard{};
-      auto vector_pin_guard = FramePinGuard{};
+      using CompressedVectorIterator = decltype(vector.cbegin());
+      using DictionaryIteratorType = decltype(_dictionary->cbegin());
+      auto dictionary_pin_guard = ReadPinGuard{*_dictionary};
+      auto vector_pin_guard = ReadPinGuard{vector};
 
       auto begin = Iterator<CompressedVectorIterator, DictionaryIteratorType>{
-          _dictionary->cbegin().get_ptr().pin(dictionary_pin_guard), _segment.null_value_id(),
-          vector.cbegin().get_ptr().pin(vector_pin_guard), ChunkOffset{0u}};
+          _dictionary->cbegin(), _segment.null_value_id(), vector.cbegin(), ChunkOffset{0u}};
       auto end = Iterator<CompressedVectorIterator, DictionaryIteratorType>{
-          _dictionary->cbegin().get_ptr().pin(dictionary_pin_guard), _segment.null_value_id(),
-          vector.cend().get_ptr().pin(vector_pin_guard), static_cast<ChunkOffset>(_segment.size())};
+          _dictionary->cbegin(), _segment.null_value_id(), vector.cend(), static_cast<ChunkOffset>(_segment.size())};
 
       functor(begin, end);
     });
@@ -51,21 +49,20 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
 
     resolve_compressed_vector_type(*_segment.attribute_vector(), [&](const auto& vector) {
       using Decompressor = std::decay_t<decltype(vector.create_decompressor())>;
-      using DictionaryIteratorType = decltype(_dictionary->cbegin().get_ptr().get());
+      using DictionaryIteratorType = decltype(_dictionary->cbegin());
       using PosListIteratorType = decltype(position_filter->cbegin());
 
-      auto dictionary_pin_guard = FramePinGuard{};
-      auto vector_pin_guard = FramePinGuard{vector};
-      auto pos_list_pin_guard =
-          FramePinGuard{};  // TODO: this is not needed for all PosList types using std::conditional
+      auto dictionary_pin_guard = ReadPinGuard{*_dictionary};
+      auto vector_pin_guard = ReadPinGuard{vector};
+      auto pos_list_pin_guard = ReadPinGuard{position_filter};
 
       auto begin = PointAccessIterator<Decompressor, DictionaryIteratorType, PosListIteratorType>{
-          _dictionary->cbegin().get_ptr().pin(dictionary_pin_guard), _segment.null_value_id(),
-          vector.create_decompressor(), position_filter->cbegin(), position_filter->cbegin()};
+          _dictionary->cbegin(), _segment.null_value_id(), vector.create_decompressor(), position_filter->cbegin(),
+          position_filter->cbegin()};
 
       auto end = PointAccessIterator<Decompressor, DictionaryIteratorType, PosListIteratorType>{
-          _dictionary->cbegin().get_ptr().pin(dictionary_pin_guard), _segment.null_value_id(),
-          vector.create_decompressor(), position_filter->cbegin(), position_filter->cend()};
+          _dictionary->cbegin(), _segment.null_value_id(), vector.create_decompressor(), position_filter->cbegin(),
+          position_filter->cend()};
       functor(begin, end);
     });
   }

@@ -68,7 +68,8 @@ std::shared_ptr<const Table> CreateTable::_on_execute(std::shared_ptr<Transactio
   // If IF NOT EXISTS is not set and the table already exists, StorageManager throws an exception
   if (!if_not_exists || !Hyrise::get().storage_manager.has_table(table_name)) {
     // TODO(anybody) chunk size and mvcc not yet specifiable
-    const auto table = std::make_shared<Table>(column_definitions, TableType::Data, Chunk::DEFAULT_SIZE, UseMvcc::Yes);
+    // TODO(nikriek): reduce chunk size
+    const auto table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{8192}, UseMvcc::Yes);
     Hyrise::get().storage_manager.add_table(table_name, table);
 
     for (const auto& table_key_constraint : _left_input->get_output()->soft_key_constraints()) {

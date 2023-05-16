@@ -5,7 +5,6 @@
 #include <memory>
 
 #include "storage/base_segment_encoder.hpp"
-#include "storage/buffer/pin_guard.hpp"
 #include "storage/dictionary_segment.hpp"
 #include "storage/fixed_string_dictionary_segment.hpp"
 #include "storage/segment_iterables/any_segment_iterable.hpp"
@@ -45,7 +44,7 @@ class DictionaryEncoder : public SegmentEncoder<DictionaryEncoder<Encoding>> {
       null_values.resize(segment_size);    // resized to size of segment
 
       for (auto current_position = size_t{0}; segment_it != segment_end; ++segment_it, ++current_position) {
-        const auto segment_item = *segment_it;
+        const auto& segment_item = *segment_it;
         if (!segment_item.is_null()) {
           const auto segment_value = segment_item.value();
           dense_values.push_back(segment_value);
@@ -61,27 +60,14 @@ class DictionaryEncoder : public SegmentEncoder<DictionaryEncoder<Encoding>> {
       }
     });
 
-    // Dictionary is pinned through the allocator.
     auto dictionary = std::make_shared<pmr_vector<T>>(dense_values.cbegin(), dense_values.cend(), allocator);
-    auto dictionary_pin_guard = FramePinGuard{AccessIntent::Write};
-
-    // TODO: End can land outside of a page if the vector is exactly the page site.. This a temp fix only, potential solution is to never use the last bytes of a page
-    T* dict_begin_raw = dictionary->begin().get_ptr().pin(dictionary_pin_guard);
-    T* dict_end_raw = dict_begin_raw + dictionary->size();
-    std::sort(dict_begin_raw, dict_end_raw);
-
-    auto dictionary_begin = decltype(dictionary->begin())(dictionary->begin().get_ptr().pin(dictionary_pin_guard));
-    auto dictionary_end = dictionary_begin + dictionary->size();
-    auto dictionary_cend =
-        decltype(dictionary->begin())(dictionary->begin().get_ptr().pin(dictionary_pin_guard)) + dictionary->size();
-    // TODO: Verify what is passed to the vec_itetrator. does it swizzle?!
-
-    dictionary->erase(std::unique(dictionary_begin, dictionary_end), dictionary_cend);
+    std::sort(dictionary->begin(), dictionary->end());
+    dictionary->erase(std::unique(dictionary->begin(), dictionary->end()), dictionary->cend());
     dictionary->shrink_to_fit();
 
     const auto null_value_id = static_cast<uint32_t>(dictionary->size());
-    auto uncompressed_attribute_vector = pmr_vector<uint32_t>{static_cast<uint32_t>(null_values.size()), allocator};
 
+    auto uncompressed_attribute_vector = pmr_vector<uint32_t>{null_values.size(), allocator};
     auto values_iter = dense_values.cbegin();
     const auto null_values_size = null_values.size();
     for (auto current_position = size_t{0}; current_position < null_values_size; ++current_position) {
@@ -105,10 +91,8 @@ class DictionaryEncoder : public SegmentEncoder<DictionaryEncoder<Encoding>> {
 
     if constexpr (Encoding == EncodingType::FixedStringDictionary) {
       // Encode a segment with a FixedStringVector as dictionary. pmr_string is the only supported type
-      auto dictionary_pin_guard = FramePinGuard{};
-      auto fixed_string_dictionary = std::make_shared<FixedStringVector>(
-          dictionary->cbegin().get_ptr().pin(dictionary_pin_guard),
-          dictionary->cend().get_ptr().pin(dictionary_pin_guard), max_string_length, allocator);
+      auto fixed_string_dictionary =
+          std::make_shared<FixedStringVector>(dictionary->cbegin(), dictionary->cend(), max_string_length, allocator);
       return std::make_shared<FixedStringDictionarySegment<T>>(fixed_string_dictionary, compressed_attribute_vector);
     } else {
       // Encode a segment with a pmr_vector<T> as dictionary
@@ -119,11 +103,8 @@ class DictionaryEncoder : public SegmentEncoder<DictionaryEncoder<Encoding>> {
  private:
   template <typename U, typename T>
   static ValueID _get_value_id(const U& dictionary, const T& value) {
-    auto pin_guard = FramePinGuard{AccessIntent::Read};  // TODO: can be moved somewhere else
     return ValueID{static_cast<ValueID::base_type>(
-        std::distance(dictionary->cbegin().get_ptr().pin(pin_guard),
-                      std::lower_bound(dictionary->cbegin().get_ptr().pin(pin_guard),
-                                       dictionary->cend().get_ptr().pin(pin_guard), value)))};
+        std::distance(dictionary->cbegin(), std::lower_bound(dictionary->cbegin(), dictionary->cend(), value)))};
   }
 };
 

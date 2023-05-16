@@ -5,13 +5,9 @@
 
 namespace hyrise {
 
-MvccData::MvccData(const size_t size, CommitID begin_commit_id) {
+MvccData::MvccData(const size_t size, CommitID begin_commit_id)
+    : allocator(get_new_delete_memory_resource()), _begin_cids(allocator), _end_cids(allocator), _tids(allocator) {
   DebugAssert(size > 0, "No point in having empty MVCC data, as it cannot grow");
-
-  auto pin_guard1 = AllocatorPinGuard{_begin_cids.get_stored_allocator()};
-  auto pin_guard2 = AllocatorPinGuard{_end_cids.get_stored_allocator()};
-  auto pin_guard3 = AllocatorPinGuard{_tids.get_stored_allocator()};
-
   _begin_cids.resize(size, begin_commit_id);
   _end_cids.resize(size, MAX_COMMIT_ID);
   _tids.resize(size, copyable_atomic<TransactionID>{INVALID_TRANSACTION_ID});
@@ -42,7 +38,6 @@ std::ostream& operator<<(std::ostream& stream, const MvccData& mvcc_data) {
 
 CommitID MvccData::get_begin_cid(const ChunkOffset offset) const {
   DebugAssert(offset < _begin_cids.size(), "offset out of bounds; MvccData insufficently preallocated?");
-  auto pin_guard = FramePinGuard{_begin_cids};
   return _begin_cids[offset];
 }
 

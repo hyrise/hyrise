@@ -1,6 +1,5 @@
 #include "sort.hpp"
 
-#include "storage/buffer/pin_guard.hpp"
 #include "storage/segment_iterate.hpp"
 #include "utils/timer.hpp"
 
@@ -65,11 +64,10 @@ std::shared_ptr<Table> write_materialized_output_table(const std::shared_ptr<con
         accessor_by_chunk_id[input_chunk_id] = create_segment_accessor<ColumnDataType>(abstract_segment);
       }
 
-      auto pos_list_pin_guard = FramePinGuard{AccessIntent::Write};
-      auto pos_list_ptr = pos_list.begin().get_ptr().pin(pos_list_pin_guard);
+      auto pos_list_pin_guard = WritePinGuard{pos_list};
 
       for (auto row_index = size_t{0}; row_index < row_count; ++row_index) {
-        const auto [chunk_id, chunk_offset] = pos_list_ptr[row_index];
+        const auto [chunk_id, chunk_offset] = pos_list[row_index];
 
         auto& accessor = accessor_by_chunk_id[chunk_id];
         const auto typed_value = accessor->access(chunk_offset);
@@ -143,7 +141,7 @@ std::shared_ptr<Table> write_reference_output_table(const std::shared_ptr<const 
   // We have decided against duplicating MVCC data in https://github.com/hyrise/hyrise/issues/408
   auto output_table = std::make_shared<Table>(unsorted_table->column_definitions(), TableType::References);
 
-  auto pos_list_pin_guard = FramePinGuard{input_pos_list};
+  auto pos_list_pin_guard = ReadPinGuard{input_pos_list};
 
   const auto resolve_indirection = unsorted_table->type() == TableType::References;
   const auto column_count = output_table->column_count();
@@ -465,7 +463,7 @@ class Sort::SortImpl {
 
   // When there was a preceding sorting run, we materialize by retaining the order of the values in the passed PosList.
   void _materialize_column_from_pos_list(const RowIDPosList& pos_list) {
-    auto pin_guard = FramePinGuard{pos_list};
+    auto pin_guard = ReadPinGuard{pos_list};
 
     const auto input_chunk_count = _table_in->chunk_count();
     auto accessor_by_chunk_id =

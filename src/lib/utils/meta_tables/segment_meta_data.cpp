@@ -39,7 +39,7 @@ void gather_segment_meta_data(const std::shared_ptr<Table>& meta_table, const Me
           if (encoded_segment->compressed_vector_type()) {
             std::stringstream sstream;
             sstream << *encoded_segment->compressed_vector_type();
-            vector_compression = pmr_string(sstream.str().begin(), sstream.str().end(), allocator);
+            // TODO: vector_compression = pmr_string(sstream.str().begin(), sstream.str().end(), allocator);
           }
         }
 

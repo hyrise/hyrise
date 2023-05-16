@@ -5,8 +5,11 @@
 #include "benchmark/benchmark.h"
 #include "storage/buffer/utils.hpp"
 #include "utils.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
+
+constexpr auto NUMBER_OF_VALUES = 250000;
 
 struct PointerObserver {
   virtual void observer(void* ptr) = 0;
@@ -23,21 +26,21 @@ struct TestPointer {
   using difference_type = std::ptrdiff_t;
   using iterator_category = std::random_access_iterator_tag;
 
-  explicit TestPointer(FramePtr frame, std::uintptr_t offset, PointerObserver* observer = nullptr)
+  explicit TestPointer(FramePtr frame, int* offset, PointerObserver* observer = nullptr)
       : frame(frame), ptr_or_offset(offset), observer(observer) {
-    if constexpr (GetPointer == 4) {
-      observer->observer(*this);
-    }
+    // if constexpr (GetPointer == 4) {
+    //   observer->observer(*this);
+    // }
   }
 
   ~TestPointer() {
-    if constexpr (GetPointer == 4) {
-      observer->unregister(*this);
-    }
+    // if constexpr (GetPointer == 4) {
+    //   observer->unregister(*this);
+    // }
   }
 
   TestPointer& operator++(void) noexcept {
-    ptr_or_offset += sizeof(value_type);
+    ptr_or_offset++;
     return *this;
   }
 
@@ -59,12 +62,12 @@ struct TestPointer {
   }
 
   TestPointer& operator+=(difference_type offset) noexcept {
-    ptr_or_offset += offset * difference_type(sizeof(PointedType));
+    ptr_or_offset += offset;
     return *this;
   }
 
   TestPointer& operator--(void) noexcept {
-    ptr_or_offset -= difference_type(sizeof(PointedType));
+    ptr_or_offset--;
     return *this;
   }
 
@@ -83,37 +86,29 @@ struct TestPointer {
   }
 
   void* get_pointer_simple() const {
-    if (frame) {
-      if (frame->data) {
-        return frame->data + ptr_or_offset;
-      } else {
-        return nullptr;
-      }
+    if (frame->data) {
+      return frame->data + reinterpret_cast<uint64_t>(ptr_or_offset);
     } else {
-      return reinterpret_cast<void*>(ptr_or_offset);
+      return ptr_or_offset;
     }
   }
 
   void* get_pointer_dummy__branchless() const {
-    uintptr_t pointer = ptr_or_offset;
-    uintptr_t offset = (uintptr_t)frame->data ? pointer : 0;
-    return reinterpret_cast<void*>((uintptr_t)frame->data + offset);
+    int* pointer = ptr_or_offset;
+    int* offset = frame->data ? pointer : 0;
+    return frame->data + reinterpret_cast<uint64_t>(offset);
   }
 
   void* get_pointer_likely() const {
-    if (frame) {
-      if (frame->data) {
-        [[likely]] return frame->data + ptr_or_offset;
-      } else {
-        return nullptr;
-      }
+    if (frame->data) {
+      [[likely]] return frame->data + reinterpret_cast<uint64_t>(ptr_or_offset);
     } else {
       return reinterpret_cast<void*>(ptr_or_offset);
     }
   }
 
   void* get_raw_pointer() const {
-    return reinterpret_cast<void*>(ptr_or_offset);
+    return ptr_or_offset;
   }
 
   friend bool operator<(const TestPointer& ptr1, const TestPointer& ptr2) noexcept {
@@ -130,7 +125,7 @@ struct TestPointer {
   }
 
   FramePtr frame;
-  std::uintptr_t ptr_or_offset;
+  int* ptr_or_offset;
   PointerObserver* observer;
 };
 
@@ -146,14 +141,14 @@ inline bool operator>=(const TestPointer<T>& ptr1, const TestPointer<T>& ptr2) {
 
 struct PointerObserverImpl : PointerObserver {
   void observer(TestPointer<4>* p) {
-    p->ptr_or_offset = (std::uintptr_t)p->frame->data + p->ptr_or_offset;
+    // TODO: p->ptr_or_offset = p->frame->data + reinterpret_cast<uint64_t>(p->ptr_or_offset);
   }
 
   void unregister(TestPointer<4>* p) {}
 };
 
 static void BM_pointer_sort_simple_frame(benchmark::State& state) {
-  alignas(512) std::array<typename TestPointer<0>::value_type, 5000> array;
+  alignas(512) std::array<typename TestPointer<0>::value_type, NUMBER_OF_VALUES> array;
   auto dummy = make_frame(PageID{0}, PageSizeType::KiB32, PageType::Dram, reinterpret_cast<std::byte*>(array.data()));
 
   std::iota(array.begin(), array.end(), 1);
@@ -162,14 +157,15 @@ static void BM_pointer_sort_simple_frame(benchmark::State& state) {
     state.PauseTiming();
     std::reverse(array.begin(), array.end());
     auto begin = TestPointer<0>(dummy, 0);
-    auto end = TestPointer<0>(dummy, array.size());
+    auto end = TestPointer<0>(dummy, reinterpret_cast<int*>(sizeof(int) * array.size()));
     state.ResumeTiming();
     std::sort(begin, end);
   }
+  DebugAssert(std::is_sorted(array.begin(), array.end()), "Array not sorted");
 }
 
 static void BM_pointer_sort_simple_raw(benchmark::State& state) {
-  alignas(512) std::array<typename TestPointer<0>::value_type, 5000> array;
+  alignas(512) std::array<typename TestPointer<0>::value_type, NUMBER_OF_VALUES> array;
   auto dummy = make_frame(PageID{0}, PageSizeType::KiB32, PageType::Dram, nullptr);
 
   std::iota(array.begin(), array.end(), 1);
@@ -177,16 +173,19 @@ static void BM_pointer_sort_simple_raw(benchmark::State& state) {
   for (auto _ : state) {
     state.PauseTiming();
     std::reverse(array.begin(), array.end());
-    auto begin = TestPointer<0>(dummy, reinterpret_cast<std::uintptr_t>(array.data()));
-    auto end = TestPointer<0>(dummy, reinterpret_cast<std::uintptr_t>(array.data() + array.size()));
+    auto begin = TestPointer<0>(dummy, &(*array.begin()));
+    auto end = TestPointer<0>(dummy, &(*array.end()));
     state.ResumeTiming();
     std::sort(begin, end);
   }
+  DebugAssert(std::is_sorted(array.begin(), array.end()), "Array not sorted");
 }
 
 static void BM_pointer_sort_simple_likley_frame(benchmark::State& state) {
-  alignas(512) std::array<typename TestPointer<1>::value_type, 5000> array;
+  alignas(512) std::array<typename TestPointer<1>::value_type, NUMBER_OF_VALUES> array;
   auto dummy = make_frame(PageID{0}, PageSizeType::KiB32, PageType::Dram, reinterpret_cast<std::byte*>(array.data()));
+
+  dummy.swap(DummyFrame());
 
   std::iota(array.begin(), array.end(), 1);
 
@@ -194,14 +193,15 @@ static void BM_pointer_sort_simple_likley_frame(benchmark::State& state) {
     state.PauseTiming();
     std::reverse(array.begin(), array.end());
     auto begin = TestPointer<1>(dummy, 0);
-    auto end = TestPointer<1>(dummy, array.size());
+    auto end = TestPointer<1>(dummy, reinterpret_cast<int*>(sizeof(int) * array.size()));
     state.ResumeTiming();
     std::sort(begin, end);
   }
+  DebugAssert(std::is_sorted(array.begin(), array.end()), "Array not sorted");
 }
 
 static void BM_pointer_sort_simple_likley_raw(benchmark::State& state) {
-  alignas(512) std::array<typename TestPointer<1>::value_type, 5000> array;
+  alignas(512) std::array<typename TestPointer<1>::value_type, NUMBER_OF_VALUES> array;
   auto dummy = make_frame(PageID{0}, PageSizeType::KiB32, PageType::Dram, nullptr);
 
   std::iota(array.begin(), array.end(), 1);
@@ -209,15 +209,16 @@ static void BM_pointer_sort_simple_likley_raw(benchmark::State& state) {
   for (auto _ : state) {
     state.PauseTiming();
     std::reverse(array.begin(), array.end());
-    auto begin = TestPointer<1>(dummy, reinterpret_cast<std::uintptr_t>(array.data()));
-    auto end = TestPointer<1>(dummy, reinterpret_cast<std::uintptr_t>(array.data() + array.size()));
+    auto begin = TestPointer<1>(dummy, &(*array.begin()));
+    auto end = TestPointer<1>(dummy, &(*array.end()));
     state.ResumeTiming();
     std::sort(begin, end);
   }
+  DebugAssert(std::is_sorted(array.begin(), array.end()), "Array not sorted");
 }
 
 static void BM_pointer_sort_branchless_frame(benchmark::State& state) {
-  alignas(512) std::array<typename TestPointer<2>::value_type, 5000> array;
+  alignas(512) std::array<typename TestPointer<2>::value_type, NUMBER_OF_VALUES> array;
 
   auto dummy = make_frame(PageID{0}, PageSizeType::KiB32, PageType::Dram, reinterpret_cast<std::byte*>(array.data()));
 
@@ -227,14 +228,15 @@ static void BM_pointer_sort_branchless_frame(benchmark::State& state) {
     state.PauseTiming();
     std::reverse(array.begin(), array.end());
     auto begin = TestPointer<2>(dummy, 0);
-    auto end = TestPointer<2>(dummy, array.size());
+    auto end = TestPointer<2>(dummy, reinterpret_cast<int*>(sizeof(int) * array.size()));
     state.ResumeTiming();
     std::sort(begin, end);
   }
+  DebugAssert(std::is_sorted(array.begin(), array.end()), "Array not sorted");
 }
 
 static void BM_pointer_sort_branchless_raw(benchmark::State& state) {
-  alignas(512) std::array<typename TestPointer<2>::value_type, 5000> array;
+  alignas(512) std::array<typename TestPointer<2>::value_type, NUMBER_OF_VALUES> array;
 
   auto dummy = make_frame(PageID{0}, PageSizeType::KiB32, PageType::Dram, nullptr);
 
@@ -243,36 +245,49 @@ static void BM_pointer_sort_branchless_raw(benchmark::State& state) {
   for (auto _ : state) {
     state.PauseTiming();
     std::reverse(array.begin(), array.end());
-    auto begin = TestPointer<2>(dummy, reinterpret_cast<std::uintptr_t>(array.data()));
-    auto end = TestPointer<2>(dummy, reinterpret_cast<std::uintptr_t>(array.data() + array.size()));
+    auto begin = TestPointer<2>(dummy, &(*array.begin()));
+    auto end = TestPointer<2>(dummy, &(*array.end()));
     state.ResumeTiming();
     std::sort(begin, end);
   }
+  DebugAssert(std::is_sorted(array.begin(), array.end()), "Array not sorted");
 }
 
 static void BM_pointer_sort_raw(benchmark::State& state) {
-  alignas(512) std::array<typename TestPointer<3>::value_type, 5000> array;
+  alignas(512) std::array<typename TestPointer<3>::value_type, NUMBER_OF_VALUES> array;
 
   std::iota(array.begin(), array.end(), 1);
 
   for (auto _ : state) {
     state.PauseTiming();
     std::reverse(array.begin(), array.end());
-    auto begin = TestPointer<3>(nullptr, reinterpret_cast<std::uintptr_t>(array.data()));
-    auto end = TestPointer<3>(nullptr, reinterpret_cast<std::uintptr_t>(array.data() + array.size()));
+    auto begin = TestPointer<3>(nullptr, &(*array.begin()));
+    auto end = TestPointer<3>(nullptr, &(*array.end()));
     state.ResumeTiming();
 
     std::sort(begin, end);
   }
+  DebugAssert(std::is_sorted(array.begin(), array.end()), "Array not sorted");
+}
+
+static void BM_pointer_sort_raw2(benchmark::State& state) {
+  std::array<typename TestPointer<3>::value_type, NUMBER_OF_VALUES> array;
+
+  std::iota(array.begin(), array.end(), 1);
+
+  for (auto _ : state) {
+    std::sort(array.data(), array.data() + array.size());
+  }
+  DebugAssert(std::is_sorted(array.begin(), array.end()), "Array not sorted");
 }
 
 BENCHMARK(BM_pointer_sort_simple_frame);
 BENCHMARK(BM_pointer_sort_simple_raw);
 BENCHMARK(BM_pointer_sort_branchless_frame);
-BENCHMARK(BM_pointer_sort_branchless_raw);
-BENCHMARK(BM_pointer_sort_raw);
+// BENCHMARK(BM_pointer_sort_branchless_raw);
 BENCHMARK(BM_pointer_sort_simple_likley_frame);
 BENCHMARK(BM_pointer_sort_simple_likley_raw);
+BENCHMARK(BM_pointer_sort_raw);
 
 // Benchmark random vs sequential access e.g vector vs tree with set or linked list
 // Benchmark different sizes of the vector

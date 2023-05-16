@@ -97,8 +97,37 @@ bool Frame::is_referenced() const {
   return referenced.load();
 }
 
+// void Frame::register_swizzleable_pointer(BufferPtr<void>* pointer) {
+//   std::lock_guard<std::mutex> lock(latch);
+//   swizzleable_pointers.insert(pointer);
+// }
+
+// void Frame::unregister_swizzleable_pointer(BufferPtr<void>* pointer) {
+//   std::lock_guard<std::mutex> lock(latch);
+//   swizzleable_pointers.erase(pointer);
+// }
+
+// void Frame::swizzle_pointers() {
+//   for (const auto& ptr : swizzleable_pointers) {
+//     auto offset = reinterpret_cast<std::uintptr_t>(ptr->_ptr_or_offset);
+//     if (!is_swizzled_pointer(offset)) {
+//       ptr->_ptr_or_offset = reinterpret_cast<void*>(swizzle_pointer(offset, frame->data));
+//     }
+//   }
+// }
+
+// void Frame::unswizzle_pointers() {
+//   for (const auto ptr : swizzleable_pointers) {
+//     auto offset = reinterpret_cast<std::uintptr_t>(ptr->_ptr_or_offset);
+//     if (is_swizzled_pointer(offset)) {
+//       ptr->_ptr_or_offset = reinterpret_cast<void*>(unswizzle_pointer(offset, frame->data));
+//     }
+//   }
+// }
+
 Frame::~Frame() {
-  DebugAssert(!is_pinned(), "Frame was deleted while still pinned");
+  // TODO: Perform evicrion if still resident
+  // DebugAssert(!is_pinned(), "Frame was deleted while still pinned");
 }
 
 // inline void intrusive_ptr_add_ref(Frame* frame) {

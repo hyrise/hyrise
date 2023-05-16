@@ -122,7 +122,7 @@ class BufferManager : public MemoryResource, public Noncopyable {
    * 
    * @param FramePtr Pointer to the frame to pin. 
    */
-  void pin(FramePtr frame);
+  void pin(const FramePtr& frame);
 
   /**
    * @brief Unpinning (pin count = 0) marks a frame available for replacement.
@@ -130,7 +130,7 @@ class BufferManager : public MemoryResource, public Noncopyable {
    * @param FramePtr Pointer to the frame to unpin.  
    * @param dirty If the page is dirty, it will be flushed back to a lower layer.
    */
-  void unpin(FramePtr frame, const bool dirty = false);
+  void unpin(const FramePtr& frame, const bool dirty = false);
 
   /**
    * @brief Load a frame or its sibling depending on the migration policy. The returned frame is not necessarily the same as the passed frame. 
@@ -148,7 +148,7 @@ class BufferManager : public MemoryResource, public Noncopyable {
    * @param ptr 
    * @return std::pair<FramePtr, std::ptrdiff_t> Pointer to the frame and the offset in the frame
    */
-  std::pair<FramePtr, std::ptrdiff_t> unswizzle(const void* ptr);
+  std::pair<FramePtr, std::ptrdiff_t> find_frame_and_offset(const void* ptr);
 
   /**
    * @brief Allocates pages to fullfil allocation request of the given bytes and alignment 
@@ -208,14 +208,14 @@ class BufferManager : public MemoryResource, public Noncopyable {
    * Holds multiple sized buffer pools on either DRAM or NUMA memory.
   */
   struct BufferPools {
-    void allocate_frame(FramePtr frame);
-    void deallocate_frame(FramePtr frame);
+    void allocate_frame(FramePtr& frame);
+    void deallocate_frame(FramePtr& frame);
 
     // Purge the eviction queue
     void purge_eviction_queue();
 
     // Add a frame to the eviction queue
-    void add_to_eviction_queue(FramePtr frame);
+    void add_to_eviction_queue(const FramePtr& frame);
 
     // Clears the buffer pools
     void clear();

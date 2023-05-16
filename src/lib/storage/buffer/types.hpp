@@ -18,6 +18,9 @@
 STRONG_TYPEDEF(uint32_t, PageID);
 
 namespace hyrise {
+
+constexpr PageID INVALID_PAGE_ID{std::numeric_limits<PageID::base_type>::max()};
+
 enum class PageSizeType { KiB8, KiB16, KiB32, KiB64, KiB128, KiB256, KiB512 };
 
 // Get the number of bytes for a given PageSizeType
@@ -144,5 +147,10 @@ constexpr PageType page_type_for_numa_buffer_pools(const BufferManagerMode mode)
   }
   Fail("Unknown BufferManagerMode");
 }
+
+// Pointer swizzling
+bool is_swizzled_pointer(const std::uintptr_t ptr) noexcept;
+std::uintptr_t swizzle_pointer(const std::uintptr_t offset, const std::byte* data) noexcept;
+std::uintptr_t unswizzle_pointer(const std::uintptr_t ptr, const std::byte* data) noexcept;
 
 }  // namespace hyrise

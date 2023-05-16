@@ -92,13 +92,13 @@ class Frame {
   // Friend function used by the FramePtr intrusive_ptr to decrease the ref_count. This functions also avoids circular dependencies between the sibling frame.This functions should not be called directly.
   friend void intrusive_ptr_release(Frame* frame) {
     DebugAssert(frame != nullptr, "Frame is nullptr");
+
     // const auto prev_ref_count = frame->_ref_count.fetch_sub(1, std::memory_order_release);
     if (frame->_ref_count.fetch_sub(1, std::memory_order_release) == 1) {
       // Source: https://www.boost.org/doc/libs/1_61_0/doc/html/atomic/usage_examples.html
       std::atomic_thread_fence(std::memory_order_acquire);
       delete frame;
     }
-
     // if (prev_ref_count == 2 && frame->sibling_frame && frame->sibling_frame->sibling_frame == frame) {
     //   // TODO: Thread safety?
     //   auto sibling_frame = frame->sibling_frame;
@@ -114,6 +114,11 @@ class Frame {
 template <typename... Args>
 FramePtr make_frame(Args&&... args) {
   return FramePtr(new Frame(std::forward<Args>(args)...));
+}
+
+static FramePtr DummyFrame() {
+  static FramePtr dummy = make_frame(PageID{INVALID_PAGE_ID}, PageSizeType::KiB8, PageType::Dram, nullptr);
+  return dummy;
 }
 
 // void intrusive_ptr_add_ref(Frame* frame);

@@ -105,7 +105,7 @@ BufferManager::BufferPools& BufferManager::BufferPools::operator=(BufferManager:
 }
 
 // TODO: Track purges, verifiy proper eviction, rename to evict until free
-void BufferManager::BufferPools::allocate_frame(FramePtr frame) {
+void BufferManager::BufferPools::allocate_frame(FramePtr& frame) {
   DebugAssert(frame->page_type == _page_type, "Frame has wrong page type");
   const auto required_size_type = frame->size_type;
 
@@ -183,7 +183,7 @@ void BufferManager::BufferPools::allocate_frame(FramePtr frame) {
   frame->set_resident();
 }
 
-void BufferManager::BufferPools::deallocate_frame(FramePtr frame) {
+void BufferManager::BufferPools::deallocate_frame(FramePtr& frame) {
   // TODO: add_to_eviction_queue(frame); ?, might reduce madvie calls
   DebugAssert(frame->page_type == _page_type, "Frame has wrong page type");
   if (frame->is_resident()) {
@@ -235,7 +235,7 @@ void BufferManager::BufferPools::purge_eviction_queue() {
   }
 }
 
-void BufferManager::BufferPools::add_to_eviction_queue(FramePtr frame) {
+void BufferManager::BufferPools::add_to_eviction_queue(const FramePtr& frame) {
   DebugAssert(frame != nullptr, "Frame is null");
   DebugAssert(frame->page_type == _page_type, "Frame has wrong page type");
 
@@ -482,7 +482,7 @@ FramePtr BufferManager::new_frame(const PageSizeType size_type) {
   }
 }
 
-void BufferManager::unpin(FramePtr frame, const bool dirty) {
+void BufferManager::unpin(const FramePtr& frame, const bool dirty) {
   if (frame->page_type == PageType::Dram) {
     _metrics->current_pins_dram--;
   } else if (frame->page_type == PageType::Numa) {
@@ -506,10 +506,13 @@ void BufferManager::unpin(FramePtr frame, const bool dirty) {
   }
 }
 
-void BufferManager::pin(FramePtr frame) {
+void BufferManager::pin(const FramePtr& frame) {
+  if (!frame->is_resident()) {
+    make_resident(frame, AccessIntent::Read);
+  }
   DebugAssert(frame->is_resident(), "Frame should be resident");
-  frame->pin();
   frame->set_referenced();
+  frame->pin();
 
   if (frame->page_type == PageType::Dram) {
     _metrics->current_pins_dram++;
@@ -520,16 +523,14 @@ void BufferManager::pin(FramePtr frame) {
   } else {
     Fail("Invalid page type");
   }
-
-  // TODO: _make_resident(frame);
 }
 
-std::pair<FramePtr, std::ptrdiff_t> BufferManager::unswizzle(const void* ptr) {
+std::pair<FramePtr, std::ptrdiff_t> BufferManager::find_frame_and_offset(const void* ptr) {
   // TODO: Unswizzle might be called with end() pointer and therefore going to the next page.
   // or set referenced use add_to_victionqeue to add it to the end of the queue
   if (_dram_buffer_pools.enabled) {
     for (auto& buffer_pool : _dram_buffer_pools._buffer_pools) {
-      const auto unswizzled = buffer_pool->unswizzle(ptr);
+      const auto unswizzled = buffer_pool->find_frame_and_offset(ptr);
       if (unswizzled.first) {
         unswizzled.first->set_referenced();
         return unswizzled;
@@ -538,7 +539,7 @@ std::pair<FramePtr, std::ptrdiff_t> BufferManager::unswizzle(const void* ptr) {
   }
   if (_numa_buffer_pools.enabled) {
     for (auto& buffer_pool : _numa_buffer_pools._buffer_pools) {
-      const auto unswizzled = buffer_pool->unswizzle(ptr);
+      const auto unswizzled = buffer_pool->find_frame_and_offset(ptr);
       if (unswizzled.first) {
         unswizzled.first->set_referenced();
         return unswizzled;
@@ -546,7 +547,7 @@ std::pair<FramePtr, std::ptrdiff_t> BufferManager::unswizzle(const void* ptr) {
     }
   }
 
-  return std::make_pair(nullptr, 0);
+  return std::make_pair(DummyFrame(), 0);
 };
 
 BufferPtr<void> BufferManager::allocate(std::size_t bytes, std::size_t align) {

@@ -85,13 +85,12 @@ ValueID DictionarySegment<T>::lower_bound(const AllTypeVariant& value) const {
       static_cast<uint64_t>(std::ceil(std::log2(_dictionary->size())));
   const auto typed_value = boost::get<T>(value);
 
-  auto pin_guard = FramePinGuard{};
-  auto iter = std::lower_bound(_dictionary->cbegin().get_ptr().pin(pin_guard),
-                               _dictionary->cend().get_ptr().pin(pin_guard), typed_value);
-  if (iter == _dictionary->cend().get_ptr().pin(pin_guard)) {
+  auto pin_guard = ReadPinGuard{*_dictionary};
+  auto iter = std::lower_bound(_dictionary->cbegin(), _dictionary->cend(), typed_value);
+  if (iter == _dictionary->cend()) {
     return INVALID_VALUE_ID;
   }
-  return ValueID{static_cast<ValueID::base_type>(std::distance(_dictionary->cbegin().get_ptr().pin(pin_guard), iter))};
+  return ValueID{static_cast<ValueID::base_type>(std::distance(_dictionary->cbegin(), iter))};
 }
 
 template <typename T>

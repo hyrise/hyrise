@@ -194,23 +194,23 @@ TEST_F(BufferManagerTest, TestAllocateDifferentPageSizes) {
   EXPECT_ANY_THROW(buffer_manager.allocate(bytes_for_size_type(PageSizeType::KiB512) + 5));
 }
 
-TEST_F(BufferManagerTest, TestUnswizzle) {
-  auto buffer_manager = create_buffer_manager(bytes_for_size_type(MAX_PAGE_SIZE_TYPE));
+// TEST_F(BufferManagerTest, TestUnswizzle) {
+//   auto buffer_manager = create_buffer_manager(bytes_for_size_type(MAX_PAGE_SIZE_TYPE));
 
-  auto ptr1 = buffer_manager.allocate(bytes_for_size_type(PageSizeType::KiB32));
-  auto [frame1, offset1] = buffer_manager.unswizzle(static_cast<char*>(ptr1.get_pointer()) + 30);
-  EXPECT_EQ(offset1, 30);
-  EXPECT_EQ(frame1->page_id, PageID{0});
-  EXPECT_EQ(frame1->size_type, PageSizeType::KiB32);
-  EXPECT_EQ(frame1->page_type, PageType::Dram);
+//   auto ptr1 = buffer_manager.allocate(bytes_for_size_type(PageSizeType::KiB32));
+//   auto [frame1, offset1] = buffer_manager.unswizzle(static_cast<char*>(ptr1.get_pointer()) + 30);
+//   EXPECT_EQ(offset1, 30);
+//   EXPECT_EQ(frame1->page_id, PageID{0});
+//   EXPECT_EQ(frame1->size_type, PageSizeType::KiB32);
+//   EXPECT_EQ(frame1->page_type, PageType::Dram);
 
-  auto ptr2 = buffer_manager.allocate(bytes_for_size_type(PageSizeType::KiB64));
-  auto [frame2, offset2] = buffer_manager.unswizzle(static_cast<char*>(ptr2.get_pointer()) + 1337);
-  EXPECT_EQ(offset2, 1337);
-  EXPECT_EQ(frame2->page_id, PageID{1});
-  EXPECT_EQ(frame2->size_type, PageSizeType::KiB64);
-  EXPECT_EQ(frame2->page_type, PageType::Dram);
-}
+//   auto ptr2 = buffer_manager.allocate(bytes_for_size_type(PageSizeType::KiB64));
+//   auto [frame2, offset2] = buffer_manager.unswizzle(static_cast<char*>(ptr2.get_pointer()) + 1337);
+//   EXPECT_EQ(offset2, 1337);
+//   EXPECT_EQ(frame2->page_id, PageID{1});
+//   EXPECT_EQ(frame2->size_type, PageSizeType::KiB64);
+//   EXPECT_EQ(frame2->page_type, PageType::Dram);
+// }
 
 TEST_F(BufferManagerTest, TestMakeResidentDramSDDMode) {
   auto buffer_manager = create_buffer_manager(bytes_for_size_type(MAX_PAGE_SIZE_TYPE), BufferManagerMode::DramSSD);

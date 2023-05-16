@@ -25,6 +25,14 @@ ValueSegment<T>::ValueSegment(bool nullable, ChunkOffset capacity) : BaseValueSe
 }
 
 template <typename T>
+ValueSegment<T>::~ValueSegment() {
+  if constexpr (std::is_same_v<T, pmr_string>) {
+    auto pin_guard = WritePinGuard{_values};
+    _values.clear();
+  }
+}
+
+template <typename T>
 ValueSegment<T>::ValueSegment(pmr_vector<T>&& values)
     : BaseValueSegment(data_type_from_type<T>()), _values(std::move(values)) {}
 

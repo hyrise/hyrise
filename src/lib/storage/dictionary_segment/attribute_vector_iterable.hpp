@@ -19,13 +19,11 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
   template <typename Functor>
   void _on_with_iterators(const Functor& functor) const {
     resolve_compressed_vector_type(_attribute_vector, [&](const auto& vector) {
-      using CompressedVectorIterator = decltype(vector.cbegin().get_ptr().get());
+      using CompressedVectorIterator = decltype(vector.cbegin());
+      auto pin_guard = ReadPinGuard{vector};
 
-      auto vector_pin_guard = FramePinGuard{};
-
-      auto begin = Iterator<CompressedVectorIterator>{_null_value_id, vector.cbegin().get_ptr().pin(vector_pin_guard),
-                                                      ChunkOffset{0u}};
-      auto end = Iterator<CompressedVectorIterator>{_null_value_id, vector.cend().get_ptr().pin(vector_pin_guard),
+      auto begin = Iterator<CompressedVectorIterator>{_null_value_id, vector.cbegin(), ChunkOffset{0u}};
+      auto end = Iterator<CompressedVectorIterator>{_null_value_id, vector.cend(),
                                                     static_cast<ChunkOffset>(_attribute_vector.size())};
       functor(begin, end);
     });
@@ -37,10 +35,9 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
   void _on_with_iterators(const std::shared_ptr<PosListType>& position_filter, const Functor& functor) const {
     resolve_compressed_vector_type(_attribute_vector, [&](const auto& vector) {
       using Decompressor = std::decay_t<decltype(vector.create_decompressor())>;
-
       using PosListIteratorType = std::decay_t<decltype(position_filter->cbegin())>;
 
-      // TODO: Use an Pin Dict here
+      Fail("Pin");
       auto begin = PointAccessIterator<Decompressor, PosListIteratorType>{
           _null_value_id, vector.create_decompressor(), position_filter->cbegin(), position_filter->cbegin()};
       auto end = PointAccessIterator<Decompressor, PosListIteratorType>{

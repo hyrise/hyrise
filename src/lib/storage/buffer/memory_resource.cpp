@@ -93,7 +93,7 @@ BufferPtr<void> NewDeleteMemoryResource::allocate(std::size_t bytes, std::size_t
 }
 
 void NewDeleteMemoryResource::deallocate(BufferPtr<void> ptr, std::size_t bytes, std::size_t alignment) {
-  const auto raw_ptr = reinterpret_cast<void*>(ptr.get_offset());
+  const auto raw_ptr = reinterpret_cast<void*>(ptr._ptr_or_offset);
   operator delete[](raw_ptr, std::align_val_t(alignment));
 }
 

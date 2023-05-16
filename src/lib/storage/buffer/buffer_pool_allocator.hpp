@@ -23,7 +23,7 @@ class BufferPoolAllocator {
   using void_pointer = BufferPtr<void>;
   using difference_type = typename pointer::difference_type;
 
-  BufferPoolAllocator() : _memory_resource(get_buffer_manager_memory_resource()) {}
+  BufferPoolAllocator() : _memory_resource(get_monotonic_buffer_resource()) {}
 
   BufferPoolAllocator(MemoryResource* memory_resource) : _memory_resource(memory_resource) {}
 

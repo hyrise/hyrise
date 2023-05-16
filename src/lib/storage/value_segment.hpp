@@ -22,6 +22,8 @@ class ValueSegment : public BaseValueSegment {
   explicit ValueSegment(pmr_vector<T>&& values);
   explicit ValueSegment(pmr_vector<T>&& values, pmr_vector<bool>&& null_values);
 
+  ~ValueSegment() override;
+
   // Return the value at a certain position. If you want to write efficient operators, back off!
   // Use values() and null_values() to get the vectors and check the content yourself.
   AllTypeVariant operator[](const ChunkOffset chunk_offset) const override;
