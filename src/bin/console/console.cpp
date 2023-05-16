@@ -462,7 +462,7 @@ int Console::_help(const std::string& /*args*/) {
   out("  help                                      - Show this message\n");
   out("  setting [property] [value]                - Change a runtime setting\n");
   out("           scheduler (on|off)               - Turn the scheduler on (default) or off\n");
-  out("  reset                                     - Clear all stored tables ans cached query plans\n\n");
+  out("  reset                                     - Clear all stored tables and cached query plans\n\n");
   // clang-format on
 
   return ReturnCode::Ok;
