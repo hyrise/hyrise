@@ -52,18 +52,23 @@ class ColumnPruningRuleTest : public StrategyBaseTest {
 
 TEST_F(ColumnPruningRuleTest, NoUnion) {
   // clang-format off
-  const auto lqp =
+  _lqp =
   ProjectionNode::make(expression_vector(add_(mul_(a, u), 5)),
     PredicateNode::make(greater_than_(5, c),
       JoinNode::make(JoinMode::Inner, greater_than_(v, a),
         node_abc,
         SortNode::make(expression_vector(w), std::vector<SortMode>{SortMode::Ascending},
           node_uvw))));
+  // clang-format on
+
+  // Create deep copy so we can set pruned ColumnIDs on node_abc below without manipulating the input LQP.
+  _lqp = _lqp->deep_copy();
 
   const auto pruned_node_abc = pruned(node_abc, {ColumnID{1}});
   const auto pruned_a = pruned_node_abc->get_column("a");
   const auto pruned_c = pruned_node_abc->get_column("c");
 
+  // clang-format off
   const auto expected_lqp =
   ProjectionNode::make(expression_vector(add_(mul_(pruned_a, u), 5)),
     PredicateNode::make(greater_than_(5, pruned_c),
@@ -73,29 +78,34 @@ TEST_F(ColumnPruningRuleTest, NoUnion) {
           node_uvw))));
   // clang-format on
 
-  apply_rule(rule, lqp);
+  _apply_rule(rule, _lqp);
 
-  EXPECT_LQP_EQ(lqp, expected_lqp);
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(ColumnPruningRuleTest, WithUnion) {
-  for (auto union_mode : {SetOperationMode::Positions, SetOperationMode::All}) {
+  for (const auto union_mode : {SetOperationMode::Positions, SetOperationMode::All}) {
     SCOPED_TRACE(std::string{"union_mode: "} + std::string{magic_enum::enum_name(union_mode)});
 
     // clang-format off
-    const auto lqp =
+    _lqp =
     ProjectionNode::make(expression_vector(a),
       UnionNode::make(union_mode,
         PredicateNode::make(greater_than_(a, 5),
           node_abc),
         PredicateNode::make(greater_than_(b, 5),
           node_abc)));
+    // clang-format on
+
+    // Create deep copy so we can set pruned ColumnIDs on node_abc below without manipulating the input LQP.
+    _lqp = _lqp->deep_copy();
 
     const auto pruned_node_abc = pruned(node_abc, {ColumnID{2}});
     const auto pruned_a = pruned_node_abc->get_column("a");
     const auto pruned_b = pruned_node_abc->get_column("b");
 
     // Column c is not used anywhere above the union, so it can be pruned at least in the Positions mode.
+    // clang-format off
     const auto expected_lqp =
     ProjectionNode::make(expression_vector(pruned_a),
       UnionNode::make(union_mode,
@@ -105,15 +115,15 @@ TEST_F(ColumnPruningRuleTest, WithUnion) {
           pruned_node_abc)));
     // clang-format on
 
-    apply_rule(rule, lqp);
+    _apply_rule(rule, _lqp);
 
-    EXPECT_LQP_EQ(lqp, lqp);
+    EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 }
 
 TEST_F(ColumnPruningRuleTest, WithMultipleProjections) {
   // clang-format off
-  const auto lqp =
+  _lqp =
   ProjectionNode::make(expression_vector(a),
     PredicateNode::make(greater_than_(mul_(a, b), 5),
       ProjectionNode::make(expression_vector(a, b, mul_(a, b), c),
@@ -134,14 +144,14 @@ TEST_F(ColumnPruningRuleTest, WithMultipleProjections) {
            pruned_node_abc)))));
   // clang-format on
 
-  apply_rule(rule, lqp);
+  _apply_rule(rule, _lqp);
 
-  EXPECT_LQP_EQ(lqp, expected_lqp);
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(ColumnPruningRuleTest, ProjectionDoesNotRecompute) {
   // clang-format off
-  const auto lqp =
+  _lqp =
   ProjectionNode::make(expression_vector(add_(add_(a, 2), 1)),
     PredicateNode::make(greater_than_(add_(a, 2), 5),
       ProjectionNode::make(expression_vector(add_(a, 2)),
@@ -157,11 +167,11 @@ TEST_F(ColumnPruningRuleTest, ProjectionDoesNotRecompute) {
         pruned_node_abc)));
   // clang-format on
 
-  apply_rule(rule, lqp);
+  _apply_rule(rule, _lqp);
 
   // We can be sure that the top projection node does not recompute a+2 because a is not available.
 
-  EXPECT_LQP_EQ(lqp, expected_lqp);
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(ColumnPruningRuleTest, Diamond) {
@@ -170,7 +180,7 @@ TEST_F(ColumnPruningRuleTest, Diamond) {
   ProjectionNode::make(expression_vector(add_(a, 2), add_(b, 3), add_(c, 4)),
     node_abc);
 
-  const auto lqp =
+  _lqp =
   ProjectionNode::make(expression_vector(add_(a, 2), add_(b, 3)),
     UnionNode::make(SetOperationMode::Positions,
       PredicateNode::make(greater_than_(add_(a, 2), 5),
@@ -196,16 +206,16 @@ TEST_F(ColumnPruningRuleTest, Diamond) {
         expected_sub_lqp)));
   // clang-format on
 
-  apply_rule(rule, lqp);
+  _apply_rule(rule, _lqp);
 
   // We can be sure that the top projection node does not recompute a+2 because a is not available.
 
-  EXPECT_LQP_EQ(lqp, expected_lqp);
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(ColumnPruningRuleTest, SimpleAggregate) {
   // clang-format off
-  const auto lqp =
+  _lqp =
   AggregateNode::make(expression_vector(), expression_vector(sum_(add_(a, 2))),
     ProjectionNode::make(expression_vector(a, b, add_(a, 2)),
       node_abc));
@@ -219,14 +229,14 @@ TEST_F(ColumnPruningRuleTest, SimpleAggregate) {
       pruned_node_abc));
   // clang-format on
 
-  apply_rule(rule, lqp);
+  _apply_rule(rule, _lqp);
 
-  EXPECT_LQP_EQ(lqp, expected_lqp);
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(ColumnPruningRuleTest, UngroupedCountStar) {
   // clang-format off
-  const auto lqp =
+  _lqp =
   AggregateNode::make(expression_vector(), expression_vector(count_star_(node_abc)),
     ProjectionNode::make(expression_vector(a, b, add_(a, 2)),
       node_abc));
@@ -240,14 +250,14 @@ TEST_F(ColumnPruningRuleTest, UngroupedCountStar) {
       pruned_node_abc));
   // clang-format on
 
-  apply_rule(rule, lqp);
+  _apply_rule(rule, _lqp);
 
-  EXPECT_LQP_EQ(lqp, expected_lqp);
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(ColumnPruningRuleTest, UngroupedCountStarAndSum) {
   // clang-format off
-  const auto lqp =
+  _lqp =
   AggregateNode::make(expression_vector(), expression_vector(count_star_(node_abc), sum_(b)),
     ProjectionNode::make(expression_vector(a, b, add_(a, 2)),
       node_abc));
@@ -261,14 +271,14 @@ TEST_F(ColumnPruningRuleTest, UngroupedCountStarAndSum) {
       pruned_node_abc));
   // clang-format on
 
-  apply_rule(rule, lqp);
+  _apply_rule(rule, _lqp);
 
-  EXPECT_LQP_EQ(lqp, expected_lqp);
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(ColumnPruningRuleTest, GroupedCountStar) {
   // clang-format off
-  const auto lqp =
+  _lqp =
   AggregateNode::make(expression_vector(b, a), expression_vector(count_star_(node_abc)),
     ProjectionNode::make(expression_vector(a, b, add_(a, 2)),
       node_abc));
@@ -283,9 +293,9 @@ TEST_F(ColumnPruningRuleTest, GroupedCountStar) {
       pruned_node_abc));
   // clang-format on
 
-  apply_rule(rule, lqp);
+  _apply_rule(rule, _lqp);
 
-  EXPECT_LQP_EQ(lqp, expected_lqp);
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(ColumnPruningRuleTest, DoNotPruneUpdateInputs) {
@@ -296,61 +306,61 @@ TEST_F(ColumnPruningRuleTest, DoNotPruneUpdateInputs) {
   PredicateNode::make(greater_than_(a, 5),
     node_abc);
 
-  const auto lqp =
+  _lqp =
   UpdateNode::make("dummy",
     select_rows_lqp,
     ProjectionNode::make(expression_vector(a, add_(b, 1), c),
       select_rows_lqp));
   // clang-format on
 
-  const auto expected_lqp = lqp->deep_copy();
-  apply_rule(rule, lqp);
-  EXPECT_LQP_EQ(lqp, expected_lqp);
+  const auto expected_lqp = _lqp->deep_copy();
+  _apply_rule(rule, _lqp);
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(ColumnPruningRuleTest, DoNotPruneInsertInputs) {
   // Do not prune away input columns to Insert, Insert needs them all.
 
   // clang-format off
-  const auto lqp =
+  _lqp =
   InsertNode::make("dummy",
     PredicateNode::make(greater_than_(a, 5),
       node_abc));
   // clang-format on
 
-  const auto expected_lqp = lqp->deep_copy();
-  apply_rule(rule, lqp);
-  EXPECT_LQP_EQ(lqp, expected_lqp);
+  const auto expected_lqp = _lqp->deep_copy();
+  _apply_rule(rule, _lqp);
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(ColumnPruningRuleTest, DoNotPruneDeleteInputs) {
   // Do not prune away input columns to Delete, Delete needs them all.
 
   // clang-format off
-  const auto lqp =
+  _lqp =
   DeleteNode::make(
     PredicateNode::make(greater_than_(a, 5),
       node_abc));
   // clang-format on
 
-  const auto expected_lqp = lqp->deep_copy();
-  apply_rule(rule, lqp);
-  EXPECT_LQP_EQ(lqp, expected_lqp);
+  const auto expected_lqp = _lqp->deep_copy();
+  _apply_rule(rule, _lqp);
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(ColumnPruningRuleTest, DoNotPruneExportInputs) {
   // Do not prune away input columns to Export, Export needs them all.
 
   // clang-format off
-  const auto lqp =
+  _lqp =
   ExportNode::make("dummy.csv", FileType::Auto,
     PredicateNode::make(greater_than_(a, 5),
       node_abc));
   // clang-format on
 
-  const auto expected_lqp = lqp->deep_copy();
-  apply_rule(rule, lqp);
-  EXPECT_LQP_EQ(lqp, expected_lqp);
+  const auto expected_lqp = _lqp->deep_copy();
+  _apply_rule(rule, _lqp);
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(ColumnPruningRuleTest, DoNotPruneChangeMetaTableInputs) {
@@ -361,16 +371,16 @@ TEST_F(ColumnPruningRuleTest, DoNotPruneChangeMetaTableInputs) {
   PredicateNode::make(greater_than_(a, 5),
     node_abc);
 
-  const auto lqp =
+  _lqp =
   ChangeMetaTableNode::make("dummy", MetaTableChangeType::Update,
     select_rows_lqp,
     ProjectionNode::make(expression_vector(a, add_(b, 1), c),
       select_rows_lqp));
   // clang-format on
 
-  const auto expected_lqp = lqp->deep_copy();
-  apply_rule(rule, lqp);
-  EXPECT_LQP_EQ(lqp, expected_lqp);
+  const auto expected_lqp = _lqp->deep_copy();
+  _apply_rule(rule, _lqp);
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(ColumnPruningRuleTest, AnnotatePrunableJoinInput) {
@@ -390,9 +400,9 @@ TEST_F(ColumnPruningRuleTest, AnnotatePrunableJoinInput) {
       // Project columns of prunable input away.
       const auto projections =
           prunable_input_side == LQPInputSide::Left ? expression_vector(u, v) : expression_vector(a, b);
-      const auto lqp = ProjectionNode::make(projections, join_node);
+      _lqp = ProjectionNode::make(projections, join_node);
 
-      apply_rule(rule, lqp);
+      _apply_rule(rule, _lqp);
 
       SCOPED_TRACE("With JoinMode::" + std::string{magic_enum::enum_name(join_mode)});
       EXPECT_TRUE(join_node->prunable_input_side());

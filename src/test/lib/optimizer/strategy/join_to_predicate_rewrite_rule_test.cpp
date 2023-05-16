@@ -65,30 +65,27 @@ TEST_P(JoinToPredicateRewriteRuleJoinModeTest, PerformRewrite) {
   join_node->set_right_input(PredicateNode::make(equals_(v, 0), node_b));
 
   // clang-format off
-  const auto lqp =
+  _lqp =
   ProjectionNode::make(expression_vector(b),
     join_node);
 
   const auto subquery = ProjectionNode::make(expression_vector(u),
     PredicateNode::make(equals_(v, 0), node_b));
 
-  auto expected_lqp =
+  auto expected_lqp = std::static_pointer_cast<AbstractLQPNode>(
   ProjectionNode::make(expression_vector(b),
     PredicateNode::make(equals_(a, lqp_subquery_(subquery)),
-      node_a));
+      node_a)));
   // clang-format on
 
+  join_node->mark_input_side_as_prunable(LQPInputSide::Right);
+
   if (GetParam() != JoinMode::Inner && GetParam() != JoinMode::Semi) {
-    expected_lqp = std::static_pointer_cast<ProjectionNode>(lqp->deep_copy());
+    expected_lqp = _lqp->deep_copy();
   }
+  _apply_rule(rule, _lqp);
 
-  // Run ColumnPruningRule to annotate the prunable input sides.
-  apply_rule(std::make_shared<ColumnPruningRule>(), lqp);
-  apply_rule(std::make_shared<ColumnPruningRule>(), expected_lqp);
-
-  apply_rule(rule, lqp);
-
-  EXPECT_LQP_EQ(lqp, expected_lqp);
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(JoinToPredicateRewriteRuleTest, MissingPredicate) {
@@ -99,17 +96,17 @@ TEST_F(JoinToPredicateRewriteRuleTest, MissingPredicate) {
   node_b->set_key_constraints(key_constraints);
 
   // clang-format off
-  const auto lqp =
+  _lqp =
   ProjectionNode::make(expression_vector(b),
     JoinNode::make(JoinMode::Inner, equals_(a, u),
       node_a, node_b));
   // clang-format on
 
-  apply_rule(std::make_shared<ColumnPruningRule>(), lqp);
-  const auto expected_lqp = lqp->deep_copy();
+  _apply_rule(std::make_shared<ColumnPruningRule>(), _lqp);
+  const auto expected_lqp = _lqp->deep_copy();
 
-  apply_rule(rule, lqp);
-  EXPECT_LQP_EQ(lqp, expected_lqp);
+  _apply_rule(rule, _lqp);
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(JoinToPredicateRewriteRuleTest, MissingUccOnPredicateColumn) {
@@ -119,18 +116,18 @@ TEST_F(JoinToPredicateRewriteRuleTest, MissingUccOnPredicateColumn) {
   node_b->set_key_constraints(key_constraints);
 
   // clang-format off
-  const auto lqp =
+  _lqp =
   ProjectionNode::make(expression_vector(b),
     JoinNode::make(JoinMode::Semi, equals_(a, u),
       node_a,
       PredicateNode::make(equals_(v, 0), node_b)));
   // clang-format on
 
-  apply_rule(std::make_shared<ColumnPruningRule>(), lqp);
-  const auto expected_lqp = lqp->deep_copy();
+  _apply_rule(std::make_shared<ColumnPruningRule>(), _lqp);
+  const auto expected_lqp = _lqp->deep_copy();
 
-  apply_rule(rule, lqp);
-  EXPECT_LQP_EQ(lqp, expected_lqp);
+  _apply_rule(rule, _lqp);
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(JoinToPredicateRewriteRuleTest, MissingUccOnJoinColumn) {
@@ -140,18 +137,18 @@ TEST_F(JoinToPredicateRewriteRuleTest, MissingUccOnJoinColumn) {
   node_b->set_key_constraints(key_constraints);
 
   // clang-format off
-  const auto lqp =
+  _lqp =
   ProjectionNode::make(expression_vector(b),
     JoinNode::make(JoinMode::Inner, equals_(a, u),
       node_a,
       PredicateNode::make(equals_(v, 0), node_b)));
   // clang-format on
 
-  apply_rule(std::make_shared<ColumnPruningRule>(), lqp);
-  const auto expected_lqp = lqp->deep_copy();
+  _apply_rule(std::make_shared<ColumnPruningRule>(), _lqp);
+  const auto expected_lqp = _lqp->deep_copy();
 
-  apply_rule(rule, lqp);
-  EXPECT_LQP_EQ(lqp, expected_lqp);
+  _apply_rule(rule, _lqp);
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(JoinToPredicateRewriteRuleTest, NoUnusedJoinSide) {
@@ -162,18 +159,18 @@ TEST_F(JoinToPredicateRewriteRuleTest, NoUnusedJoinSide) {
   node_b->set_key_constraints(key_constraints);
 
   // clang-format off
-  const auto lqp =
+  _lqp =
   ProjectionNode::make(expression_vector(b, u),
     JoinNode::make(JoinMode::Inner, equals_(a, u),
       node_a,
       PredicateNode::make(equals_(v, 0), node_b)));
   // clang-format on
 
-  apply_rule(std::make_shared<ColumnPruningRule>(), lqp);
-  const auto expected_lqp = lqp->deep_copy();
+  _apply_rule(std::make_shared<ColumnPruningRule>(), _lqp);
+  const auto expected_lqp = _lqp->deep_copy();
 
-  apply_rule(rule, lqp);
-  EXPECT_LQP_EQ(lqp, expected_lqp);
+  _apply_rule(rule, _lqp);
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(JoinToPredicateRewriteRuleTest, Union) {
@@ -184,19 +181,22 @@ TEST_F(JoinToPredicateRewriteRuleTest, Union) {
   node_b->set_key_constraints(key_constraints);
 
   // clang-format off
-  const auto lqp =
+  _lqp =
   ProjectionNode::make(expression_vector(b),
     JoinNode::make(JoinMode::Inner, equals_(a, u),
       node_a,
-      PredicateNode::make(equals_(v, 0),
-      UnionNode::make(SetOperationMode::Positions, node_b, node_b))));
+      UnionNode::make(SetOperationMode::Positions,
+        PredicateNode::make(equals_(v, 0),
+          node_b),
+        PredicateNode::make(equals_(v, 1),
+          node_b))));
   // clang-format on
 
-  apply_rule(std::make_shared<ColumnPruningRule>(), lqp);
-  const auto expected_lqp = lqp->deep_copy();
+  _apply_rule(std::make_shared<ColumnPruningRule>(), _lqp);
+  const auto expected_lqp = _lqp->deep_copy();
 
-  apply_rule(rule, lqp);
-  EXPECT_LQP_EQ(lqp, expected_lqp);
+  _apply_rule(rule, _lqp);
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 }  // namespace hyrise

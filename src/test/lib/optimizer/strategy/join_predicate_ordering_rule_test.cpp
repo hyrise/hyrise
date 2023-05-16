@@ -60,23 +60,23 @@ TEST_F(JoinPredicateOrderingRuleTest, InnerEquiJoin) {
 
   {
     const auto input_join_predicates = expression_vector(equals_(a_y, b_y), equals_(a_z, b_z), equals_(a_x, b_x));
-    const auto lqp = JoinNode::make(JoinMode::Inner, input_join_predicates, node_a, node_b);
-    apply_rule(_rule, lqp);
-    EXPECT_LQP_EQ(lqp, expected_lqp);
+    _lqp = JoinNode::make(JoinMode::Inner, input_join_predicates, node_a, node_b);
+    _apply_rule(_rule, _lqp);
+    EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 
   {
     const auto input_join_predicates = expression_vector(equals_(a_x, b_x), equals_(a_y, b_y), equals_(a_z, b_z));
-    const auto lqp = JoinNode::make(JoinMode::Inner, input_join_predicates, node_a, node_b);
-    apply_rule(_rule, lqp);
-    EXPECT_LQP_EQ(lqp, expected_lqp);
+    _lqp = JoinNode::make(JoinMode::Inner, input_join_predicates, node_a, node_b);
+    _apply_rule(_rule, _lqp);
+    EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 
   {
     const auto input_join_predicates = expression_vector(equals_(a_y, b_y), equals_(a_x, b_x), equals_(a_z, b_z));
-    const auto lqp = JoinNode::make(JoinMode::Inner, input_join_predicates, node_a, node_b);
-    apply_rule(_rule, lqp);
-    EXPECT_LQP_EQ(lqp, expected_lqp);
+    _lqp = JoinNode::make(JoinMode::Inner, input_join_predicates, node_a, node_b);
+    _apply_rule(_rule, _lqp);
+    EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 }
 
@@ -92,14 +92,14 @@ TEST_F(JoinPredicateOrderingRuleTest, AntiNonEqualsJoin) {
     // Might need to adjust this as soon as we can estimate cardinalities for non-equals join predicates.
     const auto expected_lqp = JoinNode::make(join_mode, non_equals_predicates, node_a, node_b);
 
-    const auto lqp = JoinNode::make(join_mode, non_equals_predicates, node_a, node_b);
-    apply_rule(_rule, lqp);
-    EXPECT_LQP_EQ(lqp, expected_lqp);
+    _lqp = JoinNode::make(join_mode, non_equals_predicates, node_a, node_b);
+    _apply_rule(_rule, _lqp);
+    EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 
   for (const auto& join_mode : {JoinMode::Semi, JoinMode::AntiNullAsTrue, JoinMode::AntiNullAsFalse}) {
-    const auto lqp = JoinNode::make(join_mode, non_equals_predicates, node_a, node_b);
-    EXPECT_THROW(apply_rule(_rule, lqp), std::logic_error);
+    _lqp = JoinNode::make(join_mode, non_equals_predicates, node_a, node_b);
+    EXPECT_THROW(_apply_rule(_rule, _lqp), std::logic_error);
   }
 }
 
@@ -117,10 +117,10 @@ TEST_F(JoinPredicateOrderingRuleTest, SemiGreaterAndEquiJoin) {
 
   const auto input_join_predicates =
       expression_vector(greater_than_(a_x, b_x), equals_(a_y, b_y), greater_than_(a_z, b_z));
-  const auto lqp = JoinNode::make(JoinMode::Semi, input_join_predicates, node_a, node_b);
+  _lqp = JoinNode::make(JoinMode::Semi, input_join_predicates, node_a, node_b);
 
-  apply_rule(_rule, lqp);
-  EXPECT_LQP_EQ(lqp, expected_lqp);
+  _apply_rule(_rule, _lqp);
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 }  // namespace hyrise

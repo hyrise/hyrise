@@ -103,31 +103,31 @@ TEST_F(InExpressionRewriteRuleTest, ExpressionEvaluatorStrategy) {
   rule->strategy = InExpressionRewriteRule::Strategy::ExpressionEvaluator;
 
   {
-    const auto lqp = PredicateNode::make(single_element_in_expression, node);
-    const auto expected_lqp = lqp->deep_copy();
-    apply_rule(rule, lqp);
-    EXPECT_LQP_EQ(lqp, expected_lqp);
+    _lqp = PredicateNode::make(single_element_in_expression, node);
+    const auto expected_lqp = _lqp->deep_copy();
+    _apply_rule(rule, _lqp);
+    EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 
   {
-    const auto lqp = PredicateNode::make(five_element_in_expression, node);
-    const auto expected_lqp = lqp->deep_copy();
-    apply_rule(rule, lqp);
-    EXPECT_LQP_EQ(lqp, expected_lqp);
+    _lqp = PredicateNode::make(five_element_in_expression, node);
+    const auto expected_lqp = _lqp->deep_copy();
+    _apply_rule(rule, _lqp);
+    EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 
   {
-    const auto lqp = PredicateNode::make(five_element_not_in_expression, node);
-    const auto expected_lqp = lqp->deep_copy();
-    apply_rule(rule, lqp);
-    EXPECT_LQP_EQ(lqp, expected_lqp);
+    _lqp = PredicateNode::make(five_element_not_in_expression, node);
+    const auto expected_lqp = _lqp->deep_copy();
+    _apply_rule(rule, _lqp);
+    EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 
   {
-    const auto lqp = PredicateNode::make(hundred_element_in_expression, node);
-    const auto expected_lqp = lqp->deep_copy();
-    apply_rule(rule, lqp);
-    EXPECT_LQP_EQ(lqp, expected_lqp);
+    _lqp = PredicateNode::make(hundred_element_in_expression, node);
+    const auto expected_lqp = _lqp->deep_copy();
+    _apply_rule(rule, _lqp);
+    EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 }
 
@@ -135,58 +135,58 @@ TEST_F(InExpressionRewriteRuleTest, DisjunctionStrategy) {
   rule->strategy = InExpressionRewriteRule::Strategy::Disjunction;
 
   {
-    const auto lqp = PredicateNode::make(single_element_in_expression, node);
-    apply_rule(rule, lqp);
+    _lqp = PredicateNode::make(single_element_in_expression, node);
+    _apply_rule(rule, _lqp);
     const auto expected_lqp = PredicateNode::make(equals_(col_a, 1), node);
-    EXPECT_LQP_EQ(lqp, expected_lqp);
+    EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 
   {
-    const auto lqp = PredicateNode::make(five_element_in_expression, node);
-    apply_rule(rule, lqp);
+    _lqp = PredicateNode::make(five_element_in_expression, node);
+    _apply_rule(rule, _lqp);
 
-    EXPECT_TRUE(check_disjunction(lqp, {1, 2, 3, 4, 5}));
+    EXPECT_TRUE(check_disjunction(_lqp, {1, 2, 3, 4, 5}));
   }
 
   {
-    const auto lqp = PredicateNode::make(five_element_not_in_expression, node);
-    EXPECT_THROW(apply_rule(rule, lqp), std::logic_error);
+    _lqp = PredicateNode::make(five_element_not_in_expression, node);
+    EXPECT_THROW(_apply_rule(rule, _lqp), std::logic_error);
   }
 
   {
-    const auto lqp = PredicateNode::make(duplicate_element_in_expression, node);
-    apply_rule(rule, lqp);
+    _lqp = PredicateNode::make(duplicate_element_in_expression, node);
+    _apply_rule(rule, _lqp);
     // clang-format off
     const auto expected_lqp =
       UnionNode::make(SetOperationMode::All,
         PredicateNode::make(equals_(col_a, 2), node),
         PredicateNode::make(equals_(col_a, 1), node));
     // clang-format on
-    EXPECT_LQP_EQ(lqp, expected_lqp);
+    EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 
   {
-    const auto lqp = PredicateNode::make(different_types_on_left_and_right_side_expression, node);
-    EXPECT_THROW(apply_rule(rule, lqp), std::logic_error);
+    _lqp = PredicateNode::make(different_types_on_left_and_right_side_expression, node);
+    EXPECT_THROW(_apply_rule(rule, _lqp), std::logic_error);
   }
 
   {
-    const auto lqp = PredicateNode::make(different_types_on_right_side_expression, node);
-    EXPECT_THROW(apply_rule(rule, lqp), std::logic_error);
+    _lqp = PredicateNode::make(different_types_on_right_side_expression, node);
+    EXPECT_THROW(_apply_rule(rule, _lqp), std::logic_error);
   }
 
   {
     // Generally, we could get the rule to throw out predicates that compare to NULL, but since those queries are
     // stupid anyway, we don't write the additional code. Test that it does not break:
-    const auto lqp = PredicateNode::make(null_in_expression, node);
-    apply_rule(rule, lqp);
+    _lqp = PredicateNode::make(null_in_expression, node);
+    _apply_rule(rule, _lqp);
     // clang-format off
     const auto expected_lqp =
       UnionNode::make(SetOperationMode::All,
         PredicateNode::make(equals_(col_a, NULL_VALUE), node),
         PredicateNode::make(equals_(col_a, 1), node));
     // clang-format on
-    EXPECT_LQP_EQ(lqp, expected_lqp);
+    EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 }
 
@@ -194,8 +194,8 @@ TEST_F(InExpressionRewriteRuleTest, JoinStrategy) {
   rule->strategy = InExpressionRewriteRule::Strategy::Join;
 
   {
-    const auto lqp = PredicateNode::make(single_element_in_expression, node);
-    apply_rule(rule, lqp);
+    _lqp = PredicateNode::make(single_element_in_expression, node);
+    _apply_rule(rule, _lqp);
 
     const auto column_definitions = TableColumnDefinitions{{"right_values", DataType::Int, false}};
     const auto table = std::make_shared<Table>(column_definitions, TableType::Data);
@@ -204,13 +204,13 @@ TEST_F(InExpressionRewriteRuleTest, JoinStrategy) {
     const auto right_col = lqp_column_(static_table_node, ColumnID{0});
     const auto expected_lqp = JoinNode::make(JoinMode::Semi, equals_(col_a, right_col), node, static_table_node);
 
-    EXPECT_LQP_EQ(lqp, expected_lqp);
-    EXPECT_TABLE_EQ_UNORDERED(static_cast<StaticTableNode&>(*lqp->right_input()).table, table);
+    EXPECT_LQP_EQ(_lqp, expected_lqp);
+    EXPECT_TABLE_EQ_UNORDERED(static_cast<StaticTableNode&>(*_lqp->right_input()).table, table);
   }
 
   {
-    const auto lqp = PredicateNode::make(five_element_in_expression, node);
-    apply_rule(rule, lqp);
+    _lqp = PredicateNode::make(five_element_in_expression, node);
+    _apply_rule(rule, _lqp);
 
     const auto column_definitions = TableColumnDefinitions{{"right_values", DataType::Int, false}};
     const auto table = std::make_shared<Table>(column_definitions, TableType::Data);
@@ -223,13 +223,13 @@ TEST_F(InExpressionRewriteRuleTest, JoinStrategy) {
     const auto right_col = lqp_column_(static_table_node, ColumnID{0});
     const auto expected_lqp = JoinNode::make(JoinMode::Semi, equals_(col_a, right_col), node, static_table_node);
 
-    EXPECT_LQP_EQ(lqp, expected_lqp);
-    EXPECT_TABLE_EQ_UNORDERED(static_cast<StaticTableNode&>(*lqp->right_input()).table, table);
+    EXPECT_LQP_EQ(_lqp, expected_lqp);
+    EXPECT_TABLE_EQ_UNORDERED(static_cast<StaticTableNode&>(*_lqp->right_input()).table, table);
   }
 
   {
-    const auto lqp = PredicateNode::make(five_element_not_in_expression, node);
-    apply_rule(rule, lqp);
+    _lqp = PredicateNode::make(five_element_not_in_expression, node);
+    _apply_rule(rule, _lqp);
 
     const auto column_definitions = TableColumnDefinitions{{"right_values", DataType::Int, false}};
     const auto table = std::make_shared<Table>(column_definitions, TableType::Data);
@@ -243,26 +243,26 @@ TEST_F(InExpressionRewriteRuleTest, JoinStrategy) {
     const auto expected_lqp =
         JoinNode::make(JoinMode::AntiNullAsTrue, equals_(col_a, right_col), node, static_table_node);
 
-    EXPECT_LQP_EQ(lqp, expected_lqp);
-    EXPECT_TABLE_EQ_UNORDERED(static_cast<StaticTableNode&>(*lqp->right_input()).table, table);
+    EXPECT_LQP_EQ(_lqp, expected_lqp);
+    EXPECT_TABLE_EQ_UNORDERED(static_cast<StaticTableNode&>(*_lqp->right_input()).table, table);
   }
 
   // We do not test duplicate_element_in_expression, as the correctness of the join strategy does not depend on
   // duplicate elimination. We don't see any potential in eliminating duplicates, as we have not seen any, yet.
 
   {
-    const auto lqp = PredicateNode::make(different_types_on_left_and_right_side_expression, node);
-    EXPECT_THROW(apply_rule(rule, lqp), std::logic_error);
+    _lqp = PredicateNode::make(different_types_on_left_and_right_side_expression, node);
+    EXPECT_THROW(_apply_rule(rule, _lqp), std::logic_error);
   }
 
   {
-    const auto lqp = PredicateNode::make(different_types_on_right_side_expression, node);
-    EXPECT_THROW(apply_rule(rule, lqp), std::logic_error);
+    _lqp = PredicateNode::make(different_types_on_right_side_expression, node);
+    EXPECT_THROW(_apply_rule(rule, _lqp), std::logic_error);
   }
 
   {
-    const auto lqp = PredicateNode::make(null_in_expression, node);
-    apply_rule(rule, lqp);
+    _lqp = PredicateNode::make(null_in_expression, node);
+    _apply_rule(rule, _lqp);
 
     const auto column_definitions = TableColumnDefinitions{{"right_values", DataType::Int, false}};
     const auto table = std::make_shared<Table>(column_definitions, TableType::Data);
@@ -271,8 +271,8 @@ TEST_F(InExpressionRewriteRuleTest, JoinStrategy) {
     const auto right_col = lqp_column_(static_table_node, ColumnID{0});
     const auto expected_lqp = JoinNode::make(JoinMode::Semi, equals_(col_a, right_col), node, static_table_node);
 
-    EXPECT_LQP_EQ(lqp, expected_lqp);
-    EXPECT_TABLE_EQ_UNORDERED(static_cast<StaticTableNode&>(*lqp->right_input()).table, table);
+    EXPECT_LQP_EQ(_lqp, expected_lqp);
+    EXPECT_TABLE_EQ_UNORDERED(static_cast<StaticTableNode&>(*_lqp->right_input()).table, table);
   }
 }
 
@@ -280,39 +280,43 @@ TEST_F(InExpressionRewriteRuleTest, AutoStrategy) {
   const auto cardinality_estimator = CardinalityEstimator{};
 
   {
-    // Disjunction for single element
-    const auto lqp = PredicateNode::make(single_element_in_expression, node);
-    apply_rule(rule, lqp);
+    // Disjunction for single element.
+    _lqp = PredicateNode::make(single_element_in_expression, node);
+    _apply_rule(rule, _lqp);
     const auto expected_lqp = PredicateNode::make(equals_(col_a, 1), node);
-    EXPECT_LQP_EQ(lqp, expected_lqp);
+    EXPECT_LQP_EQ(_lqp, expected_lqp);
 
-    EXPECT_FLOAT_EQ(cardinality_estimator.estimate_cardinality(lqp), 1000.f / 200 * 1);
+    EXPECT_FLOAT_EQ(cardinality_estimator.estimate_cardinality(_lqp), 1000.f / 200 * 1);
   }
 
+  std::cout << __FILE__ << ":" << __LINE__ << std::endl;
+
   {
-    // ExpressionEvaluator for five elements
-    const auto lqp = PredicateNode::make(five_element_in_expression, node);
-    const auto expected_lqp = lqp->deep_copy();
-    apply_rule(rule, lqp);
-    EXPECT_LQP_EQ(lqp, expected_lqp);
+    // ExpressionEvaluator for five elements.
+    _lqp = PredicateNode::make(five_element_in_expression, node);
+    const auto expected_lqp = _lqp->deep_copy();
+    _apply_rule(rule, _lqp);
+    EXPECT_LQP_EQ(_lqp, expected_lqp);
 
     // No cardinality check here, as an IN expression with 5 elements will not be touched (see
     // MAX_ELEMENTS_FOR_DISJUNCTION and MIN_ELEMENTS_FOR_JOIN). These InExpressions are currently not supported by the
     // CardinalityEstimator.
   }
+  std::cout << __FILE__ << ":" << __LINE__ << std::endl;
 
   {
-    // ExpressionEvaluator for differing types
-    const auto lqp = PredicateNode::make(different_types_on_right_side_expression, node);
-    const auto expected_lqp = lqp->deep_copy();
-    apply_rule(rule, lqp);
-    EXPECT_LQP_EQ(lqp, expected_lqp);
+    // ExpressionEvaluator for differing types.
+    _lqp = PredicateNode::make(different_types_on_right_side_expression, node);
+    const auto expected_lqp = _lqp->deep_copy();
+    _apply_rule(rule, _lqp);
+    EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
+  std::cout << __FILE__ << ":" << __LINE__ << std::endl;
 
   {
-    // Join for 100 elements
-    const auto lqp = PredicateNode::make(hundred_element_in_expression, node);
-    apply_rule(rule, lqp);
+    // Join for 100 elements.
+    _lqp = PredicateNode::make(hundred_element_in_expression, node);
+    _apply_rule(rule, _lqp);
 
     const auto column_definitions = TableColumnDefinitions{{"right_values", DataType::Int, false}};
     const auto table = std::make_shared<Table>(column_definitions, TableType::Data);
@@ -323,16 +327,17 @@ TEST_F(InExpressionRewriteRuleTest, AutoStrategy) {
     const auto right_col = lqp_column_(static_table_node, ColumnID{0});
     const auto expected_lqp = JoinNode::make(JoinMode::Semi, equals_(col_a, right_col), node, static_table_node);
 
-    EXPECT_LQP_EQ(lqp, expected_lqp);
-    EXPECT_TABLE_EQ_UNORDERED(static_cast<StaticTableNode&>(*lqp->right_input()).table, table);
+    EXPECT_LQP_EQ(_lqp, expected_lqp);
+    EXPECT_TABLE_EQ_UNORDERED(static_cast<StaticTableNode&>(*_lqp->right_input()).table, table);
 
-    EXPECT_NEAR(cardinality_estimator.estimate_cardinality(lqp), 1000.f / 200 * 100, 10);
+    EXPECT_NEAR(cardinality_estimator.estimate_cardinality(_lqp), 1000.f / 200 * 100, 10);
   }
+  std::cout << __FILE__ << ":" << __LINE__ << std::endl;
 
   {
-    // Join for 100 elements even if table is large
-    const auto lqp = PredicateNode::make(hundred_element_in_expression_large_input, many_row_node);
-    apply_rule(rule, lqp);
+    // Join for 100 elements even if table is large.
+    _lqp = PredicateNode::make(hundred_element_in_expression_large_input, many_row_node);
+    _apply_rule(rule, _lqp);
 
     const auto column_definitions = TableColumnDefinitions{{"right_values", DataType::Int, false}};
     const auto table = std::make_shared<Table>(column_definitions, TableType::Data);
@@ -344,39 +349,45 @@ TEST_F(InExpressionRewriteRuleTest, AutoStrategy) {
     const auto expected_lqp =
         JoinNode::make(JoinMode::Semi, equals_(col_large, right_col), many_row_node, static_table_node);
 
-    EXPECT_LQP_EQ(lqp, expected_lqp);
-    EXPECT_TABLE_EQ_UNORDERED(static_cast<StaticTableNode&>(*lqp->right_input()).table, table);
+    EXPECT_LQP_EQ(_lqp, expected_lqp);
+    EXPECT_TABLE_EQ_UNORDERED(static_cast<StaticTableNode&>(*_lqp->right_input()).table, table);
   }
+  std::cout << __FILE__ << ":" << __LINE__ << std::endl;
 
   {
-    // Disjunction for two elements, even if one is NULL
-    const auto lqp = PredicateNode::make(null_in_expression, node);
-    apply_rule(rule, lqp);
+    // Disjunction for two elements, even if one is NULL.
+    _lqp = PredicateNode::make(null_in_expression, node);
+    _apply_rule(rule, _lqp);
     // clang-format off
     const auto expected_lqp =
     UnionNode::make(SetOperationMode::All,
       PredicateNode::make(equals_(col_a, NULL_VALUE), node),
       PredicateNode::make(equals_(col_a, 1), node));
     // clang-format on
-    EXPECT_LQP_EQ(lqp, expected_lqp);
+    EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
+  std::cout << __FILE__ << ":" << __LINE__ << std::endl;
 
   {
-    // Disjunction for five elements, if table is large
-    const auto lqp = PredicateNode::make(five_element_in_expression, many_row_node);
-    apply_rule(rule, lqp);
+    // Disjunction for five elements, if table is large.
+    _lqp = PredicateNode::make(five_element_in_expression, many_row_node);
+    _lqp = _lqp->deep_copy();
+    _apply_rule(rule, _lqp);
 
-    EXPECT_TRUE(check_disjunction(lqp, {1, 2, 3, 4, 5}));
+    EXPECT_TRUE(check_disjunction(_lqp, {1, 2, 3, 4, 5}));
   }
+  std::cout << __FILE__ << ":" << __LINE__ << std::endl;
 
   {
-    // ExpressionEvaluator, despite table is large and elements below threshold if FunctionExpression contained
-    const auto lqp = PredicateNode::make(two_element_functional_in_expression, many_row_node);
-    const auto expected_lqp = lqp->deep_copy();
-    apply_rule(rule, lqp);
+    // ExpressionEvaluator, despite table is large and elements below threshold if FunctionExpression contained.
+    _lqp = PredicateNode::make(two_element_functional_in_expression, many_row_node);
+    const auto expected_lqp = _lqp->deep_copy();
+    _apply_rule(rule, _lqp);
 
-    EXPECT_LQP_EQ(lqp, expected_lqp);
+    EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
+
+  std::cout << __FILE__ << ":" << __LINE__ << std::endl;
 }
 
 }  // namespace hyrise

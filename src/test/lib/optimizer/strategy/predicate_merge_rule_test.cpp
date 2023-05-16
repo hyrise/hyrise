@@ -36,7 +36,7 @@ class PredicateMergeRuleTest : public StrategyBaseTest {
 
 TEST_F(PredicateMergeRuleTest, MergeUnionBelowPredicate) {
   // clang-format off
-  const auto lqp =
+  _lqp =
   PredicateNode::make(equals_(a_a, 10),
     UnionNode::make(SetOperationMode::Positions,
       PredicateNode::make(less_than_(a_b, 8),
@@ -49,17 +49,9 @@ TEST_F(PredicateMergeRuleTest, MergeUnionBelowPredicate) {
     node_a);
   // clang-format on
 
-  std::cout << *lqp << std::endl;
+  _apply_rule(rule, _lqp);
 
-  std::cout << *expected_lqp << std::endl;
-
-  apply_rule(rule, lqp);
-
-  std::cout << *lqp << std::endl;
-
-  std::cout << *expected_lqp << std::endl;
-
-  EXPECT_LQP_EQ(lqp, expected_lqp);
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(PredicateMergeRuleTest, MergeUnionBelowPredicateBelowUnion) {
@@ -72,7 +64,7 @@ TEST_F(PredicateMergeRuleTest, MergeUnionBelowPredicateBelowUnion) {
       PredicateNode::make(greater_than_(a_b, 12),
         node_a)));
 
-  const auto lqp =
+  _lqp =
   UnionNode::make(SetOperationMode::Positions,
     PredicateNode::make(less_than_(a_b, 15),
       sub_lqp),
@@ -84,14 +76,14 @@ TEST_F(PredicateMergeRuleTest, MergeUnionBelowPredicateBelowUnion) {
     node_a);
   // clang-format on
 
-  apply_rule(rule, lqp);
+  _apply_rule(rule, _lqp);
 
-  EXPECT_LQP_EQ(lqp, expected_lqp);
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(PredicateMergeRuleTest, MergeSimpleDisjunction) {
   // clang-format off
-  const auto lqp =
+  _lqp =
   UnionNode::make(SetOperationMode::Positions,
     PredicateNode::make(less_than_(a_a, 3),
       node_a),
@@ -103,14 +95,14 @@ TEST_F(PredicateMergeRuleTest, MergeSimpleDisjunction) {
     node_a);
   // clang-format on
 
-  apply_rule(rule, lqp);
+  _apply_rule(rule, _lqp);
 
-  EXPECT_LQP_EQ(lqp, expected_lqp);
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(PredicateMergeRuleTest, MergeComplexDisjunction) {
   // clang-format off
-  const auto lqp =
+  _lqp =
   UnionNode::make(SetOperationMode::Positions,
     PredicateNode::make(equals_(a_b, 7),
       node_a),
@@ -128,14 +120,14 @@ TEST_F(PredicateMergeRuleTest, MergeComplexDisjunction) {
     node_a);
   // clang-format on
 
-  apply_rule(rule, lqp);
+  _apply_rule(rule, _lqp);
 
-  EXPECT_LQP_EQ(lqp, expected_lqp);
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(PredicateMergeRuleTest, MergeBelowProjection) {
   // clang-format off
-  const auto lqp =
+  _lqp =
   ProjectionNode::make(expression_vector(a_a),
     UnionNode::make(SetOperationMode::Positions,
       PredicateNode::make(less_than_(a_a, 1),
@@ -149,14 +141,14 @@ TEST_F(PredicateMergeRuleTest, MergeBelowProjection) {
       node_a));
   // clang-format on
 
-  apply_rule(rule, lqp);
+  _apply_rule(rule, _lqp);
 
-  EXPECT_LQP_EQ(lqp, expected_lqp);
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(PredicateMergeRuleTest, MergeOnlyAboveLeftTable) {
   // clang-format off
-  const auto lqp =
+  _lqp =
   UnionNode::make(SetOperationMode::Positions,
     UnionNode::make(SetOperationMode::Positions,
       PredicateNode::make(equals_(a_a, 47),
@@ -174,9 +166,9 @@ TEST_F(PredicateMergeRuleTest, MergeOnlyAboveLeftTable) {
       node_b));
   // clang-format on
 
-  apply_rule(rule, lqp);
+  _apply_rule(rule, _lqp);
 
-  EXPECT_LQP_EQ(lqp, expected_lqp);
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(PredicateMergeRuleTest, MergeUnionsSeparatedByProjection) {
@@ -189,7 +181,7 @@ TEST_F(PredicateMergeRuleTest, MergeUnionsSeparatedByProjection) {
       PredicateNode::make(greater_than_(3, 2),
         node_a)));
 
-  const auto lqp =
+  _lqp =
   UnionNode::make(SetOperationMode::Positions,
     PredicateNode::make(less_than_(a_a, 10),
       sub_lqp),
@@ -203,14 +195,14 @@ TEST_F(PredicateMergeRuleTest, MergeUnionsSeparatedByProjection) {
         node_a)));
   // clang-format on
 
-  apply_rule(rule, lqp);
+  _apply_rule(rule, _lqp);
 
-  EXPECT_LQP_EQ(lqp, expected_lqp);
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(PredicateMergeRuleTest, MergeUnionsSeparatedByJoin) {
   // clang-format off
-  const auto lqp =
+  _lqp =
   JoinNode::make(JoinMode::Inner, equals_(a_a, b_a),
     UnionNode::make(SetOperationMode::Positions,
       PredicateNode::make(less_than_(a_a, 1),
@@ -231,9 +223,9 @@ TEST_F(PredicateMergeRuleTest, MergeUnionsSeparatedByJoin) {
       node_b));
   // clang-format on
 
-  apply_rule(rule, lqp);
+  _apply_rule(rule, _lqp);
 
-  EXPECT_LQP_EQ(lqp, expected_lqp);
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(PredicateMergeRuleTest, HandleDiamondLQPWithCorrelatedParameters) {
@@ -252,7 +244,7 @@ TEST_F(PredicateMergeRuleTest, HandleDiamondLQPWithCorrelatedParameters) {
     PredicateNode::make(greater_than_(a_b, parameter1),
       node_a));
 
-  const auto lqp =
+  _lqp =
   JoinNode::make(JoinMode::Inner, equals_(a_a, a_b),
     ProjectionNode::make(expression_vector(a_a),
       union_node),
@@ -267,9 +259,9 @@ TEST_F(PredicateMergeRuleTest, HandleDiamondLQPWithCorrelatedParameters) {
       predicate_node));
   // clang-format on
 
-  apply_rule(rule, lqp);
+  _apply_rule(rule, _lqp);
 
-  EXPECT_LQP_EQ(lqp, expected_lqp);
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(PredicateMergeRuleTest, MergeSimpleNestedConjunctionsAndDisjunctions) {
@@ -281,7 +273,7 @@ TEST_F(PredicateMergeRuleTest, MergeSimpleNestedConjunctionsAndDisjunctions) {
     PredicateNode::make(less_than_(a_a, 8),
       node_a));
 
-  const auto lqp =
+  _lqp =
   UnionNode::make(SetOperationMode::Positions,
     PredicateNode::make(less_than_equals_(a_b, 7),
       lower_union_node),
@@ -293,9 +285,9 @@ TEST_F(PredicateMergeRuleTest, MergeSimpleNestedConjunctionsAndDisjunctions) {
     node_a);
   // clang-format on
 
-  apply_rule(rule, lqp);
+  _apply_rule(rule, _lqp);
 
-  EXPECT_LQP_EQ(lqp, expected_lqp);
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(PredicateMergeRuleTest, MergeComplexNestedConjunctionsAndDisjunctions) {
@@ -312,7 +304,7 @@ TEST_F(PredicateMergeRuleTest, MergeComplexNestedConjunctionsAndDisjunctions) {
     PredicateNode::make(less_than_(a_a, 8),
       sub_lqp));
 
-  const auto lqp =
+  _lqp =
   UnionNode::make(SetOperationMode::Positions,
     UnionNode::make(SetOperationMode::Positions,
       PredicateNode::make(less_than_equals_(a_b, 7),
@@ -331,44 +323,44 @@ TEST_F(PredicateMergeRuleTest, MergeComplexNestedConjunctionsAndDisjunctions) {
         node_a)));
   // clang-format on
 
-  apply_rule(rule, lqp);
+  _apply_rule(rule, _lqp);
 
-  EXPECT_LQP_EQ(lqp, expected_lqp);
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(PredicateMergeRuleTest, NoRewriteSimplePredicate) {
   // clang-format off
-  const auto lqp =
+  _lqp =
   PredicateNode::make(less_than_(a_a, 10),
     node_a);
   // clang-format on
 
-  const auto expected_lqp = lqp->deep_copy();
+  const auto expected_lqp = _lqp->deep_copy();
 
-  apply_rule(rule, lqp);
+  _apply_rule(rule, _lqp);
 
-  EXPECT_LQP_EQ(lqp, expected_lqp);
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(PredicateMergeRuleTest, NoRewritePredicateChains) {
   // Pure predicate chains won't be merged since this is unlikely to improve the performance.
   // clang-format off
-  const auto lqp =
+  _lqp =
   PredicateNode::make(equals_(a_a, 5),
     PredicateNode::make(equals_(13, 13),
       node_a));
   // clang-format on
 
-  const auto expected_lqp = lqp->deep_copy();
+  const auto expected_lqp = _lqp->deep_copy();
 
-  apply_rule(rule, lqp);
+  _apply_rule(rule, _lqp);
 
-  EXPECT_LQP_EQ(lqp, expected_lqp);
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(PredicateMergeRuleTest, NoRewriteDifferentTables) {
   // clang-format off
-  const auto lqp =
+  _lqp =
   UnionNode::make(SetOperationMode::Positions,
     PredicateNode::make(equals_(a_a, 47),
       node_a),
@@ -376,16 +368,16 @@ TEST_F(PredicateMergeRuleTest, NoRewriteDifferentTables) {
       node_b));
   // clang-format on
 
-  const auto expected_lqp = lqp->deep_copy();
+  const auto expected_lqp = _lqp->deep_copy();
 
-  apply_rule(rule, lqp);
+  _apply_rule(rule, _lqp);
 
-  EXPECT_LQP_EQ(lqp, expected_lqp);
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(PredicateMergeRuleTest, NoRewriteDifferentSetOperationMode) {
   // clang-format off
-  const auto lqp =
+  _lqp =
   UnionNode::make(SetOperationMode::All,
     PredicateNode::make(equals_(a_a, 47),
       node_a),
@@ -393,11 +385,11 @@ TEST_F(PredicateMergeRuleTest, NoRewriteDifferentSetOperationMode) {
       node_a));
   // clang-format on
 
-  const auto expected_lqp = lqp->deep_copy();
+  const auto expected_lqp = _lqp->deep_copy();
 
-  apply_rule(rule, lqp);
+  _apply_rule(rule, _lqp);
 
-  EXPECT_LQP_EQ(lqp, expected_lqp);
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 }  // namespace hyrise

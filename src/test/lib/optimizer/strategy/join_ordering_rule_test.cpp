@@ -50,7 +50,7 @@ TEST_F(JoinOrderingRuleTest, MultipleJoinGraphs) {
   // e.g., when there is a barrier in the form of an outer join
 
   // clang-format off
-  const auto lqp =
+  _lqp =
   AggregateNode::make(expression_vector(a_a), expression_vector(),
     PredicateNode::make(equals_(a_a, b_b),
       JoinNode::make(JoinMode::Cross,
@@ -62,7 +62,7 @@ TEST_F(JoinOrderingRuleTest, MultipleJoinGraphs) {
               node_d,
               node_c))))));
 
-  apply_rule(rule, lqp);
+  _apply_rule(rule, _lqp);
 
   const auto expected_lqp =
   AggregateNode::make(expression_vector(a_a), expression_vector(),
@@ -75,7 +75,7 @@ TEST_F(JoinOrderingRuleTest, MultipleJoinGraphs) {
       node_a));
   // clang-format on
 
-  EXPECT_LQP_EQ(lqp, expected_lqp);
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 }  // namespace hyrise

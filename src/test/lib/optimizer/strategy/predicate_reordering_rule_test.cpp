@@ -1,9 +1,3 @@
-#include <memory>
-#include <optional>
-#include <string>
-#include <utility>
-#include <vector>
-
 #include "base_test.hpp"
 #include "lib/optimizer/strategy/strategy_base_test.hpp"
 
@@ -48,7 +42,7 @@ class PredicateReorderingTest : public StrategyBaseTest {
 
 TEST_F(PredicateReorderingTest, SimpleReorderingTest) {
   // clang-format off
-  const auto lqp =
+  _lqp =
   PredicateNode::make(greater_than_(a, 50),
     PredicateNode::make(greater_than_(a, 10),
       node));
@@ -58,13 +52,13 @@ TEST_F(PredicateReorderingTest, SimpleReorderingTest) {
       node));
   // clang-format on
 
-  apply_rule(_rule, lqp);
-  EXPECT_LQP_EQ(lqp, expected_lqp);
+  _apply_rule(_rule, _lqp);
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(PredicateReorderingTest, MoreComplexReorderingTest) {
   // clang-format off
-  const auto lqp =
+  _lqp =
   PredicateNode::make(greater_than_(a, 99),
     PredicateNode::make(greater_than_(b, 55),
       PredicateNode::make(greater_than_(c, 100),
@@ -76,14 +70,14 @@ TEST_F(PredicateReorderingTest, MoreComplexReorderingTest) {
         node)));
   // clang-format on
 
-  apply_rule(_rule, lqp);
+  _apply_rule(_rule, _lqp);
 
-  EXPECT_LQP_EQ(lqp, expected_lqp);
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(PredicateReorderingTest, ComplexReorderingTest) {
   // clang-format off
-  const auto lqp =
+  _lqp =
   PredicateNode::make(equals_(a, 95),
     PredicateNode::make(greater_than_(b, 55),
       PredicateNode::make(greater_than_(b, 40),
@@ -103,8 +97,8 @@ TEST_F(PredicateReorderingTest, ComplexReorderingTest) {
               node))))));
   // clang-format on
 
-  apply_rule(_rule, lqp);
-  EXPECT_LQP_EQ(lqp, expected_lqp);
+  _apply_rule(_rule, _lqp);
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(PredicateReorderingTest, SameOrderingForStoredTable) {
@@ -115,20 +109,20 @@ TEST_F(PredicateReorderingTest, SameOrderingForStoredTable) {
 
   {
     // clang-format off
-    const auto lqp =
+    _lqp =
     PredicateNode::make(less_than_(lqp_column_(stored_table_node, ColumnID{0}), 40),
       PredicateNode::make(less_than_(lqp_column_(stored_table_node, ColumnID{0}), 20),
         stored_table_node));
     // clang-format on
-    const auto expected_lqp = lqp->deep_copy();
+    const auto expected_lqp = _lqp->deep_copy();
 
-    apply_rule(_rule, lqp);
+    _apply_rule(_rule, _lqp);
 
-    EXPECT_LQP_EQ(lqp, expected_lqp);
+    EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
   {
     // clang-format off
-    const auto lqp =
+    _lqp =
     PredicateNode::make(less_than_(lqp_column_(stored_table_node, ColumnID{0}), 20),
       PredicateNode::make(less_than_(lqp_column_(stored_table_node, ColumnID{0}), 400),
         stored_table_node));
@@ -139,9 +133,9 @@ TEST_F(PredicateReorderingTest, SameOrderingForStoredTable) {
         stored_table_node));
     // clang-format on
 
-    apply_rule(_rule, lqp);
+    _apply_rule(_rule, _lqp);
 
-    EXPECT_LQP_EQ(lqp, expected_lqp);
+    EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 }
 
@@ -174,7 +168,7 @@ TEST_F(PredicateReorderingTest, PredicatesAsRightInput) {
                                        {GenericHistogram<int32_t>::with_single_bin(0, 100, 100.0f, 100.0f)});
 
   // clang-format off
-  const auto lqp =
+  _lqp =
   JoinNode::make(JoinMode::Cross,
     PredicateNode::make(greater_than_(lqp_column_(table_0, ColumnID{0}), 80),
       PredicateNode::make(greater_than_(lqp_column_(table_0, ColumnID{0}), 60),
@@ -195,8 +189,8 @@ TEST_F(PredicateReorderingTest, PredicatesAsRightInput) {
           table_1))));
   // clang-format on
 
-  apply_rule(_rule, lqp);
-  EXPECT_LQP_EQ(lqp, expected_lqp);
+  _apply_rule(_rule, _lqp);
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(PredicateReorderingTest, PredicatesWithMultipleOutputs) {
@@ -232,7 +226,7 @@ TEST_F(PredicateReorderingTest, PredicatesWithMultipleOutputs) {
     PredicateNode::make(greater_than_(lqp_column_(table_node, ColumnID{0}), 5),
       table_node));
 
-  const auto lqp =
+  _lqp =
   UnionNode::make(SetOperationMode::Positions,
     PredicateNode::make(greater_than_(lqp_column_(table_node, ColumnID{0}), 90),
       sub_lqp),
@@ -250,13 +244,13 @@ TEST_F(PredicateReorderingTest, PredicatesWithMultipleOutputs) {
     expected_sub_lqp);
   // clang-format on
 
-  apply_rule(_rule, lqp);
-  EXPECT_LQP_EQ(lqp, expected_lqp);
+  _apply_rule(_rule, _lqp);
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(PredicateReorderingTest, SimpleValidateReorderingTest) {
   // clang-format off
-  const auto lqp =
+  _lqp =
   PredicateNode::make(greater_than_(a, 60),
     ValidateNode::make(
       node));
@@ -267,8 +261,8 @@ TEST_F(PredicateReorderingTest, SimpleValidateReorderingTest) {
       node));
   // clang-format on
 
-  apply_rule(_rule, lqp);
-  EXPECT_LQP_EQ(lqp, expected_lqp);
+  _apply_rule(_rule, _lqp);
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 }  // namespace hyrise

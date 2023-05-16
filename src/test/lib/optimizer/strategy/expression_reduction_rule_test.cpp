@@ -159,7 +159,7 @@ TEST_F(ExpressionReductionRuleTest, RemoveDuplicateAggregate) {
   {
     // SELECT SUM(a), COUNT(a), AVG(a) -> SUM(a), COUNT(a), SUM(a) / COUNT(a) AS AVG(a)
     // clang-format off
-    const auto lqp =
+    _lqp =
     AggregateNode::make(expression_vector(), expression_vector(sum_(col_a), count_(col_a), avg_(col_a)),  // NOLINT(whitespace/line_length)
       stored_table_node);
 
@@ -170,14 +170,14 @@ TEST_F(ExpressionReductionRuleTest, RemoveDuplicateAggregate) {
         AggregateNode::make(expression_vector(), expression_vector(sum_(col_a), count_(col_a)), stored_table_node)));
     // clang-format on
 
-    apply_rule(rule, lqp);
-    EXPECT_LQP_EQ(lqp, expected_lqp);
+    _apply_rule(rule, _lqp);
+    EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 
   {
     // SELECT SUM(a), COUNT(*), AVG(a) -> SUM(a), COUNT(*), SUM(a) / COUNT(*) AS AVG(a) as a is not NULLable
     // clang-format off
-    const auto lqp =
+    _lqp =
     AggregateNode::make(expression_vector(), expression_vector(sum_(col_a), count_star_(stored_table_node), avg_(col_a)),  // NOLINT(whitespace/line_length)
       stored_table_node);
 
@@ -189,14 +189,14 @@ TEST_F(ExpressionReductionRuleTest, RemoveDuplicateAggregate) {
           stored_table_node)));
     // clang-format on
 
-    apply_rule(rule, lqp);
-    EXPECT_LQP_EQ(lqp, expected_lqp);
+    _apply_rule(rule, _lqp);
+    EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 
   {
     // SELECT SUM(a), COUNT(a), AVG(a) GROUP BY b -> SUM(a), COUNT(a), SUM(a) / COUNT(a) AS AVG(a) GROUP BY b
     // clang-format off
-    const auto lqp =
+    _lqp =
     AggregateNode::make(expression_vector(col_b), expression_vector(sum_(col_a), count_(col_a), avg_(col_a)),
       stored_table_node);
 
@@ -207,21 +207,21 @@ TEST_F(ExpressionReductionRuleTest, RemoveDuplicateAggregate) {
         AggregateNode::make(expression_vector(col_b), expression_vector(sum_(col_a), count_(col_a)), stored_table_node)));                              // NOLINT(whitespace/line_length)
     // clang-format on
 
-    apply_rule(rule, lqp);
-    EXPECT_LQP_EQ(lqp, expected_lqp);
+    _apply_rule(rule, _lqp);
+    EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 
   {
     // SELECT SUM(b), COUNT(*), AVG(b) stays unmodified as b is NULLable
     // clang-format off
-    const auto lqp =
+    _lqp =
     AggregateNode::make(expression_vector(), expression_vector(sum_(col_b), count_star_(stored_table_node), avg_(col_b)),  // NOLINT(whitespace/line_length)
       stored_table_node);
     // clang-format on
 
-    const auto expected_lqp = lqp->deep_copy();
-    apply_rule(rule, lqp);
-    EXPECT_LQP_EQ(lqp, expected_lqp);
+    const auto expected_lqp = _lqp->deep_copy();
+    _apply_rule(rule, _lqp);
+    EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 
   {
@@ -231,33 +231,33 @@ TEST_F(ExpressionReductionRuleTest, RemoveDuplicateAggregate) {
     JoinNode::make(JoinMode::Inner, equals_(col_a, col_b),
       stored_table_node,
       stored_table_node);
-    const auto lqp =
+    _lqp =
     AggregateNode::make(expression_vector(), expression_vector(count_star_(join_node)),
       join_node);
     // clang-format on
 
-    const auto expected_lqp = lqp->deep_copy();
-    apply_rule(rule, lqp);
-    EXPECT_LQP_EQ(lqp, expected_lqp);
+    const auto expected_lqp = _lqp->deep_copy();
+    _apply_rule(rule, _lqp);
+    EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 
   {
     // SELECT SUM(a), COUNT(b), AVG(a) stays unmodified as COUNT(b) is unrelated
     // clang-format off
-    const auto lqp =
+    _lqp =
     AggregateNode::make(expression_vector(), expression_vector(sum_(col_a), count_(col_b), avg_(col_a)),
       stored_table_node);
     // clang-format on
 
-    const auto expected_lqp = lqp->deep_copy();
-    apply_rule(rule, lqp);
-    EXPECT_LQP_EQ(lqp, expected_lqp);
+    const auto expected_lqp = _lqp->deep_copy();
+    _apply_rule(rule, _lqp);
+    EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 
   {
     // SELECT SUM(a), COUNT(a) + 1, AVG(a) + 2 -> SUM(a), COUNT(a) + 1, SUM(a) / COUNT(a) + 2 AS AVG(a) + 2
     // clang-format off
-    const auto lqp =
+    _lqp =
     ProjectionNode::make(expression_vector(sum_(col_a), add_(count_(col_a), 1), add_(avg_(col_a), 2)),
       AggregateNode::make(expression_vector(), expression_vector(sum_(col_a), count_(col_a), avg_(col_a)),
         stored_table_node));
@@ -271,8 +271,8 @@ TEST_F(ExpressionReductionRuleTest, RemoveDuplicateAggregate) {
           stored_table_node))));
     // clang-format on
 
-    apply_rule(rule, lqp);
-    EXPECT_LQP_EQ(lqp, expected_lqp);
+    _apply_rule(rule, _lqp);
+    EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 
   {
@@ -280,7 +280,7 @@ TEST_F(ExpressionReductionRuleTest, RemoveDuplicateAggregate) {
     const auto aliases = std::vector<std::string>{"SUM(a)", "foo", "bar"};
 
     // clang-format off
-    const auto lqp =
+    _lqp =
     AliasNode::make(expression_vector(sum_(col_a), count_(col_a), avg_(col_a)), aliases,
       AggregateNode::make(expression_vector(), expression_vector(sum_(col_a), count_(col_a), avg_(col_a)),
       stored_table_node));
@@ -292,8 +292,8 @@ TEST_F(ExpressionReductionRuleTest, RemoveDuplicateAggregate) {
           stored_table_node)));
     // clang-format on
 
-    apply_rule(rule, lqp);
-    EXPECT_LQP_EQ(lqp, expected_lqp);
+    _apply_rule(rule, _lqp);
+    EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 }
 
@@ -302,7 +302,7 @@ TEST_F(ExpressionReductionRuleTest, ApplyToLQP) {
   const auto a_and_c = and_(a, c);
 
   // clang-format off
-  const auto lqp =
+  _lqp =
   PredicateNode::make(or_(a_and_b, a_and_c),
     PredicateNode::make(like_(s, "RED%"),
       PredicateNode::make(equals_(3, add_(4, 3)),
@@ -315,9 +315,9 @@ TEST_F(ExpressionReductionRuleTest, ApplyToLQP) {
         mock_node)));
   // clang-format on
 
-  apply_rule(rule, lqp);
+  _apply_rule(rule, _lqp);
 
-  EXPECT_LQP_EQ(lqp, expected_lqp);
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 }  // namespace hyrise
