@@ -20,7 +20,7 @@ namespace hyrise {
 
 using namespace expression_functional;  // NOLINT(build/namespaces)
 
-class BetweenCompositionTest : public StrategyBaseTest {
+class BetweenCompositionRuleTest : public StrategyBaseTest {
  protected:
   void SetUp() override {
     _rule = std::make_shared<BetweenCompositionRule>();
@@ -42,7 +42,7 @@ class BetweenCompositionTest : public StrategyBaseTest {
   std::shared_ptr<BetweenCompositionRule> _rule;
 };
 
-TEST_F(BetweenCompositionTest, ColumnExpressionLeft) {
+TEST_F(BetweenCompositionRuleTest, ColumnExpressionLeft) {
   // clang-format off
   _lqp =
   PredicateNode::make(greater_than_equals_(_a_a, 200),
@@ -59,7 +59,7 @@ TEST_F(BetweenCompositionTest, ColumnExpressionLeft) {
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
-TEST_F(BetweenCompositionTest, ColumnExpressionRight) {
+TEST_F(BetweenCompositionRuleTest, ColumnExpressionRight) {
   // clang-format off
   _lqp =
   PredicateNode::make(less_than_equals_(200, _a_a),
@@ -76,12 +76,12 @@ TEST_F(BetweenCompositionTest, ColumnExpressionRight) {
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
-TEST_F(BetweenCompositionTest, NoColumnRange) {
+TEST_F(BetweenCompositionRuleTest, NoColumnRange) {
   // clang-format off
   _lqp =
   PredicateNode::make(less_than_equals_(_a_b, 300),
     PredicateNode::make(greater_than_equals_(_a_a, 200),
-      _node_a));
+      _node_a))->deep_copy();
 
   const auto expected_lqp =
   PredicateNode::make(less_than_equals_(_a_b, 300),
@@ -94,12 +94,12 @@ TEST_F(BetweenCompositionTest, NoColumnRange) {
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
-TEST_F(BetweenCompositionTest, EmptyColumnRange) {
+TEST_F(BetweenCompositionRuleTest, EmptyColumnRange) {
   // clang-format off
   _lqp =
   PredicateNode::make(greater_than_equals_(_a_a, 300),
     PredicateNode::make(less_than_equals_(_a_a, 200),
-      _node_a));
+      _node_a))->deep_copy();
 
   const auto expected_lqp =
   PredicateNode::make(between_inclusive_(_a_a, 300, 200),
@@ -111,7 +111,7 @@ TEST_F(BetweenCompositionTest, EmptyColumnRange) {
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
-TEST_F(BetweenCompositionTest, NoPullPastOrExpression) {
+TEST_F(BetweenCompositionRuleTest, NoPullPastOrExpression) {
   // clang-format off
   _lqp =
   PredicateNode::make(or_(greater_than_equals_(_a_a, 200), less_than_equals_(_a_a, 300)),
@@ -125,12 +125,12 @@ TEST_F(BetweenCompositionTest, NoPullPastOrExpression) {
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
-TEST_F(BetweenCompositionTest, PredicateChain) {
+TEST_F(BetweenCompositionRuleTest, PredicateChain) {
   // clang-format off
   _lqp =
   PredicateNode::make(greater_than_equals_(_a_a, 200),
     PredicateNode::make(less_than_equals_(_a_a, 300),
-      _node_a));
+      _node_a))->deep_copy();
 
   const auto expected_lqp =
   PredicateNode::make(between_inclusive_(_a_a, 200, 300),
@@ -142,13 +142,13 @@ TEST_F(BetweenCompositionTest, PredicateChain) {
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
-TEST_F(BetweenCompositionTest, LongPredicateChain) {
+TEST_F(BetweenCompositionRuleTest, LongPredicateChain) {
   // clang-format off
   _lqp =
   PredicateNode::make(greater_than_equals_(_a_a, 200),
     PredicateNode::make(less_than_equals_(_a_b, 300),
       PredicateNode::make(less_than_equals_(_a_a, 300),
-        _node_a)));
+        _node_a)))->deep_copy();
 
   const auto expected_lqp =
   PredicateNode::make(between_inclusive_(_a_a, 200, 300),
@@ -161,12 +161,12 @@ TEST_F(BetweenCompositionTest, LongPredicateChain) {
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
-TEST_F(BetweenCompositionTest, LeftExclusive) {
+TEST_F(BetweenCompositionRuleTest, LeftExclusive) {
   // clang-format off
   _lqp =
   PredicateNode::make(greater_than_(_a_a, 200),
     PredicateNode::make(less_than_equals_(_a_a, 300),
-      _node_a));
+      _node_a))->deep_copy();
 
   const auto expected_lqp =
   PredicateNode::make(between_lower_exclusive_(_a_a, 200, 300),
@@ -178,12 +178,12 @@ TEST_F(BetweenCompositionTest, LeftExclusive) {
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
-TEST_F(BetweenCompositionTest, RightExclusive) {
+TEST_F(BetweenCompositionRuleTest, RightExclusive) {
   // clang-format off
   _lqp =
   PredicateNode::make(greater_than_equals_(_a_a, 200),
     PredicateNode::make(less_than_(_a_a, 300),
-      _node_a));
+      _node_a))->deep_copy();
 
   const auto expected_lqp =
   PredicateNode::make(between_upper_exclusive_(_a_a, 200, 300),
@@ -195,12 +195,12 @@ TEST_F(BetweenCompositionTest, RightExclusive) {
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
-TEST_F(BetweenCompositionTest, BothExclusive) {
+TEST_F(BetweenCompositionRuleTest, BothExclusive) {
   // clang-format off
   _lqp =
   PredicateNode::make(greater_than_(_a_a, 200),
     PredicateNode::make(less_than_(_a_a, 300),
-      _node_a));
+      _node_a))->deep_copy();
 
   const auto expected_lqp =
   PredicateNode::make(between_exclusive_(_a_a, 200, 300),
@@ -212,7 +212,7 @@ TEST_F(BetweenCompositionTest, BothExclusive) {
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
-TEST_F(BetweenCompositionTest, TwoChains) {
+TEST_F(BetweenCompositionRuleTest, TwoChains) {
   // clang-format off
   _lqp =
   PredicateNode::make(greater_than_(_a_a, 200),
@@ -220,7 +220,7 @@ TEST_F(BetweenCompositionTest, TwoChains) {
       ValidateNode::make(
         PredicateNode::make(greater_than_(_a_b, 500),
           PredicateNode::make(less_than_(_a_b, 600),
-            _node_a)))));
+            _node_a)))))->deep_copy();
 
   const auto expected_lqp =
   PredicateNode::make(between_exclusive_(_a_a, 200, 300),
@@ -234,7 +234,7 @@ TEST_F(BetweenCompositionTest, TwoChains) {
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
-TEST_F(BetweenCompositionTest, NoPullPastAggregate) {
+TEST_F(BetweenCompositionRuleTest, NoPullPastAggregate) {
   // clang-format off
   _lqp =
   PredicateNode::make(greater_than_equals_(_a_a, 200),
@@ -250,7 +250,7 @@ TEST_F(BetweenCompositionTest, NoPullPastAggregate) {
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
-TEST_F(BetweenCompositionTest, NoPullPastJoin) {
+TEST_F(BetweenCompositionRuleTest, NoPullPastJoin) {
   // clang-format off
   _lqp =
   PredicateNode::make(less_than_equals_(_a_a, _b_a),
@@ -268,7 +268,7 @@ TEST_F(BetweenCompositionTest, NoPullPastJoin) {
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
-TEST_F(BetweenCompositionTest, TwoChainsBeforeJoin) {
+TEST_F(BetweenCompositionRuleTest, TwoChainsBeforeJoin) {
   // clang-format off
   _lqp =
   PredicateNode::make(equals_(_a_a, _b_a),
@@ -278,7 +278,7 @@ TEST_F(BetweenCompositionTest, TwoChainsBeforeJoin) {
           _node_a)),
       PredicateNode::make(greater_than_equals_(_b_a, 400),
         PredicateNode::make(less_than_equals_(_b_a, 500),
-          _node_b))));
+          _node_b))))->deep_copy();
 
   const auto expected_lqp =
   PredicateNode::make(equals_(_a_a, _b_a),
@@ -294,15 +294,13 @@ TEST_F(BetweenCompositionTest, TwoChainsBeforeJoin) {
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
-TEST_F(BetweenCompositionTest, TwoColumnsNoMatch) {
+TEST_F(BetweenCompositionRuleTest, TwoColumnsNoMatch) {
   // clang-format off
   _lqp =
   PredicateNode::make(less_than_equals_(_a_a, _a_b),
     _node_a);
 
-  const auto expected_lqp =
-  PredicateNode::make(less_than_equals_(_a_a, _a_b),
-    _node_a);
+  const auto expected_lqp = _lqp->deep_copy();
   // clang-format on
 
   _apply_rule(_rule, _lqp);
@@ -310,7 +308,7 @@ TEST_F(BetweenCompositionTest, TwoColumnsNoMatch) {
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
-TEST_F(BetweenCompositionTest, FindOptimalInclusiveBetween) {
+TEST_F(BetweenCompositionRuleTest, FindOptimalInclusiveBetween) {
   // clang-format off
   _lqp =
   PredicateNode::make(greater_than_equals_(_a_a, 100),
@@ -329,7 +327,7 @@ TEST_F(BetweenCompositionTest, FindOptimalInclusiveBetween) {
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
-TEST_F(BetweenCompositionTest, FindOptimalExclusiveBetween) {
+TEST_F(BetweenCompositionRuleTest, FindOptimalExclusiveBetween) {
   // clang-format off
   _lqp =
   PredicateNode::make(greater_than_(_a_a, 100),
@@ -348,13 +346,13 @@ TEST_F(BetweenCompositionTest, FindOptimalExclusiveBetween) {
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
-TEST_F(BetweenCompositionTest, KeepRemainingPredicates) {
+TEST_F(BetweenCompositionRuleTest, KeepRemainingPredicates) {
   // clang-format off
   _lqp =
   PredicateNode::make(greater_than_equals_(_a_a, 200),
     PredicateNode::make(less_than_equals_(_a_a, 300),
       PredicateNode::make(less_than_equals_(_a_b, 300),
-        _node_a)));
+        _node_a)))->deep_copy();
 
   const auto expected_lqp =
   PredicateNode::make(between_inclusive_(_a_a, 200, 300),
@@ -367,7 +365,7 @@ TEST_F(BetweenCompositionTest, KeepRemainingPredicates) {
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
-TEST_F(BetweenCompositionTest, MultipleBetweensVariousLocations) {
+TEST_F(BetweenCompositionRuleTest, MultipleBetweensVariousLocations) {
   // clang-format off
   _lqp =
   PredicateNode::make(greater_than_equals_(_a_a, 200),
@@ -377,7 +375,7 @@ TEST_F(BetweenCompositionTest, MultipleBetweensVariousLocations) {
           PredicateNode::make(less_than_equals_(_a_a, 250),
               PredicateNode::make(less_than_equals_(_a_a, 300),
                 PredicateNode::make(greater_than_equals_(_a_b, 150),
-                  _node_a)))))));
+                  _node_a)))))))->deep_copy();
 
   const auto expected_lqp =
   PredicateNode::make(between_inclusive_(_a_a, 230, 250),
@@ -391,7 +389,7 @@ TEST_F(BetweenCompositionTest, MultipleBetweensVariousLocations) {
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
-TEST_F(BetweenCompositionTest, NonBoundaryPredicate) {
+TEST_F(BetweenCompositionRuleTest, NonBoundaryPredicate) {
   // clang-format off
   _lqp =
   PredicateNode::make(greater_than_(_a_a, 100),
@@ -410,7 +408,7 @@ TEST_F(BetweenCompositionTest, NonBoundaryPredicate) {
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
-TEST_F(BetweenCompositionTest, NoPullPastDiamondPredicate) {
+TEST_F(BetweenCompositionRuleTest, NoPullPastDiamondPredicate) {
   // clang-format off
   const auto predicate_node =
   PredicateNode::make(greater_than_equals_(_a_a, 200),
@@ -432,7 +430,7 @@ TEST_F(BetweenCompositionTest, NoPullPastDiamondPredicate) {
   EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
-TEST_F(BetweenCompositionTest, HandleMultipleEqualExpressions) {
+TEST_F(BetweenCompositionRuleTest, HandleMultipleEqualExpressions) {
   // clang-format off
   _lqp =
   PredicateNode::make(equals_(_a_a, 100),

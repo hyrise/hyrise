@@ -33,7 +33,7 @@ class InExpressionRewriteRuleTest : public StrategyBaseTest {
     col_large = many_row_node->get_column("col_large");
 
     single_element_in_expression = in_(col_a, list_(1));
-    two_element_functional_in_expression = in_(substr_(col_c, 1, 5), list_("85669", "86197"));
+    two_element_functional_in_expression = in_(substr_(col_large, 1, 5), list_("85669", "86197"));
     five_element_in_expression = in_(col_a, list_(1, 2, 3, 4, 5));
     five_element_not_in_expression = not_in_(col_a, list_(1, 2, 3, 4, 5));
     duplicate_element_in_expression = in_(col_a, list_(1, 2, 1));
@@ -54,7 +54,7 @@ class InExpressionRewriteRuleTest : public StrategyBaseTest {
  public:
   // Can't use EXPECT_LQP_EQ for disjunction rewrites for multiple elements, because ExpressionUnorderedSet produces
   // a non-deterministic order of predicates
-  bool check_disjunction(std::shared_ptr<AbstractLQPNode> lqp, std::vector<int> expected_values) {
+  bool check_disjunction(std::shared_ptr<AbstractLQPNode> lqp, std::shared_ptr<AbstractExpression> expected_column, std::vector<int> expected_values) {
     auto values_found_in_predicates = std::vector<int>{};
 
     // Checks that a given node is a predicate of the form `col_a = x` where x is an int and will be added to
@@ -65,7 +65,7 @@ class InExpressionRewriteRuleTest : public StrategyBaseTest {
       EXPECT_TRUE(predicate_node);
       auto predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(predicate_node->predicate());
       EXPECT_TRUE(predicate);
-      EXPECT_EQ(predicate->left_operand(), col_a);
+      EXPECT_EQ(predicate->left_operand(), expected_column);
       EXPECT_EQ(predicate->right_operand()->type, ExpressionType::Value);
       values_found_in_predicates.emplace_back(
           boost::get<int>(dynamic_cast<ValueExpression&>(*predicate->right_operand()).value));
@@ -145,7 +145,7 @@ TEST_F(InExpressionRewriteRuleTest, DisjunctionStrategy) {
     _lqp = PredicateNode::make(five_element_in_expression, node);
     _apply_rule(rule, _lqp);
 
-    EXPECT_TRUE(check_disjunction(_lqp, {1, 2, 3, 4, 5}));
+    EXPECT_TRUE(check_disjunction(_lqp, col_a, {1, 2, 3, 4, 5}));
   }
 
   {
@@ -289,8 +289,6 @@ TEST_F(InExpressionRewriteRuleTest, AutoStrategy) {
     EXPECT_FLOAT_EQ(cardinality_estimator.estimate_cardinality(_lqp), 1000.f / 200 * 1);
   }
 
-  std::cout << __FILE__ << ":" << __LINE__ << std::endl;
-
   {
     // ExpressionEvaluator for five elements.
     _lqp = PredicateNode::make(five_element_in_expression, node);
@@ -302,7 +300,6 @@ TEST_F(InExpressionRewriteRuleTest, AutoStrategy) {
     // MAX_ELEMENTS_FOR_DISJUNCTION and MIN_ELEMENTS_FOR_JOIN). These InExpressions are currently not supported by the
     // CardinalityEstimator.
   }
-  std::cout << __FILE__ << ":" << __LINE__ << std::endl;
 
   {
     // ExpressionEvaluator for differing types.
@@ -311,7 +308,6 @@ TEST_F(InExpressionRewriteRuleTest, AutoStrategy) {
     _apply_rule(rule, _lqp);
     EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
-  std::cout << __FILE__ << ":" << __LINE__ << std::endl;
 
   {
     // Join for 100 elements.
@@ -332,7 +328,6 @@ TEST_F(InExpressionRewriteRuleTest, AutoStrategy) {
 
     EXPECT_NEAR(cardinality_estimator.estimate_cardinality(_lqp), 1000.f / 200 * 100, 10);
   }
-  std::cout << __FILE__ << ":" << __LINE__ << std::endl;
 
   {
     // Join for 100 elements even if table is large.
@@ -352,7 +347,6 @@ TEST_F(InExpressionRewriteRuleTest, AutoStrategy) {
     EXPECT_LQP_EQ(_lqp, expected_lqp);
     EXPECT_TABLE_EQ_UNORDERED(static_cast<StaticTableNode&>(*_lqp->right_input()).table, table);
   }
-  std::cout << __FILE__ << ":" << __LINE__ << std::endl;
 
   {
     // Disjunction for two elements, even if one is NULL.
@@ -366,17 +360,14 @@ TEST_F(InExpressionRewriteRuleTest, AutoStrategy) {
     // clang-format on
     EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
-  std::cout << __FILE__ << ":" << __LINE__ << std::endl;
 
   {
     // Disjunction for five elements, if table is large.
-    _lqp = PredicateNode::make(five_element_in_expression, many_row_node);
-    _lqp = _lqp->deep_copy();
+    _lqp = PredicateNode::make(in_(col_large, list_(1, 2, 3, 4, 5)), many_row_node);
     _apply_rule(rule, _lqp);
 
-    EXPECT_TRUE(check_disjunction(_lqp, {1, 2, 3, 4, 5}));
+    EXPECT_TRUE(check_disjunction(_lqp, col_large, {1, 2, 3, 4, 5}));
   }
-  std::cout << __FILE__ << ":" << __LINE__ << std::endl;
 
   {
     // ExpressionEvaluator, despite table is large and elements below threshold if FunctionExpression contained.
@@ -386,8 +377,6 @@ TEST_F(InExpressionRewriteRuleTest, AutoStrategy) {
 
     EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
-
-  std::cout << __FILE__ << ":" << __LINE__ << std::endl;
 }
 
 }  // namespace hyrise
