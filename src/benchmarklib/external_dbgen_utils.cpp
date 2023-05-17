@@ -26,10 +26,8 @@ void generate_csv_tables_with_external_dbgen(const std::string& dbgen_path, cons
     {
       // Call dbgen.
       auto cmd = std::stringstream{};
-      // `2>` in a string seems to break Sublime Text's formatter, so it's split into two strings.
       cmd << "cd " << tables_path << " && " << dbgen_path << "/dbgen -f -s " << scale_factor << " "
-          << additional_cli_args << "  -b " << dbgen_path << "/dists.dss >/dev/null 2"
-          << ">/dev/null";
+          << additional_cli_args << "  -b " << dbgen_path << "/dists.dss >/dev/null 2>&1";
       auto ret = system(cmd.str().c_str());
       Assert(!ret, "Calling dbgen failed");
     }
