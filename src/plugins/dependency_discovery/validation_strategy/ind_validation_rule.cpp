@@ -62,37 +62,7 @@ ValidationStatus perform_set_based_inclusion_check(const std::shared_ptr<const T
       continue;
     }
 
-    const auto& segment = chunk->get_segment(included_column_id);
-    segment_with_iterators<T>(*segment, [&](auto it, const auto end) {
-      while (it != end) {
-        if (!it->is_null() && !including_values.contains(it->value())) {
-          status = ValidationStatus::Invalid;
-          return;
-        }
-        ++it;
-      }
-    });
-
-    if (const auto& value_segment = std::dynamic_pointer_cast<ValueSegment<T>>(segment)) {
-      if (value_segment->is_nullable()) {
-        const auto& values = value_segment->values();
-        const auto& null_values = value_segment->null_values();
-        const auto segment_size = values.size();
-        for (auto chunk_offset = ChunkOffset{0}; chunk_offset < segment_size; ++chunk_offset) {
-          if (!null_values[chunk_offset] && !including_values.contains(values[chunk_offset])) {
-            status = ValidationStatus::Invalid;
-            break;
-          }
-        }
-        continue;
-      }
-      for (const auto& value : value_segment->values()) {
-        if (!including_values.contains(value)) {
-          status = ValidationStatus::Invalid;
-          break;
-        }
-      }
-    } else if (const auto& dictionary_segment = std::dynamic_pointer_cast<DictionarySegment<T>>(segment)) {
+    if (const auto& dictionary_segment = std::dynamic_pointer_cast<DictionarySegment<T>>(segment)) {
       for (const auto& value : *dictionary_segment->dictionary()) {
         if (!including_values.contains(value)) {
           status = ValidationStatus::Invalid;
