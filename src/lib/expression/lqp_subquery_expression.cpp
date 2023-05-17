@@ -82,9 +82,8 @@ bool LQPSubqueryExpression::_shallow_equals(const AbstractExpression& expression
 }
 
 size_t LQPSubqueryExpression::_shallow_hash() const {
-  // Return 0, thus forcing a hash collision for LQPSubqueryExpressions and triggering a full equality check.
-  // TODO(moritz) LQP hashing will be introduced with the JoinOrdering optimizer, until then we live with these
-  //              collisions
+  // Return 0, thus forcing a hash collision for LQPSubqueryExpressions and triggering a full equality check. Since we
+  // often hash full query plans (that do not contain many LQPSubqueryExpressions), this should be fine.
   return AbstractExpression::_shallow_hash();
 }
 

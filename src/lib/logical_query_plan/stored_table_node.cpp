@@ -277,11 +277,12 @@ size_t StoredTableNode::_on_shallow_hash() const {
   for (const auto& pruned_column_id : _pruned_column_ids) {
     boost::hash_combine(hash, static_cast<size_t>(pruned_column_id));
   }
-  for (const auto& predicate : prunable_subquery_predicates()) {
-    for (const auto& lqp : find_subquery_lqps(predicate)) {
-      boost::hash_combine(hash, lqp->hash());
-    }
-  }
+
+  // We intentionally firce a hash collision for StoredTableNodes with the same number of (but different) prunable
+  // subquery predicates. Since we assume that (i) these predicates are not often set and (ii) we do hash LQPs often,
+  // this reduces the hash overhead, makes the code simpler, and triggers an in-depth equality check for the rare cases
+  // with prunable subquery predicates.
+  boost::hash_combine(hash, _prunable_subquery_predicates.size());
   return hash;
 }
 
@@ -302,24 +303,68 @@ bool StoredTableNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNo
     return false;
   }
 
+  // Check equality of prunable subquery predicates. For now, the order of the predicates matters. Though this is a
+  // missed opportunity for LQP deduplication, we do not consider this a problem for now.
   const auto& prunable_subquery_predicates = this->prunable_subquery_predicates();
   const auto& rhs_prunable_subquery_predicates = stored_table_node.prunable_subquery_predicates();
   const auto subquery_predicate_count = prunable_subquery_predicates.size();
+
   if (subquery_predicate_count != rhs_prunable_subquery_predicates.size()) {
     return false;
   }
 
   for (auto predicate_idx = size_t{0}; predicate_idx < subquery_predicate_count; ++predicate_idx) {
-    const auto& subquery_lqps = find_subquery_lqps(prunable_subquery_predicates[predicate_idx]);
-    const auto& rhs_subquery_lqps = find_subquery_lqps(rhs_prunable_subquery_predicates[predicate_idx]);
-    const auto subquery_lqp_count = subquery_lqps.size();
-    if (subquery_lqp_count != rhs_subquery_lqps.size()) {
+    // We cannot check that the PredicateNodes are equal since this equality check recurses into the inputs und we do
+    // not terminate. We have to compare the predicate expressions. We cannot use expressions_equal(...) on the node
+    // expressions: LQPColumnExpressions of copies are not equal.
+    DebugAssert(prunable_subquery_predicates[predicate_idx]->node_expressions.size() == 1 &&
+                    rhs_prunable_subquery_predicates[predicate_idx]->node_expressions.size() == 1,
+                "PredicateNodes must have exactly one predicate.");
+    const auto predicate = std::dynamic_pointer_cast<AbstractPredicateExpression>(
+        prunable_subquery_predicates[predicate_idx]->node_expressions.front());
+    const auto rhs_predicate = std::dynamic_pointer_cast<AbstractPredicateExpression>(
+        rhs_prunable_subquery_predicates[predicate_idx]->node_expressions.front());
+
+    Assert(predicate && rhs_predicate, "Prunable subquery predicates must have PredicateExpressions.");
+    if (predicate->predicate_condition != rhs_predicate->predicate_condition) {
       return false;
     }
 
-    for (auto lqp_idx = size_t{0}; lqp_idx < subquery_lqp_count; ++lqp_idx) {
-      if (*subquery_lqps[lqp_idx] != *subquery_lqps[lqp_idx]) {
+    const auto& arguments = predicate->arguments;
+    const auto& rhs_arguments = rhs_predicate->arguments;
+    const auto argument_count = arguments.size();
+    if (argument_count != rhs_arguments.size()) {
+      return false;
+    }
+
+    // Check each argument individually.
+    for (auto expression_idx = size_t{0}; expression_idx < argument_count; ++expression_idx) {
+      const auto expression = arguments[expression_idx];
+      const auto rhs_expression = rhs_arguments[expression_idx];
+      const auto expression_type = expression->type;
+      if (expression_type != rhs_expression->type) {
         return false;
+      }
+
+      if (expression_type == ExpressionType::LQPColumn) {
+        // For LQPColumnExpressions, just check that the original ColumnID matches.
+        // LQPColumnExpression::_on_shallow_equals(...) compares the pointers to the original nodes, which are different
+        // for deep copies. We cannot compare `*column_expression.original_node.lock() ==
+        // *rhs_column_expression.original_node.lock()` because of the recursion. However, plan structure mismatches
+        // will be caught by AbstractLQPNode::operator==(...).
+        const auto& column_expression = static_cast<LQPColumnExpression&>(*expression);
+        const auto& rhs_column_expression = static_cast<LQPColumnExpression&>(*rhs_expression);
+        if (column_expression.original_column_id != rhs_column_expression.original_column_id) {
+          return false;
+        }
+      } else {
+        Assert(expression_type == ExpressionType::LQPSubquery,
+               "Prunable subquery predicates should only have columns and subqueries as arguments.");
+        // LQPSubqueryExpression::_shallow_equals(...) compares `*expression->lqp == *rhs_expression->lqp`, which is
+        // what we want to ensure.
+        if (*expression != *rhs_expression) {
+          return false;
+        }
       }
     }
   }
