@@ -583,30 +583,61 @@ void TPCCTableGenerator::_add_constraints(
   district_table->add_soft_key_constraint(
       {{district_table->column_id_by_name("D_W_ID"), district_table->column_id_by_name("D_ID")},
        KeyConstraintType::PRIMARY_KEY});
+  district_table->add_soft_foreign_key_constraint({{district_table->column_id_by_name("D_W_ID")},
+                                                   district_table,
+                                                   {warehouse_table->column_id_by_name("W_ID")},
+                                                   warehouse_table});
 
   const auto& customer_table = table_info_by_name.at("CUSTOMER").table;
   customer_table->add_soft_key_constraint(
       {{customer_table->column_id_by_name("C_W_ID"), customer_table->column_id_by_name("C_D_ID"),
         customer_table->column_id_by_name("C_ID")},
        KeyConstraintType::PRIMARY_KEY});
+  customer_table->add_soft_foreign_key_constraint(
+      {{customer_table->column_id_by_name("C_W_ID"), customer_table->column_id_by_name("C_D_ID")},
+       customer_table,
+       {district_table->column_id_by_name("D_W_ID"), district_table->column_id_by_name("D_ID")},
+       district_table});
 
-  const auto& new_order_table = table_info_by_name.at("NEW_ORDER").table;
-  new_order_table->add_soft_key_constraint(
-      {{new_order_table->column_id_by_name("NO_W_ID"), new_order_table->column_id_by_name("NO_D_ID"),
-        new_order_table->column_id_by_name("NO_O_ID")},
-       KeyConstraintType::PRIMARY_KEY});
+  const auto& history_table = table_info_by_name.at("HISTORY").table;
+  history_table->add_soft_foreign_key_constraint(
+      {{history_table->column_id_by_name("H_C_W_ID"), history_table->column_id_by_name("H_C_D_ID"),
+        history_table->column_id_by_name("H_C_ID")},
+       history_table,
+       {customer_table->column_id_by_name("C_W_ID"), customer_table->column_id_by_name("C_D_ID"),
+        customer_table->column_id_by_name("C_ID")},
+       customer_table});
+  history_table->add_soft_foreign_key_constraint(
+      {{history_table->column_id_by_name("H_W_ID"), history_table->column_id_by_name("H_D_ID")},
+       history_table,
+       {district_table->column_id_by_name("D_W_ID"), district_table->column_id_by_name("D_ID")},
+       district_table});
 
   const auto& order_table = table_info_by_name.at("ORDER").table;
   order_table->add_soft_key_constraint(
       {{order_table->column_id_by_name("O_W_ID"), order_table->column_id_by_name("O_D_ID"),
         order_table->column_id_by_name("O_ID")},
        KeyConstraintType::PRIMARY_KEY});
+  order_table->add_soft_foreign_key_constraint(
+      {{order_table->column_id_by_name("O_W_ID"), order_table->column_id_by_name("O_D_ID"),
+        order_table->column_id_by_name("O_C_ID")},
+       order_table,
+       {customer_table->column_id_by_name("C_W_ID"), customer_table->column_id_by_name("C_D_ID"),
+        customer_table->column_id_by_name("C_ID")},
+       customer_table});
 
-  const auto& order_line_table = table_info_by_name.at("ORDER_LINE").table;
-  order_line_table->add_soft_key_constraint(
-      {{order_line_table->column_id_by_name("OL_W_ID"), order_line_table->column_id_by_name("OL_D_ID"),
-        order_line_table->column_id_by_name("OL_O_ID"), order_line_table->column_id_by_name("OL_NUMBER")},
+  const auto& new_order_table = table_info_by_name.at("NEW_ORDER").table;
+  new_order_table->add_soft_key_constraint(
+      {{new_order_table->column_id_by_name("NO_W_ID"), new_order_table->column_id_by_name("NO_D_ID"),
+        new_order_table->column_id_by_name("NO_O_ID")},
        KeyConstraintType::PRIMARY_KEY});
+  new_order_table->add_soft_foreign_key_constraint(
+      {{new_order_table->column_id_by_name("NO_W_ID"), new_order_table->column_id_by_name("NO_D_ID"),
+        new_order_table->column_id_by_name("NO_O_ID")},
+       new_order_table,
+       {order_table->column_id_by_name("O_W_ID"), order_table->column_id_by_name("O_D_ID"),
+        order_table->column_id_by_name("O_ID")},
+       order_table});
 
   const auto& item_table = table_info_by_name.at("ITEM").table;
   item_table->add_soft_key_constraint({{item_table->column_id_by_name("I_ID")}, KeyConstraintType::PRIMARY_KEY});
@@ -615,6 +646,30 @@ void TPCCTableGenerator::_add_constraints(
   stock_table->add_soft_key_constraint(
       {{stock_table->column_id_by_name("S_W_ID"), stock_table->column_id_by_name("S_I_ID")},
        KeyConstraintType::PRIMARY_KEY});
+  stock_table->add_soft_foreign_key_constraint({{stock_table->column_id_by_name("S_W_ID")},
+                                                stock_table,
+                                                {warehouse_table->column_id_by_name("W_ID")},
+                                                warehouse_table});
+  stock_table->add_soft_foreign_key_constraint(
+      {{stock_table->column_id_by_name("S_I_ID")}, stock_table, {item_table->column_id_by_name("I_ID")}, item_table});
+
+  const auto& order_line_table = table_info_by_name.at("ORDER_LINE").table;
+  order_line_table->add_soft_key_constraint(
+      {{order_line_table->column_id_by_name("OL_W_ID"), order_line_table->column_id_by_name("OL_D_ID"),
+        order_line_table->column_id_by_name("OL_O_ID"), order_line_table->column_id_by_name("OL_NUMBER")},
+       KeyConstraintType::PRIMARY_KEY});
+  order_line_table->add_soft_foreign_key_constraint(
+      {{order_line_table->column_id_by_name("OL_W_ID"), order_line_table->column_id_by_name("OL_D_ID"),
+        order_line_table->column_id_by_name("OL_O_ID")},
+       order_line_table,
+       {order_table->column_id_by_name("O_W_ID"), order_table->column_id_by_name("O_D_ID"),
+        order_table->column_id_by_name("O_ID")},
+       order_table});
+  order_line_table->add_soft_foreign_key_constraint(
+      {{order_line_table->column_id_by_name("OL_SUPPLY_W_ID"), order_line_table->column_id_by_name("OL_I_ID")},
+       order_line_table,
+       {stock_table->column_id_by_name("S_W_ID"), stock_table->column_id_by_name("S_I_ID")},
+       stock_table});
 }
 
 thread_local TPCCRandomGenerator TPCCTableGenerator::_random_gen;  // NOLINT

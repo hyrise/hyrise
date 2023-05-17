@@ -439,7 +439,7 @@ const TableKeyConstraints& Table::soft_key_constraints() const {
 void Table::add_soft_foreign_key_constraint(const ForeignKeyConstraint& foreign_key_constraint) {
   Assert(_type == TableType::Data, "ForeignKeyConstraints are not tracked for reference tables across the PQP.");
 
-  Assert(&*foreign_key_constraint.foreign_key_table() == this, "ForeignKeyConstraint is added to the wrong table.");
+  Assert(foreign_key_constraint.foreign_key_table().get() == this, "ForeignKeyConstraint is added to the wrong table.");
 
   // Check validity of specified columns.
   const auto column_count = this->column_count();
@@ -448,7 +448,8 @@ void Table::add_soft_foreign_key_constraint(const ForeignKeyConstraint& foreign_
   }
 
   const auto referenced_table = foreign_key_constraint.primary_key_table();
-  Assert(referenced_table && &*referenced_table != this, "ForeignKeyConstraint must reference another existing table.");
+  Assert(referenced_table && referenced_table.get() != this,
+         "ForeignKeyConstraint must reference another existing table.");
 
   // Check validity of key columns from other table.
   const auto referenced_table_column_count = referenced_table->column_count();

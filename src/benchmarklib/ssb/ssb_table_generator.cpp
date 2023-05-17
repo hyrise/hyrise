@@ -39,26 +39,40 @@ void SSBTableGenerator::_add_constraints(
   customer_table->add_soft_key_constraint(
       {{customer_table->column_id_by_name("c_custkey")}, KeyConstraintType::PRIMARY_KEY});
 
-  const auto& lineorder_table = table_info_by_name.at("lineorder").table;
-  const auto lineorder_pk_constraint = TableKeyConstraint{
-      {lineorder_table->column_id_by_name("lo_orderkey"), lineorder_table->column_id_by_name("lo_linenumber")},
-      KeyConstraintType::PRIMARY_KEY};
-  lineorder_table->add_soft_key_constraint(lineorder_pk_constraint);
-
   const auto& part_table = table_info_by_name.at("part").table;
-  const auto part_table_pk_constraint =
-      TableKeyConstraint{{part_table->column_id_by_name("p_partkey")}, KeyConstraintType::PRIMARY_KEY};
-  part_table->add_soft_key_constraint(part_table_pk_constraint);
+  part_table->add_soft_key_constraint({{part_table->column_id_by_name("p_partkey")}, KeyConstraintType::PRIMARY_KEY});
 
   const auto& supplier_table = table_info_by_name.at("supplier").table;
-  const auto supplier_pk_constraint =
-      TableKeyConstraint{{supplier_table->column_id_by_name("s_suppkey")}, KeyConstraintType::PRIMARY_KEY};
-  supplier_table->add_soft_key_constraint(supplier_pk_constraint);
+  supplier_table->add_soft_key_constraint(
+      {{supplier_table->column_id_by_name("s_suppkey")}, KeyConstraintType::PRIMARY_KEY});
 
   const auto& date_table = table_info_by_name.at("date").table;
-  const auto date_pk_constraint =
-      TableKeyConstraint{{date_table->column_id_by_name("d_datekey")}, KeyConstraintType::PRIMARY_KEY};
-  date_table->add_soft_key_constraint(date_pk_constraint);
+  date_table->add_soft_key_constraint({{date_table->column_id_by_name("d_datekey")}, KeyConstraintType::PRIMARY_KEY});
+
+  const auto& lineorder_table = table_info_by_name.at("lineorder").table;
+  lineorder_table->add_soft_key_constraint(
+      {{lineorder_table->column_id_by_name("lo_orderkey"), lineorder_table->column_id_by_name("lo_linenumber")},
+       KeyConstraintType::PRIMARY_KEY});
+  lineorder_table->add_soft_foreign_key_constraint({{lineorder_table->column_id_by_name("lo_custkey")},
+                                                    lineorder_table,
+                                                    {customer_table->column_id_by_name("c_custkey")},
+                                                    customer_table});
+  lineorder_table->add_soft_foreign_key_constraint({{lineorder_table->column_id_by_name("lo_partkey")},
+                                                    lineorder_table,
+                                                    {part_table->column_id_by_name("p_partkey")},
+                                                    part_table});
+  lineorder_table->add_soft_foreign_key_constraint({{lineorder_table->column_id_by_name("lo_suppkey")},
+                                                    lineorder_table,
+                                                    {supplier_table->column_id_by_name("s_suppkey")},
+                                                    supplier_table});
+  lineorder_table->add_soft_foreign_key_constraint({{lineorder_table->column_id_by_name("lo_orderdate")},
+                                                    lineorder_table,
+                                                    {date_table->column_id_by_name("d_datekey")},
+                                                    date_table});
+  lineorder_table->add_soft_foreign_key_constraint({{lineorder_table->column_id_by_name("lo_commitdate")},
+                                                    lineorder_table,
+                                                    {date_table->column_id_by_name("d_datekey")},
+                                                    date_table});
 }
 
 }  // namespace hyrise

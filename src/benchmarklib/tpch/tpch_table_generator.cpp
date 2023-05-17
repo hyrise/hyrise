@@ -97,7 +97,7 @@ void dbgen_cleanup() {
     for (size_t idx = 0; idx < TOTDATE; ++idx) {
       free((void*)asc_date[idx]);  // NOLINT
     }
-    free(asc_date);  // NOLINT
+    free(asc_date);                // NOLINT
   }
   asc_date = nullptr;
 }
@@ -326,46 +326,67 @@ AbstractTableGenerator::SortOrderByTable TPCHTableGenerator::_sort_order_by_tabl
 
 void TPCHTableGenerator::_add_constraints(
     std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) const {
+  const auto& region_table = table_info_by_name.at("region").table;
+  region_table->add_soft_key_constraint(
+      {{region_table->column_id_by_name("r_regionkey")}, KeyConstraintType::PRIMARY_KEY});
+
+  const auto& nation_table = table_info_by_name.at("nation").table;
+  nation_table->add_soft_key_constraint(
+      {{nation_table->column_id_by_name("n_nationkey")}, KeyConstraintType::PRIMARY_KEY});
+  nation_table->add_soft_foreign_key_constraint({{nation_table->column_id_by_name("n_regionkey")},
+                                                 nation_table,
+                                                 {region_table->column_id_by_name("r_regionkey")},
+                                                 region_table});
+
   const auto& customer_table = table_info_by_name.at("customer").table;
   customer_table->add_soft_key_constraint(
       {{customer_table->column_id_by_name("c_custkey")}, KeyConstraintType::PRIMARY_KEY});
-
-  const auto& orders_table = table_info_by_name.at("orders").table;
-  const auto orders_pk_constraint =
-      TableKeyConstraint{{orders_table->column_id_by_name("o_orderkey")}, KeyConstraintType::PRIMARY_KEY};
-  orders_table->add_soft_key_constraint(orders_pk_constraint);
-
-  const auto& lineitem_table = table_info_by_name.at("lineitem").table;
-  const auto lineitem_pk_constraint = TableKeyConstraint{
-      {lineitem_table->column_id_by_name("l_orderkey"), lineitem_table->column_id_by_name("l_linenumber")},
-      KeyConstraintType::PRIMARY_KEY};
-  lineitem_table->add_soft_key_constraint(lineitem_pk_constraint);
-
-  const auto& part_table = table_info_by_name.at("part").table;
-  const auto part_table_pk_constraint =
-      TableKeyConstraint{{part_table->column_id_by_name("p_partkey")}, KeyConstraintType::PRIMARY_KEY};
-  part_table->add_soft_key_constraint(part_table_pk_constraint);
-
-  const auto& partsupp_table = table_info_by_name.at("partsupp").table;
-  const auto partsupp_pk_constraint = TableKeyConstraint{
-      {partsupp_table->column_id_by_name("ps_partkey"), partsupp_table->column_id_by_name("ps_suppkey")},
-      KeyConstraintType::PRIMARY_KEY};
-  partsupp_table->add_soft_key_constraint(partsupp_pk_constraint);
+  customer_table->add_soft_foreign_key_constraint({{customer_table->column_id_by_name("c_nationkey")},
+                                                   customer_table,
+                                                   {nation_table->column_id_by_name("n_nationkey")},
+                                                   nation_table});
 
   const auto& supplier_table = table_info_by_name.at("supplier").table;
-  const auto supplier_pk_constraint =
-      TableKeyConstraint{{supplier_table->column_id_by_name("s_suppkey")}, KeyConstraintType::PRIMARY_KEY};
-  supplier_table->add_soft_key_constraint(supplier_pk_constraint);
+  supplier_table->add_soft_key_constraint(
+      {{supplier_table->column_id_by_name("s_suppkey")}, KeyConstraintType::PRIMARY_KEY});
+  supplier_table->add_soft_foreign_key_constraint({{supplier_table->column_id_by_name("s_nationkey")},
+                                                   supplier_table,
+                                                   {nation_table->column_id_by_name("n_nationkey")},
+                                                   nation_table});
 
-  const auto& nation_table = table_info_by_name.at("nation").table;
-  const auto nation_pk_constraint =
-      TableKeyConstraint{{nation_table->column_id_by_name("n_nationkey")}, KeyConstraintType::PRIMARY_KEY};
-  nation_table->add_soft_key_constraint(nation_pk_constraint);
+  const auto& part_table = table_info_by_name.at("part").table;
+  part_table->add_soft_key_constraint({{part_table->column_id_by_name("p_partkey")}, KeyConstraintType::PRIMARY_KEY});
 
-  const auto& region_table = table_info_by_name.at("region").table;
-  const auto region_pk_constraint =
-      TableKeyConstraint{{region_table->column_id_by_name("r_regionkey")}, KeyConstraintType::PRIMARY_KEY};
-  region_table->add_soft_key_constraint(region_pk_constraint);
+  const auto& partsupp_table = table_info_by_name.at("partsupp").table;
+  partsupp_table->add_soft_key_constraint(
+      {{partsupp_table->column_id_by_name("ps_partkey"), partsupp_table->column_id_by_name("ps_suppkey")},
+       KeyConstraintType::PRIMARY_KEY});
+  partsupp_table->add_soft_foreign_key_constraint({{partsupp_table->column_id_by_name("ps_partkey")},
+                                                   partsupp_table,
+                                                   {part_table->column_id_by_name("p_partkey")},
+                                                   part_table});
+  partsupp_table->add_soft_foreign_key_constraint({{partsupp_table->column_id_by_name("ps_suppkey")},
+                                                   partsupp_table,
+                                                   {supplier_table->column_id_by_name("s_suppkey")},
+                                                   supplier_table});
+
+  const auto& orders_table = table_info_by_name.at("orders").table;
+  orders_table->add_soft_key_constraint(
+      {{orders_table->column_id_by_name("o_orderkey")}, KeyConstraintType::PRIMARY_KEY});
+  orders_table->add_soft_foreign_key_constraint({{orders_table->column_id_by_name("o_custkey")},
+                                                 orders_table,
+                                                 {customer_table->column_id_by_name("c_custkey")},
+                                                 customer_table});
+
+  const auto& lineitem_table = table_info_by_name.at("lineitem").table;
+  lineitem_table->add_soft_key_constraint(
+      {{lineitem_table->column_id_by_name("l_orderkey"), lineitem_table->column_id_by_name("l_linenumber")},
+       KeyConstraintType::PRIMARY_KEY});
+  lineitem_table->add_soft_foreign_key_constraint(
+      {{lineitem_table->column_id_by_name("l_partkey"), lineitem_table->column_id_by_name("l_suppkey")},
+       lineitem_table,
+       {partsupp_table->column_id_by_name("ps_partkey"), partsupp_table->column_id_by_name("ps_suppkey")},
+       partsupp_table});
 }
 
 }  // namespace hyrise
