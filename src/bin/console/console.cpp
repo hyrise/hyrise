@@ -151,13 +151,11 @@ Console::Console()
   register_command("setting", std::bind(&Console::_change_runtime_setting, this, std::placeholders::_1));
   register_command("load_plugin", std::bind(&Console::_load_plugin, this, std::placeholders::_1));
   register_command("unload_plugin", std::bind(&Console::_unload_plugin, this, std::placeholders::_1));
+  register_command("reset", std::bind(&Console::_reset, this));
 }
 
 Console::~Console() {
-  if (_explicitly_created_transaction_context) {
-    _explicitly_created_transaction_context->rollback(RollbackReason::User);
-    out("A transaction was still open and has been rolled back.\n");
-  }
+  _rollback();
 
   out("Bye.\n");
 
@@ -414,7 +412,7 @@ void Console::out(const std::shared_ptr<const Table>& table, const PrintFlags fl
 
 // NOLINTNEXTLINE - while this particular method could be made static, others cannot.
 int Console::_exit(const std::string& /*args*/) {
-  return Console::ReturnCode::Quit;
+  return ReturnCode::Quit;
 }
 
 int Console::_help(const std::string& /*args*/) {
@@ -461,12 +459,13 @@ int Console::_help(const std::string& /*args*/) {
   out("  load_plugin FILE                          - Load and start plugin stored at FILE\n");
   out("  unload_plugin NAME                        - Stop and unload the plugin libNAME.so/dylib (also clears the query cache)\n");  // NOLINT(whitespace/line_length)
   out("  quit                                      - Exit the HYRISE Console\n");
-  out("  help                                      - Show this message\n\n");
-  out("  setting [property] [value]                - Change a runtime setting\n\n");
-  out("           scheduler (on|off)               - Turn the scheduler on (default) or off\n\n");
+  out("  help                                      - Show this message\n");
+  out("  setting [property] [value]                - Change a runtime setting\n");
+  out("           scheduler (on|off)               - Turn the scheduler on (default) or off\n");
+  out("  reset                                     - Clear all stored tables and cached query plans\n\n");
   // clang-format on
 
-  return Console::ReturnCode::Ok;
+  return ReturnCode::Ok;
 }
 
 int Console::_generate_tpcc(const std::string& args) {
@@ -481,11 +480,11 @@ int Console::_generate_tpcc(const std::string& args) {
     return ReturnCode::Error;
   }
 
-  const auto num_warehouses = std::stoull(arguments.at(0));
+  const auto num_warehouses = boost::lexical_cast<size_t>(arguments[0]);
 
   auto chunk_size = Chunk::DEFAULT_SIZE;
   if (arguments.size() > 1) {
-    chunk_size = ChunkOffset{boost::lexical_cast<ChunkOffset::base_type>(arguments.at(1))};
+    chunk_size = ChunkOffset{boost::lexical_cast<ChunkOffset::base_type>(arguments[1])};
   }
 
   out("Generating all TPCC tables (this might take a while) ...\n");
@@ -506,11 +505,11 @@ int Console::_generate_tpch(const std::string& args) {
     return ReturnCode::Error;
   }
 
-  const auto scale_factor = std::stof(arguments.at(0));
+  const auto scale_factor = boost::lexical_cast<float>(arguments[0]);
 
   auto chunk_size = Chunk::DEFAULT_SIZE;
   if (arguments.size() > 1) {
-    chunk_size = ChunkOffset{boost::lexical_cast<ChunkOffset::base_type>(arguments.at(1))};
+    chunk_size = ChunkOffset{boost::lexical_cast<ChunkOffset::base_type>(arguments[1])};
   }
 
   out("Generating all TPCH tables (this might take a while) ...\n");
@@ -530,11 +529,11 @@ int Console::_generate_tpcds(const std::string& args) {
     return ReturnCode::Error;
   }
 
-  const auto scale_factor = static_cast<uint32_t>(std::stoul(arguments.at(0)));
+  const auto scale_factor = boost::lexical_cast<uint32_t>(arguments[0]);
 
   auto chunk_size = Chunk::DEFAULT_SIZE;
   if (arguments.size() > 1) {
-    chunk_size = ChunkOffset{boost::lexical_cast<ChunkOffset::base_type>(arguments.at(1))};
+    chunk_size = ChunkOffset{boost::lexical_cast<ChunkOffset::base_type>(arguments[1])};
   }
 
   out("Generating all TPC-DS tables (this might take a while) ...\n");
@@ -554,15 +553,18 @@ int Console::_generate_ssb(const std::string& args) {
     return ReturnCode::Error;
   }
 
-  const auto scale_factor = std::stof(arguments.at(0));
+  const auto scale_factor = boost::lexical_cast<float>(arguments[0]);
 
   auto chunk_size = Chunk::DEFAULT_SIZE;
   if (arguments.size() > 1) {
-    chunk_size = ChunkOffset{boost::lexical_cast<ChunkOffset::base_type>(arguments.at(1))};
+    chunk_size = ChunkOffset{boost::lexical_cast<ChunkOffset::base_type>(arguments[1])};
   }
 
   // Try to find dbgen binary.
-  const auto ssb_dbgen_path = std::filesystem::canonical(_path).remove_filename() / "third_party/ssb-dbgen";
+  const auto executable_path = std::filesystem::canonical(_path).remove_filename();
+  const auto ssb_dbgen_path = executable_path / "third_party/ssb-dbgen";
+  const auto csv_meta_path = executable_path / "../resources/benchmark/ssb/schema";
+
   if (!std::filesystem::exists(ssb_dbgen_path / "dbgen")) {
     out(std::string{"SSB dbgen not found at "} + ssb_dbgen_path.string() + "\n");
     return ReturnCode::Error;
@@ -574,7 +576,7 @@ int Console::_generate_ssb(const std::string& args) {
   std::filesystem::create_directories(ssb_data_path.str());
 
   out("Generating all SSB tables (this might take a while) ...\n");
-  SSBTableGenerator{ssb_dbgen_path.string(), ssb_data_path.str(), scale_factor, chunk_size}.generate_and_store();
+  SSBTableGenerator{ssb_dbgen_path, csv_meta_path, ssb_data_path.str(), scale_factor, chunk_size}.generate_and_store();
 
   return ReturnCode::Ok;
 }
@@ -977,11 +979,31 @@ int Console::_unload_plugin(const std::string& input) {
   // The presence of some plugins might cause certain query plans to be generated which will not work if the plugin
   // is stopped. Therefore, we clear the cache. For example, a plugin might create indexes which lead to query plans
   // using IndexScans, these query plans might become unusable after the plugin is unloaded.
+  _lqp_cache->clear();
   _pqp_cache->clear();
 
   out("Plugin (" + plugin_name + ") stopped.\n");
 
   return ReturnCode::Ok;
+}
+
+int Console::_reset() {
+  _rollback();
+  _lqp_cache->clear();
+  _pqp_cache->clear();
+
+  Hyrise::get().reset();
+  Hyrise::get().default_pqp_cache = _pqp_cache;
+  Hyrise::get().default_lqp_cache = _lqp_cache;
+
+  return ReturnCode::Ok;
+}
+
+void Console::_rollback() {
+  if (_explicitly_created_transaction_context) {
+    _explicitly_created_transaction_context->rollback(RollbackReason::User);
+    out("A transaction was still open and has been rolled back.\n");
+  }
 }
 
 // GNU readline interface to our commands
