@@ -23,8 +23,8 @@ class EqualDistinctCountHistogram : public AbstractHistogram<T> {
  public:
   using AbstractHistogram<T>::AbstractHistogram;
 
-  EqualDistinctCountHistogram(std::vector<T>&& bin_minima, std::vector<T>&& bin_maxima,
-                              std::vector<HistogramCountType>&& bin_heights,
+  EqualDistinctCountHistogram(pmr_vector<T>&& bin_minima, pmr_vector<T>&& bin_maxima,
+                              pmr_vector<HistogramCountType>&& bin_heights,
                               const HistogramCountType distinct_count_per_bin, const BinID bin_count_with_extra_value,
                               const HistogramDomain<T>& domain = {});
 
@@ -54,6 +54,8 @@ class EqualDistinctCountHistogram : public AbstractHistogram<T> {
   HistogramCountType bin_height(const BinID index) const override;
   HistogramCountType bin_distinct_count(const BinID index) const override;
 
+  std::shared_ptr<AbstractStatisticsObject> scaled(const Selectivity selectivity) const override;
+
  protected:
   BinID _bin_for_value(const T& value) const override;
   BinID _next_bin_for_value(const T& value) const override;
@@ -64,13 +66,13 @@ class EqualDistinctCountHistogram : public AbstractHistogram<T> {
    */
 
   // Min values on a per-bin basis.
-  std::vector<T> _bin_minima;
+  pmr_vector<T> _bin_minima;
 
   // Max values on a per-bin basis.
-  std::vector<T> _bin_maxima;
+  pmr_vector<T> _bin_maxima;
 
   // Number of values on a per-bin basis.
-  std::vector<HistogramCountType> _bin_heights;
+  pmr_vector<HistogramCountType> _bin_heights;
 
   // Number of distinct values per bin.
   HistogramCountType _distinct_count_per_bin;

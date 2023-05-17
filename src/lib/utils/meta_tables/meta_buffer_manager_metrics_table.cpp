@@ -48,7 +48,6 @@ const std::string& MetaBufferManagerMetricsTable::name() const {
 std::shared_ptr<Table> MetaBufferManagerMetricsTable::_on_generate() const {
   const auto metrics = Hyrise::get().buffer_manager.metrics();
   auto output_table = std::make_shared<Table>(_column_definitions, TableType::Data, std::nullopt, UseMvcc::Yes);
-
   output_table->append({static_cast<int64_t>(metrics->current_bytes_used_dram),
                         static_cast<int64_t>(metrics->current_bytes_used_numa),
                         static_cast<int64_t>(metrics->total_allocated_bytes_dram),

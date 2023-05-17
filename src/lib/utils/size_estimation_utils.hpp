@@ -42,6 +42,8 @@ size_t string_vector_memory_usage(const V& string_vector, const MemoryUsageCalcu
   using StringType = typename V::value_type;
   const auto base_size = sizeof(V);
 
+  auto pin_guard = ReadPinGuard{string_vector};
+
   // Early out
   if (string_vector.empty()) {
     return base_size + (string_vector.capacity() * sizeof(StringType));

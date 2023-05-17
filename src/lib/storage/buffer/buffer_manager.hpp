@@ -31,10 +31,16 @@ class BufferManager : public MemoryResource, public Noncopyable {
     std::atomic_uint64_t total_unused_bytes_dram = 0;  // TODO: this becomes invalid with the monotonic buffer resource
 
     double internal_fragmentation_rate_dram() const {
+      if (total_allocated_bytes_dram == 0) {
+        return 0;
+      }
       return (double)total_unused_bytes_dram / (double)total_allocated_bytes_dram;
     }
 
     double internal_fragmentation_rate_numa() const {
+      if (total_allocated_bytes_numa == 0) {
+        return 0;
+      }
       return (double)total_unused_bytes_numa / (double)total_allocated_bytes_numa;
     }
 

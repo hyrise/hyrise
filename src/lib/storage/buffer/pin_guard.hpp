@@ -7,6 +7,13 @@
 #include "storage/buffer/buffer_pool_allocator_observer.hpp"
 #include "storage/buffer/memory_resource.hpp"
 #include "storage/buffer/types.hpp"
+#include "storage/dictionary_segment.hpp"
+#include "storage/fixed_string_dictionary_segment.hpp"
+#include "storage/frame_of_reference_segment.hpp"
+#include "storage/lz4_segment.hpp"
+#include "storage/reference_segment.hpp"
+#include "storage/run_length_segment.hpp"
+#include "storage/value_segment.hpp"
 #include "types.hpp"
 
 namespace hyrise {
@@ -48,10 +55,69 @@ template <AccessIntent accessIntent>
 struct FramePinGuard final : public PinnedFrames<accessIntent> {
   using PinnedFrames<accessIntent>::add_pin;
 
- public:
+  template <typename T, typename = void>
+  struct is_iterable : std::false_type {};
+
   template <typename T>
+  struct is_iterable<T, std::void_t<decltype(std::begin(std::declval<T>())), decltype(std::end(std::declval<T>()))>>
+      : std::true_type {};
+
+ public:
+  template <typename T, typename = std::enable_if_t<is_iterable<T>::value>>
   FramePinGuard(T& object) {
-    const auto& frame = object.begin().get_ptr().get_frame();
+    add_vector_pins(object);
+  }
+
+  template <typename T, typename = std::enable_if_t<is_iterable<T>::value>>
+  FramePinGuard(const std::shared_ptr<T>& position_filter) {
+    if (const auto vector = std::dynamic_pointer_cast<const RowIDPosList>(position_filter)) {
+      add_vector_pins(*vector);
+    };
+  }
+
+  // TODO: Adapt them to work with strings, too
+  template <typename T>
+  FramePinGuard(const ValueSegment<T>& segment) {
+    add_vector_pins(segment.values());
+  }
+
+  template <typename T>
+  FramePinGuard(const FrameOfReferenceSegment<T>& segment) {
+    Fail("FrameOfReferenceSegment not implemented yet")
+  }
+
+  template <typename T>
+  FramePinGuard(const RunLengthSegment<T>& segment) {
+    Fail("RunLengthSegment not implemented yet");
+  }
+
+  template <typename T>
+  FramePinGuard(const LZ4Segment<T>& segment) {
+    Fail("LZ4Segment not implemented yet");
+  }
+
+  template <typename T>
+  FramePinGuard(const FixedStringDictionarySegment<T>& segment) {
+    Fail("FixedStringDictionarySegment not implemented yet");
+  }
+
+  FramePinGuard(const ReferenceSegment& segment) {
+    Fail("ReferenceSegment not implemented yet");
+  }
+
+  template <typename T>
+  FramePinGuard(const DictionarySegment<T>& segment) {
+    // const auto& attribute_vector_frame = segment.attribute_vector().begin().get_ptr().get_frame();
+    // add_pin(attribute_vector_frame);
+
+    // const auto& frame = segment.dictionary().begin().get_ptr().get_frame();
+    // add_pin(frame);
+  }
+
+ private:
+  template <typename T>
+  add_vector_pins(const pmr_vector<T>& vector) {
+    const auto& frame = vector.begin().get_ptr().get_frame();
 
     add_pin(frame);
 
@@ -64,14 +130,6 @@ struct FramePinGuard final : public PinnedFrames<accessIntent> {
       }
     }
   }
-
-  template <>
-  FramePinGuard(const std::shared_ptr<const AbstractPosList>& position_filter) {
-    if (const auto vector = std::dynamic_pointer_cast<const RowIDPosList>(position_filter)) {
-      const auto& frame = vector->begin().get_ptr().get_frame();
-      add_pin(frame);
-    };
-  }
 };
 
 using ReadPinGuard = FramePinGuard<AccessIntent::Read>;
@@ -83,7 +141,7 @@ using WritePinGuard = FramePinGuard<AccessIntent::Write>;
  * The AllocatorPinGuard is not thread-safe!
 */
 class AllocatorPinGuard final : private Noncopyable {
-  struct Observer : public PinnedFrames<AccessIntent::Write>, public BufferPoolAllocatorObserver {
+  struct Observer final : public PinnedFrames<AccessIntent::Write>, public BufferPoolAllocatorObserver {
     void on_allocate(const FramePtr& frame) override {
       add_pin(frame);
     }

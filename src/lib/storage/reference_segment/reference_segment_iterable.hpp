@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "resolve_type.hpp"
+#include "storage/buffer/pin_guard.hpp"
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/dictionary_segment.hpp"
 #include "storage/fixed_string_dictionary_segment.hpp"
@@ -117,6 +118,7 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
       auto accessors = std::make_shared<Accessors>(referenced_table->chunk_count());
 
       resolve_pos_list_type(position_filter, [&](auto resolved_position_filter) {
+        auto pin_guard = ReadPinGuard{resolved_position_filter};
         const auto position_begin_it = resolved_position_filter->begin();
         const auto position_end_it = resolved_position_filter->end();
 

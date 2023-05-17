@@ -37,7 +37,9 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
       using Decompressor = std::decay_t<decltype(vector.create_decompressor())>;
       using PosListIteratorType = std::decay_t<decltype(position_filter->cbegin())>;
 
-      Fail("Pin");
+      auto vector_pin_guard = ReadPinGuard{vector};
+      auto position_filter_pin_guard = ReadPinGuard{position_filter};
+
       auto begin = PointAccessIterator<Decompressor, PosListIteratorType>{
           _null_value_id, vector.create_decompressor(), position_filter->cbegin(), position_filter->cbegin()};
       auto end = PointAccessIterator<Decompressor, PosListIteratorType>{

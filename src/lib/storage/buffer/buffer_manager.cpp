@@ -528,6 +528,7 @@ void BufferManager::pin(const FramePtr& frame) {
 std::pair<FramePtr, std::ptrdiff_t> BufferManager::find_frame_and_offset(const void* ptr) {
   // TODO: Unswizzle might be called with end() pointer and therefore going to the next page.
   // or set referenced use add_to_victionqeue to add it to the end of the queue
+  // TODO: The region could be found in a branchless using masks
   if (_dram_buffer_pools.enabled) {
     for (auto& buffer_pool : _dram_buffer_pools._buffer_pools) {
       const auto unswizzled = buffer_pool->find_frame_and_offset(ptr);

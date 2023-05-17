@@ -141,6 +141,7 @@ class BufferPtr {
   }
 
   pointer get() const {
+    // PerformanceWarning(_frame->page_id == INVALID_PAGE_ID || _frame->is_pinned(), "BufferPtr: Frame is not pinned");
     if (_frame->data) {
       return reinterpret_cast<pointer>(_frame->data + _ptr_or_offset);
     } else {

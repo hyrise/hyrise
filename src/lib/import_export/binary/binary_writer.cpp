@@ -23,6 +23,10 @@ using namespace hyrise;  // NOLINT
 template <typename T, typename Alloc>
 void export_values(std::ofstream& ofstream, const boost::container::vector<T, Alloc>& values);
 
+void export_char_vector_values(std::ofstream& ofstream, const std::vector<char>& values) {
+  ofstream.write(values.data(), values.size() * sizeof(char));
+}
+
 /* Writes the given strings to the ofstream. First an array of string lengths is written. After that the strings are
  * written without any gaps between them.
  * In order to reduce the number of memory allocations we iterate twice over the string vector.
@@ -48,14 +52,14 @@ void export_string_values(std::ofstream& ofstream, const pmr_vector<pmr_string>&
   }
 
   // Write all string contents into to buffer.
-  pmr_vector<char> buffer(total_length);
+  std::vector<char> buffer(total_length);
   size_t start = 0;
   for (const auto& str : values) {
     std::memcpy(buffer.data() + start, str.data(), str.size());
     start += str.size();
   }
 
-  export_values(ofstream, buffer);
+  export_char_vector_values(ofstream, buffer);
 }
 
 template <typename T, typename Alloc>

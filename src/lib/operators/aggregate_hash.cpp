@@ -870,6 +870,7 @@ std::enable_if_t<aggregate_func == AggregateFunction::Min || aggregate_func == A
                  void>
 write_aggregate_values(pmr_vector<AggregateType>& values, pmr_vector<bool>& null_values,
                        const AggregateResults<ColumnDataType, aggregate_func>& results) {
+  Fail("Pin");
   values.reserve(results.size());
   null_values.reserve(results.size());
 
@@ -896,6 +897,7 @@ std::enable_if_t<aggregate_func == AggregateFunction::Count, void> write_aggrega
     pmr_vector<AggregateType>& values, pmr_vector<bool>& null_values,
     const AggregateResults<ColumnDataType, aggregate_func>& results) {
   values.reserve(results.size());
+  Fail("Pin");
 
   for (const auto& result : results) {
     // NULL_ROW_ID (just a marker, not literally NULL) means that this result is either a gap (in the case of an
@@ -914,6 +916,7 @@ std::enable_if_t<aggregate_func == AggregateFunction::CountDistinct, void> write
     pmr_vector<AggregateType>& values, pmr_vector<bool>& null_values,
     const AggregateResults<ColumnDataType, aggregate_func>& results) {
   values.reserve(results.size());
+  Fail("Pin");
 
   for (const auto& result : results) {
     // NULL_ROW_ID (just a marker, not literally NULL) means that this result is either a gap (in the case of an
@@ -933,6 +936,7 @@ write_aggregate_values(pmr_vector<AggregateType>& values, pmr_vector<bool>& null
                        const AggregateResults<ColumnDataType, aggregate_func>& results) {
   values.reserve(results.size());
   null_values.reserve(results.size());
+  Fail("Pin");
 
   for (const auto& result : results) {
     // NULL_ROW_ID (just a marker, not literally NULL) means that this result is either a gap (in the case of an
@@ -967,6 +971,7 @@ write_aggregate_values(pmr_vector<AggregateType>& values, pmr_vector<bool>& null
                        const AggregateResults<ColumnDataType, aggregate_func>& results) {
   values.reserve(results.size());
   null_values.reserve(results.size());
+  Fail("Pin");
 
   for (const auto& result : results) {
     // NULL_ROW_ID (just a marker, not literally NULL) means that this result is either a gap (in the case of an
@@ -996,6 +1001,8 @@ write_aggregate_values(pmr_vector<AggregateType>& values, pmr_vector<bool>& null
 }
 
 void AggregateHash::_write_groupby_output(RowIDPosList& pos_list) {
+  auto pin_guard = ReadPinGuard{pos_list};
+
   Timer timer;
   auto input_table = left_input_table();
 
@@ -1031,9 +1038,12 @@ void AggregateHash::_write_groupby_output(RowIDPosList& pos_list) {
 
       const auto column_is_nullable = input_table->column_is_nullable(input_column_id);
 
-      auto values = pmr_vector<ColumnDataType>{};
+      auto allocator = PolymorphicAllocator<ColumnDataType>{};
+      auto allocator_pin_guard = AllocatorPinGuard{allocator};
+
+      auto values = pmr_vector<ColumnDataType>{allocator};
       values.reserve(pos_list.size());
-      auto null_values = pmr_vector<bool>{};
+      auto null_values = pmr_vector<bool>{allocator};
       null_values.reserve(column_is_nullable ? pos_list.size() : 0);
 
       auto accessors =
@@ -1153,8 +1163,11 @@ void AggregateHash::write_aggregate_output(ColumnID aggregate_index) {
   // Write aggregated values into the segment. While write_aggregate_values could track if an actual NULL value was
   // written or not, we rather make the output types consistent independent of the input types. Not sure what the
   // standard says about this.
-  auto values = pmr_vector<decltype(aggregate_type)>{};
-  auto null_values = pmr_vector<bool>{};
+  auto allocator = PolymorphicAllocator<ColumnDataType>{};
+  auto allocator_pin_guard = AllocatorPinGuard{allocator};
+
+  auto values = pmr_vector<decltype(aggregate_type)>{allocator};
+  auto null_values = pmr_vector<bool>{allocator};
 
   constexpr bool NEEDS_NULL =
       (aggregate_function != AggregateFunction::Count && aggregate_function != AggregateFunction::CountDistinct);

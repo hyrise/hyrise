@@ -132,8 +132,6 @@ void VolatileRegion::deallocate(FramePtr frame) {
 }
 
 std::pair<FramePtr, std::ptrdiff_t> VolatileRegion::find_frame_and_offset(const void* ptr) {
-  std::lock_guard<std::mutex> lock(_mutex);
-
   if (ptr < _mapped_memory || ptr >= _mapped_memory + _total_bytes) {
     return std::make_pair(nullptr, 0);
   }
