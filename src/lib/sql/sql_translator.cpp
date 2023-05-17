@@ -1186,11 +1186,11 @@ void SQLTranslator::_translate_select_groupby_having(const hsql::SelectStatement
   //
   // This might create unnecessary aggregate nodes when we already have an aggregation that creates unique results:
   // `SELECT DISTINCT a, MIN(b) FROM t GROUP BY a` would have one aggregate that groups by a and calculates MIN(b), and
-  // one that groups by both a and MIN(b) without calculating anything. Fixing this should be done by an optimizer rule
-  // that checks for each GROUP BY whether it guarantees the results to be unique or not. Doable, but no priority.
+  // one that groups by both a and MIN(b) without calculating anything. Fixing this is done by an optimizer rule
+  // (DependentGroupByReductionRule) that checks if the respective columns are already unique.
   if (select.selectDistinct) {
-    _current_lqp = AggregateNode::make(_unwrap_elements(_inflated_select_list_elements),
-                                       std::vector<std::shared_ptr<AbstractExpression>>{}, _current_lqp);
+    _current_lqp =
+        AggregateNode::make(_unwrap_elements(_inflated_select_list_elements), expression_vector(), _current_lqp);
   }
 }
 
