@@ -62,6 +62,7 @@ ValidationStatus perform_set_based_inclusion_check(const std::shared_ptr<const T
       continue;
     }
 
+    const auto& segment = chunk->get_segment(included_column_id);
     if (const auto& dictionary_segment = std::dynamic_pointer_cast<DictionarySegment<T>>(segment)) {
       for (const auto& value : *dictionary_segment->dictionary()) {
         if (!including_values.contains(value)) {
