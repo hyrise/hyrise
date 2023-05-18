@@ -23,21 +23,6 @@ bool contains_any_column_id(const ColumnIDs& search_columns, const std::vector<C
   });
 }
 
-std::vector<std::shared_ptr<const AbstractLQPNode>> find_subquery_lqps(
-    const std::shared_ptr<const AbstractLQPNode>& predicate_node) {
-  auto subquery_lqps = std::vector<std::shared_ptr<const AbstractLQPNode>>{};
-
-  const auto& expressions = predicate_node->node_expressions;
-  Assert(expressions.size() == 1, "Expected single Predicate per Node.");
-  for (const auto& expression : expressions[0]->arguments) {
-    if (expression->type == ExpressionType::LQPSubquery) {
-      subquery_lqps.emplace_back(static_cast<const LQPSubqueryExpression&>(*expression).lqp);
-    }
-  }
-
-  return subquery_lqps;
-}
-
 }  // namespace
 
 namespace hyrise {
