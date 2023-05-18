@@ -182,8 +182,10 @@ struct AggregateResultContext : SegmentVisitorContext {
   // In cases where we know how many values to expect, we can preallocate the context in order to avoid later
   // re-allocations.
   explicit AggregateResultContext(const size_t preallocated_size = 0)
-      : results(preallocated_size, AggregateResultAllocator{&buffer}) {}
+      : _alloc(&buffer), _pin_guard(_alloc), results(preallocated_size, _alloc) {}
 
+  AggregateResultAllocator _alloc;
+  AllocatorPinGuard _pin_guard;
   MonotonicBufferResource buffer;
   AggregateResults<ColumnDataType, aggregate_function> results;
 };
@@ -870,7 +872,6 @@ std::enable_if_t<aggregate_func == AggregateFunction::Min || aggregate_func == A
                  void>
 write_aggregate_values(pmr_vector<AggregateType>& values, pmr_vector<bool>& null_values,
                        const AggregateResults<ColumnDataType, aggregate_func>& results) {
-  Fail("Pin");
   values.reserve(results.size());
   null_values.reserve(results.size());
 
@@ -897,7 +898,6 @@ std::enable_if_t<aggregate_func == AggregateFunction::Count, void> write_aggrega
     pmr_vector<AggregateType>& values, pmr_vector<bool>& null_values,
     const AggregateResults<ColumnDataType, aggregate_func>& results) {
   values.reserve(results.size());
-  Fail("Pin");
 
   for (const auto& result : results) {
     // NULL_ROW_ID (just a marker, not literally NULL) means that this result is either a gap (in the case of an
@@ -936,7 +936,6 @@ write_aggregate_values(pmr_vector<AggregateType>& values, pmr_vector<bool>& null
                        const AggregateResults<ColumnDataType, aggregate_func>& results) {
   values.reserve(results.size());
   null_values.reserve(results.size());
-  Fail("Pin");
 
   for (const auto& result : results) {
     // NULL_ROW_ID (just a marker, not literally NULL) means that this result is either a gap (in the case of an
@@ -971,7 +970,6 @@ write_aggregate_values(pmr_vector<AggregateType>& values, pmr_vector<bool>& null
                        const AggregateResults<ColumnDataType, aggregate_func>& results) {
   values.reserve(results.size());
   null_values.reserve(results.size());
-  Fail("Pin");
 
   for (const auto& result : results) {
     // NULL_ROW_ID (just a marker, not literally NULL) means that this result is either a gap (in the case of an
@@ -1145,7 +1143,7 @@ void AggregateHash::write_aggregate_output(ColumnID aggregate_index) {
 
   // Before writing the first aggregate column, write all group keys into the respective columns
   if (aggregate_index == 0) {
-    auto pos_list = RowIDPosList{};
+    auto pos_list = RowIDPosList{};  // TODO(nikriek): Pin
     pos_list.reserve(results.size());
     for (const auto& result : results) {
       // NULL_ROW_ID (just a marker, not literally NULL) means that this result is either a gap (in the case of an

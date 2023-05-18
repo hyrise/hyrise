@@ -73,6 +73,9 @@ class Frame {
 
   bool is_referenced() const;
 
+  void increase_ref_count();
+  void decrease_ref_count();
+
   // Returns the internal reference count. This function should only be used for testing and debugging purposes.
   std::size_t _internal_ref_count() const;
 
@@ -99,12 +102,6 @@ class Frame {
       std::atomic_thread_fence(std::memory_order_acquire);
       delete frame;
     }
-    // if (prev_ref_count == 2 && frame->sibling_frame && frame->sibling_frame->sibling_frame == frame) {
-    //   // TODO: Thread safety?
-    //   auto sibling_frame = frame->sibling_frame;
-    //   frame->sibling_frame.reset();
-    //   sibling_frame->sibling_frame.reset();
-    // }
   }
 
   // Current reference count of the frame

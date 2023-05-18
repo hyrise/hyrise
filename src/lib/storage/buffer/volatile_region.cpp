@@ -100,7 +100,7 @@ void VolatileRegion::allocate(FramePtr frame) {
   auto data = _mapped_memory + frame_id * bytes_for_size_type(_size_type);
   frame->data = data;
 
-  _frames[frame_id] = frame;
+  _frames[frame_id] = frame.get();
 }
 
 void VolatileRegion::move(FramePtr from, FramePtr to) {
@@ -114,7 +114,7 @@ void VolatileRegion::move(FramePtr from, FramePtr to) {
 
   to->data = from->data;
   from->data = nullptr;
-  _frames[frame_id] = to;
+  _frames[frame_id] = to.get();
 }
 
 void VolatileRegion::deallocate(FramePtr frame) {
@@ -128,10 +128,11 @@ void VolatileRegion::deallocate(FramePtr frame) {
 
   const auto offset = reinterpret_cast<const std::byte*>(frame->data) - _mapped_memory;
   const auto frame_id = offset / bytes_for_size_type(_size_type);
+  _frames[frame_id] = nullptr;
   _free_slots.set(frame_id);
 }
 
-std::pair<FramePtr, std::ptrdiff_t> VolatileRegion::find_frame_and_offset(const void* ptr) {
+std::pair<Frame*, std::ptrdiff_t> VolatileRegion::find_frame_and_offset(const void* ptr) {
   if (ptr < _mapped_memory || ptr >= _mapped_memory + _total_bytes) {
     return std::make_pair(nullptr, 0);
   }
@@ -139,6 +140,7 @@ std::pair<FramePtr, std::ptrdiff_t> VolatileRegion::find_frame_and_offset(const 
   const auto buffer = reinterpret_cast<const std::byte*>(ptr) - _mapped_memory;
   const auto frame_id = buffer / bytes_for_size_type(_size_type);
   const auto offset = buffer % bytes_for_size_type(_size_type);
+
   return std::make_pair(_frames[frame_id], offset);
 }
 

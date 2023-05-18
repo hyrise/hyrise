@@ -67,6 +67,8 @@ class BufferPoolAllocator {
       const auto frame = ptr.get_frame();
       observer->on_allocate(frame);
     }
+    // Manually increase the ref count when passing the pointer to the data structure
+    ptr._frame->increase_ref_count();
     return ptr;
   }
 
@@ -75,6 +77,7 @@ class BufferPoolAllocator {
       auto frame = ptr.get_frame();
       observer->on_deallocate(frame);
     }
+    ptr._frame->decrease_ref_count();
     _memory_resource->deallocate(static_cast<void_pointer>(ptr), sizeof(value_type) * n, alignof(T));
   }
 

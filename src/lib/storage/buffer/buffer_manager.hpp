@@ -154,7 +154,7 @@ class BufferManager : public MemoryResource, public Noncopyable {
    * @param ptr 
    * @return std::pair<FramePtr, std::ptrdiff_t> Pointer to the frame and the offset in the frame
    */
-  std::pair<FramePtr, std::ptrdiff_t> find_frame_and_offset(const void* ptr);
+  std::pair<Frame*, std::ptrdiff_t> find_frame_and_offset(const void* ptr);
 
   /**
    * @brief Allocates pages to fullfil allocation request of the given bytes and alignment 

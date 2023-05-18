@@ -126,7 +126,7 @@ void BufferManager::BufferPools::allocate_frame(FramePtr& frame) {
           "pool.");
     }
 
-    auto current_frame = item.frame;
+    auto& current_frame = item.frame;
 
     // Lock the frame to prevent it from being modified while we are working on it
     std::lock_guard<std::mutex> lock(current_frame->latch);
@@ -211,6 +211,8 @@ void BufferManager::BufferPools::purge_eviction_queue() {
   if (!eviction_queue) {
     return;
   }
+
+  // TODO: Dellocate 0/1 counted frames here or somewhere else?
 
   for (auto i = size_t{0}; i < MAX_EVICTION_QUEUE_PURGES; i++) {
     // Check if the queue is empty
@@ -525,7 +527,7 @@ void BufferManager::pin(const FramePtr& frame) {
   }
 }
 
-std::pair<FramePtr, std::ptrdiff_t> BufferManager::find_frame_and_offset(const void* ptr) {
+std::pair<Frame*, std::ptrdiff_t> BufferManager::find_frame_and_offset(const void* ptr) {
   // TODO: Unswizzle might be called with end() pointer and therefore going to the next page.
   // or set referenced use add_to_victionqeue to add it to the end of the queue
   // TODO: The region could be found in a branchless using masks
@@ -548,7 +550,7 @@ std::pair<FramePtr, std::ptrdiff_t> BufferManager::find_frame_and_offset(const v
     }
   }
 
-  return std::make_pair(DummyFrame(), 0);
+  return std::make_pair(DummyFrame().get(), 0);
 };
 
 BufferPtr<void> BufferManager::allocate(std::size_t bytes, std::size_t align) {
@@ -571,10 +573,12 @@ BufferPtr<void> BufferManager::allocate(std::size_t bytes, std::size_t align) {
   }
 
   _metrics->num_allocs++;
-  return BufferPtr<void>(frame, 0, typename BufferPtr<void>::AllocTag{});
+
+  return BufferPtr<void>(frame.get(), 0, typename BufferPtr<void>::AllocTag{});
 }
 
 void BufferManager::deallocate(BufferPtr<void> ptr, std::size_t bytes, std::size_t align) {
+  //TODO: decrase ref count
   //Fail("Not implemented");
   // _metrics->num_deallocs++;
   // auto shared_frame = ptr._shared_frame;

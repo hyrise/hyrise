@@ -54,7 +54,7 @@ FramePtr Frame::clone_and_attach_sibling() {
   DebugAssert(sibling_frame == nullptr,
               "Frame::clone_and_attach_sibling() called on frame with sibling_frame != nullptr");
   auto new_frame = make_frame(page_id, size_type, clone_page_type);
-  sibling_frame = new_frame;
+  sibling_frame = new_frame.get();
   new_frame->sibling_frame = this;
   return new_frame;
 }
@@ -97,33 +97,13 @@ bool Frame::is_referenced() const {
   return referenced.load();
 }
 
-// void Frame::register_swizzleable_pointer(BufferPtr<void>* pointer) {
-//   std::lock_guard<std::mutex> lock(latch);
-//   swizzleable_pointers.insert(pointer);
-// }
+void Frame::increase_ref_count() {
+  _ref_count.fetch_add(1, std::memory_order_relaxed);
+}
 
-// void Frame::unregister_swizzleable_pointer(BufferPtr<void>* pointer) {
-//   std::lock_guard<std::mutex> lock(latch);
-//   swizzleable_pointers.erase(pointer);
-// }
-
-// void Frame::swizzle_pointers() {
-//   for (const auto& ptr : swizzleable_pointers) {
-//     auto offset = reinterpret_cast<std::uintptr_t>(ptr->_ptr_or_offset);
-//     if (!is_swizzled_pointer(offset)) {
-//       ptr->_ptr_or_offset = reinterpret_cast<void*>(swizzle_pointer(offset, frame->data));
-//     }
-//   }
-// }
-
-// void Frame::unswizzle_pointers() {
-//   for (const auto ptr : swizzleable_pointers) {
-//     auto offset = reinterpret_cast<std::uintptr_t>(ptr->_ptr_or_offset);
-//     if (is_swizzled_pointer(offset)) {
-//       ptr->_ptr_or_offset = reinterpret_cast<void*>(unswizzle_pointer(offset, frame->data));
-//     }
-//   }
-// }
+void Frame::decrease_ref_count() {
+  _ref_count.fetch_sub(1, std::memory_order_relaxed);
+}
 
 Frame::~Frame() {
   // TODO: Perform evicrion if still resident

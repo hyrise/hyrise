@@ -30,6 +30,8 @@ class BufferPtr {
   template <typename U>
   friend class BufferPtr;
   friend class BufferManager;
+  template <typename U>
+  friend class BufferPoolAllocator;
 
   // TODO: Ensure Pinning before every access
 
@@ -68,8 +70,7 @@ class BufferPtr {
   BufferPtr(const BufferPtr<U>& other, const AllocTag& tag)
       : _frame(other._frame), _ptr_or_offset(other._ptr_or_offset) {}
 
-  explicit BufferPtr(const FramePtr& frame, const size_t offset, const AllocTag& tag)
-      : _frame(frame), _ptr_or_offset(offset) {}
+  explicit BufferPtr(Frame* frame, const size_t offset, const AllocTag& tag) : _frame(frame), _ptr_or_offset(offset) {}
 
   pointer operator->() const {
     return get();
@@ -189,12 +190,12 @@ class BufferPtr {
     return ptr1.get() < ptr2;
   }
 
-  void make_resident(const AccessIntent access_intent) {
-    _frame = get_buffer_manager_memory_resource()->make_resident(_frame, access_intent);
-  }
+  // void make_resident(const AccessIntent access_intent) {
+  //   _frame = get_buffer_manager_memory_resource()->make_resident(_frame, access_intent);
+  // }
 
   FramePtr get_frame() const {
-    return _frame;
+    return FramePtr(_frame);
   }
 
   size_t get_frame_ref_count() const {
@@ -205,7 +206,7 @@ class BufferPtr {
     return BufferPtr(&ref);
   }
 
-  FramePtr _frame;
+  Frame* _frame;
   std::uintptr_t _ptr_or_offset = 0;
 
   template <class T1, class T2>
@@ -234,7 +235,7 @@ class BufferPtr {
       }
       return;
     } else {
-      _frame = DummyFrame();
+      _frame = DummyFrame().get();
     }
   }
 };

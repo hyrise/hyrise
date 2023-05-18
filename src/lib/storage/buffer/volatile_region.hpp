@@ -23,7 +23,7 @@ class VolatileRegion : public Noncopyable {
                  const int8_t memory_numa_node = NO_NUMA_MEMORY_NODE);
   ~VolatileRegion();
 
-  std::pair<FramePtr, std::ptrdiff_t> find_frame_and_offset(const void* ptr);
+  std::pair<Frame*, std::ptrdiff_t> find_frame_and_offset(const void* ptr);
 
   void allocate(FramePtr frame);
   void move(FramePtr from, FramePtr to);
@@ -49,7 +49,7 @@ class VolatileRegion : public Noncopyable {
 
   std::byte* _mapped_memory;
 
-  std::vector<FramePtr> _frames;
+  std::vector<Frame*> _frames;
   boost::dynamic_bitset<> _free_slots;
 
   std::mutex _mutex;
