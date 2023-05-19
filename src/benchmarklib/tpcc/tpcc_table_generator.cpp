@@ -687,6 +687,6 @@ void TPCCTableGenerator::_add_constraints(
       {{stock_table->column_id_by_name("S_I_ID")}, stock_table, {item_table->column_id_by_name("I_ID")}, item_table});
 }
 
-thread_local TPCCRandomGenerator TPCCTableGenerator::_random_gen;
+thread_local TPCCRandomGenerator TPCCTableGenerator::_random_gen;  // NOLINT
 
 }  // namespace hyrise
