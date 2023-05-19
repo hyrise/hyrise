@@ -1191,162 +1191,37 @@ std::shared_ptr<Table> TPCDSTableGenerator::generate_web_site(ds_key_t max_rows)
 
 void TPCDSTableGenerator::_add_constraints(
     std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) const {
-  /**
-   * Adds all PRIMARY KEY and FOREIGN KEY key constraints as described in the official TPC-DS specification.
-   * (Section 2: Logical Database Design)
-   */
+  // Set all primary (PK) and foreign keys (FK) as defined in the specification (2 Logical Database Design, p. 23-35).
 
-  // Dimension Tables (17)
-
-  const auto& date_dim_table = table_info_by_name.at("date_dim").table;
-  date_dim_table->add_soft_key_constraint(
-      {{date_dim_table->column_id_by_name("d_date_sk")}, KeyConstraintType::PRIMARY_KEY});
-
-  const auto& store_table = table_info_by_name.at("store").table;
-  store_table->add_soft_key_constraint(
-      {{store_table->column_id_by_name("s_store_sk")}, KeyConstraintType::PRIMARY_KEY});
-  store_table->add_soft_foreign_key_constraint({{store_table->column_id_by_name("s_closed_date_sk")},
-                                                store_table,
-                                                {date_dim_table->column_id_by_name("d_date_sk")},
-                                                date_dim_table});
-
-  const auto& call_center_table = table_info_by_name.at("call_center").table;
-  call_center_table->add_soft_key_constraint(
-      {{call_center_table->column_id_by_name("cc_call_center_sk")}, KeyConstraintType::PRIMARY_KEY});
-  call_center_table->add_soft_foreign_key_constraint({{call_center_table->column_id_by_name("cc_closed_date_sk")},
-                                                      call_center_table,
-                                                      {date_dim_table->column_id_by_name("d_date_sk")},
-                                                      date_dim_table});
-  call_center_table->add_soft_foreign_key_constraint({{call_center_table->column_id_by_name("cc_open_date_sk")},
-                                                      call_center_table,
-                                                      {date_dim_table->column_id_by_name("d_date_sk")},
-                                                      date_dim_table});
-
-  const auto& catalog_page_table = table_info_by_name.at("catalog_page").table;
-  catalog_page_table->add_soft_key_constraint(
-      {{catalog_page_table->column_id_by_name("cp_catalog_page_sk")}, KeyConstraintType::PRIMARY_KEY});
-  catalog_page_table->add_soft_foreign_key_constraint({{catalog_page_table->column_id_by_name("cp_start_date_sk")},
-                                                       catalog_page_table,
-                                                       {date_dim_table->column_id_by_name("d_date_sk")},
-                                                       date_dim_table});
-  catalog_page_table->add_soft_foreign_key_constraint({{catalog_page_table->column_id_by_name("cp_end_date_sk")},
-                                                       catalog_page_table,
-                                                       {date_dim_table->column_id_by_name("d_date_sk")},
-                                                       date_dim_table});
-
-  const auto& web_site_table = table_info_by_name.at("web_site").table;
-  web_site_table->add_soft_key_constraint(
-      {{web_site_table->column_id_by_name("web_site_sk")}, KeyConstraintType::PRIMARY_KEY});
-  web_site_table->add_soft_foreign_key_constraint({{web_site_table->column_id_by_name("web_open_date_sk")},
-                                                   web_site_table,
-                                                   {date_dim_table->column_id_by_name("d_date_sk")},
-                                                   date_dim_table});
-  web_site_table->add_soft_foreign_key_constraint({{web_site_table->column_id_by_name("web_close_date_sk")},
-                                                   web_site_table,
-                                                   {date_dim_table->column_id_by_name("d_date_sk")},
-                                                   date_dim_table});
-
-  const auto& customer_address_table = table_info_by_name.at("customer_address").table;
-  customer_address_table->add_soft_key_constraint(
-      {{customer_address_table->column_id_by_name("ca_address_sk")}, KeyConstraintType::PRIMARY_KEY});
-
-  const auto& customer_demographics_table = table_info_by_name.at("customer_demographics").table;
-  customer_demographics_table->add_soft_key_constraint(
-      {{customer_demographics_table->column_id_by_name("cd_demo_sk")}, KeyConstraintType::PRIMARY_KEY});
-
-  const auto& income_band_table = table_info_by_name.at("income_band").table;
-  income_band_table->add_soft_key_constraint(
-      {{income_band_table->column_id_by_name("ib_income_band_sk")}, KeyConstraintType::PRIMARY_KEY});
-
-  const auto& household_demographics_table = table_info_by_name.at("household_demographics").table;
-  household_demographics_table->add_soft_key_constraint(
-      {{household_demographics_table->column_id_by_name("hd_demo_sk")}, KeyConstraintType::PRIMARY_KEY});
-  household_demographics_table->add_soft_foreign_key_constraint(
-      {{household_demographics_table->column_id_by_name("hd_income_band_sk")},
-       household_demographics_table,
-       {income_band_table->column_id_by_name("ib_income_band_sk")},
-       income_band_table});
-
-  const auto& customer_table = table_info_by_name.at("customer").table;
-  customer_table->add_soft_key_constraint(
-      {{customer_table->column_id_by_name("c_customer_sk")}, KeyConstraintType::PRIMARY_KEY});
-  customer_table->add_soft_foreign_key_constraint({{customer_table->column_id_by_name("c_current_cdemo_sk")},
-                                                   customer_table,
-                                                   {customer_demographics_table->column_id_by_name("cd_demo_sk")},
-                                                   customer_demographics_table});
-  customer_table->add_soft_foreign_key_constraint({{customer_table->column_id_by_name("c_current_hdemo_sk")},
-                                                   customer_table,
-                                                   {household_demographics_table->column_id_by_name("hd_demo_sk")},
-                                                   household_demographics_table});
-  customer_table->add_soft_foreign_key_constraint({{customer_table->column_id_by_name("c_current_addr_sk")},
-                                                   customer_table,
-                                                   {customer_address_table->column_id_by_name("ca_address_sk")},
-                                                   date_dim_table});
-
-  customer_table->add_soft_foreign_key_constraint({{customer_table->column_id_by_name("c_first_shipto_date_sk")},
-                                                   customer_table,
-                                                   {date_dim_table->column_id_by_name("d_date_sk")},
-                                                   date_dim_table});
-  customer_table->add_soft_foreign_key_constraint({{customer_table->column_id_by_name("c_first_sales_date_sk")},
-                                                   customer_table,
-                                                   {date_dim_table->column_id_by_name("d_date_sk")},
-                                                   date_dim_table});
-
-  const auto& web_page_table = table_info_by_name.at("web_page").table;
-  web_page_table->add_soft_key_constraint(
-      {{web_page_table->column_id_by_name("wp_web_page_sk")}, KeyConstraintType::PRIMARY_KEY});
-
-  web_page_table->add_soft_foreign_key_constraint({{web_page_table->column_id_by_name("wp_creation_date_sk")},
-                                                   web_page_table,
-                                                   {date_dim_table->column_id_by_name("d_date_sk")},
-                                                   date_dim_table});
-  web_page_table->add_soft_foreign_key_constraint({{web_page_table->column_id_by_name("wp_access_date_sk")},
-                                                   web_page_table,
-                                                   {date_dim_table->column_id_by_name("d_date_sk")},
-                                                   date_dim_table});
-  web_page_table->add_soft_foreign_key_constraint({{web_page_table->column_id_by_name("wp_customer_sk")},
-                                                   web_page_table,
-                                                   {customer_table->column_id_by_name("c_customer_sk")},
-                                                   customer_table});
-
-  const auto& warehouse_table = table_info_by_name.at("warehouse").table;
-  warehouse_table->add_soft_key_constraint(
-      {{warehouse_table->column_id_by_name("w_warehouse_sk")}, KeyConstraintType::PRIMARY_KEY});
-
-  const auto& item_table = table_info_by_name.at("item").table;
-  item_table->add_soft_key_constraint({{item_table->column_id_by_name("i_item_sk")}, KeyConstraintType::PRIMARY_KEY});
-
-  const auto& promotion_table = table_info_by_name.at("promotion").table;
-  promotion_table->add_soft_key_constraint(
-      {{promotion_table->column_id_by_name("p_promo_sk")}, KeyConstraintType::PRIMARY_KEY});
-
-  promotion_table->add_soft_foreign_key_constraint({{promotion_table->column_id_by_name("p_start_date_sk")},
-                                                    promotion_table,
-                                                    {date_dim_table->column_id_by_name("d_date_sk")},
-                                                    date_dim_table});
-  promotion_table->add_soft_foreign_key_constraint({{promotion_table->column_id_by_name("p_end_date_sk")},
-                                                    promotion_table,
-                                                    {date_dim_table->column_id_by_name("d_date_sk")},
-                                                    date_dim_table});
-  promotion_table->add_soft_foreign_key_constraint({{promotion_table->column_id_by_name("p_item_sk")},
-                                                    promotion_table,
-                                                    {item_table->column_id_by_name("i_item_sk")},
-                                                    item_table});
-
-  const auto& reason_table = table_info_by_name.at("reason").table;
-  reason_table->add_soft_key_constraint(
-      {{reason_table->column_id_by_name("r_reason_sk")}, KeyConstraintType::PRIMARY_KEY});
-
-  const auto& ship_mode_table = table_info_by_name.at("ship_mode").table;
-  ship_mode_table->add_soft_key_constraint(
-      {{ship_mode_table->column_id_by_name("sm_ship_mode_sk")}, KeyConstraintType::PRIMARY_KEY});
-
-  const auto& time_dim_table = table_info_by_name.at("time_dim").table;
-  time_dim_table->add_soft_key_constraint(
-      {{time_dim_table->column_id_by_name("t_time_sk")}, KeyConstraintType::PRIMARY_KEY});
-
-  // Fact Tables (7)
+  // Get all tables.
+  // Fact Tables (7).
   const auto& store_sales_table = table_info_by_name.at("store_sales").table;
+  const auto& store_returns_table = table_info_by_name.at("store_returns").table;
+  const auto& catalog_sales_table = table_info_by_name.at("catalog_sales").table;
+  const auto& catalog_returns_table = table_info_by_name.at("catalog_returns").table;
+  const auto& web_sales_table = table_info_by_name.at("web_sales").table;
+  const auto& web_returns_table = table_info_by_name.at("web_returns").table;
+  const auto& inventory_table = table_info_by_name.at("inventory").table;
+  // Dimension Tables (17).
+  const auto& store_table = table_info_by_name.at("store").table;
+  const auto& call_center_table = table_info_by_name.at("call_center").table;
+  const auto& catalog_page_table = table_info_by_name.at("catalog_page").table;
+  const auto& web_site_table = table_info_by_name.at("web_site").table;
+  const auto& web_page_table = table_info_by_name.at("web_page").table;
+  const auto& warehouse_table = table_info_by_name.at("warehouse").table;
+  const auto& customer_table = table_info_by_name.at("customer").table;
+  const auto& customer_address_table = table_info_by_name.at("customer_address").table;
+  const auto& customer_demographics_table = table_info_by_name.at("customer_demographics").table;
+  const auto& date_dim_table = table_info_by_name.at("date_dim").table;
+  const auto& household_demographics_table = table_info_by_name.at("household_demographics").table;
+  const auto& item_table = table_info_by_name.at("item").table;
+  const auto& income_band_table = table_info_by_name.at("income_band").table;
+  const auto& promotion_table = table_info_by_name.at("promotion").table;
+  const auto& reason_table = table_info_by_name.at("reason").table;
+  const auto& ship_mode_table = table_info_by_name.at("ship_mode").table;
+  const auto& time_dim_table = table_info_by_name.at("time_dim").table;
+
+  // store_sales - 1 composite PK, 9 FKs.
   store_sales_table->add_soft_key_constraint(
       {{store_sales_table->column_id_by_name("ss_item_sk"), store_sales_table->column_id_by_name("ss_ticket_number")},
        KeyConstraintType::PRIMARY_KEY});
@@ -1387,7 +1262,7 @@ void TPCDSTableGenerator::_add_constraints(
                                                       {promotion_table->column_id_by_name("p_promo_sk")},
                                                       promotion_table});
 
-  const auto& store_returns_table = table_info_by_name.at("store_returns").table;
+  // store_returns - 1 composite PK, 9 FKs.
   store_returns_table->add_soft_key_constraint({{store_returns_table->column_id_by_name("sr_item_sk"),
                                                  store_returns_table->column_id_by_name("sr_ticket_number")},
                                                 KeyConstraintType::PRIMARY_KEY});
@@ -1399,6 +1274,8 @@ void TPCDSTableGenerator::_add_constraints(
                                                         store_returns_table,
                                                         {time_dim_table->column_id_by_name("t_time_sk")},
                                                         time_dim_table});
+  // The specification also allows to set the FK to i_item_sk directly, but we only set the composite key to ss_item_sk,
+  // ss_ticket_number.
   store_returns_table->add_soft_foreign_key_constraint(
       {{store_returns_table->column_id_by_name("sr_item_sk"),
         store_returns_table->column_id_by_name("sr_ticket_number")},
@@ -1430,7 +1307,7 @@ void TPCDSTableGenerator::_add_constraints(
                                                         {reason_table->column_id_by_name("r_reason_sk")},
                                                         reason_table});
 
-  const auto& catalog_sales_table = table_info_by_name.at("catalog_sales").table;
+  // catalog_sales - 1 composite PK, 17 FKs.
   catalog_sales_table->add_soft_key_constraint({{catalog_sales_table->column_id_by_name("cs_item_sk"),
                                                  catalog_sales_table->column_id_by_name("cs_order_number")},
                                                 KeyConstraintType::PRIMARY_KEY});
@@ -1503,7 +1380,7 @@ void TPCDSTableGenerator::_add_constraints(
                                                         {promotion_table->column_id_by_name("p_promo_sk")},
                                                         promotion_table});
 
-  const auto& catalog_returns_table = table_info_by_name.at("catalog_returns").table;
+  // catalog_returns - 1 composite PK, 16 FKs.
   catalog_returns_table->add_soft_key_constraint({{catalog_returns_table->column_id_by_name("cr_item_sk"),
                                                    catalog_returns_table->column_id_by_name("cr_order_number")},
                                                   KeyConstraintType::PRIMARY_KEY});
@@ -1517,6 +1394,8 @@ void TPCDSTableGenerator::_add_constraints(
        catalog_returns_table,
        {time_dim_table->column_id_by_name("t_time_sk")},
        time_dim_table});
+  // The specification also allows to set the FK to i_item_sk directly, but we only set the composite key to cs_item_sk,
+  // cs_order_number.
   catalog_returns_table->add_soft_foreign_key_constraint({{catalog_returns_table->column_id_by_name("cr_item_sk"),
                                                            catalog_returns_table->column_id_by_name("cr_order_number")},
                                                           catalog_returns_table,
@@ -1586,7 +1465,7 @@ void TPCDSTableGenerator::_add_constraints(
                                                           {reason_table->column_id_by_name("r_reason_sk")},
                                                           reason_table});
 
-  const auto& web_sales_table = table_info_by_name.at("web_sales").table;
+  // web_sales - 1 composite PK, 17 FKs.
   web_sales_table->add_soft_key_constraint(
       {{web_sales_table->column_id_by_name("ws_item_sk"), web_sales_table->column_id_by_name("ws_order_number")},
        KeyConstraintType::PRIMARY_KEY});
@@ -1659,7 +1538,7 @@ void TPCDSTableGenerator::_add_constraints(
                                                     {promotion_table->column_id_by_name("p_promo_sk")},
                                                     promotion_table});
 
-  const auto& web_returns_table = table_info_by_name.at("web_returns").table;
+  // web_returns - 1 composite PK, 13 FKs.
   web_returns_table->add_soft_key_constraint(
       {{web_returns_table->column_id_by_name("wr_item_sk"), web_returns_table->column_id_by_name("wr_order_number")},
        KeyConstraintType::PRIMARY_KEY});
@@ -1671,6 +1550,8 @@ void TPCDSTableGenerator::_add_constraints(
                                                       web_returns_table,
                                                       {time_dim_table->column_id_by_name("t_time_sk")},
                                                       time_dim_table});
+  // The specification also allows to set the FK to i_item_sk directly, but we only set the composite key to ws_item_sk,
+  // ws_order_number.
   web_returns_table->add_soft_foreign_key_constraint(
       {{web_returns_table->column_id_by_name("wr_item_sk"), web_returns_table->column_id_by_name("wr_order_number")},
        web_returns_table,
@@ -1719,7 +1600,7 @@ void TPCDSTableGenerator::_add_constraints(
                                                       {reason_table->column_id_by_name("r_reason_sk")},
                                                       reason_table});
 
-  const auto& inventory_table = table_info_by_name.at("inventory").table;
+  // inventory - 1 composite PK, 3 FKs.
   inventory_table->add_soft_key_constraint(
       {{inventory_table->column_id_by_name("inv_date_sk"), inventory_table->column_id_by_name("inv_item_sk"),
         inventory_table->column_id_by_name("inv_warehouse_sk")},
@@ -1736,6 +1617,156 @@ void TPCDSTableGenerator::_add_constraints(
                                                     inventory_table,
                                                     {warehouse_table->column_id_by_name("w_warehouse_sk")},
                                                     warehouse_table});
+
+  // store - 1 PK, 1 FK.
+  store_table->add_soft_key_constraint(
+      {{store_table->column_id_by_name("s_store_sk")}, KeyConstraintType::PRIMARY_KEY});
+  store_table->add_soft_foreign_key_constraint({{store_table->column_id_by_name("s_closed_date_sk")},
+                                                store_table,
+                                                {date_dim_table->column_id_by_name("d_date_sk")},
+                                                date_dim_table});
+
+  // call_center - 1 PK, 2 FKs.
+  call_center_table->add_soft_key_constraint(
+      {{call_center_table->column_id_by_name("cc_call_center_sk")}, KeyConstraintType::PRIMARY_KEY});
+  call_center_table->add_soft_foreign_key_constraint({{call_center_table->column_id_by_name("cc_closed_date_sk")},
+                                                      call_center_table,
+                                                      {date_dim_table->column_id_by_name("d_date_sk")},
+                                                      date_dim_table});
+  call_center_table->add_soft_foreign_key_constraint({{call_center_table->column_id_by_name("cc_open_date_sk")},
+                                                      call_center_table,
+                                                      {date_dim_table->column_id_by_name("d_date_sk")},
+                                                      date_dim_table});
+
+  // catalog_page - 1 PK, 2 FKs.
+  catalog_page_table->add_soft_key_constraint(
+      {{catalog_page_table->column_id_by_name("cp_catalog_page_sk")}, KeyConstraintType::PRIMARY_KEY});
+  catalog_page_table->add_soft_foreign_key_constraint({{catalog_page_table->column_id_by_name("cp_start_date_sk")},
+                                                       catalog_page_table,
+                                                       {date_dim_table->column_id_by_name("d_date_sk")},
+                                                       date_dim_table});
+  catalog_page_table->add_soft_foreign_key_constraint({{catalog_page_table->column_id_by_name("cp_end_date_sk")},
+                                                       catalog_page_table,
+                                                       {date_dim_table->column_id_by_name("d_date_sk")},
+                                                       date_dim_table});
+
+  // web_site - 1 PK, 2 FKs.
+  web_site_table->add_soft_key_constraint(
+      {{web_site_table->column_id_by_name("web_site_sk")}, KeyConstraintType::PRIMARY_KEY});
+  web_site_table->add_soft_foreign_key_constraint({{web_site_table->column_id_by_name("web_open_date_sk")},
+                                                   web_site_table,
+                                                   {date_dim_table->column_id_by_name("d_date_sk")},
+                                                   date_dim_table});
+  web_site_table->add_soft_foreign_key_constraint({{web_site_table->column_id_by_name("web_close_date_sk")},
+                                                   web_site_table,
+                                                   {date_dim_table->column_id_by_name("d_date_sk")},
+                                                   date_dim_table});
+
+  // web_page - 1 PK, 3 FKs.
+  web_page_table->add_soft_key_constraint(
+      {{web_page_table->column_id_by_name("wp_web_page_sk")}, KeyConstraintType::PRIMARY_KEY});
+
+  web_page_table->add_soft_foreign_key_constraint({{web_page_table->column_id_by_name("wp_creation_date_sk")},
+                                                   web_page_table,
+                                                   {date_dim_table->column_id_by_name("d_date_sk")},
+                                                   date_dim_table});
+  web_page_table->add_soft_foreign_key_constraint({{web_page_table->column_id_by_name("wp_access_date_sk")},
+                                                   web_page_table,
+                                                   {date_dim_table->column_id_by_name("d_date_sk")},
+                                                   date_dim_table});
+  web_page_table->add_soft_foreign_key_constraint({{web_page_table->column_id_by_name("wp_customer_sk")},
+                                                   web_page_table,
+                                                   {customer_table->column_id_by_name("c_customer_sk")},
+                                                   customer_table});
+
+  // warehouse - 1 PK.
+  warehouse_table->add_soft_key_constraint(
+      {{warehouse_table->column_id_by_name("w_warehouse_sk")}, KeyConstraintType::PRIMARY_KEY});
+
+  // customer - 1 PK, 6 FKs.
+  customer_table->add_soft_key_constraint(
+      {{customer_table->column_id_by_name("c_customer_sk")}, KeyConstraintType::PRIMARY_KEY});
+  customer_table->add_soft_foreign_key_constraint({{customer_table->column_id_by_name("c_current_cdemo_sk")},
+                                                   customer_table,
+                                                   {customer_demographics_table->column_id_by_name("cd_demo_sk")},
+                                                   customer_demographics_table});
+  customer_table->add_soft_foreign_key_constraint({{customer_table->column_id_by_name("c_current_hdemo_sk")},
+                                                   customer_table,
+                                                   {household_demographics_table->column_id_by_name("hd_demo_sk")},
+                                                   household_demographics_table});
+  customer_table->add_soft_foreign_key_constraint({{customer_table->column_id_by_name("c_current_addr_sk")},
+                                                   customer_table,
+                                                   {customer_address_table->column_id_by_name("ca_address_sk")},
+                                                   date_dim_table});
+  customer_table->add_soft_foreign_key_constraint({{customer_table->column_id_by_name("c_first_shipto_date_sk")},
+                                                   customer_table,
+                                                   {date_dim_table->column_id_by_name("d_date_sk")},
+                                                   date_dim_table});
+  customer_table->add_soft_foreign_key_constraint({{customer_table->column_id_by_name("c_first_sales_date_sk")},
+                                                   customer_table,
+                                                   {date_dim_table->column_id_by_name("d_date_sk")},
+                                                   date_dim_table});
+  customer_table->add_soft_foreign_key_constraint({{customer_table->column_id_by_name("c_last_review_date_sk")},
+                                                   customer_table,
+                                                   {date_dim_table->column_id_by_name("d_date_sk")},
+                                                   date_dim_table});
+
+  // customer_address - 1 PK.
+  customer_address_table->add_soft_key_constraint(
+      {{customer_address_table->column_id_by_name("ca_address_sk")}, KeyConstraintType::PRIMARY_KEY});
+
+  // customer_demographics - 1 PK.
+  customer_demographics_table->add_soft_key_constraint(
+      {{customer_demographics_table->column_id_by_name("cd_demo_sk")}, KeyConstraintType::PRIMARY_KEY});
+
+  // date_dim - 1 PK.
+  date_dim_table->add_soft_key_constraint(
+      {{date_dim_table->column_id_by_name("d_date_sk")}, KeyConstraintType::PRIMARY_KEY});
+
+  // household_demographics - 1 PK, 1 FK.
+  household_demographics_table->add_soft_key_constraint(
+      {{household_demographics_table->column_id_by_name("hd_demo_sk")}, KeyConstraintType::PRIMARY_KEY});
+  household_demographics_table->add_soft_foreign_key_constraint(
+      {{household_demographics_table->column_id_by_name("hd_income_band_sk")},
+       household_demographics_table,
+       {income_band_table->column_id_by_name("ib_income_band_sk")},
+       income_band_table});
+
+  // item - 1 PK.
+  item_table->add_soft_key_constraint({{item_table->column_id_by_name("i_item_sk")}, KeyConstraintType::PRIMARY_KEY});
+
+  // income_band - 1 PK.
+  income_band_table->add_soft_key_constraint(
+      {{income_band_table->column_id_by_name("ib_income_band_sk")}, KeyConstraintType::PRIMARY_KEY});
+
+  // promotion - 1 PK, 3 FKs.
+  promotion_table->add_soft_key_constraint(
+      {{promotion_table->column_id_by_name("p_promo_sk")}, KeyConstraintType::PRIMARY_KEY});
+
+  promotion_table->add_soft_foreign_key_constraint({{promotion_table->column_id_by_name("p_start_date_sk")},
+                                                    promotion_table,
+                                                    {date_dim_table->column_id_by_name("d_date_sk")},
+                                                    date_dim_table});
+  promotion_table->add_soft_foreign_key_constraint({{promotion_table->column_id_by_name("p_end_date_sk")},
+                                                    promotion_table,
+                                                    {date_dim_table->column_id_by_name("d_date_sk")},
+                                                    date_dim_table});
+  promotion_table->add_soft_foreign_key_constraint({{promotion_table->column_id_by_name("p_item_sk")},
+                                                    promotion_table,
+                                                    {item_table->column_id_by_name("i_item_sk")},
+                                                    item_table});
+
+  // reason - 1 PK.
+  reason_table->add_soft_key_constraint(
+      {{reason_table->column_id_by_name("r_reason_sk")}, KeyConstraintType::PRIMARY_KEY});
+
+  // ship_mode - 1 PK.
+  ship_mode_table->add_soft_key_constraint(
+      {{ship_mode_table->column_id_by_name("sm_ship_mode_sk")}, KeyConstraintType::PRIMARY_KEY});
+
+  // time_dim - 1 PK.
+  time_dim_table->add_soft_key_constraint(
+      {{time_dim_table->column_id_by_name("t_time_sk")}, KeyConstraintType::PRIMARY_KEY});
 }
 
 }  // namespace hyrise

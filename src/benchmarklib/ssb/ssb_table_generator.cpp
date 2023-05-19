@@ -35,21 +35,18 @@ std::unordered_map<std::string, BenchmarkTableInfo> SSBTableGenerator::generate(
 
 void SSBTableGenerator::_add_constraints(
     std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) const {
-  const auto& customer_table = table_info_by_name.at("customer").table;
-  customer_table->add_soft_key_constraint(
-      {{customer_table->column_id_by_name("c_custkey")}, KeyConstraintType::PRIMARY_KEY});
+  // Set all primary (PK) and foreign keys (FK) as defined in the specification (2. Detail on SSB Format, p. 2-4).
 
-  const auto& part_table = table_info_by_name.at("part").table;
-  part_table->add_soft_key_constraint({{part_table->column_id_by_name("p_partkey")}, KeyConstraintType::PRIMARY_KEY});
-
-  const auto& supplier_table = table_info_by_name.at("supplier").table;
-  supplier_table->add_soft_key_constraint(
-      {{supplier_table->column_id_by_name("s_suppkey")}, KeyConstraintType::PRIMARY_KEY});
-
-  const auto& date_table = table_info_by_name.at("date").table;
-  date_table->add_soft_key_constraint({{date_table->column_id_by_name("d_datekey")}, KeyConstraintType::PRIMARY_KEY});
-
+  // Get all tables.
   const auto& lineorder_table = table_info_by_name.at("lineorder").table;
+  const auto& part_table = table_info_by_name.at("part").table;
+  const auto& supplier_table = table_info_by_name.at("supplier").table;
+  const auto& customer_table = table_info_by_name.at("customer").table;
+  const auto& date_table = table_info_by_name.at("date").table;
+
+  // Set constraints.
+
+  // lineorder - 1 composite PK, 5 FKs.
   lineorder_table->add_soft_key_constraint(
       {{lineorder_table->column_id_by_name("lo_orderkey"), lineorder_table->column_id_by_name("lo_linenumber")},
        KeyConstraintType::PRIMARY_KEY});
@@ -73,6 +70,20 @@ void SSBTableGenerator::_add_constraints(
                                                     lineorder_table,
                                                     {date_table->column_id_by_name("d_datekey")},
                                                     date_table});
+
+  // part - 1 PK.
+  part_table->add_soft_key_constraint({{part_table->column_id_by_name("p_partkey")}, KeyConstraintType::PRIMARY_KEY});
+
+  // supplier - 1 PK.
+  supplier_table->add_soft_key_constraint(
+      {{supplier_table->column_id_by_name("s_suppkey")}, KeyConstraintType::PRIMARY_KEY});
+
+  // customer - 1 PK.
+  customer_table->add_soft_key_constraint(
+      {{customer_table->column_id_by_name("c_custkey")}, KeyConstraintType::PRIMARY_KEY});
+
+  // date - 1 PK.
+  date_table->add_soft_key_constraint({{date_table->column_id_by_name("d_datekey")}, KeyConstraintType::PRIMARY_KEY});
 }
 
 }  // namespace hyrise
