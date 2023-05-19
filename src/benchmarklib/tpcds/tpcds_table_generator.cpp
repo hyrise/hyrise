@@ -1706,7 +1706,7 @@ void TPCDSTableGenerator::_add_constraints(
                                                    customer_table,
                                                    {date_dim_table->column_id_by_name("d_date_sk")},
                                                    date_dim_table});
-  customer_table->add_soft_foreign_key_constraint({{customer_table->column_id_by_name("c_last_review_date_sk")},
+  customer_table->add_soft_foreign_key_constraint({{customer_table->column_id_by_name("c_last_review_date")},
                                                    customer_table,
                                                    {date_dim_table->column_id_by_name("d_date_sk")},
                                                    date_dim_table});
