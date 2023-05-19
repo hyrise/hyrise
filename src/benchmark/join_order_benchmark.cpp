@@ -16,39 +16,50 @@
  * The Join Order Benchmark was introduced by Leis et al. "How good are query optimizers, really?". It runs on an IMDB
  * database from ~2013 that gets downloaded if necessary as part of running this benchmark. Its 113 queries are obtained
  * from the "third_party/join-order-benchmark" submodule. For an overview of the schema, see:
- * https://doi.org/10.1007/s00778-017-0480-7
+ * https://doi.org/10.1007/s00778-017-0480-7 (Leis et al. "Query optimization through the looking glass, and what we
+ *                                                         found running the Join Order Benchmark")
  */
 
 using namespace hyrise;                // NOLINT(build/namespaces)
 using namespace std::string_literals;  // NOLINT(build/namespaces)
 
-/**
- * Each of the 21 JOB tables has one surrogate key. This function registers key constraints for all of them as well as
- * resulting foreign key contraints.
- */
 void add_key_constraints(std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) {
-  const auto& name_table = table_info_by_name.at("name").table;
-  name_table->add_soft_key_constraint({{name_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
+  // Set all primary (PK) and foreign keys (FK) as defined in "Query optimization through the looking glass, and what we
+  // found running the Join Order Benchmark" (2.1 The IMDB data set, Fig. 2, p. 645).
 
+  // Get all tables.
   const auto& aka_name_table = table_info_by_name.at("aka_name").table;
+  const auto& aka_title_table = table_info_by_name.at("aka_title").table;
+  const auto& cast_info_table = table_info_by_name.at("cast_info").table;
+  const auto& char_name_table = table_info_by_name.at("char_name").table;
+  const auto& comp_cast_type_table = table_info_by_name.at("comp_cast_type").table;
+  const auto& company_name_table = table_info_by_name.at("company_name").table;
+  const auto& company_type_table = table_info_by_name.at("company_type").table;
+  const auto& complete_cast_table = table_info_by_name.at("complete_cast").table;
+  const auto& info_type_table = table_info_by_name.at("info_type").table;
+  const auto& keyword_table = table_info_by_name.at("keyword").table;
+  const auto& kind_type_table = table_info_by_name.at("kind_type").table;
+  const auto& link_type_table = table_info_by_name.at("link_type").table;
+  const auto& movie_companies_table = table_info_by_name.at("movie_companies").table;
+  const auto& movie_info_table = table_info_by_name.at("movie_info").table;
+  const auto& movie_info_idx_table = table_info_by_name.at("movie_info_idx").table;
+  const auto& movie_keyword_table = table_info_by_name.at("movie_keyword").table;
+  const auto& movie_link_table = table_info_by_name.at("movie_link").table;
+  const auto& name_table = table_info_by_name.at("name").table;
+  const auto& person_info_table = table_info_by_name.at("person_info").table;
+  const auto& role_type_table = table_info_by_name.at("role_type").table;
+  const auto& title_table = table_info_by_name.at("title").table;
+
+  // Set constraints.
+
+  // aka_name - 1 PK, 1 FK.
   aka_name_table->add_soft_key_constraint({{aka_name_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
   aka_name_table->add_soft_foreign_key_constraint({{aka_name_table->column_id_by_name("person_id")},
                                                    aka_name_table,
                                                    {name_table->column_id_by_name("id")},
                                                    name_table});
 
-  const auto& kind_type_table = table_info_by_name.at("kind_type").table;
-  kind_type_table->add_soft_key_constraint(
-      {{kind_type_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
-
-  const auto& title_table = table_info_by_name.at("title").table;
-  title_table->add_soft_key_constraint({{title_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
-  title_table->add_soft_foreign_key_constraint({{title_table->column_id_by_name("kind_id")},
-                                                title_table,
-                                                {kind_type_table->column_id_by_name("id")},
-                                                kind_type_table});
-
-  const auto& aka_title_table = table_info_by_name.at("aka_title").table;
+  // aka_title - 1 PK, 1 FK.
   aka_title_table->add_soft_key_constraint(
       {{aka_title_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
   aka_title_table->add_soft_foreign_key_constraint({{aka_title_table->column_id_by_name("movie_id")},
@@ -56,15 +67,7 @@ void add_key_constraints(std::unordered_map<std::string, BenchmarkTableInfo>& ta
                                                     {title_table->column_id_by_name("id")},
                                                     title_table});
 
-  const auto& char_name_table = table_info_by_name.at("char_name").table;
-  char_name_table->add_soft_key_constraint(
-      {{char_name_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
-
-  const auto& role_type_table = table_info_by_name.at("role_type").table;
-  role_type_table->add_soft_key_constraint(
-      {{role_type_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
-
-  const auto& cast_info_table = table_info_by_name.at("cast_info").table;
+  // cast_info - 1 PK, 4 FKs.
   cast_info_table->add_soft_key_constraint(
       {{cast_info_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
   cast_info_table->add_soft_foreign_key_constraint({{cast_info_table->column_id_by_name("movie_id")},
@@ -84,19 +87,23 @@ void add_key_constraints(std::unordered_map<std::string, BenchmarkTableInfo>& ta
                                                     {role_type_table->column_id_by_name("id")},
                                                     role_type_table});
 
-  const auto& comp_cast_type_table = table_info_by_name.at("comp_cast_type").table;
+  // char_name - 1 PK.
+  char_name_table->add_soft_key_constraint(
+      {{char_name_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
+
+  // comp_cast_type - 1 PK.
   comp_cast_type_table->add_soft_key_constraint(
       {{comp_cast_type_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
 
-  const auto& company_name_table = table_info_by_name.at("company_name").table;
+  // company_name - 1 PK.
   company_name_table->add_soft_key_constraint(
       {{company_name_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
 
-  const auto& company_type_table = table_info_by_name.at("company_type").table;
+  // company_type - 1 PK.
   company_type_table->add_soft_key_constraint(
       {{company_type_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
 
-  const auto& complete_cast_table = table_info_by_name.at("complete_cast").table;
+  // complete_cast - 1 PK, 3 FKs.
   complete_cast_table->add_soft_key_constraint(
       {{complete_cast_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
   complete_cast_table->add_soft_foreign_key_constraint({{complete_cast_table->column_id_by_name("subject_id")},
@@ -112,18 +119,22 @@ void add_key_constraints(std::unordered_map<std::string, BenchmarkTableInfo>& ta
                                                         {title_table->column_id_by_name("id")},
                                                         title_table});
 
-  const auto& info_type_table = table_info_by_name.at("info_type").table;
+  // info_type - 1 PK.
   info_type_table->add_soft_key_constraint(
       {{info_type_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
 
-  const auto& keyword_table = table_info_by_name.at("keyword").table;
+  // keywort - 1 PK.
   keyword_table->add_soft_key_constraint({{keyword_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
 
-  const auto& link_type_table = table_info_by_name.at("link_type").table;
+  // kind_type - 1 PK.
+  kind_type_table->add_soft_key_constraint(
+      {{kind_type_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
+
+  // link_type - 1 PK.
   link_type_table->add_soft_key_constraint(
       {{link_type_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
 
-  const auto& movie_companies_table = table_info_by_name.at("movie_companies").table;
+  // movie_companies - 1 PK, 3 FKs.
   movie_companies_table->add_soft_key_constraint(
       {{movie_companies_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
   movie_companies_table->add_soft_foreign_key_constraint({{movie_companies_table->column_id_by_name("company_id")},
@@ -139,7 +150,7 @@ void add_key_constraints(std::unordered_map<std::string, BenchmarkTableInfo>& ta
                                                           {company_type_table->column_id_by_name("id")},
                                                           company_type_table});
 
-  const auto& movie_info_table = table_info_by_name.at("movie_info").table;
+  // movie_info - 1 PK, 2 FKs.
   movie_info_table->add_soft_key_constraint(
       {{movie_info_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
   movie_info_table->add_soft_foreign_key_constraint({{movie_info_table->column_id_by_name("movie_id")},
@@ -151,7 +162,7 @@ void add_key_constraints(std::unordered_map<std::string, BenchmarkTableInfo>& ta
                                                      {info_type_table->column_id_by_name("id")},
                                                      info_type_table});
 
-  const auto& movie_info_idx_table = table_info_by_name.at("movie_info_idx").table;
+  // movie_info_idx - 1 PK, 2 FKs.
   movie_info_idx_table->add_soft_key_constraint(
       {{movie_info_idx_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
   movie_info_idx_table->add_soft_foreign_key_constraint({{movie_info_idx_table->column_id_by_name("movie_id")},
@@ -163,7 +174,7 @@ void add_key_constraints(std::unordered_map<std::string, BenchmarkTableInfo>& ta
                                                          {info_type_table->column_id_by_name("id")},
                                                          info_type_table});
 
-  const auto& movie_keyword_table = table_info_by_name.at("movie_keyword").table;
+  // movie_keyword - 1 PK, 2 FKs.
   movie_keyword_table->add_soft_key_constraint(
       {{movie_keyword_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
   movie_keyword_table->add_soft_foreign_key_constraint({{movie_keyword_table->column_id_by_name("movie_id")},
@@ -175,7 +186,7 @@ void add_key_constraints(std::unordered_map<std::string, BenchmarkTableInfo>& ta
                                                         {keyword_table->column_id_by_name("id")},
                                                         keyword_table});
 
-  const auto& movie_link_table = table_info_by_name.at("movie_link").table;
+  // movie_link - 1 PK, 3 FKs.
   movie_link_table->add_soft_key_constraint(
       {{movie_link_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
   movie_link_table->add_soft_foreign_key_constraint({{movie_link_table->column_id_by_name("movie_id")},
@@ -191,7 +202,10 @@ void add_key_constraints(std::unordered_map<std::string, BenchmarkTableInfo>& ta
                                                      {link_type_table->column_id_by_name("id")},
                                                      link_type_table});
 
-  const auto& person_info_table = table_info_by_name.at("person_info").table;
+  // name - 1 PK.
+  name_table->add_soft_key_constraint({{name_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
+
+  // person_info - 1 PK, 2 FKs.
   person_info_table->add_soft_key_constraint(
       {{person_info_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
 
@@ -203,6 +217,17 @@ void add_key_constraints(std::unordered_map<std::string, BenchmarkTableInfo>& ta
                                                       person_info_table,
                                                       {info_type_table->column_id_by_name("id")},
                                                       info_type_table});
+
+  // role_type - 1 PK.
+  role_type_table->add_soft_key_constraint(
+      {{role_type_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
+
+  // title - 1 PK, 1 FK.
+  title_table->add_soft_key_constraint({{title_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
+  title_table->add_soft_foreign_key_constraint({{title_table->column_id_by_name("kind_id")},
+                                                title_table,
+                                                {kind_type_table->column_id_by_name("id")},
+                                                kind_type_table});
 }
 
 int main(int argc, char* argv[]) {
