@@ -140,6 +140,10 @@ std::optional<PageSizeType> SSDRegion::get_size_type(const PageID page_id) {
   return std::nullopt;
 }
 
+size_t SSDRegion::memory_consumption() const {
+  return _page_directory.capacity() * sizeof(decltype(_page_directory)::value_type);
+}
+
 std::filesystem::path SSDRegion::get_file_name() {
   return _backing_file_name;
 }

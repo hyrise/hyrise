@@ -21,6 +21,10 @@ bool Frame::is_resident() const {
   return state.load() == State::Resident;
 }
 
+bool Frame::is_invalid() const {
+  return page_type == PageType::Invalid;
+}
+
 bool Frame::is_pinned() const {
   return pin_count.load() > 0;
 }
@@ -105,35 +109,31 @@ void Frame::decrease_ref_count() {
   _ref_count.fetch_sub(1, std::memory_order_relaxed);
 }
 
-Frame::~Frame() {
-  // TODO: Perform evicrion if still resident
-  // DebugAssert(!is_pinned(), "Frame was deleted while still pinned");
+bool Frame::is_dirty() const {
+  return dirty.load();
 }
 
-// inline void intrusive_ptr_add_ref(Frame* frame) {
-//   frame->_ref_count.fetch_add(1, std::memory_order_acq_rel);
-// }
+Frame::~Frame() {
+  //TODO DebugAssert(!is_resident(), "Frame was deleted while still resident");
+}
 
-// // TODO: What happens if we add more reference again?
+// Friend function used by the FramePtr intrusive_ptr to increase the ref_count. This functions should not be called directly.
+inline void intrusive_ptr_add_ref(Frame* frame) {
+  DebugAssert(frame != nullptr, "Frame is nullptr");
+  frame->_ref_count.fetch_add(1, std::memory_order_release);
+}
 
-// inline void intrusive_ptr_release(Frame* frame) {
-//   // The only reference is left between this frame and its sibling frame
-//   // We just remove the sibling frame pointer. This decreases the ref count in the sibling frame.
-//   // Doing so, the sibling becomes the new sole owner if this frame and we avoid any circular dependencies.
-//   const auto prev_ref_count = frame->_ref_count.fetch_sub(1, std::memory_order_acq_rel);
-//   if (prev_ref_count == 1) {
-//     // Source: https://www.boost.org/doc/libs/1_61_0/doc/html/atomic/usage_examples.html
-//     boost::atomic_thread_fence(boost::memory_order_acquire);
-//     delete frame;
-//   }
+// Friend function used by the FramePtr intrusive_ptr to decrease the ref_count. This functions also avoids circular dependencies between the sibling frame.This functions should not be called directly.
+inline void intrusive_ptr_release(Frame* frame) {
+  DebugAssert(frame != nullptr, "Frame is nullptr");
 
-//   if (prev_ref_count == 2 && frame->sibling_frame && frame->sibling_frame->sibling_frame == frame) {
-//     // TODO: Thread safety?
-//     auto sibling_frame = frame->sibling_frame;
-//     frame->sibling_frame.reset();
-//     sibling_frame->sibling_frame.reset();
-//   }
-// }
+  // TODO: Handle reference count with sibling frame
+  if (frame->_ref_count.fetch_sub(1, std::memory_order_release) == 1) {
+    // Source: https://www.boost.org/doc/libs/1_61_0/doc/html/atomic/usage_examples.html
+    std::atomic_thread_fence(std::memory_order_acquire);
+    delete frame;
+  }
+}
 
 std::size_t Frame::_internal_ref_count() const {
   return _ref_count.load();

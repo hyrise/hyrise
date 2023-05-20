@@ -63,18 +63,22 @@ struct FramePinGuard final : public PinnedFrames<accessIntent> {
 
   template <typename T, typename = std::enable_if_t<is_iterable<T>::value>>
   void add_vector_pins(const T& vector) {
-    const auto& frame = vector.begin().get_ptr().get_frame();
+    const auto frame = vector.begin().get_ptr().get_frame();
 
     add_pin(frame);
 
     // Ensure that all child frames are pinned fo^r pmr_vector<pmr_string>
     if constexpr (std::is_same_v<std::remove_cv_t<T>, pmr_vector<pmr_string>>) {
       for (const auto& string : vector) {
-        if (const auto& string_frame = string.begin().get_frame()) {
-          if (!has_pinned(string_frame)) {
-            add_pin(string_frame);
-          }
+        const auto string_frame = string.begin().get_frame();
+        if (!string_frame) {
+          continue;
         }
+
+        if (has_pinned(string_frame) || string_frame->is_invalid()) {
+          continue;
+        }
+        add_pin(string_frame);
       }
     }
   }
@@ -119,7 +123,7 @@ struct FramePinGuard final : public PinnedFrames<accessIntent> {
   }
 
   FramePinGuard(const ReferenceSegment& segment) {
-    //TODO ("ReferenceSegment not implemented yet");
+    Fail("ReferenceSegment not implemented yet");
   }
 
   template <typename T>

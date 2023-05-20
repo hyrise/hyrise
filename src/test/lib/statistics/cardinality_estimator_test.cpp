@@ -58,12 +58,12 @@ class CardinalityEstimatorTest : public BaseTest {
      */
     // clang-format off
     const auto histogram_b_a = std::make_shared<GenericHistogram<int32_t>>(
-      std::vector<int32_t>{0, 5, 10}, std::vector<int32_t>{4, 9, 15},
-      std::vector<HistogramCountType>{10, 10, 12}, std::vector<HistogramCountType>{5, 5, 6});
+      pmr_vector<int32_t>{0, 5, 10}, pmr_vector<int32_t>{4, 9, 15},
+      pmr_vector<HistogramCountType>{10, 10, 12}, pmr_vector<HistogramCountType>{5, 5, 6});
 
     const auto histogram_b_b = std::make_shared<GenericHistogram<int32_t>>(
-      std::vector<int32_t>{0}, std::vector<int32_t>{9},
-      std::vector<HistogramCountType>{32}, std::vector<HistogramCountType>{10});
+      pmr_vector<int32_t>{0}, pmr_vector<int32_t>{9},
+      pmr_vector<HistogramCountType>{32}, pmr_vector<HistogramCountType>{10});
     // clang-format on
 
     node_b = create_mock_node_with_statistics({{DataType::Int, "a"}, {DataType::Int, "b"}}, 32,
@@ -77,14 +77,14 @@ class CardinalityEstimatorTest : public BaseTest {
      */
     // clang-format off
     const auto histogram_c_x = std::make_shared<EqualDistinctCountHistogram<int32_t>>(
-      std::vector<int32_t>{0, 8}, std::vector<int32_t>{7, 15},
-      std::vector<HistogramCountType>{32, 32}, 8, 0);
+      pmr_vector<int32_t>{0, 8}, pmr_vector<int32_t>{7, 15},
+      pmr_vector<HistogramCountType>{32, 32}, 8, 0);
 
     const auto histogram_c_y = std::make_shared<GenericHistogram<int32_t>>(
-      std::vector<int32_t>{0},
-      std::vector<int32_t>{9},
-      std::vector<HistogramCountType>{64},
-      std::vector<HistogramCountType>{10});
+      pmr_vector<int32_t>{0},
+      pmr_vector<int32_t>{9},
+      pmr_vector<HistogramCountType>{64},
+      pmr_vector<HistogramCountType>{10});
     // clang-format on
 
     node_c = create_mock_node_with_statistics({{DataType::Int, "x"}, {DataType::Int, "y"}}, 64,
@@ -338,12 +338,12 @@ TEST_F(CardinalityEstimatorTest, JoinBinsInnerEqui) {
 
 TEST_F(CardinalityEstimatorTest, JoinInnerEquiHistograms) {
   const auto left_histogram = GenericHistogram<int32_t>(
-      std::vector<int32_t>{0, 10, 20, 30, 40, 50, 60}, std::vector<int32_t>{9, 19, 29, 39, 49, 59, 69},
-      std::vector<HistogramCountType>{10, 15, 10, 20, 5, 15, 5}, std::vector<HistogramCountType>{1, 1, 3, 8, 1, 5, 1});
+      pmr_vector<int32_t>{0, 10, 20, 30, 40, 50, 60}, pmr_vector<int32_t>{9, 19, 29, 39, 49, 59, 69},
+      pmr_vector<HistogramCountType>{10, 15, 10, 20, 5, 15, 5}, pmr_vector<HistogramCountType>{1, 1, 3, 8, 1, 5, 1});
 
   const auto right_histogram =
-      GenericHistogram<int32_t>(std::vector<int32_t>{20, 30, 50}, std::vector<int32_t>{29, 39, 59},
-                                std::vector<HistogramCountType>{10, 5, 10}, std::vector<HistogramCountType>{7, 2, 10});
+      GenericHistogram<int32_t>(pmr_vector<int32_t>{20, 30, 50}, pmr_vector<int32_t>{29, 39, 59},
+                                pmr_vector<HistogramCountType>{10, 5, 10}, pmr_vector<HistogramCountType>{7, 2, 10});
 
   const auto join_histogram =
       CardinalityEstimator::estimate_inner_equi_join_with_histograms<int32_t>(left_histogram, right_histogram);
@@ -384,20 +384,20 @@ TEST_F(CardinalityEstimatorTest, JoinOuter) {
 
 TEST_F(CardinalityEstimatorTest, JoinSemiHistograms) {
   const auto left_join_column_histogram = std::make_shared<GenericHistogram<int32_t>>(
-      std::vector<int32_t>{0, 10, 20, 30, 40, 50, 60}, std::vector<int32_t>{9, 19, 29, 39, 49, 59, 69},
-      std::vector<HistogramCountType>{10, 15, 10, 20, 5, 15, 5}, std::vector<HistogramCountType>{1, 1, 3, 8, 1, 6, 1});
+      pmr_vector<int32_t>{0, 10, 20, 30, 40, 50, 60}, pmr_vector<int32_t>{9, 19, 29, 39, 49, 59, 69},
+      pmr_vector<HistogramCountType>{10, 15, 10, 20, 5, 15, 5}, pmr_vector<HistogramCountType>{1, 1, 3, 8, 1, 6, 1});
   const auto left_join_column_statistics = std::make_shared<AttributeStatistics<int32_t>>();
   left_join_column_statistics->set_statistics_object(left_join_column_histogram);
 
   const auto left_non_join_column_histogram = std::make_shared<GenericHistogram<int32_t>>(
-      std::vector<int32_t>{0, 5, 10}, std::vector<int32_t>{4, 9, 14}, std::vector<HistogramCountType>{20, 40, 30},
-      std::vector<HistogramCountType>{1, 1, 3});
+      pmr_vector<int32_t>{0, 5, 10}, pmr_vector<int32_t>{4, 9, 14}, pmr_vector<HistogramCountType>{20, 40, 30},
+      pmr_vector<HistogramCountType>{1, 1, 3});
   const auto left_non_join_column_statistics = std::make_shared<AttributeStatistics<int32_t>>();
   left_non_join_column_statistics->set_statistics_object(left_non_join_column_histogram);
 
   const auto right_histogram = std::make_shared<GenericHistogram<int32_t>>(
-      std::vector<int32_t>{20, 30, 50, 70}, std::vector<int32_t>{29, 39, 69, 79},
-      std::vector<HistogramCountType>{10, 5, 10, 8}, std::vector<HistogramCountType>{7, 2, 6, 8});
+      pmr_vector<int32_t>{20, 30, 50, 70}, pmr_vector<int32_t>{29, 39, 69, 79},
+      pmr_vector<HistogramCountType>{10, 5, 10, 8}, pmr_vector<HistogramCountType>{7, 2, 6, 8});
   const auto right_statistics = std::make_shared<AttributeStatistics<int32_t>>();
   right_statistics->set_statistics_object(right_histogram);
 
@@ -701,16 +701,16 @@ TEST_F(CardinalityEstimatorTest, PredicateWithNull) {
 TEST_F(CardinalityEstimatorTest, PredicateEstimateColumnVsColumnEquiScan) {
   // clang-format off
   const auto left_histogram = GenericHistogram<int32_t>(
-    std::vector<int32_t>           {10, 13, 16},
-    std::vector<int32_t>           {12, 14, 20},
-    std::vector<HistogramCountType>{3,   9, 10},
-    std::vector<HistogramCountType>{2,   3, 10});
+    pmr_vector<int32_t>           {10, 13, 16},
+    pmr_vector<int32_t>           {12, 14, 20},
+    pmr_vector<HistogramCountType>{3,   9, 10},
+    pmr_vector<HistogramCountType>{2,   3, 10});
 
   const auto right_histogram = GenericHistogram<int32_t>(
-    std::vector<int32_t>           {0, 13, 15, 16},
-    std::vector<int32_t>           {5, 14, 15, 20},
-    std::vector<HistogramCountType>{7,  5, 1,  10},
-    std::vector<HistogramCountType>{5,  2, 1,   2});
+    pmr_vector<int32_t>           {0, 13, 15, 16},
+    pmr_vector<int32_t>           {5, 14, 15, 20},
+    pmr_vector<HistogramCountType>{7,  5, 1,  10},
+    pmr_vector<HistogramCountType>{5,  2, 1,   2});
   // clang-format on
 
   const auto result_histogram =

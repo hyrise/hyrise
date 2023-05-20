@@ -69,7 +69,8 @@ BufferManager::Config BufferManager::Config::from_env() {
 BufferManager::BufferPools::BufferPools(const PageType page_type, const size_t pool_size,
                                         const std::function<void(const FramePtr&)> evict_frame,
                                         const bool enable_eviction_purge_worker,
-                                        const std::shared_ptr<BufferManager::Metrics> metrics)
+                                        const std::shared_ptr<BufferManager::Metrics> metrics,
+                                        const size_t numa_memory_node)
     : _used_bytes(0),
       enabled(_page_type != PageType::Invalid),
       _evict_frame(evict_frame),
@@ -79,7 +80,7 @@ BufferManager::BufferPools::BufferPools(const PageType page_type, const size_t p
       _metrics(metrics) {
   if (enabled) {
     _eviction_queue = std::make_shared<EvictionQueue>();
-    _buffer_pools = create_volatile_regions_for_size_types(page_type, pool_size);
+    _buffer_pools = create_volatile_regions_for_size_types(page_type, pool_size, numa_memory_node);
     if (enable_eviction_purge_worker) {
       _eviction_purge_worker = std::make_unique<PausableLoopThread>(IDLE_EVICTION_QUEUE_PURGE,
                                                                     [&](size_t) { this->purge_eviction_queue(); });
@@ -87,16 +88,21 @@ BufferManager::BufferPools::BufferPools(const PageType page_type, const size_t p
   }
 }
 
+BufferManager::BufferPools::~BufferPools() {
+  // TODO: Refactor mapped memory allocation
+  if (const auto& pool = _buffer_pools[0]) {
+    const auto num_bytes = _buffer_pools.size() * pool->total_bytes();
+    VolatileRegion::unmap_memory(pool->mapped_memory(), num_bytes);
+  }
+}
+
 BufferManager::BufferPools& BufferManager::BufferPools::operator=(BufferManager::BufferPools&& other) {
   _used_bytes = other._used_bytes.load();
   _max_bytes = other._max_bytes;
   _page_type = other._page_type;
-  _page_type = other._page_type;
   // _evict_frame = other._evict_frame;
   enabled = other.enabled;
   _metrics = other._metrics;
-  // Assert(_max_bytes == other._max_bytes, "Cannot move buffer pools with different sizes");
-  // Assert(_page_type == other._page_type, "Cannot move buffer pools with different page types");
   _buffer_pools = std::move(other._buffer_pools);
   _eviction_purge_worker = std::move(other._eviction_purge_worker);
   _eviction_queue = std::move(other._eviction_queue);
@@ -258,6 +264,30 @@ void BufferManager::BufferPools::clear() {
   }
 }
 
+std::pair<Frame*, std::ptrdiff_t> BufferManager::BufferPools::ptr_to_frame(const void* ptr) {
+  const auto offset = reinterpret_cast<const std::byte*>(ptr) - _buffer_pools[0]->mapped_memory();
+  const auto region_idx = offset / _buffer_pools[0]->total_bytes();
+  const auto page_size = bytes_for_size_type(MIN_PAGE_SIZE_TYPE) * (1 << region_idx);
+  const auto region_offset = offset % _buffer_pools[0]->total_bytes();
+  const auto frame_idx = region_offset / page_size;
+  const auto page_offset = region_offset % page_size;
+
+  const auto frame_ptr = region_idx >= 0 && region_idx < _buffer_pools.size()
+                             ? _buffer_pools[region_idx]->frame_at_index(frame_idx)
+                             : nullptr;
+
+  return {frame_ptr, page_offset};
+}
+
+size_t BufferManager::BufferPools::memory_consumption() const {
+  auto result = size_t{0};
+  for (const auto& pool : _buffer_pools) {
+    result += pool ? pool->memory_consumption() : 0;
+  }
+  result += _eviction_queue ? _eviction_queue->unsafe_size() * sizeof(EvictionItem) + sizeof(EvictionQueue) : 0;
+  return result;
+}
+
 //----------------------------------------------------
 // Buffer Manager
 //----------------------------------------------------
@@ -270,10 +300,10 @@ BufferManager::BufferManager(const Config config)
       _metrics(std::make_shared<Metrics>()),
       _dram_buffer_pools(page_type_for_dram_buffer_pools(config.mode), config.dram_buffer_pool_size,
                          std::bind(&BufferManager::evict_frame, this, std::placeholders::_1),
-                         config.enable_eviction_purge_worker, _metrics),
+                         config.enable_eviction_purge_worker, _metrics, NO_NUMA_MEMORY_NODE),
       _numa_buffer_pools(page_type_for_numa_buffer_pools(config.mode), config.numa_buffer_pool_size,
                          std::bind(&BufferManager::evict_frame, this, std::placeholders::_1),
-                         config.enable_eviction_purge_worker, _metrics) {
+                         config.enable_eviction_purge_worker, _metrics, config.numa_memory_node) {
   Assert(_dram_buffer_pools.enabled || _numa_buffer_pools.enabled, "No Buffer Pool is enabled");
 }
 
@@ -528,29 +558,22 @@ void BufferManager::pin(const FramePtr& frame) {
 }
 
 std::pair<Frame*, std::ptrdiff_t> BufferManager::find_frame_and_offset(const void* ptr) {
-  // TODO: Unswizzle might be called with end() pointer and therefore going to the next page.
-  // or set referenced use add_to_victionqeue to add it to the end of the queue
-  // TODO: The region could be found in a branchless using masks
   if (_dram_buffer_pools.enabled) {
-    for (auto& buffer_pool : _dram_buffer_pools._buffer_pools) {
-      const auto unswizzled = buffer_pool->find_frame_and_offset(ptr);
-      if (unswizzled.first) {
-        unswizzled.first->set_referenced();
-        return unswizzled;
-      }
-    }
-  }
-  if (_numa_buffer_pools.enabled) {
-    for (auto& buffer_pool : _numa_buffer_pools._buffer_pools) {
-      const auto unswizzled = buffer_pool->find_frame_and_offset(ptr);
-      if (unswizzled.first) {
-        unswizzled.first->set_referenced();
-        return unswizzled;
-      }
+    auto frame = _dram_buffer_pools.ptr_to_frame(ptr);
+    if (frame.first != nullptr) {
+      frame.first->set_referenced();
+      return frame;
     }
   }
 
-  return std::make_pair(DummyFrame().get(), 0);
+  if (_numa_buffer_pools.enabled) {
+    auto frame = _numa_buffer_pools.ptr_to_frame(ptr);
+    if (frame.first != nullptr) {
+      frame.first->set_referenced();
+      return frame;
+    }
+  }
+  return std::make_pair(&DUMMY_FRAME, 0);
 };
 
 BufferPtr<void> BufferManager::allocate(std::size_t bytes, std::size_t align) {
@@ -578,7 +601,6 @@ BufferPtr<void> BufferManager::allocate(std::size_t bytes, std::size_t align) {
 }
 
 void BufferManager::deallocate(BufferPtr<void> ptr, std::size_t bytes, std::size_t align) {
-  //TODO: decrase ref count
   //Fail("Not implemented");
   // _metrics->num_deallocs++;
   // auto shared_frame = ptr._shared_frame;
@@ -608,6 +630,12 @@ std::shared_ptr<BufferManager::Metrics> BufferManager::metrics() {
 
 void BufferManager::reset_metrics() {
   _metrics = std::make_shared<Metrics>();
+}
+
+size_t BufferManager::memory_consumption() const {
+  // TODO: Fix number of frames
+  return _dram_buffer_pools.memory_consumption() + _numa_buffer_pools.memory_consumption() +
+         _ssd_region->memory_consumption() + _num_pages * sizeof(Frame);
 }
 
 void BufferManager::clear() {

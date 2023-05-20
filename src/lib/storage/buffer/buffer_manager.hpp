@@ -201,6 +201,16 @@ class BufferManager : public MemoryResource, public Noncopyable {
   */
   void clear();
 
+  /**
+   * @brief Get the current memory consumption of the buffer manager in bytes for all its data structures.
+  */
+  size_t memory_consumption() const;
+
+  /**
+   * @brief Dummy Frame is a null object of a frame. It is used by the BufferPtr if the pointer is outside of the buffer manager.
+  */
+  Frame DUMMY_FRAME = Frame(PageID{INVALID_PAGE_ID}, PageSizeType::KiB8, PageType::Invalid, nullptr);
+
  protected:
   friend class Hyrise;
   friend class BufferPtrTest;
@@ -223,12 +233,14 @@ class BufferManager : public MemoryResource, public Noncopyable {
     // Add a frame to the eviction queue
     void add_to_eviction_queue(const FramePtr& frame);
 
-    // Clears the buffer pools
+    // Soft-clears the buffer pools
     void clear();
 
     BufferPools(const PageType page_type, const size_t pool_size,
                 const std::function<void(const FramePtr&)> evict_frame, const bool enable_eviction_purge_worker,
-                const std::shared_ptr<BufferManager::Metrics> metrics);
+                const std::shared_ptr<BufferManager::Metrics> metrics,
+                const size_t numa_memory_node = NO_NUMA_MEMORY_NODE);
+    ~BufferPools();
 
     BufferPools& operator=(BufferPools&& other);
 
@@ -258,6 +270,12 @@ class BufferManager : public MemoryResource, public Noncopyable {
 
     // Calls the parent buffer manager to evict a frame using the migration policy
     std::function<void(const FramePtr&)> _evict_frame;
+
+    // Returns the frame the data pointer is pointing to and the offset in the frame
+    std::pair<Frame*, std::ptrdiff_t> ptr_to_frame(const void* ptr);
+
+    // Returns how much memory is consumed by the state of the buffer pools
+    size_t memory_consumption() const;
   };
 
   // Allocate a new frame in the buffer pool by allocating a frame. May evict a frame from the buffer pool.

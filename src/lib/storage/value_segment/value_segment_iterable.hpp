@@ -105,6 +105,9 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
     }
 
     NonNullSegmentPosition<T> dereference() const {
+      if constexpr (std::is_same_v<T, pmr_string>) {
+        return NonNullSegmentPosition<T>{*_value_it, _chunk_offset};
+      }
       return NonNullSegmentPosition<T>{*_value_it, _chunk_offset};
     }
 

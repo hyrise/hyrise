@@ -35,6 +35,7 @@ std::shared_ptr<RowIDPosList> ColumnVsColumnTableScanImpl::scan_chunk(ChunkID ch
   const auto right_segment = chunk->get_segment(_right_column_id);
 
   std::shared_ptr<RowIDPosList> result;
+  auto matches_pin_guard = AllocatorPinGuard{result->get_stored_allocator()};
 
   /**
    * Reducing the compile time:
@@ -128,6 +129,7 @@ std::shared_ptr<RowIDPosList> __attribute__((noinline))
 ColumnVsColumnTableScanImpl::_typed_scan_chunk_with_iterables(ChunkID chunk_id, const LeftIterable& left_iterable,
                                                               const RightIterable& right_iterable) const {
   auto matches_out = std::shared_ptr<RowIDPosList>{};
+  auto matches_pin_guard = AllocatorPinGuard{matches_out->get_stored_allocator()};
 
   left_iterable.with_iterators([&](auto left_it, const auto left_end) {
     right_iterable.with_iterators([&](auto right_it, const auto right_end) {

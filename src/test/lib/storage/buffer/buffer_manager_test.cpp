@@ -567,6 +567,31 @@ TEST_F(BufferManagerTest, TestAllocateAndDeallocateWithDramSSDMode) {
   GTEST_SKIP();
 }
 
+TEST_F(BufferManagerTest, TestFindFrameAndOffset) {
+  // TODO: test with numa, too
+  auto buffer_manager = create_buffer_manager(5 * bytes_for_size_type(MAX_PAGE_SIZE_TYPE), BufferManagerMode::DramSSD);
+
+  auto ptr1 = static_cast<BufferPtr<int>>(buffer_manager.allocate(bytes_for_size_type(PageSizeType::KiB8))) + 50;
+  auto [frame1, offset1] = buffer_manager.find_frame_and_offset(ptr1.operator->());
+  EXPECT_EQ(frame1, ptr1.get_frame());
+  EXPECT_EQ(offset1, 50 * sizeof(int));
+
+  auto ptr2 = static_cast<BufferPtr<int>>(buffer_manager.allocate(bytes_for_size_type(PageSizeType::KiB8))) + 1337;
+  auto [frame2, offset2] = buffer_manager.find_frame_and_offset(ptr2.operator->());
+  EXPECT_EQ(frame2, ptr2.get_frame());
+  EXPECT_EQ(offset2, 1337 * sizeof(int));
+
+  auto ptr3 = static_cast<BufferPtr<int>>(buffer_manager.allocate(bytes_for_size_type(PageSizeType::KiB256))) + 0;
+  auto [frame3, offset3] = buffer_manager.find_frame_and_offset(ptr3.operator->());
+  EXPECT_EQ(frame3, ptr3.get_frame());
+  EXPECT_EQ(offset3, 0);
+
+  int test_var = 10;
+  auto [outside_frame, outside_offset] = buffer_manager.find_frame_and_offset(std::addressof(test_var));
+  EXPECT_EQ(outside_frame, &(buffer_manager.DUMMY_FRAME));
+  EXPECT_EQ(outside_offset, 0);
+}
+
 TEST_F(BufferManagerTest, TestVectorBeginEnd) {
   // auto allocator = PolymorphicAllocator<size_t>{get_buffer_manager_memory_resource()};
   // // 8192 * 4 == Page32KB

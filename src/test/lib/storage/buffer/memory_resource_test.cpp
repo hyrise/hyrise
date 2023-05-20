@@ -29,7 +29,7 @@ class LogResource : public MemoryResource {
     auto allocated_dram_frame =
         make_frame(PageID{allocations.size()}, find_fitting_page_size_type(bytes), PageType::Dram);
     allocations.emplace_back(allocated_dram_frame, bytes, alignment);
-    return BufferPtr<void>(allocated_dram_frame, 0, typename BufferPtr<void>::AllocTag{});
+    return BufferPtr<void>(allocated_dram_frame.get(), 0, typename BufferPtr<void>::AllocTag{});
   }
 
   void deallocate(BufferPtr<void> p, const std::size_t bytes, const std::size_t alignment) override {
@@ -99,8 +99,8 @@ TEST_F(MonotonicBufferResourceTest, TestAllocate) {
     remaining_storage = remaining;
   }
   {
-    //Exhaust the remaining storage with 2 byte alignment (the last allocation
-    //was 4 bytes with 4 byte alignment) so it should be already 2-byte aligned.
+    // Exhaust the remaining storage with 2 byte alignment (the last allocation
+    // was 4 bytes with 4 byte alignment) so it should be already 2-byte aligned.
     // We trigger it twice to avoid the 80% fill threshold
     monotonic_buffer_resource.allocate(remaining_storage / 2, 2);
     monotonic_buffer_resource.allocate(monotonic_buffer_resource.remaining_storage(), 2);

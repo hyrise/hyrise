@@ -21,31 +21,36 @@ class VolatileRegion : public Noncopyable {
  public:
   VolatileRegion(const PageSizeType size_type, const PageType page_type, const size_t num_bytes,
                  const int8_t memory_numa_node = NO_NUMA_MEMORY_NODE);
-  ~VolatileRegion();
 
-  std::pair<Frame*, std::ptrdiff_t> find_frame_and_offset(const void* ptr);
+  VolatileRegion(const PageSizeType size_type, const PageType page_type, const size_t num_bytes,
+                 std::byte* premapped_region);
+  Frame* frame_at_index(const size_t index) const;
 
   void allocate(FramePtr frame);
   void move(FramePtr from, FramePtr to);
   void deallocate(FramePtr frame);
   void free(FramePtr frame);
 
-  // Total number of bytes in the region
-  size_t capacity() const;
+  std::byte* mapped_memory() const;
+  size_t useable_bytes() const;
+  size_t total_bytes() const;
 
-  // Unmap and remap memory region and reassign memory to frames
+  PageType get_page_type() const;
+  PageSizeType get_size_type() const;
+
   void clear();
 
+  size_t memory_consumption() const;
+
+  static std::byte* map_memory(const size_t num_bytes, const int8_t numa_memory_node = NO_NUMA_MEMORY_NODE);
+  static void unmap_memory(std::byte* memory, const size_t num_bytes);
+
  private:
-  void unmap_memory();
-  void map_memory();
-
-  void to_numa(std::byte* address);
-
   const PageType _page_type;
-  const size_t _numa_memory_node;
-  const size_t _total_bytes;
   const PageSizeType _size_type;
+
+  const size_t _total_bytes;
+  const size_t _useable_bytes;
 
   std::byte* _mapped_memory;
 
@@ -56,6 +61,6 @@ class VolatileRegion : public Noncopyable {
 };
 
 std::array<std::unique_ptr<VolatileRegion>, NUM_PAGE_SIZE_TYPES> create_volatile_regions_for_size_types(
-    const PageType page_type, const size_t num_bytes);
+    const PageType page_type, const size_t num_byte, const int8_t numa_memory_node = NO_NUMA_MEMORY_NODE);
 
 }  // namespace hyrise

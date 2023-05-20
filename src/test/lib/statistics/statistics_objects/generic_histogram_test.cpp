@@ -445,10 +445,10 @@ TEST_F(GenericHistogramTest, EstimateCardinalityInt) {
 TEST_F(GenericHistogramTest, EstimateCardinalityFloat) {
   // clang-format off
   const auto histogram = std::make_shared<GenericHistogram<float>>(
-    std::vector<float>             {2.0f,  23.0f, next_value(25.0f),            31.0f,  32.0f},
-    std::vector<float>             {22.0f, 25.0f,            30.0f,  next_value(31.0f), 32.0f},
-    std::vector<HistogramCountType>{17,    30,               20,                 7,      3},
-    std::vector<HistogramCountType>{ 5,     3,                5,                 2,      1});
+    pmr_vector<float>             {2.0f,  23.0f, next_value(25.0f),            31.0f,  32.0f},
+    pmr_vector<float>             {22.0f, 25.0f,            30.0f,  next_value(31.0f), 32.0f},
+    pmr_vector<HistogramCountType>{17,    30,               20,                 7,      3},
+    pmr_vector<HistogramCountType>{ 5,     3,                5,                 2,      1});
   // clang-format on
 
   const auto total_count = histogram->total_count();
@@ -518,10 +518,10 @@ TEST_F(GenericHistogramTest, EstimateCardinalityFloat) {
 TEST_F(GenericHistogramTest, DoesNotContain) {
   // clang-format off
   const auto histogram_a = GenericHistogram<float>{
-  std::vector<float>             {2.0f,  23.0f, next_value(25.0f),            31.0f,  32.0f},
-  std::vector<float>             {22.0f, 25.0f,            30.0f,  next_value(31.0f), 32.0f},
-  std::vector<HistogramCountType>{17,    30,               20,                 7,      3},
-  std::vector<HistogramCountType>{ 5,     3,                5,                 2,      1}};
+  pmr_vector<float>             {2.0f,  23.0f, next_value(25.0f),            31.0f,  32.0f},
+  pmr_vector<float>             {22.0f, 25.0f,            30.0f,  next_value(31.0f), 32.0f},
+  pmr_vector<HistogramCountType>{17,    30,               20,                 7,      3},
+  pmr_vector<HistogramCountType>{ 5,     3,                5,                 2,      1}};
   // clang-format on
 
   EXPECT_TRUE(histogram_a.does_not_contain(PredicateCondition::Equals, 1.0f));
@@ -550,10 +550,10 @@ TEST_F(GenericHistogramTest, DoesNotContain) {
 TEST_F(GenericHistogramTest, EstimateCardinalityString) {
   // clang-format off
   const auto histogram = std::make_shared<GenericHistogram<pmr_string>>(
-  std::vector<pmr_string>        {"aa", "at", "bi"},
-  std::vector<pmr_string>        {"as", "ax", "dr"},
-  std::vector<HistogramCountType>{  17,   30,   40},
-  std::vector<HistogramCountType>{   5,    3,   27},
+  pmr_vector<pmr_string>        {"aa", "at", "bi"},
+  pmr_vector<pmr_string>        {"as", "ax", "dr"},
+  pmr_vector<HistogramCountType>{  17,   30,   40},
+  pmr_vector<HistogramCountType>{   5,    3,   27},
   StringHistogramDomain{'a', 'z', 2u});
   // clang-format on
 
@@ -572,31 +572,31 @@ TEST_F(GenericHistogramTest, SlicedInt) {
 
   // Normal histogram, no special cases here
   const auto histogram_a = std::make_shared<GenericHistogram<int32_t>>(
-    std::vector<int32_t>            { 1, 31, 60, 80},
-    std::vector<int32_t>            {25, 50, 60, 99},
-    std::vector<HistogramCountType> {40, 30, 5,  10},
-    std::vector<HistogramCountType> {10, 20, 1,  1});
+    pmr_vector<int32_t>            { 1, 31, 60, 80},
+    pmr_vector<int32_t>            {25, 50, 60, 99},
+    pmr_vector<HistogramCountType> {40, 30, 5,  10},
+    pmr_vector<HistogramCountType> {10, 20, 1,  1});
 
   // Histogram with zeros in bin height/distinct_count
   const auto histogram_b = std::make_shared<GenericHistogram<int32_t>>(
-    std::vector<int32_t>            { 0,  6, 30, 51},
-    std::vector<int32_t>            { 5, 20, 50, 52},
-    std::vector<HistogramCountType> { 4,  0,  0,  0.000001f},
-    std::vector<HistogramCountType> { 0, 20,  0,  0.000001f});
+    pmr_vector<int32_t>            { 0,  6, 30, 51},
+    pmr_vector<int32_t>            { 5, 20, 50, 52},
+    pmr_vector<HistogramCountType> { 4,  0,  0,  0.000001f},
+    pmr_vector<HistogramCountType> { 0, 20,  0,  0.000001f});
 
   // Histogram with a single bin, which in turn has a single value
   const auto histogram_c = std::make_shared<GenericHistogram<int32_t>>(
-    std::vector<int32_t>            { 5},
-    std::vector<int32_t>            {15},
-    std::vector<HistogramCountType> { 1},
-    std::vector<HistogramCountType> { 1});
+    pmr_vector<int32_t>            { 5},
+    pmr_vector<int32_t>            {15},
+    pmr_vector<HistogramCountType> { 1},
+    pmr_vector<HistogramCountType> { 1});
 
   // Empty histogram
   const auto histogram_d = std::make_shared<GenericHistogram<int32_t>>(
-    std::vector<int32_t>            {},
-    std::vector<int32_t>            {},
-    std::vector<HistogramCountType> {},
-    std::vector<HistogramCountType> {});
+    pmr_vector<int32_t>            {},
+    pmr_vector<int32_t>            {},
+    pmr_vector<HistogramCountType> {},
+    pmr_vector<HistogramCountType> {});
   // clang-format on
 
   std::vector<Predicate> predicates{
@@ -651,9 +651,9 @@ TEST_F(GenericHistogramTest, SlicedInt) {
 }
 
 TEST_F(GenericHistogramTest, SliceReturnsNullptr) {
-  const auto histogram = std::make_shared<GenericHistogram<int32_t>>(std::vector<int32_t>{1}, std::vector<int32_t>{25},
-                                                                     std::vector<HistogramCountType>{40},
-                                                                     std::vector<HistogramCountType>{10});
+  const auto histogram = std::make_shared<GenericHistogram<int32_t>>(pmr_vector<int32_t>{1}, pmr_vector<int32_t>{25},
+                                                                     pmr_vector<HistogramCountType>{40},
+                                                                     pmr_vector<HistogramCountType>{10});
 
   // Check that histogram returns a nullptr if predicate will not match any data.
   EXPECT_EQ(histogram->sliced(PredicateCondition::LessThan, 1), nullptr);
@@ -665,29 +665,29 @@ TEST_F(GenericHistogramTest, SliceReturnsNullptr) {
 TEST_F(GenericHistogramTest, SlicedFloat) {
   // clang-format off
   const auto histogram_a = std::make_shared<GenericHistogram<float>>(
-    std::vector<float>             {1.0f,            2.0f,   3.0f, 12.25f,       100.0f},
-    std::vector<float>             {1.0f, next_value(2.0f), 11.0f, 17.25f, 1'000'100.0f},
-    std::vector<HistogramCountType>{5,              10,     32,    70,             1},
-    std::vector<HistogramCountType>{1,               5,      4,    70,             1});
+    pmr_vector<float>             {1.0f,            2.0f,   3.0f, 12.25f,       100.0f},
+    pmr_vector<float>             {1.0f, next_value(2.0f), 11.0f, 17.25f, 1'000'100.0f},
+    pmr_vector<HistogramCountType>{5,              10,     32,    70,             1},
+    pmr_vector<HistogramCountType>{1,               5,      4,    70,             1});
 
   // Histogram with zeros in bin height/distinct_count
   const auto histogram_b = std::make_shared<GenericHistogram<float>>(
-  std::vector<float>              { 0,  6, 30, 51},
-  std::vector<float>              { 5, 20, 50, 52},
-  std::vector<HistogramCountType> { 4,  0,  0,  0.000001f},
-  std::vector<HistogramCountType> { 0, 20,  0,  0.000001f});
+  pmr_vector<float>              { 0,  6, 30, 51},
+  pmr_vector<float>              { 5, 20, 50, 52},
+  pmr_vector<HistogramCountType> { 4,  0,  0,  0.000001f},
+  pmr_vector<HistogramCountType> { 0, 20,  0,  0.000001f});
 
   const auto histogram_c = std::make_shared<GenericHistogram<float>>(
-    std::vector<float>             {5.0f},
-    std::vector<float>             {5.0f},
-    std::vector<HistogramCountType>{12},
-    std::vector<HistogramCountType>{1});
+    pmr_vector<float>             {5.0f},
+    pmr_vector<float>             {5.0f},
+    pmr_vector<HistogramCountType>{12},
+    pmr_vector<HistogramCountType>{1});
 
   const auto histogram_d = std::make_shared<GenericHistogram<float>>(
-    std::vector<float>             {},
-    std::vector<float>             {},
-    std::vector<HistogramCountType>{},
-    std::vector<HistogramCountType>{});
+    pmr_vector<float>             {},
+    pmr_vector<float>             {},
+    pmr_vector<HistogramCountType>{},
+    pmr_vector<HistogramCountType>{});
   // clang-format on
 
   std::vector<std::shared_ptr<AbstractHistogram<float>>> histograms{histogram_a, histogram_b, histogram_c, histogram_d};
@@ -758,10 +758,10 @@ TEST_F(GenericHistogramTest, SlicedFloat) {
 TEST_F(GenericHistogramTest, PrunedInt) {
   // clang-format off
   const auto histogram = std::make_shared<GenericHistogram<int32_t>>(
-    std::vector<int32_t>            { 1, 31, 60, 80},
-    std::vector<int32_t>            {25, 50, 60, 99},
-    std::vector<HistogramCountType> {40, 30, 5,  10},
-    std::vector<HistogramCountType> {10, 20, 1,  1});
+    pmr_vector<int32_t>            { 1, 31, 60, 80},
+    pmr_vector<int32_t>            {25, 50, 60, 99},
+    pmr_vector<HistogramCountType> {40, 30, 5,  10},
+    pmr_vector<HistogramCountType> {10, 20, 1,  1});
   // clang-format on
 
   {
@@ -773,10 +773,10 @@ TEST_F(GenericHistogramTest, PrunedInt) {
     // This is what the histogram looks like after 20 values that are not >= 26 are pruned (aka. removed) from the
     // statistics
     const auto expected_histogram = GenericHistogram<int32_t>{
-      std::vector<int32_t>            { 1, 31, 60, 80},
-      std::vector<int32_t>            {25, 50, 60, 99},
-      std::vector<HistogramCountType> {20, 30, 5,  10},  // This is the row that changes in the tests
-      std::vector<HistogramCountType> {10, 20, 1,  1}};
+      pmr_vector<int32_t>            { 1, 31, 60, 80},
+      pmr_vector<int32_t>            {25, 50, 60, 99},
+      pmr_vector<HistogramCountType> {20, 30, 5,  10},  // This is the row that changes in the tests
+      pmr_vector<HistogramCountType> {10, 20, 1,  1}};
     // clang-format on
 
     EXPECT_EQ(*pruned, expected_histogram);
@@ -788,10 +788,10 @@ TEST_F(GenericHistogramTest, PrunedInt) {
         std::static_pointer_cast<GenericHistogram<int32_t>>(histogram->pruned(55, PredicateCondition::GreaterThan, 40));
     // clang-format off
     const auto expected_histogram = GenericHistogram<int32_t>{
-      std::vector<int32_t>            {31, 60, 80},
-      std::vector<int32_t>            {50, 60, 99},
-      std::vector<HistogramCountType> {15, 5,  10},
-      std::vector<HistogramCountType> {20, 1,  1}};
+      pmr_vector<int32_t>            {31, 60, 80},
+      pmr_vector<int32_t>            {50, 60, 99},
+      pmr_vector<HistogramCountType> {15, 5,  10},
+      pmr_vector<HistogramCountType> {20, 1,  1}};
     // clang-format on
 
     EXPECT_EQ(*pruned, expected_histogram);
@@ -803,10 +803,10 @@ TEST_F(GenericHistogramTest, PrunedInt) {
         histogram->pruned(3, PredicateCondition::LessThanEquals, 70));
     // clang-format off
     const auto expected_histogram = GenericHistogram<int32_t>{
-      std::vector<int32_t>            { 1, 31, 60, 80},
-      std::vector<int32_t>            {25, 50, 60, 99},
-      std::vector<HistogramCountType> {40, 30, 5,  7},
-      std::vector<HistogramCountType> {10, 20, 1,  1}};
+      pmr_vector<int32_t>            { 1, 31, 60, 80},
+      pmr_vector<int32_t>            {25, 50, 60, 99},
+      pmr_vector<HistogramCountType> {40, 30, 5,  7},
+      pmr_vector<HistogramCountType> {10, 20, 1,  1}};
     // clang-format on
 
     EXPECT_EQ(*pruned, expected_histogram);
@@ -819,10 +819,10 @@ TEST_F(GenericHistogramTest, PrunedInt) {
     const auto remaining_ratio = 1.0f - 8.0f / (5.0f + 10.0f);
     // clang-format off
     const auto expected_histogram = GenericHistogram<int32_t>{
-      std::vector<int32_t>            { 1, 31, 60, 80},
-      std::vector<int32_t>            {25, 50, 60, 99},
-      std::vector<HistogramCountType> {40, 30, 5.0f*remaining_ratio, 10.0f*remaining_ratio},
-      std::vector<HistogramCountType> {10, 20, 1,  1}};
+      pmr_vector<int32_t>            { 1, 31, 60, 80},
+      pmr_vector<int32_t>            {25, 50, 60, 99},
+      pmr_vector<HistogramCountType> {40, 30, 5.0f*remaining_ratio, 10.0f*remaining_ratio},
+      pmr_vector<HistogramCountType> {10, 20, 1,  1}};
     // clang-format on
 
     EXPECT_EQ(*pruned, expected_histogram);
@@ -834,10 +834,10 @@ TEST_F(GenericHistogramTest, PrunedInt) {
         std::static_pointer_cast<GenericHistogram<int32_t>>(histogram->pruned(27, PredicateCondition::Equals, 17));
     // clang-format off
     const auto expected_histogram = GenericHistogram<int32_t>{
-      std::vector<int32_t>            { 1, 31, 60, 80},
-      std::vector<int32_t>            {25, 50, 60, 99},
-      std::vector<HistogramCountType> {28, 20, 5*2.0f/3,  10*2.0f/3},
-      std::vector<HistogramCountType> {10, 20, 1,  1}};
+      pmr_vector<int32_t>            { 1, 31, 60, 80},
+      pmr_vector<int32_t>            {25, 50, 60, 99},
+      pmr_vector<HistogramCountType> {28, 20, 5*2.0f/3,  10*2.0f/3},
+      pmr_vector<HistogramCountType> {10, 20, 1,  1}};
     // clang-format on
 
     EXPECT_EQ(*pruned, expected_histogram);
@@ -850,10 +850,10 @@ TEST_F(GenericHistogramTest, PrunedInt) {
 
     // clang-format off
     const auto expected_histogram = GenericHistogram<int32_t>{
-      std::vector<int32_t>            { 1, 31, 60, 80},
-      std::vector<int32_t>            {25, 50, 60, 99},
-      std::vector<HistogramCountType> {32, 24, 4,  8},
-      std::vector<HistogramCountType> {10, 20, 1,  1}};
+      pmr_vector<int32_t>            { 1, 31, 60, 80},
+      pmr_vector<int32_t>            {25, 50, 60, 99},
+      pmr_vector<HistogramCountType> {32, 24, 4,  8},
+      pmr_vector<HistogramCountType> {10, 20, 1,  1}};
     // clang-format on
 
     EXPECT_EQ(*pruned, expected_histogram);
@@ -865,10 +865,10 @@ TEST_F(GenericHistogramTest, PrunedInt) {
         std::static_pointer_cast<GenericHistogram<int32_t>>(histogram->pruned(3, PredicateCondition::NotEquals, 21));
     // clang-format off
     const auto expected_histogram = GenericHistogram<int32_t>{
-      std::vector<int32_t>            { 1, 31, 60, 80},
-      std::vector<int32_t>            {25, 50, 60, 99},
-      std::vector<HistogramCountType> {37, 30, 5,  10},
-      std::vector<HistogramCountType> {10, 20, 1,  1}};
+      pmr_vector<int32_t>            { 1, 31, 60, 80},
+      pmr_vector<int32_t>            {25, 50, 60, 99},
+      pmr_vector<HistogramCountType> {37, 30, 5,  10},
+      pmr_vector<HistogramCountType> {10, 20, 1,  1}};
     // clang-format on
 
     EXPECT_EQ(*pruned, expected_histogram);
@@ -888,10 +888,10 @@ TEST_F(GenericHistogramTest, PrunedInt) {
         histogram->pruned(14, PredicateCondition::BetweenInclusive, 41, 50));
     // clang-format off
     const auto expected_histogram = GenericHistogram<int32_t>{
-      std::vector<int32_t>            { 1, 31, 60, 80},
-      std::vector<int32_t>            {25, 50, 60, 99},
-      std::vector<HistogramCountType> {32, 27, 4,  8},
-      std::vector<HistogramCountType> {10, 20, 1,  1}};
+      pmr_vector<int32_t>            { 1, 31, 60, 80},
+      pmr_vector<int32_t>            {25, 50, 60, 99},
+      pmr_vector<HistogramCountType> {32, 27, 4,  8},
+      pmr_vector<HistogramCountType> {10, 20, 1,  1}};
     // clang-format on
 
     EXPECT_EQ(*pruned, expected_histogram);
@@ -903,10 +903,10 @@ TEST_F(GenericHistogramTest, PrunedInt) {
         histogram->pruned(24, PredicateCondition::BetweenExclusive, 41, 89));
     // clang-format off
     const auto expected_histogram = GenericHistogram<int32_t>{
-      std::vector<int32_t>            { 1, 31, 60, 80},
-      std::vector<int32_t>            {25, 50, 60, 99},
-      std::vector<HistogramCountType> {24, 24, 5,  8},
-      std::vector<HistogramCountType> {10, 20, 1,  1}};
+      pmr_vector<int32_t>            { 1, 31, 60, 80},
+      pmr_vector<int32_t>            {25, 50, 60, 99},
+      pmr_vector<HistogramCountType> {24, 24, 5,  8},
+      pmr_vector<HistogramCountType> {10, 20, 1,  1}};
     // clang-format on
 
     EXPECT_EQ(*pruned, expected_histogram);
@@ -919,10 +919,10 @@ TEST_F(GenericHistogramTest, PrunedInt) {
         histogram->pruned(12, PredicateCondition::BetweenLowerExclusive, -10, 40));
     // clang-format off
     const auto expected_histogram = GenericHistogram<int32_t>{
-      std::vector<int32_t>            { 1, 31,   60, 80},
-      std::vector<int32_t>            {25, 50,   60, 99},
-      std::vector<HistogramCountType> {40, 24,   3,  6},
-      std::vector<HistogramCountType> {10, 20,   1,  1}};
+      pmr_vector<int32_t>            { 1, 31,   60, 80},
+      pmr_vector<int32_t>            {25, 50,   60, 99},
+      pmr_vector<HistogramCountType> {40, 24,   3,  6},
+      pmr_vector<HistogramCountType> {10, 20,   1,  1}};
     // clang-format on
 
     EXPECT_EQ(*pruned, expected_histogram);
@@ -934,10 +934,10 @@ TEST_F(GenericHistogramTest, PrunedInt) {
         histogram->pruned(100, PredicateCondition::GreaterThan, 40));
     // clang-format off
     const auto expected_histogram = GenericHistogram<int32_t>{
-      std::vector<int32_t>            {31, 60, 80},
-      std::vector<int32_t>            {50, 60, 99},
-      std::vector<HistogramCountType> {15, 5,  10},
-      std::vector<HistogramCountType> {20, 1,  1}};
+      pmr_vector<int32_t>            {31, 60, 80},
+      pmr_vector<int32_t>            {50, 60, 99},
+      pmr_vector<HistogramCountType> {15, 5,  10},
+      pmr_vector<HistogramCountType> {20, 1,  1}};
     // clang-format on
 
     EXPECT_EQ(*pruned, expected_histogram);
@@ -948,10 +948,10 @@ TEST_F(GenericHistogramTest, PrunedString) {
   // Same cardinalities as in PrunedInt, just with string values. Strings are chosen so that their numeric
   // representation is the same as the numbers used in PrunedInt, too.
   // clang-format off
-  const auto histogram = std::make_shared<GenericHistogram<pmr_string>>(std::vector<pmr_string>        { "a", "bc", "ce", "cy"},  // NOLINT
-                                                                        std::vector<pmr_string>        {"ax", "bv", "ce", "dq"},  // NOLINT
-                                                                        std::vector<HistogramCountType>{40,   30,   5,    10},    // NOLINT
-                                                                        std::vector<HistogramCountType>{10,   20,   1,    1},     // NOLINT
+  const auto histogram = std::make_shared<GenericHistogram<pmr_string>>(pmr_vector<pmr_string>        { "a", "bc", "ce", "cy"},  // NOLINT
+                                                                        pmr_vector<pmr_string>        {"ax", "bv", "ce", "dq"},  // NOLINT
+                                                                        pmr_vector<HistogramCountType>{40,   30,   5,    10},    // NOLINT
+                                                                        pmr_vector<HistogramCountType>{10,   20,   1,    1},     // NOLINT
                                                                         StringHistogramDomain{'a', 'z', 2u});
   // clang-format on
 
@@ -962,10 +962,10 @@ TEST_F(GenericHistogramTest, PrunedString) {
 
     // clang-format off
     const auto expected_histogram = GenericHistogram<pmr_string>{
-      std::vector<pmr_string>        { "a", "bc", "ce", "cy"},
-      std::vector<pmr_string>        {"ax", "bv", "ce", "dq"},
-      std::vector<HistogramCountType>{20,   30,   5,    10},
-      std::vector<HistogramCountType>{10,   20,   1,    1},
+      pmr_vector<pmr_string>        { "a", "bc", "ce", "cy"},
+      pmr_vector<pmr_string>        {"ax", "bv", "ce", "dq"},
+      pmr_vector<HistogramCountType>{20,   30,   5,    10},
+      pmr_vector<HistogramCountType>{10,   20,   1,    1},
       StringHistogramDomain{'a', 'z', 2u}};
     // clang-format on
 
@@ -978,10 +978,10 @@ TEST_F(GenericHistogramTest, PrunedString) {
         histogram->pruned(55, PredicateCondition::GreaterThan, "bl"));
     // clang-format off
     const auto expected_histogram = GenericHistogram<pmr_string>{
-      std::vector<pmr_string>        {"bc", "ce", "cy"},
-      std::vector<pmr_string>        {"bv", "ce", "dq"},
-      std::vector<HistogramCountType>{15,   5,    10},
-      std::vector<HistogramCountType>{20,   1,    1},
+      pmr_vector<pmr_string>        {"bc", "ce", "cy"},
+      pmr_vector<pmr_string>        {"bv", "ce", "dq"},
+      pmr_vector<HistogramCountType>{15,   5,    10},
+      pmr_vector<HistogramCountType>{20,   1,    1},
       StringHistogramDomain{'a', 'z', 2u}};
     // clang-format on
 
@@ -994,10 +994,10 @@ TEST_F(GenericHistogramTest, PrunedString) {
         histogram->pruned(14, PredicateCondition::BetweenInclusive, "bl", "bu"));
     // clang-format off
     const auto expected_histogram = GenericHistogram<pmr_string>{
-      std::vector<pmr_string>        { "a", "bc", "ce", "cy"},
-      std::vector<pmr_string>        {"ax", "bv", "ce", "dq"},
-      std::vector<HistogramCountType>{32,   27,   4,    8},
-      std::vector<HistogramCountType>{10,   20,   1,    1},
+      pmr_vector<pmr_string>        { "a", "bc", "ce", "cy"},
+      pmr_vector<pmr_string>        {"ax", "bv", "ce", "dq"},
+      pmr_vector<HistogramCountType>{32,   27,   4,    8},
+      pmr_vector<HistogramCountType>{10,   20,   1,    1},
       StringHistogramDomain{'a', 'z', 2u}};
     // clang-format on
 
@@ -1010,10 +1010,10 @@ TEST_F(GenericHistogramTest, PrunedString) {
         histogram->pruned(24, PredicateCondition::BetweenExclusive, "bm", "dg"));
     // clang-format off
     const auto expected_histogram = GenericHistogram<pmr_string>{
-      std::vector<pmr_string>        { "a", "bc", "ce", "cy"},
-      std::vector<pmr_string>        {"ax", "bv", "ce", "dq"},
-      std::vector<HistogramCountType>{24,   24,   5,    8},
-      std::vector<HistogramCountType>{10,   20,   1,    1},
+      pmr_vector<pmr_string>        { "a", "bc", "ce", "cy"},
+      pmr_vector<pmr_string>        {"ax", "bv", "ce", "dq"},
+      pmr_vector<HistogramCountType>{24,   24,   5,    8},
+      pmr_vector<HistogramCountType>{10,   20,   1,    1},
       StringHistogramDomain{'a', 'z', 2u}};
     // clang-format on
 
@@ -1027,10 +1027,10 @@ TEST_F(GenericHistogramTest, PrunedString) {
         histogram->pruned(24, PredicateCondition::BetweenExclusive, "blaba", "dfqfqs"));
     // clang-format off
     const auto expected_histogram = GenericHistogram<pmr_string>{
-      std::vector<pmr_string>        { "a", "bc", "ce", "cy"},
-      std::vector<pmr_string>        {"ax", "bv", "ce", "dq"},
-      std::vector<HistogramCountType>{24,   24,   5,    8},
-      std::vector<HistogramCountType>{10,   20,   1,    1},
+      pmr_vector<pmr_string>        { "a", "bc", "ce", "cy"},
+      pmr_vector<pmr_string>        {"ax", "bv", "ce", "dq"},
+      pmr_vector<HistogramCountType>{24,   24,   5,    8},
+      pmr_vector<HistogramCountType>{10,   20,   1,    1},
       StringHistogramDomain{'a', 'z', 2u}};
     // clang-format on
 
@@ -1045,10 +1045,10 @@ TEST_F(GenericHistogramTest, PrunedString) {
         histogram->pruned(15, PredicateCondition::BetweenExclusive, "cX", "dg"));
     // clang-format off
     const auto expected_histogram = GenericHistogram<pmr_string>{
-      std::vector<pmr_string>        { "a", "bc", "ce", "cy"},
-      std::vector<pmr_string>        {"ax", "bv", "ce", "dq"},
-      std::vector<HistogramCountType>{32,   24,   5,    9},
-      std::vector<HistogramCountType>{10,   20,   1,    1},
+      pmr_vector<pmr_string>        { "a", "bc", "ce", "cy"},
+      pmr_vector<pmr_string>        {"ax", "bv", "ce", "dq"},
+      pmr_vector<HistogramCountType>{32,   24,   5,    9},
+      pmr_vector<HistogramCountType>{10,   20,   1,    1},
       StringHistogramDomain{'a', 'z', 2u}};
     // clang-format on
 
@@ -1059,16 +1059,16 @@ TEST_F(GenericHistogramTest, PrunedString) {
 TEST_F(GenericHistogramTest, SplitAtEmptyBinBounds) {
   // clang-format off
   const auto histogram = GenericHistogram<int32_t>(
-          std::vector<int32_t>{},
-          std::vector<int32_t>{},
-          std::vector<HistogramCountType>{},
-          std::vector<HistogramCountType>{});
+          pmr_vector<int32_t>{},
+          pmr_vector<int32_t>{},
+          pmr_vector<HistogramCountType>{},
+          pmr_vector<HistogramCountType>{});
   // clang-format on
 
-  const auto expected_minima = std::vector<int32_t>{};
-  const auto expected_maxima = std::vector<int32_t>{};
-  const auto expected_heights = std::vector<HistogramCountType>{};
-  const auto expected_distinct_counts = std::vector<HistogramCountType>{};
+  const auto expected_minima = pmr_vector<int32_t>{};
+  const auto expected_maxima = pmr_vector<int32_t>{};
+  const auto expected_heights = pmr_vector<HistogramCountType>{};
+  const auto expected_distinct_counts = pmr_vector<HistogramCountType>{};
 
   const auto new_hist = histogram.split_at_bin_bounds(std::vector<std::pair<int32_t, int32_t>>{{}, {}});
 
@@ -1085,17 +1085,16 @@ TEST_F(GenericHistogramTest, SplitAtEmptyBinBounds) {
 TEST_F(GenericHistogramTest, SplitAtBinBounds) {
   // clang-format off
   const auto histogram = GenericHistogram<int32_t>(
-          std::vector<int32_t>{1,  30, 60, 80},
-          std::vector<int32_t>{25, 50, 75, 100},
-          std::vector<HistogramCountType>{40, 30, 20, 10},
-          std::vector<HistogramCountType>{10, 20, 15, 5});
+          pmr_vector<int32_t>{1,  30, 60, 80},
+          pmr_vector<int32_t>{25, 50, 75, 100},
+          pmr_vector<HistogramCountType>{40, 30, 20, 10},
+          pmr_vector<HistogramCountType>{10, 20, 15, 5});
   // clang-format on
 
-  const auto expected_minima = std::vector<int32_t>{1, 10, 16, 30, 36, 60, 80};
-  const auto expected_maxima = std::vector<int32_t>{9, 15, 25, 35, 50, 75, 100};
-  const auto expected_heights = std::vector<HistogramCountType>{14.4f, 9.6f, 16.0f, 8.57143f, 21.42857f, 20.0f, 10};
-  const auto expected_distinct_counts =
-      std::vector<HistogramCountType>{3.6f, 2.4f, 4.0f, 5.7142859f, 14.285714f, 15, 5};
+  const auto expected_minima = pmr_vector<int32_t>{1, 10, 16, 30, 36, 60, 80};
+  const auto expected_maxima = pmr_vector<int32_t>{9, 15, 25, 35, 50, 75, 100};
+  const auto expected_heights = pmr_vector<HistogramCountType>{14.4f, 9.6f, 16.0f, 8.57143f, 21.42857f, 20.0f, 10};
+  const auto expected_distinct_counts = pmr_vector<HistogramCountType>{3.6f, 2.4f, 4.0f, 5.7142859f, 14.285714f, 15, 5};
 
   const auto new_hist = histogram.split_at_bin_bounds(std::vector<std::pair<int32_t, int32_t>>{{10, 15}, {28, 35}});
 
@@ -1112,28 +1111,28 @@ TEST_F(GenericHistogramTest, SplitAtBinBounds) {
 TEST_F(GenericHistogramTest, SplitAtBinBoundsTwoHistograms) {
   // clang-format off
   const auto histogram_1 = GenericHistogram<int32_t>(
-          std::vector<int32_t>{0,  5, 15, 20, 35, 45, 50},
-          std::vector<int32_t>{4, 10, 18, 29, 40, 48, 51},
+          pmr_vector<int32_t>{0,  5, 15, 20, 35, 45, 50},
+          pmr_vector<int32_t>{4, 10, 18, 29, 40, 48, 51},
 
           // We only care about the bin edges in this test.
-          std::vector<HistogramCountType>{1, 1, 1, 1, 1, 1, 1},
-          std::vector<HistogramCountType>{1, 1, 1, 1, 1, 1, 1});
+          pmr_vector<HistogramCountType>{1, 1, 1, 1, 1, 1, 1},
+          pmr_vector<HistogramCountType>{1, 1, 1, 1, 1, 1, 1});
 
   const auto histogram_2 = GenericHistogram<int32_t>(
-          std::vector<int32_t>{2, 12, 40, 45, 50},
-          std::vector<int32_t>{7, 25, 42, 48, 52},
+          pmr_vector<int32_t>{2, 12, 40, 45, 50},
+          pmr_vector<int32_t>{7, 25, 42, 48, 52},
 
           // We only care about the bin edges in this test.
-          std::vector<HistogramCountType>{1, 1, 1, 1, 1},
-          std::vector<HistogramCountType>{1, 1, 1, 1, 1});
+          pmr_vector<HistogramCountType>{1, 1, 1, 1, 1},
+          pmr_vector<HistogramCountType>{1, 1, 1, 1, 1});
 
   // Even though the histograms are supposed to have the same bin edges, they do not exactly match.
   // The reason is that bins which do not contain any values are not created,
   // so some bins are missing in one histogram, and some are missing in the other.
-  const auto histogram_1_expected_minima = std::vector<int32_t>{0, 2, 5,  8,     15,     20, 26, 35, 40,     45, 50};
-  const auto histogram_2_expected_minima = std::vector<int32_t>{   2, 5,     12, 15, 19, 20,         40, 41, 45, 50, 52};  // NOLINT
-  const auto histogram_1_expected_maxima = std::vector<int32_t>{1, 4, 7, 10,     18,     25, 29, 39, 40,     48, 51};
-  const auto histogram_2_expected_maxima = std::vector<int32_t>{   4, 7,     14, 18, 19, 25,         40, 42, 48, 51, 52};  // NOLINT
+  const auto histogram_1_expected_minima = pmr_vector<int32_t>{0, 2, 5,  8,     15,     20, 26, 35, 40,     45, 50};
+  const auto histogram_2_expected_minima = pmr_vector<int32_t>{   2, 5,     12, 15, 19, 20,         40, 41, 45, 50, 52};  // NOLINT
+  const auto histogram_1_expected_maxima = pmr_vector<int32_t>{1, 4, 7, 10,     18,     25, 29, 39, 40,     48, 51};
+  const auto histogram_2_expected_maxima = pmr_vector<int32_t>{   4, 7,     14, 18, 19, 25,         40, 42, 48, 51, 52};  // NOLINT
   // clang-format on
 
   const auto new_histogram_1 = histogram_1.split_at_bin_bounds(histogram_2.bin_bounds());
@@ -1155,10 +1154,10 @@ TEST_F(GenericHistogramTest, SplitAtBinBoundsTwoHistograms) {
 TEST_F(GenericHistogramTest, ScaledWithSelectivity) {
   // clang-format off
   const auto histogram = GenericHistogram<int32_t>(
-    std::vector<int32_t>{1,  30, 60, 80},
-    std::vector<int32_t>{25, 50, 75, 100},
-    std::vector<HistogramCountType>{40, 30, 20, 10},
-    std::vector<HistogramCountType>{10, 20, 15, 5});
+    pmr_vector<int32_t>{1,  30, 60, 80},
+    pmr_vector<int32_t>{25, 50, 75, 100},
+    pmr_vector<HistogramCountType>{40, 30, 20, 10},
+    pmr_vector<HistogramCountType>{10, 20, 15, 5});
   // clang-format on
 
   const auto scaled_statistics_object_05 = histogram.scaled(0.5f);

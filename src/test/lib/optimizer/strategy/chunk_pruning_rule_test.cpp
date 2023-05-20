@@ -89,10 +89,10 @@ TEST_F(ChunkPruningRuleTest, SimplePruningTest) {
 
   // clang-format off
   const auto expected_histogram = GenericHistogram<int32_t>{
-    std::vector<int32_t>            {12345},
-    std::vector<int32_t>            {12345},
-    std::vector<HistogramCountType> {2},
-    std::vector<HistogramCountType> {1}};
+    pmr_vector<int32_t>            {12345},
+    pmr_vector<int32_t>            {12345},
+    pmr_vector<HistogramCountType> {2},
+    pmr_vector<HistogramCountType> {1}};
   // clang-format on
 
   const auto& column_statistics =

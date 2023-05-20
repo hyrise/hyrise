@@ -101,6 +101,16 @@ EqualDistinctCountHistogram<T>::EqualDistinctCountHistogram(pmr_vector<T>&& bin_
 }
 
 template <typename T>
+EqualDistinctCountHistogram<T>::~EqualDistinctCountHistogram() {
+  auto minima_pin_guard = WritePinGuard{_bin_minima};
+  _bin_minima.clear();
+  auto maxima_pin_guard = WritePinGuard{_bin_maxima};
+  _bin_maxima.clear();
+  auto heights_pin_guard = WritePinGuard{_bin_heights};
+  _bin_heights.clear();
+}
+
+template <typename T>
 std::shared_ptr<EqualDistinctCountHistogram<T>> EqualDistinctCountHistogram<T>::from_column(
     const Table& table, const ColumnID column_id, const BinID max_bin_count, const HistogramDomain<T>& domain) {
   Assert(max_bin_count > 0, "max_bin_count must be greater than zero ");
@@ -157,25 +167,6 @@ std::shared_ptr<EqualDistinctCountHistogram<T>> EqualDistinctCountHistogram<T>::
   return std::make_shared<EqualDistinctCountHistogram<T>>(
       std::move(bin_minima), std::move(bin_maxima), std::move(bin_heights),
       static_cast<HistogramCountType>(distinct_count_per_bin), bin_count_with_extra_value);
-}
-
-template <typename T>
-std::shared_ptr<AbstractStatisticsObject> EqualDistinctCountHistogram<T>::scaled(const Selectivity selectivity) const {
-  Assert(!std::isnan(selectivity), "Unexpected selectivity.");
-  GenericHistogramBuilder<T> builder(bin_count(), AbstractHistogram<T>::_domain);
-
-  auto minima_pin_guard = ReadPinGuard{_bin_minima};
-  auto maxima_pin_guard = ReadPinGuard{_bin_maxima};
-  auto heights_pin_guard = ReadPinGuard{_bin_heights};
-
-  // Scale the number of values in the bin with the given selectivity.
-  for (auto bin_id = BinID{0}; bin_id < bin_count(); ++bin_id) {
-    builder.add_bin(
-        bin_minimum(bin_id), bin_maximum(bin_id), bin_height(bin_id) * selectivity,
-        AbstractHistogram<T>::_scale_distinct_count(bin_height(bin_id), bin_distinct_count(bin_id), selectivity));
-  }
-
-  return builder.build();
 }
 
 template <typename T>

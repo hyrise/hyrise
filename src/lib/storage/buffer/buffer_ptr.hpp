@@ -142,12 +142,7 @@ class BufferPtr {
   }
 
   pointer get() const {
-    // PerformanceWarning(_frame->page_id == INVALID_PAGE_ID || _frame->is_pinned(), "BufferPtr: Frame is not pinned");
-    if (_frame->data) {
-      return reinterpret_cast<pointer>(_frame->data + _ptr_or_offset);
-    } else {
-      return reinterpret_cast<pointer>(_ptr_or_offset);
-    }
+    return reinterpret_cast<pointer>(_frame->data + _ptr_or_offset);
   }
 
   inline friend bool operator==(const BufferPtr& ptr1, const BufferPtr& ptr2) noexcept {
@@ -190,12 +185,15 @@ class BufferPtr {
     return ptr1.get() < ptr2;
   }
 
-  // void make_resident(const AccessIntent access_intent) {
-  //   _frame = get_buffer_manager_memory_resource()->make_resident(_frame, access_intent);
-  // }
-
   FramePtr get_frame() const {
+    if (_frame->page_type == PageType::Invalid) {
+      return nullptr;
+    }
     return FramePtr(_frame);
+  }
+
+  std::uintptr_t get_offset() const {
+    return _ptr_or_offset;
   }
 
   size_t get_frame_ref_count() const {
@@ -230,12 +228,12 @@ class BufferPtr {
       const auto [frame, offset] =
           get_buffer_manager_memory_resource()->find_frame_and_offset(reinterpret_cast<const void*>(ptr));
       _frame = frame;
-      if (frame->page_id != INVALID_PAGE_ID) {
+      if (frame->page_type != PageType::Invalid) {
         _ptr_or_offset = offset;
       }
       return;
     } else {
-      _frame = DummyFrame().get();
+      _frame = &get_buffer_manager_memory_resource()->DUMMY_FRAME;
     }
   }
 };

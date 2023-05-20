@@ -27,7 +27,7 @@ class EqualDistinctCountHistogram : public AbstractHistogram<T> {
                               pmr_vector<HistogramCountType>&& bin_heights,
                               const HistogramCountType distinct_count_per_bin, const BinID bin_count_with_extra_value,
                               const HistogramDomain<T>& domain = {});
-
+  ~EqualDistinctCountHistogram();
   /**
    * Create an EqualDistinctCountHistogram for a column (spanning all Segments) of a Table
    * @param max_bin_count   Desired number of bins. Less might be created, but never more. Must not be zero.
@@ -53,8 +53,6 @@ class EqualDistinctCountHistogram : public AbstractHistogram<T> {
   const T& bin_maximum(const BinID index) const override;
   HistogramCountType bin_height(const BinID index) const override;
   HistogramCountType bin_distinct_count(const BinID index) const override;
-
-  std::shared_ptr<AbstractStatisticsObject> scaled(const Selectivity selectivity) const override;
 
  protected:
   BinID _bin_for_value(const T& value) const override;

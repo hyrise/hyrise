@@ -33,6 +33,8 @@ class SSDRegion : public Noncopyable {
 
   std::filesystem::path get_file_name();
 
+  size_t memory_consumption() const;
+
  private:
   const int _fd;
   const std::filesystem::path _backing_file_name;

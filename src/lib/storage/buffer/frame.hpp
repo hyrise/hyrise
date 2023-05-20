@@ -34,14 +34,16 @@ class Frame {
   // Pointer to raw data in volatile region
   std::byte* data;
 
+  // Mutex used for safe concurrent access
   std::mutex latch;
 
+  // Pointer to the sibling frame. This can be a DRAM frame or a NUMA frame.
   FramePtr sibling_frame;
 
-  // Various helper functions
+  // Check if the frame can be evicted based on its state
   bool can_evict() const;
 
-  // Set the frame to evicted
+  // Set the frame to evicted state
   void set_evicted();
 
   // Try setting the dirty flag. It won't be reset if it is already set.
@@ -50,10 +52,19 @@ class Frame {
   // Check if the frame is resident
   bool is_resident() const;
 
+  // Set the frame to resident state
   void set_resident();
 
+  // Check if the frame is pinned
   bool is_pinned() const;
 
+  // Check if the frame is invalid (e.g. for a dummy frame)
+  bool is_invalid() const;
+
+  // Check if the frame is dirty
+  bool is_dirty() const;
+
+  // Clear the frame
   void clear();
 
   // Pin the frame
@@ -71,38 +82,31 @@ class Frame {
   // Set the reference bit to true
   void set_referenced();
 
+  // Check if the reference bit is set
   bool is_referenced() const;
 
+  // Manually increase the reference count. This function is only cautionary used on the BufferPoolAllocator
   void increase_ref_count();
+
+  // Manually decrease the reference count. This function is only cautionary used on the BufferPoolAllocator
   void decrease_ref_count();
 
   // Returns the internal reference count. This function should only be used for testing and debugging purposes.
   std::size_t _internal_ref_count() const;
 
-  // TODO: atomically?
+  // Clone the frame and attach it as sibling. A NUMA frame gets a DRAM frame and visa-versa TODO: atomically?
   template <PageType clone_page_type>
   FramePtr clone_and_attach_sibling();
 
+  // Copy the data from the source frame to the target frame using memcpy
   void copy_data_to(const FramePtr& target_frame) const;
 
  private:
   // Friend function used by the FramePtr intrusive_ptr to increase the ref_count. This functions should not be called directly.
-  friend void intrusive_ptr_add_ref(Frame* frame) {
-    DebugAssert(frame != nullptr, "Frame is nullptr");
-    frame->_ref_count.fetch_add(1, std::memory_order_release);
-  }
+  friend void intrusive_ptr_add_ref(Frame* frame);
 
   // Friend function used by the FramePtr intrusive_ptr to decrease the ref_count. This functions also avoids circular dependencies between the sibling frame.This functions should not be called directly.
-  friend void intrusive_ptr_release(Frame* frame) {
-    DebugAssert(frame != nullptr, "Frame is nullptr");
-
-    // const auto prev_ref_count = frame->_ref_count.fetch_sub(1, std::memory_order_release);
-    if (frame->_ref_count.fetch_sub(1, std::memory_order_release) == 1) {
-      // Source: https://www.boost.org/doc/libs/1_61_0/doc/html/atomic/usage_examples.html
-      std::atomic_thread_fence(std::memory_order_acquire);
-      delete frame;
-    }
-  }
+  friend void intrusive_ptr_release(Frame* frame);
 
   // Current reference count of the frame
   std::atomic_uint32_t _ref_count;
@@ -111,11 +115,6 @@ class Frame {
 template <typename... Args>
 FramePtr make_frame(Args&&... args) {
   return FramePtr(new Frame(std::forward<Args>(args)...));
-}
-
-static FramePtr DummyFrame() {
-  static FramePtr dummy = make_frame(PageID{INVALID_PAGE_ID}, PageSizeType::KiB8, PageType::Dram, nullptr);
-  return dummy;
 }
 
 // void intrusive_ptr_add_ref(Frame* frame);

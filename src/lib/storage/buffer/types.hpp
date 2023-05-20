@@ -40,6 +40,7 @@ constexpr PageSizeType find_fitting_page_size_type(const std::size_t bytes) {
 
 constexpr size_t NUM_PAGE_SIZE_TYPES = magic_enum::enum_count<PageSizeType>();
 
+constexpr PageSizeType MIN_PAGE_SIZE_TYPE = magic_enum::enum_value<PageSizeType>(0);
 constexpr PageSizeType MAX_PAGE_SIZE_TYPE = magic_enum::enum_value<PageSizeType>(NUM_PAGE_SIZE_TYPES - 1);
 
 // Signifies an invalid NUMA node (>= 0 is a valid node)

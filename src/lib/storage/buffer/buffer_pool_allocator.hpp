@@ -73,10 +73,15 @@ class BufferPoolAllocator {
   }
 
   void deallocate(pointer const ptr, std::size_t n) {
+    DebugAssert(
+        ptr.get_frame().get() == &get_buffer_manager_memory_resource()->DUMMY_FRAME || ptr.get_frame()->is_resident(),
+        "Trying to deallocate on a non-resident frame");
+
     if (auto observer = _observer.lock()) {
       auto frame = ptr.get_frame();
       observer->on_deallocate(frame);
     }
+    // TODO: Properly test the ref counting
     ptr._frame->decrease_ref_count();
     _memory_resource->deallocate(static_cast<void_pointer>(ptr), sizeof(value_type) * n, alignof(T));
   }
