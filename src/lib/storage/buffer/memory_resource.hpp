@@ -78,14 +78,11 @@ class MonotonicBufferResource : public MemoryResource {
   static constexpr float NEW_PAGE_FILL_RATIO = 0.8f;
 
   MemoryResource* _memory_resource;
-  FramePtr _current_frame;
 
+  FramePtr _current_frame;
   std::size_t _current_buffer_pos;
   std::size_t _current_buffer_size;
   std::size_t _next_buffer_size;
-
-  // TODO: Make it lock free
-  std::mutex _mutex;
 };
 
 /**
@@ -98,14 +95,23 @@ class NewDeleteMemoryResource : public MemoryResource {
   void deallocate(BufferPtr<void> ptr, std::size_t bytes, std::size_t alignment);
 };
 
-// Factory functions for memory resource
+class GlobalMonotonicBufferResource : public MemoryResource {
+ public:
+  BufferPtr<void> allocate(std::size_t bytes, std::size_t alignment);
+  void deallocate(BufferPtr<void> ptr, std::size_t bytes, std::size_t alignment);
 
+ private:
+  boost::thread_specific_ptr<MonotonicBufferResource> _memory_resource;
+  MonotonicBufferResource* get_memory_resource();
+};
+
+// Factory functions for memory resource
 BufferManager* get_buffer_manager_memory_resource();
 
 // Return the global Memory Resource that uses classical new and delete and thereby bypassed the buffer manager
 NewDeleteMemoryResource* get_new_delete_memory_resource();
 
 // TODO: This does not work if a data structure allocated again on a different thread since the pointer might be used for another thread
-MonotonicBufferResource* get_monotonic_buffer_resource();
+GlobalMonotonicBufferResource* get_global_monotonic_buffer_resource();
 
 }  // namespace hyrise

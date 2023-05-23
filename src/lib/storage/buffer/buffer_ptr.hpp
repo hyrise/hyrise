@@ -12,7 +12,7 @@
 
 namespace hyrise {
 
-template <typename PointedType>
+template <typename PointedType>  // TODO: Introduce tag that can do ref counting
 class BufferPtr {
  public:
   // Used to mark the BufferPtr as freshly allocated after allocation

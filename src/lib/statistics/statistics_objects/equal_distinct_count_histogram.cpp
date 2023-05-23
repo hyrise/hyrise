@@ -217,18 +217,24 @@ BinID EqualDistinctCountHistogram<T>::_next_bin_for_value(const T& value) const 
 template <typename T>
 const T& EqualDistinctCountHistogram<T>::bin_minimum(const BinID index) const {
   DebugAssert(index < _bin_minima.size(), "Index is not a valid bin.");
+  ReadPinGuard{_bin_minima};
+  PerformanceWarning("Histogram _bin_minima() with pin called");
   return _bin_minima[index];
 }
 
 template <typename T>
 const T& EqualDistinctCountHistogram<T>::bin_maximum(const BinID index) const {
   DebugAssert(index < _bin_maxima.size(), "Index is not a valid bin.");
+  ReadPinGuard{_bin_maxima};
+  PerformanceWarning("Histogram _bin_maxima() with pin called");
   return _bin_maxima[index];
 }
 
 template <typename T>
 HistogramCountType EqualDistinctCountHistogram<T>::bin_height(const BinID index) const {
   DebugAssert(index < _bin_heights.size(), "Index is not a valid bin.");
+  ReadPinGuard{_bin_heights};
+  PerformanceWarning("Histogram bin_height() with pin called");
   return _bin_heights[index];
 }
 

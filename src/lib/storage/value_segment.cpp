@@ -134,8 +134,10 @@ template <typename T>
 void ValueSegment<T>::resize(const size_t size) {
   DebugAssert(size > _values.size() && size <= _values.capacity(),
               "ValueSegments should not be shrunk or resized beyond their original capacity");
+  auto values_pin_guard = WritePinGuard{_values};
   _values.resize(size);
   if (is_nullable()) {
+    auto values_pin_guard = WritePinGuard{*_null_values};
     std::lock_guard<std::mutex> lock{_null_value_modification_mutex};
     _null_values->resize(size);
   }
@@ -166,7 +168,7 @@ size_t ValueSegment<T>::memory_usage(const MemoryUsageCalculationMode mode) cons
   const auto common_elements_size = sizeof(*this) + null_value_vector_size;
 
   if constexpr (std::is_same_v<T, pmr_string>) {
-    return common_elements_size + string_vector_memory_usage(_values, mode);
+    return common_elements_size;  // TOD= string_vector_memory_usage(_values, mode);
   }
 
   return common_elements_size + _values.capacity() * sizeof(T);

@@ -10,7 +10,7 @@
 std::size_t _delete_count = 0;
 
 void operator delete(void* p) noexcept {
-  _delete_count++;
+  // _delete_count++;
   std::free(p);
 }
 

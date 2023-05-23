@@ -28,7 +28,8 @@ DictionarySegment<T>::DictionarySegment(const std::shared_ptr<const pmr_vector<T
 
 template <typename T>
 DictionarySegment<T>::~DictionarySegment() {
-  Fail("TODO");
+  auto dict_pin_guard = WritePinGuard{*_dictionary};
+  // auto attribute_vector_pin_guard = WritePinGuard{_attribute_vector};
 }
 
 template <typename T>

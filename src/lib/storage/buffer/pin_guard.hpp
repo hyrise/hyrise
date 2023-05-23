@@ -24,6 +24,7 @@ struct PinnedFrames : public Noncopyable {
   void add_pin(const FramePtr& frame) {
     _pins.push_back(frame);
     get_buffer_manager_memory_resource()->pin(frame);
+    DebugAssert(frame->is_resident(), "Is resident");
   }
 
   void remove_pin(const FramePtr& frame) {
@@ -67,7 +68,7 @@ struct FramePinGuard final : public PinnedFrames<accessIntent> {
 
     add_pin(frame);
 
-    // Ensure that all child frames are pinned fo^r pmr_vector<pmr_string>
+    // Ensure that all child frames are pinned for pmr_vector<pmr_string>
     if constexpr (std::is_same_v<std::remove_cv_t<T>, pmr_vector<pmr_string>>) {
       for (const auto& string : vector) {
         const auto string_frame = string.begin().get_frame();
@@ -96,7 +97,6 @@ struct FramePinGuard final : public PinnedFrames<accessIntent> {
     };
   }
 
-  // TODO: Adapt them to work with strings, too
   template <typename T>
   FramePinGuard(const ValueSegment<T>& segment) {
     add_vector_pins(segment.values());

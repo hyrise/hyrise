@@ -592,6 +592,86 @@ TEST_F(BufferManagerTest, TestFindFrameAndOffset) {
   EXPECT_EQ(outside_offset, 0);
 }
 
+TEST_F(BufferManagerTest, TestMultipleAllocationsAndDeallocations) {
+  constexpr auto iterations = size_t{1000};
+  constexpr auto vector_size = size_t{8192};
+  Hyrise::get().buffer_manager =
+      create_buffer_manager(bytes_for_size_type(MAX_PAGE_SIZE_TYPE), BufferManagerMode::DramSSD);
+  auto vectors = std::vector<std::shared_ptr<pmr_vector<int32_t>>>{};
+
+  for (auto i = 0; i < iterations; ++i) {
+    auto allocator = PolymorphicAllocator<size_t>{get_buffer_manager_memory_resource()};
+    auto pin_guard = AllocatorPinGuard{allocator};
+    auto vector = pmr_vector<int32_t>(vector_size, allocator);
+    std::fill(vector.begin(), vector.end(), i);
+    vectors.emplace_back(std::make_shared<pmr_vector<int32_t>>(std::move(vector)));
+  }
+
+  for (auto i = 0; i < iterations; ++i) {
+    ReadPinGuard pin_guard{*vectors[i]};
+    auto& vector = *vectors[i];
+    for (auto j = 0; j < vector_size; ++j) {
+      EXPECT_EQ(vector[j], i);
+    }
+  }
+
+  for (size_t i = iterations - 1; i > 0; --i) {
+    ReadPinGuard pin_guard{*vectors[i]};
+    auto& vector = *vectors[i];
+    for (auto j = 0; j < vector_size; ++j) {
+      EXPECT_EQ(vector[j], i);
+    }
+  }
+
+  for (auto i = 0; i < iterations; ++i) {
+    WritePinGuard pin_guard{*vectors[i]};
+    vectors[i] = nullptr;
+  }
+}
+
+TEST_F(BufferManagerTest, TestMultipleAllocationsAndDeallocationsStrings) {
+  constexpr auto iterations = size_t{1000};
+  constexpr auto vector_size = size_t{8192};
+  Hyrise::get().buffer_manager =
+      create_buffer_manager(2 * bytes_for_size_type(MAX_PAGE_SIZE_TYPE), BufferManagerMode::DramSSD);
+  auto vectors = std::vector<std::shared_ptr<pmr_vector<pmr_string>>>{};
+  auto buffer_resource = MonotonicBufferResource{get_buffer_manager_memory_resource()};
+
+  for (auto i = 0; i < iterations; ++i) {
+    auto allocator = PolymorphicAllocator<size_t>{&buffer_resource};
+    auto pin_guard = AllocatorPinGuard{allocator};
+    auto vector = pmr_vector<pmr_string>(vector_size, allocator);
+    if (i > iterations / 2) {
+      std::fill(vector.begin(), vector.end(), boost::lexical_cast<pmr_string>(i));
+    } else {
+      std::fill(vector.begin(), vector.end(),
+                std::move(boost::lexical_cast<pmr_string>(i) + "add some padding to create along string"));
+    }
+    vectors.emplace_back(std::make_shared<pmr_vector<pmr_string>>(std::move(vector)));
+  }
+
+  for (auto i = 0; i < iterations; ++i) {
+    ReadPinGuard pin_guard{*vectors[i]};
+    auto& vector = *vectors[i];
+    for (auto j = 0; j < vector_size; ++j) {
+      EXPECT_EQ(vector[j], boost::lexical_cast<pmr_string>(i));
+    }
+  }
+
+  for (size_t i = iterations - 1; i > 0; --i) {
+    ReadPinGuard pin_guard{*vectors[i]};
+    auto& vector = *vectors[i];
+    for (auto j = 0; j < vector_size; ++j) {
+      EXPECT_EQ(vector[j], boost::lexical_cast<pmr_string>(i));
+    }
+  }
+
+  for (auto i = 0; i < iterations; ++i) {
+    WritePinGuard pin_guard{*vectors[i]};
+    vectors[i] = nullptr;
+  }
+}
+
 TEST_F(BufferManagerTest, TestVectorBeginEnd) {
   // auto allocator = PolymorphicAllocator<size_t>{get_buffer_manager_memory_resource()};
   // // 8192 * 4 == Page32KB

@@ -114,26 +114,31 @@ bool Frame::is_dirty() const {
 }
 
 Frame::~Frame() {
+#ifdef HYRISE_DEBUG
+  if (is_resident()) {
+    std::cout << "WARNING: Frame was removed without eviction" << std::endl;  // TODO
+  }
+#endif
   //TODO DebugAssert(!is_resident(), "Frame was deleted while still resident");
 }
 
 // Friend function used by the FramePtr intrusive_ptr to increase the ref_count. This functions should not be called directly.
-inline void intrusive_ptr_add_ref(Frame* frame) {
-  DebugAssert(frame != nullptr, "Frame is nullptr");
-  frame->_ref_count.fetch_add(1, std::memory_order_release);
-}
+// inline void intrusive_ptr_add_ref(Frame* frame) {
+//   DebugAssert(frame != nullptr, "Frame is nullptr");
+//   frame->_ref_count.fetch_add(1, std::memory_order_release);
+// }
 
-// Friend function used by the FramePtr intrusive_ptr to decrease the ref_count. This functions also avoids circular dependencies between the sibling frame.This functions should not be called directly.
-inline void intrusive_ptr_release(Frame* frame) {
-  DebugAssert(frame != nullptr, "Frame is nullptr");
+// // Friend function used by the FramePtr intrusive_ptr to decrease the ref_count. This functions also avoids circular dependencies between the sibling frame.This functions should not be called directly.
+// inline void intrusive_ptr_release(Frame* frame) {
+//   DebugAssert(frame != nullptr, "Frame is nullptr");
 
-  // TODO: Handle reference count with sibling frame
-  if (frame->_ref_count.fetch_sub(1, std::memory_order_release) == 1) {
-    // Source: https://www.boost.org/doc/libs/1_61_0/doc/html/atomic/usage_examples.html
-    std::atomic_thread_fence(std::memory_order_acquire);
-    delete frame;
-  }
-}
+//   // TODO: Handle reference count with sibling frame
+//   if (frame->_ref_count.fetch_sub(1, std::memory_order_release) == 1) {
+//     // Source: https://www.boost.org/doc/libs/1_61_0/doc/html/atomic/usage_examples.html
+//     std::atomic_thread_fence(std::memory_order_acquire);
+//     delete frame;
+//   }
+// }
 
 std::size_t Frame::_internal_ref_count() const {
   return _ref_count.load();

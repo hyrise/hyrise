@@ -103,10 +103,27 @@ class Frame {
 
  private:
   // Friend function used by the FramePtr intrusive_ptr to increase the ref_count. This functions should not be called directly.
-  friend void intrusive_ptr_add_ref(Frame* frame);
+  // friend void intrusive_ptr_add_ref(Frame* frame);
+
+  // // Friend function used by the FramePtr intrusive_ptr to decrease the ref_count. This functions also avoids circular dependencies between the sibling frame.This functions should not be called directly.
+  // friend void intrusive_ptr_release(Frame* frame);
+
+  friend void intrusive_ptr_add_ref(Frame* frame) {
+    DebugAssert(frame != nullptr, "Frame is nullptr");
+    frame->_ref_count.fetch_add(1, std::memory_order_release);
+  }
 
   // Friend function used by the FramePtr intrusive_ptr to decrease the ref_count. This functions also avoids circular dependencies between the sibling frame.This functions should not be called directly.
-  friend void intrusive_ptr_release(Frame* frame);
+  friend void intrusive_ptr_release(Frame* frame) {
+    DebugAssert(frame != nullptr, "Frame is nullptr");
+
+    // TODO: Handle reference count with sibling frame
+    if (frame->_ref_count.fetch_sub(1, std::memory_order_release) == 1) {
+      // Source: https://www.boost.org/doc/libs/1_61_0/doc/html/atomic/usage_examples.html
+      std::atomic_thread_fence(std::memory_order_acquire);
+      delete frame;
+    }
+  }
 
   // Current reference count of the frame
   std::atomic_uint32_t _ref_count;

@@ -112,6 +112,7 @@ BufferManager::BufferPools& BufferManager::BufferPools::operator=(BufferManager:
 
 // TODO: Track purges, verifiy proper eviction, rename to evict until free
 void BufferManager::BufferPools::allocate_frame(FramePtr& frame) {
+  // Assume that the frame is freshly allocated or locked individually
   DebugAssert(frame->page_type == _page_type, "Frame has wrong page type");
   const auto required_size_type = frame->size_type;
 
@@ -124,18 +125,21 @@ void BufferManager::BufferPools::allocate_frame(FramePtr& frame) {
   // Find potential victim frame if we don't have enough space left
   auto item = EvictionItem{};
   // TODO: Really need to convert to int64?
+
   while (((int64_t)current_bytes + (int64_t)bytes_required - (int64_t)freed_bytes) > (int64_t)_max_bytes) {
     if (!_eviction_queue->try_pop(item)) {
-      _used_bytes -= bytes_required;
       Fail(
           "Cannot pop item from queue. All frames seems to be pinned. Please increase the memory size of this buffer "
           "pool.");
     }
 
-    auto& current_frame = item.frame;
+    auto current_frame = item.frame;
+
+    DebugAssert(current_frame != frame, "Frame is already in the queue");
 
     // Lock the frame to prevent it from being modified while we are working on it
-    std::lock_guard<std::mutex> lock(current_frame->latch);
+    DebugAssert(current_frame->_internal_ref_count() > 0, "Frame has no references");
+    std::scoped_lock lock(current_frame->latch);
     DebugAssert(current_frame->page_type == _page_type, "Frame has wrong page type");
 
     // Check if the frame can be evicted based on the timestamp, the state and the pin count
@@ -150,7 +154,7 @@ void BufferManager::BufferPools::allocate_frame(FramePtr& frame) {
     }
 
     // Call the callback to evict the frame. This is handled by the BufferManager instead of the BufferPool,
-    // because we need access other members for eviction.
+    // because we need access other things for eviction.
     _evict_frame(current_frame);
 
     const auto current_frame_size_type = current_frame->size_type;
@@ -159,7 +163,6 @@ void BufferManager::BufferPools::allocate_frame(FramePtr& frame) {
 
     if (current_frame_size_type == required_size_type) {
       // If the evicted frame is of the same page type, we should just use it directly.
-      // TODO: Lock frame?
       _buffer_pools[static_cast<size_t>(required_size_type)]->move(current_frame, frame);
       break;
     } else {
@@ -193,7 +196,7 @@ void BufferManager::BufferPools::deallocate_frame(FramePtr& frame) {
   // TODO: add_to_eviction_queue(frame); ?, might reduce madvie calls
   DebugAssert(frame->page_type == _page_type, "Frame has wrong page type");
   if (frame->is_resident()) {
-    std::lock_guard<std::mutex> lock(frame->latch);
+    std::scoped_lock lock(frame->latch);
     const auto size_type = frame->size_type;
     _buffer_pools[static_cast<size_t>(size_type)]->free(frame);
     _used_bytes -= bytes_for_size_type(size_type);
@@ -347,7 +350,7 @@ FramePtr BufferManager::make_resident(FramePtr frame, const AccessIntent access_
         if (!numa_frame) {
           numa_frame = dram_frame->clone_and_attach_sibling<PageType::Numa>();
         }
-        std::lock_guard<std::mutex> lock(numa_frame->latch);
+        std::scoped_lock lock(numa_frame->latch);
 
         DebugAssert(!numa_frame->is_resident(), "DRAM frame is already resident");
         _numa_buffer_pools.allocate_frame(numa_frame);
@@ -366,12 +369,13 @@ FramePtr BufferManager::make_resident(FramePtr frame, const AccessIntent access_
       if (!dram_frame) {
         dram_frame = numa_frame->clone_and_attach_sibling<PageType::Dram>();
       }
-      _dram_buffer_pools.allocate_frame(dram_frame);
 
       numa_frame->wait_until_unpinned();
 
       DebugAssert(!dram_frame->is_pinned(), "DRAM frame is already pinned");
       std::scoped_lock lock(numa_frame->latch, dram_frame->latch);
+
+      _dram_buffer_pools.allocate_frame(dram_frame);
 
       numa_frame->pin();
       dram_frame->pin();
@@ -393,14 +397,14 @@ FramePtr BufferManager::make_resident(FramePtr frame, const AccessIntent access_
   // Case 4: Neither in DRAM nor in NUMA or not bypass DRAM --> we need to bring the page into DRAM
   DebugAssert(dram_frame, "DRAM frame is not allocated");
 
-  std::lock_guard<std::mutex> lock(dram_frame->latch);
+  std::scoped_lock lock(dram_frame->latch);
 
   dram_frame->pin();
   _dram_buffer_pools.allocate_frame(dram_frame);
   read_page_from_ssd(dram_frame);
   dram_frame->dirty = true;
   dram_frame->unpin();
-  _dram_buffer_pools.add_to_eviction_queue(dram_frame);
+  // _dram_buffer_pools.add_to_eviction_queue(dram_frame);
 
   return dram_frame;
 }
@@ -409,8 +413,6 @@ void BufferManager::evict_frame(const FramePtr& frame) {
   DebugAssert(frame != nullptr, "Frame is null");
   DebugAssert(frame->is_resident(), "Frame is not resident");
   DebugAssert(!frame->is_pinned(), "Frame is still pinned");
-  DebugAssert(!frame->latch.try_lock(),
-              "Frame should not be locked. Otherwise, we run into a deadlock when using this function as callback");
 
   // Case 1: The frame is not dirty and we don't need to do anything
   if (!frame->dirty) {
@@ -420,10 +422,13 @@ void BufferManager::evict_frame(const FramePtr& frame) {
 
   // Case 2: Numa buffer pools are disabled anyways, we can just write to SSD
   if (!_numa_buffer_pools.enabled) {
+    frame->pin();
     DebugAssert(frame->page_type == PageType::Dram, "Invalid page type");
     write_page_to_ssd(frame);
     frame->dirty = false;
     frame->set_evicted();
+    frame->unpin();
+
     return;
   }
 
@@ -447,7 +452,7 @@ void BufferManager::evict_frame(const FramePtr& frame) {
   numa_frame->wait_until_unpinned();
   DebugAssert(!numa_frame->dirty.load(), "NUMA frame is dirty");
 
-  std::lock_guard<std::mutex> lock(numa_frame->latch);
+  std::scoped_lock lock(numa_frame->latch);
   numa_frame->pin();
   frame->pin();
 
@@ -505,6 +510,7 @@ FramePtr BufferManager::new_frame(const PageSizeType size_type) {
 
   if (use_dram) {
     auto allocated_dram_frame = make_frame(page_id, size_type, PageType::Dram);
+    DebugAssert(allocated_dram_frame->_internal_ref_count() >= 1, "Frame should be referenced at least once");
     _dram_buffer_pools.allocate_frame(allocated_dram_frame);
     return allocated_dram_frame;
   } else {
@@ -596,6 +602,10 @@ BufferPtr<void> BufferManager::allocate(std::size_t bytes, std::size_t align) {
   }
 
   _metrics->num_allocs++;
+
+  // TODO: Remove. Leads to leaks
+  frame->increase_ref_count();
+  frame->increase_ref_count();
 
   return BufferPtr<void>(frame.get(), 0, typename BufferPtr<void>::AllocTag{});
 }

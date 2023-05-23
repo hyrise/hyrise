@@ -37,8 +37,6 @@ BufferPtr<void> MonotonicBufferResource::allocate_from_current(std::size_t align
 }
 
 BufferPtr<void> MonotonicBufferResource::allocate(std::size_t bytes, std::size_t alignment) {
-  std::lock_guard<std::mutex> lock(_mutex);
-
   if (alignment > alignof(std::max_align_t)) {
     Fail("Alignment must not be greater than alignof(std::max_align_t)");
   }
@@ -84,7 +82,7 @@ bool MonotonicBufferResource::fills_page(std::size_t bytes) const {
 
 void MonotonicBufferResource::deallocate([[maybe_unused]] BufferPtr<void> ptr, [[maybe_unused]] std::size_t bytes,
                                          [[maybe_unused]] std::size_t alignment) {
-  // In constrast to the std memory resource, we still dispatch to the underlying memory resource to
+  // noop
 }
 
 BufferPtr<void> NewDeleteMemoryResource::allocate(std::size_t bytes, std::size_t alignment) {
@@ -97,6 +95,21 @@ void NewDeleteMemoryResource::deallocate(BufferPtr<void> ptr, std::size_t bytes,
   operator delete[](raw_ptr, std::align_val_t(alignment));
 }
 
+BufferPtr<void> GlobalMonotonicBufferResource::allocate(std::size_t bytes, std::size_t alignment) {
+  return get_memory_resource()->allocate(bytes, alignment);
+}
+
+void GlobalMonotonicBufferResource::deallocate(BufferPtr<void> ptr, std::size_t bytes, std::size_t alignment) {
+  get_memory_resource()->deallocate(ptr, bytes, alignment);
+}
+
+MonotonicBufferResource* GlobalMonotonicBufferResource::get_memory_resource() {
+  if (!_memory_resource.get()) {
+    _memory_resource.reset(new MonotonicBufferResource());
+  }
+  return _memory_resource.get();
+}
+
 BufferManager* get_buffer_manager_memory_resource() {
   return &Hyrise::get().buffer_manager;
 }
@@ -106,11 +119,8 @@ NewDeleteMemoryResource* get_new_delete_memory_resource() {
   return &memory_resource;
 }
 
-MonotonicBufferResource* get_monotonic_buffer_resource() {
-  static boost::thread_specific_ptr<MonotonicBufferResource> memory_resource;
-  if (!memory_resource.get()) {
-    memory_resource.reset(new MonotonicBufferResource());
-  }
-  return memory_resource.get();
+GlobalMonotonicBufferResource* get_global_monotonic_buffer_resource() {
+  static GlobalMonotonicBufferResource memory_resource;
+  return &memory_resource;
 }
 }  // namespace hyrise

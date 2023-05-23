@@ -27,11 +27,14 @@ class FixedWidthIntegerVector : public CompressedVector<FixedWidthIntegerVector<
  public:
   explicit FixedWidthIntegerVector(pmr_vector<UnsignedIntType> data) : _data{std::move(data)} {}
 
+  ~FixedWidthIntegerVector() {
+    auto pin_guard = ReadPinGuard{_data};
+  }
+
   const pmr_vector<UnsignedIntType>& data() const {
     return _data;
   }
 
- public:
   size_t on_size() const {
     return _data.size();
   }
