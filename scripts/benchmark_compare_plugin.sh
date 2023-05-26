@@ -31,8 +31,6 @@ case "${output}" in
     *)          echo 'Unsupported operating system. Aborting.' && exit 1;;
 esac
 
-echo "1"
-
 # Retrieve SHA-1 hashes from arguments (e.g., translate "master" into an actual hash)
 commit_reference=$1
 
