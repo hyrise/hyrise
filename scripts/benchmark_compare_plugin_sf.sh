@@ -87,7 +87,6 @@ do
     runtime=$(( runtime > 60 ? runtime : 60 ))
 
     echo "Running $benchmark for $commit... (single-threaded, SF ${sf})"
-    echo "${build_folder}"/"$benchmark" -t ${runtime} -r ${runs} -w ${warmup_seconds} -o "${build_folder}/benchmark_plugin_results/${benchmark}_${commit}_st_s${sf}.json"
     ( "${build_folder}"/"$benchmark" -r ${runs} -t ${runtime} -w ${warmup_seconds} -o "${build_folder}/benchmark_plugin_results/${benchmark}_${commit}_st_s${sf}.json" 2>&1 ) | tee "${build_folder}/benchmark_plugin_results/${benchmark}_${commit}_st_s${sf}.log"
 
     echo "Running $benchmark for $commit... (single-threaded, SF ${sf}) w/ plugin"
