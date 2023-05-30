@@ -160,7 +160,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_by_node_type(
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_stored_table_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto stored_table_node = std::dynamic_pointer_cast<StoredTableNode>(node);
-  Assert(!stored_table_node->left_input() && !stored_table_node->right_input(), "StoredTableNode must be a leaf");
+  Assert(!stored_table_node->left_input() && !stored_table_node->right_input(), "StoredTableNode must be a leaf.");
   return std::make_shared<GetTable>(stored_table_node->table_name, stored_table_node->pruned_chunk_ids(),
                                     stored_table_node->pruned_column_ids());
 }
@@ -239,7 +239,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_in
     }
 
     // Check if chunk is indexed.
-    if (indexed_chunk_ids.find(chunk_id) != indexed_chunk_ids.end()) {
+    if (indexed_chunk_ids.contains(chunk_id)) {
       indexed_chunks.emplace_back(pruned_table_chunk_id);
     }
     ++pruned_table_chunk_id;

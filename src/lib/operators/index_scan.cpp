@@ -60,7 +60,7 @@ std::shared_ptr<const Table> IndexScan::_on_execute() {
   }
 
   _out_table = std::make_shared<Table>(_in_table->column_definitions(), TableType::References);
-  auto matches_out = std::make_shared<RowIDPosList>();
+  auto matches_out = std::make_shared<RowIDPosList>();  // TODO(anyone): assess if std::deque is more appropriate here
 
   const auto& indexes = _in_table->get_table_indexes(_indexed_column_id);
   Assert(!indexes.empty(), "No indexes for the requested ColumnID available.");
@@ -88,7 +88,7 @@ std::shared_ptr<const Table> IndexScan::_on_execute() {
       break;
     }
     default:
-      Fail("Unsupported comparison type, PartialHashIndex only supports Equals and NotEquals.");
+      Fail("Unsupported comparison type. Currently, Hyrise's secondary indexes only support Equals and NotEquals.");
   }
 
   if (matches_out->empty()) {
@@ -97,24 +97,31 @@ std::shared_ptr<const Table> IndexScan::_on_execute() {
 
   // Split the output RowIDPosList per Chunk.
 
+  const auto reserved_pos_list_size = std::max(size_t{4}, matches_out->size() / chunk_id_mapping.size());
+
   auto matches_out_per_chunk = std::vector<std::shared_ptr<RowIDPosList>>{};
-  auto first_pos_list = std::make_shared<RowIDPosList>();
-  first_pos_list->guarantee_single_chunk();
-  matches_out_per_chunk.emplace_back(first_pos_list);
+  matches_out_per_chunk.emplace_back(std::make_shared<RowIDPosList>());
+  matches_out_per_chunk.back()->guarantee_single_chunk();
+  matches_out_per_chunk.back()->reserve(reserved_pos_list_size);
 
   auto current_chunk_id = (*matches_out)[0].chunk_id;
-  for (const auto match : *matches_out) {
+  for (const auto& match : *matches_out) {
+    // Indexes are storing positions per value chunk-wise sorted. The following assert checks that this assumption
+    // remains valid. In case the index's behavior is changed, creating a new output chunk whenever the referenced
+    // chunk ID changes, should be revisited.
+    // TODO(Martin): change to debug Assert once we passed the full CI.
+    Assert(_predicate_condition != PredicateCondition::Equals || current_chunk_id <= match.chunk_id, "Unexpected order of positions during index traversal.");
+
     if (match.chunk_id == current_chunk_id) {
       matches_out_per_chunk.back()->emplace_back(match);
-    } else {
-      auto new_chunk_matches_out = std::make_shared<RowIDPosList>();
-
-      new_chunk_matches_out->guarantee_single_chunk();
-      new_chunk_matches_out->emplace_back(match);
-
-      matches_out_per_chunk.emplace_back(new_chunk_matches_out);
-      current_chunk_id = match.chunk_id;
+      continue;
     }
+
+    matches_out_per_chunk.emplace_back(std::make_shared<RowIDPosList>());
+    matches_out_per_chunk.back()->guarantee_single_chunk();
+    matches_out_per_chunk.back()->reserve(reserved_pos_list_size);
+    matches_out_per_chunk.back()->emplace_back(match);
+    current_chunk_id = match.chunk_id;
   }
 
   const auto in_table_column_count = _in_table->column_count();

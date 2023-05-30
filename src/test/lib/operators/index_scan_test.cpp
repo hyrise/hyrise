@@ -66,13 +66,15 @@ class OperatorsIndexScanTest : public BaseTest {
 
   void ASSERT_COLUMN_EQ(std::shared_ptr<const Table> table, const ColumnID& column_id,
                         std::vector<AllTypeVariant> expected) {
-    for (auto chunk_id = ChunkID{0u}; chunk_id < table->chunk_count(); ++chunk_id) {
-      const auto chunk = table->get_chunk(chunk_id);
+    const auto chunk_count = table->chunk_count();
+    for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+      const auto& chunk = table->get_chunk(chunk_id);
 
-      for (auto chunk_offset = ChunkOffset{0u}; chunk_offset < chunk->size(); ++chunk_offset) {
+      const auto chunk_size = chunk->size();
+      for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
         const auto& segment = *chunk->get_segment(column_id);
 
-        const auto found_value = segment[chunk_offset];
+        const auto& found_value = segment[chunk_offset];
         const auto comparator = [found_value](const AllTypeVariant expected_value) {
           // returns equivalency, not equality to simulate std::multiset.
           // multiset cannot be used because it triggers a compiler / lib bug when built in CI
@@ -86,7 +88,7 @@ class OperatorsIndexScanTest : public BaseTest {
       }
     }
 
-    ASSERT_EQ(expected.size(), 0u);
+    ASSERT_EQ(expected.size(), 0);
   }
 
   std::shared_ptr<GetTable> _int_int;
@@ -101,7 +103,7 @@ TEST_F(OperatorsIndexScanTest, SingleColumnScanOnDataTable) {
 
   const auto right_value = AllTypeVariant{4};
 
-  std::map<PredicateCondition, std::vector<AllTypeVariant>> tests;
+  auto tests = std::map<PredicateCondition, std::vector<AllTypeVariant>>{};
   tests[PredicateCondition::Equals] = {104, 104};
   tests[PredicateCondition::NotEquals] = {100, 102, 106, 108, 110, 112, 100, 102, 106, 108, 110, 112};
 
@@ -117,8 +119,6 @@ TEST_F(OperatorsIndexScanTest, SingleColumnScanOnDataTable) {
 
     scan_small_chunk->execute();
 
-    // auto table = scan->get_output();
-
     this->ASSERT_COLUMN_EQ(scan->get_output(), ColumnID{1u}, test.second);
     this->ASSERT_COLUMN_EQ(scan_small_chunk->get_output(), ColumnID{1u}, test.second);
   }
@@ -129,7 +129,7 @@ TEST_F(OperatorsIndexScanTest, ScanWithNoChunkIDsIncluded) {
 
   const auto right_value = AllTypeVariant{4};
 
-  std::map<PredicateCondition, std::vector<AllTypeVariant>> tests;
+  auto tests = std::map<PredicateCondition, std::vector<AllTypeVariant>>{};
   tests[PredicateCondition::Equals] = {};
   tests[PredicateCondition::NotEquals] = {};
 
@@ -159,7 +159,7 @@ TEST_F(OperatorsIndexScanTest, SingleColumnScanValueGreaterThanMaxDictionaryValu
 
   const auto right_value = AllTypeVariant{30};
 
-  std::map<PredicateCondition, std::vector<AllTypeVariant>> tests;
+  auto tests = std::map<PredicateCondition, std::vector<AllTypeVariant>>{};
   tests[PredicateCondition::Equals] = no_rows;
   tests[PredicateCondition::NotEquals] = all_rows;
 
@@ -187,7 +187,7 @@ TEST_F(OperatorsIndexScanTest, SingleColumnScanValueLessThanMinDictionaryValue) 
 
   const auto right_value = AllTypeVariant{-10};
 
-  std::map<PredicateCondition, std::vector<AllTypeVariant>> tests;
+  auto tests = std::map<PredicateCondition, std::vector<AllTypeVariant>>{};
   tests[PredicateCondition::Equals] = no_rows;
   tests[PredicateCondition::NotEquals] = all_rows;
 
