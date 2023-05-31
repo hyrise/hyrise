@@ -307,7 +307,8 @@ void Optimizer::validate_lqp(const std::shared_ptr<AbstractLQPNode>& root_node) 
   auto nodes_by_lqp = LQPNodesByLQP{};
   // Second, assign each LQPNode to its LQP. Since the results of uncorrelated subquery LQPs do not depend on correlated
   // parameters, we can use them in multiple LQPSubqueryExpressions and treat them like normal LQPNodes. However,
-  // correlated subqueries must not share nodes with any other (sub-)LQP.
+  // correlated subqueries must not share nodes with any other (sub-)LQP. Correlated subquery LQPs must not be reused,
+  // they are completely managed by the ExpressionEvaluator, which deep copies them for each row.
   for (const auto& lqp : lqps) {
     assign_node_to_lqp_recursively(lqp, lqp, nodes_by_lqp);
   }
