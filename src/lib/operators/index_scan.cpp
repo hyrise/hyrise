@@ -110,7 +110,8 @@ std::shared_ptr<const Table> IndexScan::_on_execute() {
     // remains valid. In case the index's behavior is changed, creating a new output chunk whenever the referenced
     // chunk ID changes, should be revisited.
     // TODO(Martin): change to debug Assert once we passed the full CI.
-    Assert(_predicate_condition != PredicateCondition::Equals || current_chunk_id <= match.chunk_id, "Unexpected order of positions during index traversal.");
+    Assert(_predicate_condition != PredicateCondition::Equals || current_chunk_id <= match.chunk_id,
+           "Unexpected order of positions during index traversal.");
 
     if (match.chunk_id == current_chunk_id) {
       matches_out_per_chunk.back()->emplace_back(match);
