@@ -65,7 +65,6 @@ void assign_node_to_lqp_recursively(const std::shared_ptr<const AbstractLQPNode>
 void validate_lqp_with_uncorrelated_subqueries(const std::shared_ptr<const AbstractLQPNode>& lqp,
                                                const std::shared_ptr<const AbstractLQPNode>& root_lqp,
                                                const LQPNodesByLQP& nodes_by_lqp) {
-  // If you can think of a way in which an LQP can be corrupt, please add it!
   // (1) Make sure that all outputs found in an LQP are also part of the same LQP (excluding uncorrelated subqueries).
   // (2) Make sure each node has the number of inputs expected for that node type.
   // (3) Make sure that for all LQPColumnExpressions, the original_node is part of the LQP.
@@ -298,16 +297,17 @@ std::shared_ptr<AbstractLQPNode> Optimizer::optimize(
 }
 
 void Optimizer::validate_lqp(const std::shared_ptr<AbstractLQPNode>& root_node) {
+  // If you can think of a way in which an LQP can be corrupt, please add it!
   // First, collect all LQPs (the main LQP and all uncorrelated subqueries).
   auto lqps = std::vector<std::shared_ptr<AbstractLQPNode>>{root_node};
-  auto subquery_expressions_by_lqp = collect_lqp_subquery_expressions_by_lqp(root_node, true);
-  for (const auto& [lqp, _] : subquery_expressions_by_lqp) {
-    lqps.emplace_back(lqp);
+  for (auto& [lqp, _] : collect_lqp_subquery_expressions_by_lqp(root_node, true)) {
+    lqps.emplace_back(std::move(lqp));
   }
 
   auto nodes_by_lqp = LQPNodesByLQP{};
-  // Second, assign each LQPNode to its LQP. Uncorrelated subqueries are treated like normal LQPNodes since their output
-  // can also be used multiple times.
+  // Second, assign each LQPNode to its LQP. Since the results of uncorrelated subquery LQPs do not depend on correlated
+  // parameters, we can use them in multiple LQPSubqueryExpressions and treat them like normal LQPNodes. However,
+  // correlated subqueries must not share nodes with any other (sub-)LQP.
   for (const auto& lqp : lqps) {
     assign_node_to_lqp_recursively(lqp, lqp, nodes_by_lqp);
   }

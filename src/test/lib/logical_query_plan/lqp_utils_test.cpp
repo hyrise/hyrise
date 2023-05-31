@@ -304,16 +304,14 @@ TEST_F(LQPUtilsTest, CollectSubqueryExpressionsByLQPNestedSubqueries) {
   // Prepare an LQP with multiple subqueries in a nested manner.
 
   for (const auto only_correlated_subqueries : {true, false}) {
-    auto message = std::stringstream{};
-    message << "Consider only uncorrelated subqueries: " << std::boolalpha << only_correlated_subqueries;
-    SCOPED_TRACE(message.str());
+    SCOPED_TRACE(std::string{"Consider only uncorrelated subqueries: "} +
+                 (only_correlated_subqueries ? "true" : "false"));
 
     // clang-format off
     const auto nested_subquery_lqp =
     AggregateNode::make(expression_vector(), expression_vector(max_(a_a)),
       node_a);
     const auto max_a_subquery = lqp_subquery_(nested_subquery_lqp);
-
 
     const auto correlated_parameter = correlated_parameter_(ParameterID{0}, b_y);
     const auto correlated_subquery_lqp =

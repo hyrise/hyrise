@@ -100,12 +100,13 @@ TEST_F(OptimizerTest, AssertsCorrectNumberOfInputs) {
   EXPECT_THROW(Optimizer::validate_lqp(lqp), std::logic_error);
 }
 
-TEST_F(OptimizerTest, AssertsInPlanReferences) {
+TEST_F(OptimizerTest, AssertsOriginalNodeInSamePlan) {
   // clang-format off
   auto lqp =
   JoinNode::make(JoinMode::Inner, equals_(x, 1),
-    node_a,
-    node_a);
+    ProjectionNode::make(expression_vector(add_(b, subquery_a)),
+      PredicateNode::make(greater_than_(a, subquery_b),
+        node_a)));
   // clang-format on
 
   EXPECT_THROW(Optimizer::validate_lqp(lqp), std::logic_error);
@@ -164,7 +165,7 @@ TEST_F(OptimizerTest, VerifiesResults) {
 
    protected:
     void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override {
-      // Change the `b` expression in the projection to `x`, which is not part of the input LQP
+      // Change the `b` expression in the projection to `u`, which is not part of the input LQP.
       const auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(lqp_root->left_input());
       if (!projection_node) {
         return;
