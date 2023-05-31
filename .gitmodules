@@ -53,6 +53,7 @@
 [submodule "third_party/sql-parser"]
 	path = third_party/sql-parser
 	url = https://github.com/hyrise/sql-parser.git
+	branch = dey4ss/window_functions
 [submodule "third_party/ssb-dbgen"]
 	path = third_party/ssb-dbgen
 	url = https://github.com/hyrise/ssb-dbgen.git
