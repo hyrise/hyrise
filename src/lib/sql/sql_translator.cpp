@@ -997,7 +997,7 @@ std::vector<SQLTranslator::SelectListElement> SQLTranslator::_translate_select_l
     } else if (hsql_select_expr->type == hsql::kExprLiteralInterval) {
       FailInput("Interval can only be added to or substracted from a date");
     } else {
-      auto expression = _translate_hsql_expr(*hsql_select_expr, _sql_identifier_resolver);
+      auto expression = _translate_hsql_expr(*hsql_select_expr, _sql_identifier_resolver, true);
       select_list_elements.emplace_back(expression);
       if (hsql_select_expr->name && hsql_select_expr->type != hsql::kExprFunctionRef &&
           hsql_select_expr->type != hsql::kExprExtract) {
@@ -1637,18 +1637,20 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_add_expressions_if_unavailable(
 }
 
 std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
-    const hsql::Expr& expr, const std::shared_ptr<SQLIdentifierResolver>& sql_identifier_resolver) {
+    const hsql::Expr& expr, const std::shared_ptr<SQLIdentifierResolver>& sql_identifier_resolver, bool allow_window_expressions) {
   auto name = expr.name ? std::string(expr.name) : "";
 
-  auto left = expr.expr ? _translate_hsql_expr(*expr.expr, sql_identifier_resolver) : nullptr;
-  const auto right = expr.expr2 ? _translate_hsql_expr(*expr.expr2, sql_identifier_resolver) : nullptr;
+  auto left = expr.expr ? _translate_hsql_expr(*expr.expr, sql_identifier_resolver, allow_window_expressions) : nullptr;
+  const auto right = expr.expr2 ? _translate_hsql_expr(*expr.expr2, sql_identifier_resolver, allow_window_expressions) : nullptr;
 
   if (left) {
-    AssertInput(left->type != ExpressionType::Interval, "IntervalExpression must follow another expression");
+    AssertInput(left->type != ExpressionType::Interval, "IntervalExpression must follow another expression.");
+    AssertInput(left->type != ExpressionType::Window, "WindowExpressions must not be nested.");
   }
   if (right && right->type == ExpressionType::Interval) {
     AssertInput(expr.type == hsql::kExprOperator && (expr.opType == hsql::kOpPlus || expr.opType == hsql::kOpMinus),
                 "Intervals can only be added or substracted");
+    AssertInput(right->type != ExpressionType::Window, "WindowExpressions must not be nested.");
   }
 
   switch (expr.type) {
@@ -1972,6 +1974,11 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
       AssertInput(unit == DatetimeComponent::Day || unit == DatetimeComponent::Month || unit == DatetimeComponent::Year,
                   "Only date intervals are supported yet");
       return interval_(expr.ival, unit);
+    }
+
+    case hsql::kExprWindow: {
+      Fail("WIP");
+
     }
   }
   Fail("Invalid enum value");
