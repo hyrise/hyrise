@@ -36,7 +36,6 @@ std::vector<std::optional<ColumnID>> column_ids_after_pruning(const size_t origi
 
 std::unordered_map<ChunkID, ChunkID> chunk_ids_after_pruning(const size_t original_table_chunk_count,
                                                              const std::vector<ChunkID>& pruned_chunk_ids) {
-  
   DebugAssert(std::is_sorted(pruned_chunk_ids.begin(), pruned_chunk_ids.end()),
               "Expected a sorted vector of pruned chunk IDs.");
   DebugAssert(pruned_chunk_ids.empty() || pruned_chunk_ids.back() < original_table_chunk_count,
