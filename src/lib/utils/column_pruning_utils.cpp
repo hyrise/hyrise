@@ -8,9 +8,9 @@ namespace hyrise {
 
 std::vector<std::optional<ColumnID>> column_ids_after_pruning(const size_t original_table_column_count,
                                                               const std::vector<ColumnID>& pruned_column_ids) {
-  DebugAssert(std::is_sorted(pruned_chunk_ids.begin(), pruned_chunk_ids.end()),
+  DebugAssert(std::is_sorted(pruned_column_ids.begin(), pruned_column_ids.end()),
               "Expected a sorted vector of pruned chunk IDs.");
-  DebugAssert(pruned_chunk_ids.size() < original_table_chunk_count,
+  DebugAssert(pruned_column_ids.size() < original_table_column_count,
               "List of pruned chunks longer than chunks in actual table.");
 
   auto column_id_mapping = std::vector<std::optional<ColumnID>>(original_table_column_count);
