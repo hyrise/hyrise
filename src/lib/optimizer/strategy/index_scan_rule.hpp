@@ -31,9 +31,6 @@ class IndexScanRule : public AbstractRule {
 
  protected:
   void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override;
-  bool _is_index_scan_applicable(const TableIndexStatistics& index_statistics,
-                                 const std::shared_ptr<PredicateNode>& predicate_node) const;
-  static bool _is_single_segment_index(const TableIndexStatistics& index_statistics);
 };
 
 }  // namespace hyrise
