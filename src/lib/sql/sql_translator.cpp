@@ -1711,6 +1711,8 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
 
     case hsql::kExprFunctionRef: {
       // TODO: Window functions
+      AssertInput(!expr.windowDescription || allow_window_functions,
+                  "Window functions are only allowed in the SELECT list and must not be nested.");
       // convert to upper-case to find mapping
       std::transform(name.cbegin(), name.cend(), name.begin(),
                      [](const auto character) { return std::toupper(character); });
