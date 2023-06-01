@@ -28,8 +28,13 @@ std::vector<std::optional<ColumnID>> column_ids_after_pruning(const size_t origi
 
 std::unordered_map<ChunkID, ChunkID> chunk_ids_after_pruning(const size_t original_table_chunk_count,
                                                              const std::vector<ChunkID>& pruned_chunk_ids) {
+  DebugAssert(std::is_sorted(pruned_chunk_ids.begin(), pruned_chunk_ids.end()),
+              "Expected a sorted vector of pruned chunk IDs.");
+  DebugAssert(pruned_chunk_ids.size() < original_table_chunk_count,
+              "List of pruned chunks longer than chunks in actual table.");
+
   auto chunk_id_mapping = std::unordered_map<ChunkID, ChunkID>{};
-  std::vector<bool> chunk_pruned_bitvector(original_table_chunk_count);
+  auto chunk_pruned_bitvector = std::vector<bool>(original_table_chunk_count);
 
   // Fill the bitvector
   for (const auto& pruned_chunk_id : pruned_chunk_ids) {
@@ -40,7 +45,8 @@ std::unordered_map<ChunkID, ChunkID> chunk_ids_after_pruning(const size_t origin
   auto next_updated_chunk_id = ChunkID{0};
   for (auto chunk_index = ChunkID{0}; chunk_index < original_table_chunk_count; ++chunk_index) {
     if (!chunk_pruned_bitvector[chunk_index]) {
-      chunk_id_mapping[chunk_index] = next_updated_chunk_id++;
+      chunk_id_mapping[chunk_index] = next_updated_chunk_id;
+      ++next_updated_chunk_id;
     }
   }
   return chunk_id_mapping;

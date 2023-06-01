@@ -64,7 +64,7 @@ TEST_F(IndexScanRuleTest, NoIndexScanWithoutIndex) {
   predicate_node_0->set_left_input(stored_table_node);
 
   EXPECT_EQ(predicate_node_0->scan_type, ScanType::TableScan);
-  auto reordered = StrategyBaseTest::apply_rule(rule, predicate_node_0);
+  StrategyBaseTest::apply_rule(rule, predicate_node_0);
   EXPECT_EQ(predicate_node_0->scan_type, ScanType::TableScan);
 }
 
@@ -79,7 +79,7 @@ TEST_F(IndexScanRuleTest, NoIndexScanWithIndexOnOtherColumn) {
   predicate_node_0->set_left_input(stored_table_node);
 
   EXPECT_EQ(predicate_node_0->scan_type, ScanType::TableScan);
-  auto reordered = StrategyBaseTest::apply_rule(rule, predicate_node_0);
+  StrategyBaseTest::apply_rule(rule, predicate_node_0);
   EXPECT_EQ(predicate_node_0->scan_type, ScanType::TableScan);
 }
 
@@ -90,7 +90,7 @@ TEST_F(IndexScanRuleTest, NoIndexScanWithTwoColumnPredicate) {
   predicate_node_0->set_left_input(stored_table_node);
 
   EXPECT_EQ(predicate_node_0->scan_type, ScanType::TableScan);
-  auto reordered = StrategyBaseTest::apply_rule(rule, predicate_node_0);
+  StrategyBaseTest::apply_rule(rule, predicate_node_0);
   EXPECT_EQ(predicate_node_0->scan_type, ScanType::TableScan);
 }
 
@@ -105,7 +105,7 @@ TEST_F(IndexScanRuleTest, NoIndexScanWithHighSelectivity) {
   predicate_node_0->set_left_input(stored_table_node);
 
   EXPECT_EQ(predicate_node_0->scan_type, ScanType::TableScan);
-  auto reordered = StrategyBaseTest::apply_rule(rule, predicate_node_0);
+  StrategyBaseTest::apply_rule(rule, predicate_node_0);
   EXPECT_EQ(predicate_node_0->scan_type, ScanType::TableScan);
 }
 
@@ -120,7 +120,7 @@ TEST_F(IndexScanRuleTest, IndexScanWithIndex) {
   predicate_node_0->set_left_input(stored_table_node);
 
   EXPECT_EQ(predicate_node_0->scan_type, ScanType::TableScan);
-  auto reordered = StrategyBaseTest::apply_rule(rule, predicate_node_0);
+  StrategyBaseTest::apply_rule(rule, predicate_node_0);
   EXPECT_EQ(predicate_node_0->scan_type, ScanType::IndexScan);
 }
 
@@ -137,7 +137,7 @@ TEST_F(IndexScanRuleTest, IndexScanWithIndexPrunedColumn) {
   predicate_node_0->set_left_input(stored_table_node);
 
   EXPECT_EQ(predicate_node_0->scan_type, ScanType::TableScan);
-  auto reordered = StrategyBaseTest::apply_rule(rule, predicate_node_0);
+  StrategyBaseTest::apply_rule(rule, predicate_node_0);
   EXPECT_EQ(predicate_node_0->scan_type, ScanType::IndexScan);
 }
 
@@ -154,8 +154,28 @@ TEST_F(IndexScanRuleTest, IndexScanOnlyOnOutputOfStoredTableNode) {
   auto predicate_node_1 = PredicateNode::make(less_than_(b, 15));
   predicate_node_1->set_left_input(predicate_node_0);
 
-  auto reordered = StrategyBaseTest::apply_rule(rule, predicate_node_1);
+  StrategyBaseTest::apply_rule(rule, predicate_node_1);
   EXPECT_EQ(predicate_node_0->scan_type, ScanType::IndexScan);
+  EXPECT_EQ(predicate_node_1->scan_type, ScanType::TableScan);
+}
+
+// Same test as before, but placing the predicate with a very high selectivity first, does not trigger an index scan.
+// The following predicate has a very low selectivity, but does not follow a stored table node.
+TEST_F(IndexScanRuleTest, NoIndexScanForPredicatesNotOnStoredTableNode) {
+  auto chunk_ids = std::vector<ChunkID>(table->chunk_count());
+  std::iota(chunk_ids.begin(), chunk_ids.end(), 0);
+  table->create_partial_hash_index(ColumnID{1}, chunk_ids);
+
+  generate_mock_statistics(1'000'000);
+
+  auto predicate_node_0 = PredicateNode::make(less_than_(b, 15));
+  predicate_node_0->set_left_input(stored_table_node);
+
+  auto predicate_node_1 = PredicateNode::make(equals_(b, 19'900));
+  predicate_node_1->set_left_input(predicate_node_0);
+
+  StrategyBaseTest::apply_rule(rule, predicate_node_1);
+  EXPECT_EQ(predicate_node_0->scan_type, ScanType::TableScan);
   EXPECT_EQ(predicate_node_1->scan_type, ScanType::TableScan);
 }
 

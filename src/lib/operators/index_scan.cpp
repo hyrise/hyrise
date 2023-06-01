@@ -106,9 +106,9 @@ std::shared_ptr<const Table> IndexScan::_on_execute() {
 
   auto current_chunk_id = (*matches_out)[0].chunk_id;
   for (const auto& match : *matches_out) {
-    // Indexes are storing positions per value chunk-wise sorted. The following assert checks that this assumption
-    // remains valid. In case the index's behavior is changed, creating a new output chunk whenever the referenced
-    // chunk ID changes, should be revisited.
+    // The positions stored per value in Hyrise's partial indexes are sorted chunk-wise. The following assert checks
+    // that this assumption remains valid. In case the index's behavior changes, the current approach of creating a new
+    // output chunk whenever the referenced chunk ID changes, should be revisited.
     // TODO(Martin): change to debug Assert once we passed the full CI.
     Assert(_predicate_condition != PredicateCondition::Equals || current_chunk_id <= match.chunk_id,
            "Unexpected order of positions during index traversal.");
