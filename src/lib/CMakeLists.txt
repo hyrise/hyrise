@@ -164,6 +164,8 @@ set(
     logical_query_plan/update_node.hpp
     logical_query_plan/validate_node.cpp
     logical_query_plan/validate_node.hpp
+    logical_query_plan/window_node.cpp
+    logical_query_plan/window_node.hpp
     lossless_cast.cpp
     lossless_cast.hpp
     lossy_cast.hpp

@@ -181,8 +181,10 @@ class SQLTranslator final {
 
   std::shared_ptr<AbstractLQPNode> _validate_if_active(const std::shared_ptr<AbstractLQPNode>& input_node);
 
+  // Window functions are only allowed in the select list and must not be nested, so we do not allow them by default.
   std::shared_ptr<AbstractExpression> _translate_hsql_expr(
-      const hsql::Expr& expr, const std::shared_ptr<SQLIdentifierResolver>& sql_identifier_resolver, bool allow_window_expressions = false);
+      const hsql::Expr& expr, const std::shared_ptr<SQLIdentifierResolver>& sql_identifier_resolver,
+      bool allow_window_functions = false);
   std::shared_ptr<LQPSubqueryExpression> _translate_hsql_subquery(
       const hsql::SelectStatement& select, const std::shared_ptr<SQLIdentifierResolver>& sql_identifier_resolver);
   std::shared_ptr<AbstractExpression> _translate_hsql_case(

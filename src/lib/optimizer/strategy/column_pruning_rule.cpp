@@ -18,6 +18,7 @@
 #include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/union_node.hpp"
 #include "logical_query_plan/update_node.hpp"
+#include "logical_query_plan/window_node.hpp"
 
 namespace {
 
@@ -170,6 +171,24 @@ ExpressionUnorderedSet gather_locally_required_expressions(
           // This probably needs all expressions, as all of them are used to establish uniqueness
           Fail("SetOperationMode::Unique is not supported yet");
         }
+      }
+    } break;
+
+    // WindowNodes need all expressions (i) that are inputs of the window function, (ii) they should partition by, and
+    // (iii) they should order by.
+    case LQPNodeType::Window: {
+      const auto& window_function = static_cast<const AggregateExpression&>(*node->node_expressions[0]);
+      Assert(window_function.window, "Window functions must define a window.");
+
+      locally_required_expressions.emplace(window_function.argument());
+
+      const auto& window = *window_function.window;
+      for (const auto& partition_by_expression : window.partition_by_expressions) {
+        locally_required_expressions.emplace(partition_by_expression);
+      }
+
+      for (const auto& order_by_expression : window.order_by_expressions) {
+        locally_required_expressions.emplace(order_by_expression);
       }
     } break;
 

@@ -270,19 +270,19 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_select_statement(cons
     _sql_identifier_resolver = std::make_shared<SQLIdentifierResolver>();
   }
 
-  // Translate SELECT list (to retrieve aliases)
+  // Translate SELECT list (to retrieve aliases).
   const auto select_list_elements = _translate_select_list(*select.selectList);
 
-  // Translate WHERE
+  // Translate WHERE.
   if (select.whereClause) {
     const auto where_expression = _translate_hsql_expr(*select.whereClause, _sql_identifier_resolver);
     _current_lqp = _translate_predicate_expression(where_expression, _current_lqp);
   }
 
-  // Translate SELECT, HAVING, GROUP BY in one go, as they are interdependent
+  // Translate SELECT, HAVING, GROUP BY in one go, as they are interdependent.
   _translate_select_groupby_having(select, select_list_elements);
 
-  // Translate ORDER BY and LIMIT
+  // Translate ORDER BY and LIMIT.
   if (select.order) {
     _translate_order_by(*select.order);
   }
@@ -291,9 +291,9 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_select_statement(cons
   }
 
   /**
-   * Name, select and arrange the Columns as specified in the SELECT clause
+   * Name, select and arrange the columns as specified in the SELECT clause.
    */
-  // Only add a ProjectionNode if necessary
+  // Only add a ProjectionNode if necessary.
   const auto& inflated_select_list_expressions = _unwrap_elements(_inflated_select_list_elements);
   if (!expressions_equal(_current_lqp->output_expressions(), inflated_select_list_expressions)) {
     _current_lqp = ProjectionNode::make(inflated_select_list_expressions, _current_lqp);
@@ -997,7 +997,7 @@ std::vector<SQLTranslator::SelectListElement> SQLTranslator::_translate_select_l
     } else if (hsql_select_expr->type == hsql::kExprLiteralInterval) {
       FailInput("Interval can only be added to or substracted from a date");
     } else {
-      auto expression = _translate_hsql_expr(*hsql_select_expr, _sql_identifier_resolver, true);
+      const auto expression = _translate_hsql_expr(*hsql_select_expr, _sql_identifier_resolver, true);
       select_list_elements.emplace_back(expression);
       if (hsql_select_expr->name && hsql_select_expr->type != hsql::kExprFunctionRef &&
           hsql_select_expr->type != hsql::kExprExtract) {
@@ -1637,20 +1637,20 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_add_expressions_if_unavailable(
 }
 
 std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
-    const hsql::Expr& expr, const std::shared_ptr<SQLIdentifierResolver>& sql_identifier_resolver, bool allow_window_expressions) {
+    const hsql::Expr& expr, const std::shared_ptr<SQLIdentifierResolver>& sql_identifier_resolver,
+    bool allow_window_functions) {
   auto name = expr.name ? std::string(expr.name) : "";
 
-  auto left = expr.expr ? _translate_hsql_expr(*expr.expr, sql_identifier_resolver, allow_window_expressions) : nullptr;
-  const auto right = expr.expr2 ? _translate_hsql_expr(*expr.expr2, sql_identifier_resolver, allow_window_expressions) : nullptr;
+  auto left = expr.expr ? _translate_hsql_expr(*expr.expr, sql_identifier_resolver, allow_window_functions) : nullptr;
+  const auto right =
+      expr.expr2 ? _translate_hsql_expr(*expr.expr2, sql_identifier_resolver, allow_window_functions) : nullptr;
 
   if (left) {
     AssertInput(left->type != ExpressionType::Interval, "IntervalExpression must follow another expression.");
-    AssertInput(left->type != ExpressionType::Window, "WindowExpressions must not be nested.");
   }
   if (right && right->type == ExpressionType::Interval) {
     AssertInput(expr.type == hsql::kExprOperator && (expr.opType == hsql::kOpPlus || expr.opType == hsql::kOpMinus),
                 "Intervals can only be added or substracted");
-    AssertInput(right->type != ExpressionType::Window, "WindowExpressions must not be nested.");
   }
 
   switch (expr.type) {
@@ -1710,6 +1710,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
     }
 
     case hsql::kExprFunctionRef: {
+      // TODO: Window functions
       // convert to upper-case to find mapping
       std::transform(name.cbegin(), name.cend(), name.begin(),
                      [](const auto character) { return std::toupper(character); });
@@ -1974,11 +1975,6 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
       AssertInput(unit == DatetimeComponent::Day || unit == DatetimeComponent::Month || unit == DatetimeComponent::Year,
                   "Only date intervals are supported yet");
       return interval_(expr.ival, unit);
-    }
-
-    case hsql::kExprWindow: {
-      Fail("WIP");
-
     }
   }
   Fail("Invalid enum value");

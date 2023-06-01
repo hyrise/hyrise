@@ -249,6 +249,7 @@ void Optimizer::validate_lqp(const std::shared_ptr<AbstractLQPNode>& root_node) 
         case LQPNodeType::Root:
         case LQPNodeType::Sort:
         case LQPNodeType::Validate:
+        case LQPNodeType::Window:
           num_expected_inputs = 1;
           break;
 

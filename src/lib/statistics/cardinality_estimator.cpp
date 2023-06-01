@@ -24,6 +24,7 @@
 #include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/union_node.hpp"
 #include "logical_query_plan/validate_node.hpp"
+#include "logical_query_plan/window_node.hpp"
 #include "lossy_cast.hpp"
 #include "operators/operator_join_predicate.hpp"
 #include "operators/operator_scan_predicate.hpp"
@@ -199,6 +200,11 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
           estimate_union_node(*union_node, left_input_table_statistics, right_input_table_statistics);
     } break;
 
+    case LQPNodeType::Window: {
+      const auto window_node = std::dynamic_pointer_cast<const WindowNode>(lqp);
+      output_table_statistics = estimate_window_node(*window_node, left_input_table_statistics);
+    } break;
+
     // Currently there is no actual estimation being done and we always apply the worst case
     case LQPNodeType::Intersect:
     case LQPNodeType::Except: {
@@ -285,6 +291,27 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_projection_node(
       });
     }
   }
+
+  return std::make_shared<TableStatistics>(std::move(column_statistics), input_table_statistics->row_count);
+}
+
+std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_window_node(
+    const WindowNode& window_node, const std::shared_ptr<TableStatistics>& input_table_statistics) const {
+  // For the result of the window function, dummy statistics are created for now.
+
+  const auto& output_expressions = window_node.output_expressions();
+  const auto output_expression_count = output_expressions.size();
+  auto column_statistics = std::vector<std::shared_ptr<BaseAttributeStatistics>>{output_expression_count};
+  const auto forwarded_expression_count = output_expression_count - 1;
+
+  for (auto column_id = ColumnID{0}; column_id < forwarded_expression_count; ++column_id) {
+    column_statistics[column_id] = input_table_statistics->column_statistics[column_id];
+  }
+
+  resolve_data_type(output_expressions.back()->data_type(), [&](const auto data_type_t) {
+    using ColumnDataType = typename decltype(data_type_t)::type;
+    column_statistics[forwarded_expression_count] = std::make_shared<AttributeStatistics<ColumnDataType>>();
+  });
 
   return std::make_shared<TableStatistics>(std::move(column_statistics), input_table_statistics->row_count);
 }
