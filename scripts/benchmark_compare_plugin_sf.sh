@@ -87,10 +87,10 @@ do
     runtime=$(( runtime > 60 ? runtime : 60 ))
 
     echo "Running $benchmark for $commit... (single-threaded, SF ${sf})"
-    ( "${build_folder}"/"$benchmark" -r ${runs} -t ${runtime} -w ${warmup_seconds} -o "${build_folder}/benchmark_plugin_results/${benchmark}_${commit}_st_s${sf}.json" 2>&1 ) | tee "${build_folder}/benchmark_plugin_results/${benchmark}_${commit}_st_s${sf}.log"
+    ( "${build_folder}"/"$benchmark" -s {sf} --dont_cache_binary_tables -r ${runs} -t ${runtime} -w ${warmup_seconds} -o "${build_folder}/benchmark_plugin_results/${benchmark}_${commit}_st_s${sf}.json" 2>&1 ) | tee "${build_folder}/benchmark_plugin_results/${benchmark}_${commit}_st_s${sf}.log"
 
     echo "Running $benchmark for $commit... (single-threaded, SF ${sf}) w/ plugin"
-    ( "${build_folder}"/"$benchmark" -r ${runs} -t ${runtime} -w ${warmup_seconds} -o "${build_folder}/benchmark_plugin_results/${benchmark}_${commit}_st_s${sf}_plugin.json" -p "${build_folder}/lib/libhyriseDependencyDiscoveryPlugin.${lib_suffix}" 2>&1 ) | tee "${build_folder}/benchmark_plugin_results/${benchmark}_${commit}_st_s${sf}_plugin.log"
+    ( "${build_folder}"/"$benchmark" -s {sf} --dont_cache_binary_tables -r ${runs} -t ${runtime} -w ${warmup_seconds} -o "${build_folder}/benchmark_plugin_results/${benchmark}_${commit}_st_s${sf}_plugin.json" -p "${build_folder}/lib/libhyriseDependencyDiscoveryPlugin.${lib_suffix}" 2>&1 ) | tee "${build_folder}/benchmark_plugin_results/${benchmark}_${commit}_st_s${sf}_plugin.log"
   done
 done
 cd "${build_folder}"
