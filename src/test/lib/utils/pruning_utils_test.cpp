@@ -7,7 +7,9 @@ namespace hyrise {
 class PruningUtilsTest : public BaseTest {};
 
 TEST_F(PruningUtilsTest, ColumnIDMapping) {
-  EXPECT_THROW(column_ids_after_pruning(4, {ColumnID{4}}), std::logic_error);
+  if constexpr (HYRISE_DEBUG) {
+    EXPECT_THROW(column_ids_after_pruning(4, {ColumnID{4}}), std::logic_error);
+  }
 
   auto actual_column_mapping = column_ids_after_pruning(6, {ColumnID{0}, ColumnID{1}, ColumnID{2}});
   auto expected_column_mapping = std::vector<std::optional<ColumnID>>{std::nullopt, std::nullopt, std::nullopt,
@@ -31,7 +33,9 @@ TEST_F(PruningUtilsTest, ColumnIDMapping) {
 }
 
 TEST_F(PruningUtilsTest, ChunkIDMapping) {
-  EXPECT_THROW(chunk_ids_after_pruning(4, {ChunkID{4}}), std::logic_error);
+  if constexpr (HYRISE_DEBUG) {
+    EXPECT_THROW(chunk_ids_after_pruning(4, {ChunkID{4}}), std::logic_error);
+  }
 
   auto actual_chunk_mapping = chunk_ids_after_pruning(6, {ChunkID{0}, ChunkID{1}, ChunkID{2}});
   auto expected_chunk_mapping = std::unordered_map<ChunkID, ChunkID>{
