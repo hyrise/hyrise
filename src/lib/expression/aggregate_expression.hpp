@@ -39,7 +39,9 @@ struct FrameBound {
 
   bool operator==(const FrameBound& rhs);
 
-  const int64_t offset;
+  std::string description();
+
+  const uint64_t offset;
   const FrameBoundType type;
   const bool unbounded;
 };

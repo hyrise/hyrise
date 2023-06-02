@@ -174,22 +174,22 @@ ExpressionUnorderedSet gather_locally_required_expressions(
       }
     } break;
 
-    // WindowNodes need all expressions (i) that are inputs of the window function, (ii) they should partition by, and
-    // (iii) they should order by.
+    // WindowNodes need all expressions (i) that are the input of the window function, (ii) they should partition by,
+    // and (iii) they should order by.
     case LQPNodeType::Window: {
       const auto& window_function = static_cast<const AggregateExpression&>(*node->node_expressions[0]);
       Assert(window_function.window, "Window functions must define a window.");
 
-      locally_required_expressions.emplace(window_function.argument());
+      const auto& function_argument = window_function.argument();
+      if (function_argument) {
+        locally_required_expressions.emplace(function_argument);
+      }
 
       const auto& window = *window_function.window;
-      for (const auto& partition_by_expression : window.partition_by_expressions) {
-        locally_required_expressions.emplace(partition_by_expression);
-      }
+      locally_required_expressions.insert(window.partition_by_expressions.begin(),
+                                          window.partition_by_expressions.end());
+      locally_required_expressions.insert(window.order_by_expressions.begin(), window.order_by_expressions.end());
 
-      for (const auto& order_by_expression : window.order_by_expressions) {
-        locally_required_expressions.emplace(order_by_expression);
-      }
     } break;
 
     case LQPNodeType::Intersect:
