@@ -39,6 +39,12 @@ bool WindowNode::is_column_nullable(const ColumnID column_id) const {
 }
 
 UniqueColumnCombinations WindowNode::unique_column_combinations() const {
+  // TODO(anyone): The column added by the window function can be unique under certain circumstances. However, since the
+  // WindowNode is close to the LQP root by definition, its data dependencies should not be the subject of many possible
+  // optimizations. In detail, the window function's column is unique for each of the follwoing cases:
+  //   (1) The window is not partitioned and the window function is row_number().
+  //   (2) The window is not partitioned, there is a UCC on the ordered columns, the frame starts the partition begin,
+  //       and the function is rank() or dense_rank().
   return _forward_left_unique_column_combinations();
 }
 

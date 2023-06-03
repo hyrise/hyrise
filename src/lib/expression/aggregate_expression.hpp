@@ -106,6 +106,14 @@ const auto window_function_to_string = make_bimap<WindowFunction, std::string>({
     {WindowFunction::RowNumber, "ROW_NUMBER"},
 });
 
+const auto aggregate_functions = std::unordered_set<WindowFunction>{WindowFunction::Min,
+WindowFunction::Max,
+WindowFunction::Sum,
+WindowFunction::Avg,
+WindowFunction::Count,
+WindowFunction::CountDistinct,
+WindowFunction::StandardDeviationSample};
+
 class AggregateExpression : public AbstractExpression {
  public:
   AggregateExpression(const AggregateFunction init_aggregate_function,

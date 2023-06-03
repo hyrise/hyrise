@@ -1820,7 +1820,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
           }
         }
 
-        Assert(hsql_window_description.frameDescription, "Window function has no frameDescription. Bug in sqlparser?");
+        Assert(hsql_window_description.frameDescription, "Window function has no FrameDescription. Bug in sqlparser?");
         const auto& hsql_frame_description = *hsql_window_description.frameDescription;
         auto frame_type = FrameType::Rows;
         switch (hsql_frame_description.type) {
@@ -1834,12 +1834,17 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
         }
 
         Assert(hsql_frame_description.start && hsql_frame_description.end,
-               "frameDescription has no frame bounds. Bug in sqlparser?");
+               "FrameDescription has no frame bounds. Bug in sqlparser?");
         auto start = translate_frame_bound(*hsql_frame_description.start);
         auto end = translate_frame_bound(*hsql_frame_description.end);
-        // The end must not be before the start, but the CURRENT ROW must not be within the window. To ensure this
-        // behavior, we treat CURRENT ROW as an offset of 0, PRECEDING as a negative offset, and FOLLOWING as a negative
-        // offset. If end offset < start offset, the frame definition is invalid.
+
+        // "Restrictions are that `frame_start` cannot be UNBOUNDED FOLLOWING, `frame_end` cannot be UNBOUNDED
+        // PRECEDING, and the `frame_end` choice cannot appear earlier [...] than the `frame_start` choice does — for
+        // example RANGE BETWEEN CURRENT ROW AND offset PRECEDING is not allowed. But, for example, ROWS BETWEEN 7
+        //  PRECEDING AND 8 PRECEDING is allowed, even though it would never select any rows."
+        // - https://www.postgresql.org/docs/current/sql-expressions.html#SYNTAX-WINDOW-FUNCTIONS
+        // To ensure this behavior, we treat CURRENT ROW as an offset of 0, PRECEDING as a negative offset, and
+        // FOLLOWING as a positive offset. If end offset < start offset, the frame definition is invalid.
         const auto relative_frame_offset = [](const auto& frame_bound) {
           auto offset = int64_t{0};
           if (frame_bound.type == FrameBoundType::Preceding) {
@@ -1855,7 +1860,8 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
 
         const auto start_offset = relative_frame_offset(*start);
         const auto end_offset = relative_frame_offset(*end);
-        AssertInput(end_offset >= start_offset,
+        AssertInput((start->type != FrameBoundType::Following || !start->unbounded) &&
+                        (end->type != FrameBoundType::Preceding || !end->unbounded) && end_offset >= start_offset,
                     "Frame starting from " + start->description() + " cannot end at " + end->description() + ".");
 
         auto frame_description = std::make_unique<FrameDescription>(frame_type, std::move(start), std::move(end));
