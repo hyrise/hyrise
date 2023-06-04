@@ -83,6 +83,46 @@ TEST_F(OperatorScanPredicateTest, FromExpressionColumnRight) {
   EXPECT_EQ(operator_predicate_a.value, AllParameterVariant{5});
 }
 
+TEST_F(OperatorScanPredicateTest, OutputToStream) {
+    auto actual = std::stringstream{};
+    const auto operator_predicates_a = OperatorScanPredicate::from_expression(*between_inclusive_(5, a, b), *node);
+    const auto operator_predicates_b = OperatorScanPredicate::from_expression(*greater_than_(a, 5), *node);
+    const auto operator_predicates_c = OperatorScanPredicate::from_expression(*less_than_(a, 5), *node);
+    const auto operator_predicates_d = OperatorScanPredicate::from_expression(*greater_than_(a, b), *node);
+
+    ASSERT_TRUE(operator_predicates_a);
+    ASSERT_TRUE(operator_predicates_b);
+    ASSERT_TRUE(operator_predicates_c);
+    ASSERT_TRUE(operator_predicates_d);
+
+    for (const auto& predicate : *operator_predicates_a) {
+        actual << predicate << '\n';
+    }
+    std::string expected_output = "Column #0 <=5\nColumn #1 >=5\n";
+    ASSERT_EQ(actual.str(), expected_output);
+
+    actual.str("");
+    for (const auto& predicate : *operator_predicates_b) {
+        actual << predicate << '\n';
+    }
+    expected_output = "Column #0 >5\n";
+    ASSERT_EQ(actual.str(), expected_output);
+
+    actual.str("");
+    for (const auto& predicate : *operator_predicates_c) {
+        actual << predicate << '\n';
+    }
+    expected_output = "Column #0 <5\n";
+    ASSERT_EQ(actual.str(), expected_output);
+
+    actual.str("");
+    for (const auto& predicate : *operator_predicates_d) {
+        actual << predicate << '\n';
+    }
+    expected_output = "Column #0 >Column #1\n";
+    ASSERT_EQ(actual.str(), expected_output);
+}
+
 TEST_F(OperatorScanPredicateTest, SimpleBetween) {
   for (const auto predicate_condition :
        {PredicateCondition::BetweenInclusive, PredicateCondition::BetweenLowerExclusive,
