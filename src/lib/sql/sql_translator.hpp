@@ -218,6 +218,8 @@ class SQLTranslator final {
 
   // "Inflated" because all wildcards will be inflated to the expressions they actually represent
   std::vector<SelectListElement> _inflated_select_list_elements;
+
+  std::vector<std::shared_ptr<AbstractExpression>> _order_by_expressions;
 };
 
 }  // namespace hyrise

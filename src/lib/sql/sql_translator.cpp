@@ -291,17 +291,33 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_select_statement(cons
   }
 
   /**
-   * Name, select and arrange the Columns as specified in the SELECT clause
+   * Name, select and arrange the columns as specified in the SELECT clause.
    */
-  // Only add a ProjectionNode if necessary
+  // Only add a ProjectionNode if necessary.
   const auto& inflated_select_list_expressions = _unwrap_elements(_inflated_select_list_elements);
   if (!expressions_equal(_current_lqp->output_expressions(), inflated_select_list_expressions)) {
     _current_lqp = ProjectionNode::make(inflated_select_list_expressions, _current_lqp);
   }
 
+  // For SELECT DISTINCT, we add an AggregateNode that groups by all output columns, but does not use any aggregate
+  // functions, e.g.: `SELECT DISTINCT a, b ...` becomes `SELECT a, b ... GROUP BY a, b`.
+  //
+  // This might create unnecessary AggregateNodes when we already have an aggregation that creates unique results:
+  // `SELECT DISTINCT a, MIN(b) FROM t GROUP BY a` would have one aggregate that groups by a and calculates MIN(b), and
+  // one that groups by both a and MIN(b) without calculating anything. Fixing this is done by an optimizer rule
+  // (DependentGroupByReductionRule) that checks if the respective columns are already unique.
+  if (select.selectDistinct) {
+    _current_lqp = AggregateNode::make(inflated_select_list_expressions, expression_vector(), _current_lqp);
+    const auto& output_expressions = _current_lqp->output_expressions();
+    const auto& output_expression_set = ExpressionUnorderedSet{output_expressions.begin(), output_expressions.end()};
+    AssertInput(std::all_of(_order_by_expressions.cbegin(), _order_by_expressions.cend(),
+                            [&](const auto& expression) { return output_expression_set.contains(expression); }),
+                "For SELECT DISTINCT, ORDER BY expressions must appear in the SELECT list.");
+  }
+
   // Check whether we need to create an AliasNode - this is the case whenever an Expression was assigned a column_name
   // that is not its generated name.
-  auto need_alias_node = std::any_of(
+  const auto need_alias_node = std::any_of(
       _inflated_select_list_elements.begin(), _inflated_select_list_elements.end(), [](const auto& element) {
         return std::any_of(element.identifiers.begin(), element.identifiers.end(), [&](const auto& identifier) {
           return identifier.column_name != element.expression->as_column_name();
@@ -1180,18 +1196,6 @@ void SQLTranslator::_translate_select_groupby_having(const hsql::SelectStatement
       _inflated_select_list_elements.emplace_back(select_list_elements[select_list_idx]);
     }
   }
-
-  // For SELECT DISTINCT, we add an aggregate node that groups by all output columns, but doesn't use any aggregate
-  // functions, e.g.: `SELECT DISTINCT a, b ...` becomes `SELECT a, b ... GROUP BY a, b`.
-  //
-  // This might create unnecessary aggregate nodes when we already have an aggregation that creates unique results:
-  // `SELECT DISTINCT a, MIN(b) FROM t GROUP BY a` would have one aggregate that groups by a and calculates MIN(b), and
-  // one that groups by both a and MIN(b) without calculating anything. Fixing this is done by an optimizer rule
-  // (DependentGroupByReductionRule) that checks if the respective columns are already unique.
-  if (select.selectDistinct) {
-    _current_lqp =
-        AggregateNode::make(_unwrap_elements(_inflated_select_list_elements), expression_vector(), _current_lqp);
-  }
 }
 
 void SQLTranslator::_translate_set_operation(const hsql::SetOperation& set_operator) {
@@ -1246,7 +1250,7 @@ void SQLTranslator::_translate_order_by(const std::vector<hsql::OrderDescription
     return;
   }
 
-  // So we can later reset the available Expressions to the Expressions of this LQP
+  // So we can later reset the available expressions to the expressions of this LQP.
   const auto input_lqp = _current_lqp;
 
   const auto order_list_size = order_list.size();
@@ -1254,18 +1258,17 @@ void SQLTranslator::_translate_order_by(const std::vector<hsql::OrderDescription
   auto sort_modes = std::vector<SortMode>(order_list_size);
   for (auto expression_idx = size_t{0}; expression_idx < order_list_size; ++expression_idx) {
     const auto& order_description = order_list[expression_idx];
-    expressions[expression_idx] = _translate_hsql_expr(*order_description->expr, _sql_identifier_resolver);
+    const auto& order_by_expression = _translate_hsql_expr(*order_description->expr, _sql_identifier_resolver);
+    expressions[expression_idx] = order_by_expression;
+    _order_by_expressions.emplace_back(order_by_expression);
     sort_modes[expression_idx] = order_type_to_sort_mode.at(order_description->type);
   }
 
   _current_lqp = _add_expressions_if_unavailable(_current_lqp, expressions);
   _current_lqp = SortNode::make(expressions, sort_modes, _current_lqp);
 
-  // If any Expressions were added to perform the sorting, remove them again
-  const auto input_output_expressions = input_lqp->output_expressions();
-  if (input_output_expressions.size() != _current_lqp->output_expressions().size()) {
-    _current_lqp = ProjectionNode::make(input_output_expressions, _current_lqp);
-  }
+  // If any expressions were added to perform the sorting, we will add a ProjectionNode later and remove them again in
+  // _translate_select_statement(...).
 }
 
 void SQLTranslator::_translate_limit(const hsql::LimitDescription& limit) {
