@@ -13,6 +13,7 @@ fi
 
 benchmarks='hyriseBenchmarkTPCH hyriseBenchmarkTPCDS hyriseBenchmarkStarSchema'
 scale_factors="1 20 30 50 70 100"
+scale_factors="10 100"
 # Set to 1 because even a single warmup run of a query makes the observed runtimes much more stable. See discussion in #2405 for some preliminary reasoning.
 warmup_seconds=1
 mt_shuffled_runtime=1200
