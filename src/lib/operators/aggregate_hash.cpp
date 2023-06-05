@@ -147,7 +147,7 @@ AggregateHash::AggregateHash(const std::shared_ptr<AbstractOperator>& input_oper
   // NOLINTNEXTLINE - clang-tidy wants _has_aggregate_functions in the member initializer list
   _has_aggregate_functions =
       !_aggregates.empty() && !std::all_of(_aggregates.begin(), _aggregates.end(), [](const auto aggregate_expression) {
-        return aggregate_expression->aggregate_function == WindowFunction::Any;
+        return aggregate_expression->window_function == WindowFunction::Any;
       });
 }
 
@@ -593,11 +593,11 @@ void AggregateHash::_aggregate() {
   for (auto aggregate_idx = ColumnID{0}; aggregate_idx < aggregate_count; ++aggregate_idx) {
     const auto& aggregate = _aggregates[aggregate_idx];
 
-    const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->operand());
+    const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->argument());
     const auto input_column_id = pqp_column.column_id;
 
     if (input_column_id == INVALID_COLUMN_ID) {
-      Assert(aggregate->aggregate_function == WindowFunction::Count, "Only COUNT may have an invalid ColumnID");
+      Assert(aggregate->window_function == WindowFunction::Count, "Only COUNT may have an invalid ColumnID");
       // SELECT COUNT(*) - we know the template arguments, so we don't need a visitor
       auto context = std::make_shared<AggregateContext<CountColumnType, WindowFunction::Count, AggregateKey>>(
           _expected_result_size);
@@ -607,7 +607,7 @@ void AggregateHash::_aggregate() {
     }
     const auto data_type = input_table->column_data_type(input_column_id);
     _contexts_per_column[aggregate_idx] =
-        _create_aggregate_context<AggregateKey>(data_type, aggregate->aggregate_function);
+        _create_aggregate_context<AggregateKey>(data_type, aggregate->window_function);
   }
 
   // Process Chunks and perform aggregations
@@ -670,11 +670,11 @@ void AggregateHash::_aggregate() {
          * specific output logic for COUNT(*).
          */
 
-        const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->operand());
+        const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->argument());
         const auto input_column_id = pqp_column.column_id;
 
         if (input_column_id == INVALID_COLUMN_ID) {
-          Assert(aggregate->aggregate_function == WindowFunction::Count, "Only COUNT may have an invalid ColumnID");
+          Assert(aggregate->window_function == WindowFunction::Count, "Only COUNT may have an invalid ColumnID");
           auto context =
               std::static_pointer_cast<AggregateContext<CountColumnType, WindowFunction::Count, AggregateKey>>(
                   _contexts_per_column[aggregate_idx]);
@@ -729,7 +729,7 @@ void AggregateHash::_aggregate() {
         resolve_data_type(data_type, [&, aggregate](auto type) {
           using ColumnDataType = typename decltype(type)::type;
 
-          switch (aggregate->aggregate_function) {
+          switch (aggregate->window_function) {
             case WindowFunction::Min:
               _aggregate_segment<ColumnDataType, WindowFunction::Min, AggregateKey>(chunk_id, aggregate_idx,
                                                                                     *abstract_segment, keys_per_chunk);
@@ -766,8 +766,7 @@ void AggregateHash::_aggregate() {
             case WindowFunction::PercentRank:
             case WindowFunction::Rank:
             case WindowFunction::RowNumber:
-              Fail("Unsupported aggregate function " +
-                   window_function_to_string.left.at(aggregate->aggregate_function));
+              Fail("Unsupported aggregate function " + window_function_to_string.left.at(aggregate->window_function));
           }
         });
 
@@ -830,7 +829,7 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
   const auto& input_table = left_input_table();
   auto aggregate_idx = ColumnID{0};
   for (const auto& aggregate : _aggregates) {
-    const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->operand());
+    const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->argument());
     const auto input_column_id = pqp_column.column_id;
 
     // Output column for COUNT(*).
@@ -839,7 +838,7 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
 
     resolve_data_type(data_type, [&](auto type) {
       using ColumnDataType = typename decltype(type)::type;
-      switch (aggregate->aggregate_function) {
+      switch (aggregate->window_function) {
         case WindowFunction::Min:
           _write_aggregate_output<ColumnDataType, WindowFunction::Min>(aggregate_idx);
           break;
@@ -869,7 +868,7 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
         case WindowFunction::PercentRank:
         case WindowFunction::Rank:
         case WindowFunction::RowNumber:
-          Fail("Unsupported aggregate function " + window_function_to_string.left.at(aggregate->aggregate_function));
+          Fail("Unsupported aggregate function " + window_function_to_string.left.at(aggregate->window_function));
       }
     });
 
@@ -1041,8 +1040,8 @@ void AggregateHash::_write_groupby_output(RowIDPosList& pos_list) {
       ++output_column_id;
     }
     for (const auto& aggregate : _aggregates) {
-      if (aggregate->aggregate_function == WindowFunction::Any) {
-        const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->operand());
+      if (aggregate->window_function == WindowFunction::Any) {
+        const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->argument());
         const auto input_column_id = pqp_column.column_id;
         unaggregated_columns.emplace_back(input_column_id, output_column_id);
       }
@@ -1120,16 +1119,16 @@ void AggregateHash::_write_aggregate_output(ColumnID aggregate_index) {
 
   // retrieve type information from the aggregation traits
   typename AggregateTraits<ColumnDataType, aggregate_function>::AggregateType aggregate_type;
-  auto aggregate_data_type = AggregateTraits<ColumnDataType, aggregate_function>::AGGREGATE_DATA_TYPE;
+  auto RESULT_TYPE = AggregateTraits<ColumnDataType, aggregate_function>::RESULT_TYPE;
 
   const auto& aggregate = _aggregates[aggregate_index];
 
-  const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->operand());
+  const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->argument());
   const auto input_column_id = pqp_column.column_id;
 
-  if (aggregate_data_type == DataType::Null) {
+  if (RESULT_TYPE == DataType::Null) {
     // if not specified, it’s the input column’s type
-    aggregate_data_type = left_input_table()->column_data_type(input_column_id);
+    RESULT_TYPE = left_input_table()->column_data_type(input_column_id);
   }
 
   auto context = std::static_pointer_cast<AggregateResultContext<ColumnDataType, aggregate_function>>(
@@ -1176,7 +1175,7 @@ void AggregateHash::_write_aggregate_output(ColumnID aggregate_index) {
   DebugAssert(NEEDS_NULL || null_values.empty(), "write_aggregate_values unexpectedly wrote NULL values");
   const auto output_column_id = _groupby_column_ids.size() + aggregate_index;
   _output_column_definitions[output_column_id] =
-      TableColumnDefinition{aggregate->as_column_name(), aggregate_data_type, NEEDS_NULL};
+      TableColumnDefinition{aggregate->as_column_name(), RESULT_TYPE, NEEDS_NULL};
 
   auto output_segment = std::shared_ptr<ValueSegment<decltype(aggregate_type)>>{};
   if (!NEEDS_NULL) {

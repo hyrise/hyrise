@@ -32,6 +32,9 @@ AggregateNode::AggregateNode(const std::vector<std::shared_ptr<AbstractExpressio
              "Expression used as aggregate expression must be of type WindowFunctionExpression.");
       const auto& window_function = static_cast<const WindowFunctionExpression&>(*aggregate_expression);
       Assert(!window_function.window(), "Aggregates must not define a window.");
+      Assert(
+          aggregate_functions.contains(window_function.window_function),
+          window_function_to_string.left.at(window_function.window_function) + " is not a valid aggregate function.");
     }
   }
 
@@ -82,7 +85,7 @@ std::vector<std::shared_ptr<AbstractExpression>> AggregateNode::output_expressio
     DebugAssert(output_expression->type == ExpressionType::WindowFunction,
                 "Unexpected non-aggregate in list of aggregates.");
     const auto& aggregate_expression = static_cast<WindowFunctionExpression&>(*output_expression);
-    if (aggregate_expression.aggregate_function == WindowFunction::Any) {
+    if (aggregate_expression.window_function == WindowFunction::Any) {
       output_expression = output_expression->arguments[0];
     }
   }

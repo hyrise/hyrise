@@ -196,7 +196,7 @@ bool expression_evaluable_on_lqp(const std::shared_ptr<AbstractExpression>& expr
       // output_expressions. Check if sub_expression is COUNT(*) - if yes, ignore the INVALID_COLUMN_ID and verify that
       // its original_node is part of lqp.
       const auto& aggregate_expression = static_cast<const WindowFunctionExpression&>(*sub_expression);
-      const auto& lqp_column_expression = static_cast<const LQPColumnExpression&>(*aggregate_expression.operand());
+      const auto& lqp_column_expression = static_cast<const LQPColumnExpression&>(*aggregate_expression.argument());
       const auto& original_node = lqp_column_expression.original_node.lock();
       Assert(original_node, "LQPColumnExpression is expired, LQP is invalid");
 

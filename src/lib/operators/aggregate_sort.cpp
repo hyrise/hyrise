@@ -67,7 +67,7 @@ const std::string& AggregateSort::name() const {
 template <typename ColumnType, typename AggregateType, WindowFunction aggregate_function>
 void AggregateSort::_aggregate_values(const std::set<RowID>& group_boundaries, const uint64_t aggregate_index,
                                       const std::shared_ptr<const Table>& sorted_table) {
-  const auto& pqp_column = static_cast<const PQPColumnExpression&>(*_aggregates[aggregate_index]->operand());
+  const auto& pqp_column = static_cast<const PQPColumnExpression&>(*_aggregates[aggregate_index]->argument());
   const auto input_column_id = pqp_column.column_id;
 
   auto aggregator = WindowFunctionBuilder<ColumnType, AggregateType, aggregate_function>().get_aggregate_function();
@@ -243,7 +243,7 @@ void AggregateSort::_set_and_write_aggregate_value(
   auto is_null = value_count == 0;
 
   if constexpr (aggregate_function == WindowFunction::Count) {
-    const auto& pqp_column = static_cast<const PQPColumnExpression&>(*this->_aggregates[aggregate_index]->operand());
+    const auto& pqp_column = static_cast<const PQPColumnExpression&>(*this->_aggregates[aggregate_index]->argument());
     const auto input_column_id = pqp_column.column_id;
 
     if (input_column_id != INVALID_COLUMN_ID) {
@@ -402,7 +402,7 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
   // Create aggregate column definitions
   auto aggregate_idx = ColumnID{0};
   for (const auto& aggregate : _aggregates) {
-    const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->operand());
+    const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->argument());
     const auto column_id = pqp_column.column_id;
 
     /*
@@ -416,7 +416,7 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
     const auto data_type = column_id == INVALID_COLUMN_ID ? DataType::Long : input_table->column_data_type(column_id);
 
     resolve_data_type(data_type, [&, aggregate_idx](auto type) {
-      _create_aggregate_column_definitions(type, aggregate_idx, aggregate->aggregate_function);
+      _create_aggregate_column_definitions(type, aggregate_idx, aggregate->window_function);
     });
 
     ++aggregate_idx;
@@ -439,8 +439,8 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
     if (_groupby_column_ids.empty()) {
       std::vector<AllTypeVariant> default_values;
       for (const auto& aggregate : _aggregates) {
-        if (aggregate->aggregate_function == WindowFunction::Count ||
-            aggregate->aggregate_function == WindowFunction::CountDistinct) {
+        if (aggregate->window_function == WindowFunction::Count ||
+            aggregate->window_function == WindowFunction::CountDistinct) {
           default_values.emplace_back(int64_t{0});
         } else {
           default_values.emplace_back(NULL_VALUE);
@@ -628,7 +628,7 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
      * but the function call expects an input type, we choose Int arbitrarily.
      * This is NOT the result type of COUNT(*), which is Long.
      */
-    const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->operand());
+    const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->argument());
     const auto input_column_id = pqp_column.column_id;
 
     const auto data_type =
@@ -638,12 +638,12 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
 
       /*
        * We are aware that the switch looks very repetitive, but we could not find a dynamic solution.
-       * The problem we encountered: We cannot simply hand aggregate->aggregate_function into the call of _aggregate_values.
+       * The problem we encountered: We cannot simply hand aggregate->window_function into the call of _aggregate_values.
        * The reason: the compiler wants to know at compile time which of the templated versions need to be called.
-       * However, aggregate->aggregate_function is something that is only available at runtime,
+       * However, aggregate->window_function is something that is only available at runtime,
        * so the compiler cannot know its value and thus not deduce the correct method call.
        */
-      switch (aggregate->aggregate_function) {
+      switch (aggregate->window_function) {
         case WindowFunction::Min: {
           using AggregateType = typename AggregateTraits<ColumnDataType, WindowFunction::Min>::AggregateType;
           _aggregate_values<ColumnDataType, AggregateType, WindowFunction::Min>(group_boundaries, aggregate_index,
@@ -699,7 +699,7 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
           case WindowFunction::PercentRank:
           case WindowFunction::Rank:
           case WindowFunction::RowNumber:
-            Fail("Unsupported aggregate function " + window_function_to_string.left.at(aggregate->aggregate_function));
+            Fail("Unsupported aggregate function " + window_function_to_string.left.at(aggregate->window_function));
         }
       }
     });
@@ -785,15 +785,15 @@ void AggregateSort::_create_aggregate_column_definitions(boost::hana::basic_type
 template <typename ColumnType, WindowFunction aggregate_function>
 void AggregateSort::create_aggregate_column_definitions(ColumnID column_index) {
   // retrieve type information from the aggregation traits
-  auto aggregate_data_type = AggregateTraits<ColumnType, aggregate_function>::AGGREGATE_DATA_TYPE;
+  auto RESULT_TYPE = AggregateTraits<ColumnType, aggregate_function>::RESULT_TYPE;
 
   const auto& aggregate = _aggregates[column_index];
-  const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->operand());
+  const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->argument());
   const auto input_column_id = pqp_column.column_id;
 
-  if (aggregate_data_type == DataType::Null) {
+  if (RESULT_TYPE == DataType::Null) {
     // if not specified, it’s the input column’s type
-    aggregate_data_type = left_input_table()->column_data_type(input_column_id);
+    RESULT_TYPE = left_input_table()->column_data_type(input_column_id);
   }
 
   const auto nullable =
@@ -801,7 +801,7 @@ void AggregateSort::create_aggregate_column_definitions(ColumnID column_index) {
        aggregate_function != WindowFunction::Any) ||
       (aggregate_function == WindowFunction::Any && left_input_table()->column_is_nullable(input_column_id));
   const auto column_name =
-      aggregate->aggregate_function == WindowFunction::Any ? pqp_column.as_column_name() : aggregate->as_column_name();
-  _output_column_definitions.emplace_back(column_name, aggregate_data_type, nullable);
+      aggregate->window_function == WindowFunction::Any ? pqp_column.as_column_name() : aggregate->as_column_name();
+  _output_column_definitions.emplace_back(column_name, RESULT_TYPE, nullable);
 }
 }  // namespace hyrise

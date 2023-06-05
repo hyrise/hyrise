@@ -568,9 +568,9 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_predicate_node(
       // de-duplicated in the LQPTranslator).
       auto subquery_origin_node = lower_bound_lqp.left_input();
 
-      if (lower_bound_aggregate_expression->aggregate_function != WindowFunction::Min ||
-          upper_bound_aggregate_expression->aggregate_function != WindowFunction::Max ||
-          *lower_bound_aggregate_expression->operand() != *upper_bound_aggregate_expression->operand() ||
+      if (lower_bound_aggregate_expression->window_function != WindowFunction::Min ||
+          upper_bound_aggregate_expression->window_function != WindowFunction::Max ||
+          *lower_bound_aggregate_expression->argument() != *upper_bound_aggregate_expression->argument() ||
           *subquery_origin_node != *upper_bound_lqp.left_input()) {
         return input_table_statistics;
       }
@@ -603,7 +603,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_predicate_node(
       }
 
       subquery_statistics = estimate_statistics(subquery_origin_node);
-      subquery_column_id = subquery_origin_node->get_column_id(*lower_bound_aggregate_expression->operand());
+      subquery_column_id = subquery_origin_node->get_column_id(*lower_bound_aggregate_expression->argument());
     }
 
     if (!subquery_statistics) {

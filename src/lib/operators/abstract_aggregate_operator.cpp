@@ -69,21 +69,21 @@ std::string AbstractAggregateOperator::description(DescriptionMode description_m
 void AbstractAggregateOperator::_validate_aggregates() const {
   const auto input_table = left_input_table();
   for (const auto& aggregate : _aggregates) {
-    const auto pqp_column = std::dynamic_pointer_cast<PQPColumnExpression>(aggregate->operand());
+    const auto pqp_column = std::dynamic_pointer_cast<PQPColumnExpression>(aggregate->argument());
     DebugAssert(pqp_column,
                 "Aggregate operators can currently only handle physical columns, no complicated expressions");
     const auto column_id = pqp_column->column_id;
     if (column_id == INVALID_COLUMN_ID) {
-      Assert(aggregate->aggregate_function == WindowFunction::Count, "Aggregate: Asterisk is only valid with COUNT");
+      Assert(aggregate->window_function == WindowFunction::Count, "Aggregate: Asterisk is only valid with COUNT");
     } else {
       DebugAssert(column_id < input_table->column_count(), "Aggregate column index out of bounds");
       DebugAssert(pqp_column->data_type() == input_table->column_data_type(column_id),
                   "Mismatching column_data_type for input column");
-      Assert(input_table->column_data_type(column_id) != DataType::String ||
-                 (aggregate->aggregate_function != WindowFunction::Sum &&
-                  aggregate->aggregate_function != WindowFunction::Avg &&
-                  aggregate->aggregate_function != WindowFunction::StandardDeviationSample),
-             "Aggregate: Cannot calculate SUM, AVG or STDDEV_SAMP on string column");
+      Assert(
+          input_table->column_data_type(column_id) != DataType::String ||
+              (aggregate->window_function != WindowFunction::Sum && aggregate->window_function != WindowFunction::Avg &&
+               aggregate->window_function != WindowFunction::StandardDeviationSample),
+          "Aggregate: Cannot calculate SUM, AVG or STDDEV_SAMP on string column");
     }
   }
 }

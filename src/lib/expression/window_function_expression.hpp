@@ -56,11 +56,11 @@ const auto aggregate_functions = std::unordered_set<WindowFunction>{WindowFuncti
 
 class WindowFunctionExpression : public AbstractExpression {
  public:
-  WindowFunctionExpression(const WindowFunction init_aggregate_function,
+  WindowFunctionExpression(const WindowFunction init_window_function,
                            const std::shared_ptr<AbstractExpression>& argument,
                            const std::shared_ptr<AbstractExpression>& window = nullptr);
 
-  std::shared_ptr<AbstractExpression> operand() const;
+  std::shared_ptr<AbstractExpression> argument() const;
 
   std::shared_ptr<AbstractExpression> window() const;
 
@@ -69,7 +69,7 @@ class WindowFunctionExpression : public AbstractExpression {
 
   static bool is_count_star(const AbstractExpression& expression);
 
-  const WindowFunction aggregate_function;
+  const WindowFunction window_function;
 
  protected:
   std::shared_ptr<AbstractExpression> _on_deep_copy(
@@ -78,7 +78,7 @@ class WindowFunctionExpression : public AbstractExpression {
   size_t _shallow_hash() const override;
   bool _on_is_nullable_on_lqp(const AbstractLQPNode& /*lqp*/) const override;
 
-  bool _has_operand;
+  bool _has_window{false};
 };
 
 }  // namespace hyrise

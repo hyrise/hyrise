@@ -1139,6 +1139,7 @@ void SQLTranslator::_translate_select_groupby_having(const hsql::SelectStatement
   auto pre_aggregate_expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
   auto aggregate_expression_set = ExpressionUnorderedSet{};
   auto aggregate_expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
+  //auto window_expressions = ExpressionUnorderedSet{};
 
   // Visitor that identifies still uncomputed WindowFunctionExpressions and their arguments.
   const auto find_uncomputed_aggregates_and_arguments = [&](auto& sub_expression) {
@@ -1156,10 +1157,15 @@ void SQLTranslator::_translate_select_groupby_having(const hsql::SelectStatement
       return ExpressionVisitation::VisitArguments;
     }
 
-    auto aggregate_expression = std::static_pointer_cast<WindowFunctionExpression>(sub_expression);
-    if (aggregate_expression_set.emplace(aggregate_expression).second) {
-      aggregate_expressions.emplace_back(aggregate_expression);
-      for (const auto& argument : aggregate_expression->arguments) {
+    const auto& window_expression = std::static_pointer_cast<WindowFunctionExpression>(sub_expression);
+    //const auto& window = window_expression->window_description();
+    /*if (window && window_expression_set.emplace(window_expression).second) {
+      return ExpressionVisitation::VisitArguments;
+    }*/
+
+    if (aggregate_expression_set.emplace(window_expression).second) {
+      aggregate_expressions.emplace_back(window_expression);
+      for (const auto& argument : window_expression->arguments) {
         if (pre_aggregate_expression_set.emplace(argument).second) {
           // Handle COUNT(*)
           const auto* const column_expression = dynamic_cast<const LQPColumnExpression*>(&*argument);
@@ -1173,14 +1179,14 @@ void SQLTranslator::_translate_select_groupby_having(const hsql::SelectStatement
     return ExpressionVisitation::DoNotVisitArguments;
   };
 
-  // Identify all Aggregates and their arguments needed for SELECT
+  // Identify all Aggregates and their arguments needed for SELECT.
   for (const auto& element : select_list_elements) {
     if (element.expression) {
       visit_expression(element.expression, find_uncomputed_aggregates_and_arguments);
     }
   }
 
-  // Identify all GROUP BY expressions
+  // Identify all GROUP BY expressions.
   auto group_by_expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
   if (select.groupBy && select.groupBy->columns) {
     group_by_expressions.reserve(select.groupBy->columns->size());
@@ -1193,7 +1199,7 @@ void SQLTranslator::_translate_select_groupby_having(const hsql::SelectStatement
     }
   }
 
-  // Gather all aggregates and arguments from HAVING
+  // Gather all aggregates and arguments from HAVING.
   auto having_expression = std::shared_ptr<AbstractExpression>{};
   if (select.groupBy && select.groupBy->having) {
     having_expression = _translate_hsql_expr(*select.groupBy->having, _sql_identifier_resolver);
@@ -1204,15 +1210,14 @@ void SQLTranslator::_translate_select_groupby_having(const hsql::SelectStatement
 
   const auto pre_aggregate_lqp = _current_lqp;
 
-  // Build Aggregate
+  // Build Aggregate.
   if (is_aggregate) {
-    // If needed, add a Projection to evaluate all Expression required for GROUP BY/Aggregates
+    // If needed, add a Projection to evaluate all Expression required for GROUP BY/Aggregates.
     if (!pre_aggregate_expressions.empty()) {
       const auto& output_expressions = _current_lqp->output_expressions();
       const auto any_expression_not_yet_available = std::any_of(
-          pre_aggregate_expressions.cbegin(), pre_aggregate_expressions.cend(), [&](const auto& expression) {
-            return !static_cast<bool>(find_expression_idx(*expression, output_expressions));
-          });
+          pre_aggregate_expressions.cbegin(), pre_aggregate_expressions.cend(),
+          [&](const auto& expression) { return !find_expression_idx(*expression, output_expressions).has_value(); });
 
       if (any_expression_not_yet_available) {
         _current_lqp = ProjectionNode::make(pre_aggregate_expressions, _current_lqp);
@@ -1221,14 +1226,23 @@ void SQLTranslator::_translate_select_groupby_having(const hsql::SelectStatement
     _current_lqp = AggregateNode::make(group_by_expressions, aggregate_expressions, _current_lqp);
   }
 
-  // Build Having
+  // Build Having.
   if (having_expression) {
     AssertInput(expression_evaluable_on_lqp(having_expression, *_current_lqp),
                 "HAVING references columns not accessible after Aggregation");
     _current_lqp = _translate_predicate_expression(having_expression, _current_lqp);
   }
 
-  for (auto select_list_idx = size_t{0}; select_list_idx < select.selectList->size(); ++select_list_idx) {
+  // Build windows.
+  /*const auto has_windows = !window_expressions.empty();
+  if (has_windows) {
+    for (const auto& window_expression : window_expressions) {
+      AssertInput();
+    }
+  }*/
+
+  const auto select_list_size = select.selectList->size();
+  for (auto select_list_idx = size_t{0}; select_list_idx < select_list_size; ++select_list_idx) {
     const auto* hsql_expr = (*select.selectList)[select_list_idx];
 
     if (hsql_expr->type == hsql::kExprStar) {
@@ -1893,14 +1907,15 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
           AssertInput(allow_window_functions,
                       "Window functions are only allowed in the SELECT list and must not be nested.");
           AssertInput(window_description, "Window function " + name + " requires a window definition.");
+          AssertInput(!expr.exprList || expr.exprList->empty() == 1, "Window functions must not have an argument.");
+        } else {
+          AssertInput(expr.exprList && expr.exprList->size() == 1,
+                      "Expected exactly one argument for an aggregate function.");
         }
 
         if (window_function == WindowFunction::Count && expr.distinct) {
           window_function = WindowFunction::CountDistinct;
         }
-
-        AssertInput(expr.exprList && expr.exprList->size() == 1,
-                    "Expected exactly one argument for this Aggregate/WindowFunction.");
 
         auto aggregate_expression = std::shared_ptr<WindowFunctionExpression>{};
 
@@ -1909,14 +1924,10 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
           case WindowFunction::Max:
           case WindowFunction::Sum:
           case WindowFunction::Avg:
-          case WindowFunction::StandardDeviationSample:
-          case WindowFunction::CumeDist:
-          case WindowFunction::DenseRank:
-          case WindowFunction::PercentRank:
-          case WindowFunction::Rank:
-          case WindowFunction::RowNumber: {
+          case WindowFunction::StandardDeviationSample: {
             aggregate_expression = std::make_shared<WindowFunctionExpression>(
-                window_function, _translate_hsql_expr(*expr.exprList->front(), sql_identifier_resolver));
+                window_function, _translate_hsql_expr(*expr.exprList->front(), sql_identifier_resolver),
+                window_description);
           } break;
           case WindowFunction::Any:
             Fail("ANY() is an internal aggregation function.");
@@ -1938,20 +1949,31 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
 
               const auto column_expression = lqp_column_(leaf_node, INVALID_COLUMN_ID);
 
-              aggregate_expression = std::make_shared<WindowFunctionExpression>(window_function, column_expression);
+              aggregate_expression =
+                  std::make_shared<WindowFunctionExpression>(window_function, column_expression, window_description);
             } else {
               aggregate_expression = std::make_shared<WindowFunctionExpression>(
-                  window_function, _translate_hsql_expr(*expr.exprList->front(), sql_identifier_resolver));
+                  window_function, _translate_hsql_expr(*expr.exprList->front(), sql_identifier_resolver),
+                  window_description);
             }
+          } break;
+
+          case WindowFunction::CumeDist:
+          case WindowFunction::DenseRank:
+          case WindowFunction::PercentRank:
+          case WindowFunction::Rank:
+          case WindowFunction::RowNumber: {
+            aggregate_expression =
+                std::make_shared<WindowFunctionExpression>(window_function, nullptr, window_description);
           } break;
         }
 
         // Check that the aggregate can be calculated on the given expression
-        const auto aggregate_data_type = aggregate_expression->data_type();
-        AssertInput(aggregate_data_type != DataType::Null,
+        const auto result_type = aggregate_expression->data_type();
+        AssertInput(result_type != DataType::Null,
                     std::string{"Invalid aggregate "} + aggregate_expression->as_column_name() +
                         " for input data type " +
-                        data_type_to_string.left.at(aggregate_expression->operand()->data_type()));
+                        data_type_to_string.left.at(aggregate_expression->argument()->data_type()));
 
         // Check for ambiguous expressions that occur both at the current node and in its input tables. Example:
         //   SELECT COUNT(a) FROM (SELECT a, COUNT(a) FROM t GROUP BY a) t2

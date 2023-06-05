@@ -3,6 +3,7 @@
 #include "cost_estimation/cost_estimator_logical.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_subquery_expression.hpp"
+#include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/logical_plan_root_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "strategy/between_composition_rule.hpp"
@@ -156,7 +157,8 @@ void validate_lqp_with_uncorrelated_subqueries(const std::shared_ptr<const Abstr
     //  late evaluation, window functions cannot be used within the WHERE, GROUP BY, or HAVING clauses."
     // - Kevin Kline. SQL in a Nutshell, 3rd Edition. p 520.
     // Thus, we check that a WindowNode is only followed by ProjectionNodes (if there are calculations on the window
-    // function result), AliasNodes, SortNodes, LimitNodes, and the LogicalPlanRootNode.
+    // function result), AliasNodes, SortNodes, LimitNodes, AggregateNoded for SELECT DISTINCT, and the
+    // LogicalPlanRootNode.
     if (node->type == LQPNodeType::Window) {
       visit_lqp_upwards(node, [](const auto& output_node) {
         switch (output_node->type) {
@@ -167,11 +169,19 @@ void validate_lqp_with_uncorrelated_subqueries(const std::shared_ptr<const Abstr
           case LQPNodeType::Root:
             return LQPUpwardVisitation::VisitOutputs;
 
+          case LQPNodeType::Aggregate: {
+            const auto& aggregate_node = static_cast<const AggregateNode&>(*output_node);
+            Assert(aggregate_node.node_expressions.size() == aggregate_node.aggregate_expressions_begin_idx,
+                   "WindowNode is followed by an LQPNode of type Aggregate.");
+          }
+            return LQPUpwardVisitation::VisitOutputs;
+
           default:
             break;
         }
 
-        Fail("WindowNode is follwed by an LQPNode of type " + std::string{magic_enum::enum_name(output_node->type)});
+        Fail("WindowNode is follwed by an LQPNode of type " + std::string{magic_enum::enum_name(output_node->type)} +
+             ".");
       });
     }
 

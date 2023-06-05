@@ -180,7 +180,7 @@ ExpressionUnorderedSet gather_locally_required_expressions(
       const auto& window_function = static_cast<const WindowFunctionExpression&>(*node->node_expressions[0]);
       Assert(window_function.window(), "Window functions must define a window.");
 
-      const auto& function_argument = window_function.operand();
+      const auto& function_argument = window_function.argument();
       if (function_argument) {
         locally_required_expressions.emplace(function_argument);
       }

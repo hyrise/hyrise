@@ -250,7 +250,7 @@ void ExpressionReductionRule::remove_duplicate_aggregate(
       continue;
     }
     auto& aggregate_expression = static_cast<WindowFunctionExpression&>(*input_expression);
-    switch (aggregate_expression.aggregate_function) {
+    switch (aggregate_expression.window_function) {
       case WindowFunction::Sum: {
         sums.emplace_back(input_expression);
         break;
@@ -278,12 +278,12 @@ void ExpressionReductionRule::remove_duplicate_aggregate(
   for (const auto& avg_expression_ptr : avgs) {
     const auto& avg_expression = static_cast<WindowFunctionExpression&>(*avg_expression_ptr.get());
 
-    const auto& avg_argument = avg_expression.operand();
+    const auto& avg_argument = avg_expression.argument();
     const auto avg_argument_is_nullable = avg_argument->is_nullable_on_lqp(*aggregate_input_node);
 
     // A helper function that checks whether SUMs and COUNTs match the AVG
     const auto finder = [&](const auto& other_expression) {
-      const auto other_argument = static_cast<const WindowFunctionExpression&>(*other_expression.get()).operand();
+      const auto other_argument = static_cast<const WindowFunctionExpression&>(*other_expression.get()).argument();
       const auto column_expression = std::dynamic_pointer_cast<const LQPColumnExpression>(other_argument);
 
       if (column_expression && column_expression->original_column_id == INVALID_COLUMN_ID) {
