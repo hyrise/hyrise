@@ -11,7 +11,7 @@ then
   exit 1
 fi
 
-benchmarks='hyriseBenchmarkTPCH hyriseBenchmarkTPCDS hyriseBenchmarkStarSchema'
+benchmarks='hyriseBenchmarkTPCH hyriseBenchmarkTPCDS hyriseBenchmarkStarSchema hyriseBenchmarkJoinOrder'
 scale_factors="1 20 30 50 70 100"
 scale_factors="10 100"
 # Set to 1 because even a single warmup run of a query makes the observed runtimes much more stable. See discussion in #2405 for some preliminary reasoning.
@@ -84,6 +84,12 @@ for benchmark in $benchmarks
 do
   for sf in $scale_factors
   do
+
+  if [ "$benchmark" = "hyriseBenchmarkJoinOrder" ]; then
+      continue;
+  fi
+
+
     runtime=$((sf * 6))
     runtime=$(( runtime > 60 ? runtime : 60 ))
 
@@ -94,6 +100,13 @@ do
     ( "${build_folder}"/"$benchmark" -s ${sf} --dont_cache_binary_tables -r ${runs} -t ${runtime} -w ${warmup_seconds} -o "${build_folder}/benchmark_plugin_results/${benchmark}_${commit}_st_s${sf}_plugin.json" -p "${build_folder}/lib/libhyriseDependencyDiscoveryPlugin.${lib_suffix}" 2>&1 ) | tee "${build_folder}/benchmark_plugin_results/${benchmark}_${commit}_st_s${sf}_plugin.log"
   done
 done
+
+    echo "Running hyriseBenchmarkJoinOrder for $commit... (single-threaded)"
+    ( "${build_folder}"/hyriseBenchmarkJoinOrder --dont_cache_binary_tables -r ${runs} -w ${warmup_seconds} -o "${build_folder}/benchmark_plugin_results/hyriseBenchmarkJoinOrder_${commit}_st.json" 2>&1 ) | tee "${build_folder}/benchmark_plugin_results/hyriseBenchmarkJoinOrder_${commit}_st.log"
+
+    echo "Running hyriseBenchmarkJoinOrder for $commit... (single-threaded) w/ plugin"
+    ( "${build_folder}"/hyriseBenchmarkJoinOrder --dont_cache_binary_tables -r ${runs} -w ${warmup_seconds} -o "${build_folder}/benchmark_plugin_results/hyriseBenchmarkJoinOrder_${commit}_st_plugin.json" -p "${build_folder}/lib/libhyriseDependencyDiscoveryPlugin.${lib_suffix}" 2>&1 ) | tee "${build_folder}/benchmark_plugin_results/hyriseBenchmarkJoinOrder_${commit}_st_plugin.log"
+
 cd "${build_folder}"
 
 exit 0
