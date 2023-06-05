@@ -3,8 +3,8 @@
 #include <unordered_map>
 
 #include "expression/abstract_expression.hpp"
-#include "expression/aggregate_expression.hpp"
 #include "expression/expression_utils.hpp"
+#include "expression/window_function_expression.hpp"
 #include "hyrise.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
@@ -42,7 +42,7 @@ void gather_expressions_not_computed_by_expression_evaluator(
     return;
   }
 
-  if (expression->type == ExpressionType::Aggregate || expression->type == ExpressionType::LQPColumn) {
+  if (expression->type == ExpressionType::WindowFunction || expression->type == ExpressionType::LQPColumn) {
     // Aggregates and LQPColumns are not calculated by the ExpressionEvaluator and are thus required to be part of the
     // input.
     required_expressions.emplace(expression);
@@ -96,8 +96,8 @@ ExpressionUnorderedSet gather_locally_required_expressions(
           locally_required_expressions.emplace(expression);
         } else {
           // We need the arguments of all aggregate functions
-          DebugAssert(expression->type == ExpressionType::Aggregate, "Expected AggregateExpression");
-          if (!AggregateExpression::is_count_star(*expression)) {
+          DebugAssert(expression->type == ExpressionType::WindowFunction, "Expected WindowFunctionExpression");
+          if (!WindowFunctionExpression::is_count_star(*expression)) {
             locally_required_expressions.emplace(expression->arguments[0]);
           } else {
             /**
@@ -177,19 +177,16 @@ ExpressionUnorderedSet gather_locally_required_expressions(
     // WindowNodes need all expressions (i) that are the input of the window function, (ii) they should partition by,
     // and (iii) they should order by.
     case LQPNodeType::Window: {
-      const auto& window_function = static_cast<const AggregateExpression&>(*node->node_expressions[0]);
-      Assert(window_function.window, "Window functions must define a window.");
+      const auto& window_function = static_cast<const WindowFunctionExpression&>(*node->node_expressions[0]);
+      Assert(window_function.window(), "Window functions must define a window.");
 
-      const auto& function_argument = window_function.argument();
+      const auto& function_argument = window_function.operand();
       if (function_argument) {
         locally_required_expressions.emplace(function_argument);
       }
 
-      const auto& window = *window_function.window;
-      locally_required_expressions.insert(window.partition_by_expressions.begin(),
-                                          window.partition_by_expressions.end());
-      locally_required_expressions.insert(window.order_by_expressions.begin(), window.order_by_expressions.end());
-
+      const auto& window = static_cast<const WindowExpression&>(*window_function.window());
+      locally_required_expressions.insert(window.arguments.begin(), window.arguments.end());
     } break;
 
     case LQPNodeType::Intersect:

@@ -396,18 +396,18 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_aggregate_node(
   const auto& node_expressions = aggregate_node->node_expressions;
   const auto node_expression_count = node_expressions.size();
 
-  std::vector<std::shared_ptr<AggregateExpression>> pqp_aggregate_expressions;
+  std::vector<std::shared_ptr<WindowFunctionExpression>> pqp_aggregate_expressions;
   pqp_aggregate_expressions.reserve(node_expression_count - aggregate_node->aggregate_expressions_begin_idx);
   for (auto expression_idx = aggregate_node->aggregate_expressions_begin_idx; expression_idx < node_expression_count;
        ++expression_idx) {
     const auto& lqp_expression = aggregate_node->node_expressions[expression_idx];
 
-    Assert(lqp_expression->type == ExpressionType::Aggregate,
+    Assert(lqp_expression->type == ExpressionType::WindowFunction,
            "Expression '" + lqp_expression->as_column_name() +
-               "' used as AggregateExpression is not an AggregateExpression");
+               "' used as WindowFunctionExpression is not an WindowFunctionExpression");
 
     const auto pqp_expression = _translate_expression(lqp_expression, node->left_input(), input_expressions);
-    const auto aggregate_expression = std::static_pointer_cast<AggregateExpression>(pqp_expression);
+    const auto aggregate_expression = std::static_pointer_cast<WindowFunctionExpression>(pqp_expression);
     pqp_aggregate_expressions.emplace_back(aggregate_expression);
   }
 
@@ -593,9 +593,9 @@ std::shared_ptr<AbstractExpression> LQPTranslator::_translate_expression(
     }
 
     // Resolve COUNT(*)
-    if (AggregateExpression::is_count_star(*expression)) {
+    if (WindowFunctionExpression::is_count_star(*expression)) {
       const auto star = std::make_shared<PQPColumnExpression>(INVALID_COLUMN_ID, DataType::Long, false, "*");
-      expression = std::make_shared<AggregateExpression>(AggregateFunction::Count, star);
+      expression = std::make_shared<WindowFunctionExpression>(WindowFunction::Count, star);
       return ExpressionVisitation::DoNotVisitArguments;
     }
 

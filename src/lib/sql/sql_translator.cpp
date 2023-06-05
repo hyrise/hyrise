@@ -3,7 +3,6 @@
 #include "create_sql_parser_error_message.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/abstract_predicate_expression.hpp"
-#include "expression/aggregate_expression.hpp"
 #include "expression/arithmetic_expression.hpp"
 #include "expression/between_expression.hpp"
 #include "expression/binary_predicate_expression.hpp"
@@ -20,6 +19,8 @@
 #include "expression/lqp_subquery_expression.hpp"
 #include "expression/unary_minus_expression.hpp"
 #include "expression/value_expression.hpp"
+#include "expression/window_expression.hpp"
+#include "expression/window_function_expression.hpp"
 #include "hyrise.hpp"
 #include "import_export/file_type.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
@@ -249,7 +250,7 @@ std::shared_ptr<AbstractExpression> inverse_predicate(const AbstractExpression& 
   Fail("Invalid enum value.");
 }
 
-std::unique_ptr<FrameBound> translate_frame_bound(const hsql::FrameBound& hsql_frame_bound) {
+FrameBound translate_frame_bound(const hsql::FrameBound& hsql_frame_bound) {
   auto bound_type = FrameBoundType::CurrentRow;
   switch (hsql_frame_bound.type) {
     case hsql::FrameBoundType::kCurrentRow:
@@ -264,7 +265,7 @@ std::unique_ptr<FrameBound> translate_frame_bound(const hsql::FrameBound& hsql_f
   const auto offset = hsql_frame_bound.offset;
   Assert(offset >= 0, "Expected non-negative offset. Bug in sqlparser?");
 
-  return std::make_unique<FrameBound>(static_cast<uint64_t>(offset), bound_type, hsql_frame_bound.unbounded);
+  return FrameBound{static_cast<uint64_t>(offset), bound_type, hsql_frame_bound.unbounded};
 }
 
 }  // namespace
@@ -1139,23 +1140,23 @@ void SQLTranslator::_translate_select_groupby_having(const hsql::SelectStatement
   auto aggregate_expression_set = ExpressionUnorderedSet{};
   auto aggregate_expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
 
-  // Visitor that identifies still uncomputed AggregateExpressions and their arguments.
+  // Visitor that identifies still uncomputed WindowFunctionExpressions and their arguments.
   const auto find_uncomputed_aggregates_and_arguments = [&](auto& sub_expression) {
     /**
-     * If the AggregateExpression has already been computed in a previous node (consider "x" in
-     * "SELECT x FROM (SELECT MIN(a) as x FROM t) AS y)", it doesn't count as a new Aggregate and is therefore not
-     * considered an "Aggregate" in the current SELECT list. Handling this as a special case seems hacky to me as well,
-     * but it's the best solution I can come up with right now.
+     * If the WindowFunctionExpression has already been computed in a previous node (consider "x" in
+     * "SELECT x FROM (SELECT MIN(a) as x FROM t) AS y)", it does not count as a new Aggregate and is therefore not
+     * considered an "Aggregate" in the current SELECT list. Handling this as a special case seems hacky, but it is the
+     * best solution we came up with.
      */
     if (_current_lqp->find_column_id(*sub_expression)) {
       return ExpressionVisitation::DoNotVisitArguments;
     }
 
-    if (sub_expression->type != ExpressionType::Aggregate) {
+    if (sub_expression->type != ExpressionType::WindowFunction) {
       return ExpressionVisitation::VisitArguments;
     }
 
-    auto aggregate_expression = std::static_pointer_cast<AggregateExpression>(sub_expression);
+    auto aggregate_expression = std::static_pointer_cast<WindowFunctionExpression>(sub_expression);
     if (aggregate_expression_set.emplace(aggregate_expression).second) {
       aggregate_expressions.emplace_back(aggregate_expression);
       for (const auto& argument : aggregate_expression->arguments) {
@@ -1795,7 +1796,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
     case hsql::kExprFunctionRef: {
       // TODO: Window functions
       // Translate window definition.
-      auto window_description = std::unique_ptr<WindowDescription>();
+      auto window_description = std::shared_ptr<WindowExpression>();
       if (expr.windowDescription) {
         AssertInput(allow_window_functions,
                     "Window functions are only allowed in the SELECT list and must not be nested.");
@@ -1835,8 +1836,8 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
 
         Assert(hsql_frame_description.start && hsql_frame_description.end,
                "FrameDescription has no frame bounds. Bug in sqlparser?");
-        auto start = translate_frame_bound(*hsql_frame_description.start);
-        auto end = translate_frame_bound(*hsql_frame_description.end);
+        const auto& start = translate_frame_bound(*hsql_frame_description.start);
+        const auto& end = translate_frame_bound(*hsql_frame_description.end);
 
         // "Restrictions are that `frame_start` cannot be UNBOUNDED FOLLOWING, `frame_end` cannot be UNBOUNDED
         // PRECEDING, and the `frame_end` choice cannot appear earlier [...] than the `frame_start` choice does — for
@@ -1858,16 +1859,15 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
           return offset;
         };
 
-        const auto start_offset = relative_frame_offset(*start);
-        const auto end_offset = relative_frame_offset(*end);
-        AssertInput((start->type != FrameBoundType::Following || !start->unbounded) &&
-                        (end->type != FrameBoundType::Preceding || !end->unbounded) && end_offset >= start_offset,
-                    "Frame starting from " + start->description() + " cannot end at " + end->description() + ".");
+        const auto start_offset = relative_frame_offset(start);
+        const auto end_offset = relative_frame_offset(end);
+        AssertInput((start.type != FrameBoundType::Following || !start.unbounded) &&
+                        (end.type != FrameBoundType::Preceding || !end.unbounded) && end_offset >= start_offset,
+                    "Frame starting from " + start.description() + " cannot end at " + end.description() + ".");
 
-        auto frame_description = std::make_unique<FrameDescription>(frame_type, std::move(start), std::move(end));
-        window_description =
-            std::make_unique<WindowDescription>(std::move(partition_by_expressions), std::move(order_by_expressions),
-                                                std::move(sort_modes), std::move(frame_description));
+        auto frame_description = std::make_unique<FrameDescription>(frame_type, start, end);
+        window_description = window_(std::move(partition_by_expressions), std::move(order_by_expressions),
+                                     std::move(sort_modes), std::move(frame_description));
       }
 
       // convert to upper-case to find mapping
@@ -1875,7 +1875,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
                      [](const auto character) { return std::toupper(character); });
 
       // Some SQL functions have aliases, which we map to one unique identifier here.
-      static const std::unordered_map<std::string, std::string> function_aliases{{{"SUBSTRING"}, {"SUBSTR"}}};
+      static const auto function_aliases = std::unordered_map<std::string, std::string>{{{"SUBSTRING"}, {"SUBSTR"}}};
       const auto found_alias = function_aliases.find(name);
       if (found_alias != function_aliases.end()) {
         name = found_alias->second;
@@ -1884,39 +1884,49 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
       Assert(expr.exprList, "FunctionRef has no exprList. Bug in sqlparser?");
 
       /**
-       * Aggregate function
+       * Window function
        */
-      const auto aggregate_iter = aggregate_function_to_string.right.find(name);
-      if (aggregate_iter != aggregate_function_to_string.right.end()) {
-        auto aggregate_function = aggregate_iter->second;
+      const auto window_function_iter = window_function_to_string.right.find(name);
+      if (window_function_iter != window_function_to_string.right.end()) {
+        auto window_function = window_function_iter->second;
+        if (!aggregate_functions.contains(window_function)) {
+          AssertInput(allow_window_functions,
+                      "Window functions are only allowed in the SELECT list and must not be nested.");
+          AssertInput(window_description, "Window function " + name + " requires a window definition.");
+        }
 
-        if (aggregate_function == AggregateFunction::Count && expr.distinct) {
-          aggregate_function = AggregateFunction::CountDistinct;
+        if (window_function == WindowFunction::Count && expr.distinct) {
+          window_function = WindowFunction::CountDistinct;
         }
 
         AssertInput(expr.exprList && expr.exprList->size() == 1,
-                    "Expected exactly one argument for this AggregateFunction");
+                    "Expected exactly one argument for this Aggregate/WindowFunction.");
 
-        auto aggregate_expression = std::shared_ptr<AggregateExpression>{};
+        auto aggregate_expression = std::shared_ptr<WindowFunctionExpression>{};
 
-        switch (aggregate_function) {
-          case AggregateFunction::Min:
-          case AggregateFunction::Max:
-          case AggregateFunction::Sum:
-          case AggregateFunction::Avg:
-          case AggregateFunction::StandardDeviationSample: {
-            aggregate_expression = std::make_shared<AggregateExpression>(
-                aggregate_function, _translate_hsql_expr(*expr.exprList->front(), sql_identifier_resolver));
+        switch (window_function) {
+          case WindowFunction::Min:
+          case WindowFunction::Max:
+          case WindowFunction::Sum:
+          case WindowFunction::Avg:
+          case WindowFunction::StandardDeviationSample:
+          case WindowFunction::CumeDist:
+          case WindowFunction::DenseRank:
+          case WindowFunction::PercentRank:
+          case WindowFunction::Rank:
+          case WindowFunction::RowNumber: {
+            aggregate_expression = std::make_shared<WindowFunctionExpression>(
+                window_function, _translate_hsql_expr(*expr.exprList->front(), sql_identifier_resolver));
           } break;
-          case AggregateFunction::Any:
+          case WindowFunction::Any:
             Fail("ANY() is an internal aggregation function.");
-          case AggregateFunction::Count:
-          case AggregateFunction::CountDistinct: {
+          case WindowFunction::Count:
+          case WindowFunction::CountDistinct: {
             if (expr.exprList->front()->type == hsql::kExprStar) {
               AssertInput(!expr.exprList->front()->name, "Illegal <t>.* in COUNT()");
 
               // Find any leaf node below COUNT(*)
-              std::shared_ptr<AbstractLQPNode> leaf_node = nullptr;
+              auto leaf_node = std::shared_ptr<AbstractLQPNode>{};
               visit_lqp(_current_lqp, [&](const auto& node) {
                 if (!node->left_input() && !node->right_input()) {
                   leaf_node = node;
@@ -1928,10 +1938,10 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
 
               const auto column_expression = lqp_column_(leaf_node, INVALID_COLUMN_ID);
 
-              aggregate_expression = std::make_shared<AggregateExpression>(aggregate_function, column_expression);
+              aggregate_expression = std::make_shared<WindowFunctionExpression>(window_function, column_expression);
             } else {
-              aggregate_expression = std::make_shared<AggregateExpression>(
-                  aggregate_function, _translate_hsql_expr(*expr.exprList->front(), sql_identifier_resolver));
+              aggregate_expression = std::make_shared<WindowFunctionExpression>(
+                  window_function, _translate_hsql_expr(*expr.exprList->front(), sql_identifier_resolver));
             }
           } break;
         }
@@ -1941,7 +1951,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
         AssertInput(aggregate_data_type != DataType::Null,
                     std::string{"Invalid aggregate "} + aggregate_expression->as_column_name() +
                         " for input data type " +
-                        data_type_to_string.left.at(aggregate_expression->argument()->data_type()));
+                        data_type_to_string.left.at(aggregate_expression->operand()->data_type()));
 
         // Check for ambiguous expressions that occur both at the current node and in its input tables. Example:
         //   SELECT COUNT(a) FROM (SELECT a, COUNT(a) FROM t GROUP BY a) t2

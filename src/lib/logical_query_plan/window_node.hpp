@@ -6,7 +6,7 @@ namespace hyrise {
 
 class WindowNode : public EnableMakeForLQPNode<WindowNode>, public AbstractLQPNode {
  public:
-  WindowNode(const std::shared_ptr<AbstractExpression>& window_function_expression);
+  explicit WindowNode(const std::shared_ptr<AbstractExpression>& window_function_expression);
 
   std::string description(const DescriptionMode mode = DescriptionMode::Short) const override;
   std::vector<std::shared_ptr<AbstractExpression>> output_expressions() const override;

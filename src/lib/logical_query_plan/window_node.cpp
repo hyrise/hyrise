@@ -8,9 +8,10 @@ namespace hyrise {
 WindowNode::WindowNode(const std::shared_ptr<AbstractExpression>& window_function_expression)
     : AbstractLQPNode{LQPNodeType::Window, {window_function_expression}} {
   if constexpr (HYRISE_DEBUG) {
-    Assert(window_function_expression && window_function_expression->type == ExpressionType::Aggregate,
-           "Expression used as window function must be of type AggregateExpression.");
-    Assert(static_cast<AggregateExpression&>(*window_function_expression).window,
+    Assert(window_function_expression && window_function_expression->type == ExpressionType::WindowFunction,
+           "Expression used as window function must be of type WindowFunctionExpression.");
+    const auto& window_function = static_cast<const WindowFunctionExpression&>(*window_function_expression);
+    Assert(window_function.window() && window_function.window()->type == ExpressionType::Window,
            "WindowFunctionExpression must define a window.");
   }
 };

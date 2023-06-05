@@ -106,7 +106,7 @@ enum class ExpressionVisitation { VisitArguments, DoNotVisitArguments };
 template <typename Expression, typename Visitor>
 void visit_expression(Expression& expression, Visitor visitor) {
   // The reference wrapper bit is important so we can manipulate the Expression even by replacing sub expression
-  std::queue<std::reference_wrapper<Expression>> expression_queue;
+  auto expression_queue = std::queue<std::reference_wrapper<Expression>>{};
   expression_queue.push(expression);
 
   while (!expression_queue.empty()) {

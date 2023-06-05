@@ -211,8 +211,10 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::evaluate_expressi
       result = _evaluate_unary_minus_expression<Result>(static_cast<const UnaryMinusExpression&>(expression));
       break;
 
-    case ExpressionType::Aggregate:
-      Fail("ExpressionEvaluator doesn't support Aggregates, use the Aggregate Operator to compute them");
+    case ExpressionType::Window:
+    case ExpressionType::WindowFunction:
+      Fail(
+          "ExpressionEvaluator doesn't support Aggregates/WindowFunctions, use the Aggregate Operator to compute them");
 
     case ExpressionType::List:
       Fail("Can't evaluate a ListExpression, lists should only appear as the right operand of an InExpression");

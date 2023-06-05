@@ -1,9 +1,6 @@
 #pragma once
 
-#include <memory>
-
 #include "abstract_expression.hpp"
-#include "aggregate_expression.hpp"
 #include "arithmetic_expression.hpp"
 #include "between_expression.hpp"
 #include "binary_predicate_expression.hpp"
@@ -25,6 +22,8 @@
 #include "pqp_subquery_expression.hpp"
 #include "unary_minus_expression.hpp"
 #include "value_expression.hpp"
+#include "window_expression.hpp"
+#include "window_function_expression.hpp"
 
 /**
  * This file provides convenience methods to create (nested) Expression objects with little boilerplate.
@@ -93,6 +92,14 @@ struct unary final {
 };
 
 template <auto t, typename E>
+struct binary_defaulted final {
+  template <typename A>
+  std::shared_ptr<E> operator()(const A& a, const std::shared_ptr<AbstractExpression>& b = nullptr) const {
+    return std::make_shared<E>(t, to_expression(a), b);
+  }
+};
+
+template <auto t, typename E>
 struct binary final {
   template <typename A, typename B>
   std::shared_ptr<E> operator()(const A& a, const B& b) const {
@@ -114,14 +121,21 @@ struct ternary final {
 
 inline detail::unary<PredicateCondition::IsNull, IsNullExpression> is_null_;
 inline detail::unary<PredicateCondition::IsNotNull, IsNullExpression> is_not_null_;
-inline detail::unary<AggregateFunction::Sum, AggregateExpression> sum_;
-inline detail::unary<AggregateFunction::Max, AggregateExpression> max_;
-inline detail::unary<AggregateFunction::Min, AggregateExpression> min_;
-inline detail::unary<AggregateFunction::Avg, AggregateExpression> avg_;
-inline detail::unary<AggregateFunction::Count, AggregateExpression> count_;
-inline detail::unary<AggregateFunction::CountDistinct, AggregateExpression> count_distinct_;
-inline detail::unary<AggregateFunction::StandardDeviationSample, AggregateExpression> standard_deviation_sample_;
-inline detail::unary<AggregateFunction::Any, AggregateExpression> any_;
+
+inline detail::binary_defaulted<WindowFunction::Sum, WindowFunctionExpression> sum_;
+inline detail::binary_defaulted<WindowFunction::Max, WindowFunctionExpression> max_;
+inline detail::binary_defaulted<WindowFunction::Min, WindowFunctionExpression> min_;
+inline detail::binary_defaulted<WindowFunction::Avg, WindowFunctionExpression> avg_;
+inline detail::binary_defaulted<WindowFunction::Count, WindowFunctionExpression> count_;
+inline detail::binary_defaulted<WindowFunction::CountDistinct, WindowFunctionExpression> count_distinct_;
+inline detail::binary_defaulted<WindowFunction::StandardDeviationSample, WindowFunctionExpression>
+    standard_deviation_sample_;
+inline detail::binary_defaulted<WindowFunction::Any, WindowFunctionExpression> any_;
+inline detail::binary_defaulted<WindowFunction::CumeDist, WindowFunctionExpression> cume_dist_;
+inline detail::binary_defaulted<WindowFunction::DenseRank, WindowFunctionExpression> dense_rank_;
+inline detail::binary_defaulted<WindowFunction::PercentRank, WindowFunctionExpression> percent_rank_;
+inline detail::binary_defaulted<WindowFunction::Rank, WindowFunctionExpression> rank_;
+inline detail::binary_defaulted<WindowFunction::RowNumber, WindowFunctionExpression> row_number_;
 
 inline detail::binary<ArithmeticOperator::Division, ArithmeticExpression> div_;
 inline detail::binary<ArithmeticOperator::Multiplication, ArithmeticExpression> mul_;
@@ -231,7 +245,7 @@ std::shared_ptr<CorrelatedParameterExpression> correlated_parameter_(const Param
   return std::make_shared<CorrelatedParameterExpression>(parameter_id, *to_expression(referenced));
 }
 
-std::shared_ptr<AggregateExpression> count_star_(const std::shared_ptr<AbstractLQPNode>& lqp_node);
+std::shared_ptr<WindowFunctionExpression> count_star_(const std::shared_ptr<AbstractLQPNode>& lqp_node);
 
 template <typename Argument>
 std::shared_ptr<UnaryMinusExpression> unary_minus_(const Argument& argument) {
@@ -244,6 +258,11 @@ std::shared_ptr<CastExpression> cast_(const Argument& argument, const DataType d
 }
 
 std::shared_ptr<IntervalExpression> interval_(const int64_t duration, const DatetimeComponent unit);
+
+std::shared_ptr<WindowExpression> window_(
+    const std::vector<std::shared_ptr<AbstractExpression>>& partition_by_expressions,
+    const std::vector<std::shared_ptr<AbstractExpression>>& order_by_expressions,
+    const std::vector<SortMode>& sort_modes, std::unique_ptr<FrameDescription> frame_description);
 
 }  // namespace expression_functional
 

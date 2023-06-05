@@ -25,8 +25,6 @@ set(
     expression/abstract_expression.hpp
     expression/abstract_predicate_expression.cpp
     expression/abstract_predicate_expression.hpp
-    expression/aggregate_expression.cpp
-    expression/aggregate_expression.hpp
     expression/arithmetic_expression.cpp
     expression/arithmetic_expression.hpp
     expression/between_expression.cpp
@@ -81,6 +79,10 @@ set(
     expression/unary_minus_expression.hpp
     expression/value_expression.cpp
     expression/value_expression.hpp
+    expression/window_expression.cpp
+    expression/window_expression.hpp
+    expression/window_function_expression.cpp
+    expression/window_function_expression.hpp
     hyrise.cpp
     hyrise.hpp
     import_export/binary/binary_parser.cpp

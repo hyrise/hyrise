@@ -40,7 +40,7 @@ std::shared_ptr<const Table> sort_table_by_column_ids(const std::shared_ptr<cons
 namespace hyrise {
 
 AggregateSort::AggregateSort(const std::shared_ptr<AbstractOperator>& input_operator,
-                             const std::vector<std::shared_ptr<AggregateExpression>>& aggregates,
+                             const std::vector<std::shared_ptr<WindowFunctionExpression>>& aggregates,
                              const std::vector<ColumnID>& groupby_column_ids)
     : AbstractAggregateOperator(input_operator, aggregates, groupby_column_ids) {}
 
@@ -58,19 +58,19 @@ const std::string& AggregateSort::name() const {
  *
  * @tparam ColumnType the type of the input column to aggregate on
  * @tparam AggregateType the type of the aggregate (=output column)
- * @tparam aggregate_function as type parameter - e.g. AggregateFunction::MIN, AVG, COUNT, ...
+ * @tparam aggregate_function as type parameter - e.g. WindowFunction::MIN, AVG, COUNT, ...
  * @param group_boundaries the row ids where a new combination in the sorted table begins
  * @param aggregate_index determines which aggregate to calculate (from _aggregates)
  * @param aggregate_function the aggregate function - as callable object. This should always be the same as aggregate_function
  * @param sorted_table the input table, sorted by the group by columns
  */
-template <typename ColumnType, typename AggregateType, AggregateFunction aggregate_function>
+template <typename ColumnType, typename AggregateType, WindowFunction aggregate_function>
 void AggregateSort::_aggregate_values(const std::set<RowID>& group_boundaries, const uint64_t aggregate_index,
                                       const std::shared_ptr<const Table>& sorted_table) {
-  const auto& pqp_column = static_cast<const PQPColumnExpression&>(*_aggregates[aggregate_index]->argument());
+  const auto& pqp_column = static_cast<const PQPColumnExpression&>(*_aggregates[aggregate_index]->operand());
   const auto input_column_id = pqp_column.column_id;
 
-  auto aggregator = AggregateFunctionBuilder<ColumnType, AggregateType, aggregate_function>().get_aggregate_function();
+  auto aggregator = WindowFunctionBuilder<ColumnType, AggregateType, aggregate_function>().get_aggregate_function();
 
   // We already know beforehand how many aggregate values (=group-by-combinations) we have to calculate
   const auto num_groups = group_boundaries.size() + 1;
@@ -95,7 +95,7 @@ void AggregateSort::_aggregate_values(const std::set<RowID>& group_boundaries, c
 
   auto accumulator = AggregateAccumulator<aggregate_function, AggregateType>{};
   auto current_chunk_id = ChunkID{0};
-  if (aggregate_function == AggregateFunction::Count && input_column_id == INVALID_COLUMN_ID) {
+  if (aggregate_function == WindowFunction::Count && input_column_id == INVALID_COLUMN_ID) {
     /*
      * Special COUNT(*) implementation.
      * We do not need to care about null values for COUNT(*).
@@ -177,9 +177,9 @@ void AggregateSort::_aggregate_values(const std::set<RowID>& group_boundaries, c
         if (!position.is_null()) {
           aggregator(new_value, value_count, accumulator);
           ++value_count;
-          if constexpr (aggregate_function == AggregateFunction::CountDistinct) {
+          if constexpr (aggregate_function == WindowFunction::CountDistinct) {
             unique_values.insert(new_value);
-          } else if constexpr (aggregate_function == AggregateFunction::Any) {
+          } else if constexpr (aggregate_function == WindowFunction::Any) {
             // Gathering the group's first value for ANY() is sufficient
             return;
           }
@@ -223,7 +223,7 @@ void AggregateSort::_aggregate_values(const std::set<RowID>& group_boundaries, c
  *
  *
  * @tparam AggregateType the data type of the aggregate result
- * @tparam aggregate_function as type parameter - e.g. AggregateFunction::Min, Max, ...
+ * @tparam aggregate_function as type parameter - e.g. WindowFunction::Min, Max, ...
  * @param aggregate_results the vector where the aggregate values should be stored
  * @param aggregate_null_values the vector indicating whether a specific aggregate value is null
  * @param aggregate_group_index the offset to use for `aggregate_results` and `aggregate_null_values`
@@ -234,7 +234,7 @@ void AggregateSort::_aggregate_values(const std::set<RowID>& group_boundaries, c
  * @param value_count_with_null the number of rows  - used by COUNT(*)
  * @param unique_value_count the number of unique values
  */
-template <typename AggregateType, AggregateFunction aggregate_function>
+template <typename AggregateType, WindowFunction aggregate_function>
 void AggregateSort::_set_and_write_aggregate_value(
     pmr_vector<AggregateType>& aggregate_results, pmr_vector<bool>& aggregate_null_values,
     const uint64_t aggregate_group_index, [[maybe_unused]] const uint64_t aggregate_index,
@@ -242,8 +242,8 @@ void AggregateSort::_set_and_write_aggregate_value(
     [[maybe_unused]] const uint64_t value_count_with_null, [[maybe_unused]] const uint64_t unique_value_count) const {
   auto is_null = value_count == 0;
 
-  if constexpr (aggregate_function == AggregateFunction::Count) {
-    const auto& pqp_column = static_cast<const PQPColumnExpression&>(*this->_aggregates[aggregate_index]->argument());
+  if constexpr (aggregate_function == WindowFunction::Count) {
+    const auto& pqp_column = static_cast<const PQPColumnExpression&>(*this->_aggregates[aggregate_index]->operand());
     const auto input_column_id = pqp_column.column_id;
 
     if (input_column_id != INVALID_COLUMN_ID) {
@@ -258,20 +258,20 @@ void AggregateSort::_set_and_write_aggregate_value(
     is_null = false;
   }
 
-  if constexpr (aggregate_function == AggregateFunction::Avg && std::is_arithmetic_v<AggregateType>) {
+  if constexpr (aggregate_function == WindowFunction::Avg && std::is_arithmetic_v<AggregateType>) {
     if (value_count > 0) {
       accumulator = accumulator / static_cast<AggregateType>(value_count);
     }
   }
 
-  if constexpr (aggregate_function == AggregateFunction::CountDistinct) {
+  if constexpr (aggregate_function == WindowFunction::CountDistinct) {
     accumulator = unique_value_count;
 
     // COUNT is never NULL
     is_null = false;
   }
 
-  if constexpr (aggregate_function == AggregateFunction::StandardDeviationSample) {
+  if constexpr (aggregate_function == WindowFunction::StandardDeviationSample) {
     if (!std::is_same_v<AggregateType, pmr_string>) {
       if (value_count >= 2) {
         aggregate_results[aggregate_group_index] = accumulator[3];
@@ -402,7 +402,7 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
   // Create aggregate column definitions
   auto aggregate_idx = ColumnID{0};
   for (const auto& aggregate : _aggregates) {
-    const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->argument());
+    const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->operand());
     const auto column_id = pqp_column.column_id;
 
     /*
@@ -439,8 +439,8 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
     if (_groupby_column_ids.empty()) {
       std::vector<AllTypeVariant> default_values;
       for (const auto& aggregate : _aggregates) {
-        if (aggregate->aggregate_function == AggregateFunction::Count ||
-            aggregate->aggregate_function == AggregateFunction::CountDistinct) {
+        if (aggregate->aggregate_function == WindowFunction::Count ||
+            aggregate->aggregate_function == WindowFunction::CountDistinct) {
           default_values.emplace_back(int64_t{0});
         } else {
           default_values.emplace_back(NULL_VALUE);
@@ -628,7 +628,7 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
      * but the function call expects an input type, we choose Int arbitrarily.
      * This is NOT the result type of COUNT(*), which is Long.
      */
-    const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->argument());
+    const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->operand());
     const auto input_column_id = pqp_column.column_id;
 
     const auto data_type =
@@ -644,55 +644,62 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
        * so the compiler cannot know its value and thus not deduce the correct method call.
        */
       switch (aggregate->aggregate_function) {
-        case AggregateFunction::Min: {
-          using AggregateType = typename AggregateTraits<ColumnDataType, AggregateFunction::Min>::AggregateType;
-          _aggregate_values<ColumnDataType, AggregateType, AggregateFunction::Min>(group_boundaries, aggregate_index,
-                                                                                   sorted_table);
+        case WindowFunction::Min: {
+          using AggregateType = typename AggregateTraits<ColumnDataType, WindowFunction::Min>::AggregateType;
+          _aggregate_values<ColumnDataType, AggregateType, WindowFunction::Min>(group_boundaries, aggregate_index,
+                                                                                sorted_table);
           break;
         }
-        case AggregateFunction::Max: {
-          using AggregateType = typename AggregateTraits<ColumnDataType, AggregateFunction::Max>::AggregateType;
-          _aggregate_values<ColumnDataType, AggregateType, AggregateFunction::Max>(group_boundaries, aggregate_index,
-                                                                                   sorted_table);
+        case WindowFunction::Max: {
+          using AggregateType = typename AggregateTraits<ColumnDataType, WindowFunction::Max>::AggregateType;
+          _aggregate_values<ColumnDataType, AggregateType, WindowFunction::Max>(group_boundaries, aggregate_index,
+                                                                                sorted_table);
           break;
         }
-        case AggregateFunction::Sum: {
-          using AggregateType = typename AggregateTraits<ColumnDataType, AggregateFunction::Sum>::AggregateType;
-          _aggregate_values<ColumnDataType, AggregateType, AggregateFunction::Sum>(group_boundaries, aggregate_index,
-                                                                                   sorted_table);
+        case WindowFunction::Sum: {
+          using AggregateType = typename AggregateTraits<ColumnDataType, WindowFunction::Sum>::AggregateType;
+          _aggregate_values<ColumnDataType, AggregateType, WindowFunction::Sum>(group_boundaries, aggregate_index,
+                                                                                sorted_table);
           break;
         }
 
-        case AggregateFunction::Avg: {
-          using AggregateType = typename AggregateTraits<ColumnDataType, AggregateFunction::Avg>::AggregateType;
-          _aggregate_values<ColumnDataType, AggregateType, AggregateFunction::Avg>(group_boundaries, aggregate_index,
-                                                                                   sorted_table);
+        case WindowFunction::Avg: {
+          using AggregateType = typename AggregateTraits<ColumnDataType, WindowFunction::Avg>::AggregateType;
+          _aggregate_values<ColumnDataType, AggregateType, WindowFunction::Avg>(group_boundaries, aggregate_index,
+                                                                                sorted_table);
           break;
         }
-        case AggregateFunction::Count: {
-          using AggregateType = typename AggregateTraits<ColumnDataType, AggregateFunction::Count>::AggregateType;
-          _aggregate_values<ColumnDataType, AggregateType, AggregateFunction::Count>(group_boundaries, aggregate_index,
-                                                                                     sorted_table);
+        case WindowFunction::Count: {
+          using AggregateType = typename AggregateTraits<ColumnDataType, WindowFunction::Count>::AggregateType;
+          _aggregate_values<ColumnDataType, AggregateType, WindowFunction::Count>(group_boundaries, aggregate_index,
+                                                                                  sorted_table);
           break;
         }
-        case AggregateFunction::CountDistinct: {
-          using AggregateType = typename AggregateTraits<
-              ColumnDataType, AggregateFunction::CountDistinct>::AggregateType;  // NOLINT(whitespace/line_length)
-          _aggregate_values<ColumnDataType, AggregateType, AggregateFunction::CountDistinct>(
-              group_boundaries, aggregate_index, sorted_table);
-          break;
-        }
-        case AggregateFunction::StandardDeviationSample: {
+        case WindowFunction::CountDistinct: {
           using AggregateType =
-              typename AggregateTraits<ColumnDataType, AggregateFunction::StandardDeviationSample>::AggregateType;
-          _aggregate_values<ColumnDataType, AggregateType, AggregateFunction::StandardDeviationSample>(
+              typename AggregateTraits<ColumnDataType,
+                                       WindowFunction::CountDistinct>::AggregateType;  // NOLINT(whitespace/line_length)
+          _aggregate_values<ColumnDataType, AggregateType, WindowFunction::CountDistinct>(
               group_boundaries, aggregate_index, sorted_table);
           break;
         }
-        case AggregateFunction::Any: {
+        case WindowFunction::StandardDeviationSample: {
+          using AggregateType =
+              typename AggregateTraits<ColumnDataType, WindowFunction::StandardDeviationSample>::AggregateType;
+          _aggregate_values<ColumnDataType, AggregateType, WindowFunction::StandardDeviationSample>(
+              group_boundaries, aggregate_index, sorted_table);
+          break;
+        }
+        case WindowFunction::Any: {
           write_groupby_column(input_column_id, ColumnID{static_cast<ColumnID::base_type>(aggregate_index +
                                                                                           _groupby_column_ids.size())});
           break;
+          case WindowFunction::CumeDist:
+          case WindowFunction::DenseRank:
+          case WindowFunction::PercentRank:
+          case WindowFunction::Rank:
+          case WindowFunction::RowNumber:
+            Fail("Unsupported aggregate function " + window_function_to_string.left.at(aggregate->aggregate_function));
         }
       }
     });
@@ -724,37 +731,43 @@ void AggregateSort::_on_cleanup() {}
 
 template <typename ColumnType>
 void AggregateSort::_create_aggregate_column_definitions(boost::hana::basic_type<ColumnType> /*type*/,
-                                                         ColumnID column_index, AggregateFunction aggregate_function) {
+                                                         ColumnID column_index, WindowFunction aggregate_function) {
   /*
    * We are aware that the switch looks very repetitive, but we could not find a dynamic solution.
    * There is a similar switch statement in _on_execute for calling _aggregate_values.
    * See the comment there for reasoning.
    */
   switch (aggregate_function) {
-    case AggregateFunction::Min:
-      create_aggregate_column_definitions<ColumnType, AggregateFunction::Min>(column_index);
+    case WindowFunction::Min:
+      create_aggregate_column_definitions<ColumnType, WindowFunction::Min>(column_index);
       break;
-    case AggregateFunction::Max:
-      create_aggregate_column_definitions<ColumnType, AggregateFunction::Max>(column_index);
+    case WindowFunction::Max:
+      create_aggregate_column_definitions<ColumnType, WindowFunction::Max>(column_index);
       break;
-    case AggregateFunction::Sum:
-      create_aggregate_column_definitions<ColumnType, AggregateFunction::Sum>(column_index);
+    case WindowFunction::Sum:
+      create_aggregate_column_definitions<ColumnType, WindowFunction::Sum>(column_index);
       break;
-    case AggregateFunction::Avg:
-      create_aggregate_column_definitions<ColumnType, AggregateFunction::Avg>(column_index);
+    case WindowFunction::Avg:
+      create_aggregate_column_definitions<ColumnType, WindowFunction::Avg>(column_index);
       break;
-    case AggregateFunction::Count:
-      create_aggregate_column_definitions<ColumnType, AggregateFunction::Count>(column_index);
+    case WindowFunction::Count:
+      create_aggregate_column_definitions<ColumnType, WindowFunction::Count>(column_index);
       break;
-    case AggregateFunction::CountDistinct:
-      create_aggregate_column_definitions<ColumnType, AggregateFunction::CountDistinct>(column_index);
+    case WindowFunction::CountDistinct:
+      create_aggregate_column_definitions<ColumnType, WindowFunction::CountDistinct>(column_index);
       break;
-    case AggregateFunction::StandardDeviationSample:
-      create_aggregate_column_definitions<ColumnType, AggregateFunction::StandardDeviationSample>(column_index);
+    case WindowFunction::StandardDeviationSample:
+      create_aggregate_column_definitions<ColumnType, WindowFunction::StandardDeviationSample>(column_index);
       break;
-    case AggregateFunction::Any:
-      create_aggregate_column_definitions<ColumnType, AggregateFunction::Any>(column_index);
+    case WindowFunction::Any:
+      create_aggregate_column_definitions<ColumnType, WindowFunction::Any>(column_index);
       break;
+    case WindowFunction::CumeDist:
+    case WindowFunction::DenseRank:
+    case WindowFunction::PercentRank:
+    case WindowFunction::Rank:
+    case WindowFunction::RowNumber:
+      Fail("Unsupported aggregate function " + window_function_to_string.left.at(aggregate_function));
   }
 }
 
@@ -769,13 +782,13 @@ void AggregateSort::_create_aggregate_column_definitions(boost::hana::basic_type
  *  and writing the actual output.
  *  This would also allow to reuse the code for handling an empty input table (see _on_execute()).
  */
-template <typename ColumnType, AggregateFunction aggregate_function>
+template <typename ColumnType, WindowFunction aggregate_function>
 void AggregateSort::create_aggregate_column_definitions(ColumnID column_index) {
   // retrieve type information from the aggregation traits
   auto aggregate_data_type = AggregateTraits<ColumnType, aggregate_function>::AGGREGATE_DATA_TYPE;
 
   const auto& aggregate = _aggregates[column_index];
-  const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->argument());
+  const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->operand());
   const auto input_column_id = pqp_column.column_id;
 
   if (aggregate_data_type == DataType::Null) {
@@ -784,11 +797,11 @@ void AggregateSort::create_aggregate_column_definitions(ColumnID column_index) {
   }
 
   const auto nullable =
-      (aggregate_function != AggregateFunction::Count && aggregate_function != AggregateFunction::CountDistinct &&
-       aggregate_function != AggregateFunction::Any) ||
-      (aggregate_function == AggregateFunction::Any && left_input_table()->column_is_nullable(input_column_id));
-  const auto column_name = aggregate->aggregate_function == AggregateFunction::Any ? pqp_column.as_column_name()
-                                                                                   : aggregate->as_column_name();
+      (aggregate_function != WindowFunction::Count && aggregate_function != WindowFunction::CountDistinct &&
+       aggregate_function != WindowFunction::Any) ||
+      (aggregate_function == WindowFunction::Any && left_input_table()->column_is_nullable(input_column_id));
+  const auto column_name =
+      aggregate->aggregate_function == WindowFunction::Any ? pqp_column.as_column_name() : aggregate->as_column_name();
   _output_column_definitions.emplace_back(column_name, aggregate_data_type, nullable);
 }
 }  // namespace hyrise

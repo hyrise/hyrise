@@ -9,7 +9,7 @@ namespace hyrise {
 
 AbstractAggregateOperator::AbstractAggregateOperator(
     const std::shared_ptr<AbstractOperator>& input_operator,
-    const std::vector<std::shared_ptr<AggregateExpression>>& aggregates,
+    const std::vector<std::shared_ptr<WindowFunctionExpression>>& aggregates,
     const std::vector<ColumnID>& groupby_column_ids,
     std::unique_ptr<AbstractOperatorPerformanceData> init_performance_data)
     : AbstractReadOnlyOperator(OperatorType::Aggregate, input_operator, nullptr, std::move(init_performance_data)),
@@ -24,7 +24,7 @@ AbstractAggregateOperator::AbstractAggregateOperator(
          "Neither aggregate nor groupby columns have been specified");
 }
 
-const std::vector<std::shared_ptr<AggregateExpression>>& AbstractAggregateOperator::aggregates() const {
+const std::vector<std::shared_ptr<WindowFunctionExpression>>& AbstractAggregateOperator::aggregates() const {
   return _aggregates;
 }
 
@@ -69,20 +69,20 @@ std::string AbstractAggregateOperator::description(DescriptionMode description_m
 void AbstractAggregateOperator::_validate_aggregates() const {
   const auto input_table = left_input_table();
   for (const auto& aggregate : _aggregates) {
-    const auto pqp_column = std::dynamic_pointer_cast<PQPColumnExpression>(aggregate->argument());
+    const auto pqp_column = std::dynamic_pointer_cast<PQPColumnExpression>(aggregate->operand());
     DebugAssert(pqp_column,
                 "Aggregate operators can currently only handle physical columns, no complicated expressions");
     const auto column_id = pqp_column->column_id;
     if (column_id == INVALID_COLUMN_ID) {
-      Assert(aggregate->aggregate_function == AggregateFunction::Count, "Aggregate: Asterisk is only valid with COUNT");
+      Assert(aggregate->aggregate_function == WindowFunction::Count, "Aggregate: Asterisk is only valid with COUNT");
     } else {
       DebugAssert(column_id < input_table->column_count(), "Aggregate column index out of bounds");
       DebugAssert(pqp_column->data_type() == input_table->column_data_type(column_id),
                   "Mismatching column_data_type for input column");
       Assert(input_table->column_data_type(column_id) != DataType::String ||
-                 (aggregate->aggregate_function != AggregateFunction::Sum &&
-                  aggregate->aggregate_function != AggregateFunction::Avg &&
-                  aggregate->aggregate_function != AggregateFunction::StandardDeviationSample),
+                 (aggregate->aggregate_function != WindowFunction::Sum &&
+                  aggregate->aggregate_function != WindowFunction::Avg &&
+                  aggregate->aggregate_function != WindowFunction::StandardDeviationSample),
              "Aggregate: Cannot calculate SUM, AVG or STDDEV_SAMP on string column");
     }
   }

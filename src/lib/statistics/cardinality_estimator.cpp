@@ -543,7 +543,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_predicate_node(
         return input_table_statistics;
       }
 
-      // Check that input nodes provide only a single AggregateExpression.
+      // Check that input nodes provide only a single WindowFunctionExpression.
       const auto& lower_bound_lqp = *lower_bound_subquery->lqp;
       const auto& upper_bound_lqp = *upper_bound_subquery->lqp;
       const auto& lower_bound_node_expressions = lower_bound_lqp.node_expressions;
@@ -552,14 +552,14 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_predicate_node(
         return input_table_statistics;
       }
       const auto& lower_bound_aggregate_expression =
-          std::dynamic_pointer_cast<AggregateExpression>(lower_bound_node_expressions.front());
+          std::dynamic_pointer_cast<WindowFunctionExpression>(lower_bound_node_expressions.front());
       const auto& upper_bound_aggregate_expression =
-          std::dynamic_pointer_cast<AggregateExpression>(upper_bound_node_expressions.front());
+          std::dynamic_pointer_cast<WindowFunctionExpression>(upper_bound_node_expressions.front());
       if (!lower_bound_aggregate_expression || !upper_bound_aggregate_expression) {
         return input_table_statistics;
       }
 
-      // Check that the AggregateFunctions are as expected and are performed on the same column, and the nodes have the
+      // Check that the WindowFunctions are as expected and are performed on the same column, and the nodes have the
       // same input. The predicate must look like `BETWEEN (SELECT MIN(key) ...) AND (SELECT MAX(key) ...))`. The
       // aggregates guarantee to select the minimal and maximal join key of the underlying subquery. Furthermore, they
       // must both operate on the same join key and on the same input so preserve all join keys. A side effect of
@@ -568,9 +568,9 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_predicate_node(
       // de-duplicated in the LQPTranslator).
       auto subquery_origin_node = lower_bound_lqp.left_input();
 
-      if (lower_bound_aggregate_expression->aggregate_function != AggregateFunction::Min ||
-          upper_bound_aggregate_expression->aggregate_function != AggregateFunction::Max ||
-          *lower_bound_aggregate_expression->argument() != *upper_bound_aggregate_expression->argument() ||
+      if (lower_bound_aggregate_expression->aggregate_function != WindowFunction::Min ||
+          upper_bound_aggregate_expression->aggregate_function != WindowFunction::Max ||
+          *lower_bound_aggregate_expression->operand() != *upper_bound_aggregate_expression->operand() ||
           *subquery_origin_node != *upper_bound_lqp.left_input()) {
         return input_table_statistics;
       }
@@ -603,7 +603,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_predicate_node(
       }
 
       subquery_statistics = estimate_statistics(subquery_origin_node);
-      subquery_column_id = subquery_origin_node->get_column_id(*lower_bound_aggregate_expression->argument());
+      subquery_column_id = subquery_origin_node->get_column_id(*lower_bound_aggregate_expression->operand());
     }
 
     if (!subquery_statistics) {
