@@ -3363,25 +3363,42 @@ TEST_F(SQLTranslatorTest, MultipleWindowFunctions) {
 
 TEST_F(SQLTranslatorTest, InvalidWindowFunctions) {
   // Pure window functions must define a window.
-  EXPECT_THROW(sql_to_lqp_helper("SELECT rank() FROM int_float_a;"), InvalidInputException);
+  EXPECT_THROW(sql_to_lqp_helper("SELECT rank() FROM int_float;"), InvalidInputException);
   // Pure window functions must not have an argument.
-  EXPECT_THROW(sql_to_lqp_helper("SELECT rank(a) OVER () FROM int_float_a;"), InvalidInputException);
+  EXPECT_THROW(sql_to_lqp_helper("SELECT rank(a) OVER () FROM int_float;"), InvalidInputException);
   // Aggregate functions used as window functions must have an argument.
-  EXPECT_THROW(sql_to_lqp_helper("SELECT avg() OVER () FROM int_float_a;"), InvalidInputException);
+  EXPECT_THROW(sql_to_lqp_helper("SELECT avg() OVER () FROM int_float;"), InvalidInputException);
   // Window functions can only be used in the SELECT list.
-  EXPECT_THROW(sql_to_lqp_helper("SELECT a FROM int_float_a WHERE avg(a) OVER () > a;"), InvalidInputException);
-  EXPECT_THROW(sql_to_lqp_helper("SELECT a FROM int_float_a GROUP BY avg(a) OVER ();"), InvalidInputException);
-  EXPECT_THROW(sql_to_lqp_helper("SELECT a FROM int_float_a ORDER BY avg(a) OVER ();"), InvalidInputException);
-  EXPECT_THROW(sql_to_lqp_helper("SELECT a FROM int_float_a LIMIT min(a) OVER ();"), InvalidInputException);
+  EXPECT_THROW(sql_to_lqp_helper("SELECT a FROM int_float WHERE avg(a) OVER () > a;"), InvalidInputException);
+  EXPECT_THROW(sql_to_lqp_helper("SELECT a FROM int_float GROUP BY avg(a) OVER ();"), InvalidInputException);
+  EXPECT_THROW(sql_to_lqp_helper("SELECT a FROM int_float ORDER BY avg(a) OVER ();"), InvalidInputException);
+  EXPECT_THROW(sql_to_lqp_helper("SELECT a FROM int_float LIMIT min(a) OVER ();"), InvalidInputException);
   // Window functions must not be nested.
-  EXPECT_THROW(sql_to_lqp_helper("SELECT rank() OVER(ORDER BY avg(a) OVER ()) FROM int_float_a;"),
+  EXPECT_THROW(sql_to_lqp_helper("SELECT rank() OVER(ORDER BY avg(a) OVER ()) FROM int_float;"), InvalidInputException);
+  EXPECT_THROW(sql_to_lqp_helper("SELECT rank() OVER(ORDER BY a) rnk, avg() OVER(ORDER BY rnk) FROM int_float;"),
                InvalidInputException);
-  EXPECT_THROW(sql_to_lqp_helper("SELECT rank() OVER(ORDER BY a) rnk, avg() OVER(ORDER BY rnk) FROM int_float_a;"),
+  // Arguments of window functions must be available or derivable.
+  EXPECT_THROW(sql_to_lqp_helper("SELECT avg(a) OVER () FROM int_float GROUP BY b;"), InvalidInputException);
+  // PATITION BY and ORDER BY expressions must be available or derivable.
+  EXPECT_THROW(sql_to_lqp_helper("SELECT rank() OVER(PARTITION BY a) FROM int_float GROUP BY b;"),
                InvalidInputException);
-  // PATITION BY and ORDER BY expressions must be available.
-  EXPECT_THROW(sql_to_lqp_helper("SELECT rank() OVER(PARTITION BY a) FROM int_float_a GROUP BY b;"),
+  EXPECT_THROW(sql_to_lqp_helper("SELECT rank() OVER(ORDER BY a) FROM int_float GROUP BY b;"), InvalidInputException);
+  // GROUPS frames are not supported.
+  EXPECT_THROW(sql_to_lqp_helper("SELECT rank() OVER (GROUPS UNBOUNDED PRECEDING) FROM int_float;"),
                InvalidInputException);
-  EXPECT_THROW(sql_to_lqp_helper("SELECT rank() OVER(ORDER BY a) FROM int_float_a GROUP BY b;"), InvalidInputException);
+  // Frame begin must not be UNBOUNDED FOLLOWING.
+  EXPECT_THROW(sql_to_lqp_helper(
+                   "SELECT rank() OVER (ROWS BETWEEN UNBOUNDED FOLLOWING AND UNBOUNDED FOLLOWING) FROM int_float;"),
+               InvalidInputException);
+  // Frame end must not be UNBOUNDED PRECEDING.
+  EXPECT_THROW(sql_to_lqp_helper("SELECT rank() OVER (ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED PRECEDING) FROM "
+                                 "int_float;"),
+               InvalidInputException);
+  // Frame end must not be before start.
+  EXPECT_THROW(sql_to_lqp_helper("SELECT rank() OVER (ROWS BETWEEN 1 FOLLOWING AND CURRENT ROW) FROM int_float;"),
+               InvalidInputException);
+  // Function must be a window function.
+  EXPECT_THROW(sql_to_lqp_helper("SELECT substr(b, 1, 3) OVER () FROM int_string;"), InvalidInputException);
 }
 
 }  // namespace hyrise

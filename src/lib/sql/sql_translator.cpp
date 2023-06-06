@@ -1251,16 +1251,18 @@ void SQLTranslator::_translate_select_groupby_having(const hsql::SelectStatement
     auto window_nodes = std::vector<std::shared_ptr<WindowNode>>{};
     window_nodes.reserve(window_expressions.size());
 
-    // We apply some simplifications here:
-    //    1. The argument of the window function must be available on the current LQP.
-    //    2. We assume that PARTITION BY and ORDER BY expressions must either be present or can be computed by a
-    //       ProjectionNode.
-    //    3. Multiple window functions must not use the results of each other.
+    // The argument of the window function, PARTITION BY expressions, and ORDER BY expressions must either be present
+    // or can be computed by a ProjectionNode. This also means a window function cannot depend on the result of
+    // another window function.
     for (const auto& expression : window_expressions) {
       const auto& window_function = static_cast<const WindowFunctionExpression&>(*expression);
       const auto& argument = window_function.argument();
-      AssertInput(!argument || computed_expression_set.contains(argument),
-                  "Argument of window function " + window_function.as_column_name() + "is not available.");
+      AssertInput(!argument || expression_evaluable_on_lqp(argument, *_current_lqp),
+                  "Argument of window function " + window_function.as_column_name() + " is not available.");
+      if (argument && !computed_expression_set.contains(argument)) {
+        required_expressions.emplace(argument);
+      }
+
       // We ensured there is a window above.
       const auto& window = static_cast<const WindowExpression&>(*window_function.window());
       for (const auto& required_expression : window.arguments) {
@@ -1274,14 +1276,14 @@ void SQLTranslator::_translate_select_groupby_having(const hsql::SelectStatement
       window_nodes.emplace_back(WindowNode::make(expression));
     }
 
-    // Add a ProjectionNode for uncomputed expressions in PARTITION BY and ORDER BY.
+    // Add a ProjectionNode for uncomputed expressions.
     if (!required_expressions.empty()) {
       computed_expressions.insert(computed_expressions.end(), required_expressions.cbegin(),
                                   required_expressions.cend());
       _current_lqp = ProjectionNode::make(computed_expressions, _current_lqp);
     }
 
-    // Add WindowNodes on top of the LQP.
+    // Add WindowNodes on top of the LQP. For now, their order is just the same as in the SELECT list.
     for (const auto& window_node : window_nodes) {
       window_node->set_left_input(_current_lqp);
       _current_lqp = window_node;
@@ -1956,7 +1958,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
       Assert(expr.exprList, "FunctionRef has no exprList. Bug in sqlparser?");
 
       /**
-       * Window function.
+       * Window/aggregate function.
        */
       const auto window_function_iter = window_function_to_string.right.find(name);
       if (window_function_iter != window_function_to_string.right.end()) {
@@ -2060,6 +2062,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
       const auto function_iter = function_type_to_string.right.find(name);
 
       if (function_iter != function_type_to_string.right.end()) {
+        AssertInput(!window_description, "Function " + name + " is not a window function.");
         auto arguments = std::vector<std::shared_ptr<AbstractExpression>>{};
         arguments.reserve(expr.exprList->size());
 

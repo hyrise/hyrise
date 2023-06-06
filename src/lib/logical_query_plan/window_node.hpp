@@ -4,6 +4,10 @@
 
 namespace hyrise {
 
+/**
+ * LQPNode to wrap SQL:2003 window functions. The information necessary to define the window and the window function is
+ * stored in WindowExpression and WindowFunctionExpression, so this LQPNode is rather lightweight.
+ */
 class WindowNode : public EnableMakeForLQPNode<WindowNode>, public AbstractLQPNode {
  public:
   explicit WindowNode(const std::shared_ptr<AbstractExpression>& window_function_expression);

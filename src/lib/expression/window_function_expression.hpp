@@ -11,7 +11,6 @@ namespace hyrise {
  * terms, this would be an additional, but unnecessary GROUP BY column. This function is only used by the optimizer in
  * case that all values of the group are known to be equal (see DependentGroupByReductionRule).
  */
-
 enum class WindowFunction {
   Min,
   Max,
@@ -27,6 +26,16 @@ enum class WindowFunction {
   Rank,
   RowNumber
 };
+
+// Actual aggregate functions.
+const auto aggregate_functions = std::unordered_set<WindowFunction>{WindowFunction::Min,
+                                                                    WindowFunction::Max,
+                                                                    WindowFunction::Sum,
+                                                                    WindowFunction::Avg,
+                                                                    WindowFunction::Count,
+                                                                    WindowFunction::CountDistinct,
+                                                                    WindowFunction::StandardDeviationSample,
+                                                                    WindowFunction::Any};
 
 std::ostream& operator<<(std::ostream& stream, const WindowFunction window_function);
 
@@ -46,17 +55,10 @@ const auto window_function_to_string = make_bimap<WindowFunction, std::string>({
     {WindowFunction::RowNumber, "ROW_NUMBER"},
 });
 
-const auto aggregate_functions = std::unordered_set<WindowFunction>{WindowFunction::Min,
-                                                                    WindowFunction::Max,
-                                                                    WindowFunction::Sum,
-                                                                    WindowFunction::Avg,
-                                                                    WindowFunction::Count,
-                                                                    WindowFunction::CountDistinct,
-                                                                    WindowFunction::StandardDeviationSample,
-                                                                    WindowFunction::Any};
-
 /**
- * SQL Window/aggregate functions with optionally defined window.
+ * SQL Window/aggregate functions with optionally defined window. Window functions are a superset of aggregate
+ * functions: Each aggregate function is a window function when defining a window. Thus, we keep it simple and use
+ *  aggregate functions as window functions without a window and a certain function type.
  */
 class WindowFunctionExpression : public AbstractExpression {
  public:

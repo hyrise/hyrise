@@ -24,11 +24,8 @@ std::string WindowNode::description(const DescriptionMode mode) const {
   stream << node_expressions.front()->description(expression_mode);
   // Print the window definition in any case.
   if (mode == DescriptionMode::Short) {
-    stream << " OVER ("
-           << static_cast<const WindowFunctionExpression&>(*node_expressions.front())
-                  .window()
-                  ->description(expression_mode)
-           << ")";
+    const auto& window = static_cast<const WindowFunctionExpression&>(*node_expressions.front()).window();
+    stream << " OVER (" << window->description(expression_mode) << ")";
   }
 
   return stream.str();
