@@ -39,14 +39,17 @@ class WindowNodeTest : public BaseTest {
 };
 
 TEST_F(WindowNodeTest, InvalidExpressions) {
-  if constexpr (!HYRISE_DEBUG) {
-    GTEST_SKIP();
-  }
-
-  EXPECT_THROW(WindowNode::make(std::shared_ptr<AbstractExpression>{}), std::logic_error);
-  EXPECT_THROW(WindowNode::make(add_(_a, _b)), std::logic_error);
-  EXPECT_THROW(WindowNode::make(avg_(_a)), std::logic_error);
   EXPECT_THROW(avg_(_a, _b), std::logic_error);
+  auto frame_description = _window->frame_description->deep_copy();
+  EXPECT_THROW(
+      window_(expression_vector(), expression_vector(_a), std::vector<SortMode>{}, std::move(frame_description)),
+      std::logic_error);
+
+  if constexpr (HYRISE_DEBUG) {
+    EXPECT_THROW(WindowNode::make(std::shared_ptr<AbstractExpression>{}), std::logic_error);
+    EXPECT_THROW(WindowNode::make(add_(_a, _b)), std::logic_error);
+    EXPECT_THROW(WindowNode::make(avg_(_a)), std::logic_error);
+  }
 }
 
 TEST_F(WindowNodeTest, NodeExpressions) {

@@ -49,6 +49,12 @@ struct FrameDescription : private Noncopyable {
 
 std::ostream& operator<<(std::ostream& stream, const FrameDescription& frame_description);
 
+/**
+ * Representation of a window used for SQL:2003 window functions (see window_function_expression.hpp). Windows define
+ * how the window function is applied. If there are PARTITION BY expressions, the function is applied tuples in
+ * different partitions independently. ORDER BY expressions define in which order the function is applied within the
+ *  same partition. The frame defines the actual sliding window of tuples used as input of the window function.
+ */
 class WindowExpression : public AbstractExpression {
  public:
   WindowExpression(const std::vector<std::shared_ptr<AbstractExpression>>& partition_by_expressions,
