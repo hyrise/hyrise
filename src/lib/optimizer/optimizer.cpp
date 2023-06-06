@@ -153,38 +153,6 @@ void validate_lqp_with_uncorrelated_subqueries(const std::shared_ptr<const Abstr
                                                            std::to_string(node->input_count()) + " inputs, while " +
                                                            std::to_string(num_expected_inputs) + " were expected.");
 
-    // "Window functions are the last items in a query to be evaluated, except for the ORDER BY clause. Because of this
-    //  late evaluation, window functions cannot be used within the WHERE, GROUP BY, or HAVING clauses."
-    // - Kevin Kline. SQL in a Nutshell, 3rd Edition. p 520.
-    // Thus, we check that a WindowNode is only followed by ProjectionNodes (if there are calculations on the window
-    // function result), AliasNodes, SortNodes, LimitNodes, AggregateNoded for SELECT DISTINCT, and the
-    // LogicalPlanRootNode.
-    if (node->type == LQPNodeType::Window) {
-      visit_lqp_upwards(node, [](const auto& output_node) {
-        switch (output_node->type) {
-          case LQPNodeType::Projection:
-          case LQPNodeType::Alias:
-          case LQPNodeType::Sort:
-          case LQPNodeType::Limit:
-          case LQPNodeType::Root:
-            return LQPUpwardVisitation::VisitOutputs;
-
-          case LQPNodeType::Aggregate: {
-            const auto& aggregate_node = static_cast<const AggregateNode&>(*output_node);
-            Assert(aggregate_node.node_expressions.size() == aggregate_node.aggregate_expressions_begin_idx,
-                   "WindowNode is followed by an LQPNode of type Aggregate.");
-          }
-            return LQPUpwardVisitation::VisitOutputs;
-
-          default:
-            break;
-        }
-
-        Fail("WindowNode is follwed by an LQPNode of type " + std::string{magic_enum::enum_name(output_node->type)} +
-             ".");
-      });
-    }
-
     for (const auto& uncorrelated_subquery : uncorrelated_subqueries_per_node(node)) {
       validate_lqp_with_uncorrelated_subqueries(uncorrelated_subquery, root_lqp, nodes_by_lqp);
     }

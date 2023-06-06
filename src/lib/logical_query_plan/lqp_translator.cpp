@@ -122,24 +122,25 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_by_node_type(
     LQPNodeType type, const std::shared_ptr<AbstractLQPNode>& node) const {
   switch (type) {
     // clang-format off
+    case LQPNodeType::Aggregate:          return _translate_aggregate_node(node);
     case LQPNodeType::Alias:              return _translate_alias_node(node);
-    case LQPNodeType::StoredTable:        return _translate_stored_table_node(node);
+    case LQPNodeType::ChangeMetaTable:    return _translate_change_meta_table_node(node);
+    case LQPNodeType::Delete:             return _translate_delete_node(node);
+    case LQPNodeType::DummyTable:         return _translate_dummy_table_node(node);
+    case LQPNodeType::Except:             return _translate_except_node(node);
+    case LQPNodeType::Insert:             return _translate_insert_node(node);
+    case LQPNodeType::Intersect:          return _translate_intersect_node(node);
+    case LQPNodeType::Join:               return _translate_join_node(node);
+    case LQPNodeType::Limit:              return _translate_limit_node(node);
     case LQPNodeType::Predicate:          return _translate_predicate_node(node);
     case LQPNodeType::Projection:         return _translate_projection_node(node);
     case LQPNodeType::Sort:               return _translate_sort_node(node);
-    case LQPNodeType::Join:               return _translate_join_node(node);
-    case LQPNodeType::Aggregate:          return _translate_aggregate_node(node);
-    case LQPNodeType::Limit:              return _translate_limit_node(node);
-    case LQPNodeType::Insert:             return _translate_insert_node(node);
-    case LQPNodeType::Delete:             return _translate_delete_node(node);
-    case LQPNodeType::DummyTable:         return _translate_dummy_table_node(node);
     case LQPNodeType::StaticTable:        return _translate_static_table_node(node);
+    case LQPNodeType::StoredTable:        return _translate_stored_table_node(node);
+    case LQPNodeType::Union:              return _translate_union_node(node);
     case LQPNodeType::Update:             return _translate_update_node(node);
     case LQPNodeType::Validate:           return _translate_validate_node(node);
-    case LQPNodeType::Union:              return _translate_union_node(node);
-    case LQPNodeType::Intersect:          return _translate_intersect_node(node);
-    case LQPNodeType::Except:             return _translate_except_node(node);
-    case LQPNodeType::ChangeMetaTable:    return _translate_change_meta_table_node(node);
+    case LQPNodeType::Window:             return _translate_window_node(node);
 
     // Maintenance operators
     case LQPNodeType::CreateView:         return _translate_create_view_node(node);
@@ -492,6 +493,12 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_validate_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto input_operator = translate_node(node->left_input());
   return std::make_shared<Validate>(input_operator);
+}
+
+// NOLINTNEXTLINE - while this particular method could be made static, others cannot.
+std::shared_ptr<AbstractOperator> LQPTranslator::_translate_window_node(
+    const std::shared_ptr<AbstractLQPNode>& node) const {
+  FailInput("Hyrise does not yet support window functions.");
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_change_meta_table_node(

@@ -12,7 +12,9 @@ namespace hyrise {
 std::ostream& operator<<(std::ostream& stream, const FrameBoundType frame_bound_type) {
   if (frame_bound_type == FrameBoundType::CurrentRow) {
     stream << "CURRENT ROW";
+    return stream;
   }
+
   auto type_str = std::string{magic_enum::enum_name(frame_bound_type)};
   std::transform(type_str.cbegin(), type_str.cend(), type_str.begin(),
                  [](const auto character) { return std::toupper(character); });
