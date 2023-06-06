@@ -50,6 +50,7 @@
 #include "logical_query_plan/union_node.hpp"
 #include "logical_query_plan/update_node.hpp"
 #include "logical_query_plan/validate_node.hpp"
+#include "logical_query_plan/window_node.hpp"
 #include "storage/lqp_view.hpp"
 #include "storage/table.hpp"
 #include "utils/date_time_utils.hpp"
@@ -165,6 +166,12 @@ std::shared_ptr<AbstractLQPNode> add_expressions_if_unavailable(
 
   const auto output_expressions = node->output_expressions();
   projection_expressions.insert(projection_expressions.end(), output_expressions.cbegin(), output_expressions.cend());
+
+  // If the current LQP already is a ProjectionNode, do not add another one.
+  if (node->type == LQPNodeType::Projection) {
+    node->node_expressions = projection_expressions;
+    return node;
+  }
 
   return ProjectionNode::make(projection_expressions, node);
 }
@@ -375,7 +382,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_select_statement(cons
     }
   }
 
-  // Translate FROM
+  // Translate FROM.
   if (select.fromTable) {
     _from_clause_result = _translate_table_ref(*select.fromTable);
     _current_lqp = _from_clause_result->lqp;
@@ -397,10 +404,12 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_select_statement(cons
   // Translate SELECT, HAVING, GROUP BY in one go, as they are interdependent.
   _translate_select_groupby_having(select, select_list_elements);
 
-  // Translate ORDER BY and LIMIT.
-  if (select.order) {
-    _translate_order_by(*select.order);
-  }
+  // Translate ORDER BY and DISTINCT. ORDER BY and LIMIT must be executed after DISTINCT. Thus, we must ensure that all
+  // ORDER BY expressions are selected if a DISTINCT result is required.
+  const auto& inflated_select_list_expressions = unwrap_elements(_inflated_select_list_elements);
+  _translate_order_by_distinct(select.order, inflated_select_list_expressions, select.selectDistinct);
+
+  // Translate LIMIT.
   if (select.limit) {
     _translate_limit(*select.limit);
   }
@@ -409,14 +418,13 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_select_statement(cons
    * Name, select and arrange the columns as specified in the SELECT clause.
    */
   // Only add a ProjectionNode if necessary.
-  const auto& inflated_select_list_expressions = unwrap_elements(_inflated_select_list_elements);
   if (!expressions_equal(_current_lqp->output_expressions(), inflated_select_list_expressions)) {
     _current_lqp = ProjectionNode::make(inflated_select_list_expressions, _current_lqp);
   }
 
   // Check whether we need to create an AliasNode - this is the case whenever an Expression was assigned a column_name
   // that is not its generated name.
-  auto need_alias_node = std::any_of(
+  const auto need_alias_node = std::any_of(
       _inflated_select_list_elements.begin(), _inflated_select_list_elements.end(), [](const auto& element) {
         return std::any_of(element.identifiers.begin(), element.identifiers.end(), [&](const auto& identifier) {
           return identifier.column_name != element.expression->as_column_name();
@@ -443,9 +451,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_select_statement(cons
       _translate_set_operation(*set_operator);
 
       // In addition to local ORDER BY and LIMIT clauses, the result of the set operation(s) may have final clauses too.
-      if (set_operator->resultOrder) {
-        _translate_order_by(*set_operator->resultOrder);
-      }
+      _translate_order_by_distinct(set_operator->resultOrder, {}, false);
+
       if (set_operator->resultLimit) {
         _translate_limit(*set_operator->resultLimit);
       }
@@ -1139,7 +1146,7 @@ void SQLTranslator::_translate_select_groupby_having(const hsql::SelectStatement
   auto pre_aggregate_expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
   auto aggregate_expression_set = ExpressionUnorderedSet{};
   auto aggregate_expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
-  //auto window_expressions = ExpressionUnorderedSet{};
+  auto window_expressions = ExpressionUnorderedSet{};
 
   // Visitor that identifies still uncomputed WindowFunctionExpressions and their arguments.
   const auto find_uncomputed_aggregates_and_arguments = [&](auto& sub_expression) {
@@ -1158,10 +1165,10 @@ void SQLTranslator::_translate_select_groupby_having(const hsql::SelectStatement
     }
 
     const auto& window_expression = std::static_pointer_cast<WindowFunctionExpression>(sub_expression);
-    //const auto& window = window_expression->window_description();
-    /*if (window && window_expression_set.emplace(window_expression).second) {
+    const auto& window = window_expression->window();
+    if (window && window_expressions.emplace(window_expression).second) {
       return ExpressionVisitation::VisitArguments;
-    }*/
+    }
 
     if (aggregate_expression_set.emplace(window_expression).second) {
       aggregate_expressions.emplace_back(window_expression);
@@ -1233,13 +1240,48 @@ void SQLTranslator::_translate_select_groupby_having(const hsql::SelectStatement
     _current_lqp = _translate_predicate_expression(having_expression, _current_lqp);
   }
 
-  // Build windows.
-  /*const auto has_windows = !window_expressions.empty();
-  if (has_windows) {
-    for (const auto& window_expression : window_expressions) {
-      AssertInput();
+  // Build Windows.
+  if (!window_expressions.empty()) {
+    auto computed_expressions = _current_lqp->output_expressions();
+    const auto computed_expression_set =
+        ExpressionUnorderedSet{computed_expressions.begin(), computed_expressions.end()};
+    auto required_expressions = ExpressionUnorderedSet{};
+    auto window_nodes = std::vector<std::shared_ptr<WindowNode>>{};
+    window_nodes.reserve(window_expressions.size());
+
+    // We apply some simplifications here:
+    //    1. The argument of the window function must be available on the current LQP.
+    //    2. We assume that PARTITION BY and ORDER BY expressions must either be present or can be computed by a
+    //       ProjectionNode.
+    //    3. Multiple window functions must not use the results of each other.
+    for (const auto& expression : window_expressions) {
+      const auto& window_function = static_cast<const WindowFunctionExpression&>(*expression);
+      const auto& argument = window_function.argument();
+      AssertInput(!argument || computed_expression_set.contains(argument),
+                  "Argument of window function " + window_function.as_column_name() + "is not available.");
+      // We ensured there is a window above.
+      const auto& window = static_cast<const WindowExpression&>(*window_function.window());
+      for (const auto& required_expression : window.arguments) {
+        if (!computed_expression_set.contains(required_expression)) {
+          required_expressions.emplace(required_expression);
+        }
+      }
+      window_nodes.emplace_back(WindowNode::make(expression));
     }
-  }*/
+
+    // Add a ProjectionNode for uncomputed expressions in PARTITION BY and ORDER BY.
+    if (!required_expressions.empty()) {
+      computed_expressions.insert(computed_expressions.end(), required_expressions.cbegin(),
+                                  required_expressions.cend());
+      _current_lqp = ProjectionNode::make(computed_expressions, _current_lqp);
+    }
+
+    // Add WindowNodes on top of the LQP.
+    for (const auto& window_node : window_nodes) {
+      window_node->set_left_input(_current_lqp);
+      _current_lqp = window_node;
+    }
+  }
 
   const auto select_list_size = select.selectList->size();
   for (auto select_list_idx = size_t{0}; select_list_idx < select_list_size; ++select_list_idx) {
@@ -1309,18 +1351,6 @@ void SQLTranslator::_translate_select_groupby_having(const hsql::SelectStatement
       _inflated_select_list_elements.emplace_back(select_list_elements[select_list_idx]);
     }
   }
-
-  // For SELECT DISTINCT, we add an aggregate node that groups by all output columns, but doesn't use any aggregate
-  // functions, e.g.: `SELECT DISTINCT a, b ...` becomes `SELECT a, b ... GROUP BY a, b`.
-  //
-  // This might create unnecessary aggregate nodes when we already have an aggregation that creates unique results:
-  // `SELECT DISTINCT a, MIN(b) FROM t GROUP BY a` would have one aggregate that groups by a and calculates MIN(b), and
-  // one that groups by both a and MIN(b) without calculating anything. Fixing this is done by an optimizer rule
-  // (DependentGroupByReductionRule) that checks if the respective columns are already unique.
-  if (select.selectDistinct) {
-    _current_lqp =
-        AggregateNode::make(unwrap_elements(_inflated_select_list_elements), expression_vector(), _current_lqp);
-  }
 }
 
 void SQLTranslator::_translate_set_operation(const hsql::SetOperation& set_operator) {
@@ -1370,30 +1400,54 @@ void SQLTranslator::_translate_set_operation(const hsql::SetOperation& set_opera
   _current_lqp = lqp;
 }
 
-void SQLTranslator::_translate_order_by(const std::vector<hsql::OrderDescription*>& order_list) {
-  if (order_list.empty()) {
-    return;
+void SQLTranslator::_translate_order_by_distinct(const std::vector<hsql::OrderDescription*>* order_list,
+                                                 const std::vector<std::shared_ptr<AbstractExpression>>& select_list,
+                                                 const bool distinct) {
+  const auto perform_sort = order_list && !order_list->empty();
+  auto expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
+  auto sort_modes = std::vector<SortMode>{};
+
+  if (perform_sort) {
+    const auto& hsql_order_expressions = *order_list;
+    const auto order_list_size = hsql_order_expressions.size();
+    expressions.resize(order_list_size);
+    sort_modes.resize(order_list_size);
+    for (auto expression_idx = size_t{0}; expression_idx < order_list_size; ++expression_idx) {
+      const auto& order_description = hsql_order_expressions[expression_idx];
+      expressions[expression_idx] = _translate_hsql_expr(*order_description->expr, _sql_identifier_resolver);
+      sort_modes[expression_idx] = order_type_to_sort_mode.at(order_description->type);
+    }
+
+    _current_lqp = add_expressions_if_unavailable(_current_lqp, expressions);
   }
 
-  // So we can later reset the available Expressions to the Expressions of this LQP
-  const auto input_lqp = _current_lqp;
+  // For SELECT DISTINCT, we add an AggregateNode that groups by all output columns, but does not use any aggregate
+  // functions, e.g.: `SELECT DISTINCT a, b ...` becomes `SELECT a, b ... GROUP BY a, b`.
+  //
+  // This might create unnecessary AggregateNodes when we already have an aggregation that creates unique results:
+  // `SELECT DISTINCT a, MIN(b) FROM t GROUP BY a` would have one aggregate that groups by a and calculates MIN(b), and
+  // one that groups by both a and MIN(b) without calculating anything. Fixing this is done by an optimizer rule
+  // (DependentGroupByReductionRule) that checks if the respective columns are already unique.
+  if (distinct) {
+    if (perform_sort) {
+      // If we ORDER BY expressions later, we must ensure they are also selected (DISTINCT must be applied before ORDER
+      // BY).
+      const auto& select_expressions_set = ExpressionUnorderedSet{select_list.begin(), select_list.end()};
+      AssertInput(std::all_of(expressions.cbegin(), expressions.cend(),
+                              [&](const auto& expression) { return select_expressions_set.contains(expression); }),
+                  "For SELECT DISTINCT, ORDER BY expressions must appear in the SELECT list.");
+    }
 
-  const auto order_list_size = order_list.size();
-  auto expressions = std::vector<std::shared_ptr<AbstractExpression>>(order_list_size);
-  auto sort_modes = std::vector<SortMode>(order_list_size);
-  for (auto expression_idx = size_t{0}; expression_idx < order_list_size; ++expression_idx) {
-    const auto& order_description = order_list[expression_idx];
-    expressions[expression_idx] = _translate_hsql_expr(*order_description->expr, _sql_identifier_resolver);
-    sort_modes[expression_idx] = order_type_to_sort_mode.at(order_description->type);
+    // Add currently uncomputed expressions, e.g., a + 1 for SELECT DISTINCT a + 1 FROM table_a.
+    _current_lqp = add_expressions_if_unavailable(_current_lqp, select_list);
+
+    _current_lqp = AggregateNode::make(select_list, expression_vector(), _current_lqp);
   }
 
-  _current_lqp = add_expressions_if_unavailable(_current_lqp, expressions);
-  _current_lqp = SortNode::make(expressions, sort_modes, _current_lqp);
-
-  // If any Expressions were added to perform the sorting, remove them again
-  const auto input_output_expressions = input_lqp->output_expressions();
-  if (input_output_expressions.size() != _current_lqp->output_expressions().size()) {
-    _current_lqp = ProjectionNode::make(input_output_expressions, _current_lqp);
+  // If any expressions were added to perform the sorting, we must add a ProjectionNode later and remove them again in
+  // _translate_select_statement(...).
+  if (perform_sort) {
+    _current_lqp = SortNode::make(expressions, sort_modes, _current_lqp);
   }
 }
 
@@ -1808,7 +1862,6 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
     }
 
     case hsql::kExprFunctionRef: {
-      // TODO: Window functions
       // Translate window definition.
       auto window_description = std::shared_ptr<WindowExpression>();
       if (expr.windowDescription) {
@@ -1884,7 +1937,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
                                      std::move(sort_modes), std::move(frame_description));
       }
 
-      // convert to upper-case to find mapping
+      // Convert to upper-case to find mapping.
       std::transform(name.cbegin(), name.cend(), name.begin(),
                      [](const auto character) { return std::toupper(character); });
 
@@ -1898,7 +1951,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
       Assert(expr.exprList, "FunctionRef has no exprList. Bug in sqlparser?");
 
       /**
-       * Window function
+       * Window function.
        */
       const auto window_function_iter = window_function_to_string.right.find(name);
       if (window_function_iter != window_function_to_string.right.end()) {
@@ -1968,7 +2021,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
           } break;
         }
 
-        // Check that the aggregate can be calculated on the given expression
+        // Check that the aggregate can be calculated on the given expression.
         const auto result_type = aggregate_expression->data_type();
         AssertInput(result_type != DataType::Null,
                     std::string{"Invalid aggregate "} + aggregate_expression->as_column_name() +
