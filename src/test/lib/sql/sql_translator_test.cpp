@@ -962,8 +962,7 @@ TEST_F(SQLTranslatorTest, Distinct) {
   // clang-format off
   const auto expected_lqp =
   AggregateNode::make(expression_vector(int_float_b), expression_vector(),
-    ProjectionNode::make(expression_vector(int_float_b),
-     stored_table_node_int_float));
+    stored_table_node_int_float);
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
@@ -999,8 +998,8 @@ TEST_F(SQLTranslatorTest, DistinctAndOrderBy) {
 
   // clang-format off
   const auto expected_lqp =
-  AggregateNode::make(expression_vector(int_float_a, int_float_b), expression_vector(),
-    SortNode::make(expression_vector(int_float_b), std::vector<SortMode>{SortMode::Ascending},
+  SortNode::make(expression_vector(int_float_b), std::vector<SortMode>{SortMode::Ascending},
+    AggregateNode::make(expression_vector(int_float_a, int_float_b), expression_vector(),
       stored_table_node_int_float));
   // clang-format on
 
@@ -1012,20 +1011,18 @@ TEST_F(SQLTranslatorTest, DistinctAndOrderByWithProjection) {
 
   // clang-format off
   const auto expected_lqp =
-  AggregateNode::make(expression_vector(add_(int_float_a, int_float_b)), expression_vector(),
-    // This ProjectionNode seems superfluous, but when we translate the SortNode, we do not know which expressions
-    // will be part of the SELECT list, so we add a + b and do not remove a and b there.
-    ProjectionNode::make(expression_vector(add_(int_float_a, int_float_b)),
-      SortNode::make(expression_vector(add_(int_float_a, int_float_b)), std::vector<SortMode>{SortMode::Ascending},
-        ProjectionNode::make(expression_vector(add_(int_float_a, int_float_b), int_float_a, int_float_b),
-          stored_table_node_int_float))));
+  SortNode::make(expression_vector(add_(int_float_a, int_float_b)), std::vector<SortMode>{SortMode::Ascending},
+    AggregateNode::make(expression_vector(add_(int_float_a, int_float_b)), expression_vector(),
+      ProjectionNode::make(expression_vector(add_(int_float_a, int_float_b), int_float_a, int_float_b),
+        stored_table_node_int_float)));
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
 TEST_F(SQLTranslatorTest, DistinctAndOrderByInvalid) {
-  // For SELECT DISTINCT, expressions in the ORDER BY clause must also be in the SELECT list.
+  // ORDER BY is executed after DISTINCT. For SELECT DISTINCT, expressions in the ORDER BY clause must also be in the
+  // SELECT list.
   EXPECT_THROW(sql_to_lqp_helper("SELECT DISTINCT a FROM int_float ORDER BY b"), InvalidInputException);
 }
 
@@ -1038,7 +1035,7 @@ TEST_F(SQLTranslatorTest, AggregateWithDistinctAndRelatedGroupBy) {
   // clang-format off
   const auto expected_lqp =
   AggregateNode::make(expression_vector(int_float_b, mul_(sum_(a_times_3), int_float_b)), expression_vector(),
-    ProjectionNode::make(expression_vector(int_float_b, mul_(sum_(a_times_3), int_float_b)),
+    ProjectionNode::make(expression_vector(mul_(sum_(a_times_3), int_float_b), int_float_b,  sum_(a_times_3)),
       AggregateNode::make(expression_vector(int_float_b), expression_vector(sum_(a_times_3)),
         ProjectionNode::make(expression_vector(a_times_3, int_float_b),
           stored_table_node_int_float))));
@@ -1053,9 +1050,8 @@ TEST_F(SQLTranslatorTest, AggregateWithDistinctAndUnrelatedGroupBy) {
   // clang-format off
   const auto expected_lqp =
   AggregateNode::make(expression_vector(min_(int_float_a)), expression_vector(),
-    ProjectionNode::make(expression_vector(min_(int_float_a)),
-      AggregateNode::make(expression_vector(int_float_b), expression_vector(min_(int_float_a)),
-        stored_table_node_int_float)));
+    AggregateNode::make(expression_vector(int_float_b), expression_vector(min_(int_float_a)),
+      stored_table_node_int_float));
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
