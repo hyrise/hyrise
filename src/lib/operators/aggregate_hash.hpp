@@ -22,7 +22,7 @@
 
 #include "abstract_aggregate_operator.hpp"
 #include "abstract_read_only_operator.hpp"
-#include "aggregate/aggregate_traits.hpp"
+#include "aggregate/window_function_traits.hpp"
 #include "expression/window_function_expression.hpp"
 #include "resolve_type.hpp"
 #include "storage/reference_segment.hpp"
@@ -64,7 +64,7 @@ Optionally, the result may also contain:
 */
 template <typename ColumnDataType, WindowFunction aggregate_function>
 struct AggregateResult {
-  using AggregateType = typename AggregateTraits<ColumnDataType, aggregate_function>::AggregateType;
+  using AggregateType = typename WindowFunctionTraits<ColumnDataType, aggregate_function>::ReturnType;
 
   using DistinctValues = tsl::robin_set<ColumnDataType, std::hash<ColumnDataType>, std::equal_to<ColumnDataType>,
                                         PolymorphicAllocator<ColumnDataType>>;

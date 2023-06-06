@@ -184,7 +184,7 @@ set(
     operators/abstract_read_only_operator.hpp
     operators/abstract_read_write_operator.cpp
     operators/abstract_read_write_operator.hpp
-    operators/aggregate/aggregate_traits.hpp
+    operators/aggregate/window_function_traits.hpp
     operators/aggregate_hash.cpp
     operators/aggregate_hash.hpp
     operators/aggregate_sort.cpp

@@ -92,6 +92,14 @@ struct unary final {
 };
 
 template <auto t, typename E>
+struct pseudo_unary final {
+  template <typename A>
+  std::shared_ptr<E> operator()(const A& a) const {
+    return std::make_shared<E>(t, nullptr, to_expression(a));
+  }
+};
+
+template <auto t, typename E>
 struct binary_defaulted final {
   template <typename A>
   std::shared_ptr<E> operator()(const A& a, const std::shared_ptr<AbstractExpression>& b = nullptr) const {
@@ -122,6 +130,12 @@ struct ternary final {
 inline detail::unary<PredicateCondition::IsNull, IsNullExpression> is_null_;
 inline detail::unary<PredicateCondition::IsNotNull, IsNullExpression> is_not_null_;
 
+inline detail::pseudo_unary<WindowFunction::CumeDist, WindowFunctionExpression> cume_dist_;
+inline detail::pseudo_unary<WindowFunction::DenseRank, WindowFunctionExpression> dense_rank_;
+inline detail::pseudo_unary<WindowFunction::PercentRank, WindowFunctionExpression> percent_rank_;
+inline detail::pseudo_unary<WindowFunction::Rank, WindowFunctionExpression> rank_;
+inline detail::pseudo_unary<WindowFunction::RowNumber, WindowFunctionExpression> row_number_;
+
 inline detail::binary_defaulted<WindowFunction::Sum, WindowFunctionExpression> sum_;
 inline detail::binary_defaulted<WindowFunction::Max, WindowFunctionExpression> max_;
 inline detail::binary_defaulted<WindowFunction::Min, WindowFunctionExpression> min_;
@@ -131,11 +145,6 @@ inline detail::binary_defaulted<WindowFunction::CountDistinct, WindowFunctionExp
 inline detail::binary_defaulted<WindowFunction::StandardDeviationSample, WindowFunctionExpression>
     standard_deviation_sample_;
 inline detail::binary_defaulted<WindowFunction::Any, WindowFunctionExpression> any_;
-inline detail::binary_defaulted<WindowFunction::CumeDist, WindowFunctionExpression> cume_dist_;
-inline detail::binary_defaulted<WindowFunction::DenseRank, WindowFunctionExpression> dense_rank_;
-inline detail::binary_defaulted<WindowFunction::PercentRank, WindowFunctionExpression> percent_rank_;
-inline detail::binary_defaulted<WindowFunction::Rank, WindowFunctionExpression> rank_;
-inline detail::binary_defaulted<WindowFunction::RowNumber, WindowFunctionExpression> row_number_;
 
 inline detail::binary<ArithmeticOperator::Division, ArithmeticExpression> div_;
 inline detail::binary<ArithmeticOperator::Multiplication, ArithmeticExpression> mul_;

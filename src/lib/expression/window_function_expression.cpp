@@ -6,7 +6,7 @@
 
 #include "expression_utils.hpp"
 #include "lqp_column_expression.hpp"
-#include "operators/aggregate/aggregate_traits.hpp"
+#include "operators/aggregate/window_function_traits.hpp"
 #include "resolve_type.hpp"
 #include "utils/assert.hpp"
 
@@ -17,7 +17,7 @@ WindowFunctionExpression::WindowFunctionExpression(const WindowFunction init_win
                                                    const std::shared_ptr<AbstractExpression>& window)
     : AbstractExpression{ExpressionType::WindowFunction, {/* Expressions are set below. */}},
       window_function(init_window_function) {
-  arguments.reserve(2);
+  arguments.reserve(argument && window ? 2 : 1);
   if (argument) {
     arguments.emplace_back(argument);
   }
@@ -76,19 +76,19 @@ DataType WindowFunctionExpression::data_type() const {
       !aggregate_functions.contains(window_function)) {
     switch (window_function) {
       case WindowFunction::Count:
-        return AggregateTraits<NullValue, WindowFunction::Count>::RESULT_TYPE;
+        return WindowFunctionTraits<NullValue, WindowFunction::Count>::RESULT_TYPE;
       case WindowFunction::CountDistinct:
-        return AggregateTraits<NullValue, WindowFunction::CountDistinct>::RESULT_TYPE;
+        return WindowFunctionTraits<NullValue, WindowFunction::CountDistinct>::RESULT_TYPE;
       case WindowFunction::CumeDist:
-        return AggregateTraits<NullValue, WindowFunction::CumeDist>::RESULT_TYPE;
+        return WindowFunctionTraits<NullValue, WindowFunction::CumeDist>::RESULT_TYPE;
       case WindowFunction::DenseRank:
-        return AggregateTraits<NullValue, WindowFunction::DenseRank>::RESULT_TYPE;
+        return WindowFunctionTraits<NullValue, WindowFunction::DenseRank>::RESULT_TYPE;
       case WindowFunction::PercentRank:
-        return AggregateTraits<NullValue, WindowFunction::PercentRank>::RESULT_TYPE;
+        return WindowFunctionTraits<NullValue, WindowFunction::PercentRank>::RESULT_TYPE;
       case WindowFunction::Rank:
-        return AggregateTraits<NullValue, WindowFunction::Rank>::RESULT_TYPE;
+        return WindowFunctionTraits<NullValue, WindowFunction::Rank>::RESULT_TYPE;
       case WindowFunction::RowNumber:
-        return AggregateTraits<NullValue, WindowFunction::RowNumber>::RESULT_TYPE;
+        return WindowFunctionTraits<NullValue, WindowFunction::RowNumber>::RESULT_TYPE;
       default:
         break;  // The rest is handled below.
     }
@@ -103,22 +103,22 @@ DataType WindowFunctionExpression::data_type() const {
     using AggregateDataType = typename decltype(data_type_t)::type;
     switch (window_function) {
       case WindowFunction::Min:
-        result_type = AggregateTraits<AggregateDataType, WindowFunction::Min>::RESULT_TYPE;
+        result_type = WindowFunctionTraits<AggregateDataType, WindowFunction::Min>::RESULT_TYPE;
         break;
       case WindowFunction::Max:
-        result_type = AggregateTraits<AggregateDataType, WindowFunction::Max>::RESULT_TYPE;
+        result_type = WindowFunctionTraits<AggregateDataType, WindowFunction::Max>::RESULT_TYPE;
         break;
       case WindowFunction::Avg:
-        result_type = AggregateTraits<AggregateDataType, WindowFunction::Avg>::RESULT_TYPE;
+        result_type = WindowFunctionTraits<AggregateDataType, WindowFunction::Avg>::RESULT_TYPE;
         break;
       case WindowFunction::Sum:
-        result_type = AggregateTraits<AggregateDataType, WindowFunction::Sum>::RESULT_TYPE;
+        result_type = WindowFunctionTraits<AggregateDataType, WindowFunction::Sum>::RESULT_TYPE;
         break;
       case WindowFunction::StandardDeviationSample:
-        result_type = AggregateTraits<AggregateDataType, WindowFunction::StandardDeviationSample>::RESULT_TYPE;
+        result_type = WindowFunctionTraits<AggregateDataType, WindowFunction::StandardDeviationSample>::RESULT_TYPE;
         break;
       case WindowFunction::Any:
-        result_type = AggregateTraits<AggregateDataType, WindowFunction::Any>::RESULT_TYPE;
+        result_type = WindowFunctionTraits<AggregateDataType, WindowFunction::Any>::RESULT_TYPE;
         break;
       case WindowFunction::Count:
       case WindowFunction::CountDistinct:
@@ -169,9 +169,10 @@ size_t WindowFunctionExpression::_shallow_hash() const {
 }
 
 bool WindowFunctionExpression::_on_is_nullable_on_lqp(const AbstractLQPNode& /*lqp*/) const {
-  // Aggregates (except COUNT and COUNT DISTINCT) will return NULL when executed on an
-  // empty group - thus they are always nullable
-  return window_function != WindowFunction::Count && window_function != WindowFunction::CountDistinct;
+  // Aggregates (except COUNT and COUNT DISTINCT) will return NULL when executed on an empty group. Thus, they are
+  // always nullable. Pure window functions always return a value.
+  return aggregate_functions.contains(window_function) && window_function != WindowFunction::Count &&
+         window_function != WindowFunction::CountDistinct;
 }
 
 std::ostream& operator<<(std::ostream& stream, const WindowFunction window_function) {

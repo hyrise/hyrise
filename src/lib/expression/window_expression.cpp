@@ -98,7 +98,7 @@ WindowExpression::WindowExpression(const std::vector<std::shared_ptr<AbstractExp
                                    const std::vector<std::shared_ptr<AbstractExpression>>& order_by_expressions,
                                    const std::vector<SortMode>& init_sort_modes,
                                    std::unique_ptr<FrameDescription> init_frame_description)
-    : AbstractExpression{ExpressionType::Window, {{/* Expressions added below */}}},
+    : AbstractExpression{ExpressionType::Window, {{/* Expressions added below. */}}},
       sort_modes{init_sort_modes},
       frame_description{std::move(init_frame_description)},
       order_by_expressions_begin_idx{partition_by_expressions.size()} {

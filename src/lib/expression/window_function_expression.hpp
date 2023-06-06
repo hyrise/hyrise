@@ -6,13 +6,12 @@
 namespace hyrise {
 
 /**
- * Supported aggregate functions. In addition to the default SQL functions (e.g., MIN(), MAX()), Hyrise internally uses
- * the ANY() function, which expects all values in the group to be equal and returns that value. In SQL terms, this
- * would be an additional, but unnecessary GROUP BY column. This function is only used by the optimizer in case that
- * all values of the group are known to be equal (see DependentGroupByReductionRule).
+ * Supported window/aggregate functions. In addition to the default SQL functions (e.g., MIN(), MAX()), Hyrise
+ * internally uses the ANY() function, which expects all values in the group to be equal and returns that value. In SQL
+ * terms, this would be an additional, but unnecessary GROUP BY column. This function is only used by the optimizer in
+ * case that all values of the group are known to be equal (see DependentGroupByReductionRule).
  */
 
-// TODO: change to WindowFunctionExpression
 enum class WindowFunction {
   Min,
   Max,
@@ -39,6 +38,7 @@ const auto window_function_to_string = make_bimap<WindowFunction, std::string>({
     {WindowFunction::Count, "COUNT"},
     {WindowFunction::CountDistinct, "COUNT DISTINCT"},
     {WindowFunction::StandardDeviationSample, "STDDEV_SAMP"},
+    {WindowFunction::Any, "ANY"},
     {WindowFunction::CumeDist, "CUME_DIST"},
     {WindowFunction::DenseRank, "DENSE_RANK"},
     {WindowFunction::PercentRank, "PERCENT_RANK"},
@@ -52,8 +52,12 @@ const auto aggregate_functions = std::unordered_set<WindowFunction>{WindowFuncti
                                                                     WindowFunction::Avg,
                                                                     WindowFunction::Count,
                                                                     WindowFunction::CountDistinct,
-                                                                    WindowFunction::StandardDeviationSample};
+                                                                    WindowFunction::StandardDeviationSample,
+                                                                    WindowFunction::Any};
 
+/**
+ * SQL Window/aggregate functions with optionally defined window.
+ */
 class WindowFunctionExpression : public AbstractExpression {
  public:
   WindowFunctionExpression(const WindowFunction init_window_function,

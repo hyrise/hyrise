@@ -4,7 +4,7 @@
 #include <memory>
 #include <vector>
 
-#include "aggregate/aggregate_traits.hpp"
+#include "aggregate/window_function_traits.hpp"
 #include "all_type_variant.hpp"
 #include "expression/pqp_column_expression.hpp"
 #include "operators/sort.hpp"
@@ -645,47 +645,47 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
        */
       switch (aggregate->window_function) {
         case WindowFunction::Min: {
-          using AggregateType = typename AggregateTraits<ColumnDataType, WindowFunction::Min>::AggregateType;
+          using AggregateType = typename WindowFunctionTraits<ColumnDataType, WindowFunction::Min>::ReturnType;
           _aggregate_values<ColumnDataType, AggregateType, WindowFunction::Min>(group_boundaries, aggregate_index,
                                                                                 sorted_table);
           break;
         }
         case WindowFunction::Max: {
-          using AggregateType = typename AggregateTraits<ColumnDataType, WindowFunction::Max>::AggregateType;
+          using AggregateType = typename WindowFunctionTraits<ColumnDataType, WindowFunction::Max>::ReturnType;
           _aggregate_values<ColumnDataType, AggregateType, WindowFunction::Max>(group_boundaries, aggregate_index,
                                                                                 sorted_table);
           break;
         }
         case WindowFunction::Sum: {
-          using AggregateType = typename AggregateTraits<ColumnDataType, WindowFunction::Sum>::AggregateType;
+          using AggregateType = typename WindowFunctionTraits<ColumnDataType, WindowFunction::Sum>::ReturnType;
           _aggregate_values<ColumnDataType, AggregateType, WindowFunction::Sum>(group_boundaries, aggregate_index,
                                                                                 sorted_table);
           break;
         }
 
         case WindowFunction::Avg: {
-          using AggregateType = typename AggregateTraits<ColumnDataType, WindowFunction::Avg>::AggregateType;
+          using AggregateType = typename WindowFunctionTraits<ColumnDataType, WindowFunction::Avg>::ReturnType;
           _aggregate_values<ColumnDataType, AggregateType, WindowFunction::Avg>(group_boundaries, aggregate_index,
                                                                                 sorted_table);
           break;
         }
         case WindowFunction::Count: {
-          using AggregateType = typename AggregateTraits<ColumnDataType, WindowFunction::Count>::AggregateType;
+          using AggregateType = typename WindowFunctionTraits<ColumnDataType, WindowFunction::Count>::ReturnType;
           _aggregate_values<ColumnDataType, AggregateType, WindowFunction::Count>(group_boundaries, aggregate_index,
                                                                                   sorted_table);
           break;
         }
         case WindowFunction::CountDistinct: {
-          using AggregateType =
-              typename AggregateTraits<ColumnDataType,
-                                       WindowFunction::CountDistinct>::AggregateType;  // NOLINT(whitespace/line_length)
+          using AggregateType = typename WindowFunctionTraits<
+              ColumnDataType,
+              WindowFunction::CountDistinct>::ReturnType;  // NOLINT(whitespace/line_length)
           _aggregate_values<ColumnDataType, AggregateType, WindowFunction::CountDistinct>(
               group_boundaries, aggregate_index, sorted_table);
           break;
         }
         case WindowFunction::StandardDeviationSample: {
           using AggregateType =
-              typename AggregateTraits<ColumnDataType, WindowFunction::StandardDeviationSample>::AggregateType;
+              typename WindowFunctionTraits<ColumnDataType, WindowFunction::StandardDeviationSample>::ReturnType;
           _aggregate_values<ColumnDataType, AggregateType, WindowFunction::StandardDeviationSample>(
               group_boundaries, aggregate_index, sorted_table);
           break;
@@ -785,7 +785,7 @@ void AggregateSort::_create_aggregate_column_definitions(boost::hana::basic_type
 template <typename ColumnType, WindowFunction aggregate_function>
 void AggregateSort::create_aggregate_column_definitions(ColumnID column_index) {
   // retrieve type information from the aggregation traits
-  auto RESULT_TYPE = AggregateTraits<ColumnType, aggregate_function>::RESULT_TYPE;
+  auto RESULT_TYPE = WindowFunctionTraits<ColumnType, aggregate_function>::RESULT_TYPE;
 
   const auto& aggregate = _aggregates[column_index];
   const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->argument());

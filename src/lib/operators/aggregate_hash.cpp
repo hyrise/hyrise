@@ -10,7 +10,7 @@
 
 #include "tsl/robin_map.h"
 
-#include "aggregate/aggregate_traits.hpp"
+#include "aggregate/window_function_traits.hpp"
 #include "expression/pqp_column_expression.hpp"
 #include "hyrise.hpp"
 #include "resolve_type.hpp"
@@ -205,7 +205,7 @@ template <typename ColumnDataType, WindowFunction aggregate_function, typename A
 __attribute__((hot)) void AggregateHash::_aggregate_segment(ChunkID chunk_id, ColumnID column_index,
                                                             const AbstractSegment& abstract_segment,
                                                             KeysPerChunk<AggregateKey>& keys_per_chunk) {
-  using AggregateType = typename AggregateTraits<ColumnDataType, aggregate_function>::AggregateType;
+  using AggregateType = typename WindowFunctionTraits<ColumnDataType, aggregate_function>::ReturnType;
 
   auto aggregator = WindowFunctionBuilder<ColumnDataType, AggregateType, aggregate_function>().get_aggregate_function();
 
@@ -1118,8 +1118,8 @@ void AggregateHash::_write_aggregate_output(ColumnID aggregate_index) {
   auto timer = Timer{};
 
   // retrieve type information from the aggregation traits
-  typename AggregateTraits<ColumnDataType, aggregate_function>::AggregateType aggregate_type;
-  auto RESULT_TYPE = AggregateTraits<ColumnDataType, aggregate_function>::RESULT_TYPE;
+  typename WindowFunctionTraits<ColumnDataType, aggregate_function>::ReturnType aggregate_type;
+  auto RESULT_TYPE = WindowFunctionTraits<ColumnDataType, aggregate_function>::RESULT_TYPE;
 
   const auto& aggregate = _aggregates[aggregate_index];
 

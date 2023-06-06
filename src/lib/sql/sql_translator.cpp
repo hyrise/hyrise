@@ -1146,7 +1146,8 @@ void SQLTranslator::_translate_select_groupby_having(const hsql::SelectStatement
   auto pre_aggregate_expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
   auto aggregate_expression_set = ExpressionUnorderedSet{};
   auto aggregate_expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
-  auto window_expressions = ExpressionUnorderedSet{};
+  auto window_expression_set = ExpressionUnorderedSet{};
+  auto window_expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
 
   // Visitor that identifies still uncomputed WindowFunctionExpressions and their arguments.
   const auto find_uncomputed_aggregates_and_arguments = [&](auto& sub_expression) {
@@ -1166,7 +1167,8 @@ void SQLTranslator::_translate_select_groupby_having(const hsql::SelectStatement
 
     const auto& window_expression = std::static_pointer_cast<WindowFunctionExpression>(sub_expression);
     const auto& window = window_expression->window();
-    if (window && window_expressions.emplace(window_expression).second) {
+    if (window && window_expression_set.emplace(window_expression).second) {
+      window_expressions.emplace_back(window_expression);
       return ExpressionVisitation::VisitArguments;
     }
 
@@ -1262,6 +1264,9 @@ void SQLTranslator::_translate_select_groupby_having(const hsql::SelectStatement
       // We ensured there is a window above.
       const auto& window = static_cast<const WindowExpression&>(*window_function.window());
       for (const auto& required_expression : window.arguments) {
+        AssertInput(
+            expression_evaluable_on_lqp(required_expression, *_current_lqp),
+            "Required column " + required_expression->as_column_name() + " for window definition is not available.");
         if (!computed_expression_set.contains(required_expression)) {
           required_expressions.emplace(required_expression);
         }
@@ -1898,7 +1903,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
             frame_type = FrameType::Range;
             break;
           case hsql::FrameType::kGroups:
-            FailInput("GROUP frames are not supported.");
+            FailInput("GROUPS frames are not supported.");
         }
 
         Assert(hsql_frame_description.start && hsql_frame_description.end,
@@ -1989,7 +1994,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
             if (expr.exprList->front()->type == hsql::kExprStar) {
               AssertInput(!expr.exprList->front()->name, "Illegal <t>.* in COUNT()");
 
-              // Find any leaf node below COUNT(*)
+              // Find any leaf node below COUNT(*).
               auto leaf_node = std::shared_ptr<AbstractLQPNode>{};
               visit_lqp(_current_lqp, [&](const auto& node) {
                 if (!node->left_input() && !node->right_input()) {
@@ -2050,7 +2055,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
       }
 
       /**
-       * "Normal" function
+       * "Normal" function.
        */
       const auto function_iter = function_type_to_string.right.find(name);
 
