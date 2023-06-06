@@ -1,12 +1,5 @@
 #include "aggregate_node.hpp"
 
-#include <algorithm>
-#include <memory>
-#include <optional>
-#include <sstream>
-#include <string>
-#include <vector>
-
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_column_expression.hpp"
 #include "expression/window_function_expression.hpp"

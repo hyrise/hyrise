@@ -1,8 +1,5 @@
 #include "cardinality_estimator.hpp"
 
-#include <iostream>
-#include <memory>
-
 #include "attribute_statistics.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_functional.hpp"
