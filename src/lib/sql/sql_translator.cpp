@@ -1265,10 +1265,10 @@ void SQLTranslator::_translate_order_by_distinct(const std::vector<hsql::OrderDe
       AssertInput(std::all_of(expressions.cbegin(), expressions.cend(),
                               [&](const auto& expression) { return select_expressions_set.contains(expression); }),
                   "For SELECT DISTINCT, ORDER BY expressions must appear in the SELECT list.");
-    } else {
-      // Add currently uncomputed expressions, e.g., a + 1 for SELECT DISTINCT a + 1 FROM table_a.
-      _current_lqp = _add_expressions_if_unavailable(_current_lqp, select_list);
     }
+
+    // Add currently uncomputed expressions, e.g., a + 1 for SELECT DISTINCT a + 1 FROM table_a.
+    _current_lqp = _add_expressions_if_unavailable(_current_lqp, select_list);
 
     _current_lqp = AggregateNode::make(select_list, expression_vector(), _current_lqp);
   }
@@ -1645,6 +1645,11 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_add_expressions_if_unavailable(
   const auto output_expressions = node->output_expressions();
   projection_expressions.insert(projection_expressions.end(), output_expressions.cbegin(), output_expressions.cend());
 
+  // If the current LQP already is a ProjectionNode, do not add another one.
+  if (node->type == LQPNodeType::Projection) {
+    node->node_expressions = projection_expressions;
+    return node;
+  }
   return ProjectionNode::make(projection_expressions, node);
 }
 

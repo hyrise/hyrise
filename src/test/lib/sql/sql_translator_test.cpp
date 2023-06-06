@@ -1020,6 +1020,24 @@ TEST_F(SQLTranslatorTest, DistinctAndOrderByWithProjection) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
+TEST_F(SQLTranslatorTest, DistinctAndOrderByWithProjectionAndFurtherExpression) {
+  const auto [actual_lqp, translation_info] =
+      sql_to_lqp_helper("SELECT DISTINCT a + b, a + c FROM int_int_int ORDER BY a + b");
+
+  const auto a_plus_b = add_(int_int_int_a, int_int_int_b);
+  const auto a_plus_c = add_(int_int_int_a, int_int_int_c);
+
+  // clang-format off
+  const auto expected_lqp =
+  SortNode::make(expression_vector(a_plus_b), std::vector<SortMode>{SortMode::Ascending},
+    AggregateNode::make(expression_vector(a_plus_b, a_plus_c), expression_vector(),
+      ProjectionNode::make(expression_vector(a_plus_c, a_plus_b, int_int_int_a, int_int_int_b, int_int_int_c),
+        stored_table_node_int_int_int)));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
 TEST_F(SQLTranslatorTest, DistinctAndOrderByInvalid) {
   // ORDER BY is executed after DISTINCT. For SELECT DISTINCT, expressions in the ORDER BY clause must also be in the
   // SELECT list.
