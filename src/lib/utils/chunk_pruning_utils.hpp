@@ -22,7 +22,8 @@ std::set<ChunkID> compute_chunk_exclude_list(
     std::unordered_map<StoredTableNodePredicateNodePair, std::set<ChunkID>,
                        boost::hash<StoredTableNodePredicateNodePair>>& excluded_chunk_ids_by_predicate);
 
-// Convenience version when no caching of results is required, e.g., when there is only a single PredicatePruningChain.
+// Convenience version when no the result cache is not used by the caller for future calls, e.g., when there is only a
+// single PredicatePruningChain.
 std::set<ChunkID> compute_chunk_exclude_list(const PredicatePruningChain& predicate_pruning_chain,
                                              const std::shared_ptr<StoredTableNode>& stored_table_node);
 
