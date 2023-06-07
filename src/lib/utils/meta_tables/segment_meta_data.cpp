@@ -10,7 +10,7 @@
 namespace hyrise {
 
 void gather_segment_meta_data(const std::shared_ptr<Table>& meta_table, const MemoryUsageCalculationMode mode) {
-  auto allocator = PolymorphicAllocator<pmr_string>{get_global_monotonic_buffer_resource()};
+  auto allocator = PolymorphicAllocator<pmr_string>{};
   auto pin_guard = AllocatorPinGuard{allocator};
   for (const auto& [table_name, table] : Hyrise::get().storage_manager.tables()) {
     const auto chunk_count = table->chunk_count();

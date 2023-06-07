@@ -78,12 +78,16 @@ void generate_chunk_pruning_statistics(const std::shared_ptr<Chunk>& chunk) {
           }
         });
 
-        auto allocator = PolymorphicAllocator<ColumnDataType>{};
-        auto dictionary_allocator_pin_guard = AllocatorPinGuard{allocator};
+        auto dictionary = [&]() {
+          auto allocator = PolymorphicAllocator<ColumnDataType>{};
+          auto dictionary_allocator_pin_guard = AllocatorPinGuard{allocator};
 
-        pmr_vector<ColumnDataType> dictionary{values.cbegin(), values.cend(), allocator};
+          pmr_vector<ColumnDataType> dictionary{values.cbegin(), values.cend(), allocator};
 
-        std::sort(dictionary.begin(), dictionary.end());
+          std::sort(dictionary.begin(), dictionary.end());
+
+          return dictionary;
+        }();
         create_pruning_statistics_for_segment(*segment_statistics, dictionary);
       }
 

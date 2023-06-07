@@ -1,13 +1,17 @@
 #pragma once
 
 #include <atomic>
-#include <mutex>
+#include <shared_mutex>
+#include "storage/buffer/hybrid_latch.hpp"
 #include "storage/buffer/types.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {
 
-class Frame {
+// TODO: Potential improvements: pin_count -1 -> evicted
+// TODO: Merge, diry, reference etc. into a single state variable
+
+class Frame : public HybridLatch {
  public:
   enum class State { Evicted, Resident };
 
@@ -33,9 +37,6 @@ class Frame {
 
   // Pointer to raw data in volatile region
   std::byte* data;
-
-  // Mutex used for safe concurrent access
-  std::mutex latch;
 
   // Pointer to the sibling frame. This can be a DRAM frame or a NUMA frame.
   FramePtr sibling_frame;

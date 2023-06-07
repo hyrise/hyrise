@@ -139,8 +139,6 @@ void BufferManager::BufferPools::allocate_frame(FramePtr& frame) {
 
     // Lock the frame to prevent it from being modified while we are working on it
     DebugAssert(current_frame->_internal_ref_count() > 0, "Frame has no references");
-    std::scoped_lock lock(current_frame->latch);
-    DebugAssert(current_frame->page_type == _page_type, "Frame has wrong page type");
 
     // Check if the frame can be evicted based on the timestamp, the state and the pin count
     if (!item.can_evict()) {
@@ -152,6 +150,13 @@ void BufferManager::BufferPools::allocate_frame(FramePtr& frame) {
       _eviction_queue->push(item);
       continue;
     }
+
+    if (current_frame->is_locked_exclusive()) {
+      // _eviction_queue->push(item);  // TODO: This might still faile
+      continue;
+    }
+    auto lock_guard = current_frame->create_exclusive_guard();
+    DebugAssert(current_frame->page_type == _page_type, "Frame has wrong page type");
 
     // Call the callback to evict the frame. This is handled by the BufferManager instead of the BufferPool,
     // because we need access other things for eviction.
@@ -196,7 +201,7 @@ void BufferManager::BufferPools::deallocate_frame(FramePtr& frame) {
   // TODO: add_to_eviction_queue(frame); ?, might reduce madvie calls
   DebugAssert(frame->page_type == _page_type, "Frame has wrong page type");
   if (frame->is_resident()) {
-    std::scoped_lock lock(frame->latch);
+    auto lock_guard = frame->create_exclusive_guard();
     const auto size_type = frame->size_type;
     _buffer_pools[static_cast<size_t>(size_type)]->free(frame);
     _used_bytes -= bytes_for_size_type(size_type);
@@ -350,7 +355,7 @@ FramePtr BufferManager::make_resident(FramePtr frame, const AccessIntent access_
         if (!numa_frame) {
           numa_frame = dram_frame->clone_and_attach_sibling<PageType::Numa>();
         }
-        std::scoped_lock lock(numa_frame->latch);
+        numa_frame->lock_exclusive();
 
         DebugAssert(!numa_frame->is_resident(), "DRAM frame is already resident");
         _numa_buffer_pools.allocate_frame(numa_frame);
@@ -361,6 +366,8 @@ FramePtr BufferManager::make_resident(FramePtr frame, const AccessIntent access_
         numa_frame->unpin();
 
         _numa_buffer_pools.add_to_eviction_queue(numa_frame);
+
+        numa_frame->unlock_exclusive();
 
         return numa_frame;
       }
@@ -373,7 +380,8 @@ FramePtr BufferManager::make_resident(FramePtr frame, const AccessIntent access_
       numa_frame->wait_until_unpinned();
 
       DebugAssert(!dram_frame->is_pinned(), "DRAM frame is already pinned");
-      std::scoped_lock lock(numa_frame->latch, dram_frame->latch);
+      numa_frame->lock_shared();
+      dram_frame->lock_exclusive();
 
       _dram_buffer_pools.allocate_frame(dram_frame);
 
@@ -389,6 +397,9 @@ FramePtr BufferManager::make_resident(FramePtr frame, const AccessIntent access_
       _dram_buffer_pools.add_to_eviction_queue(dram_frame);
       _numa_buffer_pools.add_to_eviction_queue(numa_frame);
 
+      numa_frame->unlock_shared();
+      dram_frame->unlock_exclusive();
+
       return dram_frame;
     }
     // !is_numa_resident && !bypass_dram is also handled with Case 4
@@ -397,7 +408,7 @@ FramePtr BufferManager::make_resident(FramePtr frame, const AccessIntent access_
   // Case 4: Neither in DRAM nor in NUMA or not bypass DRAM --> we need to bring the page into DRAM
   DebugAssert(dram_frame, "DRAM frame is not allocated");
 
-  std::scoped_lock lock(dram_frame->latch);
+  dram_frame->lock_exclusive();
 
   dram_frame->pin();
   _dram_buffer_pools.allocate_frame(dram_frame);
@@ -405,6 +416,7 @@ FramePtr BufferManager::make_resident(FramePtr frame, const AccessIntent access_
   dram_frame->dirty = true;
   dram_frame->unpin();
   // _dram_buffer_pools.add_to_eviction_queue(dram_frame);
+  dram_frame->unlock_exclusive();
 
   return dram_frame;
 }
@@ -452,7 +464,8 @@ void BufferManager::evict_frame(const FramePtr& frame) {
   numa_frame->wait_until_unpinned();
   DebugAssert(!numa_frame->dirty.load(), "NUMA frame is dirty");
 
-  std::scoped_lock lock(numa_frame->latch);
+  auto lock_guard = numa_frame->create_exclusive_guard();
+
   numa_frame->pin();
   frame->pin();
 

@@ -149,6 +149,9 @@ constexpr PageType page_type_for_numa_buffer_pools(const BufferManagerMode mode)
   Fail("Unknown BufferManagerMode");
 }
 
+template <typename T>
+class BufferPtr;
+
 // Pointer swizzling
 bool is_swizzled_pointer(const std::uintptr_t ptr) noexcept;
 std::uintptr_t swizzle_pointer(const std::uintptr_t offset, const std::byte* data) noexcept;

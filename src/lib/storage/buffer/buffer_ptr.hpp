@@ -51,15 +51,18 @@ class BufferPtr {
     find_frame_and_offset(ptr);
   }
 
-  BufferPtr(const BufferPtr& other) : _frame(other._frame), _ptr_or_offset(other._ptr_or_offset) {}
+  BufferPtr(const BufferPtr& other) : _frame(try_replace_frame(other._frame)), _ptr_or_offset(other._ptr_or_offset) {}
 
   template <typename U>
-  BufferPtr(const BufferPtr<U>& other) : _frame(other._frame), _ptr_or_offset(other._ptr_or_offset) {}
+  BufferPtr(const BufferPtr<U>& other)
+      : _frame(try_replace_frame(other._frame)), _ptr_or_offset(other._ptr_or_offset) {}
 
-  BufferPtr(BufferPtr&& other) : _frame(std::move(other._frame)), _ptr_or_offset(std::move(other._ptr_or_offset)) {}
+  BufferPtr(BufferPtr&& other)
+      : _frame(try_replace_frame(other._frame)), _ptr_or_offset(std::move(other._ptr_or_offset)) {}
 
   template <typename U>
-  BufferPtr(BufferPtr<U>&& other) : _frame(std::move(other._frame)), _ptr_or_offset(std::move(other._ptr_or_offset)) {}
+  BufferPtr(BufferPtr<U>&& other)
+      : _frame(try_replace_frame(other._frame)), _ptr_or_offset(std::move(other._ptr_or_offset)) {}
 
   template <typename T>
   BufferPtr(T* ptr) {
@@ -221,13 +224,42 @@ class BufferPtr {
     _ptr_or_offset -= bytes;
   }
 
+  Frame* try_replace_frame(Frame* frame) {
+    // TODO: Check for pin status
+    // Before using a container with this pointer, we assume that a PinGuard was used.
+    // Thus, either the DRAM or the NUMA frame is resident. However, the current frame is this ptr might not be best to use.
+    // E.g. If the sibling frame is a DRAM frame, we would actually prefer it for performance reason
+
+    if (frame->page_type == PageType::Invalid) {
+      // Ignore invalid frames
+      return frame;
+    }
+
+    auto numa_frame = frame->page_type == PageType::Numa ? frame : frame->sibling_frame.get();
+    const auto is_numa_resident = numa_frame != nullptr && numa_frame->is_resident();
+
+    auto dram_frame = frame->page_type == PageType::Dram ? frame : frame->sibling_frame.get();
+    const auto is_dram_resident = dram_frame != nullptr && dram_frame->is_resident();
+
+    if (is_dram_resident) {
+      // DebugAssert(dram_frame->is_pinned(), "Frame should be pinned");
+      return dram_frame;
+    } else if (is_numa_resident) {
+      // DebugAssert(numa_frame->is_pinned(), "Frame should be pinned");
+      return numa_frame;
+    } else {
+      return frame;
+      // Fail("Found non resident frame");
+    }
+  }
+
   template <typename T>
   void find_frame_and_offset(T* ptr) {
     _ptr_or_offset = reinterpret_cast<std::uintptr_t>(ptr);
     if (ptr) {
       const auto [frame, offset] =
           get_buffer_manager_memory_resource()->find_frame_and_offset(reinterpret_cast<const void*>(ptr));
-      _frame = frame;
+      _frame = try_replace_frame(frame);
       if (frame->page_type != PageType::Invalid) {
         _ptr_or_offset = offset;
       }

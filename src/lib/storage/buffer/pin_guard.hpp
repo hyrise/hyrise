@@ -14,6 +14,7 @@
 #include "storage/reference_segment.hpp"
 #include "storage/run_length_segment.hpp"
 #include "storage/value_segment.hpp"
+#include "storage/vector_compression/bitpacking/bitpacking_vector.hpp"
 #include "types.hpp"
 
 namespace hyrise {
@@ -22,8 +23,12 @@ template <AccessIntent accessIntent>
 struct PinnedFrames : public Noncopyable {
  public:
   void add_pin(const FramePtr& frame) {
+    if (frame->page_type == PageType::Invalid) {
+      return;
+    }
     _pins.push_back(frame);
     get_buffer_manager_memory_resource()->pin(frame);
+    lock(frame);
     DebugAssert(frame->is_resident(), "Is resident");
   }
 
@@ -31,6 +36,7 @@ struct PinnedFrames : public Noncopyable {
     auto it = std::find(_pins.begin(), _pins.end(), frame);
     if (it != _pins.end()) {
       get_buffer_manager_memory_resource()->unpin(frame, false);
+      unlock(frame);
       _pins.erase(it);
     }
   }
@@ -40,9 +46,34 @@ struct PinnedFrames : public Noncopyable {
     return it != _pins.end();
   }
 
+  FramePtr find_frame(const void* ptr) {
+    return FramePtr(get_buffer_manager_memory_resource()->find_frame_and_offset(ptr).first);
+  }
+
+  void lock(const FramePtr& frame) {
+    if constexpr (accessIntent == AccessIntent::Read) {
+      frame->lock_shared();
+    } else if constexpr (accessIntent == AccessIntent::Write) {
+      frame->lock_exclusive();
+    } else {
+      Fail("Not implemented.");
+    }
+  }
+
+  void unlock(const FramePtr& frame) {
+    if constexpr (accessIntent == AccessIntent::Read) {
+      frame->unlock_shared();
+    } else if constexpr (accessIntent == AccessIntent::Write) {
+      frame->unlock_exclusive();
+    } else {
+      Fail("Not implemented.");
+    }
+  }
+
   ~PinnedFrames() {
     for (const auto& frame : _pins) {
       get_buffer_manager_memory_resource()->unpin(frame, accessIntent == AccessIntent::Write);
+      unlock(frame);
     }
   }
 
@@ -54,6 +85,7 @@ template <AccessIntent accessIntent>
 struct FramePinGuard final : public PinnedFrames<accessIntent> {
   using PinnedFrames<accessIntent>::add_pin;
   using PinnedFrames<accessIntent>::has_pinned;
+  using PinnedFrames<accessIntent>::find_frame;
 
   template <typename T, typename = void>
   struct is_iterable : std::false_type {};
@@ -64,14 +96,13 @@ struct FramePinGuard final : public PinnedFrames<accessIntent> {
 
   template <typename T, typename = std::enable_if_t<is_iterable<T>::value>>
   void add_vector_pins(const T& vector) {
-    const auto frame = vector.begin().get_ptr().get_frame();
-
+    const auto frame = find_frame(vector.data());
     add_pin(frame);
 
     // Ensure that all child frames are pinned for pmr_vector<pmr_string>
     if constexpr (std::is_same_v<std::remove_cv_t<T>, pmr_vector<pmr_string>>) {
       for (const auto& string : vector) {
-        const auto string_frame = string.begin().get_frame();
+        const auto string_frame = find_frame(string.data());
         if (!string_frame) {
           continue;
         }
@@ -95,6 +126,23 @@ struct FramePinGuard final : public PinnedFrames<accessIntent> {
     if (const auto vector = std::dynamic_pointer_cast<const RowIDPosList>(position_filter)) {
       add_vector_pins(*vector);
     };
+  }
+
+  template <>
+  FramePinGuard(const BitPackingVector& object) {
+    Fail("Not implemented");
+    // add_vector_pins(object.data());
+  }
+
+  template <>
+  FramePinGuard(const pmr_compact_vector& object) {
+    Fail("Not implemented");
+    // add_vector_pins(object.get());
+  }
+
+  template <typename T>
+  FramePinGuard(const FixedWidthIntegerVector<T>& object) {
+    add_vector_pins(object.data());
   }
 
   template <typename T>
@@ -147,11 +195,14 @@ using WritePinGuard = FramePinGuard<AccessIntent::Write>;
 class AllocatorPinGuard final : private Noncopyable {
   struct Observer final : public PinnedFrames<AccessIntent::Write>, public BufferPoolAllocatorObserver {
     void on_allocate(const FramePtr& frame) override {
-      add_pin(frame);
+      // TODO: solve pinning issue
+      if (!has_pinned(frame)) {
+        add_pin(frame);
+      }
     }
 
     void on_deallocate(const FramePtr& frame) override {
-      remove_pin(frame);
+      // remove_pin(frame);
     }
   };
 

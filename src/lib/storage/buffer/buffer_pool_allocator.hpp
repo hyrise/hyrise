@@ -14,6 +14,8 @@ namespace hyrise {
 
 /**
  * The BufferPoolAllocator is a custom, polymorphic allocator that uses the BufferManager to allocate and deallocate pages.
+ * 
+ * TODO: Combine this allocator with scoped allocator to use same page like monotonic buffer resource for strings
 */
 template <class T>
 class BufferPoolAllocator {
@@ -24,7 +26,7 @@ class BufferPoolAllocator {
   using void_pointer = BufferPtr<void>;
   using difference_type = typename pointer::difference_type;
 
-  BufferPoolAllocator() : _memory_resource(get_global_monotonic_buffer_resource()) {}
+  BufferPoolAllocator() : _memory_resource(get_buffer_manager_memory_resource()) {}
 
   BufferPoolAllocator(MemoryResource* memory_resource) : _memory_resource(memory_resource) {}
 
@@ -84,7 +86,7 @@ class BufferPoolAllocator {
       observer->on_deallocate(frame);
     }
     // TODO: Thread local memory resource might be destroyed (e.g. monotonic)
-    _memory_resource->deallocate(static_cast<void_pointer>(ptr), sizeof(value_type) * n, alignof(T));
+    // _memory_resource->deallocate(static_cast<void_pointer>(ptr), sizeof(value_type) * n, alignof(T));
     ptr._frame->decrease_ref_count();
   }
 

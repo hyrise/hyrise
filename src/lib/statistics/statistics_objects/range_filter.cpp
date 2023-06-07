@@ -131,12 +131,6 @@ std::unique_ptr<RangeFilter<T>> RangeFilter<T>::build_filter(const pmr_vector<T>
 
   DebugAssert(max_ranges_count > 0, "Number of ranges to create needs to be larger zero.");
   auto dictionary_pin_guard = ReadPinGuard{dictionary};
-  // if (!std::is_sorted(dictionary.cbegin(), dictionary.cend())) {
-  //   for (auto elem : dictionary) {
-  //     std::cout << elem << " ";
-  //   }
-  //   std::cout << std::endl;
-  // }
   DebugAssert(std::is_sorted(dictionary.cbegin(), dictionary.cend()), "Dictionary must be sorted in ascending order.");
 
   if (dictionary.empty()) {

@@ -50,7 +50,8 @@ BufferPtr<void> MonotonicBufferResource::allocate(std::size_t bytes, std::size_t
     aligner = 0u;
     this->increase_next_buffer_at_least_to(bytes);
     _current_frame = _memory_resource->allocate(_next_buffer_size, alignment).get_frame();
-    DebugAssert(_current_frame, "MemoryResource did not return a valid frame");
+    DebugAssert(_current_frame && _current_frame->page_type != PageType::Invalid,
+                "MemoryResource did not return a valid frame");
     _current_buffer_size = _next_buffer_size;
     _current_buffer_pos = 0u;
     this->increase_next_buffer();
@@ -95,20 +96,13 @@ void NewDeleteMemoryResource::deallocate(BufferPtr<void> ptr, std::size_t bytes,
   operator delete[](raw_ptr, std::align_val_t(alignment));
 }
 
-BufferPtr<void> GlobalMonotonicBufferResource::allocate(std::size_t bytes, std::size_t alignment) {
-  return get_memory_resource()->allocate(bytes, alignment);
-}
+// BufferPtr<void> GlobalMonotonicBufferResource::allocate(std::size_t bytes, std::size_t alignment) {
+//   return get_memory_resource()->allocate(bytes, alignment);
+// }
 
-void GlobalMonotonicBufferResource::deallocate(BufferPtr<void> ptr, std::size_t bytes, std::size_t alignment) {
-  get_memory_resource()->deallocate(ptr, bytes, alignment);
-}
-
-MonotonicBufferResource* GlobalMonotonicBufferResource::get_memory_resource() {
-  if (!_memory_resource.get()) {
-    _memory_resource.reset(new MonotonicBufferResource());
-  }
-  return _memory_resource.get();
-}
+// void GlobalMonotonicBufferResource::deallocate(BufferPtr<void> ptr, std::size_t bytes, std::size_t alignment) {
+//   get_memory_resource()->deallocate(ptr, bytes, alignment);
+// }
 
 BufferManager* get_buffer_manager_memory_resource() {
   return &Hyrise::get().buffer_manager;
@@ -116,11 +110,6 @@ BufferManager* get_buffer_manager_memory_resource() {
 
 NewDeleteMemoryResource* get_new_delete_memory_resource() {
   static NewDeleteMemoryResource memory_resource;
-  return &memory_resource;
-}
-
-GlobalMonotonicBufferResource* get_global_monotonic_buffer_resource() {
-  static GlobalMonotonicBufferResource memory_resource;
   return &memory_resource;
 }
 }  // namespace hyrise

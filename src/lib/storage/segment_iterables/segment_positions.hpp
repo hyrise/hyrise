@@ -82,8 +82,13 @@ class NonNullSegmentPosition final : public AbstractSegmentPosition<T> {
  public:
   static constexpr bool Nullable = false;
 
+  template <typename U = T, typename = std::enable_if_t<!std::is_same_v<U, pmr_string>>>
   NonNullSegmentPosition(const T& value, const ChunkOffset& chunk_offset)
       : _value{value}, _chunk_offset{chunk_offset} {}
+
+  template <typename U = T, typename = std::enable_if_t<std::is_same_v<U, pmr_string>>>
+  NonNullSegmentPosition(const U& value, const ChunkOffset& chunk_offset)
+      : _value{value, get_new_delete_memory_resource()}, _chunk_offset{chunk_offset} {}
 
   const T& value() const override {
     return _value;

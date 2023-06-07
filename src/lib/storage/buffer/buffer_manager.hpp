@@ -15,10 +15,10 @@ namespace hyrise {
 
 // TODO: Calculate hotness of a values as the inverse of the size so that smaller pages are likely to be evicted
 // TODO: Do not create persistent page directly, but only when it is needed
-// TODO: Introduce page type as template parameter to buffer pools
 
 class BufferManager : public MemoryResource, public Noncopyable {
  public:
+  // TODO: Metrics dont need strict memory ordering but can use "relaxed"
   // Metrics are storing statistics like copied bytes that happen during allocations and access of the buffer manager.
   struct Metrics {
     // The current amount of bytes being allocated
