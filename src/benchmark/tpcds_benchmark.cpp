@@ -3,17 +3,19 @@
 #include <iostream>
 #include <string>
 
+#include "cxxopts.hpp"
+
 #include "benchmark_runner.hpp"
 #include "cli_config_parser.hpp"
-#include "cxxopts.hpp"
 #include "file_based_benchmark_item_runner.hpp"
 #include "tpcds/tpcds_table_generator.hpp"
 #include "utils/assert.hpp"
 #include "utils/sqlite_add_indices.hpp"
 
-using namespace hyrise;  // NOLINT
+using namespace hyrise;  // NOLINT(build/namespaces)
 
 namespace {
+
 const std::unordered_set<std::string> filename_blacklist() {
   auto filename_blacklist = std::unordered_set<std::string>{};
   const auto blacklist_file_path = "resources/benchmark/tpcds/query_blacklist.cfg";
@@ -32,6 +34,7 @@ const std::unordered_set<std::string> filename_blacklist() {
   }
   return filename_blacklist;
 }
+
 }  // namespace
 
 int main(int argc, char* argv[]) {
@@ -57,13 +60,15 @@ int main(int argc, char* argv[]) {
 
   std::cout << "- TPC-DS scale factor is " << scale_factor << std::endl;
 
-  std::string query_path = "resources/benchmark/tpcds/tpcds-result-reproduction/query_qualification";
+  const auto query_path = std::string{"resources/benchmark/tpcds/tpcds-result-reproduction/query_qualification"};
 
   Assert(std::filesystem::is_directory(query_path), "Query path (" + query_path + ") has to be a directory.");
   Assert(std::filesystem::exists(std::filesystem::path{query_path + "/01.sql"}), "Queries have to be available.");
 
   auto query_generator = std::make_unique<FileBasedBenchmarkItemRunner>(config, query_path, filename_blacklist());
   if (config->verify) {
+    // We can only verify the results for SF 1 since the dedicated result sets were obtained on this SF.
+    Assert(scale_factor == 1, "TPC-DS result verification can only be performed on scale factor 1 (--scale 1).");
     query_generator->load_dedicated_expected_results(
         std::filesystem::path{"resources/benchmark/tpcds/tpcds-result-reproduction/answer_sets_tbl"});
   }

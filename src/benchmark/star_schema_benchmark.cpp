@@ -61,6 +61,12 @@ int main(int argc, char* argv[]) {
 
   std::cout << "- SSB scale factor is " << scale_factor << std::endl;
   context.emplace("scale_factor", scale_factor);
+  // We cannot verify the results for larger SFs since SQLite overflows integers for aggregation results. We could use
+  // dedicated result sets in these cases similar to TPC-DS. However, we need to generate these result sets using a
+  // trustworthy DBMS, such as Postgres. We empirically tested that errors occur for SF > 0.1 (0.11 due to float
+  // comparison).
+  Assert(!config->verify || scale_factor < 0.11,
+         "SSB result verification is only supported fo scale factors <= 0.1 (--scale 0.1).");
 
   // Different from the TPC-H benchmark, where the table and query generators are immediately embedded in Hyrise, the
   // SSB implementation calls those generators externally. This is because we would get linking conflicts if we were
