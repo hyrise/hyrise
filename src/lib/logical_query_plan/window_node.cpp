@@ -15,7 +15,7 @@ WindowNode::WindowNode(const std::shared_ptr<AbstractExpression>& window_functio
     Assert(window_function.window() && window_function.window()->type == ExpressionType::Window,
            "WindowFunctionExpression must define a window.");
   }
-};
+}
 
 std::string WindowNode::description(const DescriptionMode mode) const {
   const auto expression_mode = _expression_description_mode(mode);
