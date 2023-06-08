@@ -1,6 +1,7 @@
 #include "window_node.hpp"
 
 #include "expression/expression_utils.hpp"
+#include "expression/window_function_expression.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {
