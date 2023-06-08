@@ -30,7 +30,7 @@ class AliasNodeTest : public BaseTest {
 };
 
 TEST_F(AliasNodeTest, NodeExpressions) {
-  ASSERT_EQ(alias_node->node_expressions.size(), 2u);
+  ASSERT_EQ(alias_node->node_expressions.size(), 2);
   EXPECT_EQ(alias_node->node_expressions.at(0), b);
   EXPECT_EQ(alias_node->node_expressions.at(1), a);
 }

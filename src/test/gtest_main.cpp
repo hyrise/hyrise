@@ -6,7 +6,8 @@
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
 
-std::string hyrise::test_data_path;  // NOLINT
+std::string hyrise::test_data_path;        // NOLINT
+std::string hyrise::test_executable_path;  // NOLINT
 
 void create_test_data_directory(std::optional<std::string>& prefix) {
   Assert(!std::filesystem::exists(hyrise::test_data_path),
@@ -34,14 +35,15 @@ int main(int argc, char** argv) {
   auto performance_warning_disabler = hyrise::PerformanceWarningDisabler{};
   ::testing::InitGoogleTest(&argc, argv);
 
-  std::optional<std::string> prefix;
+  auto prefix = std::optional<std::string>{};
   if (argc > 1) {
-    // If argv[1] is set after gtest extracted its commands, we interpret it as directory name prefix for test data
+    // If argv[1] is set after gtest extracted its commands, we interpret it as directory name prefix for test data.
     hyrise::test_data_path = "./" + std::string(argv[1]) + "/.hyrise_test_data/";
     prefix = argv[1];
   } else {
     hyrise::test_data_path = "./.hyrise_test_data/";
   }
+  hyrise::test_executable_path = std::filesystem::canonical("./" + std::string{argv[0]}).remove_filename();
   remove_test_data_directory();
   create_test_data_directory(prefix);
 

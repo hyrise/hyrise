@@ -33,6 +33,7 @@ using namespace expression_functional;  // NOLINT(build/namespaces)
 class AbstractLQPNode;
 
 extern std::string test_data_path;
+extern std::string test_executable_path;
 
 template <typename ParamType>
 class BaseTestWithParam

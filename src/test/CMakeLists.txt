@@ -249,10 +249,11 @@ set(
 set (
     SYSTEM_TEST_SOURCES
     ${SHARED_SOURCES}
+    benchmarklib/ssb/ssb_table_generator_test.cpp
     benchmarklib/synthetic_table_generator_test.cpp
     benchmarklib/tpcc/tpcc_test.cpp
-    benchmarklib/tpcds/tpcds_db_generator_test.cpp
-    benchmarklib/tpch/tpch_db_generator_test.cpp
+    benchmarklib/tpcds/tpcds_table_generator_test.cpp
+    benchmarklib/tpch/tpch_table_generator_test.cpp
     gtest_main.cpp
     lib/concurrency/stress_test.cpp
     lib/server/server_test_runner.cpp

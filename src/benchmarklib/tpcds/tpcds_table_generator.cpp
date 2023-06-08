@@ -1274,8 +1274,8 @@ void TPCDSTableGenerator::_add_constraints(
                                                         store_returns_table,
                                                         {time_dim_table->column_id_by_name("t_time_sk")},
                                                         time_dim_table});
-  // The specification also allows to set the FK to i_item_sk directly, but we only set the composite key to ss_item_sk,
-  // ss_ticket_number.
+  // The specification also allows to set the FK to i_item_sk directly, but we only set the composite key to
+  // ss_item_sk, ss_ticket_number.
   store_returns_table->add_soft_foreign_key_constraint(
       {{store_returns_table->column_id_by_name("sr_item_sk"),
         store_returns_table->column_id_by_name("sr_ticket_number")},
@@ -1550,8 +1550,8 @@ void TPCDSTableGenerator::_add_constraints(
                                                       web_returns_table,
                                                       {time_dim_table->column_id_by_name("t_time_sk")},
                                                       time_dim_table});
-  // The specification also allows to set the FK to i_item_sk directly, but we only set the composite key to ws_item_sk,
-  // ws_order_number.
+  // The specification also allows to set the FK to i_item_sk directly, but we only set the composite key to
+  // ws_item_sk, ws_order_number.
   web_returns_table->add_soft_foreign_key_constraint(
       {{web_returns_table->column_id_by_name("wr_item_sk"), web_returns_table->column_id_by_name("wr_order_number")},
        web_returns_table,
