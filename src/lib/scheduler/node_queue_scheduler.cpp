@@ -36,7 +36,8 @@ void NodeQueueScheduler::begin() {
   _shutdown_flag = false;
   DebugAssert(!_active, "Scheduler is already active");
 
-  _workers.reserve(Hyrise::get().topology.num_cpus());
+  _worker_count = Hyrise::get().topology.num_cpus();
+  _workers.reserve(_worker_count);
   _queue_count = Hyrise::get().topology.nodes().size();
   _queues.reserve(_queue_count);
 
@@ -53,7 +54,7 @@ void NodeQueueScheduler::begin() {
     }
   }
 
-  _workers_per_node = _workers.size() / _queue_count;
+  _workers_per_node = _worker_count / _queue_count;
   _active = true;
 
   for (auto& worker : _workers) {
@@ -62,9 +63,9 @@ void NodeQueueScheduler::begin() {
 
   // We wait for each worker to start. Without waiting, test might shut down the scheduler before any workers have
   // started.
-  for (const auto& worker : _workers) {
-    worker->is_ready.wait(false);
-  }
+  // for (const auto& worker : _workers) {
+  // worker->is_ready.wait(false);
+  // }
 
   // Sleep to ensure that worker threads have been set up correctly. Otherwise, tests that immediate take the scheduler
   // down might create tasks before the workers are set up.
@@ -85,10 +86,10 @@ void NodeQueueScheduler::wait_for_all_tasks() {
 
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
-    if (wait_loops > 10'000) {
+    ++wait_loops;
+    if (wait_loops > 1'000) {
       Fail("Time out during wait_for_all_tasks().");
     }
-    ++wait_loops;
   }
 }
 
@@ -100,62 +101,17 @@ void NodeQueueScheduler::finish() {
     return;
   }
 
+  wait_for_all_tasks();
+
   // Signal workers that scheduler is shutting down.
   _shutdown_flag = true;
-
-  {
-    auto wake_up_loop_count = size_t{0};
-    while (true) {
-      auto wait_flag = std::atomic_flag{};
-      auto waiting_workers_counter = std::atomic_uint32_t{0};
-
-      // Schedule non-op jobs (one for each worker). Can be necessary as workers might sleep and wait for queue events.
-      // The tasks cannot be stolen to ensure that we reach each worker of each node.
-      auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
-      jobs.reserve(_queue_count * _workers_per_node);
-      for (auto node_id = NodeID{0}; node_id < _queue_count; ++node_id) {
-        for (auto worker_id = size_t{0}; worker_id < _workers_per_node; ++worker_id) {
-          auto shutdown_signal_task = std::make_shared<JobTask>(
-              [&]() {
-                ++waiting_workers_counter;
-                wait_flag.wait(false);
-              },
-              SchedulePriority::Default, false);
-          jobs.push_back(std::move(shutdown_signal_task));
-          jobs.back()->schedule(node_id);
-        }
-      }
-
-      const auto worker_count = _workers.size();
-      auto wait_loop_count = size_t{0};
-      while (waiting_workers_counter < worker_count) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
-
-        // We wait up to 3 seconds (tests might run on congested servers) per loop.
-        if (wait_loop_count > 30) {
-          break;
-        }
-        ++wait_loop_count;
-      }
-
-      std::cout << "run " << wake_up_loop_count << std::endl;
-
-      wait_flag.test_and_set();
-      wait_flag.notify_all();
-
-      if (waiting_workers_counter == worker_count) {
-        break;
-      }
-
-      ++wake_up_loop_count;
-    }
+  for (auto& queue : _queues) {
+    queue->signal(_workers_per_node);
   }
-
-  wait_for_all_tasks();
 
   // All queues SHOULD be empty by now
   if (HYRISE_DEBUG) {
-    for (auto& queue : _queues) {
+    for (const auto& queue : _queues) {
       Assert(queue->empty(), "NodeQueueScheduler bug: queue wasn't empty even though all tasks finished");
     }
   }
