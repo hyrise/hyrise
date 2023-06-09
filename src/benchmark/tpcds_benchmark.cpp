@@ -67,7 +67,7 @@ int main(int argc, char* argv[]) {
 
   auto query_generator = std::make_unique<FileBasedBenchmarkItemRunner>(config, query_path, filename_blacklist());
   if (config->verify) {
-    // We can only verify the results for SF 1 since the dedicated result sets were obtained on this SF.
+    // We can only verify the results for scale factor (SF) 1 since the dedicated result sets were obtained on this SF.
     Assert(scale_factor == 1, "TPC-DS result verification can only be performed on scale factor 1 (--scale 1).");
     query_generator->load_dedicated_expected_results(
         std::filesystem::path{"resources/benchmark/tpcds/tpcds-result-reproduction/answer_sets_tbl"});
