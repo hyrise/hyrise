@@ -265,8 +265,8 @@ TEST_F(SQLTranslatorTest, CaseExpressionSearched) {
 }
 
 TEST_F(SQLTranslatorTest, Coalesce) {
-  // Coalesce is just a syntactic sugar for CASE checking the for IS NOT NULL.
-  const auto [actual_lqp, translation_info] = sql_to_lqp_helper("SELECT COALESCE(a, a+1, 1) FROM int_float;");
+  // Coalesce is just syntactic sugar for a nested CASE WHEN expression IS NOT NULL THEN expression ...
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper("SELECT COALESCE(a, a + 1, 1) FROM int_float;");
 
   // clang-format off
   const auto expression = case_(is_not_null_(int_float_a),
@@ -279,6 +279,9 @@ TEST_F(SQLTranslatorTest, Coalesce) {
   const auto expected_lqp = ProjectionNode::make(expression_vector(expression), stored_table_node_int_float);
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+
+  // COALESCE list must not be empty.
+  EXPECT_THROW(sql_to_lqp_helper("SELECT COALESCE();"), InvalidInputException);
 }
 
 TEST_F(SQLTranslatorTest, SelectListAlias) {
