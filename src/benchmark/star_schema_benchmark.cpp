@@ -63,11 +63,11 @@ int main(int argc, char* argv[]) {
   context.emplace("scale_factor", scale_factor);
   // We cannot verify the results for larger scale factors (SFs) since SQLite overflows integers for aggregation
   // results. We could use dedicated result sets in these cases similar to TPC-DS. However, we need to generate these
-  // result sets using a trustworthy DBMS, such as Postgres. Since we do not consider this worth the effort for now and
-  // in particular, it does not solve the issue of requiring special SFs (the result set is only valid fot the SF it
-  //  was generated with), we simply limit verification to rather small SFs.
-  We empirically tested that errors occur for SF > 0.1 (0.11 due to float
-  // comparison).
+  // result sets using a trustworthy DBMS, such as Postgres. We decided against this approach for two reasons. First,
+  // we do not consider this worth the effort for now. Second, it does not solve the issue of requiring specific SFs:
+  // The result set would only be valid for the SF it was generated on. Thus, we simply limit verification to rather
+  // small SFs.
+  // We empirically figured out that errors do not occur for SF <= 0.1 (0.11 to account for float comparison).
   Assert(!config->verify || scale_factor < 0.11,
          "SSB result verification is only supported fo scale factors <= 0.1 (--scale 0.1).");
 
