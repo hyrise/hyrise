@@ -24,6 +24,7 @@
 #include "strategy/predicate_placement_rule.hpp"
 #include "strategy/predicate_reordering_rule.hpp"
 #include "strategy/predicate_split_up_rule.hpp"
+#include "strategy/semi_join_reduction_removal_rule.hpp"
 #include "strategy/semi_join_reduction_rule.hpp"
 #include "strategy/stored_table_column_alignment_rule.hpp"
 #include "strategy/subquery_to_join_rule.hpp"
@@ -207,7 +208,6 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
 
   optimizer->add_rule(std::make_unique<PredicateReorderingRule>());
 
-
   // The SemiJoinReductionRule is very sensitive to the predicate placement and order present when it is applied. In
   // general, running the PredicatePlacementRule and the PredicateReorderingRule before the SemiJoinReductionRule is
   // beneficial. However, TPC-H Q 21 (that is already long-running) degrades drastically. See:
@@ -242,6 +242,10 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   optimizer->add_rule(std::make_unique<InExpressionRewriteRule>());
 
   optimizer->add_rule(std::make_unique<IndexScanRule>());
+
+  optimizer->add_rule(std::make_unique<SemiJoinReductionRemovalRule>());
+
+  optimizer->add_rule(std::make_unique<PredicateReorderingRule>());
 
   optimizer->add_rule(std::make_unique<PredicateMergeRule>());
 

@@ -187,13 +187,13 @@ void lqp_replace_node(const std::shared_ptr<AbstractLQPNode>& original_node,
   const auto input_sides = original_node->get_input_sides();
 
   /**
-   * Tie the replacement_node with this nodes inputs
+   * Tie the replacement_node with this node's inputs.
    */
   replacement_node->set_left_input(original_node->left_input());
   replacement_node->set_right_input(original_node->right_input());
 
   /**
-   * Tie the replacement_node with this nodes outputs.
+   * Tie the replacement_node with this node's outputs.
    */
   const auto output_count = outputs.size();
   for (auto output_idx = size_t{0}; output_idx < output_count; ++output_idx) {
@@ -201,7 +201,7 @@ void lqp_replace_node(const std::shared_ptr<AbstractLQPNode>& original_node,
   }
 
   /**
-   * Untie this node from the LQP
+   * Untie this node from the LQP.
    */
   original_node->set_left_input(nullptr);
   original_node->set_right_input(nullptr);
@@ -212,21 +212,21 @@ void lqp_remove_node(const std::shared_ptr<AbstractLQPNode>& node, const AllowRi
          "Caller did not explicitly confirm that right input should be ignored");
 
   /**
-   * Back up outputs and in which input side they hold this node
+   * Back up outputs and in which input side they hold this node.
    */
   auto outputs = node->outputs();
   auto input_sides = node->get_input_sides();
 
   /**
-   * Hold left_input ptr in extra variable to keep the ref count up and untie it from this node.
-   * left_input might be nullptr
+   * Hold left_input ptr in extra variable to keep the ref count up and untie it from this node. left_input might be
+   * nullptr.
    */
-  auto left_input = node->left_input();
+  const auto left_input = node->left_input();
   node->set_left_input(nullptr);
 
   /**
-   * Tie this node's previous outputs with this nodes previous left input
-   * If left_input is nullptr, still call set_input so this node will get untied from the LQP.
+   * Tie this node's previous outputs with this node's previous left input. If left_input is nullptr, still call
+   * set_input so this node will get untied from the LQP.
    */
   const auto output_count = outputs.size();
   for (auto output_idx = size_t{0}; output_idx < output_count; ++output_idx) {

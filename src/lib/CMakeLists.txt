@@ -331,6 +331,8 @@ set(
     optimizer/strategy/predicate_reordering_rule.hpp
     optimizer/strategy/predicate_split_up_rule.cpp
     optimizer/strategy/predicate_split_up_rule.hpp
+    optimizer/strategy/semi_join_reduction_removal_rule.cpp
+    optimizer/strategy/semi_join_reduction_removal_rule.hpp
     optimizer/strategy/semi_join_reduction_rule.cpp
     optimizer/strategy/semi_join_reduction_rule.hpp
     optimizer/strategy/stored_table_column_alignment_rule.cpp
