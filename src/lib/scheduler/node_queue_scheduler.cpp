@@ -133,7 +133,7 @@ void NodeQueueScheduler::finish() {
 
         // We wait up to 3 seconds (tests might run on congested servers) per loop.
         if (wait_loop_count > 30) {
-          continue;
+          break;
         }
         ++wait_loop_count;
       }
