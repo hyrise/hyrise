@@ -203,6 +203,7 @@ set(
     operators/index_scan.hpp
     operators/insert.cpp
     operators/insert.hpp
+    operators/join_helper/join_output_writing.cpp
     operators/join_helper/join_output_writing.hpp
     operators/join_hash.cpp
     operators/join_hash.hpp
@@ -436,8 +437,12 @@ set(
     storage/chunk_encoder.hpp
     storage/constraints/abstract_table_constraint.cpp
     storage/constraints/abstract_table_constraint.hpp
+    storage/constraints/foreign_key_constraint.cpp
+    storage/constraints/foreign_key_constraint.hpp
     storage/constraints/table_key_constraint.cpp
     storage/constraints/table_key_constraint.hpp
+    storage/constraints/table_order_constraint.cpp
+    storage/constraints/table_order_constraint.hpp
     storage/create_iterable_from_reference_segment.ipp
     storage/create_iterable_from_segment.hpp
     storage/create_iterable_from_segment.ipp

@@ -26,11 +26,11 @@ PQPColumnExpression::PQPColumnExpression(const ColumnID init_column_id, const Da
       _column_name(column_name) {}
 
 std::shared_ptr<AbstractExpression> PQPColumnExpression::_on_deep_copy(
-    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& /*copied_ops*/) const {
   return std::make_shared<PQPColumnExpression>(column_id, _data_type, _nullable, _column_name);
 }
 
-std::string PQPColumnExpression::description(const DescriptionMode mode) const {
+std::string PQPColumnExpression::description(const DescriptionMode /*mode*/) const {
   return _column_name;
 }
 
@@ -54,7 +54,7 @@ size_t PQPColumnExpression::_shallow_hash() const {
   return boost::hash_value(static_cast<size_t>(column_id));
 }
 
-bool PQPColumnExpression::_on_is_nullable_on_lqp(const AbstractLQPNode& lqp) const {
+bool PQPColumnExpression::_on_is_nullable_on_lqp(const AbstractLQPNode& /*lqp*/) const {
   Fail("Nullability 'on lqp' should never be queried from a PQPColumn");
 }
 

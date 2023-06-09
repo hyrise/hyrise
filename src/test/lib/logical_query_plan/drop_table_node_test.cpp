@@ -33,4 +33,8 @@ TEST_F(DropTableNodeTest, Copy) {
   EXPECT_EQ(*drop_table_node, *drop_table_node->deep_copy());
 }
 
+TEST_F(DropTableNodeTest, NoUniqueColumnCombinations) {
+  EXPECT_THROW(drop_table_node->unique_column_combinations(), std::logic_error);
+}
+
 }  // namespace hyrise

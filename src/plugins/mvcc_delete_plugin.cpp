@@ -46,7 +46,7 @@ void MvccDeletePlugin::_logical_delete_loop() {
 
     // Check all chunks, except for the last one, which is currently used for insertions
     const auto max_chunk_id = static_cast<ChunkID>(table->chunk_count() - 1);
-    for (auto chunk_id = ChunkID{0}; chunk_id < max_chunk_id; chunk_id++) {
+    for (auto chunk_id = ChunkID{0}; chunk_id < max_chunk_id; ++chunk_id) {
       const auto& chunk = table->get_chunk(chunk_id);
       if (chunk && !chunk->get_cleanup_commit_id()) {
         const auto chunk_memory = chunk->memory_usage(MemoryUsageCalculationMode::Sampled);
@@ -83,16 +83,16 @@ void MvccDeletePlugin::_logical_delete_loop() {
           DebugAssert(table->get_chunk(chunk_id)->get_cleanup_commit_id(),
                       "Chunk needs to be deleted logically before deleting it physically.");
 
-          std::lock_guard<std::mutex> lock(_physical_delete_queue_mutex);
+          const auto lock = std::lock_guard<std::mutex>{_physical_delete_queue_mutex};
           _physical_delete_queue.emplace(table, chunk_id);
           saved_memory += chunk_memory;
-          num_chunks++;
+          ++num_chunks;
         }
       }
     }
     if (saved_memory > 0) {
-      std::ostringstream message;
-      double saved_mb = static_cast<float>(saved_memory) / (1000.0 * 1000.0);
+      auto message = std::ostringstream{};
+      auto saved_mb = static_cast<float>(saved_memory) / (1000.0f * 1000.0f);
       message << "Consolidated " << num_chunks << " chunk(s) of " << table_name << ", saved approx. "
               << std::setprecision(2) << saved_mb << " MB";
       Hyrise::get().log_manager.add_message("MvccDeletePlugin", message.str(), LogLevel::Info);
@@ -104,7 +104,7 @@ void MvccDeletePlugin::_logical_delete_loop() {
  * This function processes the physical-delete-queue until its empty.
  */
 void MvccDeletePlugin::_physical_delete_loop() {
-  std::lock_guard<std::mutex> lock(_physical_delete_queue_mutex);
+  const auto lock = std::lock_guard<std::mutex>{_physical_delete_queue_mutex};
 
   if (!_physical_delete_queue.empty()) {
     TableAndChunkID table_and_chunk_id = _physical_delete_queue.front();
@@ -115,14 +115,14 @@ void MvccDeletePlugin::_physical_delete_loop() {
 
     if (chunk->get_cleanup_commit_id()) {
       // Check whether there are still active transactions that might use the chunk
-      auto conflicting_transactions = false;
+      auto transactions_conflict = false;
       auto lowest_snapshot_commit_id = Hyrise::get().transaction_manager.get_lowest_active_snapshot_commit_id();
 
       if (lowest_snapshot_commit_id) {
-        conflicting_transactions = *chunk->get_cleanup_commit_id() > lowest_snapshot_commit_id.value();
+        transactions_conflict = *chunk->get_cleanup_commit_id() > lowest_snapshot_commit_id.value();
       }
 
-      if (!conflicting_transactions) {
+      if (!transactions_conflict) {
         _delete_chunk_physically(table, table_and_chunk_id.second);
         _physical_delete_queue.pop();
       }

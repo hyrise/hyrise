@@ -21,9 +21,9 @@ RangeFilter<T>::RangeFilter(std::vector<std::pair<T, T>> init_ranges)
 }
 
 template <typename T>
-Cardinality RangeFilter<T>::estimate_cardinality(const PredicateCondition predicate_condition,
-                                                 const AllTypeVariant& variant_value,
-                                                 const std::optional<AllTypeVariant>& variant_value2) const {
+Cardinality RangeFilter<T>::estimate_cardinality(const PredicateCondition /*predicate_condition*/,
+                                                 const AllTypeVariant& /*variant_value*/,
+                                                 const std::optional<AllTypeVariant>& /*variant_value2*/) const {
   // Theoretically, one could come up with some type of estimation (everything outside the range is 0, everything inside
   // is estimated assuming equi-distribution). For that, we would also need the cardinality of the underlying data.
   // Currently, as RangeFilters are on a per-segment basis and estimate_cardinality is called for an entire column,

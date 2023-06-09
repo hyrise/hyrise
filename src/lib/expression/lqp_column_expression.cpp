@@ -18,7 +18,7 @@ LQPColumnExpression::LQPColumnExpression(const std::shared_ptr<const AbstractLQP
       original_column_id(init_original_column_id) {}
 
 std::shared_ptr<AbstractExpression> LQPColumnExpression::_on_deep_copy(
-    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& /*copied_ops*/) const {
   return std::make_shared<LQPColumnExpression>(original_node.lock(), original_column_id);
 }
 
@@ -120,7 +120,7 @@ size_t LQPColumnExpression::_shallow_hash() const {
   return hash;
 }
 
-bool LQPColumnExpression::_on_is_nullable_on_lqp(const AbstractLQPNode& lqp) const {
+bool LQPColumnExpression::_on_is_nullable_on_lqp(const AbstractLQPNode& /*lqp*/) const {
   Fail(
       "Should not be called. This should have been forwarded to StoredTableNode/StaticTableNode/MockNode by "
       "AbstractExpression::is_nullable_on_lqp()");

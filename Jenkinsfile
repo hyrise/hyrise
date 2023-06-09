@@ -101,7 +101,9 @@ try {
 
             sh "mkdir clang-debug && cd clang-debug &&                                                   ${cmake} ${debug}          ${clang}  ${unity}  .. && make -j libjemalloc-build"
 
-            // Configure the rest in parallel
+            // Configure the rest in parallel.
+            // Note on the clang-debug-tidy stage: clang-tidy misses some flaws when running in a unity build. However, it runs very long and we agreed to life with that for now.
+            // See: https://gitlab.kitware.com/cmake/cmake/-/issues/20058
             sh "mkdir clang-debug-tidy && cd clang-debug-tidy &&                                         ${cmake} ${debug}          ${clang}   ${unity} -DENABLE_CLANG_TIDY=ON .. &\
             mkdir clang-debug-unity-odr && cd clang-debug-unity-odr &&                                   ${cmake} ${debug}          ${clang}   ${unity} -DCMAKE_UNITY_BUILD_BATCH_SIZE=0 .. &\
             mkdir clang-debug-disable-precompile-headers && cd clang-debug-disable-precompile-headers && ${cmake} ${debug}          ${clang}            -DCMAKE_DISABLE_PRECOMPILE_HEADERS=On .. &\
@@ -153,6 +155,7 @@ try {
                 sh "./scripts/test/hyriseConsole_test.py clang-release"
                 sh "./scripts/test/hyriseServer_test.py clang-release"
                 sh "./scripts/test/hyriseBenchmarkJoinOrder_test.py clang-release"
+                sh "./scripts/test/hyriseBenchmarkStarSchema_test.py clang-release"
                 sh "./scripts/test/hyriseBenchmarkFileBased_test.py clang-release"
                 sh "cd clang-release && ../scripts/test/hyriseBenchmarkTPCC_test.py ." // Own folder to isolate binary export tests
                 sh "cd clang-release && ../scripts/test/hyriseBenchmarkTPCH_test.py ." // Own folder to isolate visualization
@@ -169,12 +172,14 @@ try {
                 sh "./scripts/test/hyriseConsole_test.py clang-debug"
                 sh "./scripts/test/hyriseServer_test.py clang-debug"
                 sh "./scripts/test/hyriseBenchmarkJoinOrder_test.py clang-debug"
+                sh "./scripts/test/hyriseBenchmarkStarSchema_test.py clang-debug"
                 sh "./scripts/test/hyriseBenchmarkFileBased_test.py clang-debug"
                 sh "cd clang-debug && ../scripts/test/hyriseBenchmarkTPCH_test.py ." // Own folder to isolate visualization
                 sh "cd clang-debug && ../scripts/test/hyriseBenchmarkJCCH_test.py ." // Own folder to isolate visualization
                 sh "./scripts/test/hyriseConsole_test.py gcc-debug"
                 sh "./scripts/test/hyriseServer_test.py gcc-debug"
                 sh "./scripts/test/hyriseBenchmarkJoinOrder_test.py gcc-debug"
+                sh "./scripts/test/hyriseBenchmarkStarSchema_test.py gcc-debug"
                 sh "./scripts/test/hyriseBenchmarkFileBased_test.py gcc-debug"
                 sh "cd gcc-debug && ../scripts/test/hyriseBenchmarkTPCH_test.py ." // Own folder to isolate visualization
                 sh "cd gcc-debug && ../scripts/test/hyriseBenchmarkJCCH_test.py ." // Own folder to isolate visualization
@@ -206,8 +211,7 @@ try {
             stage("clang-debug:tidy") {
               if (env.BRANCH_NAME == 'master' || full_ci) {
                 // We do not run tidy checks on the src/test folder, so there is no point in running the expensive clang-tidy for those files
-                // As clang-tidy is the slowest step, we allow it to use more parallel jobs.
-                sh "cd clang-debug-tidy && make hyrise_impl hyriseBenchmarkFileBased hyriseBenchmarkTPCH hyriseBenchmarkTPCDS hyriseBenchmarkJoinOrder hyriseConsole hyriseServer -k -j \$(( \$(nproc) / 10))"
+                sh "cd clang-debug-tidy && make hyrise_impl hyriseBenchmarkFileBased hyriseBenchmarkTPCH hyriseBenchmarkTPCDS hyriseBenchmarkJoinOrder hyriseConsole hyriseServer hyriseMvccDeletePlugin hyriseUccDiscoveryPlugin -k -j \$(( \$(nproc) / 10))"
               } else {
                 Utils.markStageSkippedForConditional("clangDebugTidy")
               }
@@ -241,6 +245,7 @@ try {
                 sh "./scripts/test/hyriseConsole_test.py gcc-release"
                 sh "./scripts/test/hyriseServer_test.py gcc-release"
                 sh "./scripts/test/hyriseBenchmarkJoinOrder_test.py gcc-release"
+                sh "./scripts/test/hyriseBenchmarkStarSchema_test.py gcc-release"
                 sh "./scripts/test/hyriseBenchmarkFileBased_test.py gcc-release"
                 sh "cd gcc-release && ../scripts/test/hyriseBenchmarkTPCC_test.py ." // Own folder to isolate binary export tests
                 sh "cd gcc-release && ../scripts/test/hyriseBenchmarkTPCH_test.py ." // Own folder to isolate visualization
@@ -350,7 +355,18 @@ try {
                 Utils.markStageSkippedForConditional("jobQueryPlans")
               }
             }
+          }, ssbQueryPlans: {
+            stage("ssbQueryPlans") {
+              if (env.BRANCH_NAME == 'master' || full_ci) {
+                sh "mkdir -p query_plans/ssb; cd query_plans/ssb && ../../clang-release/hyriseBenchmarkStarSchema --dont_cache_binary_tables -r 1 -s 1 --visualize && ../../scripts/plot_operator_breakdown.py ../../clang-release/"
+                archiveArtifacts artifacts: 'query_plans/ssb/*.svg'
+                archiveArtifacts artifacts: 'query_plans/ssb/operator_breakdown.pdf'
+              } else {
+                Utils.markStageSkippedForConditional("ssbQueryPlans")
+              }
+            }
           }
+
         } finally {
           sh "ls -A1 | xargs rm -rf"
           deleteDir()

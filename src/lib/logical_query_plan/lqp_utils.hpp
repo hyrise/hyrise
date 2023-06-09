@@ -62,9 +62,11 @@ using SubqueryExpressionsByLQP =
     std::unordered_map<std::shared_ptr<AbstractLQPNode>, std::vector<std::weak_ptr<LQPSubqueryExpression>>>;
 
 /**
- * Returns unique LQPs from (nested) LQPSubqueryExpressions of @param node.
+ * Returns unique LQPs from (nested) LQPSubqueryExpressions of @param node. If @param only_correlated is set to true,
+ * only LQPs from correlated subqueries are part of the result.
  */
-SubqueryExpressionsByLQP collect_lqp_subquery_expressions_by_lqp(const std::shared_ptr<AbstractLQPNode>& node);
+SubqueryExpressionsByLQP collect_lqp_subquery_expressions_by_lqp(const std::shared_ptr<AbstractLQPNode>& node,
+                                                                 const bool only_correlated = false);
 
 /**
  * For two equally structured LQPs lhs and rhs, create a mapping for each node in lhs pointing to its equivalent in rhs.
@@ -240,8 +242,8 @@ std::vector<std::shared_ptr<AbstractLQPNode>> lqp_find_leaves(const std::shared_
  *         This is a helper method that maps column ids from tables to the matching output expressions. Conceptually,
  *         it only works on data source nodes. Currently, these are StoredTableNodes, StaticTableNodes and MockNodes.
  */
-ExpressionUnorderedSet find_column_expressions(const AbstractLQPNode& lqp_node,
-                                               const std::vector<ColumnID>& column_ids);
+template <typename ColumnIDs>
+ExpressionUnorderedSet find_column_expressions(const AbstractLQPNode& lqp_node, const ColumnIDs& column_ids);
 
 /**
  * @return True if there is a UCC in the given set of @param unique_column_combinations matching the given set of

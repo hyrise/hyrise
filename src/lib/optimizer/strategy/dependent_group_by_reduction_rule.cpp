@@ -2,7 +2,6 @@
 
 #include <unordered_map>
 
-#include "expression/abstract_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
 #include "hyrise.hpp"
@@ -81,19 +80,8 @@ void DependentGroupByReductionRule::_apply_to_plan_without_subqueries(
     }
     auto& aggregate_node = static_cast<AggregateNode&>(*node);
 
-    // Early exit: If there are no functional dependencies, we can skip this rule.
-    const auto& fds = aggregate_node.functional_dependencies();
-    if (fds.empty()) {
-      return LQPVisitation::VisitInputs;
-    }
-
-    // --- Preparation ---
-    // Store a copy of the root's output expressions before applying the rule.
-    const auto root_output_expressions = lqp_root->output_expressions();
-    // Also store a copy of the aggregate's output expressions to verify the output column order later on.
-    const auto initial_aggregate_output_expressions = aggregate_node.output_expressions();
-
-    // Gather group-by columns
+    // --- Preparation --
+    // Gather group-by columns.
     const auto fetch_group_by_columns = [&aggregate_node]() {
       auto group_by_columns = ExpressionUnorderedSet{aggregate_node.aggregate_expressions_begin_idx + 1};
       auto node_expressions_iter = aggregate_node.node_expressions.cbegin();
@@ -102,6 +90,40 @@ void DependentGroupByReductionRule::_apply_to_plan_without_subqueries(
       return group_by_columns;
     };
     auto group_by_columns = fetch_group_by_columns();
+
+    // Early exit (i): To guarantee distinct results for SELECT DISTINCT clauses, the SQLTranslator adds an
+    // AggregateNode with the selected attributes as group by columns. If the AggregateNode's input is already unique
+    // for these columns, remove the entire node.
+    // Example: SELECT DISTINCT n_nationkey FROM nation is reflected as [ Aggregate GROUP BY n_nationkey ]. The
+    // AggregateNode does not have more node expressions than the single GROUP BY column and the input (StoredTableNode
+    // in this case) has a UCC for { n_nationkey }.
+    if (group_by_columns.size() == node->node_expressions.size() &&
+        node->left_input()->has_matching_ucc(group_by_columns)) {
+      const auto& output_expressions = aggregate_node.output_expressions();
+      // Remove the AggregateNode if it does not limit or reorder the output expressions.
+      if (expressions_equal(output_expressions, node->left_input()->output_expressions())) {
+        lqp_remove_node(node);
+        return LQPVisitation::VisitInputs;
+      }
+
+      // Else, replace it with a ProjectionNode. For instance, SELECT DISTINCT n_name, n_regionkey FROM nation (the
+      // column order is different than in the original table) turns from [ Aggregate GROUP BY n_name, n_regionkey ] to
+      // [ Projection n_name, n_regionkey ].
+      const auto projection_node = ProjectionNode::make(output_expressions);
+      lqp_replace_node(node, projection_node);
+      return LQPVisitation::VisitInputs;
+    }
+
+    // Early exit (ii): If there are no functional dependencies, we can skip this rule.
+    const auto& fds = aggregate_node.functional_dependencies();
+    if (fds.empty()) {
+      return LQPVisitation::VisitInputs;
+    }
+
+    // Store a copy of the root's output expressions before applying the rule.
+    const auto& root_output_expressions = lqp_root->output_expressions();
+    // Also store a copy of the aggregate's output expressions to verify the output column order later on.
+    const auto& initial_aggregate_output_expressions = aggregate_node.output_expressions();
 
     // Get a sorted list of ColumnIDs from an FD's set of determinants.
     const auto get_column_ids = [&](const auto& determinants) {
@@ -143,7 +165,7 @@ void DependentGroupByReductionRule::_apply_to_plan_without_subqueries(
         continue;
       }
 
-      bool success = remove_dependent_group_by_columns(fd, aggregate_node, group_by_columns);
+      const auto success = remove_dependent_group_by_columns(fd, aggregate_node, group_by_columns);
       if (success) {
         // Refresh data structures correspondingly.
         group_by_list_changed = true;

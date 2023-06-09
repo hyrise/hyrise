@@ -23,7 +23,7 @@ std::shared_ptr<const Table> sort_table_by_column_ids(const std::shared_ptr<cons
   auto sort_definitions = std::vector<SortColumnDefinition>{};
   sort_definitions.reserve(column_ids.size());
   for (const auto& column_id : column_ids) {
-    sort_definitions.emplace_back(SortColumnDefinition{column_id, SortMode::Ascending});
+    sort_definitions.emplace_back(column_id, SortMode::Ascending);
   }
 
   const auto table_wrapper = std::make_shared<TableWrapper>(table_to_sort);
@@ -93,7 +93,7 @@ void AggregateSort::_aggregate_values(const std::set<RowID>& group_boundaries, c
 
   const auto chunk_count = sorted_table->chunk_count();
 
-  AggregateAccumulator<aggregate_function, AggregateType> accumulator{};
+  auto accumulator = AggregateAccumulator<aggregate_function, AggregateType>{};
   auto current_chunk_id = ChunkID{0};
   if (aggregate_function == AggregateFunction::Count && input_column_id == INVALID_COLUMN_ID) {
     /*
@@ -129,7 +129,7 @@ void AggregateSort::_aggregate_values(const std::set<RowID>& group_boundaries, c
     // Compute value count with null values for the last iteration
     value_count_with_null = sorted_table->get_chunk(current_group_begin_pointer.chunk_id)->size() -
                             current_group_begin_pointer.chunk_offset;
-    for (auto chunk_id = ChunkID{current_group_begin_pointer.chunk_id + 1}; chunk_id < chunk_count; chunk_id++) {
+    for (auto chunk_id = ChunkID{current_group_begin_pointer.chunk_id + 1}; chunk_id < chunk_count; ++chunk_id) {
       value_count_with_null += sorted_table->get_chunk(chunk_id)->size();
     }
 
@@ -165,18 +165,18 @@ void AggregateSort::_aggregate_values(const std::set<RowID>& group_boundaries, c
           // Reset helper variables
           accumulator = {};
           unique_values.clear();
-          value_count = 0u;
-          value_count_with_null = 0u;
+          value_count = 0;
+          value_count_with_null = 0;
 
           // Update indexing variables
-          aggregate_group_index++;
-          group_boundary_iter++;
+          ++aggregate_group_index;
+          ++group_boundary_iter;
         }
 
         // Update helper variables
         if (!position.is_null()) {
           aggregator(new_value, value_count, accumulator);
-          value_count++;
+          ++value_count;
           if constexpr (aggregate_function == AggregateFunction::CountDistinct) {
             unique_values.insert(new_value);
           } else if constexpr (aggregate_function == AggregateFunction::Any) {
@@ -184,9 +184,9 @@ void AggregateSort::_aggregate_values(const std::set<RowID>& group_boundaries, c
             return;
           }
         }
-        value_count_with_null++;
+        ++value_count_with_null;
       });
-      current_chunk_id++;
+      ++current_chunk_id;
     }
   }
   // Aggregate value for the last group was not written yet
@@ -291,7 +291,7 @@ void AggregateSort::_set_and_write_aggregate_value(
 
 Segments AggregateSort::_get_segments_of_chunk(const std::shared_ptr<const Table>& input_table,
                                                const ChunkID chunk_id) {
-  Segments segments{};
+  auto segments = Segments{};
   const auto column_count = input_table->column_count();
   segments.reserve(column_count);
   const auto chunk = input_table->get_chunk(chunk_id);
@@ -346,7 +346,7 @@ std::shared_ptr<Table> AggregateSort::_sort_table_chunk_wise(const std::shared_p
     } else {
       // Creating a new table holding only the current chunk and pass it to the sort operator.
       auto single_chunk_table = std::make_shared<Table>(input_table->column_definitions(), input_table->type());
-      Segments segments;
+      auto segments = Segments{};
       segments.reserve(column_count);
       for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
         segments.emplace_back(chunk->get_segment(column_id));
@@ -400,7 +400,7 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
   }
 
   // Create aggregate column definitions
-  ColumnID aggregate_idx{0};
+  auto aggregate_idx = ColumnID{0};
   for (const auto& aggregate : _aggregates) {
     const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->argument());
     const auto column_id = pqp_column.column_id;
@@ -452,7 +452,7 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
     return result_table;
   }
 
-  std::shared_ptr<const Table> sorted_table = input_table;
+  auto sorted_table = input_table;
   if (!_groupby_column_ids.empty()) {
     /**
     * If there is a value clustering for a column, it means that all tuples with the same value in that column are in
@@ -569,7 +569,8 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
       auto values = pmr_vector<ColumnDataType>(group_boundaries.size() + 1);
       auto null_values = pmr_vector<bool>(column_is_nullable ? group_boundaries.size() + 1 : 0);
 
-      for (size_t value_index = 0; value_index < values.size(); value_index++) {
+      const auto value_count = values.size();
+      for (size_t value_index = 0; value_index < value_count; ++value_index) {
         RowID group_start;
         if (value_index == 0) {
           // First group starts in the first row, but there is no corresponding entry in the set. See above for reasons.
@@ -712,8 +713,8 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
 
 std::shared_ptr<AbstractOperator> AggregateSort::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_left_input,
-    const std::shared_ptr<AbstractOperator>& copied_right_input,
-    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
+    const std::shared_ptr<AbstractOperator>& /*copied_right_input*/,
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& /*copied_ops*/) const {
   return std::make_shared<AggregateSort>(copied_left_input, _aggregates, _groupby_column_ids);
 }
 
@@ -722,7 +723,7 @@ void AggregateSort::_on_set_parameters(const std::unordered_map<ParameterID, All
 void AggregateSort::_on_cleanup() {}
 
 template <typename ColumnType>
-void AggregateSort::_create_aggregate_column_definitions(boost::hana::basic_type<ColumnType> type,
+void AggregateSort::_create_aggregate_column_definitions(boost::hana::basic_type<ColumnType> /*type*/,
                                                          ColumnID column_index, AggregateFunction aggregate_function) {
   /*
    * We are aware that the switch looks very repetitive, but we could not find a dynamic solution.
