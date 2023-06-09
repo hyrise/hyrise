@@ -213,6 +213,8 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
 
   optimizer->add_rule(std::make_unique<PredicatePlacementRule>());
 
+  optimizer->add_rule(std::make_unique<PredicateReorderingRule>());
+
   // The SemiJoinReductionRule is very sensitive to the predicate placement and order present when it is applied. In
   // general, running the PredicatePlacementRule and the PredicateReorderingRule before the SemiJoinReductionRule is
   // beneficial. However, TPC-H Q 21 (that is already long-running) degrades drastically. See:
