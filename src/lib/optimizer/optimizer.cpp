@@ -204,9 +204,9 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
 
   optimizer->add_rule(std::make_unique<JoinToPredicateRewriteRule>());
 
-  // optimizer->add_rule(std::make_unique<PredicatePlacementRule>());
+  optimizer->add_rule(std::make_unique<PredicatePlacementRule>());
 
-  // optimizer->add_rule(std::make_unique<PredicateReorderingRule>());
+  optimizer->add_rule(std::make_unique<PredicateReorderingRule>());
 
   // The SemiJoinReductionRule is very sensitive to the predicate placement and order present when it is applied. In
   // general, running the PredicatePlacementRule and the PredicateReorderingRule before the SemiJoinReductionRule is
@@ -243,7 +243,7 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
 
   optimizer->add_rule(std::make_unique<IndexScanRule>());
 
-  optimizer->add_rule(std::make_unique<SemiJoinReductionRemovalRule>());
+  // optimizer->add_rule(std::make_unique<SemiJoinReductionRemovalRule>());
 
   optimizer->add_rule(std::make_unique<PredicateReorderingRule>());
 

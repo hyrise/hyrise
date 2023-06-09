@@ -45,6 +45,7 @@ void remove_semi_join_reductions_recursively(const std::shared_ptr<AbstractLQPNo
       join_node->set_right_input(nullptr);
       const auto input_node = join_node->left_input();
       lqp_remove_node(join_node);
+      std::cout << "remove " << lqp_node->description() << std::endl;
       remove_semi_join_reductions_recursively(input_node, cardinality_estimator, visited_nodes);
       return;
     }
@@ -67,6 +68,7 @@ void remove_semi_join_reductions_recursively(const std::shared_ptr<AbstractLQPNo
         right_cardinality_with_reduction <
             right_cardinality_without_reduction * SemiJoinReductionRule::MINIMUM_SELECTIVITY) {
       join_node->set_right_input(nullptr);
+      std::cout << "remove " << lqp_node->description() << std::endl;
       remove_semi_join_reductions_recursively(input_node, cardinality_estimator, visited_nodes);
       return;
     }
