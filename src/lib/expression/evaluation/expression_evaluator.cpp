@@ -852,7 +852,7 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_extract
         // do lazy checks only whenever required. Though parsing the string values leads to degraded performance
         // compared to, e.g., accessing substrings or accessing member variables, we ensure correct results.
         // TODO(anyone): Revisit for performance if we use this in actual benchmarks.
-        Assert(value.size() >= 10u, "Invalid ISO 8601 extended timestamp '" + value + "'");
+        Assert(value.size() >= 10, "Invalid ISO 8601 extended timestamp '" + value + "'");
         const auto& timestamp = string_to_timestamp(value);
         Assert(timestamp, "Invalid ISO 8601 extended timestamp '" + value + "'");
         values[chunk_offset] = extract_component(*timestamp);

@@ -1708,7 +1708,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
     }
 
     case hsql::kExprFunctionRef: {
-      // convert to upper-case to find mapping
+      // Convert to upper-case to find mapping.
       std::transform(name.cbegin(), name.cend(), name.begin(),
                      [](const auto character) { return std::toupper(character); });
 
@@ -1816,6 +1816,34 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
         }
 
         return std::make_shared<FunctionExpression>(function_iter->second, arguments);
+      }
+
+      // COALESCE(a, b, c) is just syntactic sugar for the following CASE expression:
+      // CASE
+      //    WHEN (a IS NOT NULL) THEN a
+      //    WHEN (b IS NOT NULL) THEN b
+      //    ELSE c
+      // END
+      // TODO(anyone): Though we have not seen this in benchmarks, there is no reason to add COALESCE list arguments if
+      // the preceding argument is not nullable.
+      if (name == "COALESCE") {
+        AssertInput(expr.exprList && !expr.exprList->empty(), "COALESCE list must not be empty.");
+        auto case_expression = std::shared_ptr<AbstractExpression>{};
+
+        // Build CASE expression bottom-up, i.e,. in reverse fashion.
+        for (auto argument_it = expr.exprList->crbegin(); argument_it != expr.exprList->crend(); ++argument_it) {
+          const auto& expression = _translate_hsql_expr(**argument_it, sql_identifier_resolver);
+          // The end of the list is the ELSE branch, which is the base case.
+          if (argument_it == expr.exprList->crbegin()) {
+            case_expression = expression;
+            continue;
+          }
+
+          // If this is not the end, add a CASE on top.
+          case_expression = case_(is_not_null_(expression), expression, case_expression);
+        }
+
+        return case_expression;
       }
 
       FailInput("Couldn't resolve function '"s + name + "'");

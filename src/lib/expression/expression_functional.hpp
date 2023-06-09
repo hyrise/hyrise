@@ -1,7 +1,5 @@
 #pragma once
 
-#include <memory>
-
 #include "abstract_expression.hpp"
 #include "aggregate_expression.hpp"
 #include "arithmetic_expression.hpp"
