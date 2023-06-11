@@ -94,7 +94,6 @@ EqualDistinctCountHistogram<T>::EqualDistinctCountHistogram(pmr_vector<T>&& bin_
   Assert(_bin_count_with_extra_value < _bin_minima.size(), "Cannot have more bins with extra value than bins.");
 
   AbstractHistogram<T>::_assert_bin_validity();
-  auto pin_guard = ReadPinGuard{_bin_heights};
   _total_count = std::accumulate(_bin_heights.cbegin(), _bin_heights.cend(), HistogramCountType{0});
   _total_distinct_count = _distinct_count_per_bin * static_cast<HistogramCountType>(bin_count()) +
                           static_cast<HistogramCountType>(_bin_count_with_extra_value);
@@ -217,7 +216,6 @@ BinID EqualDistinctCountHistogram<T>::_next_bin_for_value(const T& value) const 
 template <typename T>
 const T& EqualDistinctCountHistogram<T>::bin_minimum(const BinID index) const {
   DebugAssert(index < _bin_minima.size(), "Index is not a valid bin.");
-  ReadPinGuard{_bin_minima};
   PerformanceWarning("Histogram _bin_minima() with pin called");
   return _bin_minima[index];
 }
@@ -225,7 +223,6 @@ const T& EqualDistinctCountHistogram<T>::bin_minimum(const BinID index) const {
 template <typename T>
 const T& EqualDistinctCountHistogram<T>::bin_maximum(const BinID index) const {
   DebugAssert(index < _bin_maxima.size(), "Index is not a valid bin.");
-  ReadPinGuard{_bin_maxima};
   PerformanceWarning("Histogram _bin_maxima() with pin called");
   return _bin_maxima[index];
 }
@@ -233,7 +230,6 @@ const T& EqualDistinctCountHistogram<T>::bin_maximum(const BinID index) const {
 template <typename T>
 HistogramCountType EqualDistinctCountHistogram<T>::bin_height(const BinID index) const {
   DebugAssert(index < _bin_heights.size(), "Index is not a valid bin.");
-  ReadPinGuard{_bin_heights};
   PerformanceWarning("Histogram bin_height() with pin called");
   return _bin_heights[index];
 }

@@ -49,7 +49,7 @@ BufferPtr<void> MonotonicBufferResource::allocate(std::size_t bytes, std::size_t
   if (this->remaining_storage(alignment, aligner) < bytes) {
     aligner = 0u;
     this->increase_next_buffer_at_least_to(bytes);
-    _current_frame = _memory_resource->allocate(_next_buffer_size, alignment).get_frame();
+    _current_frame = std::move(_memory_resource->allocate(_next_buffer_size, alignment)).get_frame();
     DebugAssert(_current_frame && _current_frame->page_type != PageType::Invalid,
                 "MemoryResource did not return a valid frame");
     _current_buffer_size = _next_buffer_size;

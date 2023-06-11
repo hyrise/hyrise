@@ -21,6 +21,8 @@ class BufferPtr {
   using pointer = PointedType*;
 
   using reference = typename add_reference<PointedType>::type;
+  using const_reference = typename add_reference<const PointedType>::type;
+
   using element_type = PointedType;
   using value_type = std::remove_cv_t<PointedType>;
   using difference_type = std::ptrdiff_t;
@@ -222,6 +224,10 @@ class BufferPtr {
 
   void dec_offset(difference_type bytes) noexcept {
     _ptr_or_offset -= bytes;
+  }
+
+  ~BufferPtr() {
+    std::cout << "";
   }
 
   Frame* try_replace_frame(Frame* frame) {

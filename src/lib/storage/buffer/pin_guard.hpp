@@ -23,13 +23,13 @@ template <AccessIntent accessIntent>
 struct PinnedFrames : public Noncopyable {
  public:
   void add_pin(const FramePtr& frame) {
-    if (frame->page_type == PageType::Invalid) {
+    if (frame->is_invalid()) {
       return;
     }
     _pins.push_back(frame);
     get_buffer_manager_memory_resource()->pin(frame);
     lock(frame);
-    DebugAssert(frame->is_resident(), "Is resident");
+    // DebugAssert(frame->is_resident(), "Is resident");
   }
 
   void remove_pin(const FramePtr& frame) {
@@ -46,15 +46,11 @@ struct PinnedFrames : public Noncopyable {
     return it != _pins.end();
   }
 
-  FramePtr find_frame(const void* ptr) {
-    return FramePtr(get_buffer_manager_memory_resource()->find_frame_and_offset(ptr).first);
-  }
-
   void lock(const FramePtr& frame) {
     if constexpr (accessIntent == AccessIntent::Read) {
-      frame->lock_shared();
+      // TODO frame->lock_shared();
     } else if constexpr (accessIntent == AccessIntent::Write) {
-      frame->lock_exclusive();
+      // frame->lock_exclusive();
     } else {
       Fail("Not implemented.");
     }
@@ -62,9 +58,9 @@ struct PinnedFrames : public Noncopyable {
 
   void unlock(const FramePtr& frame) {
     if constexpr (accessIntent == AccessIntent::Read) {
-      frame->unlock_shared();
+      // frame->unlock_shared();
     } else if constexpr (accessIntent == AccessIntent::Write) {
-      frame->unlock_exclusive();
+      // frame->unlock_exclusive();
     } else {
       Fail("Not implemented.");
     }
@@ -85,7 +81,6 @@ template <AccessIntent accessIntent>
 struct FramePinGuard final : public PinnedFrames<accessIntent> {
   using PinnedFrames<accessIntent>::add_pin;
   using PinnedFrames<accessIntent>::has_pinned;
-  using PinnedFrames<accessIntent>::find_frame;
 
   template <typename T, typename = void>
   struct is_iterable : std::false_type {};
@@ -96,13 +91,12 @@ struct FramePinGuard final : public PinnedFrames<accessIntent> {
 
   template <typename T, typename = std::enable_if_t<is_iterable<T>::value>>
   void add_vector_pins(const T& vector) {
-    const auto frame = find_frame(vector.data());
-    add_pin(frame);
+    vector.for_each_ptr([&](auto& ptr) { add_pin(ptr.get_frame()); });
 
     // Ensure that all child frames are pinned for pmr_vector<pmr_string>
     if constexpr (std::is_same_v<std::remove_cv_t<T>, pmr_vector<pmr_string>>) {
       for (const auto& string : vector) {
-        const auto string_frame = find_frame(string.data());
+        const auto string_frame = string.begin().get_frame();
         if (!string_frame) {
           continue;
         }

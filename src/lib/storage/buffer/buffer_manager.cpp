@@ -619,6 +619,9 @@ BufferPtr<void> BufferManager::allocate(std::size_t bytes, std::size_t align) {
   // TODO: Remove. Leads to leaks
   frame->increase_ref_count();
   frame->increase_ref_count();
+  frame->increase_ref_count();
+  frame->increase_ref_count();
+  frame->increase_ref_count();
 
   return BufferPtr<void>(frame.get(), 0, typename BufferPtr<void>::AllocTag{});
 }
