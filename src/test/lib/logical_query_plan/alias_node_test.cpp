@@ -17,17 +17,24 @@ class AliasNodeTest : public BaseTest {
     b = mock_node->get_column("b");
 
     aliases = {"x", "y"};
+    partial_aliases = {"b", "z"};
     expressions = {b, a};
     alias_node = AliasNode::make(expressions, aliases, mock_node);
+    partial_alias_node = AliasNode::make(expressions, partial_aliases, mock_node);
   }
 
-  std::vector<std::string> aliases;
+  std::vector<std::string> aliases, partial_aliases;
   std::vector<std::shared_ptr<AbstractExpression>> expressions;
   std::shared_ptr<MockNode> mock_node;
 
-  std::shared_ptr<AbstractExpression> a, b;
-  std::shared_ptr<AliasNode> alias_node;
+  std::shared_ptr<AbstractExpression> a, b, c;
+  std::shared_ptr<AliasNode> alias_node, partial_alias_node;
 };
+
+TEST_F(AliasNodeTest, NodeDescription) {
+  EXPECT_EQ(alias_node->description(), std::string{"[Alias] b AS x, a AS y"});
+  EXPECT_EQ(partial_alias_node->description(), std::string{"[Alias] b, a AS z"});
+}
 
 TEST_F(AliasNodeTest, NodeExpressions) {
   ASSERT_EQ(alias_node->node_expressions.size(), 2u);

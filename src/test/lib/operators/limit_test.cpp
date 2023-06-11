@@ -147,4 +147,14 @@ TEST_F(OperatorsLimitTest, ForwardSortedByFlag) {
   }
 }
 
+TEST_F(OperatorsLimitTest, OnlyIntegralTypes) {
+  auto limit = std::make_shared<Limit>(_table_wrapper, to_expression(AllTypeVariant{"test_string"}));
+  EXPECT_THROW(limit->execute(), std::logic_error);
+}
+
+TEST_F(OperatorsLimitTest, GetName) {
+  auto limit = std::make_shared<Limit>(_table_wrapper, to_expression(int64_t{2}));
+  EXPECT_EQ(limit->name(), std::string{"Limit"});
+}
+
 }  // namespace hyrise
