@@ -21,10 +21,12 @@ template <class T>
 class BufferPoolAllocator {
  public:
   using value_type = T;
-  using pointer = BufferPtr<T>;
-  using const_pointer = BufferPtr<const T>;
-  using void_pointer = BufferPtr<void>;
+  using pointer = T*;
+  using const_pointer = const T*;
+  using void_pointer = void*;
   using difference_type = typename pointer::difference_type;
+  using reference = pointer::reference;
+  using const_reference = pointer::const_reference;
 
   BufferPoolAllocator() : _memory_resource(get_buffer_manager_memory_resource()) {}
 
@@ -65,8 +67,8 @@ class BufferPoolAllocator {
   }
 
   [[nodiscard]] pointer allocate(std::size_t n) {
-    auto ptr = pointer(_memory_resource->allocate(sizeof(value_type) * n, alignof(T)), typename pointer::AllocTag{});
-    ptr._frame->increase_ref_count();  // TODO: Inject auto ref count in buffer ptr <void>
+    auto ptr = std::move(_memory_resource->allocate(sizeof(value_type) * n, alignof(T)));
+    ptr._frame->increase_ref_count();  // TODO: Inject auto re)f count in buffer ptr <void>
     if (auto observer = _observer.lock()) {
       const auto frame = ptr.get_frame();
       observer->on_allocate(frame);
@@ -74,10 +76,10 @@ class BufferPoolAllocator {
     // Manually increase the ref count when passing the pointer to the data structure
     DebugAssert(ptr.get_frame() == nullptr || ptr.get_frame()->is_resident(),
                 "Trying to allocate on a non-resident frame");
-    return ptr;
+    return pointer(std::move(ptr), typename pointer::AllocTag{});
   }
 
-  void deallocate(pointer const ptr, std::size_t n) {
+  void deallocate(const pointer& ptr, std::size_t n) {
     DebugAssert(ptr.get_frame() == nullptr || ptr.get_frame()->is_resident(),
                 "Trying to deallocate on a non-resident frame");
 
@@ -109,9 +111,19 @@ class BufferPoolAllocator {
     return _observer;
   }
 
+  pointer address(reference value) const {
+    return pointer(boost::addressof(value));
+  }
+
+  //!Returns address of non mutable object.
+  //!Never throws
+  const_pointer address(const_reference value) const {
+    return const_pointer(boost::addressof(value));
+  }
+
  private:
   std::weak_ptr<BufferPoolAllocatorObserver> _observer;
-  MemoryResource* _memory_resource;
+  MemoryResource* _memory_resource;  // TODO: Use the buffer manager as observer?
 };
 
 }  // namespace hyrise

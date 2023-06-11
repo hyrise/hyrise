@@ -101,6 +101,10 @@ struct EvictionItem {
 
 constexpr size_t MAX_EVICTION_QUEUE_PURGES = 1024;
 
+#define CACHELINE_SIZE 64
+
+constexpr size_t DEFAULT_RESERVED_VIRTUAL_MEMORY = ;
+
 using EvictionQueue = tbb::concurrent_queue<EvictionItem>;
 
 // The page type is used to determine the memory region the page is allocated on
