@@ -192,6 +192,12 @@ class OperatorsAggregateTest : public BaseTest {
 using AggregateTypes = ::testing::Types<AggregateHash, AggregateSort>;
 TYPED_TEST_SUITE(OperatorsAggregateTest, AggregateTypes, );  // NOLINT(whitespace/parens)
 
+TEST(OperatorsAggregateHashTest, EmptyHash) {
+  const auto expected_empty_hash = 0;
+  EXPECT_EQ(std::hash<EmptyAggregateKey>()(EmptyAggregateKey{}), expected_empty_hash);
+  EXPECT_EQ(std::hash<AggregateKeySmallVector>()(AggregateKeySmallVector{}), expected_empty_hash);
+}
+
 TYPED_TEST(OperatorsAggregateTest, OperatorName) {
   const auto table = this->_table_wrapper_1_1->get_output();
   const auto aggregate_expressions = std::vector<std::shared_ptr<AggregateExpression>>{
