@@ -105,11 +105,25 @@ set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${FLAGS_ALL} ${FLAGS_REL
 set(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO} ${FLAGS_ALL} ${FLAGS_RELEASE}")
 set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} ${FLAGS_ALL} ${FLAGS_RELEASE}")
 
-
-# On Linux, use the lld linker, which is twice as fast for incremental debug builds
-if (NOT APPLE)
-    set(CMAKE_SHARED_LINKER_FLAGS "-fuse-ld=lld")
-    set(CMAKE_EXE_LINKER_FLAGS "-fuse-ld=lld")
+include(CheckLinkerFlag)
+if (HYRISE_LINKER)
+    check_linker_flag(CXX "-fuse-ld=${HYRISE_LINKER}" HAS_HYRISE_LINKER)
+    if (NOT HAS_HYRISE_LINKER)
+        message(FATAL_ERROR "Got HYRISE_LINKER=${HYRISE_LINKER}, but -fuse-ld=${HYRISE_LINKER} does not work.")
+    endif()
+    message(STATUS "Using HYRISE_LINKER (${HYRISE_LINKER}).")
+    add_link_options("-fuse-ld=${HYRISE_LINKER}")
+else()
+    check_linker_flag(CXX "-fuse-ld=lld" HAS_LLD)
+    if (HAS_LLD)
+        message(STATUS "Found LLD, using as linker.")
+        add_link_options("-fuse-ld=lld")
+    else()
+        message(STATUS "Using default linker.")
+        if (NOT APPLE)
+            message(WARNING "Consider installing the LLD linker for faster incremental builds on Linux.")
+        endif()
+    endif()
 endif()
 
 # Require NCurses over Curses
