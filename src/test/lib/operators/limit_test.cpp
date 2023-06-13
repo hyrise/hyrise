@@ -147,4 +147,9 @@ TEST_F(OperatorsLimitTest, ForwardSortedByFlag) {
   }
 }
 
+TEST_F(OperatorsLimitTest, Name) {
+  const auto limit = std::make_shared<Limit>(_table_wrapper, to_expression(int64_t{4}));
+  EXPECT_EQ(limit->name(), "Limit");
+}
+
 }  // namespace hyrise
