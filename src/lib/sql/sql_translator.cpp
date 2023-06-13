@@ -283,25 +283,24 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_select_statement(cons
   _translate_select_groupby_having(select, select_list_elements);
 
   // Translate ORDER BY and DISTINCT. ORDER BY and LIMIT must be executed after DISTINCT. Thus, we must ensure that all
-  // ORDER BY expressions are selected if a DISTINCT result is required.
+  // ORDER BY expressions are part of the SELECT list if a DISTINCT result is required.
   const auto& inflated_select_list_expressions = _unwrap_elements(_inflated_select_list_elements);
-  _translate_order_by_distinct(select.order, inflated_select_list_expressions, select.selectDistinct);
+  _translate_distinct_order_by(select.order, inflated_select_list_expressions, select.selectDistinct);
 
   // Translate LIMIT.
   if (select.limit) {
     _translate_limit(*select.limit);
   }
 
-  /**
-   * Name, select and arrange the columns as specified in the SELECT clause.
-   */
-  // Only add a ProjectionNode if necessary.
+  // Project, arrange, and name the columns as specified in the SELECT clause.
+  //
+  // 1. Add a ProjectionNode if necessary.
   if (!expressions_equal(_current_lqp->output_expressions(), inflated_select_list_expressions)) {
     _current_lqp = ProjectionNode::make(inflated_select_list_expressions, _current_lqp);
   }
 
-  // Check whether we need to create an AliasNode - this is the case whenever an Expression was assigned a column_name
-  // that is not its generated name.
+  // 2. Check whether we need to create an AliasNode. This is the case whenever an expression was assigned a
+  //    column_name that is not its generated name.
   const auto need_alias_node = std::any_of(
       _inflated_select_list_elements.begin(), _inflated_select_list_elements.end(), [](const auto& element) {
         return std::any_of(element.identifiers.begin(), element.identifiers.end(), [&](const auto& identifier) {
@@ -310,7 +309,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_select_statement(cons
       });
 
   if (need_alias_node) {
-    std::vector<std::string> aliases;
+    auto aliases = std::vector<std::string>{};
     for (const auto& element : _inflated_select_list_elements) {
       if (!element.identifiers.empty()) {
         aliases.emplace_back(element.identifiers.back().column_name);
@@ -328,9 +327,19 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_select_statement(cons
       AssertInput(set_operator->setType != hsql::kSetUnion, "Union Operations are currently not supported");
       _translate_set_operation(*set_operator);
 
-      // In addition to local ORDER BY and LIMIT clauses, the result of the set operation(s) may have final clauses too.
-      _translate_order_by_distinct(set_operator->resultOrder, {}, false);
-
+      // In addition to local ORDER BY and LIMIT clauses, the result of the set operation(s) may have final clauses,
+      // too. Consider the following example query (returns the first ten dates when store_sales happened, except the
+      // days one of the five web_sales with the highest price happened):
+      //     SELECT DISTINCT sold_date
+      //                FROM (SELECT sold_date FROM store_sales)
+      //              EXCEPT (SELECT sold_date FROM web_sales
+      //                    ORDER BY sales_price DESC
+      //                       LIMIT 5)
+      //            ORDER BY sold_date ASC
+      //               LIMIT 10;
+      // While ORDER BY sales_price DESC LIMIT 5 belongs to the subquery and has to be executed locally, ORDER BY
+      // sold_date ASC LIMIT 10 refers to the intersection and must be executed on the result.
+      _translate_distinct_order_by(set_operator->resultOrder, inflated_select_list_expressions, select.selectDistinct);
       if (set_operator->resultLimit) {
         _translate_limit(*set_operator->resultLimit);
       }
@@ -1229,7 +1238,7 @@ void SQLTranslator::_translate_set_operation(const hsql::SetOperation& set_opera
   _current_lqp = lqp;
 }
 
-void SQLTranslator::_translate_order_by_distinct(const std::vector<hsql::OrderDescription*>* order_list,
+void SQLTranslator::_translate_distinct_order_by(const std::vector<hsql::OrderDescription*>* order_list,
                                                  const std::vector<std::shared_ptr<AbstractExpression>>& select_list,
                                                  const bool distinct) {
   const auto perform_sort = order_list && !order_list->empty();
@@ -1259,8 +1268,8 @@ void SQLTranslator::_translate_order_by_distinct(const std::vector<hsql::OrderDe
   // (DependentGroupByReductionRule) that checks if the respective columns are already unique.
   if (distinct) {
     if (perform_sort) {
-      // If we ORDER BY expressions later, we must ensure they are also selected (DISTINCT must be applied before ORDER
-      // BY).
+      // If we later sort the table by the ORDER BY expression, we must ensure they are also part of the SELECT list
+      // (DISTINCT will be applied before ORDER BY).
       const auto& select_expressions_set = ExpressionUnorderedSet{select_list.begin(), select_list.end()};
       AssertInput(std::all_of(expressions.cbegin(), expressions.cend(),
                               [&](const auto& expression) { return select_expressions_set.contains(expression); }),
