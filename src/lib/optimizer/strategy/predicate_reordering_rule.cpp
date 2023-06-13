@@ -121,7 +121,7 @@ void PredicateReorderingRule::_reorder_predicates(
 
   // Sort in descending order
   std::sort(nodes_and_cardinalities.begin(), nodes_and_cardinalities.end(),
-            [&](auto& left, auto& right) { return left.second > right.second; });
+            [](auto& left, auto& right) { return left.second > right.second; });
 
   // Ensure that nodes are chained correctly
   nodes_and_cardinalities.back().first->set_left_input(input);

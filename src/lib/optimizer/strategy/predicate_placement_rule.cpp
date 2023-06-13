@@ -63,8 +63,8 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
       }
 
       if (barrier_node->type == LQPNodeType::Join) {
-        const auto join_mode = static_cast<JoinNode&>(*barrier_node).join_mode;
-        return is_semi_or_anti_join(join_mode);
+        const auto& join_node = static_cast<const JoinNode&>(*barrier_node);
+        return is_semi_or_anti_join(join_node.join_mode) && join_node.join_predicates().size() == 1;
       }
 
       return false;
