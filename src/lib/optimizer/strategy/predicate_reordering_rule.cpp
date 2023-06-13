@@ -36,7 +36,7 @@ bool is_predicate_style_node(const std::shared_ptr<AbstractLQPNode>& node) {
   // from multiple tables), the ValidateNode will still be able to operate on the semi join's output.
   if (node->type == LQPNodeType::Join) {
     const auto& join_node = static_cast<JoinNode&>(*node);
-    if (is_semi_or_anti_join(join_node.join_mode)) {
+    if (is_semi_or_anti_join(join_node.join_mode) && join_node.join_predicates().size() == 1) {
       return true;
     }
   }
@@ -61,7 +61,7 @@ void PredicateReorderingRule::_apply_to_plan_without_subqueries(
   auto reordered_predicate_nodes = std::unordered_set<std::shared_ptr<AbstractLQPNode>>{};
   visit_lqp(lqp_root, [&](const auto& node) {
     if (is_predicate_style_node(node) && !reordered_predicate_nodes.contains(node)) {
-      std::vector<std::shared_ptr<AbstractLQPNode>> predicate_nodes;
+      auto predicate_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
 
       // Gather adjacent PredicateNodes
       auto current_node = node;

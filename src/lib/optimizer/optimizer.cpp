@@ -204,7 +204,7 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
 
   optimizer->add_rule(std::make_unique<JoinToPredicateRewriteRule>());
 
-  // optimizer->add_rule(std::make_unique<PredicatePlacementRule>());
+  optimizer->add_rule(std::make_unique<PredicatePlacementRule>());
 
   // optimizer->add_rule(std::make_unique<PredicateReorderingRule>());
 
@@ -245,7 +245,7 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
 
   // optimizer->add_rule(std::make_unique<SemiJoinReductionRemovalRule>());
 
-  optimizer->add_rule(std::make_unique<PredicateReorderingRule>());
+  // optimizer->add_rule(std::make_unique<PredicateReorderingRule>());
 
   optimizer->add_rule(std::make_unique<PredicateMergeRule>());
 
