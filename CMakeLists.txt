@@ -1,5 +1,5 @@
 # consider updating DEPENDENCIES.md when you touch this line
-cmake_minimum_required(VERSION 3.9 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.18 FATAL_ERROR)
 
 project(Hyrise)
 
@@ -105,12 +105,6 @@ set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${FLAGS_ALL} ${FLAGS_REL
 set(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO} ${FLAGS_ALL} ${FLAGS_RELEASE}")
 set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} ${FLAGS_ALL} ${FLAGS_RELEASE}")
 
-# Check for unity builds
-if(${CMAKE_VERSION} VERSION_LESS "3.16.0")
-    if(DEFINED CMAKE_UNITY_BUILD)
-        message(FATAL_ERROR "-DCMAKE_UNITY_BUILD=ON was set, but your cmake version does not support unity builds.")
-    endif()
-endif()
 
 # On Linux, use the lld linker, which is twice as fast for incremental debug builds
 if (NOT APPLE)
@@ -151,17 +145,14 @@ cmake_policy(SET CMP0069 NEW)
 set(CMAKE_POLICY_DEFAULT_CMP0069 NEW)
 option(ENABLE_LTO "Set to ON to build Hyrise with enabled Link Time Optimization (LTO). Default: OFF" OFF)
 if (${ENABLE_LTO})
-    if(NOT ${CMAKE_VERSION} VERSION_LESS "3.9.0")
-        cmake_minimum_required(VERSION 3.9 FATAL_ERROR)
-        include(CheckIPOSupported)
-        check_ipo_supported(RESULT ipo_supported OUTPUT ipo_output)
-        if(ipo_supported)
-            set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
-            add_definitions(-DWITH_LTO)
-            message(STATUS "Building with Link-Time Optimization")
-        else()
-            message(WARNING "LTO not supported: ${ipo_output}")
-        endif()
+    include(CheckIPOSupported)
+    check_ipo_supported(RESULT ipo_supported OUTPUT ipo_output)
+    if(ipo_supported)
+        set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+        add_definitions(-DWITH_LTO)
+        message(STATUS "Building with Link-Time Optimization")
+    else()
+        message(WARNING "LTO not supported: ${ipo_output}")
     endif()
 endif()
 
