@@ -35,8 +35,8 @@ bool is_predicate_style_node(const std::shared_ptr<AbstractLQPNode>& node) {
   // might place the join below a ValidateNode, but since it is not a "proper" join (i.e., one that returns columns
   // from multiple tables), the ValidateNode will still be able to operate on the semi join's output.
   if (node->type == LQPNodeType::Join) {
-    const auto& join_node = static_cast<JoinNode&>(*node);
-    if (is_semi_or_anti_join(join_node.join_mode)) {
+    const auto& join_node = static_cast<const JoinNode&>(*node);
+    if (is_semi_or_anti_join(join_node.join_mode) && join_node.join_predicates().size() == 1) {
       return true;
     }
   }
