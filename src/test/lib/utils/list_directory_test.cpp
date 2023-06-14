@@ -1,8 +1,8 @@
+#include "base_test.hpp"
+
 #include <filesystem>
 #include <fstream>
 #include <sys/stat.h>
-
-#include "base_test.hpp"
 
 #include "utils/list_directory.hpp"
 
@@ -46,4 +46,4 @@ TEST_F(ListDirectoryTest, ListBasicDirectory) {
   std::filesystem::remove_all(TEST_DIRECTORY);
 }
 
-} // namespace hyrise
+}  // namespace hyrise
