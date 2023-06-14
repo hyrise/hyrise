@@ -1,10 +1,10 @@
-#include "base_test.hpp"
+#include "utils/list_directory.hpp"
 
+#include <sys/stat.h>
 #include <filesystem>
 #include <fstream>
-#include <sys/stat.h>
 
-#include "utils/list_directory.hpp"
+#include "base_test.hpp"
 
 namespace hyrise {
 
@@ -22,15 +22,11 @@ TEST_F(ListDirectoryTest, ListBasicDirectory) {
 
   EXPECT_TRUE(directory_exists);
 
-  const auto files = std::vector<std::string>{
-    TEST_DIRECTORY + "/one.test",
-    TEST_DIRECTORY + "/two.test",
-    TEST_DIRECTORY + "/three.test",
-    TEST_DIRECTORY + "/four.test"
-  };
+  const auto files = std::vector<std::string>{TEST_DIRECTORY + "/one.test", TEST_DIRECTORY + "/two.test",
+                                              TEST_DIRECTORY + "/three.test", TEST_DIRECTORY + "/four.test"};
 
   for (const auto& file : files) {
-    std::ofstream{ file };
+    std::ofstream{file};
   }
   std::filesystem::create_directory(TEST_DIRECTORY + "/test-subdirectory");
 
