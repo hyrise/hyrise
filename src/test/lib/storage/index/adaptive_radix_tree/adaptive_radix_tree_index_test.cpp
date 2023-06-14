@@ -285,4 +285,26 @@ TEST_F(AdaptiveRadixTreeIndexTest, DenseVectorOfInts) {
   _search_elements(values);
 }
 
+TEST_F(AdaptiveRadixTreeIndexTest, UpperLowerBoundForNonExistingElements) {
+  for (int32_t test_size : {4, 16, 48, 256}) {
+    std::vector<std::optional<int32_t>> ints(test_size);
+    for (auto index = 0; index < test_size; ++index) {
+      // leave out the second and second to last element (e.g. 1 & 2, 1 & 14, ...)
+      if (index != 1 && index != test_size - 2) {
+        ints[index] = index;
+      }
+    }
+    auto segment = create_dict_segment_by_type<int32_t>(DataType::Int, ints);
+    auto index =
+        std::make_shared<AdaptiveRadixTreeIndex>(std::vector<std::shared_ptr<const AbstractSegment>>({segment}));
+
+    if (test_size == 4) {
+      EXPECT_EQ(*index->lower_bound({1}), 3);
+    } else {
+      EXPECT_EQ(*index->lower_bound({1}), 2);
+    }
+    EXPECT_EQ(*index->upper_bound({test_size - 2}), test_size - 1);
+  }
+}
+
 }  // namespace hyrise
