@@ -337,10 +337,6 @@ TEST_F(SchedulerTest, DetermineQueueIDForTask) {
 
 template <typename Iterator>
 void merge_sort(Iterator first, Iterator last) {
-  if (std::distance(first, last) == 1) {
-    return;
-  }
-
   if (std::distance(first, last) < 100'000) {
     std::sort(first, last);
     return;
@@ -349,8 +345,8 @@ void merge_sort(Iterator first, Iterator last) {
   auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
 
   auto middle = first + (std::distance(first, last) / 2);
-  tasks.emplace_back(std::make_shared<JobTask>([=] { merge_sort(first, middle); }));
-  tasks.emplace_back(std::make_shared<JobTask>([=] { merge_sort(middle, last); }));
+  tasks.emplace_back(std::make_shared<JobTask>([&]() { merge_sort(first, middle); }));
+  tasks.emplace_back(std::make_shared<JobTask>([&]() { merge_sort(middle, last); }));
 
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
 
@@ -359,17 +355,9 @@ void merge_sort(Iterator first, Iterator last) {
 
 TEST_F(SchedulerTest, MergeSort) {
   constexpr auto ITEM_COUNT = size_t{100'000'000};
-  Assert(ITEM_COUNT % 5 == 0, "Must be dividable by 5.");
   Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
 
-  auto sorted_vector = std::vector<int64_t>(ITEM_COUNT);
-  std::iota(sorted_vector.begin(), sorted_vector.end(), 0);
-
-  // for (const auto el : sorted_vector) {
-  //   std::printf("%lld, ", el);
-  // }
-  // std::printf("\n\n");
-
+  Assert(ITEM_COUNT % 5 == 0, "Must be dividable by 5.");
   auto vector_to_sort = std::vector<int64_t>{};
   vector_to_sort.reserve(ITEM_COUNT);
   for (auto i = size_t{0}; i < ITEM_COUNT / 5; ++i) {
@@ -379,23 +367,11 @@ TEST_F(SchedulerTest, MergeSort) {
   }
 
   EXPECT_FALSE(std::is_sorted(vector_to_sort.begin(), vector_to_sort.end()));
-
-  // for (const auto el : vector_to_sort) {
-  //   std::printf("%lld, ", el);
-  // }
-
   merge_sort(vector_to_sort.begin(), vector_to_sort.end());
-  std::printf("\n\n");
-
-  // for (const auto el : vector_to_sort) {
-  //   std::printf("%lld, ", el);
-  // }
-
   std::printf("will wait\n");
   Hyrise::get().scheduler()->wait_for_all_tasks();
   std::printf("will finish\n");
   Hyrise::get().scheduler()->finish();
-
   EXPECT_TRUE(std::is_sorted(vector_to_sort.begin(), vector_to_sort.end()));
 }
 
