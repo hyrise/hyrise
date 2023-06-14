@@ -13,10 +13,14 @@
 namespace hyrise {
 
 class WindowFunctionEvaluator : public AbstractReadOnlyOperator {
-  // TODO: Think about not copying the data, but adding segments to all chunks of the input table
+  // TODO(group): Think about not copying the data, but adding segments to all chunks of the input table
 
  public:
   using AbstractReadOnlyOperator::AbstractReadOnlyOperator;
+
+  static constexpr uint8_t hash_partition_bits = 8;
+  static constexpr size_t hash_partition_mask = (1u << hash_partition_bits) - 1;
+  static constexpr uint32_t hash_partition_partition_count = 1u << hash_partition_bits;
 
   const std::string& name() const override;
 
@@ -24,12 +28,15 @@ class WindowFunctionEvaluator : public AbstractReadOnlyOperator {
   std::shared_ptr<const Table> _on_execute() override;
 
  private:
-  using PartitionedData = std::vector<std::vector<std::pair<AllTypeVariant, RowID>>>;
+  using PartitionedData = std::vector<std::pair<std::vector<AllTypeVariant>, RowID>>;
 
   PartitionedData partition_and_sort() const;
   void compute_window_function(const PartitionedData& partitioned_data, auto&& emit_computed_value) const;
   template <typename T>
   std::shared_ptr<const Table> annotate_input_table(std::vector<ValueSegment<T>> segments_for_output_column) const;
+
+  ColumnID _partition_by_column_id;
+  ColumnID _order_by_column_id;
 };
 
 }  // namespace hyrise
