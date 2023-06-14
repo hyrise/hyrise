@@ -68,6 +68,13 @@ void NodeQueueScheduler::wait_for_all_tasks() {
 
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
   }
+
+  for (auto& queue : _queues) {
+    while (!queue->empty()) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(1));
+      std::cout << "slept" << std::endl;
+    }
+  }
 }
 
 void NodeQueueScheduler::finish() {
