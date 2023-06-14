@@ -72,7 +72,7 @@ TEST_F(EntireChunkPosListTest, CheckIterators) {
   EXPECT_EQ(table->row_count(), 3);
 
   const auto chunk_id = ChunkID{0};
-  const auto chunk_size = ChunkOffset{table->row_count()};
+  const auto chunk_size = ChunkOffset{3};
   const auto entire_chunk_pos_list = std::make_shared<const EntireChunkPosList>(chunk_id, chunk_size);
 
   table->append({int32_t{4}});
