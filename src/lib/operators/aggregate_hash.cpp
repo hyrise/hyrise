@@ -186,7 +186,7 @@ struct AggregateResultContext : SegmentVisitorContext {
 
   AggregateResultAllocator _alloc;
   AllocatorPinGuard _pin_guard;
-  MonotonicBufferResource buffer;
+  boost::container::pmr::monotonic_buffer_resource buffer;
   AggregateResults<ColumnDataType, aggregate_function> results;
 };
 
@@ -414,7 +414,7 @@ KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() {
             // This time, we have no idea how much space we need, so we take some memory and then rely on the automatic
             // resizing. The size is quite random, but since single memory allocations do not cost too much, we rather
             // allocate a bit too much.
-            auto temp_buffer = MonotonicBufferResource(get_buffer_manager_memory_resource(), MAX_PAGE_SIZE_TYPE);
+            auto temp_buffer = boost::container::pmr::monotonic_buffer_resource(1'000'000);
             auto allocator = PolymorphicAllocator<std::pair<const ColumnDataType, AggregateKeyEntry>>{&temp_buffer};
 
             auto id_map = tsl::robin_map<ColumnDataType, AggregateKeyEntry, std::hash<ColumnDataType>, std::equal_to<>,

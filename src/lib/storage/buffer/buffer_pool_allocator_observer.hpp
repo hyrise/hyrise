@@ -9,7 +9,7 @@ namespace hyrise {
 */
 class BufferPoolAllocatorObserver {
  public:
-  virtual void on_allocate(const FramePtr& frame) = 0;
-  virtual void on_deallocate(const FramePtr& frame) = 0;
+  virtual void on_allocate(const PageID page_id) = 0;
+  virtual void on_deallocate(const PageID page_id) = 0;
 };
 }  // namespace hyrise

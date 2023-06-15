@@ -442,11 +442,8 @@ set(
     storage/create_iterable_from_reference_segment.ipp
     storage/create_iterable_from_segment.hpp
     storage/create_iterable_from_segment.ipp
-    storage/buffer/buffer_ptr.hpp
     storage/buffer/buffer_manager.cpp
     storage/buffer/buffer_manager.hpp
-    storage/buffer/memory_resource.cpp
-    storage/buffer/memory_resource.hpp
     storage/buffer/buffer_pool_allocator.hpp
     storage/buffer/buffer_pool_allocator_observer.hpp
     storage/buffer/frame.cpp

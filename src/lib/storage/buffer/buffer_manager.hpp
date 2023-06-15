@@ -1,10 +1,10 @@
 #pragma once
 
+#include <boost/container/pmr/memory_resource.hpp>
 #include <memory>
 #include <tuple>
 #include "noncopyable.hpp"
 #include "storage/buffer/frame.hpp"
-#include "storage/buffer/memory_resource.hpp"
 #include "storage/buffer/migration_policy.hpp"
 #include "storage/buffer/ssd_region.hpp"
 #include "storage/buffer/types.hpp"
@@ -13,13 +13,9 @@
 
 namespace hyrise {
 
-// TODO: Calculate hotness of a values as the inverse of the size so that smaller pages are likely to be evicted
-// TODO: Do not create persistent page directly, but only when it is needed
-
-class BufferManager : public MemoryResource, public Noncopyable {
+class BufferManager : public boost::container::pmr::memory_resource, public Noncopyable {
  public:
-  // TODO: Metrics dont need strict memory ordering but can use "relaxed"
-  // Metrics are storing statistics like copied bytes that happen during allocations and access of the buffer manager.
+  // TODO: Add
   struct Metrics {
     // The current amount of bytes being allocated
     std::atomic_uint64_t current_bytes_used_dram =
@@ -78,9 +74,6 @@ class BufferManager : public MemoryResource, public Noncopyable {
     std::atomic_uint64_t num_dram_evictions;
     std::atomic_uint64_t num_numa_evictions;
 
-    // TODO: Ratio is defined in Spitfire paper. Lower values signfies lower duplication.
-    // std::size_t dram_numa_inclusivity_ratio = 0;
-
     // Number of madvice calls, TODO: track in more places
     std::atomic_uint64_t num_madvice_free_calls_numa = 0;
     std::atomic_uint64_t num_madvice_free_calls_dram = 0;
@@ -97,7 +90,7 @@ class BufferManager : public MemoryResource, public Noncopyable {
     MigrationPolicy migration_policy = EagerMigrationPolicy{};
 
     // Identifier of the NUMA node to use for the buffer pool (default: -1, i.e., no NUMA node)
-    int8_t numa_memory_node = NO_NUMA_MEMORY_NODE;
+    NumaMemoryNode memory_node = NO_NUMA_MEMORY_NODE;
 
     // Path to the SSD storage. Can be a block device or a directory. (default: ~/.hyrise).
     std::filesystem::path ssd_path = "~/.hyrise";
@@ -112,203 +105,98 @@ class BufferManager : public MemoryResource, public Noncopyable {
     static Config from_env();
   };
 
-  /**
-   * @brief Construct a new Buffer Manager that reads the configuration from the environment.
-  */
   BufferManager();
 
-  /**
-   * @brief Construct a new Buffer Manager with the given configuration.
-   * @param config The configuration to use.
-  */
   BufferManager(const Config config);
 
-  /**
-   * @brief Pininig a frame marks a frame locks it. It needs to be unpinned before it can be replaced by the eviction policy.
-   * 
-   * @param FramePtr Pointer to the frame to pin. 
-   */
-  void pin(const FramePtr& frame);
+  ~BufferManager();
 
-  /**
-   * @brief Unpinning (pin count = 0) marks a frame available for replacement.
-   * 
-   * @param FramePtr Pointer to the frame to unpin.  
-   * @param dirty If the page is dirty, it will be flushed back to a lower layer.
-   */
-  void unpin(const FramePtr& frame, const bool dirty = false);
+  BufferManager& operator=(BufferManager&& other) noexcept;
 
-  /**
-   * @brief Load a frame or its sibling depending on the migration policy. The returned frame is not necessarily the same as the passed frame. 
-   * The returned frame is guaranteed to be resident. It also likely to be unpinned in most cases and put into the back of the eviction queue. 
-   * Therefore, immediate accesses should *likely*, but not guaranteed, yield valid data.
-   * 
-   * @param frame The frame to load.
-   * @param access_intent The access intent for the frame. Could be Read or Write. This controls different probabilities given by the migration policy. 
-  */
-  FramePtr make_resident(FramePtr frame, const AccessIntent access_intent);
+  static BufferManager& get();
 
-  /**
-   * @brief Get the frame and offset for a given pointer.
-   * 
-   * @param ptr 
-   * @return std::pair<FramePtr, std::ptrdiff_t> Pointer to the frame and the offset in the frame
-   */
-  std::pair<Frame*, std::ptrdiff_t> find_frame_and_offset(const void* ptr);
+  void pin_for_write(const PageID page_id);
 
-  /**
-   * @brief Allocates pages to fullfil allocation request of the given bytes and alignment 
-  */
-  BufferPtr<void> allocate(std::size_t bytes, std::size_t align = alignof(std::max_align_t));
+  void pin_for_read(const PageID page_id);
 
-  /**
-   * @brief Deallocates a pointer. 
-  */
-  void deallocate(BufferPtr<void> ptr, std::size_t bytes, std::size_t align = alignof(std::max_align_t));
+  void set_dirty(const PageID page_id);
 
-  /**
-   * @brief Returns the current metrics holding information about allocations, page table hits etc. of the current buffer manager instance.
-  */
+  void unpin_for_write(const PageID page_id);
+
+  void unpin_for_read(const PageID page_id);
+
+  PageID find_page(const void* ptr) const;
+
+  void* do_allocate(std::size_t bytes, std::size_t alignment) override;
+
+  void do_deallocate(void* p, std::size_t bytes, std::size_t alignment) override;
+
+  bool do_is_equal(const boost::container::pmr::memory_resource& other) const noexcept override;
+
   std::shared_ptr<Metrics> metrics();
 
-  /**
-   * @brief Reset the metrics of the buffer manager e.g. when starting a benchmark run.
-  */
-  void reset_metrics();
-
-  /**
-   * @brief Copy assignment operator. Shouly be used carefully as it might leads to invalid data.
-  */
-  BufferManager& operator=(BufferManager&& other);
-
-  /**
-   *@brief  Get the current number of bytes used by the buffer manager on NUMA.
-  */
-  std::size_t numa_bytes_used() const;
-
-  /**
-   * @brief Get the current number of bytes used by the buffer manager on DRAM.
-  */
-  std::size_t dram_bytes_used() const;
-
-  /**
-   * @brief Get the current config object.
-  */
-  Config get_config() const;
-
-  /**
-  * @brief Reset all data in the internal data structures. Be careful with this as you still have data pointing to this buffer manager.
-  */
-  void clear();
-
-  /**
-   * @brief Get the current memory consumption of the buffer manager in bytes for all its data structures.
-  */
   size_t memory_consumption() const;
-
-  /**
-   * @brief Dummy Frame is a null object of a frame. It is used by the BufferPtr if the pointer is outside of the buffer manager.
-  */
-  Frame DUMMY_FRAME = Frame(PageID{INVALID_PAGE_ID}, PageSizeType::KiB8, PageType::Invalid, nullptr);
 
  protected:
   friend class Hyrise;
-  friend class BufferPtrTest;
-  friend class BufferManagerTest;
-  friend class BufferPoolAllocatorTest;
-  friend class PinGuardTest;
-  friend class Frame;
 
  private:
-  /**
-   * Holds multiple sized buffer pools on either DRAM or NUMA memory.
-  */
-  struct BufferPools {
-    void allocate_frame(FramePtr& frame);
-    void deallocate_frame(FramePtr& frame);
+  struct BufferPool {
+    BufferPool(const size_t pool_size, const bool enable_eviction_purge_worker,
+               std::array<std::unique_ptr<VolatileRegion>, NUM_PAGE_SIZE_TYPES>& volatile_regions,
+               SSDRegion* ssd_region, BufferPool* target_buffer_pool,
+               const NumaMemoryNode memory_node = DEFAULT_DRAM_NUMA_NODE);
 
-    // Purge the eviction queue
+    BufferPool& operator=(BufferPool&& other) noexcept;
+
+    void free_pages(const PageSizeType size);
+
     void purge_eviction_queue();
 
-    // Add a frame to the eviction queue
-    void add_to_eviction_queue(const FramePtr& frame);
-
-    // Soft-clears the buffer pools
-    void clear();
-
-    BufferPools(const PageType page_type, const size_t pool_size,
-                const std::function<void(const FramePtr&)> evict_frame, const bool enable_eviction_purge_worker,
-                const std::shared_ptr<BufferManager::Metrics> metrics,
-                const size_t numa_memory_node = NO_NUMA_MEMORY_NODE);
-    ~BufferPools();
-
-    BufferPools& operator=(BufferPools&& other);
+    void add_to_eviction_queue(const PageID page_id, Frame* frame);
 
     // The maximum number of bytes that can be allocated TODO: make const
-    size_t _max_bytes;
+    size_t max_bytes;
 
     // The number of bytes that are currently used
-    std::atomic_uint64_t _used_bytes;
+    std::atomic<size_t> used_bytes;
 
-    // Memory Regions for each page size type
-    std::array<std::unique_ptr<VolatileRegion>, NUM_PAGE_SIZE_TYPES> _buffer_pools;
+    SSDRegion* ssd_region;
+    BufferPool* target_buffer_pool;
 
     // Eviction queue for frames that are not pinned
-    std::shared_ptr<EvictionQueue> _eviction_queue;
+    std::unique_ptr<EvictionQueue> eviction_queue;
 
     // Async background worker that purges the eviction queue
-    std::unique_ptr<PausableLoopThread> _eviction_purge_worker;
+    std::unique_ptr<PausableLoopThread> eviction_purge_worker;
 
-    // Metrics passed down from buffer manager
-    std::shared_ptr<BufferManager::Metrics> _metrics;
+    std::array<std::unique_ptr<VolatileRegion>, NUM_PAGE_SIZE_TYPES>& volatile_regions;
 
-    // Current types of pages in the buffer pools
-    PageType _page_type;
-
-    // Enable or disable the buffer bool
-    bool enabled;
-
-    // Calls the parent buffer manager to evict a frame using the migration policy
-    std::function<void(const FramePtr&)> _evict_frame;
-
-    // Returns the frame the data pointer is pointing to and the offset in the frame
-    std::pair<Frame*, std::ptrdiff_t> ptr_to_frame(const void* ptr);
-
-    // Returns how much memory is consumed by the state of the buffer pools
-    size_t memory_consumption() const;
+    NumaMemoryNode memory_node;
   };
 
-  // Allocate a new frame in the buffer pool by allocating a frame. May evict a frame from the buffer pool.
-  FramePtr new_frame(const PageSizeType size_type);
+  VolatileRegion& get_region(const PageID page_id);
 
-  // Evict a frame to a lower level buffer pool (NUMA) or to SSD
-  void evict_frame(const FramePtr& frame);
+  void write_page(const PageID page_id);
 
-  // Read a frame from disk into the buffer pool
-  void read_page_from_ssd(const FramePtr& frame);
+  void read_page(const PageID page_id);
 
-  // Write out a frame to disk
-  void write_page_to_ssd(const FramePtr& frame);
+  void make_resident(const PageID page_id, const Frame* frame, const AccessIntent access_intent);
 
-  Config _config;  // TODO: Const;
+  void add_to_eviction_queue(const PageID page_id, Frame* frame);
 
-  // Total number of pages currently in the buffer pool
-  std::atomic_uint64_t _num_pages;
+  Config _config;  // TODO: Const
 
-  // Metrics of buffer manager
-  std::shared_ptr<Metrics> _metrics{};
+  std::byte* _mapped_region;
 
-  // Migration Policy to decide when to migrate pages to DRAM or NUMA buffer pools
-  MigrationPolicy _migration_policy;
+  std::array<std::unique_ptr<VolatileRegion>, NUM_PAGE_SIZE_TYPES> _volatile_regions;
 
-  // Memory Region for pages on SSD
-  std::shared_ptr<SSDRegion> _ssd_region;  // TODO: Maybe this can become a unique_ptr
+  BufferPool _secondary_buffer_pool;
 
-  // Memory Region for pages in DRAM using multiple volatile region for each page size type
-  BufferPools _dram_buffer_pools;
+  BufferPool _primary_buffer_pool;
 
-  // Memory Region for pages on a NUMA nodes (preferrably memory only) using multiple volatile region for each page size type
-  BufferPools _numa_buffer_pools;
+  SSDRegion _ssd_region;
+
+  std::shared_ptr<Metrics> _metrics;
 };
-
 }  // namespace hyrise

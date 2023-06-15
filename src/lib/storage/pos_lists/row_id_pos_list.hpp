@@ -33,7 +33,6 @@ class RowIDPosList final : public AbstractPosList, private pmr_vector<RowID> {
   using reverse_iterator = Vector::reverse_iterator;
   using const_reverse_iterator = Vector::const_reverse_iterator;
   using for_each_ptr_function = Vector::for_each_ptr_function;
-  using for_each_ptr = Vector::for_each_ptr;
 
   /* (1 ) */ RowIDPosList() noexcept(noexcept(allocator_type())) {}
 

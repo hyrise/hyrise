@@ -20,14 +20,12 @@ class SSDRegion : public Noncopyable {
  public:
   enum class DeviceType { BLOCK, REGULAR_FILE };
 
-  SSDRegion(const std::filesystem::path& file_name, const uint64_t initial_num_bytes = 1UL << 25);
+  SSDRegion(const std::filesystem::path& file_name, const size_t max_bytes_per_size_type,
+            const uint64_t initial_num_bytes = 1UL << 25);
   ~SSDRegion();
 
-  void write_page(FramePtr frame);
-  void read_page(FramePtr frame);
-
-  void allocate(const PageID page_id, const PageSizeType size_type);
-  std::optional<PageSizeType> get_size_type(const PageID page_id);
+  void write_page(const PageID page_id, std::byte* data);
+  void read_page(const PageID page_id, std::byte* data);
 
   DeviceType get_device_type() const;
 
@@ -35,16 +33,13 @@ class SSDRegion : public Noncopyable {
 
   size_t memory_consumption() const;
 
+  SSDRegion& operator=(SSDRegion&& other) noexcept;
+
  private:
-  const int _fd;
-  const std::filesystem::path _backing_file_name;
-  const DeviceType _device_type;
-
-  // Last position in file. Used when writing a new page
-  size_t _end_position;
-
-  std::vector<std::pair<std::size_t, PageSizeType>> _page_directory;
-  std::mutex _page_directory_mutex;
+  int _fd;
+  size_t _max_bytes_per_size_type;
+  std::filesystem::path _backing_file_name;
+  DeviceType _device_type;
 
   static int open_file_descriptor(const std::filesystem::path& file_name);
 };

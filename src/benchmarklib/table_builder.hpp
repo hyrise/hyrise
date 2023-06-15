@@ -11,11 +11,11 @@
 #include <boost/hana/tuple.hpp>
 #include <boost/hana/zip_with.hpp>
 
+#include <boost/container/pmr/monotonic_buffer_resource.hpp>
 #include "resolve_type.hpp"
 #include "types.hpp"
 
 #include "storage/buffer/buffer_pool_allocator.hpp"
-#include "storage/buffer/memory_resource.hpp"
 #include "storage/buffer/pin_guard.hpp"
 
 namespace hyrise {
@@ -116,8 +116,7 @@ class TableBuilder {
   template <typename Names>
   TableBuilder(const ChunkOffset chunk_size, const boost::hana::tuple<DataTypes...>& types, const Names& names,
                const ChunkOffset estimated_rows = ChunkOffset{0})
-      : _monotonic_buffer_resource(),
-        _alloc(&_monotonic_buffer_resource),
+      : _alloc(get_buffer_manager_memory_resource()),
         _alloc_pin_guard(_alloc),
         _value_vectors(hana::replicate<hana::tuple_tag>(_alloc, hana::length(types))),
         _null_value_vectors(hana::replicate<hana::tuple_tag>(_alloc, hana::length(types))),
@@ -211,7 +210,6 @@ class TableBuilder {
   std::shared_ptr<Table> _table;
   ChunkOffset _estimated_rows_per_chunk;
 
-  MonotonicBufferResource _monotonic_buffer_resource;
   PolymorphicAllocator<size_t> _alloc;
   AllocatorPinGuard _alloc_pin_guard;
 

@@ -4,8 +4,8 @@
 #include <boost/container/small_vector.hpp>
 #include <set>
 #include <type_traits>
+#include "storage/buffer/buffer_manager.hpp"
 #include "storage/buffer/buffer_pool_allocator_observer.hpp"
-#include "storage/buffer/memory_resource.hpp"
 #include "storage/buffer/types.hpp"
 #include "storage/dictionary_segment.hpp"
 #include "storage/fixed_string_dictionary_segment.hpp"
@@ -22,59 +22,43 @@ namespace hyrise {
 template <AccessIntent accessIntent>
 struct PinnedFrames : public Noncopyable {
  public:
-  void add_pin(const FramePtr& frame) {
-    if (frame->is_invalid()) {
-      return;
+  void add_pin(const PageID page_id) {
+    _pins.push_back(page_id);
+    if constexpr (accessIntent == AccessIntent::Write) {
+      BufferManager::get().pin_for_write(page_id);
+    } else if constexpr (accessIntent == AccessIntent::Read) {
+      BufferManager::get().pin_for_read(page_id);
     }
-    _pins.push_back(frame);
-    get_buffer_manager_memory_resource()->pin(frame);
-    lock(frame);
-    // DebugAssert(frame->is_resident(), "Is resident");
   }
 
-  void remove_pin(const FramePtr& frame) {
-    auto it = std::find(_pins.begin(), _pins.end(), frame);
+  void remove_pin(const PageID page_id) {
+    auto it = std::find(_pins.begin(), _pins.end(), page_id);
     if (it != _pins.end()) {
-      get_buffer_manager_memory_resource()->unpin(frame, false);
-      unlock(frame);
+      if constexpr (accessIntent == AccessIntent::Write) {
+        BufferManager::get().unpin_for_write(page_id);
+      } else if constexpr (accessIntent == AccessIntent::Read) {
+        BufferManager::get().unpin_for_read(page_id);
+      }
       _pins.erase(it);
     }
   }
 
-  bool has_pinned(const FramePtr& frame) {
-    auto it = std::find(_pins.begin(), _pins.end(), frame);
+  bool has_pinned(const PageID page_id) {
+    auto it = std::find(_pins.begin(), _pins.end(), page_id);
     return it != _pins.end();
   }
 
-  void lock(const FramePtr& frame) {
-    if constexpr (accessIntent == AccessIntent::Read) {
-      // TODO frame->lock_shared();
-    } else if constexpr (accessIntent == AccessIntent::Write) {
-      // frame->lock_exclusive();
-    } else {
-      Fail("Not implemented.");
-    }
-  }
-
-  void unlock(const FramePtr& frame) {
-    if constexpr (accessIntent == AccessIntent::Read) {
-      // frame->unlock_shared();
-    } else if constexpr (accessIntent == AccessIntent::Write) {
-      // frame->unlock_exclusive();
-    } else {
-      Fail("Not implemented.");
-    }
-  }
-
   ~PinnedFrames() {
-    for (const auto& frame : _pins) {
-      get_buffer_manager_memory_resource()->unpin(frame, accessIntent == AccessIntent::Write);
-      unlock(frame);
+    for (const auto page_id : _pins) {
+      if constexpr (accessIntent == AccessIntent::Write) {
+        BufferManager::get().unpin_for_write(page_id);
+      } else if constexpr (accessIntent == AccessIntent::Read) {
+        BufferManager::get().unpin_for_read(page_id);
+      }
     }
   }
 
-  // TODO: Maybe change to other container, and make it concurrent, use boost flat_set for faster inserts and delets?
-  boost::container::small_vector<FramePtr, 5> _pins;
+  boost::container::small_vector<PageID, 5> _pins;
 };
 
 template <AccessIntent accessIntent>
@@ -91,20 +75,21 @@ struct FramePinGuard final : public PinnedFrames<accessIntent> {
 
   template <typename T, typename = std::enable_if_t<is_iterable<T>::value>>
   void add_vector_pins(const T& vector) {
-    vector.for_each_ptr([&](auto& ptr) { add_pin(ptr.get_frame()); });
+    const auto page_id = BufferManager::get().find_page(vector.data());
+    add_pin(page_id);
 
     // Ensure that all child frames are pinned for pmr_vector<pmr_string>
     if constexpr (std::is_same_v<std::remove_cv_t<T>, pmr_vector<pmr_string>>) {
       for (const auto& string : vector) {
-        const auto string_frame = string.begin().get_frame();
-        if (!string_frame) {
+        const auto string_page_id = BufferManager::get().find_page(string.data());
+        if (!string_page_id.valid()) {
           continue;
         }
 
-        if (has_pinned(string_frame) || string_frame->is_invalid()) {
+        if (has_pinned(string_page_id)) {
           continue;
         }
-        add_pin(string_frame);
+        add_pin(string_page_id);
       }
     }
   }
@@ -188,15 +173,15 @@ using WritePinGuard = FramePinGuard<AccessIntent::Write>;
 */
 class AllocatorPinGuard final : private Noncopyable {
   struct Observer final : public PinnedFrames<AccessIntent::Write>, public BufferPoolAllocatorObserver {
-    void on_allocate(const FramePtr& frame) override {
+    void on_allocate(const PageID page_id) override {
       // TODO: solve pinning issue
-      if (!has_pinned(frame)) {
-        add_pin(frame);
+      if (!has_pinned(page_id)) {
+        add_pin(page_id);
       }
     }
 
-    void on_deallocate(const FramePtr& frame) override {
-      // remove_pin(frame);
+    void on_deallocate(const PageID page_id) override {
+      remove_pin(page_id);
     }
   };
 

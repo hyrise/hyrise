@@ -3,8 +3,6 @@
 
 namespace hyrise {
 
-constexpr auto META_PAGE_SIZE = PageSizeType::KiB8;
-
 static SSDRegion::DeviceType find_device_type_or_fail(const std::filesystem::path& file_name) {
   if (std::filesystem::is_regular_file(file_name)) {
     return SSDRegion::DeviceType::REGULAR_FILE;
@@ -15,11 +13,11 @@ static SSDRegion::DeviceType find_device_type_or_fail(const std::filesystem::pat
   }
 }
 
-SSDRegion::SSDRegion(const std::filesystem::path& file_name, const uint64_t initial_num_bytes)
+SSDRegion::SSDRegion(const std::filesystem::path& file_name, const size_t max_bytes_per_size_type,
+                     const uint64_t initial_num_bytes)
     : _fd(open_file_descriptor(file_name)),
       _backing_file_name(file_name),
-      _end_position(0),
-      _page_directory(32),
+      _max_bytes_per_size_type(max_bytes_per_size_type),
       _device_type(find_device_type_or_fail(file_name)) {
   if (_device_type == DeviceType::REGULAR_FILE) {
     std::filesystem::resize_file(file_name, initial_num_bytes);
@@ -64,84 +62,44 @@ int SSDRegion::open_file_descriptor(const std::filesystem::path& file_name) {
   return fd;
 }
 
-void SSDRegion::write_page(FramePtr frame) {
-  const auto num_bytes = bytes_for_size_type(frame->size_type);
-  off_t page_pos;
-  {
-    std::lock_guard<std::mutex> lock(_page_directory_mutex);
-    if (frame->page_id < _page_directory.size()) {
-      page_pos = _end_position;
-      _end_position += num_bytes;
-      _page_directory[frame->page_id] = std::make_pair(page_pos, frame->size_type);
-    } else {
-      _page_directory.resize(frame->page_id + 1);  // TODO: Do that in constructor
-      page_pos = _page_directory[frame->page_id].first;
-    }
-  }
-  DebugAssert(reinterpret_cast<const std::uintptr_t>(frame->data) % PAGE_ALIGNMENT == 0,
+void SSDRegion::write_page(PageID page_id, std::byte* data) {
+  const auto num_bytes = bytes_for_size_type(page_id.size_type());
+  DebugAssert(reinterpret_cast<const std::uintptr_t>(data) % PAGE_ALIGNMENT == 0,
               "Destination is not properly aligned to 512");
-  DebugAssert(bytes_for_size_type(frame->size_type) >= PAGE_ALIGNMENT,
-              "SizeType needs to be larger than 512 for optimal SSD reads and writes");
-
-  // Using reinterpret_cast is necessary here. Even the C++ StdLib does it in their examples.
-  // TODO: Use multiple?
-  const auto result = pwrite(_fd, frame->data, num_bytes, page_pos);
+  // auto pos = _max_bytes_per_size_type * TODO
+  const auto result = pwrite(_fd, data, num_bytes, 0);
   if (result < 0) {
     const auto error = errno;
     Fail("Error while writing to SSDRegion: " + strerror(error));
   }
-  // TODO Needs flush
+  // TODO Needs flush?
 }
 
-void SSDRegion::read_page(FramePtr frame) {
-  size_t num_bytes;
-  size_t page_pos;
-  {
-    std::lock_guard<std::mutex> lock(_page_directory_mutex);
-
-    if (frame->page_id >= _page_directory.size()) {
-      Fail("PageId cannot be found in page directory");
-    }
-
-    num_bytes = bytes_for_size_type(frame->size_type);
-    DebugAssert(frame->size_type == _page_directory[frame->page_id].second, "Should have the same size type");
-    page_pos = _page_directory[frame->page_id].first;
-  }
-  DebugAssert(reinterpret_cast<std::uintptr_t>(frame->data) % PAGE_ALIGNMENT == 0,
+void SSDRegion::read_page(PageID page_id, std::byte* data) {
+  const auto num_bytes = bytes_for_size_type(page_id.size_type());
+  DebugAssert(reinterpret_cast<std::uintptr_t>(data) % PAGE_ALIGNMENT == 0,
               "Destination is not properly aligned to 512");
-  DebugAssert(bytes_for_size_type(frame->size_type) >= PAGE_ALIGNMENT,
-              "SizeType needs to be larger than 512 for optimal SSD reads and writes");
 
   // Using reinterpret_cast is necessary here. Even the C++ StdLib does it in their examples.
-  const auto result = pread(_fd, frame->data, num_bytes, page_pos);
+  const auto result = pread(_fd, data, num_bytes, 0);
   if (result < 0) {
     const auto error = errno;
     Fail("Error while reading from SSDRegion: " + strerror(error));
   }
 }
 
-void SSDRegion::allocate(const PageID page_id, const PageSizeType size_type) {
-  std::lock_guard<std::mutex> lock(_page_directory_mutex);
-
-  if (page_id >= _page_directory.size()) {
-    _page_directory.resize(page_id + 1);
-  }
-  const auto page_pos = _end_position;
-  _end_position += bytes_for_size_type(size_type);
-  _page_directory[page_id] = std::make_pair(page_pos, size_type);
-}
-
-std::optional<PageSizeType> SSDRegion::get_size_type(const PageID page_id) {
-  std::lock_guard<std::mutex> lock(_page_directory_mutex);
-
-  if (page_id < _page_directory.size()) {
-    return _page_directory[page_id].second;
-  }
-  return std::nullopt;
-}
-
 size_t SSDRegion::memory_consumption() const {
-  return _page_directory.capacity() * sizeof(decltype(_page_directory)::value_type);
+  return 0;  // TODO
+}
+
+SSDRegion& SSDRegion::operator=(SSDRegion&& other) noexcept {
+  if (&other != this) {
+    _fd = std::move(other._fd);
+    _max_bytes_per_size_type = other._max_bytes_per_size_type;
+    _backing_file_name = std::move(other._backing_file_name);
+    _device_type = other._device_type;
+  }
+  return *this;
 }
 
 std::filesystem::path SSDRegion::get_file_name() {

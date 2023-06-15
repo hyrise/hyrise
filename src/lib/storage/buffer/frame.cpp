@@ -2,146 +2,100 @@
 
 namespace hyrise {
 
-bool Frame::can_evict() const {
-  return is_resident() && !is_pinned();
+// TODO: Memory order
+
+Frame::Frame() {
+  _state_and_version.store(update_state_with_same_version(0, EVICTED));
 }
 
-void Frame::try_set_dirty(const bool new_dirty) {
-  bool expected = dirty.load();
-  bool desired = expected | new_dirty;
-  while (!dirty.compare_exchange_strong(expected, desired)) {
-    expected = dirty.load();
-    desired = expected | new_dirty;
-  }
+void Frame::set_memory_node(const NumaMemoryNode memory_node) {
+  DebugAssert(state(_state_and_version.load()) == LOCKED, "Frame must be locked to set memory node.");
+  _state_and_version |= MEMORY_NODE_MASK & (static_cast<size_t>(memory_node) << MEMORY_NODE_SHIFT);
 }
 
-bool Frame::is_resident() const {
-  DebugAssert(state.load() != State::Resident || data != nullptr,
-              "Frame::is_resident() called on frame with data == nullptr");
-  return state.load() == State::Resident;
-}
-
-bool Frame::is_invalid() const {
-  return page_type == PageType::Invalid;
-}
-
-bool Frame::is_pinned() const {
-  return pin_count.load() > 0;
+void Frame::set_dirty(const bool new_dirty) {
+  DebugAssert(state(_state_and_version.load()) == LOCKED, "Frame must be locked to set dirty flag.");
+  _state_and_version |= DIRTY_MASK & (new_dirty << DIRTY_SHIFT);
 }
 
 void Frame::set_evicted() {
-  state.store(State::Evicted);
+  DebugAssert(state(_state_and_version.load()) == MARKED, "Frame must be marked to set evicted flag.");
+  _state_and_version.store(update_state_with_increment_version(_state_and_version.load(), EVICTED));
 }
 
-void Frame::set_resident() {
-  state.store(State::Resident);
+bool Frame::try_mark(StateVersionType old_state_and_version) {
+  DebugAssert(state(_state_and_version.load()) == UNLOCKED, "Frame must be unlocked to mark.");
+  return _state_and_version.compare_exchange_strong(old_state_and_version,
+                                                    update_state_with_same_version(old_state_and_version, MARKED));
 }
 
-void Frame::set_referenced() {
-  referenced.store(true);
+bool Frame::is_dirty() const {
+  return (_state_and_version.load() & DIRTY_MASK) >> DIRTY_SHIFT;
 }
 
-bool Frame::try_second_chance_evictable() {
-  auto was_referenced = referenced.exchange(false);
-  return !was_referenced;
+StateVersionType Frame::state(StateVersionType state_and_version) {
+  return state_and_version & STATE_MASK >> STATE_SHIFT;
 }
 
-void Frame::copy_data_to(const FramePtr& target_frame) const {
-  const auto num_bytes = bytes_for_size_type(size_type);
-  DebugAssert(target_frame->size_type == size_type, "Frame::copy_data_to() called with different size types");
-  std::memcpy(target_frame->data, data, num_bytes);
+StateVersionType Frame::version(StateVersionType state_and_version) {
+  return state_and_version & VERSION_MASK;
 }
 
-template <PageType clone_page_type>
-FramePtr Frame::clone_and_attach_sibling() {
-  DebugAssert(page_type != clone_page_type, "Frame::clone_and_attach_sibling() called with same page type");
-  DebugAssert(sibling_frame == nullptr,
-              "Frame::clone_and_attach_sibling() called on frame with sibling_frame != nullptr");
-  auto new_frame = make_frame(page_id, size_type, clone_page_type);
-  sibling_frame = new_frame.get();
-  new_frame->sibling_frame = this;
-  return new_frame;
+StateVersionType Frame::state_and_version() const {
+  return _state_and_version.load();
 }
 
-template FramePtr Frame::clone_and_attach_sibling<PageType::Dram>();
-template FramePtr Frame::clone_and_attach_sibling<PageType::Numa>();
-
-void Frame::clear() {
-  state.store(State::Evicted);
-  dirty.store(false);
-  pin_count.store(0);
-  data = nullptr;
-  referenced = true;
-  eviction_timestamp.store(0);
+NumaMemoryNode Frame::memory_node() const {
+  return static_cast<NumaMemoryNode>((_state_and_version.load() & MEMORY_NODE_MASK) >> MEMORY_NODE_SHIFT);
 }
 
-void Frame::pin() {
-  pin_count.fetch_add(1, std::memory_order_relaxed);
+bool Frame::try_lock_shared(StateVersionType old_state_and_version) {
+  auto old_state = state(old_state_and_version);
+  if (old_state < LOCKED_SHARED) {
+    return _state_and_version.compare_exchange_strong(
+        old_state_and_version, update_state_with_same_version(old_state_and_version, old_state + 1));
+  }
+  if (old_state == MARKED) {
+    return _state_and_version.compare_exchange_strong(old_state_and_version,
+                                                      update_state_with_same_version(old_state_and_version, 1));
+  }
+  return false;
 }
 
-bool Frame::unpin() {
-  auto old_pin_count = pin_count.fetch_sub(1, std::memory_order_relaxed);
-  DebugAssert(old_pin_count > 0, "Frame::unpin() called on frame with pin_count == 0");
-  return old_pin_count == 1;
+bool Frame::try_lock_exclusive(StateVersionType old_state_and_version) {
+  return _state_and_version.compare_exchange_strong(old_state_and_version,
+                                                    update_state_with_same_version(old_state_and_version, LOCKED));
 }
 
-void Frame::wait_until_unpinned() const {
-  constexpr auto max_retries = 10000;
-  auto retries = size_t{0};
-  while (is_pinned()) {
-    ++retries;
-    std::this_thread::yield();
-    if (retries > max_retries) {
-      Fail("Frame::wait_until_unpinned() timed out");
+void Frame::unlock_shared() {
+  while (true) {
+    auto old_state_and_version = _state_and_version.load();
+    auto old_state = state(old_state_and_version);
+    DebugAssert(old_state > 0 && old_state <= LOCKED_SHARED, "Frame must be locked shared to unlock shared.");
+    if (_state_and_version.compare_exchange_strong(
+            old_state_and_version, update_state_with_same_version(old_state_and_version, old_state - 1))) {
+      return;
     }
   }
 }
 
-bool Frame::is_referenced() const {
-  return referenced.load();
+void Frame::unlock_exclusive() {
+  _state_and_version.store(update_state_with_increment_version(_state_and_version.load(), UNLOCKED),
+                           std::memory_order_release);
 }
 
-void Frame::increase_ref_count() {
-  _ref_count.fetch_add(1, std::memory_order_relaxed);
+StateVersionType Frame::update_state_with_same_version(StateVersionType old_version_and_state,
+                                                       StateVersionType new_state) {
+  constexpr auto SHIFT = NUM_BITS - STATE_SHIFT;
+  static_assert(SHIFT == 8, "Shift must be 8.");
+  return (old_version_and_state << SHIFT) >> SHIFT | (new_state << STATE_SHIFT);
 }
 
-void Frame::decrease_ref_count() {
-  _ref_count.fetch_sub(1, std::memory_order_relaxed);
-}
-
-bool Frame::is_dirty() const {
-  return dirty.load();
-}
-
-Frame::~Frame() {
-#ifdef HYRISE_DEBUG
-  if (is_resident()) {
-    std::cout << "WARNING: Frame was removed without eviction" << std::endl;  // TODO
-  }
-#endif
-  //TODO DebugAssert(!is_resident(), "Frame was deleted while still resident");
-}
-
-// Friend function used by the FramePtr intrusive_ptr to increase the ref_count. This functions should not be called directly.
-// inline void intrusive_ptr_add_ref(Frame* frame) {
-//   DebugAssert(frame != nullptr, "Frame is nullptr");
-//   frame->_ref_count.fetch_add(1, std::memory_order_release);
-// }
-
-// // Friend function used by the FramePtr intrusive_ptr to decrease the ref_count. This functions also avoids circular dependencies between the sibling frame.This functions should not be called directly.
-// inline void intrusive_ptr_release(Frame* frame) {
-//   DebugAssert(frame != nullptr, "Frame is nullptr");
-
-//   // TODO: Handle reference count with sibling frame
-//   if (frame->_ref_count.fetch_sub(1, std::memory_order_release) == 1) {
-//     // Source: https://www.boost.org/doc/libs/1_61_0/doc/html/atomic/usage_examples.html
-//     std::atomic_thread_fence(std::memory_order_acquire);
-//     delete frame;
-//   }
-// }
-
-std::size_t Frame::_internal_ref_count() const {
-  return _ref_count.load();
+StateVersionType Frame::update_state_with_increment_version(StateVersionType old_version_and_state,
+                                                            StateVersionType new_state) {
+  constexpr auto SHIFT = NUM_BITS - STATE_SHIFT;
+  static_assert(SHIFT == 8, "Shift must be 8.");
+  return ((old_version_and_state << SHIFT) >> SHIFT) + 1 | (new_state << STATE_SHIFT);
 }
 
 }  // namespace hyrise

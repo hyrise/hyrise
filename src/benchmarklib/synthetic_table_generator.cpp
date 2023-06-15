@@ -20,7 +20,6 @@
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/topology.hpp"
 #include "statistics/generate_pruning_statistics.hpp"
-#include "storage/buffer/buffer_ptr.hpp"
 #include "storage/buffer/pin_guard.hpp"
 #include "storage/chunk.hpp"
 #include "storage/chunk_encoder.hpp"

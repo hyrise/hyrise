@@ -93,7 +93,7 @@ void export_value(std::ofstream& ofstream, const T& value) {
 
 void export_compact_vector(std::ofstream& ofstream, const pmr_compact_vector& values) {
   export_value(ofstream, static_cast<uint8_t>(values.bits()));
-  ofstream.write(reinterpret_cast<const char*>(values.get().get()), static_cast<int64_t>(values.bytes()));
+  ofstream.write(reinterpret_cast<const char*>(values.get()), static_cast<int64_t>(values.bytes()));
 }
 
 }  // namespace

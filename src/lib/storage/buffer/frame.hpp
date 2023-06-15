@@ -1,141 +1,60 @@
 #pragma once
 
 #include <atomic>
-#include <shared_mutex>
-#include "storage/buffer/hybrid_latch.hpp"
+#include <bit>
 #include "storage/buffer/types.hpp"
-#include "utils/assert.hpp"
 
 namespace hyrise {
 
-// TODO: Potential improvements: pin_count -1 -> evicted
-// TODO: Merge, diry, reference etc. into a single state variable
+// TODO: memory order
 
-class Frame : public HybridLatch {
+class Frame {
  public:
-  enum class State { Evicted, Resident };
+  static constexpr StateVersionType UNLOCKED = 0;
+  static constexpr StateVersionType LOCKED_SHARED = 252;
+  static constexpr StateVersionType LOCKED = 253;
+  static constexpr StateVersionType MARKED = 254;
+  static constexpr StateVersionType EVICTED = 255;
 
-  const PageSizeType size_type;
-  const PageType page_type;
-  const PageID page_id;
+  Frame();
 
-  explicit Frame(const PageID page_id, const PageSizeType size_type, const PageType page_type,
-                 std::byte* data = nullptr)
-      : page_id(page_id), size_type(size_type), page_type(page_type), data(data) {}
-
-  ~Frame();
-  // State variables
-  std::atomic_uint32_t pin_count{0};
-  std::atomic<State> state;
-  std::atomic_bool dirty{false};
-
-  // Reference bit that is used for second chance eviction
-  std::atomic_bool referenced{false};
-
-  // Used for eviction_queue
-  std::atomic_uint64_t eviction_timestamp{0};
-
-  // Pointer to raw data in volatile region
-  std::byte* data;
-
-  // Pointer to the sibling frame. This can be a DRAM frame or a NUMA frame.
-  FramePtr sibling_frame;
-
-  // Check if the frame can be evicted based on its state
-  bool can_evict() const;
-
-  // Set the frame to evicted state
-  void set_evicted();
-
-  // Try setting the dirty flag. It won't be reset if it is already set.
-  void try_set_dirty(const bool new_dirty);
-
-  // Check if the frame is resident
-  bool is_resident() const;
-
-  // Set the frame to resident state
-  void set_resident();
-
-  // Check if the frame is pinned
-  bool is_pinned() const;
-
-  // Check if the frame is invalid (e.g. for a dummy frame)
-  bool is_invalid() const;
-
-  // Check if the frame is dirty
+  // Flags and metadata
+  void set_memory_node(const NumaMemoryNode memory_node);
+  void set_dirty(const bool new_dirty);
   bool is_dirty() const;
+  NumaMemoryNode memory_node() const;
 
-  // Clear the frame
-  void clear();
+  // State transitions
+  void set_evicted();
+  bool try_mark(StateVersionType old_state_and_version);
+  bool try_lock_shared(StateVersionType old_state_and_version);
+  bool try_lock_exclusive(StateVersionType old_state_and_version);
+  void unlock_shared();
+  void unlock_exclusive();
 
-  // Pin the frame
-  void pin();
-
-  // Unpin the frame and return true if the frame is now unpinned. Otherwise return false.
-  bool unpin();
-
-  // Wait until the frame is unpinned. This yield the current threads and throws an exception after a fixed timout
-  void wait_until_unpinned() const;
-
-  // Check if the frame is evictable and if it is, set the reference bit to false and return true. Otherwise return
-  bool try_second_chance_evictable();
-
-  // Set the reference bit to true
-  void set_referenced();
-
-  // Check if the reference bit is set
-  bool is_referenced() const;
-
-  // Manually increase the reference count. This function is only cautionary used on the BufferPoolAllocator
-  void increase_ref_count();
-
-  // Manually decrease the reference count. This function is only cautionary used on the BufferPoolAllocator
-  void decrease_ref_count();
-
-  // Returns the internal reference count. This function should only be used for testing and debugging purposes.
-  std::size_t _internal_ref_count() const;
-
-  // Clone the frame and attach it as sibling. A NUMA frame gets a DRAM frame and visa-versa TODO: atomically?
-  template <PageType clone_page_type>
-  FramePtr clone_and_attach_sibling();
-
-  // Copy the data from the source frame to the target frame using memcpy
-  void copy_data_to(const FramePtr& target_frame) const;
+  // State and version helper
+  StateVersionType state_and_version() const;
+  static StateVersionType state(StateVersionType state_and_version);
+  static StateVersionType version(StateVersionType state_and_version);
 
  private:
-  // Friend function used by the FramePtr intrusive_ptr to increase the ref_count. This functions should not be called directly.
-  // friend void intrusive_ptr_add_ref(Frame* frame);
+  //clang-format off
+  static constexpr uint64_t MEMORY_NODE_MASK = 0x000F000000000000;
+  static constexpr uint64_t DIRTY_MASK = 0x00F0000000000000;
+  static constexpr uint64_t STATE_MASK = 0xFF00000000000000;
+  static constexpr uint64_t VERSION_MASK = 0x0000FFFFFFFFFFFF;
+  //clang-format on
 
-  // // Friend function used by the FramePtr intrusive_ptr to decrease the ref_count. This functions also avoids circular dependencies between the sibling frame.This functions should not be called directly.
-  // friend void intrusive_ptr_release(Frame* frame);
+  static constexpr uint64_t NUM_BITS = sizeof(StateVersionType) * CHAR_BIT;
+  static constexpr uint64_t MEMORY_NODE_SHIFT = std::countr_zero(MEMORY_NODE_MASK);
+  static constexpr uint64_t DIRTY_SHIFT = std::countr_zero(DIRTY_MASK);
+  static constexpr uint64_t STATE_SHIFT = std::countr_zero(STATE_MASK);
 
-  friend void intrusive_ptr_add_ref(Frame* frame) {
-    DebugAssert(frame != nullptr, "Frame is nullptr");
-    frame->_ref_count.fetch_add(1, std::memory_order_release);
-  }
+  StateVersionType update_state_with_same_version(StateVersionType old_version_and_state, StateVersionType new_state);
+  StateVersionType update_state_with_increment_version(StateVersionType old_version_and_state,
+                                                       StateVersionType new_state);
 
-  // Friend function used by the FramePtr intrusive_ptr to decrease the ref_count. This functions also avoids circular dependencies between the sibling frame.This functions should not be called directly.
-  friend void intrusive_ptr_release(Frame* frame) {
-    DebugAssert(frame != nullptr, "Frame is nullptr");
-
-    // TODO: Handle reference count with sibling frame
-    if (frame->_ref_count.fetch_sub(1, std::memory_order_release) == 1) {
-      // Source: https://www.boost.org/doc/libs/1_61_0/doc/html/atomic/usage_examples.html
-      std::atomic_thread_fence(std::memory_order_acquire);
-      delete frame;
-    }
-  }
-
-  // Current reference count of the frame
-  std::atomic_uint32_t _ref_count;
+  std::atomic<StateVersionType> _state_and_version;
 };
-
-template <typename... Args>
-FramePtr make_frame(Args&&... args) {
-  return FramePtr(new Frame(std::forward<Args>(args)...));
-}
-
-// void intrusive_ptr_add_ref(Frame* frame);
-// void intrusive_ptr_release(Frame* frame);
 
 }  // namespace hyrise

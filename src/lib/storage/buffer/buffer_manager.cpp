@@ -1,16 +1,66 @@
 #include "buffer_manager.hpp"
+#include <sys/mman.h>
+#include <unistd.h>
 #include <algorithm>
 #include <chrono>
 #include <fstream>
 #include <nlohmann/json.hpp>
 #include <utility>
 #include "hyrise.hpp"
-#include "storage/buffer/buffer_ptr.hpp"
 #include "storage/buffer/ssd_region.hpp"
 #include "storage/buffer/volatile_region.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {
+
+//----------------------------------------------------
+// Helper Functions for Memory Mapping and Yielding
+//----------------------------------------------------
+
+std::byte* create_mapped_region() {
+#ifdef __APPLE__
+  const int flags = MAP_PRIVATE | MAP_ANON | MAP_NORESERVE;
+#elif __linux__
+  const int flags = MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE;
+#endif
+  const auto mapped_memory =
+      static_cast<std::byte*>(mmap(NULL, DEFAULT_RESERVED_VIRTUAL_MEMORY, PROT_READ | PROT_WRITE, flags, -1, 0));
+#ifdef __linux__
+  madvise(_mapped_memory, num_bytes, MADV_DONTFORK);
+#endif
+
+  if (mapped_memory == MAP_FAILED) {
+    const auto error = errno;
+    Fail("Failed to map volatile pool region: " + strerror(errno));
+  }
+
+  return mapped_memory;
+}
+
+std::array<std::unique_ptr<VolatileRegion>, NUM_PAGE_SIZE_TYPES> create_volatile_regions(std::byte* mapped_region) {
+  DebugAssert(mapped_region != nullptr, "Region not properly mapped");
+  auto array = std::array<std::unique_ptr<VolatileRegion>, NUM_PAGE_SIZE_TYPES>{};
+  const auto num_bytes_per_region = DEFAULT_RESERVED_VIRTUAL_MEMORY / NUM_PAGE_SIZE_TYPES;
+  for (auto i = size_t{0}; i < NUM_PAGE_SIZE_TYPES; i++) {
+    array[i] = std::make_unique<VolatileRegion>(magic_enum::enum_value<PageSizeType>(i),
+                                                mapped_region + num_bytes_per_region * i,
+                                                mapped_region + num_bytes_per_region * (i + 1));
+  }
+
+  return array;
+}
+
+void unmap_region(std::byte* region) {
+  if (munmap(region, DEFAULT_RESERVED_VIRTUAL_MEMORY) < 0) {
+    const auto error = errno;
+    Fail("Failed to unmap volatile pool region: " + strerror(errno));
+  }
+}
+
+void yield() {
+  // TODO: Upgrade yield based on counter
+  std::this_thread::yield();
+};
 
 //----------------------------------------------------
 // Config
@@ -53,7 +103,8 @@ BufferManager::Config BufferManager::Config::from_env() {
         migration_policy_json.value("numa_write_ratio", config.migration_policy.get_numa_write_ratio())};
     config.enable_eviction_purge_worker =
         json.value("enable_eviction_purge_worker", config.enable_eviction_purge_worker);
-    config.numa_memory_node = json.value("numa_memory_node", config.numa_memory_node);
+    config.memory_node =
+        static_cast<NumaMemoryNode>(json.value("memory_node", static_cast<int8_t>(config.memory_node)));
     config.mode = magic_enum::enum_cast<BufferManagerMode>(json.value("mode", magic_enum::enum_name(config.mode)))
                       .value_or(config.mode);
     return config;
@@ -62,635 +113,306 @@ BufferManager::Config BufferManager::Config::from_env() {
   }
 }
 
-//----------------------------------------------------
-// Buffer Pools
-//----------------------------------------------------
+BufferManager::BufferManager() : BufferManager(Config::from_env()) {}
 
-BufferManager::BufferPools::BufferPools(const PageType page_type, const size_t pool_size,
-                                        const std::function<void(const FramePtr&)> evict_frame,
-                                        const bool enable_eviction_purge_worker,
-                                        const std::shared_ptr<BufferManager::Metrics> metrics,
-                                        const size_t numa_memory_node)
-    : _used_bytes(0),
-      enabled(_page_type != PageType::Invalid),
-      _evict_frame(evict_frame),
-      _max_bytes(pool_size),
-      _page_type(page_type),
+BufferManager::BufferManager(const Config config)
+    : _config(config),
+      _mapped_region(create_mapped_region()),
+      _metrics(std::make_shared<Metrics>()),
+      _volatile_regions(create_volatile_regions(_mapped_region)),
+      _ssd_region(config.ssd_path, 1 << 26),  // TODO
+      _primary_buffer_pool(config.dram_buffer_pool_size, config.enable_eviction_purge_worker, _volatile_regions,
+                           &_ssd_region, &_secondary_buffer_pool, DEFAULT_DRAM_NUMA_NODE),
+      _secondary_buffer_pool(config.dram_buffer_pool_size, config.enable_eviction_purge_worker, _volatile_regions,
+                             &_ssd_region, nullptr, config.memory_node) {}
 
-      _metrics(metrics) {
-  if (enabled) {
-    _eviction_queue = std::make_shared<EvictionQueue>();
-    _buffer_pools = create_volatile_regions_for_size_types(page_type, pool_size, numa_memory_node);
-    if (enable_eviction_purge_worker) {
-      _eviction_purge_worker = std::make_unique<PausableLoopThread>(IDLE_EVICTION_QUEUE_PURGE,
-                                                                    [&](size_t) { this->purge_eviction_queue(); });
-    }
-  }
+BufferManager::~BufferManager() {
+  unmap_region(_mapped_region);
 }
 
-BufferManager::BufferPools::~BufferPools() {
-  // TODO: Refactor mapped memory allocation
-  if (const auto& pool = _buffer_pools[0]) {
-    const auto num_bytes = _buffer_pools.size() * pool->total_bytes();
-    VolatileRegion::unmap_memory(pool->mapped_memory(), num_bytes);
+BufferManager& BufferManager::operator=(BufferManager&& other) noexcept {
+  if (&other != this) {
+    _metrics = other._metrics;
+    _config = std::move(other._config);
+    _volatile_regions = std::move(other._volatile_regions);
+    _ssd_region = std::move(_ssd_region);
+    _primary_buffer_pool = std::move(_primary_buffer_pool);
+    _secondary_buffer_pool = std::move(_secondary_buffer_pool);
+    std::swap(_mapped_region, other._mapped_region);
   }
-}
-
-BufferManager::BufferPools& BufferManager::BufferPools::operator=(BufferManager::BufferPools&& other) {
-  _used_bytes = other._used_bytes.load();
-  _max_bytes = other._max_bytes;
-  _page_type = other._page_type;
-  // _evict_frame = other._evict_frame;
-  enabled = other.enabled;
-  _metrics = other._metrics;
-  _buffer_pools = std::move(other._buffer_pools);
-  _eviction_purge_worker = std::move(other._eviction_purge_worker);
-  _eviction_queue = std::move(other._eviction_queue);
-
   return *this;
 }
 
-// TODO: Track purges, verifiy proper eviction, rename to evict until free
-void BufferManager::BufferPools::allocate_frame(FramePtr& frame) {
-  // Assume that the frame is freshly allocated or locked individually
-  DebugAssert(frame->page_type == _page_type, "Frame has wrong page type");
-  const auto required_size_type = frame->size_type;
-
-  // This potentially overshoots the _used_bytes to reserves space for the new frame.
-  // If this happens concurrently, we just continue evicting in each thread until we have enough space.
-  const auto bytes_required = bytes_for_size_type(required_size_type);
-  auto freed_bytes = size_t{0};
-  auto current_bytes = _used_bytes.fetch_add(bytes_required);
-
-  // Find potential victim frame if we don't have enough space left
-  auto item = EvictionItem{};
-  // TODO: Really need to convert to int64?
-
-  while (((int64_t)current_bytes + (int64_t)bytes_required - (int64_t)freed_bytes) > (int64_t)_max_bytes) {
-    if (!_eviction_queue->try_pop(item)) {
-      Fail(
-          "Cannot pop item from queue. All frames seems to be pinned. Please increase the memory size of this buffer "
-          "pool.");
-    }
-
-    auto current_frame = item.frame;
-
-    DebugAssert(current_frame != frame, "Frame is already in the queue");
-
-    // Lock the frame to prevent it from being modified while we are working on it
-    DebugAssert(current_frame->_internal_ref_count() > 0, "Frame has no references");
-
-    // Check if the frame can be evicted based on the timestamp, the state and the pin count
-    if (!item.can_evict()) {
-      continue;
-    }
-
-    // Check if the frame is second chance evictable. If not, just requeue it and remove the reference bit to give it another chance.
-    if (!current_frame->try_second_chance_evictable()) {
-      _eviction_queue->push(item);
-      continue;
-    }
-
-    if (current_frame->is_locked_exclusive()) {
-      // _eviction_queue->push(item);  // TODO: This might still faile
-      continue;
-    }
-    auto lock_guard = current_frame->create_exclusive_guard();
-    DebugAssert(current_frame->page_type == _page_type, "Frame has wrong page type");
-
-    // Call the callback to evict the frame. This is handled by the BufferManager instead of the BufferPool,
-    // because we need access other things for eviction.
-    _evict_frame(current_frame);
-
-    const auto current_frame_size_type = current_frame->size_type;
-    freed_bytes += bytes_for_size_type(current_frame_size_type);
-    current_bytes = _used_bytes.load();
-
-    if (current_frame_size_type == required_size_type) {
-      // If the evicted frame is of the same page type, we should just use it directly.
-      _buffer_pools[static_cast<size_t>(required_size_type)]->move(current_frame, frame);
-      break;
-    } else {
-      // Otherwise, release physical pages of the current frame and continue evicting
-      _buffer_pools[static_cast<size_t>(current_frame_size_type)]->free(current_frame);
-      if (_page_type == PageType::Dram) {
-        _metrics->num_madvice_free_calls_dram++;
-      } else if (_page_type == PageType::Numa) {
-        _metrics->num_madvice_free_calls_numa++;
-      } else {
-        Fail("Invalid page type");
-      }
-    }
-  }
-
-  // We need to subtract the freed bytes from the used bytes again,
-  // since we overshot the _used_bytes in the beginning.
-  _used_bytes -= freed_bytes;
-
-  // If we did not find a page of the correct size, we allocate a new one.
-  // We freed enough space in the previous steps.
-  if (!frame->data) {
-    _buffer_pools[static_cast<size_t>(required_size_type)]->allocate(frame);
-  }
-
-  add_to_eviction_queue(frame);
-  frame->set_resident();
+BufferManager& BufferManager::get() {
+  return Hyrise::get().buffer_manager;
 }
 
-void BufferManager::BufferPools::deallocate_frame(FramePtr& frame) {
-  // TODO: add_to_eviction_queue(frame); ?, might reduce madvie calls
-  DebugAssert(frame->page_type == _page_type, "Frame has wrong page type");
-  if (frame->is_resident()) {
-    auto lock_guard = frame->create_exclusive_guard();
-    const auto size_type = frame->size_type;
-    _buffer_pools[static_cast<size_t>(size_type)]->free(frame);
-    _used_bytes -= bytes_for_size_type(size_type);
-    if (_page_type == PageType::Dram) {
-      _metrics->num_madvice_free_calls_dram++;
-    } else if (_page_type == PageType::Numa) {
-      _metrics->num_madvice_free_calls_numa++;
-    } else {
-      Fail("Invalid page type");
-    }
-  }
-  frame->clear();
+void BufferManager::read_page(const PageID page_id) {
+  auto ptr = get_region(page_id).get_page(page_id);
+  _ssd_region.read_page(page_id, ptr);
 }
 
-void BufferManager::BufferPools::purge_eviction_queue() {
-  auto item = EvictionItem{};
+void BufferManager::write_page(const PageID page_id) {
+  auto ptr = get_region(page_id).get_page(page_id);
+  _ssd_region.write_page(page_id, ptr);
+}
 
-  // Copy pointer to eviction queue to ensure access safety when task is running, while the buffer manager
-  // was already destroyed
-  auto eviction_queue = _eviction_queue;
-  if (!eviction_queue) {
+void BufferManager::make_resident(const PageID page_id, const Frame* frame, const AccessIntent access_intent) {
+  DebugAssert(Frame::state(frame->state_and_version()) == Frame::LOCKED, "Frame needs to be locked in exclusive mode");
+  const auto is_on_dram_node = frame->memory_node() == DEFAULT_DRAM_NUMA_NODE;
+
+  // Check if we want to bypass the DRAM node
+  const auto bypass_dram =
+      (access_intent == AccessIntent::Read && _config.migration_policy.bypass_dram_during_read()) ||
+      (access_intent == AccessIntent::Write && _config.migration_policy.bypass_dram_during_write());
+
+  // Case 2: Check if we have another memory node
+  if (_config.memory_node == NO_NUMA_MEMORY_NODE) {
     return;
   }
+  // TODO
+  get_region(page_id).move_to_numa_node(page_id, NO_NUMA_MEMORY_NODE);
 
-  // TODO: Dellocate 0/1 counted frames here or somewhere else?
+  _primary_buffer_pool.free_pages(page_id.size_type());
+  read_page(page_id);
+}
 
-  for (auto i = size_t{0}; i < MAX_EVICTION_QUEUE_PURGES; i++) {
-    // Check if the queue is empty
-    if (!eviction_queue->try_pop(item)) {
-      break;
-    }
+void BufferManager::pin_for_read(const PageID page_id) {
+  const auto frame = get_region(page_id).get_frame(page_id);
 
-    // If frame is gone or the timestamp is outdated, we can purge the item
-    if (!item.can_evict()) {
-      if (_page_type == PageType::Dram) {
-        _metrics->num_dram_eviction_queue_items_purged++;
-      } else if (_page_type == PageType::Numa) {
-        _metrics->num_numa_eviction_queue_items_purged++;
-      } else {
-        Fail("Invalid page type");
+  while (true) {
+    auto state_and_version = frame->state_and_version();
+    switch (Frame::state(state_and_version)) {
+      case Frame::LOCKED: {
+        break;
       }
-      continue;
-    } else {
-      // If not, just requeue the item
-      eviction_queue->push(item);
-    }
-  }
-}
-
-void BufferManager::BufferPools::add_to_eviction_queue(const FramePtr& frame) {
-  DebugAssert(frame != nullptr, "Frame is null");
-  DebugAssert(frame->page_type == _page_type, "Frame has wrong page type");
-
-  // Insert the frame into the eviction queue with an updated timestamp
-  const auto timestamp_before_eviction = frame->eviction_timestamp++;
-  _eviction_queue->push({frame, timestamp_before_eviction + 1});
-  frame->set_referenced();
-
-  _metrics->num_dram_eviction_queue_adds++;
-}
-
-// Write clear method for BufferPools
-void BufferManager::BufferPools::clear() {
-  _used_bytes = 0;
-  _eviction_queue->clear();
-  for (auto& pool : _buffer_pools) {
-    pool->clear();
-  }
-}
-
-std::pair<Frame*, std::ptrdiff_t> BufferManager::BufferPools::ptr_to_frame(const void* ptr) {
-  const auto offset = reinterpret_cast<const std::byte*>(ptr) - _buffer_pools[0]->mapped_memory();
-  const auto region_idx = offset / _buffer_pools[0]->total_bytes();
-  const auto page_size = bytes_for_size_type(MIN_PAGE_SIZE_TYPE) * (1 << region_idx);
-  const auto region_offset = offset % _buffer_pools[0]->total_bytes();
-  const auto frame_idx = region_offset / page_size;
-  const auto page_offset = region_offset % page_size;
-
-  const auto frame_ptr = region_idx >= 0 && region_idx < _buffer_pools.size()
-                             ? _buffer_pools[region_idx]->frame_at_index(frame_idx)
-                             : nullptr;
-
-  return {frame_ptr, page_offset};
-}
-
-size_t BufferManager::BufferPools::memory_consumption() const {
-  auto result = size_t{0};
-  for (const auto& pool : _buffer_pools) {
-    result += pool ? pool->memory_consumption() : 0;
-  }
-  result += _eviction_queue ? _eviction_queue->unsafe_size() * sizeof(EvictionItem) + sizeof(EvictionQueue) : 0;
-  return result;
-}
-
-//----------------------------------------------------
-// Buffer Manager
-//----------------------------------------------------
-
-BufferManager::BufferManager(const Config config)
-    : _num_pages(0),
-      _config(config),
-      _migration_policy(config.migration_policy),
-      _ssd_region(std::make_shared<SSDRegion>(config.ssd_path)),
-      _metrics(std::make_shared<Metrics>()),
-      _dram_buffer_pools(page_type_for_dram_buffer_pools(config.mode), config.dram_buffer_pool_size,
-                         std::bind(&BufferManager::evict_frame, this, std::placeholders::_1),
-                         config.enable_eviction_purge_worker, _metrics, NO_NUMA_MEMORY_NODE),
-      _numa_buffer_pools(page_type_for_numa_buffer_pools(config.mode), config.numa_buffer_pool_size,
-                         std::bind(&BufferManager::evict_frame, this, std::placeholders::_1),
-                         config.enable_eviction_purge_worker, _metrics, config.numa_memory_node) {
-  Assert(_dram_buffer_pools.enabled || _numa_buffer_pools.enabled, "No Buffer Pool is enabled");
-}
-
-BufferManager::Config BufferManager::get_config() const {
-  return _config;
-}
-
-BufferManager::BufferManager() : BufferManager(Config::from_env()) {}
-
-FramePtr BufferManager::make_resident(FramePtr frame, const AccessIntent access_intent) {
-  // TODO: Retry mechanism for failed allocations or for optimistic locking
-
-  auto dram_frame = frame->page_type == PageType::Dram ? frame : frame->sibling_frame;
-  const auto is_dram_resident = dram_frame != nullptr && dram_frame->is_resident();
-
-  // Case 1: We passed a DRAM frame and it is already resident. This is the easy case.
-  // Case 2: We passed a NUMA frame and it has a sibling DRAM frame that is already resident. This is basically the same as case 1.
-  if (is_dram_resident) {
-    dram_frame->set_referenced();
-    return dram_frame;
-  }
-
-  auto numa_frame = frame->page_type == PageType::Numa ? frame : frame->sibling_frame;
-  const auto is_numa_resident = numa_frame != nullptr && numa_frame->is_resident();
-
-  // Case 3: The frame is not resident in DRAM at all, we need to decide if we want to bypass DRAM or not
-  if (_numa_buffer_pools.enabled) {
-    DebugAssert(dram_frame != numa_frame, "Both frames are the same");
-    // Check if we want to bypass DRAM and use the NUMA frame directly
-    const auto bypass_dram = (access_intent == AccessIntent::Read && _migration_policy.bypass_dram_during_read()) ||
-                             (access_intent == AccessIntent::Write && _migration_policy.bypass_dram_during_write());
-
-    if (is_numa_resident && bypass_dram) {
-      numa_frame->set_referenced();
-      return numa_frame;
-    } else if (!is_numa_resident && bypass_dram) {
-      const auto bypass_numa = (access_intent == AccessIntent::Read && _migration_policy.bypass_numa_during_read()) ||
-                               (access_intent == AccessIntent::Write && _migration_policy.bypass_numa_during_write());
-
-      if (!bypass_numa) {
-        if (!numa_frame) {
-          numa_frame = dram_frame->clone_and_attach_sibling<PageType::Numa>();
+      case Frame::EVICTED: {
+        if (frame->try_lock_exclusive(state_and_version)) {
+          make_resident(page_id, frame, AccessIntent::Read);
+          frame->unlock_exclusive();
         }
-        numa_frame->lock_exclusive();
-
-        DebugAssert(!numa_frame->is_resident(), "DRAM frame is already resident");
-        _numa_buffer_pools.allocate_frame(numa_frame);
-
-        numa_frame->pin();
-        read_page_from_ssd(numa_frame);
-        numa_frame->dirty = true;
-        numa_frame->unpin();
-
-        _numa_buffer_pools.add_to_eviction_queue(numa_frame);
-
-        numa_frame->unlock_exclusive();
-
-        return numa_frame;
+        break;
       }
-      // Else is handled with Case 4
-    } else if (is_numa_resident && !bypass_dram) {
-      if (!dram_frame) {
-        dram_frame = numa_frame->clone_and_attach_sibling<PageType::Dram>();
+      default: {
+        if (frame->try_lock_shared(state_and_version)) {
+          return;
+        }
+
+        break;
       }
-
-      numa_frame->wait_until_unpinned();
-
-      DebugAssert(!dram_frame->is_pinned(), "DRAM frame is already pinned");
-      numa_frame->lock_shared();
-      dram_frame->lock_exclusive();
-
-      _dram_buffer_pools.allocate_frame(dram_frame);
-
-      numa_frame->pin();
-      dram_frame->pin();
-
-      numa_frame->copy_data_to(dram_frame);
-
-      dram_frame->dirty = true;
-      dram_frame->unpin();
-      numa_frame->unpin();
-
-      _dram_buffer_pools.add_to_eviction_queue(dram_frame);
-      _numa_buffer_pools.add_to_eviction_queue(numa_frame);
-
-      numa_frame->unlock_shared();
-      dram_frame->unlock_exclusive();
-
-      return dram_frame;
     }
-    // !is_numa_resident && !bypass_dram is also handled with Case 4
-  }
-
-  // Case 4: Neither in DRAM nor in NUMA or not bypass DRAM --> we need to bring the page into DRAM
-  DebugAssert(dram_frame, "DRAM frame is not allocated");
-
-  dram_frame->lock_exclusive();
-
-  dram_frame->pin();
-  _dram_buffer_pools.allocate_frame(dram_frame);
-  read_page_from_ssd(dram_frame);
-  dram_frame->dirty = true;
-  dram_frame->unpin();
-  // _dram_buffer_pools.add_to_eviction_queue(dram_frame);
-  dram_frame->unlock_exclusive();
-
-  return dram_frame;
-}
-
-void BufferManager::evict_frame(const FramePtr& frame) {
-  DebugAssert(frame != nullptr, "Frame is null");
-  DebugAssert(frame->is_resident(), "Frame is not resident");
-  DebugAssert(!frame->is_pinned(), "Frame is still pinned");
-
-  // Case 1: The frame is not dirty and we don't need to do anything
-  if (!frame->dirty) {
-    frame->set_evicted();
-    return;
-  }
-
-  // Case 2: Numa buffer pools are disabled anyways, we can just write to SSD
-  if (!_numa_buffer_pools.enabled) {
-    frame->pin();
-    DebugAssert(frame->page_type == PageType::Dram, "Invalid page type");
-    write_page_to_ssd(frame);
-    frame->dirty = false;
-    frame->set_evicted();
-    frame->unpin();
-
-    return;
-  }
-
-  // Case 3: The frame is either a NUMA frame or a DRAM frame and we can bypass NUMA
-  const auto bypass_numa = _migration_policy.bypass_numa_during_write();
-  if (frame->page_type == PageType::Numa || (frame->page_type == PageType::Dram && bypass_numa)) {
-    frame->pin();
-    write_page_to_ssd(frame);
-    frame->dirty = false;
-    frame->set_evicted();
-    frame->unpin();
-    return;
-  }
-
-  // Case 4: The frame is a DRAM frame and we can't bypass NUMA. We need to copy the data to a NUMA frame
-  DebugAssert(frame->page_type == PageType::Dram, "Invalid page type");
-  auto numa_frame = frame->sibling_frame;
-  if (!numa_frame) {
-    numa_frame = frame->clone_and_attach_sibling<PageType::Numa>();
-  }
-  numa_frame->wait_until_unpinned();
-  DebugAssert(!numa_frame->dirty.load(), "NUMA frame is dirty");
-
-  auto lock_guard = numa_frame->create_exclusive_guard();
-
-  numa_frame->pin();
-  frame->pin();
-
-  if (!numa_frame->is_resident()) {
-    _numa_buffer_pools.allocate_frame(numa_frame);
-  }
-
-  frame->copy_data_to(numa_frame);
-
-  numa_frame->unpin();
-  frame->unpin();
-
-  numa_frame->try_set_dirty(true);
-  frame->dirty = false;
-  frame->set_evicted();
-
-  _numa_buffer_pools.add_to_eviction_queue(numa_frame);
-}
-
-void BufferManager::read_page_from_ssd(const FramePtr& frame) {
-  _ssd_region->read_page(frame);
-  const auto num_bytes = bytes_for_size_type(frame->size_type);
-  _metrics->total_bytes_copied_from_ssd += num_bytes;
-
-  if (frame->page_type == PageType::Dram) {
-    _metrics->total_bytes_copied_from_ssd_to_dram += num_bytes;
-  } else if (frame->page_type == PageType::Numa) {
-    _metrics->total_bytes_copied_from_ssd_to_numa += num_bytes;
-  } else {
-    Fail("Invalid page type");
+    yield();
   }
 }
 
-void BufferManager::write_page_to_ssd(const FramePtr& frame) {
-  _ssd_region->write_page(frame);
-  const auto num_bytes = bytes_for_size_type(frame->size_type);
-  _metrics->total_bytes_copied_to_ssd += num_bytes;
-  if (frame->page_type == PageType::Dram) {
-    _metrics->total_bytes_copied_from_dram_to_ssd += num_bytes;
-  } else if (frame->page_type == PageType::Numa) {
-    _metrics->total_bytes_copied_from_numa_to_ssd += num_bytes;
-  } else {
-    Fail("Invalid page type");
-  }
-}
-
-FramePtr BufferManager::new_frame(const PageSizeType size_type) {
-  const auto page_id = PageID{_num_pages++};
-
-  // TODO: We could just defer this to the first time the page is evicted
-  _ssd_region->allocate(page_id, size_type);
-
-  const auto use_dram =
-      !_numa_buffer_pools.enabled || (_dram_buffer_pools.enabled && !_migration_policy.bypass_dram_during_write());
-
-  if (use_dram) {
-    auto allocated_dram_frame = make_frame(page_id, size_type, PageType::Dram);
-    DebugAssert(allocated_dram_frame->_internal_ref_count() >= 1, "Frame should be referenced at least once");
-    _dram_buffer_pools.allocate_frame(allocated_dram_frame);
-    return allocated_dram_frame;
-  } else {
-    auto allocated_numa_frame = make_frame(page_id, size_type, PageType::Numa);
-    _numa_buffer_pools.allocate_frame(allocated_numa_frame);
-    return allocated_numa_frame;
-  }
-}
-
-void BufferManager::unpin(const FramePtr& frame, const bool dirty) {
-  if (frame->page_type == PageType::Dram) {
-    _metrics->current_pins_dram--;
-  } else if (frame->page_type == PageType::Numa) {
-    _metrics->current_pins_numa--;
-  } else {
-    Fail("Invalid page type");
-  }
-
-  frame->try_set_dirty(dirty);
-
-  // Add to eviction queue if the frame is not pinned anymore
-  const auto unpinned = frame->unpin();
-  if (unpinned) {
-    if (frame->page_type == PageType::Dram) {
-      _dram_buffer_pools.add_to_eviction_queue(frame);
-    } else if (frame->page_type == PageType::Numa) {
-      _numa_buffer_pools.add_to_eviction_queue(frame);
-    } else {
-      Fail("Invalid page type");
+void BufferManager::pin_for_write(const PageID page_id) {
+  const auto frame = get_region(page_id).get_frame(page_id);
+  // TODO: use counter instead of while(true)
+  while (true) {
+    auto state_and_version = frame->state_and_version();
+    switch (Frame::state(state_and_version)) {
+      case Frame::EVICTED: {
+        if (frame->try_lock_exclusive(state_and_version)) {
+          make_resident(page_id, frame, AccessIntent::Write);
+          return;
+        }
+        break;
+      }
+      case Frame::MARKED:
+      case Frame::UNLOCKED: {
+        if (frame->try_lock_exclusive(state_and_version)) {
+          return;
+        }
+        break;
+      }
+      default: {
+        yield();
+      }
     }
   }
 }
 
-void BufferManager::pin(const FramePtr& frame) {
-  if (!frame->is_resident()) {
-    make_resident(frame, AccessIntent::Read);
-  }
-  DebugAssert(frame->is_resident(), "Frame should be resident");
-  frame->set_referenced();
-  frame->pin();
+void BufferManager::unpin_for_read(const PageID page_id) {
+  auto frame = get_region(page_id).get_frame(page_id);
+  frame->unlock_shared();
+  add_to_eviction_queue(page_id, frame);
+}
 
-  if (frame->page_type == PageType::Dram) {
-    _metrics->current_pins_dram++;
-    _metrics->total_pins_dram++;
-  } else if (frame->page_type == PageType::Numa) {
-    _metrics->current_pins_numa++;
-    _metrics->total_pins_numa++;
+void BufferManager::unpin_for_write(const PageID page_id) {
+  auto frame = get_region(page_id).get_frame(page_id);
+  frame->unlock_exclusive();
+  add_to_eviction_queue(page_id, frame);
+}
+
+void BufferManager::set_dirty(const PageID page_id) {
+  get_region(page_id).get_frame(page_id)->set_dirty(true);
+}
+
+PageID BufferManager::find_page(const void* ptr) const {
+  const auto offset = reinterpret_cast<const std::byte*>(ptr) - _mapped_region;
+  const auto region_idx = offset / DEFAULT_RESERVED_VIRTUAL_MEMORY_PER_REGION;
+  const auto page_size =
+      bytes_for_size_type(MIN_PAGE_SIZE_TYPE) * (1 << region_idx);  // TODO: this might break if not exponential sizes
+  const auto region_offset = offset % DEFAULT_RESERVED_VIRTUAL_MEMORY_PER_REGION;
+  const auto page_idx = region_offset / page_size;
+  DebugAssert(region_idx < _volatile_regions.size(), "Region index out of bounds");
+
+  const auto size_type = magic_enum::enum_value<PageSizeType>(region_idx);
+  return PageID{size_type, static_cast<PageID::PageIDType>(page_idx)};
+}
+
+void BufferManager::add_to_eviction_queue(const PageID page_id, Frame* frame) {
+  if (frame->memory_node() == _primary_buffer_pool.memory_node) {
+    _primary_buffer_pool.add_to_eviction_queue(page_id, frame);
+  } else if (frame->memory_node() == _secondary_buffer_pool.memory_node) {
+    _secondary_buffer_pool.add_to_eviction_queue(page_id, frame);
   } else {
-    Fail("Invalid page type");
+    Fail("Cannot find buffer pool for given memory node");
   }
 }
 
-std::pair<Frame*, std::ptrdiff_t> BufferManager::find_frame_and_offset(const void* ptr) {
-  if (_dram_buffer_pools.enabled) {
-    auto frame = _dram_buffer_pools.ptr_to_frame(ptr);
-    if (frame.first != nullptr) {
-      frame.first->set_referenced();
-      return frame;
-    }
-  }
+void* BufferManager::do_allocate(std::size_t bytes, std::size_t alignment) {
+  const auto size_type = find_fitting_page_size_type(bytes);
+  // TODO: _migration_policy.bypass_dram_during_write());
 
-  if (_numa_buffer_pools.enabled) {
-    auto frame = _numa_buffer_pools.ptr_to_frame(ptr);
-    if (frame.first != nullptr) {
-      frame.first->set_referenced();
-      return frame;
-    }
-  }
-  return std::make_pair(&DUMMY_FRAME, 0);
-};
-
-BufferPtr<void> BufferManager::allocate(std::size_t bytes, std::size_t align) {
-  Assert(align <= PAGE_ALIGNMENT, "Alignment must be smaller than page size");
-
-  const auto page_size_type = find_fitting_page_size_type(bytes);
-
-  const auto frame = new_frame(page_size_type);
-
-  if (frame->page_type == PageType::Dram) {
-    _metrics->current_bytes_used_dram += bytes;
-    _metrics->total_unused_bytes_dram += bytes_for_size_type(page_size_type) - bytes;
-    _metrics->total_allocated_bytes_dram += bytes;
-  } else if (frame->page_type == PageType::Numa) {
-    _metrics->current_bytes_used_numa += bytes;
-    _metrics->total_unused_bytes_numa += bytes_for_size_type(page_size_type) - bytes;
-    _metrics->total_allocated_bytes_numa += bytes;
-  } else {
-    Fail("Invalid page type");
-  }
+  const auto memory_node = DEFAULT_DRAM_NUMA_NODE;
+  const auto ptr = _volatile_regions[static_cast<uint64_t>(size_type)]->allocate(memory_node);
+  // TODO: move toregion
 
   _metrics->num_allocs++;
-
-  // TODO: Remove. Leads to leaks
-  frame->increase_ref_count();
-  frame->increase_ref_count();
-  frame->increase_ref_count();
-  frame->increase_ref_count();
-  frame->increase_ref_count();
-
-  return BufferPtr<void>(frame.get(), 0, typename BufferPtr<void>::AllocTag{});
+  return ptr;
 }
 
-void BufferManager::deallocate(BufferPtr<void> ptr, std::size_t bytes, std::size_t align) {
-  //Fail("Not implemented");
-  // _metrics->num_deallocs++;
-  // auto shared_frame = ptr._shared_frame;
+void BufferManager::do_deallocate(void* p, std::size_t bytes, std::size_t alignment) {
+  const auto page_id = find_page(p);
+  _volatile_regions[static_cast<uint64_t>(page_id.size_type())]->deallocate(page_id);
+  _metrics->num_deallocs++;
+}
 
-  // if (!shared_frame) {
-  //   // TODO: This case happens with the MVCC data structures when running the filebased benchmark
-  //   return;
-  // }
+bool BufferManager::do_is_equal(const boost::container::pmr::memory_resource& other) const noexcept {
+  return this == &other;
+}
 
-  // // Deallocate the frames from their buffer pools and free some memory
-  // if (shared_frame->dram_frame) {
-  //   _metrics->current_pins_dram -= shared_frame->dram_frame->pin_count.load();  // TODO: Remove this later
-  //   _metrics->current_bytes_used_dram -= bytes;
-  //   _dram_buffer_pools.deallocate_frame(shared_frame->dram_frame);
-  // }
-
-  // if (shared_frame->numa_frame) {
-  //   _metrics->current_pins_numa -= shared_frame->numa_frame->pin_count.load();  // TODO: Remove this later
-  //   _metrics->current_bytes_used_numa -= bytes;
-  //   _numa_buffer_pools.deallocate_frame(shared_frame->numa_frame);
-  // }
+VolatileRegion& BufferManager::get_region(const PageID page_id) {
+  return *_volatile_regions[static_cast<uint64_t>(page_id.size_type())];
 }
 
 std::shared_ptr<BufferManager::Metrics> BufferManager::metrics() {
   return _metrics;
 }
 
-void BufferManager::reset_metrics() {
-  _metrics = std::make_shared<Metrics>();
-}
-
 size_t BufferManager::memory_consumption() const {
   // TODO: Fix number of frames
-  return _dram_buffer_pools.memory_consumption() + _numa_buffer_pools.memory_consumption() +
-         _ssd_region->memory_consumption() + _num_pages * sizeof(Frame);
+  //   const size_t volatile_regions_bytes = std::accumulate(_volatile_regions.begin(), _volatile_regions.end(),
+  //                                                         [](auto region) { return region->memory_consumption(); });
+  return 0;
 }
 
-void BufferManager::clear() {
-  _num_pages = 0;
-  _dram_buffer_pools.clear();
-  _numa_buffer_pools.clear();
-  _ssd_region = std::make_shared<SSDRegion>(_ssd_region->get_file_name());
+//----------------------------------------------------
+// Buffer Pool
+//----------------------------------------------------
+
+BufferManager::BufferPool::BufferPool(
+    const size_t pool_size, const bool enable_eviction_purge_worker,
+    std::array<std::unique_ptr<VolatileRegion>, NUM_PAGE_SIZE_TYPES>& volatile_regions, SSDRegion* ssd_region,
+    BufferPool* target_buffer_pool, const NumaMemoryNode memory_node)
+    : max_bytes(pool_size),
+      used_bytes(0),
+      volatile_regions(volatile_regions),
+      eviction_queue(std::make_unique<EvictionQueue>()),
+      memory_node(memory_node),
+      ssd_region(ssd_region),
+      target_buffer_pool(target_buffer_pool),
+      eviction_purge_worker(enable_eviction_purge_worker
+                                ? std::make_unique<PausableLoopThread>(IDLE_EVICTION_QUEUE_PURGE,
+                                                                       [&](size_t) { this->purge_eviction_queue(); })
+                                : nullptr) {}
+
+void BufferManager::BufferPool::purge_eviction_queue() {
+  Fail("TODO");
 }
 
-std::size_t BufferManager::numa_bytes_used() const {
-  return _numa_buffer_pools._used_bytes.load();
-}
-
-std::size_t BufferManager::dram_bytes_used() const {
-  return _dram_buffer_pools._used_bytes.load();
-}
-
-BufferManager& BufferManager::operator=(BufferManager&& other) {
-  // TODO: Think about swap
+BufferManager::BufferPool& BufferManager::BufferPool::operator=(BufferManager::BufferPool&& other) noexcept {
   if (&other != this) {
-    _num_pages = other._num_pages.load();
-    _dram_buffer_pools = std::move(other._dram_buffer_pools);
-    _numa_buffer_pools = std::move(other._numa_buffer_pools);
-    _ssd_region = other._ssd_region;
-    _migration_policy = std::move(other._migration_policy);
-    _metrics = other._metrics;
-    _config = other._config;
+    used_bytes = other.used_bytes.load();
+    max_bytes = other.max_bytes;
+    memory_node = other.memory_node;
+    eviction_purge_worker = std::move(other.eviction_purge_worker);
+    eviction_queue = std::move(other.eviction_queue);
+    volatile_regions = std::move(other.volatile_regions);
+    // ssd_region = std::move(other.ssd_region);
+    // TODO: ow about pool
   }
   return *this;
+}
+
+void BufferManager::BufferPool::add_to_eviction_queue(const PageID page_id, Frame* frame) {
+  auto current_state_and_version = frame->state_and_version();
+  DebugAssert(frame->memory_node() == memory_node, "Memory node mismatch");
+  frame->try_mark(current_state_and_version);
+  eviction_queue->push({page_id, Frame::version(current_state_and_version)});
+}
+
+void BufferManager::BufferPool::free_pages(const PageSizeType size) {
+  // TODO: Free at least 64 * PageSite bytes to reduce TLB shootdowns
+  const auto bytes_required = bytes_for_size_type(size);
+  auto freed_bytes = size_t{0};
+  auto current_bytes = used_bytes.fetch_add(bytes_required);
+
+  // Find potential victim frame if we don't have enough space left
+  auto item = EvictionItem{};
+
+  // TODO: Verify
+  while (current_bytes + bytes_required - freed_bytes > max_bytes) {
+    if (!eviction_queue->try_pop(item)) {
+      Fail(
+          "Cannot pop item from queue. All frames seems to be pinned. Please increase the memory size of this buffer "
+          "pool.");
+    }
+
+    auto& region = *volatile_regions[static_cast<uint64_t>(item.page_id.size_type())];
+    auto frame = region.get_frame(item.page_id);
+    auto current_state_and_version = frame->state_and_version();
+
+    // If the frame can be marked, this is hat we do
+    if (item.can_mark(current_state_and_version)) {
+      frame->try_mark(current_state_and_version);
+      continue;
+    }
+
+    if (!item.can_evict(current_state_and_version)) {
+      continue;
+    }
+
+    if (!frame->try_lock_exclusive(current_state_and_version)) {
+      continue;
+    }
+
+    DebugAssert(frame->memory_node() == memory_node, "Memory node mismatch");
+
+    const auto num_bytes = bytes_for_size_type(item.page_id.size_type());
+
+    if (target_buffer_pool) {
+      Fail("TODO");
+      // TODO: Migration policy
+      // Free into other pool??
+      // Or we just move to other numa node and unlock again
+      const auto target_memory_node = target_buffer_pool->memory_node;
+      region.move_to_numa_node(item.page_id, target_memory_node);
+      frame->unlock_exclusive();
+    } else {
+      // If we only have 2 tiers or if we are in the middle tier, we want to evict to disk
+      if (frame->is_dirty()) {
+        auto data = region.get_page(item.page_id);
+        ssd_region->write_page(item.page_id, data);
+      }
+      frame->set_evicted();
+    }
+    freed_bytes += num_bytes;
+    current_bytes -= used_bytes.load();
+  }
+
+  used_bytes.fetch_sub(freed_bytes);
 }
 
 }  // namespace hyrise

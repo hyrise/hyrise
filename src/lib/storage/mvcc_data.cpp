@@ -1,12 +1,15 @@
 #include "mvcc_data.hpp"
-
+#include <boost/container/pmr/global_resource.hpp>
 #include "storage/buffer/pin_guard.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {
 
 MvccData::MvccData(const size_t size, CommitID begin_commit_id)
-    : allocator(get_new_delete_memory_resource()), _begin_cids(allocator), _end_cids(allocator), _tids(allocator) {
+    : allocator(boost::container::pmr::new_delete_resource()),
+      _begin_cids(allocator),
+      _end_cids(allocator),
+      _tids(allocator) {
   DebugAssert(size > 0, "No point in having empty MVCC data, as it cannot grow");
   _begin_cids.resize(size, begin_commit_id);
   _end_cids.resize(size, MAX_COMMIT_ID);
