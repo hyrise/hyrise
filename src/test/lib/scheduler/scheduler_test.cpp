@@ -340,7 +340,7 @@ void merge_sort(Iterator first, Iterator last) {
   if (std::distance(first, last) == 1) {
     return;
   }
-  
+
   auto middle = first + (std::distance(first, last) / 2);
   auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
   tasks.emplace_back(std::make_shared<JobTask>([&]() { merge_sort(first, middle); }));
