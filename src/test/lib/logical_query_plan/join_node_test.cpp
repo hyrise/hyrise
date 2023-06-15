@@ -43,21 +43,11 @@ class JoinNodeTest : public BaseTest {
     _key_constraint_y = TableKeyConstraint{{_t_b_y->original_column_id}, KeyConstraintType::UNIQUE};
   }
 
-  std::shared_ptr<MockNode> _mock_node_a;
-  std::shared_ptr<MockNode> _mock_node_b;
-  std::shared_ptr<JoinNode> _inner_join_node;
-  std::shared_ptr<JoinNode> _semi_join_node, _semi_join_reduction_node;
-  std::shared_ptr<JoinNode> _anti_join_node;
-  std::shared_ptr<JoinNode> _cross_join_node;
-  std::shared_ptr<LQPColumnExpression> _t_a_a;
-  std::shared_ptr<LQPColumnExpression> _t_a_b;
-  std::shared_ptr<LQPColumnExpression> _t_a_c;
-  std::shared_ptr<LQPColumnExpression> _t_b_x;
-  std::shared_ptr<LQPColumnExpression> _t_b_y;
-  std::optional<TableKeyConstraint> _key_constraint_a;
-  std::optional<TableKeyConstraint> _key_constraint_b_c;
-  std::optional<TableKeyConstraint> _key_constraint_x;
-  std::optional<TableKeyConstraint> _key_constraint_y;
+  std::shared_ptr<MockNode> _mock_node_a, _mock_node_b, _mock_node_c;
+  std::shared_ptr<JoinNode> _inner_join_node, _semi_join_node, _semi_join_reduction_node, _anti_join_node,
+      _cross_join_node;
+  std::shared_ptr<LQPColumnExpression> _t_a_a, _t_a_b, _t_a_c, _t_b_x, _t_b_y, _t_b_z;
+  std::optional<TableKeyConstraint> _key_constraint_a, _key_constraint_b_c, _key_constraint_x, _key_constraint_y;
 };
 
 class JoinNodeMultiJoinModeTest : public JoinNodeTest, public ::testing::WithParamInterface<JoinMode> {};
@@ -79,20 +69,6 @@ TEST_F(JoinNodeTest, DescriptionSemiJoin) {
 
 TEST_F(JoinNodeTest, DescriptionAntiJoin) {
   EXPECT_EQ(_anti_join_node->description(), "[Join] Mode: AntiNullAsTrue [a = y]");
-}
-
-TEST_F(JoinNodeTest, OutputColumnExpressions) {
-  ASSERT_EQ(_cross_join_node->output_expressions().size(), 5u);
-  EXPECT_EQ(*_cross_join_node->output_expressions().at(0), *_t_a_a);
-  EXPECT_EQ(*_cross_join_node->output_expressions().at(1), *_t_a_b);
-  EXPECT_EQ(*_cross_join_node->output_expressions().at(2), *_t_a_c);
-  EXPECT_EQ(*_cross_join_node->output_expressions().at(3), *_t_b_x);
-  EXPECT_EQ(*_cross_join_node->output_expressions().at(4), *_t_b_y);
-
-  ASSERT_EQ(_semi_join_node->output_expressions().size(), 3u);
-  EXPECT_EQ(*_semi_join_node->output_expressions().at(0), *_t_a_a);
-  EXPECT_EQ(*_semi_join_node->output_expressions().at(1), *_t_a_b);
-  EXPECT_EQ(*_semi_join_node->output_expressions().at(2), *_t_a_c);
 }
 
 TEST_F(JoinNodeTest, HashingAndEqualityCheck) {
@@ -127,6 +103,15 @@ TEST_F(JoinNodeTest, Copy) {
   EXPECT_EQ(*_semi_join_node, *_semi_join_node->deep_copy());
   EXPECT_EQ(*_semi_join_reduction_node, *_semi_join_reduction_node->deep_copy());
   EXPECT_EQ(*_anti_join_node, *_anti_join_node->deep_copy());
+}
+
+TEST_F(JoinNodeTest, OutputColumnExpressionsCrossJoin) {
+  ASSERT_EQ(_cross_join_node->output_expressions().size(), 5u);
+  EXPECT_EQ(*_cross_join_node->output_expressions().at(0), *_t_a_a);
+  EXPECT_EQ(*_cross_join_node->output_expressions().at(1), *_t_a_b);
+  EXPECT_EQ(*_cross_join_node->output_expressions().at(2), *_t_a_c);
+  EXPECT_EQ(*_cross_join_node->output_expressions().at(3), *_t_b_x);
+  EXPECT_EQ(*_cross_join_node->output_expressions().at(4), *_t_b_y);
 }
 
 TEST_F(JoinNodeTest, OutputColumnExpressionsSemiJoin) {

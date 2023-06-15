@@ -1,7 +1,5 @@
 #pragma once
 
-#include <utility>
-
 #include "abstract_expression.hpp"
 
 namespace hyrise {
@@ -9,14 +7,14 @@ namespace hyrise {
 class AbstractLQPNode;
 
 /**
- * A LQPSubqueryExpression represents a subquery (think `a > (SELECT MIN(a) FROM ...`) used as part of an expression in
+ * An LQPSubqueryExpression represents a subquery (think `a > (SELECT MIN(a) FROM ...`) used as part of an expression in
  * an LQP.
  *
- * The Parameters of an LQPSubqueryExpression are equivalent to the correlated parameters of a nested SELECT in SQL.
+ * The parameters of an LQPSubqueryExpression are equivalent to the correlated parameters of a nested SELECT in SQL.
  * Parameters are passed in as two vectors `parameter_ids` and `parameter_expressions` that need to have the same
- * length. Each parameter_expression is assigned the ParameterID at the same index in parameter_ids. (Two separate
+ * length. Each parameter_expression is assigned the ParameterID at the same index in parameter_ids. Two separate
  * vectors are used instead of a vector of pairs so `parameter_expressions` can be passed to the AbstractExpression as
- * they are the `arguments` to the LQPSubqueryExpression.)
+ * they are the `arguments` of the LQPSubqueryExpression.
  *
  * Within the wrapped LQP, the parameter_expressions will be referenced using these ParameterIDs. This avoids pointers
  * from the wrapped LQP into the outer LQP (which would be a nightmare to maintain in deep_copy()).

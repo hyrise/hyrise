@@ -1,0 +1,54 @@
+{
+    "columns": [
+        {
+            "name": "c_custkey",
+            "nullable": false,
+            "type": "int"
+        },
+        {
+            "name": "c_name",
+            "nullable": false,
+            "type": "string"
+        },
+        {
+            "name": "c_address",
+            "nullable": false,
+            "type": "string"
+        },
+        {
+            "name": "c_city",
+            "nullable": false,
+            "type": "string"
+        },
+        {
+            "name": "c_nation",
+            "nullable": false,
+            "type": "string"
+        },
+        {
+            "name": "c_region",
+            "nullable": false,
+            "type": "string"
+        },
+        {
+            "name": "c_phone",
+            "nullable": false,
+            "type": "string"
+        },
+        {
+            "name": "c_mktsegment",
+            "nullable": false,
+            "type": "string"
+        }
+    ],
+    "config": {
+        "delimiter": "\n",
+        "delimiter_escape": "\\",
+        "escape": "\"",
+        "null_handling": "reject_null_strings",
+        "quote": "\"",
+        "reject_quoted_nonstrings": true,
+        "rfc_mode": true,
+        "separator": "|"
+    }
+}
