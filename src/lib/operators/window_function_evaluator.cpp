@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <array>
+#include <type_traits>
 #include <utility>
 
 #include "hyrise.hpp"
@@ -7,6 +8,7 @@
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
 #include "storage/value_segment.hpp"
+#include "utils/assert.hpp"
 #include "window_function_evaluator.hpp"
 
 namespace hyrise {
@@ -154,11 +156,23 @@ WindowFunctionEvaluator::PartitionedData WindowFunctionEvaluator::partition_and_
   return result;
 }
 
+template <typename T>
 void WindowFunctionEvaluator::compute_window_function(const PartitionedData& partitioned_data,
                                                       auto&& emit_computed_value) const {
-  (void)partitioned_data;
-  (void)emit_computed_value;
-  Fail("unimplemented");
+  Assert(_window_function_expression.window_function == WindowFunction::Rank,
+         "Only WindowFunction::Rank is supported.");
+
+  if constexpr (std::is_integral_v<T>) {
+    T current_rank = initial_rank;
+    const AllTypeVariant* previous_partition_value = nullptr;
+
+    for (const auto& [row_values, row_id] : partitioned_data) {
+      if (previous_partition_value && row_values[_partition_by_column_id] != *previous_partition_value)
+        current_rank = initial_rank;
+      emit_computed_value(row_id, current_rank++);
+      previous_partition_value = &row_values[_partition_by_column_id];
+    }
+  }
 }
 
 template <typename T>
