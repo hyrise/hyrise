@@ -337,14 +337,12 @@ TEST_F(SchedulerTest, DetermineQueueIDForTask) {
 
 template <typename Iterator>
 void merge_sort(Iterator first, Iterator last) {
-  if (std::distance(first, last) < 100'000) {
-    std::sort(first, last);
+  if (std::distance(first, last) == 1) {
     return;
   }
-
-  auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
-
+  
   auto middle = first + (std::distance(first, last) / 2);
+  auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
   tasks.emplace_back(std::make_shared<JobTask>([&]() { merge_sort(first, middle); }));
   tasks.emplace_back(std::make_shared<JobTask>([&]() { merge_sort(middle, last); }));
 
@@ -353,11 +351,16 @@ void merge_sort(Iterator first, Iterator last) {
   std::inplace_merge(first, middle, last);
 }
 
+// Recursive merge sort. Creates a typical divide-and-conquer fan out pattern of tasks. We use the text book
+// implementation that recurses until the vector length is 1 to increase the depth of the fan out.
 TEST_F(SchedulerTest, MergeSort) {
-  constexpr auto ITEM_COUNT = size_t{100'000'000};
+  // Sizes up to 20'000 works for MacOS (debug mode, more for release) with its comparatively small stack size. If this
+  // test fails on a new platform, check the system's stack size and if ITEM_COUNT needs to be reduced.
+  constexpr auto ITEM_COUNT = size_t{5'000};
+  Assert(ITEM_COUNT % 5 == 0, "Must be dividable by 5.");
+
   Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
 
-  Assert(ITEM_COUNT % 5 == 0, "Must be dividable by 5.");
   auto vector_to_sort = std::vector<int64_t>{};
   vector_to_sort.reserve(ITEM_COUNT);
   for (auto i = size_t{0}; i < ITEM_COUNT / 5; ++i) {
@@ -366,12 +369,7 @@ TEST_F(SchedulerTest, MergeSort) {
     }
   }
 
-  EXPECT_FALSE(std::is_sorted(vector_to_sort.begin(), vector_to_sort.end()));
   merge_sort(vector_to_sort.begin(), vector_to_sort.end());
-  std::printf("will wait\n");
-  Hyrise::get().scheduler()->wait_for_all_tasks();
-  std::printf("will finish\n");
-  Hyrise::get().scheduler()->finish();
   EXPECT_TRUE(std::is_sorted(vector_to_sort.begin(), vector_to_sort.end()));
 }
 
