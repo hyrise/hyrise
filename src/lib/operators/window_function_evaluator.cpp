@@ -132,6 +132,7 @@ WindowFunctionEvaluator::PartitionedData WindowFunctionEvaluator::partition_and_
   auto result = PartitionedData{};
   for (const auto& hash_partition : hash_partitioned_data) {
     for (const auto& row_info : hash_partition) {
+      // TODO(group): Don't include all cells here, but figure out what to keep in RelevantRowInformation and return that
       auto row_values = std::vector<AllTypeVariant>{};
       // TODO(group): Add Table::get_row(RowID)
       const auto chunk = input_table->get_chunk(row_info.row_id.chunk_id);
