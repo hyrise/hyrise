@@ -5,6 +5,7 @@
 #include <utility>
 #include <vector>
 
+#include "expression/window_function_expression.hpp"
 #include "abstract_read_only_operator.hpp"
 #include "all_type_variant.hpp"
 #include "concurrency/transaction_context.hpp"
@@ -35,6 +36,7 @@ class WindowFunctionEvaluator : public AbstractReadOnlyOperator {
 
   ColumnID _partition_by_column_id;
   ColumnID _order_by_column_id;
+  WindowFunctionExpression _window_function_expression;
 };
 
 }  // namespace hyrise

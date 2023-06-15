@@ -3,6 +3,7 @@
 #include <utility>
 
 #include "hyrise.hpp"
+#include "resolve_type.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
 #include "storage/value_segment.hpp"
@@ -18,15 +19,20 @@ const std::string& WindowFunctionEvaluator::name() const {
 std::shared_ptr<const Table> WindowFunctionEvaluator::_on_execute() {
   auto partitioned_data = partition_and_sort();
 
-  // TODO(group): need to know output type of window function
-  using T = int;
+  std::shared_ptr<const Table> result;
 
-  std::vector<ValueSegment<T>> result_segments(left_input_table()->chunk_count());
-  compute_window_function(partitioned_data, [&](RowID row_id, AllTypeVariant computed_value) {
-    result_segments[row_id.chunk_id][row_id.chunk_offset] = std::move(computed_value);
+  resolve_data_type(_window_function_expression.data_type(), [&](auto type) {
+    using T = typename decltype(type)::type;
+
+    std::vector<ValueSegment<T>> result_segments(left_input_table()->chunk_count());
+    compute_window_function<T>(partitioned_data, [&](RowID row_id, AllTypeVariant computed_value) {
+      result_segments[row_id.chunk_id][row_id.chunk_offset] = std::move(computed_value);
+    });
+
+    result = annotate_input_table(std::move(result_segments));
   });
 
-  return annotate_input_table(std::move(result_segments));
+  return result;
 }
 
 namespace {
