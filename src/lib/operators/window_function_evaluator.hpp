@@ -17,6 +17,8 @@ class WindowFunctionEvaluator : public AbstractReadOnlyOperator {
  public:
   using AbstractReadOnlyOperator::AbstractReadOnlyOperator;
 
+  static constexpr uint64_t initial_rank = 1;
+
   static constexpr uint8_t hash_partition_bits = 8;
   static constexpr size_t hash_partition_mask = (1u << hash_partition_bits) - 1;
   static constexpr uint32_t hash_partition_partition_count = 1u << hash_partition_bits;
@@ -30,6 +32,7 @@ class WindowFunctionEvaluator : public AbstractReadOnlyOperator {
   using PartitionedData = std::vector<std::pair<std::vector<AllTypeVariant>, RowID>>;
 
   PartitionedData partition_and_sort() const;
+  template <typename T>
   void compute_window_function(const PartitionedData& partitioned_data, auto&& emit_computed_value) const;
   template <typename T>
   std::shared_ptr<const Table> annotate_input_table(std::vector<ValueSegment<T>> segments_for_output_column) const;
