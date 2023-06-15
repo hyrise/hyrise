@@ -22,6 +22,7 @@ class Frame {
   void set_memory_node(const NumaMemoryNode memory_node);
   void set_dirty(const bool new_dirty);
   bool is_dirty() const;
+  void reset_dirty();
   NumaMemoryNode memory_node() const;
 
   // State transitions
@@ -31,11 +32,14 @@ class Frame {
   bool try_lock_exclusive(StateVersionType old_state_and_version);
   void unlock_shared();
   void unlock_exclusive();
+  bool is_unlocked() const;
 
   // State and version helper
   StateVersionType state_and_version() const;
   static StateVersionType state(StateVersionType state_and_version);
   static StateVersionType version(StateVersionType state_and_version);
+
+  void debug_print();
 
  private:
   //clang-format off

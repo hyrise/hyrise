@@ -2,6 +2,7 @@
 
 #include <tbb/concurrent_queue.h>
 #include <bit>
+#include <iostream>
 #include <limits>
 #include <magic_enum.hpp>
 #include "boost/integer/static_log2.hpp"
@@ -41,24 +42,33 @@ constexpr size_t PAGE_SIZE_TYPE_BITS = boost::static_log2<NUM_PAGE_SIZE_TYPES>::
 
 struct PageID {
   using PageIDType = uint64_t;
+  PageIDType _valid : 1;
   PageIDType _size_type : PAGE_SIZE_TYPE_BITS;
-  PageIDType index : (sizeof(PageIDType) * CHAR_BIT - PAGE_SIZE_TYPE_BITS);
+  PageIDType index : (sizeof(PageIDType) * CHAR_BIT - PAGE_SIZE_TYPE_BITS - 1);
 
   PageSizeType size_type() const {
     return magic_enum::enum_value<PageSizeType>(this->_size_type);
   }
 
   bool valid() const {
-    Fail("TODO");
+    return _valid;
   }
 
   auto operator<=>(const PageID&) const = default;
 
   PageID() = default;
 
-  PageID(const PageSizeType size_type, const PageIDType index)
-      : _size_type(static_cast<PageIDType>(size_type)), index(index) {}
+  constexpr PageID(const PageSizeType size_type, const PageIDType index, bool valid = true)
+      : _valid(valid), _size_type(static_cast<PageIDType>(size_type)), index(index) {}
 };
+
+inline std::ostream& operator<<(std::ostream& os, const PageID& page_id) {
+  os << "PageID(valid=" << page_id.valid() << ", size_type=" << magic_enum::enum_name(page_id.size_type())
+     << ", index=" << page_id.index << ")";
+  return os;
+}
+
+static constexpr PageID INVALID_PAGE_ID = PageID{MIN_PAGE_SIZE_TYPE, 0, false};
 
 // Signifies an invalid NUMA node (>= 0 is a valid node)
 constexpr auto NO_NUMA_MEMORY_NODE = NumaMemoryNode{-1};
@@ -123,7 +133,10 @@ struct EvictionItem {
 constexpr size_t MAX_EVICTION_QUEUE_PURGES = 1024;
 
 constexpr size_t DEFAULT_RESERVED_VIRTUAL_MEMORY = 1UL << 32;
-constexpr size_t DEFAULT_RESERVED_VIRTUAL_MEMORY_PER_REGION = DEFAULT_RESERVED_VIRTUAL_MEMORY / NUM_PAGE_SIZE_TYPES;
+
+constexpr size_t DEFAULT_RESERVED_VIRTUAL_MEMORY_PER_REGION = (DEFAULT_RESERVED_VIRTUAL_MEMORY / NUM_PAGE_SIZE_TYPES) /
+                                                              bytes_for_size_type(MAX_PAGE_SIZE_TYPE) *
+                                                              bytes_for_size_type(MAX_PAGE_SIZE_TYPE);
 
 constexpr size_t INITIAL_SLOTS_PER_REGION = 100000;  // TODO
 
@@ -147,5 +160,11 @@ enum BufferManagerMode {
 };
 
 boost::container::pmr::memory_resource* get_buffer_manager_memory_resource();
+
+inline void DebugAssertPageAligned(const void* data) {
+  DebugAssert(reinterpret_cast<std::uintptr_t>(data) % PAGE_ALIGNMENT == 0,
+              "Destination is not properly aligned to 512: " +
+                  std::to_string(reinterpret_cast<std::uintptr_t>(data) % PAGE_ALIGNMENT));
+}
 
 }  // namespace hyrise

@@ -444,11 +444,12 @@ set(
     storage/create_iterable_from_segment.ipp
     storage/buffer/buffer_manager.cpp
     storage/buffer/buffer_manager.hpp
+    storage/buffer/memory_resource.cpp
+    storage/buffer/memory_resource.hpp
     storage/buffer/buffer_pool_allocator.hpp
     storage/buffer/buffer_pool_allocator_observer.hpp
     storage/buffer/frame.cpp
     storage/buffer/frame.hpp
-    storage/buffer/hybrid_latch.hpp
     storage/buffer/pin_guard.hpp
     storage/buffer/migration_policy.cpp
     storage/buffer/migration_policy.hpp

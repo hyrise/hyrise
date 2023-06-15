@@ -162,6 +162,7 @@ class BufferManager : public boost::container::pmr::memory_resource, public Nonc
     std::atomic<size_t> used_bytes;
 
     SSDRegion* ssd_region;
+
     BufferPool* target_buffer_pool;
 
     // Eviction queue for frames that are not pinned

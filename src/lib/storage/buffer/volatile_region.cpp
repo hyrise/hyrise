@@ -15,6 +15,7 @@ VolatileRegion::VolatileRegion(const PageSizeType size_type, std::byte* region_s
       _size_type(size_type),
       _region_start(region_start),
       _region_end(region_end) {
+  DebugAssertPageAligned(region_start);
   DebugAssert(region_start < region_end, "Region is too small");
   DebugAssert((region_end - region_start) < DEFAULT_RESERVED_VIRTUAL_MEMORY, "Region start and end dont match");
   _free_slots.set();
@@ -58,7 +59,7 @@ std::byte* VolatileRegion::allocate(const NumaMemoryNode memory_node) {
     _free_slots.reset(idx);
   }
 
-  const auto page_id = PageID(_size_type, idx);
+  const auto page_id = PageID{_size_type, idx};
   move_to_numa_node(page_id, memory_node);
   auto ptr = get_page(page_id);
   return ptr;
@@ -66,7 +67,9 @@ std::byte* VolatileRegion::allocate(const NumaMemoryNode memory_node) {
 
 std::byte* VolatileRegion::get_page(PageID page_id) {
   const auto num_bytes = bytes_for_size_type(_size_type);
-  return _region_start + page_id.index * num_bytes;
+  auto data = _region_start + page_id.index * num_bytes;
+  DebugAssertPageAligned(data);
+  return data;
 }
 
 void VolatileRegion::deallocate(const PageID page_id) {

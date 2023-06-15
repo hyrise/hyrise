@@ -23,6 +23,9 @@ template <AccessIntent accessIntent>
 struct PinnedFrames : public Noncopyable {
  public:
   void add_pin(const PageID page_id) {
+    if (!page_id.valid() || has_pinned(page_id)) {
+      return;
+    }
     _pins.push_back(page_id);
     if constexpr (accessIntent == AccessIntent::Write) {
       BufferManager::get().pin_for_write(page_id);
@@ -32,15 +35,10 @@ struct PinnedFrames : public Noncopyable {
   }
 
   void remove_pin(const PageID page_id) {
-    auto it = std::find(_pins.begin(), _pins.end(), page_id);
-    if (it != _pins.end()) {
-      if constexpr (accessIntent == AccessIntent::Write) {
-        BufferManager::get().unpin_for_write(page_id);
-      } else if constexpr (accessIntent == AccessIntent::Read) {
-        BufferManager::get().unpin_for_read(page_id);
-      }
-      _pins.erase(it);
-    }
+    // auto it = std::find(_pins.begin(), _pins.end(), page_id);
+    // if (it != _pins.end()) {
+    //   _pins.erase(it);
+    // }
   }
 
   bool has_pinned(const PageID page_id) {
@@ -51,6 +49,7 @@ struct PinnedFrames : public Noncopyable {
   ~PinnedFrames() {
     for (const auto page_id : _pins) {
       if constexpr (accessIntent == AccessIntent::Write) {
+        BufferManager::get().set_dirty(page_id);
         BufferManager::get().unpin_for_write(page_id);
       } else if constexpr (accessIntent == AccessIntent::Read) {
         BufferManager::get().unpin_for_read(page_id);
@@ -175,13 +174,11 @@ class AllocatorPinGuard final : private Noncopyable {
   struct Observer final : public PinnedFrames<AccessIntent::Write>, public BufferPoolAllocatorObserver {
     void on_allocate(const PageID page_id) override {
       // TODO: solve pinning issue
-      if (!has_pinned(page_id)) {
-        add_pin(page_id);
-      }
+      add_pin(page_id);
     }
 
     void on_deallocate(const PageID page_id) override {
-      remove_pin(page_id);
+      // remove_pin(page_id);
     }
   };
 

@@ -12,11 +12,11 @@
 #include <boost/hana/zip_with.hpp>
 
 #include <boost/container/pmr/monotonic_buffer_resource.hpp>
+#include "hyrise.hpp"
 #include "resolve_type.hpp"
-#include "types.hpp"
-
 #include "storage/buffer/buffer_pool_allocator.hpp"
 #include "storage/buffer/pin_guard.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 
@@ -115,9 +115,8 @@ class TableBuilder {
   // types may contain std::optional<?>, which will result in a nullable column, otherwise columns are not nullable
   template <typename Names>
   TableBuilder(const ChunkOffset chunk_size, const boost::hana::tuple<DataTypes...>& types, const Names& names,
-               const ChunkOffset estimated_rows = ChunkOffset{0})
-      : _alloc(get_buffer_manager_memory_resource()),
-        _alloc_pin_guard(_alloc),
+               const PolymorphicAllocator<size_t>& allocator, const ChunkOffset estimated_rows = ChunkOffset{0})
+      : _alloc(allocator),
         _value_vectors(hana::replicate<hana::tuple_tag>(_alloc, hana::length(types))),
         _null_value_vectors(hana::replicate<hana::tuple_tag>(_alloc, hana::length(types))),
         _estimated_rows_per_chunk(std::min(estimated_rows, chunk_size)),
@@ -210,8 +209,7 @@ class TableBuilder {
   std::shared_ptr<Table> _table;
   ChunkOffset _estimated_rows_per_chunk;
 
-  PolymorphicAllocator<size_t> _alloc;
-  AllocatorPinGuard _alloc_pin_guard;
+  const PolymorphicAllocator<size_t>& _alloc;
 
   // _table->row_count() only counts completed chunks but we want the total number of rows added to this table builder
   size_t _row_count;

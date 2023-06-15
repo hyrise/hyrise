@@ -134,6 +134,9 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate
   dbgen_reset_seeds();
   dbgen_init_scale_factor(_scale_factor);
 
+  auto allocator = PolymorphicAllocator<size_t>{&Hyrise::get().linear_buffer_resource};
+  auto alloc_pin_guard = AllocatorPinGuard{allocator};
+
   const auto customer_count = static_cast<ChunkOffset>(tdefs[CUST].base * scale);
   const auto order_count = static_cast<ChunkOffset>(tdefs[ORDER].base * scale);
   const auto part_count = static_cast<ChunkOffset>(tdefs[PART].base * scale);
@@ -142,18 +145,21 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate
   const auto region_count = static_cast<ChunkOffset>(tdefs[REGION].base);
 
   // The `* 4` part is defined in the TPC-H specification.
-  TableBuilder customer_builder{_benchmark_config->chunk_size, customer_column_types, customer_column_names,
+  TableBuilder customer_builder{_benchmark_config->chunk_size, customer_column_types, customer_column_names, allocator,
                                 customer_count};
-  TableBuilder order_builder{_benchmark_config->chunk_size, order_column_types, order_column_names, order_count};
-  TableBuilder lineitem_builder{_benchmark_config->chunk_size, lineitem_column_types, lineitem_column_names,
+  TableBuilder order_builder{_benchmark_config->chunk_size, order_column_types, order_column_names, allocator,
+                             order_count};
+  TableBuilder lineitem_builder{_benchmark_config->chunk_size, lineitem_column_types, lineitem_column_names, allocator,
                                 ChunkOffset{order_count * 4}};
-  TableBuilder part_builder{_benchmark_config->chunk_size, part_column_types, part_column_names, part_count};
-  TableBuilder partsupp_builder{_benchmark_config->chunk_size, partsupp_column_types, partsupp_column_names,
+  TableBuilder part_builder{_benchmark_config->chunk_size, part_column_types, part_column_names, allocator, part_count};
+  TableBuilder partsupp_builder{_benchmark_config->chunk_size, partsupp_column_types, partsupp_column_names, allocator,
                                 ChunkOffset{part_count * 4}};
-  TableBuilder supplier_builder{_benchmark_config->chunk_size, supplier_column_types, supplier_column_names,
+  TableBuilder supplier_builder{_benchmark_config->chunk_size, supplier_column_types, supplier_column_names, allocator,
                                 supplier_count};
-  TableBuilder nation_builder{_benchmark_config->chunk_size, nation_column_types, nation_column_names, nation_count};
-  TableBuilder region_builder{_benchmark_config->chunk_size, region_column_types, region_column_names, region_count};
+  TableBuilder nation_builder{_benchmark_config->chunk_size, nation_column_types, nation_column_names, allocator,
+                              nation_count};
+  TableBuilder region_builder{_benchmark_config->chunk_size, region_column_types, region_column_names, allocator,
+                              region_count};
 
   /**
    * CUSTOMER

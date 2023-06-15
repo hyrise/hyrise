@@ -40,11 +40,13 @@ std::byte* create_mapped_region() {
 std::array<std::unique_ptr<VolatileRegion>, NUM_PAGE_SIZE_TYPES> create_volatile_regions(std::byte* mapped_region) {
   DebugAssert(mapped_region != nullptr, "Region not properly mapped");
   auto array = std::array<std::unique_ptr<VolatileRegion>, NUM_PAGE_SIZE_TYPES>{};
-  const auto num_bytes_per_region = DEFAULT_RESERVED_VIRTUAL_MEMORY / NUM_PAGE_SIZE_TYPES;
+
+  // Ensure that every region has the same amount of virtual memory
+  // Round to the next multiple of the largest page size
   for (auto i = size_t{0}; i < NUM_PAGE_SIZE_TYPES; i++) {
     array[i] = std::make_unique<VolatileRegion>(magic_enum::enum_value<PageSizeType>(i),
-                                                mapped_region + num_bytes_per_region * i,
-                                                mapped_region + num_bytes_per_region * (i + 1));
+                                                mapped_region + DEFAULT_RESERVED_VIRTUAL_MEMORY_PER_REGION * i,
+                                                mapped_region + DEFAULT_RESERVED_VIRTUAL_MEMORY_PER_REGION * (i + 1));
   }
 
   return array;
@@ -120,9 +122,10 @@ BufferManager::BufferManager(const Config config)
       _mapped_region(create_mapped_region()),
       _metrics(std::make_shared<Metrics>()),
       _volatile_regions(create_volatile_regions(_mapped_region)),
-      _ssd_region(config.ssd_path, 1 << 26),  // TODO
+      _ssd_region(config.ssd_path, 1 << 26),  // TODO: imprive init of pools here
       _primary_buffer_pool(config.dram_buffer_pool_size, config.enable_eviction_purge_worker, _volatile_regions,
-                           &_ssd_region, &_secondary_buffer_pool, DEFAULT_DRAM_NUMA_NODE),
+                           &_ssd_region, config.memory_node == NO_NUMA_MEMORY_NODE ? nullptr : &_secondary_buffer_pool,
+                           DEFAULT_DRAM_NUMA_NODE),
       _secondary_buffer_pool(config.dram_buffer_pool_size, config.enable_eviction_purge_worker, _volatile_regions,
                              &_ssd_region, nullptr, config.memory_node) {}
 
@@ -179,7 +182,7 @@ void BufferManager::make_resident(const PageID page_id, const Frame* frame, cons
 
 void BufferManager::pin_for_read(const PageID page_id) {
   const auto frame = get_region(page_id).get_frame(page_id);
-
+  // TODO: use counter instead of while(true), make_resident?
   while (true) {
     auto state_and_version = frame->state_and_version();
     switch (Frame::state(state_and_version)) {
@@ -207,7 +210,7 @@ void BufferManager::pin_for_read(const PageID page_id) {
 
 void BufferManager::pin_for_write(const PageID page_id) {
   const auto frame = get_region(page_id).get_frame(page_id);
-  // TODO: use counter instead of while(true)
+  // TODO: use counter instead of while(true), make_resident?
   while (true) {
     auto state_and_version = frame->state_and_version();
     switch (Frame::state(state_and_version)) {
@@ -235,7 +238,9 @@ void BufferManager::pin_for_write(const PageID page_id) {
 void BufferManager::unpin_for_read(const PageID page_id) {
   auto frame = get_region(page_id).get_frame(page_id);
   frame->unlock_shared();
-  add_to_eviction_queue(page_id, frame);
+  if (frame->is_unlocked()) {
+    add_to_eviction_queue(page_id, frame);
+  }
 }
 
 void BufferManager::unpin_for_write(const PageID page_id) {
@@ -255,10 +260,9 @@ PageID BufferManager::find_page(const void* ptr) const {
       bytes_for_size_type(MIN_PAGE_SIZE_TYPE) * (1 << region_idx);  // TODO: this might break if not exponential sizes
   const auto region_offset = offset % DEFAULT_RESERVED_VIRTUAL_MEMORY_PER_REGION;
   const auto page_idx = region_offset / page_size;
-  DebugAssert(region_idx < _volatile_regions.size(), "Region index out of bounds");
-
+  const auto valid = region_idx < NUM_PAGE_SIZE_TYPES || region_idx >= 0;
   const auto size_type = magic_enum::enum_value<PageSizeType>(region_idx);
-  return PageID{size_type, static_cast<PageID::PageIDType>(page_idx)};
+  return PageID{size_type, static_cast<PageID::PageIDType>(page_idx), valid};
 }
 
 void BufferManager::add_to_eviction_queue(const PageID page_id, Frame* frame) {
@@ -275,6 +279,9 @@ void* BufferManager::do_allocate(std::size_t bytes, std::size_t alignment) {
   const auto size_type = find_fitting_page_size_type(bytes);
   // TODO: _migration_policy.bypass_dram_during_write());
 
+  // TODO: Ensure free pages
+  _primary_buffer_pool.free_pages(size_type);
+
   const auto memory_node = DEFAULT_DRAM_NUMA_NODE;
   const auto ptr = _volatile_regions[static_cast<uint64_t>(size_type)]->allocate(memory_node);
   // TODO: move toregion
@@ -285,7 +292,10 @@ void* BufferManager::do_allocate(std::size_t bytes, std::size_t alignment) {
 
 void BufferManager::do_deallocate(void* p, std::size_t bytes, std::size_t alignment) {
   const auto page_id = find_page(p);
-  _volatile_regions[static_cast<uint64_t>(page_id.size_type())]->deallocate(page_id);
+  auto& region = get_region(page_id);
+  // region.deallocate(page_id);
+  // add_to_eviction_queue(page_id, region.get_frame(page_id));
+  // TODO: Properly handle deallocation
   _metrics->num_deallocs++;
 }
 
@@ -362,8 +372,8 @@ void BufferManager::BufferPool::free_pages(const PageSizeType size) {
   // Find potential victim frame if we don't have enough space left
   auto item = EvictionItem{};
 
-  // TODO: Verify
-  while (current_bytes + bytes_required - freed_bytes > max_bytes) {
+  // TODO: Verify, that this is correct
+  while ((int64_t)current_bytes + (int64_t)bytes_required - (int64_t)freed_bytes > (int64_t)max_bytes) {
     if (!eviction_queue->try_pop(item)) {
       Fail(
           "Cannot pop item from queue. All frames seems to be pinned. Please increase the memory size of this buffer "
@@ -405,7 +415,10 @@ void BufferManager::BufferPool::free_pages(const PageSizeType size) {
       if (frame->is_dirty()) {
         auto data = region.get_page(item.page_id);
         ssd_region->write_page(item.page_id, data);
+        frame->reset_dirty();
       }
+      region.free(item.page_id);
+      frame->unlock_exclusive();  // TODO: MIght not be necessary
       frame->set_evicted();
     }
     freed_bytes += num_bytes;
