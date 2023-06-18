@@ -74,17 +74,17 @@ void MetricsSampler::export_metrics() {
   auto context = nlohmann::json::object();
   context["interval"] = _interval.count();
   context["name"] = _name;
-  context["bytes_dram_buffer_pools"] = _buffer_manager->get_config().dram_buffer_pool_size;
-  context["bytes_numa_buffer_pools"] = _buffer_manager->get_config().numa_buffer_pool_size;
-  context["mode"] = magic_enum::enum_name(_buffer_manager->get_config().mode);
-  context["eviction_worker_enabled"] = _buffer_manager->get_config().enable_eviction_purge_worker;
-  context["ssd_path"] = _buffer_manager->get_config().ssd_path;
+  context["bytes_dram_buffer_pools"] = _buffer_manager->config().dram_buffer_pool_size;
+  context["bytes_numa_buffer_pools"] = _buffer_manager->config().numa_buffer_pool_size;
+  context["mode"] = magic_enum::enum_name(_buffer_manager->config().mode);
+  context["eviction_worker_enabled"] = _buffer_manager->config().enable_eviction_purge_worker;
+  context["ssd_path"] = _buffer_manager->config().ssd_path;
 
   auto migration_policy = nlohmann::json::object();
-  migration_policy["dram_read_ratio"] = _buffer_manager->get_config().migration_policy.get_dram_read_ratio();
-  migration_policy["dram_write_ratio"] = _buffer_manager->get_config().migration_policy.get_dram_write_ratio();
-  migration_policy["numa_read_ratio"] = _buffer_manager->get_config().migration_policy.get_numa_read_ratio();
-  migration_policy["numa_write_ratio"] = _buffer_manager->get_config().migration_policy.get_numa_write_ratio();
+  migration_policy["dram_read_ratio"] = _buffer_manager->config().migration_policy.get_dram_read_ratio();
+  migration_policy["dram_write_ratio"] = _buffer_manager->config().migration_policy.get_dram_write_ratio();
+  migration_policy["numa_read_ratio"] = _buffer_manager->config().migration_policy.get_numa_read_ratio();
+  migration_policy["numa_write_ratio"] = _buffer_manager->config().migration_policy.get_numa_write_ratio();
 
   context["migration_policy"] = migration_policy;
 

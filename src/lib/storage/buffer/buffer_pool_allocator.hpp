@@ -27,7 +27,7 @@ class BufferPoolAllocator {
   using reference = typename add_reference<T>::type;
   using const_reference = typename add_reference<const T>::type;
 
-  BufferPoolAllocator() : _memory_resource(get_buffer_manager_memory_resource()) {}
+  BufferPoolAllocator() : _memory_resource(get_buffer_manager_memory_resource()) {}  // TODO: Other memory resource?
 
   BufferPoolAllocator(boost::container::pmr::memory_resource* memory_resource) : _memory_resource(memory_resource) {}
 

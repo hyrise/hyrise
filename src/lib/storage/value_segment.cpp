@@ -26,10 +26,13 @@ ValueSegment<T>::ValueSegment(bool nullable, ChunkOffset capacity) : BaseValueSe
 
 template <typename T>
 ValueSegment<T>::~ValueSegment() {
-  auto values_pin_guard = WritePinGuard{_values};
-  _values.clear();
+  {
+    auto values_pin_guard = WritePinGuard{_values};
+    _values.clear();
+  }
   if (_null_values) {
     auto null_values_pin_guard = WritePinGuard{*_null_values};
+    _null_values->clear();
   }
 }
 

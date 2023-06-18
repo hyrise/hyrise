@@ -49,7 +49,7 @@ void VolatileRegion::free(PageID page_id) {
   }
 }
 
-std::byte* VolatileRegion::allocate(const NumaMemoryNode memory_node) {
+std::pair<PageID, std::byte*> VolatileRegion::allocate() {
   DebugAssert(_free_slots.any(), "No free slots available in region. TODO: Expand until end of region");
   // TODO: Handle missing space
   auto idx = PageID::PageIDType{0};
@@ -60,9 +60,8 @@ std::byte* VolatileRegion::allocate(const NumaMemoryNode memory_node) {
   }
 
   const auto page_id = PageID{_size_type, idx};
-  move_to_numa_node(page_id, memory_node);
   auto ptr = get_page(page_id);
-  return ptr;
+  return std::make_pair(page_id, ptr);
 }
 
 std::byte* VolatileRegion::get_page(PageID page_id) {

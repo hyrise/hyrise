@@ -33,6 +33,8 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
 
     const auto& position_filter = _segment.pos_list();
 
+    auto pin_guard = ReadPinGuard{position_filter};
+
     // If we are guaranteed that the reference segment refers to a single non-NULL chunk, we can do some
     // optimizations. For example, we can use a filtered iterator instead of having to create segments accessors
     // and using virtual method calls.
@@ -109,7 +111,6 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
       }
 
       // The functor was not called yet, because we did not instantiate specialized code for the segment type.
-
       const auto segment_iterable = create_any_segment_iterable<T>(*referenced_segment);
       segment_iterable.with_iterators(position_filter, functor);
     } else {

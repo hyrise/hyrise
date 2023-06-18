@@ -34,7 +34,6 @@ class GenericHistogramBuilder {
 
  private:
   PolymorphicAllocator<T> _allocator;
-  AllocatorPinGuard _allocator_pin_guard;
 
   HistogramDomain<T> _domain;
   pmr_vector<T> _bin_minima;

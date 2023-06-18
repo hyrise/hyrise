@@ -1,5 +1,6 @@
 #include "sort.hpp"
 
+#include "hyrise.hpp"
 #include "storage/segment_iterate.hpp"
 #include "utils/timer.hpp"
 
@@ -153,7 +154,7 @@ std::shared_ptr<Table> write_reference_output_table(const std::shared_ptr<const 
   auto output_segments_by_chunk =
       std::vector<Segments>(output_chunk_count, Segments(static_cast<typename Segments::size_type>(column_count)));
 
-  auto allocator = PolymorphicAllocator<RowIDPosList>{};
+  auto allocator = PolymorphicAllocator<RowIDPosList>{&Hyrise::get().linear_buffer_resource};
   auto pin_guard = AllocatorPinGuard{allocator};
 
   if (!resolve_indirection && input_pos_list.size() <= output_chunk_size) {
@@ -212,6 +213,7 @@ std::shared_ptr<Table> write_reference_output_table(const std::shared_ptr<const 
           DebugAssert(input_reference_segment.referenced_column_id() == referenced_column_id,
                       "Input column references more than one column");
           const auto& input_reference_pos_list = input_reference_segment.pos_list();
+          auto pin_guard = ReadPinGuard{input_reference_pos_list};
           output_pos_list->emplace_back((*input_reference_pos_list)[row_id.chunk_offset]);
         } else {
           output_pos_list->emplace_back(row_id);

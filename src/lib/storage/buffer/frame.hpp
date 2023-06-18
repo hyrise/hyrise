@@ -26,18 +26,26 @@ class Frame {
   NumaMemoryNode memory_node() const;
 
   // State transitions
-  void set_evicted();
+  void unlock_exclusive_and_set_evicted();
+
   bool try_mark(StateVersionType old_state_and_version);
+
   bool try_lock_shared(StateVersionType old_state_and_version);
+
   bool try_lock_exclusive(StateVersionType old_state_and_version);
-  void unlock_shared();
+
+  // Removes a shared locked and returns true if the frame is now unlocked
+  bool unlock_shared();
+
   void unlock_exclusive();
+
   bool is_unlocked() const;
 
   // State and version helper
   StateVersionType state_and_version() const;
   static StateVersionType state(StateVersionType state_and_version);
   static StateVersionType version(StateVersionType state_and_version);
+  static NumaMemoryNode memory_node(StateVersionType state_and_version);
 
   void debug_print();
 

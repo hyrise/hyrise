@@ -45,9 +45,9 @@ static void BM_SSDRegionReadPagesSingle(benchmark::State& state, const SSDRegion
   auto outputPage = Page();
   const auto num_pages = state.range(0);
   for (auto _ : state) {
-    for (auto page_id = PageID{0}; page_id < num_pages; page_id++) {
-      // ssd_region->read_page(PageID{0}, outputPage.size_type, outputPage.data.data());
-    }
+    // for (auto page_id = PageID{0}; page_id < num_pages; page_id++) {
+    //   // ssd_region->read_page(PageID{0}, outputPage.size_type, outputPage.data.data());
+    // }
   }
 
   state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(num_pages) * int64_t(sizeof(Page)));
@@ -60,9 +60,9 @@ static void BM_SSDRegionReadPagesSerial(benchmark::State& state, const SSDRegion
   std::vector<Page, boost::alignment::aligned_allocator<Page>> pages(num_pages);
 
   for (auto _ : state) {
-    for (auto page_id = PageID{0}; page_id < num_pages; page_id++) {
-      // ssd_region->read_page(page_id, pages[page_id].size_type, pages[page_id].data.data());
-    }
+    // for (auto page_id = PageID{0}; page_id < num_pages; page_id++) {
+    //   // ssd_region->read_page(page_id, pages[page_id].size_type, pages[page_id].data.data());
+    // }
   }
 
   state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(num_pages) * int64_t(sizeof(Page)));
@@ -94,9 +94,9 @@ static void BM_SSDRegionWritePagesSingle(benchmark::State& state, const SSDRegio
   auto outputPage = Page();
   const auto num_pages = state.range(0);
   for (auto _ : state) {
-    for (auto page_id = PageID{0}; page_id < num_pages; page_id++) {
-      // ssd_region->write_page(PageID{0}, outputPage.size_type, outputPage.data.data());
-    }
+    // for (auto page_id = PageID{0}; page_id < num_pages; page_id++) {
+    //   // ssd_region->write_page(PageID{0}, outputPage.size_type, outputPage.data.data());
+    // }
   }
 
   state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(num_pages) * int64_t(sizeof(Page)));
@@ -108,11 +108,11 @@ static void BM_SSDRegionWritePagesSerial(benchmark::State& state, const SSDRegio
   const auto num_pages = state.range(0);
   std::vector<Page, boost::alignment::aligned_allocator<Page>> pages(num_pages);
   for (auto _ : state) {
-    for (auto page_id = PageID{0}; page_id < num_pages; page_id++) {
-      // ssd_region->write_page(page_id, pages[page_id].size_type, pages[page_id].data.data());
-      auto size = pages.size();
-      benchmark::DoNotOptimize(size);
-    }
+    // for (auto page_id = PageID{0}; page_id < num_pages; page_id++) {
+    //   // ssd_region->write_page(page_id, pages[page_id].size_type, pages[page_id].data.data());
+    //   auto size = pages.size();
+    //   benchmark::DoNotOptimize(size);
+    // }
   }
 
   state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(num_pages) * int64_t(sizeof(Page)));

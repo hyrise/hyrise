@@ -65,7 +65,6 @@ int SSDRegion::open_file_descriptor(const std::filesystem::path& file_name) {
 void SSDRegion::write_page(PageID page_id, std::byte* data) {
   const auto num_bytes = bytes_for_size_type(page_id.size_type());
   DebugAssertPageAligned(data);
-  // auto pos = _max_bytes_per_size_type * TODO
   const auto result = pwrite(_fd, data, num_bytes, 0);
   if (result < 0) {
     const auto error = errno;
@@ -77,7 +76,6 @@ void SSDRegion::write_page(PageID page_id, std::byte* data) {
 void SSDRegion::read_page(PageID page_id, std::byte* data) {
   const auto num_bytes = bytes_for_size_type(page_id.size_type());
   DebugAssertPageAligned(data);
-  // Using reinterpret_cast is necessary here. Even the C++ StdLib does it in their examples.
   const auto result = pread(_fd, data, num_bytes, 0);
   if (result < 0) {
     const auto error = errno;

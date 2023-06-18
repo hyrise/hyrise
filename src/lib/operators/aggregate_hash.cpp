@@ -810,7 +810,9 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
   if (!_has_aggregate_functions) {
     auto context = std::static_pointer_cast<AggregateResultContext<DistinctColumnType, AggregateFunction::Min>>(
         _contexts_per_column[0]);
-    auto pos_list = RowIDPosList();
+    auto allocator = PolymorphicAllocator<size_t>{};
+    auto allocator_pin_guard = AllocatorPinGuard{allocator};
+    auto pos_list = RowIDPosList{allocator};
     pos_list.reserve(context->results.size());
     for (const auto& result : context->results) {
       // NULL_ROW_ID (just a marker, not literally NULL) means that this result is either a gap (in the case of an
@@ -999,8 +1001,6 @@ write_aggregate_values(pmr_vector<AggregateType>& values, pmr_vector<bool>& null
 }
 
 void AggregateHash::_write_groupby_output(RowIDPosList& pos_list) {
-  auto pin_guard = ReadPinGuard{pos_list};
-
   Timer timer;
   auto input_table = left_input_table();
 
@@ -1036,7 +1036,7 @@ void AggregateHash::_write_groupby_output(RowIDPosList& pos_list) {
 
       const auto column_is_nullable = input_table->column_is_nullable(input_column_id);
 
-      auto allocator = PolymorphicAllocator<ColumnDataType>{};
+      auto allocator = PolymorphicAllocator<ColumnDataType>{&Hyrise::get().linear_buffer_resource};
       auto allocator_pin_guard = AllocatorPinGuard{allocator};
 
       auto values = pmr_vector<ColumnDataType>{allocator};
@@ -1143,7 +1143,9 @@ void AggregateHash::write_aggregate_output(ColumnID aggregate_index) {
 
   // Before writing the first aggregate column, write all group keys into the respective columns
   if (aggregate_index == 0) {
-    auto pos_list = RowIDPosList{};  // TODO(nikriek): Pin
+    auto allocator = PolymorphicAllocator<size_t>{};
+    auto allocator_pin_guard = AllocatorPinGuard{allocator};
+    auto pos_list = RowIDPosList{allocator};
     pos_list.reserve(results.size());
     for (const auto& result : results) {
       // NULL_ROW_ID (just a marker, not literally NULL) means that this result is either a gap (in the case of an
@@ -1161,7 +1163,7 @@ void AggregateHash::write_aggregate_output(ColumnID aggregate_index) {
   // Write aggregated values into the segment. While write_aggregate_values could track if an actual NULL value was
   // written or not, we rather make the output types consistent independent of the input types. Not sure what the
   // standard says about this.
-  auto allocator = PolymorphicAllocator<ColumnDataType>{};
+  auto allocator = PolymorphicAllocator<ColumnDataType>{&Hyrise::get().linear_buffer_resource};
   auto allocator_pin_guard = AllocatorPinGuard{allocator};
 
   auto values = pmr_vector<decltype(aggregate_type)>{allocator};

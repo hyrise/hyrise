@@ -23,8 +23,8 @@ void Frame::reset_dirty() {
   _state_and_version &= ~DIRTY_MASK;
 }
 
-void Frame::set_evicted() {
-  DebugAssert(state(_state_and_version.load()) == UNLOCKED, "Frame must be marked to set evicted flag.");
+void Frame::unlock_exclusive_and_set_evicted() {
+  DebugAssert(state(_state_and_version.load()) == LOCKED, "Frame must be marked to set evicted flag.");
   _state_and_version.store(update_state_with_increment_version(_state_and_version.load(), EVICTED));
 }
 
@@ -52,7 +52,11 @@ StateVersionType Frame::state_and_version() const {
 }
 
 NumaMemoryNode Frame::memory_node() const {
-  return static_cast<NumaMemoryNode>((_state_and_version.load() & MEMORY_NODE_MASK) >> MEMORY_NODE_SHIFT);
+  return memory_node(_state_and_version.load());
+}
+
+NumaMemoryNode Frame::memory_node(StateVersionType state_and_version) {
+  return static_cast<NumaMemoryNode>((state_and_version & MEMORY_NODE_MASK) >> MEMORY_NODE_SHIFT);
 }
 
 bool Frame::try_lock_shared(StateVersionType old_state_and_version) {
@@ -73,14 +77,15 @@ bool Frame::try_lock_exclusive(StateVersionType old_state_and_version) {
                                                     update_state_with_same_version(old_state_and_version, LOCKED));
 }
 
-void Frame::unlock_shared() {
+bool Frame::unlock_shared() {
   while (true) {
     auto old_state_and_version = _state_and_version.load();
     auto old_state = state(old_state_and_version);
     DebugAssert(old_state > 0 && old_state <= LOCKED_SHARED, "Frame must be locked shared to unlock shared.");
-    if (_state_and_version.compare_exchange_strong(
-            old_state_and_version, update_state_with_same_version(old_state_and_version, old_state - 1))) {
-      return;
+    auto new_state = old_state - 1;
+    if (_state_and_version.compare_exchange_strong(old_state_and_version,
+                                                   update_state_with_same_version(old_state_and_version, new_state))) {
+      return new_state == Frame::UNLOCKED;  // return true if last shared lock was released
     }
   }
 }

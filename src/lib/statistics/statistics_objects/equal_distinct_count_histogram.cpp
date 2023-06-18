@@ -101,12 +101,12 @@ EqualDistinctCountHistogram<T>::EqualDistinctCountHistogram(pmr_vector<T>&& bin_
 
 template <typename T>
 EqualDistinctCountHistogram<T>::~EqualDistinctCountHistogram() {
-  auto minima_pin_guard = WritePinGuard{_bin_minima};
-  _bin_minima.clear();
-  auto maxima_pin_guard = WritePinGuard{_bin_maxima};
-  _bin_maxima.clear();
-  auto heights_pin_guard = WritePinGuard{_bin_heights};
-  _bin_heights.clear();
+  // auto minima_pin_guard = WritePinGuard{_bin_minima};
+  // _bin_minima.clear();
+  // auto maxima_pin_guard = WritePinGuard{_bin_maxima};
+  // _bin_maxima.clear();
+  // auto heights_pin_guard = WritePinGuard{_bin_heights};
+  // _bin_heights.clear();
 }
 
 template <typename T>

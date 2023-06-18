@@ -81,13 +81,6 @@ struct FramePinGuard final : public PinnedFrames<accessIntent> {
     if constexpr (std::is_same_v<std::remove_cv_t<T>, pmr_vector<pmr_string>>) {
       for (const auto& string : vector) {
         const auto string_page_id = BufferManager::get().find_page(string.data());
-        if (!string_page_id.valid()) {
-          continue;
-        }
-
-        if (has_pinned(string_page_id)) {
-          continue;
-        }
         add_pin(string_page_id);
       }
     }
@@ -154,6 +147,7 @@ struct FramePinGuard final : public PinnedFrames<accessIntent> {
 
   template <typename T>
   FramePinGuard(const DictionarySegment<T>& segment) {
+    Fail("DictionarySegment not implemented yet");
     const auto attribute_vector_frame = segment.attribute_vector();
     // add_vector_pins(*attribute_vector_frame);
 

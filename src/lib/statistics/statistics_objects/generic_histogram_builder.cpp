@@ -1,5 +1,7 @@
 #include "generic_histogram_builder.hpp"
 
+#include <boost/container/pmr/global_resource.hpp>
+#include "hyrise.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {
@@ -7,8 +9,7 @@ namespace hyrise {
 template <typename T>
 GenericHistogramBuilder<T>::GenericHistogramBuilder(const size_t reserve_bin_count, const HistogramDomain<T>& domain)
     : _domain(domain),
-      _allocator(),
-      _allocator_pin_guard(_allocator),
+      _allocator(boost::container::pmr::new_delete_resource()),
       _bin_minima(_allocator),
       _bin_maxima(_allocator),
       _bin_heights(_allocator),

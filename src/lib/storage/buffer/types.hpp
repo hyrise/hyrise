@@ -138,7 +138,7 @@ constexpr size_t DEFAULT_RESERVED_VIRTUAL_MEMORY_PER_REGION = (DEFAULT_RESERVED_
                                                               bytes_for_size_type(MAX_PAGE_SIZE_TYPE) *
                                                               bytes_for_size_type(MAX_PAGE_SIZE_TYPE);
 
-constexpr size_t INITIAL_SLOTS_PER_REGION = 100000;  // TODO
+constexpr size_t INITIAL_SLOTS_PER_REGION = 200000;  // TODO
 
 using EvictionQueue = tbb::concurrent_queue<EvictionItem>;
 

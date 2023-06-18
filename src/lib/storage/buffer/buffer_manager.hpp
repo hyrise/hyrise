@@ -13,6 +13,7 @@
 
 namespace hyrise {
 
+// TODO: Use mprotect for debugging
 class BufferManager : public boost::container::pmr::memory_resource, public Noncopyable {
  public:
   // TODO: Add
@@ -61,10 +62,8 @@ class BufferManager : public boost::container::pmr::memory_resource, public Nonc
     std::atomic_uint64_t total_misses_numa = 0;
 
     // Tracks pinning
-    std::atomic_uint64_t total_pins_dram = 0;
-    std::atomic_uint64_t current_pins_dram = 0;
-    std::atomic_uint64_t total_pins_numa = 0;
-    std::atomic_uint64_t current_pins_numa = 0;
+    std::atomic_uint64_t total_pins = 0;
+    std::atomic_uint64_t current_pins = 0;
 
     // Tracks the number of evictions
     std::atomic_uint64_t num_dram_eviction_queue_items_purged = 0;
@@ -119,11 +118,11 @@ class BufferManager : public boost::container::pmr::memory_resource, public Nonc
 
   void pin_for_read(const PageID page_id);
 
-  void set_dirty(const PageID page_id);
-
   void unpin_for_write(const PageID page_id);
 
   void unpin_for_read(const PageID page_id);
+
+  void set_dirty(const PageID page_id);
 
   PageID find_page(const void* ptr) const;
 
@@ -137,6 +136,11 @@ class BufferManager : public boost::container::pmr::memory_resource, public Nonc
 
   size_t memory_consumption() const;
 
+  Config config() const;
+
+  // Debugging methods
+  StateVersionType _state(const PageID page_id);
+
  protected:
   friend class Hyrise;
 
@@ -144,7 +148,7 @@ class BufferManager : public boost::container::pmr::memory_resource, public Nonc
   struct BufferPool {
     BufferPool(const size_t pool_size, const bool enable_eviction_purge_worker,
                std::array<std::unique_ptr<VolatileRegion>, NUM_PAGE_SIZE_TYPES>& volatile_regions,
-               SSDRegion* ssd_region, BufferPool* target_buffer_pool,
+               MigrationPolicy migration_policy, SSDRegion* ssd_region, BufferPool* target_buffer_pool,
                const NumaMemoryNode memory_node = DEFAULT_DRAM_NUMA_NODE);
 
     BufferPool& operator=(BufferPool&& other) noexcept;
@@ -171,6 +175,8 @@ class BufferManager : public boost::container::pmr::memory_resource, public Nonc
     // Async background worker that purges the eviction queue
     std::unique_ptr<PausableLoopThread> eviction_purge_worker;
 
+    MigrationPolicy migration_policy;
+
     std::array<std::unique_ptr<VolatileRegion>, NUM_PAGE_SIZE_TYPES>& volatile_regions;
 
     NumaMemoryNode memory_node;
@@ -182,7 +188,8 @@ class BufferManager : public boost::container::pmr::memory_resource, public Nonc
 
   void read_page(const PageID page_id);
 
-  void make_resident(const PageID page_id, const Frame* frame, const AccessIntent access_intent);
+  void make_resident(const PageID page_id, const AccessIntent access_intent,
+                     const StateVersionType previous_state_version);
 
   void add_to_eviction_queue(const PageID page_id, Frame* frame);
 

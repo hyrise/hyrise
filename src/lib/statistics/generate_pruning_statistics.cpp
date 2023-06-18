@@ -25,8 +25,6 @@ using namespace hyrise;  // NOLINT
 template <typename T>
 void create_pruning_statistics_for_segment(AttributeStatistics<T>& segment_statistics,
                                            const pmr_vector<T>& dictionary) {
-  auto pin_guard = ReadPinGuard{dictionary};
-
   std::shared_ptr<AbstractStatisticsObject> pruning_statistics;
   if constexpr (std::is_arithmetic_v<T>) {
     pruning_statistics = RangeFilter<T>::build_filter(dictionary);
@@ -66,6 +64,7 @@ void generate_chunk_pruning_statistics(const std::shared_ptr<Chunk>& chunk) {
       if constexpr (std::is_same_v<SegmentType, DictionarySegment<ColumnDataType>>) {
         // we can use the fact that dictionary segments have an accessor for the dictionary
         const auto& dictionary = *typed_segment.dictionary();
+        auto pin_guard = ReadPinGuard{dictionary};
         create_pruning_statistics_for_segment(*segment_statistics, dictionary);
       } else {
         // if we have a generic segment we create the dictionary ourselves
@@ -78,16 +77,11 @@ void generate_chunk_pruning_statistics(const std::shared_ptr<Chunk>& chunk) {
           }
         });
 
-        auto dictionary = [&]() {
-          auto allocator = PolymorphicAllocator<ColumnDataType>{};
-          auto dictionary_allocator_pin_guard = AllocatorPinGuard{allocator};
+        auto allocator = PolymorphicAllocator<ColumnDataType>{};
+        auto dictionary_allocator_pin_guard = AllocatorPinGuard{allocator};
+        pmr_vector<ColumnDataType> dictionary{values.cbegin(), values.cend(), allocator};
+        std::sort(dictionary.begin(), dictionary.end());
 
-          pmr_vector<ColumnDataType> dictionary{values.cbegin(), values.cend(), allocator};
-
-          std::sort(dictionary.begin(), dictionary.end());
-
-          return dictionary;
-        }();
         create_pruning_statistics_for_segment(*segment_statistics, dictionary);
       }
 

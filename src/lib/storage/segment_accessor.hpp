@@ -74,9 +74,10 @@ template <typename T>
 class MultipleChunkReferenceSegmentAccessor final : public AbstractSegmentAccessor<T> {
  public:
   explicit MultipleChunkReferenceSegmentAccessor(const ReferenceSegment& segment)
-      : _segment{segment}, _table{segment.referenced_table()}, _accessors{1}, _pin_guard{segment} {}
+      : _segment{segment}, _table{segment.referenced_table()}, _accessors{1}, _pin_guard{_segment.pos_list()} {}
 
   const std::optional<T> access(ChunkOffset offset) const final {
+    // TODO(nikriek): Ref table guard
     const auto& row_id = (*_segment.pos_list())[offset];
     if (row_id.is_null()) {
       return std::nullopt;
@@ -111,7 +112,7 @@ class SingleChunkReferenceSegmentAccessor final : public AbstractSegmentAccessor
  public:
   explicit SingleChunkReferenceSegmentAccessor(const AbstractPosList& pos_list, const ChunkID chunk_id,
                                                const Segment& segment)
-      : _pos_list{pos_list}, _chunk_id(chunk_id), _segment(segment), _segment_pin_guard{_segment} {}
+      : _pos_list{pos_list}, _chunk_id(chunk_id), _segment(segment) {}
 
   // TODO: _pos_list_pin_guard{pos_list}
 
@@ -130,8 +131,6 @@ class SingleChunkReferenceSegmentAccessor final : public AbstractSegmentAccessor
   const AbstractPosList& _pos_list;
   const ChunkID _chunk_id;
   const Segment& _segment;
-  const ReadPinGuard _segment_pin_guard;
-  // const ReadPinGuard _pos_list_pin_guard;
 };
 
 // Accessor for ReferenceSegments that reference only NULL values
