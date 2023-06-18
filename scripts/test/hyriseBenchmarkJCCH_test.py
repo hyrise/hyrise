@@ -38,7 +38,7 @@ def main():
     benchmark.expect_exact("Using prepared statements: no")
     benchmark.expect_exact("Using JCC-H dbgen from")
     benchmark.expect_exact("JCC-H query parameters are skewed")
-    #benchmark.expect_exact("calling external qgen")
+    # benchmark.expect_exact("calling external qgen")
     benchmark.expect_exact("Multi-threaded Topology:")
 
     close_benchmark(benchmark)
