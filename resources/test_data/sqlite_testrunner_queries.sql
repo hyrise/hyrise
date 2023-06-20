@@ -234,8 +234,8 @@ SELECT * FROM id_int_int_int_100 WHERE NOT EXISTS (SELECT * FROM int_date WHERE 
 SELECT * FROM id_int_int_int_100 WHERE EXISTS (SELECT * FROM int_date WHERE id_int_int_int_100.id = int_date.a) OR id < 20
 
 -- Window Functions
-SELECT id, a, b, c, RANK() OVER (PARTITION BY a ORDER BY c) FROM mixed
-SELECT id, a, b, c, SUM(b) OVER (PARTITION BY a ORDER BY c ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) FROM mixed
+SELECT id, a, b, c, RANK() OVER (PARTITION BY a ORDER BY c) AS r FROM mixed
+SELECT id, a, b, c, SUM(b) OVER (PARTITION BY a ORDER BY c ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) as s FROM mixed
 
 -- Aggregates
 SELECT SUM(b + b) AS sum_b_b FROM mixed;
