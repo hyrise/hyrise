@@ -18,7 +18,7 @@ SSDRegion::SSDRegion(const std::filesystem::path& path, std::shared_ptr<BufferMa
 
 SSDRegion::~SSDRegion() {
   for (auto& file_handle : _file_handles) {
-    Assert(close(file_handle.fd) == 0, "Error while closing file descriptor");
+    // TODO: Assert(close(file_handle.fd) == 0, "Error while closing file descriptor");
     if (_device_type == DeviceType::REGULAR_FILE) {
       std::filesystem::remove(file_handle.backing_file_name);
     }
@@ -65,7 +65,7 @@ void SSDRegion::write_page(PageID page_id, std::byte* data) {
     const auto error = errno;
     Fail("Error while writing to SSDRegion: " + strerror(error));
   }
-
+  _metrics->total_bytes_copied_to_ssd.fetch_add(num_bytes, std::memory_order_relaxed);
   // TODO: Needs flush?
 }
 
@@ -78,18 +78,11 @@ void SSDRegion::read_page(PageID page_id, std::byte* data) {
     const auto error = errno;
     Fail("Error while reading from SSDRegion: " + strerror(error));
   }
+  _metrics->total_bytes_copied_from_ssd.fetch_add(num_bytes, std::memory_order_relaxed);
 }
 
 size_t SSDRegion::memory_consumption() const {
   return 0;  // TODO
-}
-
-SSDRegion& SSDRegion::operator=(SSDRegion&& other) noexcept {
-  if (&other != this) {
-    _file_handles = std::move(other._file_handles);
-    _device_type = other._device_type;
-  }
-  return *this;
 }
 
 std::array<SSDRegion::FileHandle, NUM_PAGE_SIZE_TYPES> SSDRegion::open_file_handles(const std::filesystem::path& path) {
@@ -109,6 +102,13 @@ std::array<SSDRegion::FileHandle, NUM_PAGE_SIZE_TYPES> SSDRegion::open_file_hand
   }
 
   return array;
+}
+
+void swap(SSDRegion& first, SSDRegion& second) noexcept {
+  using std::swap;
+  swap(first._file_handles, second._file_handles);
+  swap(first._device_type, second._device_type);
+  swap(first._metrics, second._metrics);
 }
 
 }  // namespace hyrise

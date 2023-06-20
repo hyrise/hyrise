@@ -2,6 +2,7 @@
 
 #include <tbb/concurrent_hash_map.h>
 #include <boost/container/small_vector.hpp>
+#include <boost/core/demangle.hpp>
 #include <set>
 #include <type_traits>
 #include "storage/buffer/buffer_manager.hpp"
@@ -90,6 +91,11 @@ struct FramePinGuard final : public PinnedFrames<accessIntent> {
     }
   }
 
+  void add_vector_pins(const pmr_compact_vector& vector) {
+    const auto page_id = BufferManager::get().find_page(vector.get());
+    add_pin(page_id);
+  }
+
  public:
   template <typename T, typename = std::enable_if_t<is_iterable<T>::value>>
   FramePinGuard(T& object) {
@@ -112,7 +118,8 @@ struct FramePinGuard final : public PinnedFrames<accessIntent> {
   template <>
   FramePinGuard(const pmr_compact_vector& object) {
     Fail("Not implemented");
-    // add_vector_pins(object.get());
+
+    add_vector_pins(object);
   }
 
   template <typename T>
@@ -154,12 +161,8 @@ struct FramePinGuard final : public PinnedFrames<accessIntent> {
 
   template <typename T>
   FramePinGuard(const DictionarySegment<T>& segment) {
-    Fail("DictionarySegment not implemented yet");
-    const auto attribute_vector_frame = segment.attribute_vector();
-    add_vector_pins(*attribute_vector_frame);
-
-    const auto frame = segment.dictionary();
-    add_vector_pins(*frame);
+    resolve_compressed_vector_type(*segment.attribute_vector(), [&](auto& vector) { add_vector_pins(vector.data()); });
+    add_vector_pins(*segment.dictionary());
   }
 };
 

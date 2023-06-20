@@ -137,7 +137,7 @@ BufferManager& BufferManager::operator=(BufferManager&& other) noexcept {
     _metrics = other._metrics;
     _config = std::move(other._config);
     _volatile_regions = std::move(other._volatile_regions);
-    _ssd_region = std::move(_ssd_region);
+    std::swap(_ssd_region, other._ssd_region);
     _primary_buffer_pool = std::move(_primary_buffer_pool);
     _secondary_buffer_pool = std::move(_secondary_buffer_pool);
     std::swap(_mapped_region, other._mapped_region);
@@ -334,7 +334,7 @@ void BufferManager::do_deallocate(void* p, std::size_t bytes, std::size_t alignm
   auto& region = get_region(page_id);
   // region.deallocate(page_id);
   // add_to_eviction_queue(page_id, region.get_frame(page_id));
-  // TODO: Properly handle deallocation
+  // TODO: Properly handle deallocation, set to UNLOCKED inisitially
   _metrics->num_deallocs.fetch_add(1, std::memory_order_relaxed);
 }
 

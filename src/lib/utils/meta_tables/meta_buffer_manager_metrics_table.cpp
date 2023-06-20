@@ -5,7 +5,9 @@ namespace hyrise {
 
 // TODO: Extract more metrics
 MetaBufferManagerMetricsTable::MetaBufferManagerMetricsTable()
-    : AbstractMetaTable(TableColumnDefinitions{{"current_bytes_used_dram", DataType::Long, false},
+    : AbstractMetaTable(TableColumnDefinitions{{"pool_size_dram", DataType::Long, false},
+                                               {"pool_size_numa", DataType::Long, false},
+                                               {"current_bytes_used_dram", DataType::Long, false},
                                                {"current_bytes_used_numa", DataType::Long, false},
                                                {"total_allocated_bytes", DataType::Long, false},
                                                {"total_unused_bytes", DataType::Long, false},
@@ -46,7 +48,9 @@ std::shared_ptr<Table> MetaBufferManagerMetricsTable::_on_generate() const {
   const auto metrics = Hyrise::get().buffer_manager.metrics();
   auto output_table = std::make_shared<Table>(_column_definitions, TableType::Data, std::nullopt, UseMvcc::Yes);
   output_table->append(
-      {static_cast<int64_t>(metrics->current_bytes_used_dram.load(std::memory_order_relaxed)),
+      {static_cast<int64_t>(Hyrise::get().buffer_manager.config().dram_buffer_pool_size),
+       static_cast<int64_t>(Hyrise::get().buffer_manager.config().numa_buffer_pool_size),
+       static_cast<int64_t>(metrics->current_bytes_used_dram.load(std::memory_order_relaxed)),
        static_cast<int64_t>(metrics->current_bytes_used_numa.load(std::memory_order_relaxed)),
        static_cast<int64_t>(metrics->total_allocated_bytes.load(std::memory_order_relaxed)),
        static_cast<int64_t>(metrics->total_unused_bytes.load(std::memory_order_relaxed)),

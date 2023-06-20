@@ -24,6 +24,9 @@ class SSDRegion : public Noncopyable {
   SSDRegion(const std::filesystem::path& path, std::shared_ptr<BufferManagerMetrics> metrics);
   ~SSDRegion();
 
+  SSDRegion(SSDRegion&& other) noexcept = default;
+  SSDRegion& operator=(SSDRegion&& other) noexcept = default;
+
   void write_page(const PageID page_id, std::byte* data);
   void read_page(const PageID page_id, std::byte* data);
 
@@ -31,7 +34,7 @@ class SSDRegion : public Noncopyable {
 
   size_t memory_consumption() const;
 
-  SSDRegion& operator=(SSDRegion&& other) noexcept;
+  friend void swap(SSDRegion& first, SSDRegion& second) noexcept;
 
  private:
   struct FileHandle {
