@@ -26,14 +26,9 @@ ValueSegment<T>::ValueSegment(bool nullable, ChunkOffset capacity) : BaseValueSe
 
 template <typename T>
 ValueSegment<T>::~ValueSegment() {
-  {
-    auto values_pin_guard = WritePinGuard{_values};
-    _values.clear();
-  }
-  if (_null_values) {
-    auto null_values_pin_guard = WritePinGuard{*_null_values};
-    _null_values->clear();
-  }
+  auto values_pin_guard = WritePinGuard{*this};
+  _values.clear();
+  _null_values->clear();
 }
 
 template <typename T>
@@ -81,12 +76,17 @@ T ValueSegment<T>::get(const ChunkOffset chunk_offset) const {
 
 template <typename T>
 void ValueSegment<T>::append(const AllTypeVariant& val) {
+  // TODO(nikriek): Move somewhere else
+  auto allocator_pin_guard = AllocatorPinGuard{_values.get_stored_allocator()};
+
   Assert(size() < _values.capacity(), "ValueSegment is full");
 
   bool is_null = variant_is_null(val);
   access_counter[SegmentAccessCounter::AccessType::Point] += 1;
 
   if (is_nullable()) {
+    auto null_values_allocator_pin_guard = AllocatorPinGuard{_null_values->get_stored_allocator()};
+
     (*_null_values).push_back(is_null);
     _values.push_back(is_null ? T{} : boost::get<T>(val));
     return;

@@ -10,11 +10,9 @@ struct LinearBufferResourceState {
   std::byte* current_buffer;
   std::size_t current_buffer_pos;
   std::size_t current_buffer_size;
-  std::size_t next_buffer_size;
 };
 
-static thread_local LinearBufferResourceState linear_buffer_resource_state =
-    LinearBufferResourceState{nullptr, 0, 0, 0};
+static thread_local LinearBufferResourceState linear_buffer_resource_state = LinearBufferResourceState{nullptr, 0, 0};
 
 }  // namespace detail
 
@@ -43,15 +41,12 @@ static thread_local LinearBufferResourceState linear_buffer_resource_state =
 */
 class LinearBufferResource : public boost::container::pmr::memory_resource, public Noncopyable {
  public:
-  // Largest page size to be allocated for small allocations is 256 KiB
-  static constexpr PageSizeType MAX_PAGE_SIZE_TYPE = PageSizeType::KiB512;
-
   // First page size to be allocated for small allocations is 8 KiB
-  static constexpr PageSizeType INITIAL_PAGE_SIZE_TYPE = PageSizeType::KiB8;
+  static constexpr PageSizeType PAGE_SIZE_TYPE = PageSizeType::KiB256;
 
   LinearBufferResource();
 
-  LinearBufferResource(BufferManager* buffer_manager, const PageSizeType initial_size = INITIAL_PAGE_SIZE_TYPE);
+  LinearBufferResource(BufferManager* buffer_manager);
 
   void* do_allocate(std::size_t, std::size_t) override;
   void do_deallocate(void*, std::size_t, std::size_t) override;
@@ -65,9 +60,9 @@ class LinearBufferResource : public boost::container::pmr::memory_resource, publ
   std::size_t remaining_storage(std::size_t alignment = 1u) const noexcept;
 
  private:
-  void increase_next_buffer_at_least_to(std::size_t minimum_size);
+  // void increase_next_buffer_at_least_to(std::size_t minimum_size);
 
-  void increase_next_buffer();
+  // void increase_next_buffer();
 
   void* allocate_from_current(std::size_t aligner, std::size_t bytes);
 

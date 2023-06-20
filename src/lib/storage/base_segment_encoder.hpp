@@ -6,6 +6,7 @@
 #include <boost/hana/type.hpp>
 
 #include "all_type_variant.hpp"
+#include "hyrise.hpp"
 #include "resolve_type.hpp"
 #include "storage/abstract_encoded_segment.hpp"
 #include "storage/abstract_segment.hpp"
@@ -143,7 +144,7 @@ class SegmentEncoder : public BaseSegmentEncoder {
     const auto iterable = create_any_segment_iterable<ColumnDataType>(*abstract_segment);
 
     // Pin everything in the allocator using the AllocatorPinGuard
-    auto allocator = PolymorphicAllocator<ColumnDataType>{};
+    auto allocator = PolymorphicAllocator<ColumnDataType>{&Hyrise::get().linear_buffer_resource};
     auto allocator_pin_guard = AllocatorPinGuard{allocator};
     return _self()._on_encode(iterable, allocator);
   }

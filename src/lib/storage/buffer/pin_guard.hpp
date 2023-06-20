@@ -18,14 +18,18 @@
 #include "types.hpp"
 
 namespace hyrise {
-
 template <AccessIntent accessIntent>
 struct PinnedFrames : public Noncopyable {
  public:
   void add_pin(const PageID page_id) {
-    if (!page_id.valid() || has_pinned(page_id)) {
+    if (!page_id.valid()) {
       return;
     }
+
+    if (has_pinned(page_id)) {
+      return;
+    }
+
     _pins.push_back(page_id);
     if constexpr (accessIntent == AccessIntent::Write) {
       BufferManager::get().pin_for_write(page_id);
@@ -57,7 +61,7 @@ struct PinnedFrames : public Noncopyable {
     }
   }
 
-  boost::container::small_vector<PageID, 5> _pins;
+  std::vector<PageID> _pins;
 };
 
 template <AccessIntent accessIntent>
@@ -119,6 +123,9 @@ struct FramePinGuard final : public PinnedFrames<accessIntent> {
   template <typename T>
   FramePinGuard(const ValueSegment<T>& segment) {
     add_vector_pins(segment.values());
+    if (segment.is_nullable()) {
+      add_vector_pins(segment.null_values());
+    }
   }
 
   template <typename T>

@@ -10,7 +10,7 @@
 namespace hyrise {
 
 VolatileRegion::VolatileRegion(const PageSizeType size_type, std::byte* region_start, std::byte* region_end)
-    : _frames(INITIAL_SLOTS_PER_REGION),
+    : _frames(std::min(INITIAL_SLOTS_PER_REGION, (region_end - region_start) / bytes_for_size_type(size_type))),
       _free_slots(_frames.size()),
       _size_type(size_type),
       _region_start(region_start),
@@ -19,6 +19,13 @@ VolatileRegion::VolatileRegion(const PageSizeType size_type, std::byte* region_s
   DebugAssert(region_start < region_end, "Region is too small");
   DebugAssert((region_end - region_start) < DEFAULT_RESERVED_VIRTUAL_MEMORY, "Region start and end dont match");
   _free_slots.set();
+  std::cout << region_start << " " << region_end << std::endl;
+  if constexpr (ENABLE_MPROTECT) {
+    if (mprotect(region_start, region_end - region_start, PROT_NONE) != 0) {
+      const auto error = errno;
+      Fail("Failed to mprotect: " + strerror(errno));
+    }
+  }
 }
 
 void VolatileRegion::move_to_numa_node(PageID page_id, const NumaMemoryNode target_memory_node) {
@@ -50,17 +57,23 @@ void VolatileRegion::free(PageID page_id) {
 }
 
 std::pair<PageID, std::byte*> VolatileRegion::allocate() {
-  DebugAssert(_free_slots.any(), "No free slots available in region. TODO: Expand until end of region");
   // TODO: Handle missing space
   auto idx = PageID::PageIDType{0};
   {
     std::lock_guard<std::mutex> lock(_mutex);
+    DebugAssert(_free_slots.any(), "No free slots available in region. TODO: Expand until end of region");
     idx = _free_slots.find_first();
     _free_slots.reset(idx);
   }
 
   const auto page_id = PageID{_size_type, idx};
   auto ptr = get_page(page_id);
+  if constexpr (ENABLE_MPROTECT) {
+    if (mprotect(ptr, bytes_for_size_type(_size_type), PROT_READ | PROT_WRITE) != 0) {
+      const auto error = errno;
+      Fail("Failed to mprotect: " + strerror(errno));
+    }
+  }
   return std::make_pair(page_id, ptr);
 }
 
@@ -76,6 +89,13 @@ void VolatileRegion::deallocate(const PageID page_id) {
   std::lock_guard<std::mutex> lock(_mutex);
   // TODO: Assert unlocked and clear
   _free_slots.set(page_id.index);
+  if constexpr (HYRISE_DEBUG) {
+    auto ptr = get_page(page_id);
+    if (mprotect(ptr, bytes_for_size_type(_size_type), PROT_NONE) != 0) {
+      const auto error = errno;
+      Fail("Failed to mprotect: " + strerror(errno));
+    }
+  }
 }
 
 Frame* VolatileRegion::get_frame(const PageID page_id) {

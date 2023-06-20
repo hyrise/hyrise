@@ -27,28 +27,34 @@ class BufferPoolAllocator {
   using reference = typename add_reference<T>::type;
   using const_reference = typename add_reference<const T>::type;
 
-  BufferPoolAllocator() : _memory_resource(get_buffer_manager_memory_resource()) {}  // TODO: Other memory resource?
+  BufferPoolAllocator() : _memory_resource(get_buffer_manager_memory_resource()) {
+    DebugAssert(_memory_resource != nullptr, "_memory_resource is empty");
 
-  BufferPoolAllocator(boost::container::pmr::memory_resource* memory_resource) : _memory_resource(memory_resource) {}
+  }  // TODO: Other memory resource?
 
   BufferPoolAllocator(boost::container::pmr::memory_resource* memory_resource,
-                      std::shared_ptr<BufferPoolAllocatorObserver> observer)
-      : _memory_resource(memory_resource), _observer(observer) {}
+                      std::shared_ptr<BufferPoolAllocatorObserver> observer = nullptr)
+      : _memory_resource(memory_resource), _observer(observer) {
+    DebugAssert(_memory_resource != nullptr, "_memory_resource is empty");
+  }
 
   BufferPoolAllocator(const BufferPoolAllocator& other) noexcept {
     _memory_resource = other.memory_resource();
     _observer = other.current_observer();
+    DebugAssert(_memory_resource != nullptr, "_memory_resource is empty");
   }
 
   template <class U>
   BufferPoolAllocator(const BufferPoolAllocator<U>& other) noexcept {
     _memory_resource = other.memory_resource();
     _observer = other.current_observer();
+    DebugAssert(_memory_resource != nullptr, "_memory_resource is empty");
   }
 
   BufferPoolAllocator& operator=(const BufferPoolAllocator& other) noexcept {
     _memory_resource = other.memory_resource();
     _observer = other.current_observer();
+    DebugAssert(_memory_resource != nullptr, "_memory_resource is empty");
     return *this;
   }
 
@@ -85,6 +91,8 @@ class BufferPoolAllocator {
   }
 
   BufferPoolAllocator select_on_container_copy_construction() const noexcept {
+    DebugAssert(_memory_resource != nullptr, "_memory_resource is empty");
+
     return BufferPoolAllocator(_memory_resource, _observer.lock());
   }
 
@@ -97,16 +105,6 @@ class BufferPoolAllocator {
 
   std::weak_ptr<BufferPoolAllocatorObserver> current_observer() const {
     return _observer;
-  }
-
-  pointer address(reference value) const {
-    return pointer(boost::addressof(value));
-  }
-
-  //!Returns address of non mutable object.
-  //!Never throws
-  const_pointer address(const_reference value) const {
-    return const_pointer(boost::addressof(value));
   }
 
  private:

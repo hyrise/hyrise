@@ -4,7 +4,7 @@
 namespace hyrise {
 
 static SSDRegion::DeviceType find_device_type_or_fail(const std::filesystem::path& file_name) {
-  if (std::filesystem::is_regular_file(file_name)) {
+  if (std::filesystem::is_regular_file(file_name) || std::filesystem::is_directory(file_name)) {
     return SSDRegion::DeviceType::REGULAR_FILE;
   } else if (std::filesystem::is_block_file(file_name)) {
     return SSDRegion::DeviceType::BLOCK;
@@ -13,21 +13,15 @@ static SSDRegion::DeviceType find_device_type_or_fail(const std::filesystem::pat
   }
 }
 
-SSDRegion::SSDRegion(const std::filesystem::path& file_name, const size_t max_bytes_per_size_type,
-                     const uint64_t initial_num_bytes)
-    : _fd(open_file_descriptor(file_name)),
-      _backing_file_name(file_name),
-      _max_bytes_per_size_type(max_bytes_per_size_type),
-      _device_type(find_device_type_or_fail(file_name)) {
-  if (_device_type == DeviceType::REGULAR_FILE) {
-    std::filesystem::resize_file(file_name, initial_num_bytes);
-  }
-}
+SSDRegion::SSDRegion(const std::filesystem::path& path)
+    : _file_handles(open_file_handles(path)), _device_type(find_device_type_or_fail(path)) {}
 
 SSDRegion::~SSDRegion() {
-  Assert(close(_fd) == 0, "Error while closing file descriptor");
-  if (_device_type == DeviceType::REGULAR_FILE) {
-    std::filesystem::remove(_backing_file_name);
+  for (auto& file_handle : _file_handles) {
+    Assert(close(file_handle.fd) == 0, "Error while closing file descriptor");
+    if (_device_type == DeviceType::REGULAR_FILE) {
+      std::filesystem::remove(file_handle.backing_file_name);
+    }
   }
 }
 
@@ -64,19 +58,21 @@ int SSDRegion::open_file_descriptor(const std::filesystem::path& file_name) {
 
 void SSDRegion::write_page(PageID page_id, std::byte* data) {
   const auto num_bytes = bytes_for_size_type(page_id.size_type());
+  const auto pos = num_bytes * page_id.index;
   DebugAssertPageAligned(data);
-  const auto result = pwrite(_fd, data, num_bytes, 0);
+  const auto result = pwrite(_file_handles[page_id._size_type].fd, data, num_bytes, pos);
   if (result < 0) {
     const auto error = errno;
     Fail("Error while writing to SSDRegion: " + strerror(error));
   }
-  // TODO Needs flush?
+  // TODO: Needs flush?
 }
 
 void SSDRegion::read_page(PageID page_id, std::byte* data) {
   const auto num_bytes = bytes_for_size_type(page_id.size_type());
+  const auto pos = num_bytes * page_id.index;
   DebugAssertPageAligned(data);
-  const auto result = pread(_fd, data, num_bytes, 0);
+  const auto result = pread(_file_handles[page_id._size_type].fd, data, num_bytes, pos);
   if (result < 0) {
     const auto error = errno;
     Fail("Error while reading from SSDRegion: " + strerror(error));
@@ -89,15 +85,29 @@ size_t SSDRegion::memory_consumption() const {
 
 SSDRegion& SSDRegion::operator=(SSDRegion&& other) noexcept {
   if (&other != this) {
-    _fd = std::move(other._fd);
-    _max_bytes_per_size_type = other._max_bytes_per_size_type;
-    _backing_file_name = std::move(other._backing_file_name);
+    _file_handles = std::move(other._file_handles);
     _device_type = other._device_type;
   }
   return *this;
 }
 
-std::filesystem::path SSDRegion::get_file_name() {
-  return _backing_file_name;
+std::array<SSDRegion::FileHandle, NUM_PAGE_SIZE_TYPES> SSDRegion::open_file_handles(const std::filesystem::path& path) {
+  DebugAssert(std::filesystem::is_directory(path), "SSDRegion path must be a directory");
+  auto array = std::array<SSDRegion::FileHandle, NUM_PAGE_SIZE_TYPES>{};
+
+  const auto now = std::chrono::system_clock::now();
+  const auto timestamp = std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch()).count();
+
+  for (auto i = 0; i < NUM_PAGE_SIZE_TYPES; ++i) {
+    const auto file_name =
+        path / ("hyrise-buffer-pool-" + std::to_string(timestamp) + "-type-" + std::to_string(i) + ".bin");
+    array[i] = {open_file_descriptor(file_name), file_name};
+    if (_device_type == DeviceType::REGULAR_FILE) {
+      std::filesystem::resize_file(file_name, 1UL << 25);
+    }
+  }
+
+  return array;
 }
+
 }  // namespace hyrise

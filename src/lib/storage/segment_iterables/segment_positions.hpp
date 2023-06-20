@@ -94,8 +94,7 @@ class NonNullSegmentPosition final : public AbstractSegmentPosition<T> {
       : _value{value}, _chunk_offset{chunk_offset} {}
 
   template <typename U = T, typename = std::enable_if_t<std::is_same_v<U, pmr_string>>>
-  NonNullSegmentPosition(const U& value, const ChunkOffset& chunk_offset)
-      : _value{value, boost::container::pmr::new_delete_resource()}, _chunk_offset{chunk_offset} {}
+  NonNullSegmentPosition(const U& value, const ChunkOffset& chunk_offset) : _value{}, _chunk_offset{chunk_offset} {}
 
   const T& value() const override {
     return _value;

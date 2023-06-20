@@ -43,8 +43,6 @@ target_link_libraries_system(
 add_executable(
     hyriseBenchmarkPlayground
 
-    storage/buffer/utils.cpp
-    storage/buffer/utils.hpp
     benchmark_playground.cpp
     micro_benchmark_basic_fixture.cpp
     micro_benchmark_basic_fixture.hpp
@@ -140,9 +138,10 @@ add_executable(
     operators/table_scan_benchmark.cpp
     operators/sort_benchmark.cpp
 
-    storage/buffer/utils.cpp
-    storage/buffer/utils.hpp
+
+    storage/buffer/page_migration_benchmark.cpp
     storage/buffer/allocation_benchmark.cpp
+
     storage/buffer/ssd_region_benchmark.cpp
     storage/buffer/volatile_region_benchmark.cpp
     storage/buffer/buffer_manager_benchmark.cpp

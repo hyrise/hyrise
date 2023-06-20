@@ -112,9 +112,7 @@ class SingleChunkReferenceSegmentAccessor final : public AbstractSegmentAccessor
  public:
   explicit SingleChunkReferenceSegmentAccessor(const AbstractPosList& pos_list, const ChunkID chunk_id,
                                                const Segment& segment)
-      : _pos_list{pos_list}, _chunk_id(chunk_id), _segment(segment) {}
-
-  // TODO: _pos_list_pin_guard{pos_list}
+      : _pos_list{pos_list}, _chunk_id(chunk_id), _segment(segment), _segement_pin_guard(segment) {}
 
   const std::optional<T> access(ChunkOffset offset) const final {
     ++_accesses;
@@ -131,6 +129,7 @@ class SingleChunkReferenceSegmentAccessor final : public AbstractSegmentAccessor
   const AbstractPosList& _pos_list;
   const ChunkID _chunk_id;
   const Segment& _segment;
+  const ReadPinGuard _segement_pin_guard;
 };
 
 // Accessor for ReferenceSegments that reference only NULL values

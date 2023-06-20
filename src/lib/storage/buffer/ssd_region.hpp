@@ -20,8 +20,7 @@ class SSDRegion : public Noncopyable {
  public:
   enum class DeviceType { BLOCK, REGULAR_FILE };
 
-  SSDRegion(const std::filesystem::path& file_name, const size_t max_bytes_per_size_type,
-            const uint64_t initial_num_bytes = 1UL << 25);
+  SSDRegion(const std::filesystem::path& path);
   ~SSDRegion();
 
   void write_page(const PageID page_id, std::byte* data);
@@ -29,18 +28,20 @@ class SSDRegion : public Noncopyable {
 
   DeviceType get_device_type() const;
 
-  std::filesystem::path get_file_name();
-
   size_t memory_consumption() const;
 
   SSDRegion& operator=(SSDRegion&& other) noexcept;
 
  private:
-  int _fd;
-  size_t _max_bytes_per_size_type;
-  std::filesystem::path _backing_file_name;
+  struct FileHandle {
+    int fd;
+    std::filesystem::path backing_file_name;
+  };
+
+  std::array<FileHandle, NUM_PAGE_SIZE_TYPES> _file_handles;
   DeviceType _device_type;
 
+  std::array<FileHandle, NUM_PAGE_SIZE_TYPES> open_file_handles(const std::filesystem::path& path);
   static int open_file_descriptor(const std::filesystem::path& file_name);
 };
 }  // namespace hyrise

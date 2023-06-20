@@ -263,7 +263,9 @@ __attribute__((hot)) void AggregateHash::_aggregate_segment(ChunkID chunk_id, Co
  */
 template <typename AggregateKey>
 KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() {
-  KeysPerChunk<AggregateKey> keys_per_chunk;
+  auto allocator = PolymorphicAllocator<size_t>{&Hyrise::get().linear_buffer_resource};
+  auto pin_guard = AllocatorPinGuard{allocator};
+  KeysPerChunk<AggregateKey> keys_per_chunk{allocator};
 
   if constexpr (!std::is_same_v<AggregateKey, EmptyAggregateKey>) {
     const auto& input_table = left_input_table();

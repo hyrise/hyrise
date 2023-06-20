@@ -13,7 +13,10 @@
 
 namespace hyrise {
 
-// TODO: Use mprotect for debugging
+std::byte* create_mapped_region();
+std::array<std::unique_ptr<VolatileRegion>, NUM_PAGE_SIZE_TYPES> create_volatile_regions(std::byte* mapped_region);
+void unmap_region(std::byte* region);
+
 class BufferManager : public boost::container::pmr::memory_resource, public Noncopyable {
  public:
   // TODO: Add
@@ -74,8 +77,7 @@ class BufferManager : public boost::container::pmr::memory_resource, public Nonc
     std::atomic_uint64_t num_numa_evictions;
 
     // Number of madvice calls, TODO: track in more places
-    std::atomic_uint64_t num_madvice_free_calls_numa = 0;
-    std::atomic_uint64_t num_madvice_free_calls_dram = 0;
+    std::atomic_uint64_t num_madvice_free_calls = 0;
   };
 
   struct Config {
@@ -188,6 +190,10 @@ class BufferManager : public boost::container::pmr::memory_resource, public Nonc
 
   void read_page(const PageID page_id);
 
+  void protect_page(const PageID page_id);
+
+  void unprotect_page(const PageID page_id);
+
   void make_resident(const PageID page_id, const AccessIntent access_intent,
                      const StateVersionType previous_state_version);
 
@@ -207,4 +213,15 @@ class BufferManager : public boost::container::pmr::memory_resource, public Nonc
 
   std::shared_ptr<Metrics> _metrics;
 };
+
+template <typename T>
+inline T& DebugAssertNotEvictedAndReturn(T& value) {
+  auto page_id = BufferManager::get().find_page(value.data());
+  // DebugAssert(page_id.valid(), "Accessing invalid page");
+  // auto state = BufferManager::get()._state(page_id);
+  // DebugAssert(state == Frame::LOCKED || (state > Frame::UNLOCKED && state <= Frame::LOCKED_SHARED),
+  //             "Accessing non-pinned value: " + std::to_string(state));
+  return value;
+}
+
 }  // namespace hyrise

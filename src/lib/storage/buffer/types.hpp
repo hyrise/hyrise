@@ -17,11 +17,21 @@ STRONG_TYPEDEF(int8_t, NumaMemoryNode);
 
 namespace hyrise {
 
+inline std::size_t get_page_size() {
+  return std::size_t(sysconf(_SC_PAGESIZE));
+}
+
+#ifdef __APPLE__
+constexpr size_t PAGE_SIZE = 16384;
+enum class PageSizeType { KiB16, KiB32, KiB64, KiB128, KiB256, KiB512 };
+#elif __linux__
+constexpr size_t PAGE_SIZE = 8192;
 enum class PageSizeType { KiB8, KiB16, KiB32, KiB64, KiB128, KiB256, KiB512 };
+#endif
 
 // Get the number of bytes for a given PageSizeType
 constexpr size_t bytes_for_size_type(const PageSizeType size) {
-  return 1 << (13 + static_cast<size_t>(size));
+  return PAGE_SIZE << static_cast<size_t>(size);
 }
 
 // Find the smallest PageSizeType that can hold the given bytes
@@ -79,12 +89,6 @@ constexpr auto DEFAULT_DRAM_NUMA_NODE = NumaMemoryNode{0};
 // Pages need to be aligned to 512 in order to be used with O_DIRECT
 constexpr size_t PAGE_ALIGNMENT = 512;
 
-// Default page size in Linux, TODO: check with OS X
-constexpr size_t PAGE_SIZE = 4096;
-
-static_assert(bytes_for_size_type(magic_enum::enum_value<PageSizeType>(0)) >= PAGE_SIZE,
-              "Smallest page size does not fit into an OS page");
-
 // How often old items should be evicted from the eviction queue
 constexpr static std::chrono::milliseconds IDLE_EVICTION_QUEUE_PURGE = std::chrono::milliseconds(1000);
 
@@ -130,9 +134,12 @@ struct EvictionItem {
   bool can_mark(StateVersionType state_and_version) const;
 };
 
+// Enable or or disable mprotect calls for debugging purposes
+constexpr bool ENABLE_MPROTECT = false;
+
 constexpr size_t MAX_EVICTION_QUEUE_PURGES = 1024;
 
-constexpr size_t DEFAULT_RESERVED_VIRTUAL_MEMORY = 1UL << 32;
+constexpr size_t DEFAULT_RESERVED_VIRTUAL_MEMORY = 1UL << 45;
 
 constexpr size_t DEFAULT_RESERVED_VIRTUAL_MEMORY_PER_REGION = (DEFAULT_RESERVED_VIRTUAL_MEMORY / NUM_PAGE_SIZE_TYPES) /
                                                               bytes_for_size_type(MAX_PAGE_SIZE_TYPE) *

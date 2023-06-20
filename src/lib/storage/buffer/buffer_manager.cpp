@@ -18,6 +18,8 @@ namespace hyrise {
 //----------------------------------------------------
 
 std::byte* create_mapped_region() {
+  Assert(bytes_for_size_type(MIN_PAGE_SIZE_TYPE) == get_page_size(),
+         "Smallest page size does not fit into an OS page: " + std::to_string(get_page_size()));
 #ifdef __APPLE__
   const int flags = MAP_PRIVATE | MAP_ANON | MAP_NORESERVE;
 #elif __linux__
@@ -86,16 +88,11 @@ BufferManager::Config BufferManager::Config::from_env() {
     config.dram_buffer_pool_size = json.value("dram_buffer_pool_size", config.dram_buffer_pool_size);
     config.numa_buffer_pool_size = json.value("numa_buffer_pool_size", config.numa_buffer_pool_size);
 
-    if (std::filesystem::is_block_file(json.value("ssd_path", config.ssd_path))) {
+    if (std::filesystem::is_block_file(json.value("ssd_path", config.ssd_path)) ||
+        std::filesystem::is_directory(json.value("ssd_path", config.ssd_path))) {
       config.ssd_path = json.value("ssd_path", config.ssd_path);
-    } else if (std::filesystem::is_directory(json.value("ssd_path", config.ssd_path))) {
-      const auto path = std::filesystem::path(json.value("ssd_path", config.ssd_path));
-      const auto now = std::chrono::system_clock::now();
-      const auto timestamp = std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch()).count();
-      const auto db_file = std::filesystem::path{"hyrise-buffer-pool-" + std::to_string(timestamp) + ".bin"};
-      config.ssd_path = path / db_file;
     } else {
-      config.ssd_path = json.value("ssd_path", config.ssd_path);
+      Fail("ssd_path is neither a block device nor a directory");
     }
     auto migration_policy_json = json.value("migration_policy", nlohmann::json{});
     config.migration_policy = MigrationPolicy{
@@ -122,7 +119,7 @@ BufferManager::BufferManager(const Config config)
       _mapped_region(create_mapped_region()),
       _metrics(std::make_shared<Metrics>()),
       _volatile_regions(create_volatile_regions(_mapped_region)),
-      _ssd_region(config.ssd_path, 1 << 26),  // TODO: imprive init of pools here
+      _ssd_region(config.ssd_path),  // TODO: imprive init of pools here
       _primary_buffer_pool(config.dram_buffer_pool_size, config.enable_eviction_purge_worker, _volatile_regions,
                            config.migration_policy, &_ssd_region,
                            config.memory_node == NO_NUMA_MEMORY_NODE ? nullptr : &_secondary_buffer_pool,
@@ -185,10 +182,13 @@ void BufferManager::make_resident(const PageID page_id, const AccessIntent acces
   // TODO: Switch buffer pool
   _primary_buffer_pool.free_pages(page_id.size_type());
   get_region(page_id).move_to_numa_node(page_id, NO_NUMA_MEMORY_NODE);
+  unprotect_page(page_id);
   read_page(page_id);
 }
 
 void BufferManager::pin_for_read(const PageID page_id) {
+  DebugAssert(page_id.valid(), "Invalid page id");
+
   _metrics->total_pins.fetch_add(1, std::memory_order_relaxed);
   _metrics->current_pins.fetch_add(1, std::memory_order_relaxed);
 
@@ -221,6 +221,8 @@ void BufferManager::pin_for_read(const PageID page_id) {
 }
 
 void BufferManager::pin_for_write(const PageID page_id) {
+  DebugAssert(page_id.valid(), "Invalid page id");
+
   _metrics->total_pins.fetch_add(1, std::memory_order_relaxed);
   _metrics->current_pins.fetch_add(1, std::memory_order_relaxed);
 
@@ -253,6 +255,8 @@ void BufferManager::pin_for_write(const PageID page_id) {
 }
 
 void BufferManager::unpin_for_read(const PageID page_id) {
+  DebugAssert(page_id.valid(), "Invalid page id");
+
   _metrics->current_pins.fetch_sub(1, std::memory_order_relaxed);
 
   auto frame = get_region(page_id).get_frame(page_id);
@@ -262,6 +266,8 @@ void BufferManager::unpin_for_read(const PageID page_id) {
 }
 
 void BufferManager::unpin_for_write(const PageID page_id) {
+  DebugAssert(page_id.valid(), "Invalid page id");
+
   _metrics->current_pins.fetch_sub(1, std::memory_order_relaxed);
 
   auto frame = get_region(page_id).get_frame(page_id);
@@ -270,7 +276,29 @@ void BufferManager::unpin_for_write(const PageID page_id) {
 }
 
 void BufferManager::set_dirty(const PageID page_id) {
+  DebugAssert(page_id.valid(), "Invalid page id");
+
   get_region(page_id).get_frame(page_id)->set_dirty(true);
+}
+
+void BufferManager::protect_page(PageID page_id) {
+  if constexpr (ENABLE_MPROTECT) {
+    auto data = get_region(page_id).get_page(page_id);
+    if (mprotect(data, bytes_for_size_type(page_id.size_type()), PROT_NONE) != 0) {
+      const auto error = errno;
+      Fail("Failed to mprotect: " + strerror(errno));
+    }
+  }
+}
+
+void BufferManager::unprotect_page(PageID page_id) {
+  if constexpr (ENABLE_MPROTECT) {
+    auto data = get_region(page_id).get_page(page_id);
+    if (mprotect(data, bytes_for_size_type(page_id.size_type()), PROT_READ | PROT_WRITE) != 0) {
+      const auto error = errno;
+      Fail("Failed to mprotect: " + strerror(errno));
+    }
+  }
 }
 
 PageID BufferManager::find_page(const void* ptr) const {
@@ -304,9 +332,6 @@ void* BufferManager::do_allocate(std::size_t bytes, std::size_t alignment) {
   const auto [page_id, ptr] = _volatile_regions[static_cast<uint64_t>(size_type)]->allocate();
   _metrics->num_allocs.fetch_add(1, std::memory_order_relaxed);
 
-  if (size_type == PageSizeType::KiB16) {
-    std::cout << page_id << std::endl;
-  }
   return ptr;
 }
 
@@ -462,7 +487,8 @@ void BufferManager::BufferPool::free_pages(const PageSizeType size) {
       // Otherwise we just write the page if its dirty and free the associated pages
       if (frame->is_dirty()) {
         auto data = region.get_page(item.page_id);
-        ssd_region->write_page(item.page_id, data);
+        ssd_region->write_page(item.page_id, data);  // TODO: use global function
+        // TODO: protect_page(page_id);
         frame->reset_dirty();
       }
       region.free(item.page_id);

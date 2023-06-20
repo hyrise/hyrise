@@ -22,7 +22,7 @@ def state_string(state):
 
 
 def FrameSummary(valobj, internal_dict, *args, **options):
-    value = valobj.GetValueAsUnsigned()
+    value = valobj.GetValGetValueueAsUnsigned()
     version = value & VERSION_MASK
     memory_node = (value & NODE_MASK) >> NODE_SHIFT
     dirty = bool((value & DIRTY_MASK) >> DIRTY_SHIFT)
@@ -45,3 +45,5 @@ def __lldb_init_module(debugger, dictionary):
                            __name__ + ".FrameSummary hyrise::Frame")
     debugger.HandleCommand("type summary add -F " +
                            __name__ + ".PageIDSummary hyrise::PageID")
+    debugger.HandleCommand("type summary add -F " +
+                           __name__ + ".FrameSummary hyrise::StateVersionType")
