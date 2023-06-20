@@ -159,9 +159,9 @@ TEST_F(IndexScanRuleTest, IndexScanOnlyOnOutputOfStoredTableNode) {
   EXPECT_EQ(predicate_node_1->scan_type, ScanType::TableScan);
 }
 
-// Same test as before, but placing the predicate with a very high selectivity first, does not trigger an index scan.
-// The following predicate has a very low selectivity, but does not follow a stored table node.
-TEST_F(IndexScanRuleTest, NoIndexScanForPredicatesNotOnStoredTableNode) {
+// Same test as before, but placing the predicate with a high selectivity first, which does not trigger an index
+// scan. The seoond predicate has a very low selectivity, but does not follow a stored table node.
+TEST_F(IndexScanRuleTest, NoIndexScanForSecondPredicate) {
   auto chunk_ids = std::vector<ChunkID>(table->chunk_count());
   std::iota(chunk_ids.begin(), chunk_ids.end(), 0);
   table->create_partial_hash_index(ColumnID{1}, chunk_ids);

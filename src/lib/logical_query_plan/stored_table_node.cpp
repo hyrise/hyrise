@@ -32,7 +32,7 @@ StoredTableNode::StoredTableNode(const std::string& init_table_name)
     : AbstractLQPNode(LQPNodeType::StoredTable), table_name(init_table_name) {}
 
 std::shared_ptr<LQPColumnExpression> StoredTableNode::get_column(const std::string& name) const {
-  const auto table = Hyrise::get().storage_manager.get_table(table_name);
+  const auto& table = Hyrise::get().storage_manager.get_table(table_name);
   const auto column_id = table->column_id_by_name(name);
   return std::make_shared<LQPColumnExpression>(shared_from_this(), column_id);
 }
@@ -71,7 +71,7 @@ const std::vector<ColumnID>& StoredTableNode::pruned_column_ids() const {
 }
 
 std::string StoredTableNode::description(const DescriptionMode /*mode*/) const {
-  const auto stored_table = Hyrise::get().storage_manager.get_table(table_name);
+  const auto& stored_table = Hyrise::get().storage_manager.get_table(table_name);
 
   std::ostringstream stream;
   stream << "[StoredTable] Name: '" << table_name << "' pruned: ";
@@ -156,15 +156,15 @@ std::vector<ChunkIndexStatistics> StoredTableNode::chunk_indexes_statistics() co
   pruned_indexes_statistics.erase(std::remove_if(pruned_indexes_statistics.begin(), pruned_indexes_statistics.end(),
                                                  [&](auto& statistics) {
                                                    for (auto& original_column_id : statistics.column_ids) {
-                                                     const auto& updated_column_id =
+                                                     const auto updated_column_id =
                                                          column_id_mapping[original_column_id];
-                                                     if (!updated_column_id) {
+                                                     if (updated_column_id == INVALID_COLUMN_ID) {
                                                        // Indexed column was pruned - remove index from statistics
                                                        return true;
                                                      }
 
                                                      // Update column id
-                                                     original_column_id = *updated_column_id;
+                                                     original_column_id = updated_column_id;
                                                    }
                                                    return false;
                                                  }),
@@ -193,13 +193,13 @@ std::vector<TableIndexStatistics> StoredTableNode::table_indexes_statistics() co
     DebugAssert(index_statistic.column_ids.size() == 1, "Unexpected multi-column index");
 
     const auto& updated_column_id = column_id_mapping[index_statistic.column_ids[0]];
-    if (!updated_column_id) {
+    if (updated_column_id == INVALID_COLUMN_ID) {
       continue;  // Indexed column was pruned.
     }
 
     // Append statistic and update its column id.
     pruned_index_statistics.push_back(index_statistic);
-    pruned_index_statistics.back().column_ids[0] = *updated_column_id;
+    pruned_index_statistics.back().column_ids[0] = updated_column_id;
   }
 
   return pruned_index_statistics;

@@ -25,8 +25,10 @@ class IndexScan : public AbstractReadOnlyOperator {
 
   const std::string& name() const final;
 
-  // Must be set because only the specified chunks will be scanned. See TableScan::excluded_chunk_ids for usage.
-  // Note: These ChunkIDs are reffering to the ChunkIDs of a (!! non-pruned !!) StoredTable.
+  // Must not be empty because only the specified chunks will be scanned. See TableScan::excluded_chunk_ids for usage.
+  // Note: These ChunkIDs are reffering to the ChunkIDs of a (!! non-pruned !!) data table to which the index belongs.
+  // They do not refer to the ChunkIDs output by potentially chunk-pruned GetTable operartors (i.e., the index scan's
+  // input).
   std::vector<ChunkID> included_chunk_ids;
 
  protected:

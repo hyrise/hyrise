@@ -32,13 +32,18 @@ const std::string& IndexScan::name() const {
 }
 
 std::shared_ptr<const Table> IndexScan::_on_execute() {
+  Assert(!included_chunk_ids.empty(), "Index scan expects a non-emptpy list of chunks to process.");
+  DebugAssert(std::is_sorted(included_chunk_ids.begin(), included_chunk_ids.end()),
+              "Included ChunkIDs must be sorted.");
+
   _in_table = left_input_table();
 
-  auto chunk_id_mapping = std::unordered_map<ChunkID, ChunkID>{};
-  auto pruned_chunk_ids_set = std::unordered_set<ChunkID>{};
-
-  // If the input operator is of the type GetTable, pruning must be considered.
-  const auto& input_get_table = dynamic_pointer_cast<const GetTable>(left_input());
+  // If the input operator is of type GetTable (which we require), we get only the chunks forwarded to the index scan,
+  // for which an index exists (or more precise, for which an index existed during optimization). Nonetheless, we still
+  // access the GetTable node to check if more chunks have been pruned at runtime (this will be part of the master,
+  // later in 2023).
+  // TODO(Daniel): please help me phrasing that.
+  const auto& input_get_table = std::dynamic_pointer_cast<const GetTable>(left_input());
   Assert(input_get_table, "IndexScan needs a GetTable operator as input.");
 
   // If columns have been pruned, calculate the ColumnID that was originally indexed.
@@ -47,20 +52,29 @@ std::shared_ptr<const Table> IndexScan::_on_execute() {
 
   // If chunks have been pruned, calculate a mapping that maps the pruned ChunkIDs to the original ones.
   const auto& pruned_chunk_ids = input_get_table->pruned_chunk_ids();
-  chunk_id_mapping = chunk_ids_after_pruning(_in_table->chunk_count() + pruned_chunk_ids.size(), pruned_chunk_ids);
-  pruned_chunk_ids_set = std::unordered_set<ChunkID>{pruned_chunk_ids.begin(), pruned_chunk_ids.end()};
+  auto chunk_count_to_scan = static_cast<int32_t>(_in_table->chunk_count());
+  auto chunk_id_mapping = chunk_ids_after_pruning(_in_table->chunk_count() + pruned_chunk_ids.size(), pruned_chunk_ids);
 
   // Remove all values from the mapping not present in the included ChunkIDs.
-  for (auto iterator = chunk_id_mapping.begin(); iterator != chunk_id_mapping.end();) {
-    if (!std::binary_search(included_chunk_ids.begin(), included_chunk_ids.end(), iterator->second)) {
-      iterator = chunk_id_mapping.erase(iterator);
-    } else {
-      ++iterator;
+  for (auto index = size_t{0}; index < chunk_id_mapping.size(); ++index) {
+    const auto chunk_id = chunk_id_mapping[index];
+    if (chunk_id != INVALID_CHUNK_ID &&
+        !std::binary_search(included_chunk_ids.begin(), included_chunk_ids.end(), chunk_id)) {
+      chunk_id_mapping[index] = INVALID_CHUNK_ID;
+      --chunk_count_to_scan;
     }
   }
 
   _out_table = std::make_shared<Table>(_in_table->column_definitions(), TableType::References);
-  auto matches_out = std::make_shared<RowIDPosList>();  // TODO(anyone): assess if std::deque is more appropriate here
+
+  DebugAssert(chunk_count_to_scan >= 0, "Excluded more chunks than available.");
+  if (chunk_count_to_scan == 0) {
+    // All chunks to scan have been pruned (can happen due to dynamic pruning).
+    return _out_table;
+  }
+
+  auto pos_lists = std::vector<std::shared_ptr<RowIDPosList>>();
+  pos_lists.emplace_back(std::make_shared<RowIDPosList>());
 
   const auto& indexes = _in_table->get_table_indexes(_indexed_column_id);
   Assert(!indexes.empty(), "No indexes for the requested ColumnID available.");
@@ -68,12 +82,22 @@ std::shared_ptr<const Table> IndexScan::_on_execute() {
   Assert(indexes.size() == 1, "We do not support the handling of multiple indexes for the same column.");
   const auto& index = indexes.front();
 
+  auto& current_append_pos_list = pos_lists.back();
   const auto append_matches = [&](const auto& begin, const auto& end) {
     for (auto current_iter = begin; current_iter != end; ++current_iter) {
-      const auto mapped_chunk_id = chunk_id_mapping.find((*current_iter).chunk_id);
+      const auto mapped_chunk_id = chunk_id_mapping[(*current_iter).chunk_id];
 
-      if (mapped_chunk_id != chunk_id_mapping.end()) {
-        matches_out->emplace_back(mapped_chunk_id->second, (*current_iter).chunk_offset);
+      if (mapped_chunk_id != INVALID_CHUNK_ID) {
+        // For equal predicates, the results are sorted by chunk. It is thus possible to emit single pos lists per
+        // chunk and guaranteeing that only single chunks are referenced. We decided against this as we expect the
+        // result sets of index scans to be tiny in most cases (single chunk guarantee might not pay off and we could
+        // end up with many very small segments).
+        current_append_pos_list->emplace_back(mapped_chunk_id, (*current_iter).chunk_offset);
+
+        if (current_append_pos_list->size() > Chunk::DEFAULT_SIZE) {
+          pos_lists.emplace_back(std::make_shared<RowIDPosList>());
+          current_append_pos_list = pos_lists.back();
+        }
       }
     }
   };
@@ -91,47 +115,17 @@ std::shared_ptr<const Table> IndexScan::_on_execute() {
       Fail("Unsupported comparison type. Currently, Hyrise's secondary indexes only support Equals and NotEquals.");
   }
 
-  if (matches_out->empty()) {
+  if (pos_lists[0]->empty()) {
     return _out_table;
   }
 
-  // Split the output RowIDPosList per Chunk.
-
-  const auto reserved_pos_list_size = std::max(size_t{4}, matches_out->size() / chunk_id_mapping.size());
-
-  auto matches_out_per_chunk = std::vector<std::shared_ptr<RowIDPosList>>{};
-  matches_out_per_chunk.emplace_back(std::make_shared<RowIDPosList>());
-  matches_out_per_chunk.back()->guarantee_single_chunk();
-  matches_out_per_chunk.back()->reserve(reserved_pos_list_size);
-
-  auto current_chunk_id = (*matches_out)[0].chunk_id;
-  for (const auto& match : *matches_out) {
-    // The positions stored per value in Hyrise's partial indexes are sorted chunk-wise. The following assert checks
-    // that this assumption remains valid. In case the index's behavior changes, the current approach of creating a new
-    // output chunk whenever the referenced chunk ID changes, should be revisited.
-    // TODO(Martin): change to debug Assert once we passed the full CI.
-    Assert(_predicate_condition != PredicateCondition::Equals || current_chunk_id <= match.chunk_id,
-           "Unexpected order of positions during index traversal.");
-
-    if (match.chunk_id == current_chunk_id) {
-      matches_out_per_chunk.back()->emplace_back(match);
-      continue;
-    }
-
-    matches_out_per_chunk.emplace_back(std::make_shared<RowIDPosList>());
-    matches_out_per_chunk.back()->guarantee_single_chunk();
-    matches_out_per_chunk.back()->reserve(reserved_pos_list_size);
-    matches_out_per_chunk.back()->emplace_back(match);
-    current_chunk_id = match.chunk_id;
-  }
-
   const auto in_table_column_count = _in_table->column_count();
-  for (const auto& matches : matches_out_per_chunk) {
+  for (const auto& pos_list : pos_lists) {
     auto segments = Segments{};
     segments.reserve(in_table_column_count);
 
     for (auto column_id = ColumnID{0}; column_id < in_table_column_count; ++column_id) {
-      segments.emplace_back(std::make_shared<ReferenceSegment>(_in_table, column_id, matches));
+      segments.emplace_back(std::make_shared<ReferenceSegment>(_in_table, column_id, pos_list));
     }
 
     _out_table->append_chunk(segments, nullptr);

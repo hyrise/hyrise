@@ -6,16 +6,16 @@
 
 namespace hyrise {
 
-std::vector<std::optional<ColumnID>> column_ids_after_pruning(const size_t original_table_column_count,
-                                                              const std::vector<ColumnID>& pruned_column_ids) {
+std::vector<ColumnID> column_ids_after_pruning(const size_t original_table_column_count,
+                                               const std::vector<ColumnID>& pruned_column_ids) {
   DebugAssert(std::is_sorted(pruned_column_ids.begin(), pruned_column_ids.end()),
               "Expected a sorted vector of pruned chunk IDs.");
   DebugAssert(pruned_column_ids.empty() || pruned_column_ids.back() < original_table_column_count,
               "Largest pruned column ID is too large.");
-  DebugAssert(pruned_column_ids.size() < original_table_column_count,
+  DebugAssert(pruned_column_ids.size() <= original_table_column_count,
               "List of pruned chunks longer than chunks in actual table.");
 
-  auto column_id_mapping = std::vector<std::optional<ColumnID>>(original_table_column_count);
+  auto column_id_mapping = std::vector<ColumnID>(original_table_column_count, INVALID_COLUMN_ID);
   auto column_pruned_bitvector = std::vector<bool>(original_table_column_count);
 
   // Fill the bitvector
@@ -34,16 +34,16 @@ std::vector<std::optional<ColumnID>> column_ids_after_pruning(const size_t origi
   return column_id_mapping;
 }
 
-std::unordered_map<ChunkID, ChunkID> chunk_ids_after_pruning(const size_t original_table_chunk_count,
-                                                             const std::vector<ChunkID>& pruned_chunk_ids) {
+std::vector<ChunkID> chunk_ids_after_pruning(const size_t original_table_chunk_count,
+                                             const std::vector<ChunkID>& pruned_chunk_ids) {
   DebugAssert(std::is_sorted(pruned_chunk_ids.begin(), pruned_chunk_ids.end()),
               "Expected a sorted vector of pruned chunk IDs.");
   DebugAssert(pruned_chunk_ids.empty() || pruned_chunk_ids.back() < original_table_chunk_count,
               "Largest pruned chunk ID is too large.");
-  DebugAssert(pruned_chunk_ids.size() < original_table_chunk_count,
+  DebugAssert(pruned_chunk_ids.size() <= original_table_chunk_count,
               "List of pruned chunks longer than chunks in actual table.");
 
-  auto chunk_id_mapping = std::unordered_map<ChunkID, ChunkID>{};
+  auto chunk_id_mapping = std::vector<ChunkID>(original_table_chunk_count, INVALID_CHUNK_ID);
   auto pruned_chunk_ids_iter = pruned_chunk_ids.begin();
 
   // Calculate new chunk ids

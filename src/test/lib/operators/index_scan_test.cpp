@@ -60,7 +60,6 @@ class OperatorsIndexScanTest : public BaseTest {
     const auto partially_indexed_table = load_table("resources/test_data/tbl/int_int_shuffled.tbl", ChunkOffset{7});
     ChunkEncoder::encode_all_chunks(partially_indexed_table);
     const auto second_chunk = partially_indexed_table->get_chunk(ChunkID{1});
-    // second_chunk->template create_index<DerivedIndex>(std::vector<ColumnID>{ColumnID{0}});
     Hyrise::get().storage_manager.add_table("index_test_table", partially_indexed_table);
   }
 
@@ -99,121 +98,129 @@ class OperatorsIndexScanTest : public BaseTest {
 };
 
 TEST_F(OperatorsIndexScanTest, SingleColumnScanOnDataTable) {
-  // we do not need to check for a non existing value, because that happens automatically when we scan the second chunk
-
   const auto right_value = AllTypeVariant{4};
 
-  auto tests = std::map<PredicateCondition, std::vector<AllTypeVariant>>{};
-  tests[PredicateCondition::Equals] = {104, 104};
-  tests[PredicateCondition::NotEquals] = {100, 102, 106, 108, 110, 112, 100, 102, 106, 108, 110, 112};
+  auto tests = std::vector<std::pair<PredicateCondition, std::vector<AllTypeVariant>>>{
+      {PredicateCondition::Equals, {104, 104}},
+      {PredicateCondition::NotEquals, {100, 102, 106, 108, 110, 112, 100, 102, 106, 108, 110, 112}}};
 
-  for (const auto& test : tests) {
-    auto scan = std::make_shared<IndexScan>(this->_int_int, this->_column_id, test.first, right_value);
+  for (const auto& [predicate, test_rows] : tests) {
+    auto scan = std::make_shared<IndexScan>(this->_int_int, this->_column_id, predicate, right_value);
     scan->included_chunk_ids = {ChunkID{0}, ChunkID{1}};
 
     scan->execute();
 
     auto scan_small_chunk =
-        std::make_shared<IndexScan>(this->_int_int_small_chunk, this->_column_id, test.first, right_value);
+        std::make_shared<IndexScan>(this->_int_int_small_chunk, this->_column_id, predicate, right_value);
     scan_small_chunk->included_chunk_ids = {ChunkID{0}, ChunkID{1}, ChunkID{2}};
 
     scan_small_chunk->execute();
 
-    this->ASSERT_COLUMN_EQ(scan->get_output(), ColumnID{1u}, test.second);
-    this->ASSERT_COLUMN_EQ(scan_small_chunk->get_output(), ColumnID{1u}, test.second);
+    this->ASSERT_COLUMN_EQ(scan->get_output(), ColumnID{1u}, test_rows);
+    this->ASSERT_COLUMN_EQ(scan_small_chunk->get_output(), ColumnID{1u}, test_rows);
   }
 }
 
 TEST_F(OperatorsIndexScanTest, ScanWithNoChunkIDsIncluded) {
-  // we do not need to check for a non existing value, because that happens automatically when we scan the second chunk
+  auto tests = std::vector<std::pair<PredicateCondition, std::vector<AllTypeVariant>>>{
+      {PredicateCondition::Equals, {}}, {PredicateCondition::NotEquals, {}}};
 
-  const auto right_value = AllTypeVariant{4};
-
-  auto tests = std::map<PredicateCondition, std::vector<AllTypeVariant>>{};
-  tests[PredicateCondition::Equals] = {};
-  tests[PredicateCondition::NotEquals] = {};
-
-  for (const auto& test : tests) {
-    auto scan = std::make_shared<IndexScan>(this->_int_int, this->_column_id, test.first, right_value);
-    scan->included_chunk_ids = std::vector<ChunkID>{};
-
-    scan->execute();
-
-    auto scan_small_chunk =
-        std::make_shared<IndexScan>(this->_int_int_small_chunk, this->_column_id, test.first, right_value);
-    scan_small_chunk->included_chunk_ids = std::vector<ChunkID>{};
-
-    scan_small_chunk->execute();
-
-    auto table = scan->get_output();
-
-    this->ASSERT_COLUMN_EQ(scan->get_output(), ColumnID{1u}, test.second);
-    this->ASSERT_COLUMN_EQ(scan_small_chunk->get_output(), ColumnID{1u}, test.second);
-  }
+  auto scan =
+      std::make_shared<IndexScan>(this->_int_int, this->_column_id, PredicateCondition::Equals, AllTypeVariant{17});
+  scan->included_chunk_ids = std::vector<ChunkID>{};
+  EXPECT_THROW(scan->execute(), std::logic_error);
 }
 
 TEST_F(OperatorsIndexScanTest, SingleColumnScanValueGreaterThanMaxDictionaryValue) {
-  const auto all_rows =
-      std::vector<AllTypeVariant>{100, 102, 104, 106, 108, 110, 112, 100, 102, 104, 106, 108, 110, 112};
-  const auto no_rows = std::vector<AllTypeVariant>{};
-
   const auto right_value = AllTypeVariant{30};
 
-  auto tests = std::map<PredicateCondition, std::vector<AllTypeVariant>>{};
-  tests[PredicateCondition::Equals] = no_rows;
-  tests[PredicateCondition::NotEquals] = all_rows;
+  auto tests = std::vector<std::pair<PredicateCondition, std::vector<AllTypeVariant>>>{
+      {PredicateCondition::Equals, {}},
+      {PredicateCondition::NotEquals, {100, 102, 104, 106, 108, 110, 112, 100, 102, 104, 106, 108, 110, 112}}};
 
-  for (const auto& test : tests) {
-    auto scan = std::make_shared<IndexScan>(this->_int_int, this->_column_id, test.first, right_value);
+  for (const auto& [predicate, test_rows] : tests) {
+    auto scan = std::make_shared<IndexScan>(this->_int_int, this->_column_id, predicate, right_value);
     scan->included_chunk_ids = {ChunkID{0}, ChunkID{1}};
 
     scan->execute();
 
     auto scan_small_chunk =
-        std::make_shared<IndexScan>(this->_int_int_small_chunk, this->_column_id, test.first, right_value);
+        std::make_shared<IndexScan>(this->_int_int_small_chunk, this->_column_id, predicate, right_value);
     scan_small_chunk->included_chunk_ids = {ChunkID{0}, ChunkID{1}, ChunkID{2}};
 
     scan_small_chunk->execute();
 
-    this->ASSERT_COLUMN_EQ(scan->get_output(), ColumnID{1u}, test.second);
-    this->ASSERT_COLUMN_EQ(scan_small_chunk->get_output(), ColumnID{1u}, test.second);
+    this->ASSERT_COLUMN_EQ(scan->get_output(), ColumnID{1u}, test_rows);
+    this->ASSERT_COLUMN_EQ(scan_small_chunk->get_output(), ColumnID{1u}, test_rows);
   }
 }
 
 TEST_F(OperatorsIndexScanTest, SingleColumnScanValueLessThanMinDictionaryValue) {
-  const auto all_rows =
-      std::vector<AllTypeVariant>{100, 102, 104, 106, 108, 110, 112, 100, 102, 104, 106, 108, 110, 112};
-  const auto no_rows = std::vector<AllTypeVariant>{};
-
   const auto right_value = AllTypeVariant{-10};
 
-  auto tests = std::map<PredicateCondition, std::vector<AllTypeVariant>>{};
-  tests[PredicateCondition::Equals] = no_rows;
-  tests[PredicateCondition::NotEquals] = all_rows;
+  auto tests = std::vector<std::pair<PredicateCondition, std::vector<AllTypeVariant>>>{
+      {PredicateCondition::Equals, {}},
+      {PredicateCondition::NotEquals, {100, 102, 104, 106, 108, 110, 112, 100, 102, 104, 106, 108, 110, 112}}};
 
-  for (const auto& test : tests) {
-    auto scan = std::make_shared<IndexScan>(this->_int_int, this->_column_id, test.first, right_value);
+  for (const auto& [predicate, test_rows] : tests) {
+    auto scan = std::make_shared<IndexScan>(this->_int_int, this->_column_id, predicate, right_value);
     scan->included_chunk_ids = {ChunkID{0}, ChunkID{1}};
 
     scan->execute();
 
     auto scan_small_chunk =
-        std::make_shared<IndexScan>(this->_int_int_small_chunk, this->_column_id, test.first, right_value);
+        std::make_shared<IndexScan>(this->_int_int_small_chunk, this->_column_id, predicate, right_value);
     scan_small_chunk->included_chunk_ids = {ChunkID{0}, ChunkID{1}, ChunkID{2}};
 
     scan_small_chunk->execute();
 
-    this->ASSERT_COLUMN_EQ(scan->get_output(), ColumnID{1u}, test.second);
-    this->ASSERT_COLUMN_EQ(scan_small_chunk->get_output(), ColumnID{1u}, test.second);
+    this->ASSERT_COLUMN_EQ(scan->get_output(), ColumnID{1u}, test_rows);
+    this->ASSERT_COLUMN_EQ(scan_small_chunk->get_output(), ColumnID{1u}, test_rows);
   }
 }
 
+TEST_F(OperatorsIndexScanTest, DynamicallyPrunedChunks) {
+  auto table = load_table("resources/test_data/tbl/int_string.tbl", ChunkOffset{1});
+
+  ChunkEncoder::encode_all_chunks(table);
+
+  auto chunk_ids = std::vector<ChunkID>(table->chunk_count());
+  std::iota(chunk_ids.begin(), chunk_ids.end(), ChunkID{0});
+  table->create_partial_hash_index(ColumnID{0}, chunk_ids);
+
+  Hyrise::get().storage_manager.add_table("table", table);
+
+  const auto pruned_chunk_id_tests = std::vector<std::pair<std::vector<ChunkID>, std::vector<AllTypeVariant>>>{
+      // Prunes chunks with values 6, 10, 12, and 14.
+      {{ChunkID{2}, ChunkID{4}, ChunkID{6}, ChunkID{7}}, {2, 4, 8, 19}},
+      // Prunes all chunks (also the ones that are included in the scan). This can happen with dynamic pruning, where
+      // chunks are pruned (and added to list of pruned chunks of the GetTable operator) at runtime.
+      {{ChunkID{0}, ChunkID{1}, ChunkID{2}, ChunkID{3}, ChunkID{4}, ChunkID{5}, ChunkID{6}, ChunkID{7}, ChunkID{8},
+        ChunkID{9}, ChunkID{10}, ChunkID{11}},
+       {}}};
+
+  for (const auto& [pruned_chunk_ids, result] : pruned_chunk_id_tests) {
+    auto get_table = std::make_shared<GetTable>("table", pruned_chunk_ids, std::vector<ColumnID>{});
+    get_table->never_clear_output();
+    get_table->execute();
+
+    auto index_scan =
+        std::make_shared<IndexScan>(get_table, ColumnID{0}, PredicateCondition::NotEquals, AllTypeVariant{-17});
+    // We include chunks with values 2, 4, and 6.
+    index_scan->included_chunk_ids = {ChunkID{0}, ChunkID{1}, ChunkID{2}, ChunkID{5}};
+
+    index_scan->never_clear_output();
+    index_scan->execute();
+
+    this->ASSERT_COLUMN_EQ(index_scan->get_output(), ColumnID{0}, result);
+  }
+
+  Hyrise::get().storage_manager.drop_table("table");
+}
+
 TEST_F(OperatorsIndexScanTest, OperatorName) {
-  const auto right_value = AllTypeVariant{0};
-
-  auto scan =
-      std::make_shared<IndexScan>(this->_int_int, this->_column_id, PredicateCondition::GreaterThanEquals, right_value);
-
+  const auto scan = std::make_shared<IndexScan>(this->_int_int, this->_column_id, PredicateCondition::GreaterThanEquals,
+                                                AllTypeVariant{0});
   EXPECT_EQ(scan->name(), "IndexScan");
 }
 

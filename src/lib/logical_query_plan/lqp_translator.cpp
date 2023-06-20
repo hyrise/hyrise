@@ -215,12 +215,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_in
               "Expected sorted vector of ColumnIDs");
 
   const auto table_name = stored_table_node->table_name;
-  const auto table = Hyrise::get().storage_manager.get_table(table_name);
-
-  auto indexed_chunks = std::vector<ChunkID>{};
-
-  auto pruned_table_chunk_id = ChunkID{0};
-  auto pruned_chunk_ids_iter = pruned_chunk_ids.cbegin();
+  const auto& table = Hyrise::get().storage_manager.get_table(table_name);
 
   // Create a vector of chunk ids that have an index and are not pruned.
   const auto& indexes = table->get_table_indexes(column_id);
@@ -229,6 +224,10 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_in
   Assert(indexes.size() == 1, "We do not support the handling of multiple indexes for the same column.");
   const auto& index = indexes.front();
   const auto& indexed_chunk_ids = index->get_indexed_chunk_ids();
+
+  auto indexed_chunks = std::vector<ChunkID>{};
+  auto chunk_id_after_pruning = ChunkID{0};
+  auto pruned_chunk_ids_iter = pruned_chunk_ids.cbegin();
 
   const auto chunk_count = table->chunk_count();
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
@@ -240,9 +239,9 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_in
 
     // Check if chunk is indexed.
     if (indexed_chunk_ids.contains(chunk_id)) {
-      indexed_chunks.emplace_back(pruned_table_chunk_id);
+      indexed_chunks.emplace_back(chunk_id_after_pruning);
     }
-    ++pruned_table_chunk_id;
+    ++chunk_id_after_pruning;
   }
 
   // All chunks that have an index on column_ids are handled by an IndexScan. All other chunks are handled by
@@ -252,6 +251,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_in
 
   const auto table_scan = _translate_predicate_node_to_table_scan(node, input_operator);
 
+  DebugAssert(std::is_sorted(indexed_chunks.cbegin(), indexed_chunks.cend()), "Included/excluded chunk IDs should be sorted.");
   index_scan->included_chunk_ids = indexed_chunks;
   table_scan->excluded_chunk_ids = indexed_chunks;
 

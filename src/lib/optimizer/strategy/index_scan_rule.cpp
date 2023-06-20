@@ -21,12 +21,12 @@ namespace {
 using namespace hyrise;  // NOLINT(build/namespaces)
 
 // Only if we expect num_output_rows <= num_input_rows * selectivity_threshold, the ScanType can be set to IndexScan.
-// This value is kind of arbitrarily chosen, but the following paper suggests something similar:
-// Access Path Selection in Main-Memory Optimized Data Systems: Should I Scan or Should I Probe?
+// This value is kind of arbitrarily chosen, but the following paper suggests something similar: "Access Path Selection
+// in Main-Memory Optimized Data Systems: Should I Scan or Should I Probe?"
 constexpr float INDEX_SCAN_SELECTIVITY_THRESHOLD = 0.01f;
 
-// // Only if the number of input rows exceeds num_input_rows, the ScanType can be set to IndexScan.
-// // The number is taken from: Fast Lookups for In-Memory Column Stores: Group-Key Indices, Lookup and Maintenance.
+// Only if the number of input rows exceeds num_input_rows, the ScanType can be set to IndexScan. The number is taken
+// from: "Fast Lookups for In-Memory Column Stores: Group-Key Indices, Lookup and Maintenance."
 constexpr float INDEX_SCAN_ROW_COUNT_THRESHOLD = 1000.0f;
 
 bool is_single_segment_index(const TableIndexStatistics& index_statistics) {
@@ -57,6 +57,8 @@ bool is_index_scan_applicable(const TableIndexStatistics& index_statistics,
     return false;
   }
 
+  // There is no conceptual limitation to this rule with other predicate conditions, but Hyrise's secondary indexes are
+  // hash-based and thus lack support for other predicate conditions.
   if (operator_predicate.predicate_condition != PredicateCondition::Equals &&
       operator_predicate.predicate_condition != PredicateCondition::NotEquals) {
     return false;
@@ -84,8 +86,8 @@ std::string IndexScanRule::name() const {
 }
 
 void IndexScanRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
-  DebugAssert(cost_estimator, "IndexScanRule requires cost estimator to be set");
-  Assert(lqp_root->type == LQPNodeType::Root, "ExpressionReductionRule needs root to hold onto");
+  DebugAssert(cost_estimator, "IndexScanRule requires cost estimator to be set.");
+  Assert(lqp_root->type == LQPNodeType::Root, "ExpressionReductionRule needs root to hold onto.");
 
   visit_lqp(lqp_root, [&](const auto& node) {
     if (node->type == LQPNodeType::Predicate) {

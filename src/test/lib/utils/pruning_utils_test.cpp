@@ -12,23 +12,23 @@ TEST_F(PruningUtilsTest, ColumnIDMapping) {
   }
 
   auto actual_column_mapping = column_ids_after_pruning(6, {ColumnID{0}, ColumnID{1}, ColumnID{2}});
-  auto expected_column_mapping = std::vector<std::optional<ColumnID>>{std::nullopt, std::nullopt, std::nullopt,
-                                                                      ColumnID{0},  ColumnID{1},  ColumnID{2}};
+  auto expected_column_mapping = std::vector<ColumnID>{INVALID_COLUMN_ID, INVALID_COLUMN_ID, INVALID_COLUMN_ID,
+                                                       ColumnID{0},       ColumnID{1},       ColumnID{2}};
   EXPECT_EQ(actual_column_mapping, expected_column_mapping);
 
   actual_column_mapping = column_ids_after_pruning(6, {ColumnID{2}, ColumnID{3}});
-  expected_column_mapping = std::vector<std::optional<ColumnID>>{ColumnID{0},  ColumnID{1}, std::nullopt,
-                                                                 std::nullopt, ColumnID{2}, ColumnID{3}};
+  expected_column_mapping =
+      std::vector<ColumnID>{ColumnID{0}, ColumnID{1}, INVALID_COLUMN_ID, INVALID_COLUMN_ID, ColumnID{2}, ColumnID{3}};
   EXPECT_EQ(actual_column_mapping, expected_column_mapping);
 
   actual_column_mapping = column_ids_after_pruning(6, {ColumnID{5}});
-  expected_column_mapping = std::vector<std::optional<ColumnID>>{ColumnID{0}, ColumnID{1}, ColumnID{2},
-                                                                 ColumnID{3}, ColumnID{4}, std::nullopt};
+  expected_column_mapping =
+      std::vector<ColumnID>{ColumnID{0}, ColumnID{1}, ColumnID{2}, ColumnID{3}, ColumnID{4}, INVALID_COLUMN_ID};
   EXPECT_EQ(actual_column_mapping, expected_column_mapping);
 
   actual_column_mapping = column_ids_after_pruning(6, {ColumnID{0}, ColumnID{2}, ColumnID{4}});
-  expected_column_mapping = std::vector<std::optional<ColumnID>>{std::nullopt, ColumnID{0},  std::nullopt,
-                                                                 ColumnID{1},  std::nullopt, ColumnID{2}};
+  expected_column_mapping = std::vector<ColumnID>{INVALID_COLUMN_ID, ColumnID{0},       INVALID_COLUMN_ID,
+                                                  ColumnID{1},       INVALID_COLUMN_ID, ColumnID{2}};
   EXPECT_EQ(actual_column_mapping, expected_column_mapping);
 }
 
@@ -38,31 +38,27 @@ TEST_F(PruningUtilsTest, ChunkIDMapping) {
   }
 
   auto actual_chunk_mapping = chunk_ids_after_pruning(6, {ChunkID{0}, ChunkID{1}, ChunkID{2}});
-  auto expected_chunk_mapping = std::unordered_map<ChunkID, ChunkID>{
-      {ChunkID{3}, ChunkID{0}}, {ChunkID{4}, ChunkID{1}}, {ChunkID{5}, ChunkID{2}}};
+  auto expected_chunk_mapping =
+      std::vector<ChunkID>{INVALID_CHUNK_ID, INVALID_CHUNK_ID, INVALID_CHUNK_ID, ChunkID{0}, ChunkID{1}, ChunkID{2}};
   EXPECT_EQ(actual_chunk_mapping, expected_chunk_mapping);
 
   actual_chunk_mapping = chunk_ids_after_pruning(6, {ChunkID{2}, ChunkID{3}});
-  expected_chunk_mapping = std::unordered_map<ChunkID, ChunkID>{
-      {ChunkID{0}, ChunkID{0}}, {ChunkID{1}, ChunkID{1}}, {ChunkID{4}, ChunkID{2}}, {ChunkID{5}, ChunkID{3}}};
+  expected_chunk_mapping =
+      std::vector<ChunkID>{ChunkID{0}, ChunkID{1}, INVALID_CHUNK_ID, INVALID_CHUNK_ID, ChunkID{2}, ChunkID{3}};
   EXPECT_EQ(actual_chunk_mapping, expected_chunk_mapping);
 
   actual_chunk_mapping = chunk_ids_after_pruning(5, {ChunkID{0}, ChunkID{4}});  // first and last
-  expected_chunk_mapping = std::unordered_map<ChunkID, ChunkID>{
-      {ChunkID{1}, ChunkID{0}}, {ChunkID{2}, ChunkID{1}}, {ChunkID{3}, ChunkID{2}}};
+  expected_chunk_mapping = std::vector<ChunkID>{INVALID_CHUNK_ID, ChunkID{0}, ChunkID{1}, ChunkID{2}, INVALID_CHUNK_ID};
   EXPECT_EQ(actual_chunk_mapping, expected_chunk_mapping);
 
   actual_chunk_mapping = chunk_ids_after_pruning(6, {ChunkID{5}});
-  expected_chunk_mapping = std::unordered_map<ChunkID, ChunkID>{{ChunkID{0}, ChunkID{0}},
-                                                                {ChunkID{1}, ChunkID{1}},
-                                                                {ChunkID{2}, ChunkID{2}},
-                                                                {ChunkID{3}, ChunkID{3}},
-                                                                {ChunkID{4}, ChunkID{4}}};
+  expected_chunk_mapping =
+      std::vector<ChunkID>{ChunkID{0}, ChunkID{1}, ChunkID{2}, ChunkID{3}, ChunkID{4}, INVALID_CHUNK_ID};
   EXPECT_EQ(actual_chunk_mapping, expected_chunk_mapping);
 
   actual_chunk_mapping = chunk_ids_after_pruning(6, {ChunkID{0}, ChunkID{2}, ChunkID{4}});
-  expected_chunk_mapping = std::unordered_map<ChunkID, ChunkID>{
-      {ChunkID{1}, ChunkID{0}}, {ChunkID{3}, ChunkID{1}}, {ChunkID{5}, ChunkID{2}}};
+  expected_chunk_mapping =
+      std::vector<ChunkID>{INVALID_CHUNK_ID, ChunkID{0}, INVALID_CHUNK_ID, ChunkID{1}, INVALID_CHUNK_ID, ChunkID{2}};
   EXPECT_EQ(actual_chunk_mapping, expected_chunk_mapping);
 }
 
@@ -73,6 +69,12 @@ TEST_F(PruningUtilsTest, ColumnIDBeforePruning) {
 
   auto actual_column_id_before_pruning = column_id_before_pruning(column_id_after_pruning, pruned_column_ids);
   EXPECT_EQ(actual_column_id_before_pruning, expected_column_id_before_pruning);
+}
+
+TEST_F(PruningUtilsTest, TooManyChunksPruned) {
+  if constexpr (HYRISE_DEBUG) {
+    EXPECT_THROW(chunk_ids_after_pruning(2, {ChunkID{0}, ChunkID{1}, ChunkID{2}}), std::logic_error);
+  }
 }
 
 }  // namespace hyrise
