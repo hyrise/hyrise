@@ -1,5 +1,6 @@
 #include "benchmark_table_encoder.hpp"
 
+#include <syncstream>
 #include <atomic>
 
 #include "encoding_config.hpp"
@@ -97,10 +98,16 @@ bool BenchmarkTableEncoder::encode(const std::string& table_name, const std::sha
     if (encoding_supports_data_type(encoding_config.default_encoding_spec.encoding_type, column_data_type)) {
       chunk_encoding_spec.push_back(encoding_config.default_encoding_spec);
     } else {
-      std::cout << " - Column '" << table_name << "." << table->column_name(column_id) << "' of type ";
-      std::cout << column_data_type << " cannot be encoded as ";
-      std::cout << encoding_config.default_encoding_spec.encoding_type << " and is ";
-      std::cout << "left Unencoded." << std::endl;
+      // Use an osyncstream to prevent multiple threads writing at the same time to std::cout.
+      // Example output without osyncstream:
+      // orders.o_totalprice' of type float cannot be encoded as FixedStringDictionary and is  - Column 'left Unencoded.lineitem // NOLINT
+      // Example with osyncstream:
+      // - Column 'part.p_size' of type int cannot be encoded as FixedStringDictionary and is left Unencoded.
+      auto ostream = std::osyncstream(std::cout);
+      ostream << " - Column '" << table_name << "." << table->column_name(column_id) << "' of type ";
+      ostream << column_data_type << " cannot be encoded as ";
+      ostream << encoding_config.default_encoding_spec.encoding_type << " and is ";
+      ostream << "left Unencoded." << std::endl;
       chunk_encoding_spec.emplace_back(EncodingType::Unencoded);
     }
   }
