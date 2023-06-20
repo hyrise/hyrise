@@ -39,7 +39,7 @@ class WindowFunctionEvaluator : public AbstractReadOnlyOperator {
   void compute_window_function(const PerHash<PartitionedData>& partitioned_data, auto&& emit_computed_value) const;
   template <typename T>
   std::shared_ptr<const Table> annotate_input_table(
-      std::vector<std::shared_ptr<ValueSegment<T>>> segments_for_output_column) const;
+      std::vector<std::pair<pmr_vector<T>, pmr_vector<bool>>> segment_data_for_output_column) const;
 
   ColumnID _partition_by_column_id;
   ColumnID _order_by_column_id;

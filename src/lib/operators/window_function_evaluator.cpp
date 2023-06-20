@@ -8,6 +8,7 @@
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
 #include "storage/value_segment.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 #include "window_function_evaluator.hpp"
 
@@ -19,6 +20,8 @@ const std::string& WindowFunctionEvaluator::name() const {
 }
 
 std::shared_ptr<const Table> WindowFunctionEvaluator::_on_execute() {
+  const auto input_table = left_input_table();
+  const auto chunk_count = input_table->chunk_count();
   auto partitioned_data = partition_and_sort();
 
   std::shared_ptr<const Table> result;
@@ -26,14 +29,23 @@ std::shared_ptr<const Table> WindowFunctionEvaluator::_on_execute() {
   resolve_data_type(_window_function_expression.data_type(), [&](auto type) {
     using T = typename decltype(type)::type;
 
-    std::vector<std::shared_ptr<ValueSegment<T>>> result_segments(left_input_table()->chunk_count());
-    for (auto& ptr : result_segments)
-      ptr = std::make_shared<ValueSegment<T>>();
-    compute_window_function<T>(partitioned_data, [&](RowID row_id, AllTypeVariant computed_value) {
-      (*result_segments[row_id.chunk_id])[row_id.chunk_offset] = std::move(computed_value);
+    std::vector<std::pair<pmr_vector<T>, pmr_vector<bool>>> segment_data_for_output_column(chunk_count);
+
+    for (auto chunk_id = ChunkID(0); chunk_id < chunk_count; ++chunk_id) {
+      const auto output_length = input_table->get_chunk(chunk_id)->size();
+      segment_data_for_output_column[chunk_id].first.resize(output_length);
+      segment_data_for_output_column[chunk_id].second.resize(output_length);
+    }
+
+    compute_window_function<T>(partitioned_data, [&](RowID row_id, std::optional<T> computed_value) {
+      if (computed_value) {
+        segment_data_for_output_column[row_id.chunk_id].first[row_id.chunk_offset] = std::move(*computed_value);
+      } else {
+        segment_data_for_output_column[row_id.chunk_id].second[row_id.chunk_offset] = true;
+      }
     });
 
-    result = annotate_input_table(std::move(result_segments));
+    result = annotate_input_table(std::move(segment_data_for_output_column));
   });
 
   return result;
@@ -192,7 +204,7 @@ void WindowFunctionEvaluator::compute_window_function(const PerHash<PartitionedD
 
 template <typename T>
 std::shared_ptr<const Table> WindowFunctionEvaluator::annotate_input_table(
-    std::vector<std::shared_ptr<ValueSegment<T>>> segments_for_output_column) const {
+    std::vector<std::pair<pmr_vector<T>, pmr_vector<bool>>> segment_data_for_output_column) const {
   const auto input_table = left_input_table();
 
   auto output_column_definitions = input_table->column_definitions();
@@ -209,7 +221,9 @@ std::shared_ptr<const Table> WindowFunctionEvaluator::annotate_input_table(
     for (auto column_id = ColumnID(0); column_id < column_count; ++column_id) {
       output_segments.emplace_back(chunk->get_segment(column_id));
     }
-    output_segments.emplace_back(segments_for_output_column[chunk_id]);
+    output_segments.emplace_back(
+        std::make_shared<ValueSegment<T>>(std::move(segment_data_for_output_column[chunk_id].first),
+                                          std::move(segment_data_for_output_column[chunk_id].second)));
 
     output_chunks.emplace_back(std::make_shared<Chunk>(std::move(output_segments)));
   }
