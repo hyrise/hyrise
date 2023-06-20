@@ -1180,7 +1180,8 @@ TEST_F(LQPTranslatorTest, WindowNode) {
       rank_(window_(expression_vector(), expression_vector(), std::vector<SortMode>{}, std::move(frame)));
   const auto lqp = WindowNode::make(window_function, int_float_node);
 
-  EXPECT_THROW(LQPTranslator{}.translate_node(lqp), InvalidInputException);
+  // TODO(group): Test more
+  EXPECT_NO_THROW(LQPTranslator{}.translate_node(lqp));
 }
 
 }  // namespace hyrise
