@@ -23,6 +23,7 @@
 #include "expression/pqp_column_expression.hpp"
 #include "expression/pqp_subquery_expression.hpp"
 #include "expression/value_expression.hpp"
+#include "expression/window_expression.hpp"
 #include "hyrise.hpp"
 #include "import_node.hpp"
 #include "insert_node.hpp"
@@ -59,6 +60,7 @@
 #include "operators/union_positions.hpp"
 #include "operators/update.hpp"
 #include "operators/validate.hpp"
+#include "operators/window_function_evaluator.hpp"
 #include "predicate_node.hpp"
 #include "projection_node.hpp"
 #include "sort_node.hpp"
@@ -67,6 +69,7 @@
 #include "union_node.hpp"
 #include "update_node.hpp"
 #include "utils/column_pruning_utils.hpp"
+#include "window_node.hpp"
 
 namespace hyrise {
 
@@ -498,7 +501,27 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_validate_node(
 // NOLINTNEXTLINE - while this particular method could be made static, others cannot.
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_window_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
-  FailInput("Hyrise does not yet support window functions.");
+  const auto window_node = std::dynamic_pointer_cast<WindowNode>(node);
+  const auto input_operator = translate_node(node->left_input());
+  const auto& input_expressions = node->left_input()->output_expressions();
+  const auto window_function_expression = window_node->window_function_expression();
+  const auto window = std::dynamic_pointer_cast<WindowExpression>(window_function_expression->window());
+
+  const auto partition_by_expressions = window->partition_by_expressions();
+  Assert(partition_by_expressions.size() == 1, "Only one partition-by expression allowed for window functions.");
+  const auto partition_by_column_expression =
+      std::dynamic_pointer_cast<LQPColumnExpression>(partition_by_expressions.front());
+  Assert(partition_by_column_expression, "Partition-by clause was not a single column.");
+  const auto partition_by_column_id = partition_by_column_expression->original_column_id;
+
+  const auto order_by_expressions = window->order_by_expressions();
+  Assert(order_by_expressions.size() == 1, "Only one order-by expression allowed for window functions.");
+  const auto order_by_column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(order_by_expressions.front());
+  Assert(order_by_column_expression, "order-by clause was not a single column.");
+  const auto order_by_column_id = order_by_column_expression->original_column_id;
+
+  return std::make_shared<WindowFunctionEvaluator>(input_operator, partition_by_column_id, order_by_column_id,
+                                                   window_function_expression);
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_change_meta_table_node(
