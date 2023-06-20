@@ -5,9 +5,10 @@
 // TODO: Add
 struct BufferManagerMetrics {
   // The current amount of bytes being allocated
-  std::atomic_uint64_t current_bytes_used_dram =
-      0;  // TODO: Add Different one to signify max usage in pool vs allo/delloc
-  std::atomic_uint64_t current_bytes_used_numa = 0;
+  //   std::atomic_uint64_t current_bytes_used_dram =
+  //       0;  // TODO: Add Different one to signify max usage in pool vs allo/delloc
+  //   std::atomic_uint64_t current_bytes_used_numa = 0;
+
   std::atomic_uint64_t total_allocated_bytes;
   std::atomic_uint64_t total_unused_bytes = 0;  // TODO: this becomes invalid with the monotonic buffer resource
 

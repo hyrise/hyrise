@@ -148,8 +148,23 @@ void BufferManager::make_resident(const PageID page_id, const AccessIntent acces
                                   const StateVersionType previous_state_version) {
   // Check if the page was freshly allocated by checking the version. In this case, we want to use either DRAM or NUMA
   const auto version = Frame::version(previous_state_version);
-  const auto is_new_page = version == 0;
   const auto is_evicted = Frame::state(previous_state_version) == Frame::EVICTED;
+  const auto is_new_page = version == 0;
+  auto& region = get_region(page_id);
+
+  // Case 0: The page was freshly allocated and is not on DRAM yet. We can just unprotect the page and return.
+  if (is_new_page) {
+    DebugAssert(access_intent == AccessIntent::Write, "New pages should only be written to");
+    unprotect_page(page_id);
+    if (_secondary_buffer_pool.enabled() && _config.migration_policy.bypass_dram_during_write()) {
+      region.move_to_numa_node(page_id, _secondary_buffer_pool.memory_node);
+      _secondary_buffer_pool.free_pages(page_id.size_type());
+    } else {
+      region.move_to_numa_node(page_id, _primary_buffer_pool.memory_node);
+      _primary_buffer_pool.free_pages(page_id.size_type());
+    }
+    return;
+  }
 
   // Case 1: The page is already on DRAM. This is the easy case.
   if (!is_evicted && Frame::memory_node(previous_state_version) == _primary_buffer_pool.memory_node) {
@@ -166,10 +181,10 @@ void BufferManager::make_resident(const PageID page_id, const AccessIntent acces
 
   // Case 3: The page is not on DRAM and we don't have it on another memory node, so we need to load it from SSD
   // TODO: Switch buffer pool
-  _primary_buffer_pool.free_pages(page_id.size_type());
-  auto& region = get_region(page_id);
-  region.move_to_numa_node(page_id, DEFAULT_DRAM_NUMA_NODE);
+  // region.move_to_numa_node(page_id, DEFAULT_DRAM_NUMA_NODE);
+
   unprotect_page(page_id);
+  _primary_buffer_pool.free_pages(page_id.size_type());
   _ssd_region.read_page(page_id, region.get_page(page_id));
 }
 
@@ -288,6 +303,23 @@ void BufferManager::unprotect_page(PageID page_id) {
   }
 }
 
+size_t BufferManager::current_bytes_used_dram() const {
+  return _primary_buffer_pool.used_bytes.load(std::memory_order_relaxed);
+};
+
+size_t BufferManager::current_bytes_used_numa() const {
+  return _secondary_buffer_pool.used_bytes.load(std::memory_order_relaxed);
+};
+
+BufferManager::Config BufferManager::config() const {
+  return _config;
+}
+
+StateVersionType BufferManager::_state(const PageID page_id) {
+  const auto frame = _volatile_regions[static_cast<uint64_t>(page_id.size_type())]->get_frame(page_id);
+  return Frame::state(frame->state_and_version());
+}
+
 PageID BufferManager::find_page(const void* ptr) const {
   const auto offset = reinterpret_cast<const std::byte*>(ptr) - _mapped_region;
   const auto region_idx = offset / DEFAULT_RESERVED_VIRTUAL_MEMORY_PER_REGION;
@@ -328,7 +360,7 @@ void BufferManager::do_deallocate(void* p, std::size_t bytes, std::size_t alignm
   const auto page_id = find_page(p);
   auto& region = get_region(page_id);
   // region.deallocate(page_id);
-  // add_to_eviction_queue(page_id, region.get_frame(page_id));
+  add_to_eviction_queue(page_id, region.get_frame(page_id));
   // TODO: Properly handle deallocation, set to UNLOCKED inisitially
   _metrics->num_deallocs.fetch_add(1, std::memory_order_relaxed);
 }
@@ -412,9 +444,6 @@ BufferManager::BufferPool& BufferManager::BufferPool::operator=(BufferManager::B
     eviction_queue = std::move(other.eviction_queue);
     volatile_regions = std::move(other.volatile_regions);
     migration_policy = std::move(other.migration_policy);
-
-    // ssd_region = std::move(other.ssd_region);
-    // TODO: ow about pool
   }
   return *this;
 }
@@ -497,13 +526,8 @@ void BufferManager::BufferPool::free_pages(const PageSizeType size) {
   used_bytes.fetch_sub(freed_bytes);
 }
 
-BufferManager::Config BufferManager::config() const {
-  return _config;
-}
-
-StateVersionType BufferManager::_state(const PageID page_id) {
-  const auto frame = _volatile_regions[static_cast<uint64_t>(page_id.size_type())]->get_frame(page_id);
-  return Frame::state(frame->state_and_version());
+bool BufferManager::BufferPool::enabled() const {
+  return memory_node != NO_NUMA_MEMORY_NODE;
 }
 
 }  // namespace hyrise

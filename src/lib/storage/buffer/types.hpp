@@ -23,7 +23,7 @@ inline std::size_t get_os_page_size() {
 
 #ifdef __APPLE__
 constexpr size_t OS_PAGE_SIZE = 16384;
-enum class PageSizeType { KiB16, KiB32, KiB64, KiB128, KiB256, KiB512 };
+enum class PageSizeType { KiB16, KiB32, KiB64, KiB128, KiB256, KiB512, Kib1024 };
 #elif __linux__
 constexpr size_t PAGE_SIZE = 8192;
 enum class PageSizeType { KiB8, KiB16, KiB32, KiB64, KiB128, KiB256, KiB512, Kib1024 };

@@ -75,6 +75,10 @@ class BufferManager : public boost::container::pmr::memory_resource, public Nonc
 
   size_t memory_consumption() const;
 
+  size_t current_bytes_used_dram() const;
+
+  size_t current_bytes_used_numa() const;
+
   Config config() const;
 
   // Debugging methods
@@ -97,6 +101,8 @@ class BufferManager : public boost::container::pmr::memory_resource, public Nonc
     void purge_eviction_queue();
 
     void add_to_eviction_queue(const PageID page_id, Frame* frame);
+
+    bool enabled() const;
 
     // The maximum number of bytes that can be allocated TODO: make const
     size_t max_bytes;

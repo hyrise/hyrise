@@ -24,15 +24,6 @@ static thread_local LinearBufferResourceState linear_buffer_resource_state = Lin
  * this to be taken over by the memory ownership model of the buffer manager.
  * 
  * Properties:
- * - Initial page size is 8 KiB.
- * 
- * - Deallocation has no effect.
- * 
- *  - The memory is never released by the memory resource. The ownership of the memory is passed to the BufferPtr. When all references 
- * to a frame/page are gone, the page is released by the BufferManager. 
- * 
- * - When the current page is exhausted, a new page is allocated. The next biggest page size is used until 256 KiB is reached 
- * (thus geometrically increasing). Any new page will be 256 KiB from there on. Larger page sizes are reservered for special cases.
  * 
  * - If the bytes to be allocated fill up more than 80% of a potential page size type, a new page is allocated regardless of the current page. 
  * The existing current page is not touched and kept for the next allocation.
@@ -43,6 +34,8 @@ class LinearBufferResource : public boost::container::pmr::memory_resource, publ
  public:
   // First page size to be allocated for small allocations is 8 KiB
   static constexpr PageSizeType PAGE_SIZE_TYPE = PageSizeType::KiB256;
+
+  using AllocationCountType = std::atomic_uint64_t;
 
   LinearBufferResource();
 
@@ -60,6 +53,8 @@ class LinearBufferResource : public boost::container::pmr::memory_resource, publ
   std::size_t remaining_storage(std::size_t alignment = 1u) const noexcept;
 
  private:
+  static AllocationCountType& allocation_count(std::byte* buffer) noexcept;
+
   // void increase_next_buffer_at_least_to(std::size_t minimum_size);
 
   // void increase_next_buffer();

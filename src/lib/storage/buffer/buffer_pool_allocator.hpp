@@ -27,10 +27,9 @@ class BufferPoolAllocator {
   using reference = typename add_reference<T>::type;
   using const_reference = typename add_reference<const T>::type;
 
-  BufferPoolAllocator() : _memory_resource(get_buffer_manager_memory_resource()) {
+  BufferPoolAllocator() : _memory_resource(boost::container::pmr::new_delete_resource()) {
     DebugAssert(_memory_resource != nullptr, "_memory_resource is empty");
-
-  }  // TODO: Other memory resource?
+  }
 
   BufferPoolAllocator(boost::container::pmr::memory_resource* memory_resource,
                       std::shared_ptr<BufferPoolAllocatorObserver> observer = nullptr)

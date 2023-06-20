@@ -37,6 +37,10 @@ void* LinearBufferResource::allocate_from_current(std::size_t aligner, std::size
               "Buffer overflow");
   detail::linear_buffer_resource_state.current_buffer_size -= aligner + bytes;
 
+  // Increase ref count on this buffer
+  // LinearBufferResource::allocation_count(detail::linear_buffer_resource_state.current_buffer)
+  //     .fetch_add(1, std::memory_order_acq_rel);
+
   return detail::linear_buffer_resource_state.current_buffer + buffer_pos;
 }
 
@@ -56,6 +60,9 @@ void* LinearBufferResource::do_allocate(std::size_t bytes, std::size_t alignment
         _buffer_manager->allocate(bytes_for_size_type(PAGE_SIZE_TYPE), alignof(std::max_align_t)));
     detail::linear_buffer_resource_state.current_buffer_size = bytes_for_size_type(PAGE_SIZE_TYPE);
     detail::linear_buffer_resource_state.current_buffer_pos = 0u;
+    // detail::linear_buffer_resource_state.current_buffer_size =
+    //     bytes_for_size_type(PAGE_SIZE_TYPE) - sizeof(AllocationCountType);
+    // detail::linear_buffer_resource_state.current_buffer_pos = sizeof(AllocationCountType);
     DebugAssert(detail::linear_buffer_resource_state.current_buffer_size >= bytes,
                 "Buffer overflow while allocating new page");
   }
@@ -68,8 +75,19 @@ bool LinearBufferResource::fills_page(std::size_t bytes) const {
          (double)bytes / (double)bytes_for_size_type(find_fitting_page_size_type(bytes)) >= NEW_PAGE_FILL_RATIO;
 }
 
-void LinearBufferResource::do_deallocate(void*, std::size_t, std::size_t) {
+LinearBufferResource::AllocationCountType& LinearBufferResource::allocation_count(std::byte* buffer) noexcept {
+  return *reinterpret_cast<AllocationCountType*>(buffer);
+};
+
+void LinearBufferResource::do_deallocate(void* ptr, std::size_t, std::size_t) {
   // TODO
+  // auto page_id = _buffer_manager->find_page(ptr);
+  // auto page_ptr = nullptr;
+
+  // if (LinearBufferResource::allocation_count(page_ptr).fetch_sub(1, std::memory_order_release) == 1) {
+  //   boost::atomic_thread_fence(boost::memory_order_acquire);
+  //   _buffer_manager->do_deallocate(ptr, bytes_for_size_type(page_id.size_type()), alignof(std::max_align_t));
+  // }
 }
 
 bool LinearBufferResource::do_is_equal(const boost::container::pmr::memory_resource& other) const noexcept {

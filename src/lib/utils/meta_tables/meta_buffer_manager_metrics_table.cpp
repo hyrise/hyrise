@@ -50,8 +50,8 @@ std::shared_ptr<Table> MetaBufferManagerMetricsTable::_on_generate() const {
   output_table->append(
       {static_cast<int64_t>(Hyrise::get().buffer_manager.config().dram_buffer_pool_size),
        static_cast<int64_t>(Hyrise::get().buffer_manager.config().numa_buffer_pool_size),
-       static_cast<int64_t>(metrics->current_bytes_used_dram.load(std::memory_order_relaxed)),
-       static_cast<int64_t>(metrics->current_bytes_used_numa.load(std::memory_order_relaxed)),
+       static_cast<int64_t>(Hyrise::get().buffer_manager.current_bytes_used_dram()),
+       static_cast<int64_t>(Hyrise::get().buffer_manager.current_bytes_used_numa()),
        static_cast<int64_t>(metrics->total_allocated_bytes.load(std::memory_order_relaxed)),
        static_cast<int64_t>(metrics->total_unused_bytes.load(std::memory_order_relaxed)),
        metrics->internal_fragmentation_rate(),
