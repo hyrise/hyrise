@@ -45,84 +45,84 @@ void VolatileRegion::move_to_numa_node(PageID page_id, const NumaMemoryNode targ
   } else {
     _metrics->total_bytes_copied_from_dram_to_numa.fetch_add(bytes_for_size_type(_size_type),
                                                              std::memory_order_relaxed);
-#endif
   }
+#endif
+}
 
-  void VolatileRegion::free(PageID page_id) {
-    DebugAssert(page_id.size_type() == _size_type, "Page does not belong to this region.");
+void VolatileRegion::free(PageID page_id) {
+  DebugAssert(page_id.size_type() == _size_type, "Page does not belong to this region.");
 
-    // https://bugs.chromium.org/p/chromium/issues/detail?id=823915
+  // https://bugs.chromium.org/p/chromium/issues/detail?id=823915
 #ifdef __APPLE__
-    const int flags = MADV_FREE_REUSABLE;
+  const int flags = MADV_FREE_REUSABLE;
 #elif __linux__
   const int flags = MADV_DONTNEED;
 #endif
-    const auto num_bytes = bytes_for_size_type(_size_type);
-    auto ptr = get_page(page_id);
-    if (madvise(ptr, num_bytes, flags) < 0) {
+  const auto num_bytes = bytes_for_size_type(_size_type);
+  auto ptr = get_page(page_id);
+  if (madvise(ptr, num_bytes, flags) < 0) {
+    const auto error = errno;
+    Fail("Failed to madvice region: " + strerror(errno));
+  }
+  _metrics->num_madvice_free_calls.fetch_add(1, std::memory_order_relaxed);
+}
+
+std::pair<PageID, std::byte*> VolatileRegion::allocate() {
+  // TODO: Handle missing space
+  auto idx = PageID::PageIDType{0};
+  {
+    std::lock_guard<std::mutex> lock(_mutex);
+    DebugAssert(_free_slots.any(), "No free slots available in region. TODO: Expand until end of region");
+    idx = _free_slots.find_first();
+    _free_slots.reset(idx);
+  }
+
+  const auto page_id = PageID{_size_type, idx};
+  auto ptr = get_page(page_id);
+  if constexpr (ENABLE_MPROTECT) {
+    if (mprotect(ptr, bytes_for_size_type(_size_type), PROT_READ | PROT_WRITE) != 0) {
       const auto error = errno;
-      Fail("Failed to madvice region: " + strerror(errno));
+      Fail("Failed to mprotect: " + strerror(errno));
     }
-    _metrics->num_madvice_free_calls.fetch_add(1, std::memory_order_relaxed);
   }
+  return std::make_pair(page_id, ptr);
+}
 
-  std::pair<PageID, std::byte*> VolatileRegion::allocate() {
-    // TODO: Handle missing space
-    auto idx = PageID::PageIDType{0};
-    {
-      std::lock_guard<std::mutex> lock(_mutex);
-      DebugAssert(_free_slots.any(), "No free slots available in region. TODO: Expand until end of region");
-      idx = _free_slots.find_first();
-      _free_slots.reset(idx);
-    }
+std::byte* VolatileRegion::get_page(PageID page_id) {
+  const auto num_bytes = bytes_for_size_type(_size_type);
+  auto data = _region_start + page_id.index * num_bytes;
+  DebugAssertPageAligned(data);
+  return data;
+}
 
-    const auto page_id = PageID{_size_type, idx};
+void VolatileRegion::deallocate(const PageID page_id) {
+  DebugAssert(page_id.size_type() == _size_type, "Page does not belong to this region.");
+  std::lock_guard<std::mutex> lock(_mutex);
+  // TODO: Assert unlocked and clear
+  _free_slots.set(page_id.index);
+  if constexpr (HYRISE_DEBUG) {
     auto ptr = get_page(page_id);
-    if constexpr (ENABLE_MPROTECT) {
-      if (mprotect(ptr, bytes_for_size_type(_size_type), PROT_READ | PROT_WRITE) != 0) {
-        const auto error = errno;
-        Fail("Failed to mprotect: " + strerror(errno));
-      }
-    }
-    return std::make_pair(page_id, ptr);
-  }
-
-  std::byte* VolatileRegion::get_page(PageID page_id) {
-    const auto num_bytes = bytes_for_size_type(_size_type);
-    auto data = _region_start + page_id.index * num_bytes;
-    DebugAssertPageAligned(data);
-    return data;
-  }
-
-  void VolatileRegion::deallocate(const PageID page_id) {
-    DebugAssert(page_id.size_type() == _size_type, "Page does not belong to this region.");
-    std::lock_guard<std::mutex> lock(_mutex);
-    // TODO: Assert unlocked and clear
-    _free_slots.set(page_id.index);
-    if constexpr (HYRISE_DEBUG) {
-      auto ptr = get_page(page_id);
-      if (mprotect(ptr, bytes_for_size_type(_size_type), PROT_NONE) != 0) {
-        const auto error = errno;
-        Fail("Failed to mprotect: " + strerror(errno));
-      }
+    if (mprotect(ptr, bytes_for_size_type(_size_type), PROT_NONE) != 0) {
+      const auto error = errno;
+      Fail("Failed to mprotect: " + strerror(errno));
     }
   }
+}
 
-  Frame* VolatileRegion::get_frame(const PageID page_id) {
-    DebugAssert(page_id.size_type() == _size_type, "Page does not belong to this region.");
+Frame* VolatileRegion::get_frame(const PageID page_id) {
+  DebugAssert(page_id.size_type() == _size_type, "Page does not belong to this region.");
 
-    return &_frames[page_id.index];
-  }
+  return &_frames[page_id.index];
+}
 
-  size_t VolatileRegion::memory_consumption() const {
-    return sizeof(*this) + sizeof(decltype(_frames)::value_type) * _frames.capacity() +
-           _free_slots.capacity() / CHAR_BIT;
-  }
+size_t VolatileRegion::memory_consumption() const {
+  return sizeof(*this) + sizeof(decltype(_frames)::value_type) * _frames.capacity() + _free_slots.capacity() / CHAR_BIT;
+}
 
-  void VolatileRegion::clear() {
-    std::lock_guard<std::mutex> lock(_mutex);
-    _free_slots.set();
-    _frames.clear();
-  }
+void VolatileRegion::clear() {
+  std::lock_guard<std::mutex> lock(_mutex);
+  _free_slots.set();
+  _frames.clear();
+}
 
 }  // namespace hyrise

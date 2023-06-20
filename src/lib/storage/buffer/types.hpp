@@ -30,7 +30,7 @@ enum class PageSizeType { KiB8, KiB16, KiB32, KiB64, KiB128, KiB256, KiB512, Kib
 #endif
 
 // Get the number of bytes for a given PageSizeType
-constexpr size_t bytes_for_size_type(const PageSizeType size) {
+constexpr inline size_t bytes_for_size_type(const PageSizeType size) {
   return OS_PAGE_SIZE << static_cast<size_t>(size);
 }
 
