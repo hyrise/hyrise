@@ -14,6 +14,14 @@
 
 namespace hyrise {
 
+WindowFunctionEvaluator::WindowFunctionEvaluator(
+    const std::shared_ptr<const AbstractOperator>& input_operator, ColumnID init_partition_by_column_id,
+    ColumnID init_order_by_column_id, std::shared_ptr<WindowFunctionExpression> init_window_funtion_expression)
+    : AbstractReadOnlyOperator(OperatorType::WindowFunction, input_operator),
+      _partition_by_column_id(init_partition_by_column_id),
+      _order_by_column_id(init_order_by_column_id),
+      _window_function_expression(std::move(init_window_funtion_expression)) {}
+
 const std::string& WindowFunctionEvaluator::name() const {
   static const auto name = std::string{"WindowFunctionEvaluator"};
   return name;
@@ -38,7 +46,7 @@ std::shared_ptr<const Table> WindowFunctionEvaluator::_on_execute() {
 
   std::shared_ptr<const Table> result;
 
-  resolve_data_type(_window_function_expression.data_type(), [&](auto type) {
+  resolve_data_type(_window_function_expression->data_type(), [&](auto type) {
     using T = typename decltype(type)::type;
 
     std::vector<std::pair<pmr_vector<T>, pmr_vector<bool>>> segment_data_for_output_column(chunk_count);
@@ -193,7 +201,7 @@ WindowFunctionEvaluator::PerHash<WindowFunctionEvaluator::PartitionedData> Windo
 template <typename T>
 void WindowFunctionEvaluator::compute_window_function(const PerHash<PartitionedData>& partitioned_data,
                                                       auto&& emit_computed_value) const {
-  Assert(_window_function_expression.window_function == WindowFunction::Rank,
+  Assert(_window_function_expression->window_function == WindowFunction::Rank,
          "Only WindowFunction::Rank is supported.");
 
   if constexpr (std::is_integral_v<T>) {
