@@ -5,10 +5,10 @@
 #include <utility>
 #include <vector>
 
-#include "expression/window_function_expression.hpp"
 #include "abstract_read_only_operator.hpp"
 #include "all_type_variant.hpp"
 #include "concurrency/transaction_context.hpp"
+#include "expression/window_function_expression.hpp"
 #include "storage/table.hpp"
 
 namespace hyrise {
@@ -35,7 +35,8 @@ class WindowFunctionEvaluator : public AbstractReadOnlyOperator {
   template <typename T>
   void compute_window_function(const PartitionedData& partitioned_data, auto&& emit_computed_value) const;
   template <typename T>
-  std::shared_ptr<const Table> annotate_input_table(std::vector<ValueSegment<T>> segments_for_output_column) const;
+  std::shared_ptr<const Table> annotate_input_table(
+      std::vector<std::shared_ptr<ValueSegment<T>>> segments_for_output_column) const;
 
   ColumnID _partition_by_column_id;
   ColumnID _order_by_column_id;

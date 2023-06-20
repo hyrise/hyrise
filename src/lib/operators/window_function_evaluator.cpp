@@ -26,9 +26,11 @@ std::shared_ptr<const Table> WindowFunctionEvaluator::_on_execute() {
   resolve_data_type(_window_function_expression.data_type(), [&](auto type) {
     using T = typename decltype(type)::type;
 
-    std::vector<ValueSegment<T>> result_segments(left_input_table()->chunk_count());
+    std::vector<std::shared_ptr<ValueSegment<T>>> result_segments(left_input_table()->chunk_count());
+    for (auto& ptr : result_segments)
+      ptr = std::make_shared<ValueSegment<T>>();
     compute_window_function<T>(partitioned_data, [&](RowID row_id, AllTypeVariant computed_value) {
-      result_segments[row_id.chunk_id][row_id.chunk_offset] = std::move(computed_value);
+      (*result_segments[row_id.chunk_id])[row_id.chunk_offset] = std::move(computed_value);
     });
 
     result = annotate_input_table(std::move(result_segments));
@@ -177,9 +179,29 @@ void WindowFunctionEvaluator::compute_window_function(const PartitionedData& par
 
 template <typename T>
 std::shared_ptr<const Table> WindowFunctionEvaluator::annotate_input_table(
-    std::vector<ValueSegment<T>> segments_for_output_column) const {
-  (void)segments_for_output_column;
-  Fail("Unimplemented");
+    std::vector<std::shared_ptr<ValueSegment<T>>> segments_for_output_column) const {
+  const auto input_table = left_input_table();
+
+  auto output_column_definitions = input_table->column_definitions();
+  output_column_definitions.emplace_back("Rank", DataType::Long, false);
+
+  const auto chunk_count = input_table->chunk_count();
+  const auto column_count = input_table->column_count();
+  std::vector<std::shared_ptr<Chunk>> output_chunks;
+  output_chunks.reserve(chunk_count);
+
+  for (auto chunk_id = ChunkID(0); chunk_id < chunk_count; ++chunk_id) {
+    const auto chunk = input_table->get_chunk(chunk_id);
+    Segments output_segments;
+    for (auto column_id = ColumnID(0); column_id < column_count; ++column_id) {
+      output_segments.emplace_back(chunk->get_segment(column_id));
+    }
+    output_segments.emplace_back(segments_for_output_column[chunk_id]);
+
+    output_chunks.emplace_back(std::make_shared<Chunk>(std::move(output_segments)));
+  }
+
+  return std::make_shared<Table>(output_column_definitions, input_table->type(), std::move(output_chunks));
 }
 
 }  // namespace hyrise
