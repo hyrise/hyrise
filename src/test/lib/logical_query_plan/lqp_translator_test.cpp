@@ -461,7 +461,7 @@ TEST_F(LQPTranslatorTest, PredicateNodeIndexScan) {
    */
   const auto stored_table_node = StoredTableNode::make("int_float_chunked");
 
-  const auto table = Hyrise::get().storage_manager.get_table("int_float_chunked");
+  const auto& table = Hyrise::get().storage_manager.get_table("int_float_chunked");
   const auto index_column_id = ColumnID{1};
   const auto index_chunk_ids = std::vector<ChunkID>{ChunkID{0}, ChunkID{2}};
   table->create_partial_hash_index(index_column_id, index_chunk_ids);
@@ -493,13 +493,55 @@ TEST_F(LQPTranslatorTest, PredicateNodeIndexScan) {
   EXPECT_EQ(table_scan_op->lqp_node, predicate_node);
 }
 
+TEST_F(LQPTranslatorTest, PredicateNodePrunedIndexScan) {
+  /**
+   * Build LQP and translate to PQP
+   */
+  const auto stored_table_node = StoredTableNode::make("int_float_chunked");
+  const auto& table = Hyrise::get().storage_manager.get_table("int_float_chunked");
+
+  table->create_partial_hash_index(ColumnID{1}, {ChunkID{0}, ChunkID{2}});
+
+  stored_table_node->set_pruned_chunk_ids({ChunkID{0}});
+  auto predicate_node = PredicateNode::make(equals_(stored_table_node->get_column("b"), 42));
+  predicate_node->set_left_input(stored_table_node);
+  predicate_node->scan_type = ScanType::IndexScan;
+  const auto op = LQPTranslator{}.translate_node(predicate_node);
+
+  // As the vector of indexed chunks contains the chunk ids {0, 2} and the vector of pruned chunks
+  // contains the chunk id {0}, the first indexed chunk is pruned. Correspondingly, the ids of the
+  // indexed chunks have to be adapted, so that the indexed chunk with the id 2 now has the id 1.
+  const auto index_scan_chunk_ids = std::vector<ChunkID>{ChunkID{1}};
+
+  /**
+   * Check PQP
+   */
+  const auto union_op = std::dynamic_pointer_cast<UnionAll>(op);
+  ASSERT_TRUE(union_op);
+
+  const auto index_scan_op = std::dynamic_pointer_cast<const IndexScan>(op->left_input());
+  ASSERT_TRUE(index_scan_op);
+  EXPECT_EQ(index_scan_op->included_chunk_ids, index_scan_chunk_ids);
+
+  const auto table_scan_op = std::dynamic_pointer_cast<const TableScan>(op->right_input());
+  const auto b = PQPColumnExpression::from_table(*table, "b");
+  ASSERT_TRUE(table_scan_op);
+  EXPECT_EQ(table_scan_op->excluded_chunk_ids, index_scan_chunk_ids);
+  EXPECT_EQ(*table_scan_op->predicate(), *equals_(b, 42));
+
+  // Check the setting of LQP nodes for index scans
+  EXPECT_EQ(union_op->lqp_node, predicate_node);
+  EXPECT_EQ(index_scan_op->lqp_node, predicate_node);
+  EXPECT_EQ(table_scan_op->lqp_node, predicate_node);
+}
+
 TEST_F(LQPTranslatorTest, PredicateNodeBinaryIndexScan) {
   /**
    * Build LQP and translate to PQP
    */
   const auto stored_table_node = StoredTableNode::make("int_float_chunked");
 
-  const auto table = Hyrise::get().storage_manager.get_table("int_float_chunked");
+  const auto& table = Hyrise::get().storage_manager.get_table("int_float_chunked");
   const auto index_column_id = ColumnID{1};
   const auto index_chunk_ids = std::vector<ChunkID>{ChunkID{0}, ChunkID{2}};
   table->create_partial_hash_index(index_column_id, index_chunk_ids);
@@ -537,7 +579,7 @@ TEST_F(LQPTranslatorTest, PredicateNodeIndexScanFailsWhenNotApplicable) {
    */
   const auto stored_table_node = StoredTableNode::make("int_float_chunked");
 
-  const auto table = Hyrise::get().storage_manager.get_table("int_float_chunked");
+  const auto& table = Hyrise::get().storage_manager.get_table("int_float_chunked");
   std::vector<ColumnID> index_column_ids = {ColumnID{1}};
   std::vector<ChunkID> index_chunk_ids = {ChunkID{0}, ChunkID{2}};
   table->get_chunk(index_chunk_ids[0])->create_index<GroupKeyIndex>(index_column_ids);
