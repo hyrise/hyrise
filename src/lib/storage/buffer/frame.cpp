@@ -1,4 +1,5 @@
 #include "storage/buffer/types.hpp"
+#include <bitset>
 
 namespace hyrise {
 

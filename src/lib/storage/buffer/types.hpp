@@ -26,7 +26,7 @@ constexpr size_t PAGE_SIZE = 16384;
 enum class PageSizeType { KiB16, KiB32, KiB64, KiB128, KiB256, KiB512 };
 #elif __linux__
 constexpr size_t PAGE_SIZE = 8192;
-enum class PageSizeType { KiB8, KiB16, KiB32, KiB64, KiB128, KiB256, KiB512 };
+enum class PageSizeType { KiB8, KiB16, KiB32, KiB64, KiB128, KiB256, KiB512, Kib1024 };
 #endif
 
 // Get the number of bytes for a given PageSizeType
@@ -145,7 +145,7 @@ constexpr size_t DEFAULT_RESERVED_VIRTUAL_MEMORY_PER_REGION = (DEFAULT_RESERVED_
                                                               bytes_for_size_type(MAX_PAGE_SIZE_TYPE) *
                                                               bytes_for_size_type(MAX_PAGE_SIZE_TYPE);
 
-constexpr size_t INITIAL_SLOTS_PER_REGION = 200000;  // TODO
+constexpr size_t INITIAL_SLOTS_PER_REGION = 800000;  // TODO
 
 using EvictionQueue = tbb::concurrent_queue<EvictionItem>;
 

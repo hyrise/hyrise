@@ -33,10 +33,11 @@ void VolatileRegion::move_to_numa_node(PageID page_id, const NumaMemoryNode targ
   DebugAssert(page_id.size_type() == _size_type, "Page does not belong to this region.");
 
 #if HYRISE_NUMA_SUPPORT
-  DebugAssert(memory_numa_node != NO_NUMA_MEMORY_NODE, "Numa node has not been set.");
+  DebugAssert(target_memory_node != NO_NUMA_MEMORY_NODE, "Numa node has not been set.");
 
+  const auto num_bytes = bytes_for_size_type(_size_type);
   numa_tonode_memory(get_page(page_id), num_bytes, target_memory_node);
-  frames[page_id.index]->set_memory_node(target_memory_node);
+  _frames[page_id.index].set_memory_node(target_memory_node);
 
   if (target_memory_node == DEFAULT_DRAM_NUMA_NODE) {
     _metrics->total_bytes_copied_from_numa_to_dram.fetch_add(bytes_for_size_type(_size_type),

@@ -18,7 +18,7 @@ namespace hyrise {
 //----------------------------------------------------
 
 std::byte* create_mapped_region() {
-  Assert(bytes_for_size_type(MIN_PAGE_SIZE_TYPE) == get_page_size(),
+  Assert(bytes_for_size_type(MIN_PAGE_SIZE_TYPE) >= get_page_size(),
          "Smallest page size does not fit into an OS page: " + std::to_string(get_page_size()));
 #ifdef __APPLE__
   const int flags = MAP_PRIVATE | MAP_ANON | MAP_NORESERVE;
@@ -27,9 +27,6 @@ std::byte* create_mapped_region() {
 #endif
   const auto mapped_memory =
       static_cast<std::byte*>(mmap(NULL, DEFAULT_RESERVED_VIRTUAL_MEMORY, PROT_READ | PROT_WRITE, flags, -1, 0));
-#ifdef __linux__
-  madvise(_mapped_memory, num_bytes, MADV_DONTFORK);
-#endif
 
   if (mapped_memory == MAP_FAILED) {
     const auto error = errno;
