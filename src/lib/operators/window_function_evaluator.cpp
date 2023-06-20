@@ -7,6 +7,7 @@
 #include "resolve_type.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
+#include "storage/segment_iterate.hpp"
 #include "storage/value_segment.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
@@ -230,7 +231,7 @@ std::shared_ptr<const Table> WindowFunctionEvaluator::annotate_input_table(
   const auto input_table = left_input_table();
 
   auto output_column_definitions = input_table->column_definitions();
-  output_column_definitions.emplace_back("Rank", DataType::Long, false);
+  output_column_definitions.emplace_back(_window_function_expression->as_column_name(), DataType::Long, false);
 
   const auto chunk_count = input_table->chunk_count();
   const auto column_count = input_table->column_count();
@@ -241,7 +242,18 @@ std::shared_ptr<const Table> WindowFunctionEvaluator::annotate_input_table(
     const auto chunk = input_table->get_chunk(chunk_id);
     Segments output_segments;
     for (auto column_id = ColumnID(0); column_id < column_count; ++column_id) {
-      output_segments.emplace_back(chunk->get_segment(column_id));
+      const auto input_segment = chunk->get_segment(column_id);
+      resolve_data_type(input_segment->data_type(), [&](auto type) {
+        using ColumnDataType = typename decltype(type)::type;
+        auto output_segment = std::make_shared<ValueSegment<ColumnDataType>>();
+        segment_iterate<ColumnDataType>(*input_segment, [&](const auto& segment_position) {
+          if (segment_position.is_null())
+            output_segment->append(NULL_VALUE);
+          else
+            output_segment->append(segment_position.value());
+        });
+        output_segments.emplace_back(output_segment);
+      });
     }
     output_segments.emplace_back(
         std::make_shared<ValueSegment<T>>(std::move(segment_data_for_output_column[chunk_id].first),
