@@ -10,7 +10,7 @@ namespace hyrise {
 
 class RandomGenerator {
  public:
-  // Fix random seed by default, to make sure the benchmark is deterministic
+  // Fix random seed by default, to make sure the benchmark is deterministic.
   explicit RandomGenerator(uint32_t seed = 42) : engine(seed) {}
 
   /**
@@ -20,28 +20,27 @@ class RandomGenerator {
    * @return            a random number
    */
   uint64_t random_number(uint64_t lower, uint64_t upper) {
-    std::uniform_int_distribution<uint64_t> dist(lower, upper);
+    auto dist = std::uniform_int_distribution<uint64_t>{lower, upper};
     return dist(engine);
   }
 
   /**
-   * Generates a set of unique size_ts in the half open interval [0, id_length)
-   * This function is used, e.g., to generate foreign key relationships
+   * Generates a set of unique size_ts in the half open interval [0, id_length). This function is used, e.g., to
+   * generate foreign key relationships.
    * @param num_unique      number of unique values to be returned
    * @param id_length       maximum number (not included) in the set
    * @return                a set of unique numbers
    */
   std::set<size_t> select_unique_ids(size_t num_unique, size_t id_length) {
-    std::set<size_t> rows;
-    Assert(num_unique <= id_length, "There are not enough ids to be selected!");
-    for (size_t i = 0; i < num_unique; ++i) {
-      size_t index = static_cast<size_t>(-1);
-      do {
-        index = random_number(0, id_length - 1);
-      } while (rows.find(index) != rows.end());
-      rows.insert(index);
+    auto rows = std::set<size_t>{};
+    Assert(num_unique <= id_length, "There are not enough IDs to be selected!");
+    while (true) {
+      rows.emplace(random_number(0, id_length - 1));
+
+      if (rows.size() == num_unique) {
+        return rows;
+      }
     }
-    return rows;
   }
 
  protected:

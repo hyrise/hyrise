@@ -107,14 +107,14 @@ void MvccDeletePlugin::_physical_delete_loop() {
   const auto lock = std::lock_guard<std::mutex>{_physical_delete_queue_mutex};
 
   if (!_physical_delete_queue.empty()) {
-    TableAndChunkID table_and_chunk_id = _physical_delete_queue.front();
+    const auto& table_and_chunk_id = _physical_delete_queue.front();
     const auto& table = table_and_chunk_id.first;
     const auto& chunk = table->get_chunk(table_and_chunk_id.second);
 
-    DebugAssert(chunk != nullptr, "Chunk does not exist. Physical Delete can not be applied.");
+    DebugAssert(chunk, "Chunk does not exist. Physical Delete can not be applied.");
 
     if (chunk->get_cleanup_commit_id()) {
-      // Check whether there are still active transactions that might use the chunk
+      // Check whether there are still active transactions that might use the chunk.
       auto transactions_conflict = false;
       auto lowest_snapshot_commit_id = Hyrise::get().transaction_manager.get_lowest_active_snapshot_commit_id();
 

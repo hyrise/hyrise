@@ -19,7 +19,8 @@ TPCCPayment::TPCCPayment(const int num_warehouses, BenchmarkSQLExecutor& sql_exe
   // Use home warehouse in 85% of cases, otherwise select a random one
   std::uniform_int_distribution<> home_warehouse_dist{1, 100};
   if (num_warehouses > 2 && home_warehouse_dist(_random_engine) > 85) {
-    // Choose remote warehouse
+    // Choose remote warehouse.
+    // NOLINTNEXTLINE(cppcoreguidelines-avoid-do-while)
     do {
       c_w_id = warehouse_dist(_random_engine);
     } while (c_w_id == w_id);
