@@ -35,15 +35,19 @@ std::shared_ptr<Table> BinaryParser::parse(const std::string& filename) {
 
 template <typename T>
 pmr_compact_vector BinaryParser::_read_values_compact_vector(std::ifstream& file, const size_t count) {
+  auto allocator = PolymorphicAllocator<size_t>{&Hyrise::get().linear_buffer_resource};
+  auto pin_guard = AllocatorPinGuard{allocator};
   const auto bit_width = _read_value<uint8_t>(file);
-  auto values = pmr_compact_vector(bit_width, count);
+  auto values = pmr_compact_vector(bit_width, count, allocator);
   file.read(reinterpret_cast<char*>(values.get()), static_cast<int64_t>(values.bytes()));
   return values;
 }
 
 template <typename T>
 pmr_vector<T> BinaryParser::_read_values(std::ifstream& file, const size_t count) {
-  pmr_vector<T> values(count);
+  auto allocator = PolymorphicAllocator<size_t>{&Hyrise::get().linear_buffer_resource};
+  auto pin_guard = AllocatorPinGuard{allocator};
+  pmr_vector<T> values(count, allocator);
   file.read(reinterpret_cast<char*>(values.data()), values.size() * sizeof(T));
   return values;
 }
@@ -57,21 +61,26 @@ pmr_vector<pmr_string> BinaryParser::_read_values(std::ifstream& file, const siz
 // specialized implementation for bool values
 template <>
 pmr_vector<bool> BinaryParser::_read_values(std::ifstream& file, const size_t count) {
-  pmr_vector<BoolAsByteType> readable_bools(count);
+  auto allocator = PolymorphicAllocator<size_t>{};
+  auto pin_guard = AllocatorPinGuard{allocator};
+  pmr_vector<BoolAsByteType> readable_bools(count, allocator);
   file.read(reinterpret_cast<char*>(readable_bools.data()),
             static_cast<int64_t>(readable_bools.size() * sizeof(BoolAsByteType)));
   return {readable_bools.begin(), readable_bools.end()};
 }
 
 pmr_vector<pmr_string> BinaryParser::_read_string_values(std::ifstream& file, const size_t count) {
+  auto allocator = PolymorphicAllocator<size_t>{&Hyrise::get().linear_buffer_resource};
+  auto pin_guard = AllocatorPinGuard{allocator};
+
   const auto string_lengths = _read_values<size_t>(file, count);
   const auto total_length = std::accumulate(string_lengths.cbegin(), string_lengths.cend(), static_cast<size_t>(0));
   const auto buffer = _read_values<char>(file, total_length);
 
-  auto values = pmr_vector<pmr_string>{count};
+  auto values = pmr_vector<pmr_string>{count, allocator};
   auto start = size_t{0};
   for (auto index = size_t{0}; index < count; ++index) {
-    values[index] = pmr_string{buffer.data() + start, buffer.data() + start + string_lengths[index]};
+    values[index] = pmr_string{buffer.data() + start, buffer.data() + start + string_lengths[index], allocator};
     start += string_lengths[index];
   }
 
@@ -227,12 +236,15 @@ std::shared_ptr<RunLengthSegment<T>> BinaryParser::_import_run_length_segment(st
 template <typename T>
 std::shared_ptr<FrameOfReferenceSegment<T>> BinaryParser::_import_frame_of_reference_segment(std::ifstream& file,
                                                                                              ChunkOffset row_count) {
+  auto allocator = PolymorphicAllocator<size_t>{};
+  auto pin_guard = AllocatorPinGuard{allocator};
+
   const auto compressed_vector_type_id = _read_value<CompressedVectorTypeID>(file);
   const auto block_count = _read_value<uint32_t>(file);
   const auto block_minima = _read_values<T>(file, block_count);
 
   const auto null_values_stored = _read_value<BoolAsByteType>(file);
-  std::optional<pmr_vector<bool>> null_values;
+  std::optional<pmr_vector<bool>> null_values{allocator};
   if (null_values_stored) {
     null_values = _read_values<bool>(file, row_count);
   }
@@ -244,12 +256,15 @@ std::shared_ptr<FrameOfReferenceSegment<T>> BinaryParser::_import_frame_of_refer
 
 template <typename T>
 std::shared_ptr<LZ4Segment<T>> BinaryParser::_import_lz4_segment(std::ifstream& file, ChunkOffset row_count) {
+  auto allocator = PolymorphicAllocator<size_t>{};
+  auto pin_guard = AllocatorPinGuard{allocator};
+
   const auto num_elements = _read_value<uint32_t>(file);
   const auto block_count = _read_value<uint32_t>(file);
   const auto block_size = _read_value<uint32_t>(file);
   const auto last_block_size = _read_value<uint32_t>(file);
 
-  pmr_vector<uint32_t> lz4_block_sizes(_read_values<uint32_t>(file, block_count));
+  pmr_vector<uint32_t> lz4_block_sizes(_read_values<uint32_t>(file, block_count), allocator);
 
   const auto compressed_size = std::accumulate(lz4_block_sizes.begin(), lz4_block_sizes.end(), size_t{0});
 
@@ -259,7 +274,7 @@ std::shared_ptr<LZ4Segment<T>> BinaryParser::_import_lz4_segment(std::ifstream& 
   }
 
   const auto null_values_size = _read_value<uint32_t>(file);
-  std::optional<pmr_vector<bool>> null_values;
+  std::optional<pmr_vector<bool>> null_values{allocator};
   if (null_values_size != 0) {
     null_values = _read_values<bool>(file, null_values_size);
   } else {
@@ -324,8 +339,11 @@ std::unique_ptr<const BaseCompressedVector> BinaryParser::_import_offset_value_v
 }
 
 std::shared_ptr<FixedStringVector> BinaryParser::_import_fixed_string_vector(std::ifstream& file, const size_t count) {
+  auto allocator = PolymorphicAllocator<size_t>{};
+  auto pin_guard = AllocatorPinGuard{allocator};
+
   const auto string_length = _read_value<uint32_t>(file);
-  pmr_vector<char> values(string_length * count);
+  pmr_vector<char> values(string_length * count, allocator);
   file.read(values.data(), static_cast<int64_t>(values.size()));
   return std::make_shared<FixedStringVector>(std::move(values), string_length);
 }
