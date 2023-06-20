@@ -39,9 +39,6 @@ class BufferManager : public boost::container::pmr::memory_resource, public Nonc
     // Enables a background threads the cleans the eviction queue from junk (default: false)
     bool enable_eviction_purge_worker = false;
 
-    // Defines the mode of the buffer manager (default: dram_ssd). See BufferManagerMode for more details.
-    BufferManagerMode mode = BufferManagerMode::DramSSD;
-
     // Load the configuration from the environment
     static Config from_env();
   };

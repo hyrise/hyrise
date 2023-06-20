@@ -17,21 +17,21 @@ STRONG_TYPEDEF(int8_t, NumaMemoryNode);
 
 namespace hyrise {
 
-inline std::size_t get_page_size() {
+inline std::size_t get_os_page_size() {
   return std::size_t(sysconf(_SC_PAGESIZE));
 }
 
 #ifdef __APPLE__
-constexpr size_t PAGE_SIZE = 16384;
+constexpr size_t OS_PAGE_SIZE = 16384;
 enum class PageSizeType { KiB16, KiB32, KiB64, KiB128, KiB256, KiB512 };
 #elif __linux__
-constexpr size_t PAGE_SIZE = 8192;
-enum class PageSizeType { KiB8, KiB16, KiB32, KiB64, KiB128, KiB256, KiB512 };
+constexpr size_t OS_PAGE_SIZE = 4096;
+enum class PageSizeType { KiB4, KiB8, KiB16, KiB32, KiB64, KiB128, KiB256, KiB512 };
 #endif
 
 // Get the number of bytes for a given PageSizeType
 constexpr size_t bytes_for_size_type(const PageSizeType size) {
-  return PAGE_SIZE << static_cast<size_t>(size);
+  return OS_PAGE_SIZE << static_cast<size_t>(size);
 }
 
 // Find the smallest PageSizeType that can hold the given bytes
@@ -151,20 +151,6 @@ using EvictionQueue = tbb::concurrent_queue<EvictionItem>;
 
 // Hints the buffer manager about the access intent of the caller. AccessIntent.Write is usually used during allocations for example.
 enum class AccessIntent { Read, Write };
-
-enum BufferManagerMode {
-  // Use two volatile regions (DRAM and DRAM for NUMA emulation purposes) and SSD
-  DramNumaEmulationSSD,
-
-  // Use one volatile region (DRAM) and SSD
-  DramSSD,
-
-  // Use two volatile regions, one with DRAM and one NUMA, and SSD
-  DramNumaSSD,
-
-  // Use one volatile region (NUMA) and SSD
-  NumaSSD
-};
 
 boost::container::pmr::memory_resource* get_buffer_manager_memory_resource();
 
