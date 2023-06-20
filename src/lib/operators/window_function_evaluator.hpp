@@ -23,6 +23,9 @@ class WindowFunctionEvaluator : public AbstractReadOnlyOperator {
   static constexpr size_t hash_partition_mask = (1u << hash_partition_bits) - 1;
   static constexpr uint32_t hash_partition_partition_count = 1u << hash_partition_bits;
 
+  template <typename T>
+  using PerHash = std::array<T, hash_partition_partition_count>;
+
   const std::string& name() const override;
 
  protected:
@@ -31,9 +34,9 @@ class WindowFunctionEvaluator : public AbstractReadOnlyOperator {
  private:
   using PartitionedData = std::vector<std::pair<std::vector<AllTypeVariant>, RowID>>;
 
-  PartitionedData partition_and_sort() const;
+  PerHash<PartitionedData> partition_and_sort() const;
   template <typename T>
-  void compute_window_function(const PartitionedData& partitioned_data, auto&& emit_computed_value) const;
+  void compute_window_function(const PerHash<PartitionedData>& partitioned_data, auto&& emit_computed_value) const;
   template <typename T>
   std::shared_ptr<const Table> annotate_input_table(
       std::vector<std::shared_ptr<ValueSegment<T>>> segments_for_output_column) const;
