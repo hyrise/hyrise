@@ -199,6 +199,8 @@ void WindowFunctionEvaluator::compute_window_function(const PerHash<PartitionedD
         }
       }));
     }
+
+    Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
   }
 }
 
