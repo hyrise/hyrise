@@ -1,11 +1,11 @@
-#include "window_expression.hpp"
-
+#include <iterator>
 #include <sstream>
 
 #include <boost/container_hash/hash.hpp>
 
 #include "expression_utils.hpp"
 #include "utils/assert.hpp"
+#include "window_expression.hpp"
 
 namespace hyrise {
 
@@ -104,6 +104,14 @@ WindowExpression::WindowExpression(std::vector<std::shared_ptr<AbstractExpressio
   std::copy(partition_by_expressions.begin(), partition_by_expressions.end(), arguments.begin());
   std::copy(order_by_expressions.begin(), order_by_expressions.end(),
             arguments.begin() + order_by_expressions_begin_idx);
+}
+
+std::span<const std::shared_ptr<AbstractExpression>> WindowExpression::partition_by_expressions() const {
+  return {arguments.begin(), order_by_expressions_begin_idx};
+}
+
+std::span<const std::shared_ptr<AbstractExpression>> WindowExpression::order_by_expressions() const {
+  return {arguments.begin() + static_cast<int64_t>(order_by_expressions_begin_idx), arguments.end()};
 }
 
 std::shared_ptr<AbstractExpression> WindowExpression::_on_deep_copy(
