@@ -233,6 +233,10 @@ SELECT * FROM id_int_int_int_100 WHERE NOT EXISTS (SELECT * FROM int_date WHERE 
 -- exists to semi join reformulation: query not rewriteable
 SELECT * FROM id_int_int_int_100 WHERE EXISTS (SELECT * FROM int_date WHERE id_int_int_int_100.id = int_date.a) OR id < 20
 
+-- Window Functions
+SELECT id, a, b, c, RANK() OVER w FROM mixed WINDOW w as (PARTITION BY a ORDER BY c)
+SELECT id, a, b, c, SUM(b) OVER w FROM mixed WINDOW w as (PARTITION BY a ORDER BY c ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)
+
 -- Aggregates
 SELECT SUM(b + b) AS sum_b_b FROM mixed;
 SELECT SUM(b) + AVG(c) AS x FROM mixed GROUP BY id + 5;
