@@ -53,8 +53,7 @@ struct RelevantRowInformation {
   }
 };
 
-using HashPartitionedData =
-    std::array<std::vector<RelevantRowInformation>, WindowFunctionEvaluator::hash_partition_partition_count>;
+using HashPartitionedData = WindowFunctionEvaluator::PerHash<std::vector<RelevantRowInformation>>;
 
 HashPartitionedData partition_and_sort_chunk(const Chunk& chunk, ChunkID chunk_id, ColumnID partition_column_id,
                                              ColumnID order_column_id) {
@@ -132,47 +131,61 @@ HashPartitionedData parallel_merge_sort(const Table& input_table, ChunkRange chu
 
 }  // namespace
 
-WindowFunctionEvaluator::PartitionedData WindowFunctionEvaluator::partition_and_sort() const {
+WindowFunctionEvaluator::PerHash<WindowFunctionEvaluator::PartitionedData> WindowFunctionEvaluator::partition_and_sort()
+    const {
   const auto input_table = left_input_table();
   const auto column_count = input_table->column_count();
   const auto hash_partitioned_data =
       parallel_merge_sort(*input_table, ChunkRange{.start = ChunkID(0), .end = input_table->chunk_count()},
                           _partition_by_column_id, _order_by_column_id);
 
-  auto result = PartitionedData{};
-  for (const auto& hash_partition : hash_partitioned_data) {
-    for (const auto& row_info : hash_partition) {
-      // TODO(group): Don't include all cells here, but figure out what to keep in RelevantRowInformation and return that
-      auto row_values = std::vector<AllTypeVariant>{};
-      // TODO(group): Add Table::get_row(RowID)
-      const auto chunk = input_table->get_chunk(row_info.row_id.chunk_id);
+  auto result = PerHash<PartitionedData>{};
+  auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
 
-      for (auto column_id = ColumnID(0); column_id < column_count; ++column_id) {
-        auto segment = chunk->get_segment(column_id);
-        row_values.emplace_back((*segment)[row_info.row_id.chunk_offset]);
-      }
+  for (auto hash_value = 0u; hash_value < hash_partition_partition_count; ++hash_value) {
+    tasks.emplace_back(
+        std::make_shared<JobTask>([&hash_partitioned_data, &input_table, &result, column_count, hash_value]() {
+          for (const auto& row_info : hash_partitioned_data[hash_value]) {
+            // TODO(group): Don't include all cells here, but figure out what to keep in RelevantRowInformation and return that
+            auto row_values = std::vector<AllTypeVariant>{};
+            // TODO(group): Add Table::get_row(RowID)
+            const auto chunk = input_table->get_chunk(row_info.row_id.chunk_id);
 
-      result.push_back({std::move(row_values), row_info.row_id});
-    }
+            for (auto column_id = ColumnID(0); column_id < column_count; ++column_id) {
+              auto segment = chunk->get_segment(column_id);
+              row_values.emplace_back((*segment)[row_info.row_id.chunk_offset]);
+            }
+
+            result[hash_value].push_back({std::move(row_values), row_info.row_id});
+          }
+        }));
   }
+
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
+
   return result;
 }
 
 template <typename T>
-void WindowFunctionEvaluator::compute_window_function(const PartitionedData& partitioned_data,
+void WindowFunctionEvaluator::compute_window_function(const PerHash<PartitionedData>& partitioned_data,
                                                       auto&& emit_computed_value) const {
   Assert(_window_function_expression.window_function == WindowFunction::Rank,
          "Only WindowFunction::Rank is supported.");
 
   if constexpr (std::is_integral_v<T>) {
-    T current_rank = initial_rank;
-    const AllTypeVariant* previous_partition_value = nullptr;
+    auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
+    for (auto hash_value = 0u; hash_value < hash_partition_partition_count; ++hash_value) {
+      tasks.emplace_back(std::make_shared<JobTask>([&partitioned_data, &emit_computed_value, hash_value, this]() {
+        T current_rank = initial_rank;
+        const AllTypeVariant* previous_partition_value = nullptr;
 
-    for (const auto& [row_values, row_id] : partitioned_data) {
-      if (previous_partition_value && row_values[_partition_by_column_id] != *previous_partition_value)
-        current_rank = initial_rank;
-      emit_computed_value(row_id, current_rank++);
-      previous_partition_value = &row_values[_partition_by_column_id];
+        for (const auto& [row_values, row_id] : partitioned_data[hash_value]) {
+          if (previous_partition_value && row_values[_partition_by_column_id] != *previous_partition_value)
+            current_rank = initial_rank;
+          emit_computed_value(row_id, current_rank++);
+          previous_partition_value = &row_values[_partition_by_column_id];
+        }
+      }));
     }
   }
 }
