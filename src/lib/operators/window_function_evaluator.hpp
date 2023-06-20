@@ -5,6 +5,7 @@
 #include <utility>
 #include <vector>
 
+#include "abstract_operator.hpp"
 #include "abstract_read_only_operator.hpp"
 #include "all_type_variant.hpp"
 #include "concurrency/transaction_context.hpp"
@@ -30,6 +31,12 @@ class WindowFunctionEvaluator : public AbstractReadOnlyOperator {
 
  protected:
   std::shared_ptr<const Table> _on_execute() override;
+
+  void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
+  std::shared_ptr<AbstractOperator> _on_deep_copy(
+      const std::shared_ptr<AbstractOperator>& copied_left_input,
+      const std::shared_ptr<AbstractOperator>& copied_right_input,
+      std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const override;
 
  private:
   using PartitionedData = std::vector<std::pair<std::vector<AllTypeVariant>, RowID>>;

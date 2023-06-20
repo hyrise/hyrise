@@ -19,6 +19,18 @@ const std::string& WindowFunctionEvaluator::name() const {
   return name;
 }
 
+void WindowFunctionEvaluator::_on_set_parameters(
+    [[maybe_unused]] const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {
+  Fail("What should this do?");
+}
+
+std::shared_ptr<AbstractOperator> WindowFunctionEvaluator::_on_deep_copy(
+    [[maybe_unused]] const std::shared_ptr<AbstractOperator>& copied_left_input,
+    [[maybe_unused]] const std::shared_ptr<AbstractOperator>& copied_right_input,
+    [[maybe_unused]] std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
+  Fail("What should this do?");
+}
+
 std::shared_ptr<const Table> WindowFunctionEvaluator::_on_execute() {
   const auto input_table = left_input_table();
   const auto chunk_count = input_table->chunk_count();
