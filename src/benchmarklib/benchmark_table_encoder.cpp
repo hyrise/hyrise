@@ -1,7 +1,7 @@
 #include "benchmark_table_encoder.hpp"
 
-#include <syncstream>
 #include <atomic>
+#include <syncstream>
 
 #include "encoding_config.hpp"
 #include "hyrise.hpp"
