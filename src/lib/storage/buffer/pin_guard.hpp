@@ -156,7 +156,7 @@ struct FramePinGuard final : public PinnedFrames<accessIntent> {
   FramePinGuard(const DictionarySegment<T>& segment) {
     Fail("DictionarySegment not implemented yet");
     const auto attribute_vector_frame = segment.attribute_vector();
-    // add_vector_pins(*attribute_vector_frame);
+    add_vector_pins(*attribute_vector_frame);
 
     const auto frame = segment.dictionary();
     add_vector_pins(*frame);

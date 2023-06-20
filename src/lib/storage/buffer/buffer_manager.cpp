@@ -39,16 +39,17 @@ std::byte* create_mapped_region() {
   return mapped_memory;
 }
 
-std::array<std::unique_ptr<VolatileRegion>, NUM_PAGE_SIZE_TYPES> create_volatile_regions(std::byte* mapped_region) {
+std::array<std::unique_ptr<VolatileRegion>, NUM_PAGE_SIZE_TYPES> create_volatile_regions(
+    std::byte* mapped_region, std::shared_ptr<BufferManagerMetrics> metrics) {
   DebugAssert(mapped_region != nullptr, "Region not properly mapped");
   auto array = std::array<std::unique_ptr<VolatileRegion>, NUM_PAGE_SIZE_TYPES>{};
 
   // Ensure that every region has the same amount of virtual memory
   // Round to the next multiple of the largest page size
   for (auto i = size_t{0}; i < NUM_PAGE_SIZE_TYPES; i++) {
-    array[i] = std::make_unique<VolatileRegion>(magic_enum::enum_value<PageSizeType>(i),
-                                                mapped_region + DEFAULT_RESERVED_VIRTUAL_MEMORY_PER_REGION * i,
-                                                mapped_region + DEFAULT_RESERVED_VIRTUAL_MEMORY_PER_REGION * (i + 1));
+    array[i] = std::make_unique<VolatileRegion>(
+        magic_enum::enum_value<PageSizeType>(i), mapped_region + DEFAULT_RESERVED_VIRTUAL_MEMORY_PER_REGION * i,
+        mapped_region + DEFAULT_RESERVED_VIRTUAL_MEMORY_PER_REGION * (i + 1), metrics);
   }
 
   return array;
@@ -117,9 +118,9 @@ BufferManager::BufferManager() : BufferManager(Config::from_env()) {}
 BufferManager::BufferManager(const Config config)
     : _config(config),
       _mapped_region(create_mapped_region()),
-      _metrics(std::make_shared<Metrics>()),
-      _volatile_regions(create_volatile_regions(_mapped_region)),
-      _ssd_region(config.ssd_path),  // TODO: imprive init of pools here
+      _metrics(std::make_shared<BufferManagerMetrics>()),
+      _volatile_regions(create_volatile_regions(_mapped_region, _metrics)),
+      _ssd_region(config.ssd_path, _metrics),  // TODO: imprive init of pools here
       _primary_buffer_pool(config.dram_buffer_pool_size, config.enable_eviction_purge_worker, _volatile_regions,
                            config.migration_policy, &_ssd_region,
                            config.memory_node == NO_NUMA_MEMORY_NODE ? nullptr : &_secondary_buffer_pool,
@@ -148,16 +149,6 @@ BufferManager& BufferManager::get() {
   return Hyrise::get().buffer_manager;
 }
 
-void BufferManager::read_page(const PageID page_id) {
-  auto ptr = get_region(page_id).get_page(page_id);
-  _ssd_region.read_page(page_id, ptr);
-}
-
-void BufferManager::write_page(const PageID page_id) {
-  auto ptr = get_region(page_id).get_page(page_id);
-  _ssd_region.write_page(page_id, ptr);
-}
-
 void BufferManager::make_resident(const PageID page_id, const AccessIntent access_intent,
                                   const StateVersionType previous_state_version) {
   // Check if the page was freshly allocated by checking the version. In this case, we want to use either DRAM or NUMA
@@ -181,9 +172,10 @@ void BufferManager::make_resident(const PageID page_id, const AccessIntent acces
   // Case 3: The page is not on DRAM and we don't have it on another memory node, so we need to load it from SSD
   // TODO: Switch buffer pool
   _primary_buffer_pool.free_pages(page_id.size_type());
-  get_region(page_id).move_to_numa_node(page_id, NO_NUMA_MEMORY_NODE);
+  auto& region = get_region(page_id);
+  region.move_to_numa_node(page_id, DEFAULT_DRAM_NUMA_NODE);
   unprotect_page(page_id);
-  read_page(page_id);
+  _ssd_region.read_page(page_id, region.get_page(page_id));
 }
 
 void BufferManager::pin_for_read(const PageID page_id) {
@@ -330,7 +322,9 @@ void* BufferManager::do_allocate(std::size_t bytes, std::size_t alignment) {
   // TODO: Ensure free pages ,not needed
   // _primary_buffer_pool.free_pages(size_type);
   const auto [page_id, ptr] = _volatile_regions[static_cast<uint64_t>(size_type)]->allocate();
+
   _metrics->num_allocs.fetch_add(1, std::memory_order_relaxed);
+  _metrics->total_allocated_bytes.fetch_add(bytes_for_size_type(size_type), std::memory_order_relaxed);
 
   return ptr;
 }
@@ -352,7 +346,7 @@ VolatileRegion& BufferManager::get_region(const PageID page_id) {
   return *_volatile_regions[static_cast<uint64_t>(page_id.size_type())];
 }
 
-std::shared_ptr<BufferManager::Metrics> BufferManager::metrics() {
+std::shared_ptr<BufferManagerMetrics> BufferManager::metrics() {
   return _metrics;
 }
 
@@ -423,6 +417,7 @@ BufferManager::BufferPool& BufferManager::BufferPool::operator=(BufferManager::B
     eviction_queue = std::move(other.eviction_queue);
     volatile_regions = std::move(other.volatile_regions);
     migration_policy = std::move(other.migration_policy);
+
     // ssd_region = std::move(other.ssd_region);
     // TODO: ow about pool
   }

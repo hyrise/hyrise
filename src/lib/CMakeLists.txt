@@ -444,6 +444,7 @@ set(
     storage/create_iterable_from_segment.ipp
     storage/buffer/buffer_manager.cpp
     storage/buffer/buffer_manager.hpp
+    storage/buffer/metrics.hpp
     storage/buffer/memory_resource.cpp
     storage/buffer/memory_resource.hpp
     storage/buffer/buffer_pool_allocator.hpp

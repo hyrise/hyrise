@@ -13,8 +13,8 @@ static SSDRegion::DeviceType find_device_type_or_fail(const std::filesystem::pat
   }
 }
 
-SSDRegion::SSDRegion(const std::filesystem::path& path)
-    : _file_handles(open_file_handles(path)), _device_type(find_device_type_or_fail(path)) {}
+SSDRegion::SSDRegion(const std::filesystem::path& path, std::shared_ptr<BufferManagerMetrics> metrics)
+    : _file_handles(open_file_handles(path)), _device_type(find_device_type_or_fail(path)), _metrics(metrics) {}
 
 SSDRegion::~SSDRegion() {
   for (auto& file_handle : _file_handles) {
@@ -65,6 +65,7 @@ void SSDRegion::write_page(PageID page_id, std::byte* data) {
     const auto error = errno;
     Fail("Error while writing to SSDRegion: " + strerror(error));
   }
+
   // TODO: Needs flush?
 }
 

@@ -6,6 +6,7 @@
 #include <mutex>
 #include "frame.hpp"
 #include "noncopyable.hpp"
+#include "storage/buffer/metrics.hpp"
 #include "storage/buffer/types.hpp"
 
 namespace hyrise {
@@ -17,7 +18,8 @@ namespace hyrise {
  */
 class VolatileRegion : public Noncopyable {
  public:
-  VolatileRegion(const PageSizeType size_type, std::byte* region_start, std::byte* region_end);
+  VolatileRegion(const PageSizeType size_type, std::byte* region_start, std::byte* region_end,
+                 std::shared_ptr<BufferManagerMetrics> metrics);
 
   Frame* get_frame(PageID page_id);
   std::byte* get_page(PageID page_id);
@@ -41,6 +43,7 @@ class VolatileRegion : public Noncopyable {
   std::vector<Frame> _frames;
   boost::dynamic_bitset<> _free_slots;
 
+  std::shared_ptr<BufferManagerMetrics> _metrics;
   std::mutex _mutex;
 };
 

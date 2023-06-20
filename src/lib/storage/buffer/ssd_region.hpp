@@ -5,6 +5,7 @@
 #include <mutex>
 #include <unordered_map>
 #include "noncopyable.hpp"
+#include "storage/buffer/metrics.hpp"
 #include "storage/buffer/types.hpp"
 
 namespace hyrise {
@@ -20,7 +21,7 @@ class SSDRegion : public Noncopyable {
  public:
   enum class DeviceType { BLOCK, REGULAR_FILE };
 
-  SSDRegion(const std::filesystem::path& path);
+  SSDRegion(const std::filesystem::path& path, std::shared_ptr<BufferManagerMetrics> metrics);
   ~SSDRegion();
 
   void write_page(const PageID page_id, std::byte* data);
@@ -40,6 +41,7 @@ class SSDRegion : public Noncopyable {
 
   std::array<FileHandle, NUM_PAGE_SIZE_TYPES> _file_handles;
   DeviceType _device_type;
+  std::shared_ptr<BufferManagerMetrics> _metrics;
 
   std::array<FileHandle, NUM_PAGE_SIZE_TYPES> open_file_handles(const std::filesystem::path& path);
   static int open_file_descriptor(const std::filesystem::path& file_name);

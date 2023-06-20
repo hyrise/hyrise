@@ -5,6 +5,7 @@
 #include <tuple>
 #include "noncopyable.hpp"
 #include "storage/buffer/frame.hpp"
+#include "storage/buffer/metrics.hpp"
 #include "storage/buffer/migration_policy.hpp"
 #include "storage/buffer/ssd_region.hpp"
 #include "storage/buffer/types.hpp"
@@ -19,67 +20,6 @@ void unmap_region(std::byte* region);
 
 class BufferManager : public boost::container::pmr::memory_resource, public Noncopyable {
  public:
-  // TODO: Add
-  struct Metrics {
-    // The current amount of bytes being allocated
-    std::atomic_uint64_t current_bytes_used_dram =
-        0;  // TODO: Add Different one to signify max usage in pool vs allo/delloc
-    std::atomic_uint64_t current_bytes_used_numa = 0;
-    std::atomic_uint64_t total_allocated_bytes_dram = 0;
-    std::atomic_uint64_t total_allocated_bytes_numa = 0;
-    std::atomic_uint64_t total_unused_bytes_numa = 0;
-    std::atomic_uint64_t total_unused_bytes_dram = 0;  // TODO: this becomes invalid with the monotonic buffer resource
-
-    double internal_fragmentation_rate_dram() const {
-      if (total_allocated_bytes_dram == 0) {
-        return 0;
-      }
-      return (double)total_unused_bytes_dram / (double)total_allocated_bytes_dram;
-    }
-
-    double internal_fragmentation_rate_numa() const {
-      if (total_allocated_bytes_numa == 0) {
-        return 0;
-      }
-      return (double)total_unused_bytes_numa / (double)total_allocated_bytes_numa;
-    }
-
-    // The number of allocation
-    std::atomic_uint64_t num_allocs = 0;
-    std::atomic_uint64_t num_deallocs = 0;
-
-    // Tracks the number of bytes copied between the different regions, TODO: Maybe add a count
-    std::atomic_uint64_t total_bytes_copied_from_ssd_to_dram = 0;
-    std::atomic_uint64_t total_bytes_copied_from_ssd_to_numa = 0;
-    std::atomic_uint64_t total_bytes_copied_from_numa_to_dram = 0;
-    std::atomic_uint64_t total_bytes_copied_from_dram_to_numa = 0;
-    std::atomic_uint64_t total_bytes_copied_from_dram_to_ssd = 0;
-    std::atomic_uint64_t total_bytes_copied_from_numa_to_ssd = 0;
-    std::atomic_uint64_t total_bytes_copied_to_ssd = 0;
-    std::atomic_uint64_t total_bytes_copied_from_ssd = 0;
-
-    // Track hits and misses on DRAM or Numa
-    std::atomic_uint64_t total_hits_dram = 0;
-    std::atomic_uint64_t total_hits_numa = 0;
-    std::atomic_uint64_t total_misses_dram = 0;
-    std::atomic_uint64_t total_misses_numa = 0;
-
-    // Tracks pinning
-    std::atomic_uint64_t total_pins = 0;
-    std::atomic_uint64_t current_pins = 0;
-
-    // Tracks the number of evictions
-    std::atomic_uint64_t num_dram_eviction_queue_items_purged = 0;
-    std::atomic_uint64_t num_dram_eviction_queue_adds = 0;
-    std::atomic_uint64_t num_numa_eviction_queue_items_purged = 0;
-    std::atomic_uint64_t num_numa_eviction_queue_adds = 0;
-    std::atomic_uint64_t num_dram_evictions;
-    std::atomic_uint64_t num_numa_evictions;
-
-    // Number of madvice calls, TODO: track in more places
-    std::atomic_uint64_t num_madvice_free_calls = 0;
-  };
-
   struct Config {
     // Defines the size of the buffer pool in DRAM in bytes (default: 1 GB)
     std::size_t dram_buffer_pool_size = 1UL << 30;
@@ -134,7 +74,7 @@ class BufferManager : public boost::container::pmr::memory_resource, public Nonc
 
   bool do_is_equal(const boost::container::pmr::memory_resource& other) const noexcept override;
 
-  std::shared_ptr<Metrics> metrics();
+  std::shared_ptr<BufferManagerMetrics> metrics();
 
   size_t memory_consumption() const;
 
@@ -186,10 +126,6 @@ class BufferManager : public boost::container::pmr::memory_resource, public Nonc
 
   VolatileRegion& get_region(const PageID page_id);
 
-  void write_page(const PageID page_id);
-
-  void read_page(const PageID page_id);
-
   void protect_page(const PageID page_id);
 
   void unprotect_page(const PageID page_id);
@@ -201,6 +137,8 @@ class BufferManager : public boost::container::pmr::memory_resource, public Nonc
 
   Config _config;  // TODO: Const
 
+  std::shared_ptr<BufferManagerMetrics> _metrics;
+
   std::byte* _mapped_region;
 
   std::array<std::unique_ptr<VolatileRegion>, NUM_PAGE_SIZE_TYPES> _volatile_regions;
@@ -210,8 +148,6 @@ class BufferManager : public boost::container::pmr::memory_resource, public Nonc
   BufferPool _primary_buffer_pool;
 
   SSDRegion _ssd_region;
-
-  std::shared_ptr<Metrics> _metrics;
 };
 
 template <typename T>

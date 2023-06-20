@@ -9,8 +9,10 @@
 
 namespace hyrise {
 
-VolatileRegion::VolatileRegion(const PageSizeType size_type, std::byte* region_start, std::byte* region_end)
+VolatileRegion::VolatileRegion(const PageSizeType size_type, std::byte* region_start, std::byte* region_end,
+                               std::shared_ptr<BufferManagerMetrics> metrics)
     : _frames(std::min(INITIAL_SLOTS_PER_REGION, (region_end - region_start) / bytes_for_size_type(size_type))),
+      _metrics(metrics),
       _free_slots(_frames.size()),
       _size_type(size_type),
       _region_start(region_start),
@@ -19,7 +21,6 @@ VolatileRegion::VolatileRegion(const PageSizeType size_type, std::byte* region_s
   DebugAssert(region_start < region_end, "Region is too small");
   DebugAssert((region_end - region_start) < DEFAULT_RESERVED_VIRTUAL_MEMORY, "Region start and end dont match");
   _free_slots.set();
-  std::cout << region_start << " " << region_end << std::endl;
   if constexpr (ENABLE_MPROTECT) {
     if (mprotect(region_start, region_end - region_start, PROT_NONE) != 0) {
       const auto error = errno;
@@ -36,6 +37,14 @@ void VolatileRegion::move_to_numa_node(PageID page_id, const NumaMemoryNode targ
 
   numa_tonode_memory(get_page(page_id), num_bytes, target_memory_node);
   frames[page_id.index]->set_memory_node(target_memory_node);
+
+  if (target_memory_node == DEFAULT_DRAM_NUMA_NODE) {
+    _metrics->total_bytes_copied_from_numa_to_dram.fetch_add(bytes_for_size_type(_size_type),
+                                                             std::memory_order_relaxed);
+  } else {
+    _metrics->total_bytes_copied_from_dram_to_numa.fetch_add(bytes_for_size_type(_size_type),
+                                                             std::memory_order_relaxed);
+  }
 #endif
 }
 
@@ -54,6 +63,7 @@ void VolatileRegion::free(PageID page_id) {
     const auto error = errno;
     Fail("Failed to madvice region: " + strerror(errno));
   }
+  _metrics->num_madvice_free_calls.fetch_add(1, std::memory_order_relaxed);
 }
 
 std::pair<PageID, std::byte*> VolatileRegion::allocate() {
