@@ -120,13 +120,14 @@ void PredicateReorderingRule::_reorder_predicates(
   //     4) min cost
   //     5) max (#in - #out) / (cost - #out)
   //     6) min cost * (#out / #in)
+  //     7) min (cost - #out) * (#out / #in)
   auto nodes_and_cardinalities = std::vector<std::pair<std::shared_ptr<AbstractLQPNode>, Cardinality>>{};
   nodes_and_cardinalities.reserve(predicates.size());
   for (const auto& predicate : predicates) {
     predicate->set_left_input(input);
     const auto output_cardinality = caching_cardinality_estimator->estimate_cardinality(predicate);
     const auto cost = caching_cost_estimator->estimate_node_cost(predicate);
-    const auto benefit = (input_cardinality - output_cardinality) / (cost - output_cardinality);
+    const auto benefit = (output_cardinality / input_cardinality) * cost;
     nodes_and_cardinalities.emplace_back(predicate, benefit);
   }
 
@@ -137,7 +138,7 @@ void PredicateReorderingRule::_reorder_predicates(
 
   // Sort in descending order. The "most beneficial" predicate is a the end.
   std::sort(nodes_and_cardinalities.begin(), nodes_and_cardinalities.end(),
-            [&](auto& left, auto& right) { return left.second < right.second; });
+            [&](auto& left, auto& right) { return left.second > right.second; });
 
   // Ensure that nodes are chained correctly. The predicate at the vector end is placed after the input.
   nodes_and_cardinalities.back().first->set_left_input(input);
