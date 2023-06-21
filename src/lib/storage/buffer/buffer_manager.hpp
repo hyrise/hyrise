@@ -76,8 +76,8 @@ class BufferManager : public boost::container::pmr::memory_resource, public Nonc
   // Metrics and stats
   std::shared_ptr<BufferManagerMetrics> metrics();
   size_t memory_consumption() const;
-  size_t reserved_bytes_dram() const;
-  size_t reserved_bytes_numa() const;
+  size_t reserved_bytes_dram_buffer_pool() const;
+  size_t reserved_bytes_numa_buffer_pool() const;
   size_t free_bytes_dram_node() const;
   size_t free_bytes_numa_node() const;
   size_t total_bytes_dram_node() const;

@@ -350,11 +350,11 @@ void BufferManager::unprotect_page(PageID page_id) {
   }
 }
 
-size_t BufferManager::reserved_bytes_dram() const {
+size_t BufferManager::reserved_bytes_dram_buffer_pool() const {
   return _primary_buffer_pool->used_bytes.load(std::memory_order_relaxed);
 };
 
-size_t BufferManager::reserved_bytes_numa() const {
+size_t BufferManager::reserved_bytes_numa_buffer_pool() const {
   return _secondary_buffer_pool->used_bytes.load(std::memory_order_relaxed);
 };
 
@@ -399,7 +399,7 @@ void BufferManager::add_to_eviction_queue(const PageID page_id, Frame* frame) {
   if (frame->memory_node() == _primary_buffer_pool->memory_node) {
     _primary_buffer_pool->add_to_eviction_queue(page_id, frame);
   } else if (frame->memory_node() == _secondary_buffer_pool->memory_node) {
-    DebugAssert(_secondary_buffer_pool.enabled(), "Pool has to be enabled");
+    DebugAssert(_secondary_buffer_pool->enabled(), "Pool has to be enabled");
     _secondary_buffer_pool->add_to_eviction_queue(page_id, frame);
   } else {
     Fail("Cannot find buffer pool for given memory node " + std::to_string(frame->memory_node()));
@@ -573,6 +573,7 @@ void BufferManager::BufferPool::ensure_free_pages(const PageSizeType required_si
       if (target_buffer_pool && target_buffer_pool->enabled()) {
         metrics->total_bytes_copied_from_dram_to_ssd.fetch_add(num_bytes, std::memory_order_relaxed);
       } else {
+        // TODO: Never tracked for some reason
         metrics->total_bytes_copied_from_numa_to_ssd.fetch_add(num_bytes, std::memory_order_relaxed);
       }
     } else {
@@ -595,6 +596,9 @@ bool BufferManager::BufferPool::enabled() const {
 
 size_t BufferManager::BufferPool::free_bytes_node() const {
 #if HYRISE_NUMA_SUPPORT
+  if (memory_node == NO_NUMA_MEMORY_NODE) {
+    return 0;
+  }
   long free_bytes;
   numa_node_size(memory_node, &free_bytes);
   return free_bytes;
@@ -605,6 +609,9 @@ size_t BufferManager::BufferPool::free_bytes_node() const {
 
 size_t BufferManager::BufferPool::total_bytes_node() const {
 #if HYRISE_NUMA_SUPPORT
+  if (memory_node == NO_NUMA_MEMORY_NODE) {
+    return 0;
+  }
   return numa_node_size(memory_node, nullptr);
 #else
   return 0;
