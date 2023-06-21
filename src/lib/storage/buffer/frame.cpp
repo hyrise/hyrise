@@ -1,6 +1,5 @@
 #include <bitset>
 #include "storage/buffer/types.hpp"
-#include <bitset>
 
 namespace hyrise {
 
@@ -11,8 +10,9 @@ Frame::Frame() {
 }
 
 void Frame::set_memory_node(const NumaMemoryNode memory_node) {
+  DebugAssert(memory_node != NO_NUMA_MEMORY_NODE, "Cannot set empty numa node");
   DebugAssert(state(_state_and_version.load()) == LOCKED, "Frame must be locked to set memory node.");
-  _state_and_version |= MEMORY_NODE_MASK & (static_cast<size_t>(memory_node) << MEMORY_NODE_SHIFT);
+  _state_and_version |= (MEMORY_NODE_MASK & (static_cast<size_t>(memory_node) << MEMORY_NODE_SHIFT));
 }
 
 void Frame::set_dirty(const bool new_dirty) {

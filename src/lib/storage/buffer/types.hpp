@@ -13,7 +13,7 @@
 #include <numa.h>
 #endif
 
-STRONG_TYPEDEF(int8_t, NumaMemoryNode);
+STRONG_TYPEDEF(int64_t, NumaMemoryNode);
 
 namespace hyrise {
 

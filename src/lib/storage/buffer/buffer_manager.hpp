@@ -71,15 +71,17 @@ class BufferManager : public boost::container::pmr::memory_resource, public Nonc
 
   bool do_is_equal(const boost::container::pmr::memory_resource& other) const noexcept override;
 
-  std::shared_ptr<BufferManagerMetrics> metrics();
-
-  size_t memory_consumption() const;
-
-  size_t current_bytes_used_dram() const;
-
-  size_t current_bytes_used_numa() const;
-
   Config config() const;
+
+  // Metrics and stats
+  std::shared_ptr<BufferManagerMetrics> metrics();
+  size_t memory_consumption() const;
+  size_t reserved_bytes_dram() const;
+  size_t reserved_bytes_numa() const;
+  size_t free_bytes_dram_node() const;
+  size_t free_bytes_numa_node() const;
+  size_t total_bytes_dram_node() const;
+  size_t total_bytes_numa_node() const;
 
   // Debugging methods
   StateVersionType _state(const PageID page_id);
@@ -104,6 +106,10 @@ class BufferManager : public boost::container::pmr::memory_resource, public Nonc
     void add_to_eviction_queue(const PageID page_id, Frame* frame);
 
     bool enabled() const;
+
+    size_t free_bytes_node() const;
+
+    size_t total_bytes_node() const;
 
     // The maximum number of bytes that can be allocated TODO: make const
     size_t max_bytes;

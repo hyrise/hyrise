@@ -104,7 +104,7 @@ BufferManager::Config BufferManager::Config::from_env() {
     config.enable_eviction_purge_worker =
         json.value("enable_eviction_purge_worker", config.enable_eviction_purge_worker);
     config.memory_node =
-        static_cast<NumaMemoryNode>(json.value("memory_node", static_cast<int8_t>(config.memory_node)));
+        static_cast<NumaMemoryNode>(json.value("memory_node", static_cast<int64_t>(config.memory_node)));
     return config;
   } else {
     Fail("HYRISE_BUFFER_MANAGER_CONFIG_JSON_PATH not found in environment");
@@ -350,12 +350,28 @@ void BufferManager::unprotect_page(PageID page_id) {
   }
 }
 
-size_t BufferManager::current_bytes_used_dram() const {
+size_t BufferManager::reserved_bytes_dram() const {
   return _primary_buffer_pool->used_bytes.load(std::memory_order_relaxed);
 };
 
-size_t BufferManager::current_bytes_used_numa() const {
+size_t BufferManager::reserved_bytes_numa() const {
   return _secondary_buffer_pool->used_bytes.load(std::memory_order_relaxed);
+};
+
+size_t BufferManager::free_bytes_dram_node() const {
+  return _primary_buffer_pool->free_bytes_node();
+};
+
+size_t BufferManager::free_bytes_numa_node() const {
+  return _secondary_buffer_pool->free_bytes_node();
+};
+
+size_t BufferManager::total_bytes_dram_node() const {
+  return _primary_buffer_pool->total_bytes_node();
+};
+
+size_t BufferManager::total_bytes_numa_node() const {
+  return _secondary_buffer_pool->total_bytes_node();
 };
 
 BufferManager::Config BufferManager::config() const {
@@ -383,6 +399,7 @@ void BufferManager::add_to_eviction_queue(const PageID page_id, Frame* frame) {
   if (frame->memory_node() == _primary_buffer_pool->memory_node) {
     _primary_buffer_pool->add_to_eviction_queue(page_id, frame);
   } else if (frame->memory_node() == _secondary_buffer_pool->memory_node) {
+    DebugAssert(_secondary_buffer_pool.enabled(), "Pool has to be enabled");
     _secondary_buffer_pool->add_to_eviction_queue(page_id, frame);
   } else {
     Fail("Cannot find buffer pool for given memory node " + std::to_string(frame->memory_node()));
@@ -433,6 +450,7 @@ size_t BufferManager::memory_consumption() const {
 // Buffer Pool
 //----------------------------------------------------
 
+// TODO: properly check if disabled or not
 BufferManager::BufferPool::BufferPool(const size_t pool_size, const bool enable_eviction_purge_worker,
                                       std::array<std::shared_ptr<VolatileRegion>, NUM_PAGE_SIZE_TYPES> volatile_regions,
                                       MigrationPolicy migration_policy, std::shared_ptr<SSDRegion> ssd_region,
@@ -531,7 +549,7 @@ void BufferManager::BufferPool::ensure_free_pages(const PageSizeType required_si
       continue;
     }
 
-    DebugAssert(frame->memory_node() == memory_node, "Memory node mismatch");
+    Assert(frame->memory_node() == memory_node, "Memory node mismatch");
 
     const auto size_type = item.page_id.size_type();
     const auto num_bytes = bytes_for_size_type(size_type);
@@ -539,6 +557,7 @@ void BufferManager::BufferPool::ensure_free_pages(const PageSizeType required_si
     // If we have a target buffer pool and we don't want to bypass it, we move the page to the other pool
     const auto write_to_ssd =
         !target_buffer_pool || (target_buffer_pool->enabled() && migration_policy.bypass_numa_during_write());
+    // TODO: Check metrics
 
     if (write_to_ssd) {
       // Otherwise we just write the page if its dirty and free the associated pages
@@ -573,5 +592,23 @@ void BufferManager::BufferPool::ensure_free_pages(const PageSizeType required_si
 bool BufferManager::BufferPool::enabled() const {
   return memory_node != NO_NUMA_MEMORY_NODE;
 }
+
+size_t BufferManager::BufferPool::free_bytes_node() const {
+#if HYRISE_NUMA_SUPPORT
+  long free_bytes;
+  numa_node_size(memory_node, &free_bytes);
+  return free_bytes;
+#else
+  return 0;
+#endif
+};
+
+size_t BufferManager::BufferPool::total_bytes_node() const {
+#if HYRISE_NUMA_SUPPORT
+  return numa_node_size(memory_node, nullptr);
+#else
+  return 0;
+#endif
+};
 
 }  // namespace hyrise

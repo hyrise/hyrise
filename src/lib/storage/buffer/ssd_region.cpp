@@ -3,6 +3,8 @@
 
 namespace hyrise {
 
+// TODO: Properly support block device
+
 static SSDRegion::DeviceType find_device_type_or_fail(const std::filesystem::path& file_name) {
   if (std::filesystem::is_regular_file(file_name) || std::filesystem::is_directory(file_name)) {
     return SSDRegion::DeviceType::REGULAR_FILE;

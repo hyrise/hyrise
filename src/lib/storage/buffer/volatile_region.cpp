@@ -37,6 +37,10 @@ void VolatileRegion::move_to_numa_node(PageID page_id, const NumaMemoryNode targ
 
   const auto num_bytes = bytes_for_size_type(_size_type);
   numa_tonode_memory(get_page(page_id), num_bytes, target_memory_node);
+  const auto error = errno;
+  if (error) {
+    Fail("Failed to madvice region: " + strerror(errno));
+  }
   _frames[page_id.index].set_memory_node(target_memory_node);
 #endif
 }
