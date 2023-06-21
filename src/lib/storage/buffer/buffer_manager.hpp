@@ -15,7 +15,7 @@
 namespace hyrise {
 
 std::byte* create_mapped_region();
-std::array<std::unique_ptr<VolatileRegion>, NUM_PAGE_SIZE_TYPES> create_volatile_regions(std::byte* mapped_region);
+std::array<std::shared_ptr<VolatileRegion>, NUM_PAGE_SIZE_TYPES> create_volatile_regions(std::byte* mapped_region);
 void unmap_region(std::byte* region);
 
 class BufferManager : public boost::container::pmr::memory_resource, public Noncopyable {
@@ -90,12 +90,10 @@ class BufferManager : public boost::container::pmr::memory_resource, public Nonc
  private:
   struct BufferPool {
     BufferPool(const size_t pool_size, const bool enable_eviction_purge_worker,
-               std::array<std::unique_ptr<VolatileRegion>, NUM_PAGE_SIZE_TYPES>& volatile_regions,
+               std::array<std::shared_ptr<VolatileRegion>, NUM_PAGE_SIZE_TYPES> volatile_regions,
                MigrationPolicy migration_policy, std::shared_ptr<SSDRegion> ssd_region,
                std::shared_ptr<BufferPool> target_buffer_pool, std::shared_ptr<BufferManagerMetrics> metrics,
                const NumaMemoryNode memory_node = DEFAULT_DRAM_NUMA_NODE);
-
-    BufferPool& operator=(BufferPool&& other) noexcept;
 
     void release_page(const PageSizeType size);
 
@@ -127,12 +125,12 @@ class BufferManager : public boost::container::pmr::memory_resource, public Nonc
 
     MigrationPolicy migration_policy;
 
-    std::array<std::unique_ptr<VolatileRegion>, NUM_PAGE_SIZE_TYPES>& volatile_regions;
+    std::array<std::shared_ptr<VolatileRegion>, NUM_PAGE_SIZE_TYPES> volatile_regions;
 
     NumaMemoryNode memory_node;
   };
 
-  VolatileRegion& get_region(const PageID page_id);
+  std::shared_ptr<VolatileRegion> get_region(const PageID page_id);
 
   void protect_page(const PageID page_id);
 
@@ -149,13 +147,13 @@ class BufferManager : public boost::container::pmr::memory_resource, public Nonc
 
   std::byte* _mapped_region;
 
-  std::array<std::unique_ptr<VolatileRegion>, NUM_PAGE_SIZE_TYPES> _volatile_regions;
+  std::shared_ptr<SSDRegion> _ssd_region;
+
+  std::array<std::shared_ptr<VolatileRegion>, NUM_PAGE_SIZE_TYPES> _volatile_regions;
 
   std::shared_ptr<BufferPool> _secondary_buffer_pool;
 
   std::shared_ptr<BufferPool> _primary_buffer_pool;
-
-  std::shared_ptr<SSDRegion> _ssd_region;
 };
 
 template <typename T>
