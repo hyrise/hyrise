@@ -599,7 +599,7 @@ size_t BufferManager::BufferPool::free_bytes_node() const {
   if (memory_node == NO_NUMA_MEMORY_NODE) {
     return 0;
   }
-  long free_bytes;
+  long long free_bytes;
   numa_node_size(memory_node, &free_bytes);
   return free_bytes;
 #else
