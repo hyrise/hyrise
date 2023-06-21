@@ -29,9 +29,9 @@ const std::string& WindowFunctionEvaluator::name() const {
   return name;
 }
 
-const std::unique_ptr<FrameDescription>& WindowFunctionEvaluator::frame_description() const {
+const FrameDescription& WindowFunctionEvaluator::frame_description() const {
   const auto window = std::dynamic_pointer_cast<WindowExpression>(_window_function_expression->window());
-  return window->frame_description;
+  return *window->frame_description;
 }
 
 void WindowFunctionEvaluator::_on_set_parameters(
@@ -219,9 +219,7 @@ WindowFunctionEvaluator::PerHash<WindowFunctionEvaluator::PartitionedData> Windo
 template <WindowFunction window_function>
 void WindowFunctionEvaluator::compute_window_function(const PerHash<PartitionedData>& partitioned_data,
                                                       auto&& emit_computed_value) const {
-  const auto& frame_desc = frame_description();
-  const auto& frame_start = frame_desc->start;
-  const auto& frame_end = frame_desc->end;
+  const auto& frame = frame_description();
 
   const auto spawn_and_wait_per_hash = [&partitioned_data](auto&& per_hash_partition_function) {
     auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
@@ -235,9 +233,8 @@ void WindowFunctionEvaluator::compute_window_function(const PerHash<PartitionedD
   };
 
   if constexpr (window_function == WindowFunction::Rank) {
-    Assert(frame_desc->type == FrameType::Range && frame_start.unbounded &&
-               frame_start.type == FrameBoundType::Preceding && !frame_end.unbounded &&
-               frame_end.type == FrameBoundType::CurrentRow && frame_end.offset == 0,
+    Assert(frame.type == FrameType::Range && frame.start.unbounded && frame.start.type == FrameBoundType::Preceding &&
+               !frame.end.unbounded && frame.end.type == FrameBoundType::CurrentRow && frame.end.offset == 0,
            "Rank has FrameBounds unbounded Preceding and 0 Current Row.");
 
     using OutputColumnType = decltype(initial_rank);
@@ -260,9 +257,8 @@ void WindowFunctionEvaluator::compute_window_function(const PerHash<PartitionedD
       Fail("Something went wrong");
     }
   } else if constexpr (window_function == WindowFunction::Sum) {
-    Assert(frame_desc->type == FrameType::Rows && frame_start.unbounded &&
-               frame_start.type == FrameBoundType::Preceding && !frame_end.unbounded &&
-               frame_end.type == FrameBoundType::CurrentRow && frame_end.offset == 0,
+    Assert(frame.type == FrameType::Rows && frame.start.unbounded && frame.start.type == FrameBoundType::Preceding &&
+               !frame.end.unbounded && frame.end.type == FrameBoundType::CurrentRow && frame.end.offset == 0,
            "Sum has FrameBounds unbounded Preceding and 0 Current Row.");
 
     spawn_and_wait_per_hash([&emit_computed_value, this](const auto& hash_partition) {
