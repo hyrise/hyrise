@@ -150,6 +150,7 @@ BufferManager& BufferManager::get() {
 // TODO: This can take several templates to improve branching
 void BufferManager::make_resident(const PageID page_id, const AccessIntent access_intent,
                                   const StateVersionType state_before_exclusive) {
+  // TODO: Track hit and miss
   // Check if the page was freshly allocated by checking the version. In this case, we want to use either DRAM or NUMA
   const auto version = Frame::version(state_before_exclusive);
   const auto is_evicted = Frame::state(state_before_exclusive) == Frame::EVICTED;
@@ -240,6 +241,7 @@ void BufferManager::pin_for_read(const PageID page_id) {
   _metrics->current_pins.fetch_add(1, std::memory_order_relaxed);
 
   const auto frame = get_region(page_id)->get_frame(page_id);
+  // TOOO: Hits and misses are harder to track due to not returning for shared lock
   // TODO: use counter instead of while(true), make_resident?
   while (true) {
     auto state_and_version = frame->state_and_version();
@@ -282,6 +284,7 @@ void BufferManager::pin_for_write(const PageID page_id) {
     switch (Frame::state(state_and_version)) {
       case Frame::EVICTED: {
         if (frame->try_lock_exclusive(state_and_version)) {
+          _metrics->total_misses.fetch_add(1, std::memory_order_relaxed);
           make_resident(page_id, AccessIntent::Write, state_and_version);
           return;
         }
@@ -290,6 +293,7 @@ void BufferManager::pin_for_write(const PageID page_id) {
       case Frame::MARKED:
       case Frame::UNLOCKED: {
         if (frame->try_lock_exclusive(state_and_version)) {
+          _metrics->total_hits.fetch_add(1, std::memory_order_relaxed);
           make_resident(page_id, AccessIntent::Write, state_and_version);
           return;
         }

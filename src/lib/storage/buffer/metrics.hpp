@@ -35,10 +35,8 @@ struct BufferManagerMetrics {
   std::atomic_uint64_t total_bytes_copied_from_ssd = 0;
 
   // Track hits and misses on DRAM or Numa
-  std::atomic_uint64_t total_hits_dram = 0;
-  std::atomic_uint64_t total_hits_numa = 0;
-  std::atomic_uint64_t total_misses_dram = 0;
-  std::atomic_uint64_t total_misses_numa = 0;
+  std::atomic_uint64_t total_hits = 0;
+  std::atomic_uint64_t total_misses = 0;
 
   // Tracks pinning
   std::atomic_uint64_t total_pins = 0;
