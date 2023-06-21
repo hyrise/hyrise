@@ -92,6 +92,7 @@ class BufferManager : public boost::container::pmr::memory_resource, public Nonc
     BufferPool(const size_t pool_size, const bool enable_eviction_purge_worker,
                std::array<std::unique_ptr<VolatileRegion>, NUM_PAGE_SIZE_TYPES>& volatile_regions,
                MigrationPolicy migration_policy, SSDRegion* ssd_region, BufferPool* target_buffer_pool,
+               std::shared_ptr<BufferManagerMetrics> metrics,
                const NumaMemoryNode memory_node = DEFAULT_DRAM_NUMA_NODE);
 
     BufferPool& operator=(BufferPool&& other) noexcept;
@@ -111,6 +112,8 @@ class BufferManager : public boost::container::pmr::memory_resource, public Nonc
 
     // The number of bytes that are currently used
     std::atomic<size_t> used_bytes;
+
+    std::shared_ptr<BufferManagerMetrics> metrics;
 
     SSDRegion* ssd_region;
 

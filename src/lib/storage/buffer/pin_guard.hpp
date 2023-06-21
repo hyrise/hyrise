@@ -65,6 +65,8 @@ struct PinnedFrames : public Noncopyable {
   std::vector<PageID> _pins;
 };
 
+// TODO: EqualDistinctCountHistogram
+
 template <AccessIntent accessIntent>
 struct FramePinGuard final : public PinnedFrames<accessIntent> {
   using PinnedFrames<accessIntent>::add_pin;

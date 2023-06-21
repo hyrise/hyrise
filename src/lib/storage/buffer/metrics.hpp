@@ -30,6 +30,7 @@ struct BufferManagerMetrics {
   std::atomic_uint64_t total_bytes_copied_from_dram_to_numa = 0;
   std::atomic_uint64_t total_bytes_copied_from_dram_to_ssd = 0;
   std::atomic_uint64_t total_bytes_copied_from_numa_to_ssd = 0;
+
   std::atomic_uint64_t total_bytes_copied_to_ssd = 0;
   std::atomic_uint64_t total_bytes_copied_from_ssd = 0;
 

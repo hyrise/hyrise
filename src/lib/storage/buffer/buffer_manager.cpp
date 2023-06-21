@@ -13,6 +13,8 @@
 
 namespace hyrise {
 
+// TODO: On Mac, we should use MSYNC to see if a page is still in memory or not to avoid loading from disk
+
 //----------------------------------------------------
 // Helper Functions for Memory Mapping and Yielding
 //----------------------------------------------------
@@ -118,10 +120,10 @@ BufferManager::BufferManager(const Config config)
       _ssd_region(config.ssd_path, _metrics),  // TODO: imprive init of pools here
       _primary_buffer_pool(config.dram_buffer_pool_size, config.enable_eviction_purge_worker, _volatile_regions,
                            config.migration_policy, &_ssd_region,
-                           config.memory_node == NO_NUMA_MEMORY_NODE ? nullptr : &_secondary_buffer_pool,
+                           config.memory_node == NO_NUMA_MEMORY_NODE ? nullptr : &_secondary_buffer_pool, _metrics,
                            DEFAULT_DRAM_NUMA_NODE),
       _secondary_buffer_pool(config.dram_buffer_pool_size, config.enable_eviction_purge_worker, _volatile_regions,
-                             config.migration_policy, &_ssd_region, nullptr, config.memory_node) {}
+                             config.migration_policy, &_ssd_region, nullptr, _metrics, config.memory_node) {}
 
 BufferManager::~BufferManager() {
   unmap_region(_mapped_region);
@@ -181,6 +183,8 @@ void BufferManager::make_resident(const PageID page_id, const AccessIntent acces
     DebugAssert(Frame::memory_node(state_before_exclusive) == _primary_buffer_pool.memory_node, "Not on DRAM node");
     _primary_buffer_pool.ensure_free_pages(page_id.size_type());
     _ssd_region.read_page(page_id, region.get_page(page_id));
+    _metrics->total_bytes_copied_from_ssd_to_dram.fetch_add(bytes_for_size_type(page_id.size_type()),
+                                                            std::memory_order_relaxed);
     return;
   }
 
@@ -194,10 +198,14 @@ void BufferManager::make_resident(const PageID page_id, const AccessIntent acces
       // Case 4.1: We bypass NUMA and load directly into DRAM
       _primary_buffer_pool.ensure_free_pages(page_id.size_type());
       region.move_to_numa_node(page_id, _primary_buffer_pool.memory_node);
+      _metrics->total_bytes_copied_from_ssd_to_dram.fetch_add(bytes_for_size_type(page_id.size_type()),
+                                                              std::memory_order_relaxed);
     } else {
       // Case 4.2: We bypass load the page into NUMA
       _secondary_buffer_pool.ensure_free_pages(page_id.size_type());
       region.move_to_numa_node(page_id, _secondary_buffer_pool.memory_node);
+      _metrics->total_bytes_copied_from_ssd_to_numa.fetch_add(bytes_for_size_type(page_id.size_type()),
+                                                              std::memory_order_relaxed);
     }
     _ssd_region.read_page(page_id, region.get_page(page_id));
     return;
@@ -217,6 +225,8 @@ void BufferManager::make_resident(const PageID page_id, const AccessIntent acces
     _secondary_buffer_pool.release_page(page_id.size_type());
     _primary_buffer_pool.ensure_free_pages(page_id.size_type());
     region.move_to_numa_node(page_id, _primary_buffer_pool.memory_node);
+    _metrics->total_bytes_copied_from_numa_to_dram.fetch_add(bytes_for_size_type(page_id.size_type()),
+                                                             std::memory_order_relaxed);
     return;
   }
 }
@@ -425,13 +435,14 @@ BufferManager::BufferPool::BufferPool(
     const size_t pool_size, const bool enable_eviction_purge_worker,
     std::array<std::unique_ptr<VolatileRegion>, NUM_PAGE_SIZE_TYPES>& volatile_regions,
     MigrationPolicy migration_policy, SSDRegion* ssd_region, BufferPool* target_buffer_pool,
-    const NumaMemoryNode memory_node)
+    std::shared_ptr<BufferManagerMetrics> metrics, const NumaMemoryNode memory_node)
     : max_bytes(pool_size),
       used_bytes(0),
       volatile_regions(volatile_regions),
       eviction_queue(std::make_unique<EvictionQueue>()),
       memory_node(memory_node),
       ssd_region(ssd_region),
+      metrics(metrics),
       target_buffer_pool(target_buffer_pool),
       migration_policy(migration_policy),
       eviction_purge_worker(enable_eviction_purge_worker
@@ -477,6 +488,7 @@ BufferManager::BufferPool& BufferManager::BufferPool::operator=(BufferManager::B
     eviction_queue = std::move(other.eviction_queue);
     volatile_regions = std::move(other.volatile_regions);
     migration_policy = std::move(other.migration_policy);
+    metrics = std::move(other.metrics);
   }
   return *this;
 }
@@ -491,9 +503,9 @@ void BufferManager::BufferPool::release_page(const PageSizeType size) {
   used_bytes.fetch_sub(bytes_for_size_type(size));
 }
 
-void BufferManager::BufferPool::ensure_free_pages(const PageSizeType size) {
+void BufferManager::BufferPool::ensure_free_pages(const PageSizeType required_size) {
   // TODO: Free at least 64 * PageSite bytes to reduce TLB shootdowns
-  const auto bytes_required = bytes_for_size_type(size);
+  const auto bytes_required = bytes_for_size_type(required_size);
   auto freed_bytes = size_t{0};
   auto current_bytes = used_bytes.fetch_add(bytes_required);
 
@@ -537,9 +549,9 @@ void BufferManager::BufferPool::ensure_free_pages(const PageSizeType size) {
     const auto num_bytes = bytes_for_size_type(size_type);
 
     // If we have a target buffer pool and we don't want to bypass it, we move the page to the other pool
-    const auto bypass_secondary = !target_buffer_pool || migration_policy.bypass_numa_during_write();
+    const auto write_to_ssd = !target_buffer_pool || migration_policy.bypass_numa_during_write();
 
-    if (bypass_secondary) {
+    if (write_to_ssd) {
       // Otherwise we just write the page if its dirty and free the associated pages
       if (frame->is_dirty()) {
         auto data = region.get_page(item.page_id);
@@ -549,12 +561,18 @@ void BufferManager::BufferPool::ensure_free_pages(const PageSizeType size) {
       }
       region.free(item.page_id);
       frame->unlock_exclusive_and_set_evicted();
+      // TODO: Improve if else
+      if (!target_buffer_pool) {
+        metrics->total_bytes_copied_from_numa_to_ssd.fetch_add(num_bytes, std::memory_order_relaxed);
+      } else {
+        metrics->total_bytes_copied_from_dram_to_ssd.fetch_add(num_bytes, std::memory_order_relaxed);
+      }
     } else {
       // Or we just move to other numa node and unlock again
-      // TODO: We need for free space on the other node, does this maintain enough space on that tier?
       target_buffer_pool->ensure_free_pages(size_type);
       region.move_to_numa_node(item.page_id, target_buffer_pool->memory_node);
       frame->unlock_exclusive();
+      metrics->total_bytes_copied_from_dram_to_numa.fetch_add(num_bytes, std::memory_order_relaxed);
     }
     freed_bytes += num_bytes;
     current_bytes -= used_bytes.load();
