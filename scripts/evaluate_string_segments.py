@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import shutil
 from abc import ABC, abstractmethod
-from argparse import ArgumentParser, ArgumentTypeError, BooleanOptionalAction
+from argparse import ArgumentParser, ArgumentTypeError
 from dataclasses import dataclass
 import multiprocessing
 from os import path
@@ -11,10 +11,10 @@ import sys
 from typing import Any, Literal
 
 
-DEBUG_MODE = False
+VERBOSITY_LEVEL = 0
 
-def print_debug(*args, **kwargs) -> None:
-    if DEBUG_MODE:
+def print_debug(*args, required_verbosity_level: int, **kwargs) -> None:
+    if VERBOSITY_LEVEL >= required_verbosity_level:
         print(*args, **kwargs)
 
 
@@ -22,13 +22,20 @@ def print_error(*args, **kwargs) -> None:
     print(*args, file=sys.stderr, **kwargs)
 
 
-def output(*args, **kwargs) -> None:
+def output(*args, required_verbosity_level, **kwargs) -> None:
+    print_debug(*args, required_verbosity_level=required_verbosity_level, **kwargs)
     print(*args, file=output_file, **kwargs)
+
 
 def rm_dir(path: str) -> None:
     dirpath = Path(path)
     if dirpath.exists() and dirpath.is_dir():
         shutil.rmtree(dirpath)
+
+
+def enquote(x: str, /, *, quoatation_character='"') -> str:
+    return f'{quoatation_character}{x}{quoatation_character}'
+
 
 @dataclass(frozen=True)
 class Configuration:
@@ -38,7 +45,7 @@ class Configuration:
     scale_factor: float
     encoding_under_test: str
     time_limit: int
-    debug: bool
+    verbosity_level: int
 
 
 class Benchmark(ABC):
@@ -66,27 +73,28 @@ class Benchmark(ABC):
     def run(self, config: Configuration) -> None:
         try:
             self._config = config
-            output(f'## Benchmark {self.name}:')
+            output(f'## Benchmark {self.name}:', required_verbosity_level=1)
             for threading in ['ST', 'MT']:
-                output(f'### {"Single Thread" if threading == "ST" else "Mulitple Threads"}')
+                output(f'### {"Single Thread" if threading == "ST" else "Mulitple Threads"}', required_verbosity_level=1)
                 result_jsons = [self._run(threading, encoding) for encoding in self._encodings]
                 test_json = self._run(threading, self._config.encoding_under_test)
                 for (encoding, json) in zip(self._encodings, result_jsons):
                     check_command = ['./scripts/compare_benchmarks.py', json, test_json]
                     compare_result = check_output(check_command)
-                    output(f'Result for {encoding} vs. {self._config.encoding_under_test}:')
-                    output(compare_result.decode(encoding='utf-8'))
+                    output(f'Result for {encoding} vs. {self._config.encoding_under_test}:', required_verbosity_level=3)
+                    output(compare_result.decode(encoding='utf-8'), required_verbosity_level=3)
         except Exception as ex:
             error_message = f'Skipped {self.name} due to error {ex}.'
             print_error(error_message)
-            output(error_message)
+            output(error_message, required_verbosity_level=0)
 
     def _run(self, threading: Literal['ST', 'MT'], encoding: str) -> str:
         self._pre_run_cleanup()
+        print_debug(f'Running benchmark {self.name} for encoding {encoding}.', required_verbosity_level=1)
         st_command = self._get_arguments(threading, encoding)
-        print_debug(' '.join(st_command))
+        print_debug(f'Command: `{" ".join(map(lambda x: enquote(x), st_command))}`', required_verbosity_level=2)
         st_output = check_output(st_command)
-        print_debug(st_output)
+        print_debug(f'Output of above command: `{st_output}`', required_verbosity_level=3)
         return self._output_path(threading, encoding)
 
     def _get_arguments(self, threading: Literal['ST', 'MT'], encoding: str) -> list[str]:
@@ -172,7 +180,7 @@ class StarSchemaBenchmark(Benchmark):
 
 
 def parse_arguments() -> Configuration:
-    global DEBUG_MODE
+    global VERBOSITY_LEVEL
     def check_positive(value: any) -> int:
         ivalue = int(value)
         if ivalue <= 0:
@@ -230,18 +238,18 @@ def parse_arguments() -> Configuration:
         help='The timeout in seconds to pass to the benchmarks. Defaults to 60.'
     )
     parser.add_argument(
-        '-d',
-        '--debug',
-        dest='debug',
+        '-v',
+        '--verbose',
+        dest='verbosity_level',
         required=False,
-        default=False,
-        action=BooleanOptionalAction,
-        help='Whether to activate debug mode (more verbose output to stdout).'
+        default=0,
+        action='count',
+        help='Verbosity level. Supports multiple ocurrences (like `-vvv`) to increase verbosity.'
     )
     namespace = parser.parse_args()
-    if namespace.debug:
-        DEBUG_MODE = True
-        print_debug('Debug Mode enabled.')
+    if namespace.verbosity_level > 0:
+        VERBOSITY_LEVEL = namespace.verbosity_level
+        print_debug(f'Verbosity Mode enabled on level {VERBOSITY_LEVEL}.', required_verbosity_level=VERBOSITY_LEVEL)
     return Configuration(
         output_file=namespace.output_file,
         build_path=namespace.build_path,
@@ -249,7 +257,7 @@ def parse_arguments() -> Configuration:
         scale_factor=namespace.scale_factor,
         encoding_under_test=namespace.encoding,
         time_limit=namespace.timeout,
-        debug=namespace.debug)
+        verbosity_level=namespace.verbosity_level)
 
 
 def scale_factor_for_benchmark(benchmark: str, scale_factor: float) -> float:
@@ -273,6 +281,7 @@ def main():
     config = parse_arguments()
     Path(config.tmp_path).mkdir(parents=True, exist_ok=True)
     with open(config.output_file, 'w+') as output_file:
+        print_debug(f'Running benchmark comparing {config.encoding_under_test} Encoding against built-in encodings.', required_verbosity_level=1)
         benchmarks_names = ['hyriseBenchmarkTPCH', 'hyriseBenchmarkTPCDS', 'hyriseBenchmarkJoinOrder', 'hyriseBenchmarkStarSchema']
         benchmarks = locate_benchmarks(benchmarks_names, config)
         for benchmark in benchmarks:
