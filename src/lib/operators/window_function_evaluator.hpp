@@ -10,6 +10,7 @@
 #include "all_type_variant.hpp"
 #include "concurrency/transaction_context.hpp"
 #include "expression/window_function_expression.hpp"
+#include "operators/aggregate/window_function_traits.hpp"
 #include "storage/table.hpp"
 
 namespace hyrise {
@@ -20,7 +21,8 @@ class WindowFunctionEvaluator : public AbstractReadOnlyOperator {
                           ColumnID init_partition_by_column_id, ColumnID init_order_by_column_id,
                           std::shared_ptr<WindowFunctionExpression> init_window_funtion_expression);
 
-  static constexpr uint64_t initial_rank = 1;
+  static constexpr auto initial_rank =
+      static_cast<typename WindowFunctionTraits<void, WindowFunction::Rank>::ReturnType>(1);
 
   static constexpr uint8_t hash_partition_bits = 8;
   static constexpr size_t hash_partition_mask = (1u << hash_partition_bits) - 1;
@@ -44,7 +46,7 @@ class WindowFunctionEvaluator : public AbstractReadOnlyOperator {
   using PartitionedData = std::vector<std::pair<std::vector<AllTypeVariant>, RowID>>;
 
   PerHash<PartitionedData> partition_and_sort() const;
-  template <typename T>
+  template <WindowFunction window_function>
   void compute_window_function(const PerHash<PartitionedData>& partitioned_data, auto&& emit_computed_value) const;
   template <typename T>
   std::shared_ptr<const Table> annotate_input_table(

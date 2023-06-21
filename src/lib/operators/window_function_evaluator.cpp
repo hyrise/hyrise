@@ -3,6 +3,7 @@
 #include <type_traits>
 #include <utility>
 
+#include "expression/lqp_column_expression.hpp"
 #include "hyrise.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/abstract_task.hpp"
@@ -48,9 +49,9 @@ std::shared_ptr<const Table> WindowFunctionEvaluator::_on_execute() {
   std::shared_ptr<const Table> result;
 
   resolve_data_type(_window_function_expression->data_type(), [&](auto type) {
-    using T = typename decltype(type)::type;
+    using OutputColumnType = typename decltype(type)::type;
 
-    std::vector<std::pair<pmr_vector<T>, pmr_vector<bool>>> segment_data_for_output_column(chunk_count);
+    std::vector<std::pair<pmr_vector<OutputColumnType>, pmr_vector<bool>>> segment_data_for_output_column(chunk_count);
 
     for (auto chunk_id = ChunkID(0); chunk_id < chunk_count; ++chunk_id) {
       const auto output_length = input_table->get_chunk(chunk_id)->size();
@@ -58,13 +59,24 @@ std::shared_ptr<const Table> WindowFunctionEvaluator::_on_execute() {
       segment_data_for_output_column[chunk_id].second.resize(output_length);
     }
 
-    compute_window_function<T>(partitioned_data, [&](RowID row_id, std::optional<T> computed_value) {
+    const auto emit_value = [&](RowID row_id, std::optional<OutputColumnType> computed_value) {
       if (computed_value) {
         segment_data_for_output_column[row_id.chunk_id].first[row_id.chunk_offset] = std::move(*computed_value);
       } else {
         segment_data_for_output_column[row_id.chunk_id].second[row_id.chunk_offset] = true;
       }
-    });
+    };
+
+    switch (_window_function_expression->window_function) {
+      case WindowFunction::Rank:
+        compute_window_function<WindowFunction::Rank>(partitioned_data, emit_value);
+        break;
+      case WindowFunction::Sum:
+        compute_window_function<WindowFunction::Sum>(partitioned_data, emit_value);
+        break;
+      default:
+        Fail("Unsupported WindowFunction.");
+    }
 
     result = annotate_input_table(std::move(segment_data_for_output_column));
   });
@@ -199,29 +211,81 @@ WindowFunctionEvaluator::PerHash<WindowFunctionEvaluator::PartitionedData> Windo
   return result;
 }
 
-template <typename T>
+template <WindowFunction window_function>
 void WindowFunctionEvaluator::compute_window_function(const PerHash<PartitionedData>& partitioned_data,
                                                       auto&& emit_computed_value) const {
-  Assert(_window_function_expression->window_function == WindowFunction::Rank,
-         "Only WindowFunction::Rank is supported.");
-
-  if constexpr (std::is_integral_v<T>) {
+  const auto spawn_and_wait_per_hash = [&partitioned_data](auto&& per_hash_partition_function) {
     auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
     for (auto hash_value = 0u; hash_value < hash_partition_partition_count; ++hash_value) {
-      tasks.emplace_back(std::make_shared<JobTask>([&partitioned_data, &emit_computed_value, hash_value, this]() {
-        T current_rank = initial_rank;
-        const AllTypeVariant* previous_partition_value = nullptr;
-
-        for (const auto& [row_values, row_id] : partitioned_data[hash_value]) {
-          if (previous_partition_value && row_values[_partition_by_column_id] != *previous_partition_value)
-            current_rank = initial_rank;
-          emit_computed_value(row_id, current_rank++);
-          previous_partition_value = &row_values[_partition_by_column_id];
-        }
+      tasks.emplace_back(std::make_shared<JobTask>([hash_value, &partitioned_data, &per_hash_partition_function]() {
+        per_hash_partition_function(partitioned_data[hash_value]);
       }));
     }
 
     Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
+  };
+
+  if constexpr (window_function == WindowFunction::Rank) {
+    using OutputColumnType = decltype(initial_rank);
+
+    if constexpr (requires {
+                    emit_computed_value(std::declval<RowID>(), std::declval<std::optional<OutputColumnType>>());
+                  }) {
+      spawn_and_wait_per_hash([&emit_computed_value, this](const auto& hash_partition) {
+        auto current_rank = initial_rank;
+        const AllTypeVariant* previous_partition_value = nullptr;
+
+        for (const auto& [row_values, row_id] : hash_partition) {
+          if (previous_partition_value && row_values[_partition_by_column_id] != *previous_partition_value)
+            current_rank = initial_rank;
+          emit_computed_value(row_id, std::make_optional(current_rank++));
+          previous_partition_value = &row_values[_partition_by_column_id];
+        }
+      });
+    } else {
+      Fail("Something went wrong");
+    }
+  } else if constexpr (window_function == WindowFunction::Sum) {
+    spawn_and_wait_per_hash([&emit_computed_value, this](const auto& hash_partition) {
+      const auto sum_column_expression =
+          std::dynamic_pointer_cast<LQPColumnExpression>(_window_function_expression->argument());
+      Assert(sum_column_expression, "Can only sum over single columns.");
+      const auto sum_column_id = sum_column_expression->original_column_id;
+
+      const auto input_table = left_input_table();
+      resolve_data_type(input_table->column_data_type(sum_column_id), [&](auto input_column_type) {
+        using InputColumnType = typename decltype(input_column_type)::type;
+        using OutputColumnType = typename WindowFunctionTraits<InputColumnType, WindowFunction::Sum>::ReturnType;
+
+        if constexpr (requires {
+                        emit_computed_value(std::declval<RowID>(), std::declval<std::optional<OutputColumnType>>());
+                      }) {
+          // Assume that we calculate standard prefix sum
+          const auto zero = static_cast<OutputColumnType>(0);
+          auto sum = std::make_optional(zero);
+
+          const AllTypeVariant* previous_partition_value = nullptr;
+
+          for (const auto& [row_values, row_id] : hash_partition) {
+            if (previous_partition_value && row_values[_partition_by_column_id] != *previous_partition_value)
+              sum = zero;
+
+            if (variant_is_null(row_values[sum_column_id])) {
+              sum = std::nullopt;
+            } else if (sum) {
+              *sum += static_cast<OutputColumnType>(get<InputColumnType>(row_values[sum_column_id]));
+            }
+
+            emit_computed_value(row_id, sum);
+            previous_partition_value = &row_values[_partition_by_column_id];
+          }
+        } else {
+          Fail("Something went wrong");
+        }
+      });
+    });
+  } else {
+    Fail("Unsupported WindowFunction template instantiation.");
   }
 }
 
