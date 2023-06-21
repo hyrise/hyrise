@@ -230,34 +230,58 @@ std::shared_ptr<const Table> WindowFunctionEvaluator::annotate_input_table(
     std::vector<std::pair<pmr_vector<T>, pmr_vector<bool>>> segment_data_for_output_column) const {
   const auto input_table = left_input_table();
 
-  auto output_column_definitions = input_table->column_definitions();
-  output_column_definitions.emplace_back(_window_function_expression->as_column_name(), DataType::Long, false);
-
   const auto chunk_count = input_table->chunk_count();
   const auto column_count = input_table->column_count();
+
+  const auto new_column_name = _window_function_expression->as_column_name();
+  const auto new_column_type = _window_function_expression->data_type();
+  const auto new_column_definition = TableColumnDefinition(new_column_name, new_column_type, false);
+
+  // Create value segments for our output column.
+  std::vector<std::shared_ptr<AbstractSegment>> value_segments_for_new_column;
+  value_segments_for_new_column.reserve(chunk_count);
+  for (auto chunk_id = ChunkID(0); chunk_id < chunk_count; ++chunk_id) {
+    value_segments_for_new_column.emplace_back(
+        std::make_shared<ValueSegment<T>>(std::move(segment_data_for_output_column[chunk_id].first),
+                                          std::move(segment_data_for_output_column[chunk_id].second)));
+  }
+
+  auto outputted_segments_for_new_column = std::vector<std::shared_ptr<AbstractSegment>>{};
+  if (input_table->type() == TableType::Data) {
+    // If our input table is of TableType::Data, use the value segments created above for our output table.
+    outputted_segments_for_new_column = std::move(value_segments_for_new_column);
+  } else {
+    // If our input table is of TableType::Reference, create an extra table with the value segments and use reference
+    // segments to this table in our output.
+    auto chunks_for_referenced_table = std::vector<std::shared_ptr<Chunk>>{};
+    chunks_for_referenced_table.reserve(chunk_count);
+    for (auto chunk_id = ChunkID(0); chunk_id < chunk_count; ++chunk_id) {
+      chunks_for_referenced_table.emplace_back(
+          std::make_shared<Chunk>(Segments({std::move(value_segments_for_new_column[chunk_id])})));
+    }
+    auto referenced_table = std::make_shared<Table>(TableColumnDefinitions({new_column_definition}), TableType::Data,
+                                                    std::move(chunks_for_referenced_table));
+
+    for (auto chunk_id = ChunkID(0); chunk_id < chunk_count; ++chunk_id) {
+      const auto pos_list = std::make_shared<EntireChunkPosList>(chunk_id, input_table->get_chunk(chunk_id)->size());
+      outputted_segments_for_new_column.emplace_back(
+          std::make_shared<ReferenceSegment>(referenced_table, ColumnID{0}, pos_list));
+    }
+  }
+
+  // Create output table reusing the segments from input and the newly created segments for the output column
+  auto output_column_definitions = input_table->column_definitions();
+  output_column_definitions.push_back(new_column_definition);
   std::vector<std::shared_ptr<Chunk>> output_chunks;
   output_chunks.reserve(chunk_count);
-
   for (auto chunk_id = ChunkID(0); chunk_id < chunk_count; ++chunk_id) {
     const auto chunk = input_table->get_chunk(chunk_id);
     Segments output_segments;
     for (auto column_id = ColumnID(0); column_id < column_count; ++column_id) {
       const auto input_segment = chunk->get_segment(column_id);
-      resolve_data_type(input_segment->data_type(), [&](auto type) {
-        using ColumnDataType = typename decltype(type)::type;
-        auto output_segment = std::make_shared<ValueSegment<ColumnDataType>>();
-        segment_iterate<ColumnDataType>(*input_segment, [&](const auto& segment_position) {
-          if (segment_position.is_null())
-            output_segment->append(NULL_VALUE);
-          else
-            output_segment->append(segment_position.value());
-        });
-        output_segments.emplace_back(output_segment);
-      });
+      output_segments.emplace_back(chunk->get_segment(column_id));
     }
-    output_segments.emplace_back(
-        std::make_shared<ValueSegment<T>>(std::move(segment_data_for_output_column[chunk_id].first),
-                                          std::move(segment_data_for_output_column[chunk_id].second)));
+    output_segments.push_back(std::move(outputted_segments_for_new_column[chunk_id]));
 
     output_chunks.emplace_back(std::make_shared<Chunk>(std::move(output_segments)));
   }
