@@ -98,7 +98,7 @@ bool BenchmarkTableEncoder::encode(const std::string& table_name, const std::sha
       chunk_encoding_spec.push_back(encoding_config.default_encoding_spec);
     } else {
       // Use a stringstream here to bundle all writes into a single one and avoid locking.
-      std::ostringstream output{};
+      auto output = std::ostringstream{};
       output << " - Column '" << table_name << "." << table->column_name(column_id) << "' of type ";
       output << column_data_type << " cannot be encoded as ";
       output << encoding_config.default_encoding_spec.encoding_type << " and is ";
