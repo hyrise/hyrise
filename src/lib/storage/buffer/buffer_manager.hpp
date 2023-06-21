@@ -96,7 +96,9 @@ class BufferManager : public boost::container::pmr::memory_resource, public Nonc
 
     BufferPool& operator=(BufferPool&& other) noexcept;
 
-    void free_pages(const PageSizeType size);
+    void release_page(const PageSizeType size);
+
+    void ensure_free_pages(const PageSizeType size);
 
     void purge_eviction_queue();
 
