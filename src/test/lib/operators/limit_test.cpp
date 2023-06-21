@@ -148,12 +148,15 @@ TEST_F(OperatorsLimitTest, ForwardSortedByFlag) {
 }
 
 TEST_F(OperatorsLimitTest, OnlyIntegralTypes) {
-  auto limit = std::make_shared<Limit>(_table_wrapper, to_expression(AllTypeVariant{"test_string"}));
-  EXPECT_THROW(limit->execute(), std::logic_error);
+  const auto limit_string = std::make_shared<Limit>(_table_wrapper, value_("test_string"));
+  EXPECT_THROW(limit_string->execute(), std::logic_error);
+  
+  const auto limit_float = std::make_shared<Limit>(_table_wrapper, value_(2.0f));
+  EXPECT_THROW(limit_float->execute(), std::logic_error);
 }
 
 TEST_F(OperatorsLimitTest, GetName) {
-  auto limit = std::make_shared<Limit>(_table_wrapper, to_expression(int64_t{2}));
+  const auto limit = std::make_shared<Limit>(_table_wrapper, value_(2));
   EXPECT_EQ(limit->name(), std::string{"Limit"});
 }
 
