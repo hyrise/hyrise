@@ -1,9 +1,9 @@
 #pragma once
 
 #include <experimental/functional>
+#include <regex>
 #include <utility>
 #include <variant>
-#include <regex>
 
 #include "types.hpp"
 
