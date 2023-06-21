@@ -106,20 +106,28 @@ void PredicateReorderingRule::_reorder_predicates(
   const auto& caching_cardinality_estimator = cost_estimator->cardinality_estimator;
   caching_cardinality_estimator->guarantee_join_graph(JoinGraph{{input}, {}});
 
-  // const auto input_cardinality = caching_cardinality_estimator->estimate_cardinality(input);
+  const auto input_cardinality = caching_cardinality_estimator->estimate_cardinality(input);
 
   // Estimate the output cardinalities of each individual predicate on top of the input LQP, i.e., predicates are
   // estimated independently. Torder the predicates, we want to favor the predicate with the most beneficial ratio of
   // selectivity and cost. For simplification, we just look at (input cardinality - output cardinality) / cost.
   // TODO(dey4ss): Evaluate minimizing cost / output cardinality.
+  // Evaluated approaches:
+  //     0) min #out -> baseline
+  //     1) max (#in - #out) / cost
+  //     2) min cost * #out
+  //     3) min cost + #out
+  //     4) min cost
+  //     5) max (#in - #out) / (cost - #out)
+  //     6) min cost * (#out / #in)
   auto nodes_and_cardinalities = std::vector<std::pair<std::shared_ptr<AbstractLQPNode>, Cardinality>>{};
   nodes_and_cardinalities.reserve(predicates.size());
   for (const auto& predicate : predicates) {
     predicate->set_left_input(input);
-    // const auto output_cardinality = caching_cardinality_estimator->estimate_cardinality(predicate);
+    const auto output_cardinality = caching_cardinality_estimator->estimate_cardinality(predicate);
     const auto cost = caching_cost_estimator->estimate_node_cost(predicate);
-    // const auto benefit = cost + output_cardinality;
-    nodes_and_cardinalities.emplace_back(predicate, cost);
+    const auto benefit = (input_cardinality - output_cardinality) / (cost - output_cardinality);
+    nodes_and_cardinalities.emplace_back(predicate, benefit);
   }
 
   // Untie predicates from LQP, so we can freely retie them.
@@ -129,7 +137,7 @@ void PredicateReorderingRule::_reorder_predicates(
 
   // Sort in descending order. The "most beneficial" predicate is a the end.
   std::sort(nodes_and_cardinalities.begin(), nodes_and_cardinalities.end(),
-            [&](auto& left, auto& right) { return left.second > right.second; });
+            [&](auto& left, auto& right) { return left.second < right.second; });
 
   // Ensure that nodes are chained correctly. The predicate at the vector end is placed after the input.
   nodes_and_cardinalities.back().first->set_left_input(input);
