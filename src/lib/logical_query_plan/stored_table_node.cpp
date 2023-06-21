@@ -148,7 +148,7 @@ std::vector<ChunkIndexStatistics> StoredTableNode::chunk_indexes_statistics() co
   }
 
   auto pruned_indexes_statistics = table->chunk_indexes_statistics();
-  const auto column_id_mapping = column_ids_after_pruning(table->column_count(), _pruned_column_ids);
+  const auto column_id_mapping = pruned_column_id_mapping(table->column_count(), _pruned_column_ids);
 
   // Update index statistics
   // Note: The lambda also modifies statistics.column_ids. This is done because a regular for loop runs into issues
@@ -182,7 +182,7 @@ std::vector<TableIndexStatistics> StoredTableNode::table_indexes_statistics() co
 
   const auto input_table_column_count = table->column_count();
   const auto& index_statistics = table->table_indexes_statistics();
-  const auto column_id_mapping = column_ids_after_pruning(input_table_column_count, _pruned_column_ids);
+  const auto column_id_mapping = pruned_column_id_mapping(input_table_column_count, _pruned_column_ids);
 
   auto pruned_index_statistics = std::vector<TableIndexStatistics>{};
   pruned_index_statistics.reserve(input_table_column_count - _pruned_column_ids.size());

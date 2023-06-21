@@ -4,60 +4,57 @@
 #include <optional>
 #include <vector>
 
-namespace hyrise {
+namespace {
 
-std::vector<ColumnID> column_ids_after_pruning(const size_t original_table_column_count,
-                                               const std::vector<ColumnID>& pruned_column_ids) {
-  DebugAssert(std::is_sorted(pruned_column_ids.begin(), pruned_column_ids.end()),
-              "Expected a sorted vector of pruned chunk IDs.");
-  DebugAssert(pruned_column_ids.empty() || pruned_column_ids.back() < original_table_column_count,
-              "Largest pruned column ID is too large.");
-  DebugAssert(pruned_column_ids.size() <= original_table_column_count,
-              "List of pruned chunks longer than chunks in actual table.");
+using namespace hyrise;  // NOLINT(build/namespaces)
 
-  auto column_id_mapping = std::vector<ColumnID>(original_table_column_count, INVALID_COLUMN_ID);
-  auto column_pruned_bitvector = std::vector<bool>(original_table_column_count);
+template <typename T>
+std::vector<T> chunk_ids_after_pruning(const size_t initial_item_count, const std::vector<T>& pruned_item_ids) {
+  // This function assume to be used solely for column and chunk pruning.
+  static_assert(std::disjunction<std::is_same<T, ColumnID>, std::is_same<T, ChunkID>>(),
+                "Unexpected template type passed.");
 
-  // Fill the bitvector
-  for (const auto& pruned_column_id : pruned_column_ids) {
-    column_pruned_bitvector[pruned_column_id] = true;
+  auto INVALID_ID = T{0};
+  if constexpr (std::is_same_v<T, ColumnID>) {
+    INVALID_ID = INVALID_COLUMN_ID;
+  } else {
+    INVALID_ID = INVALID_CHUNK_ID;
   }
 
-  // Calculate new column ids
-  auto next_updated_column_id = ColumnID{0};
-  for (auto column_index = ColumnID{0}; column_index < column_pruned_bitvector.size(); ++column_index) {
-    if (!column_pruned_bitvector[column_index]) {
-      column_id_mapping[column_index] = next_updated_column_id;
-      ++next_updated_column_id;
-    }
-  }
-  return column_id_mapping;
-}
-
-std::vector<ChunkID> chunk_ids_after_pruning(const size_t original_table_chunk_count,
-                                             const std::vector<ChunkID>& pruned_chunk_ids) {
-  DebugAssert(std::is_sorted(pruned_chunk_ids.begin(), pruned_chunk_ids.end()),
+  DebugAssert(std::is_sorted(pruned_item_ids.begin(), pruned_item_ids.end()),
               "Expected a sorted vector of pruned chunk IDs.");
-  DebugAssert(pruned_chunk_ids.empty() || pruned_chunk_ids.back() < original_table_chunk_count,
+  DebugAssert(pruned_item_ids.empty() || pruned_item_ids.back() < initial_item_count,
               "Largest pruned chunk ID is too large.");
-  DebugAssert(pruned_chunk_ids.size() <= original_table_chunk_count,
+  DebugAssert(pruned_item_ids.size() <= initial_item_count,
               "List of pruned chunks longer than chunks in actual table.");
 
-  auto chunk_id_mapping = std::vector<ChunkID>(original_table_chunk_count, INVALID_CHUNK_ID);
-  auto pruned_chunk_ids_iter = pruned_chunk_ids.begin();
-
-  // Calculate new chunk ids
-  auto next_updated_chunk_id = ChunkID{0};
-  for (auto chunk_index = ChunkID{0}; chunk_index < original_table_chunk_count; ++chunk_index) {
-    if (pruned_chunk_ids_iter != pruned_chunk_ids.end() && chunk_index == *pruned_chunk_ids_iter) {
-      ++pruned_chunk_ids_iter;
+  auto id_mapping = std::vector<T>(initial_item_count, INVALID_ID);
+  auto pruned_item_ids_iter = pruned_item_ids.begin();
+  auto next_updated_id = T{0};
+  for (auto item_index = T{0}; item_index < initial_item_count; ++item_index) {
+    if (pruned_item_ids_iter != pruned_item_ids.end() && item_index == *pruned_item_ids_iter) {
+      ++pruned_item_ids_iter;
       continue;
     }
 
-    chunk_id_mapping[chunk_index] = next_updated_chunk_id;
-    ++next_updated_chunk_id;
+    id_mapping[item_index] = next_updated_id;
+    ++next_updated_id;
   }
-  return chunk_id_mapping;
+  return id_mapping;
+}
+
+}  // namespace
+
+namespace hyrise {
+
+std::vector<ColumnID> pruned_column_id_mapping(const size_t original_table_column_count,
+                                               const std::vector<ColumnID>& pruned_column_ids) {
+  return chunk_ids_after_pruning<ColumnID>(original_table_column_count, pruned_column_ids);
+}
+
+std::vector<ChunkID> pruned_chunk_id_mapping(const size_t original_table_chunk_count,
+                                             const std::vector<ChunkID>& pruned_chunk_ids) {
+  return chunk_ids_after_pruning<ChunkID>(original_table_chunk_count, pruned_chunk_ids);
 }
 
 ColumnID column_id_before_pruning(const ColumnID column_id, const std::vector<ColumnID>& pruned_column_ids) {

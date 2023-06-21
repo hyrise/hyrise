@@ -52,11 +52,12 @@ std::shared_ptr<const Table> IndexScan::_on_execute() {
 
   // If chunks have been pruned, calculate a mapping that maps the pruned ChunkIDs to the original ones.
   const auto& pruned_chunk_ids = input_get_table->pruned_chunk_ids();
+  const auto data_table_chunk_count = _in_table->chunk_count() + pruned_chunk_ids.size();
   auto chunk_count_to_scan = static_cast<int32_t>(_in_table->chunk_count());
-  auto chunk_id_mapping = chunk_ids_after_pruning(_in_table->chunk_count() + pruned_chunk_ids.size(), pruned_chunk_ids);
+  auto chunk_id_mapping = pruned_chunk_id_mapping(data_table_chunk_count, pruned_chunk_ids);
 
   // Remove all values from the mapping not present in the included ChunkIDs.
-  for (auto index = size_t{0}; index < chunk_id_mapping.size(); ++index) {
+  for (auto index = size_t{0}; index < data_table_chunk_count; ++index) {
     const auto chunk_id = chunk_id_mapping[index];
     if (chunk_id != INVALID_CHUNK_ID &&
         !std::binary_search(included_chunk_ids.begin(), included_chunk_ids.end(), chunk_id)) {
@@ -67,13 +68,13 @@ std::shared_ptr<const Table> IndexScan::_on_execute() {
 
   _out_table = std::make_shared<Table>(_in_table->column_definitions(), TableType::References);
 
-  DebugAssert(chunk_count_to_scan >= 0, "Excluded more chunks than available.");
+  DebugAssert(chunk_count_to_scan >= 0, "Excluded more chunks for scanning than input table contains.");
   if (chunk_count_to_scan == 0) {
     // All chunks to scan have been pruned (can happen due to dynamic pruning).
     return _out_table;
   }
 
-  auto pos_lists = std::vector<std::shared_ptr<RowIDPosList>>();
+  auto pos_lists = std::vector<std::shared_ptr<RowIDPosList>>{};
   pos_lists.emplace_back(std::make_shared<RowIDPosList>());
 
   const auto& indexes = _in_table->get_table_indexes(_indexed_column_id);
