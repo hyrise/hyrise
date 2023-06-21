@@ -385,7 +385,7 @@ void BufferManager::add_to_eviction_queue(const PageID page_id, Frame* frame) {
   } else if (frame->memory_node() == _secondary_buffer_pool->memory_node) {
     _secondary_buffer_pool->add_to_eviction_queue(page_id, frame);
   } else {
-    Fail("Cannot find buffer pool for given memory node");
+    Fail("Cannot find buffer pool for given memory node " + std::to_string(frame->memory_node()));
   }
 }
 
