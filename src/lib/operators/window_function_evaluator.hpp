@@ -9,6 +9,7 @@
 #include "abstract_read_only_operator.hpp"
 #include "all_type_variant.hpp"
 #include "concurrency/transaction_context.hpp"
+#include "expression/window_expression.hpp"
 #include "expression/window_function_expression.hpp"
 #include "operators/aggregate/window_function_traits.hpp"
 #include "storage/table.hpp"
@@ -51,6 +52,7 @@ class WindowFunctionEvaluator : public AbstractReadOnlyOperator {
   template <typename T>
   std::shared_ptr<const Table> annotate_input_table(
       std::vector<std::pair<pmr_vector<T>, pmr_vector<bool>>> segment_data_for_output_column) const;
+  const std::unique_ptr<FrameDescription>& frame_description() const;
 
   ColumnID _partition_by_column_id;
   ColumnID _order_by_column_id;
