@@ -81,8 +81,22 @@ class Benchmark(ABC):
             print_error(error_message)
             output(error_message)
 
-    @abstractmethod
     def _run(self, threading: Literal['ST', 'MT'], encoding: str) -> str:
+        self._pre_run_cleanup()
+        st_command = self._get_arguments(threading, encoding)
+        print_debug(' '.join(st_command))
+        st_output = check_output(st_command)
+        print_debug(st_output)
+        return self._output_path(threading, encoding)
+
+    def _get_arguments(self, threading: Literal['ST', 'MT'], encoding: str) -> list[str]:
+        arguments = [self._path, '-o', self._output_path(threading, encoding), '-t', str(self._config.time_limit), '-e', encoding]
+        if threading == 'MT':
+            arguments += ['--scheduler', '--clients', str(multiprocessing.cpu_count() // 4), '--mode=Shuffled']
+        return arguments
+
+    @abstractmethod
+    def _pre_run_cleanup(self) -> None:
         pass
 
     @property
@@ -96,26 +110,12 @@ class Benchmark(ABC):
 
 class TPCHBenchmark(Benchmark):
     name = 'tpch'
-    def _run(self, threading: Literal['ST', 'MT'], encoding: str) -> str:
-        rm_dir("tpch_cached_tables")
-        if threading == 'ST':
-            benchmark_path = self._path
-            st_output_path = self._output_path(threading, encoding)
-            st_command = [benchmark_path, '-o', st_output_path, '-t', str(self._config.time_limit), '-s', str(self._config.scale_factor), '-e', encoding]
-            print_debug(' '.join(st_command))
-            st_output = check_output(st_command)
-            print_debug(st_output)
-            return st_output_path
-        else:
-            benchmark_path = self._path
-            st_output_path = self._output_path(threading, encoding)
-            st_command = [benchmark_path, '-o', st_output_path, '-t', str(self._config.time_limit), '-s', str(self._config.scale_factor), '-e', encoding,
-                          '--scheduler', '--clients', str(multiprocessing.cpu_count() // 4), '--mode=Shuffled']
-            print_debug(' '.join(st_command))
-            st_output = check_output(st_command)
-            print_debug(st_output)
-            return st_output_path
 
+    def _get_arguments(self, threading: Literal['ST', 'MT'], encoding: str) -> list[str]:
+        return super()._get_arguments(threading, encoding) + ['-s', str(self._config.scale_factor)]
+
+    def _pre_run_cleanup(self) -> None:
+        rm_dir('tpch_cached_tables')
 
     @property
     def _path(self) -> str:
@@ -127,27 +127,13 @@ class TPCHBenchmark(Benchmark):
     
 class TPCDSBenchmark(Benchmark):
     name = 'tpcds'
-    def _run(self, threading: Literal['ST', 'MT'], encoding: str) -> None:
-        rm_dir("tpcds_cached_tables")
+
+    def _get_arguments(self, threading: Literal['ST', 'MT'], encoding: str) -> list[str]:
         # TPC-DS only supports integer scales
-        scaling_factor = max(1, int(self._config.scale_factor))
-        if threading == 'ST':
-            benchmark_path = self._path
-            st_output_path = self._output_path(threading, encoding)
-            st_command = [benchmark_path, '-o', st_output_path, '-t', str(self._config.time_limit), '-s', str(scaling_factor), '-e', encoding]
-            print_debug(' '.join(st_command))
-            st_output = check_output(st_command)
-            print_debug(st_output)
-            return st_output_path
-        else:
-            benchmark_path = self._path
-            st_output_path = self._output_path(threading, encoding)
-            st_command = [benchmark_path, '-o', st_output_path, '-t', str(self._config.time_limit), '-s', str(scaling_factor), '-e', encoding,
-                          '--scheduler', '--clients', str(multiprocessing.cpu_count() // 4), '--mode=Shuffled']
-            print_debug(' '.join(st_command))
-            st_output = check_output(st_command)
-            print_debug(st_output)
-            return st_output_path
+        return super()._get_arguments(threading, encoding) + ['-s', str(max(1, int(self._config.scale_factor)))]
+
+    def _pre_run_cleanup(self) -> None:
+        rm_dir('tpcds_cached_tables')
 
     @property
     def _path(self) -> str:
@@ -159,24 +145,9 @@ class TPCDSBenchmark(Benchmark):
 
 class JoinOrderBenchmark(Benchmark):
     name = 'job'
-    def _run(self, threading: Literal['ST', 'MT'], encoding: str) -> str:
-        if threading == 'ST':
-            benchmark_path = self._path
-            st_output_path = self._output_path(threading, encoding)
-            st_command = [benchmark_path, '-o', st_output_path, '-t', str(self._config.time_limit), '-e', encoding]
-            print_debug(' '.join(st_command))
-            st_output = check_output(st_command)
-            print_debug(st_output)
-            return st_output_path
-        else:
-            benchmark_path = self._path
-            st_output_path = self._output_path(threading, encoding)
-            st_command = [benchmark_path, '-o', st_output_path, '-t', str(self._config.time_limit), '-e', encoding,
-                          '--scheduler', '--clients', str(multiprocessing.cpu_count() // 4), '--mode=Shuffled']
-            print_debug(' '.join(st_command))
-            st_output = check_output(st_command)
-            print_debug(st_output)
-            return st_output_path
+
+    def _pre_run_cleanup(self) -> None:
+        pass
 
     @property
     def _path(self) -> str:
@@ -188,24 +159,9 @@ class JoinOrderBenchmark(Benchmark):
 
 class StarSchemaBenchmark(Benchmark):
     name = 'ssb'
-    def _run(self, threading: Literal['ST', 'MT'], encoding: str) -> None:
-        if threading == 'ST':
-            benchmark_path = self._path
-            st_output_path = self._output_path(threading, encoding)
-            st_command = [benchmark_path, '-o', st_output_path, '-t', str(self._config.time_limit), '-e', encoding]
-            print_debug(' '.join(st_command))
-            st_output = check_output(st_command)
-            print_debug(st_output)
-            return st_output_path
-        else:
-            benchmark_path = self._path
-            st_output_path = self._output_path(threading, encoding)
-            st_command = [benchmark_path, '-o', st_output_path, '-t', str(self._config.time_limit), '-e', encoding,
-                          '--scheduler', '--clients', str(multiprocessing.cpu_count() // 4), '--mode=Shuffled']
-            print_debug(' '.join(st_command))
-            st_output = check_output(st_command)
-            print_debug(st_output)
-            return st_output_path
+
+    def _pre_run_cleanup(self) -> None:
+        pass
 
     @property
     def _path(self) -> str:
