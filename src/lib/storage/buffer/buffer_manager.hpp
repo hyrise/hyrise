@@ -91,8 +91,8 @@ class BufferManager : public boost::container::pmr::memory_resource, public Nonc
   struct BufferPool {
     BufferPool(const size_t pool_size, const bool enable_eviction_purge_worker,
                std::array<std::unique_ptr<VolatileRegion>, NUM_PAGE_SIZE_TYPES>& volatile_regions,
-               MigrationPolicy migration_policy, SSDRegion* ssd_region, BufferPool* target_buffer_pool,
-               std::shared_ptr<BufferManagerMetrics> metrics,
+               MigrationPolicy migration_policy, std::shared_ptr<SSDRegion> ssd_region,
+               std::shared_ptr<BufferPool> target_buffer_pool, std::shared_ptr<BufferManagerMetrics> metrics,
                const NumaMemoryNode memory_node = DEFAULT_DRAM_NUMA_NODE);
 
     BufferPool& operator=(BufferPool&& other) noexcept;
@@ -115,9 +115,9 @@ class BufferManager : public boost::container::pmr::memory_resource, public Nonc
 
     std::shared_ptr<BufferManagerMetrics> metrics;
 
-    SSDRegion* ssd_region;
+    std::shared_ptr<SSDRegion> ssd_region;
 
-    BufferPool* target_buffer_pool;
+    std::shared_ptr<BufferPool> target_buffer_pool;
 
     // Eviction queue for frames that are not pinned
     std::unique_ptr<EvictionQueue> eviction_queue;
@@ -151,11 +151,11 @@ class BufferManager : public boost::container::pmr::memory_resource, public Nonc
 
   std::array<std::unique_ptr<VolatileRegion>, NUM_PAGE_SIZE_TYPES> _volatile_regions;
 
-  BufferPool _secondary_buffer_pool;
+  std::shared_ptr<BufferPool> _secondary_buffer_pool;
 
-  BufferPool _primary_buffer_pool;
+  std::shared_ptr<BufferPool> _primary_buffer_pool;
 
-  SSDRegion _ssd_region;
+  std::shared_ptr<SSDRegion> _ssd_region;
 };
 
 template <typename T>
