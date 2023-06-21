@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import shutil
 from abc import ABC, abstractmethod
-from argparse import ArgumentParser, BooleanOptionalAction
+from argparse import ArgumentParser, ArgumentTypeError, BooleanOptionalAction
 from dataclasses import dataclass
 import multiprocessing
 from os import path
@@ -217,6 +217,11 @@ class StarSchemaBenchmark(Benchmark):
 
 def parse_arguments() -> Configuration:
     global DEBUG_MODE
+    def check_positive(value: any) -> int:
+        ivalue = int(value)
+        if ivalue <= 0:
+            raise ArgumentTypeError("%s is an invalid positive int value" % value)
+        return ivalue
     parser = ArgumentParser()
     parser.add_argument(
         '-o',
@@ -263,10 +268,10 @@ def parse_arguments() -> Configuration:
         '-t',
         '--timeout',
         dest='timeout',
-        type=int,
+        type=check_positive,
         required=False,
-        default=-1,
-        help='The timeout in seconds to pass to the benchmarks. Defaults to -1, i.e. no timeout.'
+        default=60,
+        help='The timeout in seconds to pass to the benchmarks. Defaults to 60.'
     )
     parser.add_argument(
         '-d',
@@ -310,6 +315,7 @@ def locate_benchmarks(benchmarks: list[str], config: Configuration) -> list[Benc
 def main():
     global output_file
     config = parse_arguments()
+    Path(config.tmp_path).mkdir(parents=True, exist_ok=True)
     with open(config.output_file, 'w+') as output_file:
         benchmarks_names = ['hyriseBenchmarkTPCH', 'hyriseBenchmarkTPCDS', 'hyriseBenchmarkJoinOrder', 'hyriseBenchmarkStarSchema']
         benchmarks = locate_benchmarks(benchmarks_names, config)
