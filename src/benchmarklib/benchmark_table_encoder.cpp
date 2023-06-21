@@ -1,7 +1,6 @@
 #include "benchmark_table_encoder.hpp"
 
 #include <atomic>
-#include <mutex>
 
 #include "encoding_config.hpp"
 #include "hyrise.hpp"
@@ -98,16 +97,13 @@ bool BenchmarkTableEncoder::encode(const std::string& table_name, const std::sha
     if (encoding_supports_data_type(encoding_config.default_encoding_spec.encoding_type, column_data_type)) {
       chunk_encoding_spec.push_back(encoding_config.default_encoding_spec);
     } else {
-      // Use an osyncstream to prevent multiple threads writing at the same time to std::cout.
-      // Example output without osyncstream:
-      // orders.o_totalprice' of type float cannot be encoded as FixedStringDictionary and is  - Column 'left Unencoded.lineitem // NOLINT
-      // Example with osyncstream:
-      // - Column 'part.p_size' of type int cannot be encoded as FixedStringDictionary and is left Unencoded.
-      auto lock = std::lock_guard{output_stream_mutex};
-      std::cout << " - Column '" << table_name << "." << table->column_name(column_id) << "' of type ";
-      std::cout << column_data_type << " cannot be encoded as ";
-      std::cout << encoding_config.default_encoding_spec.encoding_type << " and is ";
-      std::cout << "left Unencoded." << std::endl;
+      // Use a stringstream here to bundle all writes into a single one and avoid locking.
+      std::ostringstream output{};
+      output << " - Column '" << table_name << "." << table->column_name(column_id) << "' of type ";
+      output << column_data_type << " cannot be encoded as ";
+      output << encoding_config.default_encoding_spec.encoding_type << " and is ";
+      output << "left Unencoded." << std::endl;
+      std::cout << output.str();
       chunk_encoding_spec.emplace_back(EncodingType::Unencoded);
     }
   }
@@ -138,7 +134,5 @@ bool BenchmarkTableEncoder::encode(const std::string& table_name, const std::sha
 
   return encoding_performed;
 }
-
-std::mutex BenchmarkTableEncoder::output_stream_mutex{};
 
 }  // namespace hyrise
