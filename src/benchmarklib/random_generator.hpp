@@ -33,6 +33,7 @@ class RandomGenerator {
    */
   std::set<size_t> select_unique_ids(size_t num_unique, size_t id_length) {
     auto rows = std::set<size_t>{};
+    Assert(num_unique > 0, "Expected to select at least one ID.");
     Assert(num_unique <= id_length, "There are not enough IDs to be selected!");
     while (true) {
       rows.emplace(random_number(0, id_length - 1));
