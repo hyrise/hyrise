@@ -118,7 +118,7 @@ void PredicateReorderingRule::_reorder_predicates(
     predicate->set_left_input(input);
     const auto output_cardinality = caching_cardinality_estimator->estimate_cardinality(predicate);
     const auto cost = caching_cost_estimator->estimate_node_cost(predicate);
-    const auto benefit = cost * output_cardinality;
+    const auto benefit = cost + output_cardinality;
     nodes_and_cardinalities.emplace_back(predicate, benefit);
   }
 
