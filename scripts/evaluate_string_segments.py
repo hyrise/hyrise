@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-
+import shutil
 from abc import ABC, abstractmethod
 from argparse import ArgumentParser, BooleanOptionalAction
 from dataclasses import dataclass
 import multiprocessing
 from os import path
+from pathlib import Path
 from subprocess import check_output
 import sys
 from typing import Any, Literal
@@ -24,6 +25,10 @@ def print_error(*args, **kwargs) -> None:
 def output(*args, **kwargs) -> None:
     print(*args, file=output_file, **kwargs)
 
+def rm_dir(path: str) -> None:
+    dirpath = Path(path)
+    if dirpath.exists() and dirpath.is_dir():
+        shutil.rmtree(dirpath)
 
 @dataclass(frozen=True)
 class Configuration:
@@ -92,6 +97,7 @@ class Benchmark(ABC):
 class TPCHBenchmark(Benchmark):
     name = 'tpch'
     def _run(self, threading: Literal['ST', 'MT'], encoding: str) -> str:
+        rm_dir("tpch_cached_tables")
         if threading == 'ST':
             benchmark_path = self._path
             st_output_path = self._output_path(threading, encoding)
@@ -121,7 +127,8 @@ class TPCHBenchmark(Benchmark):
     
 class TPCDSBenchmark(Benchmark):
     name = 'tpcds'
-    def _run(self, threading: Literal['ST', 'MT'], encoding: str) -> None:#
+    def _run(self, threading: Literal['ST', 'MT'], encoding: str) -> None:
+        rm_dir("tpcds_cached_tables")
         # TPC-DS only supports integer scales
         scaling_factor = max(1, int(self._config.scale_factor))
         if threading == 'ST':
@@ -236,7 +243,7 @@ def parse_arguments() -> Configuration:
         help='The scale factor to pass to the benchmarks that support scaling. Note that this number might get rounded or ignored if necessary for a benchmark.'
     )
     parser.add_argument(
-        '-t',
+        '-p',
         '--tmp-path',
         dest='tmp_path',
         type=str,
