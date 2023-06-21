@@ -37,6 +37,9 @@ class WindowFunctionEvaluator : public AbstractReadOnlyOperator {
  protected:
   std::shared_ptr<const Table> _on_execute() override;
 
+  template <typename InputColumnType, WindowFunction window_function>
+  std::shared_ptr<const Table> _templated_on_execute();
+
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
   std::shared_ptr<AbstractOperator> _on_deep_copy(
       const std::shared_ptr<AbstractOperator>& copied_left_input,
@@ -47,7 +50,7 @@ class WindowFunctionEvaluator : public AbstractReadOnlyOperator {
   using PartitionedData = std::vector<std::pair<std::vector<AllTypeVariant>, RowID>>;
 
   PerHash<PartitionedData> partition_and_sort() const;
-  template <WindowFunction window_function>
+  template <typename InputColumnType, WindowFunction window_function>
   void compute_window_function(const PerHash<PartitionedData>& partitioned_data, auto&& emit_computed_value) const;
   template <typename T>
   std::shared_ptr<const Table> annotate_input_table(
