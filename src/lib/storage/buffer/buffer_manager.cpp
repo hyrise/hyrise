@@ -121,8 +121,7 @@ BufferManager::BufferManager(const Config config)
       _ssd_region(std::make_shared<SSDRegion>(config.ssd_path, _metrics)),  // TODO: imprive init of pools here
       _primary_buffer_pool(std::make_shared<BufferManager::BufferPool>(
           config.dram_buffer_pool_size, config.enable_eviction_purge_worker, _volatile_regions, config.migration_policy,
-          _ssd_region, config.memory_node == NO_NUMA_MEMORY_NODE ? nullptr : _secondary_buffer_pool, _metrics,
-          DEFAULT_DRAM_NUMA_NODE)),
+          _ssd_region, _secondary_buffer_pool, _metrics, DEFAULT_DRAM_NUMA_NODE)),
       _secondary_buffer_pool(std::make_shared<BufferManager::BufferPool>(
           config.dram_buffer_pool_size, config.enable_eviction_purge_worker, _volatile_regions, config.migration_policy,
           _ssd_region, nullptr, _metrics, config.memory_node)) {}
@@ -538,7 +537,8 @@ void BufferManager::BufferPool::ensure_free_pages(const PageSizeType required_si
     const auto num_bytes = bytes_for_size_type(size_type);
 
     // If we have a target buffer pool and we don't want to bypass it, we move the page to the other pool
-    const auto write_to_ssd = !target_buffer_pool || migration_policy.bypass_numa_during_write();
+    const auto write_to_ssd =
+        !target_buffer_pool || (target_buffer_pool->enabled() && migration_policy.bypass_numa_during_write());
 
     if (write_to_ssd) {
       // Otherwise we just write the page if its dirty and free the associated pages
@@ -550,11 +550,11 @@ void BufferManager::BufferPool::ensure_free_pages(const PageSizeType required_si
       }
       region->free(item.page_id);
       frame->unlock_exclusive_and_set_evicted();
-      // TODO: Improve if else, this does not work
-      if (!target_buffer_pool) {
-        metrics->total_bytes_copied_from_numa_to_ssd.fetch_add(num_bytes, std::memory_order_relaxed);
-      } else {
+
+      if (target_buffer_pool && target_buffer_pool->enabled()) {
         metrics->total_bytes_copied_from_dram_to_ssd.fetch_add(num_bytes, std::memory_order_relaxed);
+      } else {
+        metrics->total_bytes_copied_from_numa_to_ssd.fetch_add(num_bytes, std::memory_order_relaxed);
       }
     } else {
       // Or we just move to other numa node and unlock again
