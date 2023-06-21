@@ -14,6 +14,7 @@
 namespace hyrise {
 
 // TODO: On Mac, we should use MSYNC to see if a page is still in memory or not to avoid loading from disk
+// TODO: Incluse page size in mihration desction -> large page size should be normalized
 
 //----------------------------------------------------
 // Helper Functions for Memory Mapping and Yielding

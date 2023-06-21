@@ -38,14 +38,6 @@ void VolatileRegion::move_to_numa_node(PageID page_id, const NumaMemoryNode targ
   const auto num_bytes = bytes_for_size_type(_size_type);
   numa_tonode_memory(get_page(page_id), num_bytes, target_memory_node);
   _frames[page_id.index].set_memory_node(target_memory_node);
-
-  if (target_memory_node == DEFAULT_DRAM_NUMA_NODE) {
-    _metrics->total_bytes_copied_from_numa_to_dram.fetch_add(bytes_for_size_type(_size_type),
-                                                             std::memory_order_relaxed);
-  } else {
-    _metrics->total_bytes_copied_from_dram_to_numa.fetch_add(bytes_for_size_type(_size_type),
-                                                             std::memory_order_relaxed);
-  }
 #endif
 }
 
