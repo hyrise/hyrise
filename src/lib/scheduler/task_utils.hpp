@@ -35,7 +35,7 @@ void visit_tasks(const std::shared_ptr<Task>& task, Visitor visitor) {
 
     if (visitor(task) == TaskVisitation::VisitPredecessors) {
       for (const auto& predecessor_ref : task->predecessors()) {
-        const auto& predecessor = predecessor_ref.lock();
+        const auto predecessor = predecessor_ref.lock();
         Assert(predecessor, "Predecessor expired.");
         task_queue.push(predecessor);
       }
