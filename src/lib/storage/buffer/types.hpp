@@ -89,6 +89,8 @@ constexpr auto DEFAULT_DRAM_NUMA_NODE = NumaMemoryNode{0};
 // Pages need to be aligned to 512 in order to be used with O_DIRECT
 constexpr size_t PAGE_ALIGNMENT = 512;
 
+constexpr size_t MAX_REPEAT_COUNT = 100;
+
 // How often old items should be evicted from the eviction queue
 constexpr static std::chrono::milliseconds IDLE_EVICTION_QUEUE_PURGE = std::chrono::milliseconds(1000);
 

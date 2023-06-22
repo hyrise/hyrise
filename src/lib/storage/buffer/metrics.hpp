@@ -42,7 +42,7 @@ struct BufferManagerMetrics {
   std::atomic_uint64_t total_pins = 0;
   std::atomic_uint64_t current_pins = 0;
 
-  // Tracks the number of evictions
+  // Tracks the number of evictions TODO
   std::atomic_uint64_t num_dram_eviction_queue_items_purged = 0;
   std::atomic_uint64_t num_dram_eviction_queue_adds = 0;
   std::atomic_uint64_t num_numa_eviction_queue_items_purged = 0;

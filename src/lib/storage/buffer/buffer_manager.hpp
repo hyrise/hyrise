@@ -97,9 +97,11 @@ class BufferManager : public boost::container::pmr::memory_resource, public Nonc
                std::shared_ptr<BufferPool> target_buffer_pool, std::shared_ptr<BufferManagerMetrics> metrics,
                const NumaMemoryNode memory_node = DEFAULT_DRAM_NUMA_NODE);
 
+    void evict(EvictionItem& item, Frame* frame);
+
     void release_page(const PageSizeType size);
 
-    void ensure_free_pages(const PageSizeType size);
+    bool ensure_free_pages(const PageSizeType size);
 
     void purge_eviction_queue();
 
