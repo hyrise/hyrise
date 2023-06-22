@@ -232,7 +232,7 @@ void BufferManager::make_resident(const PageID page_id, const AccessIntent acces
     _secondary_buffer_pool->release_page(page_id.size_type());
     _primary_buffer_pool->ensure_free_pages(page_id.size_type());
     region->move_to_numa_node(page_id, _primary_buffer_pool->memory_node);
-    _metrics->total_misses.fetch_add(1, std::memory_order_relaxed);
+    _metrics->total_hits.fetch_add(1, std::memory_order_relaxed);
     _metrics->total_bytes_copied_from_numa_to_dram.fetch_add(bytes_for_size_type(page_id.size_type()),
                                                              std::memory_order_relaxed);
     return;
@@ -528,8 +528,9 @@ void BufferManager::BufferPool::ensure_free_pages(const PageSizeType required_si
   while ((int64_t)current_bytes + (int64_t)bytes_required - (int64_t)freed_bytes > (int64_t)max_bytes) {
     if (!eviction_queue->try_pop(item)) {
       Fail(
-          "Cannot pop item from queue. All frames seems to be pinned. Please increase the memory size of this buffer "
-          "pool.");
+          "Cannot pop item from queue. All frames seems to be pinned. Please increase the memory size of buffer "
+          "pool for node: " +
+          std::to_string(memory_node));
     }
 
     auto region = volatile_regions[static_cast<uint64_t>(item.page_id.size_type())];
@@ -563,7 +564,6 @@ void BufferManager::BufferPool::ensure_free_pages(const PageSizeType required_si
     // If we have a target buffer pool and we don't want to bypass it, we move the page to the other pool
     const auto write_to_ssd =
         !target_buffer_pool || (target_buffer_pool->enabled() && migration_policy.bypass_numa_during_write());
-    // TODO: Check metrics
 
     if (write_to_ssd) {
       // Otherwise we just write the page if its dirty and free the associated pages
