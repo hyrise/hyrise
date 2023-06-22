@@ -26,15 +26,15 @@ void visit_tasks(const std::shared_ptr<Task>& task, Visitor visitor) {
   auto visited_tasks = std::unordered_set<std::shared_ptr<AbstractTaskType>>{};
 
   while (!task_queue.empty()) {
-    const auto task = task_queue.front();
+    const auto current_task = task_queue.front();
     task_queue.pop();
 
-    if (!visited_tasks.emplace(task).second) {
+    if (!visited_tasks.emplace(current_task).second) {
       continue;
     }
 
-    if (visitor(task) == TaskVisitation::VisitPredecessors) {
-      for (const auto& predecessor_ref : task->predecessors()) {
+    if (visitor(current_task) == TaskVisitation::VisitPredecessors) {
+      for (const auto& predecessor_ref : current_task->predecessors()) {
         const auto predecessor = predecessor_ref.lock();
         Assert(predecessor, "Predecessor expired.");
         task_queue.push(predecessor);
