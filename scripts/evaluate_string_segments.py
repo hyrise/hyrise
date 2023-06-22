@@ -98,9 +98,15 @@ class Benchmark(ABC):
         return self._output_path(threading, encoding)
 
     def _get_arguments(self, threading: Literal['ST', 'MT'], encoding: str) -> list[str]:
-        arguments = [self._path, '-o', self._output_path(threading, encoding), '-t', str(self._config.time_limit), '-e', encoding]
+        arguments = [self._path, '-o', self._output_path(threading, encoding), '-e', encoding]
         if threading == 'MT':
             arguments += ['--scheduler', '--clients', str(multiprocessing.cpu_count() // 4), '--mode=Shuffled']
+            # Multithreaded runs need longer times to be meaningful. Default to 20 minutes.
+            arguments += ['-t', str(self._config.time_limit * 20)]
+        else:
+            arguments += ['-t', str(self._config.time_limit)]
+        if metrics:
+            arguments += ['--metrics', '-r', '1']
         return arguments
 
     @abstractmethod
