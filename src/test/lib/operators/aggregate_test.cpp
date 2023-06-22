@@ -28,9 +28,10 @@ namespace hyrise {
 class OperatorsAggregateHashTest : public BaseTest {};
 
 TEST_F(OperatorsAggregateHashTest, EmptyHash) {
-  const auto expected_empty_hash = 0;
-  EXPECT_EQ(std::hash<EmptyAggregateKey>()(EmptyAggregateKey{}), expected_empty_hash);
-  EXPECT_EQ(std::hash<AggregateKeySmallVector>()(AggregateKeySmallVector{}), expected_empty_hash);
+  // Notably, both the `EmptyAggregateKey` and the empty `AggregateKeySmallVector` have the same hash, so a hash
+  // comparison is consistent with comparing all contained keys.
+  EXPECT_EQ(std::hash<EmptyAggregateKey>()(EmptyAggregateKey{}), 0);
+  EXPECT_EQ(std::hash<AggregateKeySmallVector>()(AggregateKeySmallVector{}), 0);
 }
 
 template <typename T>
