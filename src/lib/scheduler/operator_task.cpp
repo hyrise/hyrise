@@ -65,7 +65,7 @@ OperatorTask::make_tasks_from_operator(const std::shared_ptr<AbstractOperator>& 
   // cycles create memory leaks since tasks hold shared pointers to their predecessors.
   if constexpr (HYRISE_DEBUG) {
     visit_tasks(root_operator_task, [](const auto& task) {
-      for (const auto direct_successor : task->successors()) {
+      for (const auto& direct_successor : task->successors()) {
         visit_tasks_upwards(direct_successor, [&](const auto& successor) {
           Assert(task != successor, "Task graph contains a cycle.");
           return TaskUpwardVisitation::VisitSuccessors;
