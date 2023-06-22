@@ -197,24 +197,24 @@ int Console::execute_script(const std::string& filepath) {
 }
 
 int Console::_eval(const std::string& input) {
-  // Do nothing if no input was given
+  // Do nothing if no input was given.
   if (input.empty() && _multiline_input.empty()) {
     return ReturnCode::Ok;
   }
 
-  // Dump command to logfile, and to the Console if input comes from a script file
-  // Also remove Readline specific escape sequences ('\001' and '\002') to make it look normal
+  // Dump command to logfile, and to the Console if input comes from a script file. Also remove Readline specific
+  // escape sequences ('\001' and '\002') to make it look normal.
   out(remove_coloring(_prompt + input + "\n", true), _verbose);
 
-  // Check if we already are in multiline input
+  // Check if we already are in multiline input.
   if (_multiline_input.empty()) {
-    // Check if a registered command was entered
-    RegisteredCommands::iterator it;
-    if ((it = _commands.find(input.substr(0, input.find_first_of(" \n;")))) != std::end(_commands)) {
+    // Check if a registered command was entered.
+    const auto it = _commands.find(input.substr(0, input.find_first_of(" \n;")));
+    if (it != _commands.end()) {
       return _eval_command(it->second, input);
     }
 
-    // Regard query as complete if input is valid and not already in multiline
+    // Regard query as complete if input is valid and not already in multiline.
     auto parse_result = hsql::SQLParserResult{};
     hsql::SQLParser::parse(input, &parse_result);
     if (parse_result.isValid()) {
@@ -222,14 +222,14 @@ int Console::_eval(const std::string& input) {
     }
   }
 
-  // Regard query as complete if last character is semicolon, regardless of multiline or not
+  // Regard query as complete if last character is semicolon, regardless of multiline or not.
   if (input.back() == ';') {
     const auto return_code = _eval_sql(_multiline_input + input);
     _multiline_input = "";
     return return_code;
   }
 
-  // If query is not complete(/valid), and the last character is not a semicolon, enter/continue multiline
+  // If query is not complete(/valid), and the last character is not a semicolon, enter/continue multiline.
   _multiline_input += input;
   _multiline_input += '\n';
   return ReturnCode::Multiline;
@@ -991,7 +991,7 @@ int Console::_reset() {
   _lqp_cache->clear();
   _pqp_cache->clear();
 
-  Hyrise::get().reset();
+  Hyrise::reset();
   Hyrise::get().default_pqp_cache = _pqp_cache;
   Hyrise::get().default_lqp_cache = _lqp_cache;
 
