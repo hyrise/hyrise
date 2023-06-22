@@ -993,6 +993,57 @@ TEST_F(SQLTranslatorTest, DistinctAndGroupBy) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
+TEST_F(SQLTranslatorTest, DistinctAndOrderBy) {
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper("SELECT DISTINCT a, b FROM int_float ORDER BY b");
+
+  // clang-format off
+  const auto expected_lqp =
+  SortNode::make(expression_vector(int_float_b), std::vector<SortMode>{SortMode::Ascending},
+    AggregateNode::make(expression_vector(int_float_a, int_float_b), expression_vector(),
+      stored_table_node_int_float));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, DistinctAndOrderByWithProjection) {
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper("SELECT DISTINCT a + b FROM int_float ORDER BY a + b");
+
+  // clang-format off
+  const auto expected_lqp =
+  SortNode::make(expression_vector(add_(int_float_a, int_float_b)), std::vector<SortMode>{SortMode::Ascending},
+    AggregateNode::make(expression_vector(add_(int_float_a, int_float_b)), expression_vector(),
+      ProjectionNode::make(expression_vector(add_(int_float_a, int_float_b), int_float_a, int_float_b),
+        stored_table_node_int_float)));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, DistinctAndOrderByWithProjectionAndFurtherExpression) {
+  const auto [actual_lqp, translation_info] =
+      sql_to_lqp_helper("SELECT DISTINCT a + b, a + c FROM int_int_int ORDER BY a + b");
+
+  const auto a_plus_b = add_(int_int_int_a, int_int_int_b);
+  const auto a_plus_c = add_(int_int_int_a, int_int_int_c);
+
+  // clang-format off
+  const auto expected_lqp =
+  SortNode::make(expression_vector(a_plus_b), std::vector<SortMode>{SortMode::Ascending},
+    AggregateNode::make(expression_vector(a_plus_b, a_plus_c), expression_vector(),
+      ProjectionNode::make(expression_vector(a_plus_c, a_plus_b, int_int_int_a, int_int_int_b, int_int_int_c),
+        stored_table_node_int_int_int)));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, DistinctAndOrderByInvalid) {
+  // ORDER BY is executed after DISTINCT. For SELECT DISTINCT, expressions in the ORDER BY clause must also be in the
+  // SELECT list.
+  EXPECT_THROW(sql_to_lqp_helper("SELECT DISTINCT a FROM int_float ORDER BY b"), InvalidInputException);
+}
+
 TEST_F(SQLTranslatorTest, AggregateWithDistinctAndRelatedGroupBy) {
   const auto [actual_lqp, translation_info] =
       sql_to_lqp_helper("SELECT DISTINCT b, SUM(a * 3) * b FROM int_float GROUP BY b");
@@ -1002,9 +1053,10 @@ TEST_F(SQLTranslatorTest, AggregateWithDistinctAndRelatedGroupBy) {
   // clang-format off
   const auto expected_lqp =
   AggregateNode::make(expression_vector(int_float_b, mul_(sum_(a_times_3), int_float_b)), expression_vector(),
-    AggregateNode::make(expression_vector(int_float_b), expression_vector(sum_(a_times_3)),
-      ProjectionNode::make(expression_vector(a_times_3, int_float_b),
-        stored_table_node_int_float)));
+    ProjectionNode::make(expression_vector(mul_(sum_(a_times_3), int_float_b), int_float_b,  sum_(a_times_3)),
+      AggregateNode::make(expression_vector(int_float_b), expression_vector(sum_(a_times_3)),
+        ProjectionNode::make(expression_vector(a_times_3, int_float_b),
+          stored_table_node_int_float))));
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
@@ -1013,13 +1065,11 @@ TEST_F(SQLTranslatorTest, AggregateWithDistinctAndRelatedGroupBy) {
 TEST_F(SQLTranslatorTest, AggregateWithDistinctAndUnrelatedGroupBy) {
   const auto [actual_lqp, translation_info] = sql_to_lqp_helper("SELECT DISTINCT MIN(a) FROM int_float GROUP BY b");
 
-  const auto a_times_3 = mul_(int_float_a, 3);
-
   // clang-format off
   const auto expected_lqp =
   AggregateNode::make(expression_vector(min_(int_float_a)), expression_vector(),
     AggregateNode::make(expression_vector(int_float_b), expression_vector(min_(int_float_a)),
-    stored_table_node_int_float));
+      stored_table_node_int_float));
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
@@ -2969,16 +3019,16 @@ TEST_F(SQLTranslatorTest, ComplexSetOperationQuery) {
 
   // clang-format off
   const auto expected_lqp =
-  SortNode::make(expression_vector(int_int_int_a), std::vector<SortMode>{ SortMode::Ascending },
+  SortNode::make(expression_vector(int_int_int_a), std::vector<SortMode>{SortMode::Ascending},
     IntersectNode::make(SetOperationMode::Unique,
       ProjectionNode::make(expression_vector(int_int_int_a),
-        SortNode::make(expression_vector(int_int_int_a), std::vector<SortMode>{ SortMode::Ascending },
+        SortNode::make(expression_vector(int_int_int_a), std::vector<SortMode>{SortMode::Ascending},
                        stored_table_node_int_int_int)),
       LimitNode::make(value_(10),
         ExceptNode::make(SetOperationMode::Unique,
           ProjectionNode::make(expression_vector(int_int_int_b), stored_table_node_int_int_int),
           ProjectionNode::make(expression_vector(int_int_int_c),
-            SortNode::make(expression_vector(int_int_int_c), std::vector<SortMode>{ SortMode::Ascending },
+            SortNode::make(expression_vector(int_int_int_c), std::vector<SortMode>{SortMode::Ascending},
                            stored_table_node_int_int_int))))));
   // clang-format on
 
