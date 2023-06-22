@@ -64,9 +64,9 @@ OperatorTask::make_tasks_from_operator(const std::shared_ptr<AbstractOperator>& 
   // a deadlock during execution, mutually waiting for the other tasks' execution. Even if the tasks are never executed,
   // cycles create memory leaks since tasks hold shared pointers to their predecessors.
   if constexpr (HYRISE_DEBUG) {
-    visit_tasks(root_operator_task, [](const auto task) {
+    visit_tasks(root_operator_task, [](const auto& task) {
       for (const auto direct_successor : task->successors()) {
-        visit_tasks_upwards(direct_successor, [&](const auto successor) {
+        visit_tasks_upwards(direct_successor, [&](const auto& successor) {
           Assert(task != successor, "Task graph contains a cycle.");
           return TaskUpwardVisitation::VisitSuccessors;
         });
