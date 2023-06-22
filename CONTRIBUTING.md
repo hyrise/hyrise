@@ -49,7 +49,7 @@
 * Miscellaneous
   * Prefer `if (object)` over `if (object != nullptr)` or `if (object.has_value())`.
   * Don't write `this->` if you don't have to.
-  * Be explicit with types: Use [u]int(8|16|32|64)_t instead of `int, long, uint` etc.
+  * Be explicit with types: Use `[u]int(8|16|32|64)_t` instead of `int, long, uint` etc.
   * Use [auto-to-stick](https://www.fluentcpp.com/2018/09/28/auto-stick-changing-style/): `auto x = 17;` or
     `auto y = std::vector<size_t>{};`.
   * Namespaces: Do not create nested namespaces, do not import namespaces.
@@ -89,6 +89,22 @@
     * Unused variables: instead of leaving out the parameter name, comment the parameter name out (e.g.,
       `void function(const size_t /* count */) { ... }`). If the context does not provide a good name (such as
       `/* count */`), use `/* unused */`.
+
+* Prefer declaring (member) variables of the same type in a new line each ([isolated declaration](https://clang.llvm.org/extra/clang-tidy/checks/readability/isolate-declaration.html)):
+  ```c++
+  class Foo {
+    ...
+    int a;
+    int b;
+  };
+  ```
+  However, certain test classes have many member variables of the same type, e.g., `std::shared_ptr<LQPColumnExpression>` for LQP node tests. Declarations with more than one variable can be used in such test classes if the number of variables is high (see below). Please use common sense to decide on which format you use.
+  ```c++
+  class FooTest : public BaseTest {
+    ...
+    std::shared_ptr<LQPColumnExpression> a, b, c, d, e, f, g, h, i, j, k;
+  };
+  ```
 
 * Maintain correct orthography and grammar. Comments should start with a capital letter, sentences should be finished
   with a full stop.

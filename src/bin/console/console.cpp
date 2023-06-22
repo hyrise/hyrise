@@ -33,6 +33,7 @@
 #include "sql/sql_pipeline_statement.hpp"
 #include "sql/sql_plan_cache.hpp"
 #include "sql/sql_translator.hpp"
+#include "ssb/ssb_table_generator.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "tpcc/tpcc_table_generator.hpp"
 #include "tpcds/tpcds_table_generator.hpp"
@@ -47,9 +48,9 @@
 #include "visualization/lqp_visualizer.hpp"
 #include "visualization/pqp_visualizer.hpp"
 
-#define ANSI_COLOR_RED "\x1B[31m"    // NOLINT(cppcoreguidelines-macro-usage)
-#define ANSI_COLOR_GREEN "\x1B[32m"  // NOLINT(cppcoreguidelines-macro-usage)
-#define ANSI_COLOR_RESET "\x1B[0m"   // NOLINT(cppcoreguidelines-macro-usage)
+#define ANSI_COLOR_RED "\x1B[31m"               // NOLINT(cppcoreguidelines-macro-usage)
+#define ANSI_COLOR_GREEN "\x1B[32m"             // NOLINT(cppcoreguidelines-macro-usage)
+#define ANSI_COLOR_RESET "\x1B[0m"              // NOLINT(cppcoreguidelines-macro-usage)
 
 #define ANSI_COLOR_RED_RL "\001\x1B[31m\002"    // NOLINT(cppcoreguidelines-macro-usage)
 #define ANSI_COLOR_GREEN_RL "\001\x1B[32m\002"  // NOLINT(cppcoreguidelines-macro-usage)
@@ -139,6 +140,7 @@ Console::Console()
   register_command("generate_tpcc", std::bind(&Console::_generate_tpcc, this, std::placeholders::_1));
   register_command("generate_tpch", std::bind(&Console::_generate_tpch, this, std::placeholders::_1));
   register_command("generate_tpcds", std::bind(&Console::_generate_tpcds, this, std::placeholders::_1));
+  register_command("generate_ssb", std::bind(&Console::_generate_ssb, this, std::placeholders::_1));
   register_command("load", std::bind(&Console::_load_table, this, std::placeholders::_1));
   register_command("export", std::bind(&Console::_export_table, this, std::placeholders::_1));
   register_command("script", std::bind(&Console::_exec_script, this, std::placeholders::_1));
@@ -149,13 +151,11 @@ Console::Console()
   register_command("setting", std::bind(&Console::_change_runtime_setting, this, std::placeholders::_1));
   register_command("load_plugin", std::bind(&Console::_load_plugin, this, std::placeholders::_1));
   register_command("unload_plugin", std::bind(&Console::_unload_plugin, this, std::placeholders::_1));
+  register_command("reset", std::bind(&Console::_reset, this));
 }
 
 Console::~Console() {
-  if (_explicitly_created_transaction_context) {
-    _explicitly_created_transaction_context->rollback(RollbackReason::User);
-    out("A transaction was still open and has been rolled back.\n");
-  }
+  _rollback();
 
   out("Bye.\n");
 
@@ -197,24 +197,24 @@ int Console::execute_script(const std::string& filepath) {
 }
 
 int Console::_eval(const std::string& input) {
-  // Do nothing if no input was given
+  // Do nothing if no input was given.
   if (input.empty() && _multiline_input.empty()) {
     return ReturnCode::Ok;
   }
 
-  // Dump command to logfile, and to the Console if input comes from a script file
-  // Also remove Readline specific escape sequences ('\001' and '\002') to make it look normal
+  // Dump command to logfile, and to the Console if input comes from a script file. Also remove Readline specific
+  // escape sequences ('\001' and '\002') to make it look normal.
   out(remove_coloring(_prompt + input + "\n", true), _verbose);
 
-  // Check if we already are in multiline input
+  // Check if we already are in multiline input.
   if (_multiline_input.empty()) {
-    // Check if a registered command was entered
-    RegisteredCommands::iterator it;
-    if ((it = _commands.find(input.substr(0, input.find_first_of(" \n;")))) != std::end(_commands)) {
+    // Check if a registered command was entered.
+    const auto it = _commands.find(input.substr(0, input.find_first_of(" \n;")));
+    if (it != _commands.end()) {
       return _eval_command(it->second, input);
     }
 
-    // Regard query as complete if input is valid and not already in multiline
+    // Regard query as complete if input is valid and not already in multiline.
     auto parse_result = hsql::SQLParserResult{};
     hsql::SQLParser::parse(input, &parse_result);
     if (parse_result.isValid()) {
@@ -222,14 +222,14 @@ int Console::_eval(const std::string& input) {
     }
   }
 
-  // Regard query as complete if last character is semicolon, regardless of multiline or not
+  // Regard query as complete if last character is semicolon, regardless of multiline or not.
   if (input.back() == ';') {
     const auto return_code = _eval_sql(_multiline_input + input);
     _multiline_input = "";
     return return_code;
   }
 
-  // If query is not complete(/valid), and the last character is not a semicolon, enter/continue multiline
+  // If query is not complete(/valid), and the last character is not a semicolon, enter/continue multiline.
   _multiline_input += input;
   _multiline_input += '\n';
   return ReturnCode::Multiline;
@@ -339,6 +339,10 @@ void Console::set_logfile(const std::string& logfile) {
   _log = std::ofstream(logfile, std::ios_base::app | std::ios_base::out);
 }
 
+void Console::set_console_path(const std::string& path) {
+  _path = path;
+}
+
 void Console::load_history(const std::string& history_file) {
   _history_file = history_file;
 
@@ -408,7 +412,7 @@ void Console::out(const std::shared_ptr<const Table>& table, const PrintFlags fl
 
 // NOLINTNEXTLINE - while this particular method could be made static, others cannot.
 int Console::_exit(const std::string& /*args*/) {
-  return Console::ReturnCode::Quit;
+  return ReturnCode::Quit;
 }
 
 int Console::_help(const std::string& /*args*/) {
@@ -427,39 +431,41 @@ int Console::_help(const std::string& /*args*/) {
   out("HYRISE SQL Interface\n\n");
   out("Available commands:\n");
   out("  generate_tpcc NUM_WAREHOUSES [CHUNK_SIZE] - Generate all TPC-C tables\n");
-  out("  generate_tpch SCALE_FACTOR [CHUNK_SIZE] - Generate all TPC-H tables\n");
-  out("  generate_tpcds SCALE_FACTOR [CHUNK_SIZE] - Generate all TPC-DS tables\n");
-  out("  load FILEPATH [TABLENAME [ENCODING]]    - Load table from disk specified by filepath FILEPATH, store it with name TABLENAME\n");  // NOLINT(whitespace/line_length)
-  out("                                               The import type is chosen by the type of FILEPATH.\n");
-  out("                                                 Supported types: '.bin', '.csv', '.tbl'\n");
-  out("                                               If no table name is specified, the filename without extension is used\n");  // NOLINT(whitespace/line_length)
+  out("  generate_tpch SCALE_FACTOR [CHUNK_SIZE]   - Generate all TPC-H tables\n");
+  out("  generate_tpcds SCALE_FACTOR [CHUNK_SIZE]  - Generate all TPC-DS tables\n");
+  out("  generate_ssb SCALE_FACTOR [CHUNK_SIZE]    - Generate all SSB tables\n");
+  out("  load FILEPATH [TABLENAME [ENCODING]]      - Load table from disk specified by filepath FILEPATH, store it with name TABLENAME\n");  // NOLINT(whitespace/line_length)
+  out("                                                   The import type is chosen by the type of FILEPATH.\n");
+  out("                                                     Supported types: '.bin', '.csv', '.tbl'\n");
+  out("                                                   If no table name is specified, the filename without extension is used\n");  // NOLINT(whitespace/line_length)
   out(encoding_options + "\n");
-  out("  export TABLENAME FILEPATH               - Export table named TABLENAME from storage manager to filepath FILEPATH\n");  // NOLINT(whitespace/line_length)
-  out("                                               The export type is chosen by the type of FILEPATH.\n");
-  out("                                                 Supported types: '.bin', '.csv'\n");
-  out("  script SCRIPTFILE                       - Execute script specified by SCRIPTFILE\n");
-  out("  print TABLENAME                         - Fully print the given table (including MVCC data)\n");
-  out("  visualize [options] [SQL]               - Visualize a SQL query\n");
-  out("                                               Options\n");
-  out("                                                - {exec, noexec} Execute the query before visualization.\n");
-  out("                                                                 Default: exec\n");
-  out("                                                - {lqp, unoptlqp, pqp, joins} Type of plan to visualize. unoptlqp gives the\n");  // NOLINT(whitespace/line_length)
-  out("                                                                       unoptimized lqp; joins visualized the join graph.\n");  // NOLINT(whitespace/line_length)
-  out("                                                                       Default: pqp\n");
-  out("                                              SQL\n");
-  out("                                                - Optional, a query to visualize. If not specified, the last\n");
-  out("                                                  previously executed query is visualized.\n");
-  out("  txinfo                                  - Print information on the current transaction\n");
-  out("  pwd                                     - Print current working directory\n");
-  out("  load_plugin FILE                        - Load and start plugin stored at FILE\n");
-  out("  unload_plugin NAME                      - Stop and unload the plugin libNAME.so/dylib (also clears the query cache)\n");  // NOLINT(whitespace/line_length)
-  out("  quit                                    - Exit the HYRISE Console\n");
-  out("  help                                    - Show this message\n\n");
-  out("  setting [property] [value]              - Change a runtime setting\n\n");
-  out("           scheduler (on|off)             - Turn the scheduler on (default) or off\n\n");
+  out("  export TABLENAME FILEPATH                 - Export table named TABLENAME from storage manager to filepath FILEPATH\n");  // NOLINT(whitespace/line_length)
+  out("                                                 The export type is chosen by the type of FILEPATH.\n");
+  out("                                                   Supported types: '.bin', '.csv'\n");
+  out("  script SCRIPTFILE                         - Execute script specified by SCRIPTFILE\n");
+  out("  print TABLENAME                           - Fully print the given table (including MVCC data)\n");
+  out("  visualize [options] [SQL]                 - Visualize a SQL query\n");
+  out("                                                 Options\n");
+  out("                                                  - {exec, noexec} Execute the query before visualization.\n");
+  out("                                                                   Default: exec\n");
+  out("                                                  - {lqp, unoptlqp, pqp, joins} Type of plan to visualize. unoptlqp gives the\n");  // NOLINT(whitespace/line_length)
+  out("                                                                         unoptimized lqp; joins visualized the join graph.\n");  // NOLINT(whitespace/line_length)
+  out("                                                                         Default: pqp\n");
+  out("                                                SQL\n");
+  out("                                                  - Optional, a query to visualize. If not specified, the last\n");  // NOLINT(whitespace/line_length)
+  out("                                                    previously executed query is visualized.\n");
+  out("  txinfo                                    - Print information on the current transaction\n");
+  out("  pwd                                       - Print current working directory\n");
+  out("  load_plugin FILE                          - Load and start plugin stored at FILE\n");
+  out("  unload_plugin NAME                        - Stop and unload the plugin libNAME.so/dylib (also clears the query cache)\n");  // NOLINT(whitespace/line_length)
+  out("  quit                                      - Exit the HYRISE Console\n");
+  out("  help                                      - Show this message\n");
+  out("  setting [property] [value]                - Change a runtime setting\n");
+  out("           scheduler (on|off)               - Turn the scheduler on (default) or off\n");
+  out("  reset                                     - Clear all stored tables and cached query plans\n\n");
   // clang-format on
 
-  return Console::ReturnCode::Ok;
+  return ReturnCode::Ok;
 }
 
 int Console::_generate_tpcc(const std::string& args) {
@@ -474,11 +480,11 @@ int Console::_generate_tpcc(const std::string& args) {
     return ReturnCode::Error;
   }
 
-  const auto num_warehouses = std::stoull(arguments.at(0));
+  const auto num_warehouses = boost::lexical_cast<size_t>(arguments[0]);
 
   auto chunk_size = Chunk::DEFAULT_SIZE;
   if (arguments.size() > 1) {
-    chunk_size = ChunkOffset{boost::lexical_cast<ChunkOffset::base_type>(arguments.at(1))};
+    chunk_size = ChunkOffset{boost::lexical_cast<ChunkOffset::base_type>(arguments[1])};
   }
 
   out("Generating all TPCC tables (this might take a while) ...\n");
@@ -499,11 +505,11 @@ int Console::_generate_tpch(const std::string& args) {
     return ReturnCode::Error;
   }
 
-  const auto scale_factor = std::stof(arguments.at(0));
+  const auto scale_factor = boost::lexical_cast<float>(arguments[0]);
 
   auto chunk_size = Chunk::DEFAULT_SIZE;
   if (arguments.size() > 1) {
-    chunk_size = ChunkOffset{boost::lexical_cast<ChunkOffset::base_type>(arguments.at(1))};
+    chunk_size = ChunkOffset{boost::lexical_cast<ChunkOffset::base_type>(arguments[1])};
   }
 
   out("Generating all TPCH tables (this might take a while) ...\n");
@@ -523,15 +529,53 @@ int Console::_generate_tpcds(const std::string& args) {
     return ReturnCode::Error;
   }
 
-  const auto scale_factor = static_cast<uint32_t>(std::stoul(arguments.at(0)));
+  const auto scale_factor = boost::lexical_cast<uint32_t>(arguments[0]);
 
   auto chunk_size = Chunk::DEFAULT_SIZE;
   if (arguments.size() > 1) {
-    chunk_size = ChunkOffset{boost::lexical_cast<ChunkOffset::base_type>(arguments.at(1))};
+    chunk_size = ChunkOffset{boost::lexical_cast<ChunkOffset::base_type>(arguments[1])};
   }
 
   out("Generating all TPC-DS tables (this might take a while) ...\n");
   TPCDSTableGenerator{scale_factor, chunk_size}.generate_and_store();
+
+  return ReturnCode::Ok;
+}
+
+int Console::_generate_ssb(const std::string& args) {
+  const auto arguments = tokenize(args);
+
+  if (arguments.empty() || arguments.size() > 2) {
+    out("Usage: ");
+    out("  generate_ssb SCALE_FACTOR [CHUNK_SIZE]   Generate SSB tables with the specified scale factor. \n");
+    out("                                           Chunk size is " + std::to_string(Chunk::DEFAULT_SIZE) +
+        " by default. \n");
+    return ReturnCode::Error;
+  }
+
+  const auto scale_factor = boost::lexical_cast<float>(arguments[0]);
+
+  auto chunk_size = Chunk::DEFAULT_SIZE;
+  if (arguments.size() > 1) {
+    chunk_size = ChunkOffset{boost::lexical_cast<ChunkOffset::base_type>(arguments[1])};
+  }
+
+  // Try to find dbgen binary.
+  const auto executable_path = std::filesystem::canonical(_path).remove_filename();
+  const auto ssb_dbgen_path = executable_path / "third_party/ssb-dbgen";
+  const auto csv_meta_path = executable_path / "../resources/benchmark/ssb/schema";
+  if (!std::filesystem::exists(ssb_dbgen_path / "dbgen")) {
+    out(std::string{"SSB dbgen not found at "} + ssb_dbgen_path.string() + "\n");
+    return ReturnCode::Error;
+  }
+
+  // Create the ssb_data directory (if needed) and generate the ssb_data/sf-... path.
+  auto ssb_data_path = std::stringstream{};
+  ssb_data_path << "ssb_data/sf-" << std::noshowpoint << scale_factor;
+  std::filesystem::create_directories(ssb_data_path.str());
+
+  out("Generating all SSB tables (this might take a while) ...\n");
+  SSBTableGenerator{ssb_dbgen_path, csv_meta_path, ssb_data_path.str(), scale_factor, chunk_size}.generate_and_store();
 
   return ReturnCode::Ok;
 }
@@ -934,11 +978,31 @@ int Console::_unload_plugin(const std::string& input) {
   // The presence of some plugins might cause certain query plans to be generated which will not work if the plugin
   // is stopped. Therefore, we clear the cache. For example, a plugin might create indexes which lead to query plans
   // using IndexScans, these query plans might become unusable after the plugin is unloaded.
+  _lqp_cache->clear();
   _pqp_cache->clear();
 
   out("Plugin (" + plugin_name + ") stopped.\n");
 
   return ReturnCode::Ok;
+}
+
+int Console::_reset() {
+  _rollback();
+  _lqp_cache->clear();
+  _pqp_cache->clear();
+
+  Hyrise::reset();
+  Hyrise::get().default_pqp_cache = _pqp_cache;
+  Hyrise::get().default_lqp_cache = _lqp_cache;
+
+  return ReturnCode::Ok;
+}
+
+void Console::_rollback() {
+  if (_explicitly_created_transaction_context) {
+    _explicitly_created_transaction_context->rollback(RollbackReason::User);
+    out("A transaction was still open and has been rolled back.\n");
+  }
 }
 
 // GNU readline interface to our commands
@@ -1035,6 +1099,7 @@ int main(int argc, char** argv) {
 
   console.set_prompt("> ");
   console.set_logfile("console.log");
+  console.set_console_path(argv[0]);
 
   // Load command history
   console.load_history(".repl_history");

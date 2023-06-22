@@ -437,8 +437,12 @@ set(
     storage/chunk_encoder.hpp
     storage/constraints/abstract_table_constraint.cpp
     storage/constraints/abstract_table_constraint.hpp
+    storage/constraints/foreign_key_constraint.cpp
+    storage/constraints/foreign_key_constraint.hpp
     storage/constraints/table_key_constraint.cpp
     storage/constraints/table_key_constraint.hpp
+    storage/constraints/table_order_constraint.cpp
+    storage/constraints/table_order_constraint.hpp
     storage/create_iterable_from_reference_segment.ipp
     storage/create_iterable_from_segment.hpp
     storage/create_iterable_from_segment.ipp
@@ -750,14 +754,12 @@ target_include_directories(hyrise_impl PUBLIC ${CMAKE_BINARY_DIR})
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 target_compile_options(hyrise_impl PUBLIC -Xclang -fno-pch-timestamp)
 endif()
-if(NOT ${CMAKE_VERSION} VERSION_LESS "3.16.0")
-    target_precompile_headers(hyrise_impl PRIVATE
-      all_parameter_variant.hpp
-      storage/create_iterable_from_segment.hpp
-      storage/table.hpp
-      types.hpp
-    )
-endif()
+target_precompile_headers(hyrise_impl PRIVATE
+  all_parameter_variant.hpp
+  storage/create_iterable_from_segment.hpp
+  storage/table.hpp
+  types.hpp
+)
 
 # -fPIC generates position independent code which is necessary because plugins might access hyrise functions.
 target_compile_options(hyrise_impl PRIVATE -fPIC)

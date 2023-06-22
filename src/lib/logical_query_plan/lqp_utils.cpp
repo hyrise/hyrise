@@ -103,7 +103,7 @@ void lqp_find_subplan_roots_impl(std::vector<std::shared_ptr<AbstractLQPNode>>& 
 
 void recursively_collect_lqp_subquery_expressions_by_lqp(
     SubqueryExpressionsByLQP& subquery_expressions_by_lqp, const std::shared_ptr<AbstractLQPNode>& node,
-    std::unordered_set<std::shared_ptr<AbstractLQPNode>>& visited_nodes) {
+    std::unordered_set<std::shared_ptr<AbstractLQPNode>>& visited_nodes, const bool only_correlated) {
   if (!node || !visited_nodes.emplace(node).second) {
     return;
   }
@@ -115,35 +115,40 @@ void recursively_collect_lqp_subquery_expressions_by_lqp(
         return ExpressionVisitation::VisitArguments;
       }
 
-      for (auto& [lqp, subquery_expressions] : subquery_expressions_by_lqp) {
-        if (*lqp == *subquery_expression->lqp) {
-          subquery_expressions.emplace_back(subquery_expression);
-          return ExpressionVisitation::DoNotVisitArguments;
+      if (subquery_expression->is_correlated() || !only_correlated) {
+        for (auto& [lqp, subquery_expressions] : subquery_expressions_by_lqp) {
+          if (*lqp == *subquery_expression->lqp) {
+            subquery_expressions.emplace_back(subquery_expression);
+            return ExpressionVisitation::DoNotVisitArguments;
+          }
         }
+        subquery_expressions_by_lqp.emplace(subquery_expression->lqp,
+                                            std::vector{std::weak_ptr<LQPSubqueryExpression>(subquery_expression)});
       }
-      subquery_expressions_by_lqp.emplace(subquery_expression->lqp,
-                                          std::vector{std::weak_ptr<LQPSubqueryExpression>(subquery_expression)});
 
       // Subqueries can be nested. We are also interested in the LQPs from deeply nested subqueries.
       recursively_collect_lqp_subquery_expressions_by_lqp(subquery_expressions_by_lqp, subquery_expression->lqp,
-                                                          visited_nodes);
+                                                          visited_nodes, only_correlated);
 
       return ExpressionVisitation::DoNotVisitArguments;
     });
   }
 
-  recursively_collect_lqp_subquery_expressions_by_lqp(subquery_expressions_by_lqp, node->left_input(), visited_nodes);
-  recursively_collect_lqp_subquery_expressions_by_lqp(subquery_expressions_by_lqp, node->right_input(), visited_nodes);
+  recursively_collect_lqp_subquery_expressions_by_lqp(subquery_expressions_by_lqp, node->left_input(), visited_nodes,
+                                                      only_correlated);
+  recursively_collect_lqp_subquery_expressions_by_lqp(subquery_expressions_by_lqp, node->right_input(), visited_nodes,
+                                                      only_correlated);
 }
 
 }  // namespace
 
 namespace hyrise {
 
-SubqueryExpressionsByLQP collect_lqp_subquery_expressions_by_lqp(const std::shared_ptr<AbstractLQPNode>& node) {
+SubqueryExpressionsByLQP collect_lqp_subquery_expressions_by_lqp(const std::shared_ptr<AbstractLQPNode>& node,
+                                                                 const bool only_correlated) {
   auto visited_nodes = std::unordered_set<std::shared_ptr<AbstractLQPNode>>();
   auto subqueries_by_lqp = SubqueryExpressionsByLQP{};
-  recursively_collect_lqp_subquery_expressions_by_lqp(subqueries_by_lqp, node, visited_nodes);
+  recursively_collect_lqp_subquery_expressions_by_lqp(subqueries_by_lqp, node, visited_nodes, only_correlated);
 
   return subqueries_by_lqp;
 }
@@ -423,8 +428,8 @@ std::vector<std::shared_ptr<AbstractLQPNode>> lqp_find_leaves(const std::shared_
   return nodes;
 }
 
-ExpressionUnorderedSet find_column_expressions(const AbstractLQPNode& lqp_node,
-                                               const std::vector<ColumnID>& column_ids) {
+template <typename ColumnIDs>
+ExpressionUnorderedSet find_column_expressions(const AbstractLQPNode& lqp_node, const ColumnIDs& column_ids) {
   DebugAssert(lqp_node.type == LQPNodeType::StoredTable || lqp_node.type == LQPNodeType::StaticTable ||
                   lqp_node.type == LQPNodeType::Mock,
               "Did not expect other node types than StoredTableNode, StaticTableNode and MockNode.");
@@ -451,6 +456,11 @@ ExpressionUnorderedSet find_column_expressions(const AbstractLQPNode& lqp_node,
   return column_expressions;
 }
 
+template ExpressionUnorderedSet find_column_expressions(const AbstractLQPNode& lqp_node,
+                                                        const std::set<ColumnID>& column_ids);
+template ExpressionUnorderedSet find_column_expressions(const AbstractLQPNode& lqp_node,
+                                                        const std::vector<ColumnID>& column_ids);
+
 bool contains_matching_unique_column_combination(const UniqueColumnCombinations& unique_column_combinations,
                                                  const ExpressionUnorderedSet& expressions) {
   DebugAssert(!unique_column_combinations.empty(), "Invalid input: Set of UCCs should not be empty.");
@@ -471,7 +481,7 @@ bool contains_matching_unique_column_combination(const UniqueColumnCombinations&
 
 FunctionalDependencies fds_from_unique_column_combinations(const std::shared_ptr<const AbstractLQPNode>& lqp,
                                                            const UniqueColumnCombinations& unique_column_combinations) {
-  Assert(!unique_column_combinations.empty(), "Did not expect empty vector of UCCs.");
+  Assert(!unique_column_combinations.empty(), "Did not expect empty set of UCCs.");
 
   auto fds = FunctionalDependencies{};
 
@@ -537,10 +547,10 @@ void remove_invalid_fds(const std::shared_ptr<const AbstractLQPNode>& lqp, Funct
     }
 
     /**
-    * Remove FDs with determinant expressions that are
-    *  a) not part of the node's output expressions
-    *  b) nullable
-    */
+     * Remove FDs with determinant expressions that are
+     *  a) not part of the node's output expressions
+     *  b) nullable
+     */
     for (const auto& fd_determinant_expression : fd.determinants) {
       if (!output_expressions_set.contains(fd_determinant_expression)) {
         return true;

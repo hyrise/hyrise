@@ -155,6 +155,7 @@ try {
                 sh "./scripts/test/hyriseConsole_test.py clang-release"
                 sh "./scripts/test/hyriseServer_test.py clang-release"
                 sh "./scripts/test/hyriseBenchmarkJoinOrder_test.py clang-release"
+                sh "./scripts/test/hyriseBenchmarkStarSchema_test.py clang-release"
                 sh "./scripts/test/hyriseBenchmarkFileBased_test.py clang-release"
                 sh "cd clang-release && ../scripts/test/hyriseBenchmarkTPCC_test.py ." // Own folder to isolate binary export tests
                 sh "cd clang-release && ../scripts/test/hyriseBenchmarkTPCH_test.py ." // Own folder to isolate visualization
@@ -171,12 +172,14 @@ try {
                 sh "./scripts/test/hyriseConsole_test.py clang-debug"
                 sh "./scripts/test/hyriseServer_test.py clang-debug"
                 sh "./scripts/test/hyriseBenchmarkJoinOrder_test.py clang-debug"
+                sh "./scripts/test/hyriseBenchmarkStarSchema_test.py clang-debug"
                 sh "./scripts/test/hyriseBenchmarkFileBased_test.py clang-debug"
                 sh "cd clang-debug && ../scripts/test/hyriseBenchmarkTPCH_test.py ." // Own folder to isolate visualization
                 sh "cd clang-debug && ../scripts/test/hyriseBenchmarkJCCH_test.py ." // Own folder to isolate visualization
                 sh "./scripts/test/hyriseConsole_test.py gcc-debug"
                 sh "./scripts/test/hyriseServer_test.py gcc-debug"
                 sh "./scripts/test/hyriseBenchmarkJoinOrder_test.py gcc-debug"
+                sh "./scripts/test/hyriseBenchmarkStarSchema_test.py gcc-debug"
                 sh "./scripts/test/hyriseBenchmarkFileBased_test.py gcc-debug"
                 sh "cd gcc-debug && ../scripts/test/hyriseBenchmarkTPCH_test.py ." // Own folder to isolate visualization
                 sh "cd gcc-debug && ../scripts/test/hyriseBenchmarkJCCH_test.py ." // Own folder to isolate visualization
@@ -242,6 +245,7 @@ try {
                 sh "./scripts/test/hyriseConsole_test.py gcc-release"
                 sh "./scripts/test/hyriseServer_test.py gcc-release"
                 sh "./scripts/test/hyriseBenchmarkJoinOrder_test.py gcc-release"
+                sh "./scripts/test/hyriseBenchmarkStarSchema_test.py gcc-release"
                 sh "./scripts/test/hyriseBenchmarkFileBased_test.py gcc-release"
                 sh "cd gcc-release && ../scripts/test/hyriseBenchmarkTPCC_test.py ." // Own folder to isolate binary export tests
                 sh "cd gcc-release && ../scripts/test/hyriseBenchmarkTPCH_test.py ." // Own folder to isolate visualization
@@ -255,7 +259,7 @@ try {
                 sh "cd clang-release-addr-ub-sanitizers && make hyriseTest hyriseSystemTest hyriseBenchmarkTPCH hyriseBenchmarkTPCC -j \$(( \$(nproc) / 10))"
                 sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=suppressions=resources/.asan-ignore.txt ./clang-release-addr-ub-sanitizers/hyriseTest clang-release-addr-ub-sanitizers"
                 sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=suppressions=resources/.asan-ignore.txt ./clang-release-addr-ub-sanitizers/hyriseSystemTest ${tests_excluded_in_sanitizer_builds} clang-release-addr-ub-sanitizers"
-                sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=suppressions=resources/.asan-ignore.txt ./clang-release-addr-ub-sanitizers/hyriseBenchmarkTPCH -s .01 --verify -r 100 --scheduler --clients 10"
+                sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=suppressions=resources/.asan-ignore.txt ./clang-release-addr-ub-sanitizers/hyriseBenchmarkTPCH -s .01 --verify -r 100 --scheduler --clients 10 --cores \$(( \$(nproc) / 4))"
                 sh "cd clang-release-addr-ub-sanitizers && LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=suppressions=resources/.asan-ignore.txt ../scripts/test/hyriseBenchmarkTPCC_test.py ." // Own folder to isolate binary export tests
               } else {
                 Utils.markStageSkippedForConditional("clangReleaseAddrUBSanitizers")
@@ -267,7 +271,7 @@ try {
                 sh "cd clang-relwithdebinfo-thread-sanitizer && make hyriseTest hyriseSystemTest hyriseBenchmarkTPCH -j \$(( \$(nproc) / 10))"
                 sh "TSAN_OPTIONS=\"history_size=7 suppressions=resources/.tsan-ignore.txt\" ./clang-relwithdebinfo-thread-sanitizer/hyriseTest clang-relwithdebinfo-thread-sanitizer"
                 sh "TSAN_OPTIONS=\"history_size=7 suppressions=resources/.tsan-ignore.txt\" ./clang-relwithdebinfo-thread-sanitizer/hyriseSystemTest ${tests_excluded_in_sanitizer_builds} clang-relwithdebinfo-thread-sanitizer"
-                sh "TSAN_OPTIONS=\"history_size=7 suppressions=resources/.tsan-ignore.txt\" ./clang-relwithdebinfo-thread-sanitizer/hyriseBenchmarkTPCH -s .01 --verify -r 100 --scheduler --clients 10"
+                sh "TSAN_OPTIONS=\"history_size=7 suppressions=resources/.tsan-ignore.txt\" ./clang-relwithdebinfo-thread-sanitizer/hyriseBenchmarkTPCH -s .01 --verify -r 100 --scheduler --clients 10 --cores \$(( \$(nproc) / 10))"
               } else {
                 Utils.markStageSkippedForConditional("clangRelWithDebInfoThreadSanitizer")
               }
@@ -351,7 +355,18 @@ try {
                 Utils.markStageSkippedForConditional("jobQueryPlans")
               }
             }
+          }, ssbQueryPlans: {
+            stage("ssbQueryPlans") {
+              if (env.BRANCH_NAME == 'master' || full_ci) {
+                sh "mkdir -p query_plans/ssb; cd query_plans/ssb && ../../clang-release/hyriseBenchmarkStarSchema --dont_cache_binary_tables -r 1 -s 1 --visualize && ../../scripts/plot_operator_breakdown.py ../../clang-release/"
+                archiveArtifacts artifacts: 'query_plans/ssb/*.svg'
+                archiveArtifacts artifacts: 'query_plans/ssb/operator_breakdown.pdf'
+              } else {
+                Utils.markStageSkippedForConditional("ssbQueryPlans")
+              }
+            }
           }
+
         } finally {
           sh "ls -A1 | xargs rm -rf"
           deleteDir()

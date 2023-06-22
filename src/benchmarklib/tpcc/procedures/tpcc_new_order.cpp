@@ -27,7 +27,8 @@ TPCCNewOrder::TPCCNewOrder(const int num_warehouses, BenchmarkSQLExecutor& sql_e
     if (is_home_warehouse) {
       order_line.ol_supply_w_id = w_id;
     } else {
-      // Choose a warehouse that is different from w_id
+      // Choose a warehouse that is different from w_id.
+      // NOLINTNEXTLINE(cppcoreguidelines-avoid-do-while)
       do {
         order_line.ol_supply_w_id = warehouse_dist(_random_engine);
       } while (order_line.ol_supply_w_id == w_id);
