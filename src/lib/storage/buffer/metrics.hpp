@@ -30,7 +30,6 @@ struct BufferManagerMetrics {
   std::atomic_uint64_t total_bytes_copied_from_dram_to_numa = 0;
   std::atomic_uint64_t total_bytes_copied_from_dram_to_ssd = 0;
   std::atomic_uint64_t total_bytes_copied_from_numa_to_ssd = 0;
-
   std::atomic_uint64_t total_bytes_copied_to_ssd = 0;
   std::atomic_uint64_t total_bytes_copied_from_ssd = 0;
 
@@ -50,6 +49,7 @@ struct BufferManagerMetrics {
   std::atomic_uint64_t num_dram_evictions;
   std::atomic_uint64_t num_numa_evictions;
 
-  // Number of madvice calls, TODO: track in more places
+  // Number of madvice calls
+  std::atomic_uint64_t num_numa_tonode_memory_calls = 0;
   std::atomic_uint64_t num_madvice_free_calls = 0;
 };

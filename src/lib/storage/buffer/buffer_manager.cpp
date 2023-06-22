@@ -539,6 +539,11 @@ void BufferManager::BufferPool::purge_eviction_queue() {
 void BufferManager::BufferPool::add_to_eviction_queue(const PageID page_id, Frame* frame) {
   auto current_state_and_version = frame->state_and_version();
   DebugAssert(frame->memory_node() == memory_node, "Memory node mismatch");
+  if (memory_node == DEFAULT_DRAM_NUMA_NODE) {
+    metrics->num_dram_eviction_queue_adds.fetch_add(1, std::memory_order_relaxed);
+  } else {
+    metrics->num_numa_eviction_queue_adds.fetch_add(1, std::memory_order_relaxed);
+  }
   eviction_queue->push({page_id, Frame::version(current_state_and_version)});
 }
 

@@ -75,6 +75,9 @@ bool Frame::try_lock_shared(StateVersionType old_state_and_version) {
 }
 
 bool Frame::try_lock_exclusive(StateVersionType old_state_and_version) {
+  DebugAssert(state(old_state_and_version) == UNLOCKED || state(old_state_and_version) == MARKED ||
+                  state(old_state_and_version) == EVICTED,
+              "Frame must be unlocked to lock exclusive, instead: " + std::to_string(state(old_state_and_version)));
   return _state_and_version.compare_exchange_strong(old_state_and_version,
                                                     update_state_with_same_version(old_state_and_version, LOCKED));
 }
