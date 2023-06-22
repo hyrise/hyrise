@@ -63,7 +63,7 @@ TEST_F(EntireChunkPosListTest, AddAfterMatchedAllTest) {
 }
 
 TEST_F(EntireChunkPosListTest, CheckIterators) {
-  auto table = Table::create_dummy_table({{"a", DataType::Int, false}});
+  const auto table = Table::create_dummy_table({{"a", DataType::Int, false}});
   table->append({int32_t{1}});
   table->append({int32_t{2}});
   table->append({int32_t{3}});
@@ -71,9 +71,7 @@ TEST_F(EntireChunkPosListTest, CheckIterators) {
   EXPECT_EQ(table->chunk_count(), 1);
   EXPECT_EQ(table->row_count(), 3);
 
-  const auto chunk_id = ChunkID{0};
-  const auto chunk_size = ChunkOffset{3};
-  const auto entire_chunk_pos_list = std::make_shared<const EntireChunkPosList>(chunk_id, chunk_size);
+  const auto entire_chunk_pos_list = std::make_shared<const EntireChunkPosList>(ChunkID{0}, ChunkOffset{3});
 
   table->append({int32_t{4}});
   // Extra Lines have been added to the table:
