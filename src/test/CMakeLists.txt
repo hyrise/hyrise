@@ -128,6 +128,7 @@ set(
     lib/optimizer/strategy/between_composition_rule_test.cpp
     lib/optimizer/strategy/chunk_pruning_rule_test.cpp
     lib/optimizer/strategy/column_pruning_rule_test.cpp
+    lib/optimizer/strategy/data_induced_predicate_rule_test.cpp
     lib/optimizer/strategy/dependent_group_by_reduction_rule_test.cpp
     lib/optimizer/strategy/expression_reduction_rule_test.cpp
     lib/optimizer/strategy/in_expression_rewrite_rule_test.cpp
@@ -245,7 +246,7 @@ set(
     testing_assert.cpp
     testing_assert.hpp
     utils/data_dependency_test_utils.hpp
-)
+        lib/optimizer/strategy/data_induced_predicate_rule_test.cpp)
 
 set (
     SYSTEM_TEST_SOURCES

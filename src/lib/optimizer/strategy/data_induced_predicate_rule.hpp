@@ -43,7 +43,7 @@ class PredicateNode;
  * However, different from a predicate propagation approach, it does not allow us to prune on the reduced side.
 **/
 
-class DataInducedParameterRule : public AbstractRule {
+class DataInducedPredicateRule : public AbstractRule {
  public:
   std::string name() const override;
 
