@@ -286,16 +286,16 @@ TEST_F(AdaptiveRadixTreeIndexTest, DenseVectorOfInts) {
 }
 
 TEST_F(AdaptiveRadixTreeIndexTest, UpperLowerBoundForNonExistingElements) {
-  for (int32_t test_size : {4, 16, 48, 256}) {
-    std::vector<std::optional<int32_t>> ints(test_size);
-    for (auto index = 0; index < test_size; ++index) {
-      // leave out the second and second to last element (e.g. 1 & 2, 1 & 14, ...)
-      if (index != 1 && index != test_size - 2) {
-        ints[index] = index;
+  for (auto test_size : {4, 16, 48, 256}) {
+    auto ints = std::vector<std::optional<int32_t>>(test_size);
+    for (auto integer_index = 0; integer_index < test_size; ++integer_index) {
+      // Leave out the second and second to last element (e.g. 1 & 2, 1 & 14, ...).
+      if (integer_index != 1 && integer_index != test_size - 2) {
+        ints[integer_index] = integer_index;
       }
     }
-    auto segment = create_dict_segment_by_type<int32_t>(DataType::Int, ints);
-    auto index =
+    const auto segment = create_dict_segment_by_type<int32_t>(DataType::Int, ints);
+    const auto index =
         std::make_shared<AdaptiveRadixTreeIndex>(std::vector<std::shared_ptr<const AbstractSegment>>({segment}));
 
     if (test_size == 4) {
