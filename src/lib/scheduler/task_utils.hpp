@@ -62,7 +62,7 @@ void visit_tasks_upwards(const std::shared_ptr<Task>& task, Visitor visitor) {
   auto visited_tasks = std::unordered_set<std::shared_ptr<AbstractTaskType>>{};
 
   while (!task_queue.empty()) {
-    const auto& current_task = task_queue.front();
+    const auto current_task = task_queue.front();
     task_queue.pop();
 
     if (!visited_tasks.emplace(current_task).second) {
