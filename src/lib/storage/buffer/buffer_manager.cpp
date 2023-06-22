@@ -157,6 +157,7 @@ void BufferManager::make_resident(const PageID page_id, const AccessIntent acces
 
   // Case 1: The page is already on DRAM. This is the easy case.
   if (!is_evicted && Frame::memory_node(state_before_exclusive) == _primary_buffer_pool->memory_node) {
+    _metrics->total_hits.fetch_add(1, std::memory_order_relaxed);
     return;
   }
 
@@ -186,6 +187,7 @@ void BufferManager::make_resident(const PageID page_id, const AccessIntent acces
     DebugAssert(Frame::memory_node(state_before_exclusive) == _primary_buffer_pool->memory_node, "Not on DRAM node");
     _primary_buffer_pool->ensure_free_pages(page_id.size_type());
     _ssd_region->read_page(page_id, region->get_page(page_id));
+    _metrics->total_misses.fetch_add(1, std::memory_order_relaxed);
     _metrics->total_bytes_copied_from_ssd_to_dram.fetch_add(bytes_for_size_type(page_id.size_type()),
                                                             std::memory_order_relaxed);
     return;
@@ -211,6 +213,7 @@ void BufferManager::make_resident(const PageID page_id, const AccessIntent acces
                                                               std::memory_order_relaxed);
     }
     _ssd_region->read_page(page_id, region->get_page(page_id));
+    _metrics->total_misses.fetch_add(1, std::memory_order_relaxed);
     return;
   }
 
@@ -222,12 +225,14 @@ void BufferManager::make_resident(const PageID page_id, const AccessIntent acces
 
   if (bypass_dram) {
     // Case 5.1: Do nothing, stay on NUMA
+    _metrics->total_hits.fetch_add(1, std::memory_order_relaxed);
     return;
   } else {
     // Case 5.2: Migrate to DRAM
     _secondary_buffer_pool->release_page(page_id.size_type());
     _primary_buffer_pool->ensure_free_pages(page_id.size_type());
     region->move_to_numa_node(page_id, _primary_buffer_pool->memory_node);
+    _metrics->total_misses.fetch_add(1, std::memory_order_relaxed);
     _metrics->total_bytes_copied_from_numa_to_dram.fetch_add(bytes_for_size_type(page_id.size_type()),
                                                              std::memory_order_relaxed);
     return;
@@ -241,7 +246,6 @@ void BufferManager::pin_for_read(const PageID page_id) {
   _metrics->current_pins.fetch_add(1, std::memory_order_relaxed);
 
   const auto frame = get_region(page_id)->get_frame(page_id);
-  // TOOO: Hits and misses are harder to track due to not returning for shared lock
   // TODO: use counter instead of while(true), make_resident?
   while (true) {
     auto state_and_version = frame->state_and_version();
@@ -284,7 +288,6 @@ void BufferManager::pin_for_write(const PageID page_id) {
     switch (Frame::state(state_and_version)) {
       case Frame::EVICTED: {
         if (frame->try_lock_exclusive(state_and_version)) {
-          _metrics->total_misses.fetch_add(1, std::memory_order_relaxed);
           make_resident(page_id, AccessIntent::Write, state_and_version);
           return;
         }
@@ -293,7 +296,6 @@ void BufferManager::pin_for_write(const PageID page_id) {
       case Frame::MARKED:
       case Frame::UNLOCKED: {
         if (frame->try_lock_exclusive(state_and_version)) {
-          _metrics->total_hits.fetch_add(1, std::memory_order_relaxed);
           make_resident(page_id, AccessIntent::Write, state_and_version);
           return;
         }
