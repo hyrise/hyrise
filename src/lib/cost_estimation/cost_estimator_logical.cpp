@@ -2,6 +2,7 @@
 
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_utils.hpp"
+#include "expression/lqp_subquery_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
@@ -54,19 +55,37 @@ Cost CostEstimatorLogical::estimate_node_cost(const std::shared_ptr<AbstractLQPN
 }
 
 float CostEstimatorLogical::_get_expression_cost_multiplier(const std::shared_ptr<AbstractExpression>& expression) {
-  // Number of operations + number of different columns accessed to factor in expression complexity
-
   auto multiplier = 0.0f;
 
-  visit_expression(expression, [&](const auto& sub_expression) {
-    multiplier += 1.0f;
-
-    if (sub_expression->type == ExpressionType::LQPColumn) {
-      multiplier += 1.0f;
+  for (const auto& argument : expression->arguments) {
+    // Add nothing for simple predicates.
+    switch (argument->type) {
+      case ExpressionType::Value:
+        continue;
+      case ExpressionType::LQPSubquery:
+        if (!static_cast<const LQPSubqueryExpression&>(*argument).is_correlated()) {
+          continue;
+        }
+        break;
+      case ExpressionType::LQPColumn:
+        multiplier += 1.0f;
+        continue;
+      default:
+        break;
     }
 
-    return ExpressionVisitation::VisitArguments;
-  });
+    // Handle more complex stuff. Number of operations + number of different columns accessed to factor in expression
+    // complexity.
+    visit_expression(argument, [&](const auto& sub_expression) {
+      multiplier += 1.0f;
+
+      if (sub_expression->type == ExpressionType::LQPColumn) {
+        multiplier += 1.0f;
+      }
+
+      return ExpressionVisitation::VisitArguments;
+    });
+  }
 
   return multiplier;
 }
