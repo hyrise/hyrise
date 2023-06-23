@@ -15,7 +15,7 @@ namespace {
 using namespace hyrise;  // NOLINT(build/namespaces)
 
 float expression_cost_multiplier(const std::shared_ptr<AbstractExpression>& expression) {
-  auto multiplier = 1.0f;
+  auto multiplier = 0.0f;
 
   // Number of different columns accessed to factor in expression complexity.
   visit_expression(expression, [&](const auto& sub_expression) {
@@ -33,7 +33,7 @@ float expression_cost_multiplier(const std::shared_ptr<AbstractExpression>& expr
     return ExpressionVisitation::VisitArguments;
   });
 
-  return multiplier;
+  return std::max(1.0f, multiplier);
 }
 
 }  // namespace
