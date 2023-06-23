@@ -592,7 +592,7 @@ TEST_F(LQPTranslatorTest, PredicateNodeIndexScanFailsWhenNotApplicable) {
 
   // The optimizer should not set this ScanType in this situation
   predicate_node2->scan_type = ScanType::IndexScan;
-  // EXPECT_THROW(LQPTranslator{}.translate_node(predicate_node2), std::logic_error);
+  EXPECT_THROW(LQPTranslator{}.translate_node(predicate_node2), std::logic_error);
 }
 
 TEST_F(LQPTranslatorTest, ProjectionNode) {

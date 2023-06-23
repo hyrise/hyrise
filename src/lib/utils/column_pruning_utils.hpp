@@ -5,8 +5,8 @@
 namespace hyrise {
 
 /**
- * Two convenience methods that do the same thing. Take a number (e.g., the number of columns) and a set of pruned
- * item ID (e.g., pruned column IDs) and return a mapping that maps the item IDs of the initial table to the pruned
+ * Two convenience methods that do the same thing. Take a number (e.g., the number of columns) and a list of pruned
+ * item IDs (e.g., pruned column IDs) and return a mapping that maps the item IDs of the initial table to the pruned
  * table. The returned vector stores the updated item IDs at the index of the original ID if the original item was not
  * pruned. If the original item with ID i was pruned, the mapping vector contains an invalid ID (either
  * INVALID_COLUMN_ID for column pruning, or INVALID_CHUNK_ID for chunk pruning) at index i.

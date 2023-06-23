@@ -22,6 +22,7 @@ namespace hyrise {
 IndexScan::IndexScan(const std::shared_ptr<const AbstractOperator>& input_operator, const ColumnID indexed_column_id,
                      const PredicateCondition predicate_condition, const AllTypeVariant scan_value)
     : AbstractReadOnlyOperator{OperatorType::IndexScan, input_operator},
+      included_chunk_ids{std::make_shared<std::vector<ChunkID>>()},
       _indexed_column_id{indexed_column_id},
       _predicate_condition{predicate_condition},
       _scan_value{scan_value} {}
@@ -32,17 +33,19 @@ const std::string& IndexScan::name() const {
 }
 
 std::shared_ptr<const Table> IndexScan::_on_execute() {
-  Assert(!included_chunk_ids.empty(), "Index scan expects a non-emptpy list of chunks to process.");
-  DebugAssert(std::is_sorted(included_chunk_ids.begin(), included_chunk_ids.end()),
+  DebugAssert(included_chunk_ids, "Included ChunkIDs vector has not been initialized.");
+  DebugAssert(std::is_sorted(included_chunk_ids->cbegin(), included_chunk_ids->cend()),
               "Included ChunkIDs must be sorted.");
+  // Assert(!included_chunk_ids->empty(), "Index scan expects a non-empty list of chunks to process.");
 
   _in_table = left_input_table();
 
-  // If the input operator is of type GetTable (which we require), we get only the chunks forwarded to the index scan,
-  // for which an index exists (or more precise, for which an index existed during optimization). Nonetheless, we still
-  // access the GetTable node to check if more chunks have been pruned at runtime (this will be part of the master,
-  // later in 2023).
-  // TODO(Daniel): please help me phrasing that.
+  // We require the input to be a GetTable operator. This operator does not necessarily forward all columns and chunks
+  // of the indexed table due to pruning. Thus, we must map the received columns and chunks to their unpruned
+  // equivalent in the index.
+  // Though we know pruned columns and chunks during optimization and could determine the mapping in the LQPTranslator,
+  // the GetTable operator might prune additional chunks during execution at some point (dynamic pruning). As a result,
+  // we compute the mapping here.
   const auto& input_get_table = std::dynamic_pointer_cast<const GetTable>(left_input());
   Assert(input_get_table, "IndexScan needs a GetTable operator as input.");
 
@@ -57,11 +60,11 @@ std::shared_ptr<const Table> IndexScan::_on_execute() {
   auto chunk_id_mapping = pruned_chunk_id_mapping(data_table_chunk_count, pruned_chunk_ids);
 
   // Remove all values from the mapping not present in the included ChunkIDs.
-  for (auto index = size_t{0}; index < data_table_chunk_count; ++index) {
-    const auto chunk_id = chunk_id_mapping[index];
-    if (chunk_id != INVALID_CHUNK_ID &&
-        !std::binary_search(included_chunk_ids.begin(), included_chunk_ids.end(), chunk_id)) {
-      chunk_id_mapping[index] = INVALID_CHUNK_ID;
+  for (auto chunk_id = size_t{0}; chunk_id < data_table_chunk_count; ++chunk_id) {
+    const auto mapped_chunk_id = chunk_id_mapping[chunk_id];
+    if (mapped_chunk_id != INVALID_CHUNK_ID &&
+        !std::binary_search(included_chunk_ids->begin(), included_chunk_ids->end(), mapped_chunk_id)) {
+      chunk_id_mapping[chunk_id] = INVALID_CHUNK_ID;
       --chunk_count_to_scan;
     }
   }
@@ -89,13 +92,13 @@ std::shared_ptr<const Table> IndexScan::_on_execute() {
       const auto mapped_chunk_id = chunk_id_mapping[(*current_iter).chunk_id];
 
       if (mapped_chunk_id != INVALID_CHUNK_ID) {
-        // For equal predicates, the results are sorted by chunk. It is thus possible to emit single pos lists per
-        // chunk and guaranteeing that only single chunks are referenced. We decided against this as we expect the
-        // result sets of index scans to be tiny in most cases (single chunk guarantee might not pay off and we could
-        // end up with many very small segments).
+        // For equality predicates, the results are sorted by chunk. It is thus possible to emit single position lists
+        // per chunk and guarantee that only single chunks are referenced (see references_single_chunk()). We decided
+        // against this as we expect the result sets of IndexScans to be tiny in most cases (single chunk guarantee
+        // might not pay off and we could end up with many very small segments).
         current_append_pos_list->emplace_back(mapped_chunk_id, (*current_iter).chunk_offset);
 
-        if (current_append_pos_list->size() > Chunk::DEFAULT_SIZE) {
+        if (current_append_pos_list->size() >= Chunk::DEFAULT_SIZE) {
           pos_lists.emplace_back(std::make_shared<RowIDPosList>());
           current_append_pos_list = pos_lists.back();
         }

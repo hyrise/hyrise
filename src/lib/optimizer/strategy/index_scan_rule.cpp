@@ -29,14 +29,14 @@ constexpr float INDEX_SCAN_SELECTIVITY_THRESHOLD = 0.01f;
 // from: "Fast Lookups for In-Memory Column Stores: Group-Key Indices, Lookup and Maintenance."
 constexpr float INDEX_SCAN_ROW_COUNT_THRESHOLD = 1000.0f;
 
-bool is_single_segment_index(const TableIndexStatistics& index_statistics) {
+bool is_single_column_index(const TableIndexStatistics& index_statistics) {
   return index_statistics.column_ids.size() == 1;
 }
 
 bool is_index_scan_applicable(const TableIndexStatistics& index_statistics,
                               const std::shared_ptr<PredicateNode>& predicate_node,
                               const std::shared_ptr<AbstractCostEstimator>& cost_estimator) {
-  if (!is_single_segment_index(index_statistics)) {
+  if (!is_single_column_index(index_statistics)) {
     return false;
   }
 
@@ -94,10 +94,10 @@ void IndexScanRule::_apply_to_plan_without_subqueries(const std::shared_ptr<Abst
       const auto& child = node->left_input();
 
       if (child->type == LQPNodeType::StoredTable) {
-        const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(node);
-        const auto stored_table_node = std::dynamic_pointer_cast<StoredTableNode>(child);
+        const auto predicate_node = std::static_pointer_cast<PredicateNode>(node);
+        const auto stored_table_node = std::static_pointer_cast<StoredTableNode>(child);
 
-        const auto indexes_statistics = stored_table_node->table_indexes_statistics();
+        const auto& indexes_statistics = stored_table_node->table_indexes_statistics();
         for (const auto& index_statistics : indexes_statistics) {
           if (is_index_scan_applicable(index_statistics, predicate_node, cost_estimator)) {
             predicate_node->scan_type = ScanType::IndexScan;

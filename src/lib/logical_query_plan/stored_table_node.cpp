@@ -187,13 +187,14 @@ std::vector<TableIndexStatistics> StoredTableNode::table_indexes_statistics() co
   pruned_index_statistics.reserve(input_table_column_count - _pruned_column_ids.size());
 
   for (const auto& index_statistic : index_statistics) {
-    // TODO(anyone): when chunk indexes are removed, table index statistics should no longer store a vector of column
-    // IDs as multi-column indexes are not supported.
+    // TODO(anyone): When chunk indexes are removed, TableIndexStatistics should no longer store a vector of ColumnIDs
+    // as multi-column indexes are no longer supported.
     DebugAssert(index_statistic.column_ids.size() == 1, "Unexpected multi-column index");
 
     const auto& updated_column_id = column_id_mapping[index_statistic.column_ids[0]];
     if (updated_column_id == INVALID_COLUMN_ID) {
-      continue;  // Indexed column was pruned.
+      // Indexed column was pruned.
+      continue;
     }
 
     // Append statistic and update its column id.
