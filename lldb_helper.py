@@ -1,3 +1,5 @@
+import sys
+
 STATE_MASK = 0xFF00000000000000
 NODE_MASK = 0x000F000000000000
 DIRTY_MASK = 0x00F0000000000000
@@ -21,14 +23,18 @@ def state_string(state):
         return "EVICTED"
 
 
-def FrameSummary(valobj, internal_dict, *args, **options):
-    value = valobj.GetValGetValueueAsUnsigned()
+def _frame_summary(value):
     version = value & VERSION_MASK
     memory_node = (value & NODE_MASK) >> NODE_SHIFT
     dirty = bool((value & DIRTY_MASK) >> DIRTY_SHIFT)
     state_value = (value & STATE_MASK) >> STATE_SHIFT
     state = state_string(state_value)
     return "State: {}, Dirty: {}, MemoryNode: {}, Version: {}".format(state, dirty, memory_node, version)
+
+
+def FrameSummary(valobj, internal_dict, *args, **options):
+    value = valobj.GetValGetValueueAsUnsigned()
+    return _frame_summary(value)
 
 
 def PageIDSummary(valobj, internal_dict, *args, **options):
@@ -47,3 +53,12 @@ def __lldb_init_module(debugger, dictionary):
                            __name__ + ".PageIDSummary hyrise::PageID")
     debugger.HandleCommand("type summary add -F " +
                            __name__ + ".FrameSummary hyrise::StateVersionType")
+
+
+def main():
+    arg = sys.argv[1]
+    print(_frame_summary(int(arg)))
+
+
+if __name__ == '__main__':
+    main()

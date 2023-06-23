@@ -3,10 +3,8 @@
 
 namespace hyrise {
 
-// TODO: Memory order
-
 Frame::Frame() {
-  _state_and_version.store(update_state_with_same_version(0, EVICTED));
+  _state_and_version.store(update_state_with_same_version(0, EVICTED), std::memory_order_release);
 }
 
 void Frame::set_memory_node(const NumaMemoryNode memory_node) {
@@ -27,7 +25,8 @@ void Frame::reset_dirty() {
 
 void Frame::unlock_exclusive_and_set_evicted() {
   DebugAssert(state(_state_and_version.load()) == LOCKED, "Frame must be marked to set evicted flag.");
-  _state_and_version.store(update_state_with_increment_version(_state_and_version.load(), EVICTED));
+  _state_and_version.store(update_state_with_increment_version(_state_and_version.load(), EVICTED),
+                           std::memory_order_release);
 }
 
 bool Frame::try_mark(StateVersionType old_state_and_version) {
@@ -68,6 +67,7 @@ bool Frame::try_lock_shared(StateVersionType old_state_and_version) {
         old_state_and_version, update_state_with_same_version(old_state_and_version, old_state + 1));
   }
   if (old_state == MARKED) {
+    // TODO
     return _state_and_version.compare_exchange_strong(old_state_and_version,
                                                       update_state_with_same_version(old_state_and_version, 1));
   }
@@ -86,7 +86,7 @@ bool Frame::unlock_shared() {
   while (true) {
     auto old_state_and_version = _state_and_version.load();
     auto old_state = state(old_state_and_version);
-    DebugAssert(old_state > 0 && old_state <= LOCKED_SHARED, "Frame must be locked shared to unlock shared.");
+    Assert(old_state > 0 && old_state <= LOCKED_SHARED, "Frame must be locked shared to unlock shared.");
     auto new_state = old_state - 1;
     if (_state_and_version.compare_exchange_strong(old_state_and_version,
                                                    update_state_with_same_version(old_state_and_version, new_state))) {
@@ -106,14 +106,14 @@ StateVersionType Frame::update_state_with_same_version(StateVersionType old_vers
                                                        StateVersionType new_state) {
   constexpr auto SHIFT = NUM_BITS - STATE_SHIFT;
   static_assert(SHIFT == 8, "Shift must be 8.");
-  return (old_version_and_state << SHIFT) >> SHIFT | (new_state << STATE_SHIFT);
+  return ((old_version_and_state << SHIFT) >> SHIFT) | (new_state << STATE_SHIFT);
 }
 
 StateVersionType Frame::update_state_with_increment_version(StateVersionType old_version_and_state,
                                                             StateVersionType new_state) {
   constexpr auto SHIFT = NUM_BITS - STATE_SHIFT;
   static_assert(SHIFT == 8, "Shift must be 8.");
-  return ((old_version_and_state << SHIFT) >> SHIFT) + 1 | (new_state << STATE_SHIFT);
+  return (((old_version_and_state << SHIFT) >> SHIFT) + 1) | (new_state << STATE_SHIFT);
 }
 
 void Frame::debug_print() {

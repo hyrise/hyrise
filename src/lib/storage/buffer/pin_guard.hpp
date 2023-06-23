@@ -36,6 +36,8 @@ struct PinnedFrames : public Noncopyable {
       BufferManager::get().pin_for_write(page_id);
     } else if constexpr (accessIntent == AccessIntent::Read) {
       BufferManager::get().pin_for_read(page_id);
+    } else {
+      Fail("Unkwon access intent");
     }
   }
 
@@ -62,7 +64,7 @@ struct PinnedFrames : public Noncopyable {
     }
   }
 
-  std::vector<PageID> _pins;
+  std::vector<PageID> _pins;  // TODO: Small vector
 };
 
 // TODO: EqualDistinctCountHistogram

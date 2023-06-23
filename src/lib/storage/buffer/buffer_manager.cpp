@@ -280,6 +280,7 @@ void BufferManager::pin_for_read(const PageID page_id) {
   // TODO: Another, make_resident?
   for (auto repeat = size_t{0}; repeat < MAX_REPEAT_COUNT; ++repeat) {
     auto state_and_version = frame->state_and_version();
+
     switch (Frame::state(state_and_version)) {
       case Frame::LOCKED: {
         break;
@@ -290,7 +291,7 @@ void BufferManager::pin_for_read(const PageID page_id) {
           make_resident(page_id, AccessIntent::Read, state_and_version);
           frame->unlock_exclusive();
         }
-        break;
+        break;  // TODO: Continue to skip yield
       }
       default: {
         // TODO: Still call make resident here? we actually have many reads now
@@ -298,7 +299,6 @@ void BufferManager::pin_for_read(const PageID page_id) {
         if (frame->try_lock_shared(state_and_version)) {
           return;
         }
-
         break;
       }
     }
@@ -332,11 +332,8 @@ void BufferManager::pin_for_write(const PageID page_id) {
         }
         break;
       }
-      default: {
-        // The page is locked in shared or exclusive mode. Do nothing an wait.no5s
-        yield(repeat);
-      }
     }
+    yield(repeat);
   }
 }
 
@@ -344,7 +341,6 @@ void BufferManager::unpin_for_read(const PageID page_id) {
   DebugAssert(page_id.valid(), "Invalid page id");
 
   _metrics->current_pins.fetch_sub(1, std::memory_order_relaxed);
-
   auto frame = get_region(page_id)->get_frame(page_id);
   if (frame->unlock_shared()) {
     add_to_eviction_queue(page_id, frame);
@@ -355,7 +351,6 @@ void BufferManager::unpin_for_write(const PageID page_id) {
   DebugAssert(page_id.valid(), "Invalid page id");
 
   _metrics->current_pins.fetch_sub(1, std::memory_order_relaxed);
-
   auto frame = get_region(page_id)->get_frame(page_id);
   frame->unlock_exclusive();
   add_to_eviction_queue(page_id, frame);
@@ -455,11 +450,10 @@ void* BufferManager::do_allocate(std::size_t bytes, std::size_t alignment) {
 }
 
 void BufferManager::do_deallocate(void* p, std::size_t bytes, std::size_t alignment) {
-  const auto page_id = find_page(p);
-  auto region = get_region(page_id);
   // region->deallocate(page_id);
   // TODO Mark as dealloczed and iulock?
-  add_to_eviction_queue(page_id, region->get_frame(page_id));
+  const auto page_id = find_page(p);
+  add_to_eviction_queue(page_id, get_region(page_id)->get_frame(page_id));
   // TODO: Properly handle deallocation, set to UNLOCKED inisitially
   _metrics->num_deallocs.fetch_add(1, std::memory_order_relaxed);
 }
@@ -571,6 +565,10 @@ bool BufferManager::BufferPool::ensure_free_pages(const PageSizeType required_si
     auto frame = region->get_frame(item.page_id);
     auto current_state_and_version = frame->state_and_version();
 
+    if (frame->memory_node() != memory_node) {
+      continue;
+    }
+
     // If the frane is UNLOCKED, we can mark it
     if (item.can_mark(current_state_and_version)) {
       frame->try_mark(current_state_and_version);
@@ -578,12 +576,14 @@ bool BufferManager::BufferPool::ensure_free_pages(const PageSizeType required_si
       continue;
     }
 
+    // TODO: Check version and then state like vmcache.evict
+
     // If the frame is already marked, we can evict it
     if (!item.can_evict(current_state_and_version)) {
       continue;
     }
 
-    // Try locking the frame exclusively
+    // Try locking the frame exclusively, TODO: prefer shared locking
     if (!frame->try_lock_exclusive(current_state_and_version)) {
       continue;
     }
