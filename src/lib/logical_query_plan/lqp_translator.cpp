@@ -251,7 +251,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_in
   // TableScan as it is also responsible for filtering rows in chunks which are not yet indexed (or not even
   // immutable).
   if (indexed_chunks->empty()) {
-    return _translate_predicate_node_to_table_scan(node, input_operator);    
+    return _translate_predicate_node_to_table_scan(node, input_operator);
   }
 
   const auto index_scan =
@@ -359,7 +359,8 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
   }
 
   const auto& primary_join_predicate = join_predicates.front();
-  auto secondary_join_predicates = std::vector<OperatorJoinPredicate>(join_predicates.cbegin() + 1, join_predicates.cend());
+  auto secondary_join_predicates =
+      std::vector<OperatorJoinPredicate>(join_predicates.cbegin() + 1, join_predicates.cend());
 
   auto join_operator = std::shared_ptr<AbstractOperator>{};
 
