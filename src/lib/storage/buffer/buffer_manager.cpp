@@ -588,12 +588,12 @@ bool BufferManager::BufferPool::ensure_free_pages(const PageSizeType required_si
       continue;
     }
 
-    Assert(frame->memory_node() == memory_node, "Memory node mismatch");
+    Assert(frame->memory_node() == memory_node,
+           "Memory node mismatch: " + std::to_string(frame->memory_node()) + " != " + std::to_string(memory_node));
 
     evict(item, frame);
 
     DebugAssert(Frame::state(frame->state_and_version()) != Frame::LOCKED, "Frame cannot be locked");
-    Assert(frame->memory_node() == memory_node, "Memory node mismatch");
 
     const auto size_type = item.page_id.size_type();
     freed_bytes += bytes_for_size_type(size_type);
