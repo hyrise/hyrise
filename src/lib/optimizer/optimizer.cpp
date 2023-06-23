@@ -182,7 +182,10 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   // Run Group-By Reduction after the JoinOrderingRule ran. The actual join order is not important, but the matching
   // of cross joins with predicates that is done by that rule is needed to create some of the functional dependencies
   // (FDs) used by the DependentGroupByReductionRule.
-  optimizer->add_rule(std::make_unique<DependentGroupByReductionRule>());
+  const auto allow_dependent_groupby = std::getenv("DEPENDENT_GROUPBY");
+  if (!allow_dependent_groupby || !std::strcmp(allow_dependent_groupby, "1")) {
+    optimizer->add_rule(std::make_unique<DependentGroupByReductionRule>());
+  }
 
   optimizer->add_rule(std::make_unique<BetweenCompositionRule>());
 
@@ -200,9 +203,15 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   // joins into semi joins (which are treated as predicates) or predicates that can be pushed further down. For the same
   // reason, run them after the JoinOrderingRule, which does not like semi joins (see above). Furthermore, these two
   // rules depend on the ColumnPruningRule that flags joins where one input is not used later in the query plan.
-  optimizer->add_rule(std::make_unique<JoinToSemiJoinRule>());
+  const auto allow_join_to_semi = std::getenv("JOIN_TO_SEMI");
+  if (!allow_join_to_semi || !std::strcmp(allow_join_to_semi, "1")) {
+    optimizer->add_rule(std::make_unique<JoinToSemiJoinRule>());
+  }
 
-  optimizer->add_rule(std::make_unique<JoinToPredicateRewriteRule>());
+  const auto allow_join_to_predicate = std::getenv("JOIN_TO_PREDICATE");
+  if (!allow_join_to_predicate || !std::strcmp(allow_join_to_predicate, "1")) {
+    optimizer->add_rule(std::make_unique<JoinToPredicateRewriteRule>());
+  }
 
   optimizer->add_rule(std::make_unique<PredicatePlacementRule>());
 

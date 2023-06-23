@@ -108,7 +108,6 @@ void PredicateReorderingRule::_reorder_predicates(
 
   const auto input_cardinality = caching_cardinality_estimator->estimate_cardinality(input);
 
-
   // Estimate the output cardinalities of each individual predicate on top of the input LQP, i.e., predicates are
   // estimated independently. Torder the predicates, we want to favor the predicate with the most beneficial ratio of
   // selectivity and cost. For simplification, we just look at (input cardinality - output cardinality) / cost.

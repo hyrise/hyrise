@@ -19,9 +19,23 @@
 namespace hyrise {
 
 DependencyDiscoveryPlugin::DependencyDiscoveryPlugin() {
-  _add_candidate_rule(std::make_unique<DependentGroupByReductionCandidateRule>());
-  _add_candidate_rule(std::make_unique<JoinToSemiJoinCandidateRule>());
-  _add_candidate_rule(std::make_unique<JoinToPredicateCandidateRule>());
+  const auto allow_dependent_groupby = std::getenv("DEPENDENT_GROUPBY");
+  if (!allow_dependent_groupby || !std::strcmp(allow_dependent_groupby, "1")) {
+    std::cout << "- Enable Dependent Group-by Reduction" << std::endl;
+    _add_candidate_rule(std::make_unique<DependentGroupByReductionCandidateRule>());
+  }
+
+  const auto allow_join_to_semi = std::getenv("JOIN_TO_SEMI");
+  if (!allow_join_to_semi || !std::strcmp(allow_join_to_semi, "1")) {
+    std::cout << "- Enable Join to Semi-join" << std::endl;
+    _add_candidate_rule(std::make_unique<JoinToSemiJoinCandidateRule>());
+  }
+
+  const auto allow_join_to_predicate = std::getenv("JOIN_TO_PREDICATE");
+  if (!allow_join_to_predicate || !std::strcmp(allow_join_to_predicate, "1")) {
+    std::cout << "- Enable Join to Predicate" << std::endl;
+    _add_candidate_rule(std::make_unique<JoinToPredicateCandidateRule>());
+  }
 
   _add_validation_rule(std::make_unique<UccValidationRule>());
   _add_validation_rule(std::make_unique<OdValidationRule>());
