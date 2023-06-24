@@ -40,34 +40,6 @@ TEST_F(DataInducedPredicateRuleTest, CreateSimpleReduction) {
   // The _a_a side of the inner join has values from 1-50, the _b_a side has values from 10-20. Based on that
   // selectivity, a semi join reduction should be created.
 
-/*  // clang-format off
-  const auto input_lqp =
-  JoinNode::make(JoinMode::Inner, equals_(_a_a, _b_a),
-    _node_a,
-    _node_b);
-  // TODO (team): Change me
-  const auto expected_reduction =
-  JoinNode::make(JoinMode::Semi, equals_(_a_a, _b_a),
-    _node_a,
-    _node_b);
-  // TODO (team): Change me
-  const auto expected_lqp =
-  JoinNode::make(JoinMode::Inner, equals_(_a_a, _b_a),
-    expected_reduction,
-    _node_b);
-  // clang-format on
-  expected_reduction->mark_as_semi_reduction(expected_lqp);
-
-  auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
-
-  // TODO (team): Change me
-  // Check whether the added semi join was also marked as a semi reduction.
-  auto join_node = std::static_pointer_cast<JoinNode>(actual_lqp->left_input());
-  EXPECT_TRUE(join_node->is_semi_reduction());
-  EXPECT_EQ(join_node->comment, _rule->name());
-  EXPECT_EQ(join_node->get_or_find_reduced_join_node(), std::static_pointer_cast<JoinNode>(actual_lqp));*/
-
   // clang-format off
   const auto input_lqp =
   JoinNode::make(JoinMode::Inner, equals_(_a_a, _b_a),
