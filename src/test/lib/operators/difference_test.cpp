@@ -40,7 +40,8 @@ TEST_F(OperatorsDifferenceTest, DifferenceOnValueTables) {
   const auto difference = std::make_shared<Difference>(_table_wrapper_a, _table_wrapper_b);
   difference->execute();
 
-  EXPECT_TABLE_EQ_UNORDERED(difference->get_output(), load_table("resources/test_data/tbl/int_float_filtered2.tbl", ChunkOffset{2}));
+  EXPECT_TABLE_EQ_UNORDERED(difference->get_output(),
+                            load_table("resources/test_data/tbl/int_float_filtered2.tbl", ChunkOffset{2}));
 }
 
 TEST_F(OperatorsDifferenceTest, GetName) {
