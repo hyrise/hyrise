@@ -60,10 +60,10 @@ void DataInducedPredicateRule::_apply_to_plan_without_subqueries(const std::shar
     DebugAssert(!expression_evaluable_on_lqp(reducer_side_expression, *join_node->input(selection_side)),
                 "Expected filtered expression to be uniquely evaluable on one side of the join");
 
-    const auto subquery = AggregateNode::make(expression_vector(), expression_vector(min_(reducer_side_expression), max_(reducer_side_expression)), reducer_node);
+    const auto subquery = AggregateNode::make(expression_functional::expression_vector(), expression_functional::expression_vector(expression_functional::min_(reducer_side_expression), expression_functional::max_(reducer_side_expression)), reducer_node);
 
-    const auto min_c_y = ProjectionNode::make(expression_vector(min_(reducer_side_expression)), subquery);
-    const auto max_c_y = ProjectionNode::make(expression_vector(max_(reducer_side_expression)), subquery);
+    const auto min_c_y = ProjectionNode::make(expression_functional::expression_vector(expression_functional::min_(reducer_side_expression)), subquery);
+    const auto max_c_y = ProjectionNode::make(expression_functional::expression_vector(expression_functional::max_(reducer_side_expression)), subquery);
 
     const auto reduce_if_beneficial = [&](const auto side_of_join) {
       auto reduced_node = join_node->input(side_of_join);
