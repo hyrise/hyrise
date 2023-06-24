@@ -115,7 +115,8 @@ class TableBuilder {
   // types may contain std::optional<?>, which will result in a nullable column, otherwise columns are not nullable
   template <typename Names>
   TableBuilder(const ChunkOffset chunk_size, const boost::hana::tuple<DataTypes...>& types, const Names& names,
-               const PolymorphicAllocator<size_t>& allocator, const ChunkOffset estimated_rows = ChunkOffset{0})
+               const PolymorphicAllocator<size_t> allocator = PolymorphicAllocator<size_t>{},
+               const ChunkOffset estimated_rows = ChunkOffset{0})
       : _alloc(allocator),
         _value_vectors(hana::replicate<hana::tuple_tag>(_alloc, hana::length(types))),
         _null_value_vectors(hana::replicate<hana::tuple_tag>(_alloc, hana::length(types))),
@@ -209,7 +210,7 @@ class TableBuilder {
   std::shared_ptr<Table> _table;
   ChunkOffset _estimated_rows_per_chunk;
 
-  const PolymorphicAllocator<size_t>& _alloc;
+  const PolymorphicAllocator<size_t> _alloc;
 
   // _table->row_count() only counts completed chunks but we want the total number of rows added to this table builder
   size_t _row_count;

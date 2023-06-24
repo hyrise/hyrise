@@ -14,7 +14,7 @@ void Frame::set_memory_node(const NumaMemoryNode memory_node) {
 }
 
 void Frame::set_dirty(const bool new_dirty) {
-  // DebugAssert(state(_state_and_version.load()) == LOCKED, "Frame must be locked to set dirty flag.");
+  // TODO: DebugAssert(state(_state_and_version.load()) == LOCKED, "Frame must be locked to set dirty flag.");
   StateVersionType dirty = new_dirty;
   _state_and_version |= DIRTY_MASK & (dirty << DIRTY_SHIFT);
 }
@@ -24,14 +24,14 @@ void Frame::reset_dirty() {
 }
 
 void Frame::unlock_exclusive_and_set_evicted() {
-  DebugAssert(state(_state_and_version.load()) == LOCKED, "Frame must be marked to set evicted flag.");
+  Assert(state(_state_and_version.load()) == LOCKED, "Frame must be marked to set evicted flag.");
   _state_and_version.store(update_state_with_increment_version(_state_and_version.load(), EVICTED),
                            std::memory_order_release);
 }
 
 bool Frame::try_mark(StateVersionType old_state_and_version) {
-  DebugAssert(state(_state_and_version.load()) == UNLOCKED,
-              "Frame must be unlocked to mark, instead: " + std::to_string(state(_state_and_version.load())));
+  Assert(state(_state_and_version.load()) == UNLOCKED,
+         "Frame must be unlocked to mark, instead: " + std::to_string(state(_state_and_version.load())));
   return _state_and_version.compare_exchange_strong(old_state_and_version,
                                                     update_state_with_same_version(old_state_and_version, MARKED));
 }
@@ -75,9 +75,9 @@ bool Frame::try_lock_shared(StateVersionType old_state_and_version) {
 }
 
 bool Frame::try_lock_exclusive(StateVersionType old_state_and_version) {
-  DebugAssert(state(old_state_and_version) == UNLOCKED || state(old_state_and_version) == MARKED ||
-                  state(old_state_and_version) == EVICTED,
-              "Frame must be unlocked to lock exclusive, instead: " + std::to_string(state(old_state_and_version)));
+  Assert(state(old_state_and_version) == UNLOCKED || state(old_state_and_version) == MARKED ||
+             state(old_state_and_version) == EVICTED,
+         "Frame must be unlocked to lock exclusive, instead: " + std::to_string(state(old_state_and_version)));
   return _state_and_version.compare_exchange_strong(old_state_and_version,
                                                     update_state_with_same_version(old_state_and_version, LOCKED));
 }
@@ -96,8 +96,8 @@ bool Frame::unlock_shared() {
 }
 
 void Frame::unlock_exclusive() {
-  DebugAssert(state(_state_and_version.load()) == LOCKED,
-              "Frame must be locked to unlock exclusive. " + std::to_string(state(_state_and_version.load())));
+  Assert(state(_state_and_version.load()) == LOCKED,
+         "Frame must be locked to unlock exclusive. " + std::to_string(state(_state_and_version.load())));
   _state_and_version.store(update_state_with_increment_version(_state_and_version.load(), UNLOCKED),
                            std::memory_order_release);
 }

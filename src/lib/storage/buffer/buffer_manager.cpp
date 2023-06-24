@@ -62,9 +62,15 @@ void unmap_region(std::byte* region) {
   }
 }
 
-void yield(size_t) {
-  // TODO: Upgrade yield based on counter with some kind of exponential backoff
-  std::this_thread::yield();
+void yield(const size_t repeat) {
+  if (repeat < 4) {
+    // } else if (repeat < 16) {
+    //   _mm_pause();
+  } else if ((repeat < 32) || (repeat & 1)) {
+    std::this_thread::yield();
+  } else {
+    std::this_thread::sleep_for(std::chrono::nanoseconds(1000));
+  }
 };
 
 //----------------------------------------------------
@@ -278,14 +284,14 @@ void BufferManager::pin_for_read(const PageID page_id) {
 
   const auto frame = get_region(page_id)->get_frame(page_id);
   // TODO: Another, make_resident?
-  for (auto repeat = size_t{0}; repeat < MAX_REPEAT_COUNT; ++repeat) {
+  for (auto repeat = size_t{0};; ++repeat) {
     auto state_and_version = frame->state_and_version();
 
     switch (Frame::state(state_and_version)) {
       case Frame::LOCKED: {
         break;
       }
-      case Frame::MARKED:
+      // case Frame::MARKED:  // TODO
       case Frame::EVICTED: {
         if (frame->try_lock_exclusive(state_and_version)) {
           make_resident(page_id, AccessIntent::Read, state_and_version);
@@ -304,6 +310,7 @@ void BufferManager::pin_for_read(const PageID page_id) {
     }
     yield(repeat);
   }
+  Fail("Could not pin page for read");
 }
 
 void BufferManager::pin_for_write(const PageID page_id) {
@@ -314,7 +321,7 @@ void BufferManager::pin_for_write(const PageID page_id) {
 
   const auto frame = get_region(page_id)->get_frame(page_id);
   // TODO: Use another make_resident?
-  for (auto repeat = size_t{0}; repeat < MAX_REPEAT_COUNT; ++repeat) {
+  for (auto repeat = size_t{0};; ++repeat) {
     auto state_and_version = frame->state_and_version();
     switch (Frame::state(state_and_version)) {
       case Frame::EVICTED: {
@@ -335,6 +342,7 @@ void BufferManager::pin_for_write(const PageID page_id) {
     }
     yield(repeat);
   }
+  Fail("Could not pin page for write");
 }
 
 void BufferManager::unpin_for_read(const PageID page_id) {
@@ -606,6 +614,8 @@ bool BufferManager::BufferPool::ensure_free_pages(const PageSizeType required_si
 }
 
 void BufferManager::BufferPool::evict(EvictionItem& item, Frame* frame) {
+  auto current_state_and_version = frame->state_and_version();
+
   DebugAssert(Frame::state(frame->state_and_version()) == Frame::LOCKED, "Frame cannot be locked");
   auto region = volatile_regions[static_cast<uint64_t>(item.page_id.size_type())];
   const auto num_bytes = bytes_for_size_type(item.page_id.size_type());
