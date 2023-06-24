@@ -85,9 +85,9 @@ TEST_F(EntireChunkPosListTest, CheckIterators) {
 }
 
 TEST_F(EntireChunkPosListTest, MemoryUsage) {
-  const auto chunk_id = ChunkID{0};
-  const auto chunk_size = ChunkOffset{10};
-  const auto entire_chunk_pos_list = std::make_shared<const EntireChunkPosList>(chunk_id, chunk_size);
+  // Memory_usage should return only the sizeof the object, as we do not store or manage any other objects.
+  // Create dummy EntireChunkPosList.
+  const auto entire_chunk_pos_list = std::make_shared<const EntireChunkPosList>(ChunkID{0}, ChunkOffset{10});
 
   EXPECT_EQ(entire_chunk_pos_list->memory_usage(MemoryUsageCalculationMode::Full), sizeof(EntireChunkPosList));
 }
