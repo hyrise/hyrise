@@ -37,6 +37,7 @@ MetaBufferManagerMetricsTable::MetaBufferManagerMetricsTable()
                                                {"num_dram_evictions", DataType::Long, false},
                                                {"num_numa_evictions", DataType::Long, false},
                                                {"num_madvice_free_calls", DataType::Long, false},
+                                               {"num_numa_tonode_memory_calls", DataType::Long, false},
                                                {"total_bytes_state", DataType::Long, false}
 
       }) {}
@@ -82,6 +83,7 @@ std::shared_ptr<Table> MetaBufferManagerMetricsTable::_on_generate() const {
        static_cast<int64_t>(metrics->num_dram_evictions.load(std::memory_order_relaxed)),
        static_cast<int64_t>(metrics->num_numa_evictions.load(std::memory_order_relaxed)),
        static_cast<int64_t>(metrics->num_madvice_free_calls.load(std::memory_order_relaxed)),
+       static_cast<int64_t>(metrics->num_numa_tonode_memory_calls.load(std::memory_order_relaxed)),
        static_cast<int64_t>(Hyrise::get().buffer_manager.memory_consumption())});
 
   return output_table;

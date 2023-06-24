@@ -115,8 +115,8 @@ class BufferManager : public boost::container::pmr::memory_resource, public Nonc
 
     size_t memory_consumption() const;
 
-    // The maximum number of bytes that can be allocated TODO: make const
-    size_t max_bytes;
+    // The maximum number of bytes that can be allocated
+    const size_t max_bytes;
 
     // The number of bytes that are currently used
     std::atomic<size_t> used_bytes;
@@ -133,11 +133,11 @@ class BufferManager : public boost::container::pmr::memory_resource, public Nonc
     // Async background worker that purges the eviction queue
     std::unique_ptr<PausableLoopThread> eviction_purge_worker;
 
-    MigrationPolicy migration_policy;
+    const MigrationPolicy migration_policy;
 
     std::array<std::shared_ptr<VolatileRegion>, NUM_PAGE_SIZE_TYPES> volatile_regions;
 
-    NumaMemoryNode memory_node;
+    const NumaMemoryNode memory_node;
   };
 
   std::shared_ptr<VolatileRegion> get_region(const PageID page_id);
