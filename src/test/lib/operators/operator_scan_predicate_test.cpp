@@ -85,14 +85,13 @@ TEST_F(OperatorScanPredicateTest, FromExpressionColumnRight) {
 }
 
 TEST_F(OperatorScanPredicateTest, OutputToStream) {
-  auto test_cases = std::vector<std::tuple<std::optional<std::vector<OperatorScanPredicate>>, std::string>>();
-  test_cases.push_back(make_tuple(OperatorScanPredicate::from_expression(*between_inclusive_(5, a, b), *node),
-                                  "Column #0 <=5\nColumn #1 >=5\n"));
-  test_cases.push_back(
-      make_tuple(OperatorScanPredicate::from_expression(*greater_than_(a, 5), *node), "Column #0 >5\n"));
-  test_cases.push_back(make_tuple(OperatorScanPredicate::from_expression(*less_than_(a, 5), *node), "Column #0 <5\n"));
-  test_cases.push_back(
-      make_tuple(OperatorScanPredicate::from_expression(*greater_than_(a, b), *node), "Column #0 >Column #1\n"));
+  auto test_cases = std::vector<std::pair<std::optional<std::vector<OperatorScanPredicate>>, std::string>>({
+    {OperatorScanPredicate::from_expression(*between_inclusive_(5, a, b), *node),
+     "Column #0 <=5\nColumn #1 >=5\n"},
+    {OperatorScanPredicate::from_expression(*greater_than_(a, 5), *node), "Column #0 >5\n"},
+    {OperatorScanPredicate::from_expression(*greater_than_(a, 5), *node), "Column #0 >5\n"},
+    {OperatorScanPredicate::from_expression(*greater_than_(a, b), *node), "Column #0 >Column #1\n"}
+  });
 
   auto actual = std::stringstream{};
 
