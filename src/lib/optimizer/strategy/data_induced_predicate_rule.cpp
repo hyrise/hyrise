@@ -63,8 +63,11 @@ void DataInducedPredicateRule::_apply_to_plan_without_subqueries(const std::shar
 
     const auto subquery = AggregateNode::make(expression_functional::expression_vector(), expression_functional::expression_vector(expression_functional::min_(reducer_side_expression), expression_functional::max_(reducer_side_expression)), reducer_node);
 
-    const auto min_c_y = ProjectionNode::make(expression_functional::expression_vector(expression_functional::min_(reducer_side_expression)), subquery);
-    const auto max_c_y = ProjectionNode::make(expression_functional::expression_vector(expression_functional::max_(reducer_side_expression)), subquery);
+    const auto min = ProjectionNode::make(expression_functional::expression_vector(expression_functional::min_(reducer_side_expression)), subquery);
+    const auto max = ProjectionNode::make(expression_functional::expression_vector(expression_functional::max_(reducer_side_expression)), subquery);
+    // TODO build this
+    // auto between_predicate = PredicateNode::make(expression_functional::between_inclusive_( /*TODO What goes in here? predicate_expression->left_operand() ? */  , min, max), subquery);
+
 
     const auto reduce_if_beneficial = [&](const auto side_of_join) {
       auto reduced_node = join_node->input(side_of_join);

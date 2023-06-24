@@ -35,7 +35,6 @@ class DataInducedPredicateRuleTest : public StrategyBaseTest {
   std::shared_ptr<DataInducedPredicateRule> _rule{std::make_shared<DataInducedPredicateRule>()};
 };
 
-// TODO Sandro  make this usefull
 TEST_F(DataInducedPredicateRuleTest, CreateSimpleReduction) {
   // The _a_a side of the inner join has values from 1-50, the _b_a side has values from 10-20. Based on that
   // selectivity, a semi join reduction should be created.
