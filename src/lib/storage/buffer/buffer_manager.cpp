@@ -291,13 +291,13 @@ void BufferManager::pin_for_read(const PageID page_id) {
       case Frame::LOCKED: {
         break;
       }
-      // case Frame::MARKED:  // TODO
+      // case Frame::MARKED: TODO
       case Frame::EVICTED: {
         if (frame->try_lock_exclusive(state_and_version)) {
           make_resident(page_id, AccessIntent::Read, state_and_version);
           frame->unlock_exclusive();
         }
-        break;  // TODO: Continue to skip yield
+        break;
       }
       default: {
         // TODO: Still call make resident here? we actually have many reads now
@@ -479,10 +479,15 @@ std::shared_ptr<BufferManagerMetrics> BufferManager::metrics() {
 }
 
 size_t BufferManager::memory_consumption() const {
-  // TODO: Fix number of frames
-  //   const size_t volatile_regions_bytes = std::accumulate(_volatile_regions.begin(), _volatile_regions.end(),
-  //                                                         [](auto region) { return region->memory_consumption(); });
-  return 0;
+  const auto volatile_regions_bytes =
+      std::accumulate(_volatile_regions.begin(), _volatile_regions.end(), 0,
+                      [](auto acc, auto region) { return acc + region->memory_consumption(); });
+  const auto ssd_region_bytes = _ssd_region->memory_consumption();
+  const auto buffer_pool_bytes = _primary_buffer_pool->memory_consumption();
+  const auto secondary_buffer_pool_bytes = _secondary_buffer_pool->memory_consumption();
+  const auto metrics_bytes = sizeof(*_metrics);
+  return sizeof(*this) + volatile_regions_bytes + ssd_region_bytes + buffer_pool_bytes + secondary_buffer_pool_bytes +
+         metrics_bytes;
 }
 
 //----------------------------------------------------
@@ -510,6 +515,7 @@ BufferManager::BufferPool::BufferPool(const size_t pool_size, const bool enable_
                                 : nullptr) {}
 
 void BufferManager::BufferPool::purge_eviction_queue() {
+  // TODO:
   auto item = EvictionItem{};
   for (auto i = size_t{0}; 0 < MAX_EVICTION_QUEUE_PURGES; ++i) {
     if (!eviction_queue->try_pop(item)) {
@@ -584,7 +590,7 @@ bool BufferManager::BufferPool::ensure_free_pages(const PageSizeType required_si
       continue;
     }
 
-    // TODO: Check version and then state like vmcache.evict
+    // TODO: Check version and then state like vmcache.evict, shared lock??
 
     // If the frame is already marked, we can evict it
     if (!item.can_evict(current_state_and_version)) {
@@ -663,6 +669,10 @@ void BufferManager::BufferPool::evict(EvictionItem& item, Frame* frame) {
 
 bool BufferManager::BufferPool::enabled() const {
   return memory_node != NO_NUMA_MEMORY_NODE;
+}
+
+size_t BufferManager::BufferPool::memory_consumption() const {
+  return sizeof(*this) + sizeof(*eviction_queue) + sizeof(EvictionQueue::value_type) * eviction_queue->unsafe_size();
 }
 
 size_t BufferManager::BufferPool::free_bytes_node() const {

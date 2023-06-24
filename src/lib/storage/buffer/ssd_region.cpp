@@ -84,7 +84,7 @@ void SSDRegion::read_page(PageID page_id, std::byte* data) {
 }
 
 size_t SSDRegion::memory_consumption() const {
-  return 0;  // TODO
+  return sizeof(*this);
 }
 
 std::array<SSDRegion::FileHandle, NUM_PAGE_SIZE_TYPES> SSDRegion::open_file_handles(const std::filesystem::path& path) {

@@ -113,6 +113,8 @@ class BufferManager : public boost::container::pmr::memory_resource, public Nonc
 
     size_t total_bytes_node() const;
 
+    size_t memory_consumption() const;
+
     // The maximum number of bytes that can be allocated TODO: make const
     size_t max_bytes;
 
