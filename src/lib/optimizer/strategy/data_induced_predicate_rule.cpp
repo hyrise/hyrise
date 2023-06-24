@@ -2,7 +2,6 @@
 
 #include "cost_estimation/abstract_cost_estimator.hpp"
 #include "expression/binary_predicate_expression.hpp"
-#include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/enable_make_for_lqp_node.hpp"
@@ -11,6 +10,8 @@
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
 #include "statistics/abstract_cardinality_estimator.hpp"
+#include "expression/expression_functional.hpp"
+
 
 namespace hyrise {
 
