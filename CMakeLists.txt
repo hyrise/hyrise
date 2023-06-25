@@ -86,11 +86,9 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}) # Put binaries into root
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib) # Put libraries into their own dir
 
 # C(++) Flags
-set(FLAGS_ALL "-fopenmp-simd")  # enables loop vectorization hints, but does not include the OpenMP runtime
+set(FLAGS_ALL "-fopenmp-simd -DBOOST_DISABLE_ASSERTS")  # enables loop vectorization hints, but does not include the OpenMP runtime, BOOST_DISABLE_ASSERTS ensure that boost does not use asserts that block auto-vectorization
 set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} ${FLAGS_ALL}")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${FLAGS_ALL}")
-
-set(FLAGS_ALL, "-DBOOST_DISABLE_ASSERTS")
 
 # Build the binary optimized for the current system, ignoring older systems.
 # Not all environments support march=native - check before we use it. Otherwise use mcpu.
