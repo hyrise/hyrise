@@ -35,8 +35,6 @@ std::shared_ptr<RowIDPosList> ColumnVsColumnTableScanImpl::scan_chunk(ChunkID ch
   const auto right_segment = chunk->get_segment(_right_column_id);
 
   std::shared_ptr<RowIDPosList> result;
-  auto matches_pin_guard = AllocatorPinGuard{result->get_stored_allocator()};
-
   /**
    * Reducing the compile time:
    *
@@ -128,9 +126,7 @@ template <EraseTypes erase_comparator_type, typename LeftIterable, typename Righ
 std::shared_ptr<RowIDPosList> __attribute__((noinline))
 ColumnVsColumnTableScanImpl::_typed_scan_chunk_with_iterables(ChunkID chunk_id, const LeftIterable& left_iterable,
                                                               const RightIterable& right_iterable) const {
-  // TODO: Replace
   auto matches_out = std::shared_ptr<RowIDPosList>{};
-  auto matches_pin_guard = AllocatorPinGuard{matches_out->get_stored_allocator()};
 
   left_iterable.with_iterators([&](auto left_it, const auto left_end) {
     right_iterable.with_iterators([&](auto right_it, const auto right_end) {
@@ -147,8 +143,9 @@ std::shared_ptr<RowIDPosList> __attribute__((noinline))
 ColumnVsColumnTableScanImpl::_typed_scan_chunk_with_iterators(ChunkID chunk_id, LeftIterator& left_it,
                                                               const LeftIterator& left_end, RightIterator& right_it,
                                                               const RightIterator& right_end) const {
-  auto matches_out = std::make_shared<RowIDPosList>();
-  auto matches_pin_guard = AllocatorPinGuard{matches_out->get_stored_allocator()};
+  auto allocator = PolymorphicAllocator<size_t>{};
+  auto matches_pin_guard = AllocatorPinGuard{allocator};
+  auto matches_out = std::make_shared<RowIDPosList>(allocator);
 
   bool condition_was_flipped = false;
   auto maybe_flipped_condition = _predicate_condition;
