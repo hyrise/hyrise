@@ -300,15 +300,13 @@ target_link_libraries(hyriseTest hyrise ${LIBRARIES})
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 target_compile_options(hyriseTest PUBLIC -Xclang -fno-pch-timestamp)
 endif()
-if(NOT ${CMAKE_VERSION} VERSION_LESS "3.16.0")
-    target_precompile_headers(hyriseTest PRIVATE
-        <gtest/gtest.h>
-        [["all_parameter_variant.hpp"]]
-        [["storage/create_iterable_from_segment.hpp"]]
-        [["storage/table.hpp"]]
-        [["types.hpp"]]
-    )
-endif()
+target_precompile_headers(hyriseTest PRIVATE
+    <gtest/gtest.h>
+    [["all_parameter_variant.hpp"]]
+    [["storage/create_iterable_from_segment.hpp"]]
+    [["storage/table.hpp"]]
+    [["types.hpp"]]
+)
 
 # Configure hyriseSystemTest
 add_executable(hyriseSystemTest ${SYSTEM_TEST_SOURCES})

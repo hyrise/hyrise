@@ -1,8 +1,5 @@
 #include "optimizer.hpp"
 
-#include <memory>
-#include <unordered_set>
-
 #include "cost_estimation/cost_estimator_logical.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_subquery_expression.hpp"
@@ -34,7 +31,11 @@ namespace {
 
 using namespace hyrise;  // NOLINT(build/namespaces)
 
-std::vector<std::shared_ptr<const AbstractLQPNode>> uncorrelated_subqueries_per_node(const auto& node) {
+using LQPNodesByLQP = std::unordered_map<std::shared_ptr<const AbstractLQPNode>,
+                                         std::unordered_set<std::shared_ptr<const AbstractLQPNode>>>;
+
+std::vector<std::shared_ptr<const AbstractLQPNode>> uncorrelated_subqueries_per_node(
+    const std::shared_ptr<const AbstractLQPNode>& node) {
   auto uncorrelated_subqueries = std::vector<std::shared_ptr<const AbstractLQPNode>>{};
   for (const auto& expression : node->node_expressions) {
     visit_expression(expression, [&](const auto& sub_expression) {
@@ -50,7 +51,9 @@ std::vector<std::shared_ptr<const AbstractLQPNode>> uncorrelated_subqueries_per_
   return uncorrelated_subqueries;
 }
 
-void assign_node_to_lqp_recursively(const auto& subquery_root_node, const auto& root_node, auto& nodes_by_lqp) {
+void assign_node_to_lqp_recursively(const std::shared_ptr<const AbstractLQPNode>& subquery_root_node,
+                                    const std::shared_ptr<const AbstractLQPNode>& root_node,
+                                    LQPNodesByLQP& nodes_by_lqp) {
   visit_lqp(subquery_root_node, [&](auto& node) {
     nodes_by_lqp[root_node].emplace(node);
     for (const auto& uncorrelated_subquery : uncorrelated_subqueries_per_node(node)) {
@@ -60,8 +63,9 @@ void assign_node_to_lqp_recursively(const auto& subquery_root_node, const auto& 
   });
 }
 
-void validate_lqp_with_uncorrelated_subqueries(const auto& lqp, const auto& root_lqp, const auto& nodes_by_lqp) {
-  // If you can think of a way in which an LQP can be corrupt, please add it!
+void validate_lqp_with_uncorrelated_subqueries(const std::shared_ptr<const AbstractLQPNode>& lqp,
+                                               const std::shared_ptr<const AbstractLQPNode>& root_lqp,
+                                               const LQPNodesByLQP& nodes_by_lqp) {
   // (1) Make sure that all outputs found in an LQP are also part of the same LQP (excluding uncorrelated subqueries).
   // (2) Make sure each node has the number of inputs expected for that node type.
   // (3) Make sure that for all LQPColumnExpressions, the original_node is part of the LQP.
@@ -159,6 +163,10 @@ void validate_lqp_with_uncorrelated_subqueries(const auto& lqp, const auto& root
 }  // namespace
 
 namespace hyrise {
+
+OptimizerRuleMetrics::OptimizerRuleMetrics(const std::string& init_rule_name,
+                                           const std::chrono::nanoseconds init_duration)
+    : rule_name{init_rule_name}, duration{init_duration} {}
 
 /**
  * Some optimizer rules affect each other, as noted below. Sometimes, a later rule enables a new optimization for an
@@ -287,12 +295,11 @@ std::shared_ptr<AbstractLQPNode> Optimizer::optimize(
   }
 
   for (const auto& rule : _rules) {
-    Timer rule_timer{};
+    auto rule_timer = Timer{};
     rule->apply_to_plan(root_node);
-    auto rule_duration = rule_timer.lap();
 
     if (rule_durations) {
-      rule_durations->emplace_back(OptimizerRuleMetrics{rule->name(), rule_duration});
+      rule_durations->emplace_back(rule->name(), rule_timer.lap());
     }
 
     if constexpr (HYRISE_DEBUG) {
@@ -300,7 +307,7 @@ std::shared_ptr<AbstractLQPNode> Optimizer::optimize(
     }
   }
 
-  // Remove LogicalPlanRootNode
+  // Remove LogicalPlanRootNode.
   auto optimized_node = root_node->left_input();
   root_node->set_left_input(nullptr);
 
@@ -308,17 +315,18 @@ std::shared_ptr<AbstractLQPNode> Optimizer::optimize(
 }
 
 void Optimizer::validate_lqp(const std::shared_ptr<AbstractLQPNode>& root_node) {
+  // If you can think of a way in which an LQP can be corrupt, please add it!
   // First, collect all LQPs (the main LQP and all uncorrelated subqueries).
   auto lqps = std::vector<std::shared_ptr<AbstractLQPNode>>{root_node};
-  auto subquery_expressions_by_lqp = collect_lqp_subquery_expressions_by_lqp(root_node, true);
-  for (const auto& [lqp, _] : subquery_expressions_by_lqp) {
+  for (const auto& [lqp, _] : collect_lqp_subquery_expressions_by_lqp(root_node, true)) {
     lqps.emplace_back(lqp);
   }
 
-  auto nodes_by_lqp = std::unordered_map<std::shared_ptr<const AbstractLQPNode>,
-                                         std::unordered_set<std::shared_ptr<const AbstractLQPNode>>>{};
-  // Second, assign each LQPNode to its LQP. Uncorrelated subqueries are treated like normal LQPNodes since their output
-  // can also be used multiple times.
+  auto nodes_by_lqp = LQPNodesByLQP{};
+  // Second, assign each LQPNode to its LQP. Since the results of uncorrelated subquery LQPs do not depend on correlated
+  // parameters, we can use them in multiple LQPSubqueryExpressions and treat them like normal LQPNodes. However,
+  // correlated subqueries must not share nodes with any other (sub-)LQP. Correlated subquery LQPs must not be reused,
+  // they are completely managed by the ExpressionEvaluator, which deep copies them for each row.
   for (const auto& lqp : lqps) {
     assign_node_to_lqp_recursively(lqp, lqp, nodes_by_lqp);
   }

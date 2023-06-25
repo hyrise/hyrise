@@ -122,6 +122,7 @@ void EnumerateCcp::_enumerate_cmp(const JoinGraphVertexSet& primary_vertex_set) 
   std::vector<size_t> reverse_vertex_indices;
   auto current_vertex_idx = neighborhood.find_first();
 
+  // NOLINTNEXTLINE(cppcoreguidelines-avoid-do-while)
   do {
     reverse_vertex_indices.emplace_back(current_vertex_idx);
   } while ((current_vertex_idx = neighborhood.find_next(current_vertex_idx)) != JoinGraphVertexSet::npos);

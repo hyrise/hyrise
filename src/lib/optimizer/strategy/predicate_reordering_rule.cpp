@@ -35,7 +35,7 @@ bool is_predicate_style_node(const std::shared_ptr<AbstractLQPNode>& node) {
   // might place the join below a ValidateNode, but since it is not a "proper" join (i.e., one that returns columns
   // from multiple tables), the ValidateNode will still be able to operate on the semi join's output.
   if (node->type == LQPNodeType::Join) {
-    const auto& join_node = static_cast<JoinNode&>(*node);
+    const auto& join_node = static_cast<const JoinNode&>(*node);
     if (is_semi_or_anti_join(join_node.join_mode) && join_node.join_predicates().size() == 1) {
       return true;
     }
@@ -103,22 +103,36 @@ void PredicateReorderingRule::_reorder_predicates(
   // CardinalityEstimator that we will not change the LQP below the `input` node by marking it as a "vertex".
   // This allows the CardinalityEstimator to compute the statistics of `input` once, cache them and then re-use them.
   const auto caching_cost_estimator = cost_estimator->new_instance();
-  const auto caching_cardinality_estimator = cost_estimator->cardinality_estimator;
+  const auto& caching_cardinality_estimator = cost_estimator->cardinality_estimator;
   caching_cardinality_estimator->guarantee_join_graph(JoinGraph{{input}, {}});
 
-  const auto input_cardinality = caching_cardinality_estimator->estimate_cardinality(input);
+  // const auto input_cardinality = caching_cardinality_estimator->estimate_cardinality(input);
 
   // Estimate the output cardinalities of each individual predicate on top of the input LQP, i.e., predicates are
   // estimated independently. Torder the predicates, we want to favor the predicate with the most beneficial ratio of
   // selectivity and cost. For simplification, we just look at (input cardinality - output cardinality) / cost.
+  // TODO(dey4ss): Evaluate minimizing cost / output cardinality.
+  // Evaluated approaches:
+  //     0) min #out -> baseline
+  //     1) max (#in - #out) / cost
+  //     2) min cost * #out
+  //     3) min cost + #out
+  //     4) min cost
+  //     5) max (#in - #out) / (cost - #out)
+  //     6) min cost * (#out / #in)
+  //     7) min (cost - #out) * (#out / #in)
+  //     8) min #out + log(cost)
+  //     9) min #out * log(cost)
+  //    10) min #out + log(cost - #out)
+  //    11) min #out * log(cost - #out)
   auto nodes_and_cardinalities = std::vector<std::pair<std::shared_ptr<AbstractLQPNode>, Cardinality>>{};
   nodes_and_cardinalities.reserve(predicates.size());
   for (const auto& predicate : predicates) {
     predicate->set_left_input(input);
     const auto output_cardinality = caching_cardinality_estimator->estimate_cardinality(predicate);
-    const auto cost = caching_cost_estimator->estimate_node_cost(predicate);
-
-    nodes_and_cardinalities.emplace_back(predicate, (input_cardinality - output_cardinality) / cost);
+    //const auto cost = caching_cost_estimator->estimate_node_cost(predicate);
+    // const auto benefit = output_cardinality + std::log(cost * output_cardinality);
+    nodes_and_cardinalities.emplace_back(predicate, output_cardinality);
   }
 
   // Untie predicates from LQP, so we can freely retie them.
@@ -126,7 +140,7 @@ void PredicateReorderingRule::_reorder_predicates(
     lqp_remove_node(predicate, AllowRightInput::Yes);
   }
 
-  // Sort in ascending order. The "most beneficial" predicate is a the end.
+  // Sort in descending order. The "most beneficial" predicate is a the end.
   std::sort(nodes_and_cardinalities.begin(), nodes_and_cardinalities.end(),
             [](auto& left, auto& right) { return left.second < right.second; });
 

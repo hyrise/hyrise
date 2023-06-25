@@ -922,6 +922,8 @@ TEST_F(CardinalityEstimatorTest, ValueScanWithUncorrelatedSubquery) {
   // Case (i): Predicate column = <subquery>
   // Example query:
   //     SELECT n_name FROM nation WHERE n_regionkey = (SELECT r_regionkey FROM region WHERE r_name = 'ASIA');
+  // In this case, SELECT r_regionkey ... is a selection on the primary key. We know it will result in a single value,
+  // so using an uncorrelated subquery to get this value is feasible.
   // clang-format off
   const auto subquery =
   ProjectionNode::make(expression_vector(c_y),
@@ -941,7 +943,7 @@ TEST_F(CardinalityEstimatorTest, ValueScanWithUncorrelatedSubquery) {
 
   EXPECT_FLOAT_EQ(estimator.estimate_cardinality(lqp), estimator.estimate_cardinality(node_a));
 
-  // Ensure that other predicate conditions still lead to forwarding the input estimates.
+  // Ensure that any predicate condition other than equals and between still lead to forwarding the input estimates.
   for (const auto predicate_condition :
        {PredicateCondition::LessThan, PredicateCondition::LessThanEquals, PredicateCondition::NotEquals,
         PredicateCondition::GreaterThan, PredicateCondition::GreaterThanEquals}) {
@@ -971,6 +973,16 @@ TEST_F(CardinalityEstimatorTest, BetweenScanWithUncorrelatedSubquery) {
 
   EXPECT_FLOAT_EQ(estimator.estimate_cardinality(lqp), estimator.estimate_cardinality(semi_join_lqp));
   EXPECT_LT(estimator.estimate_cardinality(lqp), estimator.estimate_cardinality(node_a));
+
+  // Ensure that other between predicate conditions behave the same.
+  for (const auto predicate_condition :
+       {PredicateCondition::BetweenLowerExclusive, PredicateCondition::BetweenUpperExclusive,
+        PredicateCondition::BetweenExclusive}) {
+    const auto predicate =
+        std::make_shared<BetweenExpression>(predicate_condition, a_a, lqp_subquery_(min_c_y), lqp_subquery_(max_c_y));
+    lqp = PredicateNode::make(predicate, node_a);
+    EXPECT_FLOAT_EQ(estimator.estimate_cardinality(lqp), estimator.estimate_cardinality(semi_join_lqp));
+  }
 
   // Ensure correlated subqueries are not considered and we forward the input estimates.
   // clang-format off
@@ -1007,16 +1019,6 @@ TEST_F(CardinalityEstimatorTest, BetweenScanWithUncorrelatedSubquery) {
   // clang-format on
   lqp = PredicateNode::make(between_inclusive_(a_a, lqp_subquery_(min_c_y_filtered), lqp_subquery_(max_c_y)), node_a);
   EXPECT_FLOAT_EQ(estimator.estimate_cardinality(lqp), estimator.estimate_cardinality(node_a));
-
-  // Ensure that other predicate conditions still lead to forwarding the input estimates.
-  for (const auto predicate_condition :
-       {PredicateCondition::BetweenLowerExclusive, PredicateCondition::BetweenUpperExclusive,
-        PredicateCondition::BetweenExclusive}) {
-    const auto predicate =
-        std::make_shared<BetweenExpression>(predicate_condition, a_a, lqp_subquery_(min_c_y), lqp_subquery_(max_c_y));
-    lqp = PredicateNode::make(predicate, node_a);
-    EXPECT_FLOAT_EQ(estimator.estimate_cardinality(lqp), estimator.estimate_cardinality(node_a));
-  }
 }
 
 TEST_F(CardinalityEstimatorTest, BetweenScanWithUncorrelatedSubqueryAndProjections) {

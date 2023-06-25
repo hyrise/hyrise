@@ -419,12 +419,50 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_predicate_node(
   // TODO(anybody) Complex predicates are not processed right now and statistics objects are forwarded.
   //               That implies estimating a selectivity of 1 for such predicates.
   if (!operator_scan_predicates) {
-    // We might not have resolved the predicate because it contains subqueries. Unfortunately, we do not know the
-    // values of predicates on uncorrelated subquery results before query execution. However, if the predicate has an
-    // equals or between condition, it acts as a filter comparable to a semi-join with the join key of the subquery
-    // result (see examples below). We obtain such predicates with subquery results from the JoinToPredicateRewriteRule.
-    // This rule also checks that all preconditions are met to ensure correct query results. Thus, we do not check them
-    // here. For more information about this query rewrite, see `join_to_predicate_rewrite_rule.hpp`.
+    // We can obtain predicates with subquery results from the JoinToPredicateRewriteRule, which turns (semi-)joins
+    // into predicates. OperatorScanPredicate::from_expression(...) cannot resolve these predicates. They act as a
+    // filter comparable to a semi-join with the join key of the subquery result (see examples below).
+    //
+    // The JoinToPredicateRewriteRule checks that all preconditions are met to ensure correct query results.
+    // Especially, it guarantees that the subqueries return a single row. Thus, we do not check this here (also, the
+    // TableScan operator checks this during execution). For more information about this query rewrite, see
+    // `join_to_predicate_rewrite_rule.hpp`. In the following, we only check if the predicates look the way they should
+    // after the mentioned optimizer rule has reformulated them. If this is the case, we estimate their cardinality in
+    // the same way we do for the original, not rewritten semi-joins. In case other subquery predicates are found which
+    // have a different structure as expected, we default to assume the worst case: the input is not filtered at all
+    // and we return the input statistics.
+    //
+    // The JoinToPredicateRewriteRule creates query plans that look loke this:
+    //
+    // Case (i): An equals predicate on a unique column guarantees to emit a single tuple, where we scan another table
+    // for the resulting join key:
+    //
+    //                 [ Predicate n_regionkey = <subquery> ]
+    //                 /                             |
+    //                /                  [ Projection r_regionkey ]
+    //               |                               |
+    //               |                  [ Predicate r_name = 'ASIA' ]
+    //               |                               |
+    //   [ StoredTableNode nation ]      [ StoredTableNode region ]
+    //
+    // Case (ii): A between predicate on a column with an order dependency (OD) on the join key guarantees to emit the
+    // minimal and maximal join key. In the example, the OD d_date_sk |-> d_year holds, i.e., ordering date_dim by
+    // d_date_sk also orders d_year. Thus, a tuple with a smaller d_year than another tuple also has a smaller
+    // d_date_sk (d_date_sk for d_year = 2001 is always smaller than for d_year = 2001). Selecting a year or a
+    // sequence of years (d_year = 2000 or d_year BETWEEN 2000 AND 2001) guarantees all join keys between the min and
+    // max join key appear in the selected tuple. We scan the other web_sales by these min/max values rather than
+    // joining the two tables.
+    //
+    //              [ Predicate ws_sold_date_sk BETWEEN <subquery_a> AND <subquery_b> ]
+    //                /                                     |                |
+    //               |                  [ Projection MIN(d_date_sk ) ]  [ Projection MAX(d_date_sk) ]
+    //               |                                      |                |
+    //               |                          [ Aggregate MIN(d_date_sk), MAX(d_date_sk) ]
+    //               |                                             |
+    //               |                                  [ Predicate d_year = 2000 ]
+    //               |                                             |
+    //   [ StoredTableNode web_sales ]                  [ StoredTableNode date_dim ]
+    //
     const auto predicate_expression = std::dynamic_pointer_cast<AbstractPredicateExpression>(predicate);
     if (!predicate_expression) {
       return input_table_statistics;
@@ -436,7 +474,8 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_predicate_node(
     auto column_expression = std::shared_ptr<AbstractExpression>{};
     const auto predicate_condition = predicate_expression->predicate_condition;
 
-    // Case (i): Binary predicate with column = <subquery>. Equivalent to a semi-join with a table containing one row.
+    // The assumption is that a predicate before filters for one tuple from a unique column. This was checked by the
+    // JoinToPredicateRewriteRule.
     // Example query:
     //     SELECT n_name FROM nation WHERE n_regionkey = (SELECT r_regionkey FROM region WHERE r_name = 'ASIA');
     // We can get the statistics directly from the LQPSubqueryExpression.
@@ -467,7 +506,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_predicate_node(
     //      WHERE ws_sold_date_sk BETWEEN (SELECT MIN(d_date_sk) FROM date_dim WHERE d_year = 2000)
     //                                AND (SELECT MAX(d_date_sk) FROM date_dim WHERE d_year = 2000);
     // However, we must ensure that we have a min/max aggregate to get the the lower/upper bound of the join key.
-    if (predicate_condition == PredicateCondition::BetweenInclusive) {
+    if (is_between_predicate_condition(predicate_condition)) {
       column_expression = arguments[0];
       const auto& lower_bound_subquery = std::dynamic_pointer_cast<LQPSubqueryExpression>(arguments[1]);
       const auto& upper_bound_subquery = std::dynamic_pointer_cast<LQPSubqueryExpression>(arguments[2]);
@@ -495,7 +534,10 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_predicate_node(
       // Check that the AggregateFunctions are as expected and are performed on the same column, and the nodes have the
       // same input. The predicate must look like `BETWEEN (SELECT MIN(key) ...) AND (SELECT MAX(key) ...))`. The
       // aggregates guarantee to select the minimal and maximal join key of the underlying subquery. Furthermore, they
-      // must both operate on the same join key and on the same input so preserve all join keys.
+      // must both operate on the same join key and on the same input so preserve all join keys. A side effect of
+      // enforcing the same input node is that the aggregates must stem from the same subquery, which is only possible
+      // from a query rewrite. If they stem from a user's query, there would be two subqueries (whose operators will be
+      // de-duplicated in the LQPTranslator).
       auto subquery_origin_node = lower_bound_lqp.left_input();
 
       if (lower_bound_aggregate_expression->aggregate_function != AggregateFunction::Min ||
@@ -521,7 +563,9 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_predicate_node(
       if (subquery_origin_node->type == LQPNodeType::Aggregate) {
         const auto& node_expressions = subquery_origin_node->node_expressions;
         // Check that the AggregateNode only aggregates the min and max join key. By checking the number of node
-        // expressions, we also ensure the values are not grouped by any column.
+        // expressions, we also ensure the values are not grouped by any column: If the AggregateNode has two node
+        // expressions, one is the MIN(...) and one is the MAX(...), there cannot be another node expression for a
+        // GROUP BY column.
         if (node_expressions.size() != 2 || !find_expression_idx(*lower_bound_aggregate_expression, node_expressions) ||
             !find_expression_idx(*upper_bound_aggregate_expression, node_expressions)) {
           return input_table_statistics;
