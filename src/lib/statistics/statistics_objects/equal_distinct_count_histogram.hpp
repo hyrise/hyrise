@@ -27,7 +27,7 @@ class EqualDistinctCountHistogram : public AbstractHistogram<T> {
                               pmr_vector<HistogramCountType>&& bin_heights,
                               const HistogramCountType distinct_count_per_bin, const BinID bin_count_with_extra_value,
                               const HistogramDomain<T>& domain = {});
-  ~EqualDistinctCountHistogram();
+
   /**
    * Create an EqualDistinctCountHistogram for a column (spanning all Segments) of a Table
    * @param max_bin_count   Desired number of bins. Less might be created, but never more. Must not be zero.

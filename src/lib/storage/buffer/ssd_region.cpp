@@ -94,7 +94,7 @@ std::array<SSDRegion::FileHandle, NUM_PAGE_SIZE_TYPES> SSDRegion::open_file_hand
   const auto now = std::chrono::system_clock::now();
   const auto timestamp = std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch()).count();
 
-  for (auto i = 0; i < NUM_PAGE_SIZE_TYPES; ++i) {
+  for (auto i = size_t{0}; i < NUM_PAGE_SIZE_TYPES; ++i) {
     const auto file_name =
         path / ("hyrise-buffer-pool-" + std::to_string(timestamp) + "-type-" + std::to_string(i) + ".bin");
     array[i] = {open_file_descriptor(file_name), file_name};

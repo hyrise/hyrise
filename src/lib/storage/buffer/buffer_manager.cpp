@@ -33,7 +33,7 @@ std::byte* create_mapped_region() {
 
   if (mapped_memory == MAP_FAILED) {
     const auto error = errno;
-    Fail("Failed to map volatile pool region: " + strerror(errno));
+    Fail("Failed to map volatile pool region: " + strerror(error));
   }
 
   return mapped_memory;
@@ -58,7 +58,7 @@ std::array<std::shared_ptr<VolatileRegion>, NUM_PAGE_SIZE_TYPES> create_volatile
 void unmap_region(std::byte* region) {
   if (munmap(region, DEFAULT_RESERVED_VIRTUAL_MEMORY) < 0) {
     const auto error = errno;
-    Fail("Failed to unmap volatile pool region: " + strerror(errno));
+    Fail("Failed to unmap volatile pool region: " + strerror(error));
   }
 }
 
@@ -264,7 +264,7 @@ void BufferManager::make_resident(const PageID page_id, const AccessIntent acces
       if (!_primary_buffer_pool->ensure_free_pages(page_id.size_type())) {
         yield(repeat);
         continue;
-      };
+      }
       _secondary_buffer_pool->release_page(page_id.size_type());
       region->move_to_numa_node(page_id, _primary_buffer_pool->memory_node);
       _metrics->total_hits.fetch_add(1, std::memory_order_relaxed);
@@ -375,7 +375,7 @@ void BufferManager::protect_page(PageID page_id) {
     auto data = get_region(page_id)->get_page(page_id);
     if (mprotect(data, bytes_for_size_type(page_id.size_type()), PROT_NONE) != 0) {
       const auto error = errno;
-      Fail("Failed to mprotect: " + strerror(errno));
+      Fail("Failed to mprotect: " + strerror(error));
     }
   }
 }
@@ -385,7 +385,7 @@ void BufferManager::unprotect_page(PageID page_id) {
     auto data = get_region(page_id)->get_page(page_id);
     if (mprotect(data, bytes_for_size_type(page_id.size_type()), PROT_READ | PROT_WRITE) != 0) {
       const auto error = errno;
-      Fail("Failed to mprotect: " + strerror(errno));
+      Fail("Failed to mprotect: " + strerror(error));
     }
   }
 }

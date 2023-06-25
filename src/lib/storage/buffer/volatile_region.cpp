@@ -11,20 +11,21 @@ namespace hyrise {
 
 VolatileRegion::VolatileRegion(const PageSizeType size_type, std::byte* region_start, std::byte* region_end,
                                std::shared_ptr<BufferManagerMetrics> metrics)
-    : _frames(std::min(INITIAL_SLOTS_PER_REGION, (region_end - region_start) / bytes_for_size_type(size_type))),
-      _metrics(metrics),
-      _free_slots(_frames.size()),
-      _size_type(size_type),
+    : _size_type(size_type),
       _region_start(region_start),
-      _region_end(region_end) {
+      _region_end(region_end),
+      _frames(std::min(INITIAL_SLOTS_PER_REGION, (region_end - region_start) / bytes_for_size_type(size_type))),
+      _free_slots(_frames.size()),
+      _metrics(metrics) {
   DebugAssertPageAligned(region_start);
   DebugAssert(region_start < region_end, "Region is too small");
-  DebugAssert((region_end - region_start) < DEFAULT_RESERVED_VIRTUAL_MEMORY, "Region start and end dont match");
+  DebugAssert(static_cast<size_t>(region_end - region_start) < DEFAULT_RESERVED_VIRTUAL_MEMORY,
+              "Region start and end dont match");
   _free_slots.set();
   if constexpr (ENABLE_MPROTECT) {
     if (mprotect(region_start, region_end - region_start, PROT_NONE) != 0) {
       const auto error = errno;
-      Fail("Failed to mprotect: " + strerror(errno));
+      Fail("Failed to mprotect: " + strerror(error));
     }
   }
 }
@@ -59,7 +60,7 @@ void VolatileRegion::free(PageID page_id) {
   auto ptr = get_page(page_id);
   if (madvise(ptr, num_bytes, flags) < 0) {
     const auto error = errno;
-    Fail("Failed to madvice region: " + strerror(errno));
+    Fail("Failed to madvice region: " + strerror(error));
   }
   _metrics->num_madvice_free_calls.fetch_add(1, std::memory_order_relaxed);
 }
@@ -79,7 +80,7 @@ std::pair<PageID, std::byte*> VolatileRegion::allocate() {
   if constexpr (ENABLE_MPROTECT) {
     if (mprotect(ptr, bytes_for_size_type(_size_type), PROT_READ | PROT_WRITE) != 0) {
       const auto error = errno;
-      Fail("Failed to mprotect: " + strerror(errno));
+      Fail("Failed to mprotect: " + strerror(error));
     }
   }
   return std::make_pair(page_id, ptr);
@@ -101,7 +102,7 @@ void VolatileRegion::deallocate(const PageID page_id) {
     auto ptr = get_page(page_id);
     if (mprotect(ptr, bytes_for_size_type(_size_type), PROT_NONE) != 0) {
       const auto error = errno;
-      Fail("Failed to mprotect: " + strerror(errno));
+      Fail("Failed to mprotect: " + strerror(error));
     }
   }
 }

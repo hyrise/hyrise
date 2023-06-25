@@ -47,7 +47,7 @@ class BufferManager : public boost::container::pmr::memory_resource, public Nonc
 
   BufferManager(const Config config);
 
-  ~BufferManager();
+  ~BufferManager() override;
 
   BufferManager& operator=(BufferManager&& other) noexcept;
 
@@ -153,13 +153,13 @@ class BufferManager : public boost::container::pmr::memory_resource, public Nonc
 
   Config _config;  // TODO: Const
 
-  std::shared_ptr<BufferManagerMetrics> _metrics;
-
   std::byte* _mapped_region;
 
-  std::shared_ptr<SSDRegion> _ssd_region;
+  std::shared_ptr<BufferManagerMetrics> _metrics;
 
   std::array<std::shared_ptr<VolatileRegion>, NUM_PAGE_SIZE_TYPES> _volatile_regions;
+
+  std::shared_ptr<SSDRegion> _ssd_region;
 
   std::shared_ptr<BufferPool> _secondary_buffer_pool;
 

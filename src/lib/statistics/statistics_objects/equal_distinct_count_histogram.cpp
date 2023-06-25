@@ -100,16 +100,6 @@ EqualDistinctCountHistogram<T>::EqualDistinctCountHistogram(pmr_vector<T>&& bin_
 }
 
 template <typename T>
-EqualDistinctCountHistogram<T>::~EqualDistinctCountHistogram() {
-  // auto minima_pin_guard = WritePinGuard{_bin_minima};
-  // _bin_minima.clear();
-  // auto maxima_pin_guard = WritePinGuard{_bin_maxima};
-  // _bin_maxima.clear();
-  // auto heights_pin_guard = WritePinGuard{_bin_heights};
-  // _bin_heights.clear();
-}
-
-template <typename T>
 std::shared_ptr<EqualDistinctCountHistogram<T>> EqualDistinctCountHistogram<T>::from_column(
     const Table& table, const ColumnID column_id, const BinID max_bin_count, const HistogramDomain<T>& domain) {
   Assert(max_bin_count > 0, "max_bin_count must be greater than zero ");

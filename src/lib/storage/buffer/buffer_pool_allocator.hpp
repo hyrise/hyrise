@@ -101,8 +101,8 @@ class BufferPoolAllocator {
   }
 
  private:
-  std::weak_ptr<BufferPoolAllocatorObserver> _observer;
   boost::container::pmr::memory_resource* _memory_resource;
+  std::weak_ptr<BufferPoolAllocatorObserver> _observer;
 };
 
 }  // namespace hyrise

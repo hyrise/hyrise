@@ -117,11 +117,11 @@ class TableBuilder {
   TableBuilder(const ChunkOffset chunk_size, const boost::hana::tuple<DataTypes...>& types, const Names& names,
                const PolymorphicAllocator<size_t> allocator = PolymorphicAllocator<size_t>{},
                const ChunkOffset estimated_rows = ChunkOffset{0})
-      : _alloc(allocator),
+      : _estimated_rows_per_chunk(std::min(estimated_rows, chunk_size)),
+        _alloc(allocator),
+        _row_count{0},
         _value_vectors(hana::replicate<hana::tuple_tag>(_alloc, hana::length(types))),
-        _null_value_vectors(hana::replicate<hana::tuple_tag>(_alloc, hana::length(types))),
-        _estimated_rows_per_chunk(std::min(estimated_rows, chunk_size)),
-        _row_count{0} {
+        _null_value_vectors(hana::replicate<hana::tuple_tag>(_alloc, hana::length(types))) {
     BOOST_HANA_CONSTANT_ASSERT(boost::hana::size(names) == boost::hana::size(types));
 
     // Iterate over the column types/names and create the columns.

@@ -13,7 +13,6 @@
 #include "storage/segment_iterables/any_segment_iterator.hpp"
 #include "types.hpp"
 #include "utils/performance_warning.hpp"
-#define BOOST_DISABLE_ASSERTS
 
 namespace hyrise {
 
