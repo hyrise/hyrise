@@ -127,17 +127,8 @@ class RowIDPosList final : public AbstractPosList, private pmr_vector<RowID> {
 
   size_t memory_usage(const MemoryUsageCalculationMode /*mode*/) const final;
 
-  // The double inheritance from AbstractPosList and pmr_vector requires an explicit
-  // selection of the == operator, otherwise it is ambiguous.
-  friend bool operator==(const RowIDPosList& lhs, const RowIDPosList& rhs);
-
  private:
   bool _references_single_chunk = false;
 };
-
-inline bool operator==(const RowIDPosList& lhs, const RowIDPosList& rhs) {
-  PerformanceWarning("Using slow PosList comparison.");
-  return std::equal(lhs.cbegin(), lhs.cend(), rhs.cbegin(), rhs.cend());
-}
 
 }  // namespace hyrise
