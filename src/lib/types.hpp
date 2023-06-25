@@ -86,7 +86,7 @@ using PolymorphicAllocator = boost::container::scoped_allocator_adaptor<BufferPo
 // AllTypeVariant). This way, they can be compared to the pmr_string stored in the table. Strings that are built, e.g.,
 // for debugging, do not need to use PMR. This might sound complicated, but since the Hyrise data type registered in
 // all_type_variant.hpp is pmr_string, the compiler will complain if you use std::string when you should use pmr_string.
-using pmr_string = boost::container::basic_string<char, std::char_traits<char>, PolymorphicAllocator<char>>;
+using pmr_string = std::basic_string<char, std::char_traits<char>, PolymorphicAllocator<char>>;
 // using pmr_string = std::basic_string<char, std::char_traits<char>, PolymorphicAllocator<char>>;
 
 // A vector that gets its memory from a memory resource. It is is not necessary to replace each and every std::vector
@@ -99,7 +99,7 @@ using pmr_string = boost::container::basic_string<char, std::char_traits<char>, 
 //   pmr_vector<int> a, b{alloc};
 //   a = b;  // a does NOT use alloc, neither for its current values, nor for future allocations (#623).
 template <typename T>
-using pmr_vector = boost::container::vector<T, PolymorphicAllocator<T>>;
+using pmr_vector = std::vector<T, PolymorphicAllocator<T>>;
 
 template <typename T>
 using pmr_ring_buffer = boost::circular_buffer<T, PolymorphicAllocator<T>>;
@@ -287,9 +287,9 @@ namespace std {
 // `using pmr_string = std::string` above. If we had `pmr_string` here, we would try to redefine an existing hash
 // function.
 template <>
-struct hash<boost::container::basic_string<char, std::char_traits<char>, hyrise::PolymorphicAllocator<char>>> {
-  size_t operator()(const boost::container::basic_string<char, std::char_traits<char>,
-                                                         hyrise::PolymorphicAllocator<char>>& string) const {
+struct hash<std::basic_string<char, std::char_traits<char>, hyrise::PolymorphicAllocator<char>>> {
+  size_t operator()(
+      const std::basic_string<char, std::char_traits<char>, hyrise::PolymorphicAllocator<char>>& string) const {
     return std::hash<std::string_view>{}(string.c_str());
   }
 };

@@ -20,12 +20,6 @@ template <class T>
 class BufferPoolAllocator {
  public:
   using value_type = T;
-  using pointer = T*;
-  using const_pointer = const T*;
-  using void_pointer = void*;
-  using difference_type = std::ptrdiff_t;
-  using reference = typename add_reference<T>::type;
-  using const_reference = typename add_reference<const T>::type;
 
   BufferPoolAllocator() : _memory_resource(boost::container::pmr::new_delete_resource()) {
     DebugAssert(_memory_resource != nullptr, "_memory_resource is empty");
@@ -67,22 +61,22 @@ class BufferPoolAllocator {
     return _memory_resource != other.memory_resource() || _observer.lock() != other.current_observer().lock();
   }
 
-  [[nodiscard]] pointer allocate(std::size_t n) {
+  [[nodiscard]] T* allocate(std::size_t n) {
     auto ptr = _memory_resource->allocate(sizeof(value_type) * n, alignof(T));
     if (auto observer = _observer.lock()) {
       const auto page_id = BufferManager::get().find_page(ptr);
       observer->on_allocate(page_id);
     }
-    return static_cast<pointer>(ptr);
+    return static_cast<T*>(ptr);
   }
 
-  void deallocate(const pointer& ptr, std::size_t n) {
+  void deallocate(T* ptr, std::size_t n) {
     // TODO: Count deallocates for nested resources
     if (auto observer = _observer.lock()) {
       const auto page_id = BufferManager::get().find_page(ptr);
       observer->on_deallocate(page_id);
     }
-    _memory_resource->deallocate(static_cast<void_pointer>(ptr), sizeof(value_type) * n, alignof(T));
+    _memory_resource->deallocate(ptr, sizeof(value_type) * n, alignof(T));
   }
 
   boost::container::pmr::memory_resource* memory_resource() const noexcept {

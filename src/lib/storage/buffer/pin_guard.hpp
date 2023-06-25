@@ -95,6 +95,10 @@ struct FramePinGuard final : public PinnedFrames<accessIntent> {
     }
   }
 
+  void add_vector_pins(const pmr_vector<bool>& vector) {
+    Fail("Not implemented");
+  }
+
   void add_vector_pins(const pmr_compact_vector& vector) {
     const auto page_id = BufferManager::get().find_page(vector.get());
     add_pin(page_id);
