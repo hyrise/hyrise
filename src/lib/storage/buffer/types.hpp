@@ -150,7 +150,7 @@ constexpr size_t DEFAULT_RESERVED_VIRTUAL_MEMORY_PER_REGION = (DEFAULT_RESERVED_
                                                               bytes_for_size_type(MAX_PAGE_SIZE_TYPE) *
                                                               bytes_for_size_type(MAX_PAGE_SIZE_TYPE);
 
-constexpr size_t INITIAL_SLOTS_PER_REGION = 800000;  // TODO
+constexpr size_t INITIAL_SLOTS_PER_REGION = 900000;  // TODO
 
 // Hints the buffer manager about the access intent of the caller. AccessIntent.Write is usually used during allocations for example.
 enum class AccessIntent { Read, Write };
