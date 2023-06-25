@@ -93,19 +93,19 @@ do
     runtime=$((sf * 6))
     runtime=$(( runtime > 60 ? runtime : 60 ))
 
-    echo "Running $benchmark for $commit... (single-threaded, SF ${sf})"
-    ( "${build_folder}"/"$benchmark" -s ${sf} --dont_cache_binary_tables -r ${runs} -t ${runtime} -w ${warmup_seconds} -o "${build_folder}/benchmark_plugin_results/${benchmark}_${commit}_st_s${sf}.json" 2>&1 ) | tee "${build_folder}/benchmark_plugin_results/${benchmark}_${commit}_st_s${sf}.log"
+    echo "Running $benchmark for $commit... (single-threaded, SF ${sf}) NO SCHEMA CONSTRAINTS, ALL ON"
+    ( SCHEMA_CONSTRAINTS=0 "${build_folder}"/"$benchmark" -s ${sf} --dont_cache_binary_tables -r ${runs} -t ${runtime} -w ${warmup_seconds} -o "${build_folder}/benchmark_plugin_results/${benchmark}_${commit}_st_s${sf}.json" 2>&1 ) | tee "${build_folder}/benchmark_plugin_results/${benchmark}_${commit}_st_s${sf}.log"
 
-    echo "Running $benchmark for $commit... (single-threaded, SF ${sf}) w/ plugin"
-    ( "${build_folder}"/"$benchmark" -s ${sf} --dont_cache_binary_tables -r ${runs} -t ${runtime} -w ${warmup_seconds} -o "${build_folder}/benchmark_plugin_results/${benchmark}_${commit}_st_s${sf}_plugin.json" -p "${build_folder}/lib/libhyriseDependencyDiscoveryPlugin.${lib_suffix}" 2>&1 ) | tee "${build_folder}/benchmark_plugin_results/${benchmark}_${commit}_st_s${sf}_plugin.log"
+    echo "Running $benchmark for $commit... (single-threaded, SF ${sf}) w/ plugin NO SCHEMA CONSTRAINTS, ALL ON"
+    ( SCHEMA_CONSTRAINTS=0 "${build_folder}"/"$benchmark" -s ${sf} --dont_cache_binary_tables -r ${runs} -t ${runtime} -w ${warmup_seconds} -o "${build_folder}/benchmark_plugin_results/${benchmark}_${commit}_st_s${sf}_plugin.json" -p "${build_folder}/lib/libhyriseDependencyDiscoveryPlugin.${lib_suffix}" 2>&1 ) | tee "${build_folder}/benchmark_plugin_results/${benchmark}_${commit}_st_s${sf}_plugin.log"
   done
 done
 
-    echo "Running hyriseBenchmarkJoinOrder for $commit... (single-threaded)"
-    ( "${build_folder}"/hyriseBenchmarkJoinOrder --dont_cache_binary_tables -r ${runs} -w ${warmup_seconds} -o "${build_folder}/benchmark_plugin_results/hyriseBenchmarkJoinOrder_${commit}_st.json" 2>&1 ) | tee "${build_folder}/benchmark_plugin_results/hyriseBenchmarkJoinOrder_${commit}_st.log"
+    echo "Running hyriseBenchmarkJoinOrder for $commit... (single-threaded), NO SCHEMA CONSTRAINTS, ALL ON"
+    ( SCHEMA_CONSTRAINTS=0 "${build_folder}"/hyriseBenchmarkJoinOrder --dont_cache_binary_tables -r ${runs} -w ${warmup_seconds} -o "${build_folder}/benchmark_plugin_results/hyriseBenchmarkJoinOrder_${commit}_st.json" 2>&1 ) | tee "${build_folder}/benchmark_plugin_results/hyriseBenchmarkJoinOrder_${commit}_st.log"
 
-    echo "Running hyriseBenchmarkJoinOrder for $commit... (single-threaded) w/ plugin"
-    ( "${build_folder}"/hyriseBenchmarkJoinOrder --dont_cache_binary_tables -r ${runs} -w ${warmup_seconds} -o "${build_folder}/benchmark_plugin_results/hyriseBenchmarkJoinOrder_${commit}_st_plugin.json" -p "${build_folder}/lib/libhyriseDependencyDiscoveryPlugin.${lib_suffix}" 2>&1 ) | tee "${build_folder}/benchmark_plugin_results/hyriseBenchmarkJoinOrder_${commit}_st_plugin.log"
+    echo "Running hyriseBenchmarkJoinOrder for $commit... (single-threaded) w/ plugin, NO SCHEMA CONSTRAINTS, ALL ON"
+    ( SCHEMA_CONSTRAINTS=0 "${build_folder}"/hyriseBenchmarkJoinOrder --dont_cache_binary_tables -r ${runs} -w ${warmup_seconds} -o "${build_folder}/benchmark_plugin_results/hyriseBenchmarkJoinOrder_${commit}_st_plugin.json" -p "${build_folder}/lib/libhyriseDependencyDiscoveryPlugin.${lib_suffix}" 2>&1 ) | tee "${build_folder}/benchmark_plugin_results/hyriseBenchmarkJoinOrder_${commit}_st_plugin.log"
 
 cd "${build_folder}"
 
