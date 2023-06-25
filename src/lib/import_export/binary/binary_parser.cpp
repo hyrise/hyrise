@@ -64,7 +64,7 @@ template <>
 pmr_vector<bool> BinaryParser::_read_values(std::ifstream& file, const size_t count) {
   auto allocator = PolymorphicAllocator<size_t>{&Hyrise::get().linear_buffer_resource};
   auto pin_guard = AllocatorPinGuard{allocator};
-  pmr_vector<BoolAsByteType> readable_bools(count, alloactor);
+  pmr_vector<BoolAsByteType> readable_bools(count, allocator);
   file.read(reinterpret_cast<char*>(readable_bools.data()),
             static_cast<int64_t>(readable_bools.size() * sizeof(BoolAsByteType)));
   return {readable_bools.begin(), readable_bools.end()};

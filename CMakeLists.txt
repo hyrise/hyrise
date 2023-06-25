@@ -90,6 +90,8 @@ set(FLAGS_ALL "-fopenmp-simd")  # enables loop vectorization hints, but does not
 set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} ${FLAGS_ALL}")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${FLAGS_ALL}")
 
+set(FLAGS_ALL, "-DBOOST_DISABLE_ASSERTS")
+
 # Build the binary optimized for the current system, ignoring older systems.
 # Not all environments support march=native - check before we use it. Otherwise use mcpu.
 include(CheckCXXCompilerFlag)
