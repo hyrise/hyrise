@@ -917,13 +917,17 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_operator_scan_pr
           return;
         }
 
+        // std::cout << "NARF" << predicate << std::endl;
+
         // TODO(anybody) Simplify this block if AbstractStatisticsObject ever supports total_count()
         const auto sliced_histogram =
             std::dynamic_pointer_cast<AbstractHistogram<ColumnDataType>>(sliced_statistics_object);
         DebugAssert(sliced_histogram, "Expected slicing of a Histogram to return either nullptr or a Histogram");
         if (input_table_statistics->row_count == 0 || sliced_histogram->total_count() == 0.0f) {
+          // std::cout << "setting selectivity of 0.0f" << std::endl;
           selectivity = 0.0f;
         } else {
+          // std::cout << "setting selectivity of sliced_histogram->total_count() / input_table_statistics->row_count: " <<  sliced_histogram->total_count() << "/" << input_table_statistics->row_count << std::endl;
           selectivity = sliced_histogram->total_count() / input_table_statistics->row_count;
         }
 
@@ -943,10 +947,12 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_operator_scan_pr
   for (auto column_id = ColumnID{0}; column_id < output_column_statistics.size(); ++column_id) {
     if (!output_column_statistics[column_id]) {
       output_column_statistics[column_id] = input_table_statistics->column_statistics[column_id]->scaled(selectivity);
+      // std::cout << *output_column_statistics[column_id] << std::endl;
     }
   }
 
   const auto row_count = Cardinality{input_table_statistics->row_count * selectivity};
+  std::cout << "ROW COUNT: " << row_count << std::endl;
   return std::make_shared<TableStatistics>(std::move(output_column_statistics), row_count);
 }
 

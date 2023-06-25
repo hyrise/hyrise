@@ -76,7 +76,7 @@ class EncodedStringSegmentTest : public BaseTestWithParam<SegmentEncodingSpec> {
     for (auto offset_in_referenced_chunk = ChunkOffset{0}; offset_in_referenced_chunk < _row_count;
          ++offset_in_referenced_chunk) {
       if (offset_in_referenced_chunk % 2) {
-        list->push_back(RowID{ChunkID{0}, offset_in_referenced_chunk});
+        list->emplace_back(ChunkID{0}, offset_in_referenced_chunk);
       }
     }
 
