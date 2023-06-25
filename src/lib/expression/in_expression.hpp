@@ -9,7 +9,7 @@ namespace hyrise {
  */
 class InExpression : public AbstractPredicateExpression {
  public:
-  InExpression(const PredicateCondition init_predicate_condition, const std::shared_ptr<AbstractExpression>& value,
+  InExpression(const PredicateCondition init_predicate_condition, const std::shared_ptr<AbstractExpression>& operand,
                const std::shared_ptr<AbstractExpression>& set);
 
   /**
@@ -18,7 +18,7 @@ class InExpression : public AbstractPredicateExpression {
    */
   bool is_negated() const;
 
-  const std::shared_ptr<AbstractExpression>& value() const;
+  const std::shared_ptr<AbstractExpression>& operand() const;
   const std::shared_ptr<AbstractExpression>& set() const;
 
   std::shared_ptr<AbstractExpression> _on_deep_copy(

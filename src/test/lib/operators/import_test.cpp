@@ -24,18 +24,8 @@ class OperatorsImportTest : public BaseTest {
 
 class OperatorsImportMultiFileTypeTest : public OperatorsImportTest, public ::testing::WithParamInterface<FileType> {};
 
-auto import_test_formatter = [](const ::testing::TestParamInfo<FileType> info) {
-  auto stream = std::stringstream{};
-  stream << info.param;
-
-  auto string = stream.str();
-  string.erase(std::remove_if(string.begin(), string.end(), [](char c) { return !std::isalnum(c); }), string.end());
-
-  return string;
-};
-
 INSTANTIATE_TEST_SUITE_P(FileTypes, OperatorsImportMultiFileTypeTest,
-                         ::testing::Values(FileType::Csv, FileType::Tbl, FileType::Binary), import_test_formatter);
+                         ::testing::Values(FileType::Csv, FileType::Tbl, FileType::Binary), enum_formatter<FileType>);
 
 TEST_P(OperatorsImportMultiFileTypeTest, ImportWithFileType) {
   auto expected_table =
@@ -78,8 +68,8 @@ TEST_P(OperatorsImportMultiFileTypeTest, HasCorrectMvccData) {
 
   EXPECT_EQ(table->uses_mvcc(), UseMvcc::Yes);
   EXPECT_TRUE(table->get_chunk(ChunkID{0})->has_mvcc_data());
-  EXPECT_TRUE(table->get_chunk(ChunkID{0})->mvcc_data()->max_begin_cid.has_value());
-  EXPECT_EQ(table->get_chunk(ChunkID{0})->mvcc_data()->max_begin_cid.value(), CommitID{0});
+  EXPECT_TRUE(table->get_chunk(ChunkID{0})->mvcc_data()->max_begin_cid);
+  EXPECT_EQ(*table->get_chunk(ChunkID{0})->mvcc_data()->max_begin_cid, CommitID{0});
 }
 
 TEST_F(OperatorsImportTest, FileDoesNotExist) {

@@ -18,9 +18,9 @@
 #include "storage/table.hpp"
 #include "types.hpp"
 
-using namespace hyrise::expression_functional;  // NOLINT
-
 namespace hyrise {
+
+using namespace expression_functional;  // NOLINT(build/namespaces)
 
 class OperatorsValidateTest : public BaseTest {
  protected:
@@ -146,7 +146,7 @@ TEST_F(OperatorsValidateTest, ChunkEntirelyVisibleThrowsOnRefChunk) {
 
   auto snapshot_cid = CommitID{1};
   auto pos_list = std::make_shared<RowIDPosList>(std::initializer_list<RowID>({RowID{ChunkID{0}, ChunkOffset{0}}}));
-  Segments segments = {std::make_shared<ReferenceSegment>(_test_table, ColumnID{0}, pos_list)};
+  auto segments = Segments{std::make_shared<ReferenceSegment>(_test_table, ColumnID{0}, pos_list)};
   auto chunk = std::make_shared<Chunk>(segments);
 
   auto validate = std::make_shared<Validate>(nullptr);
@@ -228,8 +228,9 @@ TEST_F(OperatorsValidateTest, ValidateReferenceSegmentWithMultipleChunks) {
     }
   }
 
-  Segments segments;
-  for (auto column_id = ColumnID{0}; column_id < _test_table->column_count(); ++column_id) {
+  auto segments = Segments{};
+  const auto column_count = _test_table->column_count();
+  for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
     segments.emplace_back(std::make_shared<ReferenceSegment>(_test_table, column_id, pos_list));
   }
 

@@ -8,18 +8,16 @@
 #include <utility>
 #include <vector>
 
+#include "tsl/robin_map.h"
+
 #include "aggregate/aggregate_traits.hpp"
-#include "constant_mappings.hpp"
 #include "expression/pqp_column_expression.hpp"
 #include "hyrise.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
-#include "storage/create_iterable_from_segment.hpp"
 #include "storage/segment_iterate.hpp"
-#include "utils/aligned_size.hpp"
 #include "utils/assert.hpp"
-#include "utils/performance_warning.hpp"
 #include "utils/timer.hpp"
 
 namespace {
@@ -49,7 +47,7 @@ typename Results::reference get_or_add_result(CacheResultIds /*cache_result_ids*
     // As described above, we may store the index into the results vector in the AggregateKey. If the AggregateKey
     // contains multiple entries, we use the first one. As such, we store a (non-owning, raw) pointer to either the only
     // or the first entry in first_key_entry. We need a raw pointer as a reference cannot be null or reset.
-    AggregateKeyEntry* first_key_entry;
+    AggregateKeyEntry* first_key_entry = nullptr;
     if constexpr (std::is_same_v<AggregateKey, AggregateKeyEntry>) {
       first_key_entry = &key;
     } else {
@@ -160,8 +158,8 @@ const std::string& AggregateHash::name() const {
 
 std::shared_ptr<AbstractOperator> AggregateHash::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_left_input,
-    const std::shared_ptr<AbstractOperator>& copied_right_input,
-    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
+    const std::shared_ptr<AbstractOperator>& /*copied_right_input*/,
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& /*copied_ops*/) const {
   return std::make_shared<AggregateHash>(copied_left_input, _aggregates, _groupby_column_ids);
 }
 
@@ -220,7 +218,7 @@ __attribute__((hot)) void AggregateHash::_aggregate_segment(ChunkID chunk_id, Co
   auto& result_ids = *context.result_ids;
   auto& results = context.results;
 
-  ChunkOffset chunk_offset{0};
+  auto chunk_offset = ChunkOffset{0};
 
   // CacheResultIds is a boolean type parameter that is forwarded to get_or_add_result, see the documentation over there
   // for details.
@@ -619,7 +617,7 @@ void AggregateHash::_aggregate() {
 
   // Process Chunks and perform aggregations
   const auto chunk_count = input_table->chunk_count();
-  for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk_in = input_table->get_chunk(chunk_id);
     if (!chunk_in) {
       continue;
@@ -651,7 +649,7 @@ void AggregateHash::_aggregate() {
       // Add value or combination of values is added to the list of distinct value(s). This is done by calling
       // get_or_add_result, which adds the corresponding entry in the list of GROUP BY values.
       if (_use_immediate_key_shortcut) {
-        for (ChunkOffset chunk_offset{0}; chunk_offset < input_chunk_size; chunk_offset++) {
+        for (auto chunk_offset = ChunkOffset{0}; chunk_offset < input_chunk_size; ++chunk_offset) {
           // We are able to use immediate keys, so pass true_type so that the combined caching/immediate key code path
           // is enabled in get_or_add_result.
           get_or_add_result(std::true_type{}, result_ids, results,
@@ -661,14 +659,14 @@ void AggregateHash::_aggregate() {
       } else {
         // Same as above, but we do not have immediate keys, so we disable that code path to reduce the complexity of
         // get_aggregate_key.
-        for (ChunkOffset chunk_offset{0}; chunk_offset < input_chunk_size; chunk_offset++) {
+        for (auto chunk_offset = ChunkOffset{0}; chunk_offset < input_chunk_size; ++chunk_offset) {
           get_or_add_result(std::false_type{}, result_ids, results,
                             get_aggregate_key<AggregateKey>(keys_per_chunk, chunk_id, chunk_offset),
                             RowID{chunk_id, chunk_offset});
         }
       }
     } else {
-      ColumnID aggregate_idx{0};
+      auto aggregate_idx = ColumnID{0};
       for (const auto& aggregate : _aggregates) {
         /**
          * Special COUNT(*) implementation.
@@ -703,7 +701,7 @@ void AggregateHash::_aggregate() {
             // Count occurrences for each group key -  If we have more than one aggregate function (and thus more than
             // one context), it makes sense to cache the results indexes, see get_or_add_result for details.
             if (_contexts_per_column.size() > 1 || _use_immediate_key_shortcut) {
-              for (ChunkOffset chunk_offset{0}; chunk_offset < input_chunk_size; chunk_offset++) {
+              for (auto chunk_offset = ChunkOffset{0}; chunk_offset < input_chunk_size; ++chunk_offset) {
                 // Use CacheResultIds==true_type if we have more than one group by column or if the cached result ids
                 // have been written by the immediate key shortcut
                 auto& result =
@@ -713,7 +711,7 @@ void AggregateHash::_aggregate() {
                 ++result.aggregate_count;
               }
             } else {
-              for (ChunkOffset chunk_offset{0}; chunk_offset < input_chunk_size; chunk_offset++) {
+              for (auto chunk_offset = ChunkOffset{0}; chunk_offset < input_chunk_size; ++chunk_offset) {
                 auto& result =
                     get_or_add_result(std::false_type{}, result_ids, results,
                                       get_aggregate_key<AggregateKey>(keys_per_chunk, chunk_id, chunk_offset),
@@ -831,7 +829,7 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
   Write the aggregated columns to the output
   */
   const auto& input_table = left_input_table();
-  ColumnID aggregate_idx{0};
+  auto aggregate_idx = ColumnID{0};
   for (const auto& aggregate : _aggregates) {
     const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->argument());
     const auto input_column_id = pqp_column.column_id;
@@ -840,15 +838,41 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
     const auto data_type =
         input_column_id == INVALID_COLUMN_ID ? DataType::Long : input_table->column_data_type(input_column_id);
 
-    resolve_data_type(data_type, [&, aggregate_idx](auto type) {
-      _write_aggregate_output(type, aggregate_idx, aggregate->aggregate_function);
+    resolve_data_type(data_type, [&](auto type) {
+      using ColumnDataType = typename decltype(type)::type;
+      switch (aggregate->aggregate_function) {
+        case AggregateFunction::Min:
+          _write_aggregate_output<ColumnDataType, AggregateFunction::Min>(aggregate_idx);
+          break;
+        case AggregateFunction::Max:
+          _write_aggregate_output<ColumnDataType, AggregateFunction::Max>(aggregate_idx);
+          break;
+        case AggregateFunction::Sum:
+          _write_aggregate_output<ColumnDataType, AggregateFunction::Sum>(aggregate_idx);
+          break;
+        case AggregateFunction::Avg:
+          _write_aggregate_output<ColumnDataType, AggregateFunction::Avg>(aggregate_idx);
+          break;
+        case AggregateFunction::Count:
+          _write_aggregate_output<ColumnDataType, AggregateFunction::Count>(aggregate_idx);
+          break;
+        case AggregateFunction::CountDistinct:
+          _write_aggregate_output<ColumnDataType, AggregateFunction::CountDistinct>(aggregate_idx);
+          break;
+        case AggregateFunction::StandardDeviationSample:
+          _write_aggregate_output<ColumnDataType, AggregateFunction::StandardDeviationSample>(aggregate_idx);
+          break;
+        case AggregateFunction::Any:
+          // Pseudo-aggregates are written by _write_groupby_output.
+          break;
+      }
     });
 
     ++aggregate_idx;
   }
 
   // Write the output
-  Timer timer;
+  auto timer = Timer{};
   auto output = std::make_shared<Table>(_output_column_definitions, TableType::Data);
   if (_output_segments.at(0)->size() > 0) {
     output->append_chunk(_output_segments);
@@ -899,7 +923,7 @@ write_aggregate_values(pmr_vector<AggregateType>& values, pmr_vector<bool>& null
 // COUNT writes the aggregate counter
 template <typename ColumnDataType, typename AggregateType, AggregateFunction aggregate_func>
 std::enable_if_t<aggregate_func == AggregateFunction::Count, void> write_aggregate_values(
-    pmr_vector<AggregateType>& values, pmr_vector<bool>& null_values,
+    pmr_vector<AggregateType>& values, pmr_vector<bool>& /*null_values*/,
     const AggregateResults<ColumnDataType, aggregate_func>& results) {
   values.reserve(results.size());
 
@@ -917,7 +941,7 @@ std::enable_if_t<aggregate_func == AggregateFunction::Count, void> write_aggrega
 // COUNT(DISTINCT) writes the number of distinct values
 template <typename ColumnDataType, typename AggregateType, AggregateFunction aggregate_func>
 std::enable_if_t<aggregate_func == AggregateFunction::CountDistinct, void> write_aggregate_values(
-    pmr_vector<AggregateType>& values, pmr_vector<bool>& null_values,
+    pmr_vector<AggregateType>& values, pmr_vector<bool>& /*null_values*/,
     const AggregateResults<ColumnDataType, aggregate_func>& results) {
   values.reserve(results.size());
   Fail("Pin");
@@ -961,8 +985,8 @@ write_aggregate_values(pmr_vector<AggregateType>& values, pmr_vector<bool>& null
 // AVG is not defined for non-arithmetic types. Avoiding compiler errors.
 template <typename ColumnDataType, typename AggregateType, AggregateFunction aggregate_func>
 std::enable_if_t<aggregate_func == AggregateFunction::Avg && !std::is_arithmetic_v<AggregateType>, void>
-write_aggregate_values(pmr_vector<AggregateType>& values, pmr_vector<bool>& null_values,
-                       const AggregateResults<ColumnDataType, aggregate_func>& results) {
+write_aggregate_values(pmr_vector<AggregateType>& /*values*/, pmr_vector<bool>& /*null_values*/,
+                       const AggregateResults<ColumnDataType, aggregate_func>& /*results*/) {
   Fail("Invalid aggregate");
 }
 
@@ -997,13 +1021,13 @@ write_aggregate_values(pmr_vector<AggregateType>& values, pmr_vector<bool>& null
 template <typename ColumnDataType, typename AggregateType, AggregateFunction aggregate_func>
 std::enable_if_t<aggregate_func == AggregateFunction::StandardDeviationSample && !std::is_arithmetic_v<AggregateType>,
                  void>
-write_aggregate_values(pmr_vector<AggregateType>& values, pmr_vector<bool>& null_values,
-                       const AggregateResults<ColumnDataType, aggregate_func>& results) {
+write_aggregate_values(pmr_vector<AggregateType>& /*values*/, pmr_vector<bool>& /*null_values*/,
+                       const AggregateResults<ColumnDataType, aggregate_func>& /*results*/) {
   Fail("Invalid aggregate");
 }
 
 void AggregateHash::_write_groupby_output(RowIDPosList& pos_list) {
-  Timer timer;
+  auto timer = Timer{};
   auto input_table = left_input_table();
 
   auto unaggregated_columns = std::vector<std::pair<ColumnID, ColumnID>>{};
@@ -1041,10 +1065,11 @@ void AggregateHash::_write_groupby_output(RowIDPosList& pos_list) {
       auto allocator = PolymorphicAllocator<ColumnDataType>{&Hyrise::get().linear_buffer_resource};
       auto allocator_pin_guard = AllocatorPinGuard{allocator};
 
+      const auto pos_list_size = pos_list.size();
       auto values = pmr_vector<ColumnDataType>{allocator};
-      values.reserve(pos_list.size());
+      values.reserve(pos_list_size);
       auto null_values = pmr_vector<bool>{allocator};
-      null_values.reserve(column_is_nullable ? pos_list.size() : 0);
+      null_values.reserve(pos_list_size);
 
       auto accessors =
           std::vector<std::unique_ptr<AbstractSegmentAccessor<ColumnDataType>>>(input_table->chunk_count());
@@ -1085,44 +1110,13 @@ void AggregateHash::_write_groupby_output(RowIDPosList& pos_list) {
   groupby_columns_writing_duration += timer.lap();
 }
 
-template <typename ColumnDataType>
-void AggregateHash::_write_aggregate_output(boost::hana::basic_type<ColumnDataType> type, ColumnID column_index,
-                                            AggregateFunction aggregate_function) {
-  switch (aggregate_function) {
-    case AggregateFunction::Min:
-      write_aggregate_output<ColumnDataType, AggregateFunction::Min>(column_index);
-      break;
-    case AggregateFunction::Max:
-      write_aggregate_output<ColumnDataType, AggregateFunction::Max>(column_index);
-      break;
-    case AggregateFunction::Sum:
-      write_aggregate_output<ColumnDataType, AggregateFunction::Sum>(column_index);
-      break;
-    case AggregateFunction::Avg:
-      write_aggregate_output<ColumnDataType, AggregateFunction::Avg>(column_index);
-      break;
-    case AggregateFunction::Count:
-      write_aggregate_output<ColumnDataType, AggregateFunction::Count>(column_index);
-      break;
-    case AggregateFunction::CountDistinct:
-      write_aggregate_output<ColumnDataType, AggregateFunction::CountDistinct>(column_index);
-      break;
-    case AggregateFunction::StandardDeviationSample:
-      write_aggregate_output<ColumnDataType, AggregateFunction::StandardDeviationSample>(column_index);
-      break;
-    case AggregateFunction::Any:
-      // written by _write_groupby_output
-      break;
-  }
-}
-
 template <typename ColumnDataType, AggregateFunction aggregate_function>
-void AggregateHash::write_aggregate_output(ColumnID aggregate_index) {
+void AggregateHash::_write_aggregate_output(ColumnID aggregate_index) {
   // Used to track the duration of groupby columns writing, which is done for the first aggregate column only. Value is
   // subtracted from the runtime of this method (thus, it's either non-zero for the first aggregate column or zero for
   // the remaining columns).
   auto excluded_time = std::chrono::nanoseconds{};
-  Timer timer;
+  auto timer = Timer{};
 
   // retrieve type information from the aggregation traits
   typename AggregateTraits<ColumnDataType, aggregate_function>::AggregateType aggregate_type;
@@ -1157,7 +1151,7 @@ void AggregateHash::write_aggregate_output(ColumnID aggregate_index) {
       }
       pos_list.emplace_back(result.row_id);
     }
-    Timer write_groupby_output_timer;
+    auto write_groupby_output_timer = Timer{};
     _write_groupby_output(pos_list);
     excluded_time = write_groupby_output_timer.lap();
   }

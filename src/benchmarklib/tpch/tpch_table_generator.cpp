@@ -11,7 +11,7 @@ extern "C" {
 
 #include "benchmark_config.hpp"
 #include "storage/chunk.hpp"
-#include "storage/table_key_constraint.hpp"
+#include "storage/constraints/table_key_constraint.hpp"
 #include "table_builder.hpp"
 #include "utils/timer.hpp"
 
@@ -36,7 +36,7 @@ const auto lineitem_column_types = boost::hana::tuple      <int32_t,     int32_t
 const auto lineitem_column_names = boost::hana::make_tuple("l_orderkey", "l_partkey", "l_suppkey", "l_linenumber", "l_quantity", "l_extendedprice", "l_discount", "l_tax", "l_returnflag", "l_linestatus", "l_shipdate", "l_commitdate", "l_receiptdate", "l_shipinstruct", "l_shipmode", "l_comment");  // NOLINT
 
 const auto part_column_types = boost::hana::tuple      <int32_t,    pmr_string,  pmr_string,  pmr_string,  pmr_string,  int32_t,  pmr_string,    float,        pmr_string>();  // NOLINT
-const auto part_column_names = boost::hana::make_tuple("p_partkey", "p_name",    "p_mfgr",    "p_brand",   "p_type",    "p_size", "p_container", "p_retailsize", "p_comment");  // NOLINT
+const auto part_column_names = boost::hana::make_tuple("p_partkey", "p_name",    "p_mfgr",    "p_brand",   "p_type",    "p_size", "p_container", "p_retailprice", "p_comment");  // NOLINT
 
 const auto partsupp_column_types = boost::hana::tuple<     int32_t,      int32_t,      int32_t,       float,           pmr_string>();  // NOLINT
 const auto partsupp_column_names = boost::hana::make_tuple("ps_partkey", "ps_suppkey", "ps_availqty", "ps_supplycost", "ps_comment");  // NOLINT
@@ -305,11 +305,11 @@ AbstractTableGenerator::IndexesByTable TPCHTableGenerator::_indexes_by_table() c
   return {
       {"part", {{"p_partkey"}}},
       {"supplier", {{"s_suppkey"}, {"s_nationkey"}}},
-      // TODO(anyone): multi-column indexes are currently not used by the index scan rule and the translator
-      {"partsupp", {{"ps_partkey", "ps_suppkey"}, {"ps_suppkey"}}},  // ps_partkey is subset of {ps_partkey, ps_suppkey}
+      {"partsupp", {{"ps_partkey"}, {"ps_suppkey"}}},
+      // ps_partkey is subset of {ps_partkey, ps_suppkey}
       {"customer", {{"c_custkey"}, {"c_nationkey"}}},
       {"orders", {{"o_orderkey"}, {"o_custkey"}}},
-      {"lineitem", {{"l_orderkey", "l_linenumber"}, {"l_partkey", "l_suppkey"}}},
+      {"lineitem", {{"l_orderkey"}, {"l_partkey"}}},
       {"nation", {{"n_nationkey"}, {"n_regionkey"}}},
       {"region", {{"r_regionkey"}}},
   };

@@ -5,7 +5,6 @@
 #include <string>
 #include <vector>
 
-#include "constant_mappings.hpp"
 #include "cost_estimation/abstract_cost_estimator.hpp"
 #include "expression/is_null_expression.hpp"
 #include "expression/lqp_column_expression.hpp"
@@ -95,7 +94,8 @@ void NullScanRemovalRule::_remove_nodes(const std::vector<std::shared_ptr<Abstra
   }
 }
 
-void NullScanRemovalRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
+void NullScanRemovalRule::_apply_to_plan_without_subqueries(
+    const std::shared_ptr<AbstractLQPNode>& /*lqp_root*/) const {
   Fail("Did not expect this function to be called.");
 }
 

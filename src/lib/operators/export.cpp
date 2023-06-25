@@ -1,6 +1,7 @@
 #include "export.hpp"
 
 #include <boost/algorithm/string.hpp>
+#include "magic_enum.hpp"
 
 #include "hyrise.hpp"
 #include "import_export/binary/binary_writer.hpp"
@@ -20,6 +21,15 @@ Export::Export(const std::shared_ptr<const AbstractOperator>& input_operator, co
 const std::string& Export::name() const {
   static const auto name = std::string{"Export"};
   return name;
+}
+
+std::string Export::description(DescriptionMode description_mode) const {
+  const auto separator = (description_mode == DescriptionMode::SingleLine ? ' ' : '\n');
+
+  auto file_type = std::string{magic_enum::enum_name(_file_type)};
+  boost::algorithm::to_lower(file_type);
+  return AbstractOperator::description(description_mode) + separator + "to '" + _filename + "'" + separator + "(" +
+         file_type + ")";
 }
 
 std::shared_ptr<const Table> Export::_on_execute() {
@@ -45,8 +55,8 @@ std::shared_ptr<const Table> Export::_on_execute() {
 
 std::shared_ptr<AbstractOperator> Export::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_left_input,
-    const std::shared_ptr<AbstractOperator>& copied_right_input,
-    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
+    const std::shared_ptr<AbstractOperator>& /*copied_right_input*/,
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& /*copied_ops*/) const {
   return std::make_shared<Export>(copied_left_input, _filename, _file_type);
 }
 

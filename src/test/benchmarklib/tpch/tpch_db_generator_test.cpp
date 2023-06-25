@@ -97,7 +97,5 @@ TEST_F(TPCHTableGeneratorTest, GenerateAndStore) {
   EXPECT_TRUE(Hyrise::get().storage_manager.has_table("orders"));
   EXPECT_TRUE(Hyrise::get().storage_manager.has_table("nation"));
   EXPECT_TRUE(Hyrise::get().storage_manager.has_table("region"));
-
-  Hyrise::reset();
 }
 }  // namespace hyrise

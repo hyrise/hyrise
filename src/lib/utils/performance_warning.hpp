@@ -16,7 +16,7 @@
  * Performance warnings can be disabled using the RAII-style PerformanceWarningDisabler:
  *
  * {
- *   PerformanceWarningDisabler pwd;
+ *   auto performance_warning_disabler = PerformanceWarningDisabler{};
  *   std::cout << abstract_segment[5] << std::endl; // this does not cause a warning
  * }
  * // warnings are enabled again
@@ -67,11 +67,11 @@ class PerformanceWarningDisabler {
   }
 };
 
-#define PerformanceWarning(text)                                                                       \
-  {                                                                                                    \
-    static PerformanceWarningClass warn(std::string(text) + " at " + trim_source_file_path(__FILE__) + \
-                                        ":" BOOST_PP_STRINGIZE(__LINE__));                             \
-  }                                                                                                    \
+#define PerformanceWarning(text)                                                                             \
+  {                                                                                                          \
+    static const PerformanceWarningClass warn(std::string(text) + " at " + trim_source_file_path(__FILE__) + \
+                                              ":" BOOST_PP_STRINGIZE(__LINE__));                             \
+  }                                                                                                          \
   static_assert(true, "End call of macro with a semicolon")
 
 }  // namespace hyrise

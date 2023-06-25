@@ -3,10 +3,6 @@
 #include <array>
 #include <cstdint>
 
-#include <boost/version.hpp>
-#if BOOST_VERSION < 107100                 // TODO(anyone): remove this block once Ubuntu ships boost 1.71
-#include "utils/boost_curry_override.hpp"  // NOLINT
-#endif
 #include <boost/hana/at_key.hpp>
 #include <boost/hana/contains.hpp>
 #include <boost/hana/equal.hpp>
@@ -16,6 +12,7 @@
 #include <boost/hana/type.hpp>
 
 #include "all_type_variant.hpp"
+#include "magic_enum.hpp"
 #include "storage/vector_compression/vector_compression.hpp"
 #include "utils/enum_constant.hpp"
 
@@ -25,10 +22,7 @@ namespace hana = boost::hana;
 
 enum class EncodingType : uint8_t { Unencoded, Dictionary, RunLength, FixedStringDictionary, FrameOfReference, LZ4 };
 
-inline static std::vector<EncodingType> encoding_type_enum_values{
-    EncodingType::Unencoded,        EncodingType::Dictionary,
-    EncodingType::RunLength,        EncodingType::FixedStringDictionary,
-    EncodingType::FrameOfReference, EncodingType::LZ4};
+std::ostream& operator<<(std::ostream& stream, const EncodingType encoding_type);
 
 /**
  * @brief Maps each encoding type to its supported data types
@@ -82,8 +76,6 @@ std::ostream& operator<<(std::ostream& stream, const SegmentEncodingSpec& spec);
 
 using ChunkEncodingSpec = std::vector<SegmentEncodingSpec>;
 
-inline constexpr std::array all_encoding_types{EncodingType::Unencoded,        EncodingType::Dictionary,
-                                               EncodingType::FrameOfReference, EncodingType::FixedStringDictionary,
-                                               EncodingType::RunLength,        EncodingType::LZ4};
+inline constexpr auto encoding_types = magic_enum::enum_values<EncodingType>();
 
 }  // namespace hyrise

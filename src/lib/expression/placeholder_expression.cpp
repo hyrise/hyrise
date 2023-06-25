@@ -14,11 +14,11 @@ PlaceholderExpression::PlaceholderExpression(const ParameterID init_parameter_id
     : AbstractExpression(ExpressionType::Placeholder, {}), parameter_id(init_parameter_id) {}
 
 std::shared_ptr<AbstractExpression> PlaceholderExpression::_on_deep_copy(
-    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& /*copied_ops*/) const {
   return std::make_shared<PlaceholderExpression>(parameter_id);
 }
 
-std::string PlaceholderExpression::description(const DescriptionMode mode) const {
+std::string PlaceholderExpression::description(const DescriptionMode /*mode*/) const {
   std::stringstream stream;
   stream << "Placeholder[ParameterID=" << std::to_string(parameter_id) << "]";
   return stream.str();
@@ -43,7 +43,7 @@ size_t PlaceholderExpression::_shallow_hash() const {
   return boost::hash_value(static_cast<ParameterID::base_type>(parameter_id));
 }
 
-bool PlaceholderExpression::_on_is_nullable_on_lqp(const AbstractLQPNode& lqp) const {
+bool PlaceholderExpression::_on_is_nullable_on_lqp(const AbstractLQPNode& /*lqp*/) const {
   // Placeholder COULD be replaced with NULL
   return true;
 }

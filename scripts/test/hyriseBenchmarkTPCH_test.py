@@ -27,7 +27,7 @@ def main():
     arguments["--clustering"] = "Pruning"
     arguments["--encoding"] = "'Dictionary'"
     arguments["--compression"] = "'Fixed-width integer'"
-    arguments["--indexes"] = "true"
+    arguments["--chunk_indexes"] = "true"
     arguments["--scheduler"] = "false"
     arguments["--clients"] = "1"
     arguments["--dont_cache_binary_tables"] = "true"
@@ -48,7 +48,7 @@ def main():
     benchmark.expect_exact("Using prepared statements: yes")
     benchmark.expect_exact("Loading/Generating tables done")
     benchmark.expect_exact("Sorting tables")
-    benchmark.expect_exact("Creating index on customer [ c_custkey ]")
+    benchmark.expect_exact("Creating chunk indexes")
     benchmark.expect_exact("Preparing queries")
 
     close_benchmark(benchmark)
@@ -125,7 +125,7 @@ def main():
     arguments["--warmup"] = "10"
     arguments["--encoding"] = "'LZ4'"
     arguments["--compression"] = "'Bit-packing'"
-    arguments["--indexes"] = "false"
+    arguments["--chunk_indexes"] = "false"
     arguments["--scheduler"] = "true"
     arguments["--clients"] = "4"
     arguments["--verify"] = "true"

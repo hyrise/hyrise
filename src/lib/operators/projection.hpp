@@ -27,12 +27,7 @@ class Projection : public AbstractReadOnlyOperator {
 
   const std::string& name() const override;
 
-  enum class OperatorSteps : uint8_t {
-    UncorrelatedSubqueries,
-    ForwardUnmodifiedColumns,
-    EvaluateNewColumns,
-    BuildOutput
-  };
+  enum class OperatorSteps : uint8_t { ForwardUnmodifiedColumns, EvaluateNewColumns, BuildOutput };
 
   /**
    * The dummy table is used for literal projections that have no input table.
@@ -61,12 +56,10 @@ class Projection : public AbstractReadOnlyOperator {
 
   std::shared_ptr<AbstractOperator> _on_deep_copy(
       const std::shared_ptr<AbstractOperator>& copied_left_input,
-      const std::shared_ptr<AbstractOperator>& copied_right_input,
+      const std::shared_ptr<AbstractOperator>& /*copied_right_input*/,
       std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const override;
 
   ExpressionUnorderedSet _determine_forwarded_columns(const TableType table_type) const;
-
-  std::vector<std::shared_ptr<PQPSubqueryExpression>> _uncorrelated_subquery_expressions;
 };
 
 }  // namespace hyrise

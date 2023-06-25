@@ -34,7 +34,8 @@ std::shared_ptr<RowIDPosList> ColumnVsColumnTableScanImpl::scan_chunk(ChunkID ch
   const auto left_segment = chunk->get_segment(_left_column_id);
   const auto right_segment = chunk->get_segment(_right_column_id);
 
-  std::shared_ptr<RowIDPosList> result;
+  auto result = std::shared_ptr<RowIDPosList>{};
+
   /**
    * Reducing the compile time:
    *
@@ -147,7 +148,7 @@ ColumnVsColumnTableScanImpl::_typed_scan_chunk_with_iterators(ChunkID chunk_id, 
   auto matches_pin_guard = AllocatorPinGuard{allocator};
   auto matches_out = std::make_shared<RowIDPosList>(allocator);
 
-  bool condition_was_flipped = false;
+  auto condition_was_flipped = false;
   auto maybe_flipped_condition = _predicate_condition;
   if (maybe_flipped_condition == PredicateCondition::GreaterThan ||
       maybe_flipped_condition == PredicateCondition::GreaterThanEquals) {
@@ -155,6 +156,7 @@ ColumnVsColumnTableScanImpl::_typed_scan_chunk_with_iterators(ChunkID chunk_id, 
     condition_was_flipped = true;
   }
 
+  // NOLINTNEXTLINE(misc-unused-parameters): false positive for it1 and it2 being unused.
   auto conditionally_erase_comparator_type = [](auto comparator, const auto& it1, const auto& it2) {
     if constexpr (erase_comparator_type == EraseTypes::OnlyInDebugBuild) {
       return comparator;

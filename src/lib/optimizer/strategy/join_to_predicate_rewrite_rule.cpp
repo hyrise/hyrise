@@ -12,8 +12,8 @@
 
 namespace {
 
-using namespace hyrise;                         // NOLINT
-using namespace hyrise::expression_functional;  // NOLINT
+using namespace hyrise;                         // NOLINT(build/namespaces)
+using namespace hyrise::expression_functional;  // NOLINT(build/namespaces)
 
 void gather_rewrite_info(
     const std::shared_ptr<JoinNode>& join_node,
@@ -50,7 +50,7 @@ void gather_rewrite_info(
          "Neither column of the join predicate could be evaluated on the removable input.");
 
   // Check for uniqueness.
-  if (!removable_subtree->has_matching_unique_constraint({exchangeable_column_expression})) {
+  if (!removable_subtree->has_matching_ucc({exchangeable_column_expression})) {
     return;
   }
 
@@ -95,11 +95,11 @@ void gather_rewrite_info(
       return LQPVisitation::VisitInputs;
     }
 
-    // Check whether the column referenced is available for the subtree root node and unique. Checking whether the
+    // Check whether the referenced column is available for the subtree root node and unique. Checking whether the
     // column is unique on the current node is not sufficient. There could be unions or joins in between the subtree
-    // root and the current node, invalidating the uniqueness constraint.
+    // root and the current node, invalidating the unique column combination.
     if (!expression_evaluable_on_lqp(candidate_column_expression, *removable_subtree) ||
-        !removable_subtree->has_matching_unique_constraint({candidate_column_expression})) {
+        !removable_subtree->has_matching_ucc({candidate_column_expression})) {
       return LQPVisitation::VisitInputs;
     }
 

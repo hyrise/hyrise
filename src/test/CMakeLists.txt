@@ -43,13 +43,14 @@ set(
     lib/logical_query_plan/create_prepared_plan_node_test.cpp
     lib/logical_query_plan/create_table_node_test.cpp
     lib/logical_query_plan/create_view_node_test.cpp
+    lib/logical_query_plan/data_dependencies/functional_dependency_test.cpp
+    lib/logical_query_plan/data_dependencies/unique_column_combination_test.cpp
     lib/logical_query_plan/delete_node_test.cpp
     lib/logical_query_plan/drop_table_node_test.cpp
     lib/logical_query_plan/drop_view_node_test.cpp
     lib/logical_query_plan/dummy_table_node_test.cpp
     lib/logical_query_plan/except_node_test.cpp
     lib/logical_query_plan/export_node_test.cpp
-    lib/logical_query_plan/functional_dependency_test.cpp
     lib/logical_query_plan/import_node_test.cpp
     lib/logical_query_plan/insert_node_test.cpp
     lib/logical_query_plan/intersect_node_test.cpp
@@ -58,7 +59,6 @@ set(
     lib/logical_query_plan/logical_query_plan_test.cpp
     lib/logical_query_plan/lqp_find_subplan_mismatch_test.cpp
     lib/logical_query_plan/lqp_translator_test.cpp
-    lib/logical_query_plan/lqp_unique_constraint_test.cpp
     lib/logical_query_plan/lqp_utils_test.cpp
     lib/logical_query_plan/mock_node_test.cpp
     lib/logical_query_plan/predicate_node_test.cpp
@@ -149,6 +149,7 @@ set(
     lib/optimizer/strategy/subquery_to_join_rule_test.cpp
     lib/scheduler/operator_task_test.cpp
     lib/scheduler/scheduler_test.cpp
+    lib/scheduler/task_queue_test.cpp
     lib/server/mock_socket.hpp
     lib/server/postgres_protocol_handler_test.cpp
     lib/server/query_handler_test.cpp
@@ -188,6 +189,9 @@ set(
     lib/storage/chunk_encoder_test.cpp
     lib/storage/chunk_test.cpp
     lib/storage/compressed_vector_test.cpp
+    lib/storage/constraints/foreign_key_constraint_test.cpp
+    lib/storage/constraints/table_key_constraint_test.cpp
+    lib/storage/constraints/table_order_constraint_test.cpp
     lib/storage/dictionary_segment_test.cpp
     lib/storage/encoded_segment_test.cpp
     lib/storage/encoded_string_segment_test.cpp
@@ -203,6 +207,7 @@ set(
     lib/storage/index/group_key/variable_length_key_store_test.cpp
     lib/storage/index/group_key/variable_length_key_test.cpp
     lib/storage/index/multi_segment_index_test.cpp
+    lib/storage/index/partial_hash/partial_hash_index_test.cpp
     lib/storage/index/single_segment_index_test.cpp
     lib/storage/iterables_test.cpp
     lib/storage/lz4_segment_test.cpp
@@ -215,12 +220,11 @@ set(
     lib/storage/segment_iterators_test.cpp
     lib/storage/storage_manager_test.cpp
     lib/storage/table_column_definition_test.cpp
-    lib/storage/table_key_constraint_test.cpp
     lib/storage/table_test.cpp
     lib/storage/value_segment_test.cpp
     lib/tasks/chunk_compression_task_test.cpp
     lib/utils/check_table_equal_test.cpp
-    lib/utils/column_ids_after_pruning_test.cpp
+    lib/utils/column_pruning_utils_test.cpp
     lib/utils/date_time_utils_test.cpp
     lib/utils/format_bytes_test.cpp
     lib/utils/format_duration_test.cpp
@@ -233,6 +237,7 @@ set(
     lib/utils/meta_tables/meta_mock_table.cpp
     lib/utils/meta_tables/meta_mock_table.hpp
     lib/utils/meta_tables/meta_plugins_table_test.cpp
+    lib/utils/meta_tables/meta_segments_accurate_test.cpp
     lib/utils/meta_tables/meta_settings_table_test.cpp
     lib/utils/meta_tables/meta_system_utilization_table_test.cpp
     lib/utils/meta_tables/meta_table_test.cpp
@@ -251,7 +256,7 @@ set(
     plugins/ucc_discovery_plugin_test.cpp
     testing_assert.cpp
     testing_assert.hpp
-    utils/constraint_test_utils.hpp
+    utils/data_dependency_test_utils.hpp
 )
 
 set(
@@ -280,6 +285,8 @@ set(
     # Added plugin targets so that we can test member methods without going through dlsym
     hyriseMvccDeletePlugin
     hyriseUccDiscoveryPlugin
+    # Required for testing plugin benchmark hooks
+    hyriseBenchmarkLib
 )
 
 # This warning does not play well with SCOPED_TRACE
@@ -301,16 +308,13 @@ target_link_libraries(hyriseTest hyrise ${LIBRARIES})
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
     target_compile_options(hyriseTest PUBLIC -Xclang -fno-pch-timestamp)
 endif()
-
-if(NOT ${CMAKE_VERSION} VERSION_LESS "3.16.0")
-    target_precompile_headers(hyriseTest PRIVATE
-        <gtest/gtest.h>
-        [["all_parameter_variant.hpp"]]
-        [["storage/create_iterable_from_segment.hpp"]]
-        [["storage/table.hpp"]]
-        [["types.hpp"]]
-    )
-endif()
+target_precompile_headers(hyriseTest PRIVATE
+    <gtest/gtest.h>
+    [["all_parameter_variant.hpp"]]
+    [["storage/create_iterable_from_segment.hpp"]]
+    [["storage/table.hpp"]]
+    [["types.hpp"]]
+)
 
 # Configure hyriseSystemTest
 add_executable(hyriseSystemTest ${SYSTEM_TEST_SOURCES})

@@ -42,7 +42,7 @@ class MvccDeletePluginSystemTest : public BaseTest {
       std::iota(values.begin(), values.end(), begin_value);
 
       const auto value_segment = std::make_shared<ValueSegment<int>>(std::move(values));
-      Segments segments;
+      auto segments = Segments{};
       segments.emplace_back(value_segment);
       const auto mvcc_data = std::make_shared<MvccData>(segments.front()->size(), CommitID{0});
       _table->append_chunk(segments, mvcc_data);

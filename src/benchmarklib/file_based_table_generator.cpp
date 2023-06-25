@@ -1,5 +1,7 @@
 #include "file_based_table_generator.hpp"
 
+#include <unordered_set>
+
 #include <boost/algorithm/string.hpp>
 
 #include "benchmark_config.hpp"

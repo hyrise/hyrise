@@ -72,7 +72,7 @@ join_two_typed_segments(const BinaryFunctor& func, LeftIterator left_it, LeftIte
 
 namespace hyrise {
 
-bool JoinNestedLoop::supports(const JoinConfiguration config) {
+bool JoinNestedLoop::supports(const JoinConfiguration /*config*/) {
   return true;
 }
 
@@ -92,7 +92,7 @@ const std::string& JoinNestedLoop::name() const {
 std::shared_ptr<AbstractOperator> JoinNestedLoop::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_left_input,
     const std::shared_ptr<AbstractOperator>& copied_right_input,
-    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& /*copied_ops*/) const {
   return std::make_shared<JoinNestedLoop>(copied_left_input, copied_right_input, _mode, _primary_predicate,
                                           _secondary_predicates);
 }
@@ -133,10 +133,9 @@ std::shared_ptr<const Table> JoinNestedLoop::_on_execute() {
   const auto pos_list_right = std::make_shared<RowIDPosList>();
 
   const auto is_outer_join = _mode == JoinMode::Left || _mode == JoinMode::Right || _mode == JoinMode::FullOuter;
-  const auto is_semi_or_anti_join =
-      _mode == JoinMode::Semi || _mode == JoinMode::AntiNullAsFalse || _mode == JoinMode::AntiNullAsTrue;
+  const auto semi_or_anti_join = is_semi_or_anti_join(_mode);
 
-  const auto track_left_matches = is_outer_join || is_semi_or_anti_join;
+  const auto track_left_matches = is_outer_join || semi_or_anti_join;
   const auto track_right_matches = _mode == JoinMode::FullOuter;
 
   auto left_matches_by_chunk = std::vector<std::vector<bool>>(left_table->chunk_count());
@@ -182,7 +181,7 @@ std::shared_ptr<const Table> JoinNestedLoop::_on_execute() {
                         _mode,
                         maybe_flipped_predicate_condition,
                         secondary_predicate_evaluator,
-                        !is_semi_or_anti_join};
+                        !semi_or_anti_join};
       _join_two_untyped_segments(*segment_left, *segment_right, chunk_id_left, chunk_id_right, params);
     }
 
@@ -218,7 +217,7 @@ std::shared_ptr<const Table> JoinNestedLoop::_on_execute() {
 
   // Write PosLists for Semi/Anti Joins, which so far haven't written any results to the PosLists
   // We use `left_matches_by_chunk` to determine whether a tuple from the left side found a match.
-  if (is_semi_or_anti_join) {
+  if (semi_or_anti_join) {
     const auto invert = _mode == JoinMode::AntiNullAsFalse || _mode == JoinMode::AntiNullAsTrue;
 
     for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count_left; ++chunk_id) {
@@ -234,9 +233,9 @@ std::shared_ptr<const Table> JoinNestedLoop::_on_execute() {
   }
 
   // Write output Chunk based on the PosList(s) we created during the Join
-  Segments segments;
+  auto segments = Segments{};
 
-  if (is_semi_or_anti_join) {
+  if (semi_or_anti_join) {
     _write_output_chunk(segments, left_table, pos_list_left);
   } else {
     if (_mode == JoinMode::Right) {

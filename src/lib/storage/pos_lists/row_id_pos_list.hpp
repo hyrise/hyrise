@@ -126,7 +126,7 @@ class RowIDPosList final : public AbstractPosList, private pmr_vector<RowID> {
   using Vector::resize;
   using Vector::swap;
 
-  size_t memory_usage(const MemoryUsageCalculationMode mode) const final;
+  size_t memory_usage(const MemoryUsageCalculationMode /*mode*/) const final;
 
   // The double inheritance from AbstractPosList and pmr_vector requires an explicit
   // selection of the == operator, otherwise it is ambiguous.

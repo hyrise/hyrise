@@ -1,16 +1,31 @@
 #include "stored_table_node.hpp"
 
+#include "expression/expression_functional.hpp"
+#include "expression/expression_utils.hpp"
 #include "expression/lqp_column_expression.hpp"
 #include "hyrise.hpp"
 #include "lqp_utils.hpp"
 #include "statistics/table_statistics.hpp"
-#include "storage/index/index_statistics.hpp"
+#include "storage/index/chunk_index_statistics.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "utils/assert.hpp"
-#include "utils/column_ids_after_pruning.hpp"
+#include "utils/column_pruning_utils.hpp"
+
+namespace {
+
+using namespace hyrise;  // NOLINT(build/namespaces)
+
+bool contains_any_column_id(const std::set<ColumnID>& search_columns, const std::vector<ColumnID>& columns) {
+  return std::any_of(columns.cbegin(), columns.cend(),
+                     [&](const auto& column_id) { return search_columns.contains(column_id); });
+}
+
+}  // namespace
 
 namespace hyrise {
+
+using namespace expression_functional;  // NOLINT(build/namespaces)
 
 StoredTableNode::StoredTableNode(const std::string& init_table_name)
     : AbstractLQPNode(LQPNodeType::StoredTable), table_name(init_table_name) {}
@@ -54,7 +69,7 @@ const std::vector<ColumnID>& StoredTableNode::pruned_column_ids() const {
   return _pruned_column_ids;
 }
 
-std::string StoredTableNode::description(const DescriptionMode mode) const {
+std::string StoredTableNode::description(const DescriptionMode /*mode*/) const {
   const auto stored_table = Hyrise::get().storage_manager.get_table(table_name);
 
   std::ostringstream stream;
@@ -98,40 +113,36 @@ bool StoredTableNode::is_column_nullable(const ColumnID column_id) const {
   return table->column_is_nullable(column_id);
 }
 
-std::shared_ptr<LQPUniqueConstraints> StoredTableNode::unique_constraints() const {
-  auto unique_constraints = std::make_shared<LQPUniqueConstraints>();
+UniqueColumnCombinations StoredTableNode::unique_column_combinations() const {
+  auto unique_column_combinations = UniqueColumnCombinations{};
 
-  // We create unique constraints from selected table key constraints
+  // We create unique column combinations from selected table key constraints.
   const auto& table = Hyrise::get().storage_manager.get_table(table_name);
   const auto& table_key_constraints = table->soft_key_constraints();
 
-  for (const TableKeyConstraint& table_key_constraint : table_key_constraints) {
+  for (const auto& table_key_constraint : table_key_constraints) {
     // Discard key constraints that involve pruned column id(s).
-    const auto& key_constraint_column_ids = table_key_constraint.columns();
-    if (std::any_of(_pruned_column_ids.cbegin(), _pruned_column_ids.cend(),
-                    [&key_constraint_column_ids](const auto& pruned_column_id) {
-                      return key_constraint_column_ids.contains(pruned_column_id);
-                    })) {
+    if (contains_any_column_id(table_key_constraint.columns(), _pruned_column_ids)) {
       continue;
     }
 
-    // Search for expressions representing the key constraint's ColumnIDs
+    // Search for expressions representing the key constraint's ColumnIDs.
     const auto& column_expressions = find_column_expressions(*this, table_key_constraint.columns());
     DebugAssert(column_expressions.size() == table_key_constraint.columns().size(),
                 "Unexpected count of column expressions.");
 
-    // Create LQPUniqueConstraint
-    unique_constraints->emplace_back(column_expressions);
+    // Create UniqueColumnCombination
+    unique_column_combinations.emplace(column_expressions);
   }
 
-  return unique_constraints;
+  return unique_column_combinations;
 }
 
-std::vector<IndexStatistics> StoredTableNode::indexes_statistics() const {
+std::vector<ChunkIndexStatistics> StoredTableNode::chunk_indexes_statistics() const {
   DebugAssert(!left_input() && !right_input(), "StoredTableNode must be a leaf");
 
   const auto table = Hyrise::get().storage_manager.get_table(table_name);
-  auto pruned_indexes_statistics = table->indexes_statistics();
+  auto pruned_indexes_statistics = table->chunk_indexes_statistics();
 
   if (_pruned_column_ids.empty()) {
     return pruned_indexes_statistics;
@@ -175,14 +186,14 @@ size_t StoredTableNode::_on_shallow_hash() const {
   return hash;
 }
 
-std::shared_ptr<AbstractLQPNode> StoredTableNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
+std::shared_ptr<AbstractLQPNode> StoredTableNode::_on_shallow_copy(LQPNodeMapping& /*node_mapping*/) const {
   const auto copy = make(table_name);
   copy->set_pruned_chunk_ids(_pruned_chunk_ids);
   copy->set_pruned_column_ids(_pruned_column_ids);
   return copy;
 }
 
-bool StoredTableNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
+bool StoredTableNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& /*node_mapping*/) const {
   const auto& stored_table_node = static_cast<const StoredTableNode&>(rhs);
   return table_name == stored_table_node.table_name && _pruned_chunk_ids == stored_table_node._pruned_chunk_ids &&
          _pruned_column_ids == stored_table_node._pruned_column_ids;

@@ -53,11 +53,11 @@ std::shared_ptr<Table> TPCCTableGenerator::generate_item_table() {
                      });
   _add_column<pmr_string>(
       segments_by_chunk, column_definitions, "I_DATA", cardinalities, [&](const std::vector<size_t>& indices) {
-        std::string data = _random_gen.astring(26, 50);
-        bool is_original = original_ids.find(indices[0]) != original_ids.end();
+        auto data = _random_gen.astring(26, 50);
+        const auto is_original = original_ids.find(indices[0]) != original_ids.end();
         if (is_original) {
-          std::string original_string("ORIGINAL");
-          size_t start_pos = _random_gen.random_number(0, data.length() - 1 - original_string.length());
+          const auto original_string = std::string{"ORIGINAL"};
+          const auto start_pos = _random_gen.random_number(0, data.length() - 1 - original_string.length());
           data.replace(start_pos, original_string.length(), original_string);
         }
         return pmr_string(data.begin(), data.end());
@@ -169,10 +169,10 @@ std::shared_ptr<Table> TPCCTableGenerator::generate_stock_table() {
   _add_column<pmr_string>(
       segments_by_chunk, column_definitions, "S_DATA", cardinalities, [&](const std::vector<size_t>& indices) {
         std::string data = _random_gen.astring(26, 50);
-        bool is_original = original_ids.find(indices[1]) != original_ids.end();
+        const auto is_original = original_ids.find(indices[1]) != original_ids.end();
         if (is_original) {
-          std::string original_string("ORIGINAL");
-          size_t start_pos = _random_gen.random_number(0, data.length() - 1 - original_string.length());
+          const auto original_string = std::string{"ORIGINAL"};
+          const auto start_pos = _random_gen.random_number(0, data.length() - 1 - original_string.length());
           data.replace(start_pos, original_string.length(), original_string);
         }
         return pmr_string(data.begin(), data.end());
@@ -315,7 +315,7 @@ std::shared_ptr<Table> TPCCTableGenerator::generate_customer_table() {
                        [&](const std::vector<size_t>& /*indices*/) { return _current_date; });
   _add_column<pmr_string>(segments_by_chunk, column_definitions, "C_CREDIT", cardinalities,
                           [&](const std::vector<size_t>& indices) {
-                            bool is_original = original_ids.find(indices[2]) != original_ids.end();
+                            const auto is_original = original_ids.find(indices[2]) != original_ids.end();
                             return pmr_string{is_original ? "BC" : "GC"};
                           });
   _add_column<float>(segments_by_chunk, column_definitions, "C_CREDIT_LIM", cardinalities,
@@ -587,18 +587,17 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCCTableGenerator::generate
     return _load_binary_tables_from_path(cache_directory);
   }
 
-  std::vector<std::thread> threads;
-  auto item_table = generate_item_table();
-  auto warehouse_table = generate_warehouse_table();
-  auto stock_table = generate_stock_table();
-  auto district_table = generate_district_table();
-  auto customer_table = generate_customer_table();
-  auto history_table = generate_history_table();
-  auto new_order_table = generate_new_order_table();
+  const auto item_table = generate_item_table();
+  const auto warehouse_table = generate_warehouse_table();
+  const auto stock_table = generate_stock_table();
+  const auto district_table = generate_district_table();
+  const auto customer_table = generate_customer_table();
+  const auto history_table = generate_history_table();
+  const auto new_order_table = generate_new_order_table();
 
-  auto order_line_counts = generate_order_line_counts();
-  auto order_table = generate_order_table(order_line_counts);
-  auto order_line_table = generate_order_line_table(order_line_counts);
+  const auto order_line_counts = generate_order_line_counts();
+  const auto order_table = generate_order_table(order_line_counts);
+  const auto order_line_table = generate_order_line_table(order_line_counts);
 
   auto table_info_by_name =
       std::unordered_map<std::string, BenchmarkTableInfo>({{"ITEM", BenchmarkTableInfo{item_table}},
@@ -614,7 +613,8 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCCTableGenerator::generate
   if (_benchmark_config->cache_binary_tables) {
     std::filesystem::create_directories(cache_directory);
     for (auto& [table_name, table_info] : table_info_by_name) {
-      table_info.binary_file_path = cache_directory + "/" + table_name + ".bin";  // NOLINT
+      // NOLINTNEXTLINE(performance-inefficient-string-concatenation)
+      table_info.binary_file_path = cache_directory + "/" + table_name + ".bin";
     }
   }
 

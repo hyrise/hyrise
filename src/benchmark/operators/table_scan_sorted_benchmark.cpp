@@ -4,7 +4,6 @@
 
 #include "../micro_benchmark_basic_fixture.hpp"
 #include "benchmark/benchmark.h"
-#include "constant_mappings.hpp"
 #include "expression/expression_functional.hpp"
 #include "micro_benchmark_utils.hpp"
 #include "operators/table_scan.hpp"
@@ -14,9 +13,9 @@
 #include "storage/table.hpp"
 #include "utils/load_table.hpp"
 
-using namespace hyrise::expression_functional;  // NOLINT
-
 namespace hyrise {
+
+using namespace expression_functional;  // NOLINT(build/namespaces)
 
 namespace {
 

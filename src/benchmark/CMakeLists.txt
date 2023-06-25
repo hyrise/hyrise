@@ -150,8 +150,7 @@ add_executable(
 
 target_link_libraries(
     hyriseBenchmarkBufferManager
-    PRIVATE
-
+    
     hyrise
     hyriseBenchmarkLib
 )
@@ -161,3 +160,19 @@ target_link_libraries_system(
 
     benchmark::benchmark
 )
+
+
+# Configure hyriseBenchmarkStarSchema
+add_executable(
+    hyriseBenchmarkStarSchema
+
+    star_schema_benchmark.cpp
+)
+
+target_link_libraries(
+    hyriseBenchmarkStarSchema
+
+    hyrise
+    hyriseBenchmarkLib
+)
+

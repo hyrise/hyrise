@@ -14,8 +14,6 @@ namespace hyrise {
 class ChangeMetaTableTest : public BaseTest {
  protected:
   void SetUp() override {
-    Hyrise::reset();
-
     auto column_definitions = MetaMockTable().column_definitions();
     auto mock_table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2});
     mock_table->append({pmr_string{"foo"}});
@@ -34,10 +32,6 @@ class ChangeMetaTableTest : public BaseTest {
     Hyrise::get().meta_table_manager.add_table(meta_mock_table);
 
     context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::Yes);
-  }
-
-  void TearDown() override {
-    Hyrise::reset();
   }
 
   std::shared_ptr<AbstractOperator> left_input;

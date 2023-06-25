@@ -23,11 +23,12 @@ TPCCNewOrder::TPCCNewOrder(const int num_warehouses, BenchmarkSQLExecutor& sql_e
 
     std::uniform_int_distribution<> home_warehouse_dist{1, 100};
     // 1% chance of remote warehouses (if more than one).
-    auto is_home_warehouse = num_warehouses == 1 || home_warehouse_dist(_random_engine) > 1;
+    const auto is_home_warehouse = num_warehouses == 1 || home_warehouse_dist(_random_engine) > 1;
     if (is_home_warehouse) {
       order_line.ol_supply_w_id = w_id;
     } else {
-      // Choose a warehouse that is different from w_id
+      // Choose a warehouse that is different from w_id.
+      // NOLINTNEXTLINE(cppcoreguidelines-avoid-do-while)
       do {
         order_line.ol_supply_w_id = warehouse_dist(_random_engine);
       } while (order_line.ol_supply_w_id == w_id);
@@ -52,6 +53,7 @@ bool TPCCNewOrder::_on_execute() {
       _sql_executor.execute(std::string{"SELECT W_TAX FROM WAREHOUSE WHERE W_ID = "} + std::to_string(w_id));
   const auto& warehouse_table = warehouse_select_pair.second;
   Assert(warehouse_table && warehouse_table->row_count() == 1, "Did not find warehouse (or found more than one)");
+
   const auto w_tax = *warehouse_table->get_value<float>(ColumnID{0}, 0);
   Assert(w_tax >= 0.f && w_tax <= .2f, "Invalid warehouse tax rate encountered");
 

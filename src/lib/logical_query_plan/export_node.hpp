@@ -14,18 +14,17 @@ namespace hyrise {
  */
 class ExportNode : public EnableMakeForLQPNode<ExportNode>, public AbstractNonQueryNode {
  public:
-  ExportNode(const std::string& init_table_name, const std::string& init_file_name, const FileType init_file_type);
+  ExportNode(const std::string& init_file_name, const FileType init_file_type);
 
   std::string description(const DescriptionMode mode = DescriptionMode::Short) const override;
 
-  const std::string table_name;
   const std::string file_name;
   const FileType file_type;
 
  protected:
   size_t _on_shallow_hash() const override;
-  std::shared_ptr<AbstractLQPNode> _on_shallow_copy(LQPNodeMapping& node_mapping) const override;
-  bool _on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const override;
+  std::shared_ptr<AbstractLQPNode> _on_shallow_copy(LQPNodeMapping& /*node_mapping*/) const override;
+  bool _on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& /*node_mapping*/) const override;
 };
 
 }  // namespace hyrise

@@ -237,7 +237,7 @@ class TPCCTableGenerator : public AbstractTableGenerator {
    * NULL values).
    *
    * Note that this is not a general purpose function. The implementation of _add_column checks whether NULL values
-   * were actually passed and sets the column's nullable flag accordingly. As such, if this method is used with an
+   * were actually passed and sets the column's nullable flag accordingly. As such, if this method is used with a
    * generator that returns optionals but no nullopts, the column will not be nullable. For TPC-C, this is fine.
    */
   template <typename T>

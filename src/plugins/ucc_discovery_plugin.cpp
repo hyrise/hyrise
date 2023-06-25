@@ -3,6 +3,7 @@
 #include <boost/container_hash/hash.hpp>
 #include <boost/unordered_set.hpp>
 
+#include "../benchmarklib/abstract_benchmark_item_runner.hpp"
 #include "expression/binary_predicate_expression.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/value_expression.hpp"
@@ -51,6 +52,15 @@ UccDiscoveryPlugin::provided_user_executable_functions() {
   return {{"DiscoverUCCs", [&]() { _validate_ucc_candidates(_identify_ucc_candidates()); }}};
 }
 
+std::optional<PreBenchmarkHook> UccDiscoveryPlugin::pre_benchmark_hook() {
+  return [&](auto& benchmark_item_runner) {
+    for (const auto item_id : benchmark_item_runner.items()) {
+      benchmark_item_runner.execute_item(item_id);
+    }
+    _validate_ucc_candidates(_identify_ucc_candidates());
+  };
+}
+
 UccCandidates UccDiscoveryPlugin::_identify_ucc_candidates() {
   const auto lqp_cache = Hyrise::get().default_lqp_cache;
   if (!lqp_cache) {
@@ -97,11 +107,11 @@ void UccDiscoveryPlugin::_validate_ucc_candidates(const UccCandidates& ucc_candi
 
     const auto& soft_key_constraints = table->soft_key_constraints();
 
-    // Skip already discovered unique constraints.
+    // Skip already discovered UCCs.
     if (std::any_of(soft_key_constraints.cbegin(), soft_key_constraints.cend(),
                     [&column_id](const auto& key_constraint) {
                       const auto& columns = key_constraint.columns();
-                      return columns.size() == 1 && columns.contains(column_id);
+                      return columns.size() == 1 && *columns.cbegin() == column_id;
                     })) {
       message << " [skipped (already known) in " << candidate_timer.lap_formatted() << "]";
       Hyrise::get().log_manager.add_message("UccDiscoveryPlugin", message.str(), LogLevel::Info);
@@ -125,7 +135,7 @@ void UccDiscoveryPlugin::_validate_ucc_candidates(const UccCandidates& ucc_candi
         return;
       }
 
-      // We save UCC constraints directly inside the table so they can be forwarded to nodes in a query plan.
+      // We save UCCs directly inside the table so they can be forwarded to nodes in a query plan.
       message << " [confirmed in " << candidate_timer.lap_formatted() << "]";
       Hyrise::get().log_manager.add_message("UccDiscoveryPlugin", message.str(), LogLevel::Info);
       table->add_soft_key_constraint(TableKeyConstraint({column_id}, KeyConstraintType::UNIQUE));
@@ -138,7 +148,8 @@ void UccDiscoveryPlugin::_validate_ucc_candidates(const UccCandidates& ucc_candi
 }
 
 template <typename ColumnDataType>
-bool UccDiscoveryPlugin::_dictionary_segments_contain_duplicates(std::shared_ptr<Table> table, ColumnID column_id) {
+bool UccDiscoveryPlugin::_dictionary_segments_contain_duplicates(const std::shared_ptr<const Table>& table,
+                                                                 const ColumnID column_id) {
   const auto chunk_count = table->chunk_count();
   // Trigger an early-out if a dictionary-encoded segment's attribute vector is larger than the dictionary. This indica-
   // tes that at least one duplicate value or a NULL value is contained.
@@ -170,7 +181,8 @@ bool UccDiscoveryPlugin::_dictionary_segments_contain_duplicates(std::shared_ptr
 }
 
 template <typename ColumnDataType>
-bool UccDiscoveryPlugin::_uniqueness_holds_across_segments(std::shared_ptr<Table> table, ColumnID column_id) {
+bool UccDiscoveryPlugin::_uniqueness_holds_across_segments(const std::shared_ptr<const Table>& table,
+                                                           const ColumnID column_id) {
   const auto chunk_count = table->chunk_count();
   // `distinct_values` collects the segment values from all chunks.
   auto distinct_values = boost::unordered_set<ColumnDataType>{};
@@ -214,7 +226,7 @@ bool UccDiscoveryPlugin::_uniqueness_holds_across_segments(std::shared_ptr<Table
       });
     }
 
-    // If not all elements have been inserted, there must be a duplicate, so the UCC constraint is violated.
+    // If not all elements have been inserted, there must be a duplicate, so the UCC is violated.
     if (distinct_values.size() != expected_distinct_value_count) {
       return false;
     }
@@ -223,12 +235,12 @@ bool UccDiscoveryPlugin::_uniqueness_holds_across_segments(std::shared_ptr<Table
   return true;
 }
 
-void UccDiscoveryPlugin::_ucc_candidates_from_aggregate_node(std::shared_ptr<AbstractLQPNode> node,
+void UccDiscoveryPlugin::_ucc_candidates_from_aggregate_node(const std::shared_ptr<const AbstractLQPNode>& node,
                                                              UccCandidates& ucc_candidates) {
-  const auto& aggregate_node = static_cast<AggregateNode&>(*node);
+  const auto& aggregate_node = static_cast<const AggregateNode&>(*node);
   const auto column_candidates = std::vector<std::shared_ptr<AbstractExpression>>{
       aggregate_node.node_expressions.cbegin(),
-      aggregate_node.node_expressions.cbegin() + aggregate_node.aggregate_expressions_begin_idx};
+      aggregate_node.node_expressions.cbegin() + static_cast<int64_t>(aggregate_node.aggregate_expressions_begin_idx)};
 
   for (const auto& column_candidate : column_candidates) {
     const auto lqp_column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(column_candidate);
@@ -241,9 +253,9 @@ void UccDiscoveryPlugin::_ucc_candidates_from_aggregate_node(std::shared_ptr<Abs
   }
 }
 
-void UccDiscoveryPlugin::_ucc_candidates_from_join_node(std::shared_ptr<AbstractLQPNode> node,
+void UccDiscoveryPlugin::_ucc_candidates_from_join_node(const std::shared_ptr<const AbstractLQPNode>& node,
                                                         UccCandidates& ucc_candidates) {
-  const auto& join_node = static_cast<JoinNode&>(*node);
+  const auto& join_node = static_cast<const JoinNode&>(*node);
   // Fetch the join predicate to extract the UCC candidates from. Right now, limited to single-predicate equi joins.
   const auto& join_predicates = join_node.join_predicates();
   if (join_predicates.size() != 1) {
@@ -315,8 +327,8 @@ void UccDiscoveryPlugin::_ucc_candidates_from_join_node(std::shared_ptr<Abstract
 }
 
 void UccDiscoveryPlugin::_ucc_candidates_from_removable_join_input(
-    std::shared_ptr<AbstractLQPNode> root_node, std::shared_ptr<LQPColumnExpression> column_candidate,
-    UccCandidates& ucc_candidates) {
+    const std::shared_ptr<const AbstractLQPNode>& root_node,
+    const std::shared_ptr<const LQPColumnExpression>& column_candidate, UccCandidates& ucc_candidates) {
   // The input node may already be a nullptr in case we try to get the right input of node with only one input. The can-
   // didate Column might be a nullptr when the join is not performed on bare columns but, e.g., on aggregates.
   if (!root_node || !column_candidate) {
@@ -366,7 +378,7 @@ void UccDiscoveryPlugin::_ucc_candidates_from_removable_join_input(
   });
 }
 
-EXPORT_PLUGIN(UccDiscoveryPlugin)
+EXPORT_PLUGIN(UccDiscoveryPlugin);
 
 }  // namespace hyrise
 

@@ -6,7 +6,7 @@
 #include "abstract_lqp_node.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/lqp_column_expression.hpp"
-#include "storage/index/index_statistics.hpp"
+#include "storage/index/chunk_index_statistics.hpp"
 
 namespace hyrise {
 
@@ -37,14 +37,14 @@ class StoredTableNode : public EnableMakeForLQPNode<StoredTableNode>, public Abs
   const std::vector<ColumnID>& pruned_column_ids() const;
   /** @} */
 
-  std::vector<IndexStatistics> indexes_statistics() const;
+  std::vector<ChunkIndexStatistics> chunk_indexes_statistics() const;
 
   std::string description(const DescriptionMode mode = DescriptionMode::Short) const override;
   std::vector<std::shared_ptr<AbstractExpression>> output_expressions() const override;
   bool is_column_nullable(const ColumnID column_id) const override;
 
-  // Generates unique constraints from table's key constraints and pays respect to pruned columns.
-  std::shared_ptr<LQPUniqueConstraints> unique_constraints() const override;
+  // Generates unique column combinations from a table's key constraints. Drops UCCs that include pruned columns.
+  UniqueColumnCombinations unique_column_combinations() const override;
 
   const std::string table_name;
 
@@ -54,8 +54,8 @@ class StoredTableNode : public EnableMakeForLQPNode<StoredTableNode>, public Abs
 
  protected:
   size_t _on_shallow_hash() const override;
-  std::shared_ptr<AbstractLQPNode> _on_shallow_copy(LQPNodeMapping& node_mapping) const override;
-  bool _on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const override;
+  std::shared_ptr<AbstractLQPNode> _on_shallow_copy(LQPNodeMapping& /*node_mapping*/) const override;
+  bool _on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& /*node_mapping*/) const override;
 
  private:
   mutable std::optional<std::vector<std::shared_ptr<AbstractExpression>>> _output_expressions;

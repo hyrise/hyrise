@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "hyrise.hpp"
+#include "storage/index/partial_hash/partial_hash_index.hpp"
 #include "types.hpp"
 
 namespace hyrise {
@@ -40,7 +41,7 @@ const std::string& GetTable::name() const {
 std::string GetTable::description(DescriptionMode description_mode) const {
   const auto stored_table = Hyrise::get().storage_manager.get_table(_name);
   const auto separator = (description_mode == DescriptionMode::SingleLine ? ' ' : '\n');
-  std::stringstream stream;
+  auto stream = std::stringstream{};
 
   stream << AbstractOperator::description(description_mode) << separator;
   stream << "(" << table_name() << ")" << separator;
@@ -68,9 +69,9 @@ const std::vector<ColumnID>& GetTable::pruned_column_ids() const {
 }
 
 std::shared_ptr<AbstractOperator> GetTable::_on_deep_copy(
-    const std::shared_ptr<AbstractOperator>& copied_left_input,
-    const std::shared_ptr<AbstractOperator>& copied_right_input,
-    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
+    const std::shared_ptr<AbstractOperator>& /*copied_left_input*/,
+    const std::shared_ptr<AbstractOperator>& /*copied_right_input*/,
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& /*copied_ops*/) const {
   return std::make_shared<GetTable>(_name, _pruned_chunk_ids, _pruned_column_ids);
 }
 
@@ -172,7 +173,7 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
 
   auto excluded_chunk_ids_iter = excluded_chunk_ids.begin();
 
-  for (ChunkID stored_chunk_id{0}; stored_chunk_id < chunk_count; ++stored_chunk_id) {
+  for (auto stored_chunk_id = ChunkID{0}; stored_chunk_id < chunk_count; ++stored_chunk_id) {
     // Skip `stored_chunk_id` if it is in the sorted vector `excluded_chunk_ids`
     if (excluded_chunk_ids_iter != excluded_chunk_ids.end() && *excluded_chunk_ids_iter == stored_chunk_id) {
       ++excluded_chunk_ids_iter;
@@ -185,17 +186,18 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
     // Make a copy of the order-by information of the current chunk. This information is adapted when columns are
     // pruned and will be set on the output chunk.
     const auto& input_chunk_sorted_by = stored_chunk->individually_sorted_by();
-    std::optional<SortColumnDefinition> output_chunk_sorted_by;
+    auto output_chunk_sorted_by = std::optional<SortColumnDefinition>{};
 
     if (_pruned_column_ids.empty()) {
       *output_chunks_iter = stored_chunk;
     } else {
-      auto output_segments = Segments{stored_table->column_count() - _pruned_column_ids.size()};
+      const auto column_count = stored_table->column_count();
+      auto output_segments = Segments{column_count - _pruned_column_ids.size()};
       auto output_segments_iter = output_segments.begin();
       auto output_indexes = Indexes{};
 
       auto pruned_column_ids_iter = _pruned_column_ids.begin();
-      for (auto stored_column_id = ColumnID{0}; stored_column_id < stored_table->column_count(); ++stored_column_id) {
+      for (auto stored_column_id = ColumnID{0}; stored_column_id < column_count; ++stored_column_id) {
         // Skip `stored_column_id` if it is in the sorted vector `_pruned_column_ids`
         if (pruned_column_ids_iter != _pruned_column_ids.end() && stored_column_id == *pruned_column_ids_iter) {
           ++pruned_column_ids_iter;
@@ -239,8 +241,37 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
     ++output_chunks_iter;
   }
 
+  // Lambda to check if all chunks indexed by a table index have been pruned by the ChunkPruningRule or
+  // ColumnPruningRule of the optimizer.
+  const auto all_indexed_segments_pruned = [&](const auto& table_index) {
+    // Check if indexed ColumnID has been pruned.
+    const auto indexed_column_id = table_index->get_indexed_column_id();
+    if (std::find(_pruned_column_ids.cbegin(), _pruned_column_ids.cend(), indexed_column_id) !=
+        _pruned_column_ids.cend()) {
+      return true;
+    }
+
+    const auto indexed_chunk_ids = table_index->get_indexed_chunk_ids();
+
+    // Early out if index is empty.
+    if (indexed_chunk_ids.empty()) {
+      return false;
+    }
+
+    // Check if the indexed chunks have been pruned.
+    DebugAssert(std::is_sorted(_pruned_chunk_ids.begin(), _pruned_chunk_ids.end()),
+                "Expected _pruned_chunk_ids vector to be sorted.");
+    return std::all_of(indexed_chunk_ids.cbegin(), indexed_chunk_ids.cend(), [&](const auto chunk_id) {
+      return std::binary_search(_pruned_chunk_ids.cbegin(), _pruned_chunk_ids.cend(), chunk_id);
+    });
+  };
+
+  auto table_indexes = stored_table->get_table_indexes();
+  table_indexes.erase(std::remove_if(table_indexes.begin(), table_indexes.end(), all_indexed_segments_pruned),
+                      table_indexes.cend());
+
   return std::make_shared<Table>(pruned_column_definitions, TableType::Data, std::move(output_chunks),
-                                 stored_table->uses_mvcc());
+                                 stored_table->uses_mvcc(), table_indexes);
 }
 
 }  // namespace hyrise

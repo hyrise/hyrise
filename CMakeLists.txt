@@ -1,5 +1,5 @@
 # consider updating DEPENDENCIES.md when you touch this line
-cmake_minimum_required(VERSION 3.9 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.18 FATAL_ERROR)
 
 project(Hyrise)
 
@@ -55,7 +55,8 @@ if (${ENABLE_ADDR_UB_SANITIZATION})
     # add_compile_options() wants list, CMAKE_EXE_LINKER_FLAGS a string. There are probably cleverer ways than
     # duplicating the flags, but this is probably the simplest solution.
     # -fno-sanitize-recover=all is used to make UBsan fail (i.e., return a non-zero exit code) when an error is found.
-    add_compile_options(-fsanitize=address,undefined -fno-sanitize-recover=all -fsanitize-blacklist=${CMAKE_CURRENT_SOURCE_DIR}/resources/.ubsan-blacklist.txt -fno-omit-frame-pointer)
+    # -mllvm -asan-use-private-alias=1 fixes false positive ODR violation alerts for shared libraries, see https://github.com/google/sanitizers/issues/1017 and https://reviews.llvm.org/D137227
+    add_compile_options(-fsanitize=address,undefined -fno-sanitize-recover=all -fsanitize-blacklist=${CMAKE_CURRENT_SOURCE_DIR}/resources/.ubsan-blacklist.txt -fno-omit-frame-pointer -mllvm -asan-use-private-alias=1)
     add_link_options(-fsanitize=address,undefined)
     set(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=address,undefined -fno-sanitize-recover=all -fsanitize-blacklist=${CMAKE_CURRENT_SOURCE_DIR}/resources/.ubsan-blacklist.txt -fno-omit-frame-pointer")
 endif()
@@ -104,17 +105,25 @@ set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${FLAGS_ALL} ${FLAGS_REL
 set(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO} ${FLAGS_ALL} ${FLAGS_RELEASE}")
 set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} ${FLAGS_ALL} ${FLAGS_RELEASE}")
 
-# Check for unity builds
-if(${CMAKE_VERSION} VERSION_LESS "3.16.0")
-    if(DEFINED CMAKE_UNITY_BUILD)
-        message(FATAL_ERROR "-DCMAKE_UNITY_BUILD=ON was set, but your cmake version does not support unity builds.")
+include(CheckLinkerFlag)
+if (HYRISE_LINKER)
+    check_linker_flag(CXX "-fuse-ld=${HYRISE_LINKER}" HAS_HYRISE_LINKER)
+    if (NOT HAS_HYRISE_LINKER)
+        message(FATAL_ERROR "Got HYRISE_LINKER=${HYRISE_LINKER}, but -fuse-ld=${HYRISE_LINKER} does not work.")
     endif()
-endif()
-
-# On Linux, use the lld linker, which is twice as fast for incremental debug builds
-if (NOT APPLE)
-    set(CMAKE_SHARED_LINKER_FLAGS "-fuse-ld=lld")
-    set(CMAKE_EXE_LINKER_FLAGS "-fuse-ld=lld")
+    message(STATUS "Using HYRISE_LINKER (${HYRISE_LINKER}).")
+    add_link_options("-fuse-ld=${HYRISE_LINKER}")
+else()
+    check_linker_flag(CXX "-fuse-ld=lld" HAS_LLD)
+    if (HAS_LLD)
+        message(STATUS "Found LLD, using as linker.")
+        add_link_options("-fuse-ld=lld")
+    else()
+        message(STATUS "Using default linker.")
+        if (NOT APPLE)
+            message(WARNING "Consider installing the LLD linker for faster incremental builds on Linux.")
+        endif()
+    endif()
 endif()
 
 # Require NCurses over Curses
@@ -150,17 +159,14 @@ cmake_policy(SET CMP0069 NEW)
 set(CMAKE_POLICY_DEFAULT_CMP0069 NEW)
 option(ENABLE_LTO "Set to ON to build Hyrise with enabled Link Time Optimization (LTO). Default: OFF" OFF)
 if (${ENABLE_LTO})
-    if(NOT ${CMAKE_VERSION} VERSION_LESS "3.9.0")
-        cmake_minimum_required(VERSION 3.9 FATAL_ERROR)
-        include(CheckIPOSupported)
-        check_ipo_supported(RESULT ipo_supported OUTPUT ipo_output)
-        if(ipo_supported)
-            set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
-            add_definitions(-DWITH_LTO)
-            message(STATUS "Building with Link-Time Optimization")
-        else()
-            message(WARNING "LTO not supported: ${ipo_output}")
-        endif()
+    include(CheckIPOSupported)
+    check_ipo_supported(RESULT ipo_supported OUTPUT ipo_output)
+    if(ipo_supported)
+        set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+        add_definitions(-DWITH_LTO)
+        message(STATUS "Building with Link-Time Optimization")
+    else()
+        message(WARNING "LTO not supported: ${ipo_output}")
     endif()
 endif()
 

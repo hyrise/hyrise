@@ -62,9 +62,11 @@ using SubqueryExpressionsByLQP =
     std::unordered_map<std::shared_ptr<AbstractLQPNode>, std::vector<std::weak_ptr<LQPSubqueryExpression>>>;
 
 /**
- * Returns unique LQPs from (nested) LQPSubqueryExpressions of @param node.
+ * Returns unique LQPs from (nested) LQPSubqueryExpressions of @param node. If @param only_correlated is set to true,
+ * only LQPs from correlated subqueries are part of the result.
  */
-SubqueryExpressionsByLQP collect_lqp_subquery_expressions_by_lqp(const std::shared_ptr<AbstractLQPNode>& node);
+SubqueryExpressionsByLQP collect_lqp_subquery_expressions_by_lqp(const std::shared_ptr<AbstractLQPNode>& node,
+                                                                 const bool only_correlated = false);
 
 /**
  * For two equally structured LQPs lhs and rhs, create a mapping for each node in lhs pointing to its equivalent in rhs.
@@ -195,12 +197,13 @@ enum class LQPUpwardVisitation { VisitOutputs, DoNotVisitOutputs };
  * @tparam Visitor      Functor called with every node as a param.
  *                      Returns `LQPUpwardVisitation`
  */
-template <typename Visitor>
-void visit_lqp_upwards(const std::shared_ptr<AbstractLQPNode>& lqp, Visitor visitor) {
-  std::queue<std::shared_ptr<AbstractLQPNode>> node_queue;
+template <typename Node, typename Visitor>
+void visit_lqp_upwards(const std::shared_ptr<Node>& lqp, Visitor visitor) {
+  using AbstractNodeType = std::conditional_t<std::is_const_v<Node>, const AbstractLQPNode, AbstractLQPNode>;
+  std::queue<std::shared_ptr<AbstractNodeType>> node_queue;
   node_queue.push(lqp);
 
-  std::unordered_set<std::shared_ptr<AbstractLQPNode>> visited_nodes;
+  std::unordered_set<std::shared_ptr<AbstractNodeType>> visited_nodes;
 
   while (!node_queue.empty()) {
     auto node = node_queue.front();
@@ -239,27 +242,28 @@ std::vector<std::shared_ptr<AbstractLQPNode>> lqp_find_leaves(const std::shared_
  *         This is a helper method that maps column ids from tables to the matching output expressions. Conceptually,
  *         it only works on data source nodes. Currently, these are StoredTableNodes, StaticTableNodes and MockNodes.
  */
-ExpressionUnorderedSet find_column_expressions(const AbstractLQPNode& lqp_node, const std::set<ColumnID>& column_ids);
+template <typename ColumnIDs>
+ExpressionUnorderedSet find_column_expressions(const AbstractLQPNode& lqp_node, const ColumnIDs& column_ids);
 
 /**
- * @return True, if there is unique constraint in the given set of @param unique_constraints matching the given
- *         set of expressions. A unique constraint matches if it covers a subset of @param expressions.
+ * @return True if there is a UCC in the given set of @param unique_column_combinations matching the given set of
+ *         expressions. A unique column combination matches if it covers a subset of @param expressions.
  */
-bool contains_matching_unique_constraint(const std::shared_ptr<LQPUniqueConstraints>& unique_constraints,
-                                         const ExpressionUnorderedSet& expressions);
+bool contains_matching_unique_column_combination(const UniqueColumnCombinations& unique_column_combinations,
+                                                 const ExpressionUnorderedSet& expressions);
 
 /**
- * @return A set of FDs, derived from the given @param unique_constraints and based on the output expressions of the
- *         given @param lqp node.
+ * @return A set of FDs, derived from the given @param unique_column_combinations and based on the output expressions of
+ *         the given @param lqp node.
  */
-std::vector<FunctionalDependency> fds_from_unique_constraints(
-    const std::shared_ptr<const AbstractLQPNode>& lqp, const std::shared_ptr<LQPUniqueConstraints>& unique_constraints);
+FunctionalDependencies fds_from_unique_column_combinations(const std::shared_ptr<const AbstractLQPNode>& lqp,
+                                                           const UniqueColumnCombinations& unique_column_combinations);
 
 /**
  * This is a helper method that removes invalid or unnecessary FDs from the given input set @param fds by looking at
  * the @param lqp node's output expressions.
  */
-void remove_invalid_fds(const std::shared_ptr<const AbstractLQPNode>& lqp, std::vector<FunctionalDependency>& fds);
+void remove_invalid_fds(const std::shared_ptr<const AbstractLQPNode>& lqp, FunctionalDependencies& fds);
 
 /**
  * Takes the given UnionNode @param union_root_node and traverses the LQP until a common origin node was found.

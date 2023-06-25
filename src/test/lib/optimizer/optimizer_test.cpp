@@ -1,6 +1,7 @@
 #include "base_test.hpp"
 
 #include "expression/expression_functional.hpp"
+#include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/limit_node.hpp"
 #include "logical_query_plan/logical_plan_root_node.hpp"
@@ -12,9 +13,9 @@
 #include "optimizer/optimizer.hpp"
 #include "optimizer/strategy/abstract_rule.hpp"
 
-using namespace hyrise::expression_functional;  // NOLINT
-
 namespace hyrise {
+
+using namespace expression_functional;  // NOLINT(build/namespaces)
 
 class OptimizerTest : public BaseTest {
  public:
@@ -32,8 +33,14 @@ class OptimizerTest : public BaseTest {
 
     subquery_lqp_a = LimitNode::make(to_expression(1), node_b);
     subquery_a = lqp_subquery_(subquery_lqp_a);
-    subquery_lqp_b = LimitNode::make(to_expression(1), PredicateNode::make(greater_than_(u, 3), node_c));
-    subquery_b = lqp_subquery_(subquery_lqp_b);
+    const auto correlated_parameter = correlated_parameter_(ParameterID{0}, b);
+    // clang-format off
+    subquery_lqp_b =
+    LimitNode::make(to_expression(1),
+      PredicateNode::make(greater_than_(u, correlated_parameter),
+        node_c));
+    // clang-format on
+    subquery_b = lqp_subquery_(subquery_lqp_b, std::make_pair(ParameterID{0}, correlated_parameter));
   }
 
   std::shared_ptr<MockNode> node_a, node_b, node_c;
@@ -55,7 +62,7 @@ TEST_F(OptimizerTest, RequiresOwnership) {
   EXPECT_THROW(optimizer->optimize(lqp), std::logic_error);
 }
 
-TEST_F(OptimizerTest, AssertsValidOutputs) {
+TEST_F(OptimizerTest, AssertsValidOutputsOutOfPlan) {
   // clang-format off
   auto lqp =
   ProjectionNode::make(expression_vector(add_(b, subquery_a)),
@@ -64,6 +71,19 @@ TEST_F(OptimizerTest, AssertsValidOutputs) {
   // clang-format on
 
   auto out_of_plan_node = LimitNode::make(value_(10), lqp->left_input());
+
+  EXPECT_THROW(Optimizer::validate_lqp(lqp), std::logic_error);
+}
+
+TEST_F(OptimizerTest, AssertsValidOutputsInDifferentPlan) {
+  // LimitNode is part of an uncorrelated and a correlated subquery.
+
+  // clang-format off
+  auto lqp =
+  PredicateNode::make(greater_than_(a, subquery_b),
+    PredicateNode::make(less_than_(a, lqp_subquery_(subquery_lqp_b)),
+      node_a));
+  // clang-format on
 
   EXPECT_THROW(Optimizer::validate_lqp(lqp), std::logic_error);
 }
@@ -80,7 +100,7 @@ TEST_F(OptimizerTest, AssertsCorrectNumberOfInputs) {
   EXPECT_THROW(Optimizer::validate_lqp(lqp), std::logic_error);
 }
 
-TEST_F(OptimizerTest, AssertsInPlanReferences) {
+TEST_F(OptimizerTest, AssertsOriginalNodeInSamePlan) {
   // clang-format off
   auto lqp =
   JoinNode::make(JoinMode::Inner, equals_(x, 1),
@@ -90,6 +110,32 @@ TEST_F(OptimizerTest, AssertsInPlanReferences) {
   // clang-format on
 
   EXPECT_THROW(Optimizer::validate_lqp(lqp), std::logic_error);
+}
+
+TEST_F(OptimizerTest, AllowsSubqueryReuse) {
+  subquery_lqp_a->set_left_input(nullptr);
+  // clang-format off
+  const auto aggregate_node =
+  AggregateNode::make(expression_vector(), expression_vector(min_(x), max_(x)),
+    PredicateNode::make(between_inclusive_(y, 1, 3),
+      node_b));
+
+  const auto min_x =
+  ProjectionNode::make(expression_vector(min_(x)),
+    aggregate_node);
+  const auto subquery_min_x = lqp_subquery_(min_x);
+
+  const auto max_x =
+  ProjectionNode::make(expression_vector(max_(x)),
+    aggregate_node);
+  const auto subquery_max_x = lqp_subquery_(max_x);
+
+  auto lqp =
+  PredicateNode::make(between_inclusive_(a, subquery_min_x, subquery_max_x),
+    node_a);
+  // clang-format on
+
+  Optimizer::validate_lqp(lqp);
 }
 
 TEST_F(OptimizerTest, VerifiesResults) {
@@ -106,12 +152,12 @@ TEST_F(OptimizerTest, VerifiesResults) {
       node_a));
   // clang-format on
 
-  Optimizer optimizer{};
+  auto optimizer = Optimizer{};
 
   class LQPBreakingRule : public AbstractRule {
    public:
-    explicit LQPBreakingRule(const std::shared_ptr<AbstractExpression>& init_out_of_plan_expression)
-        : out_of_plan_expression(init_out_of_plan_expression) {}
+    explicit LQPBreakingRule(const std::shared_ptr<AbstractExpression>& out_of_plan_expression)
+        : _out_of_plan_expression(out_of_plan_expression) {}
 
     std::string name() const override {
       return "LQPBreakingRule";
@@ -119,18 +165,18 @@ TEST_F(OptimizerTest, VerifiesResults) {
 
    protected:
     void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override {
-      // Change the `b` expression in the projection to `x`, which is not part of the input LQP
+      // Change the `b` expression in the projection to `u`, which is not part of the input LQP.
       const auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(lqp_root->left_input());
       if (!projection_node) {
         return;
       }
-      projection_node->node_expressions[0] = out_of_plan_expression;
+      projection_node->node_expressions[0] = _out_of_plan_expression;
     }
 
-    std::shared_ptr<AbstractExpression> out_of_plan_expression;
+    std::shared_ptr<AbstractExpression> _out_of_plan_expression;
   };
 
-  optimizer.add_rule(std::make_unique<LQPBreakingRule>(x));
+  optimizer.add_rule(std::make_unique<LQPBreakingRule>(u));
 
   EXPECT_THROW(optimizer.optimize(std::move(lqp)), std::logic_error);
 }

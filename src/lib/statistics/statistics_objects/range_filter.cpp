@@ -21,9 +21,9 @@ RangeFilter<T>::RangeFilter(std::vector<std::pair<T, T>> init_ranges)
 }
 
 template <typename T>
-Cardinality RangeFilter<T>::estimate_cardinality(const PredicateCondition predicate_condition,
-                                                 const AllTypeVariant& variant_value,
-                                                 const std::optional<AllTypeVariant>& variant_value2) const {
+Cardinality RangeFilter<T>::estimate_cardinality(const PredicateCondition /*predicate_condition*/,
+                                                 const AllTypeVariant& /*variant_value*/,
+                                                 const std::optional<AllTypeVariant>& /*variant_value2*/) const {
   // Theoretically, one could come up with some type of estimation (everything outside the range is 0, everything inside
   // is estimated assuming equi-distribution). For that, we would also need the cardinality of the underlying data.
   // Currently, as RangeFilters are on a per-segment basis and estimate_cardinality is called for an entire column,
@@ -225,7 +225,7 @@ bool RangeFilter<T>::does_not_contain(const PredicateCondition predicate_conditi
   // are not prunable. Malformed predicates such as can_prune(PredicateCondition::LessThan, {5}, NULL_VALUE) are not
   // pruned either. While this call might be considered nonsensical (everything compared to NULL is null), we do not
   // require callers to identify these circumstances.
-  if (variant_is_null(variant_value) || (variant_value2.has_value() && variant_is_null(variant_value2.value())) ||
+  if (variant_is_null(variant_value) || (variant_value2 && variant_is_null(*variant_value2)) ||
       predicate_condition == PredicateCondition::IsNull || predicate_condition == PredicateCondition::IsNotNull) {
     return false;
   }
@@ -277,7 +277,7 @@ bool RangeFilter<T>::does_not_contain(const PredicateCondition predicate_conditi
        *    - both bounds are within the same gap
        */
 
-      Assert(variant_value2.has_value(), "Between operator needs two values.");
+      Assert(variant_value2, "Between operator needs two values.");
       const auto value2 = boost::get<T>(*variant_value2);
 
       // a BETWEEN 5 AND 4 will always be empty

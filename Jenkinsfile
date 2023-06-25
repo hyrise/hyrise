@@ -101,8 +101,10 @@ try {
 
             sh "mkdir clang-debug && cd clang-debug &&                                                   ${cmake} ${debug}          ${clang}  ${unity}  .. && make -j libjemalloc-build"
 
-            // Configure the rest in parallel
-            sh "mkdir clang-debug-tidy && cd clang-debug-tidy &&                                         ${cmake} ${debug}          ${clang}            -DENABLE_CLANG_TIDY=ON .. &\
+            // Configure the rest in parallel.
+            // Note on the clang-debug-tidy stage: clang-tidy misses some flaws when running in a unity build. However, it runs very long and we agreed to life with that for now.
+            // See: https://gitlab.kitware.com/cmake/cmake/-/issues/20058
+            sh "mkdir clang-debug-tidy && cd clang-debug-tidy &&                                         ${cmake} ${debug}          ${clang}   ${unity} -DENABLE_CLANG_TIDY=ON .. &\
             mkdir clang-debug-unity-odr && cd clang-debug-unity-odr &&                                   ${cmake} ${debug}          ${clang}   ${unity} -DCMAKE_UNITY_BUILD_BATCH_SIZE=0 .. &\
             mkdir clang-debug-disable-precompile-headers && cd clang-debug-disable-precompile-headers && ${cmake} ${debug}          ${clang}            -DCMAKE_DISABLE_PRECOMPILE_HEADERS=On .. &\
             mkdir clang-debug-addr-ub-sanitizers && cd clang-debug-addr-ub-sanitizers &&                 ${cmake} ${debug}          ${clang}            -DENABLE_ADDR_UB_SANITIZATION=ON .. &\
@@ -153,6 +155,7 @@ try {
                 sh "./scripts/test/hyriseConsole_test.py clang-release"
                 sh "./scripts/test/hyriseServer_test.py clang-release"
                 sh "./scripts/test/hyriseBenchmarkJoinOrder_test.py clang-release"
+                sh "./scripts/test/hyriseBenchmarkStarSchema_test.py clang-release"
                 sh "./scripts/test/hyriseBenchmarkFileBased_test.py clang-release"
                 sh "cd clang-release && ../scripts/test/hyriseBenchmarkTPCC_test.py ." // Own folder to isolate binary export tests
                 sh "cd clang-release && ../scripts/test/hyriseBenchmarkTPCH_test.py ." // Own folder to isolate visualization
@@ -169,12 +172,14 @@ try {
                 sh "./scripts/test/hyriseConsole_test.py clang-debug"
                 sh "./scripts/test/hyriseServer_test.py clang-debug"
                 sh "./scripts/test/hyriseBenchmarkJoinOrder_test.py clang-debug"
+                sh "./scripts/test/hyriseBenchmarkStarSchema_test.py clang-debug"
                 sh "./scripts/test/hyriseBenchmarkFileBased_test.py clang-debug"
                 sh "cd clang-debug && ../scripts/test/hyriseBenchmarkTPCH_test.py ." // Own folder to isolate visualization
                 sh "cd clang-debug && ../scripts/test/hyriseBenchmarkJCCH_test.py ." // Own folder to isolate visualization
                 sh "./scripts/test/hyriseConsole_test.py gcc-debug"
                 sh "./scripts/test/hyriseServer_test.py gcc-debug"
                 sh "./scripts/test/hyriseBenchmarkJoinOrder_test.py gcc-debug"
+                sh "./scripts/test/hyriseBenchmarkStarSchema_test.py gcc-debug"
                 sh "./scripts/test/hyriseBenchmarkFileBased_test.py gcc-debug"
                 sh "cd gcc-debug && ../scripts/test/hyriseBenchmarkTPCH_test.py ." // Own folder to isolate visualization
                 sh "cd gcc-debug && ../scripts/test/hyriseBenchmarkJCCH_test.py ." // Own folder to isolate visualization
@@ -206,8 +211,7 @@ try {
             stage("clang-debug:tidy") {
               if (env.BRANCH_NAME == 'master' || full_ci) {
                 // We do not run tidy checks on the src/test folder, so there is no point in running the expensive clang-tidy for those files
-                // As clang-tidy is the slowest step, we allow it to use more parallel jobs.
-                sh "cd clang-debug-tidy && make hyrise_impl hyriseBenchmarkFileBased hyriseBenchmarkTPCH hyriseBenchmarkTPCDS hyriseBenchmarkJoinOrder hyriseConsole hyriseServer -k -j \$(( \$(nproc) / 5))"
+                sh "cd clang-debug-tidy && make hyrise_impl hyriseBenchmarkFileBased hyriseBenchmarkTPCH hyriseBenchmarkTPCDS hyriseBenchmarkJoinOrder hyriseConsole hyriseServer hyriseMvccDeletePlugin hyriseUccDiscoveryPlugin -k -j \$(( \$(nproc) / 10))"
               } else {
                 Utils.markStageSkippedForConditional("clangDebugTidy")
               }
@@ -241,6 +245,7 @@ try {
                 sh "./scripts/test/hyriseConsole_test.py gcc-release"
                 sh "./scripts/test/hyriseServer_test.py gcc-release"
                 sh "./scripts/test/hyriseBenchmarkJoinOrder_test.py gcc-release"
+                sh "./scripts/test/hyriseBenchmarkStarSchema_test.py gcc-release"
                 sh "./scripts/test/hyriseBenchmarkFileBased_test.py gcc-release"
                 sh "cd gcc-release && ../scripts/test/hyriseBenchmarkTPCC_test.py ." // Own folder to isolate binary export tests
                 sh "cd gcc-release && ../scripts/test/hyriseBenchmarkTPCH_test.py ." // Own folder to isolate visualization
@@ -254,7 +259,7 @@ try {
                 sh "cd clang-release-addr-ub-sanitizers && make hyriseTest hyriseSystemTest hyriseBenchmarkTPCH hyriseBenchmarkTPCC -j \$(( \$(nproc) / 10))"
                 sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=suppressions=resources/.asan-ignore.txt ./clang-release-addr-ub-sanitizers/hyriseTest clang-release-addr-ub-sanitizers"
                 sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=suppressions=resources/.asan-ignore.txt ./clang-release-addr-ub-sanitizers/hyriseSystemTest ${tests_excluded_in_sanitizer_builds} clang-release-addr-ub-sanitizers"
-                sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=suppressions=resources/.asan-ignore.txt ./clang-release-addr-ub-sanitizers/hyriseBenchmarkTPCH -s .01 --verify -r 100 --scheduler --clients 10"
+                sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=suppressions=resources/.asan-ignore.txt ./clang-release-addr-ub-sanitizers/hyriseBenchmarkTPCH -s .01 --verify -r 100 --scheduler --clients 10 --cores \$(( \$(nproc) / 4))"
                 sh "cd clang-release-addr-ub-sanitizers && LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=suppressions=resources/.asan-ignore.txt ../scripts/test/hyriseBenchmarkTPCC_test.py ." // Own folder to isolate binary export tests
               } else {
                 Utils.markStageSkippedForConditional("clangReleaseAddrUBSanitizers")
@@ -266,7 +271,7 @@ try {
                 sh "cd clang-relwithdebinfo-thread-sanitizer && make hyriseTest hyriseSystemTest hyriseBenchmarkTPCH -j \$(( \$(nproc) / 10))"
                 sh "TSAN_OPTIONS=\"history_size=7 suppressions=resources/.tsan-ignore.txt\" ./clang-relwithdebinfo-thread-sanitizer/hyriseTest clang-relwithdebinfo-thread-sanitizer"
                 sh "TSAN_OPTIONS=\"history_size=7 suppressions=resources/.tsan-ignore.txt\" ./clang-relwithdebinfo-thread-sanitizer/hyriseSystemTest ${tests_excluded_in_sanitizer_builds} clang-relwithdebinfo-thread-sanitizer"
-                sh "TSAN_OPTIONS=\"history_size=7 suppressions=resources/.tsan-ignore.txt\" ./clang-relwithdebinfo-thread-sanitizer/hyriseBenchmarkTPCH -s .01 --verify -r 100 --scheduler --clients 10"
+                sh "TSAN_OPTIONS=\"history_size=7 suppressions=resources/.tsan-ignore.txt\" ./clang-relwithdebinfo-thread-sanitizer/hyriseBenchmarkTPCH -s .01 --verify -r 100 --scheduler --clients 10 --cores \$(( \$(nproc) / 10))"
               } else {
                 Utils.markStageSkippedForConditional("clangRelWithDebInfoThreadSanitizer")
               }
@@ -350,7 +355,18 @@ try {
                 Utils.markStageSkippedForConditional("jobQueryPlans")
               }
             }
+          }, ssbQueryPlans: {
+            stage("ssbQueryPlans") {
+              if (env.BRANCH_NAME == 'master' || full_ci) {
+                sh "mkdir -p query_plans/ssb; cd query_plans/ssb && ../../clang-release/hyriseBenchmarkStarSchema --dont_cache_binary_tables -r 1 -s 1 --visualize && ../../scripts/plot_operator_breakdown.py ../../clang-release/"
+                archiveArtifacts artifacts: 'query_plans/ssb/*.svg'
+                archiveArtifacts artifacts: 'query_plans/ssb/operator_breakdown.pdf'
+              } else {
+                Utils.markStageSkippedForConditional("ssbQueryPlans")
+              }
+            }
           }
+
         } finally {
           sh "ls -A1 | xargs rm -rf"
           deleteDir()
@@ -369,10 +385,10 @@ try {
             // We do not use install_dependencies.sh here as there is no way to run OS X in a Docker container
             sh "git submodule update --init --recursive --jobs 4 --depth=1"
 
-            sh "mkdir clang-debug && cd clang-debug && /usr/local/bin/cmake ${debug} ${unity} -DCMAKE_C_COMPILER=/usr/local/opt/llvm@14/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm@14/bin/clang++ .."
-            sh "cd clang-debug && make -j8"
+            sh "mkdir clang-debug && cd clang-debug && /usr/local/bin/cmake ${debug} ${unity} -DCMAKE_C_COMPILER=/usr/local/opt/llvm@15/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm@15/bin/clang++ .."
+            sh "cd clang-debug && make -j \$(sysctl -n hw.logicalcpu)"
             sh "./clang-debug/hyriseTest"
-            sh "./clang-debug/hyriseSystemTest --gtest_filter=-TPCCTest*:TPCDSTableGeneratorTest.*:TPCHTableGeneratorTest.RowCountsMediumScaleFactor:*.CompareToSQLite/Line1*WithLZ4"
+            sh "./clang-debug/hyriseSystemTest --gtest_filter=\"-TPCCTest*:TPCDSTableGeneratorTest.*:TPCHTableGeneratorTest.RowCountsMediumScaleFactor:*.CompareToSQLite/Line1*WithLZ4\""
             sh "PATH=/usr/local/bin/:$PATH ./scripts/test/hyriseConsole_test.py clang-debug"
             sh "PATH=/usr/local/bin/:$PATH ./scripts/test/hyriseServer_test.py clang-debug"
             sh "PATH=/usr/local/bin/:$PATH ./scripts/test/hyriseBenchmarkFileBased_test.py clang-debug"
@@ -390,21 +406,21 @@ try {
       stage("clangReleaseMacArm") {
         if (env.BRANCH_NAME == 'master' || full_ci) {
           try {
-            checkout scm          
+            checkout scm
             
             // We do not use install_dependencies.sh here as there is no way to run OS X in a Docker container
             sh "git submodule update --init --recursive --jobs 4 --depth=1"
             
             // NOTE: These paths differ from x64 - brew on ARM uses /opt (https://docs.brew.sh/Installation)
-            sh "mkdir clang-release && cd clang-release && cmake ${release} -DCMAKE_C_COMPILER=/opt/homebrew/opt/llvm@14/bin/clang -DCMAKE_CXX_COMPILER=/opt/homebrew/opt/llvm@14/bin/clang++ .."
-            sh "cd clang-release && make -j8"
+            sh "mkdir clang-release && cd clang-release && cmake ${release} -DCMAKE_C_COMPILER=/opt/homebrew/opt/llvm@15/bin/clang -DCMAKE_CXX_COMPILER=/opt/homebrew/opt/llvm@15/bin/clang++ .."
+            sh "cd clang-release && make -j \$(sysctl -n hw.logicalcpu)"
 
             // Check whether arm64 binaries are built to ensure that we are not accidentally running rosetta that
             // executes x86 binaries on arm.
             sh "file ./clang-release/hyriseTest | grep arm64"
 
             sh "./clang-release/hyriseTest"
-            sh "./clang-release/hyriseSystemTest --gtest_filter=-TPCCTest*:TPCDSTableGeneratorTest.*:TPCHTableGeneratorTest.RowCountsMediumScaleFactor:*.CompareToSQLite/Line1*WithLZ4"
+            sh "./clang-release/hyriseSystemTest --gtest_filter=\"-TPCCTest*:TPCDSTableGeneratorTest.*:TPCHTableGeneratorTest.RowCountsMediumScaleFactor:*.CompareToSQLite/Line1*WithLZ4\""
             sh "PATH=/usr/local/bin/:$PATH ./scripts/test/hyriseConsole_test.py clang-release"
             sh "PATH=/usr/local/bin/:$PATH ./scripts/test/hyriseServer_test.py clang-release"
             sh "PATH=/usr/local/bin/:$PATH ./scripts/test/hyriseBenchmarkFileBased_test.py clang-release"

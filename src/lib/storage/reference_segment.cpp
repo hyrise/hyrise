@@ -58,7 +58,7 @@ ChunkOffset ReferenceSegment::size() const {
 }
 
 std::shared_ptr<AbstractSegment> ReferenceSegment::copy_using_allocator(
-    const PolymorphicAllocator<size_t>& alloc) const {
+    const PolymorphicAllocator<size_t>& /*alloc*/) const {
   // ReferenceSegments are considered as intermediate data structures and are
   // therefore not subject to NUMA-aware chunk migrations.
   Fail("Cannot migrate a ReferenceSegment");

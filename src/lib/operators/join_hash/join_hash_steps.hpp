@@ -280,7 +280,7 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
 
   // Currently, we just do one pass
   const auto pass = size_t{0};
-  const auto radix_mask = static_cast<size_t>(pow(2, radix_bits * (pass + 1)) - 1);
+  const auto radix_mask = static_cast<size_t>(std::pow(2, radix_bits * (pass + 1)) - 1);
 
   Assert(output_bloom_filter.empty(), "output_bloom_filter should be empty");
   output_bloom_filter.resize(BLOOM_FILTER_SIZE);
@@ -409,7 +409,7 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
 
       if (Hyrise::get().is_multi_threaded()) {
         // Merge the local_output_bloom_filter into output_bloom_filter
-        std::lock_guard<std::mutex> lock{output_bloom_filter_mutex};
+        const auto lock = std::lock_guard<std::mutex>{output_bloom_filter_mutex};
         output_bloom_filter |= local_output_bloom_filter;
       }
     };
@@ -532,7 +532,7 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
 
   // currently, we just do one pass
   const size_t pass = 0;
-  const size_t radix_mask = static_cast<uint32_t>(pow(2, radix_bits * (pass + 1)) - 1);
+  const size_t radix_mask = static_cast<uint32_t>(std::pow(2, radix_bits * (pass + 1)) - 1);
 
   // allocate new (shared) output
   auto output = RadixContainer<T>(output_partition_count);

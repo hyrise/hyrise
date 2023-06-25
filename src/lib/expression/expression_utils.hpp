@@ -185,4 +185,8 @@ std::vector<std::shared_ptr<PQPSubqueryExpression>> find_pqp_subquery_expression
 std::optional<ColumnID> find_expression_idx(const AbstractExpression& search_expression,
                                             const std::vector<std::shared_ptr<AbstractExpression>>& expression_vector);
 
+template <typename ExpressionContainer>
+bool contains_all_expressions(const ExpressionContainer& search_expressions,
+                              const std::vector<std::shared_ptr<AbstractExpression>>& expression_vector);
+
 }  // namespace hyrise

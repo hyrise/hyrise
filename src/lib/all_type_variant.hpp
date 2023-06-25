@@ -4,12 +4,10 @@
 #include <string>
 #include <vector>
 
-#include <boost/version.hpp>
-#if BOOST_VERSION < 107100                 // TODO(anyone): remove this block once Ubuntu ships boost 1.71
-#include "utils/boost_curry_override.hpp"  // NOLINT
-#endif
+#include <boost/bimap.hpp>
 #include <boost/hana/core/to.hpp>
 #include <boost/hana/ext/boost/mpl/vector.hpp>
+#include <boost/hana/fold.hpp>
 #include <boost/hana/map.hpp>
 #include <boost/hana/prepend.hpp>
 #include <boost/hana/transform.hpp>
@@ -38,7 +36,7 @@ namespace detail {
   ((float,      Float,      "float"))  \
   ((double,     Double,     "double")) \
   ((pmr_string, String,     "string"))
-// Type          Enum Value   String
+//  Type        Enum Value   String
 // clang-format on
 
 #define NUM_DATA_TYPES BOOST_PP_SEQ_SIZE(DATA_TYPE_INFO)
@@ -86,6 +84,14 @@ using AllTypeVariant = detail::AllTypeVariant;
 inline bool variant_is_null(const AllTypeVariant& variant) {
   return (variant.which() == 0);
 }
+
+const auto data_type_to_string =
+    hana::fold(data_type_enum_string_pairs, boost::bimap<DataType, std::string>{}, [](auto map, auto pair) {
+      map.insert({hana::first(pair), std::string{hana::second(pair)}});
+      return map;
+    });
+
+std::ostream& operator<<(std::ostream& stream, const DataType data_type);
 
 bool is_floating_point_data_type(const DataType data_type);
 

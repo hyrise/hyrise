@@ -71,10 +71,12 @@ void TPCHBenchmarkItemRunner::on_tables_loaded() {
   if (_clustering_configuration == ClusteringConfiguration::Pruning) {
     Assert(!first_chunk->individually_sorted_by().empty(), "Sorting information was lost");
   }
-
-  if (_config->indexes) {
+  if (_config->chunk_indexes) {
     const auto indexed_column_ids = std::vector<ColumnID>{ColumnID{0}};
     Assert(!first_chunk->get_indexes(indexed_column_ids).empty(), "Index was lost");
+  }
+  if (_config->table_indexes) {
+    Assert(!orders_table->get_table_indexes().empty(), "Index was lost");
   }
   Assert(!orders_table->soft_key_constraints().empty(), "Constraints were lost");
 
@@ -224,6 +226,7 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
     case 7 - 1: {
       const auto* const nation1 = nations.list[nation_dist(random_engine)].text;
       auto nation2 = std::string{};
+      // NOLINTNEXTLINE(cppcoreguidelines-avoid-do-while)
       do {
         nation2 = nations.list[nation_dist(random_engine)].text;
       } while (nation1 == nation2);
@@ -292,6 +295,7 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
     case 12 - 1: {
       const auto* const shipmode1 = l_smode_set.list[shipmode_dist(random_engine)].text;
       std::string shipmode2;
+      // NOLINTNEXTLINE(cppcoreguidelines-avoid-do-while)
       do {
         shipmode2 = l_smode_set.list[shipmode_dist(random_engine)].text;
       } while (shipmode1 == shipmode2);

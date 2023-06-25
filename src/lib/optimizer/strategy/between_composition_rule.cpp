@@ -6,7 +6,6 @@
 #include <string>
 #include <vector>
 
-#include "constant_mappings.hpp"
 #include "expression/expression_utils.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
@@ -14,10 +13,9 @@
 #include "statistics/table_statistics.hpp"
 #include "utils/assert.hpp"
 
-using namespace hyrise::expression_functional;  // NOLINT
-
 namespace {
-using namespace hyrise;  // NOLINT
+using namespace hyrise;                 // NOLINT(build/namespaces)
+using namespace expression_functional;  // NOLINT(build/namespaces)
 
 PredicateCondition get_between_predicate_condition(bool left_inclusive, bool right_inclusive) {
   if (left_inclusive && right_inclusive) {

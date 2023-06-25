@@ -9,7 +9,6 @@
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/trim.hpp>
 
-#include "constant_mappings.hpp"
 #include "sql/sql_pipeline.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "storage/table.hpp"
@@ -102,18 +101,17 @@ void copy_row_from_sqlite_to_hyrise(const std::shared_ptr<Table>& table, sqlite3
   for (auto column_id = int{0}; column_id < column_count; ++column_id) {
     switch (sqlite3_column_type(sqlite_statement, column_id)) {
       case SQLITE_INTEGER: {
-        row.emplace_back(AllTypeVariant{sqlite3_column_int(sqlite_statement, column_id)});
+        row.emplace_back(sqlite3_column_int(sqlite_statement, column_id));
         break;
       }
 
       case SQLITE_FLOAT: {
-        row.emplace_back(AllTypeVariant{sqlite3_column_double(sqlite_statement, column_id)});
+        row.emplace_back(sqlite3_column_double(sqlite_statement, column_id));
         break;
       }
 
       case SQLITE_TEXT: {
-        row.emplace_back(AllTypeVariant{
-            pmr_string(reinterpret_cast<const char*>(sqlite3_column_text(sqlite_statement, column_id)))});
+        row.emplace_back(pmr_string(reinterpret_cast<const char*>(sqlite3_column_text(sqlite_statement, column_id))));
         break;
       }
 
@@ -176,16 +174,16 @@ SQLiteWrapper::Connection SQLiteWrapper::new_connection() const {
 }
 
 std::shared_ptr<Table> SQLiteWrapper::Connection::execute_query(const std::string& sql) const {
-  sqlite3_stmt* sqlite_statement;
+  sqlite3_stmt* sqlite_statement = nullptr;
 
   auto sql_pipeline = SQLPipelineBuilder{sql}.create_pipeline();
   const auto& queries = sql_pipeline.get_sql_per_statement();
 
   // We need to split the queries such that we only create columns/add rows from the final SELECT query
-  std::vector<std::string> queries_before_select(queries.begin(), queries.end() - 1);
-  std::string select_query = queries.back();
+  const auto queries_before_select = std::vector<std::string>(queries.begin(), queries.end() - 1);
+  const auto& select_query = queries.back();
 
-  auto return_code = int{};
+  auto return_code = int{0};
   for (const auto& query : queries_before_select) {
     return_code = sqlite3_prepare_v2(db, query.c_str(), -1, &sqlite_statement, nullptr);
 
@@ -227,8 +225,8 @@ std::shared_ptr<Table> SQLiteWrapper::Connection::execute_query(const std::strin
   return result_table;
 }
 
-void SQLiteWrapper::Connection::raw_execute_query(const std::string& sql, const bool allow_failure) const {
-  char* err_msg;
+void SQLiteWrapper::Connection::raw_execute_query(const std::string& sql) const {
+  char* err_msg = nullptr;
   auto return_code = sqlite3_exec(db, sql.c_str(), nullptr, nullptr, &err_msg);
 
   if (return_code != SQLITE_OK) {
@@ -288,7 +286,7 @@ void SQLiteWrapper::create_sqlite_table(const Table& table, const std::string& t
   insert_into_stream << ");";
   const auto insert_into_str = insert_into_stream.str();
 
-  sqlite3_stmt* insert_into_statement;
+  sqlite3_stmt* insert_into_statement = nullptr;
   const auto sqlite3_prepare_return_code =
       sqlite3_prepare_v2(main_connection.db, insert_into_str.c_str(), static_cast<int>(insert_into_str.size() + 1),
                          &insert_into_statement, nullptr);

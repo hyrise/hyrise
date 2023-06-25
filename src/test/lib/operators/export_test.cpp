@@ -5,7 +5,6 @@
 
 #include "base_test.hpp"
 
-#include "constant_mappings.hpp"
 #include "import_export/csv/csv_meta.hpp"
 #include "operators/export.hpp"
 #include "operators/table_scan.hpp"
@@ -47,18 +46,8 @@ class OperatorsExportTest : public BaseTest {
 
 class OperatorsExportMultiFileTypeTest : public OperatorsExportTest, public ::testing::WithParamInterface<FileType> {};
 
-auto export_test_formatter = [](const ::testing::TestParamInfo<FileType> info) {
-  auto stream = std::stringstream{};
-  stream << info.param;
-
-  auto string = stream.str();
-  string.erase(std::remove_if(string.begin(), string.end(), [](char c) { return !std::isalnum(c); }), string.end());
-
-  return string;
-};
-
 INSTANTIATE_TEST_SUITE_P(FileTypes, OperatorsExportMultiFileTypeTest,
-                         ::testing::Values(FileType::Csv, FileType::Binary), export_test_formatter);
+                         ::testing::Values(FileType::Csv, FileType::Binary), enum_formatter<FileType>);
 
 TEST_P(OperatorsExportMultiFileTypeTest, ExportWithFileType) {
   auto table =
@@ -97,6 +86,16 @@ TEST_P(OperatorsExportMultiFileTypeTest, ExportWithoutFileType) {
 
   EXPECT_TRUE(file_exists(filename));
   EXPECT_TRUE(compare_files(reference_filename, filename));
+}
+
+TEST_P(OperatorsExportMultiFileTypeTest, NameAndDescription) {
+  const auto exporter = std::make_shared<Export>(nullptr, "a/file/path", GetParam());
+  const auto file_type = GetParam() == FileType::Binary ? "binary" : "csv";
+  EXPECT_EQ(exporter->name(), "Export");
+  EXPECT_EQ(exporter->description(DescriptionMode::SingleLine),
+            std::string{"Export to 'a/file/path' ("} + file_type + ")");
+  EXPECT_EQ(exporter->description(DescriptionMode::MultiLine),
+            std::string{"Export\nto 'a/file/path'\n("} + file_type + ")");
 }
 
 TEST_F(OperatorsExportTest, NonsensePath) {

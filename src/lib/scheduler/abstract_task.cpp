@@ -64,7 +64,7 @@ void AbstractTask::set_as_predecessor_of(const std::shared_ptr<AbstractTask>& su
   // _pending_predecessors count in the first place when this task is already done.
   // Note that _done_condition_variable_mutex must be locked to prevent a race condition where _on_predecessor_done
   // is called before _pending_predecessors++ has executed.
-  std::lock_guard<std::mutex> lock(_done_condition_variable_mutex);
+  auto lock = std::lock_guard<std::mutex>{_done_condition_variable_mutex};
   if (!is_done()) {
     successor->_pending_predecessors++;
   }
@@ -114,7 +114,7 @@ void AbstractTask::schedule(NodeID preferred_node_id) {
 }
 
 void AbstractTask::_join() {
-  auto lock = std::unique_lock<std::mutex>(_done_condition_variable_mutex);
+  auto lock = std::unique_lock<std::mutex>{_done_condition_variable_mutex};
   if (is_done()) {
     return;
   }
@@ -153,7 +153,7 @@ void AbstractTask::execute() {
   }
 
   {
-    std::lock_guard<std::mutex> lock(_done_condition_variable_mutex);
+    const auto lock = std::lock_guard<std::mutex>{_done_condition_variable_mutex};
     _done_condition_variable.notify_all();
   }
 }
@@ -206,7 +206,7 @@ bool AbstractTask::_try_transition_to(TaskState new_state) {
    * This function must be locked to prevent race conditions. A different thread might be able to change _state
    * successfully while this thread is still between the validity check and _state.exchange(new_state).
    */
-  std::lock_guard<std::mutex> lock(_transition_to_mutex);
+  const auto lock = std::lock_guard<std::mutex>{_transition_to_mutex};
   switch (new_state) {
     case TaskState::Scheduled:
       if (_state >= TaskState::Scheduled) {

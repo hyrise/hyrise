@@ -29,12 +29,13 @@ std::shared_ptr<Table> write_materialized_output_table(const std::shared_ptr<con
   Assert(pos_list.size() == unsorted_table->row_count(), "Mismatching size of input table and PosList");
 
   // Vector of segments for each chunk
-  std::vector<Segments> output_segments_by_chunk(output_chunk_count);
+  auto output_segments_by_chunk = std::vector<Segments>{output_chunk_count};
 
   // Materialize column by column, starting a new ValueSegment whenever output_chunk_size is reached
   const auto input_chunk_count = unsorted_table->chunk_count();
+  const auto output_column_count = unsorted_table->column_count();
   const auto row_count = unsorted_table->row_count();
-  for (ColumnID column_id{0u}; column_id < output->column_count(); ++column_id) {
+  for (auto column_id = ColumnID{0}; column_id < output_column_count; ++column_id) {
     const auto column_data_type = output->column_data_type(column_id);
     const auto column_is_nullable = unsorted_table->column_is_nullable(column_id);
 
@@ -42,7 +43,7 @@ std::shared_ptr<Table> write_materialized_output_table(const std::shared_ptr<con
       using ColumnDataType = typename decltype(type)::type;
 
       auto chunk_it = output_segments_by_chunk.begin();
-      auto current_segment_size = 0u;
+      auto current_segment_size = size_t{0};
 
       auto allocator = PolymorphicAllocator<ColumnDataType>{};
       auto pin_guard = AllocatorPinGuard{allocator};
@@ -82,7 +83,7 @@ std::shared_ptr<Table> write_materialized_output_table(const std::shared_ptr<con
 
         // Check if value segment is full
         if (current_segment_size >= output_chunk_size) {
-          current_segment_size = 0u;
+          current_segment_size = 0;
 
           std::shared_ptr<ValueSegment<ColumnDataType>> value_segment;
           if (column_is_nullable) {
@@ -108,7 +109,7 @@ std::shared_ptr<Table> write_materialized_output_table(const std::shared_ptr<con
       }
 
       // Last segment has not been added
-      if (current_segment_size > 0u) {
+      if (current_segment_size > 0) {
         std::shared_ptr<ValueSegment<ColumnDataType>> value_segment;
         if (column_is_nullable) {
           value_segment = std::make_shared<ValueSegment<ColumnDataType>>(std::move(value_segment_value_vector),
@@ -161,11 +162,11 @@ std::shared_ptr<Table> write_reference_output_table(const std::shared_ptr<const 
     // Shortcut: No need to copy RowIDs if input_pos_list is small enough and we do not need to resolve the indirection.
     const auto output_pos_list = std::make_shared<RowIDPosList>(std::move(input_pos_list), allocator);
     auto& output_segments = output_segments_by_chunk.at(0);
-    for (auto column_id = ColumnID{0u}; column_id < column_count; ++column_id) {
+    for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
       output_segments[column_id] = std::make_shared<ReferenceSegment>(unsorted_table, column_id, output_pos_list);
     }
   } else {
-    for (ColumnID column_id{0u}; column_id < column_count; ++column_id) {
+    for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
       // To keep the implementation simple, we write the output ReferenceSegments column by column. This means that even
       // if input ReferenceSegments share a PosList, the output will contain independent PosLists. While this is
       // slightly more expensive to generate and slightly less efficient for following operators, we assume that the
@@ -262,8 +263,8 @@ const std::string& Sort::name() const {
 
 std::shared_ptr<AbstractOperator> Sort::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_left_input,
-    const std::shared_ptr<AbstractOperator>& copied_right_input,
-    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
+    const std::shared_ptr<AbstractOperator>& /*copied_right_input*/,
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& /*copied_ops*/) const {
   return std::make_shared<Sort>(copied_left_input, _sort_definitions, _output_chunk_size, _force_materialization);
 }
 
@@ -488,15 +489,17 @@ class Sort::SortImpl {
     }
   }
 
+  // NOLINTBEGIN(cppcoreguidelines-avoid-const-or-ref-data-members)
   const std::shared_ptr<const Table> _table_in;
 
-  // column to sort by
+  // Column to sort by.
   const ColumnID _column_id;
   const SortMode _sort_mode;
+  // NOLINTEND(cppcoreguidelines-avoid-const-or-ref-data-members)
 
   std::vector<RowIDValuePair> _row_id_value_vector;
 
-  // Stored as RowIDValuePair for better type compatibility even if value is unused
+  // Stored as RowIDValuePair for better type compatibility even if value is unused.
   std::vector<RowIDValuePair> _null_value_rows;
 };
 

@@ -10,7 +10,6 @@
 #include <tuple>
 #include <vector>
 
-#include <boost/bimap.hpp>
 #include <boost/circular_buffer.hpp>
 #include <boost/container/pmr/polymorphic_allocator.hpp>
 #include <boost/container/scoped_allocator.hpp>
@@ -18,7 +17,6 @@
 #include <boost/container/string.hpp>
 #include <boost/container/vector.hpp>
 #include <boost/operators.hpp>
-#include <boost/version.hpp>
 
 #include "noncopyable.hpp"
 #include "storage/buffer/buffer_pool_allocator.hpp"
@@ -110,10 +108,15 @@ constexpr ChunkOffset INVALID_CHUNK_OFFSET{std::numeric_limits<ChunkOffset::base
 constexpr ChunkID INVALID_CHUNK_ID{std::numeric_limits<ChunkID::base_type>::max()};
 
 struct RowID {
+  constexpr RowID(const ChunkID init_chunk_id, const ChunkOffset init_chunk_offset)
+      : chunk_id{init_chunk_id}, chunk_offset{init_chunk_offset} {}
+
+  RowID() = default;
+
   ChunkID chunk_id{INVALID_CHUNK_ID};
   ChunkOffset chunk_offset{INVALID_CHUNK_OFFSET};
 
-  // Faster than row_id == ROW_ID_NULL, since we only compare the ChunkOffset
+  // Faster than row_id == NULL_ROW_ID, since we only compare the ChunkOffset.
   bool is_null() const {
     return chunk_offset == INVALID_CHUNK_OFFSET;
   }
@@ -163,10 +166,10 @@ constexpr ValueID INVALID_VALUE_ID{std::numeric_limits<ValueID::base_type>::max(
 // use a really short one here.
 const size_t SSO_STRING_CAPACITY = pmr_string{"."}.capacity();
 
-// The Scheduler currently supports just these 3 priorities, subject to change.
+// The Scheduler currently supports just these two priorities.
 enum class SchedulePriority {
-  Default = 1,  // Schedule task at the end of the queue
-  High = 0      // Schedule task at the beginning of the queue
+  Default = 1,  // Schedule task of normal priority.
+  High = 0      // Schedule task of high priority, subject to be preferred in scheduling.
 };
 
 enum class PredicateCondition {
@@ -219,6 +222,8 @@ PredicateCondition conditions_to_between(const PredicateCondition lower, const P
 //                      dropped. This behavior mirrors NOT EXISTS
 enum class JoinMode { Inner, Left, Right, FullOuter, Cross, Semi, AntiNullAsTrue, AntiNullAsFalse };
 
+bool is_semi_or_anti_join(const JoinMode join_mode);
+
 // SQL set operations come in two flavors, with and without `ALL`, e.g., `UNION` and `UNION ALL`.
 // We have a third mode (Positions) that is used to intersect position lists that point to the same table,
 // see union_positions.hpp for details.
@@ -244,8 +249,6 @@ enum class MetaTableChangeType { Insert, Delete, Update };
 
 enum class AutoCommit : bool { Yes = true, No = false };
 
-enum class LogLevel { Debug, Info, Warning };
-
 enum class DatetimeComponent { Year, Month, Day, Hour, Minute, Second };
 
 // Used as a template parameter that is passed whenever we conditionally erase the type of a template. This is done to
@@ -268,12 +271,6 @@ inline bool operator==(const SortColumnDefinition& lhs, const SortColumnDefiniti
 
 // Dummy type, can be used to overload functions with a variant accepting a Null value
 struct Null {};
-
-extern const boost::bimap<PredicateCondition, std::string> predicate_condition_to_string;
-extern const boost::bimap<SortMode, std::string> sort_mode_to_string;
-extern const boost::bimap<JoinMode, std::string> join_mode_to_string;
-extern const boost::bimap<SetOperationMode, std::string> set_operation_mode_to_string;
-extern const boost::bimap<TableType, std::string> table_type_to_string;
 
 std::ostream& operator<<(std::ostream& stream, PredicateCondition predicate_condition);
 std::ostream& operator<<(std::ostream& stream, SortMode sort_mode);

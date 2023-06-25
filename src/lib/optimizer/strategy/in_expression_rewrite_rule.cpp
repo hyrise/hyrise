@@ -18,8 +18,9 @@
 #include "storage/table.hpp"
 
 namespace {
-using namespace hyrise;                         // NOLINT
-using namespace hyrise::expression_functional;  // NOLINT
+
+using namespace hyrise;                         // NOLINT(build/namespaces)
+using namespace hyrise::expression_functional;  // NOLINT(build/namespaces)
 
 void rewrite_to_join(const std::shared_ptr<AbstractLQPNode>& node,
                      const std::shared_ptr<AbstractExpression>& left_expression,
@@ -67,8 +68,7 @@ void rewrite_to_join(const std::shared_ptr<AbstractLQPNode>& node,
 
 void rewrite_to_disjunction(const std::shared_ptr<AbstractLQPNode>& node,
                             const std::shared_ptr<AbstractExpression>& left_expression,
-                            const std::vector<std::shared_ptr<AbstractExpression>>& right_side_expressions,
-                            DataType data_type) {
+                            const std::vector<std::shared_ptr<AbstractExpression>>& right_side_expressions) {
   // It is easier not to use lqp_replace_node here, so we need to cache the original output relations
   const auto old_output_relations = node->output_relations();
 
@@ -137,7 +137,7 @@ void InExpressionRewriteRule::_apply_to_plan_without_subqueries(
       return LQPVisitation::VisitInputs;
     }
 
-    const auto& left_expression = in_expression->value();
+    const auto& left_expression = in_expression->operand();
     const auto& right_side_expressions = static_cast<ListExpression&>(*in_expression->set()).elements();
 
     // Check whether all elements are literal values of the same data type (that is not NULL).
@@ -172,7 +172,7 @@ void InExpressionRewriteRule::_apply_to_plan_without_subqueries(
                       in_expression->is_negated());
     } else if (strategy == Strategy::Disjunction) {
       Assert(!in_expression->is_negated(), "Disjunctions cannot handle NOT IN");
-      rewrite_to_disjunction(sub_node, left_expression, right_side_expressions, *common_data_type);
+      rewrite_to_disjunction(sub_node, left_expression, right_side_expressions);
     } else if (strategy == Strategy::Auto) {
       if (right_side_expressions.size() >= MIN_ELEMENTS_FOR_JOIN) {
         rewrite_to_join(sub_node, left_expression, right_side_expressions, *common_data_type,
@@ -181,8 +181,8 @@ void InExpressionRewriteRule::_apply_to_plan_without_subqueries(
                   _cardinality_estimator()->estimate_cardinality(sub_node->left_input()) >=
                       MIN_INPUT_ROWS_FOR_DISJUNCTION) &&
                  !in_expression->is_negated() &&
-                 !std::dynamic_pointer_cast<FunctionExpression>(in_expression->value())) {
-        rewrite_to_disjunction(sub_node, left_expression, right_side_expressions, *common_data_type);
+                 !std::dynamic_pointer_cast<FunctionExpression>(in_expression->operand())) {
+        rewrite_to_disjunction(sub_node, left_expression, right_side_expressions);
       } else {
         // Stick with the ExpressionEvaluator
       }

@@ -26,7 +26,8 @@ void StorageManager::add_table(const std::string& name, std::shared_ptr<Table> t
   Assert(view_iter == _views.end() || !view_iter->second,
          "Cannot add table " + name + " - a view with the same name already exists");
 
-  for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); chunk_id++) {
+  const auto chunk_count = table->chunk_count();
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     // We currently assume that all tables stored in the StorageManager are mutable and, as such, have MVCC data. This
     // way, we do not need to check query plans if they try to update immutable tables. However, this is not a hard
     // limitation and might be changed into more fine-grained assertions if the need arises.
@@ -66,7 +67,7 @@ bool StorageManager::has_table(const std::string& name) const {
 }
 
 std::vector<std::string> StorageManager::table_names() const {
-  std::vector<std::string> table_names;
+  auto table_names = std::vector<std::string>{};
   table_names.reserve(_tables.size());
 
   for (const auto& table_item : _tables) {
@@ -77,6 +78,7 @@ std::vector<std::string> StorageManager::table_names() const {
     table_names.emplace_back(table_item.first);
   }
 
+  std::sort(table_names.begin(), table_names.end());
   return table_names;
 }
 
@@ -220,7 +222,8 @@ void StorageManager::export_all_tables_as_csv(const std::string& path) {
       auto table_wrapper = std::make_shared<TableWrapper>(table);
       table_wrapper->execute();
 
-      auto export_csv = std::make_shared<Export>(table_wrapper, path + "/" + name + ".csv", FileType::Csv);  // NOLINT
+      // NOLINTNEXTLINE(performance-inefficient-string-concatenation): not worth it, no performance-critical path.
+      auto export_csv = std::make_shared<Export>(table_wrapper, path + "/" + name + ".csv", FileType::Csv);
       export_csv->execute();
     });
     tasks.push_back(job_task);

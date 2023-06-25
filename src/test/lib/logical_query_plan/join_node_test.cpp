@@ -9,11 +9,11 @@
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
-#include "utils/constraint_test_utils.hpp"
-
-using namespace hyrise::expression_functional;  // NOLINT
+#include "utils/data_dependency_test_utils.hpp"
 
 namespace hyrise {
+
+using namespace expression_functional;  // NOLINT(build/namespaces)
 
 class JoinNodeTest : public BaseTest {
  protected:
@@ -35,7 +35,7 @@ class JoinNodeTest : public BaseTest {
     _semi_join_reduction_node->mark_as_semi_reduction(_inner_join_node);
     _anti_join_node = JoinNode::make(JoinMode::AntiNullAsTrue, equals_(_t_a_a, _t_b_y), _mock_node_a, _mock_node_b);
 
-    // Prepare constraint definitions
+    // Prepare constraint definitions.
     _key_constraint_a = TableKeyConstraint{{_t_a_a->original_column_id}, KeyConstraintType::UNIQUE};
     _key_constraint_b_c =
         TableKeyConstraint{{_t_a_b->original_column_id, _t_a_c->original_column_id}, KeyConstraintType::UNIQUE};
@@ -43,22 +43,17 @@ class JoinNodeTest : public BaseTest {
     _key_constraint_y = TableKeyConstraint{{_t_b_y->original_column_id}, KeyConstraintType::UNIQUE};
   }
 
-  std::shared_ptr<MockNode> _mock_node_a;
-  std::shared_ptr<MockNode> _mock_node_b;
-  std::shared_ptr<JoinNode> _inner_join_node;
-  std::shared_ptr<JoinNode> _semi_join_node, _semi_join_reduction_node;
-  std::shared_ptr<JoinNode> _anti_join_node;
-  std::shared_ptr<JoinNode> _cross_join_node;
-  std::shared_ptr<LQPColumnExpression> _t_a_a;
-  std::shared_ptr<LQPColumnExpression> _t_a_b;
-  std::shared_ptr<LQPColumnExpression> _t_a_c;
-  std::shared_ptr<LQPColumnExpression> _t_b_x;
-  std::shared_ptr<LQPColumnExpression> _t_b_y;
-  std::optional<TableKeyConstraint> _key_constraint_a;
-  std::optional<TableKeyConstraint> _key_constraint_b_c;
-  std::optional<TableKeyConstraint> _key_constraint_x;
-  std::optional<TableKeyConstraint> _key_constraint_y;
+  std::shared_ptr<MockNode> _mock_node_a, _mock_node_b, _mock_node_c;
+  std::shared_ptr<JoinNode> _inner_join_node, _semi_join_node, _semi_join_reduction_node, _anti_join_node,
+      _cross_join_node;
+  std::shared_ptr<LQPColumnExpression> _t_a_a, _t_a_b, _t_a_c, _t_b_x, _t_b_y, _t_b_z;
+  std::optional<TableKeyConstraint> _key_constraint_a, _key_constraint_b_c, _key_constraint_x, _key_constraint_y;
 };
+
+class JoinNodeMultiJoinModeTest : public JoinNodeTest, public ::testing::WithParamInterface<JoinMode> {};
+
+INSTANTIATE_TEST_SUITE_P(JoinNodeMultiJoinModeTestInstance, JoinNodeMultiJoinModeTest,
+                         ::testing::ValuesIn(magic_enum::enum_values<JoinMode>()), enum_formatter<JoinMode>);
 
 TEST_F(JoinNodeTest, Description) {
   EXPECT_EQ(_cross_join_node->description(), "[Join] Mode: Cross");
@@ -74,20 +69,6 @@ TEST_F(JoinNodeTest, DescriptionSemiJoin) {
 
 TEST_F(JoinNodeTest, DescriptionAntiJoin) {
   EXPECT_EQ(_anti_join_node->description(), "[Join] Mode: AntiNullAsTrue [a = y]");
-}
-
-TEST_F(JoinNodeTest, OutputColumnExpressions) {
-  ASSERT_EQ(_cross_join_node->output_expressions().size(), 5u);
-  EXPECT_EQ(*_cross_join_node->output_expressions().at(0), *_t_a_a);
-  EXPECT_EQ(*_cross_join_node->output_expressions().at(1), *_t_a_b);
-  EXPECT_EQ(*_cross_join_node->output_expressions().at(2), *_t_a_c);
-  EXPECT_EQ(*_cross_join_node->output_expressions().at(3), *_t_b_x);
-  EXPECT_EQ(*_cross_join_node->output_expressions().at(4), *_t_b_y);
-
-  ASSERT_EQ(_semi_join_node->output_expressions().size(), 3u);
-  EXPECT_EQ(*_semi_join_node->output_expressions().at(0), *_t_a_a);
-  EXPECT_EQ(*_semi_join_node->output_expressions().at(1), *_t_a_b);
-  EXPECT_EQ(*_semi_join_node->output_expressions().at(2), *_t_a_c);
 }
 
 TEST_F(JoinNodeTest, HashingAndEqualityCheck) {
@@ -122,6 +103,15 @@ TEST_F(JoinNodeTest, Copy) {
   EXPECT_EQ(*_semi_join_node, *_semi_join_node->deep_copy());
   EXPECT_EQ(*_semi_join_reduction_node, *_semi_join_reduction_node->deep_copy());
   EXPECT_EQ(*_anti_join_node, *_anti_join_node->deep_copy());
+}
+
+TEST_F(JoinNodeTest, OutputColumnExpressionsCrossJoin) {
+  ASSERT_EQ(_cross_join_node->output_expressions().size(), 5u);
+  EXPECT_EQ(*_cross_join_node->output_expressions().at(0), *_t_a_a);
+  EXPECT_EQ(*_cross_join_node->output_expressions().at(1), *_t_a_b);
+  EXPECT_EQ(*_cross_join_node->output_expressions().at(2), *_t_a_c);
+  EXPECT_EQ(*_cross_join_node->output_expressions().at(3), *_t_b_x);
+  EXPECT_EQ(*_cross_join_node->output_expressions().at(4), *_t_b_y);
 }
 
 TEST_F(JoinNodeTest, OutputColumnExpressionsSemiJoin) {
@@ -223,169 +213,164 @@ TEST_F(JoinNodeTest, IsColumnNullableWithOuterJoin) {
   EXPECT_FALSE(lqp_full_join->is_column_nullable(ColumnID{4}));
 }
 
-TEST_F(JoinNodeTest, FunctionalDependenciesSemiAndAntiJoins) {
-  // Preparations
+TEST_P(JoinNodeMultiJoinModeTest, FunctionalDependenciesForwardNonTrivialLeft) {
+  const auto join_mode = GetParam();
+  auto join_node = std::shared_ptr<JoinNode>();
+  if (join_mode == JoinMode::Cross) {
+    join_node = JoinNode::make(JoinMode::Cross, _mock_node_a, _mock_node_b);
+  } else {
+    join_node = JoinNode::make(join_mode, equals_(_t_a_a, _t_b_x), _mock_node_a, _mock_node_b);
+  }
+
+  // Left input Node has non-trivial FDs.
+  const auto fd_a = FunctionalDependency{{_t_a_a}, {_t_a_b}};
+  _mock_node_a->set_non_trivial_functional_dependencies({fd_a});
+  _mock_node_b->set_non_trivial_functional_dependencies({});
+  EXPECT_TRUE(_mock_node_a->unique_column_combinations().empty());
+  EXPECT_TRUE(_mock_node_b->unique_column_combinations().empty());
+
+  if (join_mode == JoinMode::Right || join_mode == JoinMode::FullOuter) {
+    EXPECT_TRUE(join_node->non_trivial_functional_dependencies().empty());
+  } else {
+    EXPECT_EQ(join_node->non_trivial_functional_dependencies().size(), 1);
+    EXPECT_TRUE(join_node->non_trivial_functional_dependencies().contains(fd_a));
+  }
+}
+
+TEST_P(JoinNodeMultiJoinModeTest, FunctionalDependenciesForwardNonTrivialRight) {
+  const auto join_mode = GetParam();
+  auto join_node = std::shared_ptr<JoinNode>();
+  if (join_mode == JoinMode::Cross) {
+    join_node = JoinNode::make(JoinMode::Cross, _mock_node_a, _mock_node_b);
+  } else {
+    join_node = JoinNode::make(join_mode, equals_(_t_a_a, _t_b_x), _mock_node_a, _mock_node_b);
+  }
+
+  // Right input Node has non-trivial FDs.
+  const auto fd_x = FunctionalDependency{{_t_b_x}, {_t_b_y}};
+  _mock_node_a->set_non_trivial_functional_dependencies({});
+  _mock_node_b->set_non_trivial_functional_dependencies({fd_x});
+  EXPECT_TRUE(_mock_node_a->unique_column_combinations().empty());
+  EXPECT_TRUE(_mock_node_b->unique_column_combinations().empty());
+
+  switch (join_mode) {
+    case JoinMode::Left:
+    case JoinMode::FullOuter:
+    case JoinMode::Semi:
+    case JoinMode::AntiNullAsTrue:
+    case JoinMode::AntiNullAsFalse:
+      EXPECT_TRUE(join_node->non_trivial_functional_dependencies().empty());
+      break;
+    case JoinMode::Inner:
+    case JoinMode::Right:
+    case JoinMode::Cross:
+      EXPECT_EQ(join_node->non_trivial_functional_dependencies().size(), 1);
+      EXPECT_TRUE(join_node->non_trivial_functional_dependencies().contains(fd_x));
+  }
+}
+
+TEST_P(JoinNodeMultiJoinModeTest, FunctionalDependenciesForwardNonTrivialBoth) {
+  const auto join_mode = GetParam();
+  auto join_node = std::shared_ptr<JoinNode>();
+  if (join_mode == JoinMode::Cross) {
+    join_node = JoinNode::make(JoinMode::Cross, _mock_node_a, _mock_node_b);
+  } else {
+    join_node = JoinNode::make(join_mode, equals_(_t_a_a, _t_b_x), _mock_node_a, _mock_node_b);
+  }
+
+  // Both input nodes have non-trivial FDs
   const auto fd_a = FunctionalDependency{{_t_a_a}, {_t_a_b}};
   const auto fd_x = FunctionalDependency{{_t_b_x}, {_t_b_y}};
   _mock_node_a->set_non_trivial_functional_dependencies({fd_a});
-  EXPECT_EQ(_mock_node_a->non_trivial_functional_dependencies().size(), 1);
-  EXPECT_EQ(_mock_node_a->non_trivial_functional_dependencies().at(0), fd_a);
   _mock_node_b->set_non_trivial_functional_dependencies({fd_x});
-  EXPECT_EQ(_mock_node_b->non_trivial_functional_dependencies().size(), 1);
-  EXPECT_EQ(_mock_node_b->non_trivial_functional_dependencies().at(0), fd_x);
+  EXPECT_TRUE(_mock_node_a->unique_column_combinations().empty());
+  EXPECT_TRUE(_mock_node_b->unique_column_combinations().empty());
 
-  // Tests
-  for (const auto join_mode : {JoinMode::Semi, JoinMode::AntiNullAsTrue, JoinMode::AntiNullAsFalse}) {
-    // clang-format off
-    const auto join_node =
-    JoinNode::make(join_mode, equals_(_t_a_a, _t_b_y),
-      _mock_node_a,
-      _mock_node_b);
-    // clang-format on
-
-    // We do not want JoinNode to return the FDs of the right input node
-    const auto& non_trivial_fds = join_node->non_trivial_functional_dependencies();
-    EXPECT_EQ(non_trivial_fds.size(), 1);
-    EXPECT_EQ(non_trivial_fds.at(0), fd_a);
-  }
-}
-
-TEST_F(JoinNodeTest, FunctionalDependenciesForwardNonTrivialLeft) {
-  for (const auto join_mode :
-       {JoinMode::Inner, JoinMode::Left, JoinMode::Right, JoinMode::FullOuter, JoinMode::Cross}) {
-    auto join_node = std::shared_ptr<JoinNode>();
-    if (join_mode == JoinMode::Cross) {
-      join_node = JoinNode::make(JoinMode::Cross, _mock_node_a, _mock_node_b);
-    } else {
-      join_node = JoinNode::make(join_mode, equals_(_t_a_a, _t_b_x), _mock_node_a, _mock_node_b);
-    }
-
-    // Left input Node has non-trivial FDs
-    const auto fd_a = FunctionalDependency{{_t_a_a}, {_t_a_b}};
-    _mock_node_a->set_non_trivial_functional_dependencies({fd_a});
-    _mock_node_b->set_non_trivial_functional_dependencies({});
-    EXPECT_TRUE(_mock_node_a->unique_constraints()->empty());
-    EXPECT_TRUE(_mock_node_b->unique_constraints()->empty());
-
-    if (join_mode == JoinMode::Right || join_mode == JoinMode::FullOuter) {
-      EXPECT_EQ(join_node->non_trivial_functional_dependencies().size(), 0);
-    } else {
+  switch (join_mode) {
+    case JoinMode::FullOuter:
+      EXPECT_TRUE(join_node->non_trivial_functional_dependencies().empty());
+      break;
+    case JoinMode::Left:
+    case JoinMode::Semi:
+    case JoinMode::AntiNullAsTrue:
+    case JoinMode::AntiNullAsFalse:
       EXPECT_EQ(join_node->non_trivial_functional_dependencies().size(), 1);
-      EXPECT_EQ(join_node->non_trivial_functional_dependencies().at(0), fd_a);
-    }
-  }
-}
-
-TEST_F(JoinNodeTest, FunctionalDependenciesForwardNonTrivialRight) {
-  for (const auto join_mode :
-       {JoinMode::Inner, JoinMode::Left, JoinMode::Right, JoinMode::FullOuter, JoinMode::Cross}) {
-    auto join_node = std::shared_ptr<JoinNode>();
-    if (join_mode == JoinMode::Cross) {
-      join_node = JoinNode::make(JoinMode::Cross, _mock_node_a, _mock_node_b);
-    } else {
-      join_node = JoinNode::make(join_mode, equals_(_t_a_a, _t_b_x), _mock_node_a, _mock_node_b);
-    }
-
-    // Right input Node has non-trivial FDs
-    const auto fd_x = FunctionalDependency{{_t_b_x}, {_t_b_y}};
-    _mock_node_a->set_non_trivial_functional_dependencies({});
-    _mock_node_b->set_non_trivial_functional_dependencies({fd_x});
-    EXPECT_TRUE(_mock_node_a->unique_constraints()->empty());
-    EXPECT_TRUE(_mock_node_b->unique_constraints()->empty());
-
-    if (join_mode == JoinMode::Left || join_mode == JoinMode::FullOuter) {
-      EXPECT_EQ(join_node->non_trivial_functional_dependencies().size(), 0);
-    } else {
+      EXPECT_TRUE(join_node->non_trivial_functional_dependencies().contains(fd_a));
+      break;
+    case JoinMode::Right:
       EXPECT_EQ(join_node->non_trivial_functional_dependencies().size(), 1);
-      EXPECT_EQ(join_node->non_trivial_functional_dependencies().at(0), fd_x);
-    }
-  }
-}
-
-TEST_F(JoinNodeTest, FunctionalDependenciesForwardNonTrivialBoth) {
-  for (const auto join_mode :
-       {JoinMode::Inner, JoinMode::Left, JoinMode::Right, JoinMode::FullOuter, JoinMode::Cross}) {
-    auto join_node = std::shared_ptr<JoinNode>();
-    if (join_mode == JoinMode::Cross) {
-      join_node = JoinNode::make(JoinMode::Cross, _mock_node_a, _mock_node_b);
-    } else {
-      join_node = JoinNode::make(join_mode, equals_(_t_a_a, _t_b_x), _mock_node_a, _mock_node_b);
-    }
-
-    // Both input nodes have non-trivial FDs
-    const auto fd_a = FunctionalDependency{{_t_a_a}, {_t_a_b}};
-    const auto fd_x = FunctionalDependency{{_t_b_x}, {_t_b_y}};
-    _mock_node_a->set_non_trivial_functional_dependencies({fd_a});
-    _mock_node_b->set_non_trivial_functional_dependencies({fd_x});
-    EXPECT_TRUE(_mock_node_a->unique_constraints()->empty());
-    EXPECT_TRUE(_mock_node_b->unique_constraints()->empty());
-
-    if (join_mode == JoinMode::FullOuter) {
-      EXPECT_EQ(join_node->non_trivial_functional_dependencies().size(), 0);
-    } else if (join_mode == JoinMode::Left) {
-      EXPECT_EQ(join_node->non_trivial_functional_dependencies().size(), 1);
-      EXPECT_EQ(join_node->non_trivial_functional_dependencies().at(0), fd_a);
-    } else if (join_mode == JoinMode::Right) {
-      EXPECT_EQ(join_node->non_trivial_functional_dependencies().size(), 1);
-      EXPECT_EQ(join_node->non_trivial_functional_dependencies().at(0), fd_x);
-    } else {
+      EXPECT_TRUE(join_node->non_trivial_functional_dependencies().contains(fd_x));
+      break;
+    case JoinMode::Inner:
+    case JoinMode::Cross:
       EXPECT_EQ(join_node->non_trivial_functional_dependencies().size(), 2);
-      EXPECT_EQ(join_node->non_trivial_functional_dependencies().at(0), fd_a);
-      EXPECT_EQ(join_node->non_trivial_functional_dependencies().at(1), fd_x);
-    }
+      EXPECT_TRUE(join_node->non_trivial_functional_dependencies().contains(fd_a));
+      EXPECT_TRUE(join_node->non_trivial_functional_dependencies().contains(fd_x));
   }
 }
 
-TEST_F(JoinNodeTest, FunctionalDependenciesForwardNonTrivialBothAndDerive) {
-  for (const auto join_mode :
-       {JoinMode::Inner, JoinMode::Left, JoinMode::Right, JoinMode::FullOuter, JoinMode::Cross}) {
-    auto join_node = std::shared_ptr<JoinNode>();
-    if (join_mode == JoinMode::Cross) {
-      join_node = JoinNode::make(JoinMode::Cross, _mock_node_a, _mock_node_b);
-    } else {
-      join_node = JoinNode::make(join_mode, equals_(_t_a_a, _t_b_x), _mock_node_a, _mock_node_b);
-    }
+TEST_P(JoinNodeMultiJoinModeTest, FunctionalDependenciesForwardNonTrivialBothAndDerive) {
+  const auto join_mode = GetParam();
+  auto join_node = std::shared_ptr<JoinNode>();
+  if (join_mode == JoinMode::Cross) {
+    join_node = JoinNode::make(JoinMode::Cross, _mock_node_a, _mock_node_b);
+  } else {
+    join_node = JoinNode::make(join_mode, equals_(_t_a_a, _t_b_x), _mock_node_a, _mock_node_b);
+  }
 
-    /**
-     * Test, whether non-trivial FD forwarding still works when deriving FDs from unique constraints:
-     *  - We specify unique constraints for both input tables.
-     *  - We enforce the dismissal of unique constraints for all join modes by making none of the join columns unique.
-     *    Consequently, we expect non-trivial FDs, which were derived from the input nodes' unique constraints.
+  /**
+     * Test whether non-trivial FD forwarding still works when deriving FDs from unique column combinations:
+     *  - We specify UCCs for both input tables.
+     *  - We enforce the dismissal of UCCs for all join modes by making none of the join columns unique.
+     *    Consequently, we expect non-trivial FDs that were derived from the input nodes' unique column combinations.
+     *  - Semi- and Anti-Joins preserve the UCCs, so they should not generate non-trivial FDs but keep the left input's
+     *    UCCs of the left input.
      */
-    const auto fd_a = FunctionalDependency{{_t_a_a}, {_t_a_b}};
-    const auto fd_x = FunctionalDependency{{_t_b_x}, {_t_b_y}};
-    _mock_node_a->set_non_trivial_functional_dependencies({fd_a});
-    _mock_node_b->set_non_trivial_functional_dependencies({fd_x});
-    _mock_node_a->set_key_constraints({*_key_constraint_b_c});
-    _mock_node_b->set_key_constraints({*_key_constraint_y});
-    const auto generated_fd_b_c = FunctionalDependency{{_t_a_b, _t_a_c}, {_t_a_a}};
-    const auto generated_fd_y = FunctionalDependency{{_t_b_y}, {_t_b_x}};
+  const auto fd_a = FunctionalDependency{{_t_a_a}, {_t_a_b}};
+  const auto fd_x = FunctionalDependency{{_t_b_x}, {_t_b_y}};
+  _mock_node_a->set_non_trivial_functional_dependencies({fd_a});
+  _mock_node_b->set_non_trivial_functional_dependencies({fd_x});
+  _mock_node_a->set_key_constraints({*_key_constraint_b_c});
+  _mock_node_b->set_key_constraints({*_key_constraint_y});
+  const auto generated_fd_b_c = FunctionalDependency{{_t_a_b, _t_a_c}, {_t_a_a}};
+  const auto generated_fd_y = FunctionalDependency{{_t_b_y}, {_t_b_x}};
 
-    if (join_mode == JoinMode::FullOuter) {
-      EXPECT_EQ(join_node->non_trivial_functional_dependencies().size(), 0);
-    } else if (join_mode == JoinMode::Left) {
+  switch (join_mode) {
+    case JoinMode::Semi:
+    case JoinMode::AntiNullAsTrue:
+    case JoinMode::AntiNullAsFalse:
+      EXPECT_EQ(join_node->non_trivial_functional_dependencies().size(), 1);
+      EXPECT_TRUE(join_node->non_trivial_functional_dependencies().contains(fd_a));
+      EXPECT_EQ(join_node->unique_column_combinations().size(), 1);
+      EXPECT_EQ(join_node->unique_column_combinations(), _mock_node_a->unique_column_combinations());
+      break;
+    case JoinMode::Left:
       EXPECT_EQ(join_node->non_trivial_functional_dependencies().size(), 2);
-      EXPECT_EQ(join_node->non_trivial_functional_dependencies().at(0), fd_a);
-      EXPECT_EQ(join_node->non_trivial_functional_dependencies().at(1), generated_fd_b_c);
-    } else if (join_mode == JoinMode::Right) {
+      EXPECT_TRUE(join_node->non_trivial_functional_dependencies().contains(fd_a));
+      EXPECT_TRUE(join_node->non_trivial_functional_dependencies().contains(generated_fd_b_c));
+      break;
+    case JoinMode::Right:
       EXPECT_EQ(join_node->non_trivial_functional_dependencies().size(), 2);
-      EXPECT_EQ(join_node->non_trivial_functional_dependencies().at(0), fd_x);
-      EXPECT_EQ(join_node->non_trivial_functional_dependencies().at(1), generated_fd_y);
-    } else {
+      EXPECT_TRUE(join_node->non_trivial_functional_dependencies().contains(fd_x));
+      EXPECT_TRUE(join_node->non_trivial_functional_dependencies().contains(generated_fd_y));
+      break;
+    case JoinMode::FullOuter:
+      EXPECT_TRUE(join_node->non_trivial_functional_dependencies().empty());
+      break;
+    case JoinMode::Inner:
+    case JoinMode::Cross:
       EXPECT_EQ(join_node->non_trivial_functional_dependencies().size(), 4);
-      EXPECT_EQ(join_node->non_trivial_functional_dependencies().at(0), fd_a);
-      EXPECT_EQ(join_node->non_trivial_functional_dependencies().at(1), generated_fd_b_c);
-      EXPECT_EQ(join_node->non_trivial_functional_dependencies().at(2), fd_x);
-      EXPECT_EQ(join_node->non_trivial_functional_dependencies().at(3), generated_fd_y);
-    }
+      EXPECT_TRUE(join_node->non_trivial_functional_dependencies().contains(fd_a));
+      EXPECT_TRUE(join_node->non_trivial_functional_dependencies().contains(generated_fd_b_c));
+      EXPECT_TRUE(join_node->non_trivial_functional_dependencies().contains(fd_x));
+      EXPECT_TRUE(join_node->non_trivial_functional_dependencies().contains(generated_fd_y));
   }
 }
 
 TEST_F(JoinNodeTest, FunctionalDependenciesDeriveNone) {
   /**
-   * Set unique constraints for both join columns of an Inner Join, so that unique constraints from both sides become
-   * forwarded. Consequently, we do not expect non-trivial FDs from the left or right input node's unique constraints
-   * to be derived.
+   * Set UCCs for both join columns of an Inner Join, so that UCCs from both sides are forwarded. Consequently, we do
+   * not expect non-trivial FDs from the left or right input nodes' UCCs to be derived.
    */
   _mock_node_a->set_key_constraints({*_key_constraint_a});
   _mock_node_b->set_key_constraints({*_key_constraint_x});
@@ -405,23 +390,23 @@ TEST_F(JoinNodeTest, FunctionalDependenciesDeriveNone) {
 
   // Tests
   EXPECT_EQ(join_node->non_trivial_functional_dependencies().size(), 2);
-  EXPECT_EQ(join_node->non_trivial_functional_dependencies().at(0), fd_b);
-  EXPECT_EQ(join_node->non_trivial_functional_dependencies().at(1), fd_y);
+  EXPECT_TRUE(join_node->non_trivial_functional_dependencies().contains(fd_b));
+  EXPECT_TRUE(join_node->non_trivial_functional_dependencies().contains(fd_y));
 
   EXPECT_EQ(join_node->functional_dependencies().size(), 4);
-  EXPECT_EQ(join_node->functional_dependencies().at(0), fd_b);
-  EXPECT_EQ(join_node->functional_dependencies().at(1), fd_y);
+  EXPECT_TRUE(join_node->functional_dependencies().contains(fd_b));
+  EXPECT_TRUE(join_node->functional_dependencies().contains(fd_y));
   const auto generated_fd_a = FunctionalDependency{{_t_a_a}, {_t_a_b, _t_a_c, _t_b_x, _t_b_y}};
-  EXPECT_EQ(join_node->functional_dependencies().at(2), generated_fd_a);
+  EXPECT_TRUE(join_node->functional_dependencies().contains(generated_fd_a));
   const auto generated_fd_x = FunctionalDependency{{_t_b_x}, {_t_b_y, _t_a_a, _t_a_b, _t_a_c}};
-  EXPECT_EQ(join_node->functional_dependencies().at(3), generated_fd_x);
+  EXPECT_TRUE(join_node->functional_dependencies().contains(generated_fd_x));
 }
 
 TEST_F(JoinNodeTest, FunctionalDependenciesDeriveLeftOnly) {
   /**
-   * We set a unique constraint for the left, but not for the right join column of the Inner Join. Consequently, unique
-   * constraints of the left input node become discarded whereas the unique constraints of the right input node survive.
-   * Therefore, we have to check whether left input node's trivial FDs become forwarded as non-trivial ones.
+   * We set a UCC for the left, but not for the right join column of the Inner Join. Consequently, UCCs of the left
+   * input node are discarded, whereas the UCCs of the right input node survive. Therefore, we have to check whether
+   * left input node's trivial FDs are forwarded as non-trivial ones.
    */
   _mock_node_a->set_key_constraints({*_key_constraint_a});
   _mock_node_b->set_key_constraints({*_key_constraint_x});
@@ -435,12 +420,12 @@ TEST_F(JoinNodeTest, FunctionalDependenciesDeriveLeftOnly) {
   // Tests
   const auto generated_fd_a = FunctionalDependency{{_t_a_a}, {_t_a_b, _t_a_c}};
   EXPECT_EQ(join_node->non_trivial_functional_dependencies().size(), 1);
-  EXPECT_EQ(join_node->non_trivial_functional_dependencies().at(0), generated_fd_a);
+  EXPECT_TRUE(join_node->non_trivial_functional_dependencies().contains(generated_fd_a));
 
   const auto generated_fd_x = FunctionalDependency{{_t_b_x}, {_t_a_a, _t_a_b, _t_a_c, _t_b_y}};
   EXPECT_EQ(join_node->functional_dependencies().size(), 2);
-  EXPECT_EQ(join_node->functional_dependencies().at(0), generated_fd_a);
-  EXPECT_EQ(join_node->functional_dependencies().at(1), generated_fd_x);
+  EXPECT_TRUE(join_node->functional_dependencies().contains(generated_fd_a));
+  EXPECT_TRUE(join_node->functional_dependencies().contains(generated_fd_x));
 }
 
 TEST_F(JoinNodeTest, FunctionalDependenciesUnify) {
@@ -450,12 +435,12 @@ TEST_F(JoinNodeTest, FunctionalDependenciesUnify) {
   _mock_node_a->set_key_constraints({key_constraint_a_b, key_constraint_c});
   _mock_node_b->set_key_constraints({*_key_constraint_x});
 
-  // The following FD is trivial since it can be derived from a unique constraint (PRIMARY KEY across a & b).
-  // However, we define it as non-trivial anyway, to verify the conflict resolution when merging FDs later on.
+  // The following FD is trivial since it can be derived from a UCC (PRIMARY KEY across a & b). However, we define it
+  // as non-trivial anyway, to verify the conflict resolution when merging FDs later on.
   const auto fd_a_b = FunctionalDependency{{_t_a_a, _t_a_b}, {_t_a_c}};
   _mock_node_a->set_non_trivial_functional_dependencies({fd_a_b});
 
-  // Define an Inner Join, so that all unique constraints survive
+  // Define an Inner Join, so that all UCCs survive.
   // clang-format off
   const auto& join_node =
   JoinNode::make(JoinMode::Inner, equals_(_t_a_c, _t_b_x),
@@ -471,13 +456,13 @@ TEST_F(JoinNodeTest, FunctionalDependenciesUnify) {
   // Prerequisites
   const auto& non_trivial_fds = join_node->non_trivial_functional_dependencies();
   EXPECT_EQ(non_trivial_fds.size(), 1);
-  EXPECT_EQ(non_trivial_fds.at(0), fd_a_b);
+  EXPECT_TRUE(non_trivial_fds.contains(fd_a_b));
 
-  const auto& trivial_fds = fds_from_unique_constraints(join_node, join_node->unique_constraints());
+  const auto& trivial_fds = fds_from_unique_column_combinations(join_node, join_node->unique_column_combinations());
   EXPECT_EQ(trivial_fds.size(), 3);
-  EXPECT_EQ(trivial_fds.at(0), expected_fd_a_b);
-  EXPECT_EQ(trivial_fds.at(1), expected_fd_c);
-  EXPECT_EQ(trivial_fds.at(2), expected_fd_x);
+  EXPECT_TRUE(trivial_fds.contains(expected_fd_a_b));
+  EXPECT_TRUE(trivial_fds.contains(expected_fd_c));
+  EXPECT_TRUE(trivial_fds.contains(expected_fd_x));
 
   /**
    * After unifiying the two FD sets above, we expect three and instead of four FDs since the following FD objects
@@ -487,121 +472,210 @@ TEST_F(JoinNodeTest, FunctionalDependenciesUnify) {
    */
   const auto fds_unified = union_fds(non_trivial_fds, trivial_fds);
   EXPECT_EQ(fds_unified.size(), 3);
-  const auto fds_unified_set = std::unordered_set<FunctionalDependency>(fds_unified.cbegin(), fds_unified.cend());
-  EXPECT_TRUE(fds_unified_set.contains(expected_fd_a_b));
-  EXPECT_TRUE(fds_unified_set.contains(expected_fd_c));
-  EXPECT_TRUE(fds_unified_set.contains(expected_fd_x));
+  EXPECT_TRUE(fds_unified.contains(expected_fd_a_b));
+  EXPECT_TRUE(fds_unified.contains(expected_fd_c));
+  EXPECT_TRUE(fds_unified.contains(expected_fd_x));
   EXPECT_EQ(fds_unified, join_node->functional_dependencies());
 }
 
-TEST_F(JoinNodeTest, UniqueConstraintsSemiAndAntiJoins) {
+/**
+ * The following four tests check the forwarding of UCCs given the uniqueness of the input nodes' join columns. See the
+ * table for a brief overview of the test cases:
+ *
+ *                      |                              Join column of left input is unique
+ *                      +-----------------------------------------------+-----------------------------------------------
+ *                      |                      Yes                      |                      No
+ * ---------------------+-----------------------------------------------+-----------------------------------------------
+ * Join column of | Yes | UniqueColumnCombinationsBothJoinColumnsUnique | UniqueColumnCombinationsRightJoinColumnUnique
+ * right input is +-----+-----------------------------------------------+-----------------------------------------------
+ * unique         | No  | UniqueColumnCombinationsLeftJoinColumnUnique  | UniqueColumnCombinationsNoJoinColumnUnique
+ *
+ */
+TEST_P(JoinNodeMultiJoinModeTest, UniqueColumnCombinationsNoJoinColumnUnique) {
+  const auto join_mode = GetParam();
+  auto join_node = std::shared_ptr<JoinNode>{};
+  if (join_mode == JoinMode::Cross) {
+    join_node = JoinNode::make(join_mode, _mock_node_a, _mock_node_b);
+  } else {
+    // clang-format off
+    join_node =
+    JoinNode::make(join_mode, equals_(_t_a_a, _t_b_y),
+      _mock_node_a,
+      _mock_node_b);
+    // clang-format on
+  }
+
+  // Case 1 – LEFT  table's join column (a) uniqueness : No
+  //          RIGHT table's join column (y) uniqueness : No
+  _mock_node_a->set_key_constraints({*_key_constraint_b_c});
+  _mock_node_b->set_key_constraints({*_key_constraint_x});
+
+  const auto& join_unique_column_combinations = join_node->unique_column_combinations();
+  if (is_semi_or_anti_join(join_mode)) {
+    // Semi- and Anti-Joins act as filters for the left input and preserve its unique column combinations.
+    EXPECT_EQ(join_unique_column_combinations.size(), 1);
+    EXPECT_TRUE(find_ucc_by_key_constraint(*_key_constraint_b_c, join_unique_column_combinations));
+  } else {
+    // Not unique join columns might lead to row/value duplication in the opposite relation. No UCCs remain valid.
+    EXPECT_TRUE(join_unique_column_combinations.empty());
+  }
+}
+
+TEST_P(JoinNodeMultiJoinModeTest, UniqueColumnCombinationsLeftJoinColumnUnique) {
+  const auto join_mode = GetParam();
+  auto join_node = std::shared_ptr<JoinNode>{};
+  if (join_mode == JoinMode::Cross) {
+    join_node = JoinNode::make(join_mode, _mock_node_a, _mock_node_b);
+  } else {
+    // clang-format off
+    join_node =
+    JoinNode::make(join_mode, equals_(_t_a_a, _t_b_y),
+      _mock_node_a,
+      _mock_node_b);
+    // clang-format on
+  }
+
+  // Case 2 – LEFT  table's join column (a) uniqueness : Yes
+  //          RIGHT table's join column (y) uniqueness : No
   _mock_node_a->set_key_constraints({*_key_constraint_a, *_key_constraint_b_c});
   _mock_node_b->set_key_constraints({*_key_constraint_x});
 
-  for (const auto join_mode : {JoinMode::Semi, JoinMode::AntiNullAsTrue, JoinMode::AntiNullAsFalse}) {
+  const auto& join_unique_column_combinations = join_node->unique_column_combinations();
+  switch (join_mode) {
+    case JoinMode::Cross:
+      // Cross joins should never forward UCCs.
+      EXPECT_TRUE(join_unique_column_combinations.empty());
+      break;
+    case JoinMode::Semi:
+    case JoinMode::AntiNullAsTrue:
+    case JoinMode::AntiNullAsFalse:
+      // Semi- and Anti-Joins act as filters for the left input and preserve its unique column combinations.
+      EXPECT_EQ(join_unique_column_combinations.size(), 2);
+      EXPECT_EQ(join_unique_column_combinations, _mock_node_a->unique_column_combinations());
+      break;
+    case JoinMode::Inner:
+    case JoinMode::Left:
+    case JoinMode::Right:
+    case JoinMode::FullOuter:
+      // UCCs of the right input should be forwarded. Since our current UCC implementation is compatible with NULL
+      // values, outer joins are handled like inner joins.
+      EXPECT_EQ(join_unique_column_combinations.size(), 1);
+      EXPECT_EQ(join_unique_column_combinations, _mock_node_b->unique_column_combinations());
+      break;
+  }
+}
+
+TEST_P(JoinNodeMultiJoinModeTest, UniqueColumnCombinationsRightJoinColumnUnique) {
+  const auto join_mode = GetParam();
+  auto join_node = std::shared_ptr<JoinNode>{};
+  if (join_mode == JoinMode::Cross) {
+    join_node = JoinNode::make(join_mode, _mock_node_a, _mock_node_b);
+  } else {
     // clang-format off
-    const auto join_node =
+    join_node =
     JoinNode::make(join_mode, equals_(_t_a_a, _t_b_y),
       _mock_node_a,
       _mock_node_b);
     // clang-format on
-
-    EXPECT_EQ(*join_node->unique_constraints(), *_mock_node_a->unique_constraints());
   }
+
+  // Case 3 – LEFT  table's join column (a) uniqueness : No
+  //          RIGHT table's join column (y) uniqueness : Yes
+  _mock_node_a->set_key_constraints({*_key_constraint_b_c});
+  _mock_node_b->set_key_constraints({*_key_constraint_x, *_key_constraint_y});
+
+  const auto& join_unique_column_combinations = join_node->unique_column_combinations();
+  if (join_mode == JoinMode::Cross) {
+    // Cross joins should never forward UCCs.
+    EXPECT_TRUE(join_unique_column_combinations.empty());
+    return;
+  }
+  // UCCs of the left input should be forwarded.
+  EXPECT_EQ(join_unique_column_combinations.size(), 1);
+  EXPECT_EQ(join_unique_column_combinations, _mock_node_a->unique_column_combinations());
 }
 
-TEST_F(JoinNodeTest, UniqueConstraintsInnerAndOuterJoins) {
-  // Test the forwarding logic of all, inner and outer joins based on join column uniqueness.
-  // Any join column that is not unique might lead to row-/value-duplication in the opposite table. Hence, unique
-  // constraints might break and should not be forwarded.
-  // Since our current unique constraints implementation is compatible with NULL values, outer joins are handled like
-  // inner joins.
-
-  for (const auto join_mode : {JoinMode::Inner, JoinMode::Left, JoinMode::Right, JoinMode::FullOuter}) {
+TEST_P(JoinNodeMultiJoinModeTest, UniqueColumnCombinationsBothJoinColumnsUnique) {
+  const auto join_mode = GetParam();
+  auto join_node = std::shared_ptr<JoinNode>{};
+  if (join_mode == JoinMode::Cross) {
+    join_node = JoinNode::make(join_mode, _mock_node_a, _mock_node_b);
+  } else {
     // clang-format off
-    const auto join_node =
+    join_node =
     JoinNode::make(join_mode, equals_(_t_a_a, _t_b_y),
       _mock_node_a,
       _mock_node_b);
     // clang-format on
-
-    // Case 1 – LEFT  table's join column (a) uniqueness : No
-    //          RIGHT table's join column (y) uniqueness : No
-    _mock_node_a->set_key_constraints({*_key_constraint_b_c});
-    _mock_node_b->set_key_constraints({*_key_constraint_x});
-    EXPECT_TRUE(join_node->unique_constraints()->empty());
-
-    // Case 2 – LEFT  table's join column (a) uniqueness : Yes
-    //          RIGHT table's join column (y) uniqueness : No
-    _mock_node_a->set_key_constraints({*_key_constraint_a, *_key_constraint_b_c});
-    _mock_node_b->set_key_constraints({*_key_constraint_x});
-
-    // Expect unique constraints of RIGHT table to be forwarded
-    auto join_unique_constraints = join_node->unique_constraints();
-    EXPECT_EQ(join_unique_constraints->size(), 1);
-    EXPECT_TRUE(*join_unique_constraints == *_mock_node_b->unique_constraints());
-
-    // Case 3 – LEFT  table's join column (a) uniqueness : No
-    //          RIGHT table's join column (y) uniqueness : Yes
-    _mock_node_a->set_key_constraints({*_key_constraint_b_c});
-    _mock_node_b->set_key_constraints({*_key_constraint_x, *_key_constraint_y});
-
-    // Expect unique constraints of LEFT table (b_c) to be forwarded
-    join_unique_constraints = join_node->unique_constraints();
-    EXPECT_EQ(join_unique_constraints->size(), 1);
-    EXPECT_TRUE(*join_unique_constraints == *_mock_node_a->unique_constraints());
-
-    // Case 4 – LEFT  table's join column (a) uniqueness : Yes
-    //          RIGHT table's join column (y) uniqueness : Yes
-    _mock_node_a->set_key_constraints({*_key_constraint_a, *_key_constraint_b_c});
-    _mock_node_b->set_key_constraints({*_key_constraint_x, *_key_constraint_y});
-
-    // Expect unique constraints of both, LEFT (a, b_c) and RIGHT (x, y) table to be forwarded
-    join_unique_constraints = join_node->unique_constraints();
-
-    // Basic check
-    EXPECT_EQ(join_unique_constraints->size(), 4);
-    // In-depth checks
-    EXPECT_TRUE(find_unique_constraint_by_key_constraint(*_key_constraint_a, join_unique_constraints));
-    EXPECT_TRUE(find_unique_constraint_by_key_constraint(*_key_constraint_b_c, join_unique_constraints));
-    EXPECT_TRUE(find_unique_constraint_by_key_constraint(*_key_constraint_x, join_unique_constraints));
-    EXPECT_TRUE(find_unique_constraint_by_key_constraint(*_key_constraint_y, join_unique_constraints));
   }
+
+  // Case 4 – LEFT  table's join column (a) uniqueness : Yes
+  //          RIGHT table's join column (y) uniqueness : Yes
+  _mock_node_a->set_key_constraints({*_key_constraint_a, *_key_constraint_b_c});
+  _mock_node_b->set_key_constraints({*_key_constraint_x, *_key_constraint_y});
+
+  const auto& join_unique_column_combinations = join_node->unique_column_combinations();
+  if (join_mode == JoinMode::Cross) {
+    EXPECT_TRUE(join_unique_column_combinations.empty());
+    return;
+  }
+
+  // For all other join modes, UCCs of the left input should be forwarded.
+  EXPECT_TRUE(find_ucc_by_key_constraint(*_key_constraint_a, join_unique_column_combinations));
+  EXPECT_TRUE(find_ucc_by_key_constraint(*_key_constraint_b_c, join_unique_column_combinations));
+
+  if (is_semi_or_anti_join(join_mode)) {
+    EXPECT_EQ(join_unique_column_combinations.size(), 2);
+    return;
+  }
+
+  // Inner and outer joins should also forward the right input's UCCs.
+  EXPECT_EQ(join_unique_column_combinations.size(), 4);
+  EXPECT_TRUE(find_ucc_by_key_constraint(*_key_constraint_x, join_unique_column_combinations));
+  EXPECT_TRUE(find_ucc_by_key_constraint(*_key_constraint_y, join_unique_column_combinations));
 }
 
-TEST_F(JoinNodeTest, UniqueConstraintsNonEquiJoin) {
-  // Currently, we do not support unique constraint forwarding for Non-Equi- or Theta-Joins
+TEST_P(JoinNodeMultiJoinModeTest, UniqueColumnCombinationsNonEquiJoin) {
+  // Currently, we do not support UCC forwarding for Non-Equi- or Theta-Joins. Semi-, Cross-, and Anti-Joins only
+  // support Equi-Joins.
+  const auto join_mode = GetParam();
+  if (join_mode == JoinMode::Cross || is_semi_or_anti_join(join_mode)) {
+    GTEST_SKIP();
+  }
+
   _mock_node_a->set_key_constraints({*_key_constraint_a, *_key_constraint_b_c});
   _mock_node_b->set_key_constraints({*_key_constraint_x, *_key_constraint_y});
   // clang-format off
   const auto theta_join_node =
-  JoinNode::make(JoinMode::Inner, greater_than_(_t_a_a, _t_b_x),
+  JoinNode::make(join_mode, greater_than_(_t_a_a, _t_b_x),
     _mock_node_a,
     _mock_node_b);
   // clang-format on
 
-  EXPECT_TRUE(theta_join_node->unique_constraints()->empty());
+  EXPECT_TRUE(theta_join_node->unique_column_combinations().empty());
 }
 
-TEST_F(JoinNodeTest, UniqueConstraintsNonSemiNonAntiMultiPredicateJoin) {
-  // Except for Semi- and Anti-Joins, we do not support forwarding of unique constraints for multi-predicate joins.
+TEST_P(JoinNodeMultiJoinModeTest, UniqueColumnCombinationsMultiPredicateJoin) {
+  // Except for Semi- and Anti-Joins, we do not support forwarding of UCCs for multi-predicate joins.
+  const auto join_mode = GetParam();
+  if (join_mode == JoinMode::Cross) {
+    GTEST_SKIP();
+  }
+
   _mock_node_a->set_key_constraints({*_key_constraint_a, *_key_constraint_b_c});
   _mock_node_b->set_key_constraints({*_key_constraint_x, *_key_constraint_y});
   // clang-format off
   const auto join_node =
-  JoinNode::make(JoinMode::Inner, expression_vector(less_than_(_t_a_a, _t_b_x), greater_than_(_t_a_a, _t_b_y)),
+  JoinNode::make(join_mode, expression_vector(less_than_(_t_a_a, _t_b_x), greater_than_(_t_a_a, _t_b_y)),
     _mock_node_a,
     _mock_node_b);
   // clang-format on
 
-  EXPECT_TRUE(join_node->unique_constraints()->empty());
-}
-
-TEST_F(JoinNodeTest, UniqueConstraintsCrossJoin) {
-  _mock_node_a->set_key_constraints({*_key_constraint_a, *_key_constraint_b_c});
-  _mock_node_b->set_key_constraints({*_key_constraint_x, *_key_constraint_y});
-
-  EXPECT_TRUE(_cross_join_node->unique_constraints()->empty());
+  if (is_semi_or_anti_join(join_mode)) {
+    EXPECT_EQ(join_node->unique_column_combinations(), _mock_node_a->unique_column_combinations());
+  } else {
+    EXPECT_TRUE(join_node->unique_column_combinations().empty());
+  }
 }
 
 TEST_F(JoinNodeTest, GetOrFindReducedJoinNode) {

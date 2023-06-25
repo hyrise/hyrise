@@ -2,15 +2,11 @@
 
 #include <boost/algorithm/searching/boyer_moore.hpp>
 #include <experimental/functional>
-#include <optional>
 #include <regex>
-#include <string>
 #include <utility>
 #include <variant>
-#include <vector>
 
 #include "types.hpp"
-#include "utils/assert.hpp"
 
 namespace hyrise {
 

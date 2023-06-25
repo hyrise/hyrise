@@ -17,6 +17,7 @@ namespace hyrise {
 class OperatorTask;
 class Table;
 class TransactionContext;
+class PQPSubqueryExpression;
 
 enum class OperatorType {
   Aggregate,
@@ -211,6 +212,12 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
    */
   std::shared_ptr<OperatorTask> get_or_create_operator_task();
 
+  /**
+   * Returns root nodes of uncorrelated subqueries so they can be translated to OperatorTasks and get scheduled
+   * accordingly.
+   */
+  std::vector<std::shared_ptr<AbstractOperator>> uncorrelated_subqueries() const;
+
   // LQP node with which this operator has been created. Might be uninitialized.
   std::shared_ptr<const AbstractLQPNode> lqp_node;
 
@@ -239,6 +246,10 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
       const std::shared_ptr<AbstractOperator>& copied_right_input,
       std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const = 0;
 
+  // Operators that might rely on uncorrelated subqueries should use this method in order to let AbstractOperator
+  // register and deregister as a consumer of the subqueries and ensure their tasks are scheduled.
+  void _search_and_register_uncorrelated_subqueries(const std::shared_ptr<AbstractExpression>& expression);
+
   const OperatorType _type;
 
   // Shared pointers to input operators, can be nullptr.
@@ -251,6 +262,10 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   // Weak pointer breaks cyclical dependency between operators and context
   std::optional<std::weak_ptr<TransactionContext>> _transaction_context;
 
+  // Some operators, e.g., TableScans or Projections, have predicates with uncorrelated subqueries. We store these
+  // subqueries in AbstractOperator to create their tasks.
+  std::vector<std::shared_ptr<PQPSubqueryExpression>> _uncorrelated_subquery_expressions;
+
  private:
   // We track the number of consuming operators to automate the clearing of operator results.
   std::atomic_int32_t _consumer_count = 0;
@@ -261,7 +276,7 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
 
   // State management
   std::atomic<OperatorState> _state{OperatorState::Created};
-  void _transition_to(OperatorState new_state);
+  void _transition_to(const OperatorState new_state);
 
   /**
    * OperatorTasks wrap operators for scheduling. Since operator results are shared between uncorrelated subqueries

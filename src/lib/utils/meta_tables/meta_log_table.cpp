@@ -1,6 +1,7 @@
 #include "meta_log_table.hpp"
 
-#include "constant_mappings.hpp"
+#include "magic_enum.hpp"
+
 #include "hyrise.hpp"
 #include "utils/assert.hpp"
 
@@ -28,18 +29,19 @@ std::shared_ptr<Table> MetaLogTable::_on_generate() const {
     // We need this to format the timestamp in a thread-safe way.
     // https://stackoverflow.com/questions/25618702/
     //   why-is-there-no-c11-threadsafe-alternative-to-stdlocaltime-and-stdgmtime
-    std::ostringstream timestamp;
-    auto time = std::chrono::system_clock::to_time_t(entry.timestamp);
+    auto timestamp_stream = std::ostringstream{};
+    auto timestamp = std::chrono::system_clock::to_time_t(entry.timestamp);
 
-    struct tm buffer {};
+    // "Structure holding a calendar date and time broken down into its components.", see
+    // https://en.cppreference.com/w/c/chrono/tm
+    auto buffer = tm{};
 
-    timestamp << std::put_time(localtime_r(&time, &buffer), "%F %T");
-    output_table->append(
-        {timestamp_ns, pmr_string(timestamp.str().begin(), timestamp.str().end()), 
-          pmr_string(log_level_to_string.left.at(entry.log_level).begin(), log_level_to_string.left.at(entry.log_level).end()),
-          static_cast<int32_t>(entry.log_level), 
-          pmr_string(entry.reporter.begin(), entry.reporter.end()), 
-          pmr_string(entry.message.begin(), entry.message.end())});
+    timestamp_stream << std::put_time(localtime_r(&timestamp, &buffer), "%F %T");
+    auto log_level_str = magic_enum::enum_name(entry.log_level);
+    output_table->append({timestamp_ns, pmr_string{timestamp_stream.str().begin(), timestamp_stream.str().end()},
+                          pmr_string{log_level_str.begin(), log_level_str.end()}, static_cast<int32_t>(entry.log_level),
+                          pmr_string{entry.reporter.begin(), entry.reporter.end()},
+                          pmr_string{entry.message.begin(), entry.message.end()}});
   }
 
   return output_table;

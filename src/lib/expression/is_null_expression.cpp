@@ -38,7 +38,7 @@ ExpressionPrecedence IsNullExpression::_precedence() const {
   return ExpressionPrecedence::UnaryPredicate;
 }
 
-bool IsNullExpression::_on_is_nullable_on_lqp(const AbstractLQPNode& lqp) const {
+bool IsNullExpression::_on_is_nullable_on_lqp(const AbstractLQPNode& /*lqp*/) const {
   // IS NULL always returns a boolean value, never NULL
   return false;
 }

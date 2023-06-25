@@ -19,7 +19,7 @@ FileBasedBenchmarkItemRunner::FileBasedBenchmarkItemRunner(
     : AbstractBenchmarkItemRunner(config) {
   const auto is_sql_file = [](const std::string& filename) { return boost::algorithm::ends_with(filename, ".sql"); };
 
-  std::filesystem::path path{query_path};
+  const auto path = std::filesystem::path{query_path};
   Assert(std::filesystem::exists(path), "No such file or directory '" + query_path + "'");
 
   if (std::filesystem::is_regular_file(path)) {
@@ -69,7 +69,7 @@ void FileBasedBenchmarkItemRunner::_parse_query_file(
   // The names of queries from, e.g., "queries/TPCH-7.sql" will be prefixed with "TPCH-7."
   const auto item_name_prefix = query_file_path.stem().string();
 
-  std::string content{std::istreambuf_iterator<char>(file), {}};
+  const auto content = std::string{std::istreambuf_iterator<char>(file), {}};
 
   /**
    * A file can contain multiple SQL statements, and each statement may cover one or more lines.

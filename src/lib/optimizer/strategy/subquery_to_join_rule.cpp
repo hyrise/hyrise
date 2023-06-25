@@ -25,11 +25,10 @@
 #include "logical_query_plan/validate_node.hpp"
 #include "utils/assert.hpp"
 
-using namespace hyrise::expression_functional;  // NOLINT
-
 namespace {
 
-using namespace hyrise;  // NOLINT
+using namespace hyrise;                         // NOLINT(build/namespaces)
+using namespace hyrise::expression_functional;  // NOLINT(build/namespaces)
 
 using NodeExpressionsDifferenceType =
     typename std::iterator_traits<decltype(AggregateNode::node_expressions)::iterator>::difference_type;
@@ -250,7 +249,7 @@ std::optional<SubqueryToJoinRule::PredicateNodeInfo> SubqueryToJoinRule::is_pred
     result.join_mode = in_expression->is_negated() ? JoinMode::AntiNullAsTrue : JoinMode::Semi;
     // We need to deep_copy the subquery before modifying it as it might be in use somewhere else, too.
     result.subquery = std::static_pointer_cast<LQPSubqueryExpression>(in_expression->set()->deep_copy());
-    result.join_predicate = equals_(in_expression->value(), result.subquery->lqp->output_expressions()[0]);
+    result.join_predicate = equals_(in_expression->operand(), result.subquery->lqp->output_expressions()[0]);
 
     // Correlated NOT IN is very weird w.r.t. handling of null values and cannot be turned into a
     // multi-predicate join that treats all its predicates equivalently

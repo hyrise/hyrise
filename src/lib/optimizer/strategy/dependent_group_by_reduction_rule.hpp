@@ -1,14 +1,8 @@
 #pragma once
 
 #include "abstract_rule.hpp"
-#include "expression/abstract_expression.hpp"
-#include "expression/lqp_column_expression.hpp"
 
 namespace hyrise {
-
-class AbstractLQPNode;
-class AggregateNode;
-class StoredTableNode;
 
 /**
  * In SQL, the returned columns of an aggregate are either "group-by columns" or "aggregate columns", e.g., SUM(a). As
@@ -38,6 +32,9 @@ class StoredTableNode;
  * determinant column(s) in this case the group is ensured to be of size one). This rule implements choke point 1.4 of
  * "TPC-H Analyzed: Hidden Messages and Lessons Learned from an Influential Benchmark" (Boncz et al.).
  * However, not all queries listed in the paper can be optimized yet, since Hyrise lacks foreign key support.
+ *
+ * Besides, this rule removes AggregateNodes that are inserted for SELECT DISTINCT clauses if the required columns are
+ * already distinct.
  */
 class DependentGroupByReductionRule : public AbstractRule {
  public:

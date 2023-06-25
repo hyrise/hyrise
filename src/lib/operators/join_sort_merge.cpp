@@ -50,7 +50,7 @@ JoinSortMerge::JoinSortMerge(const std::shared_ptr<const AbstractOperator>& left
 std::shared_ptr<AbstractOperator> JoinSortMerge::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_left_input,
     const std::shared_ptr<AbstractOperator>& copied_right_input,
-    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& /*copied_ops*/) const {
   return std::make_shared<JoinSortMerge>(copied_left_input, copied_right_input, _mode, _primary_predicate,
                                          _secondary_predicates);
 }
@@ -116,6 +116,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
   }
 
  protected:
+  // NOLINTBEGIN(cppcoreguidelines-avoid-const-or-ref-data-members)
   JoinSortMerge& _sort_merge_join;
   const std::shared_ptr<const Table> _left_input_table, _right_input_table;
 
@@ -125,7 +126,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
   MaterializedSegmentList<T> _sorted_left_table;
   MaterializedSegmentList<T> _sorted_right_table;
 
-  // Contains the null value row ids if a join column is an outer join column
+  // Contains the null value row ids if a join column is an outer join column.
   RowIDPosList _null_rows_left;
   RowIDPosList _null_rows_right;
 
@@ -136,11 +137,12 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
   const JoinMode _mode;
 
   const std::vector<OperatorJoinPredicate>& _secondary_join_predicates;
+  // NOLINTEND(cppcoreguidelines-avoid-const-or-ref-data-members)
 
   // The cluster count must be a power of two, i.e. 1, 2, 4, 8, 16, ...
   size_t _cluster_count;
 
-  // Contains the output row ids for each cluster
+  // Contains the output row ids for each cluster.
   std::vector<RowIDPosList> _output_pos_lists_left;
   std::vector<RowIDPosList> _output_pos_lists_right;
 
@@ -196,8 +198,10 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     template <typename F>
     void for_every_row_id(const MaterializedSegmentList<T>& table, const F& action) {
 // False positive with gcc and tsan (https://gcc.gnu.org/bugzilla/show_bug.cgi?id=92194)
+#ifndef __clang__
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#endif
       for (auto cluster = start.cluster; cluster <= end.cluster; ++cluster) {
         const auto start_index = (cluster == start.cluster) ? start.index : 0;
         const auto end_index = (cluster == end.cluster) ? end.index : table[cluster].size();
@@ -205,7 +209,9 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
           action(table[cluster][index].row_id);
         }
       }
+#ifndef __clang__
 #pragma GCC diagnostic pop
+#endif
     }
   };
 
@@ -546,8 +552,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
 
       const auto compare_result = _compare(left_value, right_value);
 
-      TableRange left_run(cluster_id, left_run_start, left_run_end);
-      TableRange right_run(cluster_id, right_run_start, right_run_end);
+      const auto left_run = TableRange(cluster_id, left_run_start, left_run_end);
+      const auto right_run = TableRange(cluster_id, right_run_start, right_run_end);
       _join_runs(left_run, right_run, compare_result, multi_predicate_join_evaluator, cluster_id);
 
       // Advance to the next run on the smaller side or both if equal

@@ -185,7 +185,6 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
       return other._pos_list_it - _pos_list_it;
     }
 
-    // TODO(anyone): benchmark if using two maps instead doing the dynamic cast every time really is faster.
     SegmentPosition<T> dereference() const {
       const auto pos_list_offset = static_cast<ChunkOffset>(_pos_list_it - _begin_pos_list_it);
 
@@ -222,7 +221,7 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
     PosListIteratorType _begin_pos_list_it;
     PosListIteratorType _pos_list_it;
 
-    // PointAccessIterators share vector with one Accessor per Chunk
+    // PointAccessIterators share vector with one accessor per chunk
     std::shared_ptr<std::vector<std::shared_ptr<AbstractSegmentAccessor<T>>>> _accessors;
   };
 };

@@ -4,7 +4,7 @@
 
 namespace hyrise {
 
-// A single float value as an AbstractStatisticsObject, to keep architectures consistent....
+// For consistency with other statistics, also single values are wrapped by an AbstractStatisticsObject.
 class NullValueRatioStatistics : public AbstractStatisticsObject {
  public:
   explicit NullValueRatioStatistics(const float init_ratio);
@@ -15,7 +15,7 @@ class NullValueRatioStatistics : public AbstractStatisticsObject {
 
   std::shared_ptr<AbstractStatisticsObject> scaled(const Selectivity selectivity) const override;
 
-  float ratio;
+  float ratio{0};
 };
 
 }  // namespace hyrise

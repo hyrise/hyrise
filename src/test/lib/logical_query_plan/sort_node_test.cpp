@@ -7,15 +7,15 @@
 #include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 
-using namespace hyrise::expression_functional;  // NOLINT
-
 namespace hyrise {
+
+using namespace expression_functional;  // NOLINT(build/namespaces)
 
 class SortNodeTest : public BaseTest {
  protected:
   void SetUp() override {
-    Hyrise::get().storage_manager.add_table(
-        "table_a", load_table("resources/test_data/tbl/int_float_double_string.tbl", ChunkOffset{2}));
+    _table_a = load_table("resources/test_data/tbl/int_float_double_string.tbl", ChunkOffset{2});
+    Hyrise::get().storage_manager.add_table("table_a", _table_a);
 
     _table_node = StoredTableNode::make("table_a");
 
@@ -29,6 +29,7 @@ class SortNodeTest : public BaseTest {
   std::shared_ptr<StoredTableNode> _table_node;
   std::shared_ptr<SortNode> _sort_node;
   std::shared_ptr<LQPColumnExpression> _a_i, _a_f, _a_d;
+  std::shared_ptr<Table> _table_a;
 };
 
 TEST_F(SortNodeTest, Descriptions) {
@@ -73,6 +74,20 @@ TEST_F(SortNodeTest, Copy) {
 TEST_F(SortNodeTest, NodeExpressions) {
   ASSERT_EQ(_sort_node->node_expressions.size(), 1u);
   EXPECT_EQ(*_sort_node->node_expressions.at(0), *_a_i);
+}
+
+TEST_F(SortNodeTest, ForwardUniqueColumnCombinations) {
+  EXPECT_TRUE(_table_node->unique_column_combinations().empty());
+  EXPECT_TRUE(_sort_node->unique_column_combinations().empty());
+
+  _table_a->add_soft_key_constraint({{ColumnID{0}}, KeyConstraintType::UNIQUE});
+  const auto ucc = UniqueColumnCombination{{_a_i}};
+  EXPECT_EQ(_table_node->unique_column_combinations().size(), 1);
+  EXPECT_TRUE(_table_node->unique_column_combinations().contains(ucc));
+
+  const auto& unique_column_combinations = _sort_node->unique_column_combinations();
+  EXPECT_EQ(unique_column_combinations.size(), 1);
+  EXPECT_TRUE(unique_column_combinations.contains(ucc));
 }
 
 }  // namespace hyrise

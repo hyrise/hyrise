@@ -21,8 +21,9 @@ class StaticTableNode : public EnableMakeForLQPNode<StaticTableNode>, public Abs
   std::vector<std::shared_ptr<AbstractExpression>> output_expressions() const override;
   bool is_column_nullable(const ColumnID column_id) const override;
 
-  // Generates unique constraints from table's key constraints.
-  std::shared_ptr<LQPUniqueConstraints> unique_constraints() const override;
+  // Generates UCCs from table's soft key constraints. We use these soft key constraints for storing table key
+  // constraints with CREATE TABLE statements.
+  UniqueColumnCombinations unique_column_combinations() const override;
 
   const std::shared_ptr<Table> table;
 
@@ -30,8 +31,8 @@ class StaticTableNode : public EnableMakeForLQPNode<StaticTableNode>, public Abs
   mutable std::optional<std::vector<std::shared_ptr<AbstractExpression>>> _output_expressions;
 
   size_t _on_shallow_hash() const override;
-  std::shared_ptr<AbstractLQPNode> _on_shallow_copy(LQPNodeMapping& node_mapping) const override;
-  bool _on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const override;
+  std::shared_ptr<AbstractLQPNode> _on_shallow_copy(LQPNodeMapping& /*node_mapping*/) const override;
+  bool _on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& /*node_mapping*/) const override;
 };
 
 }  // namespace hyrise

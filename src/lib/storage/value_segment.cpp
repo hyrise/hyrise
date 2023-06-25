@@ -81,7 +81,7 @@ void ValueSegment<T>::append(const AllTypeVariant& val) {
 
   Assert(size() < _values.capacity(), "ValueSegment is full");
 
-  bool is_null = variant_is_null(val);
+  const auto is_null = variant_is_null(val);
   access_counter[SegmentAccessCounter::AccessType::Point] += 1;
 
   if (is_nullable()) {
@@ -123,7 +123,7 @@ template <typename T>
 void ValueSegment<T>::set_null_value(const ChunkOffset chunk_offset) {
   Assert(is_nullable(), "This ValueSegment does not support null values.");
 
-  std::lock_guard<std::mutex> lock{_null_value_modification_mutex};
+  const auto lock = std::lock_guard<std::mutex>{_null_value_modification_mutex};
   (*_null_values)[chunk_offset] = true;
 }
 
@@ -136,11 +136,12 @@ template <typename T>
 void ValueSegment<T>::resize(const size_t size) {
   DebugAssert(size > _values.size() && size <= _values.capacity(),
               "ValueSegments should not be shrunk or resized beyond their original capacity");
+  // TODO
   auto values_pin_guard = WritePinGuard{_values};
   _values.resize(size);
   if (is_nullable()) {
     auto values_pin_guard = WritePinGuard{*_null_values};
-    std::lock_guard<std::mutex> lock{_null_value_modification_mutex};
+    const auto lock = std::lock_guard<std::mutex>{_null_value_modification_mutex};
     _null_values->resize(size);
   }
 }
@@ -148,10 +149,10 @@ void ValueSegment<T>::resize(const size_t size) {
 template <typename T>
 std::shared_ptr<AbstractSegment> ValueSegment<T>::copy_using_allocator(
     const PolymorphicAllocator<size_t>& alloc) const {
-  pmr_vector<T> new_values(_values, alloc);  // NOLINT(cppcoreguidelines-slicing)
-  std::shared_ptr<AbstractSegment> copy;
+  auto new_values = pmr_vector<T>{_values, alloc};  // NOLINT(cppcoreguidelines-slicing)
+  auto copy = std::shared_ptr<AbstractSegment>{};
   if (is_nullable()) {
-    pmr_vector<bool> new_null_values(*_null_values, alloc);  // NOLINT(cppcoreguidelines-slicing) (see above)
+    auto new_null_values = pmr_vector<bool>{*_null_values, alloc};  // NOLINT(cppcoreguidelines-slicing) (see above)
     copy = std::make_shared<ValueSegment<T>>(std::move(new_values), std::move(new_null_values));
   } else {
     copy = std::make_shared<ValueSegment<T>>(std::move(new_values));

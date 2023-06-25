@@ -4,9 +4,8 @@
 #include <iostream>
 
 #include <boost/algorithm/string.hpp>
-#include <magic_enum.hpp>
+#include "magic_enum.hpp"
 
-#include "constant_mappings.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
 
@@ -88,9 +87,18 @@ BenchmarkConfig CLIConfigParser::parse_cli_options(const cxxopts::ParseResult& p
     std::cout << "- Encoding is '" << encoding_type_str << "'" << std::endl;
   }
 
-  const auto indexes = parse_result["indexes"].as<bool>();
-  if (indexes) {
-    std::cout << "- Creating indexes (as defined by the benchmark)" << std::endl;
+  const auto chunk_indexes = parse_result["chunk_indexes"].as<bool>();
+  if (chunk_indexes) {
+    std::cout << "- Creating chunk indexes (separate index per chunk; columns defined by benchmark)" << std::endl;
+  }
+
+  const auto table_indexes = parse_result["table_indexes"].as<bool>();
+  if (table_indexes) {
+    std::cout << "- Creating table indexes (index per table column; columns defined by benchmark)" << std::endl;
+  }
+
+  if (chunk_indexes && table_indexes) {
+    std::cout << "WARNING: Creating chunk and table indexes simultaneously." << std::endl;
   }
 
   // Get all other variables
@@ -137,10 +145,18 @@ BenchmarkConfig CLIConfigParser::parse_cli_options(const cxxopts::ParseResult& p
     std::cout << "- Not tracking SQL metrics" << std::endl;
   }
 
+  auto plugins = std::vector<std::string>{};
+  auto comma_separated_plugins = parse_result["plugins"].as<std::string>();
+  if (!comma_separated_plugins.empty()) {
+    boost::trim_if(comma_separated_plugins, boost::is_any_of(","));
+    boost::split(plugins, comma_separated_plugins, boost::is_any_of(","), boost::token_compress_on);
+  }
+
   return BenchmarkConfig{benchmark_mode,
                          chunk_size,
                          *encoding_config,
-                         indexes,
+                         chunk_indexes,
+                         table_indexes,
                          max_runs,
                          timeout_duration,
                          warmup_duration,
@@ -152,7 +168,8 @@ BenchmarkConfig CLIConfigParser::parse_cli_options(const cxxopts::ParseResult& p
                          enable_visualization,
                          verify,
                          cache_binary_tables,
-                         metrics};
+                         metrics,
+                         plugins};
 }
 
 EncodingConfig CLIConfigParser::parse_encoding_config(const std::string& encoding_file_str) {

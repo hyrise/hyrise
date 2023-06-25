@@ -1,7 +1,7 @@
 #include <sstream>
 #include <vector>
 
-#include <magic_enum.hpp>
+#include "magic_enum.hpp"
 
 #include "base_test.hpp"
 #include "expression/expression_functional.hpp"
@@ -15,9 +15,9 @@
 #include "operators/table_wrapper.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
 
-using namespace hyrise::expression_functional;  // NOLINT
-
 namespace hyrise {
+
+using namespace expression_functional;  // NOLINT(build/namespaces)
 
 class OperatorPerformanceDataTest : public BaseTest {
  protected:
@@ -252,12 +252,12 @@ TEST_F(OperatorPerformanceDataTest, JoinIndexStepRuntimes) {
     EXPECT_GT(perf.get_step_runtime(JoinIndex::OperatorSteps::OutputWriting).count(), 0);
     EXPECT_EQ(perf.chunks_scanned_with_index, 0);
     EXPECT_EQ(perf.chunks_scanned_without_index, 2);
-    EXPECT_EQ(perf.right_input_is_index_side, true);
+    EXPECT_TRUE(perf.right_input_is_index_side);
   }
 
   // Add group-key index (required dictionary encoding) to table
   ChunkEncoder::encode_all_chunks(table);
-  table->create_index<GroupKeyIndex>({ColumnID{0}});
+  table->create_chunk_index<GroupKeyIndex>({ColumnID{0}});
 
   {
     auto join = std::make_shared<JoinIndex>(
@@ -271,7 +271,7 @@ TEST_F(OperatorPerformanceDataTest, JoinIndexStepRuntimes) {
     EXPECT_GT(perf.get_step_runtime(JoinIndex::OperatorSteps::OutputWriting).count(), 0);
     EXPECT_EQ(perf.chunks_scanned_with_index, 2);
     EXPECT_EQ(perf.chunks_scanned_without_index, 0);
-    EXPECT_EQ(perf.right_input_is_index_side, true);
+    EXPECT_TRUE(perf.right_input_is_index_side);
   }
   {
     auto join = std::make_shared<JoinIndex>(
@@ -286,7 +286,7 @@ TEST_F(OperatorPerformanceDataTest, JoinIndexStepRuntimes) {
     EXPECT_GT(perf.get_step_runtime(JoinIndex::OperatorSteps::OutputWriting).count(), 0);
     EXPECT_EQ(perf.chunks_scanned_with_index, 2);
     EXPECT_EQ(perf.chunks_scanned_without_index, 0);
-    EXPECT_EQ(perf.right_input_is_index_side, false);
+    EXPECT_FALSE(perf.right_input_is_index_side);
   }
   {
     // insert should create unencoded (unindexed) chunk
@@ -303,7 +303,7 @@ TEST_F(OperatorPerformanceDataTest, JoinIndexStepRuntimes) {
     EXPECT_GT(perf.get_step_runtime(JoinIndex::OperatorSteps::OutputWriting).count(), 0);
     EXPECT_EQ(perf.chunks_scanned_with_index, 2);
     EXPECT_EQ(perf.chunks_scanned_without_index, 1);
-    EXPECT_EQ(perf.right_input_is_index_side, true);
+    EXPECT_TRUE(perf.right_input_is_index_side);
   }
 }
 

@@ -298,7 +298,7 @@ lines = double_vertical_separators(lines, [1, 4])
 # and throughput in the header. We used two place holders that are narrow enough to not grow the column any wider than
 # necessary for the actual values. After manually changing the column title to span two column, we replace the place
 # holder with the actual full descriptions.
-for (placeholder, final) in [
+for placeholder, final in [
     ("$thrghpt", "Throughput (iter/s)"),
     ("$latency", "Latency (ms/iter)"),
 ]:
@@ -315,7 +315,7 @@ for (placeholder, final) in [
 # Swap second line of header with automatically added separator. Terminaltables does not support multi-line headers. So
 # we have the second header line as part of the results after a separator line. We need to swap these.
 lines[2], lines[3] = lines[3], lines[2]
-for (line_number, line) in enumerate(lines):
+for line_number, line in enumerate(lines):
     if line_number == len(table_data):
         # Add another separation between benchmark items and aggregates
         table_string_reformatted += lines[-1] + "\n"

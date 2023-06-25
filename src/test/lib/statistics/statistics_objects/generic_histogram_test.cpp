@@ -6,7 +6,6 @@
 
 #include "base_test.hpp"
 
-#include "constant_mappings.hpp"
 #include "statistics/statistics_objects/generic_histogram.hpp"
 #include "utils/load_table.hpp"
 
@@ -43,7 +42,7 @@ class GenericHistogramTest : public BaseTest {
  public:
   std::string predicate_to_string(const Predicate& predicate) {
     std::ostringstream stream;
-    stream << predicate_condition_to_string.left.at(predicate.predicate_condition) << " " << predicate.value;
+    stream << predicate.predicate_condition << " " << predicate.value;
     if (predicate.value2) {
       stream << " " << *predicate.value2;
     }

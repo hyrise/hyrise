@@ -72,7 +72,7 @@ class TableScan : public AbstractReadOnlyOperator {
 
   std::shared_ptr<AbstractOperator> _on_deep_copy(
       const std::shared_ptr<AbstractOperator>& copied_left_input,
-      const std::shared_ptr<AbstractOperator>& copied_right_input,
+      const std::shared_ptr<AbstractOperator>& /*copied_right_input*/,
       std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const override;
 
   void _on_set_transaction_context(const std::weak_ptr<TransactionContext>& transaction_context) override;
@@ -87,7 +87,6 @@ class TableScan : public AbstractReadOnlyOperator {
 
  private:
   const std::shared_ptr<AbstractExpression> _predicate;
-  std::vector<std::shared_ptr<PQPSubqueryExpression>> _uncorrelated_subquery_expressions;
 
   std::unique_ptr<AbstractTableScanImpl> _impl;
 

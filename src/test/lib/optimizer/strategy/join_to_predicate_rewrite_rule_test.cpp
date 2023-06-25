@@ -1,6 +1,6 @@
 #include "strategy_base_test.hpp"
 
-#include <magic_enum.hpp>
+#include "magic_enum.hpp"
 
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
@@ -21,7 +21,7 @@
 
 namespace hyrise {
 
-using namespace hyrise::expression_functional;  // NOLINT
+using namespace expression_functional;  // NOLINT(build/namespaces)
 
 class JoinToPredicateRewriteRuleTest : public StrategyBaseTest {
  public:
@@ -49,15 +49,8 @@ class JoinToPredicateRewriteRuleTest : public StrategyBaseTest {
 class JoinToPredicateRewriteRuleJoinModeTest : public JoinToPredicateRewriteRuleTest,
                                                public ::testing::WithParamInterface<JoinMode> {};
 
-auto join_mode_formatter = [](const ::testing::TestParamInfo<JoinMode> info) {
-  return std::string{magic_enum::enum_name(info.param)};
-};
-
 INSTANTIATE_TEST_SUITE_P(JoinToPredicateRewriteRuleJoinModeTestInstance, JoinToPredicateRewriteRuleJoinModeTest,
-                         ::testing::Values(JoinMode::Inner, JoinMode::Left, JoinMode::Right, JoinMode::FullOuter,
-                                           JoinMode::Cross, JoinMode::Semi, JoinMode::AntiNullAsTrue,
-                                           JoinMode::AntiNullAsFalse),
-                         join_mode_formatter);
+                         ::testing::ValuesIn(magic_enum::enum_values<JoinMode>()), enum_formatter<JoinMode>);
 
 TEST_P(JoinToPredicateRewriteRuleJoinModeTest, PerformRewrite) {
   // The rule should only rewrite inner and semi joins.

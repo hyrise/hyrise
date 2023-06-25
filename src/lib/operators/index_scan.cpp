@@ -9,14 +9,14 @@
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
 
-#include "storage/index/abstract_index.hpp"
+#include "storage/index/abstract_chunk_index.hpp"
 #include "storage/reference_segment.hpp"
 
 #include "utils/assert.hpp"
 
 namespace hyrise {
 
-IndexScan::IndexScan(const std::shared_ptr<const AbstractOperator>& input_operator, const SegmentIndexType index_type,
+IndexScan::IndexScan(const std::shared_ptr<const AbstractOperator>& input_operator, const ChunkIndexType index_type,
                      const std::vector<ColumnID>& left_column_ids, const PredicateCondition predicate_condition,
                      const std::vector<AllTypeVariant>& right_values, const std::vector<AllTypeVariant>& right_values2)
     : AbstractReadOnlyOperator{OperatorType::IndexScan, input_operator},
@@ -52,7 +52,7 @@ std::shared_ptr<const Table> IndexScan::_on_execute() {
     }
   } else {
     jobs.reserve(included_chunk_ids.size());
-    for (auto chunk_id : included_chunk_ids) {
+    for (const auto chunk_id : included_chunk_ids) {
       if (_in_table->get_chunk(chunk_id)) {
         jobs.push_back(_create_job(chunk_id, output_mutex));
       }
@@ -66,8 +66,8 @@ std::shared_ptr<const Table> IndexScan::_on_execute() {
 
 std::shared_ptr<AbstractOperator> IndexScan::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_left_input,
-    const std::shared_ptr<AbstractOperator>& copied_right_input,
-    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
+    const std::shared_ptr<AbstractOperator>& /*copied_right_input*/,
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& /*copied_ops*/) const {
   return std::make_shared<IndexScan>(copied_left_input, _index_type, _left_column_ids, _predicate_condition,
                                      _right_values, _right_values2);
 }
@@ -87,14 +87,14 @@ std::shared_ptr<AbstractTask> IndexScan::_create_job(const ChunkID chunk_id, std
       return;
     }
 
-    Segments segments;
-
-    for (ColumnID column_id{0u}; column_id < _in_table->column_count(); ++column_id) {
+    auto segments = Segments{};
+    const auto column_count = _in_table->column_count();
+    for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
       auto ref_segment_out = std::make_shared<ReferenceSegment>(_in_table, column_id, matches_out);
       segments.push_back(ref_segment_out);
     }
 
-    std::lock_guard<std::mutex> lock(output_mutex);
+    const auto lock = std::lock_guard<std::mutex>{output_mutex};
     _out_table->append_chunk(segments, nullptr, chunk->get_allocator());
   });
 
@@ -118,8 +118,8 @@ void IndexScan::_validate_input() {
 RowIDPosList IndexScan::_scan_chunk(const ChunkID chunk_id) {
   const auto to_row_id = [chunk_id](ChunkOffset chunk_offset) { return RowID{chunk_id, chunk_offset}; };
 
-  auto range_begin = AbstractIndex::Iterator{};
-  auto range_end = AbstractIndex::Iterator{};
+  auto range_begin = AbstractChunkIndex::Iterator{};
+  auto range_end = AbstractChunkIndex::Iterator{};
 
   const auto chunk = _in_table->get_chunk(chunk_id);
   auto matches_out = RowIDPosList{};
@@ -199,7 +199,7 @@ RowIDPosList IndexScan::_scan_chunk(const ChunkID chunk_id) {
 
   for (auto matches_position = current_matches_size; matches_position < final_matches_size; ++matches_position) {
     matches_out[matches_position] = RowID{chunk_id, *range_begin};
-    range_begin++;
+    ++range_begin;
   }
 
   return matches_out;

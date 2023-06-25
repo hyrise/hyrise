@@ -69,6 +69,7 @@
 #include "stored_table_node.hpp"
 #include "union_node.hpp"
 #include "update_node.hpp"
+#include "utils/column_pruning_utils.hpp"
 
 using namespace std::string_literals;  // NOLINT
 
@@ -241,7 +242,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_in
     }
     // Check if chunk has GroupKey index
     const auto chunk = table->get_chunk(chunk_id);
-    if (chunk && chunk->get_index(SegmentIndexType::GroupKey, column_ids)) {
+    if (chunk && chunk->get_index(ChunkIndexType::GroupKey, column_ids)) {
       indexed_chunks.emplace_back(pruned_table_chunk_id);
     }
     ++pruned_table_chunk_id;
@@ -249,7 +250,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_in
 
   // All chunks that have an index on column_ids are handled by an IndexScan. All other chunks are handled by
   // TableScan(s).
-  auto index_scan = std::make_shared<IndexScan>(input_operator, SegmentIndexType::GroupKey, column_ids,
+  auto index_scan = std::make_shared<IndexScan>(input_operator, ChunkIndexType::GroupKey, column_ids,
                                                 predicate->predicate_condition, right_values, right_values2);
 
   const auto table_scan = _translate_predicate_node_to_table_scan(node, input_operator);
@@ -319,7 +320,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_sort_node(
     Assert(pqp_column_expression,
            "Sort Expression '"s + pqp_expression->as_column_name() + "' must be available as column, LQP is invalid");
 
-    column_definitions.emplace_back(SortColumnDefinition{pqp_column_expression->column_id, *sort_mode_iter});
+    column_definitions.emplace_back(pqp_column_expression->column_id, *sort_mode_iter);
   }
   current_pqp = std::make_shared<Sort>(current_pqp, column_definitions);
 
@@ -477,13 +478,13 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_union_node(
 
 // NOLINTNEXTLINE - while this particular method could be made static, others cannot.
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_intersect_node(
-    const std::shared_ptr<AbstractLQPNode>& node) const {
+    const std::shared_ptr<AbstractLQPNode>& /*node*/) const {
   FailInput("Hyrise does not yet support set operations");
 }
 
 // NOLINTNEXTLINE - while this particular method could be made static, others cannot.
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_except_node(
-    const std::shared_ptr<AbstractLQPNode>& node) const {
+    const std::shared_ptr<AbstractLQPNode>& /*node*/) const {
   FailInput("Hyrise does not yet support set operations");
 }
 
@@ -566,7 +567,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_create_prepared_plan
 
 // NOLINTNEXTLINE - while this particular method could be made static, others cannot.
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_dummy_table_node(
-    const std::shared_ptr<AbstractLQPNode>& node) const {
+    const std::shared_ptr<AbstractLQPNode>& /*node*/) const {
   return std::make_shared<TableWrapper>(Projection::dummy_table());
 }
 

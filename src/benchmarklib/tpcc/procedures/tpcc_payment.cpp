@@ -19,7 +19,8 @@ TPCCPayment::TPCCPayment(const int num_warehouses, BenchmarkSQLExecutor& sql_exe
   // Use home warehouse in 85% of cases, otherwise select a random one
   std::uniform_int_distribution<> home_warehouse_dist{1, 100};
   if (num_warehouses > 2 && home_warehouse_dist(_random_engine) > 85) {
-    // Choose remote warehouse
+    // Choose remote warehouse.
+    // NOLINTNEXTLINE(cppcoreguidelines-avoid-do-while)
     do {
       c_w_id = warehouse_dist(_random_engine);
     } while (c_w_id == w_id);
@@ -43,7 +44,7 @@ TPCCPayment::TPCCPayment(const int num_warehouses, BenchmarkSQLExecutor& sql_exe
 }
 
 bool TPCCPayment::_on_execute() {
-  SQLPipelineStatus pipeline_status;
+  auto pipeline_status = SQLPipelineStatus::NotExecuted;
 
   // Retrieve information about the warehouse
   const auto warehouse_select_pair = _sql_executor.execute(
@@ -51,8 +52,8 @@ bool TPCCPayment::_on_execute() {
       std::to_string(w_id));
   const auto& warehouse_table = warehouse_select_pair.second;
   Assert(warehouse_table && warehouse_table->row_count() == 1, "Did not find warehouse (or found more than one)");
-  auto w_name = *warehouse_table->get_value<pmr_string>(ColumnID{0}, 0);
-  auto w_ytd = *warehouse_table->get_value<float>(ColumnID{6}, 0);
+  const auto w_name = *warehouse_table->get_value<pmr_string>(ColumnID{0}, 0);
+  const auto w_ytd = *warehouse_table->get_value<float>(ColumnID{6}, 0);
 
   // Update warehouse YTD
   std::tie(pipeline_status, std::ignore) =
@@ -69,8 +70,8 @@ bool TPCCPayment::_on_execute() {
       std::to_string(w_id) + " AND D_ID = " + std::to_string(d_id));
   const auto& district_table = district_select_pair.second;
   Assert(district_table && district_table->row_count() == 1, "Did not find district (or found more than one)");
-  auto d_name = *district_table->get_value<pmr_string>(ColumnID{0}, 0);
-  auto d_ytd = *district_table->get_value<float>(ColumnID{6}, 0);
+  const auto d_name = *district_table->get_value<pmr_string>(ColumnID{0}, 0);
+  const auto d_ytd = *district_table->get_value<float>(ColumnID{6}, 0);
 
   // Update district YTD
   const auto district_update_pair =
