@@ -113,13 +113,11 @@ struct FramePinGuard final : public PinnedFrames<accessIntent> {
     }
   }
 
-  template <>
   FramePinGuard(const BitPackingVector& object) {
     Fail("Not implemented");
     // add_vector_pins(object.data());
   }
 
-  template <>
   FramePinGuard(const pmr_compact_vector& object) {
     Fail("Not implemented");
 
