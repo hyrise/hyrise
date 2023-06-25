@@ -128,11 +128,11 @@ void PredicateReorderingRule::_reorder_predicates(
   auto nodes_and_cardinalities = std::vector<std::pair<std::shared_ptr<AbstractLQPNode>, Cardinality>>{};
   nodes_and_cardinalities.reserve(predicates.size());
   for (const auto& predicate : predicates) {
-    predicate->set_left_input(input);
+    predicate->set_left_input(input);g
     const auto output_cardinality = caching_cardinality_estimator->estimate_cardinality(predicate);
-    //const auto cost = caching_cost_estimator->estimate_node_cost(predicate);
+    const auto cost = caching_cost_estimator->estimate_node_cost(predicate);
     // const auto benefit = output_cardinality + std::log(cost * output_cardinality);
-    nodes_and_cardinalities.emplace_back(predicate, output_cardinality);
+    nodes_and_cardinalities.emplace_back(predicate, cost);
   }
 
   // Untie predicates from LQP, so we can freely retie them.
