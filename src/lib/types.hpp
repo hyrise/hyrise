@@ -99,7 +99,7 @@ using pmr_string = std::basic_string<char, std::char_traits<char>, PolymorphicAl
 //   pmr_vector<int> a, b{alloc};
 //   a = b;  // a does NOT use alloc, neither for its current values, nor for future allocations (#623).
 template <typename T>
-using pmr_vector = std::vector<T, PolymorphicAllocator<T>>;
+using pmr_vector = boost::container::vector<T, PolymorphicAllocator<T>>;
 
 template <typename T>
 using pmr_ring_buffer = boost::circular_buffer<T, PolymorphicAllocator<T>>;
