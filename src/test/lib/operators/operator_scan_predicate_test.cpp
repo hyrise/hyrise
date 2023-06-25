@@ -86,7 +86,7 @@ TEST_F(OperatorScanPredicateTest, FromExpressionColumnRight) {
 }
 
 TEST_F(OperatorScanPredicateTest, OutputToStream) {
-  const auto test_cases = std::vector<std::pair<std::shared_ptr<AbstractExpression>, std::string>>(
+  const auto test_cases = std::vector<std::pair<std::shared_ptr<AbstractPredicateExpression>, std::string>>(
       {{between_inclusive_(5, a, b), "Column #0 <=5\nColumn #1 >=5\n"},
        {greater_than_(a, 5), "Column #0 >5\n"},
        {less_than_(a, 5), "Column #0 <5\n"},
@@ -95,7 +95,7 @@ TEST_F(OperatorScanPredicateTest, OutputToStream) {
   auto actual = std::stringstream{};
 
   for (const auto& [expression, expected] : test_cases) {
-    auto operator_predicates = OperatorScanPredicate::from_expression(*expression, *node);
+    const auto operator_predicates = OperatorScanPredicate::from_expression(*expression, *node);
     ASSERT_TRUE(operator_predicates);
     for (const auto& predicate : *operator_predicates) {
       actual << predicate << '\n';
