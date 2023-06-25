@@ -30,8 +30,9 @@ std::shared_ptr<RowIDPosList> ColumnIsNullTableScanImpl::scan_chunk(const ChunkI
   const auto& chunk = _in_table->get_chunk(chunk_id);
   const auto& segment = chunk->get_segment(_column_id);
 
-  auto matches = std::make_shared<RowIDPosList>();
-  auto matches_pin_guard = AllocatorPinGuard{matches->get_stored_allocator()};
+  auto allocator = PolymorphicAllocator<size_t>{};
+  auto matches_pin_guard = AllocatorPinGuard{allocator};
+  auto matches = std::make_shared<RowIDPosList>(allocator);
 
   if (const auto value_segment = std::dynamic_pointer_cast<BaseValueSegment>(segment)) {
     _scan_value_segment(*value_segment, chunk_id, *matches);

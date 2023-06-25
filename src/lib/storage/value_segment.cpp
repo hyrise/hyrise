@@ -77,7 +77,7 @@ T ValueSegment<T>::get(const ChunkOffset chunk_offset) const {
 template <typename T>
 void ValueSegment<T>::append(const AllTypeVariant& val) {
   // TODO(nikriek): Move somewhere else
-  auto allocator_pin_guard = AllocatorPinGuard{_values.get_stored_allocator()};
+  // auto allocator_pin_guard = AllocatorPinGuard{_values.get_stored_allocator()};
 
   Assert(size() < _values.capacity(), "ValueSegment is full");
 
@@ -85,7 +85,7 @@ void ValueSegment<T>::append(const AllTypeVariant& val) {
   access_counter[SegmentAccessCounter::AccessType::Point] += 1;
 
   if (is_nullable()) {
-    auto null_values_allocator_pin_guard = AllocatorPinGuard{_null_values->get_stored_allocator()};
+    // auto null_values_allocator_pin_guard = AllocatorPinGuard{_null_values->get_stored_allocator()};
 
     (*_null_values).push_back(is_null);
     _values.push_back(is_null ? T{} : boost::get<T>(val));
