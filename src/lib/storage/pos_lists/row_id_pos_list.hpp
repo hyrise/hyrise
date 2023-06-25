@@ -81,8 +81,6 @@ class RowIDPosList final : public AbstractPosList, private pmr_vector<RowID> {
   using Vector::assign;
   using Vector::get_allocator;
 
-  // using Vector::get_stored_allocator;
-
   // Element access
   RowID operator[](const size_t index) const final {
     return Vector::operator[](index);
