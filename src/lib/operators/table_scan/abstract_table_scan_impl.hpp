@@ -61,8 +61,9 @@ class AbstractTableScanImpl {
       _simd_scan_with_iterators<CheckForNull>(func, left_it, left_end, chunk_id, matches_out, right_it);
     }
 
-    // Do the remainder the easy way. If we did not use the SIMD optimization above, left_it was not yet touched, so we
-    // iterate over the entire input data.
+// Do the remainder the easy way. If we did not use the SIMD optimization above, left_it was not yet touched, so we
+// iterate over the entire input data.
+#privdep
     for (; left_it != left_end; ++left_it) {
       const auto left = *left_it;
       if constexpr (std::is_same_v<RightIterator, std::false_type>) {
@@ -133,6 +134,7 @@ class AbstractTableScanImpl {
       // NOLINTNEXTLINE
       {}  // clang-format off
       #pragma omp simd reduction(|:mask) safelen(BLOCK_SIZE)
+      #pragma ivdep
       // clang-format on
       for (auto index = size_t{0}; index < BLOCK_SIZE; ++index) {
         // Fill `mask` with 1s at positions where the condition is fulfilled
