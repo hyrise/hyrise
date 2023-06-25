@@ -69,9 +69,12 @@ void gather_segment_meta_data(const std::shared_ptr<Table>& meta_table, const Me
         }
 
         const auto& access_counter = segment->access_counter;
-        meta_table->append({pmr_string{table_name}, static_cast<int32_t>(chunk_id), static_cast<int32_t>(column_id),
-                            pmr_string{table->column_name(column_id)}, data_type_str, distinct_value_count, encoding,
-                            vector_compression, static_cast<int64_t>(estimated_size),
+        // TODO(nikriek)
+        meta_table->append({pmr_string{table_name.begin(), table_name.end()}, static_cast<int32_t>(chunk_id),
+                            static_cast<int32_t>(column_id),
+                            pmr_string{table->column_name(column_id).begin(), table->column_name(column_id).end()},
+                            data_type_str, distinct_value_count, encoding, vector_compression,
+                            static_cast<int64_t>(estimated_size),
                             static_cast<int64_t>(access_counter[SegmentAccessCounter::AccessType::Point]),
                             static_cast<int64_t>(access_counter[SegmentAccessCounter::AccessType::Sequential]),
                             static_cast<int64_t>(access_counter[SegmentAccessCounter::AccessType::Monotonic]),

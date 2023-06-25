@@ -155,13 +155,6 @@ target_link_libraries(
     hyriseBenchmarkLib
 )
 
-target_link_libraries_system(
-    hyriseBenchmarkBufferManager
-
-    benchmark::benchmark
-)
-
-
 # Configure hyriseBenchmarkStarSchema
 add_executable(
     hyriseBenchmarkStarSchema

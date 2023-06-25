@@ -23,7 +23,7 @@ using namespace hyrise;  // NOLINT
 template <typename T, typename Alloc>
 void export_values(std::ofstream& ofstream, const boost::container::vector<T, Alloc>& values);
 
-void export_char_vector_values(std::ofstream& ofstream, const std::vector<char>& values) {
+void export_char_vector_values(std::ofstream& ofstream, const pmr_vector<char>& values) {
   ofstream.write(values.data(), values.size() * sizeof(char));
 }
 
@@ -51,8 +51,8 @@ void export_string_values(std::ofstream& ofstream, const pmr_vector<pmr_string>&
   if (total_length == 0) {
     return;
   }
-  // TODO
-  auto buffer = pmr_vector<char>(total_length);
+  auto allocator = PolymorphicAllocator<char>{boost::container::pmr::new_delete_resource()};
+  auto buffer = pmr_vector<char>(total_length, allocator);
   auto start = size_t{0};
   for (const auto& str : values) {
     std::memcpy(buffer.data() + start, str.data(), str.size());
@@ -130,15 +130,19 @@ void BinaryWriter::_write_header(const Table& table, std::ofstream& ofstream) {
   //   column_names[column_id] = pmr_string(table.column_name(column_id).begin(), table.column_name(column_id).end());
 
   // TODO: Allocator?s
-  auto column_types = pmr_vector<pmr_string>(table.column_count());
-  auto column_names = pmr_vector<pmr_string>(table.column_count());
-  auto columns_are_nullable = pmr_vector<bool>(table.column_count());
+  auto column_types =
+      pmr_vector<pmr_string>(static_cast<typename pmr_vector<pmr_string>::size_type>(table.column_count()));
+  auto column_names =
+      pmr_vector<pmr_string>(static_cast<typename pmr_vector<pmr_string>::size_type>(table.column_count()));
+  auto columns_are_nullable =
+      pmr_vector<bool>(static_cast<typename pmr_vector<pmr_string>::size_type>(table.column_count()));
 
   // Transform column types and copy column names in order to write them to the file.
   const auto column_count = table.column_count();
   for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
-    column_types[column_id] = data_type_to_string.left.at(table.column_data_type(column_id));
-    column_names[column_id] = table.column_name(column_id);
+    column_types[column_id] = pmr_string(data_type_to_string.left.at(table.column_data_type(column_id)).begin(),
+                                         data_type_to_string.left.at(table.column_data_type(column_id)).end());
+    column_names[column_id] = pmr_string(table.column_name(column_id).begin(), table.column_name(column_id).end());
     columns_are_nullable[column_id] = table.column_is_nullable(column_id);
   }
   export_values(ofstream, column_types);

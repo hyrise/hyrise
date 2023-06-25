@@ -94,6 +94,11 @@ void BenchmarkRunner::run() {
   std::unique_ptr<PausableLoopThread> metrics_thread;
   if (_config.metrics) {
     SQLPipelineBuilder{
+        "CREATE TABLE benchmark_segments_log AS SELECT 0 AS snapshot_id, 'init' AS moment, * FROM meta_segments"}
+        .create_pipeline()
+        .get_result_table();
+
+    SQLPipelineBuilder{
         "CREATE TABLE benchmark_system_utilization_log AS SELECT CAST(0 as LONG) AS \"timestamp\", * FROM "
         "meta_system_utilization"}
         .create_pipeline()
