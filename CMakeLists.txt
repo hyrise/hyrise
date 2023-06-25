@@ -34,6 +34,7 @@ elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
     if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 13.0)
         message("Too old")
     endif()
+    add_compile_options(-Wno-pass-failed)
     execute_process(
         COMMAND brew --prefix
         RESULT_VARIABLE BREW
