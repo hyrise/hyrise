@@ -345,7 +345,7 @@ TEST_F(OperatorsInsertTest, SetMaxBeginCID) {
 
   context->commit();
 
-  EXPECT_EQ(chunk->mvcc_data()->max_begin_cid, CommitID{2});
+  EXPECT_EQ(chunk->mvcc_data()->max_begin_cid.load(), CommitID{2});
 }
 
 }  // namespace hyrise

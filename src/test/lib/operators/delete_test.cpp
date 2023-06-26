@@ -380,7 +380,7 @@ TEST_F(OperatorsDeleteTest, SetMaxEndCID) {
 
   context->commit();
 
-  EXPECT_EQ(chunk->mvcc_data()->max_end_cid, CommitID{2});
+  EXPECT_EQ(chunk->mvcc_data()->max_end_cid.load(), CommitID{2});
 }
 
 }  // namespace hyrise
