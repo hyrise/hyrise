@@ -23,13 +23,16 @@ class PageMigrationFixture : public benchmark::Fixture {
 BENCHMARK_DEFINE_F(PageMigrationFixture, BM_ToNodeMemory)(benchmark::State& state) {
   auto size_type = static_cast<PageSizeType>(state.range(1));
   const auto num_bytes = bytes_for_size_type(size_type);
-  constexpr auto VIRT_SIZE = 1 * 1024 * 1024 * 1024;
+  constexpr auto VIRT_SIZE = 0.5 * 1024 * 1024 * 1024;
 
   for (auto _ : state) {
     state.PauseTiming();
 #if HYRISE_NUMA_SUPPORT
     numa_tonode_memory(_mapped_region, VIRT_SIZE, 0);
-    std::memset(_mapped_region, 0x5, VIRT_SIZE);
+    for (int i = 0; i < VIRT_SIZE; i += 4096) {
+      auto page_start = _mapped_region + OS_PAGE_SIZE * i;
+      std::memset(page_start, 0x5, VIRT_SIZE);
+    }
 #endif
     state.ResumeTiming();
     for (int idx = 0; idx < state.range(1); ++idx) {
