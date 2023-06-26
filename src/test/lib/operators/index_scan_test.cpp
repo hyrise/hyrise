@@ -106,13 +106,15 @@ TEST_F(OperatorsIndexScanTest, SingleColumnScanOnDataTable) {
 
   for (const auto& [predicate, test_rows] : tests) {
     auto scan = std::make_shared<IndexScan>(this->_int_int, this->_column_id, predicate, right_value);
-    scan->included_chunk_ids = {ChunkID{0}, ChunkID{1}};
+    scan->included_chunk_ids =
+        std::make_shared<std::vector<ChunkID>>(std::initializer_list<ChunkID>{ChunkID{0}, ChunkID{1}});
 
     scan->execute();
 
     auto scan_small_chunk =
         std::make_shared<IndexScan>(this->_int_int_small_chunk, this->_column_id, predicate, right_value);
-    scan_small_chunk->included_chunk_ids = {ChunkID{0}, ChunkID{1}, ChunkID{2}};
+    scan_small_chunk->included_chunk_ids =
+        std::make_shared<std::vector<ChunkID>>(std::initializer_list<ChunkID>{ChunkID{0}, ChunkID{1}, ChunkID{2}});
 
     scan_small_chunk->execute();
 
@@ -127,7 +129,7 @@ TEST_F(OperatorsIndexScanTest, ScanWithNoChunkIDsIncluded) {
 
   auto scan =
       std::make_shared<IndexScan>(this->_int_int, this->_column_id, PredicateCondition::Equals, AllTypeVariant{17});
-  scan->included_chunk_ids = std::vector<ChunkID>{};
+  scan->included_chunk_ids = std::make_shared<std::vector<ChunkID>>();
   EXPECT_THROW(scan->execute(), std::logic_error);
 }
 
@@ -140,13 +142,15 @@ TEST_F(OperatorsIndexScanTest, SingleColumnScanValueGreaterThanMaxDictionaryValu
 
   for (const auto& [predicate, test_rows] : tests) {
     auto scan = std::make_shared<IndexScan>(this->_int_int, this->_column_id, predicate, right_value);
-    scan->included_chunk_ids = {ChunkID{0}, ChunkID{1}};
+    scan->included_chunk_ids =
+        std::make_shared<std::vector<ChunkID>>(std::initializer_list<ChunkID>{ChunkID{0}, ChunkID{1}});
 
     scan->execute();
 
     auto scan_small_chunk =
         std::make_shared<IndexScan>(this->_int_int_small_chunk, this->_column_id, predicate, right_value);
-    scan_small_chunk->included_chunk_ids = {ChunkID{0}, ChunkID{1}, ChunkID{2}};
+    scan_small_chunk->included_chunk_ids =
+        std::make_shared<std::vector<ChunkID>>(std::initializer_list<ChunkID>{ChunkID{0}, ChunkID{1}, ChunkID{2}});
 
     scan_small_chunk->execute();
 
@@ -164,13 +168,15 @@ TEST_F(OperatorsIndexScanTest, SingleColumnScanValueLessThanMinDictionaryValue) 
 
   for (const auto& [predicate, test_rows] : tests) {
     auto scan = std::make_shared<IndexScan>(this->_int_int, this->_column_id, predicate, right_value);
-    scan->included_chunk_ids = {ChunkID{0}, ChunkID{1}};
+    scan->included_chunk_ids =
+        std::make_shared<std::vector<ChunkID>>(std::initializer_list<ChunkID>{ChunkID{0}, ChunkID{1}});
 
     scan->execute();
 
     auto scan_small_chunk =
         std::make_shared<IndexScan>(this->_int_int_small_chunk, this->_column_id, predicate, right_value);
-    scan_small_chunk->included_chunk_ids = {ChunkID{0}, ChunkID{1}, ChunkID{2}};
+    scan_small_chunk->included_chunk_ids =
+        std::make_shared<std::vector<ChunkID>>(std::initializer_list<ChunkID>{ChunkID{0}, ChunkID{1}, ChunkID{2}});
 
     scan_small_chunk->execute();
 
@@ -207,7 +213,8 @@ TEST_F(OperatorsIndexScanTest, DynamicallyPrunedChunks) {
     auto index_scan =
         std::make_shared<IndexScan>(get_table, ColumnID{0}, PredicateCondition::NotEquals, AllTypeVariant{-17});
     // We include chunks with values 2, 4, and 6.
-    index_scan->included_chunk_ids = {ChunkID{0}, ChunkID{1}, ChunkID{2}, ChunkID{5}};
+    index_scan->included_chunk_ids = std::make_shared<std::vector<ChunkID>>(
+        std::initializer_list<ChunkID>{ChunkID{0}, ChunkID{1}, ChunkID{2}, ChunkID{5}});
 
     index_scan->never_clear_output();
     index_scan->execute();

@@ -880,7 +880,7 @@ TEST_P(OperatorsTableScanTest, ScanWithExcludedFirstChunk) {
   auto scan = std::make_shared<TableScan>(
       _int_int_partly_compressed,
       greater_than_equals_(get_column_expression(_int_int_partly_compressed, ColumnID{0}), 0));
-  scan->excluded_chunk_ids = {ChunkID{0}};
+  scan->excluded_chunk_ids = std::make_shared<std::vector<ChunkID>>(std::initializer_list<ChunkID>{ChunkID{0}});
   scan->execute();
 
   ASSERT_COLUMN_EQ(scan->get_output(), ColumnID{1}, expected);

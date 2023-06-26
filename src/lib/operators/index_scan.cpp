@@ -36,7 +36,7 @@ std::shared_ptr<const Table> IndexScan::_on_execute() {
   DebugAssert(included_chunk_ids, "Included ChunkIDs vector has not been initialized.");
   DebugAssert(std::is_sorted(included_chunk_ids->cbegin(), included_chunk_ids->cend()),
               "Included ChunkIDs must be sorted.");
-  // Assert(!included_chunk_ids->empty(), "Index scan expects a non-empty list of chunks to process.");
+  Assert(!included_chunk_ids->empty(), "Index scan expects a non-empty list of chunks to process.");
 
   _in_table = left_input_table();
 

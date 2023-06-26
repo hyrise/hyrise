@@ -479,12 +479,12 @@ TEST_F(LQPTranslatorTest, PredicateNodeIndexScan) {
 
   const auto index_scan_op = std::dynamic_pointer_cast<const IndexScan>(op->left_input());
   ASSERT_TRUE(index_scan_op);
-  EXPECT_EQ(index_scan_op->included_chunk_ids, index_chunk_ids);
+  EXPECT_EQ(*index_scan_op->included_chunk_ids, index_chunk_ids);
 
   const auto table_scan_op = std::dynamic_pointer_cast<const TableScan>(op->right_input());
   const auto b = PQPColumnExpression::from_table(*table, "b");
   ASSERT_TRUE(table_scan_op);
-  EXPECT_EQ(table_scan_op->excluded_chunk_ids, index_chunk_ids);
+  EXPECT_EQ(*table_scan_op->excluded_chunk_ids, index_chunk_ids);
   EXPECT_EQ(*table_scan_op->predicate(), *equals_(b, 42));
 
   // Check the setting of LQP nodes for index scans
@@ -521,12 +521,12 @@ TEST_F(LQPTranslatorTest, PredicateNodePrunedIndexScan) {
 
   const auto index_scan_op = std::dynamic_pointer_cast<const IndexScan>(op->left_input());
   ASSERT_TRUE(index_scan_op);
-  EXPECT_EQ(index_scan_op->included_chunk_ids, index_scan_chunk_ids);
+  EXPECT_EQ(*index_scan_op->included_chunk_ids, index_scan_chunk_ids);
 
   const auto table_scan_op = std::dynamic_pointer_cast<const TableScan>(op->right_input());
   const auto b = PQPColumnExpression::from_table(*table, "b");
   ASSERT_TRUE(table_scan_op);
-  EXPECT_EQ(table_scan_op->excluded_chunk_ids, index_scan_chunk_ids);
+  EXPECT_EQ(*table_scan_op->excluded_chunk_ids, index_scan_chunk_ids);
   EXPECT_EQ(*table_scan_op->predicate(), *equals_(b, 42));
 
   // Check the setting of LQP nodes for index scans
@@ -564,8 +564,8 @@ TEST_F(LQPTranslatorTest, PredicateNodeBinaryIndexScan) {
   const auto b = PQPColumnExpression::from_table(*table, "b");
   const auto table_scan_op = std::dynamic_pointer_cast<const TableScan>(op->right_input());
   ASSERT_TRUE(table_scan_op);
-  EXPECT_EQ(index_scan_op->included_chunk_ids, index_chunk_ids);
-  EXPECT_EQ(table_scan_op->excluded_chunk_ids, index_chunk_ids);
+  EXPECT_EQ(*index_scan_op->included_chunk_ids, index_chunk_ids);
+  EXPECT_EQ(*table_scan_op->excluded_chunk_ids, index_chunk_ids);
   EXPECT_EQ(*table_scan_op->predicate(), *between_inclusive_(b, 42, 1337));
 }
 
