@@ -95,30 +95,6 @@ constexpr size_t MAX_REPEAT_COUNT = 100;
 // How often old items should be evicted from the eviction queue
 constexpr static std::chrono::milliseconds IDLE_EVICTION_QUEUE_PURGE = std::chrono::milliseconds(1000);
 
-// Copied from boost::interprocess, because #include <boost/type_traits/add_reference.hpp> was not enough
-// I guess, because of "typedef nat &type" that can be used as reference dummy type
-struct nat {};
-
-template <typename T>
-struct add_reference {
-  typedef T& type;
-};
-
-template <class T>
-struct add_reference<T&> {
-  typedef T& type;
-};
-
-template <>
-struct add_reference<void> {
-  typedef nat& type;
-};
-
-template <>
-struct add_reference<const void> {
-  typedef const nat& type;
-};
-
 class Frame;
 using StateVersionType = uint64_t;
 

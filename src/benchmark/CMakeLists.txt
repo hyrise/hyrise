@@ -152,6 +152,7 @@ target_link_libraries(
     hyriseBenchmarkBufferManager
     
     hyrise
+    benchmark::benchmark
     hyriseBenchmarkLib
 )
 

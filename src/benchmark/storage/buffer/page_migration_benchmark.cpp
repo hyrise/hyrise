@@ -10,8 +10,6 @@ class PageMigrationFixture : public benchmark::Fixture {
  public:
   void SetUp(const ::benchmark::State& state) {
     _mapped_region = create_mapped_region();
-    volatile_regions =
-        std::array<std::unique_ptr<VolatileRegion>, NUM_PAGE_SIZE_TYPES> create_volatile_regions(_mapped_region);
   }
 
   void TearDown(const ::benchmark::State& state) {
@@ -22,20 +20,29 @@ class PageMigrationFixture : public benchmark::Fixture {
   std::byte* _mapped_region;
 };
 
-void unmap_region(std::byte* region);
+BENCHMARK_DEFINE_F(PageMigrationFixture, BM_ToNodeMemory)(benchmark::State& state) {
+  auto size_type = static_cast<PageSizeType>(state.range(1));
+  const auto num_bytes = bytes_for_size_type(size_type);
 
-BENCHMARK_DEFINE_F(PageMigrationFixture, BM_MigrateFromDRAMToCXL)(benchmark::State& state) {
-  auto region = volatile_regions[state.range(0)];
-
-  for (auto _ : st) {}
+  for (auto _ : state) {
+    state.PauseTiming();
+#if HYRISE_NUMA_SUPPORT
+    numa_tonode_memory(_mapped_region, DEFAULT_RESERVED_VIRTUAL_MEMORY, 0);
+    std::memset(_mapped_region, 0x5, 1 * 1024 * 1024 * 1024);
+#endif
+    state.ResumeTiming();
+    for (int idx = 0; idx < state.range(1); ++idx) {
+#if HYRISE_NUMA_SUPPORT
+      benchmark::DoNotOptimize(numa_tonode_memory(_mapped_region + idx * num_bytes, num_bytes, 2));
+#endif
+    }
+    benchmark::ClobberMemory();
+  }
 }
 
-BENCHMARK_DEFINE_F(PageMigrationFixture, BM_MigrateFromCXLToDRAM)(benchmark::State& state) {
-  for (auto _ : st) {}
-}
-
-BENCHMARK_REGISTER_F(PageMigrationFixture, BM_MigrateFromDRAMToCXL)
+BENCHMARK_REGISTER_F(PageMigrationFixture, BM_ToNodeMemory)
     ->ArgsProduct({benchmark::CreateRange(64, 2048, /*multi=*/2),
-                   benchmark::CreateDenseRange(MIN_PAGE_SIZE_TYPE, MAX_PAGE_SIZE_TYPE, /*step=*/1)})
+                   benchmark::CreateDenseRange(static_cast<uint64_t>(MIN_PAGE_SIZE_TYPE),
+                                               static_cast<u_int64_t>(MAX_PAGE_SIZE_TYPE), /*step=*/1)});
 
 }  // namespace hyrise
