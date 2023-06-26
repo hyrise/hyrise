@@ -21,16 +21,14 @@ class PageMigrationFixture : public benchmark::Fixture {
 };
 
 BENCHMARK_DEFINE_F(PageMigrationFixture, BM_ToNodeMemory)(benchmark::State& state) {
-  auto size_type = static_cast<PageSizeType>(state.range(1));
+  auto size_type = static_cast<PageSizeType>(state.range(0));
   const auto num_bytes = bytes_for_size_type(size_type);
-  constexpr auto VIRT_SIZE = 0.5 * 1024 * 1024 * 1024;
+  constexpr auto VIRT_SIZE = 1 * 1024 * 1024 * 1024;
+  const auto times = VIRT_SIZE / num_bytes;
 
 #if HYRISE_NUMA_SUPPORT
   numa_tonode_memory(_mapped_region, VIRT_SIZE, 0);
-  for (int i = 0; i < VIRT_SIZE; i += OS_PAGE_SIZE) {
-    auto page_start = _mapped_region + i;
-    std::memset(page_start, 0x5, VIRT_SIZE);
-  }
+  std::memset(page_start, 0x1, VIRT_SIZE);
 #endif
 
   for (auto _ : state) {
@@ -39,7 +37,7 @@ BENCHMARK_DEFINE_F(PageMigrationFixture, BM_ToNodeMemory)(benchmark::State& stat
     numa_tonode_memory(_mapped_region, VIRT_SIZE, 0);
 #endif
     state.ResumeTiming();
-    for (int idx = 0; idx < state.range(1); ++idx) {
+    for (int idx = 0; idx < times; ++idx) {
 #if HYRISE_NUMA_SUPPORT
       numa_tonode_memory(_mapped_region + idx * num_bytes, num_bytes, 2);
 #endif
@@ -51,8 +49,7 @@ BENCHMARK_DEFINE_F(PageMigrationFixture, BM_ToNodeMemory)(benchmark::State& stat
 }
 
 BENCHMARK_REGISTER_F(PageMigrationFixture, BM_ToNodeMemory)
-    ->ArgsProduct({benchmark::CreateRange(64, 2048, /*multi=*/2),
-                   benchmark::CreateDenseRange(static_cast<uint64_t>(MIN_PAGE_SIZE_TYPE),
+    ->ArgsProduct({benchmark::CreateDenseRange(static_cast<uint64_t>(MIN_PAGE_SIZE_TYPE),
                                                static_cast<u_int64_t>(MAX_PAGE_SIZE_TYPE), /*step=*/1)});
 
 }  // namespace hyrise
