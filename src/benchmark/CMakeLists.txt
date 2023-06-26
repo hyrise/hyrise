@@ -130,7 +130,7 @@ add_executable(
 
     # micro_benchmark_basic_fixture.cpp
     # micro_benchmark_basic_fixture.hpp
-    # micro_benchmark_main.cpp
+    micro_benchmark_main.cpp
     # micro_benchmark_utils.cpp
     # micro_benchmark_utils.hpp
 
