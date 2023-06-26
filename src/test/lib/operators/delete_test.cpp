@@ -362,4 +362,25 @@ TEST_F(OperatorsDeleteTest, PrunedInputTable) {
   EXPECT_EQ(_table2->get_chunk(ChunkID{2})->mvcc_data()->get_end_cid(ChunkOffset{1}), expected_end_cid);
 }
 
+TEST_F(OperatorsDeleteTest, SetMaxEndCID) {
+  const auto get_table = std::make_shared<GetTable>(_table_name);
+  get_table->execute();
+
+  const auto table_scan = create_table_scan(get_table, ColumnID{0}, PredicateCondition::LessThan, 1000);
+  table_scan->execute();
+
+  const auto delete_op = std::make_shared<Delete>(table_scan);
+  const auto context = std::make_shared<TransactionContext>(TransactionID{1}, CommitID{2}, AutoCommit::No);
+  delete_op->set_transaction_context(context);
+  delete_op->execute();
+
+  const auto& chunk = _table->get_chunk(ChunkID{0});
+  ASSERT_TRUE(chunk->mvcc_data());
+  EXPECT_EQ(chunk->mvcc_data()->max_end_cid, MvccData::MAX_COMMIT_ID);
+
+  context->commit();
+
+  EXPECT_EQ(chunk->mvcc_data()->max_end_cid, CommitID{2});
+}
+
 }  // namespace hyrise

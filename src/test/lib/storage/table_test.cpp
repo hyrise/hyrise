@@ -137,13 +137,13 @@ TEST_F(StorageTableTest, FillingUpAChunkFinalizesIt) {
 
   const auto c = t->get_chunk(ChunkID{0});
   auto mvcc_data = c->mvcc_data();
-  EXPECT_FALSE(mvcc_data->max_begin_cid);
+  EXPECT_EQ(mvcc_data->max_begin_cid.load(), MvccData::MAX_COMMIT_ID);
   EXPECT_TRUE(c->is_mutable());
 
   t->append({6, "world"});
   t->append({7, "!"});
 
-  EXPECT_EQ(*mvcc_data->max_begin_cid, 0);
+  EXPECT_EQ(mvcc_data->max_begin_cid.load(), 0);
   EXPECT_FALSE(c->is_mutable());
 }
 

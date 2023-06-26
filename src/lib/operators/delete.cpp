@@ -1,14 +1,10 @@
 #include "delete.hpp"
 
-#include <memory>
-#include <string>
-#include <utility>
-
 #include "concurrency/transaction_context.hpp"
 #include "operators/validate.hpp"
 #include "statistics/table_statistics.hpp"
 #include "storage/reference_segment.hpp"
-#include "utils/assert.hpp"
+#include "utils/atomic_max.hpp"
 
 namespace hyrise {
 
@@ -93,16 +89,18 @@ void Delete::_on_commit_records(const CommitID commit_id) {
   const auto chunk_count = _referencing_table->chunk_count();
   for (auto referencing_chunk_id = ChunkID{0}; referencing_chunk_id < chunk_count; ++referencing_chunk_id) {
     const auto referencing_chunk = _referencing_table->get_chunk(referencing_chunk_id);
-    const auto referencing_segment =
-        std::static_pointer_cast<const ReferenceSegment>(referencing_chunk->get_segment(ColumnID{0}));
-    const auto referenced_table = referencing_segment->referenced_table();
+    const auto& referencing_segment =
+        static_cast<const ReferenceSegment&>(*referencing_chunk->get_segment(ColumnID{0}));
+    const auto referenced_table = referencing_segment.referenced_table();
 
-    for (const auto row_id : *referencing_segment->pos_list()) {
-      const auto referenced_chunk = referenced_table->get_chunk(row_id.chunk_id);
+    for (const auto row_id : *referencing_segment.pos_list()) {
+      const auto& referenced_chunk = referenced_table->get_chunk(row_id.chunk_id);
+      auto& mvcc_data = *referenced_chunk->mvcc_data();
 
-      referenced_chunk->mvcc_data()->set_end_cid(row_id.chunk_offset, commit_id);
-      referenced_chunk->increase_invalid_row_count(ChunkOffset{1});
+      mvcc_data.set_end_cid(row_id.chunk_offset, commit_id);
       // We do not unlock the rows so subsequent transactions properly fail when attempting to update these rows.
+      referenced_chunk->increase_invalid_row_count(ChunkOffset{1});
+      set_atomic_max(mvcc_data.max_end_cid, commit_id);
     }
   }
 }

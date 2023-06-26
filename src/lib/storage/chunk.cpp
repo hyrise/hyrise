@@ -1,20 +1,11 @@
 #include "chunk.hpp"
 
-#include <algorithm>
-#include <iterator>
-#include <limits>
-#include <memory>
-#include <mutex>
-#include <string>
-#include <utility>
-#include <vector>
-
 #include "abstract_segment.hpp"
 #include "index/abstract_chunk_index.hpp"
 #include "reference_segment.hpp"
 #include "resolve_type.hpp"
 #include "storage/segment_iterate.hpp"
-#include "utils/assert.hpp"
+#include "utils/atomic_max.hpp"
 
 namespace hyrise {
 
@@ -110,12 +101,11 @@ void Chunk::finalize() {
   _is_mutable = false;
 
   // Only perform the max_begin_cid check if it hasn't already been set.
-  if (has_mvcc_data() && !_mvcc_data->max_begin_cid) {
+  if (has_mvcc_data() && _mvcc_data->max_begin_cid.load() == MvccData::MAX_COMMIT_ID) {
     const auto chunk_size = size();
-    Assert(chunk_size > 0, "finalize() should not be called on an empty chunk");
-    _mvcc_data->max_begin_cid = CommitID{0};
+    Assert(chunk_size > 0, "finalize() should not be called on an empty Chunk.");
     for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
-      _mvcc_data->max_begin_cid = std::max(*_mvcc_data->max_begin_cid, _mvcc_data->get_begin_cid(chunk_offset));
+      set_atomic_max(_mvcc_data->max_begin_cid, _mvcc_data->get_begin_cid(chunk_offset));
     }
 
     Assert(_mvcc_data->max_begin_cid != MvccData::MAX_COMMIT_ID,
