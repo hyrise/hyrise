@@ -18,9 +18,6 @@
 #include "utils/assert.hpp"
 
 namespace hyrise {
-
-// TODO(nikriek): Find the the ones to use with
-
 std::shared_ptr<Table> BinaryParser::parse(const std::string& filename) {
   std::ifstream file;
   file.open(filename, std::ios::binary);

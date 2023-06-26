@@ -6,7 +6,7 @@
 
 namespace hyrise {
 
-// TODO: memory order
+// TODO: Encode New/ref counted page here, use 14 bits for it
 
 class Frame {
  public:

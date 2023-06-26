@@ -5,8 +5,6 @@
 
 namespace hyrise {
 
-static thread_local LinearBufferResource linear_buffer_resource = LinearBufferResource(&BufferManager::get());
-
 LinearBufferResource::LinearBufferResource(BufferManager* buffer_manager) : _buffer_manager(buffer_manager) {}
 
 LinearBufferResource::LinearBufferResource() : LinearBufferResource(nullptr) {}
@@ -60,6 +58,7 @@ void* LinearBufferResource::do_allocate(std::size_t bytes, std::size_t alignment
         _buffer_manager->allocate(bytes_for_size_type(PAGE_SIZE_TYPE), alignof(std::max_align_t)));
     detail::linear_buffer_resource_state.current_buffer_size = bytes_for_size_type(PAGE_SIZE_TYPE);
     detail::linear_buffer_resource_state.current_buffer_pos = 0u;
+
     // detail::linear_buffer_resource_state.current_buffer_size =
     //     bytes_for_size_type(PAGE_SIZE_TYPE) - sizeof(AllocationCountType);
     // detail::linear_buffer_resource_state.current_buffer_pos = sizeof(AllocationCountType);

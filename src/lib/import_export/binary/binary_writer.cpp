@@ -123,8 +123,9 @@ void BinaryWriter::_write_header(const Table& table, std::ofstream& ofstream) {
   // Transform column types and copy column names in order to write them to the file.
   const auto column_count = table.column_count();
   for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
-    column_types[column_id] = data_type_to_string.left.at(table.column_data_type(column_id));
-    column_names[column_id] = table.column_name(column_id);
+    auto column_type = data_type_to_string.left.at(table.column_data_type(column_id));
+    column_types[column_id] = pmr_string{column_type.begin(), column_type.end()};
+    column_names[column_id] = pmr_string{table.column_name(column_id).begin(), table.column_name(column_id).end()};
     columns_are_nullable[column_id] = table.column_is_nullable(column_id);
   }
   export_values(ofstream, column_types);
