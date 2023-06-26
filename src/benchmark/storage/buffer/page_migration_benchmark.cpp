@@ -33,11 +33,13 @@ BENCHMARK_DEFINE_F(PageMigrationFixture, BM_ToNodeMemory)(benchmark::State& stat
     state.ResumeTiming();
     for (int idx = 0; idx < state.range(1); ++idx) {
 #if HYRISE_NUMA_SUPPORT
-      benchmark::DoNotOptimize(numa_tonode_memory(_mapped_region + idx * num_bytes, num_bytes, 2));
+      numa_tonode_memory(_mapped_region + idx * num_bytes, num_bytes, 2);
 #endif
     }
     benchmark::ClobberMemory();
   }
+  state.SetItemsProcessed(int64_t(state.iterations()) * int64_t(state.range(0)));
+  state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(state.range(0)) * num_bytes);
 }
 
 BENCHMARK_REGISTER_F(PageMigrationFixture, BM_ToNodeMemory)
