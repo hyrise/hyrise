@@ -69,7 +69,7 @@ BENCHMARK_DEFINE_F(PageMigrationFixture, BM_ToNodeMemoryLatency)(benchmark::Stat
   state.SetBytesProcessed(int64_t(state.iterations()) * num_bytes);
 }
 
-BENCHMARK_DEFINE_F(PageMigrationFixture, BM_ToNodeMemoryLatency)(benchmark::State& state) {
+BENCHMARK_DEFINE_F(PageMigrationFixture, BM_MovePagesLatency)(benchmark::State& state) {
   auto size_type = static_cast<PageSizeType>(state.range(0));
   const auto num_bytes = bytes_for_size_type(size_type);
   constexpr auto VIRT_SIZE = 5UL * 1024 * 1024 * 1024;
@@ -105,4 +105,8 @@ BENCHMARK_REGISTER_F(PageMigrationFixture, BM_ToNodeMemory)
 BENCHMARK_REGISTER_F(PageMigrationFixture, BM_ToNodeMemoryLatency)
     ->ArgsProduct({benchmark::CreateDenseRange(static_cast<uint64_t>(MIN_PAGE_SIZE_TYPE),
                                                static_cast<u_int64_t>(MAX_PAGE_SIZE_TYPE), /*step=*/1)});
+BENCHMARK_REGISTER_F(PageMigrationFixture, BM_MovePagesLatency)
+    ->ArgsProduct({benchmark::CreateDenseRange(static_cast<uint64_t>(MIN_PAGE_SIZE_TYPE),
+                                               static_cast<u_int64_t>(MAX_PAGE_SIZE_TYPE), /*step=*/1)});
+
 }  // namespace hyrise
