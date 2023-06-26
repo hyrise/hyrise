@@ -917,8 +917,6 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_operator_scan_pr
           return;
         }
 
-        // std::cout << "NARF" << predicate << std::endl;
-
         // TODO(anybody) Simplify this block if AbstractStatisticsObject ever supports total_count()
         const auto sliced_histogram =
             std::dynamic_pointer_cast<AbstractHistogram<ColumnDataType>>(sliced_statistics_object);
@@ -945,7 +943,6 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_operator_scan_pr
   for (auto column_id = ColumnID{0}; column_id < output_column_statistics.size(); ++column_id) {
     if (!output_column_statistics[column_id]) {
       output_column_statistics[column_id] = input_table_statistics->column_statistics[column_id]->scaled(selectivity);
-      // std::cout << *output_column_statistics[column_id] << std::endl;
     }
   }
 
