@@ -19,14 +19,14 @@ float expression_cost_multiplier(const std::shared_ptr<AbstractExpression>& expr
 
   // Number of different columns accessed to factor in expression complexity.
   visit_expression(expression, [&](const auto& sub_expression) {
-
     if (sub_expression->type == ExpressionType::LQPColumn) {
       multiplier += 1.0f;
       return ExpressionVisitation::DoNotVisitArguments;
     }
 
-    if (sub_expression->type == ExpressionType::LQPSubquery && static_cast<LQPSubqueryExpression&>(*sub_expression).is_correlated()) {
-      multiplier +=1.0f;
+    if (sub_expression->type == ExpressionType::LQPSubquery &&
+        static_cast<LQPSubqueryExpression&>(*sub_expression).is_correlated()) {
+      multiplier += 1.0f;
       return ExpressionVisitation::VisitArguments;
     }
 
@@ -73,7 +73,8 @@ Cost CostEstimatorLogical::estimate_node_cost(const std::shared_ptr<AbstractLQPN
     }
 
     case LQPNodeType::Predicate:
-      return left_input_row_count * expression_cost_multiplier(static_cast<PredicateNode&>(*node).predicate()) + output_row_count;
+      return left_input_row_count * expression_cost_multiplier(static_cast<PredicateNode&>(*node).predicate()) +
+             output_row_count;
 
     default:
       return left_input_row_count + output_row_count;
