@@ -44,13 +44,15 @@ BENCHMARK_DEFINE_F(PageMigrationFixture, BM_ToNodeMemory)(benchmark::State& stat
     }
     benchmark::ClobberMemory();
   }
-  state.SetItemsProcessed(int64_t(state.iterations()) * int64_t(state.range(0)));
-  state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(state.range(0)) * num_bytes);
+  state.SetItemsProcessed(int64_t(state.iterations()) * times);
+  state.SetBytesProcessed(int64_t(state.iterations()) * times * num_bytes);
 }
 
 BENCHMARK_DEFINE_F(PageMigrationFixture, BM_ToNodeMemoryLatency)(benchmark::State& state) {
   auto size_type = static_cast<PageSizeType>(state.range(0));
   const auto num_bytes = bytes_for_size_type(size_type);
+  constexpr auto VIRT_SIZE = 5UL * 1024 * 1024 * 1024;
+
 #if HYRISE_NUMA_SUPPORT
   numa_tonode_memory(_mapped_region, VIRT_SIZE, 0);
   std::memset(_mapped_region, 0x1, VIRT_SIZE);
@@ -59,10 +61,12 @@ BENCHMARK_DEFINE_F(PageMigrationFixture, BM_ToNodeMemoryLatency)(benchmark::Stat
   auto i = 0;
   for (auto _ : state) {
 #if HYRISE_NUMA_SUPPORT
-    numa_tonode_memory(_mapped_region * (++i * num_bytes), num_bytes, 2);
+    numa_tonode_memory(_mapped_region + (++i * num_bytes), num_bytes, 2);
 #endif
     benchmark::ClobberMemory();
   }
+  state.SetItemsProcessed(int64_t(state.iterations()));
+  state.SetBytesProcessed(int64_t(state.iterations()) * num_bytes);
 }
 
 BENCHMARK_REGISTER_F(PageMigrationFixture, BM_ToNodeMemory)
