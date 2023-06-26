@@ -25,14 +25,18 @@ BENCHMARK_DEFINE_F(PageMigrationFixture, BM_ToNodeMemory)(benchmark::State& stat
   const auto num_bytes = bytes_for_size_type(size_type);
   constexpr auto VIRT_SIZE = 0.5 * 1024 * 1024 * 1024;
 
+#if HYRISE_NUMA_SUPPORT
+  numa_tonode_memory(_mapped_region, VIRT_SIZE, 0);
+  for (int i = 0; i < VIRT_SIZE; i += OS_PAGE_SIZE) {
+    auto page_start = _mapped_region + i;
+    std::memset(page_start, 0x5, VIRT_SIZE);
+  }
+#endif
+
   for (auto _ : state) {
     state.PauseTiming();
 #if HYRISE_NUMA_SUPPORT
     numa_tonode_memory(_mapped_region, VIRT_SIZE, 0);
-    for (int i = 0; i < VIRT_SIZE; i += OS_PAGE_SIZE) {
-      auto page_start = _mapped_region + i;
-      std::memset(page_start, 0x5, VIRT_SIZE);
-    }
 #endif
     state.ResumeTiming();
     for (int idx = 0; idx < state.range(1); ++idx) {
