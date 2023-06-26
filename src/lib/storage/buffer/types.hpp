@@ -120,7 +120,7 @@ constexpr bool ENABLE_MPROTECT = false;
 
 constexpr size_t MAX_EVICTION_QUEUE_PURGES = 1024;
 
-constexpr size_t DEFAULT_RESERVED_VIRTUAL_MEMORY = 1UL << 45;
+constexpr size_t DEFAULT_RESERVED_VIRTUAL_MEMORY = 1UL << 38;  // 256 GiB
 
 constexpr size_t DEFAULT_RESERVED_VIRTUAL_MEMORY_PER_REGION = (DEFAULT_RESERVED_VIRTUAL_MEMORY / NUM_PAGE_SIZE_TYPES) /
                                                               bytes_for_size_type(MAX_PAGE_SIZE_TYPE) *
