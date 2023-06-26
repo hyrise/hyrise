@@ -31,9 +31,11 @@ elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
         compiler_not_supported("Your clang version ${CMAKE_CXX_COMPILER_VERSION} is too old.")
     endif()
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
-    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 13.0)
-        message("Too old")
+    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 14.0)
+        message("Hyrise does not support Apple clang versions older than version 14.")
     endif()
+    # In release mode, we found issues on ARM with loop unrolling (MacOS Ventura, Apple Clang 14.0).
+    # As we do not benchmark on MacOS, the can currently savely ignore this issue.
     add_compile_options(-Wno-pass-failed)
     execute_process(
         COMMAND brew --prefix
