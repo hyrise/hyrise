@@ -29,8 +29,8 @@ BENCHMARK_DEFINE_F(PageMigrationFixture, BM_ToNodeMemory)(benchmark::State& stat
     state.PauseTiming();
 #if HYRISE_NUMA_SUPPORT
     numa_tonode_memory(_mapped_region, VIRT_SIZE, 0);
-    for (int i = 0; i < VIRT_SIZE; i += 4096) {
-      auto page_start = _mapped_region + OS_PAGE_SIZE * i;
+    for (int i = 0; i < VIRT_SIZE; i += OS_PAGE_SIZE) {
+      auto page_start = _mapped_region + i;
       std::memset(page_start, 0x5, VIRT_SIZE);
     }
 #endif
