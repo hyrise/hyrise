@@ -18,7 +18,8 @@ namespace hyrise {
 
 WindowFunctionEvaluator::WindowFunctionEvaluator(
     const std::shared_ptr<const AbstractOperator>& input_operator, std::vector<ColumnID> init_partition_by_column_ids,
-    std::vector<ColumnID> init_order_by_column_ids, std::shared_ptr<WindowFunctionExpression> init_window_funtion_expression)
+    std::vector<ColumnID> init_order_by_column_ids,
+    std::shared_ptr<WindowFunctionExpression> init_window_funtion_expression)
     : AbstractReadOnlyOperator(OperatorType::WindowFunction, input_operator),
       _partition_by_column_ids(std::move(init_partition_by_column_ids)),
       _order_by_column_ids(std::move(init_order_by_column_ids)),
@@ -96,6 +97,17 @@ std::shared_ptr<const Table> WindowFunctionEvaluator::_on_execute() {
 
 namespace {
 
+template <typename T>
+T clamped_add(T lhs, T rhs, T max) {
+  return std::min(lhs + rhs, max);
+}
+
+template <typename T>
+T clamped_sub(T lhs, T rhs, T min) {
+  using U = std::make_signed_t<T>;
+  return static_cast<T>(std::max(static_cast<U>(static_cast<U>(lhs) - static_cast<U>(rhs)), static_cast<U>(min)));
+}
+
 struct RelevantRowInformation {
   std::vector<AllTypeVariant> partition_values;
   std::vector<AllTypeVariant> order_values;
@@ -103,14 +115,16 @@ struct RelevantRowInformation {
 
   static bool compare_for_hash_partitioning(const RelevantRowInformation& lhs, const RelevantRowInformation& rhs) {
     const auto comp_result = lhs.partition_values <=> rhs.partition_values;
-    if(std::is_neq(comp_result)) return std::is_lt(comp_result);
+    if (std::is_neq(comp_result))
+      return std::is_lt(comp_result);
     return lhs.order_values < rhs.order_values;
   }
 };
 
 using HashPartitionedData = WindowFunctionEvaluator::PerHash<std::vector<RelevantRowInformation>>;
 
-HashPartitionedData partition_and_sort_chunk(const Chunk& chunk, ChunkID chunk_id, std::span<const ColumnID> partition_column_ids,
+HashPartitionedData partition_and_sort_chunk(const Chunk& chunk, ChunkID chunk_id,
+                                             std::span<const ColumnID> partition_column_ids,
                                              std::span<const ColumnID> order_column_ids) {
   auto result = HashPartitionedData{};
 
@@ -137,7 +151,8 @@ HashPartitionedData partition_and_sort_chunk(const Chunk& chunk, ChunkID chunk_i
         .order_values = std::move(order_values),
         .row_id = RowID(chunk_id, chunk_offset),
     };
-    const auto hash_partition = boost::hash_range(row_info.partition_values.begin(), row_info.partition_values.end()) & WindowFunctionEvaluator::hash_partition_mask;
+    const auto hash_partition = boost::hash_range(row_info.partition_values.begin(), row_info.partition_values.end()) &
+                                WindowFunctionEvaluator::hash_partition_mask;
     result[hash_partition].push_back(std::move(row_info));
   }
 
@@ -161,7 +176,8 @@ struct ChunkRange {
   }
 };
 
-HashPartitionedData parallel_merge_sort(const Table& input_table, ChunkRange chunk_range, std::span<const ColumnID> partition_column_ids,
+HashPartitionedData parallel_merge_sort(const Table& input_table, ChunkRange chunk_range,
+                                        std::span<const ColumnID> partition_column_ids,
                                         std::span<const ColumnID> order_column_ids) {
   if (chunk_range.is_single_chunk()) {
     const auto chunk_id = chunk_range.start;
@@ -251,60 +267,62 @@ void WindowFunctionEvaluator::compute_window_function(const PerHash<PartitionedD
     Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
   };
 
+  const auto is_same_partition = [&](std::span<const AllTypeVariant> lhs, std::span<const AllTypeVariant> rhs) {
+    return std::ranges::all_of(_partition_by_column_ids,
+                               [&](ColumnID column_id) { return lhs[column_id] == rhs[column_id]; });
+  };
+
   if constexpr (window_function == WindowFunction::Rank) {
     Assert(frame.type == FrameType::Range && frame.start.unbounded && frame.start.type == FrameBoundType::Preceding &&
                !frame.end.unbounded && frame.end.type == FrameBoundType::CurrentRow && frame.end.offset == 0,
-           "Rank has FrameBounds unbounded Preceding and 0 Current Row.");
+           "Rank has Range FrameBounds unbounded Preceding and 0 Current Row.");
 
-    spawn_and_wait_per_hash([&emit_computed_value, this](const auto& hash_partition) {
+    spawn_and_wait_per_hash([&emit_computed_value, &is_same_partition](const auto& hash_partition) {
       auto current_rank = initial_rank;
       const std::vector<AllTypeVariant>* previous_row = nullptr;
 
       for (const auto& [row_values, row_id] : hash_partition) {
-        for (const auto column_id : _partition_by_column_ids) {
-          if (previous_row && (*previous_row)[column_id] != row_values[column_id]) {
-            current_rank = initial_rank;
-            break;
-          }
+        if (previous_row && !is_same_partition(*previous_row, row_values)) {
+          current_rank = initial_rank;
         }
         emit_computed_value(row_id, std::make_optional(current_rank++));
         previous_row = &row_values;
       }
     });
-  } else if constexpr (window_function == WindowFunction::Sum) {
-    Assert(frame.type == FrameType::Rows && frame.start.unbounded && frame.start.type == FrameBoundType::Preceding &&
-               !frame.end.unbounded && frame.end.type == FrameBoundType::CurrentRow && frame.end.offset == 0,
-           "Sum has FrameBounds unbounded Preceding and 0 Current Row.");
 
-    spawn_and_wait_per_hash([&emit_computed_value, this](const auto& hash_partition) {
+  } else if constexpr (window_function == WindowFunction::Sum) {
+    Assert(frame.type == FrameType::Rows, "Sum only works with FrameBounds of type Rows");
+
+    spawn_and_wait_per_hash([&emit_computed_value, &is_same_partition, &frame, this](const auto& hash_partition) {
       const auto sum_column_expression =
           std::dynamic_pointer_cast<LQPColumnExpression>(_window_function_expression->argument());
       Assert(sum_column_expression, "Can only sum over single columns.");
       const auto sum_column_id = sum_column_expression->original_column_id;
-
-      // Assume that we calculate standard prefix sum
       const auto zero = static_cast<OutputColumnType>(0);
       auto sum = std::optional<OutputColumnType>();
 
-      const std::vector<AllTypeVariant>* previous_row = nullptr;
-
+      auto index = long(0);
       for (const auto& [row_values, row_id] : hash_partition) {
-        for (const auto column_id : _partition_by_column_ids) {
-          if (previous_row && (*previous_row)[column_id] != row_values[column_id]) {
-            sum = std::nullopt;
-            break;
+        sum = std::nullopt;
+        const auto frame_bound_start =
+            frame.start.unbounded ? uint64_t(0) : clamped_sub<uint64_t>(index, frame.start.offset, 0);
+        const auto last_row = clamped_sub<uint64_t>(hash_partition.size(), 1, 0);
+        const auto frame_bound_end =
+            frame.end.unbounded ? last_row : clamped_add<uint64_t>(index, frame.end.offset, last_row);
+
+        for (auto row_index = frame_bound_start; row_index <= frame_bound_end; ++row_index) {
+          const auto& [current_row_values, current_row_id] = hash_partition[row_index];
+          if (is_same_partition(row_values, current_row_values)) {
+            if (!variant_is_null(current_row_values[sum_column_id])) {
+              if (!sum) {
+                sum = zero;
+              }
+              *sum += static_cast<OutputColumnType>(get<InputColumnType>(current_row_values[sum_column_id]));
+            }
           }
         }
-
-        if (!variant_is_null(row_values[sum_column_id])) {
-          if (!sum) {
-            sum = zero;
-          }
-          *sum += static_cast<OutputColumnType>(get<InputColumnType>(row_values[sum_column_id]));
-        }
-
         emit_computed_value(row_id, sum);
-        previous_row = &row_values;
+        ++index;
       }
     });
   } else {
