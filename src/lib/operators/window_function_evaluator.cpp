@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <array>
+#include <cstdint>
 #include <type_traits>
 #include <utility>
 
@@ -301,11 +302,11 @@ void WindowFunctionEvaluator::compute_window_function(const PerHash<PartitionedD
       const auto zero = static_cast<OutputColumnType>(0);
       auto sum = std::optional<OutputColumnType>();
 
-      auto index = long(0);
+      auto index = static_cast<uint64_t>(0);
       for (const auto& [row_values, row_id] : hash_partition) {
         sum = std::nullopt;
         const auto frame_bound_start =
-            frame.start.unbounded ? uint64_t(0) : clamped_sub<uint64_t>(index, frame.start.offset, 0);
+            frame.start.unbounded ? static_cast<uint64_t>(0) : clamped_sub<uint64_t>(index, frame.start.offset, 0);
         const auto last_row = clamped_sub<uint64_t>(hash_partition.size(), 1, 0);
         const auto frame_bound_end =
             frame.end.unbounded ? last_row : clamped_add<uint64_t>(index, frame.end.offset, last_row);
