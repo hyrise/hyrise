@@ -33,19 +33,15 @@ std::shared_ptr<Table> BinaryParser::parse(const std::string& filename) {
 
 template <typename T>
 pmr_compact_vector BinaryParser::_read_values_compact_vector(std::ifstream& file, const size_t count) {
-  auto allocator = PolymorphicAllocator<size_t>{&Hyrise::get().linear_buffer_resource};
-  auto pin_guard = AllocatorPinGuard{allocator};
   const auto bit_width = _read_value<uint8_t>(file);
-  auto values = pmr_compact_vector(bit_width, count, allocator);
+  auto values = pmr_compact_vector(bit_width, count);
   file.read(reinterpret_cast<char*>(values.get()), static_cast<int64_t>(values.bytes()));
   return values;
 }
 
 template <typename T>
 pmr_vector<T> BinaryParser::_read_values(std::ifstream& file, const size_t count) {
-  auto allocator = PolymorphicAllocator<size_t>{&Hyrise::get().linear_buffer_resource};
-  auto pin_guard = AllocatorPinGuard{allocator};
-  pmr_vector<T> values(count, allocator);
+  pmr_vector<T> values(count);
   file.read(reinterpret_cast<char*>(values.data()), values.size() * sizeof(T));
   return values;
 }
@@ -59,9 +55,7 @@ pmr_vector<pmr_string> BinaryParser::_read_values(std::ifstream& file, const siz
 // specialized implementation for bool values
 template <>
 pmr_vector<bool> BinaryParser::_read_values(std::ifstream& file, const size_t count) {
-  auto allocator = PolymorphicAllocator<size_t>{&Hyrise::get().linear_buffer_resource};
-  auto pin_guard = AllocatorPinGuard{allocator};
-  pmr_vector<BoolAsByteType> readable_bools(count, allocator);
+  pmr_vector<BoolAsByteType> readable_bools(count);
   file.read(reinterpret_cast<char*>(readable_bools.data()),
             static_cast<int64_t>(readable_bools.size() * sizeof(BoolAsByteType)));
   return {readable_bools.begin(), readable_bools.end()};
@@ -184,25 +178,31 @@ std::shared_ptr<AbstractSegment> BinaryParser::_import_segment(std::ifstream& fi
 template <typename T>
 std::shared_ptr<ValueSegment<T>> BinaryParser::_import_value_segment(std::ifstream& file, ChunkOffset row_count,
                                                                      bool column_is_nullable) {
+  auto allocator = PolymorphicAllocator<size_t>{};
+  auto pin_guard = AllocatorPinGuard{allocator};
+
   if (column_is_nullable) {
     const auto segment_is_nullable = _read_value<bool>(file);
     if (segment_is_nullable) {
-      auto nullables = _read_values<bool>(file, row_count);
-      auto values = _read_values<T>(file, row_count);
+      auto nullables = pmr_vector<bool>(_read_values<bool>(file, row_count), allocator);
+      auto values = pmr_vector<T>(_read_values<T>(file, row_count), allocator);
       return std::make_shared<ValueSegment<T>>(std::move(values), std::move(nullables));
     }
   }
 
-  auto values = _read_values<T>(file, row_count);
+  auto values = pmr_vector<T>(_read_values<T>(file, row_count), allocator);
   return std::make_shared<ValueSegment<T>>(std::move(values));
 }
 
 template <typename T>
 std::shared_ptr<DictionarySegment<T>> BinaryParser::_import_dictionary_segment(std::ifstream& file,
                                                                                ChunkOffset row_count) {
+  auto allocator = PolymorphicAllocator<size_t>{};
+  auto pin_guard = AllocatorPinGuard{allocator};
+
   const auto compressed_vector_type_id = _read_value<CompressedVectorTypeID>(file);
   const auto dictionary_size = _read_value<ValueID>(file);
-  auto dictionary = std::make_shared<pmr_vector<T>>(_read_values<T>(file, dictionary_size));
+  auto dictionary = std::make_shared<pmr_vector<T>>(_read_values<T>(file, dictionary_size), allocator);
 
   auto attribute_vector = _import_attribute_vector(file, row_count, compressed_vector_type_id);
 
@@ -211,6 +211,7 @@ std::shared_ptr<DictionarySegment<T>> BinaryParser::_import_dictionary_segment(s
 
 std::shared_ptr<FixedStringDictionarySegment<pmr_string>> BinaryParser::_import_fixed_string_dictionary_segment(
     std::ifstream& file, ChunkOffset row_count) {
+  Fail("Not implemented yet");
   const auto compressed_vector_type_id = _read_value<CompressedVectorTypeID>(file);
   const auto dictionary_size = _read_value<ValueID>(file);
   auto dictionary = _import_fixed_string_vector(file, dictionary_size);
@@ -222,6 +223,7 @@ std::shared_ptr<FixedStringDictionarySegment<pmr_string>> BinaryParser::_import_
 template <typename T>
 std::shared_ptr<RunLengthSegment<T>> BinaryParser::_import_run_length_segment(std::ifstream& file,
                                                                               ChunkOffset /*row_count*/) {
+  Fail("Not implemented yet");
   const auto size = _read_value<uint32_t>(file);
   const auto values = std::make_shared<pmr_vector<T>>(_read_values<T>(file, size));
   const auto null_values = std::make_shared<pmr_vector<bool>>(_read_values<bool>(file, size));
@@ -233,6 +235,7 @@ std::shared_ptr<RunLengthSegment<T>> BinaryParser::_import_run_length_segment(st
 template <typename T>
 std::shared_ptr<FrameOfReferenceSegment<T>> BinaryParser::_import_frame_of_reference_segment(std::ifstream& file,
                                                                                              ChunkOffset row_count) {
+  Fail("Not implemented yet");
   const auto compressed_vector_type_id = _read_value<CompressedVectorTypeID>(file);
   const auto block_count = _read_value<uint32_t>(file);
   const auto block_minima = _read_values<T>(file, block_count);
@@ -250,6 +253,7 @@ std::shared_ptr<FrameOfReferenceSegment<T>> BinaryParser::_import_frame_of_refer
 
 template <typename T>
 std::shared_ptr<LZ4Segment<T>> BinaryParser::_import_lz4_segment(std::ifstream& file, ChunkOffset row_count) {
+  Fail("Not implemented yet");
   const auto num_elements = _read_value<uint32_t>(file);
   const auto block_count = _read_value<uint32_t>(file);
   const auto block_size = _read_value<uint32_t>(file);
@@ -297,6 +301,7 @@ std::shared_ptr<LZ4Segment<T>> BinaryParser::_import_lz4_segment(std::ifstream& 
 
 std::shared_ptr<BaseCompressedVector> BinaryParser::_import_attribute_vector(
     std::ifstream& file, const ChunkOffset row_count, const CompressedVectorTypeID compressed_vector_type_id) {
+  Fail("Not implemented yet");
   const auto compressed_vector_type = static_cast<CompressedVectorType>(compressed_vector_type_id);
   switch (compressed_vector_type) {
     case CompressedVectorType::BitPacking:
@@ -315,6 +320,7 @@ std::shared_ptr<BaseCompressedVector> BinaryParser::_import_attribute_vector(
 
 std::unique_ptr<const BaseCompressedVector> BinaryParser::_import_offset_value_vector(
     std::ifstream& file, const ChunkOffset row_count, const CompressedVectorTypeID compressed_vector_type_id) {
+  Fail("Not implemented yet");
   const auto compressed_vector_type = static_cast<CompressedVectorType>(compressed_vector_type_id);
   switch (compressed_vector_type) {
     case CompressedVectorType::BitPacking:
@@ -332,6 +338,7 @@ std::unique_ptr<const BaseCompressedVector> BinaryParser::_import_offset_value_v
 }
 
 std::shared_ptr<FixedStringVector> BinaryParser::_import_fixed_string_vector(std::ifstream& file, const size_t count) {
+  Fail("Not implemented yet");
   const auto string_length = _read_value<uint32_t>(file);
   pmr_vector<char> values(string_length * count);
   file.read(values.data(), static_cast<int64_t>(values.size()));
