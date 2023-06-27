@@ -8,7 +8,7 @@
 
 namespace hyrise {
 
-template <typename T, typename Combine, T neutral_element>
+template <typename T, typename Combine>
 class SegmentTree {
   friend class SegmentTreeTest;
 
@@ -20,8 +20,9 @@ class SegmentTree {
     RangeBound end;
   };
 
-  explicit SegmentTree(std::span<const T> leaf_values, Combine&& init_combine = Combine())
+  explicit SegmentTree(std::span<const T> leaf_values, T init_neutral_element = T(), Combine&& init_combine = Combine())
       : leaf_count(std::bit_ceil(leaf_values.size())),
+        neutral_element(std::move(init_neutral_element)),
         combine(init_combine),
         tree(2 * leaf_count + 1, neutral_element) {
     const auto first_leaf_index = leaf_count;
@@ -60,6 +61,7 @@ class SegmentTree {
   // clang-format on
 
   size_t leaf_count;
+  T neutral_element;
   Combine combine;
   std::vector<T> tree;
 };
