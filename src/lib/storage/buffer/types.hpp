@@ -116,7 +116,7 @@ struct EvictionItem {
 using EvictionQueue = tbb::concurrent_queue<EvictionItem>;
 
 // Enable or or disable mprotect calls for debugging purposes
-constexpr bool ENABLE_MPROTECT = false;
+constexpr bool ENABLE_MPROTECT = true;
 
 constexpr size_t MAX_EVICTION_QUEUE_PURGES = 1024;
 

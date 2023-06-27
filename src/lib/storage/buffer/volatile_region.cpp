@@ -123,4 +123,26 @@ void VolatileRegion::clear() {
   _frames.clear();
 }
 
+void VolatileRegion::protect_page(const PageID page_id) {
+  if constexpr (ENABLE_MPROTECT) {
+    DebugAssert(page_id.size_type() == _size_type, "Page does not belong to this region.");
+    auto data = get_page(page_id);
+    if (mprotect(data, bytes_for_size_type(page_id.size_type()), PROT_NONE) != 0) {
+      const auto error = errno;
+      Fail("Failed to mprotect: " + strerror(error));
+    }
+  }
+}
+
+void VolatileRegion::unprotect_page(const PageID page_id) {
+  if constexpr (ENABLE_MPROTECT) {
+    DebugAssert(page_id.size_type() == _size_type, "Page does not belong to this region.");
+    auto data = get_page(page_id);
+    if (mprotect(data, bytes_for_size_type(page_id.size_type()), PROT_READ | PROT_WRITE) != 0) {
+      const auto error = errno;
+      Fail("Failed to mprotect: " + strerror(error));
+    }
+  }
+}
+
 }  // namespace hyrise

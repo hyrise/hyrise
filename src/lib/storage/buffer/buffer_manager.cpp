@@ -176,7 +176,7 @@ void BufferManager::make_resident(const PageID page_id, const AccessIntent acces
   // and we dont want to load anything from SSD
   if (is_new_page) {
     DebugAssert(access_intent == AccessIntent::Write, "New pages should only be written to");
-    unprotect_page(page_id);
+    region->unprotect_page(page_id);
     for (auto repeat = size_t{0}; repeat < MAX_REPEAT_COUNT; ++repeat) {
       if (_secondary_buffer_pool->enabled() && !_config.migration_policy.bypass_numa_during_write()) {
         // Case 0.1: Use NUMA
@@ -199,7 +199,7 @@ void BufferManager::make_resident(const PageID page_id, const AccessIntent acces
 
   if (!_secondary_buffer_pool->enabled()) {
     // Case 3: The page is not on DRAM and we don't have it on another memory node, so we need to load it from SSD
-    unprotect_page(page_id);
+    region->unprotect_page(page_id);
     DebugAssert(Frame::memory_node(state_before_exclusive) == _primary_buffer_pool->memory_node, "Not on DRAM node");
     for (auto repeat = size_t{0}; repeat < MAX_REPEAT_COUNT; ++repeat) {
       if (!_primary_buffer_pool->ensure_free_pages(page_id.size_type())) {
@@ -218,7 +218,7 @@ void BufferManager::make_resident(const PageID page_id, const AccessIntent acces
 
   // Case 4: The page is evicted anyways, decide if numa should be bypassed or not and load the page
   if (is_evicted) {
-    unprotect_page(page_id);
+    region->unprotect_page(page_id);
 
     for (auto repeat = size_t{0}; repeat < MAX_REPEAT_COUNT; ++repeat) {
       const auto bypass_numa =
@@ -370,26 +370,6 @@ void BufferManager::set_dirty(const PageID page_id) {
   DebugAssert(page_id.valid(), "Invalid page id");
 
   get_region(page_id)->get_frame(page_id)->set_dirty(true);
-}
-
-void BufferManager::protect_page(PageID page_id) {
-  if constexpr (ENABLE_MPROTECT) {
-    auto data = get_region(page_id)->get_page(page_id);
-    if (mprotect(data, bytes_for_size_type(page_id.size_type()), PROT_NONE) != 0) {
-      const auto error = errno;
-      Fail("Failed to mprotect: " + strerror(error));
-    }
-  }
-}
-
-void BufferManager::unprotect_page(PageID page_id) {
-  if constexpr (ENABLE_MPROTECT) {
-    auto data = get_region(page_id)->get_page(page_id);
-    if (mprotect(data, bytes_for_size_type(page_id.size_type()), PROT_READ | PROT_WRITE) != 0) {
-      const auto error = errno;
-      Fail("Failed to mprotect: " + strerror(error));
-    }
-  }
 }
 
 size_t BufferManager::reserved_bytes_dram_buffer_pool() const {
@@ -640,7 +620,7 @@ void BufferManager::BufferPool::evict(EvictionItem& item, Frame* frame) {
       if (frame->is_dirty()) {
         auto data = region->get_page(item.page_id);
         ssd_region->write_page(item.page_id, data);  // TODO: use global function
-        // protect_page(page_id);
+        region->protect_page(item.page_id);
         frame->reset_dirty();
       }
       region->free(item.page_id);

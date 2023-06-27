@@ -34,6 +34,9 @@ class VolatileRegion : public Noncopyable {
 
   size_t memory_consumption() const;
 
+  void protect_page(const PageID page_id);
+  void unprotect_page(const PageID page_id);
+
  private:
   const PageSizeType _size_type;
 
