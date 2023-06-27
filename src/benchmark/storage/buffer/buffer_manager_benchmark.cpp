@@ -49,7 +49,7 @@ BENCHMARK_DEFINE_F(BufferManagerFixture, BM_BufferManagerPinForWrite)(benchmark:
 }
 
 BENCHMARK_REGISTER_F(BufferManagerFixture, BM_BufferManagerPinForWrite)
-    ->Range(1, 4)
+    ->DenseRange(1, 4)
     ->ThreadRange(1, 128)
     ->UseRealTime();
 

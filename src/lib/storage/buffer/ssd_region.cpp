@@ -20,7 +20,11 @@ SSDRegion::SSDRegion(const std::filesystem::path& path, std::shared_ptr<BufferMa
 
 SSDRegion::~SSDRegion() {
   for (auto& file_handle : _file_handles) {
-    // TODO: Assert(close(file_handle.fd) == 0, "Error while closing file descriptor");
+    if (close(file_handle.fd) != 0) {
+      const auto error = errno;
+      Fail("Error while closing file descriptor: " + strerror(error));
+    }
+    // TODO: Assert( == 0, "Error while closing file descriptor");
     if (_device_type == DeviceType::REGULAR_FILE) {
       std::filesystem::remove(file_handle.backing_file_name);
     }
