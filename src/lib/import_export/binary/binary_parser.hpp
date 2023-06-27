@@ -16,6 +16,7 @@
 #include "storage/run_length_segment.hpp"
 #include "storage/table.hpp"
 #include "storage/value_segment.hpp"
+#include "storage/variable_length_string_segment.hpp"
 #include "storage/vector_compression/bitpacking/bitpacking_vector_type.hpp"
 
 namespace hyrise {
@@ -75,6 +76,9 @@ class BinaryParser {
                                                                 bool column_is_nullable);
   template <typename T>
   static std::shared_ptr<DictionarySegment<T>> _import_dictionary_segment(std::ifstream& file, ChunkOffset row_count);
+
+  static std::shared_ptr<VariableLengthStringSegment> _import_variable_string_length_segment(std::ifstream& file,
+                                                                                      ChunkOffset row_count);
 
   static std::shared_ptr<FixedStringDictionarySegment<pmr_string>> _import_fixed_string_dictionary_segment(
       std::ifstream& file, ChunkOffset row_count);

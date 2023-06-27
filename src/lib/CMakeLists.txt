@@ -666,7 +666,7 @@ set(
     visualization/viz_record_layout.cpp
     visualization/viz_record_layout.hpp
     ${CMAKE_BINARY_DIR}/version.hpp
-)
+        storage/variable_length_string_segment.hpp storage/variable_length_string_segment.cpp)
 
 set(
     LIBRARIES

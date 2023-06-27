@@ -12,18 +12,17 @@ namespace hyrise {
 class BaseCompressedVector;
 
 /**
- * @brief Segment implementing dictionary encoding.
+ * @brief Segment implementing variable length string encoding.
  *
  * Uses vector compression schemes for its attribute vector.
  */
-template <typename T>
-class DictionarySegment : public BaseDictionarySegment {
+class VariableLengthStringSegment : public BaseDictionarySegment {
  public:
-  explicit DictionarySegment(const std::shared_ptr<const pmr_vector<T>>& dictionary,
+  explicit VariableLengthStringSegment(const std::shared_ptr<const pmr_vector<char>>& dictionary,
                              const std::shared_ptr<const BaseCompressedVector>& attribute_vector);
 
   // returns an underlying dictionary
-  std::shared_ptr<const pmr_vector<T>> dictionary() const;
+  std::shared_ptr<const pmr_vector<char>> dictionary() const;
 
   /**
    * @defgroup AbstractSegment interface
@@ -32,13 +31,14 @@ class DictionarySegment : public BaseDictionarySegment {
 
   AllTypeVariant operator[](const ChunkOffset chunk_offset) const final;
 
-  std::optional<T> get_typed_value(const ChunkOffset chunk_offset) const {
+  std::optional<pmr_string> get_typed_value(const ChunkOffset chunk_offset) const {
     // performance critical - not in cpp to help with inlining
-    const auto value_id = _decompressor->get(chunk_offset);
-    if (value_id == _dictionary->size()) {
+    const auto offset = _decompressor->get(chunk_offset);
+    if (offset == _dictionary->size()) {
       return std::nullopt;
     }
-    return (*_dictionary)[value_id];
+
+    return pmr_string(_dictionary->data() + offset);
   }
 
   ChunkOffset size() const final;
@@ -61,14 +61,14 @@ class DictionarySegment : public BaseDictionarySegment {
    */
   EncodingType encoding_type() const final;
 
-  // Returns the first value ID that refers to a value >= the search value and INVALID_VALUE_ID if all values are
-  // smaller than the search value. Here, INVALID_VALUE_ID does not represent NULL (which isn't stored in the
+  // Returns the first valueId ID that refers to a valueId >= the search valueId and INVALID_VALUE_ID if all values are
+  // smaller than the search valueId. Here, INVALID_VALUE_ID does not represent NULL (which isn't stored in the
   // dictionary anyway). Imagine a segment with values from 1 to 10. A scan for `WHERE a < 12` would retrieve
   // `lower_bound(12) == INVALID_VALUE_ID` and compare all values in the attribute vector to `< INVALID_VALUE_ID`.
   // Thus, returning INVALID_VALUE_ID makes comparisons much easier. However, the caller has to make sure that
-  // NULL values stored in the attribute vector (stored with a value ID of unique_values_count()) are excluded.
+  // NULL values stored in the attribute vector (stored with a valueId ID of unique_values_count()) are excluded.
   // See #1471 for a deeper discussion.
-  ValueID lower_bound(const AllTypeVariant& value) const final;
+  ValueID lower_bound(const AllTypeVariant& valueId) const final;
 
   // Returns the first value ID that refers to a value > the search value and INVALID_VALUE_ID if all values are
   // smaller than or equal to the search value (see also lower_bound).
@@ -76,20 +76,25 @@ class DictionarySegment : public BaseDictionarySegment {
 
   AllTypeVariant value_of_value_id(const ValueID value_id) const final;
 
+  pmr_string typed_value_of_value_id(const ValueID value_id) const;
+
   ValueID::base_type unique_values_count() const final;
 
   std::shared_ptr<const BaseCompressedVector> attribute_vector() const final;
 
   ValueID null_value_id() const final;
 
-  /**@}*/
-
  protected:
-  const std::shared_ptr<const pmr_vector<T>> _dictionary;
+  using Offset = size_t;
+  const std::shared_ptr<const pmr_vector<char>> _dictionary;
+  // Maps chunk offsets to dictionary offsets.
   const std::shared_ptr<const BaseCompressedVector> _attribute_vector;
   std::unique_ptr<BaseVectorDecompressor> _decompressor;
-};
+  const size_t _unique_value_count;
+  // Maps value ids to dictionary offsets.
+  const std::unique_ptr<const pmr_vector<Offset>> _offset_vector;
 
-EXPLICITLY_DECLARE_DATA_TYPES(DictionarySegment);
+  std::unique_ptr<const pmr_vector<Offset>> _generate_offset_vector() const;
+};
 
 }  // namespace hyrise
