@@ -50,12 +50,13 @@ class Frame {
   void debug_print();
 
  private:
-  //clang-format off
+  // clang-format off
   static constexpr uint64_t MEMORY_NODE_MASK = 0x000F000000000000;
-  static constexpr uint64_t DIRTY_MASK = 0x00F0000000000000;
-  static constexpr uint64_t STATE_MASK = 0xFF00000000000000;
-  static constexpr uint64_t VERSION_MASK = 0x0000FFFFFFFFFFFF;
-  //clang-format on
+  static constexpr uint64_t DIRTY_MASK       = 0x00F0000000000000;
+  static constexpr uint64_t STATE_MASK       = 0xFF00000000000000;
+  static constexpr uint64_t VERSION_MASK     = 0x0000FFFFFFFFFFFF;
+  static_assert((MEMORY_NODE_MASK ^ DIRTY_MASK ^ STATE_MASK ^ VERSION_MASK) == std::numeric_limits<StateVersionType>::max());
+  // clang-format on
 
   static constexpr uint64_t NUM_BITS = sizeof(StateVersionType) * CHAR_BIT;
   static constexpr uint64_t MEMORY_NODE_SHIFT = std::countr_zero(MEMORY_NODE_MASK);

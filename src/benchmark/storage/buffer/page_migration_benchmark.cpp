@@ -88,7 +88,7 @@ BENCHMARK_DEFINE_F(PageMigrationFixture, BM_MovePagesLatency)(benchmark::State& 
   auto i = 0;
   for (auto _ : state) {
 #if HYRISE_NUMA_SUPPORT
-    for (std::size_t j = 0; j < pages.size(); ++i) {
+    for (std::size_t j = 0; j < pages.size(); ++j) {
       pages[i] = _mapped_region + i * num_bytes + j * OS_PAGE_SIZE;
     }
     numa_move_pages(0, pages.size(), pages.data(), nodes.data(), nullptr, 0);
