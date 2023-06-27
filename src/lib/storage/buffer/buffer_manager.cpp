@@ -68,7 +68,7 @@ void yield(const size_t repeat) {
     //   _mm_pause();
   } else if ((repeat < 32) || (repeat & 1)) {
     std::this_thread::yield();
-  } else if (repeat < 1000) {
+  } else if (repeat < 20000) {
     std::this_thread::sleep_for(std::chrono::nanoseconds(1000));
   } else {
     Fail("Yield for too long. Something is blocking writes.");
