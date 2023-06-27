@@ -13,10 +13,9 @@ class BufferManagerFixture : public benchmark::Fixture {
 
   void SetUp(const ::benchmark::State& state) {
     if (state.thread_index() == 0) {
-      _buffer_manager = BufferManager({
-          .dram_buffer_pool_size = DEFAULT_DRAM_BUFFER_POOL_SIZE,
-          .memory_node = NO_NUMA_MEMORY_NODE,
-      });
+      _buffer_manager = BufferManager({.dram_buffer_pool_size = DEFAULT_DRAM_BUFFER_POOL_SIZE,
+                                       .memory_node = NO_NUMA_MEMORY_NODE,
+                                       .ssd_path = "/home/nriek/hyrise-fork/benchmarks"});
     }
   }
 
@@ -28,10 +27,12 @@ class BufferManagerFixture : public benchmark::Fixture {
 
 BENCHMARK_DEFINE_F(BufferManagerFixture, BM_BufferManagerPinForWrite)(benchmark::State& state) {
   constexpr auto PAGE_SIZE_TYPE = MIN_PAGE_SIZE_TYPE;
+  const auto DRAM_SIZE_RATIO = state.range(0);
 
   std::random_device rd;
   std::mt19937 gen(rd());
-  std::uniform_int_distribution<> distr(0, DEFAULT_DRAM_BUFFER_POOL_SIZE / bytes_for_size_type(PAGE_SIZE_TYPE));
+  std::uniform_int_distribution<> distr(
+      0, DRAM_SIZE_RATIO * (DEFAULT_DRAM_BUFFER_POOL_SIZE / bytes_for_size_type(PAGE_SIZE_TYPE)));
 
   for (auto _ : state) {
     auto page_id = PageID{PAGE_SIZE_TYPE, static_cast<size_t>(distr(gen))};
@@ -40,14 +41,17 @@ BENCHMARK_DEFINE_F(BufferManagerFixture, BM_BufferManagerPinForWrite)(benchmark:
     std::memset(_buffer_manager._get_page_ptr(page_id), 0x1337, page_id.num_bytes());
     state.ResumeTiming();
     _buffer_manager.unpin_for_write(page_id);
-    benchmark::ClobberMemory();
+    // benchmark::ClobberMemory();
   }
 
   state.SetItemsProcessed(int64_t(state.iterations()));
   state.SetBytesProcessed(int64_t(state.iterations()) * bytes_for_size_type(PAGE_SIZE_TYPE));
 }
 
-BENCHMARK_REGISTER_F(BufferManagerFixture, BM_BufferManagerPinForWrite)->ThreadRange(1, 128)->UseRealTime();
+BENCHMARK_REGISTER_F(BufferManagerFixture, BM_BufferManagerPinForWrite)
+    ->Range(1, 4)
+    ->ThreadRange(1, 128)
+    ->UseRealTime();
 
 }  // namespace hyrise
 
