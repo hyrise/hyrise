@@ -1154,7 +1154,7 @@ TEST_F(LQPTranslatorTest, WindowNode) {
   const auto lqp = WindowNode::make(window_function, int_float_node);
 
   // TODO(group): Test more
-  EXPECT_THROW(LQPTranslator{}.translate_node(lqp), std::logic_error);
+  EXPECT_NO_THROW(LQPTranslator{}.translate_node(lqp));
 }
 
 }  // namespace hyrise

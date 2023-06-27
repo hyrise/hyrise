@@ -19,7 +19,7 @@ namespace hyrise {
 class WindowFunctionEvaluator : public AbstractReadOnlyOperator {
  public:
   WindowFunctionEvaluator(const std::shared_ptr<const AbstractOperator>& input_operator,
-                          ColumnID init_partition_by_column_id, ColumnID init_order_by_column_id,
+                          std::vector<ColumnID> init_partition_by_column_ids, std::vector<ColumnID> init_order_by_column_ids,
                           std::shared_ptr<WindowFunctionExpression> init_window_funtion_expression);
 
   static constexpr auto initial_rank =
@@ -57,8 +57,8 @@ class WindowFunctionEvaluator : public AbstractReadOnlyOperator {
       std::vector<std::pair<pmr_vector<T>, pmr_vector<bool>>> segment_data_for_output_column) const;
   const FrameDescription& frame_description() const;
 
-  ColumnID _partition_by_column_id;
-  ColumnID _order_by_column_id;
+  std::vector<ColumnID> _partition_by_column_ids;
+  std::vector<ColumnID> _order_by_column_ids;
   std::shared_ptr<WindowFunctionExpression> _window_function_expression;
 };
 
