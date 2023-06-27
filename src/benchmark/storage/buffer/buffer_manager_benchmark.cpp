@@ -10,9 +10,9 @@ namespace hyrise {
 
 class BufferManagerFixture : public benchmark::Fixture {
  public:
-  constexpr auto PAGE_SIZE_TYPE = MIN_PAGE_SIZE_TYPE;
+  constexpr static auto PAGE_SIZE_TYPE = MIN_PAGE_SIZE_TYPE;
   constexpr static auto DEFAULT_DRAM_BUFFER_POOL_SIZE = 1 << 30;  // 1 GB
-  constexpr static auto CACHE_LINE_SIZE = std::hardware_constructive_interference_size;
+  constexpr static auto CACHE_LINE_SIZE = 64;
 
   void SetUp(const ::benchmark::State& state) {
     if (state.thread_index() == 0) {
