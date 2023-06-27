@@ -22,7 +22,7 @@ SSDRegion::~SSDRegion() {
   for (auto& file_handle : _file_handles) {
     if (close(file_handle.fd) != 0) {
       const auto error = errno;
-      Fail("Error while closing file descriptor: " + strerror(error));
+      Fail("Error while closing file descriptor " + std::to_string(file_handle.fd) + ": " + strerror(error));
     }
     // TODO: Assert( == 0, "Error while closing file descriptor");
     if (_device_type == DeviceType::REGULAR_FILE) {
