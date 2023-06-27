@@ -32,7 +32,7 @@ std::shared_ptr<AbstractExpression> PQPSubqueryExpression::_on_deep_copy(
 
 DataType PQPSubqueryExpression::data_type() const {
   Assert(_data_type_info,
-         "Can't determine the DataType of this SubqueryExpression, probably because it returns multiple columns");
+         "Cannot determine the DataType of this SubqueryExpression, probably because it returns multiple columns");
   return _data_type_info->data_type;
 }
 
@@ -41,8 +41,8 @@ bool PQPSubqueryExpression::is_correlated() const {
 }
 
 std::string PQPSubqueryExpression::description(const DescriptionMode /*mode*/) const {
-  std::stringstream stream;
-  stream << "SUBQUERY (PQP, " << pqp.get() << ")";
+  auto stream = std::stringstream{};
+  stream << "SUBQUERY (PQP, " << pqp << ")";
   return stream.str();
 }
 
