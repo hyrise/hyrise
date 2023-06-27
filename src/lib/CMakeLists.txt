@@ -651,6 +651,7 @@ set(
     utils/plugin_manager.hpp
     utils/print_utils.cpp
     utils/print_utils.hpp
+    utils/segment_tree.hpp
     utils/settings/abstract_setting.cpp
     utils/settings/abstract_setting.hpp
     utils/settings_manager.cpp
