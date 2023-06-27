@@ -1,5 +1,3 @@
-#include <tuple>
-
 #include "base_test.hpp"
 
 #include "expression/expression_functional.hpp"
@@ -93,7 +91,6 @@ TEST_F(OperatorScanPredicateTest, OutputToStream) {
        {greater_than_(a, b), "Column #0 >Column #1\n"}});
 
   auto actual = std::stringstream{};
-
   for (const auto& [expression, expected] : test_cases) {
     const auto operator_predicates = OperatorScanPredicate::from_expression(*expression, *node);
     ASSERT_TRUE(operator_predicates);
