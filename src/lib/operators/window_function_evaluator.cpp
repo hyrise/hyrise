@@ -102,15 +102,9 @@ struct RelevantRowInformation {
   RowID row_id;
 
   static bool compare_for_hash_partitioning(const RelevantRowInformation& lhs, const RelevantRowInformation& rhs) {
-    for(auto i = size_t{0}, partition_values_size = lhs.partition_values.size(); i < partition_values_size; ++i) {
-      if(lhs.partition_values[i] != rhs.partition_values[i])
-        return lhs.partition_values[i] < rhs.partition_values[i];
-    }
-    for(auto i = size_t{0}, order_values_size = lhs.order_values.size(); i < order_values_size; ++i) {
-      if(lhs.order_values[i] != rhs.order_values[i])
-        return lhs.order_values[i] < rhs.order_values[i];
-    }
-    return false;
+    const auto comp_result = lhs.partition_values <=> rhs.partition_values;
+    if(std::is_neq(comp_result)) return std::is_lt(comp_result);
+    return lhs.order_values < rhs.order_values;
   }
 };
 
