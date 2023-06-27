@@ -208,8 +208,7 @@ void BufferManager::make_resident(const PageID page_id, const AccessIntent acces
       }
       _ssd_region->read_page(page_id, region->get_page(page_id));
       _metrics->total_misses.fetch_add(1, std::memory_order_relaxed);
-      _metrics->total_bytes_copied_from_ssd_to_dram.fetch_add(bytes_for_size_type(page_id.size_type()),
-                                                              std::memory_order_relaxed);
+      _metrics->total_bytes_copied_from_ssd_to_dram.fetch_add(page_id.num_bytes(), std::memory_order_relaxed);
       return;
     }
     Fail(
@@ -231,8 +230,7 @@ void BufferManager::make_resident(const PageID page_id, const AccessIntent acces
           continue;
         }
         region->move_to_numa_node(page_id, _primary_buffer_pool->memory_node);
-        _metrics->total_bytes_copied_from_ssd_to_dram.fetch_add(bytes_for_size_type(page_id.size_type()),
-                                                                std::memory_order_relaxed);
+        _metrics->total_bytes_copied_from_ssd_to_dram.fetch_add(page_id.num_bytes(), std::memory_order_relaxed);
       } else {
         // Case 4.2: We bypass load the page into NUMA
         if (!_secondary_buffer_pool->ensure_free_pages(page_id.size_type())) {
@@ -240,8 +238,7 @@ void BufferManager::make_resident(const PageID page_id, const AccessIntent acces
           continue;
         }
         region->move_to_numa_node(page_id, _secondary_buffer_pool->memory_node);
-        _metrics->total_bytes_copied_from_ssd_to_numa.fetch_add(bytes_for_size_type(page_id.size_type()),
-                                                                std::memory_order_relaxed);
+        _metrics->total_bytes_copied_from_ssd_to_numa.fetch_add(page_id.num_bytes(), std::memory_order_relaxed);
       }
       _ssd_region->read_page(page_id, region->get_page(page_id));
       _metrics->total_misses.fetch_add(1, std::memory_order_relaxed);
@@ -270,8 +267,7 @@ void BufferManager::make_resident(const PageID page_id, const AccessIntent acces
       _secondary_buffer_pool->release_page(page_id.size_type());
       region->move_to_numa_node(page_id, _primary_buffer_pool->memory_node);
       _metrics->total_hits.fetch_add(1, std::memory_order_relaxed);
-      _metrics->total_bytes_copied_from_numa_to_dram.fetch_add(bytes_for_size_type(page_id.size_type()),
-                                                               std::memory_order_relaxed);
+      _metrics->total_bytes_copied_from_numa_to_dram.fetch_add(page_id.num_bytes(), std::memory_order_relaxed);
       return;
     }
   }
@@ -456,6 +452,10 @@ std::shared_ptr<VolatileRegion> BufferManager::get_region(const PageID page_id) 
   return _volatile_regions[static_cast<uint64_t>(page_id.size_type())];
 }
 
+std::byte* BufferManager::_get_page_ptr(const PageID page_id) {
+  return get_region(page_id)->get_page(page_id);
+}
+
 std::shared_ptr<BufferManagerMetrics> BufferManager::metrics() {
   return _metrics;
 }
@@ -626,8 +626,7 @@ void BufferManager::BufferPool::evict(EvictionItem& item, Frame* frame) {
       region->free(item.page_id);
       frame->unlock_exclusive_and_set_evicted();
 
-      // TODO: This is a bit implicit
-      if (target_buffer_pool && target_buffer_pool->enabled()) {
+      if (frame->memory_node() == DEFAULT_DRAM_NUMA_NODE) {
         metrics->total_bytes_copied_from_dram_to_ssd.fetch_add(num_bytes, std::memory_order_relaxed);
       } else {
         metrics->total_bytes_copied_from_numa_to_ssd.fetch_add(num_bytes, std::memory_order_relaxed);

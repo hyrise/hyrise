@@ -140,11 +140,11 @@ add_executable(
 
 
     storage/buffer/page_migration_benchmark.cpp
+    storage/buffer/buffer_manager_benchmark.cpp
     # storage/buffer/allocation_benchmark.cpp
 
     # storage/buffer/ssd_region_benchmark.cpp
     # storage/buffer/volatile_region_benchmark.cpp
-    # storage/buffer/buffer_manager_benchmark.cpp
     # storage/buffer/vector_sort_benchmark.cpp
 )
 

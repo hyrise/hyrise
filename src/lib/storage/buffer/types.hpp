@@ -60,6 +60,10 @@ struct PageID {
     return magic_enum::enum_value<PageSizeType>(this->_size_type);
   }
 
+  size_t num_bytes() const {
+    return bytes_for_size_type(size_type());
+  }
+
   bool valid() const {
     return _valid;
   }

@@ -85,6 +85,7 @@ class BufferManager : public boost::container::pmr::memory_resource, public Nonc
 
   // Debugging methods
   StateVersionType _state(const PageID page_id);
+  std::byte* _get_page_ptr(const PageID page_id);
 
  protected:
   friend class Hyrise;

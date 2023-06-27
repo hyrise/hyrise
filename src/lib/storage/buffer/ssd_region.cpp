@@ -59,7 +59,7 @@ int SSDRegion::open_file_descriptor(const std::filesystem::path& file_name) {
 }
 
 void SSDRegion::write_page(PageID page_id, std::byte* data) {
-  const auto num_bytes = bytes_for_size_type(page_id.size_type());
+  const auto num_bytes = page_id.num_bytes();
   const auto pos = num_bytes * page_id.index;
   DebugAssertPageAligned(data);
   const auto result = pwrite(_file_handles[page_id._size_type].fd, data, num_bytes, pos);
@@ -72,7 +72,7 @@ void SSDRegion::write_page(PageID page_id, std::byte* data) {
 }
 
 void SSDRegion::read_page(PageID page_id, std::byte* data) {
-  const auto num_bytes = bytes_for_size_type(page_id.size_type());
+  const auto num_bytes = page_id.num_bytes();
   const auto pos = num_bytes * page_id.index;
   DebugAssertPageAligned(data);
   const auto result = pread(_file_handles[page_id._size_type].fd, data, num_bytes, pos);
