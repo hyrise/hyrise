@@ -1302,4 +1302,14 @@ TEST_P(OperatorsTableScanTest, SortedFlagMultipleChunksReferenced) {
   ASSERT_TRUE(chunk_sorted_by.empty());
 }
 
+TEST_P(OperatorsTableScanTest, DeepCopyRetainsExcludedChunks) {
+  const auto table_scan =
+      create_table_scan(get_int_float_op(), ColumnID{0}, PredicateCondition::GreaterThanEquals, 1234);
+  table_scan->excluded_chunk_ids = std::make_shared<std::vector<ChunkID>>(std::initializer_list<ChunkID>{ChunkID{0}});
+  const auto new_table_scan = std::dynamic_pointer_cast<TableScan>(table_scan->deep_copy());
+  EXPECT_EQ(*table_scan->excluded_chunk_ids, *new_table_scan->excluded_chunk_ids);
+  EXPECT_EQ(table_scan->excluded_chunk_ids->data(),
+            new_table_scan->excluded_chunk_ids->data());  // Should be the same object.
+}
+
 }  // namespace hyrise

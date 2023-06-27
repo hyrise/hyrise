@@ -84,7 +84,13 @@ std::shared_ptr<AbstractOperator> TableScan::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_left_input,
     const std::shared_ptr<AbstractOperator>& /*copied_right_input*/,
     std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
-  return std::make_shared<TableScan>(copied_left_input, _predicate->deep_copy(copied_ops));
+  const auto table_scan = std::make_shared<TableScan>(copied_left_input, _predicate->deep_copy(copied_ops));
+
+  // Excluded ChunkIDs are set when an IndexScan scans those chunks in parallel using a secondary index and the result
+  // of both operators in unioned. When the PQP is later copied due to a PQP cache hit, we need to set
+  // included/excluded chunks again in both operators. Otherwise, the index scan would not scan any chunks.
+  table_scan->excluded_chunk_ids = excluded_chunk_ids;
+  return table_scan;
 }
 
 std::shared_ptr<const Table> TableScan::_on_execute() {

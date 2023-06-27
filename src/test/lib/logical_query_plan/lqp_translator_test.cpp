@@ -535,6 +535,33 @@ TEST_F(LQPTranslatorTest, PredicateNodePrunedIndexScan) {
   EXPECT_EQ(table_scan_op->lqp_node, predicate_node);
 }
 
+// All indexed chunks are pruned. The LQP translator should not instantiate an index scan and a union.
+TEST_F(LQPTranslatorTest, PredicateNodeEntirelyPrunedIndexScan) {
+  /**
+   * Build LQP and translate to PQP
+   */
+  const auto stored_table_node = StoredTableNode::make("int_float_chunked");
+  const auto& table = Hyrise::get().storage_manager.get_table("int_float_chunked");
+
+  table->create_partial_hash_index(ColumnID{1}, {ChunkID{0}, ChunkID{2}});
+
+  stored_table_node->set_pruned_chunk_ids({ChunkID{0}, ChunkID{2}});
+  auto predicate_node = PredicateNode::make(equals_(stored_table_node->get_column("b"), 42));
+  predicate_node->set_left_input(stored_table_node);
+  predicate_node->scan_type = ScanType::IndexScan;
+  const auto op = LQPTranslator{}.translate_node(predicate_node);
+
+  /**
+   * Check PQP: only table scan is instantiated.
+   */
+  const auto table_scan_op = std::dynamic_pointer_cast<const TableScan>(op);
+  const auto b = PQPColumnExpression::from_table(*table, "b");
+  ASSERT_TRUE(table_scan_op);
+  EXPECT_EQ(*table_scan_op->excluded_chunk_ids, std::vector<ChunkID>{});
+  EXPECT_EQ(*table_scan_op->predicate(), *equals_(b, 42));
+  EXPECT_EQ(table_scan_op->lqp_node, predicate_node);
+}
+
 TEST_F(LQPTranslatorTest, PredicateNodeBinaryIndexScan) {
   /**
    * Build LQP and translate to PQP

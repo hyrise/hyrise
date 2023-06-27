@@ -51,7 +51,7 @@ std::shared_ptr<const Table> IndexScan::_on_execute() {
 
   // If columns have been pruned, calculate the ColumnID that was originally indexed.
   const auto& pruned_column_ids = input_get_table->pruned_column_ids();
-  _indexed_column_id = column_id_before_pruning(_indexed_column_id, pruned_column_ids);
+  const auto indexed_column_id_adapted = column_id_before_pruning(_indexed_column_id, pruned_column_ids);
 
   // If chunks have been pruned, calculate a mapping that maps the pruned ChunkIDs to the original ones.
   const auto& pruned_chunk_ids = input_get_table->pruned_chunk_ids();
@@ -80,7 +80,7 @@ std::shared_ptr<const Table> IndexScan::_on_execute() {
   auto pos_lists = std::vector<std::shared_ptr<RowIDPosList>>{};
   pos_lists.emplace_back(std::make_shared<RowIDPosList>());
 
-  const auto& indexes = _in_table->get_table_indexes(_indexed_column_id);
+  const auto& indexes = _in_table->get_table_indexes(indexed_column_id_adapted);
   Assert(!indexes.empty(), "No indexes for the requested ColumnID available.");
 
   Assert(indexes.size() == 1, "We do not support the handling of multiple indexes for the same column.");
@@ -142,7 +142,14 @@ std::shared_ptr<AbstractOperator> IndexScan::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_left_input,
     const std::shared_ptr<AbstractOperator>& /*copied_right_input*/,
     std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& /*copied_ops*/) const {
-  return std::make_shared<IndexScan>(copied_left_input, _indexed_column_id, _predicate_condition, _scan_value);
+  const auto index_scan =
+      std::make_shared<IndexScan>(copied_left_input, _indexed_column_id, _predicate_condition, _scan_value);
+
+  // We need to set the included ChunkIDs againg, otherwise a copy (e.g., due to a PQP cache hit) would not scan any
+  // chunks. Similarly, we also set the excluded ChunkIDs in the TableScan. Otherwise, we would end up with the same
+  // tuples returned twice when the TableScan scans the same chunks (as the result is later unioned).
+  index_scan->included_chunk_ids = included_chunk_ids;
+  return index_scan;
 }
 
 void IndexScan::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}

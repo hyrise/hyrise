@@ -231,4 +231,14 @@ TEST_F(OperatorsIndexScanTest, OperatorName) {
   EXPECT_EQ(scan->name(), "IndexScan");
 }
 
+TEST_F(OperatorsIndexScanTest, DeepCopyRetainsIncludedChunks) {
+  const auto index_scan = std::make_shared<IndexScan>(this->_int_int, this->_column_id,
+                                                      PredicateCondition::GreaterThanEquals, AllTypeVariant{0});
+  index_scan->included_chunk_ids = std::make_shared<std::vector<ChunkID>>(std::initializer_list<ChunkID>{ChunkID{0}});
+  const auto new_index_scan = std::dynamic_pointer_cast<IndexScan>(index_scan->deep_copy());
+  EXPECT_EQ(*index_scan->included_chunk_ids, *new_index_scan->included_chunk_ids);
+  EXPECT_EQ(index_scan->included_chunk_ids->data(),
+            new_index_scan->included_chunk_ids->data());  // Should be the same object.
+}
+
 }  // namespace hyrise
