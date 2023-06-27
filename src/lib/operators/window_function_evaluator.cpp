@@ -273,6 +273,22 @@ void WindowFunctionEvaluator::compute_window_function(const PerHash<PartitionedD
                                [&](ColumnID column_id) { return lhs[column_id] == rhs[column_id]; });
   };
 
+  const auto calculate_partition_bounds =
+      [&is_same_partition](std::span<const PartitionedData::value_type> hash_partition, auto&& emit_window_bounds) {
+        auto partition_start = static_cast<size_t>(0);
+
+        while (partition_start < hash_partition.size()) {
+          const auto partition_end = std::distance(
+              hash_partition.begin(), std::find_if(hash_partition.begin() + static_cast<ssize_t>(partition_start),
+                                                   hash_partition.end(), [&](const auto& next_element) {
+                                                     return !is_same_partition(hash_partition[partition_start].first,
+                                                                               next_element.first);
+                                                   }));
+          emit_window_bounds(partition_start, partition_end);
+          partition_start = partition_end;
+        }
+      };
+
   if constexpr (window_function == WindowFunction::Rank) {
     Assert(frame.type == FrameType::Range && frame.start.unbounded && frame.start.type == FrameBoundType::Preceding &&
                !frame.end.unbounded && frame.end.type == FrameBoundType::CurrentRow && frame.end.offset == 0,
@@ -294,38 +310,39 @@ void WindowFunctionEvaluator::compute_window_function(const PerHash<PartitionedD
   } else if constexpr (window_function == WindowFunction::Sum) {
     Assert(frame.type == FrameType::Rows, "Sum only works with FrameBounds of type Rows");
 
-    spawn_and_wait_per_hash([&emit_computed_value, &is_same_partition, &frame, this](const auto& hash_partition) {
-      const auto sum_column_expression =
-          std::dynamic_pointer_cast<LQPColumnExpression>(_window_function_expression->argument());
-      Assert(sum_column_expression, "Can only sum over single columns.");
-      const auto sum_column_id = sum_column_expression->original_column_id;
-      const auto zero = static_cast<OutputColumnType>(0);
-      auto sum = std::optional<OutputColumnType>();
+    spawn_and_wait_per_hash(
+        [&emit_computed_value, &calculate_partition_bounds, &frame, this](const auto& hash_partition) {
+          const auto sum_column_expression =
+              std::dynamic_pointer_cast<LQPColumnExpression>(_window_function_expression->argument());
+          Assert(sum_column_expression, "Can only sum over single columns.");
+          const auto sum_column_id = sum_column_expression->original_column_id;
+          const auto zero = static_cast<OutputColumnType>(0);
 
-      auto index = static_cast<uint64_t>(0);
-      for (const auto& [row_values, row_id] : hash_partition) {
-        sum = std::nullopt;
-        const auto frame_bound_start =
-            frame.start.unbounded ? static_cast<uint64_t>(0) : clamped_sub<uint64_t>(index, frame.start.offset, 0);
-        const auto last_row = clamped_sub<uint64_t>(hash_partition.size(), 1, 0);
-        const auto frame_bound_end =
-            frame.end.unbounded ? last_row : clamped_add<uint64_t>(index, frame.end.offset, last_row);
+          calculate_partition_bounds(hash_partition, [&](uint64_t partition_start, uint64_t partition_end) {
+            for (auto tuple_index = partition_start; tuple_index < partition_end; ++tuple_index) {
+              const auto window_start = frame.start.unbounded
+                                            ? partition_start
+                                            : clamped_sub<uint64_t>(tuple_index, frame.start.offset, partition_start);
+              const auto window_end = frame.end.unbounded
+                                          ? partition_end
+                                          : clamped_add<uint64_t>(tuple_index, frame.end.offset + 1, partition_end);
+              const auto window = std::span(hash_partition.begin() + window_start, hash_partition.begin() + window_end);
 
-        for (auto row_index = frame_bound_start; row_index <= frame_bound_end; ++row_index) {
-          const auto& [current_row_values, current_row_id] = hash_partition[row_index];
-          if (is_same_partition(row_values, current_row_values)) {
-            if (!variant_is_null(current_row_values[sum_column_id])) {
-              if (!sum) {
-                sum = zero;
+              auto sum = std::optional<OutputColumnType>();
+              for (const auto& [window_tuple_values, _] : window) {
+                const auto summand = window_tuple_values[sum_column_id];
+                if (!variant_is_null(summand)) {
+                  if (!sum) {
+                    sum = zero;
+                  }
+                  *sum += static_cast<OutputColumnType>(get<InputColumnType>(summand));
+                }
               }
-              *sum += static_cast<OutputColumnType>(get<InputColumnType>(current_row_values[sum_column_id]));
+
+              emit_computed_value(hash_partition[tuple_index].second, sum);
             }
-          }
-        }
-        emit_computed_value(row_id, sum);
-        ++index;
-      }
-    });
+          });
+        });
   } else {
     Fail("Unsupported WindowFunction template instantiation.");
   }
