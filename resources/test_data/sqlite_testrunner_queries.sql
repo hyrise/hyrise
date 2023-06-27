@@ -237,6 +237,9 @@ SELECT * FROM id_int_int_int_100 WHERE EXISTS (SELECT * FROM int_date WHERE id_i
 SELECT id, a, b, c, RANK() OVER (PARTITION BY a ORDER BY c) AS r FROM mixed
 SELECT id, a, b, c, SUM(b) OVER (PARTITION BY a ORDER BY c ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS s FROM mixed
 SELECT a, b, c, SUM(b) OVER (PARTITION BY a ORDER BY c ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS s FROM mixed_null
+-- multiple order by
+SELECT id, a, b, c, RANK() OVER (PARTITION BY b ORDER BY a, c) AS r FROM mixed
+SELECT id, a, b, c, RANK() OVER (PARTITION BY a, b ORDER BY c) AS r FROM mixed
 
 -- Aggregates
 SELECT SUM(b + b) AS sum_b_b FROM mixed;

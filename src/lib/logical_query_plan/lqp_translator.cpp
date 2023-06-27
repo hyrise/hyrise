@@ -514,19 +514,22 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_window_node(
   const auto window = std::dynamic_pointer_cast<WindowExpression>(window_function_expression->window());
 
   const auto partition_by_expressions = window->partition_by_expressions();
-  Assert(partition_by_expressions.size() == 1, "Only one partition-by expression allowed for window functions.");
-  const auto partition_by_column_expression =
-      std::dynamic_pointer_cast<LQPColumnExpression>(partition_by_expressions.front());
-  Assert(partition_by_column_expression, "Partition-by clause was not a single column.");
-  const auto partition_by_column_id = partition_by_column_expression->original_column_id;
+  auto partition_by_column_ids = std::vector<ColumnID>();
+  for (auto expression : partition_by_expressions) {
+    const auto column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(expression);
+    Assert(column_expression, "Partition-by expression was not column.");
+    partition_by_column_ids.push_back(column_expression->original_column_id);
+  }
 
   const auto order_by_expressions = window->order_by_expressions();
-  Assert(order_by_expressions.size() == 1, "Only one order-by expression allowed for window functions.");
-  const auto order_by_column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(order_by_expressions.front());
-  Assert(order_by_column_expression, "order-by clause was not a single column.");
-  const auto order_by_column_id = order_by_column_expression->original_column_id;
+  auto order_by_column_ids = std::vector<ColumnID>();
+  for (auto expression : order_by_expressions) {
+    const auto column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(expression);
+    Assert(column_expression, "Order-by expression was not column.");
+    order_by_column_ids.push_back(column_expression->original_column_id);
+  }
 
-  return std::make_shared<WindowFunctionEvaluator>(input_operator, partition_by_column_id, order_by_column_id,
+  return std::make_shared<WindowFunctionEvaluator>(input_operator, partition_by_column_ids, order_by_column_ids,
                                                    window_function_expression);
 }
 

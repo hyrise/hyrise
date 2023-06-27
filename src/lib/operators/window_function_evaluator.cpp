@@ -17,11 +17,11 @@
 namespace hyrise {
 
 WindowFunctionEvaluator::WindowFunctionEvaluator(
-    const std::shared_ptr<const AbstractOperator>& input_operator, ColumnID init_partition_by_column_id,
-    ColumnID init_order_by_column_id, std::shared_ptr<WindowFunctionExpression> init_window_funtion_expression)
+    const std::shared_ptr<const AbstractOperator>& input_operator, std::vector<ColumnID> init_partition_by_column_ids,
+    std::vector<ColumnID> init_order_by_column_ids, std::shared_ptr<WindowFunctionExpression> init_window_funtion_expression)
     : AbstractReadOnlyOperator(OperatorType::WindowFunction, input_operator),
-      _partition_by_column_id(init_partition_by_column_id),
-      _order_by_column_id(init_order_by_column_id),
+      _partition_by_column_ids(std::move(init_partition_by_column_ids)),
+      _order_by_column_ids(std::move(init_order_by_column_ids)),
       _window_function_expression(std::move(init_window_funtion_expression)) {}
 
 const std::string& WindowFunctionEvaluator::name() const {
@@ -97,34 +97,53 @@ std::shared_ptr<const Table> WindowFunctionEvaluator::_on_execute() {
 namespace {
 
 struct RelevantRowInformation {
-  AllTypeVariant partition_value;
-  AllTypeVariant order_value;
+  std::vector<AllTypeVariant> partition_values;
+  std::vector<AllTypeVariant> order_values;
   RowID row_id;
 
   static bool compare_for_hash_partitioning(const RelevantRowInformation& lhs, const RelevantRowInformation& rhs) {
-    if (lhs.partition_value != rhs.partition_value)
-      return lhs.partition_value < rhs.partition_value;
-    return lhs.order_value < rhs.order_value;
+    for(auto i = size_t{0}, partition_values_size = lhs.partition_values.size(); i < partition_values_size; ++i) {
+      if(lhs.partition_values[i] != rhs.partition_values[i])
+        return lhs.partition_values[i] < rhs.partition_values[i];
+    }
+    for(auto i = size_t{0}, order_values_size = lhs.order_values.size(); i < order_values_size; ++i) {
+      if(lhs.order_values[i] != rhs.order_values[i])
+        return lhs.order_values[i] < rhs.order_values[i];
+    }
+    return false;
   }
 };
 
 using HashPartitionedData = WindowFunctionEvaluator::PerHash<std::vector<RelevantRowInformation>>;
 
-HashPartitionedData partition_and_sort_chunk(const Chunk& chunk, ChunkID chunk_id, ColumnID partition_column_id,
-                                             ColumnID order_column_id) {
+HashPartitionedData partition_and_sort_chunk(const Chunk& chunk, ChunkID chunk_id, std::span<const ColumnID> partition_column_ids,
+                                             std::span<const ColumnID> order_column_ids) {
   auto result = HashPartitionedData{};
 
-  const auto partition_segment = chunk.get_segment(partition_column_id);
-  const auto order_segment = chunk.get_segment(order_column_id);
+  auto partition_segments = std::vector<std::shared_ptr<AbstractSegment>>();
+  partition_segments.reserve(partition_column_ids.size());
+  for (const auto column_id : partition_column_ids)
+    partition_segments.push_back(chunk.get_segment(column_id));
+
+  auto order_segments = std::vector<std::shared_ptr<AbstractSegment>>();
+  order_segments.reserve(order_column_ids.size());
+  for (const auto column_id : order_column_ids)
+    order_segments.push_back(chunk.get_segment(column_id));
 
   for (auto chunk_offset = ChunkOffset(0), row_count = chunk.size(); chunk_offset < row_count; ++chunk_offset) {
+    auto partition_values = std::vector<AllTypeVariant>();
+    for (auto segment : partition_segments)
+      partition_values.push_back((*segment)[chunk_offset]);
+    auto order_values = std::vector<AllTypeVariant>();
+    for (auto segment : order_segments)
+      order_values.push_back((*segment)[chunk_offset]);
+
     auto row_info = RelevantRowInformation{
-        .partition_value = (*partition_segment)[chunk_offset],
-        .order_value = (*order_segment)[chunk_offset],
+        .partition_values = std::move(partition_values),
+        .order_values = std::move(order_values),
         .row_id = RowID(chunk_id, chunk_offset),
     };
-    const auto hash_partition =
-        std::hash<AllTypeVariant>()(row_info.partition_value) & WindowFunctionEvaluator::hash_partition_mask;
+    const auto hash_partition = boost::hash_range(row_info.partition_values.begin(), row_info.partition_values.end()) & WindowFunctionEvaluator::hash_partition_mask;
     result[hash_partition].push_back(std::move(row_info));
   }
 
@@ -148,12 +167,12 @@ struct ChunkRange {
   }
 };
 
-HashPartitionedData parallel_merge_sort(const Table& input_table, ChunkRange chunk_range, ColumnID partition_column_id,
-                                        ColumnID order_column_id) {
+HashPartitionedData parallel_merge_sort(const Table& input_table, ChunkRange chunk_range, std::span<const ColumnID> partition_column_ids,
+                                        std::span<const ColumnID> order_column_ids) {
   if (chunk_range.is_single_chunk()) {
     const auto chunk_id = chunk_range.start;
     const auto chunk = input_table.get_chunk(chunk_id);
-    return partition_and_sort_chunk(*chunk, chunk_id, partition_column_id, order_column_id);
+    return partition_and_sort_chunk(*chunk, chunk_id, partition_column_ids, order_column_ids);
   }
 
   const auto middle = ChunkID(chunk_range.start + chunk_range.size() / 2);
@@ -162,11 +181,11 @@ HashPartitionedData parallel_merge_sort(const Table& input_table, ChunkRange chu
   auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
   tasks.emplace_back(std::make_shared<JobTask>([&]() {
     left_result = parallel_merge_sort(input_table, ChunkRange{.start = chunk_range.start, .end = middle},
-                                      partition_column_id, order_column_id);
+                                      partition_column_ids, order_column_ids);
   }));
   tasks.emplace_back(std::make_shared<JobTask>([&]() {
     right_result = parallel_merge_sort(input_table, ChunkRange{.start = middle, .end = chunk_range.end},
-                                       partition_column_id, order_column_id);
+                                       partition_column_ids, order_column_ids);
   }));
 
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
@@ -192,7 +211,7 @@ WindowFunctionEvaluator::PerHash<WindowFunctionEvaluator::PartitionedData> Windo
   const auto column_count = input_table->column_count();
   const auto hash_partitioned_data =
       parallel_merge_sort(*input_table, ChunkRange{.start = ChunkID(0), .end = input_table->chunk_count()},
-                          _partition_by_column_id, _order_by_column_id);
+                          _partition_by_column_ids, _order_by_column_ids);
 
   auto result = PerHash<PartitionedData>{};
   auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
@@ -245,13 +264,17 @@ void WindowFunctionEvaluator::compute_window_function(const PerHash<PartitionedD
 
     spawn_and_wait_per_hash([&emit_computed_value, this](const auto& hash_partition) {
       auto current_rank = initial_rank;
-      const AllTypeVariant* previous_partition_value = nullptr;
+      const std::vector<AllTypeVariant>* previous_row = nullptr;
 
       for (const auto& [row_values, row_id] : hash_partition) {
-        if (previous_partition_value && row_values[_partition_by_column_id] != *previous_partition_value)
-          current_rank = initial_rank;
+        for (const auto column_id : _partition_by_column_ids) {
+          if (previous_row && (*previous_row)[column_id] != row_values[column_id]) {
+            current_rank = initial_rank;
+            break;
+          }
+        }
         emit_computed_value(row_id, std::make_optional(current_rank++));
-        previous_partition_value = &row_values[_partition_by_column_id];
+        previous_row = &row_values;
       }
     });
   } else if constexpr (window_function == WindowFunction::Sum) {
@@ -269,11 +292,14 @@ void WindowFunctionEvaluator::compute_window_function(const PerHash<PartitionedD
       const auto zero = static_cast<OutputColumnType>(0);
       auto sum = std::optional<OutputColumnType>();
 
-      const AllTypeVariant* previous_partition_value = nullptr;
+      const std::vector<AllTypeVariant>* previous_row = nullptr;
 
       for (const auto& [row_values, row_id] : hash_partition) {
-        if (previous_partition_value && row_values[_partition_by_column_id] != *previous_partition_value) {
-          sum = std::nullopt;
+        for (const auto column_id : _partition_by_column_ids) {
+          if (previous_row && (*previous_row)[column_id] != row_values[column_id]) {
+            sum = std::nullopt;
+            break;
+          }
         }
 
         if (!variant_is_null(row_values[sum_column_id])) {
@@ -284,7 +310,7 @@ void WindowFunctionEvaluator::compute_window_function(const PerHash<PartitionedD
         }
 
         emit_computed_value(row_id, sum);
-        previous_partition_value = &row_values[_partition_by_column_id];
+        previous_row = &row_values;
       }
     });
   } else {
