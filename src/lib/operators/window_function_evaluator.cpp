@@ -4,6 +4,7 @@
 #include <type_traits>
 #include <utility>
 
+#include "all_type_variant.hpp"
 #include "expression/lqp_column_expression.hpp"
 #include "hyrise.hpp"
 #include "resolve_type.hpp"
@@ -13,6 +14,7 @@
 #include "storage/value_segment.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
+#include "utils/segment_tree.hpp"
 #include "window_function_evaluator.hpp"
 
 namespace hyrise {
@@ -310,39 +312,42 @@ void WindowFunctionEvaluator::compute_window_function(const PerHash<PartitionedD
   } else if constexpr (window_function == WindowFunction::Sum) {
     Assert(frame.type == FrameType::Rows, "Sum only works with FrameBounds of type Rows");
 
-    spawn_and_wait_per_hash(
-        [&emit_computed_value, &calculate_partition_bounds, &frame, this](const auto& hash_partition) {
-          const auto sum_column_expression =
-              std::dynamic_pointer_cast<LQPColumnExpression>(_window_function_expression->argument());
-          Assert(sum_column_expression, "Can only sum over single columns.");
-          const auto sum_column_id = sum_column_expression->original_column_id;
-          const auto zero = static_cast<OutputColumnType>(0);
+    spawn_and_wait_per_hash([&emit_computed_value, &calculate_partition_bounds, &frame,
+                             this](const auto& hash_partition) {
+      const auto sum_column_expression =
+          std::dynamic_pointer_cast<LQPColumnExpression>(_window_function_expression->argument());
+      Assert(sum_column_expression, "Can only sum over single columns.");
+      const auto sum_column_id = sum_column_expression->original_column_id;
 
-          calculate_partition_bounds(hash_partition, [&](uint64_t partition_start, uint64_t partition_end) {
-            for (auto tuple_index = partition_start; tuple_index < partition_end; ++tuple_index) {
-              const auto window_start = frame.start.unbounded
-                                            ? partition_start
-                                            : clamped_sub<uint64_t>(tuple_index, frame.start.offset, partition_start);
-              const auto window_end = frame.end.unbounded
-                                          ? partition_end
-                                          : clamped_add<uint64_t>(tuple_index, frame.end.offset + 1, partition_end);
-              const auto window = std::span(hash_partition.begin() + window_start, hash_partition.begin() + window_end);
-
-              auto sum = std::optional<OutputColumnType>();
-              for (const auto& [window_tuple_values, _] : window) {
-                const auto summand = window_tuple_values[sum_column_id];
-                if (!variant_is_null(summand)) {
-                  if (!sum) {
-                    sum = zero;
-                  }
-                  *sum += static_cast<OutputColumnType>(get<InputColumnType>(summand));
-                }
-              }
-
-              emit_computed_value(hash_partition[tuple_index].second, sum);
-            }
-          });
+      calculate_partition_bounds(hash_partition, [&](uint64_t partition_start, uint64_t partition_end) {
+        using Combine = decltype([](std::optional<OutputColumnType> lhs,
+                                    std::optional<OutputColumnType> rhs) -> std::optional<OutputColumnType> {
+          if (!lhs && !rhs)
+            return std::nullopt;
+          return lhs.value_or(0) + rhs.value_or(0);
         });
+
+        std::vector<std::optional<OutputColumnType>> leaf_values(partition_end - partition_start);
+        std::transform(hash_partition.begin() + partition_start, hash_partition.begin() + partition_end,
+                       leaf_values.begin(), [sum_column_id](const auto& tuple) -> std::optional<OutputColumnType> {
+                         const auto summand = tuple.first[sum_column_id];
+                         if (variant_is_null(summand))
+                           return std::nullopt;
+                         return static_cast<OutputColumnType>(get<InputColumnType>(summand));
+                       });
+        SegmentTree<std::optional<OutputColumnType>, Combine> segment_tree(leaf_values);
+
+        for (auto tuple_index = partition_start; tuple_index < partition_end; ++tuple_index) {
+          const auto window_start = frame.start.unbounded
+                                        ? partition_start
+                                        : clamped_sub<uint64_t>(tuple_index, frame.start.offset, partition_start);
+          const auto window_end = frame.end.unbounded
+                                      ? partition_end
+                                      : clamped_add<uint64_t>(tuple_index, frame.end.offset + 1, partition_end);
+          emit_computed_value(hash_partition[tuple_index].second, segment_tree.range_query({window_start, window_end}));
+        }
+      });
+    });
   } else {
     Fail("Unsupported WindowFunction template instantiation.");
   }
