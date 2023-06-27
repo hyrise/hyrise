@@ -267,17 +267,19 @@ void WindowFunctionEvaluator::compute_window_function(const PerHash<PartitionedD
 
       // Assume that we calculate standard prefix sum
       const auto zero = static_cast<OutputColumnType>(0);
-      auto sum = std::make_optional(zero);
+      auto sum = std::optional<OutputColumnType>();
 
       const AllTypeVariant* previous_partition_value = nullptr;
 
       for (const auto& [row_values, row_id] : hash_partition) {
-        if (previous_partition_value && row_values[_partition_by_column_id] != *previous_partition_value)
-          sum = zero;
-
-        if (variant_is_null(row_values[sum_column_id])) {
+        if (previous_partition_value && row_values[_partition_by_column_id] != *previous_partition_value) {
           sum = std::nullopt;
-        } else if (sum) {
+        }
+
+        if (!variant_is_null(row_values[sum_column_id])) {
+          if (!sum) {
+            sum = zero;
+          }
           *sum += static_cast<OutputColumnType>(get<InputColumnType>(row_values[sum_column_id]));
         }
 
