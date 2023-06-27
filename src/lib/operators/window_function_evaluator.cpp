@@ -300,7 +300,8 @@ std::shared_ptr<const Table> WindowFunctionEvaluator::annotate_input_table(
 
   const auto new_column_name = _window_function_expression->as_column_name();
   const auto new_column_type = _window_function_expression->data_type();
-  const auto new_column_definition = TableColumnDefinition(new_column_name, new_column_type, false);
+  const auto new_column_definition = TableColumnDefinition(new_column_name, new_column_type,
+                                                           _window_function_expression->is_nullable_on_lqp(*lqp_node));
 
   // Create value segments for our output column.
   std::vector<std::shared_ptr<AbstractSegment>> value_segments_for_new_column;
@@ -343,7 +344,6 @@ std::shared_ptr<const Table> WindowFunctionEvaluator::annotate_input_table(
     const auto chunk = input_table->get_chunk(chunk_id);
     Segments output_segments;
     for (auto column_id = ColumnID(0); column_id < column_count; ++column_id) {
-      const auto input_segment = chunk->get_segment(column_id);
       output_segments.emplace_back(chunk->get_segment(column_id));
     }
     output_segments.push_back(std::move(outputted_segments_for_new_column[chunk_id]));
