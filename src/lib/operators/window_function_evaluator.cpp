@@ -80,43 +80,32 @@ std::shared_ptr<const Table> WindowFunctionEvaluator::_templated_on_execute() {
 }
 
 std::shared_ptr<const Table> WindowFunctionEvaluator::_on_execute() {
-  auto result = std::shared_ptr<const Table>();
-  switch (_window_function_expression->window_function) {
-    case WindowFunction::Rank:
-      return _templated_on_execute<NullValue, WindowFunction::Rank>();
-    case WindowFunction::Sum:
-      resolve_data_type(_window_function_expression->argument()->data_type(), [&](auto input_data_type) {
-        using InputColumnType = typename decltype(input_data_type)::type;
-        if constexpr (std::is_arithmetic_v<InputColumnType>) {
-          result = _templated_on_execute<InputColumnType, WindowFunction::Sum>();
-        } else {
-          Fail("Unsupported input column type for sum.");
-        }
-      });
-      return result;
-    case WindowFunction::Min:
-      resolve_data_type(_window_function_expression->argument()->data_type(), [&](auto input_data_type) {
-        using InputColumnType = typename decltype(input_data_type)::type;
-        if constexpr (std::is_arithmetic_v<InputColumnType>) {
-          result = _templated_on_execute<InputColumnType, WindowFunction::Min>();
-        } else {
-          Fail("Unsupported input column type for Min.");
-        }
-      });
-      return result;
-    case WindowFunction::Max:
-      resolve_data_type(_window_function_expression->argument()->data_type(), [&](auto input_data_type) {
-        using InputColumnType = typename decltype(input_data_type)::type;
-        if constexpr (std::is_arithmetic_v<InputColumnType>) {
-          result = _templated_on_execute<InputColumnType, WindowFunction::Max>();
-        } else {
-          Fail("Unsupported input column type for Max.");
-        }
-      });
-      return result;
-    default:
-      Fail("Unsupported WindowFunction.");
+  const auto window_function = _window_function_expression->window_function;
+  if (window_function == WindowFunction::Rank) {
+    return _templated_on_execute<NullValue, WindowFunction::Rank>();
   }
+
+  auto result = std::shared_ptr<const Table>();
+  resolve_data_type(_window_function_expression->argument()->data_type(), [&](auto input_data_type) {
+    using InputColumnType = typename decltype(input_data_type)::type;
+    if constexpr (std::is_arithmetic_v<InputColumnType>) {
+      result = [&]() {
+        switch (window_function) {
+          case WindowFunction::Sum:
+            return _templated_on_execute<InputColumnType, WindowFunction::Sum>();
+          case WindowFunction::Min:
+            return _templated_on_execute<InputColumnType, WindowFunction::Min>();
+          case WindowFunction::Max:
+            return _templated_on_execute<InputColumnType, WindowFunction::Max>();
+          default:
+            Fail("Unsupported window function.");
+        }
+      }();
+    } else {
+      Fail("Unsupported input column type for window function.");
+    }
+  });
+  return result;
 }
 
 namespace {
