@@ -118,7 +118,7 @@ BENCHMARK_DEFINE_F(BufferManagerFixture, BM_BufferManagerMultiplePageSizesInMemo
     _buffer_manager.unpin_for_read(page_id);
     // benchmark::ClobberMemory();
   }
-
+  state.SetLabel(std::string(magic_enum::enum_name(page_size_type)));
   state.SetItemsProcessed(int64_t(state.iterations()));
   state.SetBytesProcessed(int64_t(state.iterations()) * bytes_for_size_type(PAGE_SIZE_TYPE));
 }
@@ -153,7 +153,7 @@ BENCHMARK_DEFINE_F(BufferManagerFixture, BM_BufferManagerMultiplePageSizesOutMem
     _buffer_manager.unpin_for_read(page_id);
     // benchmark::ClobberMemory();
   }
-
+  state.SetLabel(std::string(magic_enum::enum_name(page_size_type)));
   state.SetItemsProcessed(int64_t(state.iterations()));
   state.SetBytesProcessed(int64_t(state.iterations()) * bytes_for_size_type(PAGE_SIZE_TYPE));
 }
