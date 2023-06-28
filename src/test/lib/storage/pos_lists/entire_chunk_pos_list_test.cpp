@@ -62,7 +62,10 @@ TEST_F(EntireChunkPosListTest, AddAfterMatchedAllTest) {
   // this case, which we right now don't check.
 }
 
-TEST_F(EntireChunkPosListTest, CheckIterators) {
+TEST_F(EntireChunkPosListTest, AfterAddCheckIterators) {
+  // This checks if the EntireChunkPosList correctly handles Iterators, after rows are added 
+  // to the table. These added rows should not be contained in the PosList.
+
   const auto table = Table::create_dummy_table({{"a", DataType::Int, false}});
   table->append({int32_t{1}});
   table->append({int32_t{2}});
