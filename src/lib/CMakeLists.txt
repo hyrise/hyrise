@@ -281,6 +281,7 @@ set(
     operators/update.hpp
     operators/validate.cpp
     operators/validate.hpp
+    operators/window_function_combinator.hpp
     operators/window_function_evaluator.cpp
     operators/window_function_evaluator.hpp
     optimizer/join_ordering/abstract_join_ordering_algorithm.cpp

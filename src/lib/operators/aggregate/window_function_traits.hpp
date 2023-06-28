@@ -1,5 +1,6 @@
 #pragma once
 
+#include "expression/window_function_expression.hpp"
 #include "resolve_type.hpp"
 
 namespace hyrise {

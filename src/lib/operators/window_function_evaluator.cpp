@@ -15,6 +15,7 @@
 #include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/segment_tree.hpp"
+#include "window_function_combinator.hpp"
 #include "window_function_evaluator.hpp"
 
 namespace hyrise {
@@ -320,13 +321,6 @@ void WindowFunctionEvaluator::compute_window_function(const PerHash<PartitionedD
       const auto sum_column_id = sum_column_expression->original_column_id;
 
       calculate_partition_bounds(hash_partition, [&](uint64_t partition_start, uint64_t partition_end) {
-        using Combine = decltype([](std::optional<OutputColumnType> lhs,
-                                    std::optional<OutputColumnType> rhs) -> std::optional<OutputColumnType> {
-          if (!lhs && !rhs)
-            return std::nullopt;
-          return lhs.value_or(0) + rhs.value_or(0);
-        });
-
         std::vector<std::optional<OutputColumnType>> leaf_values(partition_end - partition_start);
         std::transform(hash_partition.begin() + partition_start, hash_partition.begin() + partition_end,
                        leaf_values.begin(), [sum_column_id](const auto& tuple) -> std::optional<OutputColumnType> {
@@ -335,7 +329,9 @@ void WindowFunctionEvaluator::compute_window_function(const PerHash<PartitionedD
                            return std::nullopt;
                          return static_cast<OutputColumnType>(get<InputColumnType>(summand));
                        });
-        SegmentTree<std::optional<OutputColumnType>, Combine> segment_tree(leaf_values);
+        SegmentTree<std::optional<OutputColumnType>,
+                    typename WindowFunctionCombinator<OutputColumnType, window_function>::Combine>
+            segment_tree(leaf_values, WindowFunctionCombinator<OutputColumnType, window_function>::neutral_element);
 
         for (auto tuple_index = partition_start; tuple_index < partition_end; ++tuple_index) {
           const auto window_start = frame.start.unbounded
