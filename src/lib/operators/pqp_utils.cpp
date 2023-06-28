@@ -15,13 +15,10 @@ AllTypeVariant resolve_uncorrelated_subquery(const std::shared_ptr<const Abstrac
   if (row_count == 1) {
     const auto chunk = subquery_result_table->get_chunk(ChunkID{0});
     Assert(chunk, "Subquery results cannot be physically deleted.");
-    resolve_data_type(subquery_result_table->column_data_type(ColumnID{0}), [&](const auto data_type_t) {
-      using ColumnDataType = typename decltype(data_type_t)::type;
-      segment_iterate<ColumnDataType>(*chunk->get_segment(ColumnID{0}), [&](const auto& position) {
-        if (!position.is_null()) {
-          subquery_result = position.value();
-        }
-      });
+    segment_iterate(*chunk->get_segment(ColumnID{0}), [&](const auto& position) {
+      if (!position.is_null()) {
+        subquery_result = position.value();
+      }
     });
   }
 

@@ -57,7 +57,9 @@ void visit_pqp(const std::shared_ptr<Operator>& pqp, Visitor visitor) {
 
 /**
  * Gets the value provided by an uncorrelated subquery. Ensures that the subquery was executed and does not return too
- * many values.
+ * many values. If the subquery provides an empty result, return NULL_VALUE. Since this function is used by the
+ * TableScan to resolve uncorrelated subqueries that can stem from a join rewrite, returning NULL_VALUE for empty
+ * results leads to no matching tuples for the scan predicate, which is the same as a join with an empty relation.
  */
 AllTypeVariant resolve_uncorrelated_subquery(const std::shared_ptr<const AbstractOperator>& subquery_operator);
 

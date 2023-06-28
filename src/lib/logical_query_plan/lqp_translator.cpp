@@ -71,7 +71,7 @@
 namespace hyrise {
 
 std::shared_ptr<AbstractOperator> LQPTranslator::translate_node(const std::shared_ptr<AbstractLQPNode>& node) const {
-  const auto& pqp = _translate_node_recursively(node);
+  const auto pqp = _translate_node_recursively(node);
 
   // Predicates that contain uncorrelated subqueries cannot be used for chunk pruning in the optimization phase since we
   // do not know the predicate value yet. However, the ChunkPruningRule attaches the corresponding PredicateNodes to the

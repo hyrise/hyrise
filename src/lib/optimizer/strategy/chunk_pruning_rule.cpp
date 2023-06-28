@@ -239,16 +239,18 @@ std::vector<PredicatePruningChain> ChunkPruningRule::_find_predicate_pruning_cha
 }
 
 std::set<ChunkID> ChunkPruningRule::_intersect_chunk_ids(const std::vector<std::set<ChunkID>>& chunk_id_sets) {
-  if (chunk_id_sets.empty() || chunk_id_sets.at(0).empty()) {
+  if (chunk_id_sets.empty() || chunk_id_sets[0].empty()) {
     return {};
   }
-  if (chunk_id_sets.size() == 1) {
-    return chunk_id_sets.at(0);
+
+  const auto chunk_id_set_count = chunk_id_sets.size();
+  if (chunk_id_set_count == 1) {
+    return chunk_id_sets[0];
   }
 
-  auto chunk_id_set = chunk_id_sets.at(0);
-  for (auto set_idx = size_t{1}; set_idx < chunk_id_sets.size(); ++set_idx) {
-    const auto& current_chunk_id_set = chunk_id_sets.at(set_idx);
+  auto chunk_id_set = chunk_id_sets[0];
+  for (auto set_idx = size_t{1}; set_idx < chunk_id_set_count; ++set_idx) {
+    const auto& current_chunk_id_set = chunk_id_sets[set_idx];
     if (current_chunk_id_set.empty()) {
       return {};
     }

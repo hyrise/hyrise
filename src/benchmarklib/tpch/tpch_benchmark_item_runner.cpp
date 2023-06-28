@@ -226,6 +226,7 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
     case 7 - 1: {
       const auto* const nation1 = nations.list[nation_dist(random_engine)].text;
       auto nation2 = std::string{};
+      // NOLINTNEXTLINE(cppcoreguidelines-avoid-do-while)
       do {
         nation2 = nations.list[nation_dist(random_engine)].text;
       } while (nation1 == nation2);
@@ -294,6 +295,7 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
     case 12 - 1: {
       const auto* const shipmode1 = l_smode_set.list[shipmode_dist(random_engine)].text;
       std::string shipmode2;
+      // NOLINTNEXTLINE(cppcoreguidelines-avoid-do-while)
       do {
         shipmode2 = l_smode_set.list[shipmode_dist(random_engine)].text;
       } while (shipmode1 == shipmode2);

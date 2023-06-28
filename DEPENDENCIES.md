@@ -8,7 +8,7 @@
 | clang-format              | >= 11.0          |    All   |                      Yes (formatting) |
 | clang-tidy                | >= 11.0          |    All   |                         Yes (linting) |
 | coreutils                 | any              |    Mac   |                         Yes (scripts) |
-| cmake                     | >= 3.9           |    All   |                                    No |
+| cmake                     | >= 3.18          |    All   |                                    No |
 | dos2unix                  | any              |    All   |                         Yes (linting) |
 | gcc                       | >= 9.1           |    All   | Yes, if clang installed, not for OS X |
 | gcovr                     | >= 3.2           |    All   |                        Yes (coverage) |
@@ -16,7 +16,7 @@
 | libnuma-dev               | any              |    Linux |                            Yes (numa) |
 | libnuma1                  | any              |    Linux |                            Yes (numa) |
 | libpq-dev                 | >= 9             |    All   |                                    No |
-| lld                       | any              |    Linux |   No, but could be removed from cmake |
+| lld                       | any              |    Linux |                                   Yes |
 | parallel                  | any              |    All   |                                   Yes |
 | pexpect                   | >= 4             |    All   |                     Yes (tests in CI) |
 | postgresql-server-dev-all | >= 154           |    Linux |                                    No |

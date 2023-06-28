@@ -11,7 +11,7 @@ class AbstractOperator;
  * A PQPSubqueryExpression represents a subquery (think `a > (SELECT MIN(a) FROM ...`) used as part of an expression in
  * a PQP.
  *
- * The Parameters of a PQPSubqueryExpression are equivalent to the correlated parameters of a nested SELECT in SQL.
+ * The parameters of a PQPSubqueryExpression are equivalent to the correlated parameters of a nested SELECT in SQL.
  */
 class PQPSubqueryExpression : public AbstractExpression {
  public:
