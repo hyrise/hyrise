@@ -145,11 +145,11 @@ TEST_F(StorageTableTest, FillingUpAChunkFinalizesIt) {
   table->append({7, "!"});
 
   EXPECT_EQ(mvcc_data->max_begin_cid.load(), 0);
-  EXPECT_FALSE(c->is_mutable());
+  EXPECT_FALSE(chunk->is_mutable());
 }
 
 TEST_F(StorageTableTest, AppendsMutableChunkIfLastChunkImmutableOnAppend) {
-  chunktable = load_table("resources/test_data/tbl/float_int.tbl", ChunkOffset{2});
+  table = load_table("resources/test_data/tbl/float_int.tbl", ChunkOffset{2});
   EXPECT_EQ(table->chunk_count(), 2);
   EXPECT_EQ(table->row_count(), 3);
 
@@ -160,10 +160,10 @@ TEST_F(StorageTableTest, AppendsMutableChunkIfLastChunkImmutableOnAppend) {
 TEST_F(StorageTableTest, EmplaceChunk) {
   EXPECT_EQ(table->chunk_count(), 0u);
 
-  auto vs_int = std::make_shared<ValueSegment<int>>();
-  auto vs_str = std::make_shared<ValueSegment<pmr_string>>();
+  const auto vs_int = std::make_shared<ValueSegment<int>>();
+  const auto vs_str = std::make_shared<ValueSegment<pmr_string>>();
 
-  vs_intable->append(5);
+  vs_int->append(5);
   vs_str->append("five");
 
   table->append_chunk({vs_int, vs_str});
@@ -224,7 +224,7 @@ TEST_F(StorageTableTest, EmplaceChunkDoesNotReplaceIfNumberOfChunksGreaterOne) {
     auto vs_int = std::make_shared<ValueSegment<int>>();
     auto vs_str = std::make_shared<ValueSegment<pmr_string>>();
 
-    vs_intable->append(5);
+    vs_int->append(5);
     vs_str->append("World!");
 
     table->append_chunk({vs_int, vs_str});

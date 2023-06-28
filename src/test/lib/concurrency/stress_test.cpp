@@ -284,7 +284,7 @@ TEST_F(StressTest, AtomicMaxConcurrentUpdate) {
   }
 
   // Highest thread ID is 100, 1'000 repetitions. 100 + 1'000 = 1'100.
-  EXPECT_EQ(counter, 1'100);
+  EXPECT_EQ(counter.load(), 1'100);
 }
 
 }  // namespace hyrise

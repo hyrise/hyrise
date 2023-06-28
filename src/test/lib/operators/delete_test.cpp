@@ -376,7 +376,7 @@ TEST_F(OperatorsDeleteTest, SetMaxEndCID) {
 
   const auto& chunk = _table->get_chunk(ChunkID{0});
   ASSERT_TRUE(chunk->mvcc_data());
-  EXPECT_EQ(chunk->mvcc_data()->max_end_cid, MvccData::MAX_COMMIT_ID);
+  EXPECT_EQ(chunk->mvcc_data()->max_end_cid.load(), MvccData::MAX_COMMIT_ID);
 
   context->commit();
 
