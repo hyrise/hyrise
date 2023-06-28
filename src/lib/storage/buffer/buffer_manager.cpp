@@ -510,8 +510,9 @@ void BufferManager::BufferPool::purge_eviction_queue() {
 
     // The item is in state UNLOCKED and can be marked
     if (item.can_mark(current_state_and_version)) {
-      frame->try_mark(current_state_and_version);
-      add_to_eviction_queue(item.page_id, frame);
+      if (frame->try_mark(current_state_and_version)) {
+        add_to_eviction_queue(item.page_id, frame);
+      }
       continue;
     }
 
@@ -567,8 +568,9 @@ bool BufferManager::BufferPool::ensure_free_pages(const PageSizeType required_si
 
     // If the frane is UNLOCKED, we can mark it
     if (item.can_mark(current_state_and_version)) {
-      frame->try_mark(current_state_and_version);
-      add_to_eviction_queue(item.page_id, frame);
+      if (frame->try_mark(current_state_and_version)) {
+        add_to_eviction_queue(item.page_id, frame);
+      }
       continue;
     }
 
