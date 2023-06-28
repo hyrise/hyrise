@@ -308,6 +308,7 @@ void Chunk::try_finalize() {
   // set the max_begin_cid here since committed Insert operators already set it.
   if (_is_finalizable && is_mutable() && _mvcc_data->pending_inserts() == 0) {
     _is_mutable = false;
+    _is_finalizable = false;
   }
 }
 
