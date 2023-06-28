@@ -26,7 +26,7 @@ constexpr size_t OS_PAGE_SIZE = 16384;
 enum class PageSizeType { KiB16, KiB32, KiB64, KiB128, KiB256, KiB512, Kib1024 };
 #elif __linux__
 constexpr size_t OS_PAGE_SIZE = 8192;
-enum class PageSizeType { KiB8, KiB16, KiB32, KiB64, KiB128, KiB256, KiB512, Kib1024 };
+enum class PageSizeType { KiB8, KiB16, KiB32, KiB64, KiB128, KiB256, KiB512, MiB1, MiB2 };
 #endif
 
 // Get the number of bytes for a given PageSizeType

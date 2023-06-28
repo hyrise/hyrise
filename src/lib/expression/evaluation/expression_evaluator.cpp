@@ -1452,7 +1452,7 @@ void ExpressionEvaluator::_materialize_segment_if_not_yet_materialized(const Col
   resolve_data_type(segment.data_type(), [&](const auto column_data_type_t) {
     using ColumnDataType = typename decltype(column_data_type_t)::type;
 
-    auto allocator = PolymorphicAllocator<ColumnDataType>{&Hyrise::get().linear_buffer_resource};
+    auto allocator = PolymorphicAllocator<ColumnDataType>{&JemallocMemoryResource::get()};
     auto pin_guard = AllocatorPinGuard{allocator};
 
     pmr_vector<ColumnDataType> values{allocator};

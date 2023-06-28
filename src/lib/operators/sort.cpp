@@ -155,7 +155,7 @@ std::shared_ptr<Table> write_reference_output_table(const std::shared_ptr<const 
   auto output_segments_by_chunk =
       std::vector<Segments>(output_chunk_count, Segments(static_cast<typename Segments::size_type>(column_count)));
 
-  auto allocator = PolymorphicAllocator<RowIDPosList>{&Hyrise::get().linear_buffer_resource};
+  auto allocator = PolymorphicAllocator<RowIDPosList>{&JemallocMemoryResource::get()};
   auto pin_guard = AllocatorPinGuard{allocator};
 
   if (!resolve_indirection && input_pos_list.size() <= output_chunk_size) {

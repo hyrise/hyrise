@@ -261,7 +261,7 @@ __attribute__((hot)) void AggregateHash::_aggregate_segment(ChunkID chunk_id, Co
  */
 template <typename AggregateKey>
 KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() {
-  auto allocator = PolymorphicAllocator<size_t>{&Hyrise::get().linear_buffer_resource};
+  auto allocator = PolymorphicAllocator<size_t>{&JemallocMemoryResource::get()};
   auto pin_guard = AllocatorPinGuard{allocator};
   KeysPerChunk<AggregateKey> keys_per_chunk{allocator};
 
@@ -1062,7 +1062,7 @@ void AggregateHash::_write_groupby_output(RowIDPosList& pos_list) {
 
       const auto column_is_nullable = input_table->column_is_nullable(input_column_id);
 
-      auto allocator = PolymorphicAllocator<ColumnDataType>{&Hyrise::get().linear_buffer_resource};
+      auto allocator = PolymorphicAllocator<ColumnDataType>{&JemallocMemoryResource::get()};
       auto allocator_pin_guard = AllocatorPinGuard{allocator};
 
       const auto pos_list_size = pos_list.size();
@@ -1159,7 +1159,7 @@ void AggregateHash::_write_aggregate_output(ColumnID aggregate_index) {
   // Write aggregated values into the segment. While write_aggregate_values could track if an actual NULL value was
   // written or not, we rather make the output types consistent independent of the input types. Not sure what the
   // standard says about this.
-  auto allocator = PolymorphicAllocator<ColumnDataType>{&Hyrise::get().linear_buffer_resource};
+  auto allocator = PolymorphicAllocator<ColumnDataType>{&JemallocMemoryResource::get()};
   auto allocator_pin_guard = AllocatorPinGuard{allocator};
 
   auto values = pmr_vector<decltype(aggregate_type)>{allocator};
