@@ -7,6 +7,7 @@
 #include "hyrise.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/task_queue.hpp"
+#include "sql/sql_pipeline_builder.hpp"
 #include "utils/atomic_max.hpp"
 
 namespace hyrise {
@@ -285,6 +286,41 @@ TEST_F(StressTest, AtomicMaxConcurrentUpdate) {
 
   // Highest thread ID is 100, 1'000 repetitions. 100 + 1'000 = 1'100.
   EXPECT_EQ(counter.load(), 1'100);
+}
+
+TEST_F(StressTest, ConcurrentInsertsFinalizeChunks) {
+  const auto table = std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Int, false}}, TableType::Data,
+                                             ChunkOffset{2}, UseMvcc::Yes);
+  Hyrise::get().storage_manager.add_table("table_a", table);
+  Hyrise::get().default_pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
+  Hyrise::get().default_lqp_cache = std::make_shared<SQLLogicalPlanCache>();
+
+  const auto num_threads = 100;
+  const auto num_inserts = 1'000;
+  auto threads = std::vector<std::thread>{};
+  threads.reserve(num_threads);
+
+  for (auto thread_id = 0; thread_id < num_threads; ++thread_id) {
+    threads.emplace_back([]() {
+      for (auto i = 0; i < num_inserts; ++i) {
+        SQLPipelineBuilder{"INSERT INTO table_a VALUES(1);"}.create_pipeline().get_result_table();
+      }
+    });
+  }
+
+  for (auto& thread : threads) {
+    thread.join();
+  }
+
+  EXPECT_EQ(table->chunk_count(), 50'000);
+  EXPECT_EQ(table->row_count(), 100'000);
+
+  const auto immutable_chunk_count = table->chunk_count() - 1;
+  for (auto chunk_id = ChunkID{0}; chunk_id < immutable_chunk_count; ++chunk_id) {
+    const auto& chunk = table->get_chunk(chunk_id);
+    ASSERT_TRUE(chunk);
+    ASSERT_FALSE(chunk->is_mutable());
+  }
 }
 
 }  // namespace hyrise

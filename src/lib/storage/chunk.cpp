@@ -35,7 +35,7 @@ Chunk::Chunk(Segments segments, const std::shared_ptr<MvccData>& mvcc_data,
 }
 
 bool Chunk::is_mutable() const {
-  return _is_mutable;
+  return _is_mutable.load();
 }
 
 void Chunk::replace_segment(size_t column_id, const std::shared_ptr<AbstractSegment>& segment) {
@@ -295,6 +295,20 @@ std::optional<CommitID> Chunk::get_cleanup_commit_id() const {
 void Chunk::set_cleanup_commit_id(const CommitID cleanup_commit_id) {
   Assert(!get_cleanup_commit_id(), "Cleanup-commit-ID can only be set once.");
   _cleanup_commit_id.store(cleanup_commit_id);
+}
+
+void Chunk::mark_as_finalizable() {
+  _is_finalizable = true;
+}
+
+void Chunk::try_finalize() {
+  DebugAssert(_mvcc_data, "Expected to be executed with MVCC enabled.");
+  // Finalize if the chunk was marked finalizable (i.e., it reached the target size and a new chunk was added to the
+  // table), it is still mutable and all pending Insert operators are either commited or rolled back. We do not have to
+  // set the max_begin_cid here since committed Insert operators already set it.
+  if (_is_finalizable && is_mutable() && _mvcc_data->pending_inserts() == 0) {
+    _is_mutable = false;
+  }
 }
 
 }  // namespace hyrise

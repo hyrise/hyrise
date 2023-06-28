@@ -83,4 +83,16 @@ size_t MvccData::memory_usage() const {
   return bytes;
 }
 
+void MvccData::register_insert() {
+  ++_pending_inserts;
+}
+
+void MvccData::deregister_insert() {
+  --_pending_inserts;
+}
+
+int32_t MvccData::pending_inserts() const {
+  return _pending_inserts.load();
+}
+
 }  // namespace hyrise

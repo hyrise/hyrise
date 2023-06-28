@@ -186,7 +186,15 @@ class Chunk : private Noncopyable {
    */
   void finalize();
 
- private:
+  /**
+   * Insert operators mark that they appended a new chunk to the table. From this moment on, the former last chunk chunk
+   * can be finalized as soon as all pending Inserts commited or rolled back. After each commit or rollback, an Insert
+   * operator operator tries to finalize the chunk(s) where it inserted data. If it is finalizable (i.e., it reached the
+   * target size and a new chunk was added to the table) and no Inserts are pending, the chunk is set immutable.
+   */
+  void mark_as_finalizable();
+  void try_finalize();
+
   std::vector<std::shared_ptr<const AbstractSegment>> _get_segments_for_ids(
       const std::vector<ColumnID>& column_ids) const;
 
@@ -196,7 +204,8 @@ class Chunk : private Noncopyable {
   std::shared_ptr<MvccData> _mvcc_data;
   Indexes _indexes;
   std::optional<ChunkPruningStatistics> _pruning_statistics;
-  bool _is_mutable = true;
+  std::atomic_bool _is_mutable{true};
+  std::atomic_bool _is_finalizable{false};
   std::vector<SortColumnDefinition> _sorted_by;
   mutable std::atomic<ChunkOffset::base_type> _invalid_row_count{ChunkOffset::base_type{0}};
 

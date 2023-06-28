@@ -105,13 +105,22 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
     while (remaining_rows > 0) {
       auto target_chunk_id = ChunkID{_target_table->chunk_count() - 1};
       auto target_chunk = _target_table->get_chunk(target_chunk_id);
+      auto mvcc_data = target_chunk->mvcc_data();
 
-      // If the last Chunk of the target Table is either immutable or full, append a new mutable Chunk
+      // If the last Chunk of the target Table is either immutable or full, append a new mutable Chunk.
       if (!target_chunk->is_mutable() || target_chunk->size() == _target_table->target_chunk_size()) {
+        // Allow the chunk to be finalized since no new Insert operators will write to it. Then try to finalize it. If
+        // all Insert operators writing to the chunk are already finished, this make the chunk immutable. Otherwise the
+        // pending Insert operators will do this once they are done.
+        target_chunk->mark_as_finalizable();
+        target_chunk->try_finalize();
         _target_table->append_mutable_chunk();
         ++target_chunk_id;
         target_chunk = _target_table->get_chunk(target_chunk_id);
+        mvcc_data = target_chunk->mvcc_data();
       }
+      // Register that Insert is pending. See chunk.hpp for details.
+      mvcc_data->register_insert();
 
       const auto num_rows_for_target_chunk =
           std::min<size_t>(_target_table->target_chunk_size() - target_chunk->size(), remaining_rows);
@@ -124,7 +133,6 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
       // Do so before resizing the Segments, because the resize of `Chunk::_segments.front()` is what releases the
       // new row count.
       {
-        const auto& mvcc_data = target_chunk->mvcc_data();
         DebugAssert(mvcc_data, "Insert cannot operate on a table without MVCC data");
         const auto transaction_id = context->transaction_id();
         const auto end_offset = target_chunk->size() + num_rows_for_target_chunk;
@@ -219,7 +227,7 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
 void Insert::_on_commit_records(const CommitID cid) {
   for (const auto& target_chunk_range : _target_chunk_ranges) {
     const auto target_chunk = _target_table->get_chunk(target_chunk_range.chunk_id);
-    auto mvcc_data = target_chunk->mvcc_data();
+    const auto& mvcc_data = target_chunk->mvcc_data();
 
     for (auto chunk_offset = target_chunk_range.begin_chunk_offset; chunk_offset < target_chunk_range.end_chunk_offset;
          ++chunk_offset) {
@@ -231,13 +239,17 @@ void Insert::_on_commit_records(const CommitID cid) {
 
     // This fence ensures that the changes to TID (which are not sequentially consistent) are visible to other threads.
     std::atomic_thread_fence(std::memory_order_release);
+
+    // Deregister the pending Insert and try to finalize the chunk.
+    mvcc_data->deregister_insert();
+    target_chunk->try_finalize();
   }
 }
 
 void Insert::_on_rollback_records() {
   for (const auto& target_chunk_range : _target_chunk_ranges) {
     const auto target_chunk = _target_table->get_chunk(target_chunk_range.chunk_id);
-    auto mvcc_data = target_chunk->mvcc_data();
+    const auto& mvcc_data = target_chunk->mvcc_data();
 
     /**
      * !!! Crucial comment, PLEASE READ AND _UNDERSTAND_ before altering any of the following code !!!
@@ -272,6 +284,10 @@ void Insert::_on_rollback_records() {
 
     // This fence ensures that the changes to TID (which are not sequentially consistent) are visible to other threads.
     std::atomic_thread_fence(std::memory_order_release);
+
+    // Deregister the pending Insert and try to finalize the chunk.
+    mvcc_data->deregister_insert();
+    target_chunk->try_finalize();
   }
 }
 

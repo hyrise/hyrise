@@ -48,11 +48,19 @@ struct MvccData {
 
   size_t memory_usage() const;
 
+  // Register and deregister Insert operators that write to the chunk. We use this information to notice when all
+  // Inserts are either commited or rolled back and if we can finalize a chunk. For more details, see chunk.hpp.
+  void register_insert();
+  void deregister_insert();
+  int32_t pending_inserts() const;
+
  private:
   // These vectors are pre-allocated. Do not resize them as someone might be reading them concurrently.
   pmr_vector<CommitID> _begin_cids;                  // < commit id when record was added
   pmr_vector<CommitID> _end_cids;                    // < commit id when record was deleted
   pmr_vector<copyable_atomic<TransactionID>> _tids;  // < 0 unless locked by a transaction
+
+  std::atomic_int32_t _pending_inserts{0};
 };
 
 std::ostream& operator<<(std::ostream& stream, const MvccData& mvcc_data);
