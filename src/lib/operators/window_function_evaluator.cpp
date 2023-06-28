@@ -94,6 +94,26 @@ std::shared_ptr<const Table> WindowFunctionEvaluator::_on_execute() {
         }
       });
       return result;
+    case WindowFunction::Min:
+      resolve_data_type(_window_function_expression->argument()->data_type(), [&](auto input_data_type) {
+        using InputColumnType = typename decltype(input_data_type)::type;
+        if constexpr (std::is_arithmetic_v<InputColumnType>) {
+          result = _templated_on_execute<InputColumnType, WindowFunction::Min>();
+        } else {
+          Fail("Unsupported input column type for Min.");
+        }
+      });
+      return result;
+    case WindowFunction::Max:
+      resolve_data_type(_window_function_expression->argument()->data_type(), [&](auto input_data_type) {
+        using InputColumnType = typename decltype(input_data_type)::type;
+        if constexpr (std::is_arithmetic_v<InputColumnType>) {
+          result = _templated_on_execute<InputColumnType, WindowFunction::Max>();
+        } else {
+          Fail("Unsupported input column type for Max.");
+        }
+      });
+      return result;
     default:
       Fail("Unsupported WindowFunction.");
   }
@@ -310,7 +330,7 @@ void WindowFunctionEvaluator::compute_window_function(const PerHash<PartitionedD
       }
     });
 
-  } else if constexpr (window_function == WindowFunction::Sum) {
+  } else if constexpr (UseSegmentTree<OutputColumnType, window_function>) {
     Assert(frame.type == FrameType::Rows, "Sum only works with FrameBounds of type Rows");
 
     spawn_and_wait_per_hash([&emit_computed_value, &calculate_partition_bounds, &frame,
