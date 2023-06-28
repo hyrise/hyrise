@@ -16,11 +16,14 @@ class BaseCompressedVector;
  *
  * Uses vector compression schemes for its attribute vector.
  */
-class VariableLengthStringSegment : public BaseDictionarySegment {
+class VariableStringDictionarySegment : public BaseDictionarySegment {
  public:
-  explicit VariableLengthStringSegment(const std::shared_ptr<const pmr_vector<char>>& dictionary,
-                             const std::shared_ptr<const BaseCompressedVector>& attribute_vector);
+  VariableStringDictionarySegment(const std::shared_ptr<const pmr_vector<char>>& dictionary,
+                                           const std::shared_ptr<const BaseCompressedVector>& attribute_vector,
+                                           const std::shared_ptr<const pmr_vector<uint32_t>> offset_vector);
 
+  // TODO:: remove
+  VariableStringDictionarySegment(): BaseDictionarySegment(static_cast<const DataType>(0)), _unique_value_count(0){};
   // returns an underlying dictionary
   std::shared_ptr<const pmr_vector<char>> dictionary() const;
 
@@ -85,16 +88,13 @@ class VariableLengthStringSegment : public BaseDictionarySegment {
   ValueID null_value_id() const final;
 
  protected:
-  using Offset = size_t;
   const std::shared_ptr<const pmr_vector<char>> _dictionary;
   // Maps chunk offsets to dictionary offsets.
   const std::shared_ptr<const BaseCompressedVector> _attribute_vector;
   std::unique_ptr<BaseVectorDecompressor> _decompressor;
   const size_t _unique_value_count;
   // Maps value ids to dictionary offsets.
-  const std::unique_ptr<const pmr_vector<Offset>> _offset_vector;
-
-  std::unique_ptr<const pmr_vector<Offset>> _generate_offset_vector() const;
+  const std::shared_ptr<const pmr_vector<uint32_t>> _offset_vector;
 };
 
 }  // namespace hyrise
