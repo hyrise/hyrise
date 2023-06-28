@@ -67,12 +67,12 @@ class AbstractTableScanImpl {
       const auto left = *left_it;
       if constexpr (std::is_same_v<RightIterator, std::false_type>) {
         if ((!CheckForNull || !left.is_null()) && func(left)) {
-          matches_out.emplace_back(RowID{chunk_id, left.chunk_offset()});
+          matches_out.emplace_back(chunk_id, left.chunk_offset());
         }
       } else {
         const auto right = *right_it;
         if ((!CheckForNull || (!left.is_null() && !right.is_null())) && func(left, right)) {
-          matches_out.emplace_back(RowID{chunk_id, left.chunk_offset()});
+          matches_out.emplace_back(chunk_id, left.chunk_offset());
         }
         ++right_it;
       }
