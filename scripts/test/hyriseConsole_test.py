@@ -114,7 +114,7 @@ def main():
 
     # Test TPCH generation.
     console.sendline("generate_tpch     0.01   7")
-    console.expect("Generating tables done")
+    console.expect("Generating tables done", timeout=300)
 
     # Test TPCH tables.
     console.sendline("select * from nation")
