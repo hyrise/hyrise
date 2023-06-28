@@ -12,7 +12,7 @@ inline void set_atomic_max(std::atomic<T>& maximum_value, const T& value) noexce
   while (prev_value < value && !maximum_value.compare_exchange_weak(prev_value, value)) {}
 }
 
-// Specialization for CommitID: Ignore MAX_COMMIT_ID as reserved value.
+// Specialization for CommitID: Ignore MAX_COMMIT_ID as reserved value and treat it like it was unset.
 template <>
 inline void set_atomic_max(std::atomic<CommitID>& maximum_value, const CommitID& value) noexcept {
   auto prev_value = maximum_value.load();

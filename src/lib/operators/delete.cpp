@@ -88,7 +88,7 @@ std::shared_ptr<const Table> Delete::_on_execute(std::shared_ptr<TransactionCont
 void Delete::_on_commit_records(const CommitID commit_id) {
   const auto chunk_count = _referencing_table->chunk_count();
   for (auto referencing_chunk_id = ChunkID{0}; referencing_chunk_id < chunk_count; ++referencing_chunk_id) {
-    const auto referencing_chunk = _referencing_table->get_chunk(referencing_chunk_id);
+    const auto& referencing_chunk = _referencing_table->get_chunk(referencing_chunk_id);
     const auto& referencing_segment =
         static_cast<const ReferenceSegment&>(*referencing_chunk->get_segment(ColumnID{0}));
     const auto referenced_table = referencing_segment.referenced_table();
