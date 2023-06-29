@@ -35,6 +35,16 @@ class WindowFunctionEvaluator : public AbstractReadOnlyOperator {
 
   const std::string& name() const override;
 
+  struct RelevantRowInformation {
+    std::vector<AllTypeVariant> partition_values;
+    std::vector<AllTypeVariant> order_values;
+    AllTypeVariant function_argument;
+    RowID row_id;
+    static bool compare_for_hash_partitioning(const RelevantRowInformation& lhs, const RelevantRowInformation& rhs);
+  };
+
+  using HashPartitionedData = WindowFunctionEvaluator::PerHash<std::vector<RelevantRowInformation>>;
+
  protected:
   std::shared_ptr<const Table> _on_execute() override;
 
@@ -48,11 +58,9 @@ class WindowFunctionEvaluator : public AbstractReadOnlyOperator {
       std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const override;
 
  private:
-  using PartitionedData = std::vector<std::pair<std::vector<AllTypeVariant>, RowID>>;
-
-  PerHash<PartitionedData> partition_and_sort() const;
+  HashPartitionedData partition_and_sort() const;
   template <typename InputColumnType, WindowFunction window_function>
-  void compute_window_function(const PerHash<PartitionedData>& partitioned_data, auto&& emit_computed_value) const;
+  void compute_window_function(const HashPartitionedData& partitioned_data, auto&& emit_computed_value) const;
   template <typename T>
   std::shared_ptr<const Table> annotate_input_table(
       std::vector<std::pair<pmr_vector<T>, pmr_vector<bool>>> segment_data_for_output_column) const;
