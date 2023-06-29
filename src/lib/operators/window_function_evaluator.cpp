@@ -6,6 +6,7 @@
 
 #include "all_type_variant.hpp"
 #include "expression/lqp_column_expression.hpp"
+#include "expression/window_function_expression.hpp"
 #include "hyrise.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/abstract_task.hpp"
@@ -69,14 +70,22 @@ std::shared_ptr<const Table> WindowFunctionEvaluator::_templated_on_execute() {
     segment_data_for_output_column[chunk_id].second.resize(output_length);
   }
 
-  compute_window_function<InputColumnType, window_function>(
-      partitioned_data, [&](RowID row_id, std::optional<OutputColumnType> computed_value) {
-        if (computed_value) {
-          segment_data_for_output_column[row_id.chunk_id].first[row_id.chunk_offset] = std::move(*computed_value);
-        } else {
-          segment_data_for_output_column[row_id.chunk_id].second[row_id.chunk_offset] = true;
-        }
-      });
+  const auto emit_computed_value = [&](RowID row_id, std::optional<OutputColumnType> computed_value) {
+    if (computed_value) {
+      segment_data_for_output_column[row_id.chunk_id].first[row_id.chunk_offset] = std::move(*computed_value);
+    } else {
+      segment_data_for_output_column[row_id.chunk_id].second[row_id.chunk_offset] = true;
+    }
+  };
+
+  switch (choose_computation_strategy<window_function>()) {
+    case ComputationStrategy::OnePass:
+      compute_window_function_one_pass<InputColumnType, window_function>(partitioned_data, emit_computed_value);
+      break;
+    case ComputationStrategy::SegmentTree:
+      compute_window_function_segment_tree<InputColumnType, window_function>(partitioned_data, emit_computed_value);
+      break;
+  }
 
   return annotate_input_table(std::move(segment_data_for_output_column));
 }
@@ -246,7 +255,8 @@ bool WindowFunctionEvaluator::RelevantRowInformation::compare_for_hash_partition
 template <WindowFunction window_function>
 ComputationStrategy WindowFunctionEvaluator::choose_computation_strategy() const {
   const auto& frame = frame_description();
-  const auto is_prefix_frame = frame.type == FrameType::Rows && frame.start.unbounded && !frame.end.unbounded &&
+  const auto is_prefix_frame = frame.type == FrameType::Range && frame.start.unbounded &&
+                               frame.start.type == FrameBoundType::Preceding && !frame.end.unbounded &&
                                frame.end.type == FrameBoundType::CurrentRow;
   if (is_prefix_frame)
     return ComputationStrategy::OnePass;
@@ -287,12 +297,10 @@ void WindowFunctionEvaluator::for_each_partition(std::span<const RelevantRowInfo
 }
 
 template <typename InputColumnType, WindowFunction window_function>
-void WindowFunctionEvaluator::compute_window_function(const HashPartitionedData& partitioned_data,
-                                                      auto&& emit_computed_value) const {
-  const auto& frame = frame_description();
-  using OutputColumnType = typename WindowFunctionTraits<InputColumnType, window_function>::ReturnType;
-
+void WindowFunctionEvaluator::compute_window_function_one_pass(const HashPartitionedData& partitioned_data,
+                                                               auto&& emit_computed_value) const {
   if constexpr (window_function == WindowFunction::Rank) {
+    const auto& frame = frame_description();
     Assert(frame.type == FrameType::Range && frame.start.unbounded && frame.start.type == FrameBoundType::Preceding &&
                !frame.end.unbounded && frame.end.type == FrameBoundType::CurrentRow && frame.end.offset == 0,
            "Rank has Range FrameBounds unbounded Preceding and 0 Current Row.");
@@ -308,8 +316,18 @@ void WindowFunctionEvaluator::compute_window_function(const HashPartitionedData&
         previous_row = &row;
       }
     });
+  } else {
+    Fail("Generalize onepass computation later.");
+  }
+}
 
-  } else if constexpr (UseSegmentTree<OutputColumnType, window_function>) {
+template <typename InputColumnType, WindowFunction window_function>
+void WindowFunctionEvaluator::compute_window_function_segment_tree(const HashPartitionedData& partitioned_data,
+                                                                   auto&& emit_computed_value) const {
+  const auto& frame = frame_description();
+  using OutputColumnType = typename WindowFunctionTraits<InputColumnType, window_function>::ReturnType;
+
+  if constexpr (UseSegmentTree<OutputColumnType, window_function>) {
     Assert(frame.type == FrameType::Rows, "Sum only works with FrameBounds of type Rows");
 
     spawn_and_wait_per_hash(partitioned_data, [&emit_computed_value, &frame](const auto& hash_partition) {
@@ -337,7 +355,7 @@ void WindowFunctionEvaluator::compute_window_function(const HashPartitionedData&
       });
     });
   } else {
-    Fail("Unsupported WindowFunction template instantiation.");
+    Fail("Called compute_window_function_segment_tree with incompatible window function.");
   }
 }
 
