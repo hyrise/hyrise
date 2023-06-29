@@ -13,11 +13,14 @@
 namespace hyrise {
 
 constexpr static auto rank_like_window_functions =
-    std::array{WindowFunction::Rank, WindowFunction::DenseRank, WindowFunction::RowNumber};
+    std::array{WindowFunction::Rank, WindowFunction::DenseRank, WindowFunction::RowNumber, WindowFunction::PercentRank};
+
+constexpr bool is_rank_like(WindowFunction window_function) {
+  return std::ranges::find(rank_like_window_functions, window_function) != rank_like_window_functions.end();
+}
 
 template <WindowFunction window_function>
-concept RankLike = std::ranges::find(rank_like_window_functions, window_function) !=
-rank_like_window_functions.end();
+concept RankLike = is_rank_like(window_function);
 
 constexpr static auto segment_tree_window_functions =
     std::array{WindowFunction::Sum, WindowFunction::Min, WindowFunction::Max};
@@ -43,8 +46,47 @@ struct WindowFunctionCombinator<T, WindowFunction::Rank> {
 
     void update(const WindowFunctionEvaluator::RelevantRowInformation& previous_value,
                 const WindowFunctionEvaluator::RelevantRowInformation& current_value) {
+      ++row_number;
       if (previous_value.order_values != current_value.order_values)
         rank = row_number;
+    }
+  };
+};
+
+template <typename T>
+struct WindowFunctionCombinator<T, WindowFunction::DenseRank> {
+  using ReturnType = typename WindowFunctionTraits<T, WindowFunction::DenseRank>::ReturnType;
+
+  struct OnePassState {
+    ReturnType row_number = 1;
+    ReturnType rank = 1;
+
+    std::optional<ReturnType> current_value() const {
+      return rank;
+    }
+
+    void update(const WindowFunctionEvaluator::RelevantRowInformation& previous_value,
+                const WindowFunctionEvaluator::RelevantRowInformation& current_value) {
+      ++row_number;
+      if (previous_value.order_values != current_value.order_values)
+        ++rank;
+    }
+  };
+};
+
+template <typename T>
+struct WindowFunctionCombinator<T, WindowFunction::RowNumber> {
+  using ReturnType = typename WindowFunctionTraits<T, WindowFunction::RowNumber>::ReturnType;
+
+  struct OnePassState {
+    ReturnType row_number = 1;
+
+    std::optional<ReturnType> current_value() const {
+      return row_number;
+    }
+
+    void update([[maybe_unused]] const WindowFunctionEvaluator::RelevantRowInformation& previous_value,
+                [[maybe_unused]] const WindowFunctionEvaluator::RelevantRowInformation& current_value) {
       ++row_number;
     }
   };

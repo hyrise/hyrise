@@ -92,8 +92,17 @@ std::shared_ptr<const Table> WindowFunctionEvaluator::_templated_on_execute() {
 
 std::shared_ptr<const Table> WindowFunctionEvaluator::_on_execute() {
   const auto window_function = _window_function_expression->window_function;
-  if (window_function == WindowFunction::Rank) {
-    return _templated_on_execute<NullValue, WindowFunction::Rank>();
+  switch (window_function) {
+    case WindowFunction::Rank:
+      return _templated_on_execute<NullValue, WindowFunction::Rank>();
+    case WindowFunction::DenseRank:
+      return _templated_on_execute<NullValue, WindowFunction::DenseRank>();
+    case WindowFunction::RowNumber:
+      return _templated_on_execute<NullValue, WindowFunction::RowNumber>();
+    case WindowFunction::PercentRank:
+      Fail("PercentRank is not supported.");
+    default:
+      Assert(!is_rank_like(window_function), "Unhandled rank-like window function.");
   }
 
   auto result = std::shared_ptr<const Table>();
@@ -272,9 +281,8 @@ WindowFunctionEvaluator::HashPartitionedData WindowFunctionEvaluator::partition_
   const auto function_argument_column_id =
       argument_column_expression ? argument_column_expression->original_column_id : INVALID_COLUMN_ID;
 
-  Assert(function_argument_column_id != INVALID_COLUMN_ID ||
-             _window_function_expression->window_function == WindowFunction::Rank,
-         "Could not extract window function argument, although it was not rank");
+  Assert(function_argument_column_id != INVALID_COLUMN_ID || is_rank_like(_window_function_expression->window_function),
+         "Could not extract window function argument, although it was not rank-like");
 
   return parallel_merge_sort(*input_table, ChunkRange{.start = ChunkID(0), .end = input_table->chunk_count()},
                              _partition_by_column_ids, _order_by_column_ids, function_argument_column_id);
@@ -299,12 +307,7 @@ void WindowFunctionEvaluator::for_each_partition(std::span<const RelevantRowInfo
 template <typename InputColumnType, WindowFunction window_function>
 void WindowFunctionEvaluator::compute_window_function_one_pass(const HashPartitionedData& partitioned_data,
                                                                auto&& emit_computed_value) const {
-  if constexpr (window_function == WindowFunction::Rank) {
-    const auto& frame = frame_description();
-    Assert(frame.type == FrameType::Range && frame.start.unbounded && frame.start.type == FrameBoundType::Preceding &&
-               !frame.end.unbounded && frame.end.type == FrameBoundType::CurrentRow && frame.end.offset == 0,
-           "Rank has Range FrameBounds unbounded Preceding and 0 Current Row.");
-
+  if constexpr (RankLike<window_function>) {
     spawn_and_wait_per_hash(partitioned_data, [&emit_computed_value](const auto& hash_partition) {
       using Traits = WindowFunctionCombinator<InputColumnType, window_function>;
       using State = typename Traits::OnePassState;
@@ -313,16 +316,18 @@ void WindowFunctionEvaluator::compute_window_function_one_pass(const HashPartiti
       const RelevantRowInformation* previous_row = nullptr;
 
       for (const auto& row : hash_partition) {
-        if (previous_row && previous_row->partition_values != row.partition_values)
-          state = State{};
-        else
-          state.update(*previous_row, row);
+        if (previous_row) {
+          if (previous_row->partition_values != row.partition_values)
+            state = State{};
+          else
+            state.update(*previous_row, row);
+        }
         emit_computed_value(row.row_id, state.current_value());
         previous_row = &row;
       }
     });
   } else {
-    Fail("Generalize onepass computation later.");
+    Fail("Unsupported OnePass window function.");
   }
 }
 
