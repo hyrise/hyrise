@@ -306,13 +306,18 @@ void WindowFunctionEvaluator::compute_window_function_one_pass(const HashPartiti
            "Rank has Range FrameBounds unbounded Preceding and 0 Current Row.");
 
     spawn_and_wait_per_hash(partitioned_data, [&emit_computed_value](const auto& hash_partition) {
-      auto current_rank = initial_rank;
+      using Traits = WindowFunctionCombinator<InputColumnType, window_function>;
+      using State = typename Traits::OnePassState;
+      auto state = State{};
+
       const RelevantRowInformation* previous_row = nullptr;
 
       for (const auto& row : hash_partition) {
         if (previous_row && previous_row->partition_values != row.partition_values)
-          current_rank = initial_rank;
-        emit_computed_value(row.row_id, std::make_optional(current_rank++));
+          state = State{};
+        else
+          state.update(*previous_row, row);
+        emit_computed_value(row.row_id, state.current_value());
         previous_row = &row;
       }
     });
