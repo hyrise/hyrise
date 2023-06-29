@@ -182,7 +182,11 @@ std::shared_ptr<AbstractSegment> BinaryParser::_import_segment(std::ifstream& fi
 template <typename T>
 std::shared_ptr<ValueSegment<T>> BinaryParser::_import_value_segment(std::ifstream& file, ChunkOffset row_count,
                                                                      bool column_is_nullable) {
-  auto allocator = PolymorphicAllocator<size_t>{};
+#ifdef HYRISE_WITH_JEMALLOC
+  auto allocator = PolymorphicAllocator<size_t>{&JemallocMemoryResource::get()};
+#else
+  auto allocator = PolymorphicAllocator<size_t>{&LinearBufferResource::get()};
+#endif
   auto pin_guard = AllocatorPinGuard{allocator};
 
   if (column_is_nullable) {

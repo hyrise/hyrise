@@ -41,9 +41,10 @@ JemallocMemoryResource::JemallocMemoryResource() {
   //  * the application.  A force purge will make JEMalloc `madvise(DONTNEED)` these
   //  * pages immediately.
   //  *
-  bool retain_enabled;
-  size_t sz = sizeof(retain_enabled);
-  // Assert(mallctl("opt.retain", &retain_enabled, &sz, NULL, 0), 0, "Unexpected mallctl() failure");
+  //   bool retain_enabled = 0;
+  //   Assert(mallctl("opt.retain", nullptr, nullptr, &retain_enabled, sizeof(retain_enabled)) == 0,
+  //          "Unexpected mallctl() failure");
+
   _hooks.alloc = ResourceExtentHooks::alloc;
   size_t size = sizeof(_arena_index);
   arena_config_t arena_config;
@@ -54,10 +55,10 @@ JemallocMemoryResource::JemallocMemoryResource() {
                  sizeof(arena_config)) == 0,
          "arenas_create_ext failed");
 
-  // ssize_t muzzy_decay_ms = -1;
-  // auto muzzy_decay_cmd = "arena." + std::to_string(_arena_index) + ".muzzy_decay_ms";
-  // Assert(mallctl(muzzy_decay_cmd.c_str(), nullptr, nullptr, (void*)&muzzy_decay_ms, sizeof(muzzy_decay_cmd)) == 0,
-  //        "setting muzzy_decay_ms failed");
+  //   ssize_t muzzy_decay_ms = 1;
+  //   auto muzzy_decay_cmd = "arena." + std::to_string(_arena_index) + ".muzzy_decay_ms";
+  //   Assert(mallctl(muzzy_decay_cmd.c_str(), nullptr, nullptr, (void*)&muzzy_decay_ms, sizeof(muzzy_decay_cmd)) == 0,
+  //          "setting muzzy_decay_ms failed");
 
   ssize_t dirty_decay_ms = -1;
   auto dirty_decay_cmd = "arena." + std::to_string(_arena_index) + ".dirty_decay_ms";
