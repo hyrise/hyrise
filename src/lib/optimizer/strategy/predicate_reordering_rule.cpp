@@ -131,10 +131,10 @@ void PredicateReorderingRule::_reorder_predicates(
   nodes_and_cardinalities.reserve(predicates.size());
   for (const auto& predicate : predicates) {
     predicate->set_left_input(input);
-    // const auto output_cardinality = caching_cardinality_estimator->estimate_cardinality(predicate);
-    const auto cost = caching_cost_estimator->estimate_node_cost(predicate);
+    const auto output_cardinality = caching_cardinality_estimator->estimate_cardinality(predicate);
+    // const auto cost = caching_cost_estimator->estimate_node_cost(predicate);
     // const auto benefit = (input_cardinality - output_cardinality) / (cost - output_cardinality);
-    nodes_and_cardinalities.emplace_back(predicate, cost);
+    nodes_and_cardinalities.emplace_back(predicate, output_cardinality);
   }
 
   // Untie predicates from LQP, so we can freely retie them.
