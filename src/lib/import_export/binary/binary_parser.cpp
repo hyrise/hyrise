@@ -66,7 +66,11 @@ pmr_vector<pmr_string> BinaryParser::_read_string_values(std::ifstream& file, co
   const auto total_length = std::accumulate(string_lengths.cbegin(), string_lengths.cend(), static_cast<size_t>(0));
   const auto buffer = _read_values<char>(file, total_length);
 
+#ifdef HYRISE_WITH_JEMALLOC
   auto allocator = PolymorphicAllocator<size_t>{&JemallocMemoryResource::get()};
+#else
+  auto allocator = PolymorphicAllocator<size_t>{&LinearBufferResource::get()};
+#endif
   auto pin_guard = AllocatorPinGuard{allocator};
   auto values = pmr_vector<pmr_string>{count, allocator};
   auto start = size_t{0};
@@ -259,7 +263,11 @@ std::shared_ptr<LZ4Segment<T>> BinaryParser::_import_lz4_segment(std::ifstream& 
   const auto block_size = _read_value<uint32_t>(file);
   const auto last_block_size = _read_value<uint32_t>(file);
 
+#ifdef HYRISE_WITH_JEMALLOC
   auto allocator = PolymorphicAllocator<size_t>{&JemallocMemoryResource::get()};
+#else
+  auto allocator = PolymorphicAllocator<size_t>{&LinearBufferResource::get()};
+#endif
   auto pin_guard = AllocatorPinGuard{allocator};
   pmr_vector<uint32_t> lz4_block_sizes(_read_values<uint32_t>(file, block_count), allocator);
 

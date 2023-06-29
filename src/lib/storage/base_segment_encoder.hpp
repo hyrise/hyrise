@@ -144,7 +144,11 @@ class SegmentEncoder : public BaseSegmentEncoder {
     const auto iterable = create_any_segment_iterable<ColumnDataType>(*abstract_segment);
 
     // Pin everything in the allocator using the AllocatorPinGuard
+#ifdef HYRISE_WITH_JEMALLOC
     auto allocator = PolymorphicAllocator<ColumnDataType>{&JemallocMemoryResource::get()};
+#else
+    auto allocator = PolymorphicAllocator<ColumnDataType>{&LinearBufferResource::get()};
+#endif
     auto allocator_pin_guard = AllocatorPinGuard{allocator};
     return _self()._on_encode(iterable, allocator);
   }

@@ -20,6 +20,8 @@ class PageMigrationFixture : public benchmark::Fixture {
   std::byte* _mapped_region;
 };
 
+// TODO: Preftech
+
 BENCHMARK_DEFINE_F(PageMigrationFixture, BM_ToNodeMemory)(benchmark::State& state) {
   auto size_type = static_cast<PageSizeType>(state.range(0));
   const auto num_bytes = bytes_for_size_type(size_type);
@@ -78,6 +80,7 @@ BENCHMARK_DEFINE_F(PageMigrationFixture, BM_MovePagesLatency)(benchmark::State& 
   numa_tonode_memory(_mapped_region, VIRT_SIZE, 0);
   std::memset(_mapped_region, 0x1, VIRT_SIZE);
 #endif
+  //__builtin_prefetch
 
   std::vector<void*> pages{};
   pages.resize(num_bytes / OS_PAGE_SIZE);

@@ -29,7 +29,6 @@ struct ResourceExtentHooks {
 };
 
 JemallocMemoryResource::JemallocMemoryResource() {
-  //    Get the number of bytes that could be purged via `purge_all()`.
   //  * JEMalloc holds pages in three states:
   //  *   - active: In use by the application
   //  *   - dirty: Held by JEMalloc for future allocations
@@ -66,15 +65,14 @@ JemallocMemoryResource::JemallocMemoryResource() {
          "setting dirty_decay_ms failed");
 
   // TODO: Maybe add more arenas to reduce contention
-  // retain_grow_limit?
-  _mallocx_flags = MALLOCX_ARENA(_arena_index);
-  // | MALLOCX_TCACHE_NONE;
+  // retain_grow_limit? thread.arena
+  _mallocx_flags = MALLOCX_ARENA(_arena_index) | MALLOCX_TCACHE_NONE;
 }
 
 JemallocMemoryResource::~JemallocMemoryResource() {}
 
 void* JemallocMemoryResource::do_allocate(std::size_t bytes, std::size_t alignment) {
-  // uint32_t arena_idx = tk_thread_get_arena();
+  // TODO:: uint32_t arena_idx = tk_thread_get_arena();
   return mallocx(bytes, _mallocx_flags);
 }
 

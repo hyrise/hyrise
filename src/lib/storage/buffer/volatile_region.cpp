@@ -98,13 +98,7 @@ void VolatileRegion::deallocate(const PageID page_id) {
   std::lock_guard<std::mutex> lock(_mutex);
   // TODO: Assert unlocked and clear
   _free_slots.set(page_id.index);
-  if constexpr (HYRISE_DEBUG) {
-    auto ptr = get_page(page_id);
-    if (mprotect(ptr, bytes_for_size_type(_size_type), PROT_NONE) != 0) {
-      const auto error = errno;
-      Fail("Failed to mprotect: " + strerror(error));
-    }
-  }
+  protect_page(page_id);
 }
 
 Frame* VolatileRegion::get_frame(const PageID page_id) {

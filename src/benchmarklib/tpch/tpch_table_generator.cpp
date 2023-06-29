@@ -10,11 +10,11 @@ extern "C" {
 #include <utility>
 
 #include "benchmark_config.hpp"
+#include "storage/buffer/jemalloc_resource.hpp"
 #include "storage/chunk.hpp"
 #include "storage/constraints/table_key_constraint.hpp"
 #include "table_builder.hpp"
 #include "utils/timer.hpp"
-#include "storage/buffer/jemalloc_resource.hpp"
 
 extern const char** asc_date;  // NOLINT
 extern seed_t seed[];          // NOLINT
@@ -135,7 +135,11 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate
   dbgen_reset_seeds();
   dbgen_init_scale_factor(_scale_factor);
 
+#ifdef HYRISE_WITH_JEMALLOC
   auto allocator = PolymorphicAllocator<size_t>{&JemallocMemoryResource::get()};
+#else
+  auto allocator = PolymorphicAllocator<size_t>{&LinearBufferResource::get()};
+#endif
   auto alloc_pin_guard = AllocatorPinGuard{allocator};
 
   const auto customer_count = static_cast<ChunkOffset>(tdefs[CUST].base * scale);

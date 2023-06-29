@@ -19,9 +19,9 @@ class JemallocMemoryResource : public boost::container::pmr::memory_resource, pu
   void do_deallocate(void* pointer, std::size_t bytes, std::size_t alignment);
   bool do_is_equal(const boost::container::pmr::memory_resource& other) const noexcept;
 
-  unsigned int _arena_index;
 
  private:
+  unsigned int _arena_index;
   extent_hooks_t _hooks{};
   int _mallocx_flags;
 };

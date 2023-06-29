@@ -2,6 +2,7 @@
 
 #include <boost/container/pmr/memory_resource.hpp>
 #include "storage/buffer/buffer_manager.hpp"
+#include "utils/singleton.hpp"
 
 namespace hyrise {
 
@@ -30,7 +31,7 @@ static thread_local LinearBufferResourceState linear_buffer_resource_state = Lin
  * 
  * - Each thread gets its own instance of a LinearBufferResource through Tread-Local Storage with LinearBufferResource *get_monotonic_memory_resource()
 */
-class LinearBufferResource : public boost::container::pmr::memory_resource, public Noncopyable {
+class LinearBufferResource : public boost::container::pmr::memory_resource, public Singleton<LinearBufferResource> {
  public:
   // First page size to be allocated for small allocations is 8 KiB
   static constexpr PageSizeType PAGE_SIZE_TYPE = PageSizeType::KiB256;
