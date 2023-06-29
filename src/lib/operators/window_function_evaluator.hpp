@@ -23,6 +23,8 @@ class WindowFunctionEvaluator : public AbstractReadOnlyOperator {
                           std::vector<ColumnID> init_order_by_column_ids,
                           std::shared_ptr<WindowFunctionExpression> init_window_funtion_expression);
 
+  const std::string& name() const override;
+
   static constexpr auto initial_rank =
       static_cast<typename WindowFunctionTraits<void, WindowFunction::Rank>::ReturnType>(1);
 
@@ -33,17 +35,16 @@ class WindowFunctionEvaluator : public AbstractReadOnlyOperator {
   template <typename T>
   using PerHash = std::array<T, hash_partition_partition_count>;
 
-  const std::string& name() const override;
-
   struct RelevantRowInformation {
     std::vector<AllTypeVariant> partition_values;
     std::vector<AllTypeVariant> order_values;
     AllTypeVariant function_argument;
     RowID row_id;
+
     static bool compare_for_hash_partitioning(const RelevantRowInformation& lhs, const RelevantRowInformation& rhs);
   };
 
-  using HashPartitionedData = WindowFunctionEvaluator::PerHash<std::vector<RelevantRowInformation>>;
+  using HashPartitionedData = PerHash<std::vector<RelevantRowInformation>>;
 
  protected:
   std::shared_ptr<const Table> _on_execute() override;
@@ -64,6 +65,7 @@ class WindowFunctionEvaluator : public AbstractReadOnlyOperator {
   template <typename T>
   std::shared_ptr<const Table> annotate_input_table(
       std::vector<std::pair<pmr_vector<T>, pmr_vector<bool>>> segment_data_for_output_column) const;
+
   const FrameDescription& frame_description() const;
 
   std::vector<ColumnID> _partition_by_column_ids;
