@@ -65,6 +65,9 @@ class WindowFunctionEvaluator : public AbstractReadOnlyOperator {
   HashPartitionedData partition_and_sort() const;
   template <typename InputColumnType, WindowFunction window_function>
   void compute_window_function(const HashPartitionedData& partitioned_data, auto&& emit_computed_value) const;
+
+  static void for_each_partition(std::span<const RelevantRowInformation> hash_partition, auto&& emit_partition_bounds);
+
   template <typename T>
   std::shared_ptr<const Table> annotate_input_table(
       std::vector<std::pair<pmr_vector<T>, pmr_vector<bool>>> segment_data_for_output_column) const;
