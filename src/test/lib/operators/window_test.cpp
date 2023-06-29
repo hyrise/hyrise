@@ -52,14 +52,17 @@ TEST_F(OperatorsWindowTest, Rank) {
   const auto window_funtion_expression =
       rank_(window_(partition_by_expressions, order_by_expressions, sort_modes, std::move(frame_description)));
 
-  const auto partition_by_columns = std::vector<ColumnID>{0};
-  const auto order_by_columns = std::vector<ColumnID>{1};
+  const auto partition_by_columns = std::vector<ColumnID>{ColumnID{0}};
+  const auto order_by_columns = std::vector<ColumnID>{ColumnID{1}};
 
   const auto window_function_operator = std::make_shared<WindowFunctionEvaluator>(
       this->_table_wrapper, partition_by_columns, order_by_columns, window_funtion_expression);
 
   window_function_operator->execute();
   const auto result_table = window_function_operator->get_output();
+
+  std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/windowoperator/rank/input_not_unique_result.tbl");
+  EXPECT_TABLE_EQ_UNORDERED(result_table, expected_result);
 }
 
 }  // namespace hyrise
