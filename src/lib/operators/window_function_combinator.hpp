@@ -8,6 +8,7 @@
 #include "abstract_aggregate_operator.hpp"
 #include "aggregate/window_function_traits.hpp"
 #include "expression/window_function_expression.hpp"
+#include "window_function_evaluator.hpp"
 
 namespace hyrise {
 
@@ -27,6 +28,27 @@ segment_tree_window_functions.end();
 
 template <typename T, WindowFunction window_function>
 struct WindowFunctionCombinator {};
+
+template <typename T>
+struct WindowFunctionCombinator<T, WindowFunction::Rank> {
+  using ReturnType = typename WindowFunctionTraits<T, WindowFunction::Rank>::ReturnType;
+
+  struct OnePassState {
+    ReturnType row_number = 1;
+    ReturnType rank = 1;
+
+    std::optional<ReturnType> current_value() const {
+      return rank;
+    }
+
+    void update(const WindowFunctionEvaluator::RelevantRowInformation& previous_value,
+                const WindowFunctionEvaluator::RelevantRowInformation& current_value) {
+      if (previous_value.order_values != current_value.order_values)
+        rank = row_number;
+      ++row_number;
+    }
+  };
+};
 
 template <typename T>
 struct WindowFunctionCombinator<T, WindowFunction::Sum> {
