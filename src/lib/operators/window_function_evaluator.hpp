@@ -35,6 +35,9 @@ class WindowFunctionEvaluator : public AbstractReadOnlyOperator {
   template <typename T>
   using PerHash = std::array<T, hash_partition_partition_count>;
 
+  template <typename T>
+  static void spawn_and_wait_per_hash(const PerHash<T>& data, auto&& per_hash_function);
+
   struct RelevantRowInformation {
     std::vector<AllTypeVariant> partition_values;
     std::vector<AllTypeVariant> order_values;

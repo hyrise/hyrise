@@ -222,6 +222,17 @@ WindowFunctionEvaluator::HashPartitionedData parallel_merge_sort(const Table& in
 
 }  // namespace
 
+template <typename T>
+void WindowFunctionEvaluator::spawn_and_wait_per_hash(const PerHash<T>& data, auto&& per_hash_function) {
+  auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
+  for (auto hash_value = 0u; hash_value < hash_partition_partition_count; ++hash_value) {
+    tasks.emplace_back(
+        std::make_shared<JobTask>([hash_value, &data, &per_hash_function]() { per_hash_function(data[hash_value]); }));
+  }
+
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
+};
+
 bool WindowFunctionEvaluator::RelevantRowInformation::compare_for_hash_partitioning(const RelevantRowInformation& lhs,
                                                                                     const RelevantRowInformation& rhs) {
   const auto comp_result = lhs.partition_values <=> rhs.partition_values;
@@ -251,17 +262,6 @@ void WindowFunctionEvaluator::compute_window_function(const HashPartitionedData&
   const auto& frame = frame_description();
   using OutputColumnType = typename WindowFunctionTraits<InputColumnType, window_function>::ReturnType;
 
-  const auto spawn_and_wait_per_hash = [&partitioned_data](auto&& per_hash_partition_function) {
-    auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
-    for (auto hash_value = 0u; hash_value < hash_partition_partition_count; ++hash_value) {
-      tasks.emplace_back(std::make_shared<JobTask>([hash_value, &partitioned_data, &per_hash_partition_function]() {
-        per_hash_partition_function(partitioned_data[hash_value]);
-      }));
-    }
-
-    Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
-  };
-
   const auto calculate_partition_bounds = [](std::span<const RelevantRowInformation> hash_partition,
                                              auto&& emit_window_bounds) {
     auto partition_start = static_cast<size_t>(0);
@@ -283,7 +283,7 @@ void WindowFunctionEvaluator::compute_window_function(const HashPartitionedData&
                !frame.end.unbounded && frame.end.type == FrameBoundType::CurrentRow && frame.end.offset == 0,
            "Rank has Range FrameBounds unbounded Preceding and 0 Current Row.");
 
-    spawn_and_wait_per_hash([&emit_computed_value](const auto& hash_partition) {
+    spawn_and_wait_per_hash(partitioned_data, [&emit_computed_value](const auto& hash_partition) {
       auto current_rank = initial_rank;
       const RelevantRowInformation* previous_row = nullptr;
 
@@ -298,7 +298,8 @@ void WindowFunctionEvaluator::compute_window_function(const HashPartitionedData&
   } else if constexpr (UseSegmentTree<OutputColumnType, window_function>) {
     Assert(frame.type == FrameType::Rows, "Sum only works with FrameBounds of type Rows");
 
-    spawn_and_wait_per_hash([&emit_computed_value, &calculate_partition_bounds, &frame](const auto& hash_partition) {
+    spawn_and_wait_per_hash(partitioned_data, [&emit_computed_value, &calculate_partition_bounds,
+                                               &frame](const auto& hash_partition) {
       calculate_partition_bounds(hash_partition, [&](uint64_t partition_start, uint64_t partition_end) {
         std::vector<std::optional<OutputColumnType>> leaf_values(partition_end - partition_start);
         std::transform(hash_partition.begin() + partition_start, hash_partition.begin() + partition_end,
