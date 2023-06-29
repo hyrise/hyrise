@@ -30,7 +30,15 @@ WindowFunctionEvaluator::WindowFunctionEvaluator(
     : AbstractReadOnlyOperator(OperatorType::WindowFunction, input_operator),
       _partition_by_column_ids(std::move(init_partition_by_column_ids)),
       _order_by_column_ids(std::move(init_order_by_column_ids)),
-      _window_function_expression(std::move(init_window_funtion_expression)) {}
+      _window_function_expression(std::move(init_window_funtion_expression)) {
+  const auto argument_column_expression =
+      std::dynamic_pointer_cast<LQPColumnExpression>(_window_function_expression->argument());
+  _function_argument_column_id =
+      argument_column_expression ? argument_column_expression->original_column_id : INVALID_COLUMN_ID;
+  Assert(
+      _function_argument_column_id != INVALID_COLUMN_ID || is_rank_like(_window_function_expression->window_function),
+      "Could not extract window function argument, although it was not rank-like");
+}
 
 const std::string& WindowFunctionEvaluator::name() const {
   static const auto name = std::string{"WindowFunctionEvaluator"};
@@ -274,18 +282,15 @@ ComputationStrategy WindowFunctionEvaluator::choose_computation_strategy() const
   return ComputationStrategy::SegmentTree;
 }
 
+bool WindowFunctionEvaluator::is_output_nullable() const {
+  return !is_rank_like(_window_function_expression->window_function) &&
+         left_input_table()->column_is_nullable(_function_argument_column_id);
+}
+
 WindowFunctionEvaluator::HashPartitionedData WindowFunctionEvaluator::partition_and_sort() const {
   const auto input_table = left_input_table();
-  const auto argument_column_expression =
-      std::dynamic_pointer_cast<LQPColumnExpression>(_window_function_expression->argument());
-  const auto function_argument_column_id =
-      argument_column_expression ? argument_column_expression->original_column_id : INVALID_COLUMN_ID;
-
-  Assert(function_argument_column_id != INVALID_COLUMN_ID || is_rank_like(_window_function_expression->window_function),
-         "Could not extract window function argument, although it was not rank-like");
-
   return parallel_merge_sort(*input_table, ChunkRange{.start = ChunkID(0), .end = input_table->chunk_count()},
-                             _partition_by_column_ids, _order_by_column_ids, function_argument_column_id);
+                             _partition_by_column_ids, _order_by_column_ids, _function_argument_column_id);
 }
 
 void WindowFunctionEvaluator::for_each_partition(std::span<const RelevantRowInformation> hash_partition,
@@ -379,16 +384,20 @@ std::shared_ptr<const Table> WindowFunctionEvaluator::annotate_input_table(
 
   const auto new_column_name = _window_function_expression->as_column_name();
   const auto new_column_type = _window_function_expression->data_type();
-  const auto new_column_definition = TableColumnDefinition(new_column_name, new_column_type,
-                                                           _window_function_expression->is_nullable_on_lqp(*lqp_node));
+  const auto new_column_definition = TableColumnDefinition(new_column_name, new_column_type, is_output_nullable());
 
   // Create value segments for our output column.
   std::vector<std::shared_ptr<AbstractSegment>> value_segments_for_new_column;
   value_segments_for_new_column.reserve(chunk_count);
   for (auto chunk_id = ChunkID(0); chunk_id < chunk_count; ++chunk_id) {
-    value_segments_for_new_column.emplace_back(
-        std::make_shared<ValueSegment<T>>(std::move(segment_data_for_output_column[chunk_id].first),
-                                          std::move(segment_data_for_output_column[chunk_id].second)));
+    if (is_output_nullable()) {
+      value_segments_for_new_column.emplace_back(
+          std::make_shared<ValueSegment<T>>(std::move(segment_data_for_output_column[chunk_id].first),
+                                            std::move(segment_data_for_output_column[chunk_id].second)));
+    } else {
+      value_segments_for_new_column.emplace_back(
+          std::make_shared<ValueSegment<T>>(std::move(segment_data_for_output_column[chunk_id].first)));
+    }
   }
 
   auto outputted_segments_for_new_column = std::vector<std::shared_ptr<AbstractSegment>>{};
