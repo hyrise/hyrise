@@ -49,6 +49,14 @@ class WindowFunctionEvaluator : public AbstractReadOnlyOperator {
 
   using HashPartitionedData = PerHash<std::vector<RelevantRowInformation>>;
 
+  enum class ComputationStrategy {
+    OnePass,
+    SegmentTree,
+  };
+
+  template <WindowFunction window_function>
+  ComputationStrategy choose_computation_strategy() const;
+
  protected:
   std::shared_ptr<const Table> _on_execute() override;
 

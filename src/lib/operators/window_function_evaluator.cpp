@@ -20,6 +20,8 @@
 
 namespace hyrise {
 
+using ComputationStrategy = WindowFunctionEvaluator::ComputationStrategy;
+
 WindowFunctionEvaluator::WindowFunctionEvaluator(
     const std::shared_ptr<const AbstractOperator>& input_operator, std::vector<ColumnID> init_partition_by_column_ids,
     std::vector<ColumnID> init_order_by_column_ids,
@@ -239,6 +241,18 @@ bool WindowFunctionEvaluator::RelevantRowInformation::compare_for_hash_partition
   if (std::is_neq(comp_result))
     return std::is_lt(comp_result);
   return lhs.order_values < rhs.order_values;
+}
+
+template <WindowFunction window_function>
+ComputationStrategy WindowFunctionEvaluator::choose_computation_strategy() const {
+  const auto& frame = frame_description();
+  const auto is_prefix_frame = frame.type == FrameType::Rows && frame.start.unbounded && !frame.end.unbounded &&
+                               frame.end.type == FrameBoundType::CurrentRow;
+  if (is_prefix_frame)
+    return ComputationStrategy::OnePass;
+
+  Assert(!RankLike<window_function>, "Invalid frame for rank-like window function.");
+  return ComputationStrategy::SegmentTree;
 }
 
 WindowFunctionEvaluator::HashPartitionedData WindowFunctionEvaluator::partition_and_sort() const {

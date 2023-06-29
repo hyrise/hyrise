@@ -7,8 +7,16 @@
 
 #include "abstract_aggregate_operator.hpp"
 #include "aggregate/window_function_traits.hpp"
+#include "expression/window_function_expression.hpp"
 
 namespace hyrise {
+
+constexpr static auto rank_like_window_functions =
+    std::array{WindowFunction::Rank, WindowFunction::DenseRank, WindowFunction::RowNumber};
+
+template <WindowFunction window_function>
+concept RankLike = std::ranges::find(rank_like_window_functions, window_function) !=
+rank_like_window_functions.end();
 
 constexpr static auto segment_tree_window_functions =
     std::array{WindowFunction::Sum, WindowFunction::Min, WindowFunction::Max};
