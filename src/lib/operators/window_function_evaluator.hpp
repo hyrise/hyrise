@@ -57,6 +57,8 @@ class WindowFunctionEvaluator : public AbstractReadOnlyOperator {
   template <WindowFunction window_function>
   ComputationStrategy choose_computation_strategy() const;
 
+  bool is_output_nullable() const;
+
  protected:
   std::shared_ptr<const Table> _on_execute() override;
 
@@ -65,7 +67,7 @@ class WindowFunctionEvaluator : public AbstractReadOnlyOperator {
 
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
   std::shared_ptr<AbstractOperator> _on_deep_copy(
-      const std::shared_ptr<AbstractOperator>& copied_left_input,
+      const std::shared_ptr<AbstractOperator>& copiis_output_nullableed_left_input,
       const std::shared_ptr<AbstractOperator>& copied_right_input,
       std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const override;
 
@@ -88,6 +90,7 @@ class WindowFunctionEvaluator : public AbstractReadOnlyOperator {
 
   std::vector<ColumnID> _partition_by_column_ids;
   std::vector<ColumnID> _order_by_column_ids;
+  ColumnID _function_argument_column_id;
   std::shared_ptr<WindowFunctionExpression> _window_function_expression;
 };
 
