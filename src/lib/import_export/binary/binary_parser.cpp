@@ -205,7 +205,11 @@ std::shared_ptr<ValueSegment<T>> BinaryParser::_import_value_segment(std::ifstre
 template <typename T>
 std::shared_ptr<DictionarySegment<T>> BinaryParser::_import_dictionary_segment(std::ifstream& file,
                                                                                ChunkOffset row_count) {
-  auto allocator = PolymorphicAllocator<size_t>{};
+#ifdef HYRISE_WITH_JEMALLOC
+  auto allocator = PolymorphicAllocator<size_t>{&JemallocMemoryResource::get()};
+#else
+  auto allocator = PolymorphicAllocator<size_t>{&LinearBufferResource::get()};
+#endif
   auto pin_guard = AllocatorPinGuard{allocator};
 
   const auto compressed_vector_type_id = _read_value<CompressedVectorTypeID>(file);

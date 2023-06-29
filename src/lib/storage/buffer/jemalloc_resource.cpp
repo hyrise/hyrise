@@ -17,16 +17,51 @@ using arena_config_t = struct arena_config_s;
 
 namespace hyrise {
 
-struct ResourceExtentHooks {
-  static void* alloc(extent_hooks_t* extent_hooks, void* new_addr, size_t size, size_t alignment, bool* zero,
-                     bool* commit, unsigned arena_index) {
-    return Hyrise::get().buffer_manager.do_allocate(size, alignment);
-  }
+static void* alloc(extent_hooks_t* extent_hooks, void* new_addr, size_t size, size_t alignment, bool* zero,
+                   bool* commit, unsigned arena_index) {
+  return Hyrise::get().buffer_manager.do_allocate(size, alignment);
+}
 
-  // static bool dalloc(extent_hooks_t* extent_hooks, void* ptr, size_t size, bool committed, unsigned arena_index) {
-  //   Hyrise::get().buffer_manager.do_deallocate(ptr, size, std::max_align_t);
-  // }
-};
+bool extent_dalloc(extent_hooks_t* extent_hooks, void* addr, size_t size, bool committed, unsigned arena_ind) {
+  return true;
+}
+
+static void extent_destroy(extent_hooks_t* extent_hooks, void* addr, size_t size, bool committed, unsigned arena_ind) {}
+
+static bool extent_commit(extent_hooks_t* extent_hooks, void* addr, size_t size, size_t offset, size_t length,
+                          unsigned arena_ind) {
+  return true;
+}
+
+static bool extent_purge_lazy(extent_hooks_t* extent_hooks, void* addr, size_t size, size_t offset, size_t length,
+                              unsigned arena_ind) {
+  return true;
+}
+
+static bool extent_purge(extent_hooks_t* extent_hooks, void* addr, size_t size, size_t offset, size_t length,
+                         unsigned arena_ind) {
+  return true;
+}
+
+static bool extent_split(extent_hooks_t* /*extent_hooks*/, void* /*addr*/, size_t /*size*/, size_t /*sizea*/,
+                         size_t /*sizeb*/, bool /*committed*/, unsigned /*arena_ind*/) {
+  return false;
+}
+
+static bool extent_merge(extent_hooks_t* /*extent_hooks*/, void* /*addra*/, size_t /*sizea*/, void* /*addrb*/,
+                         size_t /*sizeb*/, bool /*committed*/, unsigned /*arena_ind*/) {
+  return false;
+}
+
+static extent_hooks_t s_hooks{alloc,
+                              extent_dalloc,   // dalloc
+                              extent_destroy,  // destroy
+                              extent_commit,
+                              nullptr,            // decommit
+                              extent_purge_lazy,  // purge_lazy
+                              extent_purge,       // purge_forced
+                              extent_split,
+                              extent_merge};
 
 JemallocMemoryResource::JemallocMemoryResource() {
   //  * JEMalloc holds pages in three states:
@@ -45,11 +80,10 @@ JemallocMemoryResource::JemallocMemoryResource() {
   //   Assert(mallctl("opt.retain", nullptr, nullptr, &retain_enabled, sizeof(retain_enabled)) == 0,
   //          "Unexpected mallctl() failure");
 
-  _hooks.alloc = ResourceExtentHooks::alloc;
   size_t size = sizeof(_arena_index);
   arena_config_t arena_config;
   arena_config.metadata_use_hooks = false;
-  arena_config.extent_hooks = &_hooks;
+  arena_config.extent_hooks = &s_hooks;
 
   Assert(mallctl("experimental.arenas_create_ext", static_cast<void*>(&_arena_index), &size, &arena_config,
                  sizeof(arena_config)) == 0,
@@ -67,7 +101,7 @@ JemallocMemoryResource::JemallocMemoryResource() {
 
   // TODO: Maybe add more arenas to reduce contention
   // retain_grow_limit? thread.arena
-  _mallocx_flags = MALLOCX_ARENA(_arena_index) | MALLOCX_TCACHE_NONE;
+  _mallocx_flags = MALLOCX_ARENA(_arena_index);
 }
 
 JemallocMemoryResource::~JemallocMemoryResource() {}

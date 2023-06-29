@@ -1,8 +1,6 @@
 #pragma once
 
 #ifdef HYRISE_WITH_JEMALLOC
-#include <jemalloc/jemalloc.h>
-
 #include <boost/container/pmr/memory_resource.hpp>
 #include <utils/singleton.hpp>
 
@@ -22,7 +20,6 @@ class JemallocMemoryResource : public boost::container::pmr::memory_resource, pu
 
  private:
   unsigned int _arena_index;
-  extent_hooks_t _hooks{};
   int _mallocx_flags;
 };
 }  // namespace hyrise

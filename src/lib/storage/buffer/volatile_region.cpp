@@ -15,12 +15,14 @@ VolatileRegion::VolatileRegion(const PageSizeType size_type, std::byte* region_s
       _region_start(region_start),
       _region_end(region_end),
       _frames(std::min(INITIAL_SLOTS_PER_REGION, (region_end - region_start) / bytes_for_size_type(size_type))),
-      _free_slots(_frames.size()),
+      _free_slots(std::min(INITIAL_SLOTS_PER_REGION, (region_end - region_start) / bytes_for_size_type(size_type))),
       _metrics(metrics) {
   DebugAssertPageAligned(region_start);
   DebugAssert(region_start < region_end, "Region is too small");
   DebugAssert(static_cast<size_t>(region_end - region_start) < DEFAULT_RESERVED_VIRTUAL_MEMORY,
               "Region start and end dont match");
+  DebugAssert(_frames.size() > 0, "Region is too small");
+  DebugAssert(_free_slots.size() > 0, "Region is too small");
   _free_slots.set();
   if constexpr (ENABLE_MPROTECT) {
     if (mprotect(region_start, region_end - region_start, PROT_NONE) != 0) {
@@ -70,7 +72,7 @@ std::pair<PageID, std::byte*> VolatileRegion::allocate() {
   auto idx = PageID::PageIDType{0};
   {
     std::lock_guard<std::mutex> lock(_mutex);
-    DebugAssert(_free_slots.any(), "No free slots available in region. TODO: Expand until end of region");
+    Assert(_free_slots.any(), "No free slots available in region. TODO: Expand until end of region");
     idx = _free_slots.find_first();
     _free_slots.reset(idx);
   }

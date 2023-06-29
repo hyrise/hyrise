@@ -23,7 +23,7 @@ inline std::size_t get_os_page_size() {
 
 #ifdef __APPLE__
 constexpr size_t OS_PAGE_SIZE = 16384;
-enum class PageSizeType { KiB16, KiB32, KiB64, KiB128, KiB256, KiB512, Kib1024 };
+enum class PageSizeType { KiB16, KiB32, KiB64, KiB128, KiB256, KiB512, MiB1, MiB2 };
 #elif __linux__
 constexpr size_t OS_PAGE_SIZE = 8192;
 enum class PageSizeType { KiB8, KiB16, KiB32, KiB64, KiB128, KiB256, KiB512, MiB1, MiB2 };
@@ -130,7 +130,7 @@ constexpr size_t DEFAULT_RESERVED_VIRTUAL_MEMORY_PER_REGION = (DEFAULT_RESERVED_
                                                               bytes_for_size_type(MAX_PAGE_SIZE_TYPE) *
                                                               bytes_for_size_type(MAX_PAGE_SIZE_TYPE);
 
-constexpr size_t INITIAL_SLOTS_PER_REGION = 900000;  // TODO
+constexpr size_t INITIAL_SLOTS_PER_REGION = 10000000;  // TODO
 
 // Hints the buffer manager about the access intent of the caller. AccessIntent.Write is usually used during allocations for example.
 enum class AccessIntent { Read, Write };
