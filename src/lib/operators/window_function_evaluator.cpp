@@ -256,27 +256,27 @@ WindowFunctionEvaluator::HashPartitionedData WindowFunctionEvaluator::partition_
                              _partition_by_column_ids, _order_by_column_ids, function_argument_column_id);
 }
 
+void WindowFunctionEvaluator::for_each_partition(std::span<const RelevantRowInformation> hash_partition,
+                                                 auto&& emit_partition_bounds) {
+  auto partition_start = static_cast<size_t>(0);
+
+  while (partition_start < hash_partition.size()) {
+    const auto partition_end = std::distance(
+        hash_partition.begin(), std::find_if(hash_partition.begin() + static_cast<ssize_t>(partition_start),
+                                             hash_partition.end(), [&](const auto& next_element) {
+                                               return hash_partition[partition_start].partition_values !=
+                                                      next_element.partition_values;
+                                             }));
+    emit_partition_bounds(partition_start, partition_end);
+    partition_start = partition_end;
+  }
+}
+
 template <typename InputColumnType, WindowFunction window_function>
 void WindowFunctionEvaluator::compute_window_function(const HashPartitionedData& partitioned_data,
                                                       auto&& emit_computed_value) const {
   const auto& frame = frame_description();
   using OutputColumnType = typename WindowFunctionTraits<InputColumnType, window_function>::ReturnType;
-
-  const auto calculate_partition_bounds = [](std::span<const RelevantRowInformation> hash_partition,
-                                             auto&& emit_window_bounds) {
-    auto partition_start = static_cast<size_t>(0);
-
-    while (partition_start < hash_partition.size()) {
-      const auto partition_end = std::distance(
-          hash_partition.begin(), std::find_if(hash_partition.begin() + static_cast<ssize_t>(partition_start),
-                                               hash_partition.end(), [&](const auto& next_element) {
-                                                 return hash_partition[partition_start].partition_values !=
-                                                        next_element.partition_values;
-                                               }));
-      emit_window_bounds(partition_start, partition_end);
-      partition_start = partition_end;
-    }
-  };
 
   if constexpr (window_function == WindowFunction::Rank) {
     Assert(frame.type == FrameType::Range && frame.start.unbounded && frame.start.type == FrameBoundType::Preceding &&
@@ -298,9 +298,8 @@ void WindowFunctionEvaluator::compute_window_function(const HashPartitionedData&
   } else if constexpr (UseSegmentTree<OutputColumnType, window_function>) {
     Assert(frame.type == FrameType::Rows, "Sum only works with FrameBounds of type Rows");
 
-    spawn_and_wait_per_hash(partitioned_data, [&emit_computed_value, &calculate_partition_bounds,
-                                               &frame](const auto& hash_partition) {
-      calculate_partition_bounds(hash_partition, [&](uint64_t partition_start, uint64_t partition_end) {
+    spawn_and_wait_per_hash(partitioned_data, [&emit_computed_value, &frame](const auto& hash_partition) {
+      for_each_partition(hash_partition, [&](uint64_t partition_start, uint64_t partition_end) {
         std::vector<std::optional<OutputColumnType>> leaf_values(partition_end - partition_start);
         std::transform(hash_partition.begin() + partition_start, hash_partition.begin() + partition_end,
                        leaf_values.begin(), [](const auto& row) -> std::optional<OutputColumnType> {
