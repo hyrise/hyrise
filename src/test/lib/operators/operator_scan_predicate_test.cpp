@@ -97,7 +97,7 @@ TEST_F(OperatorScanPredicateTest, OutputToStream) {
     for (const auto& predicate : *operator_predicates) {
       actual << predicate << '\n';
     }
-    ASSERT_EQ(actual.str(), expected);
+    EXPECT_EQ(actual.str(), expected);
     actual.str("");
   }
 }
