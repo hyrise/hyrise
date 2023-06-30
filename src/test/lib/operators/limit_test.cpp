@@ -155,7 +155,7 @@ TEST_F(OperatorsLimitTest, OnlyIntegralTypes) {
   EXPECT_THROW(limit_float->execute(), std::logic_error);
 }
 
-TEST_F(OperatorsLimitTest, GetName) {
+TEST_F(OperatorsLimitTest, Name) {
   const auto limit = std::make_shared<Limit>(_table_wrapper, value_(2));
   EXPECT_EQ(limit->name(), std::string{"Limit"});
 }

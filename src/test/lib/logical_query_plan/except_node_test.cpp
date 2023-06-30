@@ -62,7 +62,7 @@ TEST_F(ExceptNodeTest, NonTrivialFunctionalDependencies) {
   _mock_node1->set_non_trivial_functional_dependencies(non_trivial_dependencies);
 
   EXPECT_EQ(_except_node->non_trivial_functional_dependencies(), non_trivial_dependencies);
-  // Also works if right_input is not set
+  // Also works if right_input is not set.
   EXPECT_EQ(_except_node_without_right_input->non_trivial_functional_dependencies(), non_trivial_dependencies);
 }
 
