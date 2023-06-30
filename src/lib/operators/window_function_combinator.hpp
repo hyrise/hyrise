@@ -94,14 +94,28 @@ struct WindowFunctionCombinator<T, WindowFunction::RowNumber> {
 
 template <typename T>
 struct WindowFunctionCombinator<T, WindowFunction::Sum> {
-  using Combine = decltype([](std::optional<typename WindowFunctionTraits<T, WindowFunction::Sum>::ReturnType> lhs,
-                              std::optional<typename WindowFunctionTraits<T, WindowFunction::Sum>::ReturnType> rhs)
-                               -> std::optional<typename WindowFunctionTraits<T, WindowFunction::Sum>::ReturnType> {
-    if (!lhs && !rhs)
-      return std::nullopt;
-    return lhs.value_or(0) + rhs.value_or(0);
-  });
+  using ReturnType = typename WindowFunctionTraits<T, WindowFunction::Sum>::ReturnType;
+
+  using Combine =
+      decltype([](std::optional<ReturnType> lhs, std::optional<ReturnType> rhs) -> std::optional<ReturnType> {
+        if (!lhs && !rhs)
+          return std::nullopt;
+        return lhs.value_or(0) + rhs.value_or(0);
+      });
   constexpr static auto neutral_element = std::optional<T>();
+
+  struct OnePassState {
+    std::optional<ReturnType> sum{};
+
+    std::optional<ReturnType> current_value() const {
+      return sum;
+    }
+
+    void update([[maybe_unused]] const WindowFunctionEvaluator::RelevantRowInformation& previous_value,
+                const WindowFunctionEvaluator::RelevantRowInformation& current_value) {
+      sum = Combine{}(sum, current_value.function_argument);
+    }
+  };
 };
 
 template <typename T>
