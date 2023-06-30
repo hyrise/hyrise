@@ -63,8 +63,8 @@ TEST_F(EntireChunkPosListTest, AddAfterMatchedAllTest) {
 }
 
 TEST_F(EntireChunkPosListTest, InsertDoesNotAffectIterators) {
-  // This checks if the EntireChunkPosList correctly handles Iterators, after rows are added
-  // to the table. These added rows should not be contained in the PosList.
+  // This checks that the EntireChunkPosList does not change its iterators after rows were added to the table. These
+  // added rows should not be contained in the PosList.
 
   const auto table = Table::create_dummy_table({{"a", DataType::Int, false}});
   table->append({int32_t{1}});
