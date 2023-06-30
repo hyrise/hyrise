@@ -44,6 +44,8 @@ class WindowFunctionEvaluator : public AbstractReadOnlyOperator {
     AllTypeVariant function_argument;
     RowID row_id;
 
+    static auto compare_with_null_equal(const AllTypeVariant& lhs, const AllTypeVariant& rhs);
+    static auto compare_with_null_equal(std::span<const AllTypeVariant> lhs, std::span<const AllTypeVariant> rhs);
     static bool compare_for_hash_partitioning(const RelevantRowInformation& lhs, const RelevantRowInformation& rhs);
   };
 

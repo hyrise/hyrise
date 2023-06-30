@@ -261,12 +261,35 @@ void WindowFunctionEvaluator::spawn_and_wait_per_hash(const PerHash<T>& data, au
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
 };
 
+auto WindowFunctionEvaluator::RelevantRowInformation::compare_with_null_equal(const AllTypeVariant& lhs,
+                                                                              const AllTypeVariant& rhs) {
+  if (variant_is_null(lhs) && variant_is_null(rhs))
+    return std::partial_ordering::equivalent;
+  if (variant_is_null(lhs))
+    return std::partial_ordering::less;
+  if (variant_is_null(rhs))
+    return std::partial_ordering::greater;
+  if (lhs < rhs)
+    return std::partial_ordering::less;
+  if (lhs == rhs)
+    return std::partial_ordering::equivalent;
+  return std::partial_ordering::greater;
+}
+
+auto WindowFunctionEvaluator::RelevantRowInformation::compare_with_null_equal(std::span<const AllTypeVariant> lhs,
+                                                                              std::span<const AllTypeVariant> rhs) {
+  return std::lexicographical_compare_three_way(lhs.begin(), lhs.end(), rhs.begin(), rhs.end(),
+                                                [](const auto& lhs_element, const auto& rhs_element) {
+                                                  return compare_with_null_equal(lhs_element, rhs_element);
+                                                });
+}
+
 bool WindowFunctionEvaluator::RelevantRowInformation::compare_for_hash_partitioning(const RelevantRowInformation& lhs,
                                                                                     const RelevantRowInformation& rhs) {
-  const auto comp_result = lhs.partition_values <=> rhs.partition_values;
+  const auto comp_result = compare_with_null_equal(lhs.partition_values, rhs.partition_values);
   if (std::is_neq(comp_result))
     return std::is_lt(comp_result);
-  return lhs.order_values < rhs.order_values;
+  return std::is_lt(compare_with_null_equal(lhs.order_values, rhs.order_values));
 }
 
 template <WindowFunction window_function>
@@ -299,11 +322,12 @@ void WindowFunctionEvaluator::for_each_partition(std::span<const RelevantRowInfo
 
   while (partition_start < hash_partition.size()) {
     const auto partition_end = std::distance(
-        hash_partition.begin(), std::find_if(hash_partition.begin() + static_cast<ssize_t>(partition_start),
-                                             hash_partition.end(), [&](const auto& next_element) {
-                                               return hash_partition[partition_start].partition_values !=
-                                                      next_element.partition_values;
-                                             }));
+        hash_partition.begin(),
+        std::find_if(hash_partition.begin() + static_cast<ssize_t>(partition_start) + 1, hash_partition.end(),
+                     [&](const auto& next_element) {
+                       return std::is_neq(RelevantRowInformation::compare_with_null_equal(
+                           hash_partition[partition_start].partition_values, next_element.partition_values));
+                     }));
     emit_partition_bounds(partition_start, partition_end);
     partition_start = partition_end;
   }
@@ -322,7 +346,8 @@ void WindowFunctionEvaluator::compute_window_function_one_pass(const HashPartiti
 
       for (const auto& row : hash_partition) {
         if (previous_row) {
-          if (previous_row->partition_values != row.partition_values)
+          if (std::is_neq(RelevantRowInformation::compare_with_null_equal(previous_row->partition_values,
+                                                                          row.partition_values)))
             state = State{};
           else
             state.update(*previous_row, row);

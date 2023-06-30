@@ -253,6 +253,8 @@ SELECT id, MAX(c) OVER (PARTITION BY a ORDER BY b ROWS BETWEEN 3 PRECEDING AND 1
 SELECT id, RANK() OVER (PARTITION BY a ORDER BY b) AS r FROM mixed
 SELECT id, DENSE_RANK() OVER (PARTITION BY a ORDER BY b) AS r FROM mixed
 SELECT id, ROW_NUMBER() OVER (PARTITION BY a ORDER BY b) AS r FROM mixed
+-- partition on nullable column
+SELECT a, b, RANK() OVER (PARTITION BY b ORDER BY a) AS r FROM mixed_null
 
 -- Aggregates
 SELECT SUM(b + b) AS sum_b_b FROM mixed;
