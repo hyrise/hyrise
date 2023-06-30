@@ -258,7 +258,7 @@ TEST_F(OperatorTaskTest, NotExecutedOperatorTaskCannotBeSkipped) {
   EXPECT_THROW(task->skip_operator_task(), std::logic_error);
 }
 
-TEST_F(OperatorTaskTest, NotSkipOperatorTaskWithMultiOwners) {
+TEST_F(OperatorTaskTest, DoNotSkipOperatorTaskWithMultiOwners) {
   const auto table = std::make_shared<GetTable>("table_a");
   table->execute();
 
