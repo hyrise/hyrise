@@ -80,7 +80,7 @@ TEST_F(EntireChunkPosListTest, AfterAddCheckIterators) {
   // One row has been added to the table.
   EXPECT_EQ(table->chunk_count(), 1);
   EXPECT_EQ(table->row_count(), 4);
-  // Newly added rows are not in the position list
+  // Newly added rows are not in the position list.
   EXPECT_EQ(entire_chunk_pos_list->begin().dereference().chunk_offset, 0);
   EXPECT_EQ(entire_chunk_pos_list->size(), 3);
   EXPECT_EQ(entire_chunk_pos_list->begin().distance_to(entire_chunk_pos_list->end()), 3);
