@@ -5,11 +5,17 @@
 
 import json
 import matplotlib.pyplot as plt
+import matplotlib.ticker as mplticker
 import pandas as pd
 import sys
 
+
 benchmarks = []
 rule_benchmarks = []
+
+y_ticks = [x / 5 for x in range(6)]
+y_tick_labels = [f"{x:,.0%}" for x in y_ticks]
+
 
 if len(sys.argv) != 2:
     exit("Usage: " + sys.argv[0] + " benchmark.json")
@@ -44,8 +50,6 @@ for benchmark_json in data["benchmarks"]:
 
                 if statement["optimizer_rule_durations"]:
                     for rule_name, rule_duration in statement["optimizer_rule_durations"].items():
-                        # crop typeid().name down to the actual rule name. This might be compiler dependent
-                        rule_name = rule_name[11:-1]
                         if rule_name not in sum_optimizer_rule_durations:
                             sum_optimizer_rule_durations[rule_name] = rule_duration
                         else:
@@ -77,12 +81,14 @@ print(benchmark_df)
 
 plt.figure()
 ax = benchmark_df.plot.bar(x="Benchmark", stacked=True)
-ax.set_ylabel("Share of query run time")
-ax.set_yticklabels(["{:,.0%}".format(x) for x in ax.get_yticks()])
+ax.set_ylabel("Share of Query Runtime")
+
+ax.yaxis.set_major_locator(mplticker.FixedLocator(y_ticks))
+ax.set_yticklabels(y_tick_labels)
 
 # Reverse legend so that it matches the stacked bars
 handles, labels = ax.get_legend_handles_labels()
-ax.legend(reversed(handles), reversed(labels), bbox_to_anchor=(1.0, 1.0))
+ax.legend(reversed(handles), reversed(labels), bbox_to_anchor=(0.5, 1.05), loc="lower center", ncols=2)
 
 # Add total runtime to labels
 xlabels = ax.get_xticklabels()
@@ -92,13 +98,14 @@ ax.set_xticklabels(xlabels)
 
 basename = sys.argv[1].replace(".json", "")
 plt.tight_layout()
-plt.savefig(basename + "_breakdown.png")
+plt.savefig(basename + "_breakdown.pdf")
 
 rule_benchmark_df = pd.DataFrame(rule_benchmarks, columns=["Benchmark"] + list(sum_optimizer_rule_durations.keys()))
 # sort optimizer rules
 rule_benchmark_df = rule_benchmark_df.reindex(
     columns=[rule_benchmark_df.columns[0]] + sorted(rule_benchmark_df.columns[1:], key=str.casefold, reverse=True)
 )
+
 # summing up the runtimes from all rules for each query
 optimizer_total_time = rule_benchmark_df.iloc[:, 1:].apply(lambda x: x.sum(), axis=1)
 # Normalize data from nanoseconds to percentage of total cost
@@ -108,7 +115,7 @@ rule_benchmark_df.iloc[:, 1:] = rule_benchmark_df.iloc[:, 1:].apply(lambda x: x 
 rule_benchmark_df.insert(0, "Other Rules", 0)
 threshold = 0.05
 for index, benchmark in rule_benchmark_df[sum_optimizer_rule_durations.keys()].iterrows():
-    for rule_name, rule_duration in benchmark.iteritems():
+    for rule_name, rule_duration in benchmark.items():
         if rule_duration < threshold:
             rule_benchmark_df.loc[index, "Other Rules"] += rule_duration
             rule_benchmark_df.loc[index, rule_name] = None
@@ -116,13 +123,14 @@ rule_benchmark_df.dropna(how="all", axis=1, inplace=True)
 
 plt.figure()
 ax = rule_benchmark_df.plot.bar(x="Benchmark", stacked=True)
-ax.set_ylabel("Share of optimizer run time")
+ax.set_ylabel("Share of Optimizer Runtime")
 
-ax.set_yticklabels(["{:,.0%}".format(x) for x in ax.get_yticks()])
+ax.yaxis.set_major_locator(mplticker.FixedLocator(y_ticks))
+ax.set_yticklabels(y_tick_labels)
 
 # Reverse legend so that it matches the stacked bars
 handles, labels = ax.get_legend_handles_labels()
-ax.legend(reversed(handles), reversed(labels), bbox_to_anchor=(1.0, 1.0))
+ax.legend(reversed(handles), reversed(labels), bbox_to_anchor=(0.5, 1.05), loc="lower center", ncols=2)
 
 # Add total runtime to labels
 xlabels = ax.get_xticklabels()
@@ -131,4 +139,4 @@ for label_id, label in enumerate(xlabels):
 ax.set_xticklabels(xlabels)
 
 plt.tight_layout()
-plt.savefig(basename + "_optimizer_breakdown.png")
+plt.savefig(basename + "_optimizer_breakdown.pdf")

@@ -155,7 +155,7 @@ class SQLTranslator final {
                                         const std::vector<SelectListElement>& select_list_elements);
 
   void _translate_set_operation(const hsql::SetOperation& set_operator);
-  void _translate_order_by_distinct(const std::vector<hsql::OrderDescription*>* order_list,
+  void _translate_distinct_order_by(const std::vector<hsql::OrderDescription*>* order_list,
                                     const std::vector<std::shared_ptr<AbstractExpression>>& select_list,
                                     const bool distinct);
   void _translate_limit(const hsql::LimitDescription& limit);

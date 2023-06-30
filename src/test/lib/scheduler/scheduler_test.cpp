@@ -335,4 +335,42 @@ TEST_F(SchedulerTest, DetermineQueueIDForTask) {
   // The distribution of tasks under high load is tested in the concurrency stress tests.
 }
 
+template <typename Iterator>
+void merge_sort(Iterator first, Iterator last) {
+  if (std::distance(first, last) == 1) {
+    return;
+  }
+
+  auto middle = first + (std::distance(first, last) / 2);
+  auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
+  tasks.emplace_back(std::make_shared<JobTask>([&]() { merge_sort(first, middle); }));
+  tasks.emplace_back(std::make_shared<JobTask>([&]() { merge_sort(middle, last); }));
+
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
+
+  std::inplace_merge(first, middle, last);
+}
+
+// Recursive merge sort. Creates a typical divide-and-conquer fan out pattern of tasks. We use the text book
+// implementation that recurses until the vector length is 1 to increase the depth of the fan out.
+TEST_F(SchedulerTest, MergeSort) {
+  // Sizes up to 20'000 works for MacOS (debug mode, more for release) with its comparatively small stack size. If this
+  // test fails on a new platform, check the system's stack size and if ITEM_COUNT needs to be reduced.
+  constexpr auto ITEM_COUNT = size_t{5'000};
+  Assert(ITEM_COUNT % 5 == 0, "Must be dividable by 5.");
+
+  Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
+
+  auto vector_to_sort = std::vector<int64_t>{};
+  vector_to_sort.reserve(ITEM_COUNT);
+  for (auto i = size_t{0}; i < ITEM_COUNT / 5; ++i) {
+    for (auto j = size_t{0}; j < 5; ++j) {
+      vector_to_sort.push_back(i*5 + (4-j));
+    }
+  }
+
+  merge_sort(vector_to_sort.begin(), vector_to_sort.end());
+  EXPECT_TRUE(std::is_sorted(vector_to_sort.begin(), vector_to_sort.end()));
+}
+
 }  // namespace hyrise
