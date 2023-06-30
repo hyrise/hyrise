@@ -77,7 +77,7 @@ TEST_F(EntireChunkPosListTest, AfterAddCheckIterators) {
   const auto entire_chunk_pos_list = std::make_shared<const EntireChunkPosList>(ChunkID{0}, ChunkOffset{3});
 
   table->append({int32_t{4}});
-  // Extra Lines have been added to the table:
+  // One row has been added to the table.
   EXPECT_EQ(table->chunk_count(), 1);
   EXPECT_EQ(table->row_count(), 4);
   // Newly added rows are not in the position list
