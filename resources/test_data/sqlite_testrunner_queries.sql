@@ -255,6 +255,7 @@ SELECT id, DENSE_RANK() OVER (PARTITION BY a ORDER BY b) AS r FROM mixed
 SELECT id, ROW_NUMBER() OVER (PARTITION BY a ORDER BY b) AS r FROM mixed
 -- partition on nullable column
 SELECT a, b, RANK() OVER (PARTITION BY b ORDER BY a) AS r FROM mixed_null
+SELECT a, b, RANK() OVER (PARTITION BY a ORDER BY b) AS r FROM mixed_null
 
 -- Aggregates
 SELECT SUM(b + b) AS sum_b_b FROM mixed;

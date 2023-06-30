@@ -261,8 +261,8 @@ void WindowFunctionEvaluator::spawn_and_wait_per_hash(const PerHash<T>& data, au
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
 };
 
-auto WindowFunctionEvaluator::RelevantRowInformation::compare_with_null_equal(const AllTypeVariant& lhs,
-                                                                              const AllTypeVariant& rhs) {
+std::partial_ordering WindowFunctionEvaluator::RelevantRowInformation::compare_with_null_equal(
+    const AllTypeVariant& lhs, const AllTypeVariant& rhs) {
   if (variant_is_null(lhs) && variant_is_null(rhs))
     return std::partial_ordering::equivalent;
   if (variant_is_null(lhs))
@@ -276,8 +276,8 @@ auto WindowFunctionEvaluator::RelevantRowInformation::compare_with_null_equal(co
   return std::partial_ordering::greater;
 }
 
-auto WindowFunctionEvaluator::RelevantRowInformation::compare_with_null_equal(std::span<const AllTypeVariant> lhs,
-                                                                              std::span<const AllTypeVariant> rhs) {
+std::partial_ordering WindowFunctionEvaluator::RelevantRowInformation::compare_with_null_equal(
+    std::span<const AllTypeVariant> lhs, std::span<const AllTypeVariant> rhs) {
   return std::lexicographical_compare_three_way(lhs.begin(), lhs.end(), rhs.begin(), rhs.end(),
                                                 [](const auto& lhs_element, const auto& rhs_element) {
                                                   return compare_with_null_equal(lhs_element, rhs_element);

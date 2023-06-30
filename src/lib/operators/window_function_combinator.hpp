@@ -47,7 +47,8 @@ struct WindowFunctionCombinator<T, WindowFunction::Rank> {
     void update(const WindowFunctionEvaluator::RelevantRowInformation& previous_value,
                 const WindowFunctionEvaluator::RelevantRowInformation& current_value) {
       ++row_number;
-      if (previous_value.order_values != current_value.order_values)
+      if (std::is_neq(WindowFunctionEvaluator::RelevantRowInformation::compare_with_null_equal(
+              previous_value.order_values, current_value.order_values)))
         rank = row_number;
     }
   };
@@ -58,7 +59,6 @@ struct WindowFunctionCombinator<T, WindowFunction::DenseRank> {
   using ReturnType = typename WindowFunctionTraits<T, WindowFunction::DenseRank>::ReturnType;
 
   struct OnePassState {
-    ReturnType row_number = 1;
     ReturnType rank = 1;
 
     std::optional<ReturnType> current_value() const {
@@ -67,8 +67,8 @@ struct WindowFunctionCombinator<T, WindowFunction::DenseRank> {
 
     void update(const WindowFunctionEvaluator::RelevantRowInformation& previous_value,
                 const WindowFunctionEvaluator::RelevantRowInformation& current_value) {
-      ++row_number;
-      if (previous_value.order_values != current_value.order_values)
+      if (std::is_neq(WindowFunctionEvaluator::RelevantRowInformation::compare_with_null_equal(
+              previous_value.order_values, current_value.order_values)))
         ++rank;
     }
   };
