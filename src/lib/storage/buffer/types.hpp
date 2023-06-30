@@ -25,7 +25,7 @@ inline std::size_t get_os_page_size() {
 constexpr size_t OS_PAGE_SIZE = 16384;
 enum class PageSizeType { KiB16, KiB32, KiB64, KiB128, KiB256, KiB512, MiB1, MiB2 };
 #elif __linux__
-constexpr size_t OS_PAGE_SIZE = 8192;
+constexpr size_t OS_PAGE_SIZE = 4096;
 enum class PageSizeType { KiB4, KiB8, KiB16, KiB32, KiB64, KiB128, KiB256, KiB512, MiB1, MiB2 };
 #endif
 
