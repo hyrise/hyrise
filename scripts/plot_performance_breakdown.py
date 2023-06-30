@@ -9,8 +9,13 @@ import matplotlib.ticker as mplticker
 import pandas as pd
 import sys
 
+
 benchmarks = []
 rule_benchmarks = []
+
+y_ticks = [x / 5 for x in range(6)]
+y_tick_labels = [f"{x:,.0%}" for x in y_ticks]
+
 
 if len(sys.argv) != 2:
     exit("Usage: " + sys.argv[0] + " benchmark.json")
@@ -78,9 +83,8 @@ plt.figure()
 ax = benchmark_df.plot.bar(x="Benchmark", stacked=True)
 ax.set_ylabel("Share of Query Runtime")
 
-y_ticks_loc = ax.get_yticks().tolist()
-ax.yaxis.set_major_locator(mplticker.FixedLocator(y_ticks_loc))
-ax.set_yticklabels([f"{x:,.0%}" for x in y_ticks_loc])
+ax.yaxis.set_major_locator(mplticker.FixedLocator(y_ticks))
+ax.set_yticklabels(y_tick_labels)
 
 # Reverse legend so that it matches the stacked bars
 handles, labels = ax.get_legend_handles_labels()
@@ -121,14 +125,12 @@ plt.figure()
 ax = rule_benchmark_df.plot.bar(x="Benchmark", stacked=True)
 ax.set_ylabel("Share of Optimizer Runtime")
 
-y_ticks_loc = ax.get_yticks().tolist()
-ax.yaxis.set_major_locator(mplticker.FixedLocator(y_ticks_loc))
-ax.set_yticklabels([f"{x:,.0%}" for x in y_ticks_loc])
+ax.yaxis.set_major_locator(mplticker.FixedLocator(y_ticks))
+ax.set_yticklabels(y_tick_labels)
 
 # Reverse legend so that it matches the stacked bars
 handles, labels = ax.get_legend_handles_labels()
 ax.legend(reversed(handles), reversed(labels), bbox_to_anchor=(0.5, 1.05), loc="lower center", ncols=2)
-
 
 # Add total runtime to labels
 xlabels = ax.get_xticklabels()
