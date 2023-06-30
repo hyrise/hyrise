@@ -34,6 +34,7 @@ bool extent_dalloc(extent_hooks_t* extent_hooks, void* addr, size_t size, bool c
   // If the function returns true, this indicates opt-out from deallocation;
   // the virtual memory mapping associated with the extent remains mapped, in the same commit state, and available for
   // future use, in which case it will be automatically retained for later reuse.
+  Hyrise::get().buffer_manager.deallocate(addr, size);
   return true;
 }
 
