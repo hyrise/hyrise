@@ -4,7 +4,6 @@
 #include <algorithm>
 #include <chrono>
 #include <fstream>
-#include <nlohmann/json.hpp>
 #include <utility>
 #include "hyrise.hpp"
 #include "storage/buffer/ssd_region.hpp"
@@ -71,7 +70,7 @@ void yield(const size_t repeat) {
   } else if (repeat < 100000) {
     std::this_thread::sleep_for(std::chrono::nanoseconds(1000));
   } else {
-    Fail("Yield for too long. Something is blocking writes.");
+    Fail("Yield for too long. Somthing is blocking.");
   }
 };
 
@@ -118,6 +117,24 @@ BufferManager::Config BufferManager::Config::from_env() {
     Fail("HYRISE_BUFFER_MANAGER_CONFIG_JSON_PATH not found in environment");
   }
 }
+
+nlohmann::json BufferManager::Config::to_json() const {
+  auto json = nlohmann::json{};
+  json["dram_buffer_pool_size"] = dram_buffer_pool_size;
+  json["numa_buffer_pool_size"] = numa_buffer_pool_size;
+  json["ssd_path"] = ssd_path;
+  json["migration_policy"]["dram_read_ratio"] = migration_policy.get_dram_read_ratio();
+  json["migration_policy"]["dram_write_ratio"] = migration_policy.get_dram_write_ratio();
+  json["migration_policy"]["numa_read_ratio"] = migration_policy.get_numa_read_ratio();
+  json["migration_policy"]["numa_write_ratio"] = migration_policy.get_numa_write_ratio();
+  json["enable_eviction_purge_worker"] = enable_eviction_purge_worker;
+  json["memory_node"] = static_cast<int64_t>(memory_node);
+  return json;
+}
+
+//----------------------------------------------------
+// BufferManager
+//----------------------------------------------------
 
 BufferManager::BufferManager() : BufferManager(Config::from_env()) {}
 

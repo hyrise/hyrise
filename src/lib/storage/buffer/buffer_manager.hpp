@@ -11,6 +11,7 @@
 #include "storage/buffer/types.hpp"
 #include "storage/buffer/volatile_region.hpp"
 #include "utils/pausable_loop_thread.hpp"
+#include <nlohmann/json.hpp>
 
 namespace hyrise {
 
@@ -41,6 +42,9 @@ class BufferManager : public boost::container::pmr::memory_resource, public Nonc
 
     // Load the configuration from the environment
     static Config from_env();
+
+      nlohmann::json to_json() const;
+
   };
 
   BufferManager();

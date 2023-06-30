@@ -582,6 +582,7 @@ nlohmann::json BenchmarkRunner::create_context(const BenchmarkConfig& config) {
                         {"using_scheduler", config.enable_scheduler},
                         {"cores", config.cores},
                         {"clients", config.clients},
+                        {"buffer_manager", BufferManager::get().config().to_json()},
                         {"data_preparation_cores", config.data_preparation_cores},
                         {"verify", config.verify},
                         {"time_unit", "ns"},
