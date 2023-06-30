@@ -91,12 +91,14 @@ class BinaryParser {
 
   // Calls the _import_attribute_vector<uintX_t> function that corresponds to the given compressed_vector_type_id.
   static std::shared_ptr<BaseCompressedVector> _import_attribute_vector(
-      std::ifstream& file, ChunkOffset row_count, CompressedVectorTypeID compressed_vector_type_id);
+      std::ifstream& file, ChunkOffset row_count, CompressedVectorTypeID compressed_vector_type_id,
+      const PolymorphicAllocator<size_t>& allocator);
 
   static std::unique_ptr<const BaseCompressedVector> _import_offset_value_vector(
       std::ifstream& file, ChunkOffset row_count, CompressedVectorTypeID compressed_vector_type_id);
 
-  static std::shared_ptr<FixedStringVector> _import_fixed_string_vector(std::ifstream& file, const size_t count);
+  static std::shared_ptr<FixedStringVector> _import_fixed_string_vector(std::ifstream& file, const size_t count,
+                                                                        PolymorphicAllocator<size_t>& allocator);
 
   // Reads row_count many values from type T and returns them in a vector
   template <typename T>

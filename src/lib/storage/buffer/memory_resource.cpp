@@ -7,7 +7,7 @@ namespace hyrise {
 
 LinearBufferResource::LinearBufferResource(BufferManager* buffer_manager) : _buffer_manager(buffer_manager) {}
 
-LinearBufferResource::LinearBufferResource() : LinearBufferResource(nullptr) {}
+LinearBufferResource::LinearBufferResource() : LinearBufferResource(&Hyrise::get().buffer_manager) {}
 
 std::size_t LinearBufferResource::remaining_storage(std::size_t alignment,
                                                     std::size_t& wasted_due_to_alignment) const noexcept {
