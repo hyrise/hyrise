@@ -1,11 +1,10 @@
-#include "utils/list_directory.hpp"
-
-#include <sys/stat.h>
 #include <filesystem>
 #include <fstream>
 #include <unordered_set>
 
 #include "base_test.hpp"
+
+#include "utils/list_directory.hpp"
 
 namespace hyrise {
 
