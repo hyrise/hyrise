@@ -59,7 +59,7 @@ BENCHMARK_DEFINE_F(PageMigrationFixture, BM_ToNodeMemoryLatency)(benchmark::Stat
   numa_tonode_memory(_mapped_region, VIRT_SIZE, 0);
   std::memset(_mapped_region, 0x1, VIRT_SIZE);
 #endif
-
+  // TODO: radnom
   auto i = 0;
   for (auto _ : state) {
 #if HYRISE_NUMA_SUPPORT

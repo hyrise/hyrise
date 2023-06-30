@@ -18,16 +18,22 @@ using arena_config_t = struct arena_config_s;
 
 namespace hyrise {
 
-static void* alloc(extent_hooks_t* extent_hooks, void* new_addr, size_t size, size_t alignment, bool* zero,
-                   bool* commit, unsigned arena_index) {
+static void* extent_alloc(extent_hooks_t* extent_hooks, void* new_addr, size_t size, size_t alignment, bool* zero,
+                          bool* commit, unsigned arena_index) {
   if (size > bytes_for_size_type(MAX_PAGE_SIZE_TYPE)) {
+    // We cannot handle allocations larger than the largest PageSizeType. This ok because we only use jemalloc for
+    // allocations of PageSizeType or smaller.
     return nullptr;
   }
-  return Hyrise::get().buffer_manager.do_allocate(size, alignment);
+  return Hyrise::get().buffer_manager.allocate(size, alignment);
 }
 
 bool extent_dalloc(extent_hooks_t* extent_hooks, void* addr, size_t size, bool committed, unsigned arena_ind) {
-  // TODO: Handle this?
+  // An extent deallocation function conforms to the extent_dalloc_t type and deallocates an extent at given addr
+  // and size with committed/decommited memory as indicated, on behalf of arena arena_ind, returning false upon success.
+  // If the function returns true, this indicates opt-out from deallocation;
+  // the virtual memory mapping associated with the extent remains mapped, in the same commit state, and available for
+  // future use, in which case it will be automatically retained for later reuse.
   return true;
 }
 
@@ -58,15 +64,8 @@ static bool extent_merge(extent_hooks_t* /*extent_hooks*/, void* /*addra*/, size
   return false;
 }
 
-static extent_hooks_t s_hooks{alloc,
-                              extent_dalloc,   // dalloc
-                              extent_destroy,  // destroy
-                              extent_commit,
-                              nullptr,            // decommit
-                              extent_purge_lazy,  // purge_lazy
-                              extent_purge,       // purge_forced
-                              extent_split,
-                              extent_merge};
+static extent_hooks_t s_hooks{extent_alloc,      extent_dalloc, extent_destroy, extent_commit, nullptr,
+                              extent_purge_lazy, extent_purge,  extent_split,   extent_merge};
 
 JemallocMemoryResource::JemallocMemoryResource() {
   size_t size = sizeof(_arena_index);
@@ -90,7 +89,7 @@ JemallocMemoryResource::JemallocMemoryResource() {
 
   // TODO: Maybe add more arenas to reduce contention
   // retain_grow_limit? thread.arena
-  _mallocx_flags = MALLOCX_ARENA(_arena_index);  //| MALLOCX_TCACHE_NONE;
+  _mallocx_flags = MALLOCX_ARENA(_arena_index) | MALLOCX_TCACHE_NONE;
 }
 
 JemallocMemoryResource::~JemallocMemoryResource() {}

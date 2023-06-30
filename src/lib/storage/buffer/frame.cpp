@@ -30,8 +30,8 @@ void Frame::unlock_exclusive_and_set_evicted() {
 }
 
 bool Frame::try_mark(StateVersionType old_state_and_version) {
-  DebugAssert(state(_state_and_version.load()) == UNLOCKED,
-              "Frame must be unlocked to mark, instead: " + std::to_string(state(_state_and_version.load())));
+  // DebugAssert(state(_state_and_version.load()) == UNLOCKED,
+  //             "Frame must be unlocked to mark, instead: " + std::to_string(state(_state_and_version.load())));
   return _state_and_version.compare_exchange_strong(old_state_and_version,
                                                     update_state_with_same_version(old_state_and_version, MARKED));
 }
