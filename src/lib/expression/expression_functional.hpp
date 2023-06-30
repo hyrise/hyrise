@@ -76,13 +76,13 @@ std::shared_ptr<ValueExpression> null_();
 namespace detail {
 
 /**
- * @defgroup Static objects that create Expressions that have an enum member (e.g. PredicateCondition::Equals)
- *
- * Having these eliminates the need to specify a function for each Expression-Enum-Member combination
- *
+ * @defgroup Static objects that create Expressions that have an enum member (e.g. PredicateCondition::Equals). Having
+ * these eliminates the need to specify a function for each Expression-Enum-member combination.
  * @{
  */
 
+// Helper for unary expressions (one argument).
+//   Example: is_null_(argument) --> IsNullExpression(IsNull, argument)
 template <auto t, typename E>
 struct unary final {
   template <typename A>
@@ -91,6 +91,8 @@ struct unary final {
   }
 };
 
+// Helper for expressions that have two arguments, but the first one is always nullptr.
+//   Example: rank_(window) --> WindowFunctionExpression(WindowFunction::Rank, nullptr, window)
 template <auto t, typename E>
 struct pseudo_unary final {
   template <typename A>
@@ -99,6 +101,8 @@ struct pseudo_unary final {
   }
 };
 
+// Helper for expressions that have two arguments, where the second one can be nullptr.
+//   Example: sum_(column_a) --> WindowFunctionExpression(WindowFunction::Sum, column_a, nullptr)
 template <auto t, typename E>
 struct binary_defaulted final {
   template <typename A>
@@ -107,6 +111,8 @@ struct binary_defaulted final {
   }
 };
 
+// Helper for binary expressions (two arguments).
+//   Example: or_(argument_1, argmuent_2) --> LogicalExpression(LogicalOperator::Or, argument_1, argmuent_2)
 template <auto t, typename E>
 struct binary final {
   template <typename A, typename B>
@@ -115,6 +121,8 @@ struct binary final {
   }
 };
 
+// Helper for ternary expressions (three arguments).
+//   Example: between_inclusive_(column_a, value_1, value_2) --> BetweenExpression(PredicateCondition::BetweenInclusive, column_a, value_1, value_2)
 template <auto t, typename E>
 struct ternary final {
   template <typename A, typename B, typename C>
@@ -168,7 +176,7 @@ inline detail::ternary<PredicateCondition::BetweenUpperExclusive, BetweenExpress
 inline detail::ternary<PredicateCondition::BetweenExclusive, BetweenExpression> between_exclusive_;
 
 template <typename... Args>
-std::shared_ptr<LQPSubqueryExpression> lqp_subquery_(const std::shared_ptr<AbstractLQPNode>& lqp,  // NOLINT
+std::shared_ptr<LQPSubqueryExpression> lqp_subquery_(const std::shared_ptr<AbstractLQPNode>& lqp,
                                                      Args&&... parameter_id_expression_pairs) {
   if constexpr (sizeof...(Args) > 0) {
     // Correlated subquery
@@ -271,7 +279,7 @@ std::shared_ptr<IntervalExpression> interval_(const int64_t duration, const Date
 std::shared_ptr<WindowExpression> window_(
     const std::vector<std::shared_ptr<AbstractExpression>>& partition_by_expressions,
     const std::vector<std::shared_ptr<AbstractExpression>>& order_by_expressions,
-    const std::vector<SortMode>& sort_modes, std::unique_ptr<FrameDescription> frame_description);
+    const std::vector<SortMode>& sort_modes, const FrameDescription& frame_description);
 
 }  // namespace expression_functional
 

@@ -423,11 +423,10 @@ TEST_F(ColumnPruningRuleTest, DoNotPruneChangeMetaTableInputs) {
 
 TEST_F(ColumnPruningRuleTest, DoNotPruneWindowNodeInputs) {
   // Do not prune away the window function argument, the PARTITION BY columns, and the ORDER BY columns.
-  auto frame_description =
-      std::make_unique<FrameDescription>(FrameType::Range, FrameBound{0, FrameBoundType::Preceding, true},
-                                         FrameBound{0, FrameBoundType::CurrentRow, false});
+  const auto frame_description = FrameDescription{FrameType::Range, FrameBound{0, FrameBoundType::Preceding, true},
+                                                  FrameBound{0, FrameBoundType::CurrentRow, false}};
   const auto window = window_(expression_vector(a), expression_vector(b), std::vector<SortMode>{SortMode::Ascending},
-                              std::move(frame_description));
+                              frame_description);
 
   const auto lqp = WindowNode::make(min_(c, window), node_abc);
   const auto expected_lqp = lqp->deep_copy();

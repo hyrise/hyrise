@@ -42,7 +42,7 @@ std::shared_ptr<AbstractExpression> WindowFunctionExpression::window() const {
 }
 
 std::string WindowFunctionExpression::description(const DescriptionMode mode) const {
-  std::stringstream stream;
+  auto stream = std::stringstream{};
 
   if (window_function == WindowFunction::CountDistinct) {
     Assert(argument(), "COUNT(DISTINCT ...) requires an argument");
@@ -153,8 +153,8 @@ bool WindowFunctionExpression::is_count_star(const AbstractExpression& expressio
 std::shared_ptr<AbstractExpression> WindowFunctionExpression::_on_deep_copy(
     std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
   const auto& argument = this->argument();
-  const auto& argument_copy = argument ? argument->deep_copy(copied_ops) : nullptr;
-  const auto& window_copy = _has_window ? arguments.back()->deep_copy(copied_ops) : nullptr;
+  const auto argument_copy = argument ? argument->deep_copy(copied_ops) : nullptr;
+  const auto window_copy = _has_window ? arguments.back()->deep_copy(copied_ops) : nullptr;
   return std::make_shared<WindowFunctionExpression>(window_function, argument_copy, window_copy);
 }
 
@@ -169,10 +169,14 @@ size_t WindowFunctionExpression::_shallow_hash() const {
 }
 
 bool WindowFunctionExpression::_on_is_nullable_on_lqp(const AbstractLQPNode& /*lqp*/) const {
+  // Pure window functions always return a value.
+  if (!aggregate_functions.contains(window_function)) {
+    return false;
+  }
+
   // Aggregates (except COUNT and COUNT DISTINCT) will return NULL when executed on an empty group. Thus, they are
-  // always nullable. Pure window functions always return a value.
-  return aggregate_functions.contains(window_function) && window_function != WindowFunction::Count &&
-         window_function != WindowFunction::CountDistinct;
+  // always nullable.
+  return window_function != WindowFunction::Count && window_function != WindowFunction::CountDistinct;
 }
 
 std::ostream& operator<<(std::ostream& stream, const WindowFunction window_function) {

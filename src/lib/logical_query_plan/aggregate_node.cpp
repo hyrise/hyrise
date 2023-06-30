@@ -75,8 +75,6 @@ std::vector<std::shared_ptr<AbstractExpression>> AggregateNode::output_expressio
   for (auto expression_idx = aggregate_expressions_begin_idx; expression_idx < output_expression_count;
        ++expression_idx) {
     auto& output_expression = output_expressions[expression_idx];
-    DebugAssert(output_expression->type == ExpressionType::WindowFunction,
-                "Unexpected non-aggregate in list of aggregates.");
     const auto& aggregate_expression = static_cast<WindowFunctionExpression&>(*output_expression);
     if (aggregate_expression.window_function == WindowFunction::Any) {
       output_expression = output_expression->arguments[0];

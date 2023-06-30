@@ -294,8 +294,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_projection_node(
 
 std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_window_node(
     const WindowNode& window_node, const std::shared_ptr<TableStatistics>& input_table_statistics) const {
-  // For the result of the window function, dummy statistics are created for now.
-
+  // Forward the input statistics for all but the last column (which contains the window function result).
   const auto& output_expressions = window_node.output_expressions();
   const auto output_expression_count = output_expressions.size();
   auto column_statistics = std::vector<std::shared_ptr<BaseAttributeStatistics>>{output_expression_count};
@@ -305,6 +304,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_window_node(
     column_statistics[column_id] = input_table_statistics->column_statistics[column_id];
   }
 
+  // For the result of the window function, dummy statistics are created for now.
   resolve_data_type(output_expressions.back()->data_type(), [&](const auto data_type_t) {
     using ColumnDataType = typename decltype(data_type_t)::type;
     column_statistics[forwarded_expression_count] = std::make_shared<AttributeStatistics<ColumnDataType>>();

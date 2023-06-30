@@ -78,10 +78,6 @@ std::string FrameDescription::description() const {
   return stream.str();
 }
 
-std::unique_ptr<FrameDescription> FrameDescription::deep_copy() const {
-  return std::make_unique<FrameDescription>(type, start, end);
-}
-
 size_t FrameDescription::hash() const {
   auto hash_value = static_cast<size_t>(type);
   boost::hash_combine(hash_value, start.hash());
@@ -97,10 +93,10 @@ std::ostream& operator<<(std::ostream& stream, const FrameDescription& frame_des
 WindowExpression::WindowExpression(const std::vector<std::shared_ptr<AbstractExpression>>& partition_by_expressions,
                                    const std::vector<std::shared_ptr<AbstractExpression>>& order_by_expressions,
                                    const std::vector<SortMode>& init_sort_modes,
-                                   std::unique_ptr<FrameDescription> init_frame_description)
+                                   const FrameDescription& init_frame_description)
     : AbstractExpression{ExpressionType::Window, {{/* Expressions added below. */}}},
       sort_modes{init_sort_modes},
-      frame_description{std::move(init_frame_description)},
+      frame_description{init_frame_description},
       order_by_expressions_begin_idx{partition_by_expressions.size()} {
   const auto order_by_expression_count = order_by_expressions.size();
   Assert(order_by_expression_count == sort_modes.size(), "Passed sort modes do not match ORDER BY expressions.");
@@ -128,19 +124,16 @@ std::shared_ptr<AbstractExpression> WindowExpression::_on_deep_copy(
   }
 
   return std::make_shared<WindowExpression>(partition_by_expressions, order_by_expressions, sort_modes,
-                                            frame_description->deep_copy());
+                                            frame_description);
 }
 
 std::string WindowExpression::description(const DescriptionMode mode) const {
   auto stream = std::stringstream{};
   if (order_by_expressions_begin_idx > 0) {
-    stream << "PARTITION BY ";
+    stream << "PARTITION BY " << arguments[0]->description(mode);
 
-    for (auto expression_idx = size_t{0}; expression_idx < order_by_expressions_begin_idx; ++expression_idx) {
-      stream << arguments[expression_idx]->description(mode);
-      if (expression_idx < order_by_expressions_begin_idx - 1) {
-        stream << ", ";
-      }
+    for (auto expression_idx = size_t{1}; expression_idx < order_by_expressions_begin_idx; ++expression_idx) {
+      stream << ", " << arguments[expression_idx]->description(mode);
     }
 
     stream << " ";
@@ -148,20 +141,18 @@ std::string WindowExpression::description(const DescriptionMode mode) const {
 
   const auto expression_count = arguments.size();
   if (order_by_expressions_begin_idx < expression_count) {
-    stream << "ORDER BY ";
+    stream << "ORDER BY " << arguments[order_by_expressions_begin_idx]->description(mode) << " " << sort_modes[0];
 
-    for (auto expression_idx = order_by_expressions_begin_idx; expression_idx < expression_count; ++expression_idx) {
-      stream << arguments[expression_idx]->description(mode) << " "
+    for (auto expression_idx = order_by_expressions_begin_idx + 1; expression_idx < expression_count;
+         ++expression_idx) {
+      stream << ", " << arguments[expression_idx]->description(mode) << " "
              << sort_modes[expression_idx - order_by_expressions_begin_idx];
-      if (expression_idx < expression_count - 1) {
-        stream << ", ";
-      }
     }
 
     stream << " ";
   }
 
-  stream << *frame_description;
+  stream << frame_description;
   return stream.str();
 }
 
@@ -173,7 +164,7 @@ bool WindowExpression::_shallow_equals(const AbstractExpression& expression) con
   DebugAssert(dynamic_cast<const WindowExpression*>(&expression),
               "Different expression type should have been caught by AbstractExpression::operator==");
   const auto& rhs = static_cast<const WindowExpression&>(expression);
-  return sort_modes == rhs.sort_modes && *frame_description == *rhs.frame_description;
+  return sort_modes == rhs.sort_modes && frame_description == rhs.frame_description;
 }
 
 size_t WindowExpression::_shallow_hash() const {
@@ -181,7 +172,7 @@ size_t WindowExpression::_shallow_hash() const {
   for (const auto sort_mode : sort_modes) {
     boost::hash_combine(hash_value, static_cast<size_t>(sort_mode));
   }
-  boost::hash_combine(hash_value, frame_description->hash());
+  boost::hash_combine(hash_value, frame_description.hash());
   return hash_value;
 }
 

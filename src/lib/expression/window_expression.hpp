@@ -10,13 +10,6 @@ std::ostream& operator<<(std::ostream& stream, const FrameBoundType frame_bound_
 struct FrameBound {
   FrameBound(const uint64_t init_offset, const FrameBoundType init_type, const bool init_unbounded);
 
-  FrameBound() = default;
-  FrameBound(const FrameBound&) = default;
-  FrameBound(FrameBound&&) = default;
-
-  FrameBound& operator=(const FrameBound&) = default;
-  FrameBound& operator=(FrameBound&&) = default;
-
   bool operator==(const FrameBound& rhs) const;
 
   size_t hash() const;
@@ -33,7 +26,7 @@ std::ostream& operator<<(std::ostream& stream, const FrameBound& frame_bound);
 enum class FrameType { Rows, Range, Groups };
 std::ostream& operator<<(std::ostream& stream, const FrameType frame_type);
 
-struct FrameDescription : private Noncopyable {
+struct FrameDescription {
   FrameDescription(const FrameType init_type, const FrameBound& init_start, const FrameBound& init_end);
 
   bool operator==(const FrameDescription& rhs) const;
@@ -42,9 +35,9 @@ struct FrameDescription : private Noncopyable {
   size_t hash() const;
   std::unique_ptr<FrameDescription> deep_copy() const;
 
-  const FrameType type;
-  const FrameBound start;
-  const FrameBound end;
+  FrameType type;
+  FrameBound start;
+  FrameBound end;
 };
 
 std::ostream& operator<<(std::ostream& stream, const FrameDescription& frame_description);
@@ -53,20 +46,19 @@ std::ostream& operator<<(std::ostream& stream, const FrameDescription& frame_des
  * Representation of a window used for SQL:2003 window functions (see window_function_expression.hpp). Windows define
  * how the window function is applied. If there are PARTITION BY expressions, the function is applied tuples in
  * different partitions independently. ORDER BY expressions define in which order the function is applied within the
- *  same partition. The frame defines the actual sliding window of tuples used as input of the window function.
+ * same partition. The frame defines the actual sliding window of tuples used as input of the window function.
  */
 class WindowExpression : public AbstractExpression {
  public:
   WindowExpression(const std::vector<std::shared_ptr<AbstractExpression>>& partition_by_expressions,
                    const std::vector<std::shared_ptr<AbstractExpression>>& order_by_expressions,
-                   const std::vector<SortMode>& init_sort_modes,
-                   std::unique_ptr<FrameDescription> init_frame_description);
+                   const std::vector<SortMode>& init_sort_modes, const FrameDescription& init_frame_description);
 
   std::string description(const DescriptionMode mode) const override;
   DataType data_type() const override;
 
   std::vector<SortMode> sort_modes;
-  std::unique_ptr<FrameDescription> frame_description;
+  FrameDescription frame_description;
   size_t order_by_expressions_begin_idx{0};
 
  protected:

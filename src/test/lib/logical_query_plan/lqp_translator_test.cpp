@@ -1147,10 +1147,9 @@ TEST_F(LQPTranslatorTest, ChangeMetaTable) {
 }
 
 TEST_F(LQPTranslatorTest, WindowNode) {
-  auto frame = std::make_unique<FrameDescription>(FrameType::Range, FrameBound{0, FrameBoundType::Preceding, true},
-                                                  FrameBound{0, FrameBoundType::CurrentRow, false});
-  const auto window_function =
-      rank_(window_(expression_vector(), expression_vector(), std::vector<SortMode>{}, std::move(frame)));
+  const auto frame = FrameDescription{FrameType::Range, FrameBound{0, FrameBoundType::Preceding, true},
+                                      FrameBound{0, FrameBoundType::CurrentRow, false}};
+  const auto window_function = rank_(window_(expression_vector(), expression_vector(), std::vector<SortMode>{}, frame));
   const auto lqp = WindowNode::make(window_function, int_float_node);
 
   EXPECT_THROW(LQPTranslator{}.translate_node(lqp), InvalidInputException);

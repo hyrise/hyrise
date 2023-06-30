@@ -1219,9 +1219,9 @@ void SQLTranslator::_translate_select_groupby_having(const hsql::SelectStatement
 
   const auto pre_aggregate_lqp = _current_lqp;
 
-  // Build Aggregate.
+  // Build AggregateNodes.
   if (is_aggregate) {
-    // If needed, add a Projection to evaluate all Expression required for GROUP BY/Aggregates.
+    // If needed, add a ProjectionNode to evaluate all expressions required for GROUP BY/aggregates.
     if (!pre_aggregate_expressions.empty()) {
       const auto& output_expressions = _current_lqp->output_expressions();
       const auto any_expression_not_yet_available = std::any_of(
@@ -1235,14 +1235,14 @@ void SQLTranslator::_translate_select_groupby_having(const hsql::SelectStatement
     _current_lqp = AggregateNode::make(group_by_expressions, aggregate_expressions, _current_lqp);
   }
 
-  // Build Having.
+  // Build HAVING.
   if (having_expression) {
     AssertInput(expression_evaluable_on_lqp(having_expression, *_current_lqp),
                 "HAVING references columns not accessible after Aggregation");
     _current_lqp = _translate_predicate_expression(having_expression, _current_lqp);
   }
 
-  // Build Windows.
+  // Build WindowNodes.
   if (!window_expressions.empty()) {
     auto computed_expressions = _current_lqp->output_expressions();
     const auto computed_expression_set =
@@ -1910,8 +1910,8 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
 
         Assert(hsql_frame_description.start && hsql_frame_description.end,
                "FrameDescription has no frame bounds. Bug in sqlparser?");
-        const auto& start = translate_frame_bound(*hsql_frame_description.start);
-        const auto& end = translate_frame_bound(*hsql_frame_description.end);
+        const auto start = translate_frame_bound(*hsql_frame_description.start);
+        const auto end = translate_frame_bound(*hsql_frame_description.end);
 
         // "Restrictions are that `frame_start` cannot be UNBOUNDED FOLLOWING, `frame_end` cannot be UNBOUNDED
         // PRECEDING, and the `frame_end` choice cannot appear earlier [...] than the `frame_start` choice does — for
@@ -1939,9 +1939,9 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
                         (end.type != FrameBoundType::Preceding || !end.unbounded) && end_offset >= start_offset,
                     "Frame starting from " + start.description() + " cannot end at " + end.description() + ".");
 
-        auto frame_description = std::make_unique<FrameDescription>(frame_type, start, end);
+        const auto frame_description = FrameDescription{frame_type, start, end};
         window_description = window_(std::move(partition_by_expressions), std::move(order_by_expressions),
-                                     std::move(sort_modes), std::move(frame_description));
+                                     std::move(sort_modes), frame_description);
       }
 
       // Convert to upper-case to find mapping.
@@ -1967,7 +1967,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
           AssertInput(allow_window_functions,
                       "Window functions are only allowed in the SELECT list and must not be nested.");
           AssertInput(window_description, "Window function " + name + " requires a window definition.");
-          AssertInput(!expr.exprList || expr.exprList->empty() == 1, "Window functions must not have an argument.");
+          AssertInput(!expr.exprList || expr.exprList->empty(), "Window functions must not have an argument.");
         } else {
           AssertInput(expr.exprList && expr.exprList->size() == 1,
                       "Expected exactly one argument for an aggregate function.");
