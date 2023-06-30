@@ -77,6 +77,7 @@ BENCHMARK_DEFINE_F(BufferManagerFixture, BM_BufferManagerPinForRead)(benchmark::
     state.PauseTiming();
     auto page_ptr = _buffer_manager._get_page_ptr(page_id);
     for (auto i = 0; i < page_id.num_bytes(); i += CACHE_LINE_SIZE) {
+      __builtin_prefetch(&page_ptr[i]);
       benchmark::DoNotOptimize(page_ptr[i]);
     }
     state.ResumeTiming();

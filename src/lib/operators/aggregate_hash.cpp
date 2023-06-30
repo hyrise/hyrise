@@ -948,8 +948,6 @@ std::enable_if_t<aggregate_func == AggregateFunction::CountDistinct, void> write
     pmr_vector<AggregateType>& values, pmr_vector<bool>& /*null_values*/,
     const AggregateResults<ColumnDataType, aggregate_func>& results) {
   values.reserve(results.size());
-  // TODO(nikriek)
-  Fail("Pin");
 
   for (const auto& result : results) {
     // NULL_ROW_ID (just a marker, not literally NULL) means that this result is either a gap (in the case of an
