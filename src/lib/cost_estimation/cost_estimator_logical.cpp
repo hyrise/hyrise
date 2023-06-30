@@ -50,7 +50,7 @@ Cost CostEstimatorLogical::estimate_node_cost(const std::shared_ptr<AbstractLQPN
     case LQPNodeType::Join:
       // Covers predicated and unpredicated joins. For cross joins, output_row_count will be
       // left_input_row_count * right_input_row_count.
-      return ((left_input_row_count + right_input_row_count) * std::log(left_input_row_count + right_input_row_count)) + output_row_count;
+      return left_input_row_count + right_input_row_count + output_row_count;
 
     case LQPNodeType::Sort:
       // n * log(n) for sorting, plus n for output writing.
