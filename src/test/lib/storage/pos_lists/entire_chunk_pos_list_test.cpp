@@ -58,7 +58,7 @@ TEST_F(EntireChunkPosListTest, AddAfterMatchedAllTest) {
   // Newly added rows are not in the position list
   EXPECT_EQ(entire_chunk_pos_list->size(), 3);
 
-  // TODO(anyone): Maybe add a better check than just size, cause the returned iterators should also handle
+  // TODO(anyone): Maybe add a better check than just size, cause the returned iterators should also handle.
   // this case, which we right now don't check.
 }
 
