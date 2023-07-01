@@ -1135,6 +1135,7 @@ void AggregateHash::_write_aggregate_output(ColumnID aggregate_index) {
       _contexts_per_column[aggregate_index]);
 
   const auto& results = context->results;
+  auto pin_guard = ReadPinGuard{results};
 
   // Before writing the first aggregate column, write all group keys into the respective columns
   if (aggregate_index == 0) {
