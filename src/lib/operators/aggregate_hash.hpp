@@ -170,7 +170,7 @@ class AggregateHash : public AbstractAggregateOperator {
 
   void _on_cleanup() override;
 
-  void _write_groupby_output(RowIDPosList& pos_list);
+  void _write_groupby_output(RowIDPosList& pos_list, const PolymorphicAllocator<size_t>& allocator);
 
   template <typename ColumnDataType, AggregateFunction aggregate_function>
   void _write_aggregate_output(ColumnID aggregate_index);

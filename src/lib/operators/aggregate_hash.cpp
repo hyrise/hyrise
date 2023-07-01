@@ -826,7 +826,7 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
       }
       pos_list.emplace_back(result.row_id);
     }
-    _write_groupby_output(pos_list);
+    _write_groupby_output(pos_list, allocator);
   }
 
   /*
@@ -1029,7 +1029,7 @@ write_aggregate_values(pmr_vector<AggregateType>& /*values*/, pmr_vector<bool>& 
   Fail("Invalid aggregate");
 }
 
-void AggregateHash::_write_groupby_output(RowIDPosList& pos_list) {
+void AggregateHash::_write_groupby_output(RowIDPosList& pos_list, const PolymorphicAllocator<size_t>& allocator) {
   auto timer = Timer{};
   auto input_table = left_input_table();
 
@@ -1064,14 +1064,6 @@ void AggregateHash::_write_groupby_output(RowIDPosList& pos_list) {
       using ColumnDataType = typename decltype(typed_value)::type;
 
       const auto column_is_nullable = input_table->column_is_nullable(input_column_id);
-
-#ifdef HYRISE_WITH_JEMALLOC
-      auto allocator = PolymorphicAllocator<size_t>{&JemallocMemoryResource::get()};
-#else
-  auto allocator = PolymorphicAllocator<size_t>{&LinearBufferResource::get()};
-#endif
-      auto allocator_pin_guard = AllocatorPinGuard{allocator};
-
       const auto pos_list_size = pos_list.size();
       auto values = pmr_vector<ColumnDataType>{allocator};
       values.reserve(pos_list_size);
@@ -1159,7 +1151,7 @@ void AggregateHash::_write_aggregate_output(ColumnID aggregate_index) {
       pos_list.emplace_back(result.row_id);
     }
     auto write_groupby_output_timer = Timer{};
-    _write_groupby_output(pos_list);
+    _write_groupby_output(pos_list, allocator);
     excluded_time = write_groupby_output_timer.lap();
   }
 

@@ -70,7 +70,7 @@ void yield(const size_t repeat) {
   } else if (repeat < 100000) {
     std::this_thread::sleep_for(std::chrono::nanoseconds(1000));
   } else {
-    Fail("Yield for too long. Somthing is blocking.");
+    Fail("Yield for too long. Something is blocking.");
   }
 };
 
