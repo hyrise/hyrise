@@ -27,6 +27,4 @@ inline std::ostream& operator<<(std::ostream& stream, const TableColumnDefinitio
 
 using TableColumnDefinitions = std::vector<TableColumnDefinition>;
 
-TableColumnDefinitions concatenated(const TableColumnDefinitions& lhs, const TableColumnDefinitions& rhs);
-
 }  // namespace hyrise
