@@ -36,13 +36,16 @@ void DataInducedPredicateRule::_apply_to_plan_without_subqueries(const std::shar
   const auto estimator = cost_estimator->cardinality_estimator->new_instance();
   estimator->guarantee_bottom_up_construction();
 
-  visit_lqp(lqp_root, [&lqp_root, &estimator, &opposite_side, this, &data_induced_predicates](const auto& node) {
+  visit_lqp(lqp_root, [ &estimator, &opposite_side, &data_induced_predicates](const auto& node) {
     if (node->type != LQPNodeType::Join) {
       return LQPVisitation::VisitInputs;
     }
     // std::cout << *lqp_root << std::endl;
     const auto join_node = std::static_pointer_cast<JoinNode>(node);
-
+    if(join_node->join_predicates().size() != 1) {
+        std::cout << "We currently only support data induced predicates with only one join predicate" << std::endl;
+        return LQPVisitation::VisitInputs;
+    }
     DebugAssert(join_node->join_predicates().size() == 1, "We currently only support data induced predicates with only one join predicate");
 
     const auto predicate_expression = std::dynamic_pointer_cast<BinaryPredicateExpression>(join_node->join_predicates()[0]);
@@ -50,7 +53,7 @@ void DataInducedPredicateRule::_apply_to_plan_without_subqueries(const std::shar
     DebugAssert(predicate_expression->predicate_condition == PredicateCondition::Equals, "PredicateCondition must be equals");
 
     // Currently we always use the right side as reducer and left is reduced TODO fix this to always choose right side
-    const auto selection_side = LQPInputSide::Left;
+    // const auto selection_side = LQPInputSide::Left;
 
   const auto reduce_if_beneficial = [&](const auto selection_side) {
 
@@ -62,7 +65,7 @@ void DataInducedPredicateRule::_apply_to_plan_without_subqueries(const std::shar
       auto reduced_side_expression = predicate_expression->right_operand();
 
       auto original_cardinality = estimator->estimate_cardinality(reduced_node);
-      auto reducer_node_cardinality = estimator->estimate_cardinality(reducer_node);
+      // auto reducer_node_cardinality = estimator->estimate_cardinality(reducer_node);
 
       if (!expression_evaluable_on_lqp(reducer_side_expression, *reducer_node)) {
           std::swap(reduced_side_expression, reducer_side_expression);
