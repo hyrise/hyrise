@@ -49,7 +49,7 @@ class DataInducedPredicateRule : public AbstractRule {
 
   // Defines the minimum selectivity for a semi join reduction to be added. For a candidate location in the LQP with an
   // input cardinality `i`, the output cardinality of the semi join has to be lower than `i * MINIMUM_SELECTIVITY`.
-  constexpr static auto MINIMUM_SELECTIVITY = .25;
+  constexpr static auto MINIMUM_SELECTIVITY = .4;
 
  protected:
   void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override;

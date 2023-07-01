@@ -14,6 +14,7 @@
 
 
 namespace hyrise {
+using namespace expression_functional;
 
 std::string DataInducedPredicateRule::name() const {
   static const auto name = std::string{"DataInducedParameterRule"};
@@ -26,7 +27,7 @@ void DataInducedPredicateRule::_apply_to_plan_without_subqueries(const std::shar
   // Adding semi joins inside visit_lqp might lead to endless recursions. Thus, we use visit_lqp to identify the
   // reductions that we want to add to the plan, write them into semi_join_reductions and actually add them after
   // visit_lqp.
-  std::vector<std::tuple<std::shared_ptr<JoinNode>, LQPInputSide, std::shared_ptr<JoinNode>>> semi_join_reductions;
+  std::vector<std::tuple<std::shared_ptr<JoinNode>, LQPInputSide, std::shared_ptr<PredicateNode>>> data_induced_predicates;
 
   const auto opposite_side = [](const auto side) {
     return side == LQPInputSide::Left ? LQPInputSide::Right : LQPInputSide::Left;
@@ -35,11 +36,11 @@ void DataInducedPredicateRule::_apply_to_plan_without_subqueries(const std::shar
   const auto estimator = cost_estimator->cardinality_estimator->new_instance();
   estimator->guarantee_bottom_up_construction();
 
-  visit_lqp(lqp_root, [&lqp_root, &estimator, &opposite_side, this, &semi_join_reductions](const auto& node) {
+  visit_lqp(lqp_root, [&lqp_root, &estimator, &opposite_side, this, &data_induced_predicates](const auto& node) {
     if (node->type != LQPNodeType::Join) {
       return LQPVisitation::VisitInputs;
     }
-    std::cout << *lqp_root << std::endl;
+    // std::cout << *lqp_root << std::endl;
     const auto join_node = std::static_pointer_cast<JoinNode>(node);
 
     DebugAssert(join_node->join_predicates().size() == 1, "We currently only support data induced predicates with only one join predicate");
@@ -48,115 +49,66 @@ void DataInducedPredicateRule::_apply_to_plan_without_subqueries(const std::shar
     DebugAssert(predicate_expression, "Expected BinaryPredicateExpression");
     DebugAssert(predicate_expression->predicate_condition == PredicateCondition::Equals, "PredicateCondition must be equals");
 
-    // Currently we always use the right side as reducer and left is reduced
+    // Currently we always use the right side as reducer and left is reduced TODO fix this to always choose right side
     const auto selection_side = LQPInputSide::Left;
 
-    auto reduced_node = join_node->input(selection_side);
-    auto reducer_node = join_node->input(opposite_side(selection_side));
-
-    const auto& reducer_side_expression =
-        expression_evaluable_on_lqp(predicate_expression->left_operand(), *reducer_node)
-            ? predicate_expression->left_operand()
-            : predicate_expression->right_operand();
-    DebugAssert(!expression_evaluable_on_lqp(reducer_side_expression, *join_node->input(selection_side)),
-                "Expected filtered expression to be uniquely evaluable on one side of the join");
-
-    const auto subquery = AggregateNode::make(expression_functional::expression_vector(), expression_functional::expression_vector(expression_functional::min_(reducer_side_expression), expression_functional::max_(reducer_side_expression)), reducer_node);
-
-    const auto min = ProjectionNode::make(expression_functional::expression_vector(expression_functional::min_(reducer_side_expression)), subquery);
-    const auto max = ProjectionNode::make(expression_functional::expression_vector(expression_functional::max_(reducer_side_expression)), subquery);
-    // TODO build this
-    // auto between_predicate = PredicateNode::make(expression_functional::between_inclusive_( /*TODO What goes in here? predicate_expression->left_operand() ? */  , min, max), subquery);
+  const auto reduce_if_beneficial = [&](const auto selection_side) {
 
 
-    const auto reduce_if_beneficial = [&](const auto side_of_join) {
-      auto reduced_node = join_node->input(side_of_join);
+      auto reduced_node = join_node->input(selection_side);
+      auto reducer_node = join_node->input(opposite_side(selection_side));
+
+      auto reducer_side_expression = predicate_expression->left_operand();
+      auto reduced_side_expression = predicate_expression->right_operand();
+
       auto original_cardinality = estimator->estimate_cardinality(reduced_node);
-
-      auto reducer_node = join_node->input(opposite_side(side_of_join));
       auto reducer_node_cardinality = estimator->estimate_cardinality(reducer_node);
 
-
-
-      const auto semi_join_reduction_node = JoinNode::make(JoinMode::Semi, predicate_expression);
-      semi_join_reduction_node->mark_as_semi_reduction(join_node);
-      semi_join_reduction_node->comment = name();
-      lqp_insert_node(join_node, side_of_join, semi_join_reduction_node);
-      semi_join_reduction_node->set_right_input(reducer_node);
-
-      const auto reduced_cardinality = estimator->estimate_cardinality(semi_join_reduction_node);
-
-      semi_join_reduction_node->set_right_input(nullptr);
-      lqp_remove_node(semi_join_reduction_node);
-
-      // TODO (team): fix me for dips currently we reduce every time
-      // While semi join reductions might not be immediately beneficial if the original cardinality is low, remember
-      // that they might be pushed down in the LQP to a point where they are more beneficial (e.g., below an
-      // Aggregate).
-      /* if (original_cardinality == 0 || (reduced_cardinality / original_cardinality) > MINIMUM_SELECTIVITY) {
-        return;
-      } */
-
-      // For `t1 JOIN t2 on t1.a = t2.a` where a semi join reduction is supposed to be added to t1, `t1.a = t2.a`
-      // is the predicate_expression. The values from t1 are supposed to be filtered by looking at t1.a, which is
-      // called the reducer_side_expression.
-      const auto& reducer_side_expression =
-          expression_evaluable_on_lqp(predicate_expression->left_operand(), *reducer_node)
-              ? predicate_expression->left_operand()
-              : predicate_expression->right_operand();
-      DebugAssert(!expression_evaluable_on_lqp(reducer_side_expression, *join_node->input(side_of_join)),
+      if (!expression_evaluable_on_lqp(reducer_side_expression, *reducer_node)) {
+          std::swap(reduced_side_expression, reducer_side_expression);
+      }
+      DebugAssert(!expression_evaluable_on_lqp(reducer_side_expression, *join_node->input(selection_side)),
                   "Expected filtered expression to be uniquely evaluable on one side of the join");
 
-      // Currently, the right input of the semi join reduction (i.e., the reducer node) is the opposite input of the
-      // join_node. By walking down that LQP, we might find a suitable reducer node where predicate_expression
-      // continues to be evaluable but where the cardinality is lower (mostly, because we moved below a join). Also,
-      // by moving further down in the LQP, we (1) allow the semi join reduction to start earlier in multi-threaded
-      // environments and (2) have a better chance at finding a common reducer node for multiple semi joins,
-      // improving the reusability of sub-LQPs.
-      while (true) {
-        // Independent of the join type of the reducer_node, we can use either side of the join's input as a candidate
-        // for the reducer, as long as the predicate continues to be evaluable. This is because the join in
-        // reducer_node might only remove values from the reducer's list of values, but does not add any new values.
-        // As such, each value in the output of the join will also be found in the input.
-        if (reducer_node->type != LQPNodeType::Join) {
-          break;
-        }
 
-        const auto try_deeper_reducer_node = [&](const auto side_of_input) {
-          const auto& candidate = reducer_node->input(side_of_input);
-          if (!expression_evaluable_on_lqp(reducer_side_expression, *candidate)) {
-            return false;
-          }
+      const auto subquery = AggregateNode::make(expression_functional::expression_vector(),
+                                                expression_functional::expression_vector(
+                                                        expression_functional::min_(reducer_side_expression),
+                                                        expression_functional::max_(reducer_side_expression)),
+                                                reducer_node);
 
-          const auto candidate_cardinality = estimator->estimate_cardinality(candidate);
 
-          // Check if the candidate has an equal or lower cardinality. Allow for some tolerance due to float values
-          // being used.
-          if (candidate_cardinality > reducer_node_cardinality * 1.01) {
-            return false;
-          }
+      const auto min = ProjectionNode::make(
+              expression_functional::expression_vector(expression_functional::min_(reducer_side_expression)), subquery);
+      const auto max = ProjectionNode::make(
+              expression_functional::expression_vector(expression_functional::max_(reducer_side_expression)), subquery);
 
-          reducer_node = candidate;
-          reducer_node_cardinality = candidate_cardinality;
+      auto between_predicate = PredicateNode::make(
+              expression_functional::between_inclusive_(reduced_side_expression, lqp_subquery_(min),
+                                                        lqp_subquery_(max)));
+      lqp_insert_node(join_node, selection_side, between_predicate);
 
-          return true;
-        };
 
-        if (try_deeper_reducer_node(LQPInputSide::Left) || try_deeper_reducer_node(LQPInputSide::Right)) {
-          continue;
-        }
-        break;
+      // estimate cardinality and decide wether its usefull to do this
+      const auto reduced_cardinality = estimator->estimate_cardinality(between_predicate);
+      lqp_remove_node(between_predicate);
+
+      // Wenn selektivitaet entsprechend, praedikat in vektor speichern und spaeter reinpacken
+      // TODO make side independent
+      // between_predicate->set_left_input(reduced_node);
+
+      if (original_cardinality == 0 || (reduced_cardinality / original_cardinality) > MINIMUM_SELECTIVITY) {
+          return;
       }
+      data_induced_predicates.emplace_back(join_node, selection_side, between_predicate);
 
-      if (reducer_node_cardinality > original_cardinality) {
-        // The JoinHash, which is currently used for semi joins is bad at handling cases where the build side is
-        // larger than the probe side. In these cases, do not add a semi join reduction for now.
-        return;
-      }
-
-      semi_join_reduction_node->set_right_input(reducer_node);
-      semi_join_reductions.emplace_back(join_node, side_of_join, semi_join_reduction_node);
-    };
+      // Benchmarking ==visualize flag
+      // Benchmarking zunaechst mit sf 0.01
+      // spaeter zum messen 10
+      // spaeter tpc-h, tpcds und join order benchmark
+      // helper benchmark_all
+      // compare_benchmarks (python) mit output.jsons als param in /scripts
+  };
 
 
 
@@ -181,7 +133,7 @@ void DataInducedPredicateRule::_apply_to_plan_without_subqueries(const std::shar
     return LQPVisitation::VisitInputs;
   });
 
-  for (const auto& [join_node, side_of_join, semi_join_reduction_node] : semi_join_reductions) {
+  for (const auto& [join_node, side_of_join, semi_join_reduction_node] : data_induced_predicates) {
     lqp_insert_node(join_node, side_of_join, semi_join_reduction_node, AllowRightInput::Yes);
   }
 }

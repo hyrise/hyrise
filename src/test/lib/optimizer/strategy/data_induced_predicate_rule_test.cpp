@@ -44,7 +44,13 @@ TEST_F(DataInducedPredicateRuleTest, CreateSimpleReduction) {
   JoinNode::make(JoinMode::Inner, equals_(_a_a, _b_a),
     _node_a,
     _node_b);
+  // TODO Fix test by removing hard coded values and get between without hard coded values OR IS THIS EVEN RELEVANT?
+    /*const auto subquery = AggregateNode::make(expression_functional::expression_vector(), expression_functional::expression_vector(expression_functional::min_(reducer_side_expression), expression_functional::max_(reducer_side_expression)), reducer_node);
 
+
+    const auto min = ProjectionNode::make(expression_functional::expression_vector(expression_functional::min_(reducer_side_expression)), subquery);
+    const auto max = ProjectionNode::make(expression_functional::expression_vector(expression_functional::max_(reducer_side_expression)), subquery);
+*/
   const auto expected_reduction = PredicateNode::make(between_inclusive_(_a_a, value_(10), value_(20)), _node_a);
 
   const auto expected_lqp =
@@ -56,6 +62,12 @@ TEST_F(DataInducedPredicateRuleTest, CreateSimpleReduction) {
   //expected_reduction->mark_as_data_induced_predicate(expected_lqp);
 
   auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+        std::cout << "*expected_lqp" << std::endl;
+        std::cout << *expected_lqp << std::endl;
+        std::cout << "*actual_lqp" << std::endl;
+        std::cout << *actual_lqp << std::endl;
+
+// TODO Do actually want to compare the query plans?
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 
   // TODO (team): Change me (in the future)
