@@ -400,7 +400,7 @@ TEST_F(OperatorsGetTableTest, DynamicSubqueryPruning) {
   execute_all({table_wrapper, get_table});
 
   const auto& output_table = get_table->get_output();
-  EXPECT_EQ(get_table->get_output()->chunk_count(), 2);
+  EXPECT_EQ(output_table->chunk_count(), 2);
 
   EXPECT_EQ(get_table->description(DescriptionMode::SingleLine),
             "GetTable (int_int_float) pruned: 2/4 chunk(s) (1 static, 1 dynamic), 1/3 column(s)");
@@ -432,7 +432,7 @@ TEST_F(OperatorsGetTableTest, DynamicSubqueryPruningSubqueryNotExecuted) {
   get_table->execute();
 
   const auto& output_table = get_table->get_output();
-  EXPECT_EQ(get_table->get_output()->chunk_count(), 3);
+  EXPECT_EQ(output_table->chunk_count(), 3);
 
   EXPECT_EQ(get_table->description(DescriptionMode::SingleLine),
             "GetTable (int_int_float) pruned: 1/4 chunk(s) (1 static, 0 dynamic), 1/3 column(s)");
