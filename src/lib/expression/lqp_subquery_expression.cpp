@@ -39,8 +39,8 @@ std::shared_ptr<AbstractExpression> LQPSubqueryExpression::_on_deep_copy(
 }
 
 std::string LQPSubqueryExpression::description(const DescriptionMode mode) const {
-  std::stringstream stream;
-  stream << "SUBQUERY (LQP, " << lqp.get();
+  auto stream = std::stringstream{};
+  stream << "SUBQUERY (LQP, " << lqp;
 
   if (!arguments.empty()) {
     stream << ", Parameters: ";
