@@ -47,7 +47,7 @@ TEST_F(DummyTableNodeTest, NoUniqueColumnCombinations) {
 }
 
 TEST_F(DummyTableNodeTest, IsColumnNullable) {
-  EXPECT_THROW(_dummy_table_node->is_column_nullable(ColumnID{}), std::logic_error);
+  EXPECT_THROW(_dummy_table_node->is_column_nullable(ColumnID{0}), std::logic_error);
 }
 
 }  // namespace hyrise

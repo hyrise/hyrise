@@ -301,8 +301,8 @@ TEST_F(StorageTableTest, LastChunkOfReferenceTable) {
 TEST_F(StorageTableTest, CreatePartialHashIndex) {
   auto hash_index = t->get_table_indexes();
   EXPECT_TRUE(hash_index.empty());
-  const auto *const world_string = "World";
-  const auto *const hello_string = "Hello";
+  const auto world_string = pmr_string{"World"};
+  const auto hello_string = pmr_string{"Hello"};
   t->append({4, hello_string});
   t->append({3, world_string});
   t->append({6, hello_string});
@@ -317,16 +317,16 @@ TEST_F(StorageTableTest, CreatePartialHashIndex) {
   auto access_range_equals_with_iterators_hello = [](auto begin, const auto end) {
     EXPECT_EQ(std::distance(begin, end), 2);
 
-    EXPECT_EQ(*begin, (RowID{ChunkID{0}, ChunkOffset{0}}));
+    EXPECT_EQ(*begin, RowID(ChunkID{0}, ChunkOffset{0}));
     ++begin;
-    EXPECT_EQ(*begin, (RowID{ChunkID{1}, ChunkOffset{0}}));
+    EXPECT_EQ(*begin, RowID(ChunkID{1}, ChunkOffset{0}));
   };
   created_hash_index->range_equals_with_iterators(access_range_equals_with_iterators_hello, hello_string);
 
   auto access_range_equals_with_iterators_world = [](const auto begin, const auto end) {
     EXPECT_EQ(std::distance(begin, end), 1);
 
-    EXPECT_EQ(*begin, (RowID{ChunkID{0}, ChunkOffset{1}}));
+    EXPECT_EQ(*begin, RowID(ChunkID{0}, ChunkOffset{1}));
   };
   created_hash_index->range_equals_with_iterators(access_range_equals_with_iterators_world, world_string);
 }
