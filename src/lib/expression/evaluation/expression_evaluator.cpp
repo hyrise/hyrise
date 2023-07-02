@@ -658,28 +658,30 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_case_ex
   pmr_vector<Result> values{allocator};
   pmr_vector<bool> nulls{allocator};
 
-  (*case_expression.then(), *case_expression.otherwise(), [&](const auto& then_result, const auto& else_result) {
-    using ThenResultType = typename std::decay_t<decltype(then_result)>::Type;
-    using ElseResultType = typename std::decay_t<decltype(else_result)>::Type;
+  _resolve_to_expression_results(
+      *case_expression.then(), *case_expression.otherwise(), [&](const auto& then_result, const auto& else_result) {
+        using ThenResultType = typename std::decay_t<decltype(then_result)>::Type;
+        using ElseResultType = typename std::decay_t<decltype(else_result)>::Type;
 
-    if constexpr (CaseEvaluator::supports_v<Result, ThenResultType, ElseResultType>) {
-      const auto result_size = _result_size(when->size(), then_result.size(), else_result.size());
-      values.resize(result_size);
-      nulls.resize(result_size);
+        if constexpr (CaseEvaluator::supports_v<Result, ThenResultType, ElseResultType>) {
+          const auto result_size = _result_size(when->size(), then_result.size(), else_result.size());
+          values.resize(result_size);
+          nulls.resize(result_size);
 
-      for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(result_size); ++chunk_offset) {
-        if (when->value(chunk_offset) && !when->is_null(chunk_offset)) {
-          values[chunk_offset] = to_value<Result>(then_result.value(chunk_offset));
-          nulls[chunk_offset] = then_result.is_null(chunk_offset);
+          for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(result_size);
+               ++chunk_offset) {
+            if (when->value(chunk_offset) && !when->is_null(chunk_offset)) {
+              values[chunk_offset] = to_value<Result>(then_result.value(chunk_offset));
+              nulls[chunk_offset] = then_result.is_null(chunk_offset);
+            } else {
+              values[chunk_offset] = to_value<Result>(else_result.value(chunk_offset));
+              nulls[chunk_offset] = else_result.is_null(chunk_offset);
+            }
+          }
         } else {
-          values[chunk_offset] = to_value<Result>(else_result.value(chunk_offset));
-          nulls[chunk_offset] = else_result.is_null(chunk_offset);
+          Fail("Illegal operands for CaseExpression");
         }
-      }
-    } else {
-      Fail("Illegal operands for CaseExpression");
-    }
-  });
+      });
 
   return std::make_shared<ExpressionResult<Result>>(std::move(values), std::move(nulls));
 }
