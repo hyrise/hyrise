@@ -1452,21 +1452,14 @@ void ExpressionEvaluator::_materialize_segment_if_not_yet_materialized(const Col
   resolve_data_type(segment.data_type(), [&](const auto column_data_type_t) {
     using ColumnDataType = typename decltype(column_data_type_t)::type;
 
-#ifdef HYRISE_WITH_JEMALLOC
-    auto allocator = PolymorphicAllocator<ColumnDataType>{&JemallocMemoryResource::get()};
-#else
-    auto allocator = PolymorphicAllocator<ColumnDataType>{&LinearBufferResource::get()};
-#endif
-    auto pin_guard = AllocatorPinGuard{allocator};
-
-    pmr_vector<ColumnDataType> values{allocator};
-    pmr_vector<bool> nulls{allocator};
+    pmr_vector<ColumnDataType> values{};
+    pmr_vector<bool> nulls{};
 
     if (const auto value_segment = dynamic_cast<const ValueSegment<ColumnDataType>*>(&segment)) {
       // Shortcut
-      values = pmr_vector<ColumnDataType>{value_segment->values(), allocator};
+      values = pmr_vector<ColumnDataType>{value_segment->values()};
       if (_table->column_is_nullable(column_id)) {
-        nulls = pmr_vector<bool>{value_segment->null_values(), allocator};
+        nulls = pmr_vector<bool>{value_segment->null_values()};
       }
     } else {
       const auto segment_size = segment.size();
@@ -1492,11 +1485,24 @@ void ExpressionEvaluator::_materialize_segment_if_not_yet_materialized(const Col
       }
     }
 
+// We perform a copy here to avoid issues with pins, this is a workaround for now.
+// When a ref segment is passed, the values array is created on the same page sometimes since they have the same size
+// Since we lock the page, the ref segment can't be accessed anymore and we get a yield error.
+#ifdef HYRISE_WITH_JEMALLOC
+    auto allocator = PolymorphicAllocator<ColumnDataType>{&JemallocMemoryResource::get()};
+#else
+    auto allocator = PolymorphicAllocator<ColumnDataType>{&LinearBufferResource::get()};
+#endif
+    auto pin_guard = AllocatorPinGuard{allocator};
+
+    auto values_copy = pmr_vector<ColumnDataType>{values, allocator};
+    auto nulls_copy = pmr_vector<bool>{nulls, allocator};
+
     if (_table->column_is_nullable(column_id)) {
       _segment_materializations[column_id] =
-          std::make_shared<ExpressionResult<ColumnDataType>>(std::move(values), std::move(nulls));
+          std::make_shared<ExpressionResult<ColumnDataType>>(std::move(values_copy), std::move(nulls_copy));
     } else {
-      _segment_materializations[column_id] = std::make_shared<ExpressionResult<ColumnDataType>>(std::move(values));
+      _segment_materializations[column_id] = std::make_shared<ExpressionResult<ColumnDataType>>(std::move(values_copy));
     }
   });
 }
