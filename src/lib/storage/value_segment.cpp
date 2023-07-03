@@ -136,7 +136,7 @@ template <typename T>
 void ValueSegment<T>::resize(const size_t size) {
   DebugAssert(size > _values.size() && size <= _values.capacity(),
               "ValueSegments should not be shrunk or resized beyond their original capacity");
-  // TODO
+  // TODO; Alloc pin guar
   auto values_pin_guard = WritePinGuard{_values};
   _values.resize(size);
   if (is_nullable()) {

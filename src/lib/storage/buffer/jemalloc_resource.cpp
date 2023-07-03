@@ -97,7 +97,10 @@ JemallocMemoryResource::~JemallocMemoryResource() {}
 
 void* JemallocMemoryResource::do_allocate(std::size_t bytes, std::size_t alignment) {
   // TODO:: uint32_t arena_idx = tk_thread_get_arena();
-  return mallocx(bytes, _mallocx_flags);
+  if (auto ptr = mallocx(bytes, _mallocx_flags)) {
+    return ptr;
+  }
+  Fail("Failed to allocate memory");
 }
 
 void JemallocMemoryResource::do_deallocate(void* pointer, std::size_t bytes, std::size_t alignment) {
