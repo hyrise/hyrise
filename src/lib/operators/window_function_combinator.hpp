@@ -113,7 +113,7 @@ struct WindowFunctionCombinator<T, WindowFunction::Sum> {
 
     void update([[maybe_unused]] const WindowFunctionEvaluator::RelevantRowInformation& previous_value,
                 const WindowFunctionEvaluator::RelevantRowInformation& current_value) {
-      sum = Combine{}(sum, current_value.function_argument);
+      sum = Combine{}(sum, static_cast<ReturnType>(get<T>(current_value.function_argument)));
     }
   };
 };
