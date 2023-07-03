@@ -6,10 +6,6 @@
 #include <utility>
 #include <vector>
 
-// Using boost::atomic_flag as our use case with waiting requires GCC 11+.
-// TODO(anybody): switch to std::atomic_flag once we require at least GCC 11.
-#include <boost/atomic/atomic_flag.hpp>
-
 #include "abstract_task.hpp"
 #include "hyrise.hpp"
 #include "job_task.hpp"
@@ -61,15 +57,9 @@ void NodeQueueScheduler::begin() {
     worker->start();
   }
 
-  // We wait for each worker to start. Without waiting, test might shut down the scheduler before any workers have
-  // started.
-  // for (const auto& worker : _workers) {
-  // worker->is_ready.wait(false);
-  // }
-
   // Sleep to ensure that worker threads have been set up correctly. Otherwise, tests that immediate take the scheduler
   // down might create tasks before the workers are set up.
-  std::this_thread::sleep_for(std::chrono::milliseconds(5));
+  // std::this_thread::sleep_for(std::chrono::milliseconds(10));
 }
 
 void NodeQueueScheduler::wait_for_all_tasks() {
@@ -90,18 +80,6 @@ void NodeQueueScheduler::wait_for_all_tasks() {
     if (wait_loops > 1'000) {
       Fail("Time out during wait_for_all_tasks().");
     }
-  }
-
-  auto queue_check_runs = size_t{0};
-  for (auto& queue : _queues) {
-    // The following assert checks that we are not looping forever. The empty() check can be inaccurate for concurrent
-    // queues when many tiny tasks have been scheduled (see MergeSort scheduler test). When this assert is triggered in
-    // other situations, there have probably been new tasks added after wait_for_all_tasks() was called.
-    Assert(queue_check_runs < 1'000, "Queues are not empty but all registered tasks have already been processed.");
-    while (!queue->empty()) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(1));
-    }
-    ++queue_check_runs;
   }
 
   for (auto& queue : _queues) {

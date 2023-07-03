@@ -60,9 +60,6 @@ void Worker::operator()() {
 
   _set_affinity();
 
-  is_ready.test_and_set();
-  is_ready.notify_all();
-
   while (Hyrise::get().scheduler()->active() && !_shutdown_flag) {
     // Worker is allowed to sleep (when queue is empty) as long as the scheduler is not shutting down.
     _work(true);
