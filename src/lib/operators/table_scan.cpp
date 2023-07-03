@@ -22,6 +22,7 @@
 #include "hyrise.hpp"
 #include "lossless_cast.hpp"
 #include "operators/operator_scan_predicate.hpp"
+#include "operators/pqp_utils.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
 #include "storage/abstract_segment.hpp"
@@ -244,7 +245,7 @@ std::shared_ptr<const AbstractExpression> TableScan::_resolve_uncorrelated_subqu
    *      - resolve arguments of type uncorrelated subquery, and create ValueExpressions from the results
    *      - create deep copies for all other arguments
    */
-  auto arguments_count = predicate->arguments.size();
+  const auto arguments_count = predicate->arguments.size();
   auto new_arguments = std::vector<std::shared_ptr<AbstractExpression>>();
   new_arguments.reserve(arguments_count);
   auto computed_subqueries_count = size_t{0};
@@ -256,29 +257,7 @@ std::shared_ptr<const AbstractExpression> TableScan::_resolve_uncorrelated_subqu
       continue;
     }
 
-    auto subquery_result = NULL_VALUE;
-    const auto subquery_pqp = subquery->pqp;
-    Assert(subquery_pqp->state() == OperatorState::ExecutedAndAvailable,
-           "Uncorrelated subquery was not executed or has already been cleared.");
-    const auto& subquery_result_table = subquery_pqp->get_output();
-    const auto row_count = subquery_result_table->row_count();
-    Assert(subquery_result_table->column_count() == 1 && row_count <= 1,
-           "Uncorrelated subqueries may return at most one single value.");
-
-    if (row_count == 1) {
-      const auto chunk = subquery_result_table->get_chunk(ChunkID{0});
-      Assert(chunk, "Subquery results cannot be physically deleted.");
-      resolve_data_type(subquery->data_type(), [&](const auto data_type_t) {
-        using ColumnDataType = typename decltype(data_type_t)::type;
-        segment_iterate<ColumnDataType>(*chunk->get_segment(ColumnID{0}), [&](const auto& position) {
-          if (!position.is_null()) {
-            subquery_result = position.value();
-          }
-        });
-      });
-    }
-
-    new_arguments.emplace_back(value_(subquery_result));
+    new_arguments.emplace_back(value_(resolve_uncorrelated_subquery(subquery->pqp)));
     ++computed_subqueries_count;
   }
   DebugAssert(new_arguments.size() == predicate->arguments.size(), "Unexpected number of arguments.");

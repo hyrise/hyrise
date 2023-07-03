@@ -1,9 +1,5 @@
 #pragma once
 
-#include <memory>
-#include <utility>
-#include <vector>
-
 #include "scheduler/abstract_task.hpp"
 
 namespace hyrise {

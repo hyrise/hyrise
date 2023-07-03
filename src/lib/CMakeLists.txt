@@ -239,6 +239,7 @@ set(
     operators/operator_performance_data.hpp
     operators/operator_scan_predicate.cpp
     operators/operator_scan_predicate.hpp
+    operators/pqp_utils.cpp
     operators/pqp_utils.hpp
     operators/print.cpp
     operators/print.hpp
@@ -347,6 +348,7 @@ set(
     scheduler/operator_task.hpp
     scheduler/task_queue.cpp
     scheduler/task_queue.hpp
+    scheduler/task_utils.hpp
     scheduler/topology.cpp
     scheduler/topology.hpp
     scheduler/worker.cpp
@@ -583,6 +585,8 @@ set(
     utils/assert.hpp
     utils/check_table_equal.cpp
     utils/check_table_equal.hpp
+    utils/chunk_pruning_utils.cpp
+    utils/chunk_pruning_utils.hpp
     utils/column_pruning_utils.cpp
     utils/column_pruning_utils.hpp
     utils/copyable_atomic.hpp
@@ -755,14 +759,12 @@ target_include_directories(hyrise_impl PUBLIC ${CMAKE_BINARY_DIR})
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 target_compile_options(hyrise_impl PUBLIC -Xclang -fno-pch-timestamp)
 endif()
-if(NOT ${CMAKE_VERSION} VERSION_LESS "3.16.0")
-    target_precompile_headers(hyrise_impl PRIVATE
-      all_parameter_variant.hpp
-      storage/create_iterable_from_segment.hpp
-      storage/table.hpp
-      types.hpp
-    )
-endif()
+target_precompile_headers(hyrise_impl PRIVATE
+  all_parameter_variant.hpp
+  storage/create_iterable_from_segment.hpp
+  storage/table.hpp
+  types.hpp
+)
 
 # -fPIC generates position independent code which is necessary because plugins might access hyrise functions.
 target_compile_options(hyrise_impl PRIVATE -fPIC)

@@ -149,6 +149,7 @@ set(
     lib/scheduler/operator_task_test.cpp
     lib/scheduler/scheduler_test.cpp
     lib/scheduler/task_queue_test.cpp
+    lib/scheduler/task_utils_test.cpp
     lib/server/mock_socket.hpp
     lib/server/postgres_protocol_handler_test.cpp
     lib/server/query_handler_test.cpp
@@ -294,15 +295,13 @@ target_link_libraries(hyriseTest hyrise ${LIBRARIES})
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 target_compile_options(hyriseTest PUBLIC -Xclang -fno-pch-timestamp)
 endif()
-if(NOT ${CMAKE_VERSION} VERSION_LESS "3.16.0")
-    target_precompile_headers(hyriseTest PRIVATE
-        <gtest/gtest.h>
-        [["all_parameter_variant.hpp"]]
-        [["storage/create_iterable_from_segment.hpp"]]
-        [["storage/table.hpp"]]
-        [["types.hpp"]]
-    )
-endif()
+target_precompile_headers(hyriseTest PRIVATE
+    <gtest/gtest.h>
+    [["all_parameter_variant.hpp"]]
+    [["storage/create_iterable_from_segment.hpp"]]
+    [["storage/table.hpp"]]
+    [["types.hpp"]]
+)
 
 # Configure hyriseSystemTest
 add_executable(hyriseSystemTest ${SYSTEM_TEST_SOURCES})
