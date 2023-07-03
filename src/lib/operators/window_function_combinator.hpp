@@ -142,4 +142,7 @@ struct WindowFunctionCombinator<T, WindowFunction::Max> {
   constexpr static auto neutral_element = std::optional<T>();
 };
 
+template <typename T, WindowFunction window_function>
+concept SupportsOnePass = requires { typename WindowFunctionCombinator<T, window_function>::OnePassState; };
+
 };  // namespace hyrise
