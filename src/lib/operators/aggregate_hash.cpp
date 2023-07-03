@@ -826,7 +826,7 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
       }
       pos_list.emplace_back(result.row_id);
     }
-    _write_groupby_output(pos_list, allocator);
+    _write_groupby_output(pos_list);
   }
 
   /*
@@ -1029,7 +1029,7 @@ write_aggregate_values(pmr_vector<AggregateType>& /*values*/, pmr_vector<bool>& 
   Fail("Invalid aggregate");
 }
 
-void AggregateHash::_write_groupby_output(RowIDPosList& pos_list, const PolymorphicAllocator<size_t>& allocator) {
+void AggregateHash::_write_groupby_output(RowIDPosList& pos_list) {
   // TODO: can rmeove alloc again
   auto timer = Timer{};
   auto input_table = left_input_table();
@@ -1063,6 +1063,9 @@ void AggregateHash::_write_groupby_output(RowIDPosList& pos_list, const Polymorp
 
     resolve_data_type(input_table->column_data_type(input_column_id), [&](const auto typed_value) {
       using ColumnDataType = typename decltype(typed_value)::type;
+
+      auto allocator = PolymorphicAllocator<bool>{};
+      auto pin_guard = AllocatorPinGuard{allocator};
 
       const auto column_is_nullable = input_table->column_is_nullable(input_column_id);
       const auto pos_list_size = pos_list.size();
@@ -1153,7 +1156,7 @@ void AggregateHash::_write_aggregate_output(ColumnID aggregate_index) {
       pos_list.emplace_back(result.row_id);
     }
     auto write_groupby_output_timer = Timer{};
-    _write_groupby_output(pos_list, allocator);
+    _write_groupby_output(pos_list);
     excluded_time = write_groupby_output_timer.lap();
   }
 
