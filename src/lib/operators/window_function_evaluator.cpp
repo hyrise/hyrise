@@ -336,7 +336,7 @@ void WindowFunctionEvaluator::for_each_partition(std::span<const RelevantRowInfo
 template <typename InputColumnType, WindowFunction window_function>
 void WindowFunctionEvaluator::compute_window_function_one_pass(const HashPartitionedData& partitioned_data,
                                                                auto&& emit_computed_value) const {
-  if constexpr (RankLike<window_function>) {
+  if constexpr (SupportsOnePass<InputColumnType, window_function>) {
     spawn_and_wait_per_hash(partitioned_data, [&emit_computed_value](const auto& hash_partition) {
       using Traits = WindowFunctionCombinator<InputColumnType, window_function>;
       using State = typename Traits::OnePassState;
