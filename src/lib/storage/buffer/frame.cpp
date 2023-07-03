@@ -105,14 +105,14 @@ void Frame::unlock_exclusive() {
 StateVersionType Frame::update_state_with_same_version(StateVersionType old_version_and_state,
                                                        StateVersionType new_state) {
   constexpr auto SHIFT = NUM_BITS - STATE_SHIFT;
-  static_assert(SHIFT == 8, "Shift must be 8.");
+  static_assert(SHIFT == 16, "Shift must be 8.");
   return ((old_version_and_state << SHIFT) >> SHIFT) | (new_state << STATE_SHIFT);
 }
 
 StateVersionType Frame::update_state_with_increment_version(StateVersionType old_version_and_state,
                                                             StateVersionType new_state) {
   constexpr auto SHIFT = NUM_BITS - STATE_SHIFT;
-  static_assert(SHIFT == 8, "Shift must be 8.");
+  static_assert(SHIFT == 16, "Shift must be 8.");
   return (((old_version_and_state << SHIFT) >> SHIFT) + 1) | (new_state << STATE_SHIFT);
 }
 

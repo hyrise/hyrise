@@ -1030,6 +1030,7 @@ write_aggregate_values(pmr_vector<AggregateType>& /*values*/, pmr_vector<bool>& 
 }
 
 void AggregateHash::_write_groupby_output(RowIDPosList& pos_list, const PolymorphicAllocator<size_t>& allocator) {
+  // TODO: can rmeove alloc again
   auto timer = Timer{};
   auto input_table = left_input_table();
 

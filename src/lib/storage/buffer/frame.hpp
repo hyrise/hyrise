@@ -11,10 +11,10 @@ namespace hyrise {
 class Frame {
  public:
   static constexpr StateVersionType UNLOCKED = 0;
-  static constexpr StateVersionType LOCKED_SHARED = 252;
-  static constexpr StateVersionType LOCKED = 253;
-  static constexpr StateVersionType MARKED = 254;
-  static constexpr StateVersionType EVICTED = 255;
+  static constexpr StateVersionType LOCKED_SHARED = 0xFFFF - 3;  // 252 if 8 bits
+  static constexpr StateVersionType LOCKED = 0xFFFF - 2;         // 253 if 8 bits
+  static constexpr StateVersionType MARKED = 0xFFFF - 1;         // 254 if 8 bits
+  static constexpr StateVersionType EVICTED = 0xFFFF;            // 255 if 8 bits, 65535 for 16 bits
 
   Frame();
 
@@ -51,10 +51,10 @@ class Frame {
 
  private:
   // clang-format off
-  static constexpr uint64_t MEMORY_NODE_MASK = 0x000F000000000000;
-  static constexpr uint64_t DIRTY_MASK       = 0x00F0000000000000;
-  static constexpr uint64_t STATE_MASK       = 0xFF00000000000000;
-  static constexpr uint64_t VERSION_MASK     = 0x0000FFFFFFFFFFFF;
+  static constexpr uint64_t MEMORY_NODE_MASK = 0x00000F0000000000;
+  static constexpr uint64_t DIRTY_MASK       = 0x0000F00000000000;
+  static constexpr uint64_t STATE_MASK       = 0xFFFF000000000000;
+  static constexpr uint64_t VERSION_MASK     = 0x000000FFFFFFFFFF;
   static_assert((MEMORY_NODE_MASK ^ DIRTY_MASK ^ STATE_MASK ^ VERSION_MASK) == std::numeric_limits<StateVersionType>::max());
   // clang-format on
 

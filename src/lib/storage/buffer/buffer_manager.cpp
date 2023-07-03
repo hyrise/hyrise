@@ -176,6 +176,7 @@ BufferManager& BufferManager::get() {
 void BufferManager::make_resident(const PageID page_id, const AccessIntent access_intent,
                                   const StateVersionType state_before_exclusive) {
   // TODO: retake the desiscion here if something
+  // TODO: What happens for the allocate case? Inpret allocate as a write regarding mig policy -> new method for pin
   // Check if the page was freshly allocated by checking the version. In this case, we want to use either DRAM or NUMA
   const auto version = Frame::version(state_before_exclusive);
   const auto is_evicted = Frame::state(state_before_exclusive) == Frame::EVICTED;
