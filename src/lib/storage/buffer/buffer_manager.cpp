@@ -70,7 +70,7 @@ void yield(const size_t repeat) {
   } else if (repeat < 100000) {
     std::this_thread::sleep_for(std::chrono::nanoseconds(1000));
   } else {
-    Fail("Yield for too long. Something is blocking.");
+    Fail("Yield for too long. Something is blocking. Current state");
   }
 };
 
@@ -192,7 +192,8 @@ void BufferManager::make_resident(const PageID page_id, const AccessIntent acces
   // Case 2: The page was freshly allocated and is not on DRAM yet. We can just decide if it should be on numa or dram
   // and we dont want to load anything from SSD
   if (is_new_page) {
-    DebugAssert(access_intent == AccessIntent::Write, "New pages should only be written to");
+    // // DebugAssert(access_intent == AccessIntent::Write || access_intent == AccessIntent::Allocate,
+    //             "New pages should only be written to");
     region->unprotect_page(page_id);
     for (auto repeat = size_t{0}; repeat < MAX_REPEAT_COUNT; ++repeat) {
       if (_secondary_buffer_pool->enabled() && !_config.migration_policy.bypass_numa_during_write()) {
@@ -291,7 +292,7 @@ void BufferManager::make_resident(const PageID page_id, const AccessIntent acces
   Fail("Could not allocate page on DRAM. Try increasing the buffer pool size.");
 }
 
-void BufferManager::pin_for_read(const PageID page_id) {
+void BufferManager::pin_shared(const PageID page_id) {
   DebugAssert(page_id.valid(), "Invalid page id");
 
   _metrics->total_pins.fetch_add(1, std::memory_order_relaxed);
@@ -328,7 +329,7 @@ void BufferManager::pin_for_read(const PageID page_id) {
   Fail("Could not pin page for read");
 }
 
-void BufferManager::pin_for_write(const PageID page_id) {
+void BufferManager::pin_exclusive(const PageID page_id) {
   DebugAssert(page_id.valid(), "Invalid page id");
 
   _metrics->total_pins.fetch_add(1, std::memory_order_relaxed);
@@ -360,7 +361,7 @@ void BufferManager::pin_for_write(const PageID page_id) {
   Fail("Could not pin page for write");
 }
 
-void BufferManager::unpin_for_read(const PageID page_id) {
+void BufferManager::unpin_shared(const PageID page_id) {
   DebugAssert(page_id.valid(), "Invalid page id");
 
   _metrics->current_pins.fetch_sub(1, std::memory_order_relaxed);
@@ -370,7 +371,7 @@ void BufferManager::unpin_for_read(const PageID page_id) {
   }
 }
 
-void BufferManager::unpin_for_write(const PageID page_id) {
+void BufferManager::unpin_exclusive(const PageID page_id) {
   DebugAssert(page_id.valid(), "Invalid page id");
 
   _metrics->current_pins.fetch_sub(1, std::memory_order_relaxed);

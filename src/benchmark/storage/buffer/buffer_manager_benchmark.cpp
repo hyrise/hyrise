@@ -44,11 +44,11 @@ BENCHMARK_DEFINE_F(BufferManagerFixture, BM_BufferManagerPinForWrite)(benchmark:
 
   for (auto _ : state) {
     auto page_id = PageID{PAGE_SIZE_TYPE, static_cast<size_t>(distr(gen))};
-    _buffer_manager.pin_for_write(page_id);
+    _buffer_manager.pin_exclusive(page_id);
     state.PauseTiming();
     std::memset(_buffer_manager._get_page_ptr(page_id), 0x1337, page_id.num_bytes());
     state.ResumeTiming();
-    _buffer_manager.unpin_for_write(page_id);
+    _buffer_manager.unpin_exclusive(page_id);
     // benchmark::ClobberMemory();
   }
 
@@ -72,7 +72,7 @@ BENCHMARK_DEFINE_F(BufferManagerFixture, BM_BufferManagerPinForRead)(benchmark::
 
   for (auto _ : state) {
     auto page_id = PageID{PAGE_SIZE_TYPE, static_cast<size_t>(distr(gen))};
-    _buffer_manager.pin_for_read(page_id);
+    _buffer_manager.pin_shared(page_id);
 
     state.PauseTiming();
     auto page_ptr = _buffer_manager._get_page_ptr(page_id);
@@ -82,7 +82,7 @@ BENCHMARK_DEFINE_F(BufferManagerFixture, BM_BufferManagerPinForRead)(benchmark::
     }
     state.ResumeTiming();
 
-    _buffer_manager.unpin_for_read(page_id);
+    _buffer_manager.unpin_shared(page_id);
     // benchmark::ClobberMemory();
   }
 
@@ -107,7 +107,7 @@ BENCHMARK_DEFINE_F(BufferManagerFixture, BM_BufferManagerMultiplePageSizesInMemo
 
   for (auto _ : state) {
     auto page_id = PageID{page_size_type, static_cast<size_t>(distr(gen))};
-    _buffer_manager.pin_for_read(page_id);
+    _buffer_manager.pin_shared(page_id);
 
     state.PauseTiming();
     auto page_ptr = _buffer_manager._get_page_ptr(page_id);
@@ -117,7 +117,7 @@ BENCHMARK_DEFINE_F(BufferManagerFixture, BM_BufferManagerMultiplePageSizesInMemo
     }
     state.ResumeTiming();
 
-    _buffer_manager.unpin_for_read(page_id);
+    _buffer_manager.unpin_shared(page_id);
     // benchmark::ClobberMemory();
   }
   state.SetLabel(std::string(magic_enum::enum_name(page_size_type)));
@@ -143,7 +143,7 @@ BENCHMARK_DEFINE_F(BufferManagerFixture, BM_BufferManagerMultiplePageSizesOutMem
 
   for (auto _ : state) {
     auto page_id = PageID{page_size_type, static_cast<size_t>(distr(gen))};
-    _buffer_manager.pin_for_read(page_id);
+    _buffer_manager.pin_shared(page_id);
 
     state.PauseTiming();
     auto page_ptr = _buffer_manager._get_page_ptr(page_id);
@@ -153,7 +153,7 @@ BENCHMARK_DEFINE_F(BufferManagerFixture, BM_BufferManagerMultiplePageSizesOutMem
     }
     state.ResumeTiming();
 
-    _buffer_manager.unpin_for_read(page_id);
+    _buffer_manager.unpin_shared(page_id);
     // benchmark::ClobberMemory();
   }
   state.SetLabel(std::string(magic_enum::enum_name(page_size_type)));
@@ -179,14 +179,14 @@ BENCHMARK_DEFINE_F(BufferManagerFixture, BM_BufferManagerMultiplePageSizesOutMem
 
   for (auto _ : state) {
     auto page_id = PageID{page_size_type, static_cast<size_t>(distr(gen))};
-    _buffer_manager.pin_for_read(page_id);
+    _buffer_manager.pin_shared(page_id);
 
     auto page_ptr = _buffer_manager._get_page_ptr(page_id);
     for (auto i = 0; i < page_id.num_bytes(); i += CACHE_LINE_SIZE) {
       __builtin_prefetch(&page_ptr[i]);
       benchmark::DoNotOptimize(page_ptr[i]);
     }
-    _buffer_manager.unpin_for_read(page_id);
+    _buffer_manager.unpin_shared(page_id);
     // benchmark::ClobberMemory();
   }
   state.SetLabel(std::string(magic_enum::enum_name(page_size_type)));

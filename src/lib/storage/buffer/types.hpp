@@ -133,7 +133,7 @@ constexpr size_t DEFAULT_RESERVED_VIRTUAL_MEMORY_PER_REGION = (DEFAULT_RESERVED_
 constexpr size_t INITIAL_SLOTS_PER_REGION = 10000000;  // TODO
 
 // Hints the buffer manager about the access intent of the caller. AccessIntent.Write is usually used during allocations for example.
-enum class AccessIntent { Read, Write };
+enum class AccessIntent { Read, Write, Allocate };
 
 boost::container::pmr::memory_resource* get_buffer_manager_memory_resource();
 

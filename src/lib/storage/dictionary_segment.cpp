@@ -105,6 +105,7 @@ ValueID DictionarySegment<T>::upper_bound(const AllTypeVariant& value) const {
       static_cast<uint64_t>(std::ceil(std::log2(_dictionary->size())));
   const auto typed_value = boost::get<T>(value);
 
+  auto pin_guard = ReadPinGuard{*_dictionary};
   auto iter = std::upper_bound(_dictionary->cbegin(), _dictionary->cend(), typed_value);
   if (iter == _dictionary->cend()) {
     return INVALID_VALUE_ID;
@@ -115,6 +116,7 @@ ValueID DictionarySegment<T>::upper_bound(const AllTypeVariant& value) const {
 template <typename T>
 AllTypeVariant DictionarySegment<T>::value_of_value_id(const ValueID value_id) const {
   DebugAssert(value_id < _dictionary->size(), "ValueID out of bounds");
+  auto pin_guard = ReadPinGuard{*_dictionary};
   access_counter[SegmentAccessCounter::AccessType::Dictionary] += 1;
   return (*_dictionary)[value_id];
 }

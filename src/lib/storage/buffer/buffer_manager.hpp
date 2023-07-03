@@ -2,6 +2,7 @@
 
 #include <boost/container/pmr/memory_resource.hpp>
 #include <memory>
+#include <nlohmann/json.hpp>
 #include <tuple>
 #include "noncopyable.hpp"
 #include "storage/buffer/frame.hpp"
@@ -11,7 +12,6 @@
 #include "storage/buffer/types.hpp"
 #include "storage/buffer/volatile_region.hpp"
 #include "utils/pausable_loop_thread.hpp"
-#include <nlohmann/json.hpp>
 
 namespace hyrise {
 
@@ -43,8 +43,7 @@ class BufferManager : public boost::container::pmr::memory_resource, public Nonc
     // Load the configuration from the environment
     static Config from_env();
 
-      nlohmann::json to_json() const;
-
+    nlohmann::json to_json() const;
   };
 
   BufferManager();
@@ -57,13 +56,14 @@ class BufferManager : public boost::container::pmr::memory_resource, public Nonc
 
   static BufferManager& get();
 
-  void pin_for_write(const PageID page_id);
+  // Rename to shared and exclusive lock
+  void pin_exclusive(const PageID page_id);
 
-  void pin_for_read(const PageID page_id);
+  void pin_shared(const PageID page_id);
 
-  void unpin_for_write(const PageID page_id);
+  void unpin_exclusive(const PageID page_id);
 
-  void unpin_for_read(const PageID page_id);
+  void unpin_shared(const PageID page_id);
 
   void set_dirty(const PageID page_id);
 

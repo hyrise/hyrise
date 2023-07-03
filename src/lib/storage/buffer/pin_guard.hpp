@@ -33,9 +33,11 @@ struct PinnedFrames : public Noncopyable {
 
     _pins.push_back(page_id);
     if constexpr (accessIntent == AccessIntent::Write) {
-      BufferManager::get().pin_for_write(page_id);
+      BufferManager::get().pin_exclusive(page_id);
     } else if constexpr (accessIntent == AccessIntent::Read) {
-      BufferManager::get().pin_for_read(page_id);
+      BufferManager::get().pin_shared(page_id);
+    } else if constexpr (accessIntent == AccessIntent::Allocate) {
+      BufferManager::get().pin_shared(page_id);
     } else {
       Fail("Unkwon access intent");
     }
@@ -57,9 +59,14 @@ struct PinnedFrames : public Noncopyable {
     for (const auto page_id : _pins) {
       if constexpr (accessIntent == AccessIntent::Write) {
         BufferManager::get().set_dirty(page_id);
-        BufferManager::get().unpin_for_write(page_id);
+        BufferManager::get().unpin_exclusive(page_id);
       } else if constexpr (accessIntent == AccessIntent::Read) {
-        BufferManager::get().unpin_for_read(page_id);
+        BufferManager::get().unpin_shared(page_id);
+      } else if constexpr (accessIntent == AccessIntent::Allocate) {
+        BufferManager::get().set_dirty(page_id);
+        BufferManager::get().unpin_shared(page_id);
+      } else {
+        Fail("Unkwon access intent");
       }
     }
   }
@@ -177,7 +184,7 @@ using WritePinGuard = FramePinGuard<AccessIntent::Write>;
  * The AllocatorPinGuard is not thread-safe!
 */
 class AllocatorPinGuard final : private Noncopyable {
-  struct Observer final : public PinnedFrames<AccessIntent::Write>, public BufferPoolAllocatorObserver {
+  struct Observer final : public PinnedFrames<AccessIntent::Allocate>, public BufferPoolAllocatorObserver {
     void on_allocate(const PageID page_id) override {
       // TODO: solve pinning issue
       add_pin(page_id);

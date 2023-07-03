@@ -63,10 +63,10 @@ TEST_F(BufferManagerStressTest, TestPinAndUnpins) {
 
     auto& request = requests[current];
     if (request.access_intent == AccessIntent::Read) {
-      bm.pin_for_read(request.page_id);
+      bm.pin_shared(request.page_id);
       std::cout << "pinned read" << std::endl;
       std::this_thread::sleep_for(request.access_time);
-      bm.unpin_for_read(request.page_id);
+      bm.unpin_shared(request.page_id);
     } else {
       bm.pin_for_write(request.page_id);
       std::cout << "pinned write" << std::endl;
