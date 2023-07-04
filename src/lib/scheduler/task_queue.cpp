@@ -55,7 +55,8 @@ std::shared_ptr<AbstractTask> TaskQueue::steal() {
         return task;
       }
 
-      queue.enqueue(task);
+      const auto t = queue.enqueue(task);
+      Assert(t, "WHAT");
       semaphore.signal();
     }
   }

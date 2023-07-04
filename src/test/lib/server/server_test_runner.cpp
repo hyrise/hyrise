@@ -394,10 +394,12 @@ TEST_F(ServerTestRunner, TestParallelConnections) {
 
   // Define the work package
   const auto connection_run = [&]() {
+	  std::cout << "Issueing" << std::endl;
     pqxx::connection connection{_connection_string};
     pqxx::nontransaction transaction{connection};
     const auto result = transaction.exec(sql);
     EXPECT_EQ(result.size(), expected_num_rows);
+	  std::cout << "Issued" << std::endl;
   };
 
   // Create the async objects and spawn them asynchronously (i.e., as their own threads)
