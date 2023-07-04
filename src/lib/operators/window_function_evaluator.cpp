@@ -83,7 +83,7 @@ std::shared_ptr<const Table> WindowFunctionEvaluator::_templated_on_execute() {
     }
   };
 
-  switch (choose_computation_strategy<window_function>()) {
+  switch (choose_computation_strategy<InputColumnType, window_function>()) {
     case ComputationStrategy::OnePass:
       compute_window_function_one_pass<InputColumnType, window_function>(partitioned_data, emit_computed_value);
       break;
@@ -289,17 +289,22 @@ bool WindowFunctionEvaluator::RelevantRowInformation::compare_for_hash_partition
   return std::is_lt(compare_with_null_equal(lhs.order_values, rhs.order_values));
 }
 
-template <WindowFunction window_function>
+template <typename InputColumnType, WindowFunction window_function>
 ComputationStrategy WindowFunctionEvaluator::choose_computation_strategy() const {
   const auto& frame = frame_description();
   const auto is_prefix_frame = frame.type == FrameType::Range && frame.start.unbounded &&
                                frame.start.type == FrameBoundType::Preceding && !frame.end.unbounded &&
                                frame.end.type == FrameBoundType::CurrentRow;
-  if (is_prefix_frame)
+  Assert(is_prefix_frame || !RankLike<window_function>, "Invalid frame for rank-like window function.");
+
+  if (is_prefix_frame && SupportsOnePass<InputColumnType, window_function>)
     return ComputationStrategy::OnePass;
 
-  Assert(!RankLike<window_function>, "Invalid frame for rank-like window function.");
-  return ComputationStrategy::SegmentTree;
+  if (SupportsSegmentTree<InputColumnType, window_function>)
+    return ComputationStrategy::SegmentTree;
+
+  Fail("Could not determine appropriate computation strategy for window function " +
+       window_function_to_string.left.at(window_function) + ".");
 }
 
 bool WindowFunctionEvaluator::is_output_nullable() const {

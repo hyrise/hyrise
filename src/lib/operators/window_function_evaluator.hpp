@@ -57,7 +57,7 @@ class WindowFunctionEvaluator : public AbstractReadOnlyOperator {
     SegmentTree,
   };
 
-  template <WindowFunction window_function>
+  template <typename InputColumnType, WindowFunction window_function>
   ComputationStrategy choose_computation_strategy() const;
 
   bool is_output_nullable() const;
