@@ -25,16 +25,13 @@ using ComputationStrategy = WindowFunctionEvaluator::ComputationStrategy;
 
 WindowFunctionEvaluator::WindowFunctionEvaluator(
     const std::shared_ptr<const AbstractOperator>& input_operator, std::vector<ColumnID> init_partition_by_column_ids,
-    std::vector<ColumnID> init_order_by_column_ids,
+    std::vector<ColumnID> init_order_by_column_ids, ColumnID init_function_argument_column_id,
     std::shared_ptr<WindowFunctionExpression> init_window_funtion_expression)
     : AbstractReadOnlyOperator(OperatorType::WindowFunction, input_operator),
       _partition_by_column_ids(std::move(init_partition_by_column_ids)),
       _order_by_column_ids(std::move(init_order_by_column_ids)),
+      _function_argument_column_id(std::move(init_function_argument_column_id)),
       _window_function_expression(std::move(init_window_funtion_expression)) {
-  const auto argument_column_expression =
-      std::dynamic_pointer_cast<LQPColumnExpression>(_window_function_expression->argument());
-  _function_argument_column_id =
-      argument_column_expression ? argument_column_expression->original_column_id : INVALID_COLUMN_ID;
   Assert(
       _function_argument_column_id != INVALID_COLUMN_ID || is_rank_like(_window_function_expression->window_function),
       "Could not extract window function argument, although it was not rank-like");

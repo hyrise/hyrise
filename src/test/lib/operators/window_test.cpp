@@ -39,7 +39,7 @@ void test_output(const std::shared_ptr<AbstractOperator> in, std::shared_ptr<Win
   const auto order_by_columns = std::vector<ColumnID>{ColumnID{1}};
 
   const auto window_function_operator =
-      std::make_shared<WindowFunctionEvaluator>(in, partition_by_columns, order_by_columns, window_funtion_expression);
+      std::make_shared<WindowFunctionEvaluator>(in, partition_by_columns, order_by_columns, INVALID_COLUMN_ID, window_funtion_expression);
 
   window_function_operator->execute();
   const auto result_table = window_function_operator->get_output();
