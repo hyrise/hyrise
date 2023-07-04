@@ -20,10 +20,10 @@ class VariableStringDictionarySegment : public BaseDictionarySegment {
  public:
   VariableStringDictionarySegment(const std::shared_ptr<const pmr_vector<char>>& dictionary,
                                   const std::shared_ptr<const BaseCompressedVector>& attribute_vector,
-                                  const std::shared_ptr<const pmr_vector<uint32_t>> offset_vector);
+                                  const std::shared_ptr<const pmr_vector<uint32_t>>& offset_vector);
 
   // TODO:: remove
-  VariableStringDictionarySegment() : BaseDictionarySegment(DataType::String), _unique_value_count(0){};
+  VariableStringDictionarySegment() : BaseDictionarySegment(DataType::String) {};
   // returns an underlying dictionary
   std::shared_ptr<const pmr_vector<char>> dictionary() const;
 
@@ -36,12 +36,12 @@ class VariableStringDictionarySegment : public BaseDictionarySegment {
 
   std::optional<pmr_string> get_typed_value(const ChunkOffset chunk_offset) const {
     // performance critical - not in cpp to help with inlining
-    const auto offset = _decompressor->get(chunk_offset);
-    if (offset == _dictionary->size()) {
+    const auto value_id = _decompressor->get(chunk_offset);
+    if (value_id == _offset_vector->size()) {
       return std::nullopt;
     }
 
-    return pmr_string(_dictionary->data() + offset);
+    return typed_value_of_value_id(ValueID{value_id});
   }
 
   ChunkOffset size() const final;
@@ -94,10 +94,9 @@ class VariableStringDictionarySegment : public BaseDictionarySegment {
 
  protected:
   const std::shared_ptr<const pmr_vector<char>> _dictionary;
-  // Maps chunk offsets to dictionary offsets.
+  // Maps chunk offsets to value ids.
   const std::shared_ptr<const BaseCompressedVector> _attribute_vector;
   std::unique_ptr<BaseVectorDecompressor> _decompressor;
-  const size_t _unique_value_count;
   // Maps value ids to dictionary offsets.
   const std::shared_ptr<const pmr_vector<uint32_t>> _offset_vector;
 };

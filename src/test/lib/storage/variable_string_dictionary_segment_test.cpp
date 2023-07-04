@@ -127,7 +127,6 @@ TEST_F(StorageVariableStringDictionarySegmentTest, MemoryUsageEstimation) {
       vs_str, DataType::String, SegmentEncodingSpec{EncodingType::VariableStringDictionary});
   const auto empty_dictionary_segment =
       std::dynamic_pointer_cast<VariableStringDictionarySegment>(empty_compressed_segment);
-  // TODO: Why are we passing mode here?
   const auto empty_memory_usage = empty_dictionary_segment->memory_usage(MemoryUsageCalculationMode::Full);
 
   vs_str->append("A");
@@ -141,7 +140,6 @@ TEST_F(StorageVariableStringDictionarySegmentTest, MemoryUsageEstimation) {
   static constexpr auto size_of_dictionary = 3u;
 
   // We have to substract 1 since the empty VariableStringSegment actually contains one null terminator
-  // TODO: Why are we specifying mode?
   EXPECT_EQ(dictionary_segment->memory_usage(MemoryUsageCalculationMode::Full),
             empty_memory_usage - 1u + 3 * size_of_attribute + size_of_dictionary);
 }
@@ -162,7 +160,24 @@ TEST_F(StorageVariableStringDictionarySegmentTest, TestLookup) {
                                           attribute_vector, VectorCompressionType::FixedWidthInteger, allocator, {4})),
                                       std::make_shared<pmr_vector<uint32_t>>(offsets)};
 
-  // TODO: Actually test lookup and compare with data.
+  auto accessors = std::vector<std::function<AllTypeVariant(const VariableStringDictionarySegment&, const ChunkOffset)>>{
+                                           +[](const VariableStringDictionarySegment& segment, const ChunkOffset offset) {
+                                             const auto maybe = segment.get_typed_value(offset);
+                                             return maybe ? maybe.value() : NULL_VALUE;
+                                           },
+                                           +[](const VariableStringDictionarySegment& segment, const ChunkOffset offset) {
+                                             return segment[offset];
+                                           }};
+  for (const auto& accessor : accessors) {
+    EXPECT_EQ(accessor(segment, ChunkOffset{0}), AllTypeVariant{"Hello"});
+    EXPECT_EQ(accessor(segment, ChunkOffset{1}), AllTypeVariant{"Hello"});
+    EXPECT_EQ(accessor(segment, ChunkOffset{2}), AllTypeVariant{"World"});
+    EXPECT_EQ(accessor(segment, ChunkOffset{3}), AllTypeVariant{"String"});
+    EXPECT_EQ(accessor(segment, ChunkOffset{4}), AllTypeVariant{"Alexander"});
+    EXPECT_EQ(accessor(segment, ChunkOffset{5}), AllTypeVariant{""});
+    EXPECT_EQ(accessor(segment, ChunkOffset{6}), AllTypeVariant{"Alexander"});
+  }
+  // EXPECT_EQ(segment.)
 }
 
 }  // namespace hyrise

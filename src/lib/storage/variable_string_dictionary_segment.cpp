@@ -8,12 +8,11 @@ namespace hyrise {
 VariableStringDictionarySegment::VariableStringDictionarySegment(
     const std::shared_ptr<const pmr_vector<char>>& dictionary,
     const std::shared_ptr<const BaseCompressedVector>& attribute_vector,
-    const std::shared_ptr<const pmr_vector<uint32_t>> offset_vector)
+    const std::shared_ptr<const pmr_vector<uint32_t>>& offset_vector)
     : BaseDictionarySegment(data_type_from_type<pmr_string>()),
       _dictionary{dictionary},
       _attribute_vector{attribute_vector},
       _decompressor{attribute_vector->create_base_decompressor()},
-      _unique_value_count(std::count(dictionary->begin(), dictionary->end(), '\0')),
       _offset_vector{offset_vector} {
   // NULL is represented by _offset_vector.size(). INVALID_VALUE_ID, which is the highest possible number in
   // ValueID::base_type (2^32 - 1), is needed to represent "value not found" in calls to lower_bound/upper_bound.
@@ -29,7 +28,7 @@ std::shared_ptr<const pmr_vector<char>> VariableStringDictionarySegment::diction
 AllTypeVariant VariableStringDictionarySegment::operator[](const ChunkOffset chunk_offset) const {
   PerformanceWarning("operator[] used");
   DebugAssert(chunk_offset != INVALID_CHUNK_OFFSET, "Passed chunk offset must be valid.");
-  access_counter[SegmentAccessCounter::AccessType::Dictionary] += 1;
+  // access_counter[SegmentAccessCounter::AccessType::Dictionary] += 1;
   const auto value = get_typed_value(chunk_offset);
   return value ? value.value() : NULL_VALUE;
 }
@@ -48,7 +47,7 @@ std::shared_ptr<AbstractSegment> VariableStringDictionarySegment::copy_using_all
   return copy;
 }
 
-size_t VariableStringDictionarySegment::memory_usage(const MemoryUsageCalculationMode mode) const {
+size_t VariableStringDictionarySegment::memory_usage(const MemoryUsageCalculationMode  /*mode*/) const {
   return _attribute_vector->data_size() + _dictionary->capacity() + _offset_vector->capacity();
 }
 
@@ -113,7 +112,7 @@ pmr_string VariableStringDictionarySegment::typed_value_of_value_id(const ValueI
 }
 
 ValueID::base_type VariableStringDictionarySegment::unique_values_count() const {
-  return _unique_value_count;
+  return _offset_vector->size();
 }
 
 std::shared_ptr<const BaseCompressedVector> VariableStringDictionarySegment::attribute_vector() const {
