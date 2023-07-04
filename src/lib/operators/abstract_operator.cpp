@@ -128,8 +128,13 @@ void AbstractOperator::execute() {
 
   if constexpr (HYRISE_DEBUG) {
     // Verify that LQP (if set) and PQP match.
-    if (lqp_node) {
-      const auto& lqp_expressions = lqp_node->output_expressions();
+    auto lqp_node2 = lqp_node->deep_copy();
+    //auto ss = std::stringstream{};
+    //ss << "I am here for: " << *lqp_node2 << "\n";
+    //std::cout << ss.str() << std::flush;
+    if (lqp_node2) {
+      //std::cout << *lqp_node2 << std::endl;
+      const auto& lqp_expressions = lqp_node2->output_expressions();
       if (!_output) {
         Assert(lqp_expressions.empty(), "Operator did not produce a result, but the LQP expects it to");
       } else if (std::dynamic_pointer_cast<const DummyTableNode>(lqp_node)) {
@@ -144,6 +149,9 @@ void AbstractOperator::execute() {
                std::string{"Mismatching number of output columns for "} + name());
         for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
           if (_type != OperatorType::Alias) {
+            //auto ss = std::stringstream{};
+            //ss << "$$$$$$ " << *lqp_expressions[column_id];
+            //std::cout << ss.str() << std::endl;
             const auto lqp_type = lqp_expressions[column_id]->data_type();
             const auto pqp_type = _output->column_data_type(column_id);
             const auto pqp_name = _output->column_name(column_id);
