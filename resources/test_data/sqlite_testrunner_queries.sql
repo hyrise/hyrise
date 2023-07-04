@@ -260,6 +260,7 @@ SELECT a, b, RANK() OVER (PARTITION BY a ORDER BY b) AS r FROM mixed_null
 -- column expressions with offset
 SELECT id, RANK() OVER (PARTITION BY b + 2 ORDER BY c + 3) AS r FROM mixed
 SELECT id, a, b, c, SUM(b + 5) OVER (PARTITION BY a ORDER BY c + 5 ROWS BETWEEN UNBOUNDED PRECEDING AND 10 FOLLOWING) as s FROM mixed
+SELECT id, a, b, c, SUM(b + 5) OVER (PARTITION BY a ORDER BY c + 5 ROWS BETWEEN UNBOUNDED PRECEDING AND 10 FOLLOWING) as s FROM id_int_int_int_100
 
 -- Aggregates
 SELECT SUM(b + b) AS sum_b_b FROM mixed;

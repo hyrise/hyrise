@@ -396,8 +396,9 @@ void WindowFunctionEvaluator::compute_window_function_segment_tree(const HashPar
                                       ? partition_end
                                       : clamped_add<uint64_t>(tuple_index, frame.end.offset + 1, partition_end);
           using Transformer = typename Traits::QueryTransformer;
-          emit_computed_value(hash_partition[tuple_index].row_id,
-                              Transformer{}(segment_tree.range_query({window_start, window_end})));
+          emit_computed_value(
+              hash_partition[tuple_index].row_id,
+              Transformer{}(segment_tree.range_query({window_start - partition_start, window_end - partition_start})));
         }
       });
     });
