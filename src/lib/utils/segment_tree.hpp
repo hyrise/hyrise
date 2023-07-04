@@ -34,6 +34,9 @@ class SegmentTree {
   }
 
   T range_query(Range range) const {
+    DebugAssert(range.start <= range.end, "Got malformed Range in SegmentTree::range_query.");
+    DebugAssert(range.end <= leaf_count, "Query range out of bounds.");
+
     auto agg = neutral_element;
     for (auto left_node = leaf_count + range.start, right_node = leaf_count + range.end; left_node < right_node;
          left_node = parent(left_node), right_node = parent(right_node)) {
