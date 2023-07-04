@@ -100,9 +100,7 @@ void Worker::_work(const bool allow_sleep) {
     // own queue. The waiting is skipped in case the scheduler is shutting down or sleep is not allowed (e.g., when
     // _work() in called for a known number of unfinished jobs, see wait_for_tasks()).
     if (!work_stealing_successful && !_shutdown_flag && allow_sleep) {
-      //std::cout << "Sleep" << std::endl;
       _queue->semaphore.wait();
-      //std::cout << "After sleep pull" << std::endl;
       task = _queue->pull();
     }
 

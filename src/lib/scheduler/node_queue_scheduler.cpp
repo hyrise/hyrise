@@ -63,7 +63,6 @@ void NodeQueueScheduler::begin() {
 }
 
 void NodeQueueScheduler::wait_for_all_tasks() {
-	std::cout << "watiforalltasks" << std::endl;
   auto wait_loops = size_t{0};
   while (true) {
     auto num_finished_tasks = uint64_t{0};
@@ -85,10 +84,8 @@ void NodeQueueScheduler::wait_for_all_tasks() {
 
   for (auto& queue : _queues) {
     auto queue_check_runs = size_t{0};
-    std::cout << "#1 check: " << queue->estimate_load() << std::endl;
     while (!queue->empty()) {
       queue->signal(1);
-        std::cout << "#2 check " << queue->estimate_load() << std::endl;
       // The following assert checks that we are not looping forever. The empty() check can be inaccurate for
       // concurrent queues when many tiny tasks have been scheduled (see MergeSort scheduler test). When this assert is
       // triggered in other situations, there have probably been new tasks added after wait_for_all_tasks() was called.
