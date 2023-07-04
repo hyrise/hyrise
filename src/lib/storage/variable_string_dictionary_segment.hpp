@@ -19,11 +19,11 @@ class BaseCompressedVector;
 class VariableStringDictionarySegment : public BaseDictionarySegment {
  public:
   VariableStringDictionarySegment(const std::shared_ptr<const pmr_vector<char>>& dictionary,
-                                           const std::shared_ptr<const BaseCompressedVector>& attribute_vector,
-                                           const std::shared_ptr<const pmr_vector<uint32_t>> offset_vector);
+                                  const std::shared_ptr<const BaseCompressedVector>& attribute_vector,
+                                  const std::shared_ptr<const pmr_vector<uint32_t>> offset_vector);
 
   // TODO:: remove
-  VariableStringDictionarySegment(): BaseDictionarySegment(static_cast<const DataType>(0)), _unique_value_count(0){};
+  VariableStringDictionarySegment() : BaseDictionarySegment(DataType::String), _unique_value_count(0){};
   // returns an underlying dictionary
   std::shared_ptr<const pmr_vector<char>> dictionary() const;
 
@@ -84,6 +84,11 @@ class VariableStringDictionarySegment : public BaseDictionarySegment {
   ValueID::base_type unique_values_count() const final;
 
   std::shared_ptr<const BaseCompressedVector> attribute_vector() const final;
+  // ValueID -> Offset : ok (offset_vector)
+  // Offset -> ValueId : need
+  /* Idea 1: Use ValueID to index into offsets to get offsets
+   *
+   */
 
   ValueID null_value_id() const final;
 

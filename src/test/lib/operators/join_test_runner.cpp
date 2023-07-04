@@ -111,7 +111,7 @@ bool operator<(const JoinTestConfiguration& l, const JoinTestConfiguration& r) {
   return l.to_tuple() < r.to_tuple();
 }
 
-bool operator==(const JoinTestConfiguration& l, const JoinTestConfiguration& r) {
+bool __attribute__((used)) operator==(const JoinTestConfiguration& l, const JoinTestConfiguration& r) {
   return l.to_tuple() == r.to_tuple();
 }
 
@@ -769,6 +769,7 @@ TEST_P(JoinTestRunner, TestJoin) {
     }
   }
 }
+
 //
 //INSTANTIATE_TEST_SUITE_P(JoinNestedLoop, JoinTestRunner,
 //                         testing::ValuesIn(JoinTestRunner::create_configurations<JoinNestedLoop>()));
