@@ -154,28 +154,32 @@ struct WindowFunctionCombinator<T, WindowFunction::Avg> {
 
 template <typename T>
 struct WindowFunctionCombinator<T, WindowFunction::Min> {
-  using TreeNode = std::optional<typename WindowFunctionTraits<T, WindowFunction::Min>::ReturnType>;
+  using MinReturnType = typename WindowFunctionTraits<T, WindowFunction::Min>::ReturnType;
+  using TreeNode = std::optional<MinReturnType>;
 
   using Combine = decltype([](TreeNode lhs, TreeNode rhs) -> TreeNode {
     if (!lhs && !rhs)
       return std::nullopt;
-    return std::min(lhs.value_or(std::numeric_limits<T>::max()), rhs.value_or(std::numeric_limits<T>::max()));
+    return std::min(lhs.value_or(std::numeric_limits<MinReturnType>::max()),
+                    rhs.value_or(std::numeric_limits<MinReturnType>::max()));
   });
-  constexpr static auto neutral_element = std::optional<T>();
+  constexpr static auto neutral_element = std::optional<MinReturnType>();
 
   using QueryTransformer = IdentityTransformer;
 };
 
 template <typename T>
 struct WindowFunctionCombinator<T, WindowFunction::Max> {
-  using TreeNode = std::optional<typename WindowFunctionTraits<T, WindowFunction::Max>::ReturnType>;
+  using MaxReturnType = typename WindowFunctionTraits<T, WindowFunction::Max>::ReturnType;
+  using TreeNode = std::optional<MaxReturnType>;
 
   using Combine = decltype([](TreeNode lhs, TreeNode rhs) -> TreeNode {
     if (!lhs && !rhs)
       return std::nullopt;
-    return std::max(lhs.value_or(std::numeric_limits<T>::min()), rhs.value_or(std::numeric_limits<T>::min()));
+    return std::max(lhs.value_or(std::numeric_limits<MaxReturnType>::min()),
+                    rhs.value_or(std::numeric_limits<MaxReturnType>::min()));
   });
-  constexpr static auto neutral_element = std::optional<T>();
+  constexpr static auto neutral_element = std::optional<MaxReturnType>();
 
   using QueryTransformer = IdentityTransformer;
 };
