@@ -50,7 +50,7 @@ BENCHMARK_DEFINE_F(PageMigrationFixture, BM_ToNodeMemory)(benchmark::State& stat
   state.SetBytesProcessed(int64_t(state.iterations()) * times * num_bytes);
 }
 
-BENCHMARK_DEFINE_F(PageMigrationFixture, BM_ToNodeMemoryLatency)(benchmark::State& state) {
+BENCHMARK_DEFINE_F(PageMigrationFixture, BM_ToNodeMemoryLatencyDramToCXL)(benchmark::State& state) {
   auto size_type = static_cast<PageSizeType>(state.range(0));
   const auto num_bytes = bytes_for_size_type(size_type);
   constexpr auto VIRT_SIZE = 5UL * 1024 * 1024 * 1024;
@@ -64,6 +64,27 @@ BENCHMARK_DEFINE_F(PageMigrationFixture, BM_ToNodeMemoryLatency)(benchmark::Stat
   for (auto _ : state) {
 #if HYRISE_NUMA_SUPPORT
     numa_tonode_memory(_mapped_region + (++i * num_bytes), num_bytes, 2);
+#endif
+    benchmark::ClobberMemory();
+  }
+  state.SetItemsProcessed(int64_t(state.iterations()));
+  state.SetBytesProcessed(int64_t(state.iterations()) * num_bytes);
+}
+
+BENCHMARK_DEFINE_F(PageMigrationFixture, BM_ToNodeMemoryLatencyCXLToDram)(benchmark::State& state) {
+  auto size_type = static_cast<PageSizeType>(state.range(0));
+  const auto num_bytes = bytes_for_size_type(size_type);
+  constexpr auto VIRT_SIZE = 5UL * 1024 * 1024 * 1024;
+
+#if HYRISE_NUMA_SUPPORT
+  numa_tonode_memory(_mapped_region, VIRT_SIZE, 2);
+  std::memset(_mapped_region, 0x1, VIRT_SIZE);
+#endif
+  // TODO: radnom
+  auto i = 0;
+  for (auto _ : state) {
+#if HYRISE_NUMA_SUPPORT
+    numa_tonode_memory(_mapped_region + (++i * num_bytes), num_bytes, 0);
 #endif
     benchmark::ClobberMemory();
   }
@@ -105,7 +126,10 @@ BENCHMARK_DEFINE_F(PageMigrationFixture, BM_MovePagesLatency)(benchmark::State& 
 BENCHMARK_REGISTER_F(PageMigrationFixture, BM_ToNodeMemory)
     ->ArgsProduct({benchmark::CreateDenseRange(static_cast<uint64_t>(MIN_PAGE_SIZE_TYPE),
                                                static_cast<u_int64_t>(MAX_PAGE_SIZE_TYPE), /*step=*/1)});
-BENCHMARK_REGISTER_F(PageMigrationFixture, BM_ToNodeMemoryLatency)
+BENCHMARK_REGISTER_F(PageMigrationFixture, BM_ToNodeMemoryLatencyDramToCXL)
+    ->ArgsProduct({benchmark::CreateDenseRange(static_cast<uint64_t>(MIN_PAGE_SIZE_TYPE),
+                                               static_cast<u_int64_t>(MAX_PAGE_SIZE_TYPE), /*step=*/1)});
+BENCHMARK_REGISTER_F(PageMigrationFixture, BM_ToNodeMemoryLatencyCXLToDram)
     ->ArgsProduct({benchmark::CreateDenseRange(static_cast<uint64_t>(MIN_PAGE_SIZE_TYPE),
                                                static_cast<u_int64_t>(MAX_PAGE_SIZE_TYPE), /*step=*/1)});
 BENCHMARK_REGISTER_F(PageMigrationFixture, BM_MovePagesLatency)
