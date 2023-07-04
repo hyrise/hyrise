@@ -21,6 +21,7 @@ class WindowFunctionEvaluator : public AbstractReadOnlyOperator {
   WindowFunctionEvaluator(const std::shared_ptr<const AbstractOperator>& input_operator,
                           std::vector<ColumnID> init_partition_by_column_ids,
                           std::vector<ColumnID> init_order_by_column_ids,
+                          ColumnID init_function_argument_column_id,
                           std::shared_ptr<WindowFunctionExpression> init_window_funtion_expression);
 
   const std::string& name() const override;
