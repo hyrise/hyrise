@@ -145,4 +145,10 @@ struct WindowFunctionCombinator<T, WindowFunction::Max> {
 template <typename T, WindowFunction window_function>
 concept SupportsOnePass = requires { typename WindowFunctionCombinator<T, window_function>::OnePassState; };
 
+template <typename T, WindowFunction window_function>
+concept SupportsSegmentTree = requires {
+                                typename WindowFunctionCombinator<T, window_function>::Combine;
+                                { WindowFunctionCombinator<T, window_function>::neutral_element };
+                              };
+
 };  // namespace hyrise
