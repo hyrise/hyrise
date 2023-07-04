@@ -118,6 +118,8 @@ std::shared_ptr<const Table> WindowFunctionEvaluator::_on_execute() {
         switch (window_function) {
           case WindowFunction::Sum:
             return _templated_on_execute<InputColumnType, WindowFunction::Sum>();
+          case WindowFunction::Avg:
+            return _templated_on_execute<InputColumnType, WindowFunction::Avg>();
           case WindowFunction::Min:
             return _templated_on_execute<InputColumnType, WindowFunction::Min>();
           case WindowFunction::Max:
@@ -369,21 +371,22 @@ void WindowFunctionEvaluator::compute_window_function_segment_tree(const HashPar
   const auto& frame = frame_description();
   using OutputColumnType = typename WindowFunctionTraits<InputColumnType, window_function>::ReturnType;
 
-  if constexpr (UseSegmentTree<OutputColumnType, window_function>) {
+  if constexpr (SupportsSegmentTree<OutputColumnType, window_function>) {
     Assert(frame.type == FrameType::Rows, "Sum only works with FrameBounds of type Rows");
 
     spawn_and_wait_per_hash(partitioned_data, [&emit_computed_value, &frame](const auto& hash_partition) {
       for_each_partition(hash_partition, [&](uint64_t partition_start, uint64_t partition_end) {
-        std::vector<std::optional<OutputColumnType>> leaf_values(partition_end - partition_start);
+        using Traits = WindowFunctionCombinator<OutputColumnType, window_function>;
+        using TreeNode = typename Traits::TreeNode;
+
+        std::vector<TreeNode> leaf_values(partition_end - partition_start);
         std::transform(hash_partition.begin() + partition_start, hash_partition.begin() + partition_end,
-                       leaf_values.begin(), [](const auto& row) -> std::optional<OutputColumnType> {
+                       leaf_values.begin(), [](const auto& row) -> TreeNode {
                          if (variant_is_null(row.function_argument))
-                           return std::nullopt;
-                         return static_cast<OutputColumnType>(get<InputColumnType>(row.function_argument));
+                           return TreeNode(std::nullopt);
+                         return TreeNode(static_cast<OutputColumnType>(get<InputColumnType>(row.function_argument)));
                        });
-        SegmentTree<std::optional<OutputColumnType>,
-                    typename WindowFunctionCombinator<OutputColumnType, window_function>::Combine>
-            segment_tree(leaf_values, WindowFunctionCombinator<OutputColumnType, window_function>::neutral_element);
+        SegmentTree<TreeNode, typename Traits::Combine> segment_tree(leaf_values, Traits::neutral_element);
 
         for (auto tuple_index = partition_start; tuple_index < partition_end; ++tuple_index) {
           const auto window_start = frame.start.unbounded
@@ -392,12 +395,14 @@ void WindowFunctionEvaluator::compute_window_function_segment_tree(const HashPar
           const auto window_end = frame.end.unbounded
                                       ? partition_end
                                       : clamped_add<uint64_t>(tuple_index, frame.end.offset + 1, partition_end);
-          emit_computed_value(hash_partition[tuple_index].row_id, segment_tree.range_query({window_start, window_end}));
+          using Transformer = typename Traits::QueryTransformer;
+          emit_computed_value(hash_partition[tuple_index].row_id,
+                              Transformer{}(segment_tree.range_query({window_start, window_end})));
         }
       });
     });
   } else {
-    Fail("Called compute_window_function_segment_tree with incompatible window function.");
+    Fail("Unsupported SegmentTree window function.");
   }
 }
 
