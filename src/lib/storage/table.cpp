@@ -178,11 +178,19 @@ void Table::append(const std::vector<AllTypeVariant>& values) {
 
 void Table::append_mutable_chunk() {
   auto segments = Segments{};
+#ifdef HYRISE_WITH_JEMALLOC
+  auto allocator = PolymorphicAllocator<size_t>{&JemallocMemoryResource::get()};
+#else
+  auto allocator = PolymorphicAllocator<size_t>{&LinearBufferResource::get()};
+#endif
+
+  auto allocator_pin_guard = AllocatorPinGuard{allocator};
+
   for (const auto& column_definition : _column_definitions) {
     resolve_data_type(column_definition.data_type, [&](auto type) {
       using ColumnDataType = typename decltype(type)::type;
       segments.push_back(
-          std::make_shared<ValueSegment<ColumnDataType>>(column_definition.nullable, _target_chunk_size));
+          std::make_shared<ValueSegment<ColumnDataType>>(allocator, column_definition.nullable, _target_chunk_size));
     });
   }
 

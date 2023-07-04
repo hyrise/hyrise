@@ -50,7 +50,7 @@ class Chunk : private Noncopyable {
   // requires up to 16 bits for the value ids. A chunk size of 100'000 would put us just slightly over that 16 bits,
   // meaning that FixedWidthInteger vectors would use 32 instead of 16 bits. We do not use 65'536 because we need to
   // account for NULL being encoded as a separate value id.
-  static constexpr auto DEFAULT_SIZE = ChunkOffset{65'535};
+  static constexpr auto DEFAULT_SIZE = ChunkOffset{8192}; // TODO(nikriek)
 
   Chunk(Segments segments, const std::shared_ptr<MvccData>& mvcc_data = nullptr,
         const std::optional<PolymorphicAllocator<Chunk>>& alloc = std::nullopt, Indexes indexes = {});

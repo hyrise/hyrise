@@ -35,6 +35,8 @@ AllTypeVariant DictionarySegment<T>::operator[](const ChunkOffset chunk_offset) 
   PerformanceWarning("operator[] used");
   DebugAssert(chunk_offset != INVALID_CHUNK_OFFSET, "Passed chunk offset must be valid.");
   access_counter[SegmentAccessCounter::AccessType::Dictionary] += 1;
+  auto pin_guard = ReadPinGuard{*this};
+
   const auto typed_value = get_typed_value(chunk_offset);
   if (!typed_value) {
     return NULL_VALUE;

@@ -17,6 +17,7 @@ template <typename T>
 class ValueSegment : public BaseValueSegment {
  public:
   explicit ValueSegment(bool nullable = false, ChunkOffset capacity = Chunk::DEFAULT_SIZE);
+  explicit ValueSegment(const PolymorphicAllocator<T> &allocator, bool nullable = false, ChunkOffset capacity = Chunk::DEFAULT_SIZE);
 
   // Create a ValueSegment with the given values.
   explicit ValueSegment(pmr_vector<T>&& values);

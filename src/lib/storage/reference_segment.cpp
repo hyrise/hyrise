@@ -29,6 +29,7 @@ ReferenceSegment::ReferenceSegment(const std::shared_ptr<const Table>& reference
 
 AllTypeVariant ReferenceSegment::operator[](const ChunkOffset chunk_offset) const {
   PerformanceWarning("operator[] used");
+  auto pin_guard = ReadPinGuard{_pos_list};
 
   const auto row_id = (*_pos_list)[chunk_offset];
 
