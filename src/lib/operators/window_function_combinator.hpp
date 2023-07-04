@@ -22,12 +22,7 @@ constexpr bool is_rank_like(WindowFunction window_function) {
 template <WindowFunction window_function>
 concept RankLike = is_rank_like(window_function);
 
-constexpr static auto segment_tree_window_functions =
-    std::array{WindowFunction::Sum, WindowFunction::Min, WindowFunction::Max};
-
-template <typename T, WindowFunction window_function>
-concept UseSegmentTree = std::is_arithmetic_v<T> && std::ranges::find(segment_tree_window_functions, window_function) !=
-segment_tree_window_functions.end();
+using IdentityTransformer = decltype([](auto query_result) { return query_result; });
 
 template <typename T, WindowFunction window_function>
 struct WindowFunctionCombinator {};
@@ -94,52 +89,95 @@ struct WindowFunctionCombinator<T, WindowFunction::RowNumber> {
 
 template <typename T>
 struct WindowFunctionCombinator<T, WindowFunction::Sum> {
-  using ReturnType = typename WindowFunctionTraits<T, WindowFunction::Sum>::ReturnType;
+  using SumReturnType = typename WindowFunctionTraits<T, WindowFunction::Sum>::ReturnType;
 
-  using Combine =
-      decltype([](std::optional<ReturnType> lhs, std::optional<ReturnType> rhs) -> std::optional<ReturnType> {
-        if (!lhs && !rhs)
-          return std::nullopt;
-        return lhs.value_or(0) + rhs.value_or(0);
-      });
+  using TreeNode = std::optional<SumReturnType>;
+
+  using Combine = decltype([](TreeNode lhs, TreeNode rhs) -> TreeNode {
+    if (!lhs && !rhs)
+      return std::nullopt;
+    return lhs.value_or(0) + rhs.value_or(0);
+  });
   constexpr static auto neutral_element = std::optional<T>();
 
-  struct OnePassState {
-    std::optional<ReturnType> sum{};
+  using QueryTransformer = IdentityTransformer;
 
-    std::optional<ReturnType> current_value() const {
+  struct OnePassState {
+    std::optional<SumReturnType> sum{};
+
+    std::optional<SumReturnType> current_value() const {
       return sum;
     }
 
     void update([[maybe_unused]] const WindowFunctionEvaluator::RelevantRowInformation& previous_value,
                 const WindowFunctionEvaluator::RelevantRowInformation& current_value) {
-      sum = Combine{}(sum, static_cast<ReturnType>(get<T>(current_value.function_argument)));
+      sum = Combine{}(sum, static_cast<SumReturnType>(get<T>(current_value.function_argument)));
     }
   };
 };
 
 template <typename T>
+struct WindowFunctionCombinator<T, WindowFunction::Avg> {
+  using SumT = typename WindowFunctionTraits<T, WindowFunction::Sum>::ReturnType;
+  using CountT = typename WindowFunctionTraits<T, WindowFunction::Count>::ReturnType;
+
+  struct TreeNode {
+    SumT sum = 0;
+    CountT non_null_count = 0;
+
+    TreeNode() = default;
+
+    TreeNode(SumT init_sum, CountT init_non_null_count) : sum(init_sum), non_null_count(init_non_null_count) {}
+
+    constexpr explicit TreeNode(std::optional<T> value) {
+      if (value) {
+        sum = *value;
+        non_null_count = 1;
+      }
+    }
+  };
+
+  using Combine = decltype([](TreeNode lhs, TreeNode rhs) {
+    return TreeNode(lhs.sum + rhs.sum, lhs.non_null_count + rhs.non_null_count);
+  });
+
+  constexpr static auto neutral_element = TreeNode(std::nullopt);
+
+  using AvgReturnType = typename WindowFunctionTraits<T, WindowFunction::Avg>::ReturnType;
+
+  using QueryTransformer = decltype([](TreeNode query_result) -> std::optional<AvgReturnType> {
+    if (query_result.non_null_count == 0)
+      return std::nullopt;
+    return static_cast<AvgReturnType>(query_result.sum) / static_cast<AvgReturnType>(query_result.non_null_count);
+  });
+};
+
+template <typename T>
 struct WindowFunctionCombinator<T, WindowFunction::Min> {
-  using Combine = decltype([](std::optional<typename WindowFunctionTraits<T, WindowFunction::Min>::ReturnType> lhs,
-                              std::optional<typename WindowFunctionTraits<T, WindowFunction::Min>::ReturnType> rhs)
-                               -> std::optional<typename WindowFunctionTraits<T, WindowFunction::Min>::ReturnType> {
+  using TreeNode = std::optional<typename WindowFunctionTraits<T, WindowFunction::Min>::ReturnType>;
+
+  using Combine = decltype([](TreeNode lhs, TreeNode rhs) -> TreeNode {
     if (!lhs && !rhs)
       return std::nullopt;
     return std::min(lhs.value_or(std::numeric_limits<T>::max()), rhs.value_or(std::numeric_limits<T>::max()));
   });
   constexpr static auto neutral_element = std::optional<T>();
+
+  using QueryTransformer = IdentityTransformer;
 };
 
 template <typename T>
 struct WindowFunctionCombinator<T, WindowFunction::Max> {
-  using Combine = decltype([](std::optional<typename WindowFunctionTraits<T, WindowFunction::Max>::ReturnType> lhs,
-                              std::optional<typename WindowFunctionTraits<T, WindowFunction::Max>::ReturnType> rhs)
-                               -> std::optional<typename WindowFunctionTraits<T, WindowFunction::Max>::ReturnType> {
+  using TreeNode = std::optional<typename WindowFunctionTraits<T, WindowFunction::Max>::ReturnType>;
+
+  using Combine = decltype([](TreeNode lhs, TreeNode rhs) -> TreeNode {
     if (!lhs && !rhs)
       return std::nullopt;
     return std::max(lhs.value_or(std::numeric_limits<T>::min()), rhs.value_or(std::numeric_limits<T>::min()));
   });
   constexpr static auto neutral_element = std::optional<T>();
+
+  using QueryTransformer = IdentityTransformer;
 };
 
 template <typename T, WindowFunction window_function>
@@ -148,6 +186,7 @@ concept SupportsOnePass = requires { typename WindowFunctionCombinator<T, window
 template <typename T, WindowFunction window_function>
 concept SupportsSegmentTree = requires {
                                 typename WindowFunctionCombinator<T, window_function>::Combine;
+                                typename WindowFunctionCombinator<T, window_function>::TreeNode;
                                 { WindowFunctionCombinator<T, window_function>::neutral_element };
                               };
 
