@@ -60,10 +60,12 @@ void VolatileRegion::free(PageID page_id) {
 #endif
   const auto num_bytes = bytes_for_size_type(_size_type);
   auto ptr = get_page(page_id);
+  unprotect_page(page_id);
   if (madvise(ptr, num_bytes, flags) < 0) {
     const auto error = errno;
     Fail("Failed to madvice region: " + strerror(error));
   }
+  protect_page(page_id);
   _metrics->num_madvice_free_calls.fetch_add(1, std::memory_order_relaxed);
 }
 

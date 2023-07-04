@@ -29,6 +29,9 @@ void copy_value_range(const std::shared_ptr<const AbstractSegment>& source_abstr
 
   auto& target_values = target_value_segment->values();
   auto target_values_pin_guard = ReadPinGuard{target_values};
+  auto target_null_values_pin_guard = target_value_segment->is_nullable()
+                                          ? std::make_optional<ReadPinGuard>(target_value_segment->null_values())
+                                          : std::nullopt;
 
   /**
    * If the source Segment is a ValueSegment, take a fast path to copy the data.
@@ -59,8 +62,6 @@ void copy_value_range(const std::shared_ptr<const AbstractSegment>& source_abstr
     segment_with_iterators<T>(*source_abstract_segment, [&](const auto source_begin, const auto /*source_end*/) {
       auto source_iter = source_begin + source_begin_offset;
       auto target_iter = target_values.begin() + target_begin_offset;
-
-      auto target_null_values_pin_guard = ReadPinGuard{target_value_segment->null_values()};
 
       // Copy values and null values
       for (auto index = ChunkOffset{0}; index < length; ++index) {

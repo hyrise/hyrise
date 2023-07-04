@@ -569,6 +569,9 @@ bool BufferManager::BufferPool::ensure_free_pages(const PageSizeType required_si
 
   auto item = EvictionItem{};
 
+  auto num_eviction_queue_purges = memory_node == DEFAULT_DRAM_NUMA_NODE ? &metrics->num_dram_eviction_queue_adds
+                                                                         : &metrics->num_numa_eviction_queue_adds;
+
   // Find potential victim frame if we don't have enough space left
   // TODO: Verify, that this is correct, cceh kthe numbersm, verify value type
   while ((int64_t)current_bytes + (int64_t)bytes_required - (int64_t)freed_bytes > (int64_t)max_bytes) {
@@ -582,6 +585,7 @@ bool BufferManager::BufferPool::ensure_free_pages(const PageSizeType required_si
     auto current_state_and_version = frame->state_and_version();
 
     if (frame->memory_node() != memory_node) {
+      num_eviction_queue_purges->fetch_add(1, std::memory_order_relaxed);
       continue;
     }
 
@@ -589,7 +593,9 @@ bool BufferManager::BufferPool::ensure_free_pages(const PageSizeType required_si
     if (item.can_mark(current_state_and_version)) {
       if (frame->try_mark(current_state_and_version)) {
         add_to_eviction_queue(item.page_id, frame);
+        continue;
       }
+      num_eviction_queue_purges->fetch_add(1, std::memory_order_relaxed);
       continue;
     }
 
@@ -597,11 +603,13 @@ bool BufferManager::BufferPool::ensure_free_pages(const PageSizeType required_si
 
     // If the frame is already marked, we can evict it
     if (!item.can_evict(current_state_and_version)) {
+      num_eviction_queue_purges->fetch_add(1, std::memory_order_relaxed);
       continue;
     }
 
     // Try locking the frame exclusively, TODO: prefer shared locking
     if (!frame->try_lock_exclusive(current_state_and_version)) {
+      num_eviction_queue_purges->fetch_add(1, std::memory_order_relaxed);
       continue;
     }
 
@@ -609,6 +617,12 @@ bool BufferManager::BufferPool::ensure_free_pages(const PageSizeType required_si
            "Memory node mismatch: " + std::to_string(frame->memory_node()) + " != " + std::to_string(memory_node));
 
     evict(item, frame);
+
+    if (memory_node == DEFAULT_DRAM_NUMA_NODE) {
+      metrics->num_dram_evictions.fetch_add(1, std::memory_order_relaxed);
+    } else {
+      metrics->num_numa_evictions.fetch_add(1, std::memory_order_relaxed);
+    }
 
     DebugAssert(Frame::state(frame->state_and_version()) != Frame::LOCKED, "Frame cannot be locked");
 

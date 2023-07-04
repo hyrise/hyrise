@@ -149,11 +149,10 @@ template <typename T>
 void ValueSegment<T>::resize(const size_t size) {
   DebugAssert(size > _values.size() && size <= _values.capacity(),
               "ValueSegments should not be shrunk or resized beyond their original capacity");
-  // TODO; Alloc pin guarfor all resize
-  auto value_pin_guard = AllocatorPinGuard{_values.get_stored_allocator()};
+  auto values_pin_guard = ReadPinGuard{_values};
   _values.resize(size);
   if (is_nullable()) {
-    auto value_pin_guard = AllocatorPinGuard{_null_values->get_stored_allocator()};
+    auto null_values_pin_guard = ReadPinGuard{*_null_values};
     const auto lock = std::lock_guard<std::mutex>{_null_value_modification_mutex};
     _null_values->resize(size);
   }
