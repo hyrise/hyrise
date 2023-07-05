@@ -16,6 +16,9 @@
 
 namespace hyrise {
 
+std::partial_ordering compare_with_null_equal(const AllTypeVariant& lhs, const AllTypeVariant& rhs);
+std::partial_ordering compare_with_null_equal(std::span<const AllTypeVariant> lhs, std::span<const AllTypeVariant> rhs);
+
 class WindowFunctionEvaluator : public AbstractReadOnlyOperator {
  public:
   WindowFunctionEvaluator(const std::shared_ptr<const AbstractOperator>& input_operator,
@@ -43,11 +46,6 @@ class WindowFunctionEvaluator : public AbstractReadOnlyOperator {
     std::vector<AllTypeVariant> order_values;
     AllTypeVariant function_argument;
     RowID row_id;
-
-    static std::partial_ordering compare_with_null_equal(const AllTypeVariant& lhs, const AllTypeVariant& rhs);
-    static std::partial_ordering compare_with_null_equal(std::span<const AllTypeVariant> lhs,
-                                                         std::span<const AllTypeVariant> rhs);
-    static bool compare_for_hash_partitioning(const RelevantRowInformation& lhs, const RelevantRowInformation& rhs);
   };
 
   using HashPartitionedData = PerHash<std::vector<RelevantRowInformation>>;
