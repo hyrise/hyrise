@@ -27,7 +27,7 @@ TEST_F(StorageVariableStringDictionarySegmentTest, CompressSegmentString) {
 
   auto segment = ChunkEncoder::encode_segment(vs_str, DataType::String,
                                               SegmentEncodingSpec{EncodingType::VariableStringDictionary});
-  auto dict_segment = std::dynamic_pointer_cast<VariableStringDictionarySegment>(segment);
+  auto dict_segment = std::dynamic_pointer_cast<VariableStringDictionarySegment<pmr_string>>(segment);
 
   // Test attribute_vector size
   EXPECT_EQ(dict_segment->size(), 6u);
@@ -52,7 +52,7 @@ TEST_F(StorageVariableStringDictionarySegmentTest, Decode) {
 
   auto segment = ChunkEncoder::encode_segment(vs_str, DataType::String,
                                               SegmentEncodingSpec{EncodingType::VariableStringDictionary});
-  auto dict_segment = std::dynamic_pointer_cast<VariableStringDictionarySegment>(segment);
+  auto dict_segment = std::dynamic_pointer_cast<VariableStringDictionarySegment<pmr_string>>(segment);
 
   EXPECT_EQ(dict_segment->encoding_type(), EncodingType::VariableStringDictionary);
   EXPECT_EQ(dict_segment->compressed_vector_type(), CompressedVectorType::FixedWidthInteger1Byte);
@@ -70,7 +70,7 @@ TEST_F(StorageVariableStringDictionarySegmentTest, LongStrings) {
 
   auto segment = ChunkEncoder::encode_segment(vs_str, DataType::String,
                                               SegmentEncodingSpec{EncodingType::VariableStringDictionary});
-  auto dict_segment = std::dynamic_pointer_cast<VariableStringDictionarySegment>(segment);
+  auto dict_segment = std::dynamic_pointer_cast<VariableStringDictionarySegment<pmr_string>>(segment);
 
   // Test sorting
   auto dict = dict_segment->dictionary();
@@ -90,7 +90,7 @@ TEST_F(StorageVariableStringDictionarySegmentTest, LowerUpperBound) {
 
   auto segment = ChunkEncoder::encode_segment(vs_str, DataType::String,
                                               SegmentEncodingSpec{EncodingType::VariableStringDictionary});
-  auto dict_segment = std::dynamic_pointer_cast<VariableStringDictionarySegment>(segment);
+  auto dict_segment = std::dynamic_pointer_cast<VariableStringDictionarySegment<pmr_string>>(segment);
 
   // Test for AllTypeVariant as parameter
   EXPECT_EQ(dict_segment->lower_bound(AllTypeVariant("E")), ValueID{2});
@@ -104,7 +104,7 @@ TEST_F(StorageVariableStringDictionarySegmentTest, LowerUpperBound) {
 }
 
 TEST_F(StorageVariableStringDictionarySegmentTest, NullValues) {
-  std::shared_ptr<ValueSegment<pmr_string>> vs_str = std::make_shared<ValueSegment<pmr_string>>(true);
+  const auto vs_str = std::make_shared<ValueSegment<pmr_string>>(true);
 
   vs_str->append("A");
   vs_str->append(NULL_VALUE);
@@ -112,7 +112,7 @@ TEST_F(StorageVariableStringDictionarySegmentTest, NullValues) {
 
   auto segment = ChunkEncoder::encode_segment(vs_str, DataType::String,
                                               SegmentEncodingSpec{EncodingType::VariableStringDictionary});
-  auto dict_segment = std::dynamic_pointer_cast<VariableStringDictionarySegment>(segment);
+  auto dict_segment = std::dynamic_pointer_cast<VariableStringDictionarySegment<pmr_string>>(segment);
 
   EXPECT_EQ(dict_segment->null_value_id(), 2u);
   EXPECT_TRUE(variant_is_null((*dict_segment)[ChunkOffset{1}]));
@@ -126,7 +126,7 @@ TEST_F(StorageVariableStringDictionarySegmentTest, MemoryUsageEstimation) {
   const auto empty_compressed_segment = ChunkEncoder::encode_segment(
       vs_str, DataType::String, SegmentEncodingSpec{EncodingType::VariableStringDictionary});
   const auto empty_dictionary_segment =
-      std::dynamic_pointer_cast<VariableStringDictionarySegment>(empty_compressed_segment);
+      std::dynamic_pointer_cast<VariableStringDictionarySegment<pmr_string>>(empty_compressed_segment);
   const auto empty_memory_usage = empty_dictionary_segment->memory_usage(MemoryUsageCalculationMode::Full);
 
   vs_str->append("A");
@@ -134,7 +134,7 @@ TEST_F(StorageVariableStringDictionarySegmentTest, MemoryUsageEstimation) {
   vs_str->append("C");
   const auto compressed_segment = ChunkEncoder::encode_segment(
       vs_str, DataType::String, SegmentEncodingSpec{EncodingType::VariableStringDictionary});
-  const auto dictionary_segment = std::dynamic_pointer_cast<VariableStringDictionarySegment>(compressed_segment);
+  const auto dictionary_segment = std::dynamic_pointer_cast<VariableStringDictionarySegment<pmr_string>>(compressed_segment);
 
   static constexpr auto size_of_attribute = 1u;
   static constexpr auto size_of_dictionary = 3u;
@@ -142,6 +142,19 @@ TEST_F(StorageVariableStringDictionarySegmentTest, MemoryUsageEstimation) {
   // We have to substract 1 since the empty VariableStringSegment actually contains one null terminator
   EXPECT_EQ(dictionary_segment->memory_usage(MemoryUsageCalculationMode::Full),
             empty_memory_usage - 1u + 3 * size_of_attribute + size_of_dictionary);
+}
+
+TEST_F(StorageVariableStringDictionarySegmentTest, TestOffsetVector) {
+  vs_str->append("ThisIsAVeryLongStringThisIsAVeryLongStringThisIsAVeryLongString");
+  vs_str->append("QuiteShort");
+  vs_str->append("Short");
+
+  auto segment = ChunkEncoder::encode_segment(vs_str, DataType::String,
+                                              SegmentEncodingSpec{EncodingType::VariableStringDictionary});
+  auto dict_segment = std::dynamic_pointer_cast<VariableStringDictionarySegment<pmr_string>>(segment);
+  const auto offset_vector = dict_segment->offset_vector();
+  EXPECT_EQ(offset_vector->size(), 3);
+  // TODO: Add more tests.
 }
 
 TEST_F(StorageVariableStringDictionarySegmentTest, TestLookup) {
@@ -155,17 +168,17 @@ TEST_F(StorageVariableStringDictionarySegmentTest, TestLookup) {
   const pmr_vector<uint32_t> offsets{0, 6, 12, 22, 29};
   const pmr_vector<uint32_t> attribute_vector{0, 0, 1, 3, 2, 4, 2};
   const auto segment =
-      VariableStringDictionarySegment{klotz,
+      VariableStringDictionarySegment<pmr_string>{klotz,
                                       std::shared_ptr<const BaseCompressedVector>(compress_vector(
                                           attribute_vector, VectorCompressionType::FixedWidthInteger, allocator, {4})),
                                       std::make_shared<pmr_vector<uint32_t>>(offsets)};
 
-  auto accessors = std::vector<std::function<AllTypeVariant(const VariableStringDictionarySegment&, const ChunkOffset)>>{
-                                           +[](const VariableStringDictionarySegment& segment, const ChunkOffset offset) {
+  auto accessors = std::vector<std::function<AllTypeVariant(const VariableStringDictionarySegment<pmr_string>&, const ChunkOffset)>>{
+                                           +[](const VariableStringDictionarySegment<pmr_string>& segment, const ChunkOffset offset) {
                                              const auto maybe = segment.get_typed_value(offset);
                                              return maybe ? maybe.value() : NULL_VALUE;
                                            },
-                                           +[](const VariableStringDictionarySegment& segment, const ChunkOffset offset) {
+                                           +[](const VariableStringDictionarySegment<pmr_string>& segment, const ChunkOffset offset) {
                                              return segment[offset];
                                            }};
   for (const auto& accessor : accessors) {
