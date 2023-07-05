@@ -6,9 +6,10 @@
 #include <boost/dynamic_bitset.hpp>
 #include <boost/lexical_cast.hpp>
 #include <uninitialized_vector.hpp>
-
 #include "bytell_hash_map.hpp"
 #include "hyrise.hpp"
+#include "numa.h"
+
 #include "operators/join_hash.hpp"
 #include "operators/multi_predicate_join/multi_predicate_join_evaluator.hpp"
 #include "resolve_type.hpp"
@@ -264,7 +265,7 @@ static const auto ALL_TRUE_BLOOM_FILTER = ~BloomFilter(BLOOM_FILTER_SIZE);
 template <typename T, typename HashedType, bool keep_null_values>
 RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table, const ColumnID column_id,
                                     std::vector<std::vector<size_t>>& histograms, const size_t radix_bits,
-                                    BloomFilter& output_bloom_filter,
+                                    BloomFilter& output_bloom_filter, std::vector<NodeID>* partition_node_locations,
                                     const BloomFilter& input_bloom_filter = ALL_TRUE_BLOOM_FILTER) {
   // Retrieve input chunk_count as it might change during execution if we work on a non-reference table
   auto chunk_count = in_table->chunk_count();
@@ -290,8 +291,12 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
   // Create histograms per chunk
   histograms.resize(chunk_count);
 
+  auto nodes = (partition_node_locations == nullptr) ? *partition_node_locations : std::vector<NodeID>{};
+  assert(nodes.size() == 0);
   auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+  // TODO(anyone): perhaps use jobs.nodeID somehow.
   jobs.reserve(chunk_count);
+  nodes.reserve(chunk_count);
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk_in = in_table->get_chunk(chunk_id);
     if (!chunk_in) {
@@ -416,9 +421,11 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
       materialize();
     } else {
       jobs.emplace_back(std::make_shared<JobTask>(materialize));
+      const auto segment = chunk_in->get_segment(column_id);
+      nodes.emplace_back(segment->numa_node_location());
     }
   }
-  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
+  Hyrise::get().scheduler()->schedule_on_preferred_nodes_and_wait_for_tasks(jobs, nodes);
 
   return radix_container;
 }
@@ -430,7 +437,8 @@ Build all the hash tables for the partitions of the build column. One job per pa
 template <typename BuildColumnType, typename HashedType>
 std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<BuildColumnType>& radix_container,
                                                            const JoinHashBuildMode mode, const size_t radix_bits,
-                                                           const BloomFilter& input_bloom_filter) {
+                                                           const BloomFilter& input_bloom_filter,
+                                                           const std::vector<NodeID>& node_placements) {
   Assert(input_bloom_filter.size() == BLOOM_FILTER_SIZE, "invalid input_bloom_filter");
 
   if (radix_container.empty()) {
@@ -500,7 +508,7 @@ std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<
       jobs.emplace_back(std::make_shared<JobTask>(insert_into_hash_table));
     }
   }
-  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
+  Hyrise::get().scheduler()->schedule_on_preferred_nodes_and_wait_for_tasks(jobs, node_placements);
 
   // If radix partitioning is used, finalize is called above.
   if (radix_bits == 0) {
@@ -513,6 +521,7 @@ std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<
 template <typename T, typename HashedType, bool keep_null_values>
 RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
                                      std::vector<std::vector<size_t>>& histograms, const size_t radix_bits,
+                                     std::vector<NodeID>& job_nodes_placement,
                                      const BloomFilter& input_bloom_filter = ALL_TRUE_BLOOM_FILTER) {
   if (radix_container.empty()) {
     return radix_container;
@@ -603,7 +612,7 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
       jobs.emplace_back(std::make_shared<JobTask>(perform_partition));
     }
   }
-  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
+  Hyrise::get().scheduler()->schedule_on_preferred_nodes_and_wait_for_tasks(jobs, job_nodes_placement);
   jobs.clear();
 
   // Compress null_values_as_char into partition.null_values
@@ -633,7 +642,8 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
            const std::vector<std::optional<PosHashTable<HashedType>>>& hash_tables,
            std::vector<RowIDPosList>& pos_lists_build_side, std::vector<RowIDPosList>& pos_lists_probe_side,
            const JoinMode mode, const Table& build_table, const Table& probe_table,
-           const std::vector<OperatorJoinPredicate>& secondary_join_predicates) {
+           const std::vector<OperatorJoinPredicate>& secondary_join_predicates,
+           const std::vector<NodeID>& node_placements) {
   std::vector<std::shared_ptr<AbstractTask>> jobs;
   jobs.reserve(probe_radix_container.size());
 
@@ -792,7 +802,8 @@ template <typename ProbeColumnType, typename HashedType, JoinMode mode>
 void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_container,
                      const std::vector<std::optional<PosHashTable<HashedType>>>& hash_tables,
                      std::vector<RowIDPosList>& pos_lists, const Table& build_table, const Table& probe_table,
-                     const std::vector<OperatorJoinPredicate>& secondary_join_predicates) {
+                     const std::vector<OperatorJoinPredicate>& secondary_join_predicates,
+                     const std::vector<NodeID>& node_placements) {
   std::vector<std::shared_ptr<AbstractTask>> jobs;
 
   const auto probe_radix_container_count = probe_radix_container.size();

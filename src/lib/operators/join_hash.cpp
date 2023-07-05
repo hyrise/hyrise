@@ -325,11 +325,11 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
       if (keep_nulls_build_column) {
         materialized_build_column = materialize_input<BuildColumnType, HashedType, true>(
             _build_input_table, _column_ids.first, histograms_build_column, _radix_bits, build_side_bloom_filter,
-            input_bloom_filter);
+            nullptr, input_bloom_filter);
       } else {
         materialized_build_column = materialize_input<BuildColumnType, HashedType, false>(
             _build_input_table, _column_ids.first, histograms_build_column, _radix_bits, build_side_bloom_filter,
-            input_bloom_filter);
+            nullptr, input_bloom_filter);
       }
     };
 
@@ -337,15 +337,16 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
      * 1.2. Materialize the larger probe partition. Use the Bloom filter from the probe partition to skip rows that
      *       will not find a join partner.
      */
+    auto probe_partitions_node_placements = std::vector<NodeID>();
     const auto materialize_probe_side = [&](const auto& input_bloom_filter) {
       if (keep_nulls_probe_column) {
         materialized_probe_column = materialize_input<ProbeColumnType, HashedType, true>(
             _probe_input_table, _column_ids.second, histograms_probe_column, _radix_bits, probe_side_bloom_filter,
-            input_bloom_filter);
+            &probe_partitions_node_placements, input_bloom_filter);
       } else {
         materialized_probe_column = materialize_input<ProbeColumnType, HashedType, false>(
             _probe_input_table, _column_ids.second, histograms_probe_column, _radix_bits, probe_side_bloom_filter,
-            input_bloom_filter);
+            &probe_partitions_node_placements, input_bloom_filter);
       }
     };
 
@@ -391,10 +392,10 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
         // radix partition the build table
         if (keep_nulls_build_column) {
           radix_build_column = partition_by_radix<BuildColumnType, HashedType, true>(
-              materialized_build_column, histograms_build_column, _radix_bits);
+              materialized_build_column, histograms_build_column, _radix_bits, probe_partitions_node_placements);
         } else {
           radix_build_column = partition_by_radix<BuildColumnType, HashedType, false>(
-              materialized_build_column, histograms_build_column, _radix_bits);
+              materialized_build_column, histograms_build_column, _radix_bits, probe_partitions_node_placements);
         }
 
         // After the data in materialized_build_column has been partitioned, it is not needed anymore.
@@ -405,10 +406,10 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
         // radix partition the probe column.
         if (keep_nulls_probe_column) {
           radix_probe_column = partition_by_radix<ProbeColumnType, HashedType, true>(
-              materialized_probe_column, histograms_probe_column, _radix_bits);
+              materialized_probe_column, histograms_probe_column, _radix_bits, probe_partitions_node_placements);
         } else {
           radix_probe_column = partition_by_radix<ProbeColumnType, HashedType, false>(
-              materialized_probe_column, histograms_probe_column, _radix_bits);
+              materialized_probe_column, histograms_probe_column, _radix_bits, probe_partitions_node_placements);
         }
 
         // After the data in materialized_probe_column has been partitioned, it is not needed anymore.
@@ -437,11 +438,12 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
      */
     auto timer_hash_map_building = Timer{};
     if (_secondary_predicates.empty() && is_semi_or_anti_join(_mode)) {
-      hash_tables = build<BuildColumnType, HashedType>(radix_build_column, JoinHashBuildMode::ExistenceOnly,
-                                                       _radix_bits, probe_side_bloom_filter);
+      hash_tables =
+          build<BuildColumnType, HashedType>(radix_build_column, JoinHashBuildMode::ExistenceOnly, _radix_bits,
+                                             probe_side_bloom_filter, probe_partitions_node_placements);
     } else {
       hash_tables = build<BuildColumnType, HashedType>(radix_build_column, JoinHashBuildMode::AllPositions, _radix_bits,
-                                                       probe_side_bloom_filter);
+                                                       probe_side_bloom_filter, probe_partitions_node_placements);
     }
     _performance_data.set_step_runtime(OperatorSteps::Building, timer_hash_map_building.lap());
 
@@ -505,32 +507,33 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
       case JoinMode::Inner:
         probe<ProbeColumnType, HashedType, false>(radix_probe_column, hash_tables, build_side_pos_lists,
                                                   probe_side_pos_lists, _mode, *_build_input_table, *_probe_input_table,
-                                                  _secondary_predicates);
+                                                  _secondary_predicates, probe_partitions_node_placements);
         break;
 
       case JoinMode::Left:
       case JoinMode::Right:
         probe<ProbeColumnType, HashedType, true>(radix_probe_column, hash_tables, build_side_pos_lists,
                                                  probe_side_pos_lists, _mode, *_build_input_table, *_probe_input_table,
-                                                 _secondary_predicates);
+                                                 _secondary_predicates, probe_partitions_node_placements);
         break;
 
       case JoinMode::Semi:
         probe_semi_anti<ProbeColumnType, HashedType, JoinMode::Semi>(radix_probe_column, hash_tables,
                                                                      probe_side_pos_lists, *_build_input_table,
-                                                                     *_probe_input_table, _secondary_predicates);
+                                                                     *_probe_input_table, _secondary_predicates,
+                                                                     probe_partitions_node_placements);
         break;
 
       case JoinMode::AntiNullAsTrue:
         probe_semi_anti<ProbeColumnType, HashedType, JoinMode::AntiNullAsTrue>(
             radix_probe_column, hash_tables, probe_side_pos_lists, *_build_input_table, *_probe_input_table,
-            _secondary_predicates);
+            _secondary_predicates, probe_partitions_node_placements);
         break;
 
       case JoinMode::AntiNullAsFalse:
         probe_semi_anti<ProbeColumnType, HashedType, JoinMode::AntiNullAsFalse>(
             radix_probe_column, hash_tables, probe_side_pos_lists, *_build_input_table, *_probe_input_table,
-            _secondary_predicates);
+            _secondary_predicates, probe_partitions_node_placements);
         break;
 
       default:

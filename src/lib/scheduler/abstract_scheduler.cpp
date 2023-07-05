@@ -35,6 +35,16 @@ void AbstractScheduler::schedule_tasks(const std::vector<std::shared_ptr<Abstrac
   }
 }
 
+void AbstractScheduler::schedule_on_preferred_nodes_and_wait_for_tasks(
+    const std::vector<std::shared_ptr<AbstractTask>>& tasks, const std::vector<NodeID>& preferred_nodes) {
+  _group_tasks(tasks);
+  assert(tasks.size() == preferred_nodes.size());
+  for (auto index = unsigned{0}; index < tasks.size(); ++index) {
+    tasks[index]->schedule(preferred_nodes[index]);
+  }
+  wait_for_tasks(tasks);
+}
+
 void AbstractScheduler::schedule_and_wait_for_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) {
   _group_tasks(tasks);
   schedule_tasks(tasks);
