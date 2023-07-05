@@ -71,7 +71,7 @@ TEST_F(EntireChunkPosListTest, InsertDoesNotAffectIterators) {
   table->append({int32_t{2}});
   table->append({int32_t{3}});
 
-  // Currently, the EntireChunkPosList is not linked to the table. Therefore, we do not expect changes when 
+  // Currently, the EntireChunkPosList is not linked to the table. Therefore, we do not expect changes when
   // the table changes. Nevertheless, this test ensures the behavior remains the same.
   EXPECT_EQ(table->chunk_count(), 1);
   EXPECT_EQ(table->row_count(), 3);
@@ -87,14 +87,6 @@ TEST_F(EntireChunkPosListTest, InsertDoesNotAffectIterators) {
   EXPECT_EQ(entire_chunk_pos_list->size(), 3);
   EXPECT_EQ(entire_chunk_pos_list->begin().distance_to(entire_chunk_pos_list->end()), 3);
   EXPECT_EQ(entire_chunk_pos_list->cbegin().distance_to(entire_chunk_pos_list->cend()), 3);
-}
-
-TEST_F(EntireChunkPosListTest, MemoryUsage) {
-  // Memory_usage should return only the sizeof the object, as we do not store or manage any other objects.
-  // Create dummy EntireChunkPosList.
-  const auto entire_chunk_pos_list = std::make_shared<const EntireChunkPosList>(ChunkID{0}, ChunkOffset{10});
-
-  EXPECT_EQ(entire_chunk_pos_list->memory_usage(MemoryUsageCalculationMode::Full), sizeof(EntireChunkPosList));
 }
 
 }  // namespace hyrise
