@@ -257,6 +257,7 @@ void AbstractTableGenerator::generate_and_store() {
         }
         table_counter++; 
     }
+    
   }
 
   /**
