@@ -1,5 +1,6 @@
 #include "dictionary_segment.hpp"
 
+#include <numaif.h>
 #include <memory>
 #include <string>
 
@@ -11,6 +12,31 @@
 
 namespace hyrise {
 
+auto numaNodeDictionaryCount = std::vector<long>(8, 0);
+
+void printAllocations() {
+  for (auto node_index = 0ul; node_index < numaNodeDictionaryCount.size(); node_index++) {
+    std::cout << "Node " << node_index << " " << numaNodeDictionaryCount[node_index] / 2  << " ";
+  }
+  std::cout << std::endl; 
+}
+
+int getNumaOfPage(const void* addr) {
+  unsigned long page = (unsigned long)addr;
+  page = page & (~(4096 - 1));
+  void* pages[1] = {(void*)page};
+  int status;
+  long ret = move_pages(0, 1, pages, NULL, &status, 0);
+  if (ret == 0) {
+    numaNodeDictionaryCount[status]++;
+    std::cout << status << " ";
+    return status;
+  } else {
+    std::cout << "move_pages returned error!" << std::endl;
+    return 0;
+  }
+}
+
 template <typename T>
 DictionarySegment<T>::DictionarySegment(const std::shared_ptr<const pmr_vector<T>>& dictionary,
                                         const std::shared_ptr<const BaseCompressedVector>& attribute_vector)
@@ -21,6 +47,17 @@ DictionarySegment<T>::DictionarySegment(const std::shared_ptr<const pmr_vector<T
   // NULL is represented by _dictionary.size(). INVALID_VALUE_ID, which is the highest possible number in
   // ValueID::base_type (2^32 - 1), is needed to represent "value not found" in calls to lower_bound/upper_bound.
   // For a DictionarySegment of the max size Chunk::MAX_SIZE, those two values overlap.
+  getNumaOfPage(_attribute_vector.get());
+  getNumaOfPage(_dictionary.get());
+  // auto node_decomp = getNumaOfPage(_decompressor.get());
+  // auto node_this = getNumaOfPage(this);
+  
+  /*if (node_attr == node_dict) {
+    std::cout << "Dictionary and its attributes on same Node" << std::endl << std::flush;
+  } else {
+    std::cout << "Dictionary and its attributes on different Node" << std::endl << std::flush;
+  }*/
+  printAllocations();
 
   Assert(_dictionary->size() < std::numeric_limits<ValueID::base_type>::max(), "Input segment too big");
 }

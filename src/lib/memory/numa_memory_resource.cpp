@@ -5,10 +5,10 @@
 
 namespace hyrise {
 
-NumaMemoryResource::NumaMemoryResource(const NumaNodeID node_id) : _node_id(node_id) {}
+NumaMemoryResource::NumaMemoryResource(const NodeID node_id) : _node_id(node_id) {}
 
 void* NumaMemoryResource::do_allocate(std::size_t bytes, std::size_t alignment) {
-  return numa_alloc(bytes);
+  return numa_alloc_onnode(bytes, _node_id);
 }
 
 NumaMemoryResource::~NumaMemoryResource() {}

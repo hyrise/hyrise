@@ -9,8 +9,8 @@ namespace hyrise {
 class NumaMemoryResourceTest : public BaseTest {};
 
 TEST_F(NumaMemoryResourceTest, AllocateDeallocate) {
-  const auto num_numa_nodes = numa_num_configured_nodes();
-  for (auto target_node_idx = NumaNodeID{0}; target_node_idx < num_numa_nodes; ++target_node_idx) {
+  const auto num_numa_nodes = static_cast<NodeID>(numa_num_configured_nodes());
+  for (auto target_node_idx = NodeID{0}; target_node_idx < num_numa_nodes; ++target_node_idx) {
     auto resource = NumaMemoryResource(target_node_idx);
     const auto allocation_size = sizeof(uint64_t);
     auto buffer = resource.do_allocate(allocation_size, allocation_size);
@@ -28,8 +28,8 @@ TEST_F(NumaMemoryResourceTest, AllocateDeallocate) {
 }
 
 TEST_F(NumaMemoryResourceTest, PolymorphicAllocator) {
-  const auto num_numa_nodes = numa_num_configured_nodes();
-  for (auto target_node_idx = NumaNodeID{0}; target_node_idx < num_numa_nodes; ++target_node_idx) {
+  const auto num_numa_nodes = static_cast<NodeID>(numa_num_configured_nodes());
+  for (auto target_node_idx = NodeID{0}; target_node_idx < num_numa_nodes; ++target_node_idx) {
     auto resource = NumaMemoryResource(target_node_idx);
     auto allocator = PolymorphicAllocator<uint64_t>{&resource};
     auto buffer = allocator.allocate(1);
