@@ -50,6 +50,7 @@ class StoredTableNode : public EnableMakeForLQPNode<StoredTableNode>, public Abs
   std::shared_ptr<TableStatistics> table_statistics;
 
  protected:
+  void _set_output_expressions() const;
   size_t _on_shallow_hash() const override;
   std::shared_ptr<AbstractLQPNode> _on_shallow_copy(LQPNodeMapping& /*node_mapping*/) const override;
   bool _on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& /*node_mapping*/) const override;
@@ -61,3 +62,4 @@ class StoredTableNode : public EnableMakeForLQPNode<StoredTableNode>, public Abs
 };
 
 }  // namespace hyrise
+
