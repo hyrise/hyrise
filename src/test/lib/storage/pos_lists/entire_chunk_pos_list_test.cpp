@@ -71,6 +71,8 @@ TEST_F(EntireChunkPosListTest, InsertDoesNotAffectIterators) {
   table->append({int32_t{2}});
   table->append({int32_t{3}});
 
+  // Currently, the EntireChunkPosList is not linked to the table. Therefore, we do not expect changes when 
+  // the table changes. Nevertheless, this test ensures the behavior remains the same.
   EXPECT_EQ(table->chunk_count(), 1);
   EXPECT_EQ(table->row_count(), 3);
 
