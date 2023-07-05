@@ -40,7 +40,7 @@ int main(int argc, char* argv[]) {
   // clang-format off
   cli_options.add_options()
     // We use -s instead of -w for consistency with the options of our other TPC-x binaries.
-    ("s,scale", "Scale factor (warehouses)", cxxopts::value<size_t>()->default_value("1"))
+    ("s,scale", "Scale factor (warehouses)", cxxopts::value<size_t>()->default_value("10"))
     ("consistency_checks", "Run TPC-C consistency checks after benchmark (included with --verify)", cxxopts::value<bool>()->default_value("false"));  // NOLINT(whitespace/line_length)
   // clang-format on
 
