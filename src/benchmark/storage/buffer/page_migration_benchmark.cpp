@@ -1,10 +1,26 @@
 #include <memory>
 #include <vector>
-
+#if HYRISE_NUMA_SUPPORT
+#include <numa.h>
+#endif
 #include "benchmark/benchmark.h"
 #include "storage/buffer/buffer_manager.hpp"
 
 namespace hyrise {
+
+void custom_move_pages(void* mem, size_t size, int node) {
+#if HYRISE_NUMA_SUPPORT
+  auto nodes = numa_allocate_nodemask();
+  numa_bitmask_setbit(nodes, node);
+  int pol = MPOL_BIND;
+  int mbind_flags = if (mbind(mem, size, MPOL_BIND, nodes ? nodes->maskp : NULL, nodes ? nodes->size + 1 : 0,
+                              MPOL_MF_MOVE | MPOL_MF_STRICT) < 0) {
+    numa_bitmask_free(nodes);
+    Fail("Move failed");
+  }
+  numa_bitmask_free(nodes);
+#endif
+}
 
 class PageMigrationFixture : public benchmark::Fixture {
  public:
@@ -36,12 +52,12 @@ BENCHMARK_DEFINE_F(PageMigrationFixture, BM_ToNodeMemory)(benchmark::State& stat
   for (auto _ : state) {
     state.PauseTiming();
 #if HYRISE_NUMA_SUPPORT
-    numa_tonode_memory(_mapped_region, VIRT_SIZE, 0);
+    custom_move_pages(_mapped_region, VIRT_SIZE, 0);
 #endif
     state.ResumeTiming();
     for (int idx = 0; idx < times; ++idx) {
 #if HYRISE_NUMA_SUPPORT
-      numa_tonode_memory(_mapped_region + idx * num_bytes, num_bytes, 2);
+      custom_move_pages(_mapped_region + idx * num_bytes, num_bytes, 2);
 #endif
     }
     benchmark::ClobberMemory();
@@ -53,17 +69,17 @@ BENCHMARK_DEFINE_F(PageMigrationFixture, BM_ToNodeMemory)(benchmark::State& stat
 BENCHMARK_DEFINE_F(PageMigrationFixture, BM_ToNodeMemoryLatencyDramToCXL)(benchmark::State& state) {
   auto size_type = static_cast<PageSizeType>(state.range(0));
   const auto num_bytes = bytes_for_size_type(size_type);
-  constexpr auto VIRT_SIZE = 5UL * 1024 * 1024 * 1024;
+  constexpr auto VIRT_SIZE = 8UL * 1024 * 1024 * 1024;
 
 #if HYRISE_NUMA_SUPPORT
-  numa_tonode_memory(_mapped_region, VIRT_SIZE, 0);
+  custom_move_pages(_mapped_region, VIRT_SIZE, 0);
   std::memset(_mapped_region, 0x1, VIRT_SIZE);
 #endif
   // TODO: radnom
   auto i = 0;
   for (auto _ : state) {
 #if HYRISE_NUMA_SUPPORT
-    numa_tonode_memory(_mapped_region + (++i * num_bytes), num_bytes, 2);
+    custom_move_pages(_mapped_region + (++i * num_bytes), num_bytes, 2);
 #endif
     benchmark::ClobberMemory();
   }
@@ -74,7 +90,7 @@ BENCHMARK_DEFINE_F(PageMigrationFixture, BM_ToNodeMemoryLatencyDramToCXL)(benchm
 BENCHMARK_DEFINE_F(PageMigrationFixture, BM_ToNodeMemoryLatencyCXLToDram)(benchmark::State& state) {
   auto size_type = static_cast<PageSizeType>(state.range(0));
   const auto num_bytes = bytes_for_size_type(size_type);
-  constexpr auto VIRT_SIZE = 5UL * 1024 * 1024 * 1024;
+  constexpr auto VIRT_SIZE = 8UL * 1024 * 1024 * 1024;
 
 #if HYRISE_NUMA_SUPPORT
   numa_tonode_memory(_mapped_region, VIRT_SIZE, 2);
