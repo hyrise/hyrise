@@ -56,10 +56,6 @@ void NodeQueueScheduler::begin() {
   for (auto& worker : _workers) {
     worker->start();
   }
-
-  // Sleep to ensure that worker threads have been set up correctly. Otherwise, tests that immediate take the scheduler
-  // down might create tasks before the workers are set up.
-  // std::this_thread::sleep_for(std::chrono::milliseconds(10));
 }
 
 void NodeQueueScheduler::wait_for_all_tasks() {
@@ -90,9 +86,10 @@ void NodeQueueScheduler::wait_for_all_tasks() {
       // triggered in other situations, there have probably been new tasks added after wait_for_all_tasks() was called.
       Assert(queue_check_runs < 1'000, "Queue is not empty but all registered tasks have already been processed.");
 
+      // Explicitly signal workers to work on remaining jobs.
       queue->signal(1);
-      std::this_thread::sleep_for(std::chrono::milliseconds(1));
 
+      std::this_thread::sleep_for(std::chrono::milliseconds(1));
       ++queue_check_runs;
     }
   }
