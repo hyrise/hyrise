@@ -34,7 +34,7 @@ class VariableStringDictionaryEncoder : public SegmentEncoder<VariableStringDict
     // construct the actual dictionary and attribute vector.
     auto dense_values = std::vector<pmr_string>();  // contains the actual values (no NULLs)
     auto null_values = std::vector<bool>();         // bitmap to mark NULL values
-    auto string_to_positions = std::unordered_map<pmr_string, std::vector<ChunkOffset>>();
+    auto string_to_chunk_offsets = std::unordered_map<pmr_string, std::vector<ChunkOffset>>();
     auto segment_size = uint32_t{0};
 
     segment_iterable.with_iterators([&](auto segment_it, const auto segment_end) {
@@ -47,17 +47,19 @@ class VariableStringDictionaryEncoder : public SegmentEncoder<VariableStringDict
         if (!segment_item.is_null()) {
           const auto& segment_value = segment_item.value();
           dense_values.push_back(segment_value);
-          string_to_positions[segment_value].push_back(ChunkOffset(current_position));
+          string_to_chunk_offsets[segment_value].push_back(ChunkOffset(current_position));
         } else {
           null_values[current_position] = true;
         }
       }
     });
 
+    // Eliminate duplicate strings.
     std::sort(dense_values.begin(), dense_values.end());
     dense_values.erase(std::unique(dense_values.begin(), dense_values.end()), dense_values.cend());
     dense_values.shrink_to_fit();
 
+    // Compute total compressed data size.
     auto total_size = uint32_t{0};
     for (const auto& value : dense_values) {
       total_size += value.size() + 1;
@@ -78,16 +80,16 @@ class VariableStringDictionaryEncoder : public SegmentEncoder<VariableStringDict
       current_offset += value.size() + 1;
     }
 
-    auto position_to_value_id = std::make_shared<pmr_vector<uint32_t>>(pmr_vector<uint32_t>(segment_size));
+    auto chunk_offset_to_value_id = std::make_shared<pmr_vector<uint32_t>>(pmr_vector<uint32_t>(segment_size));
     auto offset_vector = std::make_shared<pmr_vector<uint32_t>>(pmr_vector<uint32_t>(dense_values.size()));
     offset_vector->shrink_to_fit();
 
-    for (const auto& [string, positions] : string_to_positions) {
+    for (const auto& [string, chunk_offsets] : string_to_chunk_offsets) {
       const auto here_offset = string_offsets[string];
       const auto here_value_id = string_value_ids[string];
       (*offset_vector)[here_value_id] = here_offset;
-      for (const auto position : positions) {
-        (*position_to_value_id)[position] = here_value_id;
+      for (const auto chunk_offset : chunk_offsets) {
+        (*chunk_offset_to_value_id)[chunk_offset] = here_value_id;
       }
     }
 
@@ -95,16 +97,16 @@ class VariableStringDictionaryEncoder : public SegmentEncoder<VariableStringDict
     for (auto offset = ChunkOffset{0}; offset < segment_size; ++offset) {
       const auto is_null = null_values[offset];
       if (is_null) {
-        (*position_to_value_id)[offset] = null_value_id;
+        (*chunk_offset_to_value_id)[offset] = null_value_id;
       }
     }
 
     const auto max_value_id = current_value_id;
-    const auto compressed_position_to_value_id = std::shared_ptr<const BaseCompressedVector>(
-        compress_vector(*position_to_value_id, SegmentEncoder<VariableStringDictionaryEncoder>::vector_compression_type(),
+    const auto compressed_chunk_offset_to_value_id = std::shared_ptr<const BaseCompressedVector>(
+        compress_vector(*chunk_offset_to_value_id, SegmentEncoder<VariableStringDictionaryEncoder>::vector_compression_type(),
                         allocator, {max_value_id}));
 
-    return std::make_shared<VariableStringDictionarySegment>(klotz, compressed_position_to_value_id, offset_vector);
+    return std::make_shared<VariableStringDictionarySegment>(klotz, compressed_chunk_offset_to_value_id, offset_vector);
   }
 
 // private:

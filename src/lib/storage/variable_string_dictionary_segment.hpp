@@ -24,6 +24,8 @@ class VariableStringDictionarySegment : public BaseDictionarySegment {
 
   // TODO:: remove
   VariableStringDictionarySegment() : BaseDictionarySegment(DataType::String) {};
+
+  // TODO:: Does this make sense?
   // returns an underlying dictionary
   std::shared_ptr<const pmr_vector<char>> dictionary() const;
 
@@ -37,7 +39,7 @@ class VariableStringDictionarySegment : public BaseDictionarySegment {
   std::optional<pmr_string> get_typed_value(const ChunkOffset chunk_offset) const {
     // performance critical - not in cpp to help with inlining
     const auto value_id = _decompressor->get(chunk_offset);
-    if (value_id == _offset_vector->size()) {
+    if (value_id == null_value_id()) {
       return std::nullopt;
     }
 

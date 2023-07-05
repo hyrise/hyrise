@@ -111,6 +111,7 @@ bool operator<(const JoinTestConfiguration& l, const JoinTestConfiguration& r) {
   return l.to_tuple() < r.to_tuple();
 }
 
+// TODO: Remove attribute
 bool __attribute__((used)) operator==(const JoinTestConfiguration& l, const JoinTestConfiguration& r) {
   return l.to_tuple() == r.to_tuple();
 }

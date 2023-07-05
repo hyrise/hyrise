@@ -279,7 +279,7 @@ set(
 add_compile_options(-Wno-used-but-marked-unused)
 
 # We define TEST_PLUGIN_DIR to always load plugins from the correct directory for testing purposes
-add_definitions(-DTEST_PLUGIN_DIR= "${CMAKE_BINARY_DIR}/lib/")
+add_definitions(-DTEST_PLUGIN_DIR="${CMAKE_BINARY_DIR}/lib/")
 
 # Build special sanitizer version of googletest
 include_directories(../../third_party/googletest/googletest/)

@@ -102,7 +102,7 @@ ValueID VariableStringDictionarySegment::upper_bound(const AllTypeVariant& value
 }
 
 AllTypeVariant VariableStringDictionarySegment::value_of_value_id(const ValueID value_id) const {
-  return typed_value_of_value_id(value_id);
+  return value_id == null_value_id() ? NULL_VALUE : typed_value_of_value_id(value_id);
 }
 
 pmr_string VariableStringDictionarySegment::typed_value_of_value_id(const ValueID value_id) const {
