@@ -34,6 +34,7 @@ class PageMigrationFixture : public benchmark::Fixture {
   }
 
  protected:
+  NumaMemoryNode target_node = NumaMemoryNode{2};
   std::byte* _mapped_region;
 };
 
@@ -58,7 +59,7 @@ BENCHMARK_DEFINE_F(PageMigrationFixture, BM_ToNodeMemory)(benchmark::State& stat
     state.ResumeTiming();
     for (int idx = 0; idx < times; ++idx) {
 #if HYRISE_NUMA_SUPPORT
-      custom_move_pages(_mapped_region + idx * num_bytes, num_bytes, 2);
+      custom_move_pages(_mapped_region + idx * num_bytes, num_bytes, target_node);
 #endif
     }
     benchmark::ClobberMemory();
@@ -80,7 +81,7 @@ BENCHMARK_DEFINE_F(PageMigrationFixture, BM_ToNodeMemoryLatencyDramToCXL)(benchm
   auto i = 0;
   for (auto _ : state) {
 #if HYRISE_NUMA_SUPPORT
-    custom_move_pages(_mapped_region + (++i * num_bytes), num_bytes, 2);
+    custom_move_pages(_mapped_region + (++i * num_bytes), num_bytes, target_node);
 #endif
     benchmark::ClobberMemory();
   }
@@ -94,14 +95,14 @@ BENCHMARK_DEFINE_F(PageMigrationFixture, BM_ToNodeMemoryLatencyCXLToDram)(benchm
   constexpr auto VIRT_SIZE = 8UL * 1024 * 1024 * 1024;
 
 #if HYRISE_NUMA_SUPPORT
-  numa_tonode_memory(_mapped_region, VIRT_SIZE, 2);
+  numa_tonode_memory(_mapped_region, VIRT_SIZE, target_node);
   std::memset(_mapped_region, 0x1, VIRT_SIZE);
 #endif
   // TODO: radnom
   auto i = 0;
   for (auto _ : state) {
 #if HYRISE_NUMA_SUPPORT
-    numa_tonode_memory(_mapped_region + (++i * num_bytes), num_bytes, 0);
+    custom_move_pages(_mapped_region + (++i * num_bytes), num_bytes, 0);
 #endif
     benchmark::ClobberMemory();
   }
@@ -124,7 +125,9 @@ BENCHMARK_DEFINE_F(PageMigrationFixture, BM_MovePagesLatency)(benchmark::State& 
   pages.resize(num_bytes / OS_PAGE_SIZE);
   std::vector<int> nodes{};
   nodes.resize(num_bytes / OS_PAGE_SIZE);
-  std::fill(nodes.begin(), nodes.end(), 2);
+  std::fill(nodes.begin(), nodes.end(), target_node);
+  std::vector<int> status{};
+  status.resize(num_bytes / OS_PAGE_SIZE);
 
   auto i = 0;
   for (auto _ : state) {
@@ -132,9 +135,9 @@ BENCHMARK_DEFINE_F(PageMigrationFixture, BM_MovePagesLatency)(benchmark::State& 
     for (std::size_t j = 0; j < pages.size(); ++j) {
       pages[i] = _mapped_region + i * num_bytes + j * OS_PAGE_SIZE;
     }
-    numa_move_pages(0, pages.size(), pages.data(), nodes.data(), nullptr, 0);
+    numa_move_pages(0, pages.size(), pages.data(), nodes.data(), status.data(), MPOL_MF_MOVE | MPOL_MF_STRICT) == 0,
 #endif
-    benchmark::ClobberMemory();
+        benchmark::ClobberMemory();
   }
   state.SetItemsProcessed(int64_t(state.iterations()));
   state.SetBytesProcessed(int64_t(state.iterations()) * num_bytes);
