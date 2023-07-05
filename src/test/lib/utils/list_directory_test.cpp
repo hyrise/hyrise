@@ -28,9 +28,8 @@ class ListDirectoryTest : public BaseTest {
   void TearDown() override {
     std::filesystem::remove_all(_directory_path);
   }
-  
-  std::string _directory_path = test_data_path + "/test-directory";
 
+  std::string _directory_path = test_data_path + "/test-directory";
 };
 
 TEST_F(ListDirectoryTest, ListDirectoryWithFilesAndSubdirectory) {
