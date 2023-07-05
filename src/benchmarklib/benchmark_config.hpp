@@ -26,7 +26,7 @@ class BenchmarkConfig {
                   const bool init_enable_scheduler, const uint32_t init_cores,
                   const uint32_t init_data_preparation_cores, const uint32_t init_clients,
                   const bool init_enable_visualization, const bool init_verify, const bool init_cache_binary_tables,
-                  const bool init_metrics, const std::vector<std::string>& init_plugins);
+                  const bool init_metrics, const std::vector<std::string>& init_plugins, const bool init_relocate_numa);
 
   static BenchmarkConfig get_default_config();
 
@@ -48,6 +48,7 @@ class BenchmarkConfig {
   bool cache_binary_tables = false;  // Defaults to false for internal use, but the CLI sets it to true by default
   bool metrics = false;
   std::vector<std::string> plugins{};
+  bool relocate_numa = false;
 
  private:
   BenchmarkConfig() = default;

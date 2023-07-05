@@ -542,7 +542,9 @@ cxxopts::Options BenchmarkRunner::get_basic_cli_options(const std::string& bench
     ("dont_cache_binary_tables", "Do not cache tables as binary files for faster loading on subsequent runs", cxxopts::value<bool>()->default_value("false"))  // NOLINT(whitespace/line_length)
     ("metrics", "Track more metrics (steps in SQL pipeline, system utilization, etc.) and add them to the output JSON (see -o)", cxxopts::value<bool>()->default_value("false"))  // NOLINT(whitespace/line_length)
     // This option is only advised when the underlying system's memory capacity is overleaded by the preparation phase.
-    ("data_preparation_cores", "Specify the number of cores used by the scheduler for data preparation, i.e., sorting and encoding tables and generating table statistics. 0 means all available cores.", cxxopts::value<uint32_t>()->default_value("0"));  // NOLINT(whitespace/line_length)
+    ("data_preparation_cores", "Specify the number of cores used by the scheduler for data preparation, i.e., sorting and encoding tables and generating table statistics. 0 means all available cores.", cxxopts::value<uint32_t>()->default_value("0"))  // NOLINT(whitespace/line_length)
+    ("relocate_numa", "Relocates Tables onto numa nodes.", cxxopts::value<bool>()->default_value("false"));  // NOLINT(whitespace/line_length)
+
   // clang-format on
 
   return cli_options;
