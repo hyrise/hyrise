@@ -58,6 +58,7 @@ class Configuration:
     encoding_under_test: str
     time_limit: int
     verbosity_level: int
+    skip_benchmarks: bool
 
 
 class DictConvertible(ABC):
@@ -286,6 +287,9 @@ class Benchmark(ABC):
         return metrics
 
     def _run(self, threading: Literal['ST', 'MT'], encoding: str, metrics: bool) -> str:
+        if self._config.skip_benchmarks:
+            print_debug(f'Skipping benchmark {self.name} for encoding {encoding}.', required_verbosity_level=2)
+            return self._output_path(threading, encoding, metrics)
         self._pre_run_cleanup()
         print_debug(f'Running benchmark {self.name} for encoding {encoding}.', required_verbosity_level=1)
         st_command = self._get_arguments(threading, encoding, metrics)
@@ -445,6 +449,14 @@ def parse_arguments() -> Configuration:
         default=False,
         help='Whether to fail early when an error occurs'
     )
+    parser.add_argument(
+        '--skip-benchmarks',
+        dest='skip_benchmarks',
+        action=BooleanOptionalAction,
+        required=False,
+        default=False,
+        help='Whether to skip running the benchmarks and instead using old data.'
+    )
     namespace = parser.parse_args()
     if namespace.verbosity_level > 0:
         VERBOSITY_LEVEL = namespace.verbosity_level
@@ -462,7 +474,8 @@ def parse_arguments() -> Configuration:
         scale_factor=namespace.scale_factor,
         encoding_under_test=namespace.encoding,
         time_limit=namespace.timeout,
-        verbosity_level=namespace.verbosity_level)
+        verbosity_level=namespace.verbosity_level,
+        skip_benchmarks=namespace.skip_benchmarks)
 
 
 def scale_factor_for_benchmark(benchmark: str, scale_factor: float) -> float:
