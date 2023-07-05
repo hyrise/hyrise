@@ -5,6 +5,7 @@
 #include "hyrise.hpp"
 #include "import_export/binary/binary_parser.hpp"
 #include "import_export/binary/binary_writer.hpp"
+#include "memory/numa_memory_resource.hpp"
 #include "operators/sort.hpp"
 #include "operators/table_wrapper.hpp"
 #include "scheduler/job_task.hpp"
@@ -16,7 +17,6 @@
 #include "utils/format_duration.hpp"
 #include "utils/list_directory.hpp"
 #include "utils/timer.hpp"
-#include "memory/numa_memory_resource.hpp"
 
 namespace hyrise {
 
@@ -236,28 +236,37 @@ void AbstractTableGenerator::generate_and_store() {
               << format_duration(metrics.encoding_duration) << ")" << std::endl;
   }
 
-  if(_benchmark_config->relocate_numa){
-
+  /**
+   * Relocate tables to optimize for numa.
+   */
+  if (_benchmark_config->relocate_numa) {
     // numaNodeDictionaryCount = std::vector<long>(8, 0);
 
     auto num_nodes = static_cast<NodeID>(Hyrise::get().topology.nodes().size());
-  
-    std::cout << "Relocate data onto " << num_nodes << " nodes" << std::endl; 
 
-    auto table_counter = u_int32_t{0}; 
+    std::cout << "Relocate data onto " << num_nodes << " nodes" << std::endl;
+
+    auto table_counter = u_int32_t{0};
+
     for (auto& [table_name, table_info] : table_info_by_name) {
-        auto& table = table_info.table;
-        const auto target_node_id = NodeID{table_counter % num_nodes};
-        std::cout << "Relocate table " << table_name << " on numa_node: " << target_node_id << std::endl; 
-        
-        auto target_memory_resource = NumaMemoryResource(target_node_id);
-        for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
+      auto& table = table_info.table;
+      const auto target_node_id = NodeID{table_counter % num_nodes};
+      std::cout << "Relocate table " << table_name << " on numa_node: " << target_node_id << std::endl;
+
+      auto chunk_count = table->chunk_count();
+      auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+      jobs.reserve(chunk_count);
+      auto target_memory_resource = NumaMemoryResource(target_node_id);
+      for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+        auto migrate_job = [&, chunk_id]() {
           const auto& chunk = table->get_chunk(chunk_id);
           chunk->migrate(&target_memory_resource);
-        }
-        table_counter++; 
+        };
+        jobs.emplace_back(std::make_shared<JobTask>(migrate_job));
+      }
+      Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
+      table_counter++;
     }
-    
   }
 
   /**
