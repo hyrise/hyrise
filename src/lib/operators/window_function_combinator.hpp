@@ -42,8 +42,7 @@ struct WindowFunctionCombinator<T, WindowFunction::Rank> {
     void update(const WindowFunctionEvaluator::RelevantRowInformation& previous_value,
                 const WindowFunctionEvaluator::RelevantRowInformation& current_value) {
       ++row_number;
-      if (std::is_neq(WindowFunctionEvaluator::RelevantRowInformation::compare_with_null_equal(
-              previous_value.order_values, current_value.order_values)))
+      if (std::is_neq(compare_with_null_equal(previous_value.order_values, current_value.order_values)))
         rank = row_number;
     }
   };
@@ -62,8 +61,7 @@ struct WindowFunctionCombinator<T, WindowFunction::DenseRank> {
 
     void update(const WindowFunctionEvaluator::RelevantRowInformation& previous_value,
                 const WindowFunctionEvaluator::RelevantRowInformation& current_value) {
-      if (std::is_neq(WindowFunctionEvaluator::RelevantRowInformation::compare_with_null_equal(
-              previous_value.order_values, current_value.order_values)))
+      if (std::is_neq(compare_with_null_equal(previous_value.order_values, current_value.order_values)))
         ++rank;
     }
   };

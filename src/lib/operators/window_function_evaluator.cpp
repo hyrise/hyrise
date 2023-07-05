@@ -151,7 +151,8 @@ T clamped_sub(T lhs, T rhs, T min) {
 WindowFunctionEvaluator::HashPartitionedData partition_and_sort_chunk(const Chunk& chunk, ChunkID chunk_id,
                                                                       std::span<const ColumnID> partition_column_ids,
                                                                       std::span<const ColumnID> order_column_ids,
-                                                                      const ColumnID function_argument_column_id) {
+                                                                      const ColumnID function_argument_column_id,
+                                                                      auto comparator) {
   auto result = WindowFunctionEvaluator::HashPartitionedData{};
 
   auto partition_segments = std::vector<std::shared_ptr<AbstractSegment>>();
@@ -188,7 +189,7 @@ WindowFunctionEvaluator::HashPartitionedData partition_and_sort_chunk(const Chun
   }
 
   for (auto& partition : result) {
-    std::ranges::sort(partition, WindowFunctionEvaluator::RelevantRowInformation::compare_for_hash_partitioning);
+    std::ranges::sort(partition, comparator);
   }
 
   return result;
@@ -210,12 +211,13 @@ struct ChunkRange {
 WindowFunctionEvaluator::HashPartitionedData parallel_merge_sort(const Table& input_table, ChunkRange chunk_range,
                                                                  std::span<const ColumnID> partition_column_ids,
                                                                  std::span<const ColumnID> order_column_ids,
-                                                                 ColumnID function_argument_column_id) {
+                                                                 ColumnID function_argument_column_id,
+                                                                 auto comparator) {
   if (chunk_range.is_single_chunk()) {
     const auto chunk_id = chunk_range.start;
     const auto chunk = input_table.get_chunk(chunk_id);
     return partition_and_sort_chunk(*chunk, chunk_id, partition_column_ids, order_column_ids,
-                                    function_argument_column_id);
+                                    function_argument_column_id, comparator);
   }
 
   const auto middle = ChunkID(chunk_range.start + chunk_range.size() / 2);
@@ -224,11 +226,11 @@ WindowFunctionEvaluator::HashPartitionedData parallel_merge_sort(const Table& in
   auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
   tasks.emplace_back(std::make_shared<JobTask>([&]() {
     left_result = parallel_merge_sort(input_table, ChunkRange{.start = chunk_range.start, .end = middle},
-                                      partition_column_ids, order_column_ids, function_argument_column_id);
+                                      partition_column_ids, order_column_ids, function_argument_column_id, comparator);
   }));
   tasks.emplace_back(std::make_shared<JobTask>([&]() {
     right_result = parallel_merge_sort(input_table, ChunkRange{.start = middle, .end = chunk_range.end},
-                                       partition_column_ids, order_column_ids, function_argument_column_id);
+                                       partition_column_ids, order_column_ids, function_argument_column_id, comparator);
   }));
 
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
@@ -240,8 +242,7 @@ WindowFunctionEvaluator::HashPartitionedData parallel_merge_sort(const Table& in
     const auto& right = right_result[hash_value];
     auto& merged = result[hash_value];
     merged.resize(left.size() + right.size());
-    std::ranges::merge(left, right, merged.begin(),
-                       WindowFunctionEvaluator::RelevantRowInformation::compare_for_hash_partitioning);
+    std::ranges::merge(left, right, merged.begin(), comparator);
   }
 
   return result;
@@ -249,19 +250,7 @@ WindowFunctionEvaluator::HashPartitionedData parallel_merge_sort(const Table& in
 
 }  // namespace
 
-template <typename T>
-void WindowFunctionEvaluator::spawn_and_wait_per_hash(const PerHash<T>& data, auto&& per_hash_function) {
-  auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
-  for (auto hash_value = 0u; hash_value < hash_partition_partition_count; ++hash_value) {
-    tasks.emplace_back(
-        std::make_shared<JobTask>([hash_value, &data, &per_hash_function]() { per_hash_function(data[hash_value]); }));
-  }
-
-  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
-};
-
-std::partial_ordering WindowFunctionEvaluator::RelevantRowInformation::compare_with_null_equal(
-    const AllTypeVariant& lhs, const AllTypeVariant& rhs) {
+std::partial_ordering compare_with_null_equal(const AllTypeVariant& lhs, const AllTypeVariant& rhs) {
   if (variant_is_null(lhs) && variant_is_null(rhs))
     return std::partial_ordering::equivalent;
   if (variant_is_null(lhs))
@@ -275,21 +264,24 @@ std::partial_ordering WindowFunctionEvaluator::RelevantRowInformation::compare_w
   return std::partial_ordering::greater;
 }
 
-std::partial_ordering WindowFunctionEvaluator::RelevantRowInformation::compare_with_null_equal(
-    std::span<const AllTypeVariant> lhs, std::span<const AllTypeVariant> rhs) {
+std::partial_ordering compare_with_null_equal(std::span<const AllTypeVariant> lhs,
+                                              std::span<const AllTypeVariant> rhs) {
   return std::lexicographical_compare_three_way(lhs.begin(), lhs.end(), rhs.begin(), rhs.end(),
                                                 [](const auto& lhs_element, const auto& rhs_element) {
                                                   return compare_with_null_equal(lhs_element, rhs_element);
                                                 });
 }
 
-bool WindowFunctionEvaluator::RelevantRowInformation::compare_for_hash_partitioning(const RelevantRowInformation& lhs,
-                                                                                    const RelevantRowInformation& rhs) {
-  const auto comp_result = compare_with_null_equal(lhs.partition_values, rhs.partition_values);
-  if (std::is_neq(comp_result))
-    return std::is_lt(comp_result);
-  return std::is_lt(compare_with_null_equal(lhs.order_values, rhs.order_values));
-}
+template <typename T>
+void WindowFunctionEvaluator::spawn_and_wait_per_hash(const PerHash<T>& data, auto&& per_hash_function) {
+  auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
+  for (auto hash_value = 0u; hash_value < hash_partition_partition_count; ++hash_value) {
+    tasks.emplace_back(
+        std::make_shared<JobTask>([hash_value, &data, &per_hash_function]() { per_hash_function(data[hash_value]); }));
+  }
+
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
+};
 
 template <typename InputColumnType, WindowFunction window_function>
 ComputationStrategy WindowFunctionEvaluator::choose_computation_strategy() const {
@@ -315,9 +307,16 @@ bool WindowFunctionEvaluator::is_output_nullable() const {
 }
 
 WindowFunctionEvaluator::HashPartitionedData WindowFunctionEvaluator::partition_and_sort() const {
+  const auto comparator = [](const RelevantRowInformation& lhs, const RelevantRowInformation& rhs) {
+    const auto comp_result = compare_with_null_equal(lhs.partition_values, rhs.partition_values);
+    if (std::is_neq(comp_result))
+      return std::is_lt(comp_result);
+    return std::is_lt(compare_with_null_equal(lhs.order_values, rhs.order_values));
+  };
+
   const auto input_table = left_input_table();
   return parallel_merge_sort(*input_table, ChunkRange{.start = ChunkID(0), .end = input_table->chunk_count()},
-                             _partition_by_column_ids, _order_by_column_ids, _function_argument_column_id);
+                             _partition_by_column_ids, _order_by_column_ids, _function_argument_column_id, comparator);
 }
 
 void WindowFunctionEvaluator::for_each_partition(std::span<const RelevantRowInformation> hash_partition,
@@ -329,8 +328,8 @@ void WindowFunctionEvaluator::for_each_partition(std::span<const RelevantRowInfo
         hash_partition.begin(),
         std::find_if(hash_partition.begin() + static_cast<ssize_t>(partition_start) + 1, hash_partition.end(),
                      [&](const auto& next_element) {
-                       return std::is_neq(RelevantRowInformation::compare_with_null_equal(
-                           hash_partition[partition_start].partition_values, next_element.partition_values));
+                       return std::is_neq(compare_with_null_equal(hash_partition[partition_start].partition_values,
+                                                                  next_element.partition_values));
                      }));
     emit_partition_bounds(partition_start, partition_end);
     partition_start = partition_end;
@@ -350,8 +349,7 @@ void WindowFunctionEvaluator::compute_window_function_one_pass(const HashPartiti
 
       for (const auto& row : hash_partition) {
         if (previous_row) {
-          if (std::is_neq(RelevantRowInformation::compare_with_null_equal(previous_row->partition_values,
-                                                                          row.partition_values)))
+          if (std::is_neq(compare_with_null_equal(previous_row->partition_values, row.partition_values)))
             state = State{};
           else
             state.update(*previous_row, row);
