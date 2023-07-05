@@ -12,11 +12,12 @@ void custom_move_pages(void* mem, size_t size, int node) {
 #if HYRISE_NUMA_SUPPORT
   auto nodes = numa_allocate_nodemask();
   numa_bitmask_setbit(nodes, node);
-  int pol = MPOL_BIND;
-  int mbind_flags = if (mbind(mem, size, MPOL_BIND, nodes ? nodes->maskp : NULL, nodes ? nodes->size + 1 : 0,
-                              MPOL_MF_MOVE | MPOL_MF_STRICT) < 0) {
+  if (mbind(mem, size, MPOL_BIND, nodes ? nodes->maskp : NULL, nodes ? nodes->size + 1 : 0,
+            MPOL_MF_MOVE | MPOL_MF_STRICT) != 0) {
+    const auto error = errno;
     numa_bitmask_free(nodes);
-    Fail("Move failed");
+
+    Fail("Move pages failed: " + strerror(error));
   }
   numa_bitmask_free(nodes);
 #endif

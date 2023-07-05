@@ -39,12 +39,16 @@ void VolatileRegion::move_to_numa_node(PageID page_id, const NumaMemoryNode targ
   DebugAssert(target_memory_node != NO_NUMA_MEMORY_NODE, "Numa node has not been set.");
 
   const auto num_bytes = bytes_for_size_type(_size_type);
-  numa_tonode_memory(get_page(page_id), num_bytes, target_memory_node);
+  auto nodes = numa_allocate_nodemask();
+  numa_bitmask_setbit(nodes, target_memory_node);
+  if (mbind(get_page(page_id), num_bytes, MPOL_BIND, nodes ? nodes->maskp : NULL, nodes ? nodes->size + 1 : 0,
+            MPOL_MF_MOVE | MPOL_MF_STRICT) != 0) {
+    const auto error = errno;
+    numa_bitmask_free(nodes);
+    Fail("Move pages failed: " + strerror(error));
+  }
+  numa_bitmask_free(nodes);
   _metrics->num_numa_tonode_memory_calls.fetch_add(1, std::memory_order_relaxed);
-  // const auto error = errno;
-  // if (error) {
-  //   Fail("Failed to madvice region: " + strerror(errno));
-  // }
   _frames[page_id.index].set_memory_node(target_memory_node);
 #endif
 }
