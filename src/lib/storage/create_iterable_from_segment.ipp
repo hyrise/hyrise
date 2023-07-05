@@ -6,6 +6,8 @@
 #include "storage/run_length_segment/run_length_segment_iterable.hpp"
 #include "storage/segment_iterables/any_segment_iterable.hpp"
 #include "storage/value_segment/value_segment_iterable.hpp"
+#include "storage/variable_string_dictionary/variable_string_dictionary_iterable.hpp"
+#include "storage/variable_string_dictionary_segment.hpp"
 
 namespace hyrise {
 
@@ -81,4 +83,17 @@ auto create_iterable_from_segment(const LZ4Segment<T>& segment) {
   return AnySegmentIterable<T>(LZ4SegmentIterable<T>(segment));
 }
 
+template <typename T, bool EraseSegmentType>
+auto create_iterable_from_segment(const VariableStringDictionarySegment<T>& segment) {
+#ifdef HYRISE_ERASE_VARIABLESTRINGDICTIONARY
+  PerformanceWarning("VariableStringDictionarySegmentIterable erased by compile-time setting");
+  return AnySegmentIterable<T>(DictionarySegmentIterable<T, FixedStringVector>(segment));
+#else
+  if constexpr (EraseSegmentType) {
+    return create_any_segment_iterable<T>(segment);
+  } else {
+    return VariableStringDictionarySegmentIterable<T>{segment};
+  }
+#endif
+}
 }  // namespace hyrise

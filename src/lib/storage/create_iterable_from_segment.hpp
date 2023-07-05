@@ -26,6 +26,9 @@ class ReferenceSegment;
 template <typename T, EraseReferencedSegmentType>
 class ReferenceSegmentIterable;
 
+template <typename T>
+class VariableStringDictionarySegment;
+
 /**
  * @defgroup Uniform interface to create an iterable from a segment
  *
@@ -72,6 +75,9 @@ template <typename T, bool EraseSegmentType = HYRISE_DEBUG,
           EraseReferencedSegmentType = (HYRISE_DEBUG ? EraseReferencedSegmentType::Yes
                                                      : EraseReferencedSegmentType::No)>
 auto create_iterable_from_segment(const ReferenceSegment& segment);
+
+template <typename T, bool EraseSegmentType = HYRISE_DEBUG>
+auto create_iterable_from_segment(const VariableStringDictionarySegment<T>& segment);
 
 /**@}*/
 

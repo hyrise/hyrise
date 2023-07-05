@@ -16,6 +16,7 @@ class BaseCompressedVector;
  *
  * Uses vector compression schemes for its attribute vector.
  */
+template<typename T>
 class VariableStringDictionarySegment : public BaseDictionarySegment {
  public:
   VariableStringDictionarySegment(const std::shared_ptr<const pmr_vector<char>>& dictionary,
@@ -94,6 +95,8 @@ class VariableStringDictionarySegment : public BaseDictionarySegment {
 
   ValueID null_value_id() const final;
 
+  const std::shared_ptr<const pmr_vector<uint32_t>>& offset_vector() const;
+
  protected:
   const std::shared_ptr<const pmr_vector<char>> _dictionary;
   // Maps chunk offsets to value ids.
@@ -102,5 +105,7 @@ class VariableStringDictionarySegment : public BaseDictionarySegment {
   // Maps value ids to dictionary offsets.
   const std::shared_ptr<const pmr_vector<uint32_t>> _offset_vector;
 };
+
+extern template class VariableStringDictionarySegment<pmr_string>;
 
 }  // namespace hyrise

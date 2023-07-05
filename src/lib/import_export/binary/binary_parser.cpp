@@ -159,7 +159,7 @@ std::shared_ptr<AbstractSegment> BinaryParser::_import_segment(std::ifstream& fi
         Fail("Unsupported data type for FixedStringDictionary encoding");
       }
     case EncodingType::VariableStringDictionary:
-      return _import_variable_string_length_segment(file, row_count);
+      return _import_variable_string_length_segment<pmr_string>(file, row_count);
     case EncodingType::RunLength:
       return _import_run_length_segment<ColumnDataType>(file, row_count);
     case EncodingType::FrameOfReference:
@@ -204,7 +204,8 @@ std::shared_ptr<DictionarySegment<T>> BinaryParser::_import_dictionary_segment(s
   return std::make_shared<DictionarySegment<T>>(dictionary, attribute_vector);
 }
 
-std::shared_ptr<VariableStringDictionarySegment> BinaryParser::_import_variable_string_length_segment(std::ifstream& file,
+template<typename T>
+std::shared_ptr<VariableStringDictionarySegment<T>> BinaryParser::_import_variable_string_length_segment(std::ifstream& file,
                                                                                ChunkOffset row_count) {
 //  const auto compressed_vector_type_id = _read_value<CompressedVectorTypeID>(file);
 //  const auto dictionary_size = _read_value<ValueID>(file);
@@ -222,7 +223,7 @@ std::shared_ptr<VariableStringDictionarySegment> BinaryParser::_import_variable_
 //    offset += string.size();
 //  }
   Fail("Not implemented yet.");
-  return std::make_shared<VariableStringDictionarySegment>();
+  return std::make_shared<VariableStringDictionarySegment<T>>();
   // return std::make_shared<VariableStringDictionarySegment>(dictionary, attribute_vector, std::make_shared<pmr_vector<uint32_t>>());
 }
 
