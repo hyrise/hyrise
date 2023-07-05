@@ -1,6 +1,7 @@
 #include <filesystem>
 #include <fstream>
 #include <unordered_set>
+#include <semaphore>
 
 #include "base_test.hpp"
 
@@ -11,14 +12,17 @@ namespace hyrise {
 class ListDirectoryTest : public BaseTest {
  protected:
   void SetUp() override {
+    mutex.acquire();
     std::filesystem::create_directory(_directory_path);
   }
 
   void TearDown() override {
     std::filesystem::remove_all(_directory_path);
+    mutex.release();
   }
 
   const std::string _directory_path = test_data_path + "/test-directory";
+  std::binary_semaphore mutex{1};
 };
 
 TEST_F(ListDirectoryTest, ListDirectoryWithFilesAndSubdirectory) {
