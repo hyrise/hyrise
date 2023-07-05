@@ -1,6 +1,6 @@
 #include "dictionary_segment.hpp"
 
-#include <numaif.h>
+#include <numa.h>
 #include <memory>
 #include <string>
 
@@ -16,9 +16,9 @@ auto numaNodeDictionaryCount = std::vector<long>(8, 0);
 
 void printAllocations() {
   for (auto node_index = 0ul; node_index < numaNodeDictionaryCount.size(); node_index++) {
-    std::cout << "Node " << node_index << " " << numaNodeDictionaryCount[node_index] / 2  << " ";
+    std::cout << "Node " << node_index << " " << numaNodeDictionaryCount[node_index] / 2 << " ";
   }
-  std::cout << std::endl; 
+  std::cout << std::endl;
 }
 
 int getNumaOfPage(const void* addr) {
@@ -26,7 +26,7 @@ int getNumaOfPage(const void* addr) {
   page = page & (~(4096 - 1));
   void* pages[1] = {(void*)page};
   int status;
-  long ret = move_pages(0, 1, pages, NULL, &status, 0);
+  long ret = numa_move_pages(0, 1, pages, NULL, &status, 0);
   if (ret == 0) {
     numaNodeDictionaryCount[status]++;
     std::cout << status << " ";
@@ -52,7 +52,7 @@ DictionarySegment<T>::DictionarySegment(const std::shared_ptr<const pmr_vector<T
   getNumaOfPage(&(*_dictionary)[0]);
   // auto node_decomp = getNumaOfPage(_decompressor.get());
   // auto node_this = getNumaOfPage(this);
-  
+
   /*if (node_attr == node_dict) {
     std::cout << "Dictionary and its attributes on same Node" << std::endl << std::flush;
   } else {
