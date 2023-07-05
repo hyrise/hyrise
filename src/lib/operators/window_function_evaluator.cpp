@@ -248,28 +248,46 @@ WindowFunctionEvaluator::HashPartitionedData parallel_merge_sort(const Table& in
   return result;
 }
 
-}  // namespace
-
-std::partial_ordering compare_with_null_equal(const AllTypeVariant& lhs, const AllTypeVariant& rhs) {
-  if (variant_is_null(lhs) && variant_is_null(rhs))
-    return std::partial_ordering::equivalent;
-  if (variant_is_null(lhs))
-    return std::partial_ordering::less;
-  if (variant_is_null(rhs))
-    return std::partial_ordering::greater;
-  if (lhs < rhs)
-    return std::partial_ordering::less;
-  if (lhs == rhs)
-    return std::partial_ordering::equivalent;
-  return std::partial_ordering::greater;
+std::weak_ordering reverse(std::weak_ordering ordering) {
+  if (ordering == std::weak_ordering::less)
+    return std::weak_ordering::greater;
+  if (ordering == std::weak_ordering::greater)
+    return std::weak_ordering::less;
+  return ordering;
 }
 
-std::partial_ordering compare_with_null_equal(std::span<const AllTypeVariant> lhs,
-                                              std::span<const AllTypeVariant> rhs) {
-  return std::lexicographical_compare_three_way(lhs.begin(), lhs.end(), rhs.begin(), rhs.end(),
-                                                [](const auto& lhs_element, const auto& rhs_element) {
-                                                  return compare_with_null_equal(lhs_element, rhs_element);
-                                                });
+}  // namespace
+
+std::weak_ordering compare_with_null_equal(const AllTypeVariant& lhs, const AllTypeVariant& rhs) {
+  if (variant_is_null(lhs) && variant_is_null(rhs))
+    return std::weak_ordering::equivalent;
+  if (variant_is_null(lhs))
+    return std::weak_ordering::less;
+  if (variant_is_null(rhs))
+    return std::weak_ordering::greater;
+  if (lhs < rhs)
+    return std::weak_ordering::less;
+  if (lhs == rhs)
+    return std::weak_ordering::equivalent;
+  return std::weak_ordering::greater;
+}
+
+std::weak_ordering compare_with_null_equal(std::span<const AllTypeVariant> lhs, std::span<const AllTypeVariant> rhs) {
+  return compare_with_null_equal(lhs, rhs, []([[maybe_unused]] const auto column_index) { return false; });
+}
+
+std::weak_ordering compare_with_null_equal(std::span<const AllTypeVariant> lhs, std::span<const AllTypeVariant> rhs,
+                                           auto is_column_reversed) {
+  DebugAssert(lhs.size() == rhs.size(), "Tried to compare rows with different column counts.");
+
+  for (auto column_index = 0u; column_index < lhs.size(); ++column_index) {
+    const auto element_ordering = compare_with_null_equal(lhs[column_index], rhs[column_index]);
+    if (element_ordering != std::weak_ordering::equivalent) {
+      return is_column_reversed(column_index) ? reverse(element_ordering) : element_ordering;
+    }
+  }
+
+  return std::weak_ordering::equivalent;
 }
 
 template <typename T>
@@ -307,11 +325,16 @@ bool WindowFunctionEvaluator::is_output_nullable() const {
 }
 
 WindowFunctionEvaluator::HashPartitionedData WindowFunctionEvaluator::partition_and_sort() const {
-  const auto comparator = [](const RelevantRowInformation& lhs, const RelevantRowInformation& rhs) {
+  const auto& sort_modes = dynamic_cast<const WindowExpression&>(*_window_function_expression->window()).sort_modes;
+  const auto is_column_reversed = [&sort_modes](const auto column_index) {
+    return sort_modes[column_index] == SortMode::Descending;
+  };
+
+  const auto comparator = [&is_column_reversed](const RelevantRowInformation& lhs, const RelevantRowInformation& rhs) {
     const auto comp_result = compare_with_null_equal(lhs.partition_values, rhs.partition_values);
     if (std::is_neq(comp_result))
       return std::is_lt(comp_result);
-    return std::is_lt(compare_with_null_equal(lhs.order_values, rhs.order_values));
+    return std::is_lt(compare_with_null_equal(lhs.order_values, rhs.order_values, is_column_reversed));
   };
 
   const auto input_table = left_input_table();

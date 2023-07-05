@@ -16,8 +16,10 @@
 
 namespace hyrise {
 
-std::partial_ordering compare_with_null_equal(const AllTypeVariant& lhs, const AllTypeVariant& rhs);
-std::partial_ordering compare_with_null_equal(std::span<const AllTypeVariant> lhs, std::span<const AllTypeVariant> rhs);
+std::weak_ordering compare_with_null_equal(const AllTypeVariant& lhs, const AllTypeVariant& rhs);
+std::weak_ordering compare_with_null_equal(std::span<const AllTypeVariant> lhs, std::span<const AllTypeVariant> rhs);
+std::weak_ordering compare_with_null_equal(std::span<const AllTypeVariant> lhs, std::span<const AllTypeVariant> rhs,
+                                           auto is_column_reversed);
 
 class WindowFunctionEvaluator : public AbstractReadOnlyOperator {
  public:
