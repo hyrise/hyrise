@@ -44,7 +44,7 @@ NodeID getNumaNodeOfPage(const void* addr) {
   int status;
   long ret = numa_move_pages(0, 1, pages, NULL, &status, 0);
   if (ret == 0) {
-    return NodeID{status};
+    return static_cast<NodeID>(status);
   } else {
     std::cout << "move_pages returned error!" << std::endl;
     return INVALID_NODE_ID;
