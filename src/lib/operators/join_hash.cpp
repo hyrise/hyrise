@@ -388,14 +388,17 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
       auto timer_clustering = Timer{};
       auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
 
+      // We want to place the radix partitions of the build table onto the same node as the probe tables partition.
+      auto build_partitions_node_placements =
+          std::vector<NodeID>(materialized_build_column.size(), probe_partitions_node_placements[0]);
       jobs.emplace_back(std::make_shared<JobTask>([&]() {
         // radix partition the build table
         if (keep_nulls_build_column) {
           radix_build_column = partition_by_radix<BuildColumnType, HashedType, true>(
-              materialized_build_column, histograms_build_column, _radix_bits, probe_partitions_node_placements);
+              materialized_build_column, histograms_build_column, _radix_bits, build_partitions_node_placements);
         } else {
           radix_build_column = partition_by_radix<BuildColumnType, HashedType, false>(
-              materialized_build_column, histograms_build_column, _radix_bits, probe_partitions_node_placements);
+              materialized_build_column, histograms_build_column, _radix_bits, build_partitions_node_placements);
         }
 
         // After the data in materialized_build_column has been partitioned, it is not needed anymore.
@@ -518,10 +521,9 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
         break;
 
       case JoinMode::Semi:
-        probe_semi_anti<ProbeColumnType, HashedType, JoinMode::Semi>(radix_probe_column, hash_tables,
-                                                                     probe_side_pos_lists, *_build_input_table,
-                                                                     *_probe_input_table, _secondary_predicates,
-                                                                     probe_partitions_node_placements);
+        probe_semi_anti<ProbeColumnType, HashedType, JoinMode::Semi>(
+            radix_probe_column, hash_tables, probe_side_pos_lists, *_build_input_table, *_probe_input_table,
+            _secondary_predicates, probe_partitions_node_placements);
         break;
 
       case JoinMode::AntiNullAsTrue:
