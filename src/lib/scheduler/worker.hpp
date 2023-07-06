@@ -64,9 +64,9 @@ class Worker : public std::enable_shared_from_this<Worker>, private Noncopyable 
   void _set_affinity();
 
   std::shared_ptr<AbstractTask> _next_task{};
-  std::shared_ptr<TaskQueue> _queue;
-  WorkerID _id;
-  CpuID _cpu_id;
+  std::shared_ptr<TaskQueue> _queue{};
+  WorkerID _id{0};
+  CpuID _cpu_id{0};
   std::thread _thread;
   std::atomic_uint64_t _num_finished_tasks{0};
 
