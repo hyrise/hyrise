@@ -19,11 +19,51 @@
 
 namespace {
 
+using namespace hyrise;  // NOLINT(build/namespaces)
+
 /**
  * On worker threads, this references the Worker running on this thread, on all other threads, this is empty.
  * Uses a weak_ptr, because otherwise the ref-count of it would not reach zero within the main() scope of the program.
  */
-thread_local std::weak_ptr<hyrise::Worker> this_thread_worker;  // NOLINT (clang-tidy wants this const)
+thread_local std::weak_ptr<Worker> this_thread_worker;  // NOLINT (clang-tidy wants this const)
+
+bool get_task(const bool check_only_local_queue, const std::atomic_bool& shutdown_flag,
+              std::shared_ptr<AbstractTask>& task, std::shared_ptr<AbstractTask>& next_task,
+              std::shared_ptr<TaskQueue>& local_queue, const std::vector<std::shared_ptr<TaskQueue>>& all_queues) {
+  if (next_task) {
+      task = std::move(next_task);
+      next_task = nullptr;
+      return true;
+  }
+
+  // When waiting for the semaphore, we always check if the worker is supposed to shut down. Otherwise, a worker might
+  // "consume" muliple shutdown signals (no tasks in the queue) which hinders other workers for awaking.
+  if (!shutdown_flag && local_queue->semaphore.tryWait()) {
+    task = local_queue->pull();
+    return true;
+  }
+
+  if (check_only_local_queue) {
+    return false;
+  }
+
+  for (const auto& queue : all_queues) {
+    if (queue == local_queue) {
+      continue;
+    }
+
+    if (!shutdown_flag && queue->semaphore.tryWait()) {
+      task = queue->steal();
+      if (task) {
+        task->set_node_id(local_queue->node_id());
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
 }  // namespace
 
 namespace hyrise {
@@ -69,45 +109,26 @@ void Worker::operator()() {
 void Worker::_work(const bool allow_sleep) {
   // If execute_next has been called, run that task first, otherwise try to retrieve a task from the queue.
   auto task = std::shared_ptr<AbstractTask>{};
-  if (_next_task) {
-    task = std::move(_next_task);
-    _next_task = nullptr;
-  } else {
-    if (_queue->semaphore.tryWait()) {
-      task = _queue->pull();
+
+  const auto& queues = Hyrise::get().scheduler()->queues();
+  
+  const auto got_local_task = get_task(true, _shutdown_flag, task, _next_task, _queue, queues);
+  if (!got_local_task) {
+    const auto got_distant_task = get_task(false, _shutdown_flag, task, _next_task, _queue, queues);
+
+    if (!got_distant_task) {
+      // If there is no ready task neither in our queue nor in any other, worker waits for a new task to be pushed to the
+      // own queue. The waiting is skipped in case the scheduler is shutting down or sleep is not allowed (e.g., when
+      // _work() in called for a known number of unfinished jobs, see wait_for_tasks()).
+      if (allow_sleep && !get_task(true, _shutdown_flag, task, _next_task, _queue, queues)) {
+        _queue->semaphore.wait();
+        task = _queue->pull();
+      }
     }
   }
 
   if (!task) {
-    // Simple work stealing without explicitly transferring data between nodes.
-    auto work_stealing_successful = false;
-    for (const auto& queue : Hyrise::get().scheduler()->queues()) {
-      if (queue == _queue) {
-        continue;
-      }
-
-      if (queue->semaphore.tryWait()) {
-        task = queue->steal();
-        if (task) {
-          task->set_node_id(_queue->node_id());
-          work_stealing_successful = true;
-          break;
-        }
-      }
-    }
-
-    // If there is no ready task neither in our queue nor in any other, worker waits for a new task to be pushed to the
-    // own queue. The waiting is skipped in case the scheduler is shutting down or sleep is not allowed (e.g., when
-    // _work() in called for a known number of unfinished jobs, see wait_for_tasks()).
-    if (!work_stealing_successful && !_shutdown_flag && allow_sleep) {
-      _queue->semaphore.wait();
-      task = _queue->pull();
-    }
-
-    if (!task) {
-      // Neither stealing nor waiting succeeded, or scheduler is shutting down.
-      return;
-    }
+    return;
   }
 
   const auto successfully_assigned = task->try_mark_as_assigned_to_worker();
