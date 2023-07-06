@@ -46,14 +46,10 @@ void DataInducedPredicateRule::_apply_to_plan_without_subqueries(const std::shar
         std::cout << "We currently only support data induced predicates with only one join predicate" << std::endl;
         return LQPVisitation::VisitInputs;
     }
-    DebugAssert(join_node->join_predicates().size() == 1, "We currently only support data induced predicates with only one join predicate");
 
     const auto predicate_expression = std::dynamic_pointer_cast<BinaryPredicateExpression>(join_node->join_predicates()[0]);
     DebugAssert(predicate_expression, "Expected BinaryPredicateExpression");
     DebugAssert(predicate_expression->predicate_condition == PredicateCondition::Equals, "PredicateCondition must be equals");
-
-    // Currently we always use the right side as reducer and left is reduced TODO fix this to always choose right side
-    // const auto selection_side = LQPInputSide::Left;
 
   const auto reduce_if_beneficial = [&](const auto selection_side) {
 
@@ -73,21 +69,17 @@ void DataInducedPredicateRule::_apply_to_plan_without_subqueries(const std::shar
       DebugAssert(!expression_evaluable_on_lqp(reducer_side_expression, *join_node->input(selection_side)),
                   "Expected filtered expression to be uniquely evaluable on one side of the join");
 
-
-      const auto subquery = AggregateNode::make(expression_functional::expression_vector(),
-                                                expression_functional::expression_vector(
-                                                        expression_functional::min_(reducer_side_expression),
-                                                        expression_functional::max_(reducer_side_expression)),
-                                                reducer_node);
-
+      const auto subquery = AggregateNode::make(expression_vector(),expression_vector(
+                                                                         min_(reducer_side_expression),
+                                                                         max_(reducer_side_expression)), reducer_node);
 
       const auto min = ProjectionNode::make(
-              expression_functional::expression_vector(expression_functional::min_(reducer_side_expression)), subquery);
+              expression_vector(min_(reducer_side_expression)), subquery);
       const auto max = ProjectionNode::make(
-              expression_functional::expression_vector(expression_functional::max_(reducer_side_expression)), subquery);
+              expression_vector(max_(reducer_side_expression)), subquery);
 
       auto between_predicate = PredicateNode::make(
-              expression_functional::between_inclusive_(reduced_side_expression, lqp_subquery_(min),
+              between_inclusive_(reduced_side_expression, lqp_subquery_(min),
                                                         lqp_subquery_(max)));
       lqp_insert_node(join_node, selection_side, between_predicate);
 
@@ -96,35 +88,20 @@ void DataInducedPredicateRule::_apply_to_plan_without_subqueries(const std::shar
       const auto reduced_cardinality = estimator->estimate_cardinality(between_predicate);
       lqp_remove_node(between_predicate);
 
-      // Wenn selektivitaet entsprechend, praedikat in vektor speichern und spaeter reinpacken
-      // TODO make side independent
-      // between_predicate->set_left_input(reduced_node);
-
       if (original_cardinality == 0 || (reduced_cardinality / original_cardinality) > MINIMUM_SELECTIVITY) {
           return;
       }
       data_induced_predicates.emplace_back(join_node, selection_side, between_predicate);
-
-      // Benchmarking ==visualize flag
-      // Benchmarking zunaechst mit sf 0.01
-      // spaeter zum messen 10
-      // spaeter tpc-h, tpcds und join order benchmark
-      // helper benchmark_all
-      // compare_benchmarks (python) mit output.jsons als param in /scripts
   };
 
-
-
-
-
-    // Having defined the lambda responsible for conditionally adding a semi join reduction, we now apply it to both
+    // Having defined the lambda responsible for conditionally adding a data induced predicate, we now apply it to both
     // inputs of the join. For outer joins, we must not filter the side on which tuples survive even without a join
     // partner.
     if (join_node->join_mode != JoinMode::Right && join_node->join_mode != JoinMode::FullOuter) {
       reduce_if_beneficial(LQPInputSide::Right);
     }
 
-    // On the left side we must not create semi join reductions for anti joins as those rely on the very existence of
+    // On the left side we must not create data induced predicates for anti joins as those rely on the very existence of
     // non-matching values on the right side. Also, we should not create semi join reductions for semi joins as those
     // would simply duplicate the original join.
     if (join_node->join_mode != JoinMode::Left && join_node->join_mode != JoinMode::FullOuter &&
