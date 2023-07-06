@@ -5,6 +5,7 @@
 #include <random>
 #include "benchmark/benchmark.h"
 #include "storage/buffer/buffer_manager.hpp"
+#include "storage/buffer/zipfian_int_distribution.hpp"
 
 namespace hyrise {
 
@@ -56,7 +57,44 @@ BENCHMARK_DEFINE_F(BufferManagerFixture, BM_BufferManagerPinForWrite)(benchmark:
   state.SetBytesProcessed(int64_t(state.iterations()) * bytes_for_size_type(PAGE_SIZE_TYPE));
 }
 
-BENCHMARK_DEFINE_F(BufferManagerFixture, BM_BufferManagerPinForRead)(benchmark::State& state) {
+BENCHMARK_DEFINE_F(BufferManagerFixture, BM_BufferManagerPinForReadZipfian)(benchmark::State& state) {
+  const auto DRAM_SIZE_RATIO = state.range(0);
+  const auto MAX_PAGE_IDX = DRAM_SIZE_RATIO * (DEFAULT_DRAM_BUFFER_POOL_SIZE / bytes_for_size_type(PAGE_SIZE_TYPE));
+  if (state.thread_index() == 0) {
+    for (auto idx = size_t{0}; idx < MAX_PAGE_IDX; ++idx) {
+      auto page_id = PageID{PAGE_SIZE_TYPE, static_cast<size_t>(idx)};
+      std::memset(_buffer_manager._get_page_ptr(page_id), 0x1337, page_id.num_bytes());
+    }
+  }
+
+  std::random_device rd;
+  std::mt19937 gen(rd());
+  zipfian_int_distribution<> distr(0, MAX_PAGE_IDX);
+
+  for (auto _ : state) {
+    auto page_id = PageID{PAGE_SIZE_TYPE, static_cast<size_t>(distr(gen))};
+    _buffer_manager.pin_shared(page_id);
+
+    state.PauseTiming();
+    auto page_ptr = _buffer_manager._get_page_ptr(page_id);
+    for (auto i = 0; i < page_id.num_bytes(); i += CACHE_LINE_SIZE) {
+      __builtin_prefetch(&page_ptr[i]);
+      benchmark::DoNotOptimize(page_ptr[i]);
+    }
+    state.ResumeTiming();
+
+    _buffer_manager.unpin_shared(page_id);
+    benchmark::ClobberMemory();
+  }
+
+  state.counters["CacheHitRate"] =
+      _buffer_manager.metrics()->total_hits /
+      static_cast<double>(_buffer_manager.metrics()->total_hits + _buffer_manager.metrics()->total_misses);
+  state.SetItemsProcessed(int64_t(state.iterations()));
+  state.SetBytesProcessed(int64_t(state.iterations()) * bytes_for_size_type(PAGE_SIZE_TYPE));
+}
+
+BENCHMARK_DEFINE_F(BufferManagerFixture, BM_BufferManagerPinForReadRandom)(benchmark::State& state) {
   const auto DRAM_SIZE_RATIO = state.range(0);
   const auto MAX_PAGE_IDX = DRAM_SIZE_RATIO * (DEFAULT_DRAM_BUFFER_POOL_SIZE / bytes_for_size_type(PAGE_SIZE_TYPE));
   if (state.thread_index() == 0) {
@@ -83,9 +121,12 @@ BENCHMARK_DEFINE_F(BufferManagerFixture, BM_BufferManagerPinForRead)(benchmark::
     state.ResumeTiming();
 
     _buffer_manager.unpin_shared(page_id);
-    // benchmark::ClobberMemory();
+    benchmark::ClobberMemory();
   }
 
+  state.counters["CacheHitRate"] =
+      _buffer_manager.metrics()->total_hits /
+      static_cast<double>(_buffer_manager.metrics()->total_hits + _buffer_manager.metrics()->total_misses);
   state.SetItemsProcessed(int64_t(state.iterations()));
   state.SetBytesProcessed(int64_t(state.iterations()) * bytes_for_size_type(PAGE_SIZE_TYPE));
 }
@@ -199,9 +240,14 @@ BENCHMARK_REGISTER_F(BufferManagerFixture, BM_BufferManagerPinForWrite)
     ->ThreadRange(1, 128)
     ->UseRealTime();
 
-BENCHMARK_REGISTER_F(BufferManagerFixture, BM_BufferManagerPinForRead)
+BENCHMARK_REGISTER_F(BufferManagerFixture, BM_BufferManagerPinForReadZipfian)
     ->DenseRange(1, 4)
-    ->ThreadRange(1, 128)
+    ->ThreadRange(1, 48)
+    ->UseRealTime();
+
+BENCHMARK_REGISTER_F(BufferManagerFixture, BM_BufferManagerPinForReadRandom)
+    ->DenseRange(1, 4)
+    ->ThreadRange(1, 48)
     ->UseRealTime();
 
 BENCHMARK_REGISTER_F(BufferManagerFixture, BM_BufferManagerMultiplePageSizesInMemory)

@@ -138,7 +138,7 @@ add_executable(
     # operators/table_scan_benchmark.cpp
     # operators/sort_benchmark.cpp
 
-
+    storage/buffer/zipfian_int_distribution.hpp
     storage/buffer/page_migration_benchmark.cpp
     storage/buffer/buffer_manager_benchmark.cpp
     # storage/buffer/allocation_benchmark.cpp
