@@ -2,6 +2,7 @@
 #include <vector>
 #if HYRISE_NUMA_SUPPORT
 #include <numa.h>
+#include <numaif.h>
 #endif
 #include "benchmark/benchmark.h"
 #include "storage/buffer/buffer_manager.hpp"

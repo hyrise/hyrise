@@ -4,6 +4,7 @@
 #include "utils/assert.hpp"
 
 #if HYRISE_NUMA_SUPPORT
+#include <numaif.h>
 #include <numa.h>
 #endif
 
