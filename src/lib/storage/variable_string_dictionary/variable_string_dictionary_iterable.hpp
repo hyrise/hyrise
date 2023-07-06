@@ -113,7 +113,8 @@ class VariableStringDictionarySegmentIterable : public PointAccessibleSegmentIte
         return SegmentPosition<T>{T{}, true, _chunk_offset};
       }
 
-      return SegmentPosition<T>{T{*(_dictionary_begin_it + _offset_vector->operator[](value_id))}, false, _chunk_offset};
+      // TODO: Remove &* Hack to get pointer to iterator's data
+      return SegmentPosition<T>{T{&*(_dictionary_begin_it + _offset_vector->operator[](value_id))}, false, _chunk_offset};
     }
 
    private:
@@ -158,7 +159,7 @@ class VariableStringDictionarySegmentIterable : public PointAccessibleSegmentIte
         return SegmentPosition<T>{T{}, true, chunk_offsets.offset_in_poslist};
       }
 
-      return SegmentPosition<T>{T{*(_dictionary_begin_it + _offset_vector->operator[](value_id))}, false, chunk_offsets.offset_in_poslist};
+      return SegmentPosition<T>{T{&*(_dictionary_begin_it + _offset_vector->operator[](value_id))}, false, chunk_offsets.offset_in_poslist};
     }
 
    private:
