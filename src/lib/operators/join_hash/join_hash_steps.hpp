@@ -438,7 +438,7 @@ template <typename BuildColumnType, typename HashedType>
 std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<BuildColumnType>& radix_container,
                                                            const JoinHashBuildMode mode, const size_t radix_bits,
                                                            const BloomFilter& input_bloom_filter,
-                                                           const std::vector<NodeID>& node_placements) {
+                                                           const std::vector<NodeID> node_placements) {
   Assert(input_bloom_filter.size() == BLOOM_FILTER_SIZE, "invalid input_bloom_filter");
 
   if (radix_container.empty()) {
@@ -463,7 +463,9 @@ std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<
   }
 
   std::vector<std::shared_ptr<AbstractTask>> jobs;
+  auto actual_nodes = std::vector<NodeID>();
   jobs.reserve(radix_container.size());
+  actual_nodes.reserve(radix_container.size());
 
   for (size_t partition_idx = 0; partition_idx < radix_container.size(); ++partition_idx) {
     // Skip empty partitions, so that we don't have too many empty jobs and hash tables
@@ -506,13 +508,12 @@ std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<
       insert_into_hash_table();
     } else {
       jobs.emplace_back(std::make_shared<JobTask>(insert_into_hash_table));
+      actual_nodes.emplace_back(node_placements[partition_idx]);
     }
   }
-  // TODO(anyone)
-  // note: if partitions got pruned, jobs and node placement will missmatch.
 
   if (jobs.size()) {
-    Hyrise::get().scheduler()->schedule_on_preferred_nodes_and_wait_for_tasks(jobs, node_placements);
+    Hyrise::get().scheduler()->schedule_on_preferred_nodes_and_wait_for_tasks(jobs, actual_nodes);
   }
 
   // If radix partitioning is used, finalize is called above.
