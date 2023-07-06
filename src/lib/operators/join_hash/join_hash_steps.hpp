@@ -446,7 +446,7 @@ std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<
                                                            const std::vector<NodeID> node_placements) {
   Assert(input_bloom_filter.size() == BLOOM_FILTER_SIZE, "invalid input_bloom_filter");
   Assert(radix_container.size() == node_placements.size(), std::to_string(radix_container.size()) + " partitions vs. " +
-                                                               std::to_string(node_placements.size()) + "job nodes");
+                                                               std::to_string(node_placements.size()) + " job nodes");
   if (radix_container.empty()) {
     return {};
   }
@@ -551,7 +551,7 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
   const auto output_partition_count = size_t{1} << radix_bits;
   Assert(input_partition_count == job_nodes_placement.size(),
          std::to_string(input_partition_count) + " partitions vs. " + std::to_string(job_nodes_placement.size()) +
-             "job nodes");
+             " job nodes");
   // currently, we just do one pass
   const size_t pass = 0;
   const size_t radix_mask = static_cast<uint32_t>(std::pow(2, radix_bits * (pass + 1)) - 1);
@@ -661,8 +661,14 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
            const JoinMode mode, const Table& build_table, const Table& probe_table,
            const std::vector<OperatorJoinPredicate>& secondary_join_predicates,
            const std::vector<NodeID>& node_placements) {
+  auto num_probe_radix_partitions = probe_radix_container.size();
+  Assert(num_probe_radix_partitions == node_placements.size(),
+         std::to_string(num_probe_radix_partitions) + " partitions vs. " + std::to_string(node_placements.size()) +
+             " job nodes");
   std::vector<std::shared_ptr<AbstractTask>> jobs;
-  jobs.reserve(probe_radix_container.size());
+  std::vector<NodeID> job_nodes;
+  jobs.reserve(num_probe_radix_partitions);
+  job_nodes.reserve(num_probe_radix_partitions);
 
   /*
     NUMA notes:
@@ -672,7 +678,7 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
     and the job that probes that partition should also be on that NUMA node.
   */
 
-  for (size_t partition_idx = 0; partition_idx < probe_radix_container.size(); ++partition_idx) {
+  for (size_t partition_idx = 0; partition_idx < num_probe_radix_partitions; ++partition_idx) {
     // Skip empty partitions to avoid empty output chunks
     if (probe_radix_container[partition_idx].elements.empty()) {
       continue;
@@ -809,10 +815,11 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
       probe_partition();
     } else {
       jobs.emplace_back(std::make_shared<JobTask>(probe_partition));
+      job_nodes.emplace_back(node_placements[partition_idx]);
     }
   }
 
-  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
+  Hyrise::get().scheduler()->schedule_on_preferred_nodes_and_wait_for_tasks(jobs, job_nodes);
 }
 
 template <typename ProbeColumnType, typename HashedType, JoinMode mode>
@@ -821,10 +828,14 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_containe
                      std::vector<RowIDPosList>& pos_lists, const Table& build_table, const Table& probe_table,
                      const std::vector<OperatorJoinPredicate>& secondary_join_predicates,
                      const std::vector<NodeID>& node_placements) {
-  std::vector<std::shared_ptr<AbstractTask>> jobs;
-
   const auto probe_radix_container_count = probe_radix_container.size();
+  Assert(probe_radix_container_count == node_placements.size(),
+         std::to_string(probe_radix_container_count) + " partitions vs. " + std::to_string(node_placements.size()) +
+             " job nodes");
+  std::vector<std::shared_ptr<AbstractTask>> jobs;
+  std::vector<NodeID> job_nodes;
   jobs.reserve(probe_radix_container_count);
+  job_nodes.reserve(probe_radix_container_count);
 
   for (auto partition_idx = size_t{0}; partition_idx < probe_radix_container_count; ++partition_idx) {
     // Skip empty partitions to avoid empty output chunks
@@ -930,10 +941,11 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_containe
       probe_partition();
     } else {
       jobs.emplace_back(std::make_shared<JobTask>(probe_partition));
+      job_nodes.emplace_back(node_placements[partition_idx]);
     }
   }
 
-  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
+  Hyrise::get().scheduler()->schedule_on_preferred_nodes_and_wait_for_tasks(jobs, job_nodes);
 }
 
 }  // namespace hyrise

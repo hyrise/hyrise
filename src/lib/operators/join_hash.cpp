@@ -511,37 +511,41 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
       probe_side_pos_lists[partition_index].reserve(result_rows_per_partition);
     }
 
+    // We want to probe on the nodes, where our data is located.
+    auto probing_node_placements = std::vector<NodeID>(
+        radix_probe_column.size(),
+        (probe_partitions_node_placements.size()) ? probe_partitions_node_placements[0] : INVALID_NODE_ID);
     Timer timer_probing;
     switch (_mode) {
       case JoinMode::Inner:
         probe<ProbeColumnType, HashedType, false>(radix_probe_column, hash_tables, build_side_pos_lists,
                                                   probe_side_pos_lists, _mode, *_build_input_table, *_probe_input_table,
-                                                  _secondary_predicates, probe_partitions_node_placements);
+                                                  _secondary_predicates, probing_node_placements);
         break;
 
       case JoinMode::Left:
       case JoinMode::Right:
         probe<ProbeColumnType, HashedType, true>(radix_probe_column, hash_tables, build_side_pos_lists,
                                                  probe_side_pos_lists, _mode, *_build_input_table, *_probe_input_table,
-                                                 _secondary_predicates, probe_partitions_node_placements);
+                                                 _secondary_predicates, probing_node_placements);
         break;
 
       case JoinMode::Semi:
         probe_semi_anti<ProbeColumnType, HashedType, JoinMode::Semi>(
             radix_probe_column, hash_tables, probe_side_pos_lists, *_build_input_table, *_probe_input_table,
-            _secondary_predicates, probe_partitions_node_placements);
+            _secondary_predicates, probing_node_placements);
         break;
 
       case JoinMode::AntiNullAsTrue:
         probe_semi_anti<ProbeColumnType, HashedType, JoinMode::AntiNullAsTrue>(
             radix_probe_column, hash_tables, probe_side_pos_lists, *_build_input_table, *_probe_input_table,
-            _secondary_predicates, probe_partitions_node_placements);
+            _secondary_predicates, probing_node_placements);
         break;
 
       case JoinMode::AntiNullAsFalse:
         probe_semi_anti<ProbeColumnType, HashedType, JoinMode::AntiNullAsFalse>(
             radix_probe_column, hash_tables, probe_side_pos_lists, *_build_input_table, *_probe_input_table,
-            _secondary_predicates, probe_partitions_node_placements);
+            _secondary_predicates, probing_node_placements);
         break;
 
       default:
