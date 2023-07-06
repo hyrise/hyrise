@@ -291,7 +291,7 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
   // Create histograms per chunk
   histograms.resize(chunk_count);
 
-  auto nodes = (partition_node_locations) ? *partition_node_locations : std::vector<NodeID>{};
+  auto& nodes = (partition_node_locations) ? *partition_node_locations : std::vector<NodeID>{};
   assert(nodes.size() == 0);
   auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
   // TODO(anyone): perhaps use jobs.nodeID somehow.
