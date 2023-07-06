@@ -12,15 +12,6 @@ namespace hyrise {
 
 class ListDirectoryTest : public BaseTest {
  protected:
-  ListDirectoryTest() {
-    // You can do set-up work for each test here.
-    auto rand_dev = std::random_device();
-    auto generator = std::mt19937();
-    auto distribution = std::uniform_int_distribution<uint32_t>(0, INT_MAX);
-
-    _directory_path.append(std::to_string(distribution(generator)));
-  }
-
   void SetUp() override {
     std::filesystem::create_directory(_directory_path);
   }
