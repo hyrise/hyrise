@@ -20,7 +20,7 @@ class AbstractSegment : private Noncopyable {
   // the type of the data contained in this segment
   DataType data_type() const;
 
-  NodeID numa_node_location();
+  virtual NodeID numa_node_location();
 
   // returns the value at a given position
   virtual AllTypeVariant operator[](const ChunkOffset chunk_offset) const = 0;
