@@ -244,6 +244,7 @@ set(
         testing_assert.cpp
         testing_assert.hpp
         utils/data_dependency_test_utils.hpp
+        lib/storage/variable_string_dictionary_segment_test.cpp
 )
 
 set(
@@ -259,8 +260,7 @@ set(
         lib/sql/sqlite_testrunner/sqlite_testrunner_encodings.cpp
         lib/utils/plugin_test_utils.cpp
         lib/utils/plugin_test_utils.hpp
-        plugins/mvcc_delete_plugin_system_test.cpp
-        lib/storage/variable_string_dictionary_segment_test.cpp)
+        plugins/mvcc_delete_plugin_system_test.cpp)
 
 # Both hyriseTest and hyriseSystemTest link against these
 set(
