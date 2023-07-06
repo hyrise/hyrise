@@ -389,8 +389,9 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
       auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
 
       // We want to place the radix partitions of the build table onto the same node as the probe tables partition.
-      auto build_partitions_node_placements =
-          std::vector<NodeID>(materialized_build_column.size(), probe_partitions_node_placements[0]);
+      auto build_partitions_node_placements = std::vector<NodeID>(
+          materialized_build_column.size(),
+          (probe_partitions_node_placements.size()) ? probe_partitions_node_placements[0] : INVALID_NODE_ID);
       jobs.emplace_back(std::make_shared<JobTask>([&]() {
         // radix partition the build table
         if (keep_nulls_build_column) {
@@ -439,14 +440,19 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
      *    We use the probe side's Bloom filter to exclude values from the hash table that will not be accessed in the
      *    probe step.
      */
+
+    // We want to place the radix partitions of the build table onto the same node as the probe tables partition.
+    auto build_hash_tables_node_placements = std::vector<NodeID>(
+        radix_build_column.size(),
+        (probe_partitions_node_placements.size()) ? probe_partitions_node_placements[0] : INVALID_NODE_ID);
     auto timer_hash_map_building = Timer{};
     if (_secondary_predicates.empty() && is_semi_or_anti_join(_mode)) {
       hash_tables =
           build<BuildColumnType, HashedType>(radix_build_column, JoinHashBuildMode::ExistenceOnly, _radix_bits,
-                                             probe_side_bloom_filter, probe_partitions_node_placements);
+                                             probe_side_bloom_filter, build_hash_tables_node_placements);
     } else {
       hash_tables = build<BuildColumnType, HashedType>(radix_build_column, JoinHashBuildMode::AllPositions, _radix_bits,
-                                                       probe_side_bloom_filter, probe_partitions_node_placements);
+                                                       probe_side_bloom_filter, build_hash_tables_node_placements);
     }
     _performance_data.set_step_runtime(OperatorSteps::Building, timer_hash_map_building.lap());
 

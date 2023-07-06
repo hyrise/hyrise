@@ -422,11 +422,13 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
       materialize();
     } else {
       jobs.emplace_back(std::make_shared<JobTask>(materialize));
-      const auto segment = chunk_in->get_segment(column_id);
-      nodes->emplace_back(segment->numa_node_location());
     }
+    const auto segment = chunk_in->get_segment(column_id);
+    nodes->emplace_back(segment->numa_node_location());
   }
-  Hyrise::get().scheduler()->schedule_on_preferred_nodes_and_wait_for_tasks(jobs, *nodes);
+  if (jobs.size()) {
+    Hyrise::get().scheduler()->schedule_on_preferred_nodes_and_wait_for_tasks(jobs, *nodes);
+  }
 
   return radix_container;
 }
