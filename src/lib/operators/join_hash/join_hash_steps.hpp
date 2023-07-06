@@ -440,7 +440,8 @@ std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<
                                                            const BloomFilter& input_bloom_filter,
                                                            const std::vector<NodeID> node_placements) {
   Assert(input_bloom_filter.size() == BLOOM_FILTER_SIZE, "invalid input_bloom_filter");
-
+  Assert(radix_container.size() == node_placements.size(), std::to_string(radix_container.size()) + " partitions vs. " +
+                                                               std::to_string(node_placements.size()) + "job nodes");
   if (radix_container.empty()) {
     return {};
   }
@@ -543,7 +544,9 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
 
   const auto input_partition_count = radix_container.size();
   const auto output_partition_count = size_t{1} << radix_bits;
-
+  Assert(input_partition_count == job_nodes_placement.size(),
+         std::to_string(input_partition_count) + " partitions vs. " + std::to_string(job_nodes_placement.size()) +
+             "job nodes");
   // currently, we just do one pass
   const size_t pass = 0;
   const size_t radix_mask = static_cast<uint32_t>(std::pow(2, radix_bits * (pass + 1)) - 1);
