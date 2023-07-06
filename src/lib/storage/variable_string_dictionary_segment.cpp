@@ -143,4 +143,6 @@ const std::shared_ptr<const pmr_vector<uint32_t>>& VariableStringDictionarySegme
   return _offset_vector;
 }
 
+template class VariableStringDictionarySegment<pmr_string>;
+
 }  // namespace hyrise

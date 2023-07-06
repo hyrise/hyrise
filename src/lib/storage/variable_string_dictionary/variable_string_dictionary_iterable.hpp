@@ -51,10 +51,10 @@ class VariableStringDictionarySegmentIterable : public PointAccessibleSegmentIte
       using PosListIteratorType = decltype(position_filter->cbegin());
       auto begin = PointAccessIterator<Decompressor, DictionaryIteratorType, PosListIteratorType>{
           _dictionary->cbegin(), _segment.null_value_id(), vector.create_decompressor(), position_filter->cbegin(),
-          position_filter->cbegin()};
+          position_filter->cbegin(), _segment.offset_vector()};
       auto end = PointAccessIterator<Decompressor, DictionaryIteratorType, PosListIteratorType>{
           _dictionary->cbegin(), _segment.null_value_id(), vector.create_decompressor(), position_filter->cbegin(),
-          position_filter->cend()};
+          position_filter->cend(), _segment.offset_vector()};
       functor(begin, end);
     });
   }
@@ -135,13 +135,15 @@ class VariableStringDictionarySegmentIterable : public PointAccessibleSegmentIte
 
     PointAccessIterator(DictionaryIteratorType dictionary_begin_it, const ValueID null_value_id,
                         Decompressor attribute_decompressor, PosListIteratorType position_filter_begin,
-                        PosListIteratorType position_filter_it)
+                        PosListIteratorType position_filter_it, const std::shared_ptr<const pmr_vector<uint32_t>>& offset_vector)
         : AbstractPointAccessSegmentIterator<
               PointAccessIterator<Decompressor, DictionaryIteratorType, PosListIteratorType>, SegmentPosition<T>,
               PosListIteratorType>{std::move(position_filter_begin), std::move(position_filter_it)},
           _dictionary_begin_it{std::move(dictionary_begin_it)},
           _null_value_id{null_value_id},
-          _attribute_decompressor{std::move(attribute_decompressor)} {}
+          _attribute_decompressor{std::move(attribute_decompressor)} ,
+    _offset_vector{offset_vector}
+    {}
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
@@ -156,13 +158,14 @@ class VariableStringDictionarySegmentIterable : public PointAccessibleSegmentIte
         return SegmentPosition<T>{T{}, true, chunk_offsets.offset_in_poslist};
       }
 
-      return SegmentPosition<T>{T{*(_dictionary_begin_it + value_id)}, false, chunk_offsets.offset_in_poslist};
+      return SegmentPosition<T>{T{*(_dictionary_begin_it + _offset_vector->operator[](value_id))}, false, chunk_offsets.offset_in_poslist};
     }
 
    private:
     DictionaryIteratorType _dictionary_begin_it;
     ValueID _null_value_id;
     mutable Decompressor _attribute_decompressor;
+    std::shared_ptr<const pmr_vector<uint32_t>> _offset_vector;
   };
 
  private:
