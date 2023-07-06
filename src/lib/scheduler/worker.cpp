@@ -30,6 +30,7 @@ thread_local std::weak_ptr<Worker> this_thread_worker;  // NOLINT (clang-tidy wa
 bool get_task(const bool check_only_local_queue, const std::atomic_bool& shutdown_flag,
               std::shared_ptr<AbstractTask>& task, std::shared_ptr<AbstractTask>& next_task,
               std::shared_ptr<TaskQueue>& local_queue, const std::vector<std::shared_ptr<TaskQueue>>& all_queues) {
+  // If execute_next has been called, run that task first, otherwise try to retrieve a task from the queue.
   if (next_task) {
       task = std::move(next_task);
       next_task = nullptr;
@@ -107,19 +108,16 @@ void Worker::operator()() {
 }
 
 void Worker::_work(const bool allow_sleep) {
-  // If execute_next has been called, run that task first, otherwise try to retrieve a task from the queue.
-  auto task = std::shared_ptr<AbstractTask>{};
-
   const auto& queues = Hyrise::get().scheduler()->queues();
 
+  auto task = std::shared_ptr<AbstractTask>{};
   const auto got_local_task = get_task(true, _shutdown_flag, task, _next_task, _queue, queues);
   if (!got_local_task) {
     const auto got_distant_task = get_task(false, _shutdown_flag, task, _next_task, _queue, queues);
-
     if (!got_distant_task) {
-      // If there is no ready task neither in our queue nor in any other, worker waits for a new task to be pushed to
-      // the own queue. The waiting is skipped in case the scheduler is shutting down or sleep is not allowed (e.g.,
-      // when _work() in called for a known number of unfinished jobs, see wait_for_tasks()).
+      // If there is no ready task neither in the local queue nor in any other, the worker waits for a new task to be
+      // pushed to the own queue. The waiting is skipped in case the scheduler is shutting down or sleep is not allowed
+      //  (e.g., when _work() is called for a known number of unfinished jobs, see wait_for_tasks()).
       if (allow_sleep && !get_task(true, _shutdown_flag, task, _next_task, _queue, queues)) {
         _queue->semaphore.wait();
         task = _queue->pull();
