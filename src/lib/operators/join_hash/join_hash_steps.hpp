@@ -291,7 +291,7 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
   // Create histograms per chunk
   histograms.resize(chunk_count);
 
-  auto nodes = (partition_node_locations == nullptr) ? *partition_node_locations : std::vector<NodeID>{};
+  auto nodes = (partition_node_locations) ? *partition_node_locations : std::vector<NodeID>{};
   assert(nodes.size() == 0);
   auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
   // TODO(anyone): perhaps use jobs.nodeID somehow.
@@ -508,7 +508,12 @@ std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<
       jobs.emplace_back(std::make_shared<JobTask>(insert_into_hash_table));
     }
   }
-  Hyrise::get().scheduler()->schedule_on_preferred_nodes_and_wait_for_tasks(jobs, node_placements);
+  // TODO(anyone)
+  // note: if partitions got pruned, jobs and node placement will missmatch.
+
+  if (jobs.size()) {
+    Hyrise::get().scheduler()->schedule_on_preferred_nodes_and_wait_for_tasks(jobs, node_placements);
+  }
 
   // If radix partitioning is used, finalize is called above.
   if (radix_bits == 0) {
