@@ -39,9 +39,13 @@ void print_numa_location_of_segments(std::unordered_map<std::string, BenchmarkTa
   auto num_nodes = static_cast<NodeID>(Hyrise::get().topology.nodes().size());
 
   std::vector<int> global_segment_count (num_nodes, 0);
-
+  std::cout << "TABLE,\t";
+  for (auto i = NodeID{0}; i < num_nodes; ++i){
+    std::cout << "Node" << i << ",\t";
+  }
+  std::cout << "INVALID_NODE_ID" << std::endl;
   for(auto [table_name,table_info] : table_info_by_name){
-    std::cout << table_name << std::endl;  
+    std::cout << table_name << ",\t";  
     std::vector<int> table_segment_count (num_nodes,0);
     auto invalid_node_id_counter = u_int32_t{0};
     auto& table = table_info.table;
@@ -63,10 +67,10 @@ void print_numa_location_of_segments(std::unordered_map<std::string, BenchmarkTa
       }
     }
     for(auto i = u_int32_t{0}; i < num_nodes; i++){
-      std::cout << "Node " << i << ": " << table_segment_count[i] << " Segments \t";
+      std::cout << table_segment_count[i] << ", \t";
       global_segment_count[i] += table_segment_count[i];
     }
-    std::cout << "INVALID_NODE_IDS: " << invalid_node_id_counter << std::endl;
+    std::cout << invalid_node_id_counter << std::endl;
   }
   return;
 }
@@ -292,8 +296,10 @@ void AbstractTableGenerator::generate_and_store() {
     for (auto& [table_name, table_info] : table_info_by_name) {
       auto& table = table_info.table;
       const auto target_node_id = NodeID{table_counter % num_nodes};
-      std::cout << "Relocate table " << table_name << " on numa_node: " << target_node_id << std::endl;
-
+      std::cout << "Relocate table " << table_name << " on numa_node: " << target_node_id;
+      auto timer = Timer{};
+    
+    
       auto chunk_count = table->chunk_count();
       auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
       jobs.reserve(chunk_count);
@@ -307,6 +313,7 @@ void AbstractTableGenerator::generate_and_store() {
       }
       Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
       table_counter++;
+      std::cout << " (" << timer.lap_formatted() << ")" << std::endl;
     }
   }
 
