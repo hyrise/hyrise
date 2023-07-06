@@ -35,6 +35,42 @@ BenchmarkTableInfo::BenchmarkTableInfo(const std::shared_ptr<Table>& init_table)
 AbstractTableGenerator::AbstractTableGenerator(const std::shared_ptr<BenchmarkConfig>& benchmark_config)
     : _benchmark_config(benchmark_config) {}
 
+void print_numa_location_of_segments(std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name){
+  auto num_nodes = static_cast<NodeID>(Hyrise::get().topology.nodes().size());
+
+  std::vector<int> global_segment_count (num_nodes, 0);
+
+  for(auto [table_name,table_info] : table_info_by_name){
+    std::cout << table_name << std::endl;  
+    std::vector<int> table_segment_count (num_nodes,0);
+    auto invalid_node_id_counter = u_int32_t{0};
+    auto& table = table_info.table;
+    auto chunk_count = table->chunk_count();
+    auto column_count = table->column_count();
+  
+    for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+      auto chunk = table->get_chunk(chunk_id); 
+      for(auto column_id = ColumnID{0}; column_id < column_count; ++column_id){
+        auto segment = chunk->get_segment(column_id); 
+        auto numa_node = segment->numa_node_location();
+
+        if(numa_node == INVALID_NODE_ID){
+          invalid_node_id_counter++;
+          continue; 
+        }
+
+        table_segment_count[numa_node]++;
+      }
+    }
+    for(auto i = u_int32_t{0}; i < num_nodes; i++){
+      std::cout << "Node " << i << ": " << table_segment_count[i] << " Segments \t";
+      global_segment_count[i] += table_segment_count[i];
+    }
+    std::cout << "INVALID_NODE_IDS: " << invalid_node_id_counter << std::endl;
+  }
+  return;
+}
+
 void AbstractTableGenerator::generate_and_store() {
   auto timer = Timer{};
 
@@ -236,6 +272,11 @@ void AbstractTableGenerator::generate_and_store() {
               << format_duration(metrics.encoding_duration) << ")" << std::endl;
   }
 
+
+  std::cout << "Numa-Locations before relocation" << std::endl; 
+  print_numa_location_of_segments(table_info_by_name); 
+  
+
   /**
    * Relocate tables to optimize for numa.
    */
@@ -268,6 +309,10 @@ void AbstractTableGenerator::generate_and_store() {
       table_counter++;
     }
   }
+
+  std::cout << "Numa-Locations after relocation" << std::endl; 
+  print_numa_location_of_segments(table_info_by_name); 
+ 
 
   /**
    * Write the Tables into binary files if required
