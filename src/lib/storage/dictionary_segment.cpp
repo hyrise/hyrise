@@ -63,7 +63,7 @@ DictionarySegment<T>::DictionarySegment(const std::shared_ptr<const pmr_vector<T
   // For a DictionarySegment of the max size Chunk::MAX_SIZE, those two values overlap.
   // _attribute_vector->at(0);
   //printNumaNodeOfPage(_attribute_vector.get());
-  printNumaNodeOfPage(&(*_dictionary)[0]);
+  // printNumaNodeOfPage(&(*_dictionary)[0]);
   // auto node_decomp = printNumaNodeOfPage(_decompressor.get());
   // auto node_this = printNumaNodeOfPage(this);
 
@@ -72,7 +72,7 @@ DictionarySegment<T>::DictionarySegment(const std::shared_ptr<const pmr_vector<T
   } else {
     std::cout << "Dictionary and its attributes on different Node" << std::endl << std::flush;
   }*/
-  printAllocations();
+  // printAllocations();
   _node_id = getNumaNodeOfPage(&(*_dictionary)[0]);
   Assert(_dictionary->size() < std::numeric_limits<ValueID::base_type>::max(), "Input segment too big");
 }
