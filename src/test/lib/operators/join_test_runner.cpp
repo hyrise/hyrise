@@ -771,14 +771,14 @@ TEST_P(JoinTestRunner, TestJoin) {
   }
 }
 
-//
-//INSTANTIATE_TEST_SUITE_P(JoinNestedLoop, JoinTestRunner,
-//                         testing::ValuesIn(JoinTestRunner::create_configurations<JoinNestedLoop>()));
-//INSTANTIATE_TEST_SUITE_P(JoinHash, JoinTestRunner,
-//                         testing::ValuesIn(JoinTestRunner::create_configurations<JoinHash>()));
-//INSTANTIATE_TEST_SUITE_P(JoinSortMerge, JoinTestRunner,
-//                         testing::ValuesIn(JoinTestRunner::create_configurations<JoinSortMerge>()));
-//INSTANTIATE_TEST_SUITE_P(JoinIndex, JoinTestRunner,
-//                         testing::ValuesIn(JoinTestRunner::create_configurations<JoinIndex>()));
+
+INSTANTIATE_TEST_SUITE_P(JoinNestedLoop, JoinTestRunner,
+                         testing::ValuesIn(JoinTestRunner::create_configurations<JoinNestedLoop>()));
+INSTANTIATE_TEST_SUITE_P(JoinHash, JoinTestRunner,
+                         testing::ValuesIn(JoinTestRunner::create_configurations<JoinHash>()));
+INSTANTIATE_TEST_SUITE_P(JoinSortMerge, JoinTestRunner,
+                         testing::ValuesIn(JoinTestRunner::create_configurations<JoinSortMerge>()));
+INSTANTIATE_TEST_SUITE_P(JoinIndex, JoinTestRunner,
+                         testing::ValuesIn(JoinTestRunner::create_configurations<JoinIndex>()));
 
 }  // namespace hyrise
