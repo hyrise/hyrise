@@ -41,7 +41,7 @@ class DictionarySegment : public BaseDictionarySegment {
     return (*_dictionary)[value_id];
   }
 
-  NodeID numa_node_location();
+  NodeID numa_node_location() override;
   ChunkOffset size() const final;
 
   std::shared_ptr<AbstractSegment> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const final;

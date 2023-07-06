@@ -11,8 +11,6 @@ void* NumaMemoryResource::do_allocate(std::size_t bytes, std::size_t alignment) 
   return numa_alloc_onnode(bytes, _node_id);
 }
 
-NumaMemoryResource::~NumaMemoryResource() {}
-
 void NumaMemoryResource::do_deallocate(void* pointer, std::size_t bytes, std::size_t alignment) {
   numa_free(pointer, bytes);
 }

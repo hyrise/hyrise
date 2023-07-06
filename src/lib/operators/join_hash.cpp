@@ -388,14 +388,18 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
       auto timer_clustering = Timer{};
       auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
 
+      // We want to place the radix partitions of the build table onto the same node as the probe tables partition.
+      auto build_partitions_node_placements = std::vector<NodeID>(
+          materialized_build_column.size(),
+          (probe_partitions_node_placements.size()) ? probe_partitions_node_placements[0] : INVALID_NODE_ID);
       jobs.emplace_back(std::make_shared<JobTask>([&]() {
         // radix partition the build table
         if (keep_nulls_build_column) {
           radix_build_column = partition_by_radix<BuildColumnType, HashedType, true>(
-              materialized_build_column, histograms_build_column, _radix_bits, probe_partitions_node_placements);
+              materialized_build_column, histograms_build_column, _radix_bits, build_partitions_node_placements);
         } else {
           radix_build_column = partition_by_radix<BuildColumnType, HashedType, false>(
-              materialized_build_column, histograms_build_column, _radix_bits, probe_partitions_node_placements);
+              materialized_build_column, histograms_build_column, _radix_bits, build_partitions_node_placements);
         }
 
         // After the data in materialized_build_column has been partitioned, it is not needed anymore.
@@ -436,14 +440,19 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
      *    We use the probe side's Bloom filter to exclude values from the hash table that will not be accessed in the
      *    probe step.
      */
+
+    // We want to place the radix partitions of the build table onto the same node as the probe tables partition.
+    auto build_hash_tables_node_placements = std::vector<NodeID>(
+        radix_build_column.size(),
+        (probe_partitions_node_placements.size()) ? probe_partitions_node_placements[0] : INVALID_NODE_ID);
     auto timer_hash_map_building = Timer{};
     if (_secondary_predicates.empty() && is_semi_or_anti_join(_mode)) {
       hash_tables =
           build<BuildColumnType, HashedType>(radix_build_column, JoinHashBuildMode::ExistenceOnly, _radix_bits,
-                                             probe_side_bloom_filter, probe_partitions_node_placements);
+                                             probe_side_bloom_filter, build_hash_tables_node_placements);
     } else {
       hash_tables = build<BuildColumnType, HashedType>(radix_build_column, JoinHashBuildMode::AllPositions, _radix_bits,
-                                                       probe_side_bloom_filter, probe_partitions_node_placements);
+                                                       probe_side_bloom_filter, build_hash_tables_node_placements);
     }
     _performance_data.set_step_runtime(OperatorSteps::Building, timer_hash_map_building.lap());
 
@@ -502,38 +511,41 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
       probe_side_pos_lists[partition_index].reserve(result_rows_per_partition);
     }
 
+    // We want to probe on the nodes, where our data is located.
+    auto probing_node_placements = std::vector<NodeID>(
+        radix_probe_column.size(),
+        (probe_partitions_node_placements.size()) ? probe_partitions_node_placements[0] : INVALID_NODE_ID);
     Timer timer_probing;
     switch (_mode) {
       case JoinMode::Inner:
         probe<ProbeColumnType, HashedType, false>(radix_probe_column, hash_tables, build_side_pos_lists,
                                                   probe_side_pos_lists, _mode, *_build_input_table, *_probe_input_table,
-                                                  _secondary_predicates, probe_partitions_node_placements);
+                                                  _secondary_predicates, probing_node_placements);
         break;
 
       case JoinMode::Left:
       case JoinMode::Right:
         probe<ProbeColumnType, HashedType, true>(radix_probe_column, hash_tables, build_side_pos_lists,
                                                  probe_side_pos_lists, _mode, *_build_input_table, *_probe_input_table,
-                                                 _secondary_predicates, probe_partitions_node_placements);
+                                                 _secondary_predicates, probing_node_placements);
         break;
 
       case JoinMode::Semi:
-        probe_semi_anti<ProbeColumnType, HashedType, JoinMode::Semi>(radix_probe_column, hash_tables,
-                                                                     probe_side_pos_lists, *_build_input_table,
-                                                                     *_probe_input_table, _secondary_predicates,
-                                                                     probe_partitions_node_placements);
+        probe_semi_anti<ProbeColumnType, HashedType, JoinMode::Semi>(
+            radix_probe_column, hash_tables, probe_side_pos_lists, *_build_input_table, *_probe_input_table,
+            _secondary_predicates, probing_node_placements);
         break;
 
       case JoinMode::AntiNullAsTrue:
         probe_semi_anti<ProbeColumnType, HashedType, JoinMode::AntiNullAsTrue>(
             radix_probe_column, hash_tables, probe_side_pos_lists, *_build_input_table, *_probe_input_table,
-            _secondary_predicates, probe_partitions_node_placements);
+            _secondary_predicates, probing_node_placements);
         break;
 
       case JoinMode::AntiNullAsFalse:
         probe_semi_anti<ProbeColumnType, HashedType, JoinMode::AntiNullAsFalse>(
             radix_probe_column, hash_tables, probe_side_pos_lists, *_build_input_table, *_probe_input_table,
-            _secondary_predicates, probe_partitions_node_placements);
+            _secondary_predicates, probing_node_placements);
         break;
 
       default:
