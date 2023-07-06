@@ -292,12 +292,13 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
   histograms.resize(chunk_count);
 
   auto empty_nodes = std::vector<NodeID>{};
-  auto nodes = (partition_node_locations) ? partition_node_locations : &empty_nodes;
-  assert(nodes->size() == 0);
+  auto partition_nodes = (partition_node_locations) ? partition_node_locations : &empty_nodes;
+  auto job_nodes = std::vector<NodeID>{};
+  assert(partition_nodes->size() == 0);
   auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
   // TODO(anyone): perhaps use jobs.nodeID somehow.
   jobs.reserve(chunk_count);
-  nodes->reserve(chunk_count);
+  partition_nodes->reserve(chunk_count);
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk_in = in_table->get_chunk(chunk_id);
     if (!chunk_in) {
@@ -418,16 +419,17 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
         output_bloom_filter |= local_output_bloom_filter;
       }
     };
+    const auto& segment = chunk_in->get_segment(column_id);
+    partition_nodes->emplace_back(segment->numa_node_location());
     if (JoinHash::JOB_SPAWN_THRESHOLD > num_rows) {
       materialize();
     } else {
       jobs.emplace_back(std::make_shared<JobTask>(materialize));
+      job_nodes.emplace_back(segment->numa_node_location());
     }
-    const auto segment = chunk_in->get_segment(column_id);
-    nodes->emplace_back(segment->numa_node_location());
   }
   if (jobs.size()) {
-    Hyrise::get().scheduler()->schedule_on_preferred_nodes_and_wait_for_tasks(jobs, *nodes);
+    Hyrise::get().scheduler()->schedule_on_preferred_nodes_and_wait_for_tasks(jobs, job_nodes);
   }
 
   return radix_container;
