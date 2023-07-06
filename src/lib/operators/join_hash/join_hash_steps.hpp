@@ -576,8 +576,10 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
     }
   }
 
+  std::vector<NodeID> actual_nodes;
   std::vector<std::shared_ptr<AbstractTask>> jobs;
   jobs.reserve(input_partition_count);
+  actual_nodes.reserve(input_partition_count);
 
   for (auto input_partition_idx = ChunkID{0}; input_partition_idx < input_partition_count; ++input_partition_idx) {
     const auto& input_partition = radix_container[input_partition_idx];
@@ -616,9 +618,10 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
       perform_partition();
     } else {
       jobs.emplace_back(std::make_shared<JobTask>(perform_partition));
+      actual_nodes.emplace_back(job_nodes_placement[input_partition_idx]);
     }
   }
-  Hyrise::get().scheduler()->schedule_on_preferred_nodes_and_wait_for_tasks(jobs, job_nodes_placement);
+  Hyrise::get().scheduler()->schedule_on_preferred_nodes_and_wait_for_tasks(jobs, actual_nodes);
   jobs.clear();
 
   // Compress null_values_as_char into partition.null_values
