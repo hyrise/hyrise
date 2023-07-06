@@ -38,11 +38,15 @@ AbstractTableGenerator::AbstractTableGenerator(const std::shared_ptr<BenchmarkCo
 void print_numa_location_of_segments(std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) {
   auto num_nodes = static_cast<NodeID>(Hyrise::get().topology.nodes().size());
 
-  std::vector<int> global_segment_count(num_nodes, 0);
-
-  for (auto [table_name, table_info] : table_info_by_name) {
-    std::cout << table_name << std::endl;
-    std::vector<int> table_segment_count(num_nodes, 0);
+  std::vector<int> global_segment_count (num_nodes, 0);
+  std::cout << "TABLE,\t";
+  for (auto i = NodeID{0}; i < num_nodes; ++i){
+    std::cout << "Node" << i << ",\t";
+  }
+  std::cout << "INVALID_NODE_ID" << std::endl;
+  for(auto [table_name,table_info] : table_info_by_name){
+    std::cout << table_name.substr(0, std::min(size_t{6}, table_name.size())) << ",\t";  
+    std::vector<int> table_segment_count (num_nodes,0);
     auto invalid_node_id_counter = u_int32_t{0};
     auto& table = table_info.table;
     auto chunk_count = table->chunk_count();
@@ -278,6 +282,7 @@ void AbstractTableGenerator::generate_and_store() {
   /**
    * Relocate tables to optimize for numa.
    */
+  auto global_timer = Timer{};
   if (_benchmark_config->relocate_numa) {
     // we need to keep the MemoryResources alive until their memory is deallocated, for some reason.
     auto num_nodes = static_cast<NodeID>(Hyrise::get().topology.nodes().size());
@@ -312,6 +317,8 @@ void AbstractTableGenerator::generate_and_store() {
       std::cout << " (" << timer.lap_formatted() << ")" << std::endl;
     }
   }
+
+  std::cout << "Numa-Relocation took:  " << global_timer.lap_formatted() << std::endl; 
 
   std::cout << "Numa-Locations after relocation" << std::endl;
   print_numa_location_of_segments(table_info_by_name);
