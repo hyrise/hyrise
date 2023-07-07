@@ -171,6 +171,16 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
   bool try_mark_as_assigned_to_worker();
 
   /**
+   * Sets the shutdown flag that signals workers to shut down.
+   */
+  void set_as_shutdown_task();
+
+  /**
+   * Return whether the task is a shutdown task.
+   */
+  bool is_shutdown_task();
+
+  /**
    * Executes the task in the current thread, blocks until all operations are finished.
    */
   void execute();
@@ -202,6 +212,7 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
   std::atomic<NodeID> _node_id{INVALID_NODE_ID};
   SchedulePriority _priority;
   std::atomic_bool _stealable;
+  bool _is_shutdown_task{false};
   std::function<void()> _done_callback;
 
   // For dependencies.

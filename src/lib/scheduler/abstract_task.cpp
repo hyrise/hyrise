@@ -89,6 +89,14 @@ bool AbstractTask::try_mark_as_assigned_to_worker() {
   return _try_transition_to(TaskState::AssignedToWorker);
 }
 
+void AbstractTask::set_as_shutdown_task() {
+  _is_shutdown_task = true;
+}
+
+bool AbstractTask::is_shutdown_task() {
+  return _is_shutdown_task;
+}
+
 void AbstractTask::set_done_callback(const std::function<void()>& done_callback) {
   DebugAssert(!is_scheduled(), "Possible race: Don't set callback after the Task was scheduled");
 
@@ -124,7 +132,7 @@ void AbstractTask::_join() {
 
 void AbstractTask::execute() {
   {
-    auto success_started = _try_transition_to(TaskState::Started);
+    const auto success_started = _try_transition_to(TaskState::Started);
     Assert(success_started, "Expected successful transition to TaskState::Started.");
   }
   DebugAssert(is_ready(), "Task must not be executed before its dependencies are done");
@@ -139,7 +147,7 @@ void AbstractTask::execute() {
   _on_execute();
 
   {
-    auto success_done = _try_transition_to(TaskState::Done);
+    const auto success_done = _try_transition_to(TaskState::Done);
     Assert(success_done, "Expected successful transition to TaskState::Done.");
   }
 
@@ -177,6 +185,7 @@ void AbstractTask::_on_predecessor_done() {
 
       // Instead of adding the current task to the queue, try to execute it immediately on the same worker as the last
       // predecessor. This should improve cache locality and reduce the scheduling costs.
+      // std::printf("$$$$$\n");
       current_worker->execute_next(shared_from_this());
     } else {
       if (is_scheduled()) {

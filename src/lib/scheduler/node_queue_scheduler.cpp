@@ -70,7 +70,7 @@ void NodeQueueScheduler::wait_for_all_tasks() {
       break;
     }
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
 
     ++wait_loops;
     if (wait_loops > 1'000) {
@@ -105,24 +105,60 @@ void NodeQueueScheduler::finish() {
 
   wait_for_all_tasks();
 
-  // Signal workers that scheduler is shutting down.
-  _shutdown_flag = true;
-  for (auto& queue : _queues) {
-    queue->signal(_workers_per_node);
-  }
+  auto workers_shut_down = std::atomic_uint64_t{_worker_count};
 
-  // All queues SHOULD be empty by now
-  if constexpr (HYRISE_DEBUG) {
-    for (const auto& queue : _queues) {
-      Assert(queue->empty(), "NodeQueueScheduler bug: queue wasn't empty even though all tasks finished.");
+  for (auto node_id = NodeID{0}; node_id < _queue_count; ++node_id) {
+    // Create a shutdown task for every worker.
+    // Assert(_queues[node_id]->empty(), "Queue should be empty as previously checked.");
+
+    for (auto worker_id = size_t{0}; worker_id < _workers_per_node; ++worker_id) {
+      auto job_task = std::make_shared<JobTask>([&]() { --workers_shut_down; }, SchedulePriority::Default, false);
+      job_task->set_as_shutdown_task();
+      job_task->schedule(node_id);
     }
   }
 
+  // for (auto worker_id = size_t{0}; worker_id < _worker_count; ++worker_id) {
+  //   auto job_task = std::make_shared<JobTask>([&]() { ++workers_shut_down; });
+  //   job_task->set_as_shutdown_task();
+  //   job_task->schedule();
+  //   std::cout << "Scheduled shut down task #" << worker_id << std::endl;
+  // }
+
+  // for (auto& queue : _queues) {
+  //   auto queue_check_runs = size_t{0};
+  //   while (!queue->empty()) {
+
+  //     std::printf("workers: %zu && workers_shut_down: %u\n", _worker_count, workers_shut_down.load());
+  //     // The following assert checks that we are not looping forever. The empty() check can be inaccurate for
+  //     // concurrent queues when many tiny tasks have been scheduled (see MergeSort scheduler test). When this assert is
+  //     // triggered in other situations, there have probably been new tasks added after wait_for_all_tasks() was called.
+  //     Assert(queue_check_runs < 1'000, "Queue is not empty but all registered tasks have already been processed.");
+
+  //     // Explicitly signal workers to work on remaining jobs.
+  //     queue->signal(1);
+
+  //     std::this_thread::sleep_for(std::chrono::milliseconds(1));
+  //     ++queue_check_runs;
+  //   }
+  // }
+
+
+  auto check_runs = size_t{0};
+  while (workers_shut_down.load() > 0)  {
+    Assert(check_runs < 1'000, "Queue is not empty but all registered tasks have already been processed.");
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    ++check_runs;
+  }
+
+
   _active = false;
 
+  std::cout << "Joining" << std::endl;
   for (auto& worker : _workers) {
     worker->join();
   }
+  std::cout << "/Joining" << std::endl;
 
   _workers = {};
   _queues = {};
@@ -211,7 +247,7 @@ void NodeQueueScheduler::_group_tasks(const std::vector<std::shared_ptr<Abstract
 
   std::vector<std::shared_ptr<AbstractTask>> grouped_tasks(NUM_GROUPS);
   for (const auto& task : tasks) {
-    if (!task->predecessors().empty() || !task->successors().empty()) {
+    if (!task->predecessors().empty() || !task->successors().empty() || task->is_shutdown_task()) {
       return;
     }
 

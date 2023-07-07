@@ -50,9 +50,11 @@ class Worker : public std::enable_shared_from_this<Worker>, private Noncopyable 
   void operator=(Worker&&) = delete;
 
  protected:
+  enum class AllowSleep : bool { Yes = true, No = false };
+
   void operator()();
 
-  void _work(const bool allow_sleep);
+  void _work(const AllowSleep allow_sleep);
 
   void _wait_for_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks);
 
@@ -71,9 +73,10 @@ class Worker : public std::enable_shared_from_this<Worker>, private Noncopyable 
   std::atomic_uint64_t _num_finished_tasks{0};
 
   std::atomic_bool& _shutdown_flag;
+  bool _active{true};
 
   std::vector<int> _random{};
-  size_t _next_random{};
+  size_t _next_random{0};
 };
 
 }  // namespace hyrise

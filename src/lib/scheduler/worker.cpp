@@ -39,7 +39,7 @@ bool get_task(const bool check_only_local_queue, const std::atomic_bool& shutdow
 
   // When waiting for the semaphore, we always check if the worker is supposed to shut down. Otherwise, a worker might
   // "consume" muliple shutdown signals (no tasks in the queue) which hinders other workers for awaking.
-  if (!shutdown_flag && local_queue->semaphore.tryWait()) {
+  if (local_queue->semaphore.tryWait()) {
     task = local_queue->pull();
     return true;
   }
@@ -53,7 +53,7 @@ bool get_task(const bool check_only_local_queue, const std::atomic_bool& shutdow
       continue;
     }
 
-    if (!shutdown_flag && queue->semaphore.tryWait()) {
+    if (queue->semaphore.tryWait()) {
       task = queue->steal();
       if (task) {
         task->set_node_id(local_queue->node_id());
@@ -101,13 +101,14 @@ void Worker::operator()() {
 
   _set_affinity();
 
-  while (Hyrise::get().scheduler()->active() && !_shutdown_flag) {
+  while (Hyrise::get().scheduler()->active() && _active) {
     // Worker is allowed to sleep (when queue is empty) as long as the scheduler is not shutting down.
-    _work(true);
+    _work(AllowSleep::Yes);
   }
+  // std::printf("Worker with id %lu ended ().\n", static_cast<size_t>(_id));
 }
 
-void Worker::_work(const bool allow_sleep) {
+void Worker::_work(const AllowSleep allow_sleep) {
   const auto& queues = Hyrise::get().scheduler()->queues();
 
   auto task = std::shared_ptr<AbstractTask>{};
@@ -118,8 +119,10 @@ void Worker::_work(const bool allow_sleep) {
       // If there is no ready task neither in the local queue nor in any other, the worker waits for a new task to be
       // pushed to the own queue. The waiting is skipped in case the scheduler is shutting down or sleep is not allowed
       //  (e.g., when _work() is called for a known number of unfinished jobs, see wait_for_tasks()).
-      if (allow_sleep && !get_task(true, _shutdown_flag, task, _next_task, _queue, queues)) {
+      if (allow_sleep == AllowSleep::Yes && !get_task(true, _shutdown_flag, task, _next_task, _queue, queues)) {
+        // std::printf("Worker with id %lu goes to sleep.\n", static_cast<size_t>(_id));
         _queue->semaphore.wait();
+        // std::printf("Worker with id %lu was woken up.\n", static_cast<size_t>(_id));
         task = _queue->pull();
       }
     }
@@ -136,6 +139,14 @@ void Worker::_work(const bool allow_sleep) {
   }
 
   task->execute();
+
+  // std::printf("Worker with id %lu checks for shutdown.\n", static_cast<size_t>(_id));
+  if (task->is_shutdown_task()) {
+    // std::printf("Worker with id %lu got a shutdown task.\n", static_cast<size_t>(_id));
+    _active = false;
+  }
+  // std::printf("/Worker with id %lu checked for shutdown.\n", static_cast<size_t>(_id));
+
 
   // This is part of the Scheduler shutdown system. Count the number of tasks a Worker executed to allow the
   // Scheduler to determine whether all tasks finished
@@ -238,7 +249,7 @@ void Worker::_wait_for_tasks(const std::vector<std::shared_ptr<AbstractTask>>& t
     // Run any job. This could be any job that is currently enqueued. Note: This job may internally call wait_for_tasks
     // again, in which case we would first wait for the inner task before the outer task has a chance to proceed.
     // We do not allow the worker to sleep here as we know that the passed task list is not yet fully processed.
-    _work(false);
+    _work(AllowSleep::No);
   }
 }
 

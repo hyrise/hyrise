@@ -259,7 +259,7 @@ __attribute__((hot)) void AggregateHash::_aggregate_segment(ChunkID chunk_id, Co
  */
 template <typename AggregateKey>
 KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() {
-  KeysPerChunk<AggregateKey> keys_per_chunk;
+  auto keys_per_chunk = KeysPerChunk<AggregateKey>{};
 
   if constexpr (!std::is_same_v<AggregateKey, EmptyAggregateKey>) {
     const auto& input_table = left_input_table();
@@ -304,7 +304,7 @@ KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() {
     //     We can immediately map these into a numerical representation by reinterpreting their byte storage as an
     //     integer. The calculation is described below. Note that this is done on a per-string basis and does not
     //     require all strings in the given column to be that short.
-    std::vector<std::shared_ptr<AbstractTask>> jobs;
+    auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
     jobs.reserve(_groupby_column_ids.size());
 
     for (size_t group_column_index = 0; group_column_index < _groupby_column_ids.size(); ++group_column_index) {
