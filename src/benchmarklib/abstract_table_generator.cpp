@@ -17,6 +17,7 @@
 #include "utils/format_duration.hpp"
 #include "utils/list_directory.hpp"
 #include "utils/timer.hpp"
+#include <numa.h>
 
 namespace hyrise {
 
@@ -301,7 +302,8 @@ void AbstractTableGenerator::generate_and_store() {
       std::cout << "Relocate table " << table_name << " on numa_node: " << target_node_id;
       auto timer = Timer{};
     
-    
+      // numa_set_preferred(target_node_id); 
+      // numa_run_on_node(target_node_id);
       auto chunk_count = table->chunk_count();
       auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
       jobs.reserve(chunk_count);
@@ -316,9 +318,21 @@ void AbstractTableGenerator::generate_and_store() {
       table_counter++;
       std::cout << " (" << timer.lap_formatted() << ")" << std::endl;
     }
+    size_t sum_allocations = 0; 
+    size_t sum_deallocations = 0; 
+    size_t sum_allocated_bytes = 0;
+    for(auto numa_memory_resource : *target_memory_resources){
+      sum_allocations += numa_memory_resource._num_allocations;
+      sum_allocated_bytes += numa_memory_resource._sum_allocated_bytes;
+      sum_deallocations += numa_memory_resource._num_deallocations;
+    } 
+    std::cout << "sum_allocations: " << sum_allocations << std::endl; 
+    std::cout << "sum_deallocations: " << sum_deallocations << std::endl; 
+    std::cout << "sum_allocated_bytes: " << sum_allocated_bytes << std::endl;
   }
 
   std::cout << "Numa-Relocation took:  " << global_timer.lap_formatted() << std::endl; 
+
 
   std::cout << "Numa-Locations after relocation" << std::endl;
   print_numa_location_of_segments(table_info_by_name);
