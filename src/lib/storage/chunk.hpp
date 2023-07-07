@@ -18,7 +18,7 @@
 #include "table_column_definition.hpp"
 #include "types.hpp"
 #include "utils/copyable_atomic.hpp"
-
+#include "memory/numa_memory_resource.hpp"
 namespace hyrise {
 
 class AbstractChunkIndex;
@@ -120,6 +120,9 @@ class Chunk : private Noncopyable {
   void remove_index(const std::shared_ptr<AbstractChunkIndex>& index);
 
   void migrate(boost::container::pmr::memory_resource* memory_source);
+
+  // TODO: For profiling purposes only... should be removed in the future
+  void migrate(NumaMemoryResource* memory_source, std::map<std::string, size_t> & column_allocations_mapping, const std::vector<std::string> & column_names);
 
   bool references_exactly_one_table() const;
 
