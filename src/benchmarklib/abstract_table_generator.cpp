@@ -296,6 +296,7 @@ void AbstractTableGenerator::generate_and_store() {
 
     auto table_counter = u_int32_t{0};
 
+    std::map<std::string, size_t> column_allocations_mapping; 
     for (auto& [table_name, table_info] : table_info_by_name) {
       auto& table = table_info.table;
       const auto target_node_id = NodeID{table_counter % num_nodes};
@@ -309,8 +310,8 @@ void AbstractTableGenerator::generate_and_store() {
       jobs.reserve(chunk_count);
       for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
         auto migrate_job = [&, chunk_id]() {
-          const auto& chunk = table->get_chunk(chunk_id);
-          chunk->migrate(&target_memory_resources->at(target_node_id));
+        const auto& chunk = table->get_chunk(chunk_id);
+        chunk->migrate(&target_memory_resources->at(target_node_id), column_allocations_mapping, table->column_names());
         };
         jobs.emplace_back(std::make_shared<JobTask>(migrate_job));
       }
@@ -329,6 +330,10 @@ void AbstractTableGenerator::generate_and_store() {
     std::cout << "sum_allocations: " << sum_allocations << std::endl; 
     std::cout << "sum_deallocations: " << sum_deallocations << std::endl; 
     std::cout << "sum_allocated_bytes: " << sum_allocated_bytes << std::endl;
+
+    for(auto [column, num_allocations] : column_allocations_mapping){
+      std::cout << column << ": " << num_allocations << std::endl; 
+    }
   }
 
   std::cout << "Numa-Relocation took:  " << global_timer.lap_formatted() << std::endl; 
