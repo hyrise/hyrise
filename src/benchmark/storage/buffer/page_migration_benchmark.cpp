@@ -136,9 +136,9 @@ BENCHMARK_DEFINE_F(PageMigrationFixture, BM_MovePagesLatency)(benchmark::State& 
     for (std::size_t j = 0; j < pages.size(); ++j) {
       pages[i] = _mapped_region + i * num_bytes + j * OS_PAGE_SIZE;
     }
-    numa_move_pages(0, pages.size(), pages.data(), nodes.data(), status.data(), MPOL_MF_MOVE | MPOL_MF_STRICT) == 0,
+    Assert(move_pages(0, pages.size(), pages.data(), nodes.data(), status.data(), MPOL_MF_MOVE) == 0);
 #endif
-        benchmark::ClobberMemory();
+    benchmark::ClobberMemory();
   }
   state.SetItemsProcessed(int64_t(state.iterations()));
   state.SetBytesProcessed(int64_t(state.iterations()) * num_bytes);

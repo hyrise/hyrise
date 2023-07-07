@@ -203,7 +203,7 @@ void BufferManager::make_resident(const PageID page_id, const AccessIntent acces
           yield(repeat);
           continue;
         }
-        region->move_to_numa_node(page_id, _secondary_buffer_pool->memory_node);
+        region->mbind_to_numa_node(page_id, _secondary_buffer_pool->memory_node);
       } else {
         // Case 0.2: Use DRAM
         if (!_primary_buffer_pool->ensure_free_pages(page_id.size_type())) {
@@ -211,6 +211,7 @@ void BufferManager::make_resident(const PageID page_id, const AccessIntent acces
           continue;
         }
       }
+
       return;
     }
     Fail("Could not allocate page on NUMA or DRAM. Try increasing both buffer pool sizes.");
@@ -248,7 +249,7 @@ void BufferManager::make_resident(const PageID page_id, const AccessIntent acces
           yield(repeat);
           continue;
         }
-        region->move_to_numa_node(page_id, _primary_buffer_pool->memory_node);
+        region->mbind_to_numa_node(page_id, _primary_buffer_pool->memory_node);
         _metrics->total_bytes_copied_from_ssd_to_dram.fetch_add(page_id.num_bytes(), std::memory_order_relaxed);
       } else {
         // Case 4.2: We bypass load the page into NUMA
@@ -256,7 +257,7 @@ void BufferManager::make_resident(const PageID page_id, const AccessIntent acces
           yield(repeat);
           continue;
         }
-        region->move_to_numa_node(page_id, _secondary_buffer_pool->memory_node);
+        region->mbind_to_numa_node(page_id, _secondary_buffer_pool->memory_node);
         _metrics->total_bytes_copied_from_ssd_to_numa.fetch_add(page_id.num_bytes(), std::memory_order_relaxed);
       }
       _ssd_region->read_page(page_id, region->get_page(page_id));
@@ -284,7 +285,7 @@ void BufferManager::make_resident(const PageID page_id, const AccessIntent acces
         continue;
       }
       _secondary_buffer_pool->release_page(page_id.size_type());
-      region->move_to_numa_node(page_id, _primary_buffer_pool->memory_node);
+      region->mbind_to_numa_node(page_id, _primary_buffer_pool->memory_node);
       _metrics->total_hits.fetch_add(1, std::memory_order_relaxed);
       _metrics->total_bytes_copied_from_numa_to_dram.fetch_add(page_id.num_bytes(), std::memory_order_relaxed);
       return;
@@ -673,7 +674,7 @@ void BufferManager::BufferPool::evict(EvictionItem& item, Frame* frame) {
         yield(repeat);
         continue;
       };
-      region->move_to_numa_node(item.page_id, target_buffer_pool->memory_node);
+      region->mbind_to_numa_node(item.page_id, target_buffer_pool->memory_node);
       frame->unlock_exclusive();
       target_buffer_pool->add_to_eviction_queue(item.page_id, frame);
       metrics->total_bytes_copied_from_dram_to_numa.fetch_add(num_bytes, std::memory_order_relaxed);

@@ -9,6 +9,14 @@
 
 namespace hyrise {
 
+/**
+ * Bechmark idea:
+ * Sacle read ops with difedderne page size
+ * Scale read ops with single page size and different DRAM size ratios
+ * Use zipfian skews to test different hit and miss rates for single pahe size and diffeent dram size ratios
+ * 
+*/
+
 class BufferManagerFixture : public benchmark::Fixture {
  public:
   constexpr static auto PAGE_SIZE_TYPE = MIN_PAGE_SIZE_TYPE;
@@ -70,6 +78,12 @@ BENCHMARK_DEFINE_F(BufferManagerFixture, BM_BufferManagerPinForReadZipfian)(benc
   std::random_device rd;
   std::mt19937 gen(rd());
   zipfian_int_distribution<> distr(0, MAX_PAGE_IDX);
+  // Warmup
+  for (auto i = 0; i < MAX_PAGE_IDX; ++i) {
+    auto page_id = PageID{PAGE_SIZE_TYPE, static_cast<size_t>(distr(gen))};
+    _buffer_manager.pin_shared(page_id);
+    _buffer_manager.unpin_shared(page_id);
+  }
 
   for (auto _ : state) {
     auto page_id = PageID{PAGE_SIZE_TYPE, static_cast<size_t>(distr(gen))};
@@ -87,9 +101,9 @@ BENCHMARK_DEFINE_F(BufferManagerFixture, BM_BufferManagerPinForReadZipfian)(benc
     benchmark::ClobberMemory();
   }
 
-  state.counters["CacheHitRate"] =
-      _buffer_manager.metrics()->total_hits /
-      static_cast<double>(_buffer_manager.metrics()->total_hits + _buffer_manager.metrics()->total_misses);
+  auto metrics = _buffer_manager.metrics();
+  state.counters["CacheHitRate"] = static_cast<double>(metrics->total_hits.load()) /
+                                   static_cast<double>(metrics->total_hits.load() + metrics->total_misses.load());
   state.SetItemsProcessed(int64_t(state.iterations()));
   state.SetBytesProcessed(int64_t(state.iterations()) * bytes_for_size_type(PAGE_SIZE_TYPE));
 }
@@ -107,6 +121,13 @@ BENCHMARK_DEFINE_F(BufferManagerFixture, BM_BufferManagerPinForReadRandom)(bench
   std::random_device rd;
   std::mt19937 gen(rd());
   std::uniform_int_distribution<> distr(0, MAX_PAGE_IDX);
+
+  // Warmup
+  for (auto i = 0; i < MAX_PAGE_IDX; ++i) {
+    auto page_id = PageID{PAGE_SIZE_TYPE, static_cast<size_t>(distr(gen))};
+    _buffer_manager.pin_exclusive(page_id);
+    _buffer_manager.unpin_exclusive(page_id);
+  }
 
   for (auto _ : state) {
     auto page_id = PageID{PAGE_SIZE_TYPE, static_cast<size_t>(distr(gen))};

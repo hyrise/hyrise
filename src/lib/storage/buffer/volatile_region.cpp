@@ -4,8 +4,8 @@
 #include "utils/assert.hpp"
 
 #if HYRISE_NUMA_SUPPORT
-#include <numaif.h>
 #include <numa.h>
+#include <numaif.h>
 #endif
 
 namespace hyrise {
@@ -33,7 +33,27 @@ VolatileRegion::VolatileRegion(const PageSizeType size_type, std::byte* region_s
   }
 }
 
-void VolatileRegion::move_to_numa_node(PageID page_id, const NumaMemoryNode target_memory_node) {
+void VolatileRegion::move_page_to_numa_node(PageID page_id, const NumaMemoryNode target_memory_node) {
+  DebugAssert(page_id.size_type() == _size_type, "Page does not belong to this region.");
+#if HYRISE_NUMA_SUPPORT
+  DebugAssert(target_memory_node != NO_NUMA_MEMORY_NODE, "Numa node has not been set.");
+  static thread_local std::vector<void*> pages_to_move{bytes_for_size_type(_size_type) / OS_PAGE_SIZE};
+  static thread_local std::vector<int> nodes{bytes_for_size_type(_size_type) / OS_PAGE_SIZE};
+
+  for (auto i = 0u; i < pages_to_move.size(); ++i) {
+    pages_to_move[i] = get_page(page_id) + i * OS_PAGE_SIZE;
+    nodes[i] = target_memory_node;
+  }
+  if (move_pages(0, pages_to_move.size(), pages_to_move.data(), nodes.data(), nullptr, MPOL_MF_MOVE) != 0) {
+    const auto error = errno;
+    Fail("Move pages failed: " + strerror(error));
+  }
+  _metrics->num_numa_tonode_memory_calls.fetch_add(1, std::memory_order_relaxed);
+  _frames[page_id.index].set_memory_node(target_memory_node);
+#endif
+}
+
+void VolatileRegion::mbind_to_numa_node(PageID page_id, const NumaMemoryNode target_memory_node) {
   DebugAssert(page_id.size_type() == _size_type, "Page does not belong to this region.");
 
 #if HYRISE_NUMA_SUPPORT

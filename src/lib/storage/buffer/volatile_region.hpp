@@ -27,7 +27,9 @@ class VolatileRegion : public Noncopyable {
   std::pair<PageID, std::byte*> allocate();
   void deallocate(PageID page_id);
 
-  void move_to_numa_node(PageID page_id, const NumaMemoryNode target_memory_node = DEFAULT_DRAM_NUMA_NODE);
+  void mbind_to_numa_node(PageID page_id, const NumaMemoryNode target_memory_node = DEFAULT_DRAM_NUMA_NODE);
+  void move_page_to_numa_node(PageID page_id, const NumaMemoryNode target_memory_node = DEFAULT_DRAM_NUMA_NODE);
+
   void free(PageID page_id);
 
   void clear();
