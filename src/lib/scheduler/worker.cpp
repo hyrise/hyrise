@@ -118,9 +118,12 @@ void Worker::_work(const bool allow_sleep) {
       // If there is no ready task neither in the local queue nor in any other, the worker waits for a new task to be
       // pushed to the own queue. The waiting is skipped in case the scheduler is shutting down or sleep is not allowed
       //  (e.g., when _work() is called for a known number of unfinished jobs, see wait_for_tasks()).
-      if (allow_sleep && !get_task(true, _shutdown_flag, task, _next_task, _queue, queues)) {
-        _queue->semaphore.wait();
-        task = _queue->pull();
+      if (allow_sleep && !_shutdown_flag) {
+        // A last check on the local queue before (potentially) putting the worker to sleep and wait on the semaphore.
+	if (!get_task(true, _shutdown_flag, task, _next_task, _queue, queues)) {
+          _queue->semaphore.wait();
+          task = _queue->pull();
+	}
       }
     }
   }
