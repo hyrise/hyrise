@@ -120,10 +120,10 @@ void Worker::_work(const bool allow_sleep) {
       //  (e.g., when _work() is called for a known number of unfinished jobs, see wait_for_tasks()).
       if (allow_sleep && !_shutdown_flag) {
         // A last check on the local queue before (potentially) putting the worker to sleep and wait on the semaphore.
-	if (!get_task(true, _shutdown_flag, task, _next_task, _queue, queues)) {
+        if (!get_task(true, _shutdown_flag, task, _next_task, _queue, queues)) {
           _queue->semaphore.wait();
           task = _queue->pull();
-	}
+        }
       }
     }
   }
