@@ -115,10 +115,12 @@ void NodeQueueScheduler::finish() {
     const auto node_worker_count = _workers_per_node[node_id]; 
     for (auto worker_id = size_t{0}; worker_id < node_worker_count; ++worker_id) {
       // Create a shutdown task for every worker.
-      auto job_task = std::make_shared<JobTask>([&]() { --workers_shut_down; }, SchedulePriority::Default, false);
+      auto job_task = std::make_shared<JobTask>([&]() { --workers_shut_down; },
+                                SchedulePriority::Default, false);
       job_task->set_as_shutdown_task();
       job_task->schedule(node_id);
-      std::printf("scheduling a task for worker #%zu on node #%zu\n", worker_id, static_cast<size_t>(node_id));
+      std::printf("scheduling a task for worker #%zu on node #%zu\n",
+           worker_id, static_cast<size_t>(node_id));
     }
   }
 
@@ -150,7 +152,8 @@ void NodeQueueScheduler::finish() {
 
   auto check_runs = size_t{0};
   while (workers_shut_down.load() > 0)  {
-    std::printf("what? workers count: %zu and workers_shut_down remaining: %zu\n", _worker_count, static_cast<size_t>(workers_shut_down.load()));
+    std::printf("what? workers count: %zu and workers_shut_down remaining: %zu\n",
+        _worker_count, static_cast<size_t>(workers_shut_down.load()));
     Assert(check_runs < 500, "Queue is not empty but all registered tasks have already been processed.");
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
     ++check_runs;
