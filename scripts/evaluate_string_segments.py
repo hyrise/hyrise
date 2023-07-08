@@ -89,7 +89,6 @@ class Runtimes(DictConvertible):
         }
 
 
-
 @dataclass(frozen=True, slots=True)
 class MemoryConsumption(DictConvertible):
     column_name: str
@@ -169,7 +168,26 @@ class Benchmark(ABC):
             'hyriseBenchmarkStarSchema': StarSchemaBenchmark
         }
         return classes[name](*args, **kwargs)
-    
+
+    """
+    Create a config file as depicted in the `--full_help` of the benchmarks and return its path.
+    """
+    def _write_encoding_config_file(self, threading: Literal['ST', 'MT'], encoding: str, metrics: bool) -> str:
+        config_path = path.join(self._config.tmp_path, 'config', f'{self.name}-{threading}-{encoding}-{metrics}.json')
+        config_contents = {
+            'default': {
+                'encoding': 'Dictionary'
+            },
+            'type': {
+                'string': {
+                    'encoding': encoding
+                }
+            }
+        }
+        with open(config_path, mode='w') as config:
+            json.dump(config_contents, config)
+        return config_path
+
     def run(self, config: Configuration) -> Mapping[str, Runtimes] | None:
         try:
             self._config = config
@@ -299,7 +317,8 @@ class Benchmark(ABC):
         return self._output_path(threading, encoding, metrics)
 
     def _get_arguments(self, threading: Literal['ST', 'MT'], encoding: str, metrics: bool) -> list[str]:
-        arguments = [self._path, '-o', self._output_path(threading, encoding, metrics), '-e', encoding]
+        encoding_config_path = self._write_encoding_config_file(threading, encoding, metrics)
+        arguments = [self._path, '-o', self._output_path(threading, encoding, metrics), '-e', encoding_config_path]
         if threading == 'MT':
             arguments += ['--scheduler', '--clients', str(multiprocessing.cpu_count() // 4), '--mode=Shuffled']
             # Multithreaded runs need longer times to be meaningful. Default to 20 minutes.
@@ -519,6 +538,7 @@ def main():
     global output_file
     config = parse_arguments()
     Path(config.tmp_path).mkdir(parents=True, exist_ok=True)
+    (Path(config.tmp_path) / Path('config')).mkdir(parents=True, exist_ok=True)
     Path(config.output_directory).mkdir(parents=True, exist_ok=True)
     if True:
     # with open(config.output_file, 'w+') as output_file:
@@ -531,7 +551,7 @@ def main():
             metrics = benchmark.compare_metrics(config)
             if runtimes is not None and metrics is not None:
                 stats[benchmark.name] = (runtimes, metrics)
-        plot_stats(stats)
+        # plot_stats(stats)
 
 
 if __name__ == '__main__':
