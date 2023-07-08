@@ -134,9 +134,9 @@ class NodeQueueScheduler : public AbstractScheduler {
   // queue pushes).
   std::atomic_bool _shutdown_flag{false};
 
-  size_t _queue_count{1};
+  size_t _node_count{1};
   size_t _worker_count{1};
-  size_t _workers_per_node{2};
+  std::vector<size_t> _workers_per_node;
 
   std::mutex _finish_mutex{};
 };

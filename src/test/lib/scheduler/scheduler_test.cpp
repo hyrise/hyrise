@@ -378,10 +378,14 @@ TEST_F(SchedulerTest, NodeQueueSchedulerCreationAndReset) {
   constexpr auto WORKER_COUNT = size_t{128};
   constexpr auto RUN_COUNT = size_t{128};
 
+  std::cout << Hyrise::get().topology << std::endl;
+  Hyrise::get().topology.use_fake_numa_topology(WORKER_COUNT, WORKER_COUNT / 4);
+  std::cout << Hyrise::get().topology << std::endl;
   for (auto loop_id = size_t{0}; loop_id < RUN_COUNT; ++loop_id) {
-    Hyrise::get().topology.use_fake_numa_topology(WORKER_COUNT, WORKER_COUNT / 4);
+    // std::cout << Hyrise::get().topology << std::endl;
     Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
     Hyrise::get().set_scheduler(std::make_shared<ImmediateExecutionScheduler>());
+    // std::cout << Hyrise::get().topology << std::endl;
   }
 }
 

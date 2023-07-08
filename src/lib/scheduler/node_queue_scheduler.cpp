@@ -34,8 +34,9 @@ void NodeQueueScheduler::begin() {
 
   _worker_count = Hyrise::get().topology.num_cpus();
   _workers.reserve(_worker_count);
-  _queue_count = Hyrise::get().topology.nodes().size();
-  _queues.reserve(_queue_count);
+  _node_count = Hyrise::get().topology.nodes().size();
+  _queues.reserve(_node_count);
+  _workers_per_node.reserve(_node_count);
 
   for (auto node_id = NodeID{0}; node_id < Hyrise::get().topology.nodes().size(); ++node_id) {
     auto queue = std::make_shared<TaskQueue>(node_id);
@@ -48,9 +49,11 @@ void NodeQueueScheduler::begin() {
       _workers.emplace_back(std::make_shared<Worker>(queue, WorkerID{_worker_id_allocator->allocate()},
                                                      topology_cpu.cpu_id, _shutdown_flag));
     }
+
+    // Tracked per node as we have seen Docker instances with unbalanced NUMA topologies.
+    _workers_per_node.emplace_back(topology_node.cpus.size());
   }
 
-  _workers_per_node = _worker_count / _queue_count;
   _active = true;
 
   for (auto& worker : _workers) {
@@ -107,14 +110,15 @@ void NodeQueueScheduler::finish() {
 
   auto workers_shut_down = std::atomic_uint64_t{_worker_count};
 
-  for (auto node_id = NodeID{0}; node_id < _queue_count; ++node_id) {
-    // Create a shutdown task for every worker.
-    // Assert(_queues[node_id]->empty(), "Queue should be empty as previously checked.");
-
-    for (auto worker_id = size_t{0}; worker_id < _workers_per_node; ++worker_id) {
+  std::cout << "Worker count: " << _worker_count << std::endl;
+  for (auto node_id = NodeID{0}; node_id < _node_count; ++node_id) {
+    const auto node_worker_count = _workers_per_node[node_id]; 
+    for (auto worker_id = size_t{0}; worker_id < node_worker_count; ++worker_id) {
+      // Create a shutdown task for every worker.
       auto job_task = std::make_shared<JobTask>([&]() { --workers_shut_down; }, SchedulePriority::Default, false);
       job_task->set_as_shutdown_task();
       job_task->schedule(node_id);
+      std::printf("scheduling a task for worker #%zu on node #%zu\n", worker_id, static_cast<size_t>(node_id));
     }
   }
 
@@ -146,7 +150,8 @@ void NodeQueueScheduler::finish() {
 
   auto check_runs = size_t{0};
   while (workers_shut_down.load() > 0)  {
-    Assert(check_runs < 1'000, "Queue is not empty but all registered tasks have already been processed.");
+    std::printf("what? workers count: %zu and workers_shut_down remaining: %zu\n", _worker_count, static_cast<size_t>(workers_shut_down.load()));
+    Assert(check_runs < 500, "Queue is not empty but all registered tasks have already been processed.");
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
     ++check_runs;
   }
@@ -200,7 +205,7 @@ void NodeQueueScheduler::schedule(std::shared_ptr<AbstractTask> task, NodeID pre
 
 NodeID NodeQueueScheduler::determine_queue_id(const NodeID preferred_node_id) const {
   // Early out: no need to check for preferred node or other queues, if there is only a single node queue.
-  if (_queue_count == 1) {
+  if (_node_count == 1) {
     return NodeID{0};
   }
 
@@ -215,23 +220,23 @@ NodeID NodeQueueScheduler::determine_queue_id(const NodeID preferred_node_id) co
   }
 
   // Initial min values with Node 0.
-  auto min_load_queue_id = NodeID{0};
+  auto min_load_node_id = NodeID{0};
   auto min_load = _queues[0]->estimate_load();
 
-  // When the current load of node 0 is small, do not check other queues.
-  if (min_load < _workers_per_node) {
+  // When the current load of node 0 is small (less tasks than threads on first node), do not check other queues.
+  if (min_load < _workers_per_node[0]) {
     return NodeID{0};
   }
 
-  for (auto queue_id = NodeID{1}; queue_id < _queue_count; ++queue_id) {
-    const auto queue_load = _queues[queue_id]->estimate_load();
+  for (auto node_id = NodeID{1}; node_id < _node_count; ++node_id) {
+    const auto queue_load = _queues[node_id]->estimate_load();
     if (queue_load < min_load) {
-      min_load_queue_id = queue_id;
+      min_load_node_id = node_id;
       min_load = queue_load;
     }
   }
 
-  return min_load_queue_id;
+  return min_load_node_id;
 }
 
 void NodeQueueScheduler::_group_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const {
