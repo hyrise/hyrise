@@ -72,6 +72,8 @@ Cost CostEstimatorLogical::estimate_node_cost(const std::shared_ptr<AbstractLQPN
         case SetOperationMode::Unique:
           Fail("ToDo, see discussion https://github.com/hyrise/hyrise/pull/2156#discussion_r452803825");
       }
+
+      Fail("This cannot happen, but gcc thinks this is a fall-through and complains.");
     }
 
     case LQPNodeType::StoredTable:
