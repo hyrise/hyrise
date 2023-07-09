@@ -923,10 +923,11 @@ TEST_F(PredicatePlacementRuleTest, DoNotCreatePreJoinPredicateIfUnrelated) {
 }
 
 TEST_F(PredicatePlacementRuleTest, DoNotMoveMultiPredicateSemiAndAntiJoins) {
+  // Multi-predicate semi- and anti-joins cannot be executed efficiently, so we do not treat them as predicates.
   for (const auto join_mode : {JoinMode::Semi, JoinMode::AntiNullAsTrue, JoinMode::AntiNullAsFalse}) {
     // clang-format off
     const auto lqp =
-    JoinNode::make(join_mode, and_(equals_(_a_a, _b_a), not_equals_(_a_b, _b_b)),
+    JoinNode::make(join_mode, expression_vector(equals_(_a_a, _b_a), not_equals_(_a_b, _b_b)),
       JoinNode::make(JoinMode::Inner, equals_(_b_a, _c_a),
         _stored_table_b,
         _stored_table_c),
