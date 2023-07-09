@@ -26,7 +26,8 @@ TEST_F(LogicalPlanRootNodeTest, Description) {
 }
 
 TEST_F(LogicalPlanRootNodeTest, Copy) {
-  EXPECT_EQ(*_logical_plan_root_node, *_logical_plan_root_node->deep_copy());
-  EXPECT_EQ(_logical_plan_root_node->hash(), _logical_plan_root_node->hash());
+  const auto node_copy = _logical_plan_root_node->deep_copy();
+  EXPECT_EQ(*_logical_plan_root_node, *node_copy);
+  EXPECT_EQ(_logical_plan_root_node->hash(), node_copy->hash());
 }
 }  // namespace hyrise
