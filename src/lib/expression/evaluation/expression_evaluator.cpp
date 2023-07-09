@@ -1031,12 +1031,7 @@ std::shared_ptr<BaseValueSegment> ExpressionEvaluator::evaluate_expression_to_se
   _resolve_to_expression_result_view(expression, [&](const auto& view) {
     using ColumnDataType = typename std::decay_t<decltype(view)>::Type;
 
-#ifdef HYRISE_WITH_JEMALLOC
-    auto allocator = PolymorphicAllocator<size_t>{&JemallocMemoryResource::get()};
-#else
-  auto allocator = PolymorphicAllocator<size_t>{&LinearBufferResource::get()};
-#endif
-    auto pin_guard = AllocatorPinGuard{allocator};
+    auto allocator = PolymorphicAllocator<size_t>{};
 
     pmr_vector<bool> nulls{allocator};
 

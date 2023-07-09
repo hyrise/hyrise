@@ -261,11 +261,11 @@ __attribute__((hot)) void AggregateHash::_aggregate_segment(ChunkID chunk_id, Co
  */
 template <typename AggregateKey>
 KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() {
-  // #ifdef HYRISE_WITH_JEMALLOC
-  //   auto allocator = PolymorphicAllocator<size_t>{&JemallocMemoryResource::get()};
-  // #else
-  // #endif
-  auto allocator = PolymorphicAllocator<size_t>{};
+#ifdef HYRISE_WITH_JEMALLOC
+  auto allocator = PolymorphicAllocator<size_t>{&JemallocMemoryResource::get()};
+#else
+  auto allocator = PolymorphicAllocator<size_t>{&LinearBufferResource::get()};
+#endif
   auto pin_guard = AllocatorPinGuard{allocator};
   KeysPerChunk<AggregateKey> keys_per_chunk{allocator};
 
