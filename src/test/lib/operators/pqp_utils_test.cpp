@@ -10,7 +10,7 @@
 
 namespace hyrise {
 
-using namespace expression_functional;  // NOLIT(build/namespaces)
+using namespace expression_functional;  // NOLINT(build/namespaces)
 
 class PQPUtilsTest : public BaseTest {
  public:
@@ -107,6 +107,9 @@ TEST_F(PQPUtilsTest, ResolveUncorrelatedSubqueryWrongOperatorState) {
 }
 
 TEST_F(PQPUtilsTest, ResolveUncorrelatedSubqueryEmptyResult) {
+  // Since this function is used by the TableScan to resolve uncorrelated subqueries that can stem from a join rewrite,
+  // returning NULL_VALUE for empty results leads to no matching tuples for the scan predicate, which is the same as a
+  // join with an empty relation.
   const auto dummy_table = Table::create_dummy_table({{"a", DataType::Int, false}});
   const auto table_wrapper = std::make_shared<TableWrapper>(dummy_table);
   table_wrapper->execute();

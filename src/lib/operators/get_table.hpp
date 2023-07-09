@@ -1,8 +1,5 @@
 #pragma once
 
-#include <memory>
-#include <set>
-
 #include "abstract_read_only_operator.hpp"
 #include "concurrency/transaction_context.hpp"
 
@@ -58,4 +55,5 @@ class GetTable : public AbstractReadOnlyOperator {
   mutable std::vector<std::weak_ptr<const AbstractOperator>> _prunable_subquery_scans{};
   std::set<ChunkID> _dynamically_pruned_chunk_ids{};
 };
+
 }  // namespace hyrise

@@ -123,17 +123,17 @@ TEST_F(StoredTableNodeTest, HashingAndEqualitWithPrunableSubqueryPredicates) {
       stored_table_node_b));
 
   const auto lqp_a =
-  PredicateNode::make(equals_(_a, lqp_subquery_(subquery_a)),
+  PredicateNode::make(equals_(different_node_a->get_column("a"), lqp_subquery_(subquery_a)),
     different_node_a);
 
   // Different predicate column than lqp_a.
   const auto lqp_b =
-  PredicateNode::make(equals_(_b, lqp_subquery_(subquery_a)),
+  PredicateNode::make(equals_(different_node_b->get_column("b"), lqp_subquery_(subquery_a)),
     different_node_b);
 
   // Different predicate condition than lqp_a.
   const auto lqp_c =
-  PredicateNode::make(less_than_(_a, lqp_subquery_(subquery_a)),
+  PredicateNode::make(less_than_(different_node_c->get_column("a"), lqp_subquery_(subquery_a)),
     different_node_c);
 
   // Different subquery than lqp_a.
@@ -143,7 +143,7 @@ TEST_F(StoredTableNodeTest, HashingAndEqualitWithPrunableSubqueryPredicates) {
       stored_table_node_b));
 
   const auto lqp_d =
-  PredicateNode::make(equals_(_b, lqp_subquery_(subquery_d)),
+  PredicateNode::make(equals_(different_node_d->get_column("a"), lqp_subquery_(subquery_d)),
     different_node_d);
   // clang-format on
 

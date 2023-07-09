@@ -199,7 +199,7 @@ std::string AbstractOperator::description(DescriptionMode /*description_mode*/) 
 
 std::shared_ptr<AbstractOperator> AbstractOperator::deep_copy() const {
   auto copied_ops = std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>{};
-  const auto& copy = deep_copy(copied_ops);
+  const auto copy = deep_copy(copied_ops);
 
   // Predicates that contain uncorrelated subqueries cannot be used for chunk pruning in the optimization phase since we
   // do not know the predicate value yet. However, the ChunkPruningRule attaches the corresponding PredicateNodes to the

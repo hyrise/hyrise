@@ -242,7 +242,7 @@ size_t AbstractLQPNode::output_count() const {
 }
 
 std::shared_ptr<AbstractLQPNode> AbstractLQPNode::deep_copy(LQPNodeMapping node_mapping) const {
-  const auto& copy = _deep_copy_impl(node_mapping);
+  const auto copy = _deep_copy_impl(node_mapping);
 
   // Predicates that contain uncorrelated subqueries cannot be used for chunk pruning in the optimization phase since we
   // do not know the predicate value yet. However, the ChunkPruningRule attaches the corresponding PredicateNodes to the
@@ -296,7 +296,7 @@ std::optional<ColumnID> AbstractLQPNode::find_column_id(const AbstractExpression
 
 ColumnID AbstractLQPNode::get_column_id(const AbstractExpression& expression) const {
   const auto column_id = find_column_id(expression);
-  Assert(column_id, "This node has no column '" + expression.as_column_name() + "'");
+  Assert(column_id, "This node has no column '" + expression.as_column_name() + "'.");
   return *column_id;
 }
 

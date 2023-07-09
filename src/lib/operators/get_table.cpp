@@ -1,7 +1,6 @@
 #include "get_table.hpp"
 
 #include <algorithm>
-#include <memory>
 #include <sstream>
 #include <unordered_set>
 
