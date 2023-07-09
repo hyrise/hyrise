@@ -188,8 +188,9 @@ class Benchmark(ABC):
             json.dump(config_contents, config)
         return config_path
 
-    def run(self, config: Configuration) -> Mapping[str, Runtimes] | None:
+    def run(self, config: Configuration) -> Mapping[Literal['ST', 'MT'], Mapping[str, Runtimes]] | None:
         try:
+            results: dict[Literal['ST', 'MT'], Mapping[str, Runtimes]] = {}
             self._config = config
             output(f'## Benchmark {self.name}:', required_verbosity_level=1)
             threading_options: list[Literal['ST', 'MT']] = ['ST', 'MT']
@@ -226,7 +227,8 @@ class Benchmark(ABC):
                 #     compare_result = check_output(check_command)
                 #     output(f'Result for {encoding} vs. {self._config.encoding_under_test}:', required_verbosity_level=3)
                 #     output(compare_result.decode(encoding='utf-8'), required_verbosity_level=3)
-                return times
+                results[threading] = times
+            return results
         except Exception as ex:
             if FAIL_FAST:
                 raise ex
@@ -513,7 +515,7 @@ def locate_benchmarks(benchmarks: list[str], config: Configuration) -> list[Benc
     return benchmark_objects
 
 
-def plot_stats(stats: dict[str, tuple[Mapping[str, Runtimes], Mapping[str, Metrics]]], *, figsize: tuple[int, int]=(15, 10)) -> None:
+def plot_stats(stats: dict[str, tuple[Mapping[Literal['ST', 'MT'], Mapping[str, Runtimes]], Mapping[str, Metrics]]], *, figsize: tuple[int, int]=(15, 10)) -> None:
     f, axiis = plt.subplots(2, 2, figsize=figsize)
     # data=pd.DataFrame(data=results)
     data = pd.DataFrame.from_dict(stats, orient='index')
@@ -545,7 +547,7 @@ def main():
         print_debug(f'Running benchmark comparing {config.encoding_under_test} Encoding against built-in encodings.', required_verbosity_level=1)
         benchmarks_names = ['hyriseBenchmarkTPCH', 'hyriseBenchmarkTPCDS', 'hyriseBenchmarkJoinOrder', 'hyriseBenchmarkStarSchema']
         benchmarks = locate_benchmarks(benchmarks_names, config)
-        stats: dict[str, tuple[Mapping[str, Runtimes], Mapping[str, Metrics]]] = {}
+        stats: dict[str, tuple[Mapping[Literal['ST', 'MT'], Mapping[str, Runtimes]], Mapping[str, Metrics]]] = {}
         for benchmark in benchmarks:
             runtimes = benchmark.run(config)
             metrics = benchmark.compare_metrics(config)
