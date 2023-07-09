@@ -45,7 +45,7 @@ void VolatileRegion::move_page_to_numa_node(PageID page_id, const NumaMemoryNode
     pages_to_move[i] = get_page(page_id) + i * OS_PAGE_SIZE;
     nodes[i] = target_memory_node;
   }
-  if (move_pages(0, pages_to_move.size(), pages_to_move.data(), status.data(), MPOL_MF_MOVE) < 0) {
+  if (move_pages(0, pages_to_move.size(), pages_to_move.data(), nodes.data(), status.data(), MPOL_MF_MOVE) < 0) {
     const auto error = errno;
     Fail("Move pages failed: " + strerror(error));
   }
