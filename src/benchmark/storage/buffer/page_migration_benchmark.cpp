@@ -100,6 +100,7 @@ BENCHMARK_DEFINE_F(PageMigrationFixture, BM_ToNodeMemoryLatencyCXLToDram)(benchm
   std::memset(_mapped_region, 0x1, VIRT_SIZE);
 #endif
   // TODO: radnom
+
   auto i = 0;
   for (auto _ : state) {
 #if HYRISE_NUMA_SUPPORT
@@ -111,6 +112,7 @@ BENCHMARK_DEFINE_F(PageMigrationFixture, BM_ToNodeMemoryLatencyCXLToDram)(benchm
   state.SetBytesProcessed(int64_t(state.iterations()) * num_bytes);
 }
 
+// TODO: run with more time
 BENCHMARK_DEFINE_F(PageMigrationFixture, BM_MovePagesLatency)(benchmark::State& state) {
   auto size_type = static_cast<PageSizeType>(state.range(0));
   const auto num_bytes = bytes_for_size_type(size_type);
@@ -132,12 +134,15 @@ BENCHMARK_DEFINE_F(PageMigrationFixture, BM_MovePagesLatency)(benchmark::State& 
 
   auto i = 0;
   for (auto _ : state) {
-#if HYRISE_NUMA_SUPPORT
     for (std::size_t j = 0; j < pages.size(); ++j) {
-      pages[i] = _mapped_region + i * num_bytes + j * OS_PAGE_SIZE;
+      pages[j] = _mapped_region + i * num_bytes + j * OS_PAGE_SIZE;
+      nodes[j] = target_node;
     }
-    Assert(move_pages(0, pages.size(), pages.data(), nodes.data(), status.data(), MPOL_MF_MOVE) == 0, "failed to move");
+#if HYRISE_NUMA_SUPPORT
+    Assert(move_pages(0, pages.size(), pages.data(), nodes.data(), status.data(), MPOL_MF_MOVE) < 0,
+           "Failed to move " + strerror(errno));
 #endif
+    i++;
     benchmark::ClobberMemory();
   }
   state.SetItemsProcessed(int64_t(state.iterations()));

@@ -39,12 +39,13 @@ void VolatileRegion::move_page_to_numa_node(PageID page_id, const NumaMemoryNode
   DebugAssert(target_memory_node != NO_NUMA_MEMORY_NODE, "Numa node has not been set.");
   static thread_local std::vector<void*> pages_to_move{bytes_for_size_type(_size_type) / OS_PAGE_SIZE};
   static thread_local std::vector<int> nodes{bytes_for_size_type(_size_type) / OS_PAGE_SIZE};
+  static thread_local std::vector<int> status{bytes_for_size_type(_size_type) / OS_PAGE_SIZE};
 
   for (auto i = 0u; i < pages_to_move.size(); ++i) {
     pages_to_move[i] = get_page(page_id) + i * OS_PAGE_SIZE;
     nodes[i] = target_memory_node;
   }
-  if (move_pages(0, pages_to_move.size(), pages_to_move.data(), nodes.data(), nullptr, MPOL_MF_MOVE) != 0) {
+  if (move_pages(0, pages_to_move.size(), pages_to_move.data(), status.data(), MPOL_MF_MOVE) < 0) {
     const auto error = errno;
     Fail("Move pages failed: " + strerror(error));
   }
