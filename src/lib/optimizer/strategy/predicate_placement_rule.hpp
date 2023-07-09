@@ -13,7 +13,8 @@ class PredicateNode;
 /**
  * Heuristic rule pushing non-expensive predicates down as far as possible (to reduce the result set early on) and
  * pulling expensive predicates up as far as possible. For the purpose of this rule, single-predicate semi- and
- * anti-joins are treated as predicates as well.
+ * anti-joins are treated as predicates as well. Though all semi- and anti-joins filter the left input, we cannot
+ * execute them efficiently if they have multiple predicates.
  *
  * PredicatePlacementRule::_is_expensive_predicate() determines what constitutes "expensive". Right now, we consider
  * predicates involving a correlated subquery as "expensive" and all other predicates as non-expensive.

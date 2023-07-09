@@ -277,7 +277,7 @@ TEST_F(PredicateReorderingTest, DoNotReorderMultiPredicateSemiAndAntiJoins) {
       PredicateNode::make(greater_than_(b, 0),
         node),
       PredicateNode::make(greater_than_(b_a, 50),
-        node_b))->deep_copy();
+        node_b));
     // clang-format on
 
     const auto expected_lqp = lqp->deep_copy();
