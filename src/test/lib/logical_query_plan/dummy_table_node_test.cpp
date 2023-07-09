@@ -56,4 +56,8 @@ TEST_F(DummyTableNodeTest, NoInclusionDependencies) {
   EXPECT_TRUE(_dummy_table_node->inclusion_dependencies().empty());
 }
 
+TEST_F(DummyTableNodeTest, IsColumnNullable) {
+  EXPECT_THROW(_dummy_table_node->is_column_nullable(ColumnID{0}), std::logic_error);
+}
+
 }  // namespace hyrise
