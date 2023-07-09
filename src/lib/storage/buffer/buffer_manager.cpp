@@ -422,7 +422,7 @@ StateVersionType BufferManager::_state(const PageID page_id) {
 }
 
 PageID BufferManager::find_page(const void* ptr) const {
-  const auto offset = reinterpret_cast<const std::byte*>(ptr) - _mapped_region;
+  const auto offset = std::ptrdiff_t{reinterpret_cast<const std::byte*>(ptr) - _mapped_region};
   const auto region_idx = offset / DEFAULT_RESERVED_VIRTUAL_MEMORY_PER_REGION;
   const auto page_size =
       bytes_for_size_type(MIN_PAGE_SIZE_TYPE) * (1 << region_idx);  // TODO: this might break if not exponential sizes
@@ -638,8 +638,6 @@ bool BufferManager::BufferPool::ensure_free_pages(const PageSizeType required_si
 }
 
 void BufferManager::BufferPool::evict(EvictionItem& item, Frame* frame) {
-  auto current_state_and_version = frame->state_and_version();
-
   DebugAssert(Frame::state(frame->state_and_version()) == Frame::LOCKED, "Frame cannot be locked");
   auto region = volatile_regions[static_cast<uint64_t>(item.page_id.size_type())];
   const auto num_bytes = bytes_for_size_type(item.page_id.size_type());
