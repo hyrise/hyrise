@@ -17,7 +17,9 @@ float expression_cost_multiplier(const std::shared_ptr<AbstractExpression>& expr
   auto multiplier = 0.0f;
 
   // Number of different columns accessed to factor in expression complexity. Also add a factor for correlated
-  // subqueries since we have to evaluate the subquery for each tuple again.
+  // subqueries since we have to evaluate the subquery for each tuple again. In the past, we added to the factor for
+  // each expression in the predicate. This led to too pressimistic cost estimations for PredicatesNodes compared to
+  // (semi-)joins.
   visit_expression(expression, [&](const auto& sub_expression) {
     if ((sub_expression->type == ExpressionType::LQPColumn) ||
         (sub_expression->type == ExpressionType::LQPSubquery &&
@@ -57,9 +59,7 @@ Cost CostEstimatorLogical::estimate_node_cost(const std::shared_ptr<AbstractLQPN
       return left_input_row_count * std::log(left_input_row_count) + output_row_count;
 
     case LQPNodeType::Union: {
-      const auto& union_mode = static_cast<const UnionNode&>(*node).set_operation_mode;
-      Assert(union_mode == SetOperationMode::Positions,
-             "Invalid Union mode :" + std::string{magic_enum::enum_name(union_mode)});
+      const auto union_mode = static_cast<const UnionNode&>(*node).set_operation_mode;
 
       switch (union_mode) {
         case SetOperationMode::Positions:
