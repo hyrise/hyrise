@@ -25,6 +25,15 @@
 
 namespace hyrise {
 
+class OperatorsAggregateHashTest : public BaseTest {};
+
+TEST_F(OperatorsAggregateHashTest, EmptyHash) {
+  // Notably, both the `EmptyAggregateKey` and the empty `AggregateKeySmallVector` have the same hash, so a hash
+  // comparison is consistent with comparing all contained keys.
+  EXPECT_EQ(std::hash<EmptyAggregateKey>()(EmptyAggregateKey{}), 0);
+  EXPECT_EQ(std::hash<AggregateKeySmallVector>()(AggregateKeySmallVector{}), 0);
+}
+
 template <typename T>
 void test_output(const std::shared_ptr<AbstractOperator> in,
                  const std::vector<std::pair<ColumnID, WindowFunction>>& aggregate_definitions,
