@@ -434,6 +434,18 @@ TEST_F(ColumnPruningRuleTest, DoNotPruneWindowNodeInputs) {
   EXPECT_LQP_EQ(lqp, expected_lqp);
 }
 
+TEST_F(ColumnPruningRuleTest, PruneInputsNotNeededByWindowNode) {
+  // Do not prune away the window the PARTITION BY columns and the ORDER BY columns, but prune additional columns.
+  const auto frame_description = FrameDescription{FrameType::Range, FrameBound{0, FrameBoundType::Preceding, true},
+                                                  FrameBound{0, FrameBoundType::CurrentRow, false}};
+  const auto window = window_(expression_vector(a), expression_vector(b), std::vector<SortMode>{SortMode::Ascending},
+                              frame_description);
+
+  const auto lqp = WindowNode::make(rank_(window), node_abc);
+  apply_rule(rule, lqp);
+  EXPECT_EQ(node_abc->pruned_column_ids(), std::vector<ColumnID>(ColumnID{0}));
+}
+
 TEST_F(ColumnPruningRuleTest, AnnotatePrunableJoinInput) {
   // Join inputs where no expressions are used later in the query plan should be marked as prunable to enable further
   // optimization, such as Join to Semi-Join rewrite. We skip Semi- and Anti-Joins since their right input is always
