@@ -51,7 +51,7 @@ void NodeQueueScheduler::begin() {
                                                      topology_cpu.cpu_id, _shutdown_flag));
     }
 
-    // Tracked per node as we have seen Docker instances with unbalanced NUMA topologies.
+    // Tracked per node as core restrictions can lead to unbalanced core counts.
     _workers_per_node.emplace_back(topology_node.cpus.size());
   }
 

@@ -64,7 +64,7 @@ std::shared_ptr<AbstractTask> TaskQueue::steal() {
     }
   }
 
-  // We waited for the semaphore to enter pull() but did not receive a task. Ensure that queues are checked again.
+  // We waited for the semaphore to enter steal() but did not receive a task. Ensure that queues are checked again.
   semaphore.signal();
   return nullptr;
 }
