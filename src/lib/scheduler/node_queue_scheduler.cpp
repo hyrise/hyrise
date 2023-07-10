@@ -164,8 +164,9 @@ void NodeQueueScheduler::finish() {
       for (const auto& queue : _queues) {
         queue_info << queue->semaphore.availableApprox() << "\t";
       }
-      
-      std::printf("Workers count: %zu and workers_shut_down remaining: %zu\n%s\n\n", _worker_count, static_cast<size_t>(workers_shut_down.load()), queue_info.str().c_str());
+
+      std::printf("Workers count: %zu and workers_shut_down remaining: %zu\n%s\n\n", _worker_count,
+                  static_cast<size_t>(workers_shut_down.load()), queue_info.str().c_str());
     }
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
     ++check_runs;
