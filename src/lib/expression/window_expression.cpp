@@ -90,9 +90,9 @@ std::ostream& operator<<(std::ostream& stream, const FrameDescription& frame_des
   return stream;
 }
 
-WindowExpression::WindowExpression(const std::vector<std::shared_ptr<AbstractExpression>>& partition_by_expressions,
-                                   const std::vector<std::shared_ptr<AbstractExpression>>& order_by_expressions,
-                                   const std::vector<SortMode>& init_sort_modes,
+WindowExpression::WindowExpression(const std::vector<std::shared_ptr<AbstractExpression>>&& partition_by_expressions,
+                                   const std::vector<std::shared_ptr<AbstractExpression>>&& order_by_expressions,
+                                   const std::vector<SortMode>&& init_sort_modes,
                                    const FrameDescription& init_frame_description)
     : AbstractExpression{ExpressionType::Window, {{/* Expressions added below. */}}},
       sort_modes{init_sort_modes},
@@ -123,8 +123,8 @@ std::shared_ptr<AbstractExpression> WindowExpression::_on_deep_copy(
         arguments[order_by_expressions_begin_idx + expression_idx]->deep_copy(copied_ops);
   }
 
-  return std::make_shared<WindowExpression>(partition_by_expressions, order_by_expressions, sort_modes,
-                                            frame_description);
+  return std::make_shared<WindowExpression>(std::move(partition_by_expressions), std::move(order_by_expressions),
+                                            std::move(sort_modes), frame_description);
 }
 
 std::string WindowExpression::description(const DescriptionMode mode) const {

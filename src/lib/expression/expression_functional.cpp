@@ -50,11 +50,11 @@ std::shared_ptr<IntervalExpression> interval_(const int64_t duration, const Date
 }
 
 std::shared_ptr<WindowExpression> window_(
-    const std::vector<std::shared_ptr<AbstractExpression>>& partition_by_expressions,
-    const std::vector<std::shared_ptr<AbstractExpression>>& order_by_expressions,
-    const std::vector<SortMode>& sort_modes, const FrameDescription& frame_description) {
-  return std::make_shared<WindowExpression>(partition_by_expressions, order_by_expressions, sort_modes,
-                                            frame_description);
+    const std::vector<std::shared_ptr<AbstractExpression>>&& partition_by_expressions,
+    const std::vector<std::shared_ptr<AbstractExpression>>&& order_by_expressions,
+    const std::vector<SortMode>&& sort_modes, const FrameDescription& frame_description) {
+  return std::make_shared<WindowExpression>(std::move(partition_by_expressions), std::move(order_by_expressions),
+                                            std::move(sort_modes), frame_description);
 }
 
 }  // namespace hyrise::expression_functional

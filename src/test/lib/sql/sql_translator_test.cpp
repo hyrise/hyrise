@@ -3264,7 +3264,7 @@ TEST_F(SQLTranslatorTest, BasicWindowFunction) {
 
 TEST_F(SQLTranslatorTest, WindowFunctionFrames) {
   // Try all prossible framing options.
-  const auto frampe_types =
+  const auto frame_types =
       std::vector<std::pair<std::string, FrameType>>{{"RANGE", FrameType::Range}, {"ROWS", FrameType::Rows}};
   const auto frame_descriptions =
       std::vector<std::string>{"UNBOUNDED PRECEDING", "BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING",
@@ -3276,7 +3276,7 @@ TEST_F(SQLTranslatorTest, WindowFunctionFrames) {
       FrameBound{0, FrameBoundType::CurrentRow, false}, FrameBound{0, FrameBoundType::Following, true},
       FrameBound{2, FrameBoundType::Following, false}, FrameBound{0, FrameBoundType::CurrentRow, false}};
 
-  for (const auto& [frame_type_str, frame_type] : frampe_types) {
+  for (const auto& [frame_type_str, frame_type] : frame_types) {
     for (auto frame_bound_id = size_t{0}; frame_bound_id < frame_descriptions.size(); ++frame_bound_id) {
       const auto query = "SELECT a, b, row_number() OVER (ORDER BY a " + frame_type_str + " " +
                          frame_descriptions[frame_bound_id] + " ) FROM int_float;";
@@ -3293,7 +3293,7 @@ TEST_F(SQLTranslatorTest, WindowFunctionFrames) {
 }
 
 TEST_F(SQLTranslatorTest, WindowDifferentFunctions) {
-  // Try all prossible window_functions.
+  // Try all possible WindowFunctions.
   const auto functions =
       std::vector<std::string>{"rank()", "dense_rank()", "percent_rank()", "cume_dist()", "row_number()",
                                "min(a)", "max(a)",       "avg(a)",         "count(a)",    "count(distinct a)"};

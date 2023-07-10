@@ -277,9 +277,9 @@ std::shared_ptr<CastExpression> cast_(const Argument& argument, const DataType d
 std::shared_ptr<IntervalExpression> interval_(const int64_t duration, const DatetimeComponent unit);
 
 std::shared_ptr<WindowExpression> window_(
-    const std::vector<std::shared_ptr<AbstractExpression>>& partition_by_expressions,
-    const std::vector<std::shared_ptr<AbstractExpression>>& order_by_expressions,
-    const std::vector<SortMode>& sort_modes, const FrameDescription& frame_description);
+    const std::vector<std::shared_ptr<AbstractExpression>>&& partition_by_expressions,
+    const std::vector<std::shared_ptr<AbstractExpression>>&& order_by_expressions,
+    const std::vector<SortMode>&& sort_modes, const FrameDescription& frame_description);
 
 }  // namespace expression_functional
 

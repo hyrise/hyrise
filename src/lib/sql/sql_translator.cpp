@@ -1197,7 +1197,7 @@ void SQLTranslator::_translate_select_groupby_having(const hsql::SelectStatement
     return ExpressionVisitation::DoNotVisitArguments;
   };
 
-  // Identify all Aggregates and their arguments needed for SELECT.
+  // Identify all WindowExpressions and their arguments needed for SELECT.
   for (const auto& element : select_list_elements) {
     if (element.expression) {
       visit_expression(element.expression, find_uncomputed_aggregates_and_arguments);
@@ -1217,7 +1217,7 @@ void SQLTranslator::_translate_select_groupby_having(const hsql::SelectStatement
     }
   }
 
-  // Gather all aggregates and arguments from HAVING.
+  // Gather all WindowExpressions and arguments from HAVING.
   auto having_expression = std::shared_ptr<AbstractExpression>{};
   if (select.groupBy && select.groupBy->having) {
     having_expression = _translate_hsql_expr(*select.groupBy->having, _sql_identifier_resolver);
