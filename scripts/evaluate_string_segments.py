@@ -15,10 +15,12 @@ from typing import Any, Literal, Mapping
 
 import pandas as pd
 import matplotlib.pyplot as plt
+import seaborn as sns
 
 
 VERBOSITY_LEVEL = 0
 FAIL_FAST = False
+
 
 def print_debug(*args, required_verbosity_level: int, **kwargs) -> None:
     if VERBOSITY_LEVEL >= required_verbosity_level:
@@ -31,7 +33,6 @@ def print_error(*args, **kwargs) -> None:
 
 def output(*args, required_verbosity_level, **kwargs) -> None:
     print_debug(*args, required_verbosity_level=required_verbosity_level, **kwargs)
-    # print(*args, file=output_file, **kwargs)
 
 
 def rm_dir(path: str) -> None:
@@ -88,6 +89,18 @@ class Runtimes(DictConvertible):
             'runtimes': list(runtime.as_dict() for runtime in self.runtimes)
         }
 
+    def min(self) -> int:
+        return min(map(lambda x: x.items_per_second, self.runtimes))
+
+    def max(self) -> int:
+        return max(map(lambda x: x.items_per_second, self.runtimes))
+
+    def average(self) -> float:
+        return statistics.fmean(map(lambda x: x.items_per_second, self.runtimes))
+
+    def median(self) -> float:
+        return statistics.median(map(lambda x: x.items_per_second, self.runtimes))
+
 
 @dataclass(frozen=True, slots=True)
 class MemoryConsumption(DictConvertible):
@@ -112,22 +125,29 @@ class Metrics(DictConvertible):
             'memory_consumption': list(consumption.as_dict() for consumption in self.memory_consumptions)
         }
 
-    def min(self) -> int:
-        return min(map(lambda x: x.memory_consumption, self.memory_consumptions))
+    def _as_generator(self, *, only_string_columns: bool):
+        return (consumption
+                for consumption
+                in self.memory_consumptions
+                if not only_string_columns
+                or consumption.column_type == 'string')
 
-    def max(self) -> int:
-        return max(map(lambda x: x.memory_consumption, self.memory_consumptions))
+    def min(self, *, only_string_columns: bool) -> int:
+        return min(map(lambda x: x.memory_consumption, self._as_generator(only_string_columns=only_string_columns)))
 
-    def average(self) -> float:
-        return statistics.fmean(map(lambda x: x.memory_consumption, self.memory_consumptions))
+    def max(self, *, only_string_columns: bool) -> int:
+        return max(map(lambda x: x.memory_consumption, self._as_generator(only_string_columns=only_string_columns)))
 
-    def median(self) -> float:
-        return statistics.median(map(lambda x: x.memory_consumption, self.memory_consumptions))
+    def average(self, *, only_string_columns: bool) -> float:
+        return statistics.fmean(map(lambda x: x.memory_consumption, self._as_generator(only_string_columns=only_string_columns)))
+
+    def median(self, *, only_string_columns: bool) -> float:
+        return statistics.median(map(lambda x: x.memory_consumption, self._as_generator(only_string_columns=only_string_columns)))
 
 
 def plot(results: dict[str, list], *, title: str, yaxis: str, path: str, figsize: tuple[int, int]=(15, 10)) -> None:
     f, axiis = plt.subplots(1, 1, figsize=figsize)
-    # data=pd.DataFrame(data=results)
+    # The transposing of the orientation is done to allow for empty cells.
     data = pd.DataFrame.from_dict(results, orient='index')
     data = data.transpose()
     print_debug(data, required_verbosity_level=3)
@@ -222,11 +242,6 @@ class Benchmark(ABC):
                         in times.items()
                     }
                     json.dump(raw_times, f)
-                # for (encoding, json) in zip(self._encodings, result_jsons):
-                #     check_command = ['./scripts/compare_benchmarks.py', json, test_json]
-                #     compare_result = check_output(check_command)
-                #     output(f'Result for {encoding} vs. {self._config.encoding_under_test}:', required_verbosity_level=3)
-                #     output(compare_result.decode(encoding='utf-8'), required_verbosity_level=3)
                 results[threading] = times
             return results
         except Exception as ex:
@@ -242,12 +257,9 @@ class Benchmark(ABC):
         runtimes = Runtimes([])
         for benchmark in json_file['benchmarks']:
             name = benchmark['name']
-            # successful_runs = benchmark['successful_runs']
             duration = benchmark['items_per_second']
-            # duration = statistics.mean(float(run['duration']) for run in successful_runs)
             runtime = Runtime(name, duration)
             runtimes.runtimes.append(runtime)
-        # return list(map(lambda x: x.runtime, runtimes.runtimes))
         return runtimes
 
     def compare_metrics(self, config: Configuration) -> Mapping[str, Metrics] | None:
@@ -275,8 +287,6 @@ class Benchmark(ABC):
                         in metrics.items()
                     }
                 json.dump(raw_metrics, f)
-            # for encoding, json in zip(self._encodings, result_jsons):
-            #     self._compare_metrics(json, test_json, encoding, self._config.encoding_under_test)
             return metrics
         except Exception as ex:
             if FAIL_FAST:
@@ -286,24 +296,13 @@ class Benchmark(ABC):
             output(error_message, required_verbosity_level=4)
             return None
 
-    # def _compare_metrics(self, reference_json: str, test_json: str, reference_encoding: str, test_encoding: str) -> 'Metrics':
     def _compare_metrics(self, json: str) -> Metrics:
         json_file = read_json(json)
-        # test = read_json(test_json)
         metrics = Metrics([])
-        # test_metrics = Metrics([])
         for segment in json_file['segments']:
-        # for ref_segment, test_segment in zip(reference['segments'], test['segments']):
             column_type = segment['column_data_type']
             column_name = segment['column_name']
-            # # Only look at string columns
-            # if column_type != 'string':
-            #     continue
             metrics.memory_consumptions.append(MemoryConsumption(column_name, column_type, segment["estimated_size_in_bytes"]))
-            # test_metrics.memory_consumptions.append(MemoryConsumption(column_name, column_type, test_segment["estimated_size_in_bytes"]))
-        # output(f'For reference encoding {reference_encoding}: {{ min: {reference_metrics.min()}, max: {reference_metrics.max()}, average: {reference_metrics.average()}, median: {reference_metrics.median()} }}; ' +
-        #        f'For test encoding {test_encoding}: {{ min: {test_metrics.min()}, max: {test_metrics.max()}, average: {test_metrics.average()}, median: {test_metrics.median()} }}', required_verbosity_level=2)
-        # return list(map(lambda x: x.memory_consumption, metrics.memory_consumptions))
         return metrics
 
     def _run(self, threading: Literal['ST', 'MT'], encoding: str, metrics: bool) -> str:
@@ -515,45 +514,52 @@ def locate_benchmarks(benchmarks: list[str], config: Configuration) -> list[Benc
     return benchmark_objects
 
 
-def plot_stats(stats: dict[str, tuple[Mapping[Literal['ST', 'MT'], Mapping[str, Runtimes]], Mapping[str, Metrics]]], *, figsize: tuple[int, int]=(15, 10)) -> None:
-    f, axiis = plt.subplots(2, 2, figsize=figsize)
-    # data=pd.DataFrame(data=results)
-    data = pd.DataFrame.from_dict(stats, orient='index')
-    data = data.transpose()
-    print_debug(data, required_verbosity_level=3)
-    if data.empty:
-        print_error('Data Frame is empty; no result data to show!')
-        return
-    data.plot(
-        kind='box',
-        ax=axiis,
-        title=title,
-        xlabel='Encodings',
-        ylabel=f'{yaxis} (Logarithmic Scale)',
-        logy=True,
-    )
-    f.tight_layout()
-    f.savefig(path)
+def refine_stats(stats: dict[str, tuple[Mapping[Literal['ST', 'MT'], Mapping[str, Runtimes]], Mapping[str, Metrics]]]) -> dict:
+    result = {
+        'ENCODING': [],
+        'RUNTIME': [],
+        'MODE': [],
+        'SIZE': [],
+        'BENCHMARK': []
+    }
+    for benchmark_name, benchmark_results in stats.items():
+        for threading, runtimes in benchmark_results[0].items():
+            for encoding, runtime_wrapper in runtimes.items():
+                runtime = runtime_wrapper.median()
+                metrics = benchmark_results[1][encoding]
+                size = metrics.median(only_string_columns=True)
+                result['SIZE'].append(size)
+                result['RUNTIME'].append(runtime)
+                result['MODE'].append(threading)
+                result['ENCODING'].append(encoding)
+                result['BENCHMARK'].append(benchmark_name)
+    return result
+
+
+def plot_stats(stats: dict[str, tuple[Mapping[Literal['ST', 'MT'], Mapping[str, Runtimes]], Mapping[str, Metrics]]], *, path: str) -> None:
+    data = pd.DataFrame.from_dict(refine_stats(stats))
+    g = sns.FacetGrid(data, col="BENCHMARK", row="MODE", hue="ENCODING", sharex=False, sharey=False)
+    g.map(sns.scatterplot, "SIZE", "RUNTIME")
+    g.add_legend()
+    g.set_axis_labels("Memory Consumption [Median Bytes]", "Throughput [Median Items per Second]")
+    g.savefig(path)
 
 
 def main():
-    global output_file
     config = parse_arguments()
     Path(config.tmp_path).mkdir(parents=True, exist_ok=True)
     (Path(config.tmp_path) / Path('config')).mkdir(parents=True, exist_ok=True)
     Path(config.output_directory).mkdir(parents=True, exist_ok=True)
-    if True:
-    # with open(config.output_file, 'w+') as output_file:
-        print_debug(f'Running benchmark comparing {config.encoding_under_test} Encoding against built-in encodings.', required_verbosity_level=1)
-        benchmarks_names = ['hyriseBenchmarkTPCH', 'hyriseBenchmarkTPCDS', 'hyriseBenchmarkJoinOrder', 'hyriseBenchmarkStarSchema']
-        benchmarks = locate_benchmarks(benchmarks_names, config)
-        stats: dict[str, tuple[Mapping[Literal['ST', 'MT'], Mapping[str, Runtimes]], Mapping[str, Metrics]]] = {}
-        for benchmark in benchmarks:
-            runtimes = benchmark.run(config)
-            metrics = benchmark.compare_metrics(config)
-            if runtimes is not None and metrics is not None:
-                stats[benchmark.name] = (runtimes, metrics)
-        # plot_stats(stats)
+    print_debug(f'Running benchmark comparing {config.encoding_under_test} Encoding against built-in encodings.', required_verbosity_level=1)
+    benchmarks_names = ['hyriseBenchmarkTPCH', 'hyriseBenchmarkTPCDS', 'hyriseBenchmarkJoinOrder', 'hyriseBenchmarkStarSchema']
+    benchmarks = locate_benchmarks(benchmarks_names, config)
+    stats: dict[str, tuple[Mapping[Literal['ST', 'MT'], Mapping[str, Runtimes]], Mapping[str, Metrics]]] = {}
+    for benchmark in benchmarks:
+        runtimes = benchmark.run(config)
+        metrics = benchmark.compare_metrics(config)
+        if runtimes is not None and metrics is not None:
+            stats[benchmark.name] = (runtimes, metrics)
+    plot_stats(stats, path=path.join(config.output_directory, 'comparison.png'))
 
 
 if __name__ == '__main__':
