@@ -88,6 +88,19 @@ void NodeQueueScheduler::wait_for_all_tasks() {
       // The following assert checks that we are not looping forever. The empty() check can be inaccurate for
       // concurrent queues when many tiny tasks have been scheduled (see MergeSort scheduler test). When this assert is
       // triggered in other situations, there have probably been new tasks added after wait_for_all_tasks() was called.
+      if (queue_check_runs > 500) { 
+	      auto queue_info = std::stringstream{};
+	      queue_info << "Queue sizes: \n\t";
+	      for (const auto& queue : _queues) {
+		queue_info << queue->estimate_load() << "\t";
+	      }
+	      queue_info << "\n\t";
+	      for (const auto& queue : _queues) {
+		queue_info << queue->semaphore.availableApprox() << "\t";
+	      }
+
+	      std::cerr << queue_info.str() << "\n\n";
+      }
       Assert(queue_check_runs < 1'000, "Queue is not empty but all registered tasks have already been processed.");
 
       // Explicitly signal workers to work on remaining jobs.
