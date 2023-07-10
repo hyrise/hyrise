@@ -33,7 +33,7 @@ void TaskQueue::push(const std::shared_ptr<AbstractTask>& task, const SchedulePr
   }
 
   task->set_node_id(_node_id);
-  const auto enqueue_successful = _queues[priority_uint].enqueue(task);
+  [[maybe_unused]] const auto enqueue_successful = _queues[priority_uint].enqueue(task);
   DebugAssert(enqueue_successful, "Enqueuing did not succeed.");
   semaphore.signal();
 }
