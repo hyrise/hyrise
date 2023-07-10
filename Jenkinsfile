@@ -380,9 +380,9 @@ try {
       stage("clangDebugMacX64") {
         // We have experienced frequent network problems with this CI machine. So far, we have not found the cause.
         // Since we run this stage very late and it frequently fails due to network problems, we retry the stage three
-        // times as (i) we can be rather sure that most problems with the current pull request have been already found
+        // times as (i) we can be rather sure that most problems with the current pull request have already been found
         // in earlier stages and fails in this stage are probably network issues, and (ii) we avoid re-runs of entire
-        // Full CI runs that failed in the vary last stage due to a single network issue.
+        // Full CI runs that failed in the very last stage due to a single network issue.
         retry(3) {
           if (env.BRANCH_NAME == 'master' || full_ci) {
             try {

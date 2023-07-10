@@ -34,8 +34,8 @@ elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
     if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 14.0)
         compiler_not_supported("Hyrise does not support Apple clang compilers older than version 14.")
     endif()
-    # In release mode, we found issues on ARM with loop unrolling (MacOS Ventura, Apple Clang 14.0).
-    # As we do not benchmark on MacOS, the can currently savely ignore this issue.
+    # In release mode, we found issues on ARM with loop unrolling (macOS Ventura, Apple Clang 14.0).
+    # As we do not benchmark on macOS, we can safely ignore this issue for now.
     add_compile_options(-Wno-pass-failed)
     execute_process(
         COMMAND brew --prefix
