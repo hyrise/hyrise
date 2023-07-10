@@ -113,13 +113,15 @@ void NodeQueueScheduler::finish() {
 
   // std::cout << "Worker count: " << _worker_count << std::endl;
   for (auto node_id = NodeID{0}; node_id < _node_count; ++node_id) {
-    const auto node_worker_count = _workers_per_node[node_id]; 
+    const auto node_worker_count = _workers_per_node[node_id];
     for (auto worker_id = size_t{0}; worker_id < node_worker_count; ++worker_id) {
       // Create a shutdown task for every worker.
-      auto job_task = std::make_shared<JobTask>([&]() { --workers_shut_down; }, SchedulePriority::Default, false);
+      auto job_task = std::make_shared<JobTask>([&]() { --workers_shut_down; },
+                                SchedulePriority::Default, false);
       job_task->set_as_shutdown_task();
       job_task->schedule(node_id);
-      // std::printf("scheduling a task for worker #%zu on node #%zu\n", worker_id, static_cast<size_t>(node_id));
+      // std::printf("scheduling a task for worker #%zu on node #%zu\n",
+      //      worker_id, static_cast<size_t>(node_id));
     }
   }
 
