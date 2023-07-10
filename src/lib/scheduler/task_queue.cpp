@@ -33,7 +33,8 @@ void TaskQueue::push(const std::shared_ptr<AbstractTask>& task, const SchedulePr
   }
 
   task->set_node_id(_node_id);
-  _queues[priority_uint].enqueue(task);
+  const auto enqueue_successful = _queues[priority_uint].enqueue(task);
+  DebugAssert(enqueue_successful, "Enqueuing did not succeed.");
   semaphore.signal();
 }
 
@@ -44,6 +45,9 @@ std::shared_ptr<AbstractTask> TaskQueue::pull() {
       return task;
     }
   }
+
+  // We waited for the semaphore to enter pull() but did not receive a task. Ensure that queues are checked again.
+  semaphore.signal();
   return nullptr;
 }
 
@@ -59,6 +63,9 @@ std::shared_ptr<AbstractTask> TaskQueue::steal() {
       semaphore.signal();
     }
   }
+
+  // We waited for the semaphore to enter pull() but did not receive a task. Ensure that queues are checked again.
+  semaphore.signal();
   return nullptr;
 }
 

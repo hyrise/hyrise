@@ -1,5 +1,6 @@
 #include "node_queue_scheduler.hpp"
 
+#include <atomic>
 #include <cstdlib>
 #include <iostream>
 #include <memory>
@@ -110,7 +111,7 @@ void NodeQueueScheduler::finish() {
 
   auto workers_shut_down = std::atomic_uint64_t{_worker_count};
 
-  std::cout << "Worker count: " << _worker_count << std::endl;
+  // std::cout << "Worker count: " << _worker_count << std::endl;
   for (auto node_id = NodeID{0}; node_id < _node_count; ++node_id) {
     const auto node_worker_count = _workers_per_node[node_id]; 
     for (auto worker_id = size_t{0}; worker_id < node_worker_count; ++worker_id) {
@@ -118,7 +119,7 @@ void NodeQueueScheduler::finish() {
       auto job_task = std::make_shared<JobTask>([&]() { --workers_shut_down; }, SchedulePriority::Default, false);
       job_task->set_as_shutdown_task();
       job_task->schedule(node_id);
-      std::printf("scheduling a task for worker #%zu on node #%zu\n", worker_id, static_cast<size_t>(node_id));
+      // std::printf("scheduling a task for worker #%zu on node #%zu\n", worker_id, static_cast<size_t>(node_id));
     }
   }
 
@@ -149,9 +150,21 @@ void NodeQueueScheduler::finish() {
 
 
   auto check_runs = size_t{0};
-  while (workers_shut_down.load() > 0)  {
-    std::printf("what? workers count: %zu and workers_shut_down remaining: %zu\n", _worker_count, static_cast<size_t>(workers_shut_down.load()));
-    Assert(check_runs < 500, "Queue is not empty but all registered tasks have already been processed.");
+  while (workers_shut_down.load(std::memory_order::relaxed) > 0)  {
+    Assert(check_runs < 1'000, "Time out: not all shut down have been processed.");
+    if (check_runs > 50 && workers_shut_down.load(std::memory_order::relaxed) > 0) {
+      auto queue_info = std::stringstream{};
+      queue_info << "Queue sizes: \n\t";
+      for (const auto& queue : _queues) {
+        queue_info << queue->estimate_load() << "\t";
+      }
+      queue_info << "\n\t";
+      for (const auto& queue : _queues) {
+        queue_info << queue->semaphore.availableApprox() << "\t";
+      }
+      
+      std::printf("Workers count: %zu and workers_shut_down remaining: %zu\n%s\n\n", _worker_count, static_cast<size_t>(workers_shut_down.load()), queue_info.str().c_str());
+    }
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
     ++check_runs;
   }
@@ -159,11 +172,11 @@ void NodeQueueScheduler::finish() {
 
   _active = false;
 
-  std::cout << "Joining" << std::endl;
+  // std::cout << "Joining" << std::endl;
   for (auto& worker : _workers) {
     worker->join();
   }
-  std::cout << "/Joining" << std::endl;
+  // std::cout << "/Joining" << std::endl;
 
   _workers = {};
   _queues = {};

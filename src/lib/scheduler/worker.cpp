@@ -37,11 +37,11 @@ bool get_task(const bool check_only_local_queue, const std::atomic_bool& shutdow
       return true;
   }
 
-  // When waiting for the semaphore, we always check if the worker is supposed to shut down. Otherwise, a worker might
-  // "consume" muliple shutdown signals (no tasks in the queue) which hinders other workers for awaking.
   if (local_queue->semaphore.tryWait()) {
     task = local_queue->pull();
-    return true;
+    if (task) {
+      return true;
+    }
   }
 
   if (check_only_local_queue) {
@@ -146,7 +146,6 @@ void Worker::_work(const AllowSleep allow_sleep) {
     _active = false;
   }
   // std::printf("/Worker with id %lu checked for shutdown.\n", static_cast<size_t>(_id));
-
 
   // This is part of the Scheduler shutdown system. Count the number of tasks a Worker executed to allow the
   // Scheduler to determine whether all tasks finished
