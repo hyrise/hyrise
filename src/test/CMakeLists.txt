@@ -149,6 +149,7 @@ set(
     lib/scheduler/operator_task_test.cpp
     lib/scheduler/scheduler_test.cpp
     lib/scheduler/task_queue_test.cpp
+    lib/scheduler/task_utils_test.cpp
     lib/server/mock_socket.hpp
     lib/server/postgres_protocol_handler_test.cpp
     lib/server/query_handler_test.cpp
@@ -215,6 +216,7 @@ set(
     lib/utils/date_time_utils_test.cpp
     lib/utils/format_bytes_test.cpp
     lib/utils/format_duration_test.cpp
+    lib/utils/list_directory_test.cpp
     lib/utils/load_table_test.cpp
     lib/utils/log_manager_test.cpp
     lib/utils/lossless_predicate_cast_test.cpp
