@@ -53,10 +53,11 @@ void WindowFunctionEvaluator::_on_set_parameters(
 }
 
 std::shared_ptr<AbstractOperator> WindowFunctionEvaluator::_on_deep_copy(
-    [[maybe_unused]] const std::shared_ptr<AbstractOperator>& copied_left_input,
+    const std::shared_ptr<AbstractOperator>& copied_left_input,
     [[maybe_unused]] const std::shared_ptr<AbstractOperator>& copied_right_input,
     [[maybe_unused]] std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
-  Fail("What should this do?");
+  return std::make_shared<WindowFunctionEvaluator>(copied_left_input, _partition_by_column_ids, _order_by_column_ids,
+                                                   _function_argument_column_id, _window_function_expression);
 }
 
 template <typename InputColumnType, WindowFunction window_function>
