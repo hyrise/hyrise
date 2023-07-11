@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <functional>
 #include <limits>
 #include <optional>
 #include <type_traits>
@@ -21,8 +22,6 @@ constexpr bool is_rank_like(WindowFunction window_function) {
 
 template <WindowFunction window_function>
 concept RankLike = is_rank_like(window_function);
-
-using IdentityTransformer = decltype([](auto query_result) { return query_result; });
 
 template <typename T, WindowFunction window_function>
 struct WindowFunctionCombinator {};
@@ -98,7 +97,7 @@ struct WindowFunctionCombinator<T, WindowFunction::Sum> {
   });
   constexpr static auto neutral_element = std::optional<T>();
 
-  using QueryTransformer = IdentityTransformer;
+  using QueryTransformer = std::identity;
 
   struct OnePassState {
     std::optional<SumReturnType> sum{};
@@ -163,7 +162,7 @@ struct WindowFunctionCombinator<T, WindowFunction::Min> {
   });
   constexpr static auto neutral_element = std::optional<MinReturnType>();
 
-  using QueryTransformer = IdentityTransformer;
+  using QueryTransformer = std::identity;
 };
 
 template <typename T>
@@ -179,7 +178,7 @@ struct WindowFunctionCombinator<T, WindowFunction::Max> {
   });
   constexpr static auto neutral_element = std::optional<MaxReturnType>();
 
-  using QueryTransformer = IdentityTransformer;
+  using QueryTransformer = std::identity;
 };
 
 template <typename T, WindowFunction window_function>
