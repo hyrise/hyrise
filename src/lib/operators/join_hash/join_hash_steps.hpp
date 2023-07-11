@@ -632,7 +632,7 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
       actual_nodes.emplace_back(job_nodes_placement[input_partition_idx]);
     }
   }
-  if (jobs) {
+  if (jobs.size()) {
     std::cout << "Starting perform_partition on " << jobs.size() << " jobs on node " << actual_nodes[0] << std::endl;
   }
   Hyrise::get().scheduler()->schedule_on_preferred_nodes_and_wait_for_tasks(jobs, actual_nodes);
@@ -825,7 +825,7 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
     }
   }
 
-  if (jobs) {
+  if (jobs.size()) {
     std::cout << "Starting probe_partition on " << jobs.size() << " jobs on node " << job_nodes[0] << std::endl;
   }
   Hyrise::get().scheduler()->schedule_on_preferred_nodes_and_wait_for_tasks(jobs, job_nodes);
@@ -954,7 +954,7 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_containe
     }
   }
 
-  if (jobs) {
+  if (jobs.size()) {
     std::cout << "Starting probe_partition (semi anti) on " << jobs.size() << " jobs on node " << job_nodes[0]
               << std::endl;
   }
