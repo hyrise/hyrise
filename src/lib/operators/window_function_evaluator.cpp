@@ -206,9 +206,8 @@ WindowFunctionEvaluator::HashPartitionedData partition_and_sort_chunk(const Chun
     result[hash_partition].push_back(std::move(row_info));
   }
 
-  for (auto& partition : result) {
-    std::ranges::sort(partition, comparator);
-  }
+  WindowFunctionEvaluator::spawn_and_wait_per_hash(
+      result, [&comparator](auto& hash_partition) { std::ranges::sort(hash_partition, comparator); });
 
   return result;
 }
@@ -255,13 +254,13 @@ WindowFunctionEvaluator::HashPartitionedData parallel_merge_sort(const Table& in
 
   auto result = WindowFunctionEvaluator::HashPartitionedData{};
 
-  for (auto hash_value = 0u; hash_value < WindowFunctionEvaluator::hash_partition_partition_count; ++hash_value) {
-    const auto& left = left_result[hash_value];
-    const auto& right = right_result[hash_value];
-    auto& merged = result[hash_value];
-    merged.resize(left.size() + right.size());
-    std::ranges::merge(left, right, merged.begin(), comparator);
-  }
+  WindowFunctionEvaluator::spawn_and_wait_per_hash(
+      result, [&left_result, &right_result, &comparator](auto& result_partition, auto hash_value) {
+        const auto& left = left_result[hash_value];
+        const auto& right = right_result[hash_value];
+        result_partition.resize(left.size() + right.size());
+        std::ranges::merge(left, right, result_partition.begin(), comparator);
+      });
 
   return result;
 }
