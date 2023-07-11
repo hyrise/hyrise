@@ -27,7 +27,7 @@ void NumaExtentHooks::store_node_id_for_arena(ArenaID arena_id, NodeID node_id) 
     Fail("Tried to assign node id to an already assigned arena id.");
   }
   node_id_for_arena_id[arena_id] = node_id;
-};
+}
 
 void* NumaExtentHooks::alloc(extent_hooks_t* extent_hooks, void* new_addr, size_t size, size_t alignment, bool* zero,
                              bool* commit, unsigned arena_index) {
