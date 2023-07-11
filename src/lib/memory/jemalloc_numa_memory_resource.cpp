@@ -1,4 +1,4 @@
-#include "numa_memory_resource.hpp"
+#include "jemalloc_numa_memory_resource.hpp"
 
 #include <numa.h>
 #include <boost/container/pmr/memory_resource.hpp>
@@ -18,12 +18,11 @@ using arena_config_t = struct arena_config_s;
 
 namespace hyrise {
 
-NumaExtentHooks::NumaExtentHooks(const NumaNodeID node_id) {}
+NumaExtentHooks::NumaExtentHooks(const NodeID node_id) {}
 
-std::unordered_map<ArenaID, NumaNodeID> NumaExtentHooks::node_id_for_arena_id =
-    std::unordered_map<ArenaID, NumaNodeID>{};
+std::unordered_map<ArenaID, NodeID> NumaExtentHooks::node_id_for_arena_id = std::unordered_map<ArenaID, NodeID>{};
 
-void NumaExtentHooks::store_node_id_for_arena(ArenaID arena_id, NumaNodeID node_id) {
+void NumaExtentHooks::store_node_id_for_arena(ArenaID arena_id, NodeID node_id) {
   if (NumaExtentHooks::node_id_for_arena_id.contains(arena_id)) {
     Fail("Tried to assign node id to an already assigned arena id.");
   }
@@ -41,7 +40,7 @@ void* NumaExtentHooks::alloc(extent_hooks_t* extent_hooks, void* new_addr, size_
   return addr;
 }
 
-NumaMemoryResource::NumaMemoryResource(const NumaNodeID node_id) : _node_id(node_id) {
+JemallocNumaMemoryResource::JemallocNumaMemoryResource(const NodeID node_id) : _node_id(node_id) {
   // Setup jemalloc arena.
   _hooks.alloc = NumaExtentHooks::alloc;
   auto arena_id = uint32_t{0};
@@ -57,19 +56,19 @@ NumaMemoryResource::NumaMemoryResource(const NumaNodeID node_id) : _node_id(node
   _allocation_flags = MALLOCX_ARENA(arena_id) | MALLOCX_TCACHE_NONE;
 }
 
-void* NumaMemoryResource::do_allocate(std::size_t bytes, std::size_t alignment) {
+void* JemallocNumaMemoryResource::do_allocate(std::size_t bytes, std::size_t alignment) {
   // return numa_alloc(bytes);
   return mallocx(bytes, _allocation_flags);
 }
 
-NumaMemoryResource::~NumaMemoryResource() {}
+JemallocNumaMemoryResource::~JemallocNumaMemoryResource() {}
 
-void NumaMemoryResource::do_deallocate(void* pointer, std::size_t bytes, std::size_t alignment) {
+void JemallocNumaMemoryResource::do_deallocate(void* pointer, std::size_t bytes, std::size_t alignment) {
   // numa_free(pointer, bytes);
   sdallocx(pointer, bytes, _allocation_flags);
 }
 
-bool NumaMemoryResource::do_is_equal(const memory_resource& other) const noexcept {
+bool JemallocNumaMemoryResource::do_is_equal(const memory_resource& other) const noexcept {
   return &other == this;
 }
 
