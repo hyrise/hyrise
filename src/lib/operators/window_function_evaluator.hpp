@@ -42,6 +42,8 @@ class WindowFunctionEvaluator : public AbstractReadOnlyOperator {
   using PerHash = std::array<T, hash_partition_partition_count>;
 
   template <typename T>
+  static void spawn_and_wait_per_hash(PerHash<T>& data, auto&& per_hash_function);
+  template <typename T>
   static void spawn_and_wait_per_hash(const PerHash<T>& data, auto&& per_hash_function);
 
   enum class OperatorSteps : uint8_t { PartitionAndSort, Compute, Annotate };

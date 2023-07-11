@@ -309,11 +309,30 @@ std::weak_ordering compare_with_null_equal(std::span<const AllTypeVariant> lhs, 
 }
 
 template <typename T>
+void WindowFunctionEvaluator::spawn_and_wait_per_hash(PerHash<T>& data, auto&& per_hash_function) {
+  auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
+  for (auto hash_value = 0u; hash_value < hash_partition_partition_count; ++hash_value) {
+    tasks.emplace_back(std::make_shared<JobTask>([hash_value, &data, &per_hash_function]() {
+      if constexpr (requires { per_hash_function(data[hash_value], hash_value); })
+        per_hash_function(data[hash_value], hash_value);
+      else
+        per_hash_function(data[hash_value]);
+    }));
+  }
+
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
+};
+
+template <typename T>
 void WindowFunctionEvaluator::spawn_and_wait_per_hash(const PerHash<T>& data, auto&& per_hash_function) {
   auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
   for (auto hash_value = 0u; hash_value < hash_partition_partition_count; ++hash_value) {
-    tasks.emplace_back(
-        std::make_shared<JobTask>([hash_value, &data, &per_hash_function]() { per_hash_function(data[hash_value]); }));
+    tasks.emplace_back(std::make_shared<JobTask>([hash_value, &data, &per_hash_function]() {
+      if constexpr (requires { per_hash_function(data[hash_value], hash_value); })
+        per_hash_function(data[hash_value], hash_value);
+      else
+        per_hash_function(data[hash_value]);
+    }));
   }
 
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
