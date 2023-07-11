@@ -2,6 +2,7 @@
 # Include this here because we need the GENERATED property on version.hpp and in CMake that property has directory
 # scope
 include(${PROJECT_SOURCE_DIR}/cmake/git_watcher.cmake)
+
 # Sources and libraries shared among the different builds of the lib
 set(
     SOURCES
@@ -170,7 +171,8 @@ set(
     memory/boost_default_memory_resource.cpp
     memory/numa_memory_resource.cpp
     memory/numa_memory_resource.hpp
-    memory/zero_allocator.hpp
+    memory/jemalloc_numa_memory_resource.cpp
+    memory/jemalloc_numa_memory_resource.hpp
     memory/zero_allocator.hpp
     null_value.hpp
     operators/abstract_aggregate_operator.cpp
@@ -684,21 +686,23 @@ set(
     uninitialized_vector
     libzstd_static
     ${CMAKE_DL_LIBS}
+
     # Additional libraries added with target_link_libraries_system below
 )
 
-if (NOT APPLE)
+if(NOT APPLE)
     set(LIBRARIES ${LIBRARIES} atomic pthread)
 endif()
 
-if (${ENABLE_NUMA_SUPPORT})
+if(${ENABLE_NUMA_SUPPORT})
     set(LIBRARIES ${LIBRARIES} ${NUMA_LIBRARY})
 endif()
 
 set(ERASE_SEGMENT_TYPES "" CACHE STRING "Erase iterators and accessors for these types (e.g., RunLength,FrameOfReference). Good for compile time, bad for run time (if these types end up being used)")
 string(REPLACE "," ";" ERASE_SEGMENT_TYPES_LIST "${ERASE_SEGMENT_TYPES}")
 string(TOUPPER "${ERASE_SEGMENT_TYPES_LIST}" ERASE_SEGMENT_TYPES_UPPER)
-if (NOT "${ERASE_SEGMENT_TYPES_UPPER}" STREQUAL "")
+
+if(NOT "${ERASE_SEGMENT_TYPES_UPPER}" STREQUAL "")
     foreach(ERASE_SEGMENT_TYPE ${ERASE_SEGMENT_TYPES_UPPER})
         message(STATUS "Erasing iterators and accessors for: ${ERASE_SEGMENT_TYPE}")
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DHYRISE_ERASE_${ERASE_SEGMENT_TYPE}")
@@ -706,7 +710,7 @@ if (NOT "${ERASE_SEGMENT_TYPES_UPPER}" STREQUAL "")
 endif()
 
 # hyrise_impl should not be directly used, as linking to it regularly excludes unused symbols. See hyrise below.
-if(NOT ENABLE_COVERAGE AND NOT (APPLE AND (ENABLE_ADDR_UB_SANITIZATION OR ENABLE_THREAD_SANITIZATION)))
+if(NOT ENABLE_COVERAGE AND NOT(APPLE AND(ENABLE_ADDR_UB_SANITIZATION OR ENABLE_THREAD_SANITIZATION)))
     add_library(hyrise_impl SHARED ${SOURCES})
 else()
     # Use a static build for coverage information - otherwise .cpp files are missing from the report
@@ -750,7 +754,7 @@ target_link_libraries_system(
     tbb
 )
 
-if (NUMA_FOUND)
+if(NUMA_FOUND)
     target_link_libraries(hyrise_impl PUBLIC numa)
 endif()
 
@@ -759,13 +763,14 @@ target_include_directories(hyrise_impl PUBLIC ${CMAKE_BINARY_DIR})
 # Precompile the most expensive headers. Only add headers here if you know what you are doing, as this has the potential
 # of negatively affecting the build time.
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-target_compile_options(hyrise_impl PUBLIC -Xclang -fno-pch-timestamp)
+    target_compile_options(hyrise_impl PUBLIC -Xclang -fno-pch-timestamp)
 endif()
+
 target_precompile_headers(hyrise_impl PRIVATE
-  all_parameter_variant.hpp
-  storage/create_iterable_from_segment.hpp
-  storage/table.hpp
-  types.hpp
+    all_parameter_variant.hpp
+    storage/create_iterable_from_segment.hpp
+    storage/table.hpp
+    types.hpp
 )
 
 # -fPIC generates position independent code which is necessary because plugins might access hyrise functions.
@@ -773,16 +778,16 @@ target_compile_options(hyrise_impl PRIVATE -fPIC)
 
 # Dependency hyrise --> git_watcher needs to be added manually, apparently. Otherwise version.hpp, for reasons unknown
 # isn't updated when HEAD changes
-
 add_dependencies(hyrise_impl AlwaysCheckGit)
 
 # This is a wrapper around hyrise_impl that forces the compiler to emit all symbols
 add_library(hyrise INTERFACE)
+
 # Forward all include directories from hyrise_impl
 target_include_directories(hyrise INTERFACE $<TARGET_PROPERTY:hyrise_impl,INCLUDE_DIRECTORIES>)
 
 # -force_load/--whole-archive are necessary to include all symbols so that dynamically loaded plugins can use them
-if (APPLE)
+if(APPLE)
     set_property(TARGET hyrise PROPERTY INTERFACE_LINK_LIBRARIES -force_load $<TARGET_FILE:hyrise_impl>)
 else()
     set_property(TARGET hyrise PROPERTY INTERFACE_LINK_LIBRARIES -Wl,--whole-archive,$<TARGET_FILE:hyrise_impl>,--no-whole-archive)
@@ -794,7 +799,7 @@ target_link_libraries(hyrise INTERFACE hyrise_impl)
 # For convenience, to be able to launch, e.g., hyriseTest, directly from the build directory,
 # add a link to the resources/ directory at the root of the build directory).
 add_custom_target(resourceLink
-        COMMAND ln -fs ${CMAKE_BINARY_DIR}/../resources ${CMAKE_BINARY_DIR}/
+    COMMAND ln -fs ${CMAKE_BINARY_DIR}/../resources ${CMAKE_BINARY_DIR}/
 )
 
 add_dependencies(hyrise resourceLink)
