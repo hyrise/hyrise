@@ -429,6 +429,7 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
     }
   }
   if (jobs.size()) {
+    std::cout << "Starting materialize on " << jobs.size() << " jobs on node " << job_nodes[0] << std::endl;
     Hyrise::get().scheduler()->schedule_on_preferred_nodes_and_wait_for_tasks(jobs, job_nodes);
   }
 
@@ -519,6 +520,8 @@ std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<
   }
 
   if (jobs.size()) {
+    std::cout << "Starting insert_into_hash_table on " << jobs.size() << " jobs on node " << actual_nodes[0]
+              << std::endl;
     Hyrise::get().scheduler()->schedule_on_preferred_nodes_and_wait_for_tasks(jobs, actual_nodes);
   }
 
@@ -628,6 +631,9 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
       jobs.emplace_back(std::make_shared<JobTask>(perform_partition));
       actual_nodes.emplace_back(job_nodes_placement[input_partition_idx]);
     }
+  }
+  if (jobs) {
+    std::cout << "Starting perform_partition on " << jobs.size() << " jobs on node " << actual_nodes[0] << std::endl;
   }
   Hyrise::get().scheduler()->schedule_on_preferred_nodes_and_wait_for_tasks(jobs, actual_nodes);
   jobs.clear();
@@ -819,6 +825,9 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
     }
   }
 
+  if (jobs) {
+    std::cout << "Starting probe_partition on " << jobs.size() << " jobs on node " << job_nodes[0] << std::endl;
+  }
   Hyrise::get().scheduler()->schedule_on_preferred_nodes_and_wait_for_tasks(jobs, job_nodes);
 }
 
@@ -945,6 +954,10 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_containe
     }
   }
 
+  if (jobs) {
+    std::cout << "Starting probe_partition (semi anti) on " << jobs.size() << " jobs on node " << job_nodes[0]
+              << std::endl;
+  }
   Hyrise::get().scheduler()->schedule_on_preferred_nodes_and_wait_for_tasks(jobs, job_nodes);
 }
 

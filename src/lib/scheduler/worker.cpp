@@ -9,6 +9,7 @@
 #include <memory>
 #include <mutex>
 #include <random>
+#include <syncstream>
 #include <thread>
 #include <vector>
 
@@ -112,7 +113,8 @@ void Worker::_work() {
     return;
   }
 
-  std::cout << "Task scheduled on node " << task->node_id() << " executed node id " << _queue->node_id() << std::endl;
+  std::osyncstream(std::cout) << "Task scheduled on node " << task->node_id() << " executed node id "
+                              << _queue->node_id() << std::endl;
   task->execute();
 
   // This is part of the Scheduler shutdown system. Count the number of tasks a Worker executed to allow the
