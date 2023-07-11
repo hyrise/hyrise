@@ -39,12 +39,12 @@ class VariableStringDictionarySegment : public BaseDictionarySegment {
 
   std::optional<pmr_string> get_typed_value(const ChunkOffset chunk_offset) const {
     // performance critical - not in cpp to help with inlining
-    const auto value_id = _decompressor->get(chunk_offset);
-    if (value_id == null_value_id()) {
+    const auto offset = _decompressor->get(chunk_offset);
+    if (offset == _dictionary->size()) {
       return std::nullopt;
     }
 
-    return typed_value_of_value_id(ValueID{value_id});
+    return pmr_string(_dictionary->data() + offset);
   }
 
   ChunkOffset size() const final;

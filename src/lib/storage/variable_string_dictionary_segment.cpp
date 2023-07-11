@@ -84,12 +84,6 @@ ValueID VariableStringDictionarySegment<T>::lower_bound(const AllTypeVariant& va
     return INVALID_VALUE_ID;
   }
   return ValueID{static_cast<ValueID::base_type>(std::distance(args.cbegin(), it))};
-
-//  auto iter = std::lower_bound(_dictionary->cbegin(), _dictionary->cend(), typed_value);
-//  if (iter == _dictionary->cend()) {
-//    return INVALID_VALUE_ID;
-//  }
-//  return ValueID{static_cast<ValueID::base_type>(std::distance(_dictionary->cbegin(), iter))};
 }
 
 template <typename T>

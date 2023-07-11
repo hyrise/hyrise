@@ -80,7 +80,7 @@ class VariableStringDictionaryEncoder : public SegmentEncoder<VariableStringDict
       current_offset += value.size() + 1;
     }
 
-    auto chunk_offset_to_value_id = std::make_shared<pmr_vector<uint32_t>>(pmr_vector<uint32_t>(segment_size));
+    auto chunk_offset_to_klotz_offset = std::make_shared<pmr_vector<uint32_t>>(pmr_vector<uint32_t>(segment_size));
     auto offset_vector = std::make_shared<pmr_vector<uint32_t>>(pmr_vector<uint32_t>(dense_values.size()));
     offset_vector->shrink_to_fit();
 
@@ -89,32 +89,25 @@ class VariableStringDictionaryEncoder : public SegmentEncoder<VariableStringDict
       const auto here_value_id = string_value_ids[string];
       (*offset_vector)[here_value_id] = here_offset;
       for (const auto chunk_offset : chunk_offsets) {
-        (*chunk_offset_to_value_id)[chunk_offset] = here_value_id;
+        (*chunk_offset_to_klotz_offset)[chunk_offset] = here_offset;
       }
     }
 
-    const auto null_value_id = dense_values.size();
+    const auto null_offset = klotz->size();
     for (auto offset = ChunkOffset{0}; offset < segment_size; ++offset) {
       const auto is_null = null_values[offset];
       if (is_null) {
-        (*chunk_offset_to_value_id)[offset] = null_value_id;
+        (*chunk_offset_to_klotz_offset)[offset] = null_offset;
       }
     }
 
     const auto max_value_id = current_value_id;
-    const auto compressed_chunk_offset_to_value_id = std::shared_ptr<const BaseCompressedVector>(
-        compress_vector(*chunk_offset_to_value_id, SegmentEncoder<VariableStringDictionaryEncoder>::vector_compression_type(),
+    const auto compressed_chunk_offset_to_klotz_offset = std::shared_ptr<const BaseCompressedVector>(
+        compress_vector(*chunk_offset_to_klotz_offset, SegmentEncoder<VariableStringDictionaryEncoder>::vector_compression_type(),
                         allocator, {max_value_id}));
 
-    return std::make_shared<VariableStringDictionarySegment<pmr_string>>(klotz, compressed_chunk_offset_to_value_id, offset_vector);
+    return std::make_shared<VariableStringDictionarySegment<pmr_string>>(klotz, compressed_chunk_offset_to_klotz_offset, offset_vector);
   }
-
-// private:
-//  template <typename U, typename T>
-//  static ValueID _get_value_id(const U& dictionary, const T& value) {
-//    return ValueID{static_cast<ValueID::base_type>(
-//        std::distance(dictionary->cbegin(), std::lower_bound(dictionary->cbegin(), dictionary->cend(), value)))};
-//  }
 };
 
 }  // namespace hyrise

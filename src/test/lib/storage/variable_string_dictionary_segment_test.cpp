@@ -166,7 +166,7 @@ TEST_F(StorageVariableStringDictionarySegmentTest, TestLookup) {
   klotz->resize(data.size());
   std::memcpy(klotz->data(), data.data(), data.size());
   const pmr_vector<uint32_t> offsets{0, 6, 12, 22, 29};
-  const pmr_vector<uint32_t> attribute_vector{0, 0, 1, 3, 2, 4, 2};
+  const pmr_vector<uint32_t> attribute_vector{0, 0, 6, 22, 12, 29, 12};
   const auto segment =
       VariableStringDictionarySegment<pmr_string>{klotz,
                                       std::shared_ptr<const BaseCompressedVector>(compress_vector(
@@ -190,7 +190,17 @@ TEST_F(StorageVariableStringDictionarySegmentTest, TestLookup) {
     EXPECT_EQ(accessor(segment, ChunkOffset{5}), AllTypeVariant{""});
     EXPECT_EQ(accessor(segment, ChunkOffset{6}), AllTypeVariant{"Alexander"});
   }
-  // EXPECT_EQ(segment.)
+}
+
+TEST_F(StorageVariableStringDictionarySegmentTest, TestIterable) {
+  vs_str->append("Bill");
+  vs_str->append("Steve");
+  vs_str->append("Bill");
+  auto segment = ChunkEncoder::encode_segment(vs_str, DataType::String,
+                                              SegmentEncodingSpec{EncodingType::VariableStringDictionary});
+  auto dict_segment = std::dynamic_pointer_cast<VariableStringDictionarySegment<pmr_string>>(segment);
+
+  // resolve_data_and_segment_type(segment, [])
 }
 
 }  // namespace hyrise
