@@ -322,9 +322,8 @@ void WindowFunctionEvaluator::spawn_and_wait_per_hash(const PerHash<T>& data, au
 template <typename InputColumnType, WindowFunction window_function>
 ComputationStrategy WindowFunctionEvaluator::choose_computation_strategy() const {
   const auto& frame = frame_description();
-  const auto is_prefix_frame = frame.type == FrameType::Range && frame.start.unbounded &&
-                               frame.start.type == FrameBoundType::Preceding && !frame.end.unbounded &&
-                               frame.end.type == FrameBoundType::CurrentRow;
+  const auto is_prefix_frame = frame.start.unbounded && frame.start.type == FrameBoundType::Preceding &&
+                               !frame.end.unbounded && frame.end.type == FrameBoundType::CurrentRow;
   Assert(is_prefix_frame || !RankLike<window_function>, "Invalid frame for rank-like window function.");
 
   if (is_prefix_frame && SupportsOnePass<InputColumnType, window_function>)
