@@ -388,11 +388,10 @@ void WindowFunctionEvaluator::compute_window_function_one_pass(const HashPartiti
       const RelevantRowInformation* previous_row = nullptr;
 
       for (const auto& row : hash_partition) {
-        if (previous_row) {
-          if (std::is_neq(compare_with_null_equal(previous_row->partition_values, row.partition_values)))
-            state = State{};
-          else
-            state.update(*previous_row, row);
+        if (previous_row && std::is_eq(compare_with_null_equal(previous_row->partition_values, row.partition_values))) {
+          state.update(*previous_row, row);
+        } else {
+          state = State(row);
         }
         emit_computed_value(row.row_id, state.current_value());
         previous_row = &row;

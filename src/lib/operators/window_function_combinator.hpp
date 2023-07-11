@@ -13,6 +13,17 @@
 
 namespace hyrise {
 
+namespace {
+
+template <typename T>
+std::optional<T> as_optional(AllTypeVariant value) {
+  if (variant_is_null(value))
+    return std::nullopt;
+  return get<T>(value);
+}
+
+};  // namespace
+
 constexpr static auto rank_like_window_functions =
     std::array{WindowFunction::Rank, WindowFunction::DenseRank, WindowFunction::RowNumber, WindowFunction::PercentRank};
 
@@ -26,6 +37,35 @@ concept RankLike = is_rank_like(window_function);
 template <typename T, WindowFunction window_function>
 struct WindowFunctionCombinator {};
 
+template <typename T, typename Combinator>
+struct OnePassStateFromTreeLogicMixin {
+  // TODO(niklas): This currently assumes that tree nodes are optionals of the input value. Instead, the combinator should provide a `ToTreeNode` that replaces the current constructors
+
+  struct OnePassState {
+    using TreeNode = typename Combinator::TreeNode;
+
+    TreeNode value = Combinator::neutral_element;
+
+    OnePassState() = default;
+
+    explicit OnePassState(const WindowFunctionEvaluator::RelevantRowInformation& initial_row)
+        : value(as_optional<T>(initial_row.function_argument)) {}
+
+    auto current_value() const {
+      using Transformer = typename Combinator::QueryTransformer;
+
+      return Transformer{}(value);
+    }
+
+    void update([[maybe_unused]] const WindowFunctionEvaluator::RelevantRowInformation& previous_value,
+                const WindowFunctionEvaluator::RelevantRowInformation& current_value) {
+      using Combine = typename Combinator::Combine;
+
+      value = Combine{}(value, as_optional<T>(current_value.function_argument));
+    }
+  };
+};
+
 template <typename T>
 struct WindowFunctionCombinator<T, WindowFunction::Rank> {
   using ReturnType = typename WindowFunctionTraits<T, WindowFunction::Rank>::ReturnType;
@@ -33,6 +73,10 @@ struct WindowFunctionCombinator<T, WindowFunction::Rank> {
   struct OnePassState {
     ReturnType row_number = 1;
     ReturnType rank = 1;
+
+    OnePassState() = default;
+
+    explicit OnePassState([[maybe_unused]] const WindowFunctionEvaluator::RelevantRowInformation& initial_row) {}
 
     std::optional<ReturnType> current_value() const {
       return rank;
@@ -54,6 +98,10 @@ struct WindowFunctionCombinator<T, WindowFunction::DenseRank> {
   struct OnePassState {
     ReturnType rank = 1;
 
+    OnePassState() = default;
+
+    explicit OnePassState([[maybe_unused]] const WindowFunctionEvaluator::RelevantRowInformation& initial_row) {}
+
     std::optional<ReturnType> current_value() const {
       return rank;
     }
@@ -73,6 +121,10 @@ struct WindowFunctionCombinator<T, WindowFunction::RowNumber> {
   struct OnePassState {
     ReturnType row_number = 1;
 
+    OnePassState() = default;
+
+    explicit OnePassState([[maybe_unused]] const WindowFunctionEvaluator::RelevantRowInformation& initial_row) {}
+
     std::optional<ReturnType> current_value() const {
       return row_number;
     }
@@ -85,7 +137,8 @@ struct WindowFunctionCombinator<T, WindowFunction::RowNumber> {
 };
 
 template <typename T>
-struct WindowFunctionCombinator<T, WindowFunction::Sum> {
+struct WindowFunctionCombinator<T, WindowFunction::Sum>
+    : OnePassStateFromTreeLogicMixin<T, WindowFunctionCombinator<T, WindowFunction::Sum>> {
   using SumReturnType = typename WindowFunctionTraits<T, WindowFunction::Sum>::ReturnType;
 
   using TreeNode = std::optional<SumReturnType>;
@@ -95,22 +148,9 @@ struct WindowFunctionCombinator<T, WindowFunction::Sum> {
       return std::nullopt;
     return lhs.value_or(0) + rhs.value_or(0);
   });
-  constexpr static auto neutral_element = std::optional<T>();
+  constexpr static auto neutral_element = std::optional<SumReturnType>();
 
   using QueryTransformer = std::identity;
-
-  struct OnePassState {
-    std::optional<SumReturnType> sum{};
-
-    std::optional<SumReturnType> current_value() const {
-      return sum;
-    }
-
-    void update([[maybe_unused]] const WindowFunctionEvaluator::RelevantRowInformation& previous_value,
-                const WindowFunctionEvaluator::RelevantRowInformation& current_value) {
-      sum = Combine{}(sum, static_cast<SumReturnType>(get<T>(current_value.function_argument)));
-    }
-  };
 };
 
 template <typename T>
