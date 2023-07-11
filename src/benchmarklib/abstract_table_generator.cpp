@@ -5,7 +5,8 @@
 #include "hyrise.hpp"
 #include "import_export/binary/binary_parser.hpp"
 #include "import_export/binary/binary_writer.hpp"
-#include "memory/numa_memory_resource.hpp"
+// #include "memory/numa_memory_resource.hpp"
+#include "memory/jemalloc_numa_memory_resource.hpp"
 #include "operators/sort.hpp"
 #include "operators/table_wrapper.hpp"
 #include "scheduler/job_task.hpp"
@@ -287,16 +288,16 @@ void AbstractTableGenerator::generate_and_store() {
   if (_benchmark_config->relocate_numa) {
     // we need to keep the MemoryResources alive until their memory is deallocated, for some reason.
     auto num_nodes = static_cast<NodeID>(Hyrise::get().topology.nodes().size());
-    auto target_memory_resources = new std::vector<NumaMemoryResource>{};
+    auto target_memory_resources = new std::vector<JemallocNumaMemoryResource>{};
     for (auto node_id = NodeID{0}; node_id < num_nodes; node_id++) {
-      target_memory_resources->push_back(NumaMemoryResource(node_id));
+      target_memory_resources->push_back(JemallocNumaMemoryResource(node_id));
     }
 
     std::cout << "Relocate data onto " << num_nodes << " nodes" << std::endl;
 
     auto table_counter = u_int32_t{0};
 
-    std::map<std::string, size_t> column_allocations_mapping; 
+    // std::map<std::string, size_t> column_allocations_mapping; 
     for (auto& [table_name, table_info] : table_info_by_name) {
       auto& table = table_info.table;
       const auto target_node_id = NodeID{table_counter % num_nodes};
@@ -311,7 +312,8 @@ void AbstractTableGenerator::generate_and_store() {
       for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
         auto migrate_job = [&, chunk_id]() {
         const auto& chunk = table->get_chunk(chunk_id);
-        chunk->migrate(&target_memory_resources->at(target_node_id), column_allocations_mapping, table->column_names());
+        chunk->migrate(&target_memory_resources->at(target_node_id));
+        // chunk->migrate(&target_memory_resources->at(target_node_id), column_allocations_mapping, table->column_names());
         };
         jobs.emplace_back(std::make_shared<JobTask>(migrate_job));
       }
@@ -319,21 +321,21 @@ void AbstractTableGenerator::generate_and_store() {
       table_counter++;
       std::cout << " (" << timer.lap_formatted() << ")" << std::endl;
     }
-    size_t sum_allocations = 0; 
-    size_t sum_deallocations = 0; 
-    size_t sum_allocated_bytes = 0;
-    for(auto numa_memory_resource : *target_memory_resources){
-      sum_allocations += numa_memory_resource._num_allocations;
-      sum_allocated_bytes += numa_memory_resource._sum_allocated_bytes;
-      sum_deallocations += numa_memory_resource._num_deallocations;
-    } 
-    std::cout << "sum_allocations: " << sum_allocations << std::endl; 
-    std::cout << "sum_deallocations: " << sum_deallocations << std::endl; 
-    std::cout << "sum_allocated_bytes: " << sum_allocated_bytes << std::endl;
+    // size_t sum_allocations = 0; 
+    // size_t sum_deallocations = 0; 
+    // size_t sum_allocated_bytes = 0;
+    // for(auto numa_memory_resource : *target_memory_resources){
+    //   sum_allocations += numa_memory_resource._num_allocations;
+    //   sum_allocated_bytes += numa_memory_resource._sum_allocated_bytes;
+    //   sum_deallocations += numa_memory_resource._num_deallocations;
+    // } 
+    // std::cout << "sum_allocations: " << sum_allocations << std::endl; 
+    // std::cout << "sum_deallocations: " << sum_deallocations << std::endl; 
+    // std::cout << "sum_allocated_bytes: " << sum_allocated_bytes << std::endl;
 
-    for(auto [column, num_allocations] : column_allocations_mapping){
-      std::cout << column << ": " << num_allocations << std::endl; 
-    }
+    // for(auto [column, num_allocations] : column_allocations_mapping){
+    //   std::cout << column << ": " << num_allocations << std::endl; 
+    // }
   }
 
   std::cout << "Numa-Relocation took:  " << global_timer.lap_formatted() << std::endl; 
