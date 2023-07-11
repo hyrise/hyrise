@@ -193,14 +193,28 @@ TEST_F(StorageVariableStringDictionarySegmentTest, TestLookup) {
 }
 
 TEST_F(StorageVariableStringDictionarySegmentTest, TestIterable) {
-  vs_str->append("Bill");
-  vs_str->append("Steve");
-  vs_str->append("Bill");
-  auto segment = ChunkEncoder::encode_segment(vs_str, DataType::String,
+  auto value_segment = std::make_shared<ValueSegment<pmr_string>>(true);
+  value_segment->append("Bill");
+  value_segment->append("");
+  value_segment->append("Steve");
+  value_segment->append(NULL_VALUE);
+  value_segment->append("Bill");
+  auto segment = ChunkEncoder::encode_segment(value_segment, DataType::String,
                                               SegmentEncodingSpec{EncodingType::VariableStringDictionary});
   auto dict_segment = std::dynamic_pointer_cast<VariableStringDictionarySegment<pmr_string>>(segment);
 
-  // resolve_data_and_segment_type(segment, [])
+  auto iterable = create_iterable_from_segment<pmr_string>(*dict_segment);
+  auto current_chunk_offset = ChunkOffset{0};
+  iterable.for_each([&](const auto& value) {
+      const auto expected_value = value_segment->operator[](current_chunk_offset);
+      current_chunk_offset++;
+      if (variant_is_null(expected_value)) {
+        EXPECT_TRUE(value.is_null());
+        return;
+      }
+      ASSERT_FALSE(value.is_null());
+      EXPECT_EQ(value.value(), boost::get<pmr_string>(expected_value));
+  });
 }
 
 }  // namespace hyrise
