@@ -190,7 +190,8 @@ struct WindowFunctionCombinator<T, WindowFunction::Avg> {
 };
 
 template <typename T>
-struct WindowFunctionCombinator<T, WindowFunction::Min> {
+struct WindowFunctionCombinator<T, WindowFunction::Min>
+    : OnePassStateFromTreeLogicMixin<T, WindowFunctionCombinator<T, WindowFunction::Min>> {
   using MinReturnType = typename WindowFunctionTraits<T, WindowFunction::Min>::ReturnType;
   using TreeNode = std::optional<MinReturnType>;
 
@@ -206,7 +207,8 @@ struct WindowFunctionCombinator<T, WindowFunction::Min> {
 };
 
 template <typename T>
-struct WindowFunctionCombinator<T, WindowFunction::Max> {
+struct WindowFunctionCombinator<T, WindowFunction::Max>
+    : OnePassStateFromTreeLogicMixin<T, WindowFunctionCombinator<T, WindowFunction::Max>> {
   using MaxReturnType = typename WindowFunctionTraits<T, WindowFunction::Max>::ReturnType;
   using TreeNode = std::optional<MaxReturnType>;
 
