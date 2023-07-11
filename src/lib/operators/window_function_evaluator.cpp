@@ -167,34 +167,38 @@ WindowFunctionEvaluator::HashPartitionedData partition_and_sort_chunk(const Chun
                                                                       std::span<const ColumnID> order_column_ids,
                                                                       const ColumnID function_argument_column_id,
                                                                       auto comparator) {
+  const auto chunk_size = chunk.size();
+
+  const auto collect_values_of_columns = [&chunk, chunk_size](std::span<const ColumnID> column_ids) {
+    auto values = std::vector(chunk_size, std::vector(column_ids.size(), NULL_VALUE));
+    for (auto column_id_index = 0u; column_id_index < column_ids.size(); ++column_id_index) {
+      const auto segment = chunk.get_segment(column_ids[column_id_index]);
+      segment_iterate(*segment, [&](const auto& position) {
+        if (!position.is_null())
+          values[position.chunk_offset()][column_id_index] = position.value();
+      });
+    }
+    return values;
+  };
+
+  auto partition_values = collect_values_of_columns(partition_column_ids);
+  auto order_values = collect_values_of_columns(order_column_ids);
+
+  auto function_argument_values = std::vector<AllTypeVariant>(chunk_size, NULL_VALUE);
+  if (function_argument_column_id != INVALID_COLUMN_ID) {
+    segment_iterate(*chunk.get_segment(function_argument_column_id), [&](const auto& position) {
+      if (!position.is_null())
+        function_argument_values[position.chunk_offset()] = position.value();
+    });
+  }
+
   auto result = WindowFunctionEvaluator::HashPartitionedData{};
 
-  auto partition_segments = std::vector<std::shared_ptr<AbstractSegment>>();
-  partition_segments.reserve(partition_column_ids.size());
-  for (const auto column_id : partition_column_ids)
-    partition_segments.push_back(chunk.get_segment(column_id));
-
-  auto order_segments = std::vector<std::shared_ptr<AbstractSegment>>();
-  order_segments.reserve(order_column_ids.size());
-  for (const auto column_id : order_column_ids)
-    order_segments.push_back(chunk.get_segment(column_id));
-
-  for (auto chunk_offset = ChunkOffset(0), row_count = chunk.size(); chunk_offset < row_count; ++chunk_offset) {
-    auto partition_values = std::vector<AllTypeVariant>();
-    for (const auto& segment : partition_segments)
-      partition_values.push_back((*segment)[chunk_offset]);
-    auto order_values = std::vector<AllTypeVariant>();
-    for (const auto& segment : order_segments)
-      order_values.push_back((*segment)[chunk_offset]);
-
-    auto function_argument = function_argument_column_id != INVALID_COLUMN_ID
-                                 ? (*chunk.get_segment(function_argument_column_id))[chunk_offset]
-                                 : NULL_VALUE;
-
+  for (auto chunk_offset = ChunkOffset(0); chunk_offset < chunk_size; ++chunk_offset) {
     auto row_info = WindowFunctionEvaluator::RelevantRowInformation{
-        .partition_values = std::move(partition_values),
-        .order_values = std::move(order_values),
-        .function_argument = std::move(function_argument),
+        .partition_values = std::move(partition_values[chunk_offset]),
+        .order_values = std::move(order_values[chunk_offset]),
+        .function_argument = std::move(function_argument_values[chunk_offset]),
         .row_id = RowID(chunk_id, chunk_offset),
     };
     const auto hash_partition = boost::hash_range(row_info.partition_values.begin(), row_info.partition_values.end()) &
