@@ -26,7 +26,6 @@ class NumaExtentHooks {
 class JemallocNumaMemoryResource : public boost::container::pmr::memory_resource {
  public:
   JemallocNumaMemoryResource(const NodeID node_id);
-  ~JemallocNumaMemoryResource() override;
 
   void* do_allocate(std::size_t bytes, std::size_t alignment) override;
   void do_deallocate(void* p, std::size_t bytes, std::size_t alignment) override;

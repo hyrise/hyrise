@@ -61,8 +61,6 @@ void* JemallocNumaMemoryResource::do_allocate(std::size_t bytes, std::size_t ali
   return mallocx(bytes, _allocation_flags);
 }
 
-JemallocNumaMemoryResource::~JemallocNumaMemoryResource() {}
-
 void JemallocNumaMemoryResource::do_deallocate(void* pointer, std::size_t bytes, std::size_t alignment) {
   // numa_free(pointer, bytes);
   sdallocx(pointer, bytes, _allocation_flags);
