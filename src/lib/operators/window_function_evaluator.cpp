@@ -15,7 +15,9 @@
 #include "storage/value_segment.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
+#include "utils/format_duration.hpp"
 #include "utils/segment_tree.hpp"
+#include "utils/timer.hpp"
 #include "window_function_combinator.hpp"
 #include "window_function_evaluator.hpp"
 
@@ -27,7 +29,8 @@ WindowFunctionEvaluator::WindowFunctionEvaluator(
     const std::shared_ptr<const AbstractOperator>& input_operator, std::vector<ColumnID> init_partition_by_column_ids,
     std::vector<ColumnID> init_order_by_column_ids, ColumnID init_function_argument_column_id,
     std::shared_ptr<WindowFunctionExpression> init_window_funtion_expression)
-    : AbstractReadOnlyOperator(OperatorType::WindowFunction, input_operator),
+    : AbstractReadOnlyOperator(OperatorType::WindowFunction, input_operator, nullptr,
+                               std::make_unique<PerformanceData>()),
       _partition_by_column_ids(std::move(init_partition_by_column_ids)),
       _order_by_column_ids(std::move(init_order_by_column_ids)),
       _function_argument_column_id(std::move(init_function_argument_column_id)),
@@ -64,7 +67,12 @@ template <typename InputColumnType, WindowFunction window_function>
 std::shared_ptr<const Table> WindowFunctionEvaluator::_templated_on_execute() {
   const auto input_table = left_input_table();
   const auto chunk_count = input_table->chunk_count();
+
+  auto timer = Timer{};
+  auto& window_performance_data = dynamic_cast<PerformanceData&>(*performance_data);
+
   auto partitioned_data = partition_and_sort();
+  window_performance_data.set_step_runtime(OperatorSteps::PartitionAndSort, timer.lap());
 
   using OutputColumnType = typename WindowFunctionTraits<InputColumnType, window_function>::ReturnType;
 
@@ -86,14 +94,19 @@ std::shared_ptr<const Table> WindowFunctionEvaluator::_templated_on_execute() {
 
   switch (choose_computation_strategy<InputColumnType, window_function>()) {
     case ComputationStrategy::OnePass:
+      window_performance_data.one_pass = true;
       compute_window_function_one_pass<InputColumnType, window_function>(partitioned_data, emit_computed_value);
       break;
     case ComputationStrategy::SegmentTree:
+      window_performance_data.one_pass = false;
       compute_window_function_segment_tree<InputColumnType, window_function>(partitioned_data, emit_computed_value);
       break;
   }
+  window_performance_data.set_step_runtime(OperatorSteps::Compute, timer.lap());
 
-  return annotate_input_table(std::move(segment_data_for_output_column));
+  const auto annotated_table = annotate_input_table(std::move(segment_data_for_output_column));
+  window_performance_data.set_step_runtime(OperatorSteps::Annotate, timer.lap());
+  return annotated_table;
 }
 
 std::shared_ptr<const Table> WindowFunctionEvaluator::_on_execute() {
@@ -495,6 +508,14 @@ std::shared_ptr<const Table> WindowFunctionEvaluator::annotate_input_table(
   }
 
   return std::make_shared<Table>(output_column_definitions, input_table->type(), std::move(output_chunks));
+}
+
+void WindowFunctionEvaluator::PerformanceData::output_to_stream(std::ostream& stream,
+                                                                DescriptionMode description_mode) const {
+  OperatorPerformanceData<OperatorSteps>::output_to_stream(stream, description_mode);
+
+  const auto separator = (description_mode == DescriptionMode::SingleLine ? ' ' : '\n');
+  stream << separator << "OnePass: " << one_pass << ".";
 }
 
 }  // namespace hyrise
