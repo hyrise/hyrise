@@ -12,6 +12,7 @@
 #include "expression/window_expression.hpp"
 #include "expression/window_function_expression.hpp"
 #include "operators/aggregate/window_function_traits.hpp"
+#include "operators/operator_performance_data.hpp"
 #include "storage/table.hpp"
 
 namespace hyrise {
@@ -42,6 +43,13 @@ class WindowFunctionEvaluator : public AbstractReadOnlyOperator {
 
   template <typename T>
   static void spawn_and_wait_per_hash(const PerHash<T>& data, auto&& per_hash_function);
+
+  enum class OperatorSteps : uint8_t { PartitionAndSort, Compute, Annotate };
+
+  struct PerformanceData : public OperatorPerformanceData<OperatorSteps> {
+    void output_to_stream(std::ostream& stream, DescriptionMode description_mode) const override;
+    bool one_pass;
+  };
 
   struct RelevantRowInformation {
     std::vector<AllTypeVariant> partition_values;
