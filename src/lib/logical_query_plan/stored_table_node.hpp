@@ -62,4 +62,3 @@ class StoredTableNode : public EnableMakeForLQPNode<StoredTableNode>, public Abs
 };
 
 }  // namespace hyrise
-

@@ -185,7 +185,6 @@ void AbstractTask::_on_predecessor_done() {
 
       // Instead of adding the current task to the queue, try to execute it immediately on the same worker as the last
       // predecessor. This should improve cache locality and reduce the scheduling costs.
-      // std::printf("$$$$$\n");
       current_worker->execute_next(shared_from_this());
     } else {
       if (is_scheduled()) {

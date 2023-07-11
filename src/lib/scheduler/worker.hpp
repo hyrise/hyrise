@@ -14,8 +14,7 @@ namespace hyrise {
 class TaskQueue;
 
 /**
- * To be executed on a separate Thread, fetches and executes tasks until the queue is empty AND the shutdown flag is set
- * Ideally there should be one Worker actively doing work per CPU, but multiple might be active occasionally
+ * To be executed on a separate thread, fetches and executes tasks until the queue is empty.
  */
 class Worker : public std::enable_shared_from_this<Worker>, private Noncopyable {
   friend class AbstractScheduler;
@@ -23,7 +22,7 @@ class Worker : public std::enable_shared_from_this<Worker>, private Noncopyable 
  public:
   static std::shared_ptr<Worker> get_this_thread_worker();
 
-  Worker(const std::shared_ptr<TaskQueue>& queue, WorkerID worker_id, CpuID cpu_id, std::atomic_bool& shutdown_flag);
+  Worker(const std::shared_ptr<TaskQueue>& queue, WorkerID worker_id, CpuID cpu_id);
 
   /**
    * Unique ID of a worker. Currently not in use, but really helpful for debugging.

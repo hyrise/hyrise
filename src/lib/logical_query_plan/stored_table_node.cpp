@@ -204,4 +204,3 @@ bool StoredTableNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNo
 }
 
 }  // namespace hyrise
-

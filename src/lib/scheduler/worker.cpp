@@ -27,14 +27,14 @@ using namespace hyrise;  // NOLINT(build/namespaces)
  */
 thread_local std::weak_ptr<Worker> this_thread_worker;  // NOLINT (clang-tidy wants this const)
 
-bool get_task(const bool check_only_local_queue, const std::atomic_bool& shutdown_flag,
-              std::shared_ptr<AbstractTask>& task, std::shared_ptr<AbstractTask>& next_task,
-              std::shared_ptr<TaskQueue>& local_queue, const std::vector<std::shared_ptr<TaskQueue>>& all_queues) {
+bool get_task(const bool check_only_local_queue, std::shared_ptr<AbstractTask>& task,
+              std::shared_ptr<AbstractTask>& next_task, std::shared_ptr<TaskQueue>& local_queue,
+              const std::vector<std::shared_ptr<TaskQueue>>& all_queues) {
   // If execute_next has been called, run that task first, otherwise try to retrieve a task from the queue.
   if (next_task) {
-      task = std::move(next_task);
-      next_task = nullptr;
-      return true;
+    task = std::move(next_task);
+    next_task = nullptr;
+    return true;
   }
 
   if (local_queue->semaphore.tryWait()) {
@@ -73,9 +73,8 @@ std::shared_ptr<Worker> Worker::get_this_thread_worker() {
   return ::this_thread_worker.lock();
 }
 
-Worker::Worker(const std::shared_ptr<TaskQueue>& queue, WorkerID worker_id, CpuID cpu_id,
-               std::atomic_bool& shutdown_flag)
-    : _queue(queue), _id(worker_id), _cpu_id(cpu_id), _shutdown_flag(shutdown_flag) {
+Worker::Worker(const std::shared_ptr<TaskQueue>& queue, WorkerID worker_id, CpuID cpu_id)
+    : _queue(queue), _id(worker_id), _cpu_id(cpu_id) {
   // Generate a random distribution from 0-99 for later use, see below
   _random.resize(100);
   std::iota(_random.begin(), _random.end(), 0);
@@ -105,24 +104,21 @@ void Worker::operator()() {
     // Worker is allowed to sleep (when queue is empty) as long as the scheduler is not shutting down.
     _work(AllowSleep::Yes);
   }
-  // std::printf("Worker with id %lu ended ().\n", static_cast<size_t>(_id));
 }
 
 void Worker::_work(const AllowSleep allow_sleep) {
   const auto& queues = Hyrise::get().scheduler()->queues();
 
   auto task = std::shared_ptr<AbstractTask>{};
-  const auto got_local_task = get_task(true, _shutdown_flag, task, _next_task, _queue, queues);
+  const auto got_local_task = get_task(true, task, _next_task, _queue, queues);
   if (!got_local_task) {
-    const auto got_distant_task = get_task(false, _shutdown_flag, task, _next_task, _queue, queues);
+    const auto got_distant_task = get_task(false, task, _next_task, _queue, queues);
     if (!got_distant_task) {
       // If there is no ready task neither in the local queue nor in any other, the worker waits for a new task to be
       // pushed to the own queue. The waiting is skipped in case the scheduler is shutting down or sleep is not allowed
       //  (e.g., when _work() is called for a known number of unfinished jobs, see wait_for_tasks()).
-      if (allow_sleep == AllowSleep::Yes && !get_task(true, _shutdown_flag, task, _next_task, _queue, queues)) {
-        // std::printf("Worker with id %lu goes to sleep.\n", static_cast<size_t>(_id));
+      if (allow_sleep == AllowSleep::Yes && !get_task(true, task, _next_task, _queue, queues)) {
         _queue->semaphore.wait();
-        // std::printf("Worker with id %lu was woken up.\n", static_cast<size_t>(_id));
         task = _queue->pull();
       }
     }
@@ -140,12 +136,9 @@ void Worker::_work(const AllowSleep allow_sleep) {
 
   task->execute();
 
-  // std::printf("Worker with id %lu checks for shutdown.\n", static_cast<size_t>(_id));
   if (task->is_shutdown_task()) {
-    // std::printf("Worker with id %lu got a shutdown task.\n", static_cast<size_t>(_id));
     _active = false;
   }
-  // std::printf("/Worker with id %lu checked for shutdown.\n", static_cast<size_t>(_id));
 
   // This is part of the Scheduler shutdown system. Count the number of tasks a Worker executed to allow the
   // Scheduler to determine whether all tasks finished

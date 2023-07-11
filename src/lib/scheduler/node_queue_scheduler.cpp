@@ -63,7 +63,6 @@ void NodeQueueScheduler::begin() {
 }
 
 void NodeQueueScheduler::wait_for_all_tasks() {
-  auto wait_loops = size_t{0};
   while (true) {
     auto num_finished_tasks = uint64_t{0};
     for (const auto& worker : _workers) {
@@ -74,12 +73,7 @@ void NodeQueueScheduler::wait_for_all_tasks() {
       break;
     }
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(1));
-
-    ++wait_loops;
-    if (wait_loops > 1'000) {
-      Fail("Time out during wait_for_all_tasks().");
-    }
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
   }
 
   for (auto& queue : _queues) {
@@ -91,6 +85,7 @@ void NodeQueueScheduler::wait_for_all_tasks() {
       Assert(queue_check_runs < 1'000, "Queue is not empty but all registered tasks have already been processed.");
 
       // Explicitly signal workers to work on remaining jobs.
+      // TODO(Martin): still needed?
       // queue->signal(1);
 
       std::this_thread::sleep_for(std::chrono::milliseconds(1));
@@ -100,7 +95,7 @@ void NodeQueueScheduler::wait_for_all_tasks() {
 }
 
 void NodeQueueScheduler::finish() {
-  // Lock finish() to ensure that the shutdown tasks are not send twice (we later check for empty queues).
+  // Lock finish() to ensure that the shutdown tasks are not sent twice.
   auto lock = std::lock_guard<std::mutex>{_finish_mutex};
 
   if (!_active) {
@@ -115,70 +110,24 @@ void NodeQueueScheduler::finish() {
     const auto node_worker_count = _workers_per_node[node_id];
     for (auto worker_id = size_t{0}; worker_id < node_worker_count; ++worker_id) {
       // Create a shutdown task for every worker.
-      auto job_task = std::make_shared<JobTask>([&]() { --workers_shut_down; },
-                                SchedulePriority::Default, false);
+      auto job_task = std::make_shared<JobTask>([&]() { --workers_shut_down; }, SchedulePriority::Default, false);
       job_task->set_as_shutdown_task();
       job_task->schedule(node_id);
-      // std::printf("scheduling a task for worker #%zu on node #%zu\n",
-      //      worker_id, static_cast<size_t>(node_id));
     }
   }
 
-  // for (auto worker_id = size_t{0}; worker_id < _worker_count; ++worker_id) {
-  //   auto job_task = std::make_shared<JobTask>([&]() { ++workers_shut_down; });
-  //   job_task->set_as_shutdown_task();
-  //   job_task->schedule();
-  //   std::cout << "Scheduled shut down task #" << worker_id << std::endl;
-  // }
-
-  // for (auto& queue : _queues) {
-  //   auto queue_check_runs = size_t{0};
-  //   while (!queue->empty()) {
-
-  //     std::printf("workers: %zu && workers_shut_down: %u\n", _worker_count, workers_shut_down.load());
-  //     // The following assert checks that we are not looping forever. The empty() check can be inaccurate for
-       // concurrent queues when many tiny tasks have been scheduled (see MergeSort scheduler test). When this assert is
-       // triggered in other situations, there have probably been new tasks added after wait_for_all_tasks() was called.
-  //     Assert(queue_check_runs < 1'000, "Queue is not empty but all registered tasks have already been processed.");
-
-  //     // Explicitly signal workers to work on remaining jobs.
-  //     queue->signal(1);
-
-  //     std::this_thread::sleep_for(std::chrono::milliseconds(1));
-  //     ++queue_check_runs;
-  //   }
-  // }
-
-
   auto check_runs = size_t{0};
-  while (workers_shut_down.load(std::memory_order::relaxed) > 0)  {
+  while (workers_shut_down.load(std::memory_order::relaxed) > 0) {
     Assert(check_runs < 1'000, "Time out: not all shut down have been processed.");
-    if (check_runs > 50 && workers_shut_down.load(std::memory_order::relaxed) > 0) {
-      auto queue_info = std::stringstream{};
-      queue_info << "Queue sizes: \n\t";
-      for (const auto& queue : _queues) {
-        queue_info << queue->estimate_load() << "\t";
-      }
-      queue_info << "\n\t";
-      for (const auto& queue : _queues) {
-        queue_info << queue->semaphore.availableApprox() << "\t";
-      }
-
-      std::printf("Workers count: %zu and workers_shut_down remaining: %zu\n%s\n\n", _worker_count,
-                  static_cast<size_t>(workers_shut_down.load()), queue_info.str().c_str());
-    }
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
     ++check_runs;
   }
 
-
   _active = false;
 
-  // std::cout << "Joining" << std::endl;
   for (auto& worker : _workers) {
     worker->join();
   }
-  // std::cout << "/Joining" << std::endl;
 
   _workers = {};
   _queues = {};

@@ -366,7 +366,7 @@ TEST_F(SchedulerTest, MergeSort) {
   vector_to_sort.reserve(ITEM_COUNT);
   for (auto i = size_t{0}; i < ITEM_COUNT / 5; ++i) {
     for (auto j = size_t{0}; j < 5; ++j) {
-      vector_to_sort.push_back(i*5 + (4-j));
+      vector_to_sort.push_back(i * 5 + (4 - j));
     }
   }
 
