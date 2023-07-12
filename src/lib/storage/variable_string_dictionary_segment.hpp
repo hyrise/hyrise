@@ -22,8 +22,8 @@ class VariableStringDictionarySegment : public AbstractEncodedSegment {
   VariableStringDictionarySegment(const std::shared_ptr<const pmr_vector<char>>& dictionary,
                                   const std::shared_ptr<const BaseCompressedVector>& attribute_vector);
 
-  // TODO:: remove - use in binary Writer
-  VariableStringDictionarySegment() : AbstractEncodedSegment(DataType::String){};
+  // TODO(student): remove - use in binary Writer
+  VariableStringDictionarySegment() : AbstractEncodedSegment(DataType::String) {}
 
   /**
    * @defgroup AbstractSegment interface

@@ -65,7 +65,7 @@ class VariableStringDictionaryEncoder : public SegmentEncoder<VariableStringDict
       total_size += value.size() + 1;
     }
 
-    // TODO::(us) reserve instead of resize, beware null terminators
+    // TODO(student): Reserve instead of resize, beware null terminators.
     auto klotz = std::make_shared<pmr_vector<char>>(pmr_vector<char>(total_size));
     // We assume segment size up to 4 GByte.
     auto string_offsets = std::unordered_map<pmr_string, uint32_t>();
@@ -84,7 +84,6 @@ class VariableStringDictionaryEncoder : public SegmentEncoder<VariableStringDict
 
     for (const auto& [string, chunk_offsets] : string_to_chunk_offsets) {
       const auto here_offset = string_offsets[string];
-      const auto here_value_id = string_value_ids[string];
       for (const auto chunk_offset : chunk_offsets) {
         (*chunk_offset_to_klotz_offset)[chunk_offset] = here_offset;
       }

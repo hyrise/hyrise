@@ -62,7 +62,7 @@ TEST_F(StorageVariableStringDictionarySegmentTest, LongStrings) {
   auto dict_segment = std::dynamic_pointer_cast<VariableStringDictionarySegment<pmr_string>>(segment);
 
   // Test sorting
-  // TODO: Here
+  // TODO(student): Find out what is being tested here and fix these.
   //  EXPECT_EQ(*(dict->begin()), "QuiteShort");
   //  EXPECT_EQ(*(dict->begin() + 1), "Short");
   //  EXPECT_EQ(*(dict->begin() + 2), "ThisIsAVeryLongStringThisIsAVeryLongStringThisIsAVeryLongString");

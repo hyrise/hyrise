@@ -551,6 +551,7 @@ set(
     storage/value_segment/null_value_vector_iterable.hpp
     storage/value_segment/value_segment_iterable.hpp
     storage/variable_string_dictionary/variable_string_dictionary_encoder.hpp
+    storage/variable_string_dictionary/variable_string_dictionary_iterable.hpp
     storage/variable_string_dictionary_segment.cpp
     storage/variable_string_dictionary_segment.hpp
     storage/vector_compression/base_compressed_vector.hpp

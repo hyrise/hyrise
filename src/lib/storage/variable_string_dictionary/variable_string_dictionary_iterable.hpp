@@ -111,7 +111,7 @@ class VariableStringDictionarySegmentIterable
         return SegmentPosition<T>{T{}, true, _chunk_offset};
       }
 
-      // TODO: Remove &* Hack to get pointer to iterator's data
+      // TODO(student): Remove &* Hack to get pointer to iterator's data
       return SegmentPosition<T>{T{&*(_klotz_begin_it + offset)}, false, _chunk_offset};
     }
 
@@ -122,7 +122,6 @@ class VariableStringDictionarySegmentIterable
     ChunkOffset _chunk_offset;
   };
 
-  // TODO: Add offset_vector also here.
   template <typename Decompressor, typename DictionaryIteratorType, typename PosListIteratorType>
   class PointAccessIterator : public AbstractPointAccessSegmentIterator<
                                   PointAccessIterator<Decompressor, DictionaryIteratorType, PosListIteratorType>,
