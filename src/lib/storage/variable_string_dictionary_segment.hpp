@@ -16,14 +16,14 @@ class BaseCompressedVector;
  *
  * Uses vector compression schemes for its attribute vector.
  */
-template<typename T>
+template <typename T>
 class VariableStringDictionarySegment : public AbstractEncodedSegment {
  public:
   VariableStringDictionarySegment(const std::shared_ptr<const pmr_vector<char>>& dictionary,
                                   const std::shared_ptr<const BaseCompressedVector>& attribute_vector);
 
   // TODO:: remove - use in binary Writer
-  VariableStringDictionarySegment() : AbstractEncodedSegment(DataType::String) {};
+  VariableStringDictionarySegment() : AbstractEncodedSegment(DataType::String){};
 
   /**
    * @defgroup AbstractSegment interface
@@ -62,8 +62,8 @@ class VariableStringDictionarySegment : public AbstractEncodedSegment {
    */
   EncodingType encoding_type() const final;
 
-  const std::shared_ptr<const BaseCompressedVector> &attribute_vector() const;
-  const std::shared_ptr<const pmr_vector<char>> &klotz() const;
+  const std::shared_ptr<const BaseCompressedVector>& attribute_vector() const;
+  const std::shared_ptr<const pmr_vector<char>>& klotz() const;
 
  protected:
   const std::shared_ptr<const pmr_vector<char>> _klotz;

@@ -3,14 +3,15 @@
 #include <type_traits>
 
 #include "storage/abstract_segment.hpp"
-#include "storage/variable_string_dictionary_segment.hpp"
 #include "storage/segment_iterables.hpp"
+#include "storage/variable_string_dictionary_segment.hpp"
 #include "storage/vector_compression/resolve_compressed_vector_type.hpp"
 
 namespace hyrise {
 
 template <typename T>
-class VariableStringDictionarySegmentIterable : public PointAccessibleSegmentIterable<VariableStringDictionarySegmentIterable<T>> {
+class VariableStringDictionarySegmentIterable
+    : public PointAccessibleSegmentIterable<VariableStringDictionarySegmentIterable<T>> {
  public:
   using ValueType = T;
   using Dictionary = pmr_vector<char>;
@@ -27,9 +28,8 @@ class VariableStringDictionarySegmentIterable : public PointAccessibleSegmentIte
       using CompressedVectorIterator = decltype(vector.cbegin());
       using DictionaryIteratorType = decltype(_klotz->cbegin());
 
-
-      auto begin = Iterator<CompressedVectorIterator, DictionaryIteratorType>{
-          _klotz->cbegin(), _klotz->size(), vector.cbegin(), ChunkOffset{0u}};
+      auto begin = Iterator<CompressedVectorIterator, DictionaryIteratorType>{_klotz->cbegin(), _klotz->size(),
+                                                                              vector.cbegin(), ChunkOffset{0u}};
       auto end = Iterator<CompressedVectorIterator, DictionaryIteratorType>{
           _klotz->cbegin(), _klotz->size(), vector.cend(), static_cast<ChunkOffset>(_segment.size())};
 
@@ -42,19 +42,20 @@ class VariableStringDictionarySegmentIterable : public PointAccessibleSegmentIte
     _segment.access_counter[SegmentAccessCounter::access_type(*position_filter)] += position_filter->size();
     _segment.access_counter[SegmentAccessCounter::AccessType::Dictionary] += position_filter->size();
 
-    resolve_compressed_vector_type(*_segment.attribute_vector(), [this, &functor, &position_filter](const auto& vector) {
-      using Decompressor = std::decay_t<decltype(vector.create_decompressor())>;
-      using DictionaryIteratorType = decltype(_klotz->cbegin());
+    resolve_compressed_vector_type(
+        *_segment.attribute_vector(), [this, &functor, &position_filter](const auto& vector) {
+          using Decompressor = std::decay_t<decltype(vector.create_decompressor())>;
+          using DictionaryIteratorType = decltype(_klotz->cbegin());
 
-      using PosListIteratorType = decltype(position_filter->cbegin());
-      auto begin = PointAccessIterator<Decompressor, DictionaryIteratorType, PosListIteratorType>{
-          _klotz->cbegin(), _klotz->size(), vector.create_decompressor(), position_filter->cbegin(),
-          position_filter->cbegin()};
-      auto end = PointAccessIterator<Decompressor, DictionaryIteratorType, PosListIteratorType>{
-          _klotz->cbegin(), _klotz->size(), vector.create_decompressor(), position_filter->cbegin(),
-          position_filter->cend()};
-      functor(begin, end);
-    });
+          using PosListIteratorType = decltype(position_filter->cbegin());
+          auto begin = PointAccessIterator<Decompressor, DictionaryIteratorType, PosListIteratorType>{
+              _klotz->cbegin(), _klotz->size(), vector.create_decompressor(), position_filter->cbegin(),
+              position_filter->cbegin()};
+          auto end = PointAccessIterator<Decompressor, DictionaryIteratorType, PosListIteratorType>{
+              _klotz->cbegin(), _klotz->size(), vector.create_decompressor(), position_filter->cbegin(),
+              position_filter->cend()};
+          functor(begin, end);
+        });
   }
 
   size_t _on_size() const {

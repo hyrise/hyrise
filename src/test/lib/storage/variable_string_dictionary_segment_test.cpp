@@ -32,7 +32,6 @@ TEST_F(StorageVariableStringDictionarySegmentTest, CompressSegmentString) {
   // Test attribute_vector size
   EXPECT_EQ(dict_segment->size(), 6u);
   EXPECT_EQ(dict_segment->attribute_vector()->size(), 6u);
-
 }
 
 TEST_F(StorageVariableStringDictionarySegmentTest, Decode) {
@@ -99,7 +98,8 @@ TEST_F(StorageVariableStringDictionarySegmentTest, MemoryUsageEstimation) {
   vs_str->append("C");
   const auto compressed_segment = ChunkEncoder::encode_segment(
       vs_str, DataType::String, SegmentEncodingSpec{EncodingType::VariableStringDictionary});
-  const auto dictionary_segment = std::dynamic_pointer_cast<VariableStringDictionarySegment<pmr_string>>(compressed_segment);
+  const auto dictionary_segment =
+      std::dynamic_pointer_cast<VariableStringDictionarySegment<pmr_string>>(compressed_segment);
 
   static constexpr auto size_of_attribute_vector_entry = 1u;
   // 3u for letters and 3u for null terminators
@@ -119,19 +119,19 @@ TEST_F(StorageVariableStringDictionarySegmentTest, TestLookup) {
   std::memcpy(klotz->data(), data.data(), data.size());
   const pmr_vector<uint32_t> offsets{0, 6, 12, 22, 29};
   const pmr_vector<uint32_t> attribute_vector{0, 0, 6, 22, 12, 29, 12};
-  const auto segment =
-      VariableStringDictionarySegment<pmr_string>{klotz,
-                                      std::shared_ptr<const BaseCompressedVector>(compress_vector(
-                                          attribute_vector, VectorCompressionType::FixedWidthInteger, allocator, {4}))};
+  const auto segment = VariableStringDictionarySegment<pmr_string>{
+      klotz, std::shared_ptr<const BaseCompressedVector>(
+                 compress_vector(attribute_vector, VectorCompressionType::FixedWidthInteger, allocator, {4}))};
 
-  auto accessors = std::vector<std::function<AllTypeVariant(const VariableStringDictionarySegment<pmr_string>&, const ChunkOffset)>>{
-                                           +[](const VariableStringDictionarySegment<pmr_string>& segment, const ChunkOffset offset) {
-                                             const auto maybe = segment.get_typed_value(offset);
-                                             return maybe ? maybe.value() : NULL_VALUE;
-                                           },
-                                           +[](const VariableStringDictionarySegment<pmr_string>& segment, const ChunkOffset offset) {
-                                             return segment[offset];
-                                           }};
+  auto accessors =
+      std::vector<std::function<AllTypeVariant(const VariableStringDictionarySegment<pmr_string>&, const ChunkOffset)>>{
+          +[](const VariableStringDictionarySegment<pmr_string>& segment, const ChunkOffset offset) {
+            const auto maybe = segment.get_typed_value(offset);
+            return maybe ? maybe.value() : NULL_VALUE;
+          },
+          +[](const VariableStringDictionarySegment<pmr_string>& segment, const ChunkOffset offset) {
+            return segment[offset];
+          }};
   for (const auto& accessor : accessors) {
     EXPECT_EQ(accessor(segment, ChunkOffset{0}), AllTypeVariant{"Hello"});
     EXPECT_EQ(accessor(segment, ChunkOffset{1}), AllTypeVariant{"Hello"});
@@ -157,14 +157,14 @@ TEST_F(StorageVariableStringDictionarySegmentTest, TestIterable) {
   auto iterable = create_iterable_from_segment<pmr_string>(*dict_segment);
   auto current_chunk_offset = ChunkOffset{0};
   iterable.for_each([&](const auto& value) {
-      const auto expected_value = value_segment->operator[](current_chunk_offset);
-      current_chunk_offset++;
-      if (variant_is_null(expected_value)) {
-        EXPECT_TRUE(value.is_null());
-        return;
-      }
-      ASSERT_FALSE(value.is_null());
-      EXPECT_EQ(value.value(), boost::get<pmr_string>(expected_value));
+    const auto expected_value = value_segment->operator[](current_chunk_offset);
+    current_chunk_offset++;
+    if (variant_is_null(expected_value)) {
+      EXPECT_TRUE(value.is_null());
+      return;
+    }
+    ASSERT_FALSE(value.is_null());
+    EXPECT_EQ(value.value(), boost::get<pmr_string>(expected_value));
   });
 }
 

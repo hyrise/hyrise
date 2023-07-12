@@ -78,8 +78,8 @@ class BinaryParser {
   static std::shared_ptr<DictionarySegment<T>> _import_dictionary_segment(std::ifstream& file, ChunkOffset row_count);
 
   template <typename T>
-  static std::shared_ptr<VariableStringDictionarySegment<T>> _import_variable_string_length_segment(std::ifstream& file,
-                                                                                      ChunkOffset row_count);
+  static std::shared_ptr<VariableStringDictionarySegment<T>> _import_variable_string_length_segment(
+      std::ifstream& file, ChunkOffset row_count);
 
   static std::shared_ptr<FixedStringDictionarySegment<pmr_string>> _import_fixed_string_dictionary_segment(
       std::ifstream& file, ChunkOffset row_count);

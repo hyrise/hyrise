@@ -336,8 +336,8 @@ void BinaryWriter::_write_segment(const LZ4Segment<T>& lz4_segment, bool /*colum
 }
 
 template <typename T>
-void BinaryWriter::_write_segment(const VariableStringDictionarySegment<T>& dictionary_segment, bool /*column_is_nullable*/,
-                                  std::ofstream& ofstream) {
+void BinaryWriter::_write_segment(const VariableStringDictionarySegment<T>& dictionary_segment,
+                                  bool /*column_is_nullable*/, std::ofstream& ofstream) {
   export_value(ofstream, EncodingType::VariableStringDictionary);
 
   // Write attribute vector compression id

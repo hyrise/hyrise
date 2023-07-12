@@ -204,24 +204,24 @@ std::shared_ptr<DictionarySegment<T>> BinaryParser::_import_dictionary_segment(s
   return std::make_shared<DictionarySegment<T>>(dictionary, attribute_vector);
 }
 
-template<typename T>
-std::shared_ptr<VariableStringDictionarySegment<T>> BinaryParser::_import_variable_string_length_segment(std::ifstream& file,
-                                                                               ChunkOffset row_count) {
-//  const auto compressed_vector_type_id = _read_value<CompressedVectorTypeID>(file);
-//  const auto dictionary_size = _read_value<ValueID>(file);
-//  const auto strings = _read_values<pmr_string>(file, dictionary_size);
-//
-//  auto attribute_vector = _import_attribute_vector(file, row_count, compressed_vector_type_id);
-//  auto total_length_of_strings = size_t{0};
-//  std::for_each(strings.cbegin(), strings.cend(), [&total_length_of_strings](const pmr_string& string) {
-//    total_length_of_strings += string.size();
-//  });
-//  auto dictionary = std::make_shared<pmr_vector<char>>(total_length_of_strings);
-//  auto offset = size_t{0};
-//  for (const auto& string : strings) {
-//    strcpy(dictionary->data() + offset, string.data());
-//    offset += string.size();
-//  }
+template <typename T>
+std::shared_ptr<VariableStringDictionarySegment<T>> BinaryParser::_import_variable_string_length_segment(
+    std::ifstream& file, ChunkOffset row_count) {
+  //  const auto compressed_vector_type_id = _read_value<CompressedVectorTypeID>(file);
+  //  const auto dictionary_size = _read_value<ValueID>(file);
+  //  const auto strings = _read_values<pmr_string>(file, dictionary_size);
+  //
+  //  auto attribute_vector = _import_attribute_vector(file, row_count, compressed_vector_type_id);
+  //  auto total_length_of_strings = size_t{0};
+  //  std::for_each(strings.cbegin(), strings.cend(), [&total_length_of_strings](const pmr_string& string) {
+  //    total_length_of_strings += string.size();
+  //  });
+  //  auto dictionary = std::make_shared<pmr_vector<char>>(total_length_of_strings);
+  //  auto offset = size_t{0};
+  //  for (const auto& string : strings) {
+  //    strcpy(dictionary->data() + offset, string.data());
+  //    offset += string.size();
+  //  }
   // TODO:: implement
   Fail("Not implemented yet.");
   return std::make_shared<VariableStringDictionarySegment<T>>();
