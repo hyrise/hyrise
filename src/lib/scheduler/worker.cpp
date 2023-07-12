@@ -12,6 +12,8 @@
 #include <thread>
 #include <vector>
 
+#include <boost/predef.h>
+
 #include "abstract_scheduler.hpp"
 #include "abstract_task.hpp"
 #include "hyrise.hpp"
@@ -20,6 +22,14 @@
 namespace {
 
 using namespace hyrise;  // NOLINT(build/namespaces)
+
+void spin_wait() {
+#if BOOST_ARCH_ARM
+    __asm__ __volatile__("yield");
+#elif BOOST_ARCH_X86_64
+    _mm_pause();
+#endif
+}
 
 /**
  * On worker threads, this references the Worker running on this thread, on all other threads, this is empty.
@@ -110,17 +120,52 @@ void Worker::_work(const AllowSleep allow_sleep) {
   const auto& queues = Hyrise::get().scheduler()->queues();
 
   auto task = std::shared_ptr<AbstractTask>{};
-  const auto got_local_task = get_task(true, task, _next_task, _queue, queues);
-  if (!got_local_task) {
+  auto spin_count = uint32_t{0};
+  auto first_sleep_try = std::optional<std::chrono::steady_clock::time_point>{};
+  while (true) {
+    ++spin_count;
+    const auto got_local_task = get_task(true, task, _next_task, _queue, queues);
+    if (got_local_task) {
+      break;
+    }
+
+    if (spin_count < 16) {
+      // Do not immediately steal tasks but first spin a few times on the local queue.
+      continue;
+    }
+
     const auto got_distant_task = get_task(false, task, _next_task, _queue, queues);
-    if (!got_distant_task) {
-      // If there is no ready task neither in the local queue nor in any other, the worker waits for a new task to be
-      // pushed to the own queue. The waiting is skipped in case the scheduler is shutting down or sleep is not allowed
-      //  (e.g., when _work() is called for a known number of unfinished jobs, see wait_for_tasks()).
-      if (allow_sleep == AllowSleep::Yes && !get_task(true, task, _next_task, _queue, queues)) {
-        _queue->semaphore.wait();
-        task = _queue->pull();
-      }
+    if (got_distant_task) {
+      break;
+    }
+
+    if (allow_sleep == AllowSleep::No) {
+      break;
+    }
+
+    // If there is no ready task neither in the local queue nor in any other, the worker waits for a new task to be
+    // pushed to the own queue. The waiting is skipped in case the scheduler is shutting down or sleep is not allowed
+    //  (e.g., when _work() is called for a known number of unfinished jobs, see wait_for_tasks()).
+    const auto last_try_before_sleep = get_task(true, task, _next_task, _queue, queues);
+    if (last_try_before_sleep) {
+      break;
+    }
+
+    if (!first_sleep_try) {
+      // Use an optional and set start time here to avoid obtaining the clock in the spinning loop.
+      first_sleep_try = std::chrono::steady_clock::now();
+    }
+
+    const auto time_passed_spinning = std::chrono::nanoseconds{std::chrono::steady_clock::now() - *first_sleep_try};
+    if (time_passed_spinning.count() > 5'000'000) {
+      _queue->semaphore.wait();
+      task = _queue->pull();
+      break;
+    }
+
+    const auto loop_count = std::max(1024, 1 << spin_count);
+    for (auto loop_id = int32_t{0}; loop_id < loop_count; ++loop_id) {
+      spin_wait();
     }
   }
 
