@@ -29,8 +29,24 @@ void NumaExtentHooks::store_node_id_for_arena(ArenaID arena_id, NodeID node_id) 
   node_id_for_arena_id[arena_id] = node_id;
 }
 
+size_t NumaExtentHooks::get_num_allocations(NodeID node_id) {
+  return num_allocations[node_id];
+}
+
+size_t NumaExtentHooks::get_sum_allocated_bytes(NodeID node_id) {
+  return sum_allocated_bytes[node_id];
+}
+
 void* NumaExtentHooks::alloc(extent_hooks_t* extent_hooks, void* new_addr, size_t size, size_t alignment, bool* zero,
                              bool* commit, unsigned arena_index) {
+  num_allocations[node_id_for_arena_id[arena_index]] += 1;
+  
+  size_t off; 
+  if((off = size % 4096) > 0){
+    size += 4096 - off; 
+  }
+  sum_allocated_bytes[node_id_for_arena_id[arena_index]] += size;
+  
   void* addr = mmap(nullptr, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
   DebugAssert(addr != nullptr, "Failed to mmap pages.");
   DebugAssert(NumaExtentHooks::node_id_for_arena_id.contains(arena_index),

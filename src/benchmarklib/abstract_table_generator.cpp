@@ -321,17 +321,17 @@ void AbstractTableGenerator::generate_and_store() {
       table_counter++;
       std::cout << " (" << timer.lap_formatted() << ")" << std::endl;
     }
-    // size_t sum_allocations = 0; 
-    // size_t sum_deallocations = 0; 
-    // size_t sum_allocated_bytes = 0;
-    // for(auto numa_memory_resource : *target_memory_resources){
-    //   sum_allocations += numa_memory_resource._num_allocations;
-    //   sum_allocated_bytes += numa_memory_resource._sum_allocated_bytes;
-    //   sum_deallocations += numa_memory_resource._num_deallocations;
-    // } 
-    // std::cout << "sum_allocations: " << sum_allocations << std::endl; 
-    // std::cout << "sum_deallocations: " << sum_deallocations << std::endl; 
-    // std::cout << "sum_allocated_bytes: " << sum_allocated_bytes << std::endl;
+    size_t sum_allocations = 0; 
+    size_t sum_deallocations = 0; 
+    size_t sum_allocated_bytes = 0;
+    for(auto i = NodeID{0}; i < num_nodes; ++i){
+      sum_allocations += NumaExtentHooks::get_num_allocations(i);
+      sum_allocated_bytes += NumaExtentHooks::get_sum_allocated_bytes(i);
+      //sum_deallocations += numa_memory_resource._num_deallocations;
+    } 
+    std::cout << "sum_allocations: " << sum_allocations << std::endl; 
+    std::cout << "sum_deallocations: " << sum_deallocations << std::endl; 
+    std::cout << "sum_allocated_bytes: " << sum_allocated_bytes << std::endl;
 
     // for(auto [column, num_allocations] : column_allocations_mapping){
     //   std::cout << column << ": " << num_allocations << std::endl; 

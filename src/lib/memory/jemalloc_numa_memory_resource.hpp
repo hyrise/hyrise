@@ -19,8 +19,14 @@ class NumaExtentHooks {
                      bool* commit, unsigned arena_index);
   static void store_node_id_for_arena(ArenaID, NodeID);
 
+  static size_t get_num_allocations(NodeID node_id);
+  static size_t get_sum_allocated_bytes(NodeID node_id);
+
  private:
   static std::unordered_map<ArenaID, NodeID> node_id_for_arena_id;
+  static std::unordered_map<NodeID, size_t> num_allocations; 
+  static std::unordered_map<NodeID, size_t> sum_allocated_bytes;
+  
 };
 
 class JemallocNumaMemoryResource : public boost::container::pmr::memory_resource {
@@ -30,6 +36,7 @@ class JemallocNumaMemoryResource : public boost::container::pmr::memory_resource
   void* do_allocate(std::size_t bytes, std::size_t alignment) override;
   void do_deallocate(void* p, std::size_t bytes, std::size_t alignment) override;
   bool do_is_equal(const memory_resource& other) const noexcept override;
+
 
  protected:
   NodeID _node_id{0};
