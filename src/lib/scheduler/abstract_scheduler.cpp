@@ -40,7 +40,11 @@ void AbstractScheduler::schedule_on_preferred_nodes_and_wait_for_tasks(
   _group_tasks(tasks);
   assert(tasks.size() == preferred_nodes.size());
   for (auto index = unsigned{0}; index < tasks.size(); ++index) {
-    tasks[index]->schedule(preferred_nodes[index]);
+    if (preferred_nodes[index] == INVALID_NODE_ID) {
+      tasks[index]->schedule();
+    } else {
+      tasks[index]->schedule(preferred_nodes[index]);
+    }
   }
   wait_for_tasks(tasks);
 }
