@@ -94,7 +94,8 @@ class WindowFunctionEvaluator : public AbstractReadOnlyOperator {
   template <typename InputColumnType, WindowFunction window_function>
   void compute_window_function_segment_tree(const HashPartitionedData& partitioned_data,
                                             auto&& emit_computed_value) const;
-  template <typename InputColumnType, WindowFunction window_function, FrameType frame_type>
+  template <typename InputColumnType, WindowFunction window_function, FrameType frame_type,
+            typename OrderByColumnType = NullValue>
   void templated_compute_window_function_segment_tree(const HashPartitionedData& partitioned_data,
                                                       auto&& emit_computed_value) const;
   template <typename T>
