@@ -8,6 +8,13 @@
 
 namespace hyrise {
 
+struct QueryRange {
+  using Bound = uint64_t;
+
+  Bound start;
+  Bound end;
+};
+
 // A segment tree is a data structure that supports efficiently computing aggregates over arbitrary connected intervals
 // (`Range`s) of the underlying array of values. The aggregate function, `combine`, must
 //
@@ -37,13 +44,6 @@ class SegmentTree {
   friend class SegmentTreeTest;
 
  public:
-  using RangeBound = uint64_t;
-
-  struct Range {
-    RangeBound start;
-    RangeBound end;
-  };
-
   explicit SegmentTree(std::span<const T> leaf_values, T init_neutral_element = T(), Combine&& init_combine = Combine())
       : leaf_count(std::bit_ceil(leaf_values.size())),
         neutral_element(std::move(init_neutral_element)),
@@ -58,7 +58,7 @@ class SegmentTree {
   }
 
   // Returns the aggregate of the leaf values in the queried range.
-  T range_query(Range range) const {
+  T range_query(QueryRange range) const {
     // The algorithm works like this: There are two pointers, left_node and right_node, that span the range that still
     // needs to be included in the query aggregate. Initially, they start the corresponding leaf node values. As with
     // the query interface, the left_node is inclusive and the right_node is exclusive (that is, right_node could point
@@ -101,7 +101,7 @@ class SegmentTree {
   }
 
  private:
-  using NodeIndex = RangeBound;
+  using NodeIndex = QueryRange::Bound;
 
   static constexpr NodeIndex root = 1;
 
