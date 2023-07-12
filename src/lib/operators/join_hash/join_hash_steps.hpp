@@ -424,13 +424,9 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
     if (JoinHash::JOB_SPAWN_THRESHOLD > num_rows) {
       materialize();
     } else {
-      jobs.emplace_back(std::make_shared<JobTask>(materialize));
+      jobs.emplace_back(std::make_shared<JobTask>(materialize, SchedulePriority::Default, false));
       job_nodes.emplace_back(segment->numa_node_location());
     }
-  }
-  if (jobs.size()) {
-    std::cout << "Starting materialize on " << jobs.size() << " jobs on node " << job_nodes[0] << std::endl;
-    Hyrise::get().scheduler()->schedule_on_preferred_nodes_and_wait_for_tasks(jobs, job_nodes);
   }
 
   return radix_container;
@@ -514,14 +510,12 @@ std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<
       // Parallelizing this would require a concurrent hash table, which is likely more expensive.
       insert_into_hash_table();
     } else {
-      jobs.emplace_back(std::make_shared<JobTask>(insert_into_hash_table));
+      jobs.emplace_back(std::make_shared<JobTask>(insert_into_hash_table, SchedulePriority::Default, false));
       actual_nodes.emplace_back(node_placements[partition_idx]);
     }
   }
 
   if (jobs.size()) {
-    std::cout << "Starting insert_into_hash_table on " << jobs.size() << " jobs on node " << actual_nodes[0]
-              << std::endl;
     Hyrise::get().scheduler()->schedule_on_preferred_nodes_and_wait_for_tasks(jobs, actual_nodes);
   }
 
@@ -628,12 +622,9 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
     if (JoinHash::JOB_SPAWN_THRESHOLD > elements_count) {
       perform_partition();
     } else {
-      jobs.emplace_back(std::make_shared<JobTask>(perform_partition));
+      jobs.emplace_back(std::make_shared<JobTask>(perform_partition, SchedulePriority::Default, false));
       actual_nodes.emplace_back(job_nodes_placement[input_partition_idx]);
     }
-  }
-  if (jobs.size()) {
-    std::cout << "Starting perform_partition on " << jobs.size() << " jobs on node " << actual_nodes[0] << std::endl;
   }
   Hyrise::get().scheduler()->schedule_on_preferred_nodes_and_wait_for_tasks(jobs, actual_nodes);
   jobs.clear();
@@ -820,14 +811,11 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
     if (JoinHash::JOB_SPAWN_THRESHOLD > elements_count) {
       probe_partition();
     } else {
-      jobs.emplace_back(std::make_shared<JobTask>(probe_partition));
+      jobs.emplace_back(std::make_shared<JobTask>(probe_partition, SchedulePriority::Default, false));
       job_nodes.emplace_back(node_placements[partition_idx]);
     }
   }
 
-  if (jobs.size()) {
-    std::cout << "Starting probe_partition on " << jobs.size() << " jobs on node " << job_nodes[0] << std::endl;
-  }
   Hyrise::get().scheduler()->schedule_on_preferred_nodes_and_wait_for_tasks(jobs, job_nodes);
 }
 
@@ -949,15 +937,11 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_containe
     if (JoinHash::JOB_SPAWN_THRESHOLD > elements_count) {
       probe_partition();
     } else {
-      jobs.emplace_back(std::make_shared<JobTask>(probe_partition));
+      jobs.emplace_back(std::make_shared<JobTask>(probe_partition, SchedulePriority::Default, false));
       job_nodes.emplace_back(node_placements[partition_idx]);
     }
   }
 
-  if (jobs.size()) {
-    std::cout << "Starting probe_partition (semi anti) on " << jobs.size() << " jobs on node " << job_nodes[0]
-              << std::endl;
-  }
   Hyrise::get().scheduler()->schedule_on_preferred_nodes_and_wait_for_tasks(jobs, job_nodes);
 }
 

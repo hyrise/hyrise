@@ -70,7 +70,6 @@ void Worker::operator()() {
 void Worker::_work() {
   // If execute_next has been called, run that task first, otherwise try to retrieve a task from the queue.
   auto task = std::shared_ptr<AbstractTask>{};
-  auto task_original_node_id = _queue->node_id();
   if (_next_task) {
     task = std::move(_next_task);
     _next_task = nullptr;
@@ -88,7 +87,6 @@ void Worker::_work() {
 
       task = queue->steal();
       if (task) {
-        task_original_node_id = task->node_id();
         task->set_node_id(_queue->node_id());
         work_stealing_successful = true;
         break;
@@ -112,11 +110,6 @@ void Worker::_work() {
     return;
   }
 
-  static std::mutex lock;
-
-  std::unique_lock guard{lock};
-  std::cout << "Task scheduled on node " << task->node_id() << " executed node id " << _queue->node_id() << std::endl;
-  guard.unlock();
   task->execute();
 
   // This is part of the Scheduler shutdown system. Count the number of tasks a Worker executed to allow the

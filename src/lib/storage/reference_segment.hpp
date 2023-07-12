@@ -35,6 +35,7 @@ class ReferenceSegment : public AbstractSegment {
 
   std::shared_ptr<AbstractSegment> copy_using_allocator(const PolymorphicAllocator<size_t>& /*alloc*/) const override;
 
+  NodeID numa_node_location() override;
   size_t memory_usage(const MemoryUsageCalculationMode mode) const override;
 
  protected:
