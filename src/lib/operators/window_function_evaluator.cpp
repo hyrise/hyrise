@@ -344,7 +344,8 @@ ComputationStrategy WindowFunctionEvaluator::choose_computation_strategy() const
                                !frame.end.unbounded && frame.end.type == FrameBoundType::CurrentRow;
   Assert(is_prefix_frame || !RankLike<window_function>, "Invalid frame for rank-like window function.");
 
-  if (is_prefix_frame && SupportsOnePass<InputColumnType, window_function>)
+  if (is_prefix_frame && SupportsOnePass<InputColumnType, window_function> &&
+      (is_rank_like(window_function) || frame.type == FrameType::Rows))
     return ComputationStrategy::OnePass;
 
   if (SupportsSegmentTree<InputColumnType, window_function>)
