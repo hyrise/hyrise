@@ -30,7 +30,6 @@ NodeQueueScheduler::~NodeQueueScheduler() {
 }
 
 void NodeQueueScheduler::begin() {
-  _shutdown_flag = false;
   DebugAssert(!_active, "Scheduler is already active");
 
   _worker_count = Hyrise::get().topology.num_cpus();
@@ -48,7 +47,7 @@ void NodeQueueScheduler::begin() {
 
     for (const auto& topology_cpu : topology_node.cpus) {
       _workers.emplace_back(std::make_shared<Worker>(queue, WorkerID{_worker_id_allocator->allocate()},
-                                                     topology_cpu.cpu_id, _shutdown_flag));
+                                                     topology_cpu.cpu_id));
     }
 
     // Tracked per node as core restrictions can lead to unbalanced core counts.

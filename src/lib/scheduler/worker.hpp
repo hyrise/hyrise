@@ -71,7 +71,6 @@ class Worker : public std::enable_shared_from_this<Worker>, private Noncopyable 
   std::thread _thread;
   std::atomic_uint64_t _num_finished_tasks{0};
 
-  std::atomic_bool& _shutdown_flag;
   bool _active{true};
 
   std::vector<int> _random{};
