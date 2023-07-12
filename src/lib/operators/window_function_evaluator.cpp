@@ -65,6 +65,11 @@ std::shared_ptr<AbstractOperator> WindowFunctionEvaluator::_on_deep_copy(
 
 template <typename InputColumnType, WindowFunction window_function>
 std::shared_ptr<const Table> WindowFunctionEvaluator::_templated_on_execute() {
+  if (frame_description().type == FrameType::Range) {
+    Assert(_order_by_column_ids.size() == 1,
+           "Range mode frames are only allowed when there is exactly one order-by expression.");
+  }
+
   const auto input_table = left_input_table();
   const auto chunk_count = input_table->chunk_count();
 
@@ -425,25 +430,87 @@ namespace {
 
 using RelevantRowInformation = WindowFunctionEvaluator::RelevantRowInformation;
 
-template <FrameType frame_type>
-QueryRange calculate_window_bounds([[maybe_unused]] std::span<const RelevantRowInformation> partition,
-                                   [[maybe_unused]] uint64_t tuple_index,
-                                   [[maybe_unused]] const FrameDescription& frame) {
-  Fail("Unsupported frame type.");
-}
+template <FrameType frame_type, typename OrderByColumnType>
+struct WindowBoundCalculator {
+  static QueryRange calculate_window_bounds([[maybe_unused]] std::span<const RelevantRowInformation> partition,
+                                            [[maybe_unused]] uint64_t tuple_index,
+                                            [[maybe_unused]] const FrameDescription& frame) {
+    std::string error_message = "Unsupported frame type and order-by column type combination: ";
+    error_message += [&]() {
+      using namespace std::literals::string_view_literals;
 
-template <>
-QueryRange calculate_window_bounds<FrameType::Rows>(std::span<const RelevantRowInformation> partition,
-                                                    uint64_t tuple_index, const FrameDescription& frame) {
-  const auto start = frame.start.unbounded ? 0 : clamped_sub<uint64_t>(tuple_index, frame.start.offset, 0);
-  const auto end = frame.end.unbounded ? partition.size()
-                                       : clamped_add<uint64_t>(tuple_index, frame.end.offset + 1, partition.size());
-  return {start, end};
-}
+      switch (frame_type) {
+        case FrameType::Rows:
+          return "Rows"sv;
+        case FrameType::Range:
+          return "Range"sv;
+        case FrameType::Groups:
+          return "Groups"sv;
+      }
+    }();
+    error_message += " ";
+    error_message += data_type_to_string.left.at(data_type_from_type<OrderByColumnType>());
+    Fail(error_message);
+  }
+};
+
+template <typename OrderByColumnType>
+struct WindowBoundCalculator<FrameType::Rows, OrderByColumnType> {
+  static QueryRange calculate_window_bounds(std::span<const RelevantRowInformation> partition, uint64_t tuple_index,
+                                            const FrameDescription& frame) {
+    const auto start = frame.start.unbounded ? 0 : clamped_sub<uint64_t>(tuple_index, frame.start.offset, 0);
+    const auto end = frame.end.unbounded ? partition.size()
+                                         : clamped_add<uint64_t>(tuple_index, frame.end.offset + 1, partition.size());
+    return {start, end};
+  }
+};
+
+template <typename OrderByColumnType>
+  requires std::is_integral_v<OrderByColumnType>
+struct WindowBoundCalculator<FrameType::Range, OrderByColumnType> {
+  static QueryRange calculate_window_bounds(std::span<const RelevantRowInformation> partition, uint64_t tuple_index,
+                                            const FrameDescription& frame) {
+    const auto current_value = as_optional<OrderByColumnType>(partition[tuple_index].order_values[0]);
+
+    // We sort null-first
+    const auto end_of_null_peer_group_it =
+        std::ranges::partition_point(partition, [&](const auto& row) { return variant_is_null(row.order_values[0]); });
+    const auto end_of_null_peer_group = std::distance(partition.begin(), end_of_null_peer_group_it);
+    const auto non_null_values = partition.subspan(end_of_null_peer_group);
+
+    const auto start = [&]() -> uint64_t {
+      if (frame.start.unbounded) {
+        return 0;
+      }
+      if (!current_value) {
+        return 0;
+      }
+      const auto it = std::ranges::partition_point(non_null_values, [&](const auto& row) {
+        return std::cmp_less(get<OrderByColumnType>(row.order_values[0]) + frame.start.offset, *current_value);
+      });
+      return end_of_null_peer_group + std::distance(non_null_values.begin(), it);
+    }();
+
+    const auto end = [&]() -> uint64_t {
+      if (frame.end.unbounded) {
+        return partition.size();
+      }
+      if (!current_value) {
+        return end_of_null_peer_group;
+      }
+      const auto it = std::ranges::partition_point(non_null_values, [&](const auto& row) {
+        return std::cmp_less_equal(get<OrderByColumnType>(row.order_values[0]), *current_value + frame.end.offset);
+      });
+      return end_of_null_peer_group + std::distance(non_null_values.begin(), it);
+    }();
+
+    return {start, end};
+  }
+};
 
 };  // namespace
 
-template <typename InputColumnType, WindowFunction window_function, FrameType frame_type>
+template <typename InputColumnType, WindowFunction window_function, FrameType frame_type, typename OrderByColumnType>
 void WindowFunctionEvaluator::templated_compute_window_function_segment_tree(
     const HashPartitionedData& partitioned_data, auto&& emit_computed_value) const {
   const auto& frame = frame_description();
@@ -457,19 +524,19 @@ void WindowFunctionEvaluator::templated_compute_window_function_segment_tree(
         using Traits = WindowFunctionCombinator<OutputColumnType, window_function>;
         using TreeNode = typename Traits::TreeNode;
 
-        std::vector<TreeNode> leaf_values(partition_end - partition_start);
-        std::transform(hash_partition.begin() + partition_start, hash_partition.begin() + partition_end,
-                       leaf_values.begin(), [](const auto& row) -> TreeNode {
-                         if (variant_is_null(row.function_argument))
-                           return TreeNode(std::nullopt);
-                         return TreeNode(static_cast<OutputColumnType>(get<InputColumnType>(row.function_argument)));
-                       });
+        std::vector<TreeNode> leaf_values(partition.size());
+        std::ranges::transform(partition, leaf_values.begin(), [](const auto& row) -> TreeNode {
+          if (variant_is_null(row.function_argument))
+            return TreeNode(std::nullopt);
+          return TreeNode(static_cast<OutputColumnType>(get<InputColumnType>(row.function_argument)));
+        });
         SegmentTree<TreeNode, typename Traits::Combine> segment_tree(leaf_values, Traits::neutral_element);
 
         for (auto tuple_index = 0u; tuple_index < partition.size(); ++tuple_index) {
-          const auto query_range = calculate_window_bounds<frame_type>(partition, tuple_index, frame);
+          using BoundCalculator = WindowBoundCalculator<frame_type, OrderByColumnType>;
+          const auto query_range = BoundCalculator::calculate_window_bounds(partition, tuple_index, frame);
           using Transformer = typename Traits::QueryTransformer;
-          emit_computed_value(hash_partition[tuple_index].row_id, Transformer{}(segment_tree.range_query(query_range)));
+          emit_computed_value(partition[tuple_index].row_id, Transformer{}(segment_tree.range_query(query_range)));
         }
       });
     });
@@ -484,11 +551,16 @@ void WindowFunctionEvaluator::compute_window_function_segment_tree(const HashPar
   const auto& frame = frame_description();
   switch (frame.type) {
     case FrameType::Rows:
-      return templated_compute_window_function_segment_tree<InputColumnType, window_function, FrameType::Rows>(
+      templated_compute_window_function_segment_tree<InputColumnType, window_function, FrameType::Rows>(
           partitioned_data, emit_computed_value);
+      break;
     case FrameType::Range:
-      return templated_compute_window_function_segment_tree<InputColumnType, window_function, FrameType::Range>(
-          partitioned_data, emit_computed_value);
+      resolve_data_type(left_input_table()->column_data_type(_order_by_column_ids[0]), [&](auto data_type) {
+        templated_compute_window_function_segment_tree<InputColumnType, window_function, FrameType::Range,
+                                                       typename decltype(data_type)::type>(partitioned_data,
+                                                                                           emit_computed_value);
+      });
+      break;
     case FrameType::Groups:
       Fail("Unsupported frame type: Groups.");
   }
