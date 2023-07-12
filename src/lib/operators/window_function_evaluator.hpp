@@ -94,8 +94,12 @@ class WindowFunctionEvaluator : public AbstractReadOnlyOperator {
   template <typename InputColumnType, WindowFunction window_function>
   void compute_window_function_segment_tree(const HashPartitionedData& partitioned_data,
                                             auto&& emit_computed_value) const;
+
+  // Sentinel type to indicate that Range mode is used without an order-by column
+  struct NoOrderByColumn {};
+
   template <typename InputColumnType, WindowFunction window_function, FrameType frame_type,
-            typename OrderByColumnType = NullValue>
+            typename OrderByColumnType = NoOrderByColumn>
   void templated_compute_window_function_segment_tree(const HashPartitionedData& partitioned_data,
                                                       auto&& emit_computed_value) const;
   template <typename T>
