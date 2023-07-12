@@ -116,7 +116,7 @@ class VariableStringDictionarySegmentIterable
         return SegmentPosition<T>{T{}, true, _chunk_offset};
       }
 
-      // TODO: Remove &* Hack to get pointer to iterator's data
+      // TODO(student): Remove &* Hack to get pointer to iterator's data
       return SegmentPosition<T>{T{&*(_dictionary_begin_it + _offset_vector->operator[](value_id))}, false,
                                 _chunk_offset};
     }
@@ -129,7 +129,6 @@ class VariableStringDictionarySegmentIterable
     std::shared_ptr<const pmr_vector<uint32_t>> _offset_vector;
   };
 
-  // TODO: Add offset_vector also here.
   template <typename Decompressor, typename DictionaryIteratorType, typename PosListIteratorType>
   class PointAccessIterator : public AbstractPointAccessSegmentIterator<
                                   PointAccessIterator<Decompressor, DictionaryIteratorType, PosListIteratorType>,

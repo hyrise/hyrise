@@ -38,7 +38,7 @@ TEST_F(StorageVariableStringDictionarySegmentTest, CompressSegmentString) {
 
   // Test sorting
   auto dict = dict_segment->dictionary();
-  // TODO: Replace with working code
+  // TODO(student): Replace with working code
   //  EXPECT_EQ(*(dict->begin()), "Alexander");
   //  EXPECT_EQ(*(dict->begin() + 1), "Bill");
   //  EXPECT_EQ(*(dict->begin() + 2), "Hasso");
@@ -74,7 +74,7 @@ TEST_F(StorageVariableStringDictionarySegmentTest, LongStrings) {
 
   // Test sorting
   auto dict = dict_segment->dictionary();
-  // TODO: Here
+  // TODO(student): Find out what is being tested here and fix these.
   //  EXPECT_EQ(*(dict->begin()), "QuiteShort");
   //  EXPECT_EQ(*(dict->begin() + 1), "Short");
   //  EXPECT_EQ(*(dict->begin() + 2), "ThisIsAVeryLongStringThisIsAVeryLongStringThisIsAVeryLongString");
@@ -156,7 +156,7 @@ TEST_F(StorageVariableStringDictionarySegmentTest, TestOffsetVector) {
   auto dict_segment = std::dynamic_pointer_cast<VariableStringDictionarySegment<pmr_string>>(segment);
   const auto offset_vector = dict_segment->offset_vector();
   EXPECT_EQ(offset_vector->size(), 3);
-  // TODO: Add more tests.
+  // TODO(student): Add more tests.
 }
 
 TEST_F(StorageVariableStringDictionarySegmentTest, TestLookup) {

@@ -352,7 +352,7 @@ void BinaryWriter::_write_segment(const VariableStringDictionarySegment<T>& dict
   _export_compressed_vector(ofstream, *dictionary_segment.compressed_vector_type(),
                             *dictionary_segment.attribute_vector());
 
-  // TODO: Write Offset vector?
+  // TODO(student): Write Offset vector?
 }
 
 template <typename T>

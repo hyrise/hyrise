@@ -65,7 +65,7 @@ class VariableStringDictionaryEncoder : public SegmentEncoder<VariableStringDict
       total_size += value.size() + 1;
     }
 
-    // TODO::(us) reserve instead of resize, beware null terminators
+    // TODO(student): Reserve instead of resize, beware null terminators.
     auto klotz = std::make_shared<pmr_vector<char>>(pmr_vector<char>(total_size));
     // We assume segment size up to 4 GByte.
     auto string_offsets = std::unordered_map<pmr_string, uint32_t>();
