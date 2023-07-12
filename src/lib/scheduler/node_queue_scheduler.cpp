@@ -132,7 +132,8 @@ void NodeQueueScheduler::schedule(std::shared_ptr<AbstractTask> task, NodeID pre
 
   const auto node_id_for_queue = determine_queue_id(preferred_node_id);
   DebugAssert((static_cast<size_t>(node_id_for_queue) < _queues.size()),
-              "Node ID is not within range of available nodes.");
+              "Node ID is not within range of available nodes. NodeID: " + std::to_string(node_id_for_queue) +
+                  " queue size: " + std::to_string(_queues.size()));
   _queues[node_id_for_queue]->push(task, priority);
 }
 
