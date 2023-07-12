@@ -134,14 +134,16 @@ TEST_F(StorageVariableStringDictionarySegmentTest, MemoryUsageEstimation) {
   vs_str->append("C");
   const auto compressed_segment = ChunkEncoder::encode_segment(
       vs_str, DataType::String, SegmentEncodingSpec{EncodingType::VariableStringDictionary});
-  const auto dictionary_segment = std::dynamic_pointer_cast<VariableStringDictionarySegment<pmr_string>>(compressed_segment);
+  const auto dictionary_segment =
+      std::dynamic_pointer_cast<VariableStringDictionarySegment<pmr_string>>(compressed_segment);
 
-  static constexpr auto size_of_attribute = 1u;
-  static constexpr auto size_of_dictionary = 3u;
+  static constexpr auto size_of_attribute_vector_entry = 1u;
+  // 3u for letters and 3u for null terminators
+  static constexpr auto size_of_dictionary = 6u;
+  static constexpr auto size_of_offset_vector = sizeof(uint32_t);
 
-  // We have to substract 1 since the empty VariableStringSegment actually contains one null terminator
   EXPECT_EQ(dictionary_segment->memory_usage(MemoryUsageCalculationMode::Full),
-            empty_memory_usage - 1u + 3 * size_of_attribute + size_of_dictionary);
+            empty_memory_usage + 3 * (size_of_attribute_vector_entry + size_of_offset_vector) + size_of_dictionary);
 }
 
 TEST_F(StorageVariableStringDictionarySegmentTest, TestOffsetVector) {
@@ -167,20 +169,21 @@ TEST_F(StorageVariableStringDictionarySegmentTest, TestLookup) {
   std::memcpy(klotz->data(), data.data(), data.size());
   const pmr_vector<uint32_t> offsets{0, 6, 12, 22, 29};
   const pmr_vector<uint32_t> attribute_vector{0, 0, 1, 3, 2, 4, 2};
-  const auto segment =
-      VariableStringDictionarySegment<pmr_string>{klotz,
-                                      std::shared_ptr<const BaseCompressedVector>(compress_vector(
-                                          attribute_vector, VectorCompressionType::FixedWidthInteger, allocator, {4})),
-                                      std::make_shared<pmr_vector<uint32_t>>(offsets)};
+  const auto segment = VariableStringDictionarySegment<pmr_string>{
+      klotz,
+      std::shared_ptr<const BaseCompressedVector>(
+          compress_vector(attribute_vector, VectorCompressionType::FixedWidthInteger, allocator, {4})),
+      std::make_shared<pmr_vector<uint32_t>>(offsets)};
 
-  auto accessors = std::vector<std::function<AllTypeVariant(const VariableStringDictionarySegment<pmr_string>&, const ChunkOffset)>>{
-                                           +[](const VariableStringDictionarySegment<pmr_string>& segment, const ChunkOffset offset) {
-                                             const auto maybe = segment.get_typed_value(offset);
-                                             return maybe ? maybe.value() : NULL_VALUE;
-                                           },
-                                           +[](const VariableStringDictionarySegment<pmr_string>& segment, const ChunkOffset offset) {
-                                             return segment[offset];
-                                           }};
+  auto accessors =
+      std::vector<std::function<AllTypeVariant(const VariableStringDictionarySegment<pmr_string>&, const ChunkOffset)>>{
+          +[](const VariableStringDictionarySegment<pmr_string>& segment, const ChunkOffset offset) {
+            const auto maybe = segment.get_typed_value(offset);
+            return maybe ? maybe.value() : NULL_VALUE;
+          },
+          +[](const VariableStringDictionarySegment<pmr_string>& segment, const ChunkOffset offset) {
+            return segment[offset];
+          }};
   for (const auto& accessor : accessors) {
     EXPECT_EQ(accessor(segment, ChunkOffset{0}), AllTypeVariant{"Hello"});
     EXPECT_EQ(accessor(segment, ChunkOffset{1}), AllTypeVariant{"Hello"});

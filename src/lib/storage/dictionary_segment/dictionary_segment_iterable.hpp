@@ -6,8 +6,8 @@
 #include "storage/dictionary_segment.hpp"
 #include "storage/fixed_string_dictionary_segment.hpp"
 #include "storage/segment_iterables.hpp"
-#include "storage/vector_compression/resolve_compressed_vector_type.hpp"
 #include "storage/variable_string_dictionary_segment.hpp"
+#include "storage/vector_compression/resolve_compressed_vector_type.hpp"
 
 namespace hyrise {
 

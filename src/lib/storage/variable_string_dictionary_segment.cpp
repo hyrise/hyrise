@@ -47,14 +47,17 @@ std::shared_ptr<AbstractSegment> VariableStringDictionarySegment<T>::copy_using_
   auto new_attribute_vector = _attribute_vector->copy_using_allocator(alloc);
   auto new_dictionary = std::make_shared<pmr_vector<char>>(*_dictionary, alloc);
   auto new_offset = std::make_shared<pmr_vector<uint32_t>>(*_offset_vector, alloc);
-  auto copy = std::make_shared<VariableStringDictionarySegment>(std::move(new_dictionary), std::move(new_attribute_vector), std::move(new_offset));
+  auto copy = std::make_shared<VariableStringDictionarySegment>(std::move(new_dictionary),
+                                                                std::move(new_attribute_vector), std::move(new_offset));
   copy->access_counter = access_counter;
   return copy;
 }
 
 template <typename T>
-size_t VariableStringDictionarySegment<T>::memory_usage(const MemoryUsageCalculationMode  /*mode*/) const {
-  return _attribute_vector->data_size() + _dictionary->capacity() + _offset_vector->capacity();
+size_t VariableStringDictionarySegment<T>::memory_usage(const MemoryUsageCalculationMode /*mode*/) const {
+  using OffsetVectorType = typename std::decay<decltype(*_offset_vector->begin())>::type;
+  return _attribute_vector->data_size() + _dictionary->capacity() +
+         _offset_vector->capacity() * sizeof(OffsetVectorType);
 }
 
 template <typename T>
@@ -70,41 +73,33 @@ EncodingType VariableStringDictionarySegment<T>::encoding_type() const {
 template <typename T>
 ValueID VariableStringDictionarySegment<T>::lower_bound(const AllTypeVariant& value) const {
   DebugAssert(!variant_is_null(value), "Null value passed.");
-//  access_counter[SegmentAccessCounter::AccessType::Dictionary] +=
-//      static_cast<uint64_t>(std::ceil(std::log2(_offset_vector->size())));
+  //  access_counter[SegmentAccessCounter::AccessType::Dictionary] +=
+  //      static_cast<uint64_t>(std::ceil(std::log2(_offset_vector->size())));
   const auto typed_value = boost::get<pmr_string>(value);
 
   auto args = std::vector<ValueID>(_offset_vector->size());
   std::iota(args.begin(), args.end(), 0);
-  auto it = std::lower_bound(args.cbegin(), args.cend(), typed_value,
-                             [this](const ValueID valueId, const auto to_find) {
-                               return typed_value_of_value_id(valueId) < to_find;
-                             });
+  auto it = std::lower_bound(
+      args.cbegin(), args.cend(), typed_value,
+      [this](const ValueID valueId, const auto to_find) { return typed_value_of_value_id(valueId) < to_find; });
   if (it == args.cend()) {
     return INVALID_VALUE_ID;
   }
   return ValueID{static_cast<ValueID::base_type>(std::distance(args.cbegin(), it))};
-
-//  auto iter = std::lower_bound(_dictionary->cbegin(), _dictionary->cend(), typed_value);
-//  if (iter == _dictionary->cend()) {
-//    return INVALID_VALUE_ID;
-//  }
-//  return ValueID{static_cast<ValueID::base_type>(std::distance(_dictionary->cbegin(), iter))};
 }
 
 template <typename T>
 ValueID VariableStringDictionarySegment<T>::upper_bound(const AllTypeVariant& value) const {
   DebugAssert(!variant_is_null(value), "Null value passed.");
-//  access_counter[SegmentAccessCounter::AccessType::Dictionary] +=
-//    static_cast<uint64_t>(std::ceil(std::log2(_offset_vector->size())));
+  //  access_counter[SegmentAccessCounter::AccessType::Dictionary] +=
+  //    static_cast<uint64_t>(std::ceil(std::log2(_offset_vector->size())));
   const auto typed_value = boost::get<pmr_string>(value);
 
   auto args = std::vector<ValueID>(_offset_vector->size());
   std::iota(args.begin(), args.end(), 0);
-  auto it = std::upper_bound(args.cbegin(), args.cend(), typed_value,
-                             [this](const auto to_find, const ValueID valueID) {
-                               return to_find < typed_value_of_value_id(valueID);
-                             });
+  auto it = std::upper_bound(
+      args.cbegin(), args.cend(), typed_value,
+      [this](const auto to_find, const ValueID valueID) { return to_find < typed_value_of_value_id(valueID); });
   if (it == args.cend()) {
     return INVALID_VALUE_ID;
   }

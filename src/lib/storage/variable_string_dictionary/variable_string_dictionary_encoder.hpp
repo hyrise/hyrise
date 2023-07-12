@@ -102,19 +102,20 @@ class VariableStringDictionaryEncoder : public SegmentEncoder<VariableStringDict
     }
 
     const auto max_value_id = current_value_id;
-    const auto compressed_chunk_offset_to_value_id = std::shared_ptr<const BaseCompressedVector>(
-        compress_vector(*chunk_offset_to_value_id, SegmentEncoder<VariableStringDictionaryEncoder>::vector_compression_type(),
-                        allocator, {max_value_id}));
+    const auto compressed_chunk_offset_to_value_id = std::shared_ptr<const BaseCompressedVector>(compress_vector(
+        *chunk_offset_to_value_id, SegmentEncoder<VariableStringDictionaryEncoder>::vector_compression_type(),
+        allocator, {max_value_id}));
 
-    return std::make_shared<VariableStringDictionarySegment<pmr_string>>(klotz, compressed_chunk_offset_to_value_id, offset_vector);
+    return std::make_shared<VariableStringDictionarySegment<pmr_string>>(klotz, compressed_chunk_offset_to_value_id,
+                                                                         offset_vector);
   }
 
-// private:
-//  template <typename U, typename T>
-//  static ValueID _get_value_id(const U& dictionary, const T& value) {
-//    return ValueID{static_cast<ValueID::base_type>(
-//        std::distance(dictionary->cbegin(), std::lower_bound(dictionary->cbegin(), dictionary->cend(), value)))};
-//  }
+  // private:
+  //  template <typename U, typename T>
+  //  static ValueID _get_value_id(const U& dictionary, const T& value) {
+  //    return ValueID{static_cast<ValueID::base_type>(
+  //        std::distance(dictionary->cbegin(), std::lower_bound(dictionary->cbegin(), dictionary->cend(), value)))};
+  //  }
 };
 
 }  // namespace hyrise

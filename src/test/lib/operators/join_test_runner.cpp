@@ -771,7 +771,6 @@ TEST_P(JoinTestRunner, TestJoin) {
   }
 }
 
-
 INSTANTIATE_TEST_SUITE_P(JoinNestedLoop, JoinTestRunner,
                          testing::ValuesIn(JoinTestRunner::create_configurations<JoinNestedLoop>()));
 INSTANTIATE_TEST_SUITE_P(JoinHash, JoinTestRunner,

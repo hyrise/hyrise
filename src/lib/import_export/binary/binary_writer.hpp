@@ -224,7 +224,7 @@ class BinaryWriter {
 
   template <typename T>
   static void _write_segment(const VariableStringDictionarySegment<T>& dictionary_segment, bool /*column_is_nullable*/,
-                                    std::ofstream& ofstream);
+                             std::ofstream& ofstream);
 
   template <typename T>
   static CompressedVectorTypeID _compressed_vector_type_id(const AbstractEncodedSegment& abstract_encoded_segment);

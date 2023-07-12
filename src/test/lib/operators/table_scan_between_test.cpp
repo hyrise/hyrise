@@ -182,15 +182,15 @@ class TableScanBetweenTest : public TypedOperatorBaseTest {
 TEST_P(TableScanBetweenTest, Inclusive) {
   auto inclusive_tests = std::vector<std::tuple<AllTypeVariant, AllTypeVariant, std::vector<int>>>{
       {12.25, 16.25, {1, 2, 3}},                          // Both boundaries exact match
-//      {12.0, 16.25, {1, 2, 3}},                           // Left boundary open match
-//      {12.25, 16.75, {1, 2, 3}},                          // Right boundary open match
-//      {12.0, 16.75, {1, 2, 3}},                           // Both boundaries open match
-//      {0.0, 16.75, {0, 1, 2, 3}},                         // Left boundary before first value
-//      {16.0, 50.75, {3, 4, 5, 6, 7, 8, 9, 10}},           // Right boundary after last value
-//      {13.0, 16.25, {2, 3}},                              // Left boundary after first value
-//      {12.25, 15.0, {1, 2}},                              // Right boundary before last value
-//      {0.25, 50.75, {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10}},  // Matching all values
-//      {0.25, 0.75, {}},                                   // Matching no value
+      {12.0, 16.25, {1, 2, 3}},                           // Left boundary open match
+      {12.25, 16.75, {1, 2, 3}},                          // Right boundary open match
+      {12.0, 16.75, {1, 2, 3}},                           // Both boundaries open match
+      {0.0, 16.75, {0, 1, 2, 3}},                         // Left boundary before first value
+      {16.0, 50.75, {3, 4, 5, 6, 7, 8, 9, 10}},           // Right boundary after last value
+      {13.0, 16.25, {2, 3}},                              // Left boundary after first value
+      {12.25, 15.0, {1, 2}},                              // Right boundary before last value
+      {0.25, 50.75, {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10}},  // Matching all values
+      {0.25, 0.75, {}},                                   // Matching no value
   };
 
   _test_between_scan(inclusive_tests, PredicateCondition::BetweenInclusive);
