@@ -421,17 +421,39 @@ void WindowFunctionEvaluator::compute_window_function_one_pass(const HashPartiti
   }
 }
 
-template <typename InputColumnType, WindowFunction window_function>
-void WindowFunctionEvaluator::compute_window_function_segment_tree(const HashPartitionedData& partitioned_data,
-                                                                   auto&& emit_computed_value) const {
+namespace {
+
+using RelevantRowInformation = WindowFunctionEvaluator::RelevantRowInformation;
+
+template <FrameType frame_type>
+QueryRange calculate_window_bounds([[maybe_unused]] std::span<const RelevantRowInformation> partition,
+                                   [[maybe_unused]] uint64_t tuple_index,
+                                   [[maybe_unused]] const FrameDescription& frame) {
+  Fail("Unsupported frame type.");
+}
+
+template <>
+QueryRange calculate_window_bounds<FrameType::Rows>(std::span<const RelevantRowInformation> partition,
+                                                    uint64_t tuple_index, const FrameDescription& frame) {
+  const auto start = frame.start.unbounded ? 0 : clamped_sub<uint64_t>(tuple_index, frame.start.offset, 0);
+  const auto end = frame.end.unbounded ? partition.size()
+                                       : clamped_add<uint64_t>(tuple_index, frame.end.offset + 1, partition.size());
+  return {start, end};
+}
+
+};  // namespace
+
+template <typename InputColumnType, WindowFunction window_function, FrameType frame_type>
+void WindowFunctionEvaluator::templated_compute_window_function_segment_tree(
+    const HashPartitionedData& partitioned_data, auto&& emit_computed_value) const {
   const auto& frame = frame_description();
   using OutputColumnType = typename WindowFunctionTraits<InputColumnType, window_function>::ReturnType;
 
   if constexpr (SupportsSegmentTree<OutputColumnType, window_function>) {
-    Assert(frame.type == FrameType::Rows, "Sum only works with FrameBounds of type Rows");
-
     spawn_and_wait_per_hash(partitioned_data, [&emit_computed_value, &frame](const auto& hash_partition) {
       for_each_partition(hash_partition, [&](uint64_t partition_start, uint64_t partition_end) {
+        const auto partition = std::span(hash_partition.begin() + partition_start, partition_end - partition_start);
+
         using Traits = WindowFunctionCombinator<OutputColumnType, window_function>;
         using TreeNode = typename Traits::TreeNode;
 
@@ -444,22 +466,31 @@ void WindowFunctionEvaluator::compute_window_function_segment_tree(const HashPar
                        });
         SegmentTree<TreeNode, typename Traits::Combine> segment_tree(leaf_values, Traits::neutral_element);
 
-        for (auto tuple_index = partition_start; tuple_index < partition_end; ++tuple_index) {
-          const auto window_start = frame.start.unbounded
-                                        ? partition_start
-                                        : clamped_sub<uint64_t>(tuple_index, frame.start.offset, partition_start);
-          const auto window_end = frame.end.unbounded
-                                      ? partition_end
-                                      : clamped_add<uint64_t>(tuple_index, frame.end.offset + 1, partition_end);
+        for (auto tuple_index = 0u; tuple_index < partition.size(); ++tuple_index) {
+          const auto query_range = calculate_window_bounds<frame_type>(partition, tuple_index, frame);
           using Transformer = typename Traits::QueryTransformer;
-          emit_computed_value(
-              hash_partition[tuple_index].row_id,
-              Transformer{}(segment_tree.range_query({window_start - partition_start, window_end - partition_start})));
+          emit_computed_value(hash_partition[tuple_index].row_id, Transformer{}(segment_tree.range_query(query_range)));
         }
       });
     });
   } else {
     Fail("Unsupported SegmentTree window function.");
+  }
+}
+
+template <typename InputColumnType, WindowFunction window_function>
+void WindowFunctionEvaluator::compute_window_function_segment_tree(const HashPartitionedData& partitioned_data,
+                                                                   auto&& emit_computed_value) const {
+  const auto& frame = frame_description();
+  switch (frame.type) {
+    case FrameType::Rows:
+      return templated_compute_window_function_segment_tree<InputColumnType, window_function, FrameType::Rows>(
+          partitioned_data, emit_computed_value);
+    case FrameType::Range:
+      return templated_compute_window_function_segment_tree<InputColumnType, window_function, FrameType::Range>(
+          partitioned_data, emit_computed_value);
+    case FrameType::Groups:
+      Fail("Unsupported frame type: Groups.");
   }
 }
 
