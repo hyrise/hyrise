@@ -4,7 +4,6 @@
 
 #include "storage/abstract_segment.hpp"
 #include "storage/variable_string_dictionary_segment.hpp"
-#include "storage/fixed_string_dictionary_segment.hpp"
 #include "storage/segment_iterables.hpp"
 #include "storage/vector_compression/resolve_compressed_vector_type.hpp"
 
@@ -17,7 +16,7 @@ class VariableStringDictionarySegmentIterable : public PointAccessibleSegmentIte
   using Dictionary = pmr_vector<char>;
 
   explicit VariableStringDictionarySegmentIterable(const VariableStringDictionarySegment<T>& segment)
-      : _segment{segment}, _dictionary(segment.dictionary()) {}
+      : _segment{segment}, _klotz(segment.klotz()) {}
 
   template <typename Functor>
   void _on_with_iterators(const Functor& functor) const {
@@ -26,14 +25,13 @@ class VariableStringDictionarySegmentIterable : public PointAccessibleSegmentIte
 
     resolve_compressed_vector_type(*_segment.attribute_vector(), [this, &functor](const auto& vector) {
       using CompressedVectorIterator = decltype(vector.cbegin());
-      using DictionaryIteratorType = decltype(_dictionary->cbegin());
+      using DictionaryIteratorType = decltype(_klotz->cbegin());
 
-      const auto& offset_vector = _segment.offset_vector();
 
       auto begin = Iterator<CompressedVectorIterator, DictionaryIteratorType>{
-          _dictionary->cbegin(), _dictionary->size(), vector.cbegin(), ChunkOffset{0u}, offset_vector};
+          _klotz->cbegin(), _klotz->size(), vector.cbegin(), ChunkOffset{0u}};
       auto end = Iterator<CompressedVectorIterator, DictionaryIteratorType>{
-          _dictionary->cbegin(), _dictionary->size(), vector.cend(), static_cast<ChunkOffset>(_segment.size()), offset_vector};
+          _klotz->cbegin(), _klotz->size(), vector.cend(), static_cast<ChunkOffset>(_segment.size())};
 
       functor(begin, end);
     });
@@ -46,15 +44,15 @@ class VariableStringDictionarySegmentIterable : public PointAccessibleSegmentIte
 
     resolve_compressed_vector_type(*_segment.attribute_vector(), [this, &functor, &position_filter](const auto& vector) {
       using Decompressor = std::decay_t<decltype(vector.create_decompressor())>;
-      using DictionaryIteratorType = decltype(_dictionary->cbegin());
+      using DictionaryIteratorType = decltype(_klotz->cbegin());
 
       using PosListIteratorType = decltype(position_filter->cbegin());
       auto begin = PointAccessIterator<Decompressor, DictionaryIteratorType, PosListIteratorType>{
-          _dictionary->cbegin(), _dictionary->size(), vector.create_decompressor(), position_filter->cbegin(),
-          position_filter->cbegin(), _segment.offset_vector()};
+          _klotz->cbegin(), _klotz->size(), vector.create_decompressor(), position_filter->cbegin(),
+          position_filter->cbegin()};
       auto end = PointAccessIterator<Decompressor, DictionaryIteratorType, PosListIteratorType>{
-          _dictionary->cbegin(), _dictionary->size(), vector.create_decompressor(), position_filter->cbegin(),
-          position_filter->cend(), _segment.offset_vector()};
+          _klotz->cbegin(), _klotz->size(), vector.create_decompressor(), position_filter->cbegin(),
+          position_filter->cend()};
       functor(begin, end);
     });
   }
@@ -72,12 +70,11 @@ class VariableStringDictionarySegmentIterable : public PointAccessibleSegmentIte
     using IterableType = VariableStringDictionarySegmentIterable<T>;
 
     Iterator(DictionaryIteratorType dictionary_begin_it, uint32_t null_offset, CompressedVectorIterator attribute_it,
-             ChunkOffset chunk_offset, const std::shared_ptr<const pmr_vector<uint32_t>>& offset_vector)
-        : _dictionary_begin_it{std::move(dictionary_begin_it)},
+             ChunkOffset chunk_offset)
+        : _klotz_begin_it{std::move(dictionary_begin_it)},
           _null_offset{null_offset},
           _attribute_it{std::move(attribute_it)},
-          _chunk_offset{chunk_offset},
-          _offset_vector{offset_vector} {}
+          _chunk_offset{chunk_offset} {}
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
@@ -114,15 +111,14 @@ class VariableStringDictionarySegmentIterable : public PointAccessibleSegmentIte
       }
 
       // TODO: Remove &* Hack to get pointer to iterator's data
-      return SegmentPosition<T>{T{&*(_dictionary_begin_it + offset)}, false, _chunk_offset};
+      return SegmentPosition<T>{T{&*(_klotz_begin_it + offset)}, false, _chunk_offset};
     }
 
    private:
-    DictionaryIteratorType _dictionary_begin_it;
+    DictionaryIteratorType _klotz_begin_it;
     uint32_t _null_offset;
     CompressedVectorIterator _attribute_it;
     ChunkOffset _chunk_offset;
-    std::shared_ptr<const pmr_vector<uint32_t>> _offset_vector;
   };
 
   // TODO: Add offset_vector also here.
@@ -136,15 +132,13 @@ class VariableStringDictionarySegmentIterable : public PointAccessibleSegmentIte
 
     PointAccessIterator(DictionaryIteratorType dictionary_begin_it, const uint32_t null_offset,
                         Decompressor attribute_decompressor, PosListIteratorType position_filter_begin,
-                        PosListIteratorType position_filter_it, const std::shared_ptr<const pmr_vector<uint32_t>>& offset_vector)
+                        PosListIteratorType position_filter_it)
         : AbstractPointAccessSegmentIterator<
               PointAccessIterator<Decompressor, DictionaryIteratorType, PosListIteratorType>, SegmentPosition<T>,
               PosListIteratorType>{std::move(position_filter_begin), std::move(position_filter_it)},
-          _dictionary_begin_it{std::move(dictionary_begin_it)},
+          _klotz_begin_it{std::move(dictionary_begin_it)},
           _null_offset{null_offset},
-          _attribute_decompressor{std::move(attribute_decompressor)} ,
-    _offset_vector{offset_vector}
-    {}
+          _attribute_decompressor{std::move(attribute_decompressor)} {}
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
@@ -159,32 +153,18 @@ class VariableStringDictionarySegmentIterable : public PointAccessibleSegmentIte
         return SegmentPosition<T>{T{}, true, chunk_offsets.offset_in_poslist};
       }
 
-      return SegmentPosition<T>{T{&*(_dictionary_begin_it + offset)}, false, chunk_offsets.offset_in_poslist};
+      return SegmentPosition<T>{T{&*(_klotz_begin_it + offset)}, false, chunk_offsets.offset_in_poslist};
     }
 
    private:
-    DictionaryIteratorType _dictionary_begin_it;
+    DictionaryIteratorType _klotz_begin_it;
     uint32_t _null_offset;
     mutable Decompressor _attribute_decompressor;
-    std::shared_ptr<const pmr_vector<uint32_t>> _offset_vector;
   };
 
  private:
   const VariableStringDictionarySegment<pmr_string>& _segment;
-  std::shared_ptr<const Dictionary> _dictionary;
+  std::shared_ptr<const Dictionary> _klotz;
 };
-
-//template <typename T>
-//struct is_dictionary_segment_iterable {
-//  static constexpr auto value = false;
-//};
-//
-//template <template <typename T, typename Dictionary> typename Iterable, typename T, typename Dictionary>
-//struct is_dictionary_segment_iterable<Iterable<T, Dictionary>> {
-//  static constexpr auto value = std::is_same_v<VariableStringDictionarySegmentIterable<T>, Iterable<T, Dictionary>>;
-//};
-//
-//template <typename T>
-//inline constexpr bool is_dictionary_segment_iterable_v = is_dictionary_segment_iterable<T>::value;
 
 }  // namespace hyrise

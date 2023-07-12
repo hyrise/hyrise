@@ -22,9 +22,6 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
   explicit DictionarySegmentIterable(const FixedStringDictionarySegment<pmr_string>& segment)
       : _segment{segment}, _dictionary(segment.fixed_string_dictionary()) {}
 
-  explicit DictionarySegmentIterable(const VariableStringDictionarySegment<pmr_string>& segment)
-      : _segment{segment}, _dictionary(segment.dictionary()) {}
-
   template <typename Functor>
   void _on_with_iterators(const Functor& functor) const {
     _segment.access_counter[SegmentAccessCounter::AccessType::Sequential] += _segment.size();

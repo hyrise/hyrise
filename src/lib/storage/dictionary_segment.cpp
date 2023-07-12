@@ -18,7 +18,7 @@ DictionarySegment<T>::DictionarySegment(const std::shared_ptr<const pmr_vector<T
       _dictionary{dictionary},
       _attribute_vector{attribute_vector},
       _decompressor{_attribute_vector->create_base_decompressor()} {
-  // NULL is represented by _dictionary.size(). INVALID_VALUE_ID, which is the highest possible number in
+  // NULL is represented by _klotz.size(). INVALID_VALUE_ID, which is the highest possible number in
   // ValueID::base_type (2^32 - 1), is needed to represent "value not found" in calls to lower_bound/upper_bound.
   // For a DictionarySegment of the max size Chunk::MAX_SIZE, those two values overlap.
 

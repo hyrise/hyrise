@@ -81,13 +81,10 @@ class VariableStringDictionaryEncoder : public SegmentEncoder<VariableStringDict
     }
 
     auto chunk_offset_to_klotz_offset = std::make_shared<pmr_vector<uint32_t>>(pmr_vector<uint32_t>(segment_size));
-    auto offset_vector = std::make_shared<pmr_vector<uint32_t>>(pmr_vector<uint32_t>(dense_values.size()));
-    offset_vector->shrink_to_fit();
 
     for (const auto& [string, chunk_offsets] : string_to_chunk_offsets) {
       const auto here_offset = string_offsets[string];
       const auto here_value_id = string_value_ids[string];
-      (*offset_vector)[here_value_id] = here_offset;
       for (const auto chunk_offset : chunk_offsets) {
         (*chunk_offset_to_klotz_offset)[chunk_offset] = here_offset;
       }
@@ -106,7 +103,7 @@ class VariableStringDictionaryEncoder : public SegmentEncoder<VariableStringDict
         compress_vector(*chunk_offset_to_klotz_offset, SegmentEncoder<VariableStringDictionaryEncoder>::vector_compression_type(),
                         allocator, {max_value_id}));
 
-    return std::make_shared<VariableStringDictionarySegment<pmr_string>>(klotz, compressed_chunk_offset_to_klotz_offset, offset_vector);
+    return std::make_shared<VariableStringDictionarySegment<pmr_string>>(klotz, compressed_chunk_offset_to_klotz_offset);
   }
 };
 

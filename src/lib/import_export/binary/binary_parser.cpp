@@ -222,6 +222,7 @@ std::shared_ptr<VariableStringDictionarySegment<T>> BinaryParser::_import_variab
 //    strcpy(dictionary->data() + offset, string.data());
 //    offset += string.size();
 //  }
+  // TODO:: implement
   Fail("Not implemented yet.");
   return std::make_shared<VariableStringDictionarySegment<T>>();
   // return std::make_shared<VariableStringDictionarySegment>(dictionary, attribute_vector, std::make_shared<pmr_vector<uint32_t>>());
