@@ -71,7 +71,7 @@ struct PinnedFrames : public Noncopyable {
     }
   }
 
-  std::vector<PageID> _pins;  // TODO: Small vector
+  boost::container::small_vector<PageID, 3> _pins;
 };
 
 // TODO: EqualDistinctCountHistogram
