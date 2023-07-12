@@ -92,13 +92,13 @@ std::shared_ptr<const Table> WindowFunctionEvaluator::_templated_on_execute() {
     }
   };
 
-  switch (choose_computation_strategy<InputColumnType, window_function>()) {
+  const auto computation_strategy = choose_computation_strategy<InputColumnType, window_function>();
+  window_performance_data.computation_strategy = computation_strategy;
+  switch (computation_strategy) {
     case ComputationStrategy::OnePass:
-      window_performance_data.one_pass = true;
       compute_window_function_one_pass<InputColumnType, window_function>(partitioned_data, emit_computed_value);
       break;
     case ComputationStrategy::SegmentTree:
-      window_performance_data.one_pass = false;
       compute_window_function_segment_tree<InputColumnType, window_function>(partitioned_data, emit_computed_value);
       break;
   }
@@ -535,7 +535,17 @@ void WindowFunctionEvaluator::PerformanceData::output_to_stream(std::ostream& st
   OperatorPerformanceData<OperatorSteps>::output_to_stream(stream, description_mode);
 
   const auto separator = (description_mode == DescriptionMode::SingleLine ? ' ' : '\n');
-  stream << separator << "OnePass: " << one_pass << ".";
+  const auto computation_strategy_string = [&]() {
+    using namespace std::literals::string_view_literals;
+
+    switch (computation_strategy) {
+      case ComputationStrategy::OnePass:
+        return "OnePass"sv;
+      case ComputationStrategy::SegmentTree:
+        return "SegmentTree"sv;
+    }
+  }();
+  stream << separator << "Computation strategy: " << computation_strategy_string << ".";
 }
 
 }  // namespace hyrise
