@@ -66,8 +66,8 @@ std::shared_ptr<AbstractOperator> WindowFunctionEvaluator::_on_deep_copy(
 template <typename InputColumnType, WindowFunction window_function>
 std::shared_ptr<const Table> WindowFunctionEvaluator::_templated_on_execute() {
   if (frame_description().type == FrameType::Range) {
-    Assert(_order_by_column_ids.size() == 1,
-           "Range mode frames are only allowed when there is exactly one order-by expression.");
+    Assert(_order_by_column_ids.size() <= 1,
+           "Range mode frames are only allowed when there is at most one order-by expression.");
   }
 
   const auto input_table = left_input_table();
@@ -465,6 +465,15 @@ struct WindowBoundCalculator<FrameType::Rows, OrderByColumnType> {
   }
 };
 
+template <>
+struct WindowBoundCalculator<FrameType::Range, WindowFunctionEvaluator::NoOrderByColumn> {
+  static QueryRange calculate_window_bounds(std::span<const RelevantRowInformation> partition,
+                                            [[maybe_unused]] uint64_t tuple_index,
+                                            [[maybe_unused]] const FrameDescription& frame) {
+    return {0, partition.size()};
+  }
+};
+
 template <typename OrderByColumnType>
   requires std::is_integral_v<OrderByColumnType>
 struct WindowBoundCalculator<FrameType::Range, OrderByColumnType> {
@@ -555,11 +564,16 @@ void WindowFunctionEvaluator::compute_window_function_segment_tree(const HashPar
           partitioned_data, emit_computed_value);
       break;
     case FrameType::Range:
-      resolve_data_type(left_input_table()->column_data_type(_order_by_column_ids[0]), [&](auto data_type) {
+      if (_order_by_column_ids.empty()) {
         templated_compute_window_function_segment_tree<InputColumnType, window_function, FrameType::Range,
-                                                       typename decltype(data_type)::type>(partitioned_data,
-                                                                                           emit_computed_value);
-      });
+                                                       NoOrderByColumn>(partitioned_data, emit_computed_value);
+      } else {
+        resolve_data_type(left_input_table()->column_data_type(_order_by_column_ids[0]), [&](auto data_type) {
+          templated_compute_window_function_segment_tree<InputColumnType, window_function, FrameType::Range,
+                                                         typename decltype(data_type)::type>(partitioned_data,
+                                                                                             emit_computed_value);
+        });
+      }
       break;
     case FrameType::Groups:
       Fail("Unsupported frame type: Groups.");
