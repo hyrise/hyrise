@@ -173,6 +173,8 @@ class ExpressionEvaluator final {
       const std::vector<std::shared_ptr<AbstractExpression>>& arguments);
   std::shared_ptr<ExpressionResult<pmr_string>> _evaluate_concatenate(
       const std::vector<std::shared_ptr<AbstractExpression>>& arguments);
+  template <typename Result>
+  std::shared_ptr<ExpressionResult<Result>> _evaluate_absolute(const std::shared_ptr<AbstractExpression>& argument);
 
   template <typename Result>
   static std::vector<std::shared_ptr<ExpressionResult<Result>>> _prune_tables_to_expression_results(

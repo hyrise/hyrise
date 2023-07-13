@@ -785,14 +785,19 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_functio
     case FunctionType::Concatenate:
     case FunctionType::Substring:
       if constexpr (std::is_same_v<Result, pmr_string>) {
-        switch (expression.function_type) {
-          case FunctionType::Substring:
-            return _evaluate_substring(expression.arguments);
-          case FunctionType::Concatenate:
-            return _evaluate_concatenate(expression.arguments);
+        if (expression.function_type == FunctionType::Substring) {
+          return _evaluate_substring(expression.arguments);
         }
+        return _evaluate_concatenate(expression.arguments);
       }
-      Fail("Function can only be evaluated to a string");
+
+      Fail("Function can only be evaluated to a string.");
+    case FunctionType::Absolute:
+      if constexpr (!std::is_same_v<Result, pmr_string>) {
+        Assert(expression.arguments.size() == 1, "ABS expects exactly one argument.");
+        return _evaluate_absolute<Result>(expression.arguments.front());
+      }
+      Fail("ABS cannot be evaluated to a string.");
   }
   Fail("Invalid enum value");
 }
@@ -1580,6 +1585,31 @@ std::shared_ptr<ExpressionResult<pmr_string>> ExpressionEvaluator::_evaluate_con
   }
 
   return std::make_shared<ExpressionResult<pmr_string>>(std::move(result_values), std::move(result_nulls));
+}
+
+template <typename Result>
+std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_absolute(
+    const std::shared_ptr<AbstractExpression>& argument) {
+  const auto argument_result = evaluate_expression_to_result<Result>(*argument);
+  const auto result_size = argument_result->size();
+
+  auto result = pmr_vector<Result>(result_size);
+  auto null_values = pmr_vector<bool>{};
+  if (argument_result->is_nullable()) {
+    null_values.resize(result_size, false);
+  }
+
+  argument_result->as_view([&](const auto& argument_view) {
+    for (auto chunk_offset = ChunkOffset{0}; chunk_offset < result_size; ++chunk_offset) {
+      if (argument_view.is_null(chunk_offset)) {
+        null_values[chunk_offset] = true;
+        continue;
+      }
+      result[chunk_offset] = std::abs(argument_view.value(chunk_offset));
+    }
+  });
+
+  return std::make_shared<ExpressionResult<Result>>(std::move(result), std::move(null_values));
 }
 
 template <typename Result>

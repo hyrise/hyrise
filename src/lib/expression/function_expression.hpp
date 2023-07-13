@@ -7,8 +7,9 @@ namespace hyrise {
 
 // For a possible list of functions, see https://www.w3schools.com/sql/sql_ref_sqlserver.asp
 enum class FunctionType {
-  Substring,   // SUBSTR()
-  Concatenate  // CONCAT()
+  Substring,    // SUBSTR()
+  Concatenate,  // CONCAT()
+  Absolute      // ABS()
 };
 
 std::ostream& operator<<(std::ostream& stream, const FunctionType function_type);
