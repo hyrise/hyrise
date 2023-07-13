@@ -14,8 +14,8 @@ enum class FunctionType {
 
 std::ostream& operator<<(std::ostream& stream, const FunctionType function_type);
 
-const auto function_type_to_string =
-    make_bimap<FunctionType, std::string>({{FunctionType::Substring, "SUBSTR"}, {FunctionType::Concatenate, "CONCAT"}});
+const auto function_type_to_string = make_bimap<FunctionType, std::string>(
+    {{FunctionType::Substring, "SUBSTR"}, {FunctionType::Concatenate, "CONCAT"}, {FunctionType::Absolute, "ABS"}});
 
 class FunctionExpression : public AbstractExpression {
  public:
