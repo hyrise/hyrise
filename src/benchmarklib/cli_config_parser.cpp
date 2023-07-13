@@ -152,6 +152,13 @@ BenchmarkConfig CLIConfigParser::parse_cli_options(const cxxopts::ParseResult& p
     boost::split(plugins, comma_separated_plugins, boost::is_any_of(","), boost::token_compress_on);
   }
 
+  const auto relocate_numa = parse_result["relocate_numa"].as<bool>();
+  if (relocate_numa) {
+    std::cout << "- Relocating Tables according to numa strategy" << std::endl;
+  } else {
+    std::cout << "- Not Relocating Tables" << std::endl;
+  }
+
   return BenchmarkConfig{benchmark_mode,
                          chunk_size,
                          *encoding_config,
@@ -169,7 +176,8 @@ BenchmarkConfig CLIConfigParser::parse_cli_options(const cxxopts::ParseResult& p
                          verify,
                          cache_binary_tables,
                          metrics,
-                         plugins};
+                         plugins,
+                         relocate_numa};
 }
 
 EncodingConfig CLIConfigParser::parse_encoding_config(const std::string& encoding_file_str) {
