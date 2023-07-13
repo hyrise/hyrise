@@ -429,6 +429,10 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
     }
   }
 
+  if (jobs.size()) {
+    Hyrise::get().scheduler()->schedule_on_preferred_nodes_and_wait_for_tasks(jobs, job_nodes);
+  }
+
   return radix_container;
 }
 
