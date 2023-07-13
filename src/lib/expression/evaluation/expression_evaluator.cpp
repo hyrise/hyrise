@@ -627,10 +627,10 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_predica
 template <typename Result>
 std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_column_expression(
     const PQPColumnExpression& column_expression) {
-  Assert(_chunk, "Cannot access columns in this Expression as it doesn't operate on a Table/Chunk");
+  Assert(_chunk, "Cannot access columns in this Expression as it does not operate on a Table/Chunk.");
 
   const auto& segment = *_chunk->get_segment(column_expression.column_id);
-  Assert(segment.data_type() == data_type_from_type<Result>(), "Can't evaluate segment to different type");
+  Assert(segment.data_type() == data_type_from_type<Result>(), "Cannot evaluate segment to different type.");
 
   _materialize_segment_if_not_yet_materialized(column_expression.column_id);
   return std::static_pointer_cast<ExpressionResult<Result>>(_segment_materializations[column_expression.column_id]);
@@ -774,7 +774,7 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_value_o
     return std::make_shared<ExpressionResult<Result>>(pmr_vector<Result>{{Result{}}}, nulls);
   }
 
-  Assert(value.type() == typeid(Result), "Can't evaluate ValueExpression to requested type Result");
+  Assert(value.type() == typeid(Result), "Cannot evaluate ValueExpression to requested type Result.");
   return std::make_shared<ExpressionResult<Result>>(pmr_vector<Result>{{boost::get<Result>(value)}});
 }
 

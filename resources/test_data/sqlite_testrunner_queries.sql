@@ -117,6 +117,7 @@ SELECT a, b, b+b AS e, b+b+NULL AS f FROM mixed_null;
 SELECT 1 + 5.6 > 7 OR 2 > 1 AS i FROM mixed;
 SELECT 2 / 0, b / 0, 50 / id FROM mixed;
 SELECT 2 % 0, b % 0, 50 % id FROM mixed;
+SELECT ABS(id - b) FROM mixed;
 
 -- Aliases
 SELECT R.a, S.a FROM mixed AS R, mixed AS S;

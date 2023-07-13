@@ -1843,8 +1843,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
 
         return std::make_shared<FunctionExpression>(function_iter->second, arguments);
       }
-
-      FailInput("Couldn't resolve function '"s + name + "'");
+      FailInput("Could not resolve function '" + name + "'");
     }
 
     case hsql::kExprOperator: {
