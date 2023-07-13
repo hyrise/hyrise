@@ -120,7 +120,7 @@ void Worker::_work(const AllowSleep allow_sleep) {
   const auto& queues = Hyrise::get().scheduler()->queues();
 
   auto task = std::shared_ptr<AbstractTask>{};
-  auto spin_count = uint32_t{0};
+  auto spin_count = uint64_t{0};
   auto first_sleep_try = std::optional<std::chrono::steady_clock::time_point>{};
   while (true) {
     ++spin_count;
@@ -129,7 +129,7 @@ void Worker::_work(const AllowSleep allow_sleep) {
       break;
     }
 
-    if (spin_count < 16) {
+    if (spin_count < 4) {
       // Do not immediately steal tasks but first spin a few times on the local queue.
       continue;
     }
@@ -141,6 +141,10 @@ void Worker::_work(const AllowSleep allow_sleep) {
 
     if (allow_sleep == AllowSleep::No) {
       break;
+    }
+
+    if (spin_count < 16) {
+      continue;
     }
 
     // If there is no ready task neither in the local queue nor in any other, the worker waits for a new task to be
@@ -158,13 +162,15 @@ void Worker::_work(const AllowSleep allow_sleep) {
 
     const auto time_passed_spinning = std::chrono::nanoseconds{std::chrono::steady_clock::now() - *first_sleep_try};
     if (time_passed_spinning.count() > 5'000'000) {
+      // std::printf("Worker id %zu goes to sleep. Spin count is %zu and we waited %zu ns.\n", static_cast<size_t>(_id), static_cast<size_t>(spin_count), static_cast<size_t>(time_passed_spinning.count()));
       _queue->semaphore.wait();
       task = _queue->pull();
       break;
     }
 
-    const auto loop_count = std::max(1024, 1 << spin_count);
-    for (auto loop_id = int32_t{0}; loop_id < loop_count; ++loop_id) {
+    const auto spin_loop_count = std::min(1024, 1 << std::min(uint64_t{62}, spin_count));
+    // std::printf("Worker id %zu is looping %lld times (spin count %lld).\n", static_cast<size_t>(_id), static_cast<int64_t>(spin_loop_count), static_cast<int64_t>(spin_count));
+    for (auto loop_id = int32_t{0}; loop_id < spin_loop_count; ++loop_id) {
       spin_wait();
     }
   }
