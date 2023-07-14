@@ -23,6 +23,11 @@ namespace {
 
 using namespace hyrise;  // NOLINT(build/namespaces)
 
+// Uses a pause instruction to signal the CPU that the process is spinning to wait, which can be more energy efficient
+// and puts less pressure on the cache than a pause-less spinning loop (see
+// https://www.intel.com/content/www/us/en/developer/articles/technical/a-common-construct-to-avoid-the-contention-of-threads-architecture-agnostic-spin-wait-loops.html).
+// Instructions differ between ARM and x86. Tested on recent x86 CPUs (AMD and Intel) as well as ARM-based Apple M2 and
+// Raspberry Pi 4.
 void spin_wait() {
 #if BOOST_ARCH_ARM
     __asm__ __volatile__("yield");
@@ -36,44 +41,6 @@ void spin_wait() {
  * Uses a weak_ptr, because otherwise the ref-count of it would not reach zero within the main() scope of the program.
  */
 thread_local std::weak_ptr<Worker> this_thread_worker;  // NOLINT (clang-tidy wants this const)
-
-bool get_task(const bool check_only_local_queue, std::shared_ptr<AbstractTask>& task,
-              std::shared_ptr<AbstractTask>& next_task, std::shared_ptr<TaskQueue>& local_queue,
-              const std::vector<std::shared_ptr<TaskQueue>>& all_queues) {
-  // If execute_next has been called, run that task first, otherwise try to retrieve a task from the queue.
-  if (next_task) {
-    task = std::move(next_task);
-    next_task = nullptr;
-    return true;
-  }
-
-  if (local_queue->semaphore.tryWait()) {
-    task = local_queue->pull();
-    if (task) {
-      return true;
-    }
-  }
-
-  if (check_only_local_queue) {
-    return false;
-  }
-
-  for (const auto& queue : all_queues) {
-    if (queue == local_queue) {
-      continue;
-    }
-
-    if (queue->semaphore.tryWait()) {
-      task = queue->steal();
-      if (task) {
-        task->set_node_id(local_queue->node_id());
-        return true;
-      }
-    }
-  }
-
-  return false;
-}
 
 }  // namespace
 
@@ -118,15 +85,23 @@ void Worker::operator()() {
 
 void Worker::_work(const AllowSleep allow_sleep) {
   const auto& queues = Hyrise::get().scheduler()->queues();
+  // Optional to only fetch current time when needed later.
+  auto first_sleep_try = std::optional<std::chrono::steady_clock::time_point>{};
 
   auto task = std::shared_ptr<AbstractTask>{};
-  auto spin_count = uint64_t{0};
-  auto first_sleep_try = std::optional<std::chrono::steady_clock::time_point>{};
+  auto spin_count = int64_t{-1};
   while (true) {
     ++spin_count;
-    const auto got_local_task = get_task(true, task, _next_task, _queue, queues);
-    if (got_local_task) {
+
+    if (_next_task) {
+      task = std::move(_next_task);
+      _next_task = nullptr;
       break;
+    } else {
+      if (_queue->semaphore.tryWait()) {
+        task = _queue->pull();
+        break;
+      }
     }
 
     if (spin_count < 4) {
@@ -134,46 +109,57 @@ void Worker::_work(const AllowSleep allow_sleep) {
       continue;
     }
 
-    const auto got_distant_task = get_task(false, task, _next_task, _queue, queues);
-    if (got_distant_task) {
+    // No workable task on local queue: try to steal from other queues.
+    for (const auto& queue : queues) {
+      if (queue == _queue) {
+        continue;
+      }
+
+      if (queue->semaphore.tryWait()) {
+        task = queue->steal();
+        if (task) {
+          task->set_node_id(_queue->node_id());
+          break;
+        }
+      }
+    }
+
+    if (task || allow_sleep == AllowSleep::No) {
+      // Exit loop when task successfully pulled from distant queue or when worker is not allowed to sleep or spin (see
+      // _work() call in _wait_for_tasks()).
       break;
     }
 
-    if (allow_sleep == AllowSleep::No) {
-      break;
+    // Exponential back off. Do not spin more than 1024 times.
+    const auto spin_loop_count = std::min(1024, 1 << std::min(int64_t{10}, spin_count));
+    DebugAssert(spin_loop_count >= 0 && spin_loop_count < 1025, "Unexpected spin count (over-/underflow?).");
+    for (auto loop_id = int32_t{0}; loop_id < spin_loop_count; ++loop_id) {
+      spin_wait();
     }
 
     if (spin_count < 16) {
+      // Continue spinning without checking for the overall spin time if spin count is small.
       continue;
     }
 
-    // If there is no ready task neither in the local queue nor in any other, the worker waits for a new task to be
-    // pushed to the own queue. The waiting is skipped in case the scheduler is shutting down or sleep is not allowed
-    //  (e.g., when _work() is called for a known number of unfinished jobs, see wait_for_tasks()).
-    const auto last_try_before_sleep = get_task(true, task, _next_task, _queue, queues);
-    if (last_try_before_sleep) {
-      break;
-    }
-
     if (!first_sleep_try) {
-      // Use an optional and set start time here to avoid obtaining the clock in the spinning loop.
+      // Set start time here to avoid obtaining the clock in the spinning loop unnecessarily.
       first_sleep_try = std::chrono::steady_clock::now();
     }
 
     const auto time_passed_spinning = std::chrono::nanoseconds{std::chrono::steady_clock::now() - *first_sleep_try};
     if (time_passed_spinning.count() > 5'000'000) {
-      // std::printf("Worker id %zu goes to sleep. Spin count is %zu and we waited %zu ns.\n", static_cast<size_t>(_id), static_cast<size_t>(spin_count), static_cast<size_t>(time_passed_spinning.count()));
+      // We only yield the worker thread after we have spinned for 10 ms.
+      std::printf("Worker id %zu goes to sleep. Spin count is %zu and we waited %zu ns.\n", static_cast<size_t>(_id), static_cast<size_t>(spin_count), static_cast<size_t>(time_passed_spinning.count()));
       _queue->semaphore.wait();
+      // std::printf("Worker id %zu awakes. Spin count is %zu and we waited %zu ns.\n", static_cast<size_t>(_id), static_cast<size_t>(spin_count), static_cast<size_t>(time_passed_spinning.count()));
       task = _queue->pull();
       break;
     }
-
-    const auto spin_loop_count = std::min(1024, 1 << std::min(uint64_t{62}, spin_count));
-    // std::printf("Worker id %zu is looping %lld times (spin count %lld).\n", static_cast<size_t>(_id), static_cast<int64_t>(spin_loop_count), static_cast<int64_t>(spin_count));
-    for (auto loop_id = int32_t{0}; loop_id < spin_loop_count; ++loop_id) {
-      spin_wait();
-    }
+    // std::printf("Worker id %zu spin count: %zu.\n", static_cast<size_t>(_id), static_cast<size_t>(spin_count));
   }
+
+  std::printf("Worker id %zu processes task with a spin count of: %zu.\n", static_cast<size_t>(_id), static_cast<size_t>(spin_count));
 
   if (!task) {
     return;
