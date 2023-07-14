@@ -47,9 +47,10 @@ TEST_F(AggregateNodeTest, InvalidAggregates) {
   EXPECT_THROW(AggregateNode::make(expression_vector(), expression_vector(window_function)), std::logic_error);
 
   // WindowFunctionExpression used as aggregate function must not define a window.
-  const auto frame_description = FrameDescription{FrameType::Range, FrameBound{0, FrameBoundType::Preceding, true},
-                                                  FrameBound{0, FrameBoundType::CurrentRow, false}};
-  const auto window = window_(expression_vector(), expression_vector(), std::vector<SortMode>{}, frame_description);
+  auto frame_description = FrameDescription{FrameType::Range, FrameBound{0, FrameBoundType::Preceding, true},
+                                            FrameBound{0, FrameBoundType::CurrentRow, false}};
+  const auto window =
+      window_(expression_vector(), expression_vector(), std::vector<SortMode>{}, std::move(frame_description));
 
   EXPECT_THROW(AggregateNode::make(expression_vector(), expression_vector(min_(_a, window))), std::logic_error);
 }

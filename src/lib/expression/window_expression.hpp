@@ -8,7 +8,7 @@ enum class FrameBoundType { Preceding, Following, CurrentRow };
 std::ostream& operator<<(std::ostream& stream, const FrameBoundType frame_bound_type);
 
 struct FrameBound {
-  FrameBound(const uint64_t init_offset, const FrameBoundType init_type, const bool init_unbounded);
+  FrameBound(const size_t init_offset, const FrameBoundType init_type, const bool init_unbounded);
 
   bool operator==(const FrameBound& rhs) const;
 
@@ -16,7 +16,7 @@ struct FrameBound {
 
   std::string description() const;
 
-  uint64_t offset{0};
+  size_t offset{0};
   FrameBoundType type{FrameBoundType::Preceding};
   bool unbounded{false};
 };
@@ -50,9 +50,9 @@ std::ostream& operator<<(std::ostream& stream, const FrameDescription& frame_des
  */
 class WindowExpression : public AbstractExpression {
  public:
-  WindowExpression(const std::vector<std::shared_ptr<AbstractExpression>>&& partition_by_expressions,
-                   const std::vector<std::shared_ptr<AbstractExpression>>&& order_by_expressions,
-                   const std::vector<SortMode>&& init_sort_modes, const FrameDescription& init_frame_description);
+  WindowExpression(std::vector<std::shared_ptr<AbstractExpression>>&& partition_by_expressions,
+                   std::vector<std::shared_ptr<AbstractExpression>>&& order_by_expressions,
+                   std::vector<SortMode>&& init_sort_modes, FrameDescription&& init_frame_description);
 
   std::string description(const DescriptionMode mode) const override;
   DataType data_type() const override;

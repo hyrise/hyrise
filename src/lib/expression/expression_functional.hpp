@@ -122,7 +122,7 @@ struct binary final {
 };
 
 // Helper for ternary expressions (three arguments).
-//   Example: between_inclusive_(column_a, value_1, value_2) --> BetweenExpression(PredicateCondition::BetweenInclusive, column_a, value_1, value_2)
+//   Example: between_inclusive_(column_a, value_1, value_2) --> BetweenExpression(PredicateCondition::BetweenInclusive, column_a, value_1, value_2)  // NOLINT(whitespace/line_length)
 template <auto t, typename E>
 struct ternary final {
   template <typename A, typename B, typename C>
@@ -276,10 +276,9 @@ std::shared_ptr<CastExpression> cast_(const Argument& argument, const DataType d
 
 std::shared_ptr<IntervalExpression> interval_(const int64_t duration, const DatetimeComponent unit);
 
-std::shared_ptr<WindowExpression> window_(
-    const std::vector<std::shared_ptr<AbstractExpression>>&& partition_by_expressions,
-    const std::vector<std::shared_ptr<AbstractExpression>>&& order_by_expressions,
-    const std::vector<SortMode>&& sort_modes, const FrameDescription& frame_description);
+std::shared_ptr<WindowExpression> window_(std::vector<std::shared_ptr<AbstractExpression>>&& partition_by_expressions,
+                                          std::vector<std::shared_ptr<AbstractExpression>>&& order_by_expressions,
+                                          std::vector<SortMode>&& sort_modes, FrameDescription&& frame_description);
 
 }  // namespace expression_functional
 

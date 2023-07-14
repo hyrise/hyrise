@@ -1071,9 +1071,10 @@ TEST_F(CardinalityEstimatorTest, BetweenScanWithUncorrelatedSubqueryAndProjectio
 }
 
 TEST_F(CardinalityEstimatorTest, WindowNode) {
-  const auto frame_description = FrameDescription{FrameType::Range, FrameBound{0, FrameBoundType::Preceding, true},
-                                                  FrameBound{0, FrameBoundType::CurrentRow, false}};
-  const auto window = window_(expression_vector(), expression_vector(), std::vector<SortMode>{}, frame_description);
+  auto frame_description = FrameDescription{FrameType::Range, FrameBound{0, FrameBoundType::Preceding, true},
+                                            FrameBound{0, FrameBoundType::CurrentRow, false}};
+  const auto window =
+      window_(expression_vector(), expression_vector(), std::vector<SortMode>{}, std::move(frame_description));
   const auto lqp = WindowNode::make(min_(a_a, window), node_a);
 
   const auto input_table_statistics = node_a->table_statistics();

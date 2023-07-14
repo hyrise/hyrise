@@ -22,7 +22,7 @@ std::ostream& operator<<(std::ostream& stream, const FrameBoundType frame_bound_
   return stream;
 }
 
-FrameBound::FrameBound(const uint64_t init_offset, const FrameBoundType init_type, const bool init_unbounded)
+FrameBound::FrameBound(const size_t init_offset, const FrameBoundType init_type, const bool init_unbounded)
     : offset{init_offset}, type{init_type}, unbounded{init_unbounded} {}
 
 bool FrameBound::operator==(const FrameBound& rhs) const {
@@ -30,7 +30,7 @@ bool FrameBound::operator==(const FrameBound& rhs) const {
 }
 
 size_t FrameBound::hash() const {
-  auto hash_value = static_cast<size_t>(offset);
+  auto hash_value = offset;
   boost::hash_combine(hash_value, static_cast<size_t>(type));
   boost::hash_combine(hash_value, boost::hash_value(unbounded));
   return hash_value;
@@ -90,11 +90,10 @@ std::ostream& operator<<(std::ostream& stream, const FrameDescription& frame_des
   return stream;
 }
 
-WindowExpression::WindowExpression(const std::vector<std::shared_ptr<AbstractExpression>>&& partition_by_expressions,
-                                   const std::vector<std::shared_ptr<AbstractExpression>>&& order_by_expressions,
-                                   const std::vector<SortMode>&& init_sort_modes,
-                                   const FrameDescription& init_frame_description)
-    : AbstractExpression{ExpressionType::Window, {{/* Expressions added below. */}}},
+WindowExpression::WindowExpression(std::vector<std::shared_ptr<AbstractExpression>>&& partition_by_expressions,
+                                   std::vector<std::shared_ptr<AbstractExpression>>&& order_by_expressions,
+                                   std::vector<SortMode>&& init_sort_modes, FrameDescription&& init_frame_description)
+    : AbstractExpression{ExpressionType::Window, {/* Expressions added below. */}},
       sort_modes{init_sort_modes},
       frame_description{init_frame_description},
       order_by_expressions_begin_idx{partition_by_expressions.size()} {
@@ -111,8 +110,8 @@ std::shared_ptr<AbstractExpression> WindowExpression::_on_deep_copy(
     std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
   const auto expression_count = arguments.size();
   const auto order_by_expression_count = expression_count - order_by_expressions_begin_idx;
-  auto partition_by_expressions = std::vector<std::shared_ptr<AbstractExpression>>{order_by_expressions_begin_idx};
-  auto order_by_expressions = std::vector<std::shared_ptr<AbstractExpression>>{order_by_expression_count};
+  auto partition_by_expressions = std::vector<std::shared_ptr<AbstractExpression>>(order_by_expressions_begin_idx);
+  auto order_by_expressions = std::vector<std::shared_ptr<AbstractExpression>>(order_by_expression_count);
 
   for (auto expression_idx = size_t{0}; expression_idx < order_by_expressions_begin_idx; ++expression_idx) {
     partition_by_expressions[expression_idx] = arguments[expression_idx]->deep_copy(copied_ops);
@@ -122,9 +121,11 @@ std::shared_ptr<AbstractExpression> WindowExpression::_on_deep_copy(
     order_by_expressions[expression_idx] =
         arguments[order_by_expressions_begin_idx + expression_idx]->deep_copy(copied_ops);
   }
+  auto frame_description_copy = frame_description;
+  auto sort_modes_copy = sort_modes;
 
   return std::make_shared<WindowExpression>(std::move(partition_by_expressions), std::move(order_by_expressions),
-                                            std::move(sort_modes), frame_description);
+                                            std::move(sort_modes_copy), std::move(frame_description_copy));
 }
 
 std::string WindowExpression::description(const DescriptionMode mode) const {

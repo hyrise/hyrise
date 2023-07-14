@@ -3253,10 +3253,10 @@ TEST_F(SQLTranslatorTest, CastStatement) {
 TEST_F(SQLTranslatorTest, BasicWindowFunction) {
   const auto& [actual_lqp, _] = sql_to_lqp_helper("SELECT a, b, row_number() OVER (ORDER BY a DESC) FROM int_float;");
 
-  const auto frame = FrameDescription{FrameType::Range, FrameBound{0, FrameBoundType::Preceding, true},
-                                      FrameBound{0, FrameBoundType::CurrentRow, false}};
-  const auto window =
-      window_(expression_vector(), expression_vector(int_float_a), std::vector<SortMode>{SortMode::Descending}, frame);
+  auto frame = FrameDescription{FrameType::Range, FrameBound{0, FrameBoundType::Preceding, true},
+                                FrameBound{0, FrameBoundType::CurrentRow, false}};
+  const auto window = window_(expression_vector(), expression_vector(int_float_a),
+                              std::vector<SortMode>{SortMode::Descending}, std::move(frame));
   const auto expected_lqp = WindowNode::make(row_number_(window), stored_table_node_int_float);
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
@@ -3282,9 +3282,9 @@ TEST_F(SQLTranslatorTest, WindowFunctionFrames) {
                          frame_descriptions[frame_bound_id] + " ) FROM int_float;";
       const auto& [actual_lqp, _] = sql_to_lqp_helper(query);
 
-      const auto frame = FrameDescription{frame_type, expected_starts[frame_bound_id], expected_ends[frame_bound_id]};
+      auto frame = FrameDescription{frame_type, expected_starts[frame_bound_id], expected_ends[frame_bound_id]};
       const auto window = window_(expression_vector(), expression_vector(int_float_a),
-                                  std::vector<SortMode>{SortMode::Ascending}, frame);
+                                  std::vector<SortMode>{SortMode::Ascending}, std::move(frame));
       const auto expected_lqp = WindowNode::make(row_number_(window), stored_table_node_int_float);
 
       EXPECT_LQP_EQ(actual_lqp, expected_lqp);
@@ -3298,10 +3298,12 @@ TEST_F(SQLTranslatorTest, WindowDifferentFunctions) {
       std::vector<std::string>{"rank()", "dense_rank()", "percent_rank()", "cume_dist()", "row_number()",
                                "min(a)", "max(a)",       "avg(a)",         "count(a)",    "count(distinct a)"};
 
-  const auto frame = FrameDescription{FrameType::Range, FrameBound{0, FrameBoundType::Preceding, true},
-                                      FrameBound{0, FrameBoundType::CurrentRow, false}};
-  const auto window = window_(expression_vector(int_float_b), expression_vector(int_float_a),
-                              std::vector<SortMode>{SortMode::Ascending}, frame);
+  auto frame = FrameDescription{FrameType::Range, FrameBound{0, FrameBoundType::Preceding, true},
+                                FrameBound{0, FrameBoundType::CurrentRow, false}};
+  auto partition_by_expressions = expression_vector(int_float_b);
+  auto order_by_expressions = expression_vector(int_float_a);
+  const auto window = window_(std::move(partition_by_expressions), std::move(order_by_expressions),
+                              std::vector<SortMode>{SortMode::Ascending}, std::move(frame));
   const auto expected_functions =
       expression_vector(rank_(window), dense_rank_(window), percent_rank_(window), cume_dist_(window),
                         row_number_(window), min_(int_float_a, window), max_(int_float_a, window),
@@ -3310,7 +3312,7 @@ TEST_F(SQLTranslatorTest, WindowDifferentFunctions) {
   for (auto window_function_id = size_t{0}; window_function_id < functions.size(); ++window_function_id) {
     const auto query =
         "SELECT a, b, " + functions[window_function_id] + " OVER (PARTITION BY b ORDER BY a) FROM int_float;";
-    const auto& [actual_lqp, _] = sql_to_lqp_helper(query);
+    const auto [actual_lqp, _] = sql_to_lqp_helper(query);
 
     const auto expected_lqp = WindowNode::make(expected_functions[window_function_id], stored_table_node_int_float);
 
@@ -3320,12 +3322,12 @@ TEST_F(SQLTranslatorTest, WindowDifferentFunctions) {
 
 TEST_F(SQLTranslatorTest, WindowFunctionWithProjections) {
   // We need one ProjectionNode before the WindowNode to calculate a + b and one after it to compute 1.0 / row_number().
-  const auto& [actual_lqp, _] = sql_to_lqp_helper("SELECT 1.0 / row_number() OVER (ORDER BY a + b) FROM int_float;");
+  const auto [actual_lqp, _] = sql_to_lqp_helper("SELECT 1.0 / row_number() OVER (ORDER BY a + b) FROM int_float;");
 
-  const auto frame = FrameDescription{FrameType::Range, FrameBound{0, FrameBoundType::Preceding, true},
-                                      FrameBound{0, FrameBoundType::CurrentRow, false}};
+  auto frame = FrameDescription{FrameType::Range, FrameBound{0, FrameBoundType::Preceding, true},
+                                FrameBound{0, FrameBoundType::CurrentRow, false}};
   const auto window = window_(expression_vector(), expression_vector(add_(int_float_a, int_float_b)),
-                              std::vector<SortMode>{SortMode::Ascending}, frame);
+                              std::vector<SortMode>{SortMode::Ascending}, std::move(frame));
   const auto window_function = row_number_(window);
 
   // clang-format off
@@ -3340,14 +3342,15 @@ TEST_F(SQLTranslatorTest, WindowFunctionWithProjections) {
 }
 
 TEST_F(SQLTranslatorTest, MultipleWindowFunctions) {
-  const auto& [actual_lqp, _] =
+  const auto [actual_lqp, _] =
       sql_to_lqp_helper("SELECT a, b, rank() OVER (), row_number() OVER (ORDER BY a) FROM int_float;");
 
-  const auto frame_a = FrameDescription{FrameType::Range, FrameBound{0, FrameBoundType::Preceding, true},
-                                        FrameBound{0, FrameBoundType::CurrentRow, false}};
-  const auto window_a = window_(expression_vector(), expression_vector(), std::vector<SortMode>{}, frame_a);
-  const auto window_b =
-      window_(expression_vector(), expression_vector(int_float_a), std::vector<SortMode>{SortMode::Ascending}, frame_a);
+  auto frame_a = FrameDescription{FrameType::Range, FrameBound{0, FrameBoundType::Preceding, true},
+                                  FrameBound{0, FrameBoundType::CurrentRow, false}};
+  auto frame_b = frame_a;
+  const auto window_a = window_(expression_vector(), expression_vector(), std::vector<SortMode>{}, std::move(frame_a));
+  const auto window_b = window_(expression_vector(), expression_vector(int_float_a),
+                                std::vector<SortMode>{SortMode::Ascending}, std::move(frame_b));
 
   // clang-format off
   const auto expected_lqp =

@@ -18,9 +18,9 @@ class WindowNodeTest : public BaseTest {
     _a = _mock_node->get_column("a");
     _b = _mock_node->get_column("b");
 
-    const auto frame_description = FrameDescription{FrameType::Range, FrameBound{0, FrameBoundType::Preceding, true},
-                                                    FrameBound{0, FrameBoundType::CurrentRow, false}};
-    _window = window_(expression_vector(), expression_vector(), std::vector<SortMode>{}, frame_description);
+    auto frame_description = FrameDescription{FrameType::Range, FrameBound{0, FrameBoundType::Preceding, true},
+                                              FrameBound{0, FrameBoundType::CurrentRow, false}};
+    _window = window_(expression_vector(), expression_vector(), std::vector<SortMode>{}, std::move(frame_description));
     _window_function = min_(_a, _window);
 
     _window_node = WindowNode::make(_window_function, _mock_node);
@@ -39,8 +39,10 @@ class WindowNodeTest : public BaseTest {
 
 TEST_F(WindowNodeTest, InvalidExpressions) {
   EXPECT_THROW(avg_(_a, _b), std::logic_error);
-  EXPECT_THROW(window_(expression_vector(), expression_vector(_a), std::vector<SortMode>{}, _window->frame_description),
-               std::logic_error);
+  auto frame_description = _window->frame_description;
+  EXPECT_THROW(
+      window_(expression_vector(), expression_vector(_a), std::vector<SortMode>{}, std::move(frame_description)),
+      std::logic_error);
 
   if constexpr (HYRISE_DEBUG) {
     EXPECT_THROW(WindowNode::make(std::shared_ptr<AbstractExpression>{}), std::logic_error);
@@ -59,13 +61,13 @@ TEST_F(WindowNodeTest, Description) {
   auto frame_description = FrameDescription{FrameType::Rows, FrameBound{1, FrameBoundType::Preceding, false},
                                             FrameBound{2, FrameBoundType::Following, false}};
   auto window = window_(expression_vector(_a), expression_vector(_b), std::vector<SortMode>{SortMode::Descending},
-                        frame_description);
+                        std::move(frame_description));
   auto window_node = WindowNode::make(rank_(window));
   EXPECT_EQ(window_node->description(),
             "[Window] RANK() OVER (PARTITION BY a ORDER BY b Descending ROWS BETWEEN 1 PRECEDING AND 2 FOLLOWING)");
   frame_description = FrameDescription{FrameType::Rows, FrameBound{0, FrameBoundType::CurrentRow, false},
                                        FrameBound{0, FrameBoundType::Following, true}};
-  window = window_(expression_vector(), expression_vector(), std::vector<SortMode>{}, frame_description);
+  window = window_(expression_vector(), expression_vector(), std::vector<SortMode>{}, std::move(frame_description));
   window_node = WindowNode::make(cume_dist_(window));
   EXPECT_EQ(window_node->description(), "[Window] CUME_DIST() OVER (ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)");
 }
@@ -92,8 +94,9 @@ TEST_F(WindowNodeTest, HashingAndEqualityCheck) {
   const auto window_node_different_function = WindowNode::make(rank_(_window), _mock_node);
   EXPECT_NE(*window_node_different_function, *_window_node);
 
+  auto frame_description = _window->frame_description;
   const auto window =
-      window_(expression_vector(_a), expression_vector(), std::vector<SortMode>{}, _window->frame_description);
+      window_(expression_vector(_a), expression_vector(), std::vector<SortMode>{}, std::move(frame_description));
   const auto window_node_different_window = WindowNode::make(rank_(window), _mock_node);
   EXPECT_NE(*window_node_different_window, *_window_node);
   EXPECT_NE(*window_node_different_window, *window_node_different_function);
