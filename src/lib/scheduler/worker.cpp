@@ -27,44 +27,6 @@ using namespace hyrise;  // NOLINT(build/namespaces)
  */
 thread_local std::weak_ptr<Worker> this_thread_worker;  // NOLINT (clang-tidy wants this const)
 
-bool get_task(const bool check_only_local_queue, std::shared_ptr<AbstractTask>& task,
-              std::shared_ptr<AbstractTask>& next_task, std::shared_ptr<TaskQueue>& local_queue,
-              const std::vector<std::shared_ptr<TaskQueue>>& all_queues) {
-  // If execute_next has been called, run that task first, otherwise try to retrieve a task from the queue.
-  if (next_task) {
-    task = std::move(next_task);
-    next_task = nullptr;
-    return true;
-  }
-
-  if (local_queue->semaphore.tryWait()) {
-    task = local_queue->pull();
-    if (task) {
-      return true;
-    }
-  }
-
-  if (check_only_local_queue) {
-    return false;
-  }
-
-  for (const auto& queue : all_queues) {
-    if (queue == local_queue) {
-      continue;
-    }
-
-    if (queue->semaphore.tryWait()) {
-      task = queue->steal();
-      if (task) {
-        task->set_node_id(local_queue->node_id());
-        return true;
-      }
-    }
-  }
-
-  return false;
-}
-
 }  // namespace
 
 namespace hyrise {
@@ -107,21 +69,35 @@ void Worker::operator()() {
 }
 
 void Worker::_work(const AllowSleep allow_sleep) {
-  const auto& queues = Hyrise::get().scheduler()->queues();
-
   auto task = std::shared_ptr<AbstractTask>{};
-  const auto got_local_task = get_task(true, task, _next_task, _queue, queues);
-  if (!got_local_task) {
-    const auto got_distant_task = get_task(false, task, _next_task, _queue, queues);
-    if (!got_distant_task) {
-      // If there is no ready task neither in the local queue nor in any other, the worker waits for a new task to be
-      // pushed to the own queue. The waiting is skipped in case the scheduler is shutting down or sleep is not allowed
-      //  (e.g., when _work() is called for a known number of unfinished jobs, see wait_for_tasks()).
-      if (allow_sleep == AllowSleep::Yes && !get_task(true, task, _next_task, _queue, queues)) {
-        _queue->semaphore.wait();
-        task = _queue->pull();
+  if (_next_task) {
+    task = std::move(_next_task);
+    _next_task = nullptr;
+  } else {
+    if (_queue->semaphore.tryWait()) {
+      task = _queue->pull();
+    }
+  }
+
+  if (!task) {
+    for (const auto& queue : Hyrise::get().scheduler()->queues()) {
+      if (queue == _queue) {
+        continue;
+      }
+
+      if (queue->semaphore.tryWait()) {
+        task = queue->steal();
+        if (task) {
+          task->set_node_id(_queue->node_id());
+          break;
+        }
       }
     }
+  }
+
+  if (!task && allow_sleep == AllowSleep::Yes) {
+    _queue->semaphore.wait();
+    task = _queue->pull();
   }
 
   if (!task) {
