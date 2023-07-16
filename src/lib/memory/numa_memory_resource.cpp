@@ -14,19 +14,17 @@ NumaMemoryResource::NumaMemoryResource(const NodeID node_id)
 void* NumaMemoryResource::do_allocate(std::size_t bytes, std::size_t alignment) {
   _lap_num_allocations++;
   auto align_bytes = size_t{0};
-  if ((align_bytes = (bytes % alignment)) > 0)
+  auto offset = size_t{0};
+  if ((align_bytes = (bytes % alignment)) > 0) {
     bytes += alignment - align_bytes;
-  if ((_sum_allocated_bytes + bytes) > ALLOCATED_BYTES) {
+  }
+  if (((offset = __sync_fetch_and_add(&_sum_allocated_bytes, bytes))) > ALLOCATED_BYTES) {
     std::cout << "Out of allocated memory on node" << _node_id << std::endl;
-    return nullptr;
+    return (nullptr);
   } else {
-    auto offset = _sum_allocated_bytes;
-    _sum_allocated_bytes += bytes;
-    assert(buffer + offset < ALLOCATED_BYTES);
     return (void*)(buffer + offset);
   }
-  Fail("NumaMemoryResource failed to allocate");
-  return nullptr;
+  return (nullptr);
 }
 
 void NumaMemoryResource::do_deallocate(void* pointer, std::size_t bytes, std::size_t alignment) {
