@@ -65,9 +65,10 @@ std::shared_ptr<AbstractOperator> WindowFunctionEvaluator::_on_deep_copy(
 
 template <typename InputColumnType, WindowFunction window_function>
 std::shared_ptr<const Table> WindowFunctionEvaluator::_templated_on_execute() {
-  if (frame_description().type == FrameType::Range) {
+  if (!is_rank_like(window_function) && frame_description().type == FrameType::Range) {
     Assert(_order_by_column_ids.size() <= 1,
-           "Range mode frames are only allowed when there is at most one order-by expression.");
+           "For non-rank-like window functions, range mode frames are only allowed when there is at most one order-by "
+           "expression.");
   }
 
   const auto input_table = left_input_table();
