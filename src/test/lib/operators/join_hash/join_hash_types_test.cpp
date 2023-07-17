@@ -16,17 +16,20 @@ class JoinHashTypesTest : public BaseTest {};
 template <typename T, typename HashType>
 void test_hash_map(const std::vector<T>& values) {
   Partition<T> partition;
+  auto node_placements = std::vector<NodeID>();
   for (ChunkOffset i = ChunkOffset{0}; i < values.size(); ++i) {
     RowID row_id{ChunkID{17}, i};
     partition.elements.emplace_back(PartitionedElement<T>{row_id, static_cast<T>(values.at(i))});
     partition.null_values.emplace_back(false);
   }
+  node_placements.emplace_back(INVALID_NODE_ID);
 
   // Build a BloomFilter that cannot be used to skip any entries by creating a BloomFilter with every value being false
   // and using bitwise negation (~x).
   auto bloom_filter = ~BloomFilter(BLOOM_FILTER_SIZE);
 
-  auto hash_maps = build<T, HashType>(RadixContainer<T>{partition}, JoinHashBuildMode::AllPositions, 0, bloom_filter);
+  auto hash_maps = build<T, HashType>(RadixContainer<T>{partition}, JoinHashBuildMode::AllPositions, 0, bloom_filter,
+                                      node_placements);
 
   // With only one offset value passed, one hash map will be created
   EXPECT_EQ(hash_maps.size(), 1);

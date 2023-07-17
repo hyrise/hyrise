@@ -43,6 +43,8 @@ class DictionarySegment : public BaseDictionarySegment {
 
   ChunkOffset size() const final;
 
+  NodeID numa_node_location() override;
+
   std::shared_ptr<AbstractSegment> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const final;
 
   size_t memory_usage(const MemoryUsageCalculationMode mode) const final;
@@ -88,6 +90,7 @@ class DictionarySegment : public BaseDictionarySegment {
   const std::shared_ptr<const pmr_vector<T>> _dictionary;
   const std::shared_ptr<const BaseCompressedVector> _attribute_vector;
   std::unique_ptr<BaseVectorDecompressor> _decompressor;
+  NodeID _node_id;
 };
 
 EXPLICITLY_DECLARE_DATA_TYPES(DictionarySegment);
