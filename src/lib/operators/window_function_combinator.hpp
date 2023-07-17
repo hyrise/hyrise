@@ -35,29 +35,27 @@ struct WindowFunctionCombinator {};
 
 template <typename T, typename Combinator>
 struct OnePassStateFromTreeLogicMixin {
-  // TODO(niklas): This currently assumes that tree nodes are optionals of the input value. Instead, the combinator should provide a `ToTreeNode` that replaces the current constructors
-
   struct OnePassState {
     using TreeNode = typename Combinator::TreeNode;
 
-    TreeNode value = Combinator::neutral_element;
+    TreeNode node = Combinator::neutral_element;
 
     OnePassState() = default;
 
     explicit OnePassState(const WindowFunctionEvaluator::RelevantRowInformation& initial_row)
-        : value(as_optional<T>(initial_row.function_argument)) {}
+        : node(Combinator::from_value(as_optional<T>(initial_row.function_argument))) {}
 
     auto current_value() const {
       using Transformer = typename Combinator::QueryTransformer;
 
-      return Transformer{}(value);
+      return Transformer{}(node);
     }
 
     void update([[maybe_unused]] const WindowFunctionEvaluator::RelevantRowInformation& previous_value,
                 const WindowFunctionEvaluator::RelevantRowInformation& current_value) {
       using Combine = typename Combinator::Combine;
 
-      value = Combine{}(value, as_optional<T>(current_value.function_argument));
+      node = Combine{}(node, Combinator::from_value(as_optional<T>(current_value.function_argument)));
     }
   };
 };
@@ -139,12 +137,16 @@ struct WindowFunctionCombinator<T, WindowFunction::Sum>
 
   using TreeNode = std::optional<SumReturnType>;
 
+  constexpr static TreeNode from_value(std::optional<T> value) {
+    return value;
+  }
+
   using Combine = decltype([](TreeNode lhs, TreeNode rhs) -> TreeNode {
     if (!lhs && !rhs)
       return std::nullopt;
     return lhs.value_or(0) + rhs.value_or(0);
   });
-  constexpr static auto neutral_element = std::optional<SumReturnType>();
+  constexpr static auto neutral_element = from_value(std::nullopt);
 
   using QueryTransformer = std::identity;
 };
@@ -157,24 +159,20 @@ struct WindowFunctionCombinator<T, WindowFunction::Avg> {
   struct TreeNode {
     SumT sum = 0;
     CountT non_null_count = 0;
-
-    TreeNode() = default;
-
-    TreeNode(SumT init_sum, CountT init_non_null_count) : sum(init_sum), non_null_count(init_non_null_count) {}
-
-    constexpr explicit TreeNode(std::optional<T> value) {
-      if (value) {
-        sum = *value;
-        non_null_count = 1;
-      }
-    }
   };
 
+  constexpr static TreeNode from_value(std::optional<T> value) {
+    if (value) {
+      return {.sum = *value, .non_null_count = 1};
+    }
+    return {.sum = 0, .non_null_count = 0};
+  }
+
   using Combine = decltype([](TreeNode lhs, TreeNode rhs) {
-    return TreeNode(lhs.sum + rhs.sum, lhs.non_null_count + rhs.non_null_count);
+    return TreeNode{.sum = lhs.sum + rhs.sum, .non_null_count = lhs.non_null_count + rhs.non_null_count};
   });
 
-  constexpr static auto neutral_element = TreeNode(std::nullopt);
+  constexpr static auto neutral_element = from_value(std::nullopt);
 
   using AvgReturnType = typename WindowFunctionTraits<T, WindowFunction::Avg>::ReturnType;
 
@@ -186,10 +184,36 @@ struct WindowFunctionCombinator<T, WindowFunction::Avg> {
 };
 
 template <typename T>
+struct WindowFunctionCombinator<T, WindowFunction::Count> {
+  using CountT = typename WindowFunctionTraits<T, WindowFunction::Count>::ReturnType;
+
+  struct TreeNode {
+    CountT non_null_count = 0;
+  };
+
+  constexpr static TreeNode from_value(std::optional<T> value) {
+    return {.non_null_count = (value.has_value())};
+  }
+
+  using Combine = decltype([](TreeNode lhs, TreeNode rhs) {
+    return TreeNode{.non_null_count = lhs.non_null_count + rhs.non_null_count};
+  });
+
+  constexpr static auto neutral_element = from_value(std::nullopt);
+
+  using QueryTransformer =
+      decltype([](TreeNode query_result) -> std::optional<CountT> { return query_result.non_null_count; });
+};
+
+template <typename T>
 struct WindowFunctionCombinator<T, WindowFunction::Min>
     : OnePassStateFromTreeLogicMixin<T, WindowFunctionCombinator<T, WindowFunction::Min>> {
   using MinReturnType = typename WindowFunctionTraits<T, WindowFunction::Min>::ReturnType;
   using TreeNode = std::optional<MinReturnType>;
+
+  constexpr static TreeNode from_value(std::optional<T> value) {
+    return value;
+  }
 
   using Combine = decltype([](TreeNode lhs, TreeNode rhs) -> TreeNode {
     if (!lhs && !rhs)
@@ -207,6 +231,10 @@ struct WindowFunctionCombinator<T, WindowFunction::Max>
     : OnePassStateFromTreeLogicMixin<T, WindowFunctionCombinator<T, WindowFunction::Max>> {
   using MaxReturnType = typename WindowFunctionTraits<T, WindowFunction::Max>::ReturnType;
   using TreeNode = std::optional<MaxReturnType>;
+
+  constexpr static TreeNode from_value(std::optional<T> value) {
+    return value;
+  }
 
   using Combine = decltype([](TreeNode lhs, TreeNode rhs) -> TreeNode {
     if (!lhs && !rhs)
