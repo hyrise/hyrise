@@ -266,6 +266,12 @@ SELECT id, RANK() OVER (ORDER BY b DESC, c) AS r from id_int_int_int_100;
 SELECT id, DENSE_RANK() OVER (ORDER BY b DESC, c ASC) AS r from id_int_int_int_100;
 SELECT id, ROW_NUMBER() OVER (ORDER BY b DESC, c DESC) AS r from id_int_int_int_100;
 SELECT id, AVG(a) OVER (ORDER BY b ASC, c DESC ROWS BETWEEN 3 PRECEDING AND 3 FOLLOWING) AS average from id_int_int_int_100;
+-- range mode
+SELECT id, AVG(a) OVER (ORDER BY b RANGE BETWEEN 3 PRECEDING AND 3 FOLLOWING) AS average from id_int_int_int_100;
+SELECT id, SUM(a) OVER (PARTITION BY b) AS average from id_int_int_int_100;
+-- count
+SELECT id, a, b, c, count(a) over (PARTITION BY b ORDER BY c) AS count from id_int_int_int_100;
+
 
 -- Aggregates
 SELECT SUM(b + b) AS sum_b_b FROM mixed;
