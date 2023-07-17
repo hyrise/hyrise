@@ -1,17 +1,10 @@
 #include "between_composition_rule.hpp"
 
-#include <algorithm>
-#include <iostream>
-#include <memory>
-#include <string>
-#include <vector>
-
 #include "expression/expression_utils.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "statistics/table_statistics.hpp"
-#include "utils/assert.hpp"
 
 namespace {
 using namespace hyrise;                 // NOLINT(build/namespaces)

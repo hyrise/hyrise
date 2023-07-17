@@ -1,10 +1,6 @@
-#include "optimizer/strategy/stored_table_column_alignment_rule.hpp"
+#include "stored_table_column_alignment_rule.hpp"
 
-#include <algorithm>
-#include <memory>
-#include <optional>
 #include <unordered_set>
-#include <vector>
 
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/logical_plan_root_node.hpp"

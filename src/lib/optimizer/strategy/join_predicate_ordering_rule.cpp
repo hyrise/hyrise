@@ -7,7 +7,6 @@
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "statistics/cardinality_estimator.hpp"
-#include "utils/assert.hpp"
 
 namespace hyrise {
 

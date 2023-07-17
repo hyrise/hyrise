@@ -9,7 +9,6 @@
 #include "statistics/abstract_cardinality_estimator.hpp"
 #include "statistics/cardinality_estimation_cache.hpp"
 #include "statistics/table_statistics.hpp"
-#include "utils/assert.hpp"
 
 namespace hyrise {
 

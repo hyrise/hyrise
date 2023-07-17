@@ -331,7 +331,7 @@ TEST_F(OptimizerTest, OptimizesSubqueriesExactlyOnce) {
   }
 }
 
-TEST_F(OptimizerTest, SetsRootNodeAndCostOptimizer) {
+TEST_F(OptimizerTest, SetsRootNodeAndCostEstimator) {
   class MockRule : public AbstractRule {
    public:
     std::string name() const override {

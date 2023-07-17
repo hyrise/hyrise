@@ -1,10 +1,6 @@
 #include "subquery_to_join_rule.hpp"
 
-#include <algorithm>
 #include <iterator>
-#include <map>
-#include <memory>
-#include <utility>
 
 #include "expression/abstract_expression.hpp"
 #include "expression/abstract_predicate_expression.hpp"
@@ -23,7 +19,6 @@
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/validate_node.hpp"
-#include "utils/assert.hpp"
 
 namespace {
 

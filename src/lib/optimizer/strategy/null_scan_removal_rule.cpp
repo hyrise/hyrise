@@ -1,10 +1,5 @@
 #include "null_scan_removal_rule.hpp"
 
-#include <algorithm>
-#include <memory>
-#include <string>
-#include <vector>
-
 #include "cost_estimation/abstract_cost_estimator.hpp"
 #include "expression/is_null_expression.hpp"
 #include "expression/lqp_column_expression.hpp"
@@ -18,7 +13,6 @@
 #include "statistics/cardinality_estimation_cache.hpp"
 #include "statistics/cardinality_estimator.hpp"
 #include "statistics/table_statistics.hpp"
-#include "utils/assert.hpp"
 
 namespace hyrise {
 
