@@ -139,6 +139,8 @@ std::shared_ptr<const Table> WindowFunctionEvaluator::_on_execute() {
             return _templated_on_execute<InputColumnType, WindowFunction::Sum>();
           case WindowFunction::Avg:
             return _templated_on_execute<InputColumnType, WindowFunction::Avg>();
+          case WindowFunction::Count:
+            return _templated_on_execute<InputColumnType, WindowFunction::Count>();
           case WindowFunction::Min:
             return _templated_on_execute<InputColumnType, WindowFunction::Min>();
           case WindowFunction::Max:
@@ -535,9 +537,7 @@ void WindowFunctionEvaluator::templated_compute_window_function_segment_tree(
 
         std::vector<TreeNode> leaf_values(partition.size());
         std::ranges::transform(partition, leaf_values.begin(), [](const auto& row) -> TreeNode {
-          if (variant_is_null(row.function_argument))
-            return TreeNode(std::nullopt);
-          return TreeNode(static_cast<OutputColumnType>(get<InputColumnType>(row.function_argument)));
+          return Traits::from_value(as_optional<InputColumnType>(row.function_argument));
         });
         SegmentTree<TreeNode, typename Traits::Combine> segment_tree(leaf_values, Traits::neutral_element);
 
