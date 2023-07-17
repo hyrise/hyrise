@@ -341,7 +341,8 @@ TEST_F(OptimizerTest, SetsRootNodeAndCostEstimator) {
    protected:
     void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override {
       EXPECT_EQ(lqp_root->type, LQPNodeType::Root);
-      EXPECT_TRUE(cost_estimator);
+      ASSERT_TRUE(cost_estimator);
+      EXPECT_TRUE(cost_estimator->cardinality_estimator);
     }
   };
 
