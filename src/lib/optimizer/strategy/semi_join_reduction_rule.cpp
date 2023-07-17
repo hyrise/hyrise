@@ -15,12 +15,11 @@ std::string SemiJoinReductionRule::name() const {
 }
 
 void SemiJoinReductionRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
-  Assert(lqp_root->type == LQPNodeType::Root, "Rule needs root to hold onto");
-
   // Adding semi joins inside visit_lqp might lead to endless recursions. Thus, we use visit_lqp to identify the
   // reductions that we want to add to the plan, write them into semi_join_reductions and actually add them after
   // visit_lqp.
-  std::vector<std::tuple<std::shared_ptr<JoinNode>, LQPInputSide, std::shared_ptr<JoinNode>>> semi_join_reductions;
+  auto semi_join_reductions =
+      std::vector<std::tuple<std::shared_ptr<JoinNode>, LQPInputSide, std::shared_ptr<JoinNode>>>{};
 
   const auto opposite_side = [](const auto side) {
     return side == LQPInputSide::Left ? LQPInputSide::Right : LQPInputSide::Left;

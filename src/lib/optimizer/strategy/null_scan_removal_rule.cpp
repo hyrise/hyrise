@@ -28,9 +28,7 @@ std::string NullScanRemovalRule::name() const {
 }
 
 void NullScanRemovalRule::apply_to_plan(const std::shared_ptr<LogicalPlanRootNode>& root) const {
-  Assert(root->type == LQPNodeType::Root, "NullScanRemovalRule needs root to hold onto");
-
-  std::vector<std::shared_ptr<AbstractLQPNode>> nodes_to_remove;
+  auto nodes_to_remove = std::vector<std::shared_ptr<AbstractLQPNode>>{};
 
   // To determine if the rule applies to a node it must meet all of the following conditions:
   // 1. The node must be of type Predicate

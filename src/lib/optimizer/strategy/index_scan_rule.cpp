@@ -35,9 +35,6 @@ std::string IndexScanRule::name() const {
 }
 
 void IndexScanRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
-  DebugAssert(cost_estimator, "IndexScanRule requires cost estimator to be set");
-  Assert(lqp_root->type == LQPNodeType::Root, "ExpressionReductionRule needs root to hold onto");
-
   visit_lqp(lqp_root, [&](const auto& node) {
     if (node->type == LQPNodeType::Predicate) {
       const auto& child = node->left_input();

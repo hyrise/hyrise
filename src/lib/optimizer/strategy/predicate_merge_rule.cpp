@@ -39,17 +39,15 @@ std::string PredicateMergeRule::name() const {
  * rule might be adapted to make more sophisticated decisions on which predicates to include.
  */
 void PredicateMergeRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
-  Assert(lqp_root->type == LQPNodeType::Root, "PredicateMergeRule needs root to hold onto");
-
   // (Potentially mergeable) subplans are identified by their topmost UnionNode. node_to_topmost holds a mapping from
   // PredicateNodes and UnionNodes within such subplans to the respective topmost UnionNode.
-  std::map<const std::shared_ptr<AbstractLQPNode>, const std::shared_ptr<UnionNode>> node_to_topmost;
+  auto node_to_topmost = std::map<const std::shared_ptr<AbstractLQPNode>, const std::shared_ptr<UnionNode>>{};
 
   // Store the same nodes as node_to_topmost but preserve their order
-  std::queue<std::shared_ptr<AbstractLQPNode>> node_queue;
+  auto node_queue = std::queue<std::shared_ptr<AbstractLQPNode>>{};
 
   // For every topmost UnionNode, store the total number of UnionNodes in its subplan below
-  std::map<const std::shared_ptr<UnionNode>, size_t> topmost_to_union_count;
+  auto topmost_to_union_count = std::map<const std::shared_ptr<UnionNode>, size_t>{};
 
   // Step 1: Collect mergeable nodes
   visit_lqp(lqp_root, [&](const auto& node) {

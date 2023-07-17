@@ -19,15 +19,10 @@ std::string JoinOrderingRule::name() const {
 }
 
 void JoinOrderingRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
-  DebugAssert(cost_estimator, "JoinOrderingRule requires cost estimator to be set");
-
   /**
    * Dispatch _perform_join_ordering_recursively() and fix the column order afterwards, since changing join order might
    * have changed it
    */
-
-  Assert(lqp_root->type == LQPNodeType::Root, "JoinOrderingRule needs root to hold onto");
-
   const auto expected_column_order = lqp_root->output_expressions();
 
   auto result_lqp = _perform_join_ordering_recursively(lqp_root->left_input());
@@ -79,7 +74,7 @@ std::shared_ptr<AbstractLQPNode> JoinOrderingRule::_perform_join_ordering_recurs
     // a join graph with only one vertex is no actual join and needs no ordering
     result_lqp = lqp;
   } else if (join_graph->vertices.size() < 9) {
-    result_lqp = DpCcp{}(*join_graph, caching_cost_estimator);  // NOLINT - doesn't like `{}()`
+    result_lqp = DpCcp{}(*join_graph, caching_cost_estimator);                   // NOLINT - doesn't like `{}()`
   } else {
     result_lqp = GreedyOperatorOrdering{}(*join_graph, caching_cost_estimator);  // NOLINT - doesn't like `{}()`
   }

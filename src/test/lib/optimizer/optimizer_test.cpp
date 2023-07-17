@@ -331,4 +331,43 @@ TEST_F(OptimizerTest, OptimizesSubqueriesExactlyOnce) {
   }
 }
 
+TEST_F(OptimizerTest, SetsRootNodeAndCostOptimizer) {
+  class MockRule : public AbstractRule {
+   public:
+    std::string name() const override {
+      return "MockRule";
+    }
+
+   protected:
+    void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override {
+      ASSERT_EQ(lqp_root->type, LQPNodeType::Root);
+      ASSERT_TRUE(cost_estimator);
+    }
+  };
+
+  auto optimizer = Optimizer{};
+  optimizer.add_rule(std::make_unique<MockRule>());
+
+  // LQP without subqueries.
+  auto lqp_a = PredicateNode::make(greater_than_(a, 1), node_a);
+  optimizer.optimize(std::move(lqp_a));
+
+  // LQP with an uncorrelated subquery.
+  auto lqp_b = PredicateNode::make(greater_than_(a, subquery_a), node_a);
+  optimizer.optimize(std::move(lqp_b));
+
+  // LQP with a correlated subquery.
+  auto lqp_c = PredicateNode::make(greater_than_(a, subquery_b), node_a);
+  optimizer.optimize(std::move(lqp_c));
+
+  // LQP with an uncorrelated and a correlated subquery.
+  // clang-format off
+  auto lqp_d =
+  ProjectionNode::make(expression_vector(add_(b, subquery_a)),
+    PredicateNode::make(greater_than_(a, subquery_b),
+      node_a));
+  // clang-format on
+  optimizer.optimize(std::move(lqp_d));
+}
+
 }  // namespace hyrise

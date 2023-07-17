@@ -26,8 +26,6 @@ void JoinPredicateOrderingRule::_apply_to_plan_without_subqueries(
 
     DebugAssert(std::dynamic_pointer_cast<JoinNode>(node), "LQPNodeType::Join should only be set for JoinNode.");
     const auto join_mode = std::static_pointer_cast<JoinNode>(node)->join_mode;
-
-    DebugAssert(cost_estimator, "JoinOrderingRule requires cost estimator to be set");
     const auto caching_cardinality_estimator = cost_estimator->cardinality_estimator->new_instance();
 
     // Estimate join selectivity of a predicate by creating a new join node joining only on that one predicate and
