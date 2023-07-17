@@ -340,13 +340,15 @@ TEST_F(OptimizerTest, SetsRootNodeAndCostEstimator) {
 
    protected:
     void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override {
-      ASSERT_EQ(lqp_root->type, LQPNodeType::Root);
-      ASSERT_TRUE(cost_estimator);
+      EXPECT_EQ(lqp_root->type, LQPNodeType::Root);
+      EXPECT_TRUE(cost_estimator);
     }
   };
 
   auto optimizer = Optimizer{};
-  optimizer.add_rule(std::make_unique<MockRule>());
+  auto mock_rule = std::make_unique<MockRule>();
+  EXPECT_FALSE(mock_rule->cost_estimator);
+  optimizer.add_rule(std::move(mock_rule));
 
   // LQP without subqueries.
   auto lqp_a = PredicateNode::make(greater_than_(a, 1), node_a);
