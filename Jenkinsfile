@@ -173,13 +173,13 @@ try {
                 sh "./scripts/test/hyriseBenchmarkJoinOrder_test.py clang-debug"
                 sh "./scripts/test/hyriseBenchmarkFileBased_test.py clang-debug"
                 sh "cd clang-debug && ../scripts/test/hyriseBenchmarkTPCH_test.py ." // Own folder to isolate visualization
-                sh "cd clang-debug && ../scripts/test/hyriseBenchmarkJCCH_test.py ." // Own folder to isolate visualization
+                sh "cd clang-debug && ../scripts/test/hyriseBenchmarkJCCH_test.py ." // Own folder to isolate cached data
                 sh "./scripts/test/hyriseConsole_test.py gcc-debug"
                 sh "./scripts/test/hyriseServer_test.py gcc-debug"
                 sh "./scripts/test/hyriseBenchmarkJoinOrder_test.py gcc-debug"
                 sh "./scripts/test/hyriseBenchmarkFileBased_test.py gcc-debug"
                 sh "cd gcc-debug && ../scripts/test/hyriseBenchmarkTPCH_test.py ." // Own folder to isolate visualization
-                sh "cd gcc-debug && ../scripts/test/hyriseBenchmarkJCCH_test.py ." // Own folder to isolate visualization
+                sh "cd gcc-debug && ../scripts/test/hyriseBenchmarkJCCH_test.py ." // Own folder to isolate cached data
 
               } else {
                 Utils.markStageSkippedForConditional("debugSystemTests")
@@ -297,22 +297,12 @@ try {
             }
           }
 
-          // We run these test in an own stage since we encountered issues with multiple concurrent calls to the external DB generators.
-          parallel debugSSBTest: {
-            stage("debugSSBTest") {
-              if (env.BRANCH_NAME == 'master' || full_ci) {
-                sh "./scripts/test/hyriseBenchmarkStarSchema_test.py clang-debug"
-              } else {
-                Utils.markStageSkippedForConditional("debugSSBTest")
-              }
-            }
-          }, debugJCCHTest: {
-            stage("debugJCCHTest") {
-              if (env.BRANCH_NAME == 'master' || full_ci) {
-                sh "./scripts/test/hyriseBenchmarkJCCH_test.py clang-debug"
-              } else {
-                Utils.markStageSkippedForConditional("debugJCCHTest")
-              }
+          // We run this test in an own stage since we encountered issues with multiple concurrent calls to the external DB generator.
+          stage("clangDebugSSBTest") {
+            if (env.BRANCH_NAME == 'master' || full_ci) {
+              sh "./scripts/test/hyriseBenchmarkStarSchema_test.py clang-debug"
+            } else {
+              Utils.markStageSkippedForConditional("clangDebugSSBTest")
             }
           }
 
