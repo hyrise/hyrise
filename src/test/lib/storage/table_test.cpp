@@ -8,9 +8,9 @@
 
 #include "memory/zero_allocator.hpp"
 #include "resolve_type.hpp"
+#include "storage/index/partial_hash/partial_hash_index.hpp"
 #include "storage/table.hpp"
 #include "utils/load_table.hpp"
-#include "storage/index/partial_hash/partial_hash_index.hpp"
 
 namespace hyrise {
 
@@ -289,8 +289,8 @@ TEST_F(StorageTableTest, StableChunks) {
 TEST_F(StorageTableTest, LastChunkOfReferenceTable) {
   const auto reference_table = std::make_shared<Table>(column_definitions, TableType::References);
   const auto posList = std::make_shared<RowIDPosList>(1);
-  const auto segment_int = std::make_shared<ReferenceSegment>(t, ColumnID{0}, posList);
-  const auto segment_string = std::make_shared<ReferenceSegment>(t, ColumnID{1}, posList);
+  const auto segment_int = std::make_shared<ReferenceSegment>(table, ColumnID{0}, posList);
+  const auto segment_string = std::make_shared<ReferenceSegment>(table, ColumnID{1}, posList);
   const auto segments = Segments{segment_int, segment_string};
   const auto second_segment = Segments{segment_int, segment_string};
   reference_table->append_chunk(segments);
@@ -300,17 +300,17 @@ TEST_F(StorageTableTest, LastChunkOfReferenceTable) {
 }
 
 TEST_F(StorageTableTest, CreatePartialHashIndex) {
-  auto hash_index = t->get_table_indexes();
+  auto hash_index = table->get_table_indexes();
   EXPECT_TRUE(hash_index.empty());
   const auto world_string = pmr_string{"World"};
   const auto hello_string = pmr_string{"Hello"};
-  t->append({4, hello_string});
-  t->append({3, world_string});
-  t->append({6, hello_string});
-  t->append({7, "!"});
-  t->append({8, "?"});
-  t->create_partial_hash_index(ColumnID{1}, {ChunkID{0}, ChunkID{1}});
-  hash_index = t->get_table_indexes();
+  table->append({4, hello_string});
+  table->append({3, world_string});
+  table->append({6, hello_string});
+  table->append({7, "!"});
+  table->append({8, "?"});
+  table->create_partial_hash_index(ColumnID{1}, {ChunkID{0}, ChunkID{1}});
+  hash_index = table->get_table_indexes();
   ASSERT_EQ(hash_index.size(), 1);
   const auto created_hash_index = hash_index[0];
   EXPECT_EQ(created_hash_index->get_indexed_column_id(), ColumnID{1});
@@ -333,7 +333,7 @@ TEST_F(StorageTableTest, CreatePartialHashIndex) {
 }
 
 TEST_F(StorageTableTest, CreatePartialHashIndexOnEmptyChunks) {
-  EXPECT_THROW(t->create_partial_hash_index(ColumnID{0}, {}), std::logic_error);
+  EXPECT_THROW(table->create_partial_hash_index(ColumnID{0}, {}), std::logic_error);
 }
 
 }  // namespace hyrise
