@@ -1,26 +1,27 @@
 #include "get_table.hpp"
 
 #include <algorithm>
-#include <memory>
 #include <sstream>
-#include <string>
 #include <unordered_set>
-#include <vector>
 
 #include "hyrise.hpp"
+#include "logical_query_plan/predicate_node.hpp"
+#include "logical_query_plan/stored_table_node.hpp"
+#include "operators/pqp_utils.hpp"
+#include "operators/table_scan.hpp"
 #include "storage/index/partial_hash/partial_hash_index.hpp"
-#include "types.hpp"
+#include "utils/chunk_pruning_utils.hpp"
 
 namespace hyrise {
 
-GetTable::GetTable(const std::string& name) : GetTable(name, {}, {}) {}
+GetTable::GetTable(const std::string& name) : GetTable{name, {}, {}} {}
 
 GetTable::GetTable(const std::string& name, const std::vector<ChunkID>& pruned_chunk_ids,
                    const std::vector<ColumnID>& pruned_column_ids)
-    : AbstractReadOnlyOperator(OperatorType::GetTable),
-      _name(name),
-      _pruned_chunk_ids(pruned_chunk_ids),
-      _pruned_column_ids(pruned_column_ids) {
+    : AbstractReadOnlyOperator{OperatorType::GetTable},
+      _name{name},
+      _pruned_chunk_ids{pruned_chunk_ids},
+      _pruned_column_ids{pruned_column_ids} {
   // Check pruned_chunk_ids
   DebugAssert(std::is_sorted(_pruned_chunk_ids.begin(), _pruned_chunk_ids.end()), "Expected sorted vector of ChunkIDs");
   DebugAssert(std::adjacent_find(_pruned_chunk_ids.begin(), _pruned_chunk_ids.end()) == _pruned_chunk_ids.end(),
@@ -102,7 +103,6 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
   // Currently, value_clustered_by is only used for temporary tables. If tables in the StorageManager start using that
   // flag, too, it needs to be forwarded here; otherwise it would be completely invisible in the PQP.
   DebugAssert(stored_table->value_clustered_by().empty(), "GetTable does not forward value_clustered_by");
-
   auto excluded_chunk_ids = std::vector<ChunkID>{};
   auto pruned_chunk_ids_iter = _pruned_chunk_ids.begin();
   for (ChunkID stored_chunk_id{0}; stored_chunk_id < chunk_count; ++stored_chunk_id) {

@@ -1,12 +1,7 @@
 #pragma once
 
-#include <memory>
-#include <string>
-#include <vector>
-
 #include "abstract_read_only_operator.hpp"
 #include "concurrency/transaction_context.hpp"
-#include "types.hpp"
 
 namespace hyrise {
 
@@ -17,7 +12,6 @@ namespace hyrise {
 // have to deal with tables that change their chunk count while they are being looked at. However, rows added to a chunk
 // within that stored table that was already present when GetTable was executed will be visible when calling
 // get_output().
-
 class GetTable : public AbstractReadOnlyOperator {
  public:
   // Convenience constructor without pruning info
@@ -34,18 +28,19 @@ class GetTable : public AbstractReadOnlyOperator {
   const std::vector<ChunkID>& pruned_chunk_ids() const;
   const std::vector<ColumnID>& pruned_column_ids() const;
 
+ protected:
   std::shared_ptr<AbstractOperator> _on_deep_copy(
       const std::shared_ptr<AbstractOperator>& /*copied_left_input*/,
       const std::shared_ptr<AbstractOperator>& /*copied_right_input*/,
       std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& /*copied_ops*/) const override;
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
 
- protected:
   std::shared_ptr<const Table> _on_execute() override;
 
-  // name of the table to retrieve
+  // Name of the table to retrieve.
   const std::string _name;
   const std::vector<ChunkID> _pruned_chunk_ids;
   const std::vector<ColumnID> _pruned_column_ids;
 };
+
 }  // namespace hyrise
