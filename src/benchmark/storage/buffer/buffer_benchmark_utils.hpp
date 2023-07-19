@@ -7,6 +7,8 @@
 #ifdef __AVX512VL__
 #include <x86intrin.h>
 #endif
+#include "utils/assert.hpp"
+
 namespace hyrise {
 inline void explicit_move_pages(void* mem, size_t size, int node) {
 #if HYRISE_NUMA_SUPPORT
