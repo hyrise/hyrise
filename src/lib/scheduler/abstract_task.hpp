@@ -152,7 +152,7 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
   /**
    * Schedules the task if a scheduler is available, otherwise just executes it on the current thread.
    */
-  void schedule(NodeID preferred_node_id = CURRENT_NODE_ID);
+  void schedule();
 
   /**
    * @returns true when the task is scheduled or was scheduled successfully.
@@ -199,7 +199,7 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
   void _join();
 
   std::atomic<TaskID> _id{INVALID_TASK_ID};
-  std::atomic<NodeID> _node_id{INVALID_NODE_ID};
+  std::atomic<NodeID> _node_id{CURRENT_NODE_ID};
   SchedulePriority _priority;
   std::atomic_bool _stealable;
   std::function<void()> _done_callback;

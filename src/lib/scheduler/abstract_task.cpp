@@ -96,7 +96,7 @@ void AbstractTask::set_done_callback(const std::function<void()>& done_callback)
   _done_callback = done_callback;
 }
 
-void AbstractTask::schedule(NodeID preferred_node_id) {
+void AbstractTask::schedule() {
   // We need to make sure that data written by the scheduling thread is visible in the thread executing the task. While
   // spawning a thread is an implicit barrier, we have no such guarantee when we simply add a task to a queue and it is
   // executed by an unrelated thread. Thus, we add a memory barrier.
@@ -110,7 +110,7 @@ void AbstractTask::schedule(NodeID preferred_node_id) {
     return;
   }
 
-  Hyrise::get().scheduler()->schedule(shared_from_this(), preferred_node_id, _priority);
+  Hyrise::get().scheduler()->schedule(shared_from_this(), _priority);
 }
 
 void AbstractTask::_join() {

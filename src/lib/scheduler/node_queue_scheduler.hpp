@@ -100,12 +100,9 @@ class NodeQueueScheduler : public AbstractScheduler {
 
   /**
    * @param task
-   * @param preferred_node_id determines to which queue tasks are added. Note, the task might still be stolen by other nodes due
-   *                          to task stealing in NUMA environments.
    * @param priority
    */
-  void schedule(std::shared_ptr<AbstractTask> task, NodeID preferred_node_id = CURRENT_NODE_ID,
-                SchedulePriority priority = SchedulePriority::Default) override;
+  void schedule(std::shared_ptr<AbstractTask> task, SchedulePriority priority = SchedulePriority::Default) override;
 
   /**
    * @param preferred_node_id

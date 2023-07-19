@@ -115,8 +115,7 @@ const std::vector<std::shared_ptr<Worker>>& NodeQueueScheduler::workers() const 
   return _workers;
 }
 
-void NodeQueueScheduler::schedule(std::shared_ptr<AbstractTask> task, NodeID preferred_node_id,
-                                  SchedulePriority priority) {
+void NodeQueueScheduler::schedule(std::shared_ptr<AbstractTask> task, SchedulePriority priority) {
   /**
    * Add task to the queue of the preferred node if it is ready for execution.
    */
@@ -130,7 +129,7 @@ void NodeQueueScheduler::schedule(std::shared_ptr<AbstractTask> task, NodeID pre
     return;
   }
 
-  const auto node_id_for_queue = determine_queue_id(preferred_node_id);
+  const auto node_id_for_queue = determine_queue_id(task->node_id());
   DebugAssert((static_cast<size_t>(node_id_for_queue) < _queues.size()),
               "Node ID is not within range of available nodes.");
   _queues[node_id_for_queue]->push(task, priority);
@@ -142,7 +141,7 @@ NodeID NodeQueueScheduler::determine_queue_id(const NodeID preferred_node_id) co
     return NodeID{0};
   }
 
-  if (preferred_node_id != CURRENT_NODE_ID) {
+  if (preferred_node_id != CURRENT_NODE_ID && preferred_node_id != INVALID_NODE_ID) {
     return preferred_node_id;
   }
 

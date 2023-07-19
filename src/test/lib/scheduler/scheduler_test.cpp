@@ -288,10 +288,15 @@ TEST_F(SchedulerTest, TaskToNodeAssignment) {
   const auto task_3 = std::make_shared<JobTask>([&]() {}, SchedulePriority::Default, false);
   const auto task_4 = std::make_shared<JobTask>([&]() {}, SchedulePriority::Default, false);
 
-  task_1->schedule(NodeID{0});
-  task_2->schedule(NodeID{0});
-  task_3->schedule(NodeID{0});
-  task_4->schedule(NodeID{1});
+  task_1->set_node_id(NodeID{0});
+  task_2->set_node_id(NodeID{0});
+  task_3->set_node_id(NodeID{0});
+  task_4->set_node_id(NodeID{1});
+
+  task_1->schedule();
+  task_2->schedule();
+  task_3->schedule();
+  task_4->schedule();
 
   node_queue_scheduler->wait_for_all_tasks();
 
@@ -365,7 +370,7 @@ TEST_F(SchedulerTest, MergeSort) {
   vector_to_sort.reserve(ITEM_COUNT);
   for (auto i = size_t{0}; i < ITEM_COUNT / 5; ++i) {
     for (auto j = size_t{0}; j < 5; ++j) {
-      vector_to_sort.push_back(i*5 + (4-j));
+      vector_to_sort.push_back(i * 5 + (4 - j));
     }
   }
 
