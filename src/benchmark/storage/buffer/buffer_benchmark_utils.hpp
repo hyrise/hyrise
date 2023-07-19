@@ -26,7 +26,8 @@ inline void explicit_move_pages(void* mem, size_t size, int node) {
 
 inline void simulate_cacheline_read(std::byte* ptr) {
 #ifdef __AVX512VL__
-  benchmark::DoNotOptimize((void*)_mm512_load_si512(ptr));
+  auto v = _mm512_load_si512(ptr);
+  benchmark::DoNotOptimize(v);
 #endif
 }
 
