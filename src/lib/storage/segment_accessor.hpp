@@ -61,7 +61,7 @@ class SegmentAccessor final : public AbstractSegmentAccessor<T> {
  protected:
   mutable uint64_t _accesses{0};
   const SegmentType& _segment;
-  const ReadPinGuard _pin_guard;
+  const SharedReadPinGuard _pin_guard;
 };
 
 /**
@@ -103,7 +103,7 @@ class MultipleChunkReferenceSegmentAccessor final : public AbstractSegmentAccess
   const std::shared_ptr<const Table> _table;
   // Serves as a "dictionary" from ChunkID to Accessor. Lazily increased in size as Chunks are accessed.
   mutable std::vector<std::unique_ptr<AbstractSegmentAccessor<T>>> _accessors;
-  const ReadPinGuard _pin_guard;
+  const SharedReadPinGuard _pin_guard;
 };
 
 // Accessor for ReferenceSegments that reference single chunks - see comment above
@@ -129,7 +129,7 @@ class SingleChunkReferenceSegmentAccessor final : public AbstractSegmentAccessor
   const AbstractPosList& _pos_list;
   const ChunkID _chunk_id;
   const Segment& _segment;
-  const ReadPinGuard _segement_pin_guard;
+  const SharedReadPinGuard _segement_pin_guard;
 };
 
 // Accessor for ReferenceSegments that reference only NULL values

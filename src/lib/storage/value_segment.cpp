@@ -38,7 +38,7 @@ ValueSegment<T>::ValueSegment(const PolymorphicAllocator<T>& allocator, bool nul
 
 template <typename T>
 ValueSegment<T>::~ValueSegment() {
-  auto values_pin_guard = WritePinGuard{*this};
+  auto values_pin_guard = UnsafeSharedWritePinGuard{*this};
   _values.clear();
   _null_values->clear();
 }
@@ -62,11 +62,11 @@ AllTypeVariant ValueSegment<T>::operator[](const ChunkOffset chunk_offset) const
   DebugAssert(chunk_offset != INVALID_CHUNK_OFFSET, "Passed chunk offset must be valid.");
   PerformanceWarning("operator[] used");
   access_counter[SegmentAccessCounter::AccessType::Point] += 1;
-  auto values_pin_guard = ReadPinGuard{_values};
+  auto values_pin_guard = SharedReadPinGuard{_values};
 
   // Segment supports null values and value is null
   if (is_nullable()) {
-    auto null_values_pin_guard = ReadPinGuard{*_null_values};
+    auto null_values_pin_guard = SharedReadPinGuard{*_null_values};
     if (_null_values->at(chunk_offset)) {
       return NULL_VALUE;
     }
@@ -96,11 +96,11 @@ void ValueSegment<T>::append(const AllTypeVariant& val) {
 
   const auto is_null = variant_is_null(val);
   access_counter[SegmentAccessCounter::AccessType::Point] += 1;
-  auto values_pin_guard = ReadPinGuard{_values};
+  auto values_pin_guard = SharedReadPinGuard{_values};
 
   if (is_nullable()) {
     (*_null_values).push_back(is_null);
-    auto null_values_pin_guard = ReadPinGuard{*_null_values};
+    auto null_values_pin_guard = SharedReadPinGuard{*_null_values};
     _values.push_back(is_null ? T{} : boost::get<T>(val));
     return;
   }
@@ -149,10 +149,10 @@ template <typename T>
 void ValueSegment<T>::resize(const size_t size) {
   DebugAssert(size > _values.size() && size <= _values.capacity(),
               "ValueSegments should not be shrunk or resized beyond their original capacity");
-  auto values_pin_guard = ReadPinGuard{_values};
+  auto values_pin_guard = UnsafeSharedWritePinGuard{_values};
   _values.resize(size);
   if (is_nullable()) {
-    auto null_values_pin_guard = ReadPinGuard{*_null_values};
+    auto null_values_pin_guard = UnsafeSharedWritePinGuard{*_null_values};
     const auto lock = std::lock_guard<std::mutex>{_null_value_modification_mutex};
     _null_values->resize(size);
   }

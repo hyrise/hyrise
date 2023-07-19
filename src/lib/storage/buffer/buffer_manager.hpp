@@ -59,7 +59,7 @@ class BufferManager : public boost::container::pmr::memory_resource, public Nonc
   // Rename to shared and exclusive lock
   void pin_exclusive(const PageID page_id);
 
-  void pin_shared(const PageID page_id);
+  void pin_shared(const PageID page_id, const AccessIntent accessIntent);
 
   void unpin_exclusive(const PageID page_id);
 

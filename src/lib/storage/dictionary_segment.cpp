@@ -26,7 +26,7 @@ DictionarySegment<T>::DictionarySegment(const std::shared_ptr<const pmr_vector<T
 
 template <typename T>
 DictionarySegment<T>::~DictionarySegment() {
-  auto dict_pin_guard = ReadPinGuard{*this};
+  auto dict_pin_guard = UnsafeSharedWritePinGuard{*this};
 }
 
 template <typename T>
@@ -34,7 +34,7 @@ AllTypeVariant DictionarySegment<T>::operator[](const ChunkOffset chunk_offset) 
   PerformanceWarning("operator[] used");
   DebugAssert(chunk_offset != INVALID_CHUNK_OFFSET, "Passed chunk offset must be valid.");
   access_counter[SegmentAccessCounter::AccessType::Dictionary] += 1;
-  auto pin_guard = ReadPinGuard{*this};
+  auto pin_guard = SharedReadPinGuard{*this};
 
   const auto typed_value = get_typed_value(chunk_offset);
   if (!typed_value) {
@@ -91,7 +91,7 @@ ValueID DictionarySegment<T>::lower_bound(const AllTypeVariant& value) const {
       static_cast<uint64_t>(std::ceil(std::log2(_dictionary->size())));
   const auto typed_value = boost::get<T>(value);
 
-  auto pin_guard = ReadPinGuard{*_dictionary};
+  auto pin_guard = SharedReadPinGuard{*_dictionary};
   auto iter = std::lower_bound(_dictionary->cbegin(), _dictionary->cend(), typed_value);
   if (iter == _dictionary->cend()) {
     return INVALID_VALUE_ID;
@@ -106,7 +106,7 @@ ValueID DictionarySegment<T>::upper_bound(const AllTypeVariant& value) const {
       static_cast<uint64_t>(std::ceil(std::log2(_dictionary->size())));
   const auto typed_value = boost::get<T>(value);
 
-  auto pin_guard = ReadPinGuard{*_dictionary};
+  auto pin_guard = SharedReadPinGuard{*_dictionary};
   auto iter = std::upper_bound(_dictionary->cbegin(), _dictionary->cend(), typed_value);
   if (iter == _dictionary->cend()) {
     return INVALID_VALUE_ID;
@@ -117,7 +117,7 @@ ValueID DictionarySegment<T>::upper_bound(const AllTypeVariant& value) const {
 template <typename T>
 AllTypeVariant DictionarySegment<T>::value_of_value_id(const ValueID value_id) const {
   DebugAssert(value_id < _dictionary->size(), "ValueID out of bounds");
-  auto pin_guard = ReadPinGuard{*_dictionary};
+  auto pin_guard = SharedReadPinGuard{*_dictionary};
   access_counter[SegmentAccessCounter::AccessType::Dictionary] += 1;
   return (*_dictionary)[value_id];
 }

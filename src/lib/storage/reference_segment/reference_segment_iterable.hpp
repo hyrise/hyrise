@@ -33,7 +33,7 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
 
     const auto& position_filter = _segment.pos_list();
 
-    auto pin_guard = ReadPinGuard{position_filter};
+    auto pin_guard = SharedReadPinGuard{position_filter};
 
     // If we are guaranteed that the reference segment refers to a single non-NULL chunk, we can do some
     // optimizations. For example, we can use a filtered iterator instead of having to create segments accessors
@@ -119,7 +119,7 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
       auto accessors = std::make_shared<Accessors>(referenced_table->chunk_count());
 
       resolve_pos_list_type(position_filter, [&](auto resolved_position_filter) {
-        auto pin_guard = ReadPinGuard{resolved_position_filter};
+        auto pin_guard = SharedReadPinGuard{resolved_position_filter};
         const auto position_begin_it = resolved_position_filter->begin();
         const auto position_end_it = resolved_position_filter->end();
 

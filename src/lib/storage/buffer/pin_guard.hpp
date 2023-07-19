@@ -19,74 +19,88 @@
 #include "types.hpp"
 
 namespace hyrise {
-template <AccessIntent accessIntent>
-struct PinnedFrames : public Noncopyable {
- public:
-  void add_pin(const PageID page_id) {
-    if (!page_id.valid()) {
-      return;
-    }
 
-    if (has_pinned(page_id)) {
-      return;
-    }
-
-    _pins.push_back(page_id);
-    if constexpr (accessIntent == AccessIntent::Write) {
-      BufferManager::get().pin_exclusive(page_id);
-    } else if constexpr (accessIntent == AccessIntent::Read) {
-      BufferManager::get().pin_shared(page_id);
-    } else if constexpr (accessIntent == AccessIntent::Allocate) {
-      BufferManager::get().pin_shared(page_id);
-    } else {
-      Fail("Unkwon access intent");
-    }
-  }
-
-  void remove_pin(const PageID page_id) {
-    // auto it = std::find(_pins.begin(), _pins.end(), page_id);
-    // if (it != _pins.end()) {
-    //   _pins.erase(it);
-    // }
-  }
-
-  bool has_pinned(const PageID page_id) {
-    auto it = std::find(_pins.begin(), _pins.end(), page_id);
-    return it != _pins.end();
-  }
-
-  ~PinnedFrames() {
-    for (const auto page_id : _pins) {
-      if constexpr (accessIntent == AccessIntent::Write) {
-        BufferManager::get().set_dirty(page_id);
-        BufferManager::get().unpin_exclusive(page_id);
-      } else if constexpr (accessIntent == AccessIntent::Read) {
-        BufferManager::get().unpin_shared(page_id);
-      } else if constexpr (accessIntent == AccessIntent::Allocate) {
-        BufferManager::get().set_dirty(page_id);
-        BufferManager::get().unpin_shared(page_id);
-      } else {
-        Fail("Unkwon access intent");
-      }
-    }
-  }
-
-  boost::container::small_vector<PageID, 3> _pins;
-};
-
-// TODO: EqualDistinctCountHistogram
-
-template <AccessIntent accessIntent>
-struct FramePinGuard final : public PinnedFrames<accessIntent> {
-  using PinnedFrames<accessIntent>::add_pin;
-  using PinnedFrames<accessIntent>::has_pinned;
-
+struct PinnedPageIds : public Noncopyable {
   template <typename T, typename = void>
   struct is_iterable : std::false_type {};
 
   template <typename T>
   struct is_iterable<T, std::void_t<decltype(std::begin(std::declval<T>())), decltype(std::end(std::declval<T>()))>>
       : std::true_type {};
+
+  virtual void on_pin(const PageID page_id) = 0;
+  virtual void on_unpin(const PageID page_id) = 0;
+
+  PinnedPageIds() = default;
+
+  template <typename T, typename = std::enable_if_t<is_iterable<T>::value>>
+  PinnedPageIds(T& object) {
+    add_vector_pins(object);
+  }
+
+  template <typename T, typename = std::enable_if_t<is_iterable<T>::value>>
+  PinnedPageIds(const std::shared_ptr<T>& position_filter) {
+    if (const auto vector = std::dynamic_pointer_cast<const RowIDPosList>(position_filter)) {
+      add_vector_pins(*vector);
+    }
+  }
+
+  PinnedPageIds(const BitPackingVector& object) {
+    Fail("Not implemented");
+    // add_vector_pins(object.data());
+  }
+
+  PinnedPageIds(const pmr_compact_vector& object) {
+    Fail("Not implemented");
+
+    add_vector_pins(object);
+  }
+
+  template <typename T>
+  PinnedPageIds(const FixedWidthIntegerVector<T>& object) {
+    add_vector_pins(object.data());
+  }
+
+  template <typename T>
+  PinnedPageIds(const ValueSegment<T>& segment) {
+    add_vector_pins(segment.values());
+    if (segment.is_nullable()) {
+      add_vector_pins(segment.null_values());
+    }
+  }
+
+  template <typename T>
+  PinnedPageIds(const FrameOfReferenceSegment<T>& segment) {
+    Fail("FrameOfReferenceSegment not implemented yet");
+  }
+
+  template <typename T>
+  PinnedPageIds(const RunLengthSegment<T>& segment) {
+    Fail("RunLengthSegment not implemented yet");
+  }
+
+  template <typename T>
+  PinnedPageIds(const LZ4Segment<T>& segment) {
+    Fail("LZ4Segment not implemented yet");
+  }
+
+  template <typename T>
+  PinnedPageIds(const FixedStringDictionarySegment<T>& segment) {
+    Fail("FixedStringDictionarySegment not implemented yet");
+  }
+
+  PinnedPageIds(const ReferenceSegment& segment) {
+    Fail("ReferenceSegment not implemented yet");
+  }
+
+  template <typename T>
+  PinnedPageIds(const DictionarySegment<T>& segment) {
+    resolve_compressed_vector_type(*segment.attribute_vector(), [&](auto& vector) { add_vector_pins(vector.data()); });
+    add_vector_pins(*segment.dictionary());
+  }
+
+ protected:
+  boost::container::small_vector<PageID, 3> _page_ids;
 
   template <typename T, typename = std::enable_if_t<is_iterable<T>::value>>
   void add_vector_pins(const T& vector) {
@@ -107,76 +121,82 @@ struct FramePinGuard final : public PinnedFrames<accessIntent> {
     add_pin(page_id);
   }
 
- public:
-  template <typename T, typename = std::enable_if_t<is_iterable<T>::value>>
-  FramePinGuard(T& object) {
-    add_vector_pins(object);
-  }
-
-  template <typename T, typename = std::enable_if_t<is_iterable<T>::value>>
-  FramePinGuard(const std::shared_ptr<T>& position_filter) {
-    if (const auto vector = std::dynamic_pointer_cast<const RowIDPosList>(position_filter)) {
-      add_vector_pins(*vector);
+  void add_pin(const PageID page_id) {
+    if (!page_id.valid()) {
+      return;
     }
-  }
 
-  FramePinGuard(const BitPackingVector& object) {
-    Fail("Not implemented");
-    // add_vector_pins(object.data());
-  }
-
-  FramePinGuard(const pmr_compact_vector& object) {
-    Fail("Not implemented");
-
-    add_vector_pins(object);
-  }
-
-  template <typename T>
-  FramePinGuard(const FixedWidthIntegerVector<T>& object) {
-    add_vector_pins(object.data());
-  }
-
-  template <typename T>
-  FramePinGuard(const ValueSegment<T>& segment) {
-    add_vector_pins(segment.values());
-    if (segment.is_nullable()) {
-      add_vector_pins(segment.null_values());
+    if (has_pinned(page_id)) {
+      return;
     }
+
+    on_pin(page_id);
+    _page_ids.push_back(page_id);
   }
 
-  template <typename T>
-  FramePinGuard(const FrameOfReferenceSegment<T>& segment) {
-    Fail("FrameOfReferenceSegment not implemented yet");
+  bool has_pinned(const PageID page_id) {
+    auto it = std::find(_page_ids.begin(), _page_ids.end(), page_id);
+    return it != _page_ids.end();
   }
 
-  template <typename T>
-  FramePinGuard(const RunLengthSegment<T>& segment) {
-    Fail("RunLengthSegment not implemented yet");
-  }
-
-  template <typename T>
-  FramePinGuard(const LZ4Segment<T>& segment) {
-    Fail("LZ4Segment not implemented yet");
-  }
-
-  template <typename T>
-  FramePinGuard(const FixedStringDictionarySegment<T>& segment) {
-    Fail("FixedStringDictionarySegment not implemented yet");
-  }
-
-  FramePinGuard(const ReferenceSegment& segment) {
-    Fail("ReferenceSegment not implemented yet");
-  }
-
-  template <typename T>
-  FramePinGuard(const DictionarySegment<T>& segment) {
-    resolve_compressed_vector_type(*segment.attribute_vector(), [&](auto& vector) { add_vector_pins(vector.data()); });
-    add_vector_pins(*segment.dictionary());
+  void unpin_all() {
+    for (const auto page_id : _page_ids) {
+      on_unpin(page_id);
+    }
   }
 };
 
-using ReadPinGuard = FramePinGuard<AccessIntent::Read>;
-using WritePinGuard = FramePinGuard<AccessIntent::Write>;
+// TODO: EqualDistinctCountHistogram
+
+struct SharedReadPinGuard final : public PinnedPageIds {
+  using PinnedPageIds::PinnedPageIds;
+
+  void on_pin(const PageID page_id) override {
+    BufferManager::get().pin_shared(page_id, AccessIntent::Read);
+  }
+
+  void on_unpin(const PageID page_id) override {
+    BufferManager::get().unpin_shared(page_id);
+  }
+
+  ~SharedReadPinGuard() {
+    PinnedPageIds::unpin_all();
+  }
+};
+
+struct UnsafeSharedWritePinGuard final : public PinnedPageIds {
+  using PinnedPageIds::PinnedPageIds;
+
+  void on_pin(const PageID page_id) override {
+    BufferManager::get().pin_shared(page_id, AccessIntent::Write);
+  }
+
+  void on_unpin(const PageID page_id) override {
+    BufferManager::get().set_dirty(page_id);
+    BufferManager::get().unpin_shared(page_id);
+  }
+
+  ~UnsafeSharedWritePinGuard() {
+    PinnedPageIds::unpin_all();
+  }
+};
+
+struct ExclusivePinGuard final : public PinnedPageIds {
+  using PinnedPageIds::PinnedPageIds;
+
+  void on_pin(const PageID page_id) override {
+    BufferManager::get().pin_exclusive(page_id);
+  }
+
+  void on_unpin(const PageID page_id) override {
+    BufferManager::get().set_dirty(page_id);
+    BufferManager::get().unpin_exclusive(page_id);
+  }
+
+  ~ExclusivePinGuard() {
+    PinnedPageIds::unpin_all();
+  }
+};
 
 /**
  * The AllocatorPinGuard observes all allocations and deallocations of a given allocator and pins the allocated pages during the life-time of the
@@ -184,14 +204,26 @@ using WritePinGuard = FramePinGuard<AccessIntent::Write>;
  * The AllocatorPinGuard is not thread-safe!
 */
 class AllocatorPinGuard final : private Noncopyable {
-  struct Observer final : public PinnedFrames<AccessIntent::Allocate>, public BufferPoolAllocatorObserver {
+  struct Observer final : public PinnedPageIds, public BufferPoolAllocatorObserver {
+    Observer() : PinnedPageIds{} {}
+
     void on_allocate(const PageID page_id) override {
-      // TODO: solve pinning issue
       add_pin(page_id);
     }
 
-    void on_deallocate(const PageID page_id) override {
-      // remove_pin(page_id);
+    void on_deallocate(const PageID page_id) override {}
+
+    void on_pin(const PageID page_id) override {
+      BufferManager::get().pin_shared(page_id, AccessIntent::Write);
+    }
+
+    void on_unpin(const PageID page_id) override {
+      BufferManager::get().set_dirty(page_id);
+      BufferManager::get().unpin_shared(page_id);
+    }
+
+    ~Observer() {
+      PinnedPageIds::unpin_all();
     }
   };
 

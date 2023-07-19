@@ -294,7 +294,7 @@ void BufferManager::make_resident(const PageID page_id, const AccessIntent acces
   Fail("Could not allocate page on DRAM. Try increasing the buffer pool size.");
 }
 
-void BufferManager::pin_shared(const PageID page_id) {
+void BufferManager::pin_shared(const PageID page_id, const AccessIntent accessIntent) {
   DebugAssert(page_id.valid(), "Invalid page id");
 
   _metrics->total_pins.fetch_add(1, std::memory_order_relaxed);
@@ -312,7 +312,7 @@ void BufferManager::pin_shared(const PageID page_id) {
       // case Frame::MARKED: TODO
       case Frame::EVICTED: {
         if (frame->try_lock_exclusive(state_and_version)) {
-          make_resident(page_id, AccessIntent::Read, state_and_version);
+          make_resident(page_id, accessIntent, state_and_version);
           frame->unlock_exclusive();
         }
         break;

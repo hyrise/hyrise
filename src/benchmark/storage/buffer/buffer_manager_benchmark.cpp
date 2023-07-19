@@ -81,13 +81,13 @@ BENCHMARK_DEFINE_F(BufferManagerFixture, BM_BufferManagerPinForReadZipfian)(benc
   // Warmup
   for (auto i = 0; i < MAX_PAGE_IDX; ++i) {
     auto page_id = PageID{PAGE_SIZE_TYPE, static_cast<size_t>(distr(gen))};
-    _buffer_manager.pin_shared(page_id);
+    _buffer_manager.pin_shared(page_id, AccessIntent::Read);
     _buffer_manager.unpin_shared(page_id);
   }
 
   for (auto _ : state) {
     auto page_id = PageID{PAGE_SIZE_TYPE, static_cast<size_t>(distr(gen))};
-    _buffer_manager.pin_shared(page_id);
+    _buffer_manager.pin_shared(page_id, AccessIntent::Read);
 
     state.PauseTiming();
     auto page_ptr = _buffer_manager._get_page_ptr(page_id);
@@ -131,7 +131,7 @@ BENCHMARK_DEFINE_F(BufferManagerFixture, BM_BufferManagerPinForReadRandom)(bench
 
   for (auto _ : state) {
     auto page_id = PageID{PAGE_SIZE_TYPE, static_cast<size_t>(distr(gen))};
-    _buffer_manager.pin_shared(page_id);
+    _buffer_manager.pin_shared(page_id, AccessIntent::Read);
 
     state.PauseTiming();
     auto page_ptr = _buffer_manager._get_page_ptr(page_id);
@@ -169,7 +169,7 @@ BENCHMARK_DEFINE_F(BufferManagerFixture, BM_BufferManagerMultiplePageSizesInMemo
 
   for (auto _ : state) {
     auto page_id = PageID{page_size_type, static_cast<size_t>(distr(gen))};
-    _buffer_manager.pin_shared(page_id);
+    _buffer_manager.pin_shared(page_id, AccessIntent::Read);
 
     state.PauseTiming();
     auto page_ptr = _buffer_manager._get_page_ptr(page_id);
@@ -205,7 +205,7 @@ BENCHMARK_DEFINE_F(BufferManagerFixture, BM_BufferManagerMultiplePageSizesOutMem
 
   for (auto _ : state) {
     auto page_id = PageID{page_size_type, static_cast<size_t>(distr(gen))};
-    _buffer_manager.pin_shared(page_id);
+    _buffer_manager.pin_shared(page_id, AccessIntent::Read);
 
     state.PauseTiming();
     auto page_ptr = _buffer_manager._get_page_ptr(page_id);
@@ -241,7 +241,7 @@ BENCHMARK_DEFINE_F(BufferManagerFixture, BM_BufferManagerMultiplePageSizesOutMem
 
   for (auto _ : state) {
     auto page_id = PageID{page_size_type, static_cast<size_t>(distr(gen))};
-    _buffer_manager.pin_shared(page_id);
+    _buffer_manager.pin_shared(page_id, AccessIntent::Read);
 
     auto page_ptr = _buffer_manager._get_page_ptr(page_id);
     for (auto i = 0; i < page_id.num_bytes(); i += CACHE_LINE_SIZE) {

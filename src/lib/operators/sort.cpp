@@ -66,7 +66,7 @@ std::shared_ptr<Table> write_materialized_output_table(const std::shared_ptr<con
         accessor_by_chunk_id[input_chunk_id] = create_segment_accessor<ColumnDataType>(abstract_segment);
       }
 
-      auto pos_list_pin_guard = ReadPinGuard{pos_list};
+      auto pos_list_pin_guard = SharedReadPinGuard{pos_list};
 
       for (auto row_index = size_t{0}; row_index < row_count; ++row_index) {
         const auto [chunk_id, chunk_offset] = pos_list[row_index];
@@ -143,7 +143,7 @@ std::shared_ptr<Table> write_reference_output_table(const std::shared_ptr<const 
   // We have decided against duplicating MVCC data in https://github.com/hyrise/hyrise/issues/408
   auto output_table = std::make_shared<Table>(unsorted_table->column_definitions(), TableType::References);
 
-  auto pos_list_pin_guard = ReadPinGuard{input_pos_list};
+  auto pos_list_pin_guard = SharedReadPinGuard{input_pos_list};
 
   const auto resolve_indirection = unsorted_table->type() == TableType::References;
   const auto column_count = output_table->column_count();
@@ -218,7 +218,7 @@ std::shared_ptr<Table> write_reference_output_table(const std::shared_ptr<const 
           DebugAssert(input_reference_segment.referenced_column_id() == referenced_column_id,
                       "Input column references more than one column");
           const auto& input_reference_pos_list = input_reference_segment.pos_list();
-          auto pin_guard = ReadPinGuard{input_reference_pos_list};
+          auto pin_guard = SharedReadPinGuard{input_reference_pos_list};
           output_pos_list->emplace_back((*input_reference_pos_list)[row_id.chunk_offset]);
         } else {
           output_pos_list->emplace_back(row_id);
@@ -470,7 +470,7 @@ class Sort::SortImpl {
 
   // When there was a preceding sorting run, we materialize by retaining the order of the values in the passed PosList.
   void _materialize_column_from_pos_list(const RowIDPosList& pos_list) {
-    auto pin_guard = ReadPinGuard{pos_list};
+    auto pin_guard = SharedReadPinGuard{pos_list};
 
     const auto input_chunk_count = _table_in->chunk_count();
     auto accessor_by_chunk_id =
