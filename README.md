@@ -158,6 +158,7 @@ Contact: firstname.lastname@hpi.de
 - Jan    Kossmann
 
 ## Contributors
+-   Tarik     Alnawa
 -   Yannick   Bäumer
 -   Lawrence  Benson
 -   Jasper    Blum
@@ -196,6 +197,7 @@ Contact: firstname.lastname@hpi.de
 -   Till      Lehmann
 -   Tom       Lichtenstein
 -   Alexander Löser
+-   Paula     Marten
 -   Jan       Mattfeld
 -   Arne      Mayer
 -   Dominik   Meier
@@ -211,6 +213,7 @@ Contact: firstname.lastname@hpi.de
 -   Simon     Siegert
 -   Arthur    Silber
 -   Furkan    Simsek
+-   Sandro    Speh
 -   Toni      Stachewicz
 -   Daniel    Stolpe
 -   Jonathan  Striebel

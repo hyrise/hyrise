@@ -24,8 +24,8 @@ void DataInducedPredicateRule::_apply_to_plan_without_subqueries(
     const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
   Assert(lqp_root->type == LQPNodeType::Root, "Rule needs root to hold onto");
 
-  // Adding semi joins inside visit_lqp might lead to endless recursions. Thus, we use visit_lqp to identify the
-  // reductions that we want to add to the plan, write them into semi_join_reductions and actually add them after
+  // Adding dips inside visit_lqp might lead to endless recursions. Thus, we use visit_lqp to identify the
+  // reductions that we want to add to the plan, write them into data_induced_predicates and actually add them after
   // visit_lqp.
   std::vector<std::tuple<std::shared_ptr<JoinNode>, LQPInputSide, std::shared_ptr<PredicateNode>>>
       data_induced_predicates;
@@ -96,19 +96,17 @@ void DataInducedPredicateRule::_apply_to_plan_without_subqueries(
       }
 
       // On the left side we must not create data induced predicates for anti joins as those rely on the very existence of
-      // non-matching values on the right side. Also, we should not create semi join reductions for semi joins as those
-      // would simply duplicate the original join.
+      // non-matching values on the right side.
       if (join_node->join_mode != JoinMode::Left && join_node->join_mode != JoinMode::FullOuter &&
-          join_node->join_mode != JoinMode::AntiNullAsTrue && join_node->join_mode != JoinMode::AntiNullAsFalse &&
-          join_node->join_mode != JoinMode::Semi) {
+          join_node->join_mode != JoinMode::AntiNullAsTrue && join_node->join_mode != JoinMode::AntiNullAsFalse) {
         reduce_if_beneficial(LQPInputSide::Left);
       }
     }
     return LQPVisitation::VisitInputs;
   });
 
-  for (const auto& [join_node, side_of_join, semi_join_reduction_node] : data_induced_predicates) {
-    lqp_insert_node(join_node, side_of_join, semi_join_reduction_node, AllowRightInput::Yes);
+  for (const auto& [join_node, side_of_join, data_induced_predicate_node] : data_induced_predicates) {
+    lqp_insert_node(join_node, side_of_join, data_induced_predicate_node, AllowRightInput::Yes);
   }
 }
 }  // namespace hyrise
