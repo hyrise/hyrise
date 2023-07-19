@@ -18,8 +18,8 @@
 #include "utils/format_duration.hpp"
 #include "utils/segment_tree.hpp"
 #include "utils/timer.hpp"
-#include "window_function_combinator.hpp"
 #include "window_function_evaluator.hpp"
+#include "window_function_evaluator_traits.hpp"
 
 namespace hyrise {
 
@@ -80,7 +80,7 @@ std::shared_ptr<const Table> WindowFunctionEvaluator::_templated_on_execute() {
   auto partitioned_data = partition_and_sort();
   window_performance_data.set_step_runtime(OperatorSteps::PartitionAndSort, timer.lap());
 
-  using OutputColumnType = typename WindowFunctionTraits<InputColumnType, window_function>::ReturnType;
+  using OutputColumnType = typename WindowFunctionEvaluatorTraits<InputColumnType, window_function>::OutputColumnType;
 
   std::vector<std::pair<pmr_vector<OutputColumnType>, pmr_vector<bool>>> segment_data_for_output_column(chunk_count);
 
@@ -350,7 +350,7 @@ ComputationStrategy WindowFunctionEvaluator::choose_computation_strategy() const
   const auto& frame = frame_description();
   const auto is_prefix_frame = frame.start.unbounded && frame.start.type == FrameBoundType::Preceding &&
                                !frame.end.unbounded && frame.end.type == FrameBoundType::CurrentRow;
-  Assert(is_prefix_frame || !RankLike<window_function>, "Invalid frame for rank-like window function.");
+  Assert(is_prefix_frame || !is_rank_like(window_function), "Invalid frame for rank-like window function.");
 
   if (is_prefix_frame && SupportsOnePass<InputColumnType, window_function> &&
       (is_rank_like(window_function) || frame.type == FrameType::Rows))
@@ -408,19 +408,20 @@ void WindowFunctionEvaluator::compute_window_function_one_pass(const HashPartiti
                                                                auto&& emit_computed_value) const {
   if constexpr (SupportsOnePass<InputColumnType, window_function>) {
     spawn_and_wait_per_hash(partitioned_data, [&emit_computed_value](const auto& hash_partition) {
-      using Traits = WindowFunctionCombinator<InputColumnType, window_function>;
-      using State = typename Traits::OnePassState;
+      using Traits = WindowFunctionEvaluatorTraits<InputColumnType, window_function>;
+      using Impl = typename Traits::OnePassImpl;
+      using State = typename Impl::State;
       auto state = State{};
 
       const RelevantRowInformation* previous_row = nullptr;
 
       for (const auto& row : hash_partition) {
         if (previous_row && std::is_eq(compare_with_null_equal(previous_row->partition_values, row.partition_values))) {
-          state.update(*previous_row, row);
+          Impl::update_state(state, row);
         } else {
-          state = State(row);
+          state = Impl::initial_state(row);
         }
-        emit_computed_value(row.row_id, state.current_value());
+        emit_computed_value(row.row_id, Impl::current_value(state));
         previous_row = &row;
       }
     });
@@ -533,20 +534,22 @@ void WindowFunctionEvaluator::templated_compute_window_function_segment_tree(
       for_each_partition(hash_partition, [&](uint64_t partition_start, uint64_t partition_end) {
         const auto partition = std::span(hash_partition.begin() + partition_start, partition_end - partition_start);
 
-        using Traits = WindowFunctionCombinator<OutputColumnType, window_function>;
-        using TreeNode = typename Traits::TreeNode;
+        using Traits = WindowFunctionEvaluatorTraits<InputColumnType, window_function>;
+        using Impl = typename Traits::NullableSegmentTreeImpl;
+        using TreeNode = typename Impl::TreeNode;
 
         std::vector<TreeNode> leaf_values(partition.size());
-        std::ranges::transform(partition, leaf_values.begin(), [](const auto& row) -> TreeNode {
-          return Traits::from_value(as_optional<InputColumnType>(row.function_argument));
+        std::ranges::transform(partition, leaf_values.begin(), [](const auto& row) {
+          return Impl::node_from_value(as_optional<InputColumnType>(row.function_argument));
         });
-        SegmentTree<TreeNode, typename Traits::Combine> segment_tree(leaf_values, Traits::neutral_element);
+        using Combine = decltype([](auto lhs, auto rhs) { return Impl::combine(std::move(lhs), std::move(rhs)); });
+        SegmentTree<TreeNode, Combine> segment_tree(leaf_values, Impl::neutral_element);
 
         for (auto tuple_index = 0u; tuple_index < partition.size(); ++tuple_index) {
           using BoundCalculator = WindowBoundCalculator<frame_type, OrderByColumnType>;
           const auto query_range = BoundCalculator::calculate_window_bounds(partition, tuple_index, frame);
-          using Transformer = typename Traits::QueryTransformer;
-          emit_computed_value(partition[tuple_index].row_id, Transformer{}(segment_tree.range_query(query_range)));
+          emit_computed_value(partition[tuple_index].row_id,
+                              Impl::transform_query(segment_tree.range_query(query_range)));
         }
       });
     });
