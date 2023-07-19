@@ -46,7 +46,7 @@ void BM_SequentialRead(benchmark::State& state) {
       Assert(pread(fd, page_ptr, num_bytes, iter_page_idx * num_bytes) == num_bytes, "Cannot read from file");
     } else if constexpr (SourceNode != TargetNode) {
       // Move CXL to DRAM
-      explicit_move_pages(mapped_region, VIRT_SIZE, TargetNode);
+      explicit_move_pages(page_ptr, num_bytes, TargetNode);
     } else {
       // Noop: Stay as is, read directly
     }
