@@ -13,13 +13,6 @@
 
 namespace hyrise {
 
-template <typename T>
-std::optional<T> as_optional(AllTypeVariant value) {
-  if (variant_is_null(value))
-    return std::nullopt;
-  return get<T>(value);
-}
-
 constexpr static auto rank_like_window_functions =
     std::array{WindowFunction::Rank, WindowFunction::DenseRank, WindowFunction::RowNumber, WindowFunction::PercentRank};
 
