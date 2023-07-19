@@ -214,8 +214,7 @@ std::shared_ptr<VariableStringDictionarySegment<T>> BinaryParser::_import_variab
 
   return std::make_shared<VariableStringDictionarySegment<pmr_string>>(
       std::make_shared<pmr_vector<char>>(dictionary),
-      attribute_vector
-  );
+      attribute_vector);
 }
 
 std::shared_ptr<FixedStringDictionarySegment<pmr_string>> BinaryParser::_import_fixed_string_dictionary_segment(

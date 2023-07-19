@@ -29,9 +29,11 @@ class VariableStringDictionarySegmentIterable
       using DictionaryIteratorType = decltype(_klotz->cbegin());
 
       auto begin = Iterator<CompressedVectorIterator, DictionaryIteratorType>{
-          _klotz->cbegin(), static_cast<uint32_t>(_klotz->size()), vector.cbegin(), ChunkOffset{0u}};
+          _klotz->cbegin(), static_cast<uint32_t>(_klotz->size()),
+          vector.cbegin(), ChunkOffset{0u}};
       auto end = Iterator<CompressedVectorIterator, DictionaryIteratorType>{
-          _klotz->cbegin(), static_cast<uint32_t>(_klotz->size()), vector.cend(), static_cast<ChunkOffset>(_segment.size())};
+          _klotz->cbegin(), static_cast<uint32_t>(_klotz->size()),
+          vector.cend(), static_cast<ChunkOffset>(_segment.size())};
 
       functor(begin, end);
     });
@@ -49,11 +51,11 @@ class VariableStringDictionarySegmentIterable
 
           using PosListIteratorType = decltype(position_filter->cbegin());
           auto begin = PointAccessIterator<Decompressor, DictionaryIteratorType, PosListIteratorType>{
-              _klotz->cbegin(), static_cast<uint32_t>(_klotz->size()), vector.create_decompressor(), position_filter->cbegin(),
-              position_filter->cbegin()};
+              _klotz->cbegin(), static_cast<uint32_t>(_klotz->size()),
+              vector.create_decompressor(), position_filter->cbegin(), position_filter->cbegin()};
           auto end = PointAccessIterator<Decompressor, DictionaryIteratorType, PosListIteratorType>{
-              _klotz->cbegin(), static_cast<uint32_t>(_klotz->size()), vector.create_decompressor(), position_filter->cbegin(),
-              position_filter->cend()};
+              _klotz->cbegin(), static_cast<uint32_t>(_klotz->size()),
+              vector.create_decompressor(), position_filter->cbegin(), position_filter->cend()};
           functor(begin, end);
         });
   }
