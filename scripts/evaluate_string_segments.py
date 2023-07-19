@@ -43,12 +43,16 @@ def rm_dir(path: str) -> None:
 
 
 def enquote(x: str, /, *, quoatation_character='"') -> str:
-    return f'{quoatation_character}{x}{quoatation_character}'
+    return f"{quoatation_character}{x}{quoatation_character}"
 
 
 def read_json(path: str) -> dict:
     with open(path) as file:
         return json.load(file)
+
+
+def flatten(x: list[list], /) -> list:
+    return [item for sublist in x for item in sublist]
 
 
 class DictConvertible(ABC):
@@ -64,8 +68,8 @@ class Runtime(DictConvertible):
 
     def as_dict(self) -> dict:
         return {
-            'benchmark_name': self.benchmark_name,
-            'items_per_second': self.items_per_second,
+            "benchmark_name": self.benchmark_name,
+            "items_per_second": self.items_per_second,
         }
 
 
@@ -77,9 +81,7 @@ class Runtimes(DictConvertible):
     threading: str
 
     def as_dict(self) -> dict:
-        return {
-            'runtimes': list(runtime.as_dict() for runtime in self.runtimes)
-        }
+        return {"runtimes": list(runtime.as_dict() for runtime in self.runtimes)}
 
     def min(self) -> int:
         return min(map(lambda x: x.items_per_second, self.runtimes))
@@ -91,16 +93,18 @@ class Runtimes(DictConvertible):
         return statistics.fmean(map(lambda x: x.items_per_second, self.runtimes))
 
     def median(self) -> float:
-        return statistics.median(map(lambda x: x.items_per_second, self.runtimes))\
+        return statistics.median(map(lambda x: x.items_per_second, self.runtimes))
 
     @classmethod
-    def from_json(cls, json_path: str) -> 'Runtimes':
+    def from_json(cls, json_path: str) -> "Runtimes":
         json_file = read_json(json_path)
-        runtimes = cls([], f"{json_file['branch']}-{json_file['encoding']}", json_file['benchmark_name'], json_file['threading'])
-        json_file = json_file['benchmark']
-        for benchmark in json_file['benchmarks']:
-            name = benchmark['name']
-            duration = benchmark['items_per_second']
+        runtimes = cls(
+            [], f"{json_file['branch']}-{json_file['encoding']}", json_file["benchmark_name"], json_file["threading"]
+        )
+        json_file = json_file["benchmark"]
+        for benchmark in json_file["benchmarks"]:
+            name = benchmark["name"]
+            duration = benchmark["items_per_second"]
             runtime = Runtime(name, duration)
             runtimes.runtimes.append(runtime)
         return runtimes
@@ -114,9 +118,9 @@ class MemoryConsumption(DictConvertible):
 
     def as_dict(self) -> dict:
         return {
-            'column_name': self.column_name,
-            'column_type': self.column_type,
-            'memory_consumption': self.memory_consumption,
+            "column_name": self.column_name,
+            "column_type": self.column_type,
+            "memory_consumption": self.memory_consumption,
         }
 
 
@@ -125,18 +129,16 @@ class Metrics(DictConvertible):
     memory_consumptions: list[MemoryConsumption]
     encoding: str
     benchmark_name: str
-    
+
     def as_dict(self) -> dict:
-        return {
-            'memory_consumption': list(consumption.as_dict() for consumption in self.memory_consumptions)
-        }
+        return {"memory_consumption": list(consumption.as_dict() for consumption in self.memory_consumptions)}
 
     def _as_generator(self, *, only_string_columns: bool):
-        return (consumption
-                for consumption
-                in self.memory_consumptions
-                if not only_string_columns
-                or consumption.column_type == 'string')
+        return (
+            consumption
+            for consumption in self.memory_consumptions
+            if not only_string_columns or consumption.column_type == "string"
+        )
 
     def min(self, *, only_string_columns: bool) -> int:
         return min(map(lambda x: x.memory_consumption, self._as_generator(only_string_columns=only_string_columns)))
@@ -145,38 +147,44 @@ class Metrics(DictConvertible):
         return max(map(lambda x: x.memory_consumption, self._as_generator(only_string_columns=only_string_columns)))
 
     def average(self, *, only_string_columns: bool) -> float:
-        return statistics.fmean(map(lambda x: x.memory_consumption, self._as_generator(only_string_columns=only_string_columns)))
+        return statistics.fmean(
+            map(lambda x: x.memory_consumption, self._as_generator(only_string_columns=only_string_columns))
+        )
 
     def median(self, *, only_string_columns: bool) -> float:
-        return statistics.median(map(lambda x: x.memory_consumption, self._as_generator(only_string_columns=only_string_columns)))
+        return statistics.median(
+            map(lambda x: x.memory_consumption, self._as_generator(only_string_columns=only_string_columns))
+        )
 
     @classmethod
-    def from_json(cls, json_path: str) -> 'Metrics':
+    def from_json(cls, json_path: str) -> "Metrics":
         json_file = read_json(json_path)
-        metrics = cls([], f"{json_file['branch']}-{json_file['encoding']}", json_file['benchmark_name'])
-        json_file = json_file['benchmark']
-        for segment in json_file['segments']:
-            column_type = segment['column_data_type']
-            column_name = segment['column_name']
-            metrics.memory_consumptions.append(MemoryConsumption(column_name, column_type, segment["estimated_size_in_bytes"]))
+        metrics = cls([], f"{json_file['branch']}-{json_file['encoding']}", json_file["benchmark_name"])
+        json_file = json_file["benchmark"]
+        for segment in json_file["segments"]:
+            column_type = segment["column_data_type"]
+            column_name = segment["column_name"]
+            metrics.memory_consumptions.append(
+                MemoryConsumption(column_name, column_type, segment["estimated_size_in_bytes"])
+            )
         return metrics
 
 
-def plot(results: dict[str, list], *, title: str, yaxis: str, path: str, figsize: tuple[int, int]=(15, 10)) -> None:
+def plot(results: dict[str, list], *, title: str, yaxis: str, path: str, figsize: tuple[int, int] = (15, 10)) -> None:
     f, axis = plt.subplots(1, 1, figsize=figsize)
     # The transposing of the orientation is done to allow for empty cells.
-    data = pd.DataFrame.from_dict(results, orient='index')
+    data = pd.DataFrame.from_dict(results, orient="index")
     data = data.transpose()
     print_debug(data, required_verbosity_level=3)
     if data.empty:
-        print_error('Data Frame is empty; no result data to show!')
+        print_error("Data Frame is empty; no result data to show!")
         return
     data.plot(
-        kind='box',
+        kind="box",
         ax=axis,
         title=title,
-        xlabel='Encodings',
-        ylabel=f'{yaxis} (Logarithmic Scale)',
+        xlabel="Encodings",
+        ylabel=f"{yaxis} (Logarithmic Scale)",
         logy=True,
     )
     axis.set_xticklabels(axis.get_xticklabels(), rotation=-45)
@@ -184,29 +192,27 @@ def plot(results: dict[str, list], *, title: str, yaxis: str, path: str, figsize
     f.savefig(path)
 
 
-def refine_stats(stats: dict[str, tuple[Mapping[Literal['ST', 'MT'], Mapping[str, Runtimes]], Mapping[str, Metrics]]]) -> dict:
-    result = {
-        'ENCODING': [],
-        'RUNTIME': [],
-        'MODE': [],
-        'SIZE': [],
-        'BENCHMARK': []
-    }
+def refine_stats(
+    stats: dict[str, tuple[Mapping[Literal["ST", "MT"], Mapping[str, Runtimes]], Mapping[str, Metrics]]]
+) -> dict:
+    result = {"ENCODING": [], "RUNTIME": [], "MODE": [], "SIZE": [], "BENCHMARK": []}
     for benchmark_name, benchmark_results in stats.items():
         for threading, runtimes in benchmark_results[0].items():
             for encoding, runtime_wrapper in runtimes.items():
                 runtime = runtime_wrapper.median()
                 metrics = benchmark_results[1][encoding]
                 size = metrics.median(only_string_columns=True)
-                result['SIZE'].append(size)
-                result['RUNTIME'].append(runtime)
-                result['MODE'].append(threading)
-                result['ENCODING'].append(encoding)
-                result['BENCHMARK'].append(benchmark_name)
+                result["SIZE"].append(size)
+                result["RUNTIME"].append(runtime)
+                result["MODE"].append(threading)
+                result["ENCODING"].append(encoding)
+                result["BENCHMARK"].append(benchmark_name)
     return result
 
 
-def plot_stats(stats: dict[str, tuple[Mapping[Literal['ST', 'MT'], Mapping[str, Runtimes]], Mapping[str, Metrics]]], *, path: str) -> None:
+def plot_stats(
+    stats: dict[str, tuple[Mapping[Literal["ST", "MT"], Mapping[str, Runtimes]], Mapping[str, Metrics]]], *, path: str
+) -> None:
     data = pd.DataFrame.from_dict(refine_stats(stats))
     g = sns.FacetGrid(data, col="BENCHMARK", row="MODE", hue="ENCODING", sharex=False, sharey=False)
     g.map(sns.scatterplot, "SIZE", "RUNTIME")
@@ -222,28 +228,20 @@ class Benchmarking:
         benchmarks: list[str]
         encodings: list[str]
         build_path: str
-        threading: Literal['ST', 'MT', 'both']
+        threading: Literal["ST", "MT", "both"]
         time_limit: int
         scale_factor: float
         tmp_path: str
         metrics: bool
 
         @classmethod
-        def from_namespace(cls, namespace: argparse.Namespace) -> 'Config':
-            def flatten(x: list[list], /) -> list:
-                return [elem for l in x for elem in l]
-            default_encodings = [
-                'Unencoded',
-                'Dictionary',
-                'RunLength',
-                'FixedStringDictionary',
-                'LZ4'
-            ]
+        def from_namespace(cls, namespace: argparse.Namespace) -> "Benchmarking.Config":
+            default_encodings = ["Unencoded", "Dictionary", "RunLength", "FixedStringDictionary", "LZ4"]
             encodings = flatten(namespace.encodings)
             if namespace.default_encodings:
                 encodings.extend(default_encodings)
             if len(encodings) == 0:
-                exit('No encodings to test')
+                exit("No encodings to test")
             return cls(
                 benchmarks=flatten(namespace.benchmarks),
                 encodings=encodings,
@@ -262,80 +260,82 @@ class Benchmarking:
             if ivalue <= 0:
                 raise ArgumentTypeError("%s is an invalid positive int value" % value)
             return ivalue
+
         parser.add_argument(
-            '-b',
-            '--benchmark',
-            action='append',
-            dest='benchmarks',
-            nargs='*',
-            help='A benchmark (e.g. hyriseBenchmarkTPCH) to run.',
+            "-b",
+            "--benchmark",
+            action="append",
+            dest="benchmarks",
+            nargs="*",
+            help="A benchmark (e.g. hyriseBenchmarkTPCH) to run.",
         )
         parser.add_argument(
-            '-e',
-            '--encoding',
-            action='append',
-            dest='encodings',
-            nargs='*',
+            "-e",
+            "--encoding",
+            action="append",
+            dest="encodings",
+            nargs="*",
             default=[],
-            help='An encoding that should be tested.'
+            help="An encoding that should be tested.",
         )
         parser.add_argument(
-            '-p',
-            '--build-path',
-            dest='build_path',
+            "-p",
+            "--build-path",
+            dest="build_path",
             type=str,
             required=True,
-            help='Path where the executables to benchmark are located.'
+            help="Path where the executables to benchmark are located.",
         )
         parser.add_argument(
-            '-t',
-            '--threading',
-            dest='threading',
+            "-t",
+            "--threading",
+            dest="threading",
             type=str,
             required=False,
-            default='both',
-            help='Which threading should be executed. Variants: ST, MT, both',
+            default="both",
+            help="Which threading should be executed. Variants: ST, MT, both",
         )
         parser.add_argument(
-            '-l',
-            '--timeout',
-            dest='time_limit',
+            "-l",
+            "--timeout",
+            dest="time_limit",
             type=check_positive,
             required=False,
             default=60,
-            help='The timeout in seconds to pass to the benchmarks. Defaults to 60.'
+            help="The timeout in seconds to pass to the benchmarks. Defaults to 60.",
         )
         parser.add_argument(
-            '-s',
-            '--scale-factor',
-            dest='scale_factor',
+            "-s",
+            "--scale-factor",
+            dest="scale_factor",
             type=float,
             required=True,
-            help='The scale factor to pass to the benchmarks that support scaling. Note that this number might get rounded or ignored if necessary for a benchmark.'
+            help="The scale factor to pass to the benchmarks that support scaling. Note that this number might get "
+            "rounded or ignored if necessary for a benchmark.",
         )
         parser.add_argument(
-            '--tmp-path',
-            dest='tmp_path',
+            "--tmp-path",
+            dest="tmp_path",
             type=str,
             required=False,
-            default='tmp',
-            help='The directory where the benchmark result files will be stored.'
+            default="tmp",
+            help="The directory where the benchmark result files will be stored.",
         )
         parser.add_argument(
-            '-d',
-            '--default-encodings',
-            dest='default_encodings',
+            "-d",
+            "--default-encodings",
+            dest="default_encodings",
             action=BooleanOptionalAction,
             default=False,
-            help='Whether to run benchmarks for all default encodings.'
+            help="Whether to run benchmarks for all default encodings.",
         )
         parser.add_argument(
-            '-m',
-            '--metrics',
-            dest='metrics',
+            "-m",
+            "--metrics",
+            dest="metrics",
             action=BooleanOptionalAction,
             default=False,
-            help='Whether to run metrics benchmarks or timing benchmarks.'
+            help="Whether to run metrics benchmarks or timing benchmarks.",
         )
         return parser
 
@@ -346,16 +346,17 @@ class Benchmarking:
 
         Returns a list of paths of output files, one for each benchmark.
         """
+
         @dataclass(frozen=True)
         class BenchmarkConfig(ABC):
             encoding: str
-            threading: Literal['ST', 'MT']
+            threading: Literal["ST", "MT"]
             time_limit: int
             scale_factor: float
             metrics: bool
 
         class BenchmarkRunner:
-            name = 'Benchmark'
+            name = "Benchmark"
 
             def __init__(self, path: str, tmp_path: str):
                 self._config: BenchmarkConfig | None = None
@@ -363,32 +364,22 @@ class Benchmarking:
                 self._tmp_path = tmp_path
 
             @staticmethod
-            def create(name: str, *args: Any, **kwargs: Any) -> 'BenchmarkRunner':
+            def create(name: str, *args: Any, **kwargs: Any) -> "BenchmarkRunner":
                 classes = {
-                    'hyriseBenchmarkTPCH': TpcHBenchmarkRunner,
-                    'hyriseBenchmarkTPCDS': TpcDsBenchmarkRunner,
-                    'hyriseBenchmarkJoinOrder': JobBenchmarkRunner,
-                    'hyriseBenchmarkStarSchema': SsbBenchmarkRunner
+                    "hyriseBenchmarkTPCH": TpcHBenchmarkRunner,
+                    "hyriseBenchmarkTPCDS": TpcDsBenchmarkRunner,
+                    "hyriseBenchmarkJoinOrder": JobBenchmarkRunner,
+                    "hyriseBenchmarkStarSchema": SsbBenchmarkRunner,
                 }
                 return classes[name](*args, **kwargs)
 
-            def _write_encoding_config_file(self, threading: Literal['ST', 'MT'], encoding: str, metrics: bool) -> str:
+            def _write_encoding_config_file(self, threading: Literal["ST", "MT"], encoding: str, metrics: bool) -> str:
                 """
                 Create a config file as depicted in the `--full_help` of the benchmarks and return its path.
                 """
-                config_path = path.join(self._tmp_path, 'config',
-                                        f'{self.name}-{threading}-{encoding}-{metrics}.json')
-                config_contents = {
-                    'default': {
-                        'encoding': 'Dictionary'
-                    },
-                    'type': {
-                        'string': {
-                            'encoding': encoding
-                        }
-                    }
-                }
-                with open(config_path, mode='w') as config:
+                config_path = path.join(self._tmp_path, "config", f"{self.name}-{threading}-{encoding}-{metrics}.json")
+                config_contents = {"default": {"encoding": "Dictionary"}, "type": {"string": {"encoding": encoding}}}
+                with open(config_path, mode="w") as config:
                     json.dump(config_contents, config)
                 return config_path
 
@@ -396,92 +387,103 @@ class Benchmarking:
                 self._config = config
                 return Path(self._run(self._config.threading, self._config.encoding, self._config.metrics))
 
-            def _run(self, threading: Literal['ST', 'MT'], encoding: str, metrics: bool) -> str:
+            def _run(self, threading: Literal["ST", "MT"], encoding: str, metrics: bool) -> str:
                 self._pre_run_cleanup()
                 st_command = self._get_arguments(threading, encoding, metrics)
                 check_output(st_command)
                 return self._output_path(threading, encoding, metrics)
 
-            def _get_arguments(self, threading: Literal['ST', 'MT'], encoding: str, metrics: bool) -> list[str]:
+            def _get_arguments(self, threading: Literal["ST", "MT"], encoding: str, metrics: bool) -> list[str]:
                 encoding_config_path = self._write_encoding_config_file(threading, encoding, metrics)
-                arguments = [self._path, '-o', self._output_path(threading, encoding, metrics), '-e', encoding_config_path]
-                if threading == 'MT':
-                    arguments += ['--scheduler', '--clients', str(multiprocessing.cpu_count() // 4), '--mode=Shuffled']
+                arguments = [
+                    self._path,
+                    "-o",
+                    self._output_path(threading, encoding, metrics),
+                    "-e",
+                    encoding_config_path,
+                ]
+                if threading == "MT":
+                    arguments += ["--scheduler", "--clients", str(multiprocessing.cpu_count() // 4), "--mode=Shuffled"]
                     # Multithreaded runs need longer times to be meaningful. Default to 20 minutes.
-                    arguments += ['-t', str(self._config.time_limit * 20)]
+                    arguments += ["-t", str(self._config.time_limit * 20)]
                 else:
-                    arguments += ['-t', str(self._config.time_limit)]
+                    arguments += ["-t", str(self._config.time_limit)]
                 if metrics:
-                    arguments += ['--metrics', '-r', '1']
+                    arguments += ["--metrics", "-r", "1"]
                 return arguments
 
-            def _output_path(self, threading: Literal['ST'] | Literal['MT'], encoding: str, metrics: bool) -> str:
+            def _output_path(self, threading: Literal["ST"] | Literal["MT"], encoding: str, metrics: bool) -> str:
                 try:
-                    git_commit = check_output(['git', 'rev-parse', 'HEAD'])
+                    git_commit = check_output(["git", "rev-parse", "HEAD"])
                 except CalledProcessError:
-                    git_commit = b''
-                return path.join(self._tmp_path, f'{git_commit.decode("utf-8").strip()}-{self.name}-{threading}-{encoding}-{metrics}.json')
+                    git_commit = b""
+                return path.join(
+                    self._tmp_path,
+                    f'{git_commit.decode("utf-8").strip()}-{self.name}-{threading}-{encoding}-{metrics}.json',
+                )
 
             @abstractmethod
             def _pre_run_cleanup(self):
                 ...
 
         class TpcHBenchmarkRunner(BenchmarkRunner):
-            name = 'TPC-H'
+            name = "TPC-H"
 
             def _pre_run_cleanup(self) -> None:
-                rm_dir('tpch_cached_tables')
+                rm_dir("tpch_cached_tables")
 
-            def _get_arguments(self, threading: Literal['ST', 'MT'], encoding: str, metrics: bool) -> list[str]:
-                return super()._get_arguments(threading, encoding, metrics) + ['-s', str(self._config.scale_factor)]
+            def _get_arguments(self, threading: Literal["ST", "MT"], encoding: str, metrics: bool) -> list[str]:
+                return super()._get_arguments(threading, encoding, metrics) + ["-s", str(self._config.scale_factor)]
 
         class TpcDsBenchmarkRunner(BenchmarkRunner):
-            name = 'TPC-DS'
+            name = "TPC-DS"
 
             def _pre_run_cleanup(self) -> None:
-                rm_dir('tpcds_cached_tables')
+                rm_dir("tpcds_cached_tables")
 
-            def _get_arguments(self, threading: Literal['ST', 'MT'], encoding: str, metrics: bool) -> list[str]:
+            def _get_arguments(self, threading: Literal["ST", "MT"], encoding: str, metrics: bool) -> list[str]:
                 # TPC-DS only supports integer scales
-                return super()._get_arguments(threading, encoding, metrics)\
-                    + ['-s', str(max(1, int(self._config.scale_factor)))]
+                return super()._get_arguments(threading, encoding, metrics) + [
+                    "-s",
+                    str(max(1, int(self._config.scale_factor))),
+                ]
 
         class JobBenchmarkRunner(BenchmarkRunner):
-            name = 'JOB'
+            name = "JOB"
 
             def _pre_run_cleanup(self) -> None:
-                rm_dir('imdb_data')
+                rm_dir("imdb_data")
 
         class SsbBenchmarkRunner(BenchmarkRunner):
-            name = 'SSB'
+            name = "SSB"
 
             def _pre_run_cleanup(self) -> None:
-                rm_dir('imdb_data')
+                rm_dir("imdb_data")
 
         def locate_benchmarks(benchmarks: list[str], build_path: str, tmp_path: str) -> list[BenchmarkRunner]:
             benchmark_objects: list[BenchmarkRunner] = []
             for benchmark in benchmarks:
                 benchmark_path = path.join(build_path, benchmark)
                 if not path.isfile(benchmark_path):
-                    exit(f'Cannot locate {benchmark} at {benchmark_path}!')
+                    exit(f"Cannot locate {benchmark} at {benchmark_path}!")
                 benchmark_objects.append(BenchmarkRunner.create(benchmark, benchmark_path, tmp_path))
             return benchmark_objects
 
         Path(config.tmp_path).mkdir(parents=True, exist_ok=True)
-        (Path(config.tmp_path) / Path('config')).mkdir(parents=True, exist_ok=True)
+        (Path(config.tmp_path) / Path("config")).mkdir(parents=True, exist_ok=True)
         benchmarks = locate_benchmarks(config.benchmarks, config.build_path, config.tmp_path)
         result_paths: list[Path] = []
-        threading_modes: list[Literal['ST', 'MT']] = ['ST', 'MT'] if config.threading == 'both' else [config.threading]
+        threading_modes: list[Literal["ST", "MT"]] = ["ST", "MT"] if config.threading == "both" else [config.threading]
         if config.metrics:
-            threading_modes = ['ST']
+            threading_modes = ["ST"]
         total_runs = len(benchmarks) * len(config.encodings) * len(threading_modes)
         current_benchmark = 0
         for benchmark in benchmarks:
             for encoding in config.encodings:
                 for threading in threading_modes:
                     current_benchmark += 1
-                    print(f'Running benchmark {current_benchmark}/{total_runs}')
-                    print(f'\tCurrently running {benchmark.name} with {encoding=} and {threading=}')
+                    print(f"Running benchmark {current_benchmark}/{total_runs}")
+                    print(f"\tCurrently running {benchmark.name} with {encoding=} and {threading=}")
                     run_config = BenchmarkConfig(
                         encoding=encoding,
                         threading=threading,
@@ -491,19 +493,19 @@ class Benchmarking:
                     )
                     result_path = benchmark.run(run_config)
                     # Add encoding name to result json
-                    with open(result_path, mode='r') as result_json:
+                    with open(result_path, mode="r") as result_json:
                         result_json_content = json.load(result_json)
-                    with open(result_path, mode='w') as result_json:
+                    with open(result_path, mode="w") as result_json:
                         try:
-                            git_branch = check_output(['git', 'branch', '--show-current'])
+                            git_branch = check_output(["git", "branch", "--show-current"])
                         except CalledProcessError:
-                            git_branch = b''
+                            git_branch = b""
                         result_with_encoding = {
-                            'benchmark': result_json_content,
-                            'encoding': encoding,
-                            'benchmark_name': benchmark.name,
-                            'threading': threading,
-                            'branch': git_branch.decode('utf-8').strip()
+                            "benchmark": result_json_content,
+                            "encoding": encoding,
+                            "benchmark_name": benchmark.name,
+                            "threading": threading,
+                            "branch": git_branch.decode("utf-8").strip(),
                         }
                         json.dump(result_with_encoding, result_json)
 
@@ -519,13 +521,11 @@ class Evaluation:
         output_directory: str
 
         @classmethod
-        def from_namespace(cls, namespace: argparse.Namespace) -> 'Config':
-            def flatten(x: list[list], /) -> list:
-                return [elem for l in x for elem in l]
+        def from_namespace(cls, namespace: argparse.Namespace) -> "Evaluation.Config":
             now = datetime.now()
-            now_date = f'{now.year}{now.month:02d}{now.day:02d}'
-            now_time = f'{now.hour}{now.minute:02d}{now.second:02d}'
-            output_directory = path.join(namespace.output_directory, f'run-{now_date}-{now_time}')
+            now_date = f"{now.year}{now.month:02d}{now.day:02d}"
+            now_time = f"{now.hour}{now.minute:02d}{now.second:02d}"
+            output_directory = path.join(namespace.output_directory, f"run-{now_date}-{now_time}")
 
             return cls(
                 timing_benchmark_files=flatten(namespace.timing_benchmark_files),
@@ -536,36 +536,36 @@ class Evaluation:
     @staticmethod
     def get_arguments(parser: ArgumentParser) -> ArgumentParser:
         parser.add_argument(
-            '-t',
-            '--timing-benchmark-files',
-            action='append',
-            dest='timing_benchmark_files',
+            "-t",
+            "--timing-benchmark-files",
+            action="append",
+            dest="timing_benchmark_files",
             required=True,
-            nargs='+',
-            help='All timing benchmark files to evaluate.'
+            nargs="+",
+            help="All timing benchmark files to evaluate.",
         )
         parser.add_argument(
-            '-m',
-            '--metric-benchmark-files',
-            action='append',
-            dest='metric_benchmark_files',
+            "-m",
+            "--metric-benchmark-files",
+            action="append",
+            dest="metric_benchmark_files",
             required=True,
-            nargs='+',
-            help='All timing benchmark files to evaluate.'
+            nargs="+",
+            help="All timing benchmark files to evaluate.",
         )
         parser.add_argument(
-            '-o',
-            '--output-directory',
-            dest='output_directory',
+            "-o",
+            "--output-directory",
+            dest="output_directory",
             type=str,
             required=True,
-            help='The directory where the output should be stored.'
+            help="The directory where the output should be stored.",
         )
 
     @staticmethod
     def run(config: Config) -> list[Path]:
         Path(config.output_directory).mkdir(parents=True, exist_ok=True)
-        stats: dict[str, tuple[Mapping[Literal['ST', 'MT'], Mapping[str, Runtimes]], Mapping[str, Metrics]]] = {}
+        stats: dict[str, tuple[Mapping[Literal["ST", "MT"], Mapping[str, Runtimes]], Mapping[str, Metrics]]] = {}
         metric_comparisons, metric_paths = Evaluation._compare_metrics(config)
         timing_comparisons, timing_paths = Evaluation._compare_timing_benchmarks(config)
         metric_stats: dict[str, Mapping[str, Metrics]] = {}
@@ -574,7 +574,7 @@ class Evaluation:
         for benchmark_name, runtimes in timing_comparisons.items():
             metrics = metric_stats[benchmark_name]
             stats[benchmark_name] = runtimes, metrics
-        plot_path = path.join(config.output_directory, 'comparison.png')
+        plot_path = path.join(config.output_directory, "comparison.png")
         plot_stats(stats, path=plot_path)
         paths = metric_paths
         paths.extend(timing_paths)
@@ -592,11 +592,10 @@ class Evaluation:
         paths: list[Path] = []
         result_jsons = config.metric_benchmark_files
         metrics_list = [Metrics.from_json(result_json) for result_json in result_jsons]
-        metrics_grouped_by_benchmark: dict[str, list[Metrics]] = Evaluation._group_by(metrics_list, 'benchmark_name')
+        metrics_grouped_by_benchmark: dict[str, list[Metrics]] = Evaluation._group_by(metrics_list, "benchmark_name")
         metrics_grouped_by_benchmark_and_encoding_list: dict[str, dict[str, list[Metrics]]] = {
-            benchmark: Evaluation._group_by(metrics_by_benchmark, 'encoding')
-            for benchmark, metrics_by_benchmark
-            in metrics_grouped_by_benchmark.items()
+            benchmark: Evaluation._group_by(metrics_by_benchmark, "encoding")
+            for benchmark, metrics_by_benchmark in metrics_grouped_by_benchmark.items()
         }
         # Ensure that every benchmark-encoding combination only has one entry
         for benchmark_group in metrics_grouped_by_benchmark_and_encoding_list.values():
@@ -604,105 +603,103 @@ class Evaluation:
                 if len(encoding_group) > 1:
                     exit(len(encoding_group))
         metrics_grouped_by_benchmark_and_encoding: dict[str, dict[str, Metrics]] = {
-            benchmark: {
-                encoding: entries[0]
-                for encoding, entries
-                in group.items()
-            }
-            for benchmark, group
-            in metrics_grouped_by_benchmark_and_encoding_list.items()
+            benchmark: {encoding: entries[0] for encoding, entries in group.items()}
+            for benchmark, group in metrics_grouped_by_benchmark_and_encoding_list.items()
         }
         for benchmark_name, metrics_by_benchmark in metrics_grouped_by_benchmark_and_encoding.items():
             metrics: dict[str, Metrics] = {encoding: metric for encoding, metric in metrics_by_benchmark.items()}
-            plot_path = path.join(config.output_directory, 'metrics', 'plots', f'{benchmark_name}.png')
+            plot_path = path.join(config.output_directory, "metrics", "plots", f"{benchmark_name}.png")
             Path(plot_path).parent.mkdir(parents=True, exist_ok=True)
             metrics_to_plot: dict[str, list[int]] = {}
             for encoding, metric in metrics.items():
-                metrics_to_plot[f'{encoding} (String)'] = list(map(lambda x: x.memory_consumption,
-                                                                   filter(lambda x: x.column_type == 'string',
-                                                                          metric.memory_consumptions)))
-                metrics_to_plot[f'{encoding} (All)'] = list(map(lambda x: x.memory_consumption, metric.memory_consumptions))
-            plot(metrics_to_plot, title=f'Sizes for {benchmark_name}', yaxis='Size of Segments', path=plot_path,
-                 figsize=(22, 10))
+                metrics_to_plot[f"{encoding} (String)"] = list(
+                    map(
+                        lambda x: x.memory_consumption,
+                        filter(lambda x: x.column_type == "string", metric.memory_consumptions),
+                    )
+                )
+                metrics_to_plot[f"{encoding} (All)"] = list(
+                    map(lambda x: x.memory_consumption, metric.memory_consumptions)
+                )
+            plot(
+                metrics_to_plot,
+                title=f"Sizes for {benchmark_name}",
+                yaxis="Size of Segments",
+                path=plot_path,
+                figsize=(22, 10),
+            )
             paths.append(Path(plot_path))
             # Dump raw data
-            raw_file_path = path.join(config.output_directory, 'metrics', 'raw', f'{benchmark_name}.json')
+            raw_file_path = path.join(config.output_directory, "metrics", "raw", f"{benchmark_name}.json")
             Path(raw_file_path).parent.mkdir(parents=True, exist_ok=True)
-            with open(raw_file_path, 'w') as f:
-                raw_metrics = {
-                    encoding: metric.as_dict()
-                    for encoding, metric
-                    in metrics.items()
-                }
+            with open(raw_file_path, "w") as f:
+                raw_metrics = {encoding: metric.as_dict() for encoding, metric in metrics.items()}
                 json.dump(raw_metrics, f)
             paths.append(Path(raw_file_path))
         return metrics_grouped_by_benchmark_and_encoding, paths
 
     @staticmethod
-    def _compare_timing_benchmarks(config: Config) -> tuple[dict[str, dict[Literal['ST', 'MT'], dict[str, Runtimes]]], list[Path]]:
+    def _compare_timing_benchmarks(
+        config: Config,
+    ) -> tuple[dict[str, dict[Literal["ST", "MT"], dict[str, Runtimes]]], list[Path]]:
         paths: list[Path] = []
         result_jsons = config.timing_benchmark_files
         timings_list = [Runtimes.from_json(result_json) for result_json in result_jsons]
-        timings_grouped_by_benchmark: dict[str, list[Runtimes]] = Evaluation._group_by(timings_list, 'benchmark_name')
+        timings_grouped_by_benchmark: dict[str, list[Runtimes]] = Evaluation._group_by(timings_list, "benchmark_name")
         timings_grouped_by_benchmark_and_encoding_list: dict[str, dict[str, list[Runtimes]]] = {
-            benchmark: Evaluation._group_by(timings_by_benchmark, 'encoding')
-            for benchmark, timings_by_benchmark
-            in timings_grouped_by_benchmark.items()
+            benchmark: Evaluation._group_by(timings_by_benchmark, "encoding")
+            for benchmark, timings_by_benchmark in timings_grouped_by_benchmark.items()
         }
         # Ensure that every benchmark-encoding combination only has two entries, one per threading
         for benchmark_group in timings_grouped_by_benchmark_and_encoding_list.values():
             for encoding_group in benchmark_group.values():
                 if len(encoding_group) > 2:
                     exit(len(encoding_group))
-        timings_grouped_by_benchmark_and_encoding: dict[str, dict[Literal['ST', 'MT'], dict[str, Runtimes]]] = {
+        timings_grouped_by_benchmark_and_encoding: dict[str, dict[Literal["ST", "MT"], dict[str, Runtimes]]] = {
             benchmark: {
-                'ST': {
-                    encoding: next(filter(lambda x: x.threading == 'ST', entries))
-                    for encoding, entries
-                    in group.items()
+                "ST": {
+                    encoding: next(filter(lambda x: x.threading == "ST", entries))
+                    for encoding, entries in group.items()
                 },
-                'MT': {
-                    encoding: next(filter(lambda x: x.threading == 'MT', entries))
-                    for encoding, entries
-                    in group.items()
-                }
+                "MT": {
+                    encoding: next(filter(lambda x: x.threading == "MT", entries))
+                    for encoding, entries in group.items()
+                },
             }
-            for benchmark, group
-            in timings_grouped_by_benchmark_and_encoding_list.items()
+            for benchmark, group in timings_grouped_by_benchmark_and_encoding_list.items()
         }
-        threading: Literal['ST', 'MT']
-        for threading in ['ST', 'MT']:
+        threading: Literal["ST", "MT"]
+        for threading in ["ST", "MT"]:
             for name, timing_group in timings_grouped_by_benchmark_and_encoding.items():
                 times = timing_group[threading]
-                plot_path = path.join(config.output_directory, 'runtime', 'plots', f'{name}-{threading}.png')
+                plot_path = path.join(config.output_directory, "runtime", "plots", f"{name}-{threading}.png")
                 Path(plot_path).parent.mkdir(parents=True, exist_ok=True)
                 times_to_plot = {
                     encoding: list(map(lambda x: x.items_per_second, runtimes.runtimes))
-                    for encoding, runtimes
-                    in times.items()
+                    for encoding, runtimes in times.items()
                 }
-                plot(times_to_plot, title=f'Items per second for {name}',
-                     yaxis='Items per second of individual benchmark tests', path=plot_path)
+                plot(
+                    times_to_plot,
+                    title=f"Items per second for {name}",
+                    yaxis="Items per second of individual benchmark tests",
+                    path=plot_path,
+                )
                 paths.append(Path(plot_path))
                 # Dump raw data
-                raw_file_path = path.join(config.output_directory, 'runtime', 'raw', f'{name}-{threading}.json')
+                raw_file_path = path.join(config.output_directory, "runtime", "raw", f"{name}-{threading}.json")
                 Path(raw_file_path).parent.mkdir(parents=True, exist_ok=True)
-                with open(raw_file_path, 'w') as f:
-                    raw_times = {
-                        encoding: runtimes.as_dict()
-                        for encoding, runtimes
-                        in times.items()
-                    }
+                with open(raw_file_path, "w") as f:
+                    raw_times = {encoding: runtimes.as_dict() for encoding, runtimes in times.items()}
                     json.dump(raw_times, f)
                 paths.append(Path(raw_file_path))
         return timings_grouped_by_benchmark_and_encoding, paths
 
 
 def get_arguments(parser: ArgumentParser) -> ArgumentParser:
-    subparsers = parser.add_subparsers(help='Mode of the script', dest='command')
-    benchmark_parser = subparsers.add_parser('benchmark', help='Run benchmarks for Hyrise')
+    subparsers = parser.add_subparsers(help="Mode of the script", dest="command")
+    benchmark_parser = subparsers.add_parser("benchmark", help="Run benchmarks for Hyrise")
     Benchmarking.get_arguments(benchmark_parser)
-    evaluation_parser = subparsers.add_parser('evaluate', help='Evaluate benchmark results')
+    evaluation_parser = subparsers.add_parser("evaluate", help="Evaluate benchmark results")
     Evaluation.get_arguments(evaluation_parser)
     return parser
 
@@ -713,18 +710,18 @@ def main():
     namespace = parser.parse_args()
     command = namespace.command
     match command:
-        case 'benchmark':
+        case "benchmark":
             config = Benchmarking.Config.from_namespace(namespace)
             files = Benchmarking.run(config)
-            print(f'Resulting files: {files}')
-        case 'evaluate':
+            print(f"Resulting files: {files}")
+        case "evaluate":
             config = Evaluation.Config.from_namespace(namespace)
             files = Evaluation.run(config)
-            print(f'Resulting files: {files}')
+            print(f"Resulting files: {files}")
         case _:
             print_error(f"Could not find command '{command}'!")
             exit(1)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
