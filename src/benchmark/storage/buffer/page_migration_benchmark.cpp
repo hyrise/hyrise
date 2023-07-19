@@ -5,24 +5,12 @@
 #include <numaif.h>
 #endif
 #include "benchmark/benchmark.h"
+#include "buffer_benchmark_utils.hpp"
 #include "storage/buffer/buffer_manager.hpp"
 
 namespace hyrise {
 
-void custom_move_pages(void* mem, size_t size, int node) {
-#if HYRISE_NUMA_SUPPORT
-  auto nodes = numa_allocate_nodemask();
-  numa_bitmask_setbit(nodes, node);
-  if (mbind(mem, size, MPOL_BIND, nodes ? nodes->maskp : NULL, nodes ? nodes->size + 1 : 0,
-            MPOL_MF_MOVE | MPOL_MF_STRICT) != 0) {
-    const auto error = errno;
-    numa_bitmask_free(nodes);
-
-    Fail("Move pages failed: " + strerror(error));
-  }
-  numa_bitmask_free(nodes);
-#endif
-}
+// TODO memcpy
 
 class PageMigrationFixture : public benchmark::Fixture {
  public:
@@ -54,12 +42,12 @@ BENCHMARK_DEFINE_F(PageMigrationFixture, BM_ToNodeMemory)(benchmark::State& stat
   for (auto _ : state) {
     state.PauseTiming();
 #if HYRISE_NUMA_SUPPORT
-    custom_move_pages(_mapped_region, VIRT_SIZE, 0);
+    explicit_move_pages(_mapped_region, VIRT_SIZE, 0);
 #endif
     state.ResumeTiming();
     for (int idx = 0; idx < times; ++idx) {
 #if HYRISE_NUMA_SUPPORT
-      custom_move_pages(_mapped_region + idx * num_bytes, num_bytes, target_node);
+      explicit_move_pages(_mapped_region + idx * num_bytes, num_bytes, target_node);
 #endif
     }
     benchmark::ClobberMemory();
@@ -73,14 +61,14 @@ BENCHMARK_DEFINE_F(PageMigrationFixture, BM_ToNodeMemoryLatencyDramToCXL)(benchm
   constexpr auto VIRT_SIZE = 8UL * 1024 * 1024 * 1024;
 
 #if HYRISE_NUMA_SUPPORT
-  custom_move_pages(_mapped_region, VIRT_SIZE, 0);
+  explicit_move_pages(_mapped_region, VIRT_SIZE, 0);
   std::memset(_mapped_region, 0x1, VIRT_SIZE);
 #endif
   // TODO: radnom
   auto i = 0;
   for (auto _ : state) {
 #if HYRISE_NUMA_SUPPORT
-    custom_move_pages(_mapped_region + (++i * num_bytes), num_bytes, target_node);
+    explicit_move_pages(_mapped_region + (++i * num_bytes), num_bytes, target_node);
 #endif
     benchmark::ClobberMemory();
   }
@@ -101,7 +89,7 @@ BENCHMARK_DEFINE_F(PageMigrationFixture, BM_ToNodeMemoryLatencyCXLToDram)(benchm
   auto i = 0;
   for (auto _ : state) {
 #if HYRISE_NUMA_SUPPORT
-    custom_move_pages(_mapped_region + (++i * num_bytes), num_bytes, 0);
+    explicit_move_pages(_mapped_region + (++i * num_bytes), num_bytes, 0);
 #endif
     benchmark::ClobberMemory();
   }

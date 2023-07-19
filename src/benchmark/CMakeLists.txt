@@ -141,6 +141,9 @@ add_executable(
     storage/buffer/zipfian_int_distribution.hpp
     storage/buffer/page_migration_benchmark.cpp
     storage/buffer/buffer_manager_benchmark.cpp
+    storage/buffer/page_read_benchmark.cpp
+    storage/buffer/buffer_benchmark_utils.hpp
+
     # storage/buffer/allocation_benchmark.cpp
 
     # storage/buffer/ssd_region_benchmark.cpp
