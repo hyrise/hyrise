@@ -41,7 +41,7 @@ void BM_SequentialRead(benchmark::State& state) {
     const auto page_ptr = mapped_region + (++page_idx * num_bytes);
     if constexpr (SourceNode == -1) {
       // Move SSD to CXL or DRAM
-      pread(fd, page_ptr, num_bytes, ++page_idx * num_bytes);
+      Assert(pread(fd, page_ptr, num_bytes, ++page_idx * num_bytes) == num_bytes, "Cannot read from file");
     } else if constexpr (SourceNode != TargetNode) {
       // Move CXL to DRAM
       explicit_move_pages(mapped_region, VIRT_SIZE, TargetNode);

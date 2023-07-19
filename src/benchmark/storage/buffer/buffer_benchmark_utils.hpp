@@ -14,10 +14,9 @@ inline void explicit_move_pages(void* mem, size_t size, int node) {
   numa_bitmask_setbit(nodes, node);
   if (mbind(mem, size, MPOL_BIND, nodes ? nodes->maskp : NULL, nodes ? nodes->size + 1 : 0,
             MPOL_MF_MOVE | MPOL_MF_STRICT) != 0) {
-    const auto error = errno;
     numa_bitmask_free(nodes);
 
-    Fail("Move pages failed: " + strerror(error));
+    Fail("Move pages failed");
   }
   numa_bitmask_free(nodes);
 #endif
@@ -25,7 +24,7 @@ inline void explicit_move_pages(void* mem, size_t size, int node) {
 
 inline void simulate_cacheline_read(std::byte* ptr) {
 #ifdef __AVX512VL__
-  benchmark::DoNotOptimize(_mm512_load_si512(ptr));
+  benchmark::DoNotOptimize((void*)_mm512_load_si512(ptr));
 #endif
 }
 
