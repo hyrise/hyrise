@@ -39,11 +39,11 @@ void BM_SequentialRead(benchmark::State& state) {
 
   auto page_idx = std::atomic_uint64_t{0};
   for (auto _ : state) {
-    const auto page_idx = ++page_idx;
-    const auto page_ptr = mapped_region + (page_idx * num_bytes);
+    const auto iter_page_idx = ++page_idx;
+    const auto page_ptr = mapped_region + (iter_page_idx * num_bytes);
     if constexpr (SourceNode == -1) {
       // Move SSD to CXL or DRAM
-      Assert(pread(fd, page_ptr, num_bytes, page_idx * num_bytes) == num_bytes, "Cannot read from file");
+      Assert(pread(fd, page_ptr, num_bytes, iter_page_idx * num_bytes) == num_bytes, "Cannot read from file");
     } else if constexpr (SourceNode != TargetNode) {
       // Move CXL to DRAM
       explicit_move_pages(mapped_region, VIRT_SIZE, TargetNode);
