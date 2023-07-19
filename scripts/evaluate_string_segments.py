@@ -96,7 +96,7 @@ class Runtimes(DictConvertible):
     @classmethod
     def from_json(cls, json_path: str) -> 'Runtimes':
         json_file = read_json(json_path)
-        runtimes = cls([], json_file['encoding'], json_file['benchmark_name'], json_file['threading'])
+        runtimes = cls([], f"{json_file['branch']}-{json_file['encoding']}", json_file['benchmark_name'], json_file['threading'])
         json_file = json_file['benchmark']
         for benchmark in json_file['benchmarks']:
             name = benchmark['name']
@@ -153,7 +153,7 @@ class Metrics(DictConvertible):
     @classmethod
     def from_json(cls, json_path: str) -> 'Metrics':
         json_file = read_json(json_path)
-        metrics = cls([], json_file['encoding'], json_file['benchmark_name'])
+        metrics = cls([], f"{json_file['branch']}-{json_file['encoding']}", json_file['benchmark_name'])
         json_file = json_file['benchmark']
         for segment in json_file['segments']:
             column_type = segment['column_data_type']
@@ -163,7 +163,7 @@ class Metrics(DictConvertible):
 
 
 def plot(results: dict[str, list], *, title: str, yaxis: str, path: str, figsize: tuple[int, int]=(15, 10)) -> None:
-    f, axiis = plt.subplots(1, 1, figsize=figsize)
+    f, axis = plt.subplots(1, 1, figsize=figsize)
     # The transposing of the orientation is done to allow for empty cells.
     data = pd.DataFrame.from_dict(results, orient='index')
     data = data.transpose()
@@ -173,12 +173,13 @@ def plot(results: dict[str, list], *, title: str, yaxis: str, path: str, figsize
         return
     data.plot(
         kind='box',
-        ax=axiis,
+        ax=axis,
         title=title,
         xlabel='Encodings',
         ylabel=f'{yaxis} (Logarithmic Scale)',
         logy=True,
     )
+    axis.set_xticklabels(axis.get_xticklabels(), rotation=-45)
     f.tight_layout()
     f.savefig(path)
 
@@ -211,6 +212,7 @@ def plot_stats(stats: dict[str, tuple[Mapping[Literal['ST', 'MT'], Mapping[str, 
     g.map(sns.scatterplot, "SIZE", "RUNTIME")
     g.add_legend()
     g.set_axis_labels("Memory Consumption [Median Bytes]", "Throughput [Median Items per Second]")
+    g.tight_layout()
     g.savefig(path)
 
 
@@ -492,11 +494,16 @@ class Benchmarking:
                     with open(result_path, mode='r') as result_json:
                         result_json_content = json.load(result_json)
                     with open(result_path, mode='w') as result_json:
+                        try:
+                            git_branch = check_output(['git', 'branch', '--show-current'])
+                        except CalledProcessError:
+                            git_branch = b''
                         result_with_encoding = {
                             'benchmark': result_json_content,
                             'encoding': encoding,
                             'benchmark_name': benchmark.name,
                             'threading': threading,
+                            'branch': git_branch.decode('utf-8').strip()
                         }
                         json.dump(result_with_encoding, result_json)
 
