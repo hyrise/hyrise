@@ -64,21 +64,21 @@ void BM_SequentialRead(benchmark::State& state) {
 BENCHMARK(BM_SequentialRead<-1, 0>)
     ->ArgsProduct({benchmark::CreateDenseRange(static_cast<uint64_t>(0), static_cast<u_int64_t>(9), /*step=*/1)})
     ->ThreadRange(1, 48)
-    ->Name("SSDToDRAM");
+    ->Name("BM_SequentialRead/SSDToDRAM");
 BENCHMARK(BM_SequentialRead<-1, 2>)
     ->ArgsProduct({benchmark::CreateDenseRange(static_cast<uint64_t>(0), static_cast<u_int64_t>(9), /*step=*/1)})
     ->ThreadRange(1, 48)
-    ->Name("SSDToCXL");
+    ->Name("BM_SequentialRead/SSDToCXL");
 BENCHMARK(BM_SequentialRead<2, 0>)
     ->ArgsProduct({benchmark::CreateDenseRange(static_cast<uint64_t>(0), static_cast<u_int64_t>(9), /*step=*/1)})
     ->ThreadRange(1, 48)
-    ->Name("CXLToDram");
+    ->Name("BM_SequentialRead/CXLToDram");
 BENCHMARK(BM_SequentialRead<2, 2>)
     ->ArgsProduct({benchmark::CreateDenseRange(static_cast<uint64_t>(0), static_cast<u_int64_t>(9), /*step=*/1)})
     ->ThreadRange(1, 48)
-    ->Name("CXL");
+    ->Name("BM_SequentialRead/CXL");
 BENCHMARK(BM_SequentialRead<0, 0>)
     ->ArgsProduct({benchmark::CreateDenseRange(static_cast<uint64_t>(0), static_cast<u_int64_t>(9), /*step=*/1)})
     ->ThreadRange(1, 48)
-    ->Name("DRAM");
+    ->Name("BM_SequentialRead/DRAM");
 }  // namespace hyrise
