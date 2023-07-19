@@ -21,7 +21,8 @@ void BM_SequentialRead(benchmark::State& state) {
 
   if constexpr (SourceNode == -1) {
     explicit_move_pages(mapped_region, VIRT_SIZE, TargetNode);
-    std::system(("head -c " + std::to_string(VIRT_SIZE) + " < /dev/urandom > " + FILENAME).c_str());
+    // head -c 5368709120  /dev/urandom > /home/nriek/hyrise-fork/benchmarks/BM_SequentialRead.bin
+    // std::system(("head -c " + std::to_string(VIRT_SIZE) + "  /dev/urandom > " + FILENAME).c_str());
 #ifdef __APPLE__
     int flags = O_RDWR | O_CREAT | O_DSYNC;
 #elif __linux__
@@ -38,10 +39,11 @@ void BM_SequentialRead(benchmark::State& state) {
 
   auto page_idx = std::atomic_uint64_t{0};
   for (auto _ : state) {
-    const auto page_ptr = mapped_region + (++page_idx * num_bytes);
+    const auto page_idx = ++page_idx;
+    const auto page_ptr = mapped_region + (page_idx * num_bytes);
     if constexpr (SourceNode == -1) {
       // Move SSD to CXL or DRAM
-      Assert(pread(fd, page_ptr, num_bytes, ++page_idx * num_bytes) == num_bytes, "Cannot read from file");
+      Assert(pread(fd, page_ptr, num_bytes, page_idx * num_bytes) == num_bytes, "Cannot read from file");
     } else if constexpr (SourceNode != TargetNode) {
       // Move CXL to DRAM
       explicit_move_pages(mapped_region, VIRT_SIZE, TargetNode);
