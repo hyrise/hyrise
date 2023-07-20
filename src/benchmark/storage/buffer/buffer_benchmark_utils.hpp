@@ -7,9 +7,28 @@
 #ifdef __AVX512VL__
 #include <x86intrin.h>
 #endif
+#include <sys/mman.h>
+#include <unistd.h>
 #include "utils/assert.hpp"
 
 namespace hyrise {
+
+inline std::byte* mmap_region(const size_t num_bytes) {
+#ifdef __APPLE__
+  const int flags = MAP_PRIVATE | MAP_ANON | MAP_NORESERVE;
+#elif __linux__
+  const int flags = MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE;
+#endif
+  const auto mapped_memory = static_cast<std::byte*>(mmap(NULL, num_bytes, PROT_READ | PROT_WRITE, flags, -1, 0));
+
+  if (mapped_memory == MAP_FAILED) {
+    const auto error = errno;
+    Fail("Failed to map volatile pool region: " + strerror(error));
+  }
+
+  return mapped_memory;
+}
+
 inline void explicit_move_pages(void* mem, size_t size, int node) {
 #if HYRISE_NUMA_SUPPORT
   auto nodes = numa_allocate_nodemask();

@@ -13,14 +13,14 @@ namespace hyrise {
 template <int SourceNode, int TargetNode>
 void BM_SequentialRead(benchmark::State& state) {
   const auto num_bytes = OS_PAGE_SIZE << static_cast<size_t>(state.range(0));
-  constexpr auto VIRT_SIZE = 20UL * 1024 * 1024 * 1024;
+  constexpr auto VIRT_SIZE = 40UL * 1024 * 1024 * 1024;
   constexpr auto FILENAME = "/home/nriek/hyrise-fork/benchmarks/BM_SequentialRead.bin";
 
   static int fd = -1;
   static std::byte* mapped_region = nullptr;
 
   if (state.thread_index() == 0) {
-    mapped_region = create_mapped_region();
+    mapped_region = mmap_region(VIRT_SIZE);
     if constexpr (SourceNode == -1) {
       explicit_move_pages(mapped_region, VIRT_SIZE, TargetNode);
       // head -c 5368709120  /dev/urandom > /home/nriek/hyrise-fork/benchmarks/BM_SequentialRead.bin
@@ -36,13 +36,13 @@ void BM_SequentialRead(benchmark::State& state) {
       }
     } else {
       explicit_move_pages(mapped_region, VIRT_SIZE, SourceNode);
-      std::memset(mapped_region, 0x1, VIRT_SIZE);
     }
+    std::memset(mapped_region, 0x1, VIRT_SIZE);
   }
 
   auto page_idx = std::atomic_uint64_t{0};
   for (auto _ : state) {
-    const auto iter_page_idx = page_idx.fetch_add(1) % (VIRT_SIZE / num_bytes);
+    const auto iter_page_idx = page_idx.fetch_add(1);
     const auto page_ptr = mapped_region + (iter_page_idx * num_bytes);
     Assert(page_ptr < mapped_region + VIRT_SIZE, "Out of bounds");
     if constexpr (SourceNode == -1) {
@@ -73,21 +73,31 @@ void BM_SequentialRead(benchmark::State& state) {
 BENCHMARK(BM_SequentialRead<-1, 0>)
     ->ArgsProduct({benchmark::CreateDenseRange(static_cast<uint64_t>(0), static_cast<u_int64_t>(9), /*step=*/1)})
     ->DenseThreadRange(1, 48, 2)
-    ->Name("BM_SequentialRead/SSDToDRAM");
+    ->Name("BM_SequentialRead/SSDToDRAM")
+    ->Iterations(5000)
+    ->UseRealTime();
 BENCHMARK(BM_SequentialRead<-1, 2>)
     ->ArgsProduct({benchmark::CreateDenseRange(static_cast<uint64_t>(0), static_cast<u_int64_t>(9), /*step=*/1)})
     ->DenseThreadRange(1, 48, 2)
-    ->Name("BM_SequentialRead/SSDToCXL");
+    ->Name("BM_SequentialRead/SSDToCXL")
+    ->Iterations(5000)
+    ->UseRealTime();
 BENCHMARK(BM_SequentialRead<2, 0>)
     ->ArgsProduct({benchmark::CreateDenseRange(static_cast<uint64_t>(0), static_cast<u_int64_t>(9), /*step=*/1)})
     ->DenseThreadRange(1, 48, 2)
-    ->Name("BM_SequentialRead/CXLToDram");
+    ->Name("BM_SequentialRead/CXLToDRAM")
+    ->Iterations(5000)
+    ->UseRealTime();
 BENCHMARK(BM_SequentialRead<2, 2>)
     ->ArgsProduct({benchmark::CreateDenseRange(static_cast<uint64_t>(0), static_cast<u_int64_t>(9), /*step=*/1)})
     ->DenseThreadRange(1, 48, 2)
-    ->Name("BM_SequentialRead/CXL");
+    ->Name("BM_SequentialRead/CXL")
+    ->Iterations(20000)
+    ->UseRealTime();
 BENCHMARK(BM_SequentialRead<0, 0>)
     ->ArgsProduct({benchmark::CreateDenseRange(static_cast<uint64_t>(0), static_cast<u_int64_t>(9), /*step=*/1)})
     ->DenseThreadRange(1, 48, 2)
-    ->Name("BM_SequentialRead/DRAM");
+    ->Name("BM_SequentialRead/DRAM")
+    ->Iterations(20000)
+    ->UseRealTime();
 }  // namespace hyrise
