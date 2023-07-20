@@ -20,7 +20,7 @@ void BM_SequentialRead(benchmark::State& state) {
   static std::byte* mapped_region = nullptr;
 
   if (state.thread_index() == 0) {
-    mapped_region = create_region();
+    mapped_region = create_mapped_region();
     if constexpr (SourceNode == -1) {
       explicit_move_pages(mapped_region, VIRT_SIZE, TargetNode);
       // head -c 5368709120  /dev/urandom > /home/nriek/hyrise-fork/benchmarks/BM_SequentialRead.bin
