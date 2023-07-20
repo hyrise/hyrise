@@ -13,7 +13,7 @@ namespace hyrise {
 template <int SourceNode, int TargetNode>
 void BM_SequentialRead(benchmark::State& state) {
   const auto num_bytes = OS_PAGE_SIZE << static_cast<size_t>(state.range(0));
-  constexpr auto VIRT_SIZE = 5UL * 1024 * 1024 * 1024;
+  constexpr auto VIRT_SIZE = 20UL * 1024 * 1024 * 1024;
   constexpr auto FILENAME = "/home/nriek/hyrise-fork/benchmarks/BM_SequentialRead.bin";
 
   static int fd = -1;
