@@ -107,6 +107,65 @@ TEST_F(BinaryWriterTest, FixedStringDictionaryMultipleChunks) {
       reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin", filename));
 }
 
+TEST_F(BinaryWriterTest, VariableStringDictionarySingleChunk) {
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("a", DataType::String, false);
+
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{10});
+  table->append({"This"});
+  table->append({"is"});
+  table->append({"a"});
+  table->append({"test"});
+
+  table->last_chunk()->finalize();
+  ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{EncodingType::VariableStringDictionary});
+  BinaryWriter::write(*table, filename);
+
+  EXPECT_TRUE(file_exists(filename));
+  EXPECT_TRUE(compare_files(
+      reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin", filename));
+}
+
+TEST_F(BinaryWriterTest, VariableStringDictionaryNullValue) {
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("a", DataType::String, true);
+
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{10});
+  table->append({"This"});
+  table->append({"is"});
+  table->append({"a"});
+  table->append({NULL_VALUE});
+  table->append({"test"});
+  table->append({NULL_VALUE});
+
+  table->last_chunk()->finalize();
+  ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{EncodingType::VariableStringDictionary});
+  BinaryWriter::write(*table, filename);
+
+  EXPECT_TRUE(file_exists(filename));
+  EXPECT_TRUE(compare_files(
+      reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin", filename));
+}
+
+TEST_F(BinaryWriterTest, VariableStringDictionaryMultipleChunks) {
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("a", DataType::String, false);
+
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{3});
+  table->append({"This"});
+  table->append({"is"});
+  table->append({"a"});
+  table->append({"test"});
+
+  table->last_chunk()->finalize();
+  ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{EncodingType::VariableStringDictionary});
+  BinaryWriter::write(*table, filename);
+
+  EXPECT_TRUE(file_exists(filename));
+  EXPECT_TRUE(compare_files(
+      reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin", filename));
+}
+
 TEST_F(BinaryWriterTest, NullValuesFrameOfReferenceSegment) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::Int, true);
