@@ -28,7 +28,7 @@ inline void simulate_store(std::byte* ptr) {
 #ifdef __AVX512VL__
   // using a non-temporal memory hint
   _mm512_stream_si512((__m512*)ptr, _mm512_set1_epi8(0x1));
-  _mm_sfence();
+  //_mm_sfence();
 #endif
 }
 
