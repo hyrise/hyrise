@@ -458,6 +458,7 @@ set(
     storage/buffer/buffer_pool_allocator_observer.hpp
     storage/buffer/frame.cpp
     storage/buffer/frame.hpp
+    storage/buffer/pin_guard.cpp
     storage/buffer/pin_guard.hpp
     storage/buffer/migration_policy.cpp
     storage/buffer/migration_policy.hpp

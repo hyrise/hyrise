@@ -205,26 +205,19 @@ struct ExclusivePinGuard final : public PinnedPageIds {
 */
 class AllocatorPinGuard final : private Noncopyable {
   struct Observer final : public PinnedPageIds, public BufferPoolAllocatorObserver {
+    using PinnedPageIds::add_pin;
+
     Observer() : PinnedPageIds{} {}
 
-    void on_allocate(const PageID page_id) override {
-      PinnedPageIds::add_pin(page_id);
-    }
+    void on_allocate(const PageID page_id) override;
 
-    void on_deallocate(const PageID page_id) override {}
+    void on_deallocate(const PageID page_id) override;
 
-    void on_pin(const PageID page_id) override {
-      BufferManager::get().pin_shared(page_id, AccessIntent::Write);
-    }
+    void on_pin(const PageID page_id) override;
 
-    void on_unpin(const PageID page_id) override {
-      BufferManager::get().set_dirty(page_id);
-      BufferManager::get().unpin_shared(page_id);
-    }
+    void on_unpin(const PageID page_id) override;
 
-    ~Observer() {
-      PinnedPageIds::unpin_all();
-    }
+    ~Observer();
   };
 
  public:
