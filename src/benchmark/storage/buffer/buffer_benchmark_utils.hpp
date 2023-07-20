@@ -24,8 +24,17 @@ inline void explicit_move_pages(void* mem, size_t size, int node) {
 #endif
 }
 
+inline void simulate_store(std::byte* ptr) {
+#ifdef __AVX512VL__
+  // using a non-temporal memory hint
+  _mm512_stream_si512(ptr, _mm512_set1_epi8(0x1));
+  _mm_sfence();
+#endif
+}
+
 inline void simulate_cacheline_read(std::byte* ptr) {
 #ifdef __AVX512VL__
+
   auto v = _mm512_load_si512(ptr);
   benchmark::DoNotOptimize(v);
 #endif
@@ -33,7 +42,7 @@ inline void simulate_cacheline_read(std::byte* ptr) {
 
 inline void simulate_page_read(std::byte* ptr, int num_bytes) {
   for (int i = 0; i < num_bytes; i += 64) {
-    simulate_cacheline_read(ptr + (num_bytes * i));
+    simulate_cacheline_read(ptr + i);
   }
 }
 }  // namespace hyrise
