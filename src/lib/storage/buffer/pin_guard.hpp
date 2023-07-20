@@ -208,7 +208,7 @@ class AllocatorPinGuard final : private Noncopyable {
     Observer() : PinnedPageIds{} {}
 
     void on_allocate(const PageID page_id) override {
-      add_pin(page_id);
+      PinnedPageIds::add_pin(page_id);
     }
 
     void on_deallocate(const PageID page_id) override {}
