@@ -86,7 +86,7 @@ BENCHMARK(BM_SequentialRead<2, 0>)
     ->ArgsProduct({benchmark::CreateDenseRange(static_cast<uint64_t>(0), static_cast<u_int64_t>(9), /*step=*/1)})
     ->DenseThreadRange(1, 48, 2)
     ->Name("BM_SequentialRead/CXLToDRAM")
-    ->Iterations(5000)
+    // ->Iterations(5000)
     ->UseRealTime();
 BENCHMARK(BM_SequentialRead<2, 2>)
     ->ArgsProduct({benchmark::CreateDenseRange(static_cast<uint64_t>(0), static_cast<u_int64_t>(9), /*step=*/1)})

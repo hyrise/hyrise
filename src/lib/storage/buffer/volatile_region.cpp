@@ -38,8 +38,8 @@ void VolatileRegion::move_page_to_numa_node(PageID page_id, const NumaMemoryNode
 #if HYRISE_NUMA_SUPPORT
   DebugAssert(target_memory_node != NO_NUMA_MEMORY_NODE, "Numa node has not been set.");
   static thread_local std::vector<void*> pages_to_move{bytes_for_size_type(_size_type) / OS_PAGE_SIZE};
-  static thread_local std::vector<int> nodes{bytes_for_size_type(_size_type) / OS_PAGE_SIZE};
-  static thread_local std::vector<int> status{bytes_for_size_type(_size_type) / OS_PAGE_SIZE};
+  static thread_local std::vector<int> nodes{static_cast<int>(bytes_for_size_type(_size_type) / OS_PAGE_SIZE)};
+  static thread_local std::vector<int> status{static_cast<int>(bytes_for_size_type(_size_type) / OS_PAGE_SIZE)};
 
   for (auto i = 0u; i < pages_to_move.size(); ++i) {
     pages_to_move[i] = get_page(page_id) + i * OS_PAGE_SIZE;
