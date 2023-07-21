@@ -13,7 +13,7 @@ namespace hyrise {
 template <int SourceNode, int TargetNode>
 void BM_SequentialRead(benchmark::State& state) {
   const auto num_bytes = OS_PAGE_SIZE << static_cast<size_t>(state.range(0));
-  constexpr auto VIRT_SIZE = 60UL * 1024 * 1024 * 1024;
+  constexpr auto VIRT_SIZE = 20UL * 1024 * 1024 * 1024;
   constexpr auto FILENAME = "/home/nriek/BM_SequentialRead.bin";
 
   static int fd = -1;
@@ -24,7 +24,7 @@ void BM_SequentialRead(benchmark::State& state) {
     mapped_region = mmap_region(VIRT_SIZE);
     if constexpr (SourceNode == -1) {
       explicit_move_pages(mapped_region, VIRT_SIZE, TargetNode);
-      // head -c 5368709120  /dev/urandom > /home/nriek/hyrise-fork/benchmarks/BM_SequentialRead.bin
+      // head -c 21474836480  /dev/urandom > /home/nriek/hyrise-fork/benchmarks/BM_SequentialRead.bin
       // std::system(("head -c " + std::to_string(VIRT_SIZE) + "  /dev/urandom > " + FILENAME).c_str());
 #ifdef __APPLE__
       int flags = O_RDWR | O_CREAT | O_DSYNC;
@@ -38,11 +38,7 @@ void BM_SequentialRead(benchmark::State& state) {
     } else {
       explicit_move_pages(mapped_region, VIRT_SIZE, SourceNode);
     }
-    {
-      int rnd = open("/dev/urandom", O_RDONLY);
-      read(rnd, mapped_region, VIRT_SIZE);
-      close(rnd);
-    }
+    std::memset(mapped_region, 0x1, VIRT_SIZE);
   }
 
   for (auto _ : state) {
