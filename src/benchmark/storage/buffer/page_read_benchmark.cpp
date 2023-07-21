@@ -14,7 +14,7 @@ template <int SourceNode, int TargetNode>
 void BM_SequentialRead(benchmark::State& state) {
   const auto num_bytes = OS_PAGE_SIZE << static_cast<size_t>(state.range(0));
   constexpr auto VIRT_SIZE = 40UL * 1024 * 1024 * 1024;
-  constexpr auto FILENAME = "/home/nriek/hyrise-fork/benchmarks/BM_SequentialRead.bin";
+  constexpr auto FILENAME = "/home/nriek/BM_SequentialRead.bin";
 
   static int fd = -1;
   static std::byte* mapped_region = nullptr;
@@ -64,9 +64,9 @@ void BM_SequentialRead(benchmark::State& state) {
     }
     //   std::filesystem::remove(FILENAME);
     unmap_region(mapped_region);
+    state.SetBytesProcessed(int64_t(state.iterations()) * num_bytes);
+    state.SetItemsProcessed(int64_t(state.iterations()));
   }
-  state.SetBytesProcessed(int64_t(state.iterations()) * num_bytes);
-  state.SetItemsProcessed(int64_t(state.iterations()));
 }
 
 // SSD to DRAM
@@ -74,13 +74,13 @@ BENCHMARK(BM_SequentialRead<-1, 0>)
     ->ArgsProduct({benchmark::CreateDenseRange(static_cast<uint64_t>(0), static_cast<u_int64_t>(9), /*step=*/1)})
     ->DenseThreadRange(1, 48, 2)
     ->Name("BM_SequentialRead/SSDToDRAM")
-    ->Iterations(5000)
+    // ->Iterations(5000)
     ->UseRealTime();
 BENCHMARK(BM_SequentialRead<-1, 2>)
     ->ArgsProduct({benchmark::CreateDenseRange(static_cast<uint64_t>(0), static_cast<u_int64_t>(9), /*step=*/1)})
     ->DenseThreadRange(1, 48, 2)
     ->Name("BM_SequentialRead/SSDToCXL")
-    ->Iterations(5000)
+    // ->Iterations(5000)
     ->UseRealTime();
 BENCHMARK(BM_SequentialRead<2, 0>)
     ->ArgsProduct({benchmark::CreateDenseRange(static_cast<uint64_t>(0), static_cast<u_int64_t>(9), /*step=*/1)})
@@ -92,12 +92,12 @@ BENCHMARK(BM_SequentialRead<2, 2>)
     ->ArgsProduct({benchmark::CreateDenseRange(static_cast<uint64_t>(0), static_cast<u_int64_t>(9), /*step=*/1)})
     ->DenseThreadRange(1, 48, 2)
     ->Name("BM_SequentialRead/CXL")
-    ->Iterations(20000)
+    // ->Iterations(20000)
     ->UseRealTime();
 BENCHMARK(BM_SequentialRead<0, 0>)
     ->ArgsProduct({benchmark::CreateDenseRange(static_cast<uint64_t>(0), static_cast<u_int64_t>(9), /*step=*/1)})
     ->DenseThreadRange(1, 48, 2)
     ->Name("BM_SequentialRead/DRAM")
-    ->Iterations(20000)
+    // ->Iterations(20000)
     ->UseRealTime();
 }  // namespace hyrise
