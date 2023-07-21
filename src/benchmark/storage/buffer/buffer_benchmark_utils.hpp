@@ -70,7 +70,6 @@ inline void simulate_store(std::byte* ptr) {
 
 inline void simulate_cacheline_read(std::byte* ptr) {
 #ifdef __AVX512VL__
-
   auto v = _mm512_load_si512(ptr);
   benchmark::DoNotOptimize(v);
 #endif

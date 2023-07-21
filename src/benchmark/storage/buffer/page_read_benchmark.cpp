@@ -37,7 +37,11 @@ void BM_SequentialRead(benchmark::State& state) {
     } else {
       explicit_move_pages(mapped_region, VIRT_SIZE, SourceNode);
     }
-    std::memset(mapped_region, 0x1, VIRT_SIZE);
+    {
+      int rnd = open("/dev/urandom", O_RDONLY);
+      read(rnd, mapped_region, VIRT_SIZE);
+      close(rnd);
+    }
   }
 
   auto page_idx = std::atomic_uint64_t{0};
@@ -55,9 +59,7 @@ void BM_SequentialRead(benchmark::State& state) {
       // Noop: Stay as is, read directly
     }
 
-    std::cout << "node before" << get_numa_node(page_ptr) << std::endl;
     simulate_page_read(page_ptr, num_bytes);
-    std::cout << "node after" << get_numa_node(page_ptr) << std::endl;
   }
 
   if (state.thread_index() == 0) {
