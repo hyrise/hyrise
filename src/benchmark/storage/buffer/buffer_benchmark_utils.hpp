@@ -33,7 +33,7 @@ inline int get_numa_node(void* addr) {
   int numa_node = -1;
 
 #if HYRISE_NUMA_SUPPORT
-  if (get_mempolicy(&numa_node, NULL, 0, addr, MPOL_F_NODE | MPOL_F_ADDR); != 0) {
+  if (get_mempolicy(&numa_node, NULL, 0, addr, MPOL_F_NODE | MPOL_F_ADDR) != 0) {
     Fail("Failed to get numa node");
   }
 #endif
