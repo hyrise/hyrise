@@ -20,6 +20,7 @@
 
 namespace hyrise {
 
+template <typename PinHandler>
 struct PinnedPageIds : public Noncopyable {
   template <typename T, typename = void>
   struct is_iterable : std::false_type {};
@@ -27,9 +28,6 @@ struct PinnedPageIds : public Noncopyable {
   template <typename T>
   struct is_iterable<T, std::void_t<decltype(std::begin(std::declval<T>())), decltype(std::end(std::declval<T>()))>>
       : std::true_type {};
-
-  virtual void on_pin(const PageID page_id) = 0;
-  virtual void on_unpin(const PageID page_id) = 0;
 
   PinnedPageIds() = default;
 
@@ -130,7 +128,7 @@ struct PinnedPageIds : public Noncopyable {
       return;
     }
 
-    on_pin(page_id);
+    PinHandler::on_pin(page_id);
     _page_ids.push_back(page_id);
   }
 
@@ -141,21 +139,21 @@ struct PinnedPageIds : public Noncopyable {
 
   void unpin_all() {
     for (const auto page_id : _page_ids) {
-      on_unpin(page_id);
+      PinHandler::on_unpin(page_id);
     }
   }
 };
 
 // TODO: EqualDistinctCountHistogram
 
-struct SharedReadPinGuard final : public PinnedPageIds {
+struct SharedReadPinGuard final : public PinnedPageIds<SharedReadPinGuard> {
   using PinnedPageIds::PinnedPageIds;
 
-  void on_pin(const PageID page_id) override {
+  static void on_pin(const PageID page_id) {
     BufferManager::get().pin_shared(page_id, AccessIntent::Read);
   }
 
-  void on_unpin(const PageID page_id) override {
+  static void on_unpin(const PageID page_id) {
     BufferManager::get().unpin_shared(page_id);
   }
 
@@ -164,14 +162,14 @@ struct SharedReadPinGuard final : public PinnedPageIds {
   }
 };
 
-struct UnsafeSharedWritePinGuard final : public PinnedPageIds {
+struct UnsafeSharedWritePinGuard final : public PinnedPageIds<UnsafeSharedWritePinGuard> {
   using PinnedPageIds::PinnedPageIds;
 
-  void on_pin(const PageID page_id) override {
+  static void on_pin(const PageID page_id) {
     BufferManager::get().pin_shared(page_id, AccessIntent::Write);
   }
 
-  void on_unpin(const PageID page_id) override {
+  static void on_unpin(const PageID page_id) {
     BufferManager::get().set_dirty(page_id);
     BufferManager::get().unpin_shared(page_id);
   }
@@ -181,14 +179,14 @@ struct UnsafeSharedWritePinGuard final : public PinnedPageIds {
   }
 };
 
-struct ExclusivePinGuard final : public PinnedPageIds {
+struct ExclusivePinGuard final : public PinnedPageIds<ExclusivePinGuard> {
   using PinnedPageIds::PinnedPageIds;
 
-  void on_pin(const PageID page_id) override {
+  static void on_pin(const PageID page_id) {
     BufferManager::get().pin_exclusive(page_id);
   }
 
-  void on_unpin(const PageID page_id) override {
+  static void on_unpin(const PageID page_id) {
     BufferManager::get().set_dirty(page_id);
     BufferManager::get().unpin_exclusive(page_id);
   }
@@ -204,7 +202,7 @@ struct ExclusivePinGuard final : public PinnedPageIds {
  * The AllocatorPinGuard is not thread-safe!
 */
 class AllocatorPinGuard final : private Noncopyable {
-  struct Observer final : public PinnedPageIds, public BufferPoolAllocatorObserver {
+  struct Observer final : public BufferPoolAllocatorObserver, public PinnedPageIds<Observer> {
     using PinnedPageIds::add_pin;
 
     Observer() : PinnedPageIds{} {}
@@ -213,9 +211,14 @@ class AllocatorPinGuard final : private Noncopyable {
 
     void on_deallocate(const PageID page_id) override;
 
-    void on_pin(const PageID page_id) override;
+    static void on_pin(const PageID page_id) {
+      BufferManager::get().pin_shared(page_id, AccessIntent::Write);
+    }
 
-    void on_unpin(const PageID page_id) override;
+    static void on_unpin(const PageID page_id) {
+      BufferManager::get().set_dirty(page_id);
+      BufferManager::get().unpin_shared(page_id);
+    }
 
     ~Observer();
   };
