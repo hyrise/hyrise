@@ -1,4 +1,6 @@
 #include "data_induced_predicate_rule.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
+#include <stack>
 
 #include "cost_estimation/abstract_cost_estimator.hpp"
 #include "expression/binary_predicate_expression.hpp"
@@ -18,6 +20,37 @@ using namespace expression_functional;
 std::string DataInducedPredicateRule::name() const {
   static const auto name = std::string{"DataInducedParameterRule"};
   return name;
+}
+
+bool DataInducedPredicateRule::_find_predicate(const std::shared_ptr<AbstractLQPNode>& current_node,
+                                               const std::shared_ptr<AbstractExpression>& join_predicate_expression) {
+
+  auto node_stack = std::stack<std::shared_ptr<AbstractLQPNode>>{};
+  node_stack.push(current_node);
+
+  auto visited_nodes = std::unordered_set<std::shared_ptr<AbstractLQPNode>>{};
+
+  while (!node_stack.empty()) {
+    const auto node = node_stack.top();
+    node_stack.pop();
+
+    if (!visited_nodes.emplace(node).second) {
+      continue;
+    }
+
+    if (expression_evaluable_on_lqp(join_predicate_expression, *node)) {
+      if (current_node->type == LQPNodeType::Predicate) {
+        return true;
+      }
+      if (node->left_input()) {
+        node_stack.push(node->left_input());
+      }
+      if (node->right_input()) {
+        node_stack.push(node->right_input());
+      }
+    }
+  }
+  return false;
 }
 
 void DataInducedPredicateRule::_apply_to_plan_without_subqueries(
@@ -85,7 +118,29 @@ void DataInducedPredicateRule::_apply_to_plan_without_subqueries(
         if (original_cardinality == 0 || (reduced_cardinality / original_cardinality) > MINIMUM_SELECTIVITY) {
           return;
         }
-        data_induced_predicates.emplace_back(join_node, selection_side, between_predicate);
+
+        auto predicate_found = _find_predicate(reducer_node, reducer_side_expression);
+        if (predicate_found) {
+          std::cout << "predicate found";
+          data_induced_predicates.emplace_back(join_node, selection_side, between_predicate);
+        } else {
+          // TODO (TEAM) : change this .25 to minimum selectivity from semi_join_reduction
+          if((reduced_cardinality / original_cardinality) <= .25){
+            if(selection_side == LQPInputSide::Left && join_node->join_mode != JoinMode::Semi){
+              return;
+            }
+            // TODO: insert semi join reduction node
+          }
+        }
+
+        // new visit lqp fucntion call from reducer node
+        // check if reducer side expression evaluable on lqp für neue aktuelle node
+        // wenn nicht return LQPVisitation::DoNotVisitInputs
+        // wenn nie typ == predicate dann kein dip machen, ansonsten dip vllt sinnvoll
+        // wenn kein dip direkt semi join recuction machen (Achtung semi join reduction andere selektivität)
+        // achtung linke seite und mode = semi join --> dann auch kein semi join
+
+        // magic number ab welcher kardinalität dip sinn ergibt? (falls am ende noch zeit)
       };
 
       // Having defined the lambda responsible for conditionally adding a data induced predicate, we now apply it to both
