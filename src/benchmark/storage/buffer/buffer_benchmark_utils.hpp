@@ -29,6 +29,13 @@ inline std::byte* mmap_region(const size_t num_bytes) {
   return mapped_memory;
 }
 
+inline void munmap_region(std::byte* region, const size_t num_bytes) {
+  if (munmap(region, num_bytes) < 0) {
+    const auto error = errno;
+    Fail("Failed to unmap volatile pool region: " + strerror(error));
+  }
+}
+
 inline void explicit_move_pages(void* mem, size_t size, int node) {
 #if HYRISE_NUMA_SUPPORT
   auto nodes = numa_allocate_nodemask();
