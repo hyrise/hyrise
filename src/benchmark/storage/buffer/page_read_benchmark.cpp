@@ -68,8 +68,8 @@ void BM_SequentialRead(benchmark::State& state) {
     }
     //   std::filesystem::remove(FILENAME);
     munmap_region(mapped_region, VIRT_SIZE);
-    state.SetItemsProcessed(int64_t(state.iterations()) * state.threads());
-    state.SetBytesProcessed(int64_t(state.iterations()) * num_bytes * state.threads());
+    state.SetItemsProcessed(page_idx);
+    state.SetBytesProcessed(page_idx * num_bytes);
   }
 }
 
