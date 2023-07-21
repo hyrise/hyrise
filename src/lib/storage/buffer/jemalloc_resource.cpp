@@ -65,32 +65,29 @@ static bool extent_merge(extent_hooks_t* /*extent_hooks*/, void* /*addra*/, size
   return false;
 }
 
+struct arena_config_s {
+  /* extent hooks to be used for the arena */
+  extent_hooks_t* extent_hooks;
+};
+
+using arena_config_t = struct arena_config_s;
+
 static extent_hooks_t s_hooks{extent_alloc,      extent_dalloc, extent_destroy, extent_commit, nullptr,
                               extent_purge_lazy, extent_purge,  extent_split,   extent_merge};
 
 JemallocMemoryResource::JemallocMemoryResource() {
-  size_t size = sizeof(_arena_index);
-  arena_config_t arena_config;
-  arena_config.metadata_use_hooks = false;
-  arena_config.extent_hooks = &s_hooks;
+  auto arena_id = uint32_t{0};
+  size_t size = sizeof(arena_id);
+  Assert(mallctl("arenas.create", static_cast<void*>(&arena_id), &size, nullptr, 0) == 0, "mallctl failed");
 
-  Assert(mallctl("experimental.arenas_create_ext", static_cast<void*>(&_arena_index), &size, &arena_config,
-                 sizeof(arena_config)) == 0,
-         "arenas_create_ext failed");
+  auto hooks_ptr = &s_hooks;
+  char command[64];
+  snprintf(command, sizeof(command), "arena.%u.extent_hooks", arena_id);
+  NumaExtentHooks::store_node_id_for_arena(arena_id, _node_id);
+  Assert(mallctl(command, nullptr, nullptr, static_cast<void*>(&hooks_ptr), sizeof(extent_hooks_t*)) == 0,
+         "mallctl failed");
 
-  //   ssize_t muzzy_decay_ms = 1;
-  //   auto muzzy_decay_cmd = "arena." + std::to_string(_arena_index) + ".muzzy_decay_ms";
-  //   Assert(mallctl(muzzy_decay_cmd.c_str(), nullptr, nullptr, (void*)&muzzy_decay_ms, sizeof(muzzy_decay_cmd)) == 0,
-  //          "setting muzzy_decay_ms failed");
-
-  ssize_t dirty_decay_ms = -1;
-  auto dirty_decay_cmd = "arena." + std::to_string(_arena_index) + ".dirty_decay_ms";
-  Assert(mallctl(dirty_decay_cmd.c_str(), nullptr, nullptr, (void*)&dirty_decay_ms, sizeof(dirty_decay_ms)) == 0,
-         "setting dirty_decay_ms failed");
-
-  // TODO: Maybe add more arenas to reduce contention
-  // retain_grow_limit? thread.arena
-  _mallocx_flags = MALLOCX_ARENA(_arena_index) | MALLOCX_TCACHE_NONE;
+  _mallocx_flags = MALLOCX_ARENA(arena_id) | MALLOCX_TCACHE_NONE;
 }
 
 JemallocMemoryResource::~JemallocMemoryResource() {}
@@ -104,7 +101,7 @@ void* JemallocMemoryResource::do_allocate(std::size_t bytes, std::size_t alignme
 }
 
 void JemallocMemoryResource::do_deallocate(void* pointer, std::size_t bytes, std::size_t alignment) {
-  dallocx(pointer, _mallocx_flags);
+  sdallocx(pointer, bytes, _mallocx_flags);
 }
 
 bool JemallocMemoryResource::do_is_equal(const memory_resource& other) const noexcept {
