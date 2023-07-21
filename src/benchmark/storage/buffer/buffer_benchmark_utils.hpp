@@ -29,6 +29,17 @@ inline std::byte* mmap_region(const size_t num_bytes) {
   return mapped_memory;
 }
 
+inline int get_numa_node(void* addr) {
+  int numa_node = -1;
+
+#if HYRISE_NUMA_SUPPORT
+  if (get_mempolicy(&numa_node, sizeof(numa_node), addr, MPOL_F_NODE | MPOL_F_ADDR) != 0) {
+    Fail("Failed to get numa node");
+  }
+#endif
+  return numa_node;
+}
+
 inline void munmap_region(std::byte* region, const size_t num_bytes) {
   if (munmap(region, num_bytes) < 0) {
     const auto error = errno;

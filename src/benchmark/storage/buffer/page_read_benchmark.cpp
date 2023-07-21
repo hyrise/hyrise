@@ -55,7 +55,9 @@ void BM_SequentialRead(benchmark::State& state) {
       // Noop: Stay as is, read directly
     }
 
+    std::cout << "node before" << get_numa_node(page_ptr) << std::endl;
     simulate_page_read(page_ptr, num_bytes);
+    std::cout << "node after" << get_numa_node(page_ptr) << std::endl;
   }
 
   if (state.thread_index() == 0) {
