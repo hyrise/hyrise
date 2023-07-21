@@ -83,7 +83,6 @@ JemallocMemoryResource::JemallocMemoryResource() {
   auto hooks_ptr = &s_hooks;
   char command[64];
   snprintf(command, sizeof(command), "arena.%u.extent_hooks", arena_id);
-  NumaExtentHooks::store_node_id_for_arena(arena_id, _node_id);
   Assert(mallctl(command, nullptr, nullptr, static_cast<void*>(&hooks_ptr), sizeof(extent_hooks_t*)) == 0,
          "mallctl failed");
 
