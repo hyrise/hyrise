@@ -6,9 +6,9 @@
 #include "hyrise.hpp"
 #include "utils/assert.hpp"
 
-#ifdef HYRISE_WITH_JEMALLOC
+namespace hyrise {
 
-namespace {
+#ifdef HYRISE_WITH_JEMALLOC
 
 struct arena_config_s {
   extent_hooks_t* extent_hooks;
@@ -75,8 +75,6 @@ using arena_config_t = struct arena_config_s;
 static extent_hooks_t s_hooks{extent_alloc,      extent_dalloc, extent_destroy, extent_commit, nullptr,
                               extent_purge_lazy, extent_purge,  extent_split,   extent_merge};
 #endif
-
-namespace hyrise {
 
 JemallocMemoryResource::JemallocMemoryResource() {
 #ifdef HYRISE_WITH_JEMALLOC
