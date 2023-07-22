@@ -1,10 +1,10 @@
 #include "lib/optimizer/strategy/strategy_base_test.hpp"
 
-#include "logical_query_plan/join_node.hpp"
-#include "optimizer/strategy/data_induced_predicate_rule.hpp"
-#include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
+#include "logical_query_plan/join_node.hpp"
+#include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
+#include "optimizer/strategy/data_induced_predicate_rule.hpp"
 
 namespace hyrise {
 

@@ -1,6 +1,6 @@
 #include "data_induced_predicate_rule.hpp"
-#include "logical_query_plan/abstract_lqp_node.hpp"
 #include <stack>
+#include "logical_query_plan/abstract_lqp_node.hpp"
 
 #include "cost_estimation/abstract_cost_estimator.hpp"
 #include "expression/binary_predicate_expression.hpp"
@@ -25,7 +25,6 @@ std::string DataInducedPredicateRule::name() const {
 
 bool DataInducedPredicateRule::_find_predicate(const std::shared_ptr<AbstractLQPNode>& current_node,
                                                const std::shared_ptr<AbstractExpression>& join_predicate_expression) {
-
   auto node_stack = std::stack<std::shared_ptr<AbstractLQPNode>>{};
   node_stack.push(current_node);
 
@@ -63,6 +62,7 @@ void DataInducedPredicateRule::_apply_to_plan_without_subqueries(
   // visit_lqp.
   std::vector<std::tuple<std::shared_ptr<JoinNode>, LQPInputSide, std::shared_ptr<PredicateNode>>>
       data_induced_predicates;
+  std::vector<std::tuple<std::shared_ptr<JoinNode>, LQPInputSide, std::shared_ptr<JoinNode>>> semi_join_reductions;
 
   const auto opposite_side = [](const auto side) {
     return side == LQPInputSide::Left ? LQPInputSide::Right : LQPInputSide::Left;
@@ -71,7 +71,7 @@ void DataInducedPredicateRule::_apply_to_plan_without_subqueries(
   const auto estimator = cost_estimator->cardinality_estimator->new_instance();
   estimator->guarantee_bottom_up_construction();
 
-  visit_lqp(lqp_root, [&estimator, &opposite_side, &data_induced_predicates](const auto& node) {
+  visit_lqp(lqp_root, [&estimator, &opposite_side, &data_induced_predicates, &semi_join_reductions](const auto& node) {
     if (node->type != LQPNodeType::Join) {
       return LQPVisitation::VisitInputs;
     }
@@ -122,15 +122,16 @@ void DataInducedPredicateRule::_apply_to_plan_without_subqueries(
 
         auto predicate_found = _find_predicate(reducer_node, reducer_side_expression);
         if (predicate_found) {
-          std::cout << "predicate found";
           data_induced_predicates.emplace_back(join_node, selection_side, between_predicate);
         } else {
-          // TODO (TEAM) : change this .25 to minimum selectivity from semi_join_reduction
-          if((reduced_cardinality / original_cardinality) <= SemiJoinReductionRule::MINIMUM_SELECTIVITY){
-            if(selection_side == LQPInputSide::Left && join_node->join_mode != JoinMode::Semi){
+          if ((reduced_cardinality / original_cardinality) <= SemiJoinReductionRule::MINIMUM_SELECTIVITY) {
+            if (selection_side == LQPInputSide::Left && join_node->join_mode != JoinMode::Semi) {
               return;
             }
-            // TODO: insert semi join reduction node
+            const auto semi_join_reduction_node = JoinNode::make(JoinMode::Semi, join_predicate);
+            semi_join_reduction_node->mark_as_semi_reduction(join_node);
+            semi_join_reduction_node->set_right_input(reducer_node);
+            semi_join_reductions.emplace_back(join_node, selection_side, semi_join_reduction_node);
           }
         }
 
@@ -163,6 +164,10 @@ void DataInducedPredicateRule::_apply_to_plan_without_subqueries(
 
   for (const auto& [join_node, side_of_join, data_induced_predicate_node] : data_induced_predicates) {
     lqp_insert_node(join_node, side_of_join, data_induced_predicate_node, AllowRightInput::Yes);
+  }
+
+  for (const auto& [join_node, side_of_join, semi_join_reduction_node] : semi_join_reductions) {
+    lqp_insert_node(join_node, side_of_join, semi_join_reduction_node, AllowRightInput::Yes);
   }
 }
 }  // namespace hyrise
