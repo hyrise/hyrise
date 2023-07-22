@@ -10,10 +10,10 @@
 
 namespace hyrise {
 
-template <int SourceNode, int TargetNode>
+template <size_t SIZE_GB, int SourceNode, int TargetNode>
 void BM_SequentialRead(benchmark::State& state) {
   const auto num_bytes = OS_PAGE_SIZE << static_cast<size_t>(state.range(0));
-  constexpr auto VIRT_SIZE = 20UL * 1024 * 1024 * 1024;
+  constexpr auto VIRT_SIZE = SIZE_GB * 1024 * 1024 * 1024;
   constexpr auto FILENAME = "/home/nriek/BM_SequentialRead.bin";
 
   static int fd = -1;
@@ -64,37 +64,43 @@ void BM_SequentialRead(benchmark::State& state) {
     }
     //   std::filesystem::remove(FILENAME);
     munmap_region(mapped_region, VIRT_SIZE);
-    state.SetItemsProcessed(page_idx);
-    state.SetBytesProcessed(page_idx * num_bytes);
+    state.SetItemsProcessed(int64_t(state.iterations()) * state.threads());
+    state.SetBytesProcessed(int64_t(state.iterations()) * num_bytes * state.threads());
   }
 }
 
 // SSD to DRAM
-BENCHMARK(BM_SequentialRead<-1, 0>)
+BENCHMARK(BM_SequentialRead<20, -1, 0>)
     ->ArgsProduct({benchmark::CreateDenseRange(static_cast<uint64_t>(0), static_cast<u_int64_t>(9), /*step=*/1)})
     ->DenseThreadRange(1, 48, 2)
     ->Name("BM_SequentialRead/SSDToDRAM")
     ->Iterations(200)
     ->UseRealTime();
-BENCHMARK(BM_SequentialRead<-1, 2>)
+BENCHMARK(BM_SequentialRead<20, -1, 2>)
     ->ArgsProduct({benchmark::CreateDenseRange(static_cast<uint64_t>(0), static_cast<u_int64_t>(9), /*step=*/1)})
     ->DenseThreadRange(1, 48, 2)
     ->Name("BM_SequentialRead/SSDToCXL")
     ->Iterations(200)
     ->UseRealTime();
-BENCHMARK(BM_SequentialRead<2, 0>)
+BENCHMARK(BM_SequentialRead<60, 2, 0>)
     ->ArgsProduct({benchmark::CreateDenseRange(static_cast<uint64_t>(0), static_cast<u_int64_t>(9), /*step=*/1)})
     ->DenseThreadRange(1, 48, 2)
     ->Name("BM_SequentialRead/CXLToDRAM")
     ->Iterations(500)
     ->UseRealTime();
-BENCHMARK(BM_SequentialRead<2, 2>)
+BENCHMARK(BM_SequentialRead<60, 0, 2>)
+    ->ArgsProduct({benchmark::CreateDenseRange(static_cast<uint64_t>(0), static_cast<u_int64_t>(9), /*step=*/1)})
+    ->DenseThreadRange(1, 48, 2)
+    ->Name("BM_SequentialRead/DRAMToCXL")
+    ->Iterations(500)
+    ->UseRealTime();
+BENCHMARK(BM_SequentialRead<60, 2, 2>)
     ->ArgsProduct({benchmark::CreateDenseRange(static_cast<uint64_t>(0), static_cast<u_int64_t>(9), /*step=*/1)})
     ->DenseThreadRange(1, 48, 2)
     ->Name("BM_SequentialRead/CXL")
     ->Iterations(500)
     ->UseRealTime();
-BENCHMARK(BM_SequentialRead<0, 0>)
+BENCHMARK(BM_SequentialRead<60, 0, 0>)
     ->ArgsProduct({benchmark::CreateDenseRange(static_cast<uint64_t>(0), static_cast<u_int64_t>(9), /*step=*/1)})
     ->DenseThreadRange(1, 48, 2)
     ->Name("BM_SequentialRead/DRAM")
