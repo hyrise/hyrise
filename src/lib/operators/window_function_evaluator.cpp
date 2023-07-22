@@ -527,9 +527,8 @@ template <typename InputColumnType, WindowFunction window_function, FrameType fr
 void WindowFunctionEvaluator::templated_compute_window_function_segment_tree(
     const HashPartitionedData& partitioned_data, auto&& emit_computed_value) const {
   const auto& frame = frame_description();
-  using OutputColumnType = typename WindowFunctionTraits<InputColumnType, window_function>::ReturnType;
 
-  if constexpr (SupportsSegmentTree<OutputColumnType, window_function>) {
+  if constexpr (SupportsSegmentTree<InputColumnType, window_function>) {
     spawn_and_wait_per_hash(partitioned_data, [&emit_computed_value, &frame](const auto& hash_partition) {
       for_each_partition(hash_partition, [&](uint64_t partition_start, uint64_t partition_end) {
         const auto partition = std::span(hash_partition.begin() + partition_start, partition_end - partition_start);
