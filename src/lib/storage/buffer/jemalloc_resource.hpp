@@ -1,13 +1,11 @@
 #pragma once
 
-#ifdef HYRISE_WITH_JEMALLOC
 #include <boost/container/pmr/memory_resource.hpp>
 #include <utils/singleton.hpp>
 
 namespace hyrise {
 class JemallocMemoryResource : public boost::container::pmr::memory_resource, public Singleton<JemallocMemoryResource> {
   friend Singleton;
-  friend struct ExtentHooks;
 
  public:
   JemallocMemoryResource();
@@ -21,5 +19,8 @@ class JemallocMemoryResource : public boost::container::pmr::memory_resource, pu
   unsigned int _arena_index;
   int _mallocx_flags;
 };
+
+static boost::container::pmr::memory_resource* get_default_jemalloc_memory_resource() {
+  return &JemallocMemoryResource::get();
+}
 }  // namespace hyrise
-#endif

@@ -1,22 +1,24 @@
 #include "jemalloc_resource.hpp"
 #ifdef HYRISE_WITH_JEMALLOC
 #include <jemalloc/jemalloc.h>
+#endif
 #include <cstddef>
 #include "hyrise.hpp"
 #include "utils/assert.hpp"
+
+#ifdef HYRISE_WITH_JEMALLOC
 
 namespace {
 
 struct arena_config_s {
   extent_hooks_t* extent_hooks;
-  bool metadata_use_hooks;
 };
 
 using arena_config_t = struct arena_config_s;
 
 }  // namespace
 
-namespace hyrise {
+namespace detail {
 
 static void* extent_alloc(extent_hooks_t* extent_hooks, void* new_addr, size_t size, size_t alignment, bool* zero,
                           bool* commit, unsigned arena_index) {
@@ -74,8 +76,13 @@ using arena_config_t = struct arena_config_s;
 
 static extent_hooks_t s_hooks{extent_alloc,      extent_dalloc, extent_destroy, extent_commit, nullptr,
                               extent_purge_lazy, extent_purge,  extent_split,   extent_merge};
+}  // namespace detail
+#endif
+
+namespace hyrise {
 
 JemallocMemoryResource::JemallocMemoryResource() {
+#ifdef HYRISE_WITH_JEMALLOC
   auto arena_id = uint32_t{0};
   size_t size = sizeof(arena_id);
   Assert(mallctl("arenas.create", static_cast<void*>(&arena_id), &size, nullptr, 0) == 0, "mallctl failed");
@@ -92,20 +99,26 @@ JemallocMemoryResource::JemallocMemoryResource() {
          "setting dirty_decay_ms failed");
 
   _mallocx_flags = MALLOCX_ARENA(arena_id) | MALLOCX_TCACHE_NONE;
+#endif
 }
 
 JemallocMemoryResource::~JemallocMemoryResource() {}
 
 void* JemallocMemoryResource::do_allocate(std::size_t bytes, std::size_t alignment) {
+#ifdef HYRISE_WITH_JEMALLOC
   // TODO:: uint32_t arena_idx = tk_thread_get_arena();
   if (auto ptr = mallocx(bytes, _mallocx_flags)) {
     return ptr;
   }
+#endif
   Fail("Failed to allocate memory: " + std::to_string(bytes));
 }
 
 void JemallocMemoryResource::do_deallocate(void* pointer, std::size_t bytes, std::size_t alignment) {
+#ifdef HYRISE_WITH_JEMALLOC
+
   sdallocx(pointer, bytes, _mallocx_flags);
+#endif
 }
 
 bool JemallocMemoryResource::do_is_equal(const memory_resource& other) const noexcept {
@@ -113,5 +126,3 @@ bool JemallocMemoryResource::do_is_equal(const memory_resource& other) const noe
 }
 
 }  // namespace hyrise
-
-#endif
