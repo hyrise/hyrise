@@ -143,8 +143,7 @@ add_executable(
     storage/buffer/buffer_manager_benchmark.cpp
     storage/buffer/page_read_benchmark.cpp
     storage/buffer/buffer_benchmark_utils.hpp
-
-    # storage/buffer/allocation_benchmark.cpp
+    storage/buffer/allocation_benchmark.cpp
 
     # storage/buffer/ssd_region_benchmark.cpp
     # storage/buffer/volatile_region_benchmark.cpp

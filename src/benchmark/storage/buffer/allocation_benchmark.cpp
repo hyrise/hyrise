@@ -1,87 +1,92 @@
-// #include <memory>
-// #include <vector>
+#include <memory>
+#include <vector>
 
-// #include <boost/container/vector.hpp>
-// #include "benchmark/benchmark.h"
-// #include "storage/buffer/buffer_manager.hpp"
-// #include "storage/buffer/buffer_pool_allocator.hpp"
-// #include "storage/buffer/utils.hpp"
-// #include "utils.hpp"
+#include <boost/container/pmr/polymorphic_allocator.hpp>
+#include <boost/container/vector.hpp>
+#include "benchmark/benchmark.h"
+#include "storage/buffer/buffer_manager.hpp"
+#include "storage/buffer/jemalloc_resource.hpp"
+#include "storage/buffer/pin_guard.hpp"
+#include "types.hpp"
 
-// namespace hyrise {
+namespace hyrise {
 
-// static void BM_allocate_pages_boost_vector_buffer_pool_allocator(benchmark::State& state) {
-//   auto config = BufferManager::Config{};
-//   config.dram_buffer_pool_size = 1 << 20;
-//   config.ssd_path = ssd_region_scratch_path() / "pool_allocator_benchmark.data";
-//   auto buffer_manager = BufferManager(config);
-//   auto allocator = BufferPoolAllocator<int>(&buffer_manager);
+struct IntDefaultValue {
+  static int get() {
+    return 1337;
+  }
+};
 
-//   // TODO: auto memory_manager = BufferManagerBenchmarkMemoryManager::create_and_register(&buffer_manager);
+struct ShortStringDefaultValue {
+  static pmr_string get() {
+    return pmr_string{"Hello"};
+  }
+};
 
-//   auto allocation_count = static_cast<size_t>(state.range(0));
-//   //TODO
-//   const auto vector_size = bytes_for_size_type(PageSizeType::KiB32) / sizeof(int);
-//   for (auto _ : state) {
-//     state.PauseTiming();
-//     buffer_manager.clear();
-//     state.ResumeTiming();
+struct LongStringDefaultValue {
+  static pmr_string get() {
+    return pmr_string{"Hello World! This is a long string that will be used as a default value for the vector."};
+  }
+};
 
-//     for (auto index = size_t{0}; index < allocation_count; index++) {
-//       auto array = boost::container::vector<int, BufferPoolAllocator<int>>{vector_size, allocator};
-//       auto size = array.size();
-//       benchmark::DoNotOptimize(size);
-//     }
-//   }
+template <typename Type, typename DefaultValue, auto MemoryResourceFunc>
+static void BM_allocate_vector(benchmark::State& state) {
+  using Allocator = PolymorphicAllocator<Type>;
 
-//   state.SetLabel("Multiple allocations of page-sized boost::container::vector with BufferPoolAllocator");
-// }
+  boost::container::pmr::memory_resource* memory_resource = MemoryResourceFunc();
+  auto allocator = Allocator{memory_resource};
+  auto pin_guard = AllocatorPinGuard{allocator};
+  auto allocation_count = static_cast<size_t>(state.range(0));
 
-// static void BM_allocate_pages_boost_vector_std_allocator(benchmark::State& state) {
-//   auto allocation_count = static_cast<size_t>(state.range(0));
-//   //TODO
-//   const auto vector_size = bytes_for_size_type(PageSizeType::KiB32) / sizeof(int);
-//   for (auto _ : state) {
-//     state.PauseTiming();
-//     auto allocator = std::allocator<int>();
-//     state.ResumeTiming();
+  const auto default_value = DefaultValue::get();
+  for (auto _ : state) {
+    auto array = boost::container::vector<Type, Allocator>{allocation_count, default_value, allocator};
+    auto size = array.size();
+    benchmark::DoNotOptimize(size);
+  }
 
-//     for (auto index = size_t{0}; index < allocation_count; index++) {
-//       auto array = boost::container::vector<int, std::allocator<int>>{vector_size, allocator};
-//       auto size = array.size();
-//       benchmark::DoNotOptimize(size);
-//     }
-//   }
+  if (state.thread_index() == 0) {
+    state.SetItemsProcessed(int64_t(state.iterations()) * state.threads());
+    // TODO: String might have more
+    if constexpr (std::is_same_v<Type, pmr_string>) {
+      state.SetBytesProcessed(int64_t(state.iterations()) * allocation_count * sizeof(Type) * state.threads() *
+                              default_value.capacity());
+    } else {
+      state.SetBytesProcessed(int64_t(state.iterations()) * allocation_count * sizeof(Type) * state.threads());
+    }
+  }
+}
 
-//   state.SetLabel("Multiple allocations of page-sized boost::container::vector with std::allocator");
-// }
+boost::container::pmr::memory_resource* get_buffer_manager_memory_resource() {
+  return &JemallocMemoryResource::get();
+}
 
-// static void BM_allocate_pages_std_vector_buffer_pool_allocator(benchmark::State& state) {
-//   auto config = BufferManager::Config{};
-//   config.dram_buffer_pool_size = 1 << 20;
-//   config.ssd_path = ssd_region_scratch_path() / "pool_allocator_benchmark.data";
-//   auto buffer_manager = BufferManager(config);
-//   auto allocator = BufferPoolAllocator<void>(&buffer_manager);
+// TODO: Dram vs cxl, int vs sting
+BENCHMARK(BM_allocate_vector<int, IntDefaultValue, &get_default_jemalloc_memory_resource>)
+    ->Range(8, 2 << 15)
+    ->DenseThreadRange(1, 48, 1)
+    ->Name("BM_allocate_vector/JemallocBufferManagerInt");
+BENCHMARK(BM_allocate_vector<int, IntDefaultValue, &boost::container::pmr::new_delete_resource>)
+    ->Range(8, 2 << 15)
+    ->DenseThreadRange(1, 48, 1)
+    ->Name("BM_allocate_vector/DefaultJemallocInt");
 
-//   auto allocation_count = static_cast<size_t>(state.range(0));
-//   //TODO
-//   const auto vector_size = bytes_for_size_type(PageSizeType::KiB32) / sizeof(int);
-//   for (auto _ : state) {
-//     state.PauseTiming();
-//     buffer_manager.clear();
-//     state.ResumeTiming();
+BENCHMARK(BM_allocate_vector<pmr_string, ShortStringDefaultValue, &get_default_jemalloc_memory_resource>)
+    ->Range(8, 2 << 15)
+    ->DenseThreadRange(1, 48, 1)
+    ->Name("BM_allocate_vector/JemallocBufferManagerShortString");
+BENCHMARK(BM_allocate_vector<pmr_string, ShortStringDefaultValue, &boost::container::pmr::new_delete_resource>)
+    ->Range(8, 2 << 15)
+    ->DenseThreadRange(1, 48, 1)
+    ->Name("BM_allocate_vector/DefaultJemallocShortString");
 
-//     for (auto index = size_t{0}; index < allocation_count; index++) {
-//       auto array = std::vector<int, BufferPoolAllocator<int>>{vector_size, allocator};
-//       auto size = array.size();
-//       benchmark::DoNotOptimize(size);
-//     }
-//   }
+BENCHMARK(BM_allocate_vector<pmr_string, LongStringDefaultValue, &get_default_jemalloc_memory_resource>)
+    ->Range(8, 2 << 15)
+    ->DenseThreadRange(1, 48, 1)
+    ->Name("BM_allocate_vector/JemallocBufferManagerLongString");
+BENCHMARK(BM_allocate_vector<pmr_string, LongStringDefaultValue, &boost::container::pmr::new_delete_resource>)
+    ->Range(8, 2 << 15)
+    ->DenseThreadRange(1, 48, 1)
+    ->Name("BM_allocate_vector/DefaultJemallocLongString");
 
-//   state.SetLabel("Multiple allocations of page-sized std::vector with BufferPoolAllocator");
-// }
-
-// BENCHMARK(BM_allocate_pages_boost_vector_buffer_pool_allocator)->Range(8, 8 << 9);
-// BENCHMARK(BM_allocate_pages_boost_vector_std_allocator)->Range(8, 8 << 9);
-// BENCHMARK(BM_allocate_pages_std_vector_buffer_pool_allocator)->Range(8, 8 << 9);
-// }  // namespace hyrise
+}  // namespace hyrise

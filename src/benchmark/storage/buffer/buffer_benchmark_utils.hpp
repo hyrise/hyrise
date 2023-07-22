@@ -80,4 +80,5 @@ inline void simulate_page_read(std::byte* ptr, int num_bytes) {
     simulate_cacheline_read(ptr + i);
   }
 }
+
 }  // namespace hyrise
