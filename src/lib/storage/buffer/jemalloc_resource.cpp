@@ -18,8 +18,6 @@ using arena_config_t = struct arena_config_s;
 
 }  // namespace
 
-namespace detail {
-
 static void* extent_alloc(extent_hooks_t* extent_hooks, void* new_addr, size_t size, size_t alignment, bool* zero,
                           bool* commit, unsigned arena_index) {
   if (size > bytes_for_size_type(MAX_PAGE_SIZE_TYPE)) {
@@ -76,7 +74,6 @@ using arena_config_t = struct arena_config_s;
 
 static extent_hooks_t s_hooks{extent_alloc,      extent_dalloc, extent_destroy, extent_commit, nullptr,
                               extent_purge_lazy, extent_purge,  extent_split,   extent_merge};
-}  // namespace detail
 #endif
 
 namespace hyrise {
