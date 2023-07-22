@@ -10,12 +10,6 @@ namespace hyrise {
 
 #ifdef HYRISE_WITH_JEMALLOC
 
-struct arena_config_s {
-  extent_hooks_t* extent_hooks;
-};
-
-using arena_config_t = struct arena_config_s;
-
 static void* extent_alloc(extent_hooks_t* extent_hooks, void* new_addr, size_t size, size_t alignment, bool* zero,
                           bool* commit, unsigned arena_index) {
   if (size > bytes_for_size_type(MAX_PAGE_SIZE_TYPE)) {
@@ -62,13 +56,6 @@ static bool extent_merge(extent_hooks_t* /*extent_hooks*/, void* /*addra*/, size
                          size_t /*sizeb*/, bool /*committed*/, unsigned /*arena_ind*/) {
   return false;
 }
-
-struct arena_config_s {
-  /* extent hooks to be used for the arena */
-  extent_hooks_t* extent_hooks;
-};
-
-using arena_config_t = struct arena_config_s;
 
 static extent_hooks_t s_hooks{extent_alloc,      extent_dalloc, extent_destroy, extent_commit, nullptr,
                               extent_purge_lazy, extent_purge,  extent_split,   extent_merge};
