@@ -16,8 +16,6 @@ struct arena_config_s {
 
 using arena_config_t = struct arena_config_s;
 
-}  // namespace
-
 static void* extent_alloc(extent_hooks_t* extent_hooks, void* new_addr, size_t size, size_t alignment, bool* zero,
                           bool* commit, unsigned arena_index) {
   if (size > bytes_for_size_type(MAX_PAGE_SIZE_TYPE)) {
