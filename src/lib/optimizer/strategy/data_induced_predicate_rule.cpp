@@ -12,6 +12,7 @@
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
+#include "optimizer/strategy/semi_join_reduction_rule.hpp"
 #include "statistics/abstract_cardinality_estimator.hpp"
 
 namespace hyrise {
@@ -125,7 +126,7 @@ void DataInducedPredicateRule::_apply_to_plan_without_subqueries(
           data_induced_predicates.emplace_back(join_node, selection_side, between_predicate);
         } else {
           // TODO (TEAM) : change this .25 to minimum selectivity from semi_join_reduction
-          if((reduced_cardinality / original_cardinality) <= .25){
+          if((reduced_cardinality / original_cardinality) <= SemiJoinReductionRule::MINIMUM_SELECTIVITY){
             if(selection_side == LQPInputSide::Left && join_node->join_mode != JoinMode::Semi){
               return;
             }
