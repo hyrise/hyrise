@@ -86,7 +86,7 @@ BENCHMARK(BM_SequentialRead<60, 2, 0>)
     ->ArgsProduct({benchmark::CreateDenseRange(static_cast<uint64_t>(0), static_cast<u_int64_t>(9), /*step=*/1)})
     ->DenseThreadRange(1, 48, 2)
     ->Name("BM_SequentialRead/CXLToDRAM")
-    ->Iterations(500)
+    ->Iterations(200)
     ->UseRealTime();
 BENCHMARK(BM_SequentialRead<60, 0, 2>)
     ->ArgsProduct({benchmark::CreateDenseRange(static_cast<uint64_t>(0), static_cast<u_int64_t>(9), /*step=*/1)})
@@ -98,12 +98,12 @@ BENCHMARK(BM_SequentialRead<60, 2, 2>)
     ->ArgsProduct({benchmark::CreateDenseRange(static_cast<uint64_t>(0), static_cast<u_int64_t>(9), /*step=*/1)})
     ->DenseThreadRange(1, 48, 2)
     ->Name("BM_SequentialRead/CXL")
-    ->Iterations(500)
+    ->Iterations(200)
     ->UseRealTime();
 BENCHMARK(BM_SequentialRead<60, 0, 0>)
     ->ArgsProduct({benchmark::CreateDenseRange(static_cast<uint64_t>(0), static_cast<u_int64_t>(9), /*step=*/1)})
     ->DenseThreadRange(1, 48, 2)
     ->Name("BM_SequentialRead/DRAM")
-    ->Iterations(500)
+    ->Iterations(200)
     ->UseRealTime();
 }  // namespace hyrise
