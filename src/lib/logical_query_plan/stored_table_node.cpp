@@ -166,7 +166,7 @@ void StoredTableNode::_set_output_expressions() const {
   auto pruned_column_ids_iter = _pruned_column_ids.begin();
   auto output_column_id = ColumnID{0};
   for (auto stored_column_id = ColumnID{0}; stored_column_id < stored_column_count; ++stored_column_id) {
-    // Skip `stored_column_id` if it is in the sorted vector `_pruned_column_ids`
+    // Skip `stored_column_id` if it is in the sorted vector `_pruned_column_ids`.
     if (pruned_column_ids_iter != _pruned_column_ids.end() && stored_column_id == *pruned_column_ids_iter) {
       ++pruned_column_ids_iter;
       continue;
