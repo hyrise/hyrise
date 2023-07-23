@@ -63,29 +63,35 @@ boost::container::pmr::memory_resource* get_buffer_manager_memory_resource() {
 
 // TODO: Dram vs cxl, int vs sting
 BENCHMARK(BM_allocate_vector<int, IntDefaultValue, &get_default_jemalloc_memory_resource>)
-    ->DenseRange(8, 1 << 15, 2)
+    ->Range(8, 1 << 15)
+    ->RangeMultiplier(2)
     ->DenseThreadRange(1, 48, 1)
     ->Name("BM_allocate_vector/JemallocBufferManagerInt");
 BENCHMARK(BM_allocate_vector<int, IntDefaultValue, &boost::container::pmr::new_delete_resource>)
-    ->DenseRange(8, 1 << 15, 2)
+    ->Range(8, 1 << 15)
+    ->RangeMultiplier(2)
     ->DenseThreadRange(1, 48, 1)
     ->Name("BM_allocate_vector/DefaultJemallocInt");
 
 BENCHMARK(BM_allocate_vector<pmr_string, ShortStringDefaultValue, &get_default_jemalloc_memory_resource>)
-    ->DenseRange(8, 1 << 15, 2)
+    ->Range(8, 1 << 15)
+    ->RangeMultiplier(2)
     ->DenseThreadRange(1, 48, 1)
     ->Name("BM_allocate_vector/JemallocBufferManagerShortString");
 BENCHMARK(BM_allocate_vector<pmr_string, ShortStringDefaultValue, &boost::container::pmr::new_delete_resource>)
-    ->DenseRange(8, 1 << 15, 2)
+    ->Range(8, 1 << 15)
+    ->RangeMultiplier(2)
     ->DenseThreadRange(1, 48, 1)
     ->Name("BM_allocate_vector/DefaultJemallocShortString");
 
 BENCHMARK(BM_allocate_vector<pmr_string, LongStringDefaultValue, &get_default_jemalloc_memory_resource>)
-    ->DenseRange(8, 1 << 15, 2)
+    ->Range(8, 1 << 15)
+    ->RangeMultiplier(2)
     ->DenseThreadRange(1, 48, 1)
     ->Name("BM_allocate_vector/JemallocBufferManagerLongString");
 BENCHMARK(BM_allocate_vector<pmr_string, LongStringDefaultValue, &boost::container::pmr::new_delete_resource>)
-    ->DenseRange(8, 1 << 15, 2)
+    ->Range(8, 1 << 15)
+    ->RangeMultiplier(2)
     ->DenseThreadRange(1, 48, 1)
     ->Name("BM_allocate_vector/DefaultJemallocLongString");
 
