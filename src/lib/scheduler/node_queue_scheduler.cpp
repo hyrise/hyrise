@@ -83,10 +83,6 @@ void NodeQueueScheduler::wait_for_all_tasks() {
       // triggered in other situations, there have probably been new tasks added after wait_for_all_tasks() was called.
       Assert(queue_check_runs < 1'000, "Queue is not empty but all registered tasks have already been processed.");
 
-      // Explicitly signal workers to work on remaining jobs.
-      // TODO(Martin): still needed?
-      // queue->signal(1);
-
       std::this_thread::sleep_for(std::chrono::milliseconds(1));
       ++queue_check_runs;
     }
