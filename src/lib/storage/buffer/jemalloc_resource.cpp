@@ -6,6 +6,21 @@
 #include "hyrise.hpp"
 #include "utils/assert.hpp"
 
+#ifdef HYRISE_WITH_JEMALLOC
+
+namespace {
+// TODO: Mostly likely not needed
+// from jemalloc internals (see arena_types.h)
+struct arena_config_s {
+  /* extent hooks to be used for the arena */
+  extent_hooks_t* extent_hooks;
+};
+
+using arena_config_t = struct arena_config_s;
+
+}  // namespace
+#endif
+
 namespace hyrise {
 
 #ifdef HYRISE_WITH_JEMALLOC
