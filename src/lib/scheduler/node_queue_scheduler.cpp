@@ -112,8 +112,8 @@ void NodeQueueScheduler::finish() {
   }
 
   auto check_runs = size_t{0};
-  while (workers_shut_down.load(std::memory_order::relaxed) > 0) {
-    Assert(check_runs < 1'000, "Time out: not all shut down have been processed.");
+  while (workers_shut_down.load() > 0) {
+    Assert(check_runs < 1'000, "Timeout: not all shut down tasks have been processed.");
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
     ++check_runs;
   }
