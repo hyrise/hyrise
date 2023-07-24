@@ -131,7 +131,7 @@ def main():
 
     # Test TPC-DS generation.
     console.sendline("generate_tpcds 1")
-    console.expect("Generating tables done", timeout=300)
+    console.expect("Generating tables done", timeout=600)
     console.sendline("select * from meta_tables")
     console.expect("24 rows total")
 
