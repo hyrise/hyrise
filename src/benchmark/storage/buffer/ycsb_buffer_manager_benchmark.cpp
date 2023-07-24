@@ -42,6 +42,7 @@ BENCHMARK_DEFINE_F(YCSBBufferManagerFixture, BM_ReadMostly)(benchmark::State& st
 #ifdef __APPLE__
     memory_resource = &Hyrise::get().buffer_manager;
 #elif __linux__
+    JemallocMemoryResource::get().reset();
     memory_resource = &JemallocMemoryResource::get();
 #endif
 

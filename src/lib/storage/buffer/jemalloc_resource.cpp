@@ -79,6 +79,12 @@ static extent_hooks_t s_hooks{extent_alloc,      extent_dalloc, extent_destroy, 
 #endif
 
 JemallocMemoryResource::JemallocMemoryResource() {
+  create_arena();
+}
+
+JemallocMemoryResource::~JemallocMemoryResource() {}
+
+void JemallocMemoryResource::create_arena() {
 #ifdef HYRISE_WITH_JEMALLOC
   // size_t size = sizeof(_arena_index);
   // arena_config_t arena_config;
@@ -117,7 +123,15 @@ JemallocMemoryResource::JemallocMemoryResource() {
 #endif
 }
 
-JemallocMemoryResource::~JemallocMemoryResource() {}
+void JemallocMemoryResource::reset() {
+#ifdef HYRISE_WITH_JEMALLOC
+
+  auto reset_cmd = "arena." + std::to_string(_arena_index) + ".reset";
+  Assert(mallctl(dirty_decay_cmd.c_str(), nullptr, nullptr, (void*)&reset_cmd, sizeof(reset_cmd)) == 0,
+         "setting dirty_decay_ms failed");
+  create_arena();
+#endif
+}
 
 void* JemallocMemoryResource::do_allocate(std::size_t bytes, std::size_t alignment) {
 #ifdef HYRISE_WITH_JEMALLOC
