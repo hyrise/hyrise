@@ -14,6 +14,8 @@ namespace {
 struct arena_config_s {
   /* extent hooks to be used for the arena */
   extent_hooks_t* extent_hooks;
+
+  bool metadata_use_hooks = false
 };
 
 using arena_config_t = struct arena_config_s;
@@ -78,15 +80,33 @@ static extent_hooks_t s_hooks{extent_alloc,      extent_dalloc, extent_destroy, 
 
 JemallocMemoryResource::JemallocMemoryResource() {
 #ifdef HYRISE_WITH_JEMALLOC
-  auto arena_id = uint32_t{0};
-  size_t size = sizeof(arena_id);
-  Assert(mallctl("arenas.create", static_cast<void*>(&arena_id), &size, nullptr, 0) == 0, "mallctl failed");
+  // size_t size = sizeof(_arena_index);
+  // arena_config_t arena_config;
+  // arena_config.metadata_use_hooks = false;
+  // arena_config.extent_hooks = &s_hooks;
 
-  auto hooks_ptr = &s_hooks;
-  char command[64];
-  snprintf(command, sizeof(command), "arena.%u.extent_hooks", arena_id);
-  Assert(mallctl(command, nullptr, nullptr, static_cast<void*>(&hooks_ptr), sizeof(extent_hooks_t*)) == 0,
-         "mallctl failed");
+  // Assert(mallctl("experimental.arenas_create_ext", static_cast<void*>(&_arena_index), &size, &arena_config,
+  //                sizeof(arena_config)) == 0,
+  //        "arenas_create_ext failed");
+
+  // auto arena_id = uint32_t{0};
+  // size_t size = sizeof(arena_id);
+  // Assert(mallctl("arenas.create", static_cast<void*>(&arena_id), &size, nullptr, 0) == 0, "mallctl failed");
+
+  // auto hooks_ptr = &s_hooks;
+  // char command[64];
+  // snprintf(command, sizeof(command), "arena.%u.extent_hooks", arena_id);
+  // Assert(mallctl(command, nullptr, nullptr, static_cast<void*>(&hooks_ptr), sizeof(extent_hooks_t*)) == 0,
+  //        "mallctl failed");
+
+  size_t size = sizeof(_arena_index);
+  arena_config_t arena_config;
+  arena_config.metadata_use_hooks = false;
+  arena_config.extent_hooks = &s_hooks;
+
+  Assert(mallctl("experimental.arenas_create_ext", static_cast<void*>(&_arena_index), &size, &arena_config,
+                 sizeof(arena_config)) == 0,
+         "arenas_create_ext failed");
 
   ssize_t dirty_decay_ms = -1;
   auto dirty_decay_cmd = "arena." + std::to_string(_arena_index) + ".dirty_decay_ms";
@@ -104,8 +124,7 @@ void* JemallocMemoryResource::do_allocate(std::size_t bytes, std::size_t alignme
   if (auto ptr = mallocx(bytes, MALLOCX_ALIGN(alignment) | _mallocx_flags)) {
     return ptr;
   }
-  const auto error = errno;
-  Fail("Failed to allocate memory (" + std::to_string(bytes) + "): " + strerror(error));
+  Fail("Failed to allocate memory (" + std::to_string(bytes) + ")");
 #else
   Fail("Jeamlloc is not supported");
 #endif
