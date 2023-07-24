@@ -105,8 +105,10 @@ void* JemallocMemoryResource::do_allocate(std::size_t bytes, std::size_t alignme
   if (auto ptr = mallocx(bytes, _mallocx_flags)) {
     return ptr;
   }
-#endif
   Fail("Failed to allocate memory: " + std::to_string(bytes));
+#else
+  Fail("Jeamlloc is not supported");
+#endif
 }
 
 void JemallocMemoryResource::do_deallocate(void* pointer, std::size_t bytes, std::size_t alignment) {
