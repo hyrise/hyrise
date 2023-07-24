@@ -49,7 +49,7 @@ std::shared_ptr<OperatorTask> add_operator_tasks_recursively(const std::shared_p
 
 namespace hyrise {
 OperatorTask::OperatorTask(std::shared_ptr<AbstractOperator> op, SchedulePriority priority, bool stealable)
-    : AbstractTask(priority, stealable), _op(std::move(op)) {}
+    : AbstractTask(TaskType::OperatorTask, priority, stealable), _op(std::move(op)) {}
 
 std::string OperatorTask::description() const {
   return "OperatorTask with id: " + std::to_string(id()) + " for op: " + _op->description();

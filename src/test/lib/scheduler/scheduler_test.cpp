@@ -375,9 +375,8 @@ TEST_F(SchedulerTest, MergeSort) {
 
 TEST_F(SchedulerTest, NodeQueueSchedulerCreationAndReset) {
   if (std::thread::hardware_concurrency() < 4) {
-    // If the machine has less than 4 cores, the calls to use_non_numa_topology()
-    // below will implicitly reduce the worker count to the number of cores,
-    // therefore failing the assertions.
+    // If the machine has less than 4 cores, the calls to use_non_numa_topology() below will implicitly reduce the
+    // worker count to the number of cores, therefore failing the assertions.
     GTEST_SKIP();
   }
 
@@ -385,8 +384,11 @@ TEST_F(SchedulerTest, NodeQueueSchedulerCreationAndReset) {
 
   Hyrise::get().topology.use_fake_numa_topology(thread_count, thread_count / 4);
   for (auto loop_id = size_t{0}; loop_id < 256; ++loop_id) {
-    Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
+    auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
+    Hyrise::get().set_scheduler(node_queue_scheduler);
+    EXPECT_EQ(node_queue_scheduler->active_worker_count().load(), thread_count);
     Hyrise::get().set_scheduler(std::make_shared<ImmediateExecutionScheduler>());
+    EXPECT_EQ(node_queue_scheduler->active_worker_count().load(), 0);
   }
 }
 

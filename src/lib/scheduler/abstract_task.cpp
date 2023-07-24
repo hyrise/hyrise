@@ -13,7 +13,8 @@
 
 namespace hyrise {
 
-AbstractTask::AbstractTask(SchedulePriority priority, bool stealable) : _priority(priority), _stealable(stealable) {}
+AbstractTask::AbstractTask(TaskType task_type, SchedulePriority priority, bool stealable)
+    : _type{task_type}, _priority{priority}, _stealable{stealable} {}
 
 TaskID AbstractTask::id() const {
   return _id;
@@ -89,14 +90,6 @@ bool AbstractTask::try_mark_as_assigned_to_worker() {
   return _try_transition_to(TaskState::AssignedToWorker);
 }
 
-void AbstractTask::set_as_shutdown_task() {
-  _is_shutdown_task = true;
-}
-
-bool AbstractTask::is_shutdown_task() {
-  return _is_shutdown_task;
-}
-
 void AbstractTask::set_done_callback(const std::function<void()>& done_callback) {
   DebugAssert(!is_scheduled(), "Possible race: Don't set callback after the Task was scheduled");
 
@@ -167,6 +160,10 @@ void AbstractTask::execute() {
 
 TaskState AbstractTask::state() const {
   return _state;
+}
+
+TaskType AbstractTask::type() const {
+  return _type;
 }
 
 void AbstractTask::_on_predecessor_done() {

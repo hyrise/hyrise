@@ -87,7 +87,8 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
   friend class OperatorTaskTest;
 
  public:
-  explicit AbstractTask(SchedulePriority priority = SchedulePriority::Default, bool stealable = true);
+  explicit AbstractTask(TaskType task_type, SchedulePriority priority = SchedulePriority::Default,
+                        bool stealable = true);
   virtual ~AbstractTask() = default;
 
   /**
@@ -171,21 +172,13 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
   bool try_mark_as_assigned_to_worker();
 
   /**
-   * Sets the shutdown flag that signals workers to shut down.
-   */
-  void set_as_shutdown_task();
-
-  /**
-   * Return whether the task is a shutdown task.
-   */
-  bool is_shutdown_task();
-
-  /**
    * Executes the task in the current thread, blocks until all operations are finished.
    */
   void execute();
 
   TaskState state() const;
+
+  TaskType type() const;
 
  protected:
   virtual void _on_execute() = 0;
@@ -208,11 +201,12 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
    */
   void _join();
 
+  const TaskType _type;
+
   std::atomic<TaskID> _id{INVALID_TASK_ID};
   std::atomic<NodeID> _node_id{INVALID_NODE_ID};
   SchedulePriority _priority;
   std::atomic_bool _stealable;
-  bool _is_shutdown_task{false};
   std::function<void()> _done_callback;
 
   // For dependencies.

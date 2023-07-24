@@ -61,14 +61,11 @@ namespace hyrise {
  * pull a ready task. This occurs in two cases:
  *  1) all tasks in the queue are not ready
  *  2) the queue is empty
- * In both cases, the current worker is checking another queue for a ready task. Checking another queue means accessing
- * another node (remote node). As of the physical distance of nodes, accessing a remote node is ~1.6 times slower than
- * accessing a local node. [1]
- * Therefore, the current worker fetches a task from a remote queue (without removing it). Then, the current worker
- * is sleeping some milliseconds to give any local worker of the remote node the chance to pull that task. If no local
- * worker of the remote node pulled the task, the current worker is pulling the task and therefore steals it.
- * Afterwards, the current worker is checking its local queue gain.
+ * In both cases, the current worker is checking another queue for a ready task. The current worker pulls a task from a remote queue and checks if this task is
+ * stealable. If not, the task is pushed to the task queue again.
  *
+ * Note: currently, task queues are not explicitly allocated on a NUMA node. This means most workers will frequently access distant task queues, which is ~1.6 times slower than
+ * accessing a local node [1]. 
  * [1] http://frankdenneman.nl/2016/07/13/numa-deep-dive-4-local-memory-optimization/
  */
 
@@ -117,6 +114,8 @@ class NodeQueueScheduler : public AbstractScheduler {
 
   void wait_for_all_tasks() override;
 
+  const std::atomic_uint64_t& active_worker_count() const;
+
   // Number of groups for _group_tasks
   static constexpr auto NUM_GROUPS = 10;
 
@@ -128,7 +127,9 @@ class NodeQueueScheduler : public AbstractScheduler {
   std::shared_ptr<UidAllocator> _worker_id_allocator;
   std::vector<std::shared_ptr<TaskQueue>> _queues;
   std::vector<std::shared_ptr<Worker>> _workers;
+
   std::atomic_bool _active{false};
+  std::atomic_uint64_t _active_worker_count{0};
 
   size_t _node_count{1};
   std::vector<size_t> _workers_per_node;

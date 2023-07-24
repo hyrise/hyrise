@@ -249,6 +249,8 @@ enum class DatetimeComponent { Year, Month, Day, Hour, Minute, Second };
 // AnySegmentIterators that use virtual method calls.
 enum class EraseTypes { OnlyInDebugBuild, Always };
 
+enum class TaskType { AbstractTask, ChunkCompressionTask, JobTask, MockTask, OperatorTask, ShutDownTask };
+
 // Defines in which order a certain column should be or is sorted.
 struct SortColumnDefinition final {
   explicit SortColumnDefinition(ColumnID init_column, SortMode init_sort_mode = SortMode::Ascending)

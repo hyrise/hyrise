@@ -4,10 +4,6 @@
 #include <sched.h>
 #include <unistd.h>
 
-#include <chrono>
-#include <iostream>
-#include <memory>
-#include <mutex>
 #include <random>
 #include <thread>
 #include <vector>
@@ -15,6 +11,7 @@
 #include "abstract_scheduler.hpp"
 #include "abstract_task.hpp"
 #include "hyrise.hpp"
+#include "shut_down_task.hpp"
 #include "task_queue.hpp"
 
 namespace {
@@ -116,7 +113,8 @@ void Worker::_work(const AllowSleep allow_sleep) {
 
   task->execute();
 
-  if (task->is_shutdown_task()) {
+  // In case the processed task is a ShutDownTask, we shut down the worker (see `operator()` loop).
+  if (std::dynamic_pointer_cast<ShutDownTask>(task)) {
     _active = false;
   }
 

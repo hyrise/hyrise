@@ -346,6 +346,8 @@ set(
     scheduler/node_queue_scheduler.hpp
     scheduler/operator_task.cpp
     scheduler/operator_task.hpp
+    scheduler/shut_down_task.cpp
+    scheduler/shut_down_task.hpp
     scheduler/task_queue.cpp
     scheduler/task_queue.hpp
     scheduler/task_utils.hpp

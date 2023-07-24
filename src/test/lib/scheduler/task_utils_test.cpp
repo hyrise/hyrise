@@ -7,6 +7,9 @@ namespace hyrise {
 class TaskUtilsTest : public BaseTest {
  public:
   class MockTask : public AbstractTask {
+   public:
+    MockTask() : AbstractTask{TaskType::MockTask} {}
+
    protected:
     void _on_execute() final {}
   };

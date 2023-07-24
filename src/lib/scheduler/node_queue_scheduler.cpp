@@ -10,6 +10,7 @@
 #include "abstract_task.hpp"
 #include "hyrise.hpp"
 #include "job_task.hpp"
+#include "shut_down_task.hpp"
 #include "task_queue.hpp"
 #include "uid_allocator.hpp"
 #include "utils/assert.hpp"
@@ -45,8 +46,8 @@ void NodeQueueScheduler::begin() {
     const auto& topology_node = Hyrise::get().topology.nodes()[node_id];
 
     for (const auto& topology_cpu : topology_node.cpus) {
-      _workers.emplace_back(std::make_shared<Worker>(queue, WorkerID{_worker_id_allocator->allocate()},
-                                                     topology_cpu.cpu_id));
+      _workers.emplace_back(
+          std::make_shared<Worker>(queue, WorkerID{_worker_id_allocator->allocate()}, topology_cpu.cpu_id));
     }
 
     // Tracked per node as core restrictions can lead to unbalanced core counts.
@@ -57,6 +58,7 @@ void NodeQueueScheduler::begin() {
 
   for (auto& worker : _workers) {
     worker->start();
+    ++_active_worker_count;
   }
 }
 
@@ -98,20 +100,17 @@ void NodeQueueScheduler::finish() {
 
   wait_for_all_tasks();
 
-  auto active_workers = std::atomic_uint64_t{_workers.size()};
-
   for (auto node_id = NodeID{0}; node_id < _node_count; ++node_id) {
     const auto node_worker_count = _workers_per_node[node_id];
     for (auto worker_id = size_t{0}; worker_id < node_worker_count; ++worker_id) {
       // Create a shutdown task for every worker.
-      auto job_task = std::make_shared<JobTask>([&]() { --active_workers; }, SchedulePriority::Default, false);
-      job_task->set_as_shutdown_task();
-      job_task->schedule(node_id);
+      auto shut_down_task = std::make_shared<ShutDownTask>(_active_worker_count);
+      shut_down_task->schedule(node_id);
     }
   }
 
   auto check_runs = size_t{0};
-  while (active_workers.load() > 0) {
+  while (_active_worker_count.load() > 0) {
     Assert(check_runs < 1'000, "Timeout: not all shut down tasks have been processed.");
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
     ++check_runs;
@@ -210,7 +209,7 @@ void NodeQueueScheduler::_group_tasks(const std::vector<std::shared_ptr<Abstract
 
   std::vector<std::shared_ptr<AbstractTask>> grouped_tasks(NUM_GROUPS);
   for (const auto& task : tasks) {
-    if (!task->predecessors().empty() || !task->successors().empty() || task->is_shutdown_task()) {
+    if (!task->predecessors().empty() || !task->successors().empty() || task->type() == TaskType::ShutDownTask) {
       return;
     }
 
@@ -232,6 +231,10 @@ void NodeQueueScheduler::_group_tasks(const std::vector<std::shared_ptr<Abstract
     grouped_tasks[group_id] = task;
     ++round_robin_counter;
   }
+}
+
+const std::atomic_uint64_t& NodeQueueScheduler::active_worker_count() const {
+  return _active_worker_count;
 }
 
 }  // namespace hyrise
