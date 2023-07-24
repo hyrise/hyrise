@@ -37,7 +37,7 @@ void BM_ycsb(benchmark::State& state) {
     auto config = BufferManager::Config::from_env();
     config.dram_buffer_pool_size = DEFAULT_DRAM_BUFFER_POOL_SIZE;
     config.numa_buffer_pool_size = DEFAULT_NUMA_BUFFER_POOL_SIZE;
-    config.memory_node = NumaMemoryNode{2};
+    // config.memory_node = NumaMemoryNode{2};
     config.migration_policy = policy;
 
     Hyrise::get().buffer_manager = BufferManager(config);

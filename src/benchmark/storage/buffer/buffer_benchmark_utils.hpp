@@ -110,7 +110,8 @@ using YCSBTable = std::vector<YCSBTuple>;
 using YSCBOperation = std::pair<YCSBKey, YSCBOperationType>;
 using YCSBOperations = std::vector<YSCBOperation>;
 
-inline YCSBTable generate_ycsb_table(boost::container::pmr::memory_resource* memory_resource, const size_t database_size) {
+inline YCSBTable generate_ycsb_table(boost::container::pmr::memory_resource* memory_resource,
+                                     const size_t database_size) {
   std::mt19937 generator{std::random_device{}()};
   std::uniform_int_distribution<int> distribution(0, magic_enum::enum_count<YCSBTupleSize>() - 1);
   auto table = std::vector<YCSBTuple>{};
@@ -119,10 +120,13 @@ inline YCSBTable generate_ycsb_table(boost::container::pmr::memory_resource* mem
   while (current_size < database_size) {
     auto tuple_size = magic_enum::enum_value<YCSBTupleSize>(distribution(generator));
     auto ptr = memory_resource->allocate(static_cast<size_t>(tuple_size), 64);
-    buffer_manager.pin_exclusive(buffer_manager.find_page(ptr));
+    auto page_id = buffer_manager.find_page(ptr);
+
+    buffer_manager.pin_exclusive(page_id);
     simulate_store(reinterpret_cast<std::byte*>(ptr), static_cast<int>(tuple_size));
-    buffer_manager.set_dirty(buffer_manager.find_page(ptr));
-    buffer_manager.unpin_exclusive(buffer_manager.find_page(ptr));
+    buffer_manager.set_dirty(page_id);
+    buffer_manager.unpin_exclusive(page_id);
+
     auto tuple = std::make_pair(tuple_size, reinterpret_cast<std::byte*>(ptr));
     table.push_back(tuple);
     current_size += static_cast<size_t>(tuple_size);
