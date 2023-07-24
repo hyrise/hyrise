@@ -101,11 +101,11 @@ JemallocMemoryResource::~JemallocMemoryResource() {}
 
 void* JemallocMemoryResource::do_allocate(std::size_t bytes, std::size_t alignment) {
 #ifdef HYRISE_WITH_JEMALLOC
-  // TODO:: uint32_t arena_idx = tk_thread_get_arena();
-  if (auto ptr = mallocx(bytes, _mallocx_flags)) {
+  if (auto ptr = mallocx(bytes, MALLOCX_ALIGN(alignment) | _mallocx_flags)) {
     return ptr;
   }
-  Fail("Failed to allocate memory: " + std::to_string(bytes));
+  const auto error = errno;
+  Fail("Failed to allocate memory (" + std::to_string(bytes) + "): " + strerror(error));
 #else
   Fail("Jeamlloc is not supported");
 #endif
@@ -113,8 +113,9 @@ void* JemallocMemoryResource::do_allocate(std::size_t bytes, std::size_t alignme
 
 void JemallocMemoryResource::do_deallocate(void* pointer, std::size_t bytes, std::size_t alignment) {
 #ifdef HYRISE_WITH_JEMALLOC
-
-  sdallocx(pointer, bytes, _mallocx_flags);
+  sdallocx(pointer, bytes, MALLOCX_ALIGN(alignment) | _mallocx_flags);
+#else
+  Fail("Jeamlloc is not supported");
 #endif
 }
 
