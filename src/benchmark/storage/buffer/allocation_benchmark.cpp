@@ -36,23 +36,23 @@ static void BM_allocate_vector(benchmark::State& state) {
   boost::container::pmr::memory_resource* memory_resource = MemoryResourceFunc();
   auto allocator = Allocator{memory_resource};
   auto pin_guard = AllocatorPinGuard{allocator};
-  auto allocation_count = static_cast<size_t>(state.range(0));
+  auto vector_size = static_cast<size_t>(state.range(0));
 
   const auto default_value = DefaultValue::get();
   for (auto _ : state) {
-    auto array = boost::container::vector<Type, Allocator>{allocation_count, default_value, allocator};
+    auto array = boost::container::vector<Type, Allocator>{vector_size, default_value, allocator};
     auto size = array.size();
     benchmark::DoNotOptimize(size);
   }
 
   if (state.thread_index() == 0) {
     state.SetItemsProcessed(int64_t(state.iterations()) * state.threads());
-    // TODO: String might have more
     if constexpr (std::is_same_v<Type, pmr_string>) {
-      state.SetBytesProcessed(int64_t(state.iterations()) * allocation_count * sizeof(Type) * state.threads() *
+      // TODO: String might have more bytes than the vector size
+      state.SetBytesProcessed(int64_t(state.iterations()) * vector_size * sizeof(Type) * state.threads() *
                               default_value.capacity());
     } else {
-      state.SetBytesProcessed(int64_t(state.iterations()) * allocation_count * sizeof(Type) * state.threads());
+      state.SetBytesProcessed(int64_t(state.iterations()) * vector_size * sizeof(Type) * state.threads());
     }
   }
 }
@@ -61,7 +61,7 @@ boost::container::pmr::memory_resource* get_buffer_manager_memory_resource() {
   return &JemallocMemoryResource::get();
 }
 
-// TODO: Dram vs cxl, int vs sting
+// TODO: DRAM vs CXL
 BENCHMARK(BM_allocate_vector<int, IntDefaultValue, &get_default_jemalloc_memory_resource>)
     ->RangeMultiplier(2)
     ->Range(8, 8 << 12)

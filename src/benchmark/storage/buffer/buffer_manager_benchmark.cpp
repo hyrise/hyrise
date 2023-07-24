@@ -16,7 +16,6 @@ namespace hyrise {
  * Use zipfian skews to test different hit and miss rates for single pahe size and diffeent dram size ratios
  * 
 */
-
 class BufferManagerFixture : public benchmark::Fixture {
  public:
   constexpr static auto PAGE_SIZE_TYPE = MIN_PAGE_SIZE_TYPE;
