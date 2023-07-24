@@ -134,7 +134,7 @@ TEST_F(TPCHTableGeneratorTest, TableConstraints) {
   EXPECT_EQ(orders_table->soft_foreign_key_constraints().size(), 1);
 
   EXPECT_EQ(lineitem_table->soft_key_constraints().size(), 1);
-  EXPECT_EQ(lineitem_table->soft_foreign_key_constraints().size(), 1);
+  EXPECT_EQ(lineitem_table->soft_foreign_key_constraints().size(), 4);
 
   EXPECT_EQ(nation_table->soft_key_constraints().size(), 1);
   EXPECT_EQ(nation_table->soft_foreign_key_constraints().size(), 1);

@@ -18,7 +18,9 @@ class ForeignKeyConstraintTest : public BaseTest {
     _table_c = Table::create_dummy_table({{"u", DataType::Int, false}, {"v", DataType::Int, false}});
   }
 
-  std::shared_ptr<Table> _table_a, _table_b, _table_c;
+  std::shared_ptr<Table> _table_a;
+  std::shared_ptr<Table> _table_b;
+  std::shared_ptr<Table> _table_c;
 };
 
 TEST_F(ForeignKeyConstraintTest, OrderedColumnIDs) {
@@ -95,10 +97,6 @@ TEST_F(ForeignKeyConstraintTest, AddForeignKeyConstraintsInvalid) {
   EXPECT_THROW(_table_a->add_soft_foreign_key_constraint({{ColumnID{1}}, _table_a, {ColumnID{5}}, _table_b}),
                std::logic_error);
 
-  // Invalid because inclusion constraint for the given column sets and primary key table already exists.
-  EXPECT_THROW(_table_a->add_soft_foreign_key_constraint({{ColumnID{0}}, _table_a, {ColumnID{1}}, _table_b}),
-               std::logic_error);
-
   // Invalid because the primary key table does not exist.
   EXPECT_THROW(_table_a->add_soft_foreign_key_constraint({{ColumnID{1}}, _table_a, {ColumnID{1}}, nullptr}),
                std::logic_error);
@@ -118,11 +116,6 @@ TEST_F(ForeignKeyConstraintTest, AddForeignKeyConstraintsInvalid) {
 
   // Invalid because same constraint is already set.
   EXPECT_THROW(_table_a->add_soft_foreign_key_constraint({{ColumnID{0}}, _table_a, {ColumnID{1}}, _table_b}),
-               std::logic_error);
-
-  // Invalid because there is already a foreign key on column 0.
-  EXPECT_THROW(_table_a->add_soft_foreign_key_constraint(
-                   {{ColumnID{1}, ColumnID{0}}, _table_a, {ColumnID{1}, ColumnID{0}}, _table_b}),
                std::logic_error);
 }
 

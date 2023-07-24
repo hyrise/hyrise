@@ -1262,7 +1262,7 @@ void TPCDSTableGenerator::_add_constraints(
                                                       {promotion_table->column_id_by_name("p_promo_sk")},
                                                       promotion_table});
 
-  // store_returns - 1 composite PK, 9 FKs.
+  // store_returns - 1 composite PK, 10 FKs.
   store_returns_table->add_soft_key_constraint({{store_returns_table->column_id_by_name("sr_item_sk"),
                                                  store_returns_table->column_id_by_name("sr_ticket_number")},
                                                 KeyConstraintType::PRIMARY_KEY});
@@ -1274,14 +1274,18 @@ void TPCDSTableGenerator::_add_constraints(
                                                         store_returns_table,
                                                         {time_dim_table->column_id_by_name("t_time_sk")},
                                                         time_dim_table});
-  // The specification also allows to set the FK to i_item_sk directly, but we only set the composite key to
-  // ss_item_sk, ss_ticket_number.
+  // The specification explicitly mentions the FK of sr_item_sk, sr_ticket_number as compound key to store_sales and as
+  // an FK to i_item_sk directly.
   store_returns_table->add_soft_foreign_key_constraint(
       {{store_returns_table->column_id_by_name("sr_item_sk"),
         store_returns_table->column_id_by_name("sr_ticket_number")},
        store_returns_table,
        {store_sales_table->column_id_by_name("ss_item_sk"), store_sales_table->column_id_by_name("ss_ticket_number")},
        store_sales_table});
+  store_returns_table->add_soft_foreign_key_constraint({{store_returns_table->column_id_by_name("sr_item_sk")},
+                                                        store_returns_table,
+                                                        {item_table->column_id_by_name("i_item_sk")},
+                                                        item_table});
   store_returns_table->add_soft_foreign_key_constraint({{store_returns_table->column_id_by_name("sr_customer_sk")},
                                                         store_returns_table,
                                                         {customer_table->column_id_by_name("c_customer_sk")},
@@ -1380,7 +1384,7 @@ void TPCDSTableGenerator::_add_constraints(
                                                         {promotion_table->column_id_by_name("p_promo_sk")},
                                                         promotion_table});
 
-  // catalog_returns - 1 composite PK, 16 FKs.
+  // catalog_returns - 1 composite PK, 17 FKs.
   catalog_returns_table->add_soft_key_constraint({{catalog_returns_table->column_id_by_name("cr_item_sk"),
                                                    catalog_returns_table->column_id_by_name("cr_order_number")},
                                                   KeyConstraintType::PRIMARY_KEY});
@@ -1394,14 +1398,18 @@ void TPCDSTableGenerator::_add_constraints(
        catalog_returns_table,
        {time_dim_table->column_id_by_name("t_time_sk")},
        time_dim_table});
-  // The specification also allows to set the FK to i_item_sk directly, but we only set the composite key to cs_item_sk,
-  // cs_order_number.
+  // The specification explicitly mentions the FK of cr_item_sk, cr_order_number as compound key to catalog_sales and as
+  // an FK to i_item_sk directly.
   catalog_returns_table->add_soft_foreign_key_constraint({{catalog_returns_table->column_id_by_name("cr_item_sk"),
                                                            catalog_returns_table->column_id_by_name("cr_order_number")},
                                                           catalog_returns_table,
                                                           {catalog_sales_table->column_id_by_name("cs_item_sk"),
                                                            catalog_sales_table->column_id_by_name("cs_order_number")},
                                                           catalog_sales_table});
+  catalog_returns_table->add_soft_foreign_key_constraint({{catalog_returns_table->column_id_by_name("cr_item_sk")},
+                                                          catalog_returns_table,
+                                                          {item_table->column_id_by_name("i_item_sk")},
+                                                          item_table});
   catalog_returns_table->add_soft_foreign_key_constraint(
       {{catalog_returns_table->column_id_by_name("cr_refunded_customer_sk")},
        catalog_returns_table,
@@ -1538,7 +1546,7 @@ void TPCDSTableGenerator::_add_constraints(
                                                     {promotion_table->column_id_by_name("p_promo_sk")},
                                                     promotion_table});
 
-  // web_returns - 1 composite PK, 13 FKs.
+  // web_returns - 1 composite PK, 14 FKs.
   web_returns_table->add_soft_key_constraint(
       {{web_returns_table->column_id_by_name("wr_item_sk"), web_returns_table->column_id_by_name("wr_order_number")},
        KeyConstraintType::PRIMARY_KEY});
@@ -1550,13 +1558,17 @@ void TPCDSTableGenerator::_add_constraints(
                                                       web_returns_table,
                                                       {time_dim_table->column_id_by_name("t_time_sk")},
                                                       time_dim_table});
-  // The specification also allows to set the FK to i_item_sk directly, but we only set the composite key to
-  // ws_item_sk, ws_order_number.
+  // The specification explicitly mentions the FK of wr_item_sk, wr_order_number as compound key to web_sales and as an
+  // FK to i_item_sk directly.
   web_returns_table->add_soft_foreign_key_constraint(
       {{web_returns_table->column_id_by_name("wr_item_sk"), web_returns_table->column_id_by_name("wr_order_number")},
        web_returns_table,
        {web_sales_table->column_id_by_name("ws_item_sk"), web_sales_table->column_id_by_name("ws_order_number")},
        web_sales_table});
+  web_returns_table->add_soft_foreign_key_constraint({{web_returns_table->column_id_by_name("wr_item_sk")},
+                                                      web_returns_table,
+                                                      {item_table->column_id_by_name("i_item_sk")},
+                                                      item_table});
   web_returns_table->add_soft_foreign_key_constraint({{web_returns_table->column_id_by_name("wr_refunded_customer_sk")},
                                                       web_returns_table,
                                                       {customer_table->column_id_by_name("c_customer_sk")},

@@ -146,19 +146,19 @@ TEST_F(TPCDSTableGeneratorTest, TableConstraints) {
   EXPECT_EQ(store_sales_table->soft_foreign_key_constraints().size(), 9);
 
   EXPECT_EQ(store_returns_table->soft_key_constraints().size(), 1);
-  EXPECT_EQ(store_returns_table->soft_foreign_key_constraints().size(), 9);
+  EXPECT_EQ(store_returns_table->soft_foreign_key_constraints().size(), 10);
 
   EXPECT_EQ(catalog_sales_table->soft_key_constraints().size(), 1);
   EXPECT_EQ(catalog_sales_table->soft_foreign_key_constraints().size(), 17);
 
   EXPECT_EQ(catalog_returns_table->soft_key_constraints().size(), 1);
-  EXPECT_EQ(catalog_returns_table->soft_foreign_key_constraints().size(), 16);
+  EXPECT_EQ(catalog_returns_table->soft_foreign_key_constraints().size(), 17);
 
   EXPECT_EQ(web_sales_table->soft_key_constraints().size(), 1);
   EXPECT_EQ(web_sales_table->soft_foreign_key_constraints().size(), 17);
 
   EXPECT_EQ(web_returns_table->soft_key_constraints().size(), 1);
-  EXPECT_EQ(web_returns_table->soft_foreign_key_constraints().size(), 13);
+  EXPECT_EQ(web_returns_table->soft_foreign_key_constraints().size(), 14);
 
   EXPECT_EQ(inventory_table->soft_key_constraints().size(), 1);
   EXPECT_EQ(inventory_table->soft_foreign_key_constraints().size(), 3);

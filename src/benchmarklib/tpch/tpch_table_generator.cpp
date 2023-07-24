@@ -381,17 +381,29 @@ void TPCHTableGenerator::_add_constraints(
                                                  {customer_table->column_id_by_name("c_custkey")},
                                                  customer_table});
 
-  // lineitem - 1 composite PK, 1 composite FK.
+  // lineitem - 1 composite PK, 4 FKs.
   lineitem_table->add_soft_key_constraint(
       {{lineitem_table->column_id_by_name("l_orderkey"), lineitem_table->column_id_by_name("l_linenumber")},
        KeyConstraintType::PRIMARY_KEY});
-  // The specification also allows to set the FKs to p_partkey and s_suppkey directly, but we only set the composite key
-  // to ps_partkey, ps_suppkey.
+  lineitem_table->add_soft_foreign_key_constraint({{lineitem_table->column_id_by_name("l_orderkey")},
+                                                   lineitem_table,
+                                                   {orders_table->column_id_by_name("o_orderkey")},
+                                                   orders_table});
+  // The specification explicitly allows to set the FKs of l_partkey and s_suppkey as a compound FK to partsupp and
+  // directly to part/supplier.
   lineitem_table->add_soft_foreign_key_constraint(
       {{lineitem_table->column_id_by_name("l_partkey"), lineitem_table->column_id_by_name("l_suppkey")},
        lineitem_table,
        {partsupp_table->column_id_by_name("ps_partkey"), partsupp_table->column_id_by_name("ps_suppkey")},
        partsupp_table});
+  lineitem_table->add_soft_foreign_key_constraint({{lineitem_table->column_id_by_name("l_partkey")},
+                                                   lineitem_table,
+                                                   {part_table->column_id_by_name("p_partkey")},
+                                                   part_table});
+  lineitem_table->add_soft_foreign_key_constraint({{lineitem_table->column_id_by_name("l_suppkey")},
+                                                   lineitem_table,
+                                                   {supplier_table->column_id_by_name("s_suppkey")},
+                                                   supplier_table});
 
   // nation - 1 PK, 1 FK.
   nation_table->add_soft_key_constraint(
