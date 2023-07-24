@@ -126,7 +126,7 @@ void JemallocMemoryResource::create_arena() {
 void JemallocMemoryResource::reset() {
 #ifdef HYRISE_WITH_JEMALLOC
   auto reset_cmd = "arena." + std::to_string(_arena_index) + ".reset";
-  Assert(mallctl(reset_cmd.c_str(), NULL, NULL, NULL, NULL) == 0, "setting dirty_decay_ms failed");
+  Assert(mallctl(reset_cmd.c_str(), NULL, NULL, NULL, 0) == 0, "setting dirty_decay_ms failed");
   create_arena();
 #endif
 }

@@ -19,20 +19,19 @@ namespace hyrise {
  * Use zipfian skews to test different hit and miss rates for single pahe size and diffeent dram size ratios
  * 
 */
-class YCSBBufferManagerFixture : public benchmark::Fixture {
- public:
+template <YCSBTableAccessPattern AccessPattern>
+void BM_ycsb(benchmark::State& state) {
+  constexpr auto GB = 1024 * 1024 * 1024;
   constexpr static auto PAGE_SIZE_TYPE = MIN_PAGE_SIZE_TYPE;
-  constexpr static auto DEFAULT_DRAM_BUFFER_POOL_SIZE = 1 << 30;  // 1 GB
+  constexpr static auto DEFAULT_DRAM_BUFFER_POOL_SIZE = 0.5 * GB;
 
   constexpr static auto NUM_OPERATIONS = 1000;
-  constexpr static size_t DATABASE_SIZE = 1UL * 1024 * 1024 * 1024;  // 20 GB
+  constexpr static size_t DATABASE_SIZE = 1UL * GB;
 
-  YCSBTable table;
-  YCSBOperations operations;
-  boost::container::pmr::memory_resource* memory_resource;
-};
+  static YCSBTable table;
+  static YCSBOperations operations;
+  static boost::container::pmr::memory_resource* memory_resource;
 
-BENCHMARK_DEFINE_F(YCSBBufferManagerFixture, BM_ReadMostly)(benchmark::State& state) {
   if (state.thread_index() == 0) {
     auto config = BufferManager::Config::from_env();
     config.dram_buffer_pool_size = DEFAULT_DRAM_BUFFER_POOL_SIZE;
@@ -47,14 +46,28 @@ BENCHMARK_DEFINE_F(YCSBBufferManagerFixture, BM_ReadMostly)(benchmark::State& st
 #endif
 
     table = generate_ycsb_table<DATABASE_SIZE>(memory_resource);
-    operations = generate_ycsb_operations<YCSBTableAccessPattern::ReadMostly, NUM_OPERATIONS>(table.size(), 0.99);
+    operations = generate_ycsb_operations<AccessPattern, NUM_OPERATIONS>(table.size(), 0.99);
     warmup(table, Hyrise::get().buffer_manager);
   }
 
   run_ycsb(state, table, operations, Hyrise::get().buffer_manager);
 }
 
-BENCHMARK_REGISTER_F(YCSBBufferManagerFixture, BM_ReadMostly)
+BENCHMARK(BM_ycsb<YCSBTableAccessPattern::ReadMostly>)
+    // ->DenseRange(static_cast<size_t>(MIN_PAGE_SIZE_TYPE), static_cast<size_t>(MAX_PAGE_SIZE_TYPE))
+    ->ThreadRange(1, 48)
+    ->Iterations(1)
+    ->Repetitions(1)
+    ->UseRealTime();
+
+BENCHMARK(BM_ycsb<YCSBTableAccessPattern::Balanced>)
+    // ->DenseRange(static_cast<size_t>(MIN_PAGE_SIZE_TYPE), static_cast<size_t>(MAX_PAGE_SIZE_TYPE))
+    ->ThreadRange(1, 48)
+    ->Iterations(1)
+    ->Repetitions(1)
+    ->UseRealTime();
+
+BENCHMARK(BM_ycsb<YCSBTableAccessPattern::WriteHeavy>)
     // ->DenseRange(static_cast<size_t>(MIN_PAGE_SIZE_TYPE), static_cast<size_t>(MAX_PAGE_SIZE_TYPE))
     ->ThreadRange(1, 48)
     ->Iterations(1)
