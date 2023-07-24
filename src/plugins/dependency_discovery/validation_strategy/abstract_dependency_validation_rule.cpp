@@ -56,11 +56,24 @@ bool AbstractDependencyValidationRule::_dependency_already_known(const AbstractD
 
     case DependencyType::Inclusion: {
       const auto& ind_candidate = static_cast<const IndCandidate&>(candidate);
-      const auto& foreign_key_constraint =
-          static_cast<const ForeignKeyConstraint&>(*_constraint_from_candidate(candidate));
       const auto& table = Hyrise::get().storage_manager.get_table(ind_candidate.foreign_key_table);
       const auto& current_constraints = table->soft_foreign_key_constraints();
-      return current_constraints.contains(foreign_key_constraint);
+      const auto& primary_key_table = Hyrise::get().storage_manager.get_table(ind_candidate.primary_key_table);
+      for (const auto& current_constraint : current_constraints) {
+        if (current_constraint.primary_key_table() != primary_key_table) {
+          continue;
+        }
+        const auto& primary_key_columns = current_constraint.primary_key_columns();
+        const auto& foreign_key_columns = current_constraint.foreign_key_columns();
+        const auto column_count = primary_key_columns.size();
+        for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
+          if (primary_key_columns[column_id] == ind_candidate.primary_key_column_id &&
+              foreign_key_columns[column_id] == ind_candidate.foreign_key_column_id) {
+            return true;
+          }
+        }
+      }
+      return false;
     }
 
     case DependencyType::Functional: {

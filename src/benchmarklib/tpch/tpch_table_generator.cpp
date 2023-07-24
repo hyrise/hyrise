@@ -382,11 +382,23 @@ void TPCHTableGenerator::_add_constraints(
   lineitem_table->add_soft_key_constraint(
       {{lineitem_table->column_id_by_name("l_orderkey"), lineitem_table->column_id_by_name("l_linenumber")},
        KeyConstraintType::PRIMARY_KEY});
+  lineitem_table->add_soft_foreign_key_constraint({{lineitem_table->column_id_by_name("l_orderkey")},
+                                                   lineitem_table,
+                                                   {orders_table->column_id_by_name("o_orderkey")},
+                                                   orders_table});
   lineitem_table->add_soft_foreign_key_constraint(
       {{lineitem_table->column_id_by_name("l_partkey"), lineitem_table->column_id_by_name("l_suppkey")},
        lineitem_table,
        {partsupp_table->column_id_by_name("ps_partkey"), partsupp_table->column_id_by_name("ps_suppkey")},
        partsupp_table});
+  lineitem_table->add_soft_foreign_key_constraint({{lineitem_table->column_id_by_name("l_partkey")},
+                                                   lineitem_table,
+                                                   {part_table->column_id_by_name("p_partkey")},
+                                                   part_table});
+  lineitem_table->add_soft_foreign_key_constraint({{lineitem_table->column_id_by_name("l_suppkey")},
+                                                   lineitem_table,
+                                                   {supplier_table->column_id_by_name("s_suppkey")},
+                                                   supplier_table});
 }
 
 }  // namespace hyrise

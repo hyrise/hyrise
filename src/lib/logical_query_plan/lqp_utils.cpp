@@ -682,7 +682,7 @@ InclusionDependencies find_matching_inclusion_dependencies(const InclusionDepend
 
   auto matching_inds = InclusionDependencies{};
 
-  // Look for all inclusion dependencies that is based on the given expressions.
+  // Look for all inclusion dependencies that are based on the given expressions.
   for (const auto& ind : inclusion_dependencies) {
     if (contains_all_expressions(expressions, ind.expressions)) {
       // Found a matching IND.

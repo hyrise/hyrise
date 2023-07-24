@@ -41,7 +41,8 @@ extern "C" {
 #include "utils/timer.hpp"
 
 namespace {
-using namespace hyrise;  // NOLINT
+
+using namespace hyrise;  // NOLINT(build/namespaces)
 
 using tpcds_key_t = int32_t;
 

@@ -462,7 +462,7 @@ void Table::add_soft_foreign_key_constraint(const ForeignKeyConstraint& foreign_
     // Do not allow intersecting foreign key constraints. Though a table may have unlimited inclusion dependencies for
     // the same columns (and especially the existence of [a] in [x] and [b] in [y] does not mean [a, b] in [x, y]
     // holds), it is reasonable to assume disjoint (soft) foreign keys for now.
-    Assert(!columns_intersect(existing_constraint.foreign_key_columns(), foreign_key_constraint.foreign_key_columns()),
+    Assert(existing_constraint != foreign_key_constraint,
            "ForeignKeyConstraint for required columns has already been set.");
   }
   _foreign_key_constraints.insert(foreign_key_constraint);
