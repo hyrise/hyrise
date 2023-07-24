@@ -29,7 +29,7 @@ class BufferManager : public boost::container::pmr::memory_resource, public Nonc
     std::size_t numa_buffer_pool_size = 1UL << 34;
 
     // Defines the miration policy to use (default: eager). See MigrationPolicy for more details.
-    MigrationPolicy migration_policy = LazyMigrationPolicy{};
+    MigrationPolicy migration_policy = LazyMigrationPolicy;
 
     // Identifier of the NUMA node to use for the buffer pool (default: -1, i.e., no NUMA node)
     NumaMemoryNode memory_node = NO_NUMA_MEMORY_NODE;

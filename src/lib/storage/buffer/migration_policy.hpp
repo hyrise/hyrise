@@ -13,8 +13,13 @@ namespace hyrise {
 */
 struct MigrationPolicy {
  public:
-  explicit MigrationPolicy(const double dram_read_ratio, const double dram_write_ratio, const double numa_read_ratio,
-                           const double numa_write_ratio, const std::optional<uint32_t> seed = std::nullopt);
+  constexpr MigrationPolicy(const double dram_read_ratio, const double dram_write_ratio, const double numa_read_ratio,
+                            const double numa_write_ratio, const int64_t seed = -1)
+      : _dram_read_ratio(dram_read_ratio),
+        _dram_write_ratio(dram_write_ratio),
+        _numa_read_ratio(numa_read_ratio),
+        _numa_write_ratio(numa_write_ratio),
+        _seed(seed) {}
 
   // Returns true if the migration should bypass DRAM during reads
   bool bypass_dram_during_read() const;
@@ -40,7 +45,6 @@ struct MigrationPolicy {
   //  Returns the NUMA write ratio for bypass_numa_during_write()
   double get_numa_write_ratio() const;
 
- private:
   double _dram_read_ratio;
   double _dram_write_ratio;
   double _numa_read_ratio;
@@ -48,19 +52,17 @@ struct MigrationPolicy {
 
   double random() const;
 
-  std::optional<uint32_t> _seed;
+  int64_t _seed;
 };
 
 // LazyMigrationPolicy is good for large-working sets that do not fit in-memory
-class LazyMigrationPolicy : public MigrationPolicy {
- public:
-  LazyMigrationPolicy(const std::optional<uint32_t> seed = std::nullopt) : MigrationPolicy(0.01, 0.01, 0.2, 1, seed) {}
-};
+constexpr auto LazyMigrationPolicy = MigrationPolicy(0.01, 0.01, 0.2, 1);
 
 // EagerMigrationPolicy is good for small-working sets that fit in memory as we are trying to work as much with DRAM as possible
-class EagerMigrationPolicy : public MigrationPolicy {
- public:
-  EagerMigrationPolicy(const std::optional<uint32_t> seed = std::nullopt) : MigrationPolicy(1, 1, 1, 1, seed) {}
-};
+constexpr auto EagerMigrationPolicy = MigrationPolicy(1, 1, 1, 1);
+
+constexpr auto DramOnlyMigrationPolicy = MigrationPolicy(0, 0, 1, 1);
+
+constexpr auto NumaOnlyMigrationPolicy = MigrationPolicy(1, 1, 0, 0);
 
 }  // namespace hyrise

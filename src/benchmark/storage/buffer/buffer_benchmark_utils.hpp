@@ -98,7 +98,7 @@ inline void simulate_store(std::byte* ptr, int num_bytes) {
   }
 }
 
-enum class YCSBTableAccessPattern : int { ReadMostly = 90, Balanced = 50, WriteHeavy = 10 };
+enum class YCSBTableAccessPattern : int { ReadHeavy = 90, Balanced = 50, WriteHeavy = 10 };
 enum class YSCBOperationType : int { Read, Update };
 enum class YCSBTupleSize : uint32_t { Small = CACHE_LINE_SIZE, Medium = 512, Large = 4096, Huge = 32768 };
 

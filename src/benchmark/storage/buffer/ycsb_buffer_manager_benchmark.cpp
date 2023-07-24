@@ -19,7 +19,7 @@ namespace hyrise {
  * Use zipfian skews to test different hit and miss rates for single pahe size and diffeent dram size ratios
  * 
 */
-template <YCSBTableAccessPattern AccessPattern>
+template <YCSBTableAccessPattern AccessPattern, MigrationPolicy policy = LazyMigrationPolicy>
 void BM_ycsb(benchmark::State& state) {
   constexpr auto GB = 1024 * 1024 * 1024;
   constexpr static auto PAGE_SIZE_TYPE = MIN_PAGE_SIZE_TYPE;
@@ -36,7 +36,8 @@ void BM_ycsb(benchmark::State& state) {
     auto config = BufferManager::Config::from_env();
     config.dram_buffer_pool_size = DEFAULT_DRAM_BUFFER_POOL_SIZE;
     config.numa_buffer_pool_size = DEFAULT_DRAM_BUFFER_POOL_SIZE;
-    config.memory_node = NumaMemoryNode{2};
+    // config.memory_node = NumaMemoryNode{2};
+    config.migration_policy = policy;
 
     Hyrise::get().buffer_manager = BufferManager(config);
 #ifdef __APPLE__
@@ -54,25 +55,16 @@ void BM_ycsb(benchmark::State& state) {
   run_ycsb(state, table, operations, Hyrise::get().buffer_manager);
 }
 
-BENCHMARK(BM_ycsb<YCSBTableAccessPattern::ReadMostly>)
-    // ->DenseRange(static_cast<size_t>(MIN_PAGE_SIZE_TYPE), static_cast<size_t>(MAX_PAGE_SIZE_TYPE))
-    ->ThreadRange(1, 48)
-    ->Iterations(1)
-    ->Repetitions(1)
-    ->UseRealTime();
+#define CONFIGURE_BENCHMARK(AccessPattern)                  \
+  BENCHMARK(BM_ycsb<YCSBTableAccessPattern::AccessPattern>) \
+      ->ThreadRange(1, 48)                                  \
+      ->Iterations(1)                                       \
+      ->Repetitions(1)                                      \
+      ->UseRealTime()                                       \
+      ->Name("BM_ycsb/" #AccessPattern);
 
-BENCHMARK(BM_ycsb<YCSBTableAccessPattern::Balanced>)
-    // ->DenseRange(static_cast<size_t>(MIN_PAGE_SIZE_TYPE), static_cast<size_t>(MAX_PAGE_SIZE_TYPE))
-    ->ThreadRange(1, 48)
-    ->Iterations(1)
-    ->Repetitions(1)
-    ->UseRealTime();
-
-BENCHMARK(BM_ycsb<YCSBTableAccessPattern::WriteHeavy>)
-    // ->DenseRange(static_cast<size_t>(MIN_PAGE_SIZE_TYPE), static_cast<size_t>(MAX_PAGE_SIZE_TYPE))
-    ->ThreadRange(1, 48)
-    ->Iterations(1)
-    ->Repetitions(1)
-    ->UseRealTime();
+CONFIGURE_BENCHMARK(ReadHeavy)
+CONFIGURE_BENCHMARK(Balanced)
+CONFIGURE_BENCHMARK(WriteHeavy)
 
 }  // namespace hyrise
