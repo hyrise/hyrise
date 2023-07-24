@@ -32,7 +32,7 @@ WindowFunctionEvaluator::WindowFunctionEvaluator(
                                std::make_unique<PerformanceData>()),
       _partition_by_column_ids(std::move(init_partition_by_column_ids)),
       _order_by_column_ids(std::move(init_order_by_column_ids)),
-      _function_argument_column_id(std::move(init_function_argument_column_id)),
+      _function_argument_column_id(init_function_argument_column_id),
       _window_function_expression(std::move(init_window_funtion_expression)) {
   Assert(
       _function_argument_column_id != INVALID_COLUMN_ID || is_rank_like(_window_function_expression->window_function),
