@@ -35,7 +35,8 @@ void BM_ycsb(benchmark::State& state) {
   if (state.thread_index() == 0) {
     auto config = BufferManager::Config::from_env();
     config.dram_buffer_pool_size = DEFAULT_DRAM_BUFFER_POOL_SIZE;
-    config.numa_buffer_pool_size = 0;
+    config.numa_buffer_pool_size = DEFAULT_DRAM_BUFFER_POOL_SIZE;
+    config.memory_node = NumaMemoryNode{2};
 
     Hyrise::get().buffer_manager = BufferManager(config);
 #ifdef __APPLE__
