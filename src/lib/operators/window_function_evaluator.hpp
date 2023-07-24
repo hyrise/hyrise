@@ -14,13 +14,12 @@
 #include "operators/aggregate/window_function_traits.hpp"
 #include "operators/operator_performance_data.hpp"
 #include "storage/table.hpp"
+#include "window_function_evaluator/relevant_row_information.hpp"
+#include "window_function_evaluator/window_function_evaluator_traits.hpp"
 
 namespace hyrise {
 
-std::weak_ordering compare_with_null_equal(const AllTypeVariant& lhs, const AllTypeVariant& rhs);
-std::weak_ordering compare_with_null_equal(std::span<const AllTypeVariant> lhs, std::span<const AllTypeVariant> rhs);
-std::weak_ordering compare_with_null_equal(std::span<const AllTypeVariant> lhs, std::span<const AllTypeVariant> rhs,
-                                           auto is_column_reversed);
+namespace window_function_evaluator {
 
 class WindowFunctionEvaluator : public AbstractReadOnlyOperator {
  public:
@@ -45,13 +44,6 @@ class WindowFunctionEvaluator : public AbstractReadOnlyOperator {
   static void spawn_and_wait_per_hash(PerHash<T>& data, auto&& per_hash_function);
   template <typename T>
   static void spawn_and_wait_per_hash(const PerHash<T>& data, auto&& per_hash_function);
-
-  struct RelevantRowInformation {
-    std::vector<AllTypeVariant> partition_values;
-    std::vector<AllTypeVariant> order_values;
-    AllTypeVariant function_argument;
-    RowID row_id;
-  };
 
   using HashPartitionedData = PerHash<std::vector<RelevantRowInformation>>;
 
@@ -100,6 +92,11 @@ class WindowFunctionEvaluator : public AbstractReadOnlyOperator {
 
   template <typename InputColumnType, WindowFunction window_function, FrameType frame_type,
             typename OrderByColumnType = NoOrderByColumn>
+    requires SupportsSegmentTree<InputColumnType, window_function>
+  void templated_compute_window_function_segment_tree(const HashPartitionedData& partitioned_data,
+                                                      auto&& emit_computed_value) const;
+  template <typename InputColumnType, WindowFunction window_function, FrameType frame_type,
+            typename OrderByColumnType = NoOrderByColumn>
   void templated_compute_window_function_segment_tree(const HashPartitionedData& partitioned_data,
                                                       auto&& emit_computed_value) const;
   template <typename T>
@@ -113,5 +110,9 @@ class WindowFunctionEvaluator : public AbstractReadOnlyOperator {
   ColumnID _function_argument_column_id;
   std::shared_ptr<WindowFunctionExpression> _window_function_expression;
 };
+
+}  // namespace window_function_evaluator
+
+using WindowFunctionEvaluator = window_function_evaluator::WindowFunctionEvaluator;
 
 }  // namespace hyrise

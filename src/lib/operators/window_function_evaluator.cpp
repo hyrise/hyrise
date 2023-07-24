@@ -19,9 +19,8 @@
 #include "utils/segment_tree.hpp"
 #include "utils/timer.hpp"
 #include "window_function_evaluator.hpp"
-#include "window_function_evaluator_traits.hpp"
 
-namespace hyrise {
+namespace hyrise::window_function_evaluator {
 
 using ComputationStrategy = WindowFunctionEvaluator::ComputationStrategy;
 
@@ -203,7 +202,7 @@ WindowFunctionEvaluator::HashPartitionedData partition_and_sort_chunk(const Chun
   auto result = WindowFunctionEvaluator::HashPartitionedData{};
 
   for (auto chunk_offset = ChunkOffset(0); chunk_offset < chunk_size; ++chunk_offset) {
-    auto row_info = WindowFunctionEvaluator::RelevantRowInformation{
+    auto row_info = RelevantRowInformation{
         .partition_values = std::move(partition_values[chunk_offset]),
         .order_values = std::move(order_values[chunk_offset]),
         .function_argument = std::move(function_argument_values[chunk_offset]),
@@ -273,47 +272,7 @@ WindowFunctionEvaluator::HashPartitionedData parallel_merge_sort(const Table& in
   return result;
 }
 
-std::weak_ordering reverse(std::weak_ordering ordering) {
-  if (ordering == std::weak_ordering::less)
-    return std::weak_ordering::greater;
-  if (ordering == std::weak_ordering::greater)
-    return std::weak_ordering::less;
-  return ordering;
-}
-
 }  // namespace
-
-std::weak_ordering compare_with_null_equal(const AllTypeVariant& lhs, const AllTypeVariant& rhs) {
-  if (variant_is_null(lhs) && variant_is_null(rhs))
-    return std::weak_ordering::equivalent;
-  if (variant_is_null(lhs))
-    return std::weak_ordering::less;
-  if (variant_is_null(rhs))
-    return std::weak_ordering::greater;
-  if (lhs < rhs)
-    return std::weak_ordering::less;
-  if (lhs == rhs)
-    return std::weak_ordering::equivalent;
-  return std::weak_ordering::greater;
-}
-
-std::weak_ordering compare_with_null_equal(std::span<const AllTypeVariant> lhs, std::span<const AllTypeVariant> rhs) {
-  return compare_with_null_equal(lhs, rhs, []([[maybe_unused]] const auto column_index) { return false; });
-}
-
-std::weak_ordering compare_with_null_equal(std::span<const AllTypeVariant> lhs, std::span<const AllTypeVariant> rhs,
-                                           auto is_column_reversed) {
-  DebugAssert(lhs.size() == rhs.size(), "Tried to compare rows with different column counts.");
-
-  for (auto column_index = 0u; column_index < lhs.size(); ++column_index) {
-    const auto element_ordering = compare_with_null_equal(lhs[column_index], rhs[column_index]);
-    if (element_ordering != std::weak_ordering::equivalent) {
-      return is_column_reversed(column_index) ? reverse(element_ordering) : element_ordering;
-    }
-  }
-
-  return std::weak_ordering::equivalent;
-}
 
 template <typename T>
 void WindowFunctionEvaluator::spawn_and_wait_per_hash(PerHash<T>& data, auto&& per_hash_function) {
@@ -432,8 +391,6 @@ void WindowFunctionEvaluator::compute_window_function_one_pass(const HashPartiti
 
 namespace {
 
-using RelevantRowInformation = WindowFunctionEvaluator::RelevantRowInformation;
-
 template <FrameType frame_type, typename OrderByColumnType>
 struct WindowBoundCalculator {
   static QueryRange calculate_window_bounds([[maybe_unused]] std::span<const RelevantRowInformation> partition,
@@ -524,37 +481,40 @@ struct WindowBoundCalculator<FrameType::Range, OrderByColumnType> {
 };  // namespace
 
 template <typename InputColumnType, WindowFunction window_function, FrameType frame_type, typename OrderByColumnType>
+  requires SupportsSegmentTree<InputColumnType, window_function>
 void WindowFunctionEvaluator::templated_compute_window_function_segment_tree(
     const HashPartitionedData& partitioned_data, auto&& emit_computed_value) const {
   const auto& frame = frame_description();
 
-  if constexpr (SupportsSegmentTree<InputColumnType, window_function>) {
-    spawn_and_wait_per_hash(partitioned_data, [&emit_computed_value, &frame](const auto& hash_partition) {
-      for_each_partition(hash_partition, [&](uint64_t partition_start, uint64_t partition_end) {
-        const auto partition = std::span(hash_partition.begin() + partition_start, partition_end - partition_start);
+  spawn_and_wait_per_hash(partitioned_data, [&emit_computed_value, &frame](const auto& hash_partition) {
+    for_each_partition(hash_partition, [&](uint64_t partition_start, uint64_t partition_end) {
+      const auto partition = std::span(hash_partition.begin() + partition_start, partition_end - partition_start);
 
-        using Traits = WindowFunctionEvaluatorTraits<InputColumnType, window_function>;
-        using Impl = typename Traits::NullableSegmentTreeImpl;
-        using TreeNode = typename Impl::TreeNode;
+      using Traits = WindowFunctionEvaluatorTraits<InputColumnType, window_function>;
+      using Impl = typename Traits::NullableSegmentTreeImpl;
+      using TreeNode = typename Impl::TreeNode;
 
-        std::vector<TreeNode> leaf_values(partition.size());
-        std::ranges::transform(partition, leaf_values.begin(), [](const auto& row) {
-          return Impl::node_from_value(as_optional<InputColumnType>(row.function_argument));
-        });
-        using Combine = decltype([](auto lhs, auto rhs) { return Impl::combine(std::move(lhs), std::move(rhs)); });
-        SegmentTree<TreeNode, Combine> segment_tree(leaf_values, Impl::neutral_element);
-
-        for (auto tuple_index = 0u; tuple_index < partition.size(); ++tuple_index) {
-          using BoundCalculator = WindowBoundCalculator<frame_type, OrderByColumnType>;
-          const auto query_range = BoundCalculator::calculate_window_bounds(partition, tuple_index, frame);
-          emit_computed_value(partition[tuple_index].row_id,
-                              Impl::transform_query(segment_tree.range_query(query_range)));
-        }
+      std::vector<TreeNode> leaf_values(partition.size());
+      std::ranges::transform(partition, leaf_values.begin(), [](const auto& row) {
+        return Impl::node_from_value(as_optional<InputColumnType>(row.function_argument));
       });
+      using Combine = decltype([](auto lhs, auto rhs) { return Impl::combine(std::move(lhs), std::move(rhs)); });
+      SegmentTree<TreeNode, Combine> segment_tree(leaf_values, Impl::neutral_element);
+
+      for (auto tuple_index = 0u; tuple_index < partition.size(); ++tuple_index) {
+        using BoundCalculator = WindowBoundCalculator<frame_type, OrderByColumnType>;
+        const auto query_range = BoundCalculator::calculate_window_bounds(partition, tuple_index, frame);
+        emit_computed_value(partition[tuple_index].row_id,
+                            Impl::transform_query(segment_tree.range_query(query_range)));
+      }
     });
-  } else {
-    Fail("Unsupported SegmentTree window function.");
-  }
+  });
+}
+
+template <typename InputColumnType, WindowFunction window_function, FrameType frame_type, typename OrderByColumnType>
+void WindowFunctionEvaluator::templated_compute_window_function_segment_tree(
+    [[maybe_unused]] const HashPartitionedData& partitioned_data, [[maybe_unused]] auto&& emit_computed_value) const {
+  Fail("Unsupported SegmentTree window function.");
 }
 
 template <typename InputColumnType, WindowFunction window_function>
@@ -669,4 +629,4 @@ void WindowFunctionEvaluator::PerformanceData::output_to_stream(std::ostream& st
   stream << separator << "Computation strategy: " << computation_strategy_string << ".";
 }
 
-}  // namespace hyrise
+}  // namespace hyrise::window_function_evaluator

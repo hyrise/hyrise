@@ -3,11 +3,11 @@
 #include <limits>
 #include <type_traits>
 
-#include "aggregate/window_function_traits.hpp"
 #include "expression/window_function_expression.hpp"
-#include "window_function_evaluator.hpp"
+#include "operators/aggregate/window_function_traits.hpp"
+#include "relevant_row_information.hpp"
 
-namespace hyrise {
+namespace hyrise::window_function_evaluator {
 
 constexpr static auto rank_like_window_functions =
     std::array{WindowFunction::Rank, WindowFunction::DenseRank, WindowFunction::RowNumber, WindowFunction::PercentRank};
@@ -17,8 +17,6 @@ constexpr bool is_rank_like(WindowFunction window_function) {
 }
 
 namespace impls {
-
-using RelevantRowInformation = typename WindowFunctionEvaluator::RelevantRowInformation;
 
 template <typename Impl, typename OutputType>
 concept IsOnePassImpl =
@@ -318,4 +316,4 @@ concept SupportsSegmentTree =
           typename WindowFunctionEvaluatorTraits<InputColumnType, window_function>::NullableSegmentTreeImpl::InputType>;
     };
 
-};  // namespace hyrise
+};  // namespace hyrise::window_function_evaluator
