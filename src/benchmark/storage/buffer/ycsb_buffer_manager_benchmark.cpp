@@ -23,10 +23,11 @@ template <YCSBTableAccessPattern AccessPattern, MigrationPolicy policy = LazyMig
 void BM_ycsb(benchmark::State& state) {
   constexpr auto GB = 1024 * 1024 * 1024;
   constexpr static auto PAGE_SIZE_TYPE = MIN_PAGE_SIZE_TYPE;
-  constexpr static auto DEFAULT_DRAM_BUFFER_POOL_SIZE = 0.5 * GB;
+  constexpr static auto DEFAULT_DRAM_BUFFER_POOL_SIZE = 2UL * GB;
+  constexpr static auto DEFAULT_NUMA_BUFFER_POOL_SIZE = 4UL * GB;
 
-  constexpr static auto NUM_OPERATIONS = 1000;
-  constexpr static size_t DATABASE_SIZE = 1UL * GB;
+  constexpr static auto NUM_OPERATIONS = 1000000;
+  // constexpr static size_t DATABASE_SIZE = 8UL * GB;
 
   static YCSBTable table;
   static YCSBOperations operations;
@@ -35,7 +36,7 @@ void BM_ycsb(benchmark::State& state) {
   if (state.thread_index() == 0) {
     auto config = BufferManager::Config::from_env();
     config.dram_buffer_pool_size = DEFAULT_DRAM_BUFFER_POOL_SIZE;
-    config.numa_buffer_pool_size = DEFAULT_DRAM_BUFFER_POOL_SIZE;
+    config.numa_buffer_pool_size = DEFAULT_NUMA_BUFFER_POOL_SIZE;
     config.memory_node = NumaMemoryNode{2};
     config.migration_policy = policy;
 
@@ -47,7 +48,8 @@ void BM_ycsb(benchmark::State& state) {
     memory_resource = &JemallocMemoryResource::get();
 #endif
 
-    table = generate_ycsb_table<DATABASE_SIZE>(memory_resource);
+    auto database_size = state.range(0) * GB;
+    table = generate_ycsb_table(memory_resource, database_size);
     operations = generate_ycsb_operations<AccessPattern, NUM_OPERATIONS>(table.size(), 0.99);
     warmup(table, Hyrise::get().buffer_manager);
   }
@@ -61,10 +63,23 @@ void BM_ycsb(benchmark::State& state) {
       ->Iterations(1)                                               \
       ->Repetitions(1)                                              \
       ->UseRealTime()                                               \
+      ->DenseRange(0, 10, 1)                                        \
       ->Name("BM_ycsb/" #AccessPattern "/" #Policy);
 
 CONFIGURE_BENCHMARK(ReadHeavy, LazyMigrationPolicy)
 CONFIGURE_BENCHMARK(Balanced, LazyMigrationPolicy)
 CONFIGURE_BENCHMARK(WriteHeavy, LazyMigrationPolicy)
+
+CONFIGURE_BENCHMARK(ReadHeavy, EagerMigrationPolicy)
+CONFIGURE_BENCHMARK(Balanced, EagerMigrationPolicy)
+CONFIGURE_BENCHMARK(WriteHeavy, EagerMigrationPolicy)
+
+CONFIGURE_BENCHMARK(ReadHeavy, DramOnlyMigrationPolicy)
+CONFIGURE_BENCHMARK(Balanced, DramOnlyMigrationPolicy)
+CONFIGURE_BENCHMARK(WriteHeavy, DramOnlyMigrationPolicy)
+
+CONFIGURE_BENCHMARK(ReadHeavy, NumaOnlyMigrationPolicy)
+CONFIGURE_BENCHMARK(Balanced, NumaOnlyMigrationPolicy)
+CONFIGURE_BENCHMARK(WriteHeavy, NumaOnlyMigrationPolicy)
 
 }  // namespace hyrise

@@ -9,7 +9,9 @@
 #endif
 #include <sys/mman.h>
 #include <unistd.h>
+#include <algorithm>
 #include <boost/container/pmr/memory_resource.hpp>
+#include <boost/histogram.hpp>
 #include <random>
 #include "hyrise.hpp"
 #include "storage/buffer/buffer_manager.hpp"
@@ -19,7 +21,6 @@
 namespace hyrise {
 
 constexpr static auto SEED = 123761253768512;
-
 constexpr static auto CACHE_LINE_SIZE = 64;
 
 inline std::byte* mmap_region(const size_t num_bytes) {
@@ -109,14 +110,13 @@ using YCSBTable = std::vector<YCSBTuple>;
 using YSCBOperation = std::pair<YCSBKey, YSCBOperationType>;
 using YCSBOperations = std::vector<YSCBOperation>;
 
-template <size_t DatabaseSizeBytes>
-inline YCSBTable generate_ycsb_table(boost::container::pmr::memory_resource* memory_resource) {
+inline YCSBTable generate_ycsb_table(boost::container::pmr::memory_resource* memory_resource, const size_t database_size) {
   std::mt19937 generator{std::random_device{}()};
   std::uniform_int_distribution<int> distribution(0, magic_enum::enum_count<YCSBTupleSize>() - 1);
   auto table = std::vector<YCSBTuple>{};
   size_t current_size = 0;
   auto& buffer_manager = Hyrise::get().buffer_manager;
-  while (current_size < DatabaseSizeBytes) {
+  while (current_size < database_size) {
     auto tuple_size = magic_enum::enum_value<YCSBTupleSize>(distribution(generator));
     auto ptr = memory_resource->allocate(static_cast<size_t>(tuple_size), 64);
     buffer_manager.pin_exclusive(buffer_manager.find_page(ptr));
@@ -188,11 +188,15 @@ inline void run_ycsb(benchmark::State& state, YCSBTable& table, YCSBOperations& 
     auto end = start + operations_per_thread;
     for (auto i = start; i < end; ++i) {
       const auto op = operations[i];
+      auto start = std::chrono::high_resolution_clock::now();
       execute_ycsb_action(table, buffer_manager, op);
+      auto end = std::chrono::high_resolution_clock::now();
+      const auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
     }
   }
 
-  // TODO: Update state
+  // TODO: not per thread?
+  state.SetItemsProcessed(operations_per_thread);
 }
 
 }  // namespace hyrise
