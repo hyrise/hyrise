@@ -458,14 +458,8 @@ void Table::add_soft_foreign_key_constraint(const ForeignKeyConstraint& foreign_
   }
 
   const auto append_lock = acquire_append_mutex();
-  for (const auto& existing_constraint : _foreign_key_constraints) {
-    // Do not allow intersecting foreign key constraints. Though a table may have unlimited inclusion dependencies for
-    // the same columns (and especially the existence of [a] in [x] and [b] in [y] does not mean [a, b] in [x, y]
-    // holds), it is reasonable to assume disjoint (soft) foreign keys for now.
-    Assert(existing_constraint != foreign_key_constraint,
-           "ForeignKeyConstraint for required columns has already been set.");
-  }
-  _foreign_key_constraints.insert(foreign_key_constraint);
+  const auto [_, inserted] = _foreign_key_constraints.insert(foreign_key_constraint);
+  Assert(inserted, "ForeignKeyConstraint for required columns has already been set.");
   const auto referenced_table_append_lock = referenced_table->acquire_append_mutex();
   referenced_table->_referenced_foreign_key_constraints.insert(foreign_key_constraint);
 }

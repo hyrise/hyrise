@@ -311,4 +311,30 @@ TEST_F(OperatorTaskTest, DoNotLinkPrunableSubqueriesWithCycles) {
   EXPECT_EQ(projection_task->successors().front(), table_scan->get_or_create_operator_task());
 }
 
+TEST_F(OperatorTaskTest, SkipOperatorTask) {
+  const auto table = std::make_shared<GetTable>("table_a");
+  table->execute();
+
+  const auto task = std::make_shared<OperatorTask>(table);
+  task->skip_operator_task();
+  EXPECT_TRUE(task->is_done());
+}
+
+TEST_F(OperatorTaskTest, NotExecutedOperatorTaskCannotBeSkipped) {
+  const auto table = std::make_shared<GetTable>("table_a");
+
+  const auto task = std::make_shared<OperatorTask>(table);
+  EXPECT_THROW(task->skip_operator_task(), std::logic_error);
+}
+
+TEST_F(OperatorTaskTest, DoNotSkipOperatorTaskWithMultiOwners) {
+  const auto table = std::make_shared<GetTable>("table_a");
+  table->execute();
+
+  const auto task = std::make_shared<OperatorTask>(table);
+  const auto another_task_pointer = task;
+  EXPECT_EQ(task.use_count(), 2);
+  EXPECT_THROW(task->skip_operator_task(), std::logic_error);
+}
+
 }  // namespace hyrise

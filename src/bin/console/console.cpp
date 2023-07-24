@@ -564,6 +564,7 @@ int Console::_generate_ssb(const std::string& args) {
   const auto executable_path = std::filesystem::canonical(_path).remove_filename();
   const auto ssb_dbgen_path = executable_path / "third_party/ssb-dbgen";
   const auto csv_meta_path = executable_path / "../resources/benchmark/ssb/schema";
+
   if (!std::filesystem::exists(ssb_dbgen_path / "dbgen")) {
     out(std::string{"SSB dbgen not found at "} + ssb_dbgen_path.string() + "\n");
     return ReturnCode::Error;
