@@ -23,8 +23,8 @@ template <YCSBTableAccessPattern AccessPattern, MigrationPolicy policy = LazyMig
 void BM_ycsb(benchmark::State& state) {
   constexpr auto GB = 1024 * 1024 * 1024;
   constexpr static auto PAGE_SIZE_TYPE = MIN_PAGE_SIZE_TYPE;
-  constexpr static auto DEFAULT_DRAM_BUFFER_POOL_SIZE = 2UL * GB;
-  constexpr static auto DEFAULT_NUMA_BUFFER_POOL_SIZE = 4UL * GB;
+  constexpr static auto DEFAULT_DRAM_BUFFER_POOL_SIZE = 1UL * GB;
+  constexpr static auto DEFAULT_NUMA_BUFFER_POOL_SIZE = 2UL * GB;
 
   constexpr static auto NUM_OPERATIONS = 1000000;
   // constexpr static size_t DATABASE_SIZE = 8UL * GB;
@@ -63,7 +63,7 @@ void BM_ycsb(benchmark::State& state) {
       ->Iterations(1)                                               \
       ->Repetitions(1)                                              \
       ->UseRealTime()                                               \
-      ->DenseRange(0, 10, 1)                                        \
+      ->DenseRange(1, 4, 1)                                         \
       ->Name("BM_ycsb/" #AccessPattern "/" #Policy);
 
 CONFIGURE_BENCHMARK(ReadHeavy, LazyMigrationPolicy)
