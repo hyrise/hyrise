@@ -113,7 +113,7 @@ JemallocMemoryResource::JemallocMemoryResource() {
   Assert(mallctl(dirty_decay_cmd.c_str(), nullptr, nullptr, (void*)&dirty_decay_ms, sizeof(dirty_decay_ms)) == 0,
          "setting dirty_decay_ms failed");
 
-  _mallocx_flags = MALLOCX_ARENA(arena_id) | MALLOCX_TCACHE_NONE;
+  _mallocx_flags = MALLOCX_ARENA(_arena_index) | MALLOCX_TCACHE_NONE;
 #endif
 }
 
