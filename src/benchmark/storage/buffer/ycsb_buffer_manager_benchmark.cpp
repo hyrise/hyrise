@@ -36,7 +36,7 @@ void BM_ycsb(benchmark::State& state) {
     auto config = BufferManager::Config::from_env();
     config.dram_buffer_pool_size = DEFAULT_DRAM_BUFFER_POOL_SIZE;
     config.numa_buffer_pool_size = DEFAULT_DRAM_BUFFER_POOL_SIZE;
-    // config.memory_node = NumaMemoryNode{2};
+    config.memory_node = NumaMemoryNode{2};
     config.migration_policy = policy;
 
     Hyrise::get().buffer_manager = BufferManager(config);
@@ -55,16 +55,16 @@ void BM_ycsb(benchmark::State& state) {
   run_ycsb(state, table, operations, Hyrise::get().buffer_manager);
 }
 
-#define CONFIGURE_BENCHMARK(AccessPattern)                  \
-  BENCHMARK(BM_ycsb<YCSBTableAccessPattern::AccessPattern>) \
-      ->ThreadRange(1, 48)                                  \
-      ->Iterations(1)                                       \
-      ->Repetitions(1)                                      \
-      ->UseRealTime()                                       \
-      ->Name("BM_ycsb/" #AccessPattern);
+#define CONFIGURE_BENCHMARK(AccessPattern, Policy)                  \
+  BENCHMARK(BM_ycsb<YCSBTableAccessPattern::AccessPattern, Policy>) \
+      ->ThreadRange(1, 48)                                          \
+      ->Iterations(1)                                               \
+      ->Repetitions(1)                                              \
+      ->UseRealTime()                                               \
+      ->Name("BM_ycsb/" #AccessPattern "/" #Policy);
 
-CONFIGURE_BENCHMARK(ReadHeavy)
-CONFIGURE_BENCHMARK(Balanced)
-CONFIGURE_BENCHMARK(WriteHeavy)
+CONFIGURE_BENCHMARK(ReadHeavy, LazyMigrationPolicy)
+CONFIGURE_BENCHMARK(Balanced, LazyMigrationPolicy)
+CONFIGURE_BENCHMARK(WriteHeavy, LazyMigrationPolicy)
 
 }  // namespace hyrise
