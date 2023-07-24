@@ -428,7 +428,8 @@ template <typename T>
 std::shared_ptr<AbstractSegment> LZ4Segment<T>::copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const {
   auto new_lz4_blocks = pmr_vector<pmr_vector<char>>{alloc};
   for (const auto& block : _lz4_blocks) {
-    new_lz4_blocks.emplace_back(pmr_vector<char>{block, alloc});
+    auto block_copy = pmr_vector<char>{block, alloc};
+    new_lz4_blocks.emplace_back(std::move(block_copy));
   }
 
   auto new_null_values =
