@@ -54,11 +54,9 @@ void StoredTableNode::set_pruned_column_ids(const std::vector<ColumnID>& pruned_
   DebugAssert(std::adjacent_find(pruned_column_ids.begin(), pruned_column_ids.end()) == pruned_column_ids.end(),
               "Expected vector of unique ColumnIDs");
 
-  const auto& table = Hyrise::get().storage_manager.get_table(table_name);
-
   // It is valid for an LQP to not use any of the table's columns (e.g., SELECT 5 FROM t). We still need to include at
   // least one column in the output of this node, which is used by Table::size() to determine the number of 5's.
-  const auto stored_column_count = table->column_count();
+  const auto stored_column_count = Hyrise::get().storage_manager.get_table(table_name)->column_count();
   Assert(pruned_column_ids.size() < static_cast<size_t>(stored_column_count), "Cannot exclude all columns from Table.");
 
   _pruned_column_ids = pruned_column_ids;
@@ -159,9 +157,9 @@ void StoredTableNode::_set_output_expressions() const {
   const auto& table = Hyrise::get().storage_manager.get_table(table_name);
   const auto stored_column_count = table->column_count();
 
-  // Build `_expression` with respect to the `_pruned_column_ids`
-  const auto num_unpruned_columns = stored_column_count - _pruned_column_ids.size();
-  _output_expressions = std::vector<std::shared_ptr<AbstractExpression>>(num_unpruned_columns);
+  // Create `_output_expressions` sized with respect to the `_pruned_column_ids`
+  const auto unpruned_column_count = stored_column_count - _pruned_column_ids.size();
+  _output_expressions = std::vector<std::shared_ptr<AbstractExpression>>(unpruned_column_count);
 
   auto pruned_column_ids_iter = _pruned_column_ids.begin();
   auto output_column_id = ColumnID{0};

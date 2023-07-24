@@ -69,6 +69,7 @@ void Worker::operator()() {
 }
 
 void Worker::_work(const AllowSleep allow_sleep) {
+  // If execute_next has been called, run that task first, otherwise try to retrieve a task from the queue.
   auto task = std::shared_ptr<AbstractTask>{};
   if (_next_task) {
     task = std::move(_next_task);
@@ -80,6 +81,7 @@ void Worker::_work(const AllowSleep allow_sleep) {
   }
 
   if (!task) {
+    // Simple work stealing without explicitly transferring data between nodes.
     for (const auto& queue : Hyrise::get().scheduler()->queues()) {
       if (queue == _queue) {
         continue;
@@ -95,6 +97,8 @@ void Worker::_work(const AllowSleep allow_sleep) {
     }
   }
 
+  // If there is no ready task neither in our queue nor in any other and we are allowed to sleep, wait on the
+  // semaphore.
   if (!task && allow_sleep == AllowSleep::Yes) {
     _queue->semaphore.wait();
     task = _queue->pull();

@@ -32,8 +32,7 @@ NodeQueueScheduler::~NodeQueueScheduler() {
 void NodeQueueScheduler::begin() {
   DebugAssert(!_active, "Scheduler is already active");
 
-  _worker_count = Hyrise::get().topology.num_cpus();
-  _workers.reserve(_worker_count);
+  _workers.reserve(Hyrise::get().topology.num_cpus());
   _node_count = Hyrise::get().topology.nodes().size();
   _queues.reserve(_node_count);
   _workers_per_node.reserve(_node_count);
@@ -99,20 +98,20 @@ void NodeQueueScheduler::finish() {
 
   wait_for_all_tasks();
 
-  auto workers_shut_down = std::atomic_uint64_t{_worker_count};
+  auto active_workers = std::atomic_uint64_t{_workers.size()};
 
   for (auto node_id = NodeID{0}; node_id < _node_count; ++node_id) {
     const auto node_worker_count = _workers_per_node[node_id];
     for (auto worker_id = size_t{0}; worker_id < node_worker_count; ++worker_id) {
       // Create a shutdown task for every worker.
-      auto job_task = std::make_shared<JobTask>([&]() { --workers_shut_down; }, SchedulePriority::Default, false);
+      auto job_task = std::make_shared<JobTask>([&]() { --active_workers; }, SchedulePriority::Default, false);
       job_task->set_as_shutdown_task();
       job_task->schedule(node_id);
     }
   }
 
   auto check_runs = size_t{0};
-  while (workers_shut_down.load() > 0) {
+  while (active_workers.load() > 0) {
     Assert(check_runs < 1'000, "Timeout: not all shut down tasks have been processed.");
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
     ++check_runs;

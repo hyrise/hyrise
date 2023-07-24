@@ -59,7 +59,8 @@ std::shared_ptr<AbstractTask> TaskQueue::steal() {
         return task;
       }
 
-      queue.enqueue(task);
+      [[maybe_unused]] const auto enqueue_successful = queue.enqueue(task);
+      DebugAssert(enqueue_successful, "Enqueuing stolen task did not succeed.");
       semaphore.signal();
     }
   }
