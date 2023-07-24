@@ -15,7 +15,7 @@ struct arena_config_s {
   /* extent hooks to be used for the arena */
   extent_hooks_t* extent_hooks;
 
-  bool metadata_use_hooks = false
+  bool metadata_use_hooks = false;
 };
 
 using arena_config_t = struct arena_config_s;
