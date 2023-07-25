@@ -148,7 +148,7 @@ BufferManager::BufferManager(const Config config)
           config.dram_buffer_pool_size, config.enable_eviction_purge_worker, _volatile_regions, config.migration_policy,
           _ssd_region, _secondary_buffer_pool, _metrics, DEFAULT_DRAM_NUMA_NODE)),
       _secondary_buffer_pool(std::make_shared<BufferManager::BufferPool>(
-          config.dram_buffer_pool_size, config.enable_eviction_purge_worker, _volatile_regions, config.migration_policy,
+          config.numa_buffer_pool_size, config.enable_eviction_purge_worker, _volatile_regions, config.migration_policy,
           _ssd_region, nullptr, _metrics, config.memory_node)) {}
 
 BufferManager::~BufferManager() {
@@ -210,6 +210,7 @@ void BufferManager::make_resident(const PageID page_id, const AccessIntent acces
           yield(repeat);
           continue;
         }
+        region->mbind_to_numa_node(page_id, _primary_buffer_pool->memory_node);
       }
 
       return;
@@ -575,7 +576,7 @@ bool BufferManager::BufferPool::ensure_free_pages(const PageSizeType required_si
 
   // Find potential victim frame if we don't have enough space left
   // TODO: Verify, that this is correct, cceh kthe numbersm, verify value type
-  while ((int64_t)current_bytes + (int64_t)bytes_required - (int64_t)freed_bytes > (int64_t)max_bytes) {
+  while (current_bytes + bytes_required - freed_bytes > max_bytes) {
     if (!eviction_queue->try_pop(item)) {
       used_bytes.fetch_sub(bytes_required);
       return false;
@@ -629,7 +630,7 @@ bool BufferManager::BufferPool::ensure_free_pages(const PageSizeType required_si
 
     const auto size_type = item.page_id.size_type();
     freed_bytes += bytes_for_size_type(size_type);
-    current_bytes -= used_bytes.load();
+    current_bytes = used_bytes.load();
   }
 
   used_bytes.fetch_sub(freed_bytes);
