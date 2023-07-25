@@ -592,23 +592,20 @@ bool BufferManager::BufferPool::ensure_free_pages(const PageSizeType required_si
       continue;
     }
 
-    // If the frane is UNLOCKED, we can mark it
-    if (item.can_mark(current_state_and_version)) {
-      if (frame->try_mark(current_state_and_version)) {
-        add_to_eviction_queue(item.page_id, frame);
-        continue;
+    // If the frame is already marked, we can evict it
+    if (!item.can_evict(current_state_and_version)) {
+      // If the frane is UNLOCKED, we can mark it
+      if (item.can_mark(current_state_and_version)) {
+        if (frame->try_mark(current_state_and_version)) {
+          add_to_eviction_queue(item.page_id, frame);
+          continue;
+        }
       }
       num_eviction_queue_purges->fetch_add(1, std::memory_order_relaxed);
       continue;
     }
 
     // TODO: Check version and then state like vmcache.evict, shared lock??
-
-    // If the frame is already marked, we can evict it
-    if (!item.can_evict(current_state_and_version)) {
-      num_eviction_queue_purges->fetch_add(1, std::memory_order_relaxed);
-      continue;
-    }
 
     // Try locking the frame exclusively, TODO: prefer shared locking
     if (!frame->try_lock_exclusive(current_state_and_version)) {
