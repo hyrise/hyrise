@@ -75,12 +75,26 @@ void ColumnLikeTableScanImpl::_scan_dictionary_segment(const BaseDictionarySegme
   // position_filter), this optimization is detrimental. See caller for that case.
   std::pair<size_t, std::vector<bool>> result;
 
-  if (segment.encoding_type() == EncodingType::Dictionary) {
-    const auto& typed_segment = static_cast<const DictionarySegment<pmr_string>&>(segment);
-    result = _find_matches_in_dictionary(*typed_segment.dictionary());
-  } else {
-    const auto& typed_segment = static_cast<const FixedStringDictionarySegment<pmr_string>&>(segment);
-    result = _find_matches_in_dictionary(*typed_segment.fixed_string_dictionary());
+  switch (segment.encoding_type()) {
+    case EncodingType::Dictionary: {
+      const auto& typed_segment = static_cast<const DictionarySegment<pmr_string>&>(segment);
+      result = _find_matches_in_dictionary(*typed_segment.dictionary());
+      break;
+    }
+    case EncodingType::FixedStringDictionary: {
+      const auto& typed_segment = static_cast<const FixedStringDictionarySegment<pmr_string>&>(segment);
+      result = _find_matches_in_dictionary(*typed_segment.fixed_string_dictionary());
+      break;
+    }
+    case EncodingType::VariableStringDictionary: {
+      const auto& typed_segment = static_cast<const VariableStringDictionarySegment<pmr_string>&>(segment);
+      result = _find_matches_in_dictionary(*typed_segment.dictionary());
+      break;
+    }
+    default: {
+      Fail("Dictionary encoding is not implemented.");
+    }
+
   }
 
   const auto& match_count = result.first;

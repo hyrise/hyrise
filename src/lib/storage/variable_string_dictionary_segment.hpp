@@ -27,6 +27,9 @@ class VariableStringDictionarySegment : public BaseDictionarySegment {
   // returns an underlying dictionary
   std::shared_ptr<const pmr_vector<char>> dictionary() const;
 
+  // TODO(student): think about datatype
+  std::shared_ptr<???> variable_string_dictionary() const;
+
   /**
    * @defgroup AbstractSegment interface
    * @{

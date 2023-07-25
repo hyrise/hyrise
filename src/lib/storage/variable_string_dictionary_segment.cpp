@@ -28,6 +28,11 @@ std::shared_ptr<const pmr_vector<char>> VariableStringDictionarySegment<T>::dict
 }
 
 template <typename T>
+std::shared_ptr<???> VariableStringDictionarySegment<T>::variable_string_dictionary() const {
+  return ;
+}
+
+template <typename T>
 AllTypeVariant VariableStringDictionarySegment<T>::operator[](const ChunkOffset chunk_offset) const {
   PerformanceWarning("operator[] used");
   DebugAssert(chunk_offset != INVALID_CHUNK_OFFSET, "Passed chunk offset must be valid.");
