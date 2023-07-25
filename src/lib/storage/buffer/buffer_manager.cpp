@@ -571,12 +571,13 @@ bool BufferManager::BufferPool::ensure_free_pages(const PageSizeType required_si
 
   auto item = EvictionItem{};
 
-  auto num_eviction_queue_purges = memory_node == DEFAULT_DRAM_NUMA_NODE ? &metrics->num_dram_eviction_queue_adds
-                                                                         : &metrics->num_numa_eviction_queue_adds;
+  auto num_eviction_queue_purges = memory_node == DEFAULT_DRAM_NUMA_NODE
+                                       ? &metrics->num_dram_eviction_queue_items_purged
+                                       : &metrics->num_numa_eviction_queue_items_purged;
 
   // Find potential victim frame if we don't have enough space left
   // TODO: Verify, that this is correct, cceh kthe numbersm, verify value type
-  while (current_bytes + bytes_required - freed_bytes > max_bytes) {
+  while ((current_bytes + bytes_required - freed_bytes) > max_bytes) {
     if (!eviction_queue->try_pop(item)) {
       used_bytes.fetch_sub(bytes_required);
       return false;
@@ -633,6 +634,7 @@ bool BufferManager::BufferPool::ensure_free_pages(const PageSizeType required_si
     current_bytes = used_bytes.load();
   }
 
+  // TODO: Check if this is correct
   used_bytes.fetch_sub(freed_bytes);
 
   return true;

@@ -10,8 +10,9 @@
 #include <sys/mman.h>
 #include <unistd.h>
 #include <algorithm>
+#include <boost/accumulators/accumulators.hpp>
+#include <boost/accumulators/statistics.hpp>
 #include <boost/container/pmr/memory_resource.hpp>
-#include <boost/histogram.hpp>
 #include <random>
 #include "hyrise.hpp"
 #include "storage/buffer/buffer_manager.hpp"
@@ -100,7 +101,7 @@ inline void simulate_store(std::byte* ptr, int num_bytes) {
 }
 
 enum class YCSBTableAccessPattern : int { ReadHeavy = 90, Balanced = 50, WriteHeavy = 10 };
-enum class YSCBOperationType : int { Read, Update };
+enum class YSCBOperationType : int { Read, Update, Insert, Delete };
 enum class YCSBTupleSize : uint32_t { Small = CACHE_LINE_SIZE, Medium = 512, Large = 4096, Huge = 32768 };
 
 using YCSBTuple = std::pair<YCSBTupleSize, std::byte*>;
@@ -109,6 +110,11 @@ using YCSBKey = uint64_t;
 using YCSBTable = std::vector<YCSBTuple>;
 using YSCBOperation = std::pair<YCSBKey, YSCBOperationType>;
 using YCSBOperations = std::vector<YSCBOperation>;
+
+using LatencyStats = boost::accumulators::accumulator_set<
+    double, boost::accumulators::features<boost::accumulators::tag::mean, boost::accumulators::tag::variance,
+                                          boost::accumulators::tag::median, boost::accumulators::tag::min,
+                                          boost::accumulators::tag::max>>;
 
 inline YCSBTable generate_ycsb_table(boost::container::pmr::memory_resource* memory_resource,
                                      const size_t database_size) {
@@ -152,19 +158,25 @@ inline YCSBOperations generate_ycsb_operations(const size_t num_keys, const floa
 }
 
 inline void execute_ycsb_action(const YCSBTable& table, BufferManager& buffer_manager, const YSCBOperation operation) {
-  auto [key, op_type] = operation;
-  const auto& tuple = table[key];
-  auto num_bytes = static_cast<int>(tuple.first);
-  auto ptr = tuple.second;
+  const auto [key, op_type] = operation;
+  const auto [size_type, ptr] = table[key];
+  auto num_bytes = static_cast<int>(size_type);
   auto page_id = buffer_manager.find_page(ptr);
-  if (op_type == YSCBOperationType::Read) {
-    buffer_manager.pin_shared(page_id, AccessIntent::Read);
-    simulate_page_read(ptr, num_bytes);
-    buffer_manager.unpin_shared(page_id);
-  } else {
-    buffer_manager.pin_exclusive(page_id);
-    simulate_store(ptr, num_bytes);
-    buffer_manager.unpin_exclusive(page_id);
+  switch (op_type) {
+    case YSCBOperationType::Read: {
+      buffer_manager.pin_shared(page_id, AccessIntent::Read);
+      simulate_page_read(ptr, num_bytes);
+      buffer_manager.unpin_shared(page_id);
+      break;
+    }
+    case YSCBOperationType::Update: {
+      buffer_manager.pin_exclusive(page_id);
+      simulate_store(ptr, num_bytes);
+      buffer_manager.unpin_exclusive(page_id);
+      break;
+    }
+    default:
+      Fail("Operation not supported");
   }
 }
 
@@ -185,7 +197,7 @@ inline void warmup(YCSBTable& table, BufferManager& buffer_manager) {
 inline void run_ycsb(benchmark::State& state, YCSBTable& table, YCSBOperations& operations,
                      BufferManager& buffer_manager) {
   const auto operations_per_thread = operations.size() / state.threads();
-  // TODO: Reset metrics
+  // TODO: Reset metrics of buffer manager
 
   for (auto _ : state) {
     auto start = state.thread_index() * operations_per_thread;
@@ -195,9 +207,17 @@ inline void run_ycsb(benchmark::State& state, YCSBTable& table, YCSBOperations& 
       auto start = std::chrono::high_resolution_clock::now();
       execute_ycsb_action(table, buffer_manager, op);
       auto end = std::chrono::high_resolution_clock::now();
-      const auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
+      const auto latency = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
     }
   }
+
+  /// TODO Combbe
+  // state.counters["latency_mean"] = boost::accumulators::mean(latency_stats);
+  // state.counters["latency_stddev"] = std::sqrt(boost::accumulators::variance(latency_stats));
+  // state.counters["latency_median"] = boost::accumulators::median(latency_stats);
+  // state.counters["latency_min"] = boost::accumulators::min(latency_stats);
+  // state.counters["latency_max"] = boost::accumulators::max(latency_stats);
+  // state.counters["latency_95percentile"] = boost::accumulators::quantile(latency_stats, 0.95);
 
   // TODO: not per thread?
   state.SetItemsProcessed(operations_per_thread);
