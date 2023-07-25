@@ -28,8 +28,8 @@ std::shared_ptr<const pmr_vector<char>> VariableStringDictionarySegment<T>::dict
 }
 
 template <typename T>
-std::shared_ptr<???> VariableStringDictionarySegment<T>::variable_string_dictionary() const {
-  return ;
+std::shared_ptr<VariableStringVector> VariableStringDictionarySegment<T>::variable_string_dictionary() const {
+  return std::make_shared<VariableStringVector>(dictionary(), _offset_vector->size());
 }
 
 template <typename T>

@@ -88,7 +88,7 @@ void ColumnLikeTableScanImpl::_scan_dictionary_segment(const BaseDictionarySegme
     }
     case EncodingType::VariableStringDictionary: {
       const auto& typed_segment = static_cast<const VariableStringDictionarySegment<pmr_string>&>(segment);
-      result = _find_matches_in_dictionary(*typed_segment.dictionary());
+      result = _find_matches_in_dictionary(*typed_segment.variable_string_dictionary());
       break;
     }
     default: {

@@ -5,6 +5,7 @@
 
 #include "base_dictionary_segment.hpp"
 #include "storage/vector_compression/base_compressed_vector.hpp"
+#include "storage/variable_string_dictionary/variable_string_vector.hpp"
 #include "types.hpp"
 
 namespace hyrise {
@@ -27,8 +28,7 @@ class VariableStringDictionarySegment : public BaseDictionarySegment {
   // returns an underlying dictionary
   std::shared_ptr<const pmr_vector<char>> dictionary() const;
 
-  // TODO(student): think about datatype
-  std::shared_ptr<???> variable_string_dictionary() const;
+  std::shared_ptr<VariableStringVector> variable_string_dictionary() const;
 
   /**
    * @defgroup AbstractSegment interface
