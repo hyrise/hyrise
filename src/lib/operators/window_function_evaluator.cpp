@@ -263,10 +263,10 @@ WindowFunctionEvaluator::HashPartitionedData parallel_merge_sort(const Table& in
 
   WindowFunctionEvaluator::spawn_and_wait_per_hash(
       result, [&left_result, &right_result, &comparator](auto& result_partition, auto hash_value) {
-        const auto& left = left_result[hash_value];
-        const auto& right = right_result[hash_value];
+        auto& left = left_result[hash_value];
+        auto& right = right_result[hash_value];
         result_partition.resize(left.size() + right.size());
-        std::ranges::merge(left, right, result_partition.begin(), comparator);
+        std::ranges::merge(std::move(left), std::move(right), result_partition.begin(), comparator);
       });
 
   return result;
