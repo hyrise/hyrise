@@ -83,7 +83,12 @@ do
   git checkout "$commit"
   git submodule update --init --recursive
   echo "Building $commit..."
-  $build_system clean
+  if [[ -z "$FORCE_CLEAN"  ||  "$FORCE_CLEAN" != "false"  ]]
+  then
+    echo "Clean build dir"
+    $build_system clean
+  fi
+
   /usr/bin/time -p sh -c "( $build_system -j $(nproc) ${benchmarks} hyriseDependencyDiscoveryPlugin 2>&1 ) | tee benchmark_all_results/build_${commit}_plugin.log" 2>"benchmark_all_results/build_time_${commit}_plugin.txt"
 
   # Run the benchmarks
