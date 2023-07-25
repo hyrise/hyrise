@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <array>
 #include <cstdint>
+#include <iterator>
 #include <type_traits>
 #include <utility>
 
@@ -265,8 +266,12 @@ WindowFunctionEvaluator::HashPartitionedData parallel_merge_sort(const Table& in
       result, [&left_result, &right_result, &comparator](auto& result_partition, auto hash_value) {
         auto& left = left_result[hash_value];
         auto& right = right_result[hash_value];
-        result_partition.resize(left.size() + right.size());
-        std::ranges::merge(std::move(left), std::move(right), result_partition.begin(), comparator);
+
+        const auto mid_offset = left.size();
+        result_partition = std::move(left);
+        result_partition.insert(result_partition.end(), std::make_move_iterator(right.begin()),
+                                std::make_move_iterator(right.end()));
+        std::ranges::inplace_merge(result_partition, result_partition.begin() + mid_offset, comparator);
       });
 
   return result;
