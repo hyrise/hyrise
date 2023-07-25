@@ -33,7 +33,7 @@ concept IsSegmentTreeImpl =
       typename Impl::InputType;
       typename Impl::OutputType;
       typename Impl::TreeNode;
-      { Impl::neutral_element } -> std::same_as<const typename Impl::TreeNode&>;
+      { Impl::neutral_element } -> std::convertible_to<typename Impl::TreeNode>;
       { Impl::node_from_value(std::declval<typename Impl::InputType>()) } -> std::same_as<typename Impl::TreeNode>;
       {
         Impl::combine(std::declval<typename Impl::TreeNode>(), std::declval<typename Impl::TreeNode>())
