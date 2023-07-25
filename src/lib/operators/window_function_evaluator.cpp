@@ -503,8 +503,11 @@ void WindowFunctionEvaluator::templated_compute_window_function_segment_tree(
       std::ranges::transform(partition, leaf_values.begin(), [](const auto& row) {
         return Impl::node_from_value(as_optional<InputColumnType>(row.function_argument));
       });
-      using Combine = decltype([](auto lhs, auto rhs) { return Impl::combine(std::move(lhs), std::move(rhs)); });
-      SegmentTree<TreeNode, Combine> segment_tree(leaf_values, Impl::neutral_element);
+
+      const auto combine = [](auto lhs, auto rhs) { return Impl::combine(std::move(lhs), std::move(rhs)); };
+      const auto make_neutral_element = []() { return Impl::neutral_element; };
+      SegmentTree<TreeNode, decltype(combine), decltype(make_neutral_element)> segment_tree(leaf_values, combine,
+                                                                                            make_neutral_element);
 
       for (auto tuple_index = 0u; tuple_index < partition.size(); ++tuple_index) {
         using BoundCalculator = WindowBoundCalculator<frame_type, OrderByColumnType>;

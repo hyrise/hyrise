@@ -14,7 +14,7 @@ class SegmentTreeTest : public BaseTest {
     return segment_tree.tree.size();
   }
 
-  SegmentTree<int, std::plus<>> segment_tree{std::array{1, 2, 3}, 0};
+  SegmentTree<int, std::plus<>> segment_tree{std::array{1, 2, 3}, std::plus<>{}, element_factory(0)};
 };
 
 TEST_F(SegmentTreeTest, BinaryTreeIsFull) {
