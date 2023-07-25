@@ -15,6 +15,20 @@ struct QueryRange {
   Bound end;
 };
 
+template <typename T>
+struct ElementFactory {
+  constexpr T operator()() const {
+    return element;
+  }
+
+  T element;
+};
+
+template <typename T>
+constexpr ElementFactory<T> element_factory(T element) {
+  return {element};
+}
+
 // A segment tree is a data structure that supports efficiently computing aggregates over arbitrary connected intervals
 // (`Range`s) of the underlying array of values. The aggregate function, `combine`, must
 //
@@ -39,16 +53,17 @@ struct QueryRange {
 // The first leaf is at index n.
 //
 // Refer to the documentation of `range_query` for details on its implementation.
-template <typename T, typename Combine>
+template <typename T, typename Combine, typename MakeNeutralElement = ElementFactory<T>>
 class SegmentTree {
   friend class SegmentTreeTest;
 
  public:
-  explicit SegmentTree(std::span<const T> leaf_values, T init_neutral_element = T(), Combine&& init_combine = Combine())
+  explicit SegmentTree(std::span<const T> leaf_values, Combine init_combine,
+                       MakeNeutralElement init_make_neutral_element)
       : leaf_count(std::bit_ceil(leaf_values.size())),
-        neutral_element(std::move(init_neutral_element)),
-        combine(init_combine),
-        tree(2 * leaf_count + 1, neutral_element) {
+        combine(std::move(init_combine)),
+        make_neutral_element(std::move(init_make_neutral_element)),
+        tree(2 * leaf_count + 1, make_neutral_element()) {
     const auto first_leaf_index = leaf_count;
     std::ranges::copy(leaf_values, &tree[first_leaf_index]);
 
@@ -86,7 +101,7 @@ class SegmentTree {
     DebugAssert(range.end <= leaf_count, "Query range out of bounds.");
 
     // Note: To avoid the commutativity assumption, two separate aggregates are needed.
-    auto agg = neutral_element;
+    auto agg = make_neutral_element();
     auto left_node = leaf_count + range.start;
     auto right_node = leaf_count + range.end;
     while (left_node < right_node) {
@@ -114,8 +129,8 @@ class SegmentTree {
   // clang-format on
 
   size_t leaf_count;
-  T neutral_element;
   Combine combine;
+  MakeNeutralElement make_neutral_element;
   std::vector<T> tree;
 };
 
