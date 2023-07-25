@@ -258,6 +258,16 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   // subqueries in AbstractOperator to create their tasks.
   std::vector<std::shared_ptr<PQPSubqueryExpression>> _uncorrelated_subquery_expressions;
 
+  /**
+   * OperatorTasks wrap operators for scheduling. Since operator results are shared between uncorrelated subqueries
+   * and their outer queries, OperatorTasks should be shared, too, to reduce scheduling overhead and to prevent
+   * additional logic for result sharing.
+   * To allow OperatorTask::make_tasks_from_operator to reuse an existing OperatorTask, operators create
+   * OperatorTasks from themselves and store weak pointers. The pointers must be weak because OperatorTasks also
+   * point to operators, which would otherwise create cyclic dependencies.
+   */
+  std::weak_ptr<OperatorTask> _operator_task;
+
  private:
   // We track the number of consuming operators to automate the clearing of operator results.
   std::atomic_int32_t _consumer_count = 0;
@@ -270,15 +280,6 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   std::atomic<OperatorState> _state{OperatorState::Created};
   void _transition_to(const OperatorState new_state);
 
-  /**
-   * OperatorTasks wrap operators for scheduling. Since operator results are shared between uncorrelated subqueries
-   * and their outer queries, OperatorTasks should be shared, too, to reduce scheduling overhead and to prevent
-   * additional logic for result sharing.
-   * To allow OperatorTask::make_tasks_from_operator to reuse an existing OperatorTask, operators create
-   * OperatorTasks from themselves and store weak pointers. The pointers must be weak because OperatorTasks also
-   * point to operators, which would otherwise create cyclic dependencies.
-   */
-  std::weak_ptr<OperatorTask> _operator_task;
   // To prevent race conditions in get_or_create_operator_task.
   std::mutex _operator_task_mutex;
 };

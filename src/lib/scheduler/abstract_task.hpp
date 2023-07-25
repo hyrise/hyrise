@@ -76,10 +76,15 @@ static_assert(static_cast<std::underlying_type_t<TaskState>>(TaskState::Created)
  * Derive and implement logic in _on_execute().
  */
 class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
-  // Using friend classes is quite uncommon in Hyrise. The reason it is done here is that the _join method must
-  // absolutely not be called from anyone but the scheduler. As the interface could tempt developers to do so if that
-  // method was public, we chose this approach.
+  // The reason for using AbstractScheduler as friend classes here is that the _join method must absolutely not be
+  // called from anyone but the scheduler. As the interface could tempt developers to do so if that method was public,
+  // we chose this approach.
   friend class AbstractScheduler;
+
+  // In the test cases, we create a cyclic task graph to ensure we fail in this case (cyclic tasks lead to deadlocks).
+  // However, cyclic tasks also leak memory since tasks hold shared pointers to their successors. Thus, the test must
+  // clear the successor pointers.
+  friend class OperatorTaskTest;
 
  public:
   explicit AbstractTask(SchedulePriority priority = SchedulePriority::Default, bool stealable = true);

@@ -35,6 +35,10 @@ class OperatorTaskTest : public BaseTest {
     Hyrise::get().storage_manager.add_table("table_b", _test_table_b);
   }
 
+  void clear_successors(const std::shared_ptr<AbstractTask>& task) {
+    task->_successors.clear();
+  }
+
   std::shared_ptr<Table> _test_table_a, _test_table_b;
 };
 
@@ -173,9 +177,9 @@ TEST_F(OperatorTaskTest, UncorrelatedSubqueries) {
   }
 }
 
-TEST_F(OperatorTaskTest, DetectsCycles) {
+TEST_F(OperatorTaskTest, DetectCycles) {
   // Ensure that we cannot create tasks that have cyclic dependencies and, thus, would end up in a deadlock during
-  // execution. In this test case, we achieve this with an ivalid PQP that consists of one cycle. During task creation,
+  // execution. In this test case, we achieve this with an invalid PQP that consists of one cycle. During task creation,
   // it is more likely to create cycles by incorrectly setting the tasks' predecessors. This test ensures that we notice
   // when this happens.
   if constexpr (!HYRISE_DEBUG) {
@@ -185,16 +189,20 @@ TEST_F(OperatorTaskTest, DetectsCycles) {
   // Declare a MockOperator class that allows us to set an input operator after instantiation.
   class MockOperator : public AbstractReadOnlyOperator {
    public:
-    MockOperator(const std::shared_ptr<const AbstractOperator>& input_operator)
+    explicit MockOperator(const std::shared_ptr<const AbstractOperator>& input_operator)
         : AbstractReadOnlyOperator{OperatorType::Mock, input_operator} {}
 
     const std::string& name() const override {
-      const static auto name = std::string{"MockOperator"};
+      static const auto name = std::string{"MockOperator"};
       return name;
     }
 
     void set_input(const std::shared_ptr<const AbstractOperator>& input_operator) {
       _left_input = input_operator;
+    }
+
+    std::shared_ptr<AbstractTask> get_task() {
+      return _operator_task.lock();
     }
 
    protected:
@@ -222,6 +230,16 @@ TEST_F(OperatorTaskTest, DetectsCycles) {
   mock_operator_a->set_input(mock_operator_d);
 
   EXPECT_THROW(OperatorTask::make_tasks_from_operator(mock_operator_a), std::logic_error);
+
+  // Clear the successors of the created tasks and the operator inputs. Since the tasks hold shared pointers to their
+  // successors and the operators a pointer to their input, the cyclic graph leaks memory.
+  for (const auto& op : {mock_operator_a, mock_operator_b, mock_operator_c, mock_operator_d}) {
+    op->set_input(nullptr);
+    const auto& task = op->get_task();
+    if (task) {
+      clear_successors(task);
+    }
+  }
 }
 
 TEST_F(OperatorTaskTest, LinkPrunableSubqueries) {
@@ -262,7 +280,7 @@ TEST_F(OperatorTaskTest, LinkPrunableSubqueries) {
 
 TEST_F(OperatorTaskTest, DoNotLinkPrunableSubqueriesWithCycles) {
   // Do not add the tasks of prunable subquery scans of a GetTable operator as predecessors of the GetTable task when
-  // they would form a cycle. subquery is executed first and the GetTable operator can use them for pruning during execution.
+  // they would form a cycle.
   // Example query used in this test case:
   //     SELECT ... FROM table_a WHERE a > (SELECT AVG(a) FROM table_a);
   const auto get_table = std::make_shared<GetTable>("table_a");
@@ -291,6 +309,32 @@ TEST_F(OperatorTaskTest, DoNotLinkPrunableSubqueriesWithCycles) {
   const auto& projection_task = projection->get_or_create_operator_task();
   ASSERT_EQ(projection_task->successors().size(), 1);
   EXPECT_EQ(projection_task->successors().front(), table_scan->get_or_create_operator_task());
+}
+
+TEST_F(OperatorTaskTest, SkipOperatorTask) {
+  const auto table = std::make_shared<GetTable>("table_a");
+  table->execute();
+
+  const auto task = std::make_shared<OperatorTask>(table);
+  task->skip_operator_task();
+  EXPECT_TRUE(task->is_done());
+}
+
+TEST_F(OperatorTaskTest, NotExecutedOperatorTaskCannotBeSkipped) {
+  const auto table = std::make_shared<GetTable>("table_a");
+
+  const auto task = std::make_shared<OperatorTask>(table);
+  EXPECT_THROW(task->skip_operator_task(), std::logic_error);
+}
+
+TEST_F(OperatorTaskTest, DoNotSkipOperatorTaskWithMultiOwners) {
+  const auto table = std::make_shared<GetTable>("table_a");
+  table->execute();
+
+  const auto task = std::make_shared<OperatorTask>(table);
+  const auto another_task_pointer = task;
+  EXPECT_EQ(task.use_count(), 2);
+  EXPECT_THROW(task->skip_operator_task(), std::logic_error);
 }
 
 }  // namespace hyrise

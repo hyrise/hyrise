@@ -55,6 +55,7 @@ set(
     lib/logical_query_plan/intersect_node_test.cpp
     lib/logical_query_plan/join_node_test.cpp
     lib/logical_query_plan/limit_node_test.cpp
+    lib/logical_query_plan/logical_plan_root_node_test.cpp
     lib/logical_query_plan/logical_query_plan_test.cpp
     lib/logical_query_plan/lqp_find_subplan_mismatch_test.cpp
     lib/logical_query_plan/lqp_translator_test.cpp
@@ -217,6 +218,7 @@ set(
     lib/utils/date_time_utils_test.cpp
     lib/utils/format_bytes_test.cpp
     lib/utils/format_duration_test.cpp
+    lib/utils/list_directory_test.cpp
     lib/utils/load_table_test.cpp
     lib/utils/log_manager_test.cpp
     lib/utils/lossless_predicate_cast_test.cpp
@@ -296,15 +298,13 @@ target_link_libraries(hyriseTest hyrise ${LIBRARIES})
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 target_compile_options(hyriseTest PUBLIC -Xclang -fno-pch-timestamp)
 endif()
-if(NOT ${CMAKE_VERSION} VERSION_LESS "3.16.0")
-    target_precompile_headers(hyriseTest PRIVATE
-        <gtest/gtest.h>
-        [["all_parameter_variant.hpp"]]
-        [["storage/create_iterable_from_segment.hpp"]]
-        [["storage/table.hpp"]]
-        [["types.hpp"]]
-    )
-endif()
+target_precompile_headers(hyriseTest PRIVATE
+    <gtest/gtest.h>
+    [["all_parameter_variant.hpp"]]
+    [["storage/create_iterable_from_segment.hpp"]]
+    [["storage/table.hpp"]]
+    [["types.hpp"]]
+)
 
 # Configure hyriseSystemTest
 add_executable(hyriseSystemTest ${SYSTEM_TEST_SOURCES})
