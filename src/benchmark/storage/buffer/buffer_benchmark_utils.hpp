@@ -188,36 +188,4 @@ inline void warmup(YCSBTable& table, BufferManager& buffer_manager) {
   }
 }
 
-inline void run_ycsb(benchmark::State& state, YCSBTable& table, YCSBOperations& operations,
-                     BufferManager& buffer_manager) {
-  const auto operations_per_thread = operations.size() / state.threads();
-  // TODO: Reset metrics of buffer manager
-
-  auto histogram = boost::histogram::make_histogram(boost::histogram::axis::regular<>(1000000, 0, 1000000));
-
-  for (auto _ : state) {
-    auto start = state.thread_index() * operations_per_thread;
-    auto end = start + operations_per_thread;
-    for (auto i = start; i < end; ++i) {
-      const auto op = operations[i];
-      auto start = std::chrono::high_resolution_clock::now();
-      execute_ycsb_action(table, buffer_manager, op);
-      auto end = std::chrono::high_resolution_clock::now();
-      const auto latency = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
-      histogram(latency);
-    }
-  }
-
-  /// TODO Combbe
-  // state.counters["latency_mean"] = boost::accumulators::mean(latency_stats);
-  // state.counters["latency_stddev"] = std::sqrt(boost::accumulators::variance(latency_stats));
-  // state.counters["latency_median"] = boost::accumulators::median(latency_stats);
-  // state.counters["latency_min"] = boost::accumulators::min(latency_stats);
-  // state.counters["latency_max"] = boost::accumulators::max(latency_stats);
-  // state.counters["latency_95percentile"] = boost::accumulators::quantile(latency_stats, 0.95);
-
-  // TODO: not per thread?
-  state.SetItemsProcessed(operations_per_thread);
-}
-
 }  // namespace hyrise
