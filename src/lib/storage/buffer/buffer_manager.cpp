@@ -99,7 +99,7 @@ BufferManager::Config BufferManager::Config::from_env() {
         json.value("enable_eviction_purge_worker", config.enable_eviction_purge_worker);
     config.memory_node =
         static_cast<NumaMemoryNode>(json.value("memory_node", static_cast<int64_t>(config.memory_node)));
-    config.cpu_node = static_cast<NumaMemoryNode>(json.value("cpu_node", static_cast<int64_t>(config.memory_node)));
+    config.cpu_node = static_cast<NumaMemoryNode>(json.value("cpu_node", static_cast<int64_t>(config.cpu_node)));
     return config;
   } else {
     Fail("HYRISE_BUFFER_MANAGER_CONFIG_JSON_PATH not found in environment");
@@ -145,13 +145,14 @@ BufferManager::~BufferManager() {
 
 BufferManager& BufferManager::operator=(BufferManager&& other) noexcept {
   if (&other != this) {
-    _metrics = other._metrics;
     _config = std::move(other._config);
+    _metrics = other._metrics;
     _volatile_regions = other._volatile_regions;
     _ssd_region = other._ssd_region;
     _primary_buffer_pool = other._primary_buffer_pool;
     _secondary_buffer_pool = other._secondary_buffer_pool;
     std::swap(_mapped_region, other._mapped_region);
+    // TODO: check again
   }
   return *this;
 }

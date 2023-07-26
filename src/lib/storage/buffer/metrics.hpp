@@ -22,6 +22,13 @@ struct BufferManagerMetrics {
     return (double)total_unused_bytes / (double)total_allocated_bytes;
   }
 
+  double hit_rate() const {
+    if (total_hits + total_misses == 0) {
+      return 0;
+    }
+    return (double)total_hits / (double)(total_hits + total_misses);
+  }
+
   // The number of allocation
   std::atomic_uint64_t num_allocs = 0;
   std::atomic_uint64_t num_deallocs = 0;

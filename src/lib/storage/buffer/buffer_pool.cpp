@@ -22,7 +22,6 @@ BufferPool::BufferPool(const size_t pool_size, const bool enable_eviction_purge_
                                 : nullptr) {}
 
 void BufferPool::purge_eviction_queue() {
-  // TODO:
   auto item = EvictionItem{};
   for (auto i = size_t{0}; 0 < MAX_EVICTION_QUEUE_PURGES; ++i) {
     if (!eviction_queue->try_pop(item)) {
@@ -34,30 +33,16 @@ void BufferPool::purge_eviction_queue() {
     auto current_state_and_version = frame->state_and_version();
 
     // The item is in state UNLOCKED and can be marked
-    if (item.can_mark(current_state_and_version)) {
-      if (frame->try_mark(current_state_and_version)) {
-        add_to_eviction_queue(item.page_id, frame);
-      }
-      continue;
-    }
-
-    // The item is in state MARKED and can be evicted soon
-    if (item.can_evict(current_state_and_version)) {
+    if (item.can_evict(current_state_and_version) || item.can_mark(current_state_and_version)) {
       eviction_queue->push(item);
       continue;
     }
-
-    // The item is either LOCKED or the version is outdated,
-    // we can just keep it removed
   }
 }
 
 void BufferPool::add_to_eviction_queue(const PageID page_id, Frame* frame) {
-  // TODO: When migrating, the page should be in state "Unlocked"
   auto current_state_and_version = frame->state_and_version();
   DebugAssert(frame->numa_node() == numa_node, "Memory node mismatch");
-  // DebugAssert(Frame::state(current_state_and_version) != Frame::LOCKED,
-  //             "Adding a locked frame to the queue is useless because the unlocking increments the version afterwards.");
   increment_counter(metrics->num_eviction_queue_adds);
   eviction_queue->push({page_id, Frame::version(current_state_and_version)});
 }
@@ -130,8 +115,6 @@ bool BufferPool::ensure_free_pages(const PageSizeType required_size) {
 
   // TODO: Check if this is correct
   free_bytes(freed_bytes);
-
-  // std::cout << "Bytes " << current_bytes << std::endl;
 
   return true;
 }

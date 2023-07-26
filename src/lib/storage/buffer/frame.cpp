@@ -16,9 +16,12 @@ void Frame::set_numa_node(const NumaMemoryNode numa_node) {
         old_state_and_version ^
         ((old_state_and_version ^ static_cast<StateVersionType>(numa_node) << NUMA_NODE_SHIFT) & NUMA_NODE_MASK);
     if (_state_and_version.compare_exchange_strong(old_state_and_version, new_state_and_version)) {
+      DebugAssert((old_state_and_version & ~NUMA_NODE_MASK) == (new_state_and_version & ~NUMA_NODE_MASK),
+                  "Settings the numa node failed");
       break;
     }
   }
+
   // TODO: May want to test that the state is not modified
   DebugAssert(Frame::numa_node(_state_and_version.load()) == numa_node,
               "Setting numa node didnt work: " + std::to_string(Frame::numa_node(_state_and_version.load())));

@@ -61,8 +61,10 @@ constexpr auto LazyMigrationPolicy = MigrationPolicy(0.01, 0.01, 0.2, 1);
 // EagerMigrationPolicy is good for small-working sets that fit in memory as we are trying to work as much with DRAM as possible
 constexpr auto EagerMigrationPolicy = MigrationPolicy(1, 1, 1, 1);
 
+// Only enable DRAM
 constexpr auto DramOnlyMigrationPolicy = MigrationPolicy(0, 0, 1, 1);
 
+// Only enanle NUMA
 constexpr auto NumaOnlyMigrationPolicy = MigrationPolicy(1, 1, 0, 0);
 
 }  // namespace hyrise
