@@ -246,7 +246,7 @@ void AbstractTableGenerator::generate_and_store() {
       target_memory_resources->push_back(NumaMemoryResource(node_id));
     }
 
-    std::cout << "Relocate data onto " << num_nodes << " nodes (round robin, chunk granularity)" << std::endl;
+    std::cout << "- Relocate data onto " << num_nodes << " nodes (round robin, chunk granularity)" << std::endl;
 
     auto num_relocated_chunks = ChunkID{0};
     for (auto& [table_name, table_info] : table_info_by_name) {
@@ -264,7 +264,7 @@ void AbstractTableGenerator::generate_and_store() {
         jobs.emplace_back(std::make_shared<JobTask>(migrate_job));
       }
       Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
-      std::cout << "Relocated " << table_name << " (" << timer.lap_formatted() << ")" << std::endl;
+      std::cout << "-  Relocated " << table_name << " (" << timer.lap_formatted() << ")" << std::endl;
     }
   }
 
