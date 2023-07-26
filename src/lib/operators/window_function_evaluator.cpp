@@ -412,6 +412,8 @@ struct WindowBoundCalculator {
           return "Range"sv;
         case FrameType::Groups:
           return "Groups"sv;
+        default:
+          return ""sv;
       }
     }();
     error_message += " ";
@@ -632,6 +634,8 @@ void WindowFunctionEvaluator::PerformanceData::output_to_stream(std::ostream& st
         return "OnePass"sv;
       case ComputationStrategy::SegmentTree:
         return "SegmentTree"sv;
+      default:
+        return ""sv;
     }
   }();
   stream << separator << "Computation strategy: " << computation_strategy_string << ".";
