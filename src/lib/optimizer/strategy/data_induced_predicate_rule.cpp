@@ -41,7 +41,7 @@ void DataInducedPredicateRule::_apply_to_plan_without_subqueries(
   const auto estimator = cost_estimator->cardinality_estimator->new_instance();
   estimator->guarantee_bottom_up_construction();
 
-  visit_lqp(lqp_root, [&estimator, &opposite_side, &data_induced_predicates](const auto& node) {
+  visit_lqp(lqp_root, [&estimator, &opposite_side, &data_induced_predicates, &semi_join_reductions](const auto& node) {
     if (node->type != LQPNodeType::Join) {
       return LQPVisitation::VisitInputs;
     }
@@ -89,35 +89,33 @@ void DataInducedPredicateRule::_apply_to_plan_without_subqueries(
         if (original_cardinality == 0 || (reduced_cardinality / original_cardinality) > MINIMUM_SELECTIVITY) {
           return;
         }
-        data_induced_predicates.emplace_back(join_node, selection_side, between_predicate);
+        auto found_predicate = false;
+        visit_lqp(reducer_node, [&](const auto& current_node) {
+          if (found_predicate || !expression_evaluable_on_lqp(reducer_side_expression, *current_node)) {
+            return LQPVisitation::DoNotVisitInputs;
+          }
 
-          /*auto found_predicate = false;
-          visit_lqp(reducer_node, [&](const auto& current_node) {
-            if (found_predicate || !expression_evaluable_on_lqp(reducer_side_expression, *current_node)) {
-              return LQPVisitation::DoNotVisitInputs;
-            }
+          if (current_node->type == LQPNodeType::Predicate) {
+            found_predicate = true;
+            return LQPVisitation::DoNotVisitInputs;
+          }
 
-            if (current_node->type == LQPNodeType::Predicate) {
-              found_predicate = true;
-              return LQPVisitation::DoNotVisitInputs;
+          return LQPVisitation::VisitInputs;
+        });
+        // auto predicate_found = _find_predicate(reducer_node, reducer_side_expression);
+        if (found_predicate) {
+          data_induced_predicates.emplace_back(join_node, selection_side, between_predicate);
+        } else {
+          if ((reduced_cardinality / original_cardinality) <= SemiJoinReductionRule::MINIMUM_SELECTIVITY) {
+            if (selection_side == LQPInputSide::Left && join_node->join_mode != JoinMode::Semi) {
+              return;
             }
-
-            return LQPVisitation::VisitInputs;
-          });
-          // auto predicate_found = _find_predicate(reducer_node, reducer_side_expression);
-          if (found_predicate) {
-            data_induced_predicates.emplace_back(join_node, selection_side, between_predicate);
-          } else {
-            if ((reduced_cardinality / original_cardinality) <= SemiJoinReductionRule::MINIMUM_SELECTIVITY) {
-              if (selection_side == LQPInputSide::Left && join_node->join_mode != JoinMode::Semi) {
-                return;
-              }
-              const auto semi_join_reduction_node = JoinNode::make(JoinMode::Semi, join_predicate);
-              semi_join_reduction_node->mark_as_semi_reduction(join_node);
-              semi_join_reduction_node->set_right_input(reducer_node);
-              semi_join_reductions.emplace_back(join_node, selection_side, semi_join_reduction_node);
-            }
-          }*/
+            const auto semi_join_reduction_node = JoinNode::make(JoinMode::Semi, join_predicate);
+            semi_join_reduction_node->mark_as_semi_reduction(join_node);
+            semi_join_reduction_node->set_right_input(reducer_node);
+            semi_join_reductions.emplace_back(join_node, selection_side, semi_join_reduction_node);
+          }
+        }
 
         // new visit lqp fucntion call from reducer node
         // check if reducer side expression evaluable on lqp für neue aktuelle node
