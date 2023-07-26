@@ -292,7 +292,7 @@ void WindowFunctionEvaluator::spawn_and_wait_per_hash(PerHash<T>& data, auto&& p
   }
 
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
-};
+}
 
 template <typename T>
 void WindowFunctionEvaluator::spawn_and_wait_per_hash(const PerHash<T>& data, auto&& per_hash_function) {
@@ -307,7 +307,7 @@ void WindowFunctionEvaluator::spawn_and_wait_per_hash(const PerHash<T>& data, au
   }
 
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
-};
+}
 
 template <typename InputColumnType, WindowFunction window_function>
 ComputationStrategy WindowFunctionEvaluator::choose_computation_strategy() const {
@@ -403,7 +403,7 @@ struct WindowBoundCalculator {
                                             [[maybe_unused]] const FrameDescription& frame) {
     std::string error_message = "Unsupported frame type and order-by column type combination: ";
     error_message += [&]() {
-      using namespace std::literals::string_view_literals;
+      using std::literals::string_view_literals::operator""sv;
 
       switch (frame_type) {
         case FrameType::Rows:
@@ -627,7 +627,7 @@ void WindowFunctionEvaluator::PerformanceData::output_to_stream(std::ostream& st
 
   const auto separator = (description_mode == DescriptionMode::SingleLine ? ' ' : '\n');
   const auto computation_strategy_string = [&]() {
-    using namespace std::literals::string_view_literals;
+    using std::literals::string_view_literals::operator""sv;
 
     switch (computation_strategy) {
       case ComputationStrategy::OnePass:

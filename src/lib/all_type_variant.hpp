@@ -143,7 +143,7 @@ template <typename T>
 std::optional<T> as_optional(AllTypeVariant value) {
   if (variant_is_null(value))
     return std::nullopt;
-  return get<T>(value);
+  return boost::get<T>(value);
 }
 
 }  // namespace hyrise

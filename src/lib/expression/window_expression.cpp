@@ -1,4 +1,3 @@
-#include <iterator>
 #include <sstream>
 
 #include <boost/container_hash/hash.hpp>
