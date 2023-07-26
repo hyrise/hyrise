@@ -1,13 +1,13 @@
 #include "abstract_table_generator.hpp"
 
+#include <numa.h>
+
 #include "benchmark_config.hpp"
 #include "benchmark_table_encoder.hpp"
 #include "hyrise.hpp"
 #include "import_export/binary/binary_parser.hpp"
 #include "import_export/binary/binary_writer.hpp"
-#include "memory/numa_memory_resource.hpp"
-//#include "memory/jemalloc_numa_memory_resource.hpp"
-#include <numa.h>
+#include "memory/jemalloc_numa_memory_resource.hpp"
 #include "operators/sort.hpp"
 #include "operators/table_wrapper.hpp"
 #include "scheduler/job_task.hpp"
@@ -288,9 +288,9 @@ void AbstractTableGenerator::generate_and_store() {
   if (_benchmark_config->relocate_numa) {
     // we need to keep the MemoryResources alive until their memory is deallocated, for some reason.
     auto num_nodes = static_cast<NodeID>(Hyrise::get().topology.nodes().size());
-    auto target_memory_resources = new std::vector<NumaMemoryResource>{};
+    auto target_memory_resources = new std::vector<JemallocNumaMemoryResource>{};
     for (auto node_id = NodeID{0}; node_id < num_nodes; node_id++) {
-      target_memory_resources->push_back(NumaMemoryResource(node_id));
+      target_memory_resources->push_back(JemallocNumaMemoryResource(node_id));
     }
 
     std::cout << "Relocate data onto " << num_nodes << " nodes" << std::endl;
