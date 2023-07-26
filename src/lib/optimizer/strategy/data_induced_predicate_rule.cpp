@@ -23,36 +23,6 @@ std::string DataInducedPredicateRule::name() const {
   return name;
 }
 
-bool DataInducedPredicateRule::_find_predicate(const std::shared_ptr<AbstractLQPNode>& current_node,
-                                               const std::shared_ptr<AbstractExpression>& join_predicate_expression) {
-  auto node_stack = std::stack<std::shared_ptr<AbstractLQPNode>>{};
-  node_stack.push(current_node);
-
-  auto visited_nodes = std::unordered_set<std::shared_ptr<AbstractLQPNode>>{};
-
-  while (!node_stack.empty()) {
-    const auto node = node_stack.top();
-    node_stack.pop();
-
-    if (!visited_nodes.emplace(node).second) {
-      continue;
-    }
-
-    if (expression_evaluable_on_lqp(join_predicate_expression, *node)) {
-      if (current_node->type == LQPNodeType::Predicate) {
-        return true;
-      }
-      if (node->left_input()) {
-        node_stack.push(node->left_input());
-      }
-      if (node->right_input()) {
-        node_stack.push(node->right_input());
-      }
-    }
-  }
-  return false;
-}
-
 void DataInducedPredicateRule::_apply_to_plan_without_subqueries(
     const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
   Assert(lqp_root->type == LQPNodeType::Root, "Rule needs root to hold onto");
@@ -119,9 +89,21 @@ void DataInducedPredicateRule::_apply_to_plan_without_subqueries(
         if (original_cardinality == 0 || (reduced_cardinality / original_cardinality) > MINIMUM_SELECTIVITY) {
           return;
         }
+        auto found_predicate = false;
+        visit_lqp(reducer_node, [&](const auto& current_node) {
+          if (found_predicate || !expression_evaluable_on_lqp(reducer_side_expression, *current_node)) {
+            return LQPVisitation::DoNotVisitInputs;
+          }
 
-        auto predicate_found = _find_predicate(reducer_node, reducer_side_expression);
-        if (predicate_found) {
+          if (current_node->type == LQPNodeType::Predicate) {
+            found_predicate = true;
+            return LQPVisitation::DoNotVisitInputs;
+          }
+
+          return LQPVisitation::VisitInputs;
+        });
+        // auto predicate_found = _find_predicate(reducer_node, reducer_side_expression);
+        if (found_predicate) {
           data_induced_predicates.emplace_back(join_node, selection_side, between_predicate);
         } else {
           if ((reduced_cardinality / original_cardinality) <= SemiJoinReductionRule::MINIMUM_SELECTIVITY) {
