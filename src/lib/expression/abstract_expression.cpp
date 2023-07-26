@@ -8,9 +8,9 @@
 #include "expression_utils.hpp"
 #include "utils/assert.hpp"
 
-using namespace std::string_literals;  // NOLINT
-
 namespace hyrise {
+
+using namespace std::string_literals;  // NOLINT(build/namespaces)
 
 AbstractExpression::AbstractExpression(const ExpressionType init_type,
                                        const std::vector<std::shared_ptr<AbstractExpression>>& init_arguments)
