@@ -151,10 +151,31 @@ TEST_F(OperatorsWindowTest, RowNumber) {
 }
 
 TEST_F(OperatorsWindowTest, Sum) {
-  const auto frame = build_frame();
+  const auto frame = build_frame(0, true, 0, false, FrameType::Rows);
   const auto window_function_operator =
       _window_operator_factory->build_operator(this->_table_wrapper, frame, WindowFunction::Sum, ColumnID{1});
-  test_output(window_function_operator, "prefix_sum.tbl");
+  test_output(window_function_operator, "sum.tbl");
+}
+
+TEST_F(OperatorsWindowTest, AVG) {
+  const auto frame = build_frame(0, true, 0, false, FrameType::Rows);
+  const auto window_function_operator =
+      _window_operator_factory->build_operator(this->_table_wrapper, frame, WindowFunction::Avg, ColumnID{1});
+  test_output(window_function_operator, "avg.tbl");
+}
+
+TEST_F(OperatorsWindowTest, Min) {
+  const auto frame = build_frame(0, true, 0, false, FrameType::Rows);
+  const auto window_function_operator =
+      _window_operator_factory->build_operator(this->_table_wrapper, frame, WindowFunction::Min, ColumnID{1});
+  test_output(window_function_operator, "min.tbl");
+}
+
+TEST_F(OperatorsWindowTest, Max) {
+  const auto frame = build_frame(0, true, 0, false, FrameType::Rows);
+  const auto window_function_operator =
+      _window_operator_factory->build_operator(this->_table_wrapper, frame, WindowFunction::Max, ColumnID{1});
+  test_output(window_function_operator, "max.tbl");
 }
 
 }  // namespace hyrise
