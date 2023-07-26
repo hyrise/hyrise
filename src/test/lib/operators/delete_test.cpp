@@ -437,42 +437,42 @@ TEST_F(OperatorsDeleteTest, DifferentPosLists) {
   transaction_context->commit();
   const auto expected_end_cid = transaction_context->commit_id();
 
-  const auto mvcc_data_1 = _table3->get_chunk(ChunkID{0})->mvcc_data();
+  const auto& mvcc_data_1 = _table3->get_chunk(ChunkID{0})->mvcc_data();
   EXPECT_EQ(mvcc_data_1->get_end_cid(ChunkOffset{0}), expected_end_cid);
   EXPECT_EQ(mvcc_data_1->get_end_cid(ChunkOffset{1}), expected_end_cid);
   EXPECT_EQ(mvcc_data_1->get_end_cid(ChunkOffset{2}), MvccData::MAX_COMMIT_ID);
   EXPECT_EQ(mvcc_data_1->max_end_cid.load(), expected_end_cid);
   EXPECT_EQ(_table3->get_chunk(ChunkID{0})->invalid_row_count(), 2);
 
-  const auto mvcc_data_2 = _table3->get_chunk(ChunkID{1})->mvcc_data();
+  const auto& mvcc_data_2 = _table3->get_chunk(ChunkID{1})->mvcc_data();
   EXPECT_EQ(mvcc_data_2->get_end_cid(ChunkOffset{0}), expected_end_cid);
   EXPECT_EQ(mvcc_data_2->get_end_cid(ChunkOffset{1}), expected_end_cid);
   EXPECT_EQ(mvcc_data_2->get_end_cid(ChunkOffset{2}), expected_end_cid);
   EXPECT_EQ(mvcc_data_2->max_end_cid.load(), expected_end_cid);
   EXPECT_EQ(_table3->get_chunk(ChunkID{1})->invalid_row_count(), 3);
 
-  const auto mvcc_data_3 = _table3->get_chunk(ChunkID{2})->mvcc_data();
+  const auto& mvcc_data_3 = _table3->get_chunk(ChunkID{2})->mvcc_data();
   EXPECT_EQ(mvcc_data_3->get_end_cid(ChunkOffset{0}), expected_end_cid);
   EXPECT_EQ(mvcc_data_3->get_end_cid(ChunkOffset{1}), expected_end_cid);
   EXPECT_EQ(mvcc_data_3->get_end_cid(ChunkOffset{2}), MvccData::MAX_COMMIT_ID);
   EXPECT_EQ(mvcc_data_3->max_end_cid.load(), expected_end_cid);
   EXPECT_EQ(_table3->get_chunk(ChunkID{2})->invalid_row_count(), 2);
 
-  const auto mvcc_data_4 = _table3->get_chunk(ChunkID{3})->mvcc_data();
+  const auto& mvcc_data_4 = _table3->get_chunk(ChunkID{3})->mvcc_data();
   EXPECT_EQ(mvcc_data_4->get_end_cid(ChunkOffset{0}), expected_end_cid);
   EXPECT_EQ(mvcc_data_4->get_end_cid(ChunkOffset{1}), MvccData::MAX_COMMIT_ID);
   EXPECT_EQ(mvcc_data_4->get_end_cid(ChunkOffset{2}), MvccData::MAX_COMMIT_ID);
   EXPECT_EQ(mvcc_data_4->max_end_cid.load(), expected_end_cid);
   EXPECT_EQ(_table3->get_chunk(ChunkID{3})->invalid_row_count(), 1);
 
-  const auto mvcc_data_5 = _table3->get_chunk(ChunkID{4})->mvcc_data();
+  const auto& mvcc_data_5 = _table3->get_chunk(ChunkID{4})->mvcc_data();
   EXPECT_EQ(mvcc_data_5->get_end_cid(ChunkOffset{0}), expected_end_cid);
   EXPECT_EQ(mvcc_data_5->get_end_cid(ChunkOffset{1}), expected_end_cid);
   EXPECT_EQ(mvcc_data_5->get_end_cid(ChunkOffset{2}), expected_end_cid);
   EXPECT_EQ(mvcc_data_5->max_end_cid.load(), expected_end_cid);
   EXPECT_EQ(_table3->get_chunk(ChunkID{4})->invalid_row_count(), 3);
 
-  const auto mvcc_data_6 = _table3->get_chunk(ChunkID{5})->mvcc_data();
+  const auto& mvcc_data_6 = _table3->get_chunk(ChunkID{5})->mvcc_data();
   EXPECT_EQ(mvcc_data_6->get_end_cid(ChunkOffset{0}), expected_end_cid);
   EXPECT_EQ(mvcc_data_6->get_end_cid(ChunkOffset{1}), expected_end_cid);
   EXPECT_EQ(mvcc_data_6->get_end_cid(ChunkOffset{2}), MvccData::MAX_COMMIT_ID);
@@ -481,10 +481,13 @@ TEST_F(OperatorsDeleteTest, DifferentPosLists) {
 
   const auto chunk_count = _table3->chunk_count();
   for (auto chunk_id = ChunkID{6}; chunk_id < chunk_count; ++chunk_id) {
-    const auto mvcc_data = _table3->get_chunk(chunk_id)->mvcc_data();
-    EXPECT_EQ(mvcc_data->get_end_cid(ChunkOffset{0}), MvccData::MAX_COMMIT_ID);
-    EXPECT_EQ(mvcc_data->get_end_cid(ChunkOffset{1}), MvccData::MAX_COMMIT_ID);
-    EXPECT_EQ(mvcc_data->get_end_cid(ChunkOffset{2}), MvccData::MAX_COMMIT_ID);
+    const auto& chunk = _table3->get_chunk(chunk_id);
+    const auto& mvcc_data = _table3->get_chunk(chunk_id)->mvcc_data();
+    const auto chunk_size = chunk->size();
+
+    for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
+      EXPECT_EQ(mvcc_data->get_end_cid(chunk_offset), MvccData::MAX_COMMIT_ID);
+    }
     EXPECT_EQ(mvcc_data->max_end_cid.load(), MvccData::MAX_COMMIT_ID);
     EXPECT_EQ(_table3->get_chunk(chunk_id)->invalid_row_count(), 0);
   }
