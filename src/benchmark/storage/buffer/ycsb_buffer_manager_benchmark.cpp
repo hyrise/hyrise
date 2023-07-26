@@ -54,7 +54,6 @@ class YCSBBufferManagerFixture : public benchmark::Fixture {
       table = generate_ycsb_table(memory_resource, database_size);
       operations = generate_ycsb_operations<AccessPattern, NUM_OPERATIONS>(table.size(), 0.99);
       warmup(table, Hyrise::get().buffer_manager);
-      latency_histogram = 0;
     }
   }
 };
@@ -73,7 +72,6 @@ inline void run_ycsb(benchmark::State& state, YCSBTable& table, YCSBOperations& 
       execute_ycsb_action(table, buffer_manager, op);
       auto end = std::chrono::high_resolution_clock::now();
       const auto latency = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
-      histogram(latency);
     }
   }
   /// TODO Combbe
