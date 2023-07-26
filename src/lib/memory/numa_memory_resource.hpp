@@ -12,17 +12,9 @@ class NumaMemoryResource : public boost::container::pmr::memory_resource {
   void* do_allocate(std::size_t bytes, std::size_t alignment) override;
   void do_deallocate(void* p, std::size_t bytes, std::size_t alignment) override;
   bool do_is_equal(const memory_resource& other) const noexcept override;
-  size_t lap_num_allocations();
 
-  size_t _num_allocations;
-  size_t _num_deallocations;
-  size_t _sum_allocated_bytes;
  protected:
   NodeID _node_id;
-  size_t _lap_num_allocations;
-
-  const size_t ALLOCATED_BYTES = 10ul * 1024*1024*1024;
-  char * buffer;
 };
 
 }  // namespace hyrise

@@ -1,5 +1,7 @@
 #include "abstract_table_generator.hpp"
 
+#include <numa.h>
+
 #include "benchmark_config.hpp"
 #include "benchmark_table_encoder.hpp"
 #include "hyrise.hpp"
@@ -34,6 +36,46 @@ BenchmarkTableInfo::BenchmarkTableInfo(const std::shared_ptr<Table>& init_table)
 
 AbstractTableGenerator::AbstractTableGenerator(const std::shared_ptr<BenchmarkConfig>& benchmark_config)
     : _benchmark_config(benchmark_config) {}
+
+void print_numa_location_of_segments(std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) {
+  auto num_nodes = static_cast<NodeID>(Hyrise::get().topology.nodes().size());
+
+  std::vector<int> global_segment_count(num_nodes, 0);
+  std::cout << "TABLE,\t";
+  for (auto i = NodeID{0}; i < num_nodes; ++i) {
+    std::cout << "Node" << i << ",\t";
+  }
+  std::cout << "INVALID_NODE_ID" << std::endl;
+  for (auto [table_name, table_info] : table_info_by_name) {
+    std::cout << table_name.substr(0, std::min(size_t{6}, table_name.size())) << ",\t";
+    std::vector<int> table_segment_count(num_nodes, 0);
+    auto invalid_node_id_counter = u_int32_t{0};
+    auto& table = table_info.table;
+    auto chunk_count = table->chunk_count();
+    auto column_count = table->column_count();
+
+    for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+      auto chunk = table->get_chunk(chunk_id);
+      for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
+        auto segment = chunk->get_segment(column_id);
+        auto numa_node = segment->numa_node_location();
+
+        if (numa_node == INVALID_NODE_ID) {
+          invalid_node_id_counter++;
+          continue;
+        }
+
+        table_segment_count[numa_node]++;
+      }
+    }
+    for (auto i = u_int32_t{0}; i < num_nodes; i++) {
+      std::cout << table_segment_count[i] << ", \t";
+      global_segment_count[i] += table_segment_count[i];
+    }
+    std::cout << invalid_node_id_counter << std::endl;
+  }
+  return;
+}
 
 void AbstractTableGenerator::generate_and_store() {
   auto timer = Timer{};
@@ -235,6 +277,71 @@ void AbstractTableGenerator::generate_and_store() {
     std::cout << "- Encoding tables and generating pruning statistic done ("
               << format_duration(metrics.encoding_duration) << ")" << std::endl;
   }
+
+  std::cout << "Numa-Locations before relocation" << std::endl;
+  print_numa_location_of_segments(table_info_by_name);
+
+  auto target_memory_resources = std::vector<JemallocNumaMemoryResource*>();
+
+  /**
+   * Relocate tables to optimize for numa.
+   */
+  auto global_timer = Timer{};
+  if (_benchmark_config->relocate_numa) {
+    // we need to keep the MemoryResources alive until their memory is deallocated, for some reason.
+    auto num_nodes = static_cast<NodeID>(Hyrise::get().topology.nodes().size());
+    for (auto node_id = NodeID{0}; node_id < num_nodes; node_id++) {
+      const auto jemalloc_numa_memory_resource = new JemallocNumaMemoryResource(node_id);
+      target_memory_resources.push_back(jemalloc_numa_memory_resource);
+    }
+
+    std::cout << "Relocate data onto " << num_nodes << " nodes" << std::endl;
+
+    auto counter = u_int32_t{0};
+
+    // std::map<std::string, size_t> column_allocations_mapping;
+    for (auto& [table_name, table_info] : table_info_by_name) {
+      auto& table = table_info.table;
+      auto timer = Timer{};
+
+      const auto target_node_id = NodeID{counter % num_nodes};
+      // numa_set_preferred(target_node_id);
+      // numa_run_on_node(target_node_id);
+      auto chunk_count = table->chunk_count();
+      auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+      jobs.reserve(chunk_count);
+      for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+        auto migrate_job = [&, chunk_id]() {
+          const auto& chunk = table->get_chunk(chunk_id);
+          chunk->migrate(target_memory_resources.at(target_node_id));
+        };
+        jobs.emplace_back(std::make_shared<JobTask>(migrate_job));
+      }
+      counter++;
+      Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
+      std::cout << " (" << timer.lap_formatted() << ")" << std::endl;
+    }
+    // size_t sum_allocations = 0;
+    // size_t sum_deallocations = 0;
+    // size_t sum_allocated_bytes = 0;
+    // for (auto i = NodeID{0}; i < num_nodes; ++i) {
+    //   sum_allocations += NumaExtentHooks::get_num_allocations(i);
+    //   sum_allocated_bytes += NumaExtentHooks::get_sum_allocated_bytes(i);
+    //   //sum_deallocations += numa_memory_resource._num_deallocations;
+    // }
+    // std::cout << "sum_allocations: " << sum_allocations << std::endl;
+    // std::cout << "sum_deallocations: " << sum_deallocations << std::endl;
+    // std::cout << "sum_allocated_bytes: " << sum_allocated_bytes << std::endl;
+
+    // for(auto [column, num_allocations] : column_allocations_mapping){
+    //   std::cout << column << ": " << num_allocations << std::endl;
+    // }
+  }
+
+  std::cout << "Numa-Relocation took:  " << global_timer.lap_formatted() << std::endl;
+
+  std::cout << "Numa-Locations after relocation" << std::endl;
+  print_numa_location_of_segments(table_info_by_name);
 
   /**
    * Relocate tables to optimize for numa.

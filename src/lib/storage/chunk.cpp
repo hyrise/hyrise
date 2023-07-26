@@ -15,6 +15,7 @@
 #include "resolve_type.hpp"
 #include "storage/segment_iterate.hpp"
 #include "utils/assert.hpp"
+#include "memory/numa_memory_resource.hpp"
 
 namespace hyrise {
 
@@ -192,6 +193,23 @@ void Chunk::migrate(boost::container::pmr::memory_resource* memory_source, NodeI
     new_segments.push_back(segment->copy_using_allocator(_alloc));
     new_segments.back()->set_numa_node_location(node_id);
   }
+  _segments = std::move(new_segments);
+}
+
+// For profiling purposes only
+void Chunk::migrate(NumaMemoryResource* memory_source, std::map<std::string, size_t> & column_allocations_mapping, const std::vector<std::string> & column_names) {
+  // Migrating chunks with indexes is not implemented yet.
+  if (!_indexes.empty()) {
+    Fail("Cannot migrate Chunk with Indexes.");
+  }
+
+  _alloc = PolymorphicAllocator<size_t>(memory_source);
+  Segments new_segments(_alloc);
+  for(auto i = u_int64_t{0}; i < _segments.size(); ++i){
+    new_segments.push_back(_segments[i]->copy_using_allocator(_alloc));
+    column_allocations_mapping[column_names[i]] += memory_source->lap_num_allocations(); 
+  }
+
   _segments = std::move(new_segments);
 }
 

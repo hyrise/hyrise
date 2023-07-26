@@ -292,7 +292,12 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
   // Create histograms per chunk
   histograms.resize(chunk_count);
 
+  auto empty_nodes = std::vector<NodeID>{};
+  auto partition_nodes = (partition_node_locations) ? partition_node_locations : &empty_nodes;
+  auto job_nodes = std::vector<NodeID>{};
+  assert(partition_nodes->size() == 0);
   auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+  // TODO(anyone): perhaps use jobs.nodeID somehow.
   jobs.reserve(chunk_count);
   if (partition_node_locations) {
     partition_node_locations->reserve(chunk_count);
@@ -483,7 +488,9 @@ std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<
   }
 
   std::vector<std::shared_ptr<AbstractTask>> jobs;
+  auto actual_nodes = std::vector<NodeID>();
   jobs.reserve(radix_container.size());
+  actual_nodes.reserve(radix_container.size());
 
   for (size_t partition_idx = 0; partition_idx < radix_container.size(); ++partition_idx) {
     // Skip empty partitions, so that we don't have too many empty jobs and hash tables
@@ -596,8 +603,10 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
     }
   }
 
+  std::vector<NodeID> actual_nodes;
   std::vector<std::shared_ptr<AbstractTask>> jobs;
   jobs.reserve(input_partition_count);
+  actual_nodes.reserve(input_partition_count);
 
   for (auto input_partition_idx = ChunkID{0}; input_partition_idx < input_partition_count; ++input_partition_idx) {
     const auto& input_partition = radix_container[input_partition_idx];
@@ -639,7 +648,7 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
       jobs.back()->set_node_id(job_nodes_placement[input_partition_idx]);
     }
   }
-  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
+  Hyrise::get().scheduler()->schedule_on_preferred_nodes_and_wait_for_tasks(jobs, actual_nodes);
   jobs.clear();
 
   // Compress null_values_as_char into partition.null_values
@@ -827,7 +836,7 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
     }
   }
 
-  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
+  Hyrise::get().scheduler()->schedule_on_preferred_nodes_and_wait_for_tasks(jobs, job_nodes);
 }
 
 template <typename ProbeColumnType, typename HashedType, JoinMode mode>
@@ -842,6 +851,7 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_containe
              " job nodes");
   std::vector<std::shared_ptr<AbstractTask>> jobs;
   jobs.reserve(probe_radix_container_count);
+  job_nodes.reserve(probe_radix_container_count);
 
   for (auto partition_idx = size_t{0}; partition_idx < probe_radix_container_count; ++partition_idx) {
     // Skip empty partitions to avoid empty output chunks
@@ -951,7 +961,7 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_containe
     }
   }
 
-  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
+  Hyrise::get().scheduler()->schedule_on_preferred_nodes_and_wait_for_tasks(jobs, job_nodes);
 }
 
 }  // namespace hyrise

@@ -12,6 +12,45 @@
 
 namespace hyrise {
 
+auto numaNodeDictionaryCount = std::vector<long>(8, 0);
+
+void printAllocations() {
+  for (auto node_index = 0ul; node_index < numaNodeDictionaryCount.size(); node_index++) {
+    std::cout << "Node " << node_index << " " << numaNodeDictionaryCount[node_index] / 2 << " ";
+  }
+  std::cout << std::endl;
+}
+
+int printNumaNodeOfPage(const void* addr) {
+  unsigned long page = (unsigned long)addr;
+  page = page & (~(4096 - 1));
+  void* pages[1] = {(void*)page};
+  int status;
+  long ret = numa_move_pages(0, 1, pages, NULL, &status, 0);
+  if (ret == 0) {
+    numaNodeDictionaryCount[status]++;
+    std::cout << status << " ";
+    return status;
+  } else {
+    std::cout << "move_pages returned error!" << std::endl;
+    return 0;
+  }
+}
+
+NodeID getNumaNodeOfPage(const void* addr) {
+  unsigned long page = (unsigned long)addr;
+  page = page & (~(4096 - 1));
+  void* pages[1] = {(void*)page};
+  int status;
+  long ret = numa_move_pages(0, 1, pages, NULL, &status, 0);
+  if (ret == 0) {
+    return static_cast<NodeID>(status);
+  } else {
+    std::cout << "move_pages returned error!" << std::endl;
+    return INVALID_NODE_ID;
+  }
+}
+
 template <typename T>
 DictionarySegment<T>::DictionarySegment(const std::shared_ptr<const pmr_vector<T>>& dictionary,
                                         const std::shared_ptr<const BaseCompressedVector>& attribute_vector)
@@ -22,8 +61,25 @@ DictionarySegment<T>::DictionarySegment(const std::shared_ptr<const pmr_vector<T
   // NULL is represented by _dictionary.size(). INVALID_VALUE_ID, which is the highest possible number in
   // ValueID::base_type (2^32 - 1), is needed to represent "value not found" in calls to lower_bound/upper_bound.
   // For a DictionarySegment of the max size Chunk::MAX_SIZE, those two values overlap.
+  // _attribute_vector->at(0);
+  //printNumaNodeOfPage(_attribute_vector.get());
+  // printNumaNodeOfPage(&(*_dictionary)[0]);
+  // auto node_decomp = printNumaNodeOfPage(_decompressor.get());
+  // auto node_this = printNumaNodeOfPage(this);
 
+  /*if (node_attr == node_dict) {
+    std::cout << "Dictionary and its attributes on same Node" << std::endl << std::flush;
+  } else {
+    std::cout << "Dictionary and its attributes on different Node" << std::endl << std::flush;
+  }*/
+  // printAllocations();
+  _node_id = getNumaNodeOfPage(&(*_dictionary)[0]);
   Assert(_dictionary->size() < std::numeric_limits<ValueID::base_type>::max(), "Input segment too big");
+}
+
+template <typename T>
+NodeID DictionarySegment<T>::numa_node_location() {
+  return _node_id;
 }
 
 template <typename T>
