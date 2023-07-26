@@ -4,6 +4,7 @@
 #include "expression/window_expression.hpp"
 #include "expression/window_function_expression.hpp"
 #include "logical_query_plan/static_table_node.hpp"
+#include "operators/aggregate/window_function_traits.hpp"
 #include "operators/table_wrapper.hpp"
 #include "operators/window_function_evaluator.hpp"
 #include "storage/table.hpp"
@@ -48,7 +49,7 @@ struct WindowOperatorFactory {
                                 std::move(_sort_modes), std::move(frame_description));
 
     const auto window_function_expression = [&]() -> std::shared_ptr<WindowFunctionExpression> {
-      if (aggregate_functions.contains(function_type)) {
+      if (!window_function_evaluator::is_rank_like(function_type)) {
         const auto column_expression = std::make_shared<LQPColumnExpression>(_static_table_node, argument_column);
         return std::make_shared<WindowFunctionExpression>(function_type, column_expression, window);
       } else {
@@ -127,6 +128,13 @@ TEST_F(OperatorsWindowTest, ExactlyOneOrderByForRange) {
       valid_operator_factory->build_operator(this->_table_wrapper, frame, WindowFunction::Sum, ColumnID{1});
 
   EXPECT_NO_THROW(window_function_operator_valid->execute());
+}
+
+TEST_F(OperatorsWindowTest, InvalidWindowFunction) {
+  const auto frame = build_frame();
+  const auto window_function_operator =
+      _window_operator_factory->build_operator(this->_table_wrapper, frame, WindowFunction{-1}, ColumnID{1});
+  EXPECT_THROW(window_function_operator->execute(), std::logic_error);
 }
 
 TEST_F(OperatorsWindowTest, Rank) {
