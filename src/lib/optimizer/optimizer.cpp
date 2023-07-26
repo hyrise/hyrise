@@ -217,8 +217,8 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   // beneficial. However, TPC-H Q 21 (that is already long-running) degrades drastically. See:
   // https://github.com/hyrise/hyrise/pull/2536#issuecomment-1423076256
   // TODO(anyone): Re-evaluate this in the future.
-  optimizer->add_rule(std::make_unique<SemiJoinReductionRule>());
-  // optimizer->add_rule(std::make_unique<DataInducedPredicateRule>());
+  //optimizer->add_rule(std::make_unique<SemiJoinReductionRule>());
+  optimizer->add_rule(std::make_unique<DataInducedPredicateRule>());
 
   // TODO replace semi_join_r rule with our rule
   // later: schauen, wo man gewinnt, wo man verliert mit unserer Rule (Benchmarking)
