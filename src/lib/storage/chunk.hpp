@@ -120,7 +120,7 @@ class Chunk : private Noncopyable {
   void remove_index(const std::shared_ptr<AbstractChunkIndex>& index);
 
   /**
-   * Migrates (copies) segments using memory_source. If the memory_source garantees a
+   * Migrates (copies) segments using memory_source. If the memory_source guarantees a
    * specific numa node location, set it, else ignore.
    */
   void migrate(boost::container::pmr::memory_resource* memory_source, NodeID node_id = UNKNOWN_NODE_ID);
