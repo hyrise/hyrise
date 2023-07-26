@@ -38,6 +38,7 @@ enum class LQPNodeType {
   Update,
   Union,
   Validate,
+  Window,
   Mock
 };
 
