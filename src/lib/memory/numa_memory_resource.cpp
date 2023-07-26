@@ -16,23 +16,14 @@ using arena_config_t = struct arena_config_s;
 namespace hyrise {
 NumaExtentHooks::NumaExtentHooks(const NodeID node_id) {}
 std::unordered_map<ArenaID, NodeID> NumaExtentHooks::node_id_for_arena_id = std::unordered_map<ArenaID, NodeID>{};
-std::unordered_map<NodeID, size_t> NumaExtentHooks::num_allocations = std::unordered_map<NodeID, size_t>{};
-std::unordered_map<NodeID, size_t> NumaExtentHooks::sum_allocated_bytes = std::unordered_map<NodeID, size_t>{};
   
 void NumaExtentHooks::store_node_id_for_arena(ArenaID arena_id, NodeID node_id) {
   if (NumaExtentHooks::node_id_for_arena_id.contains(arena_id)) {
     Fail("Tried to assign node id to an already assigned arena id.");
   }
   node_id_for_arena_id[arena_id] = node_id;
-  NumaExtentHooks::sum_allocated_bytes[node_id] = 0; 
-  NumaExtentHooks::num_allocations[node_id] = 0;
 }
-size_t NumaExtentHooks::get_num_allocations(NodeID node_id) {
-  return NumaExtentHooks::num_allocations[node_id];
-}
-size_t NumaExtentHooks::get_sum_allocated_bytes(NodeID node_id) {
-  return NumaExtentHooks::sum_allocated_bytes[node_id];
-}
+
 
 void* NumaExtentHooks::alloc(extent_hooks_t* extent_hooks, void* new_addr, size_t size, size_t alignment, bool* zero,
                              bool* commit, unsigned arena_index) {

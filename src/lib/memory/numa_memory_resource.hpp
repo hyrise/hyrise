@@ -16,13 +16,8 @@ class NumaExtentHooks {
   static bool dalloc(extent_hooks_t* extent_hooks, void* addr, size_t size, bool committed, unsigned arena_ind);
 
   static void store_node_id_for_arena(ArenaID, NodeID);
-
-  static size_t get_num_allocations(NodeID node_id);
-  static size_t get_sum_allocated_bytes(NodeID node_id);
  private:
   static std::unordered_map<ArenaID, NodeID> node_id_for_arena_id;
-  static std::unordered_map<NodeID, size_t> num_allocations; 
-  static std::unordered_map<NodeID, size_t> sum_allocated_bytes;
   
 };
 class NumaMemoryResource : public boost::container::pmr::memory_resource {
