@@ -7,16 +7,29 @@ Frame::Frame() {
   _state_and_version.store(update_state_with_same_version(0, EVICTED), std::memory_order_release);
 }
 
-void Frame::set_memory_node(const NumaMemoryNode memory_node) {
-  DebugAssert(memory_node != NO_NUMA_MEMORY_NODE, "Cannot set empty numa node");
+void Frame::set_numa_node(const NumaMemoryNode numa_node) {
+  DebugAssert(numa_node != NO_NUMA_MEMORY_NODE, "Cannot set empty numa node");
   DebugAssert(state(_state_and_version.load()) == LOCKED, "Frame must be locked to set memory node.");
-  _state_and_version |= (MEMORY_NODE_MASK & (static_cast<size_t>(memory_node) << MEMORY_NODE_SHIFT));
+  auto old_state_and_version = _state_and_version.load();
+  while (true) {
+    auto new_state_and_version =
+        old_state_and_version ^
+        ((old_state_and_version ^ static_cast<StateVersionType>(numa_node) << NUMA_NODE_SHIFT) & NUMA_NODE_MASK);
+    if (_state_and_version.compare_exchange_strong(old_state_and_version, new_state_and_version)) {
+      break;
+    }
+  }
+  // TODO: May want to test that the state is not modified
+  DebugAssert(Frame::numa_node(_state_and_version.load()) == numa_node,
+              "Setting numa node didnt work: " + std::to_string(Frame::numa_node(_state_and_version.load())));
 }
 
 void Frame::set_dirty(const bool new_dirty) {
   // TODO: DebugAssert(state(_state_and_version.load()) == LOCKED, "Frame must be locked to set dirty flag.");
   StateVersionType dirty = new_dirty;
-  _state_and_version |= DIRTY_MASK & (dirty << DIRTY_SHIFT);
+  // TODO: Is this really atomic???
+  _state_and_version.fetch_or(DIRTY_MASK & (dirty << DIRTY_SHIFT));
+  DebugAssert(is_dirty() == new_dirty, "Setting dirty didnt work");
 }
 
 void Frame::reset_dirty() {
@@ -52,12 +65,12 @@ StateVersionType Frame::state_and_version() const {
   return _state_and_version.load();
 }
 
-NumaMemoryNode Frame::memory_node() const {
-  return memory_node(_state_and_version.load());
+NumaMemoryNode Frame::numa_node() const {
+  return numa_node(_state_and_version.load());
 }
 
-NumaMemoryNode Frame::memory_node(StateVersionType state_and_version) {
-  return static_cast<NumaMemoryNode>((state_and_version & MEMORY_NODE_MASK) >> MEMORY_NODE_SHIFT);
+NumaMemoryNode Frame::numa_node(StateVersionType state_and_version) {
+  return static_cast<NumaMemoryNode>((state_and_version & NUMA_NODE_MASK) >> NUMA_NODE_SHIFT);
 }
 
 bool Frame::try_lock_shared(StateVersionType old_state_and_version) {

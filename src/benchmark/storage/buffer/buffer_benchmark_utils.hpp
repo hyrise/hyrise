@@ -11,8 +11,8 @@
 #include <unistd.h>
 #include <algorithm>
 #include <boost/accumulators/accumulators.hpp>
-#include <boost/accumulators/statistics.hpp>
 #include <boost/container/pmr/memory_resource.hpp>
+#include <boost/histogram.hpp>
 #include <random>
 #include "hyrise.hpp"
 #include "storage/buffer/buffer_manager.hpp"
@@ -111,11 +111,6 @@ using YCSBTable = std::vector<YCSBTuple>;
 using YSCBOperation = std::pair<YCSBKey, YSCBOperationType>;
 using YCSBOperations = std::vector<YSCBOperation>;
 
-using LatencyStats = boost::accumulators::accumulator_set<
-    double, boost::accumulators::features<boost::accumulators::tag::mean, boost::accumulators::tag::variance,
-                                          boost::accumulators::tag::median, boost::accumulators::tag::min,
-                                          boost::accumulators::tag::max>>;
-
 inline YCSBTable generate_ycsb_table(boost::container::pmr::memory_resource* memory_resource,
                                      const size_t database_size) {
   std::mt19937 generator{std::random_device{}()};
@@ -127,7 +122,6 @@ inline YCSBTable generate_ycsb_table(boost::container::pmr::memory_resource* mem
     auto tuple_size = magic_enum::enum_value<YCSBTupleSize>(distribution(generator));
     auto ptr = memory_resource->allocate(static_cast<size_t>(tuple_size), 64);
     auto page_id = buffer_manager.find_page(ptr);
-
     buffer_manager.pin_exclusive(page_id);
     simulate_store(reinterpret_cast<std::byte*>(ptr), static_cast<int>(tuple_size));
     buffer_manager.set_dirty(page_id);
@@ -199,6 +193,8 @@ inline void run_ycsb(benchmark::State& state, YCSBTable& table, YCSBOperations& 
   const auto operations_per_thread = operations.size() / state.threads();
   // TODO: Reset metrics of buffer manager
 
+  auto histogram = boost::histogram::make_histogram(boost::histogram::axis::regular<>(1000000, 0, 1000000));
+
   for (auto _ : state) {
     auto start = state.thread_index() * operations_per_thread;
     auto end = start + operations_per_thread;
@@ -208,6 +204,7 @@ inline void run_ycsb(benchmark::State& state, YCSBTable& table, YCSBOperations& 
       execute_ycsb_action(table, buffer_manager, op);
       auto end = std::chrono::high_resolution_clock::now();
       const auto latency = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
+      histogram(latency);
     }
   }
 

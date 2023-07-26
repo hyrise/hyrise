@@ -68,20 +68,24 @@ std::shared_ptr<Table> MetaBufferManagerMetricsTable::_on_generate() const {
        static_cast<int64_t>(metrics->total_bytes_copied_from_ssd_to_numa.load(std::memory_order_relaxed)),
        static_cast<int64_t>(metrics->total_bytes_copied_from_numa_to_dram.load(std::memory_order_relaxed)),
        static_cast<int64_t>(metrics->total_bytes_copied_from_dram_to_numa.load(std::memory_order_relaxed)),
-       static_cast<int64_t>(metrics->total_bytes_copied_from_dram_to_ssd.load(std::memory_order_relaxed)),
-       static_cast<int64_t>(metrics->total_bytes_copied_from_numa_to_ssd.load(std::memory_order_relaxed)),
+       static_cast<int64_t>(
+           metrics->dram_buffer_pool_metrics->total_bytes_copied_to_ssd.load(std::memory_order_relaxed)),
+       static_cast<int64_t>(
+           metrics->numa_buffer_pool_metrics->total_bytes_copied_to_ssd.load(std::memory_order_relaxed)),
        static_cast<int64_t>(metrics->total_bytes_copied_to_ssd.load(std::memory_order_relaxed)),
        static_cast<int64_t>(metrics->total_bytes_copied_from_ssd.load(std::memory_order_relaxed)),
        static_cast<int64_t>(metrics->total_hits.load(std::memory_order_relaxed)),
        static_cast<int64_t>(metrics->total_misses.load(std::memory_order_relaxed)),
        static_cast<int64_t>(metrics->total_pins.load(std::memory_order_relaxed)),
        static_cast<int64_t>(metrics->current_pins.load(std::memory_order_relaxed)),
-       static_cast<int64_t>(metrics->num_dram_eviction_queue_items_purged.load(std::memory_order_relaxed)),
-       static_cast<int64_t>(metrics->num_dram_eviction_queue_adds.load(std::memory_order_relaxed)),
-       static_cast<int64_t>(metrics->num_numa_eviction_queue_items_purged.load(std::memory_order_relaxed)),
-       static_cast<int64_t>(metrics->num_numa_eviction_queue_adds.load(std::memory_order_relaxed)),
-       static_cast<int64_t>(metrics->num_dram_evictions.load(std::memory_order_relaxed)),
-       static_cast<int64_t>(metrics->num_numa_evictions.load(std::memory_order_relaxed)),
+       static_cast<int64_t>(
+           metrics->numa_buffer_pool_metrics->num_eviction_queue_items_purged.load(std::memory_order_relaxed)),
+       static_cast<int64_t>(metrics->numa_buffer_pool_metrics->num_eviction_queue_adds.load(std::memory_order_relaxed)),
+       static_cast<int64_t>(
+           metrics->numa_buffer_pool_metrics->num_eviction_queue_items_purged.load(std::memory_order_relaxed)),
+       static_cast<int64_t>(metrics->numa_buffer_pool_metrics->num_eviction_queue_adds.load(std::memory_order_relaxed)),
+       static_cast<int64_t>(metrics->numa_buffer_pool_metrics->num_evictions.load(std::memory_order_relaxed)),
+       static_cast<int64_t>(metrics->numa_buffer_pool_metrics->num_evictions.load(std::memory_order_relaxed)),
        static_cast<int64_t>(metrics->num_madvice_free_calls.load(std::memory_order_relaxed)),
        static_cast<int64_t>(metrics->num_numa_tonode_memory_calls.load(std::memory_order_relaxed)),
        static_cast<int64_t>(Hyrise::get().buffer_manager.memory_consumption())});

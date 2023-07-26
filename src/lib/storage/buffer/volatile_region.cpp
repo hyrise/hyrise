@@ -50,7 +50,7 @@ void VolatileRegion::move_page_to_numa_node(PageID page_id, const NumaMemoryNode
     Fail("Move pages failed: " + strerror(error));
   }
   _metrics->num_numa_tonode_memory_calls.fetch_add(1, std::memory_order_relaxed);
-  _frames[page_id.index].set_memory_node(target_memory_node);
+  _frames[page_id.index].set_numa_node(target_memory_node);
 #endif
 }
 
@@ -71,8 +71,8 @@ void VolatileRegion::mbind_to_numa_node(PageID page_id, const NumaMemoryNode tar
   }
   numa_bitmask_free(nodes);
   _metrics->num_numa_tonode_memory_calls.fetch_add(1, std::memory_order_relaxed);
-  _frames[page_id.index].set_memory_node(target_memory_node);
 #endif
+  _frames[page_id.index].set_numa_node(target_memory_node);
 }
 
 void VolatileRegion::free(PageID page_id) {
@@ -95,7 +95,7 @@ void VolatileRegion::free(PageID page_id) {
   _metrics->num_madvice_free_calls.fetch_add(1, std::memory_order_relaxed);
 }
 
-std::pair<PageID, std::byte*> VolatileRegion::allocate() {
+std::tuple<PageID, Frame*, std::byte*> VolatileRegion::allocate() {
   // TODO: Handle missing space
   auto idx = PageID::PageIDType{0};
   {
@@ -113,7 +113,7 @@ std::pair<PageID, std::byte*> VolatileRegion::allocate() {
       Fail("Failed to mprotect: " + strerror(error));
     }
   }
-  return std::make_pair(page_id, ptr);
+  return std::make_tuple(page_id, &_frames[idx], ptr);
 }
 
 std::byte* VolatileRegion::get_page(PageID page_id) {

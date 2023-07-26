@@ -5,6 +5,7 @@
 #include <nlohmann/json.hpp>
 #include <tuple>
 #include "noncopyable.hpp"
+#include "storage/buffer/buffer_pool.hpp"
 #include "storage/buffer/frame.hpp"
 #include "storage/buffer/metrics.hpp"
 #include "storage/buffer/migration_policy.hpp"
@@ -33,6 +34,8 @@ class BufferManager : public boost::container::pmr::memory_resource, public Nonc
 
     // Identifier of the NUMA node to use for the buffer pool (default: -1, i.e., no NUMA node)
     NumaMemoryNode memory_node = NO_NUMA_MEMORY_NODE;
+
+    NumaMemoryNode cpu_node = DEFAULT_NUMA_NODE;
 
     // Path to the SSD storage. Can be a block device or a directory. (default: ~/.hyrise).
     std::filesystem::path ssd_path = "~/.hyrise";
@@ -94,57 +97,6 @@ class BufferManager : public boost::container::pmr::memory_resource, public Nonc
 
  protected:
   friend class Hyrise;
-
- private:
-  struct BufferPool {
-    BufferPool(const size_t pool_size, const bool enable_eviction_purge_worker,
-               std::array<std::shared_ptr<VolatileRegion>, NUM_PAGE_SIZE_TYPES> volatile_regions,
-               MigrationPolicy migration_policy, std::shared_ptr<SSDRegion> ssd_region,
-               std::shared_ptr<BufferPool> target_buffer_pool, std::shared_ptr<BufferManagerMetrics> metrics,
-               const NumaMemoryNode memory_node = DEFAULT_DRAM_NUMA_NODE);
-
-    void evict(EvictionItem& item, Frame* frame);
-
-    void release_page(const PageSizeType size);
-
-    bool ensure_free_pages(const PageSizeType size);
-
-    void purge_eviction_queue();
-
-    void add_to_eviction_queue(const PageID page_id, Frame* frame);
-
-    bool enabled() const;
-
-    size_t free_bytes_node() const;
-
-    size_t total_bytes_node() const;
-
-    size_t memory_consumption() const;
-
-    // The maximum number of bytes that can be allocated
-    const size_t max_bytes;
-
-    // The number of bytes that are currently used
-    std::atomic<size_t> used_bytes;
-
-    std::shared_ptr<BufferManagerMetrics> metrics;
-
-    std::shared_ptr<SSDRegion> ssd_region;
-
-    std::shared_ptr<BufferPool> target_buffer_pool;
-
-    // Eviction queue for frames that are not pinned
-    std::unique_ptr<EvictionQueue> eviction_queue;
-
-    // Async background worker that purges the eviction queue
-    std::unique_ptr<PausableLoopThread> eviction_purge_worker;
-
-    const MigrationPolicy migration_policy;
-
-    std::array<std::shared_ptr<VolatileRegion>, NUM_PAGE_SIZE_TYPES> volatile_regions;
-
-    const NumaMemoryNode memory_node;
-  };
 
   std::shared_ptr<VolatileRegion> get_region(const PageID page_id);
 

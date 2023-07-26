@@ -89,7 +89,7 @@ static constexpr PageID INVALID_PAGE_ID = PageID{MIN_PAGE_SIZE_TYPE, 0, false};
 constexpr auto NO_NUMA_MEMORY_NODE = NumaMemoryNode{-1};
 
 // The usual numa node for DRAM allocations
-constexpr auto DEFAULT_DRAM_NUMA_NODE = NumaMemoryNode{0};
+constexpr auto DEFAULT_NUMA_NODE = NumaMemoryNode{0};
 
 // Pages need to be aligned to 512 in order to be used with O_DIRECT
 constexpr size_t PAGE_ALIGNMENT = 512;
@@ -142,5 +142,19 @@ inline void DebugAssertPageAligned(const void* data) {
               "Destination is not properly aligned to 512: " +
                   std::to_string(reinterpret_cast<std::uintptr_t>(data) % PAGE_ALIGNMENT));
 }
+
+// Busy waiting with backoff
+inline void yield(const size_t repeat) {
+  if (repeat < 4) {
+    // } else if (repeat < 16) {
+    //   _mm_pause();
+  } else if ((repeat < 32) || (repeat & 1)) {
+    std::this_thread::yield();
+  } else if (repeat < 1000000) {
+    std::this_thread::sleep_for(std::chrono::nanoseconds(1000));
+  } else {
+    Fail("Yield for too long. Something is blocking. Current state");
+  }
+};
 
 }  // namespace hyrise
