@@ -25,8 +25,6 @@ set(
     expression/abstract_expression.hpp
     expression/abstract_predicate_expression.cpp
     expression/abstract_predicate_expression.hpp
-    expression/aggregate_expression.cpp
-    expression/aggregate_expression.hpp
     expression/arithmetic_expression.cpp
     expression/arithmetic_expression.hpp
     expression/between_expression.cpp
@@ -81,6 +79,10 @@ set(
     expression/unary_minus_expression.hpp
     expression/value_expression.cpp
     expression/value_expression.hpp
+    expression/window_expression.cpp
+    expression/window_expression.hpp
+    expression/window_function_expression.cpp
+    expression/window_function_expression.hpp
     hyrise.cpp
     hyrise.hpp
     import_export/binary/binary_parser.cpp
@@ -164,6 +166,8 @@ set(
     logical_query_plan/update_node.hpp
     logical_query_plan/validate_node.cpp
     logical_query_plan/validate_node.hpp
+    logical_query_plan/window_node.cpp
+    logical_query_plan/window_node.hpp
     lossless_cast.cpp
     lossless_cast.hpp
     lossy_cast.hpp
@@ -180,7 +184,7 @@ set(
     operators/abstract_read_only_operator.hpp
     operators/abstract_read_write_operator.cpp
     operators/abstract_read_write_operator.hpp
-    operators/aggregate/aggregate_traits.hpp
+    operators/aggregate/window_function_traits.hpp
     operators/aggregate_hash.cpp
     operators/aggregate_hash.hpp
     operators/aggregate_sort.cpp
