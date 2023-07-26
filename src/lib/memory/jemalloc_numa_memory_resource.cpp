@@ -3,6 +3,7 @@
 #include <numa.h>
 #include <boost/container/pmr/memory_resource.hpp>
 #include "utils/assert.hpp"
+#include <sys/mman.h>
 
 namespace {
 
@@ -44,13 +45,10 @@ size_t NumaExtentHooks::get_sum_allocated_bytes(NodeID node_id) {
 
 void* NumaExtentHooks::alloc(extent_hooks_t* extent_hooks, void* new_addr, size_t size, size_t alignment, bool* zero,
                              bool* commit, unsigned arena_index) {
-  NumaExtentHooks::num_allocations[NumaExtentHooks::node_id_for_arena_id[arena_index]] += 1;
-  
   size_t off; 
   if((off = size % 4096) > 0){
-    size += 4096 - off; 
+    size += 4096 - off;
   }
-  NumaExtentHooks::sum_allocated_bytes[NumaExtentHooks::node_id_for_arena_id[arena_index]] += size;
   
   void* addr = mmap(nullptr, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
   DebugAssert(addr != nullptr, "Failed to mmap pages.");
@@ -61,7 +59,12 @@ void* NumaExtentHooks::alloc(extent_hooks_t* extent_hooks, void* new_addr, size_
   return addr;
 }
 
-JemallocNumaMemoryResource::JemallocNumaMemoryResource(const NodeID node_id) : _node_id(node_id) {
+bool NumaExtentHooks::dalloc(extent_hooks_t* extent_hooks, void* addr, size_t size, bool committed, unsigned arena_ind) {
+  munmap(addr, size);
+  return true;
+}
+
+JemallocNumaMemoryResource::JemallocNumaMemoryResource(const NodeID node_id) : _node_id(node_id) {  
   // Setup jemalloc arena.
   _hooks.alloc = NumaExtentHooks::alloc;
   auto arena_id = uint32_t{0};
@@ -79,12 +82,13 @@ JemallocNumaMemoryResource::JemallocNumaMemoryResource(const NodeID node_id) : _
 
 void* JemallocNumaMemoryResource::do_allocate(std::size_t bytes, std::size_t alignment) {
   // return numa_alloc(bytes);
-  return mallocx(bytes, _allocation_flags);
+  const auto addr = mallocx(bytes, _allocation_flags);
+  return addr;
 }
 
 void JemallocNumaMemoryResource::do_deallocate(void* pointer, std::size_t bytes, std::size_t alignment) {
-  // numa_free(pointer, bytes);
-  sdallocx(pointer, bytes, _allocation_flags);
+  //numa_free(pointer, bytes);
+  dallocx(pointer, _allocation_flags);
 }
 
 bool JemallocNumaMemoryResource::do_is_equal(const memory_resource& other) const noexcept {

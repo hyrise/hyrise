@@ -17,6 +17,8 @@ class NumaExtentHooks {
 
   static void* alloc(extent_hooks_t* extent_hooks, void* new_addr, size_t size, size_t alignment, bool* zero,
                      bool* commit, unsigned arena_index);
+  static bool dalloc(extent_hooks_t* extent_hooks, void* addr, size_t size, bool committed, unsigned arena_ind);
+
   static void store_node_id_for_arena(ArenaID, NodeID);
 
   static size_t get_num_allocations(NodeID node_id);
@@ -40,7 +42,9 @@ class JemallocNumaMemoryResource : public boost::container::pmr::memory_resource
 
  protected:
   NodeID _node_id{0};
-  extent_hooks_t _hooks{};
+  extent_hooks_t _hooks{
+    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL
+  };
   int32_t _allocation_flags{0};
 };
 
