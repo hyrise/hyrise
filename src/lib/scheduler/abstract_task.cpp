@@ -13,8 +13,7 @@
 
 namespace hyrise {
 
-AbstractTask::AbstractTask(TaskType task_type, SchedulePriority priority, bool stealable)
-    : _type{task_type}, _priority{priority}, _stealable{stealable} {}
+AbstractTask::AbstractTask(SchedulePriority priority, bool stealable) : _priority{priority}, _stealable{stealable} {}
 
 TaskID AbstractTask::id() const {
   return _id;
@@ -160,10 +159,6 @@ void AbstractTask::execute() {
 
 TaskState AbstractTask::state() const {
   return _state;
-}
-
-TaskType AbstractTask::type() const {
-  return _type;
 }
 
 void AbstractTask::_on_predecessor_done() {

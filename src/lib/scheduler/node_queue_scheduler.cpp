@@ -10,7 +10,7 @@
 #include "abstract_task.hpp"
 #include "hyrise.hpp"
 #include "job_task.hpp"
-#include "shut_down_task.hpp"
+#include "shutdown_task.hpp"
 #include "task_queue.hpp"
 #include "uid_allocator.hpp"
 #include "utils/assert.hpp"
@@ -25,7 +25,7 @@ NodeQueueScheduler::NodeQueueScheduler() {
 NodeQueueScheduler::~NodeQueueScheduler() {
   if (HYRISE_DEBUG && _active) {
     // We cannot throw an exception because destructors are noexcept by default.
-    std::cerr << "NodeQueueScheduler::finish() wasn't called prior to destroying it" << std::endl;
+    std::cerr << "NodeQueueScheduler::finish() wasn't called prior to destroying it." << std::endl;
     std::exit(EXIT_FAILURE);  // NOLINT(concurrency-mt-unsafe)
   }
 }
@@ -104,7 +104,7 @@ void NodeQueueScheduler::finish() {
     const auto node_worker_count = _workers_per_node[node_id];
     for (auto worker_id = size_t{0}; worker_id < node_worker_count; ++worker_id) {
       // Create a shutdown task for every worker.
-      auto shut_down_task = std::make_shared<ShutDownTask>(_active_worker_count);
+      auto shut_down_task = std::make_shared<ShutdownTask>(_active_worker_count);
       shut_down_task->schedule(node_id);
     }
   }
@@ -209,7 +209,7 @@ void NodeQueueScheduler::_group_tasks(const std::vector<std::shared_ptr<Abstract
 
   std::vector<std::shared_ptr<AbstractTask>> grouped_tasks(NUM_GROUPS);
   for (const auto& task : tasks) {
-    if (!task->predecessors().empty() || !task->successors().empty() || task->type() == TaskType::ShutDownTask) {
+    if (!task->predecessors().empty() || !task->successors().empty() || dynamic_cast<ShutdownTask*>(&*task)) {
       return;
     }
 

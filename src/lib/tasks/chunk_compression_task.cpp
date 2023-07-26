@@ -17,7 +17,7 @@ ChunkCompressionTask::ChunkCompressionTask(const std::string& table_name, const 
     : ChunkCompressionTask{table_name, std::vector<ChunkID>{chunk_id}} {}
 
 ChunkCompressionTask::ChunkCompressionTask(const std::string& table_name, const std::vector<ChunkID>& chunk_ids)
-    : AbstractTask{TaskType::ChunkCompressionTask}, _table_name{table_name}, _chunk_ids{chunk_ids} {}
+    : _table_name{table_name}, _chunk_ids{chunk_ids} {}
 
 void ChunkCompressionTask::_on_execute() {
   const auto& table = Hyrise::get().storage_manager.get_table(_table_name);

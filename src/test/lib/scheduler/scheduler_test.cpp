@@ -14,6 +14,7 @@
 #include "scheduler/job_task.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/operator_task.hpp"
+#include "scheduler/shutdown_task.hpp"
 #include "scheduler/task_queue.hpp"
 
 namespace hyrise {

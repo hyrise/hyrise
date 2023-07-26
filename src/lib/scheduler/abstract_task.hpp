@@ -87,8 +87,7 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
   friend class OperatorTaskTest;
 
  public:
-  explicit AbstractTask(TaskType task_type, SchedulePriority priority = SchedulePriority::Default,
-                        bool stealable = true);
+  explicit AbstractTask(SchedulePriority priority = SchedulePriority::Default, bool stealable = true);
   virtual ~AbstractTask() = default;
 
   /**
@@ -178,8 +177,6 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
 
   TaskState state() const;
 
-  TaskType type() const;
-
  protected:
   virtual void _on_execute() = 0;
 
@@ -200,8 +197,6 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
    * Hyrise::get().scheduler()->wait_for_tasks().
    */
   void _join();
-
-  const TaskType _type;
 
   std::atomic<TaskID> _id{INVALID_TASK_ID};
   std::atomic<NodeID> _node_id{INVALID_NODE_ID};
