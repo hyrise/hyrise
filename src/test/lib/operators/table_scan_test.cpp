@@ -262,6 +262,12 @@ INSTANTIATE_TEST_SUITE_P(EncodingTypes, OperatorsTableScanTest,
                                            EncodingType::FrameOfReference),
                          enum_formatter<EncodingType>);
 
+INSTANTIATE_TEST_SUITE_P(EncodingTypes, OperatorsTableScanTest,
+                         ::testing::ValuesIn(get_supporting_segment_encodings_specs(DataType::Int,
+                                                                                                       true)),
+                                            ::testing::Bool()),
+                         segments_using_allocator_test_formatter);
+
 TEST_P(OperatorsTableScanTest, DoubleScan) {
   const auto expected_result = load_table("resources/test_data/tbl/int_float_filtered.tbl", ChunkOffset{2});
 

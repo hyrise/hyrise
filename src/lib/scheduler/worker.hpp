@@ -49,7 +49,7 @@ class Worker : public std::enable_shared_from_this<Worker>, private Noncopyable 
   void operator=(Worker&&) = delete;
 
  protected:
-  enum class AllowSleep : bool { Yes = true, No = false };
+  enum class AllowSleep : bool { No = false, Yes = true,  };
 
   void operator()();
 

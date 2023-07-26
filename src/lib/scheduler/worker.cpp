@@ -13,6 +13,7 @@
 #include <vector>
 
 #include <boost/predef.h>
+#include <boost/atomic/detail/pause.hpp>
 
 #include "abstract_scheduler.hpp"
 #include "abstract_task.hpp"
@@ -28,13 +29,13 @@ using namespace hyrise;  // NOLINT(build/namespaces)
 // https://www.intel.com/content/www/us/en/developer/articles/technical/a-common-construct-to-avoid-the-contention-of-threads-architecture-agnostic-spin-wait-loops.html).
 // Instructions differ between ARM and x86. Tested on recent x86 CPUs (AMD and Intel) as well as ARM-based Apple M2 and
 // Raspberry Pi 4.
-void spin_wait() {
-#if BOOST_ARCH_ARM
-    __asm__ __volatile__("yield");
-#elif BOOST_ARCH_X86_64
-    _mm_pause();
-#endif
-}
+// void spin_wait() {
+// #if BOOST_ARCH_ARM
+//     __asm__ __volatile__("yield");
+// #elif BOOST_ARCH_X86_64
+//     _mm_pause();
+// #endif
+// }
 
 /**
  * On worker threads, this references the Worker running on this thread, on all other threads, this is empty.
@@ -90,24 +91,34 @@ void Worker::_work(const AllowSleep allow_sleep) {
 
   auto task = std::shared_ptr<AbstractTask>{};
   auto spin_count = int64_t{-1};
+
+  // auto break_at_next_task = false;
+  // auto break_at_local_task = false;
+  // auto break_at_distant_task = false;
+  // auto break_at_no_sleep = false;
+  // auto break_at_wake = false;
+
   while (true) {
     ++spin_count;
 
     if (_next_task) {
       task = std::move(_next_task);
       _next_task = nullptr;
+      // break_at_next_task = true;
       break;
     } else {
       if (_queue->semaphore.tryWait()) {
         task = _queue->pull();
+        // break_at_local_task = true;
         break;
       }
     }
 
-    if (spin_count < 4) {
-      // Do not immediately steal tasks but first spin a few times on the local queue.
-      continue;
-    }
+    // if (spin_count < 4 && allow_sleep == AllowSleep::Yes) {
+    //   // Do not immediately steal tasks but first spin a few times on the local queue. In case the worker is not
+    //   // allowed to sleep, directly try to steal.
+    //   continue;
+    // }
 
     // No workable task on local queue: try to steal from other queues.
     for (const auto& queue : queues) {
@@ -119,6 +130,7 @@ void Worker::_work(const AllowSleep allow_sleep) {
         task = queue->steal();
         if (task) {
           task->set_node_id(_queue->node_id());
+          // break_at_distant_task = true;
           break;
         }
       }
@@ -127,14 +139,17 @@ void Worker::_work(const AllowSleep allow_sleep) {
     if (task || allow_sleep == AllowSleep::No) {
       // Exit loop when task successfully pulled from distant queue or when worker is not allowed to sleep or spin (see
       // _work() call in _wait_for_tasks()).
+      // break_at_no_sleep = true;
       break;
     }
 
     // Exponential back off. Do not spin more than 1024 times.
     const auto spin_loop_count = std::min(1024, 1 << std::min(int64_t{10}, spin_count));
     DebugAssert(spin_loop_count >= 0 && spin_loop_count < 1025, "Unexpected spin count (over-/underflow?).");
+    // std::printf("Worker id %zu spins %zu times.\n", static_cast<size_t>(_id), static_cast<size_t>(spin_loop_count));
     for (auto loop_id = int32_t{0}; loop_id < spin_loop_count; ++loop_id) {
-      spin_wait();
+      // spin_wait();
+      boost::atomics::detail::pause();
     }
 
     if (spin_count < 16) {
@@ -148,22 +163,24 @@ void Worker::_work(const AllowSleep allow_sleep) {
     }
 
     const auto time_passed_spinning = std::chrono::nanoseconds{std::chrono::steady_clock::now() - *first_sleep_try};
-    if (time_passed_spinning.count() > 5'000'000) {
+    if (time_passed_spinning.count() > 10'000'000) {
       // We only yield the worker thread after we have spinned for 10 ms.
-      std::printf("Worker id %zu goes to sleep. Spin count is %zu and we waited %zu ns.\n", static_cast<size_t>(_id), static_cast<size_t>(spin_count), static_cast<size_t>(time_passed_spinning.count()));
+      // std::printf("Worker id %zu goes to sleep. Spin count is %zu and we waited %zu ns.\n", static_cast<size_t>(_id), static_cast<size_t>(spin_count), static_cast<size_t>(time_passed_spinning.count()));
       _queue->semaphore.wait();
       // std::printf("Worker id %zu awakes. Spin count is %zu and we waited %zu ns.\n", static_cast<size_t>(_id), static_cast<size_t>(spin_count), static_cast<size_t>(time_passed_spinning.count()));
       task = _queue->pull();
+      // break_at_wake = true;
       break;
     }
     // std::printf("Worker id %zu spin count: %zu.\n", static_cast<size_t>(_id), static_cast<size_t>(spin_count));
   }
 
-  std::printf("Worker id %zu processes task with a spin count of: %zu.\n", static_cast<size_t>(_id), static_cast<size_t>(spin_count));
-
   if (!task) {
+    // std::printf("Worker id %zu returns with spin count of: %zu (%d, %d, %d, %d, %d, sleep: %s).\n", static_cast<size_t>(_id), static_cast<size_t>(spin_count), break_at_next_task, break_at_local_task, break_at_distant_task, break_at_no_sleep, break_at_wake, std::string{magic_enum::enum_name(allow_sleep)}.c_str());
     return;
   }
+
+  // std::printf("Worker id %zu processes task with a spin count of: %zu (%d, %d, %d, %d, %d, sleep: %s).\n", static_cast<size_t>(_id), static_cast<size_t>(spin_count), break_at_next_task, break_at_local_task, break_at_distant_task, break_at_no_sleep, break_at_wake, std::string{magic_enum::enum_name(allow_sleep)}.c_str());
 
   const auto successfully_assigned = task->try_mark_as_assigned_to_worker();
   if (!successfully_assigned) {

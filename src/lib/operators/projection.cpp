@@ -56,7 +56,7 @@ void Projection::_on_set_transaction_context(const std::weak_ptr<TransactionCont
 }
 
 std::shared_ptr<const Table> Projection::_on_execute() {
-  Timer timer;
+  auto timer = Timer{};
 
   const auto& input_table = *left_input_table();
 
