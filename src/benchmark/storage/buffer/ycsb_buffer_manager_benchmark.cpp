@@ -22,13 +22,11 @@ namespace hyrise {
 template <YCSBTableAccessPattern AccessPattern, MigrationPolicy policy = LazyMigrationPolicy>
 class YCSBBufferManagerFixture : public benchmark::Fixture {
  public:
-  constexpr static auto GB = 1024 * 1024 * 1024;
   constexpr static auto PAGE_SIZE_TYPE = MIN_PAGE_SIZE_TYPE;
   constexpr static auto DEFAULT_DRAM_BUFFER_POOL_SIZE = 1UL * GB;
   constexpr static auto DEFAULT_NUMA_BUFFER_POOL_SIZE = 2UL * GB;
 
   constexpr static auto NUM_OPERATIONS = 1000000;
-  // constexpr static size_t DATABASE_SIZE = 8UL * GB;
 
   YCSBTable table;
   YCSBOperations operations;
@@ -39,7 +37,6 @@ class YCSBBufferManagerFixture : public benchmark::Fixture {
       auto config = BufferManager::Config::from_env();
       config.dram_buffer_pool_size = DEFAULT_DRAM_BUFFER_POOL_SIZE;
       config.numa_buffer_pool_size = DEFAULT_NUMA_BUFFER_POOL_SIZE;
-      // config.memory_node = NumaMemoryNode{2};
       config.migration_policy = policy;
 
       Hyrise::get().buffer_manager = BufferManager(config);
@@ -62,6 +59,7 @@ inline void run_ycsb(benchmark::State& state, YCSBTable& table, YCSBOperations& 
                      BufferManager& buffer_manager) {
   const auto operations_per_thread = operations.size() / state.threads();
   // TODO: Reset metrics of buffer manager
+  auto bytes_processed = uint64_t{0};
 
   for (auto _ : state) {
     auto start = state.thread_index() * operations_per_thread;
@@ -69,7 +67,7 @@ inline void run_ycsb(benchmark::State& state, YCSBTable& table, YCSBOperations& 
     for (auto i = start; i < end; ++i) {
       const auto op = operations[i];
       auto start = std::chrono::high_resolution_clock::now();
-      execute_ycsb_action(table, buffer_manager, op);
+      bytes_processed += execute_ycsb_action(table, buffer_manager, op);
       auto end = std::chrono::high_resolution_clock::now();
       const auto latency = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
     }
@@ -84,6 +82,8 @@ inline void run_ycsb(benchmark::State& state, YCSBTable& table, YCSBOperations& 
 
   // TODO: not per thread?
   state.SetItemsProcessed(operations_per_thread);
+  state.SetBytesProcessed(bytes_processed);
+  state.counters["cache_hit_rate"] = buffer_manager.metrics()->hit_rate();
 }
 
 #define CONFIGURE_BENCHMARK(AccessPattern, Policy)                                       \

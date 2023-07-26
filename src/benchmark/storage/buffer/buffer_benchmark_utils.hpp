@@ -7,13 +7,15 @@
 #ifdef __AVX512VL__
 #include <x86intrin.h>
 #endif
+#include <fcntl.h>
 #include <sys/mman.h>
 #include <unistd.h>
 #include <algorithm>
-#include <boost/accumulators/accumulators.hpp>
-#include <boost/container/pmr/memory_resource.hpp>
-#include <boost/histogram.hpp>
+#include <cstdlib>
+#include <filesystem>
+#include <memory>
 #include <random>
+#include <vector>
 #include "hyrise.hpp"
 #include "storage/buffer/buffer_manager.hpp"
 #include "utils/assert.hpp"
@@ -21,6 +23,7 @@
 
 namespace hyrise {
 
+constexpr static auto GB = 1024 * 1024 * 1024;
 constexpr static auto SEED = 123761253768512;
 constexpr static auto CACHE_LINE_SIZE = 64;
 
@@ -88,16 +91,29 @@ inline void simulate_cacheline_read(std::byte* ptr) {
 #endif
 }
 
-inline void simulate_page_read(std::byte* ptr, int num_bytes) {
-  for (int i = 0; i < num_bytes; i += CACHE_LINE_SIZE) {
+inline void simulate_read(std::byte* ptr, size_t num_bytes) {
+  for (size_t i = 0; i < num_bytes; i += CACHE_LINE_SIZE) {
     simulate_cacheline_read(ptr + i);
   }
 }
 
-inline void simulate_store(std::byte* ptr, int num_bytes) {
-  for (int i = 0; i < num_bytes; i += CACHE_LINE_SIZE) {
+inline void simulate_store(std::byte* ptr, size_t num_bytes) {
+  for (size_t i = 0; i < num_bytes; i += CACHE_LINE_SIZE) {
     simulate_cacheline_store(ptr + i);
   }
+}
+
+inline int open_file(std::string_view filename) {
+#ifdef __APPLE__
+  int flags = O_RDWR | O_CREAT | O_DSYNC;
+#elif __linux__
+  int flags = O_RDWR | O_CREAT | O_DIRECT | O_DSYNC;
+#endif
+  auto fd = open(std::string(filename).c_str(), flags, 0666);
+  if (fd < 0) {
+    Fail("Cannot open file");
+  }
+  return fd;
 }
 
 enum class YCSBTableAccessPattern : int { ReadHeavy = 90, Balanced = 50, WriteHeavy = 10 };
@@ -120,7 +136,7 @@ inline YCSBTable generate_ycsb_table(boost::container::pmr::memory_resource* mem
   auto& buffer_manager = Hyrise::get().buffer_manager;
   while (current_size < database_size) {
     auto tuple_size = magic_enum::enum_value<YCSBTupleSize>(distribution(generator));
-    auto ptr = memory_resource->allocate(static_cast<size_t>(tuple_size), 64);
+    auto ptr = memory_resource->allocate(static_cast<size_t>(tuple_size), CACHE_LINE_SIZE);
     auto page_id = buffer_manager.find_page(ptr);
     buffer_manager.pin_exclusive(page_id);
     simulate_store(reinterpret_cast<std::byte*>(ptr), static_cast<int>(tuple_size));
@@ -131,6 +147,8 @@ inline YCSBTable generate_ycsb_table(boost::container::pmr::memory_resource* mem
     table.push_back(tuple);
     current_size += static_cast<size_t>(tuple_size);
   }
+
+  // TODO: Verifiy different sizes
 
   return table;
 }
@@ -147,11 +165,12 @@ inline YCSBOperations generate_ycsb_operations(const size_t num_keys, const floa
     auto key = static_cast<YCSBKey>(key_distribution(generator));
     ops.push_back(std::make_pair(key, op));
   }
-
+  // TODO: verify
   return ops;
 }
 
-inline void execute_ycsb_action(const YCSBTable& table, BufferManager& buffer_manager, const YSCBOperation operation) {
+inline uint64_t execute_ycsb_action(const YCSBTable& table, BufferManager& buffer_manager,
+                                    const YSCBOperation operation) {
   const auto [key, op_type] = operation;
   const auto [size_type, ptr] = table[key];
   auto num_bytes = static_cast<int>(size_type);
@@ -159,15 +178,15 @@ inline void execute_ycsb_action(const YCSBTable& table, BufferManager& buffer_ma
   switch (op_type) {
     case YSCBOperationType::Read: {
       buffer_manager.pin_shared(page_id, AccessIntent::Read);
-      simulate_page_read(ptr, num_bytes);
+      simulate_read(ptr, num_bytes);
       buffer_manager.unpin_shared(page_id);
-      break;
+      return num_bytes;
     }
     case YSCBOperationType::Update: {
       buffer_manager.pin_exclusive(page_id);
       simulate_store(ptr, num_bytes);
       buffer_manager.unpin_exclusive(page_id);
-      break;
+      return num_bytes;
     }
     default:
       Fail("Operation not supported");
@@ -178,13 +197,12 @@ inline void warmup(YCSBTable& table, BufferManager& buffer_manager) {
   std::mt19937 gen{std::random_device{}()};
   std::uniform_int_distribution<YCSBKey> dist(0, table.size() - 1);
 
-  int unused_bytes = buffer_manager.config().dram_buffer_pool_size + buffer_manager.config().numa_buffer_pool_size;
+  auto unused_bytes = buffer_manager.config().dram_buffer_pool_size + buffer_manager.config().numa_buffer_pool_size;
   while (unused_bytes > 0) {
     const auto key = dist(gen);
     auto [size, _] = table[key];
     YSCBOperation op = std::make_pair(key, YSCBOperationType::Read);
-    execute_ycsb_action(table, buffer_manager, op);
-    unused_bytes -= static_cast<size_t>(size);
+    unused_bytes -= execute_ycsb_action(table, buffer_manager, op);
   }
 }
 

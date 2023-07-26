@@ -26,15 +26,7 @@ void BM_SequentialRead(benchmark::State& state) {
       explicit_move_pages(mapped_region, VIRT_SIZE, TargetNode);
       // head -c 21474836480  /dev/urandom > /home/nriek/hyrise-fork/benchmarks/BM_SequentialRead.bin
       // std::system(("head -c " + std::to_string(VIRT_SIZE) + "  /dev/urandom > " + FILENAME).c_str());
-#ifdef __APPLE__
-      int flags = O_RDWR | O_CREAT | O_DSYNC;
-#elif __linux__
-      int flags = O_RDWR | O_CREAT | O_DIRECT | O_DSYNC;
-#endif
-      fd = open(FILENAME, flags, 0666);
-      if (fd < 0) {
-        Fail("Cannot open file");
-      }
+      fd = open_file(FILENAME);
     } else {
       explicit_move_pages(mapped_region, VIRT_SIZE, SourceNode);
     }
@@ -55,7 +47,7 @@ void BM_SequentialRead(benchmark::State& state) {
       // Noop: Stay as is, read directly
     }
 
-    simulate_page_read(page_ptr, num_bytes);
+    simulate_read(page_ptr, num_bytes);
   }
 
   if (state.thread_index() == 0) {
