@@ -67,7 +67,6 @@ class SQLTranslator final {
    */
   std::shared_ptr<AbstractExpression> translate_hsql_expr(const hsql::Expr& hsql_expr, const UseMvcc use_mvcc);
 
- private:
   // An expression and its identifiers. This is partly redundant to the SQLIdentifierResolver, but allows expressions
   // for equal SQL expressions with different identifiers (e.g., SELECT COUNT(*) AS cnt1, COUNT(*) AS cnt2 FROM ...).
   struct SelectListElement {
@@ -79,6 +78,7 @@ class SQLTranslator final {
     std::vector<SQLIdentifier> identifiers;
   };
 
+ private:
   // Track state while translating the FROM clause. This makes sure only the actually available SQL identifiers can be
   // used, e.g. "SELECT * FROM t1, t2 JOIN t3 ON t1.a = t2.a" is illegal since t1 is invisible to the seconds entry.
   // Also ensures the correct columns go into Select wildcards, even in presence of NATURAL/SEMI joins that remove
@@ -183,27 +183,14 @@ class SQLTranslator final {
 
   std::shared_ptr<AbstractLQPNode> _validate_if_active(const std::shared_ptr<AbstractLQPNode>& input_node);
 
+  // Window functions are only allowed in the select list and must not be nested, so we do not allow them by default.
   std::shared_ptr<AbstractExpression> _translate_hsql_expr(
-      const hsql::Expr& expr, const std::shared_ptr<SQLIdentifierResolver>& sql_identifier_resolver);
+      const hsql::Expr& expr, const std::shared_ptr<SQLIdentifierResolver>& sql_identifier_resolver,
+      bool allow_window_functions = false);
   std::shared_ptr<LQPSubqueryExpression> _translate_hsql_subquery(
       const hsql::SelectStatement& select, const std::shared_ptr<SQLIdentifierResolver>& sql_identifier_resolver);
   std::shared_ptr<AbstractExpression> _translate_hsql_case(
       const hsql::Expr& expr, const std::shared_ptr<SQLIdentifierResolver>& sql_identifier_resolver);
-
-  std::shared_ptr<AbstractExpression> _inverse_predicate(const AbstractExpression& expression) const;
-
-  static std::shared_ptr<AbstractLQPNode> _prune_expressions(
-      const std::shared_ptr<AbstractLQPNode>& node,
-      const std::vector<std::shared_ptr<AbstractExpression>>& expressions);
-
-  static std::shared_ptr<AbstractLQPNode> _add_expressions_if_unavailable(
-      const std::shared_ptr<AbstractLQPNode>& node,
-      const std::vector<std::shared_ptr<AbstractExpression>>& expressions);
-
-  static std::vector<std::shared_ptr<AbstractExpression>> _unwrap_elements(
-      const std::vector<SelectListElement>& select_list_elements);
-
-  static std::string _trim_meta_table_name(const std::string& name);
 
  private:
   const UseMvcc _use_mvcc;

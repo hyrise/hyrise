@@ -3,6 +3,7 @@
 #include "cost_estimation/cost_estimator_logical.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_subquery_expression.hpp"
+#include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/logical_plan_root_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "strategy/between_composition_rule.hpp"
@@ -135,6 +136,7 @@ void validate_lqp_with_uncorrelated_subqueries(const std::shared_ptr<const Abstr
       case LQPNodeType::Root:
       case LQPNodeType::Sort:
       case LQPNodeType::Validate:
+      case LQPNodeType::Window:
         num_expected_inputs = 1;
         break;
 

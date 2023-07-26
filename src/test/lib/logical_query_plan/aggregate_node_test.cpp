@@ -1,7 +1,3 @@
-#include <memory>
-#include <string>
-#include <vector>
-
 #include "base_test.hpp"
 
 #include "expression/expression_functional.hpp"
@@ -37,6 +33,27 @@ class AggregateNodeTest : public BaseTest {
   std::vector<std::shared_ptr<AbstractExpression>> _group_by_expressions, _aggregate_expressions;
   std::shared_ptr<LQPColumnExpression> _a, _b, _c;
 };
+
+TEST_F(AggregateNodeTest, InvalidAggregates) {
+  if constexpr (!HYRISE_DEBUG) {
+    GTEST_SKIP();
+  }
+
+  // Aggregate expression must be an aggregate function (i.e., a WindowFunctionExpression).
+  EXPECT_THROW(AggregateNode::make(expression_vector(), expression_vector(add_(_a, _b))), std::logic_error);
+
+  // WindowFunctionExpression used as aggregate function must not be a pure window function.
+  const auto window_function = std::make_shared<WindowFunctionExpression>(WindowFunction::Rank, _a);
+  EXPECT_THROW(AggregateNode::make(expression_vector(), expression_vector(window_function)), std::logic_error);
+
+  // WindowFunctionExpression used as aggregate function must not define a window.
+  auto frame_description = FrameDescription{FrameType::Range, FrameBound{0, FrameBoundType::Preceding, true},
+                                            FrameBound{0, FrameBoundType::CurrentRow, false}};
+  const auto window =
+      window_(expression_vector(), expression_vector(), std::vector<SortMode>{}, std::move(frame_description));
+
+  EXPECT_THROW(AggregateNode::make(expression_vector(), expression_vector(min_(_a, window))), std::logic_error);
+}
 
 TEST_F(AggregateNodeTest, OutputColumnExpressions) {
   ASSERT_EQ(_aggregate_node->output_expressions().size(), 4u);
