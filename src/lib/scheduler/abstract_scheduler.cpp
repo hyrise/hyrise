@@ -25,19 +25,6 @@ void AbstractScheduler::wait_for_tasks(const std::vector<std::shared_ptr<Abstrac
   }
 }
 
-void AbstractScheduler::schedule_on_preferred_nodes_and_wait_for_tasks(
-    const std::vector<std::shared_ptr<AbstractTask>>& tasks, const std::vector<NodeID>& preferred_nodes) {
-  assert(tasks.size() == preferred_nodes.size());
-  for (auto index = unsigned{0}; index < tasks.size(); ++index) {
-    if (preferred_nodes[index] != INVALID_NODE_ID) {
-      tasks[index]->set_node_id(preferred_nodes[index]);
-    }
-  }
-  _group_tasks(tasks);
-  schedule_tasks(tasks);
-  wait_for_tasks(tasks);
-}
-
 void AbstractScheduler::_group_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const {
   // Do nothing - grouping tasks is implementation-defined
 }
@@ -46,21 +33,6 @@ void AbstractScheduler::schedule_tasks(const std::vector<std::shared_ptr<Abstrac
   for (const auto& task : tasks) {
     task->schedule();
   }
-}
-
-void AbstractScheduler::schedule_on_preferred_nodes_and_wait_for_tasks(
-    const std::vector<std::shared_ptr<AbstractTask>>& tasks, const std::vector<NodeID>& preferred_nodes) {
-  _group_tasks(tasks);
-  assert(tasks.size() == preferred_nodes.size());
-  for (auto index = unsigned{0}; index < tasks.size(); ++index) {
-    //std::cout << "preferred node: " << preferred_nodes[index] << std::endl;
-    if (preferred_nodes[index] == INVALID_NODE_ID) {
-      tasks[index]->schedule();
-    } else {
-      tasks[index]->schedule(preferred_nodes[index]);
-    }
-  }
-  wait_for_tasks(tasks);
 }
 
 void AbstractScheduler::schedule_and_wait_for_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) {

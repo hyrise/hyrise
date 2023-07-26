@@ -78,11 +78,6 @@ DictionarySegment<T>::DictionarySegment(const std::shared_ptr<const pmr_vector<T
 }
 
 template <typename T>
-NodeID DictionarySegment<T>::numa_node_location() {
-  return _node_id;
-}
-
-template <typename T>
 AllTypeVariant DictionarySegment<T>::operator[](const ChunkOffset chunk_offset) const {
   PerformanceWarning("operator[] used");
   DebugAssert(chunk_offset != INVALID_CHUNK_OFFSET, "Passed chunk offset must be valid.");
