@@ -130,18 +130,50 @@ TEST_F(OperatorsWindowTest, ExactlyOneOrderByForRange) {
   EXPECT_NO_THROW(window_function_operator_valid->execute());
 }
 
+TEST_F(OperatorsWindowTest, NonRankLikeHasArgument) {
+  const auto frame = build_frame(FrameType::Rows);
+  // Non-rank-like window functions need an argument column expression.
+  EXPECT_THROW(_window_operator_factory->build_operator(this->_table_wrapper, frame, WindowFunction::Sum),
+               std::logic_error);
+  EXPECT_NO_THROW(
+      _window_operator_factory->build_operator(this->_table_wrapper, frame, WindowFunction::Sum, ColumnID{0}));
+}
+
 TEST_F(OperatorsWindowTest, InvalidWindowFunction) {
   const auto frame = build_frame();
-  const auto window_function_operator =
+  const auto unknown_window_function_operator =
       _window_operator_factory->build_operator(this->_table_wrapper, frame, WindowFunction{-1}, ColumnID{1});
-  EXPECT_THROW(window_function_operator->execute(), std::logic_error);
+  EXPECT_THROW(unknown_window_function_operator->execute(), std::logic_error);
+
+  const auto percent_rank_window_function_operator =
+      _window_operator_factory->build_operator(this->_table_wrapper, frame, WindowFunction::PercentRank, ColumnID{1});
+  // PercentRank is currently not supported.
+  EXPECT_THROW(percent_rank_window_function_operator->execute(), std::logic_error);
+}
+
+TEST_F(OperatorsWindowTest, RankLikeFrame) {
+  const auto frame = build_frame();
+  const auto unknown_window_function_operator =
+      _window_operator_factory->build_operator(this->_table_wrapper, frame, WindowFunction{-1}, ColumnID{1});
+  EXPECT_THROW(unknown_window_function_operator->execute(), std::logic_error);
+
+  const auto percent_rank_window_function_operator =
+      _window_operator_factory->build_operator(this->_table_wrapper, frame, WindowFunction::PercentRank, ColumnID{1});
+  // PercentRank is currently not supported.
+  EXPECT_THROW(percent_rank_window_function_operator->execute(), std::logic_error);
 }
 
 TEST_F(OperatorsWindowTest, Rank) {
   const auto frame = build_frame();
-  const auto window_function_operator =
+  const auto rank_like_operator =
       _window_operator_factory->build_operator(this->_table_wrapper, frame, WindowFunction::Rank);
-  test_output(window_function_operator, "rank.tbl");
+  EXPECT_NO_THROW(rank_like_operator->execute());
+
+  const auto invalid_frame = build_frame(FrameType::Range, 1, false, 0, false);
+  const auto invalid_rank_like_operator =
+      _window_operator_factory->build_operator(this->_table_wrapper, invalid_frame, WindowFunction::Rank);
+  // Rank-like window functions only work with a frame: BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW.
+  EXPECT_THROW(invalid_rank_like_operator->execute(), std::logic_error);
 }
 
 TEST_F(OperatorsWindowTest, DenseRank) {
