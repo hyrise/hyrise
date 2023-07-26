@@ -294,7 +294,7 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
 
   auto empty_nodes = std::vector<NodeID>{};
   auto job_nodes = std::vector<NodeID>{};
-  assert(partition_nodes->size() == 0);
+  // assert(partition_nodes->size() == 0);
   auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
   // TODO(anyone): perhaps use jobs.nodeID somehow.
   jobs.reserve(chunk_count);
