@@ -12,9 +12,9 @@ namespace hyrise {
 
 using namespace expression_functional;  // NOLINT(build/namespaces)
 
-FrameDescription build_frame(uint64_t offset_preceding = 0, bool preceding_unbounded = true,
-                             uint64_t offset_following = 0, bool following_unbounded = false,
-                             FrameType type = FrameType::Range) {
+FrameDescription build_frame(FrameType type = FrameType::Range, uint64_t offset_preceding = 0,
+                             bool preceding_unbounded = true, uint64_t offset_following = 0,
+                             bool following_unbounded = false) {
   const auto frame_start = FrameBound(offset_preceding, FrameBoundType::Preceding, preceding_unbounded);
   const auto frame_end = FrameBound(offset_following, FrameBoundType::CurrentRow, following_unbounded);
   return FrameDescription(type, frame_start, frame_end);
@@ -151,31 +151,51 @@ TEST_F(OperatorsWindowTest, RowNumber) {
 }
 
 TEST_F(OperatorsWindowTest, Sum) {
-  const auto frame = build_frame(0, true, 0, false, FrameType::Rows);
-  const auto window_function_operator =
+  const auto frame = build_frame(FrameType::Rows);
+  const auto sum_window_operator =
       _window_operator_factory->build_operator(this->_table_wrapper, frame, WindowFunction::Sum, ColumnID{1});
-  test_output(window_function_operator, "sum.tbl");
+  test_output(sum_window_operator, "sum.tbl");
+
+  const auto range_frame = build_frame();
+  const auto range_sum_window_operator =
+      _window_operator_factory->build_operator(this->_table_wrapper, range_frame, WindowFunction::Sum, ColumnID{1});
+  test_output(range_sum_window_operator, "prefix_sum.tbl");
 }
 
 TEST_F(OperatorsWindowTest, AVG) {
-  const auto frame = build_frame(0, true, 0, false, FrameType::Rows);
-  const auto window_function_operator =
+  const auto frame = build_frame(FrameType::Rows);
+  const auto avg_window_operator =
       _window_operator_factory->build_operator(this->_table_wrapper, frame, WindowFunction::Avg, ColumnID{1});
-  test_output(window_function_operator, "avg.tbl");
+  test_output(avg_window_operator, "avg.tbl");
+
+  const auto range_frame = build_frame(FrameType::Range, 3, false, 0, false);
+  const auto range_avg_window_operator =
+      _window_operator_factory->build_operator(this->_table_wrapper, range_frame, WindowFunction::Avg, ColumnID{1});
+  test_output(range_avg_window_operator, "range_avg.tbl");
 }
 
 TEST_F(OperatorsWindowTest, Min) {
-  const auto frame = build_frame(0, true, 0, false, FrameType::Rows);
-  const auto window_function_operator =
+  const auto frame = build_frame(FrameType::Rows);
+  const auto min_window_operator =
       _window_operator_factory->build_operator(this->_table_wrapper, frame, WindowFunction::Min, ColumnID{1});
-  test_output(window_function_operator, "min.tbl");
+  test_output(min_window_operator, "min.tbl");
+
+  const auto range_frame = build_frame(FrameType::Range, 3, false, 0, false);
+  const auto range_min_window_operator =
+      _window_operator_factory->build_operator(this->_table_wrapper, range_frame, WindowFunction::Min, ColumnID{1});
+  test_output(range_min_window_operator, "range_min.tbl");
 }
 
 TEST_F(OperatorsWindowTest, Max) {
-  const auto frame = build_frame(0, true, 0, false, FrameType::Rows);
-  const auto window_function_operator =
+  const auto frame = build_frame(FrameType::Rows);
+  const auto max_window_operator =
       _window_operator_factory->build_operator(this->_table_wrapper, frame, WindowFunction::Max, ColumnID{1});
-  test_output(window_function_operator, "max.tbl");
+  test_output(max_window_operator, "max.tbl");
+
+  const auto range_frame = build_frame(FrameType::Range, 0, false, 1, false);
+  const auto range_max_window_operator =
+      _window_operator_factory->build_operator(this->_table_wrapper, range_frame, WindowFunction::Max, ColumnID{1});
+  test_output(range_max_window_operator, "range_max.tbl");
 }
 
 }  // namespace hyrise
