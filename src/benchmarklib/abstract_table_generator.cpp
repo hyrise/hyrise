@@ -259,7 +259,7 @@ void AbstractTableGenerator::generate_and_store() {
         auto target_node_id = NodeID{num_relocated_chunks % num_nodes};
         auto migrate_job = [&, chunk_id, target_node_id]() {
           const auto& chunk = table->get_chunk(chunk_id);
-          chunk->migrate(&target_memory_resources->at(target_node_id));
+          chunk->migrate(&target_memory_resources->at(target_node_id), target_node_id);
         };
         jobs.emplace_back(std::make_shared<JobTask>(migrate_job));
       }

@@ -20,7 +20,9 @@ class AbstractSegment : private Noncopyable {
   // the type of the data contained in this segment
   DataType data_type() const;
 
-  virtual NodeID numa_node_location();
+  virtual NodeID get_numa_node_location();
+
+  virtual void set_numa_node_location(NodeID node_id);
 
   // returns the value at a given position
   virtual AllTypeVariant operator[](const ChunkOffset chunk_offset) const = 0;
@@ -39,6 +41,7 @@ class AbstractSegment : private Noncopyable {
   mutable SegmentAccessCounter access_counter;
 
  private:
+  NodeID _numa_node_location;
   const DataType _data_type;
 };
 }  // namespace hyrise

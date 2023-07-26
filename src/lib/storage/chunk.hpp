@@ -119,7 +119,11 @@ class Chunk : private Noncopyable {
 
   void remove_index(const std::shared_ptr<AbstractChunkIndex>& index);
 
-  void migrate(boost::container::pmr::memory_resource* memory_source);
+  /**
+   * Migrates (copies) segments using memory_source. If the memory_source garantees a
+   * specific numa node location, set it, else ignore.
+   */
+  void migrate(boost::container::pmr::memory_resource* memory_source, NodeID node_id = UNKNOWN_NODE_ID);
 
   bool references_exactly_one_table() const;
 

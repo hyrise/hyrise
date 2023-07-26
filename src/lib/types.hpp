@@ -146,7 +146,9 @@ constexpr ColumnID INVALID_COLUMN_ID{std::numeric_limits<ColumnID::base_type>::m
 constexpr auto INVALID_TRANSACTION_ID = TransactionID{0};
 constexpr auto INITIAL_TRANSACTION_ID = TransactionID{1};
 
+// CURRENT_NODE_ID refers to the actual numa node on which the current worker is running.
 constexpr NodeID CURRENT_NODE_ID{std::numeric_limits<NodeID::base_type>::max() - 1};
+constexpr NodeID UNKNOWN_NODE_ID{std::numeric_limits<NodeID::base_type>::max() - 2};
 
 // Declaring one part of a RowID as invalid would suffice to represent NULL values. However, this way we add an extra
 // safety net which ensures that NULL values are handled correctly. E.g., getting a chunk with INVALID_CHUNK_ID

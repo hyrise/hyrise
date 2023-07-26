@@ -426,18 +426,18 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
         if (worker) {
           // TODO(anyone): Verify this works in most cases.
           // Alternatively might do a numa call to get current node (leads to a syscall though, so probably slow).
-          // On the other hand we only end up here if the segment contains < JOB_SPAWN_THRESHOLD rows... might as well go with CURRENT_NODE_ID in "worst cases".
+          // On the other hand we only end up here if the segment contains < JOB_SPAWN_THRESHOLD rows... might as well go with UNKNOWN_NODE_ID in "worst cases".
           partition_node_locations->emplace_back(worker->queue()->node_id());
         } else {
-          partition_node_locations->emplace_back(CURRENT_NODE_ID);
+          partition_node_locations->emplace_back(UNKNOWN_NODE_ID);
         }
       }
     } else {
       jobs.emplace_back(std::make_shared<JobTask>(materialize, SchedulePriority::Default, false));
-      jobs.back()->set_node_id(segment->numa_node_location());
+      jobs.back()->set_node_id(segment->get_numa_node_location());
 
       if (partition_node_locations) {
-        partition_node_locations->emplace_back(segment->numa_node_location());
+        partition_node_locations->emplace_back(segment->get_numa_node_location());
       }
     }
   }

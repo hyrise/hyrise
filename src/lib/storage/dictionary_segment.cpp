@@ -12,20 +12,6 @@
 
 namespace hyrise {
 
-NodeID getNumaNodeOfPage(const void* addr) {
-  unsigned long page = (unsigned long)addr;
-  page = page & (~(4096 - 1));
-  void* pages[1] = {(void*)page};
-  int status;
-  long ret = numa_move_pages(0, 1, pages, NULL, &status, 0);
-  if (ret == 0) {
-    return static_cast<NodeID>(status);
-  } else {
-    std::cout << "move_pages returned error!" << std::endl;
-    return INVALID_NODE_ID;
-  }
-}
-
 template <typename T>
 DictionarySegment<T>::DictionarySegment(const std::shared_ptr<const pmr_vector<T>>& dictionary,
                                         const std::shared_ptr<const BaseCompressedVector>& attribute_vector)
@@ -37,7 +23,6 @@ DictionarySegment<T>::DictionarySegment(const std::shared_ptr<const pmr_vector<T
   // ValueID::base_type (2^32 - 1), is needed to represent "value not found" in calls to lower_bound/upper_bound.
   // For a DictionarySegment of the max size Chunk::MAX_SIZE, those two values overlap.
 
-  _node_id = getNumaNodeOfPage(&(*_dictionary)[0]);
   Assert(_dictionary->size() < std::numeric_limits<ValueID::base_type>::max(), "Input segment too big");
 }
 
@@ -72,11 +57,6 @@ std::shared_ptr<AbstractSegment> DictionarySegment<T>::copy_using_allocator(
   auto copy = std::make_shared<DictionarySegment<T>>(std::move(new_dictionary), std::move(new_attribute_vector));
   copy->access_counter = access_counter;
   return copy;
-}
-
-template <typename T>
-NodeID DictionarySegment<T>::numa_node_location() {
-  return _node_id;
 }
 
 template <typename T>
