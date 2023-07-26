@@ -211,23 +211,24 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::evaluate_expressi
       result = _evaluate_unary_minus_expression<Result>(static_cast<const UnaryMinusExpression&>(expression));
       break;
 
-    case ExpressionType::Aggregate:
-      Fail("ExpressionEvaluator doesn't support Aggregates, use the Aggregate Operator to compute them");
+    case ExpressionType::Window:
+    case ExpressionType::WindowFunction:
+      Fail("ExpressionEvaluator does not support Aggregates/WindowFunctions, use another operator to compute them.");
 
     case ExpressionType::List:
-      Fail("Can't evaluate a ListExpression, lists should only appear as the right operand of an InExpression");
+      Fail("Cannot evaluate a ListExpression, lists should only appear as the right operand of an InExpression.");
 
     case ExpressionType::LQPColumn:
     case ExpressionType::LQPSubquery:
-      Fail("Can't evaluate an LQP expression, those need to be translated by the LQPTranslator first.");
+      Fail("Cannot evaluate an LQP expression, those need to be translated by the LQPTranslator first.");
 
     case ExpressionType::Placeholder:
       Fail(
-          "Can't evaluate an expressions still containing placeholders. Are you trying to execute a PreparedPlan "
+          "Cannot evaluate an expression still containing placeholders. Are you trying to execute a prepared plan "
           "without instantiating it first?");
 
     case ExpressionType::Interval:
-      Fail("IntervalExpression should have been resolved by SQLTranslator");
+      Fail("IntervalExpression should have been resolved by SQLTranslator.");
   }
 
   // Store the result in the cache

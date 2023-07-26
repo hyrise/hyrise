@@ -292,7 +292,7 @@ TEST_F(OperatorDeepCopyTest, DeduplicationAmongSubqueries) {
   // Prepare three subqueries for Case expression
   auto group_by_columns = std::vector<ColumnID>{ColumnID{0}, ColumnID{1}};
   auto count_star = count_(pqp_column_(INVALID_COLUMN_ID, DataType::Long, false, "*"));
-  auto aggregates = std::vector<std::shared_ptr<AggregateExpression>>{count_star};
+  auto aggregates = std::vector<std::shared_ptr<WindowFunctionExpression>>{count_star};
   auto aggregate_hash = std::make_shared<AggregateHash>(get_table_a, aggregates, group_by_columns);
   auto when_subquery = std::make_shared<PQPSubqueryExpression>(aggregate_hash);
 

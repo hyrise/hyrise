@@ -1,8 +1,5 @@
 #include "cardinality_estimator.hpp"
 
-#include <iostream>
-#include <memory>
-
 #include "attribute_statistics.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_functional.hpp"
@@ -24,6 +21,7 @@
 #include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/union_node.hpp"
 #include "logical_query_plan/validate_node.hpp"
+#include "logical_query_plan/window_node.hpp"
 #include "lossy_cast.hpp"
 #include "operators/operator_join_predicate.hpp"
 #include "operators/operator_scan_predicate.hpp"
@@ -199,6 +197,11 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
           estimate_union_node(*union_node, left_input_table_statistics, right_input_table_statistics);
     } break;
 
+    case LQPNodeType::Window: {
+      const auto window_node = std::dynamic_pointer_cast<const WindowNode>(lqp);
+      output_table_statistics = estimate_window_node(*window_node, left_input_table_statistics);
+    } break;
+
     // Currently there is no actual estimation being done and we always apply the worst case
     case LQPNodeType::Intersect:
     case LQPNodeType::Except: {
@@ -285,6 +288,27 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_projection_node(
       });
     }
   }
+
+  return std::make_shared<TableStatistics>(std::move(column_statistics), input_table_statistics->row_count);
+}
+
+std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_window_node(
+    const WindowNode& window_node, const std::shared_ptr<TableStatistics>& input_table_statistics) const {
+  // Forward the input statistics for all but the last column (which contains the window function result).
+  const auto& output_expressions = window_node.output_expressions();
+  const auto output_expression_count = output_expressions.size();
+  auto column_statistics = std::vector<std::shared_ptr<BaseAttributeStatistics>>{output_expression_count};
+  const auto forwarded_expression_count = output_expression_count - 1;
+
+  for (auto column_id = ColumnID{0}; column_id < forwarded_expression_count; ++column_id) {
+    column_statistics[column_id] = input_table_statistics->column_statistics[column_id];
+  }
+
+  // For the result of the window function, dummy statistics are created for now.
+  resolve_data_type(output_expressions.back()->data_type(), [&](const auto data_type_t) {
+    using ColumnDataType = typename decltype(data_type_t)::type;
+    column_statistics[forwarded_expression_count] = std::make_shared<AttributeStatistics<ColumnDataType>>();
+  });
 
   return std::make_shared<TableStatistics>(std::move(column_statistics), input_table_statistics->row_count);
 }
@@ -516,7 +540,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_predicate_node(
         return input_table_statistics;
       }
 
-      // Check that input nodes provide only a single AggregateExpression.
+      // Check that input nodes provide only a single WindowFunctionExpression.
       const auto& lower_bound_lqp = *lower_bound_subquery->lqp;
       const auto& upper_bound_lqp = *upper_bound_subquery->lqp;
       const auto& lower_bound_node_expressions = lower_bound_lqp.node_expressions;
@@ -525,14 +549,14 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_predicate_node(
         return input_table_statistics;
       }
       const auto& lower_bound_aggregate_expression =
-          std::dynamic_pointer_cast<AggregateExpression>(lower_bound_node_expressions.front());
+          std::dynamic_pointer_cast<WindowFunctionExpression>(lower_bound_node_expressions.front());
       const auto& upper_bound_aggregate_expression =
-          std::dynamic_pointer_cast<AggregateExpression>(upper_bound_node_expressions.front());
+          std::dynamic_pointer_cast<WindowFunctionExpression>(upper_bound_node_expressions.front());
       if (!lower_bound_aggregate_expression || !upper_bound_aggregate_expression) {
         return input_table_statistics;
       }
 
-      // Check that the AggregateFunctions are as expected and are performed on the same column, and the nodes have the
+      // Check that the WindowFunctions are as expected and are performed on the same column, and the nodes have the
       // same input. The predicate must look like `BETWEEN (SELECT MIN(key) ...) AND (SELECT MAX(key) ...))`. The
       // aggregates guarantee to select the minimal and maximal join key of the underlying subquery. Furthermore, they
       // must both operate on the same join key and on the same input so preserve all join keys. A side effect of
@@ -541,8 +565,8 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_predicate_node(
       // de-duplicated in the LQPTranslator).
       auto subquery_origin_node = lower_bound_lqp.left_input();
 
-      if (lower_bound_aggregate_expression->aggregate_function != AggregateFunction::Min ||
-          upper_bound_aggregate_expression->aggregate_function != AggregateFunction::Max ||
+      if (lower_bound_aggregate_expression->window_function != WindowFunction::Min ||
+          upper_bound_aggregate_expression->window_function != WindowFunction::Max ||
           *lower_bound_aggregate_expression->argument() != *upper_bound_aggregate_expression->argument() ||
           *subquery_origin_node != *upper_bound_lqp.left_input()) {
         return input_table_statistics;

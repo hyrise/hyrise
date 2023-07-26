@@ -67,7 +67,7 @@ const std::shared_ptr<AbstractExpression>& ExpressionReductionRule::reduce_distr
 
   // Step 3 Recurse into `a, b, c, d, e` and look for possible reductions there. Do this here because we have
   //        `flat_disjunction_and_conjunction` handily available here (it gets modified later).
-  if (flat_disjunction_and_conjunction.size() == 1u && flat_disjunction_and_conjunction.front().size() == 1u) {
+  if (flat_disjunction_and_conjunction.size() == 1 && flat_disjunction_and_conjunction.front().size() == 1) {
     // input_expression is neither AND nor OR - continue with its argument
     for (auto& argument : input_expression->arguments) {
       reduce_distributivity(argument);
@@ -246,20 +246,20 @@ void ExpressionReductionRule::remove_duplicate_aggregate(
   std::vector<std::reference_wrapper<const std::shared_ptr<AbstractExpression>>> counts;
   std::vector<std::reference_wrapper<const std::shared_ptr<AbstractExpression>>> avgs;
   for (auto& input_expression : input_expressions) {
-    if (input_expression->type != ExpressionType::Aggregate) {
+    if (input_expression->type != ExpressionType::WindowFunction) {
       continue;
     }
-    auto& aggregate_expression = static_cast<AggregateExpression&>(*input_expression);
-    switch (aggregate_expression.aggregate_function) {
-      case AggregateFunction::Sum: {
+    auto& aggregate_expression = static_cast<WindowFunctionExpression&>(*input_expression);
+    switch (aggregate_expression.window_function) {
+      case WindowFunction::Sum: {
         sums.emplace_back(input_expression);
         break;
       }
-      case AggregateFunction::Count: {
+      case WindowFunction::Count: {
         counts.emplace_back(input_expression);
         break;
       }
-      case AggregateFunction::Avg: {
+      case WindowFunction::Avg: {
         avgs.emplace_back(input_expression);
         break;
       }
@@ -276,14 +276,14 @@ void ExpressionReductionRule::remove_duplicate_aggregate(
 
   // Iterate over the AVGs, check if matching SUMs and COUNTs exist, and add a suitable replacement to `replacements`.
   for (const auto& avg_expression_ptr : avgs) {
-    const auto& avg_expression = static_cast<AggregateExpression&>(*avg_expression_ptr.get());
+    const auto& avg_expression = static_cast<WindowFunctionExpression&>(*avg_expression_ptr.get());
 
     const auto& avg_argument = avg_expression.argument();
     const auto avg_argument_is_nullable = avg_argument->is_nullable_on_lqp(*aggregate_input_node);
 
     // A helper function that checks whether SUMs and COUNTs match the AVG
     const auto finder = [&](const auto& other_expression) {
-      const auto other_argument = static_cast<const AggregateExpression&>(*other_expression.get()).argument();
+      const auto other_argument = static_cast<const WindowFunctionExpression&>(*other_expression.get()).argument();
       const auto column_expression = std::dynamic_pointer_cast<const LQPColumnExpression>(other_argument);
 
       if (column_expression && column_expression->original_column_id == INVALID_COLUMN_ID) {
