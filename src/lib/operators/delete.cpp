@@ -39,7 +39,7 @@ void commit_with_pos_list(const std::shared_ptr<const Table>& referenced_table, 
   }
 
   if constexpr (is_single_chunk) {
-    referenced_chunk->increase_invalid_row_count(ChunkOffset{pos_list.size()});
+    referenced_chunk->increase_invalid_row_count(ChunkOffset{static_cast<ChunkOffset::base_type>(pos_list.size())});
     set_atomic_max(mvcc_data->max_end_cid, commit_id);
   }
 }
