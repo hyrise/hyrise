@@ -32,55 +32,57 @@ class StorageTableTest : public BaseTest {
 };
 
 TEST_F(StorageTableTest, ChunkCount) {
-  EXPECT_EQ(table->chunk_count(), 0u);
+  EXPECT_EQ(table->chunk_count(), 0);
   table->append({4, "Hello,"});
   table->append({6, "world"});
   table->append({3, "!"});
-  EXPECT_EQ(table->chunk_count(), 2u);
+  EXPECT_EQ(table->chunk_count(), 2);
 }
 
 TEST_F(StorageTableTest, GetChunk) {
   table->append({4, "Hello,"});
   table->append({6, "world"});
   table->append({3, "!"});
-  ASSERT_EQ(table->chunk_count(), 2u);
-  EXPECT_NE(table->get_chunk(ChunkID{0}), nullptr);
-  EXPECT_NE(table->get_chunk(ChunkID{1}), nullptr);
+  ASSERT_EQ(table->chunk_count(), 2);
+  EXPECT_TRUE(table->get_chunk(ChunkID{0}));
+  EXPECT_TRUE(table->get_chunk(ChunkID{1}));
 }
 
 TEST_F(StorageTableTest, ColumnCount) {
-  EXPECT_EQ(table->column_count(), 2u);
+  EXPECT_EQ(table->column_count(), 2);
 }
 
 TEST_F(StorageTableTest, RowCount) {
-  EXPECT_EQ(table->row_count(), 0u);
+  EXPECT_EQ(table->row_count(), 0);
   table->append({4, "Hello,"});
   table->append({6, "world"});
   table->append({3, "!"});
-  EXPECT_EQ(table->row_count(), 3u);
+  EXPECT_EQ(table->row_count(), 3);
 }
 
 TEST_F(StorageTableTest, GetColumnName) {
   EXPECT_EQ(table->column_name(ColumnID{0}), "column_1");
   EXPECT_EQ(table->column_name(ColumnID{1}), "column_2");
-  // TODO(anyone): Do we want checks here?
-  // EXPECT_THROW(table->column_name(ColumnID{2}), std::exception);
+  if constexpr (HYRISE_DEBUG) {
+    EXPECT_THROW(table->column_name(ColumnID{2}), std::logic_error);
+  }
 }
 
 TEST_F(StorageTableTest, GetColumnType) {
   EXPECT_EQ(table->column_data_type(ColumnID{0}), DataType::Int);
   EXPECT_EQ(table->column_data_type(ColumnID{1}), DataType::String);
-  // TODO(anyone): Do we want checks here?
-  // EXPECT_THROW(table->column_data_type(ColumnID{2}), std::exception);
+  if constexpr (HYRISE_DEBUG) {
+    EXPECT_THROW(table->column_data_type(ColumnID{2}), std::logic_error);
+  }
 }
 
 TEST_F(StorageTableTest, GetColumnIDByName) {
-  EXPECT_EQ(table->column_id_by_name("column_2"), 1u);
-  EXPECT_THROW(table->column_id_by_name("no_column_name"), std::exception);
+  EXPECT_EQ(table->column_id_by_name("column_2"), 1);
+  EXPECT_THROW(table->column_id_by_name("no_column_name"), std::logic_error);
 }
 
 TEST_F(StorageTableTest, GetChunkSize) {
-  EXPECT_EQ(table->target_chunk_size(), 2u);
+  EXPECT_EQ(table->target_chunk_size(), 2);
 }
 
 TEST_F(StorageTableTest, GetValue) {
@@ -88,28 +90,28 @@ TEST_F(StorageTableTest, GetValue) {
   table->append({6, "world"});
   table->append({3, "!"});
   table->append({3, NULL_VALUE});
-  ASSERT_EQ(*table->get_value<int32_t>(ColumnID{0}, 0u), 4);
-  EXPECT_EQ(*table->get_value<int32_t>(ColumnID{0}, 2u), 3);
-  EXPECT_FALSE(table->get_value<pmr_string>(ColumnID{1}, 3u));
+  EXPECT_EQ(*table->get_value<int32_t>(ColumnID{0}, 0), 4);
+  EXPECT_EQ(*table->get_value<int32_t>(ColumnID{0}, 2), 3);
+  EXPECT_FALSE(table->get_value<pmr_string>(ColumnID{1}, 3));
 
-  ASSERT_EQ(*table->get_value<pmr_string>(ColumnID{1}, 0u), "Hello,");
-  ASSERT_EQ(*table->get_value<pmr_string>(ColumnID{1}, 1u), "world");
-  EXPECT_THROW(*table->get_value<int32_t>(ColumnID{1}, 0u), std::exception);
-  EXPECT_THROW(*table->get_value<int32_t>(ColumnID{3}, 0u), std::exception);
+  EXPECT_EQ(*table->get_value<pmr_string>(ColumnID{1}, 0), "Hello,");
+  EXPECT_EQ(*table->get_value<pmr_string>(ColumnID{1}, 1), "world");
+  EXPECT_ANY_THROW(*table->get_value<int32_t>(ColumnID{1}, 0));
+  EXPECT_ANY_THROW(*table->get_value<int32_t>(ColumnID{3}, 0));
 
-  ASSERT_EQ(*table->get_value<int32_t>("column_1", 0u), 4);
-  ASSERT_EQ(*table->get_value<pmr_string>("column_2", 2u), "!");
-  EXPECT_THROW(*table->get_value<int32_t>("column_3", 0u), std::exception);
+  EXPECT_EQ(*table->get_value<int32_t>("column_1", 0), 4);
+  EXPECT_EQ(*table->get_value<pmr_string>("column_2", 2), "!");
+  EXPECT_THROW(*table->get_value<int32_t>("column_3", 0), std::logic_error);
 }
 
 TEST_F(StorageTableTest, GetRow) {
   table->append({4, "Hello,"});
   table->append({6, "world"});
   table->append({3, NULL_VALUE});
-  ASSERT_EQ(table->get_row(0u), std::vector<AllTypeVariant>({4, "Hello,"}));
-  ASSERT_EQ(table->get_row(1u), std::vector<AllTypeVariant>({6, "world"}));
-  ASSERT_TRUE(variant_is_null(table->get_row(2u)[1]));
-  EXPECT_ANY_THROW(table->get_row(4u));
+  EXPECT_EQ(table->get_row(0), std::vector<AllTypeVariant>({4, "Hello,"}));
+  EXPECT_EQ(table->get_row(1), std::vector<AllTypeVariant>({6, "world"}));
+  EXPECT_TRUE(variant_is_null(table->get_row(2)[1]));
+  EXPECT_THROW(table->get_row(4), std::logic_error);
 }
 
 TEST_F(StorageTableTest, GetRows) {
@@ -123,12 +125,12 @@ TEST_F(StorageTableTest, GetRows) {
 
   const auto rows = table->get_rows();
 
-  ASSERT_EQ(rows.size(), 4u);
-  EXPECT_EQ(rows.at(0u), std::vector<AllTypeVariant>({4, "Hello,"}));
-  EXPECT_EQ(rows.at(1u), std::vector<AllTypeVariant>({6, "world"}));
-  EXPECT_EQ(rows.at(2u), std::vector<AllTypeVariant>({3, "!"}));
-  EXPECT_EQ(rows.at(3u).at(0u), AllTypeVariant{9});
-  EXPECT_TRUE(variant_is_null(rows.at(3u).at(1u)));
+  ASSERT_EQ(rows.size(), 4);
+  EXPECT_EQ(rows.at(0), std::vector<AllTypeVariant>({4, "Hello,"}));
+  EXPECT_EQ(rows.at(1), std::vector<AllTypeVariant>({6, "world"}));
+  EXPECT_EQ(rows.at(2), std::vector<AllTypeVariant>({3, "!"}));
+  EXPECT_EQ(rows.at(3).at(0), AllTypeVariant{9});
+  EXPECT_TRUE(variant_is_null(rows.at(3).at(1)));
 }
 
 TEST_F(StorageTableTest, FillingUpAChunkFinalizesIt) {
@@ -159,7 +161,7 @@ TEST_F(StorageTableTest, AppendsMutableChunkIfLastChunkImmutableOnAppend) {
 }
 
 TEST_F(StorageTableTest, EmplaceChunk) {
-  EXPECT_EQ(table->chunk_count(), 0u);
+  EXPECT_EQ(table->chunk_count(), 0);
 
   const auto vs_int = std::make_shared<ValueSegment<int>>();
   const auto vs_str = std::make_shared<ValueSegment<pmr_string>>();
@@ -168,17 +170,17 @@ TEST_F(StorageTableTest, EmplaceChunk) {
   vs_str->append("five");
 
   table->append_chunk({vs_int, vs_str});
-  EXPECT_EQ(table->chunk_count(), 1u);
+  EXPECT_EQ(table->chunk_count(), 1);
 }
 
 TEST_F(StorageTableTest, EmplaceEmptyChunk) {
-  EXPECT_EQ(table->chunk_count(), 0u);
+  EXPECT_EQ(table->chunk_count(), 0);
 
   auto vs_int = std::make_shared<ValueSegment<int>>();
   auto vs_str = std::make_shared<ValueSegment<pmr_string>>();
 
   table->append_chunk({vs_int, vs_str});
-  EXPECT_EQ(table->chunk_count(), 1u);
+  EXPECT_EQ(table->chunk_count(), 1);
 }
 
 TEST_F(StorageTableTest, EmplaceEmptyChunkWhenEmptyExists) {
@@ -186,7 +188,7 @@ TEST_F(StorageTableTest, EmplaceEmptyChunkWhenEmptyExists) {
     GTEST_SKIP();
   }
 
-  EXPECT_EQ(table->chunk_count(), 0u);
+  EXPECT_EQ(table->chunk_count(), 0);
 
   {
     auto vs_int = std::make_shared<ValueSegment<int>>();
@@ -200,24 +202,24 @@ TEST_F(StorageTableTest, EmplaceEmptyChunkWhenEmptyExists) {
     EXPECT_THROW(table->append_chunk({vs_int, vs_str}), std::logic_error);
   }
 
-  EXPECT_EQ(table->chunk_count(), 1u);
+  EXPECT_EQ(table->chunk_count(), 1);
 }
 
 TEST_F(StorageTableTest, EmplaceChunkAndAppend) {
-  EXPECT_EQ(table->chunk_count(), 0u);
+  EXPECT_EQ(table->chunk_count(), 0);
 
   table->append({4, "Hello,"});
-  EXPECT_EQ(table->chunk_count(), 1u);
+  EXPECT_EQ(table->chunk_count(), 1);
 
   auto vs_int = std::make_shared<ValueSegment<int>>();
   auto vs_str = std::make_shared<ValueSegment<pmr_string>>();
 
   table->append_chunk(Segments{{vs_int, vs_str}});
-  EXPECT_EQ(table->chunk_count(), 2u);
+  EXPECT_EQ(table->chunk_count(), 2);
 }
 
 TEST_F(StorageTableTest, EmplaceChunkDoesNotReplaceIfNumberOfChunksGreaterOne) {
-  EXPECT_EQ(table->chunk_count(), 0u);
+  EXPECT_EQ(table->chunk_count(), 0);
 
   table->append({4, "Hello,"});
 
@@ -229,7 +231,7 @@ TEST_F(StorageTableTest, EmplaceChunkDoesNotReplaceIfNumberOfChunksGreaterOne) {
     vs_str->append("World!");
 
     table->append_chunk({vs_int, vs_str});
-    EXPECT_EQ(table->chunk_count(), 2u);
+    EXPECT_EQ(table->chunk_count(), 2);
   }
 
   {
@@ -237,7 +239,7 @@ TEST_F(StorageTableTest, EmplaceChunkDoesNotReplaceIfNumberOfChunksGreaterOne) {
     auto vs_str = std::make_shared<ValueSegment<pmr_string>>();
 
     table->append_chunk({vs_int, vs_str});
-    EXPECT_EQ(table->chunk_count(), 3u);
+    EXPECT_EQ(table->chunk_count(), 3);
   }
 }
 
