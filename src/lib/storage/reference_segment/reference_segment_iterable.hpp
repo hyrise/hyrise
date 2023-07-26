@@ -72,6 +72,12 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
           }
 #endif
 
+#ifdef HYRISE_ERASE_VARIABLESTRINGDICTIONARY
+          if constexpr (std::is_same_v<SegmentType, VariableStringDictionarySegment<T>>) {
+            return;
+          }
+#endif
+
 #ifdef HYRISE_ERASE_FRAMEOFREFERENCE
           if constexpr (std::is_same_v<T, int32_t>) {
             if constexpr (std::is_same_v<SegmentType, FrameOfReferenceSegment<T>>) {

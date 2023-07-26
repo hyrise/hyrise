@@ -21,8 +21,14 @@ class VariableStringVectorIterator : public boost::iterator_facade<VariableStrin
   }
 
   size_t distance_to(VariableStringVectorIterator const& other) const {  // NOLINT
+    auto left = _current_offset;
+    auto right = other._current_offset;
+    if (right < left) {
+      return -other.distance_to(*this);
+    }
+
     auto strings_in_between = size_t{0};
-    for (auto offset = _current_offset; offset < other._current_offset; ++offset) {
+    for (auto offset = left; offset < right; ++offset) {
       if (_dictionary->operator[](offset) == '\0') {
         ++strings_in_between;
       }
