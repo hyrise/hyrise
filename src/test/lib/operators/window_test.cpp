@@ -57,18 +57,18 @@ class OperatorsWindowTest : public BaseTest {
     _table_wrapper->execute();
 
     const auto static_table_node = StaticTableNode::make(_table);
-    const auto partition_by_expressions =
+    auto partition_by_expressions =
         std::vector<std::shared_ptr<AbstractExpression>>{lqp_column_(static_table_node, ColumnID{0})};
-    const auto order_by_expressions =
+    auto order_by_expressions =
         std::vector<std::shared_ptr<AbstractExpression>>{lqp_column_(static_table_node, ColumnID{1})};
 
-    const auto sort_modes = std::vector<SortMode>{SortMode::Ascending};
+    auto sort_modes = std::vector<SortMode>{SortMode::Ascending};
     const auto frame_start = FrameBound(0, FrameBoundType::Preceding, true);
     const auto frame_end = FrameBound(0, FrameBoundType::CurrentRow, false);
-    auto frame_description = std::make_unique<FrameDescription>(FrameType::Range, frame_start, frame_end);
+    auto frame_description = FrameDescription{FrameType::Range, frame_start, frame_end};
 
-    _onepass_window_expression =
-        window_(partition_by_expressions, order_by_expressions, sort_modes, std::move(frame_description));
+    _onepass_window_expression = window_(std::move(partition_by_expressions), std::move(order_by_expressions),
+                                         std::move(sort_modes), std::move(frame_description));
   }
 
  protected:

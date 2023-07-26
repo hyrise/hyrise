@@ -47,7 +47,7 @@ const std::string& WindowFunctionEvaluator::name() const {
 
 const FrameDescription& WindowFunctionEvaluator::frame_description() const {
   const auto window = std::dynamic_pointer_cast<WindowExpression>(_window_function_expression->window());
-  return *window->frame_description;
+  return window->frame_description;
 }
 
 void WindowFunctionEvaluator::_on_set_parameters(
