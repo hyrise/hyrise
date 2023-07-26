@@ -210,6 +210,7 @@ void NodeQueueScheduler::_group_tasks(const std::vector<std::shared_ptr<Abstract
   std::vector<std::shared_ptr<AbstractTask>> grouped_tasks(NUM_GROUPS);
   for (const auto& task : tasks) {
     if (!task->predecessors().empty() || !task->successors().empty() || dynamic_cast<ShutdownTask*>(&*task)) {
+      // Do not group tasks that either have precessors/successors or are ShutdownTasks.
       return;
     }
 

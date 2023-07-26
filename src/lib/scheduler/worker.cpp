@@ -113,7 +113,7 @@ void Worker::_work(const AllowSleep allow_sleep) {
 
   task->execute();
 
-  // In case the processed task is a ShutDownTask, we shut down the worker (see `operator()` loop).
+  // In case the processed task is a ShutdownTask, we shut down the worker (see `operator()` loop).
   if (dynamic_cast<ShutdownTask*>(&*task)) {
     _active = false;
   }
