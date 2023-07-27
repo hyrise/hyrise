@@ -102,10 +102,18 @@ std::shared_ptr<const Table> WindowFunctionEvaluator::_templated_on_execute() {
   window_performance_data.computation_strategy = computation_strategy;
   switch (computation_strategy) {
     case ComputationStrategy::OnePass:
-      compute_window_function_one_pass<InputColumnType, window_function>(partitioned_data, emit_computed_value);
+      if constexpr (SupportsOnePass<InputColumnType, window_function>) {
+        compute_window_function_one_pass<InputColumnType, window_function>(partitioned_data, emit_computed_value);
+      } else {
+        Fail("Chose ComputationStrategy::OnePass, although it is not supported!");
+      }
       break;
     case ComputationStrategy::SegmentTree:
-      compute_window_function_segment_tree<InputColumnType, window_function>(partitioned_data, emit_computed_value);
+      if constexpr (SupportsSegmentTree<InputColumnType, window_function>) {
+        compute_window_function_segment_tree<InputColumnType, window_function>(partitioned_data, emit_computed_value);
+      } else {
+        Fail("Chose ComputationStrategy::SegmentTree, although it is not supported!");
+      }
       break;
   }
   window_performance_data.set_step_runtime(OperatorSteps::Compute, timer.lap());
@@ -368,30 +376,27 @@ void WindowFunctionEvaluator::for_each_partition(std::span<const RelevantRowInfo
 }
 
 template <typename InputColumnType, WindowFunction window_function>
+  requires SupportsOnePass<InputColumnType, window_function>
 void WindowFunctionEvaluator::compute_window_function_one_pass(const HashPartitionedData& partitioned_data,
                                                                auto&& emit_computed_value) const {
-  if constexpr (SupportsOnePass<InputColumnType, window_function>) {
-    spawn_and_wait_per_hash(partitioned_data, [&emit_computed_value](const auto& hash_partition) {
-      using Traits = WindowFunctionEvaluatorTraits<InputColumnType, window_function>;
-      using Impl = typename Traits::OnePassImpl;
-      using State = typename Impl::State;
-      auto state = State{};
+  spawn_and_wait_per_hash(partitioned_data, [&emit_computed_value](const auto& hash_partition) {
+    using Traits = WindowFunctionEvaluatorTraits<InputColumnType, window_function>;
+    using Impl = typename Traits::OnePassImpl;
+    using State = typename Impl::State;
+    auto state = State{};
 
-      const RelevantRowInformation* previous_row = nullptr;
+    const RelevantRowInformation* previous_row = nullptr;
 
-      for (const auto& row : hash_partition) {
-        if (previous_row && std::is_eq(compare_with_null_equal(previous_row->partition_values, row.partition_values))) {
-          Impl::update_state(state, row);
-        } else {
-          state = Impl::initial_state(row);
-        }
-        emit_computed_value(row.row_id, Impl::current_value(state));
-        previous_row = &row;
+    for (const auto& row : hash_partition) {
+      if (previous_row && std::is_eq(compare_with_null_equal(previous_row->partition_values, row.partition_values))) {
+        Impl::update_state(state, row);
+      } else {
+        state = Impl::initial_state(row);
       }
-    });
-  } else {
-    Fail("Unsupported OnePass window function.");
-  }
+      emit_computed_value(row.row_id, Impl::current_value(state));
+      previous_row = &row;
+    }
+  });
 }
 
 namespace {
@@ -485,16 +490,14 @@ struct WindowBoundCalculator<FrameType::Range, OrderByColumnType> {
   }
 };
 
-};  // namespace
-
 template <typename InputColumnType, WindowFunction window_function, FrameType frame_type, typename OrderByColumnType>
   requires SupportsSegmentTree<InputColumnType, window_function>
-void WindowFunctionEvaluator::templated_compute_window_function_segment_tree(
-    const HashPartitionedData& partitioned_data, auto&& emit_computed_value) const {
-  const auto& frame = frame_description();
-
-  spawn_and_wait_per_hash(partitioned_data, [&emit_computed_value, &frame](const auto& hash_partition) {
-    for_each_partition(hash_partition, [&](uint64_t partition_start, uint64_t partition_end) {
+void templated_compute_window_function_segment_tree(
+    const WindowFunctionEvaluator::HashPartitionedData& partitioned_data, const FrameDescription& frame,
+    auto&& emit_computed_value) {
+  WindowFunctionEvaluator::spawn_and_wait_per_hash(partitioned_data, [&emit_computed_value,
+                                                                      &frame](const auto& hash_partition) {
+    WindowFunctionEvaluator::for_each_partition(hash_partition, [&](uint64_t partition_start, uint64_t partition_end) {
       const auto partition = std::span(hash_partition.begin() + partition_start, partition_end - partition_start);
 
       using Traits = WindowFunctionEvaluatorTraits<InputColumnType, window_function>;
@@ -521,30 +524,28 @@ void WindowFunctionEvaluator::templated_compute_window_function_segment_tree(
   });
 }
 
-template <typename InputColumnType, WindowFunction window_function, FrameType frame_type, typename OrderByColumnType>
-void WindowFunctionEvaluator::templated_compute_window_function_segment_tree(
-    [[maybe_unused]] const HashPartitionedData& partitioned_data, [[maybe_unused]] auto&& emit_computed_value) const {
-  Fail("Unsupported SegmentTree window function.");
-}
+};  // namespace
 
 template <typename InputColumnType, WindowFunction window_function>
+  requires SupportsSegmentTree<InputColumnType, window_function>
 void WindowFunctionEvaluator::compute_window_function_segment_tree(const HashPartitionedData& partitioned_data,
                                                                    auto&& emit_computed_value) const {
   const auto& frame = frame_description();
   switch (frame.type) {
     case FrameType::Rows:
-      templated_compute_window_function_segment_tree<InputColumnType, window_function, FrameType::Rows>(
-          partitioned_data, emit_computed_value);
+      templated_compute_window_function_segment_tree<InputColumnType, window_function, FrameType::Rows,
+                                                     NoOrderByColumn>(partitioned_data, frame, emit_computed_value);
       break;
     case FrameType::Range:
       if (_order_by_column_ids.empty()) {
         templated_compute_window_function_segment_tree<InputColumnType, window_function, FrameType::Range,
-                                                       NoOrderByColumn>(partitioned_data, emit_computed_value);
+                                                       NoOrderByColumn>(partitioned_data, frame, emit_computed_value);
       } else {
         resolve_data_type(left_input_table()->column_data_type(_order_by_column_ids[0]), [&](auto data_type) {
+          using OrderByColumnType = typename decltype(data_type)::type;
           templated_compute_window_function_segment_tree<InputColumnType, window_function, FrameType::Range,
-                                                         typename decltype(data_type)::type>(partitioned_data,
-                                                                                             emit_computed_value);
+                                                         OrderByColumnType>(partitioned_data, frame,
+                                                                            emit_computed_value);
         });
       }
       break;
