@@ -50,6 +50,7 @@ void NodeQueueScheduler::begin() {
   _workers_per_node = _workers.size() / _queue_count;
   _active = true;
 
+  _numa_queue_order = sort_relative_node_ids(get_distance_matrix(Hyrise::get().topology.nodes().size()));
   for (auto& worker : _workers) {
     worker->start();
   }
@@ -109,6 +110,11 @@ bool NodeQueueScheduler::active() const {
 
 const std::vector<std::shared_ptr<TaskQueue>>& NodeQueueScheduler::queues() const {
   return _queues;
+}
+
+const std::vector<NodeID>& NodeQueueScheduler::closest_queue_ids(NodeID node_id) const {
+  assert(node_id < _numa_queue_order.size());
+  return _numa_queue_order[node_id];
 }
 
 const std::vector<std::shared_ptr<Worker>>& NodeQueueScheduler::workers() const {

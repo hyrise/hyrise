@@ -37,8 +37,9 @@ class AbstractScheduler : public Noncopyable {
 
   virtual const std::vector<std::shared_ptr<TaskQueue>>& queues() const = 0;
 
-  virtual void schedule(std::shared_ptr<AbstractTask> task,
-                        SchedulePriority priority = SchedulePriority::Default) = 0;
+  virtual const std::vector<NodeID>& closest_queue_ids(NodeID node_id) const = 0;
+
+  virtual void schedule(std::shared_ptr<AbstractTask> task, SchedulePriority priority = SchedulePriority::Default) = 0;
 
   // Schedules the given tasks for execution and returns immediately.
   // If no asynchronicity is needed, prefer schedule_and_wait_for_tasks.

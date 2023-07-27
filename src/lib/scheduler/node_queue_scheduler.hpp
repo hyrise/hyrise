@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "abstract_scheduler.hpp"
+#include "utils/numa.hpp"
 
 namespace hyrise {
 
@@ -96,6 +97,8 @@ class NodeQueueScheduler : public AbstractScheduler {
 
   const std::vector<std::shared_ptr<TaskQueue>>& queues() const override;
 
+  const std::vector<NodeID>& closest_queue_ids(NodeID node_id) const override;
+
   const std::vector<std::shared_ptr<Worker>>& workers() const;
 
   /**
@@ -124,6 +127,7 @@ class NodeQueueScheduler : public AbstractScheduler {
   std::atomic<TaskID::base_type> _task_counter{0};
   std::shared_ptr<UidAllocator> _worker_id_allocator;
   std::vector<std::shared_ptr<TaskQueue>> _queues;
+  NodeMatrix _numa_queue_order;
   std::vector<std::shared_ptr<Worker>> _workers;
   std::atomic_bool _active{false};
 
