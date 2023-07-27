@@ -81,7 +81,7 @@ const std::vector<ColumnID>& GetTable::pruned_column_ids() const {
   return _pruned_column_ids;
 }
 
-void GetTable::set_prunable_subquery_scans(
+void GetTable::set_prunable_subquery_predicates(
     const std::vector<std::weak_ptr<const AbstractOperator>>& subquery_scans) const {
   DebugAssert(std::all_of(subquery_scans.cbegin(), subquery_scans.cend(),
                           [](const auto& op) { return op.lock() && op.lock()->type() == OperatorType::TableScan; }),
@@ -90,7 +90,7 @@ void GetTable::set_prunable_subquery_scans(
   _prunable_subquery_scans = subquery_scans;
 }
 
-std::vector<std::shared_ptr<const AbstractOperator>> GetTable::prunable_subquery_scans() const {
+std::vector<std::shared_ptr<const AbstractOperator>> GetTable::prunable_subquery_predicates() const {
   auto subquery_scans = std::vector<std::shared_ptr<const AbstractOperator>>{};
   subquery_scans.reserve(_prunable_subquery_scans.size());
   for (const auto& subquery_scan_ref : _prunable_subquery_scans) {
@@ -329,7 +329,7 @@ std::set<ChunkID> GetTable::_prune_chunks_dynamically() {
   const auto& stored_table_node = static_cast<const StoredTableNode&>(*lqp_node);
   const auto dummy_stored_table_node = StoredTableNode::make(_name);
 
-  for (const auto& op : prunable_subquery_scans()) {
+  for (const auto& op : prunable_subquery_predicates()) {
     const auto& table_scan = static_cast<const TableScan&>(*op);
     const auto& operator_predicate_arguments = table_scan.predicate()->arguments;
     const auto& predicate_node = static_cast<const PredicateNode&>(*table_scan.lqp_node);

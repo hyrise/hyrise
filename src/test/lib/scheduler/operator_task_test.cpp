@@ -260,7 +260,7 @@ TEST_F(OperatorTaskTest, LinkPrunableSubqueries) {
       get_table_a,
       equals_(pqp_column_(ColumnID{0}, DataType::Int, false, "a"), pqp_subquery_(projection, DataType::Int, false)));
 
-  get_table_a->set_prunable_subquery_scans({table_scan});
+  get_table_a->set_prunable_subquery_predicates({table_scan});
 
   const auto& [tasks, root_operator_task] = OperatorTask::make_tasks_from_operator(table_scan);
 
@@ -295,7 +295,7 @@ TEST_F(OperatorTaskTest, DoNotLinkPrunableSubqueriesWithCycles) {
       std::make_shared<TableScan>(get_table, greater_than_(pqp_column_(ColumnID{0}, DataType::Int, false, "a"),
                                                            pqp_subquery_(projection, DataType::Double, false)));
 
-  get_table->set_prunable_subquery_scans({table_scan});
+  get_table->set_prunable_subquery_predicates({table_scan});
 
   const auto& [tasks, root_operator_task] = OperatorTask::make_tasks_from_operator(table_scan);
 

@@ -1163,7 +1163,7 @@ TEST_F(LQPTranslatorTest, TranslatePrunableSubqueries) {
   const auto pqp = LQPTranslator{}.translate_node(lqp);
   const auto& get_table = std::dynamic_pointer_cast<const GetTable>(pqp->left_input());
   ASSERT_TRUE(get_table);
-  const auto& prunable_subquery_scans = get_table->prunable_subquery_scans();
+  const auto& prunable_subquery_scans = get_table->prunable_subquery_predicates();
   ASSERT_EQ(prunable_subquery_scans.size(), 1);
   EXPECT_EQ(prunable_subquery_scans.front(), pqp);
 }

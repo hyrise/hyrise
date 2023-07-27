@@ -33,8 +33,8 @@ class GetTable : public AbstractReadOnlyOperator {
   // StoredTableNode of the table the predicates are performed on. We attach the translated predicates (i.e.,
   // TableScans) to the GetTable operators so they can use them for pruning during execution ("dynamic pruning"), when
   // the subqueries might have already been executed and the predicate value is known.
-  void set_prunable_subquery_scans(const std::vector<std::weak_ptr<const AbstractOperator>>& subquery_scans) const;
-  std::vector<std::shared_ptr<const AbstractOperator>> prunable_subquery_scans() const;
+  void set_prunable_subquery_predicates(const std::vector<std::weak_ptr<const AbstractOperator>>& subquery_scans) const;
+  std::vector<std::shared_ptr<const AbstractOperator>> prunable_subquery_predicates() const;
 
  protected:
   std::shared_ptr<AbstractOperator> _on_deep_copy(

@@ -17,6 +17,7 @@
 #include "predicate_node.hpp"
 #include "update_node.hpp"
 #include "utils/assert.hpp"
+#include "utils/map_prunable_subquery_predicates.hpp"
 #include "utils/print_utils.hpp"
 
 namespace {
@@ -243,32 +244,9 @@ std::shared_ptr<AbstractLQPNode> AbstractLQPNode::deep_copy(LQPNodeMapping node_
   const auto copy = _deep_copy_impl(node_mapping);
 
   // StoredTableNodes can store references to PredicateNodes as prunable subquery predicates (see get_table.hpp for
-  // details). During a deep_copy, we must set the copied PredicateNodes as prunable subquery predicates of the
-  // StoredTableNode after copying each individual node. Due to the recursive copy strategy for input nodes, the
-  // StoredTableNodes are the first ones to be copied. The PredicateNodes of their prunable subquery predicates are
-  // copied later and cannot be found in node_mapping during the StoredTableNode copy procedure. Thus, we assign the
-  // copied predicates after the entire LQP was copied.
-  for (const auto& [node, node_copy] : node_mapping) {
-    if (node->type != LQPNodeType::StoredTable) {
-      continue;
-    }
-
-    const auto& stored_table_node = static_cast<const StoredTableNode&>(*node);
-    const auto& prunable_subquery_predicates = stored_table_node.prunable_subquery_predicates();
-    if (prunable_subquery_predicates.empty()) {
-      continue;
-    }
-
-    // Find the copies of the original PredicateNodes and set them as prunable subquery predicates of the
-    // StoredTableNode copy.
-    auto prunable_subquery_predicates_copy = std::vector<std::weak_ptr<AbstractLQPNode>>{};
-    prunable_subquery_predicates_copy.reserve(prunable_subquery_predicates.size());
-    for (const auto& predicate_node : prunable_subquery_predicates) {
-      DebugAssert(node_mapping.contains(predicate_node), "Could not find referenced node. LQP is invalid.");
-      prunable_subquery_predicates_copy.emplace_back(node_mapping.at(predicate_node));
-    }
-    static_cast<StoredTableNode&>(*node_copy).set_prunable_subquery_predicates(prunable_subquery_predicates_copy);
-  }
+  // details). We must assign the copies of these PredicateNodes after copying the entire LQP (see
+  // map_prunable_subquery_predicates.hpp).
+  map_prunable_subquery_predicates(node_mapping);
 
   return copy;
 }

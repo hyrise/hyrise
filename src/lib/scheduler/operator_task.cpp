@@ -57,7 +57,7 @@ void link_tasks_for_subquery_pruning(const std::unordered_set<std::shared_ptr<Op
     }
 
     const auto& get_table = static_cast<GetTable&>(*op);
-    for (const auto& table_scan : get_table.prunable_subquery_scans()) {
+    for (const auto& table_scan : get_table.prunable_subquery_predicates()) {
       for (const auto& subquery : table_scan->uncorrelated_subqueries()) {
         // All tasks have already been created, so we must be able to get the cached task from each operator.
         const auto& subquery_root = subquery->get_or_create_operator_task();

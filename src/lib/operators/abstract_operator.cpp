@@ -11,6 +11,7 @@
 #include "storage/table.hpp"
 #include "storage/value_segment.hpp"
 #include "utils/assert.hpp"
+#include "utils/map_prunable_subquery_predicates.hpp"
 #include "utils/format_bytes.hpp"
 #include "utils/format_duration.hpp"
 #include "utils/print_utils.hpp"
@@ -202,31 +203,9 @@ std::shared_ptr<AbstractOperator> AbstractOperator::deep_copy() const {
   const auto copy = deep_copy(copied_ops);
 
   // GetTable operators can store references to TableScans as prunable subquery predicates (see get_table.hpp for
-  // details). During a deep_copy, we must set the copied TableScan operators as prunable subquery scans of the GetTable
-  // operator after copying. Due to the recursion into the inputs of each operator, the TableSans are copied after the
-  // GetTable operators. When copying the GetTable operators, the copies of their prunable subquery predicates are not
-  // yet in copied_ops.
-  for (const auto& [op, op_copy] : copied_ops) {
-    if (op->type() != OperatorType::GetTable) {
-      continue;
-    }
-
-    const auto& get_table = static_cast<const GetTable&>(*op);
-    const auto& prunable_subquery_scans = get_table.prunable_subquery_scans();
-    if (prunable_subquery_scans.empty()) {
-      continue;
-    }
-
-    // Find the copies of the original TableScans and set them as prunable subquery scans of the GetTable copy.
-    auto prunable_subquery_scans_copy = std::vector<std::weak_ptr<const AbstractOperator>>{};
-    prunable_subquery_scans_copy.reserve(prunable_subquery_scans.size());
-    for (const auto& table_scan : prunable_subquery_scans) {
-      DebugAssert(copied_ops.contains(table_scan.get()), "Could not find referenced operator. PQP is invalid.");
-      prunable_subquery_scans_copy.emplace_back(copied_ops.at(table_scan.get()));
-    }
-
-    static_cast<GetTable&>(*op_copy).set_prunable_subquery_scans(prunable_subquery_scans_copy);
-  }
+  // details). We must assign the copies of these TableScans after copying the entire PQP (see
+  // map_prunable_subquery_predicates.hpp).
+  map_prunable_subquery_predicates(copied_ops);
 
   return copy;
 }

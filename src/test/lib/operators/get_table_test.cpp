@@ -304,11 +304,11 @@ TEST_F(OperatorsGetTableTest, Copy) {
   const auto table_scan_b =
       std::make_shared<TableScan>(get_table_c, equals_(pqp_column_(ColumnID{2}, DataType::Float, false, "c"),
                                                        pqp_subquery_(projection, DataType::Float, false)));
-  get_table_c->set_prunable_subquery_scans({table_scan_b});
+  get_table_c->set_prunable_subquery_predicates({table_scan_b});
 
   const auto& pqp_copy = table_scan_b->deep_copy();
   const auto& get_table_c_copy = std::static_pointer_cast<const GetTable>(pqp_copy->left_input());
-  const auto& prunable_subquery_scans = get_table_c_copy->prunable_subquery_scans();
+  const auto& prunable_subquery_scans = get_table_c_copy->prunable_subquery_predicates();
   ASSERT_EQ(prunable_subquery_scans.size(), 1);
   EXPECT_EQ(prunable_subquery_scans.front(), pqp_copy);
 
@@ -397,7 +397,7 @@ TEST_F(OperatorsGetTableTest, DynamicSubqueryPruning) {
   get_table->lqp_node = stored_table_node;
   table_scan->lqp_node = predicate_node;
   stored_table_node->set_prunable_subquery_predicates({predicate_node});
-  get_table->set_prunable_subquery_scans({table_scan});
+  get_table->set_prunable_subquery_predicates({table_scan});
 
   execute_all({table_wrapper, get_table});
 
@@ -430,7 +430,7 @@ TEST_F(OperatorsGetTableTest, DynamicSubqueryPruningSubqueryNotExecuted) {
   get_table->lqp_node = stored_table_node;
   table_scan->lqp_node = predicate_node;
   stored_table_node->set_prunable_subquery_predicates({predicate_node});
-  get_table->set_prunable_subquery_scans({table_scan});
+  get_table->set_prunable_subquery_predicates({table_scan});
 
   get_table->execute();
 

@@ -611,6 +611,7 @@ set(
     utils/lossless_predicate_cast.cpp
     utils/lossless_predicate_cast.hpp
     utils/make_bimap.hpp
+    utils/map_prunable_subquery_predicates.hpp
     utils/meta_table_manager.cpp
     utils/meta_table_manager.hpp
     utils/meta_tables/abstract_meta_table.cpp

@@ -66,6 +66,7 @@
 #include "stored_table_node.hpp"
 #include "union_node.hpp"
 #include "update_node.hpp"
+#include "utils/map_prunable_subquery_predicates.hpp"
 #include "utils/column_pruning_utils.hpp"
 
 namespace hyrise {
@@ -74,30 +75,9 @@ std::shared_ptr<AbstractOperator> LQPTranslator::translate_node(const std::share
   const auto pqp = _translate_node_recursively(node);
 
   // StoredTableNodes can store references to PredicateNodes as prunable subquery predicates (see get_table.hpp for
-  // details). We must set the TableScans resulting from these PredicateNodes after translation: Due to the recursion
-  // into the inputs of each LQP node, the PredicateNodes are translated after the StoredTableNodes. When translating
-  // the StoredTableNodes, the TableScans of their prunable subquery predicates are not yet in _operator_by_lqp_node.
-  for (const auto& [lqp_node, op] : _operator_by_lqp_node) {
-    if (op->type() != OperatorType::GetTable) {
-      continue;
-    }
-
-    DebugAssert(lqp_node->type == LQPNodeType::StoredTable, "Translated GetTable operator from wrong LQP node.");
-    const auto& stored_table_node = static_cast<const StoredTableNode&>(*lqp_node);
-    const auto& prunable_lqp_predicates = stored_table_node.prunable_subquery_predicates();
-    if (prunable_lqp_predicates.empty()) {
-      continue;
-    }
-
-    auto prunable_pqp_predicates = std::vector<std::weak_ptr<const AbstractOperator>>{};
-    prunable_pqp_predicates.reserve(prunable_lqp_predicates.size());
-    for (const auto& predicate : prunable_lqp_predicates) {
-      DebugAssert(_operator_by_lqp_node.contains(predicate), "Could not find referenced node. LQP/PQP is invalid.");
-      prunable_pqp_predicates.emplace_back(_operator_by_lqp_node.at(predicate));
-    }
-
-    static_cast<GetTable&>(*op).set_prunable_subquery_scans(prunable_pqp_predicates);
-  }
+  // details). We must assign the TableScans translated from these PredicateNodes after translating the entire LQP (see
+  // map_prunable_subquery_predicates.hpp).
+  map_prunable_subquery_predicates(_operator_by_lqp_node);
 
   return pqp;
 }
