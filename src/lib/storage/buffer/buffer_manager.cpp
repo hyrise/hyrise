@@ -137,7 +137,9 @@ BufferManager::BufferManager(const Config config)
           _ssd_region, _secondary_buffer_pool, config.cpu_node)),
       _secondary_buffer_pool(std::make_shared<BufferPool>(
           config.numa_buffer_pool_size, config.enable_eviction_purge_worker, _volatile_regions, config.migration_policy,
-          _ssd_region, nullptr, config.memory_node)) {}
+          _ssd_region, nullptr, config.memory_node)) {
+  Assert(config.cpu_node != config.memory_node, "CPU and memory node must be different");
+}
 
 BufferManager::~BufferManager() {
   unmap_region(_mapped_region);

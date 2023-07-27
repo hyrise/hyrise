@@ -210,14 +210,14 @@ inline uint64_t execute_ycsb_action(const YCSBTable& table, BufferManager& buffe
   auto num_cachelines = page_size_bytes / CACHE_LINE_SIZE;
   switch (op_type) {
     case YSCBOperationType::Lookup: {
-      auto offset = (rand() % num_cachelines);
+      auto offset = (rand() % num_cachelines) * CACHE_LINE_SIZE;
       buffer_manager.pin_shared(page_id, AccessIntent::Read);
       simulate_cacheline_read(ptr + offset);
       buffer_manager.unpin_shared(page_id);
       return CACHE_LINE_SIZE;
     }
     case YSCBOperationType::Update: {
-      auto offset = (rand() % num_cachelines);
+      auto offset = (rand() % num_cachelines) * CACHE_LINE_SIZE;
       buffer_manager.pin_exclusive(page_id);
       simulate_cacheline_store(ptr + offset);
       buffer_manager.unpin_exclusive(page_id);
