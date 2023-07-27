@@ -88,7 +88,6 @@ class DictionarySegment : public BaseDictionarySegment {
   const std::shared_ptr<const pmr_vector<T>> _dictionary;
   const std::shared_ptr<const BaseCompressedVector> _attribute_vector;
   std::unique_ptr<BaseVectorDecompressor> _decompressor;
-  NodeID _node_id;
 };
 
 EXPLICITLY_DECLARE_DATA_TYPES(DictionarySegment);
