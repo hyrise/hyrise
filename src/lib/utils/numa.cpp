@@ -7,8 +7,9 @@ DistanceMatrix get_distance_matrix(int num_nodes) {
   auto distance_matrix = DistanceMatrix(static_cast<size_t>(num_nodes), std::vector<int>(num_nodes, 10));
 
   // If numa_distance does not work (e.g. code is execute on Windows), 0 will be returned.
-  // In that case return default matrix.
-  if (numa_distance(0, 0) == 0) {
+  // For non NUMA systems, we check the max possible numa node, as this will still work, when we have
+  // a single node. If this call fails, return default matrix.
+  if (numa_distance(num_nodes - 1, num_nodes - 1) == 0) {
     PerformanceWarning(
         "Distance between numa nodes could not be calculated. Falling back to default distance for every "
         "interconnect.");
@@ -21,7 +22,7 @@ DistanceMatrix get_distance_matrix(int num_nodes) {
       // (e.g. we can also set dis_matrix[y][x] from the same call)
       distance_matrix[node_x][node_y] = numa_distance(node_x, node_y);
       DebugAssert(distance_matrix[node_x][node_y] != 0, "numa distance could not find distance between node " +
-                                                            std::to_string(node_x) + "and node " +
+                                                            std::to_string(node_x) + " and node " +
                                                             std::to_string(node_y));
     }
   }
