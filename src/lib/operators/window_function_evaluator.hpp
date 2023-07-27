@@ -47,6 +47,8 @@ class WindowFunctionEvaluator : public AbstractReadOnlyOperator {
 
   using HashPartitionedData = PerHash<std::vector<RelevantRowInformation>>;
 
+  static void for_each_partition(std::span<const RelevantRowInformation> hash_partition, auto&& emit_partition_bounds);
+
   enum class ComputationStrategy {
     OnePass,
     SegmentTree,
@@ -79,26 +81,18 @@ class WindowFunctionEvaluator : public AbstractReadOnlyOperator {
  private:
   HashPartitionedData partition_and_sort() const;
 
-  static void for_each_partition(std::span<const RelevantRowInformation> hash_partition, auto&& emit_partition_bounds);
-
-  template <typename InputColumnType, WindowFunction window_function>
-  void compute_window_function_one_pass(const HashPartitionedData& partitioned_data, auto&& emit_computed_value) const;
-  template <typename InputColumnType, WindowFunction window_function>
-  void compute_window_function_segment_tree(const HashPartitionedData& partitioned_data,
-                                            auto&& emit_computed_value) const;
-
   // Sentinel type to indicate that Range mode is used without an order-by column
   struct NoOrderByColumn {};
 
-  template <typename InputColumnType, WindowFunction window_function, FrameType frame_type,
-            typename OrderByColumnType = NoOrderByColumn>
+  template <typename InputColumnType, WindowFunction window_function>
+    requires SupportsOnePass<InputColumnType, window_function>
+  void compute_window_function_one_pass(const HashPartitionedData& partitioned_data, auto&& emit_computed_value) const;
+
+  template <typename InputColumnType, WindowFunction window_function>
     requires SupportsSegmentTree<InputColumnType, window_function>
-  void templated_compute_window_function_segment_tree(const HashPartitionedData& partitioned_data,
-                                                      auto&& emit_computed_value) const;
-  template <typename InputColumnType, WindowFunction window_function, FrameType frame_type,
-            typename OrderByColumnType = NoOrderByColumn>
-  void templated_compute_window_function_segment_tree(const HashPartitionedData& partitioned_data,
-                                                      auto&& emit_computed_value) const;
+  void compute_window_function_segment_tree(const HashPartitionedData& partitioned_data,
+                                            auto&& emit_computed_value) const;
+
   template <typename T>
   std::shared_ptr<const Table> annotate_input_table(
       std::vector<std::pair<pmr_vector<T>, pmr_vector<bool>>> segment_data_for_output_column) const;
