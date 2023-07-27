@@ -58,7 +58,7 @@ struct WindowOperatorFactory {
     }();
     return std::make_shared<WindowFunctionEvaluator>(input_table, _partition_by_columns, _order_by_columns,
                                                      argument_column, window_function_expression);
-  };
+  }
 
   std::shared_ptr<StaticTableNode> _static_table_node;
   std::vector<ColumnID> _partition_by_columns;
