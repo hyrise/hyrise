@@ -226,10 +226,13 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
       *output_chunks_iter = std::make_shared<Chunk>(std::move(output_segments), stored_chunk->mvcc_data(),
                                                     stored_chunk->get_allocator(), std::move(output_indexes));
 
-      if (output_chunk_sorted_by) {
-        // Finalizing the output chunk here is safe because this path is only taken for
-        // a sorted chunk. Chunks should never be sorted when they are still mutable
+      if (!stored_chunk->is_mutable()) {
+        // Finalizing is cheap here: the MvccData's max_begin_cid is already set, so finalize() only sets the flag and
+        // does not trigger anything else.
         (*output_chunks_iter)->finalize();
+      }
+
+      if (output_chunk_sorted_by) {
         (*output_chunks_iter)->set_individually_sorted_by(*output_chunk_sorted_by);
       }
 
