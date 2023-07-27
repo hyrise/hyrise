@@ -102,10 +102,10 @@ inline void run_ycsb(Fixture& fixture, benchmark::State& state) {
   if (state.thread_index() == 0) {
     state.counters["latency_mean"] = hdr_mean(fixture.latency_histogram);
     state.counters["latency_stddev"] = hdr_stddev(fixture.latency_histogram);
-    state.counters["latency_median"] = hdr_value_at_percentile(fixture.latency_histogram, 0.5);
+    state.counters["latency_median"] = hdr_value_at_percentile(fixture.latency_histogram, 50.0;
     state.counters["latency_min"] = hdr_min(fixture.latency_histogram);
     state.counters["latency_max"] = hdr_max(fixture.latency_histogram);
-    state.counters["latency_95percentile"] = hdr_value_at_percentile(fixture.latency_histogram, 0.95);
+    state.counters["latency_95percentile"] = hdr_value_at_percentile(fixture.latency_histogram, 95.0);
   }
 }
 
