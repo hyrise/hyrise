@@ -88,11 +88,11 @@ inline void run_ycsb(Fixture& fixture, benchmark::State& state) {
       const auto latency = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
       hdr_record_value(local_latency_histogram, latency);
     }
-  }
-  {
-    std::lock_guard<std::mutex> lock{fixture.latency_histogram_mutex};
-    hdr_add(fixture.latency_histogram, local_latency_histogram);
-    hdr_close(local_latency_histogram);
+    {
+      std::lock_guard<std::mutex> lock{fixture.latency_histogram_mutex};
+      hdr_add(fixture.latency_histogram, local_latency_histogram);
+      hdr_close(local_latency_histogram);
+    }
   }
 
   state.SetItemsProcessed(operations_per_thread);
