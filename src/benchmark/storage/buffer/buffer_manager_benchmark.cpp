@@ -24,16 +24,16 @@ class BufferManagerFixture : public benchmark::Fixture {
 
   void SetUp(const ::benchmark::State& state) {
     if (state.thread_index() == 0) {
-      _buffer_manager = BufferManager({.dram_buffer_pool_size = DEFAULT_DRAM_BUFFER_POOL_SIZE,
-                                       .memory_node = NO_NUMA_MEMORY_NODE,
-                                       .ssd_path = "/home/nriek/hyrise-fork/benchmarks"});
+      _buffer_manager = std::make_unique<BufferManager>({.dram_buffer_pool_size = DEFAULT_DRAM_BUFFER_POOL_SIZE,
+                                                         .memory_node = NO_NUMA_MEMORY_NODE,
+                                                         .ssd_path = "/home/nriek/hyrise-fork/benchmarks"});
     }
   }
 
   void TearDown(const ::benchmark::State& state) {}
 
  protected:
-  BufferManager _buffer_manager;
+  std::unique_ptr<BufferManager> _buffer_manager;
 };
 
 BENCHMARK_DEFINE_F(BufferManagerFixture, BM_BufferManagerPinForWrite)(benchmark::State& state) {

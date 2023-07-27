@@ -67,7 +67,7 @@ void VolatileRegion::mbind_to_numa_node(PageID page_id, const NumaMemoryNode tar
             MPOL_MF_MOVE | MPOL_MF_STRICT) != 0) {
     const auto error = errno;
     numa_bitmask_free(nodes);
-    Fail("Move pages failed: " + strerror(error));
+    Fail("Mbind failed: " + strerror(error));
   }
   numa_bitmask_free(nodes);
   _metrics->num_numa_tonode_memory_calls.fetch_add(1, std::memory_order_relaxed);

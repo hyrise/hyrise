@@ -131,7 +131,7 @@ add_executable(
     micro_benchmark_main.cpp
     storage/buffer/zipfian_int_distribution.hpp
     storage/buffer/page_migration_benchmark.cpp
-    storage/buffer/buffer_manager_benchmark.cpp
+    # storage/buffer/buffer_manager_benchmark.cpp
     storage/buffer/sequential_read_benchmark.cpp
     storage/buffer/random_access_benchmark.cpp
     storage/buffer/buffer_benchmark_utils.hpp
