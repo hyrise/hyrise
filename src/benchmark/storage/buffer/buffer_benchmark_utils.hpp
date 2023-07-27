@@ -131,8 +131,8 @@ enum class YCSBWorkload {
 enum class YSCBOperationType : int { Scan, Lookup, Update };
 
 enum class YCSBTupleSize : uint32_t {
-  Small = CACHE_LINE_SIZE,
-  Medium = 512,
+  // Small = CACHE_LINE_SIZE,
+  // Medium = 512,
   Large = 4096,
   VeryLarge = 8192,
   Huge = 32768

@@ -45,12 +45,12 @@ class YCSBBufferManagerFixture : public benchmark::Fixture {
       config.migration_policy = policy;
 
       Hyrise::get().buffer_manager = BufferManager(config);
-#ifdef __APPLE__
+      // #ifdef __APPLE__
       memory_resource = &Hyrise::get().buffer_manager;
-#elif __linux__
-      JemallocMemoryResource::get().reset();
-      memory_resource = &JemallocMemoryResource::get();
-#endif
+      // #elif __linux__
+      //       JemallocMemoryResource::get().reset();
+      //       memory_resource = &JemallocMemoryResource::get();
+      // #endif
 
       auto database_size = state.range(0) * GB;
       table = generate_ycsb_table(memory_resource, database_size);
