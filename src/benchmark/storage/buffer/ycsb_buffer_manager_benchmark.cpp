@@ -68,10 +68,9 @@ class YCSBBufferManagerFixture : public benchmark::Fixture {
   }
 };
 
-inline void run_ycsb(benchmark::State& state, YCSBTable& table, YCSBOperations& operations,
-                     BufferManager& buffer_manager, hdr_histogram* latency_histogram,
-                     std::mutex& latency_histogram_mutex) {
-  const auto operations_per_thread = operations.size() / state.threads();
+template <typename Fixture>
+inline void run_ycsb(Fixture& fixture, benchmark::State& state) {
+  const auto operations_per_thread = fixture.operations.size() / state.threads();
   // TODO: Reset metrics of buffer manager, cpu affinity?
   auto bytes_processed = uint64_t{0};
 
@@ -82,48 +81,45 @@ inline void run_ycsb(benchmark::State& state, YCSBTable& table, YCSBOperations& 
     auto start = state.thread_index() * operations_per_thread;
     auto end = start + operations_per_thread;
     for (auto i = start; i < end; ++i) {
-      const auto op = operations[i];
+      const auto op = fixture.operations[i];
       auto start = std::chrono::high_resolution_clock::now();
-      bytes_processed += execute_ycsb_action(table, buffer_manager, op);
+      bytes_processed += execute_ycsb_action(fixture.table, Hyrise::get().buffer_manager, op);
       auto end = std::chrono::high_resolution_clock::now();
       const auto latency = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
       hdr_record_value(local_latency_histogram, latency);
     }
   }
   {
-    std::lock_guard<std::mutex> lock{latency_histogram_mutex};
-    hdr_add(latency_histogram, local_latency_histogram);
+    std::lock_guard<std::mutex> lock{fixture.latency_histogram_mutex};
+    hdr_add(fixture.latency_histogram, local_latency_histogram);
     hdr_close(local_latency_histogram);
   }
-
-  // TODO: Read on larger page, write on smaller page
-  /// TODO Combbe
 
   state.SetItemsProcessed(operations_per_thread);
   state.SetBytesProcessed(bytes_processed);
   state.counters["cache_hit_rate"] =
-      benchmark::Counter(buffer_manager.metrics()->hit_rate(), benchmark::Counter::kAvgThreads);
+      benchmark::Counter(Hyrise::get().buffer_manager.metrics()->hit_rate(), benchmark::Counter::kAvgThreads);
   if (state.thread_index() == 0) {
-    state.counters["latency_mean"] = hdr_mean(latency_histogram);
-    state.counters["latency_stddev"] = hdr_stddev(latency_histogram);
-    state.counters["latency_median"] = hdr_value_at_percentile(latency_histogram, 0.5);
-    state.counters["latency_min"] = hdr_min(latency_histogram);
-    state.counters["latency_max"] = hdr_max(latency_histogram);
-    state.counters["latency_95percentile"] = hdr_value_at_percentile(latency_histogram, 0.95);
+    state.counters["latency_mean"] = hdr_mean(fixture.latency_histogram);
+    state.counters["latency_stddev"] = hdr_stddev(fixture.latency_histogram);
+    state.counters["latency_median"] = hdr_value_at_percentile(fixture.latency_histogram, 0.5);
+    state.counters["latency_min"] = hdr_min(fixture.latency_histogram);
+    state.counters["latency_max"] = hdr_max(fixture.latency_histogram);
+    state.counters["latency_95percentile"] = hdr_value_at_percentile(fixture.latency_histogram, 0.95);
   }
 }
 
-#define CONFIGURE_BENCHMARK(WL, Policy)                                                                           \
-  BENCHMARK_TEMPLATE_DEFINE_F(YCSBBufferManagerFixture, BM_ycsb_##WL##Policy, YCSBWorkload::WL, Policy)           \
-  (benchmark::State & state) {                                                                                    \
-    run_ycsb(state, table, operations, Hyrise::get().buffer_manager, latency_histogram, latency_histogram_mutex); \
-  }                                                                                                               \
-  BENCHMARK_REGISTER_F(YCSBBufferManagerFixture, BM_ycsb_##WL##Policy)                                            \
-      ->ThreadRange(1, 48)                                                                                        \
-      ->Iterations(1)                                                                                             \
-      ->Repetitions(1)                                                                                            \
-      ->UseRealTime()                                                                                             \
-      ->DenseRange(1, 4, 1)                                                                                       \
+#define CONFIGURE_BENCHMARK(WL, Policy)                                                                 \
+  BENCHMARK_TEMPLATE_DEFINE_F(YCSBBufferManagerFixture, BM_ycsb_##WL##Policy, YCSBWorkload::WL, Policy) \
+  (benchmark::State & state) {                                                                          \
+    run_ycsb(*this, state);                                                                             \
+  }                                                                                                     \
+  BENCHMARK_REGISTER_F(YCSBBufferManagerFixture, BM_ycsb_##WL##Policy)                                  \
+      ->ThreadRange(1, 48)                                                                              \
+      ->Iterations(1)                                                                                   \
+      ->Repetitions(1)                                                                                  \
+      ->UseRealTime()                                                                                   \
+      ->DenseRange(1, 4, 1)                                                                             \
       ->Name("BM_ycsb/" #WL "/" #Policy);
 
 CONFIGURE_BENCHMARK(UpdateHeavy, LazyMigrationPolicy)
