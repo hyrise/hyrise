@@ -31,6 +31,7 @@
 #include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/update_node.hpp"
 #include "logical_query_plan/validate_node.hpp"
+#include "logical_query_plan/window_node.hpp"
 #include "sql/create_sql_parser_error_message.hpp"
 #include "sql/sql_translator.hpp"
 #include "storage/table.hpp"
@@ -3247,6 +3248,158 @@ TEST_F(SQLTranslatorTest, CastStatement) {
     const auto [actual_lqp, translation_info] = sql_to_lqp_helper("SELECT CAST(1 as BIGINT);");
     EXPECT_LQP_EQ(actual_lqp, expected_lqp);
   }
+}
+
+TEST_F(SQLTranslatorTest, BasicWindowFunction) {
+  const auto& [actual_lqp, _] = sql_to_lqp_helper("SELECT a, b, row_number() OVER (ORDER BY a DESC) FROM int_float;");
+
+  auto frame = FrameDescription{FrameType::Range, FrameBound{0, FrameBoundType::Preceding, true},
+                                FrameBound{0, FrameBoundType::CurrentRow, false}};
+  const auto window = window_(expression_vector(), expression_vector(int_float_a),
+                              std::vector<SortMode>{SortMode::Descending}, std::move(frame));
+  const auto expected_lqp = WindowNode::make(row_number_(window), stored_table_node_int_float);
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, WindowFunctionFrames) {
+  // Try all prossible framing options.
+  const auto frame_types =
+      std::vector<std::pair<std::string, FrameType>>{{"RANGE", FrameType::Range}, {"ROWS", FrameType::Rows}};
+  const auto frame_descriptions =
+      std::vector<std::string>{"UNBOUNDED PRECEDING", "BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING",
+                               "BETWEEN 1 PRECEDING AND 2 FOLLOWING", "BETWEEN CURRENT ROW AND CURRENT ROW"};
+  const auto expected_starts = std::vector<FrameBound>{
+      FrameBound{0, FrameBoundType::Preceding, true}, FrameBound{0, FrameBoundType::Preceding, true},
+      FrameBound{1, FrameBoundType::Preceding, false}, FrameBound{0, FrameBoundType::CurrentRow, false}};
+  const auto expected_ends = std::vector<FrameBound>{
+      FrameBound{0, FrameBoundType::CurrentRow, false}, FrameBound{0, FrameBoundType::Following, true},
+      FrameBound{2, FrameBoundType::Following, false}, FrameBound{0, FrameBoundType::CurrentRow, false}};
+
+  for (const auto& [frame_type_str, frame_type] : frame_types) {
+    for (auto frame_bound_id = size_t{0}; frame_bound_id < frame_descriptions.size(); ++frame_bound_id) {
+      const auto query = "SELECT a, b, row_number() OVER (ORDER BY a " + frame_type_str + " " +
+                         frame_descriptions[frame_bound_id] + " ) FROM int_float;";
+      const auto& [actual_lqp, _] = sql_to_lqp_helper(query);
+
+      auto frame = FrameDescription{frame_type, expected_starts[frame_bound_id], expected_ends[frame_bound_id]};
+      const auto window = window_(expression_vector(), expression_vector(int_float_a),
+                                  std::vector<SortMode>{SortMode::Ascending}, std::move(frame));
+      const auto expected_lqp = WindowNode::make(row_number_(window), stored_table_node_int_float);
+
+      EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+    }
+  }
+}
+
+TEST_F(SQLTranslatorTest, WindowDifferentFunctions) {
+  // Try all possible WindowFunctions.
+  const auto functions =
+      std::vector<std::string>{"rank()", "dense_rank()", "percent_rank()", "cume_dist()", "row_number()",
+                               "min(a)", "max(a)",       "avg(a)",         "count(a)",    "count(distinct a)"};
+
+  auto frame = FrameDescription{FrameType::Range, FrameBound{0, FrameBoundType::Preceding, true},
+                                FrameBound{0, FrameBoundType::CurrentRow, false}};
+  auto partition_by_expressions = expression_vector(int_float_b);
+  auto order_by_expressions = expression_vector(int_float_a);
+  const auto window = window_(std::move(partition_by_expressions), std::move(order_by_expressions),
+                              std::vector<SortMode>{SortMode::Ascending}, std::move(frame));
+  const auto expected_functions =
+      expression_vector(rank_(window), dense_rank_(window), percent_rank_(window), cume_dist_(window),
+                        row_number_(window), min_(int_float_a, window), max_(int_float_a, window),
+                        avg_(int_float_a, window), count_(int_float_a, window), count_distinct_(int_float_a, window));
+
+  for (auto window_function_id = size_t{0}; window_function_id < functions.size(); ++window_function_id) {
+    const auto query =
+        "SELECT a, b, " + functions[window_function_id] + " OVER (PARTITION BY b ORDER BY a) FROM int_float;";
+    const auto [actual_lqp, _] = sql_to_lqp_helper(query);
+
+    const auto expected_lqp = WindowNode::make(expected_functions[window_function_id], stored_table_node_int_float);
+
+    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  }
+}
+
+TEST_F(SQLTranslatorTest, WindowFunctionWithProjections) {
+  // We need one ProjectionNode before the WindowNode to calculate a + b and one after it to compute 1.0 / row_number().
+  const auto [actual_lqp, _] = sql_to_lqp_helper("SELECT 1.0 / row_number() OVER (ORDER BY a + b) FROM int_float;");
+
+  auto frame = FrameDescription{FrameType::Range, FrameBound{0, FrameBoundType::Preceding, true},
+                                FrameBound{0, FrameBoundType::CurrentRow, false}};
+  const auto window = window_(expression_vector(), expression_vector(add_(int_float_a, int_float_b)),
+                              std::vector<SortMode>{SortMode::Ascending}, std::move(frame));
+  const auto window_function = row_number_(window);
+
+  // clang-format off
+  const auto expected_lqp =
+  ProjectionNode::make(expression_vector(div_(1.0, window_function)),
+    WindowNode::make(window_function,
+      ProjectionNode::make(expression_vector(int_float_a, int_float_b, add_(int_float_a, int_float_b)),
+        stored_table_node_int_float)));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, MultipleWindowFunctions) {
+  const auto [actual_lqp, _] =
+      sql_to_lqp_helper("SELECT a, b, rank() OVER (), row_number() OVER (ORDER BY a) FROM int_float;");
+
+  auto frame_a = FrameDescription{FrameType::Range, FrameBound{0, FrameBoundType::Preceding, true},
+                                  FrameBound{0, FrameBoundType::CurrentRow, false}};
+  auto frame_b = frame_a;
+  const auto window_a = window_(expression_vector(), expression_vector(), std::vector<SortMode>{}, std::move(frame_a));
+  const auto window_b = window_(expression_vector(), expression_vector(int_float_a),
+                                std::vector<SortMode>{SortMode::Ascending}, std::move(frame_b));
+
+  // clang-format off
+  const auto expected_lqp =
+  WindowNode::make(row_number_(window_b),
+    WindowNode::make(rank_(window_a),
+      stored_table_node_int_float));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, InvalidWindowFunctions) {
+  // Pure window functions must define a window.
+  EXPECT_THROW(sql_to_lqp_helper("SELECT rank() FROM int_float;"), InvalidInputException);
+  // Pure window functions must not have an argument.
+  EXPECT_THROW(sql_to_lqp_helper("SELECT rank(a) OVER () FROM int_float;"), InvalidInputException);
+  // Aggregate functions used as window functions must have an argument.
+  EXPECT_THROW(sql_to_lqp_helper("SELECT avg() OVER () FROM int_float;"), InvalidInputException);
+  // Window functions can only be used in the SELECT list.
+  EXPECT_THROW(sql_to_lqp_helper("SELECT a FROM int_float WHERE avg(a) OVER () > a;"), InvalidInputException);
+  EXPECT_THROW(sql_to_lqp_helper("SELECT a FROM int_float GROUP BY avg(a) OVER ();"), InvalidInputException);
+  EXPECT_THROW(sql_to_lqp_helper("SELECT a FROM int_float ORDER BY avg(a) OVER ();"), InvalidInputException);
+  EXPECT_THROW(sql_to_lqp_helper("SELECT a FROM int_float LIMIT min(a) OVER ();"), InvalidInputException);
+  // Window functions must not be nested.
+  EXPECT_THROW(sql_to_lqp_helper("SELECT rank() OVER(ORDER BY avg(a) OVER ()) FROM int_float;"), InvalidInputException);
+  EXPECT_THROW(sql_to_lqp_helper("SELECT rank() OVER(ORDER BY a) rnk, avg() OVER(ORDER BY rnk) FROM int_float;"),
+               InvalidInputException);
+  // Arguments of window functions must be available or derivable.
+  EXPECT_THROW(sql_to_lqp_helper("SELECT avg(a) OVER () FROM int_float GROUP BY b;"), InvalidInputException);
+  // PATITION BY and ORDER BY expressions must be available or derivable.
+  EXPECT_THROW(sql_to_lqp_helper("SELECT rank() OVER(PARTITION BY a) FROM int_float GROUP BY b;"),
+               InvalidInputException);
+  EXPECT_THROW(sql_to_lqp_helper("SELECT rank() OVER(ORDER BY a) FROM int_float GROUP BY b;"), InvalidInputException);
+  // GROUPS frames are not supported.
+  EXPECT_THROW(sql_to_lqp_helper("SELECT rank() OVER (GROUPS UNBOUNDED PRECEDING) FROM int_float;"),
+               InvalidInputException);
+  // Frame begin must not be UNBOUNDED FOLLOWING.
+  EXPECT_THROW(sql_to_lqp_helper(
+                   "SELECT rank() OVER (ROWS BETWEEN UNBOUNDED FOLLOWING AND UNBOUNDED FOLLOWING) FROM int_float;"),
+               InvalidInputException);
+  // Frame end must not be UNBOUNDED PRECEDING.
+  EXPECT_THROW(sql_to_lqp_helper("SELECT rank() OVER (ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED PRECEDING) FROM "
+                                 "int_float;"),
+               InvalidInputException);
+  // Frame end must not be before start.
+  EXPECT_THROW(sql_to_lqp_helper("SELECT rank() OVER (ROWS BETWEEN 1 FOLLOWING AND CURRENT ROW) FROM int_float;"),
+               InvalidInputException);
+  // Function must be a window function.
+  EXPECT_THROW(sql_to_lqp_helper("SELECT substr(b, 1, 3) OVER () FROM int_string;"), InvalidInputException);
 }
 
 }  // namespace hyrise

@@ -1,17 +1,13 @@
-#include <memory>
-#include <optional>
-#include <string>
-#include <utility>
-#include <vector>
-
 #include "base_test.hpp"
-#include "expression/aggregate_expression.hpp"
+
 #include "expression/arithmetic_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_column_expression.hpp"
 #include "expression/pqp_column_expression.hpp"
 #include "expression/pqp_subquery_expression.hpp"
+#include "expression/window_expression.hpp"
+#include "expression/window_function_expression.hpp"
 #include "hyrise.hpp"
 #include "import_export/file_type.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
@@ -32,6 +28,7 @@
 #include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/union_node.hpp"
 #include "logical_query_plan/validate_node.hpp"
+#include "logical_query_plan/window_node.hpp"
 #include "operators/aggregate_hash.hpp"
 #include "operators/change_meta_table.hpp"
 #include "operators/export.hpp"
@@ -1169,6 +1166,16 @@ TEST_F(LQPTranslatorTest, TranslatePrunableSubqueries) {
   const auto& prunable_subquery_scans = get_table->prunable_subquery_scans();
   ASSERT_EQ(prunable_subquery_scans.size(), 1);
   EXPECT_EQ(prunable_subquery_scans.front(), pqp);
+}
+
+TEST_F(LQPTranslatorTest, WindowNode) {
+  auto frame = FrameDescription{FrameType::Range, FrameBound{0, FrameBoundType::Preceding, true},
+                                FrameBound{0, FrameBoundType::CurrentRow, false}};
+  const auto window_function =
+      rank_(window_(expression_vector(), expression_vector(), std::vector<SortMode>{}, std::move(frame)));
+  const auto lqp = WindowNode::make(window_function, int_float_node);
+
+  EXPECT_THROW(LQPTranslator{}.translate_node(lqp), InvalidInputException);
 }
 
 }  // namespace hyrise

@@ -6,8 +6,8 @@ from hyriseBenchmarkCore import close_benchmark, check_exit_status, initialize, 
 def main():
     build_dir = initialize()
 
-    # Run SSB and validate its output using pexpect and check if all queries were successfully verified with sqlite.
-    arguments = dict()
+    # Run SSB, validate its output using pexpect, and check if all queries were successfully verified with sqlite.
+    arguments = {}
     arguments["--queries"] = "'1.1,1.2,2.2,3.3'"
     arguments["--scale"] = "0.01"
     arguments["--time"] = "10"
