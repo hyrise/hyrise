@@ -5,7 +5,7 @@
 
 #include "expression/window_function_expression.hpp"
 #include "operators/aggregate/window_function_traits.hpp"
-#include "relevant_row_information.hpp"
+#include "util.hpp"
 
 namespace hyrise::window_function_evaluator {
 

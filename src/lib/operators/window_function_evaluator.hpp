@@ -14,7 +14,7 @@
 #include "operators/aggregate/window_function_traits.hpp"
 #include "operators/operator_performance_data.hpp"
 #include "storage/table.hpp"
-#include "window_function_evaluator/relevant_row_information.hpp"
+#include "window_function_evaluator/util.hpp"
 #include "window_function_evaluator/window_function_evaluator_traits.hpp"
 
 namespace hyrise {
@@ -29,22 +29,7 @@ class WindowFunctionEvaluator : public AbstractReadOnlyOperator {
                           std::shared_ptr<WindowFunctionExpression> init_window_funtion_expression);
 
   const std::string& name() const override;
-
-  static constexpr uint8_t hash_partition_bits = 8;
-  static constexpr size_t hash_partition_mask = (1u << hash_partition_bits) - 1;
-  static constexpr uint32_t hash_partition_partition_count = 1u << hash_partition_bits;
-
-  template <typename T>
-  using PerHash = std::array<T, hash_partition_partition_count>;
-
-  template <typename T>
-  static void spawn_and_wait_per_hash(PerHash<T>& data, auto&& per_hash_function);
-  template <typename T>
-  static void spawn_and_wait_per_hash(const PerHash<T>& data, auto&& per_hash_function);
-
-  using HashPartitionedData = PerHash<std::vector<RelevantRowInformation>>;
-
-  static void for_each_partition(std::span<const RelevantRowInformation> hash_partition, auto&& emit_partition_bounds);
+  bool is_output_nullable() const;
 
   enum class ComputationStrategy {
     OnePass,
@@ -53,8 +38,6 @@ class WindowFunctionEvaluator : public AbstractReadOnlyOperator {
 
   template <typename InputColumnType, WindowFunction window_function>
   ComputationStrategy choose_computation_strategy() const;
-
-  bool is_output_nullable() const;
 
   enum class OperatorSteps : uint8_t { PartitionAndSort, Compute, Annotate };
 
@@ -78,9 +61,6 @@ class WindowFunctionEvaluator : public AbstractReadOnlyOperator {
  private:
   HashPartitionedData partition_and_sort() const;
 
-  // Sentinel type to indicate that Range mode is used without an order-by column
-  struct NoOrderByColumn {};
-
   template <typename InputColumnType, WindowFunction window_function>
     requires SupportsOnePass<InputColumnType, window_function>
   void compute_window_function_one_pass(const HashPartitionedData& partitioned_data, auto&& emit_computed_value) const;
@@ -90,9 +70,9 @@ class WindowFunctionEvaluator : public AbstractReadOnlyOperator {
   void compute_window_function_segment_tree(const HashPartitionedData& partitioned_data,
                                             auto&& emit_computed_value) const;
 
-  template <typename T>
+  template <typename OutputColumnType>
   std::shared_ptr<const Table> annotate_input_table(
-      std::vector<std::pair<pmr_vector<T>, pmr_vector<bool>>> segment_data_for_output_column) const;
+      std::vector<std::pair<pmr_vector<OutputColumnType>, pmr_vector<bool>>> segment_data_for_output_column) const;
 
   const FrameDescription& frame_description() const;
 
