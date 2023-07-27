@@ -39,7 +39,7 @@ class WindowFunctionEvaluator : public AbstractReadOnlyOperator {
   template <typename InputColumnType, WindowFunction window_function>
   ComputationStrategy choose_computation_strategy() const;
 
-  enum class OperatorSteps : uint8_t { PartitionAndSort, Compute, Annotate };
+  enum class OperatorSteps : uint8_t { MaterializeAndHash, Sort, Compute, Annotate };
 
   struct PerformanceData : public OperatorPerformanceData<OperatorSteps> {
     void output_to_stream(std::ostream& stream, DescriptionMode description_mode) const override;
