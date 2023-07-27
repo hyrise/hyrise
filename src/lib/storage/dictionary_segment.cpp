@@ -24,7 +24,7 @@ void printAllocations() {
 int printNumaNodeOfPage(const void* addr) {
   u_int64_t page = (u_int64_t)addr;
   page = page & (~(4096 - 1));
-  void* pages[1] = {reinterpret_cast<void*> page};
+  void* pages[1] = {reinterpret_cast<void*>(page)};
   int status;
   int64_t ret = numa_move_pages(0, 1, pages, NULL, &status, 0);
   if (ret == 0) {
@@ -40,7 +40,7 @@ int printNumaNodeOfPage(const void* addr) {
 NodeID getNumaNodeOfPage(const void* addr) {
   u_int64_t page = (u_int64_t)addr;
   page = page & (~(4096 - 1));
-  void* pages[1] = {reinterpret_cast<void*> page};
+  void* pages[1] = {reinterpret_cast<void*>(page)};
   int status;
   int64_t ret = numa_move_pages(0, 1, pages, NULL, &status, 0);
   if (ret == 0) {
