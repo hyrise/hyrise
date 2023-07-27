@@ -62,3 +62,6 @@
 [submodule "third_party/zstd"]
 	path = third_party/zstd
 	url = https://github.com/facebook/zstd.git
+[submodule "third_party/HdrHistogram_c"]
+	path = third_party/HdrHistogram_c
+	url = https://github.com/HdrHistogram/HdrHistogram_c

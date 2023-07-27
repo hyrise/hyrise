@@ -72,42 +72,36 @@ BENCHMARK(BM_RandomAccess<0, AccessType::Read>)
     ->ArgsProduct({benchmark::CreateDenseRange(static_cast<uint64_t>(0), static_cast<u_int64_t>(9), /*step=*/1)})
     ->DenseThreadRange(1, 48, 2)
     ->Name("BM_RandomRead/DRAM")
-    // ->Iterations(200)
     ->UseRealTime();
 
 BENCHMARK(BM_RandomAccess<0, AccessType::Write>)
     ->ArgsProduct({benchmark::CreateDenseRange(static_cast<uint64_t>(0), static_cast<u_int64_t>(9), /*step=*/1)})
     ->DenseThreadRange(1, 48, 2)
     ->Name("BM_RandomWrite/DRAM")
-    // ->Iterations(200)
     ->UseRealTime();
 
 BENCHMARK(BM_RandomAccess<-1, AccessType::Read>)
     ->ArgsProduct({benchmark::CreateDenseRange(static_cast<uint64_t>(0), static_cast<u_int64_t>(9), /*step=*/1)})
     ->DenseThreadRange(1, 48, 2)
     ->Name("BM_RandomRead/SSD")
-    // ->Iterations(200)
     ->UseRealTime();
 
 BENCHMARK(BM_RandomAccess<-1, AccessType::Write>)
     ->ArgsProduct({benchmark::CreateDenseRange(static_cast<uint64_t>(0), static_cast<u_int64_t>(9), /*step=*/1)})
     ->DenseThreadRange(1, 48, 2)
     ->Name("BM_RandomWrite/SSD")
-    // ->Iterations(200)
     ->UseRealTime();
 
 BENCHMARK(BM_RandomAccess<2, AccessType::Read>)
     ->ArgsProduct({benchmark::CreateDenseRange(static_cast<uint64_t>(0), static_cast<u_int64_t>(9), /*step=*/1)})
     ->DenseThreadRange(1, 48, 2)
     ->Name("BM_RandomRead/CXL")
-    // ->Iterations(200)
     ->UseRealTime();
 
 BENCHMARK(BM_RandomAccess<2, AccessType::Write>)
     ->ArgsProduct({benchmark::CreateDenseRange(static_cast<uint64_t>(0), static_cast<u_int64_t>(9), /*step=*/1)})
     ->DenseThreadRange(1, 48, 2)
     ->Name("BM_RandomWrite/CXL")
-    // ->Iterations(200)
     ->UseRealTime();
 
 }  // namespace hyrise

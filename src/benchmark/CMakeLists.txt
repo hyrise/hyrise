@@ -128,16 +128,7 @@ target_link_libraries(
 add_executable(
     hyriseBenchmarkBufferManager
 
-    # micro_benchmark_basic_fixture.cpp
-    # micro_benchmark_basic_fixture.hpp
     micro_benchmark_main.cpp
-    # micro_benchmark_utils.cpp
-    # micro_benchmark_utils.hpp
-
-    # operators/projection_benchmark.cpp
-    # operators/table_scan_benchmark.cpp
-    # operators/sort_benchmark.cpp
-
     storage/buffer/zipfian_int_distribution.hpp
     storage/buffer/page_migration_benchmark.cpp
     storage/buffer/buffer_manager_benchmark.cpp
@@ -146,13 +137,13 @@ add_executable(
     storage/buffer/buffer_benchmark_utils.hpp
     storage/buffer/allocation_benchmark.cpp
     storage/buffer/ycsb_buffer_manager_benchmark.cpp
-
 )
 
 target_link_libraries(
     hyriseBenchmarkBufferManager
     
     hyrise
+    hdr_histogram
     benchmark::benchmark
 )
 

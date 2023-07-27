@@ -16,6 +16,7 @@
 #include <memory>
 #include <random>
 #include <vector>
+#include "hdr/hdr_histogram.h"
 #include "hyrise.hpp"
 #include "storage/buffer/buffer_manager.hpp"
 #include "utils/assert.hpp"
@@ -103,6 +104,10 @@ inline void simulate_store(std::byte* ptr, size_t num_bytes) {
   }
 }
 
+inline void init_histogram(hdr_histogram** histogram) {
+  hdr_init(1, 10000000000, 3, histogram);
+}
+
 inline int open_file(std::string_view filename) {
 #ifdef __APPLE__
   int flags = O_RDWR | O_CREAT | O_DSYNC;
@@ -116,11 +121,25 @@ inline int open_file(std::string_view filename) {
   return fd;
 }
 
-enum class YCSBTableAccessPattern : int { ReadHeavy = 90, Balanced = 50, WriteHeavy = 10 };
-enum class YSCBOperationType : int { Read, Update, Insert, Delete };
-enum class YCSBTupleSize : uint32_t { Small = CACHE_LINE_SIZE, Medium = 512, Large = 4096, Huge = 32768 };
+enum class YCSBWorkload {
+  UpdateHeavy,  // Workload A, 50 reads / 50 updates
+  ReadMostly,   // Workload B, 95% Point Lookups
+  Scan          // Workload E, Short Ranges, 95% Scans
+};
+enum class YSCBOperationType : int { Scan, Lookup, Update };
 
-using YCSBTuple = std::pair<YCSBTupleSize, std::byte*>;
+enum class YCSBTupleSize : uint32_t {
+  Small = CACHE_LINE_SIZE,
+  Medium = 512,
+  Large = 4096,
+  VeryLarge = 8192,
+  Huge = 32768
+};
+
+struct YCSBTuple {
+  YCSBTupleSize size;
+  std::byte* ptr;
+};
 
 using YCSBKey = uint64_t;
 using YCSBTable = std::vector<YCSBTuple>;
@@ -129,6 +148,7 @@ using YCSBOperations = std::vector<YSCBOperation>;
 
 inline YCSBTable generate_ycsb_table(boost::container::pmr::memory_resource* memory_resource,
                                      const size_t database_size) {
+  Assert(database_size >= 1 * GB, "Database size must be greater than 1 GB");
   std::mt19937 generator{std::random_device{}()};
   std::uniform_int_distribution<int> distribution(0, magic_enum::enum_count<YCSBTupleSize>() - 1);
   auto table = std::vector<YCSBTuple>{};
@@ -142,9 +162,7 @@ inline YCSBTable generate_ycsb_table(boost::container::pmr::memory_resource* mem
     simulate_store(reinterpret_cast<std::byte*>(ptr), static_cast<int>(tuple_size));
     buffer_manager.set_dirty(page_id);
     buffer_manager.unpin_exclusive(page_id);
-
-    auto tuple = std::make_pair(tuple_size, reinterpret_cast<std::byte*>(ptr));
-    table.push_back(tuple);
+    table.push_back({tuple_size, reinterpret_cast<std::byte*>(ptr)});
     current_size += static_cast<size_t>(tuple_size);
   }
 
@@ -153,19 +171,30 @@ inline YCSBTable generate_ycsb_table(boost::container::pmr::memory_resource* mem
   return table;
 }
 
-template <YCSBTableAccessPattern accessPattern, size_t NumOperations>
+template <YCSBWorkload workload, size_t NumOperations>
 inline YCSBOperations generate_ycsb_operations(const size_t num_keys, const float zipf_skew) {
   YCSBOperations ops;
   static thread_local std::mt19937 generator{std::random_device{}()};
   std::uniform_int_distribution<int> op_distribution(0, 100);
   zipfian_int_distribution<YCSBKey> key_distribution{0, static_cast<YCSBKey>(num_keys - 1), zipf_skew};
   for (auto i = 0; i < NumOperations; i++) {
-    auto op = op_distribution(generator) < static_cast<int>(accessPattern) ? YSCBOperationType::Read
-                                                                           : YSCBOperationType::Update;
     auto key = static_cast<YCSBKey>(key_distribution(generator));
-    ops.push_back(std::make_pair(key, op));
+    if constexpr (workload == YCSBWorkload::UpdateHeavy) {
+      auto op =
+          op_distribution(generator) < static_cast<int>(50) ? YSCBOperationType::Lookup : YSCBOperationType::Update;
+      ops.push_back(std::make_pair(key, op));
+    } else if constexpr (workload == YCSBWorkload::ReadMostly) {
+      auto op =
+          op_distribution(generator) < static_cast<int>(95) ? YSCBOperationType::Lookup : YSCBOperationType::Update;
+      ops.push_back(std::make_pair(key, op));
+    } else if constexpr (workload == YCSBWorkload::Scan) {
+      auto op = op_distribution(generator) < static_cast<int>(95) ? YSCBOperationType::Scan : YSCBOperationType::Update;
+      ops.push_back(std::make_pair(key, op));
+    } else {
+      Fail("Workload not supported");
+    }
   }
-  // TODO: verify
+
   return ops;
 }
 
@@ -173,20 +202,29 @@ inline uint64_t execute_ycsb_action(const YCSBTable& table, BufferManager& buffe
                                     const YSCBOperation operation) {
   const auto [key, op_type] = operation;
   const auto [size_type, ptr] = table[key];
-  auto num_bytes = static_cast<int>(size_type);
   auto page_id = buffer_manager.find_page(ptr);
+  auto page_size_bytes = bytes_for_size_type(page_id.size_type());
+  auto num_cachelines = page_size_bytes / CACHE_LINE_SIZE;
   switch (op_type) {
-    case YSCBOperationType::Read: {
+    case YSCBOperationType::Lookup: {
+      auto offset = (rand() % num_cachelines);
       buffer_manager.pin_shared(page_id, AccessIntent::Read);
-      simulate_read(ptr, num_bytes);
+      simulate_cacheline_read(ptr + offset);
       buffer_manager.unpin_shared(page_id);
-      return num_bytes;
+      return CACHE_LINE_SIZE;
     }
     case YSCBOperationType::Update: {
+      auto offset = (rand() % num_cachelines);
       buffer_manager.pin_exclusive(page_id);
-      simulate_store(ptr, num_bytes);
+      simulate_cacheline_store(ptr + offset);
       buffer_manager.unpin_exclusive(page_id);
-      return num_bytes;
+      return CACHE_LINE_SIZE;
+    }
+    case YSCBOperationType::Scan: {
+      buffer_manager.pin_shared(page_id, AccessIntent::Read);
+      simulate_read(ptr, page_size_bytes);
+      buffer_manager.unpin_shared(page_id);
+      return page_size_bytes;
     }
     default:
       Fail("Operation not supported");
@@ -201,7 +239,7 @@ inline void warmup(YCSBTable& table, BufferManager& buffer_manager) {
   while (unused_bytes > 0) {
     const auto key = dist(gen);
     auto [size, _] = table[key];
-    YSCBOperation op = std::make_pair(key, YSCBOperationType::Read);
+    YSCBOperation op = std::make_pair(key, YSCBOperationType::Scan);
     unused_bytes -= execute_ycsb_action(table, buffer_manager, op);
   }
 }

@@ -5,6 +5,7 @@
 #include <random>
 #include "benchmark/benchmark.h"
 #include "buffer_benchmark_utils.hpp"
+#include "hdr/hdr_histogram.h"
 #include "hyrise.hpp"
 #include "storage/buffer/buffer_manager.hpp"
 #include "storage/buffer/jemalloc_resource.hpp"
@@ -18,8 +19,10 @@ namespace hyrise {
  * Scale read ops with single page size and different DRAM size ratios
  * Use zipfian skews to test different hit and miss rates for single pahe size and diffeent dram size ratios
  * 
+ * Partly taken from https://github.com/hpides/viper/tree/master
+ * 
 */
-template <YCSBTableAccessPattern AccessPattern, MigrationPolicy policy = LazyMigrationPolicy>
+template <YCSBWorkload WL, MigrationPolicy policy = LazyMigrationPolicy>
 class YCSBBufferManagerFixture : public benchmark::Fixture {
  public:
   constexpr static auto PAGE_SIZE_TYPE = MIN_PAGE_SIZE_TYPE;
@@ -31,6 +34,8 @@ class YCSBBufferManagerFixture : public benchmark::Fixture {
   YCSBTable table;
   YCSBOperations operations;
   boost::container::pmr::memory_resource* memory_resource;
+  hdr_histogram* latency_histogram;
+  std::mutex latency_histogram_mutex;
 
   void SetUp(const ::benchmark::State& state) {
     if (state.thread_index() == 0) {
@@ -49,17 +54,29 @@ class YCSBBufferManagerFixture : public benchmark::Fixture {
 
       auto database_size = state.range(0) * GB;
       table = generate_ycsb_table(memory_resource, database_size);
-      operations = generate_ycsb_operations<AccessPattern, NUM_OPERATIONS>(table.size(), 0.99);
+      operations = generate_ycsb_operations<WL, NUM_OPERATIONS>(table.size(), 0.99);
       warmup(table, Hyrise::get().buffer_manager);
+
+      init_histogram(&latency_histogram);
+    }
+  }
+
+  void TearDown(const ::benchmark::State& state) {
+    if (state.thread_index() == 0) {
+      hdr_close(latency_histogram);
     }
   }
 };
 
 inline void run_ycsb(benchmark::State& state, YCSBTable& table, YCSBOperations& operations,
-                     BufferManager& buffer_manager) {
+                     BufferManager& buffer_manager, hdr_histogram* latency_histogram,
+                     std::mutex& latency_histogram_mutex) {
   const auto operations_per_thread = operations.size() / state.threads();
-  // TODO: Reset metrics of buffer manager
+  // TODO: Reset metrics of buffer manager, cpu affinity?
   auto bytes_processed = uint64_t{0};
+
+  hdr_histogram* local_latency_histogram;
+  init_histogram(&local_latency_histogram);
 
   for (auto _ : state) {
     auto start = state.thread_index() * operations_per_thread;
@@ -70,50 +87,59 @@ inline void run_ycsb(benchmark::State& state, YCSBTable& table, YCSBOperations& 
       bytes_processed += execute_ycsb_action(table, buffer_manager, op);
       auto end = std::chrono::high_resolution_clock::now();
       const auto latency = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
+      hdr_record_value(local_latency_histogram, latency);
     }
   }
-  /// TODO Combbe
-  // state.counters["latency_mean"] = boost::accumulators::mean(latency_stats);
-  // state.counters["latency_stddev"] = std::sqrt(boost::accumulators::variance(latency_stats));
-  // state.counters["latency_median"] = boost::accumulators::median(latency_stats);
-  // state.counters["latency_min"] = boost::accumulators::min(latency_stats);
-  // state.counters["latency_max"] = boost::accumulators::max(latency_stats);
-  // state.counters["latency_95percentile"] = boost::accumulators::quantile(latency_stats, 0.95);
+  {
+    std::lock_guard<std::mutex> lock{latency_histogram_mutex};
+    hdr_add(latency_histogram, local_latency_histogram);
+    hdr_close(local_latency_histogram);
+  }
 
-  // TODO: not per thread?
+  // TODO: Read on larger page, write on smaller page
+  /// TODO Combbe
+
   state.SetItemsProcessed(operations_per_thread);
   state.SetBytesProcessed(bytes_processed);
-  state.counters["cache_hit_rate"] = buffer_manager.metrics()->hit_rate();
+  state.counters["cache_hit_rate"] =
+      benchmark::Counter(buffer_manager.metrics()->hit_rate(), benchmark::Counter::kAvgThreads);
+  if (state.thread_index() == 0) {
+    state.counters["latency_mean"] = hdr_mean(latency_histogram);
+    state.counters["latency_stddev"] = hdr_stddev(latency_histogram);
+    state.counters["latency_median"] = hdr_value_at_percentile(latency_histogram, 0.5);
+    state.counters["latency_min"] = hdr_min(latency_histogram);
+    state.counters["latency_max"] = hdr_max(latency_histogram);
+    state.counters["latency_95percentile"] = hdr_value_at_percentile(latency_histogram, 0.95);
+  }
 }
 
-#define CONFIGURE_BENCHMARK(AccessPattern, Policy)                                       \
-  BENCHMARK_TEMPLATE_DEFINE_F(YCSBBufferManagerFixture, BM_ycsb_##AccessPattern##Policy, \
-                              YCSBTableAccessPattern::AccessPattern, Policy)             \
-  (benchmark::State & state) {                                                           \
-    run_ycsb(state, table, operations, Hyrise::get().buffer_manager);                    \
-  }                                                                                      \
-  BENCHMARK_REGISTER_F(YCSBBufferManagerFixture, BM_ycsb_##AccessPattern##Policy)        \
-      ->ThreadRange(1, 48)                                                               \
-      ->Iterations(1)                                                                    \
-      ->Repetitions(1)                                                                   \
-      ->UseRealTime()                                                                    \
-      ->DenseRange(1, 4, 1)                                                              \
-      ->Name("BM_ycsb/" #AccessPattern "/" #Policy);
+#define CONFIGURE_BENCHMARK(WL, Policy)                                                                           \
+  BENCHMARK_TEMPLATE_DEFINE_F(YCSBBufferManagerFixture, BM_ycsb_##WL##Policy, YCSBWorkload::WL, Policy)           \
+  (benchmark::State & state) {                                                                                    \
+    run_ycsb(state, table, operations, Hyrise::get().buffer_manager, latency_histogram, latency_histogram_mutex); \
+  }                                                                                                               \
+  BENCHMARK_REGISTER_F(YCSBBufferManagerFixture, BM_ycsb_##WL##Policy)                                            \
+      ->ThreadRange(1, 48)                                                                                        \
+      ->Iterations(1)                                                                                             \
+      ->Repetitions(1)                                                                                            \
+      ->UseRealTime()                                                                                             \
+      ->DenseRange(1, 4, 1)                                                                                       \
+      ->Name("BM_ycsb/" #WL "/" #Policy);
 
-CONFIGURE_BENCHMARK(ReadHeavy, LazyMigrationPolicy)
-CONFIGURE_BENCHMARK(Balanced, LazyMigrationPolicy)
-CONFIGURE_BENCHMARK(WriteHeavy, LazyMigrationPolicy)
+CONFIGURE_BENCHMARK(UpdateHeavy, LazyMigrationPolicy)
+CONFIGURE_BENCHMARK(ReadMostly, LazyMigrationPolicy)
+CONFIGURE_BENCHMARK(Scan, LazyMigrationPolicy)
 
-CONFIGURE_BENCHMARK(ReadHeavy, EagerMigrationPolicy)
-CONFIGURE_BENCHMARK(Balanced, EagerMigrationPolicy)
-CONFIGURE_BENCHMARK(WriteHeavy, EagerMigrationPolicy)
+CONFIGURE_BENCHMARK(UpdateHeavy, EagerMigrationPolicy)
+CONFIGURE_BENCHMARK(ReadMostly, EagerMigrationPolicy)
+CONFIGURE_BENCHMARK(Scan, EagerMigrationPolicy)
 
-CONFIGURE_BENCHMARK(ReadHeavy, DramOnlyMigrationPolicy)
-CONFIGURE_BENCHMARK(Balanced, DramOnlyMigrationPolicy)
-CONFIGURE_BENCHMARK(WriteHeavy, DramOnlyMigrationPolicy)
+CONFIGURE_BENCHMARK(UpdateHeavy, DramOnlyMigrationPolicy)
+CONFIGURE_BENCHMARK(ReadMostly, DramOnlyMigrationPolicy)
+CONFIGURE_BENCHMARK(Scan, DramOnlyMigrationPolicy)
 
-CONFIGURE_BENCHMARK(ReadHeavy, NumaOnlyMigrationPolicy)
-CONFIGURE_BENCHMARK(Balanced, NumaOnlyMigrationPolicy)
-CONFIGURE_BENCHMARK(WriteHeavy, NumaOnlyMigrationPolicy)
+CONFIGURE_BENCHMARK(UpdateHeavy, NumaOnlyMigrationPolicy)
+CONFIGURE_BENCHMARK(ReadMostly, NumaOnlyMigrationPolicy)
+CONFIGURE_BENCHMARK(Scan, NumaOnlyMigrationPolicy)
 
 }  // namespace hyrise
