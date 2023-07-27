@@ -79,7 +79,7 @@ inline void explicit_move_pages(void* mem, size_t size, int node) {
 inline void simulate_cacheline_store(std::byte* ptr) {
 #ifdef __AVX512VL__
   // using a non-temporal memory hint
-  _mm512_stream_si512(reinterpret_cast<__m512*>(ptr), _mm512_set1_epi8(0x1));
+  _mm512_stream_si512(reinterpret_cast<void*>(ptr), _mm512_set1_epi8(0x1));
 #else
   std::memset(ptr, 0x1, CACHE_LINE_SIZE);
 #endif
