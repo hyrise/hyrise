@@ -82,7 +82,7 @@ void Worker::_work() {
     auto work_stealing_successful = false;
     const auto& queus = Hyrise::get().scheduler()->queues();
     for (const auto& queue_id : Hyrise::get().scheduler()->closest_queue_ids(_queue->node_id())) {
-      if (queue == _queue) {
+      if (queus[queue_id] == _queue) {
         continue;
       }
 

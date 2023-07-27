@@ -12,7 +12,7 @@
 
 namespace hyrise {
 
-auto numaNodeDictionaryCount = std::vector<long>(8, 0);
+auto numaNodeDictionaryCount = std::vector<u_int64_t>(8, 0);
 
 void printAllocations() {
   for (auto node_index = 0ul; node_index < numaNodeDictionaryCount.size(); node_index++) {
@@ -22,11 +22,11 @@ void printAllocations() {
 }
 
 int printNumaNodeOfPage(const void* addr) {
-  unsigned long page = (unsigned long)addr;
+  u_int64_t page = (u_int64_t)addr;
   page = page & (~(4096 - 1));
-  void* pages[1] = {(void*)page};
+  void* pages[1] = {reinterpret_cast<void*> page};
   int status;
-  long ret = numa_move_pages(0, 1, pages, NULL, &status, 0);
+  int64_t ret = numa_move_pages(0, 1, pages, NULL, &status, 0);
   if (ret == 0) {
     numaNodeDictionaryCount[status]++;
     std::cout << status << " ";
@@ -38,11 +38,11 @@ int printNumaNodeOfPage(const void* addr) {
 }
 
 NodeID getNumaNodeOfPage(const void* addr) {
-  unsigned long page = (unsigned long)addr;
+  u_int64_t page = (u_int64_t)addr;
   page = page & (~(4096 - 1));
-  void* pages[1] = {(void*)page};
+  void* pages[1] = {reinterpret_cast<void*> page};
   int status;
-  long ret = numa_move_pages(0, 1, pages, NULL, &status, 0);
+  int64_t ret = numa_move_pages(0, 1, pages, NULL, &status, 0);
   if (ret == 0) {
     return static_cast<NodeID>(status);
   } else {
@@ -62,7 +62,7 @@ DictionarySegment<T>::DictionarySegment(const std::shared_ptr<const pmr_vector<T
   // ValueID::base_type (2^32 - 1), is needed to represent "value not found" in calls to lower_bound/upper_bound.
   // For a DictionarySegment of the max size Chunk::MAX_SIZE, those two values overlap.
   // _attribute_vector->at(0);
-  //printNumaNodeOfPage(_attribute_vector.get());
+  // printNumaNodeOfPage(_attribute_vector.get());
   // printNumaNodeOfPage(&(*_dictionary)[0]);
   // auto node_decomp = printNumaNodeOfPage(_decompressor.get());
   // auto node_this = printNumaNodeOfPage(this);

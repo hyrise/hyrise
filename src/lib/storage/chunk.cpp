@@ -11,11 +11,11 @@
 
 #include "abstract_segment.hpp"
 #include "index/abstract_chunk_index.hpp"
+#include "memory/numa_memory_resource.hpp"
 #include "reference_segment.hpp"
 #include "resolve_type.hpp"
 #include "storage/segment_iterate.hpp"
 #include "utils/assert.hpp"
-#include "memory/numa_memory_resource.hpp"
 
 namespace hyrise {
 

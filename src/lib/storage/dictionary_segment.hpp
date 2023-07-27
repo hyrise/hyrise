@@ -40,6 +40,7 @@ class DictionarySegment : public BaseDictionarySegment {
     }
     return (*_dictionary)[value_id];
   }
+
   ChunkOffset size() const final;
 
   std::shared_ptr<AbstractSegment> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const final;

@@ -1,8 +1,8 @@
 #include "numa_memory_resource.hpp"
 #include <numa.h>
+#include <sys/mman.h>
 #include <boost/container/pmr/memory_resource.hpp>
 #include "utils/assert.hpp"
-#include <sys/mman.h>
 
 namespace {
 
@@ -13,10 +13,12 @@ struct arena_config_s {
 };
 using arena_config_t = struct arena_config_s;
 }  // namespace
+
 namespace hyrise {
 NumaExtentHooks::NumaExtentHooks(const NodeID node_id) {}
+
 std::unordered_map<ArenaID, NodeID> NumaExtentHooks::node_id_for_arena_id = std::unordered_map<ArenaID, NodeID>{};
-  
+
 void NumaExtentHooks::store_node_id_for_arena(ArenaID arena_id, NodeID node_id) {
   if (NumaExtentHooks::node_id_for_arena_id.contains(arena_id)) {
     Fail("Tried to assign node id to an already assigned arena id.");
@@ -24,11 +26,10 @@ void NumaExtentHooks::store_node_id_for_arena(ArenaID arena_id, NodeID node_id) 
   node_id_for_arena_id[arena_id] = node_id;
 }
 
-
 void* NumaExtentHooks::alloc(extent_hooks_t* extent_hooks, void* new_addr, size_t size, size_t alignment, bool* zero,
                              bool* commit, unsigned arena_index) {
-  size_t off; 
-  if((off = size % 4096) > 0){
+  size_t off;
+  if ((off = size % 4096) > 0) {
     size += 4096 - off;
   }
 
@@ -41,12 +42,13 @@ void* NumaExtentHooks::alloc(extent_hooks_t* extent_hooks, void* new_addr, size_
   return addr;
 }
 
-bool NumaExtentHooks::dalloc(extent_hooks_t* extent_hooks, void* addr, size_t size, bool committed, unsigned arena_ind) {
+bool NumaExtentHooks::dalloc(extent_hooks_t* extent_hooks, void* addr, size_t size, bool committed,
+                             unsigned arena_ind) {
   munmap(addr, size);
   return true;
 }
 
-NumaMemoryResource::NumaMemoryResource(const NodeID node_id) : _node_id(node_id) {  
+NumaMemoryResource::NumaMemoryResource(const NodeID node_id) : _node_id(node_id) {
   // Setup  arena.
   _hooks.alloc = NumaExtentHooks::alloc;
   auto arena_id = uint32_t{0};

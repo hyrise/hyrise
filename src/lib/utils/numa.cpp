@@ -17,7 +17,8 @@ DistanceMatrix get_distance_matrix(int num_nodes) {
 
   for (auto node_x = int{0}; node_x < num_nodes; ++node_x) {
     for (auto node_y = int{0}; node_y < num_nodes; ++node_y) {
-      // TODO(anyone): Assert that numa_distance is reflextive (e.g. we can also set dis_matrix[y][x] from the same call)
+      // TODO(anyone): Assert that numa_distance is symmetric.
+      // (e.g. we can also set dis_matrix[y][x] from the same call)
       distance_matrix[node_x][node_y] = numa_distance(node_x, node_y);
       DebugAssert(distance_matrix[node_x][node_y] != 0, "numa distance could not find distance between node " +
                                                             std::to_string(node_x) + "and node " +
