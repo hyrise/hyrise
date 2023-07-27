@@ -72,11 +72,9 @@ std::shared_ptr<const Table> WindowFunctionEvaluator::_templated_on_execute() {
   const auto input_table = left_input_table();
   const auto chunk_count = input_table->chunk_count();
 
-  auto timer = Timer{};
   auto& window_performance_data = dynamic_cast<PerformanceData&>(*performance_data);
 
   auto partitioned_data = partition_and_sort();
-  window_performance_data.set_step_runtime(OperatorSteps::PartitionAndSort, timer.lap());
 
   using OutputColumnType = typename WindowFunctionEvaluatorTraits<InputColumnType, window_function>::OutputColumnType;
 
@@ -98,6 +96,9 @@ std::shared_ptr<const Table> WindowFunctionEvaluator::_templated_on_execute() {
 
   const auto computation_strategy = choose_computation_strategy<InputColumnType, window_function>();
   window_performance_data.computation_strategy = computation_strategy;
+
+  auto timer = Timer{};
+
   switch (computation_strategy) {
     case ComputationStrategy::OnePass:
       if constexpr (SupportsOnePass<InputColumnType, window_function>) {
@@ -118,6 +119,7 @@ std::shared_ptr<const Table> WindowFunctionEvaluator::_templated_on_execute() {
 
   const auto annotated_table = annotate_input_table(std::move(segment_data_for_output_column));
   window_performance_data.set_step_runtime(OperatorSteps::Annotate, timer.lap());
+
   return annotated_table;
 }
 
@@ -337,8 +339,15 @@ void WindowFunctionEvaluator::partition_and_sort_buckets(HashPartitionedData& bu
 }
 
 HashPartitionedData WindowFunctionEvaluator::partition_and_sort() const {
+  auto& window_performance_data = dynamic_cast<PerformanceData&>(*performance_data);
+  auto timer = Timer{};
+
   auto buckets = materialize_into_buckets();
+  window_performance_data.set_step_runtime(OperatorSteps::MaterializeAndHash, timer.lap());
+
   partition_and_sort_buckets(buckets);
+  window_performance_data.set_step_runtime(OperatorSteps::Sort, timer.lap());
+
   return buckets;
 }
 
