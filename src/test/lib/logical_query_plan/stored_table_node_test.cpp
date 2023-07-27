@@ -106,7 +106,7 @@ TEST_F(StoredTableNodeTest, HashingAndEqualityCheck) {
   EXPECT_EQ(different_node_c->hash(), different_node_c2->hash());
 }
 
-TEST_F(StoredTableNodeTest, HashingAndEqualitWithPrunableSubqueryPredicates) {
+TEST_F(StoredTableNodeTest, HashingAndEqualityWithPrunableSubqueryPredicates) {
   const auto different_node_a = std::static_pointer_cast<StoredTableNode>(_stored_table_node->deep_copy());
   const auto different_node_b = std::static_pointer_cast<StoredTableNode>(_stored_table_node->deep_copy());
   const auto different_node_c = std::static_pointer_cast<StoredTableNode>(_stored_table_node->deep_copy());

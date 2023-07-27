@@ -28,10 +28,12 @@ class GetTable : public AbstractReadOnlyOperator {
   const std::vector<ChunkID>& pruned_chunk_ids() const;
   const std::vector<ColumnID>& pruned_column_ids() const;
 
-  // We cannot use predicates with uncorrelated subqueries to get pruned ChunkIDs during optimization. However, we can
-  // reference these predicates and keep track of them in the plan. Once we execute the plan, the subqueries might have
-  // already been executed, so we can use them for pruning during execution.
-  void set_prunable_subquery_scans(std::vector<std::weak_ptr<const AbstractOperator>> subquery_scans) const;
+  // Predicates that contain uncorrelated subqueries cannot be used for chunk pruning in the optimization phase since we
+  // do not know the predicate value yet. However, the ChunkPruningRule attaches the corresponding PredicateNodes to the
+  // StoredTableNode of the table the predicates are performed on. We attach the translated predicates (i.e.,
+  // TableScans) to the GetTable operators so they can use them for pruning during execution ("dynamic pruning"), when
+  // the subqueries might have already been executed and the predicate value is known.
+  void set_prunable_subquery_scans(const std::vector<std::weak_ptr<const AbstractOperator>>& subquery_scans) const;
   std::vector<std::shared_ptr<const AbstractOperator>> prunable_subquery_scans() const;
 
  protected:

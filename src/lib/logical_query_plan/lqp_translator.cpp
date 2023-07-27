@@ -73,19 +73,17 @@ namespace hyrise {
 std::shared_ptr<AbstractOperator> LQPTranslator::translate_node(const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto pqp = _translate_node_recursively(node);
 
-  // Predicates that contain uncorrelated subqueries cannot be used for chunk pruning in the optimization phase since we
-  // do not know the predicate value yet. However, the ChunkPruningRule attaches the corresponding PredicateNodes to the
-  // StoreTableNode of the table the predicates are performed on. We attach the translated Predicates (i.e., TableScans)
-  // to the GetTable operators so they can use them for pruning during execution, when the subqueries might have already
-  // been executed and the predicate value is known. We must set the PredicateNodes after translation: Due to the
-  // recursion into the inputs of each LQP node, the PredicateNodes are translated after the StoredTableNodes.
-  for (const auto& [_, op] : _operator_by_lqp_node) {
+  // StoredTableNodes can store references to PredicateNodes as prunable subquery predicates (see get_table.hpp for
+  // details). We must set the TableScans resulting from these PredicateNodes after translation: Due to the recursion
+  // into the inputs of each LQP node, the PredicateNodes are translated after the StoredTableNodes. When translating
+  // the StoredTableNodes, the TableScans of their prunable subquery predicates are not yet in _operator_by_lqp_node.
+  for (const auto& [lqp_node, op] : _operator_by_lqp_node) {
     if (op->type() != OperatorType::GetTable) {
       continue;
     }
 
-    DebugAssert(op->lqp_node->type == LQPNodeType::StoredTable, "Traslated GetTable operator from wrong LQP node.");
-    const auto& stored_table_node = static_cast<const StoredTableNode&>(*op->lqp_node);
+    DebugAssert(lqp_node->type == LQPNodeType::StoredTable, "Translated GetTable operator from wrong LQP node.");
+    const auto& stored_table_node = static_cast<const StoredTableNode&>(*lqp_node);
     const auto& prunable_lqp_predicates = stored_table_node.prunable_subquery_predicates();
     if (prunable_lqp_predicates.empty()) {
       continue;

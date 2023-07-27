@@ -63,7 +63,7 @@ void link_tasks_for_subquery_pruning(const std::unordered_set<std::shared_ptr<Op
         const auto& subquery_root = subquery->get_or_create_operator_task();
         Assert(tasks.contains(subquery_root), "Unknown OperatorTask.");
 
-        // Cycles in the task graph would lead to deadlocks during execution. To make sure we do not introcude cycles,
+        // Cycles in the task graph would lead to deadlocks during execution. To make sure we do not introduce cycles,
         // we only set the subquery task as predecessor of the GetTable task if it is not a successor of the GetTable
         // task.
         auto is_acyclic = true;
@@ -100,12 +100,12 @@ OperatorTask::make_tasks_from_operator(const std::shared_ptr<AbstractOperator>& 
 
   // Predicates that contain uncorrelated subqueries cannot be used for chunk pruning in the optimization phase since we
   // do not know the predicate value yet. However, the ChunkPruningRule attaches the corresponding PredicateNodes to the
-  // StoreTableNode of the table the predicates are performed on. We attach the translated Predicates (i.e., TableScans)
-  // to the GetTable operators so they can use them for pruning during execution. We set the tasks associated with the
-  // unccorrelated subqueries as predecessors of the GetTable tasks so the GetTable operators can extract the predicate
-  // values and perform dynamic chunk pruning. We cannot link the tasks during the recursive creation of operator tasks.
-  // Since not all tasks might be created when reaching the GetTable tasks, we cannot traverse the tasks to ensure an
-  // acyclic graph.
+  // StoredTableNode of the table the predicates are performed on. We attach the translated Predicates (i.e.,
+  // TableScans) to the GetTable operators so they can use them for pruning during execution.
+  // We set the tasks associated with the uncorrelated subqueries as predecessors of the GetTable tasks so the GetTable
+  // operators can extract the predicate values and perform dynamic chunk pruning. We cannot link the tasks during the
+  // recursive creation of operator tasks. Since not all tasks might be created when reaching the GetTable tasks, we
+  // cannot traverse the tasks to ensure an acyclic graph.
   link_tasks_for_subquery_pruning(operator_tasks_set);
 
   // Ensure the task graph is acyclic, i.e., no task is any (n-th) successor of itself. Tasks in cycles would end up in

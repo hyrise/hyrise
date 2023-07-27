@@ -242,13 +242,12 @@ size_t AbstractLQPNode::output_count() const {
 std::shared_ptr<AbstractLQPNode> AbstractLQPNode::deep_copy(LQPNodeMapping node_mapping) const {
   const auto copy = _deep_copy_impl(node_mapping);
 
-  // Predicates that contain uncorrelated subqueries cannot be used for chunk pruning in the optimization phase since we
-  // do not know the predicate value yet. However, the ChunkPruningRule attaches the corresponding PredicateNodes to the
-  // StoreTableNode of the table the predicates are performed on. We attach the translated Predicates (i.e., TableScans)
-  // to the GetTable operators so they can use them for pruning during execution, when the subqueries might have already
-  // been executed and the predicate value is known. During a deep_copy, we must set the copied PredicateNodes as
-  // prunable subquery predicates of the StoredTableNode after copying: Due to the recursion into the inputs of each
-  // LQP node, the PredicateNodes are copied after the StoredTableNodes.
+  // StoredTableNodes can store references to PredicateNodes as prunable subquery predicates (see get_table.hpp for
+  // details). During a deep_copy, we must set the copied PredicateNodes as prunable subquery predicates of the
+  // StoredTableNode after copying each individual node. Due to the recursive copy strategy for input nodes, the
+  // StoredTableNodes are the first ones to be copied. The PredicateNodes of their prunable subquery predicates are
+  // copied later and cannot be found in node_mapping during the StoredTableNode copy procedure. Thus, we assign the
+  // copied predicates after the entire LQP was copied.
   for (const auto& [node, node_copy] : node_mapping) {
     if (node->type != LQPNodeType::StoredTable) {
       continue;

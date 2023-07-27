@@ -81,7 +81,8 @@ const std::vector<ColumnID>& GetTable::pruned_column_ids() const {
   return _pruned_column_ids;
 }
 
-void GetTable::set_prunable_subquery_scans(std::vector<std::weak_ptr<const AbstractOperator>> subquery_scans) const {
+void GetTable::set_prunable_subquery_scans(
+    const std::vector<std::weak_ptr<const AbstractOperator>>& subquery_scans) const {
   DebugAssert(std::all_of(subquery_scans.cbegin(), subquery_scans.cend(),
                           [](const auto& op) { return op.lock() && op.lock()->type() == OperatorType::TableScan; }),
               "No TableScan set as prunable predicate.");
@@ -138,10 +139,10 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
   // flag, too, it needs to be forwarded here; otherwise it would be completely invisible in the PQP.
   DebugAssert(stored_table->value_clustered_by().empty(), "GetTable does not forward value_clustered_by");
   auto overall_pruned_chunk_ids = _prune_chunks_dynamically();
-  auto excluded_chunk_ids = std::vector<ChunkID>{};
   overall_pruned_chunk_ids.insert(_pruned_chunk_ids.cbegin(), _pruned_chunk_ids.cend());
   auto pruned_chunk_ids_iter = overall_pruned_chunk_ids.begin();
-  for (ChunkID stored_chunk_id{0}; stored_chunk_id < chunk_count; ++stored_chunk_id) {
+  auto excluded_chunk_ids = std::vector<ChunkID>{};
+  for (auto stored_chunk_id = ChunkID{0}; stored_chunk_id < chunk_count; ++stored_chunk_id) {
     // Check whether the Chunk is pruned
     if (pruned_chunk_ids_iter != overall_pruned_chunk_ids.end() && *pruned_chunk_ids_iter == stored_chunk_id) {
       ++pruned_chunk_ids_iter;
@@ -315,17 +316,19 @@ std::set<ChunkID> GetTable::_prune_chunks_dynamically() {
     return {};
   }
 
+  // Create a dummy PredicateNode for each predicate containing a subquery that has already been executed. We do not use
+  // the original predicate to ignore all other nodes between the StoredTableNode and the PredicateNodes. Since the
+  // ChunkPruningRule already took care to add only predicates that are safe to prune with, we can act as if there were
+  // no other LQP nodes.
+  auto prunable_predicate_nodes = std::vector<std::shared_ptr<PredicateNode>>{};
+  prunable_predicate_nodes.reserve(_prunable_subquery_scans.size());
+
   // Create a dummy StoredTableNode from the table to retrieve. `compute_chunk_exclude_list` modifies the node's
   // statistics and we want to avoid that. We cannot use `deep_copy()` here since it would complain that the referenced
   // prunable PredicateNodes are not part of the LQP.
   const auto& stored_table_node = static_cast<const StoredTableNode&>(*lqp_node);
   const auto dummy_stored_table_node = StoredTableNode::make(_name);
 
-  // Create a dummy PredicateNode for each predicate containing a subquery that has already been executed. We do not use
-  // the original predicate to ignore any other nodes in between. Since the ChunkPruningRule already took care to add
-  // only predicates that are safe to prune with, we can act as if there were no other LQP nodes.
-  auto prunable_predicate_nodes = std::vector<std::shared_ptr<PredicateNode>>{};
-  prunable_predicate_nodes.reserve(_prunable_subquery_scans.size());
   for (const auto& op : prunable_subquery_scans()) {
     const auto& table_scan = static_cast<const TableScan&>(*op);
     const auto& operator_predicate_arguments = table_scan.predicate()->arguments;
@@ -340,7 +343,7 @@ std::set<ChunkID> GetTable::_prune_chunks_dynamically() {
       // Replace any column with the respective column from our dummy StoredTableNode.
       if (const auto lqp_column = std::dynamic_pointer_cast<LQPColumnExpression>(argument)) {
         Assert(*lqp_column->original_node.lock() == stored_table_node,
-               "Predicate is performed on wrong StoredTableNode");
+               "Predicate is performed on wrong StoredTableNode.");
         argument = lqp_column_(dummy_stored_table_node, lqp_column->original_column_id);
         continue;
       }
@@ -350,7 +353,7 @@ std::set<ChunkID> GetTable::_prune_chunks_dynamically() {
         continue;
       }
       Assert(operator_predicate_arguments[expression_idx]->type == ExpressionType::PQPSubquery,
-             "Cannot resolve PQPSubqueryExpression");
+             "Cannot resolve PQPSubqueryExpression.");
       const auto& subquery = static_cast<PQPSubqueryExpression&>(*operator_predicate_arguments[expression_idx]);
       if (subquery.is_correlated()) {
         continue;

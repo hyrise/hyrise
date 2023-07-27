@@ -82,8 +82,9 @@ bool LQPSubqueryExpression::_shallow_equals(const AbstractExpression& expression
 }
 
 size_t LQPSubqueryExpression::_shallow_hash() const {
-  // Return 0, thus forcing a hash collision for LQPSubqueryExpressions and triggering a full equality check. Since we
-  // often hash full query plans (that do not contain many LQPSubqueryExpressions), this should be fine.
+  // Return AbstractExpression::_shallow_hash() (a.k. a.0), thus forcing a hash collision for LQPSubqueryExpressions and
+  // triggering a full equality check. Though we often hash entire query plans, we expect most plans to contain only few
+  // LQPSubqueryExpressions. Thus, these hash collisions should be fine.
   return AbstractExpression::_shallow_hash();
 }
 

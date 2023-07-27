@@ -181,10 +181,10 @@ size_t StoredTableNode::_on_shallow_hash() const {
   for (const auto& pruned_column_id : _pruned_column_ids) {
     boost::hash_combine(hash, static_cast<size_t>(pruned_column_id));
   }
-  // We intentionally firce a hash collision for StoredTableNodes with the same number of (but different) prunable
-  // subquery predicates. Since we assume that (i) these predicates are not often set and (ii) we do hash LQPs often,
-  // this reduces the hash overhead, makes the code simpler, and triggers an in-depth equality check for the rare cases
-  // with prunable subquery predicates.
+  // We intentionally force a hash collision for StoredTableNodes with the same number of prunable subquery predicates
+  // even though these predicates are different. Since we assume that (i) these predicates are not often set and (ii) we
+  // hash LQPs often, this reduces the hash overhead, makes the code simpler, and triggers an in-depth equality check
+  // for the rare cases with (the same number of) prunable subquery predicates.
   boost::hash_combine(hash, _prunable_subquery_predicates.size());
   return hash;
 }
@@ -192,7 +192,7 @@ size_t StoredTableNode::_on_shallow_hash() const {
 std::shared_ptr<AbstractLQPNode> StoredTableNode::_on_shallow_copy(LQPNodeMapping& /*node_mapping*/) const {
   // We cannot copy _prunable_subquery_predicated here since deep_copy() recurses into the input nodes and the
   // StoredTableNodes are the first ones to be copied. Instead, AbstractLQPNode::deep_copy() sets the copied
-  // PredicateNodes after the whole LQP has been copied.
+  // PredicateNodes after the entire LQP has been copied.
   const auto copy = make(table_name);
   copy->set_pruned_chunk_ids(_pruned_chunk_ids);
   copy->set_pruned_column_ids(_pruned_column_ids);

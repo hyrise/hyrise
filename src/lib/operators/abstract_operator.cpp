@@ -201,13 +201,11 @@ std::shared_ptr<AbstractOperator> AbstractOperator::deep_copy() const {
   auto copied_ops = std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>{};
   const auto copy = deep_copy(copied_ops);
 
-  // Predicates that contain uncorrelated subqueries cannot be used for chunk pruning in the optimization phase since we
-  // do not know the predicate value yet. However, the ChunkPruningRule attaches the corresponding PredicateNodes to the
-  // StoreTableNode of the table the predicates are performed on. We attach the translated Predicates (i.e., TableScans)
-  // to the GetTable operators so they can use them for pruning during execution, when the subqueries might have already
-  // been executed and the predicate value is known. During a deep_copy, we must set the copied TableScan operators as
-  // prunable subquery scans of the GetTable operator after copying: Due to the recursion into the inputs of each
-  // operator, the TableSans are copied after the GetTable operators.
+  // GetTable operators can store references to TableScans as prunable subquery predicates (see get_table.hpp for
+  // details). During a deep_copy, we must set the copied TableScan operators as prunable subquery scans of the GetTable
+  // operator after copying. Due to the recursion into the inputs of each operator, the TableSans are copied after the
+  // GetTable operators. When copying the GetTable operators, the copies of their prunable subquery predicates are not
+  // yet in copied_ops.
   for (const auto& [op, op_copy] : copied_ops) {
     if (op->type() != OperatorType::GetTable) {
       continue;
