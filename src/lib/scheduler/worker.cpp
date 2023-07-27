@@ -24,19 +24,6 @@ namespace {
 
 using namespace hyrise;  // NOLINT(build/namespaces)
 
-// Uses a pause instruction to signal the CPU that the process is spinning to wait, which can be more energy efficient
-// and puts less pressure on the cache than a pause-less spinning loop (see
-// https://www.intel.com/content/www/us/en/developer/articles/technical/a-common-construct-to-avoid-the-contention-of-threads-architecture-agnostic-spin-wait-loops.html).
-// Instructions differ between ARM and x86. Tested on recent x86 CPUs (AMD and Intel) as well as ARM-based Apple M2 and
-// Raspberry Pi 4.
-// void spin_wait() {
-// #if BOOST_ARCH_ARM
-//     __asm__ __volatile__("yield");
-// #elif BOOST_ARCH_X86_64
-//     _mm_pause();
-// #endif
-// }
-
 /**
  * On worker threads, this references the Worker running on this thread, on all other threads, this is empty.
  * Uses a weak_ptr, because otherwise the ref-count of it would not reach zero within the main() scope of the program.
@@ -114,11 +101,11 @@ void Worker::_work(const AllowSleep allow_sleep) {
       }
     }
 
-    // if (spin_count < 4 && allow_sleep == AllowSleep::Yes) {
-    //   // Do not immediately steal tasks but first spin a few times on the local queue. In case the worker is not
-    //   // allowed to sleep, directly try to steal.
-    //   continue;
-    // }
+    if (spin_count < 4 && allow_sleep == AllowSleep::Yes) {
+      // Do not immediately steal tasks but first spin a few times on the local queue. In case the worker is not
+      // allowed to sleep, directly try to steal.
+      continue;
+    }
 
     // No workable task on local queue: try to steal from other queues.
     for (const auto& queue : queues) {
@@ -148,7 +135,10 @@ void Worker::_work(const AllowSleep allow_sleep) {
     DebugAssert(spin_loop_count >= 0 && spin_loop_count < 1025, "Unexpected spin count (over-/underflow?).");
     // std::printf("Worker id %zu spins %zu times.\n", static_cast<size_t>(_id), static_cast<size_t>(spin_loop_count));
     for (auto loop_id = int32_t{0}; loop_id < spin_loop_count; ++loop_id) {
-      // spin_wait();
+      // boost::atomics::detail::pause() executes a pause/yield instruction to signal the CPU that the process is
+      // spinning to wait, which can be more energy efficient and puts less pressure on the cache than a pause-less
+      // spinning loop (see
+      // https://www.intel.com/content/www/us/en/developer/articles/technical/a-common-construct-to-avoid-the-contention-of-threads-architecture-agnostic-spin-wait-loops.html).
       boost::atomics::detail::pause();
     }
 
