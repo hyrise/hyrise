@@ -80,13 +80,13 @@ void Worker::_work() {
   if (!task) {
     // Simple work stealing without explicitly transferring data between nodes.
     auto work_stealing_successful = false;
-    const auto& queus = Hyrise::get().scheduler()->queues();
-    for (const auto& queue_id : Hyrise::get().scheduler()->closest_queue_ids(_queue->node_id())) {
-      if (queus[queue_id] == _queue) {
+    const auto& queues = Hyrise::get().scheduler()->queues();
+    for (const auto& queue_id : Hyrise::get().scheduler()->ordered_queue_ids(_queue->node_id())) {
+      if (queues[queue_id] == _queue) {
         continue;
       }
 
-      task = queus[queue_id]->steal();
+      task = queues[queue_id]->steal();
       if (task) {
         task->set_node_id(_queue->node_id());
         work_stealing_successful = true;

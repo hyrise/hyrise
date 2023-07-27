@@ -112,7 +112,7 @@ const std::vector<std::shared_ptr<TaskQueue>>& NodeQueueScheduler::queues() cons
   return _queues;
 }
 
-const std::vector<NodeID>& NodeQueueScheduler::closest_queue_ids(NodeID node_id) const {
+const std::vector<NodeID>& NodeQueueScheduler::ordered_queue_ids(NodeID node_id) const {
   assert(node_id < _numa_queue_order.size());
   return _numa_queue_order[node_id];
 }
