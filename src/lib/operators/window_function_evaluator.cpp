@@ -9,6 +9,7 @@
 #include "expression/window_function_expression.hpp"
 #include "hyrise.hpp"
 #include "resolve_type.hpp"
+#include "scheduler/job_task.hpp"
 #include "storage/segment_iterate.hpp"
 #include "storage/value_segment.hpp"
 #include "types.hpp"
@@ -175,10 +176,37 @@ T clamped_sub(T lhs, T rhs, T min) {
   return static_cast<T>(std::max(static_cast<U>(static_cast<U>(lhs) - static_cast<U>(rhs)), static_cast<U>(min)));
 }
 
-HashPartitionedData partition_and_sort_chunk(const Chunk& chunk, ChunkID chunk_id,
-                                             std::span<const ColumnID> partition_column_ids,
-                                             std::span<const ColumnID> order_column_ids,
-                                             const ColumnID function_argument_column_id, auto comparator) {
+}  // namespace
+
+template <typename InputColumnType, WindowFunction window_function>
+ComputationStrategy WindowFunctionEvaluator::choose_computation_strategy() const {
+  const auto& frame = frame_description();
+  const auto is_prefix_frame = frame.start.unbounded && frame.start.type == FrameBoundType::Preceding &&
+                               !frame.end.unbounded && frame.end.type == FrameBoundType::CurrentRow;
+  Assert(is_prefix_frame || !is_rank_like(window_function), "Invalid frame for rank-like window function.");
+
+  if (is_prefix_frame && SupportsOnePass<InputColumnType, window_function> &&
+      (is_rank_like(window_function) || frame.type == FrameType::Rows))
+    return ComputationStrategy::OnePass;
+
+  if (SupportsSegmentTree<InputColumnType, window_function>)
+    return ComputationStrategy::SegmentTree;
+
+  Fail("Could not determine appropriate computation strategy for window function " +
+       window_function_to_string.left.at(window_function) + ".");
+}
+
+bool WindowFunctionEvaluator::is_output_nullable() const {
+  return !is_rank_like(_window_function_expression->window_function) &&
+         left_input_table()->column_is_nullable(_function_argument_column_id);
+}
+
+namespace {
+
+HashPartitionedData collect_chunk_into_buckets(ChunkID chunk_id, const Chunk& chunk,
+                                               std::span<const ColumnID> partition_column_ids,
+                                               std::span<const ColumnID> order_column_ids,
+                                               ColumnID function_argument_column_id) {
   const auto chunk_size = chunk.size();
 
   const auto collect_values_of_columns = [&chunk, chunk_size](std::span<const ColumnID> column_ids) {
@@ -218,93 +246,81 @@ HashPartitionedData partition_and_sort_chunk(const Chunk& chunk, ChunkID chunk_i
     result[hash_partition].push_back(std::move(row_info));
   }
 
-  spawn_and_wait_per_hash(result,
-                          [&comparator](auto& hash_partition) { std::ranges::sort(hash_partition, comparator); });
-
   return result;
 }
 
-struct ChunkRange {
-  ChunkID start;  // inclusive
-  ChunkID end;    // exclusive
+void parallel_merge_sort(std::span<RelevantRowInformation> data, auto comparator) {
+  const auto base_size = 5096;
 
-  ChunkID size() const {
-    return ChunkID(end - start);
+  if (data.size() <= base_size) {
+    // NOTE: The "stable" is needed for tests (against sqlite) to pass, but I think that it is not actually required by
+    //       the specification.
+    std::ranges::stable_sort(data, comparator);
+    return;
   }
 
-  bool is_single_chunk() const {
-    return size() == 1;
-  }
-};
+  const auto mid = data.size() / 2;
+  const auto left = data.subspan(0, mid);
+  const auto right = data.subspan(mid);
 
-HashPartitionedData parallel_merge_sort(const Table& input_table, ChunkRange chunk_range,
-                                        std::span<const ColumnID> partition_column_ids,
-                                        std::span<const ColumnID> order_column_ids,
-                                        ColumnID function_argument_column_id, auto comparator) {
-  if (chunk_range.is_single_chunk()) {
-    const auto chunk_id = chunk_range.start;
-    const auto chunk = input_table.get_chunk(chunk_id);
-    return partition_and_sort_chunk(*chunk, chunk_id, partition_column_ids, order_column_ids,
-                                    function_argument_column_id, comparator);
-  }
+  auto tasks = std::vector<std::shared_ptr<AbstractTask>>{
+      std::make_shared<JobTask>([left, &comparator]() { parallel_merge_sort(left, comparator); }),
+      std::make_shared<JobTask>([right, &comparator]() { parallel_merge_sort(right, comparator); })};
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
 
-  const auto middle = ChunkID(chunk_range.start + chunk_range.size() / 2);
-  auto left_result = HashPartitionedData{};
-  auto right_result = HashPartitionedData{};
-  auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
-  tasks.emplace_back(std::make_shared<JobTask>([&]() {
-    left_result = parallel_merge_sort(input_table, ChunkRange{.start = chunk_range.start, .end = middle},
-                                      partition_column_ids, order_column_ids, function_argument_column_id, comparator);
-  }));
-  tasks.emplace_back(std::make_shared<JobTask>([&]() {
-    right_result = parallel_merge_sort(input_table, ChunkRange{.start = middle, .end = chunk_range.end},
-                                       partition_column_ids, order_column_ids, function_argument_column_id, comparator);
-  }));
+  std::ranges::inplace_merge(data, data.begin() + static_cast<ssize_t>(mid), comparator);
+}
+
+};  // namespace
+
+HashPartitionedData WindowFunctionEvaluator::materialize_into_buckets() const {
+  const auto input_table = left_input_table();
+  const auto chunk_count = input_table->chunk_count();
+
+  auto tasks = std::vector<std::shared_ptr<AbstractTask>>(chunk_count);
+  auto chunk_buckets = std::vector<HashPartitionedData>(chunk_count);
+
+  for (auto chunk_id = ChunkID(0); chunk_id < chunk_count; ++chunk_id) {
+    tasks[chunk_id] = std::make_shared<JobTask>([chunk_id, &input_table, &chunk_buckets, this]() {
+      const auto chunk = input_table->get_chunk(chunk_id);
+      chunk_buckets[chunk_id] = collect_chunk_into_buckets(chunk_id, *chunk, _partition_by_column_ids,
+                                                           _order_by_column_ids, _function_argument_column_id);
+    });
+  }
 
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
 
-  auto result = HashPartitionedData{};
+  auto starting_indices = std::vector<PerHash<ssize_t>>(chunk_count + 1);
+  for (auto chunk_id = ChunkID(0); chunk_id < chunk_count; ++chunk_id) {
+    const auto& my_start = starting_indices[chunk_id];
+    auto& next_start = starting_indices[chunk_id + 1];
 
-  spawn_and_wait_per_hash(result, [&left_result, &right_result, &comparator](auto& result_partition, auto hash_value) {
-    auto& left = left_result[hash_value];
-    auto& right = right_result[hash_value];
+    for (auto hash_value = 0u; hash_value < hash_partition_partition_count; ++hash_value) {
+      next_start[hash_value] = my_start[hash_value] + static_cast<ssize_t>(chunk_buckets[chunk_id][hash_value].size());
+    }
+  }
 
-    const auto mid_offset = left.size();
-    result_partition = std::move(left);
-    result_partition.insert(result_partition.end(), std::make_move_iterator(right.begin()),
-                            std::make_move_iterator(right.end()));
-    std::ranges::inplace_merge(result_partition, result_partition.begin() + mid_offset, comparator);
-  });
+  auto output_buckets = HashPartitionedData{};
 
-  return result;
+  for (auto hash_value = 0u; hash_value < hash_partition_partition_count; ++hash_value) {
+    output_buckets[hash_value].resize(starting_indices.back()[hash_value]);
+  }
+
+  for (auto chunk_id = ChunkID(0); chunk_id < chunk_count; ++chunk_id) {
+    tasks[chunk_id] = std::make_shared<JobTask>([chunk_id, &chunk_buckets, &output_buckets, &starting_indices]() {
+      for (auto hash_value = 0u; hash_value < hash_partition_partition_count; ++hash_value) {
+        auto& my_values = chunk_buckets[chunk_id][hash_value];
+        std::ranges::move(my_values, output_buckets[hash_value].begin() + starting_indices[chunk_id][hash_value]);
+      }
+    });
+  }
+
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
+
+  return output_buckets;
 }
 
-}  // namespace
-
-template <typename InputColumnType, WindowFunction window_function>
-ComputationStrategy WindowFunctionEvaluator::choose_computation_strategy() const {
-  const auto& frame = frame_description();
-  const auto is_prefix_frame = frame.start.unbounded && frame.start.type == FrameBoundType::Preceding &&
-                               !frame.end.unbounded && frame.end.type == FrameBoundType::CurrentRow;
-  Assert(is_prefix_frame || !is_rank_like(window_function), "Invalid frame for rank-like window function.");
-
-  if (is_prefix_frame && SupportsOnePass<InputColumnType, window_function> &&
-      (is_rank_like(window_function) || frame.type == FrameType::Rows))
-    return ComputationStrategy::OnePass;
-
-  if (SupportsSegmentTree<InputColumnType, window_function>)
-    return ComputationStrategy::SegmentTree;
-
-  Fail("Could not determine appropriate computation strategy for window function " +
-       window_function_to_string.left.at(window_function) + ".");
-}
-
-bool WindowFunctionEvaluator::is_output_nullable() const {
-  return !is_rank_like(_window_function_expression->window_function) &&
-         left_input_table()->column_is_nullable(_function_argument_column_id);
-}
-
-HashPartitionedData WindowFunctionEvaluator::partition_and_sort() const {
+void WindowFunctionEvaluator::partition_and_sort_buckets(HashPartitionedData& buckets) const {
   const auto& sort_modes = dynamic_cast<const WindowExpression&>(*_window_function_expression->window()).sort_modes;
   const auto is_column_reversed = [&sort_modes](const auto column_index) {
     return sort_modes[column_index] == SortMode::Descending;
@@ -317,9 +333,13 @@ HashPartitionedData WindowFunctionEvaluator::partition_and_sort() const {
     return std::is_lt(compare_with_null_equal(lhs.order_values, rhs.order_values, is_column_reversed));
   };
 
-  const auto input_table = left_input_table();
-  return parallel_merge_sort(*input_table, ChunkRange{.start = ChunkID(0), .end = input_table->chunk_count()},
-                             _partition_by_column_ids, _order_by_column_ids, _function_argument_column_id, comparator);
+  spawn_and_wait_per_hash(buckets, [&comparator](auto& bucket) { parallel_merge_sort(bucket, comparator); });
+}
+
+HashPartitionedData WindowFunctionEvaluator::partition_and_sort() const {
+  auto buckets = materialize_into_buckets();
+  partition_and_sort_buckets(buckets);
+  return buckets;
 }
 
 template <typename InputColumnType, WindowFunction window_function>
