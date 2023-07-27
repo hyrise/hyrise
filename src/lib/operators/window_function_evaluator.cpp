@@ -502,9 +502,9 @@ void WindowFunctionEvaluator::compute_window_function_segment_tree(const HashPar
   }
 }
 
-template <typename T>
+template <typename OutputColumnType>
 std::shared_ptr<const Table> WindowFunctionEvaluator::annotate_input_table(
-    std::vector<std::pair<pmr_vector<T>, pmr_vector<bool>>> segment_data_for_output_column) const {
+    std::vector<std::pair<pmr_vector<OutputColumnType>, pmr_vector<bool>>> segment_data_for_output_column) const {
   const auto input_table = left_input_table();
 
   const auto chunk_count = input_table->chunk_count();
@@ -520,11 +520,11 @@ std::shared_ptr<const Table> WindowFunctionEvaluator::annotate_input_table(
   for (auto chunk_id = ChunkID(0); chunk_id < chunk_count; ++chunk_id) {
     if (is_output_nullable()) {
       value_segments_for_new_column.emplace_back(
-          std::make_shared<ValueSegment<T>>(std::move(segment_data_for_output_column[chunk_id].first),
-                                            std::move(segment_data_for_output_column[chunk_id].second)));
+          std::make_shared<ValueSegment<OutputColumnType>>(std::move(segment_data_for_output_column[chunk_id].first),
+                                                           std::move(segment_data_for_output_column[chunk_id].second)));
     } else {
       value_segments_for_new_column.emplace_back(
-          std::make_shared<ValueSegment<T>>(std::move(segment_data_for_output_column[chunk_id].first)));
+          std::make_shared<ValueSegment<OutputColumnType>>(std::move(segment_data_for_output_column[chunk_id].first)));
     }
   }
 
