@@ -77,6 +77,7 @@ inline void explicit_move_pages(void* mem, size_t size, int node) {
 }
 
 inline void simulate_cacheline_store(std::byte* ptr) {
+  DebugAssert(uintptr_t(ptr) % CACHE_LINE_SIZE == 0, "Pointer must be cacheline aligned");
 #ifdef __AVX512VL__
   // using a non-temporal memory hint
   _mm512_stream_si512(reinterpret_cast<void*>(ptr), _mm512_set1_epi8(0x1));
@@ -86,6 +87,7 @@ inline void simulate_cacheline_store(std::byte* ptr) {
 }
 
 inline void simulate_cacheline_read(std::byte* ptr) {
+  DebugAssert(uintptr_t(ptr) % CACHE_LINE_SIZE == 0, "Pointer must be cacheline aligned");
 #ifdef __AVX512VL__
   auto v = _mm512_load_si512(ptr);
   benchmark::DoNotOptimize(v);
@@ -157,6 +159,7 @@ inline YCSBTable generate_ycsb_table(boost::container::pmr::memory_resource* mem
   while (current_size < database_size) {
     auto tuple_size = magic_enum::enum_value<YCSBTupleSize>(distribution(generator));
     auto ptr = memory_resource->allocate(static_cast<size_t>(tuple_size), CACHE_LINE_SIZE);
+    Assert(ptr != nullptr, "Allocation failed");
     auto page_id = buffer_manager.find_page(ptr);
     buffer_manager.pin_exclusive(page_id);
     simulate_store(reinterpret_cast<std::byte*>(ptr), static_cast<int>(tuple_size));
