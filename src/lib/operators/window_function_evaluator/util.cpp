@@ -1,4 +1,4 @@
-#include "relevant_row_information.hpp"
+#include "util.hpp"
 
 namespace hyrise::window_function_evaluator {
 
