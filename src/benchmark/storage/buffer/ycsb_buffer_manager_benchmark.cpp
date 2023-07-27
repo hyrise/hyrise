@@ -55,7 +55,7 @@ class YCSBBufferManagerFixture : public benchmark::Fixture {
       auto database_size = state.range(0) * GB;
       table = generate_ycsb_table(memory_resource, database_size);
       operations = generate_ycsb_operations<WL, NUM_OPERATIONS>(table.size(), 0.99);
-      warmup(table, Hyrise::get().buffer_manager);
+      // warmup(table, Hyrise::get().buffer_manager);
 
       init_histogram(&latency_histogram);
     }
@@ -97,9 +97,8 @@ inline void run_ycsb(Fixture& fixture, benchmark::State& state) {
 
   state.SetItemsProcessed(operations_per_thread);
   state.SetBytesProcessed(bytes_processed);
-  state.counters["cache_hit_rate"] =
-      benchmark::Counter(Hyrise::get().buffer_manager.metrics()->hit_rate(), benchmark::Counter::kAvgThreads);
   if (state.thread_index() == 0) {
+    state.counters["cache_hit_rate"] = Hyrise::get().buffer_manager.metrics()->hit_rate();
     state.counters["latency_mean"] = hdr_mean(fixture.latency_histogram);
     state.counters["latency_stddev"] = hdr_stddev(fixture.latency_histogram);
     state.counters["latency_median"] = hdr_value_at_percentile(fixture.latency_histogram, 50.0);
