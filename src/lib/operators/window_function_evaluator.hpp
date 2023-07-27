@@ -30,9 +30,6 @@ class WindowFunctionEvaluator : public AbstractReadOnlyOperator {
 
   const std::string& name() const override;
 
-  static constexpr auto initial_rank =
-      static_cast<typename WindowFunctionTraits<void, WindowFunction::Rank>::ReturnType>(1);
-
   static constexpr uint8_t hash_partition_bits = 8;
   static constexpr size_t hash_partition_mask = (1u << hash_partition_bits) - 1;
   static constexpr uint32_t hash_partition_partition_count = 1u << hash_partition_bits;
