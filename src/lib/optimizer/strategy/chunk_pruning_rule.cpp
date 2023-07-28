@@ -197,30 +197,32 @@ void ChunkPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<A
         for (auto& argument : predicate->arguments) {
           if (argument->type == ExpressionType::LQPSubquery &&
               !static_cast<const LQPSubqueryExpression&>(*argument).is_correlated()) {
-            // Count the number of occurrences and add the predicate iff it appears in all chains. Otherwise, we could
-            // produce incorrect query results.
-            //   Example query: SELECT * FROM orders
-            //                   WHERE o_totalprice > (SELECT AVG(c_acctbal) FROM customer)
-            //                      OR o_orderstatus = 'O'
-            //   (Select orders that are above the average customer's account balance or that are still open.)
-            //   The LQP of this query looks like the following:
-            //
-            //                     [UnionPositions]
-            //             ________/              \_________
-            //            /                                 \
-            //      [Predicate] o_orderstatus = 'O'     [Predicate] o_totalprice > SUBQUERY
-            //           |                                   |                        *
-            //           |                                   |                        * uncorrelated subquery
-            //           |                                   |                        *
-            //           |                                   |                   [Aggregate] AVG(c_acctbal)
-            //           \___________             ___________/                        |
-            //                       \           /                                    |
-            //                       [StoredTable] orders                       [StoredTable] customer
-            //
-            // Usually, we would intersect the ChunkIDs that can be pruned for both predicates. Since we do not know the
-            // predicate value for the uncorrelated subquery, this is not possible. However, we cannot prune orders with
-            // o_totalprice > AVG(c_acctbal) since we could prune away open orders. Thus, we have to ensure the
-            // predicate in question is part of every chain. For the example query, this means using AND rather than OR.
+            /**
+             * Count the number of occurrences and add the predicate iff it appears in all chains. Otherwise, we could
+             * produce incorrect query results.
+             *   Example query: SELECT * FROM orders
+             *                   WHERE o_totalprice > (SELECT AVG(c_acctbal) FROM customer)
+             *                      OR o_orderstatus = 'O'
+             *   (Select orders that are above the average customer's account balance or that are still open.)
+             *   The LQP of this query looks like the following:
+             *
+             *                     [UnionPositions]
+             *             ________/              \_________
+             *            /                                 \
+             *      [Predicate] o_orderstatus = 'O'     [Predicate] o_totalprice > SUBQUERY
+             *           |                                   |                        *
+             *           |                                   |                        * uncorrelated subquery
+             *           |                                   |                        *
+             *           |                                   |                   [Aggregate] AVG(c_acctbal)
+             *           \___________             ___________/                        |
+             *                       \           /                                    |
+             *                       [StoredTable] orders                       [StoredTable] customer
+             *
+             * Usually, we would intersect the ChunkIDs that can be pruned for both predicates. Since we do not know the
+             * predicate value for the uncorrelated subquery, this is not possible. However, we cannot prune orders with
+             * o_totalprice > AVG(c_acctbal) since we could prune away open orders. Thus, we have to ensure the
+             * predicate in question is part of every chain. For the example query, this means using AND rather than OR.
+             */
             const auto occurrence_count = ++chain_count_per_subquery_predicate[predicate_node];
             if (occurrence_count == chain_count) {
               prunable_subquery_predicates.emplace_back(predicate_node);
