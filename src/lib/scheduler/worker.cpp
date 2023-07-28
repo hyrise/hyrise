@@ -89,6 +89,7 @@ void Worker::_work() {
       task = queues[queue_id]->steal();
       if (task) {
         task->set_node_id(_queue->node_id());
+        task->_was_stolen = true;
         work_stealing_successful = true;
         break;
       }

@@ -4,6 +4,8 @@
 #include <numeric>
 #include <vector>
 #include "performance_warning.hpp"
+#include "scheduler/abstract_task.hpp"
+
 #include "types.hpp"
 
 namespace hyrise {
@@ -41,5 +43,7 @@ DistanceMatrix get_distance_matrix(int num_nodes);
     }
 */
 NodeMatrix sort_relative_node_ids(DistanceMatrix distance_matrix);
+
+void print_tasks_stolen_statistics(std::vector<std::shared_ptr<AbstractTask>>& jobs, std::string step);
 
 }  // namespace hyrise

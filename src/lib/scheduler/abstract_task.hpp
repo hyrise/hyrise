@@ -177,6 +177,8 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
 
   TaskState state() const;
 
+  std::atomic_bool _was_stolen = false;
+
  protected:
   virtual void _on_execute() = 0;
 

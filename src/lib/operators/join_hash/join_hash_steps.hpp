@@ -19,6 +19,7 @@
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/segment_iterate.hpp"
 #include "type_comparison.hpp"
+#include "utils/numa.hpp"
 
 /*
   This file includes the functions that cover the main steps of our hash join implementation
@@ -447,7 +448,7 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
   if (jobs.size()) {
     Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
   }
-
+  print_tasks_stolen_statistics(jobs, "materialize_input");
   if (partition_node_locations) {
     // Some tasks were immediately executed which is why we need to combine them with the
     // node locations of the tasks executed via the scheduler.
@@ -693,6 +694,8 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
     }
   }
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
+  print_tasks_stolen_statistics(jobs, "partition_by_radix");
+
   jobs.clear();
 
   // Compress null_values_as_char into partition.null_values
@@ -882,6 +885,8 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
   }
 
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
+
+  print_tasks_stolen_statistics(jobs, "probe");
 }
 
 template <typename ProbeColumnType, typename HashedType, JoinMode mode>
@@ -1007,6 +1012,7 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_containe
   }
 
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
+  print_tasks_stolen_statistics(jobs, "probe_semi_anti");
 }
 
 }  // namespace hyrise
