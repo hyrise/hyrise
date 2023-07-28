@@ -439,7 +439,7 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
         }
       }
     } else {
-      jobs.emplace_back(std::make_shared<JobTask>(materialize, SchedulePriority::Default, false));
+      jobs.emplace_back(std::make_shared<JobTask>(materialize));
       jobs.back()->set_node_id(segment->get_numa_node_location());
     }
   }
@@ -560,7 +560,7 @@ std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<
         radix_container_node_positions[partition_idx] = UNKNOWN_NODE_ID;
       }
     } else {
-      jobs.emplace_back(std::make_shared<JobTask>(insert_into_hash_table, SchedulePriority::Default, false));
+      jobs.emplace_back(std::make_shared<JobTask>(insert_into_hash_table));
     }
   }
 
@@ -688,7 +688,7 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
     if (JoinHash::JOB_SPAWN_THRESHOLD > elements_count) {
       perform_partition();
     } else {
-      jobs.emplace_back(std::make_shared<JobTask>(perform_partition, SchedulePriority::Default, false));
+      jobs.emplace_back(std::make_shared<JobTask>(perform_partition));
       jobs.back()->set_node_id(job_nodes_placement[input_partition_idx]);
     }
   }
@@ -874,7 +874,7 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
     if (JoinHash::JOB_SPAWN_THRESHOLD > elements_count) {
       probe_partition();
     } else {
-      jobs.emplace_back(std::make_shared<JobTask>(probe_partition, SchedulePriority::Default, false));
+      jobs.emplace_back(std::make_shared<JobTask>(probe_partition));
       if (hash_table_radix_container_matching) {
         jobs.back()->set_node_id(node_placements[partition_idx]);
       }
@@ -999,7 +999,7 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_containe
     if (JoinHash::JOB_SPAWN_THRESHOLD > elements_count) {
       probe_partition();
     } else {
-      jobs.emplace_back(std::make_shared<JobTask>(probe_partition, SchedulePriority::Default, false));
+      jobs.emplace_back(std::make_shared<JobTask>(probe_partition));
       if (hash_table_radix_container_matching) {
         jobs.back()->set_node_id(node_placements[partition_idx]);
       }
