@@ -43,8 +43,14 @@ AllTypeVariant ReferenceSegment::operator[](const ChunkOffset chunk_offset) cons
 
 NodeID ReferenceSegment::get_numa_node_location() {
   // TODO(anyone): Resolve numa node location correctly.
-  // Forwarding the NodeID of first referenced segment should already be a good approximation.
-  return UNKNOWN_NODE_ID;
+  // This forwards the location of the first referenced segment.
+  if (_pos_list->size()) {
+    const auto row_id = (*_pos_list)[0];
+    const auto chunk = _referenced_table->get_chunk(row_id.chunk_id);
+    return (*chunk->get_segment(_referenced_column_id)).get_numa_node_location();
+  } else {
+    return UNKNOWN_NODE_ID;
+  }
 }
 
 const std::shared_ptr<const AbstractPosList>& ReferenceSegment::pos_list() const {
