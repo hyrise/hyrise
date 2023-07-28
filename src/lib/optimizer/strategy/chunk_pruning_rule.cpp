@@ -172,8 +172,8 @@ void ChunkPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<A
       stored_table_node->set_pruned_chunk_ids(std::vector<ChunkID>(pruned_chunk_ids.begin(), pruned_chunk_ids.end()));
     }
 
-    // (2.4) Get predicates with uncorrelated subqueries that we can use pruning during execution and set them to the
-    //       respective StoredTableNodes.
+    // (2.4) Collect predicates with uncorrelated subqueries that we can use pruning during execution and set them to
+    //       the respective StoredTableNodes.
     // (2.4.1) Collect predicates with uncorrelated subqueries that are part of each chain in a new "pseudo" chain. When
     //         we want to use them for pruning during execution, it is safe to add the chunks pruned by them to the
     //         already pruned chunks.
@@ -203,7 +203,7 @@ void ChunkPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<A
             //                   WHERE o_totalprice > (SELECT AVG(c_acctbal) FROM customer)
             //                      OR o_orderstatus = 'O'
             //   (Select orders that are above the average customer's account balance or that are still open.)
-            //   The LQP of this query loos like the following:
+            //   The LQP of this query looks like the following:
             //
             //                     [UnionPositions]
             //             ________/              \_________

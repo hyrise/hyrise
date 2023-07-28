@@ -32,7 +32,7 @@ void map_prunable_subquery_predicates(const Mapping& mapping) {
         continue;
       }
     } else {
-      if (item->type == LQPNodeType::StoredTable) {
+      if (item->type != LQPNodeType::StoredTable) {
         continue;
       }
     }

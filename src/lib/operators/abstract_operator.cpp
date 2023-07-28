@@ -11,9 +11,9 @@
 #include "storage/table.hpp"
 #include "storage/value_segment.hpp"
 #include "utils/assert.hpp"
-#include "utils/map_prunable_subquery_predicates.hpp"
 #include "utils/format_bytes.hpp"
 #include "utils/format_duration.hpp"
+#include "utils/map_prunable_subquery_predicates.hpp"
 #include "utils/print_utils.hpp"
 #include "utils/timer.hpp"
 

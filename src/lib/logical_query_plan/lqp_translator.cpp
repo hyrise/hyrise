@@ -66,8 +66,8 @@
 #include "stored_table_node.hpp"
 #include "union_node.hpp"
 #include "update_node.hpp"
-#include "utils/map_prunable_subquery_predicates.hpp"
 #include "utils/column_pruning_utils.hpp"
+#include "utils/map_prunable_subquery_predicates.hpp"
 
 namespace hyrise {
 
