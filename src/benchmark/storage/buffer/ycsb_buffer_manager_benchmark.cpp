@@ -26,8 +26,8 @@ template <YCSBWorkload WL, MigrationPolicy policy = LazyMigrationPolicy>
 class YCSBBufferManagerFixture : public benchmark::Fixture {
  public:
   constexpr static auto PAGE_SIZE_TYPE = MIN_PAGE_SIZE_TYPE;
-  constexpr static auto DEFAULT_DRAM_BUFFER_POOL_SIZE = 1UL * GB;
-  constexpr static auto DEFAULT_NUMA_BUFFER_POOL_SIZE = 2UL * GB;
+  constexpr static auto DEFAULT_DRAM_BUFFER_POOL_SIZE = 2UL * GB;
+  constexpr static auto DEFAULT_NUMA_BUFFER_POOL_SIZE = 4UL * GB;
 
   constexpr static auto NUM_OPERATIONS = 1000000;
 
@@ -119,7 +119,7 @@ inline void run_ycsb(Fixture& fixture, benchmark::State& state) {
       ->Iterations(1)                                                                                   \
       ->Repetitions(1)                                                                                  \
       ->UseRealTime()                                                                                   \
-      ->DenseRange(1, 4, 1)                                                                             \
+      ->DenseRange(1, 10, 1)                                                                            \
       ->Name("BM_ycsb/" #WL "/" #Policy);
 
 CONFIGURE_BENCHMARK(UpdateHeavy, LazyMigrationPolicy)
