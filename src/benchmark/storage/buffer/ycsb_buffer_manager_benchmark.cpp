@@ -119,7 +119,7 @@ inline void run_ycsb(Fixture& fixture, benchmark::State& state) {
       ->Iterations(1)                                                                                   \
       ->Repetitions(1)                                                                                  \
       ->UseRealTime()                                                                                   \
-      ->DenseRange(1, 10, 1)                                                                            \
+      ->DenseRange(1, 8, 1)                                                                             \
       ->Name("BM_ycsb/" #WL "/" #Policy);
 
 CONFIGURE_BENCHMARK(UpdateHeavy, LazyMigrationPolicy)
