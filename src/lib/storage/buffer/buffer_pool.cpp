@@ -3,12 +3,13 @@
 
 namespace hyrise {
 //TODO: properly check if disabled or not
-BufferPool::BufferPool(const size_t pool_size, const bool enable_eviction_purge_worker,
+BufferPool::BufferPool(const bool enabled, const size_t pool_size, const bool enable_eviction_purge_worker,
                        std::array<std::shared_ptr<VolatileRegion>, NUM_PAGE_SIZE_TYPES> volatile_regions,
                        MigrationPolicy migration_policy, std::shared_ptr<SSDRegion> ssd_region,
                        std::shared_ptr<BufferPool> target_buffer_pool, const NumaMemoryNode numa_node)
     : max_bytes(pool_size),
       used_bytes(0),
+      enabled(enabled),
       volatile_regions(volatile_regions),
       eviction_queue(std::make_unique<EvictionQueue>()),
       numa_node(numa_node),
@@ -129,7 +130,7 @@ void BufferPool::evict(EvictionItem& item, Frame* frame) {
   for (auto repeat = size_t{0}; repeat < MAX_REPEAT_COUNT; ++repeat) {
     // If we have a target buffer pool and we don't want to bypass it, we move the page to the other pool
     const auto write_to_ssd =
-        !target_buffer_pool || !target_buffer_pool->enabled() || migration_policy.bypass_numa_during_write();
+        !target_buffer_pool || !target_buffer_pool->enabled || migration_policy.bypass_numa_during_write();
 
     if (write_to_ssd) {
       // Otherwise we just write the page if its dirty and free the associated pages
@@ -159,10 +160,6 @@ void BufferPool::evict(EvictionItem& item, Frame* frame) {
     }
   }
   Fail("Could not evict page after trying for " + std::to_string(MAX_REPEAT_COUNT) + " times");
-}
-
-bool BufferPool::enabled() const {
-  return numa_node != NO_NUMA_MEMORY_NODE;
 }
 
 size_t BufferPool::memory_consumption() const {

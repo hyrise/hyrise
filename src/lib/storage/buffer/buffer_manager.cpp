@@ -100,6 +100,8 @@ BufferManager::Config BufferManager::Config::from_env() {
     config.memory_node =
         static_cast<NumaMemoryNode>(json.value("memory_node", static_cast<int64_t>(config.memory_node)));
     config.cpu_node = static_cast<NumaMemoryNode>(json.value("cpu_node", static_cast<int64_t>(config.cpu_node)));
+    config.enable_numa = json.value("enable_numa", config.enable_numa);
+
     return config;
   } else {
     Fail("HYRISE_BUFFER_MANAGER_CONFIG_JSON_PATH not found in environment");
@@ -133,11 +135,11 @@ BufferManager::BufferManager(const Config config)
       _volatile_regions(create_volatile_regions(_mapped_region, _metrics)),
       _ssd_region(std::make_shared<SSDRegion>(config.ssd_path, _metrics)),  // TODO: imprive init of pools here
       _primary_buffer_pool(std::make_shared<BufferPool>(
-          config.dram_buffer_pool_size, config.enable_eviction_purge_worker, _volatile_regions, config.migration_policy,
-          _ssd_region, _secondary_buffer_pool, config.cpu_node)),
+          true, config.dram_buffer_pool_size, config.enable_eviction_purge_worker, _volatile_regions,
+          config.migration_policy, _ssd_region, _secondary_buffer_pool, config.cpu_node)),
       _secondary_buffer_pool(std::make_shared<BufferPool>(
-          config.numa_buffer_pool_size, config.enable_eviction_purge_worker, _volatile_regions, config.migration_policy,
-          _ssd_region, nullptr, config.memory_node)) {
+          config.enable_numa, config.numa_buffer_pool_size, config.enable_eviction_purge_worker, _volatile_regions,
+          config.migration_policy, _ssd_region, nullptr, config.memory_node)) {
   Assert(config.cpu_node != config.memory_node, "CPU and memory node must be different");
 }
 
@@ -180,7 +182,7 @@ void BufferManager::make_resident(const PageID page_id, const AccessIntent acces
 
   auto region = get_region(page_id);
 
-  if (!_secondary_buffer_pool->enabled()) {
+  if (!_secondary_buffer_pool->enabled) {
     // Case 3: The page is not on DRAM and we don't have it on another memory node, so we need to load it from SSD
     region->unprotect_page(page_id);
     DebugAssert(Frame::numa_node(state_before_exclusive) == _primary_buffer_pool->numa_node, "Not on DRAM node");
@@ -204,6 +206,7 @@ void BufferManager::make_resident(const PageID page_id, const AccessIntent acces
 
     for (auto repeat = size_t{0}; repeat < MAX_REPEAT_COUNT; ++repeat) {
       const auto bypass_numa =
+          !_secondary_buffer_pool->enabled ||
           (access_intent == AccessIntent::Read && _config.migration_policy.bypass_numa_during_read()) ||
           (access_intent == AccessIntent::Write && _config.migration_policy.bypass_numa_during_write());
       if (bypass_numa) {
@@ -400,7 +403,7 @@ void BufferManager::add_to_eviction_queue(const PageID page_id, Frame* frame) {
   if (frame->numa_node() == _primary_buffer_pool->numa_node) {
     _primary_buffer_pool->add_to_eviction_queue(page_id, frame);
   } else if (frame->numa_node() == _secondary_buffer_pool->numa_node) {
-    DebugAssert(_secondary_buffer_pool->enabled(), "Pool has to be enabled");
+    DebugAssert(_secondary_buffer_pool->enabled, "Pool has to be enabled");
     _secondary_buffer_pool->add_to_eviction_queue(page_id, frame);
   } else {
     Fail("Cannot find buffer pool for given memory node " + std::to_string(frame->numa_node()));
@@ -425,7 +428,7 @@ void* BufferManager::do_allocate(std::size_t bytes, std::size_t alignment) {
 
   for (auto repeat = size_t{0}; repeat < MAX_REPEAT_COUNT; ++repeat) {
     // Use either NUMA or DRAM for allocation
-    auto buffer_pool = _secondary_buffer_pool->enabled() && !_config.migration_policy.bypass_numa_during_write()
+    auto buffer_pool = _secondary_buffer_pool->enabled && !_config.migration_policy.bypass_numa_during_write()
                            ? _secondary_buffer_pool
                            : _primary_buffer_pool;
     if (!buffer_pool->ensure_free_pages(page_id.size_type())) {

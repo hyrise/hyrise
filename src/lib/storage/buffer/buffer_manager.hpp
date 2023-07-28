@@ -37,6 +37,8 @@ class BufferManager : public boost::container::pmr::memory_resource, public Nonc
 
     NumaMemoryNode cpu_node = DEFAULT_NUMA_NODE;
 
+    bool enable_numa = false;
+
     // Path to the SSD storage. Can be a block device or a directory. (default: ~/.hyrise).
     std::filesystem::path ssd_path = "~/.hyrise";
 

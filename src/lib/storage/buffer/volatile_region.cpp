@@ -62,7 +62,8 @@ void VolatileRegion::mbind_to_numa_node(PageID page_id, const NumaMemoryNode tar
 
   const auto num_bytes = bytes_for_size_type(_size_type);
   auto nodes = numa_allocate_nodemask();
-  numa_bitmask_setbit(nodes, target_memory_node);
+
+  (nodes, target_memory_node);
   if (mbind(get_page(page_id), num_bytes, MPOL_BIND, nodes ? nodes->maskp : NULL, nodes ? nodes->size + 1 : 0,
             MPOL_MF_MOVE | MPOL_MF_STRICT) != 0) {
     const auto error = errno;

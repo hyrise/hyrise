@@ -3,6 +3,8 @@
 
 namespace hyrise {
 
+// TODO: Verify why return x > 0 ? x > Nr : true;
+
 bool MigrationPolicy::bypass_dram_during_read() const {
   const auto rand = random();
   return rand > 0 ? rand > _dram_read_ratio : true;

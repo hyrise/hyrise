@@ -53,6 +53,8 @@ struct MigrationPolicy {
   double random() const;
 
   int64_t _seed;
+
+  bool operator<=>(const MigrationPolicy&) const = default;
 };
 
 // LazyMigrationPolicy is good for large-working sets that do not fit in-memory
@@ -62,9 +64,9 @@ constexpr auto LazyMigrationPolicy = MigrationPolicy(0.01, 0.01, 0.2, 1);
 constexpr auto EagerMigrationPolicy = MigrationPolicy(1, 1, 1, 1);
 
 // Only enable DRAM
-constexpr auto DramOnlyMigrationPolicy = MigrationPolicy(0, 0, 1, 1);
+constexpr auto NumaOnlyMigrationPolicy = MigrationPolicy(0, 0, 1, 1);
 
 // Only enanle NUMA
-constexpr auto NumaOnlyMigrationPolicy = MigrationPolicy(1, 1, 0, 0);
+constexpr auto DramOnlyMigrationPolicy = MigrationPolicy(1, 1, 0, 0);
 
 }  // namespace hyrise
