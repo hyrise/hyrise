@@ -292,11 +292,12 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
   // Create histograms per chunk
   histograms.resize(chunk_count);
 
-  auto empty_nodes = std::vector<NodeID>{};
-  auto job_nodes = std::vector<NodeID>{};
-  // assert(partition_nodes->size() == 0);
+  std::vector<std::optional<NodeID>> radix_container_node_positions;
+  if (partition_node_locations) {
+    radix_container_node_positions = std::vector<std::optional<NodeID>>(chunk_count, std::nullopt);
+  }
+
   auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
-  // TODO(anyone): perhaps use jobs.nodeID somehow.
   jobs.reserve(chunk_count);
   if (partition_node_locations) {
     partition_node_locations->reserve(chunk_count);
@@ -432,18 +433,14 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
           // Alternatively might do a numa call to get current node (leads to a syscall though, so probably slow).
           // On the other hand we only end up here if the segment contains < JOB_SPAWN_THRESHOLD rows...
           // Might as well go with UNKNOWN_NODE_ID in "worst cases".
-          partition_node_locations->emplace_back(worker->queue()->node_id());
+          radix_container_node_positions[chunk_id] = worker->queue()->node_id();
         } else {
-          partition_node_locations->emplace_back(UNKNOWN_NODE_ID);
+          radix_container_node_positions[chunk_id] = UNKNOWN_NODE_ID;
         }
       }
     } else {
       jobs.emplace_back(std::make_shared<JobTask>(materialize, SchedulePriority::Default, false));
       jobs.back()->set_node_id(segment->get_numa_node_location());
-
-      if (partition_node_locations) {
-        partition_node_locations->emplace_back(segment->get_numa_node_location());
-      }
     }
   }
 
@@ -451,21 +448,40 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
     Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
   }
 
+  if (partition_node_locations) {
+    // Some tasks were immediately executed which is why we need to combine them with the
+    // node locations of the tasks executed via the scheduler.
+    uint32_t task_index = 0;
+    for (auto& job : jobs) {
+      while (radix_container_node_positions[task_index].has_value()) {
+        partition_node_locations->emplace_back(radix_container_node_positions[task_index].value());
+        task_index++;
+      }
+      partition_node_locations->emplace_back(job->node_id());
+      task_index++;
+    }
+    // Fill in the leftover local tasks.
+    while (task_index < chunk_count) {
+      DebugAssert(radix_container_node_positions[task_index].has_value(), "node position was not set.");
+      partition_node_locations->emplace_back(radix_container_node_positions[task_index].value());
+      task_index++;
+    }
+  }
   return radix_container;
 }
 
 /*
-Build all the hash tables for the partitions of the build column. One job per partition
+Build all the hash tables for the partitions of the build column. One job per partition.
+node_placements will be filled with the numa nodes of the estimated hash table location
+(thus no execution hints should be given here).
 */
 
 template <typename BuildColumnType, typename HashedType>
 std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<BuildColumnType>& radix_container,
                                                            const JoinHashBuildMode mode, const size_t radix_bits,
                                                            const BloomFilter& input_bloom_filter,
-                                                           const std::vector<NodeID>& node_placements) {
+                                                           std::vector<NodeID>& hash_table_node_locations) {
   Assert(input_bloom_filter.size() == BLOOM_FILTER_SIZE, "invalid input_bloom_filter");
-  Assert(radix_container.size() == node_placements.size(), std::to_string(radix_container.size()) + " partitions vs. " +
-                                                               std::to_string(node_placements.size()) + " job nodes");
   if (radix_container.empty()) {
     return {};
   }
@@ -476,25 +492,26 @@ std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<
   */
   std::vector<std::optional<PosHashTable<HashedType>>> hash_tables;
 
+  auto radix_container_size = radix_container.size();
   if (radix_bits == 0) {
     auto total_size = size_t{0};
-    for (size_t partition_idx = 0; partition_idx < radix_container.size(); ++partition_idx) {
+    for (size_t partition_idx = 0; partition_idx < radix_container_size; ++partition_idx) {
       total_size += radix_container[partition_idx].elements.size();
     }
     hash_tables.resize(1);
     hash_tables[0] = PosHashTable<HashedType>(mode, total_size);
   } else {
-    hash_tables.resize(radix_container.size());
+    hash_tables.resize(radix_container_size);
   }
-
+  hash_table_node_locations.resize(hash_tables.size());
   std::vector<std::shared_ptr<AbstractTask>> jobs;
-  auto actual_nodes = std::vector<NodeID>();
-  jobs.reserve(radix_container.size());
-  actual_nodes.reserve(radix_container.size());
+  jobs.reserve(radix_container_size);
+  auto radix_container_node_positions = std::vector<std::optional<NodeID>>(radix_container_size, std::nullopt);
 
-  for (size_t partition_idx = 0; partition_idx < radix_container.size(); ++partition_idx) {
+  for (size_t partition_idx = 0; partition_idx < radix_container_size; ++partition_idx) {
     // Skip empty partitions, so that we don't have too many empty jobs and hash tables
     if (radix_container[partition_idx].elements.empty()) {
+      radix_container_node_positions[partition_idx] = UNKNOWN_NODE_ID;
       continue;
     }
     const std::hash<HashedType> hash_function;
@@ -531,9 +548,19 @@ std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<
       // the number of elements is too small. Without radix partitioning, only a single hash table will be written.
       // Parallelizing this would require a concurrent hash table, which is likely more expensive.
       insert_into_hash_table();
+      // try to retrieve current numa node
+      auto worker = Worker::get_this_thread_worker();
+      if (worker) {
+        // TODO(anyone): Verify this works in most cases.
+        // Alternatively might do a numa call to get current node (leads to a syscall though, so probably slow).
+        // On the other hand we only end up here if the segment contains < JOB_SPAWN_THRESHOLD rows...
+        // Might as well go with UNKNOWN_NODE_ID in "worst cases".
+        radix_container_node_positions[partition_idx] = worker->queue()->node_id();
+      } else {
+        radix_container_node_positions[partition_idx] = UNKNOWN_NODE_ID;
+      }
     } else {
       jobs.emplace_back(std::make_shared<JobTask>(insert_into_hash_table, SchedulePriority::Default, false));
-      jobs.back()->set_node_id(node_placements[partition_idx]);
     }
   }
 
@@ -544,6 +571,25 @@ std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<
   // If radix partitioning is used, finalize is called above.
   if (radix_bits == 0) {
     hash_tables[0]->finalize();
+  }
+
+  // Some tasks were immediately executed which is why we need to combine them with the
+  // node locations of the tasks executed via the scheduler.
+  uint32_t task_index = 0;
+  for (auto& job : jobs) {
+    while (radix_container_node_positions[task_index].has_value()) {
+      hash_table_node_locations.emplace_back(radix_container_node_positions[task_index].value());
+      task_index++;
+    }
+    hash_table_node_locations.emplace_back(job->node_id());
+    task_index++;
+  }
+  // Fill in the leftover local tasks.
+  while (task_index < radix_container_size) {
+    if (radix_container_node_positions[task_index].has_value()) {
+      hash_table_node_locations.emplace_back(radix_container_node_positions[task_index].value());
+    }
+    task_index++;
   }
 
   return hash_tables;
@@ -603,10 +649,8 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
     }
   }
 
-  std::vector<NodeID> actual_nodes;
   std::vector<std::shared_ptr<AbstractTask>> jobs;
   jobs.reserve(input_partition_count);
-  actual_nodes.reserve(input_partition_count);
 
   for (auto input_partition_idx = ChunkID{0}; input_partition_idx < input_partition_count; ++input_partition_idx) {
     const auto& input_partition = radix_container[input_partition_idx];
@@ -681,9 +725,8 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
            const std::vector<OperatorJoinPredicate>& secondary_join_predicates,
            const std::vector<NodeID>& node_placements) {
   auto num_probe_radix_partitions = probe_radix_container.size();
-  Assert(num_probe_radix_partitions == node_placements.size(),
-         std::to_string(num_probe_radix_partitions) + " partitions vs. " + std::to_string(node_placements.size()) +
-             " job nodes");
+  auto hash_table_radix_container_matching = num_probe_radix_partitions == node_placements.size();
+
   std::vector<std::shared_ptr<AbstractTask>> jobs;
   jobs.reserve(num_probe_radix_partitions);
 
@@ -832,7 +875,9 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
       probe_partition();
     } else {
       jobs.emplace_back(std::make_shared<JobTask>(probe_partition, SchedulePriority::Default, false));
-      jobs.back()->set_node_id(node_placements[partition_idx]);
+      if (hash_table_radix_container_matching) {
+        jobs.back()->set_node_id(node_placements[partition_idx]);
+      }
     }
   }
 
@@ -846,9 +891,8 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_containe
                      const std::vector<OperatorJoinPredicate>& secondary_join_predicates,
                      const std::vector<NodeID>& node_placements) {
   const auto probe_radix_container_count = probe_radix_container.size();
-  Assert(probe_radix_container_count == node_placements.size(),
-         std::to_string(probe_radix_container_count) + " partitions vs. " + std::to_string(node_placements.size()) +
-             " job nodes");
+
+  auto hash_table_radix_container_matching = probe_radix_container_count == node_placements.size();
   std::vector<std::shared_ptr<AbstractTask>> jobs;
   jobs.reserve(probe_radix_container_count);
 
@@ -956,7 +1000,9 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_containe
       probe_partition();
     } else {
       jobs.emplace_back(std::make_shared<JobTask>(probe_partition, SchedulePriority::Default, false));
-      jobs.back()->set_node_id(node_placements[partition_idx]);
+      if (hash_table_radix_container_matching) {
+        jobs.back()->set_node_id(node_placements[partition_idx]);
+      }
     }
   }
 
