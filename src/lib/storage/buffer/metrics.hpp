@@ -54,8 +54,8 @@ struct BufferManagerMetrics {
   std::atomic_uint64_t num_numa_tonode_memory_calls = 0;
   std::atomic_uint64_t num_madvice_free_calls = 0;
 
-  std::shared_ptr<BufferPool::Metrics> dram_buffer_pool_metrics;
-  std::shared_ptr<BufferPool::Metrics> numa_buffer_pool_metrics;
+  std::shared_ptr<BufferPool::Metrics> dram_buffer_pool_metrics = std::make_shared<BufferPool::Metrics>();
+  std::shared_ptr<BufferPool::Metrics> numa_buffer_pool_metrics = std::make_shared<BufferPool::Metrics>();
 };
 
 inline void increment_counter(std::atomic_uint64_t& metric, const size_t update = 1) {

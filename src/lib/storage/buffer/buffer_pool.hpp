@@ -20,7 +20,8 @@ struct BufferPool {
   BufferPool(const bool enabled, const size_t pool_size, const bool enable_eviction_purge_worker,
              std::array<std::shared_ptr<VolatileRegion>, NUM_PAGE_SIZE_TYPES> volatile_regions,
              MigrationPolicy migration_policy, std::shared_ptr<SSDRegion> ssd_region,
-             std::shared_ptr<BufferPool> target_buffer_pool, const NumaMemoryNode numa_node);
+             std::shared_ptr<BufferPool> target_buffer_pool, const NumaMemoryNode numa_node,
+             std::shared_ptr<Metrics> metrics);
 
   void evict(EvictionItem& item, Frame* frame);
 

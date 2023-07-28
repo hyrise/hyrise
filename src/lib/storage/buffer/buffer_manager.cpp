@@ -131,15 +131,16 @@ BufferManager::BufferManager() : BufferManager(Config::from_env()) {}
 BufferManager::BufferManager(const Config config)
     : _config(config),
       _mapped_region(create_mapped_region()),
-      _metrics(std::make_shared<BufferManagerMetrics>()),
       _volatile_regions(create_volatile_regions(_mapped_region, _metrics)),
       _ssd_region(std::make_shared<SSDRegion>(config.ssd_path, _metrics)),  // TODO: imprive init of pools here
-      _primary_buffer_pool(std::make_shared<BufferPool>(
-          true, config.dram_buffer_pool_size, config.enable_eviction_purge_worker, _volatile_regions,
-          config.migration_policy, _ssd_region, _secondary_buffer_pool, config.cpu_node)),
+      _metrics(std::make_shared<BufferManagerMetrics>()),
+      _primary_buffer_pool(std::make_shared<BufferPool>(true, config.dram_buffer_pool_size,
+                                                        config.enable_eviction_purge_worker, _volatile_regions,
+                                                        config.migration_policy, _ssd_region, _secondary_buffer_pool,
+                                                        config.cpu_node, _metrics->dram_buffer_pool_metrics)),
       _secondary_buffer_pool(std::make_shared<BufferPool>(
           config.enable_numa, config.numa_buffer_pool_size, config.enable_eviction_purge_worker, _volatile_regions,
-          config.migration_policy, _ssd_region, nullptr, config.memory_node)) {
+          config.migration_policy, _ssd_region, nullptr, config.memory_node, _metrics->numa_buffer_pool_metrics)) {
   Assert(config.cpu_node != config.memory_node, "CPU and memory node must be different");
 }
 
