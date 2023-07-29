@@ -91,7 +91,7 @@ inline void simulate_cacheline_read(std::byte* ptr) {
 #ifdef __AVX512VL__
   auto v = _mm512_load_si512(ptr);
   benchmark::DoNotOptimize(v);
-#else 
+#else
   __builtin_prefetch(ptr);
 #endif
 }
@@ -158,21 +158,25 @@ inline YCSBTable generate_ycsb_table(boost::container::pmr::memory_resource* mem
   auto table = std::vector<YCSBTuple>{};
   size_t current_size = 0;
   auto& buffer_manager = Hyrise::get().buffer_manager;
-  while (current_size < database_size) {
+  while (true) {
     auto tuple_size = magic_enum::enum_value<YCSBTupleSize>(distribution(generator));
+    auto page_size = bytes_for_size_type(find_fitting_page_size_type(static_cast<size_t>(tuple_size)));
+    if (current_size + page_size > database_size) {
+      break;
+    }
     auto ptr = memory_resource->allocate(static_cast<size_t>(tuple_size), CACHE_LINE_SIZE);
     Assert(ptr != nullptr, "Allocation failed");
     auto page_id = buffer_manager.find_page(ptr);
     buffer_manager.pin_exclusive(page_id);
-    simulate_store(reinterpret_cast<std::byte*>(ptr), static_cast<int>(tuple_size));
+    simulate_store(reinterpret_cast<std::byte*>(ptr), page_size);
     buffer_manager.set_dirty(page_id);
     buffer_manager.unpin_exclusive(page_id);
     table.push_back({tuple_size, reinterpret_cast<std::byte*>(ptr)});
-    current_size += static_cast<size_t>(tuple_size);
+    current_size += page_size;
   }
 
-  // TODO: Verifiy different sizes
-
+  DebugAssert(current_size <= database_size, "Table size is too small");
+  //
   return table;
 }
 

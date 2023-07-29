@@ -29,7 +29,7 @@ class YCSBBufferManagerFixture : public benchmark::Fixture {
   constexpr static auto DEFAULT_DRAM_BUFFER_POOL_SIZE = 2UL * GB;
   constexpr static auto DEFAULT_NUMA_BUFFER_POOL_SIZE = 4UL * GB;
 
-  constexpr static auto NUM_OPERATIONS = 100000;
+  constexpr static auto NUM_OPERATIONS = 1000000;
 
   YCSBTable table;
   YCSBOperations operations;
@@ -72,7 +72,7 @@ class YCSBBufferManagerFixture : public benchmark::Fixture {
 template <typename Fixture>
 inline void run_ycsb(Fixture& fixture, benchmark::State& state) {
   const auto operations_per_thread = fixture.operations.size() / state.threads();
-  // TODO: Reset metrics of buffer manager, cpu affinity?
+  // TODO: Reset metrics of buffer manager,
   auto bytes_processed = uint64_t{0};
 
   hdr_histogram* local_latency_histogram;
