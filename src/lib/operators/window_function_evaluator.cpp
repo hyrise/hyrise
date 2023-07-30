@@ -74,7 +74,13 @@ std::shared_ptr<const Table> WindowFunctionEvaluator::_templated_on_execute() {
 
   auto& window_performance_data = dynamic_cast<PerformanceData&>(*performance_data);
 
-  auto partitioned_data = partition_and_sort();
+  auto timer = Timer{};
+
+  auto partitioned_data = materialize_into_buckets();
+  window_performance_data.set_step_runtime(OperatorSteps::MaterializeAndHash, timer.lap());
+
+  partition_and_sort_buckets(partitioned_data);
+  window_performance_data.set_step_runtime(OperatorSteps::Sort, timer.lap());
 
   using OutputColumnType = typename WindowFunctionEvaluatorTraits<InputColumnType, window_function>::OutputColumnType;
 
@@ -96,8 +102,6 @@ std::shared_ptr<const Table> WindowFunctionEvaluator::_templated_on_execute() {
 
   const auto computation_strategy = choose_computation_strategy<InputColumnType, window_function>();
   window_performance_data.computation_strategy = computation_strategy;
-
-  auto timer = Timer{};
 
   switch (computation_strategy) {
     case ComputationStrategy::OnePass:
@@ -252,7 +256,7 @@ HashPartitionedData collect_chunk_into_buckets(ChunkID chunk_id, const Chunk& ch
 }
 
 void parallel_merge_sort(std::span<RelevantRowInformation> data, auto comparator) {
-  const auto base_size = 5096;
+  const auto base_size = 1u << 17u;
 
   if (data.size() <= base_size) {
     // NOTE: The "stable" is needed for tests (against sqlite) to pass, but I think that it is not actually required by
@@ -336,19 +340,6 @@ void WindowFunctionEvaluator::partition_and_sort_buckets(HashPartitionedData& bu
   };
 
   spawn_and_wait_per_hash(buckets, [&comparator](auto& bucket) { parallel_merge_sort(bucket, comparator); });
-}
-
-HashPartitionedData WindowFunctionEvaluator::partition_and_sort() const {
-  auto& window_performance_data = dynamic_cast<PerformanceData&>(*performance_data);
-  auto timer = Timer{};
-
-  auto buckets = materialize_into_buckets();
-  window_performance_data.set_step_runtime(OperatorSteps::MaterializeAndHash, timer.lap());
-
-  partition_and_sort_buckets(buckets);
-  window_performance_data.set_step_runtime(OperatorSteps::Sort, timer.lap());
-
-  return buckets;
 }
 
 template <typename InputColumnType, WindowFunction window_function>

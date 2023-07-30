@@ -62,8 +62,6 @@ class WindowFunctionEvaluator : public AbstractReadOnlyOperator {
   HashPartitionedData materialize_into_buckets() const;
   void partition_and_sort_buckets(HashPartitionedData& buckets) const;
 
-  HashPartitionedData partition_and_sort() const;
-
   template <typename InputColumnType, WindowFunction window_function>
     requires SupportsOnePass<InputColumnType, window_function>
   void compute_window_function_one_pass(const HashPartitionedData& partitioned_data, auto&& emit_computed_value) const;
