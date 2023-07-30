@@ -34,6 +34,7 @@ inline void micro_benchmark_clear_cache() {
   for (auto index = size_t{0}; index < ITEM_COUNT; ++index) {
     clear[index] += 1;
   }
+  benchmark::DoNotOptimize(clear.data());
 }
 
 inline std::byte* mmap_region(const size_t num_bytes) {
