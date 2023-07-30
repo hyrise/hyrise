@@ -28,6 +28,14 @@ constexpr static auto GB = 1024 * 1024 * 1024;
 constexpr static auto SEED = 123761253768512;
 constexpr static auto CACHE_LINE_SIZE = 64;
 
+inline void micro_benchmark_clear_cache() {
+  constexpr auto ITEM_COUNT = 500 * 1000 * 1000;
+  auto clear = std::vector<int>(ITEM_COUNT, 42);
+  for (auto index = size_t{0}; index < ITEM_COUNT; ++index) {
+    clear[index] += 1;
+  }
+}
+
 inline std::byte* mmap_region(const size_t num_bytes) {
 #ifdef __APPLE__
   const int flags = MAP_PRIVATE | MAP_ANON | MAP_NORESERVE;

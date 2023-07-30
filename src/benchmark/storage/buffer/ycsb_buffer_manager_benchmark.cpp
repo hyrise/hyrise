@@ -71,6 +71,8 @@ class YCSBBufferManagerFixture : public benchmark::Fixture {
 
 template <typename Fixture>
 inline void run_ycsb(Fixture& fixture, benchmark::State& state) {
+  micro_benchmark_clear_cache();  // Really important!
+
   const auto operations_per_thread = fixture.operations.size() / state.threads();
   // TODO: Reset metrics of buffer manager,
   auto bytes_processed = uint64_t{0};
@@ -94,6 +96,7 @@ inline void run_ycsb(Fixture& fixture, benchmark::State& state) {
       hdr_add(fixture.latency_histogram, local_latency_histogram);
       hdr_close(local_latency_histogram);
     }
+    benchmark::ClobberMemory();
   }
 
   state.SetItemsProcessed(operations_per_thread);
