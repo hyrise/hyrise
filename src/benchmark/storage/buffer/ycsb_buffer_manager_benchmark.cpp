@@ -52,11 +52,11 @@ class YCSBBufferManagerFixture : public benchmark::Fixture {
       //       JemallocMemoryResource::get().reset();
       //       memory_resource = &JemallocMemoryResource::get();
       // #endif
+      // warmup(table, Hyrise::get().buffer_manager);
 
       auto database_size = state.range(0) * GB;
       table = generate_ycsb_table(memory_resource, database_size);
       operations = generate_ycsb_operations<WL, NUM_OPERATIONS>(table.size(), 0.99);
-      // warmup(table, Hyrise::get().buffer_manager);
 
       init_histogram(&latency_histogram);
     }
