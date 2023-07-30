@@ -393,4 +393,26 @@ TEST_F(SchedulerTest, NodeQueueSchedulerCreationAndReset) {
   }
 }
 
+TEST_F(SchedulerTest, ShutdownTaskDecrement) {
+  // Inherit to overwrite execute which would otherwise force us to execute the tasks by scheduling them.
+  struct ShutdownTaskTest : public ShutdownTask {
+    explicit ShutdownTaskTest(std::atomic_int64_t& active_worker_count) : ShutdownTask{active_worker_count} {}
+
+    void execute() {
+      _on_execute();
+    }
+  };
+
+  auto counter_1 = std::atomic_int64_t{1};
+  auto shutdown_task_1 = ShutdownTaskTest{counter_1};
+  EXPECT_EQ(counter_1.load(), 1);
+  shutdown_task_1.execute();
+  EXPECT_EQ(counter_1.load(), 0);
+
+  auto counter_2 = std::atomic_int64_t{0};
+  auto shutdown_task_2 = ShutdownTaskTest{counter_2};
+  EXPECT_EQ(counter_2.load(), 0);
+  EXPECT_THROW(shutdown_task_2.execute(), std::logic_error);
+}
+
 }  // namespace hyrise

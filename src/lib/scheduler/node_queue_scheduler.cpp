@@ -92,7 +92,7 @@ void NodeQueueScheduler::wait_for_all_tasks() {
 
 void NodeQueueScheduler::finish() {
   // Lock finish() to ensure that the shutdown tasks are not sent twice.
-  auto lock = std::lock_guard<std::mutex>{_finish_mutex};
+  const auto lock = std::lock_guard<std::mutex>{_finish_mutex};
 
   if (!_active) {
     return;
@@ -100,6 +100,7 @@ void NodeQueueScheduler::finish() {
 
   wait_for_all_tasks();
 
+  Assert(static_cast<size_t>(_active_worker_count.load()) == _workers.size(), "Expected all workers to be active.");
   for (auto node_id = NodeID{0}; node_id < _node_count; ++node_id) {
     const auto node_worker_count = _workers_per_node[node_id];
     for (auto worker_id = size_t{0}; worker_id < node_worker_count; ++worker_id) {
@@ -234,7 +235,7 @@ void NodeQueueScheduler::_group_tasks(const std::vector<std::shared_ptr<Abstract
   }
 }
 
-const std::atomic_uint64_t& NodeQueueScheduler::active_worker_count() const {
+const std::atomic_int64_t& NodeQueueScheduler::active_worker_count() const {
   return _active_worker_count;
 }
 

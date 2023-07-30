@@ -5,19 +5,18 @@
 namespace hyrise {
 
 /**
- * TODO:
+ * ShutdownTasks are used to signal workers that the NodeQueueScheduler is going to shut down. The actual task only
+ * decrements the number of active workers, which needs to be passed during construction.
  */
 class ShutdownTask : public AbstractTask {
  public:
-  explicit ShutdownTask(std::atomic_uint64_t& active_worker_count)
+  explicit ShutdownTask(std::atomic_int64_t& active_worker_count)
       : AbstractTask{SchedulePriority::Default, false}, _active_worker_count{active_worker_count} {}
-
-  bool is_shutdown_task() const;
 
  protected:
   void _on_execute() override;
 
  private:
-  std::atomic_uint64_t& _active_worker_count;
+  std::atomic_int64_t& _active_worker_count;
 };
 }  // namespace hyrise
