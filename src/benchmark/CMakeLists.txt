@@ -3,7 +3,6 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 add_executable(
     hyriseMicroBenchmarks
 
-
     micro_benchmark_basic_fixture.cpp
     micro_benchmark_basic_fixture.hpp
     micro_benchmark_main.cpp
@@ -131,17 +130,19 @@ add_executable(
     micro_benchmark_main.cpp
     storage/buffer/zipfian_int_distribution.hpp
     storage/buffer/page_migration_benchmark.cpp
+
     # storage/buffer/buffer_manager_benchmark.cpp
     storage/buffer/sequential_read_benchmark.cpp
     storage/buffer/random_access_benchmark.cpp
     storage/buffer/buffer_benchmark_utils.hpp
+    storage/buffer/buffer_benchmark_utils.cpp
     storage/buffer/allocation_benchmark.cpp
     storage/buffer/ycsb_buffer_manager_benchmark.cpp
 )
 
 target_link_libraries(
     hyriseBenchmarkBufferManager
-    
+
     hyrise
     hdr_histogram
     benchmark::benchmark
@@ -160,4 +161,3 @@ target_link_libraries(
     hyrise
     hyriseBenchmarkLib
 )
-
