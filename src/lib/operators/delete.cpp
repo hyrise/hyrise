@@ -60,8 +60,8 @@ const std::string& Delete::name() const {
 std::shared_ptr<const Table> Delete::_on_execute(std::shared_ptr<TransactionContext> context) {
   _referencing_table = left_input_table();
 
-  Assert(_referencing_table->type() == TableType::References, "_referencing_table needs to reference another table");
-  Assert(_referencing_table->column_count() > 0, "_referencing_table needs columns to determine referenced table");
+  Assert(_referencing_table->type() == TableType::References, "_referencing_table needs to reference another table.");
+  Assert(_referencing_table->column_count() > 0, "_referencing_table needs columns to determine referenced table.");
 
   _transaction_id = context->transaction_id();
 
@@ -69,7 +69,7 @@ std::shared_ptr<const Table> Delete::_on_execute(std::shared_ptr<TransactionCont
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk = _referencing_table->get_chunk(chunk_id);
 
-    Assert(chunk->references_exactly_one_table(), "All segments in _referencing_table must reference the same table");
+    Assert(chunk->references_exactly_one_table(), "All segments in _referencing_table must reference the same table.");
 
     const auto first_segment = std::static_pointer_cast<const ReferenceSegment>(chunk->get_segment(ColumnID{0}));
     const auto pos_list = first_segment->pos_list();
