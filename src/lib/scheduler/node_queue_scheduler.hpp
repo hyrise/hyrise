@@ -12,50 +12,50 @@ namespace hyrise {
 /*
  * GENERAL SCHEDULING CONCEPT
  *
- * Everything that needs to be processed is encapsulated in tasks. For example, in the context of the database the
+ * Everything that needs to be processed is encapsulated in tasks. For example, in the context of the database, the
  * OperatorTasks encapsulates database operators (here, it only encapsulates the execute function). A task will be
  * pushed by a Scheduler into a TaskQueue and pulled out by a Worker to be processed.
  *
  *
  * TASK DEPENDENCIES
  *
- * Tasks can be dependent of each other. For example, in the context of the database, a table scan operation can be
- * dependent on a GetTable operation and so do the tasks that encapsulates these operations.
+ * Tasks can be dependent of each other. For example, a table scan operation can be dependent on a GetTable operation
+ * and so do the tasks that encapsulates these operations.
  * Therefore, not every task that is on top of the TaskQueue is ready to be processed. Pulling this unready task and
- * pushing it back to the queue could result in high latency for this task and in the context of databases in a high
- * latency for queries. For that reason, Workers working on tasks with dependencies try to process these first.
+ * pushing it back to the queue could result in high latency for this task and in a high latency for queries. For that
+ * reason, Workers working on tasks with dependencies try to process these first.
  *
  *
  * JOBTASKS
  *
  * JobTasks can be used from anywhere to parallelize parts of their work. If a task spawns jobs to be executed, the
  * worker executing the main task executes these jobs when possible or waits for their completion in case other workers
- * process these tasks (during this wait time, the worker pulls tasks from the queue to avoid idling).
+ * already process these tasks (during this wait time, the worker pulls tasks from the queue to avoid idling).
  *
  *
  * SCHEDULER AND TOPOLOGY
  *
- * The Scheduler is the main entry point and (currently) there are only the ImmediateExecutionScheduler
- * (single-threaded) and the NodeQueueScheduler (multi-threaded). For setting up the NodeQueueScheduler a topology is
- * used. A topology encapsulates the machine's architecture, e.g. number of CPUs and the number of nodes, where a node
- * is typically a socket or CPU (usually having multiple threads/cores).
- * In general, each node owns a TaskQueue. Furthermore, one Worker is assigned to one CPU thread. The Worker running on
- * one CPU thread of a node is primarily pulling from the local TaskQueue of this node.
+ * The Scheduler is the main entry point and (currently) there are the ImmediateExecutionScheduler (single-threaded) 
+ * and the NodeQueueScheduler (multi-threaded). For setting up the NodeQueueScheduler the server's topology is used. A
+ * topology encapsulates the machine's architecture, e.g., the number of CPU threads and NUMA nodes, where a node is
+ * typically a socket or CPU (usually having multiple threads/cores).
+ * Each node owns a TaskQueue. Furthermore, one Worker is assigned to one CPU thread. The Worker running on one CPU
+ * thread of a node is primarily pulling from the local TaskQueue of this node.
  *
  * A topology can also be created with Hyrise::get().topology.use_fake_numa_topology() to simulate a NUMA system with
- * multiple nodes (thus, queues) and worker and should mainly be used for testing NUMA-concepts on non-NUMA development
- * machines.
+ * multiple nodes (thus, queues) and Workers and should mainly be used for testing NUMA-concepts on non-NUMA
+ * development machines.
  *
  *
  * WORK STEALING
  *
- * Currently, a simple work stealing is implemented. Work stealing is useful to avoid idle workers (and therefore idle
- * CPU threads) while there are still tasks in the system that need to be processed. A worker gets idle if it can not
+ * Currently, a simple work stealing is implemented. Work stealing is useful to avoid idle Workers (and therefore idle
+ * CPU threads) while there are still tasks in the system that need to be processed. A Worker gets idle if it can not
  * pull a ready task. This occurs in two cases:
  *  1) all tasks in the queue are not ready
  *  2) the queue is empty
- * In both cases, the current worker is checking non-local queues of other NUMA nodes for ready tasks. The Worker pulls
- * a task from a remote queue and checks if this task is stealable. If not, the task is pushed to the task queue again.
+ * In both cases, the current Worker is checking non-local queues of other NUMA nodes for ready tasks. The Worker pulls
+ * a task from a remote queue and checks if this task is stealable. If not, the task is pushed to the TaskQueue again.
  *
  * Note: currently, task queues are not explicitly allocated on a NUMA node. This means most workers will frequently
  * access distant task queues, which is ~1.6 times slower than accessing a local node [1]. 

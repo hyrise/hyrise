@@ -3,8 +3,8 @@
 namespace hyrise {
 
 void ShutdownTask::_on_execute() {
-  --_active_worker_count;
-  Assert(_active_worker_count.load() >= 0, "Cannot have less than zero active workers.");
+  const auto remaining_workers = _active_worker_count--;
+  Assert(remaining_workers > 0, "Cannot decrement active worker count when no active workers are left.");
 }
 
 }  // namespace hyrise

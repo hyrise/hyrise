@@ -373,7 +373,7 @@ TEST_F(SchedulerTest, MergeSort) {
   merge_sort(vector_to_sort.begin(), vector_to_sort.end());
   EXPECT_TRUE(std::is_sorted(vector_to_sort.begin(), vector_to_sort.end()));
 }
-
+ 
 TEST_F(SchedulerTest, NodeQueueSchedulerCreationAndReset) {
   if (std::thread::hardware_concurrency() < 4) {
     // If the machine has less than 4 cores, the calls to use_non_numa_topology() below will implicitly reduce the
@@ -394,23 +394,19 @@ TEST_F(SchedulerTest, NodeQueueSchedulerCreationAndReset) {
 }
 
 TEST_F(SchedulerTest, ShutdownTaskDecrement) {
-  // Inherit to overwrite execute which would otherwise force us to execute the tasks by scheduling them.
-  struct ShutdownTaskTest : public ShutdownTask {
-    explicit ShutdownTaskTest(std::atomic_int64_t& active_worker_count) : ShutdownTask{active_worker_count} {}
-
-    void execute() {
-      _on_execute();
-    }
-  };
-
   auto counter_1 = std::atomic_int64_t{1};
-  auto shutdown_task_1 = ShutdownTaskTest{counter_1};
+  auto shutdown_task_1 = ShutdownTask{counter_1};
+  // Prepare job for execution (usually done when scheduled and obtained by workers)
+  EXPECT_TRUE(shutdown_task_1.try_mark_as_enqueued());
+  EXPECT_TRUE(shutdown_task_1.try_mark_as_assigned_to_worker());
   EXPECT_EQ(counter_1.load(), 1);
   shutdown_task_1.execute();
   EXPECT_EQ(counter_1.load(), 0);
 
   auto counter_2 = std::atomic_int64_t{0};
-  auto shutdown_task_2 = ShutdownTaskTest{counter_2};
+  auto shutdown_task_2 = ShutdownTask{counter_2};
+  EXPECT_TRUE(shutdown_task_2.try_mark_as_enqueued());
+  EXPECT_TRUE(shutdown_task_2.try_mark_as_assigned_to_worker());
   EXPECT_EQ(counter_2.load(), 0);
   EXPECT_THROW(shutdown_task_2.execute(), std::logic_error);
 }
