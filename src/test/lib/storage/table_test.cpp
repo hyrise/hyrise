@@ -63,17 +63,19 @@ TEST_F(StorageTableTest, RowCount) {
 TEST_F(StorageTableTest, GetColumnName) {
   EXPECT_EQ(table->column_name(ColumnID{0}), "column_1");
   EXPECT_EQ(table->column_name(ColumnID{1}), "column_2");
-  if constexpr (HYRISE_DEBUG) {
-    EXPECT_THROW(table->column_name(ColumnID{2}), std::logic_error);
-  }
+  EXPECT_THROW(table->column_name(ColumnID{2}), std::logic_error);
 }
 
 TEST_F(StorageTableTest, GetColumnType) {
   EXPECT_EQ(table->column_data_type(ColumnID{0}), DataType::Int);
   EXPECT_EQ(table->column_data_type(ColumnID{1}), DataType::String);
-  if constexpr (HYRISE_DEBUG) {
-    EXPECT_THROW(table->column_data_type(ColumnID{2}), std::logic_error);
-  }
+  EXPECT_THROW(table->column_data_type(ColumnID{2}), std::logic_error);
+}
+
+TEST_F(StorageTableTest, GetColumnNullability) {
+  EXPECT_FALSE(table->column_is_nullable(ColumnID{0}));
+  EXPECT_TRUE(table->column_is_nullable(ColumnID{1}));
+  EXPECT_THROW(table->column_is_nullable(ColumnID{2}), std::logic_error);
 }
 
 TEST_F(StorageTableTest, GetColumnIDByName) {

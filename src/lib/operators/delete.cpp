@@ -29,8 +29,9 @@ void commit_with_pos_list(const std::shared_ptr<const Table>& referenced_table, 
       mvcc_data = referenced_chunk->mvcc_data();
     }
 
+    // We do not unlock the rows so subsequent transactions properly fail when attempting to update these rows. Thus, we
+    // only set_end_cid to our CommitID, but do not set_tid to 0 again.
     mvcc_data->set_end_cid(row_id.chunk_offset, commit_id);
-    // We do not unlock the rows so subsequent transactions properly fail when attempting to update these rows.
 
     if constexpr (!is_single_chunk) {
       referenced_chunk->increase_invalid_row_count(ChunkOffset{1});

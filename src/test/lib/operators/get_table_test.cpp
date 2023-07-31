@@ -362,8 +362,11 @@ TEST_F(OperatorsGetTableTest, FinalizedChunks) {
   const auto& table = Hyrise::get().storage_manager.get_table("int_int_float");
   EXPECT_EQ(table->chunk_count(), 4);
   table->append({1, 1, 0.1f});
-  EXPECT_EQ(table->chunk_count(), 5);
-  EXPECT_TRUE(table->last_chunk()->is_mutable());
+  table->append_mutable_chunk();
+  table->append({1, 1, 0.1f});
+  EXPECT_EQ(table->chunk_count(), 6);
+  EXPECT_TRUE(table->get_chunk(ChunkID{4})->is_mutable());
+  EXPECT_TRUE(table->get_chunk(ChunkID{5})->is_mutable());
 
   // Test without and with pruned columns. In the first case, GetTable can just forward the stored chunks. In the second
   // case, it has to build the chunks on its own.
@@ -372,10 +375,11 @@ TEST_F(OperatorsGetTableTest, FinalizedChunks) {
     get_table->execute();
 
     const auto& get_table_output = get_table->get_output();
-    EXPECT_EQ(get_table_output->chunk_count(), 5);
+    EXPECT_EQ(get_table_output->chunk_count(), 6);
+    EXPECT_TRUE(table->get_chunk(ChunkID{4})->is_mutable());
+    EXPECT_TRUE(table->get_chunk(ChunkID{5})->is_mutable());
 
-    EXPECT_TRUE(get_table_output->last_chunk()->is_mutable());
-    const auto immutable_chunk_count = get_table_output->chunk_count() - 1;
+    const auto immutable_chunk_count = get_table_output->chunk_count() - 2;
     for (auto chunk_id = ChunkID{0}; chunk_id < immutable_chunk_count; ++chunk_id) {
       EXPECT_FALSE(get_table_output->get_chunk(chunk_id)->is_mutable());
     }
