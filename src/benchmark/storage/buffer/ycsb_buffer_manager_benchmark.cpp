@@ -33,7 +33,6 @@ class YCSBBufferManagerFixture : public benchmark::Fixture {
 
   YCSBTable table;
   YCSBOperations operations;
-  boost::container::pmr::memory_resource* memory_resource;
   hdr_histogram* latency_histogram;
   std::mutex latency_histogram_mutex;
   BufferManager& buffer_manager = Hyrise::get().buffer_manager;
@@ -48,17 +47,10 @@ class YCSBBufferManagerFixture : public benchmark::Fixture {
       config.enable_numa = (policy != DramOnlyMigrationPolicy);
 
       Hyrise::get().buffer_manager = BufferManager(config);
-      // #ifdef __APPLE__
-      memory_resource = &Hyrise::get().buffer_manager;
-      // #elif __linux__
-      //       JemallocMemoryResource::get().reset();
-      //       memory_resource = &JemallocMemoryResource::get();
-      // #endif
-      // warmup(table, Hyrise::get().buffer_manager);
 
       auto database_size = state.range(0) * GB;
-      table = generate_ycsb_table(memory_resource, database_size);
-      operations = generate_ycsb_operations<WL, NUM_OPERATIONS>(table.size(), 0.3);
+      table = generate_ycsb_table(&buffer_manager, database_size);
+      operations = generate_ycsb_operations<WL, NUM_OPERATIONS>(table.size(), 0.7);
       operations_per_thread = operations.size() / state.threads();
       init_histogram(&latency_histogram);
     }
