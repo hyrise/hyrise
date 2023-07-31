@@ -245,6 +245,7 @@ void AbstractTableGenerator::generate_and_store() {
   /**
    * Relocate tables to optimize for numa.
    */
+  /*
   if (_benchmark_config->relocate_numa) {
     // we need to keep the MemoryResources alive until their memory is deallocated, for some reason.
     auto num_nodes = static_cast<NodeID>(Hyrise::get().topology.nodes().size());
@@ -272,6 +273,24 @@ void AbstractTableGenerator::generate_and_store() {
       Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
       std::cout << "-  Relocated " << table_name << " (" << timer.lap_formatted() << ")" << std::endl;
     }
+  }
+*/
+  if (_benchmark_config->relocate_numa) {
+    std::cout << "Numa relocation start" << std::endl;
+    const auto num_nodes = static_cast<NodeID>(Hyrise::get().topology.nodes().size());
+    Hyrise::get().memory_manager.build_memory_resources();
+
+    auto target_node_id = NodeID{0};
+    for (auto& [table_name, table_info] : table_info_by_name) {
+      std::cout << "Migrating table " << table_name << std::endl;
+      auto& table = table_info.table;
+      Hyrise::get().memory_manager.migrate_table(table, target_node_id);
+
+      target_node_id = (target_node_id + 1) % num_nodes;
+      
+      std::cout << "Migrating table " << table_name << "done" << std::endl;
+    }
+    std::cout << "end" << std::endl;
   }
 
   /**
