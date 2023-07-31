@@ -140,6 +140,7 @@ class NodeQueueScheduler : public AbstractScheduler {
   mutable std::vector<size_t> _num_scheduled_tasks_per_node; 
   mutable std::vector<size_t> _num_scheduled_tasks_per_group;
 
+  size_t _group_number_per_node{30};
 
   mutable size_t _num_correctly_scheduled; 
   mutable size_t _num_incorrectly_scheduled; 

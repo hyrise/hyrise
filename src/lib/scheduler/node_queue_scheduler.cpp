@@ -19,8 +19,7 @@ NodeQueueScheduler::NodeQueueScheduler() {
   _worker_id_allocator = std::make_shared<UidAllocator>();
   _num_scheduled_tasks_per_node = std::vector<size_t>(8, 0); 
 
-  _num_scheduled_tasks_per_group = std::vector<size_t>(240, 0); 
-
+  
 
   _num_correctly_scheduled = 0; 
   _num_incorrectly_scheduled = 0;
@@ -58,6 +57,9 @@ void NodeQueueScheduler::begin() {
   _workers.reserve(Hyrise::get().topology.num_cpus());
   _queue_count = Hyrise::get().topology.nodes().size();
   _queues.reserve(_queue_count);
+
+  _num_scheduled_tasks_per_group = std::vector<size_t>(_queue_count * _group_number_per_node, 0); 
+
 
   for (auto node_id = NodeID{0}; node_id < Hyrise::get().topology.nodes().size(); ++node_id) {
     auto queue = std::make_shared<TaskQueue>(node_id);
@@ -253,41 +255,44 @@ void NodeQueueScheduler::_group_default(const std::vector<std::shared_ptr<Abstra
 }
 
 // with 240 groups.................
-// void NodeQueueScheduler::_group_numa_aware(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const {
-//   auto round_robin_counter = std::vector<int>(_queue_count, 0);
-//   std::vector<std::shared_ptr<AbstractTask>> grouped_tasks(_workers_per_node * _queue_count);
-
-//   for (const auto& task : tasks) {
-//     if (!task->predecessors().empty() || !task->successors().empty()) {
-//       return;
-//     }
-//     auto num_node = task->node_id(); 
-//     const auto group_id = (_workers_per_node * num_node) + (round_robin_counter[num_node] % _workers_per_node);
-//     _num_scheduled_tasks_per_group[group_id]++;
-//     const auto& first_task_in_group = grouped_tasks[group_id];
-//     if (first_task_in_group) {
-//       task->set_as_predecessor_of(first_task_in_group);
-//     }
-//     grouped_tasks[group_id] = task;
-//     ++round_robin_counter[task->node_id()];
-//   }
-// }
-
 void NodeQueueScheduler::_group_numa_aware(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const {
-  std::vector<std::shared_ptr<AbstractTask>> grouped_tasks(_queue_count);
+  auto round_robin_counter = std::vector<int>(_queue_count, 0);
+  
+  // std::vector<std::shared_ptr<AbstractTask>> grouped_tasks(_workers_per_node * _queue_count);
+  std::vector<std::shared_ptr<AbstractTask>> grouped_tasks(_group_number_per_node * _queue_count);
+
 
   for (const auto& task : tasks) {
     if (!task->predecessors().empty() || !task->successors().empty()) {
       return;
     }
-    auto group_id = task->node_id(); 
+    auto num_node = task->node_id(); 
+    const auto group_id = (_group_number_per_node * num_node) + (round_robin_counter[num_node] % _group_number_per_node);
+    _num_scheduled_tasks_per_group[group_id]++;
     const auto& first_task_in_group = grouped_tasks[group_id];
     if (first_task_in_group) {
       task->set_as_predecessor_of(first_task_in_group);
     }
     grouped_tasks[group_id] = task;
+    ++round_robin_counter[task->node_id()];
   }
 }
+
+// void NodeQueueScheduler::_group_numa_aware(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const {
+//   std::vector<std::shared_ptr<AbstractTask>> grouped_tasks(_queue_count);
+
+//   for (const auto& task : tasks) {
+//     if (!task->predecessors().empty() || !task->successors().empty()) {
+//       return;
+//     }
+//     auto group_id = task->node_id(); 
+//     const auto& first_task_in_group = grouped_tasks[group_id];
+//     if (first_task_in_group) {
+//       task->set_as_predecessor_of(first_task_in_group);
+//     }
+//     grouped_tasks[group_id] = task;
+//   }
+// }
 
 
 void NodeQueueScheduler::_group_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const {
