@@ -29,7 +29,14 @@ constexpr static auto GB = 1024 * 1024 * 1024;
 constexpr static auto SEED = 123761253768512;
 constexpr static auto CACHE_LINE_SIZE = 64;
 
-void micro_benchmark_clear_cache();
+inline void micro_benchmark_clear_cache() {
+  constexpr auto ITEM_COUNT = 20 * 1000 * 1000;
+  auto clear = std::vector<int>(ITEM_COUNT, 42);
+  for (auto index = size_t{0}; index < ITEM_COUNT; ++index) {
+    clear[index] += 1;
+  }
+  benchmark::ClobberMemory();
+}
 
 inline std::byte* mmap_region(const size_t num_bytes) {
 #ifdef __APPLE__
@@ -139,8 +146,8 @@ enum class YCSBTupleSize : uint32_t {
   // Small = CACHE_LINE_SIZE,
   // Medium = 512,
   Large = 4096,
-  VeryLarge = 8192,
-  Huge = 32768
+  // VeryLarge = 8192,
+  // Huge = 32768
 };
 
 struct YCSBTuple {
@@ -170,10 +177,10 @@ inline YCSBTable generate_ycsb_table(boost::container::pmr::memory_resource* mem
     auto ptr = memory_resource->allocate(static_cast<size_t>(tuple_size), CACHE_LINE_SIZE);
     Assert(ptr != nullptr, "Allocation failed");
     auto page_id = buffer_manager.find_page(ptr);
-    buffer_manager.pin_exclusive(page_id);
-    simulate_store(reinterpret_cast<std::byte*>(ptr), page_size);
+    // buffer_manager.pin_exclusive(page_id);
+    std::memset(ptr, 0x1, page_size);
     buffer_manager.set_dirty(page_id);
-    buffer_manager.unpin_exclusive(page_id);
+    // buffer_manager.unpin_exclusive(page_id);
     table.push_back({tuple_size, reinterpret_cast<std::byte*>(ptr)});
     current_size += page_size;
   }
@@ -189,8 +196,13 @@ inline YCSBOperations generate_ycsb_operations(const size_t num_keys, const floa
   static thread_local std::mt19937 generator{std::random_device{}()};
   std::uniform_int_distribution<int> op_distribution(0, 100);
   zipfian_int_distribution<YCSBKey> key_distribution{0, static_cast<YCSBKey>(num_keys - 1), zipf_skew};
+  std::vector<size_t> shuffled_keys(num_keys, 0);
+  std::iota(shuffled_keys.begin(), shuffled_keys.end(), 0);
+  auto rng = std::default_random_engine{};
+  std::shuffle(std::begin(shuffled_keys), std::end(shuffled_keys), rng);
   for (auto i = 0; i < NumOperations; i++) {
-    auto key = static_cast<YCSBKey>(key_distribution(generator));
+    auto key = shuffled_keys[key_distribution(generator)];
+
     if constexpr (workload == YCSBWorkload::UpdateHeavy) {
       auto op =
           op_distribution(generator) < static_cast<int>(50) ? YSCBOperationType::Lookup : YSCBOperationType::Update;
@@ -240,19 +252,6 @@ inline uint64_t execute_ycsb_action(const YCSBTable& table, BufferManager& buffe
     }
     default:
       Fail("Operation not supported");
-  }
-}
-
-inline void warmup(YCSBTable& table, BufferManager& buffer_manager) {
-  std::mt19937 gen{std::random_device{}()};
-  std::uniform_int_distribution<YCSBKey> dist(0, table.size() - 1);
-
-  auto unused_bytes = buffer_manager.config().dram_buffer_pool_size + buffer_manager.config().numa_buffer_pool_size;
-  while (unused_bytes > 0) {
-    const auto key = dist(gen);
-    auto [size, _] = table[key];
-    YSCBOperation op = std::make_pair(key, YSCBOperationType::Scan);
-    unused_bytes -= execute_ycsb_action(table, buffer_manager, op);
   }
 }
 

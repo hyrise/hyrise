@@ -36,6 +36,8 @@ class YCSBBufferManagerFixture : public benchmark::Fixture {
   boost::container::pmr::memory_resource* memory_resource;
   hdr_histogram* latency_histogram;
   std::mutex latency_histogram_mutex;
+  BufferManager& buffer_manager = Hyrise::get().buffer_manager;
+  uint64_t operations_per_thread;
 
   void SetUp(const ::benchmark::State& state) {
     if (state.thread_index() == 0) {
@@ -56,8 +58,8 @@ class YCSBBufferManagerFixture : public benchmark::Fixture {
 
       auto database_size = state.range(0) * GB;
       table = generate_ycsb_table(memory_resource, database_size);
-      operations = generate_ycsb_operations<WL, NUM_OPERATIONS>(table.size(), 0.99);
-
+      operations = generate_ycsb_operations<WL, NUM_OPERATIONS>(table.size(), 0.3);
+      operations_per_thread = operations.size() / state.threads();
       init_histogram(&latency_histogram);
     }
   }
@@ -67,28 +69,35 @@ class YCSBBufferManagerFixture : public benchmark::Fixture {
       hdr_close(latency_histogram);
     }
   }
+
+  void warmup(benchmark::State& state) {
+    auto start = state.thread_index() * operations_per_thread;
+    auto end = start + operations_per_thread;
+    for (auto i = start; i < end; ++i) {
+      const auto op = operations[i];
+      execute_ycsb_action(table, buffer_manager, op);
+    }
+  }
 };
 
 template <typename Fixture>
 inline void run_ycsb(Fixture& fixture, benchmark::State& state) {
-  micro_benchmark_clear_cache();  // Really important!
+  micro_benchmark_clear_cache();
 
-  const auto operations_per_thread = fixture.operations.size() / state.threads();
-  // TODO: Reset metrics of buffer manager,
   auto bytes_processed = uint64_t{0};
 
   hdr_histogram* local_latency_histogram;
   init_histogram(&local_latency_histogram);
 
   for (auto _ : state) {
-    auto start = state.thread_index() * operations_per_thread;
-    auto end = start + operations_per_thread;
+    const auto start = state.thread_index() * fixture.operations_per_thread;
+    const auto end = start + fixture.operations_per_thread;
     for (auto i = start; i < end; ++i) {
       const auto op = fixture.operations[i];
-      auto start = std::chrono::high_resolution_clock::now();
-      bytes_processed += execute_ycsb_action(fixture.table, Hyrise::get().buffer_manager, op);
-      auto end = std::chrono::high_resolution_clock::now();
-      const auto latency = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
+      const auto timer_start = std::chrono::high_resolution_clock::now();
+      bytes_processed += execute_ycsb_action(fixture.table, fixture.buffer_manager, op);
+      const auto timer_end = std::chrono::high_resolution_clock::now();
+      const auto latency = std::chrono::duration_cast<std::chrono::nanoseconds>(timer_end - timer_start).count();
       hdr_record_value(local_latency_histogram, latency);
     }
     {
@@ -98,11 +107,11 @@ inline void run_ycsb(Fixture& fixture, benchmark::State& state) {
     }
     benchmark::ClobberMemory();
   }
-
-  state.SetItemsProcessed(operations_per_thread);
+  state.SetItemsProcessed(fixture.operations_per_thread);
   state.SetBytesProcessed(bytes_processed);
+
   if (state.thread_index() == 0) {
-    state.counters["cache_hit_rate"] = Hyrise::get().buffer_manager.metrics()->hit_rate();
+    state.counters["cache_hit_rate"] = fixture.buffer_manager.metrics()->hit_rate();
     state.counters["latency_mean"] = hdr_mean(fixture.latency_histogram);
     state.counters["latency_stddev"] = hdr_stddev(fixture.latency_histogram);
     state.counters["latency_median"] = hdr_value_at_percentile(fixture.latency_histogram, 50.0);

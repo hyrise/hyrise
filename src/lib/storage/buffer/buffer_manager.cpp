@@ -482,4 +482,8 @@ size_t BufferManager::memory_consumption() const {
          metrics_bytes;
 }
 
+size_t BufferManager::pool_size() const {
+  return _primary_buffer_pool->max_bytes + (_secondary_buffer_pool->enabled ? _secondary_buffer_pool->max_bytes : 0);
+}
+
 }  // namespace hyrise
