@@ -17,6 +17,15 @@ namespace hyrise {
 
 NodeQueueScheduler::NodeQueueScheduler() {
   _worker_id_allocator = std::make_shared<UidAllocator>();
+  _num_scheduled_tasks_per_node = std::vector<size_t>(8, 0); 
+
+  _num_scheduled_tasks_per_group = std::vector<size_t>(240, 0); 
+
+
+  _num_correctly_scheduled = 0; 
+  _num_incorrectly_scheduled = 0;
+  _numa_aware_group = 0; 
+  _numa_unaware_group = 0;
 }
 
 NodeQueueScheduler::~NodeQueueScheduler() {
@@ -25,6 +34,22 @@ NodeQueueScheduler::~NodeQueueScheduler() {
     std::cerr << "NodeQueueScheduler::finish() wasn't called prior to destroying it" << std::endl;
     std::exit(EXIT_FAILURE);  // NOLINT(concurrency-mt-unsafe)
   }
+  std::cout << "num_without_preferred_node: " << _num_incorrectly_scheduled << std::endl; 
+  std::cout << "num_with_preferred_node: " <<  _num_correctly_scheduled << std::endl; 
+
+  std::cout << "Tasks per node scheduled" << std::endl; 
+  for(auto i = size_t{0}; i < _num_scheduled_tasks_per_node.size(); i++){
+    std::cout << i << ": " << _num_scheduled_tasks_per_node[i] << std::endl; 
+  }
+
+  std::cout << "Tasks per group scheduled" << std::endl; 
+  for(auto i = size_t{0}; i < _num_scheduled_tasks_per_group.size(); i++){
+    std::cout << i << ": " << _num_scheduled_tasks_per_group[i] << std::endl; 
+  }
+
+  std::cout << "Numa-Aware grouping: " << _numa_aware_group << std::endl;
+  std::cout << "Numa-Unaware grouping: " << _numa_unaware_group << std::endl;
+
 }
 
 void NodeQueueScheduler::begin() {
@@ -142,6 +167,12 @@ void NodeQueueScheduler::schedule(std::shared_ptr<AbstractTask> task, SchedulePr
   _queues[node_id_for_queue]->push(task, priority);
 }
 
+void print_queue_sizes(std::vector<std::shared_ptr<TaskQueue>> queues){
+  for(auto i = size_t{0}; i < queues.size(); ++i){
+    std::cout << i << ": " << queues[i]->estimate_load() << std::endl; 
+  }
+}
+
 NodeID NodeQueueScheduler::determine_queue_id(const NodeID preferred_node_id) const {
   // Early out: no need to check for preferred node or other queues, if there is only a single node queue.
   if (_queue_count == 1) {
@@ -151,8 +182,10 @@ NodeID NodeQueueScheduler::determine_queue_id(const NodeID preferred_node_id) co
   // If we actually set a preffered_node_id, choose it as the queue id.
   if (preferred_node_id != CURRENT_NODE_ID && preferred_node_id != INVALID_NODE_ID &&
       preferred_node_id != UNKNOWN_NODE_ID) {
+    _num_correctly_scheduled++;
     return preferred_node_id;
   }
+  _num_incorrectly_scheduled++;
 
   // If the current node is requested, try to obtain node from current worker.
   const auto& worker = Worker::get_this_thread_worker();
@@ -180,14 +213,17 @@ NodeID NodeQueueScheduler::determine_queue_id(const NodeID preferred_node_id) co
   return min_load_queue_id;
 }
 
-void NodeQueueScheduler::_group_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const {
-  // Adds predecessor/successor relationships between tasks so that only NUM_GROUPS tasks can be executed in parallel.
-  // The optimal value of NUM_GROUPS depends on the number of cores and the number of queries being executed
-  // concurrently. The current value has been found with a divining rod.
-  //
-  // Approach: Skip all tasks that already have predecessors or successors, as adding relationships to these could
-  // introduce cyclic dependencies. Again, this is far from perfect, but better than not grouping the tasks.
+bool NodeQueueScheduler::_numa_aware_grouping(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const {
+  bool numa_aware = true; 
+  for(auto task : tasks){
+    if(task->node_id() > _queue_count - 1){
+      numa_aware = false;  
+    }
+  }
+  return numa_aware; 
+}
 
+void NodeQueueScheduler::_group_default(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const {
   auto round_robin_counter = 0;
   auto common_node_id = std::optional<NodeID>{};
 
@@ -196,7 +232,6 @@ void NodeQueueScheduler::_group_tasks(const std::vector<std::shared_ptr<Abstract
     if (!task->predecessors().empty() || !task->successors().empty()) {
       return;
     }
-
     if (common_node_id) {
       // This is not really a hard assertion. As the chain will likely be executed on the same Worker (see
       // Worker::execute_next), we would ignore all but the first node_id. At the time of writing, we did not do any
@@ -214,6 +249,60 @@ void NodeQueueScheduler::_group_tasks(const std::vector<std::shared_ptr<Abstract
     }
     grouped_tasks[group_id] = task;
     ++round_robin_counter;
+  }
+}
+
+// with 240 groups.................
+// void NodeQueueScheduler::_group_numa_aware(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const {
+//   auto round_robin_counter = std::vector<int>(_queue_count, 0);
+//   std::vector<std::shared_ptr<AbstractTask>> grouped_tasks(_workers_per_node * _queue_count);
+
+//   for (const auto& task : tasks) {
+//     if (!task->predecessors().empty() || !task->successors().empty()) {
+//       return;
+//     }
+//     auto num_node = task->node_id(); 
+//     const auto group_id = (_workers_per_node * num_node) + (round_robin_counter[num_node] % _workers_per_node);
+//     _num_scheduled_tasks_per_group[group_id]++;
+//     const auto& first_task_in_group = grouped_tasks[group_id];
+//     if (first_task_in_group) {
+//       task->set_as_predecessor_of(first_task_in_group);
+//     }
+//     grouped_tasks[group_id] = task;
+//     ++round_robin_counter[task->node_id()];
+//   }
+// }
+
+void NodeQueueScheduler::_group_numa_aware(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const {
+  std::vector<std::shared_ptr<AbstractTask>> grouped_tasks(_queue_count);
+
+  for (const auto& task : tasks) {
+    if (!task->predecessors().empty() || !task->successors().empty()) {
+      return;
+    }
+    auto group_id = task->node_id(); 
+    const auto& first_task_in_group = grouped_tasks[group_id];
+    if (first_task_in_group) {
+      task->set_as_predecessor_of(first_task_in_group);
+    }
+    grouped_tasks[group_id] = task;
+  }
+}
+
+
+void NodeQueueScheduler::_group_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const {
+  // Adds predecessor/successor relationships between tasks so that only NUM_GROUPS tasks can be executed in parallel.
+  // The optimal value of NUM_GROUPS depends on the number of cores and the number of queries being executed
+  // concurrently. The current value has been found with a divining rod.
+  //
+  // Approach: Skip all tasks that already have predecessors or successors, as adding relationships to these could
+  // introduce cyclic dependencies. Again, this is far from perfect, but better than not grouping the tasks.
+  if(_numa_aware_grouping(tasks)){
+    _numa_aware_group++; 
+    return _group_numa_aware(tasks);
+  } else {
+    _numa_unaware_group++;
+    return _group_default(tasks); 
   }
 }
 
