@@ -22,6 +22,8 @@ import seaborn as sns
 VERBOSITY_LEVEL = 0
 FAIL_FAST = False
 
+DEFAULT_ENCODINGS = ["Unencoded", "Dictionary", "RunLength", "FixedStringDictionary", "LZ4"]
+
 
 def print_debug(*args, required_verbosity_level: int, **kwargs) -> None:
     if VERBOSITY_LEVEL >= required_verbosity_level:
@@ -64,13 +66,25 @@ class DictConvertible(ABC):
 @dataclass(frozen=True, slots=True)
 class Runtime(DictConvertible):
     benchmark_name: str
-    items_per_second: float
+    durations: list[float]
 
     def as_dict(self) -> dict:
         return {
             "benchmark_name": self.benchmark_name,
-            "items_per_second": self.items_per_second,
+            "durations": self.durations,
         }
+
+    def min(self) -> float:
+        return min(self.durations)
+
+    def max(self) -> float:
+        return max(self.durations)
+
+    def average(self) -> float:
+        return statistics.fmean(self.durations)
+
+    def median(self) -> float:
+        return statistics.median(self.durations)
 
 
 @dataclass(slots=True)
@@ -83,17 +97,17 @@ class Runtimes(DictConvertible):
     def as_dict(self) -> dict:
         return {"runtimes": list(runtime.as_dict() for runtime in self.runtimes)}
 
-    def min(self) -> int:
-        return min(map(lambda x: x.items_per_second, self.runtimes))
+    def min(self) -> float:
+        return min(map(lambda x: x.median(), self.runtimes))
 
-    def max(self) -> int:
-        return max(map(lambda x: x.items_per_second, self.runtimes))
+    def max(self) -> float:
+        return max(map(lambda x: x.median(), self.runtimes))
 
     def average(self) -> float:
-        return statistics.fmean(map(lambda x: x.items_per_second, self.runtimes))
+        return statistics.fmean(map(lambda x: x.median(), self.runtimes))
 
     def median(self) -> float:
-        return statistics.median(map(lambda x: x.items_per_second, self.runtimes))
+        return statistics.median(map(lambda x: x.median(), self.runtimes))
 
     @classmethod
     def from_json(cls, json_path: str) -> "Runtimes":
@@ -104,8 +118,8 @@ class Runtimes(DictConvertible):
         json_file = json_file["benchmark"]
         for benchmark in json_file["benchmarks"]:
             name = benchmark["name"]
-            duration = benchmark["items_per_second"]
-            runtime = Runtime(name, duration)
+            durations: list[float] = [run["duration"] for run in benchmark["successful_runs"]]
+            runtime = Runtime(name, durations)
             runtimes.runtimes.append(runtime)
         return runtimes
 
@@ -170,11 +184,19 @@ class Metrics(DictConvertible):
         return metrics
 
 
+def clean_encoding_name(encoding: str) -> str:
+    return encoding_without_branch\
+        if (encoding_without_branch := encoding.split('-')[-1]) in DEFAULT_ENCODINGS\
+        or encoding_without_branch.split(' ')[0] in DEFAULT_ENCODINGS\
+        else encoding
+
+
 def plot(results: dict[str, list], *, title: str, yaxis: str, path: str, figsize: tuple[int, int] = (15, 10)) -> None:
     f, axis = plt.subplots(1, 1, figsize=figsize)
     # The transposing of the orientation is done to allow for empty cells.
     data = pd.DataFrame.from_dict(results, orient="index")
     data = data.transpose()
+    data = data.rename(clean_encoding_name, axis='columns')
     print_debug(data, required_verbosity_level=3)
     if data.empty:
         print_error("Data Frame is empty; no result data to show!")
@@ -205,7 +227,8 @@ def refine_stats(
                 result["SIZE"].append(size)
                 result["RUNTIME"].append(runtime)
                 result["MODE"].append(threading)
-                result["ENCODING"].append(encoding)
+                cleaned_encoding_name = clean_encoding_name(encoding)
+                result["ENCODING"].append(cleaned_encoding_name)
                 result["BENCHMARK"].append(benchmark_name)
     return result
 
@@ -217,7 +240,7 @@ def plot_stats(
     g = sns.FacetGrid(data, col="BENCHMARK", row="MODE", hue="ENCODING", sharex=False, sharey=False)
     g.map(sns.scatterplot, "SIZE", "RUNTIME")
     g.add_legend()
-    g.set_axis_labels("Memory Consumption [Median Bytes]", "Throughput [Median Items per Second]")
+    g.set_axis_labels("Memory Consumption [Median Bytes]", "Duration [Median Runtime]")
     g.tight_layout()
     g.savefig(path)
 
@@ -236,10 +259,9 @@ class Benchmarking:
 
         @classmethod
         def from_namespace(cls, namespace: argparse.Namespace) -> "Benchmarking.Config":
-            default_encodings = ["Unencoded", "Dictionary", "RunLength", "FixedStringDictionary", "LZ4"]
             encodings = flatten(namespace.encodings)
             if namespace.default_encodings:
-                encodings.extend(default_encodings)
+                encodings.extend(DEFAULT_ENCODINGS)
             if len(encodings) == 0:
                 exit("No encodings to test")
             return cls(
@@ -518,6 +540,7 @@ class Evaluation:
     class Config:
         timing_benchmark_files: list[str]
         metric_benchmark_files: list[str]
+        ignore_encodings: list[str]
         output_directory: str
 
         @classmethod
@@ -530,6 +553,7 @@ class Evaluation:
             return cls(
                 timing_benchmark_files=flatten(namespace.timing_benchmark_files),
                 metric_benchmark_files=flatten(namespace.metric_benchmark_files),
+                ignore_encodings=flatten(namespace.ignore_encodings),
                 output_directory=output_directory,
             )
 
@@ -554,13 +578,28 @@ class Evaluation:
             help="All timing benchmark files to evaluate.",
         )
         parser.add_argument(
-            "-o",
-            "--output-directory",
-            dest="output_directory",
+            '-i',
+            '--ignore',
+            action='append',
+            dest='ignore_encodings',
+            required=False,
+            default=[],
+            nargs='+',
+            help='Encodings to ignore despite being present in the provided files.'
+        )
+        parser.add_argument(
+            '-o',
+            '--output-directory',
+            dest='output_directory',
             type=str,
             required=True,
             help="The directory where the output should be stored.",
         )
+        return parser
+
+    @staticmethod
+    def is_excluded(encoding: str, config: Config) -> bool:
+        return encoding.split('-')[-1] in config.ignore_encodings
 
     @staticmethod
     def run(config: Config) -> list[Path]:
@@ -591,7 +630,17 @@ class Evaluation:
     def _compare_metrics(config: Config) -> tuple[dict[str, dict[str, Metrics]], list[Path]]:
         paths: list[Path] = []
         result_jsons = config.metric_benchmark_files
-        metrics_list = [Metrics.from_json(result_json) for result_json in result_jsons]
+        metrics_list = [
+            metric
+            for metric
+            in
+            [
+                Metrics.from_json(result_json)
+                for result_json
+                in result_jsons
+            ]
+            if not Evaluation.is_excluded(metric.encoding, config)
+        ]
         metrics_grouped_by_benchmark: dict[str, list[Metrics]] = Evaluation._group_by(metrics_list, "benchmark_name")
         metrics_grouped_by_benchmark_and_encoding_list: dict[str, dict[str, list[Metrics]]] = {
             benchmark: Evaluation._group_by(metrics_by_benchmark, "encoding")
@@ -644,7 +693,17 @@ class Evaluation:
     ) -> tuple[dict[str, dict[Literal["ST", "MT"], dict[str, Runtimes]]], list[Path]]:
         paths: list[Path] = []
         result_jsons = config.timing_benchmark_files
-        timings_list = [Runtimes.from_json(result_json) for result_json in result_jsons]
+        timings_list = [
+            timing
+            for timing
+            in
+            [
+                Runtimes.from_json(result_json)
+                for result_json
+                in result_jsons
+            ]
+            if not Evaluation.is_excluded(timing.encoding, config)
+        ]
         timings_grouped_by_benchmark: dict[str, list[Runtimes]] = Evaluation._group_by(timings_list, "benchmark_name")
         timings_grouped_by_benchmark_and_encoding_list: dict[str, dict[str, list[Runtimes]]] = {
             benchmark: Evaluation._group_by(timings_by_benchmark, "encoding")
@@ -675,13 +734,13 @@ class Evaluation:
                 plot_path = path.join(config.output_directory, "runtime", "plots", f"{name}-{threading}.png")
                 Path(plot_path).parent.mkdir(parents=True, exist_ok=True)
                 times_to_plot = {
-                    encoding: list(map(lambda x: x.items_per_second, runtimes.runtimes))
+                    encoding: list(map(lambda x: x.median(), runtimes.runtimes))
                     for encoding, runtimes in times.items()
                 }
                 plot(
                     times_to_plot,
-                    title=f"Items per second for {name}",
-                    yaxis="Items per second of individual benchmark tests",
+                    title=f"Median duration for {name}",
+                    yaxis="Median runtime across benchmark tests",
                     path=plot_path,
                 )
                 paths.append(Path(plot_path))
