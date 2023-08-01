@@ -14,6 +14,7 @@
 #include "operators/sort.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
+#include "operators/window_function_evaluator.hpp"
 #include "scheduler/operator_task.hpp"
 #include "storage/encoding_type.hpp"
 #include "tpch/tpch_constants.hpp"
@@ -309,6 +310,26 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_HashSemiProbeRelationLarger)(bench
         _table_wrapper_map.at("lineitem"), _table_wrapper_map.at("orders"), JoinMode::Semi,
         OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals});
     join->execute();
+  }
+}
+
+BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_WindowFunctionEvaluatorRank)(benchmark::State& state) {
+  const auto window_function_expression = std::make_shared<WindowFunctionExpression>(
+      WindowFunction::Rank, nullptr,
+      window_(std::vector<std::shared_ptr<AbstractExpression>>{lqp_column_(nullptr, ColumnID(0))},
+              std::vector<std::shared_ptr<AbstractExpression>>{lqp_column_(nullptr, ColumnID(1))},
+              {SortMode::Ascending},
+              FrameDescription(FrameType::Range, FrameBound(0, FrameBoundType::Preceding, true),
+                               FrameBound(0, FrameBoundType::CurrentRow, false))));
+
+  const auto partition_by_column_ids = std::vector{ColumnID(0)};
+  const auto order_by_column_ids = std::vector{ColumnID(1)};
+  const auto input_operator = _table_wrapper_map.at("lineitem");
+
+  for (auto _ : state) {
+    auto evaluator = std::make_shared<WindowFunctionEvaluator>(
+        input_operator, partition_by_column_ids, order_by_column_ids, INVALID_COLUMN_ID, window_function_expression);
+    evaluator->execute();
   }
 }
 
