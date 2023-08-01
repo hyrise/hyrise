@@ -340,21 +340,19 @@ void BinaryWriter::_write_segment(const VariableStringDictionarySegment<T>& dict
                                   bool /*column_is_nullable*/, std::ofstream& ofstream) {
   export_value(ofstream, EncodingType::VariableStringDictionary);
 
-  // Write attribute vector compression id
+  // Write attribute vector compression type and data.
   const auto compressed_vector_type_id = _compressed_vector_type_id<T>(dictionary_segment);
   export_value(ofstream, compressed_vector_type_id);
-
-  // Write the dictionary size and dictionary
-  export_value(ofstream, static_cast<ValueID::base_type>(dictionary_segment.dictionary()->size()));
-  export_values(ofstream, *dictionary_segment.dictionary());
-
-  // Write attribute vector
   _export_compressed_vector(ofstream, *dictionary_segment.compressed_vector_type(),
                             *dictionary_segment.attribute_vector());
 
-  // Write offset vector
-  export_value(ofstream, static_cast<ValueID::base_type>(dictionary_segment.offset_vector()->size()));
+  // Write offset vector.
+  export_value(ofstream, static_cast<uint32_t>(dictionary_segment.offset_vector()->size()));
   export_values(ofstream, *dictionary_segment.offset_vector());
+
+  // Write the dictionary size and dictionary
+  export_value(ofstream, static_cast<uint32_t>(dictionary_segment.dictionary()->size()));
+  export_values(ofstream, *dictionary_segment.dictionary());
 }
 
 template <typename T>
