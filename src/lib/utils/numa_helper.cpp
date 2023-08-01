@@ -1,4 +1,4 @@
-#include "numa.hpp"
+#include "numa_helper.hpp"
 
 namespace hyrise {
 
