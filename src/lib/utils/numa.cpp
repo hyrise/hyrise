@@ -43,50 +43,50 @@ NodeMatrix sort_relative_node_ids(DistanceMatrix distance_matrix) {
 }
 
 void print_tasks_stolen_statistics(std::vector<std::shared_ptr<AbstractTask>>& jobs, std::string step) {
-  auto stolen = uint32_t{0};
-  auto not_stolen = uint32_t{0};
-  auto node_counts = std::vector<uint32_t>(9, 0);
-  auto node_counts_not_stolen = std::vector<uint32_t>(9, 0);
-  auto node_counts_stolen = std::vector<uint32_t>(9, 0);
-  for (auto& job : jobs) {
-    if (job->node_id() < 8) {
-      node_counts[job->node_id()]++;
-    } else {
-      node_counts[8]++;
-    }
-    if (job->_was_stolen) {
-      if (job->node_id() < 8) {
-        node_counts_stolen[job->node_id()]++;
+  // auto stolen = uint32_t{0};
+  // auto not_stolen = uint32_t{0};
+  // auto node_counts = std::vector<uint32_t>(9, 0);
+  // auto node_counts_not_stolen = std::vector<uint32_t>(9, 0);
+  // auto node_counts_stolen = std::vector<uint32_t>(9, 0);
+  // for (auto& job : jobs) {
+  //   if (job->node_id() < 8) {
+  //     node_counts[job->node_id()]++;
+  //   } else {
+  //     node_counts[8]++;
+  //   }
+  //   if (job->_was_stolen) {
+  //     if (job->node_id() < 8) {
+  //       node_counts_stolen[job->node_id()]++;
 
-      } else {
-        node_counts_stolen[8]++;
-      }
-      stolen++;
-    } else {
-      if (job->node_id() < 8) {
-        node_counts_not_stolen[job->node_id()]++;
+  //     } else {
+  //       node_counts_stolen[8]++;
+  //     }
+  //     stolen++;
+  //   } else {
+  //     if (job->node_id() < 8) {
+  //       node_counts_not_stolen[job->node_id()]++;
 
-      } else {
-        node_counts_not_stolen[8]++;
-      }
-      not_stolen++;
-    }
-  }
-  std::cout << "At execution of step '" << step << "' " << stolen << " jobs were stolen, " << not_stolen
-            << " jobs were not stolen" << std::endl;
-  std::cout << "X Tasks were executed on Nodes ";
-  for (auto& node_count : node_counts) {
-    std::cout << node_count << " ";
-  }
-  std::cout << std::endl << "X STOLEN Tasks were executed on Nodes ";
-  for (auto& node_count : node_counts_stolen) {
-    std::cout << node_count << " ";
-  }
-  std::cout << std::endl << "X Tasks were executed where SCHEDULED on Nodes ";
-  for (auto& node_count : node_counts_stolen) {
-    std::cout << node_count << " ";
-  }
-  std::cout << std::endl;
+  //     } else {
+  //       node_counts_not_stolen[8]++;
+  //     }
+  //     not_stolen++;
+  //   }
+  // }
+  // std::cout << "At execution of step '" << step << "' " << stolen << " jobs were stolen, " << not_stolen
+  //           << " jobs were not stolen" << std::endl;
+  // std::cout << "X Tasks were executed on Nodes ";
+  // for (auto& node_count : node_counts) {
+  //   std::cout << node_count << " ";
+  // }
+  // std::cout << std::endl << "X STOLEN Tasks were executed on Nodes ";
+  // for (auto& node_count : node_counts_stolen) {
+  //   std::cout << node_count << " ";
+  // }
+  // std::cout << std::endl << "X Tasks were executed where SCHEDULED on Nodes ";
+  // for (auto& node_count : node_counts_stolen) {
+  //   std::cout << node_count << " ";
+  // }
+  // std::cout << std::endl;
 }
 
 }  // namespace hyrise
