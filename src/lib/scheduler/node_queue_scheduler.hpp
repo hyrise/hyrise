@@ -20,10 +20,9 @@ namespace hyrise {
  * TASK DEPENDENCIES
  *
  * Tasks can be dependent of each other. For example, a table scan operation can be dependent on a GetTable operation
- * and so do the tasks that encapsulates these operations.
- * Therefore, not every task that is on top of the TaskQueue is ready to be processed. Pulling this unready task and
- * pushing it back to the queue could result in high latency for this task and in a high latency for queries. For that
- * reason, Workers working on tasks with dependencies try to process these first.
+ * and so do the tasks that encapsulates these operations. Tasks with predecessors are not scheduled (i.e., added to
+ * the TaskQueues). When tasks with successors are processed, the executing worker tries to execute the successors
+ * before pulling new tasks from the TaskQueues.
  *
  *
  * JOBTASKS
@@ -56,6 +55,8 @@ namespace hyrise {
  *  2) the queue is empty
  * In both cases, the current Worker is checking non-local queues of other NUMA nodes for ready tasks. The Worker pulls
  * a task from a remote queue and checks if this task is stealable. If not, the task is pushed to the TaskQueue again.
+ * In case no tasks can be processed, the Worker thread is put to sleep and waits on the semaphore of its node-local
+ * TaskQueue.
  *
  * Note: currently, task queues are not explicitly allocated on a NUMA node. This means most workers will frequently
  * access distant task queues, which is ~1.6 times slower than accessing a local node [1]. 

@@ -373,7 +373,7 @@ TEST_F(SchedulerTest, MergeSort) {
   merge_sort(vector_to_sort.begin(), vector_to_sort.end());
   EXPECT_TRUE(std::is_sorted(vector_to_sort.begin(), vector_to_sort.end()));
 }
- 
+
 TEST_F(SchedulerTest, NodeQueueSchedulerCreationAndReset) {
   if (std::thread::hardware_concurrency() < 4) {
     // If the machine has less than 4 cores, the calls to use_non_numa_topology() below will implicitly reduce the
