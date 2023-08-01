@@ -19,7 +19,6 @@
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/segment_iterate.hpp"
 #include "type_comparison.hpp"
-#include "utils/numa.hpp"
 
 /*
   This file includes the functions that cover the main steps of our hash join implementation
@@ -306,6 +305,9 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk_in = in_table->get_chunk(chunk_id);
     if (!chunk_in) {
+      if (partition_node_locations) {
+        radix_container_node_positions[chunk_id] = UNKNOWN_NODE_ID;
+      }
       continue;
     }
 
@@ -322,6 +324,9 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
 
       // Skip chunks that were physically deleted
       if (!chunk_in) {
+        if (partition_node_locations) {
+          radix_container_node_positions[chunk_id] = UNKNOWN_NODE_ID;
+        }
         return;
       }
 
@@ -448,7 +453,6 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
   if (jobs.size()) {
     Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
   }
-  print_tasks_stolen_statistics(jobs, "materialize_input");
   if (partition_node_locations) {
     // Some tasks were immediately executed which is why we need to combine them with the
     // node locations of the tasks executed via the scheduler.
@@ -504,7 +508,7 @@ std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<
   } else {
     hash_tables.resize(radix_container_size);
   }
-  hash_table_node_locations.resize(hash_tables.size());
+  hash_table_node_locations.reserve(hash_tables.size());
   std::vector<std::shared_ptr<AbstractTask>> jobs;
   jobs.reserve(radix_container_size);
   auto radix_container_node_positions = std::vector<std::optional<NodeID>>(radix_container_size, std::nullopt);
@@ -694,7 +698,6 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
     }
   }
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
-  print_tasks_stolen_statistics(jobs, "partition_by_radix");
 
   jobs.clear();
 
@@ -885,8 +888,6 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
   }
 
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
-
-  print_tasks_stolen_statistics(jobs, "probe");
 }
 
 template <typename ProbeColumnType, typename HashedType, JoinMode mode>
@@ -1012,7 +1013,6 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_containe
   }
 
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
-  print_tasks_stolen_statistics(jobs, "probe_semi_anti");
 }
 
 }  // namespace hyrise
