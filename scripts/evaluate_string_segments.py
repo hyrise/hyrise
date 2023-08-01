@@ -234,13 +234,15 @@ def refine_stats(
 
 
 def plot_stats(
-    stats: dict[str, tuple[Mapping[Literal["ST", "MT"], Mapping[str, Runtimes]], Mapping[str, Metrics]]], *, path: str
+    stats: dict[str, tuple[Mapping[Literal["ST", "MT"], Mapping[str, Runtimes]], Mapping[str, Metrics]]], *, path: str,
+        sharex: bool, sharey: bool
 ) -> None:
     data = pd.DataFrame.from_dict(refine_stats(stats))
-    g = sns.FacetGrid(data, col="BENCHMARK", row="MODE", hue="ENCODING", sharex=False, sharey=False)
+    data = data.sort_values('ENCODING')
+    g = sns.FacetGrid(data, col="BENCHMARK", row="MODE", hue="ENCODING", sharex=sharex, sharey=sharey)
     g.map(sns.scatterplot, "SIZE", "RUNTIME")
     g.add_legend()
-    g.set_axis_labels("Memory Consumption [Median Bytes]", "Duration [Median Runtime]")
+    g.set_axis_labels("Memory Consumption [Median Bytes]", "Duration [Median Nanoseconds]")
     g.tight_layout()
     g.savefig(path)
 
@@ -542,6 +544,8 @@ class Evaluation:
         metric_benchmark_files: list[str]
         ignore_encodings: list[str]
         output_directory: str
+        sharex: bool
+        sharey: bool
 
         @classmethod
         def from_namespace(cls, namespace: argparse.Namespace) -> "Evaluation.Config":
@@ -555,6 +559,8 @@ class Evaluation:
                 metric_benchmark_files=flatten(namespace.metric_benchmark_files),
                 ignore_encodings=flatten(namespace.ignore_encodings),
                 output_directory=output_directory,
+                sharex=namespace.sharex,
+                sharey=namespace.sharey
             )
 
     @staticmethod
@@ -595,6 +601,20 @@ class Evaluation:
             required=True,
             help="The directory where the output should be stored.",
         )
+        parser.add_argument(
+            '--share-x',
+            dest='sharex',
+            action=BooleanOptionalAction,
+            default=True,
+            help='Whether to share the x axis of the comparison plot. Defaults to True.'
+        )
+        parser.add_argument(
+            '--share-y',
+            dest='sharey',
+            action=BooleanOptionalAction,
+            default=True,
+            help='Whether to share the y axis of the comparison plot. Defaults to True.'
+        )
         return parser
 
     @staticmethod
@@ -614,7 +634,7 @@ class Evaluation:
             metrics = metric_stats[benchmark_name]
             stats[benchmark_name] = runtimes, metrics
         plot_path = path.join(config.output_directory, "comparison.png")
-        plot_stats(stats, path=plot_path)
+        plot_stats(stats, path=plot_path, sharex=config.sharex, sharey=config.sharey)
         paths = metric_paths
         paths.extend(timing_paths)
         paths.append(Path(plot_path))
@@ -740,7 +760,7 @@ class Evaluation:
                 plot(
                     times_to_plot,
                     title=f"Median duration for {name}",
-                    yaxis="Median runtime across benchmark tests",
+                    yaxis="Median runtime (in ns) across benchmark tests",
                     path=plot_path,
                 )
                 paths.append(Path(plot_path))
