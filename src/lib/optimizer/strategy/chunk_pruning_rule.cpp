@@ -172,8 +172,9 @@ void ChunkPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<A
       stored_table_node->set_pruned_chunk_ids(std::vector<ChunkID>(pruned_chunk_ids.begin(), pruned_chunk_ids.end()));
     }
 
-    // (2.4) Collect predicates with uncorrelated subqueries that we can use pruning during execution and set them to
-    //       the respective StoredTableNodes.
+    // (2.4) Collect predicates with uncorrelated subqueries that we can use for dynamic pruning during execution and
+    //       set them as prunable_subquery_predicates of the respective StoredTableNodes (for more details, see
+    //       get_table.hpp).
     // (2.4.1) Collect predicates with uncorrelated subqueries that are part of each chain in a new "pseudo" chain. When
     //         we want to use them for pruning during execution, it is safe to add the chunks pruned by them to the
     //         already pruned chunks.

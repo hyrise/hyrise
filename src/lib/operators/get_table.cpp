@@ -361,7 +361,19 @@ std::set<ChunkID> GetTable::_prune_chunks_dynamically() {
 
       // Ignore the subquery if it has not been executed yet. A reason might be that scheduling the subquery before the
       // GetTable operator would create a cycle. For instance, this can happen for a query like this:
-      // SELECT ... FROM a_table WHERE x > (SELECT AVG(x) FROM a_table);
+      // SELECT * FROM a_table WHERE x > (SELECT AVG(x) FROM a_table);
+      // The PQP of the query looks like the following:
+      //
+      //     [TableScan] x > SUBQUERY
+      //          |             *
+      //          |             * uncorrelated subquery
+      //          |             *
+      //          |      [AggregateHash] AVG(x)
+      //          |       /
+      //         [GetTable] a_table
+      //
+      // We cannot schedule the AggregateHash operator before the GetTable operator to obtain the subquery result for
+      // pruning: the OperatorTasks wrapping both operators would be in a circular wait for each other.
       if (subquery.pqp->state() != OperatorState::ExecutedAndAvailable) {
         continue;
       }

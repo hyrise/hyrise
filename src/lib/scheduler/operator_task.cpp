@@ -98,14 +98,13 @@ OperatorTask::make_tasks_from_operator(const std::shared_ptr<AbstractOperator>& 
   auto operator_tasks_set = std::unordered_set<std::shared_ptr<OperatorTask>>{};
   const auto& root_operator_task = add_operator_tasks_recursively(op, operator_tasks_set);
 
-  // Predicates that contain uncorrelated subqueries cannot be used for chunk pruning in the optimization phase since we
-  // do not know the predicate value yet. However, the ChunkPruningRule attaches the corresponding PredicateNodes to the
-  // StoredTableNode of the table the predicates are performed on. We attach the translated Predicates (i.e.,
-  // TableScans) to the GetTable operators so they can use them for pruning during execution.
+  // GetTable operators can store references to TableScans as prunable subquery predicates (see get_table.hpp for
+  // details).
   // We set the tasks associated with the uncorrelated subqueries as predecessors of the GetTable tasks so the GetTable
-  // operators can extract the predicate values and perform dynamic chunk pruning. We cannot link the tasks during the
-  // recursive creation of operator tasks. Since not all tasks might be created when reaching the GetTable tasks, we
-  // cannot traverse the tasks to ensure an acyclic graph.
+  // operators can extract the predicate values and perform dynamic chunk pruning. However, we cannot link the tasks
+  // during the recursive creation of operator tasks (see map_prunable_subquery_predicates.hpp). Potentially, not all
+  // tasks are yet created when reaching the GetTable tasks. Furthermore, we need the entire task graph to ensure that
+  // it is acyclic.
   link_tasks_for_subquery_pruning(operator_tasks_set);
 
   // Ensure the task graph is acyclic, i.e., no task is any (n-th) successor of itself. Tasks in cycles would end up in

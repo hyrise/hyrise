@@ -20,7 +20,7 @@ namespace hyrise {
  * `x = (SELECT MIN(y) FROM ...)`). We cannot prune chunks with these predicates during optimization since we do not
  * know the predicate value yet. However, we collect such predicates using subquery results that are safe to prune with
  * and also add this information to the StoredTableNode. During execution, the subquery might have already been executed
- * and the table can be pruned dynamically.
+ * and the table can be pruned dynamically (see get_table.hpp).
  */
 class ChunkPruningRule : public AbstractRule {
  public:
