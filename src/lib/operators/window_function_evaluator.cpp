@@ -77,10 +77,10 @@ std::shared_ptr<const Table> WindowFunctionEvaluator::_templated_on_execute() {
   auto timer = Timer{};
 
   auto partitioned_data = materialize_into_buckets();
-  window_performance_data.set_step_runtime(OperatorSteps::MaterializeAndHash, timer.lap());
+  window_performance_data.set_step_runtime(OperatorSteps::MaterializeIntoBuckets, timer.lap());
 
-  partition_and_sort_buckets(partitioned_data);
-  window_performance_data.set_step_runtime(OperatorSteps::Sort, timer.lap());
+  partition_and_order(partitioned_data);
+  window_performance_data.set_step_runtime(OperatorSteps::PartitionAndOrder, timer.lap());
 
   using OutputColumnType = typename WindowFunctionEvaluatorTraits<InputColumnType, window_function>::OutputColumnType;
 
@@ -326,7 +326,7 @@ HashPartitionedData WindowFunctionEvaluator::materialize_into_buckets() const {
   return output_buckets;
 }
 
-void WindowFunctionEvaluator::partition_and_sort_buckets(HashPartitionedData& buckets) const {
+void WindowFunctionEvaluator::partition_and_order(HashPartitionedData& buckets) const {
   const auto& sort_modes = dynamic_cast<const WindowExpression&>(*_window_function_expression->window()).sort_modes;
   const auto is_column_reversed = [&sort_modes](const auto column_index) {
     return sort_modes[column_index] == SortMode::Descending;

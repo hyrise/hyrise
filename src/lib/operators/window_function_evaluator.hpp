@@ -39,7 +39,12 @@ class WindowFunctionEvaluator : public AbstractReadOnlyOperator {
   template <typename InputColumnType, WindowFunction window_function>
   ComputationStrategy choose_computation_strategy() const;
 
-  enum class OperatorSteps : uint8_t { MaterializeAndHash, Sort, Compute, Annotate };
+  enum class OperatorSteps : uint8_t {
+    MaterializeIntoBuckets,
+    PartitionAndOrder,
+    Compute,
+    Annotate,
+  };
 
   struct PerformanceData : public OperatorPerformanceData<OperatorSteps> {
     void output_to_stream(std::ostream& stream, DescriptionMode description_mode) const override;
@@ -60,7 +65,7 @@ class WindowFunctionEvaluator : public AbstractReadOnlyOperator {
 
  private:
   HashPartitionedData materialize_into_buckets() const;
-  void partition_and_sort_buckets(HashPartitionedData& buckets) const;
+  void partition_and_order(HashPartitionedData& buckets) const;
 
   template <typename InputColumnType, WindowFunction window_function>
     requires SupportsOnePass<InputColumnType, window_function>
