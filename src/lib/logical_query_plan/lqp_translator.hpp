@@ -56,6 +56,7 @@ class LQPTranslator {
   std::shared_ptr<AbstractOperator> _translate_change_meta_table_node(
       const std::shared_ptr<AbstractLQPNode>& node) const;
   std::shared_ptr<AbstractOperator> _translate_validate_node(const std::shared_ptr<AbstractLQPNode>& node) const;
+  std::shared_ptr<AbstractOperator> _translate_window_node(const std::shared_ptr<AbstractLQPNode>& node) const;
 
   // Maintenance operators
   std::shared_ptr<AbstractOperator> _translate_show_tables_node(const std::shared_ptr<AbstractLQPNode>& node) const;

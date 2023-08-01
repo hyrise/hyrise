@@ -128,16 +128,17 @@ TEST_F(OperatorTaskTest, UncorrelatedSubqueries) {
   // SELECT MIN(table_b.a) FROM table_b
   const auto gt_b = std::make_shared<GetTable>("table_b", std::vector<ChunkID>{}, std::vector<ColumnID>{0});
   const auto b_a = PQPColumnExpression::from_table(*_test_table_b, "a");
-  using AggregateExpressions = std::vector<std::shared_ptr<AggregateExpression>>;
+  using WindowFunctionExpressions = std::vector<std::shared_ptr<WindowFunctionExpression>>;
   const auto aggregate_a =
-      std::make_shared<AggregateHash>(gt_b, AggregateExpressions{min_(b_a)}, std::vector<ColumnID>{});
+      std::make_shared<AggregateHash>(gt_b, WindowFunctionExpressions{min_(b_a)}, std::vector<ColumnID>{});
 
   // SELECT AVG(table_a.a) FROM table_a WHERE table_a.a > <subquery_result>
   const auto gt_a = std::make_shared<GetTable>("table_a");
   const auto a_a = PQPColumnExpression::from_table(*_test_table_a, "a");
   const auto scan =
       std::make_shared<TableScan>(gt_a, greater_than_(a_a, pqp_subquery_(aggregate_a, DataType::Int, false)));
-  auto aggregate_b = std::make_shared<AggregateHash>(scan, AggregateExpressions{avg_(a_a)}, std::vector<ColumnID>{});
+  auto aggregate_b =
+      std::make_shared<AggregateHash>(scan, WindowFunctionExpressions{avg_(a_a)}, std::vector<ColumnID>{});
 
   // SELECT 1 + <subquery_result>
   const auto table_wrapper = std::make_shared<TableWrapper>(Projection::dummy_table());
@@ -240,6 +241,32 @@ TEST_F(OperatorTaskTest, DetectCycles) {
       clear_successors(task);
     }
   }
+}
+
+TEST_F(OperatorTaskTest, SkipOperatorTask) {
+  const auto table = std::make_shared<GetTable>("table_a");
+  table->execute();
+
+  const auto task = std::make_shared<OperatorTask>(table);
+  task->skip_operator_task();
+  EXPECT_TRUE(task->is_done());
+}
+
+TEST_F(OperatorTaskTest, NotExecutedOperatorTaskCannotBeSkipped) {
+  const auto table = std::make_shared<GetTable>("table_a");
+
+  const auto task = std::make_shared<OperatorTask>(table);
+  EXPECT_THROW(task->skip_operator_task(), std::logic_error);
+}
+
+TEST_F(OperatorTaskTest, DoNotSkipOperatorTaskWithMultiOwners) {
+  const auto table = std::make_shared<GetTable>("table_a");
+  table->execute();
+
+  const auto task = std::make_shared<OperatorTask>(table);
+  const auto another_task_pointer = task;
+  EXPECT_EQ(task.use_count(), 2);
+  EXPECT_THROW(task->skip_operator_task(), std::logic_error);
 }
 
 }  // namespace hyrise

@@ -409,7 +409,7 @@ TEST_F(ExpressionTest, StaticTableNode) {
 TEST_F(ExpressionTest, EqualsAndHash) {
   std::vector<std::pair<int, std::shared_ptr<AbstractExpression>>> expressions;
 
-  // AggregateExpression
+  // WindowFunctionExpression
   expressions.emplace_back(__LINE__, count_(5));
   expressions.emplace_back(__LINE__, count_(null_()));
   expressions.emplace_back(__LINE__, sum_(a));
@@ -557,11 +557,11 @@ TEST_F(ExpressionTest, EqualsAndHash) {
 }
 
 TEST_F(ExpressionTest, IsCountStar) {
-  EXPECT_TRUE(AggregateExpression::is_count_star(*count_star_(int_float_node)));
-  EXPECT_FALSE(AggregateExpression::is_count_star(*count_(a)));
-  EXPECT_FALSE(AggregateExpression::is_count_star(*sum_(a)));
-  EXPECT_FALSE(AggregateExpression::is_count_star(*add_(a, 1)));
-  EXPECT_FALSE(AggregateExpression::is_count_star(*a));
+  EXPECT_TRUE(WindowFunctionExpression::is_count_star(*count_star_(int_float_node)));
+  EXPECT_FALSE(WindowFunctionExpression::is_count_star(*count_(a)));
+  EXPECT_FALSE(WindowFunctionExpression::is_count_star(*sum_(a)));
+  EXPECT_FALSE(WindowFunctionExpression::is_count_star(*add_(a, 1)));
+  EXPECT_FALSE(WindowFunctionExpression::is_count_star(*a));
 }
 
 }  // namespace hyrise
