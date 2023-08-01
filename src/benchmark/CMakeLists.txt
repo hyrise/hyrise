@@ -135,7 +135,6 @@ add_executable(
     storage/buffer/sequential_read_benchmark.cpp
     storage/buffer/random_access_benchmark.cpp
     storage/buffer/buffer_benchmark_utils.hpp
-    storage/buffer/buffer_benchmark_utils.cpp
     storage/buffer/allocation_benchmark.cpp
     storage/buffer/ycsb_buffer_manager_benchmark.cpp
 )
