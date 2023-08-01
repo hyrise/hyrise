@@ -1,38 +1,48 @@
 #include "ssd_region.hpp"
+#ifdef __linux__
+#include <linux/fs.h>
+#include <sys/ioctl.h>
+#endif
+
 #include <unistd.h>
 
 namespace hyrise {
 
 // TODO: Properly support block device
 
-static SSDRegion::DeviceType find_device_type_or_fail(const std::filesystem::path& file_name) {
-  if (std::filesystem::is_regular_file(file_name) || std::filesystem::is_directory(file_name)) {
-    return SSDRegion::DeviceType::REGULAR_FILE;
+static SSDRegion::Mode find_mode_or_fail(const std::filesystem::path& file_name) {
+  if (std::filesystem::is_directory(file_name)) {
+    return SSDRegion::Mode::FILE_PER_SIZE_TYPE;
   } else if (std::filesystem::is_block_file(file_name)) {
-    return SSDRegion::DeviceType::BLOCK;
+    return SSDRegion::Mode::BLOCK;
   } else {
-    Fail("The backing file has to be either a regular file or a block device");
+    Fail("The backing file has to be either a directory or a block device");
   }
 }
 
 SSDRegion::SSDRegion(const std::filesystem::path& path, std::shared_ptr<BufferManagerMetrics> metrics)
-    : _file_handles(open_file_handles(path)), _device_type(find_device_type_or_fail(path)), _metrics(metrics) {}
+    : _mode(find_mode_or_fail(path)),
+      _file_handles(_mode == Mode::FILE_PER_SIZE_TYPE ? open_file_handles_in_directory(path)
+                                                      : open_file_handles_block(path)),
+
+      _metrics(metrics) {}
 
 SSDRegion::~SSDRegion() {
   for (auto& file_handle : _file_handles) {
-    if (close(file_handle.fd) != 0) {
-      const auto error = errno;
-      Fail("Error while closing file descriptor " + std::to_string(file_handle.fd) + ": " + strerror(error));
-    }
+    close(file_handle.fd);
+    // TODO != 0) {
+    //   const auto error = errno;
+    //   Fail("Error while closing file descriptor " + std::to_string(file_handle.fd) + ": " + strerror(error));
+    // }
     // TODO: Assert( == 0, "Error while closing file descriptor");
-    if (_device_type == DeviceType::REGULAR_FILE) {
+    if (_mode == Mode::FILE_PER_SIZE_TYPE) {
       std::filesystem::remove(file_handle.backing_file_name);
     }
   }
 }
 
-SSDRegion::DeviceType SSDRegion::get_device_type() const {
-  return _device_type;
+SSDRegion::Mode SSDRegion::get_mode() const {
+  return _mode;
 }
 
 int SSDRegion::open_file_descriptor(const std::filesystem::path& file_name) {
@@ -63,10 +73,11 @@ int SSDRegion::open_file_descriptor(const std::filesystem::path& file_name) {
 }
 
 void SSDRegion::write_page(PageID page_id, std::byte* data) {
+  const auto handle = _file_handles[page_id._size_type];
   const auto num_bytes = page_id.num_bytes();
-  const auto pos = num_bytes * page_id.index;
+  const size_t pos = handle.offset + num_bytes * page_id.index;
   DebugAssertPageAligned(data);
-  const auto result = pwrite(_file_handles[page_id._size_type].fd, data, num_bytes, pos);
+  const auto result = pwrite64(handle.fd, data, num_bytes, pos);
   if (result < 0) {
     const auto error = errno;
     Fail("Error while writing to SSDRegion: " + strerror(error));
@@ -76,10 +87,11 @@ void SSDRegion::write_page(PageID page_id, std::byte* data) {
 }
 
 void SSDRegion::read_page(PageID page_id, std::byte* data) {
+  const auto handle = _file_handles[page_id._size_type];
   const auto num_bytes = page_id.num_bytes();
-  const auto pos = num_bytes * page_id.index;
+  const auto pos = handle.offset + num_bytes * page_id.index;
   DebugAssertPageAligned(data);
-  const auto result = pread(_file_handles[page_id._size_type].fd, data, num_bytes, pos);
+  const auto result = pread64(handle.fd, data, num_bytes, pos);
   if (result < 0) {
     const auto error = errno;
     Fail("Error while reading from SSDRegion: " + strerror(error));
@@ -91,7 +103,8 @@ size_t SSDRegion::memory_consumption() const {
   return sizeof(*this);
 }
 
-std::array<SSDRegion::FileHandle, NUM_PAGE_SIZE_TYPES> SSDRegion::open_file_handles(const std::filesystem::path& path) {
+std::array<SSDRegion::FileHandle, NUM_PAGE_SIZE_TYPES> SSDRegion::open_file_handles_in_directory(
+    const std::filesystem::path& path) {
   DebugAssert(std::filesystem::is_directory(path), "SSDRegion path must be a directory");
   auto array = std::array<SSDRegion::FileHandle, NUM_PAGE_SIZE_TYPES>{};
 
@@ -102,9 +115,35 @@ std::array<SSDRegion::FileHandle, NUM_PAGE_SIZE_TYPES> SSDRegion::open_file_hand
     const auto file_name =
         path / ("hyrise-buffer-pool-" + std::to_string(timestamp) + "-type-" + std::to_string(i) + ".bin");
     array[i] = {open_file_descriptor(file_name), file_name};
-    if (_device_type == DeviceType::REGULAR_FILE) {
-      std::filesystem::resize_file(file_name, 1UL << 25);
-    }
+    std::filesystem::resize_file(file_name, 1UL << 25);
+  }
+
+  return array;
+}
+
+std::array<SSDRegion::FileHandle, NUM_PAGE_SIZE_TYPES> SSDRegion::open_file_handles_block(
+    const std::filesystem::path& path) {
+  DebugAssert(std::filesystem::is_block_file(path), "SSDRegion path must be a directory");
+  auto array = std::array<SSDRegion::FileHandle, NUM_PAGE_SIZE_TYPES>{};
+
+  const auto fd = open_file_descriptor(path);
+
+  auto block_size = size_t{0};
+
+#ifdef __APPLE__
+  Fail("Block device not supported on Apple");
+#elif __linux__
+  if (ioctl(fd, BLKGETSIZE64, &block_size) < 0) {
+    const auto error = errno;
+    Fail("Failed to get size of block device: " + strerror(error));
+  }
+#endif
+
+  // Divide block device into equal chunks and align to page boundary
+  const auto bytes_per_size_type = ((block_size / NUM_PAGE_SIZE_TYPES) / OS_PAGE_SIZE) * OS_PAGE_SIZE;
+  for (auto i = size_t{0}; i < NUM_PAGE_SIZE_TYPES; ++i) {
+    const auto block_offset = i * bytes_per_size_type;
+    array[i] = {fd, path, block_offset};
   }
 
   return array;
@@ -113,7 +152,7 @@ std::array<SSDRegion::FileHandle, NUM_PAGE_SIZE_TYPES> SSDRegion::open_file_hand
 void swap(SSDRegion& first, SSDRegion& second) noexcept {
   using std::swap;
   swap(first._file_handles, second._file_handles);
-  swap(first._device_type, second._device_type);
+  swap(first._mode, second._mode);
   swap(first._metrics, second._metrics);
 }
 

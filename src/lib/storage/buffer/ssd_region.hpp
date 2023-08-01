@@ -19,7 +19,7 @@ namespace hyrise {
  */
 class SSDRegion : public Noncopyable {
  public:
-  enum class DeviceType { BLOCK, REGULAR_FILE };
+  enum class Mode { BLOCK, FILE_PER_SIZE_TYPE };
 
   SSDRegion(const std::filesystem::path& path, std::shared_ptr<BufferManagerMetrics> metrics);
   ~SSDRegion();
@@ -30,7 +30,7 @@ class SSDRegion : public Noncopyable {
   void write_page(const PageID page_id, std::byte* data);
   void read_page(const PageID page_id, std::byte* data);
 
-  DeviceType get_device_type() const;
+  Mode get_mode() const;
 
   size_t memory_consumption() const;
 
@@ -40,13 +40,16 @@ class SSDRegion : public Noncopyable {
   struct FileHandle {
     int fd;
     std::filesystem::path backing_file_name;
+    size_t offset = 0;  // Use for block devices and single files
   };
 
+  Mode _mode;
   std::array<FileHandle, NUM_PAGE_SIZE_TYPES> _file_handles;
-  DeviceType _device_type;
   std::shared_ptr<BufferManagerMetrics> _metrics;
 
-  std::array<FileHandle, NUM_PAGE_SIZE_TYPES> open_file_handles(const std::filesystem::path& path);
+  std::array<FileHandle, NUM_PAGE_SIZE_TYPES> open_file_handles_in_directory(const std::filesystem::path& path);
+  std::array<FileHandle, NUM_PAGE_SIZE_TYPES> open_file_handles_block(const std::filesystem::path& path);
+
   static int open_file_descriptor(const std::filesystem::path& file_name);
 };
 }  // namespace hyrise
