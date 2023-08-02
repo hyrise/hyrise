@@ -514,15 +514,15 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_window_node(
   const auto window = std::dynamic_pointer_cast<WindowExpression>(window_function_expression->window());
 
   auto function_argument_column_id = INVALID_COLUMN_ID;
-  if (window_function_expression->argument()) {
-    const auto argument_column_id = find_expression_idx(*window_function_expression->argument(), input_expressions);
+  if (const auto argument = window_function_expression->argument()) {
+    const auto argument_column_id = find_expression_idx(*argument, input_expressions);
     Assert(argument_column_id, "Argument expression was not a valid ColumnID.");
     function_argument_column_id = *argument_column_id;
   }
 
   const auto partition_by_expressions = window->partition_by_expressions();
   auto partition_by_column_ids = std::vector<ColumnID>();
-  for (auto expression : partition_by_expressions) {
+  for (const auto& expression : partition_by_expressions) {
     const auto column_id = find_expression_idx(*expression, input_expressions);
     Assert(column_id, "Partition-by expression was not a valid ColumnID.");
     partition_by_column_ids.push_back(*column_id);
@@ -530,7 +530,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_window_node(
 
   const auto order_by_expressions = window->order_by_expressions();
   auto order_by_column_ids = std::vector<ColumnID>();
-  for (auto expression : order_by_expressions) {
+  for (const auto& expression : order_by_expressions) {
     const auto column_id = find_expression_idx(*expression, input_expressions);
     Assert(column_id, "Order-by expression was not a valid ColumnID.");
     order_by_column_ids.push_back(*column_id);

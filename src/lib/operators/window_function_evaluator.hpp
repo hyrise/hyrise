@@ -64,7 +64,7 @@ class WindowFunctionEvaluator : public AbstractReadOnlyOperator {
       std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const override;
 
  private:
-  HashPartitionedData materialize_into_buckets() const;
+  [[nodiscard]] HashPartitionedData materialize_into_buckets() const;
   void partition_and_order(HashPartitionedData& buckets) const;
 
   template <typename InputColumnType, WindowFunction window_function>
@@ -77,7 +77,7 @@ class WindowFunctionEvaluator : public AbstractReadOnlyOperator {
                                             auto&& emit_computed_value) const;
 
   template <typename OutputColumnType>
-  std::shared_ptr<const Table> annotate_input_table(
+  [[nodiscard]] std::shared_ptr<const Table> annotate_input_table(
       std::vector<std::pair<pmr_vector<OutputColumnType>, pmr_vector<bool>>> segment_data_for_output_column) const;
 
   const FrameDescription& frame_description() const;

@@ -21,8 +21,6 @@
 
 namespace hyrise::window_function_evaluator {
 
-using ComputationStrategy = WindowFunctionEvaluator::ComputationStrategy;
-
 WindowFunctionEvaluator::WindowFunctionEvaluator(
     const std::shared_ptr<const AbstractOperator>& input_operator, std::vector<ColumnID> init_partition_by_column_ids,
     std::vector<ColumnID> init_order_by_column_ids, ColumnID init_function_argument_column_id,
@@ -49,9 +47,7 @@ const FrameDescription& WindowFunctionEvaluator::frame_description() const {
 }
 
 void WindowFunctionEvaluator::_on_set_parameters(
-    [[maybe_unused]] const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {
-  Fail("What should this do?");
-}
+    [[maybe_unused]] const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 std::shared_ptr<AbstractOperator> WindowFunctionEvaluator::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_left_input,
@@ -185,7 +181,7 @@ T clamped_sub(T lhs, T rhs, T min) {
 }  // namespace
 
 template <typename InputColumnType, WindowFunction window_function>
-ComputationStrategy WindowFunctionEvaluator::choose_computation_strategy() const {
+WindowFunctionEvaluator::ComputationStrategy WindowFunctionEvaluator::choose_computation_strategy() const {
   const auto& frame = frame_description();
   const auto is_prefix_frame = frame.start.unbounded && frame.start.type == FrameBoundType::Preceding &&
                                !frame.end.unbounded && frame.end.type == FrameBoundType::CurrentRow;
