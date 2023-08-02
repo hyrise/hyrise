@@ -24,7 +24,6 @@ class VariableStringDictionarySegment : public BaseDictionarySegment {
                                   const std::shared_ptr<const BaseCompressedVector>& attribute_vector,
                                   const std::shared_ptr<const pmr_vector<uint32_t>>& offset_vector);
 
-  // TODO(student): Does this make sense?
   // returns an underlying dictionary
   std::shared_ptr<const pmr_vector<char>> dictionary() const;
 

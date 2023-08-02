@@ -35,14 +35,6 @@ TEST_F(StorageVariableStringDictionarySegmentTest, CompressSegmentString) {
 
   // Test dictionary size (uniqueness)
   EXPECT_EQ(dict_segment->unique_values_count(), 4u);
-
-  // Test sorting
-  auto dict = dict_segment->dictionary();
-  // TODO(student): Replace with working code
-  //  EXPECT_EQ(*(dict->begin()), "Alexander");
-  //  EXPECT_EQ(*(dict->begin() + 1), "Bill");
-  //  EXPECT_EQ(*(dict->begin() + 2), "Hasso");
-  //  EXPECT_EQ(*(dict->begin() + 3), "Steve");
 }
 
 TEST_F(StorageVariableStringDictionarySegmentTest, Decode) {
@@ -61,23 +53,6 @@ TEST_F(StorageVariableStringDictionarySegmentTest, Decode) {
   EXPECT_EQ((*dict_segment)[ChunkOffset{0}], AllTypeVariant("Bill"));
   EXPECT_EQ((*dict_segment)[ChunkOffset{1}], AllTypeVariant("Steve"));
   EXPECT_EQ((*dict_segment)[ChunkOffset{2}], AllTypeVariant("Bill"));
-}
-
-TEST_F(StorageVariableStringDictionarySegmentTest, LongStrings) {
-  vs_str->append("ThisIsAVeryLongStringThisIsAVeryLongStringThisIsAVeryLongString");
-  vs_str->append("QuiteShort");
-  vs_str->append("Short");
-
-  auto segment = ChunkEncoder::encode_segment(vs_str, DataType::String,
-                                              SegmentEncodingSpec{EncodingType::VariableStringDictionary});
-  auto dict_segment = std::dynamic_pointer_cast<VariableStringDictionarySegment<pmr_string>>(segment);
-
-  // Test sorting
-  auto dict = dict_segment->dictionary();
-  // TODO(student): Find out what is being tested here and fix these.
-  //  EXPECT_EQ(*(dict->begin()), "QuiteShort");
-  //  EXPECT_EQ(*(dict->begin() + 1), "Short");
-  //  EXPECT_EQ(*(dict->begin() + 2), "ThisIsAVeryLongStringThisIsAVeryLongStringThisIsAVeryLongString");
 }
 
 TEST_F(StorageVariableStringDictionarySegmentTest, LowerUpperBound) {
@@ -156,7 +131,6 @@ TEST_F(StorageVariableStringDictionarySegmentTest, TestOffsetVector) {
   auto dict_segment = std::dynamic_pointer_cast<VariableStringDictionarySegment<pmr_string>>(segment);
   const auto offset_vector = dict_segment->offset_vector();
   EXPECT_EQ(offset_vector->size(), 3);
-  // TODO(student): Add more tests.
 }
 
 TEST_F(StorageVariableStringDictionarySegmentTest, TestLookup) {
@@ -193,7 +167,6 @@ TEST_F(StorageVariableStringDictionarySegmentTest, TestLookup) {
     EXPECT_EQ(accessor(segment, ChunkOffset{5}), AllTypeVariant{""});
     EXPECT_EQ(accessor(segment, ChunkOffset{6}), AllTypeVariant{"Alexander"});
   }
-  // EXPECT_EQ(segment.)
 }
 
 }  // namespace hyrise
