@@ -440,6 +440,26 @@ void Table::delete_key_constraint(const TableKeyConstraint& constraint) {
   _table_key_constraints.erase(constraint);
 }
 
+bool Table::constraint_guaranteed_to_be_valid(const TableKeyConstraint& table_key_constraint) const {
+  if (!table_key_constraint.can_become_invalid()) {
+    return true;
+  }
+
+  const auto chunk_count = this->chunk_count();
+  // Iterate through the chunks backwards as inserts are more likely to happen in later chunks, potentially enabling us
+  // to return faster.
+  // Subtract 1 from the chunk_id only inside the loop to avoid underflows.
+  for (auto chunk_id = chunk_count; chunk_id > 0; --chunk_id) {
+    const auto source_chunk = get_chunk(ChunkID{chunk_id - 1});
+    if (source_chunk->mvcc_data()->max_begin_cid != MvccData::MAX_COMMIT_ID &&
+        source_chunk->mvcc_data()->max_begin_cid > table_key_constraint.last_validated_on()) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 void Table::add_soft_foreign_key_constraint(const ForeignKeyConstraint& foreign_key_constraint) {
   Assert(_type == TableType::Data, "ForeignKeyConstraints are not tracked for reference tables across the PQP.");
 
