@@ -68,7 +68,7 @@ TEST_F(DataInducedPredicateRuleTest, CreateSimpleReductionOnLeftSide) {
 TEST_F(DataInducedPredicateRuleTest, CreateSimpleReductionOnRightSide) {
   // The _b_a side of the join has values from 1-50, the _a_a side has values from 10-20. Based on that
   // selectivity, a data induced predicate should be created.
-  const auto join_types = std::vector<JoinMode>{JoinMode::Inner, JoinMode::Semi, JoinMode::Left};
+  const auto join_types = std::vector<JoinMode>{JoinMode::Inner, JoinMode::Semi, JoinMode::Left, JoinMode::AntiNullAsFalse, JoinMode::AntiNullAsTrue};
   for (const auto& join_type : join_types) {
     const auto input_lqp = JoinNode::make(join_type, equals_(_a_a, _b_a), _node_b, _node_a);
 

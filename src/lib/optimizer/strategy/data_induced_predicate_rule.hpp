@@ -8,15 +8,15 @@ class AbstractLQPNode;
 class PredicateNode;
 
 /**
- * A data induced predicate is a min, max aggregate with an in-between that is added to the LQP without being present in the unoptimized LQP. This // NOLINT
- * means that it does not change the final results. Take the following query as an example - it is loosely based on
- * TPC-H 20:
+ * A data induced predicate is a min, max aggregate with an in-between that is added to the LQP without being present in
+ * the unoptimized LQP. This means that it does not change the final results. Take the following query as an example -
+ * it is loosely based on TPC-H 20:
  *
  *   SELECT p_name FROM part p1 WHERE p_size >
  *     (SELECT AVG(p_size) FROM part p2 WHERE p1.p_container = p2.p_container)
  *   AND p1.p_container IN ('SM CASE', 'MD CASE', 'LG CASE')
  *
- * It selects all parts from the part table whose size is greater than the average size of parts sold in that
+ * It selects all parts from the `part` table whose size is greater than the average size of parts sold in that
  * container. However, out of the 40 container types, we only look at three.
  *
  * Before this rule is applied, the LQP might look as follows:
@@ -25,9 +25,9 @@ class PredicateNode;
  *                                                              /             AND p1.p_size > AVG(p2.p_size) ]
  * [ part p2 ] -> [ Aggregate AVG(p_size) GROUP BY p_container ]
  *
- * As we can see, part is first fully aggregated, even though 37 container types will become irrelevant later. This
- * rule adds a dip, which uses the p2 side as the left (reducer) input. This rule adds the dip directly below the join.
- * As a result, the LQP after this rule looks like this:
+ * As we can see, `part` is first fully aggregated, even though 37 container types will become irrelevant later. This
+ * rule adds a data induced predicate (dip), which uses the p2 side as the left (reducer) input. This rule adds the dip
+ * directly below the join. As a result, the LQP after this rule looks like this:
  *
  * [ part p1 ] -> [ Predicate p_container IN (...) ----------------------------------> [ InBetween min and max ] -------> [ Semi Join ... ] // NOLINT
  *                                                                                               /        /             /

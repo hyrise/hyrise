@@ -41,16 +41,18 @@ void DataInducedPredicateRule::_apply_to_plan_without_subqueries(
     if (node->type != LQPNodeType::Join) {
       return LQPVisitation::VisitInputs;
     }
-    // std::cout << *lqp_root << std::endl;
     const auto join_node = std::static_pointer_cast<JoinNode>(node);
 
     for (const auto& join_predicate : join_node->join_predicates()) {
       const auto predicate_expression = std::dynamic_pointer_cast<BinaryPredicateExpression>(join_predicate);
       DebugAssert(predicate_expression, "Expected BinaryPredicateExpression");
+      // Currently only equal predicates are supported.
       if (predicate_expression->predicate_condition != PredicateCondition::Equals) {
         continue;
       }
 
+        // Since data induced predicates might be beneficial for both sides of the join, we create this helper lambda,
+        // which can deal with both sides.
       const auto reduce_if_beneficial = [&](const auto selection_side) {
         auto reduced_node = join_node->input(selection_side);
         auto reducer_node = join_node->input(opposite_side(selection_side));
@@ -59,8 +61,8 @@ void DataInducedPredicateRule::_apply_to_plan_without_subqueries(
         auto reduced_side_expression = predicate_expression->right_operand();
 
         auto original_cardinality = estimator->estimate_cardinality(reduced_node);
-        // auto reducer_node_cardinality = estimator->estimate_cardinality(reducer_node);
 
+        // TODO(Team): Add comment on swapping here
         if (!expression_evaluable_on_lqp(reducer_side_expression, *reducer_node)) {
           std::swap(reduced_side_expression, reducer_side_expression);
         }
@@ -74,18 +76,25 @@ void DataInducedPredicateRule::_apply_to_plan_without_subqueries(
         const auto min = ProjectionNode::make(expression_vector(min_(reducer_side_expression)), subquery);
         const auto max = ProjectionNode::make(expression_vector(max_(reducer_side_expression)), subquery);
 
+        // The between predicate is built using the projected min and max from the reducer side expression.
         auto between_predicate =
             PredicateNode::make(between_inclusive_(reduced_side_expression, lqp_subquery_(min), lqp_subquery_(max)));
         lqp_insert_node(join_node, selection_side, between_predicate);
 
-        // estimate cardinality and decide wether its usefull to do this
         const auto reduced_cardinality = estimator->estimate_cardinality(between_predicate);
         lqp_remove_node(between_predicate);
 
+        // If the `MINIMUM_SELECTIVITY` is not met we will not consider this situation for a data induced predicate.
         if (original_cardinality == 0 || (reduced_cardinality / original_cardinality) > MINIMUM_SELECTIVITY) {
           return;
         }
         data_induced_predicates.emplace_back(join_node, selection_side, between_predicate);
+        /**
+         * Additionally to this, future work could focus on evaluating if a heuristic that inserts semi join reductions
+         * if no predicate is found could be of further interest. This could be done by searching for a predicate in the
+         * lqp and adding a semi join reduction if the minimum selectivity of the SJR rule is met. First attempts for
+         * this are in the commit history of this PR.
+         */
       };
 
       // Having defined the lambda responsible for conditionally adding a data induced predicate, we now apply it to
