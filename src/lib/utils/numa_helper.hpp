@@ -3,6 +3,7 @@
 #include <numa.h>
 #include <numeric>
 #include <vector>
+
 #include "performance_warning.hpp"
 #include "scheduler/abstract_task.hpp"
 
@@ -43,6 +44,9 @@ DistanceMatrix get_distance_matrix(int num_nodes);
     }
 */
 NodeMatrix sort_relative_node_ids(DistanceMatrix distance_matrix);
+
+void merge_node_placements(std::vector<NodeID>& node_placements, std::vector<std::shared_ptr<AbstractTask>>& jobs,
+                           std::vector<std::optional<NodeID>>& non_scheduled_placements);
 
 void print_tasks_stolen_statistics(std::vector<std::shared_ptr<AbstractTask>>& jobs, std::string step);
 
