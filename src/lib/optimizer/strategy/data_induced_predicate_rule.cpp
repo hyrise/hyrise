@@ -51,8 +51,8 @@ void DataInducedPredicateRule::_apply_to_plan_without_subqueries(
         continue;
       }
 
-        // Since data induced predicates might be beneficial for both sides of the join, we create this helper lambda,
-        // which can deal with both sides.
+      // Since data induced predicates might be beneficial for both sides of the join, we create this helper lambda,
+      // which can deal with both sides.
       const auto reduce_if_beneficial = [&](const auto selection_side) {
         auto reduced_node = join_node->input(selection_side);
         auto reducer_node = join_node->input(opposite_side(selection_side));
@@ -110,8 +110,8 @@ void DataInducedPredicateRule::_apply_to_plan_without_subqueries(
 
       // On the left side we must not create data induced predicates for anti joins as those rely on the very existence
       // of non-matching values on the right side.
-      if (join_node->join_mode != JoinMode::FullOuter &&
-          join_node->join_mode != JoinMode::AntiNullAsTrue && join_node->join_mode != JoinMode::AntiNullAsFalse) {
+      if (join_node->join_mode != JoinMode::FullOuter && join_node->join_mode != JoinMode::AntiNullAsTrue &&
+          join_node->join_mode != JoinMode::AntiNullAsFalse) {
         reduce_if_beneficial(LQPInputSide::Left);
       }
     }
