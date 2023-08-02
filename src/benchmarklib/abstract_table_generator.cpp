@@ -1,7 +1,5 @@
 #include "abstract_table_generator.hpp"
 
-#include <numa.h>
-
 #include "benchmark_config.hpp"
 #include "benchmark_table_encoder.hpp"
 #include "hyrise.hpp"
@@ -237,8 +235,6 @@ void AbstractTableGenerator::generate_and_store() {
     std::cout << "- Encoding tables and generating pruning statistic done ("
               << format_duration(metrics.encoding_duration) << ")" << std::endl;
   }
-
-  std::cout << "Numa-Locations before relocation" << std::endl;
 
   auto target_memory_resources = std::vector<NumaMemoryResource*>();
 
