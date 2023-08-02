@@ -1,9 +1,9 @@
 #pragma once
 
 #include <algorithm>
-#include <bit>
+#include <bit>  // NOLINT(build/include_order)
 #include <cstdint>
-#include <span>
+#include <span>  // NOLINT(build/include_order)
 #include <vector>
 
 namespace hyrise {
