@@ -23,6 +23,7 @@ concept IsOnePassImpl =
     requires {
       typename Impl::State;
       { Impl::initial_state(std::declval<const RelevantRowInformation&>()) } -> std::same_as<typename Impl::State>;
+      // NOLINTNEXTLINE(readability/braces)
       { Impl::update_state(std::declval<typename Impl::State&>(), std::declval<const RelevantRowInformation&>()) };
       { Impl::current_value(std::declval<const typename Impl::State&>()) } -> std::same_as<OutputType>;
     };

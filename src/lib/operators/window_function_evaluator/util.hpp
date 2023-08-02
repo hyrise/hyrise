@@ -1,8 +1,8 @@
 #pragma once
 
 #include <array>
-#include <compare>
-#include <span>
+#include <compare>  // NOLINT(build/include_order)
+#include <span>     // NOLINT(build/include_order)
 #include <vector>
 
 #include "all_type_variant.hpp"
