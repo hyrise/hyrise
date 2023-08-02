@@ -248,7 +248,7 @@ set(
     testing_assert.cpp
     testing_assert.hpp
     utils/data_dependency_test_utils.hpp
-        lib/optimizer/strategy/data_induced_predicate_rule_test.cpp)
+)
 
 set (
     SYSTEM_TEST_SOURCES

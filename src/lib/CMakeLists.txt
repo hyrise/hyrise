@@ -301,8 +301,8 @@ set(
     optimizer/strategy/chunk_pruning_rule.hpp
     optimizer/strategy/column_pruning_rule.cpp
     optimizer/strategy/column_pruning_rule.hpp
-        optimizer/strategy/data_induced_predicate_rule.hpp
-        optimizer/strategy/data_induced_predicate_rule.cpp
+    optimizer/strategy/data_induced_predicate_rule.hpp
+    optimizer/strategy/data_induced_predicate_rule.cpp
     optimizer/strategy/dependent_group_by_reduction_rule.cpp
     optimizer/strategy/dependent_group_by_reduction_rule.hpp
     optimizer/strategy/expression_reduction_rule.cpp
