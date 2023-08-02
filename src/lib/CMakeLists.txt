@@ -775,10 +775,11 @@ target_compile_options(hyrise_impl PRIVATE -fPIC)
 
 # Dependency hyrise --> git_watcher needs to be added manually, apparently. Otherwise version.hpp, for reasons unknown
 # isn't updated when HEAD changes
+
 add_dependencies(hyrise_impl AlwaysCheckGit)
+
 # This is a wrapper around hyrise_impl that forces the compiler to emit all symbols
 add_library(hyrise INTERFACE)
-
 # Forward all include directories from hyrise_impl
 target_include_directories(hyrise INTERFACE $<TARGET_PROPERTY:hyrise_impl,INCLUDE_DIRECTORIES>)
 
