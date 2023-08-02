@@ -18,12 +18,12 @@ void NumaExtentHooks::store_node_id_for_arena(ArenaID arena_id, NodeID node_id) 
 
 void* NumaExtentHooks::alloc(extent_hooks_t* extent_hooks, void* new_addr, size_t size, size_t alignment, bool* zero,
                              bool* commit, unsigned arena_index) {
-  size_t off;
+  auto off = size_t{0};
   if ((off = size % PAGE_SIZE) > 0) {
     size += PAGE_SIZE - off;
   }
 
-  void* addr = mmap(nullptr, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+  auto addr = mmap(nullptr, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
   DebugAssert(addr != nullptr, "Failed to mmap pages.");
   DebugAssert(NumaExtentHooks::node_id_for_arena_id.contains(arena_index),
               "Tried allocation for arena without numa node assignment.");
@@ -41,8 +41,11 @@ bool NumaExtentHooks::dalloc(extent_hooks_t* extent_hooks, void* addr, size_t si
 NumaMemoryResource::NumaMemoryResource(const NodeID node_id) : _node_id(node_id) {
   // Setup  arena.
   _hooks.alloc = NumaExtentHooks::alloc;
+  _hooks.dalloc = NumaExtentHooks::dalloc;
+
   auto arena_id = uint32_t{0};
   auto size = sizeof(arena_id);
+  
   Assert(mallctl("arenas.create", static_cast<void*>(&arena_id), &size, nullptr, 0) == 0, "mallctl failed");
   auto hooks_ptr = &_hooks;
   char command[64];
