@@ -105,6 +105,12 @@ UniqueColumnCombinations StoredTableNode::unique_column_combinations() const {
       continue;
     }
 
+    // We may only use the key constraints as UCCs for optimization purposes if they are certainly still valid,
+    // otherwise these optimizations could produce invalid query results.
+    if (!table->constraint_guaranteed_to_be_valid(table_key_constraint)) {
+      continue;
+    }
+
     // Search for expressions representing the key constraint's ColumnIDs.
     const auto& column_expressions = find_column_expressions(*this, table_key_constraint.columns());
     DebugAssert(column_expressions.size() == table_key_constraint.columns().size(),
