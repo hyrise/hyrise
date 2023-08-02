@@ -36,6 +36,8 @@ struct RelevantRowInformation {
   std::vector<AllTypeVariant> order_values;
   AllTypeVariant function_argument;
   RowID row_id;
+
+  bool is_peer_of(const RelevantRowInformation& other) const;
 };
 
 constexpr uint8_t hash_partition_bits = 8;

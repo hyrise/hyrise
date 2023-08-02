@@ -28,4 +28,8 @@ std::weak_ordering compare_with_null_equal(std::span<const AllTypeVariant> lhs, 
   return compare_with_null_equal(lhs, rhs, []([[maybe_unused]] const auto column_index) { return false; });
 }
 
+bool RelevantRowInformation::is_peer_of(const RelevantRowInformation& other) const {
+  return std::is_eq(compare_with_null_equal(order_values, other.order_values));
+}
+
 }  // namespace hyrise::window_function_evaluator
