@@ -760,14 +760,14 @@ target_include_directories(hyrise_impl PUBLIC ${CMAKE_BINARY_DIR})
 # Precompile the most expensive headers. Only add headers here if you know what you are doing, as this has the potential
 # of negatively affecting the build time.
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-    target_compile_options(hyrise_impl PUBLIC -Xclang -fno-pch-timestamp)
+target_compile_options(hyrise_impl PUBLIC -Xclang -fno-pch-timestamp)
 endif()
 
 target_precompile_headers(hyrise_impl PRIVATE
-    all_parameter_variant.hpp
-    storage/create_iterable_from_segment.hpp
-    storage/table.hpp
-    types.hpp
+  all_parameter_variant.hpp
+  storage/create_iterable_from_segment.hpp
+  storage/table.hpp
+  types.hpp
 )
 
 # -fPIC generates position independent code which is necessary because plugins might access hyrise functions.
@@ -776,7 +776,6 @@ target_compile_options(hyrise_impl PRIVATE -fPIC)
 # Dependency hyrise --> git_watcher needs to be added manually, apparently. Otherwise version.hpp, for reasons unknown
 # isn't updated when HEAD changes
 add_dependencies(hyrise_impl AlwaysCheckGit)
-
 # This is a wrapper around hyrise_impl that forces the compiler to emit all symbols
 add_library(hyrise INTERFACE)
 
