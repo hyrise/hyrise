@@ -26,16 +26,25 @@ namespace hyrise {
  *
  * Currently, the determinant expressions are required to be non-nullable to be involved in FDs. Combining null values
  * and FDs is not trivial. For more reference, see https://arxiv.org/abs/1404.4963.
+ *
+ * If the FD may become invalid in the future (because it is not based on a schema constraint, but on the data
+ * incidentally fulfilling the constraint at the moment), the FD is marked as being not permanent.
  */
 struct FunctionalDependency {
   FunctionalDependency(ExpressionUnorderedSet init_determinants, ExpressionUnorderedSet init_dependents);
+  FunctionalDependency(ExpressionUnorderedSet init_determinants, ExpressionUnorderedSet init_dependents,
+                       bool permanent);
 
   bool operator==(const FunctionalDependency& other) const;
   bool operator!=(const FunctionalDependency& other) const;
   size_t hash() const;
 
+  bool is_permanent() const;
+
   ExpressionUnorderedSet determinants;
   ExpressionUnorderedSet dependents;
+
+  bool permanent;
 };
 
 std::ostream& operator<<(std::ostream& stream, const FunctionalDependency& expression);
