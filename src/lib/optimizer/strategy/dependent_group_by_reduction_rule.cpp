@@ -99,21 +99,25 @@ IsCacheable DependentGroupByReductionRule::_apply_to_plan_without_subqueries(
     // Example: SELECT DISTINCT n_nationkey FROM nation is reflected as [ Aggregate GROUP BY n_nationkey ]. The
     // AggregateNode does not have more node expressions than the single GROUP BY column and the input (StoredTableNode
     // in this case) has a UCC for { n_nationkey }.
-    if (group_by_columns.size() == node->node_expressions.size() &&
-        node->left_input()->has_matching_ucc(group_by_columns)) {
-      const auto& output_expressions = aggregate_node.output_expressions();
-      // Remove the AggregateNode if it does not limit or reorder the output expressions.
-      if (expressions_equal(output_expressions, node->left_input()->output_expressions())) {
-        lqp_remove_node(node);
+    if (group_by_columns.size() == node->node_expressions.size()) {
+      auto matching_ucc = node->left_input()->get_matching_ucc(group_by_columns);
+      if (matching_ucc.has_value()) {
+        rule_was_applied_using_non_permanent_ucc = !matching_ucc->is_permanent();
+
+        const auto& output_expressions = aggregate_node.output_expressions();
+        // Remove the AggregateNode if it does not limit or reorder the output expressions.
+        if (expressions_equal(output_expressions, node->left_input()->output_expressions())) {
+          lqp_remove_node(node);
+          return LQPVisitation::VisitInputs;
+        }
+
+        // Else, replace it with a ProjectionNode. For instance, SELECT DISTINCT n_name, n_regionkey FROM nation (the
+        // column order is different than in the original table) turns from [ Aggregate GROUP BY n_name, n_regionkey ]
+        // to [ Projection n_name, n_regionkey ].
+        const auto projection_node = ProjectionNode::make(output_expressions);
+        lqp_replace_node(node, projection_node);
         return LQPVisitation::VisitInputs;
       }
-
-      // Else, replace it with a ProjectionNode. For instance, SELECT DISTINCT n_name, n_regionkey FROM nation (the
-      // column order is different than in the original table) turns from [ Aggregate GROUP BY n_name, n_regionkey ] to
-      // [ Projection n_name, n_regionkey ].
-      const auto projection_node = ProjectionNode::make(output_expressions);
-      lqp_replace_node(node, projection_node);
-      return LQPVisitation::VisitInputs;
     }
 
     // Early exit (ii): If there are no functional dependencies, we can skip this rule.
@@ -169,6 +173,10 @@ IsCacheable DependentGroupByReductionRule::_apply_to_plan_without_subqueries(
 
       const auto success = remove_dependent_group_by_columns(fd, aggregate_node, group_by_columns);
       if (success) {
+        // Functional dependencies are derived from UCCs. In case we encounter a non-permanent FD,
+        // this means we encountered an underlying non-permanent UCC as well.
+        rule_was_applied_using_non_permanent_ucc |= !fd.is_permanent();
+
         // Refresh data structures correspondingly.
         group_by_list_changed = true;
         group_by_columns = fetch_group_by_columns();

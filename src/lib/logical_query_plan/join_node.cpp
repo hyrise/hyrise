@@ -118,10 +118,12 @@ UniqueColumnCombinations JoinNode::_output_unique_column_combinations(
   // Check uniqueness of join columns.
   const auto left_operand_is_unique =
       !left_unique_column_combinations.empty() &&
-      contains_matching_unique_column_combination(left_unique_column_combinations, {join_predicate->left_operand()});
+      get_matching_unique_column_combination(left_unique_column_combinations, {join_predicate->left_operand()})
+          .has_value();
   const auto right_operand_is_unique =
       !right_unique_column_combinations.empty() &&
-      contains_matching_unique_column_combination(right_unique_column_combinations, {join_predicate->right_operand()});
+      get_matching_unique_column_combination(right_unique_column_combinations, {join_predicate->right_operand()})
+          .has_value();
 
   if (left_operand_is_unique && right_operand_is_unique) {
     // Due to the one-to-one relationship, the UCCs of both sides remain valid.

@@ -462,8 +462,8 @@ template ExpressionUnorderedSet find_column_expressions(const AbstractLQPNode& l
 template ExpressionUnorderedSet find_column_expressions(const AbstractLQPNode& lqp_node,
                                                         const std::vector<ColumnID>& column_ids);
 
-bool contains_matching_unique_column_combination(const UniqueColumnCombinations& unique_column_combinations,
-                                                 const ExpressionUnorderedSet& expressions) {
+std::optional<UniqueColumnCombination> get_matching_unique_column_combination(
+    const UniqueColumnCombinations& unique_column_combinations, const ExpressionUnorderedSet& expressions) {
   DebugAssert(!unique_column_combinations.empty(), "Invalid input: Set of UCCs should not be empty.");
   DebugAssert(!expressions.empty(), "Invalid input: Set of expressions should not be empty.");
 
@@ -473,11 +473,11 @@ bool contains_matching_unique_column_combination(const UniqueColumnCombinations&
         std::all_of(ucc.expressions.cbegin(), ucc.expressions.cend(),
                     [&](const auto& ucc_expression) { return expressions.contains(ucc_expression); })) {
       // Found a matching UCC.
-      return true;
+      return ucc;
     }
   }
   // Did not find a UCC for the given expressions.
-  return false;
+  return std::nullopt;
 }
 
 FunctionalDependencies fds_from_unique_column_combinations(const std::shared_ptr<const AbstractLQPNode>& lqp,

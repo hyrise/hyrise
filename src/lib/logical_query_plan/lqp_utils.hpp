@@ -237,11 +237,11 @@ template <typename ColumnIDs>
 ExpressionUnorderedSet find_column_expressions(const AbstractLQPNode& lqp_node, const ColumnIDs& column_ids);
 
 /**
- * @return True if there is a UCC in the given set of @param unique_column_combinations matching the given set of
- *         expressions. A unique column combination matches if it covers a subset of @param expressions.
+ * @return Returns a UCC in the given set of @param unique_column_combinations matching the given set of
+ *         expressions, if one exists. A unique column combination matches if it covers a subset of @param expressions.
  */
-bool contains_matching_unique_column_combination(const UniqueColumnCombinations& unique_column_combinations,
-                                                 const ExpressionUnorderedSet& expressions);
+std::optional<UniqueColumnCombination> get_matching_unique_column_combination(
+    const UniqueColumnCombinations& unique_column_combinations, const ExpressionUnorderedSet& expressions);
 
 /**
  * @return A set of FDs, derived from the given @param unique_column_combinations and based on the output expressions of

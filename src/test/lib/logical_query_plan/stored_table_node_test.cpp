@@ -366,22 +366,22 @@ TEST_F(StoredTableNodeTest, UniqueColumnCombinationsEmpty) {
   EXPECT_TRUE(_stored_table_node->unique_column_combinations().empty());
 }
 
-TEST_F(StoredTableNodeTest, HasMatchingUniqueColumnCombination) {
+TEST_F(StoredTableNodeTest, GetMatchingUniqueColumnCombination) {
   const auto key_constraint_a = TableKeyConstraint{{_a->original_column_id}, KeyConstraintType::UNIQUE};
   _table_a->add_soft_key_constraint(key_constraint_a);
   EXPECT_EQ(_stored_table_node->unique_column_combinations().size(), 1);
 
   // Negative test.
-  EXPECT_FALSE(_stored_table_node->has_matching_ucc({_b}));
-  EXPECT_FALSE(_stored_table_node->has_matching_ucc({_c}));
-  EXPECT_FALSE(_stored_table_node->has_matching_ucc({_b, _c}));
+  EXPECT_FALSE(_stored_table_node->get_matching_ucc({_b}).has_value());
+  EXPECT_FALSE(_stored_table_node->get_matching_ucc({_c}).has_value());
+  EXPECT_FALSE(_stored_table_node->get_matching_ucc({_b, _c}).has_value());
 
   // Test exact match.
-  EXPECT_TRUE(_stored_table_node->has_matching_ucc({_a}));
+  EXPECT_TRUE(_stored_table_node->get_matching_ucc({_a}).has_value());
 
   // Test superset of column ids.
-  EXPECT_TRUE(_stored_table_node->has_matching_ucc({_a, _b}));
-  EXPECT_TRUE(_stored_table_node->has_matching_ucc({_a, _c}));
+  EXPECT_TRUE(_stored_table_node->get_matching_ucc({_a, _b}).has_value());
+  EXPECT_TRUE(_stored_table_node->get_matching_ucc({_a, _c}).has_value());
 }
 
 }  // namespace hyrise
