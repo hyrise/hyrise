@@ -94,7 +94,6 @@ void ColumnLikeTableScanImpl::_scan_dictionary_segment(const BaseDictionarySegme
     default: {
       Fail("Dictionary encoding is not implemented.");
     }
-
   }
 
   const auto& match_count = result.first;

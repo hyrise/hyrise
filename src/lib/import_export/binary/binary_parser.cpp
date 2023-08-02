@@ -215,10 +215,8 @@ std::shared_ptr<VariableStringDictionarySegment<T>> BinaryParser::_import_variab
   auto attribute_vector = _import_attribute_vector(file, row_count, compressed_vector_type_id);
 
   return std::make_shared<VariableStringDictionarySegment<pmr_string>>(
-      std::make_shared<pmr_vector<char>>(dictionary),
-      attribute_vector,
-      std::make_shared<pmr_vector<uint32_t>>(std::move(offset_vector))
-      );
+      std::make_shared<pmr_vector<char>>(dictionary), attribute_vector,
+      std::make_shared<pmr_vector<uint32_t>>(std::move(offset_vector)));
 }
 
 std::shared_ptr<FixedStringDictionarySegment<pmr_string>> BinaryParser::_import_fixed_string_dictionary_segment(

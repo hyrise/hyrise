@@ -4,8 +4,8 @@
 #include <string>
 
 #include "base_dictionary_segment.hpp"
-#include "storage/vector_compression/base_compressed_vector.hpp"
 #include "storage/variable_string_dictionary/variable_string_vector.hpp"
+#include "storage/vector_compression/base_compressed_vector.hpp"
 #include "types.hpp"
 
 namespace hyrise {

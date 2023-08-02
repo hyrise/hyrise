@@ -185,10 +185,12 @@ class Metrics(DictConvertible):
 
 
 def clean_encoding_name(encoding: str) -> str:
-    return encoding_without_branch\
-        if (encoding_without_branch := encoding.split('-')[-1]) in DEFAULT_ENCODINGS\
-        or encoding_without_branch.split(' ')[0] in DEFAULT_ENCODINGS\
+    return (
+        encoding_without_branch
+        if (encoding_without_branch := encoding.split("-")[-1]) in DEFAULT_ENCODINGS
+        or encoding_without_branch.split(" ")[0] in DEFAULT_ENCODINGS
         else encoding
+    )
 
 
 def plot(results: dict[str, list], *, title: str, yaxis: str, path: str, figsize: tuple[int, int] = (15, 10)) -> None:
@@ -196,7 +198,7 @@ def plot(results: dict[str, list], *, title: str, yaxis: str, path: str, figsize
     # The transposing of the orientation is done to allow for empty cells.
     data = pd.DataFrame.from_dict(results, orient="index")
     data = data.transpose()
-    data = data.rename(clean_encoding_name, axis='columns')
+    data = data.rename(clean_encoding_name, axis="columns")
     print_debug(data, required_verbosity_level=3)
     if data.empty:
         print_error("Data Frame is empty; no result data to show!")
@@ -234,11 +236,14 @@ def refine_stats(
 
 
 def plot_stats(
-    stats: dict[str, tuple[Mapping[Literal["ST", "MT"], Mapping[str, Runtimes]], Mapping[str, Metrics]]], *, path: str,
-        sharex: bool, sharey: bool
+    stats: dict[str, tuple[Mapping[Literal["ST", "MT"], Mapping[str, Runtimes]], Mapping[str, Metrics]]],
+    *,
+    path: str,
+    sharex: bool,
+    sharey: bool,
 ) -> None:
     data = pd.DataFrame.from_dict(refine_stats(stats))
-    data = data.sort_values('ENCODING')
+    data = data.sort_values("ENCODING")
     g = sns.FacetGrid(data, col="BENCHMARK", row="MODE", hue="ENCODING", sharex=sharex, sharey=sharey)
     g.map(sns.scatterplot, "SIZE", "RUNTIME")
     g.add_legend()
@@ -560,7 +565,7 @@ class Evaluation:
                 ignore_encodings=flatten(namespace.ignore_encodings),
                 output_directory=output_directory,
                 sharex=namespace.sharex,
-                sharey=namespace.sharey
+                sharey=namespace.sharey,
             )
 
     @staticmethod
@@ -584,42 +589,42 @@ class Evaluation:
             help="All timing benchmark files to evaluate.",
         )
         parser.add_argument(
-            '-i',
-            '--ignore',
-            action='append',
-            dest='ignore_encodings',
+            "-i",
+            "--ignore",
+            action="append",
+            dest="ignore_encodings",
             required=False,
             default=[],
-            nargs='+',
-            help='Encodings to ignore despite being present in the provided files.'
+            nargs="+",
+            help="Encodings to ignore despite being present in the provided files.",
         )
         parser.add_argument(
-            '-o',
-            '--output-directory',
-            dest='output_directory',
+            "-o",
+            "--output-directory",
+            dest="output_directory",
             type=str,
             required=True,
             help="The directory where the output should be stored.",
         )
         parser.add_argument(
-            '--share-x',
-            dest='sharex',
+            "--share-x",
+            dest="sharex",
             action=BooleanOptionalAction,
             default=True,
-            help='Whether to share the x axis of the comparison plot. Defaults to True.'
+            help="Whether to share the x axis of the comparison plot. Defaults to True.",
         )
         parser.add_argument(
-            '--share-y',
-            dest='sharey',
+            "--share-y",
+            dest="sharey",
             action=BooleanOptionalAction,
             default=True,
-            help='Whether to share the y axis of the comparison plot. Defaults to True.'
+            help="Whether to share the y axis of the comparison plot. Defaults to True.",
         )
         return parser
 
     @staticmethod
     def is_excluded(encoding: str, config: Config) -> bool:
-        return encoding.split('-')[-1] in config.ignore_encodings
+        return encoding.split("-")[-1] in config.ignore_encodings
 
     @staticmethod
     def run(config: Config) -> list[Path]:
@@ -652,13 +657,7 @@ class Evaluation:
         result_jsons = config.metric_benchmark_files
         metrics_list = [
             metric
-            for metric
-            in
-            [
-                Metrics.from_json(result_json)
-                for result_json
-                in result_jsons
-            ]
+            for metric in [Metrics.from_json(result_json) for result_json in result_jsons]
             if not Evaluation.is_excluded(metric.encoding, config)
         ]
         metrics_grouped_by_benchmark: dict[str, list[Metrics]] = Evaluation._group_by(metrics_list, "benchmark_name")
@@ -715,13 +714,7 @@ class Evaluation:
         result_jsons = config.timing_benchmark_files
         timings_list = [
             timing
-            for timing
-            in
-            [
-                Runtimes.from_json(result_json)
-                for result_json
-                in result_jsons
-            ]
+            for timing in [Runtimes.from_json(result_json) for result_json in result_jsons]
             if not Evaluation.is_excluded(timing.encoding, config)
         ]
         timings_grouped_by_benchmark: dict[str, list[Runtimes]] = Evaluation._group_by(timings_list, "benchmark_name")
@@ -754,8 +747,7 @@ class Evaluation:
                 plot_path = path.join(config.output_directory, "runtime", "plots", f"{name}-{threading}.png")
                 Path(plot_path).parent.mkdir(parents=True, exist_ok=True)
                 times_to_plot = {
-                    encoding: list(map(lambda x: x.median(), runtimes.runtimes))
-                    for encoding, runtimes in times.items()
+                    encoding: list(map(lambda x: x.median(), runtimes.runtimes)) for encoding, runtimes in times.items()
                 }
                 plot(
                     times_to_plot,

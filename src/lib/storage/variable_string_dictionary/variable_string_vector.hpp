@@ -1,7 +1,7 @@
 #pragma once
 
-#include "storage/variable_string_dictionary_segment.hpp"
 #include "storage/variable_string_dictionary/variable_string_vector_iterator.hpp"
+#include "storage/variable_string_dictionary_segment.hpp"
 
 namespace hyrise {
 
@@ -15,10 +15,13 @@ class VariableStringVector {
   VariableStringVectorIterator cbegin() const noexcept {
     return begin();
   }
+
   VariableStringVectorIterator cend() const noexcept {
     return end();
   }
+
   size_t size() const;
+
  protected:
   std::shared_ptr<const pmr_vector<char>> _dictionary;
   size_t _size;

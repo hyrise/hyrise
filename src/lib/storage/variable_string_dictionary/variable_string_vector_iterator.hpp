@@ -5,11 +5,12 @@ namespace hyrise {
 using DereferenceValue = std::string_view;
 
 class VariableStringVectorIterator : public boost::iterator_facade<VariableStringVectorIterator, DereferenceValue,
-                                                                std::random_access_iterator_tag, DereferenceValue> {
+                                                                   std::random_access_iterator_tag, DereferenceValue> {
  public:
   explicit VariableStringVectorIterator(const std::shared_ptr<const pmr_vector<char>>& dictionary,
                                         uint32_t current_offset)
       : _dictionary{dictionary}, _current_offset{current_offset} {}
+
  protected:
   friend class boost::iterator_core_access;
 
