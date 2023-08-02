@@ -183,7 +183,7 @@ TEST_F(JoinToPredicateRewriteRuleTest, NoUnusedJoinSide) {
 }
 
 TEST_F(JoinToPredicateRewriteRuleTest, Union) {
-  // Do not rewrite if there is a union on table b.
+  // Do not rewrite if there is a union on table b that preserves the UCC but outputs more than one result tuple..
   auto key_constraints = TableKeyConstraints{};
   key_constraints.emplace(TableKeyConstraint({u->original_column_id}, KeyConstraintType::UNIQUE));
   key_constraints.emplace(TableKeyConstraint({v->original_column_id}, KeyConstraintType::UNIQUE));
@@ -194,8 +194,11 @@ TEST_F(JoinToPredicateRewriteRuleTest, Union) {
   ProjectionNode::make(expression_vector(b),
     JoinNode::make(JoinMode::Inner, equals_(a, u),
       node_a,
-      PredicateNode::make(equals_(v, 0),
-      UnionNode::make(SetOperationMode::Positions, node_b, node_b))));
+      UnionNode::make(SetOperationMode::Positions,
+        PredicateNode::make(equals_(v, 0),
+          node_b),
+        PredicateNode::make(equals_(v, 1),
+          node_b))));
   // clang-format on
 
   const auto annotated_lqp = apply_rule(std::make_shared<ColumnPruningRule>(), lqp);
