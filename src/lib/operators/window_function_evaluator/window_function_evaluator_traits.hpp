@@ -108,9 +108,8 @@ struct AllRanksOnePassBase {
   }
 
   static void update_state(State& state, const RelevantRowInformation& row) {
-    const auto is_peer = std::is_eq(compare_with_null_equal(state.previous_row->order_values, row.order_values));
     ++state.row_number;
-    if (!is_peer) {
+    if (!state.previous_row->is_peer_of(row)) {
       state.rank = state.row_number;
       ++state.dense_rank;
     }
