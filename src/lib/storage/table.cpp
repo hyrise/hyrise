@@ -401,6 +401,10 @@ void Table::create_chunk_index(const std::vector<ColumnID>& column_ids, const st
   _chunk_indexes_statistics.emplace_back(ChunkIndexStatistics{column_ids, name, chunk_index_type});
 }
 
+const TableKeyConstraints& Table::soft_key_constraints() const {
+  return _table_key_constraints;
+}
+
 void Table::add_soft_key_constraint(const TableKeyConstraint& table_key_constraint) {
   Assert(_type == TableType::Data, "TableKeyConstraints are not tracked for reference tables across the PQP.");
 
@@ -432,8 +436,8 @@ void Table::add_soft_key_constraint(const TableKeyConstraint& table_key_constrai
   _table_key_constraints.insert(table_key_constraint);
 }
 
-const TableKeyConstraints& Table::soft_key_constraints() const {
-  return _table_key_constraints;
+void Table::delete_key_constraint(const TableKeyConstraint& constraint) {
+  _table_key_constraints.erase(constraint);
 }
 
 void Table::add_soft_foreign_key_constraint(const ForeignKeyConstraint& foreign_key_constraint) {
