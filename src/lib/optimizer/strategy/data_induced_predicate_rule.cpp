@@ -84,7 +84,7 @@ void DataInducedPredicateRule::_apply_to_plan_without_subqueries(
         const auto reduced_cardinality = estimator->estimate_cardinality(between_predicate);
         lqp_remove_node(between_predicate);
 
-        // If the `MINIMUM_SELECTIVITY` is not met we will not consider this situation for a data induced predicate.
+        // If the `MINIMUM_SELECTIVITY` is not met we will not consider this join_predicate for this side.
         if (original_cardinality == 0 || (reduced_cardinality / original_cardinality) > MINIMUM_SELECTIVITY) {
           return;
         }
@@ -93,20 +93,24 @@ void DataInducedPredicateRule::_apply_to_plan_without_subqueries(
          * Additionally to this, future work could focus on evaluating if a heuristic that inserts semi join reductions
          * if no predicate is found could be of further interest. This could be done by searching for a predicate in the
          * lqp and adding a semi join reduction if the minimum selectivity of the SJR rule is met. First attempts for
-         * this are in the commit history of this PR.
+         * this are in the commit history (commit f6c5fb5) of this PR.
+         *
+         * Searching for a predicate prior to the join must not ensure a good DIP performance. In contrast to that the
+         * source paper mentioned in this PR suggests Range Sets as a solution. This could improve the performance
+         * drastically.
          */
       };
 
       // Having defined the lambda responsible for conditionally adding a data induced predicate, we now apply it to
       // both inputs of the join. For outer joins, we must not filter the side on which tuples survive even without a
       // join partner.
-      if (join_node->join_mode != JoinMode::Right && join_node->join_mode != JoinMode::FullOuter) {
+      if (join_node->join_mode != JoinMode::FullOuter) {
         reduce_if_beneficial(LQPInputSide::Right);
       }
 
       // On the left side we must not create data induced predicates for anti joins as those rely on the very existence
       // of non-matching values on the right side.
-      if (join_node->join_mode != JoinMode::Left && join_node->join_mode != JoinMode::FullOuter &&
+      if (join_node->join_mode != JoinMode::FullOuter &&
           join_node->join_mode != JoinMode::AntiNullAsTrue && join_node->join_mode != JoinMode::AntiNullAsFalse) {
         reduce_if_beneficial(LQPInputSide::Left);
       }
