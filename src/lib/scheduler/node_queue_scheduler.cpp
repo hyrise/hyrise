@@ -19,8 +19,6 @@ NodeQueueScheduler::NodeQueueScheduler() {
   _worker_id_allocator = std::make_shared<UidAllocator>();
   _num_scheduled_tasks_per_node = std::vector<size_t>(8, 0); 
 
-  
-
   _num_correctly_scheduled = 0; 
   _num_incorrectly_scheduled = 0;
   _numa_aware_group = 0; 
@@ -260,7 +258,6 @@ void NodeQueueScheduler::_group_numa_aware(const std::vector<std::shared_ptr<Abs
   
   // std::vector<std::shared_ptr<AbstractTask>> grouped_tasks(_workers_per_node * _queue_count);
   std::vector<std::shared_ptr<AbstractTask>> grouped_tasks(_group_number_per_node * _queue_count);
-
 
   for (const auto& task : tasks) {
     if (!task->predecessors().empty() || !task->successors().empty()) {
