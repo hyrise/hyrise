@@ -18,7 +18,7 @@ void NumaExtentHooks::store_node_id_for_arena(ArenaID arena_id, NodeID node_id) 
 }
 
 /**
- * Allocates bytes on a specific node. 
+ * Allocates bytes on a specific node.
  *
  * Similar to the behavior, that libnuma employs for numa_alloc_onnode(..).
  * First, allocate memory with mmap and then use numa_tonode_memory(..) to move
@@ -50,7 +50,7 @@ bool NumaExtentHooks::dalloc(extent_hooks_t* extent_hooks, void* addr, size_t si
 /**
  * Create for each NumaMemoryResource exactly one jemalloc arena.
  * We then use Extent Hooks, to customize the (de)allocation behavior,
- * where we use libnuma to allocate on a specific node. 
+ * where we use libnuma to allocate on a specific node.
  */
 NumaMemoryResource::NumaMemoryResource(const NodeID node_id) : _node_id(node_id) {
   // Setup arena.
@@ -60,7 +60,6 @@ NumaMemoryResource::NumaMemoryResource(const NodeID node_id) : _node_id(node_id)
 
   // Add extent hooks to arena.
   _hooks.alloc = NumaExtentHooks::alloc;
-  _hooks.dalloc = NumaExtentHooks::dalloc;
 
   auto hooks_ptr = &_hooks;
   char command[64];
