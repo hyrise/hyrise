@@ -205,8 +205,9 @@ class Table : private Noncopyable {
    * NOTE: constraints are currently NOT ENFORCED and are only used to develop optimization rules.
    * We call them "soft" constraints to draw attention to that.
    */
-  void add_soft_key_constraint(const TableKeyConstraint& table_key_constraint);
   const TableKeyConstraints& soft_key_constraints() const;
+  void add_soft_key_constraint(const TableKeyConstraint& table_key_constraint);
+  void delete_key_constraint(const TableKeyConstraint& constraint);
 
   // Adds foreign key constraint so it can be retrieved by soft_foreign_key_constraints() of this table and by
   // referenced_foreign_key_constraints() of the table that has the primary key columns.
