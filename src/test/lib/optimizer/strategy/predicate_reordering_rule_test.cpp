@@ -269,4 +269,11 @@ TEST_F(PredicateReorderingTest, SimpleValidateReorderingTest) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
+TEST_F(PredicateReorderingTest, CheckCacheability) {
+  const auto input_lqp = PredicateNode::make(greater_than_(a, 60), ValidateNode::make(node));
+  const auto lqp_result = StrategyBaseTest::apply_rule_with_cacheability_check(_rule, input_lqp);
+  const auto cacheable = lqp_result.cacheable;
+  EXPECT_EQ(cacheable, true);
+}
+
 }  // namespace hyrise

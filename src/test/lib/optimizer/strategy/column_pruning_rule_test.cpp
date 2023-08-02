@@ -483,4 +483,12 @@ TEST_F(ColumnPruningRuleTest, AnnotatePrunableJoinInput) {
   }
 }
 
+TEST_F(ColumnPruningRuleTest, CheckCacheability) {
+  const auto lqp = ExportNode::make("dummy.csv", FileType::Auto, PredicateNode::make(greater_than_(a, 5), node_abc));
+
+  const auto lqp_result = apply_rule_with_cacheability_check(rule, lqp);
+  const auto cacheable = lqp_result.cacheable;
+  EXPECT_EQ(cacheable, true);
+}
+
 }  // namespace hyrise

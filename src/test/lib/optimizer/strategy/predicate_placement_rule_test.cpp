@@ -922,4 +922,13 @@ TEST_F(PredicatePlacementRuleTest, DoNotCreatePreJoinPredicateIfUnrelated) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
+TEST_F(PredicatePlacementRuleTest, CheckCacheability) {
+  const auto input_lqp = PredicateNode::make(
+      or_(and_(equals_(_d_b, 1), equals_(_e_a, 10)), and_(equals_(_d_b, 2), equals_(_e_a, 1))),  // NOLINT
+      JoinNode::make(JoinMode::Left, equals_(_d_a, _e_a), _stored_table_d, _stored_table_e));
+  const auto lqp_result = StrategyBaseTest::apply_rule_with_cacheability_check(_rule, input_lqp);
+  const auto cacheable = lqp_result.cacheable;
+  EXPECT_EQ(cacheable, true);
+}
+
 }  // namespace hyrise

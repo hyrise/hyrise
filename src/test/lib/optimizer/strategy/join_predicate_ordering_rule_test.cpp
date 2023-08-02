@@ -123,4 +123,18 @@ TEST_F(JoinPredicateOrderingRuleTest, SemiGreaterAndEquiJoin) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
+TEST_F(JoinPredicateOrderingRuleTest, CheckCacheability) {
+  set_statistics_for_mock_node(node_b, 100,
+                               {GenericHistogram<int32_t>::with_single_bin(0, 40, 100, 5),
+                                GenericHistogram<int32_t>::with_single_bin(30, 70, 100, 5),
+                                GenericHistogram<int32_t>::with_single_bin(10, 50, 100, 5)});
+
+  const auto predicates = expression_vector(greater_than_(a_y, b_y), less_than_(a_z, b_z));
+
+  const auto input_lqp = JoinNode::make(JoinMode::Inner, predicates, node_a, node_b);
+  const auto lqp_result = StrategyBaseTest::apply_rule_with_cacheability_check(_rule, input_lqp);
+  const auto cacheable = lqp_result.cacheable;
+  EXPECT_EQ(cacheable, true);
+}
+
 }  // namespace hyrise
