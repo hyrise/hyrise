@@ -762,7 +762,6 @@ target_include_directories(hyrise_impl PUBLIC ${CMAKE_BINARY_DIR})
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 target_compile_options(hyrise_impl PUBLIC -Xclang -fno-pch-timestamp)
 endif()
-
 target_precompile_headers(hyrise_impl PRIVATE
   all_parameter_variant.hpp
   storage/create_iterable_from_segment.hpp
