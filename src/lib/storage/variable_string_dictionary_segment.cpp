@@ -36,6 +36,7 @@ template <typename T>
 AllTypeVariant VariableStringDictionarySegment<T>::operator[](const ChunkOffset chunk_offset) const {
   PerformanceWarning("operator[] used");
   DebugAssert(chunk_offset != INVALID_CHUNK_OFFSET, "Passed chunk offset must be valid.");
+  // TODO(student): Fix access counter.
   // access_counter[SegmentAccessCounter::AccessType::Dictionary] += 1;
   const auto value = get_typed_value(chunk_offset);
   return value ? value.value() : NULL_VALUE;

@@ -29,11 +29,11 @@ TEST_F(StorageVariableStringDictionarySegmentTest, CompressSegmentString) {
                                               SegmentEncodingSpec{EncodingType::VariableStringDictionary});
   auto dict_segment = std::dynamic_pointer_cast<VariableStringDictionarySegment<pmr_string>>(segment);
 
-  // Test attribute_vector size
+  // Test attribute_vector size.
   EXPECT_EQ(dict_segment->size(), 6u);
   EXPECT_EQ(dict_segment->attribute_vector()->size(), 6u);
 
-  // Test dictionary size (uniqueness)
+  // Test dictionary size (uniqueness).
   EXPECT_EQ(dict_segment->unique_values_count(), 4u);
 }
 
@@ -49,7 +49,7 @@ TEST_F(StorageVariableStringDictionarySegmentTest, Decode) {
   EXPECT_EQ(dict_segment->encoding_type(), EncodingType::VariableStringDictionary);
   EXPECT_EQ(dict_segment->compressed_vector_type(), CompressedVectorType::FixedWidthInteger1Byte);
 
-  // Decode values
+  // Decode values.
   EXPECT_EQ((*dict_segment)[ChunkOffset{0}], AllTypeVariant("Bill"));
   EXPECT_EQ((*dict_segment)[ChunkOffset{1}], AllTypeVariant("Steve"));
   EXPECT_EQ((*dict_segment)[ChunkOffset{2}], AllTypeVariant("Bill"));
@@ -67,7 +67,7 @@ TEST_F(StorageVariableStringDictionarySegmentTest, LowerUpperBound) {
                                               SegmentEncodingSpec{EncodingType::VariableStringDictionary});
   auto dict_segment = std::dynamic_pointer_cast<VariableStringDictionarySegment<pmr_string>>(segment);
 
-  // Test for AllTypeVariant as parameter
+  // Test for AllTypeVariant as parameter.
   EXPECT_EQ(dict_segment->lower_bound(AllTypeVariant("E")), ValueID{2});
   EXPECT_EQ(dict_segment->upper_bound(AllTypeVariant("E")), ValueID{3});
 
@@ -135,7 +135,7 @@ TEST_F(StorageVariableStringDictionarySegmentTest, TestOffsetVector) {
 
 TEST_F(StorageVariableStringDictionarySegmentTest, TestLookup) {
   const auto allocator = PolymorphicAllocator<pmr_string>{};
-  // 1. Create string data (klotz)
+  // Create string data for klotz.
   // Contains zero-length string at the end, just to be annoying.
   const auto data = std::array<char, 30>{"Hello\0World\0Alexander\0String\0"};
   const auto klotz = std::make_shared<pmr_vector<char>>();

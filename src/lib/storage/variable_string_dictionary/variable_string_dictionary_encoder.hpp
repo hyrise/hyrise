@@ -32,15 +32,17 @@ class VariableStringDictionaryEncoder : public SegmentEncoder<VariableStringDict
                                                      const PolymorphicAllocator<pmr_string>& allocator) {
     // Vectors to gather the input segment's data. This data is used in a later step to
     // construct the actual dictionary and attribute vector.
-    auto dense_values = std::vector<pmr_string>();  // contains the actual values (no NULLs)
+    auto dense_values = std::vector<pmr_string>();  // Contains the actual values (no NULLs).
     auto null_values = std::vector<bool>();         // bitmap to mark NULL values
+    // Maps string to ChunkOffsets for faster write of vector that maps ChunkOffsets to ValueID.
     auto string_to_chunk_offsets = std::unordered_map<pmr_string, std::vector<ChunkOffset>>();
     auto segment_size = uint32_t{0};
 
+    // Iterate over segment, save all values and save to values the chunk_offset.
     segment_iterable.with_iterators([&](auto segment_it, const auto segment_end) {
       segment_size = std::distance(segment_it, segment_end);
-      dense_values.reserve(segment_size);  // potentially overallocate for segments with NULLs
-      null_values.resize(segment_size);    // resized to size of segment
+      dense_values.reserve(segment_size);  // Potentially overallocate for segments with NULLs.
+      null_values.resize(segment_size);    // Resized to size of segment.
 
       for (auto current_position = size_t{0}; segment_it != segment_end; ++segment_it, ++current_position) {
         const auto segment_item = *segment_it;
@@ -65,13 +67,17 @@ class VariableStringDictionaryEncoder : public SegmentEncoder<VariableStringDict
       total_size += value.size() + 1;
     }
 
+    // uniform character array containing all distinct strings
     auto klotz = std::make_shared<pmr_vector<char>>(pmr_vector<char>(total_size));
     // We assume segment size up to 4 GByte.
+    // Maps string to offset in klotz.
     auto string_offsets = std::unordered_map<pmr_string, uint32_t>();
+    // Maps string to ValueID for attribute vector.
     auto string_value_ids = std::unordered_map<pmr_string, ValueID>();
     auto current_offset = uint32_t{0};
     auto current_value_id = ValueID{0};
 
+    // Construct klotz.
     for (const auto& value : dense_values) {
       memcpy(klotz->data() + current_offset, value.c_str(), value.size());
       string_offsets[value] = current_offset;
@@ -79,10 +85,12 @@ class VariableStringDictionaryEncoder : public SegmentEncoder<VariableStringDict
       current_offset += value.size() + 1;
     }
 
-    auto chunk_offset_to_value_id = std::make_shared<pmr_vector<uint32_t>>(pmr_vector<uint32_t>(segment_size));
+    // Maps ChunkOffset to ValueID.
+    auto chunk_offset_to_value_id = std::make_shared<pmr_vector<uint32_t>>(segment_size);
     auto offset_vector = std::make_shared<pmr_vector<uint32_t>>(pmr_vector<uint32_t>(dense_values.size()));
     offset_vector->shrink_to_fit();
 
+    // Construct attribute and offset vector.
     for (const auto& [string, chunk_offsets] : string_to_chunk_offsets) {
       const auto here_offset = string_offsets[string];
       const auto here_value_id = string_value_ids[string];
@@ -92,6 +100,7 @@ class VariableStringDictionaryEncoder : public SegmentEncoder<VariableStringDict
       }
     }
 
+    // Fix up null values (mapping only maps actual data, no null values).
     const auto null_value_id = dense_values.size();
     for (auto offset = ChunkOffset{0}; offset < segment_size; ++offset) {
       const auto is_null = null_values[offset];
@@ -108,13 +117,6 @@ class VariableStringDictionaryEncoder : public SegmentEncoder<VariableStringDict
     return std::make_shared<VariableStringDictionarySegment<pmr_string>>(klotz, compressed_chunk_offset_to_value_id,
                                                                          offset_vector);
   }
-
-  // private:
-  //  template <typename U, typename T>
-  //  static ValueID _get_value_id(const U& dictionary, const T& value) {
-  //    return ValueID{static_cast<ValueID::base_type>(
-  //        std::distance(dictionary->cbegin(), std::lower_bound(dictionary->cbegin(), dictionary->cend(), value)))};
-  //  }
 };
 
 }  // namespace hyrise

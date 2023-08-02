@@ -86,11 +86,6 @@ class VariableStringDictionarySegment : public BaseDictionarySegment {
   ValueID::base_type unique_values_count() const final;
 
   std::shared_ptr<const BaseCompressedVector> attribute_vector() const final;
-  // ValueID -> Offset : ok (offset_vector)
-  // Offset -> ValueId : need
-  /* Idea 1: Use ValueID to index into offsets to get offsets
-   *
-   */
 
   ValueID null_value_id() const final;
 

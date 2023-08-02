@@ -236,7 +236,7 @@ std::string Print::_segment_type(const std::shared_ptr<AbstractSegment>& segment
         break;
       }
       case EncodingType::VariableStringDictionary: {
-        segment_type += "VSL";
+        segment_type += "VSD";
         break;
       }
       case EncodingType::FrameOfReference: {
