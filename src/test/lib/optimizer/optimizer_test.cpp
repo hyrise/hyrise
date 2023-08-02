@@ -10,8 +10,10 @@
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
+#include "logical_query_plan/stored_table_node.hpp"
 #include "optimizer/optimizer.hpp"
 #include "optimizer/strategy/abstract_rule.hpp"
+#include "optimizer/strategy/join_to_semi_join_rule.hpp"
 
 namespace hyrise {
 
@@ -164,13 +166,14 @@ TEST_F(OptimizerTest, VerifiesResults) {
     }
 
    protected:
-    void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override {
+    IsCacheable _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override {
       // Change the `b` expression in the projection to `u`, which is not part of the input LQP.
       const auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(lqp_root->left_input());
       if (!projection_node) {
-        return;
+        return IsCacheable::Yes;
       }
       projection_node->node_expressions[0] = _out_of_plan_expression;
+      return IsCacheable::Yes;
     }
 
     std::shared_ptr<AbstractExpression> _out_of_plan_expression;
@@ -198,11 +201,13 @@ TEST_F(OptimizerTest, OptimizesSubqueries) {
     }
 
    protected:
-    void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override {
+    IsCacheable _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override {
       visit_lqp(lqp_root, [&](const auto& node) {
         nodes.emplace(node);
         return LQPVisitation::VisitInputs;
       });
+
+      return IsCacheable::Yes;
     }
 
     std::unordered_set<std::shared_ptr<AbstractLQPNode>>& nodes;
@@ -287,8 +292,9 @@ TEST_F(OptimizerTest, OptimizesSubqueriesExactlyOnce) {
     size_t& counter;
 
    protected:
-    void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override {
+    IsCacheable _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override {
       ++counter;
+      return IsCacheable::Yes;
     }
   };
 
@@ -297,7 +303,7 @@ TEST_F(OptimizerTest, OptimizesSubqueriesExactlyOnce) {
   Optimizer optimizer{};
   optimizer.add_rule(std::move(rule));
 
-  const auto optimized_lqp = optimizer.optimize(std::move(lqp));
+  const auto optimized_lqp = optimizer.optimize(std::move(lqp)).logical_query_plan;
   lqp = nullptr;
 
   /**
@@ -331,4 +337,43 @@ TEST_F(OptimizerTest, OptimizesSubqueriesExactlyOnce) {
   }
 }
 
+TEST_F(OptimizerTest, CheckTrueCacheablility) {
+  auto optimizer = Optimizer::create_default_optimizer();
+
+  auto lqp = ProjectionNode::make(expression_vector(add_(b, subquery_a)),
+                                  PredicateNode::make(greater_than_(a, subquery_b), node_a));
+  auto optimize_results = optimizer->optimize(std::move(lqp));
+  EXPECT_EQ(optimize_results.cacheable, true);
+}
+
+TEST_F(OptimizerTest, CheckFalseCacheabilityOfOptimization) {
+  auto optimizer = Optimizer{};
+  optimizer.add_rule(std::make_unique<JoinToSemiJoinRule>());
+
+  auto column_definitions = TableColumnDefinitions{};
+  column_definitions.emplace_back("column0", DataType::Int, false);
+  const auto table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2}, UseMvcc::Yes);
+
+  auto& sm = Hyrise::get().storage_manager;
+  sm.add_table("table", table);
+
+  // Non-permanent UCC
+  table->add_soft_key_constraint({{ColumnID{0}}, KeyConstraintType::UNIQUE, CommitID{0}});
+
+  const auto stored_table_node = StoredTableNode::make("table");
+  const auto column0 = stored_table_node->get_column("column0");
+
+  // clang-format off
+  auto lqp1 =
+    ProjectionNode::make(expression_vector(add_(a, 2)),
+      JoinNode::make(JoinMode::Inner, equals_(a, column0),
+        ProjectionNode::make(expression_vector(a),
+          node_a),
+        stored_table_node));
+  // clang-format on
+  static_cast<JoinNode&>(*lqp1->left_input()).mark_input_side_as_prunable(LQPInputSide::Right);
+  auto optimize_results1 = optimizer.optimize(std::move(lqp1));
+
+  EXPECT_EQ(optimize_results1.cacheable, false);
+}
 }  // namespace hyrise

@@ -2,17 +2,12 @@
 
 #include <fstream>
 #include <iomanip>
-#include <memory>
 #include <utility>
-
-#include <boost/algorithm/string.hpp>
 
 #include "SQLParser.h"
 #include "create_sql_parser_error_message.hpp"
-#include "expression/value_expression.hpp"
 #include "hyrise.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
-#include "operators/export.hpp"
 #include "operators/import.hpp"
 #include "operators/maintenance/create_prepared_plan.hpp"
 #include "operators/maintenance/create_table.hpp"
@@ -21,7 +16,6 @@
 #include "operators/maintenance/drop_view.hpp"
 #include "optimizer/optimizer.hpp"
 #include "scheduler/job_task.hpp"
-#include "sql/sql_pipeline_builder.hpp"
 #include "sql/sql_plan_cache.hpp"
 #include "sql/sql_translator.hpp"
 #include "utils/assert.hpp"
@@ -110,8 +104,8 @@ const SQLTranslationInfo& SQLPipelineStatement::get_sql_translation_info() {
   return _translation_info;
 }
 
-const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logical_plan() {
-  if (_optimized_logical_plan) {
+OptimizedLogicalQueryPlan SQLPipelineStatement::get_optimized_logical_plan() {
+  if (_optimized_logical_plan.logical_query_plan) {
     return _optimized_logical_plan;
   }
 
@@ -124,7 +118,7 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
       if (lqp_is_validated(plan) == (_use_mvcc == UseMvcc::Yes)) {
         // Copy the LQP for reuse as the LQPTranslator might modify mutable fields (e.g., cached output_expressions)
         // and concurrent translations might conflict.
-        _optimized_logical_plan = plan->deep_copy();
+        _optimized_logical_plan = {true, plan->deep_copy()};
         return _optimized_logical_plan;
       }
     }
@@ -148,8 +142,8 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
   _metrics->optimizer_rule_durations = *optimizer_rule_durations;
 
   // Cache newly created plan for the according sql statement
-  if (lqp_cache && _translation_info.cacheable) {
-    lqp_cache->set(_sql_string, _optimized_logical_plan);
+  if (lqp_cache && _translation_info.cacheable && _optimized_logical_plan.cacheable) {
+    lqp_cache->set(_sql_string, _optimized_logical_plan.logical_query_plan);
   }
 
   return _optimized_logical_plan;
@@ -183,10 +177,12 @@ const std::shared_ptr<AbstractOperator>& SQLPipelineStatement::get_physical_plan
     }
   }
 
+  bool pqp_cacheable = true;
   if (!_physical_plan) {
     // "Normal" path in which the query plan is created instead of begin retrieved from cache
-    const auto& lqp = get_optimized_logical_plan();
-
+    const auto& optimization_result = get_optimized_logical_plan();
+    pqp_cacheable = optimization_result.cacheable;
+    const auto& lqp = optimization_result.logical_query_plan;
     // Reset time to exclude previous pipeline steps
     started = std::chrono::steady_clock::now();
     _physical_plan = LQPTranslator{}.translate_node(lqp);
@@ -199,7 +195,7 @@ const std::shared_ptr<AbstractOperator>& SQLPipelineStatement::get_physical_plan
   }
 
   // Cache newly created plan for the according sql statement (only if not already cached)
-  if (pqp_cache && !_metrics->query_plan_cache_hit && _translation_info.cacheable) {
+  if (pqp_cache && !_metrics->query_plan_cache_hit && _translation_info.cacheable && pqp_cacheable) {
     pqp_cache->set(_sql_string, _physical_plan);
   }
 
