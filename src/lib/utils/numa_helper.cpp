@@ -1,4 +1,7 @@
+#include <string>
+
 #include "numa_helper.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 
@@ -40,6 +43,32 @@ NodeMatrix sort_relative_node_ids(DistanceMatrix distance_matrix) {
               [&](auto l, auto r) -> bool { return distance_matrix[node_id][l] < distance_matrix[node_id][r]; });
   }
   return node_matrix;
+}
+
+void merge_node_placements(std::vector<NodeID>& node_placements, std::vector<std::shared_ptr<AbstractTask>>& jobs,
+                           std::vector<std::optional<NodeID>>& non_scheduled_placements) {
+  DebugAssert(node_placements.size() == 0, "node_placements should be empty.");
+  auto total_size = non_scheduled_placements.size();
+  node_placements.reserve(total_size);
+  uint32_t task_index = 0;
+  for (auto& job : jobs) {
+    while (non_scheduled_placements[task_index].has_value()) {
+      node_placements.emplace_back(non_scheduled_placements[task_index].value());
+      task_index++;
+    }
+    node_placements.emplace_back(job->node_id());
+    task_index++;
+  }
+  // Fill in the leftover local tasks.
+  while (task_index < total_size) {
+    if (non_scheduled_placements[task_index].has_value()) {
+      node_placements.emplace_back(non_scheduled_placements[task_index].value());
+    }
+    task_index++;
+  }
+  DebugAssert(node_placements.size() == total_size,
+              "node_placements contains " + std::to_string(node_placements.size()) +
+                  " NodeIDs while it should contain " + std::to_string(total_size));
 }
 
 void print_tasks_stolen_statistics(std::vector<std::shared_ptr<AbstractTask>>& jobs, std::string step) {
