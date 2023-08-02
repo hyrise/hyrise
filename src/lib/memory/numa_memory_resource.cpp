@@ -7,7 +7,8 @@ namespace hyrise {
 
 constexpr auto PAGE_SIZE = size_t{4096};
 
-// TODO(everyone): Find a better way to holds the mapping from NodeID to ArenaID. Could be done as part of a memory manager.
+// TODO(everyone): Find a better way to hold the mapping from NodeID to ArenaID.
+// Could be done as part of a memory manager.
 std::unordered_map<ArenaID, NodeID> NumaExtentHooks::node_id_for_arena_id = std::unordered_map<ArenaID, NodeID>{};
 
 void NumaExtentHooks::store_node_id_for_arena(ArenaID arena_id, NodeID node_id) {
