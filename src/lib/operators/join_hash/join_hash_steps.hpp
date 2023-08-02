@@ -861,7 +861,7 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_containe
   const auto probe_radix_container_count = probe_radix_container.size();
 
   auto hash_table_radix_container_matching = probe_radix_container_count == node_placements.size();
-  std::vector<std::shared_ptr<AbstractTask>> jobs;
+  auto jobs = std::vector<std::shared_ptr<AbstractTask>>();
   jobs.reserve(probe_radix_container_count);
 
   for (auto partition_idx = size_t{0}; partition_idx < probe_radix_container_count; ++partition_idx) {
