@@ -1,6 +1,4 @@
 #include "data_induced_predicate_rule.hpp"
-#include <stack>
-#include "logical_query_plan/abstract_lqp_node.hpp"
 
 #include "cost_estimation/abstract_cost_estimator.hpp"
 #include "expression/binary_predicate_expression.hpp"
@@ -12,11 +10,10 @@
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
-#include "optimizer/strategy/semi_join_reduction_rule.hpp"
 #include "statistics/abstract_cardinality_estimator.hpp"
 
 namespace hyrise {
-using namespace expression_functional;
+using namespace expression_functional;  // NOLINT(build/namespaces)
 
 std::string DataInducedPredicateRule::name() const {
   static const auto name = std::string{"DataInducedParameterRule"};
@@ -32,7 +29,6 @@ void DataInducedPredicateRule::_apply_to_plan_without_subqueries(
   // visit_lqp.
   std::vector<std::tuple<std::shared_ptr<JoinNode>, LQPInputSide, std::shared_ptr<PredicateNode>>>
       data_induced_predicates;
-  std::vector<std::tuple<std::shared_ptr<JoinNode>, LQPInputSide, std::shared_ptr<JoinNode>>> semi_join_reductions;
 
   const auto opposite_side = [](const auto side) {
     return side == LQPInputSide::Left ? LQPInputSide::Right : LQPInputSide::Left;
@@ -41,7 +37,7 @@ void DataInducedPredicateRule::_apply_to_plan_without_subqueries(
   const auto estimator = cost_estimator->cardinality_estimator->new_instance();
   estimator->guarantee_bottom_up_construction();
 
-  visit_lqp(lqp_root, [&estimator, &opposite_side, &data_induced_predicates, &semi_join_reductions](const auto& node) {
+  visit_lqp(lqp_root, [&estimator, &opposite_side, &data_induced_predicates](const auto& node) {
     if (node->type != LQPNodeType::Join) {
       return LQPVisitation::VisitInputs;
     }
@@ -89,53 +85,18 @@ void DataInducedPredicateRule::_apply_to_plan_without_subqueries(
         if (original_cardinality == 0 || (reduced_cardinality / original_cardinality) > MINIMUM_SELECTIVITY) {
           return;
         }
-        auto found_predicate = false;
-        visit_lqp(reducer_node, [&](const auto& current_node) {
-          if (found_predicate || !expression_evaluable_on_lqp(reducer_side_expression, *current_node)) {
-            return LQPVisitation::DoNotVisitInputs;
-          }
-
-          if (current_node->type == LQPNodeType::Predicate) {
-            found_predicate = true;
-            return LQPVisitation::DoNotVisitInputs;
-          }
-
-          return LQPVisitation::VisitInputs;
-        });
-        // auto predicate_found = _find_predicate(reducer_node, reducer_side_expression);
-        if (found_predicate) {
-          data_induced_predicates.emplace_back(join_node, selection_side, between_predicate);
-        } else {
-          if ((reduced_cardinality / original_cardinality) <= SemiJoinReductionRule::MINIMUM_SELECTIVITY) {
-            if (selection_side == LQPInputSide::Left && join_node->join_mode != JoinMode::Semi) {
-              return;
-            }
-            const auto semi_join_reduction_node = JoinNode::make(JoinMode::Semi, join_predicate);
-            semi_join_reduction_node->mark_as_semi_reduction(join_node);
-            semi_join_reduction_node->set_right_input(reducer_node);
-            semi_join_reductions.emplace_back(join_node, selection_side, semi_join_reduction_node);
-          }
-        }
-
-        // new visit lqp fucntion call from reducer node
-        // check if reducer side expression evaluable on lqp für neue aktuelle node
-        // wenn nicht return LQPVisitation::DoNotVisitInputs
-        // wenn nie typ == predicate dann kein dip machen, ansonsten dip vllt sinnvoll
-        // wenn kein dip direkt semi join recuction machen (Achtung semi join reduction andere selektivität)
-        // achtung linke seite und mode = semi join --> dann auch kein semi join
-
-        // magic number ab welcher kardinalität dip sinn ergibt? (falls am ende noch zeit)
+        data_induced_predicates.emplace_back(join_node, selection_side, between_predicate);
       };
 
-      // Having defined the lambda responsible for conditionally adding a data induced predicate, we now apply it to both
-      // inputs of the join. For outer joins, we must not filter the side on which tuples survive even without a join
-      // partner.
+      // Having defined the lambda responsible for conditionally adding a data induced predicate, we now apply it to
+      // both inputs of the join. For outer joins, we must not filter the side on which tuples survive even without a
+      // join partner.
       if (join_node->join_mode != JoinMode::Right && join_node->join_mode != JoinMode::FullOuter) {
         reduce_if_beneficial(LQPInputSide::Right);
       }
 
-      // On the left side we must not create data induced predicates for anti joins as those rely on the very existence of
-      // non-matching values on the right side.
+      // On the left side we must not create data induced predicates for anti joins as those rely on the very existence
+      // of non-matching values on the right side.
       if (join_node->join_mode != JoinMode::Left && join_node->join_mode != JoinMode::FullOuter &&
           join_node->join_mode != JoinMode::AntiNullAsTrue && join_node->join_mode != JoinMode::AntiNullAsFalse) {
         reduce_if_beneficial(LQPInputSide::Left);
@@ -146,10 +107,6 @@ void DataInducedPredicateRule::_apply_to_plan_without_subqueries(
 
   for (const auto& [join_node, side_of_join, data_induced_predicate_node] : data_induced_predicates) {
     lqp_insert_node(join_node, side_of_join, data_induced_predicate_node, AllowRightInput::Yes);
-  }
-
-  for (const auto& [join_node, side_of_join, semi_join_reduction_node] : semi_join_reductions) {
-    lqp_insert_node(join_node, side_of_join, semi_join_reduction_node, AllowRightInput::Yes);
   }
 }
 }  // namespace hyrise

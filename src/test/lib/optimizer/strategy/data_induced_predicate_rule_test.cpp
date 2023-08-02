@@ -51,20 +51,22 @@ TEST_F(DataInducedPredicateRuleTest, CreateSimpleReductionOnLeftSide) {
   // selectivity, a data induced predicate should be created.
 
   // clang-format off
-  const auto input_lqp =
-  JoinNode::make(JoinMode::Inner, equals_(_a_a, _b_a),
-    _node_a,
-    _node_b);
+        const auto input_lqp =
+                JoinNode::make(JoinMode::Inner, equals_(_a_a, _b_a),
+                               _node_a,
+                               _node_b);
 
-  const auto subquery = AggregateNode::make(expression_vector(), expression_vector(min_(_b_a), max_(_b_a)), _node_b);
-  const auto min = ProjectionNode::make(expression_vector(min_(_b_a)), subquery);
-  const auto max = ProjectionNode::make(expression_vector(max_(_b_a)), subquery);
-  const auto expected_reduction = PredicateNode::make(between_inclusive_(_a_a,lqp_subquery_(min),lqp_subquery_(max)), _node_a);
+        const auto subquery =
+                AggregateNode::make(expression_vector(), expression_vector(min_(_b_a), max_(_b_a)), _node_b);
+        const auto min = ProjectionNode::make(expression_vector(min_(_b_a)), subquery);
+        const auto max = ProjectionNode::make(expression_vector(max_(_b_a)), subquery);
+        const auto expected_reduction =
+                PredicateNode::make(between_inclusive_(_a_a, lqp_subquery_(min), lqp_subquery_(max)), _node_a);
 
-  const auto expected_lqp =
-  JoinNode::make(JoinMode::Inner, equals_(_a_a, _b_a),
-    expected_reduction,
-    _node_b);
+        const auto expected_lqp =
+                JoinNode::make(JoinMode::Inner, equals_(_a_a, _b_a),
+                               expected_reduction,
+                               _node_b);
   // clang-format on
 
   auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
@@ -77,20 +79,22 @@ TEST_F(DataInducedPredicateRuleTest, CreateSimpleReductionOnRightSide) {
   // selectivity, a data induced predicate should be created.
 
   // clang-format off
-  const auto input_lqp =
-  JoinNode::make(JoinMode::Inner, equals_(_a_a, _b_a),
-    _node_b,
-    _node_a);
+        const auto input_lqp =
+                JoinNode::make(JoinMode::Inner, equals_(_a_a, _b_a),
+                               _node_b,
+                               _node_a);
 
-  const auto subquery = AggregateNode::make(expression_vector(), expression_vector(min_(_b_a), max_(_b_a)), _node_b);
-  const auto min = ProjectionNode::make(expression_vector(min_(_b_a)), subquery);
-  const auto max = ProjectionNode::make(expression_vector(max_(_b_a)), subquery);
-  const auto expected_reduction = PredicateNode::make(between_inclusive_(_a_a,lqp_subquery_(min),lqp_subquery_(max)), _node_a);
+        const auto subquery = AggregateNode::make(
+                expression_vector(), expression_vector(min_(_b_a), max_(_b_a)), _node_b);
+        const auto min = ProjectionNode::make(expression_vector(min_(_b_a)), subquery);
+        const auto max = ProjectionNode::make(expression_vector(max_(_b_a)), subquery);
+        const auto expected_reduction = PredicateNode::make(
+                between_inclusive_(_a_a, lqp_subquery_(min), lqp_subquery_(max)), _node_a);
 
-  const auto expected_lqp =
-  JoinNode::make(JoinMode::Inner, equals_(_a_a, _b_a),
-    _node_b,
-    expected_reduction);
+        const auto expected_lqp =
+                JoinNode::make(JoinMode::Inner, equals_(_a_a, _b_a),
+                               _node_b,
+                               expected_reduction);
   // clang-format on
 
   auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
@@ -103,15 +107,15 @@ TEST_F(DataInducedPredicateRuleTest, NoReductionForNonBeneficial) {
   // selectivity, no data induced predicate should be created.
 
   // clang-format off
-  const auto input_lqp =
-  JoinNode::make(JoinMode::Inner, equals_(_a_a, _c_a),
-    _node_a,
-    _node_c);
+        const auto input_lqp =
+                JoinNode::make(JoinMode::Inner, equals_(_a_a, _c_a),
+                               _node_a,
+                               _node_c);
 
-  const auto expected_lqp =
-  JoinNode::make(JoinMode::Inner, equals_(_a_a, _c_a),
-    _node_a,
-    _node_c);
+        const auto expected_lqp =
+                JoinNode::make(JoinMode::Inner, equals_(_a_a, _c_a),
+                               _node_a,
+                               _node_c);
   // clang-format on
 
   auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
