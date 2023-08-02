@@ -11,10 +11,12 @@
 #include "logical_query_plan/stored_table_node.hpp"
 #include "operators/aggregate_sort.hpp"
 #include "operators/join_hash.hpp"
+#include "operators/operator_performance_data.hpp"
 #include "operators/sort.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "operators/window_function_evaluator.hpp"
+#include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/operator_task.hpp"
 #include "storage/encoding_type.hpp"
 #include "tpch/tpch_constants.hpp"
@@ -314,6 +316,10 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_HashSemiProbeRelationLarger)(bench
 }
 
 BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_WindowFunctionEvaluatorRank)(benchmark::State& state) {
+  Hyrise::get().topology.use_numa_topology(128);
+  auto scheduler = Hyrise::get().scheduler();
+  Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
+
   const auto window_function_expression = std::make_shared<WindowFunctionExpression>(
       WindowFunction::Rank, nullptr,
       window_(std::vector<std::shared_ptr<AbstractExpression>>{lqp_column_(nullptr, ColumnID(0))},
@@ -330,7 +336,16 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_WindowFunctionEvaluatorRank)(bench
     auto evaluator = std::make_shared<WindowFunctionEvaluator>(
         input_operator, partition_by_column_ids, order_by_column_ids, INVALID_COLUMN_ID, window_function_expression);
     evaluator->execute();
+    auto& window_performance_data =
+        dynamic_cast<WindowFunctionEvaluator::PerformanceData&>(*(evaluator->performance_data));
+
+    // Console output of WindowFunctionEvaluator::PerformanceData for measuring individual phases.
+    std::stringstream ss;
+    window_performance_data.output_to_stream(ss, DescriptionMode::SingleLine);
+    std::cout << ss.str() << std::endl;
   }
+  Hyrise::get().scheduler()->finish();
+  Hyrise::get().set_scheduler(scheduler);
 }
 
 }  // namespace hyrise
