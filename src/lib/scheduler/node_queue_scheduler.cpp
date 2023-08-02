@@ -216,7 +216,7 @@ NodeID NodeQueueScheduler::determine_queue_id(const NodeID preferred_node_id) co
 }
 
 bool NodeQueueScheduler::_numa_aware_grouping(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const {
-  bool numa_aware = true; 
+  auto numa_aware = true; 
   for(auto task : tasks){
     if(task->node_id() > _queue_count - 1){
       numa_aware = false;  
