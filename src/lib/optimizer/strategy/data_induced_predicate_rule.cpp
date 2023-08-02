@@ -62,7 +62,12 @@ void DataInducedPredicateRule::_apply_to_plan_without_subqueries(
 
         auto original_cardinality = estimator->estimate_cardinality(reduced_node);
 
-        // TODO(Team): Add comment on swapping here
+        /**
+         * We have to check whether the expression is actually evaluable on the reducer_node. If this is not the case
+         * we have to swap the sides. This might be the case, because it is not guaranteed, that the predicates are
+         * ordered according to the input sides.
+         */
+
         if (!expression_evaluable_on_lqp(reducer_side_expression, *reducer_node)) {
           std::swap(reduced_side_expression, reducer_side_expression);
         }
