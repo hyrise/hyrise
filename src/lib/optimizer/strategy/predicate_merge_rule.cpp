@@ -38,7 +38,8 @@ std::string PredicateMergeRule::name() const {
  * that are inputs to a merged subplan but do not necessarily belong to that subplan. When it becomes necessary, this
  * rule might be adapted to make more sophisticated decisions on which predicates to include.
  */
-void PredicateMergeRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
+IsCacheable PredicateMergeRule::_apply_to_plan_without_subqueries(
+    const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
   Assert(lqp_root->type == LQPNodeType::Root, "PredicateMergeRule needs root to hold onto");
 
   // (Potentially mergeable) subplans are identified by their topmost UnionNode. node_to_topmost holds a mapping from
@@ -109,6 +110,8 @@ void PredicateMergeRule::_apply_to_plan_without_subqueries(const std::shared_ptr
       }
     }
   }
+
+  return IsCacheable::Yes;
 }
 
 /**

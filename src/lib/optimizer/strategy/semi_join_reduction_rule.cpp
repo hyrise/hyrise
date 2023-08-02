@@ -14,7 +14,8 @@ std::string SemiJoinReductionRule::name() const {
   return name;
 }
 
-void SemiJoinReductionRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
+IsCacheable SemiJoinReductionRule::_apply_to_plan_without_subqueries(
+    const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
   Assert(lqp_root->type == LQPNodeType::Root, "Rule needs root to hold onto");
 
   // Adding semi joins inside visit_lqp might lead to endless recursions. Thus, we use visit_lqp to identify the
@@ -157,5 +158,7 @@ void SemiJoinReductionRule::_apply_to_plan_without_subqueries(const std::shared_
   for (const auto& [join_node, side_of_join, semi_join_reduction_node] : semi_join_reductions) {
     lqp_insert_node(join_node, side_of_join, semi_join_reduction_node, AllowRightInput::Yes);
   }
+
+  return IsCacheable::Yes;
 }
 }  // namespace hyrise

@@ -16,7 +16,9 @@ std::string JoinToSemiJoinRule::name() const {
   return name;
 }
 
-void JoinToSemiJoinRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
+IsCacheable JoinToSemiJoinRule::_apply_to_plan_without_subqueries(
+    const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
+  auto rule_was_applied_using_non_permanent_ucc = false;
   visit_lqp(lqp_root, [&](const auto& node) {
     // Sometimes, joins are not actually used to combine tables but only to check the existence of a tuple in a second
     // table. Example: SELECT c_name FROM customer, nation WHERE c_nationkey = n_nationkey AND n_name = 'GERMANY'
@@ -86,6 +88,8 @@ void JoinToSemiJoinRule::_apply_to_plan_without_subqueries(const std::shared_ptr
 
     return LQPVisitation::VisitInputs;
   });
+
+  return rule_was_applied_using_non_permanent_ucc ? IsCacheable::No : IsCacheable::Yes;
 }
 
 }  // namespace hyrise
