@@ -16,6 +16,7 @@ from typing import Any, Literal, Mapping
 
 import pandas as pd
 import matplotlib.pyplot as plt
+# import matplotlib.ticker as mticker
 import seaborn as sns
 
 
@@ -170,12 +171,18 @@ class Metrics(DictConvertible):
             map(lambda x: x.memory_consumption, self._as_generator(only_string_columns=only_string_columns))
         )
 
+    def sum(self, *, only_string_columns: bool) -> int:
+        return sum(map(lambda x: x.memory_consumption, self._as_generator(only_string_columns=only_string_columns)))
+
     @classmethod
     def from_json(cls, json_path: str) -> "Metrics":
         json_file = read_json(json_path)
         metrics = cls([], f"{json_file['branch']}-{json_file['encoding']}", json_file["benchmark_name"])
         json_file = json_file["benchmark"]
         for segment in json_file["segments"]:
+            # Only consider moment == "init"
+            if segment["moment"] != "init":
+                continue
             column_type = segment["column_data_type"]
             column_name = segment["column_name"]
             metrics.memory_consumptions.append(
@@ -221,9 +228,9 @@ def refine_stats(
     for benchmark_name, benchmark_results in stats.items():
         for threading, runtimes in benchmark_results[0].items():
             for encoding, runtime_wrapper in runtimes.items():
-                runtime = runtime_wrapper.median()
+                runtime = runtime_wrapper.average() / 1e9  # Given in nanoseconds, return seconds
                 metrics = benchmark_results[1][encoding]
-                size = metrics.median(only_string_columns=True)
+                size = metrics.sum(only_string_columns=True) / 1e6  # Given in Bytes, return MB
                 result["SIZE"].append(size)
                 result["RUNTIME"].append(runtime)
                 result["MODE"].append(threading)
@@ -238,11 +245,18 @@ def plot_stats(
         sharex: bool, sharey: bool
 ) -> None:
     data = pd.DataFrame.from_dict(refine_stats(stats))
-    data = data.sort_values('ENCODING')
+    data = data.sort_values(['BENCHMARK', 'ENCODING'])
+    # rcParams['axes.autolimit_mode'] = 'round_numbers'
     g = sns.FacetGrid(data, col="BENCHMARK", row="MODE", hue="ENCODING", sharex=sharex, sharey=sharey)
     g.map(sns.scatterplot, "SIZE", "RUNTIME")
+    g.set(xscale="log")
+    # for ax in g.axes.flat:
+    #     if 'JOB' in ax.get_title() or sharex:
+    #         continue  # We don't want to apply this to JOB due to its size.
+    #     ax.xaxis.set_minor_formatter(mticker.ScalarFormatter())
+    #     ax.xaxis.set_major_formatter(mticker.ScalarFormatter())
     g.add_legend()
-    g.set_axis_labels("Memory Consumption [Median Bytes]", "Duration [Median Nanoseconds]")
+    g.set_axis_labels("Memory Consumption [Sum MB] (Log)", "Duration [Avg Seconds]")
     g.tight_layout()
     g.savefig(path)
 
@@ -546,6 +560,7 @@ class Evaluation:
         output_directory: str
         sharex: bool
         sharey: bool
+        only_comparison: bool
 
         @classmethod
         def from_namespace(cls, namespace: argparse.Namespace) -> "Evaluation.Config":
@@ -560,7 +575,8 @@ class Evaluation:
                 ignore_encodings=flatten(namespace.ignore_encodings),
                 output_directory=output_directory,
                 sharex=namespace.sharex,
-                sharey=namespace.sharey
+                sharey=namespace.sharey,
+                only_comparison=namespace.only_comparison
             )
 
     @staticmethod
@@ -615,6 +631,13 @@ class Evaluation:
             default=True,
             help='Whether to share the y axis of the comparison plot. Defaults to True.'
         )
+        parser.add_argument(
+            '--only-comparison',
+            dest='only_comparison',
+            action=BooleanOptionalAction,
+            default=False,
+            help='Whether to only create the comparison plot.'
+        )
         return parser
 
     @staticmethod
@@ -633,7 +656,7 @@ class Evaluation:
         for benchmark_name, runtimes in timing_comparisons.items():
             metrics = metric_stats[benchmark_name]
             stats[benchmark_name] = runtimes, metrics
-        plot_path = path.join(config.output_directory, "comparison.png")
+        plot_path = path.join(config.output_directory, "comparison.svg")
         plot_stats(stats, path=plot_path, sharex=config.sharex, sharey=config.sharey)
         paths = metric_paths
         paths.extend(timing_paths)
@@ -675,36 +698,37 @@ class Evaluation:
             benchmark: {encoding: entries[0] for encoding, entries in group.items()}
             for benchmark, group in metrics_grouped_by_benchmark_and_encoding_list.items()
         }
-        for benchmark_name, metrics_by_benchmark in metrics_grouped_by_benchmark_and_encoding.items():
-            metrics: dict[str, Metrics] = {encoding: metric for encoding, metric in metrics_by_benchmark.items()}
-            plot_path = path.join(config.output_directory, "metrics", "plots", f"{benchmark_name}.png")
-            Path(plot_path).parent.mkdir(parents=True, exist_ok=True)
-            metrics_to_plot: dict[str, list[int]] = {}
-            for encoding, metric in metrics.items():
-                metrics_to_plot[f"{encoding} (String)"] = list(
-                    map(
-                        lambda x: x.memory_consumption,
-                        filter(lambda x: x.column_type == "string", metric.memory_consumptions),
+        if not config.only_comparison:
+            for benchmark_name, metrics_by_benchmark in metrics_grouped_by_benchmark_and_encoding.items():
+                metrics: dict[str, Metrics] = {encoding: metric for encoding, metric in metrics_by_benchmark.items()}
+                plot_path = path.join(config.output_directory, "metrics", "plots", f"{benchmark_name}.svg")
+                Path(plot_path).parent.mkdir(parents=True, exist_ok=True)
+                metrics_to_plot: dict[str, list[int]] = {}
+                for encoding, metric in metrics.items():
+                    metrics_to_plot[f"{encoding} (String)"] = list(
+                        map(
+                            lambda x: x.memory_consumption,
+                            filter(lambda x: x.column_type == "string", metric.memory_consumptions),
+                        )
                     )
+                    metrics_to_plot[f"{encoding} (All)"] = list(
+                        map(lambda x: x.memory_consumption, metric.memory_consumptions)
+                    )
+                plot(
+                    metrics_to_plot,
+                    title=f"Sizes for {benchmark_name}",
+                    yaxis="Size of Segments",
+                    path=plot_path,
+                    figsize=(22, 10),
                 )
-                metrics_to_plot[f"{encoding} (All)"] = list(
-                    map(lambda x: x.memory_consumption, metric.memory_consumptions)
-                )
-            plot(
-                metrics_to_plot,
-                title=f"Sizes for {benchmark_name}",
-                yaxis="Size of Segments",
-                path=plot_path,
-                figsize=(22, 10),
-            )
-            paths.append(Path(plot_path))
-            # Dump raw data
-            raw_file_path = path.join(config.output_directory, "metrics", "raw", f"{benchmark_name}.json")
-            Path(raw_file_path).parent.mkdir(parents=True, exist_ok=True)
-            with open(raw_file_path, "w") as f:
-                raw_metrics = {encoding: metric.as_dict() for encoding, metric in metrics.items()}
-                json.dump(raw_metrics, f)
-            paths.append(Path(raw_file_path))
+                paths.append(Path(plot_path))
+                # Dump raw data
+                raw_file_path = path.join(config.output_directory, "metrics", "raw", f"{benchmark_name}.json")
+                Path(raw_file_path).parent.mkdir(parents=True, exist_ok=True)
+                with open(raw_file_path, "w") as f:
+                    raw_metrics = {encoding: metric.as_dict() for encoding, metric in metrics.items()}
+                    json.dump(raw_metrics, f)
+                paths.append(Path(raw_file_path))
         return metrics_grouped_by_benchmark_and_encoding, paths
 
     @staticmethod
@@ -747,30 +771,31 @@ class Evaluation:
             }
             for benchmark, group in timings_grouped_by_benchmark_and_encoding_list.items()
         }
-        threading: Literal["ST", "MT"]
-        for threading in ["ST", "MT"]:
-            for name, timing_group in timings_grouped_by_benchmark_and_encoding.items():
-                times = timing_group[threading]
-                plot_path = path.join(config.output_directory, "runtime", "plots", f"{name}-{threading}.png")
-                Path(plot_path).parent.mkdir(parents=True, exist_ok=True)
-                times_to_plot = {
-                    encoding: list(map(lambda x: x.median(), runtimes.runtimes))
-                    for encoding, runtimes in times.items()
-                }
-                plot(
-                    times_to_plot,
-                    title=f"Median duration for {name}",
-                    yaxis="Median runtime (in ns) across benchmark tests",
-                    path=plot_path,
-                )
-                paths.append(Path(plot_path))
-                # Dump raw data
-                raw_file_path = path.join(config.output_directory, "runtime", "raw", f"{name}-{threading}.json")
-                Path(raw_file_path).parent.mkdir(parents=True, exist_ok=True)
-                with open(raw_file_path, "w") as f:
-                    raw_times = {encoding: runtimes.as_dict() for encoding, runtimes in times.items()}
-                    json.dump(raw_times, f)
-                paths.append(Path(raw_file_path))
+        if not config.only_comparison:
+            threading: Literal["ST", "MT"]
+            for threading in ["ST", "MT"]:
+                for name, timing_group in timings_grouped_by_benchmark_and_encoding.items():
+                    times = timing_group[threading]
+                    plot_path = path.join(config.output_directory, "runtime", "plots", f"{name}-{threading}.svg")
+                    Path(plot_path).parent.mkdir(parents=True, exist_ok=True)
+                    times_to_plot = {
+                        encoding: list(map(lambda x: x.median(), runtimes.runtimes))
+                        for encoding, runtimes in times.items()
+                    }
+                    plot(
+                        times_to_plot,
+                        title=f"Median duration for {name}",
+                        yaxis="Median runtime (in ns) across benchmark tests",
+                        path=plot_path,
+                    )
+                    paths.append(Path(plot_path))
+                    # Dump raw data
+                    raw_file_path = path.join(config.output_directory, "runtime", "raw", f"{name}-{threading}.json")
+                    Path(raw_file_path).parent.mkdir(parents=True, exist_ok=True)
+                    with open(raw_file_path, "w") as f:
+                        raw_times = {encoding: runtimes.as_dict() for encoding, runtimes in times.items()}
+                        json.dump(raw_times, f)
+                    paths.append(Path(raw_file_path))
         return timings_grouped_by_benchmark_and_encoding, paths
 
 
