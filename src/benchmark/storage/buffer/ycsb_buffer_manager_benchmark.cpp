@@ -50,7 +50,7 @@ class YCSBBufferManagerFixture : public benchmark::Fixture {
 
       auto database_size = state.range(0) * GB;
       table = generate_ycsb_table(&buffer_manager, database_size);
-      operations = generate_ycsb_operations<WL, NUM_OPERATIONS>(table.size(), 0.7);
+      operations = generate_ycsb_operations<WL, NUM_OPERATIONS>(table.size(), 0.9);
       operations_per_thread = operations.size() / state.threads();
       init_histogram(&latency_histogram);
     }

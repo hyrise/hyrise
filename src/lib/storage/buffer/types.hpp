@@ -146,8 +146,6 @@ inline void DebugAssertPageAligned(const void* data) {
 // Busy waiting with backoff
 inline void yield(const size_t repeat) {
   if (repeat < 4) {
-    // } else if (repeat < 16) {
-    //   _mm_pause();
   } else if ((repeat < 32) || (repeat & 1)) {
     std::this_thread::yield();
   } else if (repeat < 100000) {

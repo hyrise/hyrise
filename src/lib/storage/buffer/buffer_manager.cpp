@@ -286,7 +286,7 @@ void BufferManager::pin_shared(const PageID page_id, const AccessIntent accessIn
       }
       default: {
         // TODO: Still call make resident here? we actually have many reads now
-        // and we should leverage the mechanism
+        // and we should leverage the mechanism, addtional reads would benefit
         if (frame->try_lock_shared(state_and_version)) {
           return;
         }
