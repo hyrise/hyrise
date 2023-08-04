@@ -58,7 +58,7 @@ struct MigrationPolicy {
 };
 
 // LazyMigrationPolicy is good for large-working sets that do not fit in-memory
-constexpr auto LazyMigrationPolicy = MigrationPolicy(0.01, 0.01, 0.2, 0.1);
+constexpr auto LazyMigrationPolicy = MigrationPolicy(0.01, 0.01, 0.2, 1);
 
 // EagerMigrationPolicy is good for small-working sets that fit in memory as we are trying to work as much with DRAM as possible
 constexpr auto EagerMigrationPolicy = MigrationPolicy(1, 1, 1, 1);

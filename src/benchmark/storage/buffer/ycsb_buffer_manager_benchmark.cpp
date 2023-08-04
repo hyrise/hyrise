@@ -43,6 +43,8 @@ class YCSBBufferManagerFixture : public benchmark::Fixture {
       auto config = BufferManager::Config::from_env();
       config.dram_buffer_pool_size = DEFAULT_DRAM_BUFFER_POOL_SIZE;
       config.numa_buffer_pool_size = DEFAULT_NUMA_BUFFER_POOL_SIZE;
+      config.cpu_node = NodeID{0};
+      config.memory_node = NodeID{2};
       config.migration_policy = policy;
       config.enable_numa = (policy != DramOnlyMigrationPolicy);
 
