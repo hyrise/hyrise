@@ -320,7 +320,7 @@ size_t BufferManager::free_bytes_dram_node() const {
   return _primary_buffer_pool->free_bytes_node();
 };
 
-size_t BufferManager::free_bytes_node_id() const {
+size_t BufferManager::free_bytes_numa_node() const {
   return _secondary_buffer_pool->free_bytes_node();
 };
 
@@ -328,7 +328,7 @@ size_t BufferManager::total_bytes_dram_node() const {
   return _primary_buffer_pool->total_bytes_node();
 };
 
-size_t BufferManager::total_bytes_node_id() const {
+size_t BufferManager::total_bytes_numa_node() const {
   return _secondary_buffer_pool->total_bytes_node();
 };
 

@@ -88,9 +88,9 @@ class BufferManager : public boost::container::pmr::memory_resource, public Nonc
   size_t reserved_bytes_dram_buffer_pool() const;
   size_t reserved_bytes_numa_buffer_pool() const;
   size_t free_bytes_dram_node() const;
-  size_t free_bytes_node_id() const;
+  size_t free_bytes_numa_node() const;
   size_t total_bytes_dram_node() const;
-  size_t total_bytes_node_id() const;
+  size_t total_bytes_numa_node() const;
 
   // Debugging methods
   Frame::StateVersionType _state(const PageID page_id);
