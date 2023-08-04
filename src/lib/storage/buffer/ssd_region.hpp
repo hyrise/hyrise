@@ -6,7 +6,7 @@
 #include <unordered_map>
 #include "noncopyable.hpp"
 #include "storage/buffer/metrics.hpp"
-#include "storage/buffer/types.hpp"
+#include "storage/buffer/helper.hpp"
 
 namespace hyrise {
 

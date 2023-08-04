@@ -1,27 +1,21 @@
 #pragma once
 
+#include "storage/buffer/helper.hpp"
 #include "storage/buffer/migration_policy.hpp"
-#include "storage/buffer/types.hpp"
 #include "utils/pausable_loop_thread.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 
 class SSDRegion;
 class VolatileRegion;
+struct BufferPoolMetrics;
 
 struct BufferPool {
-  struct Metrics {
-    std::atomic_uint64_t num_eviction_queue_items_purged = 0;
-    std::atomic_uint64_t num_eviction_queue_adds = 0;
-    std::atomic_uint64_t num_evictions;
-    std::atomic_uint64_t total_bytes_copied_to_ssd = 0;
-  };
-
   BufferPool(const bool enabled, const size_t pool_size, const bool enable_eviction_purge_worker,
              std::array<std::shared_ptr<VolatileRegion>, NUM_PAGE_SIZE_TYPES> volatile_regions,
              MigrationPolicy migration_policy, std::shared_ptr<SSDRegion> ssd_region,
-             std::shared_ptr<BufferPool> target_buffer_pool, const NumaMemoryNode numa_node,
-             std::shared_ptr<Metrics> metrics);
+             std::shared_ptr<BufferPool> target_buffer_pool, const NodeID numa_node, std::shared_ptr<BufferPoolMetrics> metrics);
 
   void evict(EvictionItem& item, Frame* frame);
 
@@ -47,7 +41,7 @@ struct BufferPool {
   // The number of bytes that are currently used
   std::atomic_uint64_t used_bytes;
 
-  std::shared_ptr<Metrics> metrics;
+  std::shared_ptr<BufferPoolMetrics> metrics;
 
   std::shared_ptr<SSDRegion> ssd_region;
 
@@ -63,7 +57,7 @@ struct BufferPool {
 
   std::array<std::shared_ptr<VolatileRegion>, NUM_PAGE_SIZE_TYPES> volatile_regions;
 
-  const NumaMemoryNode numa_node;
+  const NodeID node_id;
 
   const bool enabled;
 };

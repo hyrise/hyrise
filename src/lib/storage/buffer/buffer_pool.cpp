@@ -1,20 +1,22 @@
 #include "buffer_pool.hpp"
+#include "metrics.hpp"
 #include "storage/buffer/ssd_region.hpp"
+#include "volatile_region.hpp"
 
 namespace hyrise {
 //TODO: properly check if disabled or not
 BufferPool::BufferPool(const bool enabled, const size_t pool_size, const bool enable_eviction_purge_worker,
                        std::array<std::shared_ptr<VolatileRegion>, NUM_PAGE_SIZE_TYPES> volatile_regions,
                        MigrationPolicy migration_policy, std::shared_ptr<SSDRegion> ssd_region,
-                       std::shared_ptr<BufferPool> target_buffer_pool, const NumaMemoryNode numa_node,
-                       std::shared_ptr<Metrics> metrics)
+                       std::shared_ptr<BufferPool> target_buffer_pool, const NodeID numa_node,
+                       std::shared_ptr<BufferPoolMetrics> metrics)
     : max_bytes(pool_size),
       used_bytes(0),
       metrics(metrics),
       enabled(enabled),
       volatile_regions(volatile_regions),
       eviction_queue(std::make_unique<EvictionQueue>()),
-      numa_node(numa_node),
+      node_id(numa_node),
       ssd_region(ssd_region),
       target_buffer_pool(target_buffer_pool),
       migration_policy(migration_policy),
@@ -44,7 +46,7 @@ void BufferPool::purge_eviction_queue() {
 
 void BufferPool::add_to_eviction_queue(const PageID page_id, Frame* frame) {
   auto current_state_and_version = frame->state_and_version();
-  DebugAssert(frame->numa_node() == numa_node, "Memory node mismatch");
+  DebugAssert(frame->node_id() == node_id, "Memory node mismatch");
   increment_counter(metrics->num_eviction_queue_adds);
   eviction_queue->push({page_id, Frame::version(current_state_and_version)});
 }
@@ -77,14 +79,14 @@ bool BufferPool::ensure_free_pages(const PageSizeType required_size) {
     auto frame = region->get_frame(item.page_id);
     auto current_state_and_version = frame->state_and_version();
 
-    if (frame->numa_node() != numa_node) {
+    if (frame->node_id() != node_id) {
       increment_counter(metrics->num_eviction_queue_items_purged);
       continue;
     }
 
     // If the frame is already marked, we can evict it
     if (!item.can_evict(current_state_and_version)) {
-      // If the frane is UNLOCKED, we can mark it
+      // If the frame is UNLOCKED, we can mark it
       if (item.can_mark(current_state_and_version)) {
         if (frame->try_mark(current_state_and_version)) {
           add_to_eviction_queue(item.page_id, frame);
@@ -101,8 +103,8 @@ bool BufferPool::ensure_free_pages(const PageSizeType required_size) {
       continue;
     }
 
-    Assert(frame->numa_node() == numa_node,
-           "Memory node mismatch: " + std::to_string(frame->numa_node()) + " != " + std::to_string(numa_node));
+    Assert(frame->node_id() == node_id,
+           "Memory node mismatch: " + std::to_string(frame->node_id()) + " != " + std::to_string(node_id));
 
     evict(item, frame);
 
@@ -153,7 +155,7 @@ void BufferPool::evict(EvictionItem& item, Frame* frame) {
         yield(repeat);
         continue;
       };
-      region->mbind_to_numa_node(item.page_id, target_buffer_pool->numa_node);
+      region->mbind_to_numa_node(item.page_id, target_buffer_pool->node_id);
       frame->unlock_exclusive();
       target_buffer_pool->add_to_eviction_queue(item.page_id, frame);
       //   TODO:increment_counter(metrics.total_bytes_copied_from_dram_to_numa, num_bytes);

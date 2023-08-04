@@ -7,18 +7,15 @@
 #include "noncopyable.hpp"
 #include "storage/buffer/buffer_pool.hpp"
 #include "storage/buffer/frame.hpp"
+#include "storage/buffer/helper.hpp"
 #include "storage/buffer/metrics.hpp"
 #include "storage/buffer/migration_policy.hpp"
 #include "storage/buffer/ssd_region.hpp"
-#include "storage/buffer/types.hpp"
 #include "storage/buffer/volatile_region.hpp"
+#include "types.hpp"
 #include "utils/pausable_loop_thread.hpp"
 
 namespace hyrise {
-
-std::byte* create_mapped_region();
-std::array<std::shared_ptr<VolatileRegion>, NUM_PAGE_SIZE_TYPES> create_volatile_regions(std::byte* mapped_region);
-void unmap_region(std::byte* region);
 
 class BufferManager : public boost::container::pmr::memory_resource, public Noncopyable {
  public:
@@ -33,9 +30,9 @@ class BufferManager : public boost::container::pmr::memory_resource, public Nonc
     MigrationPolicy migration_policy = LazyMigrationPolicy;
 
     // Identifier of the NUMA node to use for the buffer pool (default: -1, i.e., no NUMA node)
-    NumaMemoryNode memory_node = NO_NUMA_MEMORY_NODE;
+    NodeID memory_node = INVALID_NODE_ID;
 
-    NumaMemoryNode cpu_node = DEFAULT_NUMA_NODE;
+    NodeID cpu_node = NodeID{0};
 
     bool enable_numa = false;
 
@@ -91,12 +88,12 @@ class BufferManager : public boost::container::pmr::memory_resource, public Nonc
   size_t reserved_bytes_dram_buffer_pool() const;
   size_t reserved_bytes_numa_buffer_pool() const;
   size_t free_bytes_dram_node() const;
-  size_t free_bytes_numa_node() const;
+  size_t free_bytes_node_id() const;
   size_t total_bytes_dram_node() const;
-  size_t total_bytes_numa_node() const;
+  size_t total_bytes_node_id() const;
 
   // Debugging methods
-  StateVersionType _state(const PageID page_id);
+  Frame::StateVersionType _state(const PageID page_id);
   std::byte* _get_page_ptr(const PageID page_id);
 
  protected:
@@ -109,7 +106,7 @@ class BufferManager : public boost::container::pmr::memory_resource, public Nonc
   void unprotect_page(const PageID page_id);
 
   void make_resident(const PageID page_id, const AccessIntent access_intent,
-                     const StateVersionType previous_state_version);
+                     const Frame::StateVersionType previous_state_version);
 
   void add_to_eviction_queue(const PageID page_id, Frame* frame);
 

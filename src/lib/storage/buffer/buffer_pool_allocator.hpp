@@ -1,11 +1,8 @@
 #pragma once
 
 #include <boost/container/pmr/memory_resource.hpp>
-#include <boost/container/small_vector.hpp>
 #include <boost/move/utility.hpp>
-#include "storage/buffer/buffer_manager.hpp"
 #include "storage/buffer/buffer_pool_allocator_observer.hpp"
-#include "storage/buffer/frame.hpp"
 
 #include "utils/assert.hpp"
 
@@ -64,8 +61,7 @@ class BufferPoolAllocator {
   [[nodiscard]] T* allocate(std::size_t n) {
     auto ptr = _memory_resource->allocate(sizeof(value_type) * n, alignof(T));
     if (auto observer = _observer.lock()) {
-      const auto page_id = BufferManager::get().find_page(ptr);
-      observer->on_allocate(page_id);
+      observer->on_allocate(ptr);
     }
     return static_cast<T*>(ptr);
   }
@@ -73,8 +69,7 @@ class BufferPoolAllocator {
   void deallocate(T* ptr, std::size_t n) {
     // TODO: Count deallocates for nested resources
     if (auto observer = _observer.lock()) {
-      const auto page_id = BufferManager::get().find_page(ptr);
-      observer->on_deallocate(page_id);
+      observer->on_deallocate(ptr);
     }
     _memory_resource->deallocate(ptr, sizeof(value_type) * n, alignof(T));
   }

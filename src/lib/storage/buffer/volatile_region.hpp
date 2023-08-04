@@ -7,7 +7,7 @@
 #include "frame.hpp"
 #include "noncopyable.hpp"
 #include "storage/buffer/metrics.hpp"
-#include "storage/buffer/types.hpp"
+#include "storage/buffer/helper.hpp"
 #include <tuple>
 
 namespace hyrise {
@@ -28,8 +28,8 @@ class VolatileRegion : public Noncopyable {
   std::tuple<PageID, Frame*, std::byte*> allocate();
   void deallocate(PageID page_id);
 
-  void mbind_to_numa_node(PageID page_id, const NumaMemoryNode target_memory_node);
-  void move_page_to_numa_node(PageID page_id, const NumaMemoryNode target_memory_node);
+  void mbind_to_numa_node(PageID page_id, const NodeID target_memory_node);
+  void move_page_to_numa_node(PageID page_id, const NodeID target_memory_node);
 
   void free(PageID page_id);
 

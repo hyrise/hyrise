@@ -23,7 +23,7 @@ class PageMigrationFixture : public benchmark::Fixture {
   }
 
  protected:
-  NumaMemoryNode target_node = NumaMemoryNode{2};
+  NodeID target_node = NodeID{2};
   std::byte* _mapped_region;
 };
 

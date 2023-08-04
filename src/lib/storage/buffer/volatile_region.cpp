@@ -33,7 +33,7 @@ VolatileRegion::VolatileRegion(const PageSizeType size_type, std::byte* region_s
   }
 }
 
-void VolatileRegion::move_page_to_numa_node(PageID page_id, const NumaMemoryNode target_memory_node) {
+void VolatileRegion::move_page_to_numa_node(PageID page_id, const NodeID target_memory_node) {
   DebugAssert(page_id.size_type() == _size_type, "Page does not belong to this region.");
 #if HYRISE_NUMA_SUPPORT
   DebugAssert(target_memory_node != NO_NUMA_MEMORY_NODE, "Numa node has not been set.");
@@ -50,11 +50,11 @@ void VolatileRegion::move_page_to_numa_node(PageID page_id, const NumaMemoryNode
     Fail("Move pages failed: " + strerror(error));
   }
   _metrics->num_numa_tonode_memory_calls.fetch_add(1, std::memory_order_relaxed);
-  _frames[page_id.index].set_numa_node(target_memory_node);
+  _frames[page_id.index].set_node_id(target_memory_node);
 #endif
 }
 
-void VolatileRegion::mbind_to_numa_node(PageID page_id, const NumaMemoryNode target_memory_node) {
+void VolatileRegion::mbind_to_numa_node(PageID page_id, const NodeID target_memory_node) {
   DebugAssert(page_id.size_type() == _size_type, "Page does not belong to this region.");
 
 #if HYRISE_NUMA_SUPPORT
@@ -73,7 +73,7 @@ void VolatileRegion::mbind_to_numa_node(PageID page_id, const NumaMemoryNode tar
   numa_bitmask_free(nodes);
   _metrics->num_numa_tonode_memory_calls.fetch_add(1, std::memory_order_relaxed);
 #endif
-  _frames[page_id.index].set_numa_node(target_memory_node);
+  _frames[page_id.index].set_node_id(target_memory_node);
 }
 
 void VolatileRegion::free(PageID page_id) {

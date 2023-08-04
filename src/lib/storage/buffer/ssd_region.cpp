@@ -77,7 +77,7 @@ void SSDRegion::write_page(PageID page_id, std::byte* data) {
   const auto num_bytes = page_id.num_bytes();
   const size_t pos = handle.offset + num_bytes * page_id.index;
   DebugAssertPageAligned(data);
-  const auto result = pwrite64(handle.fd, data, num_bytes, pos);
+  const auto result = pwrite(handle.fd, data, num_bytes, pos);
   if (result < 0) {
     const auto error = errno;
     Fail("Error while writing to SSDRegion: " + strerror(error));
@@ -91,7 +91,7 @@ void SSDRegion::read_page(PageID page_id, std::byte* data) {
   const auto num_bytes = page_id.num_bytes();
   const auto pos = handle.offset + num_bytes * page_id.index;
   DebugAssertPageAligned(data);
-  const auto result = pread64(handle.fd, data, num_bytes, pos);
+  const auto result = pread(handle.fd, data, num_bytes, pos);
   if (result < 0) {
     const auto error = errno;
     Fail("Error while reading from SSDRegion: " + strerror(error));
@@ -131,7 +131,7 @@ std::array<SSDRegion::FileHandle, NUM_PAGE_SIZE_TYPES> SSDRegion::open_file_hand
   auto block_size = size_t{0};
 
 #ifdef __APPLE__
-  Fail("Block device not supported on Apple");
+  Fail("Block device not supported on Mac");
 #elif __linux__
   if (ioctl(fd, BLKGETSIZE64, &block_size) < 0) {
     const auto error = errno;

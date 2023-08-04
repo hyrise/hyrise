@@ -202,7 +202,6 @@ inline YCSBOperations generate_ycsb_operations(const size_t num_keys, const floa
   std::shuffle(std::begin(shuffled_keys), std::end(shuffled_keys), rng);
   for (auto i = 0; i < NumOperations; i++) {
     auto key = shuffled_keys[key_distribution(generator)];
-
     if constexpr (workload == YCSBWorkload::UpdateHeavy) {
       auto op =
           op_distribution(generator) < static_cast<int>(50) ? YSCBOperationType::Lookup : YSCBOperationType::Update;

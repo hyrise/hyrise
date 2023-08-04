@@ -6,14 +6,14 @@
 #include <limits>
 #include <magic_enum.hpp>
 #include "boost/integer/static_log2.hpp"
+#include "frame.hpp"
+#include "metrics.hpp"
 #include "strong_typedef.hpp"
 #include "utils/assert.hpp"
 
 #if HYRISE_NUMA_SUPPORT
 #include <numa.h>
 #endif
-
-STRONG_TYPEDEF(int64_t, NumaMemoryNode);
 
 namespace hyrise {
 
@@ -85,12 +85,6 @@ inline std::ostream& operator<<(std::ostream& os, const PageID& page_id) {
 
 static constexpr PageID INVALID_PAGE_ID = PageID{MIN_PAGE_SIZE_TYPE, 0, false};
 
-// Signifies an invalid NUMA node (>= 0 is a valid node)
-constexpr auto NO_NUMA_MEMORY_NODE = NumaMemoryNode{-1};
-
-// The usual numa node for DRAM allocations
-constexpr auto DEFAULT_NUMA_NODE = NumaMemoryNode{0};
-
 // Pages need to be aligned to 512 in order to be used with O_DIRECT
 constexpr size_t PAGE_ALIGNMENT = 512;
 
@@ -98,9 +92,6 @@ constexpr size_t MAX_REPEAT_COUNT = 100;
 
 // How often old items should be evicted from the eviction queue
 constexpr static std::chrono::milliseconds IDLE_EVICTION_QUEUE_PURGE = std::chrono::milliseconds(1000);
-
-class Frame;
-using StateVersionType = uint64_t;
 
 // Item for the Eviction Queue
 struct EvictionItem {
@@ -111,10 +102,10 @@ struct EvictionItem {
   uint64_t timestamp;
 
   // Check if the given frame can be evicted if it was marked before
-  bool can_evict(StateVersionType state_and_version) const;
+  bool can_evict(Frame::StateVersionType state_and_version) const;
 
   // Check if the given frame can be marked for eviction
-  bool can_mark(StateVersionType state_and_version) const;
+  bool can_mark(Frame::StateVersionType state_and_version) const;
 };
 
 using EvictionQueue = tbb::concurrent_queue<EvictionItem>;
@@ -154,5 +145,15 @@ inline void yield(const size_t repeat) {
     Fail("Yield for too long. Something is blocking. Current state");
   }
 };
+
+std::byte* create_mapped_region();
+class VolatileRegion;
+struct BufferManagerMetrics;
+std::array<std::shared_ptr<VolatileRegion>, NUM_PAGE_SIZE_TYPES> create_volatile_regions(
+    std::byte* mapped_region, std::shared_ptr<BufferManagerMetrics> metrics);
+
+void unmap_region(std::byte* region);
+
+PageID find_page(void* ptr);
 
 }  // namespace hyrise

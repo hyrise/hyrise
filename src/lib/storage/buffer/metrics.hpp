@@ -1,9 +1,15 @@
 #pragma once
 
 #include <atomic>
-#include "storage/buffer/buffer_pool.hpp"
 
 namespace hyrise {
+
+struct BufferPoolMetrics {
+  std::atomic_uint64_t num_eviction_queue_items_purged = 0;
+  std::atomic_uint64_t num_eviction_queue_adds = 0;
+  std::atomic_uint64_t num_evictions;
+  std::atomic_uint64_t total_bytes_copied_to_ssd = 0;
+};
 
 // TODO: Add
 struct BufferManagerMetrics {
@@ -54,8 +60,8 @@ struct BufferManagerMetrics {
   std::atomic_uint64_t num_numa_tonode_memory_calls = 0;
   std::atomic_uint64_t num_madvice_free_calls = 0;
 
-  std::shared_ptr<BufferPool::Metrics> dram_buffer_pool_metrics = std::make_shared<BufferPool::Metrics>();
-  std::shared_ptr<BufferPool::Metrics> numa_buffer_pool_metrics = std::make_shared<BufferPool::Metrics>();
+  std::shared_ptr<BufferPoolMetrics> dram_buffer_pool_metrics;
+  std::shared_ptr<BufferPoolMetrics> numa_buffer_pool_metrics;
 };
 
 inline void increment_counter(std::atomic_uint64_t& metric, const size_t update = 1) {

@@ -20,7 +20,6 @@
 
 #include "noncopyable.hpp"
 #include "storage/buffer/buffer_pool_allocator.hpp"
-#include "storage/buffer/jemalloc_resource.hpp"
 #include "strong_typedef.hpp"
 #include "utils/assert.hpp"
 

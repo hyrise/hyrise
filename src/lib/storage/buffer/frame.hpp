@@ -2,14 +2,14 @@
 
 #include <atomic>
 #include <bit>
-#include "storage/buffer/types.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 
-// TODO: Encode New/ref counted page here, use 14 bits for it
-
 class Frame {
  public:
+  using StateVersionType = uint64_t;
+  
   static constexpr StateVersionType UNLOCKED = 0;
   static constexpr StateVersionType LOCKED_SHARED = 0xFFFF - 3;  // 252 if 8 bits, 65532
   static constexpr StateVersionType LOCKED = 0xFFFF - 2;         // 253 if 8 bits, 65533
@@ -19,11 +19,11 @@ class Frame {
   Frame();
 
   // Flags and metadata
-  void set_numa_node(const NumaMemoryNode numa_node);
+  void set_node_id(const NodeID node_id);
   void set_dirty(const bool new_dirty);
   bool is_dirty() const;
   void reset_dirty();
-  NumaMemoryNode numa_node() const;
+  NodeID node_id() const;
 
   // State transitions
   void unlock_exclusive_and_set_evicted();
@@ -45,21 +45,21 @@ class Frame {
   StateVersionType state_and_version() const;
   static StateVersionType state(StateVersionType state_and_version);
   static StateVersionType version(StateVersionType state_and_version);
-  static NumaMemoryNode numa_node(StateVersionType state_and_version);
+  static NodeID node_id(StateVersionType state_and_version);
 
   void debug_print();
 
  private:
   // clang-format off
-  static constexpr uint64_t NUMA_NODE_MASK   = 0x00000F0000000000;
+  static constexpr uint64_t NODE_ID_MASK   = 0x00000F0000000000;
   static constexpr uint64_t DIRTY_MASK       = 0x0000F00000000000;
   static constexpr uint64_t STATE_MASK       = 0xFFFF000000000000;
   static constexpr uint64_t VERSION_MASK     = 0x000000FFFFFFFFFF;
-  static_assert((NUMA_NODE_MASK ^ DIRTY_MASK ^ STATE_MASK ^ VERSION_MASK) == std::numeric_limits<StateVersionType>::max());
+  static_assert((NODE_ID_MASK ^ DIRTY_MASK ^ STATE_MASK ^ VERSION_MASK) == std::numeric_limits<StateVersionType>::max());
   // clang-format on
 
   static constexpr uint64_t NUM_BITS = sizeof(StateVersionType) * CHAR_BIT;
-  static constexpr uint64_t NUMA_NODE_SHIFT = std::countr_zero(NUMA_NODE_MASK);
+  static constexpr uint64_t NODE_ID_SHIFT = std::countr_zero(NODE_ID_MASK);
   static constexpr uint64_t DIRTY_SHIFT = std::countr_zero(DIRTY_MASK);
   static constexpr uint64_t STATE_SHIFT = std::countr_zero(STATE_MASK);
 

@@ -7,7 +7,7 @@
 #include <type_traits>
 #include "storage/buffer/buffer_manager.hpp"
 #include "storage/buffer/buffer_pool_allocator_observer.hpp"
-#include "storage/buffer/types.hpp"
+#include "storage/buffer/helper.hpp"
 #include "storage/dictionary_segment.hpp"
 #include "storage/fixed_string_dictionary_segment.hpp"
 #include "storage/frame_of_reference_segment.hpp"
@@ -207,9 +207,9 @@ class AllocatorPinGuard final : private Noncopyable {
 
     Observer() : PinnedPageIds{} {}
 
-    void on_allocate(const PageID page_id) override;
+    void on_allocate(const void* ptr) override;
 
-    void on_deallocate(const PageID page_id) override;
+    void on_deallocate(const void* ptr) override;
 
     static void on_pin(const PageID page_id) {
       BufferManager::get().pin_shared(page_id, AccessIntent::Write);

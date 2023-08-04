@@ -1,5 +1,5 @@
 #include <bitset>
-#include "storage/buffer/types.hpp"
+#include "storage/buffer/helper.hpp"
 
 namespace hyrise {
 
@@ -7,29 +7,29 @@ Frame::Frame() {
   _state_and_version.store(update_state_with_same_version(0, EVICTED), std::memory_order_release);
 }
 
-void Frame::set_numa_node(const NumaMemoryNode numa_node) {
-  DebugAssert(numa_node != NO_NUMA_MEMORY_NODE, "Cannot set empty numa node");
+void Frame::set_node_id(const NodeID node_id) {
+  DebugAssert(node_id != INVALID_NODE_ID, "Cannot set empty numa node");
   DebugAssert(state(_state_and_version.load()) == LOCKED, "Frame must be locked to set memory node.");
   auto old_state_and_version = _state_and_version.load();
   while (true) {
     auto new_state_and_version =
         old_state_and_version ^
-        ((old_state_and_version ^ static_cast<StateVersionType>(numa_node) << NUMA_NODE_SHIFT) & NUMA_NODE_MASK);
+        ((old_state_and_version ^ static_cast<Frame::StateVersionType>(node_id) << NODE_ID_SHIFT) & NODE_ID_MASK);
     if (_state_and_version.compare_exchange_strong(old_state_and_version, new_state_and_version)) {
-      DebugAssert((old_state_and_version & ~NUMA_NODE_MASK) == (new_state_and_version & ~NUMA_NODE_MASK),
+      DebugAssert((old_state_and_version & ~NODE_ID_MASK) == (new_state_and_version & ~NODE_ID_MASK),
                   "Settings the numa node failed");
       break;
     }
   }
 
   // TODO: May want to test that the state is not modified
-  DebugAssert(Frame::numa_node(_state_and_version.load()) == numa_node,
-              "Setting numa node didnt work: " + std::to_string(Frame::numa_node(_state_and_version.load())));
+  DebugAssert(Frame::node_id(_state_and_version.load()) == node_id,
+              "Setting numa node didnt work: " + std::to_string(Frame::node_id(_state_and_version.load())));
 }
 
 void Frame::set_dirty(const bool new_dirty) {
   // TODO: DebugAssert(state(_state_and_version.load()) == LOCKED, "Frame must be locked to set dirty flag.");
-  StateVersionType dirty = new_dirty;
+  Frame::StateVersionType dirty = new_dirty;
   // TODO: Is this really atomic???
   _state_and_version.fetch_or(DIRTY_MASK & (dirty << DIRTY_SHIFT));
   DebugAssert(is_dirty() == new_dirty, "Setting dirty didnt work");
@@ -45,7 +45,7 @@ void Frame::unlock_exclusive_and_set_evicted() {
                            std::memory_order_release);
 }
 
-bool Frame::try_mark(StateVersionType old_state_and_version) {
+bool Frame::try_mark(Frame::StateVersionType old_state_and_version) {
   // DebugAssert(state(_state_and_version.load()) == UNLOCKED,
   //             "Frame must be unlocked to mark, instead: " + std::to_string(state(_state_and_version.load())));
   return _state_and_version.compare_exchange_strong(old_state_and_version,
@@ -56,27 +56,27 @@ bool Frame::is_dirty() const {
   return (_state_and_version.load() & DIRTY_MASK) >> DIRTY_SHIFT;
 }
 
-StateVersionType Frame::state(StateVersionType state_and_version) {
+Frame::StateVersionType Frame::state(Frame::StateVersionType state_and_version) {
   return (state_and_version & STATE_MASK) >> STATE_SHIFT;
 }
 
-StateVersionType Frame::version(StateVersionType state_and_version) {
+Frame::StateVersionType Frame::version(Frame::StateVersionType state_and_version) {
   return state_and_version & VERSION_MASK;
 }
 
-StateVersionType Frame::state_and_version() const {
+Frame::StateVersionType Frame::state_and_version() const {
   return _state_and_version.load();
 }
 
-NumaMemoryNode Frame::numa_node() const {
-  return numa_node(_state_and_version.load());
+NodeID Frame::node_id() const {
+  return node_id(_state_and_version.load());
 }
 
-NumaMemoryNode Frame::numa_node(StateVersionType state_and_version) {
-  return static_cast<NumaMemoryNode>((state_and_version & NUMA_NODE_MASK) >> NUMA_NODE_SHIFT);
+NodeID Frame::node_id(Frame::StateVersionType state_and_version) {
+  return static_cast<NodeID>((state_and_version & NODE_ID_MASK) >> NODE_ID_SHIFT);
 }
 
-bool Frame::try_lock_shared(StateVersionType old_state_and_version) {
+bool Frame::try_lock_shared(Frame::StateVersionType old_state_and_version) {
   auto old_state = state(old_state_and_version);
   if (old_state < LOCKED_SHARED) {
     return _state_and_version.compare_exchange_strong(
@@ -90,7 +90,7 @@ bool Frame::try_lock_shared(StateVersionType old_state_and_version) {
   return false;
 }
 
-bool Frame::try_lock_exclusive(StateVersionType old_state_and_version) {
+bool Frame::try_lock_exclusive(Frame::StateVersionType old_state_and_version) {
   Assert(state(old_state_and_version) == UNLOCKED || state(old_state_and_version) == MARKED ||
              state(old_state_and_version) == EVICTED,
          "Frame must be unlocked to lock exclusive, instead: " + std::to_string(state(old_state_and_version)));
@@ -118,15 +118,15 @@ void Frame::unlock_exclusive() {
                            std::memory_order_release);
 }
 
-StateVersionType Frame::update_state_with_same_version(StateVersionType old_version_and_state,
-                                                       StateVersionType new_state) {
+Frame::StateVersionType Frame::update_state_with_same_version(Frame::StateVersionType old_version_and_state,
+                                                              Frame::StateVersionType new_state) {
   constexpr auto SHIFT = NUM_BITS - STATE_SHIFT;
   static_assert(SHIFT == 16, "Shift must be 8.");
   return ((old_version_and_state << SHIFT) >> SHIFT) | (new_state << STATE_SHIFT);
 }
 
-StateVersionType Frame::update_state_with_increment_version(StateVersionType old_version_and_state,
-                                                            StateVersionType new_state) {
+Frame::StateVersionType Frame::update_state_with_increment_version(Frame::StateVersionType old_version_and_state,
+                                                                   Frame::StateVersionType new_state) {
   constexpr auto SHIFT = NUM_BITS - STATE_SHIFT;
   static_assert(SHIFT == 16, "Shift must be 8.");
   return (((old_version_and_state << SHIFT) >> SHIFT) + 1) | (new_state << STATE_SHIFT);

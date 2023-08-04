@@ -4,7 +4,7 @@
 
 #include <filesystem>
 #include "storage/buffer/frame.hpp"
-#include "storage/buffer/types.hpp"
+#include "storage/buffer/helper.hpp"
 #include "types.hpp"
 
 std::size_t _delete_count = 0;

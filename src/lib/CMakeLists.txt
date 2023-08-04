@@ -466,8 +466,8 @@ set(
     storage/buffer/migration_policy.hpp
     storage/buffer/ssd_region.cpp
     storage/buffer/ssd_region.hpp
-    storage/buffer/types.cpp
-    storage/buffer/types.hpp
+    storage/buffer/helper.cpp
+    storage/buffer/helper.hpp
     storage/buffer/volatile_region.cpp
     storage/buffer/volatile_region.hpp
     storage/dictionary_segment.cpp
