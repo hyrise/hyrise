@@ -112,6 +112,8 @@ inline void run_ycsb(Fixture& fixture, benchmark::State& state) {
     state.counters["latency_min"] = hdr_min(fixture.latency_histogram);
     state.counters["latency_max"] = hdr_max(fixture.latency_histogram);
     state.counters["latency_95percentile"] = hdr_value_at_percentile(fixture.latency_histogram, 95.0);
+    state.counters["bytes_written_to_ssd"] = fixture.buffer_manager.metrics()->total_bytes_copied_to_ssd.load();
+    state.counters["bytes_read_from_ssd"] = fixture.buffer_manager.metrics()->total_bytes_copied_from_ssd.load();
   }
 }
 
