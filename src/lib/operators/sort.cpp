@@ -3,6 +3,7 @@
 #include "hyrise.hpp"
 #include "storage/segment_iterate.hpp"
 #include "utils/timer.hpp"
+#include "storage/buffer/jemalloc_resource.hpp"
 
 namespace {
 

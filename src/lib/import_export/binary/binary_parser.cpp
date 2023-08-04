@@ -10,11 +10,11 @@
 
 #include "hyrise.hpp"
 #include "resolve_type.hpp"
+#include "storage/buffer/jemalloc_resource.hpp"
 #include "storage/chunk.hpp"
 #include "storage/encoding_type.hpp"
 #include "storage/vector_compression/bitpacking/bitpacking_vector.hpp"
 #include "storage/vector_compression/fixed_width_integer/fixed_width_integer_vector.hpp"
-
 #include "utils/assert.hpp"
 
 namespace hyrise {

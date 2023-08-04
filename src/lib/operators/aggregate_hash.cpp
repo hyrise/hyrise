@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "tsl/robin_map.h"
+#include "storage/buffer/jemalloc_resource.hpp"
 
 #include "aggregate/aggregate_traits.hpp"
 #include "expression/pqp_column_expression.hpp"

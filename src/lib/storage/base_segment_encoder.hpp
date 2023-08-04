@@ -4,6 +4,7 @@
 #include <type_traits>
 
 #include <boost/hana/type.hpp>
+#include "storage/buffer/jemalloc_resource.hpp"
 
 #include "all_type_variant.hpp"
 #include "hyrise.hpp"
