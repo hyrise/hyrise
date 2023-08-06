@@ -62,37 +62,37 @@ void BM_RandomAccess(benchmark::State& state) {
 }
 
 BENCHMARK(BM_RandomAccess<NodeID{0}, AccessType::Read>)
-    ->Threads(1)
+    ->DenseThreadRange(1, 48, 2)
     ->Iterations(1)
     ->Name("BM_RandomAccessLatency/Read/DRAM")
     ->UseRealTime();
 
 BENCHMARK(BM_RandomAccess<NodeID{0}, AccessType::TemporalWrite>)
-    ->Threads(1)
+    ->DenseThreadRange(1, 48, 2)
     ->Iterations(1)
     ->Name("BM_RandomAccessLatency/TemporalWrite/DRAM")
     ->UseRealTime();
 
 BENCHMARK(BM_RandomAccess<NodeID{0}, AccessType::NonTemporalWrite>)
-    ->Threads(1)
+    ->DenseThreadRange(1, 48, 2)
     ->Iterations(1)
     ->Name("BM_RandomAccessLatency/NonTemporalWrite/DRAM")
     ->UseRealTime();
 
 BENCHMARK(BM_RandomAccess<NodeID{2}, AccessType::Read>)
-    ->Threads(1)
+    ->DenseThreadRange(1, 48, 2)
     ->Iterations(1)
     ->Name("BM_RandomAccessLatency/Read/CXL")
     ->UseRealTime();
 
 BENCHMARK(BM_RandomAccess<NodeID{2}, AccessType::TemporalWrite>)
-    ->Threads(1)
+    ->DenseThreadRange(1, 48, 2)
     ->Iterations(1)
     ->Name("BM_RandomAccessLatency/TemporalWrite/CXL")
     ->UseRealTime();
 
 BENCHMARK(BM_RandomAccess<NodeID{2}, AccessType::NonTemporalWrite>)
-    ->Threads(1)
+    ->DenseThreadRange(1, 48, 2)
     ->Iterations(1)
     ->Name("BM_RandomAccessLatency/NonTemporalWrite/CXL")
     ->UseRealTime();
