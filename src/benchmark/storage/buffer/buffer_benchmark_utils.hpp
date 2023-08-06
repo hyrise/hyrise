@@ -86,11 +86,24 @@ inline void explicit_move_pages(void* mem, size_t size, int node) {
 #endif
 }
 
-inline void simulate_cacheline_store(std::byte* ptr) {
+inline void simulate_cacheline_nontemporal_store(std::byte* ptr) {
   DebugAssert(uintptr_t(ptr) % CACHE_LINE_SIZE == 0, "Pointer must be cacheline aligned");
 #ifdef __AVX512VL__
   // using a non-temporal memory hint
   _mm512_stream_si512(reinterpret_cast<void*>(ptr), _mm512_set1_epi8(0x1));
+  _mm_sfence();
+#else
+  std::memset(ptr, 0x1, CACHE_LINE_SIZE);
+#endif
+}
+
+inline void simulate_cacheline_temporal_store(std::byte* ptr) {
+  // Taken from viper
+  DebugAssert(uintptr_t(ptr) % CACHE_LINE_SIZE == 0, "Pointer must be cacheline aligned");
+#ifdef __AVX512VL__
+  _mm512_store_si512((__m512i*)(addr), _mm512_set1_epi8(0x1));
+  _mm_clwb(addr);
+  _mm_sfence()
 #else
   std::memset(ptr, 0x1, CACHE_LINE_SIZE);
 #endif

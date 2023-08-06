@@ -8,26 +8,17 @@
 #include "buffer_benchmark_utils.hpp"
 
 namespace hyrise {
-enum AccessType { Read, Write };
+enum AccessType { Read, TemporalWrite, NonTemporalWrite };
 
-template <int node, AccessType access>
+template <NodeID node, AccessType access>
 void BM_RandomAccess(benchmark::State& state) {
-  const auto num_bytes = CACHE_LINE_SIZE << static_cast<size_t>(state.range(0));
-  constexpr auto VIRT_SIZE = 30UL * GB;
-  constexpr auto FILENAME = "/home/nriek/BM_SequentialRead.bin";
-  auto max_index = VIRT_SIZE / num_bytes;
+  constexpr auto VIRT_SIZE = 2UL * GB;
+  auto max_index = VIRT_SIZE / CACHE_LINE_SIZE - 1;
 
-  static int fd = -1;
   static std::byte* mapped_region = nullptr;
 
   if (state.thread_index() == 0) {
-    mapped_region = mmap_region(VIRT_SIZE);
-    if constexpr (node == -1) {
-      explicit_move_pages(mapped_region, VIRT_SIZE, 0);
-      fd = open_file(FILENAME);
-    } else {
-      explicit_move_pages(mapped_region, VIRT_SIZE, node);
-    }
+    explicit_move_pages(mapped_region, VIRT_SIZE, node);
     std::memset(mapped_region, 0x1, VIRT_SIZE);
   }
 
@@ -35,73 +26,56 @@ void BM_RandomAccess(benchmark::State& state) {
   std::mt19937 gen(rd());
   std::uniform_int_distribution<> distribution(0, max_index);
 
-  for (auto _ : state) {
-    auto curr_idx = distribution(gen);
+  auto latencies = uint64_t{0};
 
-    if constexpr (node == -1) {
-      if constexpr (access == Read) {
-        // Move SSD to CXL or DRAM
-        Assert(pread(fd, mapped_region + curr_idx, VIRT_SIZE, 0) == VIRT_SIZE, "Cannot read from file");
-      } else {
-        // Move DRAM to SSD
-        Assert(pwrite(fd, mapped_region + curr_idx, VIRT_SIZE, 0) == VIRT_SIZE, "Cannot write to file");
-      }
+  for (auto _ : state) {
+    state.PauseTiming();
+    auto curr_idx = distribution(gen);
+    state.ResumeTiming();
+
+    const auto timer_start = std::chrono::high_resolution_clock::now();
+    if constexpr (access == AccessType::Read) {
+      simulate_read(mapped_region + curr_idx, VIRT_SIZE);
+    } else if (access == AccessType::TemporalWrite) {
+      simulate_cacheline_temporal_store(mapped_region + curr_idx);
+    } else if (access == AccessType::NonTemporalWrite) {
+      simulate_cacheline_nontemporal_store(mapped_region + curr_idx);
     } else {
-      if constexpr (access == Read) {
-        simulate_read(mapped_region + curr_idx, VIRT_SIZE);
-      } else {
-        simulate_store(mapped_region + curr_idx, VIRT_SIZE);
-      }
+      Fail("Unknown access type");
     }
+    const auto timer_end = std::chrono::high_resolution_clock::now();
+    const auto latency = std::chrono::duration_cast<std::chrono::nanoseconds>(timer_end - timer_start).count();
+    latencies += latency;
   }
 
   if (state.thread_index() == 0) {
-    if (fd >= 0) {
-      close(fd);
-    }
-    //   std::filesystem::remove(FILENAME);
     munmap_region(mapped_region, VIRT_SIZE);
     state.SetItemsProcessed(int64_t(state.iterations()) * state.threads());
-    state.SetBytesProcessed(int64_t(state.iterations()) * num_bytes * state.threads());
   }
-
-  for (auto _ : state) {}
 }
 
-BENCHMARK(BM_RandomAccess<0, AccessType::Read>)
-    ->ArgsProduct({benchmark::CreateDenseRange(static_cast<uint64_t>(0), static_cast<u_int64_t>(9), /*step=*/1)})
-    ->DenseThreadRange(1, 48, 2)
-    ->Name("BM_RandomRead/DRAM")
+BENCHMARK(BM_RandomAccess<NodeID{0}, AccessType::Read>)->Threads(1)->Name("BM_RandomRead/DRAM")->UseRealTime();
+
+BENCHMARK(BM_RandomAccess<NodeID{0}, AccessType::TemporalWrite>)
+    ->Threads(1)
+    ->Name("BM_RandomTemporalWrite/DRAM")
     ->UseRealTime();
 
-BENCHMARK(BM_RandomAccess<0, AccessType::Write>)
-    ->ArgsProduct({benchmark::CreateDenseRange(static_cast<uint64_t>(0), static_cast<u_int64_t>(9), /*step=*/1)})
-    ->DenseThreadRange(1, 48, 2)
-    ->Name("BM_RandomWrite/DRAM")
+BENCHMARK(BM_RandomAccess<NodeID{0}, AccessType::NonTemporalWrite>)
+    ->Threads(1)
+    ->Name("BM_RandomNonTemporalWrite/DRAM")
     ->UseRealTime();
 
-BENCHMARK(BM_RandomAccess<-1, AccessType::Read>)
-    ->ArgsProduct({benchmark::CreateDenseRange(static_cast<uint64_t>(0), static_cast<u_int64_t>(9), /*step=*/1)})
-    ->DenseThreadRange(1, 48, 2)
-    ->Name("BM_RandomRead/SSD")
+BENCHMARK(BM_RandomAccess<NodeID{2}, AccessType::Read>)->Threads(1)->Name("BM_RandomRead/CXL")->UseRealTime();
+
+BENCHMARK(BM_RandomAccess<NodeID{2}, AccessType::TemporalWrite>)
+    ->Threads(1)
+    ->Name("BM_RandomTemporalWrite/CXL")
     ->UseRealTime();
 
-BENCHMARK(BM_RandomAccess<-1, AccessType::Write>)
-    ->ArgsProduct({benchmark::CreateDenseRange(static_cast<uint64_t>(0), static_cast<u_int64_t>(9), /*step=*/1)})
-    ->DenseThreadRange(1, 48, 2)
-    ->Name("BM_RandomWrite/SSD")
-    ->UseRealTime();
-
-BENCHMARK(BM_RandomAccess<2, AccessType::Read>)
-    ->ArgsProduct({benchmark::CreateDenseRange(static_cast<uint64_t>(0), static_cast<u_int64_t>(9), /*step=*/1)})
-    ->DenseThreadRange(1, 48, 2)
-    ->Name("BM_RandomRead/CXL")
-    ->UseRealTime();
-
-BENCHMARK(BM_RandomAccess<2, AccessType::Write>)
-    ->ArgsProduct({benchmark::CreateDenseRange(static_cast<uint64_t>(0), static_cast<u_int64_t>(9), /*step=*/1)})
-    ->DenseThreadRange(1, 48, 2)
-    ->Name("BM_RandomWrite/CXL")
+BENCHMARK(BM_RandomAccess<NodeID{2}, AccessType::NonTemporalWrite>)
+    ->Threads(1)
+    ->Name("BM_RandomNonTemporalWrite/CXL")
     ->UseRealTime();
 
 }  // namespace hyrise
