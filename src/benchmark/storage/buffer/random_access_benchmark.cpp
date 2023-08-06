@@ -14,37 +14,36 @@ template <NodeID node, AccessType access>
 void BM_RandomAccess(benchmark::State& state) {
   auto NUM_THREADS = state.threads();
   constexpr auto VIRT_SIZE = 2UL * GB;
-  auto max_index = VIRT_SIZE / CACHE_LINE_SIZE - 1;
-  constexpr auto NUM_OPS_PER_THREAD = 1000000;
-  constexpr auto STEP_SIZE = 64;
+  constexpr auto NUM_OPS_PER_THREAD = 10000;
+  const auto SIZE_PER_THREAD = VIRT_SIZE / NUM_THREADS;
 
   static std::byte* mapped_region = nullptr;
 
   if (state.thread_index() == 0) {
+    mapped_region = mmap_region(VIRT_SIZE);
     explicit_move_pages(mapped_region, VIRT_SIZE, node);
     std::memset(mapped_region, 0x1, VIRT_SIZE);
   }
 
-  std::random_device rd;
-  std::mt19937 gen(rd());
-  std::uniform_int_distribution<> distribution(0, max_index);
-
   auto latencies = uint64_t{0};
 
-  for (auto _ : state) {
-    state.PauseTiming();
-    auto curr_idx = distribution(gen);
-    state.ResumeTiming();
+  std::random_device rd;
+  std::mt19937 gen(rd());
+  std::uniform_int_distribution<> distribution(0, SIZE_PER_THREAD / CACHE_LINE_SIZE - 1);
 
+  auto start_addr = SIZE_PER_THREAD * state.thread_index();
+
+  for (auto _ : state) {
     for (auto i = 0; i < NUM_OPS_PER_THREAD; ++i) {
-      const auto pos = i * STEP_SIZE * CACHE_LINE_SIZE + state.thread_index();
+      const auto idx = distribution(gen) * CACHE_LINE_SIZE;
+      DebugAssert(idx % CACHE_LINE_SIZE == 0, "Not cacheline aligned");
       const auto timer_start = std::chrono::high_resolution_clock::now();
       if constexpr (access == AccessType::Read) {
-        simulate_cacheline_read(mapped_region + pos);
+        simulate_cacheline_read(mapped_region + start_addr + idx);
       } else if (access == AccessType::TemporalWrite) {
-        simulate_cacheline_temporal_store(mapped_region + pos);
+        simulate_cacheline_temporal_store(mapped_region + start_addr + idx);
       } else if (access == AccessType::NonTemporalWrite) {
-        simulate_cacheline_nontemporal_store(mapped_region + pos);
+        simulate_cacheline_nontemporal_store(mapped_region + start_addr + idx);
       } else {
         Fail("Unknown access type");
       }
@@ -62,7 +61,11 @@ void BM_RandomAccess(benchmark::State& state) {
   }
 }
 
-BENCHMARK(BM_RandomAccess<NodeID{0}, AccessType::Read>)->Threads(1)->Name("BM_RandomRead/DRAM")->UseRealTime();
+BENCHMARK(BM_RandomAccess<NodeID{0}, AccessType::Read>)
+    ->Threads(1)
+    ->Iterations(1)
+    ->Name("BM_RandomAccessLatency/Read/DRAM")
+    ->UseRealTime();
 
 BENCHMARK(BM_RandomAccess<NodeID{0}, AccessType::TemporalWrite>)
     ->Threads(1)
