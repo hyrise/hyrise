@@ -13,7 +13,7 @@ enum AccessType { Read, TemporalWrite, NonTemporalWrite };
 template <NodeID node, AccessType access>
 void BM_RandomAccess(benchmark::State& state) {
   auto NUM_THREADS = state.threads();
-  constexpr auto VIRT_SIZE = 2UL * GB;
+  constexpr auto VIRT_SIZE = 20UL * GB;
   constexpr auto NUM_OPS_PER_THREAD = 10000;
   const auto SIZE_PER_THREAD = (VIRT_SIZE / NUM_THREADS / CACHE_LINE_SIZE) * CACHE_LINE_SIZE;
 
