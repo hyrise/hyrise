@@ -35,15 +35,15 @@ void BM_RandomAccess(benchmark::State& state) {
 
   for (auto _ : state) {
     for (auto i = 0; i < NUM_OPS_PER_THREAD; ++i) {
-      const auto idx = distribution(gen) * CACHE_LINE_SIZE;
-      DebugAssert(idx % CACHE_LINE_SIZE == 0, "Not cacheline aligned");
+      const auto addr = mapped_region + start_addr + distribution(gen) * CACHE_LINE_SIZE;
+      DebugAssert(reinterpret_cast<uintptr_t>(addr) % CACHE_LINE_SIZE == 0, "Not cacheline aligned");
       const auto timer_start = std::chrono::high_resolution_clock::now();
       if constexpr (access == AccessType::Read) {
-        simulate_cacheline_read(mapped_region + start_addr + idx);
+        simulate_cacheline_read(addr);
       } else if (access == AccessType::TemporalWrite) {
-        simulate_cacheline_temporal_store(mapped_region + start_addr + idx);
+        simulate_cacheline_temporal_store(addr);
       } else if (access == AccessType::NonTemporalWrite) {
-        simulate_cacheline_nontemporal_store(mapped_region + start_addr + idx);
+        simulate_cacheline_nontemporal_store(addr);
       } else {
         Fail("Unknown access type");
       }
