@@ -101,9 +101,9 @@ inline void simulate_cacheline_temporal_store(std::byte* ptr) {
   // Taken from viper
   DebugAssert(uintptr_t(ptr) % CACHE_LINE_SIZE == 0, "Pointer must be cacheline aligned");
 #ifdef __AVX512VL__
-  _mm512_store_si512((__m512i*)(addr), _mm512_set1_epi8(0x1));
-  _mm_clwb(addr);
-  _mm_sfence()
+  _mm512_store_si512((__m512i*)(ptr), _mm512_set1_epi8(0x1));
+  _mm_clwb(ptr);
+  _mm_sfence();
 #else
   std::memset(ptr, 0x1, CACHE_LINE_SIZE);
 #endif
