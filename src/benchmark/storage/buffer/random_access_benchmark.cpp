@@ -15,7 +15,7 @@ void BM_RandomAccess(benchmark::State& state) {
   auto NUM_THREADS = state.threads();
   constexpr auto VIRT_SIZE = 2UL * GB;
   constexpr auto NUM_OPS_PER_THREAD = 10000;
-  const auto SIZE_PER_THREAD = VIRT_SIZE / NUM_THREADS;
+  const auto SIZE_PER_THREAD = (VIRT_SIZE / NUM_THREADS / CACHE_LINE_SIZE) * CACHE_LINE_SIZE;
 
   static std::byte* mapped_region = nullptr;
 
@@ -62,37 +62,73 @@ void BM_RandomAccess(benchmark::State& state) {
 }
 
 BENCHMARK(BM_RandomAccess<NodeID{0}, AccessType::Read>)
-    ->DenseThreadRange(1, 48, 2)
+    ->Threads(1)
+    ->Threads(2)
+    ->Threads(4)
+    ->Threads(8)
+    ->Threads(16)
+    ->Threads(32)
+    ->Threads(48)
     ->Iterations(1)
     ->Name("BM_RandomAccessLatency/Read/DRAM")
     ->UseRealTime();
 
 BENCHMARK(BM_RandomAccess<NodeID{0}, AccessType::TemporalWrite>)
-    ->DenseThreadRange(1, 48, 2)
+    ->Threads(1)
+    ->Threads(2)
+    ->Threads(4)
+    ->Threads(8)
+    ->Threads(16)
+    ->Threads(32)
+    ->Threads(48)
     ->Iterations(1)
     ->Name("BM_RandomAccessLatency/TemporalWrite/DRAM")
     ->UseRealTime();
 
 BENCHMARK(BM_RandomAccess<NodeID{0}, AccessType::NonTemporalWrite>)
-    ->DenseThreadRange(1, 48, 2)
+    ->Threads(1)
+    ->Threads(2)
+    ->Threads(4)
+    ->Threads(8)
+    ->Threads(16)
+    ->Threads(32)
+    ->Threads(48)
     ->Iterations(1)
     ->Name("BM_RandomAccessLatency/NonTemporalWrite/DRAM")
     ->UseRealTime();
 
 BENCHMARK(BM_RandomAccess<NodeID{2}, AccessType::Read>)
-    ->DenseThreadRange(1, 48, 2)
+    ->Threads(1)
+    ->Threads(2)
+    ->Threads(4)
+    ->Threads(8)
+    ->Threads(16)
+    ->Threads(32)
+    ->Threads(48)
     ->Iterations(1)
     ->Name("BM_RandomAccessLatency/Read/CXL")
     ->UseRealTime();
 
 BENCHMARK(BM_RandomAccess<NodeID{2}, AccessType::TemporalWrite>)
-    ->DenseThreadRange(1, 48, 2)
+    ->Threads(1)
+    ->Threads(2)
+    ->Threads(4)
+    ->Threads(8)
+    ->Threads(16)
+    ->Threads(32)
+    ->Threads(48)
     ->Iterations(1)
     ->Name("BM_RandomAccessLatency/TemporalWrite/CXL")
     ->UseRealTime();
 
 BENCHMARK(BM_RandomAccess<NodeID{2}, AccessType::NonTemporalWrite>)
-    ->DenseThreadRange(1, 48, 2)
+    ->Threads(1)
+    ->Threads(2)
+    ->Threads(4)
+    ->Threads(8)
+    ->Threads(16)
+    ->Threads(32)
+    ->Threads(48)
     ->Iterations(1)
     ->Name("BM_RandomAccessLatency/NonTemporalWrite/CXL")
     ->UseRealTime();
