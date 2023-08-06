@@ -47,7 +47,7 @@ void BM_SequentialRead(benchmark::State& state) {
       // Noop: Stay as is, read directly
     }
 
-    simulate_read(page_ptr, num_bytes);
+    simulate_scan(page_ptr, num_bytes);
   }
 
   if (state.thread_index() == 0) {

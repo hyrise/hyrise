@@ -119,15 +119,9 @@ inline void simulate_cacheline_read(std::byte* ptr) {
 #endif
 }
 
-inline void simulate_read(std::byte* ptr, size_t num_bytes) {
+inline void simulate_scan(std::byte* ptr, size_t num_bytes) {
   for (size_t i = 0; i < num_bytes; i += CACHE_LINE_SIZE) {
     simulate_cacheline_read(ptr + i);
-  }
-}
-
-inline void simulate_store(std::byte* ptr, size_t num_bytes) {
-  for (size_t i = 0; i < num_bytes; i += CACHE_LINE_SIZE) {
-    simulate_cacheline_store(ptr + i);
   }
 }
 
@@ -252,13 +246,13 @@ inline uint64_t execute_ycsb_action(const YCSBTable& table, BufferManager& buffe
     case YSCBOperationType::Update: {
       auto offset = (rand() % num_cachelines) * CACHE_LINE_SIZE;
       buffer_manager.pin_exclusive(page_id);
-      simulate_cacheline_store(ptr + offset);
+      simulate_cacheline_nontemporal_store(ptr + offset);
       buffer_manager.unpin_exclusive(page_id);
       return CACHE_LINE_SIZE;
     }
     case YSCBOperationType::Scan: {
       buffer_manager.pin_shared(page_id, AccessIntent::Read);
-      simulate_read(ptr, page_size_bytes);
+      simulate_scan(ptr, page_size_bytes);
       buffer_manager.unpin_shared(page_id);
       return page_size_bytes;
     }
