@@ -41,7 +41,7 @@ class TaskQueue {
   std::shared_ptr<AbstractTask> steal();
 
   /**
-   * Returns an estimated load for the task queue (i.e., all queues of the TaskQueue instance). The load is "estimated"
+   * Returns the estimated load for the TaskQueue (i.e., all queues of the TaskQueue instance). The load is "estimated"
    * as the used concurrent queue does not guarantee that `size_approx()` returns the correct size at a given point in
    * time. The priority queues are weighted, i.e., a task in the high priority queue leads to a larger load than a task
    * in the default priority queue.

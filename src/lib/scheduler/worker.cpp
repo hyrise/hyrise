@@ -134,7 +134,7 @@ void Worker::execute_next(const std::shared_ptr<AbstractTask>& task) {
       //   * the first one is scheduled and executed very quickly before the second one reaches the schedule method
       //   * AbstractScheduler::schedule then looks at the second task and realizes that it is ready to be enqueued
       //   * ... and both the scheduler and this method try to enqueue it.
-      // If successfully_enqueued is false, we lost, and the task is already in one of the task queues.
+      // If successfully_enqueued is false, we lost, and the task is already in one of the TaskQueues.
       return;
     }
     Assert(successfully_enqueued, "Task was already enqueued, expected to be solely responsible for execution");
