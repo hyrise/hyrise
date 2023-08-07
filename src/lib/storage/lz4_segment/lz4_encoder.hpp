@@ -147,6 +147,8 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     // copy values and null flags from value segment
     auto values = pmr_vector<char>{allocator};
     values.reserve(num_chars);
+    auto sample_values = pmr_vector<char>{allocator};
+    sample_values.reserve(num_chars);
     auto null_values = pmr_vector<bool>{allocator};
 
     /**
@@ -178,7 +180,6 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
 
       null_values.resize(segment_size);
       offsets.resize(segment_size);
-      string_samples_lengths.resize(segment_size);
 
       auto offset = uint32_t{0u};
       // iterate over the iterator to access the values and increment the row index to write to the values and null
@@ -195,13 +196,17 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
           const auto value = segment_element.value();
           const auto string_length = value.size();
           values.insert(values.cend(), value.begin(), value.end());
+	  if (!value.empty()) {
+            // Don't collect empty strings for sample
+            sample_values.insert(sample_values.cend(), value.begin(), value.end());
+            string_samples_lengths.push_back(sample_size);
+          }
           Assert(string_length <= std::numeric_limits<uint32_t>::max(),
                  "The size of string row value exceeds the maximum of uint32 in LZ4 encoding.");
           offset += static_cast<uint32_t>(string_length);
           sample_size = string_length;
         }
 
-        string_samples_lengths[row_index] = sample_size;
         ++row_index;
       }
     });
@@ -236,7 +241,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     const auto input_size = values.size();
     auto dictionary = pmr_vector<char>{allocator};
     if (input_size > _block_size) {
-      dictionary = _train_dictionary(values, string_samples_lengths);
+      dictionary = _train_dictionary(sample_values, string_samples_lengths);
     }
 
     /**
@@ -396,7 +401,6 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     max_dictionary_size = std::max(max_dictionary_size, _minimum_dictionary_size);
 
     auto dictionary = pmr_vector<char>{values.get_allocator()};
-    size_t dictionary_size;
 
     // If the input does not contain enough values, it won't be possible to train a dictionary for it.
     if (values.size() < _minimum_value_size) {
@@ -404,17 +408,26 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     }
 
     dictionary.resize(max_dictionary_size);
-    dictionary_size = ZDICT_trainFromBuffer(dictionary.data(), max_dictionary_size, values.data(), sample_sizes.data(),
-                                            static_cast<unsigned>(sample_sizes.size()));
+    std::cout << "\n\n\n\n And go ... " << std::endl;
+    std::cout << "Dictionary - Size: " << dictionary.size() << " - Capacity: " << dictionary.capacity() << " \t\t Values: " << values.size() << " - Capacity: " << values.capacity() << " \t\t minimum_value_size: " << _minimum_value_size << " - max_dictionary_size: " << max_dictionary_size << std::endl;
+    std::cout << "Values: ";
+    auto i = 0;
+    for (const auto& sample : values) { if (++i > 10) break; std::cout << sample << " - "; }
+    std::cout << std::endl;
+    std::cout << "Sample sizes: ";
+    for (const auto& sample : sample_sizes) { std::cout << sample << " - "; Assert(sample > 0, "fuck"); }
+    std::cout << std::endl;
+    const auto dictionary_size = ZDICT_trainFromBuffer(dictionary.data(), max_dictionary_size, values.data(), sample_sizes.data(),
+                                                       static_cast<unsigned>(sample_sizes.size()));
 
     // If the generation failed, then compress without a dictionary (the compression ratio will suffer).
     if (ZDICT_isError(dictionary_size)) {
       return pmr_vector<char>{};
     }
 
-    DebugAssert(dictionary_size <= max_dictionary_size,
-                "Generated ZSTD dictionary in LZ4 compression is larger than "
-                "the memory allocated for it.");
+    Assert(dictionary_size <= max_dictionary_size,
+           "Generated ZSTD dictionary in LZ4 compression is larger than "
+           "the memory allocated for it.");
 
     // Shrink the allocated dictionary size to the actual size.
     dictionary.resize(dictionary_size);
