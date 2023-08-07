@@ -109,7 +109,17 @@ inline void simulate_cacheline_temporal_store(std::byte* ptr) {
 #endif
 }
 
-inline void simulate_cacheline_read(std::byte* ptr) {
+inline void simulate_cacheline_nontemporal_load(std::byte* ptr) {
+  DebugAssert(uintptr_t(ptr) % CACHE_LINE_SIZE == 0, "Pointer must be cacheline aligned");
+#ifdef __AVX512VL__
+  auto v = _mm512_stream_load_si512((__m512i*)(ptr));
+  benchmark::DoNotOptimize(v);
+#else
+  __builtin_prefetch(ptr);
+#endif
+}
+
+inline void simulate_cacheline_load(std::byte* ptr) {
   DebugAssert(uintptr_t(ptr) % CACHE_LINE_SIZE == 0, "Pointer must be cacheline aligned");
 #ifdef __AVX512VL__
   auto v = _mm512_load_si512(ptr);
@@ -121,7 +131,7 @@ inline void simulate_cacheline_read(std::byte* ptr) {
 
 inline void simulate_scan(std::byte* ptr, size_t num_bytes) {
   for (size_t i = 0; i < num_bytes; i += CACHE_LINE_SIZE) {
-    simulate_cacheline_read(ptr + i);
+    simulate_cacheline_load(ptr + i);
   }
 }
 
@@ -239,7 +249,7 @@ inline uint64_t execute_ycsb_action(const YCSBTable& table, BufferManager& buffe
     case YSCBOperationType::Lookup: {
       auto offset = (rand() % num_cachelines) * CACHE_LINE_SIZE;
       buffer_manager.pin_shared(page_id, AccessIntent::Read);
-      simulate_cacheline_read(ptr + offset);
+      simulate_cacheline_load(ptr + offset);
       buffer_manager.unpin_shared(page_id);
       return CACHE_LINE_SIZE;
     }

@@ -8,7 +8,7 @@
 #include "buffer_benchmark_utils.hpp"
 
 namespace hyrise {
-enum AccessType { Read, TemporalWrite, NonTemporalWrite };
+enum AccessType { TemporalLoad, NonTemporalLoad, TemporalWrite, NonTemporalWrite };
 
 template <NodeID node, AccessType access>
 void BM_RandomAccess(benchmark::State& state) {
@@ -38,8 +38,10 @@ void BM_RandomAccess(benchmark::State& state) {
       const auto addr = mapped_region + start_addr + distribution(gen) * CACHE_LINE_SIZE;
       DebugAssert(reinterpret_cast<uintptr_t>(addr) % CACHE_LINE_SIZE == 0, "Not cacheline aligned");
       const auto timer_start = std::chrono::high_resolution_clock::now();
-      if constexpr (access == AccessType::Read) {
-        simulate_cacheline_read(addr);
+      if constexpr (access == AccessType::TemporalLoad) {
+        simulate_cacheline_load(addr);
+      } else if (access == AccessType::NonTemporalLoad) {
+        simulate_cacheline_nontemporal_load(addr);
       } else if (access == AccessType::TemporalWrite) {
         simulate_cacheline_temporal_store(addr);
       } else if (access == AccessType::NonTemporalWrite) {
@@ -61,76 +63,26 @@ void BM_RandomAccess(benchmark::State& state) {
   }
 }
 
-BENCHMARK(BM_RandomAccess<NodeID{0}, AccessType::Read>)
-    ->Threads(1)
-    ->Threads(2)
-    ->Threads(4)
-    ->Threads(8)
-    ->Threads(16)
-    ->Threads(32)
-    ->Threads(48)
-    ->Iterations(1)
-    ->Name("BM_RandomAccessLatency/Read/DRAM")
-    ->UseRealTime();
+#define LATENCY_BM(node, label, access)                        \
+  BENCHMARK(BM_RandomAccess<NodeID{node}, AccessType::access>) \
+      ->Threads(1)                                             \
+      ->Threads(2)                                             \
+      ->Threads(4)                                             \
+      ->Threads(8)                                             \
+      ->Threads(16)                                            \
+      ->Threads(32)                                            \
+      ->Threads(48)                                            \
+      ->Iterations(1)                                          \
+      ->Name("BM_RandomAccessLatency/" #access "/" #label)     \
+      ->UseRealTime();
 
-BENCHMARK(BM_RandomAccess<NodeID{0}, AccessType::TemporalWrite>)
-    ->Threads(1)
-    ->Threads(2)
-    ->Threads(4)
-    ->Threads(8)
-    ->Threads(16)
-    ->Threads(32)
-    ->Threads(48)
-    ->Iterations(1)
-    ->Name("BM_RandomAccessLatency/TemporalWrite/DRAM")
-    ->UseRealTime();
-
-BENCHMARK(BM_RandomAccess<NodeID{0}, AccessType::NonTemporalWrite>)
-    ->Threads(1)
-    ->Threads(2)
-    ->Threads(4)
-    ->Threads(8)
-    ->Threads(16)
-    ->Threads(32)
-    ->Threads(48)
-    ->Iterations(1)
-    ->Name("BM_RandomAccessLatency/NonTemporalWrite/DRAM")
-    ->UseRealTime();
-
-BENCHMARK(BM_RandomAccess<NodeID{2}, AccessType::Read>)
-    ->Threads(1)
-    ->Threads(2)
-    ->Threads(4)
-    ->Threads(8)
-    ->Threads(16)
-    ->Threads(32)
-    ->Threads(48)
-    ->Iterations(1)
-    ->Name("BM_RandomAccessLatency/Read/CXL")
-    ->UseRealTime();
-
-BENCHMARK(BM_RandomAccess<NodeID{2}, AccessType::TemporalWrite>)
-    ->Threads(1)
-    ->Threads(2)
-    ->Threads(4)
-    ->Threads(8)
-    ->Threads(16)
-    ->Threads(32)
-    ->Threads(48)
-    ->Iterations(1)
-    ->Name("BM_RandomAccessLatency/TemporalWrite/CXL")
-    ->UseRealTime();
-
-BENCHMARK(BM_RandomAccess<NodeID{2}, AccessType::NonTemporalWrite>)
-    ->Threads(1)
-    ->Threads(2)
-    ->Threads(4)
-    ->Threads(8)
-    ->Threads(16)
-    ->Threads(32)
-    ->Threads(48)
-    ->Iterations(1)
-    ->Name("BM_RandomAccessLatency/NonTemporalWrite/CXL")
-    ->UseRealTime();
+LATENCY_BM(0, "DRAM", TemporalLoad);
+LATENCY_BM(0, "DRAM", NonTemporalLoad);
+LATENCY_BM(0, "DRAM", TemporalWrite);
+LATENCY_BM(0, "DRAM", NonTemporalWrite);
+LATENCY_BM(1, "CXL", TemporalLoad);
+LATENCY_BM(1, "CXL", NonTemporalLoad);
+LATENCY_BM(1, "CXL", TemporalWrite);
+LATENCY_BM(1, "CXL", NonTemporalWrite);
 
 }  // namespace hyrise
