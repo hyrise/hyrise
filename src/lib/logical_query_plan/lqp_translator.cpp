@@ -122,24 +122,25 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_by_node_type(
     LQPNodeType type, const std::shared_ptr<AbstractLQPNode>& node) const {
   switch (type) {
     // clang-format off
+    case LQPNodeType::Aggregate:          return _translate_aggregate_node(node);
     case LQPNodeType::Alias:              return _translate_alias_node(node);
-    case LQPNodeType::StoredTable:        return _translate_stored_table_node(node);
+    case LQPNodeType::ChangeMetaTable:    return _translate_change_meta_table_node(node);
+    case LQPNodeType::Delete:             return _translate_delete_node(node);
+    case LQPNodeType::DummyTable:         return _translate_dummy_table_node(node);
+    case LQPNodeType::Except:             return _translate_except_node(node);
+    case LQPNodeType::Insert:             return _translate_insert_node(node);
+    case LQPNodeType::Intersect:          return _translate_intersect_node(node);
+    case LQPNodeType::Join:               return _translate_join_node(node);
+    case LQPNodeType::Limit:              return _translate_limit_node(node);
     case LQPNodeType::Predicate:          return _translate_predicate_node(node);
     case LQPNodeType::Projection:         return _translate_projection_node(node);
     case LQPNodeType::Sort:               return _translate_sort_node(node);
-    case LQPNodeType::Join:               return _translate_join_node(node);
-    case LQPNodeType::Aggregate:          return _translate_aggregate_node(node);
-    case LQPNodeType::Limit:              return _translate_limit_node(node);
-    case LQPNodeType::Insert:             return _translate_insert_node(node);
-    case LQPNodeType::Delete:             return _translate_delete_node(node);
-    case LQPNodeType::DummyTable:         return _translate_dummy_table_node(node);
     case LQPNodeType::StaticTable:        return _translate_static_table_node(node);
+    case LQPNodeType::StoredTable:        return _translate_stored_table_node(node);
+    case LQPNodeType::Union:              return _translate_union_node(node);
     case LQPNodeType::Update:             return _translate_update_node(node);
     case LQPNodeType::Validate:           return _translate_validate_node(node);
-    case LQPNodeType::Union:              return _translate_union_node(node);
-    case LQPNodeType::Intersect:          return _translate_intersect_node(node);
-    case LQPNodeType::Except:             return _translate_except_node(node);
-    case LQPNodeType::ChangeMetaTable:    return _translate_change_meta_table_node(node);
+    case LQPNodeType::Window:             return _translate_window_node(node);
 
     // Maintenance operators
     case LQPNodeType::CreateView:         return _translate_create_view_node(node);
@@ -402,18 +403,18 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_aggregate_node(
   const auto& node_expressions = aggregate_node->node_expressions;
   const auto node_expression_count = node_expressions.size();
 
-  auto pqp_aggregate_expressions = std::vector<std::shared_ptr<AggregateExpression>>{};
+  auto pqp_aggregate_expressions = std::vector<std::shared_ptr<WindowFunctionExpression>>{};
   pqp_aggregate_expressions.reserve(node_expression_count - aggregate_node->aggregate_expressions_begin_idx);
   for (auto expression_idx = aggregate_node->aggregate_expressions_begin_idx; expression_idx < node_expression_count;
        ++expression_idx) {
     const auto& lqp_expression = aggregate_node->node_expressions[expression_idx];
 
-    Assert(lqp_expression->type == ExpressionType::Aggregate,
+    Assert(lqp_expression->type == ExpressionType::WindowFunction,
            "Expression '" + lqp_expression->as_column_name() +
-               "' used as AggregateExpression is not an AggregateExpression");
+               "' used as WindowFunctionExpression is not an WindowFunctionExpression");
 
     const auto pqp_expression = _translate_expression(lqp_expression, node->left_input(), input_expressions);
-    const auto aggregate_expression = std::static_pointer_cast<AggregateExpression>(pqp_expression);
+    const auto aggregate_expression = std::static_pointer_cast<WindowFunctionExpression>(pqp_expression);
     pqp_aggregate_expressions.emplace_back(aggregate_expression);
   }
 
@@ -498,6 +499,12 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_validate_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto input_operator = _translate_node_recursively(node->left_input());
   return std::make_shared<Validate>(input_operator);
+}
+
+// NOLINTNEXTLINE - while this particular method could be made static, others cannot.
+std::shared_ptr<AbstractOperator> LQPTranslator::_translate_window_node(
+    const std::shared_ptr<AbstractLQPNode>& node) const {
+  FailInput("Hyrise does not yet support window functions.");
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_change_meta_table_node(
@@ -599,9 +606,9 @@ std::shared_ptr<AbstractExpression> LQPTranslator::_translate_expression(
     }
 
     // Resolve COUNT(*)
-    if (AggregateExpression::is_count_star(*expression)) {
+    if (WindowFunctionExpression::is_count_star(*expression)) {
       const auto star = std::make_shared<PQPColumnExpression>(INVALID_COLUMN_ID, DataType::Long, false, "*");
-      expression = std::make_shared<AggregateExpression>(AggregateFunction::Count, star);
+      expression = std::make_shared<WindowFunctionExpression>(WindowFunction::Count, star);
       return ExpressionVisitation::DoNotVisitArguments;
     }
 

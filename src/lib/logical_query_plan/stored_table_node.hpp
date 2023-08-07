@@ -57,6 +57,8 @@ class StoredTableNode : public EnableMakeForLQPNode<StoredTableNode>, public Abs
   std::shared_ptr<AbstractLQPNode> _on_shallow_copy(LQPNodeMapping& /*node_mapping*/) const override;
   bool _on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& /*node_mapping*/) const override;
 
+  void _set_output_expressions() const;
+
  private:
   mutable std::optional<std::vector<std::shared_ptr<AbstractExpression>>> _output_expressions;
   std::vector<ChunkID> _pruned_chunk_ids;

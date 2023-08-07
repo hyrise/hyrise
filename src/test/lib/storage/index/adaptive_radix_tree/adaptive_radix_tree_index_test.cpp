@@ -285,4 +285,29 @@ TEST_F(AdaptiveRadixTreeIndexTest, DenseVectorOfInts) {
   _search_elements(values);
 }
 
+TEST_F(AdaptiveRadixTreeIndexTest, UpperLowerBoundForNonExistingElements) {
+  for (auto test_size : {4, 16, 48, 256}) {
+    auto values = std::vector<std::optional<int32_t>>(test_size);
+    for (auto value_index = 0; value_index < test_size; ++value_index) {
+      // Leave out the second and second to last element (e.g. 1 & 2, 1 & 14, ...).
+      if (value_index != 1 && value_index != test_size - 2) {
+        values[value_index] = value_index;
+      }
+    }
+    const auto segment = create_dict_segment_by_type<int32_t>(DataType::Int, values);
+    const auto index =
+        std::make_shared<AdaptiveRadixTreeIndex>(std::vector<std::shared_ptr<const AbstractSegment>>({segment}));
+
+    // As we look for the first element that is equal or greater, we should give out the position of 2.
+    // For test_size 4, 2 is removed as well, so we expect 3.
+    if (test_size == 4) {
+      EXPECT_EQ(*index->lower_bound({1}), 3);
+    } else {
+      EXPECT_EQ(*index->lower_bound({1}), 2);
+    }
+    // We want the position of the first element that is greater then test_size-2, which is test_size-1.
+    EXPECT_EQ(*index->upper_bound({test_size - 2}), test_size - 1);
+  }
+}
+
 }  // namespace hyrise
