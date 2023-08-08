@@ -384,8 +384,8 @@ void* BufferManager::do_allocate(std::size_t bytes, std::size_t alignment) {
     // Use either NUMA or DRAM for allocation
     // TODO: Which one?
     auto buffer_pool = _secondary_buffer_pool->enabled && _config.migration_policy.bypass_dram_during_write()
-                           ? _primary_buffer_pool
-                           : _secondary_buffer_pool;
+                           ? _secondary_buffer_pool
+                           : _primary_buffer_pool;
     if (!buffer_pool->ensure_free_pages(page_id.size_type())) {
       yield(repeat);
       continue;

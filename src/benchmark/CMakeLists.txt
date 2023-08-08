@@ -130,6 +130,7 @@ add_executable(
     micro_benchmark_main.cpp
     storage/buffer/zipfian_int_distribution.hpp
     storage/buffer/page_migration_benchmark.cpp
+    storage/buffer/skew_benchmark.cpp
 
     # storage/buffer/buffer_manager_benchmark.cpp
     storage/buffer/sequential_read_benchmark.cpp

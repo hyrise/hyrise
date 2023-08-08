@@ -76,13 +76,13 @@ void BM_RandomAccess(benchmark::State& state) {
       ->Name("BM_RandomAccessLatency/" #access "/" #label)     \
       ->UseRealTime();
 
-LATENCY_BM(0, "DRAM", TemporalLoad);
-LATENCY_BM(0, "DRAM", NonTemporalLoad);
-LATENCY_BM(0, "DRAM", TemporalWrite);
-LATENCY_BM(0, "DRAM", NonTemporalWrite);
-LATENCY_BM(1, "CXL", TemporalLoad);
-LATENCY_BM(1, "CXL", NonTemporalLoad);
-LATENCY_BM(1, "CXL", TemporalWrite);
-LATENCY_BM(1, "CXL", NonTemporalWrite);
+LATENCY_BM(0, DRAM, TemporalLoad);
+LATENCY_BM(0, DRAM, NonTemporalLoad);
+LATENCY_BM(0, DRAM, TemporalWrite);
+LATENCY_BM(0, DRAM, NonTemporalWrite);
+LATENCY_BM(1, CXL, TemporalLoad);
+LATENCY_BM(1, CXL, NonTemporalLoad);
+LATENCY_BM(1, CXL, TemporalWrite);
+LATENCY_BM(1, CXL, NonTemporalWrite);
 
 }  // namespace hyrise
