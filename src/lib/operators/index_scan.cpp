@@ -33,10 +33,10 @@ const std::string& IndexScan::name() const {
 }
 
 std::shared_ptr<const Table> IndexScan::_on_execute() {
-  DebugAssert(included_chunk_ids, "Included ChunkIDs vector has not been initialized.");
+  Assert(included_chunk_ids && !included_chunk_ids->empty(),
+         "Index scan expects a non-empty list of chunks to process.");
   DebugAssert(std::is_sorted(included_chunk_ids->cbegin(), included_chunk_ids->cend()),
               "Included ChunkIDs must be sorted.");
-  Assert(!included_chunk_ids->empty(), "Index scan expects a non-empty list of chunks to process.");
 
   _in_table = left_input_table();
 
@@ -145,7 +145,7 @@ std::shared_ptr<AbstractOperator> IndexScan::_on_deep_copy(
   const auto index_scan =
       std::make_shared<IndexScan>(copied_left_input, _indexed_column_id, _predicate_condition, _scan_value);
 
-  // We need to set the included ChunkIDs againg, otherwise a copy (e.g., due to a PQP cache hit) would not scan any
+  // We need to set the included ChunkIDs again, otherwise a copy (e.g., due to a PQP cache hit) would not scan any
   // chunks. Similarly, we also set the excluded ChunkIDs in the TableScan. Otherwise, we would end up with the same
   // tuples returned twice when the TableScan scans the same chunks (as the result is later unioned).
   index_scan->included_chunk_ids = included_chunk_ids;

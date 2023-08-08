@@ -549,7 +549,7 @@ TEST_F(LQPTranslatorTest, PredicateNodeEntirelyPrunedIndexScan) {
   const auto op = LQPTranslator{}.translate_node(predicate_node);
 
   /**
-   * Check PQP: only table scan is instantiated.
+   * Check PQP: only table scan is instantiated
    */
   const auto table_scan_op = std::dynamic_pointer_cast<const TableScan>(op);
   const auto b = PQPColumnExpression::from_table(*table, "b");
