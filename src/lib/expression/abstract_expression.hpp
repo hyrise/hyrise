@@ -15,7 +15,6 @@ class AbstractLQPNode;
 class AbstractOperator;
 
 enum class ExpressionType {
-  Aggregate,
   Arithmetic,
   Cast,
   Case,
@@ -33,7 +32,9 @@ enum class ExpressionType {
   PQPSubquery,
   LQPSubquery,
   UnaryMinus,
-  Value
+  Value,
+  Window,
+  WindowFunction
 };
 
 /**

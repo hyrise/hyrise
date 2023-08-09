@@ -56,6 +56,7 @@ set(
     lib/logical_query_plan/intersect_node_test.cpp
     lib/logical_query_plan/join_node_test.cpp
     lib/logical_query_plan/limit_node_test.cpp
+    lib/logical_query_plan/logical_plan_root_node_test.cpp
     lib/logical_query_plan/logical_query_plan_test.cpp
     lib/logical_query_plan/lqp_find_subplan_mismatch_test.cpp
     lib/logical_query_plan/lqp_translator_test.cpp
@@ -69,6 +70,7 @@ set(
     lib/logical_query_plan/union_node_test.cpp
     lib/logical_query_plan/update_node_test.cpp
     lib/logical_query_plan/validate_node_test.cpp
+    lib/logical_query_plan/window_node_test.cpp
     lib/lossless_cast_test.cpp
     lib/lossy_cast_test.cpp
     lib/memory/segments_using_allocators_test.cpp
