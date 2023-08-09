@@ -31,7 +31,7 @@ NodeQueueScheduler::~NodeQueueScheduler() {
 }
 
 void NodeQueueScheduler::begin() {
-  DebugAssert(!_active, "Scheduler is already active");
+  DebugAssert(!_active, "Scheduler is already active.");
 
   _workers.reserve(Hyrise::get().topology.num_cpus());
   _node_count = Hyrise::get().topology.nodes().size();
@@ -145,8 +145,8 @@ void NodeQueueScheduler::schedule(std::shared_ptr<AbstractTask> task, NodeID pre
   /**
    * Add task to the queue of the preferred node if it is ready for execution.
    */
-  DebugAssert(_active, "Can't schedule more tasks after the NodeQueueScheduler was shut down");
-  DebugAssert(task->is_scheduled(), "Don't call NodeQueueScheduler::schedule(), call schedule() on the task");
+  DebugAssert(_active, "Can't schedule more tasks after the NodeQueueScheduler was shut down.");
+  DebugAssert(task->is_scheduled(), "Don't call NodeQueueScheduler::schedule(), call schedule() on the task.");
 
   const auto task_counter = _task_counter++;  // Atomically take snapshot of counter
   task->set_id(TaskID{task_counter});
@@ -216,11 +216,11 @@ void NodeQueueScheduler::_group_tasks(const std::vector<std::shared_ptr<Abstract
     }
 
     if (common_node_id) {
-      // This is not really a hard assertion. As the chain will likely be executed on the same Worker (see
+      // This is not really a hard assertion. As the chain will likely be executed on the same worker (see
       // Worker::execute_next), we would ignore all but the first node_id. At the time of writing, we did not do any
       // smart node assignment. This assertion is only here so that this behavior is understood if we ever assign NUMA
       // node ids.
-      DebugAssert(task->node_id() == *common_node_id, "Expected all grouped tasks to have the same node_id");
+      DebugAssert(task->node_id() == *common_node_id, "Expected all grouped tasks to have the same node_id.");
     } else {
       common_node_id = task->node_id();
     }

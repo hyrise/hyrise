@@ -19,7 +19,7 @@ namespace {
 using namespace hyrise;  // NOLINT(build/namespaces)
 
 /**
- * On worker threads, this references the Worker running on this thread, on all other threads, this is empty.
+ * On worker threads, this references the worker running on this thread, on all other threads, this is empty.
  * Uses a weak_ptr, because otherwise the ref-count of it would not reach zero within the main() scope of the program.
  */
 thread_local std::weak_ptr<Worker> this_thread_worker;  // NOLINT (clang-tidy wants this const)
@@ -53,7 +53,7 @@ CpuID Worker::cpu_id() const {
 }
 
 void Worker::operator()() {
-  Assert(this_thread_worker.expired(), "Thread already has a worker");
+  Assert(this_thread_worker.expired(), "Thread already has a worker.");
 
   this_thread_worker = shared_from_this();
 
@@ -118,14 +118,14 @@ void Worker::_work(const AllowSleep allow_sleep) {
     _active = false;
   }
 
-  // This is part of the Scheduler shutdown system. Count the number of tasks a Worker executed to allow the
-  // Scheduler to determine whether all tasks finished
+  // This is part of the Scheduler shutdown system. Count the number of tasks a worker executed to allow the
+  // Scheduler to determine whether all tasks finished.
   _num_finished_tasks++;
 }
 
 void Worker::execute_next(const std::shared_ptr<AbstractTask>& task) {
   DebugAssert(&*get_this_thread_worker() == this,
-              "execute_next must be called from the same thread that the worker works in");
+              "execute_next must be called from the same thread that the worker works in.");
   if (!_next_task) {
     const auto successfully_enqueued = task->try_mark_as_enqueued();
     if (!successfully_enqueued) {
@@ -137,7 +137,7 @@ void Worker::execute_next(const std::shared_ptr<AbstractTask>& task) {
       // If successfully_enqueued is false, we lost, and the task is already in one of the TaskQueues.
       return;
     }
-    Assert(successfully_enqueued, "Task was already enqueued, expected to be solely responsible for execution");
+    Assert(successfully_enqueued, "Task was already enqueued, expected to be solely responsible for execution.");
     _next_task = task;
   } else {
     _queue->push(task, SchedulePriority::Default);
@@ -149,7 +149,7 @@ void Worker::start() {
 }
 
 void Worker::join() {
-  Assert(!Hyrise::get().scheduler()->active(), "Worker can't be join()-ed while the scheduler is still active");
+  Assert(!Hyrise::get().scheduler()->active(), "Worker can't be join()-ed while the scheduler is still active.");
   _thread.join();
 }
 
