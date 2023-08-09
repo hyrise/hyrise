@@ -141,7 +141,7 @@ TEST_F(LQPTranslatorTest, ArithmeticExpression) {
    */
   const auto projection_op = std::dynamic_pointer_cast<Projection>(pqp);
   ASSERT_TRUE(projection_op);
-  ASSERT_EQ(projection_op->expressions.size(), 1u);
+  ASSERT_EQ(projection_op->expressions.size(), 1);
   const auto a_plus_b_pqp = std::dynamic_pointer_cast<ArithmeticExpression>(projection_op->expressions.at(0));
   ASSERT_TRUE(a_plus_b_pqp);
   EXPECT_EQ(a_plus_b_pqp->arithmetic_operator, ArithmeticOperator::Addition);
@@ -285,11 +285,11 @@ TEST_F(LQPTranslatorTest, SubqueryExpressionCorrelated) {
   ASSERT_EQ(pqp->left_input()->type(), OperatorType::GetTable);
 
   const auto projection = std::static_pointer_cast<const Projection>(pqp);
-  ASSERT_EQ(projection->expressions.size(), 2u);
+  ASSERT_EQ(projection->expressions.size(), 2);
 
   const auto expression_a = std::dynamic_pointer_cast<PQPSubqueryExpression>(projection->expressions.at(0));
   ASSERT_TRUE(expression_a);
-  ASSERT_EQ(expression_a->parameters.size(), 2u);
+  ASSERT_EQ(expression_a->parameters.size(), 2);
   ASSERT_EQ(expression_a->parameters.at(0).first, ParameterID{0});
   ASSERT_EQ(expression_a->parameters.at(0).second, ColumnID{0});
   ASSERT_EQ(expression_a->parameters.at(1).first, ParameterID{1});
@@ -309,7 +309,7 @@ TEST_F(LQPTranslatorTest, Sort) {
    *   SELECT a, b FROM int_float ORDER BY a, a + b DESC, b ASC
    */
 
-  const auto sort_modes = std::vector<SortMode>({SortMode::Ascending, SortMode::Descending});
+  const auto sort_modes = std::vector<SortMode>{{SortMode::Ascending, SortMode::Descending}};
 
   // clang-format off
   const auto lqp =
@@ -604,8 +604,8 @@ TEST_F(LQPTranslatorTest, PredicateNodeIndexScanFailsWhenNotApplicable) {
   const auto stored_table_node = StoredTableNode::make("int_float_chunked");
 
   const auto& table = Hyrise::get().storage_manager.get_table("int_float_chunked");
-  std::vector<ColumnID> index_column_ids = {ColumnID{1}};
-  std::vector<ChunkID> index_chunk_ids = {ChunkID{0}, ChunkID{2}};
+  const auto index_column_ids = std::vector<ColumnID>{ColumnID{1}};
+  const auto index_chunk_ids = std::vector<ChunkID>{ChunkID{0}, ChunkID{2}};
   table->get_chunk(index_chunk_ids[0])->create_index<GroupKeyIndex>(index_column_ids);
   table->get_chunk(index_chunk_ids[1])->create_index<GroupKeyIndex>(index_column_ids);
 
@@ -614,7 +614,7 @@ TEST_F(LQPTranslatorTest, PredicateNodeIndexScanFailsWhenNotApplicable) {
   auto predicate_node2 = PredicateNode::make(less_than_(stored_table_node->get_column("a"), 42));
   predicate_node2->set_left_input(predicate_node);
 
-  // The optimizer should not set this ScanType in this situation.14.
+  // The optimizer should not set this ScanType in this situation.
   predicate_node2->scan_type = ScanType::IndexScan;
   EXPECT_THROW(LQPTranslator{}.translate_node(predicate_node2), std::logic_error);
 }
@@ -631,7 +631,7 @@ TEST_F(LQPTranslatorTest, ProjectionNode) {
    */
   const auto projection_op = std::dynamic_pointer_cast<Projection>(op);
   ASSERT_TRUE(projection_op);
-  EXPECT_EQ(projection_op->expressions.size(), 1u);
+  EXPECT_EQ(projection_op->expressions.size(), 1);
   EXPECT_EQ(*projection_op->expressions[0], *PQPColumnExpression::from_table(*table_int_float, "a"));
 }
 
@@ -706,8 +706,8 @@ TEST_F(LQPTranslatorTest, AggregateNodeSimple) {
    */
   const auto aggregate_op = std::dynamic_pointer_cast<AggregateHash>(op);
   ASSERT_TRUE(aggregate_op);
-  ASSERT_EQ(aggregate_op->aggregates().size(), 2u);
-  ASSERT_EQ(aggregate_op->groupby_column_ids().size(), 1u);
+  ASSERT_EQ(aggregate_op->aggregates().size(), 2);
+  ASSERT_EQ(aggregate_op->groupby_column_ids().size(), 1);
   EXPECT_EQ(aggregate_op->groupby_column_ids().at(0), ColumnID{1});
 
   const auto sum = aggregate_op->aggregates()[0];

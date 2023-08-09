@@ -162,7 +162,7 @@ TEST_F(AggregateSortTest, AggregateMaxMultiColumnSorted) {
         const auto aggregate_expressions = std::vector<std::shared_ptr<WindowFunctionExpression>>{max_(pqp_column_(
             aggregate_by_column_id, table->column_data_type(aggregate_by_column_id),
             table->column_is_nullable(aggregate_by_column_id), table->column_name(aggregate_by_column_id)))};
-        std::vector<ColumnID> groupby_column_ids = {group_by_column_id};
+        const auto groupby_column_ids = std::vector<ColumnID>{group_by_column_id};
         const auto sorted_aggregate = std::make_shared<AggregateSort>(sort, aggregate_expressions, groupby_column_ids);
         const auto unsorted_aggregate = std::make_shared<AggregateHash>(this->_table_wrapper_multi_columns,
                                                                         aggregate_expressions, groupby_column_ids);
@@ -186,7 +186,7 @@ TEST_F(AggregateSortTest, AggregateOnPresortedValueClustered) {
     const auto aggregate_expression = std::vector<std::shared_ptr<WindowFunctionExpression>>{
         sum_(pqp_column_(ColumnID{1}, table->column_data_type(ColumnID{1}), table->column_is_nullable(ColumnID{1}),
                          table->column_name(ColumnID{1})))};
-    std::vector<ColumnID> groupby_column_ids = {ColumnID{0}};
+    const auto groupby_column_ids = std::vector<ColumnID>{ColumnID{0}};
     const auto aggregate =
         std::make_shared<AggregateSort>(table_wrapper_sorted_value_clustered, aggregate_expression, groupby_column_ids);
     aggregate->execute();

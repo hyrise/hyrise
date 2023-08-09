@@ -15,7 +15,7 @@
 #include "storage/reference_segment.hpp"
 
 #include "utils/assert.hpp"
-#include "utils/column_pruning_utils.hpp"
+#include "utils/pruning_utils.hpp"
 
 namespace hyrise {
 

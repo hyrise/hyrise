@@ -1,6 +1,6 @@
 #include "base_test.hpp"
 
-#include "utils/column_pruning_utils.hpp"
+#include "utils/pruning_utils.hpp"
 
 namespace hyrise {
 

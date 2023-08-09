@@ -120,8 +120,7 @@ TEST_F(OperatorsIndexScanTest, SingleColumnScanOnDataTable) {
 
     scan->execute();
 
-    auto scan_small_chunk =
-        std::make_shared<IndexScan>(_int_int_small_chunk, _column_id, predicate, right_value);
+    auto scan_small_chunk = std::make_shared<IndexScan>(_int_int_small_chunk, _column_id, predicate, right_value);
     scan_small_chunk->included_chunk_ids = shared_chunk_id_vector({ChunkID{0}, ChunkID{1}, ChunkID{2}});
 
     scan_small_chunk->execute();
@@ -135,8 +134,7 @@ TEST_F(OperatorsIndexScanTest, ScanWithNoChunkIDsIncluded) {
   auto tests = std::vector<std::pair<PredicateCondition, std::vector<AllTypeVariant>>>{
       {PredicateCondition::Equals, {}}, {PredicateCondition::NotEquals, {}}};
 
-  auto scan =
-      std::make_shared<IndexScan>(_int_int, _column_id, PredicateCondition::Equals, AllTypeVariant{17});
+  auto scan = std::make_shared<IndexScan>(_int_int, _column_id, PredicateCondition::Equals, AllTypeVariant{17});
   scan->included_chunk_ids = std::make_shared<std::vector<ChunkID>>();
   EXPECT_THROW(scan->execute(), std::logic_error);
 }
@@ -154,8 +152,7 @@ TEST_F(OperatorsIndexScanTest, SingleColumnScanValueGreaterThanMaxDictionaryValu
 
     scan->execute();
 
-    auto scan_small_chunk =
-        std::make_shared<IndexScan>(_int_int_small_chunk, _column_id, predicate, right_value);
+    auto scan_small_chunk = std::make_shared<IndexScan>(_int_int_small_chunk, _column_id, predicate, right_value);
     scan_small_chunk->included_chunk_ids = shared_chunk_id_vector({ChunkID{0}, ChunkID{1}, ChunkID{2}});
 
     scan_small_chunk->execute();
@@ -178,8 +175,7 @@ TEST_F(OperatorsIndexScanTest, SingleColumnScanValueLessThanMinDictionaryValue) 
 
     scan->execute();
 
-    auto scan_small_chunk =
-        std::make_shared<IndexScan>(_int_int_small_chunk, _column_id, predicate, right_value);
+    auto scan_small_chunk = std::make_shared<IndexScan>(_int_int_small_chunk, _column_id, predicate, right_value);
     scan_small_chunk->included_chunk_ids = shared_chunk_id_vector({ChunkID{0}, ChunkID{1}, ChunkID{2}});
 
     scan_small_chunk->execute();
@@ -229,14 +225,14 @@ TEST_F(OperatorsIndexScanTest, DynamicallyPrunedChunks) {
 }
 
 TEST_F(OperatorsIndexScanTest, OperatorName) {
-  const auto scan = std::make_shared<IndexScan>(_int_int, _column_id, PredicateCondition::GreaterThanEquals,
-                                                AllTypeVariant{0});
+  const auto scan =
+      std::make_shared<IndexScan>(_int_int, _column_id, PredicateCondition::GreaterThanEquals, AllTypeVariant{0});
   EXPECT_EQ(scan->name(), "IndexScan");
 }
 
 TEST_F(OperatorsIndexScanTest, DeepCopyRetainsIncludedChunks) {
-  const auto index_scan = std::make_shared<IndexScan>(_int_int, _column_id,
-                                                      PredicateCondition::GreaterThanEquals, AllTypeVariant{0});
+  const auto index_scan =
+      std::make_shared<IndexScan>(_int_int, _column_id, PredicateCondition::GreaterThanEquals, AllTypeVariant{0});
   index_scan->included_chunk_ids = shared_chunk_id_vector({ChunkID{0}});
   const auto new_index_scan = std::dynamic_pointer_cast<IndexScan>(index_scan->deep_copy());
   EXPECT_EQ(*index_scan->included_chunk_ids, *new_index_scan->included_chunk_ids);
