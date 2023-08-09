@@ -53,7 +53,7 @@ void reorder_predicates(const std::vector<std::shared_ptr<AbstractLQPNode>>& pre
   // This allows the CardinalityEstimator to compute the statistics of `input` once, cache them and then re-use them.
   const auto caching_cost_estimator = cost_estimator->new_instance();
   const auto& caching_cardinality_estimator = cost_estimator->cardinality_estimator;
-  caching_cardinality_estimator->guarantee_join_graph(JoinGraph{{input}, {}});
+  caching_cost_estimator->guarantee_bottom_up_construction();
 
   // To order the predicates, we want to favor the predicate with the lowest cost. We estimate the cost of each
   // individual predicate on top of the input LQP, i.e., predicates are estimated independently. In the past, we just
