@@ -1,5 +1,7 @@
 #pragma once
 
+#include "storage/variable_string_dictionary_segment.hpp"
+
 namespace hyrise {
 
 using DereferenceValue = std::string_view;
@@ -38,15 +40,7 @@ class VariableStringVectorIterator : public boost::iterator_facade<VariableStrin
   }
 
   const std::string_view dereference() const {  // NOLINT
-    const auto offset = _offset_vector->operator[](_current_value_id);
-    auto next_offset = 0;
-    if (_current_value_id >= _offset_vector->size() - 1) {
-      next_offset = _dictionary->size();
-    } else {
-      next_offset = _offset_vector->operator[](_current_value_id + 1);
-    }
-    const auto string_length = next_offset - offset - 1;
-    return std::string_view{_dictionary->data() + offset, string_length};
+    return VariableStringDictionarySegment<pmr_string>::get_string(*_offset_vector, *_dictionary, _current_value_id);
   }
 
   std::shared_ptr<const pmr_vector<char>> _dictionary;

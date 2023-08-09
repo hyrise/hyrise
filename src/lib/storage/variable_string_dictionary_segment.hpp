@@ -4,13 +4,13 @@
 #include <string>
 
 #include "base_dictionary_segment.hpp"
-#include "storage/variable_string_dictionary/variable_string_vector.hpp"
 #include "storage/vector_compression/base_compressed_vector.hpp"
 #include "types.hpp"
 
 namespace hyrise {
 
 class BaseCompressedVector;
+class VariableStringVector;
 
 /**
  * @brief Segment implementing variable length string encoding.
@@ -90,6 +90,21 @@ class VariableStringDictionarySegment : public BaseDictionarySegment {
   ValueID null_value_id() const final;
 
   const std::shared_ptr<const pmr_vector<uint32_t>>& offset_vector() const;
+
+  static inline std::string_view get_string(const pmr_vector<uint32_t>& offset_vector,
+                                            const pmr_vector<char>& dictionary, ValueID value_id) {
+    const auto offset = offset_vector[value_id];
+    auto next_offset = 0;
+
+    if (value_id >= offset_vector.size() - 1) {
+      next_offset = dictionary.size();
+    } else {
+      next_offset = offset_vector[value_id + 1];
+    }
+    const auto string_length = next_offset - offset;
+
+    return std::string_view{dictionary.data() + offset, string_length};
+  }
 
  protected:
   const std::shared_ptr<const pmr_vector<char>> _dictionary;

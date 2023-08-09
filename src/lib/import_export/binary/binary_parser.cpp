@@ -207,7 +207,6 @@ std::shared_ptr<DictionarySegment<T>> BinaryParser::_import_dictionary_segment(s
 template <typename T>
 std::shared_ptr<VariableStringDictionarySegment<T>> BinaryParser::_import_variable_string_length_segment(
     std::ifstream& file, ChunkOffset row_count) {
-
   // Read attribute vector compression type and use it to decompress.
   const auto compressed_vector_type_id = _read_value<CompressedVectorTypeID>(file);
   auto attribute_vector = _import_attribute_vector(file, row_count, compressed_vector_type_id);

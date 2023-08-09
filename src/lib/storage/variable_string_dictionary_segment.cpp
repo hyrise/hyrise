@@ -2,6 +2,7 @@
 #include <numeric>
 
 #include "resolve_type.hpp"
+#include "storage/variable_string_dictionary/variable_string_vector.hpp"
 
 namespace hyrise {
 
@@ -121,7 +122,8 @@ template <typename T>
 pmr_string VariableStringDictionarySegment<T>::typed_value_of_value_id(const ValueID value_id) const {
   DebugAssert(value_id < _offset_vector->size(), "ValueID out of bounds");
   access_counter[SegmentAccessCounter::AccessType::Dictionary] += 1;
-  return pmr_string{_dictionary->data() + _offset_vector->operator[](value_id)};
+
+  return pmr_string{get_string(*_offset_vector, *_dictionary, value_id)};
 }
 
 template <typename T>

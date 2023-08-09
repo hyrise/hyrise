@@ -64,7 +64,7 @@ class VariableStringDictionaryEncoder : public SegmentEncoder<VariableStringDict
     // Compute total compressed data size.
     auto total_size = uint32_t{0};
     for (const auto& value : dense_values) {
-      total_size += value.size() + 1;
+      total_size += value.size();
     }
 
     // uniform character array containing all distinct strings
@@ -77,12 +77,12 @@ class VariableStringDictionaryEncoder : public SegmentEncoder<VariableStringDict
     auto current_offset = uint32_t{0};
     auto current_value_id = ValueID{0};
 
-    // Construct klotz.
+    // Construct klotz without null bytes.
     for (const auto& value : dense_values) {
       memcpy(klotz->data() + current_offset, value.c_str(), value.size());
       string_offsets[value] = current_offset;
       string_value_ids[value] = current_value_id++;
-      current_offset += value.size() + 1;
+      current_offset += value.size();
     }
 
     // Maps ChunkOffset to ValueID.

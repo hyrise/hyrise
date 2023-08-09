@@ -16,6 +16,8 @@
 #include "storage/segment_iterate.hpp"
 #include "storage/value_segment.hpp"
 #include "storage/value_segment/value_segment_iterable.hpp"
+#include "storage/variable_string_dictionary/variable_string_vector.hpp"
+#include "storage/variable_string_dictionary/variable_string_vector_iterator.hpp"
 
 namespace hyrise {
 

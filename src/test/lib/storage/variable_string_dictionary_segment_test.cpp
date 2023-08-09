@@ -1,12 +1,11 @@
 #include <memory>
 #include <string>
-#include <utility>
 
 #include "base_test.hpp"
-
 #include "storage/chunk_encoder.hpp"
-#include "storage/segment_encoding_utils.hpp"
 #include "storage/value_segment.hpp"
+#include "storage/variable_string_dictionary/variable_string_vector.hpp"
+#include "storage/variable_string_dictionary/variable_string_vector_iterator.hpp"
 #include "storage/variable_string_dictionary_segment.hpp"
 #include "storage/vector_compression/fixed_width_integer/fixed_width_integer_vector.hpp"
 
@@ -113,8 +112,7 @@ TEST_F(StorageVariableStringDictionarySegmentTest, MemoryUsageEstimation) {
       std::dynamic_pointer_cast<VariableStringDictionarySegment<pmr_string>>(compressed_segment);
 
   static constexpr auto size_of_attribute_vector_entry = 1u;
-  // 3u for letters and 3u for null terminators
-  static constexpr auto size_of_dictionary = 6u;
+  static constexpr auto size_of_dictionary = 3u;
   static constexpr auto size_of_offset_vector = sizeof(uint32_t);
 
   EXPECT_EQ(dictionary_segment->memory_usage(MemoryUsageCalculationMode::Full),
@@ -137,12 +135,15 @@ TEST_F(StorageVariableStringDictionarySegmentTest, TestLookup) {
   const auto allocator = PolymorphicAllocator<pmr_string>{};
   // Create string data for klotz.
   // Contains zero-length string at the end, just to be annoying.
-  const auto data = std::array<char, 30>{"Hello\0World\0Alexander\0String\0"};
+  const auto data = std::array<char, 26>{"HelloWorldAlexanderString"};
   const auto klotz = std::make_shared<pmr_vector<char>>();
-  klotz->resize(data.size());
-  std::memcpy(klotz->data(), data.data(), data.size());
-  const pmr_vector<uint32_t> offsets{0, 6, 12, 22, 29};
+  // -1 because of additional \0 in data.
+  const auto klotz_size = data.size() - 1;
+  klotz->resize(klotz_size);
+  std::memcpy(klotz->data(), data.data(), klotz_size);
+  const pmr_vector<uint32_t> offsets{0, 5, 10, 19, 25};
   const pmr_vector<uint32_t> attribute_vector{0, 0, 1, 3, 2, 4, 2};
+
   const auto segment = VariableStringDictionarySegment<pmr_string>{
       klotz,
       std::shared_ptr<const BaseCompressedVector>(
@@ -158,6 +159,7 @@ TEST_F(StorageVariableStringDictionarySegmentTest, TestLookup) {
           +[](const VariableStringDictionarySegment<pmr_string>& segment, const ChunkOffset offset) {
             return segment[offset];
           }};
+
   for (const auto& accessor : accessors) {
     EXPECT_EQ(accessor(segment, ChunkOffset{0}), AllTypeVariant{"Hello"});
     EXPECT_EQ(accessor(segment, ChunkOffset{1}), AllTypeVariant{"Hello"});
