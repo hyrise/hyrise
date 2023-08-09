@@ -102,7 +102,7 @@ class LQPTranslatorTest : public BaseTest {
 
 TEST_F(LQPTranslatorTest, StoredTableNode) {
   /**
-   * Build LQP and translate to PQP
+   * Build LQP and translate to PQP.
    *
    * LQP resembles:
    *    SELECT a FROM table_int_float;
@@ -125,7 +125,7 @@ TEST_F(LQPTranslatorTest, StoredTableNodeThrowsWhenNotLeaf) {
 
 TEST_F(LQPTranslatorTest, ArithmeticExpression) {
   /**
-   * Build LQP and translate to PQP
+   * Build LQP and translate to PQP.
    *
    * LQP resembles:
    *   SELECT a + b FROM table_int_float;
@@ -161,7 +161,7 @@ TEST_F(LQPTranslatorTest, ArithmeticExpression) {
 
 TEST_F(LQPTranslatorTest, PredicateNodeSimpleBinary) {
   /**
-   * Build LQP and translate to PQP
+   * Build LQP and translate to PQP.
    *
    * LQP resembles:
    *   SELECT * FROM int_float WHERE 5 > b;
@@ -184,7 +184,7 @@ TEST_F(LQPTranslatorTest, PredicateNodeSimpleBinary) {
 
 TEST_F(LQPTranslatorTest, PredicateNodeLike) {
   /**
-   * Build LQP and translate to PQP
+   * Build LQP and translate to PQP.
    *
    * LQP resembles:
    *   SELECT * FROM int_string WHERE b LIKE 'hello%';
@@ -207,7 +207,7 @@ TEST_F(LQPTranslatorTest, PredicateNodeLike) {
 
 TEST_F(LQPTranslatorTest, PredicateNodeUnary) {
   /**
-   * Build LQP and translate to PQP
+   * Build LQP and translate to PQP.
    *
    * LQP resembles:
    *   SELECT * FROM int_float WHERE b IS NOT NULL;
@@ -230,7 +230,7 @@ TEST_F(LQPTranslatorTest, PredicateNodeUnary) {
 
 TEST_F(LQPTranslatorTest, PredicateNodeBetween) {
   /**
-   * Build LQP and translate to PQP
+   * Build LQP and translate to PQP.
    *
    * LQP resembles:
    *   SELECT * FROM int_float WHERE 5 BETWEEN a AND b;
@@ -255,7 +255,7 @@ TEST_F(LQPTranslatorTest, PredicateNodeBetween) {
 
 TEST_F(LQPTranslatorTest, SubqueryExpressionCorrelated) {
   /**
-   * Build LQP and translate to PQP
+   * Build LQP and translate to PQP.
    *
    * LQP resembles:
    *   SELECT (SELECT MIN(a + int_float5.d + int_float5.a) FROM int_float), a FROM int_float5;
@@ -303,7 +303,7 @@ TEST_F(LQPTranslatorTest, SubqueryExpressionCorrelated) {
 
 TEST_F(LQPTranslatorTest, Sort) {
   /**
-   * Build LQP and translate to PQP
+   * Build LQP and translate to PQP.
    *
    * LQP resembles:
    *   SELECT a, b FROM int_float ORDER BY a, a + b DESC, b ASC
@@ -345,7 +345,7 @@ TEST_F(LQPTranslatorTest, Sort) {
 
 TEST_F(LQPTranslatorTest, LimitLiteral) {
   /**
-   * Build LQP and translate to PQP
+   * Build LQP and translate to PQP.
    *
    * LQP resembles:
    *   SELECT * FROM int_float LIMIT 1337
@@ -369,7 +369,7 @@ TEST_F(LQPTranslatorTest, LimitLiteral) {
 
 TEST_F(LQPTranslatorTest, PredicateNodeUnaryScan) {
   /**
-   * Build LQP and translate to PQP
+   * Build LQP and translate to PQP.
    */
   auto predicate_node = PredicateNode::make(equals_(int_float_b, 42), int_float_node);
   const auto op = LQPTranslator{}.translate_node(predicate_node);
@@ -385,7 +385,7 @@ TEST_F(LQPTranslatorTest, PredicateNodeUnaryScan) {
 
 TEST_F(LQPTranslatorTest, PredicateNodeBetweenScan) {
   /**
-   * Build LQP and translate to PQP
+   * Build LQP and translate to PQP.
    */
   auto predicate_node = PredicateNode::make(between_inclusive_(int_float_a, 42, 1337), int_float_node);
   const auto op = LQPTranslator{}.translate_node(predicate_node);
@@ -454,7 +454,7 @@ TEST_F(LQPTranslatorTest, PQPReferencedLQPNodeCleanUp) {
 
 TEST_F(LQPTranslatorTest, PredicateNodeIndexScan) {
   /**
-   * Build LQP and translate to PQP
+   * Build LQP and translate to PQP.
    */
   const auto stored_table_node = StoredTableNode::make("int_float_chunked");
 
@@ -492,7 +492,7 @@ TEST_F(LQPTranslatorTest, PredicateNodeIndexScan) {
 
 TEST_F(LQPTranslatorTest, PredicateNodePrunedIndexScan) {
   /**
-   * Build LQP and translate to PQP
+   * Build LQP and translate to PQP.
    */
   const auto stored_table_node = StoredTableNode::make("int_float_chunked");
   const auto& table = Hyrise::get().storage_manager.get_table("int_float_chunked");
@@ -535,7 +535,7 @@ TEST_F(LQPTranslatorTest, PredicateNodePrunedIndexScan) {
 // All indexed chunks are pruned. The LQP translator should not instantiate an index scan and a union.
 TEST_F(LQPTranslatorTest, PredicateNodeEntirelyPrunedIndexScan) {
   /**
-   * Build LQP and translate to PQP
+   * Build LQP and translate to PQP.
    */
   const auto stored_table_node = StoredTableNode::make("int_float_chunked");
   const auto& table = Hyrise::get().storage_manager.get_table("int_float_chunked");
@@ -561,7 +561,7 @@ TEST_F(LQPTranslatorTest, PredicateNodeEntirelyPrunedIndexScan) {
 
 TEST_F(LQPTranslatorTest, PredicateNodeBinaryIndexScan) {
   /**
-   * Build LQP and translate to PQP
+   * Build LQP and translate to PQP.
    */
   const auto stored_table_node = StoredTableNode::make("int_float_chunked");
 
@@ -599,7 +599,7 @@ TEST_F(LQPTranslatorTest, PredicateNodeIndexScanFailsWhenNotApplicable) {
   }
 
   /**
-   * Build LQP and translate to PQP
+   * Build LQP and translate to PQP.
    */
   const auto stored_table_node = StoredTableNode::make("int_float_chunked");
 
@@ -621,7 +621,7 @@ TEST_F(LQPTranslatorTest, PredicateNodeIndexScanFailsWhenNotApplicable) {
 
 TEST_F(LQPTranslatorTest, ProjectionNode) {
   /**
-   * Build LQP and translate to PQP
+   * Build LQP and translate to PQP.
    */
   auto projection_node = ProjectionNode::make(expression_vector(int_float_a), int_float_node);
   const auto op = LQPTranslator{}.translate_node(projection_node);
@@ -637,7 +637,7 @@ TEST_F(LQPTranslatorTest, ProjectionNode) {
 
 TEST_F(LQPTranslatorTest, JoinNodeToJoinHash) {
   /**
-   * Build LQP and translate to PQP
+   * Build LQP and translate to PQP.
    */
   auto join_node = JoinNode::make(JoinMode::Inner, equals_(int_float2_b, int_float_b), int_float_node, int_float2_node);
   const auto op = LQPTranslator{}.translate_node(join_node);
@@ -654,7 +654,7 @@ TEST_F(LQPTranslatorTest, JoinNodeToJoinHash) {
 
 TEST_F(LQPTranslatorTest, JoinNodeToJoinSortMerge) {
   /**
-   * Build LQP and translate to PQP
+   * Build LQP and translate to PQP.
    */
   auto join_node =
       JoinNode::make(JoinMode::Inner, less_than_(int_float_b, int_float2_b), int_float_node, int_float2_node);
@@ -672,7 +672,7 @@ TEST_F(LQPTranslatorTest, JoinNodeToJoinSortMerge) {
 
 TEST_F(LQPTranslatorTest, JoinNodeToJoinNestedLoop) {
   /**
-   * Build LQP and translate to PQP
+   * Build LQP and translate to PQP.
    */
   auto join_node =
       JoinNode::make(JoinMode::Inner, less_than_(int_float_a, int_float2_b), int_float_node, int_float2_node);
@@ -691,7 +691,7 @@ TEST_F(LQPTranslatorTest, JoinNodeToJoinNestedLoop) {
 
 TEST_F(LQPTranslatorTest, AggregateNodeSimple) {
   /**
-   * Build LQP and translate to PQP
+   * Build LQP and translate to PQP.
    */
   // clang-format off
   const auto lqp =
@@ -719,7 +719,7 @@ TEST_F(LQPTranslatorTest, AggregateNodeSimple) {
 
 TEST_F(LQPTranslatorTest, JoinAndPredicates) {
   /**
-   * Build LQP and translate to PQP
+   * Build LQP and translate to PQP.
    */
   auto predicate_node_left = PredicateNode::make(equals_(int_float_a, 42), int_float_node);
   auto predicate_node_right = PredicateNode::make(greater_than_(int_float2_b, 30.0), int_float2_node);
@@ -758,7 +758,7 @@ TEST_F(LQPTranslatorTest, JoinAndPredicates) {
 
 TEST_F(LQPTranslatorTest, LimitNode) {
   /**
-   * Build LQP and translate to PQP
+   * Build LQP and translate to PQP.
    */
   const auto stored_table_node = StoredTableNode::make("table_int_float");
 

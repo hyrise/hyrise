@@ -520,7 +520,7 @@ cxxopts::Options BenchmarkRunner::get_basic_cli_options(const std::string& bench
   const auto* const default_mode = (benchmark_name == "TPC-C Benchmark" ? "Shuffled" : "Ordered");
   // Similar to the mode of the benchmark, we set a different setting for table indexes when TPC-C is run. For
   // analytical benchmarks, we do not create indexes unless the user requests them as they are usually not used by the
-  // query optimizer. In contrast, for TPC-C, we create table indexes as they improve the performance of selections on
+  // query optimizer. In contrast, we create table indexes for TPC-C as they improve the performance of selections on
   // primary key columns.
   const auto* const default_table_indexes = (benchmark_name == "TPC-C Benchmark" ? "true" : "false");
 

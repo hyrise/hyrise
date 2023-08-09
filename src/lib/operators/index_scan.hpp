@@ -15,7 +15,7 @@ class AbstractTask;
 
 /**
  * Operator that performs a predicate search using indexes.
- * Note: Operator only scans the set of chunks passed to the constructor.
+ * Note: IndexScan only scans the set of chunks passed to the constructor.
  */
 class IndexScan : public AbstractReadOnlyOperator {
  public:
