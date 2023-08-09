@@ -495,12 +495,17 @@ TEST_F(OperatorsDeleteTest, DifferentPosLists) {
   }
 }
 
-// Notice that rows are duplicates in the input reference table in debug, correctly delete rows even if they are
-// duplicated in release.
+// We want to notice if the input references rows multiple times. Though this is no problem per se, it currently leads
+// to an incorrect invalid_row_count of the affected chunk.
 TEST_F(OperatorsDeleteTest, DuplicateRows) {
+  if constexpr (!HYRISE_DEBUG) {
+    GTEST_SKIP();
+  }
+
   const auto get_table = std::make_shared<GetTable>(_table_name);
-  const auto column_a = pqp_column_(ColumnID{0}, DataType::Int, false, "a");
+  get_table->execute();
   // Create TableScan that selects only the second row.
+  const auto column_a = get_column_expression(get_table, ColumnID{0});
   const auto table_scan = std::make_shared<TableScan>(get_table, equals_(column_a, 123));
   table_scan->never_clear_output();
   // Create UnionAll to have the row twice in the resulting table.
@@ -511,24 +516,12 @@ TEST_F(OperatorsDeleteTest, DuplicateRows) {
   const auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
   delete_op->set_transaction_context(transaction_context);
 
-  execute_all({get_table, table_scan, union_all});
+  execute_all({table_scan, union_all});
   EXPECT_EQ(table_scan->get_output()->row_count(), 1);
   EXPECT_EQ(union_all->get_output()->row_count(), 2);
 
-  if constexpr (HYRISE_DEBUG) {
-    EXPECT_THROW(delete_op->execute(), std::logic_error);
-    transaction_context->rollback(RollbackReason::Conflict);
-    return;
-  }
-
-  delete_op->execute();
-  transaction_context->commit();
-  const auto expected_end_cid = transaction_context->commit_id();
-
-  const auto& mvcc_data = _table->get_chunk(ChunkID{0})->mvcc_data();
-  EXPECT_EQ(mvcc_data->get_end_cid(ChunkOffset{0}), MvccData::MAX_COMMIT_ID);
-  EXPECT_EQ(mvcc_data->get_end_cid(ChunkOffset{1}), expected_end_cid);
-  EXPECT_EQ(mvcc_data->get_end_cid(ChunkOffset{2}), MvccData::MAX_COMMIT_ID);
+  EXPECT_THROW(delete_op->execute(), std::logic_error);
+  transaction_context->rollback(RollbackReason::Conflict);
 }
 
 }  // namespace hyrise

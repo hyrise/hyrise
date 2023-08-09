@@ -78,44 +78,43 @@ std::shared_ptr<const Table> Delete::_on_execute(std::shared_ptr<TransactionCont
       for (auto column_id = ColumnID{0}; column_id < _referencing_table->column_count(); ++column_id) {
         const auto segment = chunk->get_segment(column_id);
         const auto segment_pos_list = std::dynamic_pointer_cast<const ReferenceSegment>(segment)->pos_list();
-        // We could additionally check for `*segment_pos_list == *pos_list`, but for now, comparing pointers is enough
+        // We could additionally check for `*segment_pos_list == *pos_list`, but for now, comparing pointers is enough.
         Assert(segment_pos_list == pos_list,
-               "All segments of a Chunk in _referencing_table must have the same PosList");
+               "All segments of a Chunk in _referencing_table must have the same PosList.");
       }
     }
 
     for (const auto row_id : *pos_list) {
       const auto referenced_chunk = first_segment->referenced_table()->get_chunk(row_id.chunk_id);
-      Assert(referenced_chunk, "Referenced chunks are not allowed to be null pointers");
+      Assert(referenced_chunk, "Referenced chunks are not allowed to be null pointers.");
 
-      // Scope for the lock on the MVCC data
-      {
-        auto mvcc_data = referenced_chunk->mvcc_data();
-        DebugAssert(mvcc_data, "Delete cannot operate on a table without MVCC data");
+      const auto& mvcc_data = referenced_chunk->mvcc_data();
+      DebugAssert(mvcc_data, "Delete cannot operate on a table without MVCC data.");
 
-        DebugAssert(
-            Validate::is_row_visible(
-                context->transaction_id(), context->snapshot_commit_id(), mvcc_data->get_tid(row_id.chunk_offset),
-                mvcc_data->get_begin_cid(row_id.chunk_offset), mvcc_data->get_end_cid(row_id.chunk_offset)),
-            "Trying to delete a row that is not visible to the current transaction. Has the input been validated?");
+      // We validate every row again, which ensures we notice if we try to delete the same row twice within a single
+      // statement. This could happen if the input table references the same row multiple times, e.g., due to a UnionAll
+      // operator. Though marking a row as deleted multiple times from the same statement/transaction is no problem,
+      // multiple deletions currently lead to an incorrect invalid_row_count of the chunk containing the affected row.
+      DebugAssert(
+          Validate::is_row_visible(
+              context->transaction_id(), context->snapshot_commit_id(), mvcc_data->get_tid(row_id.chunk_offset),
+              mvcc_data->get_begin_cid(row_id.chunk_offset), mvcc_data->get_end_cid(row_id.chunk_offset)),
+          "Trying to delete a row that is not visible to the current transaction. Has the input been validated?");
 
-        // Actual row "lock" for delete happens here, making sure that no other transaction can delete this row
-        const auto expected = TransactionID{0};
-        const auto success = mvcc_data->compare_exchange_tid(row_id.chunk_offset, expected, _transaction_id);
+      // Actual row "lock" for delete happens here, making sure that no other transaction can delete this row.
+      const auto expected = TransactionID{0};
+      const auto success = mvcc_data->compare_exchange_tid(row_id.chunk_offset, expected, _transaction_id);
 
-        if (!success) {
-          // If the row has a set TID, it might be a row that our TX inserted
-          // No need to compare-and-swap here, because we can only run into conflicts when two transactions try to
-          // change this row from the initial tid
-
-          if (mvcc_data->get_tid(row_id.chunk_offset) == _transaction_id) {
-            // Make sure that even we don't see it anymore
-            mvcc_data->set_tid(row_id.chunk_offset, INVALID_TRANSACTION_ID);
-          } else {
-            // the row is already locked by someone else and the transaction needs to be rolled back
-            _mark_as_failed();
-            return nullptr;
-          }
+      if (!success) {
+        // If the row has a set TID, it might be a row that our transaction inserted. No need to compare-and-swap here,
+        // because we can only run into conflicts when two transactions try to change this row from the initial TID.
+        if (mvcc_data->get_tid(row_id.chunk_offset) == _transaction_id) {
+          // Make sure that even we do not see the row anymore.
+          mvcc_data->set_tid(row_id.chunk_offset, INVALID_TRANSACTION_ID);
+        } else {
+          // The row is already locked by someone else and the transaction needs to be rolled back.
+          _mark_as_failed();
+          return nullptr;
         }
       }
     }
