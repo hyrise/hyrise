@@ -44,8 +44,8 @@ class VariableStringVectorIterator : public boost::iterator_facade<VariableStrin
   }
 
   std::shared_ptr<const pmr_vector<char>> _dictionary;
-  ValueID _current_value_id;
   std::shared_ptr<const pmr_vector<uint32_t>> _offset_vector;
+  ValueID _current_value_id;
 };
 
 }  // namespace hyrise
