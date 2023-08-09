@@ -72,9 +72,11 @@ TEST_F(PruningUtilsTest, ColumnIDBeforePruning) {
 }
 
 TEST_F(PruningUtilsTest, TooManyChunksPruned) {
-  if constexpr (HYRISE_DEBUG) {
-    EXPECT_THROW(pruned_chunk_id_mapping(2, {ChunkID{0}, ChunkID{1}, ChunkID{2}}), std::logic_error);
+  if constexpr (!HYRISE_DEBUG) {
+    GTEST_SKIP();
   }
+
+  EXPECT_THROW(pruned_chunk_id_mapping(2, {ChunkID{0}, ChunkID{1}, ChunkID{2}}), std::logic_error);
 }
 
 }  // namespace hyrise
