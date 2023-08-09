@@ -34,8 +34,8 @@ DistanceMatrix get_distance_matrix(int num_nodes) {
 }
 
 NodeMatrix sort_relative_node_ids(DistanceMatrix distance_matrix) {
-  int matrix_size = distance_matrix.size();
-  auto node_matrix = NodeMatrix(static_cast<size_t>(matrix_size), std::vector<NodeID>(matrix_size, NodeID{0}));
+  const auto matrix_size = distance_matrix.size();
+  auto node_matrix = NodeMatrix(matrix_size, std::vector<NodeID>(matrix_size, NodeID{0}));
 
   for (auto node_id = int{0}; node_id < matrix_size; ++node_id) {
     std::iota(node_matrix[node_id].begin(), node_matrix[node_id].end(), 0);
@@ -48,9 +48,9 @@ NodeMatrix sort_relative_node_ids(DistanceMatrix distance_matrix) {
 void merge_node_placements(std::vector<NodeID>& node_placements, std::vector<std::shared_ptr<AbstractTask>>& jobs,
                            std::vector<std::optional<NodeID>>& non_scheduled_placements) {
   DebugAssert(node_placements.size() == 0, "node_placements should be empty.");
-  auto total_size = non_scheduled_placements.size();
+  const auto total_size = non_scheduled_placements.size();
   node_placements.reserve(total_size);
-  uint32_t task_index = 0;
+  auto task_index = uint32_t{0};
   for (auto& job : jobs) {
     while (non_scheduled_placements[task_index].has_value()) {
       node_placements.emplace_back(non_scheduled_placements[task_index].value());

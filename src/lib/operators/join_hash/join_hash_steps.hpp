@@ -475,7 +475,7 @@ std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<
   */
   std::vector<std::optional<PosHashTable<HashedType>>> hash_tables;
 
-  auto radix_container_size = radix_container.size();
+  const auto radix_container_size = radix_container.size();
   if (radix_bits == 0) {
     auto total_size = size_t{0};
     for (size_t partition_idx = 0; partition_idx < radix_container_size; ++partition_idx) {
@@ -692,8 +692,8 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
            const JoinMode mode, const Table& build_table, const Table& probe_table,
            const std::vector<OperatorJoinPredicate>& secondary_join_predicates,
            const std::vector<NodeID>& node_placements) {
-  auto num_probe_radix_partitions = probe_radix_container.size();
-  auto hash_table_radix_container_matching = num_probe_radix_partitions == node_placements.size();
+  const auto num_probe_radix_partitions = probe_radix_container.size();
+  const auto hash_table_radix_container_matching = num_probe_radix_partitions == node_placements.size();
 
   std::vector<std::shared_ptr<AbstractTask>> jobs;
   jobs.reserve(num_probe_radix_partitions);
@@ -860,7 +860,7 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_containe
                      const std::vector<NodeID>& node_placements) {
   const auto probe_radix_container_count = probe_radix_container.size();
 
-  auto hash_table_radix_container_matching = probe_radix_container_count == node_placements.size();
+  const auto hash_table_radix_container_matching = probe_radix_container_count == node_placements.size();
   auto jobs = std::vector<std::shared_ptr<AbstractTask>>();
   jobs.reserve(probe_radix_container_count);
 

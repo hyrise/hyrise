@@ -252,13 +252,13 @@ void AbstractTableGenerator::generate_and_store() {
     std::cout << "- Relocate data onto " << num_nodes << " nodes (round robin, chunk granularity)" << std::endl;
     auto num_relocated_chunks = ChunkID{0};
     for (auto& [table_name, table_info] : table_info_by_name) {
-      auto& table = table_info.table;
+      const auto& table = table_info.table;
       auto timer = Timer{};
-      auto chunk_count = table->chunk_count();
+      const auto chunk_count = table->chunk_count();
       auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
       jobs.reserve(chunk_count);
       for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id, ++num_relocated_chunks) {
-        auto target_node_id = NodeID{num_relocated_chunks % num_nodes};
+        const auto target_node_id = NodeID{num_relocated_chunks % num_nodes};
         auto migrate_job = [&, chunk_id, target_node_id]() {
           const auto& chunk = table->get_chunk(chunk_id);
           chunk->migrate(target_memory_resources.at(target_node_id), target_node_id);
