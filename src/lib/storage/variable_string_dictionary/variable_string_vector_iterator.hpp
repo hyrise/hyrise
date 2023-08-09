@@ -8,8 +8,9 @@ class VariableStringVectorIterator : public boost::iterator_facade<VariableStrin
                                                                    std::random_access_iterator_tag, DereferenceValue> {
  public:
   explicit VariableStringVectorIterator(const std::shared_ptr<const pmr_vector<char>>& dictionary,
-                                        uint32_t current_offset)
-      : _dictionary{dictionary}, _current_offset{current_offset} {}
+                                        const std::shared_ptr<const pmr_vector<uint32_t>>& offset_vector,
+                                        ValueID current_value_id)
+      : _dictionary{dictionary}, _offset_vector{offset_vector}, _current_value_id{current_value_id} {}
 
  protected:
   friend class boost::iterator_core_access;
@@ -17,63 +18,40 @@ class VariableStringVectorIterator : public boost::iterator_facade<VariableStrin
   // We have a couple of NOLINTs here becaues the facade expects these method names:
 
   bool equal(VariableStringVectorIterator const& other) const {  // NOLINT
-    return _dictionary == other._dictionary && _current_offset == other._current_offset;
+    return _dictionary == other._dictionary && _current_value_id == other._current_value_id;
   }
 
   size_t distance_to(VariableStringVectorIterator const& other) const {  // NOLINT
-    auto left = _current_offset;
-    auto right = other._current_offset;
-    if (right < left) {
-      return -other.distance_to(*this);
-    }
-
-    auto strings_in_between = size_t{0};
-    for (auto offset = left; offset < right; ++offset) {
-      if (_dictionary->operator[](offset) == '\0') {
-        ++strings_in_between;
-      }
-    }
-    return strings_in_between;
+    return static_cast<size_t>(other._current_value_id) - static_cast<size_t>(_current_value_id);
   }
 
   void advance(size_t n) {  // NOLINT
-    for (auto count = size_t{0}; count < n; ++count) {
-      increment();
-    }
+    _current_value_id += n;
   }
 
   void increment() {  // NOLINT
-    auto offset = _current_offset;
-    // We assume that we do not overrun the end of the vector.
-    for (;; ++offset) {
-      if (_dictionary->operator[](offset) == '\0') {
-        break;
-      }
-    }
-    // +1 due to NULL byte.
-    _current_offset = offset + 1;
+    ++_current_value_id;
   }
 
   void decrement() {  // NOLINT
-    // -2 because we are pointing to the first character of a string.
-    // The next character in front will be a null byte, so we have to skip it.
-    auto offset = _current_offset - 2;
-    // We assume that we do not overrun the end of the vector.
-    for (;; --offset) {
-      if (_dictionary->operator[](offset) == '\0') {
-        break;
-      }
-    }
-    // +1 due to NULL byte.
-    _current_offset = offset + 1;
+    --_current_value_id;
   }
 
   const std::string_view dereference() const {  // NOLINT
-    return std::string_view{_dictionary->data() + _current_offset, strlen(_dictionary->data() + _current_offset)};
+    const auto offset = _offset_vector->operator[](_current_value_id);
+    auto next_offset = 0;
+    if (_current_value_id >= _offset_vector->size() - 1) {
+      next_offset = _dictionary->size();
+    } else {
+      next_offset = _offset_vector->operator[](_current_value_id + 1);
+    }
+    const auto string_length = next_offset - offset - 1;
+    return std::string_view{_dictionary->data() + offset, string_length};
   }
 
   std::shared_ptr<const pmr_vector<char>> _dictionary;
-  uint32_t _current_offset;
+  ValueID _current_value_id;
+  std::shared_ptr<const pmr_vector<uint32_t>> _offset_vector;
 };
 
 }  // namespace hyrise

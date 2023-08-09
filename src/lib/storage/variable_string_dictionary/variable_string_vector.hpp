@@ -7,7 +7,8 @@ namespace hyrise {
 
 class VariableStringVector {
  public:
-  explicit VariableStringVector(const std::shared_ptr<const pmr_vector<char>>& dictionary, size_t size);
+  explicit VariableStringVector(const std::shared_ptr<const pmr_vector<char>>& dictionary,
+                                const std::shared_ptr<const pmr_vector<uint32_t>>& offset_vector);
 
   VariableStringVectorIterator begin() const noexcept;
   VariableStringVectorIterator end() const noexcept;
@@ -24,7 +25,7 @@ class VariableStringVector {
 
  protected:
   std::shared_ptr<const pmr_vector<char>> _dictionary;
-  size_t _size;
+  std::shared_ptr<const pmr_vector<uint32_t>> _offset_vector;
 };
 
 }  // namespace hyrise
