@@ -11,8 +11,8 @@ namespace hyrise {
  * when translating LQPs to PQPs. We cannot do this while copying/translating the LQP/PQP. Though we keep a mapping from
  * source to target item (LQP node to LQP node for LQP copy, operator to operator for PQP copy, LQP node to operator for
  * translation), we cannot use it for prunable subquery predicates.
- * Our copy/translation happens recursively from root to leave (StoredTableNode/GetTable). Thus, the mapping does not
- * yet contain the copied/translated predicate that we need in the leaves. As a consequence, we assign prunable subquery
+ * Our copy/translation happens recursively from root to leaf (StoredTableNode/GetTable). Thus, the mapping does not yet
+ * contain the copied/translated predicate that we need in the leaves. As a consequence, we assign prunable subquery
  * predicates after we copied/translated the entire query plan.
  */
 template <typename Mapping>
