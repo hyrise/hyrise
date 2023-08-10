@@ -1,5 +1,7 @@
 #include "variable_string_dictionary_segment.hpp"
 #include <numeric>
+// TODO(anyone): This requires gcc 10 or newer
+#include <ranges>
 
 #include "resolve_type.hpp"
 #include "storage/variable_string_dictionary/variable_string_vector.hpp"
@@ -84,15 +86,15 @@ ValueID VariableStringDictionarySegment<T>::lower_bound(const AllTypeVariant& va
   //      static_cast<uint64_t>(std::ceil(std::log2(_offset_vector->size())));
   const auto typed_value = boost::get<pmr_string>(value);
 
-  auto args = std::vector<ValueID>(_offset_vector->size());
-  std::iota(args.begin(), args.end(), 0);
+  const auto value_ids = std::ranges::iota_view{size_t{0}, _offset_vector->size()};
+
   auto it = std::lower_bound(
-      args.cbegin(), args.cend(), typed_value,
-      [this](const ValueID valueId, const auto to_find) { return typed_value_of_value_id(valueId) < to_find; });
-  if (it == args.cend()) {
+      value_ids.begin(), value_ids.end(), typed_value,
+      [this](const auto valueId, const auto to_find) { return typed_value_of_value_id(ValueID(valueId)) < to_find; });
+  if (it == value_ids.end()) {
     return INVALID_VALUE_ID;
   }
-  return ValueID{static_cast<ValueID::base_type>(std::distance(args.cbegin(), it))};
+  return ValueID{static_cast<ValueID::base_type>(std::distance(value_ids.begin(), it))};
 }
 
 template <typename T>
@@ -102,15 +104,15 @@ ValueID VariableStringDictionarySegment<T>::upper_bound(const AllTypeVariant& va
   //    static_cast<uint64_t>(std::ceil(std::log2(_offset_vector->size())));
   const auto typed_value = boost::get<pmr_string>(value);
 
-  auto args = std::vector<ValueID>(_offset_vector->size());
-  std::iota(args.begin(), args.end(), 0);
+  const auto value_ids = std::ranges::iota_view{size_t{0}, _offset_vector->size()};
+
   auto it = std::upper_bound(
-      args.cbegin(), args.cend(), typed_value,
-      [this](const auto to_find, const ValueID valueID) { return to_find < typed_value_of_value_id(valueID); });
-  if (it == args.cend()) {
+      value_ids.begin(), value_ids.end(), typed_value,
+      [this](const auto to_find, const auto valueID) { return to_find < typed_value_of_value_id(ValueID(valueID)); });
+  if (it == value_ids.end()) {
     return INVALID_VALUE_ID;
   }
-  return ValueID{static_cast<ValueID::base_type>(std::distance(args.cbegin(), it))};
+  return ValueID{static_cast<ValueID::base_type>(std::distance(value_ids.begin(), it))};
 }
 
 template <typename T>
