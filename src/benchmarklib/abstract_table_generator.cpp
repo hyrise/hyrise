@@ -393,7 +393,7 @@ void AbstractTableGenerator::_create_table_indexes(
       Assert(index_column_names.size() == 1, "Multi-column indexes are currently not supported.");
 
       for (const auto& column_name : index_column_names) {
-        std::cout << "-  Creating secondary index on '" << table_name << "." << column_name << "'" << std::flush;
+        std::cout << "-  Creating index on '" << table_name << "." << column_name << "'" << std::flush;
 
         auto per_table_index_timer = Timer{};
         table->create_partial_hash_index(table->column_id_by_name(column_name), chunk_ids);
