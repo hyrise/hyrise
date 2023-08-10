@@ -30,6 +30,9 @@ class TaskQueue;
  * TaskQueues) to avoid workers from pulling tasks that cannot (yet) be processed. Instead, succeeding tasks are
  * executed as soon as the preceding task(s) have been processed (workers try to process all successors before pulling
  * new tasks from the TaskQueues).
+ * Considering the exemplary query TPC-H 6. Here, only a single GetTable operator and none of the other operators would
+ * be scheduled. After an operator has been processed, the operators consuming its output are directly executed. For
+ * more queries operators with multiple GetTable operators, we would schedule multiple operators concurrently.
  *
  *
  * TASKS
