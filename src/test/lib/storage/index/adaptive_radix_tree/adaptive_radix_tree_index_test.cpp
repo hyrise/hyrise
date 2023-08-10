@@ -220,7 +220,8 @@ TEST_F(AdaptiveRadixTreeIndexTest, VectorOfInts) {
 }
 
 TEST_F(AdaptiveRadixTreeIndexTest, SimpleTest) {
-  const auto values = std::vector<std::optional<int32_t>>{0, 0, 0, 0, 0, 17, 17, 17, 99, std::numeric_limits<int32_t>::max()};
+  const auto values =
+      std::vector<std::optional<int32_t>>{0, 0, 0, 0, 0, 17, 17, 17, 99, std::numeric_limits<int32_t>::max()};
 
   auto segment = create_dict_segment_by_type<int32_t>(DataType::Int, values);
   auto index = std::make_shared<AdaptiveRadixTreeIndex>(std::vector<std::shared_ptr<const AbstractSegment>>({segment}));

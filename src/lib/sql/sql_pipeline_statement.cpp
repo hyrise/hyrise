@@ -41,7 +41,8 @@ SQLPipelineStatement::SQLPipelineStatement(const std::string& sql, std::shared_p
       _metrics(std::make_shared<SQLPipelineStatementMetrics>()) {
   Assert(!_parsed_sql_statement || _parsed_sql_statement->size() == 1,
          "SQLPipelineStatement must hold exactly one SQL statement");
-  DebugAssert(!_sql_string.empty(), "An SQLPipelineStatement should always contain a SQL statement string for caching");
+  DebugAssert(!_sql_string.empty(),
+              "An SQLPipelineStatement should always contain a SQL statement string for caching.");
 }
 
 void SQLPipelineStatement::set_transaction_context(const std::shared_ptr<TransactionContext>& transaction_context) {
@@ -223,7 +224,8 @@ const std::vector<std::shared_ptr<AbstractTask>>& SQLPipelineStatement::get_task
 
 std::vector<std::shared_ptr<AbstractTask>> SQLPipelineStatement::_get_transaction_tasks() {
   const auto& sql_statement = get_parsed_sql_statement();
-  const auto& transaction_statement = static_cast<const hsql::TransactionStatement&>(*sql_statement->getStatements().front());
+  const auto& transaction_statement =
+      static_cast<const hsql::TransactionStatement&>(*sql_statement->getStatements().front());
 
   switch (transaction_statement.command) {
     case hsql::kBeginTransaction:
