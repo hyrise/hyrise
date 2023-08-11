@@ -2,6 +2,7 @@
 
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_utils.hpp"
+#include "expression/list_expression.hpp"
 #include "expression/lqp_subquery_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/join_node.hpp"
@@ -18,13 +19,26 @@ float expression_cost_multiplier(const std::shared_ptr<AbstractExpression>& expr
 
   // Number of different columns accessed to factor in expression complexity. Also add a factor for correlated
   // subqueries since we have to evaluate the subquery for each tuple again. In the past, we added to the factor for
-  // each expression in the predicate. This led to too pressimistic cost estimations for PredicatesNodes compared to
+  // each expression in the predicate. This led to too pressimistic cost estimations for PredicateNodes compared to
   // (semi-)joins.
   visit_expression(expression, [&](const auto& sub_expression) {
-    if ((sub_expression->type == ExpressionType::LQPColumn) ||
+    if (sub_expression->type == ExpressionType::LQPColumn ||
         (sub_expression->type == ExpressionType::LQPSubquery &&
          static_cast<LQPSubqueryExpression&>(*sub_expression).is_correlated())) {
       multiplier += 1.0f;
+    } else if (sub_expression->type == ExpressionType::List) {
+      // ListExpressions can have many elements, all of which should be values or simple operations. Thus, we do not
+      // visit all of them separately as they cannot increase the multiplier.
+      if constexpr (HYRISE_DEBUG) {
+        for (const auto& list_element : static_cast<const ListExpression&>(*sub_expression).elements()) {
+          const auto element_is_column_like = list_element->type == ExpressionType::LQPColumn ||
+                                              (sub_expression->type == ExpressionType::LQPSubquery &&
+                                               static_cast<LQPSubqueryExpression&>(*sub_expression).is_correlated());
+          Assert(!element_is_column_like, "Did not expect column-like expression in ListExpression.");
+        }
+      }
+
+      return ExpressionVisitation::DoNotVisitArguments;
     }
 
     return ExpressionVisitation::VisitArguments;
