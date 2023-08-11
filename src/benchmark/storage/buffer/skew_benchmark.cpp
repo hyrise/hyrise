@@ -13,7 +13,7 @@ class SkewFixture : public benchmark::Fixture {
  public:
   constexpr static auto PAGE_SIZE_TYPE = MIN_PAGE_SIZE_TYPE;
 
-  constexpr static auto NUM_OPERATIONS = 100000000;
+  constexpr static auto NUM_OPERATIONS = 10 * 1000 * 1000;
 
   YCSBTable table;
   YCSBOperations operations;
@@ -31,7 +31,7 @@ class SkewFixture : public benchmark::Fixture {
       Hyrise::get().buffer_manager = BufferManager(config);
 
       auto database_size = 2UL * GB;
-      auto skew = (double)state.range(0) / double(1000);
+      auto skew = (double)state.range(0) / double(10000);
       table = generate_ycsb_table(&buffer_manager, database_size);
       operations = generate_ycsb_operations<YCSBWorkload::ReadMostly, NUM_OPERATIONS>(table.size(), skew);
       operations_per_thread = operations.size() / state.threads();
@@ -65,14 +65,16 @@ BENCHMARK_DEFINE_F(SkewFixture, BM_Skew)(benchmark::State& state) {
 BENCHMARK_REGISTER_F(SkewFixture, BM_Skew)
     ->Threads(48)
     ->Iterations(1)
-    ->Arg(1)
+    ->UseRealTime()
     ->Arg(100)
-    ->Arg(200)
-    ->Arg(500)
-    ->Arg(700)
-    ->Arg(800)
-    ->Arg(900)
-    ->Arg(990)
-    ->Arg(999)
-    ->Name("BM_skew");
+    ->Arg(1000)
+    ->Arg(2000)
+    ->Arg(5000)
+    ->Arg(7000)
+    ->Arg(8000)
+    ->Arg(9000)
+    ->Arg(9900)
+    ->Arg(9990)
+    ->Arg(9999)
+    ->Name("BM_Skew");
 }  // namespace hyrise

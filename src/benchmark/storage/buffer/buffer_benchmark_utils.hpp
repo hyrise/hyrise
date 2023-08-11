@@ -271,4 +271,47 @@ inline uint64_t execute_ycsb_action(const YCSBTable& table, BufferManager& buffe
   }
 }
 
+template <typename Fixture>
+inline void run_ycsb(Fixture& fixture, benchmark::State& state) {
+  micro_benchmark_clear_cache();
+
+  auto bytes_processed = uint64_t{0};
+
+  hdr_histogram* local_latency_histogram;
+  init_histogram(&local_latency_histogram);
+
+  for (auto _ : state) {
+    const auto start = state.thread_index() * fixture.operations_per_thread;
+    const auto end = start + fixture.operations_per_thread;
+    for (auto i = start; i < end; ++i) {
+      const auto op = fixture.operations[i];
+      const auto timer_start = std::chrono::high_resolution_clock::now();
+      bytes_processed += execute_ycsb_action(fixture.table, fixture.buffer_manager, op);
+      const auto timer_end = std::chrono::high_resolution_clock::now();
+      const auto latency = std::chrono::duration_cast<std::chrono::nanoseconds>(timer_end - timer_start).count();
+      hdr_record_value(local_latency_histogram, latency);
+    }
+    {
+      std::lock_guard<std::mutex> lock{fixture.latency_histogram_mutex};
+      hdr_add(fixture.latency_histogram, local_latency_histogram);
+      hdr_close(local_latency_histogram);
+    }
+    benchmark::ClobberMemory();
+  }
+  state.SetItemsProcessed(fixture.operations_per_thread);
+  state.SetBytesProcessed(bytes_processed);
+
+  if (state.thread_index() == 0) {
+    state.counters["cache_hit_rate"] = fixture.buffer_manager.metrics()->hit_rate();
+    state.counters["latency_mean"] = hdr_mean(fixture.latency_histogram);
+    state.counters["latency_stddev"] = hdr_stddev(fixture.latency_histogram);
+    state.counters["latency_median"] = hdr_value_at_percentile(fixture.latency_histogram, 50.0);
+    state.counters["latency_min"] = hdr_min(fixture.latency_histogram);
+    state.counters["latency_max"] = hdr_max(fixture.latency_histogram);
+    state.counters["latency_95percentile"] = hdr_value_at_percentile(fixture.latency_histogram, 95.0);
+    state.counters["bytes_written_to_ssd"] = fixture.buffer_manager.metrics()->total_bytes_copied_to_ssd.load();
+    state.counters["bytes_read_from_ssd"] = fixture.buffer_manager.metrics()->total_bytes_copied_from_ssd.load();
+  }
+}
+
 }  // namespace hyrise

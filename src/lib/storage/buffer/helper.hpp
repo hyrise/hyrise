@@ -77,7 +77,6 @@ struct PageID {
 };
 
 inline std::ostream& operator<<(std::ostream& os, const PageID& page_id) {
-  // TODO: This is wrong?
   os << "PageID(valid=" << page_id.valid() << ", size_type=" << magic_enum::enum_name(page_id.size_type())
      << ", index=" << page_id.index << ")";
   return os;
@@ -111,7 +110,7 @@ struct EvictionItem {
 using EvictionQueue = tbb::concurrent_queue<EvictionItem>;
 
 // Enable or or disable mprotect calls for debugging purposes
-constexpr bool ENABLE_MPROTECT = false;
+constexpr bool ENABLE_MPROTECT = true;
 
 constexpr size_t MAX_EVICTION_QUEUE_PURGES = 1024;
 
