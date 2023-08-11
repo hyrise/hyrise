@@ -99,7 +99,7 @@ void reorder_predicates(const std::vector<std::shared_ptr<AbstractLQPNode>>& pre
     outputs[output_idx]->set_input(input_sides[output_idx], nodes_and_costs.front().first);
   }
 
-  // All predicates are placed as outputs (i.e., "after") the next predicate in the vector.
+  // All predicates are placed as output of (i.e., "after") the next predicate in the vector.
   const auto predicate_count = nodes_and_costs.size() - 1;
   for (auto predicate_index = size_t{0}; predicate_index < predicate_count; ++predicate_index) {
     nodes_and_costs[predicate_index].first->set_left_input(nodes_and_costs[predicate_index + 1].first);
@@ -116,6 +116,7 @@ void reorder_predicates_recursively(const std::shared_ptr<AbstractLQPNode>& node
   if (!is_predicate_style_node(node)) {
     reorder_predicates_recursively(node->left_input(), cost_estimator, visited_nodes);
     reorder_predicates_recursively(node->right_input(), cost_estimator, visited_nodes);
+    visited_nodes.emplace(node);
     return;
   }
 
@@ -134,9 +135,14 @@ void reorder_predicates_recursively(const std::shared_ptr<AbstractLQPNode>& node
     current_node = current_node->left_input();
   }
 
-  // Recursively continue reordering for the input of the predicate chain.
+  // Recursively reorder predicates below the current predicate chain. Doing so, subplans do not change anymore and the
+  // CardinalityEstimator can cache their statistics. We used a top-down approach for predicate reordering in the past,
+  // but repeated calls to the CardinalityEstimator without caching turned out to be a significant performance
+  // bottleneck for short-running queries.
+  const auto& deepest_predicate = predicate_nodes.back();
+  reorder_predicates_recursively(deepest_predicate->left_input(), cost_estimator, visited_nodes);
+  reorder_predicates_recursively(deepest_predicate->right_input(), cost_estimator, visited_nodes);
   visited_nodes.insert(predicate_nodes.cbegin(), predicate_nodes.cend());
-  reorder_predicates_recursively(predicate_nodes.back()->left_input(), cost_estimator, visited_nodes);
 
   // A chain of predicates was found. Sort PredicateNodes in descending order with regards to the expected cost.
   if (predicate_nodes.size() > 1) {
