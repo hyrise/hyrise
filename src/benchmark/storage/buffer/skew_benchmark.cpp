@@ -31,7 +31,7 @@ class SkewFixture : public benchmark::Fixture {
       Hyrise::get().buffer_manager = BufferManager(config);
 
       auto database_size = 2UL * GB;
-      auto skew = (double)state.range(0) / double(10000);
+      auto skew = (double)state.range(0) / double(100);
       table = generate_ycsb_table(&buffer_manager, database_size);
       operations = generate_ycsb_operations<YCSBWorkload::ReadMostly, NUM_OPERATIONS>(table.size(), skew);
       operations_per_thread = operations.size() / state.threads();
@@ -63,18 +63,20 @@ BENCHMARK_DEFINE_F(SkewFixture, BM_Skew)(benchmark::State& state) {
 
 // Args are divided by 1000 to be passed to zipf generator
 BENCHMARK_REGISTER_F(SkewFixture, BM_Skew)
+    ->Threads(2)
     ->Threads(48)
     ->Iterations(1)
     ->UseRealTime()
+    ->Arg(1)
+    ->Arg(20)
+    ->Arg(40)
+    ->Arg(60)
+    ->Arg(80)
     ->Arg(100)
-    ->Arg(1000)
-    ->Arg(2000)
-    ->Arg(5000)
-    ->Arg(7000)
-    ->Arg(8000)
-    ->Arg(9000)
-    ->Arg(9900)
-    ->Arg(9990)
-    ->Arg(9999)
-    ->Name("BM_Skew");
+    ->Arg(120)
+    ->Arg(140)
+    ->Arg(160)
+    ->Arg(180)
+    ->Arg(200)
+    ->Name("BM_skew");
 }  // namespace hyrise

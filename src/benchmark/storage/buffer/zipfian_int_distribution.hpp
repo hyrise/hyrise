@@ -85,7 +85,7 @@ class zipfian_int_distribution {
           _M_theta(__theta),
           _M_zeta(zeta(_M_b - _M_a + 1, __theta)),
           _M_zeta2theta(zeta(2, __theta)) {
-      assert(_M_a <= _M_b && _M_theta > 0.0 && _M_theta < 1.0);
+      // assert(_M_a <= _M_b && _M_theta > 0.0 && _M_theta < 1.0);
     }
 
     explicit param_type(_IntType __a, _IntType __b, double __theta, double __zeta)

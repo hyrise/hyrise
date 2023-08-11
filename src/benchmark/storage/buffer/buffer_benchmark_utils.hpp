@@ -212,13 +212,13 @@ inline YCSBOperations generate_ycsb_operations(const size_t num_keys, const floa
   YCSBOperations ops;
   static thread_local std::mt19937 generator{std::random_device{}()};
   std::uniform_int_distribution<int> op_distribution(0, 100);
-  zipfian_int_distribution<YCSBKey> key_distribution{0, static_cast<YCSBKey>(num_keys - 1), zipf_skew};
+  zipfian_int_distribution<size_t> key_distribution{0, num_keys - 1, zipf_skew};
   std::vector<size_t> shuffled_keys(num_keys, 0);
   std::iota(shuffled_keys.begin(), shuffled_keys.end(), 0);
   auto rng = std::default_random_engine{};
   std::shuffle(std::begin(shuffled_keys), std::end(shuffled_keys), rng);
   for (auto i = 0; i < NumOperations; i++) {
-    auto key = shuffled_keys[key_distribution(generator)];
+    auto key = YCSBKey{shuffled_keys[key_distribution(generator)]};
     if constexpr (workload == YCSBWorkload::UpdateHeavy) {
       auto op =
           op_distribution(generator) < static_cast<int>(50) ? YSCBOperationType::Lookup : YSCBOperationType::Update;
