@@ -133,11 +133,6 @@ void AbstractLQPNode::set_right_input(const std::shared_ptr<AbstractLQPNode>& ri
 }
 
 void AbstractLQPNode::set_input(LQPInputSide side, const std::shared_ptr<AbstractLQPNode>& input) {
-  DebugAssert(side == LQPInputSide::Left || input == nullptr || type == LQPNodeType::Join ||
-                  type == LQPNodeType::Union || type == LQPNodeType::Update || type == LQPNodeType::Intersect ||
-                  type == LQPNodeType::Except || type == LQPNodeType::ChangeMetaTable || type == LQPNodeType::Mock,
-              "This node type does not accept a right input");
-
   // We need a reference to _inputs[input_idx], so not calling this->input(side)
   auto& current_input = _inputs[static_cast<int>(side)];
 

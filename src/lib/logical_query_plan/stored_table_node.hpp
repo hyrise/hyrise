@@ -4,6 +4,7 @@
 #include "expression/abstract_expression.hpp"
 #include "expression/lqp_column_expression.hpp"
 #include "storage/index/chunk_index_statistics.hpp"
+#include "storage/index/table_index_statistics.hpp"
 
 namespace hyrise {
 
@@ -35,6 +36,8 @@ class StoredTableNode : public EnableMakeForLQPNode<StoredTableNode>, public Abs
   /** @} */
 
   std::vector<ChunkIndexStatistics> chunk_indexes_statistics() const;
+
+  std::vector<TableIndexStatistics> table_indexes_statistics() const;
 
   std::string description(const DescriptionMode mode = DescriptionMode::Short) const override;
   std::vector<std::shared_ptr<AbstractExpression>> output_expressions() const override;
