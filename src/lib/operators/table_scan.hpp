@@ -50,7 +50,7 @@ class TableScan : public AbstractReadOnlyOperator {
    * operators. This is why this scan accepts a list of
    * excluded chunks and all others a list of included chunks.
    */
-  std::vector<ChunkID> excluded_chunk_ids;
+  std::shared_ptr<std::vector<ChunkID>> excluded_chunk_ids;
 
   struct PerformanceData : public OperatorPerformanceData<AbstractOperatorPerformanceData::NoSteps> {
     std::atomic_size_t num_chunks_with_early_out{0};

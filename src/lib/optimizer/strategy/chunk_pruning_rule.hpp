@@ -8,7 +8,7 @@
 #include "operators/operator_scan_predicate.hpp"
 #include "statistics/table_statistics.hpp"
 #include "types.hpp"
-#include "utils/chunk_pruning_utils.hpp"
+#include "utils/pruning_utils.hpp"
 
 namespace hyrise {
 

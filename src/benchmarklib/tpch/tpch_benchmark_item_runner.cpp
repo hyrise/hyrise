@@ -477,7 +477,7 @@ std::string TPCHBenchmarkItemRunner::_build_deterministic_query(const BenchmarkI
   // Stores how the parameters (the ? in the query) should be replaced. These values are examples for the queries. Most
   // of them use the verification parameters given in the TPC-H specification for the respective query. A few are
   // modified so that we get results even for a small scale factor.
-  static std::vector<std::vector<std::string>> parameter_values = {
+  static const auto parameter_values = std::vector<std::vector<std::string>>{
       {"'1998-09-02'"},
       {"15", "'%BRASS'", "'EUROPE'", "'EUROPE'"},
       {"'BUILDING'", "'1995-03-15'", "'1995-03-15'"},

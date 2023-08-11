@@ -11,7 +11,7 @@
 #include "operators/pqp_utils.hpp"
 #include "operators/table_scan.hpp"
 #include "storage/index/partial_hash/partial_hash_index.hpp"
-#include "utils/chunk_pruning_utils.hpp"
+#include "utils/pruning_utils.hpp"
 
 namespace hyrise {
 
