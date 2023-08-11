@@ -15,7 +15,7 @@ class CostEstimatorLogical : public AbstractCostEstimator {
 
   std::shared_ptr<AbstractCostEstimator> new_instance() const override;
 
-  Cost estimate_node_cost(const std::shared_ptr<AbstractLQPNode>& node) const override;
+  Cost estimate_node_cost(const std::shared_ptr<AbstractLQPNode>& node, const bool cacheable = true) const override;
 };
 
 }  // namespace hyrise

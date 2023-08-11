@@ -47,13 +47,10 @@ void reorder_predicates(const std::vector<std::shared_ptr<AbstractLQPNode>>& pre
   const auto outputs = predicates.front()->outputs();
   const auto input_sides = predicates.front()->get_input_sides();
 
-  // Setup cardinality estimation cache so that the statistics of `input` (which might be a big plan) do not need to
-  // be determined repeatedly. For this, we hijack the `guarantee_join_graph()`-guarantee and via it promise the
-  // CardinalityEstimator that we will not change the LQP below the `input` node by marking it as a "vertex".
-  // This allows the CardinalityEstimator to compute the statistics of `input` once, cache them and then re-use them.
-  const auto caching_cost_estimator = cost_estimator->new_instance();
-  const auto& caching_cardinality_estimator = cost_estimator->cardinality_estimator;
-  caching_cost_estimator->guarantee_bottom_up_construction();
+  // Estimate the cardinality of the input node once to cache its estimated statistics. Since we execute the reordering
+  // recursively, we can be sure the plan below does not change anymore the estimations can be cached safely.
+  const auto& cardinality_estimator = cost_estimator->cardinality_estimator;
+  cardinality_estimator->estimate_cardinality(input);
 
   // To order the predicates, we want to favor the predicate with the lowest cost. We estimate the cost of each
   // individual predicate on top of the input LQP, i.e., predicates are estimated independently. In the past, we just
@@ -75,8 +72,10 @@ void reorder_predicates(const std::vector<std::shared_ptr<AbstractLQPNode>>& pre
   nodes_and_costs.reserve(predicates.size());
   for (const auto& predicate : predicates) {
     predicate->set_left_input(input);
-    const auto output_cardinality = caching_cardinality_estimator->estimate_cardinality(predicate);
-    const auto estimated_cost = caching_cost_estimator->estimate_node_cost(predicate) - output_cardinality;
+    // Estimate the cardinality and cost of the predicate without caching. As the predicate order is not yet determined,
+    // caching leads to wrong estimates in the cache.
+    const auto output_cardinality = cardinality_estimator->estimate_cardinality(predicate, false);
+    const auto estimated_cost = cost_estimator->estimate_node_cost(predicate, false) - output_cardinality;
     const auto penalty = predicate->type == LQPNodeType::Join ? PredicateReorderingRule::JOIN_PENALTY : 1;
     const auto weighted_cost = estimated_cost * penalty + output_cardinality;
     nodes_and_costs.emplace_back(predicate, weighted_cost);
@@ -107,6 +106,44 @@ void reorder_predicates(const std::vector<std::shared_ptr<AbstractLQPNode>>& pre
   }
 }
 
+void reorder_predicates_recursively(const std::shared_ptr<AbstractLQPNode>& node,
+                                    const std::shared_ptr<AbstractCostEstimator>& cost_estimator,
+                                    std::unordered_set<std::shared_ptr<AbstractLQPNode>>& visited_nodes) {
+  if (!node || visited_nodes.contains(node)) {
+    return;
+  }
+
+  if (!is_predicate_style_node(node)) {
+    reorder_predicates_recursively(node->left_input(), cost_estimator, visited_nodes);
+    reorder_predicates_recursively(node->right_input(), cost_estimator, visited_nodes);
+    return;
+  }
+
+  // Gather adjacent PredicateNodes.
+  auto predicate_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
+  auto current_node = node;
+
+  while (is_predicate_style_node(current_node)) {
+    // Once a node has multiple outputs, we are not talking about a predicate chain anymore. However, a new chain can
+    // start here.
+    if (current_node->outputs().size() > 1 && !predicate_nodes.empty()) {
+      break;
+    }
+
+    predicate_nodes.emplace_back(current_node);
+    current_node = current_node->left_input();
+  }
+
+  // Recursively continue reordering for the input of the predicate chain.
+  visited_nodes.insert(predicate_nodes.cbegin(), predicate_nodes.cend());
+  reorder_predicates_recursively(predicate_nodes.back()->left_input(), cost_estimator, visited_nodes);
+
+  // A chain of predicates was found. Sort PredicateNodes in descending order with regards to the expected cost.
+  if (predicate_nodes.size() > 1) {
+    reorder_predicates(predicate_nodes, cost_estimator);
+  }
+}
+
 }  // namespace
 
 namespace hyrise {
@@ -118,38 +155,11 @@ std::string PredicateReorderingRule::name() const {
 
 void PredicateReorderingRule::_apply_to_plan_without_subqueries(
     const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
-  DebugAssert(cost_estimator, "PredicateReorderingRule requires cost estimator to be set");
-  Assert(lqp_root->type == LQPNodeType::Root, "PredicateReorderingRule needs root to hold onto");
-
   // We keep track of reordered predicate nodes, so that this rule touches predicate nodes once only.
-  auto reordered_predicate_nodes = std::unordered_set<std::shared_ptr<AbstractLQPNode>>{};
-  visit_lqp(lqp_root, [&](const auto& node) {
-    if (is_predicate_style_node(node) && !reordered_predicate_nodes.contains(node)) {
-      auto predicate_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
+  auto visited_nodes = std::unordered_set<std::shared_ptr<AbstractLQPNode>>{};
+  cost_estimator->cardinality_estimator->guarantee_bottom_up_construction();
 
-      // Gather adjacent PredicateNodes.
-      auto current_node = node;
-      while (is_predicate_style_node(current_node)) {
-        // Once a node has multiple outputs, we are not talking about a predicate chain anymore. However, a new chain
-        // can start here.
-        if (current_node->outputs().size() > 1 && !predicate_nodes.empty()) {
-          break;
-        }
-
-        predicate_nodes.emplace_back(current_node);
-        current_node = current_node->left_input();
-      }
-
-      // A chain of predicates was found. Sort PredicateNodes in descending order with regards to the expected cost.
-      // Then, continue rule in deepest input.
-      if (predicate_nodes.size() > 1) {
-        reorder_predicates(predicate_nodes, cost_estimator);
-        reordered_predicate_nodes.insert(predicate_nodes.cbegin(), predicate_nodes.cend());
-      }
-    }
-
-    return LQPVisitation::VisitInputs;
-  });
+  reorder_predicates_recursively(lqp_root, cost_estimator, visited_nodes);
 }
 
 }  // namespace hyrise

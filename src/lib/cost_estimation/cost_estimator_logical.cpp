@@ -41,12 +41,13 @@ std::shared_ptr<AbstractCostEstimator> CostEstimatorLogical::new_instance() cons
   return std::make_shared<CostEstimatorLogical>(cardinality_estimator->new_instance());
 }
 
-Cost CostEstimatorLogical::estimate_node_cost(const std::shared_ptr<AbstractLQPNode>& node) const {
-  const auto output_row_count = cardinality_estimator->estimate_cardinality(node);
+Cost CostEstimatorLogical::estimate_node_cost(const std::shared_ptr<AbstractLQPNode>& node,
+                                              const bool cacheable) const {
+  const auto output_row_count = cardinality_estimator->estimate_cardinality(node, cacheable);
   const auto left_input_row_count =
-      node->left_input() ? cardinality_estimator->estimate_cardinality(node->left_input()) : 0.0f;
+      node->left_input() ? cardinality_estimator->estimate_cardinality(node->left_input(), cacheable) : 0.0f;
   const auto right_input_row_count =
-      node->right_input() ? cardinality_estimator->estimate_cardinality(node->right_input()) : 0.0f;
+      node->right_input() ? cardinality_estimator->estimate_cardinality(node->right_input(), cacheable) : 0.0f;
 
   switch (node->type) {
     case LQPNodeType::Join:
