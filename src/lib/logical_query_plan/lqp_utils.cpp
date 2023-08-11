@@ -404,7 +404,7 @@ std::vector<std::shared_ptr<AbstractLQPNode>> lqp_find_subplan_roots(const std::
 
 std::vector<std::shared_ptr<AbstractLQPNode>> lqp_find_nodes_by_type(const std::shared_ptr<AbstractLQPNode>& lqp,
                                                                      const LQPNodeType type) {
-  std::vector<std::shared_ptr<AbstractLQPNode>> nodes;
+  auto nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
   visit_lqp(lqp, [&](const auto& node) {
     if (node->type == type) {
       nodes.emplace_back(node);
@@ -416,7 +416,7 @@ std::vector<std::shared_ptr<AbstractLQPNode>> lqp_find_nodes_by_type(const std::
 }
 
 std::vector<std::shared_ptr<AbstractLQPNode>> lqp_find_leaves(const std::shared_ptr<AbstractLQPNode>& lqp) {
-  std::vector<std::shared_ptr<AbstractLQPNode>> nodes;
+  auto nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
   visit_lqp(lqp, [&](const auto& node) {
     if (node->input_count() > 0) {
       return LQPVisitation::VisitInputs;
@@ -591,7 +591,7 @@ std::shared_ptr<AbstractLQPNode> find_diamond_origin_node(const std::shared_ptr<
   Assert(union_root_node->type == LQPNodeType::Union, "Expecting UnionNode as the diamond's root node.");
   DebugAssert(union_root_node->input_count() > 1, "Diamond root node does not have two inputs.");
   bool is_diamond = true;
-  std::optional<std::shared_ptr<AbstractLQPNode>> diamond_origin_node;
+  auto diamond_origin_node = std::optional<std::shared_ptr<AbstractLQPNode>>{};
   visit_lqp(union_root_node, [&](const auto& diamond_node) {
     if (diamond_node == union_root_node) {
       return LQPVisitation::VisitInputs;

@@ -185,7 +185,7 @@ TEST_F(StorageLZ4SegmentTest, CompressZeroOneStringSegment) {
 TEST_F(StorageLZ4SegmentTest, CompressMultiBlockStringSegment) {
   const auto block_size = LZ4Encoder::_block_size;
   const auto size_diff = size_t{1000u};
-  static_assert(block_size > size_diff, "LZ4 block size is too small");
+  static_assert(block_size > size_diff, "LZ4 block size is too small.");
 
   // Nearly fills the first block.
   const auto string1 = pmr_string(block_size - size_diff, 'a');

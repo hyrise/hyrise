@@ -195,11 +195,11 @@ void BenchmarkRunner::run() {
         continue;
       }
       const auto verification_status = result.verification_passed.load();
-      Assert(verification_status, "Verification result should have been set");
+      Assert(verification_status, "Verification result should have been set.");
       any_verification_failed |= !(*verification_status);
     }
 
-    Assert(!any_verification_failed, "Verification failed");
+    Assert(!any_verification_failed, "Verification failed.");
   }
 
   if (Hyrise::get().scheduler()) {
@@ -234,7 +234,7 @@ void BenchmarkRunner::_benchmark_shuffled() {
   std::random_device random_device;
   std::mt19937 random_generator(random_device());
 
-  Assert(_currently_running_clients == 0, "Did not expect any clients to run at this time");
+  Assert(_currently_running_clients == 0, "Did not expect any clients to run at this time.");
 
   _state = BenchmarkState{_config.max_duration};
 
@@ -264,7 +264,7 @@ void BenchmarkRunner::_benchmark_shuffled() {
 
   // Wait for the rest of the tasks that didn't make it in time - they will not count towards the results.
   Hyrise::get().scheduler()->wait_for_all_tasks();
-  Assert(_currently_running_clients == 0, "All runs must be finished at this point");
+  Assert(_currently_running_clients == 0, "All runs must be finished at this point.");
 
   _snapshot_segment_access_counters("End of Benchmark");
 }
@@ -278,7 +278,7 @@ void BenchmarkRunner::_benchmark_ordered() {
 
     auto& result = _results[item_id];
 
-    Assert(_currently_running_clients == 0, "Did not expect any clients to run at this time");
+    Assert(_currently_running_clients == 0, "Did not expect any clients to run at this time.");
 
     _state = BenchmarkState{_config.max_duration};
 
@@ -299,7 +299,7 @@ void BenchmarkRunner::_benchmark_ordered() {
       std::cout << "  -> Waiting for clients that are still running" << std::endl;
     }
     Hyrise::get().scheduler()->wait_for_all_tasks();
-    Assert(_currently_running_clients == 0, "All runs must be finished at this point");
+    Assert(_currently_running_clients == 0, "All runs must be finished at this point.");
 
     result.duration = _state.benchmark_duration;
     // chrono::seconds uses an integer precision duration type, but we need a floating-point value.
@@ -375,7 +375,7 @@ void BenchmarkRunner::_warmup(const BenchmarkItemID item_id) {
   const auto& name = _benchmark_item_runner->item_name(item_id);
   std::cout << "- Warming up for " << name << std::endl;
 
-  Assert(_currently_running_clients == 0, "Did not expect any clients to run at this time");
+  Assert(_currently_running_clients == 0, "Did not expect any clients to run at this time.");
 
   _state = BenchmarkState{_config.warmup_duration};
 
@@ -397,7 +397,7 @@ void BenchmarkRunner::_warmup(const BenchmarkItemID item_id) {
 
   // Wait for the rest of the tasks that didn't make it in time.
   Hyrise::get().scheduler()->wait_for_all_tasks();
-  Assert(_currently_running_clients == 0, "All runs must be finished at this point");
+  Assert(_currently_running_clients == 0, "All runs must be finished at this point.");
 }
 
 nlohmann::json BenchmarkRunner::_create_report() const {

@@ -21,7 +21,7 @@ void generate_csv_tables_with_external_dbgen(const std::string& dbgen_path, cons
     std::cout << "- Creating table data by calling external dbgen" << std::flush;
 
     std::filesystem::create_directory(tables_path);
-    Assert(std::filesystem::exists(tables_path), "Creating tables folder failed");
+    Assert(std::filesystem::exists(tables_path), "Creating tables folder failed.");
 
     {
       // Call dbgen.
@@ -48,7 +48,7 @@ void generate_csv_tables_with_external_dbgen(const std::string& dbgen_path, cons
         auto cmd = std::stringstream{};
         cmd << "sed -Ee 's/\\|$//' " << sed_inplace << " " << tables_path << table_name << ".csv";
         const auto ret = system(cmd.str().c_str());
-        Assert(!ret, "Removing trailing separators using sed failed");
+        Assert(!ret, "Removing trailing separators using sed failed.");
       }
 
       // std::filesystem::copy does not seem to work. We could use symlinks here, but those would make reading the file
@@ -57,7 +57,7 @@ void generate_csv_tables_with_external_dbgen(const std::string& dbgen_path, cons
         auto cmd = std::stringstream{};
         cmd << "cp  " << csv_meta_path << "/" << table_name << ".csv.json " << tables_path << table_name << ".csv.json";
         const auto ret = system(cmd.str().c_str());
-        Assert(!ret, "Copying csv.json files failed");
+        Assert(!ret, "Copying csv.json files failed.");
       }
     }
 
@@ -72,7 +72,7 @@ void remove_csv_tables(const std::string& tables_path) {
     cmd << "rm " << tables_path << "*.csv*";
     // NOLINTNEXTLINE(concurrency-mt-unsafe)
     const auto ret = system(cmd.str().c_str());
-    Assert(!ret, "Removing csv/csv.json files failed");
+    Assert(!ret, "Removing csv/csv.json files failed.");
   }
 }
 
