@@ -36,7 +36,7 @@ VolatileRegion::VolatileRegion(const PageSizeType size_type, std::byte* region_s
 void VolatileRegion::move_page_to_numa_node(PageID page_id, const NodeID target_memory_node) {
   DebugAssert(page_id.size_type() == _size_type, "Page does not belong to this region.");
 #if HYRISE_NUMA_SUPPORT
-  DebugAssert(target_memory_node != INVALID_PAGE_ID, "Numa node has not been set.");
+  DebugAssert(target_memory_node != INVALID_NODE_ID, "Numa node has not been set.");
   static thread_local std::vector<void*> pages_to_move{bytes_for_size_type(_size_type) / OS_PAGE_SIZE};
   static thread_local std::vector<int> nodes{static_cast<int>(bytes_for_size_type(_size_type) / OS_PAGE_SIZE)};
   static thread_local std::vector<int> status{static_cast<int>(bytes_for_size_type(_size_type) / OS_PAGE_SIZE)};
@@ -58,7 +58,7 @@ void VolatileRegion::mbind_to_numa_node(PageID page_id, const NodeID target_memo
   DebugAssert(page_id.size_type() == _size_type, "Page does not belong to this region.");
 
 #if HYRISE_NUMA_SUPPORT
-  DebugAssert(target_memory_node != INVALID_PAGE_ID, "Numa node has not been set.");
+  DebugAssert(target_memory_node != INVALID_NODE_ID, "Numa node has not been set.");
 
   const auto num_bytes = bytes_for_size_type(_size_type);
   auto nodes = numa_allocate_nodemask();
