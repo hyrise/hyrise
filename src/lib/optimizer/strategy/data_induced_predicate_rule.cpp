@@ -84,7 +84,7 @@ void DataInducedPredicateRule::_apply_to_plan_without_subqueries(
         // The between predicate is built using the projected min and max from the reducer side expression.
         const auto between_predicate =
             PredicateNode::make(between_inclusive_(reduced_side_expression, lqp_subquery_(min), lqp_subquery_(max)));
-        lqp_insert_node(join_node, selection_side, between_predicate);
+        lqp_insert_node(join_node, selection_side, between_predicate, AllowRightInput::Yes);
 
         const auto reduced_cardinality = estimator->estimate_cardinality(between_predicate);
         lqp_remove_node(between_predicate);

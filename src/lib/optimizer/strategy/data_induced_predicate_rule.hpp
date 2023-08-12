@@ -10,30 +10,44 @@ class PredicateNode;
 /**
  * A data induced predicate is a min, max aggregate with an in-between that is added to the LQP without being present in
  * the unoptimized LQP. It has no impact on the final result of the query but filters tuples earlier out.
- * Take the following query as an example - it is loosely based on TPC-H 20:
+ * Take the following query as an example - it is loosely based on a subquery from TPC-H 17:
  *
- *   SELECT p_name FROM part p1 WHERE p_size >
- *     (SELECT AVG(p_size) FROM part p2 WHERE p1.p_container = p2.p_container)
- *   AND p1.p_container IN ('SM CASE', 'MD CASE', 'LG CASE')
+ * SELECT SUM(l_extendedprice)
+ * FROM lineitem
+ * JOIN part ON l_partkey = p_partkey
+ * WHERE p_brand=‘1’ AND p_container=‘2’
  *
- * It selects all parts from the `part` table whose size is greater than the average size of parts sold in that
- * container. However, out of the 40 container types, we only look at three.
+ * It selects all parts from the `part` table whose were p_brand = 1 and p_container = 2. It is then joined on partkey
+ * with the lineitem tuples, which is a very large table.
+ * The data induced predicate uses information that is available about the part side of the query plan and tries to build
+ * a filter from this which can then be pushed on the other side of the join.
  *
  * Before this rule is applied, the LQP might look as follows:
  *
- * [ part p1 ] -> [ Predicate p_container IN (...) ------------> [ Semi Join p1.p_container = p2.p_container
- *                                                              /             AND p1.p_size > AVG(p2.p_size) ]
- * [ part p2 ] -> [ Aggregate AVG(p_size) GROUP BY p_container ]
+ * [ part p ] -> [ Predicate p_brand = 1 AND p_container = 2 ] ------------> [ Semi Join p.p_partkey = l.l_partkey]
+ *                                                                         /
+ *                                                             [ lineitem l ]
  *
- * As we can see, `part` is first fully aggregated, even though 37 container types will become irrelevant later. This
- * rule adds a data induced predicate (diP), which uses the p2 side as the left (reducer) input. This rule adds the diP
- * directly below the join. As a result, the LQP after this rule looks like this:
+ * Let's assume, that the statistics regarding the results, that are not filtered out in the predicate have the attribute
+ * that all filtered in tuples have a min partkey of 1 and max partkey of 3.
+ * If there was a maximum of 20 partkeys then we could filter out 85% of the tuples (if equally distributed) by filtering
+ * the lineitem tuples by this predicate.
+ * The resulting SQL Query would then look like this:
  *
- * [ part p1 ] -> [ Predicate p_container IN (...) ----------------------------------> [ InBetween min and max ] -------> [ Semi Join ... ] // NOLINT(whitespace/line_length)
- *                                                                                               /        /             /
- * [ part p2 ] -> [ Aggregate AVG(p_size) GROUP BY p_container ] ------> [ GROUP BY MIN(p_container), MAX(p_container) ]
+ * SELECT SUM(l_extendedprice)
+ * FROM lineitem
+ * JOIN part ON l_partkey = p_partkey
+ * WHERE p_brand=‘1’ AND p_container=‘2’
+ * AND p_partkey BETWEEN 1 AND 3
  *
- * We call p1 the REDUCED NODE on the reduced side and p2 the REDUCER NODE on the reducing side.
+ * This between predicate is a data induced predicate (diP) which is added directly below the join. As a result, the LQP
+ * after this rule looks like this:
+ *
+ * [ part p ] -> [ Predicate p_brand = 1 AND p_container = 2 ] ------------> [ Semi Join p.p_partkey = l.l_partkey]
+ *                                         \                                  /
+ * [ lineitem l ] ---------------------> [ Predicate p_partkey BETWEEN 1 AND 3 ]
+ *
+ * We call l the REDUCED NODE on the reduced side and p the REDUCER NODE on the reducing side.
 **/
 
 class DataInducedPredicateRule : public AbstractRule {
