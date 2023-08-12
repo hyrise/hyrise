@@ -42,7 +42,8 @@ class DataInducedPredicateRule : public AbstractRule {
 
   // Defines the minimum selectivity for a diP to be added. For a candidate location in the LQP with an
   // input cardinality `i`, the output cardinality of the semi join has to be lower than `i * MINIMUM_SELECTIVITY`.
-  // 0.4 turned out as most effective for the diP-Rule when running TPC-H with scale factor 10, hence it was set at the MINIMUM_SELECTIVITY.
+  // 0.4 turned out as most effective for the diP-Rule when running TPC-H with scale factor 10, hence it was set at the
+  // MINIMUM_SELECTIVITY.
   constexpr static auto MINIMUM_SELECTIVITY = .4;
 
  protected:
