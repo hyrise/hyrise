@@ -63,8 +63,8 @@ BENCHMARK_DEFINE_F(SkewFixture, BM_Skew)(benchmark::State& state) {
 
 // Args are divided by 1000 to be passed to zipf generator
 BENCHMARK_REGISTER_F(SkewFixture, BM_Skew)
-    // ->Threads(2)
-    ->Threads(16)
+    ->Threads(2)
+    ->Threads(48)
     ->Iterations(1)
     ->UseRealTime()
     ->Arg(1)
