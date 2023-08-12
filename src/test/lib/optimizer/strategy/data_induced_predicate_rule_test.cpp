@@ -15,25 +15,19 @@ class DataInducedPredicateRuleTest : public StrategyBaseTest {
   void SetUp() override {
     {
       const auto histogram_column_a = GenericHistogram<int32_t>::with_single_bin(1, 50, 40, 40);
-      const auto histogram_column_b = GenericHistogram<int32_t>::with_single_bin(10, 15, 40, 5);
-      _node_a = create_mock_node_with_statistics({{DataType::Int, "a"}, {DataType::Int, "b"}}, 40,
-                                                 {histogram_column_a, histogram_column_b});
+      _node_a = create_mock_node_with_statistics({{DataType::Int, "a"}}, 40, {histogram_column_a});
       _a_a = _node_a->get_column("a");
     }
 
     {
       const auto histogram_column_a = GenericHistogram<int32_t>::with_single_bin(10, 20, 10, 10);
-      const auto histogram_column_b = GenericHistogram<int32_t>::with_single_bin(40, 60, 10, 5);
-      _node_b = create_mock_node_with_statistics({{DataType::Int, "a"}, {DataType::Int, "b"}}, 10,
-                                                 {histogram_column_a, histogram_column_b});
+      _node_b = create_mock_node_with_statistics({{DataType::Int, "a"}}, 10, {histogram_column_a});
       _b_a = _node_b->get_column("a");
     }
 
     {
       const auto histogram_column_a = GenericHistogram<int32_t>::with_single_bin(1, 50, 40, 40);
-      const auto histogram_column_b = GenericHistogram<int32_t>::with_single_bin(10, 15, 40, 5);
-      _node_c = create_mock_node_with_statistics({{DataType::Int, "a"}, {DataType::Int, "b"}}, 40,
-                                                 {histogram_column_a, histogram_column_b});
+      _node_c = create_mock_node_with_statistics({{DataType::Int, "a"}}, 40, {histogram_column_a});
       _c_a = _node_c->get_column("a");
     }
   }
@@ -66,7 +60,7 @@ TEST_F(DataInducedPredicateRuleTest, CreateSimpleReductionOnLeftSide) {
 }
 
 TEST_F(DataInducedPredicateRuleTest, CreateSimpleReductionOnRightSide) {
-  // The _b_a side of the join has values from 1-50, the _a_a side has values from 10-20. Based on that
+  // The _b_a side of the join has values from 10-20, the _a_a side has values from 1-50. Based on that
   // selectivity, a data induced predicate should be created.
   const auto join_types =
       std::vector<JoinMode>{JoinMode::Inner,           JoinMode::Semi,          JoinMode::Left, JoinMode::Right,
@@ -96,7 +90,7 @@ TEST_F(DataInducedPredicateRuleTest, NoReductionForNonBeneficial) {
   for (const auto& join_type : join_types) {
     const auto input_lqp = JoinNode::make(join_type, equals_(_a_a, _c_a), _node_a, _node_c);
 
-    const auto expected_lqp = JoinNode::make(join_type, equals_(_a_a, _c_a), _node_a, _node_c);
+    const auto expected_lqp = input_lqp->deep_copy();
 
     const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
 

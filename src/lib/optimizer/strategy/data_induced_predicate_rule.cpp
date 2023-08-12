@@ -54,13 +54,11 @@ void DataInducedPredicateRule::_apply_to_plan_without_subqueries(
       // Since data induced predicates might be beneficial for both sides of the join, we create this helper lambda,
       // which can deal with both sides.
       const auto reduce_if_beneficial = [&](const auto selection_side) {
-        auto reduced_node = join_node->input(selection_side);
-        auto reducer_node = join_node->input(opposite_side(selection_side));
+        const auto reduced_node = join_node->input(selection_side);
+        const auto reducer_node = join_node->input(opposite_side(selection_side));
 
         auto reducer_side_expression = predicate_expression->left_operand();
         auto reduced_side_expression = predicate_expression->right_operand();
-
-        auto original_cardinality = estimator->estimate_cardinality(reduced_node);
 
         /**
          * We have to check whether the expression is actually evaluable on the reducer_node. If this is not the case
@@ -71,8 +69,10 @@ void DataInducedPredicateRule::_apply_to_plan_without_subqueries(
         if (!expression_evaluable_on_lqp(reducer_side_expression, *reducer_node)) {
           std::swap(reduced_side_expression, reducer_side_expression);
         }
-        DebugAssert(!expression_evaluable_on_lqp(reducer_side_expression, *join_node->input(selection_side)),
+        DebugAssert(!expression_evaluable_on_lqp(reducer_side_expression, *reduced_node),
                     "Expected filtered expression to be uniquely evaluable on one side of the join");
+
+        const auto original_cardinality = estimator->estimate_cardinality(reduced_node);
 
         const auto subquery = AggregateNode::make(
             expression_vector(), expression_vector(min_(reducer_side_expression), max_(reducer_side_expression)),
@@ -82,7 +82,7 @@ void DataInducedPredicateRule::_apply_to_plan_without_subqueries(
         const auto max = ProjectionNode::make(expression_vector(max_(reducer_side_expression)), subquery);
 
         // The between predicate is built using the projected min and max from the reducer side expression.
-        auto between_predicate =
+        const auto between_predicate =
             PredicateNode::make(between_inclusive_(reduced_side_expression, lqp_subquery_(min), lqp_subquery_(max)));
         lqp_insert_node(join_node, selection_side, between_predicate);
 

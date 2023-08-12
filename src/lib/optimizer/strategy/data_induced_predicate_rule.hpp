@@ -9,8 +9,8 @@ class PredicateNode;
 
 /**
  * A data induced predicate is a min, max aggregate with an in-between that is added to the LQP without being present in
- * the unoptimized LQP. This means that it does not change the final results. Take the following query as an example -
- * it is loosely based on TPC-H 20:
+ * the unoptimized LQP. It has no impact on the final result of the query but filters tuples earlier out.
+ * Take the following query as an example - it is loosely based on TPC-H 20:
  *
  *   SELECT p_name FROM part p1 WHERE p_size >
  *     (SELECT AVG(p_size) FROM part p2 WHERE p1.p_container = p2.p_container)
@@ -26,10 +26,10 @@ class PredicateNode;
  * [ part p2 ] -> [ Aggregate AVG(p_size) GROUP BY p_container ]
  *
  * As we can see, `part` is first fully aggregated, even though 37 container types will become irrelevant later. This
- * rule adds a data induced predicate (dip), which uses the p2 side as the left (reducer) input. This rule adds the dip
+ * rule adds a data induced predicate (diP), which uses the p2 side as the left (reducer) input. This rule adds the diP
  * directly below the join. As a result, the LQP after this rule looks like this:
  *
- * [ part p1 ] -> [ Predicate p_container IN (...) ----------------------------------> [ InBetween min and max ] -------> [ Semi Join ... ] // NOLINT
+ * [ part p1 ] -> [ Predicate p_container IN (...) ----------------------------------> [ InBetween min and max ] -------> [ Semi Join ... ] // NOLINT(whitespace/line_length)
  *                                                                                               /        /             /
  * [ part p2 ] -> [ Aggregate AVG(p_size) GROUP BY p_container ] ------> [ GROUP BY MIN(p_container), MAX(p_container) ]
  *
@@ -40,8 +40,9 @@ class DataInducedPredicateRule : public AbstractRule {
  public:
   std::string name() const override;
 
-  // Defines the minimum selectivity for a dip to be added. For a candidate location in the LQP with an
+  // Defines the minimum selectivity for a diP to be added. For a candidate location in the LQP with an
   // input cardinality `i`, the output cardinality of the semi join has to be lower than `i * MINIMUM_SELECTIVITY`.
+  // 0.4 turned out as most effective for the diP-Rule when running TPC-H with scale factor 10, hence it was set at the MINIMUM_SELECTIVITY.
   constexpr static auto MINIMUM_SELECTIVITY = .4;
 
  protected:
