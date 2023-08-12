@@ -350,6 +350,8 @@ set(
     scheduler/node_queue_scheduler.hpp
     scheduler/operator_task.cpp
     scheduler/operator_task.hpp
+    scheduler/shutdown_task.cpp
+    scheduler/shutdown_task.hpp
     scheduler/task_queue.cpp
     scheduler/task_queue.hpp
     scheduler/task_utils.hpp
@@ -744,6 +746,7 @@ target_link_libraries_system(
     hyrise_impl
 
     ${BOOST_LIBS}
+    concurrentqueue
     cpp-btree
     cxxopts
     flat-hash-map
