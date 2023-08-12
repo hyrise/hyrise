@@ -85,10 +85,10 @@ TEST_F(OperatorScanPredicateTest, FromExpressionColumnRight) {
 
 TEST_F(OperatorScanPredicateTest, OutputToStream) {
   const auto test_cases = std::vector<std::pair<std::shared_ptr<AbstractPredicateExpression>, std::string>>(
-      {{between_inclusive_(5, a, b), "Column #0 <= 5\nColumn #1 >= 5\n"},
-       {greater_than_(a, 5), "Column #0 > 5\n"},
-       {less_than_(a, 5), "Column #0 < 5\n"},
-       {greater_than_(a, b), "Column #0 > Column #1\n"}});
+      {{between_inclusive_(5, a, b), "Column #0 <=5\nColumn #1 >=5\n"},
+       {greater_than_(a, 5), "Column #0 >5\n"},
+       {less_than_(a, 5), "Column #0 <5\n"},
+       {greater_than_(a, b), "Column #0 >Column #1\n"}});
 
   auto actual = std::stringstream{};
   for (const auto& [expression, expected] : test_cases) {

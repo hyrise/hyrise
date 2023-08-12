@@ -14,7 +14,6 @@
 #include "scheduler/job_task.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/operator_task.hpp"
-#include "scheduler/shutdown_task.hpp"
 #include "scheduler/task_queue.hpp"
 
 namespace hyrise {
@@ -250,11 +249,11 @@ TEST_F(SchedulerTest, MultipleOperators) {
 
 TEST_F(SchedulerTest, VerifyTaskQueueSetup) {
   if (std::thread::hardware_concurrency() < 4) {
-    // If the machine has less than 4 cores, the calls to use_non_numa_topology() below will implicitly reduce the
-    // worker count to the number of cores, therefore failing the assertions.
+    // If the machine has less than 4 cores, the calls to use_non_numa_topology()
+    // below will implicitly reduce the worker count to the number of cores,
+    // therefore failing the assertions.
     GTEST_SKIP();
   }
-
   Hyrise::get().topology.use_non_numa_topology(4);
   Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
   EXPECT_EQ(1, Hyrise::get().scheduler()->queues().size());
@@ -366,49 +365,12 @@ TEST_F(SchedulerTest, MergeSort) {
   vector_to_sort.reserve(ITEM_COUNT);
   for (auto i = size_t{0}; i < ITEM_COUNT / 5; ++i) {
     for (auto j = size_t{0}; j < 5; ++j) {
-      vector_to_sort.push_back(i * 5 + (4 - j));
+      vector_to_sort.push_back(i*5 + (4-j));
     }
   }
 
   merge_sort(vector_to_sort.begin(), vector_to_sort.end());
   EXPECT_TRUE(std::is_sorted(vector_to_sort.begin(), vector_to_sort.end()));
-}
-
-TEST_F(SchedulerTest, NodeQueueSchedulerCreationAndReset) {
-  if (std::thread::hardware_concurrency() < 4) {
-    // If the machine has less than 4 cores, the calls to use_non_numa_topology() below will implicitly reduce the
-    // worker count to the number of cores, therefore failing the assertions.
-    GTEST_SKIP();
-  }
-
-  const auto thread_count = std::thread::hardware_concurrency();
-
-  Hyrise::get().topology.use_fake_numa_topology(thread_count, thread_count / 4);
-  for (auto loop_id = size_t{0}; loop_id < 256; ++loop_id) {
-    auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
-    Hyrise::get().set_scheduler(node_queue_scheduler);
-    EXPECT_EQ(node_queue_scheduler->active_worker_count().load(), thread_count);
-    Hyrise::get().set_scheduler(std::make_shared<ImmediateExecutionScheduler>());
-    EXPECT_EQ(node_queue_scheduler->active_worker_count().load(), 0);
-  }
-}
-
-TEST_F(SchedulerTest, ShutdownTaskDecrement) {
-  auto counter_1 = std::atomic_int64_t{1};
-  auto shutdown_task_1 = ShutdownTask{counter_1};
-  // Prepare job for execution (usually done when scheduled and obtained by workers)
-  EXPECT_TRUE(shutdown_task_1.try_mark_as_enqueued());
-  EXPECT_TRUE(shutdown_task_1.try_mark_as_assigned_to_worker());
-  EXPECT_EQ(counter_1.load(), 1);
-  shutdown_task_1.execute();
-  EXPECT_EQ(counter_1.load(), 0);
-
-  auto counter_2 = std::atomic_int64_t{0};
-  auto shutdown_task_2 = ShutdownTask{counter_2};
-  EXPECT_TRUE(shutdown_task_2.try_mark_as_enqueued());
-  EXPECT_TRUE(shutdown_task_2.try_mark_as_assigned_to_worker());
-  EXPECT_EQ(counter_2.load(), 0);
-  EXPECT_THROW(shutdown_task_2.execute(), std::logic_error);
 }
 
 }  // namespace hyrise

@@ -12,40 +12,6 @@ namespace hyrise {
 
 class TaskQueue;
 
-/**
- *
- * GENERAL TASK PROCESSING AND SCHEDULING CONCEPT
- *
- * Everything that needs to be processed is encapsulated in tasks. A task will be pushed into a TaskQueue by a
- * scheduler and pulled by a worker to be processed.
- *
- * There are currently two alternative scheduler implementations: the ImmediateExecutionScheduler (single-threaded,
- * primarily for benchmarking and debugging) and the NodeQueueScheduler (multi-threaded).
- *
- *
- * TASK DEPENDENCIES
- *
- * Tasks can be dependent on each other. For example, a TableScan operation can depend on a GetTable operation, and so
- * do the tasks that encapsulate these operations. Tasks with predecessors are not scheduled (i.e., not added to the
- * TaskQueues) to avoid workers from pulling tasks that cannot (yet) be processed. Instead, succeeding tasks are
- * executed as soon as the preceding task(s) have been processed (workers try to process all successors before pulling
- * new tasks from the TaskQueues).
- * Considering the exemplary query TPC-H 6. Here, only a single GetTable operator and none of the other operators would
- * be scheduled. After an operator has been processed, the operators consuming its output are directly executed. For
- * more complex queries with multiple GetTable operators, we would schedule multiple operators concurrently.
- *
- *
- * TASKS
- *
- * The two main task types in Hyrise are OperatorTasks and JobTasks. OperatorTasks encapsulate database operators
- * (here, they only encapsulate the execute() function). JobTasks can be used by any component to parallelize arbitrary
- * parts of its work by taking a void-returning lambda. If a task itself spawns tasks to be executed, the worker
- * executing the main task executes these tasks directly when possible or waits for their completion in case other
- * workers already process these tasks (during this wait time, the worker pulls tasks from the TaskQueues to avoid
- * idling).
- *
- */
-
 class AbstractScheduler : public Noncopyable {
  public:
   virtual ~AbstractScheduler() = default;

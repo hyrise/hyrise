@@ -245,7 +245,7 @@ TEST_F(StressTest, NodeSchedulerStressTest) {
 
   // In the default case, tasks are added to node 0 when its load is low. In this test, tasks cannot be processed until
   // `start_jobs` is set, leading to a high queue load that cannot be processed. New tasks that are scheduled should
-  // thus be assigned to different TaskQueues to distribute the load.
+  // thus be assigned to different task queues to distribute the load.
   auto second_worker = std::next(node_queue_scheduler->workers().cbegin());
   EXPECT_TRUE(std::any_of(second_worker, node_queue_scheduler->workers().cend(),
                           [](const auto& worker) { return worker->queue()->estimate_load() > 0; }));
