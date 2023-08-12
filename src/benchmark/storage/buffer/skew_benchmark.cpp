@@ -63,8 +63,8 @@ BENCHMARK_DEFINE_F(SkewFixture, BM_Skew)(benchmark::State& state) {
 
 // Args are divided by 1000 to be passed to zipf generator
 BENCHMARK_REGISTER_F(SkewFixture, BM_Skew)
-    ->Threads(2)
-    ->Threads(48)
+    // ->Threads(2)
+    ->Threads(16)
     ->Iterations(1)
     ->UseRealTime()
     ->Arg(1)
@@ -72,7 +72,7 @@ BENCHMARK_REGISTER_F(SkewFixture, BM_Skew)
     ->Arg(40)
     ->Arg(60)
     ->Arg(80)
-    ->Arg(100)
+    ->Arg(99)  // Zeta function is not defined at 1
     ->Arg(120)
     ->Arg(140)
     ->Arg(160)
