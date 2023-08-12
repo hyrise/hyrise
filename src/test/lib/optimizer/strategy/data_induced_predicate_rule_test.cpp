@@ -37,65 +37,92 @@ class DataInducedPredicateRuleTest : public StrategyBaseTest {
   std::shared_ptr<DataInducedPredicateRule> _rule{std::make_shared<DataInducedPredicateRule>()};
 };
 
-TEST_F(DataInducedPredicateRuleTest, CreateSimpleReductionOnLeftSide) {
+class DataInducedPredicateRuleTestJoinModeTest : public DataInducedPredicateRuleTest,
+                                                 public ::testing::WithParamInterface<JoinMode> {};
+
+INSTANTIATE_TEST_SUITE_P(JoinToPredicateRewriteRuleJoinModeTestInstance, DataInducedPredicateRuleTestJoinModeTest,
+                         ::testing::ValuesIn(magic_enum::enum_values<JoinMode>()), enum_formatter<JoinMode>);
+
+TEST_P(DataInducedPredicateRuleTestJoinModeTest, PerformRewriteLeftSide) {
+  // The rule should only rewrite inner semi, left and right joins.
+
   // The _a_a side of the join has values from 1-50, the _b_a side has values from 10-20. Based on that
   // selectivity, a data induced predicate should be created.
+  const auto& join_type = GetParam();
 
-  const auto join_types = std::vector<JoinMode>{JoinMode::Inner, JoinMode::Semi, JoinMode::Left, JoinMode::Right};
-  for (const auto& join_type : join_types) {
-    const auto input_lqp = JoinNode::make(join_type, equals_(_a_a, _b_a), _node_a, _node_b);
+  if (join_type == JoinMode::Cross) {
+    EXPECT_ANY_THROW(JoinNode::make(join_type, equals_(_a_a, _b_a), _node_a, _node_b));
+    return;
+  }
+  const auto input_lqp = JoinNode::make(join_type, equals_(_a_a, _b_a), _node_a, _node_b);
 
-    const auto subquery = AggregateNode::make(expression_vector(), expression_vector(min_(_b_a), max_(_b_a)), _node_b);
-    const auto min = ProjectionNode::make(expression_vector(min_(_b_a)), subquery);
-    const auto max = ProjectionNode::make(expression_vector(max_(_b_a)), subquery);
-    const auto expected_reduction =
-        PredicateNode::make(between_inclusive_(_a_a, lqp_subquery_(min), lqp_subquery_(max)), _node_a);
+  const auto subquery = AggregateNode::make(expression_vector(), expression_vector(min_(_b_a), max_(_b_a)), _node_b);
+  const auto min = ProjectionNode::make(expression_vector(min_(_b_a)), subquery);
+  const auto max = ProjectionNode::make(expression_vector(max_(_b_a)), subquery);
+  const auto expected_reduction =
+      PredicateNode::make(between_inclusive_(_a_a, lqp_subquery_(min), lqp_subquery_(max)), _node_a);
 
-    const auto expected_lqp = JoinNode::make(join_type, equals_(_a_a, _b_a), expected_reduction, _node_b);
+  const auto expected_lqp = JoinNode::make(join_type, equals_(_a_a, _b_a), expected_reduction, _node_b);
 
-    const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
 
+  if (GetParam() == JoinMode::Inner || GetParam() == JoinMode::Semi || GetParam() == JoinMode::Left ||
+      GetParam() == JoinMode::Right) {
     EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  } else {
+    EXPECT_LQP_EQ(actual_lqp, input_lqp->deep_copy());
   }
 }
 
-TEST_F(DataInducedPredicateRuleTest, CreateSimpleReductionOnRightSide) {
+TEST_P(DataInducedPredicateRuleTestJoinModeTest, PerformRewriteRightSide) {
+  // The rule should only rewrite inner semi, left, right, antiNullAsFalse and antiNullAsTrue joins.
+
   // The _b_a side of the join has values from 10-20, the _a_a side has values from 1-50. Based on that
   // selectivity, a data induced predicate should be created.
-  const auto join_types =
-      std::vector<JoinMode>{JoinMode::Inner,           JoinMode::Semi,          JoinMode::Left, JoinMode::Right,
-                            JoinMode::AntiNullAsFalse, JoinMode::AntiNullAsTrue};
-  for (const auto& join_type : join_types) {
-    const auto input_lqp = JoinNode::make(join_type, equals_(_a_a, _b_a), _node_b, _node_a);
+  const auto& join_type = GetParam();
 
-    const auto subquery = AggregateNode::make(expression_vector(), expression_vector(min_(_b_a), max_(_b_a)), _node_b);
-    const auto min = ProjectionNode::make(expression_vector(min_(_b_a)), subquery);
-    const auto max = ProjectionNode::make(expression_vector(max_(_b_a)), subquery);
-    const auto expected_reduction =
-        PredicateNode::make(between_inclusive_(_a_a, lqp_subquery_(min), lqp_subquery_(max)), _node_a);
+  if (join_type == JoinMode::Cross) {
+    EXPECT_ANY_THROW(JoinNode::make(join_type, equals_(_a_a, _b_a), _node_a, _node_b));
+    return;
+  }
+  const auto input_lqp = JoinNode::make(join_type, equals_(_a_a, _b_a), _node_b, _node_a);
 
-    const auto expected_lqp = JoinNode::make(join_type, equals_(_a_a, _b_a), _node_b, expected_reduction);
+  const auto subquery = AggregateNode::make(expression_vector(), expression_vector(min_(_b_a), max_(_b_a)), _node_b);
+  const auto min = ProjectionNode::make(expression_vector(min_(_b_a)), subquery);
+  const auto max = ProjectionNode::make(expression_vector(max_(_b_a)), subquery);
+  const auto expected_reduction =
+      PredicateNode::make(between_inclusive_(_a_a, lqp_subquery_(min), lqp_subquery_(max)), _node_a);
 
-    const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+  const auto expected_lqp = JoinNode::make(join_type, equals_(_a_a, _b_a), _node_b, expected_reduction);
 
+  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+
+  if (GetParam() == JoinMode::Inner || GetParam() == JoinMode::Semi || GetParam() == JoinMode::Left ||
+      GetParam() == JoinMode::Right || GetParam() == JoinMode::AntiNullAsFalse ||
+      GetParam() == JoinMode::AntiNullAsTrue) {
     EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  } else {
+    EXPECT_LQP_EQ(actual_lqp, input_lqp->deep_copy());
   }
 }
 
-TEST_F(DataInducedPredicateRuleTest, NoReductionForNonBeneficial) {
+TEST_P(DataInducedPredicateRuleTestJoinModeTest, DontReduceIfNotBeneficial) {
+  // The rule should not rewrite any joins.
+
   // The _a_a side of the join has values from 1-50, the _c_a side has the same value range as _a_a. Based on that
   // selectivity, no data induced predicate should be created.
+  const auto& join_type = GetParam();
 
-  const auto join_types = std::vector<JoinMode>{JoinMode::Inner, JoinMode::Semi, JoinMode::Left, JoinMode::Right};
-  for (const auto& join_type : join_types) {
-    const auto input_lqp = JoinNode::make(join_type, equals_(_a_a, _c_a), _node_a, _node_c);
-
-    const auto expected_lqp = input_lqp->deep_copy();
-
-    const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
-
-    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  if (join_type == JoinMode::Cross) {
+    EXPECT_ANY_THROW(JoinNode::make(join_type, equals_(_a_a, _b_a), _node_a, _node_b));
+    return;
   }
-}
+  const auto input_lqp = JoinNode::make(join_type, equals_(_a_a, _c_a), _node_a, _node_c);
 
+  const auto expected_lqp = input_lqp->deep_copy();
+
+  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
 }  // namespace hyrise
