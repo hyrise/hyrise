@@ -4,7 +4,7 @@
 #include <numa.h>
 #include <numaif.h>
 #endif
-#ifdef __AVX512VL__
+#ifdef __linux__
 #include <x86intrin.h>
 #endif
 #include <fcntl.h>
@@ -88,47 +88,45 @@ inline void explicit_move_pages(void* mem, size_t size, int node) {
 
 inline void simulate_cacheline_nontemporal_store(std::byte* ptr) {
   DebugAssert(uintptr_t(ptr) % CACHE_LINE_SIZE == 0, "Pointer must be cacheline aligned");
-#ifdef __AVX512VL__
+#ifdef __APPLE__
+  std::memset(ptr, 0x1, CACHE_LINE_SIZE);
+#else
   // using a non-temporal memory hint
   _mm512_stream_si512(reinterpret_cast<void*>(ptr), _mm512_set1_epi8(0x1));
   _mm_sfence();
-#else
-  std::memset(ptr, 0x1, CACHE_LINE_SIZE);
 #endif
-  benchmark::DoNotOptimize(ptr);
 }
 
 inline void simulate_cacheline_temporal_store(std::byte* ptr) {
   // Taken from viper
   DebugAssert(uintptr_t(ptr) % CACHE_LINE_SIZE == 0, "Pointer must be cacheline aligned");
-#ifdef __AVX512VL__
+#ifdef __APPLE__
+  std::memset(ptr, 0x1, CACHE_LINE_SIZE);
+#else
   _mm512_store_si512((__m512i*)(ptr), _mm512_set1_epi8(0x1));
   _mm_clwb(ptr);
   _mm_sfence();
-#else
-  std::memset(ptr, 0x1, CACHE_LINE_SIZE);
 #endif
-  benchmark::DoNotOptimize(ptr);
 }
 
 inline void simulate_cacheline_nontemporal_load(std::byte* ptr) {
   DebugAssert(uintptr_t(ptr) % CACHE_LINE_SIZE == 0, "Pointer must be cacheline aligned");
-#ifdef __AVX512VL__
-  auto v = _mm512_stream_load_si512((__m512i*)(ptr));
-  benchmark::DoNotOptimize(v);
-#else
+#ifdef __APPLE__
   __builtin_prefetch(ptr);
+#else
+  auto v = _mm512_stream_load_si512((__m512i*)(ptr));
 #endif
+  benchmark::DoNotOptimize(v);
 }
 
 inline void simulate_cacheline_load(std::byte* ptr) {
   DebugAssert(uintptr_t(ptr) % CACHE_LINE_SIZE == 0, "Pointer must be cacheline aligned");
-#ifdef __AVX512VL__
-  auto v = _mm512_load_si512(ptr);
-  benchmark::DoNotOptimize(v);
-#else
+#ifdef __APPLE__
   __builtin_prefetch(ptr);
+#else
+  auto v = _mm512_load_si512(ptr);
 #endif
+  benchmark::DoNotOptimize(v);
 }
 
 inline void simulate_scan(std::byte* ptr, size_t num_bytes) {
@@ -139,7 +137,7 @@ inline void simulate_scan(std::byte* ptr, size_t num_bytes) {
 
 inline void flush_cacheline(std::byte* ptr) {
   DebugAssert(uintptr_t(ptr) % CACHE_LINE_SIZE == 0, "Pointer must be cacheline aligned");
-#ifdef __AVX512VL__
+#ifdef __AVX512F__
   _mm_mfence();
   _mm_clflush(ptr);
   _mm_mfence();

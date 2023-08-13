@@ -140,6 +140,10 @@ add_executable(
     storage/buffer/ycsb_buffer_manager_benchmark.cpp
 )
 
+if (NOT APPLE)
+target_compile_options(hyriseBenchmarkBufferManager PRIVATE -mavx -mavx512f -mclwb)
+endif()
+
 target_link_libraries(
     hyriseBenchmarkBufferManager
 
@@ -147,6 +151,8 @@ target_link_libraries(
     hdr_histogram
     benchmark::benchmark
 )
+
+
 
 # Configure hyriseBenchmarkStarSchema
 add_executable(
