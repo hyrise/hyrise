@@ -92,7 +92,7 @@ inline void simulate_cacheline_nontemporal_store(std::byte* ptr) {
   std::memset(ptr, 0x1, CACHE_LINE_SIZE);
 #else
   // using a non-temporal memory hint
-  _mm512_stream_si512(reinterpret_cast<void*>(ptr), _mm512_set1_epi8(0x1));
+  _mm512_stream_si512(reinterpret_cast<__m512i*>(ptr), _mm512_set1_epi8(0x1));
   _mm_sfence();
 #endif
 }
@@ -103,7 +103,7 @@ inline void simulate_cacheline_temporal_store(std::byte* ptr) {
 #ifdef __APPLE__
   std::memset(ptr, 0x1, CACHE_LINE_SIZE);
 #else
-  _mm512_store_si512((__m512i*)(ptr), _mm512_set1_epi8(0x1));
+  _mm512_store_si512(reinterpret_cast<__m512i*>(ptr), _mm512_set1_epi8(0x1));
   _mm_clwb(ptr);
   _mm_sfence();
 #endif
