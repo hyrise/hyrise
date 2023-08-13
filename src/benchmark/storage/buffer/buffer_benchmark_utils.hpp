@@ -8,6 +8,7 @@
 #include <x86intrin.h>
 #endif
 #include <fcntl.h>
+#include <intrin.h>
 #include <sys/mman.h>
 #include <unistd.h>
 #include <algorithm>
@@ -145,7 +146,8 @@ inline void flush_cacheline(std::byte* ptr) {
 
 inline void flush_pipeline() {
   for (int i = 0; i < 100; i++) {
-    __nop();
+    // __nop();
+    asm("nop")
   }
 }
 
