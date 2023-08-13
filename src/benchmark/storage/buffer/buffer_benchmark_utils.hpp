@@ -143,6 +143,12 @@ inline void flush_cacheline(std::byte* ptr) {
 #endif
 }
 
+inline void flush_pipeline() {
+  for (int i = 0; i < 100; i++) {
+    __nop();
+  }
+}
+
 inline void init_histogram(hdr_histogram** histogram) {
   hdr_init(1, 10000000000, 3, histogram);
 }
