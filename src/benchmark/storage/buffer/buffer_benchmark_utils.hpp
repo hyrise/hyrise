@@ -135,6 +135,14 @@ inline void simulate_scan(std::byte* ptr, size_t num_bytes) {
   }
 }
 
+inline void flush_cacheline(std::byte* ptr) {
+  DebugAssert(uintptr_t(ptr) % CACHE_LINE_SIZE == 0, "Pointer must be cacheline aligned");
+#ifdef __AVX512VL__
+  _mm_clflush(ptr);
+  _mm_mfence();
+#endif
+}
+
 inline void init_histogram(hdr_histogram** histogram) {
   hdr_init(1, 10000000000, 3, histogram);
 }
@@ -281,11 +289,14 @@ inline void run_ycsb(Fixture& fixture, benchmark::State& state) {
   hdr_histogram* local_latency_histogram;
   init_histogram(&local_latency_histogram);
 
+  std::map<YSCBOperationType, uint64_t> operation_counts;
+
   for (auto _ : state) {
     const auto start = state.thread_index() * fixture.operations_per_thread;
     const auto end = start + fixture.operations_per_thread;
     for (auto i = start; i < end; ++i) {
       const auto op = fixture.operations[i];
+      operation_counts[op.second]++;
       const auto timer_start = std::chrono::high_resolution_clock::now();
       bytes_processed += execute_ycsb_action(fixture.table, fixture.buffer_manager, op);
       const auto timer_end = std::chrono::high_resolution_clock::now();
@@ -303,6 +314,9 @@ inline void run_ycsb(Fixture& fixture, benchmark::State& state) {
   state.SetBytesProcessed(bytes_processed);
 
   if (state.thread_index() == 0) {
+    std::cout << "Operation counts: " << operation_counts[YSCBOperationType::Lookup] << " lookups, "
+              << operation_counts[YSCBOperationType::Update] << " updates, "
+              << operation_counts[YSCBOperationType::Scan] << " scans" << std::endl;
     state.counters["cache_hit_rate"] = fixture.buffer_manager.metrics()->hit_rate();
     state.counters["latency_mean"] = hdr_mean(fixture.latency_histogram);
     state.counters["latency_stddev"] = hdr_stddev(fixture.latency_histogram);

@@ -37,6 +37,7 @@ void BM_RandomAccess(benchmark::State& state) {
     for (auto i = 0; i < NUM_OPS_PER_THREAD; ++i) {
       const auto addr = mapped_region + start_addr + distribution(gen) * CACHE_LINE_SIZE;
       DebugAssert(reinterpret_cast<uintptr_t>(addr) % CACHE_LINE_SIZE == 0, "Not cacheline aligned");
+      flush_cacheline(addr);
       const auto timer_start = std::chrono::high_resolution_clock::now();
       if constexpr (access == AccessType::TemporalLoad) {
         simulate_cacheline_load(addr);
