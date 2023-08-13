@@ -56,6 +56,7 @@ void BM_RandomAccess(benchmark::State& state) {
       } else {
         Fail("Unknown access type");
       }
+      _mm_mfence();
       const auto timer_end = std::chrono::high_resolution_clock::now();
       const auto latency = std::chrono::duration_cast<std::chrono::nanoseconds>(timer_end - timer_start).count();
       latencies += latency;
