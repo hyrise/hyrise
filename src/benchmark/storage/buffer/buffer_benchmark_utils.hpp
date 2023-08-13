@@ -115,8 +115,8 @@ inline void simulate_cacheline_nontemporal_load(std::byte* ptr) {
   __builtin_prefetch(ptr);
 #else
   auto v = _mm512_stream_load_si512((__m512i*)(ptr));
-#endif
   benchmark::DoNotOptimize(v);
+#endif
 }
 
 inline void simulate_cacheline_load(std::byte* ptr) {
@@ -125,8 +125,8 @@ inline void simulate_cacheline_load(std::byte* ptr) {
   __builtin_prefetch(ptr);
 #else
   auto v = _mm512_load_si512(ptr);
-#endif
   benchmark::DoNotOptimize(v);
+#endif
 }
 
 inline void simulate_scan(std::byte* ptr, size_t num_bytes) {
