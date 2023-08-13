@@ -95,6 +95,7 @@ inline void simulate_cacheline_nontemporal_store(std::byte* ptr) {
 #else
   std::memset(ptr, 0x1, CACHE_LINE_SIZE);
 #endif
+  benchmark::DoNotOptimize(ptr);
 }
 
 inline void simulate_cacheline_temporal_store(std::byte* ptr) {
@@ -107,6 +108,7 @@ inline void simulate_cacheline_temporal_store(std::byte* ptr) {
 #else
   std::memset(ptr, 0x1, CACHE_LINE_SIZE);
 #endif
+  benchmark::DoNotOptimize(ptr);
 }
 
 inline void simulate_cacheline_nontemporal_load(std::byte* ptr) {
