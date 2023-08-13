@@ -138,6 +138,7 @@ inline void simulate_scan(std::byte* ptr, size_t num_bytes) {
 inline void flush_cacheline(std::byte* ptr) {
   DebugAssert(uintptr_t(ptr) % CACHE_LINE_SIZE == 0, "Pointer must be cacheline aligned");
 #ifdef __AVX512VL__
+  _mm_mfence();
   _mm_clflush(ptr);
   _mm_mfence();
 #endif
