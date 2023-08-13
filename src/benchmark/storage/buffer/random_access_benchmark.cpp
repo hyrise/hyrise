@@ -13,7 +13,7 @@ enum AccessType { TemporalLoad, NonTemporalLoad, TemporalWrite, NonTemporalWrite
 template <NodeID node, AccessType access>
 void BM_RandomAccess(benchmark::State& state) {
   auto NUM_THREADS = state.threads();
-  constexpr auto VIRT_SIZE = 1UL * GB;
+  constexpr auto VIRT_SIZE = 5UL * GB;
   constexpr auto NUM_OPS_PER_THREAD = 10000;
   const auto SIZE_PER_THREAD = (VIRT_SIZE / NUM_THREADS / CACHE_LINE_SIZE) * CACHE_LINE_SIZE;
 
@@ -29,14 +29,19 @@ void BM_RandomAccess(benchmark::State& state) {
 
   std::random_device rd;
   std::mt19937 gen(rd());
-  std::uniform_int_distribution<> distribution(0, SIZE_PER_THREAD / CACHE_LINE_SIZE - 1);
+  std::uniform_int_distribution<uint64_t> distribution(0, SIZE_PER_THREAD / CACHE_LINE_SIZE - 1);
 
   auto start_addr = SIZE_PER_THREAD * state.thread_index();
 
   for (auto _ : state) {
     for (auto i = 0; i < NUM_OPS_PER_THREAD; ++i) {
-      const auto addr = mapped_region + start_addr + distribution(gen) * CACHE_LINE_SIZE;
+      auto page_idx = distribution(gen);
+      auto offset = page_idx * CACHE_LINE_SIZE;
+      const auto addr = mapped_region + offset;
       DebugAssert(reinterpret_cast<uintptr_t>(addr) % CACHE_LINE_SIZE == 0, "Not cacheline aligned");
+      DebugAssert(addr >= mapped_region, "not in region");
+      DebugAssert(addr < mapped_region + VIRT_SIZE, "not in region");
+
       flush_cacheline(addr);
       flush_pipeline();
       const auto timer_start = std::chrono::high_resolution_clock::now();
