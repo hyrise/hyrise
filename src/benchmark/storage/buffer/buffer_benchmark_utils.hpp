@@ -86,7 +86,15 @@ inline void explicit_move_pages(void* mem, size_t size, int node) {
 #endif
 }
 
-static __m512i DEFAULT_DATA = _mm512_set1_epi8(0x1);
+static const char FAKE_DATA[512] __attribute__((aligned(512))) =
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 
 inline void simulate_cacheline_nontemporal_store(std::byte* ptr) {
   DebugAssert(uintptr_t(ptr) % CACHE_LINE_SIZE == 0, "Pointer must be cacheline aligned");
@@ -94,7 +102,7 @@ inline void simulate_cacheline_nontemporal_store(std::byte* ptr) {
   std::memset(ptr, 0x1, CACHE_LINE_SIZE);
 #else
   // using a non-temporal memory hint
-  _mm512_stream_si512(reinterpret_cast<__m512i*>(ptr), DEFAULT_DATA);
+  _mm512_stream_si512(reinterpret_cast<__m512i*>(ptr), *reinterpret_cast<const __m512i*>(FAKE_DATA));
   _mm_sfence();
 #endif
 }
@@ -105,7 +113,7 @@ inline void simulate_cacheline_temporal_store(std::byte* ptr) {
 #ifdef __APPLE__
   std::memset(ptr, 0x1, CACHE_LINE_SIZE);
 #else
-  _mm512_store_si512(reinterpret_cast<__m512i*>(ptr), DEFAULT_DATA);
+  _mm512_store_si512(reinterpret_cast<__m512i*>(ptr), *reinterpret_cast<const __m512i*>(FAKE_DATA));
   _mm_clwb(ptr);
   _mm_sfence();
 #endif

@@ -87,9 +87,9 @@ LATENCY_BM(0, DRAM, TemporalLoad);
 LATENCY_BM(0, DRAM, NonTemporalLoad);
 LATENCY_BM(0, DRAM, TemporalWrite);
 LATENCY_BM(0, DRAM, NonTemporalWrite);
-LATENCY_BM(1, CXL, TemporalLoad);
-LATENCY_BM(1, CXL, NonTemporalLoad);
-LATENCY_BM(1, CXL, TemporalWrite);
-LATENCY_BM(1, CXL, NonTemporalWrite);
+LATENCY_BM(2, CXL, TemporalLoad);
+LATENCY_BM(2, CXL, NonTemporalLoad);
+LATENCY_BM(2, CXL, TemporalWrite);
+LATENCY_BM(2, CXL, NonTemporalWrite);
 
 }  // namespace hyrise
