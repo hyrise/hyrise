@@ -96,13 +96,17 @@ static const char FAKE_DATA[512] __attribute__((aligned(512))) =
     "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
     "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 
+#ifdef __linux__
+static const __m512i avx_fake_data = _mm512_load_si512(FAKE_DATA);
+#endif
+
 inline void simulate_cacheline_nontemporal_store(std::byte* ptr) {
   DebugAssert(uintptr_t(ptr) % CACHE_LINE_SIZE == 0, "Pointer must be cacheline aligned");
 #ifdef __APPLE__
   std::memset(ptr, 0x1, CACHE_LINE_SIZE);
 #else
   // using a non-temporal memory hint
-  _mm512_stream_si512(reinterpret_cast<__m512i*>(ptr), *reinterpret_cast<const __m512i*>(FAKE_DATA));
+  _mm512_stream_si512(ptr, avx_fake_data);
   _mm_sfence();
 #endif
 }
@@ -113,7 +117,7 @@ inline void simulate_cacheline_temporal_store(std::byte* ptr) {
 #ifdef __APPLE__
   std::memset(ptr, 0x1, CACHE_LINE_SIZE);
 #else
-  _mm512_store_si512(reinterpret_cast<__m512i*>(ptr), *reinterpret_cast<const __m512i*>(FAKE_DATA));
+  _mm512_store_si512(ptr, avx_fake_data);
   _mm_clwb(ptr);
   _mm_sfence();
 #endif
