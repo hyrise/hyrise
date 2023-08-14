@@ -50,6 +50,7 @@ using PerHash = std::array<T, hash_partition_partition_count>;
 template <typename T>
 void spawn_and_wait_per_hash(PerHash<T>& data, auto&& per_hash_function) {
   auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
+  tasks.reserve(hash_partition_partition_count);
   for (auto hash_value = 0u; hash_value < hash_partition_partition_count; ++hash_value) {
     tasks.emplace_back(std::make_shared<JobTask>([hash_value, &data, &per_hash_function]() {
       if constexpr (requires { per_hash_function(data[hash_value], hash_value); })
@@ -65,6 +66,7 @@ void spawn_and_wait_per_hash(PerHash<T>& data, auto&& per_hash_function) {
 template <typename T>
 void spawn_and_wait_per_hash(const PerHash<T>& data, auto&& per_hash_function) {
   auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
+  tasks.reserve(hash_partition_partition_count);
   for (auto hash_value = 0u; hash_value < hash_partition_partition_count; ++hash_value) {
     tasks.emplace_back(std::make_shared<JobTask>([hash_value, &data, &per_hash_function]() {
       if constexpr (requires { per_hash_function(data[hash_value], hash_value); })

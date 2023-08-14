@@ -46,9 +46,6 @@ const FrameDescription& WindowFunctionEvaluator::frame_description() const {
   return window->frame_description;
 }
 
-void WindowFunctionEvaluator::_on_set_parameters(
-    [[maybe_unused]] const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
-
 std::shared_ptr<AbstractOperator> WindowFunctionEvaluator::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_left_input,
     [[maybe_unused]] const std::shared_ptr<AbstractOperator>& copied_right_input,
@@ -60,6 +57,8 @@ std::shared_ptr<AbstractOperator> WindowFunctionEvaluator::_on_deep_copy(
 template <typename InputColumnType, WindowFunction window_function>
 std::shared_ptr<const Table> WindowFunctionEvaluator::_templated_on_execute() {
   if (!is_rank_like(window_function) && frame_description().type == FrameType::Range) {
+    // The SQL standard only allows for at most one order-by column when using range mode.
+    // If no order-by column is provided all tuples are treated as peers.
     Assert(_order_by_column_ids.size() <= 1,
            "For non-rank-like window functions, range mode frames are only allowed when there is at most one order-by "
            "expression.");
@@ -189,11 +188,13 @@ WindowFunctionEvaluator::ComputationStrategy WindowFunctionEvaluator::choose_com
   Assert(is_prefix_frame || !is_rank_like(window_function), "Invalid frame for rank-like window function.");
 
   if (is_prefix_frame && SupportsOnePass<InputColumnType, window_function> &&
-      (is_rank_like(window_function) || frame.type == FrameType::Rows))
+      (is_rank_like(window_function) || frame.type == FrameType::Rows)) {
     return ComputationStrategy::OnePass;
+  }
 
-  if (SupportsSegmentTree<InputColumnType, window_function>)
+  if (SupportsSegmentTree<InputColumnType, window_function>) {
     return ComputationStrategy::SegmentTree;
+  }
 
   Fail("Could not determine appropriate computation strategy for window function " +
        window_function_to_string.left.at(window_function) + ".");
@@ -217,8 +218,9 @@ HashPartitionedData collect_chunk_into_buckets(ChunkID chunk_id, const Chunk& ch
     for (auto column_id_index = 0u; column_id_index < column_ids.size(); ++column_id_index) {
       const auto segment = chunk.get_segment(column_ids[column_id_index]);
       segment_iterate(*segment, [&](const auto& position) {
-        if (!position.is_null())
+        if (!position.is_null()) {
           values[position.chunk_offset()][column_id_index] = position.value();
+        }
       });
     }
     return values;
@@ -230,8 +232,9 @@ HashPartitionedData collect_chunk_into_buckets(ChunkID chunk_id, const Chunk& ch
   auto function_argument_values = std::vector<AllTypeVariant>(chunk_size, NULL_VALUE);
   if (function_argument_column_id != INVALID_COLUMN_ID) {
     segment_iterate(*chunk.get_segment(function_argument_column_id), [&](const auto& position) {
-      if (!position.is_null())
+      if (!position.is_null()) {
         function_argument_values[position.chunk_offset()] = position.value();
+      }
     });
   }
 
@@ -331,8 +334,9 @@ void WindowFunctionEvaluator::partition_and_order(HashPartitionedData& buckets) 
 
   const auto comparator = [&is_column_reversed](const RelevantRowInformation& lhs, const RelevantRowInformation& rhs) {
     const auto comp_result = compare_with_null_equal(lhs.partition_values, rhs.partition_values);
-    if (std::is_neq(comp_result))
+    if (std::is_neq(comp_result)) {
       return std::is_lt(comp_result);
+    }
     return std::is_lt(compare_with_null_equal(lhs.order_values, rhs.order_values, is_column_reversed));
   };
 

@@ -57,7 +57,7 @@ class WindowFunctionEvaluator : public AbstractReadOnlyOperator {
   template <typename InputColumnType, WindowFunction window_function>
   std::shared_ptr<const Table> _templated_on_execute();
 
-  void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
+  void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override {}
   std::shared_ptr<AbstractOperator> _on_deep_copy(
       const std::shared_ptr<AbstractOperator>& copied_left_input,
       const std::shared_ptr<AbstractOperator>& copied_right_input,
