@@ -113,11 +113,12 @@ bool BenchmarkTableEncoder::encode(const std::string& table_name, const std::sha
    */
   auto encoding_performed = std::atomic_bool{false};
   const auto column_data_types = table->column_data_types();
+  const auto chunk_count = table->chunk_count();
 
   auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
-  jobs.reserve(table->chunk_count());
+  jobs.reserve(chunk_count);
 
-  for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto encode = [&, chunk_id]() {
       const auto chunk = table->get_chunk(ChunkID{chunk_id});
       Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");

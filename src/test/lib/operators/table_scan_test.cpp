@@ -880,7 +880,7 @@ TEST_P(OperatorsTableScanTest, ScanWithExcludedFirstChunk) {
   auto scan = std::make_shared<TableScan>(
       _int_int_partly_compressed,
       greater_than_equals_(get_column_expression(_int_int_partly_compressed, ColumnID{0}), 0));
-  scan->excluded_chunk_ids = {ChunkID{0}};
+  scan->excluded_chunk_ids = std::make_shared<std::vector<ChunkID>>(std::initializer_list<ChunkID>{ChunkID{0}});
   scan->execute();
 
   ASSERT_COLUMN_EQ(scan->get_output(), ColumnID{1}, expected);
@@ -1300,6 +1300,16 @@ TEST_P(OperatorsTableScanTest, SortedFlagMultipleChunksReferenced) {
   const auto& result_chunk_sorted = scan_sorted->get_output()->get_chunk(ChunkID{0});
   const auto& chunk_sorted_by = result_chunk_sorted->individually_sorted_by();
   ASSERT_TRUE(chunk_sorted_by.empty());
+}
+
+TEST_P(OperatorsTableScanTest, DeepCopyRetainsExcludedChunks) {
+  const auto table_scan =
+      create_table_scan(get_int_float_op(), ColumnID{0}, PredicateCondition::GreaterThanEquals, 1234);
+  table_scan->excluded_chunk_ids = std::make_shared<std::vector<ChunkID>>(std::initializer_list<ChunkID>{ChunkID{0}});
+  const auto new_table_scan = std::dynamic_pointer_cast<TableScan>(table_scan->deep_copy());
+  EXPECT_EQ(*table_scan->excluded_chunk_ids, *new_table_scan->excluded_chunk_ids);
+  EXPECT_EQ(table_scan->excluded_chunk_ids->data(),
+            new_table_scan->excluded_chunk_ids->data());  // Should be the same object.
 }
 
 }  // namespace hyrise

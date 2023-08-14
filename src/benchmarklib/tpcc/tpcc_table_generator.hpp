@@ -55,6 +55,7 @@ class TPCCTableGenerator : public AbstractTableGenerator {
   const time_t _current_date = std::time(nullptr);
 
  protected:
+  IndexesByTable _indexes_by_table() const override;
   void _add_constraints(std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) const override;
 
   template <typename T>

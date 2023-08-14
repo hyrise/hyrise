@@ -69,6 +69,7 @@ set(
     lib/logical_query_plan/union_node_test.cpp
     lib/logical_query_plan/update_node_test.cpp
     lib/logical_query_plan/validate_node_test.cpp
+    lib/logical_query_plan/window_node_test.cpp
     lib/lossless_cast_test.cpp
     lib/lossy_cast_test.cpp
     lib/memory/segments_using_allocators_test.cpp
@@ -213,7 +214,7 @@ set(
     lib/storage/value_segment_test.cpp
     lib/tasks/chunk_compression_task_test.cpp
     lib/utils/check_table_equal_test.cpp
-    lib/utils/column_pruning_utils_test.cpp
+    lib/utils/pruning_utils_test.cpp
     lib/utils/date_time_utils_test.cpp
     lib/utils/format_bytes_test.cpp
     lib/utils/format_duration_test.cpp

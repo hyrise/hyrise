@@ -405,8 +405,8 @@ TEST_F(ServerTestRunner, TestParallelConnections) {
   //  - https://stackoverflow.com/questions/12508653/what-is-the-issue-with-stdasync
   //  - Mastering the C++17 STL, pages 205f
   // TODO(anyone): Change this to proper threads+futures, or at least do not reuse this code.
-  const auto num_threads = 100u;
-  std::vector<std::future<void>> thread_futures;
+  const auto num_threads = size_t{100};
+  auto thread_futures = std::vector<std::future<void>>{};
   thread_futures.reserve(num_threads);
 
   for (auto thread_num = 0u; thread_num < num_threads; ++thread_num) {
@@ -436,15 +436,15 @@ TEST_F(ServerTestRunner, TestTransactionConflicts) {
     initial_sum = *table->get_value<int64_t>(ColumnID{0}, 0);
   }
 
-  std::atomic_int successful_increments{0};
-  std::atomic_int conflicted_increments{0};
+  auto successful_increments = std::atomic_int{0};
+  auto conflicted_increments = std::atomic_int{0};
   const auto iterations_per_thread = 10;
 
   // Define the work package
   const auto connection_run = [&]() {
     for (auto iteration = 0; iteration < iterations_per_thread; ++iteration) {
-      pqxx::connection connection{_connection_string};
-      pqxx::nontransaction transaction{connection};
+      auto connection = pqxx::connection{_connection_string};
+      auto transaction = pqxx::nontransaction{connection};
       try {
         const std::string sql = "UPDATE table_a SET a = a + 1 WHERE a = (SELECT MIN(a) FROM table_a);";
         transaction.exec(sql);
@@ -457,8 +457,8 @@ TEST_F(ServerTestRunner, TestTransactionConflicts) {
   };
 
   // Create the async objects and spawn them asynchronously (i.e., as their own threads)
-  const auto num_threads = 100u;
-  std::vector<std::future<void>> thread_futures;
+  const auto num_threads = size_t{100};
+  auto thread_futures = std::vector<std::future<void>>{};
   thread_futures.reserve(num_threads);
 
   for (auto thread_num = 0u; thread_num < num_threads; ++thread_num) {

@@ -25,8 +25,6 @@ set(
     expression/abstract_expression.hpp
     expression/abstract_predicate_expression.cpp
     expression/abstract_predicate_expression.hpp
-    expression/aggregate_expression.cpp
-    expression/aggregate_expression.hpp
     expression/arithmetic_expression.cpp
     expression/arithmetic_expression.hpp
     expression/between_expression.cpp
@@ -81,6 +79,10 @@ set(
     expression/unary_minus_expression.hpp
     expression/value_expression.cpp
     expression/value_expression.hpp
+    expression/window_expression.cpp
+    expression/window_expression.hpp
+    expression/window_function_expression.cpp
+    expression/window_function_expression.hpp
     hyrise.cpp
     hyrise.hpp
     import_export/binary/binary_parser.cpp
@@ -164,6 +166,8 @@ set(
     logical_query_plan/update_node.hpp
     logical_query_plan/validate_node.cpp
     logical_query_plan/validate_node.hpp
+    logical_query_plan/window_node.cpp
+    logical_query_plan/window_node.hpp
     lossless_cast.cpp
     lossless_cast.hpp
     lossy_cast.hpp
@@ -180,7 +184,7 @@ set(
     operators/abstract_read_only_operator.hpp
     operators/abstract_read_write_operator.cpp
     operators/abstract_read_write_operator.hpp
-    operators/aggregate/aggregate_traits.hpp
+    operators/aggregate/window_function_traits.hpp
     operators/aggregate_hash.cpp
     operators/aggregate_hash.hpp
     operators/aggregate_sort.cpp
@@ -346,6 +350,8 @@ set(
     scheduler/node_queue_scheduler.hpp
     scheduler/operator_task.cpp
     scheduler/operator_task.hpp
+    scheduler/shutdown_task.cpp
+    scheduler/shutdown_task.hpp
     scheduler/task_queue.cpp
     scheduler/task_queue.hpp
     scheduler/task_utils.hpp
@@ -585,10 +591,6 @@ set(
     utils/assert.hpp
     utils/check_table_equal.cpp
     utils/check_table_equal.hpp
-    utils/chunk_pruning_utils.cpp
-    utils/chunk_pruning_utils.hpp
-    utils/column_pruning_utils.cpp
-    utils/column_pruning_utils.hpp
     utils/copyable_atomic.hpp
     utils/date_time_utils.cpp
     utils/date_time_utils.hpp
@@ -645,6 +647,8 @@ set(
     utils/plugin_manager.hpp
     utils/print_utils.cpp
     utils/print_utils.hpp
+    utils/pruning_utils.cpp
+    utils/pruning_utils.hpp
     utils/settings/abstract_setting.cpp
     utils/settings/abstract_setting.hpp
     utils/settings_manager.cpp
@@ -737,6 +741,7 @@ target_link_libraries_system(
     hyrise_impl
 
     ${BOOST_LIBS}
+    concurrentqueue
     cpp-btree
     cxxopts
     flat-hash-map
