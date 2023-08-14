@@ -33,7 +33,7 @@ WindowFunctionEvaluator::WindowFunctionEvaluator(
       _window_function_expression(std::move(init_window_funtion_expression)) {
   Assert(
       _function_argument_column_id != INVALID_COLUMN_ID || is_rank_like(_window_function_expression->window_function),
-      "Could not extract window function argument, although it was not rank-like");
+      "Could not extract window function argument, although it was not rank-like.");
 }
 
 const std::string& WindowFunctionEvaluator::name() const {
@@ -568,7 +568,7 @@ std::shared_ptr<const Table> WindowFunctionEvaluator::annotate_input_table(
     }
   }
 
-  // Create output table reusing the segments from input and the newly created segments for the output column
+  // Create output table reusing the segments from input and the newly created segments for the output column.
   auto output_column_definitions = input_table->column_definitions();
   output_column_definitions.push_back(new_column_definition);
   auto output_chunks = std::vector<std::shared_ptr<Chunk>>();

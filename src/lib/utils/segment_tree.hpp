@@ -75,12 +75,12 @@ class SegmentTree {
   // Returns the aggregate of the leaf values in the queried range.
   T range_query(QueryRange range) const {
     // The algorithm works like this: There are two pointers, left_node and right_node, that span the range that still
-    // needs to be included in the query aggregate. Initially, they start the corresponding leaf node values. As with
+    // needs to be included in the query aggregate. Initially, they start at the corresponding leaf node values. As with
     // the query interface, the left_node is inclusive and the right_node is exclusive (that is, right_node could point
     // outside of the tree array).
-    // In each iteration, the pointers update one level towards the root of the tree. Whenever the next parent of one
-    // the pointers would not be fully contained in `range`, the current nodes value is `combine`d into the aggregate
-    // result and the pointer moves inward. After moving inward, the new nodes parent must be fully included in the
+    // In each iteration, the pointers update one level towards the root of the tree. Whenever the next parent of one of
+    // the pointers would not be fully contained in `range`, the current node's value is `combine`d into the aggregate
+    // result and the pointer moves inward. After moving inward, the new node's parent must be fully included in the
     // range again. A node must be included exactly if its index is odd, because each level (except for the root) starts
     // with an even index and the leftmost node is always a left child.
     //
