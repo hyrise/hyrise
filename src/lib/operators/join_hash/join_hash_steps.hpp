@@ -272,7 +272,7 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
                                     BloomFilter& output_bloom_filter, std::vector<NodeID>& partition_node_locations,
                                     const BloomFilter& input_bloom_filter = ALL_TRUE_BLOOM_FILTER) {
   // Retrieve input chunk_count as it might change during execution if we work on a non-reference table
-  auto chunk_count = in_table->chunk_count();
+  const auto chunk_count = in_table->chunk_count();
 
   const std::hash<HashedType> hash_function;
   // List of all elements that will be partitioned
@@ -426,8 +426,7 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
     if (JoinHash::JOB_SPAWN_THRESHOLD > num_rows) {
       materialize();
       // try to retrieve current numa node
-      auto worker = Worker::get_this_thread_worker();
-      if (worker) {
+      if (const auto worker = Worker::get_this_thread_worker()) {
         // TODO(anyone): Verify this works in most cases.
         // Alternatively might do a numa call to get current node (leads to a syscall though, so probably slow).
         // On the other hand we only end up here if the segment contains < JOB_SPAWN_THRESHOLD rows...
@@ -442,7 +441,7 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
     }
   }
 
-  if (jobs.size()) {
+  if (!jobs.empty()) {
     Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
   }
   // Some tasks were immediately executed which is why we need to combine them with the
@@ -464,7 +463,7 @@ std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<
                                                            const BloomFilter& input_bloom_filter,
                                                            std::vector<NodeID>& hash_table_node_locations) {
   Assert(input_bloom_filter.size() == BLOOM_FILTER_SIZE, "invalid input_bloom_filter");
-  DebugAssert(hash_table_node_locations.size() == 0, "hash_table_node_locations should be empty.");
+  DebugAssert(hash_table_node_locations.empty(), "hash_table_node_locations should be empty.");
   if (radix_container.empty()) {
     return {};
   }
@@ -478,7 +477,7 @@ std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<
   const auto radix_container_size = radix_container.size();
   if (radix_bits == 0) {
     auto total_size = size_t{0};
-    for (size_t partition_idx = 0; partition_idx < radix_container_size; ++partition_idx) {
+    for (auto partition_idx = size_t{0}; partition_idx < radix_container_size; ++partition_idx) {
       total_size += radix_container[partition_idx].elements.size();
     }
     hash_tables.resize(1);
@@ -531,8 +530,7 @@ std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<
       // Parallelizing this would require a concurrent hash table, which is likely more expensive.
       insert_into_hash_table();
       // try to retrieve current numa node
-      auto worker = Worker::get_this_thread_worker();
-      if (worker) {
+      if (const auto worker = Worker::get_this_thread_worker()) {
         // TODO(anyone): Verify this works in most cases.
         // Alternatively might do a numa call to get current node (leads to a syscall though, so probably slow).
         // On the other hand we only end up here if the segment contains < JOB_SPAWN_THRESHOLD rows...
@@ -546,7 +544,7 @@ std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<
     }
   }
 
-  if (jobs.size()) {
+  if (!jobs.emtpy()) {
     Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
   }
 
@@ -584,7 +582,7 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
   Assert(input_partition_count == job_nodes_placement.size(),
          std::to_string(input_partition_count) + " partitions vs. " + std::to_string(job_nodes_placement.size()) +
              " job nodes");
-  // currently, we just do one pass
+  // Currently, we just do one pass.
   const size_t pass = 0;
   const size_t radix_mask = static_cast<uint32_t>(std::pow(2, radix_bits * (pass + 1)) - 1);
 
