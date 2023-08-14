@@ -110,7 +110,7 @@ struct EvictionItem {
 using EvictionQueue = tbb::concurrent_queue<EvictionItem>;
 
 // Enable or or disable mprotect calls for debugging purposes
-constexpr bool ENABLE_MPROTECT = false;
+constexpr bool ENABLE_MPROTECT = true;
 
 constexpr size_t MAX_EVICTION_QUEUE_PURGES = 1024;
 
@@ -122,7 +122,7 @@ constexpr size_t DEFAULT_RESERVED_VIRTUAL_MEMORY_PER_REGION = (DEFAULT_RESERVED_
 
 constexpr size_t INITIAL_SLOTS_PER_REGION = 10000000;  // TODO
 
-// Hints the buffer manager about the access intent of the caller. AccessIntent.Write is usually used during allocations for example.
+// Hints the buffer manager about the access intent of the caller. This influences the migration strategy
 enum class AccessIntent { Read, Write };
 
 boost::container::pmr::memory_resource* get_buffer_manager_memory_resource();
@@ -152,7 +152,4 @@ std::array<std::shared_ptr<VolatileRegion>, NUM_PAGE_SIZE_TYPES> create_volatile
     std::byte* mapped_region, std::shared_ptr<BufferManagerMetrics> metrics);
 
 void unmap_region(std::byte* region);
-
-PageID find_page(void* ptr);
-
 }  // namespace hyrise
