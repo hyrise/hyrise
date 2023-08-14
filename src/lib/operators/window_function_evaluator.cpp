@@ -5,7 +5,6 @@
 #include <utility>
 
 #include "all_type_variant.hpp"
-#include "expression/lqp_column_expression.hpp"
 #include "expression/window_function_expression.hpp"
 #include "hyrise.hpp"
 #include "resolve_type.hpp"
@@ -377,8 +376,9 @@ struct WindowBoundCalculator {
   static QueryRange calculate_window_bounds([[maybe_unused]] std::span<const RelevantRowInformation> partition,
                                             [[maybe_unused]] uint64_t tuple_index,
                                             [[maybe_unused]] const FrameDescription& frame) {
-    auto error_message = std::string("Unsupported frame type and order-by column type combination: ");
-    error_message += [&]() {
+    auto error_stream =
+        std::ostringstream("Unsupported frame type and order-by column type combination: ", std::ios_base::ate);
+    error_stream << [&]() {
       using std::literals::string_view_literals::operator""sv;
 
       switch (frame_type) {
@@ -392,9 +392,9 @@ struct WindowBoundCalculator {
           return ""sv;
       }
     }();
-    error_message += " ";
-    error_message += data_type_to_string.left.at(data_type_from_type<OrderByColumnType>());
-    Fail(error_message);
+    error_stream << " ";
+    error_stream << data_type_to_string.left.at(data_type_from_type<OrderByColumnType>());
+    Fail(error_stream.str());
   }
 };
 
