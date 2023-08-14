@@ -76,7 +76,7 @@ void test_output(const std::shared_ptr<WindowFunctionEvaluator>& window_function
   window_function_operator->execute();
   const auto result_table = window_function_operator->get_output();
 
-  std::shared_ptr<Table> expected_result = load_table(result_table_path + answer_table);
+  const auto expected_result = load_table(result_table_path + answer_table);
   EXPECT_TABLE_EQ_UNORDERED(result_table, expected_result);
 }
 

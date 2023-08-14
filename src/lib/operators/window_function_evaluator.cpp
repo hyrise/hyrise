@@ -80,7 +80,8 @@ std::shared_ptr<const Table> WindowFunctionEvaluator::_templated_on_execute() {
 
   using OutputColumnType = typename WindowFunctionEvaluatorTraits<InputColumnType, window_function>::OutputColumnType;
 
-  std::vector<std::pair<pmr_vector<OutputColumnType>, pmr_vector<bool>>> segment_data_for_output_column(chunk_count);
+  auto segment_data_for_output_column =
+      std::vector<std::pair<pmr_vector<OutputColumnType>, pmr_vector<bool>>>(chunk_count);
 
   for (auto chunk_id = ChunkID(0); chunk_id < chunk_count; ++chunk_id) {
     const auto output_length = input_table->get_chunk(chunk_id)->size();
@@ -372,7 +373,7 @@ struct WindowBoundCalculator {
   static QueryRange calculate_window_bounds([[maybe_unused]] std::span<const RelevantRowInformation> partition,
                                             [[maybe_unused]] uint64_t tuple_index,
                                             [[maybe_unused]] const FrameDescription& frame) {
-    std::string error_message = "Unsupported frame type and order-by column type combination: ";
+    auto error_message = std::string("Unsupported frame type and order-by column type combination: ");
     error_message += [&]() {
       using std::literals::string_view_literals::operator""sv;
 
@@ -468,15 +469,15 @@ void templated_compute_window_function_segment_tree(const HashPartitionedData& p
       using Impl = typename Traits::NullableSegmentTreeImpl;
       using TreeNode = typename Impl::TreeNode;
 
-      std::vector<TreeNode> leaf_values(partition.size());
+      auto leaf_values = std::vector<TreeNode>(partition.size());
       std::ranges::transform(partition, leaf_values.begin(), [](const auto& row) {
         return Impl::node_from_value(as_optional<InputColumnType>(row.function_argument));
       });
 
       const auto combine = [](auto lhs, auto rhs) { return Impl::combine(std::move(lhs), std::move(rhs)); };
       const auto make_neutral_element = []() { return Impl::neutral_element; };
-      SegmentTree<TreeNode, decltype(combine), decltype(make_neutral_element)> segment_tree(leaf_values, combine,
-                                                                                            make_neutral_element);
+      const auto segment_tree = SegmentTree<TreeNode, decltype(combine), decltype(make_neutral_element)>(
+          leaf_values, combine, make_neutral_element);
 
       for (auto tuple_index = 0u; tuple_index < partition.size(); ++tuple_index) {
         using BoundCalculator = WindowBoundCalculator<frame_type, OrderByColumnType>;
@@ -531,7 +532,7 @@ std::shared_ptr<const Table> WindowFunctionEvaluator::annotate_input_table(
   const auto new_column_definition = TableColumnDefinition(new_column_name, new_column_type, is_output_nullable());
 
   // Create value segments for our output column.
-  std::vector<std::shared_ptr<AbstractSegment>> value_segments_for_new_column;
+  auto value_segments_for_new_column = std::vector<std::shared_ptr<AbstractSegment>>();
   value_segments_for_new_column.reserve(chunk_count);
   for (auto chunk_id = ChunkID(0); chunk_id < chunk_count; ++chunk_id) {
     if (is_output_nullable()) {
@@ -570,11 +571,11 @@ std::shared_ptr<const Table> WindowFunctionEvaluator::annotate_input_table(
   // Create output table reusing the segments from input and the newly created segments for the output column
   auto output_column_definitions = input_table->column_definitions();
   output_column_definitions.push_back(new_column_definition);
-  std::vector<std::shared_ptr<Chunk>> output_chunks;
+  auto output_chunks = std::vector<std::shared_ptr<Chunk>>();
   output_chunks.reserve(chunk_count);
   for (auto chunk_id = ChunkID(0); chunk_id < chunk_count; ++chunk_id) {
     const auto chunk = input_table->get_chunk(chunk_id);
-    Segments output_segments;
+    auto output_segments = Segments();
     for (auto column_id = ColumnID(0); column_id < column_count; ++column_id) {
       output_segments.emplace_back(chunk->get_segment(column_id));
     }
