@@ -526,7 +526,7 @@ TEST_F(ChunkPruningRuleTest, DoNotSetPrunableSubqueryScansWhenNotInAllChains) {
   UnionNode::make(SetOperationMode::Positions,
     PredicateNode::make(equals_(stored_table_node_1_col_a, lqp_subquery_(subquery_min)),
       stored_table_node_1),
-    PredicateNode::make(between_inclusive_(stored_table_node_1_col_a, lqp_subquery_(subquery_min), lqp_subquery_(subquery_max)),
+    PredicateNode::make(between_inclusive_(stored_table_node_1_col_a, lqp_subquery_(subquery_min), lqp_subquery_(subquery_max)),  // NOLINT(whitespace/line_length)
       stored_table_node_1));
   // clang-format on
 
