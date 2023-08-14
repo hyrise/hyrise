@@ -438,7 +438,6 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
      *    probe step.
      */
 
-    // We want to retrieve the hash tables node placements.
     auto build_hash_tables_node_placements = std::vector<NodeID>();
     auto timer_hash_map_building = Timer{};
     if (_secondary_predicates.empty() && is_semi_or_anti_join(_mode)) {
