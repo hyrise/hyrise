@@ -1193,6 +1193,8 @@ TEST_F(LQPTranslatorTest, TranslatePrunableSubqueries) {
   const auto& prunable_subquery_scans = get_table->prunable_subquery_predicates();
   ASSERT_EQ(prunable_subquery_scans.size(), 1);
   EXPECT_EQ(prunable_subquery_scans.front(), pqp);
+  EXPECT_TRUE(int_float2_node->pruned_chunk_ids().empty());
+  EXPECT_TRUE(get_table->pruned_chunk_ids().empty());
 }
 
 TEST_F(LQPTranslatorTest, WindowNode) {

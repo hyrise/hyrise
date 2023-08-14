@@ -105,7 +105,7 @@ std::shared_ptr<AbstractOperator> GetTable::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& /*copied_left_input*/,
     const std::shared_ptr<AbstractOperator>& /*copied_right_input*/,
     std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& /*copied_ops*/) const {
-  // We cannot copy _prunable_subquery_scans here since deep_copy() recurses into the input oprators and the GetTable
+  // We cannot copy _prunable_subquery_scans here since deep_copy() recurses into the input operators and the GetTable
   // operators are the first ones to be copied. Instead, AbstractOperator::deep_copy() sets the copied TableScans after
   // the whole PQP has been copied.
   return std::make_shared<GetTable>(_name, _pruned_chunk_ids, _pruned_column_ids);

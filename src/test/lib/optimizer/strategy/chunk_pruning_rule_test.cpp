@@ -483,18 +483,18 @@ TEST_F(ChunkPruningRuleTest, PredicateWithCorrelatedSubquery) {
 
 TEST_F(ChunkPruningRuleTest, SetPrunableSubqueryScans) {
   const auto stored_table_node_1 = StoredTableNode::make("compressed");
-  const auto a = stored_table_node_1->get_column("a");
+  const auto stored_table_node_1_col_a = stored_table_node_1->get_column("a");
   const auto stored_table_node_2 = StoredTableNode::make("long_compressed");
-  const auto x = stored_table_node_2->get_column("a");
+  const auto stored_table_node_2_col_a = stored_table_node_2->get_column("a");
 
   // clang-format off
   const auto subquery =
-  ProjectionNode::make(expression_vector(max_(x)),
-    AggregateNode::make(expression_vector(), expression_vector(max_(x)),
+  ProjectionNode::make(expression_vector(max_(stored_table_node_2_col_a)),
+    AggregateNode::make(expression_vector(), expression_vector(max_(stored_table_node_2_col_a)),
     stored_table_node_2));
 
   const auto input_lqp =
-  PredicateNode::make(greater_than_(a, lqp_subquery_(subquery)),
+  PredicateNode::make(greater_than_(stored_table_node_1_col_a, lqp_subquery_(subquery)),
     stored_table_node_1);
   // clang-format on
 
@@ -507,26 +507,26 @@ TEST_F(ChunkPruningRuleTest, SetPrunableSubqueryScans) {
 
 TEST_F(ChunkPruningRuleTest, DoNotSetPrunableSubqueryScansWhenNotInAllChains) {
   const auto stored_table_node_1 = StoredTableNode::make("compressed");
-  const auto a = stored_table_node_1->get_column("a");
+  const auto stored_table_node_1_col_a = stored_table_node_1->get_column("a");
   const auto stored_table_node_2 = StoredTableNode::make("long_compressed");
-  const auto x = stored_table_node_2->get_column("a");
+  const auto stored_table_node_2_col_a = stored_table_node_2->get_column("a");
 
   // clang-format off
   const auto subquery_min =
-  ProjectionNode::make(expression_vector(max_(x)),
-    AggregateNode::make(expression_vector(), expression_vector(max_(x)),
+  ProjectionNode::make(expression_vector(max_(stored_table_node_2_col_a)),
+    AggregateNode::make(expression_vector(), expression_vector(max_(stored_table_node_2_col_a)),
     stored_table_node_2));
 
   const auto subquery_max =
-  ProjectionNode::make(expression_vector(max_(x)),
-    AggregateNode::make(expression_vector(), expression_vector(max_(x)),
+  ProjectionNode::make(expression_vector(max_(stored_table_node_2_col_a)),
+    AggregateNode::make(expression_vector(), expression_vector(max_(stored_table_node_2_col_a)),
     stored_table_node_2));
 
   const auto input_lqp =
   UnionNode::make(SetOperationMode::Positions,
-    PredicateNode::make(equals_(a, lqp_subquery_(subquery_min)),
+    PredicateNode::make(equals_(stored_table_node_1_col_a, lqp_subquery_(subquery_min)),
       stored_table_node_1),
-    PredicateNode::make(between_inclusive_(a, lqp_subquery_(subquery_min), lqp_subquery_(subquery_max)),
+    PredicateNode::make(between_inclusive_(stored_table_node_1_col_a, lqp_subquery_(subquery_min), lqp_subquery_(subquery_max)),
       stored_table_node_1));
   // clang-format on
 
@@ -538,18 +538,18 @@ TEST_F(ChunkPruningRuleTest, DoNotSetPrunableSubqueryScansWhenNotInAllChains) {
 
 TEST_F(ChunkPruningRuleTest, DoNotSetPrunableSubqueryScansComplicatedPredicate) {
   const auto stored_table_node_1 = StoredTableNode::make("compressed");
-  const auto a = stored_table_node_1->get_column("a");
+  const auto stored_table_node_1_col_a = stored_table_node_1->get_column("a");
   const auto stored_table_node_2 = StoredTableNode::make("long_compressed");
-  const auto x = stored_table_node_2->get_column("a");
+  const auto stored_table_node_2_col_a = stored_table_node_2->get_column("a");
 
   // clang-format off
   const auto subquery =
-  ProjectionNode::make(expression_vector(x),
-    AggregateNode::make(expression_vector(x), expression_vector(),
+  ProjectionNode::make(expression_vector(stored_table_node_2_col_a),
+    AggregateNode::make(expression_vector(stored_table_node_2_col_a), expression_vector(),
     stored_table_node_2));
 
   const auto input_lqp =
-  PredicateNode::make(in_(a, lqp_subquery_(subquery)),
+  PredicateNode::make(in_(stored_table_node_1_col_a, lqp_subquery_(subquery)),
     stored_table_node_1);
   // clang-format on
 
