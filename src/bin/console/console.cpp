@@ -771,7 +771,9 @@ int Console::_visualize(const std::string& input) {
     return ReturnCode::Error;
   }
 
-  const auto img_filename = plan_type_str + ".png";
+  const auto img_filename = plan_type_str + ".svg";
+  auto graphviz_config = GraphvizConfig{};
+  graphviz_config.format = "svg";
 
   try {
     switch (plan_type) {
@@ -788,7 +790,7 @@ int Console::_visualize(const std::string& input) {
           lqp_roots.emplace_back(lqp);
         }
 
-        auto visualizer = LQPVisualizer{};
+        auto visualizer = LQPVisualizer{graphviz_config};
         visualizer.visualize(lqp_roots, img_filename);
       } break;
 
@@ -801,7 +803,7 @@ int Console::_visualize(const std::string& input) {
           _explicitly_created_transaction_context = _sql_pipeline->transaction_context();
         }
 
-        auto visualizer = PQPVisualizer{};
+        auto visualizer = PQPVisualizer{graphviz_config};
         visualizer.visualize(_sql_pipeline->get_physical_plans(), img_filename);
       } break;
 
@@ -823,7 +825,7 @@ int Console::_visualize(const std::string& input) {
           }
         }
 
-        auto visualizer = JoinGraphVisualizer{};
+        auto visualizer = JoinGraphVisualizer{graphviz_config, {}, {}, {}};
         visualizer.visualize(join_graphs, img_filename);
       } break;
     }
