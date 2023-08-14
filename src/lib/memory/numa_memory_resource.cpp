@@ -1,11 +1,14 @@
 #include "numa_memory_resource.hpp"
+
 #include <numa.h>
 #include <sys/mman.h>
+#include <unistd.h>
+
 #include "utils/assert.hpp"
 
 namespace hyrise {
 
-constexpr auto PAGE_SIZE = size_t{4096};
+const auto PAGE_SIZE = getpagesize();
 
 // TODO(everyone): Find a better way to hold the mapping from NodeID to ArenaID.
 // Could be done as part of a memory manager.

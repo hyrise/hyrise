@@ -1,6 +1,11 @@
 #pragma once
-#include <jemalloc/jemalloc.h>
+
 #include <unordered_map>
+
+#include <jemalloc/jemalloc.h>
+#include <boost/container/pmr/memory_resource.hpp>
+
+#include "types.hpp"
 
 namespace hyrise {
 
