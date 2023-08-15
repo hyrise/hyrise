@@ -33,7 +33,7 @@ bool TPCCStockLevel::_on_execute() {
   // Retrieve the number of items that have a stock level under the threshold value and belong to the 20 orders before
   // the next order ID.
   _sql_executor.execute(
-      "SELECT COUNT(DISTINCT(OL_I_ID)) FROM ORDER_LINE, STOCK WHERE OL_W_ID = " + std::to_string(w_id) +
+      "SELECT COUNT(DISTINCT(S_I_ID)) FROM ORDER_LINE, STOCK WHERE OL_W_ID = " + std::to_string(w_id) +
       " AND OL_D_ID = " + std::to_string(d_id) + " AND OL_O_ID < " + std::to_string(next_o_id) +
       " AND OL_O_ID >= " + std::to_string(next_o_id - 20) + " AND S_W_ID = " + std::to_string(w_id) +
       " AND S_I_ID = OL_I_ID AND S_QUANTITY < " + std::to_string(threshold));
