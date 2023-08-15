@@ -77,9 +77,10 @@ std::shared_ptr<const Table> WindowFunctionEvaluator::_templated_on_execute() {
   window_performance_data.set_step_runtime(OperatorSteps::PartitionAndOrder, timer.lap());
 
   using OutputColumnType = typename WindowFunctionEvaluatorTraits<InputColumnType, window_function>::OutputColumnType;
+  using IsNull = bool;
 
   auto segment_data_for_output_column =
-      std::vector<std::pair<pmr_vector<OutputColumnType>, pmr_vector<bool>>>(chunk_count);
+      std::vector<std::pair<pmr_vector<OutputColumnType>, pmr_vector<IsNull>>>(chunk_count);
 
   for (auto chunk_id = ChunkID(0); chunk_id < chunk_count; ++chunk_id) {
     const auto output_length = input_table->get_chunk(chunk_id)->size();
@@ -90,6 +91,8 @@ std::shared_ptr<const Table> WindowFunctionEvaluator::_templated_on_execute() {
   const auto emit_computed_value = [&](RowID row_id, std::optional<OutputColumnType> computed_value) {
     if (computed_value) {
       segment_data_for_output_column[row_id.chunk_id].first[row_id.chunk_offset] = std::move(*computed_value);
+      // We don't need to set segment_data_for_output_column[row_id.chunk_id].second[row_id.chunk_offset] = false,
+      // because it is default-constructed to false.
     } else {
       segment_data_for_output_column[row_id.chunk_id].second[row_id.chunk_offset] = true;
     }
