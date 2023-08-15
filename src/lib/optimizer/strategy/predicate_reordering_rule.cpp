@@ -48,7 +48,7 @@ void reorder_predicates(const std::vector<std::shared_ptr<AbstractLQPNode>>& pre
   const auto input_sides = predicates.front()->get_input_sides();
 
   // Estimate the cardinality of the input node once to cache its estimated statistics. Since we execute the reordering
-  // recursively, we can be sure the plan below does not change anymore the estimations can be cached safely.
+  // recursively, we can be sure the plan below does not change anymore and input the estimations can be cached safely.
   const auto& cardinality_estimator = cost_estimator->cardinality_estimator;
   cardinality_estimator->estimate_cardinality(input);
 

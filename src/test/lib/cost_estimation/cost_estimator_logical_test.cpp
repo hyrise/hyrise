@@ -145,4 +145,26 @@ TEST_F(CostEstimatorLogicalTest, PredicateWithCorrelatedSubquery) {
   EXPECT_FLOAT_EQ(cost_estimator->estimate_node_cost(predicate_node), expected_cost);
 }
 
+TEST_F(CostEstimatorLogicalTest, CardinalityCaching) {
+  // Enable cardinality estimation caching.
+  const auto& cardinality_estimator = cost_estimator->cardinality_estimator;
+  cardinality_estimator->guarantee_bottom_up_construction();
+  const auto& cardinality_cache = cardinality_estimator->cardinality_estimation_cache.statistics_by_lqp;
+  ASSERT_TRUE(cardinality_cache);
+  EXPECT_TRUE(cardinality_cache->empty());
+
+  // Estimate the cost of a node with cardinality caching enabled.
+  const auto predicate_node_1 = PredicateNode::make(greater_than_(a_a, 50), node_a);
+  cost_estimator->estimate_node_cost(predicate_node_1);
+  EXPECT_EQ(cardinality_cache->size(), 2);
+  EXPECT_TRUE(cardinality_cache->contains(node_a));
+  EXPECT_TRUE(cardinality_cache->contains(predicate_node_1));
+
+  // Estimate the cost of a node with cardinality caching disabled.
+  const auto predicate_node_2 = PredicateNode::make(less_than_(a_b, 55), node_a);
+  cost_estimator->estimate_node_cost(predicate_node_2, false);
+  EXPECT_EQ(cardinality_cache->size(), 2);
+  EXPECT_FALSE(cardinality_cache->contains(predicate_node_2));
+}
+
 }  // namespace hyrise
