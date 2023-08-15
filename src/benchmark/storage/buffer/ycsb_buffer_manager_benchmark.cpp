@@ -27,7 +27,7 @@ class YCSBBufferManagerFixture : public benchmark::Fixture {
  public:
   constexpr static auto PAGE_SIZE_TYPE = MIN_PAGE_SIZE_TYPE;
   constexpr static auto DEFAULT_DRAM_BUFFER_POOL_SIZE = 2UL * GB;
-  constexpr static auto DEFAULT_NUMA_BUFFER_POOL_SIZE = 4UL * GB;
+  constexpr static auto DEFAULT_NUMA_BUFFER_POOL_SIZE = 2UL * GB;  // TODO: Fix
 
   constexpr static auto NUM_OPERATIONS = 10 * 1000 * 1000;
 
