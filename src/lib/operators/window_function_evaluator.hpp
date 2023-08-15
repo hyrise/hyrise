@@ -14,12 +14,26 @@
 #include "operators/aggregate/window_function_traits.hpp"
 #include "operators/operator_performance_data.hpp"
 #include "storage/table.hpp"
+#include "utils/make_bimap.hpp"
 #include "window_function_evaluator/util.hpp"
 #include "window_function_evaluator/window_function_evaluator_traits.hpp"
 
 namespace hyrise {
 
 namespace window_function_evaluator {
+
+enum class ComputationStrategy {
+  OnePass,
+  SegmentTree,
+};
+
+std::ostream& operator<<(std::ostream& stream, const ComputationStrategy computation_strategy);
+
+const boost::bimap<ComputationStrategy, std::string> computation_strategy_to_string =
+    make_bimap<ComputationStrategy, std::string>({
+        {ComputationStrategy::OnePass, "OnePass"},
+        {ComputationStrategy::SegmentTree, "SegmentTree"},
+    });
 
 class WindowFunctionEvaluator : public AbstractReadOnlyOperator {
  public:
@@ -30,11 +44,6 @@ class WindowFunctionEvaluator : public AbstractReadOnlyOperator {
 
   const std::string& name() const override;
   bool is_output_nullable() const;
-
-  enum class ComputationStrategy {
-    OnePass,
-    SegmentTree,
-  };
 
   template <typename InputColumnType, WindowFunction window_function>
   ComputationStrategy choose_computation_strategy() const;
@@ -58,6 +67,7 @@ class WindowFunctionEvaluator : public AbstractReadOnlyOperator {
   std::shared_ptr<const Table> _templated_on_execute();
 
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override {}
+
   std::shared_ptr<AbstractOperator> _on_deep_copy(
       const std::shared_ptr<AbstractOperator>& copied_left_input,
       const std::shared_ptr<AbstractOperator>& copied_right_input,

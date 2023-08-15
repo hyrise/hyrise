@@ -180,7 +180,7 @@ T clamped_sub(T lhs, T rhs, T min) {
 }  // namespace
 
 template <typename InputColumnType, WindowFunction window_function>
-WindowFunctionEvaluator::ComputationStrategy WindowFunctionEvaluator::choose_computation_strategy() const {
+ComputationStrategy WindowFunctionEvaluator::choose_computation_strategy() const {
   const auto& frame = frame_description();
   const auto is_prefix_frame = frame.start.unbounded && frame.start.type == FrameBoundType::Preceding &&
                                !frame.end.unbounded && frame.end.type == FrameBoundType::CurrentRow;
@@ -594,22 +594,16 @@ std::shared_ptr<const Table> WindowFunctionEvaluator::annotate_input_table(
   return std::make_shared<Table>(output_column_definitions, input_table->type(), std::move(output_chunks));
 }
 
+std::ostream& operator<<(std::ostream& stream, const ComputationStrategy computation_strategy) {
+  return stream << computation_strategy_to_string.left.at(computation_strategy);
+}
+
 void WindowFunctionEvaluator::PerformanceData::output_to_stream(std::ostream& stream,
                                                                 DescriptionMode description_mode) const {
   OperatorPerformanceData<OperatorSteps>::output_to_stream(stream, description_mode);
 
   const auto separator = (description_mode == DescriptionMode::SingleLine ? ' ' : '\n');
-  const auto computation_strategy_string = [&]() {
-    using std::literals::string_view_literals::operator""sv;
-
-    switch (computation_strategy) {
-      case ComputationStrategy::OnePass:
-        return "OnePass"sv;
-      case ComputationStrategy::SegmentTree:
-        return "SegmentTree"sv;
-    }
-  }();
-  stream << separator << "Computation strategy: " << computation_strategy_string << ".";
+  stream << separator << "Computation strategy: " << computation_strategy << ".";
 }
 
 }  // namespace hyrise::window_function_evaluator
