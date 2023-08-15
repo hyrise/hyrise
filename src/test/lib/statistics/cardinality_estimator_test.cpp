@@ -1094,14 +1094,14 @@ TEST_F(CardinalityEstimatorTest, StatisticsCaching) {
   ASSERT_TRUE(statistics_cache);
   EXPECT_TRUE(statistics_cache->empty());
 
-  // Estimate the cost of a node with statistics caching enabled.
+  // Estimate the cardinality of a node with statistics caching enabled.
   const auto predicate_node_1 = PredicateNode::make(greater_than_(a_a, 50), node_a);
   estimator.estimate_cardinality(predicate_node_1);
   EXPECT_EQ(statistics_cache->size(), 2);
   EXPECT_TRUE(statistics_cache->contains(node_a));
   EXPECT_TRUE(statistics_cache->contains(predicate_node_1));
 
-  // Estimate the cost of a node with statistics caching disabled.
+  // Estimate the cardinality of a node with statistics caching disabled.
   const auto predicate_node_2 = PredicateNode::make(less_than_(a_b, 55), node_a);
   estimator.estimate_cardinality(predicate_node_2, false);
   EXPECT_EQ(statistics_cache->size(), 2);
