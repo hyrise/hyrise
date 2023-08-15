@@ -213,8 +213,9 @@ HashPartitionedData collect_chunk_into_buckets(ChunkID chunk_id, const Chunk& ch
   const auto chunk_size = chunk.size();
 
   const auto collect_values_of_columns = [&chunk, chunk_size](std::span<const ColumnID> column_ids) {
-    auto values = std::vector(chunk_size, std::vector(column_ids.size(), NULL_VALUE));
-    for (auto column_id_index = 0u; column_id_index < column_ids.size(); ++column_id_index) {
+    const auto column_count = column_ids.size();
+    auto values = std::vector(chunk_size, std::vector(column_count, NULL_VALUE));
+    for (auto column_id_index = 0u; column_id_index < column_count; ++column_id_index) {
       const auto segment = chunk.get_segment(column_ids[column_id_index]);
       segment_iterate(*segment, [&](const auto& position) {
         if (!position.is_null()) {
@@ -473,7 +474,9 @@ void templated_compute_window_function_segment_tree(const HashPartitionedData& p
       using Impl = typename Traits::NullableSegmentTreeImpl;
       using TreeNode = typename Impl::TreeNode;
 
-      auto leaf_values = std::vector<TreeNode>(partition.size());
+      const auto partition_size = partition.size();
+
+      auto leaf_values = std::vector<TreeNode>(partition_size);
       std::ranges::transform(partition, leaf_values.begin(), [](const auto& row) {
         return Impl::node_from_value(as_optional<InputColumnType>(row.function_argument));
       });
@@ -483,7 +486,7 @@ void templated_compute_window_function_segment_tree(const HashPartitionedData& p
       const auto segment_tree = SegmentTree<TreeNode, decltype(combine), decltype(make_neutral_element)>(
           leaf_values, combine, make_neutral_element);
 
-      for (auto tuple_index = 0u; tuple_index < partition.size(); ++tuple_index) {
+      for (auto tuple_index = 0u; tuple_index < partition_size; ++tuple_index) {
         using BoundCalculator = WindowBoundCalculator<frame_type, OrderByColumnType>;
         const auto query_range = BoundCalculator::calculate_window_bounds(partition, tuple_index, frame);
         emit_computed_value(partition[tuple_index].row_id,

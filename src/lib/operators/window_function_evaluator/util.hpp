@@ -21,7 +21,8 @@ std::weak_ordering compare_with_null_equal(std::span<const AllTypeVariant> lhs, 
                                            auto is_column_reversed) {
   DebugAssert(lhs.size() == rhs.size(), "Tried to compare rows with different column counts.");
 
-  for (auto column_index = 0u; column_index < lhs.size(); ++column_index) {
+  const auto lhs_size = lhs.size();
+  for (auto column_index = 0u; column_index < lhs_size; ++column_index) {
     const auto element_ordering = compare_with_null_equal(lhs[column_index], rhs[column_index]);
     if (element_ordering != std::weak_ordering::equivalent) {
       return is_column_reversed(column_index) ? reverse(element_ordering) : element_ordering;
