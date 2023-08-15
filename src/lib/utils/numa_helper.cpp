@@ -1,13 +1,17 @@
+#include "numa_helper.hpp"
+
 #include <string>
 
-#include "numa_helper.hpp"
+#include "hyrise.hpp"
 #include "utils/assert.hpp"
 
-namespace hyrise {
+namespace hyrise::numa_utils {
 
-DistanceMatrix get_distance_matrix(int num_nodes) {
+DistanceMatrix get_distance_matrix() {
+  const auto num_nodes = Hyrise::get().topology.nodes().size();
+
   // 10 is the default distance to the same node.
-  auto distance_matrix = DistanceMatrix(static_cast<size_t>(num_nodes), std::vector<int>(num_nodes, 10));
+  auto distance_matrix = DistanceMatrix(num_nodes, std::vector<int>(num_nodes, 10));
 
   // If numa_distance does not work (e.g. code is execute on Windows), 0 will be returned.
   // For non NUMA systems, we check the max possible numa node, as this will still work, when we have
@@ -33,9 +37,9 @@ DistanceMatrix get_distance_matrix(int num_nodes) {
   return distance_matrix;
 }
 
-NodeMatrix sort_relative_node_ids(DistanceMatrix distance_matrix) {
+NodePriorityMatrix make_node_priority_matrix(DistanceMatrix& distance_matrix) {
   const auto matrix_size = distance_matrix.size();
-  auto node_matrix = NodeMatrix(matrix_size, std::vector<NodeID>(matrix_size, NodeID{0}));
+  auto node_matrix = NodePriorityMatrix(matrix_size, std::vector<NodeID>(matrix_size, NodeID{0}));
 
   for (auto node_id = int{0}; node_id < matrix_size; ++node_id) {
     std::iota(node_matrix[node_id].begin(), node_matrix[node_id].end(), 0);
@@ -71,4 +75,4 @@ void merge_node_placements(std::vector<NodeID>& node_placements, std::vector<std
                   " NodeIDs while it should contain " + std::to_string(total_size));
 }
 
-}  // namespace hyrise
+}  // namespace hyrise::numa_utils

@@ -50,7 +50,7 @@ void NodeQueueScheduler::begin() {
   _workers_per_node = _workers.size() / _queue_count;
   _active = true;
 
-  _numa_queue_order = sort_relative_node_ids(get_distance_matrix(Hyrise::get().topology.nodes().size()));
+  _numa_queue_order = make_node_priority_matrix(get_distance_matrix());
   for (auto& worker : _workers) {
     worker->start();
   }

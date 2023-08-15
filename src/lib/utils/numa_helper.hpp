@@ -1,20 +1,23 @@
 #pragma once
 
 #include <numa.h>
+
 #include <numeric>
 #include <vector>
 
 #include "performance_warning.hpp"
 #include "scheduler/abstract_task.hpp"
-
 #include "types.hpp"
 
-namespace hyrise {
+namespace hyrise::numa_utils {
 
 using DistanceMatrix = std::vector<std::vector<int>>;
-using NodeMatrix = std::vector<std::vector<NodeID>>;
+using NodePriorityMatrix = std::vector<std::vector<NodeID>>;
 
 /*
+    Returns a NxN matrix M where each element M[x,y] is the distance between
+    Node x and Node y. Same Node distance should be equal to 10.
+
     Exemplary output for 8 Nodes:
     {
         {10, 16, 19, 16, 50, 50, 50, 50},
@@ -26,11 +29,15 @@ using NodeMatrix = std::vector<std::vector<NodeID>>;
         {50, 50, 50, 50, 19, 16, 10, 16},
         {50, 50, 50, 50, 16, 19, 16, 10},
     }
-    Same Node distance should be equal to 10.
 */
-DistanceMatrix get_distance_matrix(int num_nodes);
+DistanceMatrix get_distance_matrix();
 
 /*
+    Takes a distance matrix M[n,n] where element M[x,y] is the distance between
+    Node x and Node y. Returns n vectors of size n. For each vector at position
+    j, the first NodeID is the closest to j, ...,  and the last is the furthest
+    based on the distance matrix.
+
     Exemplary output for 8 Nodes:
     {
         {0, 1, 3, 2, 4, 5, 6, 7},
@@ -43,9 +50,9 @@ DistanceMatrix get_distance_matrix(int num_nodes);
         {7, 4, 6, 5, 0, 1, 2, 3},
     }
 */
-NodeMatrix sort_relative_node_ids(DistanceMatrix distance_matrix);
+NodePriorityMatrix make_node_priority_matrix(DistanceMatrix& distance_matrix);
 
 void merge_node_placements(std::vector<NodeID>& node_placements, std::vector<std::shared_ptr<AbstractTask>>& jobs,
                            std::vector<std::optional<NodeID>>& non_scheduled_placements);
 
-}  // namespace hyrise
+}  // namespace hyrise::numa_utils
