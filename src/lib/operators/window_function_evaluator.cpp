@@ -389,9 +389,8 @@ struct WindowBoundCalculator {
           return "Range"sv;
         case FrameType::Groups:
           return "Groups"sv;
-        default:
-          return ""sv;
       }
+      Fail("Invalid FrameType.");
     }();
     error_stream << " ";
     error_stream << data_type_to_string.left.at(data_type_from_type<OrderByColumnType>());
