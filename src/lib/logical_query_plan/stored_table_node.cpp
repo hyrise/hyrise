@@ -90,7 +90,7 @@ std::vector<std::shared_ptr<AbstractLQPNode>> StoredTableNode::prunable_subquery
 std::string StoredTableNode::description(const DescriptionMode /*mode*/) const {
   const auto& stored_table = Hyrise::get().storage_manager.get_table(table_name);
 
-  std::ostringstream stream;
+  auto stream = std::ostringstream{};
   stream << "[StoredTable] Name: '" << table_name << "' pruned: ";
   stream << _pruned_chunk_ids.size() << "/" << stored_table->chunk_count() << " chunk(s), ";
   stream << _pruned_column_ids.size() << "/" << stored_table->column_count() << " column(s)";
