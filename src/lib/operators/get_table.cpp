@@ -359,10 +359,9 @@ std::set<ChunkID> GetTable::_prune_chunks_dynamically() {
         continue;
       }
 
-      // Ignore the subquery if it has not been executed yet. A reason might be that scheduling the subquery before the
-      // GetTable operator would create a cycle. For instance, this can happen for a query like this:
-      // SELECT * FROM a_table WHERE x > (SELECT AVG(x) FROM a_table);
-      // The PQP of the query looks like the following:
+      // It might happen that scheduling the subquery before the GetTable operator would create a cycle. For instance,
+      // this can happen for a query like this: SELECT * FROM a_table WHERE x > (SELECT AVG(x) FROM a_table);
+      // The PQP of the query could look like the following:
       //
       //     [TableScan] x > SUBQUERY
       //          |             *
@@ -373,11 +372,10 @@ std::set<ChunkID> GetTable::_prune_chunks_dynamically() {
       //         [GetTable] a_table
       //
       // We cannot schedule the AggregateHash operator before the GetTable operator to obtain the subquery result for
-      // pruning: the OperatorTasks wrapping both operators would be in a circular wait for each other.
-      if (subquery.pqp->state() != OperatorState::ExecutedAndAvailable) {
-        continue;
-      }
-
+      // pruning: the OperatorTasks wrapping both operators would be in a circular wait for each other. We simply avoid
+      // this circular wait by StoredTableNodes using their prunable_subquery_predicates for equality checks. Thus, the
+      // LQPTranslator creates two GetTable operators rather than deduplicating them. resolve_uncorrelated_subquery()
+      // asserts that the subquery has already been executed.
       argument = value_(resolve_uncorrelated_subquery(subquery.pqp));
     }
 
