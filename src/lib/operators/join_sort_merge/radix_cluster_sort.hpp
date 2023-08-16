@@ -317,7 +317,7 @@ class RadixClusterSort {
   RadixClusterOutput<T> execute() {
     RadixClusterOutput<T> output;
 
-    Timer timer;
+    auto timer = Timer{};
     // Sort the chunks of the input tables in the non-equi cases
     ColumnMaterializer<T> left_column_materializer(!_equi_case, _materialize_null_left);
     auto [materialized_left_segments, null_rows_left, samples_left] =

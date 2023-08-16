@@ -60,7 +60,7 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config,
   // items exist for which no dedicated result could be loaded.
   if (_config.verify && _benchmark_item_runner->has_item_without_dedicated_result()) {
     std::cout << "- Loading tables into SQLite for verification." << std::endl;
-    Timer timer;
+    auto timer = Timer{};
 
     // Load the data into SQLite.
     sqlite_wrapper = std::make_shared<SQLiteWrapper>();

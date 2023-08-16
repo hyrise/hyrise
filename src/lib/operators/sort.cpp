@@ -312,7 +312,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   //  (b) a column in the table references multiple tables (see write_reference_output_table for details), or
   //  (c) a column in the table references multiple columns in the same table (which is an unlikely edge case).
   // Cases (b) and (c) can only occur if there is more than one ReferenceSegment in an input chunk.
-  Timer timer;
+  auto timer = Timer{};
   auto must_materialize = _force_materialization == ForceMaterialization::Yes;
   const auto input_chunk_count = input_table->chunk_count();
   if (!must_materialize && input_table->type() == TableType::References && input_chunk_count > 1) {
@@ -384,7 +384,7 @@ class Sort::SortImpl {
   // Returns a PosList, which can either be used as an input to the next call of sort or for materializing the
   // output table.
   RowIDPosList sort(const std::optional<RowIDPosList>& previously_sorted_pos_list) {
-    Timer timer;
+    auto timer = Timer{};
     // 1. Prepare Sort: Creating RowID-value-Structure
     _materialize_sort_column(previously_sorted_pos_list);
     materialization_time = timer.lap();

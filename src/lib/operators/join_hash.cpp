@@ -500,7 +500,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
       probe_side_pos_lists[partition_index].reserve(result_rows_per_partition);
     }
 
-    Timer timer_probing;
+    auto timer_probing = Timer{};
     switch (_mode) {
       case JoinMode::Inner:
         probe<ProbeColumnType, HashedType, false>(radix_probe_column, hash_tables, build_side_pos_lists,
@@ -551,7 +551,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
      * probe_side_pos_lists[p][r].
      */
 
-    Timer timer_output_writing;
+    auto timer_output_writing = Timer{};
 
     const auto create_left_side_pos_lists_by_segment =
         (_build_input_table->type() == TableType::References && _output_column_order != OutputColumnOrder::RightOnly);
