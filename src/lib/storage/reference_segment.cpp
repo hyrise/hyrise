@@ -48,9 +48,8 @@ NodeID ReferenceSegment::get_numa_node_location() {
     const auto row_id = (*_pos_list)[0];
     const auto chunk = _referenced_table->get_chunk(row_id.chunk_id);
     return (*chunk->get_segment(_referenced_column_id)).get_numa_node_location();
-  } else {
-    return UNKNOWN_NODE_ID;
   }
+  return UNKNOWN_NODE_ID;
 }
 
 const std::shared_ptr<const AbstractPosList>& ReferenceSegment::pos_list() const {
