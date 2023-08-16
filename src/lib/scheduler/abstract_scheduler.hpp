@@ -54,9 +54,6 @@ class AbstractScheduler : public Noncopyable {
   // NodeQueueScheduler::_group_tasks for an example.
   void schedule_and_wait_for_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks);
 
-  void schedule_on_preferred_nodes_and_wait_for_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks,
-                                                      const std::vector<NodeID>& preferred_nodes);
-
  protected:
   // Internal helper method that adds predecessor/successor relationships between tasks to limit the degree of
   // parallelism and reduce scheduling overhead.
