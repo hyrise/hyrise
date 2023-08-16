@@ -1,8 +1,10 @@
 #pragma once
 
 #include <array>
+#include <cstdint>
 #include <functional>
 #include <ranges>
+#include <span>
 
 #include "assert.hpp"
 #include "comparator_concepts.hpp"
