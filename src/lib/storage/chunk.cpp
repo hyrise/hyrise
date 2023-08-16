@@ -191,7 +191,7 @@ void Chunk::migrate(boost::container::pmr::memory_resource* memory_source, NodeI
   Segments new_segments(_alloc);
   for (const auto& segment : _segments) {
     new_segments.push_back(segment->copy_using_allocator(_alloc));
-    new_segments.back()->set_numa_node_location(node_id);
+    new_segments.back()->numa_node_location = node_id;
   }
   _segments = std::move(new_segments);
 }

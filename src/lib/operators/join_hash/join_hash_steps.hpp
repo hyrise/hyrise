@@ -437,7 +437,7 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
       }
     } else {
       jobs.emplace_back(std::make_shared<JobTask>(materialize));
-      jobs.back()->set_node_id(segment->get_numa_node_location());
+      jobs.back()->set_node_id(segment->numa_node_location);
     }
   }
 
