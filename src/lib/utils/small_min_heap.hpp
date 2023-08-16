@@ -3,8 +3,8 @@
 #include <array>
 #include <cstdint>
 #include <functional>
-#include <ranges>
-#include <span>
+#include <ranges>  // NOLINT(build/include_order)
+#include <span>    // NOLINT(build/include_order)
 
 #include "assert.hpp"
 #include "comparator_concepts.hpp"

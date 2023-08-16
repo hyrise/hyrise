@@ -1,5 +1,5 @@
 #include <random>
-#include <ranges>
+#include <ranges>  // NOLINT(build/include_order)
 #include <vector>
 
 #include "base_test.hpp"

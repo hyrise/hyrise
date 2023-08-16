@@ -1,10 +1,10 @@
 #pragma once
 
 #include <array>
-#include <compare>
+#include <compare>  // NOLINT(build/include_order)
 #include <cstdint>
-#include <ranges>
-#include <span>
+#include <ranges>  // NOLINT(build/include_order)
+#include <span>    // NOLINT(build/include_order)
 #include <utility>
 #include <vector>
 
@@ -139,7 +139,8 @@ void sort(const std::span<T> input, const std::span<T> scratch, ThreeWayComparat
 // otherwise `fan_out` many sublists are sorted recursively and merged.
 template <typename T, uint8_t fan_out = 2, size_t base_size = 1u << 10u>
 void parallel_inplace_merge_sort(const std::span<T> data, ThreeWayComparator<T> auto comparator) {
-  using namespace parallel_merge_sort_impl;
+  using parallel_merge_sort_impl::OutputMode;
+  using parallel_merge_sort_impl::sort;
 
   auto scratch = std::vector<T>(data.size());
   sort<T, fan_out, base_size, OutputMode::InInput>(data, scratch, comparator);
