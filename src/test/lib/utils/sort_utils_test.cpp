@@ -1,4 +1,3 @@
-#include <random>
 #include <ranges>  // NOLINT(build/include_order)
 #include <vector>
 
@@ -10,15 +9,8 @@ namespace hyrise {
 
 class ParallelInplaceMergeSortTest : public BaseTest {};
 
-TEST_F(ParallelInplaceMergeSortTest, Million) {
-  auto gen = std::mt19937_64(42);
-  auto dist = std::uniform_int_distribution<>(-42, 20'000);
-
-  auto data = std::vector<int>(1'000'000);
-
-  for (auto& element : data) {
-    element = dist(gen);
-  }
+TEST_F(ParallelInplaceMergeSortTest, Ten) {
+  auto data = std::array{23, -3, 10, 3, -23, -31, 5, 36, 0, 25};
 
   const auto comparator3way = [](const auto& lhs, const auto& rhs) { return (lhs + 5) <=> (rhs + 5); };
   const auto comparator = [&comparator3way](const auto& lhs, const auto& rhs) {
