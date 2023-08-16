@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -29,11 +30,10 @@ enum class ComputationStrategy {
 
 std::ostream& operator<<(std::ostream& stream, const ComputationStrategy computation_strategy);
 
-const boost::bimap<ComputationStrategy, std::string> computation_strategy_to_string =
-    make_bimap<ComputationStrategy, std::string>({
-        {ComputationStrategy::OnePass, "OnePass"},
-        {ComputationStrategy::SegmentTree, "SegmentTree"},
-    });
+const auto computation_strategy_to_string = make_bimap<ComputationStrategy, std::string_view>({
+    {ComputationStrategy::OnePass, "OnePass"},
+    {ComputationStrategy::SegmentTree, "SegmentTree"},
+});
 
 class WindowFunctionEvaluator : public AbstractReadOnlyOperator {
  public:
