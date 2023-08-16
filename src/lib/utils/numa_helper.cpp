@@ -49,27 +49,33 @@ NodePriorityMatrix make_node_priority_matrix(const DistanceMatrix& distance_matr
   return node_matrix;
 }
 
-void merge_node_placements(std::vector<NodeID>& node_placements, std::vector<std::shared_ptr<AbstractTask>>& jobs,
-                           std::vector<std::optional<NodeID>>& non_scheduled_placements) {
+void merge_node_placements(std::vector<NodeID>& node_placements, const std::vector<std::shared_ptr<AbstractTask>>& jobs,
+                           const std::vector<std::optional<NodeID>>& non_scheduled_placements) {
   DebugAssert(node_placements.size() == 0, "node_placements should be empty.");
+
   const auto total_size = non_scheduled_placements.size();
   node_placements.reserve(total_size);
-  auto task_index = uint32_t{0};
-  for (auto& job : jobs) {
-    while (non_scheduled_placements[task_index].has_value()) {
-      node_placements.emplace_back(non_scheduled_placements[task_index].value());
-      task_index++;
-    }
+
+  auto jobs_iter = jobs.begin();
+  const auto jobs_end = jobs.end();
+
+  const auto place_job = [&]() {
+    const auto& job = *jobs_iter;
     node_placements.emplace_back(job->node_id());
-    task_index++;
+    ++jobs_iter;
+  };
+
+  for (const auto& placement : non_scheduled_placements) {
+    if (placement)
+      node_placements.emplace_back(*placement);
+    else if (jobs_iter != jobs_end)
+      place_job();
   }
+
   // Fill in the leftover local tasks.
-  while (task_index < total_size) {
-    if (non_scheduled_placements[task_index].has_value()) {
-      node_placements.emplace_back(non_scheduled_placements[task_index].value());
-    }
-    task_index++;
-  }
+  while (jobs_iter != jobs_end)
+    place_job();
+
   DebugAssert(node_placements.size() == total_size,
               "node_placements contains " + std::to_string(node_placements.size()) +
                   " NodeIDs while it should contain " + std::to_string(total_size));

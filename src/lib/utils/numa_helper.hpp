@@ -52,7 +52,23 @@ DistanceMatrix get_distance_matrix();
 */
 NodePriorityMatrix make_node_priority_matrix(const DistanceMatrix& distance_matrix);
 
-void merge_node_placements(std::vector<NodeID>& node_placements, std::vector<std::shared_ptr<AbstractTask>>& jobs,
-                           std::vector<std::optional<NodeID>>& non_scheduled_placements);
+/*
+    Utility function to "merge" the node placements of two vectors of AbstractTasks or optional NodeIDs.
+    node_placements should be empty in the beginning. nullopts in non_scheduled will be filled by the NodeIDs
+    set in jobs.
+    jobs:
+
+               1        -       4      -      6
+
+    non_scheduled_placements:
+
+            nullopt - 2 - 3 - nullopt - 5 - nullopt
+
+    Will be merged to node_placements:
+
+               1  -   2 - 3  -  4   -   5  -  6
+*/
+void merge_node_placements(std::vector<NodeID>& node_placements, const std::vector<std::shared_ptr<AbstractTask>>& jobs,
+                           const std::vector<std::optional<NodeID>>& non_scheduled_placements);
 
 }  // namespace hyrise::numa_utils
