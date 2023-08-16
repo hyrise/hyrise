@@ -110,7 +110,6 @@ BENCHMARK_DEFINE_F(PageMigrationFixture, BM_ToNodeMemoryLatencyCXLToDram)(benchm
     const auto latency = std::chrono::duration_cast<std::chrono::nanoseconds>(timer_end - timer_start).count();
     latencies += latency;
 #endif
-    benchmark::ClobberMemory();
   }
   state.SetItemsProcessed(int64_t(state.iterations()));
   state.SetBytesProcessed(int64_t(state.iterations()) * num_bytes);
@@ -152,7 +151,6 @@ BENCHMARK_DEFINE_F(PageMigrationFixture, BM_MovePagesLatency)(benchmark::State& 
       latencies += latency;
     }
 #endif
-    benchmark::ClobberMemory();
   }
   state.counters["latency_mean"] = benchmark::Counter(latencies / NUM_OPS);
   state.SetItemsProcessed(NUM_OPS);
@@ -169,11 +167,11 @@ BENCHMARK_REGISTER_F(PageMigrationFixture, BM_ToNodeMemoryLatencyDramToCXL)
     ->Threads(1)
     ->Iterations(1)
     ->UseRealTime();
-BENCHMARK_REGISTER_F(PageMigrationFixture, BM_ToNodeMemoryLatencyCXLToDram)
-    ->ArgsProduct({benchmark::CreateDenseRange(static_cast<uint64_t>(0), static_cast<u_int64_t>(13), /*step=*/1)})
-    ->Threads(1)
-    ->Iterations(1)
-    ->UseRealTime();
+// BENCHMARK_REGISTER_F(PageMigrationFixture, BM_ToNodeMemoryLatencyCXLToDram)
+//     ->ArgsProduct({benchmark::CreateDenseRange(static_cast<uint64_t>(0), static_cast<u_int64_t>(13), /*step=*/1)})
+//     ->Threads(1)
+//     ->Iterations(1)
+//     ->UseRealTime();
 BENCHMARK_REGISTER_F(PageMigrationFixture, BM_MovePagesLatency)
     ->ArgsProduct({benchmark::CreateDenseRange(static_cast<uint64_t>(0), static_cast<u_int64_t>(13), /*step=*/1)})
     ->Threads(1)

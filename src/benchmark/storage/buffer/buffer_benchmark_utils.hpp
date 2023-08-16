@@ -334,9 +334,6 @@ inline void run_ycsb(Fixture& fixture, benchmark::State& state) {
   state.SetBytesProcessed(bytes_processed);
 
   if (state.thread_index() == 0) {
-    std::cout << "Operation counts: " << operation_counts[YSCBOperationType::Lookup] << " lookups, "
-              << operation_counts[YSCBOperationType::Update] << " updates, "
-              << operation_counts[YSCBOperationType::Scan] << " scans" << std::endl;
     state.counters["cache_hit_rate"] = fixture.buffer_manager.metrics()->hit_rate();
     state.counters["latency_mean"] = hdr_mean(fixture.latency_histogram);
     state.counters["latency_stddev"] = hdr_stddev(fixture.latency_histogram);
