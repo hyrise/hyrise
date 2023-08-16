@@ -170,8 +170,8 @@ TEST_F(SchedulerTest, Grouping) {
   const auto num_groups = NodeQueueScheduler::NUM_GROUPS;
   EXPECT_EQ(TASK_COUNT % num_groups, 0);
   auto expected_output = std::vector<size_t>{};
-  for (auto group = 0; group < num_groups; ++group) {
-    for (auto task_id = 0; task_id < TASK_COUNT / num_groups; ++task_id) {
+  for (auto group = size_t{0}; group < num_groups; ++group) {
+    for (auto task_id = size_t{0}; task_id < TASK_COUNT / num_groups; ++task_id) {
       expected_output.emplace_back(tasks.size() - (task_id + 1) * num_groups + group);
     }
   }

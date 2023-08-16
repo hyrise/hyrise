@@ -118,13 +118,16 @@ class NodeQueueScheduler : public AbstractScheduler {
   void wait_for_all_tasks() override;
 
   // Number of groups for _group_tasks
-  static constexpr auto NUM_GROUPS = 10;
+  static constexpr auto NUM_GROUPS = size_t{10};
+
+  // If NUMA aware grouping is applied, create groups per node. Value has beed found with a divining rod.
+  static constexpr auto NUM_GROUPS_PER_NODE = size_t{30};
 
  protected:
   void _group_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const override;
 
  private:
-  void _group_default(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const;
+  void _group_round_robin(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const;
   void _group_numa_aware(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const;
   bool _numa_aware_grouping(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const;
   std::atomic<TaskID::base_type> _task_counter{0};
@@ -136,14 +139,6 @@ class NodeQueueScheduler : public AbstractScheduler {
 
   size_t _queue_count{1};
   size_t _workers_per_node{2};
-
-  size_t _group_number_per_node{30};
-
-  mutable size_t _num_correctly_scheduled;
-  mutable size_t _num_incorrectly_scheduled;
-
-  mutable size_t _numa_aware_group;
-  mutable size_t _numa_unaware_group;
 };
 
 }  // namespace hyrise

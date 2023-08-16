@@ -181,16 +181,10 @@ NodeID NodeQueueScheduler::determine_queue_id(const NodeID preferred_node_id) co
 }
 
 bool NodeQueueScheduler::_numa_aware_grouping(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const {
-  auto numa_aware = true;
-  for (auto task : tasks) {
-    if (task->node_id() > _queue_count - 1) {
-      numa_aware = false;
-    }
-  }
-  return numa_aware;
+  return std::ranges::all_of(tasks, [this](const auto& task) { return task->node_id() < _queue_count; });
 }
 
-void NodeQueueScheduler::_group_default(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const {
+void NodeQueueScheduler::_group_round_robin(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const {
   auto round_robin_counter = 0;
   auto common_node_id = std::optional<NodeID>{};
 
@@ -219,20 +213,17 @@ void NodeQueueScheduler::_group_default(const std::vector<std::shared_ptr<Abstra
   }
 }
 
-// with 240 groups.................
 void NodeQueueScheduler::_group_numa_aware(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const {
   auto round_robin_counter = std::vector<int>(_queue_count, 0);
 
-  // std::vector<std::shared_ptr<AbstractTask>> grouped_tasks(_workers_per_node * _queue_count);
-  std::vector<std::shared_ptr<AbstractTask>> grouped_tasks(_group_number_per_node * _queue_count);
+  auto grouped_tasks = std::vector<std::shared_ptr<AbstractTask>>(NUM_GROUPS_PER_NODE * _queue_count);
 
   for (const auto& task : tasks) {
     if (!task->predecessors().empty() || !task->successors().empty()) {
       return;
     }
     auto num_node = task->node_id();
-    const auto group_id =
-        (_group_number_per_node * num_node) + (round_robin_counter[num_node] % _group_number_per_node);
+    const auto group_id = (NUM_GROUPS_PER_NODE * num_node) + (round_robin_counter[num_node] % NUM_GROUPS_PER_NODE);
     const auto& first_task_in_group = grouped_tasks[group_id];
     if (first_task_in_group) {
       task->set_as_predecessor_of(first_task_in_group);
@@ -243,16 +234,18 @@ void NodeQueueScheduler::_group_numa_aware(const std::vector<std::shared_ptr<Abs
 }
 
 void NodeQueueScheduler::_group_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const {
-  // Adds predecessor/successor relationships between tasks so that only NUM_GROUPS tasks can be executed in parallel.
-  // The optimal value of NUM_GROUPS depends on the number of cores and the number of queries being executed
-  // concurrently. The current value has been found with a divining rod.
+  // Adds predecessor/successor relationships between tasks. In case of non NUMA aware grouping
+  // only NUM_GROUPS tasks can be executed in parallel. Else _group_number_per_node * number of nodes tasks
+  // can be executed in parallel.
+  // The optimal value of NUM_GROUPS and _group_number_per_node depends on the number of cores and the number of
+  // queries being executed concurrently. The current value has been found with a divining rod.
   //
   // Approach: Skip all tasks that already have predecessors or successors, as adding relationships to these could
   // introduce cyclic dependencies. Again, this is far from perfect, but better than not grouping the tasks.
   if (_numa_aware_grouping(tasks)) {
     return _group_numa_aware(tasks);
   } else {
-    return _group_default(tasks);
+    return _group_round_robin(tasks);
   }
 }
 
