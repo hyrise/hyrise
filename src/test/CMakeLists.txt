@@ -242,6 +242,7 @@ set(
     lib/utils/settings_manager_test.cpp
     lib/utils/singleton_test.cpp
     lib/utils/small_min_heap_test.cpp
+    lib/utils/sort_utils_test.cpp
     lib/utils/size_estimation_utils_test.cpp
     lib/utils/string_utils_test.cpp
     plugins/mvcc_delete_plugin_test.cpp
