@@ -446,7 +446,7 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
   }
   // Some tasks were immediately executed which is why we need to combine them with the
   // node locations of the tasks executed via the scheduler.
-  merge_node_placements(partition_node_locations, jobs, radix_container_node_positions);
+  numa_utils::merge_node_placements(partition_node_locations, jobs, radix_container_node_positions);
 
   return radix_container;
 }
@@ -544,7 +544,7 @@ std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<
     }
   }
 
-  if (!jobs.emtpy()) {
+  if (!jobs.empty()) {
     Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
   }
 
@@ -555,7 +555,7 @@ std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<
 
   // Some tasks were immediately executed which is why we need to combine them with the
   // node locations of the tasks executed via the scheduler.
-  merge_node_placements(hash_table_node_locations, jobs, radix_container_node_positions);
+  numa_utils::merge_node_placements(hash_table_node_locations, jobs, radix_container_node_positions);
 
   return hash_tables;
 }

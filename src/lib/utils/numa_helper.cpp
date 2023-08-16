@@ -23,8 +23,8 @@ DistanceMatrix get_distance_matrix() {
     return distance_matrix;
   }
 
-  for (auto node_x = int{0}; node_x < num_nodes; ++node_x) {
-    for (auto node_y = int{0}; node_y < num_nodes; ++node_y) {
+  for (auto node_x = size_t{0}; node_x < num_nodes; ++node_x) {
+    for (auto node_y = size_t{0}; node_y < num_nodes; ++node_y) {
       // TODO(anyone): Assert that numa_distance is symmetric.
       // (e.g. we can also set dis_matrix[y][x] from the same call)
       distance_matrix[node_x][node_y] = numa_distance(node_x, node_y);
@@ -37,11 +37,11 @@ DistanceMatrix get_distance_matrix() {
   return distance_matrix;
 }
 
-NodePriorityMatrix make_node_priority_matrix(DistanceMatrix& distance_matrix) {
+NodePriorityMatrix make_node_priority_matrix(const DistanceMatrix& distance_matrix) {
   const auto matrix_size = distance_matrix.size();
   auto node_matrix = NodePriorityMatrix(matrix_size, std::vector<NodeID>(matrix_size, NodeID{0}));
 
-  for (auto node_id = int{0}; node_id < matrix_size; ++node_id) {
+  for (auto node_id = size_t{0}; node_id < matrix_size; ++node_id) {
     std::iota(node_matrix[node_id].begin(), node_matrix[node_id].end(), 0);
     std::sort(node_matrix[node_id].begin(), node_matrix[node_id].end(),
               [&](auto l, auto r) -> bool { return distance_matrix[node_id][l] < distance_matrix[node_id][r]; });

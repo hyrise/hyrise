@@ -50,7 +50,7 @@ void NodeQueueScheduler::begin() {
   _workers_per_node = _workers.size() / _queue_count;
   _active = true;
 
-  _numa_queue_order = make_node_priority_matrix(get_distance_matrix());
+  _numa_queue_order = numa_utils::make_node_priority_matrix(numa_utils::get_distance_matrix());
   for (auto& worker : _workers) {
     worker->start();
   }

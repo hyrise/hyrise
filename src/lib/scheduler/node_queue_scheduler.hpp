@@ -130,7 +130,7 @@ class NodeQueueScheduler : public AbstractScheduler {
   std::atomic<TaskID::base_type> _task_counter{0};
   std::shared_ptr<UidAllocator> _worker_id_allocator;
   std::vector<std::shared_ptr<TaskQueue>> _queues;
-  NodePriorityMatrix _numa_queue_order;
+  numa_utils::NodePriorityMatrix _numa_queue_order;
   std::vector<std::shared_ptr<Worker>> _workers;
   std::atomic_bool _active{false};
 

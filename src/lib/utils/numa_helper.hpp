@@ -50,7 +50,7 @@ DistanceMatrix get_distance_matrix();
         {7, 4, 6, 5, 0, 1, 2, 3},
     }
 */
-NodePriorityMatrix make_node_priority_matrix(DistanceMatrix& distance_matrix);
+NodePriorityMatrix make_node_priority_matrix(const DistanceMatrix& distance_matrix);
 
 void merge_node_placements(std::vector<NodeID>& node_placements, std::vector<std::shared_ptr<AbstractTask>>& jobs,
                            std::vector<std::optional<NodeID>>& non_scheduled_placements);
