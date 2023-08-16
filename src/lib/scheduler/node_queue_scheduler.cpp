@@ -113,7 +113,7 @@ const std::vector<std::shared_ptr<TaskQueue>>& NodeQueueScheduler::queues() cons
 }
 
 const std::vector<NodeID>& NodeQueueScheduler::ordered_queue_ids(NodeID node_id) const {
-  assert(node_id < _numa_queue_order.size());
+  Assert(node_id < _numa_queue_order.size(), "node_id " + std::to_string(node_id) + " is out of bounds.");
   return _numa_queue_order[node_id];
 }
 
