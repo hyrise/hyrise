@@ -89,31 +89,31 @@ BENCHMARK_DEFINE_F(PageMigrationFixture, BM_ToNodeMemoryLatencyDramToCXL)(benchm
   state.SetBytesProcessed(NUM_OPS * num_bytes);
 }
 
-BENCHMARK_DEFINE_F(PageMigrationFixture, BM_ToNodeMemoryLatencyCXLToDram)(benchmark::State& state) {
-  const auto num_bytes = OS_PAGE_SIZE << static_cast<size_t>(state.range(0));
-  constexpr auto VIRT_SIZE = 8UL * 1024 * 1024 * 1024;
+// BENCHMARK_DEFINE_F(PageMigrationFixture, BM_ToNodeMemoryLatencyCXLToDram)(benchmark::State& state) {
+//   const auto num_bytes = OS_PAGE_SIZE << static_cast<size_t>(state.range(0));
+//   constexpr auto VIRT_SIZE = 8UL * 1024 * 1024 * 1024;
 
-#if HYRISE_NUMA_SUPPORT
-  numa_tonode_memory(_mapped_region, VIRT_SIZE, target_node);
-  std::memset(_mapped_region, 0x1, VIRT_SIZE);
-#endif
-  // TODO: radnom
+// #if HYRISE_NUMA_SUPPORT
+//   numa_tonode_memory(_mapped_region, VIRT_SIZE, target_node);
+//   std::memset(_mapped_region, 0x1, VIRT_SIZE);
+// #endif
+//   // TODO: radnom
 
-  auto i = 0;
-  auto latencies = uint64_t{0};
-  for (auto _ : state) {
-#if HYRISE_NUMA_SUPPORT
-    const auto timer_start = std::chrono::high_resolution_clock::now();
+//   auto i = 0;
+//   auto latencies = uint64_t{0};
+//   for (auto _ : state) {
+// #if HYRISE_NUMA_SUPPORT
+//     const auto timer_start = std::chrono::high_resolution_clock::now();
 
-    explicit_move_pages(_mapped_region + (++i * num_bytes), num_bytes, 0);
-    const auto timer_end = std::chrono::high_resolution_clock::now();
-    const auto latency = std::chrono::duration_cast<std::chrono::nanoseconds>(timer_end - timer_start).count();
-    latencies += latency;
-#endif
-  }
-  state.SetItemsProcessed(int64_t(state.iterations()));
-  state.SetBytesProcessed(int64_t(state.iterations()) * num_bytes);
-}
+//     explicit_move_pages(_mapped_region + (++i * num_bytes), num_bytes, 0);
+//     const auto timer_end = std::chrono::high_resolution_clock::now();
+//     const auto latency = std::chrono::duration_cast<std::chrono::nanoseconds>(timer_end - timer_start).count();
+//     latencies += latency;
+// #endif
+//   }
+//   state.SetItemsProcessed(int64_t(state.iterations()));
+//   state.SetBytesProcessed(int64_t(state.iterations()) * num_bytes);
+// }
 
 // TODO: run with more time
 BENCHMARK_DEFINE_F(PageMigrationFixture, BM_MovePagesLatency)(benchmark::State& state) {
