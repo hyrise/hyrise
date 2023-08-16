@@ -31,9 +31,10 @@ bool TPCCStockLevel::_on_execute() {
   const auto next_o_id = *district_table->get_value<int32_t>(ColumnID{0}, 0);
 
   // Retrieve the number of items that have a stock level under the threshold value and belong to the 20 orders before
-  // the next order ID.
+  // the next order ID. The alias is needed for verification with SQLite, which names the result column slightly
+  // differently.
   _sql_executor.execute(
-      "SELECT COUNT(DISTINCT(S_I_ID)) FROM ORDER_LINE, STOCK WHERE OL_W_ID = " + std::to_string(w_id) +
+      "SELECT COUNT(DISTINCT(S_I_ID)) item_count FROM ORDER_LINE, STOCK WHERE OL_W_ID = " + std::to_string(w_id) +
       " AND OL_D_ID = " + std::to_string(d_id) + " AND OL_O_ID < " + std::to_string(next_o_id) +
       " AND OL_O_ID >= " + std::to_string(next_o_id - 20) + " AND S_W_ID = " + std::to_string(w_id) +
       " AND S_I_ID = OL_I_ID AND S_QUANTITY < " + std::to_string(threshold));
