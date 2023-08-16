@@ -160,22 +160,22 @@ BENCHMARK_DEFINE_F(PageMigrationFixture, BM_MovePagesLatency)(benchmark::State& 
 }
 
 BENCHMARK_REGISTER_F(PageMigrationFixture, BM_ToNodeMemory)
-    ->ArgsProduct({benchmark::CreateDenseRange(static_cast<uint64_t>(0), static_cast<u_int64_t>(13), /*step=*/1)})
+    ->ArgsProduct({benchmark::CreateDenseRange(static_cast<uint64_t>(0), static_cast<u_int64_t>(11), /*step=*/1)})
     ->Threads(1)
     ->Iterations(1)
     ->UseRealTime();
 BENCHMARK_REGISTER_F(PageMigrationFixture, BM_ToNodeMemoryLatencyDramToCXL)
-    ->ArgsProduct({benchmark::CreateDenseRange(static_cast<uint64_t>(0), static_cast<u_int64_t>(13), /*step=*/1)})
+    ->ArgsProduct({benchmark::CreateDenseRange(static_cast<uint64_t>(0), static_cast<u_int64_t>(11), /*step=*/1)})
     ->Threads(1)
     ->Iterations(1)
     ->UseRealTime();
 // BENCHMARK_REGISTER_F(PageMigrationFixture, BM_ToNodeMemoryLatencyCXLToDram)
-//     ->ArgsProduct({benchmark::CreateDenseRange(static_cast<uint64_t>(0), static_cast<u_int64_t>(13), /*step=*/1)})
+//     ->ArgsProduct({benchmark::CreateDenseRange(static_cast<uint64_t>(0), static_cast<u_int64_t>(11), /*step=*/1)})
 //     ->Threads(1)
 //     ->Iterations(1)
 //     ->UseRealTime();
 BENCHMARK_REGISTER_F(PageMigrationFixture, BM_MovePagesLatency)
-    ->ArgsProduct({benchmark::CreateDenseRange(static_cast<uint64_t>(0), static_cast<u_int64_t>(13), /*step=*/1)})
+    ->ArgsProduct({benchmark::CreateDenseRange(static_cast<uint64_t>(0), static_cast<u_int64_t>(11), /*step=*/1)})
     ->Threads(1)
     ->Iterations(1)
     ->UseRealTime();
