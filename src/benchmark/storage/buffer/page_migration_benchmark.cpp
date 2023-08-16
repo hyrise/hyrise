@@ -14,7 +14,7 @@ namespace hyrise {
 
 class PageMigrationFixture : public benchmark::Fixture {
  public:
-  static constexpr size_t NUM_OPS = 10000;
+  static constexpr size_t NUM_OPS = 1000;
 
   void SetUp(const ::benchmark::State& state) {
     _mapped_region = create_mapped_region();
@@ -85,7 +85,7 @@ BENCHMARK_DEFINE_F(PageMigrationFixture, BM_ToNodeMemoryLatencyDramToCXL)(benchm
     benchmark::ClobberMemory();
   }
   state.counters["latency_mean"] = benchmark::Counter(latencies / NUM_OPS);
-  state.counters["total_time"] = benchmark::Counter(latencies);
+  state.counters["latencies_sum"] = benchmark::Counter(latencies);
   state.SetItemsProcessed(NUM_OPS);
   state.SetBytesProcessed(NUM_OPS * num_bytes);
 }
@@ -154,7 +154,7 @@ BENCHMARK_DEFINE_F(PageMigrationFixture, BM_MovePagesLatency)(benchmark::State& 
 #endif
   }
   state.counters["latency_mean"] = benchmark::Counter(latencies / NUM_OPS);
-  state.counters["total_time"] = benchmark::Counter(latencies);
+  state.counters["latencies_sum"] = benchmark::Counter(latencies);
   state.SetItemsProcessed(NUM_OPS);
   state.SetBytesProcessed(NUM_OPS * num_bytes);
 }
