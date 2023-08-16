@@ -279,11 +279,16 @@ TEST_F(OperatorTaskTest, LinkPrunableSubqueries) {
   EXPECT_EQ(projection_task->successors().back(), get_table_a->get_or_create_operator_task());
 }
 
-TEST_F(OperatorTaskTest, DoNotLinkPrunableSubqueriesWithCycles) {
-  // Do not add the tasks of prunable subquery scans of a GetTable operator as predecessors of the GetTable task when
-  // they would form a cycle.
+TEST_F(OperatorTaskTest, PrunableSubqueriesWithCycles) {
+  // We assume the LQPTranslator creates two GetTable operators if StoredTableNodes differ in their
+  // prunable_subquery_predicates. If they are deduplicated, the subquery and the GetTable operator create a cycle in
+  // the task graph, leading to mutually waiting during execution. Thus, we fail if such a cycle would be created.
   // Example query used in this test case:
   //     SELECT ... FROM table_a WHERE a > (SELECT AVG(a) FROM table_a);
+  if constexpr (!HYRISE_DEBUG) {
+    GTEST_SKIP();
+  }
+
   const auto get_table = std::make_shared<GetTable>("table_a");
 
   const auto aggregate = std::make_shared<AggregateHash>(
@@ -297,19 +302,7 @@ TEST_F(OperatorTaskTest, DoNotLinkPrunableSubqueriesWithCycles) {
 
   get_table->set_prunable_subquery_predicates({table_scan});
 
-  const auto& [tasks, root_operator_task] = OperatorTask::make_tasks_from_operator(table_scan);
-
-  ASSERT_EQ(tasks.size(), 4);
-  const auto tasks_set = std::unordered_set<std::shared_ptr<AbstractTask>>(tasks.begin(), tasks.end());
-  EXPECT_TRUE(tasks_set.contains(get_table->get_or_create_operator_task()));
-  EXPECT_TRUE(tasks_set.contains(aggregate->get_or_create_operator_task()));
-  EXPECT_TRUE(tasks_set.contains(projection->get_or_create_operator_task()));
-  EXPECT_TRUE(tasks_set.contains(table_scan->get_or_create_operator_task()));
-
-  EXPECT_EQ(root_operator_task, table_scan->get_or_create_operator_task());
-  const auto& projection_task = projection->get_or_create_operator_task();
-  ASSERT_EQ(projection_task->successors().size(), 1);
-  EXPECT_EQ(projection_task->successors().front(), table_scan->get_or_create_operator_task());
+  EXPECT_THROW(OperatorTask::make_tasks_from_operator(table_scan), std::logic_error);
 }
 
 TEST_F(OperatorTaskTest, SkipOperatorTask) {

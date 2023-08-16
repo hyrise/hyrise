@@ -412,7 +412,7 @@ TEST_F(OperatorsGetTableTest, DynamicSubqueryPruning) {
 }
 
 TEST_F(OperatorsGetTableTest, DynamicSubqueryPruningSubqueryNotExecuted) {
-  // Same as DynamicSubqueryPruning, but the subquery is not executed. Thus, we cannot prune dynamically.
+  // Same as DynamicSubqueryPruning, but the subquery is not executed. Thus, we fail.
   const auto get_table = std::make_shared<GetTable>("int_int_float", std::vector{ChunkID{0}}, std::vector{ColumnID{1}});
   const auto dummy_table = Table::create_dummy_table({{"x", DataType::Int, false}});
   dummy_table->append({9});
@@ -432,16 +432,7 @@ TEST_F(OperatorsGetTableTest, DynamicSubqueryPruningSubqueryNotExecuted) {
   stored_table_node->set_prunable_subquery_predicates({predicate_node});
   get_table->set_prunable_subquery_predicates({table_scan});
 
-  get_table->execute();
-
-  const auto output_table = get_table->get_output();
-  ASSERT_TRUE(output_table);
-  EXPECT_EQ(output_table->chunk_count(), 3);
-
-  EXPECT_EQ(get_table->description(DescriptionMode::SingleLine),
-            "GetTable (int_int_float) pruned: 1/4 chunk(s) (1 static, 0 dynamic), 1/3 column(s)");
-  EXPECT_EQ(get_table->description(DescriptionMode::MultiLine),
-            "GetTable\n(int_int_float)\npruned:\n1/4 chunk(s) (1 static, 0 dynamic)\n1/3 column(s)");
+  EXPECT_THROW(get_table->execute(), std::logic_error);
 }
 
 }  // namespace hyrise

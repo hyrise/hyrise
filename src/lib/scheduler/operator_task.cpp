@@ -64,11 +64,12 @@ void link_tasks_for_subquery_pruning(const std::unordered_set<std::shared_ptr<Op
         Assert(tasks.contains(subquery_root), "Unknown OperatorTask.");
 
         // Cycles in the task graph would lead to deadlocks during execution. This could happen if a table can be pruned
-        // using a predicate on itself (e.g., `SELECT * FROM a_table WHERE x > (SELECT AVG(x) FROM a_table)`). To make
-        // sure we do not introduce cycles, we include the prunable_subquery_predicates of a StoredTableNode in its
-        // equality check. Thus, we have to unequal nodes that are translated to distinct operators by the
-        // LQPTranslator (and no further sanity check should be necessary). However, we still check for cycles after
-        // linking all tasks in debug builds.
+        // using a predicate on itself (e.g., `SELECT * FROM a_table WHERE x > (SELECT AVG(x) FROM a_table)`) and the
+        // LQPTranslator created a single GetTable operator due to operator deduplication. To make sure we do not
+        // introduce cycles, we include the prunable_subquery_predicates of a StoredTableNode in its equality check.
+        // Thus, we have two unequal nodes that are translated to distinct operators by the LQPTranslator (and no
+        // further sanity check should be necessary). However, we still check for cycles after linking all tasks in
+        // debug builds.
         subquery_root->set_as_predecessor_of(task);
       }
     }
