@@ -222,8 +222,8 @@ void NodeQueueScheduler::_group_numa_aware(const std::vector<std::shared_ptr<Abs
     if (!task->predecessors().empty() || !task->successors().empty()) {
       return;
     }
-    auto num_node = task->node_id();
-    const auto group_id = (NUM_GROUPS_PER_NODE * num_node) + (round_robin_counter[num_node] % NUM_GROUPS_PER_NODE);
+    const auto numa_node = task->node_id();
+    const auto group_id = (NUM_GROUPS_PER_NODE * numa_node) + (round_robin_counter[numa_node] % NUM_GROUPS_PER_NODE);
     const auto& first_task_in_group = grouped_tasks[group_id];
     if (first_task_in_group) {
       task->set_as_predecessor_of(first_task_in_group);
