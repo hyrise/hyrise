@@ -85,6 +85,7 @@ BENCHMARK_DEFINE_F(PageMigrationFixture, BM_ToNodeMemoryLatencyDramToCXL)(benchm
     benchmark::ClobberMemory();
   }
   state.counters["latency_mean"] = benchmark::Counter(latencies / NUM_OPS);
+  state.counters["total_time"] = benchmark::Counter(latencies);
   state.SetItemsProcessed(NUM_OPS);
   state.SetBytesProcessed(NUM_OPS * num_bytes);
 }
@@ -153,6 +154,7 @@ BENCHMARK_DEFINE_F(PageMigrationFixture, BM_MovePagesLatency)(benchmark::State& 
 #endif
   }
   state.counters["latency_mean"] = benchmark::Counter(latencies / NUM_OPS);
+  state.counters["total_time"] = benchmark::Counter(latencies);
   state.SetItemsProcessed(NUM_OPS);
   state.SetBytesProcessed(NUM_OPS * num_bytes);
 }
