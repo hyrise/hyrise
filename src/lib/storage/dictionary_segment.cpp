@@ -1,6 +1,5 @@
 #include "dictionary_segment.hpp"
 
-#include <numa.h>
 #include <memory>
 #include <string>
 
