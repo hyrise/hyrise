@@ -656,6 +656,7 @@ set(
     utils/settings_manager.hpp
     utils/singleton.hpp
     utils/size_estimation_utils.hpp
+    utils/small_min_heap.hpp
     utils/sqlite_add_indices.cpp
     utils/sqlite_add_indices.hpp
     utils/sqlite_wrapper.cpp
