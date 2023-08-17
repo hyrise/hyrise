@@ -64,6 +64,8 @@ NumaMemoryResource::NumaMemoryResource(const NodeID node_id) : _node_id(node_id)
   char command[64];
   snprintf(command, sizeof(command), "arena.%u.extent_hooks", arena_id);
   numa_extent_hooks::store_node_id_for_arena(arena_id, _node_id);
+  // Apparently, jemalloc wants a pointer to the pointer to the struct.
+  auto hooks_ptr = &_hooks;
   Assert(mallctl(command, nullptr, nullptr, static_cast<void*>(&hooks_ptr), sizeof(extent_hooks_t*)) == 0,
          "mallctl failed");
   _allocation_flags = MALLOCX_ARENA(arena_id) | MALLOCX_TCACHE_NONE;
