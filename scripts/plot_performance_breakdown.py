@@ -64,7 +64,7 @@ for benchmark_json in data["benchmarks"]:
 
     benchmarks.append(benchmark)
 
-    for x, rule_durations in sum_optimizer_rule_durations.items():
+    for rule_durations in sum_optimizer_rule_durations.values():
         rule_duration = sum(rule_durations)
         rule_benchmark.append(rule_duration / len(benchmark_json["successful_runs"]))
     rule_benchmarks.append(rule_benchmark)
@@ -99,7 +99,7 @@ ax.set_xticklabels(xlabels)
 
 basename = sys.argv[1].replace(".json", "")
 plt.tight_layout()
-plt.savefig(basename + "_breakdown_old.pdf")
+plt.savefig(basename + "_breakdown.pdf")
 
 rule_benchmark_df = pd.DataFrame(rule_benchmarks, columns=["Benchmark"] + list(sum_optimizer_rule_durations.keys()))
 # sort optimizer rules
@@ -140,4 +140,4 @@ for label_id, label in enumerate(xlabels):
 ax.set_xticklabels(xlabels)
 
 plt.tight_layout()
-plt.savefig(basename + "_optimizer_breakdown_old.pdf")
+plt.savefig(basename + "_optimizer_breakdown.pdf")
