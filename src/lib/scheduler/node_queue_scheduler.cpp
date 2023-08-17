@@ -181,7 +181,12 @@ NodeID NodeQueueScheduler::determine_queue_id(const NodeID preferred_node_id) co
 }
 
 bool NodeQueueScheduler::_numa_aware_grouping(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const {
-  return std::ranges::all_of(tasks, [this](const auto& task) { return task->node_id() < _queue_count; });
+  for (auto& task : tasks) {
+    if (task->node_id() >= _queue_count) {
+      return false;
+    }
+  }
+  return true;
 }
 
 void NodeQueueScheduler::_group_round_robin(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const {
