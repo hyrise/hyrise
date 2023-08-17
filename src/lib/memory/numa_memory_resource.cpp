@@ -66,7 +66,6 @@ NumaMemoryResource::NumaMemoryResource(const NodeID node_id) : _node_id(node_id)
   // Add extent hooks to arena.
   _hooks.alloc = numa_extent_hooks::alloc;
 
-  auto hooks_ptr = &_hooks;
   char command[64];
   snprintf(command, sizeof(command), "arena.%u.extent_hooks", arena_id);
   numa_extent_hooks::store_node_id_for_arena(arena_id, _node_id);
