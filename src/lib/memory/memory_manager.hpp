@@ -17,6 +17,8 @@ class MemoryManager final : public Noncopyable {
    */
   void build_memory_resources();
 
+  size_t number_of_memory_resources();
+
   /**
    * Migrates the tables and their chunks to their desired memory resources.
    */

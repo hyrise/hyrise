@@ -5,6 +5,7 @@ namespace hyrise {
 
 void MemoryManager::build_memory_resources() {
   const auto num_nodes = static_cast<NodeID>(Hyrise::get().topology.nodes().size());
+  _memory_resources.resize(num_nodes);
   for (auto node_id = NodeID{0}; node_id < num_nodes; ++node_id) {
     const auto numa_memory_resource = NumaMemoryResource(node_id);
     _memory_resources.push_back(numa_memory_resource);
@@ -27,6 +28,10 @@ void MemoryManager::migrate_table(std::shared_ptr<Table> table, NodeID target_no
   }
 
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
+}
+
+MemoryManager::number_of_memory_resources() {
+  return _memory_resources.size();
 }
 
 MemoryManager::MemoryManager() {
