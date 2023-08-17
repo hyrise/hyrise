@@ -40,6 +40,51 @@ const std::string& WindowFunctionEvaluator::name() const {
   return name;
 }
 
+std::string WindowFunctionEvaluator::description(const DescriptionMode description_mode) const {
+  const auto separator = (description_mode == DescriptionMode::SingleLine ? ' ' : '\n');
+  std::stringstream desc;
+
+  const auto output_column = [&](ColumnID column_id) {
+    if (lqp_node) {
+      desc << lqp_node->left_input()->output_expressions()[column_id]->as_column_name();
+    } else {
+      desc << "Column #" + std::to_string(column_id);
+    }
+  };
+
+  const auto output_columns = [&](const std::span<const ColumnID> column_ids) {
+    if (column_ids.empty()) {
+      return;
+    }
+    output_column(column_ids.front());
+    for (const auto& column_id : column_ids.subspan(1)) {
+      desc << "," << separator;
+      output_column(column_id);
+    }
+  };
+
+  desc << AbstractOperator::description(description_mode) << separator;
+  desc << "Partition by:" << separator << "{";
+  output_columns(_partition_by_column_ids);
+  desc << "}" << separator;
+
+  desc << "Order by:" << separator << "{";
+  output_columns(_order_by_column_ids);
+  desc << "}" << separator;
+
+  desc << "WindowFunction:" << separator
+       << window_function_to_string.left.at(_window_function_expression->window_function) << separator;
+  if (_function_argument_column_id != INVALID_COLUMN_ID) {
+    desc << "Over column:" << separator;
+    output_column(_function_argument_column_id);
+    desc << separator;
+  }
+
+  desc << "Frame:" << separator << frame_description() << separator;
+
+  return desc.str();
+}
+
 const FrameDescription& WindowFunctionEvaluator::frame_description() const {
   const auto window = std::dynamic_pointer_cast<WindowExpression>(_window_function_expression->window());
   return window->frame_description;

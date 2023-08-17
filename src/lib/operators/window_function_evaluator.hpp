@@ -43,6 +43,7 @@ class WindowFunctionEvaluator : public AbstractReadOnlyOperator {
                           std::shared_ptr<WindowFunctionExpression> init_window_funtion_expression);
 
   const std::string& name() const override;
+  std::string description(DescriptionMode description_mode) const override;
   bool is_output_nullable() const;
 
   template <typename InputColumnType, WindowFunction window_function>
