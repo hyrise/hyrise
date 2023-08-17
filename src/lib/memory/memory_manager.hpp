@@ -26,7 +26,7 @@ class MemoryManager final : public Noncopyable {
   MemoryManager();
   friend class Hyrise;
 
-  std::vector<std::shared_ptr<NumaMemoryResource>> _memory_resources;
+  std::vector<NumaMemoryResource> _memory_resources;
 };
 
 }  // namespace hyrise

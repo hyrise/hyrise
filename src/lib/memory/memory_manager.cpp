@@ -5,12 +5,10 @@ namespace hyrise {
 
 void MemoryManager::build_memory_resources() {
   const auto num_nodes = static_cast<NodeID>(Hyrise::get().topology.nodes().size());
-  std::cout << num_nodes << std::endl;
   for (auto node_id = NodeID{0}; node_id < num_nodes; ++node_id) {
-    const auto numa_memory_resource = std::make_shared<NumaMemoryResource>(NumaMemoryResource(node_id));
+    const auto numa_memory_resource = NumaMemoryResource(node_id);
     _memory_resources.push_back(numa_memory_resource);
   }
-  std::cout << "Memory resources ready" << std::endl;
 }
 
 void MemoryManager::migrate_table(std::shared_ptr<Table> table, NodeID target_node_id) {
@@ -23,7 +21,6 @@ void MemoryManager::migrate_table(std::shared_ptr<Table> table, NodeID target_no
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     auto migrate_job = [&table, &memory_resource, chunk_id, target_node_id]() {
       const auto& chunk = table->get_chunk(chunk_id);
-      std::cout << "Migrating" << std::endl;
       chunk->migrate(memory_resource, target_node_id);
     };
     jobs.emplace_back(std::make_shared<JobTask>(migrate_job));
@@ -32,6 +29,8 @@ void MemoryManager::migrate_table(std::shared_ptr<Table> table, NodeID target_no
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
 }
 
-MemoryManager::MemoryManager() {}
+MemoryManager::MemoryManager() {
+  build_memory_resources();
+}
 
 }  // namespace hyrise
