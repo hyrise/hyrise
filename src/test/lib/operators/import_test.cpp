@@ -1,6 +1,3 @@
-#include <memory>
-#include <string>
-
 #include "base_test.hpp"
 
 #include "hyrise.hpp"
@@ -68,8 +65,7 @@ TEST_P(OperatorsImportMultiFileTypeTest, HasCorrectMvccData) {
 
   EXPECT_EQ(table->uses_mvcc(), UseMvcc::Yes);
   EXPECT_TRUE(table->get_chunk(ChunkID{0})->has_mvcc_data());
-  EXPECT_TRUE(table->get_chunk(ChunkID{0})->mvcc_data()->max_begin_cid);
-  EXPECT_EQ(*table->get_chunk(ChunkID{0})->mvcc_data()->max_begin_cid, CommitID{0});
+  EXPECT_EQ(table->get_chunk(ChunkID{0})->mvcc_data()->max_begin_cid.load(), CommitID{0});
 }
 
 TEST_F(OperatorsImportTest, FileDoesNotExist) {
