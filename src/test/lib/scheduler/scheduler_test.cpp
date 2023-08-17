@@ -304,6 +304,35 @@ TEST_F(SchedulerTest, TaskToNodeAssignment) {
   EXPECT_EQ(node_queue_scheduler->workers()[1]->num_finished_tasks(), 1);
 }
 
+TEST_F(SchedulerTest, CorrectJobMapping) {
+  Hyrise::get().topology.use_fake_numa_topology(3, 1);
+  Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
+
+  auto tasks = std::vector<std::shared_ptr<AbstractTask>>();
+  auto executed_on_node = std::vector<NodeID>(4, NodeID{0});
+
+  auto addTask = [&](int node_id, int pos) {
+    auto task = std::make_shared<JobTask>([&, pos]()
+    {
+      const auto worker = Worker::get_this_thread_worker();
+      executed_on_node[pos] = worker->queue()->node_id();
+    }, SchedulePriority::Default, false);
+    task->set_node_id(NodeID{node_id});
+    tasks.emplace_back(std::move(task));
+  };
+
+  addTask(0, 0);
+  addTask(0, 1);
+  addTask(2, 2);
+  addTask(1, 3);
+
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
+
+  const auto expected_node_ids = std::vector<NodeID>{NodeID{0}, NodeID{0}, NodeID{2}, NodeID{1}};
+
+  EXPECT_EQ(executed_on_node, expected_node_ids);
+}
+
 TEST_F(SchedulerTest, SingleWorkerGuaranteeProgress) {
   Hyrise::get().topology.use_default_topology(1);
   Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
