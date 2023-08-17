@@ -32,11 +32,6 @@ void* alloc(extent_hooks_t* extent_hooks, void* new_addr, size_t size, size_t al
   return addr;
 }
 
-bool dalloc(extent_hooks_t* extent_hooks, void* addr, size_t size, bool committed, unsigned arena_ind) {
-  munmap(addr, size);
-  return true;
-}
-
 NodeID get_node_id_of_arena(ArenaID arena_id) {
   std::shared_lock<std::shared_mutex> lock(node_id_for_arena_id_mutex);
 
