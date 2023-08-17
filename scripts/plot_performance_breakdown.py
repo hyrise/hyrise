@@ -7,67 +7,8 @@
 import json
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mplticker
-import numpy as np
 import pandas as pd
 import sys
-from collections import defaultdict
-
-
-class Statement:
-    def __init__(self):
-        self.execution_durations = []
-        self.optimization_durations = []
-        self.sql_translation_durations = []
-        self.lqp_translation_durations = []
-        self.optimizer_rule_durations = defaultdict(list)
-
-    def mean_execution_duration(self):
-        return np.mean(self.execution_durations)
-
-    def mean_optimization_duration(self):
-        return np.mean(self.optimization_durations)
-
-    def mean_sql_translation_duration(self):
-        return np.mean(self.sql_translation_durations)
-
-    def mean_lqp_translation_duration(self):
-        return np.mean(self.lqp_translation_durations)
-
-    def mean_optimizer_rule_durations(self):
-        rule_durations = {}
-        optimizer_runs = len(self.optimization_durations)
-        for rule, durations in self.optimizer_rule_durations.items():
-            # Not using np.mean() since each rule can be applied multiple times per statement.
-            rule_durations[rule] = sum(durations) / optimizer_runs
-        return rule_durations
-
-
-class Query:
-    def __init__(self):
-        self.parse_durations = []
-        self.statements = []
-
-    def parse_duration(self):
-        return np.mean(self.parse_durations)
-
-    def execution_duration(self):
-        return sum([statement.mean_execution_duration() for statement in self.statements])
-
-    def optimization_duration(self):
-        return sum([statement.mean_optimization_duration() for statement in self.statements])
-
-    def sql_translation_duration(self):
-        return sum([statement.mean_sql_translation_duration() for statement in self.statements])
-
-    def lqp_translation_duration(self):
-        return sum([statement.mean_lqp_translation_duration() for statement in self.statements])
-
-    def optimizer_rule_durations(self):
-        rule_durations = defaultdict(float)
-        for statement in self.statements:
-            for rule, duration in statement.mean_optimizer_rule_durations().items():
-                rule_durations[rule] += duration
-        return rule_durations
 
 
 benchmarks = []
@@ -88,65 +29,44 @@ for benchmark_json in data["benchmarks"]:
     rule_benchmark = []
     benchmark.append(benchmark_json["name"])
     rule_benchmark.append(benchmark_json["name"])
-    queries = []
 
-    print(benchmark_json["name"])
+    sum_parse_duration = 0.0
+    sum_sql_translation_duration = 0.0
+    sum_optimization_duration = 0.0
+    sum_optimizer_rule_durations = {}
+    sum_lqp_translation_duration = 0.0
+    sum_plan_execution_duration = 0.0
 
-    # Successful runs of benchmark item.
     for run in benchmark_json["successful_runs"]:
         if len(run["metrics"]) == 0:
             exit("No metrics found. Did you run the benchmark with --metrics?")
+        for metrics in run["metrics"]:
+            sum_parse_duration += metrics["parse_duration"]
 
-        if len(queries) == 0:
-            queries = [Query() for _ in range(len(run["metrics"]))]
+            for statement in metrics["statements"]:
+                sum_sql_translation_duration += statement["sql_translation_duration"]
+                sum_optimization_duration += statement["optimization_duration"]
+                sum_lqp_translation_duration += statement["lqp_translation_duration"]
+                sum_plan_execution_duration += statement["plan_execution_duration"]
 
-        print(len(queries), len(run["metrics"]))
-        assert len(queries) >= len(run["metrics"])
+                if statement["optimizer_rule_durations"]:
+                    for rule_name, rule_duration in statement["optimizer_rule_durations"].items():
+                        if rule_name not in sum_optimizer_rule_durations:
+                            sum_optimizer_rule_durations[rule_name] = rule_duration
+                        else:
+                            sum_optimizer_rule_durations[rule_name] += rule_duration
 
-        # Metrics for each item query, e.g., queries in TPC-C procedures.
-        for query_id, metrics in enumerate(run["metrics"]):
-            query = queries[query_id]
-            query.parse_durations.append(metrics["parse_duration"])
-            if len(query.statements) == 0:
-                query.statements = [Statement() for _ in range(len(metrics["statements"]))]
-            assert len(query.statements) == len(metrics["statements"])
-
-            # Individual statements of each query, e.g., CREATE VIEW view_name, SELECT ... FROM view_name, DROP VIEW view_name
-            for statement_id, statement_metrics in enumerate(metrics["statements"]):
-                statement = query.statements[statement_id]
-                statement.execution_durations.append(statement_metrics["plan_execution_duration"])
-
-                # Cached queries have no meaningful translation and optimization information.
-                if statement_metrics["query_plan_cache_hit"]:
-                    continue
-
-                statement.sql_translation_durations.append(statement_metrics["sql_translation_duration"])
-                statement.optimization_durations.append(statement_metrics["optimization_duration"])
-                statement.lqp_translation_durations.append(statement_metrics["lqp_translation_duration"])
-
-                assert statement_metrics[
-                    "optimizer_rule_durations"
-                ], "Statement was not cached, but optimizer rule metrics are empty."
-                for rule_name, rule_durations in statement_metrics["optimizer_rule_durations"].items():
-                    statement.optimizer_rule_durations[rule_name] += rule_durations
-
-    # Sum up metrics for all queries of the item.
-    benchmark.append(sum([query.parse_duration() for query in queries]))
-    benchmark.append(sum([query.sql_translation_duration() for query in queries]))
-    benchmark.append(sum([query.optimization_duration() for query in queries]))
-    benchmark.append(sum([query.lqp_translation_duration() for query in queries]))
-    benchmark.append(sum([query.execution_duration() for query in queries]))
+    benchmark.append(sum_parse_duration / len(benchmark_json["successful_runs"]))
+    benchmark.append(sum_sql_translation_duration / len(benchmark_json["successful_runs"]))
+    benchmark.append(sum_optimization_duration / len(benchmark_json["successful_runs"]))
+    benchmark.append(sum_lqp_translation_duration / len(benchmark_json["successful_runs"]))
+    benchmark.append(sum_plan_execution_duration / len(benchmark_json["successful_runs"]))
 
     benchmarks.append(benchmark)
 
-    # Aggregate optimizer rules for all queries of the item.
-    optimizer_rule_durations = defaultdict(float)
-    for query in queries:
-        for rule, duration in query.optimizer_rule_durations().items():
-            optimizer_rule_durations[rule] += duration
-
-    for rule_duration in optimizer_rule_durations.values():
-        rule_benchmark.append(rule_duration)
+    for x, rule_durations in sum_optimizer_rule_durations.items():
+        rule_duration = sum(rule_durations)
+        rule_benchmark.append(rule_duration / len(benchmark_json["successful_runs"]))
     rule_benchmarks.append(rule_benchmark)
 
 benchmark_df = pd.DataFrame(
@@ -179,14 +99,13 @@ ax.set_xticklabels(xlabels)
 
 basename = sys.argv[1].replace(".json", "")
 plt.tight_layout()
-plt.savefig(basename + "_breakdown.pdf")
+plt.savefig(basename + "_breakdown_old.pdf")
 
-rule_benchmark_df = pd.DataFrame(rule_benchmarks, columns=["Benchmark"] + list(optimizer_rule_durations.keys()))
+rule_benchmark_df = pd.DataFrame(rule_benchmarks, columns=["Benchmark"] + list(sum_optimizer_rule_durations.keys()))
 # sort optimizer rules
 rule_benchmark_df = rule_benchmark_df.reindex(
     columns=[rule_benchmark_df.columns[0]] + sorted(rule_benchmark_df.columns[1:], key=str.casefold, reverse=True)
 )
-print(rule_benchmark_df)
 
 # summing up the runtimes from all rules for each query
 optimizer_total_time = rule_benchmark_df.iloc[:, 1:].apply(lambda x: x.sum(), axis=1)
@@ -196,7 +115,7 @@ rule_benchmark_df.iloc[:, 1:] = rule_benchmark_df.iloc[:, 1:].apply(lambda x: x 
 # aggregate all rule durations below the threshold
 rule_benchmark_df.insert(0, "Other Rules", 0)
 threshold = 0.05
-for index, benchmark in rule_benchmark_df[optimizer_rule_durations.keys()].iterrows():
+for index, benchmark in rule_benchmark_df[sum_optimizer_rule_durations.keys()].iterrows():
     for rule_name, rule_duration in benchmark.items():
         if rule_duration < threshold:
             rule_benchmark_df.loc[index, "Other Rules"] += rule_duration
@@ -221,4 +140,4 @@ for label_id, label in enumerate(xlabels):
 ax.set_xticklabels(xlabels)
 
 plt.tight_layout()
-plt.savefig(basename + "_optimizer_breakdown.pdf")
+plt.savefig(basename + "_optimizer_breakdown_old.pdf")
