@@ -29,7 +29,6 @@ void store_node_id_for_arena(ArenaID arena_id, NodeID node_id);
 
 class NumaMemoryResource : public boost::container::pmr::memory_resource {
  public:
-
   /**
    * Create for each NumaMemoryResource exactly one jemalloc arena.
    * We then use Extent Hooks, to customize the (de)allocation behavior,

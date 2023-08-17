@@ -312,11 +312,12 @@ TEST_F(SchedulerTest, CorrectJobMapping) {
   auto executed_on_node = std::vector<NodeID>(4, NodeID{0});
 
   auto addTask = [&](int node_id, int pos) {
-    auto task = std::make_shared<JobTask>([&, pos]()
-    {
-      const auto worker = Worker::get_this_thread_worker();
-      executed_on_node[pos] = worker->queue()->node_id();
-    }, SchedulePriority::Default, false);
+    auto task = std::make_shared<JobTask>(
+        [&, pos]() {
+          const auto worker = Worker::get_this_thread_worker();
+          executed_on_node[pos] = worker->queue()->node_id();
+        },
+        SchedulePriority::Default, false);
     task->set_node_id(NodeID{node_id});
     tasks.emplace_back(std::move(task));
   };
