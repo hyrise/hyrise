@@ -38,9 +38,9 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config,
   if (!_config.metrics) {
     Hyrise::get().default_pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
     Hyrise::get().default_lqp_cache = std::make_shared<SQLLogicalPlanCache>();
-    std::cout << " - Enable SQL plan caching." << std::endl;
+    std::cout << " - Switch on SQL plan caching." << std::endl;
   } else {
-    std::cout << " - No SQL plan caching." << std::endl;
+    std::cout << " - Switch off SQL plan caching since metrics tracking is requested." << std::endl;
   }
 
   // Initialise the scheduler if the benchmark was requested to run multi-threaded.
@@ -553,7 +553,7 @@ cxxopts::Options BenchmarkRunner::get_basic_cli_options(const std::string& bench
     ("visualize", "Create a visualization image of one LQP and PQP for each query, do not properly run the benchmark", cxxopts::value<bool>()->default_value("false"))  // NOLINT(whitespace/line_length)
     ("verify", "Verify each query by comparing it with the SQLite result", cxxopts::value<bool>()->default_value("false"))  // NOLINT(whitespace/line_length)
     ("dont_cache_binary_tables", "Do not cache tables as binary files for faster loading on subsequent runs", cxxopts::value<bool>()->default_value("false"))  // NOLINT(whitespace/line_length)
-    ("metrics", "Track more metrics (steps in SQL pipeline, system utilization, etc.) and add them to the output JSON (see -o)", cxxopts::value<bool>()->default_value("false"))  // NOLINT(whitespace/line_length)
+    ("metrics", "Track more metrics (steps in SQL pipeline, system utilization, etc.) and add them to the output JSON (see -o). Tracking metrics switches off plan caching.", cxxopts::value<bool>()->default_value("false"))  // NOLINT(whitespace/line_length)
     // This option is only advised when the underlying system's memory capacity is overleaded by the preparation phase.
     ("data_preparation_cores", "Specify the number of cores used by the scheduler for data preparation, i.e., sorting and encoding tables and generating table statistics. 0 means all available cores.", cxxopts::value<uint32_t>()->default_value("0"));  // NOLINT(whitespace/line_length)
   // clang-format on

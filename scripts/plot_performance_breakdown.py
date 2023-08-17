@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as mplticker
 import pandas as pd
 import sys
+from collections import defaultdict
 
 
 benchmarks = []
@@ -33,7 +34,7 @@ for benchmark_json in data["benchmarks"]:
     sum_parse_duration = 0.0
     sum_sql_translation_duration = 0.0
     sum_optimization_duration = 0.0
-    sum_optimizer_rule_durations = {}
+    sum_optimizer_rule_durations = defaultdict(list)
     sum_lqp_translation_duration = 0.0
     sum_plan_execution_duration = 0.0
 
@@ -44,17 +45,17 @@ for benchmark_json in data["benchmarks"]:
             sum_parse_duration += metrics["parse_duration"]
 
             for statement in metrics["statements"]:
+                if statement["query_plan_cache_hit"]:
+                    exit("When generating metrics, plan caching should be switched off.")
+
                 sum_sql_translation_duration += statement["sql_translation_duration"]
                 sum_optimization_duration += statement["optimization_duration"]
                 sum_lqp_translation_duration += statement["lqp_translation_duration"]
                 sum_plan_execution_duration += statement["plan_execution_duration"]
 
-                if statement["optimizer_rule_durations"]:
-                    for rule_name, rule_duration in statement["optimizer_rule_durations"].items():
-                        if rule_name not in sum_optimizer_rule_durations:
-                            sum_optimizer_rule_durations[rule_name] = rule_duration
-                        else:
-                            sum_optimizer_rule_durations[rule_name] += rule_duration
+                assert statement["optimizer_rule_durations"], "No rule durations found."
+                for rule_name, rule_duration in statement["optimizer_rule_durations"].items():
+                    sum_optimizer_rule_durations[rule_name] += rule_duration
 
     benchmark.append(sum_parse_duration / len(benchmark_json["successful_runs"]))
     benchmark.append(sum_sql_translation_duration / len(benchmark_json["successful_runs"]))
