@@ -83,6 +83,25 @@ TEST_F(OperatorScanPredicateTest, FromExpressionColumnRight) {
   EXPECT_EQ(operator_predicate_a.value, AllParameterVariant{5});
 }
 
+TEST_F(OperatorScanPredicateTest, OutputToStream) {
+  const auto test_cases = std::vector<std::pair<std::shared_ptr<AbstractPredicateExpression>, std::string>>(
+      {{between_inclusive_(5, a, b), "Column #0 <= 5\nColumn #1 >= 5\n"},
+       {greater_than_(a, 5), "Column #0 > 5\n"},
+       {less_than_(a, 5), "Column #0 < 5\n"},
+       {greater_than_(a, b), "Column #0 > Column #1\n"}});
+
+  auto actual = std::stringstream{};
+  for (const auto& [expression, expected] : test_cases) {
+    const auto operator_predicates = OperatorScanPredicate::from_expression(*expression, *node);
+    ASSERT_TRUE(operator_predicates);
+    for (const auto& predicate : *operator_predicates) {
+      actual << predicate << '\n';
+    }
+    EXPECT_EQ(actual.str(), expected);
+    actual.str("");
+  }
+}
+
 TEST_F(OperatorScanPredicateTest, SimpleBetween) {
   for (const auto predicate_condition :
        {PredicateCondition::BetweenInclusive, PredicateCondition::BetweenLowerExclusive,

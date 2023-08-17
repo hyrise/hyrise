@@ -357,4 +357,33 @@ TEST_F(OperatorsGetTableTest, AdaptOrderByInformation) {
   }
 }
 
+TEST_F(OperatorsGetTableTest, FinalizedChunks) {
+  // Insert one tuple into int_int_float to create a mutable chunk.
+  const auto& table = Hyrise::get().storage_manager.get_table("int_int_float");
+  EXPECT_EQ(table->chunk_count(), 4);
+  table->append({1, 1, 0.1f});
+  table->append_mutable_chunk();
+  table->append({1, 1, 0.1f});
+  EXPECT_EQ(table->chunk_count(), 6);
+  EXPECT_TRUE(table->get_chunk(ChunkID{4})->is_mutable());
+  EXPECT_TRUE(table->get_chunk(ChunkID{5})->is_mutable());
+
+  // Test without and with pruned columns. In the first case, GetTable can just forward the stored chunks. In the second
+  // case, it has to build the chunks on its own.
+  for (const auto& pruned_column_ids : {std::vector<ColumnID>{}, std::vector{ColumnID{1}, ColumnID{2}}}) {
+    const auto get_table = std::make_shared<GetTable>("int_int_float", std::vector<ChunkID>{}, pruned_column_ids);
+    get_table->execute();
+
+    const auto& get_table_output = get_table->get_output();
+    EXPECT_EQ(get_table_output->chunk_count(), 6);
+    EXPECT_TRUE(table->get_chunk(ChunkID{4})->is_mutable());
+    EXPECT_TRUE(table->get_chunk(ChunkID{5})->is_mutable());
+
+    const auto immutable_chunk_count = get_table_output->chunk_count() - 2;
+    for (auto chunk_id = ChunkID{0}; chunk_id < immutable_chunk_count; ++chunk_id) {
+      EXPECT_FALSE(get_table_output->get_chunk(chunk_id)->is_mutable());
+    }
+  }
+}
+
 }  // namespace hyrise

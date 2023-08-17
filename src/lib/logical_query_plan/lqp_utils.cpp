@@ -326,6 +326,7 @@ std::set<std::string> lqp_find_modified_tables(const std::shared_ptr<AbstractLQP
       case LQPNodeType::Intersect:
       case LQPNodeType::Except:
       case LQPNodeType::Mock:
+      case LQPNodeType::Window:
         return LQPVisitation::VisitInputs;
     }
     return LQPVisitation::VisitInputs;

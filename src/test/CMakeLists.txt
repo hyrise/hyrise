@@ -55,6 +55,7 @@ set(
     lib/logical_query_plan/intersect_node_test.cpp
     lib/logical_query_plan/join_node_test.cpp
     lib/logical_query_plan/limit_node_test.cpp
+    lib/logical_query_plan/logical_plan_root_node_test.cpp
     lib/logical_query_plan/logical_query_plan_test.cpp
     lib/logical_query_plan/lqp_find_subplan_mismatch_test.cpp
     lib/logical_query_plan/lqp_translator_test.cpp
@@ -68,6 +69,7 @@ set(
     lib/logical_query_plan/union_node_test.cpp
     lib/logical_query_plan/update_node_test.cpp
     lib/logical_query_plan/validate_node_test.cpp
+    lib/logical_query_plan/window_node_test.cpp
     lib/lossless_cast_test.cpp
     lib/lossy_cast_test.cpp
     lib/memory/segments_using_allocators_test.cpp
@@ -212,11 +214,13 @@ set(
     lib/storage/table_test.cpp
     lib/storage/value_segment_test.cpp
     lib/tasks/chunk_compression_task_test.cpp
+    lib/utils/atomic_max_test.cpp
     lib/utils/check_table_equal_test.cpp
-    lib/utils/column_pruning_utils_test.cpp
+    lib/utils/pruning_utils_test.cpp
     lib/utils/date_time_utils_test.cpp
     lib/utils/format_bytes_test.cpp
     lib/utils/format_duration_test.cpp
+    lib/utils/list_directory_test.cpp
     lib/utils/load_table_test.cpp
     lib/utils/log_manager_test.cpp
     lib/utils/lossless_predicate_cast_test.cpp

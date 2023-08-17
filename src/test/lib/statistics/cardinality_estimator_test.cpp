@@ -1,6 +1,3 @@
-#include <memory>
-#include <vector>
-
 #include "base_test.hpp"
 
 #include "expression/expression_functional.hpp"
@@ -26,6 +23,7 @@
 #include "logical_query_plan/union_node.hpp"
 #include "logical_query_plan/update_node.hpp"
 #include "logical_query_plan/validate_node.hpp"
+#include "logical_query_plan/window_node.hpp"
 #include "statistics/attribute_statistics.hpp"
 #include "statistics/cardinality_estimator.hpp"
 #include "statistics/statistics_objects/equal_distinct_count_histogram.hpp"
@@ -1070,6 +1068,23 @@ TEST_F(CardinalityEstimatorTest, BetweenScanWithUncorrelatedSubqueryAndProjectio
   min_c_y->set_left_input(aggregate_node);
   max_c_y->set_left_input(aggregate_node);
   EXPECT_FLOAT_EQ(estimator.estimate_cardinality(lqp), estimator.estimate_cardinality(node_a));
+}
+
+TEST_F(CardinalityEstimatorTest, WindowNode) {
+  auto frame_description = FrameDescription{FrameType::Range, FrameBound{0, FrameBoundType::Preceding, true},
+                                            FrameBound{0, FrameBoundType::CurrentRow, false}};
+  const auto window =
+      window_(expression_vector(), expression_vector(), std::vector<SortMode>{}, std::move(frame_description));
+  const auto lqp = WindowNode::make(min_(a_a, window), node_a);
+
+  const auto input_table_statistics = node_a->table_statistics();
+  const auto result_table_statistics = estimator.estimate_statistics(lqp);
+
+  EXPECT_EQ(result_table_statistics->row_count, 100);
+  ASSERT_EQ(result_table_statistics->column_statistics.size(), 3);
+  EXPECT_EQ(result_table_statistics->column_statistics.at(0), input_table_statistics->column_statistics.at(0));
+  EXPECT_EQ(result_table_statistics->column_statistics.at(1), input_table_statistics->column_statistics.at(1));
+  EXPECT_TRUE(result_table_statistics->column_statistics.at(2));
 }
 
 }  // namespace hyrise
