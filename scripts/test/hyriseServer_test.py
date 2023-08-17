@@ -49,6 +49,8 @@ def main():
 
     # Not using close_benchmark() here, as a server is started and a timeout of None would wait forever.
     client.close()
+    # Give the server a bit more time to shutdown, see https://github.com/pexpect/pexpect/issues/462
+    server.delayafterterminate = 1  # seconds
     server.close()
 
 
