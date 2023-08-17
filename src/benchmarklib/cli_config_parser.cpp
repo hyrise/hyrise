@@ -140,9 +140,6 @@ BenchmarkConfig CLIConfigParser::parse_cli_options(const cxxopts::ParseResult& p
   const auto metrics = parse_result["metrics"].as<bool>();
   if (metrics) {
     Assert(!output_file_string.empty(), "--metrics only makes sense when an output file is set.");
-    Assert(
-        warmup == 0,
-        "--metrics and --warmup should not be used together since cached queries skip translation and optimization.");
     std::cout << "- Tracking SQL metrics" << std::endl;
   } else {
     std::cout << "- Not tracking SQL metrics" << std::endl;

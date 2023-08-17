@@ -32,8 +32,16 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config,
       _benchmark_item_runner(std::move(benchmark_item_runner)),
       _table_generator(std::move(table_generator)),
       _context(context) {
-  Hyrise::get().default_pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
-  Hyrise::get().default_lqp_cache = std::make_shared<SQLLogicalPlanCache>();
+  // Enable caching only if no metrics are requested. When metrics are desired, we want to mesure translation and
+  // optimization for each SQL statement. These stages are skipped for cached plans, making it hard to interpret the
+  // measurements.
+  if (!_config.metrics) {
+    Hyrise::get().default_pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
+    Hyrise::get().default_lqp_cache = std::make_shared<SQLLogicalPlanCache>();
+    std::cout << " - Enable SQL plan caching." << std::endl;
+  } else {
+    std::cout << " - No SQL plan caching." << std::endl;
+  }
 
   // Initialise the scheduler if the benchmark was requested to run multi-threaded.
   if (config.enable_scheduler) {

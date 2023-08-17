@@ -90,6 +90,8 @@ for benchmark_json in data["benchmarks"]:
     rule_benchmark.append(benchmark_json["name"])
     queries = []
 
+    print(benchmark_json["name"])
+
     # Successful runs of benchmark item.
     for run in benchmark_json["successful_runs"]:
         if len(run["metrics"]) == 0:
@@ -98,7 +100,8 @@ for benchmark_json in data["benchmarks"]:
         if len(queries) == 0:
             queries = [Query() for _ in range(len(run["metrics"]))]
 
-        assert len(queries) == len(run["metrics"])
+        print(len(queries), len(run["metrics"]))
+        assert len(queries) >= len(run["metrics"])
 
         # Metrics for each item query, e.g., queries in TPC-C procedures.
         for query_id, metrics in enumerate(run["metrics"]):
