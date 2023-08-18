@@ -13,7 +13,6 @@
 #include "storage/value_segment.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
-#include "utils/format_duration.hpp"
 #include "utils/segment_tree.hpp"
 #include "utils/timer.hpp"
 #include "window_function_evaluator.hpp"
