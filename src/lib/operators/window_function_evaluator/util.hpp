@@ -13,10 +13,14 @@
 
 namespace hyrise::window_function_evaluator {
 
+// Reverses the ordering (used for sorting DESC).
 std::weak_ordering reverse(std::weak_ordering ordering);
+// Comparator function for two AllTypeVariants.
 std::weak_ordering compare_with_null_equal(const AllTypeVariant& lhs, const AllTypeVariant& rhs);
+// Comparator function for spans of AllTypeVariants.
 std::weak_ordering compare_with_null_equal(std::span<const AllTypeVariant> lhs, std::span<const AllTypeVariant> rhs);
 
+// Comparator function for spans of AllTypeVariants with option for reversed columns (needed for order-by column sort modes).
 std::weak_ordering compare_with_null_equal(std::span<const AllTypeVariant> lhs, std::span<const AllTypeVariant> rhs,
                                            auto is_column_reversed) {
   DebugAssert(lhs.size() == rhs.size(), "Tried to compare rows with different column counts.");
@@ -32,6 +36,9 @@ std::weak_ordering compare_with_null_equal(std::span<const AllTypeVariant> lhs, 
   return std::weak_ordering::equivalent;
 }
 
+// Stores for each row all the information needed for computing the window function.
+// This includes the values of the partition_by and order_by columns as well as the argument value,
+// which is the value of the argument column (e.g. b for AVG(b)) and NULL_VALUE if no argument exists.
 struct RelevantRowInformation {
   std::vector<AllTypeVariant> partition_values;
   std::vector<AllTypeVariant> order_values;
@@ -48,6 +55,9 @@ constexpr uint32_t hash_partition_partition_count = 1u << hash_partition_bits;
 template <typename T>
 using PerHash = std::array<T, hash_partition_partition_count>;
 
+// For each hash_value a task is spawned and the per_hash_function called with
+// the values in the corresponding hash_bucket (data[hash_value]) and also the hash_value
+// itself (optional) as parameters.
 template <typename T>
 void spawn_and_wait_per_hash(PerHash<T>& data, auto&& per_hash_function) {
   auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
@@ -82,6 +92,8 @@ void spawn_and_wait_per_hash(const PerHash<T>& data, auto&& per_hash_function) {
 
 using HashPartitionedData = PerHash<std::vector<RelevantRowInformation>>;
 
+// Because we might have multiple partitions within the same hash_value, for_each_partition finds all
+// partition bounds inside a hash_partition and calls emit_partition_bounds with the computed partition bounds.
 void for_each_partition(std::span<const RelevantRowInformation> hash_partition, auto&& emit_partition_bounds) {
   auto partition_start = static_cast<size_t>(0);
 
