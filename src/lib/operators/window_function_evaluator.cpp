@@ -124,15 +124,21 @@ std::shared_ptr<const Table> WindowFunctionEvaluator::_templated_on_execute() {
   using OutputColumnType = typename WindowFunctionEvaluatorTraits<InputColumnType, window_function>::OutputColumnType;
   using IsNull = bool;
 
+  // The segment_data_for_output_column stores the computed aggregates of the window function 
+  // and an isNull value for each chunk and row.
   auto segment_data_for_output_column =
       std::vector<std::pair<pmr_vector<OutputColumnType>, pmr_vector<IsNull>>>(chunk_count);
 
+  // For each chunk we resize the pmr_vector for the aggregate values and the isNull values by the chunk size.
   for (auto chunk_id = ChunkID(0); chunk_id < chunk_count; ++chunk_id) {
     const auto output_length = input_table->get_chunk(chunk_id)->size();
     segment_data_for_output_column[chunk_id].first.resize(output_length);
     segment_data_for_output_column[chunk_id].second.resize(output_length);
   }
 
+  // The emit_computed_value function is called by either compute_window_function_one_pass and
+  // compute_window_function_segment_tree for each RowID and computed value. The computed value
+  // is then moved to the correct position in segment_data_for_output_column and the IsNull value is set accordingly.
   const auto emit_computed_value = [&](RowID row_id, std::optional<OutputColumnType> computed_value) {
     if (computed_value) {
       segment_data_for_output_column[row_id.chunk_id].first[row_id.chunk_offset] = std::move(*computed_value);
