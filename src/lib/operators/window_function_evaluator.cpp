@@ -434,6 +434,9 @@ namespace {
 // Sentinel type to indicate that Range mode is used without an order-by column.
 struct NoOrderByColumn {};
 
+// WindowBoundCalculator should only be used with the partial specializations frame_type=FrameType::Rows and
+// frame_type=FrameType::Range. If none of these types is selected,
+// this implementation will be chosen and calculate_window_bounds will always Fail.
 template <FrameType frame_type, typename OrderByColumnType>
 struct WindowBoundCalculator {
   static QueryRange calculate_window_bounds([[maybe_unused]] std::span<const RelevantRowInformation> partition,
