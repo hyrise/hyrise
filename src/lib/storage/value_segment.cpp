@@ -99,8 +99,8 @@ void ValueSegment<T>::append(const AllTypeVariant& val) {
   auto values_pin_guard = SharedReadPinGuard{_values};
 
   if (is_nullable()) {
-    (*_null_values).push_back(is_null);
     auto null_values_pin_guard = SharedReadPinGuard{*_null_values};
+    (*_null_values).push_back(is_null);
     _values.push_back(is_null ? T{} : boost::get<T>(val));
     return;
   }

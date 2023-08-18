@@ -10,6 +10,7 @@
 #include <utility>
 #include <vector>
 
+#include "storage/buffer/pin_guard.hpp"
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/resolve_encoded_segment_type.hpp"
 #include "storage/segment_iterables/create_iterable_from_attribute_vector.hpp"
@@ -77,9 +78,11 @@ void ColumnLikeTableScanImpl::_scan_dictionary_segment(const BaseDictionarySegme
 
   if (segment.encoding_type() == EncodingType::Dictionary) {
     const auto& typed_segment = static_cast<const DictionarySegment<pmr_string>&>(segment);
+    auto pin_guard = SharedReadPinGuard{*typed_segment.dictionary()};
     result = _find_matches_in_dictionary(*typed_segment.dictionary());
   } else {
     const auto& typed_segment = static_cast<const FixedStringDictionarySegment<pmr_string>&>(segment);
+    auto pin_guard = SharedReadPinGuard{*typed_segment.fixed_string_dictionary()};
     result = _find_matches_in_dictionary(*typed_segment.fixed_string_dictionary());
   }
 
