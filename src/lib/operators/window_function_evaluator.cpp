@@ -128,7 +128,7 @@ std::shared_ptr<const Table> WindowFunctionEvaluator::_templated_on_execute() {
   auto segment_data_for_output_column =
       std::vector<std::pair<pmr_vector<OutputColumnType>, pmr_vector<IsNull>>>(chunk_count);
 
-  // For each chunk we resize the pmr_vector for the aggregate values and the isNull values by the chunk size.
+  // For each chunk we resize the pmr_vector for the aggregate values and the isNull values to the chunk size.
   for (auto chunk_id = ChunkID(0); chunk_id < chunk_count; ++chunk_id) {
     const auto output_length = input_table->get_chunk(chunk_id)->size();
     segment_data_for_output_column[chunk_id].first.resize(output_length);
@@ -339,6 +339,7 @@ HashPartitionedData WindowFunctionEvaluator::materialize_into_buckets() const {
   auto tasks = std::vector<std::shared_ptr<AbstractTask>>(chunk_count);
   auto chunk_buckets = std::vector<HashPartitionedData>(chunk_count);
 
+  // Parallel for each chunk, materialize and partition into chunk_buckets.
   for (auto chunk_id = ChunkID(0); chunk_id < chunk_count; ++chunk_id) {
     tasks[chunk_id] = std::make_shared<JobTask>([chunk_id, &input_table, &chunk_buckets, this]() {
       const auto chunk = input_table->get_chunk(chunk_id);
@@ -349,6 +350,9 @@ HashPartitionedData WindowFunctionEvaluator::materialize_into_buckets() const {
 
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
 
+  // We want all chunk_buckets with the same hash_value to be stored in the same bucket in output_buckets.
+  // For that, we need to compute for each chunk_id and hash_value the correct starting index (starting_indices[chunk_id][hash_value])
+  // to move the chunk_bucket (chunk_buckets[chunk_id][hash_value]) into the correct place in output_buckets[hash_value].
   auto starting_indices = std::vector<PerHash<ssize_t>>(chunk_count + 1);
   for (auto chunk_id = ChunkID(0); chunk_id < chunk_count; ++chunk_id) {
     const auto& my_start = starting_indices[chunk_id];
@@ -361,10 +365,15 @@ HashPartitionedData WindowFunctionEvaluator::materialize_into_buckets() const {
 
   auto output_buckets = HashPartitionedData{};
 
+  // The last element of starting_indices (starting_indices.back() = starting_indices[chunk_count]) holds the correct
+  // bucket sizes for each hash_value, because the starting_indices correspond to the index of the
+  // last element inside the bucket + 1.
+  // Therefore we can resize output_buckets[hash_value] to starting_indices.back()[hash_value].
   for (auto hash_value = 0u; hash_value < hash_partition_partition_count; ++hash_value) {
     output_buckets[hash_value].resize(starting_indices.back()[hash_value]);
   }
 
+  // Finally we can move the chunk_buckets to their correct position in output_buckets.
   for (auto chunk_id = ChunkID(0); chunk_id < chunk_count; ++chunk_id) {
     tasks[chunk_id] = std::make_shared<JobTask>([chunk_id, &chunk_buckets, &output_buckets, &starting_indices]() {
       for (auto hash_value = 0u; hash_value < hash_partition_partition_count; ++hash_value) {
