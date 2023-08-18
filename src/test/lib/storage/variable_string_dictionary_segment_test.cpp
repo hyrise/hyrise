@@ -133,19 +133,19 @@ TEST_F(StorageVariableStringDictionarySegmentTest, TestOffsetVector) {
 
 TEST_F(StorageVariableStringDictionarySegmentTest, TestLookup) {
   const auto allocator = PolymorphicAllocator<pmr_string>{};
-  // Create string data for klotz.
+  // Create string data for clob.
   // Contains zero-length string at the end, just to be annoying.
   const auto data = std::array<char, 26>{"HelloWorldAlexanderString"};
-  const auto klotz = std::make_shared<pmr_vector<char>>();
+  const auto clob = std::make_shared<pmr_vector<char>>();
   // -1 because of additional \0 in data.
-  const auto klotz_size = data.size() - 1;
-  klotz->resize(klotz_size);
-  std::memcpy(klotz->data(), data.data(), klotz_size);
+  const auto clob_size = data.size() - 1;
+  clob->resize(clob_size);
+  std::memcpy(clob->data(), data.data(), clob_size);
   const pmr_vector<uint32_t> offsets{0, 5, 10, 19, 25};
   const pmr_vector<uint32_t> attribute_vector{0, 0, 1, 3, 2, 4, 2};
 
   const auto segment = VariableStringDictionarySegment<pmr_string>{
-      klotz,
+      clob,
       std::shared_ptr<const BaseCompressedVector>(
           compress_vector(attribute_vector, VectorCompressionType::FixedWidthInteger, allocator, {4})),
       std::make_shared<pmr_vector<uint32_t>>(offsets)};
