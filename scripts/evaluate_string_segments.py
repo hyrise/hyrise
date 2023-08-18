@@ -16,7 +16,6 @@ from typing import Any, Literal, Mapping
 
 import pandas as pd
 import matplotlib.pyplot as plt
-# import matplotlib.ticker as mticker
 import seaborn as sns
 
 
@@ -35,18 +34,10 @@ def print_error(*args, **kwargs) -> None:
     print(*args, file=sys.stderr, **kwargs)
 
 
-def output(*args, required_verbosity_level, **kwargs) -> None:
-    print_debug(*args, required_verbosity_level=required_verbosity_level, **kwargs)
-
-
 def rm_dir(path: str) -> None:
     dirpath = Path(path)
     if dirpath.exists() and dirpath.is_dir():
         shutil.rmtree(dirpath)
-
-
-def enquote(x: str, /, *, quoatation_character='"') -> str:
-    return f"{quoatation_character}{x}{quoatation_character}"
 
 
 def read_json(path: str) -> dict:
@@ -112,12 +103,12 @@ class Runtimes(DictConvertible):
 
     @classmethod
     def from_json(cls, json_path: str) -> "Runtimes":
-        json_file = read_json(json_path)
+        json = read_json(json_path)
         runtimes = cls(
-            [], f"{json_file['branch']}-{json_file['encoding']}", json_file["benchmark_name"], json_file["threading"]
+            [], f"{json['branch']}-{json['encoding']}", json["benchmark_name"], json["threading"]
         )
-        json_file = json_file["benchmark"]
-        for benchmark in json_file["benchmarks"]:
+        json = json["benchmark"]
+        for benchmark in json["benchmarks"]:
             name = benchmark["name"]
             durations: list[float] = [run["duration"] for run in benchmark["successful_runs"]]
             runtime = Runtime(name, durations)
@@ -185,8 +176,9 @@ class Metrics(DictConvertible):
                 continue
             column_type = segment["column_data_type"]
             column_name = segment["column_name"]
+            estimated_size = segment["estimated_size_in_bytes"]
             metrics.memory_consumptions.append(
-                MemoryConsumption(column_name, column_type, segment["estimated_size_in_bytes"])
+                MemoryConsumption(column_name, column_type, estimated_size)
             )
         return metrics
 
@@ -246,15 +238,9 @@ def plot_stats(
 ) -> None:
     data = pd.DataFrame.from_dict(refine_stats(stats))
     data = data.sort_values(['BENCHMARK', 'ENCODING'])
-    # rcParams['axes.autolimit_mode'] = 'round_numbers'
     g = sns.FacetGrid(data, col="BENCHMARK", row="MODE", hue="ENCODING", sharex=sharex, sharey=sharey)
     g.map(sns.scatterplot, "SIZE", "RUNTIME")
     g.set(xscale="log")
-    # for ax in g.axes.flat:
-    #     if 'JOB' in ax.get_title() or sharex:
-    #         continue  # We don't want to apply this to JOB due to its size.
-    #     ax.xaxis.set_minor_formatter(mticker.ScalarFormatter())
-    #     ax.xaxis.set_major_formatter(mticker.ScalarFormatter())
     g.add_legend()
     g.set_axis_labels("Memory Consumption [Sum MB] (Log)", "Duration [Avg Seconds]")
     g.tight_layout()
@@ -292,7 +278,7 @@ class Benchmarking:
             )
 
     @staticmethod
-    def get_arguments(parser: ArgumentParser) -> ArgumentParser:
+    def register_arguments(parser: ArgumentParser) -> ArgumentParser:
         def check_positive(value) -> int:
             ivalue = int(value)
             if ivalue <= 0:
@@ -507,7 +493,6 @@ class Benchmarking:
                 benchmark_objects.append(BenchmarkRunner.create(benchmark, benchmark_path, tmp_path))
             return benchmark_objects
 
-        Path(config.tmp_path).mkdir(parents=True, exist_ok=True)
         (Path(config.tmp_path) / Path("config")).mkdir(parents=True, exist_ok=True)
         benchmarks = locate_benchmarks(config.benchmarks, config.build_path, config.tmp_path)
         result_paths: list[Path] = []
@@ -533,18 +518,18 @@ class Benchmarking:
                     # Add encoding name to result json
                     with open(result_path, mode="r") as result_json:
                         result_json_content = json.load(result_json)
+                    try:
+                        git_branch = check_output(["git", "branch", "--show-current"])
+                    except CalledProcessError:
+                        git_branch = b""
+                    result_with_encoding = {
+                        "benchmark": result_json_content,
+                        "encoding": encoding,
+                        "benchmark_name": benchmark.name,
+                        "threading": threading,
+                        "branch": git_branch.decode("utf-8").strip(),
+                    }
                     with open(result_path, mode="w") as result_json:
-                        try:
-                            git_branch = check_output(["git", "branch", "--show-current"])
-                        except CalledProcessError:
-                            git_branch = b""
-                        result_with_encoding = {
-                            "benchmark": result_json_content,
-                            "encoding": encoding,
-                            "benchmark_name": benchmark.name,
-                            "threading": threading,
-                            "branch": git_branch.decode("utf-8").strip(),
-                        }
                         json.dump(result_with_encoding, result_json)
 
                     result_paths.append(result_path)
@@ -580,7 +565,7 @@ class Evaluation:
             )
 
     @staticmethod
-    def get_arguments(parser: ArgumentParser) -> ArgumentParser:
+    def register_arguments(parser: ArgumentParser) -> ArgumentParser:
         parser.add_argument(
             "-t",
             "--timing-benchmark-files",
@@ -669,6 +654,8 @@ class Evaluation:
         values = set(map(lambda x: x.__getattribute__(key), array))
         return {value: [y for y in array if y.__getattribute__(key) == value] for value in values}
 
+    # Returns a tuple of a dictionary of the metrics grouped by benchmark and encoding with
+    # path names of the corresponding plot file and raw data file.
     @staticmethod
     def _compare_metrics(config: Config) -> tuple[dict[str, dict[str, Metrics]], list[Path]]:
         paths: list[Path] = []
@@ -753,7 +740,7 @@ class Evaluation:
             benchmark: Evaluation._group_by(timings_by_benchmark, "encoding")
             for benchmark, timings_by_benchmark in timings_grouped_by_benchmark.items()
         }
-        # Ensure that every benchmark-encoding combination only has two entries, one per threading
+        # Ensure that every benchmark-encoding combination only has two entries, one per threading.
         for benchmark_group in timings_grouped_by_benchmark_and_encoding_list.values():
             for encoding_group in benchmark_group.values():
                 if len(encoding_group) > 2:
@@ -799,18 +786,18 @@ class Evaluation:
         return timings_grouped_by_benchmark_and_encoding, paths
 
 
-def get_arguments(parser: ArgumentParser) -> ArgumentParser:
+def create_argument_parser() -> ArgumentParser:
+    parser = ArgumentParser()
     subparsers = parser.add_subparsers(help="Mode of the script", dest="command")
     benchmark_parser = subparsers.add_parser("benchmark", help="Run benchmarks for Hyrise")
-    Benchmarking.get_arguments(benchmark_parser)
+    Benchmarking.register_arguments(benchmark_parser)
     evaluation_parser = subparsers.add_parser("evaluate", help="Evaluate benchmark results")
-    Evaluation.get_arguments(evaluation_parser)
+    Evaluation.register_arguments(evaluation_parser)
     return parser
 
 
 def main():
-    parser = ArgumentParser()
-    parser = get_arguments(parser)
+    parser = create_argument_parser()
     namespace = parser.parse_args()
     command = namespace.command
     match command:
