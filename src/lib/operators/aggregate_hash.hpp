@@ -183,6 +183,8 @@ class AggregateHash : public AbstractAggregateOperator {
   std::shared_ptr<SegmentVisitorContext> _create_aggregate_context(const DataType data_type,
                                                                    const WindowFunction aggregate_function) const;
 
+  std::vector<Segments> _output_table;
+
   std::vector<std::shared_ptr<BaseValueSegment>> _groupby_segments;
   std::vector<std::shared_ptr<SegmentVisitorContext>> _contexts_per_column;
   bool _has_aggregate_functions;
