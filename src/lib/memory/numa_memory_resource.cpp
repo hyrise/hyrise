@@ -3,6 +3,7 @@
 #include <sys/mman.h>
 #include <boost/container/pmr/memory_resource.hpp>
 #include "utils/assert.hpp"
+#include "hyrise.hpp"
 
 namespace {
 
@@ -15,6 +16,7 @@ using arena_config_t = struct arena_config_s;
 }  // namespace
 
 namespace hyrise {
+
 NumaExtentHooks::NumaExtentHooks(const NodeID node_id) {}
 
 std::unordered_map<ArenaID, NodeID> NumaExtentHooks::node_id_for_arena_id = std::unordered_map<ArenaID, NodeID>{};
@@ -42,19 +44,12 @@ void* NumaExtentHooks::alloc(extent_hooks_t* extent_hooks, void* new_addr, size_
   return addr;
 }
 
-bool NumaExtentHooks::dalloc(extent_hooks_t* extent_hooks, void* addr, size_t size, bool committed,
-                             unsigned arena_ind) {
-  munmap(addr, size);
-  return true;
-}
-
 NumaMemoryResource::NumaMemoryResource(const NodeID node_id) : _node_id(node_id) {
   // Setup  arena.
-  _hooks.alloc = NumaExtentHooks::alloc;
   auto arena_id = uint32_t{0};
   size_t size = sizeof(arena_id);
   Assert(mallctl("arenas.create", static_cast<void*>(&arena_id), &size, nullptr, 0) == 0, "mallctl failed");
-  auto hooks_ptr = &_hooks;
+  auto hooks_ptr = Hyrise::get().storage_manager.get_extent_hooks();
   char command[64];
   snprintf(command, sizeof(command), "arena.%u.extent_hooks", arena_id);
   NumaExtentHooks::store_node_id_for_arena(arena_id, _node_id);

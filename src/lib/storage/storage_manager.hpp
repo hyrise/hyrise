@@ -12,6 +12,7 @@
 #include "lqp_view.hpp"
 #include "prepared_plan.hpp"
 #include "types.hpp"
+#include "memory/numa_memory_resource.hpp"
 
 namespace hyrise {
 
@@ -60,6 +61,21 @@ class StorageManager : public Noncopyable {
   // For debugging purposes mostly, dump all tables as csv
   void export_all_tables_as_csv(const std::string& path);
 
+  /**
+   * Builds one NUMA memory resource for each NUMA node. Currently, this is done by
+   * using Jemalloc, which holds one arena per memory resource. 
+   */
+  void build_memory_resources();
+
+  size_t number_of_memory_resources();
+  std::shared_ptr<NumaMemoryResource> get_memory_resource(NodeID node_id);
+
+  /**
+   * Migrates the tables and their chunks to their desired memory resources.
+   */
+  void migrate_table(std::shared_ptr<Table> table, NodeID target_node_id);
+  extent_hooks_t* get_extent_hooks();
+
  protected:
   StorageManager() = default;
   friend class Hyrise;
@@ -70,6 +86,9 @@ class StorageManager : public Noncopyable {
   tbb::concurrent_unordered_map<std::string, std::shared_ptr<Table>> _tables{INITIAL_MAP_SIZE};
   tbb::concurrent_unordered_map<std::string, std::shared_ptr<LQPView>> _views{INITIAL_MAP_SIZE};
   tbb::concurrent_unordered_map<std::string, std::shared_ptr<PreparedPlan>> _prepared_plans{INITIAL_MAP_SIZE};
+
+  std::vector<NumaMemoryResource> _memory_resources;
+  extent_hooks_t _hooks;
 };
 
 std::ostream& operator<<(std::ostream& stream, const StorageManager& storage_manager);

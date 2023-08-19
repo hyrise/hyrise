@@ -16,6 +16,7 @@
 #include "utils/assert.hpp"
 #include "utils/meta_table_manager.hpp"
 
+
 namespace hyrise {
 
 void StorageManager::add_table(const std::string& name, std::shared_ptr<Table> table) {
@@ -261,6 +262,46 @@ std::ostream& operator<<(std::ostream& stream, const StorageManager& storage_man
   }
 
   return stream;
+}
+
+void StorageManager::build_memory_resources() {
+  const auto num_nodes = static_cast<NodeID>(Hyrise::get().topology.nodes().size());
+  _memory_resources.reserve(num_nodes);
+  for (auto node_id = NodeID{0}; node_id < num_nodes; ++node_id) {
+    _memory_resources.emplace_back(node_id);
+  }
+
+  _hooks.alloc = NumaExtentHooks::alloc;
+}
+
+void StorageManager::migrate_table(std::shared_ptr<Table> table, NodeID target_node_id) {
+  const auto memory_resource = get_memory_resource(target_node_id);
+  const auto chunk_count = table->chunk_count();
+
+  auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+  jobs.reserve(chunk_count);
+
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+    auto migrate_job = [&table, &memory_resource, chunk_id, target_node_id]() {
+      const auto& chunk = table->get_chunk(chunk_id);
+      chunk->migrate(memory_resource.get(), target_node_id);
+    };
+    jobs.emplace_back(std::make_shared<JobTask>(migrate_job));
+  }
+
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
+}
+
+size_t StorageManager::number_of_memory_resources() {
+  return _memory_resources.size();
+}
+
+std::shared_ptr<NumaMemoryResource> StorageManager::get_memory_resource(NodeID node_id) {
+  return std::make_shared<NumaMemoryResource>(_memory_resources.at(node_id));
+}
+
+extent_hooks_t* StorageManager::get_extent_hooks() {
+  return &_hooks;
 }
 
 }  // namespace hyrise

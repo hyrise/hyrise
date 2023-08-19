@@ -21,7 +21,6 @@ Hyrise::Hyrise() {
   log_manager = LogManager{};
   topology = Topology{};
   _scheduler = std::make_shared<ImmediateExecutionScheduler>();
-  memory_manager = MemoryManager{};
 }
 
 void Hyrise::reset() {
