@@ -45,8 +45,7 @@ for benchmark_json in data["benchmarks"]:
             sum_parse_duration += metrics["parse_duration"]
 
             for statement in metrics["statements"]:
-                if statement["query_plan_cache_hit"]:
-                    exit("When generating metrics, plan caching should be switched off.")
+                assert not statement["query_plan_cache_hit"], "Plan caching must be switched off for metrics tracking."
 
                 sum_sql_translation_duration += statement["sql_translation_duration"]
                 sum_optimization_duration += statement["optimization_duration"]
