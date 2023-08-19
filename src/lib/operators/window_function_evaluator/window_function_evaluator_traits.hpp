@@ -117,7 +117,7 @@ struct AllRanksOnePassBase {
   }
 };
 
-};  // namespace impls
+}  // namespace impls
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -316,4 +316,4 @@ concept SupportsSegmentTree =
           typename WindowFunctionEvaluatorTraits<InputColumnType, window_function>::NullableSegmentTreeImpl::InputType>;
     };
 
-};  // namespace hyrise::window_function_evaluator
+}  // namespace hyrise::window_function_evaluator
