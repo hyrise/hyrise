@@ -4,6 +4,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <numa.h>
 
 #include "hyrise.hpp"
 #include "import_export/file_type.hpp"
@@ -266,12 +267,12 @@ std::ostream& operator<<(std::ostream& stream, const StorageManager& storage_man
 
 void StorageManager::build_memory_resources() {
   const auto num_nodes = static_cast<NodeID>(Hyrise::get().topology.nodes().size());
-  _memory_resources.reserve(num_nodes);
+  memory_resources.reserve(num_nodes);
   for (auto node_id = NodeID{0}; node_id < num_nodes; ++node_id) {
-    _memory_resources.emplace_back(node_id);
+    memory_resources.emplace_back(node_id);
   }
 
-  _hooks.alloc = NumaExtentHooks::alloc;
+  _hooks.alloc = StorageManager::alloc;
 }
 
 void StorageManager::migrate_table(std::shared_ptr<Table> table, NodeID target_node_id) {
@@ -284,7 +285,7 @@ void StorageManager::migrate_table(std::shared_ptr<Table> table, NodeID target_n
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     auto migrate_job = [&table, &memory_resource, chunk_id, target_node_id]() {
       const auto& chunk = table->get_chunk(chunk_id);
-      chunk->migrate(memory_resource.get(), target_node_id);
+      chunk->migrate(memory_resource, target_node_id);
     };
     jobs.emplace_back(std::make_shared<JobTask>(migrate_job));
   }
@@ -293,15 +294,37 @@ void StorageManager::migrate_table(std::shared_ptr<Table> table, NodeID target_n
 }
 
 size_t StorageManager::number_of_memory_resources() {
-  return _memory_resources.size();
+  return memory_resources.size();
 }
 
-std::shared_ptr<NumaMemoryResource> StorageManager::get_memory_resource(NodeID node_id) {
-  return std::make_shared<NumaMemoryResource>(_memory_resources.at(node_id));
+NumaMemoryResource* StorageManager::get_memory_resource(NodeID node_id) {
+  return &(memory_resources.at(node_id));
 }
 
 extent_hooks_t* StorageManager::get_extent_hooks() {
   return &_hooks;
+}
+
+void StorageManager::store_node_id_for_arena(ArenaID arena_id, NodeID node_id) {
+  if (node_id_for_arena_id.contains(arena_id))
+    Fail("Tried to assign node id to an already assigned arena id.");
+  node_id_for_arena_id[arena_id] = node_id;
+}
+
+void* StorageManager::alloc(extent_hooks_t* extent_hooks, void* new_addr, size_t size, size_t alignment, bool* zero,
+                             bool* commit, unsigned arena_index) {
+  size_t off;
+  if ((off = size % 4096) > 0) {
+    size += 4096 - off;
+  }
+
+  void* addr = mmap(nullptr, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+  DebugAssert(addr != nullptr, "Failed to mmap pages.");
+  DebugAssert(Hyrise::get().storage_manager.node_id_for_arena_id.contains(arena_index),
+              "Tried allocation for arena without numa node assignment.");
+  auto& node_id = Hyrise::get().storage_manager.node_id_for_arena_id[arena_index];
+  numa_tonode_memory(addr, size, node_id);
+  return addr;
 }
 
 }  // namespace hyrise

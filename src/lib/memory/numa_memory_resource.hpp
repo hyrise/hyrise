@@ -8,21 +8,6 @@
 namespace hyrise {
 using ArenaID = uint32_t;
 
-class NumaExtentHooks {
- public:
-  NumaExtentHooks() = delete;
-  explicit NumaExtentHooks(const NodeID node_id);
-
-  static void* alloc(extent_hooks_t* extent_hooks, void* new_addr, size_t size, size_t alignment, bool* zero,
-                     bool* commit, unsigned arena_index);
-  static bool dalloc(extent_hooks_t* extent_hooks, void* addr, size_t size, bool committed, unsigned arena_ind);
-
-  static void store_node_id_for_arena(ArenaID, NodeID);
-
- private:
-  static std::unordered_map<ArenaID, NodeID> node_id_for_arena_id;
-};
-
 class NumaMemoryResource : public boost::container::pmr::memory_resource {
  public:
   explicit NumaMemoryResource(const NodeID node_id);
