@@ -330,7 +330,7 @@ void parallel_merge_sort(std::span<RelevantRowInformation> data, auto comparator
   std::ranges::inplace_merge(data, data.begin() + static_cast<ssize_t>(mid), comparator);
 }
 
-};  // namespace
+}  // namespace
 
 HashPartitionedData WindowFunctionEvaluator::materialize_into_buckets() const {
   const auto input_table = left_input_table();
@@ -560,7 +560,7 @@ void templated_compute_window_function_segment_tree(const HashPartitionedData& p
   });
 }
 
-};  // namespace
+}  // namespace
 
 template <typename InputColumnType, WindowFunction window_function>
   requires SupportsSegmentTree<InputColumnType, window_function>

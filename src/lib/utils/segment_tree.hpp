@@ -134,4 +134,4 @@ class SegmentTree {
   std::vector<T> tree;
 };
 
-};  // namespace hyrise
+}  // namespace hyrise
