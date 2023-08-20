@@ -49,12 +49,12 @@ struct RelevantRowInformation {
   bool is_peer_of(const RelevantRowInformation& other) const;
 };
 
-constexpr uint8_t hash_partition_bits = 8;
-constexpr size_t hash_partition_mask = (1u << hash_partition_bits) - 1;
-constexpr uint32_t hash_partition_partition_count = 1u << hash_partition_bits;
+constexpr uint8_t bucket_bits = 8;
+constexpr size_t bucket_mask = (1u << bucket_bits) - 1;
+constexpr uint32_t bucket_count = 1u << bucket_bits;
 
 template <typename T>
-using PerHash = std::array<T, hash_partition_partition_count>;
+using PerHash = std::array<T, bucket_count>;
 
 // For each hash_value a task is spawned and the per_hash_function called with
 // the values in the corresponding hash_bucket (data[hash_value]) and also the hash_value
@@ -62,8 +62,8 @@ using PerHash = std::array<T, hash_partition_partition_count>;
 template <typename T>
 void spawn_and_wait_per_hash(PerHash<T>& data, auto&& per_hash_function) {
   auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
-  tasks.reserve(hash_partition_partition_count);
-  for (auto hash_value = 0u; hash_value < hash_partition_partition_count; ++hash_value) {
+  tasks.reserve(bucket_count);
+  for (auto hash_value = 0u; hash_value < bucket_count; ++hash_value) {
     tasks.emplace_back(std::make_shared<JobTask>([hash_value, &data, &per_hash_function]() {
       if constexpr (requires { per_hash_function(data[hash_value], hash_value); })
         per_hash_function(data[hash_value], hash_value);
@@ -78,8 +78,8 @@ void spawn_and_wait_per_hash(PerHash<T>& data, auto&& per_hash_function) {
 template <typename T>
 void spawn_and_wait_per_hash(const PerHash<T>& data, auto&& per_hash_function) {
   auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
-  tasks.reserve(hash_partition_partition_count);
-  for (auto hash_value = 0u; hash_value < hash_partition_partition_count; ++hash_value) {
+  tasks.reserve(bucket_count);
+  for (auto hash_value = 0u; hash_value < bucket_count; ++hash_value) {
     tasks.emplace_back(std::make_shared<JobTask>([hash_value, &data, &per_hash_function]() {
       if constexpr (requires { per_hash_function(data[hash_value], hash_value); })
         per_hash_function(data[hash_value], hash_value);
@@ -94,18 +94,17 @@ void spawn_and_wait_per_hash(const PerHash<T>& data, auto&& per_hash_function) {
 using HashPartitionedData = PerHash<std::vector<RelevantRowInformation>>;
 
 // Because we might have multiple partitions within the same hash_value, for_each_partition finds all
-// partition bounds inside a hash_partition and calls emit_partition_bounds with the computed partition bounds.
-void for_each_partition(std::span<const RelevantRowInformation> hash_partition, auto&& emit_partition_bounds) {
+// partition bounds inside a bucket and calls emit_partition_bounds with the computed partition bounds.
+void for_each_partition(std::span<const RelevantRowInformation> bucket, auto&& emit_partition_bounds) {
   auto partition_start = static_cast<size_t>(0);
 
-  while (partition_start < hash_partition.size()) {
+  while (partition_start < bucket.size()) {
     const auto partition_end = std::distance(
-        hash_partition.begin(),
-        std::find_if(hash_partition.begin() + static_cast<ssize_t>(partition_start) + 1, hash_partition.end(),
-                     [&](const auto& next_element) {
-                       return std::is_neq(compare_with_null_equal(hash_partition[partition_start].partition_values,
-                                                                  next_element.partition_values));
-                     }));
+        bucket.begin(), std::find_if(bucket.begin() + static_cast<ssize_t>(partition_start) + 1, bucket.end(),
+                                     [&](const auto& next_element) {
+                                       return std::is_neq(compare_with_null_equal(
+                                           bucket[partition_start].partition_values, next_element.partition_values));
+                                     }));
     emit_partition_bounds(partition_start, partition_end);
     partition_start = partition_end;
   }

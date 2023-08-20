@@ -305,9 +305,9 @@ HashPartitionedData collect_chunk_into_buckets(ChunkID chunk_id, const Chunk& ch
         .function_argument = std::move(function_argument_values[chunk_offset]),
         .row_id = RowID(chunk_id, chunk_offset),
     };
-    const auto hash_partition =
-        boost::hash_range(row_info.partition_values.begin(), row_info.partition_values.end()) & hash_partition_mask;
-    result[hash_partition].push_back(std::move(row_info));
+    const auto bucket_index =
+        boost::hash_range(row_info.partition_values.begin(), row_info.partition_values.end()) & bucket_mask;
+    result[bucket_index].push_back(std::move(row_info));
   }
 
   return result;
@@ -366,7 +366,7 @@ HashPartitionedData WindowFunctionEvaluator::materialize_into_buckets() const {
     const auto& my_start = starting_indices[chunk_id];
     auto& next_start = starting_indices[chunk_id + 1];
 
-    for (auto hash_value = 0u; hash_value < hash_partition_partition_count; ++hash_value) {
+    for (auto hash_value = 0u; hash_value < bucket_count; ++hash_value) {
       next_start[hash_value] = my_start[hash_value] + static_cast<ssize_t>(chunk_buckets[chunk_id][hash_value].size());
     }
   }
@@ -374,7 +374,7 @@ HashPartitionedData WindowFunctionEvaluator::materialize_into_buckets() const {
   // Note that the vector may not resize during writing, because multiple tasks are writing to it in parallel and at
   // indices spread throughout it. Hence, it is resized here before the writing starts.
   auto output_buckets = HashPartitionedData{};
-  for (auto hash_value = 0u; hash_value < hash_partition_partition_count; ++hash_value) {
+  for (auto hash_value = 0u; hash_value < bucket_count; ++hash_value) {
     const auto bucket_size = starting_indices[chunk_count][hash_value];
     output_buckets[hash_value].resize(bucket_size);
   }
@@ -382,7 +382,7 @@ HashPartitionedData WindowFunctionEvaluator::materialize_into_buckets() const {
   // Finally we can move the chunk_buckets to their correct position in output_buckets.
   for (auto chunk_id = ChunkID(0); chunk_id < chunk_count; ++chunk_id) {
     tasks[chunk_id] = std::make_shared<JobTask>([chunk_id, &chunk_buckets, &output_buckets, &starting_indices]() {
-      for (auto hash_value = 0u; hash_value < hash_partition_partition_count; ++hash_value) {
+      for (auto hash_value = 0u; hash_value < bucket_count; ++hash_value) {
         auto& my_values = chunk_buckets[chunk_id][hash_value];
         std::ranges::move(my_values, output_buckets[hash_value].begin() + starting_indices[chunk_id][hash_value]);
       }
@@ -415,7 +415,7 @@ template <typename InputColumnType, WindowFunction window_function>
   requires SupportsOnePass<InputColumnType, window_function>
 void WindowFunctionEvaluator::compute_window_function_one_pass(const HashPartitionedData& partitioned_data,
                                                                auto&& emit_computed_value) const {
-  spawn_and_wait_per_hash(partitioned_data, [&emit_computed_value](const auto& hash_partition) {
+  spawn_and_wait_per_hash(partitioned_data, [&emit_computed_value](const auto& bucket) {
     using Traits = WindowFunctionEvaluatorTraits<InputColumnType, window_function>;
     using Impl = typename Traits::OnePassImpl;
     using State = typename Impl::State;
@@ -423,7 +423,7 @@ void WindowFunctionEvaluator::compute_window_function_one_pass(const HashPartiti
 
     const RelevantRowInformation* previous_row = nullptr;
 
-    for (const auto& row : hash_partition) {
+    for (const auto& row : bucket) {
       if (previous_row && std::is_eq(compare_with_null_equal(previous_row->partition_values, row.partition_values))) {
         Impl::update_state(state, row);
       } else {
@@ -536,9 +536,9 @@ template <typename InputColumnType, WindowFunction window_function, FrameType fr
   requires SupportsSegmentTree<InputColumnType, window_function>
 void templated_compute_window_function_segment_tree(const HashPartitionedData& partitioned_data,
                                                     const FrameDescription& frame, auto&& emit_computed_value) {
-  spawn_and_wait_per_hash(partitioned_data, [&emit_computed_value, &frame](const auto& hash_partition) {
-    for_each_partition(hash_partition, [&](uint64_t partition_start, uint64_t partition_end) {
-      const auto partition = std::span(hash_partition.begin() + partition_start, partition_end - partition_start);
+  spawn_and_wait_per_hash(partitioned_data, [&emit_computed_value, &frame](const auto& bucket) {
+    for_each_partition(bucket, [&](uint64_t partition_start, uint64_t partition_end) {
+      const auto partition = std::span(bucket.begin() + partition_start, partition_end - partition_start);
 
       using Traits = WindowFunctionEvaluatorTraits<InputColumnType, window_function>;
       using Impl = typename Traits::NullableSegmentTreeImpl;
