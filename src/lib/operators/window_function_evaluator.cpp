@@ -113,65 +113,71 @@ std::shared_ptr<const Table> WindowFunctionEvaluator::_templated_on_execute() {
 
   auto timer = Timer{};
 
-  auto partitioned_data = materialize_into_buckets();
-  window_performance_data.set_step_runtime(OperatorSteps::MaterializeIntoBuckets, timer.lap());
+  const auto run_and_cleanup = [&]() {
+    auto partitioned_data = materialize_into_buckets();
+    window_performance_data.set_step_runtime(OperatorSteps::MaterializeIntoBuckets, timer.lap());
 
-  partition_and_order(partitioned_data);
-  window_performance_data.set_step_runtime(OperatorSteps::PartitionAndOrder, timer.lap());
+    partition_and_order(partitioned_data);
+    window_performance_data.set_step_runtime(OperatorSteps::PartitionAndOrder, timer.lap());
 
-  using OutputColumnType = typename WindowFunctionEvaluatorTraits<InputColumnType, window_function>::OutputColumnType;
-  using IsNull = bool;
+    using OutputColumnType = typename WindowFunctionEvaluatorTraits<InputColumnType, window_function>::OutputColumnType;
+    using IsNull = bool;
 
-  // The segment_data_for_output_column stores the computed aggregates of the window function
-  // and an isNull value for each chunk and row.
-  auto segment_data_for_output_column =
-      std::vector<std::pair<pmr_vector<OutputColumnType>, pmr_vector<IsNull>>>(chunk_count);
+    // The segment_data_for_output_column stores the computed aggregates of the window function
+    // and an isNull value for each chunk and row.
+    auto segment_data_for_output_column =
+        std::vector<std::pair<pmr_vector<OutputColumnType>, pmr_vector<IsNull>>>(chunk_count);
 
-  // For each chunk we resize the pmr_vector for the aggregate values and the isNull values to the chunk size.
-  for (auto chunk_id = ChunkID(0); chunk_id < chunk_count; ++chunk_id) {
-    const auto output_length = input_table->get_chunk(chunk_id)->size();
-    segment_data_for_output_column[chunk_id].first.resize(output_length);
-    segment_data_for_output_column[chunk_id].second.resize(output_length);
-  }
-
-  // The emit_computed_value function is called by either compute_window_function_one_pass and
-  // compute_window_function_segment_tree for each RowID and computed value. The computed value
-  // is then moved to the correct position in segment_data_for_output_column and the IsNull value is set accordingly.
-  const auto emit_computed_value = [&](RowID row_id, std::optional<OutputColumnType> computed_value) {
-    if (computed_value) {
-      segment_data_for_output_column[row_id.chunk_id].first[row_id.chunk_offset] = std::move(*computed_value);
-      // We don't need to set segment_data_for_output_column[row_id.chunk_id].second[row_id.chunk_offset] = false,
-      // because it is default-constructed to false.
-    } else {
-      segment_data_for_output_column[row_id.chunk_id].second[row_id.chunk_offset] = true;
+    // For each chunk we resize the pmr_vector for the aggregate values and the isNull values to the chunk size.
+    for (auto chunk_id = ChunkID(0); chunk_id < chunk_count; ++chunk_id) {
+      const auto output_length = input_table->get_chunk(chunk_id)->size();
+      segment_data_for_output_column[chunk_id].first.resize(output_length);
+      segment_data_for_output_column[chunk_id].second.resize(output_length);
     }
+
+    // The emit_computed_value function is called by either compute_window_function_one_pass and
+    // compute_window_function_segment_tree for each RowID and computed value. The computed value
+    // is then moved to the correct position in segment_data_for_output_column and the IsNull value is set accordingly.
+    const auto emit_computed_value = [&](RowID row_id, std::optional<OutputColumnType> computed_value) {
+      if (computed_value) {
+        segment_data_for_output_column[row_id.chunk_id].first[row_id.chunk_offset] = std::move(*computed_value);
+        // We don't need to set segment_data_for_output_column[row_id.chunk_id].second[row_id.chunk_offset] = false,
+        // because it is default-constructed to false.
+      } else {
+        segment_data_for_output_column[row_id.chunk_id].second[row_id.chunk_offset] = true;
+      }
+    };
+
+    const auto computation_strategy = choose_computation_strategy<InputColumnType, window_function>();
+    window_performance_data.computation_strategy = computation_strategy;
+
+    switch (computation_strategy) {
+      case ComputationStrategy::OnePass:
+        if constexpr (SupportsOnePass<InputColumnType, window_function>) {
+          compute_window_function_one_pass<InputColumnType, window_function>(partitioned_data, emit_computed_value);
+        } else {
+          Fail("Chose ComputationStrategy::OnePass, although it is not supported!");
+        }
+        break;
+      case ComputationStrategy::SegmentTree:
+        if constexpr (SupportsSegmentTree<InputColumnType, window_function>) {
+          compute_window_function_segment_tree<InputColumnType, window_function>(partitioned_data, emit_computed_value);
+        } else {
+          Fail("Chose ComputationStrategy::SegmentTree, although it is not supported!");
+        }
+        break;
+    }
+    window_performance_data.set_step_runtime(OperatorSteps::Compute, timer.lap());
+
+    const auto annotated_table = annotate_input_table(std::move(segment_data_for_output_column));
+    window_performance_data.set_step_runtime(OperatorSteps::Annotate, timer.lap());
+
+    return annotated_table;
   };
 
-  const auto computation_strategy = choose_computation_strategy<InputColumnType, window_function>();
-  window_performance_data.computation_strategy = computation_strategy;
-
-  switch (computation_strategy) {
-    case ComputationStrategy::OnePass:
-      if constexpr (SupportsOnePass<InputColumnType, window_function>) {
-        compute_window_function_one_pass<InputColumnType, window_function>(partitioned_data, emit_computed_value);
-      } else {
-        Fail("Chose ComputationStrategy::OnePass, although it is not supported!");
-      }
-      break;
-    case ComputationStrategy::SegmentTree:
-      if constexpr (SupportsSegmentTree<InputColumnType, window_function>) {
-        compute_window_function_segment_tree<InputColumnType, window_function>(partitioned_data, emit_computed_value);
-      } else {
-        Fail("Chose ComputationStrategy::SegmentTree, although it is not supported!");
-      }
-      break;
-  }
-  window_performance_data.set_step_runtime(OperatorSteps::Compute, timer.lap());
-
-  const auto annotated_table = annotate_input_table(std::move(segment_data_for_output_column));
-  window_performance_data.set_step_runtime(OperatorSteps::Annotate, timer.lap());
-
-  return annotated_table;
+  const auto result = run_and_cleanup();
+  window_performance_data.set_step_runtime(OperatorSteps::Cleanup, timer.lap());
+  return result;
 }
 
 std::shared_ptr<const Table> WindowFunctionEvaluator::_on_execute() {

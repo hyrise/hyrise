@@ -54,6 +54,8 @@ class WindowFunctionEvaluator : public AbstractReadOnlyOperator {
     PartitionAndOrder,
     Compute,
     Annotate,
+    // It seems that freeing the materialized input takes up a significant amount of time, so it gets its own step.
+    Cleanup,
   };
 
   struct PerformanceData : public OperatorPerformanceData<OperatorSteps> {
