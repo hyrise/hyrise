@@ -114,10 +114,10 @@ std::shared_ptr<const Table> WindowFunctionEvaluator::_templated_on_execute() {
   auto timer = Timer{};
 
   const auto run_and_cleanup = [&]() {
-    auto partitioned_data = materialize_into_buckets();
+    auto buckets = materialize_into_buckets();
     window_performance_data.set_step_runtime(OperatorSteps::MaterializeIntoBuckets, timer.lap());
 
-    partition_and_order(partitioned_data);
+    partition_and_order(buckets);
     window_performance_data.set_step_runtime(OperatorSteps::PartitionAndOrder, timer.lap());
 
     using OutputColumnType = typename WindowFunctionEvaluatorTraits<InputColumnType, window_function>::OutputColumnType;
@@ -154,14 +154,14 @@ std::shared_ptr<const Table> WindowFunctionEvaluator::_templated_on_execute() {
     switch (computation_strategy) {
       case ComputationStrategy::OnePass:
         if constexpr (SupportsOnePass<InputColumnType, window_function>) {
-          compute_window_function_one_pass<InputColumnType, window_function>(partitioned_data, emit_computed_value);
+          compute_window_function_one_pass<InputColumnType, window_function>(buckets, emit_computed_value);
         } else {
           Fail("Chose ComputationStrategy::OnePass, although it is not supported!");
         }
         break;
       case ComputationStrategy::SegmentTree:
         if constexpr (SupportsSegmentTree<InputColumnType, window_function>) {
-          compute_window_function_segment_tree<InputColumnType, window_function>(partitioned_data, emit_computed_value);
+          compute_window_function_segment_tree<InputColumnType, window_function>(buckets, emit_computed_value);
         } else {
           Fail("Chose ComputationStrategy::SegmentTree, although it is not supported!");
         }
@@ -264,10 +264,8 @@ bool WindowFunctionEvaluator::is_output_nullable() const {
 
 namespace {
 
-HashPartitionedData collect_chunk_into_buckets(ChunkID chunk_id, const Chunk& chunk,
-                                               std::span<const ColumnID> partition_column_ids,
-                                               std::span<const ColumnID> order_column_ids,
-                                               ColumnID function_argument_column_id) {
+Buckets collect_chunk_into_buckets(ChunkID chunk_id, const Chunk& chunk, std::span<const ColumnID> partition_column_ids,
+                                   std::span<const ColumnID> order_column_ids, ColumnID function_argument_column_id) {
   const auto chunk_size = chunk.size();
 
   const auto collect_values_of_columns = [&chunk, chunk_size](std::span<const ColumnID> column_ids) {
@@ -296,7 +294,7 @@ HashPartitionedData collect_chunk_into_buckets(ChunkID chunk_id, const Chunk& ch
     });
   }
 
-  auto result = HashPartitionedData{};
+  auto result = Buckets{};
 
   for (auto chunk_offset = ChunkOffset(0); chunk_offset < chunk_size; ++chunk_offset) {
     auto row_info = RelevantRowInformation{
@@ -337,12 +335,12 @@ void parallel_merge_sort(std::span<RelevantRowInformation> data, auto comparator
 
 }  // namespace
 
-HashPartitionedData WindowFunctionEvaluator::materialize_into_buckets() const {
+Buckets WindowFunctionEvaluator::materialize_into_buckets() const {
   const auto input_table = left_input_table();
   const auto chunk_count = input_table->chunk_count();
 
   auto tasks = std::vector<std::shared_ptr<AbstractTask>>(chunk_count);
-  auto chunk_buckets = std::vector<HashPartitionedData>(chunk_count);
+  auto chunk_buckets = std::vector<Buckets>(chunk_count);
 
   // Parallel for each chunk, materialize and partition into chunk_buckets.
   for (auto chunk_id = ChunkID(0); chunk_id < chunk_count; ++chunk_id) {
@@ -373,7 +371,7 @@ HashPartitionedData WindowFunctionEvaluator::materialize_into_buckets() const {
 
   // Note that the vector may not resize during writing, because multiple tasks are writing to it in parallel and at
   // indices spread throughout it. Hence, it is resized here before the writing starts.
-  auto output_buckets = HashPartitionedData{};
+  auto output_buckets = Buckets{};
   for (auto hash_value = 0u; hash_value < bucket_count; ++hash_value) {
     const auto bucket_size = starting_indices[chunk_count][hash_value];
     output_buckets[hash_value].resize(bucket_size);
@@ -394,7 +392,7 @@ HashPartitionedData WindowFunctionEvaluator::materialize_into_buckets() const {
   return output_buckets;
 }
 
-void WindowFunctionEvaluator::partition_and_order(HashPartitionedData& buckets) const {
+void WindowFunctionEvaluator::partition_and_order(Buckets& buckets) const {
   const auto& sort_modes = dynamic_cast<const WindowExpression&>(*_window_function_expression->window()).sort_modes;
   const auto is_column_reversed = [&sort_modes](const auto column_index) {
     return sort_modes[column_index] == SortMode::Descending;
@@ -413,9 +411,9 @@ void WindowFunctionEvaluator::partition_and_order(HashPartitionedData& buckets) 
 
 template <typename InputColumnType, WindowFunction window_function>
   requires SupportsOnePass<InputColumnType, window_function>
-void WindowFunctionEvaluator::compute_window_function_one_pass(const HashPartitionedData& partitioned_data,
+void WindowFunctionEvaluator::compute_window_function_one_pass(const Buckets& buckets,
                                                                auto&& emit_computed_value) const {
-  spawn_and_wait_per_hash(partitioned_data, [&emit_computed_value](const auto& bucket) {
+  spawn_and_wait_per_hash(buckets, [&emit_computed_value](const auto& bucket) {
     using Traits = WindowFunctionEvaluatorTraits<InputColumnType, window_function>;
     using Impl = typename Traits::OnePassImpl;
     using State = typename Impl::State;
@@ -534,9 +532,9 @@ struct WindowBoundCalculator<FrameType::Range, OrderByColumnType> {
 
 template <typename InputColumnType, WindowFunction window_function, FrameType frame_type, typename OrderByColumnType>
   requires SupportsSegmentTree<InputColumnType, window_function>
-void templated_compute_window_function_segment_tree(const HashPartitionedData& partitioned_data,
-                                                    const FrameDescription& frame, auto&& emit_computed_value) {
-  spawn_and_wait_per_hash(partitioned_data, [&emit_computed_value, &frame](const auto& bucket) {
+void templated_compute_window_function_segment_tree(const Buckets& buckets, const FrameDescription& frame,
+                                                    auto&& emit_computed_value) {
+  spawn_and_wait_per_hash(buckets, [&emit_computed_value, &frame](const auto& bucket) {
     for_each_partition(bucket, [&](uint64_t partition_start, uint64_t partition_end) {
       const auto partition = std::span(bucket.begin() + partition_start, partition_end - partition_start);
 
@@ -570,24 +568,23 @@ void templated_compute_window_function_segment_tree(const HashPartitionedData& p
 
 template <typename InputColumnType, WindowFunction window_function>
   requires SupportsSegmentTree<InputColumnType, window_function>
-void WindowFunctionEvaluator::compute_window_function_segment_tree(const HashPartitionedData& partitioned_data,
+void WindowFunctionEvaluator::compute_window_function_segment_tree(const Buckets& buckets,
                                                                    auto&& emit_computed_value) const {
   const auto& frame = frame_description();
   switch (frame.type) {
     case FrameType::Rows:
       templated_compute_window_function_segment_tree<InputColumnType, window_function, FrameType::Rows, void>(
-          partitioned_data, frame, emit_computed_value);
+          buckets, frame, emit_computed_value);
       break;
     case FrameType::Range:
       if (_order_by_column_ids.empty()) {
         templated_compute_window_function_segment_tree<InputColumnType, window_function, FrameType::Range,
-                                                       NoOrderByColumn>(partitioned_data, frame, emit_computed_value);
+                                                       NoOrderByColumn>(buckets, frame, emit_computed_value);
       } else {
         resolve_data_type(left_input_table()->column_data_type(_order_by_column_ids[0]), [&](auto data_type) {
           using OrderByColumnType = typename decltype(data_type)::type;
           templated_compute_window_function_segment_tree<InputColumnType, window_function, FrameType::Range,
-                                                         OrderByColumnType>(partitioned_data, frame,
-                                                                            emit_computed_value);
+                                                         OrderByColumnType>(buckets, frame, emit_computed_value);
         });
       }
       break;

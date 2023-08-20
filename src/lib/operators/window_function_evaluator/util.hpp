@@ -91,7 +91,7 @@ void spawn_and_wait_per_hash(const PerHash<T>& data, auto&& per_hash_function) {
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
 }
 
-using HashPartitionedData = PerHash<std::vector<RelevantRowInformation>>;
+using Buckets = PerHash<std::vector<RelevantRowInformation>>;
 
 // Because we might have multiple partitions within the same hash_value, for_each_partition finds all
 // partition bounds inside a bucket and calls emit_partition_bounds with the computed partition bounds.

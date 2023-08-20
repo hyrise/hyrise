@@ -77,17 +77,16 @@ class WindowFunctionEvaluator : public AbstractReadOnlyOperator {
       std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const override;
 
  private:
-  [[nodiscard]] HashPartitionedData materialize_into_buckets() const;
-  void partition_and_order(HashPartitionedData& buckets) const;
+  [[nodiscard]] Buckets materialize_into_buckets() const;
+  void partition_and_order(Buckets& buckets) const;
 
   template <typename InputColumnType, WindowFunction window_function>
     requires SupportsOnePass<InputColumnType, window_function>
-  void compute_window_function_one_pass(const HashPartitionedData& partitioned_data, auto&& emit_computed_value) const;
+  void compute_window_function_one_pass(const Buckets& buckets, auto&& emit_computed_value) const;
 
   template <typename InputColumnType, WindowFunction window_function>
     requires SupportsSegmentTree<InputColumnType, window_function>
-  void compute_window_function_segment_tree(const HashPartitionedData& partitioned_data,
-                                            auto&& emit_computed_value) const;
+  void compute_window_function_segment_tree(const Buckets& buckets, auto&& emit_computed_value) const;
 
   template <typename OutputColumnType>
   [[nodiscard]] std::shared_ptr<const Table> annotate_input_table(
