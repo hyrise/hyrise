@@ -109,6 +109,40 @@ TEST_F(OperatorsWindowTest, OperatorName) {
   EXPECT_EQ(window_function_operator->name(), "WindowFunctionEvaluator");
 }
 
+TEST_F(OperatorsWindowTest, Description) {
+  auto window_function_operator =
+      _window_operator_factory->build_operator(_table_wrapper, build_frame(), WindowFunction::Sum, ColumnID{2});
+  const auto* const expected_description_without_lqp =
+      "\
+WindowFunctionEvaluator\n\
+SUM(Column #2)\n\
+PartitionBy: {Column #0}\n\
+OrderBy: {Column #1}\n\
+RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW";
+
+  EXPECT_EQ(window_function_operator->description(DescriptionMode::MultiLine), expected_description_without_lqp);
+
+  // We set up mocked LQP nodes so that the operator can read the column names for its description.
+  const auto window_node = std::make_shared<MockNode>(MockNode::ColumnDefinitions{/* does not matter */});
+  window_node->set_left_input(std::make_shared<MockNode>(
+      MockNode::ColumnDefinitions{{DataType::Null, "A"}, {DataType::Null, "B"}, {DataType::Null, "C"}}));
+  window_function_operator->lqp_node = window_node;
+
+  const auto* const expected_description_with_lqp =
+      "\
+WindowFunctionEvaluator\n\
+SUM(C)\n\
+PartitionBy: {A}\n\
+OrderBy: {B}\n\
+RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW";
+  EXPECT_EQ(window_function_operator->description(DescriptionMode::MultiLine), expected_description_with_lqp);
+
+  const auto* const expected_description_single_line =
+      "WindowFunctionEvaluator SUM(C) PartitionBy: {A} OrderBy: {B} RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW";
+
+  EXPECT_EQ(window_function_operator->description(DescriptionMode::SingleLine), expected_description_single_line);
+}
+
 TEST_F(OperatorsWindowTest, ExactlyOneOrderByForRange) {
   const auto partition_columns = std::vector<ColumnID>{ColumnID{0}};
   const auto order_by_columns = std::vector<ColumnID>{ColumnID{0}, ColumnID{1}};

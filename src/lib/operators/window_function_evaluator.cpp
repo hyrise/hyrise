@@ -57,29 +57,28 @@ std::string WindowFunctionEvaluator::description(const DescriptionMode descripti
     }
     output_column(column_ids.front());
     for (const auto& column_id : column_ids.subspan(1)) {
-      desc << "," << separator;
+      desc << ", ";
       output_column(column_id);
     }
   };
 
   desc << AbstractOperator::description(description_mode) << separator;
-  desc << "Partition by:" << separator << "{";
+
+  desc << window_function_to_string.left.at(_window_function_expression->window_function) << '(';
+  if (_function_argument_column_id != INVALID_COLUMN_ID) {
+    output_column(_function_argument_column_id);
+  }
+  desc << ')' << separator;
+
+  desc << "PartitionBy: {";
   output_columns(_partition_by_column_ids);
   desc << "}" << separator;
 
-  desc << "Order by:" << separator << "{";
+  desc << "OrderBy: {";
   output_columns(_order_by_column_ids);
   desc << "}" << separator;
 
-  desc << "WindowFunction:" << separator
-       << window_function_to_string.left.at(_window_function_expression->window_function) << separator;
-  if (_function_argument_column_id != INVALID_COLUMN_ID) {
-    desc << "Over column:" << separator;
-    output_column(_function_argument_column_id);
-    desc << separator;
-  }
-
-  desc << "Frame:" << separator << frame_description() << separator;
+  desc << frame_description();
 
   return desc.str();
 }
@@ -123,7 +122,7 @@ std::shared_ptr<const Table> WindowFunctionEvaluator::_templated_on_execute() {
   using OutputColumnType = typename WindowFunctionEvaluatorTraits<InputColumnType, window_function>::OutputColumnType;
   using IsNull = bool;
 
-  // The segment_data_for_output_column stores the computed aggregates of the window function 
+  // The segment_data_for_output_column stores the computed aggregates of the window function
   // and an isNull value for each chunk and row.
   auto segment_data_for_output_column =
       std::vector<std::pair<pmr_vector<OutputColumnType>, pmr_vector<IsNull>>>(chunk_count);
