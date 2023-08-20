@@ -113,12 +113,11 @@ TEST_F(OperatorsWindowTest, Description) {
   auto window_function_operator =
       _window_operator_factory->build_operator(_table_wrapper, build_frame(), WindowFunction::Sum, ColumnID{2});
   const auto* const expected_description_without_lqp =
-      "\
-WindowFunctionEvaluator\n\
-SUM(Column #2)\n\
-PartitionBy: {Column #0}\n\
-OrderBy: {Column #1}\n\
-RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW";
+      "WindowFunctionEvaluator\n"
+      "SUM(Column #2)\n"
+      "PartitionBy: {Column #0}\n"
+      "OrderBy: {Column #1}\n"
+      "RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW";
 
   EXPECT_EQ(window_function_operator->description(DescriptionMode::MultiLine), expected_description_without_lqp);
 
@@ -129,12 +128,11 @@ RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW";
   window_function_operator->lqp_node = window_node;
 
   const auto* const expected_description_with_lqp =
-      "\
-WindowFunctionEvaluator\n\
-SUM(C)\n\
-PartitionBy: {A}\n\
-OrderBy: {B}\n\
-RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW";
+      "WindowFunctionEvaluator\n"
+      "SUM(C)\n"
+      "PartitionBy: {A}\n"
+      "OrderBy: {B}\n"
+      "RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW";
   EXPECT_EQ(window_function_operator->description(DescriptionMode::MultiLine), expected_description_with_lqp);
 
   const auto* const expected_description_single_line =

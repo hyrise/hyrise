@@ -355,9 +355,12 @@ HashPartitionedData WindowFunctionEvaluator::materialize_into_buckets() const {
 
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
 
-  // We want all chunk_buckets with the same hash_value to be stored in the same bucket in output_buckets.
-  // For that, we need to compute for each chunk_id and hash_value the correct starting index (starting_indices[chunk_id][hash_value])
-  // to move the chunk_bucket (chunk_buckets[chunk_id][hash_value]) into the correct place in output_buckets[hash_value].
+  // Next, the buckets need to be merged. We want to move the data in the buckets for each chunk in parallel, so we
+  // first compute the indices at which each task can safely write without interfering with another task. Hence, for
+  // each chunk and hash value, we compute the prefix sum of the chunk bucket sizes and store it in starting_indices.
+  // This means that the tasks move the data as if the chunk buckets would have been concatenated by a single task. In
+  // addition, starting_indices has one more element, starting_indices[chunk_count], which contains the complete sums of
+  // the sizes and therefore equals the total size of the corresponding output bucket.
   auto starting_indices = std::vector<PerHash<ssize_t>>(chunk_count + 1);
   for (auto chunk_id = ChunkID(0); chunk_id < chunk_count; ++chunk_id) {
     const auto& my_start = starting_indices[chunk_id];
@@ -368,14 +371,12 @@ HashPartitionedData WindowFunctionEvaluator::materialize_into_buckets() const {
     }
   }
 
+  // Note that the vector may not resize during writing, because multiple tasks are writing to it in parallel and at
+  // indices spread throughout it. Hence, it is resized here before the writing starts.
   auto output_buckets = HashPartitionedData{};
-
-  // The last element of starting_indices (starting_indices.back() = starting_indices[chunk_count]) holds the correct
-  // bucket sizes for each hash_value, because the starting_indices correspond to the index of the
-  // last element inside the bucket + 1.
-  // Therefore we can resize output_buckets[hash_value] to starting_indices.back()[hash_value].
   for (auto hash_value = 0u; hash_value < hash_partition_partition_count; ++hash_value) {
-    output_buckets[hash_value].resize(starting_indices.back()[hash_value]);
+    const auto bucket_size = starting_indices[chunk_count][hash_value];
+    output_buckets[hash_value].resize(bucket_size);
   }
 
   // Finally we can move the chunk_buckets to their correct position in output_buckets.

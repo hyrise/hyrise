@@ -20,7 +20,8 @@ std::weak_ordering compare_with_null_equal(const AllTypeVariant& lhs, const AllT
 // Comparator function for spans of AllTypeVariants.
 std::weak_ordering compare_with_null_equal(std::span<const AllTypeVariant> lhs, std::span<const AllTypeVariant> rhs);
 
-// Comparator function for spans of AllTypeVariants with option for reversed columns (needed for order-by column sort modes).
+// Comparator function for equally-sized collections of AllTypeVariants. Returns the lexicographical order according to
+// the non-collection version of `compare_with_null_equal` with support for reversed columns.
 std::weak_ordering compare_with_null_equal(std::span<const AllTypeVariant> lhs, std::span<const AllTypeVariant> rhs,
                                            auto is_column_reversed) {
   DebugAssert(lhs.size() == rhs.size(), "Tried to compare rows with different column counts.");
