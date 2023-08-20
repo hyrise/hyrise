@@ -23,8 +23,8 @@ NumaMemoryResource::NumaMemoryResource(const NodeID node_id) : _node_id(node_id)
   size_t size = sizeof(arena_id);
   Assert(mallctl("arenas.create", static_cast<void*>(&arena_id), &size, nullptr, 0) == 0, "mallctl failed");
 
-  // In rare cases, NumaMemoryResources are constructed before the extent_hooks are ready.
-  // In such a case, we will not add extent_hooks to the arena.
+  // In cases, std::vector deconstructs Memory Resources and constructs them again, due to memory management.
+  // It can be the case, that at this point in time the hooks are not present.
   auto hooks_ptr = Hyrise::get().storage_manager.get_extent_hooks();
   if (hooks_ptr) {
     char command[64];
@@ -48,4 +48,5 @@ void NumaMemoryResource::do_deallocate(void* pointer, std::size_t bytes, std::si
 bool NumaMemoryResource::do_is_equal(const memory_resource& other) const noexcept {
   return &other == this;
 }
+
 }  // namespace hyrise
