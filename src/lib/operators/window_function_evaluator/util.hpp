@@ -6,12 +6,20 @@
 #include <vector>
 
 #include "all_type_variant.hpp"
+#include "expression/window_function_expression.hpp"
 #include "hyrise.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
 #include "types.hpp"
 
 namespace hyrise::window_function_evaluator {
+
+constexpr static inline auto rank_like_window_functions =
+    std::array{WindowFunction::Rank, WindowFunction::DenseRank, WindowFunction::RowNumber, WindowFunction::PercentRank};
+
+constexpr bool is_rank_like(WindowFunction window_function) {
+  return std::ranges::find(rank_like_window_functions, window_function) != rank_like_window_functions.end();
+}
 
 // Reverses the ordering (used for sorting DESC).
 std::weak_ordering reverse(std::weak_ordering ordering);

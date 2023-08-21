@@ -9,13 +9,6 @@
 
 namespace hyrise::window_function_evaluator {
 
-constexpr static auto rank_like_window_functions =
-    std::array{WindowFunction::Rank, WindowFunction::DenseRank, WindowFunction::RowNumber, WindowFunction::PercentRank};
-
-constexpr bool is_rank_like(WindowFunction window_function) {
-  return std::ranges::find(rank_like_window_functions, window_function) != rank_like_window_functions.end();
-}
-
 namespace impls {
 
 template <typename Impl, typename OutputType>
