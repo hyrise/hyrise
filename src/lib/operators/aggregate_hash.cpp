@@ -21,7 +21,7 @@
 #include "utils/timer.hpp"
 
 namespace {
-using namespace hyrise;  // NOLINT
+using namespace hyrise;  // NOLINT(build/namespaces)
 
 // `get_or_add_result` is called once per row when iterating over a column that is to be aggregated. The row's `key` has
 // been calculated as part of `_partition_by_groupby_keys`. We also pass in the `row_id` of that row. This row id is
@@ -140,6 +140,7 @@ void write_groupby_output(const std::shared_ptr<const Table>& input_table,
                           const std::vector<std::shared_ptr<WindowFunctionExpression>>& aggregates,
                           const std::vector<ColumnID>& groupby_column_ids, const Results& results,
                           TableColumnDefinitions& output_column_definitions, Segments& output_segments) {
+  // std::cout << "#1" << std::endl;
   auto unaggregated_columns = std::vector<std::pair<ColumnID, ColumnID>>{};
   unaggregated_columns.reserve(groupby_column_ids.size() + aggregates.size());
   {
@@ -158,7 +159,7 @@ void write_groupby_output(const std::shared_ptr<const Table>& input_table,
     }
   }
 
-  // For each GROUP BY column, resolve its type, iterate over its values, and add them to a new output ValueSegment.
+  // std::cout << "#2" << std::endl;
   for (const auto& unaggregated_column : unaggregated_columns) {
     // Structured bindings do not work with the capture below.
     const auto input_column_id = unaggregated_column.first;
@@ -194,7 +195,8 @@ void write_groupby_output(const std::shared_ptr<const Table>& input_table,
       // input_table.type() : TableType::Data
 
       auto current_pos_list = std::make_shared<RowIDPosList>();
-      current_pos_list->reserve(std::min(input_table->row_count(), static_cast<uint64_t>(Chunk::DEFAULT_SIZE)));
+      // current_pos_list->reserve(std::min(input_table->row_count(), static_cast<uint64_t>(Chunk::DEFAULT_SIZE)));
+      current_pos_list->reserve(results.size());
       auto& current_pos_list_ref = *current_pos_list;
       
       // Determine type of input table. For reference tables, we need to point the RowID to the referenced table. If the
@@ -203,10 +205,13 @@ void write_groupby_output(const std::shared_ptr<const Table>& input_table,
       auto referenced_table = std::optional<std::shared_ptr<const Table>>{};
       auto referenced_column_id = input_column_id;
 
+      // std::cout << "#2.1" << std::endl;
+
       // In both following loops, we skip each NULL_ROW_ID (just a marker, not literally NULL), which means that this
       // result is either a gap (in the case of an unused immediate key) or the result of overallocating the result
       // vector. As such, it must be skipped.
       if (input_is_data_table) {
+        // std::cout << "Data table " << std::endl;
         referenced_table = input_table;
         for (const auto& result : results) {
           const auto& row_id = result.row_id;
@@ -216,34 +221,40 @@ void write_groupby_output(const std::shared_ptr<const Table>& input_table,
           current_pos_list_ref.emplace_back(row_id);
         }
       } else {
+        // std::cout << "ref table " << std::endl;
+        auto mappy = std::unordered_map<ChunkID, const AbstractPosList*>{};
         for (const auto& result : results) {
           const auto& row_id = result.row_id;
           if (row_id.is_null()) {
             continue;
           }
 
-          if (!referenced_table) {
-            const auto& first_segment = input_table->get_chunk(row_id.chunk_id)->get_segment(input_column_id);
-            DebugAssert(std::dynamic_pointer_cast<const ReferenceSegment>(first_segment), "Expected ReferenceSegments.");
-            const auto& reference_segment = static_cast<const ReferenceSegment&>(*first_segment);
-            referenced_table = reference_segment.referenced_table();
-            referenced_column_id = reference_segment.referenced_column_id();
+          if (!mappy.contains(row_id.chunk_id)) {
+            const auto& segment = input_table->get_chunk(row_id.chunk_id)->get_segment(input_column_id);
+            DebugAssert(std::dynamic_pointer_cast<const ReferenceSegment>(segment), "Expected ReferenceSegment.");
+            const auto& reference_segment = static_cast<const ReferenceSegment&>(*segment);
+
+            mappy.emplace(row_id.chunk_id, static_cast<const AbstractPosList*>(&*reference_segment.pos_list()));
+
+            if (!referenced_table) {
+              referenced_table = reference_segment.referenced_table();
+              referenced_column_id = reference_segment.referenced_column_id();
+            }
           }
 
-          const auto& segment = input_table->get_chunk(row_id.chunk_id)->get_segment(input_column_id);
-          DebugAssert(std::dynamic_pointer_cast<const ReferenceSegment>(segment), "Expected ReferenceSegments.");
-          const auto& reference_segment = static_cast<const ReferenceSegment&>(*segment);
-          const auto& pos_list_row_id = (*reference_segment.pos_list())[row_id.chunk_offset];
-          current_pos_list_ref.emplace_back(pos_list_row_id.chunk_id, pos_list_row_id.chunk_offset);
+          current_pos_list_ref.emplace_back((*mappy[row_id.chunk_id])[row_id.chunk_offset]);
         }
       }
+      // std::cout << "#2.2" << std::endl;
 
       if (referenced_table) {
         output_segments[output_column_id] = std::make_shared<ReferenceSegment>(*referenced_table, referenced_column_id,
                                                                                current_pos_list);
       }
+      // std::cout << "#2.3" << std::endl;
     // });
   }
+  // std::cout << "#3" << std::endl;
 }
 
 
@@ -890,6 +901,7 @@ void AggregateHash::_aggregate() {
 }  // NOLINT(readability/fn_size)
 
 std::shared_ptr<const Table> AggregateHash::_on_execute() {
+  // std::cout << description(DescriptionMode::SingleLine) << std::endl;
   // We do not want the overhead of a vector with heap storage when we have a limited number of aggregate columns.
   // However, more specializations mean more compile time. We now have specializations for 0, 1, 2, and >2 GROUP BY
   // columns.
