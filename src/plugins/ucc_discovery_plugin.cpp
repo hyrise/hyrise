@@ -135,16 +135,14 @@ void UccDiscoveryPlugin::_validate_ucc_candidates(const UccCandidates& ucc_candi
     resolve_data_type(table->column_data_type(column_id), [&](const auto data_type_t) {
       using ColumnDataType = typename decltype(data_type_t)::type;
 
-      bool ucc_is_currently_valid;
+      auto ucc_is_currently_valid = false;
       // Utilize efficient check for uniqueness inside each dictionary segment for a potential early out.
       // If that does not allow us to reject the UCC right away, we have to run the more expensive
       // cross-segment duplicate check (next clause of the if-condition).
       if (_dictionary_segments_contain_duplicates<ColumnDataType>(table, column_id)) {
-        ucc_is_currently_valid = false;
         message << " [rejected because some chunk contains duplicates in " << candidate_timer.lap_formatted() << "]";
       } else if (!_uniqueness_holds_across_segments<ColumnDataType>(table, candidate.table_name, column_id,
                                                                     transaction_context)) {
-        ucc_is_currently_valid = false;
         message << " [rejected because the column has cross-segment duplicates in " << candidate_timer.lap_formatted()
                 << "]";
       } else {
@@ -269,7 +267,7 @@ bool UccDiscoveryPlugin::_uniqueness_holds_across_segments(
     }
   }
 
-  // Using the validate operator, get a view on the current content of the table, filtering out overwritten and deleted
+  // Using the validate operator, get a view of the current content of the table, filtering out overwritten and deleted
   // values.
   const auto logical_table = std::make_shared<GetTable>(table_name, unmodified_chunks, std::vector<ColumnID>());
   logical_table->execute();
@@ -279,7 +277,7 @@ bool UccDiscoveryPlugin::_uniqueness_holds_across_segments(
   const auto& table_view = validate_table_operator->get_output();
 
   // Check all chunks for duplicates that we haven't yet in the first loop above.
-  // Note that below loop will only contain these chunks, as we have excluded the others when executing the GetTable
+  // Note that the loop below will only contain these chunks, as we have excluded the others when executing the GetTable
   // operator.
   const auto validated_chunk_count = table_view->chunk_count();
   for (auto chunk_id = ChunkID{0}; chunk_id < validated_chunk_count; ++chunk_id) {

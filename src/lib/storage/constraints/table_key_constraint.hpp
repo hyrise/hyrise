@@ -21,7 +21,7 @@ class TableKeyConstraint final : public AbstractTableConstraint {
    * voilating the set semantics of the constraint.
    */
   TableKeyConstraint(const std::set<ColumnID>& columns, const KeyConstraintType key_type);
-  TableKeyConstraint(const std::set<ColumnID>& columns, const KeyConstraintType key_type, CommitID last_validated_on);
+  TableKeyConstraint(const std::set<ColumnID>& columns, const KeyConstraintType key_type, const CommitID last_validated_on);
   TableKeyConstraint() = delete;
 
   const std::set<ColumnID>& columns() const;
@@ -32,11 +32,11 @@ class TableKeyConstraint final : public AbstractTableConstraint {
 
   /**
    * Whether this key constraint can become invalid if the table data changes.
-   * This is false for constraints specified by the table schema, but true for "incidental" uniqueness of columns
+   * This is false for constraints specified by the table schema, but true for the "incidental" uniqueness of columns
    * in any table state as adding duplicates would make them no longer unique.
    */
   bool can_become_invalid() const;
-  void revalidated_on(CommitID revalidation_commit_id) const;
+  void revalidated_on(const CommitID revalidation_commit_id) const;
 
   size_t hash() const override;
 

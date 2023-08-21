@@ -76,7 +76,7 @@ class UccDiscoveryPluginTest : public BaseTest {
     ChunkEncoder::encode_all_chunks(table, chunk_encoding_spec);
   }
 
-  void _duplicate_table(std::string table_name) {
+  void _duplicate_table(const std::string table_name) {
     auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
     const auto get_table = std::make_shared<GetTable>(table_name);
     get_table->execute();
@@ -86,12 +86,12 @@ class UccDiscoveryPluginTest : public BaseTest {
     transaction_context->commit();
   }
 
-  void _delete_row(std::shared_ptr<Table> table, size_t rowId) {
+  void _delete_row(const std::shared_ptr<Table> table, const size_t row_index) {
     auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
     const auto table_wrapper = std::make_shared<TableWrapper>(table);
     table_wrapper->execute();
-    auto table_scan =
-        create_table_scan(table_wrapper, ColumnID{0}, PredicateCondition::Equals, table->get_row(rowId).at(0));
+    const auto table_scan =
+        create_table_scan(table_wrapper, ColumnID{0}, PredicateCondition::Equals, table->get_row(row_index).at(0));
     table_scan->execute();
     auto delete_op = std::make_shared<Delete>(table_scan);
     delete_op->set_transaction_context(transaction_context);
@@ -289,7 +289,7 @@ TEST_P(UccDiscoveryPluginMultiEncodingTest, ValidateCandidatesAfterDeletion) {
   _delete_row(_table_A, 3);
 
   // We are only interested in column 1, since it was not unique before the deletion but should be now
-  auto ucc_candidates = UccCandidates{{"uniquenessTestTableA", ColumnID{1}}};
+  const auto ucc_candidates = UccCandidates{{"uniquenessTestTableA", ColumnID{1}}};
 
   _validate_ucc_candidates(ucc_candidates);
 
@@ -303,11 +303,11 @@ TEST_P(UccDiscoveryPluginMultiEncodingTest, RevalidationUpdatesValidationTimesta
   _encode_table(_table_A, GetParam());
 
   // We are only interested in column 1, since it was not unique before the deletion but should be now
-  auto ucc_candidates = UccCandidates{{"uniquenessTestTableA", ColumnID{0}}};
+  const auto ucc_candidates = UccCandidates{{"uniquenessTestTableA", ColumnID{0}}};
 
   _validate_ucc_candidates(ucc_candidates);
 
-  // Perform transaction that does not affect table A but increments the global Commit ID
+  // Perform a transaction that does not affect table A but increments the global Commit ID
   _delete_row(_table_B, 0);
 
   // Collect constraints known for the tables
