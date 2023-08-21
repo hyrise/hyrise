@@ -1,7 +1,7 @@
 #pragma once
 
 #include <atomic>
-#include <shared_mutex>  // NOLINT lint thinks this is a C header or something
+#include <shared_mutex>
 
 #include "types.hpp"
 #include "utils/copyable_atomic.hpp"
@@ -19,9 +19,10 @@ struct MvccData {
   // The last commit id is reserved for uncommitted changes
   static constexpr CommitID MAX_COMMIT_ID = CommitID{std::numeric_limits<CommitID::base_type>::max() - 1};
 
-  // This is used for optimizing the validation process. It is set during Chunk::finalize(). Consult
-  // Validate::_on_execute for further details.
-  std::optional<CommitID> max_begin_cid;
+  // This is used for optimizing the validation process. It is set during Chunk::finalize() and for each commit of an
+  // Insert/Delete operator. Consult Validate::_on_execute for further details.
+  std::atomic<CommitID> max_begin_cid{MAX_COMMIT_ID};
+  std::atomic<CommitID> max_end_cid{MAX_COMMIT_ID};
 
   // Creates MVCC data that supports a maximum of `size` rows. If the underlying chunk has less rows, the extra rows
   // here are ignored. This is to avoid resizing the vectors, which would cause reallocations and require locking.

@@ -65,3 +65,6 @@
 [submodule "third_party/HdrHistogram_c"]
 	path = third_party/HdrHistogram_c
 	url = https://github.com/HdrHistogram/HdrHistogram_c
+[submodule "third_party/concurrentqueue"]
+	path = third_party/concurrentqueue
+	url = https://github.com/cameron314/concurrentqueue.git

@@ -1,17 +1,13 @@
 #include "operator_task.hpp"
 
-#include <memory>
-#include <unordered_set>
-#include <utility>
-
 #include "operators/abstract_operator.hpp"
 #include "operators/abstract_read_write_operator.hpp"
-
-#include "scheduler/job_task.hpp"
+#include "operators/get_table.hpp"
+#include "scheduler/task_utils.hpp"
 
 namespace {
 
-using namespace hyrise;  // NOLINT
+using namespace hyrise;  // NOLINT(build/namespaces)
 
 /**
  * Create tasks recursively. Called by `make_tasks_from_operator`.
@@ -61,8 +57,24 @@ std::string OperatorTask::description() const {
 
 std::pair<std::vector<std::shared_ptr<AbstractTask>>, std::shared_ptr<OperatorTask>>
 OperatorTask::make_tasks_from_operator(const std::shared_ptr<AbstractOperator>& op) {
-  std::unordered_set<std::shared_ptr<OperatorTask>> operator_tasks_set;
+  auto operator_tasks_set = std::unordered_set<std::shared_ptr<OperatorTask>>{};
   const auto& root_operator_task = add_operator_tasks_recursively(op, operator_tasks_set);
+
+  // Ensure the task graph is acyclic, i.e., no task is any (n-th) successor of itself. Tasks in cycles would end up in
+  // a deadlock during execution, mutually waiting for the other tasks' execution. Even if the tasks are never executed,
+  // cycles create memory leaks since tasks hold shared pointers to their predecessors.
+  if constexpr (HYRISE_DEBUG) {
+    visit_tasks(root_operator_task, [](const auto& task) {
+      for (const auto& direct_successor : task->successors()) {
+        visit_tasks_upwards(direct_successor, [&](const auto& successor) {
+          Assert(task != successor, "Task graph contains a cycle.");
+          return TaskUpwardVisitation::VisitSuccessors;
+        });
+      }
+
+      return TaskVisitation::VisitPredecessors;
+    });
+  }
 
   return std::make_pair(
       std::vector<std::shared_ptr<AbstractTask>>(operator_tasks_set.begin(), operator_tasks_set.end()),
@@ -116,10 +128,10 @@ void OperatorTask::_on_execute() {
         return;
       case TransactionPhase::Committing:
       case TransactionPhase::Committed:
-        Fail("Trying to execute an operator for a transaction that is already committed");
+        Fail("Trying to execute an operator for a transaction that is already committed.");
 
       case TransactionPhase::RolledBackByUser:
-        Fail("Trying to execute an operator for a transaction that has been rolled back by the user");
+        Fail("Trying to execute an operator for a transaction that has been rolled back by the user.");
     }
   }
 

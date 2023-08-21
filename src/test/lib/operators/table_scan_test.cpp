@@ -122,13 +122,13 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
     const auto test_table_part_compressed = _int_int_partly_compressed->get_output();
 
     auto pos_list = std::make_shared<RowIDPosList>();
-    pos_list->emplace_back(RowID{ChunkID{2}, ChunkOffset{0}});
-    pos_list->emplace_back(RowID{ChunkID{1}, ChunkOffset{1}});
-    pos_list->emplace_back(RowID{ChunkID{1}, ChunkOffset{3}});
-    pos_list->emplace_back(RowID{ChunkID{0}, ChunkOffset{2}});
-    pos_list->emplace_back(RowID{ChunkID{2}, ChunkOffset{2}});
-    pos_list->emplace_back(RowID{ChunkID{0}, ChunkOffset{0}});
-    pos_list->emplace_back(RowID{ChunkID{0}, ChunkOffset{4}});
+    pos_list->emplace_back(ChunkID{2}, ChunkOffset{0});
+    pos_list->emplace_back(ChunkID{1}, ChunkOffset{1});
+    pos_list->emplace_back(ChunkID{1}, ChunkOffset{3});
+    pos_list->emplace_back(ChunkID{0}, ChunkOffset{2});
+    pos_list->emplace_back(ChunkID{2}, ChunkOffset{2});
+    pos_list->emplace_back(ChunkID{0}, ChunkOffset{0});
+    pos_list->emplace_back(ChunkID{0}, ChunkOffset{4});
 
     auto segment_a = std::make_shared<ReferenceSegment>(test_table_part_compressed, ColumnID{0}, pos_list);
     auto segment_b = std::make_shared<ReferenceSegment>(test_table_part_compressed, ColumnID{1}, pos_list);
@@ -880,7 +880,7 @@ TEST_P(OperatorsTableScanTest, ScanWithExcludedFirstChunk) {
   auto scan = std::make_shared<TableScan>(
       _int_int_partly_compressed,
       greater_than_equals_(get_column_expression(_int_int_partly_compressed, ColumnID{0}), 0));
-  scan->excluded_chunk_ids = {ChunkID{0}};
+  scan->excluded_chunk_ids = std::make_shared<std::vector<ChunkID>>(std::initializer_list<ChunkID>{ChunkID{0}});
   scan->execute();
 
   ASSERT_COLUMN_EQ(scan->get_output(), ColumnID{1}, expected);
@@ -1181,17 +1181,17 @@ TEST_P(OperatorsTableScanTest, SortedFlagReferenceSegments) {
   const auto ref_table = std::make_shared<Table>(table->column_definitions(), TableType::References);
 
   auto pos_list_1 = std::make_shared<RowIDPosList>();
-  pos_list_1->emplace_back(RowID{ChunkID{0}, ChunkOffset{1}});
-  pos_list_1->emplace_back(RowID{ChunkID{0}, ChunkOffset{0}});
-  pos_list_1->emplace_back(RowID{ChunkID{0}, ChunkOffset{3}});
-  pos_list_1->emplace_back(RowID{ChunkID{0}, ChunkOffset{2}});
+  pos_list_1->emplace_back(ChunkID{0}, ChunkOffset{1});
+  pos_list_1->emplace_back(ChunkID{0}, ChunkOffset{0});
+  pos_list_1->emplace_back(ChunkID{0}, ChunkOffset{3});
+  pos_list_1->emplace_back(ChunkID{0}, ChunkOffset{2});
   pos_list_1->guarantee_single_chunk();
 
   const auto segment_1 = std::make_shared<ReferenceSegment>(table, ColumnID{0}, pos_list_1);
   ref_table->append_chunk({segment_1});
 
   auto pos_list_2 = std::make_shared<RowIDPosList>();
-  pos_list_2->emplace_back(RowID{ChunkID{1}, ChunkOffset{0}});
+  pos_list_2->emplace_back(ChunkID{1}, ChunkOffset{0});
   pos_list_2->guarantee_single_chunk();
 
   const auto segment_2 = std::make_shared<ReferenceSegment>(table, ColumnID{0}, pos_list_2);
@@ -1229,14 +1229,14 @@ TEST_P(OperatorsTableScanTest, SortedFlagSingleChunkNotGuaranteed) {
   const auto ref_table = std::make_shared<Table>(table->column_definitions(), TableType::References);
 
   auto pos_list_1 = std::make_shared<RowIDPosList>();
-  pos_list_1->emplace_back(RowID{ChunkID{0}, ChunkOffset{1}});
-  pos_list_1->emplace_back(RowID{ChunkID{0}, ChunkOffset{3}});
+  pos_list_1->emplace_back(ChunkID{0}, ChunkOffset{1});
+  pos_list_1->emplace_back(ChunkID{0}, ChunkOffset{3});
 
   const auto segment_1 = std::make_shared<ReferenceSegment>(table, ColumnID{0}, pos_list_1);
   ref_table->append_chunk({segment_1});
 
   auto pos_list_2 = std::make_shared<RowIDPosList>();
-  pos_list_2->emplace_back(RowID{ChunkID{1}, ChunkOffset{0}});
+  pos_list_2->emplace_back(ChunkID{1}, ChunkOffset{0});
 
   const auto segment_2 = std::make_shared<ReferenceSegment>(table, ColumnID{0}, pos_list_2);
   ref_table->append_chunk({segment_2});
@@ -1279,11 +1279,11 @@ TEST_P(OperatorsTableScanTest, SortedFlagMultipleChunksReferenced) {
   const auto ref_table = std::make_shared<Table>(table->column_definitions(), TableType::References);
 
   auto pos_list_1 = std::make_shared<RowIDPosList>();
-  pos_list_1->emplace_back(RowID{ChunkID{0}, ChunkOffset{1}});
-  pos_list_1->emplace_back(RowID{ChunkID{0}, ChunkOffset{0}});
-  pos_list_1->emplace_back(RowID{ChunkID{0}, ChunkOffset{3}});
-  pos_list_1->emplace_back(RowID{ChunkID{0}, ChunkOffset{2}});
-  pos_list_1->emplace_back(RowID{ChunkID{1}, ChunkOffset{0}});
+  pos_list_1->emplace_back(ChunkID{0}, ChunkOffset{1});
+  pos_list_1->emplace_back(ChunkID{0}, ChunkOffset{0});
+  pos_list_1->emplace_back(ChunkID{0}, ChunkOffset{3});
+  pos_list_1->emplace_back(ChunkID{0}, ChunkOffset{2});
+  pos_list_1->emplace_back(ChunkID{1}, ChunkOffset{0});
 
   const auto segment = std::make_shared<ReferenceSegment>(table, ColumnID{0}, pos_list_1);
   ref_table->append_chunk({segment});
@@ -1300,6 +1300,16 @@ TEST_P(OperatorsTableScanTest, SortedFlagMultipleChunksReferenced) {
   const auto& result_chunk_sorted = scan_sorted->get_output()->get_chunk(ChunkID{0});
   const auto& chunk_sorted_by = result_chunk_sorted->individually_sorted_by();
   ASSERT_TRUE(chunk_sorted_by.empty());
+}
+
+TEST_P(OperatorsTableScanTest, DeepCopyRetainsExcludedChunks) {
+  const auto table_scan =
+      create_table_scan(get_int_float_op(), ColumnID{0}, PredicateCondition::GreaterThanEquals, 1234);
+  table_scan->excluded_chunk_ids = std::make_shared<std::vector<ChunkID>>(std::initializer_list<ChunkID>{ChunkID{0}});
+  const auto new_table_scan = std::dynamic_pointer_cast<TableScan>(table_scan->deep_copy());
+  EXPECT_EQ(*table_scan->excluded_chunk_ids, *new_table_scan->excluded_chunk_ids);
+  EXPECT_EQ(table_scan->excluded_chunk_ids->data(),
+            new_table_scan->excluded_chunk_ids->data());  // Should be the same object.
 }
 
 }  // namespace hyrise

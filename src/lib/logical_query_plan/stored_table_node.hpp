@@ -1,12 +1,10 @@
 #pragma once
 
-#include <optional>
-#include <vector>
-
 #include "abstract_lqp_node.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/lqp_column_expression.hpp"
 #include "storage/index/chunk_index_statistics.hpp"
+#include "storage/index/table_index_statistics.hpp"
 
 namespace hyrise {
 
@@ -25,8 +23,8 @@ class StoredTableNode : public EnableMakeForLQPNode<StoredTableNode>, public Abs
   std::shared_ptr<LQPColumnExpression> get_column(const std::string& name) const;
 
   /**
-   * @defgroup ColumnIDs and ChunkIDs to be pruned from the stored Table.
-   * Both vectors need to be sorted and must no contain duplicates when passed to `set_pruned_{chunk/column}_ids()`
+   * @defgroup ColumnIDs and ChunkIDs to be pruned from the stored Table. Both vectors need to be sorted and must not
+   *           contain duplicates when passed to `set_pruned_{chunk/column}_ids()`.
    *
    * @{
    */
@@ -38,6 +36,8 @@ class StoredTableNode : public EnableMakeForLQPNode<StoredTableNode>, public Abs
   /** @} */
 
   std::vector<ChunkIndexStatistics> chunk_indexes_statistics() const;
+
+  std::vector<TableIndexStatistics> table_indexes_statistics() const;
 
   std::string description(const DescriptionMode mode = DescriptionMode::Short) const override;
   std::vector<std::shared_ptr<AbstractExpression>> output_expressions() const override;
@@ -56,6 +56,8 @@ class StoredTableNode : public EnableMakeForLQPNode<StoredTableNode>, public Abs
   size_t _on_shallow_hash() const override;
   std::shared_ptr<AbstractLQPNode> _on_shallow_copy(LQPNodeMapping& /*node_mapping*/) const override;
   bool _on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& /*node_mapping*/) const override;
+
+  void _set_output_expressions() const;
 
  private:
   mutable std::optional<std::vector<std::shared_ptr<AbstractExpression>>> _output_expressions;

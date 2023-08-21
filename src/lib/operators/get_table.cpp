@@ -1,26 +1,27 @@
 #include "get_table.hpp"
 
 #include <algorithm>
-#include <memory>
 #include <sstream>
-#include <string>
 #include <unordered_set>
-#include <vector>
 
 #include "hyrise.hpp"
+#include "logical_query_plan/predicate_node.hpp"
+#include "logical_query_plan/stored_table_node.hpp"
+#include "operators/pqp_utils.hpp"
+#include "operators/table_scan.hpp"
 #include "storage/index/partial_hash/partial_hash_index.hpp"
-#include "types.hpp"
+#include "utils/pruning_utils.hpp"
 
 namespace hyrise {
 
-GetTable::GetTable(const std::string& name) : GetTable(name, {}, {}) {}
+GetTable::GetTable(const std::string& name) : GetTable{name, {}, {}} {}
 
 GetTable::GetTable(const std::string& name, const std::vector<ChunkID>& pruned_chunk_ids,
                    const std::vector<ColumnID>& pruned_column_ids)
-    : AbstractReadOnlyOperator(OperatorType::GetTable),
-      _name(name),
-      _pruned_chunk_ids(pruned_chunk_ids),
-      _pruned_column_ids(pruned_column_ids) {
+    : AbstractReadOnlyOperator{OperatorType::GetTable},
+      _name{name},
+      _pruned_chunk_ids{pruned_chunk_ids},
+      _pruned_column_ids{pruned_column_ids} {
   // Check pruned_chunk_ids
   DebugAssert(std::is_sorted(_pruned_chunk_ids.begin(), _pruned_chunk_ids.end()), "Expected sorted vector of ChunkIDs");
   DebugAssert(std::adjacent_find(_pruned_chunk_ids.begin(), _pruned_chunk_ids.end()) == _pruned_chunk_ids.end(),
@@ -102,7 +103,6 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
   // Currently, value_clustered_by is only used for temporary tables. If tables in the StorageManager start using that
   // flag, too, it needs to be forwarded here; otherwise it would be completely invisible in the PQP.
   DebugAssert(stored_table->value_clustered_by().empty(), "GetTable does not forward value_clustered_by");
-
   auto excluded_chunk_ids = std::vector<ChunkID>{};
   auto pruned_chunk_ids_iter = _pruned_chunk_ids.begin();
   for (ChunkID stored_chunk_id{0}; stored_chunk_id < chunk_count; ++stored_chunk_id) {
@@ -186,7 +186,7 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
     // Make a copy of the order-by information of the current chunk. This information is adapted when columns are
     // pruned and will be set on the output chunk.
     const auto& input_chunk_sorted_by = stored_chunk->individually_sorted_by();
-    auto output_chunk_sorted_by = std::optional<SortColumnDefinition>{};
+    auto chunk_sort_definition = std::optional<SortColumnDefinition>{};
 
     if (_pruned_column_ids.empty()) {
       *output_chunks_iter = stored_chunk;
@@ -210,7 +210,7 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
               const auto columns_pruned_so_far = std::distance(_pruned_column_ids.begin(), pruned_column_ids_iter);
               const auto new_sort_column =
                   ColumnID{static_cast<uint16_t>(static_cast<size_t>(stored_column_id) - columns_pruned_so_far)};
-              output_chunk_sorted_by = SortColumnDefinition(new_sort_column, sorted_by.sort_mode);
+              chunk_sort_definition = SortColumnDefinition(new_sort_column, sorted_by.sort_mode);
             }
           }
         }
@@ -226,11 +226,14 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
       *output_chunks_iter = std::make_shared<Chunk>(std::move(output_segments), stored_chunk->mvcc_data(),
                                                     stored_chunk->get_allocator(), std::move(output_indexes));
 
-      if (output_chunk_sorted_by) {
-        // Finalizing the output chunk here is safe because this path is only taken for
-        // a sorted chunk. Chunks should never be sorted when they are still mutable
+      if (!stored_chunk->is_mutable()) {
+        // Finalizing is cheap here: the MvccData's max_begin_cid is already set, so finalize() only sets the flag and
+        // does not trigger anything else.
         (*output_chunks_iter)->finalize();
-        (*output_chunks_iter)->set_individually_sorted_by(*output_chunk_sorted_by);
+      }
+
+      if (chunk_sort_definition) {
+        (*output_chunks_iter)->set_individually_sorted_by(*chunk_sort_definition);
       }
 
       // The output chunk contains all rows that are in the stored chunk, including invalid rows. We forward this

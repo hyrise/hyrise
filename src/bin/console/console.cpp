@@ -48,9 +48,9 @@
 #include "visualization/lqp_visualizer.hpp"
 #include "visualization/pqp_visualizer.hpp"
 
-#define ANSI_COLOR_RED "\x1B[31m"               // NOLINT(cppcoreguidelines-macro-usage)
-#define ANSI_COLOR_GREEN "\x1B[32m"             // NOLINT(cppcoreguidelines-macro-usage)
-#define ANSI_COLOR_RESET "\x1B[0m"              // NOLINT(cppcoreguidelines-macro-usage)
+#define ANSI_COLOR_RED "\x1B[31m"    // NOLINT(cppcoreguidelines-macro-usage)
+#define ANSI_COLOR_GREEN "\x1B[32m"  // NOLINT(cppcoreguidelines-macro-usage)
+#define ANSI_COLOR_RESET "\x1B[0m"   // NOLINT(cppcoreguidelines-macro-usage)
 
 #define ANSI_COLOR_RED_RL "\001\x1B[31m\002"    // NOLINT(cppcoreguidelines-macro-usage)
 #define ANSI_COLOR_GREEN_RL "\001\x1B[32m\002"  // NOLINT(cppcoreguidelines-macro-usage)
@@ -767,64 +767,69 @@ int Console::_visualize(const std::string& input) {
   }
 
   if (no_execute && !sql.empty() && _sql_pipeline->requires_execution()) {
-    out("Error: We do not support the visualization of multiple dependant statements in 'noexec' mode.\n");
+    out("Error: We do not support the visualization of multiple dependent statements in 'noexec' mode.\n");
     return ReturnCode::Error;
   }
 
   const auto img_filename = plan_type_str + ".png";
 
-  switch (plan_type) {
-    case PlanType::LQP:
-    case PlanType::UnoptLQP: {
-      auto lqp_roots = std::vector<std::shared_ptr<AbstractLQPNode>>{};
+  try {
+    switch (plan_type) {
+      case PlanType::LQP:
+      case PlanType::UnoptLQP: {
+        auto lqp_roots = std::vector<std::shared_ptr<AbstractLQPNode>>{};
 
-      const auto& lqps = (plan_type == PlanType::LQP) ? _sql_pipeline->get_optimized_logical_plans()
-                                                      : _sql_pipeline->get_unoptimized_logical_plans();
+        const auto& lqps = (plan_type == PlanType::LQP) ? _sql_pipeline->get_optimized_logical_plans()
+                                                        : _sql_pipeline->get_unoptimized_logical_plans();
 
-      lqp_roots.reserve(lqps.size());
+        lqp_roots.reserve(lqps.size());
 
-      for (const auto& lqp : lqps) {
-        lqp_roots.emplace_back(lqp);
-      }
+        for (const auto& lqp : lqps) {
+          lqp_roots.emplace_back(lqp);
+        }
 
-      auto visualizer = LQPVisualizer{};
-      visualizer.visualize(lqp_roots, img_filename);
-    } break;
+        auto visualizer = LQPVisualizer{};
+        visualizer.visualize(lqp_roots, img_filename);
+      } break;
 
-    case PlanType::PQP: {
-      if (!no_execute) {
-        _sql_pipeline->get_result_table();
+      case PlanType::PQP: {
+        if (!no_execute) {
+          _sql_pipeline->get_result_table();
 
-        // Store the transaction context as potentially modified by the pipeline. It might be a new context if a
-        // transaction was started or nullptr if we are in auto-commit mode or the last transaction was finished.
-        _explicitly_created_transaction_context = _sql_pipeline->transaction_context();
-      }
+          // Store the transaction context as potentially modified by the pipeline. It might be a new context if a
+          // transaction was started or nullptr if we are in auto-commit mode or the last transaction was finished.
+          _explicitly_created_transaction_context = _sql_pipeline->transaction_context();
+        }
 
-      auto visualizer = PQPVisualizer{};
-      visualizer.visualize(_sql_pipeline->get_physical_plans(), img_filename);
-    } break;
+        auto visualizer = PQPVisualizer{};
+        visualizer.visualize(_sql_pipeline->get_physical_plans(), img_filename);
+      } break;
 
-    case PlanType::Joins: {
-      out("NOTE: Join graphs will show only Cross and Inner joins, not Semi, Left, Right, Full outer, "
-          "AntiNullAsTrue and AntiNullAsFalse joins.\n");
+      case PlanType::Joins: {
+        out("NOTE: Join graphs will show only Cross and Inner joins, not Semi, Left, Right, Full outer, "
+            "AntiNullAsTrue and AntiNullAsFalse joins.\n");
 
-      auto join_graphs = std::vector<JoinGraph>{};
+        auto join_graphs = std::vector<JoinGraph>{};
 
-      const auto& lqps = _sql_pipeline->get_optimized_logical_plans();
-      for (const auto& lqp : lqps) {
-        const auto sub_lqps = lqp_find_subplan_roots(lqp);
+        const auto& lqps = _sql_pipeline->get_optimized_logical_plans();
+        for (const auto& lqp : lqps) {
+          const auto sub_lqps = lqp_find_subplan_roots(lqp);
 
-        for (const auto& sub_lqp : sub_lqps) {
-          const auto sub_lqp_join_graphs = JoinGraph::build_all_in_lqp(sub_lqp);
-          for (const auto& sub_lqp_join_graph : sub_lqp_join_graphs) {
-            join_graphs.emplace_back(sub_lqp_join_graph);
+          for (const auto& sub_lqp : sub_lqps) {
+            const auto sub_lqp_join_graphs = JoinGraph::build_all_in_lqp(sub_lqp);
+            for (const auto& sub_lqp_join_graph : sub_lqp_join_graphs) {
+              join_graphs.emplace_back(sub_lqp_join_graph);
+            }
           }
         }
-      }
 
-      auto visualizer = JoinGraphVisualizer{};
-      visualizer.visualize(join_graphs, img_filename);
-    } break;
+        auto visualizer = JoinGraphVisualizer{};
+        visualizer.visualize(join_graphs, img_filename);
+      } break;
+    }
+  } catch (const InvalidInputException& exception) {
+    out(std::string(exception.what()) + '\n');
+    return false;
   }
 
   // NOLINTBEGIN(concurrency-mt-unsafe) - system() is not thread-safe, but it's not used concurrently here.

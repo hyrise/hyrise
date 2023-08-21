@@ -31,6 +31,12 @@ elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
         compiler_not_supported("Your clang version ${CMAKE_CXX_COMPILER_VERSION} is too old.")
     endif()
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
+    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 14.0)
+        compiler_not_supported("Hyrise does not support Apple clang compilers older than version 14.")
+    endif()
+    # In release mode, we found issues on ARM with loop unrolling (macOS Ventura, Apple Clang 14.0).
+    # As we do not benchmark on macOS, we can safely ignore this issue for now.
+    add_compile_options(-Wno-pass-failed)
     execute_process(
         COMMAND brew --prefix
         RESULT_VARIABLE BREW
@@ -44,7 +50,7 @@ elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
     if (NOT EXISTS "${BREW_PREFIX}/opt/llvm/bin/clang")
         set(CMAKE_OSX_INSTALL_TEXT "install ${CMAKE_OSX_BREW_TEXT}the official llvm/clang package using `install_dependencies.sh` or `brew install llvm --with-toolchain` and then ")
     endif()
-    compiler_not_supported("Apple's clang compiler is not supported because it is lacking support for recent C++ features. Please ${CMAKE_OSX_INSTALL_TEXT}run cmake with `-DCMAKE_C_COMPILER=${BREW_PREFIX}/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=${BREW_PREFIX}/opt/llvm/bin/clang++`.")
+    message(WARNING "On macOS, we recommend a recent clang compiler instead of Apple's clang compiler. Please ${CMAKE_OSX_INSTALL_TEXT}run cmake with `-DCMAKE_C_COMPILER=${BREW_PREFIX}/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=${BREW_PREFIX}/opt/llvm/bin/clang++`.")
 else()
     compiler_not_supported("You are using an unsupported compiler (${CMAKE_CXX_COMPILER_ID})! Compilation has only been tested with Clang (Linux + OS X) and GCC (Linux).")
 endif()
