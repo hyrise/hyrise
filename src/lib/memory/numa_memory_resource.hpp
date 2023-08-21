@@ -24,7 +24,7 @@ void* alloc(extent_hooks_t* extent_hooks, void* new_addr, size_t size, size_t al
 NodeID get_node_id_of_arena(ArenaID arena_index);
 void store_node_id_for_arena(ArenaID arena_id, NodeID node_id);
 
-};  // namespace numa_extent_hooks
+}  // namespace numa_extent_hooks
 
 class NumaMemoryResource : public boost::container::pmr::memory_resource {
  public:
