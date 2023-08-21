@@ -52,7 +52,11 @@ const auto computation_strategy_to_string = make_bimap<ComputationStrategy, std:
 //     )
 //     FROM products
 //
-// The operator runs in four steps:
+// The operator is based on the paper
+//
+//     "Efficient Processing of Window Functions in Analytical SQL Queries" (Leis et. al., 2015)
+//
+// and runs in four steps:
 //
 //     1. Input materialization
 //
