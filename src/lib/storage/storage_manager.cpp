@@ -5,6 +5,7 @@
 #include <utility>
 #include <vector>
 #include <numa.h>
+#include <sys/mman.h>
 
 #include "hyrise.hpp"
 #include "import_export/file_type.hpp"
@@ -291,6 +292,14 @@ void StorageManager::migrate_table(std::shared_ptr<Table> table, NodeID target_n
   }
 
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
+}
+
+void StorageManager::migrate_chunk(std::shared_ptr<Chunk> chunk, NodeID target_node_id) {
+  const auto memory_resource = get_memory_resource(target_node_id);
+  auto migrate_job = [&chunk, &memory_resource, target_node_id]() {
+    chunk->migrate(memory_resource, target_node_id);
+  };
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks({std::make_shared<JobTask>(migrate_job)});
 }
 
 size_t StorageManager::number_of_memory_resources() {

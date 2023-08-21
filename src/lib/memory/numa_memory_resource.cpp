@@ -1,6 +1,5 @@
 #include "numa_memory_resource.hpp"
 
-#include <sys/mman.h>
 #include <boost/container/pmr/memory_resource.hpp>
 #include "utils/assert.hpp"
 #include "hyrise.hpp"

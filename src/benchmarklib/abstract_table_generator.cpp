@@ -247,10 +247,14 @@ void AbstractTableGenerator::generate_and_store() {
     for (auto& [table_name, table_info] : table_info_by_name) {
       auto timer = Timer{};
       auto& table = table_info.table;
-      Hyrise::get().storage_manager.migrate_table(table, target_node_id);
-      std::cout << "-  Relocated " << table_name << " (" << timer.lap_formatted() << ")" << std::endl;
 
-      target_node_id = (target_node_id + 1) % num_nodes;
+      const auto chunk_count = table->chunk_count();
+      for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+        const auto& chunk = table->get_chunk(chunk_id);
+        Hyrise::get().storage_manager.migrate_chunk(chunk, target_node_id);
+        target_node_id = (target_node_id + 1) % num_nodes;
+      }
+      std::cout << "-  Relocated " << table_name << " (" << timer.lap_formatted() << ")" << std::endl;
     }
   }
 

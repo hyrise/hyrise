@@ -12,6 +12,7 @@
 #include "lqp_view.hpp"
 #include "prepared_plan.hpp"
 #include "types.hpp"
+#include "storage/chunk.hpp"
 #include "memory/numa_memory_resource.hpp"
 
 namespace hyrise {
@@ -78,6 +79,7 @@ class StorageManager : public Noncopyable {
    * Migrates the tables and their chunks to their desired memory resources.
    */
   void migrate_table(std::shared_ptr<Table> table, NodeID target_node_id);
+  void migrate_chunk(std::shared_ptr<Chunk> chunk, NodeID target_node_id);
 
   static void* alloc(extent_hooks_t* extent_hooks, void* new_addr, size_t size, size_t alignment, bool* zero,
                     bool* commit, unsigned arena_index);
