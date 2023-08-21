@@ -19,7 +19,7 @@
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/segment_iterate.hpp"
 #include "type_comparison.hpp"
-#include "utils/numa_helper.hpp"
+#include "utils/numa_utils.hpp"
 
 /*
   This file includes the functions that cover the main steps of our hash join implementation

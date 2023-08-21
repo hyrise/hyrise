@@ -1,13 +1,28 @@
 #include "base_test.hpp"
 
 #include "types.hpp"
-#include "utils/numa_helper.hpp"
+#include "utils/numa_utils.hpp"
 
 namespace hyrise {
 
-class NumaHelperUtilsTest : public BaseTest {};
+class NumaUtilsTest : public BaseTest {};
 
-TEST_F(NumaHelperUtilsTest, MergeNodePlacements) {
+TEST_F(NumaUtilsTest, MakeNodePriorityMatrix) {
+  const auto distance_matrix = numa_utils::DistanceMatrix{
+      {1, 2, 3},
+      {3, 2, 1},
+      {2, 3, 1},
+  };
+
+  const auto priority_matrix = numa_utils::make_node_priority_matrix(distance_matrix);
+
+  const auto expected_priority_matrix = numa_utils::NodePriorityMatrix{
+      {NodeID{0}, NodeID{1}, NodeID{2}}, {NodeID{2}, NodeID{1}, NodeID{0}}, {NodeID{2}, NodeID{0}, NodeID{1}}};
+
+  EXPECT_EQ(priority_matrix, expected_priority_matrix);
+}
+
+TEST_F(NumaUtilsTest, MergeNodePlacements) {
   auto optional_node_positions =
       std::vector<std::optional<NodeID>>{NodeID{0},    std::nullopt, NodeID{2},    NodeID{3}, NodeID{4},
                                          std::nullopt, std::nullopt, std::nullopt, NodeID{8}, NodeID{9}};
@@ -31,21 +46,6 @@ TEST_F(NumaHelperUtilsTest, MergeNodePlacements) {
   const auto expected_placements = std::vector<NodeID>{NodeID{0}, NodeID{1}, NodeID{2}, NodeID{3}, NodeID{4},
                                                        NodeID{5}, NodeID{6}, NodeID{7}, NodeID{8}, NodeID{9}};
   EXPECT_EQ(node_placements, expected_placements);
-}
-
-TEST_F(NumaHelperUtilsTest, MakeNodePriorityMatrix) {
-  const auto distance_matrix = numa_utils::DistanceMatrix{
-      {1, 2, 3},
-      {3, 2, 1},
-      {2, 3, 1},
-  };
-
-  const auto priority_matrix = numa_utils::make_node_priority_matrix(distance_matrix);
-
-  const auto expected_priority_matrix = numa_utils::NodePriorityMatrix{
-      {NodeID{0}, NodeID{1}, NodeID{2}}, {NodeID{2}, NodeID{1}, NodeID{0}}, {NodeID{2}, NodeID{0}, NodeID{1}}};
-
-  EXPECT_EQ(priority_matrix, expected_priority_matrix);
 }
 
 }  // namespace hyrise

@@ -1,4 +1,4 @@
-#include "numa_helper.hpp"
+#include "numa_utils.hpp"
 
 #include <string>
 
@@ -13,9 +13,10 @@ DistanceMatrix get_distance_matrix() {
   // 10 is the default distance to the same node.
   auto distance_matrix = DistanceMatrix(num_nodes, std::vector<int>(num_nodes, 10));
 
-  // If numa_distance does not work (e.g. code is execute on Windows), 0 will be returned.
-  // For non NUMA systems, we check the max possible numa node, as this will still work, when we have
-  // a single node. If this call fails, return default matrix.
+  // If numa_distance does not work (e.g. code is executed on Windows), 0 will be returned.
+  // To determine, wether the numa distance can be correctly read on the system, we get the
+  // distance between the two "max" nodes. If that distance is set, all other distances
+  // should be set as well.
   if (numa_distance(num_nodes - 1, num_nodes - 1) == 0) {
     PerformanceWarning(
         "Distance between numa nodes could not be calculated. Falling back to default distance for every "

@@ -17,7 +17,6 @@ using NodePriorityMatrix = std::vector<std::vector<NodeID>>;
 /*
     Returns a NxN matrix M where each element M[x,y] is the distance between
     Node x and Node y. Same Node distance should be equal to 10.
-
     Exemplary output for 8 Nodes:
     {
         {10, 16, 19, 16, 50, 50, 50, 50},
@@ -37,7 +36,6 @@ DistanceMatrix get_distance_matrix();
     Node x and Node y. Returns n vectors of size n. For each vector at position
     j, the first NodeID is the closest to j, ...,  and the last is the furthest
     based on the distance matrix.
-
     Exemplary output for 8 Nodes:
     {
         {0, 1, 3, 2, 4, 5, 6, 7},

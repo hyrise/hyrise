@@ -6,7 +6,7 @@
 #include <vector>
 
 #include "abstract_scheduler.hpp"
-#include "utils/numa_helper.hpp"
+#include "utils/numa_utils.hpp"
 
 namespace hyrise {
 
@@ -36,7 +36,7 @@ namespace hyrise {
  * TaskQueue.
  *
  * Note: currently, TaskQueues are not explicitly allocated on a NUMA node. This means most workers will frequently
- * access distant TaskQueues, which is ~1.6 times slower than accessing a local node [1]. 
+ * access distant TaskQueues, which is ~1.6 times slower than accessing a local node [1].
  *
  *  [1] http://frankdenneman.nl/2016/07/13/numa-deep-dive-4-local-memory-optimization/
  *
@@ -65,7 +65,7 @@ class NodeQueueScheduler : public AbstractScheduler {
 
   const std::vector<std::shared_ptr<TaskQueue>>& queues() const override;
 
-  const std::vector<NodeID>& ordered_queue_ids(NodeID node_id) const override;
+  const std::vector<NodeID>& prioritized_queue_ids(NodeID node_id) const override;
 
   const std::vector<std::shared_ptr<Worker>>& workers() const;
 
@@ -103,7 +103,7 @@ class NodeQueueScheduler : public AbstractScheduler {
   std::atomic<TaskID::base_type> _task_counter{0};
   std::shared_ptr<UidAllocator> _worker_id_allocator;
   std::vector<std::shared_ptr<TaskQueue>> _queues;
-  numa_utils::NodePriorityMatrix _numa_queue_order;
+  numa_utils::NodePriorityMatrix _prioritized_numa_queue_ids;
   std::vector<std::shared_ptr<Worker>> _workers;
 
   std::atomic_bool _active{false};
