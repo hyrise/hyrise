@@ -346,10 +346,10 @@ TEST_F(StoredTableNodeTest, UniqueColumnCombinationsValidityNotGuaranteed) {
 
   // Modify the table so that the UCC is no longer guaranteed to be valid
   // (in fact, it is actually no longer valid because we duplicated all rows).
-  auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
+  const auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
   const auto get_table = std::make_shared<GetTable>("t_a");
   get_table->execute();
-  auto insert_op = std::make_shared<Insert>("t_a", get_table);
+  const auto insert_op = std::make_shared<Insert>("t_a", get_table);
   insert_op->set_transaction_context(transaction_context);
   insert_op->execute();
   transaction_context->commit();

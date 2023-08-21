@@ -342,7 +342,7 @@ TEST_F(OptimizerTest, CheckTrueCacheablility) {
 
   auto lqp = ProjectionNode::make(expression_vector(add_(b, subquery_a)),
                                   PredicateNode::make(greater_than_(a, subquery_b), node_a));
-  auto optimize_results = optimizer->optimize(std::move(lqp));
+  const auto optimize_results = optimizer->optimize(std::move(lqp));
   EXPECT_EQ(optimize_results.cacheable, true);
 }
 
@@ -372,7 +372,7 @@ TEST_F(OptimizerTest, CheckFalseCacheabilityOfOptimization) {
         stored_table_node));
   // clang-format on
   static_cast<JoinNode&>(*lqp1->left_input()).mark_input_side_as_prunable(LQPInputSide::Right);
-  auto optimize_results1 = optimizer.optimize(std::move(lqp1));
+  const auto optimize_results1 = optimizer.optimize(std::move(lqp1));
 
   EXPECT_EQ(optimize_results1.cacheable, false);
 }

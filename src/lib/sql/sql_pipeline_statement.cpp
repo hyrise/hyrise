@@ -104,7 +104,7 @@ const SQLTranslationInfo& SQLPipelineStatement::get_sql_translation_info() {
   return _translation_info;
 }
 
-OptimizedLogicalQueryPlan SQLPipelineStatement::get_optimized_logical_plan() {
+const OptimizedLogicalQueryPlan SQLPipelineStatement::get_optimized_logical_plan() {
   if (_optimized_logical_plan.logical_query_plan) {
     return _optimized_logical_plan;
   }
@@ -118,6 +118,7 @@ OptimizedLogicalQueryPlan SQLPipelineStatement::get_optimized_logical_plan() {
       if (lqp_is_validated(plan) == (_use_mvcc == UseMvcc::Yes)) {
         // Copy the LQP for reuse as the LQPTranslator might modify mutable fields (e.g., cached output_expressions)
         // and concurrent translations might conflict.
+        // Note that the plan we have received here was cached, so it is obviously cacheable.
         _optimized_logical_plan = {true, plan->deep_copy()};
         return _optimized_logical_plan;
       }

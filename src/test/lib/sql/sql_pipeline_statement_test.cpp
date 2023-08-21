@@ -318,7 +318,7 @@ TEST_F(SQLPipelineStatementTest, GetCachedOptimizedLQPValidated) {
 }
 
 TEST_F(SQLPipelineStatementTest, GetCachedOptimizedLQPNotValidated) {
-  // Expect cache to be empty
+  // Expect cache to be empty.
   EXPECT_FALSE(_lqp_cache->has(_select_query_a));
 
   auto not_validated_sql_pipeline =
@@ -328,25 +328,25 @@ TEST_F(SQLPipelineStatementTest, GetCachedOptimizedLQPNotValidated) {
   const auto& not_validated_lqp = not_validated_statement->get_optimized_logical_plan().logical_query_plan;
   EXPECT_FALSE(lqp_is_validated(not_validated_lqp));
 
-  // Expect cache to contain not validated LQP
+  // Expect cache to contain not validated LQP.
   EXPECT_TRUE(_lqp_cache->has(_select_query_a));
   const auto not_validated_cached_lqp = _lqp_cache->try_get(_select_query_a);
   EXPECT_FALSE(lqp_is_validated(*not_validated_cached_lqp));
 
-  // Evict not validated version by requesting a validated version
+  // Evict not validated version by requesting a validated version.
   auto validated_sql_pipeline = SQLPipelineBuilder{_select_query_a}.with_lqp_cache(_lqp_cache).create_pipeline();
   auto& validated_statement = get_sql_pipeline_statements(validated_sql_pipeline).at(0);
   const auto& validated_lqp = validated_statement->get_optimized_logical_plan().logical_query_plan;
   EXPECT_TRUE(lqp_is_validated(validated_lqp));
 
-  // Expect cache to contain not validated LQP
+  // Expect cache to contain not validated LQP.
   EXPECT_TRUE(_lqp_cache->has(_select_query_a));
   const auto validated_cached_lqp = _lqp_cache->try_get(_select_query_a);
   EXPECT_TRUE(lqp_is_validated(*validated_cached_lqp));
 }
 
 TEST_F(SQLPipelineStatementTest, OptimizedQPCachedWhenUsingCacheableOptimization) {
-  // Expect cache to be empty
+  // Expect cache to be empty.
   EXPECT_FALSE(_lqp_cache->has(_select_query_a));
 
   auto validated_sql_pipeline =
@@ -357,26 +357,26 @@ TEST_F(SQLPipelineStatementTest, OptimizedQPCachedWhenUsingCacheableOptimization
   EXPECT_TRUE(lqp_is_validated(validated_lqp));
   // We need to call this method to generate and cache the PQP.
   validated_statement->get_physical_plan();
-  // Expect cache to still not contain validated LQP as we ran a query that used a non-cacheable optimization
+  // Expect cache to still not contain validated LQP as we ran a query that used a non-cacheable optimization.
   EXPECT_TRUE(_lqp_cache->has(_select_query_a));
   EXPECT_TRUE(_pqp_cache->has(_select_query_a));
 }
 
 TEST_F(SQLPipelineStatementTest, OptimizedQPNotCachedWhenNotCacheableOptimizationUsed) {
-  // Expect cache to be empty
+  // Expect cache to be empty.
   EXPECT_FALSE(_lqp_cache->has(_select_query_using_join_to_semi_join_optimization_a));
 
   auto validated_sql_pipeline = SQLPipelineBuilder{_select_query_using_join_to_semi_join_optimization_a}
                                     .with_lqp_cache(_lqp_cache)
                                     .with_pqp_cache(_pqp_cache)
                                     .create_pipeline();
-  auto& validated_statement = get_sql_pipeline_statements(validated_sql_pipeline).at(0);
+  const auto& validated_statement = get_sql_pipeline_statements(validated_sql_pipeline).at(0);
 
   const auto& validated_lqp = validated_statement->get_optimized_logical_plan().logical_query_plan;
   EXPECT_TRUE(lqp_is_validated(validated_lqp));
   // We need to call this method to generate the PQP that would be cached if the logical query plan were cacheable.
   validated_statement->get_physical_plan();
-  // Expect cache to still not contain validated LQP as we ran a query that used a non-cacheable optimization
+  // Expect cache to still not contain validated LQP as we ran a query that used a non-cacheable optimization.
   EXPECT_FALSE(_lqp_cache->has(_select_query_using_join_to_semi_join_optimization_a));
   EXPECT_FALSE(_pqp_cache->has(_select_query_using_join_to_semi_join_optimization_a));
 }
@@ -391,7 +391,7 @@ TEST_F(SQLPipelineStatementTest, GetOptimizedLQPDoesNotInfluenceUnoptimizedLQP) 
   // Copy the structure to check that it is equal after optimizing.
   std::shared_ptr<AbstractLQPNode> unoptimized_copy = unoptimized_lqp->deep_copy();
 
-  // Optimize the LQP node
+  // Optimize the LQP node.
   statement->get_optimized_logical_plan();
   const auto& unoptimized_lqp_new = statement->get_unoptimized_logical_plan();
 

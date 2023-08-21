@@ -75,7 +75,7 @@ class SQLPipelineStatement : public Noncopyable {
   const SQLTranslationInfo& get_sql_translation_info();
 
   // Returns the optimized LQP for this statement.
-  OptimizedLogicalQueryPlan get_optimized_logical_plan();
+  const OptimizedLogicalQueryPlan get_optimized_logical_plan();
 
   // Returns the PQP for this statement.
   // The physical plan is either retrieved from the SQLPhysicalPlanCache or, if unavailable, translated from the

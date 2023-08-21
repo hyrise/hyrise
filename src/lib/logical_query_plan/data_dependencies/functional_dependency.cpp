@@ -6,6 +6,8 @@ namespace hyrise {
 
 FunctionalDependency::FunctionalDependency(ExpressionUnorderedSet init_determinants,
                                            ExpressionUnorderedSet init_dependents)
+    // Most functional dependencies we use will be permanent because they are, for example, derived from a query
+    // directly. Therefore, use that as a default.
     : FunctionalDependency(std::move(init_determinants), std::move(init_dependents), true) {}
 
 FunctionalDependency::FunctionalDependency(hyrise::ExpressionUnorderedSet init_determinants,

@@ -59,60 +59,60 @@ void gather_rewrite_info(
   // predicate that filters on a UCC, a maximum of one tuple remains in the result relation. Since at this point, we al-
   // ready know the candidate join is basically a semi join, we can further transform the join to a single predicate
   // node filtering the join column for the value of the remaining tuple's join attribute.
-  visit_lqp(
-      removable_subtree, [&removable_subtree, &rewrite_predicate, &non_permanent_ucc_was_used](auto& current_node) {
-        if (current_node->type == LQPNodeType::Union) {
-          return LQPVisitation::DoNotVisitInputs;
-        }
-        if (current_node->type != LQPNodeType::Predicate) {
-          return LQPVisitation::VisitInputs;
-        }
+  visit_lqp(removable_subtree, [&removable_subtree, &rewrite_predicate,
+                                &non_permanent_ucc_was_used](const auto& current_node) {
+    if (current_node->type == LQPNodeType::Union) {
+      return LQPVisitation::DoNotVisitInputs;
+    }
+    if (current_node->type != LQPNodeType::Predicate) {
+      return LQPVisitation::VisitInputs;
+    }
 
-        // We need to get a predicate node with a BinaryPredicateExpression.
-        const auto candidate = std::static_pointer_cast<PredicateNode>(current_node);
-        const auto candidate_expression = std::dynamic_pointer_cast<BinaryPredicateExpression>(candidate->predicate());
-        if (!candidate_expression) {
-          return LQPVisitation::VisitInputs;
-        }
+    // We need to get a predicate node with a BinaryPredicateExpression.
+    const auto candidate = std::static_pointer_cast<PredicateNode>(current_node);
+    const auto candidate_expression = std::dynamic_pointer_cast<BinaryPredicateExpression>(candidate->predicate());
+    if (!candidate_expression) {
+      return LQPVisitation::VisitInputs;
+    }
 
-        // Only predicates in the form `column = value` are useful to our optimization. These conditions have the
-        // potential (given filtered column is a UCC) to emit at most one result tuple.
-        if (candidate_expression->predicate_condition != PredicateCondition::Equals) {
-          return LQPVisitation::VisitInputs;
-        }
+    // Only predicates in the form `column = value` are useful to our optimization. These conditions have the
+    // potential (given filtered column is a UCC) to emit at most one result tuple.
+    if (candidate_expression->predicate_condition != PredicateCondition::Equals) {
+      return LQPVisitation::VisitInputs;
+    }
 
-        auto candidate_column_expression = std::shared_ptr<AbstractExpression>{};
-        auto candidate_value_expression = std::shared_ptr<AbstractExpression>{};
+    auto candidate_column_expression = std::shared_ptr<AbstractExpression>{};
+    auto candidate_value_expression = std::shared_ptr<AbstractExpression>{};
 
-        for (const auto& predicate_operand : candidate_expression->arguments) {
-          if (predicate_operand->type == ExpressionType::LQPColumn) {
-            candidate_column_expression = predicate_operand;
-          } else if (predicate_operand->type == ExpressionType::Value) {
-            candidate_value_expression = predicate_operand;
-          }
-        }
+    for (const auto& predicate_operand : candidate_expression->arguments) {
+      if (predicate_operand->type == ExpressionType::LQPColumn) {
+        candidate_column_expression = predicate_operand;
+      } else if (predicate_operand->type == ExpressionType::Value) {
+        candidate_value_expression = predicate_operand;
+      }
+    }
 
-        // There should not be a case where we run into no column, but there may be a case where we have no value but
-        // compare columns.
-        if (!candidate_value_expression || !candidate_column_expression) {
-          return LQPVisitation::VisitInputs;
-        }
+    // There should not be a case where we run into no column, but there may be a case where we have no value but
+    // compare columns.
+    if (!candidate_value_expression || !candidate_column_expression) {
+      return LQPVisitation::VisitInputs;
+    }
 
-        // Check whether the referenced column is available for the subtree root node and unique. Checking whether the
-        // column is unique on the current node is not sufficient. There could be unions or joins in between the subtree
-        // root and the current node, invalidating the unique column combination.
-        if (!expression_evaluable_on_lqp(candidate_column_expression, *removable_subtree)) {
-          return LQPVisitation::VisitInputs;
-        }
-        auto matching_ucc = removable_subtree->get_matching_ucc({candidate_column_expression});
-        if (!matching_ucc.has_value()) {
-          return LQPVisitation::VisitInputs;
-        }
+    // Check whether the referenced column is available for the subtree root node and unique. Checking whether the
+    // column is unique on the current node is not sufficient. There could be unions or joins between the subtree
+    // root and the current node, invalidating the unique column combination.
+    if (!expression_evaluable_on_lqp(candidate_column_expression, *removable_subtree)) {
+      return LQPVisitation::VisitInputs;
+    }
+    const auto matching_ucc = removable_subtree->get_matching_ucc({candidate_column_expression});
+    if (!matching_ucc.has_value()) {
+      return LQPVisitation::VisitInputs;
+    }
 
-        rewrite_predicate = candidate;
-        non_permanent_ucc_was_used |= !matching_ucc->is_permanent();
-        return LQPVisitation::DoNotVisitInputs;
-      });
+    rewrite_predicate = candidate;
+    non_permanent_ucc_was_used |= !matching_ucc->is_permanent();
+    return LQPVisitation::DoNotVisitInputs;
+  });
 
   if (rewrite_predicate) {
     rewritables.emplace_back(join_node, *prunable_side, rewrite_predicate);

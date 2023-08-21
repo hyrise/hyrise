@@ -29,6 +29,8 @@ namespace hyrise {
  *
  * If the FD may become invalid in the future (because it is not based on a schema constraint, but on the data
  * incidentally fulfilling the constraint at the moment), the FD is marked as being not permanent.
+ * This information is important because query plans that were optimized using a non-permanent FD are probably
+ * not cacheable.
  */
 struct FunctionalDependency {
   FunctionalDependency(ExpressionUnorderedSet init_determinants, ExpressionUnorderedSet init_dependents);

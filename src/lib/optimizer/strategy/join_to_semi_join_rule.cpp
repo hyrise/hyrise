@@ -75,7 +75,7 @@ IsCacheable JoinToSemiJoinRule::_apply_to_plan_without_subqueries(
 
       // Determine which node to use for Semi-Join-filtering and check for the required uniqueness guarantees.
       if (*join_node->prunable_input_side() == LQPInputSide::Left) {
-        auto matching_ucc = join_node->left_input()->get_matching_ucc(equals_predicate_expressions_left);
+        const auto matching_ucc = join_node->left_input()->get_matching_ucc(equals_predicate_expressions_left);
         if (matching_ucc.has_value()) {
           rule_was_applied_using_non_permanent_ucc = !matching_ucc->is_permanent();
 
@@ -85,7 +85,7 @@ IsCacheable JoinToSemiJoinRule::_apply_to_plan_without_subqueries(
           join_node->set_right_input(temp);
         }
       } else if (*join_node->prunable_input_side() == LQPInputSide::Right) {
-        auto matching_ucc = join_node->right_input()->get_matching_ucc(equals_predicate_expressions_right);
+        const auto matching_ucc = join_node->right_input()->get_matching_ucc(equals_predicate_expressions_right);
         if (matching_ucc.has_value()) {
           rule_was_applied_using_non_permanent_ucc = !matching_ucc->is_permanent();
 
