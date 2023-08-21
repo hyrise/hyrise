@@ -66,7 +66,7 @@ struct MakeNullableImpl {
   using OutputType = std::optional<typename NonNullableImpl::OutputType>;
   using TreeNode = std::optional<typename NonNullableImpl::TreeNode>;
 
-  constexpr static TreeNode neutral_element = std::nullopt;
+  constexpr static auto neutral_element = TreeNode{std::nullopt};
 
   static TreeNode node_from_value(InputType input) {
     if (input)
@@ -173,7 +173,7 @@ struct WindowFunctionEvaluatorTraits<InputColumnTypeT, WindowFunction::Min> {
 
   struct NonNullSegmentTreeImpl : BaseImpl {
     using TreeNode = typename BaseImpl::TreeNode;
-    constexpr static TreeNode neutral_element = std::numeric_limits<TreeNode>::max();
+    constexpr static auto neutral_element = std::numeric_limits<TreeNode>::max();
 
     static TreeNode combine(TreeNode lhs, TreeNode rhs) {
       return std::min(lhs, rhs);
@@ -193,7 +193,7 @@ struct WindowFunctionEvaluatorTraits<InputColumnTypeT, WindowFunction::Max> {
   struct NonNullSegmentTreeImpl : BaseImpl {
     using TreeNode = typename BaseImpl::TreeNode;
 
-    constexpr static TreeNode neutral_element = std::numeric_limits<TreeNode>::min();
+    constexpr static auto neutral_element = std::numeric_limits<TreeNode>::min();
 
     static TreeNode combine(TreeNode lhs, TreeNode rhs) {
       return std::max(lhs, rhs);
@@ -216,7 +216,7 @@ struct WindowFunctionEvaluatorTraits<InputColumnTypeT, WindowFunction::Count> {
     // The node contains the count of non-null values
     using TreeNode = OutputColumnType;
 
-    constexpr static TreeNode neutral_element = 0;
+    constexpr static auto neutral_element = TreeNode{0};
 
     static TreeNode node_from_value(InputType input) {
       return input.has_value();
@@ -243,7 +243,7 @@ struct WindowFunctionEvaluatorTraits<InputColumnTypeT, WindowFunction::Sum> {
   struct NonNullSegmentTreeImpl : BaseImpl {
     using TreeNode = typename BaseImpl::TreeNode;
 
-    constexpr static TreeNode neutral_element = 0;
+    constexpr static auto neutral_element = TreeNode{0};
 
     static TreeNode combine(TreeNode lhs, TreeNode rhs) {
       return lhs + rhs;
@@ -273,7 +273,7 @@ struct WindowFunctionEvaluatorTraits<InputColumnTypeT, WindowFunction::Avg> {
       CountT non_null_count;
     };
 
-    constexpr static TreeNode neutral_element = TreeNode{.sum = 0, .non_null_count = 0};
+    constexpr static auto neutral_element = TreeNode{.sum = 0, .non_null_count = 0};
 
     static TreeNode node_from_value(InputType input) {
       if (input) {
