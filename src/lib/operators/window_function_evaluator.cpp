@@ -311,28 +311,6 @@ Buckets collect_chunk_into_buckets(ChunkID chunk_id, const Chunk& chunk, std::sp
   return result;
 }
 
-void parallel_merge_sort(std::span<RelevantRowInformation> data, auto comparator) {
-  const auto base_size = 1u << 17u;
-
-  if (data.size() <= base_size) {
-    // NOTE: The "stable" is needed for tests (against sqlite) to pass, but I think that it is not actually required by
-    //       the specification.
-    std::ranges::stable_sort(data, comparator);
-    return;
-  }
-
-  const auto mid = data.size() / 2;
-  const auto left = data.subspan(0, mid);
-  const auto right = data.subspan(mid);
-
-  auto tasks = std::vector<std::shared_ptr<AbstractTask>>{
-      std::make_shared<JobTask>([left, &comparator]() { parallel_merge_sort(left, comparator); }),
-      std::make_shared<JobTask>([right, &comparator]() { parallel_merge_sort(right, comparator); })};
-  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
-
-  std::ranges::inplace_merge(data, data.begin() + static_cast<ssize_t>(mid), comparator);
-}
-
 }  // namespace
 
 Buckets WindowFunctionEvaluator::materialize_into_buckets() const {
@@ -406,7 +384,10 @@ void WindowFunctionEvaluator::partition_and_order(Buckets& buckets) const {
     return std::is_lt(compare_with_null_equal(lhs.order_values, rhs.order_values, is_column_reversed));
   };
 
-  spawn_and_wait_per_hash(buckets, [&comparator](auto& bucket) { parallel_merge_sort(bucket, comparator); });
+  spawn_and_wait_per_hash(buckets, [&comparator](auto& bucket) {
+    // TODO(anyone): Change this to parallel merge sort implementation from PR #2605 when it is merged
+    std::ranges::stable_sort(bucket, comparator);
+  });
 }
 
 template <typename InputColumnType, WindowFunction window_function>
