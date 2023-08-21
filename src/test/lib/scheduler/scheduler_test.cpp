@@ -312,21 +312,21 @@ TEST_F(SchedulerTest, CorrectJobMapping) {
   auto tasks = std::vector<std::shared_ptr<AbstractTask>>();
   auto executed_on_node = std::vector<NodeID>(4, NodeID{0});
 
-  auto addTask = [&](int node_id, int pos) {
+  auto addTask = [&](NodeID node_id, int pos) {
     auto task = std::make_shared<JobTask>(
         [&, pos]() {
           const auto worker = Worker::get_this_thread_worker();
           executed_on_node[pos] = worker->queue()->node_id();
         },
         SchedulePriority::Default, false);
-    task->set_node_id(NodeID{node_id});
+    task->set_node_id(node_id);
     tasks.emplace_back(std::move(task));
   };
 
-  addTask(0, 0);
-  addTask(0, 1);
-  addTask(2, 2);
-  addTask(1, 3);
+  addTask(NodeID{0}, 0);
+  addTask(NodeID{0}, 1);
+  addTask(NodeID{2}, 2);
+  addTask(NodeID{1}, 3);
 
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
 

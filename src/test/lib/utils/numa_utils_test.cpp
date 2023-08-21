@@ -29,16 +29,16 @@ TEST_F(NumaUtilsTest, MergeNodePlacements) {
 
   auto tasks = std::vector<std::shared_ptr<AbstractTask>>();
 
-  auto addTask = [&](int node_id) {
+  auto addTask = [&](NodeID node_id) {
     auto task = std::make_shared<JobTask>([]() { return nullptr; });
-    task->set_node_id(NodeID{node_id});
+    task->set_node_id(node_id);
     tasks.emplace_back(std::move(task));
   };
 
-  addTask(1);
-  addTask(5);
-  addTask(6);
-  addTask(7);
+  addTask(NodeID{1});
+  addTask(NodeID{5});
+  addTask(NodeID{6});
+  addTask(NodeID{7});
 
   auto node_placements = std::vector<NodeID>();
   numa_utils::merge_node_placements(node_placements, tasks, optional_node_positions);
