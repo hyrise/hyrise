@@ -16,7 +16,8 @@ const std::vector<std::shared_ptr<TaskQueue>>& ImmediateExecutionScheduler::queu
   return _queues;
 }
 
-const std::vector<NodeID>& ImmediateExecutionScheduler::ordered_queue_ids(NodeID node_id) const {
+
+const std::vector<NodeID>& ImmediateExecutionScheduler::prioritized_queue_ids(NodeID node_id) const {
   return _queue_order;
 }
 

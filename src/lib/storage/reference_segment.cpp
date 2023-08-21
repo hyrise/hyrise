@@ -25,6 +25,16 @@ ReferenceSegment::ReferenceSegment(const std::shared_ptr<const Table>& reference
   // operators ignore this, simply because we have not experienced the issue and have not considered it to be a
   // priority. This assert makes sure that we become aware of it becoming relevant.
   Assert(pos->size() <= Chunk::MAX_SIZE, "AbstractPosList exceeds Chunk::MAX_SIZE");
+
+  // In some cases, the referenced table does not contain any chunks yet. In these cases
+  // we fall back to UNKNOWN_NODE_ID.
+  if (pos->size() && _referenced_table->chunk_count() > (*pos)[0].chunk_id) {
+    const auto row_id = (*pos)[0];
+    const auto chunk = _referenced_table->get_chunk(row_id.chunk_id);
+    numa_node_location = (*chunk->get_segment(_referenced_column_id)).numa_node_location;
+  } else {
+    numa_node_location = UNKNOWN_NODE_ID;
+  }
 }
 
 AllTypeVariant ReferenceSegment::operator[](const ChunkOffset chunk_offset) const {
@@ -39,18 +49,6 @@ AllTypeVariant ReferenceSegment::operator[](const ChunkOffset chunk_offset) cons
   const auto chunk = _referenced_table->get_chunk(row_id.chunk_id);
 
   return (*chunk->get_segment(_referenced_column_id))[row_id.chunk_offset];
-}
-
-NodeID ReferenceSegment::get_numa_node_location() {
-  // TODO(anyone): Resolve numa node location correctly.
-  // This forwards the location of the first referenced segment.
-  if (_pos_list->size()) {
-    const auto row_id = (*_pos_list)[0];
-    const auto chunk = _referenced_table->get_chunk(row_id.chunk_id);
-    return (*chunk->get_segment(_referenced_column_id)).get_numa_node_location();
-  } else {
-    return UNKNOWN_NODE_ID;
-  }
 }
 
 const std::shared_ptr<const AbstractPosList>& ReferenceSegment::pos_list() const {

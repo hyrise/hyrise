@@ -129,11 +129,11 @@ def main():
     console.sendline("select * from meta_tables")
     console.expect("0 rows total")
 
-    # Test SSB generation.
-    console.sendline("generate_ssb 0.01")
-    console.expect("Generating tables done")
+    # Test TPC-DS generation.
+    console.sendline("generate_tpcds 1")
+    console.expect("Generating tables done", timeout=600)
     console.sendline("select * from meta_tables")
-    console.expect("5 rows total")
+    console.expect("24 rows total")
 
     # Test meta table modification.
     console.sendline("insert into meta_settings values ('foo', 'bar', 'baz')")

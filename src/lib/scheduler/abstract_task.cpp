@@ -7,14 +7,13 @@
 
 #include "abstract_scheduler.hpp"
 #include "hyrise.hpp"
-#include "task_queue.hpp"
 #include "worker.hpp"
 
 #include "utils/assert.hpp"
 
 namespace hyrise {
 
-AbstractTask::AbstractTask(SchedulePriority priority, bool stealable) : _priority(priority), _stealable(stealable) {}
+AbstractTask::AbstractTask(SchedulePriority priority, bool stealable) : _priority{priority}, _stealable{stealable} {}
 
 TaskID AbstractTask::id() const {
   return _id;
@@ -125,7 +124,7 @@ void AbstractTask::_join() {
 
 void AbstractTask::execute() {
   {
-    auto success_started = _try_transition_to(TaskState::Started);
+    const auto success_started = _try_transition_to(TaskState::Started);
     Assert(success_started, "Expected successful transition to TaskState::Started.");
   }
   DebugAssert(is_ready(), "Task must not be executed before its dependencies are done");
@@ -140,7 +139,7 @@ void AbstractTask::execute() {
   _on_execute();
 
   {
-    auto success_done = _try_transition_to(TaskState::Done);
+    const auto success_done = _try_transition_to(TaskState::Done);
     Assert(success_done, "Expected successful transition to TaskState::Done.");
   }
 

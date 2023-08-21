@@ -103,14 +103,20 @@ TEST_F(JoinHashStepsTest, MaterializeAndBuildWithKeepNulls) {
   // BloomFilters are ignored in this test
   BloomFilter bloom_filter_with_nulls;
   BloomFilter bloom_filter_without_nulls;
+  auto materialized_partition_locations_with_nulls = std::vector<NodeID>();
+  auto materialized_partition_locations_without_nulls = std::vector<NodeID>();
 
   // We materialize the table twice, once with keeping NULL values and once without
-  auto materialized_with_nulls =
-      materialize_input<int, int, true>(_table_with_nulls_and_zeros->get_output(), ColumnID{0}, histograms,
-                                        radix_bit_count, bloom_filter_with_nulls, nullptr);
-  auto materialized_without_nulls =
-      materialize_input<int, int, false>(_table_with_nulls_and_zeros->get_output(), ColumnID{0}, histograms,
-                                         radix_bit_count, bloom_filter_without_nulls, nullptr);
+  auto materialized_with_nulls = materialize_input<int, int, true>(
+      _table_with_nulls_and_zeros->get_output(), ColumnID{0}, histograms, radix_bit_count, bloom_filter_with_nulls,
+      materialized_partition_locations_with_nulls);
+  auto materialized_without_nulls = materialize_input<int, int, false>(
+      _table_with_nulls_and_zeros->get_output(), ColumnID{0}, histograms, radix_bit_count, bloom_filter_without_nulls,
+      materialized_partition_locations_without_nulls);
+
+  // Node partition locations should be of equal size as the output radix partitions
+  EXPECT_EQ(materialized_with_nulls.size(), materialized_partition_locations_with_nulls.size());
+  EXPECT_EQ(materialized_without_nulls.size(), materialized_partition_locations_without_nulls.size());
 
   // Partition count should be equal to chunk count
   EXPECT_EQ(materialized_with_nulls.size(),
@@ -163,9 +169,10 @@ TEST_F(JoinHashStepsTest, MaterializeOutputBloomFilter) {
   {
     std::vector<std::vector<size_t>> histograms;  // Ignored in this test
     BloomFilter bloom_filter;
+    auto materialized_partition_locations = std::vector<NodeID>();
 
     materialize_input<int, int, false>(_table_with_nulls_and_zeros->get_output(), ColumnID{0}, histograms, 1,
-                                       bloom_filter, nullptr);
+                                       bloom_filter, materialized_partition_locations);
 
     // For all input values, their position in the bloom filter should be correctly set to true
     for (auto value : std::vector<int>{0, 6, 7, 9, 13, 18}) {
@@ -184,6 +191,7 @@ TEST_F(JoinHashStepsTest, MaterializeInputBloomFilter) {
   {
     std::vector<std::vector<size_t>> histograms;  // Ignored in this test
     BloomFilter output_bloom_filter;
+    auto materialized_partition_locations = std::vector<NodeID>();
 
     // Fill input_bloom_filter
     BloomFilter input_bloom_filter(BLOOM_FILTER_SIZE);
@@ -193,7 +201,7 @@ TEST_F(JoinHashStepsTest, MaterializeInputBloomFilter) {
 
     auto container =
         materialize_input<int, int, false>(_table_with_nulls_and_zeros->get_output(), ColumnID{0}, histograms, 1,
-                                           output_bloom_filter, nullptr, input_bloom_filter);
+                                           output_bloom_filter, materialized_partition_locations, input_bloom_filter);
 
     auto materialized_values = std::vector<int>{};
     auto chunk_offsets = std::vector<int>{};
@@ -217,10 +225,12 @@ TEST_F(JoinHashStepsTest, MaterializeInputHistograms) {
   {
     std::vector<std::vector<size_t>> histograms;
     BloomFilter bloom_filter;  // Ignored in this test
+    auto materialized_partition_locations = std::vector<NodeID>();
 
     // When using 1 bit for radix partitioning, we have two radix clusters determined on the least
     // significant bit. For the 0/1 table, we should thus cluster the ones and the zeros.
-    materialize_input<int, int, false>(_table_zero_one, ColumnID{0}, histograms, 1, bloom_filter, nullptr);
+    materialize_input<int, int, false>(_table_zero_one, ColumnID{0}, histograms, 1, bloom_filter,
+                                       materialized_partition_locations);
     size_t histogram_offset_sum = 0;
     EXPECT_EQ(histograms.size(), this->_table_size_zero_one / this->_chunk_size_zero_one);
     for (const auto& radix_count_per_chunk : histograms) {
@@ -235,13 +245,15 @@ TEST_F(JoinHashStepsTest, MaterializeInputHistograms) {
   {
     std::vector<std::vector<size_t>> histograms;
     BloomFilter bloom_filter;  // Ignored in this test
+    auto materialized_partition_locations = std::vector<NodeID>();
 
     // When using 2 bits for radix partitioning, we have four radix clusters determined on the two least
     // significant bits. For the 0/1 table, we expect two non-empty clusters (00/01) and two empty ones (10/11).
     // Since the radix clusters are determine by hashing the value, we do not know in which cluster
     // the values are going to be stored.
     size_t empty_cluster_count = 0;
-    materialize_input<int, int, false>(_table_zero_one, ColumnID{0}, histograms, 2, bloom_filter, nullptr);
+    materialize_input<int, int, false>(_table_zero_one, ColumnID{0}, histograms, 2, bloom_filter,
+                                       materialized_partition_locations);
     for (const auto& radix_count_per_chunk : histograms) {
       for (auto count : radix_count_per_chunk) {
         // Again, due to the hashing, we do not know which cluster holds the value
@@ -260,9 +272,10 @@ TEST_F(JoinHashStepsTest, RadixClusteringOfNulls) {
   const size_t radix_bit_count = 1;
   std::vector<std::vector<size_t>> histograms;
   BloomFilter bloom_filter;  // Ignored in this test
+
   auto node_placements = std::vector<NodeID>();
   const auto materialized_without_null_handling = materialize_input<int, int, true>(
-      _table_int_with_nulls->get_output(), ColumnID{0}, histograms, radix_bit_count, bloom_filter, &node_placements);
+      _table_int_with_nulls->get_output(), ColumnID{0}, histograms, radix_bit_count, bloom_filter, node_placements);
   // Ensure we created NULL value information
   EXPECT_EQ(materialized_without_null_handling[0].null_values.size(),
             materialized_without_null_handling[0].elements.size());
@@ -296,8 +309,9 @@ TEST_F(JoinHashStepsTest, BuildRespectsBloomFilter) {
   auto node_placements = std::vector<NodeID>();
 
   auto container = materialize_input<int, int, false>(_table_with_nulls_and_zeros->get_output(), ColumnID{0},
-                                                      histograms, 1, output_bloom_filter, &node_placements);
+                                                      histograms, 1, output_bloom_filter, node_placements);
 
+  node_placements.clear();
   auto hash_tables =
       build<int, int>(container, JoinHashBuildMode::AllPositions, 0, input_bloom_filter, node_placements);
 
@@ -324,7 +338,7 @@ TEST_F(JoinHashStepsTest, ThrowWhenNoNullValuesArePassed) {
 
   const auto materialized_without_null_handling =
       materialize_input<int, int, false>(_table_with_nulls_and_zeros->get_output(), ColumnID{0}, histograms,
-                                         radix_bit_count, bloom_filter, &node_placements);
+                                         radix_bit_count, bloom_filter, node_placements);
   // We want to test a non-NULL-considering Radix Container, ensure we did it correctly
   EXPECT_EQ(materialized_without_null_handling[0].null_values.size(), 0);
 

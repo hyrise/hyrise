@@ -1,6 +1,5 @@
 #include "dictionary_segment.hpp"
 
-#include <numa.h>
 #include <memory>
 #include <string>
 
@@ -11,45 +10,6 @@
 #include "utils/size_estimation_utils.hpp"
 
 namespace hyrise {
-
-auto numaNodeDictionaryCount = std::vector<u_int64_t>(8, 0);
-
-void printAllocations() {
-  for (auto node_index = 0ul; node_index < numaNodeDictionaryCount.size(); node_index++) {
-    std::cout << "Node " << node_index << " " << numaNodeDictionaryCount[node_index] / 2 << " ";
-  }
-  std::cout << std::endl;
-}
-
-int printNumaNodeOfPage(const void* addr) {
-  u_int64_t page = (u_int64_t)addr;
-  page = page & (~(4096 - 1));
-  void* pages[1] = {reinterpret_cast<void*>(page)};
-  int status;
-  int64_t ret = numa_move_pages(0, 1, pages, NULL, &status, 0);
-  if (ret == 0) {
-    numaNodeDictionaryCount[status]++;
-    std::cout << status << " ";
-    return status;
-  } else {
-    std::cout << "move_pages returned error!" << std::endl;
-    return 0;
-  }
-}
-
-NodeID getNumaNodeOfPage(const void* addr) {
-  u_int64_t page = (u_int64_t)addr;
-  page = page & (~(4096 - 1));
-  void* pages[1] = {reinterpret_cast<void*>(page)};
-  int status;
-  int64_t ret = numa_move_pages(0, 1, pages, NULL, &status, 0);
-  if (ret == 0) {
-    return static_cast<NodeID>(status);
-  } else {
-    std::cout << "move_pages returned error!" << std::endl;
-    return INVALID_NODE_ID;
-  }
-}
 
 template <typename T>
 DictionarySegment<T>::DictionarySegment(const std::shared_ptr<const pmr_vector<T>>& dictionary,

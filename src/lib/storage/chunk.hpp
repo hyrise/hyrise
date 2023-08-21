@@ -126,10 +126,6 @@ class Chunk : private Noncopyable {
    */
   void migrate(boost::container::pmr::memory_resource* memory_source, NodeID node_id);
 
-  // TODO(anyone): For profiling purposes only... should be removed in the future
-  void migrate(NumaMemoryResource* memory_source, std::map<std::string, size_t>& column_allocations_mapping,
-               const std::vector<std::string>& column_names);
-
   bool references_exactly_one_table() const;
 
   const PolymorphicAllocator<Chunk>& get_allocator() const;

@@ -47,7 +47,8 @@ using namespace expression_functional;  // NOLINT(build/namespaces)
 TableScan::TableScan(const std::shared_ptr<const AbstractOperator>& input_operator,
                      const std::shared_ptr<AbstractExpression>& predicate)
     : AbstractReadOnlyOperator{OperatorType::TableScan, input_operator, nullptr, std::make_unique<PerformanceData>()},
-      _predicate(predicate) {
+      excluded_chunk_ids{std::make_shared<std::vector<ChunkID>>()},
+      _predicate{predicate} {
   _search_and_register_uncorrelated_subqueries(predicate);
 }
 
@@ -84,10 +85,19 @@ std::shared_ptr<AbstractOperator> TableScan::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_left_input,
     const std::shared_ptr<AbstractOperator>& /*copied_right_input*/,
     std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
-  return std::make_shared<TableScan>(copied_left_input, _predicate->deep_copy(copied_ops));
+  const auto table_scan = std::make_shared<TableScan>(copied_left_input, _predicate->deep_copy(copied_ops));
+
+  // Excluded ChunkIDs are set when an IndexScan scans those chunks in parallel using a secondary index and the result
+  // of both operators is unioned. When the PQP is later copied due to a PQP cache hit, we need to set
+  // included/excluded chunks again in both operators. Otherwise, the index scan would not scan any chunks.
+  table_scan->excluded_chunk_ids = excluded_chunk_ids;
+  return table_scan;
 }
 
 std::shared_ptr<const Table> TableScan::_on_execute() {
+  DebugAssert(excluded_chunk_ids, "Excluded ChunkIDs vector has not been initialized.");
+  DebugAssert(std::is_sorted(excluded_chunk_ids->cbegin(), excluded_chunk_ids->cend()),
+              "Excluded ChunkIDs must be sorted.");
   const auto in_table = left_input_table();
 
   _impl = create_impl();
@@ -95,20 +105,24 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
 
   auto output_mutex = std::mutex{};
 
-  const auto excluded_chunk_set = std::unordered_set<ChunkID>{excluded_chunk_ids.cbegin(), excluded_chunk_ids.cend()};
+  const auto chunk_count = in_table->chunk_count();
+  const auto chunks_to_scan = chunk_count - excluded_chunk_ids->size();
+
+  auto excluded_chunk_ids_iter = excluded_chunk_ids->cbegin();
 
   auto output_chunks = std::vector<std::shared_ptr<Chunk>>{};
-  output_chunks.reserve(in_table->chunk_count() - excluded_chunk_set.size());
+  output_chunks.reserve(chunks_to_scan);
 
   auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
-  jobs.reserve(in_table->chunk_count() - excluded_chunk_set.size());
+  jobs.reserve(chunks_to_scan);
 
-  const auto chunk_count = in_table->chunk_count();
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-    if (excluded_chunk_set.contains(chunk_id)) {
+    if (excluded_chunk_ids_iter != excluded_chunk_ids->cend() && chunk_id == *excluded_chunk_ids_iter) {
+      ++excluded_chunk_ids_iter;
       continue;
     }
-    const auto chunk_in = in_table->get_chunk(chunk_id);
+
+    const auto& chunk_in = in_table->get_chunk(chunk_id);
     Assert(chunk_in, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
     // chunk_in – Copy by value since copy by reference is not possible due to the limited scope of the for-iteration.

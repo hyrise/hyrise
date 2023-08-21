@@ -573,6 +573,17 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCCTableGenerator::generate
   return table_info_by_name;
 }
 
+AbstractTableGenerator::IndexesByTable TPCCTableGenerator::_indexes_by_table() const {
+  return {{"CUSTOMER", {{"C_ID"}, {"C_D_ID"}, {"C_W_ID"}}},
+          {"DISTRICT", {{"D_ID"}, {"D_W_ID"}}},
+          {"STOCK", {{"S_W_ID"}, {"S_I_ID"}}},
+          {"ORDER_LINE", {{"OL_W_ID"}, {"OL_D_ID"}, {"OL_O_ID"}, {"OL_NUMBER"}}},
+          {"ITEM", {{"I_ID"}}},
+          {"NEW_ORDER", {{"NO_O_ID"}, {"NO_D_ID"}, {"NO_W_ID"}}},
+          {"ORDER", {{"O_ID"}, {"O_D_ID"}, {"O_W_ID"}}},
+          {"WAREHOUSE", {{"W_ID"}}}};
+}
+
 void TPCCTableGenerator::_add_constraints(
     std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) const {
   const auto& warehouse_table = table_info_by_name.at("WAREHOUSE").table;

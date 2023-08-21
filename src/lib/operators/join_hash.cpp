@@ -326,11 +326,11 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
       if (keep_nulls_build_column) {
         materialized_build_column = materialize_input<BuildColumnType, HashedType, true>(
             _build_input_table, _column_ids.first, histograms_build_column, _radix_bits, build_side_bloom_filter,
-            &build_partitions_node_placements, input_bloom_filter);
+            build_partitions_node_placements, input_bloom_filter);
       } else {
         materialized_build_column = materialize_input<BuildColumnType, HashedType, false>(
             _build_input_table, _column_ids.first, histograms_build_column, _radix_bits, build_side_bloom_filter,
-            &build_partitions_node_placements, input_bloom_filter);
+            build_partitions_node_placements, input_bloom_filter);
       }
     };
 
@@ -343,11 +343,11 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
       if (keep_nulls_probe_column) {
         materialized_probe_column = materialize_input<ProbeColumnType, HashedType, true>(
             _probe_input_table, _column_ids.second, histograms_probe_column, _radix_bits, probe_side_bloom_filter,
-            &probe_partitions_node_placements, input_bloom_filter);
+            probe_partitions_node_placements, input_bloom_filter);
       } else {
         materialized_probe_column = materialize_input<ProbeColumnType, HashedType, false>(
             _probe_input_table, _column_ids.second, histograms_probe_column, _radix_bits, probe_side_bloom_filter,
-            &probe_partitions_node_placements, input_bloom_filter);
+            probe_partitions_node_placements, input_bloom_filter);
       }
     };
 
@@ -438,7 +438,6 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
      *    probe step.
      */
 
-    // We want to retrieve the hash tables node placements.
     auto build_hash_tables_node_placements = std::vector<NodeID>();
     auto timer_hash_map_building = Timer{};
     if (_secondary_predicates.empty() && is_semi_or_anti_join(_mode)) {

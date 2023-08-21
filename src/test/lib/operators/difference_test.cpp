@@ -37,13 +37,16 @@ class OperatorsDifferenceTest : public BaseTest {
 };
 
 TEST_F(OperatorsDifferenceTest, DifferenceOnValueTables) {
-  std::shared_ptr<Table> expected_result =
-      load_table("resources/test_data/tbl/int_float_filtered2.tbl", ChunkOffset{2});
-
-  auto difference = std::make_shared<Difference>(_table_wrapper_a, _table_wrapper_b);
+  const auto difference = std::make_shared<Difference>(_table_wrapper_a, _table_wrapper_b);
   difference->execute();
 
-  EXPECT_TABLE_EQ_UNORDERED(difference->get_output(), expected_result);
+  EXPECT_TABLE_EQ_UNORDERED(difference->get_output(),
+                            load_table("resources/test_data/tbl/int_float_filtered2.tbl", ChunkOffset{2}));
+}
+
+TEST_F(OperatorsDifferenceTest, GetName) {
+  const auto difference = std::make_shared<Difference>(_table_wrapper_a, _table_wrapper_b);
+  EXPECT_EQ(difference->name(), "Difference");
 }
 
 TEST_F(OperatorsDifferenceTest, DifferneceOnReferenceTables) {

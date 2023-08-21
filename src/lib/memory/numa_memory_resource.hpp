@@ -1,11 +1,12 @@
 #pragma once
+
 #include <jemalloc/jemalloc.h>
-#include <stdio.h>
-#include <sys/mman.h>
-#include <cstdint>
-#include <unordered_map>
+#include <boost/container/pmr/memory_resource.hpp>
+
+#include "types.hpp"
 
 namespace hyrise {
+
 using ArenaID = uint32_t;
 
 /**
@@ -25,6 +26,9 @@ class NumaMemoryResource : public boost::container::pmr::memory_resource {
 
   // Methods defined by memory_resource.
   void* do_allocate(std::size_t bytes, std::size_t alignment) override;
+  /**
+   * Entry point for deallocation behavior.
+   */
   void do_deallocate(void* p, std::size_t bytes, std::size_t alignment) override;
   bool do_is_equal(const memory_resource& other) const noexcept override;
 

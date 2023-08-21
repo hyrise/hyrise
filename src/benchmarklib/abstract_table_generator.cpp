@@ -1,7 +1,5 @@
 #include "abstract_table_generator.hpp"
 
-#include <numa.h>
-
 #include "benchmark_config.hpp"
 #include "benchmark_table_encoder.hpp"
 #include "hyrise.hpp"
@@ -238,8 +236,6 @@ void AbstractTableGenerator::generate_and_store() {
               << format_duration(metrics.encoding_duration) << ")" << std::endl;
   }
 
-  std::cout << "Numa-Locations before relocation" << std::endl;
-
   /**
    * Relocate tables to optimize for numa.
    */
@@ -249,8 +245,10 @@ void AbstractTableGenerator::generate_and_store() {
 
     auto target_node_id = NodeID{0};
     for (auto& [table_name, table_info] : table_info_by_name) {
+      auto timer = Timer{};
       auto& table = table_info.table;
       Hyrise::get().storage_manager.migrate_table(table, target_node_id);
+      std::cout << "-  Relocated " << table_name << " (" << timer.lap_formatted() << ")" << std::endl;
 
       target_node_id = (target_node_id + 1) % num_nodes;
     }
@@ -358,11 +356,13 @@ void AbstractTableGenerator::_create_chunk_indexes(
     std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) {
   auto timer = Timer{};
   std::cout << "- Creating chunk indexes" << std::endl;
+
   const auto& indexes_by_table = _indexes_by_table();
   if (indexes_by_table.empty()) {
     std::cout << "-  No indexes defined by benchmark" << std::endl;
     return;
   }
+
   for (const auto& [table_name, indexes] : indexes_by_table) {
     const auto& table = table_info_by_name[table_name].table;
 
@@ -394,11 +394,13 @@ void AbstractTableGenerator::_create_table_indexes(
     std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) {
   auto timer = Timer{};
   std::cout << "- Creating table indexes" << std::endl;
+
   const auto& indexes_by_table = _indexes_by_table();
   if (indexes_by_table.empty()) {
     std::cout << "-  No indexes defined by benchmark" << std::endl;
     return;
   }
+
   for (const auto& [table_name, indexes] : indexes_by_table) {
     const auto& table = table_info_by_name[table_name].table;
 
@@ -408,13 +410,12 @@ void AbstractTableGenerator::_create_table_indexes(
       Assert(index_column_names.size() == 1, "Multi-column indexes are currently not supported.");
 
       for (const auto& column_name : index_column_names) {
-        std::cout << "-  Creating an index on table " << table_name << " (" << column_name << ") covering "
-                  << chunk_ids.size() << " (all finalized) chunks]" << std::flush;
+        std::cout << "-  Creating index on '" << table_name << "." << column_name << "'" << std::flush;
 
         auto per_table_index_timer = Timer{};
         table->create_partial_hash_index(table->column_id_by_name(column_name), chunk_ids);
 
-        std::cout << "(" << per_table_index_timer.lap_formatted() << ")" << std::endl;
+        std::cout << " (" << per_table_index_timer.lap_formatted() << ")" << std::endl;
       }
     }
   }

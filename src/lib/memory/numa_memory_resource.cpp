@@ -5,22 +5,16 @@
 #include "utils/assert.hpp"
 #include "hyrise.hpp"
 
-namespace {
+#include <shared_mutex>
 
-// from  internals (see arena_types.h)
-struct arena_config_s {
-  /* extent hooks to be used for the arena */
-  extent_hooks_t* extent_hooks;
-};
-using arena_config_t = struct arena_config_s;
-}  // namespace
+#include "utils/assert.hpp"
 
 namespace hyrise {
 
 NumaMemoryResource::NumaMemoryResource(const NodeID node_id) : _node_id(node_id) {
-  // Setup  arena.
+  // Setup arena.
   auto arena_id = uint32_t{0};
-  size_t size = sizeof(arena_id);
+  auto size = sizeof(arena_id);
   Assert(mallctl("arenas.create", static_cast<void*>(&arena_id), &size, nullptr, 0) == 0, "mallctl failed");
 
   // In cases, std::vector deconstructs Memory Resources and constructs them again, due to memory management.

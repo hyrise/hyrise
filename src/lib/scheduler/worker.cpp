@@ -4,10 +4,6 @@
 #include <sched.h>
 #include <unistd.h>
 
-#include <chrono>
-#include <iostream>
-#include <memory>
-#include <mutex>
 #include <random>
 #include <thread>
 #include <vector>
@@ -15,19 +11,20 @@
 #include "abstract_scheduler.hpp"
 #include "abstract_task.hpp"
 #include "hyrise.hpp"
+#include "shutdown_task.hpp"
 #include "task_queue.hpp"
 
 namespace {
 
+using namespace hyrise;  // NOLINT(build/namespaces)
+
 /**
- * On worker threads, this references the Worker running on this thread, on all other threads, this is empty.
+ * On worker threads, this references the worker running on this thread, on all other threads, this is empty.
  * Uses a weak_ptr, because otherwise the ref-count of it would not reach zero within the main() scope of the program.
  */
-thread_local std::weak_ptr<hyrise::Worker> this_thread_worker;  // NOLINT (clang-tidy wants this const)
-}  // namespace
+thread_local std::weak_ptr<Worker> this_thread_worker;  // NOLINT (clang-tidy wants this const)
 
-// The sleep time was determined experimentally
-static constexpr auto WORKER_SLEEP_TIME = std::chrono::microseconds(300);
+}  // namespace
 
 namespace hyrise {
 
@@ -56,54 +53,58 @@ CpuID Worker::cpu_id() const {
 }
 
 void Worker::operator()() {
-  Assert(this_thread_worker.expired(), "Thread already has a worker");
+  Assert(this_thread_worker.expired(), "Thread already has a worker.");
 
   this_thread_worker = shared_from_this();
 
   _set_affinity();
 
-  while (Hyrise::get().scheduler()->active()) {
-    _work();
+  while (Hyrise::get().scheduler()->active() && _active) {
+    // Worker is allowed to sleep (when queue is empty) as long as the scheduler is not shutting down.
+    _work(AllowSleep::Yes);
   }
 }
 
-void Worker::_work() {
+void Worker::_work(const AllowSleep allow_sleep) {
   // If execute_next has been called, run that task first, otherwise try to retrieve a task from the queue.
   auto task = std::shared_ptr<AbstractTask>{};
   if (_next_task) {
     task = std::move(_next_task);
     _next_task = nullptr;
   } else {
-    task = _queue->pull();
+    if (_queue->semaphore.tryWait()) {
+      task = _queue->pull();
+    }
   }
 
   if (!task) {
     // Simple work stealing without explicitly transferring data between nodes.
-    auto work_stealing_successful = false;
     const auto& queues = Hyrise::get().scheduler()->queues();
-    for (const auto& queue_id : Hyrise::get().scheduler()->ordered_queue_ids(_queue->node_id())) {
-      if (queues[queue_id] == _queue) {
+    for (const auto& queue_id : Hyrise::get().scheduler()->prioritized_queue_ids(_queue->node_id())) {
+      const auto& queue = queues[queue_id];
+      if (queue == _queue) {
         continue;
       }
 
-      task = queues[queue_id]->steal();
-      if (task) {
-        task->set_node_id(_queue->node_id());
-        task->_was_stolen = true;
-        work_stealing_successful = true;
-        break;
+      if (queue->semaphore.tryWait()) {
+        task = queue->steal();
+        if (task) {
+          task->set_node_id(_queue->node_id());
+          break;
+        }
       }
     }
+  }
 
-    // If there is no ready task neither in our queue nor in any other, worker waits for a new task to be pushed to the
-    // own queue or returns after timer exceeded (whatever occurs first).
-    if (!work_stealing_successful) {
-      {
-        std::unique_lock<std::mutex> unique_lock(_queue->lock);
-        _queue->new_task.wait_for(unique_lock, WORKER_SLEEP_TIME);
-      }
-      return;
-    }
+  // If there is no ready task neither in our queue nor in any other and we are allowed to sleep, wait on the
+  // semaphore.
+  if (!task && allow_sleep == AllowSleep::Yes) {
+    _queue->semaphore.wait();
+    task = _queue->pull();
+  }
+
+  if (!task) {
+    return;
   }
 
   const auto successfully_assigned = task->try_mark_as_assigned_to_worker();
@@ -114,14 +115,19 @@ void Worker::_work() {
 
   task->execute();
 
-  // This is part of the Scheduler shutdown system. Count the number of tasks a Worker executed to allow the
-  // Scheduler to determine whether all tasks finished
+  // In case the processed task is a ShutdownTask, we shut down the worker (see `operator()` loop).
+  if (dynamic_cast<ShutdownTask*>(&*task)) {
+    _active = false;
+  }
+
+  // This is part of the Scheduler shutdown system. Count the number of tasks a worker executed to allow the
+  // Scheduler to determine whether all tasks finished.
   _num_finished_tasks++;
 }
 
 void Worker::execute_next(const std::shared_ptr<AbstractTask>& task) {
   DebugAssert(&*get_this_thread_worker() == this,
-              "execute_next must be called from the same thread that the worker works in");
+              "execute_next must be called from the same thread that the worker works in.");
   if (!_next_task) {
     const auto successfully_enqueued = task->try_mark_as_enqueued();
     if (!successfully_enqueued) {
@@ -130,10 +136,10 @@ void Worker::execute_next(const std::shared_ptr<AbstractTask>& task) {
       //   * the first one is scheduled and executed very quickly before the second one reaches the schedule method
       //   * AbstractScheduler::schedule then looks at the second task and realizes that it is ready to be enqueued
       //   * ... and both the scheduler and this method try to enqueue it.
-      // If successfully_enqueued is false, we lost, and the task is already in one of the task queues.
+      // If successfully_enqueued is false, we lost, and the task is already in one of the TaskQueues.
       return;
     }
-    Assert(successfully_enqueued, "Task was already enqueued, expected to be solely responsible for execution");
+    Assert(successfully_enqueued, "Task was already enqueued, expected to be solely responsible for execution.");
     _next_task = task;
   } else {
     _queue->push(task, SchedulePriority::Default);
@@ -145,7 +151,7 @@ void Worker::start() {
 }
 
 void Worker::join() {
-  Assert(!Hyrise::get().scheduler()->active(), "Worker can't be join()-ed while the scheduler is still active");
+  Assert(!Hyrise::get().scheduler()->active(), "Worker can't be join()-ed while the scheduler is still active.");
   _thread.join();
 }
 
@@ -214,7 +220,8 @@ void Worker::_wait_for_tasks(const std::vector<std::shared_ptr<AbstractTask>>& t
   while (!all_own_tasks_done()) {
     // Run any job. This could be any job that is currently enqueued. Note: This job may internally call wait_for_tasks
     // again, in which case we would first wait for the inner task before the outer task has a chance to proceed.
-    _work();
+    // We do not allow the worker to sleep here as we know that the passed task list is not yet fully processed.
+    _work(AllowSleep::No);
   }
 }
 
