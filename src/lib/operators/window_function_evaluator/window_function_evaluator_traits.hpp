@@ -9,8 +9,25 @@
 
 namespace hyrise::window_function_evaluator {
 
+// This file contains all definitions of `WindowFunctionEvaluatorTraits`, a templated struct that has partial
+// specializations for combinations of input column data type and window function containing the behavior needed to
+// compute said window function in `WindowFunctionEvaluator::compute_window_function`. There are two computation
+// strategies that can be used: `OnePass` and `SegmentTree`.
+//
+// The `impls` namespace contains generic helpers for implementing a strategy. After the `impls` namespace, there are
+// concrete implementations of the strategies on the `WindowFunctionEvaluator` object.
+
 namespace impls {
 
+// The following two concepts define the requirements for an "implementation struct". Later, we will use these to check
+// that a concrete `WindowFunctionEvaluatorTraits` type contains special member types adhering to these concepts. Note
+// that both concepts require static functions on the implementation type that might appear to be more appropriately
+// placed as member functions of another type. However, since we want to be able to use fundamental types for some of
+// the required types, we do no require anything inside of the type's namespace.
+
+// A one pass implementation can keep an arbitrary state during iteration. This state is constructed once for the first
+// row of the partition and then updated once for each following row. Once a new partition starts, a new `State` is
+// constructed from the initial row. For each row, the `current_value` according to the `State` is queried.
 template <typename Impl, typename OutputType>
 concept IsOnePassImpl =
     requires {
@@ -21,6 +38,12 @@ concept IsOnePassImpl =
       { Impl::current_value(std::declval<const typename Impl::State&>()) } -> std::same_as<OutputType>;
     };
 
+// A segment tree implementation must provide provide the `combine` operation and the neutral element for this operation
+// (see `segment_tree.hpp` for an introduction to the data structure). Additionally, the implementation can choose to
+// store more data than just the window function aggregate of the range in a tree node by setting `TreeNode` to
+// something different than `OutputType` (this is used for example in the implementation of `WindowFunction::Avg`). In
+// that case, there are two additional functions to transform a tuple's value to its corresponding leaf node and to
+// transform an aggregate from the tree (which is of type `TreeNode`) back to the `OutputType`.
 template <typename Impl>
 concept IsSegmentTreeImpl =
     requires {
@@ -35,8 +58,8 @@ concept IsSegmentTreeImpl =
       { Impl::transform_query(std::declval<typename Impl::TreeNode>()) } -> std::same_as<typename Impl::OutputType>;
     };
 
-//////////////////////////////////////////////////////////////////////////////
-
+// Base class for segment tree implementations that do not need special transformations before and after querying the
+// tree (for example `WindowFunction::Sum`). Instead, both transformations are defined as the identity function.
 template <typename InputT, typename OutputT>
 struct TrivialSegmentTreeImpl {
   using InputType = InputT;
@@ -52,6 +75,9 @@ struct TrivialSegmentTreeImpl {
   }
 };
 
+// An adapter implementation that takes an implementation and adds NULL handling to it. In particular, this resembles
+// the NULL behavior of SQL aggregation: If all values are NULL, then the aggregation is NULL, otherwise, aggregate all
+// non-NULL values.
 template <typename NonNullableImpl>
   requires IsSegmentTreeImpl<NonNullableImpl>
 struct MakeNullableImpl {
@@ -62,27 +88,31 @@ struct MakeNullableImpl {
   constexpr static auto neutral_element = TreeNode{std::nullopt};
 
   static TreeNode node_from_value(InputType input) {
-    if (input)
+    if (input) {
       return NonNullableImpl::node_from_value(*input);
+    }
     return std::nullopt;
   }
 
   static TreeNode combine(TreeNode lhs, TreeNode rhs) {
-    if (!lhs && !rhs)
+    if (!lhs && !rhs) {
       return std::nullopt;
+    }
     return NonNullableImpl::combine(lhs.value_or(NonNullableImpl::neutral_element),
                                     rhs.value_or(NonNullableImpl::neutral_element));
   }
 
   static OutputType transform_query(TreeNode node) {
-    if (node)
+    if (node) {
       return NonNullableImpl::transform_query(*node);
+    }
     return std::nullopt;
   }
 };
 
-//////////////////////////////////////////////////////////////////////////////
-
+// A base class for one pass implementations that tracks the three supported rank-like window functions all at once. For
+// the concrete implementation of these window functions, only `transform_query` needs to be added so that it returns
+// the correct member of `state`.
 struct AllRanksOnePassBase {
   struct State {
     const RelevantRowInformation* previous_row;
@@ -112,12 +142,10 @@ struct AllRanksOnePassBase {
 
 }  // namespace impls
 
-//////////////////////////////////////////////////////////////////////////////
-
+// Template struct containing one pass or segment tree implementation types as dependent types. See the
+// `SupportsOnePass` and `SupportsSegmentTree` concepts below.
 template <typename InputColumnTypeT, WindowFunction window_function>
 struct WindowFunctionEvaluatorTraits {};
-
-//////////////////////////////////////////////////////////////////////////////
 
 template <typename InputColumnTypeT>
 struct WindowFunctionEvaluatorTraits<InputColumnTypeT, WindowFunction::Rank> {
@@ -154,8 +182,6 @@ struct WindowFunctionEvaluatorTraits<InputColumnTypeT, WindowFunction::RowNumber
     }
   };
 };
-
-//////////////////////////////////////////////////////////////////////////////
 
 template <typename InputColumnTypeT>
 struct WindowFunctionEvaluatorTraits<InputColumnTypeT, WindowFunction::Min> {
@@ -287,7 +313,13 @@ struct WindowFunctionEvaluatorTraits<InputColumnTypeT, WindowFunction::Avg> {
   };
 };
 
-//////////////////////////////////////////////////////////////////////////////
+// The following two concepts define the requirements for using the one pass or segment tree computation strategy in
+// `WindowFunctionEvaluator::compute_window_function` respectively. Both concepts check for a dependent type that must
+// pass the `IsOnePassImpl` or `IsSegmentTreeImpl` concepts. Note that the segment tree implementation explicitly
+// requires NULL handling. As the entire step of `compute_window_function` does not take a significant amount of time at
+// the moment, there is no way to add an optimized implementation for non-NULL input columns. However, such an
+// optimization could be added by reusing the `IsSegmentTreeImpl` and using `T` instead of `std::optional<T>` as the
+// `InputType`.
 
 template <typename InputColumnType, WindowFunction window_function>
 concept SupportsOnePass =
