@@ -93,7 +93,7 @@ class OperatorsWindowTest : public BaseTest {
  public:
   static void SetUpTestSuite() {
     _table = load_table("resources/test_data/tbl/window_operator/input_not_unique.tbl", ChunkOffset{2});
-    _table_three_columns = load_table("resources/test_data/tbl/window_operator/input_three_columns.tbl", ChunkOffset{2});
+    _table_3_columns = load_table("resources/test_data/tbl/window_operator/input_three_columns.tbl", ChunkOffset{2});
 
     const auto partition_columns = std::vector<ColumnID>{ColumnID{0}};
     const auto order_by_columns = std::vector<ColumnID>{ColumnID{1}};
@@ -102,12 +102,12 @@ class OperatorsWindowTest : public BaseTest {
     _window_operator_factory =
         std::make_shared<WindowOperatorFactory>(_table, partition_columns, order_by_columns, sort_modes);
     _window_operator_factory_3_columns =
-        std::make_shared<WindowOperatorFactory>(_table_three_columns, partition_columns, order_by_columns, sort_modes);
+        std::make_shared<WindowOperatorFactory>(_table_3_columns, partition_columns, order_by_columns, sort_modes);
   }
 
  protected:
   inline static std::shared_ptr<Table> _table;
-  inline static std::shared_ptr<Table> _table_three_columns;
+  inline static std::shared_ptr<Table> _table_3_columns;
   inline static std::shared_ptr<WindowOperatorFactory> _window_operator_factory;
   inline static std::shared_ptr<WindowOperatorFactory> _window_operator_factory_3_columns;
 };
