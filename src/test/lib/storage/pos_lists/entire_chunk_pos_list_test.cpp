@@ -58,7 +58,36 @@ TEST_F(EntireChunkPosListTest, AddAfterMatchedAllTest) {
   // Newly added rows are not in the position list
   EXPECT_EQ(entire_chunk_pos_list->size(), 3);
 
-  // TODO(XPERIANER): Maybe add a better check than just size, cause the returned iterators should also handle
+  // TODO(anyone): Maybe add a better check than just size, cause the returned iterators should also handle.
   // this case, which we right now don't check.
 }
+
+TEST_F(EntireChunkPosListTest, InsertDoesNotAffectIterators) {
+  // This checks that the EntireChunkPosList does not change its iterators after rows were added to the table. These
+  // added rows should not be contained in the PosList.
+
+  const auto table = Table::create_dummy_table({{"a", DataType::Int, false}});
+  table->append({int32_t{1}});
+  table->append({int32_t{2}});
+  table->append({int32_t{3}});
+
+  // Currently, the EntireChunkPosList is not linked to the table. Therefore, we do not expect changes to the PosList
+  // when new tuples are appended to the table. Nevertheless, we added this test to ensure this assumption is still
+  // true even when the EntireChunkPosList might later be aware of the referenced table.
+  EXPECT_EQ(table->chunk_count(), 1);
+  EXPECT_EQ(table->row_count(), 3);
+
+  const auto entire_chunk_pos_list = std::make_shared<const EntireChunkPosList>(ChunkID{0}, ChunkOffset{3});
+
+  table->append({int32_t{4}});
+  // One row has been added to the table.
+  EXPECT_EQ(table->chunk_count(), 1);
+  EXPECT_EQ(table->row_count(), 4);
+  // Newly added rows are not in the position list.
+  EXPECT_EQ(entire_chunk_pos_list->begin().dereference().chunk_offset, 0);
+  EXPECT_EQ(entire_chunk_pos_list->size(), 3);
+  EXPECT_EQ(entire_chunk_pos_list->begin().distance_to(entire_chunk_pos_list->end()), 3);
+  EXPECT_EQ(entire_chunk_pos_list->cbegin().distance_to(entire_chunk_pos_list->cend()), 3);
+}
+
 }  // namespace hyrise

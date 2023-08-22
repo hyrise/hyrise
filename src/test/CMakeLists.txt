@@ -1,11 +1,11 @@
 set(
-        SHARED_SOURCES
-        base_test.cpp
-        base_test.hpp
-        lib/sql/sqlite_testrunner/sqlite_testrunner.cpp
-        lib/sql/sqlite_testrunner/sqlite_testrunner.hpp
-        testing_assert.cpp
-        testing_assert.hpp
+    SHARED_SOURCES
+    base_test.cpp
+    base_test.hpp
+    lib/sql/sqlite_testrunner/sqlite_testrunner.cpp
+    lib/sql/sqlite_testrunner/sqlite_testrunner.hpp
+    testing_assert.cpp
+    testing_assert.hpp
 )
 
 set(
@@ -55,6 +55,7 @@ set(
     lib/logical_query_plan/intersect_node_test.cpp
     lib/logical_query_plan/join_node_test.cpp
     lib/logical_query_plan/limit_node_test.cpp
+    lib/logical_query_plan/logical_plan_root_node_test.cpp
     lib/logical_query_plan/logical_query_plan_test.cpp
     lib/logical_query_plan/lqp_find_subplan_mismatch_test.cpp
     lib/logical_query_plan/lqp_translator_test.cpp
@@ -68,6 +69,7 @@ set(
     lib/logical_query_plan/union_node_test.cpp
     lib/logical_query_plan/update_node_test.cpp
     lib/logical_query_plan/validate_node_test.cpp
+    lib/logical_query_plan/window_node_test.cpp
     lib/lossless_cast_test.cpp
     lib/lossy_cast_test.cpp
     lib/memory/segments_using_allocators_test.cpp
@@ -149,6 +151,7 @@ set(
     lib/scheduler/operator_task_test.cpp
     lib/scheduler/scheduler_test.cpp
     lib/scheduler/task_queue_test.cpp
+    lib/scheduler/task_utils_test.cpp
     lib/server/mock_socket.hpp
     lib/server/postgres_protocol_handler_test.cpp
     lib/server/query_handler_test.cpp
@@ -210,11 +213,13 @@ set(
     lib/storage/table_test.cpp
     lib/storage/value_segment_test.cpp
     lib/tasks/chunk_compression_task_test.cpp
+    lib/utils/atomic_max_test.cpp
     lib/utils/check_table_equal_test.cpp
-    lib/utils/column_pruning_utils_test.cpp
+    lib/utils/pruning_utils_test.cpp
     lib/utils/date_time_utils_test.cpp
     lib/utils/format_bytes_test.cpp
     lib/utils/format_duration_test.cpp
+    lib/utils/list_directory_test.cpp
     lib/utils/load_table_test.cpp
     lib/utils/log_manager_test.cpp
     lib/utils/lossless_predicate_cast_test.cpp
@@ -244,10 +249,9 @@ set(
     testing_assert.cpp
     testing_assert.hpp
     utils/data_dependency_test_utils.hpp
-    lib/storage/variable_string_dictionary_segment_test.cpp
 )
 
-set(
+set (
     SYSTEM_TEST_SOURCES
     ${SHARED_SOURCES}
     benchmarklib/synthetic_table_generator_test.cpp
@@ -260,7 +264,8 @@ set(
     lib/sql/sqlite_testrunner/sqlite_testrunner_encodings.cpp
     lib/utils/plugin_test_utils.cpp
     lib/utils/plugin_test_utils.hpp
-    plugins/mvcc_delete_plugin_system_test.cpp)
+    plugins/mvcc_delete_plugin_system_test.cpp
+)
 
 # Both hyriseTest and hyriseSystemTest link against these
 set(
@@ -291,18 +296,16 @@ add_executable(hyriseTest ${HYRISE_UNIT_TEST_SOURCES})
 add_dependencies(hyriseTest hyriseSecondTestPlugin hyriseTestPlugin hyriseMvccDeletePlugin hyriseTestNonInstantiablePlugin hyriseUccDiscoveryPlugin)
 target_link_libraries(hyriseTest hyrise ${LIBRARIES})
 
-if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-    target_compile_options(hyriseTest PUBLIC -Xclang -fno-pch-timestamp)
-endif ()
-if (NOT ${CMAKE_VERSION} VERSION_LESS "3.16.0")
-    target_precompile_headers(hyriseTest PRIVATE
-            <gtest/gtest.h>
-            [["all_parameter_variant.hpp"]]
-            [["storage/create_iterable_from_segment.hpp"]]
-            [["storage/table.hpp"]]
-            [["types.hpp"]]
-            )
-endif ()
+if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+target_compile_options(hyriseTest PUBLIC -Xclang -fno-pch-timestamp)
+endif()
+target_precompile_headers(hyriseTest PRIVATE
+    <gtest/gtest.h>
+    [["all_parameter_variant.hpp"]]
+    [["storage/create_iterable_from_segment.hpp"]]
+    [["storage/table.hpp"]]
+    [["types.hpp"]]
+)
 
 # Configure hyriseSystemTest
 add_executable(hyriseSystemTest ${SYSTEM_TEST_SOURCES})

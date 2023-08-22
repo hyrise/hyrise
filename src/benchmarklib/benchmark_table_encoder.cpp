@@ -97,10 +97,13 @@ bool BenchmarkTableEncoder::encode(const std::string& table_name, const std::sha
     if (encoding_supports_data_type(encoding_config.default_encoding_spec.encoding_type, column_data_type)) {
       chunk_encoding_spec.push_back(encoding_config.default_encoding_spec);
     } else {
-      std::cout << " - Column '" << table_name << "." << table->column_name(column_id) << "' of type ";
-      std::cout << column_data_type << " cannot be encoded as ";
-      std::cout << encoding_config.default_encoding_spec.encoding_type << " and is ";
-      std::cout << "left Unencoded." << std::endl;
+      // Use a stringstream here to bundle all writes into a single one and avoid locking.
+      auto output = std::ostringstream{};
+      output << " - Column '" << table_name << "." << table->column_name(column_id) << "' of type ";
+      output << column_data_type << " cannot be encoded as ";
+      output << encoding_config.default_encoding_spec.encoding_type << " and is ";
+      output << "left Unencoded." << std::endl;
+      std::cout << output.str();
       chunk_encoding_spec.emplace_back(EncodingType::Unencoded);
     }
   }
@@ -110,11 +113,12 @@ bool BenchmarkTableEncoder::encode(const std::string& table_name, const std::sha
    */
   auto encoding_performed = std::atomic_bool{false};
   const auto column_data_types = table->column_data_types();
+  const auto chunk_count = table->chunk_count();
 
   auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
-  jobs.reserve(table->chunk_count());
+  jobs.reserve(chunk_count);
 
-  for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto encode = [&, chunk_id]() {
       const auto chunk = table->get_chunk(ChunkID{chunk_id});
       Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");

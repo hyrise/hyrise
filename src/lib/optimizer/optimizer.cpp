@@ -3,6 +3,7 @@
 #include "cost_estimation/cost_estimator_logical.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_subquery_expression.hpp"
+#include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/logical_plan_root_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "strategy/between_composition_rule.hpp"
@@ -135,6 +136,7 @@ void validate_lqp_with_uncorrelated_subqueries(const std::shared_ptr<const Abstr
       case LQPNodeType::Root:
       case LQPNodeType::Sort:
       case LQPNodeType::Validate:
+      case LQPNodeType::Window:
         num_expected_inputs = 1;
         break;
 
@@ -173,7 +175,7 @@ OptimizerRuleMetrics::OptimizerRuleMetrics(const std::string& init_rule_name,
  * optimization costs reasonable.
  */
 std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
-  const auto optimizer = std::make_shared<Optimizer>();
+  auto optimizer = std::make_shared<Optimizer>();
 
   optimizer->add_rule(std::make_unique<ExpressionReductionRule>());
 
@@ -289,8 +291,8 @@ std::shared_ptr<AbstractLQPNode> Optimizer::optimize(
     }
   }
 
-  // Remove LogicalPlanRootNode
-  const auto optimized_node = root_node->left_input();
+  // Remove LogicalPlanRootNode.
+  auto optimized_node = root_node->left_input();
   root_node->set_left_input(nullptr);
 
   return optimized_node;
@@ -300,8 +302,8 @@ void Optimizer::validate_lqp(const std::shared_ptr<AbstractLQPNode>& root_node) 
   // If you can think of a way in which an LQP can be corrupt, please add it!
   // First, collect all LQPs (the main LQP and all uncorrelated subqueries).
   auto lqps = std::vector<std::shared_ptr<AbstractLQPNode>>{root_node};
-  for (auto& [lqp, _] : collect_lqp_subquery_expressions_by_lqp(root_node, true)) {
-    lqps.emplace_back(std::move(lqp));
+  for (const auto& [lqp, _] : collect_lqp_subquery_expressions_by_lqp(root_node, true)) {
+    lqps.emplace_back(lqp);
   }
 
   auto nodes_by_lqp = LQPNodesByLQP{};

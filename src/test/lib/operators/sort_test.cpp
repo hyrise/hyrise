@@ -188,9 +188,9 @@ TEST_F(SortTest, InputReferencesDifferentTables) {
       TableColumnDefinitions{TableColumnDefinition{"a", DataType::Int, true}}, TableType::References);
 
   auto pos_list = std::make_shared<RowIDPosList>();
-  pos_list->emplace_back(RowID{ChunkID{0}, ChunkOffset{0}});
-  pos_list->emplace_back(RowID{ChunkID{0}, ChunkOffset{1}});
-  pos_list->emplace_back(RowID{ChunkID{1}, ChunkOffset{0}});
+  pos_list->emplace_back(ChunkID{0}, ChunkOffset{0});
+  pos_list->emplace_back(ChunkID{0}, ChunkOffset{1});
+  pos_list->emplace_back(ChunkID{1}, ChunkOffset{0});
 
   auto first_reference_segment = std::make_shared<ReferenceSegment>(input_table, ColumnID{0}, pos_list);
   union_table->append_chunk(Segments{first_reference_segment});
@@ -216,9 +216,9 @@ TEST_F(SortTest, InputReferencesDifferentColumns) {
       TableColumnDefinitions{TableColumnDefinition{"a", DataType::Int, true}}, TableType::References);
 
   auto pos_list = std::make_shared<RowIDPosList>();
-  pos_list->emplace_back(RowID{ChunkID{0}, ChunkOffset{0}});
-  pos_list->emplace_back(RowID{ChunkID{0}, ChunkOffset{1}});
-  pos_list->emplace_back(RowID{ChunkID{1}, ChunkOffset{0}});
+  pos_list->emplace_back(ChunkID{0}, ChunkOffset{0});
+  pos_list->emplace_back(ChunkID{0}, ChunkOffset{1});
+  pos_list->emplace_back(ChunkID{1}, ChunkOffset{0});
 
   auto first_reference_segment = std::make_shared<ReferenceSegment>(input_table, ColumnID{0}, pos_list);
   weird_table->append_chunk(Segments{first_reference_segment});

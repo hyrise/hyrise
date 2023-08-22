@@ -98,7 +98,7 @@ std::shared_ptr<Table> create_table(const size_t table_size, const pmr_vector<in
 
   auto ids_vector = generate_ids(table_size);
 
-  std::shared_ptr<Table> table = std::make_shared<Table>(table_column_definitions, TableType::Data, chunk_size);
+  auto table = std::make_shared<Table>(table_column_definitions, TableType::Data, chunk_size);
 
   for (auto chunk_index = size_t{0}; chunk_index < NUMBER_OF_CHUNKS_JOIN_AGGREGATE; ++chunk_index) {
     const auto ids_value_segment = std::make_shared<ValueSegment<int32_t>>(pmr_vector<int32_t>(
@@ -158,10 +158,10 @@ void BM_Join_Aggregate(benchmark::State& state) {
   auto operator_join_predicate =
       OperatorJoinPredicate(std::make_pair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals);
 
-  auto aggregates = std::vector<std::shared_ptr<AggregateExpression>>{
-      std::static_pointer_cast<AggregateExpression>(avg_(pqp_column_(ColumnID{0}, DataType::Int, false, "b")))};
+  auto aggregates = std::vector<std::shared_ptr<WindowFunctionExpression>>{
+      std::static_pointer_cast<WindowFunctionExpression>(avg_(pqp_column_(ColumnID{0}, DataType::Int, false, "b")))};
 
-  std::vector<ColumnID> groupby = {ColumnID{0}, ColumnID{2}};
+  const auto groupby = std::vector<ColumnID>{ColumnID{0}, ColumnID{2}};
 
   auto warmup_join =
       std::make_shared<JoinType>(table_wrapper_left, table_wrapper_right, JoinMode::Inner, operator_join_predicate);

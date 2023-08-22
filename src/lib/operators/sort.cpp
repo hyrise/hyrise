@@ -471,15 +471,17 @@ class Sort::SortImpl {
     }
   }
 
+  // NOLINTBEGIN(cppcoreguidelines-avoid-const-or-ref-data-members)
   const std::shared_ptr<const Table> _table_in;
 
-  // column to sort by
+  // Column to sort by.
   const ColumnID _column_id;
   const SortMode _sort_mode;
+  // NOLINTEND(cppcoreguidelines-avoid-const-or-ref-data-members)
 
   std::vector<RowIDValuePair> _row_id_value_vector;
 
-  // Stored as RowIDValuePair for better type compatibility even if value is unused
+  // Stored as RowIDValuePair for better type compatibility even if value is unused.
   std::vector<RowIDValuePair> _null_value_rows;
 };
 
