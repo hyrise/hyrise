@@ -138,7 +138,7 @@ BenchmarkConfig CLIConfigParser::parse_cli_options(const cxxopts::ParseResult& p
   }
 
   const auto system_metrics = parse_result["system_metrics"].as<bool>();
-  if (metrics) {
+  if (system_metrics) {
     Assert(!output_file_string.empty(), "--system_metrics only makes sense when an output file is set.");
     std::cout << "- Tracking system metrics." << std::endl;
   } else {
@@ -146,7 +146,7 @@ BenchmarkConfig CLIConfigParser::parse_cli_options(const cxxopts::ParseResult& p
   }
 
   const auto pipeline_metrics = parse_result["pipeline_metrics"].as<bool>();
-  if (metrics) {
+  if (pipeline_metrics) {
     Assert(!output_file_string.empty(), "--pipeline_metrics only makes sense when an output file is set.");
     std::cout << "- Tracking SQL pipeline metrics." << std::endl;
   } else {

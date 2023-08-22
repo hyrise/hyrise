@@ -35,7 +35,7 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config,
   // Enable caching only if no metrics are requested. When metrics are desired, we want to explicitly measure
   // translation and optimization runtimes for each SQL statement. These stages are skipped for cached plans, making it
   // hard to interpret the measurements.
-  if (!_config.pipline_metrics) {
+  if (!_config.pipeline_metrics) {
     Hyrise::get().default_pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
     Hyrise::get().default_lqp_cache = std::make_shared<SQLLogicalPlanCache>();
     std::cout << " - SQL plan caching switched on." << std::endl;
