@@ -6,7 +6,7 @@ from abc import ABC, abstractmethod
 from argparse import ArgumentParser, ArgumentTypeError, BooleanOptionalAction
 from dataclasses import dataclass
 import multiprocessing
-from os import path
+import os
 from pathlib import Path
 import statistics
 from subprocess import check_output, CalledProcessError
@@ -18,16 +18,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-
-VERBOSITY_LEVEL = 0
-FAIL_FAST = False
-
 DEFAULT_ENCODINGS = ["Unencoded", "Dictionary", "RunLength", "FixedStringDictionary", "LZ4"]
-
-
-def print_debug(*args, required_verbosity_level: int, **kwargs) -> None:
-    if VERBOSITY_LEVEL >= required_verbosity_level:
-        print(*args, **kwargs)
 
 
 def print_error(*args, **kwargs) -> None:
@@ -103,12 +94,12 @@ class Runtimes(DictConvertible):
 
     @classmethod
     def from_json(cls, json_path: str) -> "Runtimes":
-        json = read_json(json_path)
+        json_data = read_json(json_path)
         runtimes = cls(
-            [], f"{json['branch']}-{json['encoding']}", json["benchmark_name"], json["threading"]
+            [], f"{json_data['branch']}-{json_data['encoding']}", json_data["benchmark_name"], json_data["threading"]
         )
-        json = json["benchmark"]
-        for benchmark in json["benchmarks"]:
+        json_data = json_data["benchmark"]
+        for benchmark in json_data["benchmarks"]:
             name = benchmark["name"]
             durations: list[float] = [run["duration"] for run in benchmark["successful_runs"]]
             runtime = Runtime(name, durations)
@@ -167,11 +158,11 @@ class Metrics(DictConvertible):
 
     @classmethod
     def from_json(cls, json_path: str) -> "Metrics":
-        json_file = read_json(json_path)
-        metrics = cls([], f"{json_file['branch']}-{json_file['encoding']}", json_file["benchmark_name"])
-        json_file = json_file["benchmark"]
-        for segment in json_file["segments"]:
-            # Only consider moment == "init"
+        json_data = read_json(json_path)
+        metrics = cls([], f"{json_data['branch']}-{json_data['encoding']}", json_data["benchmark_name"])
+        json_data = json_data["benchmark"]
+        for segment in json_data["segments"]:
+            # Only consider moment == "init".
             if segment["moment"] != "init":
                 continue
             column_type = segment["column_data_type"]
@@ -196,7 +187,6 @@ def plot(results: dict[str, list], *, title: str, yaxis: str, path: str, figsize
     data = pd.DataFrame.from_dict(results, orient="index")
     data = data.transpose()
     data = data.rename(clean_encoding_name, axis='columns')
-    print_debug(data, required_verbosity_level=3)
     if data.empty:
         print_error("Data Frame is empty; no result data to show!")
         return
@@ -247,9 +237,10 @@ def plot_stats(
     g.savefig(path)
 
 
-def plot_query_timings(stats: list[Runtimes], *, benchmark_name: str, path: str, figsize: tuple[int, int] = (30, 10)) -> None:
+def plot_query_timings(stats: list[Runtimes], *, benchmark_name: str, path: str,
+                       figsize: tuple[int, int] = (30, 10)) -> None:
     stats = [stat for stat in stats if stat.threading == 'ST']
-    grouped: dict[str, list[Runtimes]] = Evaluation._group_by(stats, "encoding")
+    grouped: dict[str, list[Runtimes]] = Evaluation.group_by(stats, "encoding")
     stats_grouped_by_encoding = {
         encoding: {
             runtime.benchmark_name: runtime.median() / 1e9  # Provided in ns, wanted s
@@ -261,9 +252,7 @@ def plot_query_timings(stats: list[Runtimes], *, benchmark_name: str, path: str,
     }
     data = pd.DataFrame.from_dict(stats_grouped_by_encoding)
     data = data.rename(clean_encoding_name, axis='columns')
-    print(data)
     data = data.reindex(sorted(data.columns), axis=1)
-    print_debug(data, required_verbosity_level=3)
     f, axis = plt.subplots(1, 1, figsize=figsize)
     if data.empty:
         print_error("Data Frame is empty; no result data to show!")
@@ -276,7 +265,6 @@ def plot_query_timings(stats: list[Runtimes], *, benchmark_name: str, path: str,
         ylabel=f"Median Runtime (seconds) across all runs of the query (Logarithmic Scale)",
         logy=True
     )
-    # axis.set_xticklabels(axis.get_xticklabels(), rotation=-45)
     f.tight_layout()
     f.savefig(path)
 
@@ -435,14 +423,15 @@ class Benchmarking:
                 """
                 Create a config file as depicted in the `--full_help` of the benchmarks and return its path.
                 """
-                config_path = path.join(self._tmp_path, "config", f"{self.name}-{threading}-{encoding}-{metrics}.json")
+                config_path = os.path.join(self._tmp_path, "config",
+                                           f"{self.name}-{threading}-{encoding}-{metrics}.json")
                 config_contents = {"default": {"encoding": "Dictionary"}, "type": {"string": {"encoding": encoding}}}
-                with open(config_path, mode="w") as config:
-                    json.dump(config_contents, config)
+                with open(config_path, mode="w") as config_file:
+                    json.dump(config_contents, config_file)
                 return config_path
 
-            def run(self, config: BenchmarkConfig) -> Path:
-                self._config = config
+            def run(self, benchmark_config: BenchmarkConfig) -> Path:
+                self._config = benchmark_config
                 return Path(self._run(self._config.threading, self._config.encoding, self._config.metrics))
 
             def _run(self, threading: Literal["ST", "MT"], encoding: str, metrics: bool) -> str:
@@ -475,7 +464,7 @@ class Benchmarking:
                     git_commit = check_output(["git", "rev-parse", "HEAD"])
                 except CalledProcessError:
                     git_commit = b""
-                return path.join(
+                return os.path.join(
                     self._tmp_path,
                     f'{git_commit.decode("utf-8").strip()}-{self.name}-{threading}-{encoding}-{metrics}.json',
                 )
@@ -500,7 +489,7 @@ class Benchmarking:
                 rm_dir("tpcds_cached_tables")
 
             def _get_arguments(self, threading: Literal["ST", "MT"], encoding: str, metrics: bool) -> list[str]:
-                # TPC-DS only supports integer scales
+                # TPC-DS only supports integer scales.
                 return super()._get_arguments(threading, encoding, metrics) + [
                     "-s",
                     str(max(1, int(self._config.scale_factor))),
@@ -518,13 +507,13 @@ class Benchmarking:
             def _pre_run_cleanup(self) -> None:
                 rm_dir("imdb_data")
 
-        def locate_benchmarks(benchmarks: list[str], build_path: str, tmp_path: str) -> list[BenchmarkRunner]:
+        def locate_benchmarks(benchmark_names: list[str], build_path: str, tmp_path: str) -> list[BenchmarkRunner]:
             benchmark_objects: list[BenchmarkRunner] = []
-            for benchmark in benchmarks:
-                benchmark_path = path.join(build_path, benchmark)
-                if not path.isfile(benchmark_path):
-                    exit(f"Cannot locate {benchmark} at {benchmark_path}!")
-                benchmark_objects.append(BenchmarkRunner.create(benchmark, benchmark_path, tmp_path))
+            for benchmark_name in benchmark_names:
+                benchmark_path = os.path.join(build_path, benchmark_name)
+                if not os.path.isfile(benchmark_path):
+                    exit(f"Cannot locate {benchmark_name} at {benchmark_path}!")
+                benchmark_objects.append(BenchmarkRunner.create(benchmark_name, benchmark_path, tmp_path))
             return benchmark_objects
 
         (Path(config.tmp_path) / Path("config")).mkdir(parents=True, exist_ok=True)
@@ -536,20 +525,20 @@ class Benchmarking:
         total_runs = len(benchmarks) * len(config.encodings) * len(threading_modes)
         current_benchmark = 0
         for benchmark in benchmarks:
-            for encoding in config.encodings:
-                for threading in threading_modes:
+            for encoding_to_benchmark in config.encodings:
+                for threading_mode in threading_modes:
                     current_benchmark += 1
                     print(f"Running benchmark {current_benchmark}/{total_runs}")
-                    print(f"\tCurrently running {benchmark.name} with {encoding=} and {threading=}")
+                    print(f"\tCurrently running {benchmark.name} with {encoding_to_benchmark=} and {threading_mode=}")
                     run_config = BenchmarkConfig(
-                        encoding=encoding,
-                        threading=threading,
+                        encoding=encoding_to_benchmark,
+                        threading=threading_mode,
                         time_limit=config.time_limit,
                         scale_factor=config.scale_factor,
                         metrics=config.metrics,
                     )
                     result_path = benchmark.run(run_config)
-                    # Add encoding name to result json
+                    # Add encoding name to result json.
                     with open(result_path, mode="r") as result_json:
                         result_json_content = json.load(result_json)
                     try:
@@ -558,9 +547,9 @@ class Benchmarking:
                         git_branch = b""
                     result_with_encoding = {
                         "benchmark": result_json_content,
-                        "encoding": encoding,
+                        "encoding": encoding_to_benchmark,
                         "benchmark_name": benchmark.name,
-                        "threading": threading,
+                        "threading": threading_mode,
                         "branch": git_branch.decode("utf-8").strip(),
                     }
                     with open(result_path, mode="w") as result_json:
@@ -586,7 +575,7 @@ class Evaluation:
             now = datetime.now()
             now_date = f"{now.year}{now.month:02d}{now.day:02d}"
             now_time = f"{now.hour}{now.minute:02d}{now.second:02d}"
-            output_directory = path.join(namespace.output_directory, f"run-{now_date}-{now_time}")
+            output_directory = os.path.join(namespace.output_directory, f"run-{now_date}-{now_time}")
 
             return cls(
                 timing_benchmark_files=flatten(namespace.timing_benchmark_files),
@@ -669,14 +658,13 @@ class Evaluation:
         stats: dict[str, tuple[Mapping[Literal["ST", "MT"], Mapping[str, Runtimes]], Mapping[str, Metrics]]] = {}
         metric_comparisons, metric_paths = Evaluation._compare_metrics(config)
         timing_comparisons, timing_paths = Evaluation._compare_timing_benchmarks(config)
-        # return timing_paths
         metric_stats: dict[str, Mapping[str, Metrics]] = {}
         for benchmark_name, metrics in metric_comparisons.items():
             metric_stats[benchmark_name] = metrics
         for benchmark_name, runtimes in timing_comparisons.items():
             metrics = metric_stats[benchmark_name]
             stats[benchmark_name] = runtimes, metrics
-        plot_path = path.join(config.output_directory, "comparison.svg")
+        plot_path = os.path.join(config.output_directory, "comparison.svg")
         plot_stats(stats, path=plot_path, sharex=config.sharex, sharey=config.sharey)
         paths = metric_paths
         paths.extend(timing_paths)
@@ -685,7 +673,7 @@ class Evaluation:
 
     @staticmethod
     # Source: https://stackoverflow.com/a/5695268
-    def _group_by(array: list, key: str) -> dict[Any, list]:
+    def group_by(array: list, key: str) -> dict[Any, list]:
         values = set(map(lambda x: x.__getattribute__(key), array))
         return {value: [y for y in array if y.__getattribute__(key) == value] for value in values}
 
@@ -706,12 +694,12 @@ class Evaluation:
             ]
             if not Evaluation.is_excluded(metric.encoding, config)
         ]
-        metrics_grouped_by_benchmark: dict[str, list[Metrics]] = Evaluation._group_by(metrics_list, "benchmark_name")
+        metrics_grouped_by_benchmark: dict[str, list[Metrics]] = Evaluation.group_by(metrics_list, "benchmark_name")
         metrics_grouped_by_benchmark_and_encoding_list: dict[str, dict[str, list[Metrics]]] = {
-            benchmark: Evaluation._group_by(metrics_by_benchmark, "encoding")
+            benchmark: Evaluation.group_by(metrics_by_benchmark, "encoding")
             for benchmark, metrics_by_benchmark in metrics_grouped_by_benchmark.items()
         }
-        # Ensure that every benchmark-encoding combination only has one entry
+        # Ensure that every benchmark-encoding combination only has one entry.
         for benchmark_group in metrics_grouped_by_benchmark_and_encoding_list.values():
             for encoding_group in benchmark_group.values():
                 if len(encoding_group) > 1:
@@ -723,7 +711,7 @@ class Evaluation:
         if not config.only_comparison:
             for benchmark_name, metrics_by_benchmark in metrics_grouped_by_benchmark_and_encoding.items():
                 metrics: dict[str, Metrics] = {encoding: metric for encoding, metric in metrics_by_benchmark.items()}
-                plot_path = path.join(config.output_directory, "metrics", "plots", f"{benchmark_name}.svg")
+                plot_path = os.path.join(config.output_directory, "metrics", "plots", f"{benchmark_name}.svg")
                 Path(plot_path).parent.mkdir(parents=True, exist_ok=True)
                 metrics_to_plot: dict[str, list[int]] = {}
                 for encoding, metric in metrics.items():
@@ -744,8 +732,8 @@ class Evaluation:
                     figsize=(22, 10),
                 )
                 paths.append(Path(plot_path))
-                # Dump raw data
-                raw_file_path = path.join(config.output_directory, "metrics", "raw", f"{benchmark_name}.json")
+                # Dumps raw data.
+                raw_file_path = os.path.join(config.output_directory, "metrics", "raw", f"{benchmark_name}.json")
                 Path(raw_file_path).parent.mkdir(parents=True, exist_ok=True)
                 with open(raw_file_path, "w") as f:
                     raw_metrics = {encoding: metric.as_dict() for encoding, metric in metrics.items()}
@@ -770,18 +758,17 @@ class Evaluation:
             ]
             if not Evaluation.is_excluded(timing.encoding, config)
         ]
-        timings_grouped_by_benchmark: dict[str, list[Runtimes]] = Evaluation._group_by(timings_list, "benchmark_name")
+        timings_grouped_by_benchmark: dict[str, list[Runtimes]] = Evaluation.group_by(timings_list, "benchmark_name")
         for benchmark_name, benchmark_group in timings_grouped_by_benchmark.items():
-            plot_path = path.join(config.output_directory, "runtime", "plots", f"{benchmark_name}-queries.svg")
+            plot_path = os.path.join(config.output_directory, "runtime", "plots", f"{benchmark_name}-queries.svg")
             Path(plot_path).parent.mkdir(parents=True, exist_ok=True)
-            print(f'{benchmark_name=}')
             plot_query_timings(benchmark_group, benchmark_name=benchmark_name, path=plot_path)
             paths.append(Path(plot_path))
         timings_grouped_by_benchmark_and_encoding_list: dict[str, dict[str, list[Runtimes]]] = {
-            benchmark: Evaluation._group_by(timings_by_benchmark, "encoding")
+            benchmark: Evaluation.group_by(timings_by_benchmark, "encoding")
             for benchmark, timings_by_benchmark in timings_grouped_by_benchmark.items()
         }
-        # Ensure that every benchmark-encoding combination only has two entries, one per threading.
+        # Ensures that every benchmark-encoding combination only has two entries, one per threading.
         for benchmark_group in timings_grouped_by_benchmark_and_encoding_list.values():
             for encoding_group in benchmark_group.values():
                 if len(encoding_group) > 2:
@@ -804,7 +791,7 @@ class Evaluation:
             for threading in ["ST", "MT"]:
                 for name, timing_group in timings_grouped_by_benchmark_and_encoding.items():
                     times = timing_group[threading]
-                    plot_path = path.join(config.output_directory, "runtime", "plots", f"{name}-{threading}.svg")
+                    plot_path = os.path.join(config.output_directory, "runtime", "plots", f"{name}-{threading}.svg")
                     Path(plot_path).parent.mkdir(parents=True, exist_ok=True)
                     times_to_plot = {
                         encoding: list(map(lambda x: x.median(), runtimes.runtimes))
@@ -817,8 +804,8 @@ class Evaluation:
                         path=plot_path,
                     )
                     paths.append(Path(plot_path))
-                    # Dump raw data
-                    raw_file_path = path.join(config.output_directory, "runtime", "raw", f"{name}-{threading}.json")
+                    # Dumps raw data.
+                    raw_file_path = os.path.join(config.output_directory, "runtime", "raw", f"{name}-{threading}.json")
                     Path(raw_file_path).parent.mkdir(parents=True, exist_ok=True)
                     with open(raw_file_path, "w") as f:
                         raw_times = {encoding: runtimes.as_dict() for encoding, runtimes in times.items()}
