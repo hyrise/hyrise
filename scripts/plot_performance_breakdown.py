@@ -39,12 +39,15 @@ for benchmark_json in data["benchmarks"]:
     sum_plan_execution_duration = 0.0
 
     for run in benchmark_json["successful_runs"]:
-        if len(run["metrics"]) == 0:
-            exit("No metrics found. Did you run the benchmark with --metrics?")
-        for metrics in run["metrics"]:
+        if len(run["pipeline_metrics"]) == 0:
+            exit("No pipeline metrics found. Did you run the benchmark with --pipeline_metrics?")
+        for metrics in run["pipeline_metrics"]:
             sum_parse_duration += metrics["parse_duration"]
 
             for statement in metrics["statements"]:
+                # Plan caching should be switched off for pipeline metrics generation by the BenchmarkRunner. Otherwise,
+                # we would not have enough measurements of translation/optimization times to provide meaningful average
+                # times.
                 assert not statement["query_plan_cache_hit"], "Plan caching must be switched off for metrics tracking."
 
                 sum_sql_translation_duration += statement["sql_translation_duration"]
