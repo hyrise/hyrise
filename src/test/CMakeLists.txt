@@ -212,6 +212,7 @@ set(
     lib/storage/table_column_definition_test.cpp
     lib/storage/table_test.cpp
     lib/storage/value_segment_test.cpp
+    lib/storage/variable_string_dictionary_segment_test.cpp
     lib/tasks/chunk_compression_task_test.cpp
     lib/utils/atomic_max_test.cpp
     lib/utils/check_table_equal_test.cpp

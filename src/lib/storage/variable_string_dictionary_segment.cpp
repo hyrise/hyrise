@@ -1,7 +1,7 @@
 #include "variable_string_dictionary_segment.hpp"
 #include <numeric>
 // TODO(anyone): This requires gcc 10 or newer
-#include <ranges>
+#include <ranges>  // NOLINT(build/include_order)
 
 #include "resolve_type.hpp"
 #include "storage/variable_string_dictionary/variable_string_vector.hpp"
