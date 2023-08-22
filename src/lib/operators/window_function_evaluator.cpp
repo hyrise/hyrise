@@ -19,19 +19,24 @@
 
 namespace hyrise::window_function_evaluator {
 
-WindowFunctionEvaluator::WindowFunctionEvaluator(
-    const std::shared_ptr<const AbstractOperator>& input_operator, std::vector<ColumnID> init_partition_by_column_ids,
-    std::vector<ColumnID> init_order_by_column_ids, ColumnID init_function_argument_column_id,
-    std::shared_ptr<WindowFunctionExpression> init_window_funtion_expression)
+WindowFunctionEvaluator::WindowFunctionEvaluator(const std::shared_ptr<const AbstractOperator>& input_operator,
+                                                 std::vector<ColumnID> init_partition_by_column_ids,
+                                                 std::vector<ColumnID> init_order_by_column_ids,
+                                                 ColumnID init_function_argument_column_id,
+                                                 WindowFunction init_window_function,
+                                                 std::shared_ptr<WindowExpression> init_window,
+                                                 std::string init_output_column_name, DataType init_output_data_type)
     : AbstractReadOnlyOperator(OperatorType::WindowFunction, input_operator, nullptr,
                                std::make_unique<PerformanceData>()),
       _partition_by_column_ids(std::move(init_partition_by_column_ids)),
       _order_by_column_ids(std::move(init_order_by_column_ids)),
       _function_argument_column_id(init_function_argument_column_id),
-      _window_function_expression(std::move(init_window_funtion_expression)) {
-  Assert(
-      _function_argument_column_id != INVALID_COLUMN_ID || is_rank_like(_window_function_expression->window_function),
-      "Could not extract window function argument, although it was not rank-like.");
+      _window_function(init_window_function),
+      _window(std::move(init_window)),
+      _output_column_name(std::move(init_output_column_name)),
+      _output_data_type(init_output_data_type) {
+  Assert(_function_argument_column_id != INVALID_COLUMN_ID || is_rank_like(_window_function),
+         "Could not extract window function argument, although it was not rank-like.");
 }
 
 const std::string& WindowFunctionEvaluator::name() const {
@@ -64,7 +69,7 @@ std::string WindowFunctionEvaluator::description(const DescriptionMode descripti
 
   desc << AbstractOperator::description(description_mode) << separator;
 
-  desc << window_function_to_string.left.at(_window_function_expression->window_function) << '(';
+  desc << window_function_to_string.left.at(_window_function) << '(';
   if (_function_argument_column_id != INVALID_COLUMN_ID) {
     output_column(_function_argument_column_id);
   }
@@ -84,8 +89,7 @@ std::string WindowFunctionEvaluator::description(const DescriptionMode descripti
 }
 
 const FrameDescription& WindowFunctionEvaluator::frame_description() const {
-  const auto window = std::dynamic_pointer_cast<WindowExpression>(_window_function_expression->window());
-  return window->frame_description;
+  return _window->frame_description;
 }
 
 std::shared_ptr<AbstractOperator> WindowFunctionEvaluator::_on_deep_copy(
@@ -93,7 +97,8 @@ std::shared_ptr<AbstractOperator> WindowFunctionEvaluator::_on_deep_copy(
     [[maybe_unused]] const std::shared_ptr<AbstractOperator>& copied_right_input,
     [[maybe_unused]] std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
   return std::make_shared<WindowFunctionEvaluator>(copied_left_input, _partition_by_column_ids, _order_by_column_ids,
-                                                   _function_argument_column_id, _window_function_expression);
+                                                   _function_argument_column_id, _window_function, _window,
+                                                   _output_column_name, _output_data_type);
 }
 
 template <typename InputColumnType, WindowFunction window_function>
@@ -181,7 +186,7 @@ std::shared_ptr<const Table> WindowFunctionEvaluator::_templated_on_execute() {
 }
 
 std::shared_ptr<const Table> WindowFunctionEvaluator::_on_execute() {
-  const auto window_function = _window_function_expression->window_function;
+  const auto window_function = _window_function;
   switch (window_function) {
     case WindowFunction::Rank:
       return _templated_on_execute<NullValue, WindowFunction::Rank>();
@@ -196,7 +201,7 @@ std::shared_ptr<const Table> WindowFunctionEvaluator::_on_execute() {
   }
 
   auto result = std::shared_ptr<const Table>();
-  resolve_data_type(_window_function_expression->argument()->data_type(), [&](auto input_data_type) {
+  resolve_data_type(left_input_table()->column_data_type(_function_argument_column_id), [&](auto input_data_type) {
     using InputColumnType = typename decltype(input_data_type)::type;
     if constexpr (std::is_arithmetic_v<InputColumnType>) {
       result = [&]() {
@@ -258,8 +263,7 @@ ComputationStrategy WindowFunctionEvaluator::choose_computation_strategy() const
 }
 
 bool WindowFunctionEvaluator::is_output_nullable() const {
-  return !is_rank_like(_window_function_expression->window_function) &&
-         left_input_table()->column_is_nullable(_function_argument_column_id);
+  return !is_rank_like(_window_function) && left_input_table()->column_is_nullable(_function_argument_column_id);
 }
 
 namespace {
@@ -371,7 +375,7 @@ Buckets WindowFunctionEvaluator::materialize_into_buckets() const {
 }
 
 void WindowFunctionEvaluator::partition_and_order(Buckets& buckets) const {
-  const auto& sort_modes = dynamic_cast<const WindowExpression&>(*_window_function_expression->window()).sort_modes;
+  const auto& sort_modes = _window->sort_modes;
   const auto is_column_reversed = [&sort_modes](const auto column_index) {
     return sort_modes[column_index] == SortMode::Descending;
   };
@@ -582,8 +586,8 @@ std::shared_ptr<const Table> WindowFunctionEvaluator::annotate_input_table(
   const auto chunk_count = input_table->chunk_count();
   const auto column_count = input_table->column_count();
 
-  const auto new_column_name = _window_function_expression->as_column_name();
-  const auto new_column_type = _window_function_expression->data_type();
+  const auto new_column_name = _output_column_name;
+  const auto new_column_type = _output_data_type;
   const auto new_column_definition = TableColumnDefinition(new_column_name, new_column_type, is_output_nullable());
 
   // Create value segments for our output column.

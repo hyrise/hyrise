@@ -114,7 +114,8 @@ class WindowFunctionEvaluator : public AbstractReadOnlyOperator {
   WindowFunctionEvaluator(const std::shared_ptr<const AbstractOperator>& input_operator,
                           std::vector<ColumnID> init_partition_by_column_ids,
                           std::vector<ColumnID> init_order_by_column_ids, ColumnID init_function_argument_column_id,
-                          std::shared_ptr<WindowFunctionExpression> init_window_funtion_expression);
+                          WindowFunction init_window_function, std::shared_ptr<WindowExpression> init_window,
+                          std::string init_output_column_name, DataType init_output_data_type);
 
   const std::string& name() const override;
   std::string description(DescriptionMode description_mode) const override;
@@ -171,7 +172,10 @@ class WindowFunctionEvaluator : public AbstractReadOnlyOperator {
   std::vector<ColumnID> _partition_by_column_ids;
   std::vector<ColumnID> _order_by_column_ids;
   ColumnID _function_argument_column_id;
-  std::shared_ptr<WindowFunctionExpression> _window_function_expression;
+  WindowFunction _window_function;
+  std::shared_ptr<WindowExpression> _window;
+  std::string _output_column_name;
+  DataType _output_data_type;
 };
 
 }  // namespace window_function_evaluator
