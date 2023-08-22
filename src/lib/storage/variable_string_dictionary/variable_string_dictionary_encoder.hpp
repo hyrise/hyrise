@@ -65,12 +65,8 @@ class VariableStringDictionaryEncoder : public SegmentEncoder<VariableStringDict
     dense_values.shrink_to_fit();
 
     // Compute total compressed data size.
-    const auto total_size = std::accumulate(
-        dense_values.begin(),
-        dense_values.end(),
-        uint32_t{0},
-        [](uint32_t acc, pmr_string& value) { return acc + value.size(); }
-    );
+    const auto total_size = std::accumulate(dense_values.begin(), dense_values.end(), uint32_t{0},
+                                            [](uint32_t acc, pmr_string& value) { return acc + value.size(); });
 
     // uniform character array containing all distinct strings
     auto clob = std::make_shared<pmr_vector<char>>(pmr_vector<char>(total_size));
@@ -116,8 +112,8 @@ class VariableStringDictionaryEncoder : public SegmentEncoder<VariableStringDict
 
     // last_value_id corresponds to the maximal value id of the segment.
     const auto compressed_chunk_offset_to_value_id = std::shared_ptr<const BaseCompressedVector>(compress_vector(
-        chunk_offset_to_value_id, SegmentEncoder<VariableStringDictionaryEncoder>::vector_compression_type(),
-        allocator, {last_value_id}));
+        chunk_offset_to_value_id, SegmentEncoder<VariableStringDictionaryEncoder>::vector_compression_type(), allocator,
+        {last_value_id}));
 
     return std::make_shared<VariableStringDictionarySegment<pmr_string>>(clob, compressed_chunk_offset_to_value_id,
                                                                          offset_vector);

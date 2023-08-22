@@ -27,7 +27,7 @@ template <typename T, EraseReferencedSegmentType>
 class ReferenceSegmentIterable;
 
 template <typename T>
-requires (std::is_same_v<T, pmr_string>)
+  requires(std::is_same_v<T, pmr_string>)
 class VariableStringDictionarySegment;
 
 /**

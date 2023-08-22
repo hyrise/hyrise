@@ -18,7 +18,7 @@ class VariableStringVector;
  * Uses vector compression schemes for its attribute vector.
  */
 template <typename T>
-requires (std::is_same_v<T, pmr_string>)
+  requires(std::is_same_v<T, pmr_string>)
 class VariableStringDictionarySegment : public BaseDictionarySegment {
  public:
   VariableStringDictionarySegment(const std::shared_ptr<const pmr_vector<char>>& dictionary,
