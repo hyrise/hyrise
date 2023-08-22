@@ -308,4 +308,20 @@ TEST_F(ExpressionReductionRuleTest, ApplyToLQP) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
+TEST_F(ExpressionReductionRuleTest, CheckCacheability) {
+  const auto table_definition = TableColumnDefinitions{{"a", DataType::Int, false}, {"b", DataType::Int, true}};
+  const auto table = Table::create_dummy_table(table_definition);
+  Hyrise::get().storage_manager.add_table("agg_table", table);
+  const auto stored_table_node = StoredTableNode::make("agg_table");
+
+  const auto col_a = lqp_column_(stored_table_node, ColumnID{0});
+  const auto col_b = lqp_column_(stored_table_node, ColumnID{1});
+  const auto lqp = AggregateNode::make(
+      expression_vector(), expression_vector(sum_(col_b), count_star_(stored_table_node), avg_(col_b)),  // NOLINT
+      stored_table_node);
+  const auto lqp_result = apply_rule_with_cacheability_check(rule, lqp);
+  const auto cacheable = lqp_result.cacheable;
+  EXPECT_EQ(cacheable, true);
+}
+
 }  // namespace hyrise

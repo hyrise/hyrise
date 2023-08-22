@@ -62,7 +62,7 @@ class ExpressionReductionRule : public AbstractRule {
                                          const std::shared_ptr<AbstractLQPNode>& root_node);
 
  protected:
-  void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override;
+  IsCacheable _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override;
 };
 
 }  // namespace hyrise

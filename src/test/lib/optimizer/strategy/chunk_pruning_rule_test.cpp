@@ -480,4 +480,14 @@ TEST_F(ChunkPruningRuleTest, PredicateWithCorrelatedSubquery) {
   EXPECT_EQ(stored_table_node_1->pruned_chunk_ids(), expected_chunk_ids);
 }
 
+TEST_F(ChunkPruningRuleTest, CheckCacheability) {
+  const auto stored_table_node = StoredTableNode::make("fixed_string_compressed");
+
+  const auto predicate_node = PredicateNode::make(equals_(lqp_column_(stored_table_node, ColumnID{0}), "zzz"));
+  predicate_node->set_left_input(stored_table_node);
+
+  const auto lqp_result = StrategyBaseTest::apply_rule_with_cacheability_check(_rule, predicate_node);
+  const auto cacheable = lqp_result.cacheable;
+  EXPECT_EQ(cacheable, true);
+}
 }  // namespace hyrise

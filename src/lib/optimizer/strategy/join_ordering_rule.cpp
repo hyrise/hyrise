@@ -18,7 +18,8 @@ std::string JoinOrderingRule::name() const {
   return name;
 }
 
-void JoinOrderingRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
+IsCacheable JoinOrderingRule::_apply_to_plan_without_subqueries(
+    const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
   DebugAssert(cost_estimator, "JoinOrderingRule requires cost estimator to be set");
 
   /**
@@ -38,6 +39,8 @@ void JoinOrderingRule::_apply_to_plan_without_subqueries(const std::shared_ptr<A
   }
 
   lqp_root->set_left_input(result_lqp);
+
+  return IsCacheable::Yes;
 }
 
 std::shared_ptr<AbstractLQPNode> JoinOrderingRule::_perform_join_ordering_recursively(

@@ -23,7 +23,8 @@ std::string PredicatePlacementRule::name() const {
   return name;
 }
 
-void PredicatePlacementRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
+IsCacheable PredicatePlacementRule::_apply_to_plan_without_subqueries(
+    const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
   // The traversal functions require the existence of a root of the LQP, so make sure we have that
   const auto root_node = lqp_root->type == LQPNodeType::Root ? lqp_root : LogicalPlanRootNode::make(lqp_root);
 
@@ -34,6 +35,8 @@ void PredicatePlacementRule::_apply_to_plan_without_subqueries(const std::shared
   _push_down_traversal(root_node, LQPInputSide::Left, push_down_nodes, *estimator);
 
   _pull_up_traversal(root_node, LQPInputSide::Left);
+
+  return IsCacheable::Yes;
 }
 
 void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<AbstractLQPNode>& current_node,

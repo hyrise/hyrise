@@ -16,6 +16,15 @@ class AbstractRule;
 class AbstractLQPNode;
 
 /**
+ * Holds the result of optimizing an LQP, which consists of the optimized LQP and the information on whether it can be
+ * cached.
+ */
+struct OptimizedLogicalQueryPlan {
+  bool cacheable{true};
+  std::shared_ptr<AbstractLQPNode> logical_query_plan;
+};
+
+/**
  * Applies optimization rules to an LQP.
  * On each invocation of optimize(), these Batches are applied in the same order as they were added
  * to the Optimizer.
@@ -38,7 +47,7 @@ class Optimizer final {
    * Returns optimized version of @param input.
    * @param rule_durations may be set in order to retrieve runtime information for each applied rule.
    */
-  std::shared_ptr<AbstractLQPNode> optimize(
+  OptimizedLogicalQueryPlan optimize(
       std::shared_ptr<AbstractLQPNode> input,
       const std::shared_ptr<std::vector<OptimizerRuleMetrics>>& rule_durations = nullptr) const;
 

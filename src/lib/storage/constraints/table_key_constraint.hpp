@@ -21,7 +21,8 @@ class TableKeyConstraint final : public AbstractTableConstraint {
    * voilating the set semantics of the constraint.
    */
   TableKeyConstraint(const std::set<ColumnID>& columns, const KeyConstraintType key_type);
-  TableKeyConstraint(const std::set<ColumnID>& columns, const KeyConstraintType key_type, const CommitID last_validated_on);
+  TableKeyConstraint(const std::set<ColumnID>& columns, const KeyConstraintType key_type,
+                     const CommitID last_validated_on);
   TableKeyConstraint() = delete;
 
   const std::set<ColumnID>& columns() const;

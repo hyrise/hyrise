@@ -103,7 +103,7 @@ std::string StoredTableColumnAlignmentRule::name() const {
  * The default implementation of this function optimizes a given LQP and all of its subquery LQPs individually.
  * However, as we do not want to align StoredTableNodes per plan but across all plans, we override it accordingly.
  */
-void StoredTableColumnAlignmentRule::apply_to_plan(const std::shared_ptr<LogicalPlanRootNode>& root_node) const {
+IsCacheable StoredTableColumnAlignmentRule::apply_to_plan(const std::shared_ptr<LogicalPlanRootNode>& root_node) const {
   // (1) Collect all plans
   auto lqps = std::vector<std::shared_ptr<AbstractLQPNode>>();
   lqps.emplace_back(std::static_pointer_cast<AbstractLQPNode>(root_node));
@@ -117,9 +117,11 @@ void StoredTableColumnAlignmentRule::apply_to_plan(const std::shared_ptr<Logical
 
   // (3) Align grouped StoredTableNodes
   align_pruned_column_ids(grouped_stored_table_nodes);
+
+  return IsCacheable::Yes;
 }
 
-void StoredTableColumnAlignmentRule::_apply_to_plan_without_subqueries(
+IsCacheable StoredTableColumnAlignmentRule::_apply_to_plan_without_subqueries(
     const std::shared_ptr<AbstractLQPNode>& /*lqp_root*/) const {
   Fail("Did not expect this function to be called.");
 }

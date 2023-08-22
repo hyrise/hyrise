@@ -17,7 +17,7 @@ class JoinOrderingRule : public AbstractRule {
   std::string name() const override;
 
  protected:
-  void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override;
+  IsCacheable _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override;
 
  private:
   std::shared_ptr<AbstractLQPNode> _perform_join_ordering_recursively(
