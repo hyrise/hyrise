@@ -187,10 +187,11 @@ class Chunk : private Noncopyable {
   void finalize();
 
   /**
-   * Insert operators mark that they appended a new chunk to the table. From this moment on, the former last chunk chunk
-   * can be finalized as soon as all pending Inserts commited or rolled back. After each commit or rollback, an Insert
-   * operator operator tries to finalize the chunk(s) where it inserted data. If it is finalizable (i.e., it reached the
-   * target size and a new chunk was added to the table) and no Inserts are pending, the chunk is set immutable.
+   * Insert operators mark that they appended a new chunk to the table. From this moment on, the former last chunk can
+   * be finalized as soon as all pending Inserts commited or rolled back (which can also be immediately). After each
+   * commit or rollback, an Insert operator tries to finalize the chunks it inserted data into. If these chunks are
+   * finalizable (i.e., they reached the target size and a new chunk was added to the table) and no Inserts are pending,
+   * the chunk is set immutable.
    */
   void mark_as_finalizable();
   void try_finalize();

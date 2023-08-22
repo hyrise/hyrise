@@ -5,6 +5,9 @@
 #include "base_test.hpp"
 
 #include "hyrise.hpp"
+#include "operators/insert.hpp"
+#include "operators/projection.hpp"
+#include "operators/table_wrapper.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/task_queue.hpp"
 #include "sql/sql_pipeline_builder.hpp"
@@ -296,14 +299,28 @@ TEST_F(StressTest, ConcurrentInsertsFinalizeChunks) {
   Hyrise::get().default_lqp_cache = std::make_shared<SQLLogicalPlanCache>();
 
   const auto num_threads = 100;
-  const auto num_inserts = 1'000;
+  const auto num_inserts = 5'000;
   auto threads = std::vector<std::thread>{};
   threads.reserve(num_threads);
 
   for (auto thread_id = 0; thread_id < num_threads; ++thread_id) {
     threads.emplace_back([]() {
       for (auto i = 0; i < num_inserts; ++i) {
-        SQLPipelineBuilder{"INSERT INTO table_a VALUES(1);"}.create_pipeline().get_result_table();
+        // Commit only 50% of transactions. Thus, there should be committed and rolled back operators that both finalize
+        // chunks.
+        const auto do_commit = num_inserts % 2 == 0;
+        const auto table_wrapper = std::make_shared<TableWrapper>(Projection::dummy_table());
+        const auto projection = std::make_shared<Projection>(table_wrapper, expression_vector(value_(1)));
+        const auto insert = std::make_shared<Insert>("table_a", projection);
+        const auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
+        insert->set_transaction_context(transaction_context);
+        execute_all({table_wrapper, projection, insert});
+        EXPECT_FALSE(insert->execute_failed());
+        if (do_commit) {
+          transaction_context->commit();
+        } else {
+          transaction_context->rollback(RollbackReason::User);
+        }
       }
     });
   }
@@ -312,8 +329,9 @@ TEST_F(StressTest, ConcurrentInsertsFinalizeChunks) {
     thread.join();
   }
 
-  EXPECT_EQ(table->chunk_count(), 50'000);
-  EXPECT_EQ(table->row_count(), 100'000);
+  // 100 threads * 5'000 insertions = 500'000 tuples in 250'000 chunks with chunk size 2.
+  EXPECT_EQ(table->chunk_count(), 250'000);
+  EXPECT_EQ(table->row_count(), 500'000);
 
   const auto immutable_chunk_count = table->chunk_count() - 1;
   for (auto chunk_id = ChunkID{0}; chunk_id < immutable_chunk_count; ++chunk_id) {

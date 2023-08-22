@@ -75,31 +75,34 @@ TEST_F(ChunkCompressionTaskTest, DictionarySize) {
 }
 
 TEST_F(ChunkCompressionTaskTest, CompressionWithAbortedInsert) {
-  auto table = load_table("resources/test_data/tbl/compression_input.tbl", ChunkOffset{6});
+  const auto table = load_table("resources/test_data/tbl/compression_input.tbl", ChunkOffset{6});
   Hyrise::get().storage_manager.add_table("table_insert", table);
 
-  auto gt1 = std::make_shared<GetTable>("table_insert");
+  const auto gt1 = std::make_shared<GetTable>("table_insert");
   gt1->execute();
 
-  auto ins = std::make_shared<Insert>("table_insert", gt1);
+  const auto ins = std::make_shared<Insert>("table_insert", gt1);
   auto context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
   ins->set_transaction_context(context);
   ins->execute();
   context->rollback(RollbackReason::User);
 
-  ASSERT_EQ(table->chunk_count(), 4u);
+  ASSERT_EQ(table->chunk_count(), 4);
 
-  table->get_chunk(ChunkID{2})->finalize();
+  // The last two chunks were created by the Insert operator. Even though it was rolled back, it finalized the first
+  // chunk it created. The last created chunk was not finalized yet.
+  EXPECT_FALSE(table->get_chunk(ChunkID{2})->is_mutable());
+  EXPECT_TRUE(table->get_chunk(ChunkID{3})->is_mutable());
   table->get_chunk(ChunkID{3})->finalize();
 
-  auto compression = std::make_shared<ChunkCompressionTask>(
+  const auto compression = std::make_shared<ChunkCompressionTask>(
       "table_insert", std::vector<ChunkID>{ChunkID{0}, ChunkID{1}, ChunkID{2}, ChunkID{3}});
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks({compression});
 
   for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count() - 1; ++chunk_id) {
-    auto dict_segment =
+    const auto dict_segment =
         std::dynamic_pointer_cast<const BaseDictionarySegment>(table->get_chunk(chunk_id)->get_segment(ColumnID{0}));
-    ASSERT_NE(dict_segment, nullptr);
+    ASSERT_TRUE(dict_segment);
   }
 
   auto gt2 = std::make_shared<GetTable>("table_insert");
@@ -108,7 +111,7 @@ TEST_F(ChunkCompressionTaskTest, CompressionWithAbortedInsert) {
   context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
   validate->set_transaction_context(context);
   validate->execute();
-  EXPECT_EQ(validate->get_output()->row_count(), 12u);
+  EXPECT_EQ(validate->get_output()->row_count(), 12);
 }
 
 }  // namespace hyrise

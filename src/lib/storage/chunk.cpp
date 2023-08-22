@@ -306,9 +306,19 @@ void Chunk::try_finalize() {
   // Finalize if the chunk was marked finalizable (i.e., it reached the target size and a new chunk was added to the
   // table), it is still mutable and all pending Insert operators are either commited or rolled back. We do not have to
   // set the max_begin_cid here since committed Insert operators already set it.
-  if (_is_finalizable && is_mutable() && _mvcc_data->pending_inserts() == 0) {
-    _is_mutable = false;
+  if (!_is_finalizable || !is_mutable() || _mvcc_data->pending_inserts() != 0) {
+    return;
+  }
+
+  // Mark chunk as immutable. fetch_and() is only defined for integral types, so we use compare_exchange_strong().
+  auto true_type = true;
+  if (_is_mutable.compare_exchange_strong(true_type, false)) {
+    DebugAssert(true_type, "Value exchanged but value was actually false.");
+    // We were the first ones to mark the chunk as immutable. Thus, we are the ones to take care of anything that needs
+    // to be done. In the future, this can mean to start background statistics generation, encoding, etc.
     _is_finalizable = false;
+  } else {
+    DebugAssert(!true_type, "Value not exchanged but value was actually true.");
   }
 }
 

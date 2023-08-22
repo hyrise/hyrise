@@ -348,4 +348,202 @@ TEST_F(OperatorsInsertTest, SetMaxBeginCID) {
   EXPECT_EQ(chunk->mvcc_data()->max_begin_cid.load(), CommitID{2});
 }
 
+// We are the last pending Insert operator for a chunk. Thus, we finalize it on commit/rollback.
+TEST_F(OperatorsInsertTest, FinalizeSingleChunk) {
+  for (const auto do_commit : {true, false}) {
+    const auto column_definitions = TableColumnDefinitions{{"a", DataType::Int, false}};
+    const auto target_table =
+        std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2}, UseMvcc::Yes);
+    if (Hyrise::get().storage_manager.has_table("target_table")) {
+      Hyrise::get().storage_manager.drop_table("target_table");
+    }
+    Hyrise::get().storage_manager.add_table("target_table", target_table);
+
+    const auto values_to_insert = std::make_shared<Table>(column_definitions, TableType::Data);
+    values_to_insert->append({int32_t{1}});
+    values_to_insert->append({int32_t{2}});
+
+    const auto table_wrapper = std::make_shared<TableWrapper>(values_to_insert);
+    const auto insert = std::make_shared<Insert>("target_table", table_wrapper);
+    const auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
+
+    EXPECT_EQ(target_table->chunk_count(), 0);
+    insert->set_transaction_context(transaction_context);
+    execute_all({table_wrapper, insert});
+    EXPECT_FALSE(insert->execute_failed());
+    ASSERT_EQ(target_table->chunk_count(), 1);
+
+    EXPECT_TRUE(target_table->last_chunk()->is_mutable());
+    EXPECT_EQ(target_table->last_chunk()->mvcc_data()->pending_inserts(), 1);
+    // Allow Insert to finalize chunk.
+    target_table->last_chunk()->mark_as_finalizable();
+
+    if (do_commit) {
+      transaction_context->commit();
+    } else {
+      transaction_context->rollback(RollbackReason::User);
+    }
+
+    EXPECT_FALSE(target_table->last_chunk()->is_mutable());
+    EXPECT_EQ(target_table->last_chunk()->mvcc_data()->pending_inserts(), 0);
+  }
+}
+
+// Multiple Insert operators insert into the same chunk. The operator that finishes last finalizes the chunk on commit/
+// rollback.
+TEST_F(OperatorsInsertTest, FinalizeSingleChunkMultipleOperators) {
+  for (const auto do_commit : {true, false}) {
+    const auto column_definitions = TableColumnDefinitions{{"a", DataType::Int, false}};
+    const auto target_table =
+        std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2}, UseMvcc::Yes);
+    if (Hyrise::get().storage_manager.has_table("target_table")) {
+      Hyrise::get().storage_manager.drop_table("target_table");
+    }
+    Hyrise::get().storage_manager.add_table("target_table", target_table);
+
+    EXPECT_EQ(target_table->chunk_count(), 0);
+
+    const auto transaction_contexts = std::vector{
+        Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No),
+        Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No),
+    };
+
+    for (auto& transaction_context : transaction_contexts) {
+      const auto values_to_insert = std::make_shared<Table>(column_definitions, TableType::Data);
+      values_to_insert->append({int32_t{1}});
+
+      const auto table_wrapper = std::make_shared<TableWrapper>(values_to_insert);
+      const auto insert = std::make_shared<Insert>("target_table", table_wrapper);
+
+      insert->set_transaction_context(transaction_context);
+      execute_all({table_wrapper, insert});
+      EXPECT_FALSE(insert->execute_failed());
+    }
+
+    ASSERT_EQ(target_table->chunk_count(), 1);
+    EXPECT_TRUE(target_table->last_chunk()->is_mutable());
+    EXPECT_EQ(target_table->last_chunk()->mvcc_data()->pending_inserts(), 2);
+    // Allow Inserts to finalize chunk.
+    target_table->last_chunk()->mark_as_finalizable();
+
+    // The first operator finishes, but it does not finalize the chunk since the second operator is still pending.
+    if (do_commit) {
+      transaction_contexts[0]->commit();
+    } else {
+      transaction_contexts[0]->rollback(RollbackReason::User);
+    }
+    EXPECT_TRUE(target_table->last_chunk()->is_mutable());
+    EXPECT_EQ(target_table->last_chunk()->mvcc_data()->pending_inserts(), 1);
+
+    // The second operator finalizes the chunk once it finishes.
+    if (do_commit) {
+      transaction_contexts[1]->commit();
+    } else {
+      transaction_contexts[1]->rollback(RollbackReason::User);
+    }
+    EXPECT_FALSE(target_table->last_chunk()->is_mutable());
+    EXPECT_EQ(target_table->last_chunk()->mvcc_data()->pending_inserts(), 0);
+  }
+}
+
+// We insert into multiple chunks, which we finalize on commit/rollback.
+TEST_F(OperatorsInsertTest, FinalizeMultipleChunks) {
+  for (const auto do_commit : {true, false}) {
+    const auto column_definitions = TableColumnDefinitions{{"a", DataType::Int, false}};
+    const auto target_table =
+        std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2}, UseMvcc::Yes);
+    if (Hyrise::get().storage_manager.has_table("target_table")) {
+      Hyrise::get().storage_manager.drop_table("target_table");
+    }
+    Hyrise::get().storage_manager.add_table("target_table", target_table);
+
+    const auto values_to_insert = std::make_shared<Table>(column_definitions, TableType::Data);
+    for (auto value = int32_t{0}; value < 9; ++value) {
+      values_to_insert->append({value});
+    }
+
+    const auto table_wrapper = std::make_shared<TableWrapper>(values_to_insert);
+    const auto insert = std::make_shared<Insert>("target_table", table_wrapper);
+    const auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
+
+    EXPECT_EQ(target_table->chunk_count(), 0);
+    insert->set_transaction_context(transaction_context);
+    execute_all({table_wrapper, insert});
+    EXPECT_FALSE(insert->execute_failed());
+    ASSERT_EQ(target_table->chunk_count(), 5);
+
+    for (auto chunk_id = ChunkID{0}; chunk_id < 5; ++chunk_id) {
+      EXPECT_TRUE(target_table->get_chunk(chunk_id)->is_mutable());
+      EXPECT_EQ(target_table->get_chunk(chunk_id)->mvcc_data()->pending_inserts(), 1);
+    }
+
+    if (do_commit) {
+      transaction_context->commit();
+    } else {
+      transaction_context->rollback(RollbackReason::User);
+    }
+
+    // The last chunk is not finalized since it is not full.
+    EXPECT_TRUE(target_table->last_chunk()->is_mutable());
+    EXPECT_EQ(target_table->last_chunk()->mvcc_data()->pending_inserts(), 0);
+
+    // Previous chunks are finalized by ourselves.
+    for (auto chunk_id = ChunkID{0}; chunk_id < 4; ++chunk_id) {
+      EXPECT_FALSE(target_table->get_chunk(chunk_id)->is_mutable());
+      EXPECT_EQ(target_table->get_chunk(chunk_id)->mvcc_data()->pending_inserts(), 0);
+    }
+  }
+}
+
+// No Insert operator is pending for the last completely filled chunk and we add a new one. Thus, we finalize it
+// immediately on execution.
+TEST_F(OperatorsInsertTest, FinalizePreviousChunk) {
+  const auto column_definitions = TableColumnDefinitions{{"a", DataType::Int, false}};
+  const auto target_table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2}, UseMvcc::Yes);
+  Hyrise::get().storage_manager.add_table("target_table", target_table);
+
+  // The first Insert operator creates and fills the first chunk but does not finalize it itself.
+  {
+    const auto values_to_insert = std::make_shared<Table>(column_definitions, TableType::Data);
+    values_to_insert->append({int32_t{1}});
+    values_to_insert->append({int32_t{1}});
+
+    const auto table_wrapper = std::make_shared<TableWrapper>(values_to_insert);
+    const auto insert = std::make_shared<Insert>("target_table", table_wrapper);
+    const auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
+
+    EXPECT_EQ(target_table->chunk_count(), 0);
+    insert->set_transaction_context(transaction_context);
+    execute_all({table_wrapper, insert});
+    EXPECT_FALSE(insert->execute_failed());
+    ASSERT_EQ(target_table->chunk_count(), 1);
+    transaction_context->commit();
+  }
+
+  // The first chunk is full, but it is not finalized yet: No new mutable chunk has been appended yet.
+  EXPECT_TRUE(target_table->last_chunk()->is_mutable());
+  EXPECT_EQ(target_table->last_chunk()->mvcc_data()->pending_inserts(), 0);
+
+  // The second Insert operator creates the second chunk and immediately finalizes the first chunk.
+  {
+    const auto values_to_insert = std::make_shared<Table>(column_definitions, TableType::Data);
+    values_to_insert->append({int32_t{1}});
+
+    const auto table_wrapper = std::make_shared<TableWrapper>(values_to_insert);
+    const auto insert = std::make_shared<Insert>("target_table", table_wrapper);
+    const auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
+
+    EXPECT_EQ(target_table->chunk_count(), 1);
+    insert->set_transaction_context(transaction_context);
+    execute_all({table_wrapper, insert});
+    EXPECT_FALSE(insert->execute_failed());
+
+    // When adding the new chunk, the Insert operator finalizes the previous chunk.
+    ASSERT_EQ(target_table->chunk_count(), 2);
+    EXPECT_FALSE(target_table->get_chunk(ChunkID{0})->is_mutable());
+    EXPECT_TRUE(target_table->get_chunk(ChunkID{1})->is_mutable());
+    transaction_context->commit();
+  }
+}
+
 }  // namespace hyrise
