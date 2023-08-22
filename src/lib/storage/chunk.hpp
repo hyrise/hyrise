@@ -181,8 +181,8 @@ class Chunk : private Noncopyable {
   void set_cleanup_commit_id(CommitID cleanup_commit_id);
 
   /**
-   * Executes tasks that are connected with finalizing a chunk. Currently, chunks are made immutable, and
-   * depending on skip_mvcc_check, the MVCC max_begin_cid is set. Finalizing a chunk is the inserter's responsibility.
+   * Executes tasks that are connected with finalizing a chunk. Currently, chunks are made immutable, and if not already
+   * done by Insert operators, the MVCC max_begin_cid is set. Finalizing a chunk is the inserter's responsibility.
    */
   void finalize();
 
