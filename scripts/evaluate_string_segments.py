@@ -261,6 +261,40 @@ def plot_stats(
     g.savefig(path)
 
 
+def plot_query_timings(stats: list[Runtimes], *, benchmark_name: str, path: str, figsize: tuple[int, int] = (30, 10)) -> None:
+    stats = [stat for stat in stats if stat.threading == 'ST']
+    grouped: dict[str, list[Runtimes]] = Evaluation._group_by(stats, "encoding")
+    stats_grouped_by_encoding = {
+        encoding: {
+            runtime.benchmark_name: runtime.median() / 1e9  # Provided in ns, wanted s
+            for runtime
+            in flatten(list(map(lambda x: x.runtimes, runtimes)))
+        }
+        for encoding, runtimes
+        in grouped.items()
+    }
+    data = pd.DataFrame.from_dict(stats_grouped_by_encoding)
+    data = data.rename(clean_encoding_name, axis='columns')
+    print(data)
+    data = data.reindex(sorted(data.columns), axis=1)
+    print_debug(data, required_verbosity_level=3)
+    f, axis = plt.subplots(1, 1, figsize=figsize)
+    if data.empty:
+        print_error("Data Frame is empty; no result data to show!")
+        return
+    data.plot(
+        kind="bar",
+        ax=axis,
+        title=f"Query times for benchmark {benchmark_name} (ST)",
+        xlabel="Queries",
+        ylabel=f"Median Runtime (seconds) across all runs of the query (Logarithmic Scale)",
+        logy=True
+    )
+    # axis.set_xticklabels(axis.get_xticklabels(), rotation=-45)
+    f.tight_layout()
+    f.savefig(path)
+
+
 class Benchmarking:
     @dataclass(frozen=True)
     class Config:
@@ -650,6 +684,7 @@ class Evaluation:
         stats: dict[str, tuple[Mapping[Literal["ST", "MT"], Mapping[str, Runtimes]], Mapping[str, Metrics]]] = {}
         metric_comparisons, metric_paths = Evaluation._compare_metrics(config)
         timing_comparisons, timing_paths = Evaluation._compare_timing_benchmarks(config)
+        # return timing_paths
         metric_stats: dict[str, Mapping[str, Metrics]] = {}
         for benchmark_name, metrics in metric_comparisons.items():
             metric_stats[benchmark_name] = metrics
@@ -693,7 +728,7 @@ class Evaluation:
         for benchmark_group in metrics_grouped_by_benchmark_and_encoding_list.values():
             for encoding_group in benchmark_group.values():
                 if len(encoding_group) > 1:
-                    exit(len(encoding_group))
+                    raise RuntimeError(f'Too many encoding groups: {len(encoding_group)}')
         metrics_grouped_by_benchmark_and_encoding: dict[str, dict[str, Metrics]] = {
             benchmark: {encoding: entries[0] for encoding, entries in group.items()}
             for benchmark, group in metrics_grouped_by_benchmark_and_encoding_list.items()
@@ -749,6 +784,12 @@ class Evaluation:
             if not Evaluation.is_excluded(timing.encoding, config)
         ]
         timings_grouped_by_benchmark: dict[str, list[Runtimes]] = Evaluation._group_by(timings_list, "benchmark_name")
+        for benchmark_name, benchmark_group in timings_grouped_by_benchmark.items():
+            plot_path = path.join(config.output_directory, "runtime", "plots", f"{benchmark_name}-queries.svg")
+            Path(plot_path).parent.mkdir(parents=True, exist_ok=True)
+            print(f'{benchmark_name=}')
+            plot_query_timings(benchmark_group, benchmark_name=benchmark_name, path=plot_path)
+            paths.append(Path(plot_path))
         timings_grouped_by_benchmark_and_encoding_list: dict[str, dict[str, list[Runtimes]]] = {
             benchmark: Evaluation._group_by(timings_by_benchmark, "encoding")
             for benchmark, timings_by_benchmark in timings_grouped_by_benchmark.items()
