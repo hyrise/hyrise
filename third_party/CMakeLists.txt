@@ -70,6 +70,10 @@ endif()
 add_library(cpp-btree INTERFACE)
 target_include_directories(cpp-btree INTERFACE cpp-btree/include/btree)
 
+# Build concurrentqueue
+add_library(concurrentqueue INTERFACE)
+target_include_directories(concurrentqueue INTERFACE concurrentqueue)
+
 
 # Build flat-hash-map
 add_library(flat-hash-map INTERFACE)

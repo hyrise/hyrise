@@ -54,7 +54,7 @@ class Topology final : public Noncopyable {
   /**
    * Use a non-NUMA topology.
    * The topology has one node, and a number of cores equal to either max_num_cores or the number of physically
-   * availyble cores, whichever one is lower.
+   * available cores, whichever one is lower.
    *
    * Calls _init_non_numa_topology() internally.
    */
