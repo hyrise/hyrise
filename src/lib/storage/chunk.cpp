@@ -311,14 +311,15 @@ void Chunk::try_finalize() {
   }
 
   // Mark chunk as immutable. fetch_and() is only defined for integral types, so we use compare_exchange_strong().
-  auto true_type = true;
-  if (_is_mutable.compare_exchange_strong(true_type, false)) {
-    DebugAssert(true_type, "Value exchanged but value was actually false.");
-    // We were the first ones to mark the chunk as immutable. Thus, we are the ones to take care of anything that needs
-    // to be done. In the future, this can mean to start background statistics generation, encoding, etc.
+  auto success = true;
+  if (_is_mutable.compare_exchange_strong(success, false)) {
+    DebugAssert(success, "Value exchanged but value was actually false.");
+    // We were the first ones to mark the chunk as immutable. Thus, have to take care of anything else that needs to be
+    // done. In the future, this can mean to start background statistics generation, encoding, etc.
     _is_finalizable = false;
   } else {
-    DebugAssert(!true_type, "Value not exchanged but value was actually true.");
+    // Another thread is about to finalize this chunk. Do nothing.
+    DebugAssert(!success, "Value not exchanged but value was actually true.");
   }
 }
 
