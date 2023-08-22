@@ -4,13 +4,13 @@
 | ------------------------- | ---------------- | -------- | ------------------------------------- |
 | autoconf                  | >= 2.69          |    All   |                                    No |
 | boost                     | >= 1.70.0        |    All   |                                    No |
-| clang                     | >= 11.0          |    All   |                 Yes, if gcc installed |
-| clang-format              | >= 11.0          |    All   |                      Yes (formatting) |
-| clang-tidy                | >= 11.0          |    All   |                         Yes (linting) |
+| clang                     | >= 13.0          |    All   |                 Yes, if gcc installed |
+| clang-format              | >= 13.0          |    All   |                      Yes (formatting) |
+| clang-tidy                | >= 13.0          |    All   |                         Yes (linting) |
 | coreutils                 | any              |    Mac   |                         Yes (scripts) |
 | cmake                     | >= 3.18          |    All   |                                    No |
 | dos2unix                  | any              |    All   |                         Yes (linting) |
-| gcc                       | >= 9.1           |    All   | Yes, if clang installed, not for OS X |
+| gcc                       | >= 10.0          |    All   | Yes, if clang installed, not for OS X |
 | gcovr                     | >= 3.2           |    All   |                        Yes (coverage) |
 | graphviz                  | any              |    All   |             Yes (query visualization) |
 | libnuma-dev               | any              |    Linux |                            Yes (numa) |
