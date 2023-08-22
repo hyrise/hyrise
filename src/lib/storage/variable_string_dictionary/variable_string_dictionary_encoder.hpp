@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <limits>
 #include <memory>
+#include <numeric>
 
 #include "storage/base_segment_encoder.hpp"
 #include "storage/dictionary_segment.hpp"
@@ -64,10 +65,12 @@ class VariableStringDictionaryEncoder : public SegmentEncoder<VariableStringDict
     dense_values.shrink_to_fit();
 
     // Compute total compressed data size.
-    auto total_size = uint32_t{0};
-    for (const auto& value : dense_values) {
-      total_size += value.size();
-    }
+    const auto total_size = std::accumulate(
+        dense_values.begin(),
+        dense_values.end(),
+        uint32_t{0},
+        [](uint32_t acc, pmr_string& value) { return acc + value.size(); }
+    );
 
     // uniform character array containing all distinct strings
     auto clob = std::make_shared<pmr_vector<char>>(pmr_vector<char>(total_size));
@@ -76,29 +79,29 @@ class VariableStringDictionaryEncoder : public SegmentEncoder<VariableStringDict
     auto string_offsets = std::unordered_map<pmr_string, uint32_t>();
     // Maps string to ValueID for attribute vector.
     auto string_value_ids = std::unordered_map<pmr_string, ValueID>();
-    auto current_offset = uint32_t{0};
-    auto current_value_id = ValueID{0};
+    auto last_offset = uint32_t{0};
+    auto last_value_id = ValueID{0};
 
     // Construct clob without null bytes.
     for (const auto& value : dense_values) {
-      memcpy(clob->data() + current_offset, value.c_str(), value.size());
-      string_offsets[value] = current_offset;
-      string_value_ids[value] = current_value_id++;
-      current_offset += value.size();
+      memcpy(clob->data() + last_offset, value.c_str(), value.size());
+      string_offsets[value] = last_offset;
+      string_value_ids[value] = last_value_id++;
+      last_offset += value.size();
     }
 
     // Maps ChunkOffset to ValueID.
-    auto chunk_offset_to_value_id = std::make_shared<pmr_vector<uint32_t>>(segment_size);
+    auto chunk_offset_to_value_id = pmr_vector<uint32_t>(static_cast<size_t>(segment_size));
     auto offset_vector = std::make_shared<pmr_vector<uint32_t>>(pmr_vector<uint32_t>(dense_values.size()));
     offset_vector->shrink_to_fit();
 
     // Construct attribute and offset vector.
     for (const auto& [string, chunk_offsets] : string_to_chunk_offsets) {
-      const auto here_offset = string_offsets[string];
-      const auto here_value_id = string_value_ids[string];
-      (*offset_vector)[here_value_id] = here_offset;
+      const auto offset = string_offsets[string];
+      const auto value_id = string_value_ids[string];
+      (*offset_vector)[value_id] = offset;
       for (const auto chunk_offset : chunk_offsets) {
-        (*chunk_offset_to_value_id)[chunk_offset] = here_value_id;
+        chunk_offset_to_value_id[chunk_offset] = value_id;
       }
     }
 
@@ -107,14 +110,14 @@ class VariableStringDictionaryEncoder : public SegmentEncoder<VariableStringDict
     for (auto offset = ChunkOffset{0}; offset < segment_size; ++offset) {
       const auto is_null = null_values[offset];
       if (is_null) {
-        (*chunk_offset_to_value_id)[offset] = null_value_id;
+        chunk_offset_to_value_id[offset] = null_value_id;
       }
     }
 
-    const auto max_value_id = current_value_id;
+    // last_value_id corresponds to the maximal value id of the segment.
     const auto compressed_chunk_offset_to_value_id = std::shared_ptr<const BaseCompressedVector>(compress_vector(
-        *chunk_offset_to_value_id, SegmentEncoder<VariableStringDictionaryEncoder>::vector_compression_type(),
-        allocator, {max_value_id}));
+        chunk_offset_to_value_id, SegmentEncoder<VariableStringDictionaryEncoder>::vector_compression_type(),
+        allocator, {last_value_id}));
 
     return std::make_shared<VariableStringDictionarySegment<pmr_string>>(clob, compressed_chunk_offset_to_value_id,
                                                                          offset_vector);

@@ -41,9 +41,11 @@ class VariableStringDictionarySegment : public BaseDictionarySegment {
     // performance critical - not in cpp to help with inlining
     const auto value_id = _decompressor->get(chunk_offset);
     if (value_id == null_value_id()) {
+      // We do not increase SegmentAccessCounter here because we do not access the dictionary.
       return std::nullopt;
     }
 
+    // TODO(student): Does this impact performance?
     return typed_value_of_value_id(ValueID{value_id});
   }
 

@@ -209,19 +209,17 @@ std::shared_ptr<VariableStringDictionarySegment<T>> BinaryParser::_import_variab
     std::ifstream& file, ChunkOffset row_count) {
   // Read attribute vector compression type and use it to decompress.
   const auto compressed_vector_type_id = _read_value<CompressedVectorTypeID>(file);
-  auto attribute_vector = _import_attribute_vector(file, row_count, compressed_vector_type_id);
+  const auto attribute_vector = _import_attribute_vector(file, row_count, compressed_vector_type_id);
 
   // Read offset vector.
   const auto offset_vector_size = _read_value<uint32_t>(file);
-  auto offset_vector = _read_values<uint32_t>(file, offset_vector_size);
+  const auto offset_vector = std::make_shared<pmr_vector<uint32_t>>(_read_values<uint32_t>(file, offset_vector_size));
 
   // Read dictionary.
   const auto dictionary_size = _read_value<uint32_t>(file);
-  auto dictionary = _read_values<char>(file, dictionary_size);
+  const auto dictionary = std::make_shared<pmr_vector<char>>(_read_values<char>(file, dictionary_size));
 
-  return std::make_shared<VariableStringDictionarySegment<pmr_string>>(
-      std::make_shared<pmr_vector<char>>(dictionary), attribute_vector,
-      std::make_shared<pmr_vector<uint32_t>>(std::move(offset_vector)));
+  return std::make_shared<VariableStringDictionarySegment<pmr_string>>(dictionary, attribute_vector, offset_vector);
 }
 
 std::shared_ptr<FixedStringDictionarySegment<pmr_string>> BinaryParser::_import_fixed_string_dictionary_segment(

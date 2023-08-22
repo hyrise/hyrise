@@ -39,8 +39,7 @@ template <typename T>
 AllTypeVariant VariableStringDictionarySegment<T>::operator[](const ChunkOffset chunk_offset) const {
   PerformanceWarning("operator[] used");
   DebugAssert(chunk_offset != INVALID_CHUNK_OFFSET, "Passed chunk offset must be valid.");
-  // TODO(student): Fix access counter.
-  // access_counter[SegmentAccessCounter::AccessType::Dictionary] += 1;
+
   const auto value = get_typed_value(chunk_offset);
   return value ? value.value() : NULL_VALUE;
 }
@@ -82,8 +81,9 @@ EncodingType VariableStringDictionarySegment<T>::encoding_type() const {
 template <typename T>
 ValueID VariableStringDictionarySegment<T>::lower_bound(const AllTypeVariant& value) const {
   DebugAssert(!variant_is_null(value), "Null value passed.");
-  //  access_counter[SegmentAccessCounter::AccessType::Dictionary] +=
-  //      static_cast<uint64_t>(std::ceil(std::log2(_offset_vector->size())));
+  access_counter[SegmentAccessCounter::AccessType::Dictionary] +=
+      static_cast<uint64_t>(std::ceil(std::log2(_offset_vector->size())));
+
   const auto typed_value = boost::get<pmr_string>(value);
 
   const auto value_ids = std::ranges::iota_view{size_t{0}, _offset_vector->size()};
@@ -100,8 +100,8 @@ ValueID VariableStringDictionarySegment<T>::lower_bound(const AllTypeVariant& va
 template <typename T>
 ValueID VariableStringDictionarySegment<T>::upper_bound(const AllTypeVariant& value) const {
   DebugAssert(!variant_is_null(value), "Null value passed.");
-  //  access_counter[SegmentAccessCounter::AccessType::Dictionary] +=
-  //    static_cast<uint64_t>(std::ceil(std::log2(_offset_vector->size())));
+  access_counter[SegmentAccessCounter::AccessType::Dictionary] +=
+    static_cast<uint64_t>(std::ceil(std::log2(_offset_vector->size())));
   const auto typed_value = boost::get<pmr_string>(value);
 
   const auto value_ids = std::ranges::iota_view{size_t{0}, _offset_vector->size()};
@@ -117,6 +117,7 @@ ValueID VariableStringDictionarySegment<T>::upper_bound(const AllTypeVariant& va
 
 template <typename T>
 AllTypeVariant VariableStringDictionarySegment<T>::value_of_value_id(const ValueID value_id) const {
+  // We do not increase SegmentAccessCounter in true case because we do not access the dictionary.
   return value_id == null_value_id() ? NULL_VALUE : typed_value_of_value_id(value_id);
 }
 
