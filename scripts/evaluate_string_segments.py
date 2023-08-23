@@ -168,17 +168,17 @@ class Metrics(DictConvertible):
             column_type = segment["column_data_type"]
             column_name = segment["column_name"]
             estimated_size = segment["estimated_size_in_bytes"]
-            metrics.memory_consumptions.append(
-                MemoryConsumption(column_name, column_type, estimated_size)
-            )
+            metrics.memory_consumptions.append(MemoryConsumption(column_name, column_type, estimated_size))
         return metrics
 
 
 def clean_encoding_name(encoding: str) -> str:
-    return encoding_without_branch\
-        if (encoding_without_branch := encoding.split('-')[-1]) in DEFAULT_ENCODINGS\
-        or encoding_without_branch.split(' ')[0] in DEFAULT_ENCODINGS\
+    return (
+        encoding_without_branch
+        if (encoding_without_branch := encoding.split("-")[-1]) in DEFAULT_ENCODINGS
+        or encoding_without_branch.split(" ")[0] in DEFAULT_ENCODINGS
         else encoding
+    )
 
 
 def plot(results: dict[str, list], *, title: str, yaxis: str, path: str, figsize: tuple[int, int] = (15, 10)) -> None:
@@ -186,7 +186,7 @@ def plot(results: dict[str, list], *, title: str, yaxis: str, path: str, figsize
     # The transposing of the orientation is done to allow for empty cells.
     data = pd.DataFrame.from_dict(results, orient="index")
     data = data.transpose()
-    data = data.rename(clean_encoding_name, axis='columns')
+    data = data.rename(clean_encoding_name, axis="columns")
     if data.empty:
         print_error("Data Frame is empty; no result data to show!")
         return
@@ -223,11 +223,14 @@ def refine_stats(
 
 
 def plot_stats(
-    stats: dict[str, tuple[Mapping[Literal["ST", "MT"], Mapping[str, Runtimes]], Mapping[str, Metrics]]], *, path: str,
-        sharex: bool, sharey: bool
+    stats: dict[str, tuple[Mapping[Literal["ST", "MT"], Mapping[str, Runtimes]], Mapping[str, Metrics]]],
+    *,
+    path: str,
+    sharex: bool,
+    sharey: bool,
 ) -> None:
     data = pd.DataFrame.from_dict(refine_stats(stats))
-    data = data.sort_values(['BENCHMARK', 'ENCODING'])
+    data = data.sort_values(["BENCHMARK", "ENCODING"])
     g = sns.FacetGrid(data, col="BENCHMARK", row="MODE", hue="ENCODING", sharex=sharex, sharey=sharey)
     g.map(sns.scatterplot, "SIZE", "RUNTIME")
     g.set(xscale="log")
@@ -237,21 +240,20 @@ def plot_stats(
     g.savefig(path)
 
 
-def plot_query_timings(stats: list[Runtimes], *, benchmark_name: str, path: str,
-                       figsize: tuple[int, int] = (30, 10)) -> None:
-    stats = [stat for stat in stats if stat.threading == 'ST']
+def plot_query_timings(
+    stats: list[Runtimes], *, benchmark_name: str, path: str, figsize: tuple[int, int] = (30, 10)
+) -> None:
+    stats = [stat for stat in stats if stat.threading == "ST"]
     grouped: dict[str, list[Runtimes]] = Evaluation.group_by(stats, "encoding")
     stats_grouped_by_encoding = {
         encoding: {
             runtime.benchmark_name: runtime.median() / 1e9  # Provided in ns, wanted s
-            for runtime
-            in flatten(list(map(lambda x: x.runtimes, runtimes)))
+            for runtime in flatten(list(map(lambda x: x.runtimes, runtimes)))
         }
-        for encoding, runtimes
-        in grouped.items()
+        for encoding, runtimes in grouped.items()
     }
     data = pd.DataFrame.from_dict(stats_grouped_by_encoding)
-    data = data.rename(clean_encoding_name, axis='columns')
+    data = data.rename(clean_encoding_name, axis="columns")
     data = data.reindex(sorted(data.columns), axis=1)
     f, axis = plt.subplots(1, 1, figsize=figsize)
     if data.empty:
@@ -262,8 +264,8 @@ def plot_query_timings(stats: list[Runtimes], *, benchmark_name: str, path: str,
         ax=axis,
         title=f"Query times for benchmark {benchmark_name} (ST)",
         xlabel="Queries",
-        ylabel=f"Median Runtime (seconds) across all runs of the query (Logarithmic Scale)",
-        logy=True
+        ylabel="Median Runtime (seconds) across all runs of the query (Logarithmic Scale)",
+        logy=True,
     )
     f.tight_layout()
     f.savefig(path)
@@ -423,8 +425,9 @@ class Benchmarking:
                 """
                 Create a config file as depicted in the `--full_help` of the benchmarks and return its path.
                 """
-                config_path = os.path.join(self._tmp_path, "config",
-                                           f"{self.name}-{threading}-{encoding}-{metrics}.json")
+                config_path = os.path.join(
+                    self._tmp_path, "config", f"{self.name}-{threading}-{encoding}-{metrics}.json"
+                )
                 config_contents = {"default": {"encoding": "Dictionary"}, "type": {"string": {"encoding": encoding}}}
                 with open(config_path, mode="w") as config_file:
                     json.dump(config_contents, config_file)
@@ -584,7 +587,7 @@ class Evaluation:
                 output_directory=output_directory,
                 sharex=namespace.sharex,
                 sharey=namespace.sharey,
-                only_comparison=namespace.only_comparison
+                only_comparison=namespace.only_comparison,
             )
 
     @staticmethod
@@ -608,49 +611,49 @@ class Evaluation:
             help="All timing benchmark files to evaluate.",
         )
         parser.add_argument(
-            '-i',
-            '--ignore',
-            action='append',
-            dest='ignore_encodings',
+            "-i",
+            "--ignore",
+            action="append",
+            dest="ignore_encodings",
             required=False,
             default=[],
-            nargs='+',
-            help='Encodings to ignore despite being present in the provided files.'
+            nargs="+",
+            help="Encodings to ignore despite being present in the provided files.",
         )
         parser.add_argument(
-            '-o',
-            '--output-directory',
-            dest='output_directory',
+            "-o",
+            "--output-directory",
+            dest="output_directory",
             type=str,
             required=True,
             help="The directory where the output should be stored.",
         )
         parser.add_argument(
-            '--share-x',
-            dest='sharex',
+            "--share-x",
+            dest="sharex",
             action=BooleanOptionalAction,
             default=True,
-            help='Whether to share the x axis of the comparison plot. Defaults to True.'
+            help="Whether to share the x axis of the comparison plot. Defaults to True.",
         )
         parser.add_argument(
-            '--share-y',
-            dest='sharey',
+            "--share-y",
+            dest="sharey",
             action=BooleanOptionalAction,
             default=True,
-            help='Whether to share the y axis of the comparison plot. Defaults to True.'
+            help="Whether to share the y axis of the comparison plot. Defaults to True.",
         )
         parser.add_argument(
-            '--only-comparison',
-            dest='only_comparison',
+            "--only-comparison",
+            dest="only_comparison",
             action=BooleanOptionalAction,
             default=False,
-            help='Whether to only create the comparison plot.'
+            help="Whether to only create the comparison plot.",
         )
         return parser
 
     @staticmethod
     def is_excluded(encoding: str, config: Config) -> bool:
-        return encoding.split('-')[-1] in config.ignore_encodings
+        return encoding.split("-")[-1] in config.ignore_encodings
 
     @staticmethod
     def run(config: Config) -> list[Path]:
@@ -685,13 +688,7 @@ class Evaluation:
         result_jsons = config.metric_benchmark_files
         metrics_list = [
             metric
-            for metric
-            in
-            [
-                Metrics.from_json(result_json)
-                for result_json
-                in result_jsons
-            ]
+            for metric in [Metrics.from_json(result_json) for result_json in result_jsons]
             if not Evaluation.is_excluded(metric.encoding, config)
         ]
         metrics_grouped_by_benchmark: dict[str, list[Metrics]] = Evaluation.group_by(metrics_list, "benchmark_name")
@@ -703,7 +700,7 @@ class Evaluation:
         for benchmark_group in metrics_grouped_by_benchmark_and_encoding_list.values():
             for encoding_group in benchmark_group.values():
                 if len(encoding_group) > 1:
-                    raise RuntimeError(f'Too many encoding groups: {len(encoding_group)}')
+                    raise RuntimeError(f"Too many encoding groups: {len(encoding_group)}")
         metrics_grouped_by_benchmark_and_encoding: dict[str, dict[str, Metrics]] = {
             benchmark: {encoding: entries[0] for encoding, entries in group.items()}
             for benchmark, group in metrics_grouped_by_benchmark_and_encoding_list.items()
@@ -749,13 +746,7 @@ class Evaluation:
         result_jsons = config.timing_benchmark_files
         timings_list = [
             timing
-            for timing
-            in
-            [
-                Runtimes.from_json(result_json)
-                for result_json
-                in result_jsons
-            ]
+            for timing in [Runtimes.from_json(result_json) for result_json in result_jsons]
             if not Evaluation.is_excluded(timing.encoding, config)
         ]
         timings_grouped_by_benchmark: dict[str, list[Runtimes]] = Evaluation.group_by(timings_list, "benchmark_name")
