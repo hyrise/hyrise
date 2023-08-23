@@ -64,9 +64,7 @@ struct WindowOperatorFactory {
     const auto output_column_name =
         function_type != WindowFunction{-1} ? window_function_expression->as_column_name() : "NULL";
     return std::make_shared<WindowFunctionEvaluator>(_table_wrapper, _partition_by_columns, _order_by_columns,
-                                                     argument_column, window_function_expression->window_function,
-                                                     window, output_column_name,
-                                                     window_function_expression->data_type());
+                                                     argument_column, function_type, window, output_column_name);
   }
 
   std::shared_ptr<TableWrapper> _table_wrapper;

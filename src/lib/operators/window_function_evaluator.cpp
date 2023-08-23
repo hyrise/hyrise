@@ -25,7 +25,7 @@ WindowFunctionEvaluator::WindowFunctionEvaluator(const std::shared_ptr<const Abs
                                                  ColumnID init_function_argument_column_id,
                                                  WindowFunction init_window_function,
                                                  std::shared_ptr<WindowExpression> init_window,
-                                                 std::string init_output_column_name, DataType init_output_data_type)
+                                                 std::string init_output_column_name)
     : AbstractReadOnlyOperator(OperatorType::WindowFunction, input_operator, nullptr,
                                std::make_unique<PerformanceData>()),
       _partition_by_column_ids(std::move(init_partition_by_column_ids)),
@@ -33,8 +33,7 @@ WindowFunctionEvaluator::WindowFunctionEvaluator(const std::shared_ptr<const Abs
       _function_argument_column_id(init_function_argument_column_id),
       _window_function(init_window_function),
       _window(std::move(init_window)),
-      _output_column_name(std::move(init_output_column_name)),
-      _output_data_type(init_output_data_type) {
+      _output_column_name(std::move(init_output_column_name)) {
   Assert(_function_argument_column_id != INVALID_COLUMN_ID || is_rank_like(_window_function),
          "Could not extract window function argument, although it was not rank-like.");
 }
@@ -98,7 +97,7 @@ std::shared_ptr<AbstractOperator> WindowFunctionEvaluator::_on_deep_copy(
     [[maybe_unused]] std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
   return std::make_shared<WindowFunctionEvaluator>(copied_left_input, _partition_by_column_ids, _order_by_column_ids,
                                                    _function_argument_column_id, _window_function, _window,
-                                                   _output_column_name, _output_data_type);
+                                                   _output_column_name);
 }
 
 template <typename InputColumnType, WindowFunction window_function>
@@ -584,9 +583,8 @@ std::shared_ptr<const Table> WindowFunctionEvaluator::annotate_input_table(
   const auto chunk_count = input_table->chunk_count();
   const auto column_count = input_table->column_count();
 
-  const auto new_column_name = _output_column_name;
-  const auto new_column_type = _output_data_type;
-  const auto new_column_definition = TableColumnDefinition(new_column_name, new_column_type, is_output_nullable());
+  const auto new_column_definition =
+      TableColumnDefinition(_output_column_name, data_type_from_type<OutputColumnType>(), is_output_nullable());
 
   // Create value segments for our output column.
   auto value_segments_for_new_column = std::vector<std::shared_ptr<AbstractSegment>>();

@@ -540,8 +540,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_window_node(
 
   return std::make_shared<WindowFunctionEvaluator>(
       input_operator, partition_by_column_ids, order_by_column_ids, function_argument_column_id,
-      window_function_expression->window_function, window, window_function_expression->as_column_name(),
-      window_function_expression->data_type());
+      window_function_expression->window_function, window, window_function_expression->as_column_name());
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_change_meta_table_node(
