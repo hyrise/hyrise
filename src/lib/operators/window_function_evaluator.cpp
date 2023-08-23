@@ -204,8 +204,7 @@ std::shared_ptr<const Table> WindowFunctionEvaluator::_on_execute() {
             resolve_data_type(input_data_type, [&](const auto const_input_data_type) {
               using InputColumnType = typename decltype(const_input_data_type)::type;
 
-              // TODO(anyone): I think we already support MIN(string_col) if we relax this guard.
-              if constexpr (std::is_arithmetic_v<InputColumnType>) {
+              if constexpr (SupportsAnyStrategy<InputColumnType, window_function>) {
                 result = _templated_on_execute<InputColumnType, window_function>();
               } else {
                 Fail("Unsupported input column type " + data_type_to_string.left.at(input_data_type) +

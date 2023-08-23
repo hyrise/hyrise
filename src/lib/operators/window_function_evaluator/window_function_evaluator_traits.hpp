@@ -184,6 +184,7 @@ struct WindowFunctionEvaluatorTraits<InputColumnTypeT, WindowFunction::RowNumber
 };
 
 template <typename InputColumnTypeT>
+  requires std::is_arithmetic_v<InputColumnTypeT>
 struct WindowFunctionEvaluatorTraits<InputColumnTypeT, WindowFunction::Min> {
   using InputColumnType = InputColumnTypeT;
   using OutputColumnType = typename WindowFunctionTraits<InputColumnType, WindowFunction::Min>::ReturnType;
@@ -203,6 +204,7 @@ struct WindowFunctionEvaluatorTraits<InputColumnTypeT, WindowFunction::Min> {
 };
 
 template <typename InputColumnTypeT>
+  requires std::is_arithmetic_v<InputColumnTypeT>
 struct WindowFunctionEvaluatorTraits<InputColumnTypeT, WindowFunction::Max> {
   using InputColumnType = InputColumnTypeT;
   using OutputColumnType = typename WindowFunctionTraits<InputColumnType, WindowFunction::Max>::ReturnType;
@@ -340,5 +342,9 @@ concept SupportsSegmentTree =
           std::optional<InputColumnType>,
           typename WindowFunctionEvaluatorTraits<InputColumnType, window_function>::NullableSegmentTreeImpl::InputType>;
     };
+
+template <typename InputColumnType, WindowFunction window_function>
+concept SupportsAnyStrategy =
+    SupportsOnePass<InputColumnType, window_function> || SupportsSegmentTree<InputColumnType, window_function>;
 
 }  // namespace hyrise::window_function_evaluator
