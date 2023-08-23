@@ -107,7 +107,7 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
       auto target_chunk = _target_table->get_chunk(target_chunk_id);
       auto mvcc_data = target_chunk->mvcc_data();
 
-      // If the last Chunk of the target Table is either immutable or full, append a new mutable Chunk.
+      // If the last chunk of the target table is either immutable or full, append a new mutable chunk.
       if (!target_chunk->is_mutable() || target_chunk->size() == _target_table->target_chunk_size()) {
         // Allow the chunk to be finalized since no new Insert operators will write to it. Then try to finalize it. If
         // all Insert operators writing to the chunk are already finished, this make the chunk immutable. Otherwise the

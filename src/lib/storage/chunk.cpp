@@ -298,6 +298,7 @@ void Chunk::set_cleanup_commit_id(const CommitID cleanup_commit_id) {
 }
 
 void Chunk::mark_as_finalizable() {
+  Assert(!_is_finalizable, "Chunk should not be marked as finalizable multiple times.");
   _is_finalizable = true;
 }
 
@@ -314,8 +315,8 @@ void Chunk::try_finalize() {
   auto success = true;
   if (_is_mutable.compare_exchange_strong(success, false)) {
     DebugAssert(success, "Value exchanged but value was actually false.");
-    // We were the first ones to mark the chunk as immutable. Thus, have to take care of anything else that needs to be
-    // done. In the future, this can mean to start background statistics generation, encoding, etc.
+    // We were the first ones to mark the chunk as immutable. Thus, we have to take care of anything else that needs to
+    // be done. In the future, this can mean to start background statistics generation, encoding, etc.
     _is_finalizable = false;
   } else {
     // Another thread is about to finalize this chunk. Do nothing.

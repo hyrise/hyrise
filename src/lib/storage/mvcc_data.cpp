@@ -75,11 +75,10 @@ bool MvccData::compare_exchange_tid(const ChunkOffset offset, TransactionID expe
 }
 
 size_t MvccData::memory_usage() const {
-  auto bytes = size_t{0};
-  bytes += sizeof(_tids) + sizeof(_begin_cids) + sizeof(_end_cids);  // NOLINT
-  bytes += _tids.size() * sizeof(decltype(_tids)::value_type);
-  bytes += _begin_cids.size() * sizeof(decltype(_begin_cids)::value_type);
-  bytes += _end_cids.size() * sizeof(decltype(_end_cids)::value_type);
+  auto bytes = sizeof(*this);
+  bytes += _tids.capacity() * sizeof(decltype(_tids)::value_type);
+  bytes += _begin_cids.capacity() * sizeof(decltype(_begin_cids)::value_type);
+  bytes += _end_cids.capacity() * sizeof(decltype(_end_cids)::value_type);
   return bytes;
 }
 

@@ -276,11 +276,11 @@ TEST_F(StressTest, AtomicMaxConcurrentUpdate) {
   threads.reserve(thread_count);
 
   for (auto thread_id = uint32_t{1}; thread_id <= thread_count; ++thread_id) {
-    threads.emplace_back(std::thread{[thread_id, &counter]() {
+    threads.emplace_back([thread_id, &counter]() {
       for (auto i = uint32_t{1}; i <= repetitions; ++i) {
         set_atomic_max(counter, thread_id + i);
       }
-    }});
+    });
   }
 
   for (auto& thread : threads) {
@@ -293,28 +293,32 @@ TEST_F(StressTest, AtomicMaxConcurrentUpdate) {
 
 TEST_F(StressTest, ConcurrentInsertsFinalizeChunks) {
   const auto table = std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Int, false}}, TableType::Data,
-                                             ChunkOffset{2}, UseMvcc::Yes);
+                                             ChunkOffset{3}, UseMvcc::Yes);
   Hyrise::get().storage_manager.add_table("table_a", table);
-  Hyrise::get().default_pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
-  Hyrise::get().default_lqp_cache = std::make_shared<SQLLogicalPlanCache>();
 
-  const auto num_threads = 100;
-  const auto num_inserts = 5'000;
+  const auto values_to_insert =
+      std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Int, false}}, TableType::Data);
+  values_to_insert->append({int32_t{1}});
+  values_to_insert->append({int32_t{1}});
+  const auto table_wrapper = std::make_shared<TableWrapper>(values_to_insert);
+  table_wrapper->never_clear_output();
+  table_wrapper->execute();
+
+  const auto thread_count = 100;
+  const auto insert_count = 3'000;
   auto threads = std::vector<std::thread>{};
   threads.reserve(num_threads);
 
-  for (auto thread_id = 0; thread_id < num_threads; ++thread_id) {
-    threads.emplace_back([]() {
-      for (auto i = 0; i < num_inserts; ++i) {
+  for (auto thread_id = 0; thread_id < thread_count; ++thread_id) {
+    threads.emplace_back([&]() {
+      for (auto i = 0; i < insert_count; ++i) {
         // Commit only 50% of transactions. Thus, there should be committed and rolled back operators that both finalize
         // chunks.
         const auto do_commit = num_inserts % 2 == 0;
-        const auto table_wrapper = std::make_shared<TableWrapper>(Projection::dummy_table());
-        const auto projection = std::make_shared<Projection>(table_wrapper, expression_vector(value_(1)));
-        const auto insert = std::make_shared<Insert>("table_a", projection);
+        const auto insert = std::make_shared<Insert>("table_a", table_wrapper);
         const auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
         insert->set_transaction_context(transaction_context);
-        execute_all({table_wrapper, projection, insert});
+        insert->execute();
         EXPECT_FALSE(insert->execute_failed());
         if (do_commit) {
           transaction_context->commit();
@@ -329,16 +333,17 @@ TEST_F(StressTest, ConcurrentInsertsFinalizeChunks) {
     thread.join();
   }
 
-  // 100 threads * 5'000 insertions = 500'000 tuples in 250'000 chunks with chunk size 2.
-  EXPECT_EQ(table->chunk_count(), 250'000);
-  EXPECT_EQ(table->row_count(), 500'000);
+  // 100 threads * 3'000 insertions * 2 values = 600'000 tuples in 200'000 chunks with chunk size 3.
+  EXPECT_EQ(table->chunk_count(), 200'000);
+  EXPECT_EQ(table->row_count(), 600'000);
 
   const auto immutable_chunk_count = table->chunk_count() - 1;
   for (auto chunk_id = ChunkID{0}; chunk_id < immutable_chunk_count; ++chunk_id) {
     const auto& chunk = table->get_chunk(chunk_id);
     ASSERT_TRUE(chunk);
-    ASSERT_FALSE(chunk->is_mutable());
+    EXPECT_FALSE(chunk->is_mutable());
   }
+  EXPECT_TRUE(table->last_chunk()->is_mutable());
 }
 
 }  // namespace hyrise

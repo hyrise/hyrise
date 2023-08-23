@@ -24,6 +24,12 @@ class OperatorsInsertTest : public BaseTest {
   void SetUp() override {}
 };
 
+TEST_F(OperatorsInsertTest, Name) {
+  const auto table_wrapper = std::make_shared<TableWrapper>(Projection::dummy_table());
+  const auto insert = std::make_shared<Insert>("a_table", nullptr);
+  EXPECT_EQ(insert->name(), "Insert");
+}
+
 TEST_F(OperatorsInsertTest, SelfInsert) {
   auto table_name = "test_table";
   auto table = load_table("resources/test_data/tbl/float_int.tbl");
@@ -390,7 +396,7 @@ TEST_F(OperatorsInsertTest, FinalizeSingleChunk) {
 }
 
 // Multiple Insert operators insert into the same chunk. The operator that finishes last finalizes the chunk on commit/
-// rollback.
+// rollback. A concurrency stress test can be found at `stress_test.cpp` (ConcurrentInsertsFinalizeChunks).
 TEST_F(OperatorsInsertTest, FinalizeSingleChunkMultipleOperators) {
   for (const auto do_commit : {true, false}) {
     const auto column_definitions = TableColumnDefinitions{{"a", DataType::Int, false}};

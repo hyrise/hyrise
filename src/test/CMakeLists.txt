@@ -202,6 +202,7 @@ set(
     lib/storage/iterables_test.cpp
     lib/storage/lz4_segment_test.cpp
     lib/storage/materialize_test.cpp
+    lib/storage/mvcc_data_test.cpp
     lib/storage/pos_lists/entire_chunk_pos_list_test.cpp
     lib/storage/prepared_plan_test.cpp
     lib/storage/reference_segment_test.cpp
