@@ -96,11 +96,14 @@ class OperatorsWindowTest : public BaseTest {
     const auto partition_columns = std::vector<ColumnID>{ColumnID{0}};
     const auto order_by_columns = std::vector<ColumnID>{ColumnID{1}};
     const auto sort_modes = std::vector<SortMode>{SortMode::Ascending};
+    const auto sort_modes_reverse = std::vector<SortMode>{SortMode::Descending};
 
     _window_operator_factory =
         std::make_shared<WindowOperatorFactory>(_table, partition_columns, order_by_columns, sort_modes);
     _window_operator_factory_3_columns =
         std::make_shared<WindowOperatorFactory>(_table_3_columns, partition_columns, order_by_columns, sort_modes);
+    _window_operator_factory_reverse =
+        std::make_shared<WindowOperatorFactory>(_table, partition_columns, order_by_columns, sort_modes_reverse);
   }
 
  protected:
@@ -108,6 +111,7 @@ class OperatorsWindowTest : public BaseTest {
   inline static std::shared_ptr<Table> _table_3_columns;
   inline static std::shared_ptr<WindowOperatorFactory> _window_operator_factory;
   inline static std::shared_ptr<WindowOperatorFactory> _window_operator_factory_3_columns;
+  inline static std::shared_ptr<WindowOperatorFactory> _window_operator_factory_reverse;
 };
 
 TEST_F(OperatorsWindowTest, OperatorName) {
@@ -190,6 +194,12 @@ TEST_F(OperatorsWindowTest, InvalidWindowFunction) {
       _window_operator_factory->build_operator(frame, WindowFunction::PercentRank, ColumnID{1});
   // PercentRank is currently not supported.
   EXPECT_THROW(percent_rank_window_function_operator->execute(), std::logic_error);
+}
+
+TEST_F(OperatorsWindowTest, ReverseOrdering) {
+  const auto frame = build_frame();
+  const auto window_function_operator = _window_operator_factory_reverse->build_operator(frame, WindowFunction::Rank);
+  test_output(window_function_operator, "rank_reverse.tbl");
 }
 
 TEST_F(OperatorsWindowTest, Rank) {
