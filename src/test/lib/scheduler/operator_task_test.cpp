@@ -39,6 +39,10 @@ class OperatorTaskTest : public BaseTest {
     task->_successors.clear();
   }
 
+  std::shared_ptr<AbstractTask> get_task(const std::shared_ptr<AbstractOperator>& op) {
+    return op->_operator_task.lock();
+  }
+
   std::shared_ptr<Table> _test_table_a, _test_table_b;
 };
 
@@ -303,6 +307,15 @@ TEST_F(OperatorTaskTest, PrunableSubqueriesWithCycles) {
   get_table->set_prunable_subquery_predicates({table_scan});
 
   EXPECT_THROW(OperatorTask::make_tasks_from_operator(table_scan), std::logic_error);
+
+  // Clear the successors of the created tasks. Since the tasks hold shared pointers to their successors, the cyclic
+  // graph leaks memory.
+  for (const auto& op : std::vector<std::shared_ptr<AbstractOperator>>{get_table, aggregate, table_scan}) {
+    const auto& task = get_task(op);
+    if (task) {
+      clear_successors(task);
+    }
+  }
 }
 
 TEST_F(OperatorTaskTest, SkipOperatorTask) {
