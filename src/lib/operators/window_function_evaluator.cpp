@@ -328,6 +328,11 @@ Buckets WindowFunctionEvaluator::materialize_into_buckets() const {
   for (auto chunk_id = ChunkID(0); chunk_id < chunk_count; ++chunk_id) {
     tasks[chunk_id] = std::make_shared<JobTask>([chunk_id, &input_table, &chunk_buckets, this]() {
       const auto chunk = input_table->get_chunk(chunk_id);
+      // Going forward, we will not check the assertion again, since the output table of the previous operator should
+      // not change during execution of the current operator. Similarly, while there could generally be tables with
+      // deleted chunks, this should not happen with the tables in the operator pipeline as `GetTable` should remove any
+      // such chunks already.
+      Assert(chunk, "Got nullptr from `get_chunk` in `materialize_into_buckets`.");
       chunk_buckets[chunk_id] = collect_chunk_into_buckets(chunk_id, *chunk, _partition_by_column_ids,
                                                            _order_by_column_ids, _function_argument_column_id);
     });
