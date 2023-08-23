@@ -86,7 +86,6 @@ void test_output(const std::shared_ptr<WindowFunctionEvaluator>& window_function
   const auto expected_result = load_table(result_table_path + answer_table);
   EXPECT_TABLE_EQ_UNORDERED(result_table, expected_result);
 }
-
 class OperatorsWindowTest : public BaseTest {
  public:
   static void SetUpTestSuite() {
@@ -105,6 +104,13 @@ class OperatorsWindowTest : public BaseTest {
     _window_operator_factory_reverse =
         std::make_shared<WindowOperatorFactory>(_table, partition_columns, order_by_columns, sort_modes_reverse);
   }
+  
+  static bool operators_equal(const auto& operator_a, const auto& operator_b) {
+    // TODO get friend stuff working so we can access private variables
+    // TODO check all fields
+    return operator_a->_partition_by_column_ids == operator_b->_partition_by_column_ids;
+  }
+  
 
  protected:
   inline static std::shared_ptr<Table> _table;
@@ -151,6 +157,13 @@ TEST_F(OperatorsWindowTest, Description) {
       "WindowFunctionEvaluator SUM(C) PartitionBy: {A} OrderBy: {B} RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW";
 
   EXPECT_EQ(window_function_operator->description(DescriptionMode::SingleLine), expected_description_single_line);
+}
+
+TEST_F(OperatorsWindowTest, DeepCopy) {
+  const auto frame = build_frame();
+  const auto original_operator = _window_operator_factory->build_operator(frame, WindowFunction::Rank);
+  const auto copied_operator = std::dynamic_pointer_cast<WindowFunctionEvaluator>(original_operator->deep_copy());
+  EXPECT_TRUE(operators_equal(original_operator, copied_operator));
 }
 
 TEST_F(OperatorsWindowTest, ExactlyOneOrderByForRange) {
