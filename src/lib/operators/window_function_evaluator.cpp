@@ -186,49 +186,42 @@ std::shared_ptr<const Table> WindowFunctionEvaluator::_templated_on_execute() {
 }
 
 std::shared_ptr<const Table> WindowFunctionEvaluator::_on_execute() {
-  const auto window_function = _window_function;
-  switch (window_function) {
-    case WindowFunction::Rank:
-      return _templated_on_execute<NullValue, WindowFunction::Rank>();
-    case WindowFunction::DenseRank:
-      return _templated_on_execute<NullValue, WindowFunction::DenseRank>();
-    case WindowFunction::RowNumber:
-      return _templated_on_execute<NullValue, WindowFunction::RowNumber>();
-    case WindowFunction::PercentRank:
-      Fail("PercentRank is not supported.");
-    default:
-      Assert(!is_rank_like(window_function), "Unhandled rank-like window function.");
+  auto result = std::shared_ptr<const Table>{};
+
+  if (!magic_enum::enum_contains(_window_function)) {
+    Fail("Unknown window function: " + std::to_string(magic_enum::enum_underlying(_window_function)) + ".");
   }
 
-  auto result = std::shared_ptr<const Table>();
-  resolve_data_type(left_input_table()->column_data_type(_function_argument_column_id), [&](auto input_data_type) {
-    using InputColumnType = typename decltype(input_data_type)::type;
-    if constexpr (std::is_arithmetic_v<InputColumnType>) {
-      result = [&]() {
-        switch (window_function) {
-          case WindowFunction::Sum:
-            return _templated_on_execute<InputColumnType, WindowFunction::Sum>();
-          case WindowFunction::Avg:
-            return _templated_on_execute<InputColumnType, WindowFunction::Avg>();
-          case WindowFunction::Count:
-            return _templated_on_execute<InputColumnType, WindowFunction::Count>();
-          case WindowFunction::Min:
-            return _templated_on_execute<InputColumnType, WindowFunction::Min>();
-          case WindowFunction::Max:
-            return _templated_on_execute<InputColumnType, WindowFunction::Max>();
-          default:
-            Fail("Unsupported window function.");
+  magic_enum::enum_switch(
+      [&](const auto window_function) {
+        if constexpr (!is_supported_window_function(window_function)) {
+          Fail("Unsupported window function: " + window_function_to_string.left.at(window_function) + ".");
+        } else {
+          if constexpr (!has_argument(window_function)) {
+            result = _templated_on_execute<NullValue, window_function>();
+          } else {
+            const auto input_data_type = left_input_table()->column_data_type(_function_argument_column_id);
+
+            resolve_data_type(input_data_type, [&](const auto const_input_data_type) {
+              using InputColumnType = typename decltype(const_input_data_type)::type;
+
+              // TODO(anyone): I think we already support MIN(string_col) if we relax this guard.
+              if constexpr (std::is_arithmetic_v<InputColumnType>) {
+                result = _templated_on_execute<InputColumnType, window_function>();
+              } else {
+                Fail("Unsupported input column type " + data_type_to_string.left.at(input_data_type) +
+                     " for window function " + window_function_to_string.left.at(window_function) + ".");
+              }
+            });
+          }
         }
-      }();
-    } else {
-      Fail("Unsupported input column type for window function.");
-    }
-  });
+      },
+      _window_function);
+
   return result;
 }
 
 namespace {
-
 template <typename T>
 T clamped_add(T lhs, T rhs, T max) {
   return std::min(lhs + rhs, max);

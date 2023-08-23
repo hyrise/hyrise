@@ -21,6 +21,18 @@ constexpr bool is_rank_like(WindowFunction window_function) {
   return std::ranges::find(rank_like_window_functions, window_function) != rank_like_window_functions.end();
 }
 
+constexpr static inline auto supported_window_functions =
+    std::array{WindowFunction::Rank, WindowFunction::DenseRank, WindowFunction::RowNumber, WindowFunction::Sum,
+               WindowFunction::Avg,  WindowFunction::Count,     WindowFunction::Min,       WindowFunction::Max};
+
+constexpr bool is_supported_window_function(WindowFunction window_function) {
+  return std::ranges::find(supported_window_functions, window_function) != supported_window_functions.end();
+}
+
+constexpr bool has_argument(WindowFunction window_function) {
+  return !is_rank_like(window_function);
+}
+
 // Reverses the ordering (used for sorting DESC).
 std::weak_ordering reverse(std::weak_ordering ordering);
 // Comparator function for two AllTypeVariants.
