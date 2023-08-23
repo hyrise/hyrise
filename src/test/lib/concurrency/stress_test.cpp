@@ -307,14 +307,14 @@ TEST_F(StressTest, ConcurrentInsertsFinalizeChunks) {
   const auto thread_count = 100;
   const auto insert_count = 3'000;
   auto threads = std::vector<std::thread>{};
-  threads.reserve(num_threads);
+  threads.reserve(thread_count);
 
   for (auto thread_id = 0; thread_id < thread_count; ++thread_id) {
     threads.emplace_back([&]() {
       for (auto i = 0; i < insert_count; ++i) {
         // Commit only 50% of transactions. Thus, there should be committed and rolled back operators that both finalize
         // chunks.
-        const auto do_commit = num_inserts % 2 == 0;
+        const auto do_commit = insert_count % 2 == 0;
         const auto insert = std::make_shared<Insert>("table_a", table_wrapper);
         const auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
         insert->set_transaction_context(transaction_context);
