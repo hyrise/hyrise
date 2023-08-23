@@ -65,8 +65,11 @@ class VariableStringDictionaryEncoder : public SegmentEncoder<VariableStringDict
     dense_values.shrink_to_fit();
 
     // Compute total compressed data size.
-    const auto total_size = std::accumulate(dense_values.begin(), dense_values.end(), uint32_t{0},
-                                            [](uint32_t acc, pmr_string& value) { return acc + value.size(); });
+    const auto total_size = std::accumulate(dense_values.begin(), dense_values.end(), size_t{0},
+                                            [](size_t acc, pmr_string& value) { return acc + value.size(); });
+
+    // Check for oversize dictionary.
+    Assert(total_size < std::numeric_limits<uint32_t>::max(), "Dictionary is too large!");
 
     // uniform character array containing all distinct strings
     auto clob = std::make_shared<pmr_vector<char>>(pmr_vector<char>(total_size));
@@ -75,7 +78,7 @@ class VariableStringDictionaryEncoder : public SegmentEncoder<VariableStringDict
     auto string_offsets = std::unordered_map<pmr_string, uint32_t>();
     // Maps string to ValueID for attribute vector.
     auto string_value_ids = std::unordered_map<pmr_string, ValueID>();
-    auto last_offset = size_t{0};
+    auto last_offset = uint32_t{0};
     auto last_value_id = ValueID{0};
 
     // Construct clob without null bytes.
@@ -85,9 +88,6 @@ class VariableStringDictionaryEncoder : public SegmentEncoder<VariableStringDict
       string_value_ids[value] = last_value_id++;
       last_offset += value.size();
     }
-
-    // Check for oversize dictionary.
-    Assert(last_offset < std::numeric_limits<uint32_t>::max(), "Maximum dictionary offset is too large!");
 
     // Maps ChunkOffset to ValueID.
     auto chunk_offset_to_value_id = pmr_vector<uint32_t>(static_cast<size_t>(segment_size));
