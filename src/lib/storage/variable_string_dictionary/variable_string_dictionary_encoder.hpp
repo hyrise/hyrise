@@ -75,16 +75,19 @@ class VariableStringDictionaryEncoder : public SegmentEncoder<VariableStringDict
     auto string_offsets = std::unordered_map<pmr_string, uint32_t>();
     // Maps string to ValueID for attribute vector.
     auto string_value_ids = std::unordered_map<pmr_string, ValueID>();
-    auto last_offset = uint32_t{0};
+    auto last_offset = size_t{0};
     auto last_value_id = ValueID{0};
 
     // Construct clob without null bytes.
     for (const auto& value : dense_values) {
       memcpy(clob->data() + last_offset, value.c_str(), value.size());
-      string_offsets[value] = last_offset;
+      string_offsets[value] = static_cast<uint32_t>(last_offset);
       string_value_ids[value] = last_value_id++;
       last_offset += value.size();
     }
+
+    // Check for oversize dictionary.
+    Assert(last_offset < std::numeric_limits<uint32_t>::max(), "Maximum dictionary offset is too large!");
 
     // Maps ChunkOffset to ValueID.
     auto chunk_offset_to_value_id = pmr_vector<uint32_t>(static_cast<size_t>(segment_size));
