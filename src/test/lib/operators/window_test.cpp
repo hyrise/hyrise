@@ -86,6 +86,7 @@ void test_output(const std::shared_ptr<WindowFunctionEvaluator>& window_function
   const auto expected_result = load_table(result_table_path + answer_table);
   EXPECT_TABLE_EQ_UNORDERED(result_table, expected_result);
 }
+
 class OperatorsWindowTest : public BaseTest {
  public:
   static void SetUpTestSuite() {
@@ -104,13 +105,15 @@ class OperatorsWindowTest : public BaseTest {
     _window_operator_factory_reverse =
         std::make_shared<WindowOperatorFactory>(_table, partition_columns, order_by_columns, sort_modes_reverse);
   }
-  
+
   static bool operators_equal(const auto& operator_a, const auto& operator_b) {
-    // TODO get friend stuff working so we can access private variables
-    // TODO check all fields
-    return operator_a->_partition_by_column_ids == operator_b->_partition_by_column_ids;
+    return (operator_a->_partition_by_column_ids == operator_b->_partition_by_column_ids &&
+            operator_a->_order_by_column_ids == operator_b->_order_by_column_ids &&
+            operator_a->_function_argument_column_id == operator_b->_function_argument_column_id &&
+            operator_a->_window_function == operator_b->_window_function &&
+            operator_a->_window == operator_b->_window &&
+            operator_a->_output_column_name == operator_b->_output_column_name);
   }
-  
 
  protected:
   inline static std::shared_ptr<Table> _table;

@@ -21,6 +21,9 @@
 
 namespace hyrise {
 
+// Needed so we can add OperatorsWindowTest as friend
+class OperatorsWindowTest;
+
 namespace window_function_evaluator {
 
 enum class ComputationStrategy {
@@ -110,7 +113,8 @@ const auto computation_strategy_to_string = make_bimap<ComputationStrategy, std:
 //  materialized input data once the other steps are finished. This is due to the fact that we found this time to be
 //  surprisingly high.
 class WindowFunctionEvaluator : public AbstractReadOnlyOperator {
-  friend class OperatorsWindowTest;
+  friend class ::hyrise::OperatorsWindowTest;
+
  public:
   WindowFunctionEvaluator(const std::shared_ptr<const AbstractOperator>& input_operator,
                           std::vector<ColumnID> init_partition_by_column_ids,

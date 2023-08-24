@@ -49,9 +49,11 @@ std::weak_ordering compare_with_null_equal(std::span<const AllTypeVariant> lhs, 
   const auto lhs_size = lhs.size();
   for (auto column_index = 0u; column_index < lhs_size; ++column_index) {
     auto element_ordering = compare_with_null_equal(lhs[column_index], rhs[column_index]);
-    if (is_column_reversed(column_index)) element_ordering = reverse(element_ordering);
+    if (is_column_reversed(column_index))
+      element_ordering = reverse(element_ordering);
 
-    if (element_ordering != std::weak_ordering::equivalent) return element_ordering;
+    if (element_ordering != std::weak_ordering::equivalent)
+      return element_ordering;
   }
 
   return std::weak_ordering::equivalent;
