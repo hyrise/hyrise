@@ -81,7 +81,7 @@ class VariableStringDictionaryEncoder : public SegmentEncoder<VariableStringDict
     auto last_offset = uint32_t{0};
     auto last_value_id = ValueID{0};
 
-    // Construct clob without null bytes.
+    // Construct clob with null bytes (therefore some + 1 around the code).
     for (const auto& value : dense_values) {
       memcpy(clob->data() + last_offset, value.c_str(), value.size() + 1);
       string_offsets[value] = static_cast<uint32_t>(last_offset);

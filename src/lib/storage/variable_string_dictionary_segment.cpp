@@ -1,7 +1,5 @@
 #include "variable_string_dictionary_segment.hpp"
 #include <numeric>
-// TODO(anyone): This requires gcc 10 or newer
-#include <ranges>  // NOLINT(build/include_order)
 
 #include "resolve_type.hpp"
 #include "storage/variable_string_dictionary/variable_string_vector.hpp"
@@ -103,13 +101,11 @@ const {
 
   const auto typed_value = boost::get<pmr_string>(value);
 
-  auto it = std::lower_bound(
-      _offset_vector->begin(), _offset_vector->end(),
-      typed_value,
-      [this](const auto offset, const auto to_find) {
-        if (offset >= _dictionary->size()) return "" < to_find;
-        const auto value = std::string_view{_dictionary->data() + offset};
-        return value < to_find; });
+  auto it = std::lower_bound(_offset_vector->begin(), _offset_vector->end(), typed_value,
+                             [this](const auto& offset, const auto& to_find) {
+                               const auto value = std::string_view{_dictionary->data() + offset};
+                               return value < to_find;
+                             });
   if (it == _offset_vector->end()) {
     return INVALID_VALUE_ID;
   }
@@ -123,17 +119,18 @@ const {
   DebugAssert(!variant_is_null(value), "Null value passed.");
   access_counter[SegmentAccessCounter::AccessType::Dictionary] +=
       static_cast<uint64_t>(std::ceil(std::log2(_offset_vector->size())));
+
   const auto typed_value = boost::get<pmr_string>(value);
 
-  const auto value_ids = std::ranges::iota_view{size_t{0}, _offset_vector->size()};
-
-  auto it = std::upper_bound(
-      value_ids.begin(), value_ids.end(), typed_value,
-      [this](const auto to_find, const auto valueID) { return to_find < typed_value_of_value_id(ValueID(valueID)); });
-  if (it == value_ids.end()) {
+  auto it = std::upper_bound(_offset_vector->begin(), _offset_vector->end(), typed_value,
+                             [this](const auto& to_find, const auto& offset) {
+                               const auto value = std::string_view{_dictionary->data() + offset};
+                               return value > to_find;
+                             });
+  if (it == _offset_vector->end()) {
     return INVALID_VALUE_ID;
   }
-  return ValueID{static_cast<ValueID::base_type>(std::distance(value_ids.begin(), it))};
+  return ValueID{static_cast<ValueID::base_type>(std::distance(_offset_vector->begin(), it))};
 }
 
 template <typename T>

@@ -112,7 +112,8 @@ TEST_F(StorageVariableStringDictionarySegmentTest, MemoryUsageEstimation) {
       std::dynamic_pointer_cast<VariableStringDictionarySegment<pmr_string>>(compressed_segment);
 
   static constexpr auto size_of_attribute_vector_entry = 1u;
-  static constexpr auto size_of_dictionary = 3u;
+  // 3u for letters and 3u for null terminators
+  static constexpr auto size_of_dictionary = 6u;
   static constexpr auto size_of_offset_vector = sizeof(uint32_t);
 
   EXPECT_EQ(dictionary_segment->memory_usage(MemoryUsageCalculationMode::Full),
@@ -135,13 +136,12 @@ TEST_F(StorageVariableStringDictionarySegmentTest, TestLookup) {
   const auto allocator = PolymorphicAllocator<pmr_string>{};
   // Create string data for clob.
   // Contains zero-length string at the end, just to be annoying.
-  const auto data = std::array<char, 26>{"HelloWorldAlexanderString"};
+  const auto data = std::array<char, 30>{"Hello\0World\0Alexander\0String\0"};
   const auto clob = std::make_shared<pmr_vector<char>>();
-  // -1 because of additional \0 in data.
-  const auto clob_size = data.size() - 1;
+  const auto clob_size = data.size();
   clob->resize(clob_size);
   std::memcpy(clob->data(), data.data(), clob_size);
-  const pmr_vector<uint32_t> offsets{0, 5, 10, 19, 25};
+  const pmr_vector<uint32_t> offsets{0, 6, 12, 22, 29};
   const pmr_vector<uint32_t> attribute_vector{0, 0, 1, 3, 2, 4, 2};
 
   const auto segment = VariableStringDictionarySegment<pmr_string>{
