@@ -231,8 +231,8 @@ void BenchmarkRunner::_benchmark_shuffled() {
   }
 
   // For shuffling the item order.
-  std::random_device random_device;
-  std::mt19937 random_generator(random_device());
+  auto random_device = std::random_device{};
+  auto random_generator = std::mt19937(random_device());
 
   Assert(_currently_running_clients == 0, "Did not expect any clients to run at this time");
 
