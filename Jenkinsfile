@@ -63,7 +63,7 @@ try {
       // See also: https://github.com/google/sanitizers/issues/764
       // To use memory related syscalls (specifically mbind, get_mempolicy, and get_mempolicy) we also need SYS_NICE.
       // See also: https://github.com/docker-library/mongo/issues/113
-      hyriseCI.inside("--cap-add SYS_NICE --cap-add SYS_PTRACE -u 0:0") {
+      hyriseCI.inside("--security-opt seccomp=$WORKSPACE/hyrise/jenkins/seccomp_override.json --cap-add SYS_NICE --cap-add SYS_PTRACE -u 0:0") {
         try {
           stage("Setup") {
             checkout scm
