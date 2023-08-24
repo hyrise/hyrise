@@ -89,13 +89,18 @@ class SegmentTree {
     // is now empty.
     //
     // Tiny example: sum query for the range [1, 4):
-    // (read algorithm steps from bottom to top; l and r are short for left_node and right_node respectively)
+    //   - The letters l and r are short for left_node and right_node respectively
+    //   - Initially we set l = n + 1 = 5 and r = n + 4 = 8
+    //   - Query processes through the levels of the tree from bottom to top, so continue reading at the leaves
     //
-    //                  6        l and r are both after 6 (index 2) ; query is done
-    //                1   5      l is on 5, r is after 5 (index 4)  ; 5 is included from l in the aggregate
-    //               0 1 2 3     l is on 1, r is after 3 (index 8)  ; 1 is included from l in the aggregate
+    // Value:           6        [l, r) = [2, 2) = empty
+    // Index:           1         => query is done
     //
-    // Leaf index:   4 5 6 7
+    // Value:         1   5      [l, r) = [3, 4)
+    // Index:         2   3       => 5 is included from l in the aggregate
+    //
+    // Value:        0 1 2 3     [l, r) = [5, 8)
+    // Index:        4 5 6 7      => 1 is included from l in the aggregate
 
     DebugAssert(range.start <= range.end, "Got malformed Range in SegmentTree::range_query.");
     DebugAssert(range.end <= leaf_count, "Query range out of bounds.");
