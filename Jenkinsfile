@@ -58,6 +58,8 @@ try {
       def hyriseCI = docker.image('hyrise/hyrise-ci:22.04');
       hyriseCI.pull()
 
+      sh "ls ${WORKSPACE}"
+
       def seccompPathHost = "${WORKSPACE}/jenkins/seccomp_override.json"
       def seccompPathContainer = "/tmp/seccomp_override.json"
 
