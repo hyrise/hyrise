@@ -1,10 +1,11 @@
+#include "window_expression.hpp"
+
 #include <sstream>
 
 #include <boost/container_hash/hash.hpp>
 
 #include "expression_utils.hpp"
 #include "utils/assert.hpp"
-#include "window_expression.hpp"
 
 namespace hyrise {
 
