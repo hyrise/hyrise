@@ -106,6 +106,14 @@ WindowExpression::WindowExpression(std::vector<std::shared_ptr<AbstractExpressio
             arguments.begin() + order_by_expressions_begin_idx);
 }
 
+std::span<const std::shared_ptr<AbstractExpression>> WindowExpression::partition_by_expressions() const {
+  return {arguments.begin(), order_by_expressions_begin_idx};
+}
+
+std::span<const std::shared_ptr<AbstractExpression>> WindowExpression::order_by_expressions() const {
+  return {arguments.begin() + static_cast<int64_t>(order_by_expressions_begin_idx), arguments.end()};
+}
+
 std::shared_ptr<AbstractExpression> WindowExpression::_on_deep_copy(
     std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
   const auto expression_count = arguments.size();

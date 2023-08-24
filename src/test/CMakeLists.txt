@@ -75,6 +75,7 @@ set(
     lib/memory/segments_using_allocators_test.cpp
     lib/memory/zero_allocator_test.cpp
     lib/null_value_test.cpp
+    lib/operators/window_test.cpp
     lib/operators/aggregate_sort_test.cpp
     lib/operators/aggregate_test.cpp
     lib/operators/alias_operator_test.cpp
@@ -239,6 +240,7 @@ set(
     lib/utils/plugin_test_utils.cpp
     lib/utils/plugin_test_utils.hpp
     lib/utils/print_utils_test.cpp
+    lib/utils/segment_tree_test.cpp
     lib/utils/setting_test.cpp
     lib/utils/settings_manager_test.cpp
     lib/utils/singleton_test.cpp

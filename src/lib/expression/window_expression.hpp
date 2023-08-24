@@ -1,5 +1,7 @@
 #pragma once
 
+#include <span>
+
 #include "abstract_expression.hpp"
 
 namespace hyrise {
@@ -60,6 +62,9 @@ class WindowExpression : public AbstractExpression {
   std::vector<SortMode> sort_modes;
   FrameDescription frame_description;
   size_t order_by_expressions_begin_idx{0};
+
+  std::span<const std::shared_ptr<AbstractExpression>> partition_by_expressions() const;
+  std::span<const std::shared_ptr<AbstractExpression>> order_by_expressions() const;
 
  protected:
   std::shared_ptr<AbstractExpression> _on_deep_copy(

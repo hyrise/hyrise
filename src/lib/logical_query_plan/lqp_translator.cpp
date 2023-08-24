@@ -23,6 +23,7 @@
 #include "expression/pqp_column_expression.hpp"
 #include "expression/pqp_subquery_expression.hpp"
 #include "expression/value_expression.hpp"
+#include "expression/window_expression.hpp"
 #include "hyrise.hpp"
 #include "import_node.hpp"
 #include "insert_node.hpp"
@@ -59,6 +60,7 @@
 #include "operators/union_positions.hpp"
 #include "operators/update.hpp"
 #include "operators/validate.hpp"
+#include "operators/window_function_evaluator.hpp"
 #include "predicate_node.hpp"
 #include "projection_node.hpp"
 #include "sort_node.hpp"
@@ -67,6 +69,7 @@
 #include "stored_table_node.hpp"
 #include "union_node.hpp"
 #include "update_node.hpp"
+#include "window_node.hpp"
 
 namespace hyrise {
 
@@ -504,7 +507,40 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_validate_node(
 // NOLINTNEXTLINE - while this particular method could be made static, others cannot.
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_window_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
-  FailInput("Hyrise does not yet support window functions.");
+  const auto window_node = std::dynamic_pointer_cast<WindowNode>(node);
+  const auto input_operator = translate_node(node->left_input());
+  const auto& input_expressions = node->left_input()->output_expressions();
+  const auto window_function_expression = window_node->window_function_expression();
+  const auto window = std::dynamic_pointer_cast<WindowExpression>(window_function_expression->window());
+
+  auto function_argument_column_id = INVALID_COLUMN_ID;
+  if (const auto argument = window_function_expression->argument()) {
+    const auto argument_column_id = find_expression_idx(*argument, input_expressions);
+    Assert(argument_column_id, "Argument expression was not a valid ColumnID.");
+    function_argument_column_id = *argument_column_id;
+  }
+
+  const auto partition_by_expressions = window->partition_by_expressions();
+  auto partition_by_column_ids = std::vector<ColumnID>();
+  partition_by_column_ids.reserve(partition_by_expressions.size());
+  for (const auto& expression : partition_by_expressions) {
+    const auto column_id = find_expression_idx(*expression, input_expressions);
+    Assert(column_id, "Partition-by expression was not a valid ColumnID.");
+    partition_by_column_ids.push_back(*column_id);
+  }
+
+  const auto order_by_expressions = window->order_by_expressions();
+  auto order_by_column_ids = std::vector<ColumnID>();
+  order_by_column_ids.reserve(order_by_expressions.size());
+  for (const auto& expression : order_by_expressions) {
+    const auto column_id = find_expression_idx(*expression, input_expressions);
+    Assert(column_id, "Order-by expression was not a valid ColumnID.");
+    order_by_column_ids.push_back(*column_id);
+  }
+
+  return std::make_shared<WindowFunctionEvaluator>(
+      input_operator, partition_by_column_ids, order_by_column_ids, function_argument_column_id,
+      window_function_expression->window_function, window, window_function_expression->as_column_name());
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_change_meta_table_node(

@@ -49,6 +49,7 @@
 #include "operators/table_wrapper.hpp"
 #include "operators/union_all.hpp"
 #include "operators/union_positions.hpp"
+#include "operators/window_function_evaluator.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
 #include "storage/prepared_plan.hpp"
@@ -1180,7 +1181,12 @@ TEST_F(LQPTranslatorTest, WindowNode) {
       rank_(window_(expression_vector(), expression_vector(), std::vector<SortMode>{}, std::move(frame)));
   const auto lqp = WindowNode::make(window_function, int_float_node);
 
-  EXPECT_THROW(LQPTranslator{}.translate_node(lqp), InvalidInputException);
+  const auto pqp = LQPTranslator{}.translate_node(lqp);
+  const auto window_function_evaluator = std::dynamic_pointer_cast<WindowFunctionEvaluator>(pqp);
+
+  EXPECT_EQ(window_function_evaluator->type(), OperatorType::WindowFunction);
+  EXPECT_EQ(window_function_evaluator->left_input()->type(), OperatorType::GetTable);
+  EXPECT_EQ(window_function_evaluator->right_input(), nullptr);
 }
 
 }  // namespace hyrise

@@ -20,13 +20,13 @@ WindowNode::WindowNode(const std::shared_ptr<AbstractExpression>& window_functio
 std::string WindowNode::description(const DescriptionMode mode) const {
   const auto expression_mode = _expression_description_mode(mode);
   auto stream = std::stringstream{};
+  const auto window_function = window_function_expression();
 
   stream << "[Window] ";
-  stream << node_expressions.front()->description(expression_mode);
-  // Print the window definition in any case.
+  stream << window_function->description(expression_mode);
+  // Print the window definition in Short DescriptionMode.
   if (mode == DescriptionMode::Short) {
-    const auto& window = static_cast<const WindowFunctionExpression&>(*node_expressions.front()).window();
-    stream << " OVER (" << window->description(expression_mode) << ")";
+    stream << " OVER (" << window_function->window()->description(expression_mode) << ")";
   }
 
   return stream.str();
@@ -55,6 +55,18 @@ UniqueColumnCombinations WindowNode::unique_column_combinations() const {
   return _forward_left_unique_column_combinations();
 }
 
+std::shared_ptr<WindowFunctionExpression> WindowNode::window_function_expression() {
+  DebugAssert(node_expressions.front()->type == ExpressionType::WindowFunction,
+              "WindowNode has wrong expression type for only node expression");
+  return std::dynamic_pointer_cast<WindowFunctionExpression>(node_expressions.front());
+}
+
+std::shared_ptr<const WindowFunctionExpression> WindowNode::window_function_expression() const {
+  DebugAssert(node_expressions.front()->type == ExpressionType::WindowFunction,
+              "WindowNode has wrong expression type for only node expression");
+  return std::dynamic_pointer_cast<WindowFunctionExpression>(node_expressions.front());
+}
+
 size_t WindowNode::_on_shallow_hash() const {
   // The WindowFunctionExpression contains everything that is required for the hash. Its hash is combined with the
   // WindowNode's hash in AbstractLQPNode::hash().
@@ -63,11 +75,11 @@ size_t WindowNode::_on_shallow_hash() const {
 
 std::shared_ptr<AbstractLQPNode> WindowNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
   return std::make_shared<WindowNode>(
-      expression_copy_and_adapt_to_different_lqp(*node_expressions.front(), node_mapping));
+      expression_copy_and_adapt_to_different_lqp(*window_function_expression(), node_mapping));
 }
 
 bool WindowNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
-  return expression_equal_to_expression_in_different_lqp(*node_expressions.front(), *rhs.node_expressions.front(),
+  return expression_equal_to_expression_in_different_lqp(*window_function_expression(), *rhs.node_expressions.front(),
                                                          node_mapping);
 }
 }  // namespace hyrise

@@ -281,6 +281,11 @@ set(
     operators/update.hpp
     operators/validate.cpp
     operators/validate.hpp
+    operators/window_function_evaluator.cpp
+    operators/window_function_evaluator.hpp
+    operators/window_function_evaluator/util.cpp
+    operators/window_function_evaluator/util.hpp
+    operators/window_function_evaluator/window_function_evaluator_traits.hpp
     optimizer/join_ordering/abstract_join_ordering_algorithm.cpp
     optimizer/join_ordering/abstract_join_ordering_algorithm.hpp
     optimizer/join_ordering/dp_ccp.cpp
@@ -650,6 +655,7 @@ set(
     utils/print_utils.hpp
     utils/pruning_utils.cpp
     utils/pruning_utils.hpp
+    utils/segment_tree.hpp
     utils/settings/abstract_setting.cpp
     utils/settings/abstract_setting.hpp
     utils/settings_manager.cpp
