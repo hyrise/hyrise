@@ -10,10 +10,10 @@
 #include <vector>
 
 #include "lqp_view.hpp"
-#include "prepared_plan.hpp"
-#include "types.hpp"
-#include "storage/chunk.hpp"
 #include "memory/numa_memory_resource.hpp"
+#include "prepared_plan.hpp"
+#include "storage/chunk.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 
@@ -67,8 +67,10 @@ class StorageManager : public Noncopyable {
   //
 
   /**
-   * Builds one NUMA memory resource for each NUMA node. Currently, this is done by
-   * using Jemalloc, which holds one arena per memory resource. 
+   * Builds one NUMA memory resource for each NUMA node. Currently, this is done using Jemalloc, which holds
+   * one arena per memory resource. As we only need the memory_resources in some special cases, memory resources
+   * are not built by default. Only the first call to this function will actually build the memory resources, all
+   * subsequent calls will do nothing.
    */
   void build_memory_resources();
 
@@ -82,7 +84,7 @@ class StorageManager : public Noncopyable {
   void migrate_chunk(std::shared_ptr<Chunk> chunk, NodeID target_node_id);
 
   static void* alloc(extent_hooks_t* extent_hooks, void* new_addr, size_t size, size_t alignment, bool* zero,
-                    bool* commit, unsigned arena_index);
+                     bool* commit, unsigned arena_index);
   void store_node_id_for_arena(ArenaID, NodeID);
 
   extent_hooks_t* get_extent_hooks();

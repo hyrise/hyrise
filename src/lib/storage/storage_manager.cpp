@@ -1,11 +1,11 @@
 #include "storage_manager.hpp"
 
+#include <numa.h>
+#include <sys/mman.h>
 #include <memory>
 #include <string>
 #include <utility>
 #include <vector>
-#include <numa.h>
-#include <sys/mman.h>
 
 #include "hyrise.hpp"
 #include "import_export/file_type.hpp"
@@ -17,7 +17,6 @@
 #include "statistics/table_statistics.hpp"
 #include "utils/assert.hpp"
 #include "utils/meta_table_manager.hpp"
-
 
 namespace hyrise {
 
@@ -267,6 +266,9 @@ std::ostream& operator<<(std::ostream& stream, const StorageManager& storage_man
 }
 
 void StorageManager::build_memory_resources() {
+  if (!memory_resources.empty()) {
+    return;
+  }
   const auto num_nodes = static_cast<NodeID>(Hyrise::get().topology.nodes().size());
   memory_resources.reserve(num_nodes);
   for (auto node_id = NodeID{0}; node_id < num_nodes; ++node_id) {
@@ -296,9 +298,7 @@ void StorageManager::migrate_table(std::shared_ptr<Table> table, NodeID target_n
 
 void StorageManager::migrate_chunk(std::shared_ptr<Chunk> chunk, NodeID target_node_id) {
   const auto memory_resource = get_memory_resource(target_node_id);
-  auto migrate_job = [&chunk, &memory_resource, target_node_id]() {
-    chunk->migrate(memory_resource, target_node_id);
-  };
+  auto migrate_job = [&chunk, &memory_resource, target_node_id]() { chunk->migrate(memory_resource, target_node_id); };
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks({std::make_shared<JobTask>(migrate_job)});
 }
 
@@ -321,7 +321,7 @@ void StorageManager::store_node_id_for_arena(ArenaID arena_id, NodeID node_id) {
 }
 
 void* StorageManager::alloc(extent_hooks_t* extent_hooks, void* new_addr, size_t size, size_t alignment, bool* zero,
-                             bool* commit, unsigned arena_index) {
+                            bool* commit, unsigned arena_index) {
   size_t off;
   if ((off = size % 4096) > 0) {
     size += 4096 - off;
