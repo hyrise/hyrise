@@ -58,6 +58,8 @@ try {
       def hyriseCI = docker.image('hyrise/hyrise-ci:22.04');
       hyriseCI.pull()
 
+      checkout scm
+
       OUTPUT = sh (
         script: "ls ${WORKSPACE}",
         returnStdout: true
