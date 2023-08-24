@@ -3,6 +3,7 @@
 
 #include "base_test.hpp"
 #include "storage/chunk_encoder.hpp"
+#include "storage/create_iterable_from_segment.hpp"
 #include "storage/value_segment.hpp"
 #include "storage/variable_string_dictionary/variable_string_vector.hpp"
 #include "storage/variable_string_dictionary/variable_string_vector_iterator.hpp"
