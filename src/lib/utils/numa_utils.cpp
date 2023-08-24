@@ -1,5 +1,12 @@
 #include "numa_utils.hpp"
 
+#if HYRISE_NUMA_SUPPORT
+
+#include <numa.h>
+
+#endif
+
+#include <numeric>
 #include <string>
 
 #include "hyrise.hpp"
@@ -12,6 +19,8 @@ DistanceMatrix get_distance_matrix() {
 
   // 10 is the default distance to the same node.
   auto distance_matrix = DistanceMatrix(num_nodes, std::vector<int>(num_nodes, 10));
+
+#if HYRISE_NUMA_SUPPORT
 
   // If numa_distance does not work (e.g. code is executed on Windows), 0 will be returned.
   // To determine, wether the numa distance can be correctly read on the system, we get the
@@ -34,6 +43,8 @@ DistanceMatrix get_distance_matrix() {
                                                             std::to_string(node_y));
     }
   }
+
+#endif
 
   return distance_matrix;
 }
