@@ -271,7 +271,7 @@ SELECT id, AVG(a) OVER (ORDER BY b RANGE BETWEEN 3 PRECEDING AND 3 FOLLOWING) AS
 SELECT id, SUM(a) OVER (PARTITION BY b) AS average from id_int_int_int_100;
 -- count
 SELECT id, a, b, c, count(a) over (PARTITION BY b ORDER BY c) AS count from id_int_int_int_100;
-SELECT id, COUNT(d) OVER (PARTITION BY a ORDER BY b ROWS BETWEEN 3 PRECEDING AND 1 FOLLOWING) AS m FROM mixed_null
+SELECT a, b, COUNT(d) OVER (PARTITION BY a ORDER BY b ROWS BETWEEN 3 PRECEDING AND 1 FOLLOWING) AS count FROM mixed_null
 
 -- Aggregates
 SELECT SUM(b + b) AS sum_b_b FROM mixed;
