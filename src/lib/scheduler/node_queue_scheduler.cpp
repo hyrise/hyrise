@@ -87,7 +87,7 @@ void NodeQueueScheduler::wait_for_all_tasks() {
 
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
     ++progress_loop_count;
-    previousless_finished_task_count = num_finished_tasks;
+    previous_finished_task_count = num_finished_tasks;
   }
 
   for (const auto& queue : _queues) {
