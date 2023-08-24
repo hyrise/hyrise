@@ -1,11 +1,10 @@
 #include "numa_memory_resource.hpp"
 
-#include <boost/container/pmr/memory_resource.hpp>
-#include "utils/assert.hpp"
-#include "hyrise.hpp"
-
 #include <shared_mutex>
 
+#include <boost/container/pmr/memory_resource.hpp>
+
+#include "hyrise.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {
@@ -24,7 +23,7 @@ NumaMemoryResource::NumaMemoryResource(const NodeID node_id) : _node_id(node_id)
     snprintf(command, sizeof(command), "arena.%u.extent_hooks", arena_id);
     Hyrise::get().storage_manager.store_node_id_for_arena(arena_id, _node_id);
     Assert(mallctl(command, nullptr, nullptr, static_cast<void*>(&hooks_ptr), sizeof(extent_hooks_t*)) == 0,
-          "mallctl failed");
+           "mallctl failed");
     _allocation_flags = MALLOCX_ARENA(arena_id) | MALLOCX_TCACHE_NONE;
   }
 }
