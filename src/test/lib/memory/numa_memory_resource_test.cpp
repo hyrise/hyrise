@@ -1,5 +1,9 @@
+#if HYRISE_NUMA_SUPPORT
+
 #include <numa.h>
 #include <numaif.h>
+
+#endif
 
 #include "base_test.hpp"
 
@@ -14,7 +18,7 @@ class NumaMemoryResourceTest : public BaseTest {
   }
 };
 
-#if HYRISE_NUMA_SUPPORT == 1
+#if HYRISE_NUMA_SUPPORT
 
 // Check if data is located on target numa node.
 void assert_node_location(void* buffer, NodeID target_node_id) {

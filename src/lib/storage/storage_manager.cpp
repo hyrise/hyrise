@@ -1,7 +1,13 @@
 #include "storage_manager.hpp"
 
+#if HYRISE_NUMA_SUPPORT
+
 #include <numa.h>
+
+#endif
+
 #include <sys/mman.h>
+#include <iostream>
 #include <memory>
 #include <string>
 #include <utility>
@@ -266,6 +272,11 @@ std::ostream& operator<<(std::ostream& stream, const StorageManager& storage_man
 }
 
 void StorageManager::build_memory_resources() {
+#if HYRISE_NUMA_SUPPORT != 1
+  std::cerr
+      << "\nWarning: StorageManager::build_memory_resources() called even though the system does not support NUMA.\n\n";
+#endif
+
   if (!memory_resources.empty()) {
     return;
   }
@@ -332,7 +343,13 @@ void* StorageManager::alloc(extent_hooks_t* extent_hooks, void* new_addr, size_t
   DebugAssert(Hyrise::get().storage_manager.node_id_for_arena_id.contains(arena_index),
               "Tried allocation for arena without numa node assignment.");
   auto& node_id = Hyrise::get().storage_manager.node_id_for_arena_id[arena_index];
+
+#if HYRISE_NUMA_SUPPORT
+
   numa_tonode_memory(addr, size, node_id);
+
+#endif
+
   return addr;
 }
 

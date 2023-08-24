@@ -1,8 +1,5 @@
 #pragma once
 
-#include <numa.h>
-
-#include <numeric>
 #include <vector>
 
 #include "performance_warning.hpp"
