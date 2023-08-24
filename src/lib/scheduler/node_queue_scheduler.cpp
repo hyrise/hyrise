@@ -63,6 +63,7 @@ void NodeQueueScheduler::begin() {
 }
 
 void NodeQueueScheduler::wait_for_all_tasks() {
+  std::cout << "Wait for all tasks" << std::endl;
   while (true) {
     auto num_finished_tasks = uint64_t{0};
     for (const auto& worker : _workers) {
@@ -72,6 +73,8 @@ void NodeQueueScheduler::wait_for_all_tasks() {
     if (num_finished_tasks == _task_counter) {
       break;
     }
+
+    std::cout << "shitty ... num_finished_tasks & _task_counter: " << num_finished_tasks << " & " <<  _task_counter.load() << std::endl;
 
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
   }
