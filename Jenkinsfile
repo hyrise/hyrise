@@ -58,7 +58,11 @@ try {
       def hyriseCI = docker.image('hyrise/hyrise-ci:22.04');
       hyriseCI.pull()
 
-      def seccompPath = "${WORKSPACE}/jenkins/seccomp_override.json"
+      def seccompPathHost = "${WORKSPACE}/jenkins/seccomp_override.json"
+      def seccompPathContainer = "/tmp/seccomp_override.json"
+
+      sh "cp ${seccompPathHost} ${seccompPathContainer}"
+
 
       // LSAN (executed as part of ASAN) requires elevated privileges. Therefore, we had to add --cap-add SYS_PTRACE.
       // Even if the CI run sometimes succeeds without SYS_PTRACE, you should not remove it until you know what you are doing.
