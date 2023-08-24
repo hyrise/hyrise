@@ -1,5 +1,10 @@
 #pragma once
 
+#ifdef HYRISE_WITH_JEMALLOC
+
+#include <jemalloc/jemalloc.h>
+
+#endif
 #include <tbb/concurrent_unordered_map.h>
 
 #include <iostream>
@@ -83,11 +88,14 @@ class StorageManager : public Noncopyable {
   void migrate_table(std::shared_ptr<Table> table, NodeID target_node_id);
   void migrate_chunk(std::shared_ptr<Chunk> chunk, NodeID target_node_id);
 
-  static void* alloc(extent_hooks_t* extent_hooks, void* new_addr, size_t size, size_t alignment, bool* zero,
-                     bool* commit, unsigned arena_index);
   void store_node_id_for_arena(ArenaID, NodeID);
 
+#ifdef HYRISE_WITH_JEMALLOC
+static void* alloc(extent_hooks_t* extent_hooks, void* new_addr, size_t size, size_t alignment, bool* zero,
+                  bool* commit, unsigned arena_index);
   extent_hooks_t* get_extent_hooks();
+#endif
+
   std::unordered_map<ArenaID, NodeID> node_id_for_arena_id;
 
   // It is static, so that it lives until the process terminates.
@@ -106,7 +114,9 @@ class StorageManager : public Noncopyable {
   tbb::concurrent_unordered_map<std::string, std::shared_ptr<LQPView>> _views{INITIAL_MAP_SIZE};
   tbb::concurrent_unordered_map<std::string, std::shared_ptr<PreparedPlan>> _prepared_plans{INITIAL_MAP_SIZE};
 
+#ifdef HYRISE_WITH_JEMALLOC
   inline static extent_hooks_t _hooks;
+#endif
 };
 
 std::ostream& operator<<(std::ostream& stream, const StorageManager& storage_manager);

@@ -286,7 +286,9 @@ void StorageManager::build_memory_resources() {
     memory_resources.emplace_back(node_id);
   }
 
+#ifdef HYRISE_WITH_JEMALLOC
   _hooks.alloc = StorageManager::alloc;
+#endif
 }
 
 void StorageManager::migrate_table(std::shared_ptr<Table> table, NodeID target_node_id) {
@@ -321,14 +323,10 @@ NumaMemoryResource* StorageManager::get_memory_resource(NodeID node_id) {
   return &(memory_resources.at(node_id));
 }
 
+#ifdef HYRISE_WITH_JEMALLOC
+
 extent_hooks_t* StorageManager::get_extent_hooks() {
   return &_hooks;
-}
-
-void StorageManager::store_node_id_for_arena(ArenaID arena_id, NodeID node_id) {
-  if (node_id_for_arena_id.contains(arena_id))
-    Fail("Tried to assign node id to an already assigned arena id.");
-  node_id_for_arena_id[arena_id] = node_id;
 }
 
 void* StorageManager::alloc(extent_hooks_t* extent_hooks, void* new_addr, size_t size, size_t alignment, bool* zero,
@@ -351,6 +349,15 @@ void* StorageManager::alloc(extent_hooks_t* extent_hooks, void* new_addr, size_t
 #endif
 
   return addr;
+}
+
+#endif
+
+
+void StorageManager::store_node_id_for_arena(ArenaID arena_id, NodeID node_id) {
+  if (node_id_for_arena_id.contains(arena_id))
+    Fail("Tried to assign node id to an already assigned arena id.");
+  node_id_for_arena_id[arena_id] = node_id;
 }
 
 }  // namespace hyrise

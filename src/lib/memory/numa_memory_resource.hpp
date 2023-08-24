@@ -1,6 +1,5 @@
 #pragma once
 
-#include <jemalloc/jemalloc.h>
 #include <boost/container/pmr/memory_resource.hpp>
 
 #include "types.hpp"
@@ -11,12 +10,12 @@ using ArenaID = uint32_t;
 
 /**
  * The base memory resource for NUMA memory allocation.
- * 
+ *
  * Each NumaMemoryResource is intended to correspond to exactly one NUMA node,
- * for which it creates a jemalloc arena to allocate memory with it. 
+ * for which it creates a jemalloc arena to allocate memory with it.
  * The NUMA specific allocation behavior is defined by extent_hooks, which are
- * located in the StorageManager. extent_hooks are a way of hooking into the 
- * allocation behavior of jemalloc and allow to use NUMA calls to move allocated 
+ * located in the StorageManager. extent_hooks are a way of hooking into the
+ * allocation behavior of jemalloc and allow to use NUMA calls to move allocated
  * memory to specific NUMA nodes.
  */
 class NumaMemoryResource : public boost::container::pmr::memory_resource {
