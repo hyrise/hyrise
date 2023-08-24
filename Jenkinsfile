@@ -52,7 +52,7 @@ try {
       // Print the hostname to let us know on which node the docker image was executed for reproducibility.
       sh "hostname"
     }
-  
+
     // The empty '' results in using the default registry: https://index.docker.io/v1/
     docker.withRegistry('', 'docker') {
       def hyriseCI = docker.image('hyrise/hyrise-ci:22.04');
@@ -61,7 +61,9 @@ try {
       // LSAN (executed as part of ASAN) requires elevated privileges. Therefore, we had to add --cap-add SYS_PTRACE.
       // Even if the CI run sometimes succeeds without SYS_PTRACE, you should not remove it until you know what you are doing.
       // See also: https://github.com/google/sanitizers/issues/764
-      hyriseCI.inside("--cap-add SYS_PTRACE -u 0:0") {
+      // To use memory related syscalls (specifically mbind, get_mempolicy, and get_mempolicy) we also need SYS_NICE.
+      // See also: https://github.com/docker-library/mongo/issues/113
+      hyriseCI.inside("--cap-add SYS_NICE --cap-add SYS_PTRACE -u 0:0") {
         try {
           stage("Setup") {
             checkout scm
@@ -81,7 +83,7 @@ try {
 
             // We don't use unity builds with GCC 9 as it triggers https://github.com/google/googletest/issues/3552
             unity = '-DCMAKE_UNITY_BUILD=ON'
- 
+
             // With Hyrise, we aim to support the most recent compiler versions and do not invest a lot of work to
             // support older versions. We test the oldest LLVM version shipped with Ubuntu 22.04 (i.e., LLVM 11) and
             // GCC 9 (oldest version supported by Hyrise). We execute at least debug runs for them.
@@ -425,7 +427,7 @@ try {
         if (env.BRANCH_NAME == 'master' || full_ci) {
           try {
             checkout scm
-            
+
             // We do not use install_dependencies.sh here as there is no way to run OS X in a Docker container
             sh "git submodule update --init --recursive --jobs 4 --depth=1"
 
