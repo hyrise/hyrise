@@ -308,8 +308,9 @@ struct WindowFunctionEvaluatorTraits<InputColumnTypeT, WindowFunction::Avg> {
     }
 
     static OutputType transform_query(TreeNode node) {
-      if (node.non_null_count == 0)
+      if (node.non_null_count == 0) {
         return std::nullopt;
+      }
       return static_cast<AvgT>(node.sum) / static_cast<AvgT>(node.non_null_count);
     }
   };

@@ -141,8 +141,9 @@ inline DataType data_type_from_all_type_variant(const AllTypeVariant& all_type_v
 
 template <typename T>
 std::optional<T> as_optional(AllTypeVariant value) {
-  if (variant_is_null(value))
+  if (variant_is_null(value)) {
     return std::nullopt;
+  }
   return boost::get<T>(value);
 }
 

@@ -49,11 +49,13 @@ std::weak_ordering compare_with_null_equal(std::span<const AllTypeVariant> lhs, 
   const auto lhs_size = lhs.size();
   for (auto column_index = 0u; column_index < lhs_size; ++column_index) {
     auto element_ordering = compare_with_null_equal(lhs[column_index], rhs[column_index]);
-    if (is_column_reversed(column_index))
+    if (is_column_reversed(column_index)) {
       element_ordering = reverse(element_ordering);
+    }
 
-    if (element_ordering != std::weak_ordering::equivalent)
+    if (element_ordering != std::weak_ordering::equivalent) {
       return element_ordering;
+    }
   }
 
   return std::weak_ordering::equivalent;
@@ -87,10 +89,11 @@ void spawn_and_wait_per_hash(PerHash<T>& data, auto&& per_hash_function) {
   tasks.reserve(bucket_count);
   for (auto hash_value = 0u; hash_value < bucket_count; ++hash_value) {
     tasks.emplace_back(std::make_shared<JobTask>([hash_value, &data, &per_hash_function]() {
-      if constexpr (requires { per_hash_function(data[hash_value], hash_value); })
+      if constexpr (requires { per_hash_function(data[hash_value], hash_value); }) {
         per_hash_function(data[hash_value], hash_value);
-      else
+      } else {
         per_hash_function(data[hash_value]);
+      }
     }));
   }
 
@@ -103,10 +106,11 @@ void spawn_and_wait_per_hash(const PerHash<T>& data, auto&& per_hash_function) {
   tasks.reserve(bucket_count);
   for (auto hash_value = 0u; hash_value < bucket_count; ++hash_value) {
     tasks.emplace_back(std::make_shared<JobTask>([hash_value, &data, &per_hash_function]() {
-      if constexpr (requires { per_hash_function(data[hash_value], hash_value); })
+      if constexpr (requires { per_hash_function(data[hash_value], hash_value); }) {
         per_hash_function(data[hash_value], hash_value);
-      else
+      } else {
         per_hash_function(data[hash_value]);
+      }
     }));
   }
 

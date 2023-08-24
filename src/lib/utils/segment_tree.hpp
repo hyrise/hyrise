@@ -105,10 +105,12 @@ class SegmentTree {
     auto left_node = leaf_count + range.start;
     auto right_node = leaf_count + range.end;
     while (left_node < right_node) {
-      if (left_node & 1u)
+      if (left_node & 1u) {
         agg = combine(tree[left_node++], agg);
-      if (right_node & 1u)
+      }
+      if (right_node & 1u) {
         agg = combine(agg, tree[--right_node]);
+      }
       left_node = parent(left_node);
       right_node = parent(right_node);
     }

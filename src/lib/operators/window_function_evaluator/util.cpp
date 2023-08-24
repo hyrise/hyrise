@@ -3,24 +3,31 @@
 namespace hyrise::window_function_evaluator {
 
 std::weak_ordering reverse(std::weak_ordering ordering) {
-  if (ordering == std::weak_ordering::less)
+  if (ordering == std::weak_ordering::less) {
     return std::weak_ordering::greater;
-  if (ordering == std::weak_ordering::greater)
+  }
+  if (ordering == std::weak_ordering::greater) {
     return std::weak_ordering::less;
+  }
   return ordering;
 }
 
 std::weak_ordering compare_with_null_equal(const AllTypeVariant& lhs, const AllTypeVariant& rhs) {
-  if (variant_is_null(lhs) && variant_is_null(rhs))
+  if (variant_is_null(lhs) && variant_is_null(rhs)) {
     return std::weak_ordering::equivalent;
-  if (variant_is_null(lhs))
+  }
+  if (variant_is_null(lhs)) {
     return std::weak_ordering::less;
-  if (variant_is_null(rhs))
+  }
+  if (variant_is_null(rhs)) {
     return std::weak_ordering::greater;
-  if (lhs < rhs)
+  }
+  if (lhs < rhs) {
     return std::weak_ordering::less;
-  if (lhs == rhs)
+  }
+  if (lhs == rhs) {
     return std::weak_ordering::equivalent;
+  }
   return std::weak_ordering::greater;
 }
 
