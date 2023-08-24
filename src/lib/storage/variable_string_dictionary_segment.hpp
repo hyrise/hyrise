@@ -69,14 +69,14 @@ requires(std::is_same_v<T, pmr_string>) class VariableStringDictionarySegment : 
    */
   EncodingType encoding_type() const final;
 
-  // Returns the first valueId ID that refers to a valueId >= the search valueId and INVALID_VALUE_ID if all values are
-  // smaller than the search valueId. Here, INVALID_VALUE_ID does not represent NULL (which isn't stored in the
+  // Returns the first offset ID that refers to a offset >= the search offset and INVALID_VALUE_ID if all values are
+  // smaller than the search offset. Here, INVALID_VALUE_ID does not represent NULL (which isn't stored in the
   // dictionary anyway). Imagine a segment with values from 1 to 10. A scan for `WHERE a < 12` would retrieve
   // `lower_bound(12) == INVALID_VALUE_ID` and compare all values in the attribute vector to `< INVALID_VALUE_ID`.
   // Thus, returning INVALID_VALUE_ID makes comparisons much easier. However, the caller has to make sure that
-  // NULL values stored in the attribute vector (stored with a valueId ID of unique_values_count()) are excluded.
+  // NULL values stored in the attribute vector (stored with a offset ID of unique_values_count()) are excluded.
   // See #1471 for a deeper discussion.
-  ValueID lower_bound(const AllTypeVariant& valueId) const final;
+  ValueID lower_bound(const AllTypeVariant& offset) const final;
 
   // Returns the first value ID that refers to a value > the search value and INVALID_VALUE_ID if all values are
   // smaller than or equal to the search value (see also lower_bound).
@@ -104,7 +104,7 @@ requires(std::is_same_v<T, pmr_string>) class VariableStringDictionarySegment : 
     } else {
       next_offset = offset_vector[value_id + 1];
     }
-    const auto string_length = next_offset - offset;
+    const auto string_length = next_offset - offset - 1;
 
     return std::string_view{dictionary.data() + offset, string_length};
   }

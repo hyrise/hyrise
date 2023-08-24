@@ -103,15 +103,17 @@ const {
 
   const auto typed_value = boost::get<pmr_string>(value);
 
-  const auto value_ids = std::ranges::iota_view{size_t{0}, _offset_vector->size()};
-
   auto it = std::lower_bound(
-      value_ids.begin(), value_ids.end(), typed_value,
-      [this](const auto valueId, const auto to_find) { return typed_value_of_value_id(ValueID(valueId)) < to_find; });
-  if (it == value_ids.end()) {
+      _offset_vector->begin(), _offset_vector->end(),
+      typed_value,
+      [this](const auto offset, const auto to_find) {
+        if (offset >= _dictionary->size()) return "" < to_find;
+        const auto value = std::string_view{_dictionary->data() + offset};
+        return value < to_find; });
+  if (it == _offset_vector->end()) {
     return INVALID_VALUE_ID;
   }
-  return ValueID{static_cast<ValueID::base_type>(std::distance(value_ids.begin(), it))};
+  return ValueID{static_cast<ValueID::base_type>(std::distance(_offset_vector->begin(), it))};
 }
 
 template <typename T>

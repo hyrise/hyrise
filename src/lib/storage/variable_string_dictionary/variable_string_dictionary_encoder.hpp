@@ -66,7 +66,7 @@ class VariableStringDictionaryEncoder : public SegmentEncoder<VariableStringDict
 
     // Compute total compressed data size.
     const auto total_size = std::accumulate(dense_values.begin(), dense_values.end(), size_t{0},
-                                            [](size_t acc, pmr_string& value) { return acc + value.size(); });
+                                            [](size_t acc, pmr_string& value) { return acc + value.size() + 1; });
 
     // Check for oversize dictionary.
     Assert(total_size < std::numeric_limits<uint32_t>::max(), "Dictionary is too large!");
@@ -83,10 +83,10 @@ class VariableStringDictionaryEncoder : public SegmentEncoder<VariableStringDict
 
     // Construct clob without null bytes.
     for (const auto& value : dense_values) {
-      memcpy(clob->data() + last_offset, value.c_str(), value.size());
+      memcpy(clob->data() + last_offset, value.c_str(), value.size() + 1);
       string_offsets[value] = static_cast<uint32_t>(last_offset);
       string_value_ids[value] = last_value_id++;
-      last_offset += value.size();
+      last_offset += value.size() + 1;
     }
 
     // Maps ChunkOffset to ValueID.
