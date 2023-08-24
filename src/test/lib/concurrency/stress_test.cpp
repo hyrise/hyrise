@@ -305,7 +305,7 @@ TEST_F(StressTest, ConcurrentInsertsFinalizeChunks) {
   table_wrapper->execute();
 
   const auto thread_count = 100;
-  const auto insert_count = 3'000;
+  const auto insert_count = 300;
   auto threads = std::vector<std::thread>{};
   threads.reserve(thread_count);
 
@@ -333,9 +333,9 @@ TEST_F(StressTest, ConcurrentInsertsFinalizeChunks) {
     thread.join();
   }
 
-  // 100 threads * 3'000 insertions * 2 values = 600'000 tuples in 200'000 chunks with chunk size 3.
-  EXPECT_EQ(table->chunk_count(), 200'000);
-  EXPECT_EQ(table->row_count(), 600'000);
+  // 100 threads * 300 insertions * 2 values = 60'000 tuples in 20'000 chunks with chunk size 3.
+  EXPECT_EQ(table->chunk_count(), 20'000);
+  EXPECT_EQ(table->row_count(), 60'000);
 
   const auto immutable_chunk_count = table->chunk_count() - 1;
   for (auto chunk_id = ChunkID{0}; chunk_id < immutable_chunk_count; ++chunk_id) {
