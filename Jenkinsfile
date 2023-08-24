@@ -60,24 +60,14 @@ try {
 
       checkout scm
 
-      OUTPUT = sh (
-        script: "ls ${WORKSPACE}",
-        returnStdout: true
-      )
-      echo "OUTPUT: ${OUTPUT}"
-
       def seccompPathHost = "${WORKSPACE}/jenkins/seccomp_override.json"
-      def seccompPathContainer = "/tmp/seccomp_override.json"
-
-      sh "cp ${seccompPathHost} ${seccompPathContainer}"
-
 
       // LSAN (executed as part of ASAN) requires elevated privileges. Therefore, we had to add --cap-add SYS_PTRACE.
       // Even if the CI run sometimes succeeds without SYS_PTRACE, you should not remove it until you know what you are doing.
       // See also: https://github.com/google/sanitizers/issues/764
       // To use memory related syscalls (specifically mbind, get_mempolicy, and get_mempolicy) we also need SYS_NICE.
       // See also: https://github.com/docker-library/mongo/issues/113
-      hyriseCI.inside("--security-opt seccomp=${seccompPath} --cap-add SYS_NICE --cap-add SYS_PTRACE -u 0:0") {
+      hyriseCI.inside("--security-opt seccomp=${seccompPathHost} --cap-add SYS_NICE --cap-add SYS_PTRACE -u 0:0") {
         try {
           stage("Setup") {
             checkout scm
