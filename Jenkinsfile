@@ -272,29 +272,6 @@ try {
                 Utils.markStageSkippedForConditional("clangRelWithDebInfoThreadSanitizer")
               }
             }
-          }, clangDebugCoverage: {
-            stage("clang-debug-coverage") {
-              if (env.BRANCH_NAME == 'master' || full_ci) {
-                sh "./scripts/coverage.sh --generate_badge=true"
-                sh "find coverage -type d -exec chmod +rx {} \\;"
-                archive 'coverage_badge.svg'
-                archive 'coverage_percent.txt'
-                publishHTML (target: [
-                  allowMissing: false,
-                  alwaysLinkToLastBuild: false,
-                  keepAll: true,
-                  reportDir: 'coverage',
-                  reportFiles: 'index.html',
-                  reportName: "Llvm-cov_Report"
-                ])
-                script {
-                  coverageChange = sh script: "./scripts/compare_coverage.sh", returnStdout: true
-                  githubNotify context: 'Coverage', description: "$coverageChange", status: 'SUCCESS', targetUrl: "${env.BUILD_URL}/RCov_20Report/index.html"
-                }
-              } else {
-                Utils.markStageSkippedForConditional("clangDebugCoverage")
-              }
-            }
           }
 
           // We run this test in an own stage since we encountered issues with multiple concurrent calls to the external DB generator.
