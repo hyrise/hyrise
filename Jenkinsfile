@@ -62,7 +62,7 @@ try {
         script: "ls ${WORKSPACE}",
         returnStdout: true
       )
-      echo "OUTPUT: ${OUPUT}"
+      echo "OUTPUT: ${OUTPUT}"
 
       def seccompPathHost = "${WORKSPACE}/jenkins/seccomp_override.json"
       def seccompPathContainer = "/tmp/seccomp_override.json"
