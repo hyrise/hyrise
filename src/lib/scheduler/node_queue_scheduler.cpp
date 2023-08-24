@@ -53,7 +53,6 @@ void NodeQueueScheduler::begin() {
         _workers.emplace_back(
             std::make_shared<Worker>(queue, WorkerID{_worker_id_allocator->allocate()}, topology_cpu.cpu_id));
       }
-
     }
   }
 
@@ -79,7 +78,8 @@ void NodeQueueScheduler::wait_for_all_tasks() {
       break;
     }
 
-    Assert(progressless_loop_count < 1'000, "Timeout: no progress while waiting for all scheduled tasks to be processed.");
+    Assert(progressless_loop_count < 1'000,
+          "Timeout: no progress while waiting for all scheduled tasks to be processed.");
 
     if (previous_finished_task_count < num_finished_tasks) {
       progressless_loop_count = 0;
