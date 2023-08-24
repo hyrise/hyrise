@@ -57,7 +57,7 @@ void NodeQueueScheduler::begin() {
     }
   }
 
-  Assert(!_active_nodes.empty(), "No node with active workers created.");
+  Assert(!_active_nodes.empty(), "None of the system nodes has active workers.");
   _active = true;
 
   for (auto& worker : _workers) {
@@ -180,12 +180,11 @@ void NodeQueueScheduler::schedule(std::shared_ptr<AbstractTask> task, NodeID pre
 }
 
 NodeID NodeQueueScheduler::determine_queue_id(const NodeID preferred_node_id) const {
-  // Early out: scheduler has only a single active node and queue.
+  // Early out: no need to check for preferred node or other queues, if there is only a single node queue.
   if (_active_nodes.size() == 1) {
     return _active_nodes[0];
   }
 
-  // Early out: no need to check for preferred node or other queues, if there is only a single node queue.
   if (preferred_node_id != CURRENT_NODE_ID) {
     return preferred_node_id;
   }
@@ -196,7 +195,7 @@ NodeID NodeQueueScheduler::determine_queue_id(const NodeID preferred_node_id) co
     return worker->queue()->node_id();
   }
 
-  // Initial min values with Node 0.
+  // Initial min values with first active node.
   auto min_load_node_id = _active_nodes[0];
   auto min_load = _queues[min_load_node_id]->estimate_load();
 
