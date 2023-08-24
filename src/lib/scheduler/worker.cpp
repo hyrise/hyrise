@@ -38,7 +38,6 @@ Worker::Worker(const std::shared_ptr<TaskQueue>& queue, WorkerID worker_id, CpuI
   _random.resize(100);
   std::iota(_random.begin(), _random.end(), 0);
   std::shuffle(_random.begin(), _random.end(), std::default_random_engine{std::random_device{}()});
-std::cout << "jo" << queue->estimate_load() << std::endl;
 }
 
 WorkerID Worker::id() const {

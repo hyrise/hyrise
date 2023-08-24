@@ -49,8 +49,6 @@ void NodeQueueScheduler::begin() {
       auto queue = std::make_shared<TaskQueue>(node_id);
       _queues[node_id] = queue;
 
-      std::cout << "Workers for node " << static_cast<size_t>(node_id) << ": " << topology_node.cpus.size() << std::endl;
-
       for (const auto& topology_cpu : topology_node.cpus) {
         _workers.emplace_back(
             std::make_shared<Worker>(queue, WorkerID{_worker_id_allocator->allocate()}, topology_cpu.cpu_id));
@@ -69,8 +67,7 @@ void NodeQueueScheduler::begin() {
 }
 
 void NodeQueueScheduler::wait_for_all_tasks() {
-  std::cout << "Wait for all tasks" << std::endl;
-  auto progress_loop_count = size_t{0};
+  auto progressless_loop_count = size_t{0};
   auto previous_finished_task_count = std::numeric_limits<size_t>::max();
   while (true) {
     auto num_finished_tasks = uint64_t{0};
@@ -82,30 +79,15 @@ void NodeQueueScheduler::wait_for_all_tasks() {
       break;
     }
 
-<<<<<<< HEAD
-    std::cout << "shitty ... num_finished_tasks & _task_counter: " << num_finished_tasks << " & " <<  _task_counter.load() << " and queue loads: ";
-    for (const auto& queue : _queues) {
-      if (!queue) {
-        continue;
-      }
-      std::cout << " -  " << queue->estimate_load();
-    }
-=======
-    std::cout << "shitty ... num_finished_tasks & _task_counter: " << num_finished_tasks << " & " <<  _task_counter.load() << " and queue loads: " << std::endl;
-    for (const auto& queue : _queues)
-      { std::cout << " -  " << queue->estimate_load(); }
->>>>>>> 698ba4c41 (Jojo)
-    std::cout << "(loop: " << progress_loop_count << std::endl;
-
-    Assert(progress_loop_count < 1'000, "Timeout: no progress while waiting for all scheduled tasks to be processed.");
+    Assert(progressless_loop_count < 1'000, "Timeout: no progress while waiting for all scheduled tasks to be processed.");
 
     if (previous_finished_task_count < num_finished_tasks) {
-      progress_loop_count = 0;
+      progressless_loop_count = 0;
     }
 
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
     ++progress_loop_count;
-    previous_finished_task_count = num_finished_tasks;
+    previousless_finished_task_count = num_finished_tasks;
   }
 
   for (const auto& queue : _queues) {
@@ -134,9 +116,7 @@ void NodeQueueScheduler::finish() {
     return;
   }
 
-  std::cout << "1" << std::endl;
   wait_for_all_tasks();
-  std::cout << "2" << std::endl;
 
   Assert(static_cast<size_t>(_active_worker_count.load()) == _workers.size(), "Expected all workers to be active.");
   for (auto node_id = NodeID{0}; node_id < _node_count; ++node_id) {
@@ -146,7 +126,6 @@ void NodeQueueScheduler::finish() {
       auto shut_down_task = std::make_shared<ShutdownTask>(_active_worker_count);
       shut_down_task->schedule(node_id);
     }
-    std::cout << "dings" << std::endl;
   }
 
   auto check_runs = size_t{0};
