@@ -8,7 +8,6 @@
 #include <uninitialized_vector.hpp>
 #include "bytell_hash_map.hpp"
 #include "hyrise.hpp"
-#include "numa.h"
 
 #include "operators/join_hash.hpp"
 #include "operators/multi_predicate_join/multi_predicate_join_evaluator.hpp"
