@@ -44,6 +44,9 @@ void NodeQueueScheduler::begin() {
     // Tracked per node as core restrictions can lead to unbalanced core counts.
     _workers_per_node.emplace_back(topology_node.cpus.size());
 
+    // Only create queues for nodes with CPUs assigned. Otherwise, we might add tasks to these queues that can never be
+    // directly pulled and must be stolen by other nodes' CPUs. This can lead to problems when shutting down the
+    // scheduler.
     if (!topology_node.cpus.empty()) {
       _active_nodes.push_back(node_id);
       auto queue = std::make_shared<TaskQueue>(node_id);
@@ -67,7 +70,7 @@ void NodeQueueScheduler::begin() {
 
 void NodeQueueScheduler::wait_for_all_tasks() {
   auto progressless_loop_count = size_t{0};
-  auto previous_finished_task_count = std::numeric_limits<size_t>::max();
+  auto previous_finished_task_count = size_t{0};
   while (true) {
     auto num_finished_tasks = uint64_t{0};
     for (const auto& worker : _workers) {
@@ -78,16 +81,24 @@ void NodeQueueScheduler::wait_for_all_tasks() {
       break;
     }
 
-    Assert(progressless_loop_count < 1'000,
-          "Timeout: no progress while waiting for all scheduled tasks to be processed.");
+    // Ensure we do not wait forever for tasks that cannot be processed or are stuck.
+    if (progressless_loop_count >= 1'000) {
+      const auto remaining_task_count = _task_counter - num_finished_tasks;
+      auto message = std::stringstream{};
+      // We waited for 10 ms, 1'000 times = 10s.
+      message << "Timeout: no progress while waiting for all scheduled tasks to be processed. " << remaining_task_count
+              << " task(s) still remaining for 10s now, quitting.";
+      Fail(message.str());
+    }
 
-    if (previous_finished_task_count < num_finished_tasks) {
+    if (previous_finished_task_count == num_finished_tasks) {
+      ++progressless_loop_count;
+    } else {
+      previous_finished_task_count = num_finished_tasks;
       progressless_loop_count = 0;
     }
 
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
-    ++progressless_loop_count;
-    previous_finished_task_count = num_finished_tasks;
   }
 
   for (const auto& queue : _queues) {

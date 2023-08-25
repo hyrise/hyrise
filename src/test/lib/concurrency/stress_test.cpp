@@ -287,4 +287,20 @@ TEST_F(StressTest, AtomicMaxConcurrentUpdate) {
   EXPECT_EQ(counter.load(), 1'100);
 }
 
+TEST_F(StressTest, SchedulerShutdownWithStuckTasks) {
+  // Create a task that does not finish.
+  auto keep_spinning = std::atomic_bool{true};
+  const auto job_task = std::make_shared<JobTask>([&]() {
+    while (keep_spinning) {
+      std::this_thread::sleep_for(std::chrono::milliseconds{10});
+    }
+  });
+
+  job_task->schedule();
+  EXPECT_THROW(Hyrise::get().scheduler()->wait_for_all_tasks(), std::logic_error);
+
+  // Allow task to finish so the scheduler can also finish (triggered by Hyrise::reset() in the test destructor).
+  keep_spinning = false;
+}
+
 }  // namespace hyrise
