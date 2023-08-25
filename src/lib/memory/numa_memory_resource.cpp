@@ -16,7 +16,6 @@
 namespace hyrise {
 
 NumaMemoryResource::NumaMemoryResource(const NodeID node_id) : _node_id(node_id) {
-
 #ifdef HYRISE_WITH_JEMALLOC
   // Setup arena.
   auto arena_id = uint32_t{0};
