@@ -299,8 +299,9 @@ TEST_F(StressTest, SchedulerShutdownWithStuckTasks) {
   job_task->schedule();
   EXPECT_THROW(Hyrise::get().scheduler()->wait_for_all_tasks(), std::logic_error);
 
-  // Allow task to finish so the scheduler can also finish (triggered by Hyrise::reset() in the test destructor).
+  // Allow task to finish so the scheduler can also finish.
   keep_spinning = false;
+  Hyrise::get().scheduler()->finish();
 }
 
 }  // namespace hyrise

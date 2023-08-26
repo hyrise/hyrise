@@ -81,13 +81,14 @@ void NodeQueueScheduler::wait_for_all_tasks() {
       break;
     }
 
-    // Ensure we do not wait forever for tasks that cannot be processed or are stuck.
-    if (progressless_loop_count >= 1'000) {
+    // Ensure we do not wait forever for tasks that cannot be processed or are stuck. 10s seemed too little for TSAN
+    // builds in the CI.
+    if (progressless_loop_count >= 1'500) {
       const auto remaining_task_count = _task_counter - num_finished_tasks;
       auto message = std::stringstream{};
-      // We waited for 10 ms, 1'000 times = 10s.
+      // We waited for 10 ms, 1'500 times = 15s.
       message << "Timeout: no progress while waiting for all scheduled tasks to be processed. " << remaining_task_count
-              << " task(s) still remaining for 10s now, quitting.";
+              << " task(s) still remaining for 15s now, quitting.";
       Fail(message.str());
     }
 
