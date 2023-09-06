@@ -24,6 +24,9 @@
 namespace {
 using namespace hyrise;  // NOLINT(build/namespaces)
 
+// Size into which the intermediate aggregate output is split (determines the chunk size of the output).
+constexpr auto RESULT_SPLIT_SIZE = Chunk::DEFAULT_SIZE;
+
 
 template<class T>
 struct is_shared_ptr : std::false_type {};
@@ -93,7 +96,7 @@ struct ResultSplitter {
   // References to most recent vector to which data is appended.
   ValueVectorType* append_value_vector;
   pmr_vector<bool>* append_null_vector;
-  size_t split_size{Chunk::DEFAULT_SIZE};
+  size_t split_size{RESULT_SPLIT_SIZE};
   size_t max_size;
 };
 
