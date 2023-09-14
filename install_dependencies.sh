@@ -50,7 +50,7 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
             echo "Installing dependencies (this may take a while)..."
             if sudo apt-get update >/dev/null; then
                 # Packages added here should also be added to the Dockerfile
-                sudo apt-get install --no-install-recommends -y autoconf bash-completion bc clang-14 clang-17 clang-format-17 clang-tidy-17 cmake curl dos2unix g++-11 gcc-11 gcovr git graphviz libboost-all-dev libhwloc-dev libncurses5-dev libnuma-dev libnuma1 libpq-dev libreadline-dev libsqlite3-dev libtbb-dev lld man parallel postgresql-server-dev-all python3 python3-pip valgrind &
+                sudo apt-get install --no-install-recommends -y autoconf bash-completion bc clang-13 clang-17 clang-format-17 clang-tidy-17 cmake curl dos2unix g++-11 gcc-11 gcovr git graphviz libboost-all-dev libhwloc-dev libncurses5-dev libnuma-dev libnuma1 libpq-dev libreadline-dev libsqlite3-dev libtbb-dev lld man parallel postgresql-server-dev-all python3 python3-pip valgrind &
 
                 if ! git submodule update --jobs 5 --init --recursive; then
                     echo "Error during git fetching submodules."
@@ -69,7 +69,7 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
                     exit 1
                 fi
 
-                sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 90 --slave /usr/bin/g++ g++ /usr/bin/g++-11
+                sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-13 90 --slave /usr/bin/g++ g++ /usr/bin/g++-13
                 # we use llvm-profdata-11 and llvm-cov-11 due to an unresolved issue with coverage under clang14 (https://github.com/llvm/llvm-project/issues/54907)
                 sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-17 90 --slave /usr/bin/clang++ clang++ /usr/bin/clang++-17 --slave /usr/bin/clang-tidy clang-tidy /usr/bin/clang-tidy-17 --slave /usr/bin/llvm-profdata llvm-profdata /usr/bin/llvm-profdata-17 --slave /usr/bin/llvm-cov llvm-cov /usr/bin/llvm-cov-17 --slave /usr/bin/clang-format clang-format /usr/bin/clang-format-17
             else
