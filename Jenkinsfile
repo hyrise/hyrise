@@ -55,7 +55,7 @@ try {
   
     // The empty '' results in using the default registry: https://index.docker.io/v1/
     docker.withRegistry('', 'docker') {
-      def hyriseCI = docker.image('hyrise/hyrise-ci:22.04');
+      def hyriseCI = docker.image('hyrise/hyrise-ci:23.10');
       hyriseCI.pull()
 
       // LSAN (executed as part of ASAN) requires elevated privileges. Therefore, we had to add --cap-add SYS_PTRACE.
@@ -88,9 +88,9 @@ try {
             // If you want to upgrade compiler versions, please update install_dependencies.sh,  DEPENDENCIES.md, and
             // the documentation (README, Wiki).
             clang = '-DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++'
-            clang11 = '-DCMAKE_C_COMPILER=clang-11 -DCMAKE_CXX_COMPILER=clang++-11'
+            clang11 = '-DCMAKE_C_COMPILER=clang-13 -DCMAKE_CXX_COMPILER=clang++-13'
             gcc = '-DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++'
-            gcc9 = '-DCMAKE_C_COMPILER=gcc-9 -DCMAKE_CXX_COMPILER=g++-9'
+            gcc9 = '-DCMAKE_C_COMPILER=gcc-11 -DCMAKE_CXX_COMPILER=g++-11'
 
             debug = '-DCMAKE_BUILD_TYPE=Debug'
             release = '-DCMAKE_BUILD_TYPE=Release'

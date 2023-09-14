@@ -2,15 +2,16 @@
 # You need to build and push it manually, see the wiki for details:
 # https://github.com/hyrise/hyrise/wiki/Docker-Image
 
-FROM ubuntu:22.04
+FROM ubuntu:23.10
 ENV DEBIAN_FRONTEND noninteractive
+ENV PATH "/hyrise_venv/bin:$PATH"
 RUN apt-get update \
     && apt-get install -y \
         autoconf \
         bash-completion \
         bc \
-        clang-11 \
         clang-14 \
+        clang-17 \
         clang-format-14 \
         clang-tidy-14 \
         cmake \
@@ -39,12 +40,14 @@ RUN apt-get update \
         postgresql-server-dev-all \
         python3 \
         python3-pip \
+        python3-venv \
         software-properties-common \
         sudo \
         valgrind \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* \
     && ln -sf /usr/bin/llvm-symbolizer-14 /usr/bin/llvm-symbolizer \
+    && python3 -m venv /hyrise_venv/ \
     && pip3 install scipy pandas matplotlib # preload large Python packages (installs numpy and others)
 
 ENV HYRISE_HEADLESS_SETUP=true
