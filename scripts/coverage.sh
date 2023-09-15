@@ -36,13 +36,13 @@ cd build-coverage
 # We use clang 11 for the coverage check as clang 14 (the default clang version for Ubuntu 22.04) has an unresolved
 # issue (see https://github.com/llvm/llvm-project/issues/54907).
 path_to_compiler=''
-c_compiler='clang-11'
-cxx_compiler='clang++-11'
+c_compiler='clang-17'
+cxx_compiler='clang++-17'
 
 unamestr=$(uname)
 if [[ "$unamestr" == 'Darwin' ]]; then
    # Use homebrew clang for OS X
-   path_to_compiler="$(brew --prefix llvm@11)/bin/"
+   path_to_compiler="$(brew --prefix llvm@17)/bin/"
    c_compiler='clang'
    cxx_compiler='clang++'
 fi
