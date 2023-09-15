@@ -1,5 +1,8 @@
 #include "list_directory.hpp"
 
+#include <filesystem>
+#include <vector>
+
 namespace hyrise {
 
 std::vector<std::filesystem::path> list_directory(const std::string& directory) {
