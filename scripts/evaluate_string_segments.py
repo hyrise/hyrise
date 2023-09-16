@@ -459,7 +459,7 @@ class Benchmarking:
                 else:
                     arguments += ["-t", str(self._config.time_limit)]
                 if metrics:
-                    arguments += ["--metrics", "-r", "1"]
+                    arguments += ["--system_metrics", "-r", "1"]
                 return arguments
 
             def _output_path(self, threading: Literal["ST"] | Literal["MT"], encoding: str, metrics: bool) -> str:
