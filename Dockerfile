@@ -4,7 +4,8 @@
 
 FROM ubuntu:23.10
 ENV DEBIAN_FRONTEND noninteractive
-ENV PATH "/hyrise_venv/bin:$PATH"
+ENV HYRISE_VENV_PATH "/hyrise_venv"
+ENV PATH "${HYRISE_VENV_PATH}/bin:$PATH"
 RUN apt-get update \
     && apt-get install -y \
         autoconf \
@@ -12,19 +13,17 @@ RUN apt-get update \
         bc \
         clang-14 \
         clang-17 \
-        clang-format-14 \
-        clang-tidy-14 \
+        clang-format \
+        clang-tidy \
         cmake \
         curl \
         dos2unix \
-        g++-9 \
         g++-11 \
-        gcc-9 \
         gcc-11 \
         gcovr \
         git \
         graphviz \
-        libboost-all-dev \
+        libboost1.81-dev \
         libhwloc-dev \
         libncurses5-dev \
         libnuma-dev \
@@ -47,7 +46,7 @@ RUN apt-get update \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* \
     && ln -sf /usr/bin/llvm-symbolizer-14 /usr/bin/llvm-symbolizer \
-    && python3 -m venv /hyrise_venv/ \
+    && python3 -m venv "${HYRISE_VENV_PATH}/" \
     && pip3 install scipy pandas matplotlib # preload large Python packages (installs numpy and others)
 
 ENV HYRISE_HEADLESS_SETUP=true

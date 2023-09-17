@@ -50,7 +50,7 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
             echo "Installing dependencies (this may take a while)..."
             if sudo apt-get update >/dev/null; then
                 # Packages added here should also be added to the Dockerfile
-                sudo apt-get install --no-install-recommends -y autoconf bash-completion bc clang-15 clang-17 clang-format-17 clang-tidy-17 cmake curl dos2unix g++-11 gcc-11 gcovr git graphviz libboost-all-dev libhwloc-dev libncurses5-dev libnuma-dev libnuma1 libpq-dev libreadline-dev libsqlite3-dev libtbb-dev lld man parallel postgresql-server-dev-all python3 python3-pip valgrind &
+                sudo apt-get install --no-install-recommends -y autoconf bash-completion bc clang-15 clang-17 clang-format-17 clang-tidy-17 cmake curl dos2unix g++-11 gcc-11 gcovr git graphviz libboost1.81-dev libhwloc-dev libncurses5-dev libnuma-dev libnuma1 libpq-dev libreadline-dev libsqlite3-dev libtbb-dev lld man parallel postgresql-server-dev-all python3 python3-pip valgrind &
 
                 if ! git submodule update --jobs 5 --init --recursive; then
                     echo "Error during git fetching submodules."
@@ -75,7 +75,7 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
             else
                 echo "Error during installation."
                 exit 1
-            fi
+            ei
         else
             echo "Unsupported system. You might get the install script to work if you remove the '/etc/lsb-release' line, but you will be on your own."
             exit 1
@@ -85,5 +85,7 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
         exit 1
     fi
 fi
+
+# sudo apt-get install --no-install-recommends -y libboost1.81-dev
 
 exit 0
