@@ -75,7 +75,7 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
             else
                 echo "Error during installation."
                 exit 1
-            ei
+            fi
         else
             echo "Unsupported system. You might get the install script to work if you remove the '/etc/lsb-release' line, but you will be on your own."
             exit 1
@@ -85,7 +85,5 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
         exit 1
     fi
 fi
-
-# sudo apt-get install --no-install-recommends -y libboost1.81-dev
 
 exit 0
