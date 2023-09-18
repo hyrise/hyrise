@@ -1438,7 +1438,6 @@ std::shared_ptr<SegmentVisitorContext> AggregateHash::_create_aggregate_context(
         Fail("Unsupported aggregate function '" + window_function_to_string.left.at(aggregate_function) + "'.");
     }
   });
-
   return context;
 }
 

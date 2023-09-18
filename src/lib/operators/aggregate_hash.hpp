@@ -185,7 +185,7 @@ class AggregateHash : public AbstractAggregateOperator {
 
   // Dat structure used to gather results during aggregation execution. This data structure further stores the
   // materialized aggregate results that are later returned as EntirePosLists reference segments in the output table.
-  // TODO: rename
+  // TODO(Bouncner): rename
   std::vector<Segments> _output_table;
 
   std::vector<std::shared_ptr<BaseValueSegment>> _groupby_segments;
