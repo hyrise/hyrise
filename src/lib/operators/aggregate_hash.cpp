@@ -24,85 +24,66 @@
 namespace {
 using namespace hyrise;  // NOLINT(build/namespaces)
 
-// Size into which the intermediate aggregate output is split (determines the chunk size of the output).
-constexpr auto RESULT_SPLIT_SIZE = Chunk::DEFAULT_SIZE;
-
-
-template<class T>
-struct is_shared_ptr : std::false_type {};
-
-template<class T>
-struct is_shared_ptr<std::shared_ptr<T>> : std::true_type {};
-
 /**
- * Helper struct to split writing of results into smaller chunks.
+ * Helper to split results into chunks, prepare the output vectors, and parallelize the consumers (i.e., passed
+ * lambdas) of the split results.
  */
-template <typename ValueVectorType>
-struct ResultSplitter {
-  using ValueType = typename ValueVectorType::value_type;
-
-  ResultSplitter(std::vector<std::shared_ptr<ValueVectorType>>& init_value_vectors, std::vector<std::shared_ptr<pmr_vector<bool>>>& init_null_vectors, const size_t init_max_size)
-      : value_vectors{init_value_vectors},
-        null_vectors{init_null_vectors},
-        max_size{init_max_size} {
-    Assert(split_size > 0, "Split size must be positive.");
-    DebugAssert(value_vectors.empty(), "Initialize vectors usings prepare().");
-    DebugAssert(null_vectors.empty(), "Initialize vectors usings prepare().");
+template <typename ColumnDataType, WindowFunction aggregate_func, typename ResultConsumer, typename ValueVectorType>
+void split_results_chunk_wise(const bool write_nulls, const AggregateResults<ColumnDataType, aggregate_func>& results,
+                              std::vector<ValueVectorType>& value_vectors, std::vector<pmr_vector<bool>>& null_vectors,
+                              const ResultConsumer consumer_function) {
+  if (results.empty()) {
+    return;
   }
 
-  void prepare(const bool write_nulls) {
-    value_vectors.push_back(std::make_shared<ValueVectorType>());
-    append_value_vector = &*value_vectors.back();
-    append_value_vector->reserve(std::min(split_size, max_size));
+  auto results_begin = results.cbegin();
 
-    if (write_nulls) {
-      null_vectors.push_back(std::make_shared<pmr_vector<bool>>());
-      append_null_vector = &*null_vectors.back();
-      append_null_vector->reserve(std::min(split_size, max_size));
-    }
+  const auto result_count = static_cast<ChunkID::base_type>(results.size());
+  const auto output_chunk_count = static_cast<ChunkID::base_type>(
+      std::ceil(static_cast<double>(result_count) / static_cast<double>(Chunk::DEFAULT_SIZE)));
+
+  value_vectors.resize(output_chunk_count);
+  if (write_nulls) {
+    null_vectors.resize(output_chunk_count);
   }
 
-  void append(const ValueType value) {
-    DebugAssert(!value_vectors.empty(), "Call prepare() before appending.");
-    if (append_value_vector->size() == split_size) {
-      value_vectors.push_back(std::make_shared<ValueVectorType>());
-      append_value_vector = &*value_vectors.back();
-
-      // We could keep track of the remaining elements before reaching max_size, but we do not know the actual max size
-      // (NULLs are skipped, see callers of this method). We make the simple assumption that reserving split_size is
-      // acceptable as we end up with multiple result chunks anyway at this point anyway.
-      append_value_vector->reserve(split_size);
-    }
-
-    append_value_vector->emplace_back(value);
+  if constexpr (!std::is_same_v<ValueVectorType, std::shared_ptr<RowIDPosList>>) {
+    // Check that are are dealing with expected input data, which is either pos lists (for writing the group-by outputs)
+    // or pmr_vector<DataType::*> for the aggregate results.
+    using AggregateType = typename ValueVectorType::value_type;
+    static_assert(std::is_same_v<ValueVectorType, pmr_vector<AggregateType>>);
   }
 
-  void append(const ValueType value, const bool is_null) {
-    DebugAssert(!value_vectors.empty(), "Call prepare() before appending.");
-    if (append_null_vector->size() == split_size) {
-      null_vectors.push_back(std::make_shared<pmr_vector<bool>>());
-      append_null_vector = &*null_vectors.back();
-      append_null_vector->reserve(split_size);
-    }
+  auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+  jobs.reserve(output_chunk_count);
+  for (auto output_chunk_id = ChunkID{0}; output_chunk_id < output_chunk_count; ++output_chunk_id) {
+    jobs.emplace_back(std::make_shared<JobTask>([&, output_chunk_id, consumer_function]() {
+      auto begin = results_begin + output_chunk_id * Chunk::DEFAULT_SIZE;
+      auto end = results_begin + std::min(result_count, (output_chunk_id + 1) * Chunk::DEFAULT_SIZE);
 
-    DebugAssert(!null_vectors.empty(), "Writing NULL value, but NULL vectors are not initialized.");
-    append(value);
-    append_null_vector->emplace_back(is_null);
+      const auto element_count = std::distance(begin, end);
+      if constexpr (std::is_same_v<ValueVectorType, std::shared_ptr<RowIDPosList>>) {
+        using ValueType = typename ValueVectorType::element_type;
+        value_vectors[output_chunk_id] = std::make_shared<ValueType>();
+        value_vectors[output_chunk_id]->reserve(element_count);
+      } else {
+        value_vectors[output_chunk_id].reserve(element_count);
+      }
+
+      if (write_nulls) {
+        null_vectors[output_chunk_id].reserve(element_count);
+      }
+
+      consumer_function(begin, end, output_chunk_id);
+    }));
   }
 
-  // Passed vectors that the ResultSplitter is writing into.
-  std::vector<std::shared_ptr<ValueVectorType>>& value_vectors;
-  std::vector<std::shared_ptr<pmr_vector<bool>>>& null_vectors;
-  // References to most recent vector to which data is appended.
-  ValueVectorType* append_value_vector;
-  pmr_vector<bool>* append_null_vector;
-  size_t split_size{RESULT_SPLIT_SIZE};
-  size_t max_size;
-};
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
+}
 
 void prepare_output(std::vector<Segments>& output, const size_t chunk_count, const size_t column_count) {
-  DebugAssert(output.empty() || output.size() == chunk_count, "Output data structure should be either empty or already prepared.");
-  Assert(chunk_count > 0, "Chunk count should be larger zero.");
+  DebugAssert(output.empty() || output.size() == chunk_count,
+              "Output data structure should be either empty or already prepared.");
 
   if (output.size() == chunk_count) {
     return;
@@ -230,7 +211,6 @@ void write_groupby_output(const std::shared_ptr<const Table>& input_table,
                           const std::vector<std::shared_ptr<WindowFunctionExpression>>& aggregates,
                           const std::vector<ColumnID>& groupby_column_ids, const Results& results,
                           TableColumnDefinitions& output_column_definitions, std::vector<Segments>& output_table) {
-  // std::cout << "#1" << std::endl;
   DebugAssert(output_table.empty(), "");
   auto unaggregated_columns = std::vector<std::pair<ColumnID, ColumnID>>{};
   unaggregated_columns.reserve(groupby_column_ids.size() + aggregates.size());
@@ -250,7 +230,6 @@ void write_groupby_output(const std::shared_ptr<const Table>& input_table,
     }
   }
 
-  // std::cout << "#2" << std::endl;
   for (const auto& unaggregated_column : unaggregated_columns) {
     // Structured bindings do not work with the capture below.
     const auto input_column_id = unaggregated_column.first;
@@ -260,12 +239,8 @@ void write_groupby_output(const std::shared_ptr<const Table>& input_table,
         TableColumnDefinition{input_table->column_name(input_column_id), input_table->column_data_type(input_column_id),
                               input_table->column_is_nullable(input_column_id)};
 
-    auto pos_lists = std::vector<std::shared_ptr<RowIDPosList>>();
-    auto unused_nulls = std::vector<std::shared_ptr<pmr_vector<bool>>>{};  // Not used for PosList writing.
-    auto splitter = ResultSplitter(pos_lists, unused_nulls, results.size());
-
-    constexpr auto WRITE_NULL_VALUES = false;  // Here, we only write positions, not actual values or NULLs.
-    splitter.prepare(WRITE_NULL_VALUES);
+    auto pos_lists = std::vector<std::shared_ptr<RowIDPosList>>{};
+    auto unused_nulls = std::vector<pmr_vector<bool>>{};  // Not used for PosList writing.
 
     // Determine type of input table. For reference tables, we need to point the RowID to the referenced table. If the
     // table is a data table, we can directly use the RowID.
@@ -273,50 +248,66 @@ void write_groupby_output(const std::shared_ptr<const Table>& input_table,
     auto referenced_table = std::optional<std::shared_ptr<const Table>>{};
     auto referenced_column_id = input_column_id;
 
+    using AggregateResultsIter = typename Results::const_iterator;
+
     // In both following loops, we skip each NULL_ROW_ID (just a marker, not literally NULL), which means that this
     // result is either a gap (in the case of an unused immediate key) or the result of overallocating the result
     // vector. As such, it must be skipped.
     if (input_is_data_table) {
       referenced_table = input_table;
-      for (const auto& result : results) {
-        const auto& row_id = result.row_id;
-        if (row_id.is_null()) {
-          continue;
-        }
-        splitter.append(row_id);
-      }
+
+      split_results_chunk_wise(false, results, pos_lists, unused_nulls,
+                               [&](AggregateResultsIter begin, const AggregateResultsIter end, const ChunkID chunk_id) {
+                                 auto& pos_list = *pos_lists[chunk_id];
+
+                                 for (; begin != end; ++begin) {
+                                   const auto& row_id = begin->row_id;
+                                   if (row_id.is_null()) {
+                                     continue;
+                                   }
+                                   pos_list.push_back(row_id);
+                                 }
+                               });
     } else {
-      auto mappy = std::unordered_map<ChunkID, const AbstractPosList*>{};
-      for (const auto& result : results) {
-        const auto& row_id = result.row_id;
-        if (row_id.is_null()) {
-          continue;
-        }
+      split_results_chunk_wise(
+          false, results, pos_lists, unused_nulls,
+          [&](AggregateResultsIter begin, const AggregateResultsIter end, const ChunkID chunk_id) {
+            // Map to cache references to PosLists (avoids frequent dynamic casts to obtain position list of reference
+            // segments).
+            auto mappy = std::unordered_map<ChunkID, const AbstractPosList*>{};
+            auto& pos_list = *pos_lists[chunk_id];
 
-        if (!mappy.contains(row_id.chunk_id)) {
-          const auto& segment = input_table->get_chunk(row_id.chunk_id)->get_segment(input_column_id);
-          DebugAssert(std::dynamic_pointer_cast<const ReferenceSegment>(segment), "Expected ReferenceSegment.");
-          const auto& reference_segment = static_cast<const ReferenceSegment&>(*segment);
+            for (; begin != end; ++begin) {
+              const auto& row_id = begin->row_id;
+              if (row_id.is_null()) {
+                continue;
+              }
 
-          mappy.emplace(row_id.chunk_id, static_cast<const AbstractPosList*>(&*reference_segment.pos_list()));
+              if (!mappy.contains(row_id.chunk_id)) {
+                const auto& segment = input_table->get_chunk(row_id.chunk_id)->get_segment(input_column_id);
+                DebugAssert(std::dynamic_pointer_cast<const ReferenceSegment>(segment), "Expected ReferenceSegment.");
+                const auto& reference_segment = static_cast<const ReferenceSegment&>(*segment);
 
-          if (!referenced_table) {
-            referenced_table = reference_segment.referenced_table();
-            referenced_column_id = reference_segment.referenced_column_id();
-          }
-        }
+                mappy.emplace(row_id.chunk_id, static_cast<const AbstractPosList*>(&*reference_segment.pos_list()));
 
-        splitter.append((*mappy[row_id.chunk_id])[row_id.chunk_offset]);
-      }
+                if (!referenced_table) {
+                  referenced_table = reference_segment.referenced_table();
+                  referenced_column_id = reference_segment.referenced_column_id();
+                }
+              }
+
+              pos_list.push_back((*mappy[row_id.chunk_id])[row_id.chunk_offset]);
+            }
+          });
     }
 
     if (referenced_table) {
-      const auto output_table_chunk_count = splitter.value_vectors.size();
+      const auto output_table_chunk_count = pos_lists.size();
       prepare_output(output_table, output_table_chunk_count, output_column_definitions.size());
       for (auto output_chunk_id = ChunkID{0}; output_chunk_id < output_table_chunk_count; ++output_chunk_id) {
-        const auto& pos_list = splitter.value_vectors[output_chunk_id];
+        const auto& pos_list = pos_lists[output_chunk_id];
         output_table[output_chunk_id][output_column_id] =
-          std::make_shared<ReferenceSegment>(*referenced_table, referenced_column_id, pos_list);  
+            std::make_shared<ReferenceSegment>(*referenced_table, referenced_column_id, pos_list);
       }
     }
   }
@@ -965,7 +956,6 @@ void AggregateHash::_aggregate() {
 }  // NOLINT(readability/fn_size)
 
 std::shared_ptr<const Table> AggregateHash::_on_execute() {
-  // std::cout << description(DescriptionMode::SingleLine) << std::endl;
   // We do not want the overhead of a vector with heap storage when we have a limited number of aggregate columns.
   // However, more specializations mean more compile time. We now have specializations for 0, 1, 2, and >2 GROUP BY
   // columns.
@@ -1009,7 +999,6 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
   */
   const auto& input_table = left_input_table();
   auto aggregate_idx = ColumnID{0};
-  // auto aggregate_columns_result_column_definitions = TableColumnDefinitions{};
   for (const auto& aggregate : _aggregates) {
     const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->argument());
     const auto input_column_id = pqp_column.column_id;
@@ -1017,8 +1006,6 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
     // Output column for COUNT(*).
     const auto data_type =
         input_column_id == INVALID_COLUMN_ID ? DataType::Long : input_table->column_data_type(input_column_id);
-
-    // aggregate_columns_result_column_definitions.emplace_back(_output_column_definitions[aggregate_idx].name, data_type, (aggregate->window_function != WindowFunction::Count && aggregate->window_function != WindowFunction::CountDistinct));
 
     resolve_data_type(data_type, [&](auto type) {
       using ColumnDataType = typename decltype(type)::type;
@@ -1073,15 +1060,6 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
   reference_segment_indexes.resize(_groupby_column_ids.size());
   auto entireposlist_indexes = std::vector<ColumnID>{};
   entireposlist_indexes.reserve(_aggregates.size());
-  // auto aggregate_column_offset = ColumnID{static_cast<ColumnID::base_type>(_groupby_column_ids.size())};
-  // for (const auto& aggregate : _aggregates) {
-  //   if (aggregate->window_function == WindowFunction::Any) {
-  //     reference_segment_indexes.push_back(aggregate_column_offset);
-  //   } else {
-  //     entireposlist_indexes.push_back(aggregate_column_offset);
-  //   }
-  //   ++aggregate_column_offset;
-  // }
 
   std::iota(reference_segment_indexes.begin(), reference_segment_indexes.end(), ColumnID{0});
   auto output_column_id = ColumnID{static_cast<ColumnID::base_type>(_groupby_column_ids.size())};
@@ -1093,33 +1071,6 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
     }
     ++output_column_id;
   }
-
-  // auto groupby_column_ids_iter = _groupby_column_ids.cbegin();
-  // auto aggregates_iter = _aggregates.cbegin();
-  // for (auto output_column_id = ColumnID{0}; output_column_id < num_output_columns; ++output_column_id) {
-  //   if (output_column_id == *groupby_column_ids_iter) {
-  //     reference_segment_indexes.push_back(output_column_id);
-  //     ++groupby_column_ids_iter;
-  //     continue;
-  //   }
-
-  //   if ((*aggregates_iter)->window_function == WindowFunction::Any) {
-  //     reference_segment_indexes.push_back(output_column_id);
-  //     ++aggregates_iter;
-  //     continue;
-  //   }
-
-  //   entireposlist_indexes.push_back(output_column_id);
-  //   ++aggregates_iter;
-  // }
-
-  // std::cout << "reference_segment_indexes >>> ";
-  // for (auto i : reference_segment_indexes) { std::cout << " - " << i; }
-  // std::cout << std::endl;
-
-  // std::cout << "entireposlist_indexes >>> ";
-  // for (auto i : entireposlist_indexes) { std::cout << " - " << i; }
-  // std::cout << std::endl;
 
   auto aggregate_columns_result_table = std::shared_ptr<Table>{};
   if (!entireposlist_indexes.empty()) {
@@ -1141,11 +1092,11 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
       }
 
       aggregate_columns_result_table->append_chunk(aggregate_segments);
-    }    
+    }
   }
 
   auto operator_output = std::make_shared<Table>(_output_column_definitions, TableType::References);
-  if (_output_table.front()[0] && _output_table.front()[0]->size() > 0) {
+  if (!_output_table.empty() && _output_table.front()[0]->size() > 0) {
     const auto output_table_chunk_count = _output_table.size();
     for (auto chunk_id = ChunkID{0}; chunk_id < output_table_chunk_count; ++chunk_id) {
       auto reference_segments = Segments{};
@@ -1163,10 +1114,10 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
       Assert(!_groupby_column_ids.empty() || materialized_table_column_count > 0, "What?");
       for (auto materialized_table_column_id = ColumnID{0};
            materialized_table_column_id < materialized_table_column_count; ++materialized_table_column_id) {
-        DebugAssert(
-            !std::dynamic_pointer_cast<const ReferenceSegment>(aggregate_columns_result_table->get_chunk(chunk_id)
-                                                                   ->get_segment(ColumnID{materialized_table_column_id})),
-            "Unexpected reference segment at at this position.");
+        DebugAssert(!std::dynamic_pointer_cast<const ReferenceSegment>(
+                        aggregate_columns_result_table->get_chunk(chunk_id)->get_segment(
+                            ColumnID{materialized_table_column_id})),
+                    "Unexpected reference segment at at this position.");
         const auto entire_chunk_pos_list = std::make_shared<EntireChunkPosList>(chunk_id, chunk_size);
         reference_segments[entireposlist_indexes[materialized_table_column_id]] = std::make_shared<ReferenceSegment>(
             aggregate_columns_result_table, materialized_table_column_id, entire_chunk_pos_list);
@@ -1195,112 +1146,169 @@ template <typename ColumnDataType, typename AggregateType, WindowFunction aggreg
 std::enable_if_t<aggregate_func == WindowFunction::Min || aggregate_func == WindowFunction::Max ||
                      aggregate_func == WindowFunction::Sum || aggregate_func == WindowFunction::Any,
                  void>
-write_aggregate_values(auto& splitter, const AggregateResults<ColumnDataType, aggregate_func>& results) {
-  splitter.prepare(true);
+write_aggregate_values(const AggregateResults<ColumnDataType, aggregate_func>& results,
+                       std::vector<pmr_vector<AggregateType>>& value_vectors,
+                       std::vector<pmr_vector<bool>>& null_vectors) {
+  using AggregateResultsIter = typename AggregateResults<ColumnDataType, aggregate_func>::const_iterator;
+  split_results_chunk_wise(
+      true, results, value_vectors, null_vectors,
+      [&](AggregateResultsIter begin, const AggregateResultsIter end, const ChunkID chunk_id) {
+        auto& values = value_vectors[chunk_id];
+        auto& null_values = null_vectors[chunk_id];
 
-  for (const auto& result : results) {
-    // NULL_ROW_ID (just a marker, not literally NULL) means that this result is either a gap (in the case of an unused
-    // immediate key) or the result of overallocating the result vector. As such, it must be skipped.
-    if (result.row_id.is_null()) {
-      continue;
-    }
+        for (; begin != end; ++begin) {
+          const auto& result = *begin;
 
-    if (result.aggregate_count > 0) {
-      splitter.append(result.accumulator, false);
-    } else {
-      splitter.append({}, true);
-    }
-  }
+          // NULL_ROW_ID (just a marker, not literally NULL) means that this result is either a gap (in the case of an
+          // unused immediate key) or the result of overallocating the result vector. As such, it must be skipped.
+          if (result.row_id.is_null()) {
+            continue;
+          }
+
+          if (result.aggregate_count > 0) {
+            values.emplace_back(result.accumulator);
+            null_values.emplace_back(false);
+          } else {
+            values.emplace_back();
+            null_values.emplace_back(true);
+          }
+        }
+      });
 }
 
 // COUNT writes the aggregate counter
 template <typename ColumnDataType, typename AggregateType, WindowFunction aggregate_func>
-std::enable_if_t<aggregate_func == WindowFunction::Count, void> write_aggregate_values(auto& splitter, const AggregateResults<ColumnDataType, aggregate_func>& results) {
-  splitter.prepare(false);
+std::enable_if_t<aggregate_func == WindowFunction::Count, void> write_aggregate_values(
+    const AggregateResults<ColumnDataType, aggregate_func>& results,
+    std::vector<pmr_vector<AggregateType>>& value_vectors, std::vector<pmr_vector<bool>>& null_vectors) {
+  using AggregateResultsIter = typename AggregateResults<ColumnDataType, aggregate_func>::const_iterator;
+  split_results_chunk_wise(
+      false, results, value_vectors, null_vectors,
+      [&](AggregateResultsIter begin, const AggregateResultsIter end, const ChunkID chunk_id) {
+        auto& values = value_vectors[chunk_id];
 
-  for (const auto& result : results) {
-    // NULL_ROW_ID (just a marker, not literally NULL) means that this result is either a gap (in the case of an unused
-    // immediate key) or the result of overallocating the result vector. As such, it must be skipped.
-    if (result.row_id.is_null()) {
-      continue;
-    }
+        for (; begin != end; ++begin) {
+          const auto& result = *begin;
 
-    splitter.append(result.aggregate_count);
-  }
+          // NULL_ROW_ID (just a marker, not literally NULL) means that this result is either a gap (in the case of an
+          // unused immediate key) or the result of overallocating the result vector. As such, it must be skipped.
+          if (result.row_id.is_null()) {
+            continue;
+          }
+
+          values.emplace_back(result.aggregate_count);
+        }
+      });
 }
 
 // COUNT(DISTINCT) writes the number of distinct values
 template <typename ColumnDataType, typename AggregateType, WindowFunction aggregate_func>
-std::enable_if_t<aggregate_func == WindowFunction::CountDistinct, void> write_aggregate_values(auto& splitter,
-    const AggregateResults<ColumnDataType, aggregate_func>& results) {
-  splitter.prepare(false);
+std::enable_if_t<aggregate_func == WindowFunction::CountDistinct, void> write_aggregate_values(
+    const AggregateResults<ColumnDataType, aggregate_func>& results,
+    std::vector<pmr_vector<AggregateType>>& value_vectors, std::vector<pmr_vector<bool>>& null_vectors) {
+  using AggregateResultsIter = typename AggregateResults<ColumnDataType, aggregate_func>::const_iterator;
+  split_results_chunk_wise(
+      false, results, value_vectors, null_vectors,
+      [&](AggregateResultsIter begin, const AggregateResultsIter end, const ChunkID chunk_id) {
+        auto& values = value_vectors[chunk_id];
 
-  for (const auto& result : results) {
-    // NULL_ROW_ID (just a marker, not literally NULL) means that this result is either a gap (in the case of an unused
-    // immediate key) or the result of overallocating the result vector. As such, it must be skipped.
-    if (result.row_id.is_null()) {
-      continue;
-    }
+        for (; begin != end; ++begin) {
+          const auto& result = *begin;
 
-    splitter.append(result.accumulator.size());
-  }
+          // NULL_ROW_ID (just a marker, not literally NULL) means that this result is either a gap (in the case of an
+          // unused immediate key) or the result of overallocating the result vector. As such, it must be skipped.
+          if (result.row_id.is_null()) {
+            continue;
+          }
+
+          values.emplace_back(result.accumulator.size());
+        }
+      });
 }
 
 // AVG writes the calculated average from current aggregate and the aggregate counter
 template <typename ColumnDataType, typename AggregateType, WindowFunction aggregate_func>
 std::enable_if_t<aggregate_func == WindowFunction::Avg && std::is_arithmetic_v<AggregateType>, void>
-write_aggregate_values(auto& splitter, const AggregateResults<ColumnDataType, aggregate_func>& results) {
-  splitter.prepare(true);
+write_aggregate_values(const AggregateResults<ColumnDataType, aggregate_func>& results,
+                       std::vector<pmr_vector<AggregateType>>& value_vectors,
+                       std::vector<pmr_vector<bool>>& null_vectors) {
+  using AggregateResultsIter = typename AggregateResults<ColumnDataType, aggregate_func>::const_iterator;
+  split_results_chunk_wise(
+      true, results, value_vectors, null_vectors,
+      [&](AggregateResultsIter begin, const AggregateResultsIter end, const ChunkID chunk_id) {
+        auto& values = value_vectors[chunk_id];
+        auto& null_values = null_vectors[chunk_id];
 
-  for (const auto& result : results) {
-    // NULL_ROW_ID (just a marker, not literally NULL) means that this result is either a gap (in the case of an unused
-    // immediate key) or the result of overallocating the result vector. As such, it must be skipped.
-    if (result.row_id.is_null()) {
-      continue;
-    }
+        for (; begin != end; ++begin) {
+          const auto& result = *begin;
 
-    if (result.aggregate_count > 0) {
-      splitter.append(result.accumulator / static_cast<AggregateType>(result.aggregate_count), false);
-    } else {
-      splitter.append({}, true);
-    }
-  }
+          // NULL_ROW_ID (just a marker, not literally NULL) means that this result is either a gap (in the case of an
+          // unused immediate key) or the result of overallocating the result vector. As such, it must be skipped.
+          if (result.row_id.is_null()) {
+            continue;
+          }
+
+          if (result.aggregate_count > 0) {
+            values.emplace_back(result.accumulator / static_cast<AggregateType>(result.aggregate_count));
+            null_values.emplace_back(false);
+          } else {
+            values.emplace_back();
+            null_values.emplace_back(true);
+          }
+        }
+      });
 }
 
 // AVG is not defined for non-arithmetic types. Avoiding compiler errors.
 template <typename ColumnDataType, typename AggregateType, WindowFunction aggregate_func>
 std::enable_if_t<aggregate_func == WindowFunction::Avg && !std::is_arithmetic_v<AggregateType>, void>
-write_aggregate_values(auto& /*splitter*/, const AggregateResults<ColumnDataType, aggregate_func>& /*results*/) {
+write_aggregate_values(const AggregateResults<ColumnDataType, aggregate_func>& /*results*/,
+                       std::vector<pmr_vector<AggregateType>>& /* values */,
+                       std::vector<pmr_vector<bool>>& /* null_vectors */) {
   Fail("Invalid aggregate");
 }
 
 // STDDEV_SAMP writes the calculated standard deviation from current aggregate and the aggregate counter.
 template <typename ColumnDataType, typename AggregateType, WindowFunction aggregate_func>
 std::enable_if_t<aggregate_func == WindowFunction::StandardDeviationSample && std::is_arithmetic_v<AggregateType>, void>
-write_aggregate_values(auto& splitter, const AggregateResults<ColumnDataType, aggregate_func>& results) {
-  splitter.prepare(true);
+write_aggregate_values(const AggregateResults<ColumnDataType, aggregate_func>& results,
+                       std::vector<pmr_vector<AggregateType>>& value_vectors,
+                       std::vector<pmr_vector<bool>>& null_vectors) {
+  using AggregateResultsIter = typename AggregateResults<ColumnDataType, aggregate_func>::const_iterator;
+  split_results_chunk_wise(
+      true, results, value_vectors, null_vectors,
+      [&](AggregateResultsIter begin, const AggregateResultsIter end, const ChunkID chunk_id) {
+        auto& values = value_vectors[chunk_id];
+        auto& null_values = null_vectors[chunk_id];
 
-  for (const auto& result : results) {
-    // NULL_ROW_ID (just a marker, not literally NULL) means that this result is either a gap (in the case of an unused
-    // immediate key) or the result of overallocating the result vector. As such, it must be skipped.
-    if (result.row_id.is_null()) {
-      continue;
-    }
+        for (; begin != end; ++begin) {
+          const auto& result = *begin;
 
-    if (result.aggregate_count > 1) {
-      splitter.append(result.accumulator[3], false);
-    } else {
-      // STDDEV_SAMP is undefined for lists with less than two elements.
-      splitter.append({}, true);
-    }
-  }
+          // NULL_ROW_ID (just a marker, not literally NULL) means that this result is either a gap (in the case of an
+          // unused immediate key) or the result of overallocating the result vector. As such, it must be skipped.
+          if (result.row_id.is_null()) {
+            continue;
+          }
+
+          if (result.aggregate_count > 1) {
+            values.emplace_back(result.accumulator[3]);
+            null_values.emplace_back(false);
+          } else {
+            // STDDEV_SAMP is undefined for lists with less than two elements.
+            values.emplace_back();
+            null_values.emplace_back(true);
+          }
+        }
+      });
 }
 
 // STDDEV_SAMP is not defined for non-arithmetic types. Avoiding compiler errors.
 template <typename ColumnDataType, typename AggregateType, WindowFunction aggregate_func>
 std::enable_if_t<aggregate_func == WindowFunction::StandardDeviationSample && !std::is_arithmetic_v<AggregateType>,
                  void>
-write_aggregate_values(auto& /*splitter*/, const AggregateResults<ColumnDataType, aggregate_func>& /*results*/) {
+write_aggregate_values(const AggregateResults<ColumnDataType, aggregate_func>& /*results*/,
+                       std::vector<pmr_vector<AggregateType>>& /* values */,
+                       std::vector<pmr_vector<bool>>& /* null_vectors */) {
   Fail("Invalid aggregate");
 }
 
@@ -1341,44 +1349,46 @@ void AggregateHash::_write_aggregate_output(ColumnID aggregate_index) {
     excluded_time = groupby_columns_writing_runtime;
   }
 
-  // Write aggregated values into the segment. While write_aggregate_values could track if an actual NULL value was
-  // written or not, we rather make the output types consistent independent of the input types. Not sure what the
-  // standard says about this.
-  auto values = std::vector<std::shared_ptr<pmr_vector<decltype(aggregate_type)>>>{};
-  auto null_values = std::vector<std::shared_ptr<pmr_vector<bool>>>{};
-  auto splitter = ResultSplitter(values, null_values, results.size());
+  auto value_vectors = std::vector<pmr_vector<decltype(aggregate_type)>>{};
+  auto null_vectors = std::vector<pmr_vector<bool>>{};
 
   constexpr bool NEEDS_NULL =
       (aggregate_function != WindowFunction::Count && aggregate_function != WindowFunction::CountDistinct);
   const auto output_column_id = _groupby_column_ids.size() + aggregate_index;
 
-  write_aggregate_values<ColumnDataType, decltype(aggregate_type), aggregate_function>(splitter, results);
+  // Write aggregated values. While write_aggregate_values could track if an actual NULL value was written or not, we
+  // rather make the output types consistent independent of the input types. Not sure what the standard says about this.
+  write_aggregate_values<ColumnDataType, decltype(aggregate_type), aggregate_function>(results, value_vectors,
+                                                                                       null_vectors);
 
-  DebugAssert(!NEEDS_NULL || !splitter.null_vectors.empty(), "write_aggregate_values unexpectedly wrote NULL values.");
-
-  if (_groupby_column_ids.empty() && (splitter.value_vectors.empty() || splitter.value_vectors[0]->empty())) {
+  if (_groupby_column_ids.empty() && value_vectors.empty()) {
     // If we did not GROUP BY anything and we have no results, we need to add NULL for most aggregates and 0 for count.
+    value_vectors.emplace_back();
+    value_vectors[0].emplace_back();
     if constexpr (NEEDS_NULL) {
-      splitter.append(decltype(aggregate_type){}, true);
-    } else {
-      splitter.append(decltype(aggregate_type){});
+      Assert(null_vectors.empty(), "Unexpected non-empty state of null values.");
+      null_vectors.emplace_back();
+      null_vectors[0].emplace_back(true);
     }
   }
 
-  prepare_output(_output_table, splitter.value_vectors.size(), _output_column_definitions.size());
+  DebugAssert(NEEDS_NULL || null_vectors.empty(), "write_aggregate_values unexpectedly wrote NULL values");
+
+  prepare_output(_output_table, value_vectors.size(), _output_column_definitions.size());
 
   _output_column_definitions[output_column_id] =
       TableColumnDefinition{aggregate->as_column_name(), RESULT_TYPE, NEEDS_NULL};
 
-  const auto materialized_segment_count = splitter.value_vectors.size();
+  const auto materialized_segment_count = value_vectors.size();
   for (auto segment_id = ChunkID{0}; segment_id < materialized_segment_count; ++segment_id) {
     auto output_segment = std::shared_ptr<ValueSegment<decltype(aggregate_type)>>{};
     if (!NEEDS_NULL) {
-      output_segment = std::make_shared<ValueSegment<decltype(aggregate_type)>>(std::move(*splitter.value_vectors[segment_id]));
+      output_segment = std::make_shared<ValueSegment<decltype(aggregate_type)>>(std::move(value_vectors[segment_id]));
     } else {
-      DebugAssert(splitter.value_vectors[segment_id]->size() == splitter.null_vectors[segment_id]->size(), "Sizes of value and NULL vectors differ.");
-      output_segment =
-          std::make_shared<ValueSegment<decltype(aggregate_type)>>(std::move(*splitter.value_vectors[segment_id]), std::move(*splitter.null_vectors[segment_id]));
+      DebugAssert(value_vectors[segment_id].size() == null_vectors[segment_id].size(),
+                  "Sizes of value and NULL vectors differ.");
+      output_segment = std::make_shared<ValueSegment<decltype(aggregate_type)>>(std::move(value_vectors[segment_id]),
+                                                                                std::move(null_vectors[segment_id]));
     }
     _output_table[segment_id][output_column_id] = output_segment;
   }

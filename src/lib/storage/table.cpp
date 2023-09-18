@@ -284,12 +284,6 @@ void Table::append_chunk(const Segments& segments, std::shared_ptr<MvccData> mvc
   if constexpr (HYRISE_DEBUG) {
     for (const auto& segment : segments) {
       const auto is_reference_segment = std::dynamic_pointer_cast<ReferenceSegment>(segment) != nullptr;
-      // if (_type == TableType::References) {
-      //   std::cout << "type is references" << std::endl;
-      // } else {std::cout << "type is data" << std::endl;}
-      // if (is_reference_segment) {
-      //   std::cout << "current segment is reference" << std::endl;
-      // } else {std::cout << "current segment is NOT reference" << std::endl;}
       Assert(is_reference_segment == (_type == TableType::References), "Invalid Segment type");
     }
 
