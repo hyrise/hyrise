@@ -3,11 +3,11 @@
 #include <boost/container/pmr/monotonic_buffer_resource.hpp>
 #include <boost/container/pmr/unsynchronized_pool_resource.hpp>
 #include <boost/container/small_vector.hpp>
+#include <boost/unordered/unordered_flat_map.hpp>
 #include <boost/dynamic_bitset.hpp>
 #include <boost/lexical_cast.hpp>
 #include <uninitialized_vector.hpp>
 
-#include "bytell_hash_map.hpp"
 #include "hyrise.hpp"
 #include "operators/join_hash.hpp"
 #include "operators/multi_predicate_join/multi_predicate_join_evaluator.hpp"
@@ -89,7 +89,7 @@ class PosHashTable {
 
   // In case we consider runtime to be more relevant, the flat hash map performs better (measured to be mostly on par
   // with bytell hash map and in some cases up to 5% faster) but is significantly larger than the bytell hash map.
-  using OffsetHashTable = ska::bytell_hash_map<HashedType, Offset>;
+  using OffsetHashTable = boost::unordered_flat_map<HashedType, Offset>;
 
   // The small_vector holds the first n values in local storage and only resorts to heap storage after that. 1 is chosen
   // as n because in many cases, we join on primary key attributes where by definition we have only one match on the
