@@ -1,6 +1,14 @@
 #!/bin/bash
 
 if [[ -z $HYRISE_HEADLESS_SETUP ]]; then
+    BOOST_INSTALLED=$(dpkg-query -W --showformat='${Status}\n' libboost1.74-dev 2>/dev/null | grep "install ok installed")
+    if [ "" != "$BOOST_INSTALLED" ]; then
+         read -p 'libboost1.74-dev is installed but 1.81 is required. Ok to remove 1.74-dev? [y|n] ' -n 1 -r < /dev/tty
+        echo
+         if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
+             sudo apt-get remove libboost1.74-dev
+         fi
+    fi
     read -p 'This script installs the dependencies of Hyrise. It might upgrade already installed packages. Continue? [y|n] ' -n 1 -r < /dev/tty
 else
     REPLY="y"
@@ -49,6 +57,16 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
         if [ -f /etc/lsb-release ] && cat /etc/lsb-release | grep DISTRIB_ID | grep Ubuntu >/dev/null; then
             echo "Installing dependencies (this may take a while)..."
             if sudo apt-get update >/dev/null; then
+                sudo apt-get install --no-install-recommends -y software-properties-common lsb-release
+                if [[ "$(lsb_release -sr)" < "23.10" ]]; then
+                    # The boost version shipped with Ubuntu versions before 23.10 do not provide
+                    # boost::unordered_flat_map. Thus, we manually retrieve it.
+                    sudo add-apt-repository -y ppa:mhier/libboost-latest
+                    sudo apt-get update
+                    sudo apt-get install --no-install-recommends -y libboost1.81-all-dev
+                else 
+                    sudo apt-get install --no-install-recommends -y libboost1.81-all-dev
+                fi
                 # Packages added here should also be added to the Dockerfile
                 sudo apt-get install --no-install-recommends -y autoconf bash-completion bc clang-11 clang-14 clang-format-14 clang-tidy-14 cmake curl dos2unix g++-9 gcc-9 g++-11 gcc-11 gcovr git graphviz libboost-all-dev libhwloc-dev libncurses5-dev libnuma-dev libnuma1 libpq-dev libreadline-dev libsqlite3-dev libtbb-dev lld man parallel postgresql-server-dev-all python3 python3-pip valgrind &
 
