@@ -67,7 +67,7 @@ TEST_F(CostEstimatorLogicalTest, UnionAll) {
 }
 
 TEST_F(CostEstimatorLogicalTest, UnionPositions) {
-  // We need to sort both input's PosLists (n * log(n)) and write the output.
+  // We need to sort both inputs' PosLists (n * log(n)) and write the output.
   const auto union_node = UnionNode::make(SetOperationMode::Positions, node_a, node_b);
 
   const auto output_cardinality = cost_estimator->cardinality_estimator->estimate_cardinality(union_node);

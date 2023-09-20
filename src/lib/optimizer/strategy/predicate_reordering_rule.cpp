@@ -48,7 +48,7 @@ void reorder_predicates(const std::vector<std::shared_ptr<AbstractLQPNode>>& pre
   const auto input_sides = predicates.front()->get_input_sides();
 
   // Estimate the cardinality of the input node once to cache its estimated statistics. Since we execute the reordering
-  // recursively, we can be sure the plan below does not change anymore and input the estimations can be cached safely.
+  // recursively, we can be sure the plan below does not change anymore and the input estimations can be cached safely.
   const auto& cardinality_estimator = cost_estimator->cardinality_estimator;
   cardinality_estimator->estimate_cardinality(input);
 
@@ -74,9 +74,10 @@ void reorder_predicates(const std::vector<std::shared_ptr<AbstractLQPNode>>& pre
     predicate->set_left_input(input);
     // Estimate the cardinality and cost of the predicate without caching. As the predicate order is not yet determined,
     // caching leads to wrong estimates in the cache.
-    const auto output_cardinality = cardinality_estimator->estimate_cardinality(predicate, false);
-    const auto estimated_cost = cost_estimator->estimate_node_cost(predicate, false) - output_cardinality;
-    const auto penalty = predicate->type == LQPNodeType::Join ? PredicateReorderingRule::JOIN_PENALTY : 1;
+    constexpr auto do_cache = false;
+    const auto output_cardinality = cardinality_estimator->estimate_cardinality(predicate, do_cache);
+    const auto estimated_cost = cost_estimator->estimate_node_cost(predicate, do_cache) - output_cardinality;
+    const auto penalty = predicate->type == LQPNodeType::Join ? PredicateReorderingRule::JOIN_PENALTY : 1.0f;
     const auto weighted_cost = estimated_cost * penalty + output_cardinality;
     nodes_and_costs.emplace_back(predicate, weighted_cost);
   }
@@ -86,7 +87,7 @@ void reorder_predicates(const std::vector<std::shared_ptr<AbstractLQPNode>>& pre
     lqp_remove_node(predicate, AllowRightInput::Yes);
   }
 
-  // Sort in descending order. The "most beneficial" predicate (i.e., with the lowest cost) is a the end.
+  // Sort in descending order. The "most beneficial" predicate (i.e., with the lowest cost) is at the end.
   std::sort(nodes_and_costs.begin(), nodes_and_costs.end(),
             [&](auto& left, auto& right) { return left.second > right.second; });
 
@@ -161,7 +162,7 @@ std::string PredicateReorderingRule::name() const {
 
 void PredicateReorderingRule::_apply_to_plan_without_subqueries(
     const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
-  // We keep track of reordered predicate nodes, so that this rule touches predicate nodes once only.
+  // We keep track of reordered PredicateNodes, so that this rule touches predicate nodes once only.
   auto visited_nodes = std::unordered_set<std::shared_ptr<AbstractLQPNode>>{};
   cost_estimator->cardinality_estimator->guarantee_bottom_up_construction();
 

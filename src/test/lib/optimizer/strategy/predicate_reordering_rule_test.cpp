@@ -263,8 +263,8 @@ TEST_F(PredicateReorderingTest, SimpleValidateReorderingTest) {
 }
 
 TEST_F(PredicateReorderingTest, DoNotReorderMultiPredicateSemiAndAntiJoins) {
-  // The semi-/anti-joins filter the left input relation, the PredicateNode does not. However, do not reorder the nodes
-  // as we cannot execute multi-predicate joins efficiently.
+  // The semi-/anti-joins filter `node` (selectivity < 1), the PredicateNode does not (selectivity = 1). However, do not
+  // reorder the nodes as we cannot execute multi-predicate joins efficiently.
   const auto node_b = static_pointer_cast<MockNode>(node->deep_copy());
   const auto b_a = node_b->get_column("a");
   const auto b_b = node_b->get_column("b");

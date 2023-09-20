@@ -19,8 +19,11 @@ float expression_cost_multiplier(const std::shared_ptr<AbstractExpression>& expr
 
   // Number of different columns accessed to factor in expression complexity. Also add a factor for correlated
   // subqueries since we have to evaluate the subquery for each tuple again. In the past, we added to the factor for
-  // each expression in the predicate. This led to too pressimistic cost estimations for PredicateNodes compared to
-  // (semi-)joins.
+  // each expression in the predicate. This led to too pessimistic cost estimations for PredicateNodes compared to
+  // (semi-)joins. We start with a weight of 0 to ease, e.g., the estimation of column vs. column predicates of nested
+  // predicates (SELECT ... WHERE column_a = column_b OR column_3 = 'a' needs to evaluate three columns).
+  // Returning the maximum of `multiplier` and 1 accounts for tautologies (SELECT ... WHERE 1 = 1), which we currently
+  // do not optimize and pass to the ExpressionEvaluator.
   visit_expression(expression, [&](const auto& sub_expression) {
     if (sub_expression->type == ExpressionType::LQPColumn ||
         (sub_expression->type == ExpressionType::LQPSubquery &&
@@ -34,7 +37,7 @@ float expression_cost_multiplier(const std::shared_ptr<AbstractExpression>& expr
           const auto element_is_column_like = list_element->type == ExpressionType::LQPColumn ||
                                               (sub_expression->type == ExpressionType::LQPSubquery &&
                                                static_cast<LQPSubqueryExpression&>(*sub_expression).is_correlated());
-          Assert(!element_is_column_like, "Did not expect column-like expression in ListExpression.");
+          Assert(!element_is_column_like, "Did not expect columns or correlated subqueries in ListExpression.");
         }
       }
 

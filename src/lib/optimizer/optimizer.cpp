@@ -217,8 +217,8 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   // JoinToSemiJoinRule, or predicates created by the JoinToPredicateRewriteRule are properly placed, too. Also run the
   // PredicateReorderingRule before the SemiJoinReductionRule to order semi/anti joins before we add semi join
   // reductions. Otherwise, we might add unnecessary reductions.
-  // Note: Pusing all newly created predicates down is not always beneficial. Examples are the TPC-DS queries 13 and 48.
-  // Here, we join a table with a foreign-key relationship and no additional filters on that table without using it
+  // Note: Pushing all newly created predicates down is not always beneficial. Examples are the TPC-DS queries 13 and
+  // 48. Here, we join a table with a foreign-key relationship and no additional filters on that table without using it
   // further. The superfluous semi-join is pushed down, degrading performance.
   // TODO(dey4ss): Revisit and improve this once Hyrise really supports foreign keys/INDs and all FKs are set - either
   // improve cardinality estimation or implement join avoidance.
