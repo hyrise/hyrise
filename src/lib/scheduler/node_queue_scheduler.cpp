@@ -53,6 +53,7 @@ void NodeQueueScheduler::begin() {
       _queues[node_id] = queue;
 
       for (const auto& topology_cpu : topology_node.cpus) {
+        // TODO(anybody): Place queues on the actual NUMA node once we have NUMA-aware allocators.
         _workers.emplace_back(
             std::make_shared<Worker>(queue, WorkerID{_worker_id_allocator->allocate()}, topology_cpu.cpu_id));
       }
