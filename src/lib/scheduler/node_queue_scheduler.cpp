@@ -44,9 +44,9 @@ void NodeQueueScheduler::begin() {
     // Tracked per node as core restrictions can lead to unbalanced core counts.
     _workers_per_node.emplace_back(topology_node.cpus.size());
 
-    // Only create queues for nodes with CPUs assigned. Otherwise, we might add tasks to these queues that can never be
-    // directly pulled and must be stolen by other nodes' CPUs. This can lead to problems when shutting down the
-    // scheduler.
+    // Only create queues for nodes with CPUs assigned. Otherwise, no workers are active on these nodes and we might
+    // add tasks to these queues that can never be directly pulled and must be stolen by other nodes' workers. As
+    // ShutdownTasks are not stealable, placing tasks on nodes without workers can lead to failing shutdowns.
     if (!topology_node.cpus.empty()) {
       _active_nodes.push_back(node_id);
       auto queue = std::make_shared<TaskQueue>(node_id);
@@ -88,7 +88,7 @@ void NodeQueueScheduler::wait_for_all_tasks() {
       auto message = std::stringstream{};
       // We waited for 10 ms, 1'500 times = 15s.
       message << "Timeout: no progress while waiting for all scheduled tasks to be processed. " << remaining_task_count
-              << " task(s) still remaining for 15s now, quitting.";
+              << " task(s) still remaining without progress for 15s now, quitting.";
       Fail(message.str());
     }
 
@@ -192,8 +192,10 @@ void NodeQueueScheduler::schedule(std::shared_ptr<AbstractTask> task, NodeID pre
 }
 
 NodeID NodeQueueScheduler::determine_queue_id(const NodeID preferred_node_id) const {
+  const auto active_node_count = _active_nodes.size();
+
   // Early out: no need to check for preferred node or other queues, if there is only a single node queue.
-  if (_active_nodes.size() == 1) {
+  if (active_node_count == 1) {
     return _active_nodes[0];
   }
 
@@ -217,7 +219,6 @@ NodeID NodeQueueScheduler::determine_queue_id(const NodeID preferred_node_id) co
   }
 
   // Check remaining nodes.
-  const auto active_node_count = _active_nodes.size();
   for (auto node_id_offset = size_t{1}; node_id_offset < active_node_count; ++node_id_offset) {
     const auto node_id = _active_nodes[node_id_offset];
     const auto queue_load = _queues[node_id]->estimate_load();
