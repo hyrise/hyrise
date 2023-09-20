@@ -49,11 +49,11 @@ def main():
 
     # Not using close_benchmark() here, as a server is started and a timeout of None would wait forever.
     client.close()
-    # Give the server a bit more time to shutdown, see https://github.com/pexpect/pexpect/issues/462
-    # We found large servers, such as the CI server, to take a considerable amount of time to boot up and shut down
-    # (e.g., the used CI server in 2023 has 128 threads, thus, 128 worker threads). pexpect waits three times before
-    # raising an error. `terminate` exposes the underlying PtyProcess's shutdown logic, allowing to modify the delay.
-    # `close` eventually also calls the same shutdown logic.
+    # Give the server a bit more time to shut down, see https://github.com/pexpect/pexpect/issues/462.
+    # We found hyriseServer on large machines, such as the CI server, to take a considerable amount of time to boot up and shut down
+    # (e.g., the used CI server in 2023 has 128 threads and thus spawns 128 worker threads). pexpect waits three times before
+    # raising a timeout error. `terminate` exposes the underlying PtyProcess's shutdown logic, allowing to modify the delay.
+    # `close` eventually also calls the same shutdown logic, but does not consider the increased delay.
     server.delayafterterminate = 5  # 5 seconds * 3 tries = 15 seconds overall waiting.
     server.terminate()
 
