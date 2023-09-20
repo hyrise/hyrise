@@ -210,7 +210,7 @@ NodeID NodeQueueScheduler::determine_queue_id(const NodeID preferred_node_id) co
     return worker->queue()->node_id();
   }
 
-  // Initial min values with first active node.
+  // Initialize mininmal values with first active node.
   auto min_load_node_id = _active_nodes[0];
   auto min_load = _queues[min_load_node_id]->estimate_load();
 
