@@ -35,25 +35,32 @@ void NodeQueueScheduler::begin() {
 
   _workers.reserve(Hyrise::get().topology.num_cpus());
   _node_count = Hyrise::get().topology.nodes().size();
-  _queues.reserve(_node_count);
+  _queues.resize(_node_count);
   _workers_per_node.reserve(_node_count);
 
   for (auto node_id = NodeID{0}; node_id < Hyrise::get().topology.nodes().size(); ++node_id) {
-    auto queue = std::make_shared<TaskQueue>(node_id);
-
-    _queues.emplace_back(queue);
-
     const auto& topology_node = Hyrise::get().topology.nodes()[node_id];
-
-    for (const auto& topology_cpu : topology_node.cpus) {
-      _workers.emplace_back(
-          std::make_shared<Worker>(queue, WorkerID{_worker_id_allocator->allocate()}, topology_cpu.cpu_id));
-    }
 
     // Tracked per node as core restrictions can lead to unbalanced core counts.
     _workers_per_node.emplace_back(topology_node.cpus.size());
+
+    // Only create queues for nodes with CPUs assigned. Otherwise, no workers are active on these nodes and we might
+    // add tasks to these queues that can never be directly pulled and must be stolen by other nodes' workers. As
+    // ShutdownTasks are not stealable, placing tasks on nodes without workers can lead to failing shutdowns.
+    if (!topology_node.cpus.empty()) {
+      _active_nodes.push_back(node_id);
+      auto queue = std::make_shared<TaskQueue>(node_id);
+      _queues[node_id] = queue;
+
+      for (const auto& topology_cpu : topology_node.cpus) {
+        // TODO(anybody): Place queues on the actual NUMA node once we have NUMA-aware allocators.
+        _workers.emplace_back(
+            std::make_shared<Worker>(queue, WorkerID{_worker_id_allocator->allocate()}, topology_cpu.cpu_id));
+      }
+    }
   }
 
+  Assert(!_active_nodes.empty(), "None of the system nodes has active workers.");
   _active = true;
 
   for (auto& worker : _workers) {
@@ -63,6 +70,8 @@ void NodeQueueScheduler::begin() {
 }
 
 void NodeQueueScheduler::wait_for_all_tasks() {
+  auto progressless_loop_count = size_t{0};
+  auto previous_finished_task_count = size_t{0};
   while (true) {
     auto num_finished_tasks = uint64_t{0};
     for (const auto& worker : _workers) {
@@ -73,10 +82,32 @@ void NodeQueueScheduler::wait_for_all_tasks() {
       break;
     }
 
+    // Ensure we do not wait forever for tasks that cannot be processed or are stuck. 10s seemed too little for TSAN
+    // builds in the CI.
+    if (progressless_loop_count >= 1'500) {
+      const auto remaining_task_count = _task_counter - num_finished_tasks;
+      auto message = std::stringstream{};
+      // We waited for 10 ms, 1'500 times = 15s.
+      message << "Timeout: no progress while waiting for all scheduled tasks to be processed. " << remaining_task_count
+              << " task(s) still remaining without progress for 15s now, quitting.";
+      Fail(message.str());
+    }
+
+    if (previous_finished_task_count == num_finished_tasks) {
+      ++progressless_loop_count;
+    } else {
+      previous_finished_task_count = num_finished_tasks;
+      progressless_loop_count = 0;
+    }
+
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
   }
 
-  for (auto& queue : _queues) {
+  for (const auto& queue : _queues) {
+    if (!queue) {
+      continue;
+    }
+
     auto queue_check_runs = size_t{0};
     while (!queue->empty()) {
       // The following assert checks that we are not looping forever. The empty() check can be inaccurate for
@@ -162,9 +193,11 @@ void NodeQueueScheduler::schedule(std::shared_ptr<AbstractTask> task, NodeID pre
 }
 
 NodeID NodeQueueScheduler::determine_queue_id(const NodeID preferred_node_id) const {
+  const auto active_node_count = _active_nodes.size();
+
   // Early out: no need to check for preferred node or other queues, if there is only a single node queue.
-  if (_node_count == 1) {
-    return NodeID{0};
+  if (active_node_count == 1) {
+    return _active_nodes[0];
   }
 
   if (preferred_node_id != CURRENT_NODE_ID) {
@@ -177,19 +210,21 @@ NodeID NodeQueueScheduler::determine_queue_id(const NodeID preferred_node_id) co
     return worker->queue()->node_id();
   }
 
-  // Initial min values with Node 0.
-  auto min_load_node_id = NodeID{0};
-  auto min_load = _queues[0]->estimate_load();
+  // Initialize mininmal values with first active node.
+  auto min_load_node_id = _active_nodes[0];
+  auto min_load = _queues[min_load_node_id]->estimate_load();
 
-  // When the current load of node 0 is small (less tasks than threads on first node), do not check other queues.
-  if (min_load < _workers_per_node[0]) {
-    return NodeID{0};
+  // When the load of the initial node is small (less tasks than threads on first node), do not check other queues.
+  if (min_load < _workers_per_node[min_load_node_id]) {
+    return min_load_node_id;
   }
 
-  for (auto node_id = NodeID{1}; node_id < _node_count; ++node_id) {
+  // Check remaining nodes.
+  for (auto node_id_offset = size_t{1}; node_id_offset < active_node_count; ++node_id_offset) {
+    const auto node_id = _active_nodes[node_id_offset];
     const auto queue_load = _queues[node_id]->estimate_load();
     if (queue_load < min_load) {
-      min_load_node_id = node_id;
+      min_load_node_id = _active_nodes[node_id];
       min_load = queue_load;
     }
   }
