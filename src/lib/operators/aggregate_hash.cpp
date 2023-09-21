@@ -25,8 +25,9 @@ namespace {
 using namespace hyrise;  // NOLINT(build/namespaces)
 
 /**
- * Helper to split results into chunks, prepare the output vectors, and parallelize the consumers (i.e., passed
- * lambdas) of the split results.
+ * Helper to split results into chunks and prepare output vectors. Consumers receive iterators to parts of the results
+ * and are called concurrently.
+ * Function is user either to process RowIDs (for group-by columns) or actual values (for aggregation results).
  */
 template <typename ColumnDataType, WindowFunction aggregate_func, typename ResultConsumer, typename ValueVectorType>
 void split_results_chunk_wise(const bool write_nulls, const AggregateResults<ColumnDataType, aggregate_func>& results,
@@ -210,8 +211,9 @@ template <typename Results>
 void write_groupby_output(const std::shared_ptr<const Table>& input_table,
                           const std::vector<std::shared_ptr<WindowFunctionExpression>>& aggregates,
                           const std::vector<ColumnID>& groupby_column_ids, const Results& results,
-                          TableColumnDefinitions& output_column_definitions, std::vector<Segments>& output_table) {
-  DebugAssert(output_table.empty(), "");
+                          TableColumnDefinitions& intermediate_result_column_definitions,
+                          std::vector<Segments>& intermediate_result) {
+  DebugAssert(intermediate_result.empty(), "Expected output data structure to be empty.");
   auto unaggregated_columns = std::vector<std::pair<ColumnID, ColumnID>>{};
   unaggregated_columns.reserve(groupby_column_ids.size() + aggregates.size());
   {
@@ -235,7 +237,7 @@ void write_groupby_output(const std::shared_ptr<const Table>& input_table,
     const auto input_column_id = unaggregated_column.first;
     const auto output_column_id = unaggregated_column.second;
 
-    output_column_definitions[output_column_id] =
+    intermediate_result_column_definitions[output_column_id] =
         TableColumnDefinition{input_table->column_name(input_column_id), input_table->column_data_type(input_column_id),
                               input_table->column_is_nullable(input_column_id)};
 
@@ -274,7 +276,7 @@ void write_groupby_output(const std::shared_ptr<const Table>& input_table,
           [&](AggregateResultsIter begin, const AggregateResultsIter end, const ChunkID chunk_id) {
             // Map to cache references to PosLists (avoids frequent dynamic casts to obtain position list of reference
             // segments).
-            auto mappy = std::unordered_map<ChunkID, const AbstractPosList*>{};
+            auto pos_list_mapping = std::unordered_map<ChunkID, const AbstractPosList*>{};
             auto& pos_list = *pos_lists[chunk_id];
 
             for (; begin != end; ++begin) {
@@ -283,12 +285,13 @@ void write_groupby_output(const std::shared_ptr<const Table>& input_table,
                 continue;
               }
 
-              if (!mappy.contains(row_id.chunk_id)) {
+              if (!pos_list_mapping.contains(row_id.chunk_id)) {
                 const auto& segment = input_table->get_chunk(row_id.chunk_id)->get_segment(input_column_id);
-                DebugAssert(std::dynamic_pointer_cast<const ReferenceSegment>(segment), "Expected ReferenceSegment.");
+                DebugAssert(std::dynamic_pointer_cast<const ReferenceSegment>(segment), "Expected a ReferenceSegment.");
                 const auto& reference_segment = static_cast<const ReferenceSegment&>(*segment);
 
-                mappy.emplace(row_id.chunk_id, static_cast<const AbstractPosList*>(&*reference_segment.pos_list()));
+                pos_list_mapping.emplace(row_id.chunk_id,
+                                         static_cast<const AbstractPosList*>(&*reference_segment.pos_list()));
 
                 if (!referenced_table) {
                   referenced_table = reference_segment.referenced_table();
@@ -296,17 +299,18 @@ void write_groupby_output(const std::shared_ptr<const Table>& input_table,
                 }
               }
 
-              pos_list.push_back((*mappy[row_id.chunk_id])[row_id.chunk_offset]);
+              pos_list.push_back((*pos_list_mapping[row_id.chunk_id])[row_id.chunk_offset]);
             }
           });
     }
 
     if (referenced_table) {
-      const auto output_table_chunk_count = pos_lists.size();
-      prepare_output(output_table, output_table_chunk_count, output_column_definitions.size());
-      for (auto output_chunk_id = ChunkID{0}; output_chunk_id < output_table_chunk_count; ++output_chunk_id) {
+      const auto intermediate_result_chunk_count = pos_lists.size();
+      prepare_output(intermediate_result, intermediate_result_chunk_count,
+                     intermediate_result_column_definitions.size());
+      for (auto output_chunk_id = ChunkID{0}; output_chunk_id < intermediate_result_chunk_count; ++output_chunk_id) {
         const auto& pos_list = pos_lists[output_chunk_id];
-        output_table[output_chunk_id][output_column_id] =
+        intermediate_result[output_chunk_id][output_column_id] =
             std::make_shared<ReferenceSegment>(*referenced_table, referenced_column_id, pos_list);
       }
     }
@@ -977,7 +981,6 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
 
   const auto num_output_columns = _groupby_column_ids.size() + _aggregates.size();
   _output_column_definitions.resize(num_output_columns);
-  _output_segments.resize(num_output_columns);
 
   /**
    * If only GROUP BY columns (including ANY pseudo-aggregates) are written, we need to call write_groupby_output.
@@ -990,7 +993,7 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
         _contexts_per_column[0]);
     auto groupby_columns_writing_timer = Timer{};
     write_groupby_output(left_input_table(), _aggregates, _groupby_column_ids, context->results,
-                         _output_column_definitions, _output_table);
+                         _output_column_definitions, _intermediate_result);
     groupby_columns_writing_duration += groupby_columns_writing_timer.lap();
   }
 
@@ -1046,7 +1049,7 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
     ++aggregate_idx;
   }
 
-  // At this point, we collected the group by columns as reference segments which are split using the default chunk size
+  // At this point, we collected the group-by columns as reference segments which are split using the default chunk size
   // (minus gap rows, see comments on NULL_ID). In contrast, the aggregate values are consecutively materialized. We
   // will now split these and create a temporary table of reference segments (temporary as life time is set by
   // shared_ptr via ReferenceSegment::_referenced_table). This temporary table stores reference segments for the group
@@ -1083,7 +1086,7 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
     }
 
     aggregate_columns_result_table = std::make_shared<Table>(aggregate_column_definitions, TableType::Data);
-    for (const auto& materialized_result_chunk : _output_table) {
+    for (const auto& materialized_result_chunk : _intermediate_result) {
       auto aggregate_segments = Segments{};
       aggregate_segments.reserve(materialized_column_count);
 
@@ -1096,22 +1099,22 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
   }
 
   auto operator_output = std::make_shared<Table>(_output_column_definitions, TableType::References);
-  if (!_output_table.empty() && _output_table.front()[0]->size() > 0) {
-    const auto output_table_chunk_count = _output_table.size();
+  if (!_intermediate_result.empty() && _intermediate_result.front()[0]->size() > 0) {
+    const auto output_table_chunk_count = _intermediate_result.size();
     for (auto chunk_id = ChunkID{0}; chunk_id < output_table_chunk_count; ++chunk_id) {
       auto reference_segments = Segments{};
       reference_segments.resize(num_output_columns);
 
       for (const auto column_id : reference_segment_indexes) {
-        // std::cout << _output_table[chunk_id][column_id]->size() << std::endl;
-        DebugAssert(std::dynamic_pointer_cast<const ReferenceSegment>(_output_table[chunk_id][column_id]),
-                    "Expected reference segment at this position.");
-        reference_segments[column_id] = _output_table[chunk_id][column_id];
+        DebugAssert(std::dynamic_pointer_cast<const ReferenceSegment>(_intermediate_result[chunk_id][column_id]),
+                    "Expected a ReferenceSegment at this position.");
+        reference_segments[column_id] = _intermediate_result[chunk_id][column_id];
       }
 
       const auto materialized_table_column_count = entireposlist_indexes.size();
-      const auto chunk_size = _output_table[chunk_id][0]->size();
-      Assert(!_groupby_column_ids.empty() || materialized_table_column_count > 0, "What?");
+      const auto chunk_size = _intermediate_result[chunk_id][0]->size();
+      Assert(!_groupby_column_ids.empty() || materialized_table_column_count > 0,
+             "Output does not contain any columns.");
       for (auto materialized_table_column_id = ColumnID{0};
            materialized_table_column_id < materialized_table_column_count; ++materialized_table_column_id) {
         DebugAssert(!std::dynamic_pointer_cast<const ReferenceSegment>(
@@ -1343,7 +1346,7 @@ void AggregateHash::_write_aggregate_output(ColumnID aggregate_index) {
   if (aggregate_index == 0) {
     auto groupby_columns_writing_timer = Timer{};
     write_groupby_output(left_input_table(), _aggregates, _groupby_column_ids, results, _output_column_definitions,
-                         _output_table);
+                         _intermediate_result);
     const auto groupby_columns_writing_runtime = groupby_columns_writing_timer.lap();
     groupby_columns_writing_duration += groupby_columns_writing_runtime;
     excluded_time = groupby_columns_writing_runtime;
@@ -1374,7 +1377,7 @@ void AggregateHash::_write_aggregate_output(ColumnID aggregate_index) {
 
   DebugAssert(NEEDS_NULL || null_vectors.empty(), "write_aggregate_values unexpectedly wrote NULL values");
 
-  prepare_output(_output_table, value_vectors.size(), _output_column_definitions.size());
+  prepare_output(_intermediate_result, value_vectors.size(), _output_column_definitions.size());
 
   _output_column_definitions[output_column_id] =
       TableColumnDefinition{aggregate->as_column_name(), RESULT_TYPE, NEEDS_NULL};
@@ -1390,7 +1393,7 @@ void AggregateHash::_write_aggregate_output(ColumnID aggregate_index) {
       output_segment = std::make_shared<ValueSegment<decltype(aggregate_type)>>(std::move(value_vectors[segment_id]),
                                                                                 std::move(null_vectors[segment_id]));
     }
-    _output_table[segment_id][output_column_id] = output_segment;
+    _intermediate_result[segment_id][output_column_id] = output_segment;
   }
 
   aggregate_columns_writing_duration += timer.lap() - excluded_time;
@@ -1438,6 +1441,7 @@ std::shared_ptr<SegmentVisitorContext> AggregateHash::_create_aggregate_context(
         Fail("Unsupported aggregate function '" + window_function_to_string.left.at(aggregate_function) + "'.");
     }
   });
+
   return context;
 }
 
