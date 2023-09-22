@@ -1,6 +1,7 @@
 #include "list_directory.hpp"
 
 #include <filesystem>
+#include <string>
 #include <vector>
 
 namespace hyrise {
