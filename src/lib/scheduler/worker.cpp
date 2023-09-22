@@ -4,6 +4,7 @@
 #include <sched.h>
 #include <unistd.h>
 
+#include <algorithm>
 #include <random>
 #include <thread>
 #include <vector>
@@ -13,6 +14,8 @@
 #include "hyrise.hpp"
 #include "shutdown_task.hpp"
 #include "task_queue.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace {
 
