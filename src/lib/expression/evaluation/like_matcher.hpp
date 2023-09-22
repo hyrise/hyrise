@@ -1,7 +1,10 @@
 #pragma once
 
+#include <array>
 #include <functional>
+#include <ostream>
 #include <regex>
+#include <string>
 #include <utility>
 #include <variant>
 
@@ -128,7 +131,7 @@ class LikeMatcher {
 
     } else if (std::holds_alternative<MultipleContainsPattern>(_pattern_variant)) {
       const auto& contains_strs = std::get<MultipleContainsPattern>(_pattern_variant).strings;
-      std::vector<Searcher> searchers;
+      auto searchers = std::vector<Searcher>{};
       searchers.reserve(contains_strs.size());
       for (const auto& contains_str : contains_strs) {
         searchers.emplace_back(Searcher(contains_str.begin(), contains_str.end()));
