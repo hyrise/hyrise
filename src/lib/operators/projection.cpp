@@ -2,10 +2,12 @@
 
 #include <algorithm>
 #include <atomic>
+#include <chrono>
 #include <functional>
 #include <memory>
 #include <numeric>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -19,6 +21,7 @@
 #include "storage/resolve_encoded_segment_type.hpp"
 #include "storage/segment_iterate.hpp"
 #include "storage/vector_compression/vector_compression.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/timer.hpp"
 
