@@ -210,7 +210,7 @@ NodeID NodeQueueScheduler::determine_queue_id(const NodeID preferred_node_id) co
     return worker->queue()->node_id();
   }
 
-  // Initialize mininmal values with first active node.
+  // Initialize minimal values with first active node.
   auto min_load_node_id = _active_nodes[0];
   auto min_load = _queues[min_load_node_id]->estimate_load();
 
@@ -243,7 +243,7 @@ void NodeQueueScheduler::_group_tasks(const std::vector<std::shared_ptr<Abstract
   auto round_robin_counter = 0;
   auto common_node_id = std::optional<NodeID>{};
 
-  std::vector<std::shared_ptr<AbstractTask>> grouped_tasks(NUM_GROUPS);
+  auto grouped_tasks = std::vector<std::shared_ptr<AbstractTask>>(NUM_GROUPS);
   for (const auto& task : tasks) {
     if (!task->predecessors().empty() || !task->successors().empty() || dynamic_cast<ShutdownTask*>(&*task)) {
       // Do not group tasks that either have precessors/successors or are ShutdownTasks.
