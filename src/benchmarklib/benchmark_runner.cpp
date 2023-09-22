@@ -38,9 +38,9 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config,
   if (!_config.pipeline_metrics) {
     Hyrise::get().default_pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
     Hyrise::get().default_lqp_cache = std::make_shared<SQLLogicalPlanCache>();
-    std::cout << " - SQL plan caching switched on." << std::endl;
+    std::cout << "- SQL plan caching switched on." << std::endl;
   } else {
-    std::cout << " - SQL plan caching switched off since SQL pipeline metrics tracking is requested." << std::endl;
+    std::cout << "- SQL plan caching switched off since SQL pipeline metrics tracking is requested." << std::endl;
   }
 
   // Initialise the scheduler if the benchmark was requested to run multi-threaded.
