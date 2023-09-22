@@ -164,8 +164,9 @@ typedef struct
    char     *name;
    char     *comment;
    DSS_HUGE      base;
-   int       (*loader) ();
-   long      (*gen_seed)();
+   // HYRISE: add function protopytes (C2x compatibility).
+   int       (*loader) (void*, int);
+   long      (*gen_seed)(int, DSS_HUGE);
    int       child;
    DSS_HUGE vtotal;
 }         tdef;
