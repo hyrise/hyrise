@@ -1,9 +1,13 @@
 #pragma once
 
-#include <experimental/functional>
+#include <functional>
 #include <regex>
 #include <utility>
 #include <variant>
+
+#ifndef __cpp_lib_boyer_moore_searcher
+#include <experimental/functional>
+#endif
 
 #include "types.hpp"
 
