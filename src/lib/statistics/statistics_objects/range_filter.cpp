@@ -130,7 +130,6 @@ std::unique_ptr<RangeFilter<T>> RangeFilter<T>::build_filter(const pmr_vector<T>
   static_assert(std::is_arithmetic_v<T>, "Range filters are only allowed on arithmetic types.");
 
   DebugAssert(max_ranges_count > 0, "Number of ranges to create needs to be larger zero.");
-  DebugAssert(std::is_sorted(dictionary.begin(), dictionary.cend()), "Dictionary must be sorted in ascending order.");
 
   if (dictionary.empty()) {
     // Empty dictionaries will, e.g., occur in segments with only NULLs - or empty segments.
@@ -148,9 +147,9 @@ std::unique_ptr<RangeFilter<T>> RangeFilter<T>::build_filter(const pmr_vector<T>
    * effectively degrades to a MinMaxFilter (i.e., stores only a single range).
    * While being rather unlikely for doubles, it's more likely to happen when Hyrise includes tinyint etc.
    * std::make_unsigned<T>::type would be possible to use for signed int types, but not for floating types.
-   * Approach: take the min and max values and simply check if the distance between both might overflow. We (debug-)
-   * asserted that the dictionary is sorted before, so we simply access its first and last element.
+   * Approach: take the min and max values and simply check if the distance between both might overflow.
    */
+  DebugAssert(std::is_sorted(dictionary.cbegin(), dictionary.cend()), "Dictionary must be sorted in ascending order.");
   const auto min = dictionary.front();
   const auto max = dictionary.back();
   if ((min < 0) && (max > std::numeric_limits<T>::max() + min)) {
