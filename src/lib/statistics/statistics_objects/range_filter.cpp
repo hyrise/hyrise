@@ -39,7 +39,7 @@ std::shared_ptr<AbstractStatisticsObject> RangeFilter<T>::sliced(
     return nullptr;
   }
 
-  std::vector<std::pair<T, T>> sliced_ranges;
+  auto sliced_ranges = std::vector<std::pair<T, T>>{};
   const auto value = boost::get<T>(variant_value);
 
   // If value is on range edge, we do not take the opportunity to slightly improve the new object.
@@ -80,10 +80,10 @@ std::shared_ptr<AbstractStatisticsObject> RangeFilter<T>::sliced(
       } else {
         sliced_ranges.emplace_back(std::pair<T, T>{value, iter->second});
       }
-      iter++;
+      ++iter;
 
       // Copy all following ranges.
-      for (; iter != ranges.cend(); iter++) {
+      for (; iter != ranges.cend(); ++iter) {
         sliced_ranges.emplace_back(*iter);
       }
     } break;
@@ -138,22 +138,23 @@ std::unique_ptr<RangeFilter<T>> RangeFilter<T>::build_filter(const pmr_vector<T>
   }
 
   if (dictionary.size() == 1) {
-    std::vector<std::pair<T, T>> ranges;
-    ranges.emplace_back(dictionary.front(), dictionary.front());
+    auto ranges = std::vector<std::pair<T, T>>{{dictionary.front(), dictionary.front()}};
     return std::make_unique<RangeFilter<T>>(std::move(ranges));
   }
 
-  /*
-  * The code to determine the range boundaries requires calculating the distances between values. We cannot express the
-  * distance between -DBL_MAX and DBL_MAX using any of the standard data types. For these cases, the RangeFilter
-  * effectively degrades to a MinMaxFilter (i.e., stores only a single range).
-  * While being rather unlikely for doubles, it's more likely to happen when Hyrise includes tinyint etc.
-  * std::make_unsigned<T>::type would be possible to use for signed int types, but not for floating types.
-  * Approach: take the min and max values and simply check if the distance between both might overflow.
-  */
-  const auto min_max = std::minmax_element(dictionary.cbegin(), dictionary.cend());
-  if ((*min_max.first < 0) && (*min_max.second > std::numeric_limits<T>::max() + *min_max.first)) {
-    return std::make_unique<RangeFilter<T>>(std::vector<std::pair<T, T>>{{*min_max.first, *min_max.second}});
+  /**
+   * The code to determine the range boundaries requires calculating the distances between values. We cannot express the
+   * distance between -DBL_MAX and DBL_MAX using any of the standard data types. For these cases, the RangeFilter
+   * effectively degrades to a MinMaxFilter (i.e., stores only a single range).
+   * While being rather unlikely for doubles, it's more likely to happen when Hyrise includes tinyint etc.
+   * std::make_unsigned<T>::type would be possible to use for signed int types, but not for floating types.
+   * Approach: take the min and max values and simply check if the distance between both might overflow. We (debug-)
+   * asserted that the dictionary is sorted before, so we simply access its first and last element.
+   */
+  const auto min = dictionary.front();
+  const auto max = dictionary.back();
+  if ((min < 0) && (max > std::numeric_limits<T>::max() + min)) {
+    return std::make_unique<RangeFilter<T>>(std::vector<std::pair<T, T>>{{min, max}});
   }
 
   // Running example:
@@ -164,11 +165,11 @@ std::unique_ptr<RangeFilter<T>> RangeFilter<T>::build_filter(const pmr_vector<T>
   // 1. Calculate the distance from each value in the (sorted) dictionary to the next value and store a pair that
   //    contains (a) the distance to the next value in the dictionary and (b) the entry's index in the dictionary:
   //    (1,0) (2,1) (3,2) (1,3) (2,3)
-  // 2. Sort the vector in descending order by the size of the gaps (might be an unstable sort):
+  // 2. Sort the vector in descending order by the size of the gaps (might be an unstable sort).
   //    (3,2) (2,1) (2,3) (1,0) (1,3)
-  // 3. Shorten the vector to containt the `max_ranges_count - 1` biggest gaps
+  // 3. Shorten the vector to contain the `max_ranges_count - 1` biggest gaps.
   //    (3,2) (2,1)
-  // 4. Restore the original order of the dictionary by sorting on the second field
+  // 4. Restore the original order of the dictionary by sorting on the second field.
   //    (2,1) (3,2)
   // 5. Add the highest value in the dictionary (more correctly, its index). We will not need the distance for this
   //    entry, so it is initialized with T{}.
@@ -181,15 +182,15 @@ std::unique_ptr<RangeFilter<T>> RangeFilter<T>::build_filter(const pmr_vector<T>
   //    Third range:      dictionary[2+1] until dictionary[5]
   //    Result as values: [2, 3] [5, 5] [8, 11]
 
-  // 1. Calculate the distance from each value in the (sorted) dictionary to the next value
-  std::vector<std::pair<T, size_t>> distances;
+  // 1. Calculate the distance from each value in the (sorted) dictionary to the next value.
+  auto distances = std::vector<std::pair<T, size_t>>{};
   distances.reserve(dictionary.size() - 1);
   for (auto dict_it = dictionary.cbegin(); dict_it + 1 != dictionary.cend(); ++dict_it) {
     auto dict_it_next = dict_it + 1;
     distances.emplace_back(*dict_it_next - *dict_it, std::distance(dictionary.cbegin(), dict_it));
   }
 
-  // 2. Sort the vector in descending order by the size of the gaps
+  // 2. Sort the vector in descending order by the size of the gaps.
   std::sort(distances.begin(), distances.end(),
             [](const auto& pair1, const auto& pair2) { return pair1.first > pair2.first; });
 
@@ -198,15 +199,16 @@ std::unique_ptr<RangeFilter<T>> RangeFilter<T>::build_filter(const pmr_vector<T>
     distances.resize(max_ranges_count - 1);
   }
 
-  // 4. Restore the original order of the dictionary by sorting on the second field
+  // 4. Restore the original order of the dictionary by sorting on the second field.
   std::sort(distances.begin(), distances.end(),
             [](const auto& pair1, const auto& pair2) { return pair1.second < pair2.second; });
 
-  // 5. Add the highest value in the dictionary (more correctly, its index)
+  // 5. Add the highest value in the dictionary (more correctly, its index).
   distances.emplace_back(T{}, dictionary.size() - 1);
 
-  // 6. Construct ranges
-  std::vector<std::pair<T, T>> ranges;
+  // 6. Construct ranges.
+  auto ranges = std::vector<std::pair<T, T>>{};
+  ranges.reserve(distances.size());
   auto range_start_index = size_t{0};
   for (const auto& distance_index_pair : distances) {
     const auto range_end_index = distance_index_pair.second;
@@ -279,7 +281,7 @@ bool RangeFilter<T>::does_not_contain(const PredicateCondition predicate_conditi
       Assert(variant_value2, "Between operator needs two values.");
       const auto value2 = boost::get<T>(*variant_value2);
 
-      // a BETWEEN 5 AND 4 will always be empty
+      // a BETWEEN 5 AND 4 will always be empty.
       if (value2 < value) {
         return true;
       }
