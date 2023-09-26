@@ -78,7 +78,7 @@ std::shared_ptr<AbstractStatisticsObject> RangeFilter<T>::sliced(
       if (value <= iter->first) {
         sliced_ranges.emplace_back(*iter);
       } else {
-        sliced_ranges.emplace_back(std::pair<T, T>{value, iter->second});
+        sliced_ranges.emplace_back(value, iter->second);
       }
       ++iter;
 
@@ -149,10 +149,11 @@ std::unique_ptr<RangeFilter<T>> RangeFilter<T>::build_filter(const pmr_vector<T>
    * std::make_unsigned<T>::type would be possible to use for signed int types, but not for floating types.
    * Approach: take the min and max values and simply check if the distance between both might overflow.
    */
+  static_assert(std::is_signed_v<T>, "Expected a signed arithmetic type.");
   DebugAssert(std::is_sorted(dictionary.cbegin(), dictionary.cend()), "Dictionary must be sorted in ascending order.");
   const auto min = dictionary.front();
   const auto max = dictionary.back();
-  if ((min < 0) && (max > std::numeric_limits<T>::max() + min)) {
+  if ((min < 0) && (max >= std::numeric_limits<T>::max() + min)) {
     return std::make_unique<RangeFilter<T>>(std::vector<std::pair<T, T>>{{min, max}});
   }
 
