@@ -55,7 +55,7 @@ std::shared_ptr<AbstractStatisticsObject> RangeFilter<T>::sliced(
 
       // Copy all the ranges before the value.
       auto iter = ranges.cbegin();
-      for (; iter != end_iter; ++iter) {
+      for (; iter != ranges.cend(); ++iter) {
         sliced_ranges.emplace_back(*iter);
       }
 
