@@ -351,18 +351,24 @@ TYPED_TEST(RangeFilterTest, SlicedWithUnmatchingPredicates) {
 
   EXPECT_FALSE(filter->sliced(PredicateCondition::LessThan, this->_min_value));
   EXPECT_TRUE(filter->sliced(PredicateCondition::LessThanEquals, this->_min_value));
+  EXPECT_FALSE(filter->sliced(PredicateCondition::LessThanEquals, lower_bound));
   EXPECT_TRUE(filter->sliced(PredicateCondition::GreaterThanEquals, this->_max_value));
+  EXPECT_FALSE(filter->sliced(PredicateCondition::GreaterThanEquals, upper_bound));
   EXPECT_FALSE(filter->sliced(PredicateCondition::GreaterThan, this->_max_value));
 
   EXPECT_FALSE(filter->sliced(PredicateCondition::BetweenExclusive, lower_bound, this->_min_value));
   EXPECT_TRUE(filter->sliced(PredicateCondition::BetweenInclusive, lower_bound, this->_min_value));
+  EXPECT_FALSE(filter->sliced(PredicateCondition::BetweenInclusive, lower_bound, lower_bound));
   EXPECT_TRUE(filter->sliced(PredicateCondition::BetweenLowerExclusive, lower_bound, this->_min_value));
+  EXPECT_FALSE(filter->sliced(PredicateCondition::BetweenLowerExclusive, lower_bound, lower_bound));
   EXPECT_FALSE(filter->sliced(PredicateCondition::BetweenUpperExclusive, lower_bound, this->_min_value));
 
   EXPECT_FALSE(filter->sliced(PredicateCondition::BetweenExclusive, this->_max_value, upper_bound));
   EXPECT_TRUE(filter->sliced(PredicateCondition::BetweenInclusive, this->_max_value, upper_bound));
+  EXPECT_FALSE(filter->sliced(PredicateCondition::BetweenInclusive, upper_bound, upper_bound));
   EXPECT_FALSE(filter->sliced(PredicateCondition::BetweenLowerExclusive, this->_max_value, upper_bound));
   EXPECT_TRUE(filter->sliced(PredicateCondition::BetweenUpperExclusive, this->_max_value, upper_bound));
+  EXPECT_FALSE(filter->sliced(PredicateCondition::BetweenUpperExclusive, upper_bound, upper_bound));
 }
 
 class RangeFilterTestUntyped : public BaseTest {};
