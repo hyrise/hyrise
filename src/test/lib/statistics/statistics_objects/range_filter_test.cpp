@@ -43,8 +43,9 @@ TYPED_TEST(RangeFilterTest, ValueRangeTooLarge) {
   const auto lowest = std::numeric_limits<TypeParam>::lowest();
   const auto max = std::numeric_limits<TypeParam>::max();
   // Create vector with a huge gap in the middle whose length exceeds the type's limits.
-  const pmr_vector<TypeParam> test_vector{static_cast<TypeParam>(0.9 * lowest), static_cast<TypeParam>(0.8 * lowest),
-                                          static_cast<TypeParam>(0.8 * max), static_cast<TypeParam>(0.9 * max)};
+  const auto test_vector =
+      pmr_vector<TypeParam>{static_cast<TypeParam>(0.9 * lowest), static_cast<TypeParam>(0.8 * lowest),
+                            static_cast<TypeParam>(0.8 * max), static_cast<TypeParam>(0.9 * max)};
 
   // The filter will not create 5 ranges due to potential overflow problems when calculating distances. In this case,
   // only a filter with a single range is built.
@@ -132,14 +133,13 @@ TYPED_TEST(RangeFilterTest, MultipleRanges) {
       EXPECT_TRUE(filter->does_not_contain(PredicateCondition::BetweenInclusive, third_gap_min, third_gap_max));
     }
   }
-  {
-    if constexpr (!HYRISE_DEBUG) {
-      GTEST_SKIP();
-    }
 
-    // Throw when range filter shall include 0 range values.
-    EXPECT_THROW((RangeFilter<TypeParam>::build_filter(this->_values, 0)), std::logic_error);
+  if constexpr (!HYRISE_DEBUG) {
+    GTEST_SKIP();
   }
+
+  // Throw when range filter shall include 0 range values.
+  EXPECT_THROW((RangeFilter<TypeParam>::build_filter(this->_values, 0)), std::logic_error);
 }
 
 // Create more ranges than distinct values in the test data.
@@ -242,13 +242,13 @@ TYPED_TEST(RangeFilterTest, LargeValueRange) {
 
   const auto filter = RangeFilter<TypeParam>::build_filter(values, 3);
 
-  // A filter with three ranges has two gaps: (i) 0.28*lowest-0.36*max and (ii) 0.36*lowest-0.30*lowest
+  // A filter with three ranges has two gaps: (i) 0.28 * lowest - 0.36 * max and (ii) 0.36 * lowest - 0.30 * lowest.
   EXPECT_TRUE(filter->does_not_contain(PredicateCondition::BetweenInclusive, static_cast<TypeParam>(0.27 * lowest),
                                        static_cast<TypeParam>(0.35 * max)));
   EXPECT_TRUE(filter->does_not_contain(PredicateCondition::BetweenInclusive, static_cast<TypeParam>(0.35 * lowest),
                                        static_cast<TypeParam>(0.31 * lowest)));
 
-  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Equals, static_cast<TypeParam>(TypeParam{0})));  // in gap
+  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Equals, static_cast<TypeParam>(TypeParam{0})));  // In gap.
   EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Equals, static_cast<TypeParam>(0.5 * lowest)));
   EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Equals, static_cast<TypeParam>(0.5 * max)));
 
@@ -299,9 +299,8 @@ TYPED_TEST(RangeFilterTest, Sliced) {
 
   new_filter = std::static_pointer_cast<RangeFilter<TypeParam>>(
       filter->sliced(PredicateCondition::BetweenInclusive, TypeParam{7}, TypeParam{17}));
-  EXPECT_EQ(new_filter->ranges, Ranges({{7, 10}}));
-
   // New filter should start at 7 and end right before first gap (because 17 is in that gap).
+  EXPECT_EQ(new_filter->ranges, Ranges({{7, 10}}));
 
   new_filter = std::static_pointer_cast<RangeFilter<TypeParam>>(
       filter->sliced(PredicateCondition::BetweenInclusive, TypeParam{17}, TypeParam{27}));
@@ -376,7 +375,7 @@ class RangeFilterTestUntyped : public BaseTest {};
 
 // Test predicates which are not supported by the range filter.
 TEST_F(RangeFilterTestUntyped, DoNotPruneUnsupportedPredicates) {
-  const pmr_vector<int> values{-1000, -900, 900, 1000};
+  const auto values = pmr_vector<int>{-1000, -900, 900, 1000};
   const auto filter = RangeFilter<int>::build_filter(values);
 
   EXPECT_FALSE(filter->does_not_contain(PredicateCondition::IsNull, {17}));
@@ -391,7 +390,7 @@ TEST_F(RangeFilterTestUntyped, DoNotPruneUnsupportedPredicates) {
 
   // For the default filter, the following value is prunable.
   EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Equals, 1));
-  // But malformed predicates are skipped intentionally and are thus not prunable
+  // But malformed predicates are skipped intentionally and, thus, are not prunable.
   EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Equals, 1, NULL_VALUE));
 }
 

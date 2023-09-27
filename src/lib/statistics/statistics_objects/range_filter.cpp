@@ -17,7 +17,7 @@ namespace hyrise {
 template <typename T>
 RangeFilter<T>::RangeFilter(std::vector<std::pair<T, T>> init_ranges)
     : AbstractStatisticsObject(data_type_from_type<T>()), ranges(std::move(init_ranges)) {
-  DebugAssert(!ranges.empty(), "Cannot construct empty RangeFilter");
+  DebugAssert(!ranges.empty(), "Cannot construct empty RangeFilter.");
 }
 
 template <typename T>
@@ -28,7 +28,7 @@ Cardinality RangeFilter<T>::estimate_cardinality(const PredicateCondition /*pred
   // is estimated assuming equi-distribution). For that, we would also need the cardinality of the underlying data.
   // Currently, as RangeFilters are on a per-segment basis and estimate_cardinality is called for an entire column,
   // there is no use for this.
-  Fail("Currently, RangeFilters cannot be used to estimate cardinalities");
+  Fail("Currently, RangeFilters cannot be used to estimate cardinalities.");
 }
 
 template <typename T>
@@ -103,8 +103,7 @@ std::shared_ptr<AbstractStatisticsObject> RangeFilter<T>::sliced(
       sliced_ranges = ranges;
   }
 
-  DebugAssert(!sliced_ranges.empty(), "As does_not_contain was false, the sliced_ranges should not be empty");
-
+  DebugAssert(!sliced_ranges.empty(), "As does_not_contain() was false, the sliced_ranges should not be empty.");
   return std::make_shared<RangeFilter<T>>(sliced_ranges);
 }
 
@@ -118,11 +117,10 @@ std::unique_ptr<RangeFilter<T>> RangeFilter<T>::build_filter(const pmr_vector<T>
                                                              uint32_t max_ranges_count) {
   // See #1536
   static_assert(std::is_arithmetic_v<T>, "Range filters are only allowed on arithmetic types.");
-
   DebugAssert(max_ranges_count > 0, "Number of ranges to create needs to be larger zero.");
 
+  // Empty dictionaries will, e.g., occur in segments with only NULLs - or empty segments.
   if (dictionary.empty()) {
-    // Empty dictionaries will, e.g., occur in segments with only NULLs - or empty segments.
     return nullptr;
   }
 
@@ -143,7 +141,7 @@ std::unique_ptr<RangeFilter<T>> RangeFilter<T>::build_filter(const pmr_vector<T>
   DebugAssert(std::is_sorted(dictionary.cbegin(), dictionary.cend()), "Dictionary must be sorted in ascending order.");
   const auto min = dictionary.front();
   const auto max = dictionary.back();
-  // max > std::numeric_limits<T>::max() + min would the correct mathematic assumption. However, it only works for
+  // max > std::numeric_limits<T>::max() + min would the mathematically correct assumption. However, it only works for
   // integral types. For floating-point types, the precision is not high enough to differentiate, e.g., max - 1 from
   // max. While in theory sacrificing one value, we account for this imprecision.
   if ((min < 0) && (max >= std::numeric_limits<T>::max() + min)) {
@@ -179,7 +177,7 @@ std::unique_ptr<RangeFilter<T>> RangeFilter<T>::build_filter(const pmr_vector<T>
   auto distances = std::vector<std::pair<T, size_t>>{};
   distances.reserve(dictionary.size() - 1);
   for (auto dict_it = dictionary.cbegin(); dict_it + 1 != dictionary.cend(); ++dict_it) {
-    auto dict_it_next = dict_it + 1;
+    const auto dict_it_next = dict_it + 1;
     distances.emplace_back(*dict_it_next - *dict_it, std::distance(dictionary.cbegin(), dict_it));
   }
 
