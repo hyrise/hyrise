@@ -126,7 +126,6 @@ std::unique_ptr<RangeFilter<T>> RangeFilter<T>::build_filter(const pmr_vector<T>
     return nullptr;
   }
 
-  DebugAssert(std::is_sorted(dictionary.cbegin(), dictionary.cend()), "Dictionary must be sorted in ascending order.");
   if (dictionary.size() == 1) {
     auto ranges = std::vector<std::pair<T, T>>{{dictionary.front(), dictionary.front()}};
     return std::make_unique<RangeFilter<T>>(std::move(ranges));
@@ -140,8 +139,8 @@ std::unique_ptr<RangeFilter<T>> RangeFilter<T>::build_filter(const pmr_vector<T>
    * std::make_unsigned<T>::type would be possible to use for signed int types, but not for floating types.
    * Approach: take the min and max values and simply check if the distance between both might overflow.
    */
-  // TODO: comment for >= (floating-point precision)
   static_assert(std::is_signed_v<T>, "Expected a signed arithmetic type.");
+  DebugAssert(std::is_sorted(dictionary.cbegin(), dictionary.cend()), "Dictionary must be sorted in ascending order.");
   const auto min = dictionary.front();
   const auto max = dictionary.back();
   // max > std::numeric_limits<T>::max() + min would in theory be the correct assumption. However, it only works for
