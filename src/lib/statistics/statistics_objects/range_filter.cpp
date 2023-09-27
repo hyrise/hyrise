@@ -55,12 +55,12 @@ std::shared_ptr<AbstractStatisticsObject> RangeFilter<T>::sliced(
 
       // Copy all the ranges before the value.
       auto iter = ranges.cbegin();
-      for (; iter != ranges.cend(); ++iter) {
+      for (; iter != end_iter; ++iter) {
         sliced_ranges.emplace_back(*iter);
       }
 
       // If value is not in a gap, limit the last range's upper bound to value.
-      if (value >= iter->first) {
+      if (iter != ranges.cend() && value >= iter->first) {
         sliced_ranges.emplace_back(std::pair<T, T>{iter->first, value});
       }
     } break;
