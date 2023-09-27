@@ -23,8 +23,8 @@ class RangeFilterTest : public BaseTest {
     // -1000 to 2, third 17-100.
     _values = pmr_vector<T>{-1000, 2, 3, 4, 7, 8, 10, 17, 100, 101, 102, 103, 123456};
 
-    _min_value = *std::min_element(std::begin(_values), std::end(_values));
-    _max_value = *std::max_element(std::begin(_values), std::end(_values));
+    _min_value = _values.front();
+    _max_value = _values.back();
 
     // `_value_in_gap` in a value in the largest gap of the test data.
     _value_in_gap = T{1024};
@@ -158,7 +158,7 @@ TYPED_TEST(RangeFilterTest, MoreRangesThanValues) {
   EXPECT_TRUE(filter->does_not_contain(PredicateCondition::GreaterThan, TypeParam{this->_max_value}));
 }
 
-// This test checks the correct pruning on the bounds (min/max) of the test data for various predicate conditions
+// This test checks the correct pruning on the bounds (min/max) of the test data for various predicate conditions.
 // For better understanding, see min_max_filter_test.cpp.
 TYPED_TEST(RangeFilterTest, CanPruneOnBounds) {
   const auto filter = RangeFilter<TypeParam>::build_filter(this->_values);
@@ -216,13 +216,17 @@ TYPED_TEST(RangeFilterTest, Between) {
   EXPECT_FALSE(filter->does_not_contain(PredicateCondition::BetweenInclusive, TypeParam{101}, TypeParam{103}));
   EXPECT_FALSE(filter->does_not_contain(PredicateCondition::BetweenInclusive, TypeParam{102}, TypeParam{1004}));
 
-  // SQL's between is inclusive.
+  // Predicates between gap bounds.
   EXPECT_FALSE(filter->does_not_contain(PredicateCondition::BetweenInclusive, TypeParam{103}, TypeParam{123456}));
+  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::BetweenExclusive, TypeParam{103}, TypeParam{123456}));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::BetweenLowerExclusive, TypeParam{103}, TypeParam{123456}));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::BetweenUpperExclusive, TypeParam{103}, TypeParam{123456}));
 
-  // TODO(dey4ss): Implement.
-  // EXPECT_TRUE(filter->does_not_contain(PredicateCondition::BetweenExclusive, TypeParam{103}, TypeParam{123456}));
-  // EXPECT_TRUE(filter->does_not_contain(PredicateCondition::BetweenLowerExclusive, TypeParam{103}, TypeParam{123455}));  // NOLINT(whitespace/line_length)
-  // EXPECT_TRUE(filter->does_not_contain(PredicateCondition::BetweenUpperExclusive, TypeParam{104}, TypeParam{123456}));  // NOLINT(whitespace/line_length)
+  // Predicates completely in gap.
+  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::BetweenInclusive, TypeParam{104}, TypeParam{123455}));
+  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::BetweenExclusive, TypeParam{103}, TypeParam{123456}));
+  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::BetweenLowerExclusive, TypeParam{103}, TypeParam{123455}));
+  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::BetweenUpperExclusive, TypeParam{104}, TypeParam{123456}));
 }
 
 // Test larger value ranges.
@@ -306,25 +310,39 @@ TYPED_TEST(RangeFilterTest, Sliced) {
   // Slice with equality predicate will return MinMaxFilter.
   const auto min_max_filter =
       std::dynamic_pointer_cast<MinMaxFilter<TypeParam>>(filter->sliced(PredicateCondition::Equals, TypeParam{7}));
+  ASSERT_TRUE(min_max_filter);
   EXPECT_EQ(min_max_filter->min, 7);
   EXPECT_EQ(min_max_filter->max, 7);
 }
 
-TYPED_TEST(RangeFilterTest, SliceWithPredicateReturnsNullptr) {
+TYPED_TEST(RangeFilterTest, SliceWithUnmatchingPredicates) {
   const auto filter = RangeFilter<TypeParam>::build_filter(this->_values, 5);
 
-  EXPECT_EQ(filter->sliced(PredicateCondition::LessThan, this->_min_value), nullptr);
-  EXPECT_NE(filter->sliced(PredicateCondition::LessThanEquals, this->_min_value), nullptr);
-  EXPECT_NE(filter->sliced(PredicateCondition::GreaterThanEquals, this->_max_value), nullptr);
-  EXPECT_EQ(filter->sliced(PredicateCondition::GreaterThan, this->_max_value), nullptr);
+  EXPECT_FALSE(filter->sliced(PredicateCondition::LessThan, this->_min_value));
+  EXPECT_TRUE(filter->sliced(PredicateCondition::LessThanEquals, this->_min_value));
+  EXPECT_TRUE(filter->sliced(PredicateCondition::GreaterThanEquals, this->_max_value));
+  EXPECT_FALSE(filter->sliced(PredicateCondition::GreaterThan, this->_max_value));
+
+  const auto lower_bound = this->_min_value - TypeParam{1};
+  EXPECT_FALSE(filter->sliced(PredicateCondition::BetweenExclusive, lower_bound, this->_min_value));
+  EXPECT_TRUE(filter->sliced(PredicateCondition::BetweenInclusive, lower_bound, this->_min_value));
+  EXPECT_TRUE(filter->sliced(PredicateCondition::BetweenLowerExclusive, lower_bound, this->_min_value));
+  EXPECT_FALSE(filter->sliced(PredicateCondition::BetweenUpperExclusive, lower_bound, this->_min_value));
+
+  const auto upper_bound = this->_max_value + TypeParam{1};
+  EXPECT_FALSE(filter->sliced(PredicateCondition::BetweenExclusive, this->_max_value, upper_bound));
+  EXPECT_TRUE(filter->sliced(PredicateCondition::BetweenInclusive, this->_max_value, upper_bound));
+  EXPECT_FALSE(filter->sliced(PredicateCondition::BetweenLowerExclusive, this->_max_value, upper_bound));
+  EXPECT_TRUE(filter->sliced(PredicateCondition::BetweenUpperExclusive, this->_max_value, upper_bound));
 }
 
-TYPED_TEST(RangeFilterTest, HugeGaps) {
+TYPED_TEST(RangeFilterTest, HugeValueRange) {
+  using Ranges = std::vector<std::pair<TypeParam, TypeParam>>;
   // We build the RangeFilter by calculating distances between values. By definition, these differences are positive.
   // Thus, we fall back to a MinMaxFilter (RangeFilter with one range) if the requested min and max values have a
   // distance that is larger than the maximal possible value of the data type.
 
-  // min() is not(!) the smallest value for floating-point types, see
+  // min() is not(!) the smallest possible value for floating-point types, see
   // https://en.cppreference.com/w/cpp/types/numeric_limits/min
   const auto min = std::numeric_limits<TypeParam>::lowest();
   const auto max = std::numeric_limits<TypeParam>::max();
@@ -338,12 +356,19 @@ TYPED_TEST(RangeFilterTest, HugeGaps) {
   // The same is true for [min, ... , 1] and [-1, ... , max].
   const auto range_min_to_one = pmr_vector<TypeParam>{min, min + TypeParam{1}, TypeParam{-1}, TypeParam{1}};
   range_filter = RangeFilter<TypeParam>::build_filter(range_min_to_one);
-  expected_range = std::vector<std::pair<TypeParam, TypeParam>>{{min, TypeParam{1}}};
+  expected_range = Ranges{{min, TypeParam{1}}};
   EXPECT_EQ(range_filter->ranges, expected_range);
 
   const auto range_minus_one_to_max = pmr_vector<TypeParam>{TypeParam{-1}, TypeParam{1}, max - TypeParam{1}, max};
   range_filter = RangeFilter<TypeParam>::build_filter(range_minus_one_to_max);
-  expected_range = std::vector<std::pair<TypeParam, TypeParam>>{{TypeParam{-1}, max}};
+  expected_range = Ranges{{TypeParam{-1}, max}};
+  EXPECT_EQ(range_filter->ranges, expected_range);
+
+  // [0, ... , max] is okay.
+  const auto range_zero_to_max = pmr_vector<TypeParam>{TypeParam{0}, TypeParam{1}, max - TypeParam{1}, max};
+  range_filter = RangeFilter<TypeParam>::build_filter(range_zero_to_max);
+  expected_range = Ranges{
+      {TypeParam{0}, TypeParam{0}}, {TypeParam{1}, TypeParam{1}}, {max - TypeParam{1}, max - TypeParam{1}}, {max, max}};
   EXPECT_EQ(range_filter->ranges, expected_range);
 }
 

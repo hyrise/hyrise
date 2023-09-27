@@ -49,17 +49,15 @@ std::shared_ptr<AbstractStatisticsObject> RangeFilter<T>::sliced(
       return std::make_shared<MinMaxFilter<T>>(value, value);
     case PredicateCondition::LessThan:
     case PredicateCondition::LessThanEquals: {
-      auto end_iter =
+      const auto end_iter =
           std::lower_bound(ranges.cbegin(), ranges.cend(), value,
-                           [](const auto& range, const auto& search_value) { return range.second < search_value; });
+                           [](const auto& range, const auto search_value) { return range.second < search_value; });
 
       // Copy all the ranges before the value.
       auto iter = ranges.cbegin();
       for (; iter != end_iter; ++iter) {
         sliced_ranges.emplace_back(*iter);
       }
-
-      DebugAssert(iter != ranges.cend(), "does_not_contain() should have caught that.");
 
       // If value is not in a gap, limit the last range's upper bound to value.
       if (value >= iter->first) {
@@ -70,8 +68,7 @@ std::shared_ptr<AbstractStatisticsObject> RangeFilter<T>::sliced(
     case PredicateCondition::GreaterThanEquals: {
       auto iter =
           std::lower_bound(ranges.cbegin(), ranges.cend(), value,
-                           [](const auto& range, const auto& search_value) { return range.second < search_value; });
-
+                           [](const auto& range, const auto search_value) { return range.second < search_value; });
       DebugAssert(iter != ranges.cend(), "does_not_contain() should have caught that.");
 
       // If value is in a gap, use the next range, otherwise limit the next range's upper bound to value.
@@ -88,25 +85,18 @@ std::shared_ptr<AbstractStatisticsObject> RangeFilter<T>::sliced(
       }
     } break;
 
-    case PredicateCondition::BetweenInclusive: {
-      DebugAssert(variant_value2, "Between needs a second value.");
-      const auto value2 = boost::get<T>(*variant_value2);
-      return sliced(PredicateCondition::GreaterThanEquals, value)->sliced(PredicateCondition::LessThanEquals, value2);
-    }
-    case PredicateCondition::BetweenLowerExclusive: {
-      DebugAssert(variant_value2, "Between needs a second value.");
-      const auto value2 = boost::get<T>(*variant_value2);
-      return sliced(PredicateCondition::GreaterThanEquals, value)->sliced(PredicateCondition::LessThan, value2);
-    }
-    case PredicateCondition::BetweenUpperExclusive: {
-      DebugAssert(variant_value2, "Between needs a second value.");
-      const auto value2 = boost::get<T>(*variant_value2);
-      return sliced(PredicateCondition::GreaterThan, value)->sliced(PredicateCondition::LessThanEquals, value2);
-    }
+    case PredicateCondition::BetweenInclusive:
+    case PredicateCondition::BetweenLowerExclusive:
+    case PredicateCondition::BetweenUpperExclusive:
     case PredicateCondition::BetweenExclusive: {
       DebugAssert(variant_value2, "Between needs a second value.");
-      const auto value2 = boost::get<T>(*variant_value2);
-      return sliced(PredicateCondition::GreaterThan, value)->sliced(PredicateCondition::LessThan, value2);
+      const auto lower_predicate_condition = is_lower_inclusive_between(predicate_condition)
+                                                 ? PredicateCondition::GreaterThanEquals
+                                                 : PredicateCondition::GreaterThan;
+      const auto upper_predicate_condition = is_upper_inclusive_between(predicate_condition)
+                                                 ? PredicateCondition::LessThanEquals
+                                                 : PredicateCondition::LessThan;
+      return sliced(lower_predicate_condition, value)->sliced(upper_predicate_condition, *variant_value2);
     }
 
     default:
@@ -136,6 +126,7 @@ std::unique_ptr<RangeFilter<T>> RangeFilter<T>::build_filter(const pmr_vector<T>
     return nullptr;
   }
 
+  DebugAssert(std::is_sorted(dictionary.cbegin(), dictionary.cend()), "Dictionary must be sorted in ascending order.");
   if (dictionary.size() == 1) {
     auto ranges = std::vector<std::pair<T, T>>{{dictionary.front(), dictionary.front()}};
     return std::make_unique<RangeFilter<T>>(std::move(ranges));
@@ -149,10 +140,13 @@ std::unique_ptr<RangeFilter<T>> RangeFilter<T>::build_filter(const pmr_vector<T>
    * std::make_unsigned<T>::type would be possible to use for signed int types, but not for floating types.
    * Approach: take the min and max values and simply check if the distance between both might overflow.
    */
+  // TODO: comment for >= (floating-point precision)
   static_assert(std::is_signed_v<T>, "Expected a signed arithmetic type.");
-  DebugAssert(std::is_sorted(dictionary.cbegin(), dictionary.cend()), "Dictionary must be sorted in ascending order.");
   const auto min = dictionary.front();
   const auto max = dictionary.back();
+  // max > std::numeric_limits<T>::max() + min would in theory be the correct assumption. However, it only works for
+  // integral types. For floating-point types, the precision is not high enough to differentiate, e.g., max - 1 from
+  // max. While in sacrificing one value, we account for this imprecision.
   if ((min < 0) && (max >= std::numeric_limits<T>::max() + min)) {
     return std::make_unique<RangeFilter<T>>(std::vector<std::pair<T, T>>{{min, max}});
   }
@@ -235,30 +229,21 @@ bool RangeFilter<T>::does_not_contain(const PredicateCondition predicate_conditi
   // if this was not done.
   const auto value = boost::get<T>(variant_value);
 
-  // Operators work as follows: value_from_table <operator> value
-  // e.g. OpGreaterThan: value_from_table > value
-  // thus we can exclude chunk if value >= _max since then no value from the table can be greater than value
   switch (predicate_condition) {
     case PredicateCondition::GreaterThan: {
-      auto& max = ranges.back().second;
-      return value >= max;
+      return value >= ranges.back().second;
     }
     case PredicateCondition::GreaterThanEquals: {
-      auto& max = ranges.back().second;
-      return value > max;
+      return value > ranges.back().second;
     }
     case PredicateCondition::LessThan: {
-      auto& min = ranges.front().first;
-      return value <= min;
+      return value <= ranges.front().first;
     }
     case PredicateCondition::LessThanEquals: {
-      auto& min = ranges.front().first;
-      return value < min;
+      return value < ranges.front().first;
     }
     case PredicateCondition::Equals: {
-      for (const auto& bounds : ranges) {
-        const auto& [min, max] = bounds;
-
+      for (const auto& [min, max] : ranges) {
         if (value >= min && value <= max) {
           return false;
         }
@@ -272,13 +257,12 @@ bool RangeFilter<T>::does_not_contain(const PredicateCondition predicate_conditi
     case PredicateCondition::BetweenLowerExclusive:
     case PredicateCondition::BetweenUpperExclusive:
     case PredicateCondition::BetweenExclusive: {
-      /* There are two scenarios where a between predicate can be pruned:
-       *    - both bounds are "outside" (not spanning) the segment's value range (i.e., either both are smaller than
-       *      the minimum or both are larger than the maximum
-       *    - both bounds are within the same gap
-       */
+      // There are two scenarios where a between predicate can be pruned:
+      //    (i) Both bounds are "outside" (not spanning) the segment's value range (i.e., either both are smaller than
+      //        the minimum or both are larger than the maximum).
+      //   (ii) Both bounds are within the same gap.
 
-      Assert(variant_value2, "Between operator needs two values.");
+      Assert(variant_value2, "Between predicate needs two values.");
       const auto value2 = boost::get<T>(*variant_value2);
 
       // a BETWEEN 5 AND 4 will always be empty.
@@ -286,29 +270,42 @@ bool RangeFilter<T>::does_not_contain(const PredicateCondition predicate_conditi
         return true;
       }
 
+      const auto is_lower_inclusive = is_lower_inclusive_between(predicate_condition);
+      const auto is_upper_inclusive = is_upper_inclusive_between(predicate_condition);
+
       // Smaller than the segment's minimum.
-      if (does_not_contain(PredicateCondition::LessThanEquals, std::max(value, value2))) {
+      const auto min = ranges.front().first;
+      const auto is_below_min = is_upper_inclusive_between(predicate_condition) ? (value2 < min) : (value2 <= min);
+      if (is_below_min) {
         return true;
       }
 
       // Larger than the segment's maximum.
-      if (does_not_contain(PredicateCondition::GreaterThanEquals, std::min(value, value2))) {
+      const auto max = ranges.back().second;
+      const auto is_above_max = is_lower_inclusive_between(predicate_condition) ? (value > max) : (value >= max);
+      if (is_above_max) {
         return true;
       }
 
-      const auto range_comp = [](const std::pair<T, T> range, const T compare_value) {
-        return range.second < compare_value;
-      };
-      // Get value range or next larger value range if searched value is in a gap.
-      const auto start_lower = std::lower_bound(ranges.cbegin(), ranges.cend(), value, range_comp);
-      const auto end_lower = std::lower_bound(ranges.cbegin(), ranges.cend(), value2, range_comp);
+      // Find the range that starts at an element >= value2.
+      const auto upper_bound_range =
+          std::lower_bound(ranges.cbegin(), ranges.cend(), value2,
+                           [](const auto& range, const auto compare_value) { return range.first < compare_value; });
 
-      const bool start_in_value_range =
-          (start_lower != ranges.cend()) && (*start_lower).first <= value && value <= (*start_lower).second;
-      const bool end_in_value_range =
-          (end_lower != ranges.cend()) && (*end_lower).first <= value2 && value2 <= (*end_lower).second;
+      // If we find such a range, check for inclusive case.
+      auto upper_bound_in_gap =
+          upper_bound_range == ranges.cend() || !is_upper_inclusive || upper_bound_range->first > value2;
+      if (!upper_bound_in_gap) {
+        return false;
+      }
 
-      return !start_in_value_range && !end_in_value_range && start_lower == end_lower;
+      // If value2 is in a gap, there must be a previous range since we checked before that value2 is not smaller than
+      // the min.
+      Assert(upper_bound_range != ranges.begin(), "Out-of-range between predicate should have been caught before.");
+
+      // Check if the lower bound is in the same gap.
+      const auto previous_range = std::prev(upper_bound_range);
+      return is_lower_inclusive ? previous_range->second < value : previous_range->second <= value;
     }
     default:
       return false;
