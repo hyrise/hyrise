@@ -26,14 +26,18 @@ class RangeFilterTest : public BaseTest {
     _min_value = _values.front();
     _max_value = _values.back();
 
-    // `_value_in_gap` in a value in the largest gap of the test data.
+    // Value in the largest gap of the test data.
     _value_in_gap = T{1024};
-    _value_smaller_than_minimum = _min_value - 1;  // Value smaller than the minimum.
-    _value_larger_than_maximum = _max_value + 1;   // Value larger than the maximum.
+    _lower_bound = _min_value - 1;  // Value smaller than the minimum.
+    _upper_bound = _max_value + 1;  // Value larger than the maximum.
   }
 
   pmr_vector<T> _values;
-  T _value_smaller_than_minimum, _min_value, _max_value, _value_larger_than_maximum, _value_in_gap;
+  T _lower_bound;
+  T _min_value;
+  T _max_value;
+  T _upper_bound;
+  T _value_in_gap;
 };
 
 using RangeFilterTypes = ::testing::Types<int, float, double>;
@@ -191,35 +195,35 @@ TYPED_TEST(RangeFilterTest, CanPruneOnBounds) {
     EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Equals, {value}));
   }
 
-  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::LessThan, {this->_value_smaller_than_minimum}));
+  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::LessThan, {this->_lower_bound}));
   EXPECT_TRUE(filter->does_not_contain(PredicateCondition::LessThan, {this->_min_value}));
   EXPECT_FALSE(filter->does_not_contain(PredicateCondition::LessThan, {this->_value_in_gap}));
   EXPECT_FALSE(filter->does_not_contain(PredicateCondition::LessThan, {this->_max_value}));
-  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::LessThan, {this->_value_larger_than_maximum}));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::LessThan, {this->_upper_bound}));
 
-  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::LessThanEquals, {this->_value_smaller_than_minimum}));
+  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::LessThanEquals, {this->_lower_bound}));
   EXPECT_FALSE(filter->does_not_contain(PredicateCondition::LessThanEquals, {this->_min_value}));
   EXPECT_FALSE(filter->does_not_contain(PredicateCondition::LessThanEquals, {this->_value_in_gap}));
   EXPECT_FALSE(filter->does_not_contain(PredicateCondition::LessThanEquals, {this->_max_value}));
-  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::LessThanEquals, {this->_value_larger_than_maximum}));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::LessThanEquals, {this->_upper_bound}));
 
-  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Equals, {this->_value_smaller_than_minimum}));
+  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Equals, {this->_lower_bound}));
   EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Equals, {this->_min_value}));
   EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Equals, {this->_value_in_gap}));
   EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Equals, {this->_max_value}));
-  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Equals, {this->_value_larger_than_maximum}));
+  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Equals, {this->_upper_bound}));
 
-  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::GreaterThanEquals, {this->_value_smaller_than_minimum}));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::GreaterThanEquals, {this->_lower_bound}));
   EXPECT_FALSE(filter->does_not_contain(PredicateCondition::GreaterThanEquals, {this->_min_value}));
   EXPECT_FALSE(filter->does_not_contain(PredicateCondition::GreaterThanEquals, {this->_value_in_gap}));
   EXPECT_FALSE(filter->does_not_contain(PredicateCondition::GreaterThanEquals, {this->_max_value}));
-  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::GreaterThanEquals, {this->_value_larger_than_maximum}));
+  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::GreaterThanEquals, {this->_upper_bound}));
 
-  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::GreaterThan, {this->_value_smaller_than_minimum}));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::GreaterThan, {this->_lower_bound}));
   EXPECT_FALSE(filter->does_not_contain(PredicateCondition::GreaterThan, {this->_min_value}));
   EXPECT_FALSE(filter->does_not_contain(PredicateCondition::GreaterThan, {this->_value_in_gap}));
   EXPECT_TRUE(filter->does_not_contain(PredicateCondition::GreaterThan, {this->_max_value}));
-  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::GreaterThan, {this->_value_larger_than_maximum}));
+  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::GreaterThan, {this->_upper_bound}));
 }
 
 // Test larger value ranges.
@@ -227,8 +231,8 @@ TYPED_TEST(RangeFilterTest, Between) {
   const auto filter = RangeFilter<TypeParam>::build_filter(this->_values);
 
   // This one has bounds in gaps, but cannot prune.
-  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::BetweenInclusive, {this->_max_value - 1},
-                                        {this->_value_larger_than_maximum}));
+  EXPECT_FALSE(
+      filter->does_not_contain(PredicateCondition::BetweenInclusive, {this->_max_value - 1}, {this->_upper_bound}));
 
   EXPECT_TRUE(filter->does_not_contain(PredicateCondition::BetweenInclusive, TypeParam{-3000}, TypeParam{-2000}));
   EXPECT_TRUE(filter->does_not_contain(PredicateCondition::BetweenInclusive, TypeParam{-999}, TypeParam{1}));
@@ -340,35 +344,33 @@ TYPED_TEST(RangeFilterTest, Sliced) {
 
 TYPED_TEST(RangeFilterTest, SlicedWithUnmatchingPredicates) {
   const auto filter = RangeFilter<TypeParam>::build_filter(this->_values, 5);
-  const auto lower_bound = this->_min_value - TypeParam{1};
-  const auto upper_bound = this->_max_value + TypeParam{1};
 
-  EXPECT_FALSE(filter->sliced(PredicateCondition::Equals, lower_bound));
-  EXPECT_FALSE(filter->sliced(PredicateCondition::Equals, upper_bound));
+  EXPECT_FALSE(filter->sliced(PredicateCondition::Equals, this->_lower_bound));
+  EXPECT_FALSE(filter->sliced(PredicateCondition::Equals, this->_upper_bound));
 
   const auto one_element_filter = RangeFilter<TypeParam>::build_filter({TypeParam{1}});
   EXPECT_FALSE(one_element_filter->sliced(PredicateCondition::NotEquals, TypeParam{1}));
 
   EXPECT_FALSE(filter->sliced(PredicateCondition::LessThan, this->_min_value));
   EXPECT_TRUE(filter->sliced(PredicateCondition::LessThanEquals, this->_min_value));
-  EXPECT_FALSE(filter->sliced(PredicateCondition::LessThanEquals, lower_bound));
+  EXPECT_FALSE(filter->sliced(PredicateCondition::LessThanEquals, this->_lower_bound));
   EXPECT_TRUE(filter->sliced(PredicateCondition::GreaterThanEquals, this->_max_value));
-  EXPECT_FALSE(filter->sliced(PredicateCondition::GreaterThanEquals, upper_bound));
+  EXPECT_FALSE(filter->sliced(PredicateCondition::GreaterThanEquals, this->_upper_bound));
   EXPECT_FALSE(filter->sliced(PredicateCondition::GreaterThan, this->_max_value));
 
-  EXPECT_FALSE(filter->sliced(PredicateCondition::BetweenExclusive, lower_bound, this->_min_value));
-  EXPECT_TRUE(filter->sliced(PredicateCondition::BetweenInclusive, lower_bound, this->_min_value));
-  EXPECT_FALSE(filter->sliced(PredicateCondition::BetweenInclusive, lower_bound, lower_bound));
-  EXPECT_TRUE(filter->sliced(PredicateCondition::BetweenLowerExclusive, lower_bound, this->_min_value));
-  EXPECT_FALSE(filter->sliced(PredicateCondition::BetweenLowerExclusive, lower_bound, lower_bound));
-  EXPECT_FALSE(filter->sliced(PredicateCondition::BetweenUpperExclusive, lower_bound, this->_min_value));
+  EXPECT_FALSE(filter->sliced(PredicateCondition::BetweenExclusive, this->_lower_bound, this->_min_value));
+  EXPECT_TRUE(filter->sliced(PredicateCondition::BetweenInclusive, this->_lower_bound, this->_min_value));
+  EXPECT_FALSE(filter->sliced(PredicateCondition::BetweenInclusive, this->_lower_bound, this->_lower_bound));
+  EXPECT_TRUE(filter->sliced(PredicateCondition::BetweenLowerExclusive, this->_lower_bound, this->_min_value));
+  EXPECT_FALSE(filter->sliced(PredicateCondition::BetweenLowerExclusive, this->_lower_bound, this->_lower_bound));
+  EXPECT_FALSE(filter->sliced(PredicateCondition::BetweenUpperExclusive, this->_lower_bound, this->_min_value));
 
-  EXPECT_FALSE(filter->sliced(PredicateCondition::BetweenExclusive, this->_max_value, upper_bound));
-  EXPECT_TRUE(filter->sliced(PredicateCondition::BetweenInclusive, this->_max_value, upper_bound));
-  EXPECT_FALSE(filter->sliced(PredicateCondition::BetweenInclusive, upper_bound, upper_bound));
-  EXPECT_FALSE(filter->sliced(PredicateCondition::BetweenLowerExclusive, this->_max_value, upper_bound));
-  EXPECT_TRUE(filter->sliced(PredicateCondition::BetweenUpperExclusive, this->_max_value, upper_bound));
-  EXPECT_FALSE(filter->sliced(PredicateCondition::BetweenUpperExclusive, upper_bound, upper_bound));
+  EXPECT_FALSE(filter->sliced(PredicateCondition::BetweenExclusive, this->_max_value, this->_upper_bound));
+  EXPECT_TRUE(filter->sliced(PredicateCondition::BetweenInclusive, this->_max_value, this->_upper_bound));
+  EXPECT_FALSE(filter->sliced(PredicateCondition::BetweenInclusive, this->_upper_bound, this->_upper_bound));
+  EXPECT_FALSE(filter->sliced(PredicateCondition::BetweenLowerExclusive, this->_max_value, this->_upper_bound));
+  EXPECT_TRUE(filter->sliced(PredicateCondition::BetweenUpperExclusive, this->_max_value, this->_upper_bound));
+  EXPECT_FALSE(filter->sliced(PredicateCondition::BetweenUpperExclusive, this->_upper_bound, this->_upper_bound));
 }
 
 class RangeFilterTestUntyped : public BaseTest {};
