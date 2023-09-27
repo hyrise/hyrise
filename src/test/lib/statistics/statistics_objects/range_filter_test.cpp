@@ -338,21 +338,27 @@ TYPED_TEST(RangeFilterTest, Sliced) {
   EXPECT_EQ(min_max_filter->max, 7);
 }
 
-TYPED_TEST(RangeFilterTest, SliceWithUnmatchingPredicates) {
+TYPED_TEST(RangeFilterTest, SlicedWithUnmatchingPredicates) {
   const auto filter = RangeFilter<TypeParam>::build_filter(this->_values, 5);
+  const auto lower_bound = this->_min_value - TypeParam{1};
+  const auto upper_bound = this->_max_value + TypeParam{1};
+
+  EXPECT_FALSE(filter->sliced(PredicateCondition::Equals, lower_bound));
+  EXPECT_FALSE(filter->sliced(PredicateCondition::Equals, upper_bound));
+
+  const auto one_element_filter = RangeFilter<TypeParam>::build_filter({TypeParam{1}});
+  EXPECT_FALSE(one_element_filter->sliced(PredicateCondition::NotEquals, TypeParam{1}));
 
   EXPECT_FALSE(filter->sliced(PredicateCondition::LessThan, this->_min_value));
   EXPECT_TRUE(filter->sliced(PredicateCondition::LessThanEquals, this->_min_value));
   EXPECT_TRUE(filter->sliced(PredicateCondition::GreaterThanEquals, this->_max_value));
   EXPECT_FALSE(filter->sliced(PredicateCondition::GreaterThan, this->_max_value));
 
-  const auto lower_bound = this->_min_value - TypeParam{1};
   EXPECT_FALSE(filter->sliced(PredicateCondition::BetweenExclusive, lower_bound, this->_min_value));
   EXPECT_TRUE(filter->sliced(PredicateCondition::BetweenInclusive, lower_bound, this->_min_value));
   EXPECT_TRUE(filter->sliced(PredicateCondition::BetweenLowerExclusive, lower_bound, this->_min_value));
   EXPECT_FALSE(filter->sliced(PredicateCondition::BetweenUpperExclusive, lower_bound, this->_min_value));
 
-  const auto upper_bound = this->_max_value + TypeParam{1};
   EXPECT_FALSE(filter->sliced(PredicateCondition::BetweenExclusive, this->_max_value, upper_bound));
   EXPECT_TRUE(filter->sliced(PredicateCondition::BetweenInclusive, this->_max_value, upper_bound));
   EXPECT_FALSE(filter->sliced(PredicateCondition::BetweenLowerExclusive, this->_max_value, upper_bound));
