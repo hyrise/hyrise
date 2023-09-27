@@ -143,9 +143,9 @@ std::unique_ptr<RangeFilter<T>> RangeFilter<T>::build_filter(const pmr_vector<T>
   DebugAssert(std::is_sorted(dictionary.cbegin(), dictionary.cend()), "Dictionary must be sorted in ascending order.");
   const auto min = dictionary.front();
   const auto max = dictionary.back();
-  // max > std::numeric_limits<T>::max() + min would in theory be the correct assumption. However, it only works for
+  // max > std::numeric_limits<T>::max() + min would the correct mathematic assumption. However, it only works for
   // integral types. For floating-point types, the precision is not high enough to differentiate, e.g., max - 1 from
-  // max. While in sacrificing one value, we account for this imprecision.
+  // max. While in theory sacrificing one value, we account for this imprecision.
   if ((min < 0) && (max >= std::numeric_limits<T>::max() + min)) {
     return std::make_unique<RangeFilter<T>>(std::vector<std::pair<T, T>>{{min, max}});
   }
