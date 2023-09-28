@@ -61,7 +61,7 @@ std::shared_ptr<AbstractStatisticsObject> RangeFilter<T>::sliced(
 
       // If value is not in a gap, limit the last range's upper bound to value.
       if (iter != ranges.cend() && value >= iter->first) {
-        sliced_ranges.emplace_back(std::pair<T, T>{iter->first, value});
+        sliced_ranges.emplace_back(iter->first, value);
       }
     } break;
     case PredicateCondition::GreaterThan:
