@@ -67,7 +67,7 @@ void ResultSerializer::send_query_response(
     const auto chunk_size = chunk->size();
 
     const auto column_count = table->column_count();
-    auto segments = Segments(column_count);
+    auto segments = Segments(static_cast<typename Segments::size_type>(column_count));
     for (auto column_id = ColumnID{0}; column_id < column_count; column_id++) {
       segments[column_id] = chunk->get_segment(column_id);
     }

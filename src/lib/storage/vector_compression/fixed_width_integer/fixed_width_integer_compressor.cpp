@@ -1,4 +1,5 @@
 #include "fixed_width_integer_compressor.hpp"
+#include "storage/buffer/pin_guard.hpp"
 
 namespace hyrise {
 

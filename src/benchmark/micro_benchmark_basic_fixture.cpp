@@ -10,7 +10,7 @@
 
 namespace hyrise {
 
-void MicroBenchmarkBasicFixture::SetUp(::benchmark::State& /*state*/) {
+void MicroBenchmarkBasicFixture::SetUp(::benchmark::State& state) {
   const auto chunk_size = ChunkOffset{2'000};
   const auto row_count = size_t{40'000};
 
@@ -31,6 +31,12 @@ void MicroBenchmarkBasicFixture::SetUp(::benchmark::State& /*state*/) {
 }
 
 void MicroBenchmarkBasicFixture::TearDown(::benchmark::State& /*state*/) {
+  // The table objects needs to be manually removed here to not interfere with the buffer manager
+  // that is reset below.
+  _table_wrapper_a = nullptr;
+  _table_wrapper_b = nullptr;
+  _table_dict_wrapper = nullptr;
+
   Hyrise::reset();
 }
 

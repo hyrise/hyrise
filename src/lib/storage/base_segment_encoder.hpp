@@ -4,11 +4,14 @@
 #include <type_traits>
 
 #include <boost/hana/type.hpp>
+#include "storage/buffer/jemalloc_resource.hpp"
 
 #include "all_type_variant.hpp"
+#include "hyrise.hpp"
 #include "resolve_type.hpp"
 #include "storage/abstract_encoded_segment.hpp"
 #include "storage/abstract_segment.hpp"
+#include "storage/buffer/pin_guard.hpp"
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/encoding_type.hpp"
 #include "storage/vector_compression/vector_compression.hpp"
@@ -141,8 +144,14 @@ class SegmentEncoder : public BaseSegmentEncoder {
     static_assert(decltype(supports(data_type_c))::value);
     const auto iterable = create_any_segment_iterable<ColumnDataType>(*abstract_segment);
 
-    // For now, we allocate without a specific memory source.
-    return _self()._on_encode(iterable, PolymorphicAllocator<ColumnDataType>{});
+    // Pin everything in the allocator using the AllocatorPinGuard
+#ifdef HYRISE_WITH_JEMALLOC
+    auto allocator = PolymorphicAllocator<ColumnDataType>{&JemallocMemoryResource::get()};
+#else
+    auto allocator = PolymorphicAllocator<ColumnDataType>{&LinearBufferResource::get()};
+#endif
+    auto allocator_pin_guard = AllocatorPinGuard{allocator};
+    return _self()._on_encode(iterable, allocator);
   }
 
   /**@}*/

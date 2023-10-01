@@ -144,7 +144,9 @@ std::shared_ptr<RowIDPosList> __attribute__((noinline))
 ColumnVsColumnTableScanImpl::_typed_scan_chunk_with_iterators(ChunkID chunk_id, LeftIterator& left_it,
                                                               const LeftIterator& left_end, RightIterator& right_it,
                                                               const RightIterator& right_end) const {
-  auto matches_out = std::make_shared<RowIDPosList>();
+  auto allocator = PolymorphicAllocator<size_t>{};
+  auto matches_pin_guard = AllocatorPinGuard{allocator};
+  auto matches_out = std::make_shared<RowIDPosList>(allocator);
 
   auto condition_was_flipped = false;
   auto maybe_flipped_condition = _predicate_condition;

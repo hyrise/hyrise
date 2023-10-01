@@ -8,6 +8,7 @@
 #include <utility>
 #include <vector>
 
+#include "storage/buffer/jemalloc_resource.hpp"
 #include "tsl/robin_map.h"
 
 #include "aggregate/window_function_traits.hpp"
@@ -180,8 +181,10 @@ struct AggregateResultContext : SegmentVisitorContext {
   // In cases where we know how many values to expect, we can preallocate the context in order to avoid later
   // re-allocations.
   explicit AggregateResultContext(const size_t preallocated_size = 0)
-      : results(preallocated_size, AggregateResultAllocator{&buffer}) {}
+      : _alloc(&buffer), _pin_guard(_alloc), results(preallocated_size, _alloc) {}
 
+  AggregateResultAllocator _alloc;
+  AllocatorPinGuard _pin_guard;
   boost::container::pmr::monotonic_buffer_resource buffer;
   AggregateResults<ColumnDataType, aggregate_function> results;
 };
@@ -258,7 +261,14 @@ __attribute__((hot)) void AggregateHash::_aggregate_segment(ChunkID chunk_id, Co
  */
 template <typename AggregateKey>
 KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() {
-  auto keys_per_chunk = KeysPerChunk<AggregateKey>{};
+#ifdef HYRISE_WITH_JEMALLOC
+  auto allocator = PolymorphicAllocator<size_t>{&JemallocMemoryResource::get()};
+#else
+  auto allocator = PolymorphicAllocator<size_t>{&LinearBufferResource::get()};
+#endif
+  auto pin_guard = AllocatorPinGuard{allocator};
+
+  auto keys_per_chunk = KeysPerChunk<AggregateKey>{allocator};
 
   if constexpr (!std::is_same_v<AggregateKey, EmptyAggregateKey>) {
     const auto& input_table = left_input_table();
@@ -811,7 +821,9 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
   if (!_has_aggregate_functions) {
     auto context = std::static_pointer_cast<AggregateResultContext<DistinctColumnType, WindowFunction::Min>>(
         _contexts_per_column[0]);
-    auto pos_list = RowIDPosList();
+    auto allocator = PolymorphicAllocator<size_t>{};
+    auto allocator_pin_guard = AllocatorPinGuard{allocator};
+    auto pos_list = RowIDPosList{allocator};
     pos_list.reserve(context->results.size());
     for (const auto& result : context->results) {
       // NULL_ROW_ID (just a marker, not literally NULL) means that this result is either a gap (in the case of an
@@ -1030,6 +1042,7 @@ write_aggregate_values(pmr_vector<AggregateType>& /*values*/, pmr_vector<bool>& 
 }
 
 void AggregateHash::_write_groupby_output(RowIDPosList& pos_list) {
+  // TODO: can rmeove alloc again
   auto timer = Timer{};
   auto input_table = left_input_table();
 
@@ -1063,12 +1076,14 @@ void AggregateHash::_write_groupby_output(RowIDPosList& pos_list) {
     resolve_data_type(input_table->column_data_type(input_column_id), [&](const auto typed_value) {
       using ColumnDataType = typename decltype(typed_value)::type;
 
-      const auto column_is_nullable = input_table->column_is_nullable(input_column_id);
+      auto allocator = PolymorphicAllocator<bool>{};
+      auto pin_guard = AllocatorPinGuard{allocator};
 
+      const auto column_is_nullable = input_table->column_is_nullable(input_column_id);
       const auto pos_list_size = pos_list.size();
-      auto values = pmr_vector<ColumnDataType>{};
+      auto values = pmr_vector<ColumnDataType>{allocator};
       values.reserve(pos_list_size);
-      auto null_values = pmr_vector<bool>{};
+      auto null_values = pmr_vector<bool>{allocator};
       null_values.reserve(pos_list_size);
 
       auto accessors =
@@ -1136,10 +1151,13 @@ void AggregateHash::_write_aggregate_output(ColumnID aggregate_index) {
       _contexts_per_column[aggregate_index]);
 
   const auto& results = context->results;
+  auto pin_guard = SharedReadPinGuard{results};
 
   // Before writing the first aggregate column, write all group keys into the respective columns
   if (aggregate_index == 0) {
-    auto pos_list = RowIDPosList{};
+    auto allocator = PolymorphicAllocator<size_t>{};
+    auto allocator_pin_guard = AllocatorPinGuard{allocator};
+    auto pos_list = RowIDPosList{allocator};
     pos_list.reserve(results.size());
     for (const auto& result : results) {
       // NULL_ROW_ID (just a marker, not literally NULL) means that this result is either a gap (in the case of an
@@ -1157,8 +1175,10 @@ void AggregateHash::_write_aggregate_output(ColumnID aggregate_index) {
   // Write aggregated values into the segment. While write_aggregate_values could track if an actual NULL value was
   // written or not, we rather make the output types consistent independent of the input types. Not sure what the
   // standard says about this.
-  auto values = pmr_vector<decltype(aggregate_type)>{};
-  auto null_values = pmr_vector<bool>{};
+  auto allocator = PolymorphicAllocator<size_t>{};
+
+  auto values = pmr_vector<decltype(aggregate_type)>{allocator};
+  auto null_values = pmr_vector<bool>{allocator};
 
   constexpr bool NEEDS_NULL =
       (aggregate_function != WindowFunction::Count && aggregate_function != WindowFunction::CountDistinct);

@@ -254,7 +254,8 @@ TEST_F(StorageLZ4SegmentTest, CompressDictionaryStringSegment) {
   const auto num_rows = 100'000 / 20;
 
   for (auto index = size_t{0u}; index < num_rows; ++index) {
-    vs_str->append(AllTypeVariant{pmr_string{"this is element " + std::to_string(index)}});
+    const auto element_string = "this is element " + std::to_string(index);
+    vs_str->append(AllTypeVariant{pmr_string(element_string.begin(), element_string.end())});
   }
 
   auto lz4_segment = compress(vs_str, DataType::String);
@@ -287,7 +288,8 @@ TEST_F(StorageLZ4SegmentTest, CompressDictionaryStringSegment) {
   EXPECT_EQ(result.first, "this is element 3003");
 
   result = lz4_segment->decompress(ChunkOffset{num_rows - 1}, result.second, cache);
-  EXPECT_EQ(result.first, pmr_string{"this is element " + std::to_string(num_rows - 1)});
+  const auto element_string = "this is element " + std::to_string(num_rows - 1);
+  EXPECT_EQ(result.first, pmr_string(element_string.begin(), element_string.end()));
 
   // Finally, decompress the whole segment.
   auto decompressed_data = lz4_segment->decompress();

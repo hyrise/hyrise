@@ -37,9 +37,11 @@ std::shared_ptr<Table> MetaLogTable::_on_generate() const {
     auto buffer = tm{};
 
     timestamp_stream << std::put_time(localtime_r(&timestamp, &buffer), "%F %T");
-    output_table->append({timestamp_ns, pmr_string{timestamp_stream.str()},
-                          pmr_string{magic_enum::enum_name(entry.log_level)}, static_cast<int32_t>(entry.log_level),
-                          pmr_string{entry.reporter}, pmr_string{entry.message}});
+    auto log_level_str = magic_enum::enum_name(entry.log_level);
+    output_table->append({timestamp_ns, pmr_string{timestamp_stream.str().begin(), timestamp_stream.str().end()},
+                          pmr_string{log_level_str.begin(), log_level_str.end()}, static_cast<int32_t>(entry.log_level),
+                          pmr_string{entry.reporter.begin(), entry.reporter.end()},
+                          pmr_string{entry.message.begin(), entry.message.end()}});
   }
 
   return output_table;

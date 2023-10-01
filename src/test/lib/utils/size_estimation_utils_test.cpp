@@ -48,7 +48,7 @@ TEST_F(SizeEstimationUtilsTest, StringVectorExceedingSSOLengths) {
   constexpr auto vector_length = size_t{200};
   const auto large_string = pmr_string(large_string_length, '#');
 
-  pmr_vector<pmr_string> string_vector{vector_length, ""};
+  auto string_vector = pmr_vector<pmr_string>(vector_length);
   string_vector[0] = large_string;
   string_vector[50] = large_string;
   string_vector[100] = large_string;

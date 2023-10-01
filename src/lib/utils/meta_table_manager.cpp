@@ -1,5 +1,6 @@
 #include "meta_table_manager.hpp"
 
+#include "utils/meta_tables/meta_buffer_manager_metrics_table.hpp"
 #include "utils/meta_tables/meta_chunk_sort_orders_table.hpp"
 #include "utils/meta_tables/meta_chunks_table.hpp"
 #include "utils/meta_tables/meta_columns_table.hpp"
@@ -34,6 +35,7 @@ namespace hyrise {
 MetaTableManager::MetaTableManager() {
   const auto meta_tables =
       std::vector<std::shared_ptr<AbstractMetaTable>>{std::make_shared<MetaTablesTable>(),
+                                                      std::make_shared<MetaBufferManagerMetricsTable>(),
                                                       std::make_shared<MetaColumnsTable>(),
                                                       std::make_shared<MetaChunksTable>(),
                                                       std::make_shared<MetaChunkSortOrdersTable>(),

@@ -19,6 +19,8 @@ struct TopologyNode final {
   explicit TopologyNode(std::vector<TopologyCpu>&& init_cpus) : cpus(std::move(init_cpus)) {}
 
   std::vector<TopologyCpu> cpus;
+
+  bool is_memory_node() const;
 };
 
 std::ostream& operator<<(std::ostream& stream, const TopologyNode& topology_node);
@@ -72,6 +74,10 @@ class Topology final : public Noncopyable {
   const std::vector<TopologyNode>& nodes() const;
 
   size_t num_cpus() const;
+
+  size_t total_bytes(NodeID node_id) const;
+
+  size_t free_bytes(NodeID node_id) const;
 
  private:
   Topology();

@@ -3,6 +3,7 @@
 #include <type_traits>
 
 #include "storage/abstract_segment.hpp"
+#include "storage/buffer/pin_guard.hpp"
 #include "storage/dictionary_segment.hpp"
 #include "storage/fixed_string_dictionary_segment.hpp"
 #include "storage/segment_iterables.hpp"
@@ -29,6 +30,8 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
     resolve_compressed_vector_type(*_segment.attribute_vector(), [&](const auto& vector) {
       using CompressedVectorIterator = decltype(vector.cbegin());
       using DictionaryIteratorType = decltype(_dictionary->cbegin());
+      auto dictionary_pin_guard = SharedReadPinGuard{*_dictionary};
+      auto vector_pin_guard = SharedReadPinGuard{vector};
 
       auto begin = Iterator<CompressedVectorIterator, DictionaryIteratorType>{
           _dictionary->cbegin(), _segment.null_value_id(), vector.cbegin(), ChunkOffset{0u}};
@@ -47,11 +50,16 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
     resolve_compressed_vector_type(*_segment.attribute_vector(), [&](const auto& vector) {
       using Decompressor = std::decay_t<decltype(vector.create_decompressor())>;
       using DictionaryIteratorType = decltype(_dictionary->cbegin());
-
       using PosListIteratorType = decltype(position_filter->cbegin());
+
+      auto dictionary_pin_guard = SharedReadPinGuard{*_dictionary};
+      auto vector_pin_guard = SharedReadPinGuard{vector};
+      auto pos_list_pin_guard = SharedReadPinGuard{position_filter};
+
       auto begin = PointAccessIterator<Decompressor, DictionaryIteratorType, PosListIteratorType>{
           _dictionary->cbegin(), _segment.null_value_id(), vector.create_decompressor(), position_filter->cbegin(),
           position_filter->cbegin()};
+
       auto end = PointAccessIterator<Decompressor, DictionaryIteratorType, PosListIteratorType>{
           _dictionary->cbegin(), _segment.null_value_id(), vector.create_decompressor(), position_filter->cbegin(),
           position_filter->cend()};

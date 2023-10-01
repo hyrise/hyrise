@@ -11,6 +11,7 @@
 #include "tsl/robin_map.h"
 
 #include "generic_histogram.hpp"
+#include "generic_histogram_builder.hpp"
 #include "resolve_type.hpp"
 #include "storage/segment_iterate.hpp"
 
@@ -76,8 +77,8 @@ std::vector<std::pair<T, HistogramCountType>> value_distribution_from_column(con
 namespace hyrise {
 
 template <typename T>
-EqualDistinctCountHistogram<T>::EqualDistinctCountHistogram(std::vector<T>&& bin_minima, std::vector<T>&& bin_maxima,
-                                                            std::vector<HistogramCountType>&& bin_heights,
+EqualDistinctCountHistogram<T>::EqualDistinctCountHistogram(pmr_vector<T>&& bin_minima, pmr_vector<T>&& bin_maxima,
+                                                            pmr_vector<HistogramCountType>&& bin_heights,
                                                             const HistogramCountType distinct_count_per_bin,
                                                             const BinID bin_count_with_extra_value,
                                                             const HistogramDomain<T>& domain)
@@ -93,7 +94,6 @@ EqualDistinctCountHistogram<T>::EqualDistinctCountHistogram(std::vector<T>&& bin
   Assert(_bin_count_with_extra_value < _bin_minima.size(), "Cannot have more bins with extra value than bins.");
 
   AbstractHistogram<T>::_assert_bin_validity();
-
   _total_count = std::accumulate(_bin_heights.cbegin(), _bin_heights.cend(), HistogramCountType{0});
   _total_distinct_count = _distinct_count_per_bin * static_cast<HistogramCountType>(_bin_heights.size()) +
                           static_cast<HistogramCountType>(_bin_count_with_extra_value);
@@ -107,7 +107,7 @@ std::shared_ptr<EqualDistinctCountHistogram<T>> EqualDistinctCountHistogram<T>::
   const auto value_distribution = value_distribution_from_column(table, column_id, domain);
 
   if (value_distribution.empty()) {
-    return nullptr;
+    return nullptr;  // TODO(nikriek): Investigate this case
   }
 
   // If there are fewer distinct values than the number of desired bins use that instead.
@@ -118,9 +118,12 @@ std::shared_ptr<EqualDistinctCountHistogram<T>> EqualDistinctCountHistogram<T>::
   const auto distinct_count_per_bin = static_cast<size_t>(value_distribution.size() / bin_count);
   const BinID bin_count_with_extra_value = value_distribution.size() % bin_count;
 
-  std::vector<T> bin_minima(bin_count);
-  std::vector<T> bin_maxima(bin_count);
-  std::vector<HistogramCountType> bin_heights(bin_count);
+  auto allocator = PolymorphicAllocator<T>{};
+  auto alloc_in_guard = AllocatorPinGuard{allocator};
+
+  pmr_vector<T> bin_minima(bin_count, allocator);
+  pmr_vector<T> bin_maxima(bin_count, allocator);
+  pmr_vector<HistogramCountType> bin_heights(bin_count, allocator);
 
   // `min_value_idx` and `max_value_idx` are indices into the sorted vector `value_distribution`
   // describing which range of distinct values goes into a bin

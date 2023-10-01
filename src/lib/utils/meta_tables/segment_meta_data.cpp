@@ -13,6 +13,8 @@
 namespace hyrise {
 
 void gather_segment_meta_data(const std::shared_ptr<Table>& meta_table, const MemoryUsageCalculationMode mode) {
+  auto allocator = PolymorphicAllocator<pmr_string>{};
+  auto pin_guard = AllocatorPinGuard{allocator};
   for (const auto& [table_name, table] : Hyrise::get().storage_manager.tables()) {
     const auto chunk_count = table->chunk_count();
     for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
@@ -27,18 +29,21 @@ void gather_segment_meta_data(const std::shared_ptr<Table>& meta_table, const Me
         const auto& segment = chunk->get_segment(column_id);
 
         const auto data_type = table->column_data_type(column_id);
-        const auto data_type_str = pmr_string{data_type_to_string.left.at(data_type)};
+        const auto data_type_str = pmr_string{data_type_to_string.left.at(data_type).begin(),
+                                              data_type_to_string.left.at(data_type).end(), allocator};
 
         const auto estimated_size = segment->memory_usage(mode);
         auto encoding = NULL_VALUE;
         auto vector_compression = NULL_VALUE;
         if (const auto& encoded_segment = std::dynamic_pointer_cast<AbstractEncodedSegment>(segment)) {
-          encoding = pmr_string{magic_enum::enum_name(encoded_segment->encoding_type())};
+          auto encoding_enum_str = magic_enum::enum_name(encoded_segment->encoding_type());
+          encoding = pmr_string{encoding_enum_str.begin(), encoding_enum_str.end(), allocator};
 
           if (encoded_segment->compressed_vector_type()) {
             std::stringstream sstream;
             sstream << *encoded_segment->compressed_vector_type();
-            vector_compression = pmr_string{sstream.str()};
+            const auto stream_as_str = sstream.str();
+            vector_compression = pmr_string(stream_as_str.begin(), stream_as_str.end(), allocator);
           }
         }
 
@@ -64,9 +69,12 @@ void gather_segment_meta_data(const std::shared_ptr<Table>& meta_table, const Me
         }
 
         const auto& access_counter = segment->access_counter;
-        meta_table->append({pmr_string{table_name}, static_cast<int32_t>(chunk_id), static_cast<int32_t>(column_id),
-                            pmr_string{table->column_name(column_id)}, data_type_str, distinct_value_count, encoding,
-                            vector_compression, static_cast<int64_t>(estimated_size),
+        // TODO(nikriek)
+        meta_table->append({pmr_string{table_name.begin(), table_name.end()}, static_cast<int32_t>(chunk_id),
+                            static_cast<int32_t>(column_id),
+                            pmr_string{table->column_name(column_id).begin(), table->column_name(column_id).end()},
+                            data_type_str, distinct_value_count, encoding, vector_compression,
+                            static_cast<int64_t>(estimated_size),
                             static_cast<int64_t>(access_counter[SegmentAccessCounter::AccessType::Point]),
                             static_cast<int64_t>(access_counter[SegmentAccessCounter::AccessType::Sequential]),
                             static_cast<int64_t>(access_counter[SegmentAccessCounter::AccessType::Monotonic]),

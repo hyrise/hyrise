@@ -2,10 +2,6 @@
 
 namespace hyrise::expression_functional {
 
-std::shared_ptr<AbstractExpression> to_expression(const std::shared_ptr<AbstractExpression>& expression) {
-  return expression;
-}
-
 std::shared_ptr<ValueExpression> to_expression(const AllTypeVariant& value) {
   return std::make_shared<ValueExpression>(value);
 }

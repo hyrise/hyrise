@@ -123,6 +123,37 @@ target_link_libraries(
     hyriseBenchmarkLib
 )
 
+# Configure hyriseBenchmarkBufferManager
+add_executable(
+    hyriseBenchmarkBufferManager
+
+    micro_benchmark_main.cpp
+    storage/buffer/zipfian_int_distribution.hpp
+    storage/buffer/page_migration_benchmark.cpp
+    storage/buffer/skew_benchmark.cpp
+
+    # storage/buffer/buffer_manager_benchmark.cpp
+    storage/buffer/sequential_read_benchmark.cpp
+    storage/buffer/random_access_benchmark.cpp
+    storage/buffer/buffer_benchmark_utils.hpp
+    storage/buffer/allocation_benchmark.cpp
+    storage/buffer/ycsb_buffer_manager_benchmark.cpp
+)
+
+if (NOT APPLE)
+target_compile_options(hyriseBenchmarkBufferManager PRIVATE -mavx -mavx512f -mclwb)
+endif()
+
+target_link_libraries(
+    hyriseBenchmarkBufferManager
+
+    hyrise
+    hdr_histogram
+    benchmark::benchmark
+)
+
+
+
 # Configure hyriseBenchmarkStarSchema
 add_executable(
     hyriseBenchmarkStarSchema

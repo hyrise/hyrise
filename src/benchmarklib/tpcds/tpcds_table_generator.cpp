@@ -35,6 +35,7 @@ extern "C" {
 #include <tpcds-kit/tools/w_web_sales.h>
 #include <tpcds-kit/tools/w_web_site.h>
 }
+#include <boost/lexical_cast.hpp>
 
 #include "benchmark_config.hpp"
 #include "table_builder.hpp"
@@ -382,11 +383,16 @@ std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TPCDSTableGenerator::_
 }
 
 std::shared_ptr<Table> TPCDSTableGenerator::generate_call_center(ds_key_t max_rows) const {
+  auto allocator = PolymorphicAllocator<size_t>{};
+  auto alloc_pin_guard = AllocatorPinGuard{allocator};
+
   auto [call_center_first, call_center_count] = prepare_for_table(CALL_CENTER);
+
   call_center_count = std::min(call_center_count, max_rows);
 
-  auto call_center_builder = TableBuilder{_benchmark_config->chunk_size, call_center_column_types,
-                                          call_center_column_names, static_cast<ChunkOffset>(call_center_count)};
+  auto call_center_builder =
+      TableBuilder{_benchmark_config->chunk_size, call_center_column_types, call_center_column_names, allocator,
+                   static_cast<ChunkOffset>(call_center_count)};
 
   auto call_center = CALL_CENTER_TBL{};
   call_center.cc_closed_date_id = ds_key_t{-1};
@@ -412,7 +418,7 @@ std::shared_ptr<Table> TPCDSTableGenerator::generate_call_center(ds_key_t max_ro
         resolve_string(CC_DIVISION_NAME, call_center.cc_division_name),
         resolve_integer(CC_COMPANY, call_center.cc_company),
         resolve_string(CC_COMPANY_NAME, call_center.cc_company_name),
-        resolve_string(CC_ADDRESS, pmr_string{std::to_string(call_center.cc_address.street_num)}),
+        resolve_string(CC_ADDRESS, pmr_string{boost::lexical_cast<pmr_string>(call_center.cc_address.street_num)}),
         resolve_street_name(CC_ADDRESS, call_center.cc_address),
         resolve_string(CC_ADDRESS, call_center.cc_address.street_type),
         resolve_string(CC_ADDRESS, call_center.cc_address.suite_num),
@@ -429,11 +435,14 @@ std::shared_ptr<Table> TPCDSTableGenerator::generate_call_center(ds_key_t max_ro
 }
 
 std::shared_ptr<Table> TPCDSTableGenerator::generate_catalog_page(ds_key_t max_rows) const {
+  auto allocator = PolymorphicAllocator<size_t>{};
+  auto alloc_pin_guard = AllocatorPinGuard{allocator};
   auto [catalog_page_first, catalog_page_count] = prepare_for_table(CATALOG_PAGE);
   catalog_page_count = std::min(catalog_page_count, max_rows);
 
-  auto catalog_page_builder = TableBuilder{_benchmark_config->chunk_size, catalog_page_column_types,
-                                           catalog_page_column_names, static_cast<ChunkOffset>(catalog_page_count)};
+  auto catalog_page_builder =
+      TableBuilder{_benchmark_config->chunk_size, catalog_page_column_types, catalog_page_column_names, allocator,
+                   static_cast<ChunkOffset>(catalog_page_count)};
 
   auto catalog_page = CATALOG_PAGE_TBL{};
   // NOLINTBEGIN(cppcoreguidelines-pro-type-vararg,hicpp-vararg)
@@ -461,15 +470,19 @@ std::shared_ptr<Table> TPCDSTableGenerator::generate_catalog_page(ds_key_t max_r
 
 std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TPCDSTableGenerator::generate_catalog_sales_and_returns(
     ds_key_t max_rows) const {
+  auto allocator = PolymorphicAllocator<size_t>{};
+  auto alloc_pin_guard = AllocatorPinGuard{allocator};
+
   auto [catalog_sales_first, catalog_sales_count] = prepare_for_table(CATALOG_SALES);
   // catalog_sales_count is NOT the actual number of catalog sales created, for each of these "master" catalog_sales
   // multiple "detail" catalog sales are created and possibly returned
 
-  auto catalog_sales_builder = TableBuilder{_benchmark_config->chunk_size, catalog_sales_column_types,
-                                            catalog_sales_column_names, static_cast<ChunkOffset>(catalog_sales_count)};
+  auto catalog_sales_builder =
+      TableBuilder{_benchmark_config->chunk_size, catalog_sales_column_types, catalog_sales_column_names, allocator,
+                   static_cast<ChunkOffset>(catalog_sales_count)};
 
-  auto catalog_returns_builder =
-      TableBuilder{_benchmark_config->chunk_size, catalog_returns_column_types, catalog_returns_column_names};
+  auto catalog_returns_builder = TableBuilder{_benchmark_config->chunk_size, catalog_returns_column_types,
+                                              catalog_returns_column_names, allocator};
 
   for (auto catalog_sale_index = ds_key_t{0}; catalog_sale_index < catalog_sales_count; ++catalog_sale_index) {
     auto catalog_sales = W_CATALOG_SALES_TBL{};
@@ -565,12 +578,15 @@ std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TPCDSTableGenerator::g
 }
 
 std::shared_ptr<Table> TPCDSTableGenerator::generate_customer_address(ds_key_t max_rows) const {
+  auto allocator = PolymorphicAllocator<size_t>{};
+  auto alloc_pin_guard = AllocatorPinGuard{allocator};
+
   auto [customer_address_first, customer_address_count] = prepare_for_table(CUSTOMER_ADDRESS);
   customer_address_count = std::min(customer_address_count, max_rows);
 
   auto customer_address_builder =
       TableBuilder{_benchmark_config->chunk_size, customer_address_column_types, customer_address_column_names,
-                   static_cast<ChunkOffset>(customer_address_count)};
+                   allocator, static_cast<ChunkOffset>(customer_address_count)};
 
   for (auto customer_address_index = ds_key_t{0}; customer_address_index < customer_address_count;
        ++customer_address_index) {
@@ -579,7 +595,7 @@ std::shared_ptr<Table> TPCDSTableGenerator::generate_customer_address(ds_key_t m
 
     customer_address_builder.append_row(
         customer_address.ca_addr_sk, customer_address.ca_addr_id,
-        resolve_string(CA_ADDRESS_STREET_NUM, pmr_string{std::to_string(customer_address.ca_address.street_num)}),
+        resolve_string(CA_ADDRESS_STREET_NUM, boost::lexical_cast<pmr_string>(customer_address.ca_address.street_num)),
         resolve_street_name(CA_ADDRESS_STREET_NAME1, customer_address.ca_address),
         resolve_string(CA_ADDRESS_STREET_TYPE, customer_address.ca_address.street_type),
         resolve_string(CA_ADDRESS_SUITE_NUM, customer_address.ca_address.suite_num),
@@ -596,11 +612,14 @@ std::shared_ptr<Table> TPCDSTableGenerator::generate_customer_address(ds_key_t m
 }
 
 std::shared_ptr<Table> TPCDSTableGenerator::generate_customer(ds_key_t max_rows) const {
+  auto allocator = PolymorphicAllocator<size_t>{};
+  auto alloc_pin_guard = AllocatorPinGuard{allocator};
+
   auto [customer_first, customer_count] = prepare_for_table(CUSTOMER);
   customer_count = std::min(customer_count, max_rows);
 
   auto customer_builder = TableBuilder{_benchmark_config->chunk_size, customer_column_types, customer_column_names,
-                                       static_cast<ChunkOffset>(customer_count)};
+                                       allocator, static_cast<ChunkOffset>(customer_count)};
 
   for (auto customer_index = ds_key_t{0}; customer_index < customer_count; ++customer_index) {
     const auto customer = call_dbgen_mk<W_CUSTOMER_TBL, &mk_w_customer, CUSTOMER>(customer_first + customer_index);
@@ -624,12 +643,15 @@ std::shared_ptr<Table> TPCDSTableGenerator::generate_customer(ds_key_t max_rows)
 }
 
 std::shared_ptr<Table> TPCDSTableGenerator::generate_customer_demographics(ds_key_t max_rows) const {
+  auto allocator = PolymorphicAllocator<size_t>{};
+  auto alloc_pin_guard = AllocatorPinGuard{allocator};
+
   auto [customer_demographics_first, customer_demographics_count] = prepare_for_table(CUSTOMER_DEMOGRAPHICS);
   customer_demographics_count = std::min(customer_demographics_count, max_rows);
 
-  auto customer_demographics_builder =
-      TableBuilder{_benchmark_config->chunk_size, customer_demographics_column_types,
-                   customer_demographics_column_names, static_cast<ChunkOffset>(customer_demographics_count)};
+  auto customer_demographics_builder = TableBuilder{_benchmark_config->chunk_size, customer_demographics_column_types,
+                                                    customer_demographics_column_names, allocator,
+                                                    static_cast<ChunkOffset>(customer_demographics_count)};
 
   for (auto customer_demographic = ds_key_t{0}; customer_demographic < customer_demographics_count;
        ++customer_demographic) {
@@ -652,16 +674,18 @@ std::shared_ptr<Table> TPCDSTableGenerator::generate_customer_demographics(ds_ke
 }
 
 std::shared_ptr<Table> TPCDSTableGenerator::generate_date_dim(ds_key_t max_rows) const {
+  auto allocator = PolymorphicAllocator<size_t>{};
+  auto alloc_pin_guard = AllocatorPinGuard{allocator};
   auto [date_first, date_count] = prepare_for_table(DATE);
   date_count = std::min(date_count, max_rows);
 
-  auto date_builder = TableBuilder{_benchmark_config->chunk_size, date_column_types, date_column_names,
+  auto date_builder = TableBuilder{_benchmark_config->chunk_size, date_column_types, date_column_names, allocator,
                                    static_cast<ChunkOffset>(date_count)};
 
   for (auto date_index = ds_key_t{0}; date_index < date_count; ++date_index) {
     const auto date = call_dbgen_mk<W_DATE_TBL, &mk_w_date, DATE>(date_first + date_index);
-
-    auto quarter_name = pmr_string{std::to_string(date.d_year) + "Q" + std::to_string(date.d_qoy)};
+    const auto quarter_string = std::to_string(date.d_year) + "Q" + std::to_string(date.d_qoy);
+    auto quarter_name = pmr_string(quarter_string.begin(), quarter_string.end());
 
     date_builder.append_row(
         date.d_date_sk, date.d_date_id,
@@ -689,12 +713,15 @@ std::shared_ptr<Table> TPCDSTableGenerator::generate_date_dim(ds_key_t max_rows)
 }
 
 std::shared_ptr<Table> TPCDSTableGenerator::generate_household_demographics(ds_key_t max_rows) const {
+  auto allocator = PolymorphicAllocator<size_t>{};
+  auto alloc_pin_guard = AllocatorPinGuard{allocator};
+
   auto [household_demographics_first, household_demographics_count] = prepare_for_table(HOUSEHOLD_DEMOGRAPHICS);
   household_demographics_count = std::min(household_demographics_count, max_rows);
 
-  auto household_demographics_builder =
-      TableBuilder{_benchmark_config->chunk_size, household_demographics_column_types,
-                   household_demographics_column_names, static_cast<ChunkOffset>(household_demographics_count)};
+  auto household_demographics_builder = TableBuilder{_benchmark_config->chunk_size, household_demographics_column_types,
+                                                     household_demographics_column_names, allocator,
+                                                     static_cast<ChunkOffset>(household_demographics_count)};
 
   for (auto household_demographic = ds_key_t{0}; household_demographic < household_demographics_count;
        ++household_demographic) {
@@ -715,11 +742,14 @@ std::shared_ptr<Table> TPCDSTableGenerator::generate_household_demographics(ds_k
 }
 
 std::shared_ptr<Table> TPCDSTableGenerator::generate_income_band(ds_key_t max_rows) const {
+  auto allocator = PolymorphicAllocator<size_t>{};
+  auto alloc_pin_guard = AllocatorPinGuard{allocator};
   auto [income_band_first, income_band_count] = prepare_for_table(INCOME_BAND);
   income_band_count = std::min(income_band_count, max_rows);
 
-  auto income_band_builder = TableBuilder{_benchmark_config->chunk_size, income_band_column_types,
-                                          income_band_column_names, static_cast<ChunkOffset>(income_band_count)};
+  auto income_band_builder =
+      TableBuilder{_benchmark_config->chunk_size, income_band_column_types, income_band_column_names, allocator,
+                   static_cast<ChunkOffset>(income_band_count)};
 
   for (auto income_band_index = ds_key_t{0}; income_band_index < income_band_count; ++income_band_index) {
     const auto income_band =
@@ -734,11 +764,13 @@ std::shared_ptr<Table> TPCDSTableGenerator::generate_income_band(ds_key_t max_ro
 }
 
 std::shared_ptr<Table> TPCDSTableGenerator::generate_inventory(ds_key_t max_rows) const {
+  auto allocator = PolymorphicAllocator<size_t>{};
+  auto alloc_pin_guard = AllocatorPinGuard{allocator};
   auto [inventory_first, inventory_count] = prepare_for_table(INVENTORY);
   inventory_count = std::min(inventory_count, max_rows);
 
   auto inventory_builder = TableBuilder{_benchmark_config->chunk_size, inventory_column_types, inventory_column_names,
-                                        static_cast<ChunkOffset>(inventory_count)};
+                                        allocator, static_cast<ChunkOffset>(inventory_count)};
 
   for (auto inventory_index = ds_key_t{0}; inventory_index < inventory_count; ++inventory_index) {
     const auto inventory =
@@ -752,10 +784,12 @@ std::shared_ptr<Table> TPCDSTableGenerator::generate_inventory(ds_key_t max_rows
 }
 
 std::shared_ptr<Table> TPCDSTableGenerator::generate_item(ds_key_t max_rows) const {
+  auto allocator = PolymorphicAllocator<size_t>{};
+  auto alloc_pin_guard = AllocatorPinGuard{allocator};
   auto [item_first, item_count] = prepare_for_table(ITEM);
   item_count = std::min(item_count, max_rows);
 
-  auto item_builder = TableBuilder{_benchmark_config->chunk_size, item_column_types, item_column_names,
+  auto item_builder = TableBuilder{_benchmark_config->chunk_size, item_column_types, item_column_names, allocator,
                                    static_cast<ChunkOffset>(item_count)};
 
   for (auto item_index = ds_key_t{0}; item_index < item_count; ++item_index) {
@@ -779,11 +813,13 @@ std::shared_ptr<Table> TPCDSTableGenerator::generate_item(ds_key_t max_rows) con
 }
 
 std::shared_ptr<Table> TPCDSTableGenerator::generate_promotion(ds_key_t max_rows) const {
+  auto allocator = PolymorphicAllocator<size_t>{};
+  auto alloc_pin_guard = AllocatorPinGuard{allocator};
   auto [promotion_first, promotion_count] = prepare_for_table(PROMOTION);
   promotion_count = std::min(promotion_count, max_rows);
 
   auto promotion_builder = TableBuilder{_benchmark_config->chunk_size, promotion_column_types, promotion_column_names,
-                                        static_cast<ChunkOffset>(promotion_count)};
+                                        allocator, static_cast<ChunkOffset>(promotion_count)};
 
   for (auto promotion_index = ds_key_t{0}; promotion_index < promotion_count; ++promotion_index) {
     const auto promotion =
@@ -810,10 +846,13 @@ std::shared_ptr<Table> TPCDSTableGenerator::generate_promotion(ds_key_t max_rows
 }
 
 std::shared_ptr<Table> TPCDSTableGenerator::generate_reason(ds_key_t max_rows) const {
+  auto allocator = PolymorphicAllocator<size_t>{};
+  auto alloc_pin_guard = AllocatorPinGuard{allocator};
+
   auto [reason_first, reason_count] = prepare_for_table(REASON);
   reason_count = std::min(reason_count, max_rows);
 
-  auto reason_builder = TableBuilder{_benchmark_config->chunk_size, reason_column_types, reason_column_names,
+  auto reason_builder = TableBuilder{_benchmark_config->chunk_size, reason_column_types, reason_column_names, allocator,
                                      static_cast<ChunkOffset>(reason_count)};
 
   for (auto reason_index = ds_key_t{0}; reason_index < reason_count; ++reason_index) {
@@ -827,11 +866,14 @@ std::shared_ptr<Table> TPCDSTableGenerator::generate_reason(ds_key_t max_rows) c
 }
 
 std::shared_ptr<Table> TPCDSTableGenerator::generate_ship_mode(ds_key_t max_rows) const {
+  auto allocator = PolymorphicAllocator<size_t>{};
+  auto alloc_pin_guard = AllocatorPinGuard{allocator};
+
   auto [ship_mode_first, ship_mode_count] = prepare_for_table(SHIP_MODE);
   ship_mode_count = std::min(ship_mode_count, max_rows);
 
   auto ship_mode_builder = TableBuilder{_benchmark_config->chunk_size, ship_mode_column_types, ship_mode_column_names,
-                                        static_cast<ChunkOffset>(ship_mode_count)};
+                                        allocator, static_cast<ChunkOffset>(ship_mode_count)};
 
   for (auto ship_mode_index = ds_key_t{0}; ship_mode_index < ship_mode_count; ++ship_mode_index) {
     const auto ship_mode =
@@ -848,10 +890,13 @@ std::shared_ptr<Table> TPCDSTableGenerator::generate_ship_mode(ds_key_t max_rows
 }
 
 std::shared_ptr<Table> TPCDSTableGenerator::generate_store(ds_key_t max_rows) const {
+  auto allocator = PolymorphicAllocator<size_t>{};
+  auto alloc_pin_guard = AllocatorPinGuard{allocator};
+
   auto [store_first, store_count] = prepare_for_table(STORE);
   store_count = std::min(store_count, max_rows);
 
-  auto store_builder = TableBuilder{_benchmark_config->chunk_size, store_column_types, store_column_names,
+  auto store_builder = TableBuilder{_benchmark_config->chunk_size, store_column_types, store_column_names, allocator,
                                     static_cast<ChunkOffset>(store_count)};
 
   for (auto store_index = ds_key_t{0}; store_index < store_count; ++store_index) {
@@ -871,7 +916,7 @@ std::shared_ptr<Table> TPCDSTableGenerator::generate_store(ds_key_t max_rows) co
         resolve_string(W_STORE_MARKET_MANAGER, store.market_manager),
         resolve_key(W_STORE_DIVISION_ID, store.division_id), resolve_string(W_STORE_DIVISION_NAME, store.division_name),
         resolve_key(W_STORE_COMPANY_ID, store.company_id), resolve_string(W_STORE_COMPANY_NAME, store.company_name),
-        resolve_string(W_STORE_ADDRESS_STREET_NUM, pmr_string{std::to_string(store.address.street_num)}),
+        resolve_string(W_STORE_ADDRESS_STREET_NUM, boost::lexical_cast<pmr_string>(store.address.street_num)),
         resolve_street_name(W_STORE_ADDRESS_STREET_NAME1, store.address),
         resolve_string(W_STORE_ADDRESS_STREET_TYPE, store.address.street_type),
         resolve_string(W_STORE_ADDRESS_SUITE_NUM, store.address.suite_num),
@@ -889,12 +934,16 @@ std::shared_ptr<Table> TPCDSTableGenerator::generate_store(ds_key_t max_rows) co
 
 std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TPCDSTableGenerator::generate_store_sales_and_returns(
     ds_key_t max_rows) const {
+  auto allocator = PolymorphicAllocator<size_t>{};
+  auto alloc_pin_guard = AllocatorPinGuard{allocator};
+
   auto [store_sales_first, store_sales_count] = prepare_for_table(STORE_SALES);
 
-  auto store_sales_builder = TableBuilder{_benchmark_config->chunk_size, store_sales_column_types,
-                                          store_sales_column_names, static_cast<ChunkOffset>(store_sales_count)};
+  auto store_sales_builder =
+      TableBuilder{_benchmark_config->chunk_size, store_sales_column_types, store_sales_column_names, allocator,
+                   static_cast<ChunkOffset>(store_sales_count)};
   auto store_returns_builder =
-      TableBuilder{_benchmark_config->chunk_size, store_returns_column_types, store_returns_column_names};
+      TableBuilder{_benchmark_config->chunk_size, store_returns_column_types, store_returns_column_names, allocator};
 
   for (auto store_sale = ds_key_t{0}; store_sale < store_sales_count; ++store_sale) {
     auto store_sales = W_STORE_SALES_TBL{};
@@ -970,10 +1019,12 @@ std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TPCDSTableGenerator::g
 }
 
 std::shared_ptr<Table> TPCDSTableGenerator::generate_time_dim(ds_key_t max_rows) const {
+  auto allocator = PolymorphicAllocator<size_t>{};
+  auto alloc_pin_guard = AllocatorPinGuard{allocator};
   auto [time_first, time_count] = prepare_for_table(TIME);
   time_count = std::min(time_count, max_rows);
 
-  auto time_builder = TableBuilder{_benchmark_config->chunk_size, time_column_types, time_column_names,
+  auto time_builder = TableBuilder{_benchmark_config->chunk_size, time_column_types, time_column_names, allocator,
                                    static_cast<ChunkOffset>(time_count)};
 
   for (auto time_index = ds_key_t{0}; time_index < time_count; ++time_index) {
@@ -990,11 +1041,14 @@ std::shared_ptr<Table> TPCDSTableGenerator::generate_time_dim(ds_key_t max_rows)
 }
 
 std::shared_ptr<Table> TPCDSTableGenerator::generate_warehouse(ds_key_t max_rows) const {
+  auto allocator = PolymorphicAllocator<size_t>{};
+  auto alloc_pin_guard = AllocatorPinGuard{allocator};
+
   auto [warehouse_first, warehouse_count] = prepare_for_table(WAREHOUSE);
   warehouse_count = std::min(warehouse_count, max_rows);
 
   auto warehouse_builder = TableBuilder{_benchmark_config->chunk_size, warehouse_column_types, warehouse_column_names,
-                                        static_cast<ChunkOffset>(warehouse_count)};
+                                        allocator, static_cast<ChunkOffset>(warehouse_count)};
 
   for (auto warehouse_index = ds_key_t{0}; warehouse_index < warehouse_count; ++warehouse_index) {
     const auto warehouse =
@@ -1005,7 +1059,7 @@ std::shared_ptr<Table> TPCDSTableGenerator::generate_warehouse(ds_key_t max_rows
 
         resolve_string(W_WAREHOUSE_NAME, warehouse.w_warehouse_name),
         resolve_integer(W_WAREHOUSE_SQ_FT, warehouse.w_warehouse_sq_ft),
-        resolve_string(W_ADDRESS_STREET_NUM, pmr_string{std::to_string(warehouse.w_address.street_num)}),
+        resolve_string(W_ADDRESS_STREET_NUM, boost::lexical_cast<pmr_string>(warehouse.w_address.street_num)),
         resolve_street_name(W_ADDRESS_STREET_NAME1, warehouse.w_address),
         resolve_string(W_ADDRESS_STREET_TYPE, warehouse.w_address.street_type),
         resolve_string(W_ADDRESS_SUITE_NUM, warehouse.w_address.suite_num),
@@ -1021,11 +1075,14 @@ std::shared_ptr<Table> TPCDSTableGenerator::generate_warehouse(ds_key_t max_rows
 }
 
 std::shared_ptr<Table> TPCDSTableGenerator::generate_web_page(ds_key_t max_rows) const {
+  auto allocator = PolymorphicAllocator<size_t>{};
+  auto alloc_pin_guard = AllocatorPinGuard{allocator};
+
   auto [web_page_first, web_page_count] = prepare_for_table(WEB_PAGE);
   web_page_count = std::min(web_page_count, max_rows);
 
   auto web_page_builder = TableBuilder{_benchmark_config->chunk_size, web_page_column_types, web_page_column_names,
-                                       static_cast<ChunkOffset>(web_page_count)};
+                                       allocator, static_cast<ChunkOffset>(web_page_count)};
 
   for (auto web_page_index = ds_key_t{0}; web_page_index < web_page_count; ++web_page_index) {
     const auto web_page = call_dbgen_mk<W_WEB_PAGE_TBL, &mk_w_web_page, WEB_PAGE>(web_page_first + web_page_index);
@@ -1048,12 +1105,15 @@ std::shared_ptr<Table> TPCDSTableGenerator::generate_web_page(ds_key_t max_rows)
 
 std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TPCDSTableGenerator::generate_web_sales_and_returns(
     ds_key_t max_rows) const {
+  auto allocator = PolymorphicAllocator<size_t>{};
+  auto alloc_pin_guard = AllocatorPinGuard{allocator};
+
   auto [web_sales_first, web_sales_count] = prepare_for_table(WEB_SALES);
 
   auto web_sales_builder = TableBuilder{_benchmark_config->chunk_size, web_sales_column_types, web_sales_column_names,
-                                        static_cast<ChunkOffset>(web_sales_count)};
+                                        allocator, static_cast<ChunkOffset>(web_sales_count)};
   auto web_returns_builder =
-      TableBuilder{_benchmark_config->chunk_size, web_returns_column_types, web_returns_column_names};
+      TableBuilder{_benchmark_config->chunk_size, web_returns_column_types, web_returns_column_names, allocator};
 
   for (auto web_sales_index = ds_key_t{0}; web_sales_index < web_sales_count; ++web_sales_index) {
     auto web_sales = W_WEB_SALES_TBL{};
@@ -1145,11 +1205,14 @@ std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TPCDSTableGenerator::g
 }
 
 std::shared_ptr<Table> TPCDSTableGenerator::generate_web_site(ds_key_t max_rows) const {
+  auto allocator = PolymorphicAllocator<size_t>{};
+  auto alloc_pin_guard = AllocatorPinGuard{allocator};
+
   auto [web_site_first, web_site_count] = prepare_for_table(WEB_SITE);
   web_site_count = std::min(web_site_count, max_rows);
 
   auto web_site_builder = TableBuilder{_benchmark_config->chunk_size, web_site_column_types, web_site_column_names,
-                                       static_cast<ChunkOffset>(web_site_count)};
+                                       allocator, static_cast<ChunkOffset>(web_site_count)};
 
   auto web_site = W_WEB_SITE_TBL{};
   static_assert(sizeof(web_site.web_class) == 51);
@@ -1173,7 +1236,7 @@ std::shared_ptr<Table> TPCDSTableGenerator::generate_web_site(ds_key_t max_rows)
         resolve_string(WEB_MARKET_MANAGER, web_site.web_market_manager),
         resolve_integer(WEB_COMPANY_ID, web_site.web_company_id),
         resolve_string(WEB_COMPANY_NAME, web_site.web_company_name),
-        resolve_string(WEB_ADDRESS_STREET_NUM, pmr_string{std::to_string(web_site.web_address.street_num)}),
+        resolve_string(WEB_ADDRESS_STREET_NUM, boost::lexical_cast<pmr_string>(web_site.web_address.street_num)),
         resolve_street_name(WEB_ADDRESS_STREET_NAME1, web_site.web_address),
         resolve_string(WEB_ADDRESS_STREET_TYPE, web_site.web_address.street_type),
         resolve_string(WEB_ADDRESS_SUITE_NUM, web_site.web_address.suite_num),

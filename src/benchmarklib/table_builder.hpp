@@ -7,10 +7,15 @@
 
 #include <boost/hana/assert.hpp>
 #include <boost/hana/for_each.hpp>
+#include <boost/hana/replicate.hpp>
 #include <boost/hana/tuple.hpp>
 #include <boost/hana/zip_with.hpp>
 
+#include <boost/container/pmr/monotonic_buffer_resource.hpp>
+#include "hyrise.hpp"
 #include "resolve_type.hpp"
+#include "storage/buffer/buffer_pool_allocator.hpp"
+#include "storage/buffer/pin_guard.hpp"
 #include "types.hpp"
 
 namespace hyrise {
@@ -110,8 +115,13 @@ class TableBuilder {
   // types may contain std::optional<?>, which will result in a nullable column, otherwise columns are not nullable
   template <typename Names>
   TableBuilder(const ChunkOffset chunk_size, const boost::hana::tuple<DataTypes...>& types, const Names& names,
+               const PolymorphicAllocator<size_t> allocator = PolymorphicAllocator<size_t>{},
                const ChunkOffset estimated_rows = ChunkOffset{0})
-      : _estimated_rows_per_chunk(std::min(estimated_rows, chunk_size)), _row_count{0} {
+      : _estimated_rows_per_chunk(std::min(estimated_rows, chunk_size)),
+        _alloc(allocator),
+        _row_count{0},
+        _value_vectors(hana::replicate<hana::tuple_tag>(_alloc, hana::length(types))),
+        _null_value_vectors(hana::replicate<hana::tuple_tag>(_alloc, hana::length(types))) {
     BOOST_HANA_CONSTANT_ASSERT(boost::hana::size(names) == boost::hana::size(types));
 
     // Iterate over the column types/names and create the columns.
@@ -164,7 +174,6 @@ class TableBuilder {
 
       // the type of optional_or_value is either std::optional<T> or just T, hence the variable name
       auto& optional_or_value = values_and_null_values_and_value[boost::hana::llong_c<2>];
-
       constexpr auto column_is_nullable = std::decay_t<decltype(null_values)>::has_value;
       auto value_is_null = table_builder::is_null(optional_or_value);
 
@@ -200,6 +209,8 @@ class TableBuilder {
  private:
   std::shared_ptr<Table> _table;
   ChunkOffset _estimated_rows_per_chunk;
+
+  const PolymorphicAllocator<size_t> _alloc;
 
   // _table->row_count() only counts completed chunks but we want the total number of rows added to this table builder
   size_t _row_count;

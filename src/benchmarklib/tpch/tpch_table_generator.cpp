@@ -10,6 +10,7 @@ extern "C" {
 #include <utility>
 
 #include "benchmark_config.hpp"
+#include "storage/buffer/jemalloc_resource.hpp"
 #include "storage/chunk.hpp"
 #include "storage/constraints/table_key_constraint.hpp"
 #include "table_builder.hpp"
@@ -134,6 +135,13 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate
   dbgen_reset_seeds();
   dbgen_init_scale_factor(_scale_factor);
 
+#ifdef HYRISE_WITH_JEMALLOC
+  auto allocator = PolymorphicAllocator<size_t>{&JemallocMemoryResource::get()};
+#else
+  auto allocator = PolymorphicAllocator<size_t>{&LinearBufferResource::get()};
+#endif
+  auto alloc_pin_guard = AllocatorPinGuard{allocator};
+
   const auto customer_count = static_cast<ChunkOffset>(tdefs[CUST].base * scale);
   const auto order_count = static_cast<ChunkOffset>(tdefs[ORDER].base * scale);
   const auto part_count = static_cast<ChunkOffset>(tdefs[PART].base * scale);
@@ -142,20 +150,22 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate
   const auto region_count = static_cast<ChunkOffset>(tdefs[REGION].base);
 
   // The `* 4` part is defined in the TPC-H specification.
-  auto customer_builder =
-      TableBuilder{_benchmark_config->chunk_size, customer_column_types, customer_column_names, customer_count};
-  auto order_builder = TableBuilder{_benchmark_config->chunk_size, order_column_types, order_column_names, order_count};
+  auto customer_builder = TableBuilder{_benchmark_config->chunk_size, customer_column_types, customer_column_names,
+                                       allocator, customer_count};
+  auto order_builder =
+      TableBuilder{_benchmark_config->chunk_size, order_column_types, order_column_names, allocator, order_count};
   auto lineitem_builder = TableBuilder{_benchmark_config->chunk_size, lineitem_column_types, lineitem_column_names,
-                                       ChunkOffset{order_count * 4}};
-  auto part_builder = TableBuilder{_benchmark_config->chunk_size, part_column_types, part_column_names, part_count};
+                                       allocator, ChunkOffset{order_count * 4}};
+  auto part_builder =
+      TableBuilder{_benchmark_config->chunk_size, part_column_types, part_column_names, allocator, part_count};
   auto partsupp_builder = TableBuilder{_benchmark_config->chunk_size, partsupp_column_types, partsupp_column_names,
-                                       ChunkOffset{part_count * 4}};
-  auto supplier_builder =
-      TableBuilder{_benchmark_config->chunk_size, supplier_column_types, supplier_column_names, supplier_count};
+                                       allocator, ChunkOffset{part_count * 4}};
+  auto supplier_builder = TableBuilder{_benchmark_config->chunk_size, supplier_column_types, supplier_column_names,
+                                       allocator, supplier_count};
   auto nation_builder =
-      TableBuilder{_benchmark_config->chunk_size, nation_column_types, nation_column_names, nation_count};
+      TableBuilder{_benchmark_config->chunk_size, nation_column_types, nation_column_names, allocator, nation_count};
   auto region_builder =
-      TableBuilder{_benchmark_config->chunk_size, region_column_types, region_column_names, region_count};
+      TableBuilder{_benchmark_config->chunk_size, region_column_types, region_column_names, allocator, region_count};
 
   /**
    * CUSTOMER

@@ -241,6 +241,8 @@ class AbstractHistogram : public AbstractStatisticsObject {
   static Cardinality _scale_distinct_count(Cardinality value_count, Cardinality distinct_count,
                                            Selectivity selectivity);
 
+  HistogramDomain<T> _domain;
+
  private:
   /**
    * Helper for implementing, e.g., LessThan as an inversion of GreaterThanEquals.
@@ -261,8 +263,6 @@ class AbstractHistogram : public AbstractStatisticsObject {
    * If the bin that holds the value is the last bin or it is greater than max, return INVALID_BIN_ID.
    */
   virtual BinID _next_bin_for_value(const T& value) const = 0;
-
-  HistogramDomain<T> _domain;
 };
 
 EXPLICITLY_DECLARE_DATA_TYPES(AbstractHistogram);

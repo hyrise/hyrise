@@ -34,6 +34,10 @@ class FixedStringIterator : public boost::iterator_facade<FixedStringIterator<On
     return *this;
   }
 
+  typename Storage::pointer get_ptr() const {
+    return _chars.begin().get_ptr() + _pos;
+  }
+
  private:
   friend class boost::iterator_core_access;
 

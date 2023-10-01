@@ -31,6 +31,7 @@
 #include "operators/abstract_operator.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/operator_task.hpp"
+#include "storage/buffer/pin_guard.hpp"
 #include "storage/segment_iterate.hpp"
 #include "storage/value_segment.hpp"
 #include "utils/assert.hpp"
@@ -307,7 +308,10 @@ ExpressionEvaluator::_evaluate_like_expression<ExpressionEvaluator::Bool>(const 
   const auto invert_results = expression.predicate_condition == PredicateCondition::NotLike;
 
   const auto result_size = _result_size(left_results->size(), right_results->size());
-  auto result_values = pmr_vector<ExpressionEvaluator::Bool>(result_size, 0);
+  auto allocator = PolymorphicAllocator<ExpressionEvaluator::Bool>{};
+  auto pin_guard = AllocatorPinGuard{allocator};
+
+  auto result_values = pmr_vector<ExpressionEvaluator::Bool>(result_size, 0 /*initial_value*/, allocator);
 
   /**
    * Three different kinds of LIKE are considered for performance reasons and avoid redundant creation of the
@@ -357,7 +361,9 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_like_ex
 template <>
 std::shared_ptr<ExpressionResult<ExpressionEvaluator::Bool>>
 ExpressionEvaluator::_evaluate_is_null_expression<ExpressionEvaluator::Bool>(const IsNullExpression& expression) {
-  pmr_vector<ExpressionEvaluator::Bool> result_values;
+  auto allocator = PolymorphicAllocator<ExpressionEvaluator::Bool>{};
+  auto pin_guard = AllocatorPinGuard{allocator};
+  pmr_vector<ExpressionEvaluator::Bool> result_values{allocator};
 
   _resolve_to_expression_result_view(*expression.operand(), [&](const auto& view) {
     const auto view_size = static_cast<ChunkOffset>(view.size());
@@ -389,8 +395,11 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
   const auto& left_expression = *in_expression.operand();
   const auto& right_expression = *in_expression.set();
 
-  pmr_vector<ExpressionEvaluator::Bool> result_values;
-  pmr_vector<bool> result_nulls;
+  auto allocator = PolymorphicAllocator<ExpressionEvaluator::Bool>{};
+  auto pin_guard = AllocatorPinGuard{allocator};
+
+  pmr_vector<ExpressionEvaluator::Bool> result_values{allocator};
+  pmr_vector<bool> result_nulls{allocator};
 
   if (right_expression.type == ExpressionType::List) {
     const auto& list_expression = static_cast<const ListExpression&>(right_expression);
@@ -398,13 +407,13 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
     if (list_expression.elements().empty()) {
       // `x IN ()` is false/`x NOT IN ()` is true, even if this is not supported by SQL
       return std::make_shared<ExpressionResult<ExpressionEvaluator::Bool>>(
-          pmr_vector<ExpressionEvaluator::Bool>{in_expression.is_negated()});
+          pmr_vector<ExpressionEvaluator::Bool>{in_expression.is_negated(), allocator});
     }
 
     if (left_expression.data_type() == DataType::Null) {
       // `NULL [NOT] IN ...` is NULL
-      return std::make_shared<ExpressionResult<ExpressionEvaluator::Bool>>(pmr_vector<ExpressionEvaluator::Bool>{0},
-                                                                           pmr_vector<bool>{true});
+      return std::make_shared<ExpressionResult<ExpressionEvaluator::Bool>>(
+          pmr_vector<ExpressionEvaluator::Bool>{0, allocator}, pmr_vector<bool>{true, allocator});
     }
 
     /**
@@ -437,7 +446,7 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
     if (type_compatible_elements.empty()) {
       // `x IN ()` is false/`x NOT IN ()` is true, even if this is not supported by SQL
       return std::make_shared<ExpressionResult<ExpressionEvaluator::Bool>>(
-          pmr_vector<ExpressionEvaluator::Bool>{in_expression.is_negated()});
+          pmr_vector<ExpressionEvaluator::Bool>{in_expression.is_negated(), allocator});
     }
 
     // If all elements of the list are simple values (e.g., `IN (1, 2, 3)`), iterate over the column and directly
@@ -453,7 +462,9 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
 
         // Above, we have ruled out NULL on the left side, but the compiler does not know this yet
         if constexpr (!std::is_same_v<LeftDataType, NullValue>) {
-          auto right_values = pmr_vector<LeftDataType>(type_compatible_elements.size());
+          auto right_values_allocator = PolymorphicAllocator<LeftDataType>{};
+          auto pin_guard = AllocatorPinGuard{right_values_allocator};
+          auto right_values = pmr_vector<LeftDataType>(type_compatible_elements.size(), right_values_allocator);
           auto right_values_idx = size_t{0};
           for (const auto& expression : type_compatible_elements) {
             const auto& value_expression = std::static_pointer_cast<ValueExpression>(expression);
@@ -642,8 +653,11 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_case_ex
     const CaseExpression& case_expression) {
   const auto when = evaluate_expression_to_result<ExpressionEvaluator::Bool>(*case_expression.when());
 
-  pmr_vector<Result> values;
-  pmr_vector<bool> nulls;
+  auto allocator = PolymorphicAllocator<Result>{};
+  auto pin_guard = AllocatorPinGuard{allocator};
+
+  pmr_vector<Result> values{allocator};
+  pmr_vector<bool> nulls{allocator};
 
   _resolve_to_expression_results(
       *case_expression.then(), *case_expression.otherwise(), [&](const auto& then_result, const auto& else_result) {
@@ -690,8 +704,11 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_cast_ex
    *    NULL -> Any type                    A nulled value of the requested type is returned.
    */
 
-  auto values = pmr_vector<Result>{};
-  auto nulls = pmr_vector<bool>{};
+  auto allocator = PolymorphicAllocator<ExpressionEvaluator::Bool>{};
+  auto pin_guard = AllocatorPinGuard{allocator};
+
+  auto values = pmr_vector<Result>{allocator};
+  auto nulls = pmr_vector<bool>{allocator};
 
   _resolve_to_expression_result(*cast_expression.argument(), [&](const auto& argument_result) {
     argument_result.as_view([&](const auto& argument_result_view) {
@@ -726,7 +743,13 @@ ExpressionEvaluator::_evaluate_exists_expression<ExpressionEvaluator::Bool>(cons
   const auto subquery_result_tables = _evaluate_subquery_expression_to_tables(*subquery_expression);
 
   const auto subquery_result_table_count = static_cast<ChunkOffset>(subquery_result_tables.size());
-  auto result_values = pmr_vector<ExpressionEvaluator::Bool>(subquery_result_table_count);
+
+  auto allocator = PolymorphicAllocator<ExpressionEvaluator::Bool>{};
+  auto pin_guard = AllocatorPinGuard{allocator};
+
+  // static_cast is required to avoid issues with ambiguous constructors
+  auto result_values = pmr_vector<ExpressionEvaluator::Bool>(
+      static_cast<typename pmr_vector<ExpressionEvaluator::Bool>::size_type>(subquery_result_table_count), allocator);
 
   switch (exists_expression.exists_expression_type) {
     case ExistsExpressionType::Exists:
@@ -770,13 +793,20 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_value_o
     // NullValue can be evaluated to any type - it is then a null value of that type.
     // This makes it easier to implement expressions where a certain data type is expected, but a Null literal is
     // given. Think `CASE NULL THEN ... ELSE ...` - the NULL will be evaluated to be a bool.
-    pmr_vector<bool> nulls{};
+
+    auto allocator = PolymorphicAllocator<bool>{};
+    auto pin_guard = AllocatorPinGuard{allocator};
+    pmr_vector<bool> nulls{allocator};
     nulls.emplace_back(true);
+    // TODO: Add allocator to ExpressionResult
     return std::make_shared<ExpressionResult<Result>>(pmr_vector<Result>{{Result{}}}, nulls);
   }
 
   Assert(value.type() == typeid(Result), "Can't evaluate ValueExpression to requested type Result");
-  return std::make_shared<ExpressionResult<Result>>(pmr_vector<Result>{{boost::get<Result>(value)}});
+
+  auto allocator = PolymorphicAllocator<Result>{};
+  auto pin_guard = AllocatorPinGuard{allocator};
+  return std::make_shared<ExpressionResult<Result>>(pmr_vector<Result>{{boost::get<Result>(value)}, allocator});
 }
 
 template <typename Result>
@@ -841,7 +871,9 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_extract
 template <typename Result, typename Functor>
 std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_extract_component(
     const ExpressionResult<pmr_string>& from_result, const Functor extract_component) {
-  auto values = pmr_vector<Result>(from_result.size());
+  auto allocator = PolymorphicAllocator<Result>{};
+  auto pin_guard = AllocatorPinGuard{allocator};
+  auto values = pmr_vector<Result>(from_result.size(), allocator);
 
   from_result.as_view([&](const auto& from_view) {
     const auto from_view_size = static_cast<ChunkOffset>(from_view.size());
@@ -867,8 +899,11 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_extract
 template <typename Result>
 std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_unary_minus_expression(
     const UnaryMinusExpression& unary_minus_expression) {
-  pmr_vector<Result> values;
-  pmr_vector<bool> nulls;
+  auto allocator = PolymorphicAllocator<Result>{};
+  auto pin_guard = AllocatorPinGuard{allocator};
+
+  pmr_vector<Result> values{allocator};
+  pmr_vector<bool> nulls{allocator};
 
   _resolve_to_expression_result(*unary_minus_expression.argument(), [&](const auto& argument_result) {
     using ArgumentType = typename std::decay_t<decltype(argument_result)>::Type;
@@ -899,7 +934,8 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_subquer
   const auto subquery_results = _prune_tables_to_expression_results<Result>(subquery_result_tables);
 
   const auto subquery_result_count = static_cast<ChunkOffset>(subquery_results.size());
-  auto result_values = pmr_vector<Result>(subquery_result_count);
+
+  auto result_values = pmr_vector<Result>(static_cast<typename pmr_vector<Result>::size_type>(subquery_result_count));
   auto result_nulls = pmr_vector<bool>{};
 
   // Materialize values.
@@ -992,15 +1028,18 @@ std::shared_ptr<const Table> ExpressionEvaluator::_evaluate_subquery_expression_
 std::shared_ptr<BaseValueSegment> ExpressionEvaluator::evaluate_expression_to_segment(
     const AbstractExpression& expression) {
   std::shared_ptr<BaseValueSegment> segment;
-  pmr_vector<bool> nulls;
 
   _resolve_to_expression_result_view(expression, [&](const auto& view) {
     using ColumnDataType = typename std::decay_t<decltype(view)>::Type;
 
+    auto allocator = PolymorphicAllocator<size_t>{};
+
+    pmr_vector<bool> nulls{allocator};
+
     if constexpr (std::is_same_v<ColumnDataType, NullValue>) {
       Fail("Can't create a Segment from a NULL");
     } else {
-      auto values = pmr_vector<ColumnDataType>(_output_row_count);
+      auto values = pmr_vector<ColumnDataType>(_output_row_count, allocator);
 
       for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(_output_row_count);
            ++chunk_offset) {
@@ -1230,8 +1269,10 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_logical
 template <typename Result, typename Functor>
 std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_binary_with_default_null_logic(
     const AbstractExpression& left_expression, const AbstractExpression& right_expression) {
-  auto values = pmr_vector<Result>{};
-  auto nulls = pmr_vector<bool>{};
+  auto allocator = PolymorphicAllocator<Result>{};
+  auto pin_guard = AllocatorPinGuard{allocator};
+  auto values = pmr_vector<Result>{allocator};
+  auto nulls = pmr_vector<bool>{allocator};
 
   _resolve_to_expression_results(left_expression, right_expression, [&](const auto& left, const auto& right) {
     using LeftDataType = typename std::decay_t<decltype(left)>::Type;
@@ -1274,10 +1315,13 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_binary_
     using RightDataType = typename std::decay_t<decltype(right)>::Type;
 
     if constexpr (Functor::template supports<Result, LeftDataType, RightDataType>::value) {
-      const auto result_row_count = _result_size(left.size(), right.size());
-
-      auto nulls = pmr_vector<bool>(result_row_count);
-      auto values = pmr_vector<Result>(result_row_count);
+      // static_cast is required to avoid issues with ambiguous constructors
+      const auto result_row_count =
+          static_cast<typename pmr_vector<bool>::size_type>(_result_size(left.size(), right.size()));
+      auto allocator = PolymorphicAllocator<Result>{};
+      auto pin_guard = AllocatorPinGuard{allocator};
+      auto nulls = pmr_vector<bool>(result_row_count, allocator);
+      auto values = pmr_vector<Result>(result_row_count, allocator);
 
       for (auto row_idx = ChunkOffset{0}; row_idx < result_row_count; ++row_idx) {
         auto null = false;
@@ -1366,8 +1410,11 @@ ChunkOffset ExpressionEvaluator::_result_size(const RowCounts... row_counts) {
 
 pmr_vector<bool> ExpressionEvaluator::_evaluate_default_null_logic(const pmr_vector<bool>& left,
                                                                    const pmr_vector<bool>& right) {
+  auto allocator = PolymorphicAllocator<bool>{};
+  auto pin_guard = AllocatorPinGuard{allocator};
+
   if (left.size() == right.size()) {
-    auto nulls = pmr_vector<bool>(left.size());
+    auto nulls = pmr_vector<bool>(left.size(), allocator);
     std::transform(left.begin(), left.end(), right.begin(), nulls.begin(),
                    [](const auto lhs, const auto rhs) { return lhs || rhs; });
     return nulls;
@@ -1378,7 +1425,7 @@ pmr_vector<bool> ExpressionEvaluator::_evaluate_default_null_logic(const pmr_vec
                 "Operand should have either the same row count as the other, 1 row (to represent a literal), or no "
                 "rows (to represent a non-nullable operand)");
     if (!right.empty() && right.front()) {
-      return pmr_vector<bool>({true});
+      return pmr_vector<bool>({true}, allocator);
     }
 
     return left;
@@ -1388,7 +1435,7 @@ pmr_vector<bool> ExpressionEvaluator::_evaluate_default_null_logic(const pmr_vec
               "Operand should have either the same row count as the other, 1 row (to represent a literal), or no "
               "rows (to represent a non-nullable operand)");
   if (!left.empty() && left.front()) {
-    return pmr_vector<bool>({true});
+    return pmr_vector<bool>({true}, allocator);
   }
 
   return right;
@@ -1406,8 +1453,8 @@ void ExpressionEvaluator::_materialize_segment_if_not_yet_materialized(const Col
   resolve_data_type(segment.data_type(), [&](const auto column_data_type_t) {
     using ColumnDataType = typename decltype(column_data_type_t)::type;
 
-    pmr_vector<ColumnDataType> values;
-    pmr_vector<bool> nulls;
+    pmr_vector<ColumnDataType> values{};
+    pmr_vector<bool> nulls{};
 
     if (const auto value_segment = dynamic_cast<const ValueSegment<ColumnDataType>*>(&segment)) {
       // Shortcut
@@ -1456,10 +1503,15 @@ std::shared_ptr<ExpressionResult<pmr_string>> ExpressionEvaluator::_evaluate_sub
   const auto starts = evaluate_expression_to_result<int32_t>(*arguments[1]);
   const auto lengths = evaluate_expression_to_result<int32_t>(*arguments[2]);
 
-  const auto row_count = _result_size(strings->size(), starts->size(), lengths->size());
+  // static_cast is required to avoid issues with ambiguous constructors
+  const auto row_count = static_cast<typename pmr_vector<pmr_string>::size_type>(
+      _result_size(strings->size(), starts->size(), lengths->size()));
 
-  auto result_values = pmr_vector<pmr_string>(row_count);
-  auto result_nulls = pmr_vector<bool>(row_count);
+  auto allocator = PolymorphicAllocator<pmr_string>{};
+  auto pin_guard = AllocatorPinGuard{allocator};
+
+  auto result_values = pmr_vector<pmr_string>(row_count, allocator);
+  auto result_nulls = pmr_vector<bool>(row_count, allocator);
 
   for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(row_count); ++chunk_offset) {
     result_nulls[chunk_offset] =
@@ -1529,6 +1581,9 @@ std::shared_ptr<ExpressionResult<pmr_string>> ExpressionEvaluator::_evaluate_con
 
   auto result_is_nullable = false;
 
+  auto allocator = PolymorphicAllocator<pmr_string>{};
+  auto pin_guard = AllocatorPinGuard{allocator};
+
   // 1 - Compute the arguments
   for (const auto& argument : arguments) {
     // CONCAT with a NULL literal argument -> result is NULL
@@ -1551,7 +1606,7 @@ std::shared_ptr<ExpressionResult<pmr_string>> ExpressionEvaluator::_evaluate_con
   }
 
   // 3 - Concatenate the values
-  auto result_values = pmr_vector<pmr_string>(result_size);
+  auto result_values = pmr_vector<pmr_string>(result_size, allocator);
   for (const auto& argument_result : argument_results) {
     argument_result->as_view([&](const auto& argument_view) {
       for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(result_size); ++chunk_offset) {
@@ -1562,7 +1617,7 @@ std::shared_ptr<ExpressionResult<pmr_string>> ExpressionEvaluator::_evaluate_con
   }
 
   // 4 - Optionally concatenate the nulls (i.e. one argument is null -> result is null) and return
-  pmr_vector<bool> result_nulls{};
+  pmr_vector<bool> result_nulls{allocator};
   if (result_is_nullable) {
     result_nulls.resize(result_size, false);
     for (const auto& argument_result : argument_results) {
@@ -1601,11 +1656,14 @@ std::vector<std::shared_ptr<ExpressionResult<Result>>> ExpressionEvaluator::_pru
     Assert(table->column_data_type(ColumnID{0}) == data_type_from_type<Result>(),
            "Expected different DataType from Subquery");
 
+    auto allocator = PolymorphicAllocator<Result>{};
+    auto pin_guard = AllocatorPinGuard{allocator};
+
     const auto row_count = table->row_count();
     const auto chunk_count = table->chunk_count();
 
-    auto result_nulls = pmr_vector<bool>{};
-    auto result_values = pmr_vector<Result>(row_count);
+    auto result_nulls = pmr_vector<bool>{allocator};
+    auto result_values = pmr_vector<Result>(row_count, allocator);
 
     auto chunk_offset = ChunkOffset{0};
 

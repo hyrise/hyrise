@@ -13,13 +13,15 @@ Hyrise::Hyrise() {
   // destructed last.
   boost::container::pmr::get_default_resource();
 
-  storage_manager = StorageManager{};
+  topology = Topology{};
+  buffer_manager = BufferManager{BufferManagerConfig{topology}};  // TODO: use env
+  storage_manager = {};
   plugin_manager = PluginManager{};
   transaction_manager = TransactionManager{};
   meta_table_manager = MetaTableManager{};
   settings_manager = SettingsManager{};
   log_manager = LogManager{};
-  topology = Topology{};
+
   _scheduler = std::make_shared<ImmediateExecutionScheduler>();
 }
 

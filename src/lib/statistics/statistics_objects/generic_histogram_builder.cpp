@@ -1,12 +1,19 @@
 #include "generic_histogram_builder.hpp"
 
+#include <boost/container/pmr/global_resource.hpp>
+#include "hyrise.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {
 
 template <typename T>
 GenericHistogramBuilder<T>::GenericHistogramBuilder(const size_t reserve_bin_count, const HistogramDomain<T>& domain)
-    : _domain(domain) {
+    : _allocator(boost::container::pmr::new_delete_resource()),
+      _domain(domain),
+      _bin_minima(_allocator),
+      _bin_maxima(_allocator),
+      _bin_heights(_allocator),
+      _bin_distinct_counts(_allocator) {
   _bin_minima.reserve(reserve_bin_count);
   _bin_maxima.reserve(reserve_bin_count);
   _bin_heights.reserve(reserve_bin_count);

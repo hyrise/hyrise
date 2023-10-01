@@ -22,6 +22,10 @@ const int Topology::_number_of_hardware_nodes = numa_num_configured_nodes();  //
 const int Topology::_number_of_hardware_nodes = 1;  // NOLINT
 #endif
 
+bool TopologyNode::is_memory_node() const {
+  return cpus.empty();
+}
+
 Topology::Topology() {
   _init_default_topology();
 }
@@ -196,6 +200,33 @@ std::ostream& operator<<(std::ostream& stream, const Topology& topology) {
   }
 
   return stream;
+}
+
+size_t Topology::free_bytes(NodeID node_id) const {
+#if HYRISE_NUMA_SUPPORT
+  if (node_id == INVALID_NODE_ID) {
+    return 0;
+  }
+  long long free_bytes;
+  numa_node_size(node_id, &free_bytes);
+  return free_bytes;
+#else
+  Fail("Topology::free_bytes() is not supported for topologies without NUMA support");
+#endif
+}
+
+size_t Topology::total_bytes(NodeID node_id) const {
+#if HYRISE_NUMA_SUPPORT
+  if (node_id == INVALID_NODE_ID) {
+    return 0;
+  }
+  return numa_node_size(node_id, nullptr);
+#else
+  const auto page_size = static_cast<int64_t>(sysconf(_SC_PAGESIZE));
+  const auto num_pages = static_cast<int64_t>(sysconf(_SC_PHYS_PAGES));
+  const auto free_bytes = (num_pages * page_size) / _nodes.size();
+  return free_bytes;
+#endif
 }
 
 }  // namespace hyrise

@@ -10,15 +10,14 @@
 
 #include "hyrise.hpp"
 #include "resolve_type.hpp"
+#include "storage/buffer/jemalloc_resource.hpp"
 #include "storage/chunk.hpp"
 #include "storage/encoding_type.hpp"
 #include "storage/vector_compression/bitpacking/bitpacking_vector.hpp"
 #include "storage/vector_compression/fixed_width_integer/fixed_width_integer_vector.hpp"
-
 #include "utils/assert.hpp"
 
 namespace hyrise {
-
 std::shared_ptr<Table> BinaryParser::parse(const std::string& filename) {
   std::ifstream file;
   file.open(filename, std::ios::binary);
@@ -34,6 +33,7 @@ std::shared_ptr<Table> BinaryParser::parse(const std::string& filename) {
 
 template <typename T>
 pmr_compact_vector BinaryParser::_read_values_compact_vector(std::ifstream& file, const size_t count) {
+  Fail("Not implemented yet, wem might need an alloactor here");
   const auto bit_width = _read_value<uint8_t>(file);
   auto values = pmr_compact_vector(bit_width, count);
   file.read(reinterpret_cast<char*>(values.get()), static_cast<int64_t>(values.bytes()));
@@ -67,10 +67,11 @@ pmr_vector<pmr_string> BinaryParser::_read_string_values(std::ifstream& file, co
   const auto total_length = std::accumulate(string_lengths.cbegin(), string_lengths.cend(), static_cast<size_t>(0));
   const auto buffer = _read_values<char>(file, total_length);
 
-  auto values = pmr_vector<pmr_string>{count};
+  auto allocator = PolymorphicAllocator<size_t>{};
+  auto values = pmr_vector<pmr_string>{count, allocator};
   auto start = size_t{0};
   for (auto index = size_t{0}; index < count; ++index) {
-    values[index] = pmr_string{buffer.data() + start, buffer.data() + start + string_lengths[index]};
+    values[index] = pmr_string{buffer.data() + start, buffer.data() + start + string_lengths[index], allocator};
     start += string_lengths[index];
   }
 
@@ -177,37 +178,57 @@ std::shared_ptr<AbstractSegment> BinaryParser::_import_segment(std::ifstream& fi
 template <typename T>
 std::shared_ptr<ValueSegment<T>> BinaryParser::_import_value_segment(std::ifstream& file, ChunkOffset row_count,
                                                                      bool column_is_nullable) {
+#ifdef HYRISE_WITH_JEMALLOC
+  auto allocator = PolymorphicAllocator<size_t>{&JemallocMemoryResource::get()};
+#else
+  auto allocator = PolymorphicAllocator<size_t>{&LinearBufferResource::get()};
+#endif
+  auto pin_guard = AllocatorPinGuard{allocator};
+
   if (column_is_nullable) {
     const auto segment_is_nullable = _read_value<bool>(file);
     if (segment_is_nullable) {
-      auto nullables = _read_values<bool>(file, row_count);
-      auto values = _read_values<T>(file, row_count);
+      auto nullables = pmr_vector<bool>(_read_values<bool>(file, row_count), allocator);
+      auto values = pmr_vector<T>(_read_values<T>(file, row_count), allocator);
       return std::make_shared<ValueSegment<T>>(std::move(values), std::move(nullables));
     }
   }
 
-  auto values = _read_values<T>(file, row_count);
+  auto values = pmr_vector<T>(_read_values<T>(file, row_count), allocator);
   return std::make_shared<ValueSegment<T>>(std::move(values));
 }
 
 template <typename T>
 std::shared_ptr<DictionarySegment<T>> BinaryParser::_import_dictionary_segment(std::ifstream& file,
                                                                                ChunkOffset row_count) {
+#ifdef HYRISE_WITH_JEMALLOC
+  auto allocator = PolymorphicAllocator<size_t>{&JemallocMemoryResource::get()};
+#else
+  auto allocator = PolymorphicAllocator<size_t>{&LinearBufferResource::get()};
+#endif
+  auto pin_guard = AllocatorPinGuard{allocator};
+
   const auto compressed_vector_type_id = _read_value<CompressedVectorTypeID>(file);
   const auto dictionary_size = _read_value<ValueID>(file);
-  auto dictionary = std::make_shared<pmr_vector<T>>(_read_values<T>(file, dictionary_size));
+  auto dictionary = std::make_shared<pmr_vector<T>>(_read_values<T>(file, dictionary_size), allocator);
 
-  auto attribute_vector = _import_attribute_vector(file, row_count, compressed_vector_type_id);
+  auto attribute_vector = _import_attribute_vector(file, row_count, compressed_vector_type_id, allocator);
 
   return std::make_shared<DictionarySegment<T>>(dictionary, attribute_vector);
 }
 
 std::shared_ptr<FixedStringDictionarySegment<pmr_string>> BinaryParser::_import_fixed_string_dictionary_segment(
     std::ifstream& file, ChunkOffset row_count) {
+#ifdef HYRISE_WITH_JEMALLOC
+  auto allocator = PolymorphicAllocator<size_t>{&JemallocMemoryResource::get()};
+#else
+  auto allocator = PolymorphicAllocator<size_t>{&LinearBufferResource::get()};
+#endif
+  auto pin_guard = AllocatorPinGuard{allocator};
   const auto compressed_vector_type_id = _read_value<CompressedVectorTypeID>(file);
   const auto dictionary_size = _read_value<ValueID>(file);
-  auto dictionary = _import_fixed_string_vector(file, dictionary_size);
-  auto attribute_vector = _import_attribute_vector(file, row_count, compressed_vector_type_id);
+  auto dictionary = _import_fixed_string_vector(file, dictionary_size, allocator);
+  auto attribute_vector = _import_attribute_vector(file, row_count, compressed_vector_type_id, allocator);
 
   return std::make_shared<FixedStringDictionarySegment<pmr_string>>(dictionary, attribute_vector);
 }
@@ -215,6 +236,7 @@ std::shared_ptr<FixedStringDictionarySegment<pmr_string>> BinaryParser::_import_
 template <typename T>
 std::shared_ptr<RunLengthSegment<T>> BinaryParser::_import_run_length_segment(std::ifstream& file,
                                                                               ChunkOffset /*row_count*/) {
+  Fail("Not implemented yet");
   const auto size = _read_value<uint32_t>(file);
   const auto values = std::make_shared<pmr_vector<T>>(_read_values<T>(file, size));
   const auto null_values = std::make_shared<pmr_vector<bool>>(_read_values<bool>(file, size));
@@ -226,6 +248,7 @@ std::shared_ptr<RunLengthSegment<T>> BinaryParser::_import_run_length_segment(st
 template <typename T>
 std::shared_ptr<FrameOfReferenceSegment<T>> BinaryParser::_import_frame_of_reference_segment(std::ifstream& file,
                                                                                              ChunkOffset row_count) {
+  Fail("Not implemented yet");
   const auto compressed_vector_type_id = _read_value<CompressedVectorTypeID>(file);
   const auto block_count = _read_value<uint32_t>(file);
   const auto block_minima = _read_values<T>(file, block_count);
@@ -243,12 +266,19 @@ std::shared_ptr<FrameOfReferenceSegment<T>> BinaryParser::_import_frame_of_refer
 
 template <typename T>
 std::shared_ptr<LZ4Segment<T>> BinaryParser::_import_lz4_segment(std::ifstream& file, ChunkOffset row_count) {
+  Fail("Not implemented yet");
   const auto num_elements = _read_value<uint32_t>(file);
   const auto block_count = _read_value<uint32_t>(file);
   const auto block_size = _read_value<uint32_t>(file);
   const auto last_block_size = _read_value<uint32_t>(file);
 
-  pmr_vector<uint32_t> lz4_block_sizes(_read_values<uint32_t>(file, block_count));
+#ifdef HYRISE_WITH_JEMALLOC
+  auto allocator = PolymorphicAllocator<size_t>{&JemallocMemoryResource::get()};
+#else
+  auto allocator = PolymorphicAllocator<size_t>{&LinearBufferResource::get()};
+#endif
+  auto pin_guard = AllocatorPinGuard{allocator};
+  pmr_vector<uint32_t> lz4_block_sizes(_read_values<uint32_t>(file, block_count), allocator);
 
   const auto compressed_size = std::accumulate(lz4_block_sizes.begin(), lz4_block_sizes.end(), size_t{0});
 
@@ -287,17 +317,21 @@ std::shared_ptr<LZ4Segment<T>> BinaryParser::_import_lz4_segment(std::ifstream& 
 }
 
 std::shared_ptr<BaseCompressedVector> BinaryParser::_import_attribute_vector(
-    std::ifstream& file, const ChunkOffset row_count, const CompressedVectorTypeID compressed_vector_type_id) {
+    std::ifstream& file, const ChunkOffset row_count, const CompressedVectorTypeID compressed_vector_type_id,
+    const PolymorphicAllocator<size_t>& allocator) {
   const auto compressed_vector_type = static_cast<CompressedVectorType>(compressed_vector_type_id);
   switch (compressed_vector_type) {
     case CompressedVectorType::BitPacking:
       return std::make_shared<BitPackingVector>(_read_values_compact_vector<uint32_t>(file, row_count));
     case CompressedVectorType::FixedWidthInteger1Byte:
-      return std::make_shared<FixedWidthIntegerVector<uint8_t>>(_read_values<uint8_t>(file, row_count));
+      return std::make_shared<FixedWidthIntegerVector<uint8_t>>(
+          pmr_vector<uint8_t>(_read_values<uint8_t>(file, row_count), allocator));
     case CompressedVectorType::FixedWidthInteger2Byte:
-      return std::make_shared<FixedWidthIntegerVector<uint16_t>>(_read_values<uint16_t>(file, row_count));
+      return std::make_shared<FixedWidthIntegerVector<uint16_t>>(
+          pmr_vector<uint16_t>(_read_values<uint16_t>(file, row_count), allocator));
     case CompressedVectorType::FixedWidthInteger4Byte:
-      return std::make_shared<FixedWidthIntegerVector<uint32_t>>(_read_values<uint32_t>(file, row_count));
+      return std::make_shared<FixedWidthIntegerVector<uint32_t>>(
+          pmr_vector<uint32_t>(_read_values<uint32_t>(file, row_count), allocator));
     default:
       Fail("Cannot import attribute vector with compressed vector type id: " +
            std::to_string(compressed_vector_type_id));
@@ -306,6 +340,7 @@ std::shared_ptr<BaseCompressedVector> BinaryParser::_import_attribute_vector(
 
 std::unique_ptr<const BaseCompressedVector> BinaryParser::_import_offset_value_vector(
     std::ifstream& file, const ChunkOffset row_count, const CompressedVectorTypeID compressed_vector_type_id) {
+  Fail("Not implemented yet");
   const auto compressed_vector_type = static_cast<CompressedVectorType>(compressed_vector_type_id);
   switch (compressed_vector_type) {
     case CompressedVectorType::BitPacking:
@@ -322,9 +357,10 @@ std::unique_ptr<const BaseCompressedVector> BinaryParser::_import_offset_value_v
   }
 }
 
-std::shared_ptr<FixedStringVector> BinaryParser::_import_fixed_string_vector(std::ifstream& file, const size_t count) {
+std::shared_ptr<FixedStringVector> BinaryParser::_import_fixed_string_vector(std::ifstream& file, const size_t count,
+                                                                             PolymorphicAllocator<size_t>& allocator) {
   const auto string_length = _read_value<uint32_t>(file);
-  pmr_vector<char> values(string_length * count);
+  pmr_vector<char> values(string_length * count, allocator);
   file.read(values.data(), static_cast<int64_t>(values.size()));
   return std::make_shared<FixedStringVector>(std::move(values), string_length);
 }

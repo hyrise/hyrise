@@ -35,8 +35,9 @@ std::shared_ptr<Table> MetaChunkSortOrdersTable::_on_generate() const {
         for (const auto& [sorted_by_column_id, sort_mode] : sorted_by) {
           std::stringstream sort_mode_stream;
           sort_mode_stream << sort_mode;
-          output_table->append({pmr_string{table_name}, static_cast<int32_t>(chunk_id),
-                                static_cast<int32_t>(sorted_by_column_id), pmr_string{sort_mode_stream.str()}});
+          const auto sort_mode_string = sort_mode_stream.str();
+          output_table->append({pmr_string(table_name.begin(), table_name.end()), static_cast<int32_t>(chunk_id),
+                                static_cast<int32_t>(sorted_by_column_id), pmr_string(sort_mode_string.begin(), sort_mode_string.end())});
         }
       }
     }

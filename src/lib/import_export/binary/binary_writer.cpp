@@ -20,8 +20,8 @@ namespace {
 using namespace hyrise;  // NOLINT
 
 // Writes the content of the vector to the ofstream
-template <typename T, typename Alloc>
-void export_values(std::ofstream& ofstream, const std::vector<T, Alloc>& values);
+template <typename T>
+void export_values(std::ofstream& ofstream, const pmr_vector<T>& values);
 
 /* Writes the given strings to the ofstream. First an array of string lengths is written. After that the strings are
  * written without any gaps between them.
@@ -59,8 +59,8 @@ void export_string_values(std::ofstream& ofstream, const pmr_vector<pmr_string>&
   export_values(ofstream, buffer);
 }
 
-template <typename T, typename Alloc>
-void export_values(std::ofstream& ofstream, const std::vector<T, Alloc>& values) {
+template <typename T>
+void export_values(std::ofstream& ofstream, const pmr_vector<T>& values) {
   ofstream.write(reinterpret_cast<const char*>(values.data()), values.size() * sizeof(T));
 }
 
@@ -75,8 +75,8 @@ void export_values(std::ofstream& ofstream, const pmr_vector<pmr_string>& values
 }
 
 // specialized implementation for bool values
-template <typename Alloc>
-void export_values(std::ofstream& ofstream, const std::vector<bool, Alloc>& values) {
+template <>
+void export_values(std::ofstream& ofstream, const pmr_vector<bool>& values) {
   // Cast to fixed-size format used in binary file
   const auto writable_bools = pmr_vector<BoolAsByteType>(values.begin(), values.end());
   export_values(ofstream, writable_bools);
@@ -116,15 +116,16 @@ void BinaryWriter::_write_header(const Table& table, std::ofstream& ofstream) {
   export_value(ofstream, static_cast<ChunkID::base_type>(table.chunk_count()));
   export_value(ofstream, static_cast<ColumnID::base_type>(table.column_count()));
 
-  auto column_types = pmr_vector<pmr_string>(table.column_count());
-  auto column_names = pmr_vector<pmr_string>(table.column_count());
-  auto columns_are_nullable = pmr_vector<bool>(table.column_count());
+  auto column_types = pmr_vector<pmr_string>(static_cast<size_t>(table.column_count()));
+  auto column_names = pmr_vector<pmr_string>(static_cast<size_t>(table.column_count()));
+  auto columns_are_nullable = pmr_vector<bool>(static_cast<size_t>(table.column_count()));
 
   // Transform column types and copy column names in order to write them to the file.
   const auto column_count = table.column_count();
   for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
-    column_types[column_id] = data_type_to_string.left.at(table.column_data_type(column_id));
-    column_names[column_id] = table.column_name(column_id);
+    auto column_type = data_type_to_string.left.at(table.column_data_type(column_id));
+    column_types[column_id] = pmr_string{column_type.begin(), column_type.end()};
+    column_names[column_id] = pmr_string{table.column_name(column_id).begin(), table.column_name(column_id).end()};
     columns_are_nullable[column_id] = table.column_is_nullable(column_id);
   }
   export_values(ofstream, column_types);
@@ -179,8 +180,8 @@ void BinaryWriter::_write_segment(const ReferenceSegment& reference_segment, boo
   resolve_data_type(reference_segment.data_type(), [&](auto type) {
     using SegmentDataType = typename decltype(type)::type;
 
-    auto values = pmr_vector<SegmentDataType>(reference_segment.size());
-    auto null_values = pmr_vector<bool>(reference_segment.size());
+    auto values = pmr_vector<SegmentDataType>(static_cast<size_t>(reference_segment.size()));
+    auto null_values = pmr_vector<bool>(static_cast<size_t>(reference_segment.size()));
     auto current_position = size_t{0};
 
     segment_iterate<SegmentDataType>(reference_segment, [&](const auto& position) {

@@ -12,8 +12,14 @@
 
 #include <boost/circular_buffer.hpp>
 #include <boost/container/pmr/polymorphic_allocator.hpp>
+#include <boost/container/scoped_allocator.hpp>
+
+#include <boost/container/string.hpp>
+#include <boost/container/vector.hpp>
 #include <boost/operators.hpp>
 
+#include "noncopyable.hpp"
+#include "storage/buffer/buffer_pool_allocator.hpp"
 #include "strong_typedef.hpp"
 #include "utils/assert.hpp"
 
@@ -72,7 +78,7 @@ using Cost = float;
 //
 // TODO(anyone): replace this with std::pmr once libc++ supports PMR.
 template <typename T>
-using PolymorphicAllocator = boost::container::pmr::polymorphic_allocator<T>;
+using PolymorphicAllocator = BufferPoolAllocator<T>;
 
 // The string type that is used internally to store data. It's hard to draw the line between this and std::string or
 // give advice when to use what. Generally, everything that is user-supplied data (mostly, data stored in a table) is a
@@ -80,7 +86,7 @@ using PolymorphicAllocator = boost::container::pmr::polymorphic_allocator<T>;
 // AllTypeVariant). This way, they can be compared to the pmr_string stored in the table. Strings that are built, e.g.,
 // for debugging, do not need to use PMR. This might sound complicated, but since the Hyrise data type registered in
 // all_type_variant.hpp is pmr_string, the compiler will complain if you use std::string when you should use pmr_string.
-using pmr_string = std::basic_string<char, std::char_traits<char>, PolymorphicAllocator<char>>;
+using pmr_string = boost::container::basic_string<char, std::char_traits<char>, PolymorphicAllocator<char>>;
 
 // A vector that gets its memory from a memory resource. It is is not necessary to replace each and every std::vector
 // with this. It only makes sense to use this if you also supply a memory resource. Otherwise, default memory will be
@@ -92,7 +98,7 @@ using pmr_string = std::basic_string<char, std::char_traits<char>, PolymorphicAl
 //   pmr_vector<int> a, b{alloc};
 //   a = b;  // a does NOT use alloc, neither for its current values, nor for future allocations (#623).
 template <typename T>
-using pmr_vector = std::vector<T, PolymorphicAllocator<T>>;
+using pmr_vector = boost::container::vector<T, PolymorphicAllocator<T>>;
 
 template <typename T>
 using pmr_ring_buffer = boost::circular_buffer<T, PolymorphicAllocator<T>>;
@@ -226,7 +232,7 @@ enum class SetOperationMode { Unique, All, Positions };
 // values, both for ascending and descending sorts. See sort.cpp for details.
 enum class SortMode { Ascending, Descending };
 
-enum class TableType { References, Data };
+enum class TableType { References, Data, BufferManagedData };
 
 enum class DescriptionMode { SingleLine, MultiLine };
 
@@ -262,16 +268,6 @@ inline bool operator==(const SortColumnDefinition& lhs, const SortColumnDefiniti
   return lhs.column == rhs.column && lhs.sort_mode == rhs.sort_mode;
 }
 
-class Noncopyable {
- protected:
-  Noncopyable() = default;
-  Noncopyable(Noncopyable&&) noexcept = default;
-  Noncopyable& operator=(Noncopyable&&) noexcept = default;
-  ~Noncopyable() = default;
-  Noncopyable(const Noncopyable&) = delete;
-  const Noncopyable& operator=(const Noncopyable&) = delete;
-};
-
 // Dummy type, can be used to overload functions with a variant accepting a Null value
 struct Null {};
 
@@ -290,10 +286,11 @@ namespace std {
 // `using pmr_string = std::string` above. If we had `pmr_string` here, we would try to redefine an existing hash
 // function.
 template <>
-struct hash<std::basic_string<char, std::char_traits<char>, hyrise::PolymorphicAllocator<char>>> {
-  size_t operator()(
-      const std::basic_string<char, std::char_traits<char>, hyrise::PolymorphicAllocator<char>>& string) const {
+struct hash<boost::container::basic_string<char, std::char_traits<char>, hyrise::PolymorphicAllocator<char>>> {
+  size_t operator()(const boost::container::basic_string<char, std::char_traits<char>,
+                                                         hyrise::PolymorphicAllocator<char>>& string) const {
     return std::hash<std::string_view>{}(string.c_str());
   }
 };
+
 }  // namespace std

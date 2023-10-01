@@ -7,6 +7,7 @@
 
 #include "gtest/gtest.h"
 
+#include <boost/variant.hpp>
 #include "cache/gdfs_cache.hpp"
 #include "expression/expression_functional.hpp"
 #include "hyrise.hpp"
@@ -121,3 +122,10 @@ inline auto segment_encoding_formatter = [](const ::testing::TestParamInfo<Segme
 };
 
 }  // namespace hyrise
+
+namespace boost {
+  template<typename T>
+  void PrintTo(const variant<T>& bar, std::ostream* os){
+
+  };
+}

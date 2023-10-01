@@ -90,7 +90,7 @@ class SchedulerTest : public BaseTest {
     task2->schedule();
   }
 
-  void increment_counter_in_subtasks(std::atomic_uint32_t& counter) {
+  void increment_metric_counter_in_subtasks(std::atomic_uint32_t& counter) {
     std::vector<std::shared_ptr<AbstractTask>> tasks;
     for (auto outer_counter = size_t{0}; outer_counter < 10; ++outer_counter) {
       auto task = std::make_shared<JobTask>([&]() {
@@ -119,7 +119,7 @@ TEST_F(SchedulerTest, BasicTest) {
 
   std::atomic_uint32_t counter{0};
 
-  increment_counter_in_subtasks(counter);
+  increment_metric_counter_in_subtasks(counter);
 
   Hyrise::get().scheduler()->finish();
 
@@ -130,7 +130,7 @@ TEST_F(SchedulerTest, BasicTest) {
 
 TEST_F(SchedulerTest, BasicTestWithoutScheduler) {
   std::atomic_uint32_t counter{0};
-  increment_counter_in_subtasks(counter);
+  increment_metric_counter_in_subtasks(counter);
   ASSERT_EQ(counter, 30u);
 }
 

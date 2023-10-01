@@ -9,9 +9,9 @@
 namespace hyrise {
 
 template <typename T>
-GenericHistogram<T>::GenericHistogram(std::vector<T>&& bin_minima, std::vector<T>&& bin_maxima,
-                                      std::vector<HistogramCountType>&& bin_heights,
-                                      std::vector<HistogramCountType>&& bin_distinct_counts,
+GenericHistogram<T>::GenericHistogram(pmr_vector<T>&& bin_minima, pmr_vector<T>&& bin_maxima,
+                                      pmr_vector<HistogramCountType>&& bin_heights,
+                                      pmr_vector<HistogramCountType>&& bin_distinct_counts,
                                       const HistogramDomain<T>& domain)
     : AbstractHistogram<T>(domain),
       _bin_minima(std::move(bin_minima)),
@@ -34,8 +34,9 @@ std::shared_ptr<GenericHistogram<T>> GenericHistogram<T>::with_single_bin(const 
                                                                           const HistogramCountType& height,
                                                                           const HistogramCountType& distinct_count,
                                                                           const HistogramDomain<T>& domain) {
-  return std::make_shared<GenericHistogram>(std::vector{min}, std::vector{max}, std::vector{height},
-                                            std::vector{distinct_count}, domain);
+  return std::make_shared<GenericHistogram>(pmr_vector<T>{{min}}, pmr_vector<T>{{max}},
+                                            pmr_vector<HistogramCountType>{height},
+                                            pmr_vector<HistogramCountType>{distinct_count}, domain);
 }
 
 template <typename T>

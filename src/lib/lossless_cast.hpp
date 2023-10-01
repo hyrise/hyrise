@@ -96,7 +96,8 @@ lossless_cast(const Source& source) {
 template <typename Target, typename Source>
 std::enable_if_t<std::is_integral_v<Source> && std::is_same_v<pmr_string, Target>, std::optional<Target>> lossless_cast(
     const Source& source) {
-  return pmr_string{std::to_string(source)};
+  const auto some_string = std::to_string(source);
+  return pmr_string(some_string.begin(), some_string.end());
 }
 
 // Floating point to string

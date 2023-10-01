@@ -17,11 +17,30 @@ namespace hyrise {
 
 template <typename T>
 ValueSegment<T>::ValueSegment(bool nullable, ChunkOffset capacity) : BaseValueSegment(data_type_from_type<T>()) {
+  Fail("Dont use this anymore for buffer management");
   _values.reserve(capacity);
   if (nullable) {
     _null_values = pmr_vector<bool>();
     _null_values->reserve(capacity);
   }
+}
+
+template <typename T>
+ValueSegment<T>::ValueSegment(const PolymorphicAllocator<T>& allocator, bool nullable, ChunkOffset capacity)
+    : BaseValueSegment(data_type_from_type<T>()),
+      _values(allocator),
+      _null_values(nullable ? std::make_optional<pmr_vector<bool>>(allocator) : std::nullopt) {
+  _values.reserve(capacity);
+  if (nullable) {
+    _null_values->reserve(capacity);
+  }
+}
+
+template <typename T>
+ValueSegment<T>::~ValueSegment() {
+  auto values_pin_guard = UnsafeSharedWritePinGuard{*this};
+  _values.clear();
+  _null_values->clear();
 }
 
 template <typename T>
@@ -43,10 +62,14 @@ AllTypeVariant ValueSegment<T>::operator[](const ChunkOffset chunk_offset) const
   DebugAssert(chunk_offset != INVALID_CHUNK_OFFSET, "Passed chunk offset must be valid.");
   PerformanceWarning("operator[] used");
   access_counter[SegmentAccessCounter::AccessType::Point] += 1;
+  auto values_pin_guard = SharedReadPinGuard{_values};
 
   // Segment supports null values and value is null
-  if (is_nullable() && _null_values->at(chunk_offset)) {
-    return NULL_VALUE;
+  if (is_nullable()) {
+    auto null_values_pin_guard = SharedReadPinGuard{*_null_values};
+    if (_null_values->at(chunk_offset)) {
+      return NULL_VALUE;
+    }
   }
 
   return _values.at(chunk_offset);
@@ -73,8 +96,10 @@ void ValueSegment<T>::append(const AllTypeVariant& val) {
 
   const auto is_null = variant_is_null(val);
   access_counter[SegmentAccessCounter::AccessType::Point] += 1;
+  auto values_pin_guard = SharedReadPinGuard{_values};
 
   if (is_nullable()) {
+    auto null_values_pin_guard = SharedReadPinGuard{*_null_values};
     (*_null_values).push_back(is_null);
     _values.push_back(is_null ? T{} : boost::get<T>(val));
     return;
@@ -124,8 +149,10 @@ template <typename T>
 void ValueSegment<T>::resize(const size_t size) {
   DebugAssert(size > _values.size() && size <= _values.capacity(),
               "ValueSegments should not be shrunk or resized beyond their original capacity");
+  auto values_pin_guard = UnsafeSharedWritePinGuard{_values};
   _values.resize(size);
   if (is_nullable()) {
+    auto null_values_pin_guard = UnsafeSharedWritePinGuard{*_null_values};
     const auto lock = std::lock_guard<std::mutex>{_null_value_modification_mutex};
     _null_values->resize(size);
   }
@@ -156,7 +183,7 @@ size_t ValueSegment<T>::memory_usage(const MemoryUsageCalculationMode mode) cons
   const auto common_elements_size = sizeof(*this) + null_value_vector_size;
 
   if constexpr (std::is_same_v<T, pmr_string>) {
-    return common_elements_size + string_vector_memory_usage(_values, mode);
+    return common_elements_size;  // TOD= string_vector_memory_usage(_values, mode);
   }
 
   return common_elements_size + _values.capacity() * sizeof(T);

@@ -19,7 +19,10 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
   template <typename Functor>
   void _on_with_iterators(const Functor& functor) const {
     _segment.access_counter[SegmentAccessCounter::AccessType::Sequential] += _segment.size();
+    auto values_pin_guard = SharedReadPinGuard{_segment.values()};
+
     if (_segment.is_nullable()) {
+      auto null_values_pin_guard = SharedReadPinGuard{_segment.null_values()};
       auto begin = Iterator{_segment.values().cbegin(), _segment.values().cbegin(), _segment.null_values().cbegin()};
       auto end = Iterator{_segment.values().cbegin(), _segment.values().cend(), _segment.null_values().cend()};
       functor(begin, end);
@@ -36,7 +39,12 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
 
     using PosListIteratorType = std::decay_t<decltype(position_filter->cbegin())>;
 
+    auto values_pin_guard = SharedReadPinGuard{_segment.values()};
+    auto position_filter_pin_guard = SharedReadPinGuard{position_filter};
+
     if (_segment.is_nullable()) {
+      auto values_pin_guard = SharedReadPinGuard{_segment.null_values()};
+
       auto begin = PointAccessIterator<PosListIteratorType>{_segment.values().cbegin(), _segment.null_values().cbegin(),
                                                             position_filter->cbegin(), position_filter->cbegin()};
       auto end = PointAccessIterator<PosListIteratorType>{_segment.values().cbegin(), _segment.null_values().cbegin(),
@@ -97,6 +105,9 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
     }
 
     NonNullSegmentPosition<T> dereference() const {
+      if constexpr (std::is_same_v<T, pmr_string>) {
+        return NonNullSegmentPosition<T>{*_value_it, _chunk_offset};
+      }
       return NonNullSegmentPosition<T>{*_value_it, _chunk_offset};
     }
 

@@ -13,7 +13,7 @@ class LikeMatcherTest : public BaseTest {
  public:
   bool match(const std::string& value, const std::string& pattern) const {
     auto result = false;
-    LikeMatcher{pmr_string{pattern}}.resolve(false, [&](const auto& matcher) { result = matcher(pmr_string{value}); });
+    LikeMatcher{pmr_string(pattern.begin(), pattern.end())}.resolve(false, [&](const auto& matcher) { result = matcher(pmr_string(value.begin(), value.end())); });
     return result;
   }
 };

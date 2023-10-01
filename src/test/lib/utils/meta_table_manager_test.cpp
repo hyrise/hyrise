@@ -5,6 +5,7 @@
 #include "storage/chunk_encoder.hpp"
 #include "utils/load_table.hpp"
 #include "utils/meta_table_manager.hpp"
+#include "utils/meta_tables/meta_buffer_manager_metrics_table.hpp"
 #include "utils/meta_tables/meta_chunk_sort_orders_table.hpp"
 #include "utils/meta_tables/meta_chunks_table.hpp"
 #include "utils/meta_tables/meta_columns_table.hpp"
@@ -38,6 +39,7 @@ class MetaTableManagerTest : public BaseTest {
             std::make_shared<MetaSettingsTable>(),
             std::make_shared<MetaSystemInformationTable>(),
             std::make_shared<MetaSystemUtilizationTable>(),
+            std::make_shared<MetaBufferManagerMetricsTable>(),
             std::make_shared<MetaTablesTable>()};
   }
 

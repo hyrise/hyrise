@@ -8,6 +8,7 @@
 
 #include "base_value_segment.hpp"
 #include "chunk.hpp"
+#include "storage/buffer/buffer_pool_allocator.hpp"
 
 namespace hyrise {
 
@@ -16,10 +17,13 @@ template <typename T>
 class ValueSegment : public BaseValueSegment {
  public:
   explicit ValueSegment(bool nullable = false, ChunkOffset capacity = Chunk::DEFAULT_SIZE);
+  explicit ValueSegment(const PolymorphicAllocator<T> &allocator, bool nullable = false, ChunkOffset capacity = Chunk::DEFAULT_SIZE);
 
   // Create a ValueSegment with the given values.
   explicit ValueSegment(pmr_vector<T>&& values);
   explicit ValueSegment(pmr_vector<T>&& values, pmr_vector<bool>&& null_values);
+
+  ~ValueSegment() override;
 
   // Return the value at a certain position. If you want to write efficient operators, back off!
   // Use values() and null_values() to get the vectors and check the content yourself.

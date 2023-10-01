@@ -44,7 +44,7 @@ class DictionaryEncoder : public SegmentEncoder<DictionaryEncoder<Encoding>> {
       null_values.resize(segment_size);    // resized to size of segment
 
       for (auto current_position = size_t{0}; segment_it != segment_end; ++segment_it, ++current_position) {
-        const auto segment_item = *segment_it;
+        const auto& segment_item = *segment_it;
         if (!segment_item.is_null()) {
           const auto segment_value = segment_item.value();
           dense_values.push_back(segment_value);

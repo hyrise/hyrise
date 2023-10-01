@@ -35,6 +35,7 @@ endfunction(add_plugin)
 
 add_plugin(NAME hyriseMvccDeletePlugin SRCS mvcc_delete_plugin.cpp mvcc_delete_plugin.hpp DEPS gtest hyriseBenchmarkLib magic_enum sqlparser)
 add_plugin(NAME hyriseSecondTestPlugin SRCS second_test_plugin.cpp second_test_plugin.hpp DEPS hyriseBenchmarkLib magic_enum sqlparser)
+add_plugin(NAME hyriseBufferManagerPlugin SRCS buffer_manager_plugin.cpp buffer_manager_plugin.hpp DEPS nlohmann_json hyriseBenchmarkLib magic_enum)
 add_plugin(NAME hyriseTestNonInstantiablePlugin SRCS non_instantiable_plugin.cpp DEPS hyriseBenchmarkLib)
 add_plugin(NAME hyriseTestPlugin SRCS test_plugin.cpp test_plugin.hpp DEPS hyriseBenchmarkLib magic_enum sqlparser)
 add_plugin(NAME hyriseUccDiscoveryPlugin SRCS ucc_discovery_plugin.cpp ucc_discovery_plugin.hpp DEPS compact_vector hyriseBenchmarkLib magic_enum sqlparser)

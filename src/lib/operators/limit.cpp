@@ -78,7 +78,8 @@ std::shared_ptr<const Table> Limit::_on_execute() {
     const auto column_count = input_table->column_count();
     for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
       const auto input_abstract_segment = input_chunk->get_segment(column_id);
-      auto output_pos_list = std::make_shared<RowIDPosList>(output_chunk_row_count);
+      auto output_pos_list =
+          std::make_shared<RowIDPosList>(static_cast<typename RowIDPosList::size_type>(output_chunk_row_count));
       std::shared_ptr<const Table> referenced_table;
       ColumnID output_column_id = column_id;
 

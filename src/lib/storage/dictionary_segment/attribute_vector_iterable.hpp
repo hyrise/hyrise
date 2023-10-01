@@ -20,6 +20,7 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
   void _on_with_iterators(const Functor& functor) const {
     resolve_compressed_vector_type(_attribute_vector, [&](const auto& vector) {
       using CompressedVectorIterator = decltype(vector.cbegin());
+      auto pin_guard = SharedReadPinGuard{vector};
 
       auto begin = Iterator<CompressedVectorIterator>{_null_value_id, vector.cbegin(), ChunkOffset{0u}};
       auto end = Iterator<CompressedVectorIterator>{_null_value_id, vector.cend(),
@@ -34,8 +35,11 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
   void _on_with_iterators(const std::shared_ptr<PosListType>& position_filter, const Functor& functor) const {
     resolve_compressed_vector_type(_attribute_vector, [&](const auto& vector) {
       using Decompressor = std::decay_t<decltype(vector.create_decompressor())>;
-
       using PosListIteratorType = std::decay_t<decltype(position_filter->cbegin())>;
+
+      auto vector_pin_guard = SharedReadPinGuard{vector};
+      auto position_filter_pin_guard = SharedReadPinGuard{position_filter};
+
       auto begin = PointAccessIterator<Decompressor, PosListIteratorType>{
           _null_value_id, vector.create_decompressor(), position_filter->cbegin(), position_filter->cbegin()};
       auto end = PointAccessIterator<Decompressor, PosListIteratorType>{

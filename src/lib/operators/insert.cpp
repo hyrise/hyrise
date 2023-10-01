@@ -23,16 +23,25 @@ void copy_value_range(const std::shared_ptr<const AbstractSegment>& source_abstr
   Assert(target_value_segment, "Cannot insert into non-ValueSegments");
 
   auto& target_values = target_value_segment->values();
+  auto target_values_pin_guard = UnsafeSharedWritePinGuard{target_values};
+  auto target_null_values_pin_guard = target_value_segment->is_nullable()
+                                          ? std::make_optional<UnsafeSharedWritePinGuard>(target_value_segment->null_values())
+                                          : std::nullopt;
 
   /**
    * If the source Segment is a ValueSegment, take a fast path to copy the data.
    * Otherwise, take a (potentially slower) fallback path.
    */
   if (const auto source_value_segment = std::dynamic_pointer_cast<const ValueSegment<T>>(source_abstract_segment)) {
+    auto values_pin_guard = SharedReadPinGuard{source_value_segment->values()};
+
     std::copy_n(source_value_segment->values().begin() + source_begin_offset, length,
                 target_values.begin() + target_begin_offset);
 
     if (source_value_segment->is_nullable()) {
+      auto null_values_pin_guard = SharedReadPinGuard{source_value_segment->null_values()};
+      auto target_null_values_pin_guard = UnsafeSharedWritePinGuard{target_value_segment->null_values()};
+
       const auto nulls_begin_iter = source_value_segment->null_values().begin() + source_begin_offset;
       const auto nulls_end_iter = nulls_begin_iter + length;
 

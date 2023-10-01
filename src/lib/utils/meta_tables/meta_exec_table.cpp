@@ -24,7 +24,8 @@ std::shared_ptr<Table> MetaExecTable::_on_generate() const {
 
   for (const auto& [key, _] : Hyrise::get().plugin_manager.user_executable_functions()) {
     const auto& [plugin_name, function_name] = key;
-    output_table->append({pmr_string{plugin_name}, pmr_string{function_name}});
+    output_table->append({pmr_string(plugin_name.begin(), plugin_name.end()),
+     pmr_string(function_name.begin(), function_name.end())});
   }
 
   return output_table;

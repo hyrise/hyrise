@@ -20,6 +20,7 @@
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/topology.hpp"
 #include "statistics/generate_pruning_statistics.hpp"
+#include "storage/buffer/pin_guard.hpp"
 #include "storage/chunk.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/table.hpp"
@@ -32,7 +33,9 @@ using namespace hyrise;  // NOLINT
 
 template <typename T>
 pmr_vector<T> create_typed_segment_values(const std::vector<int>& values) {
-  pmr_vector<T> result(values.size());
+  auto allocator = PolymorphicAllocator<T>{};
+  auto dictionary_pin_guard = AllocatorPinGuard{allocator};
+  pmr_vector<T> result(values.size(), allocator);
 
   auto insert_position = size_t{0};
   for (const auto& value : values) {
@@ -135,7 +138,9 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
             }
           }
 
-          auto null_values = pmr_vector<bool>{};
+          auto allocator = PolymorphicAllocator<ColumnDataType>{};
+          auto null_values_pin_guard = AllocatorPinGuard{allocator};
+          auto null_values = pmr_vector<bool>{allocator};
 
           /**
            * If a ratio of to-be-created NULL values is given, fill the null_values vector used in the ValueSegment
@@ -143,6 +148,7 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
            */
           if (column_specifications[column_index].null_ratio > 0.0f) {
             null_values.resize(chunk_size, false);
+            // Resize might lead to a new page allocation
 
             const double step_size = 1.0 / column_specifications[column_index].null_ratio;
             double current_row_offset = 0.0;

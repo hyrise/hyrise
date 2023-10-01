@@ -99,38 +99,41 @@ void BenchmarkRunner::run() {
   _benchmark_start = std::chrono::steady_clock::now();
   _benchmark_wall_clock_start = std::chrono::system_clock::now();
 
-  auto track_system_utilization = std::atomic_bool{_config.system_metrics};
-  auto system_utilization_tracker = std::thread{[&] {
-    if (!track_system_utilization) {
-      return;
-    }
+  std::unique_ptr<PausableLoopThread> metrics_thread;
+  if (_config.metrics) {
+    SQLPipelineBuilder{
+        "CREATE TABLE benchmark_segments_log AS SELECT 0 AS snapshot_id, 'init' AS moment, * FROM meta_segments"}
+        .create_pipeline()
+        .get_result_table();
 
-    // Start tracking the system utilization.
     SQLPipelineBuilder{
         "CREATE TABLE benchmark_system_utilization_log AS SELECT CAST(0 as LONG) AS \"timestamp\", * FROM "
         "meta_system_utilization"}
         .create_pipeline()
         .get_result_table();
 
-    while (track_system_utilization) {
-      const auto timestamp = std::chrono::nanoseconds{std::chrono::steady_clock::now() - _benchmark_start}.count();
-
-      auto sql_builder = std::stringstream{};
-      sql_builder << "INSERT INTO benchmark_system_utilization_log SELECT CAST(" << timestamp
-                  << "as LONG), * FROM meta_system_utilization";
-
-      SQLPipelineBuilder{sql_builder.str()}.create_pipeline().get_result_table();
-
-      std::this_thread::sleep_for(SYSTEM_UTILIZATION_TRACKING_INTERVAL);
-    }
-  }};
-
-  if (_config.system_metrics) {
-    // Create a table for the segment access counter log.
     SQLPipelineBuilder{
-        "CREATE TABLE benchmark_segments_log AS SELECT 0 AS snapshot_id, 'init' AS moment, * FROM meta_segments"}
+        "CREATE TABLE benchmark_buffer_manager_metrics_log AS SELECT CAST(0 as LONG) AS \"timestamp\", * FROM "
+        "meta_buffer_manager_metrics"}
         .create_pipeline()
         .get_result_table();
+
+    metrics_thread = std::make_unique<PausableLoopThread>(METRICS_SAMPLING_INTERVAL, [this](size_t) {
+      // Start tracking the system utilization
+      const auto timestamp = std::chrono::nanoseconds{std::chrono::steady_clock::now() - _benchmark_start}.count();
+
+      auto system_utilization_sql_builder = std::stringstream{};
+      system_utilization_sql_builder << "INSERT INTO benchmark_system_utilization_log SELECT CAST(" << timestamp
+                                     << "as LONG), * FROM meta_system_utilization";
+
+      SQLPipelineBuilder{system_utilization_sql_builder.str()}.create_pipeline().get_result_table();
+
+      auto buffer_manager_metrics_sql_builder = std::stringstream{};
+      buffer_manager_metrics_sql_builder << "INSERT INTO benchmark_buffer_manager_metrics_log SELECT CAST(" << timestamp
+                                         << "as LONG), * FROM meta_buffer_manager_metrics";
+
+      SQLPipelineBuilder{buffer_manager_metrics_sql_builder.str()}.create_pipeline().get_result_table();
+    });
   }
 
   // Retrieve the items to be executed and prepare the result vector.
@@ -214,10 +217,6 @@ void BenchmarkRunner::run() {
     Hyrise::get().scheduler()->finish();
     Hyrise::get().set_scheduler(std::make_shared<ImmediateExecutionScheduler>());
   }
-
-  // Stop the thread that tracks the system utilization.
-  track_system_utilization = false;
-  system_utilization_tracker.join();
 }
 
 void BenchmarkRunner::_benchmark_shuffled() {
@@ -503,6 +502,10 @@ nlohmann::json BenchmarkRunner::_create_report() const {
     report["system_utilization"] = _sql_to_json("SELECT * FROM benchmark_system_utilization_log");
   }
 
+  if (Hyrise::get().storage_manager.has_table("benchmark_buffer_manager_metrics_log")) {
+    report["buffer_manager_metrics"] = _sql_to_json("SELECT * FROM benchmark_buffer_manager_metrics_log");
+  }
+
   if (Hyrise::get().storage_manager.has_table("benchmark_segments_log")) {
     report["segments"] = _sql_to_json("SELECT * FROM benchmark_segments_log");
   }
@@ -593,6 +596,7 @@ nlohmann::json BenchmarkRunner::create_context(const BenchmarkConfig& config) {
                         {"using_scheduler", config.enable_scheduler},
                         {"cores", config.cores},
                         {"clients", config.clients},
+                        {"buffer_manager", BufferManager::get().config().to_json()},
                         {"data_preparation_cores", config.data_preparation_cores},
                         {"verify", config.verify},
                         {"time_unit", "ns"},
