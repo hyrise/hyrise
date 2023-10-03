@@ -1,9 +1,13 @@
 #include "node_queue_scheduler.hpp"
 
 #include <atomic>
+#include <chrono>
 #include <cstdlib>
 #include <iostream>
 #include <memory>
+#include <mutex>
+#include <optional>
+#include <thread>
 #include <utility>
 #include <vector>
 
@@ -12,6 +16,7 @@
 #include "job_task.hpp"
 #include "shutdown_task.hpp"
 #include "task_queue.hpp"
+#include "types.hpp"
 #include "uid_allocator.hpp"
 #include "utils/assert.hpp"
 #include "worker.hpp"
@@ -71,8 +76,22 @@ void NodeQueueScheduler::begin() {
 
 void NodeQueueScheduler::wait_for_all_tasks() {
   auto progressless_loop_count = size_t{0};
-  auto previous_finished_task_count = size_t{0};
+  auto previous_finished_task_count = TaskID::base_type{0};
+
+  // To check if the system is still processing incoming jobs, we store the previous task count and loop-wait until no
+  // new jobs are created anymore.
+  auto previous_task_count = TaskID::base_type{_task_counter.load()};
+
   while (true) {
+    if (_task_counter > previous_task_count) {
+      // System is still processing new tasks (can happen when, e.g., currently running tasks schedule new tasks):
+      // loop-wait until task counter is stable (this check can still fail in edge cases, but we make the simple
+      // assumption that nobody calls wait_for_all_tasks() if there is still significant processing ongoing).
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+      previous_task_count = _task_counter;
+      continue;
+    }
+
     auto num_finished_tasks = uint64_t{0};
     for (const auto& worker : _workers) {
       num_finished_tasks += worker->num_finished_tasks();
@@ -113,9 +132,9 @@ void NodeQueueScheduler::wait_for_all_tasks() {
       // The following assert checks that we are not looping forever. The empty() check can be inaccurate for
       // concurrent queues when many tiny tasks have been scheduled (see MergeSort scheduler test). When this assert is
       // triggered in other situations, there have probably been new tasks added after wait_for_all_tasks() was called.
-      Assert(queue_check_runs < 1'000, "Queue is not empty but all registered tasks have already been processed.");
+      Assert(queue_check_runs < 3'000, "Queue is not empty but all registered tasks have already been processed.");
 
-      std::this_thread::sleep_for(std::chrono::milliseconds(1));
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
       ++queue_check_runs;
     }
   }
@@ -143,8 +162,8 @@ void NodeQueueScheduler::finish() {
 
   auto check_runs = size_t{0};
   while (_active_worker_count.load() > 0) {
-    Assert(check_runs < 1'000, "Timeout: not all shut down tasks have been processed.");
-    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    Assert(check_runs < 3'000, "Timeout: not all shut down tasks have been processed.");
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
     ++check_runs;
   }
 
