@@ -101,14 +101,17 @@ void NodeQueueScheduler::wait_for_all_tasks() {
       break;
     }
 
-    // Ensure we do not wait forever for tasks that cannot be processed or are stuck. 10s seemed too little for TSAN
-    // builds in the CI.
-    if (progressless_loop_count >= 1'500) {
+    // Ensure we do not wait forever for tasks that cannot be processed or are stuck. We currently wait 1 hour (3600
+    // seconds). This wait time allows us to run TPC-H with scale factor 1000 and two cores without issues, which we
+    // consider acceptable right now. If large scale factors or slower data access paths (e.g., data on secondary
+    // storage) become relevant, the current mechanism and general query processing probably need to be re-evaluated
+    // (e.g., ensure operators split their work into more, but smaller tasks).
+    if (progressless_loop_count >= 360'000) {
       const auto remaining_task_count = _task_counter - num_finished_tasks;
       auto message = std::stringstream{};
-      // We waited for 10 ms, 1'500 times = 15s.
+      // We waited for 1 h (360'000 * 10 ms).
       message << "Timeout: no progress while waiting for all scheduled tasks to be processed. " << remaining_task_count
-              << " task(s) still remaining without progress for 15s now, quitting.";
+              << " task(s) still remaining without progress for 1 h now, quitting.";
       Fail(message.str());
     }
 
@@ -132,7 +135,7 @@ void NodeQueueScheduler::wait_for_all_tasks() {
       // The following assert checks that we are not looping forever. The empty() check can be inaccurate for
       // concurrent queues when many tiny tasks have been scheduled (see MergeSort scheduler test). When this assert is
       // triggered in other situations, there have probably been new tasks added after wait_for_all_tasks() was called.
-      Assert(queue_check_runs < 3'000, "Queue is not empty but all registered tasks have already been processed.");
+      Assert(queue_check_runs < 6'000, "Queue is not empty but all registered tasks have already been processed.");
 
       std::this_thread::sleep_for(std::chrono::milliseconds(10));
       ++queue_check_runs;
@@ -229,7 +232,7 @@ NodeID NodeQueueScheduler::determine_queue_id(const NodeID preferred_node_id) co
     return worker->queue()->node_id();
   }
 
-  // Initialize mininmal values with first active node.
+  // Initialize minimal values with first active node.
   auto min_load_node_id = _active_nodes[0];
   auto min_load = _queues[min_load_node_id]->estimate_load();
 
@@ -262,7 +265,7 @@ void NodeQueueScheduler::_group_tasks(const std::vector<std::shared_ptr<Abstract
   auto round_robin_counter = 0;
   auto common_node_id = std::optional<NodeID>{};
 
-  std::vector<std::shared_ptr<AbstractTask>> grouped_tasks(NUM_GROUPS);
+  auto grouped_tasks = std::vector<std::shared_ptr<AbstractTask>>(NUM_GROUPS);
   for (const auto& task : tasks) {
     if (!task->predecessors().empty() || !task->successors().empty() || dynamic_cast<ShutdownTask*>(&*task)) {
       // Do not group tasks that either have precessors/successors or are ShutdownTasks.
