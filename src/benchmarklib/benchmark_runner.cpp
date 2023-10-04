@@ -588,7 +588,7 @@ nlohmann::json BenchmarkRunner::create_context(const BenchmarkConfig& config) {
 nlohmann::json BenchmarkRunner::_sql_to_json(const std::string& sql) {
   auto pipeline = SQLPipelineBuilder{sql}.create_pipeline();
   const auto& [pipeline_status, table] = pipeline.get_result_table();
-  Assert(pipeline_status == SQLPipelineStatus::Success, "_sql_to_json failed");
+  Assert(pipeline_status == SQLPipelineStatus::Success, "_sql_to_json failed.");
 
   auto output = nlohmann::json::array();
   for (auto row_nr = uint64_t{0}; row_nr < table->row_count(); ++row_nr) {

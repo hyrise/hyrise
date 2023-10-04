@@ -48,7 +48,7 @@ std::string ReadBuffer<SocketType>::get_string() {
 template <typename SocketType>
 std::string ReadBuffer<SocketType>::get_string(const size_t string_length,
                                                const HasNullTerminator has_null_terminator) {
-  std::string result;
+  auto result = std::string{};
   result.reserve(string_length);
 
   // First, use bytes available in buffer
@@ -67,7 +67,7 @@ std::string ReadBuffer<SocketType>::get_string(const size_t string_length,
 
   // Ignore last character if it is \0
   if (has_null_terminator == HasNullTerminator::Yes) {
-    Assert(result.back() == '\0', "Last character is not a null terminator");
+    Assert(result.back() == '\0', "Last character is not a null terminator.");
     result.pop_back();
   }
 
@@ -85,7 +85,7 @@ void ReadBuffer<SocketType>::_receive_if_necessary(const size_t bytes_required) 
   const auto maximum_readable_size = maximum_capacity() - size();
 
   auto bytes_read = size_t{0};
-  boost::system::error_code error_code;
+  auto error_code = boost::system::error_code{};
   // We cannot forward an iterator to the read system call. Hence, we need to use raw pointers. Therefore, we need to
   // distinguish between reading into continuous memory or partially read the data.
   if (std::distance(&*_start_position, &*_current_position) < 0 || &*_start_position == _data.data()) {

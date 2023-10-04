@@ -34,7 +34,7 @@ bool TPCCOrderStatus::_on_execute() {
         std::string{"SELECT C_ID, C_BALANCE, C_FIRST, C_MIDDLE, C_LAST FROM CUSTOMER WHERE C_W_ID = "} +
         std::to_string(w_id) + " AND C_D_ID = " + std::to_string(d_id) +
         " AND C_ID = " + std::to_string(std::get<int32_t>(customer)));
-    Assert(customer_table && customer_table->row_count() == 1, "Did not find customer by ID (or found more than one)");
+    Assert(customer_table && customer_table->row_count() == 1, "Did not find customer by ID (or found more than one).");
 
     customer_id = std::get<int32_t>(customer);
   } else {
@@ -43,7 +43,7 @@ bool TPCCOrderStatus::_on_execute() {
         std::string{"SELECT C_ID, C_BALANCE, C_FIRST, C_MIDDLE, C_LAST FROM CUSTOMER WHERE C_W_ID = "} +
         std::to_string(w_id) + " AND C_D_ID = " + std::to_string(d_id) + " AND C_LAST = '" +
         std::string{std::get<pmr_string>(customer)} + "' ORDER BY C_FIRST");
-    Assert(customer_table->row_count() >= 1, "Did not find customer by name");
+    Assert(customer_table->row_count() >= 1, "Did not find customer by name.");
 
     // Calculate ceil(n/2)
     const auto customer_offset =
@@ -58,7 +58,7 @@ bool TPCCOrderStatus::_on_execute() {
       " AND O_D_ID = " + std::to_string(d_id) + " AND O_C_ID = " + std::to_string(customer_id) + " ORDER BY O_ID DESC");
   const auto& order_table = order_select_pair.second;
   // Returns multiple orders, we are interested in the latest one
-  Assert(order_table && order_table->row_count() >= 1, "Did not find order");
+  Assert(order_table && order_table->row_count() >= 1, "Did not find order.");
   o_id = *order_table->get_value<int32_t>(ColumnID{0}, 0);
   o_entry_d = *order_table->get_value<int32_t>(ColumnID{1}, 0);
   o_carrier_id = order_table->get_value<int32_t>(ColumnID{2}, 0);
@@ -69,7 +69,7 @@ bool TPCCOrderStatus::_on_execute() {
       std::to_string(w_id) + " AND OL_D_ID = " + std::to_string(d_id) + " AND OL_O_ID = " + std::to_string(o_id));
   const auto& order_line_table = order_line_select_pair.second;
   Assert(order_line_table && order_line_table->row_count() >= 5 && order_line_table->row_count() <= 15,
-         "Did not find order lines");
+         "Did not find order lines.");
   for (auto row = size_t{0}; row < order_line_table->row_count(); ++row) {
     ol_quantity_sum += *order_line_table->get_value<int32_t>(ColumnID{2}, row);
   }

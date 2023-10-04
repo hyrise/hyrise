@@ -113,7 +113,7 @@ void expression_adapt_to_different_lqp(std::shared_ptr<AbstractExpression>& expr
     }
 
     const auto lqp_column_expression_ptr = std::dynamic_pointer_cast<LQPColumnExpression>(expression_ptr);
-    Assert(lqp_column_expression_ptr, "Asked to adapt expression in LQP, but encountered non-LQP ColumnExpression");
+    Assert(lqp_column_expression_ptr, "Asked to adapt expression in LQP, but encountered non-LQP ColumnExpression.");
 
     expression_ptr = expression_adapt_to_different_lqp(*lqp_column_expression_ptr, node_mapping);
 
@@ -124,10 +124,10 @@ void expression_adapt_to_different_lqp(std::shared_ptr<AbstractExpression>& expr
 std::shared_ptr<LQPColumnExpression> expression_adapt_to_different_lqp(const LQPColumnExpression& lqp_column_expression,
                                                                        const LQPNodeMapping& node_mapping) {
   const auto node = lqp_column_expression.original_node.lock();
-  Assert(node, "LQPColumnExpression is expired");
+  Assert(node, "LQPColumnExpression is expired.");
   const auto node_mapping_iter = node_mapping.find(node);
   Assert(node_mapping_iter != node_mapping.end(),
-         "Couldn't find referenced node (" + node->description() + ") in NodeMapping");
+         "Couldn't find referenced node (" + node->description() + ") in NodeMapping.");
 
   return std::make_shared<LQPColumnExpression>(node_mapping_iter->second, lqp_column_expression.original_column_id);
 }
@@ -148,8 +148,8 @@ std::string expression_descriptions(const std::vector<std::shared_ptr<AbstractEx
 }
 
 DataType expression_common_type(const DataType lhs, const DataType rhs) {
-  Assert(lhs != DataType::Null || rhs != DataType::Null, "Can't deduce common type if both sides are NULL");
-  Assert((lhs == DataType::String) == (rhs == DataType::String), "Strings only compatible with strings");
+  Assert(lhs != DataType::Null || rhs != DataType::Null, "Can't deduce common type if both sides are NULL.");
+  Assert((lhs == DataType::String) == (rhs == DataType::String), "Strings only compatible with strings.");
 
   // Long+NULL -> Long; NULL+Long -> Long
   if (lhs == DataType::Null) {
@@ -198,7 +198,7 @@ bool expression_evaluable_on_lqp(const std::shared_ptr<AbstractExpression>& expr
       const auto& aggregate_expression = static_cast<const WindowFunctionExpression&>(*sub_expression);
       const auto& lqp_column_expression = static_cast<const LQPColumnExpression&>(*aggregate_expression.argument());
       const auto& original_node = lqp_column_expression.original_node.lock();
-      Assert(original_node, "LQPColumnExpression is expired, LQP is invalid");
+      Assert(original_node, "LQPColumnExpression is expired, LQP is invalid.");
 
       // Now check if lqp contains that original_node
       evaluable = false;
@@ -293,7 +293,7 @@ void expression_set_transaction_context(const std::shared_ptr<AbstractExpression
     }
 
     const auto pqp_subquery_expression = std::dynamic_pointer_cast<PQPSubqueryExpression>(sub_expression);
-    Assert(pqp_subquery_expression, "Expected a PQPSubqueryExpression here");
+    Assert(pqp_subquery_expression, "Expected a PQPSubqueryExpression here.");
     pqp_subquery_expression->pqp->set_transaction_context_recursively(transaction_context);
 
     return ExpressionVisitation::DoNotVisitArguments;
@@ -332,7 +332,7 @@ bool expression_contains_correlated_parameter(const std::shared_ptr<AbstractExpr
 
 std::optional<AllTypeVariant> expression_get_value_or_parameter(const AbstractExpression& expression) {
   if (const auto* correlated_parameter_expression = dynamic_cast<const CorrelatedParameterExpression*>(&expression)) {
-    DebugAssert(correlated_parameter_expression->value(), "CorrelatedParameterExpression doesn't have a value set");
+    DebugAssert(correlated_parameter_expression->value(), "CorrelatedParameterExpression doesn't have a value set.");
     return *correlated_parameter_expression->value();
   }
 
@@ -342,7 +342,7 @@ std::optional<AllTypeVariant> expression_get_value_or_parameter(const AbstractEx
 
   if (expression.type == ExpressionType::Cast) {
     const auto& cast_expression = static_cast<const CastExpression&>(expression);
-    Assert(expression.data_type() != DataType::Null, "Cast as NULL is undefined");
+    Assert(expression.data_type() != DataType::Null, "Cast as NULL is undefined.");
     // More complicated casts  should be resolved by ExpressionEvaluator.
     // E.g., CAST(any_column AS INT) cannot and should not be evaluated here.
     if (cast_expression.argument()->type != ExpressionType::Value) {

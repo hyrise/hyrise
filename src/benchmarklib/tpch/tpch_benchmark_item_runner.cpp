@@ -45,7 +45,7 @@ TPCHBenchmarkItemRunner::TPCHBenchmarkItemRunner(const std::shared_ptr<Benchmark
                      [&](const auto benchmark_item_id) {
                        return benchmark_item_id >= BenchmarkItemID{0} && benchmark_item_id < 22;  // NOLINT
                      }),
-         "Invalid TPC-H item id");
+         "Invalid TPC-H item ID.");
 }
 
 const std::vector<BenchmarkItemID>& TPCHBenchmarkItemRunner::items() const {
@@ -54,13 +54,13 @@ const std::vector<BenchmarkItemID>& TPCHBenchmarkItemRunner::items() const {
 
 bool TPCHBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, BenchmarkSQLExecutor& sql_executor) {
   const auto sql = _build_query(item_id);
-  std::shared_ptr<const Table> expected_result_table = nullptr;
+  auto expected_result_table = std::shared_ptr<const Table>{};
   if (!_dedicated_expected_results.empty()) {
     expected_result_table = _dedicated_expected_results[item_id];
   }
 
   const auto [status, table] = sql_executor.execute(sql, expected_result_table);
-  Assert(status == SQLPipelineStatus::Success, "TPC-H items should not fail");
+  Assert(status == SQLPipelineStatus::Success, "TPC-H items should not fail.");
   return true;
 }
 
@@ -69,16 +69,16 @@ void TPCHBenchmarkItemRunner::on_tables_loaded() {
   const auto orders_table = Hyrise::get().storage_manager.get_table("orders");
   const auto first_chunk = orders_table->get_chunk(ChunkID{0});
   if (_clustering_configuration == ClusteringConfiguration::Pruning) {
-    Assert(!first_chunk->individually_sorted_by().empty(), "Sorting information was lost");
+    Assert(!first_chunk->individually_sorted_by().empty(), "Sorting information was lost.");
   }
   if (_config->chunk_indexes) {
     const auto indexed_column_ids = std::vector<ColumnID>{ColumnID{0}};
-    Assert(!first_chunk->get_indexes(indexed_column_ids).empty(), "Index was lost");
+    Assert(!first_chunk->get_indexes(indexed_column_ids).empty(), "Index was lost.");
   }
   if (_config->table_indexes) {
-    Assert(!orders_table->get_table_indexes().empty(), "Index was lost");
+    Assert(!orders_table->get_table_indexes().empty(), "Index was lost.");
   }
-  Assert(!orders_table->soft_key_constraints().empty(), "Constraints were lost");
+  Assert(!orders_table->soft_key_constraints().empty(), "Constraints were lost.");
 
   if (_use_prepared_statements) {
     std::cout << " - Preparing queries" << std::endl;
@@ -109,11 +109,11 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
   // Preferring a fast random engine over one with high-quality randomness. Engines are not thread-safe. Since we are
   // fine with them not being synced across threads and object cost is not an issue, we simply use one generator per
   // calling thread.
-  static thread_local std::minstd_rand random_engine{_random_seed++};
+  static thread_local auto random_engine = std::minstd_rand{_random_seed++};
 
   // This is not nice, but initializing this statically would require external methods and make it harder to
   // follow in the end. It's not like this list (taken from TPC-H 4.2.2.13) will ever change...
-  static const std::vector materials{"TIN", "NICKEL", "BRASS", "STEEL", "COPPER"};
+  static const auto materials = std::vector{"TIN", "NICKEL", "BRASS", "STEEL", "COPPER"};
 
   static const auto sizes =
       std::vector{1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25,
@@ -129,23 +129,23 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
   // uniform_int_distributions should not be modified when they are used, but because we have no explicit thread safety
   // guarantee, we make this thread-local, too.
 
-  std::uniform_int_distribution<> material_dist{0, static_cast<int>(materials.size() - 1)};
-  std::uniform_int_distribution<> region_dist{0, regions.count - 1};
-  std::uniform_int_distribution<> segment_dist{0, c_mseg_set.count - 1};
-  std::uniform_int_distribution<> nation_dist{0, nations.count - 1};
-  std::uniform_int_distribution<> type_dist{0, p_types_set.count - 1};
-  std::uniform_int_distribution<> color_dist{0, colors.count - 1};
-  std::uniform_int_distribution<> shipmode_dist{0, l_smode_set.count - 1};
-  std::uniform_int_distribution<> brand_char_dist{1, 5};
-  std::uniform_int_distribution<> container_dist{0, p_cntr_set.count - 1};
+  auto material_dist = std::uniform_int_distribution<>{0, static_cast<int>(materials.size() - 1)};
+  auto region_dist = std::uniform_int_distribution<>{0, regions.count - 1};
+  auto segment_dist = std::uniform_int_distribution<>{0, c_mseg_set.count - 1};
+  auto nation_dist = std::uniform_int_distribution<>{0, nations.count - 1};
+  auto type_dist = std::uniform_int_distribution<>{0, p_types_set.count - 1};
+  auto color_dist = std::uniform_int_distribution<>{0, colors.count - 1};
+  auto shipmode_dist = std::uniform_int_distribution<>{0, l_smode_set.count - 1};
+  auto brand_char_dist = std::uniform_int_distribution<>{1, 5};
+  auto container_dist = std::uniform_int_distribution<>{0, p_cntr_set.count - 1};
 
   // Will be filled with the parameters for this query and passed to the next method which builds the query string
-  std::vector<std::string> parameters;
+  auto parameters = std::vector<std::string>{};
 
   switch (item_id) {
     // Writing `1-1` to make people aware that this is zero-indexed while TPC-H query names are not
     case 1 - 1: {
-      std::uniform_int_distribution<> date_diff_dist{60, 120};
+      auto date_diff_dist = std::uniform_int_distribution<>{60, 120};
       const auto date =
           date_interval(boost::gregorian::date{1998, 12, 01}, -date_diff_dist(random_engine), DatetimeComponent::Day);
 
@@ -154,7 +154,7 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
     }
 
     case 2 - 1: {
-      std::uniform_int_distribution<> size_dist{1, 50};
+      auto size_dist = std::uniform_int_distribution<>{1, 50};
       const auto size = size_dist(random_engine);
       const auto* const material = materials[material_dist(random_engine)];
       const auto* const region = regions.list[region_dist(random_engine)].text;
@@ -168,7 +168,7 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
 
     case 3 - 1: {
       const auto* const segment = c_mseg_set.list[segment_dist(random_engine)].text;
-      std::uniform_int_distribution<> date_diff_dist{0, 30};
+      auto date_diff_dist = std::uniform_int_distribution<>{0, 30};
       const auto date =
           date_interval(boost::gregorian::date{1995, 03, 01}, date_diff_dist(random_engine), DatetimeComponent::Day);
 
@@ -179,7 +179,7 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
     }
 
     case 4 - 1: {
-      std::uniform_int_distribution<> date_diff_dist{0, 4 * 12 + 9};
+      auto date_diff_dist = std::uniform_int_distribution<>{0, 4 * 12 + 9};
       const auto diff = date_diff_dist(random_engine);
       const auto begin_date = date_interval(boost::gregorian::date{1993, 01, 01}, diff, DatetimeComponent::Month);
       const auto end_date = date_interval(begin_date, 3, DatetimeComponent::Month);
@@ -192,7 +192,7 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
     case 5 - 1: {
       const auto* const region = regions.list[region_dist(random_engine)].text;
 
-      std::uniform_int_distribution<> date_diff_dist{0, 4};
+      auto date_diff_dist = std::uniform_int_distribution<>{0, 4};
       const auto diff = date_diff_dist(random_engine);
       const auto begin_date = date_interval(boost::gregorian::date{1993, 01, 01}, diff, DatetimeComponent::Year);
       const auto end_date = date_interval(begin_date, 1, DatetimeComponent::Year);
@@ -204,15 +204,15 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
     }
 
     case 6 - 1: {
-      std::uniform_int_distribution<> date_diff_dist{0, 4};
+      auto date_diff_dist = std::uniform_int_distribution<>{0, 4};
       const auto diff = date_diff_dist(random_engine);
       const auto begin_date = date_interval(boost::gregorian::date{1993, 01, 01}, diff, DatetimeComponent::Year);
       const auto end_date = date_interval(begin_date, 1, DatetimeComponent::Year);
 
-      static std::uniform_int_distribution<> discount_dist{2, 9};
+      static auto discount_dist = std::uniform_int_distribution<>{2, 9};
       const auto discount = 0.01f * static_cast<float>(discount_dist(random_engine));
 
-      std::uniform_int_distribution<> quantity_dist{24, 25};
+      auto quantity_dist = std::uniform_int_distribution<>{24, 25};
       const auto quantity = quantity_dist(random_engine);
 
       parameters.emplace_back("'"s + date_to_string(begin_date) + "'");
@@ -272,7 +272,7 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
     }
 
     case 10 - 1: {
-      std::uniform_int_distribution<> date_diff_dist{0, 23};
+      auto date_diff_dist = std::uniform_int_distribution<>{0, 23};
       const auto diff = date_diff_dist(random_engine);
       const auto begin_date = date_interval(boost::gregorian::date{1993, 01, 01}, diff, DatetimeComponent::Month);
       const auto end_date = date_interval(begin_date, 3, DatetimeComponent::Month);
@@ -294,13 +294,13 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
 
     case 12 - 1: {
       const auto* const shipmode1 = l_smode_set.list[shipmode_dist(random_engine)].text;
-      std::string shipmode2;
+      auto shipmode2 = std::string{};
       // NOLINTNEXTLINE(cppcoreguidelines-avoid-do-while)
       do {
         shipmode2 = l_smode_set.list[shipmode_dist(random_engine)].text;
       } while (shipmode1 == shipmode2);
 
-      std::uniform_int_distribution<> date_diff_dist{0, 4};
+      auto date_diff_dist = std::uniform_int_distribution<>{0, 4};
       const auto diff = date_diff_dist(random_engine);
       const auto begin_date = date_interval(boost::gregorian::date{1993, 01, 01}, diff, DatetimeComponent::Year);
       const auto end_date = date_interval(begin_date, 1, DatetimeComponent::Year);
@@ -316,14 +316,14 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
       const auto words1 = std::vector{"special", "pending", "unusual", "express"};
       const auto words2 = std::vector{"packages", "requests", "accounts", "deposits"};
 
-      std::uniform_int_distribution<> word_dist{0, 3};
+      auto word_dist = std::uniform_int_distribution<>{0, 3};
 
       parameters.emplace_back("'%"s + words1[word_dist(random_engine)] + '%' + words2[word_dist(random_engine)] + "%'");
       break;
     }
 
     case 14 - 1: {
-      std::uniform_int_distribution<> date_diff_dist{0, 5 * 12};
+      auto date_diff_dist = std::uniform_int_distribution<>{0, 5 * 12};
       const auto diff = date_diff_dist(random_engine);
       const auto begin_date = date_interval(boost::gregorian::date{1993, 01, 01}, diff, DatetimeComponent::Month);
       const auto end_date = date_interval(begin_date, 1, DatetimeComponent::Month);
@@ -336,7 +336,7 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
     case 15 - 1: {
       auto query_15 = std::string{tpch_queries.at(15)};
 
-      std::uniform_int_distribution<> date_diff_dist{0, 4 * 12 + 9};
+      auto date_diff_dist = std::uniform_int_distribution<>{0, 4 * 12 + 9};
       const auto diff = date_diff_dist(random_engine);
       const auto begin_date = date_interval(boost::gregorian::date{1993, 01, 01}, diff, DatetimeComponent::Month);
       const auto end_date = date_interval(begin_date, 3, DatetimeComponent::Month);
@@ -386,7 +386,7 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
     }
 
     case 18 - 1: {
-      std::uniform_int_distribution<> quantity_dist{312, 315};
+      auto quantity_dist = std::uniform_int_distribution<>{312, 315};
       const auto quantity = quantity_dist(random_engine);
 
       parameters.emplace_back(std::to_string(quantity));
@@ -394,9 +394,9 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
     }
 
     case 19 - 1: {
-      std::uniform_int_distribution<> quantity1_dist{1, 10};
-      std::uniform_int_distribution<> quantity2_dist{10, 20};
-      std::uniform_int_distribution<> quantity3_dist{20, 30};
+      auto quantity1_dist = std::uniform_int_distribution<>{1, 10};
+      auto quantity2_dist = std::uniform_int_distribution<>{10, 20};
+      auto quantity3_dist = std::uniform_int_distribution<>{20, 30};
       const auto quantity1 = quantity1_dist(random_engine);
       const auto quantity2 = quantity2_dist(random_engine);
       const auto quantity3 = quantity3_dist(random_engine);
@@ -419,7 +419,7 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
 
     case 20 - 1: {
       const auto* const color = colors.list[color_dist(random_engine)].text;
-      std::uniform_int_distribution<> date_diff_dist{0, 4};
+      auto date_diff_dist = std::uniform_int_distribution<>{0, 4};
       const auto diff = date_diff_dist(random_engine);
       const auto begin_date = date_interval(boost::gregorian::date{1993, 01, 01}, diff, DatetimeComponent::Year);
       const auto end_date = date_interval(begin_date, 1, DatetimeComponent::Year);
@@ -454,14 +454,14 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
     }
 
     default:
-      Fail("There are only 22 TPC-H queries");
+      Fail("There are only 22 TPC-H queries.");
   }
 
   return _substitute_placeholders(item_id, parameters);
 }  // NOLINT
 
 std::string TPCHBenchmarkItemRunner::_build_deterministic_query(const BenchmarkItemID item_id) {
-  DebugAssert(item_id < 22, "There are only 22 TPC-H queries");
+  DebugAssert(item_id < 22, "There are only 22 TPC-H queries.");
 
   if (item_id + 1 == 15) {
     // Generating TPC-H Query 15 by hand
@@ -477,7 +477,7 @@ std::string TPCHBenchmarkItemRunner::_build_deterministic_query(const BenchmarkI
   // Stores how the parameters (the ? in the query) should be replaced. These values are examples for the queries. Most
   // of them use the verification parameters given in the TPC-H specification for the respective query. A few are
   // modified so that we get results even for a small scale factor.
-  static std::vector<std::vector<std::string>> parameter_values = {
+  static auto parameter_values = std::vector<std::vector<std::string>>{
       {"'1998-09-02'"},
       {"15", "'%BRASS'", "'EUROPE'", "'EUROPE'"},
       {"'BUILDING'", "'1995-03-15'", "'1995-03-15'"},
@@ -505,7 +505,7 @@ std::string TPCHBenchmarkItemRunner::_build_deterministic_query(const BenchmarkI
 }
 
 std::string TPCHBenchmarkItemRunner::item_name(const BenchmarkItemID item_id) const {
-  Assert(item_id < 22u, "item_id out of range");
+  Assert(item_id < 22u, "item_id out of range.");
   return std::string("TPC-H ") + (item_id + 1 < 10 ? "0" : "") + std::to_string(item_id + 1);
 }
 
@@ -513,7 +513,7 @@ std::string TPCHBenchmarkItemRunner::_substitute_placeholders(const BenchmarkIte
                                                               const std::vector<std::string>& parameter_values) const {
   if (_use_prepared_statements) {
     // Join the parameter values for an "EXECUTE TPCHn VALUES (...)" string
-    std::stringstream sql;
+    auto sql = std::stringstream{};
     sql << "EXECUTE TPCH" << (item_id + 1) << " (" << boost::algorithm::join(parameter_values, ", ") << ")";
     return sql.str();
   }
@@ -525,7 +525,7 @@ std::string TPCHBenchmarkItemRunner::_substitute_placeholders(const BenchmarkIte
     boost::replace_first(query_template, "?", parameter_value);
   }
 
-  Assert(query_template.find('?') == std::string::npos, "Unreplaced Placeholder");
+  Assert(query_template.find('?') == std::string::npos, "Unreplaced Placeholder.");
 
   return query_template;
 }

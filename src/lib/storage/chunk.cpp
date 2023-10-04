@@ -22,19 +22,19 @@ Chunk::Chunk(Segments segments, const std::shared_ptr<MvccData>& mvcc_data,
              const std::optional<PolymorphicAllocator<Chunk>>& alloc, Indexes indexes)
     : _segments(std::move(segments)), _mvcc_data(mvcc_data), _indexes(std::move(indexes)) {
   DebugAssert(!_segments.empty(),
-              "Chunks without Segments are not legal, as the row count of such a Chunk cannot be determined");
+              "Chunks without segments are not legal, as the row count of such a chunk cannot be determined.");
 
   if constexpr (HYRISE_DEBUG) {
     const auto is_reference_chunk =
         !_segments.empty() ? std::dynamic_pointer_cast<ReferenceSegment>(_segments.front()) != nullptr : false;
 
     for (const auto& segment : _segments) {
-      Assert(segment, "Segment must not be nullptr");
+      Assert(segment, "Segment must not be nullptr.");
       Assert(!mvcc_data || !std::dynamic_pointer_cast<ReferenceSegment>(segment),
              "Chunks containing ReferenceSegments should not contain MvccData. They implicitly use the MvccData of the "
-             "referenced Table");
+             "referenced table.");
       Assert((std::dynamic_pointer_cast<ReferenceSegment>(segment) != nullptr) == is_reference_chunk,
-             "Chunk can either contain only ReferenceSegments or only non-ReferenceSegments");
+             "Chunk can either contain only ReferenceSegments or only non-ReferenceSegments.");
     }
   }
 
@@ -52,7 +52,7 @@ void Chunk::replace_segment(size_t column_id, const std::shared_ptr<AbstractSegm
 }
 
 void Chunk::append(const std::vector<AllTypeVariant>& values) {
-  DebugAssert(is_mutable(), "Can't append to immutable Chunk");
+  DebugAssert(is_mutable(), "Cannot append to immutable Chunk.");
 
   if (has_mvcc_data()) {
     // Make the row visible - mvcc_data has been pre-allocated
@@ -62,13 +62,13 @@ void Chunk::append(const std::vector<AllTypeVariant>& values) {
   // The added values, i.e., a new row, must have the same number of attributes as the table.
   DebugAssert((_segments.size() == values.size()),
               ("append: number of segments (" + std::to_string(_segments.size()) + ") does not match value list (" +
-               std::to_string(values.size()) + ")"));
+               std::to_string(values.size()) + ")."));
 
   auto segment_it = _segments.cbegin();
   auto value_it = values.begin();
   for (; segment_it != _segments.end(); segment_it++, value_it++) {
     const auto& base_value_segment = std::dynamic_pointer_cast<BaseValueSegment>(*segment_it);
-    DebugAssert(base_value_segment, "Can't append to segment that is not a ValueSegment");
+    DebugAssert(base_value_segment, "Cannot append to segment that is not a ValueSegment.");
     base_value_segment->append(*value_it);
   }
 }
@@ -112,7 +112,7 @@ void Chunk::finalize() {
   // Only perform the max_begin_cid check if it hasn't already been set.
   if (has_mvcc_data() && !_mvcc_data->max_begin_cid) {
     const auto chunk_size = size();
-    Assert(chunk_size > 0, "finalize() should not be called on an empty chunk");
+    Assert(chunk_size > 0, "finalize() should not be called on an empty chunk.");
     _mvcc_data->max_begin_cid = CommitID{0};
     for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
       _mvcc_data->max_begin_cid = std::max(*_mvcc_data->max_begin_cid, _mvcc_data->get_begin_cid(chunk_offset));
@@ -146,7 +146,7 @@ std::shared_ptr<AbstractChunkIndex> Chunk::get_index(const ChunkIndexType index_
 
 void Chunk::remove_index(const std::shared_ptr<AbstractChunkIndex>& index) {
   auto it = std::find(_indexes.cbegin(), _indexes.cend(), index);
-  DebugAssert(it != _indexes.cend(), "Trying to remove a non-existing index");
+  DebugAssert(it != _indexes.cend(), "Trying to remove a non-existing index.");
   _indexes.erase(it);
 }
 
@@ -183,7 +183,7 @@ bool Chunk::references_exactly_one_table() const {
 void Chunk::migrate(boost::container::pmr::memory_resource* memory_source) {
   // Migrating chunks with indexes is not implemented yet.
   if (!_indexes.empty()) {
-    Fail("Cannot migrate Chunk with Indexes.");
+    Fail("Cannot migrate chunk with indexes.");
   }
 
   _alloc = PolymorphicAllocator<size_t>(memory_source);
@@ -239,7 +239,7 @@ const std::optional<ChunkPruningStatistics>& Chunk::pruning_statistics() const {
 void Chunk::set_pruning_statistics(const std::optional<ChunkPruningStatistics>& pruning_statistics) {
   Assert(!is_mutable(), "Cannot set pruning statistics on mutable chunks.");
   Assert(!pruning_statistics || pruning_statistics->size() == static_cast<size_t>(column_count()),
-         "Pruning statistics must have same number of segments as Chunk");
+         "Pruning statistics must have same number of segments as chunk.");
 
   _pruning_statistics = pruning_statistics;
 }

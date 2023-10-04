@@ -45,7 +45,7 @@ BenchmarkConfig CLIConfigParser::parse_cli_options(const cxxopts::ParseResult& p
     }
   }
 
-  Assert(clients > 0, "Invalid value for --clients");
+  Assert(clients > 0, "Invalid value for --clients.");
 
   if (enable_scheduler && clients == 1) {
     std::cout << "\n\n- WARNING: You are running in multi-threaded (MT) mode but have set --clients=1.\n";

@@ -102,7 +102,7 @@ void print_table_key_constraints(const std::shared_ptr<const Table>& table, std:
   for (const auto& constraint : table_key_constraints) {
     stream << magic_enum::enum_name(constraint.key_type()) << "(";
     const auto& columns = constraint.columns();
-    Assert(!columns.empty(), "Did not expect useless constraint");
+    Assert(!columns.empty(), "Did not expect useless constraint.");
     const auto& last_column = *std::prev(columns.cend());
     for (auto column : columns) {
       stream << table->column_name(column);

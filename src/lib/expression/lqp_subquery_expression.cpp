@@ -19,7 +19,7 @@ LQPSubqueryExpression::LQPSubqueryExpression(
       lqp(init_lqp),
       parameter_ids(init_parameter_ids) {
   Assert(parameter_ids.size() == parameter_expressions.size(),
-         "Need exactly as many ParameterIDs as parameter Expressions");
+         "Need exactly as many ParameterIDs as parameter Expressions.");
 }
 
 size_t LQPSubqueryExpression::parameter_count() const {
@@ -27,7 +27,7 @@ size_t LQPSubqueryExpression::parameter_count() const {
 }
 
 std::shared_ptr<AbstractExpression> LQPSubqueryExpression::parameter_expression(const size_t parameter_idx) const {
-  Assert(parameter_idx < parameter_count(), "Parameter index out of range");
+  Assert(parameter_idx < parameter_count(), "Parameter index out of range.");
   return arguments[parameter_idx];
 }
 
@@ -60,13 +60,13 @@ std::string LQPSubqueryExpression::description(const DescriptionMode mode) const
 DataType LQPSubqueryExpression::data_type() const {
   const auto& output_expressions = lqp->output_expressions();
   Assert(output_expressions.size() == 1,
-         "Can only determine the DataType of SubqueryExpressions that return exactly one column");
+         "Can only determine the DataType of SubqueryExpressions that return exactly one column.");
   return output_expressions[0]->data_type();
 }
 
 bool LQPSubqueryExpression::_on_is_nullable_on_lqp(const AbstractLQPNode& /*node*/) const {
   Assert(lqp->output_expressions().size() == 1,
-         "Can only determine the nullability of SelectExpressions that return exactly one column");
+         "Can only determine the nullability of SelectExpressions that return exactly one column.");
   return lqp->is_column_nullable(ColumnID{0});
 }
 
@@ -76,7 +76,7 @@ bool LQPSubqueryExpression::is_correlated() const {
 
 bool LQPSubqueryExpression::_shallow_equals(const AbstractExpression& expression) const {
   DebugAssert(dynamic_cast<const LQPSubqueryExpression*>(&expression),
-              "Different expression type should have been caught by AbstractExpression::operator==");
+              "Different expression type should have been caught by AbstractExpression::operator==.");
   const auto& subquery_expression = static_cast<const LQPSubqueryExpression&>(expression);
   return *lqp == *subquery_expression.lqp && parameter_ids == subquery_expression.parameter_ids;
 }

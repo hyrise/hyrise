@@ -18,7 +18,7 @@ bool RowIDPosList::references_single_chunk() const {
             return row_id.chunk_id == common_chunk_id && row_id.chunk_offset != INVALID_CHUNK_OFFSET;
           });
         }(),
-        "RowIDPosList was marked as referencing a single chunk, but references more");
+        "RowIDPosList was marked as referencing a single chunk, but references more.");
   }
   return _references_single_chunk;
 }
@@ -26,8 +26,8 @@ bool RowIDPosList::references_single_chunk() const {
 ChunkID RowIDPosList::common_chunk_id() const {
   DebugAssert(references_single_chunk(),
               "Can only retrieve the common_chunk_id if the RowIDPosList is guaranteed to reference a single chunk.");
-  Assert(!empty(), "Cannot retrieve common_chunk_id of an empty chunk");
-  Assert((*this)[0].chunk_id != INVALID_CHUNK_ID, "RowIDPosList that references_single_chunk must not contain NULL");
+  Assert(!empty(), "Cannot retrieve common_chunk_id of an empty chunk.");
+  Assert((*this)[0].chunk_id != INVALID_CHUNK_ID, "RowIDPosList that references_single_chunk must not contain NULL.");
   return (*this)[0].chunk_id;
 }
 

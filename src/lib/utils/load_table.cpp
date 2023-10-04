@@ -19,7 +19,7 @@ namespace hyrise {
 std::shared_ptr<Table> create_table_from_header(std::ifstream& infile, ChunkOffset chunk_size) {
   std::string line;
   std::getline(infile, line);
-  Assert(line.find('\r') == std::string::npos, "Windows encoding is not supported, use dos2unix");
+  Assert(line.find('\r') == std::string::npos, "Windows encoding is not supported, use dos2unix.");
   std::vector<std::string> column_names = split_string_by_delimiter(line, '|');
   std::getline(infile, line);
   std::vector<std::string> column_types = split_string_by_delimiter(line, '|');
@@ -38,7 +38,7 @@ std::shared_ptr<Table> create_table_from_header(std::ifstream& infile, ChunkOffs
   for (auto index = size_t{0}; index < column_name_count; ++index) {
     const auto data_type = data_type_to_string.right.find(column_types[index]);
     Assert(data_type != data_type_to_string.right.end(),
-           std::string("Invalid data type ") + column_types[index] + " for column " + column_names[index]);
+           std::string("Invalid data type ") + column_types[index] + " for column " + column_names[index] + ".");
     column_definitions.emplace_back(column_names[index], data_type->second, column_nullable[index]);
   }
 
@@ -47,14 +47,14 @@ std::shared_ptr<Table> create_table_from_header(std::ifstream& infile, ChunkOffs
 
 std::shared_ptr<Table> create_table_from_header(const std::string& file_name, ChunkOffset chunk_size) {
   std::ifstream infile(file_name);
-  Assert(infile.is_open(), "load_table: Could not find file " + file_name);
+  Assert(infile.is_open(), "load_table: Could not find file '" + file_name + "'.");
   return create_table_from_header(infile, chunk_size);
 }
 
 std::shared_ptr<Table> load_table(const std::string& file_name, ChunkOffset chunk_size,
                                   FinalizeLastChunk finalize_last_chunk) {
   std::ifstream infile(file_name);
-  Assert(infile.is_open(), "load_table: Could not find file " + file_name);
+  Assert(infile.is_open(), "load_table: Could not find file '" + file_name + "'.");
 
   auto table = create_table_from_header(infile, chunk_size);
 

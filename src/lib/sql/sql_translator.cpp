@@ -270,7 +270,7 @@ FrameBound translate_frame_bound(const hsql::FrameBound& hsql_frame_bound) {
   }
 
   const auto offset = hsql_frame_bound.offset;
-  Assert(offset >= 0, "Expected non-negative offset. Bug in sqlparser?");
+  Assert(offset >= 0, "Expected non-negative offset. Bug in the SQL parser?");
 
   return FrameBound{static_cast<uint64_t>(offset), bound_type, hsql_frame_bound.unbounded};
 }
@@ -352,9 +352,9 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_statement(const hsql:
     case hsql::kStmtAlter:
     case hsql::kStmtError:
     case hsql::kStmtRename:
-      FailInput("Statement type not supported");
+      FailInput("Statement type not supported.");
   }
-  Fail("Invalid enum value");
+  Fail("Invalid enum value.");
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_select_statement(const hsql::SelectStatement& select) {
@@ -372,8 +372,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_select_statement(cons
   // 11. UNION/INTERSECT/EXCEPT ORDER BY clause
   // 12. UNION/INTERSECT/EXCEPT LIMIT clause
 
-  AssertInput(select.selectList, "SELECT list needs to exist");
-  AssertInput(!select.selectList->empty(), "SELECT list needs to have entries");
+  AssertInput(select.selectList, "SELECT list needs to exist.");
+  AssertInput(!select.selectList->empty(), "SELECT list needs to have entries.");
 
   // Translate WITH clause
   if (select.withDescriptions) {
@@ -446,7 +446,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_select_statement(cons
   if (select.setOperations) {
     for (const auto* const set_operator : *select.setOperations) {
       // Currently, only the SQL translation of intersect and except is implemented.
-      AssertInput(set_operator->setType != hsql::kSetUnion, "Union Operations are currently not supported");
+      AssertInput(set_operator->setType != hsql::kSetUnion, "Union Operations are currently not supported.");
       _translate_set_operation(*set_operator);
 
       // In addition to local ORDER BY and LIMIT clauses, the result of the set operation(s) may have final clauses,
