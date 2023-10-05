@@ -168,15 +168,19 @@ size_t WindowFunctionExpression::_shallow_hash() const {
   return boost::hash_value(static_cast<size_t>(window_function));
 }
 
-bool WindowFunctionExpression::_on_is_nullable_on_lqp(const AbstractLQPNode& /*lqp*/) const {
+bool WindowFunctionExpression::_on_is_nullable_on_lqp(const AbstractLQPNode& lqp) const {
   // Pure window functions always return a value.
   if (!aggregate_functions.contains(window_function)) {
     return false;
   }
 
   // Aggregates (except COUNT and COUNT DISTINCT) will return NULL when executed on an empty group. Thus, they are
-  // always nullable.
-  return window_function != WindowFunction::Count && window_function != WindowFunction::CountDistinct;
+  // always nullable if the input expressions are nullable.
+  if (window_function == WindowFunction::Count || window_function == WindowFunction::CountDistinct) {
+    return false;
+  }
+
+  return argument()->is_nullable_on_lqp(*lqp);
 }
 
 std::ostream& operator<<(std::ostream& stream, const WindowFunction window_function) {
