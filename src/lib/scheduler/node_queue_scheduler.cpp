@@ -105,7 +105,7 @@ void NodeQueueScheduler::wait_for_all_tasks() {
     // seconds). This wait time allows us to run TPC-H with scale factor 1000 and two cores without issues, which we
     // consider acceptable right now. If large scale factors or slower data access paths (e.g., data on secondary
     // storage) become relevant, the current mechanism and general query processing probably need to be re-evaluated
-    // (e.g., ensure operators split their work into more, but smaller tasks).
+    // (e.g., ensure operators split their work into smaller tasks).
     if (progressless_loop_count >= 360'000) {
       const auto remaining_task_count = _task_counter - num_finished_tasks;
       auto message = std::stringstream{};
