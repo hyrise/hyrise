@@ -130,8 +130,8 @@ def main():
     console.expect("0 rows total")
 
     # Test TPC-C generation. We also tried different benchmarks here. SSB and JCC-H are not thread-safe due to the
-    # external data generator, leading to problems since this test is executed multiple times. TPC-DS data generation is
-    # quite slow on SF 1 when the CI system is under pressure, causing timeouts regularly.
+    # external data generator, leading to problems since this test is executed multiple times. We consider TPC-DS data
+    # generation too slow to be run regularly within the CI pipeline.
     console.sendline("generate_tpcc 1")
     console.expect("Generating tables done", timeout=600)
     console.sendline("select * from meta_tables")

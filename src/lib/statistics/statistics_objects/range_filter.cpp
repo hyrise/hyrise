@@ -11,6 +11,7 @@
 #include "resolve_type.hpp"
 #include "statistics/statistics_objects/min_max_filter.hpp"
 #include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 
@@ -255,52 +256,65 @@ bool RangeFilter<T>::does_not_contain(const PredicateCondition predicate_conditi
     case PredicateCondition::BetweenUpperExclusive:
     case PredicateCondition::BetweenExclusive: {
       // There are two scenarios where a between predicate can be pruned:
-      //    (i) Both bounds are "outside" (not spanning) the segment's value range (i.e., either both are smaller than
-      //        the minimum or both are larger than the maximum).
-      //   (ii) Both bounds are within the same gap.
+      //     - Both bounds are "outside" (not spanning) the segment's value range (i.e., either both are smaller than
+      //       the minimum or both are larger than the maximum).
+      //     - Both bounds are within the same gap.
 
       Assert(variant_value2, "Between predicate needs two values.");
       const auto value2 = boost::get<T>(*variant_value2);
-
-      // a BETWEEN 5 AND 4 will always be empty.
-      if (value2 < value) {
-        return true;
-      }
-
       const auto is_lower_inclusive = is_lower_inclusive_between(predicate_condition);
       const auto is_upper_inclusive = is_upper_inclusive_between(predicate_condition);
 
-      // Smaller than the segment's minimum.
+      // "X BETWEEN Y AND Z" is equivalent to "X>=Y AND X<=Z" [SQL-92]. Thus, `a BETWEEN 5 AND 4` will always be empty.
+      const auto is_inclusive = is_lower_inclusive && is_lower_inclusive;
+      if (is_inclusive ? value2 < value : value2 <= value) {
+        return true;
+      }
+
+
+      // For the following code, consider the running example of a RangeFilter with two ranges: [2, 4] [7, 10].
+      // The predicate is `a BETWEEN x AND y`.
+      // Case (i): y is less than the segment's minimum. If y < 2 (or <= 2 for upper exclusive predicate), the predicate
+      //           cannot match.
       const auto min = ranges.front().first;
       const auto is_below_min = is_upper_inclusive_between(predicate_condition) ? (value2 < min) : (value2 <= min);
       if (is_below_min) {
         return true;
       }
 
-      // Larger than the segment's maximum.
+      // Case (ii): x is greater than than the segment's maximum. If x > 10 (or >= 10 for lower exclusive predicate),
+      //            the predicate cannot match.
       const auto max = ranges.back().second;
       const auto is_above_max = is_lower_inclusive_between(predicate_condition) ? (value > max) : (value >= max);
       if (is_above_max) {
         return true;
       }
 
-      // Find the range that starts at an element >= value2.
+      // Case (iii): The predicate can match the segment's values. However, the predicate values can be exactly in a gap
+      //             between two ranges (e.g., a BETWEEN 5 AND 6).
+      //             We know that y >(=) 2. Thus, we find the range that starts at an element >= y. If we cannot find
+      //             such a range, y is greater than the maximum (and thus, in a gap).
       const auto upper_bound_range =
           std::lower_bound(ranges.cbegin(), ranges.cend(), value2,
                            [](const auto& range, const auto compare_value) { return range.first < compare_value; });
 
-      // If we find such a range, check for inclusive case.
+      // If we find a range, y can still be the exact range border (e.g., y = 7). For upper inclusive predicates, there
+      // can be matches if this is the case.
       auto upper_bound_in_gap =
           upper_bound_range == ranges.cend() || !is_upper_inclusive || upper_bound_range->first > value2;
       if (!upper_bound_in_gap) {
         return false;
       }
 
-      // If value2 is in a gap, there must be a previous range since we checked before that value2 is not smaller than
-      // the min.
+      // If y is in a gap, there must be a previous range since we checked before that y is not smaller than the min.
       Assert(upper_bound_range != ranges.begin(), "Out-of-range between predicate should have been caught before.");
 
-      // Check if the lower bound is in the same gap.
+      // Check if x is in the same gap as y. We do this by comparing x with the upper border of the range before the
+      // one we found above. If x >= 4 (or > 4 for lower inclusive), the predicate cannot match. Else, x is in the range
+      // and the predicate can match.
+      // Note that this check also covers the case where y is in a range. E.g., for y = 8, our search for y would point
+      // to the ranges' end. We already ensured that x <= y. The previous range is [7, 10], with an upper border greater
+      // than x. Thus, there can be matches.
       const auto previous_range = std::prev(upper_bound_range);
       return is_lower_inclusive ? previous_range->second < value : previous_range->second <= value;
     }
