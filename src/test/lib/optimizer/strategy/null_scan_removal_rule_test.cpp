@@ -102,4 +102,18 @@ TEST_F(NullScanRemovalRuleTest, TableColumnDefinitionIsNotNullable) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
+TEST_F(NullScanRemovalRuleTest, ColumnBecomesNullable) {
+  // clang-format off
+  const auto input_lqp =
+  PredicateNode::make(is_not_null_(table_node_column),
+    JoinNode::make(JoinMode::FullOuter, equals_(table_node_column, mock_node_column),
+      mock_node,
+      table_node));
+  // clang-format on
+  const auto expected_lqp = input_lqp->deep_copy();
+  const auto actual_lqp = apply_rule(rule, input_lqp);
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
 }  // namespace hyrise

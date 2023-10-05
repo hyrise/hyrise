@@ -260,8 +260,8 @@ std::vector<std::shared_ptr<AbstractExpression>> AbstractLQPNode::output_express
 }
 
 std::optional<ColumnID> AbstractLQPNode::find_column_id(const AbstractExpression& expression) const {
-  const auto& expressions_of_output = output_expressions();
-  return find_expression_idx(expression, expressions_of_output);
+  const auto output_expressions = this->output_expressions();
+  return find_expression_idx(expression, output_expressions);
 }
 
 ColumnID AbstractLQPNode::get_column_id(const AbstractExpression& expression) const {
