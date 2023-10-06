@@ -20,11 +20,14 @@ class ImmediateExecutionScheduler : public AbstractScheduler {
 
   const std::vector<std::shared_ptr<TaskQueue>>& queues() const override;
 
+  const std::vector<NodeID>& prioritized_queue_ids(NodeID node_id) const override;
+
   void schedule(std::shared_ptr<AbstractTask> task, NodeID preferred_node_id = CURRENT_NODE_ID,
                 SchedulePriority priority = SchedulePriority::Default) override;
 
  private:
   std::vector<std::shared_ptr<TaskQueue>> _queues = std::vector<std::shared_ptr<TaskQueue>>{};
+  std::vector<NodeID> _queue_order = std::vector<NodeID>{0};
 };
 
 }  // namespace hyrise

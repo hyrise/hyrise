@@ -53,6 +53,7 @@ void NodeQueueScheduler::begin() {
     // Tracked per node as core restrictions can lead to unbalanced core counts.
     _workers_per_node.emplace_back(topology_node.cpus.size());
   }
+  _prioritized_numa_queue_ids = numa_utils::make_node_priority_matrix(numa_utils::get_distance_matrix());
 
   _active = true;
 
@@ -159,6 +160,12 @@ void NodeQueueScheduler::schedule(std::shared_ptr<AbstractTask> task, NodeID pre
   DebugAssert((static_cast<size_t>(node_id_for_queue) < _queues.size()),
               "Node ID is not within range of available nodes.");
   _queues[node_id_for_queue]->push(task, priority);
+}
+
+const std::vector<NodeID>& NodeQueueScheduler::prioritized_queue_ids(NodeID node_id) const {
+  DebugAssert(node_id < _prioritized_numa_queue_ids.size(),
+              "node_id " + std::to_string(node_id) + " is out of bounds.");
+  return _prioritized_numa_queue_ids[node_id];
 }
 
 NodeID NodeQueueScheduler::determine_queue_id(const NodeID preferred_node_id) const {

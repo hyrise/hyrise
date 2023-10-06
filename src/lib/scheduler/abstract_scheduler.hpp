@@ -71,6 +71,10 @@ class AbstractScheduler : public Noncopyable {
 
   virtual const std::vector<std::shared_ptr<TaskQueue>>& queues() const = 0;
 
+  // Returns a vector containing indices for all tasks queues, prioritized by their actual node's NUMA distance to
+  // the given node_id.
+  virtual const std::vector<NodeID>& prioritized_queue_ids(NodeID node_id) const = 0;
+
   virtual void schedule(std::shared_ptr<AbstractTask> task, NodeID preferred_node_id = CURRENT_NODE_ID,
                         SchedulePriority priority = SchedulePriority::Default) = 0;
 

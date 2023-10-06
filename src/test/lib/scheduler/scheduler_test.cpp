@@ -157,7 +157,7 @@ TEST_F(SchedulerTest, Grouping) {
   auto output = std::vector<size_t>{};
   auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
 
-  constexpr auto TASK_COUNT = 50;
+  constexpr auto TASK_COUNT = 60;
 
   for (auto task_id = 0; task_id < TASK_COUNT; ++task_id) {
     tasks.emplace_back(std::make_shared<JobTask>([&output, task_id] { output.emplace_back(task_id); }));

@@ -79,7 +79,9 @@ void Worker::_work(const AllowSleep allow_sleep) {
 
   if (!task) {
     // Simple work stealing without explicitly transferring data between nodes.
-    for (const auto& queue : Hyrise::get().scheduler()->queues()) {
+    const auto& queues = Hyrise::get().scheduler()->queues();
+    for (const auto queue_id : Hyrise::get().scheduler()->prioritized_queue_ids(_queue->node_id())) {
+      const auto& queue = queues[queue_id];
       if (queue == _queue) {
         continue;
       }
