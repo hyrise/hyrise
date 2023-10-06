@@ -292,8 +292,8 @@ bool RangeFilter<T>::does_not_contain(const PredicateCondition predicate_conditi
 
       // Case (iii): The predicate can match the segment's values. However, the predicate values can be exactly in a gap
       //             between two ranges (e.g., a BETWEEN 5 AND 6).
-      //             We know that y >(=) 2. Thus, we find the range that starts at an element >= y. If we cannot find
-      //             such a range, y is greater than the maximum (and thus, in a gap).
+      //             We know that y >(=) 2. Thus, we find the range whose minimum is >= y. If we cannot find such a
+      //             range, y is greater than the segment's maximum (and thus, in a gap).
       const auto upper_bound_range =
           std::lower_bound(ranges.cbegin(), ranges.cend(), value2,
                            [](const auto& range, const auto compare_value) { return range.first < compare_value; });
