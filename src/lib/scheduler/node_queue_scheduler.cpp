@@ -75,20 +75,21 @@ void NodeQueueScheduler::begin() {
 }
 
 void NodeQueueScheduler::wait_for_all_tasks() {
-  auto progressless_loop_count = size_t{0};
-  auto previous_finished_task_count = TaskID::base_type{0};
-
   // To check if the system is still processing incoming jobs, we store the previous task count and loop-wait until no
   // new jobs are created anymore.
   auto previous_task_count = TaskID::base_type{_task_counter.load()};
 
+  auto progressless_loop_count = size_t{0};
+  auto previous_finished_task_count = TaskID::base_type{0};
+
   while (true) {
-    if (_task_counter > previous_task_count) {
+    const auto current_task_count = _task_counter.load();
+    if (current_task_count > previous_task_count) {
       // System is still processing new tasks (can happen when, e.g., currently running tasks schedule new tasks):
       // loop-wait until task counter is stable (this check can still fail in edge cases, but we make the simple
       // assumption that nobody calls wait_for_all_tasks() if there is still significant processing ongoing).
+      previous_task_count = current_task_count;
       std::this_thread::sleep_for(std::chrono::milliseconds(10));
-      previous_task_count = _task_counter;
       continue;
     }
 
