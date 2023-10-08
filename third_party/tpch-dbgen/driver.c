@@ -55,7 +55,8 @@
 
 #define DECLARER				/* EXTERN references get defined here */
 #define NO_FUNC (int (*) ()) NULL	/* to clean up tdefs */
-#define NO_LFUNC (long (*) ()) NULL		/* to clean up tdefs */
+// HYRISE: Add parameter prototype (C2x compatibility).
+#define NO_LFUNC (long (*) (int, DSS_HUGE)) NULL		/* to clean up tdefs */
 
 #include "config.h"
 #include "release.h"
@@ -154,16 +155,17 @@ static int bTableSet = 0;
 /*
 * flat file print functions; used with -F(lat) option
 */
-int pr_cust (customer_t * c, int mode);
-int pr_line (order_t * o, int mode);
-int pr_order (order_t * o, int mode);
-int pr_part (part_t * p, int mode);
-int pr_psupp (part_t * p, int mode);
-int pr_supp (supplier_t * s, int mode);
-int pr_order_line (order_t * o, int mode);
-int pr_part_psupp (part_t * p, int mode);
-int pr_nation (code_t * c, int mode);
-int pr_region (code_t * c, int mode);
+// HYRISE: change first parameter to void pointer so the tdef loader member can have a function prototype (C2x compatibility).
+int pr_cust (void * t, int mode);
+int pr_line (void * t, int mode);
+int pr_order (void * t, int mode);
+int pr_part (void * t, int mode);
+int pr_psupp (void * t, int mode);
+int pr_supp (void * t, int mode);
+int pr_order_line (void * t, int mode);
+int pr_part_psupp (void * t, int mode);
+int pr_nation (void * t, int mode);
+int pr_region (void * t, int mode);
 
 /*
 * seed generation functions; used with '-O s' option

@@ -98,6 +98,7 @@ class NodeQueueScheduler : public AbstractScheduler {
   std::shared_ptr<UidAllocator> _worker_id_allocator;
   std::vector<std::shared_ptr<TaskQueue>> _queues;
   std::vector<std::shared_ptr<Worker>> _workers;
+  std::vector<NodeID> _active_nodes;
 
   std::atomic_bool _active{false};
   std::atomic_int64_t _active_worker_count{0};

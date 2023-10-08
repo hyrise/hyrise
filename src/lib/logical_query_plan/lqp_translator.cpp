@@ -67,11 +67,20 @@
 #include "stored_table_node.hpp"
 #include "union_node.hpp"
 #include "update_node.hpp"
+#include "utils/map_prunable_subquery_predicates.hpp"
+#include "utils/pruning_utils.hpp"
 
 namespace hyrise {
 
 std::shared_ptr<AbstractOperator> LQPTranslator::translate_node(const std::shared_ptr<AbstractLQPNode>& node) const {
-  return _translate_node_recursively(node);
+  const auto pqp = _translate_node_recursively(node);
+
+  // StoredTableNodes can store references to PredicateNodes as prunable subquery predicates (see get_table.hpp for
+  // details). We must assign the TableScans translated from these PredicateNodes after translating the entire LQP (see
+  // map_prunable_subquery_predicates.hpp).
+  map_prunable_subquery_predicates(_operator_by_lqp_node);
+
+  return pqp;
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_node_recursively(

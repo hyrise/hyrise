@@ -216,6 +216,7 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   std::unique_ptr<AbstractOperatorPerformanceData> performance_data;
 
  protected:
+  friend class OperatorTaskTest;
   // abstract method to actually execute the operator
   // execute and get_output are split into two methods to allow for easier
   // asynchronous execution
