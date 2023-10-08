@@ -80,7 +80,7 @@ void Worker::_work(const AllowSleep allow_sleep) {
   if (!task) {
     // Simple work stealing without explicitly transferring data between nodes.
     for (const auto& queue : Hyrise::get().scheduler()->queues()) {
-      if (queue == _queue) {
+      if (!queue || queue == _queue) {
         continue;
       }
 
