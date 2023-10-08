@@ -52,6 +52,9 @@ Hyrise is developed for Linux (preferrably the most current Ubuntu version) and 
 ## Supported Benchmarks
 We support a number of benchmarks out of the box. This makes it easy to generate performance numbers without having to set up the data generation, loading CSVs, and finding a query runner. You can run them using the `./hyriseBenchmark*` binaries.
 
+Note that the query plans are generated in our CI pipeline with possibly many stages in parallel and different CI runs
+might be executed on different machines. Reported runtimes are not to be taken as solid benchmark performance numbers.
+
 | Benchmark   | Notes                                                                                                                    |
 | ----------- | ------------------------------------------------------------------------------------------------------------------------ |
 | TPC-DS      | [Query Plans](https://hyrise-ci.epic-hpi.de/job/hyrise/job/hyrise/job/master/lastStableBuild/artifact/query_plans/tpcds) |
