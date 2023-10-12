@@ -46,8 +46,6 @@ struct PageID {
     return _valid;
   }
 
-  auto operator<=>(const PageID&) const = default;
-
   PageID() = default;
 
   constexpr PageID(const PageSizeType size_type, const PageIDType index, bool valid = true)
