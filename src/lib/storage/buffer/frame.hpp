@@ -88,8 +88,9 @@ class Frame final {
   static constexpr uint64_t DIRTY_MASK       = 0x0000F00000000000;
   static constexpr uint64_t STATE_MASK       = 0xFFFF000000000000;
   static constexpr uint64_t VERSION_MASK     = 0x000000FFFFFFFFFF;
-  static_assert((NODE_ID_MASK ^ DIRTY_MASK ^ STATE_MASK ^ VERSION_MASK) == std::numeric_limits<StateVersionType>::max(), "The given masks do not cover the whole StateVersionType");
   // clang-format on
+  static_assert((NODE_ID_MASK ^ DIRTY_MASK ^ STATE_MASK ^ VERSION_MASK) == std::numeric_limits<StateVersionType>::max(),
+                "The given masks do not cover the whole StateVersionType");
 
   static constexpr uint64_t NUM_BITS = sizeof(StateVersionType) * CHAR_BIT;
   static constexpr uint64_t NODE_ID_SHIFT = std::countr_zero(NODE_ID_MASK);
