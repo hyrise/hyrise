@@ -22,18 +22,6 @@ ValidationResult UccValidationRule::_on_validate(const AbstractDependencyCandida
   resolve_data_type(table->column_data_type(column_id), [&](const auto data_type_t) {
     using ColumnDataType = typename decltype(data_type_t)::type;
 
-    // Utilize efficient check for uniqueness inside each dictionary segment for a potential early out.
-    const auto& column_statistics = ValidationUtils<ColumnDataType>::collect_column_statistics(table, column_id);
-    if (column_statistics.all_segments_dictionary) {
-      if (!column_statistics.all_segments_unique) {
-        status = ValidationStatus::Invalid;
-        return;
-      } else if (column_statistics.segments_disjoint) {
-        status = ValidationStatus::Valid;
-        return;
-      }
-    }
-
     // If we reach here, we have to run the more expensive cross-segment duplicate check.
     if (!_uniqueness_holds_across_segments<ColumnDataType>(table, column_id)) {
       status = ValidationStatus::Invalid;

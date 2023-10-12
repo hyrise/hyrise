@@ -112,80 +112,10 @@ ValidationResult IndValidationRule::_on_validate(const AbstractDependencyCandida
     const auto& included_min_max =
         ValidationUtils<ColumnDataType>::get_column_min_max_value(included_table, included_column_id);
 
-    if (!included_min_max) {
       result.status = perform_set_based_inclusion_check<ColumnDataType>(including_table, including_column_id,
                                                                         included_table, included_column_id);
       return;
-    }
 
-    if constexpr (std::is_integral_v<ColumnDataType>) {
-      auto including_unique_by_ucc = false;
-      auto including_continuous = false;
-
-      const auto& key_constraints = including_table->soft_key_constraints();
-      for (const auto& key_constraint : key_constraints) {
-        // Already checked that min/max values match. If unique, then IND must be valid.
-        if (key_constraint.columns().size() != 1 || *key_constraint.columns().cbegin() != including_column_id) {
-          continue;
-        }
-        including_unique_by_ucc = true;
-        const auto& including_min_max =
-            ValidationUtils<ColumnDataType>::get_column_min_max_value(including_table, including_column_id);
-        if (!including_min_max) {
-          result.status = perform_set_based_inclusion_check<ColumnDataType>(including_table, including_column_id,
-                                                                            included_table, included_column_id);
-          return;
-        }
-
-        const auto min = including_min_max->first;
-        const auto max = including_min_max->second;
-        if (min > included_min_max->first || max < included_min_max->second) {
-          result.status = ValidationStatus::Invalid;
-          return;
-        }
-
-        const auto domain = max - min;
-        including_continuous = static_cast<uint64_t>(domain) == including_table->row_count() - 1;
-      }
-
-      auto including_unique_by_statistics = false;
-      if (!including_unique_by_ucc) {
-        const auto& including_statistics =
-            ValidationUtils<ColumnDataType>::collect_column_statistics(including_table, including_column_id);
-        if (including_statistics.min && including_statistics.max) {
-          const auto min = *including_statistics.min;
-          const auto max = *including_statistics.max;
-          if (min > included_min_max->first || max < included_min_max->second) {
-            result.status = ValidationStatus::Invalid;
-            return;
-          }
-
-          including_unique_by_statistics =
-              including_statistics.all_segments_unique && including_statistics.segments_disjoint;
-          including_continuous = including_statistics.segments_continuous;
-          if (including_unique_by_statistics) {
-            result.constraints[including_table] = std::make_shared<TableKeyConstraint>(
-                std::set<ColumnID>{including_column_id}, KeyConstraintType::UNIQUE);
-          }
-        }
-      }
-
-      if ((including_unique_by_ucc || including_unique_by_statistics) && including_continuous) {
-        result.status = ValidationStatus::Valid;
-        return;
-      }
-    } else {
-      const auto& including_min_max =
-          ValidationUtils<ColumnDataType>::get_column_min_max_value(including_table, including_column_id);
-      if (including_min_max && (including_min_max->first > included_min_max->first ||
-                                including_min_max->second < included_min_max->second)) {
-        result.status = ValidationStatus::Invalid;
-        return;
-      }
-    }
-
-    result.status = perform_set_based_inclusion_check<ColumnDataType>(including_table, including_column_id,
-                                                                      included_table, included_column_id);
   });
 
   if (result.status == ValidationStatus::Valid) {
