@@ -151,7 +151,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_node_recursively(
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_by_node_type(
     LQPNodeType type, const std::shared_ptr<AbstractLQPNode>& node) const {
   switch (type) {
-    // clang-format off
+      // clang-format off
     case LQPNodeType::Alias:              return _translate_alias_node(node);
     case LQPNodeType::StoredTable:        return _translate_stored_table_node(node);
     case LQPNodeType::Predicate:          return _translate_predicate_node(node);

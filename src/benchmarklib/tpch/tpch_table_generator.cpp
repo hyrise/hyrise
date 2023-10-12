@@ -97,7 +97,7 @@ void dbgen_cleanup() {
     for (size_t idx = 0; idx < TOTDATE; ++idx) {
       free((void*)asc_date[idx]);  // NOLINT
     }
-    free(asc_date);                // NOLINT
+    free(asc_date);  // NOLINT
   }
   asc_date = nullptr;
 }
