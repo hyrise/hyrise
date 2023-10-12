@@ -44,3 +44,5 @@ default.profraw
 tpcc_cached_tables/
 tpcds_cached_tables/
 tpch_cached_tables/
+
+buffer_manager_data

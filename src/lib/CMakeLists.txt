@@ -434,6 +434,8 @@ set(
     storage/buffer/frame.cpp
     storage/buffer/frame.hpp
     storage/buffer/page_id.hpp
+    storage/buffer/persistence_manager.cpp
+    storage/buffer/persistence_manager.hpp
     storage/chunk.cpp
     storage/chunk.hpp
     storage/chunk_encoder.cpp
