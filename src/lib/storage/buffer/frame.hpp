@@ -1,8 +1,9 @@
 #pragma once
 
+#include "types.hpp"
+
 #include <atomic>
 #include <bit>
-#include "types.hpp"
 
 namespace hyrise {
 
