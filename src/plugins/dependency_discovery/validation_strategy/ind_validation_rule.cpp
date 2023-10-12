@@ -108,10 +108,6 @@ ValidationResult IndValidationRule::_on_validate(const AbstractDependencyCandida
   auto result = ValidationResult{ValidationStatus::Uncertain};
   resolve_data_type(included_table->column_data_type(included_column_id), [&](const auto data_type_t) {
     using ColumnDataType = typename decltype(data_type_t)::type;
-
-    const auto& included_min_max =
-        ValidationUtils<ColumnDataType>::get_column_min_max_value(included_table, included_column_id);
-
       result.status = perform_set_based_inclusion_check<ColumnDataType>(including_table, including_column_id,
                                                                         included_table, included_column_id);
       return;
