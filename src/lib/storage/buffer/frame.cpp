@@ -82,7 +82,6 @@ bool Frame::try_lock_shared(Frame::StateVersionType old_state_and_version) {
         old_state_and_version, update_state_with_same_version(old_state_and_version, old_state + 1));
   }
   if (old_state == MARKED) {
-    // TODO
     return _state_and_version.compare_exchange_strong(old_state_and_version,
                                                       update_state_with_same_version(old_state_and_version, 1));
   }
