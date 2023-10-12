@@ -28,7 +28,7 @@ void Frame::set_node_id(const NodeID node_id) {
 }
 
 void Frame::set_dirty(const bool new_dirty) {
-  // TODO: DebugAssert(state(_state_and_version.load()) == LOCKED, "Frame must be locked to set dirty flag.");
+  DebugAssert(state(_state_and_version.load()) == LOCKED, "Frame must be locked to set dirty flag.");
   Frame::StateVersionType dirty = new_dirty;
   _state_and_version.fetch_or(DIRTY_MASK & (dirty << DIRTY_SHIFT));
   DebugAssert(is_dirty() == new_dirty, "Setting dirty didnt work");
@@ -45,8 +45,8 @@ void Frame::unlock_exclusive_and_set_evicted() {
 }
 
 bool Frame::try_mark(Frame::StateVersionType old_state_and_version) {
-  // DebugAssert(state(_state_and_version.load()) == UNLOCKED,
-  //             "Frame must be unlocked to mark, instead: " + std::to_string(state(_state_and_version.load())));
+  DebugAssert(state(_state_and_version.load()) == UNLOCKED,
+              "Frame must be unlocked to mark, instead: " + std::to_string(state(_state_and_version.load())));
   return _state_and_version.compare_exchange_strong(old_state_and_version,
                                                     update_state_with_same_version(old_state_and_version, MARKED));
 }
