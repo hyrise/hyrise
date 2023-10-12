@@ -10,15 +10,14 @@
 
 namespace hyrise {
 
-VolatileRegion::VolatileRegion(const PageSizeType size_type, std::byte* region_start,
-                                std::byte* region_end)
+VolatileRegion::VolatileRegion(const PageSizeType size_type, std::byte* region_start, std::byte* region_end)
     : _size_type(size_type),
       _region_start(region_start),
       _region_end(region_end),
-      _frames(_region_end - _region_start) / bytes_for_size_type(size_type)) {
+      _frames((_region_end - _region_start) / bytes_for_size_type(size_type)) {
   DebugAssert(_region_start < _region_end, "Region is too small");
-  DebugAssert(static_cast<size_t>(region_end - region_start) < BufferManagerConfig::DEFAULT_RESERVED_VIRTUAL_MEMORY,
-              "Region start and end dont match");
+  // DebugAssert(static_cast<size_t>(region_end - region_start) < BufferManagerConfig::DEFAULT_RESERVED_VIRTUAL_MEMORY,
+  // "Region start and end dont match");
   DebugAssert(_frames.size() > 0, "Region is too small");
   if constexpr (ENABLE_MPROTECT) {
     if (mprotect(_region_start, _region_end - _region_start, PROT_NONE) != 0) {

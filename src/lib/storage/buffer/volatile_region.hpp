@@ -24,8 +24,7 @@ class VolatileRegion final : public Noncopyable {
   constexpr static bool ENABLE_MPROTECT = false;
 
   // Create a VolatileRegion in a virtual memory region for a givem size_type. The approximate_size_bytes defines a initial number of frames to be created.
-  VolatileRegion(const PageSizeType size_type,  std::byte* region_start,
-                                std::byte* region_end);
+  VolatileRegion(const PageSizeType size_type, std::byte* region_start, std::byte* region_end);
 
   // Get the frame of a given page
   Frame* get_frame(PageID page_id);
