@@ -32,8 +32,16 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config,
       _benchmark_item_runner(std::move(benchmark_item_runner)),
       _table_generator(std::move(table_generator)),
       _context(context) {
-  Hyrise::get().default_pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
-  Hyrise::get().default_lqp_cache = std::make_shared<SQLLogicalPlanCache>();
+  // Enable caching only if no metrics are requested. When metrics are desired, we want to explicitly measure
+  // translation and optimization runtimes for each SQL statement. These stages are skipped for cached plans, making it
+  // hard to interpret the measurements.
+  if (!_config.pipeline_metrics) {
+    Hyrise::get().default_pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
+    Hyrise::get().default_lqp_cache = std::make_shared<SQLLogicalPlanCache>();
+    std::cout << "- SQL plan caching switched on." << std::endl;
+  } else {
+    std::cout << "- SQL plan caching switched off since SQL pipeline metrics tracking is requested." << std::endl;
+  }
 
   // Initialise the scheduler if the benchmark was requested to run multi-threaded.
   if (config.enable_scheduler) {
@@ -91,7 +99,7 @@ void BenchmarkRunner::run() {
   _benchmark_start = std::chrono::steady_clock::now();
   _benchmark_wall_clock_start = std::chrono::system_clock::now();
 
-  auto track_system_utilization = std::atomic_bool{_config.metrics};
+  auto track_system_utilization = std::atomic_bool{_config.system_metrics};
   auto system_utilization_tracker = std::thread{[&] {
     if (!track_system_utilization) {
       return;
@@ -117,7 +125,7 @@ void BenchmarkRunner::run() {
     }
   }};
 
-  if (_config.metrics) {
+  if (_config.system_metrics) {
     // Create a table for the segment access counter log.
     SQLPipelineBuilder{
         "CREATE TABLE benchmark_segments_log AS SELECT 0 AS snapshot_id, 'init' AS moment, * FROM meta_segments"}
@@ -350,7 +358,7 @@ void BenchmarkRunner::_schedule_item_run(const BenchmarkItemID item_id) {
 
         // Prevent items from adding their result after the time is up.
         if (!_state.is_done()) {
-          if (!_config.metrics) {
+          if (!_config.pipeline_metrics) {
             metrics.clear();
           }
           const auto item_result =
@@ -414,7 +422,7 @@ nlohmann::json BenchmarkRunner::_create_report() const {
       for (const auto& run_result : runs) {
         // Convert the SQLPipelineMetrics for each run of the BenchmarkItem into JSON.
         auto all_pipeline_metrics_json = nlohmann::json::array();
-        // metrics can be empty if _config.metrics is false.
+        // metrics can be empty if _config.pipeline_metrics is false.
         for (const auto& pipeline_metrics : run_result.metrics) {
           auto pipeline_metrics_json = nlohmann::json{{"parse_duration", pipeline_metrics.parse_time_nanos.count()},
                                                       {"statements", nlohmann::json::array()}};
@@ -441,7 +449,7 @@ nlohmann::json BenchmarkRunner::_create_report() const {
 
         runs_json.push_back(nlohmann::json{{"begin", run_result.begin.count()},
                                            {"duration", run_result.duration.count()},
-                                           {"metrics", all_pipeline_metrics_json}});
+                                           {"pipeline_metrics", all_pipeline_metrics_json}});
       }
       return runs_json;
     };
@@ -518,6 +526,11 @@ cxxopts::Options BenchmarkRunner::get_basic_cli_options(const std::string& bench
   // method and not a class, retrieving this default value properly would require some major refactoring of how
   // benchmarks interact with the BenchmarkRunner. At this moment, that does not seem to be worth the effort.
   const auto* const default_mode = (benchmark_name == "TPC-C Benchmark" ? "Shuffled" : "Ordered");
+  // Similar to the mode of the benchmark, we set a different setting for table indexes when TPC-C is run. For
+  // analytical benchmarks, we do not create indexes unless the user requests them as they are usually not used by the
+  // query optimizer. In contrast, we create table indexes for TPC-C as they improve the performance of selections on
+  // primary key columns.
+  const auto* const default_table_indexes = (benchmark_name == "TPC-C Benchmark" ? "true" : "false");
 
   // clang-format off
   cli_options.add_options()
@@ -533,14 +546,15 @@ cxxopts::Options BenchmarkRunner::get_basic_cli_options(const std::string& bench
     ("p,plugins", "Specify plugins to be loaded and execute their pre-/post-benchmark hooks (comma-separated paths to shared libraries w/o whitespaces)", cxxopts::value<std::string>()->default_value(""))  // NOLINT(whitespace/line_length)
     ("compression", "Specify vector compression as a string. Options: " + compression_strings_option, cxxopts::value<std::string>()->default_value(""))  // NOLINT(whitespace/line_length)
     ("chunk_indexes", "Create chunk indexes (separate index per chunk; columns defined by benchmark)", cxxopts::value<bool>()->default_value("false"))  // NOLINT(whitespace/line_length)
-    ("table_indexes", "Create table indexes (index per table column; columns defined by benchmark)", cxxopts::value<bool>()->default_value("false"))  // NOLINT(whitespace/line_length)
+    ("table_indexes", "Create table indexes (index per table column; columns defined by benchmark)", cxxopts::value<bool>()->default_value(default_table_indexes))  // NOLINT(whitespace/line_length)
     ("scheduler", "Enable or disable the scheduler", cxxopts::value<bool>()->default_value("false"))
     ("cores", "Specify the number of cores used by the scheduler (if active). 0 means all available cores", cxxopts::value<uint32_t>()->default_value("0"))  // NOLINT(whitespace/line_length)
     ("clients", "Specify how many items should run in parallel if the scheduler is active", cxxopts::value<uint32_t>()->default_value("1"))  // NOLINT(whitespace/line_length)
     ("visualize", "Create a visualization image of one LQP and PQP for each query, do not properly run the benchmark", cxxopts::value<bool>()->default_value("false"))  // NOLINT(whitespace/line_length)
     ("verify", "Verify each query by comparing it with the SQLite result", cxxopts::value<bool>()->default_value("false"))  // NOLINT(whitespace/line_length)
     ("dont_cache_binary_tables", "Do not cache tables as binary files for faster loading on subsequent runs", cxxopts::value<bool>()->default_value("false"))  // NOLINT(whitespace/line_length)
-    ("metrics", "Track more metrics (steps in SQL pipeline, system utilization, etc.) and add them to the output JSON (see -o)", cxxopts::value<bool>()->default_value("false"))  // NOLINT(whitespace/line_length)
+    ("system_metrics", "Track system metrics (system utilization, segment accesses, etc.) and add them to the output JSON (see -o).", cxxopts::value<bool>()->default_value("false"))  // NOLINT(whitespace/line_length)
+    ("pipeline_metrics", "Track SQL pipeline metrics (runtime of steps in SQL pipeline, optimizer rule durations) and add them to the output JSON (see -o). Tracking pipeline metrics switches off plan caching.", cxxopts::value<bool>()->default_value("false"))  // NOLINT(whitespace/line_length)
     // This option is only advised when the underlying system's memory capacity is overleaded by the preparation phase.
     ("data_preparation_cores", "Specify the number of cores used by the scheduler for data preparation, i.e., sorting and encoding tables and generating table statistics. 0 means all available cores.", cxxopts::value<uint32_t>()->default_value("0"));  // NOLINT(whitespace/line_length)
   // clang-format on
@@ -615,7 +629,7 @@ nlohmann::json BenchmarkRunner::_sql_to_json(const std::string& sql) {
 }
 
 void BenchmarkRunner::_snapshot_segment_access_counters(const std::string& moment) {
-  if (!_config.metrics) {
+  if (!_config.system_metrics) {
     return;
   }
 

@@ -65,6 +65,7 @@ class TPCDSTableGenerator final : public AbstractTableGenerator {
   std::shared_ptr<Table> generate_web_site(ds_key_t max_rows = _ds_key_max) const;
 
  protected:
+  IndexesByTable _indexes_by_table() const override;
   void _add_constraints(std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) const override;
 
  private:

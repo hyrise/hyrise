@@ -16,19 +16,19 @@ enum class DataDistributionType { Uniform, NormalSkewed, Pareto };
 
 struct ColumnDataDistribution {
   static ColumnDataDistribution make_uniform_config(const double min, const double max) {
-    ColumnDataDistribution c{};
-    c.min_value = min;
-    c.max_value = max;
-    c.num_different_values = static_cast<int>(std::floor(max - min));
-    return c;
+    auto config = ColumnDataDistribution{};
+    config.min_value = min;
+    config.max_value = max;
+    config.num_different_values = static_cast<int>(std::floor(max - min));
+    return config;
   }
 
   static ColumnDataDistribution make_pareto_config(const double pareto_scale = 1.0, const double pareto_shape = 1.0) {
-    ColumnDataDistribution c{};
-    c.pareto_scale = pareto_scale;
-    c.pareto_shape = pareto_shape;
-    c.distribution_type = DataDistributionType::Pareto;
-    return c;
+    auto config = ColumnDataDistribution{};
+    config.pareto_scale = pareto_scale;
+    config.pareto_shape = pareto_shape;
+    config.distribution_type = DataDistributionType::Pareto;
+    return config;
   }
 
   static ColumnDataDistribution make_skewed_normal_config(
@@ -36,44 +36,44 @@ struct ColumnDataDistribution {
       // Temporary work around for https://github.com/boostorg/math/issues/254.
       // TODO(anyone): reset to 0.0 when Hyrise's boost has the fix.
       const double skew_shape = 0.0001) {
-    ColumnDataDistribution c{};
-    c.skew_location = skew_location;
-    c.skew_scale = skew_scale;
-    c.skew_shape = skew_shape;
-    c.distribution_type = DataDistributionType::NormalSkewed;
-    return c;
+    auto config = ColumnDataDistribution{};
+    config.skew_location = skew_location;
+    config.skew_scale = skew_scale;
+    config.skew_shape = skew_shape;
+    config.distribution_type = DataDistributionType::NormalSkewed;
+    return config;
   }
 
   DataDistributionType distribution_type = DataDistributionType::Uniform;
 
   int num_different_values = 1'000;
 
-  double pareto_scale;
-  double pareto_shape;
+  double pareto_scale = 0.0;
+  double pareto_shape = 0.0;
 
-  double skew_location;
-  double skew_scale;
-  double skew_shape;
+  double skew_location = 0.0;
+  double skew_scale = 0.0;
+  double skew_shape = 0.0;
 
-  double min_value;
-  double max_value;
+  double min_value = 0.0;
+  double max_value = 0.0;
 };
 
 struct ColumnSpecification {
   ColumnSpecification(const ColumnDataDistribution& init_data_distribution, const DataType& init_data_type,
                       const std::optional<SegmentEncodingSpec> init_segment_encoding_spec = std::nullopt,
                       const std::optional<std::string> init_name = std::nullopt, const float init_null_ratio = 0.0f)
-      : data_distribution(init_data_distribution),
-        data_type(init_data_type),
-        segment_encoding_spec(init_segment_encoding_spec),
-        name(init_name),
-        null_ratio(init_null_ratio) {}
+      : data_distribution{init_data_distribution},
+        data_type{init_data_type},
+        segment_encoding_spec{init_segment_encoding_spec},
+        name{init_name},
+        null_ratio{init_null_ratio} {}
 
   const ColumnDataDistribution data_distribution;
   const DataType data_type;
   const std::optional<SegmentEncodingSpec> segment_encoding_spec;
   const std::optional<std::string> name;
-  const float null_ratio;
+  const float null_ratio = 0.0f;
 };
 
 class SyntheticTableGenerator {
@@ -124,21 +124,21 @@ class SyntheticTableGenerator {
       constexpr auto prefix_length = size_t{4};
       constexpr auto variable_string_length = generated_string_length - prefix_length;
 
-      const std::vector<char> chars = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F',
-                                       'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V',
-                                       'W', 'X', 'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l',
-                                       'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'};
-      const size_t chars_base = chars.size();
+      const auto chars = std::vector<char>{
+          '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K',
+          'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f',
+          'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'};
+      const auto chars_base = chars.size();
       Assert(static_cast<double>(input) < std::pow(chars_base, variable_string_length),
              "Input too large. Cannot be represented in " + std::to_string(variable_string_length) + " chars.");
 
-      pmr_string result(generated_string_length, ' ');  // fill full length with spaces
+      auto result = pmr_string(generated_string_length, ' ');  // fill full length with spaces
       if (input == 0) {
         return result;
       }
 
-      const size_t result_char_count = static_cast<size_t>(std::floor(std::log(input) / std::log(chars_base)) + 1);
-      size_t remainder = static_cast<size_t>(input);
+      const auto result_char_count = static_cast<size_t>(std::floor(std::log(input) / std::log(chars_base)) + 1);
+      auto remainder = static_cast<size_t>(input);
       for (auto i = size_t{0}; i < result_char_count; ++i) {
         result[generated_string_length - 1 - i] = chars[remainder % chars_base];
         remainder = static_cast<size_t>(remainder / chars_base);

@@ -363,6 +363,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
    */
   template <typename T>
   pmr_vector<char> _train_dictionary(const pmr_vector<T>& values) {
+    static_assert(std::is_arithmetic_v<T>);
     const auto min_sample_size = size_t{8u};
     const auto values_size = values.size() * sizeof(T);
     const auto sample_size = std::max(sizeof(T), min_sample_size);
@@ -396,7 +397,6 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     max_dictionary_size = std::max(max_dictionary_size, _minimum_dictionary_size);
 
     auto dictionary = pmr_vector<char>{values.get_allocator()};
-    size_t dictionary_size;
 
     // If the input does not contain enough values, it won't be possible to train a dictionary for it.
     if (values.size() < _minimum_value_size) {
@@ -404,8 +404,8 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     }
 
     dictionary.resize(max_dictionary_size);
-    dictionary_size = ZDICT_trainFromBuffer(dictionary.data(), max_dictionary_size, values.data(), sample_sizes.data(),
-                                            static_cast<unsigned>(sample_sizes.size()));
+    const auto dictionary_size = ZDICT_trainFromBuffer(dictionary.data(), max_dictionary_size, values.data(),
+                                                       sample_sizes.data(), static_cast<unsigned>(sample_sizes.size()));
 
     // If the generation failed, then compress without a dictionary (the compression ratio will suffer).
     if (ZDICT_isError(dictionary_size)) {

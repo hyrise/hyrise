@@ -1,6 +1,6 @@
 #pragma once
 
-#include "expression/aggregate_expression.hpp"
+#include "expression/window_function_expression.hpp"
 #include "operators/abstract_operator.hpp"
 #include "operators/abstract_read_only_operator.hpp"
 #include "type_comparison.hpp"
@@ -9,12 +9,12 @@
 namespace hyrise {
 
 /*
-The AggregateFunctionBuilder is used to create the lambda function that will be used by
+The WindowFunctionBuilder is used to create the lambda function that will be used by
 the AggregateVisitor. It is a separate class because methods cannot be partially specialized.
 Therefore, we partially specialize the whole class and define the get_aggregate_function anew every time.
 */
-template <typename ColumnDataType, typename AggregateType, AggregateFunction aggregate_function>
-class AggregateFunctionBuilder {
+template <typename ColumnDataType, typename AggregateType, WindowFunction aggregate_function>
+class WindowFunctionBuilder {
  public:
   void get_aggregate_function() {
     Fail("Invalid aggregate function");
@@ -24,7 +24,7 @@ class AggregateFunctionBuilder {
 using StandardDeviationSampleData = std::array<double, 4>;
 
 template <typename ColumnDataType, typename AggregateType>
-class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::Min> {
+class WindowFunctionBuilder<ColumnDataType, AggregateType, WindowFunction::Min> {
  public:
   auto get_aggregate_function() {
     return [](const ColumnDataType& new_value, const size_t aggregate_count, AggregateType& accumulator) {
@@ -40,7 +40,7 @@ class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction:
 };
 
 template <typename ColumnDataType, typename AggregateType>
-class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::Max> {
+class WindowFunctionBuilder<ColumnDataType, AggregateType, WindowFunction::Max> {
  public:
   auto get_aggregate_function() {
     return [](const ColumnDataType& new_value, const size_t aggregate_count, AggregateType& accumulator) {
@@ -53,7 +53,7 @@ class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction:
 };
 
 template <typename ColumnDataType, typename AggregateType>
-class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::Sum> {
+class WindowFunctionBuilder<ColumnDataType, AggregateType, WindowFunction::Sum> {
  public:
   auto get_aggregate_function() {
     return [](const ColumnDataType& new_value, const size_t aggregate_count, AggregateType& accumulator) {
@@ -65,18 +65,18 @@ class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction:
 };
 
 template <typename ColumnDataType, typename AggregateType>
-class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::Avg> {
+class WindowFunctionBuilder<ColumnDataType, AggregateType, WindowFunction::Avg> {
  public:
   auto get_aggregate_function() {
     // We reuse Sum here, as updating an average value for every row is costly and prone to problems regarding
     // precision. To get the average, the aggregate operator needs to count the number of elements contributing to this
     // sum, and divide the final sum by that number.
-    return AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::Sum>{}.get_aggregate_function();
+    return WindowFunctionBuilder<ColumnDataType, AggregateType, WindowFunction::Sum>{}.get_aggregate_function();
   }
 };
 
 template <typename ColumnDataType, typename AggregateType>
-class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::StandardDeviationSample> {
+class WindowFunctionBuilder<ColumnDataType, AggregateType, WindowFunction::StandardDeviationSample> {
  public:
   auto get_aggregate_function() {
     return [](const ColumnDataType& new_value, const size_t aggregate_count, StandardDeviationSampleData& accumulator) {
@@ -112,7 +112,7 @@ class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction:
 };
 
 template <typename ColumnDataType, typename AggregateType>
-class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::Count> {
+class WindowFunctionBuilder<ColumnDataType, AggregateType, WindowFunction::Count> {
  public:
   auto get_aggregate_function() {
     return [](const ColumnDataType&, const size_t aggregate_count, AggregateType& accumulator) {};
@@ -120,7 +120,7 @@ class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction:
 };
 
 template <typename ColumnDataType, typename AggregateType>
-class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::CountDistinct> {
+class WindowFunctionBuilder<ColumnDataType, AggregateType, WindowFunction::CountDistinct> {
  public:
   auto get_aggregate_function() {
     return [](const ColumnDataType&, const size_t aggregate_count, AggregateType& accumulator) {};
@@ -130,12 +130,12 @@ class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction:
 class AbstractAggregateOperator : public AbstractReadOnlyOperator {
  public:
   AbstractAggregateOperator(const std::shared_ptr<AbstractOperator>& input_operator,
-                            const std::vector<std::shared_ptr<AggregateExpression>>& aggregates,
+                            const std::vector<std::shared_ptr<WindowFunctionExpression>>& aggregates,
                             const std::vector<ColumnID>& groupby_column_ids,
                             std::unique_ptr<AbstractOperatorPerformanceData> performance_data =
                                 std::make_unique<OperatorPerformanceData<AbstractOperatorPerformanceData::NoSteps>>());
 
-  const std::vector<std::shared_ptr<AggregateExpression>>& aggregates() const;
+  const std::vector<std::shared_ptr<WindowFunctionExpression>>& aggregates() const;
 
   const std::vector<ColumnID>& groupby_column_ids() const;
 
@@ -147,7 +147,7 @@ class AbstractAggregateOperator : public AbstractReadOnlyOperator {
   void _validate_aggregates() const;
 
   Segments _output_segments;
-  const std::vector<std::shared_ptr<AggregateExpression>> _aggregates;
+  const std::vector<std::shared_ptr<WindowFunctionExpression>> _aggregates;
   const std::vector<ColumnID> _groupby_column_ids;
 
   TableColumnDefinitions _output_column_definitions;

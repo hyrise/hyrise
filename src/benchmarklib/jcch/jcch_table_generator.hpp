@@ -11,17 +11,16 @@ namespace hyrise {
 // FileBasedTableGenerator (for the csv loading part). One could argue if composition would be more appropriate
 // here. The relationship between FileBasedTableGenerator and JCCHTableGenerator does not really satisfy the Liskov
 // substitution principle. However, it makes reusing the TPC-H definitions much easier.
-
 class JCCHTableGenerator : virtual public AbstractTableGenerator,
                            private TPCHTableGenerator,
                            private FileBasedTableGenerator {
  public:
-  // Convenience constructor for creating a JCCHTableGenerator without a benchmarking context
+  // Convenience constructor for creating a JCCHTableGenerator without a benchmarking context.
   explicit JCCHTableGenerator(const std::string& dbgen_path, const std::string& data_path, float scale_factor,
                               ClusteringConfiguration clustering_configuration,
                               ChunkOffset chunk_size = Chunk::DEFAULT_SIZE);
 
-  // Constructor for creating a JCCHTableGenerator in a benchmark
+  // Constructor for creating a JCCHTableGenerator in a benchmark.
   explicit JCCHTableGenerator(const std::string& dbgen_path, const std::string& data_path, float scale_factor,
                               ClusteringConfiguration clustering_configuration,
                               const std::shared_ptr<BenchmarkConfig>& benchmark_config);
