@@ -23,6 +23,8 @@ class VolatileRegion final : public Noncopyable {
   // Enable mprotect class for debugging purposes
   constexpr static bool ENABLE_MPROTECT = false;
 
+  constexpr static uint64_t DEFAULT_RESERVED_VIRTUAL_MEMORY = 1UL << 38;  // 256 GiB
+
   // Create a VolatileRegion in a virtual memory region for a givem size_type. The approximate_size_bytes defines a initial number of frames to be created.
   VolatileRegion(const PageSizeType size_type, std::byte* region_start, std::byte* region_end);
 
@@ -44,6 +46,8 @@ class VolatileRegion final : public Noncopyable {
   // Returns the number of pages this region can manage
   size_t size() const;
 
+  PageSizeType size_type() const;
+
   // Calculate the approximate memory used by this object
   size_t memory_consumption() const;
 
@@ -52,6 +56,16 @@ class VolatileRegion final : public Noncopyable {
 
   // Calls mprotect on a given page to unprotect it. Used for debugging.
   void _unprotect_page(const PageID page_id);
+
+  // Create a fixed-sized memory region using mmap that can be divided into regions of pages for all size types
+  static std::byte* create_mapped_region();
+
+  // Unmap the fixed-sized memory region
+  static void unmap_region(std::byte* region);
+
+  // Create a VolatileRegion for each size type from the fixed-sized memory region
+  static std::array<std::shared_ptr<VolatileRegion>, NUM_PAGE_SIZE_TYPES> create_volatile_regions(
+      std::byte* mapped_region);
 
  private:
   std::atomic_uint64_t num_madvice_free_calls = 0;

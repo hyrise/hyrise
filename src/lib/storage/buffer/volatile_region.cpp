@@ -110,6 +110,10 @@ size_t VolatileRegion::size() const {
   return _frames.size();
 }
 
+PageSizeType VolatileRegion::size_type() const {
+  return _size_type;
+}
+
 void VolatileRegion::_protect_page(const PageID page_id) {
   if constexpr (ENABLE_MPROTECT) {
     DebugAssert(page_id.size_type() == _size_type, "Page does not belong to this region.");
@@ -129,6 +133,56 @@ void VolatileRegion::_unprotect_page(const PageID page_id) {
       const auto error = errno;
       Fail("Failed to mprotect: " + strerror(error));
     }
+  }
+}
+
+inline std::size_t get_os_page_size() {
+  return std::size_t(sysconf(_SC_PAGESIZE));
+}
+
+constexpr size_t DEFAULT_RESERVED_VIRTUAL_MEMORY_PER_REGION =
+    (VolatileRegion::DEFAULT_RESERVED_VIRTUAL_MEMORY / NUM_PAGE_SIZE_TYPES) / bytes_for_size_type(MAX_PAGE_SIZE_TYPE) *
+    bytes_for_size_type(MAX_PAGE_SIZE_TYPE);
+
+std::byte* VolatileRegion::create_mapped_region() {
+  Assert(bytes_for_size_type(MIN_PAGE_SIZE_TYPE) >= get_os_page_size(),
+         "Smallest page size does not fit into an OS page: " + std::to_string(get_os_page_size()));
+#ifdef __APPLE__
+  const int flags = MAP_PRIVATE | MAP_ANON | MAP_NORESERVE;
+#elif __linux__
+  const int flags = MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE;
+#endif
+  const auto mapped_memory = static_cast<std::byte*>(
+      mmap(NULL, VolatileRegion::DEFAULT_RESERVED_VIRTUAL_MEMORY, PROT_READ | PROT_WRITE, flags, -1, 0));
+
+  if (mapped_memory == MAP_FAILED) {
+    const auto error = errno;
+    Fail("Failed to map volatile pool region: " + strerror(error));
+  }
+
+  return mapped_memory;
+}
+
+std::array<std::shared_ptr<VolatileRegion>, NUM_PAGE_SIZE_TYPES> VolatileRegion::create_volatile_regions(
+    std::byte* mapped_region) {
+  DebugAssert(mapped_region != nullptr, "Region not properly mapped");
+  auto array = std::array<std::shared_ptr<VolatileRegion>, NUM_PAGE_SIZE_TYPES>{};
+
+  // Ensure that every region has the same amount of virtual memory
+  // Round to the next multiple of the largest page size
+  for (auto i = size_t{0}; i < NUM_PAGE_SIZE_TYPES; i++) {
+    array[i] = std::make_shared<VolatileRegion>(magic_enum::enum_value<PageSizeType>(i),
+                                                mapped_region + DEFAULT_RESERVED_VIRTUAL_MEMORY_PER_REGION * i,
+                                                mapped_region + DEFAULT_RESERVED_VIRTUAL_MEMORY_PER_REGION * (i + 1));
+  }
+
+  return array;
+}
+
+void VolatileRegion::unmap_region(std::byte* region) {
+  if (munmap(region, VolatileRegion::DEFAULT_RESERVED_VIRTUAL_MEMORY) < 0) {
+    const auto error = errno;
+    Fail("Failed to unmap volatile pool region: " + strerror(error));
   }
 }
 
