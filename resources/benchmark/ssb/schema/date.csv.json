@@ -1,0 +1,99 @@
+{
+    "columns": [
+        {
+            "name": "d_datekey",
+            "nullable": false,
+            "type": "int"
+        },
+        {
+            "name": "d_date",
+            "nullable": false,
+            "type": "string"
+        },
+        {
+            "name": "d_dayofweek",
+            "nullable": false,
+            "type": "string"
+        },
+        {
+            "name": "d_month",
+            "nullable": false,
+            "type": "string"
+        },
+        {
+            "name": "d_year",
+            "nullable": false,
+            "type": "int"
+        },
+        {
+            "name": "d_yearmonthnum",
+            "nullable": false,
+            "type": "int"
+        },
+        {
+            "name": "d_yearmonth",
+            "nullable": false,
+            "type": "string"
+        },
+        {
+            "name": "d_daynuminweek",
+            "nullable": false,
+            "type": "int"
+        },
+        {
+            "name": "d_daynuminmonth",
+            "nullable": false,
+            "type": "int"
+        },
+        {
+            "name": "d_daynuminyear",
+            "nullable": false,
+            "type": "int"
+        },
+        {
+            "name": "d_monthnuminyear",
+            "nullable": false,
+            "type": "int"
+        },
+         {
+            "name": "d_weeknuminyear",
+            "nullable": false,
+            "type": "int"
+        },
+        {
+            "name": "d_sellingseason",
+            "nullable": false,
+            "type": "string"
+        },
+        {
+            "name": "d_lastdayinweekfl",
+            "nullable": false,
+            "type": "int"
+        },
+        {
+            "name": "d_lastdayinmonthfl",
+            "nullable": false,
+            "type": "int"
+        },
+        {
+            "name": "d_holidayfl",
+            "nullable": false,
+            "type": "int"
+        },
+        {
+            "name": "d_weekdayfl",
+            "nullable": false,
+            "type": "int"
+        }
+    ],
+    "config": {
+        "delimiter": "\n",
+        "delimiter_escape": "\\",
+        "escape": "\"",
+        "null_handling": "reject_null_strings",
+        "quote": "\"",
+        "reject_quoted_nonstrings": true,
+        "rfc_mode": true,
+        "separator": "|"
+    }
+}

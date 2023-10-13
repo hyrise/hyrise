@@ -12,17 +12,17 @@
 #include "expression/lqp_column_expression.hpp"
 #include "expression/lqp_subquery_expression.hpp"
 #include "join_node.hpp"
+#include "logical_query_plan/stored_table_node.hpp"
 #include "lqp_utils.hpp"
 #include "predicate_node.hpp"
 #include "update_node.hpp"
 #include "utils/assert.hpp"
+#include "utils/map_prunable_subquery_predicates.hpp"
 #include "utils/print_utils.hpp"
-
-using namespace std::string_literals;  // NOLINT
 
 namespace {
 
-using namespace hyrise;  // NOLINT
+using namespace hyrise;  // NOLINT(build/namespaces)
 
 void collect_lqps_in_plan(const AbstractLQPNode& lqp, std::unordered_set<std::shared_ptr<AbstractLQPNode>>& lqps);
 
@@ -134,11 +134,6 @@ void AbstractLQPNode::set_right_input(const std::shared_ptr<AbstractLQPNode>& ri
 }
 
 void AbstractLQPNode::set_input(LQPInputSide side, const std::shared_ptr<AbstractLQPNode>& input) {
-  DebugAssert(side == LQPInputSide::Left || input == nullptr || type == LQPNodeType::Join ||
-                  type == LQPNodeType::Union || type == LQPNodeType::Update || type == LQPNodeType::Intersect ||
-                  type == LQPNodeType::Except || type == LQPNodeType::ChangeMetaTable || type == LQPNodeType::Mock,
-              "This node type does not accept a right input");
-
   // We need a reference to _inputs[input_idx], so not calling this->input(side)
   auto& current_input = _inputs[static_cast<int>(side)];
 
@@ -240,8 +235,15 @@ size_t AbstractLQPNode::output_count() const {
   return _outputs.size();
 }
 
-std::shared_ptr<AbstractLQPNode> AbstractLQPNode::deep_copy(LQPNodeMapping input_node_mapping) const {
-  return _deep_copy_impl(input_node_mapping);
+std::shared_ptr<AbstractLQPNode> AbstractLQPNode::deep_copy(LQPNodeMapping node_mapping) const {
+  const auto copy = _deep_copy_impl(node_mapping);
+
+  // StoredTableNodes can store references to PredicateNodes as prunable subquery predicates (see get_table.hpp for
+  // details). We must assign the copies of these PredicateNodes after copying the entire LQP (see
+  // map_prunable_subquery_predicates.hpp).
+  map_prunable_subquery_predicates(node_mapping);
+
+  return copy;
 }
 
 bool AbstractLQPNode::shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
@@ -264,7 +266,7 @@ std::optional<ColumnID> AbstractLQPNode::find_column_id(const AbstractExpression
 
 ColumnID AbstractLQPNode::get_column_id(const AbstractExpression& expression) const {
   const auto column_id = find_column_id(expression);
-  Assert(column_id, "This node has no column '"s + expression.as_column_name() + "'");
+  Assert(column_id, "This node has no column '" + expression.as_column_name() + "'.");
   return *column_id;
 }
 

@@ -535,7 +535,7 @@ bool PredicatePlacementRule::_is_evaluable_on_lqp(const std::shared_ptr<Abstract
       auto has_uncomputed_aggregate = false;
       const auto predicate = predicate_node.predicate();
       visit_expression(predicate, [&](const auto& expression) {
-        if (expression->type == ExpressionType::Aggregate && !lqp->find_column_id(*expression)) {
+        if (expression->type == ExpressionType::WindowFunction && !lqp->find_column_id(*expression)) {
           has_uncomputed_aggregate = true;
           return ExpressionVisitation::DoNotVisitArguments;
         }

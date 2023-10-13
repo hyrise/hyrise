@@ -14,7 +14,7 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
 
         echo "Installing dependencies (this may take a while)..."
         if brew update >/dev/null; then
-            # check, for each program (aka. formula) individually with brew, whether it is already installed due to brew issues on MacOS after system upgrade
+            # check, for each program (aka. formula) individually with brew, whether it is already installed due to brew issues on macOS after system upgrade
             # NOTE: The Mac CI server does not execute the install_dependencies.sh - formulas need to be installed manually.
             for formula in autoconf boost cmake coreutils dos2unix graphviz libpq ncurses parallel pkg-config postgresql readline sqlite3 tbb; do
                 # if brew formula is installed

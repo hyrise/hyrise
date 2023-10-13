@@ -320,4 +320,32 @@ TEST_F(OperatorsInsertTest, InsertIntoEmptyTable) {
   EXPECT_TABLE_EQ_ORDERED(target_table, table_int_float);
 }
 
+TEST_F(OperatorsInsertTest, SetMaxBeginCID) {
+  auto column_definitions = TableColumnDefinitions{};
+  column_definitions.emplace_back("a", DataType::Int, false);
+  column_definitions.emplace_back("b", DataType::Float, false);
+
+  const auto target_table =
+      std::make_shared<Table>(column_definitions, TableType::Data, Chunk::DEFAULT_SIZE, UseMvcc::Yes);
+  Hyrise::get().storage_manager.add_table("target_table", target_table);
+
+  const auto table_int_float = load_table("resources/test_data/tbl/int_float.tbl");
+
+  const auto table_wrapper = std::make_shared<TableWrapper>(table_int_float);
+  table_wrapper->execute();
+
+  const auto insert = std::make_shared<Insert>("target_table", table_wrapper);
+  const auto context = std::make_shared<TransactionContext>(TransactionID{1}, CommitID{2}, AutoCommit::No);
+  insert->set_transaction_context(context);
+  insert->execute();
+
+  const auto& chunk = target_table->get_chunk(ChunkID{0});
+  ASSERT_TRUE(chunk->mvcc_data());
+  EXPECT_EQ(chunk->mvcc_data()->max_begin_cid.load(), MvccData::MAX_COMMIT_ID);
+
+  context->commit();
+
+  EXPECT_EQ(chunk->mvcc_data()->max_begin_cid.load(), CommitID{2});
+}
+
 }  // namespace hyrise
