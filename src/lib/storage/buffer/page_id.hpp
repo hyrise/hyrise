@@ -46,6 +46,14 @@ struct PageID {
     return _valid;
   }
 
+  bool operator<(const PageID& other) const {
+    return this->index < other.index && this->size_type() < other.size_type();
+  };
+
+  bool operator==(const PageID& other) const {
+    return this->index == other.index && this->size_type() == other.size_type();
+  };
+
   PageID() = default;
 
   constexpr PageID(const PageSizeType size_type, const PageIDType index, bool valid = true)
