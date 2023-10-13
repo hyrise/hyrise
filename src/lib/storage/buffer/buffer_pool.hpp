@@ -1,7 +1,9 @@
 #pragma once
 
 #include "concurrentqueue.h"
+#include "persistence_manager.hpp"
 #include "types.hpp"
+#include "volatile_region.hpp"
 
 namespace hyrise {
 
@@ -34,6 +36,9 @@ class BufferPool final {
   void resize(const uint64_t new_size);
 
  private:
+  friend class BufferManager;
+  friend class BufferPoolTest;
+
   // Item for the Eviction Queue
   struct EvictionItem final {
     // The page to be evicted.
@@ -52,8 +57,6 @@ class BufferPool final {
   using EvictionQueue = moodycamel::ConcurrentQueue<EvictionItem>;
 
   static constexpr size_t PURGE_INTERVAL = 1024;
-
-  friend class BufferManager;
 
   BufferPool(const size_t pool_size,
              const std::array<std::shared_ptr<VolatileRegion>, NUM_PAGE_SIZE_TYPES> volatile_regions,
@@ -81,8 +84,6 @@ class BufferPool final {
 
   // Eviction queue for frames that are not pinned
   EvictionQueue eviction_queue;
-
-  const MigrationPolicy migration_policy;
 
   const std::array<std::shared_ptr<VolatileRegion>, NUM_PAGE_SIZE_TYPES> volatile_regions;
 

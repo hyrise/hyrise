@@ -106,5 +106,27 @@ class Frame final {
   std::atomic<StateVersionType> _state_and_version;
 };
 
+/**
+ * retry_with_backoff is a helper function to retry a function with exponential backoff when performing a latching operation
+ * on a frame. It can be further improved with a "Parking Lot" as described in Böttcher et al. "Scalable and Robust Latches for Database Systems"
+*/
+template <typename Func>
+inline void retry_with_backoff(const Func& func, const size_t max_repeat_count = 1000000) {
+  for (auto repeat = uint64_t{0}; repeat < max_repeat_count; ++repeat) {
+    if (func()) {
+      return;
+    }
+    if (repeat < 4) {
+    } else if ((repeat < 32) || (repeat & 1)) {
+      std::this_thread::yield();
+    } else if (repeat < 1000000) {
+      std::this_thread::sleep_for(std::chrono::nanoseconds(1000));
+    } else {
+      Fail("Yield for too long. Something is blocking. Current state");
+    }
+  }
+  Fail("Too many retries. Something is blocking");
+}
+
 std::ostream& operator<<(std::ostream& os, const Frame& frame);
 }  // namespace hyrise

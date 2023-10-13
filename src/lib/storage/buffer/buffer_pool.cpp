@@ -82,7 +82,7 @@ bool BufferPool::ensure_free_pages(const PageSizeType required_size) {
     auto current_state_and_version = frame->state_and_version();
 
     if (frame->node_id() != node_id) {
-      increment_metric_counter(num_eviction_queue_items_purged);
+      num_eviction_queue_items_purged.fetch_add(1, std::memory_order_relaxed);
       continue;
     }
 
@@ -95,13 +95,13 @@ bool BufferPool::ensure_free_pages(const PageSizeType required_size) {
           continue;
         }
       }
-      increment_metric_counter(num_eviction_queue_items_purged);
+      num_eviction_queue_items_purged.fetch_add(1, std::memory_order_relaxed);
       continue;
     }
 
     // Try locking the frame exclusively, TODO: prefer shared locking
     if (!frame->try_lock_exclusive(current_state_and_version)) {
-      increment_metric_counter(num_eviction_queue_items_purged);
+      num_eviction_queue_items_purged.fetch_add(1, std::memory_order_relaxed);
       continue;
     }
 
@@ -110,7 +110,7 @@ bool BufferPool::ensure_free_pages(const PageSizeType required_size) {
 
     evict(item, frame);
 
-    increment_metric_counter(num_evictions);
+    num_evictions.fetch_add(1, std::memory_order_relaxed);
 
     // DebugAssert(Frame::state(frame->state_and_version()) != Frame::LOCKED, "Frame cannot be locked");
 
@@ -136,8 +136,8 @@ void BufferPool::evict(EvictionItem& item, Frame* frame) {
     // Otherwise we just write the page if its dirty and free the associated pages
     if (frame->is_dirty()) {
       auto data = region->get_page(item.page_id);
-      ssd_region->write_page(item.page_id, data);  // TODO: use global function
-      region->protect_page(item.page_id);
+      persistence_manager->write_page(item.page_id, data);  // TODO: use global function
+      region->_protect_page(item.page_id);
       frame->reset_dirty();
     }
     region->free(item.page_id);
@@ -175,10 +175,6 @@ uint64_t BufferPool::get_num_eviction_queue_items_purged() const {
 
 uint64_t BufferPool::get_num_evictions() const {
   return num_evictions.load(std::memory_order_relaxed);
-}
-
-std::shared_ptr<BufferPool> BufferPool::get_target_buffer_pool() const {
-  return target_buffer_pool;
 }
 
 void BufferPool::resize(const uint64_t new_size) {
