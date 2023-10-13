@@ -7,6 +7,7 @@
 #include "import_export/csv/csv_parser.hpp"
 #include "utils/assert.hpp"
 #include "utils/load_table.hpp"
+#include "storage/chunk_encoder.hpp"
 
 namespace hyrise {
 
@@ -48,6 +49,10 @@ std::shared_ptr<const Table> Import::_on_execute() {
       break;
     case FileType::Auto:
       Fail("File type should have been determined previously.");
+  }
+
+  if (_file_type != FileType::Binary) {
+    ChunkEncoder::encode_all_chunks(table);
   }
 
   if (Hyrise::get().storage_manager.has_table(_tablename)) {
