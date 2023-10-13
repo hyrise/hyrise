@@ -68,12 +68,18 @@ void Worker::operator()() {
 void Worker::_work(const AllowSleep allow_sleep) {
   // If execute_next has been called, run that task first, otherwise try to retrieve a task from the queue.
   auto task = std::shared_ptr<AbstractTask>{};
+  //auto did_pull = false;
   if (_next_task) {
     task = std::move(_next_task);
     _next_task = nullptr;
+    //did_pull = true;
+    /*if (_id == 88) {
+      std::printf("Worker #%zu: got next task, queue load %zu\n", static_cast<size_t>(_id), _queue->estimate_load());
+    }*/
   } else {
     if (_queue->semaphore.tryWait()) {
       task = _queue->pull();
+    //did_pull = true;
     }
   }
 
@@ -88,6 +94,7 @@ void Worker::_work(const AllowSleep allow_sleep) {
         task = queue->steal();
         if (task) {
           task->set_node_id(_queue->node_id());
+          //did_pull = true;
           break;
         }
       }
@@ -97,11 +104,20 @@ void Worker::_work(const AllowSleep allow_sleep) {
   // If there is no ready task neither in our queue nor in any other and we are allowed to sleep, wait on the
   // semaphore.
   if (!task && allow_sleep == AllowSleep::Yes) {
+    /*if (_id == 88) {
+      std::printf("Worker #%zu: wait with current queue load of %zu\n", static_cast<size_t>(_id), _queue->estimate_load());
+    }*/
     _queue->semaphore.wait();
     task = _queue->pull();
+    //did_pull = true;
   }
 
   if (!task) {
+    /*
+    if (_id == 88) {
+      std::printf("Worker #%zu: return from work()  with current queue load of %zu\n", static_cast<size_t>(_id), _queue->estimate_load());
+    } */
+    //if (did_pull) std::printf("We pulled but did not get a task.\n");
     return;
   }
 

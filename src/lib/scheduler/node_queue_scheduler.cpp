@@ -177,9 +177,11 @@ void NodeQueueScheduler::finish() {
     worker->join();
   }
 
+  _task_counter = 0;
   _workers = {};
   _queues = {};
-  _task_counter = 0;
+  _active_nodes = {};
+  _workers_per_node = {};
 }
 
 bool NodeQueueScheduler::active() const {
@@ -205,6 +207,12 @@ void NodeQueueScheduler::schedule(std::shared_ptr<AbstractTask> task, NodeID pre
   const auto task_counter = _task_counter++;  // Atomically take snapshot of counter
   task->set_id(TaskID{task_counter});
 
+  /*
+  if (task_counter % 117 == 0) {
+    std::printf("Scheduling task (prio: %zu) with description %s\n", static_cast<size_t>(priority), task->description().c_str());
+  }
+*/
+
   if (!task->is_ready()) {
     return;
   }
@@ -217,6 +225,14 @@ void NodeQueueScheduler::schedule(std::shared_ptr<AbstractTask> task, NodeID pre
 
 NodeID NodeQueueScheduler::determine_queue_id(const NodeID preferred_node_id) const {
   const auto active_node_count = _active_nodes.size();
+/*
+  std::stringstream ss;
+ss << ">>> ";
+  for (auto node : _active_nodes)
+ { ss << static_cast<size_t>(node) << " - "; }
+  ss << " <<< \n";
+  std::cout << ss.str() << std::endl;
+*/
 
   // Early out: no need to check for preferred node or other queues, if there is only a single node queue.
   if (active_node_count == 1) {

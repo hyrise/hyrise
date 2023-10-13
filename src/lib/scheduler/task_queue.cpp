@@ -4,6 +4,7 @@
 #include <utility>
 
 #include "abstract_task.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {
@@ -31,7 +32,14 @@ void TaskQueue::push(const std::shared_ptr<AbstractTask>& task, const SchedulePr
   if (!task->try_mark_as_enqueued()) {
     return;
   }
+  
+  //std::printf("%p\n", (void*)&*this);
 
+  std::string t = "Unexpected NodeID: " + std::to_string(static_cast<size_t>(_node_id));
+  Assert(_node_id == NodeID{3}, t);
+
+  //std::cout << task->description() << std::endl;
+  //std::cout << _node_id << " is node_id " << std::endl;
   task->set_node_id(_node_id);
   [[maybe_unused]] const auto enqueue_successful = _queues[priority_uint].enqueue(task);
   DebugAssert(enqueue_successful, "Enqueuing did not succeed.");

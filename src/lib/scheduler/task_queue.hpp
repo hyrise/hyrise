@@ -22,6 +22,8 @@ class TaskQueue {
  public:
   static constexpr uint32_t NUM_PRIORITY_LEVELS = 2;
 
+  TaskQueue() = delete;
+
   explicit TaskQueue(NodeID node_id);
 
   bool empty() const;
@@ -56,7 +58,7 @@ class TaskQueue {
   moodycamel::LightweightSemaphore semaphore;
 
  private:
-  NodeID _node_id;
+  NodeID _node_id{INVALID_NODE_ID};
   std::array<moodycamel::ConcurrentQueue<std::shared_ptr<AbstractTask>>, NUM_PRIORITY_LEVELS> _queues;
 };
 
