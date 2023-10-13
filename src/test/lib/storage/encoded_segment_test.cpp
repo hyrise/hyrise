@@ -85,17 +85,17 @@ class EncodedSegmentTest : public BaseTestWithParam<SegmentEncodingSpec> {
   }
 
   static std::shared_ptr<RowIDPosList> _create_sequential_position_filter(size_t row_count) {
-    auto list = std::make_shared<RowIDPosList>();
-    list->guarantee_single_chunk();
+    auto position_list = std::make_shared<RowIDPosList>();
+    position_list->guarantee_single_chunk();
 
     for (auto offset_in_referenced_chunk = ChunkOffset{0}; offset_in_referenced_chunk < row_count;
          ++offset_in_referenced_chunk) {
       if (offset_in_referenced_chunk % 2) {
-        list->push_back(RowID{ChunkID{0}, offset_in_referenced_chunk});
+        position_list->emplace_back(ChunkID{0}, offset_in_referenced_chunk);
       }
     }
 
-    return list;
+    return position_list;
   }
 
   std::shared_ptr<RowIDPosList> _create_random_access_position_filter() {

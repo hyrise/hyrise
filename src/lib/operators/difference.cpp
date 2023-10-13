@@ -139,7 +139,7 @@ std::shared_ptr<const Table> Difference::_on_execute() {
           if (pos_list_pair.first) {
             pos_list_pair.second->emplace_back((*pos_list_pair.first)[chunk_offset]);
           } else {
-            pos_list_pair.second->emplace_back(RowID{chunk_id, chunk_offset});
+            pos_list_pair.second->emplace_back(chunk_id, chunk_offset);
           }
         }
       }

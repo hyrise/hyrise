@@ -56,6 +56,11 @@ class Console : public Singleton<Console> {
   void set_logfile(const std::string& logfile);
 
   /*
+   * Set the executable path. Used to call external programs, such as data generators.
+   */
+  void set_console_path(const std::string& path);
+
+  /*
    * Load command history from history file.
    */
   void load_history(const std::string& history_file);
@@ -112,6 +117,7 @@ class Console : public Singleton<Console> {
   int _generate_tpcc(const std::string& args);
   int _generate_tpch(const std::string& args);
   int _generate_tpcds(const std::string& args);
+  int _generate_ssb(const std::string& args);
   int _load_table(const std::string& args);
   int _export_table(const std::string& args);
   int _exec_script(const std::string& script_file);
@@ -125,13 +131,11 @@ class Console : public Singleton<Console> {
   int _load_plugin(const std::string& args);
   int _unload_plugin(const std::string& input);
 
+  int _reset();
+  void _rollback();
+
   // Creates the pipelines and returns whether is was successful (true) or not (false)
   bool _initialize_pipeline(const std::string& sql);
-
-  // Checks whether the execution of the SQLPipeline has been rolled back and displays information accordingly.
-  // If rollback == true, the explicit context is deleted.
-  // Returns true if rollbacked, else false
-  bool _handle_rollback();
 
   // GNU readline interface to our commands
   static char** _command_completion(const char* text, const int start, const int /*end*/);
@@ -149,6 +153,7 @@ class Console : public Singleton<Console> {
   std::ofstream _log;
   bool _verbose;
   bool _pagination_active;
+  std::string _path;
 
   std::unique_ptr<SQLPipeline> _sql_pipeline;
   std::shared_ptr<TransactionContext> _explicitly_created_transaction_context;

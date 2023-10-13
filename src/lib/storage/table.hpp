@@ -190,6 +190,8 @@ class Table : private Noncopyable {
 
   std::vector<ChunkIndexStatistics> chunk_indexes_statistics() const;
 
+  std::vector<TableIndexStatistics> table_indexes_statistics() const;
+
   /**
    * Creates a PartialHashIndex on a set of chunks of a specific column and adds the index to the
    * table's index statistics. Table indexes can only be created on a set of immutable chunks.

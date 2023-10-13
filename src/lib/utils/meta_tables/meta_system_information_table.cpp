@@ -59,8 +59,8 @@ size_t MetaSystemInformationTable::_cpu_count() {
 #endif
 
 #ifdef __APPLE__
-  size_t processors;
-  size_t size = sizeof(processors);
+  auto processors = size_t{};
+  auto size = sizeof(processors);
   const auto ret = sysctlbyname("hw.ncpu", &processors, &size, nullptr, 0);
   Assert(ret == 0, "Failed to call sysctl hw.ncpu");
 
@@ -82,8 +82,8 @@ size_t MetaSystemInformationTable::_ram_size() {
 #endif
 
 #ifdef __APPLE__
-  uint64_t ram;
-  size_t size = sizeof(ram);
+  auto ram = uint64_t{};
+  auto size = sizeof(ram);
   const auto ret = sysctlbyname("hw.memsize", &ram, &size, nullptr, 0);
   Assert(ret == 0, "Failed to call sysctl hw.memsize");
 

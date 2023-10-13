@@ -14,6 +14,7 @@
 #include "operators/print.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
+#include "operators/union_all.hpp"
 #include "operators/update.hpp"
 #include "operators/validate.hpp"
 #include "statistics/table_statistics.hpp"
@@ -22,21 +23,30 @@
 
 namespace hyrise {
 
+using namespace expression_functional;  // NOLINT(build/namespaces)
+
 class OperatorsDeleteTest : public BaseTest {
  protected:
   void SetUp() override {
     _table_name = "table_a";
     _table2_name = "table_b";
+    _table3_name = "table_c";
     _table = load_table("resources/test_data/tbl/int_float.tbl");
     _table2 = load_table("resources/test_data/tbl/int_int3.tbl", ChunkOffset{3});
+    _table3 = load_table("resources/test_data/tbl/25_ints_sorted.tbl", ChunkOffset{3});
 
     // Delete Operator works with the Storage Manager, so the test table must also be known to the StorageManager
     Hyrise::get().storage_manager.add_table(_table_name, _table);
     Hyrise::get().storage_manager.add_table(_table2_name, _table2);
+    Hyrise::get().storage_manager.add_table(_table3_name, _table3);
   }
 
-  std::string _table_name, _table2_name;
-  std::shared_ptr<Table> _table, _table2;
+  std::string _table_name;
+  std::string _table2_name;
+  std::string _table3_name;
+  std::shared_ptr<Table> _table;
+  std::shared_ptr<Table> _table2;
+  std::shared_ptr<Table> _table3;
 
   void helper(bool commit);
 };
@@ -360,6 +370,158 @@ TEST_F(OperatorsDeleteTest, PrunedInputTable) {
   EXPECT_EQ(_table2->get_chunk(ChunkID{1})->mvcc_data()->get_end_cid(ChunkOffset{2}), MvccData::MAX_COMMIT_ID);
   EXPECT_EQ(_table2->get_chunk(ChunkID{2})->mvcc_data()->get_end_cid(ChunkOffset{0}), MvccData::MAX_COMMIT_ID);
   EXPECT_EQ(_table2->get_chunk(ChunkID{2})->mvcc_data()->get_end_cid(ChunkOffset{1}), expected_end_cid);
+}
+
+TEST_F(OperatorsDeleteTest, SetMaxEndCID) {
+  const auto get_table = std::make_shared<GetTable>(_table_name);
+  get_table->execute();
+
+  const auto table_scan = create_table_scan(get_table, ColumnID{0}, PredicateCondition::LessThan, 1000);
+  table_scan->execute();
+
+  const auto delete_op = std::make_shared<Delete>(table_scan);
+  const auto transaction_context = std::make_shared<TransactionContext>(TransactionID{1}, CommitID{2}, AutoCommit::No);
+  delete_op->set_transaction_context(transaction_context);
+  delete_op->execute();
+
+  const auto& chunk = _table->get_chunk(ChunkID{0});
+  ASSERT_TRUE(chunk->mvcc_data());
+  EXPECT_EQ(chunk->mvcc_data()->max_end_cid.load(), MvccData::MAX_COMMIT_ID);
+
+  transaction_context->commit();
+
+  EXPECT_EQ(chunk->mvcc_data()->max_end_cid.load(), CommitID{2});
+}
+
+// Check that all MvccData and invalid_row_counts are correctly set for all kinds of PosLists.
+TEST_F(OperatorsDeleteTest, DifferentPosLists) {
+  // Case (i): RowIDPosList that references a single chunk.
+  const auto pos_list_1 = std::make_shared<RowIDPosList>(
+      RowIDPosList{RowID{ChunkID{0}, ChunkOffset{0}}, RowID{ChunkID{0}, ChunkOffset{1}}});
+  pos_list_1->guarantee_single_chunk();
+  const auto chunk_1 =
+      std::make_shared<Chunk>(Segments{std::make_shared<ReferenceSegment>(_table3, ColumnID{0}, pos_list_1)});
+
+  // Case (ii): RowIDPosList that references an entire chunk.
+  const auto pos_list_2 = std::make_shared<RowIDPosList>(RowIDPosList{
+      RowID{ChunkID{1}, ChunkOffset{0}}, RowID{ChunkID{1}, ChunkOffset{1}}, RowID{ChunkID{1}, ChunkOffset{2}}});
+  pos_list_2->guarantee_single_chunk();
+  const auto chunk_2 =
+      std::make_shared<Chunk>(Segments{std::make_shared<ReferenceSegment>(_table3, ColumnID{0}, pos_list_2)});
+
+  // Case (iii): RowIDPosList that references multiple chunks.
+  const auto pos_list_3 = std::make_shared<RowIDPosList>(RowIDPosList{
+      RowID{ChunkID{2}, ChunkOffset{0}}, RowID{ChunkID{2}, ChunkOffset{1}}, RowID{ChunkID{3}, ChunkOffset{0}}});
+  const auto chunk_3 =
+      std::make_shared<Chunk>(Segments{std::make_shared<ReferenceSegment>(_table3, ColumnID{0}, pos_list_3)});
+
+  // Case (iv): EntireChunkPosList that references an entire chunk.
+  const auto pos_list_4 = std::make_shared<EntireChunkPosList>(ChunkID{4}, ChunkOffset{3});
+  const auto chunk_4 =
+      std::make_shared<Chunk>(Segments{std::make_shared<ReferenceSegment>(_table3, ColumnID{0}, pos_list_4)});
+
+  // Case (v): EntireChunkPosList that does not reference an entire chunk.
+  const auto pos_list_5 = std::make_shared<EntireChunkPosList>(ChunkID{5}, ChunkOffset{2});
+  const auto chunk_5 =
+      std::make_shared<Chunk>(Segments{std::make_shared<ReferenceSegment>(_table3, ColumnID{0}, pos_list_5)});
+
+  // Build a reference table as input for the operator.
+  auto chunks = std::vector<std::shared_ptr<Chunk>>{chunk_1, chunk_2, chunk_3, chunk_4, chunk_5};
+  const auto column_definitions = TableColumnDefinitions{{"a", DataType::Int, false}};
+  const auto reference_table = std::make_shared<Table>(column_definitions, TableType::References, std::move(chunks));
+  const auto table_wrapper = std::make_shared<TableWrapper>(reference_table);
+
+  // Execute the operator.
+  const auto delete_op = std::make_shared<Delete>(table_wrapper);
+  const auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
+  delete_op->set_transaction_context(transaction_context);
+  execute_all({table_wrapper, delete_op});
+  transaction_context->commit();
+  const auto expected_end_cid = transaction_context->commit_id();
+
+  const auto& mvcc_data_1 = _table3->get_chunk(ChunkID{0})->mvcc_data();
+  EXPECT_EQ(mvcc_data_1->get_end_cid(ChunkOffset{0}), expected_end_cid);
+  EXPECT_EQ(mvcc_data_1->get_end_cid(ChunkOffset{1}), expected_end_cid);
+  EXPECT_EQ(mvcc_data_1->get_end_cid(ChunkOffset{2}), MvccData::MAX_COMMIT_ID);
+  EXPECT_EQ(mvcc_data_1->max_end_cid.load(), expected_end_cid);
+  EXPECT_EQ(_table3->get_chunk(ChunkID{0})->invalid_row_count(), 2);
+
+  const auto& mvcc_data_2 = _table3->get_chunk(ChunkID{1})->mvcc_data();
+  EXPECT_EQ(mvcc_data_2->get_end_cid(ChunkOffset{0}), expected_end_cid);
+  EXPECT_EQ(mvcc_data_2->get_end_cid(ChunkOffset{1}), expected_end_cid);
+  EXPECT_EQ(mvcc_data_2->get_end_cid(ChunkOffset{2}), expected_end_cid);
+  EXPECT_EQ(mvcc_data_2->max_end_cid.load(), expected_end_cid);
+  EXPECT_EQ(_table3->get_chunk(ChunkID{1})->invalid_row_count(), 3);
+
+  const auto& mvcc_data_3 = _table3->get_chunk(ChunkID{2})->mvcc_data();
+  EXPECT_EQ(mvcc_data_3->get_end_cid(ChunkOffset{0}), expected_end_cid);
+  EXPECT_EQ(mvcc_data_3->get_end_cid(ChunkOffset{1}), expected_end_cid);
+  EXPECT_EQ(mvcc_data_3->get_end_cid(ChunkOffset{2}), MvccData::MAX_COMMIT_ID);
+  EXPECT_EQ(mvcc_data_3->max_end_cid.load(), expected_end_cid);
+  EXPECT_EQ(_table3->get_chunk(ChunkID{2})->invalid_row_count(), 2);
+
+  const auto& mvcc_data_4 = _table3->get_chunk(ChunkID{3})->mvcc_data();
+  EXPECT_EQ(mvcc_data_4->get_end_cid(ChunkOffset{0}), expected_end_cid);
+  EXPECT_EQ(mvcc_data_4->get_end_cid(ChunkOffset{1}), MvccData::MAX_COMMIT_ID);
+  EXPECT_EQ(mvcc_data_4->get_end_cid(ChunkOffset{2}), MvccData::MAX_COMMIT_ID);
+  EXPECT_EQ(mvcc_data_4->max_end_cid.load(), expected_end_cid);
+  EXPECT_EQ(_table3->get_chunk(ChunkID{3})->invalid_row_count(), 1);
+
+  const auto& mvcc_data_5 = _table3->get_chunk(ChunkID{4})->mvcc_data();
+  EXPECT_EQ(mvcc_data_5->get_end_cid(ChunkOffset{0}), expected_end_cid);
+  EXPECT_EQ(mvcc_data_5->get_end_cid(ChunkOffset{1}), expected_end_cid);
+  EXPECT_EQ(mvcc_data_5->get_end_cid(ChunkOffset{2}), expected_end_cid);
+  EXPECT_EQ(mvcc_data_5->max_end_cid.load(), expected_end_cid);
+  EXPECT_EQ(_table3->get_chunk(ChunkID{4})->invalid_row_count(), 3);
+
+  const auto& mvcc_data_6 = _table3->get_chunk(ChunkID{5})->mvcc_data();
+  EXPECT_EQ(mvcc_data_6->get_end_cid(ChunkOffset{0}), expected_end_cid);
+  EXPECT_EQ(mvcc_data_6->get_end_cid(ChunkOffset{1}), expected_end_cid);
+  EXPECT_EQ(mvcc_data_6->get_end_cid(ChunkOffset{2}), MvccData::MAX_COMMIT_ID);
+  EXPECT_EQ(mvcc_data_6->max_end_cid.load(), expected_end_cid);
+  EXPECT_EQ(_table3->get_chunk(ChunkID{5})->invalid_row_count(), 2);
+
+  const auto chunk_count = _table3->chunk_count();
+  for (auto chunk_id = ChunkID{6}; chunk_id < chunk_count; ++chunk_id) {
+    const auto& chunk = _table3->get_chunk(chunk_id);
+    const auto& mvcc_data = _table3->get_chunk(chunk_id)->mvcc_data();
+    const auto chunk_size = chunk->size();
+
+    for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
+      EXPECT_EQ(mvcc_data->get_end_cid(chunk_offset), MvccData::MAX_COMMIT_ID);
+    }
+    EXPECT_EQ(mvcc_data->max_end_cid.load(), MvccData::MAX_COMMIT_ID);
+    EXPECT_EQ(_table3->get_chunk(chunk_id)->invalid_row_count(), 0);
+  }
+}
+
+// We want to notice if the input references rows multiple times. Though this is no problem per se, it currently leads
+// to an incorrect invalid_row_count of the affected chunk.
+TEST_F(OperatorsDeleteTest, DuplicateRows) {
+  if constexpr (!HYRISE_DEBUG) {
+    GTEST_SKIP();
+  }
+
+  const auto get_table = std::make_shared<GetTable>(_table_name);
+  get_table->execute();
+  // Create TableScan that selects only the second row.
+  const auto column_a = get_column_expression(get_table, ColumnID{0});
+  const auto table_scan = std::make_shared<TableScan>(get_table, equals_(column_a, 123));
+  table_scan->never_clear_output();
+  // Create UnionAll to have the row twice in the resulting table.
+  const auto union_all = std::make_shared<UnionAll>(table_scan, table_scan);
+  union_all->never_clear_output();
+
+  const auto delete_op = std::make_shared<Delete>(union_all);
+  const auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
+  delete_op->set_transaction_context(transaction_context);
+
+  execute_all({table_scan, union_all});
+  EXPECT_EQ(table_scan->get_output()->row_count(), 1);
+  EXPECT_EQ(union_all->get_output()->row_count(), 2);
+
+  EXPECT_THROW(delete_op->execute(), std::logic_error);
+  transaction_context->rollback(RollbackReason::Conflict);
 }
 
 }  // namespace hyrise

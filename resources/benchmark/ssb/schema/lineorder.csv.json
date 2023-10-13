@@ -1,0 +1,99 @@
+{
+    "columns": [
+        {
+            "name": "lo_orderkey",
+            "nullable": false,
+            "type": "int"
+        },
+        {
+            "name": "lo_linenumber",
+            "nullable": false,
+            "type": "int"
+        },
+        {
+            "name": "lo_custkey",
+            "nullable": false,
+            "type": "int"
+        },
+        {
+            "name": "lo_partkey",
+            "nullable": false,
+            "type": "int"
+        },
+        {
+            "name": "lo_suppkey",
+            "nullable": false,
+            "type": "int"
+        },
+        {
+            "name": "lo_orderdate",
+            "nullable": false,
+            "type": "int"
+        },
+        {
+            "name": "lo_orderpriority",
+            "nullable": false,
+            "type": "string"
+        },
+        {
+            "name": "lo_shippriority",
+            "nullable": false,
+            "type": "string"
+        },
+        {
+            "name": "lo_quantity",
+            "nullable": false,
+            "type": "int"
+        },
+        {
+            "name": "lo_extendedprice",
+            "nullable": false,
+            "type": "int"
+        },
+        {
+            "name": "lo_ordtotalprice",
+            "nullable": false,
+            "type": "int"
+        },
+        {
+            "name": "lo_discount",
+            "nullable": false,
+            "type": "int"
+        },
+        {
+            "name": "lo_revenue",
+            "nullable": false,
+            "type": "int"
+        },
+        {
+            "name": "lo_supplycost",
+            "nullable": false,
+            "type": "int"
+        },
+        {
+            "name": "lo_tax",
+            "nullable": false,
+            "type": "int"
+        },
+        {
+            "name": "lo_commitdate",
+            "nullable": false,
+            "type": "int"
+        },
+        {
+            "name": "lo_shipmode",
+            "nullable": false,
+            "type": "string"
+        }
+    ],
+    "config": {
+        "delimiter": "\n",
+        "delimiter_escape": "\\",
+        "escape": "\"",
+        "null_handling": "reject_null_strings",
+        "quote": "\"",
+        "reject_quoted_nonstrings": true,
+        "rfc_mode": true,
+        "separator": "|"
+    }
+}

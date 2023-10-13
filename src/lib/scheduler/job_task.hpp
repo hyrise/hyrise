@@ -30,7 +30,7 @@ class JobTask : public AbstractTask {
  public:
   explicit JobTask(const std::function<void()>& fn, SchedulePriority priority = SchedulePriority::Default,
                    bool stealable = true)
-      : AbstractTask(priority, stealable), _fn(fn) {}
+      : AbstractTask{priority, stealable}, _fn{fn} {}
 
  protected:
   void _on_execute() override;

@@ -1189,6 +1189,33 @@ std::shared_ptr<Table> TPCDSTableGenerator::generate_web_site(ds_key_t max_rows)
   return web_site_builder.finish_table();
 }
 
+AbstractTableGenerator::IndexesByTable TPCDSTableGenerator::_indexes_by_table() const {
+  return {{"store_sales", {{"ss_item_sk"}, {"ss_ticket_number"}}},
+          {"store_returns", {{"sr_item_sk"}, {"sr_ticket_number"}}},
+          {"catalog_sales", {{"cs_item_sk"}, {"cs_order_number"}}},
+          {"catalog_returns", {{"cr_item_sk"}, {"cr_order_number"}}},
+          {"web_sales", {{"ws_item_sk"}, {"ws_order_number"}}},
+          {"web_returns", {{"wr_item_sk"}, {"wr_order_number"}}},
+          {"inventory", {{"inv_date_sk"}, {"inv_item_sk"}, {"inv_warehouse_sk"}}},
+          {"store", {{"s_store_sk"}}},
+          {"call_center", {{"cc_call_center_sk"}}},
+          {"catalog_page", {{"cp_catalog_page_sk"}}},
+          {"web_site", {{"web_site_sk"}}},
+          {"web_page", {{"wp_web_page_sk"}}},
+          {"warehouse", {{"w_warehouse_sk"}}},
+          {"customer", {{"c_customer_sk"}}},
+          {"customer_address", {{"ca_address_sk"}}},
+          {"customer_demographics", {{"cd_demo_sk"}}},
+          {"date_dim", {{"d_date_sk"}}},
+          {"household_demographics", {{"hd_demo_sk"}}},
+          {"item", {{"i_item_sk"}}},
+          {"income_band", {{"ib_income_band_sk"}}},
+          {"promotion", {{"p_promo_sk"}}},
+          {"reason", {{"r_reason_sk"}}},
+          {"ship_mode", {{"sm_ship_mode_sk"}}},
+          {"time_dim", {{"t_time_sk"}}}};
+}
+
 void TPCDSTableGenerator::_add_constraints(
     std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) const {
   /**
