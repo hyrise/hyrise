@@ -48,11 +48,11 @@ struct PageID {
 
   bool operator<(const PageID& other) const {
     return this->index < other.index && this->size_type() < other.size_type();
-  };
+  }
 
   bool operator==(const PageID& other) const {
     return this->index == other.index && this->size_type() == other.size_type();
-  };
+  }
 
   PageID() = default;
 
