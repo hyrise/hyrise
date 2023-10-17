@@ -1,6 +1,3 @@
-#include <memory>
-#include <vector>
-
 #include "base_test.hpp"
 
 #include "expression/expression_functional.hpp"
@@ -26,6 +23,7 @@
 #include "logical_query_plan/union_node.hpp"
 #include "logical_query_plan/update_node.hpp"
 #include "logical_query_plan/validate_node.hpp"
+#include "logical_query_plan/window_node.hpp"
 #include "statistics/attribute_statistics.hpp"
 #include "statistics/cardinality_estimator.hpp"
 #include "statistics/statistics_objects/equal_distinct_count_histogram.hpp"
@@ -91,6 +89,7 @@ class CardinalityEstimatorTest : public BaseTest {
                                               {histogram_c_x, histogram_c_y});
 
     c_x = node_c->get_column("x");
+    c_y = node_c->get_column("y");
 
     /**
      * node_d
@@ -143,7 +142,7 @@ class CardinalityEstimatorTest : public BaseTest {
   }
 
   CardinalityEstimator estimator;
-  std::shared_ptr<LQPColumnExpression> a_a, a_b, b_a, b_b, c_x, d_a, d_b, d_c, e_a, e_b, f_a, f_b, g_a;
+  std::shared_ptr<LQPColumnExpression> a_a, a_b, b_a, b_b, c_x, c_y, d_a, d_b, d_c, e_a, e_b, f_a, f_b, g_a;
   std::shared_ptr<MockNode> node_a, node_b, node_c, node_d, node_e, node_f, node_g;
 };
 
@@ -911,6 +910,181 @@ TEST_F(CardinalityEstimatorTest, NonQueryNodes) {
   EXPECT_EQ(estimator.estimate_cardinality(DropViewNode::make("v", false)), 0.0f);
   EXPECT_EQ(estimator.estimate_cardinality(DropTableNode::make("t", false)), 0.0f);
   EXPECT_EQ(estimator.estimate_cardinality(DummyTableNode::make()), 0.0f);
+}
+
+// Usually, we assume that we know nothing about predicates getting their values from uncorrelated subqueries and we
+// simply forward the input estimations. However, special predicates with subqueries can stem from join rewrites (e.g.,
+// JoinToPredicateRewriteRule). We estimate the resulting plans just like we would have done it for a semi-join. The
+// following two test cases ensure the correct behavior for the possible rewrites.
+TEST_F(CardinalityEstimatorTest, ValueScanWithUncorrelatedSubquery) {
+  // Case (i): Predicate column = <subquery>
+  // Example query:
+  //     SELECT n_name FROM nation WHERE n_regionkey = (SELECT r_regionkey FROM region WHERE r_name = 'ASIA');
+  // In this case, SELECT r_regionkey ... is a selection on the primary key. We know it will result in a single value,
+  // so using an uncorrelated subquery to get this value is feasible.
+  // clang-format off
+  const auto subquery =
+  ProjectionNode::make(expression_vector(c_y),
+    PredicateNode::make(equals_(c_y, value_(2)),
+      node_c));
+  // clang-format on
+
+  auto lqp = PredicateNode::make(equals_(a_a, lqp_subquery_(subquery)), node_a);
+
+  const auto semi_join_lqp = JoinNode::make(JoinMode::Semi, equals_(a_a, c_y), node_a, subquery);
+
+  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(lqp), estimator.estimate_cardinality(semi_join_lqp));
+  EXPECT_LT(estimator.estimate_cardinality(lqp), estimator.estimate_cardinality(node_a));
+
+  // Ensure correlated subqueries are not considered and we forward the input estimates.
+  lqp = PredicateNode::make(equals_(a_a, lqp_subquery_(subquery, std::make_pair(ParameterID{0}, a_b))), node_a);
+
+  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(lqp), estimator.estimate_cardinality(node_a));
+
+  // Ensure that any predicate condition other than equals and between still lead to forwarding the input estimates.
+  for (const auto predicate_condition :
+       {PredicateCondition::LessThan, PredicateCondition::LessThanEquals, PredicateCondition::NotEquals,
+        PredicateCondition::GreaterThan, PredicateCondition::GreaterThanEquals}) {
+    const auto predicate =
+        std::make_shared<BinaryPredicateExpression>(predicate_condition, a_a, lqp_subquery_(subquery));
+    lqp = PredicateNode::make(predicate, node_a);
+
+    EXPECT_FLOAT_EQ(estimator.estimate_cardinality(lqp), estimator.estimate_cardinality(node_a));
+  }
+}
+
+TEST_F(CardinalityEstimatorTest, BetweenScanWithUncorrelatedSubquery) {
+  // Case (ii): Predicate column BETWEEN min(<subquery>) and max(<subquery>)
+  // Example query:
+  //     SELECT SUM(ws_ext_sales_price) FROM web_sales
+  //      WHERE ws_sold_date_sk BETWEEN (SELECT MIN(d_date_sk) FROM date_dim WHERE d_year = 2000)
+  //                                AND (SELECT MAX(d_date_sk) FROM date_dim WHERE d_year = 2000);
+  const auto subquery = PredicateNode::make(between_inclusive_(c_y, value_(0), value_(2)), node_c);
+
+  const auto min_c_y = AggregateNode::make(expression_vector(), expression_vector(min_(c_y)), subquery);
+
+  const auto max_c_y = AggregateNode::make(expression_vector(), expression_vector(max_(c_y)), subquery);
+
+  auto lqp = PredicateNode::make(between_inclusive_(a_a, lqp_subquery_(min_c_y), lqp_subquery_(max_c_y)), node_a);
+
+  const auto semi_join_lqp = JoinNode::make(JoinMode::Semi, equals_(a_a, c_y), node_a, subquery);
+
+  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(lqp), estimator.estimate_cardinality(semi_join_lqp));
+  EXPECT_LT(estimator.estimate_cardinality(lqp), estimator.estimate_cardinality(node_a));
+
+  // Ensure that other between predicate conditions behave the same.
+  for (const auto predicate_condition :
+       {PredicateCondition::BetweenLowerExclusive, PredicateCondition::BetweenUpperExclusive,
+        PredicateCondition::BetweenExclusive}) {
+    const auto predicate =
+        std::make_shared<BetweenExpression>(predicate_condition, a_a, lqp_subquery_(min_c_y), lqp_subquery_(max_c_y));
+    lqp = PredicateNode::make(predicate, node_a);
+    EXPECT_FLOAT_EQ(estimator.estimate_cardinality(lqp), estimator.estimate_cardinality(semi_join_lqp));
+  }
+
+  // Ensure correlated subqueries are not considered and we forward the input estimates.
+  // clang-format off
+  lqp =
+  PredicateNode::make(between_inclusive_(a_a, lqp_subquery_(min_c_y, std::make_pair(ParameterID{0}, a_b)), lqp_subquery_(max_c_y, std::make_pair(ParameterID{0}, a_b))),  // NOLINT(whitespace/line_length)
+    node_a);
+  // clang-format on
+
+  // Ensure we do not consider the wrong aggregate functions and forward the input estimates.
+  lqp = PredicateNode::make(between_inclusive_(a_a, lqp_subquery_(max_c_y), lqp_subquery_(max_c_y)), node_a);
+  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(lqp), estimator.estimate_cardinality(node_a));
+
+  lqp = PredicateNode::make(between_inclusive_(a_a, lqp_subquery_(min_c_y), lqp_subquery_(min_c_y)), node_a);
+  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(lqp), estimator.estimate_cardinality(node_a));
+
+  // Aggregate functions must be performed on the same column.
+  const auto min_c_x = AggregateNode::make(expression_vector(), expression_vector(min_(c_x)), subquery);
+  lqp = PredicateNode::make(between_inclusive_(a_a, lqp_subquery_(min_c_x), lqp_subquery_(max_c_y)), node_a);
+  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(lqp), estimator.estimate_cardinality(node_a));
+
+  // Aggregate functions must not group the tuples. Otherwise, we do not get the minimum and maximum value for the join
+  // key for the underlying node.
+  const auto min_c_y_grouped = AggregateNode::make(expression_vector(c_x), expression_vector(min_(c_y)), subquery);
+  lqp = PredicateNode::make(between_inclusive_(a_a, lqp_subquery_(min_c_y_grouped), lqp_subquery_(max_c_y)), node_a);
+  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(lqp), estimator.estimate_cardinality(node_a));
+
+  // There must not be another operator in between aggregate and origin node. Otherwise, further join keys might be
+  // filtered and the predicate is not equivalent to a semi-join with the origin node anymore.
+  // clang-format off
+  const auto min_c_y_filtered =
+  AggregateNode::make(expression_vector(), expression_vector(min_(c_y)),
+    PredicateNode::make(not_equals_(c_x, value_(1)),
+      subquery));
+  // clang-format on
+  lqp = PredicateNode::make(between_inclusive_(a_a, lqp_subquery_(min_c_y_filtered), lqp_subquery_(max_c_y)), node_a);
+  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(lqp), estimator.estimate_cardinality(node_a));
+}
+
+TEST_F(CardinalityEstimatorTest, BetweenScanWithUncorrelatedSubqueryAndProjections) {
+  // Similar to BetweenScanWithUncorrelatedSubquery, but with a single AggregateNode for MIN/MAX and two projections.
+  // Example query is the same as for that test case:
+  //     SELECT SUM(ws_ext_sales_price) FROM web_sales
+  //      WHERE ws_sold_date_sk BETWEEN (SELECT MIN(d_date_sk) FROM date_dim WHERE d_year = 2000)
+  //                                AND (SELECT MAX(d_date_sk) FROM date_dim WHERE d_year = 2000);
+  // clang-format off
+  const auto subquery =
+  AggregateNode::make(expression_vector(), expression_vector(min_(c_y), max_(c_y)),
+    PredicateNode::make(between_inclusive_(c_y, value_(0), value_(2)),
+      node_c));
+  // clang-format on
+
+  const auto min_c_y = ProjectionNode::make(expression_vector(min_(c_y)), subquery);
+  const auto max_c_y = ProjectionNode::make(expression_vector(max_(c_y)), subquery);
+
+  auto lqp = PredicateNode::make(between_inclusive_(a_a, lqp_subquery_(min_c_y), lqp_subquery_(max_c_y)), node_a);
+
+  const auto semi_join_lqp = JoinNode::make(JoinMode::Semi, equals_(a_a, c_y), node_a, subquery->left_input());
+
+  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(lqp), estimator.estimate_cardinality(semi_join_lqp));
+  EXPECT_LT(estimator.estimate_cardinality(lqp), estimator.estimate_cardinality(node_a));
+
+  // Ensure that other between predicate conditions behave the same.
+  for (const auto predicate_condition :
+       {PredicateCondition::BetweenLowerExclusive, PredicateCondition::BetweenUpperExclusive,
+        PredicateCondition::BetweenExclusive}) {
+    const auto predicate =
+        std::make_shared<BetweenExpression>(predicate_condition, a_a, lqp_subquery_(min_c_y), lqp_subquery_(max_c_y));
+    lqp = PredicateNode::make(predicate, node_a);
+    EXPECT_FLOAT_EQ(estimator.estimate_cardinality(lqp), estimator.estimate_cardinality(semi_join_lqp));
+  }
+
+  // Input nodes must be ProjectionNodes.
+  const auto min_c_y_alias = AliasNode::make(expression_vector(min_(c_y)), std::vector<std::string>{"foo"}, subquery);
+  lqp = PredicateNode::make(between_inclusive_(a_a, lqp_subquery_(min_c_y_alias), lqp_subquery_(max_c_y)), node_a);
+  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(lqp), estimator.estimate_cardinality(node_a));
+
+  // Common node must be AggregateNode.
+  const auto union_node = UnionNode::make(SetOperationMode::All, subquery, subquery);
+  min_c_y->set_left_input(union_node);
+  max_c_y->set_left_input(union_node);
+  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(lqp), estimator.estimate_cardinality(node_a));
+
+  // Aggregate node must not group the tuples.
+  const auto aggregate_node = AggregateNode::make(expression_vector(c_x), expression_vector(min_(c_y), max_(c_y)));
+  min_c_y->set_left_input(aggregate_node);
+  max_c_y->set_left_input(aggregate_node);
+  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(lqp), estimator.estimate_cardinality(node_a));
+}
+
+TEST_F(CardinalityEstimatorTest, WindowNode) {
+  auto frame_description = FrameDescription{FrameType::Range, FrameBound{0, FrameBoundType::Preceding, true},
+                                            FrameBound{0, FrameBoundType::CurrentRow, false}};
+  const auto window =
+      window_(expression_vector(), expression_vector(), std::vector<SortMode>{}, std::move(frame_description));
+  const auto lqp = WindowNode::make(min_(a_a, window), node_a);
+
+  const auto input_table_statistics = node_a->table_statistics();
+  const auto result_table_statistics = estimator.estimate_statistics(lqp);
+
+  EXPECT_EQ(result_table_statistics->row_count, 100);
+  ASSERT_EQ(result_table_statistics->column_statistics.size(), 3);
+  EXPECT_EQ(result_table_statistics->column_statistics.at(0), input_table_statistics->column_statistics.at(0));
+  EXPECT_EQ(result_table_statistics->column_statistics.at(1), input_table_statistics->column_statistics.at(1));
+  EXPECT_TRUE(result_table_statistics->column_statistics.at(2));
 }
 
 }  // namespace hyrise

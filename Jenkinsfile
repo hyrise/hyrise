@@ -52,7 +52,7 @@ try {
       // Print the hostname to let us know on which node the docker image was executed for reproducibility.
       sh "hostname"
     }
-  
+
     // The empty '' results in using the default registry: https://index.docker.io/v1/
     docker.withRegistry('', 'docker') {
       def hyriseCI = docker.image('hyrise/hyrise-ci:22.04');
@@ -81,7 +81,7 @@ try {
 
             // We don't use unity builds with GCC 9 as it triggers https://github.com/google/googletest/issues/3552
             unity = '-DCMAKE_UNITY_BUILD=ON'
- 
+
             // With Hyrise, we aim to support the most recent compiler versions and do not invest a lot of work to
             // support older versions. We test the oldest LLVM version shipped with Ubuntu 22.04 (i.e., LLVM 11) and
             // GCC 9 (oldest version supported by Hyrise). We execute at least debug runs for them.
@@ -173,13 +173,15 @@ try {
                 sh "./scripts/test/hyriseBenchmarkJoinOrder_test.py clang-debug"
                 sh "./scripts/test/hyriseBenchmarkFileBased_test.py clang-debug"
                 sh "cd clang-debug && ../scripts/test/hyriseBenchmarkTPCH_test.py ." // Own folder to isolate visualization
-                sh "cd clang-debug && ../scripts/test/hyriseBenchmarkJCCH_test.py ." // Own folder to isolate visualization
+                sh "cd clang-debug && ../scripts/test/hyriseBenchmarkJCCH_test.py ." // Own folder to isolate cached data
+                sh "cd clang-debug && ../scripts/test/hyriseBenchmarkStarSchema_test.py ." // Own folder to isolate cached data
                 sh "./scripts/test/hyriseConsole_test.py gcc-debug"
                 sh "./scripts/test/hyriseServer_test.py gcc-debug"
                 sh "./scripts/test/hyriseBenchmarkJoinOrder_test.py gcc-debug"
                 sh "./scripts/test/hyriseBenchmarkFileBased_test.py gcc-debug"
                 sh "cd gcc-debug && ../scripts/test/hyriseBenchmarkTPCH_test.py ." // Own folder to isolate visualization
-                sh "cd gcc-debug && ../scripts/test/hyriseBenchmarkJCCH_test.py ." // Own folder to isolate visualization
+                sh "cd gcc-debug && ../scripts/test/hyriseBenchmarkJCCH_test.py ." // Own folder to isolate cached data
+                sh "cd gcc-debug && ../scripts/test/hyriseBenchmarkStarSchema_test.py ." // Own folder to isolate cached data
 
               } else {
                 Utils.markStageSkippedForConditional("debugSystemTests")
@@ -255,7 +257,7 @@ try {
                 sh "cd clang-release-addr-ub-sanitizers && make hyriseTest hyriseSystemTest hyriseBenchmarkTPCH hyriseBenchmarkTPCC -j \$(( \$(nproc) / 10))"
                 sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=suppressions=resources/.asan-ignore.txt ./clang-release-addr-ub-sanitizers/hyriseTest clang-release-addr-ub-sanitizers"
                 sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=suppressions=resources/.asan-ignore.txt ./clang-release-addr-ub-sanitizers/hyriseSystemTest ${tests_excluded_in_sanitizer_builds} clang-release-addr-ub-sanitizers"
-                sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=suppressions=resources/.asan-ignore.txt ./clang-release-addr-ub-sanitizers/hyriseBenchmarkTPCH -s .01 --verify -r 100 --scheduler --clients 10"
+                sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=suppressions=resources/.asan-ignore.txt ./clang-release-addr-ub-sanitizers/hyriseBenchmarkTPCH -s .01 --verify -r 100 --scheduler --clients 10 --cores \$(( \$(nproc) / 4))"
                 sh "cd clang-release-addr-ub-sanitizers && LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=suppressions=resources/.asan-ignore.txt ../scripts/test/hyriseBenchmarkTPCC_test.py ." // Own folder to isolate binary export tests
               } else {
                 Utils.markStageSkippedForConditional("clangReleaseAddrUBSanitizers")
@@ -267,7 +269,7 @@ try {
                 sh "cd clang-relwithdebinfo-thread-sanitizer && make hyriseTest hyriseSystemTest hyriseBenchmarkTPCH -j \$(( \$(nproc) / 10))"
                 sh "TSAN_OPTIONS=\"history_size=7 suppressions=resources/.tsan-ignore.txt\" ./clang-relwithdebinfo-thread-sanitizer/hyriseTest clang-relwithdebinfo-thread-sanitizer"
                 sh "TSAN_OPTIONS=\"history_size=7 suppressions=resources/.tsan-ignore.txt\" ./clang-relwithdebinfo-thread-sanitizer/hyriseSystemTest ${tests_excluded_in_sanitizer_builds} clang-relwithdebinfo-thread-sanitizer"
-                sh "TSAN_OPTIONS=\"history_size=7 suppressions=resources/.tsan-ignore.txt\" ./clang-relwithdebinfo-thread-sanitizer/hyriseBenchmarkTPCH -s .01 --verify -r 100 --scheduler --clients 10"
+                sh "TSAN_OPTIONS=\"history_size=7 suppressions=resources/.tsan-ignore.txt\" ./clang-relwithdebinfo-thread-sanitizer/hyriseBenchmarkTPCH -s .01 --verify -r 100 --scheduler --clients 10 --cores \$(( \$(nproc) / 10))"
               } else {
                 Utils.markStageSkippedForConditional("clangRelWithDebInfoThreadSanitizer")
               }
@@ -351,7 +353,18 @@ try {
                 Utils.markStageSkippedForConditional("jobQueryPlans")
               }
             }
+          }, ssbQueryPlans: {
+            stage("ssbQueryPlans") {
+              if (env.BRANCH_NAME == 'master' || full_ci) {
+                sh "mkdir -p query_plans/ssb; cd query_plans/ssb && ../../clang-release/hyriseBenchmarkStarSchema --dont_cache_binary_tables -r 1 -s 1 --visualize && ../../scripts/plot_operator_breakdown.py ../../clang-release/"
+                archiveArtifacts artifacts: 'query_plans/ssb/*.svg'
+                archiveArtifacts artifacts: 'query_plans/ssb/operator_breakdown.pdf'
+              } else {
+                Utils.markStageSkippedForConditional("ssbQueryPlans")
+              }
+            }
           }
+
         } finally {
           sh "ls -A1 | xargs rm -rf"
           deleteDir()
@@ -363,25 +376,38 @@ try {
   parallel clangDebugMacX64: {
     node('mac') {
       stage("clangDebugMacX64") {
-        if (env.BRANCH_NAME == 'master' || full_ci) {
-          try {
-            checkout scm
+        // We have experienced frequent network problems with this CI machine. So far, we have not found the cause.
+        // Since we run this stage very late and it frequently fails due to network problems, we retry the stage three
+        // times as (i) we can be rather sure that most problems with the current pull request have already been found
+        // in earlier stages and fails in this stage are probably network issues, and (ii) we avoid re-runs of entire
+        // Full CI runs that failed in the very last stage due to a single network issue.
+        retry(3) {
+          if (env.BRANCH_NAME == 'master' || full_ci) {
+            try {
+              checkout scm
 
-            // We do not use install_dependencies.sh here as there is no way to run OS X in a Docker container
-            sh "git submodule update --init --recursive --jobs 4 --depth=1"
+              // We do not use install_dependencies.sh here as there is no way to run OS X in a Docker container
+              sh "git submodule update --init --recursive --jobs 4 --depth=1"
 
-            sh "mkdir clang-debug && cd clang-debug && /usr/local/bin/cmake ${debug} ${unity} -DCMAKE_C_COMPILER=/usr/local/opt/llvm@15/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm@15/bin/clang++ .."
-            sh "cd clang-debug && make -j \$(sysctl -n hw.logicalcpu)"
-            sh "./clang-debug/hyriseTest"
-            sh "./clang-debug/hyriseSystemTest --gtest_filter=\"-TPCCTest*:TPCDSTableGeneratorTest.*:TPCHTableGeneratorTest.RowCountsMediumScaleFactor:*.CompareToSQLite/Line1*WithLZ4\""
-            sh "PATH=/usr/local/bin/:$PATH ./scripts/test/hyriseConsole_test.py clang-debug"
-            sh "PATH=/usr/local/bin/:$PATH ./scripts/test/hyriseServer_test.py clang-debug"
-            sh "PATH=/usr/local/bin/:$PATH ./scripts/test/hyriseBenchmarkFileBased_test.py clang-debug"
-          } finally {
-            sh "ls -A1 | xargs rm -rf"
+              // Build hyriseTest with macOS's default compiler (Apple clang) and run it.
+              sh "mkdir clang-apple-debug && cd clang-apple-debug && /usr/local/bin/cmake ${debug} ${unity} .."
+              sh "cd clang-apple-debug && make -j \$(sysctl -n hw.logicalcpu)"
+              sh "./clang-apple-debug/hyriseTest"
+
+              // Build Hyrise with a recent clang compiler version (as recommended for Hyrise on macOS) and run various tests.
+              sh "mkdir clang-debug && cd clang-debug && /usr/local/bin/cmake ${debug} ${unity} -DCMAKE_C_COMPILER=/usr/local/opt/llvm@16/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm@16/bin/clang++ .."
+              sh "cd clang-debug && make -j \$(sysctl -n hw.logicalcpu)"
+              sh "./clang-debug/hyriseTest"
+              sh "./clang-debug/hyriseSystemTest --gtest_filter=\"-TPCCTest*:TPCDSTableGeneratorTest.*:TPCHTableGeneratorTest.RowCountsMediumScaleFactor:*.CompareToSQLite/Line1*WithLZ4\""
+              sh "PATH=/usr/local/bin/:$PATH ./scripts/test/hyriseConsole_test.py clang-debug"
+              sh "PATH=/usr/local/bin/:$PATH ./scripts/test/hyriseServer_test.py clang-debug"
+              sh "PATH=/usr/local/bin/:$PATH ./scripts/test/hyriseBenchmarkFileBased_test.py clang-debug"
+            } finally {
+              sh "ls -A1 | xargs rm -rf"
+            }
+          } else {
+            Utils.markStageSkippedForConditional("clangDebugMacX64")
           }
-        } else {
-          Utils.markStageSkippedForConditional("clangDebugMacX64")
         }
       }
     }
@@ -392,12 +418,18 @@ try {
         if (env.BRANCH_NAME == 'master' || full_ci) {
           try {
             checkout scm
-            
+
             // We do not use install_dependencies.sh here as there is no way to run OS X in a Docker container
             sh "git submodule update --init --recursive --jobs 4 --depth=1"
-            
+
+            // Build hyriseTest with macOS's default compiler (Apple clang) and run it.
+            sh "mkdir clang-apple-release && cd clang-apple-release && cmake ${release} .."
+            sh "cd clang-apple-release && make -j \$(sysctl -n hw.logicalcpu)"
+            sh "./clang-apple-release/hyriseTest"
+
+            // Build Hyrise with a recent clang compiler version (as recommended for Hyrise on macOS) and run various tests.
             // NOTE: These paths differ from x64 - brew on ARM uses /opt (https://docs.brew.sh/Installation)
-            sh "mkdir clang-release && cd clang-release && cmake ${release} -DCMAKE_C_COMPILER=/opt/homebrew/opt/llvm@15/bin/clang -DCMAKE_CXX_COMPILER=/opt/homebrew/opt/llvm@15/bin/clang++ .."
+            sh "mkdir clang-release && cd clang-release && cmake ${release} -DCMAKE_C_COMPILER=/opt/homebrew/opt/llvm@16/bin/clang -DCMAKE_CXX_COMPILER=/opt/homebrew/opt/llvm@16/bin/clang++ .."
             sh "cd clang-release && make -j \$(sysctl -n hw.logicalcpu)"
 
             // Check whether arm64 binaries are built to ensure that we are not accidentally running rosetta that

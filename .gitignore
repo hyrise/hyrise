@@ -1,5 +1,4 @@
 obj/*
-imdb_data
 .DS_STORE
 build/*
 build-*/*
@@ -44,5 +43,8 @@ default.profraw
 tpcc_cached_tables/
 tpcds_cached_tables/
 tpch_cached_tables/
+imdb_data/
+jcch_data/
+ssb_data/
 
-buffer_manager_data
+buffer_manager_data/

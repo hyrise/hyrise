@@ -47,7 +47,7 @@ void JCCHBenchmarkItemRunner::_load_params() {
 
   // Check if the query parameters have already been generated
   if (!std::filesystem::exists(params_path)) {
-    Timer timer;
+    auto timer = Timer{};
 
     std::cout << "- Creating query parameters by calling external qgen" << std::flush;
 
@@ -90,7 +90,7 @@ void JCCHBenchmarkItemRunner::_load_params() {
   auto file = std::ifstream(params_path);
   Assert(file.is_open(), std::string{"Could not open JCC-H parameters at "} + params_path);
 
-  std::string line;
+  auto line = std::string{};
   while (std::getline(file, line)) {
     // Load the parameter into the corresponding entry in _all_params
     auto string_values = split_string_by_delimiter(line, '\t');
@@ -111,7 +111,7 @@ bool JCCHBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, Be
   std::uniform_int_distribution<> params_dist{0, static_cast<int>(this_item_params.size() - 1)};
   const auto raw_params_iter = this_item_params.begin() + params_dist(random_engine);
 
-  std::vector<std::string> parameters;
+  auto parameters = std::vector<std::string>{};
   auto sql = std::string{};
 
   // This mirrors TPCHBenchmarkItemRunner::_on_execute_item. Instead of generating random parameters according to the

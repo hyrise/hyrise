@@ -41,7 +41,7 @@ std::ostream& OperatorScanPredicate::output_to_stream(std::ostream& stream,
     column_name_left = table->column_name(column_id);
   }
 
-  stream << column_name_left << " " << predicate_condition;
+  stream << column_name_left << " " << predicate_condition << " ";
 
   if (table && is_column_id(value)) {
     stream << table->column_name(boost::get<ColumnID>(value));

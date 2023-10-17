@@ -24,14 +24,21 @@
 #include "storage/table.hpp"
 #include "types.hpp"
 
+namespace {
+
+using namespace hyrise;  // NOLINT(build/namespaces)
+
+std::shared_ptr<std::vector<ChunkID>> shared_chunk_id_vector(std::vector<ChunkID>&& chunk_vector) {
+  return std::make_shared<std::vector<ChunkID>>(chunk_vector);
+}
+
+}  // namespace
+
 namespace hyrise {
 
-template <typename DerivedIndex>
 class OperatorsIndexScanTest : public BaseTest {
  protected:
   void SetUp() override {
-    _index_type = get_chunk_index_type_of<DerivedIndex>();
-
     auto int_int_7 = load_table("resources/test_data/tbl/int_int_shuffled.tbl", ChunkOffset{7});
     auto int_int_5 = load_table("resources/test_data/tbl/int_int_shuffled_2.tbl", ChunkOffset{5});
 
@@ -44,42 +51,39 @@ class OperatorsIndexScanTest : public BaseTest {
     _chunk_ids_partly_compressed = std::vector<ChunkID>(int_int_5->chunk_count());
     std::iota(_chunk_ids_partly_compressed.begin(), _chunk_ids_partly_compressed.end(), ChunkID{0});
 
-    _column_ids = std::vector<ColumnID>{ColumnID{0u}};
+    _column_id = ColumnID{0};
 
-    for (const auto& chunk_id : _chunk_ids) {
-      const auto chunk = int_int_7->get_chunk(chunk_id);
-      chunk->template create_index<DerivedIndex>(_column_ids);
-    }
+    int_int_7->create_partial_hash_index(_column_id, _chunk_ids);
+    int_int_5->create_partial_hash_index(_column_id, _chunk_ids_partly_compressed);
 
-    for (const auto& chunk_id : _chunk_ids_partly_compressed) {
-      const auto chunk = int_int_5->get_chunk(chunk_id);
-      chunk->template create_index<DerivedIndex>(_column_ids);
-    }
+    Hyrise::get().storage_manager.add_table("int_int_7", int_int_7);
+    Hyrise::get().storage_manager.add_table("int_int_5", int_int_5);
 
-    _int_int = std::make_shared<TableWrapper>(std::move(int_int_7));
+    _int_int = std::make_shared<GetTable>("int_int_7");
     _int_int->never_clear_output();
     _int_int->execute();
 
-    _int_int_small_chunk = std::make_shared<TableWrapper>(std::move(int_int_5));
+    _int_int_small_chunk = std::make_shared<GetTable>("int_int_5");
     _int_int_small_chunk->never_clear_output();
     _int_int_small_chunk->execute();
 
     const auto partially_indexed_table = load_table("resources/test_data/tbl/int_int_shuffled.tbl", ChunkOffset{7});
     ChunkEncoder::encode_all_chunks(partially_indexed_table);
     const auto second_chunk = partially_indexed_table->get_chunk(ChunkID{1});
-    second_chunk->template create_index<DerivedIndex>(std::vector<ColumnID>{ColumnID{0}});
     Hyrise::get().storage_manager.add_table("index_test_table", partially_indexed_table);
   }
 
   void ASSERT_COLUMN_EQ(std::shared_ptr<const Table> table, const ColumnID& column_id,
                         std::vector<AllTypeVariant> expected) {
-    for (auto chunk_id = ChunkID{0u}; chunk_id < table->chunk_count(); ++chunk_id) {
-      const auto chunk = table->get_chunk(chunk_id);
+    const auto chunk_count = table->chunk_count();
+    for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+      const auto& chunk = table->get_chunk(chunk_id);
 
-      for (auto chunk_offset = ChunkOffset{0u}; chunk_offset < chunk->size(); ++chunk_offset) {
+      const auto chunk_size = chunk->size();
+      for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
         const auto& segment = *chunk->get_segment(column_id);
 
-        const auto found_value = segment[chunk_offset];
+        const auto& found_value = segment[chunk_offset];
         const auto comparator = [found_value](const AllTypeVariant expected_value) {
           // returns equivalency, not equality to simulate std::multiset.
           // multiset cannot be used because it triggers a compiler / lib bug when built in CI
@@ -93,217 +97,147 @@ class OperatorsIndexScanTest : public BaseTest {
       }
     }
 
-    ASSERT_EQ(expected.size(), 0u);
+    ASSERT_EQ(expected.size(), 0);
   }
 
-  std::shared_ptr<TableWrapper> _int_int;
-  std::shared_ptr<TableWrapper> _int_int_small_chunk;
+  std::shared_ptr<GetTable> _int_int;
+  std::shared_ptr<GetTable> _int_int_small_chunk;
   std::vector<ChunkID> _chunk_ids;
   std::vector<ChunkID> _chunk_ids_partly_compressed;
-  std::vector<ColumnID> _column_ids;
-  ChunkIndexType _index_type;
+  ColumnID _column_id;
 };
 
-typedef ::testing::Types<GroupKeyIndex, AdaptiveRadixTreeIndex, CompositeGroupKeyIndex,
-                         BTreeIndex /* add further indexes */>
-    SingleSegmentIndexTypes;
+TEST_F(OperatorsIndexScanTest, SingleColumnScanOnDataTable) {
+  const auto right_value = AllTypeVariant{4};
 
-TYPED_TEST_SUITE(OperatorsIndexScanTest, SingleSegmentIndexTypes, );  // NOLINT(whitespace/parens)
+  auto tests = std::vector<std::pair<PredicateCondition, std::vector<AllTypeVariant>>>{
+      {PredicateCondition::Equals, {104, 104}},
+      {PredicateCondition::NotEquals, {100, 102, 106, 108, 110, 112, 100, 102, 106, 108, 110, 112}}};
 
-TYPED_TEST(OperatorsIndexScanTest, SingleColumnScanOnDataTable) {
-  // we do not need to check for a non existing value, because that happens automatically when we scan the second chunk
-
-  const auto right_values = std::vector<AllTypeVariant>{AllTypeVariant{4}};
-  const auto right_values2 = std::vector<AllTypeVariant>{AllTypeVariant{9}};
-
-  std::map<PredicateCondition, std::vector<AllTypeVariant>> tests;
-  tests[PredicateCondition::Equals] = {104, 104};
-  tests[PredicateCondition::NotEquals] = {100, 102, 106, 108, 110, 112, 100, 102, 106, 108, 110, 112};
-  tests[PredicateCondition::LessThan] = {100, 102, 100, 102};
-  tests[PredicateCondition::LessThanEquals] = {100, 102, 104, 100, 102, 104};
-  tests[PredicateCondition::GreaterThan] = {106, 108, 110, 112, 106, 108, 110, 112};
-  tests[PredicateCondition::GreaterThanEquals] = {104, 106, 108, 110, 112, 104, 106, 108, 110, 112};
-  tests[PredicateCondition::BetweenInclusive] = {104, 106, 108, 104, 106, 108};
-  tests[PredicateCondition::BetweenLowerExclusive] = {106, 108, 106, 108};
-  tests[PredicateCondition::BetweenUpperExclusive] = {104, 106, 108, 104, 106, 108};
-  tests[PredicateCondition::BetweenExclusive] = {106, 108, 106, 108};
-
-  for (const auto& test : tests) {
-    auto scan = std::make_shared<IndexScan>(this->_int_int, this->_index_type, this->_column_ids, test.first,
-                                            right_values, right_values2);
+  for (const auto& [predicate, test_rows] : tests) {
+    auto scan = std::make_shared<IndexScan>(_int_int, _column_id, predicate, right_value);
+    scan->included_chunk_ids = shared_chunk_id_vector({ChunkID{0}, ChunkID{1}});
 
     scan->execute();
 
-    auto scan_small_chunk = std::make_shared<IndexScan>(this->_int_int_small_chunk, this->_index_type,
-                                                        this->_column_ids, test.first, right_values, right_values2);
+    auto scan_small_chunk = std::make_shared<IndexScan>(_int_int_small_chunk, _column_id, predicate, right_value);
+    scan_small_chunk->included_chunk_ids = shared_chunk_id_vector({ChunkID{0}, ChunkID{1}, ChunkID{2}});
 
     scan_small_chunk->execute();
 
-    this->ASSERT_COLUMN_EQ(scan->get_output(), ColumnID{1u}, test.second);
-    this->ASSERT_COLUMN_EQ(scan_small_chunk->get_output(), ColumnID{1u}, test.second);
+    ASSERT_COLUMN_EQ(scan->get_output(), ColumnID{1u}, test_rows);
+    ASSERT_COLUMN_EQ(scan_small_chunk->get_output(), ColumnID{1u}, test_rows);
   }
 }
 
-TYPED_TEST(OperatorsIndexScanTest, SingleColumnScanValueGreaterThanMaxDictionaryValue) {
-  const auto all_rows =
-      std::vector<AllTypeVariant>{100, 102, 104, 106, 108, 110, 112, 100, 102, 104, 106, 108, 110, 112};
-  const auto no_rows = std::vector<AllTypeVariant>{};
+TEST_F(OperatorsIndexScanTest, ScanWithNoChunkIDsIncluded) {
+  auto tests = std::vector<std::pair<PredicateCondition, std::vector<AllTypeVariant>>>{
+      {PredicateCondition::Equals, {}}, {PredicateCondition::NotEquals, {}}};
 
-  const auto right_values = std::vector<AllTypeVariant>{AllTypeVariant{30}};
-  const auto right_values2 = std::vector<AllTypeVariant>{AllTypeVariant{34}};
+  auto scan = std::make_shared<IndexScan>(_int_int, _column_id, PredicateCondition::Equals, AllTypeVariant{17});
+  scan->included_chunk_ids = std::make_shared<std::vector<ChunkID>>();
+  EXPECT_THROW(scan->execute(), std::logic_error);
+}
 
-  std::map<PredicateCondition, std::vector<AllTypeVariant>> tests;
-  tests[PredicateCondition::Equals] = no_rows;
-  tests[PredicateCondition::NotEquals] = all_rows;
-  tests[PredicateCondition::LessThan] = all_rows;
-  tests[PredicateCondition::LessThanEquals] = all_rows;
-  tests[PredicateCondition::GreaterThan] = no_rows;
-  tests[PredicateCondition::GreaterThanEquals] = no_rows;
+TEST_F(OperatorsIndexScanTest, SingleColumnScanValueGreaterThanMaxDictionaryValue) {
+  const auto right_value = AllTypeVariant{30};
 
-  for (const auto& test : tests) {
-    auto scan = std::make_shared<IndexScan>(this->_int_int, this->_index_type, this->_column_ids, test.first,
-                                            right_values, right_values2);
+  auto tests = std::vector<std::pair<PredicateCondition, std::vector<AllTypeVariant>>>{
+      {PredicateCondition::Equals, {}},
+      {PredicateCondition::NotEquals, {100, 102, 104, 106, 108, 110, 112, 100, 102, 104, 106, 108, 110, 112}}};
+
+  for (const auto& [predicate, test_rows] : tests) {
+    auto scan = std::make_shared<IndexScan>(_int_int, _column_id, predicate, right_value);
+    scan->included_chunk_ids = shared_chunk_id_vector({ChunkID{0}, ChunkID{1}});
 
     scan->execute();
 
-    auto scan_small_chunk = std::make_shared<IndexScan>(this->_int_int_small_chunk, this->_index_type,
-                                                        this->_column_ids, test.first, right_values, right_values2);
+    auto scan_small_chunk = std::make_shared<IndexScan>(_int_int_small_chunk, _column_id, predicate, right_value);
+    scan_small_chunk->included_chunk_ids = shared_chunk_id_vector({ChunkID{0}, ChunkID{1}, ChunkID{2}});
 
     scan_small_chunk->execute();
 
-    this->ASSERT_COLUMN_EQ(scan->get_output(), ColumnID{1u}, test.second);
-    this->ASSERT_COLUMN_EQ(scan_small_chunk->get_output(), ColumnID{1u}, test.second);
+    ASSERT_COLUMN_EQ(scan->get_output(), ColumnID{1u}, test_rows);
+    ASSERT_COLUMN_EQ(scan_small_chunk->get_output(), ColumnID{1u}, test_rows);
   }
 }
 
-TYPED_TEST(OperatorsIndexScanTest, SingleColumnScanValueLessThanMinDictionaryValue) {
-  const auto all_rows =
-      std::vector<AllTypeVariant>{100, 102, 104, 106, 108, 110, 112, 100, 102, 104, 106, 108, 110, 112};
-  const auto no_rows = std::vector<AllTypeVariant>{};
+TEST_F(OperatorsIndexScanTest, SingleColumnScanValueLessThanMinDictionaryValue) {
+  const auto right_value = AllTypeVariant{-10};
 
-  const auto right_values = std::vector<AllTypeVariant>{AllTypeVariant{-10}};
-  const auto right_values2 = std::vector<AllTypeVariant>{AllTypeVariant{34}};
+  auto tests = std::vector<std::pair<PredicateCondition, std::vector<AllTypeVariant>>>{
+      {PredicateCondition::Equals, {}},
+      {PredicateCondition::NotEquals, {100, 102, 104, 106, 108, 110, 112, 100, 102, 104, 106, 108, 110, 112}}};
 
-  std::map<PredicateCondition, std::vector<AllTypeVariant>> tests;
-  tests[PredicateCondition::Equals] = no_rows;
-  tests[PredicateCondition::NotEquals] = all_rows;
-  tests[PredicateCondition::LessThan] = no_rows;
-  tests[PredicateCondition::LessThanEquals] = no_rows;
-  tests[PredicateCondition::GreaterThan] = all_rows;
-  tests[PredicateCondition::GreaterThanEquals] = all_rows;
-
-  for (const auto& test : tests) {
-    auto scan = std::make_shared<IndexScan>(this->_int_int, this->_index_type, this->_column_ids, test.first,
-                                            right_values, right_values2);
+  for (const auto& [predicate, test_rows] : tests) {
+    auto scan = std::make_shared<IndexScan>(_int_int, _column_id, predicate, right_value);
+    scan->included_chunk_ids = shared_chunk_id_vector({ChunkID{0}, ChunkID{1}});
 
     scan->execute();
 
-    auto scan_small_chunk = std::make_shared<IndexScan>(this->_int_int_small_chunk, this->_index_type,
-                                                        this->_column_ids, test.first, right_values, right_values2);
+    auto scan_small_chunk = std::make_shared<IndexScan>(_int_int_small_chunk, _column_id, predicate, right_value);
+    scan_small_chunk->included_chunk_ids = shared_chunk_id_vector({ChunkID{0}, ChunkID{1}, ChunkID{2}});
 
     scan_small_chunk->execute();
 
-    this->ASSERT_COLUMN_EQ(scan->get_output(), ColumnID{1u}, test.second);
-    this->ASSERT_COLUMN_EQ(scan_small_chunk->get_output(), ColumnID{1u}, test.second);
+    ASSERT_COLUMN_EQ(scan->get_output(), ColumnID{1u}, test_rows);
+    ASSERT_COLUMN_EQ(scan_small_chunk->get_output(), ColumnID{1u}, test_rows);
   }
 }
 
-TYPED_TEST(OperatorsIndexScanTest, SingleColumnScanOnlySomeChunks) {
-  const auto right_values = std::vector<AllTypeVariant>{AllTypeVariant{4}};
-  const auto right_values2 = std::vector<AllTypeVariant>{AllTypeVariant{9}};
+TEST_F(OperatorsIndexScanTest, DynamicallyPrunedChunks) {
+  auto table = load_table("resources/test_data/tbl/int_string.tbl", ChunkOffset{1});
 
-  std::map<PredicateCondition, std::vector<AllTypeVariant>> tests;
-  tests[PredicateCondition::Equals] = {};
-  tests[PredicateCondition::NotEquals] = {100, 102, 106, 108, 110, 112, 106, 110, 112};
-  tests[PredicateCondition::LessThan] = {100, 102};
-  tests[PredicateCondition::LessThanEquals] = {100, 102};
-  tests[PredicateCondition::GreaterThan] = {106, 108, 110, 112, 106, 110, 112};
-  tests[PredicateCondition::GreaterThanEquals] = {106, 108, 110, 112, 106, 110, 112};
-  tests[PredicateCondition::BetweenInclusive] = {106, 106, 108};
-  tests[PredicateCondition::BetweenLowerExclusive] = {106, 108, 106};
-  tests[PredicateCondition::BetweenUpperExclusive] = {106, 108, 106};
-  tests[PredicateCondition::BetweenExclusive] = {106, 108, 106};
+  ChunkEncoder::encode_all_chunks(table);
 
-  for (const auto& test : tests) {
-    auto scan = std::make_shared<IndexScan>(this->_int_int_small_chunk, this->_index_type, this->_column_ids,
-                                            test.first, right_values, right_values2);
+  auto chunk_ids = std::vector<ChunkID>(table->chunk_count());
+  std::iota(chunk_ids.begin(), chunk_ids.end(), ChunkID{0});
+  table->create_partial_hash_index(ColumnID{0}, chunk_ids);
 
-    scan->included_chunk_ids = {ChunkID{0}, ChunkID{2}};
+  Hyrise::get().storage_manager.add_table("table", table);
 
-    scan->execute();
+  const auto pruned_chunk_id_tests = std::vector<std::pair<std::vector<ChunkID>, std::vector<AllTypeVariant>>>{
+      // Prunes chunks with values 6, 10, 12, and 14.
+      {{ChunkID{2}, ChunkID{4}, ChunkID{6}, ChunkID{7}}, {2, 4, 8, 19}},
+      // Prunes all chunks (also the ones that are included in the scan). This can happen with dynamic pruning, where
+      // chunks are pruned (and added to list of pruned chunks of the GetTable operator) at runtime.
+      {{ChunkID{0}, ChunkID{1}, ChunkID{2}, ChunkID{3}, ChunkID{4}, ChunkID{5}, ChunkID{6}, ChunkID{7}, ChunkID{8},
+        ChunkID{9}, ChunkID{10}, ChunkID{11}},
+       {}}};
 
-    this->ASSERT_COLUMN_EQ(scan->get_output(), ColumnID{1u}, test.second);
+  for (const auto& [pruned_chunk_ids, result] : pruned_chunk_id_tests) {
+    auto get_table = std::make_shared<GetTable>("table", pruned_chunk_ids, std::vector<ColumnID>{});
+    get_table->never_clear_output();
+    get_table->execute();
+
+    auto index_scan =
+        std::make_shared<IndexScan>(get_table, ColumnID{0}, PredicateCondition::NotEquals, AllTypeVariant{-17});
+    // We include chunks with values 2, 4, and 6.
+    index_scan->included_chunk_ids = shared_chunk_id_vector({ChunkID{0}, ChunkID{1}, ChunkID{2}, ChunkID{5}});
+
+    index_scan->never_clear_output();
+    index_scan->execute();
+
+    ASSERT_COLUMN_EQ(index_scan->get_output(), ColumnID{0}, result);
   }
+
+  Hyrise::get().storage_manager.drop_table("table");
 }
 
-TYPED_TEST(OperatorsIndexScanTest, PosListGuarenteesSingleChunkReference) {
-  const auto right_values = std::vector<AllTypeVariant>{AllTypeVariant{4}};
-  const auto right_values2 = std::vector<AllTypeVariant>{AllTypeVariant{9}};
-
-  auto scan = std::make_shared<IndexScan>(this->_int_int, this->_index_type, this->_column_ids,
-                                          PredicateCondition::Equals, right_values, right_values2);
-  scan->execute();
-
-  const auto chunk_count = scan->get_output()->chunk_count();
-  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-    const auto chunk = scan->get_output()->get_chunk(chunk_id);
-
-    const auto segment = chunk->get_segment(this->_column_ids[0]);
-    const auto reference_segment = std::dynamic_pointer_cast<ReferenceSegment>(segment);
-    const auto& pos_list = reference_segment->pos_list();
-    EXPECT_TRUE(pos_list->references_single_chunk());
-  }
-}
-
-TYPED_TEST(OperatorsIndexScanTest, OperatorName) {
-  const auto right_values = std::vector<AllTypeVariant>(this->_column_ids.size(), AllTypeVariant{0});
-
-  auto scan = std::make_shared<IndexScan>(this->_int_int, this->_index_type, this->_column_ids,
-                                          PredicateCondition::GreaterThanEquals, right_values);
-
+TEST_F(OperatorsIndexScanTest, OperatorName) {
+  const auto scan =
+      std::make_shared<IndexScan>(_int_int, _column_id, PredicateCondition::GreaterThanEquals, AllTypeVariant{0});
   EXPECT_EQ(scan->name(), "IndexScan");
 }
 
-TYPED_TEST(OperatorsIndexScanTest, AddedChunk) {
-  // We want to make sure that all chunks are covered even if they have been added after SQL translation
-
-  const auto stored_table_node = StoredTableNode::make("index_test_table");
-  auto predicate_node = PredicateNode::make(equals_(stored_table_node->get_column("a"), 4), stored_table_node);
-  predicate_node->scan_type = ScanType::IndexScan;
-
-  const auto pqp = LQPTranslator{}.translate_node(predicate_node);
-
-  // Test correct LQP-Translation. For some reason, only GroupKeyIndexes are currently used.
-  if (this->_index_type != ChunkIndexType::GroupKey) {
-    return;
-  }
-  const auto indexed_chunks = std::vector<ChunkID>{ChunkID{1}};
-
-  auto union_op = std::dynamic_pointer_cast<UnionAll>(pqp);
-  ASSERT_TRUE(union_op);
-  auto index_scan = std::dynamic_pointer_cast<IndexScan>(union_op->mutable_left_input());
-  ASSERT_TRUE(index_scan);
-  EXPECT_EQ(index_scan->included_chunk_ids, indexed_chunks);
-  auto table_scan = std::dynamic_pointer_cast<TableScan>(union_op->mutable_right_input());
-  ASSERT_TRUE(table_scan);
-  EXPECT_EQ(table_scan->excluded_chunk_ids, indexed_chunks);
-  auto get_table = std::dynamic_pointer_cast<GetTable>(table_scan->mutable_left_input());
-  ASSERT_TRUE(get_table);
-
-  // Add values:
-  const auto table = Hyrise::get().storage_manager.get_table("index_test_table");
-  table->append({4, 5});
-  EXPECT_EQ(table->chunk_count(), 3);
-
-  // Test correct execution:
-  get_table->execute();
-  table_scan->execute();
-  index_scan->execute();
-  union_op->execute();
-
-  EXPECT_TABLE_EQ_UNORDERED(
-      union_op->get_output(),
-      load_table("resources/test_data/tbl/int_int_shuffled_appended_and_filtered.tbl", ChunkOffset{10}));
+TEST_F(OperatorsIndexScanTest, DeepCopyRetainsIncludedChunks) {
+  const auto index_scan =
+      std::make_shared<IndexScan>(_int_int, _column_id, PredicateCondition::GreaterThanEquals, AllTypeVariant{0});
+  index_scan->included_chunk_ids = shared_chunk_id_vector({ChunkID{0}});
+  const auto new_index_scan = std::dynamic_pointer_cast<IndexScan>(index_scan->deep_copy());
+  EXPECT_EQ(*index_scan->included_chunk_ids, *new_index_scan->included_chunk_ids);
+  EXPECT_EQ(index_scan->included_chunk_ids->data(),
+            new_index_scan->included_chunk_ids->data());  // Should be the same object.
 }
 
 }  // namespace hyrise

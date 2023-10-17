@@ -224,7 +224,7 @@ TEST_F(OperatorsValidateTest, ValidateReferenceSegmentWithMultipleChunks) {
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk_size = _test_table->get_chunk(chunk_id)->size();
     for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
-      pos_list->emplace_back(RowID{chunk_id, chunk_offset});
+      pos_list->emplace_back(chunk_id, chunk_offset);
     }
   }
 

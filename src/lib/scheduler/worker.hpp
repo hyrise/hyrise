@@ -14,8 +14,7 @@ namespace hyrise {
 class TaskQueue;
 
 /**
- * To be executed on a separate Thread, fetches and executes tasks until the queue is empty AND the shutdown flag is set
- * Ideally there should be one Worker actively doing work per CPU, but multiple might be active occasionally
+ * To be executed on a separate thread, fetches and executes tasks until the queue is empty.
  */
 class Worker : public std::enable_shared_from_this<Worker>, private Noncopyable {
   friend class AbstractScheduler;
@@ -50,8 +49,11 @@ class Worker : public std::enable_shared_from_this<Worker>, private Noncopyable 
   void operator=(Worker&&) = delete;
 
  protected:
+  enum class AllowSleep : bool { Yes = true, No = false };
+
   void operator()();
-  void _work();
+
+  void _work(const AllowSleep allow_sleep);
 
   void _wait_for_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks);
 
@@ -63,14 +65,16 @@ class Worker : public std::enable_shared_from_this<Worker>, private Noncopyable 
   void _set_affinity();
 
   std::shared_ptr<AbstractTask> _next_task{};
-  std::shared_ptr<TaskQueue> _queue;
-  WorkerID _id;
-  CpuID _cpu_id;
+  std::shared_ptr<TaskQueue> _queue{};
+  WorkerID _id{0};
+  CpuID _cpu_id{0};
   std::thread _thread;
   std::atomic_uint64_t _num_finished_tasks{0};
 
+  bool _active{true};
+
   std::vector<int> _random{};
-  size_t _next_random{};
+  size_t _next_random{0};
 };
 
 }  // namespace hyrise

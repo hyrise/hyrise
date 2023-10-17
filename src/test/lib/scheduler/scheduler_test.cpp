@@ -14,6 +14,7 @@
 #include "scheduler/job_task.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/operator_task.hpp"
+#include "scheduler/shutdown_task.hpp"
 #include "scheduler/task_queue.hpp"
 
 namespace hyrise {
@@ -249,11 +250,11 @@ TEST_F(SchedulerTest, MultipleOperators) {
 
 TEST_F(SchedulerTest, VerifyTaskQueueSetup) {
   if (std::thread::hardware_concurrency() < 4) {
-    // If the machine has less than 4 cores, the calls to use_non_numa_topology()
-    // below will implicitly reduce the worker count to the number of cores,
-    // therefore failing the assertions.
+    // If the machine has less than 4 cores, the calls to use_non_numa_topology() below will implicitly reduce the
+    // worker count to the number of cores, therefore failing the assertions.
     GTEST_SKIP();
   }
+
   Hyrise::get().topology.use_non_numa_topology(4);
   Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
   EXPECT_EQ(1, Hyrise::get().scheduler()->queues().size());
@@ -333,6 +334,81 @@ TEST_F(SchedulerTest, DetermineQueueIDForTask) {
   EXPECT_EQ(node_queue_scheduler->determine_queue_id(CURRENT_NODE_ID), NodeID{0});
 
   // The distribution of tasks under high load is tested in the concurrency stress tests.
+}
+
+template <typename Iterator>
+void merge_sort(Iterator first, Iterator last) {
+  if (std::distance(first, last) == 1) {
+    return;
+  }
+
+  auto middle = first + (std::distance(first, last) / 2);
+  auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
+  tasks.emplace_back(std::make_shared<JobTask>([&]() { merge_sort(first, middle); }));
+  tasks.emplace_back(std::make_shared<JobTask>([&]() { merge_sort(middle, last); }));
+
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
+
+  std::inplace_merge(first, middle, last);
+}
+
+// Recursive merge sort. Creates a typical divide-and-conquer fan out pattern of tasks. We use the text book
+// implementation that recurses until the vector length is 1 to increase the depth of the fan out.
+TEST_F(SchedulerTest, MergeSort) {
+  // Sizes up to 20'000 works for MacOS (debug mode, more for release) with its comparatively small stack size. If this
+  // test fails on a new platform, check the system's stack size and if ITEM_COUNT needs to be reduced.
+  constexpr auto ITEM_COUNT = size_t{5'000};
+  Assert(ITEM_COUNT % 5 == 0, "Must be dividable by 5.");
+
+  Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
+
+  auto vector_to_sort = std::vector<int64_t>{};
+  vector_to_sort.reserve(ITEM_COUNT);
+  for (auto i = size_t{0}; i < ITEM_COUNT / 5; ++i) {
+    for (auto j = size_t{0}; j < 5; ++j) {
+      vector_to_sort.push_back(i * 5 + (4 - j));
+    }
+  }
+
+  merge_sort(vector_to_sort.begin(), vector_to_sort.end());
+  EXPECT_TRUE(std::is_sorted(vector_to_sort.begin(), vector_to_sort.end()));
+}
+
+TEST_F(SchedulerTest, NodeQueueSchedulerCreationAndReset) {
+  if (std::thread::hardware_concurrency() < 4) {
+    // If the machine has less than 4 cores, the calls to use_non_numa_topology() below will implicitly reduce the
+    // worker count to the number of cores, therefore failing the assertions.
+    GTEST_SKIP();
+  }
+
+  const auto thread_count = std::thread::hardware_concurrency();
+
+  Hyrise::get().topology.use_fake_numa_topology(thread_count, thread_count / 4);
+  for (auto loop_id = size_t{0}; loop_id < 256; ++loop_id) {
+    auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
+    Hyrise::get().set_scheduler(node_queue_scheduler);
+    EXPECT_EQ(node_queue_scheduler->active_worker_count().load(), thread_count);
+    Hyrise::get().set_scheduler(std::make_shared<ImmediateExecutionScheduler>());
+    EXPECT_EQ(node_queue_scheduler->active_worker_count().load(), 0);
+  }
+}
+
+TEST_F(SchedulerTest, ShutdownTaskDecrement) {
+  auto counter_1 = std::atomic_int64_t{1};
+  auto shutdown_task_1 = ShutdownTask{counter_1};
+  // Prepare job for execution (usually done when scheduled and obtained by workers)
+  EXPECT_TRUE(shutdown_task_1.try_mark_as_enqueued());
+  EXPECT_TRUE(shutdown_task_1.try_mark_as_assigned_to_worker());
+  EXPECT_EQ(counter_1.load(), 1);
+  shutdown_task_1.execute();
+  EXPECT_EQ(counter_1.load(), 0);
+
+  auto counter_2 = std::atomic_int64_t{0};
+  auto shutdown_task_2 = ShutdownTask{counter_2};
+  EXPECT_TRUE(shutdown_task_2.try_mark_as_enqueued());
+  EXPECT_TRUE(shutdown_task_2.try_mark_as_assigned_to_worker());
+  EXPECT_EQ(counter_2.load(), 0);
+  EXPECT_THROW(shutdown_task_2.execute(), std::logic_error);
 }
 
 }  // namespace hyrise

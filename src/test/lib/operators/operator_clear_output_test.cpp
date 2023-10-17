@@ -4,8 +4,8 @@
 #include "base_test.hpp"
 
 #include "expression/abstract_expression.hpp"
-#include "expression/aggregate_expression.hpp"
 #include "expression/pqp_column_expression.hpp"
+#include "expression/window_function_expression.hpp"
 #include "operators/aggregate_hash.hpp"
 #include "operators/get_table.hpp"
 #include "operators/join_hash.hpp"
@@ -215,13 +215,13 @@ TEST_F(OperatorClearOutputTest, ConsumerTrackingProjectionUncorrelatedSubquery) 
 
   // Left input node: COUNT(*)
   const auto star = std::make_shared<PQPColumnExpression>(INVALID_COLUMN_ID, DataType::Long, false, "*");
-  auto aggregate_count_star = std::make_shared<AggregateExpression>(AggregateFunction::Count, star);
+  auto aggregate_count_star = std::make_shared<WindowFunctionExpression>(WindowFunction::Count, star);
   auto aggregate_hash_count_star = std::make_shared<AggregateHash>(
-      validate, std::vector<std::shared_ptr<AggregateExpression>>{aggregate_count_star}, std::vector<ColumnID>{});
+      validate, std::vector<std::shared_ptr<WindowFunctionExpression>>{aggregate_count_star}, std::vector<ColumnID>{});
   // Subquery expression: (SELECT MAX(a) FROM int_int_int)
-  auto aggregate_max_a = std::make_shared<AggregateExpression>(AggregateFunction::Max, _a);
+  auto aggregate_max_a = std::make_shared<WindowFunctionExpression>(WindowFunction::Max, _a);
   auto aggregate_hash_max_a = std::make_shared<AggregateHash>(
-      validate, std::vector<std::shared_ptr<AggregateExpression>>{aggregate_max_a}, std::vector<ColumnID>{});
+      validate, std::vector<std::shared_ptr<WindowFunctionExpression>>{aggregate_max_a}, std::vector<ColumnID>{});
 
   // Projection: COUNT(*), (SELECT MAX(a) FROM int_int_int)
   auto pqp_count_star =
@@ -262,13 +262,13 @@ TEST_F(OperatorClearOutputTest, ConsumerTrackingProjectionUncorrelatedSubqueryNe
 
   // Left input node: COUNT(*)
   const auto star = std::make_shared<PQPColumnExpression>(INVALID_COLUMN_ID, DataType::Long, false, "*");
-  auto aggregate_count_star = std::make_shared<AggregateExpression>(AggregateFunction::Count, star);
+  auto aggregate_count_star = std::make_shared<WindowFunctionExpression>(WindowFunction::Count, star);
   auto aggregate_hash_count_star = std::make_shared<AggregateHash>(
-      validate, std::vector<std::shared_ptr<AggregateExpression>>{aggregate_count_star}, std::vector<ColumnID>{});
+      validate, std::vector<std::shared_ptr<WindowFunctionExpression>>{aggregate_count_star}, std::vector<ColumnID>{});
   // Subquery expression: (SELECT MAX(a) FROM int_int_int)
-  auto aggregate_max_a = std::make_shared<AggregateExpression>(AggregateFunction::Max, _a);
+  auto aggregate_max_a = std::make_shared<WindowFunctionExpression>(WindowFunction::Max, _a);
   auto aggregate_hash_max_a = std::make_shared<AggregateHash>(
-      validate, std::vector<std::shared_ptr<AggregateExpression>>{aggregate_max_a}, std::vector<ColumnID>{});
+      validate, std::vector<std::shared_ptr<WindowFunctionExpression>>{aggregate_max_a}, std::vector<ColumnID>{});
 
   // Projection: COUNT(*) + (SELECT MAX(a) FROM int_int_int)
   auto pqp_count_star =

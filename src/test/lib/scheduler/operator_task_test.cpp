@@ -35,6 +35,14 @@ class OperatorTaskTest : public BaseTest {
     Hyrise::get().storage_manager.add_table("table_b", _test_table_b);
   }
 
+  void clear_successors(const std::shared_ptr<AbstractTask>& task) {
+    task->_successors.clear();
+  }
+
+  std::shared_ptr<AbstractTask> get_task(const std::shared_ptr<AbstractOperator>& op) {
+    return op->_operator_task.lock();
+  }
+
   std::shared_ptr<Table> _test_table_a, _test_table_b;
 };
 
@@ -124,16 +132,17 @@ TEST_F(OperatorTaskTest, UncorrelatedSubqueries) {
   // SELECT MIN(table_b.a) FROM table_b
   const auto gt_b = std::make_shared<GetTable>("table_b", std::vector<ChunkID>{}, std::vector<ColumnID>{0});
   const auto b_a = PQPColumnExpression::from_table(*_test_table_b, "a");
-  using AggregateExpressions = std::vector<std::shared_ptr<AggregateExpression>>;
+  using WindowFunctionExpressions = std::vector<std::shared_ptr<WindowFunctionExpression>>;
   const auto aggregate_a =
-      std::make_shared<AggregateHash>(gt_b, AggregateExpressions{min_(b_a)}, std::vector<ColumnID>{});
+      std::make_shared<AggregateHash>(gt_b, WindowFunctionExpressions{min_(b_a)}, std::vector<ColumnID>{});
 
   // SELECT AVG(table_a.a) FROM table_a WHERE table_a.a > <subquery_result>
   const auto gt_a = std::make_shared<GetTable>("table_a");
   const auto a_a = PQPColumnExpression::from_table(*_test_table_a, "a");
   const auto scan =
       std::make_shared<TableScan>(gt_a, greater_than_(a_a, pqp_subquery_(aggregate_a, DataType::Int, false)));
-  auto aggregate_b = std::make_shared<AggregateHash>(scan, AggregateExpressions{avg_(a_a)}, std::vector<ColumnID>{});
+  auto aggregate_b =
+      std::make_shared<AggregateHash>(scan, WindowFunctionExpressions{avg_(a_a)}, std::vector<ColumnID>{});
 
   // SELECT 1 + <subquery_result>
   const auto table_wrapper = std::make_shared<TableWrapper>(Projection::dummy_table());
@@ -171,6 +180,168 @@ TEST_F(OperatorTaskTest, UncorrelatedSubqueries) {
     EXPECT_NO_THROW(task->schedule());
     // We don't have to wait here, because we are running the task tests without a scheduler.
   }
+}
+
+TEST_F(OperatorTaskTest, DetectCycles) {
+  // Ensure that we cannot create tasks that have cyclic dependencies and, thus, would end up in a deadlock during
+  // execution. In this test case, we achieve this with an invalid PQP that consists of one cycle. During task creation,
+  // it is more likely to create cycles by incorrectly setting the tasks' predecessors. This test ensures that we notice
+  // when this happens.
+  if constexpr (!HYRISE_DEBUG) {
+    GTEST_SKIP();
+  }
+
+  // Declare a MockOperator class that allows us to set an input operator after instantiation.
+  class MockOperator : public AbstractReadOnlyOperator {
+   public:
+    explicit MockOperator(const std::shared_ptr<const AbstractOperator>& input_operator)
+        : AbstractReadOnlyOperator{OperatorType::Mock, input_operator} {}
+
+    const std::string& name() const override {
+      static const auto name = std::string{"MockOperator"};
+      return name;
+    }
+
+    void set_input(const std::shared_ptr<const AbstractOperator>& input_operator) {
+      _left_input = input_operator;
+    }
+
+    std::shared_ptr<AbstractTask> get_task() {
+      return _operator_task.lock();
+    }
+
+   protected:
+    std::shared_ptr<const Table> _on_execute() override {
+      return nullptr;
+    }
+
+    std::shared_ptr<AbstractOperator> _on_deep_copy(
+        const std::shared_ptr<AbstractOperator>& /*copied_left_input*/,
+        const std::shared_ptr<AbstractOperator>& /*copied_right_input*/,
+        std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& /*copied_ops*/) const override {
+      return nullptr;
+    }
+
+    void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& /*parameters*/) override {}
+  };
+
+  // Create some operators that are an input of the next one.
+  const auto& mock_operator_a = std::make_shared<MockOperator>(nullptr);
+  const auto& mock_operator_b = std::make_shared<MockOperator>(mock_operator_a);
+  const auto& mock_operator_c = std::make_shared<MockOperator>(mock_operator_b);
+  const auto& mock_operator_d = std::make_shared<MockOperator>(mock_operator_c);
+
+  // Set the last operator as input of the first one. Now, we have a cycle.
+  mock_operator_a->set_input(mock_operator_d);
+
+  EXPECT_THROW(OperatorTask::make_tasks_from_operator(mock_operator_a), std::logic_error);
+
+  // Clear the successors of the created tasks and the operator inputs. Since the tasks hold shared pointers to their
+  // successors and the operators a pointer to their input, the cyclic graph leaks memory.
+  for (const auto& op : {mock_operator_a, mock_operator_b, mock_operator_c, mock_operator_d}) {
+    op->set_input(nullptr);
+    const auto& task = op->get_task();
+    if (task) {
+      clear_successors(task);
+    }
+  }
+}
+
+TEST_F(OperatorTaskTest, LinkPrunableSubqueries) {
+  // Add the tasks of prunable subquery scans of a GetTable operator as predecessors of the GetTable task. Thus, the
+  // subquery is executed first and the GetTable operator can use them for pruning during execution.
+  // Example query used in this test case:
+  //     SELECT ... FROM table_a WHERE a = (SELECT MIN(a) FROM table_b);
+  const auto get_table_a = std::make_shared<GetTable>("table_a");
+  const auto get_table_b = std::make_shared<GetTable>("table_b");
+
+  const auto aggregate = std::make_shared<AggregateHash>(
+      get_table_b, std::vector{min_(pqp_column_(ColumnID{0}, DataType::Int, false, "a"))}, std::vector<ColumnID>{});
+  const auto projection =
+      std::make_shared<Projection>(aggregate, expression_vector(pqp_column_(ColumnID{0}, DataType::Int, false, "a")));
+
+  const auto table_scan = std::make_shared<TableScan>(
+      get_table_a,
+      equals_(pqp_column_(ColumnID{0}, DataType::Int, false, "a"), pqp_subquery_(projection, DataType::Int, false)));
+
+  get_table_a->set_prunable_subquery_predicates({table_scan});
+
+  const auto& [tasks, root_operator_task] = OperatorTask::make_tasks_from_operator(table_scan);
+
+  ASSERT_EQ(tasks.size(), 5);
+  const auto tasks_set = std::unordered_set<std::shared_ptr<AbstractTask>>(tasks.begin(), tasks.end());
+  EXPECT_TRUE(tasks_set.contains(get_table_a->get_or_create_operator_task()));
+  EXPECT_TRUE(tasks_set.contains(get_table_b->get_or_create_operator_task()));
+  EXPECT_TRUE(tasks_set.contains(aggregate->get_or_create_operator_task()));
+  EXPECT_TRUE(tasks_set.contains(projection->get_or_create_operator_task()));
+  EXPECT_TRUE(tasks_set.contains(table_scan->get_or_create_operator_task()));
+
+  EXPECT_EQ(root_operator_task, table_scan->get_or_create_operator_task());
+  const auto& projection_task = projection->get_or_create_operator_task();
+  ASSERT_EQ(projection_task->successors().size(), 2);
+  EXPECT_EQ(projection_task->successors().front(), table_scan->get_or_create_operator_task());
+  EXPECT_EQ(projection_task->successors().back(), get_table_a->get_or_create_operator_task());
+}
+
+TEST_F(OperatorTaskTest, PrunableSubqueriesWithCycles) {
+  // We assume the LQPTranslator creates two GetTable operators if StoredTableNodes differ in their
+  // prunable_subquery_predicates. If they are deduplicated, the subquery and the GetTable operator create a cycle in
+  // the task graph, leading to mutually waiting during execution. Thus, we fail if such a cycle would be created.
+  // Example query used in this test case:
+  //     SELECT ... FROM table_a WHERE a > (SELECT AVG(a) FROM table_a);
+  if constexpr (!HYRISE_DEBUG) {
+    GTEST_SKIP();
+  }
+
+  const auto get_table = std::make_shared<GetTable>("table_a");
+
+  const auto aggregate = std::make_shared<AggregateHash>(
+      get_table, std::vector{avg_(pqp_column_(ColumnID{0}, DataType::Int, false, "a"))}, std::vector<ColumnID>{});
+  const auto projection = std::make_shared<Projection>(
+      aggregate, expression_vector(pqp_column_(ColumnID{0}, DataType::Double, false, "a")));
+
+  const auto table_scan =
+      std::make_shared<TableScan>(get_table, greater_than_(pqp_column_(ColumnID{0}, DataType::Int, false, "a"),
+                                                           pqp_subquery_(projection, DataType::Double, false)));
+
+  get_table->set_prunable_subquery_predicates({table_scan});
+
+  EXPECT_THROW(OperatorTask::make_tasks_from_operator(table_scan), std::logic_error);
+
+  // Clear the successors of the created tasks. Since the tasks hold shared pointers to their successors, the cyclic
+  // graph leaks memory.
+  for (const auto& op : std::vector<std::shared_ptr<AbstractOperator>>{get_table, aggregate, table_scan}) {
+    const auto& task = get_task(op);
+    if (task) {
+      clear_successors(task);
+    }
+  }
+}
+
+TEST_F(OperatorTaskTest, SkipOperatorTask) {
+  const auto table = std::make_shared<GetTable>("table_a");
+  table->execute();
+
+  const auto task = std::make_shared<OperatorTask>(table);
+  task->skip_operator_task();
+  EXPECT_TRUE(task->is_done());
+}
+
+TEST_F(OperatorTaskTest, NotExecutedOperatorTaskCannotBeSkipped) {
+  const auto table = std::make_shared<GetTable>("table_a");
+
+  const auto task = std::make_shared<OperatorTask>(table);
+  EXPECT_THROW(task->skip_operator_task(), std::logic_error);
+}
+
+TEST_F(OperatorTaskTest, DoNotSkipOperatorTaskWithMultiOwners) {
+  const auto table = std::make_shared<GetTable>("table_a");
+  table->execute();
+
+  const auto task = std::make_shared<OperatorTask>(table);
+  const auto another_task_pointer = task;
+  EXPECT_EQ(task.use_count(), 2);
+  EXPECT_THROW(task->skip_operator_task(), std::logic_error);
 }
 
 }  // namespace hyrise
