@@ -66,6 +66,9 @@ void Worker::operator()() {
 }
 
 void Worker::_work(const AllowSleep allow_sleep) {
+  //if (_id == 88) {
+  //  std::printf("Worker #%zu: current queue load: %zu\t\tcurrent semaphore count: %zu\n", static_cast<size_t>(_id), _queue->estimate_load(), _queue->estimate_load());
+  //}
   // If execute_next has been called, run that task first, otherwise try to retrieve a task from the queue.
   auto task = std::shared_ptr<AbstractTask>{};
   //auto did_pull = false;
@@ -73,11 +76,11 @@ void Worker::_work(const AllowSleep allow_sleep) {
     task = std::move(_next_task);
     _next_task = nullptr;
     //did_pull = true;
-    /*if (_id == 88) {
-      std::printf("Worker #%zu: got next task, queue load %zu\n", static_cast<size_t>(_id), _queue->estimate_load());
-    }*/
   } else {
     if (_queue->semaphore.tryWait()) {
+      //if (_id == 88) {
+      // std::printf("Worker #%zu: hard-pulling next task, queue load %zu\n", static_cast<size_t>(_id), _queue->semaphore.availableApprox());
+      //}
       task = _queue->pull();
     //did_pull = true;
     }

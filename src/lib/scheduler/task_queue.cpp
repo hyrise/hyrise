@@ -35,8 +35,7 @@ void TaskQueue::push(const std::shared_ptr<AbstractTask>& task, const SchedulePr
   
   //std::printf("%p\n", (void*)&*this);
 
-  std::string t = "Unexpected NodeID: " + std::to_string(static_cast<size_t>(_node_id));
-  Assert(_node_id == NodeID{3}, t);
+  //Assert(_node_id == NodeID{3}, "Unexpected NodeID: " + std::to_string(static_cast<size_t>(_node_id)));
 
   //std::cout << task->description() << std::endl;
   //std::cout << _node_id << " is node_id " << std::endl;
