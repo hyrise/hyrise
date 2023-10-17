@@ -37,13 +37,19 @@ class PersistenceManager final : public Noncopyable {
   void read_page(const PageID page_id, std::byte* data);
 
   // Returns the mode of the SSDRegion.
-  Mode get_mode() const;
+  Mode mode() const;
 
   // Returns the consumed memory in bytes for debugging purposes.
   size_t memory_consumption() const;
 
   // Swap the contents of two SSDRegions. This is not thread-safe.
   friend void swap(PersistenceManager& first, PersistenceManager& second) noexcept;
+
+  // Returns the total number of bytes written to the disk.
+  uint64_t total_bytes_written() const;
+
+  // Returns the total number of bytes read from the disk.
+  uint64_t total_bytes_read() const;
 
  private:
   // Each page size type has its own file handle. The file handle contains the file descriptor and the backing file name.
@@ -62,8 +68,8 @@ class PersistenceManager final : public Noncopyable {
   std::array<FileHandle, NUM_PAGE_SIZE_TYPES> _file_handles;
 
   // Internal metrics
-  std::atomic_uint64_t total_bytes_copied_to_ssd = 0;
-  std::atomic_uint64_t total_bytes_copied_from_ssd = 0;
+  std::atomic_uint64_t _total_bytes_written = 0;
+  std::atomic_uint64_t _total_bytes_read = 0;
 
   // Open file handles for the given path. If the path is a directory, a file is created for each page size type.
   std::array<FileHandle, NUM_PAGE_SIZE_TYPES> open_file_handles_in_directory(const std::filesystem::path& path);
