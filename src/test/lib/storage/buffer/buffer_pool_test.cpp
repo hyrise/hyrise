@@ -19,12 +19,6 @@ class BufferPoolTest : public BaseTest {
     VolatileRegion::unmap_region(region);
   }
 
-  const std::string db_path = test_data_path + "buffer_manager_data";
-  std::shared_ptr<PersistenceManager> persistence_manager;
-  std::byte* region;
-  std::array<std::shared_ptr<VolatileRegion>, NUM_PAGE_SIZE_TYPES> volatile_regions;
-  std::unique_ptr<BufferPool> buffer_pool;
-
   bool ensure_free_pages(const uint64_t size) {
     return buffer_pool->ensure_free_pages(size);
   }
@@ -37,6 +31,12 @@ class BufferPoolTest : public BaseTest {
   std::unique_ptr<BufferPool> create_buffer_pool(Args&&... args) {
     return std::unique_ptr<BufferPool>(new BufferPool{std::forward<Args>(args)...});
   }
+
+  const std::string db_path = test_data_path + "buffer_manager_data";
+  std::shared_ptr<PersistenceManager> persistence_manager;
+  std::byte* region;
+  std::array<std::shared_ptr<VolatileRegion>, NUM_PAGE_SIZE_TYPES> volatile_regions;
+  std::unique_ptr<BufferPool> buffer_pool;
 };
 
 TEST_F(BufferPoolTest, TestEnsureFreePagesInsufficentSpace) {
@@ -100,7 +100,7 @@ TEST_F(BufferPoolTest, TestWriteDirtyFrameOnEviction) {
   frame->unlock_exclusive();
   add_to_eviction_queue(page_id);
 
-  EXPECT_EQ(persistence_manager->get_total_bytes_written(), 0);
+  EXPECT_EQ(persistence_manager->total_bytes_written(), 0);
   EXPECT_TRUE(frame->is_dirty());
 
   // Force page eviction by allocation new pages
@@ -108,7 +108,7 @@ TEST_F(BufferPoolTest, TestWriteDirtyFrameOnEviction) {
   ensure_free_pages(bytes_for_size_type(PageSizeType::KiB16));
   ensure_free_pages(bytes_for_size_type(PageSizeType::KiB16));
 
-  EXPECT_EQ(persistence_manager->get_total_bytes_written(), bytes_for_size_type(PageSizeType::KiB16));
+  EXPECT_EQ(persistence_manager->total_bytes_written(), bytes_for_size_type(PageSizeType::KiB16));
   EXPECT_FALSE(frame->is_dirty());
 }
 
@@ -134,5 +134,7 @@ TEST_F(BufferPoolTest, TestGetNodeId) {
       create_buffer_pool(bytes_for_size_type(PageSizeType::KiB16), volatile_regions, persistence_manager, NodeID{2});
   EXPECT_EQ(buffer_pool->node_id(), NodeID{2});
 }
+
+// TODO: Properly test the resize
 
 }  // namespace hyrise
