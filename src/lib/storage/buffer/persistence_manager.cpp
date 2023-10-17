@@ -41,7 +41,7 @@ PersistenceManager::~PersistenceManager() {
   }
 }
 
-PersistenceManager::Mode PersistenceManager::get_mode() const {
+PersistenceManager::Mode PersistenceManager::mode() const {
   return _mode;
 }
 
@@ -86,7 +86,7 @@ void PersistenceManager::write_page(PageID page_id, std::byte* data) {
     const auto error = errno;
     Fail("Error while writing to PersistenceManager: " + strerror(error));
   }
-  total_bytes_copied_to_ssd.fetch_add(num_bytes, std::memory_order_relaxed);
+  _total_bytes_written.fetch_add(num_bytes, std::memory_order_relaxed);
 }
 
 void PersistenceManager::read_page(PageID page_id, std::byte* data) {
@@ -100,7 +100,7 @@ void PersistenceManager::read_page(PageID page_id, std::byte* data) {
     const auto error = errno;
     Fail("Error while reading from PersistenceManager: " + strerror(error));
   }
-  total_bytes_copied_from_ssd.fetch_add(num_bytes, std::memory_order_relaxed);
+  _total_bytes_read.fetch_add(num_bytes, std::memory_order_relaxed);
 }
 
 size_t PersistenceManager::memory_consumption() const {
@@ -158,13 +158,20 @@ void swap(PersistenceManager& first, PersistenceManager& second) noexcept {
   std::swap(first._mode, second._mode);
 
   // The exchange is not atomic
-  const auto copied_to_ssd_tmp = first.total_bytes_copied_to_ssd.load();
-  first.total_bytes_copied_to_ssd = second.total_bytes_copied_to_ssd.load();
-  second.total_bytes_copied_to_ssd = copied_to_ssd_tmp;
+  const auto copied_to_ssd_tmp = first._total_bytes_written.load();
+  first._total_bytes_written = second._total_bytes_written.load();
+  second._total_bytes_written = copied_to_ssd_tmp;
 
-  const auto copied_from_ssd_tmp = first.total_bytes_copied_from_ssd.load();
-  first.total_bytes_copied_from_ssd = second.total_bytes_copied_from_ssd.load();
-  second.total_bytes_copied_from_ssd = copied_from_ssd_tmp;
+  const auto copied_from_ssd_tmp = first._total_bytes_read.load();
+  first._total_bytes_read = second._total_bytes_read.load();
+  second._total_bytes_read = copied_from_ssd_tmp;
 }
 
+uint64_t PersistenceManager::total_bytes_written() const {
+  return _total_bytes_written.load(std::memory_order_relaxed);
+}
+
+uint64_t PersistenceManager::total_bytes_read() const {
+  return _total_bytes_read.load(std::memory_order_relaxed);
+}
 }  // namespace hyrise
