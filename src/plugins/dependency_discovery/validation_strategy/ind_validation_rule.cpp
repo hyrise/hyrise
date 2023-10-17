@@ -45,11 +45,31 @@ std::unordered_set<T> collect_values(const std::shared_ptr<const Table>& table, 
 }
 
 template <typename T>
-ValidationStatus perform_set_based_inclusion_check(const std::shared_ptr<const Table>& including_table,
+ValidationStatus perform_set_based_inclusion_check(const std::shared_ptr<Table>& including_table,
                                                    const ColumnID including_column_id,
-                                                   const std::shared_ptr<const Table>& included_table,
-                                                   const ColumnID included_column_id) {
-  const auto& including_values = collect_values<T>(including_table, including_column_id);
+                                                   const std::shared_ptr<Table>& included_table,
+                                                   const ColumnID included_column_id, std::unordered_map<std::shared_ptr<Table>, std::shared_ptr<AbstractTableConstraint>>& constraints, const std::optional<std::pair<T, T>>& including_min_max, const std::optional<std::pair<T, T>>& included_min_max) {
+  const auto including_values = collect_values<T>(including_table, including_column_id);
+
+  if constexpr (std::is_integral_v<T>) {
+    Assert(!including_values.empty(), "Exmpty tables not considered.");
+    if (including_min_max) {
+      const auto domain = static_cast<size_t>(including_min_max->second - including_min_max->first);
+      if (domain == including_table->row_count() - 1) {
+        constraints[including_table] = std::make_shared<TableKeyConstraint>(
+        std::set<ColumnID>{including_column_id}, KeyConstraintType::UNIQUE);
+      }
+
+      // Skip probing if primary key continuous.
+      if (domain == including_values.size() - 1 && including_min_max && included_min_max && including_min_max->first <= included_min_max->first && including_min_max->second >= included_min_max->second) {
+        return ValidationStatus::Valid;
+
+      }
+    } else {
+      PerformanceWarning("Could not obtain min/max values.");
+    }
+
+  }
 
   auto status = ValidationStatus::Valid;
   const auto chunk_count = included_table->chunk_count();
@@ -113,10 +133,13 @@ ValidationResult IndValidationRule::_on_validate(const AbstractDependencyCandida
         ValidationUtils<ColumnDataType>::get_column_min_max_value(included_table, included_column_id);
 
     if (!included_min_max) {
+      PerformanceWarning("Could not obtain min/max values.");
       result.status = perform_set_based_inclusion_check<ColumnDataType>(including_table, including_column_id,
-                                                                        included_table, included_column_id);
+                                                                        included_table, included_column_id, result.constraints, std::nullopt, std::nullopt);
       return;
     }
+
+    auto including_min_max = std::optional<std::pair<ColumnDataType, ColumnDataType>>{};
 
     if constexpr (std::is_integral_v<ColumnDataType>) {
       auto including_unique_by_ucc = false;
@@ -129,11 +152,11 @@ ValidationResult IndValidationRule::_on_validate(const AbstractDependencyCandida
           continue;
         }
         including_unique_by_ucc = true;
-        const auto& including_min_max =
+        including_min_max =
             ValidationUtils<ColumnDataType>::get_column_min_max_value(including_table, including_column_id);
         if (!including_min_max) {
           result.status = perform_set_based_inclusion_check<ColumnDataType>(including_table, including_column_id,
-                                                                            included_table, included_column_id);
+                                                                            included_table, included_column_id, result.constraints, including_min_max, included_min_max);
           return;
         }
 
@@ -175,7 +198,7 @@ ValidationResult IndValidationRule::_on_validate(const AbstractDependencyCandida
         return;
       }
     } else {
-      const auto& including_min_max =
+      including_min_max =
           ValidationUtils<ColumnDataType>::get_column_min_max_value(including_table, including_column_id);
       if (including_min_max && (including_min_max->first > included_min_max->first ||
                                 including_min_max->second < included_min_max->second)) {
@@ -185,7 +208,7 @@ ValidationResult IndValidationRule::_on_validate(const AbstractDependencyCandida
     }
 
     result.status = perform_set_based_inclusion_check<ColumnDataType>(including_table, including_column_id,
-                                                                      included_table, included_column_id);
+                                                                      included_table, included_column_id, result.constraints, including_min_max, included_min_max);
   });
 
   if (result.status == ValidationStatus::Valid) {
