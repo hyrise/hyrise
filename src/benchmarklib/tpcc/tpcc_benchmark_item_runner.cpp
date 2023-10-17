@@ -12,8 +12,8 @@ TPCCBenchmarkItemRunner::TPCCBenchmarkItemRunner(const std::shared_ptr<Benchmark
     : AbstractBenchmarkItemRunner(config), _num_warehouses(num_warehouses) {}
 
 const std::vector<BenchmarkItemID>& TPCCBenchmarkItemRunner::items() const {
-  static const std::vector<BenchmarkItemID> items{BenchmarkItemID{0}, BenchmarkItemID{1}, BenchmarkItemID{2},
-                                                  BenchmarkItemID{3}, BenchmarkItemID{4}};
+  static const auto items = std::vector<BenchmarkItemID>{BenchmarkItemID{0}, BenchmarkItemID{1}, BenchmarkItemID{2},
+                                                         BenchmarkItemID{3}, BenchmarkItemID{4}};
   return items;
 }
 
@@ -66,7 +66,7 @@ std::string TPCCBenchmarkItemRunner::item_name(const BenchmarkItemID item_id) co
 const std::vector<int>& TPCCBenchmarkItemRunner::weights() const {
   // Except for New-Order, the given weights are minimums (see 5.2.3 in the standard). Since New-Order is the
   // transaction being counted for tpmC, we want it to have the highest weight possible.
-  static const std::vector<int> weights{4, 45, 4, 43, 4};
+  static const auto weights = std::vector<int>{4, 45, 4, 43, 4};
   return weights;
 }
 

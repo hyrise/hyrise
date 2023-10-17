@@ -1,17 +1,13 @@
 #include "operator_task.hpp"
 
-#include <memory>
-#include <unordered_set>
-#include <utility>
-
 #include "operators/abstract_operator.hpp"
 #include "operators/abstract_read_write_operator.hpp"
-
-#include "scheduler/job_task.hpp"
+#include "operators/get_table.hpp"
+#include "scheduler/task_utils.hpp"
 
 namespace {
 
-using namespace hyrise;  // NOLINT
+using namespace hyrise;  // NOLINT(build/namespaces)
 
 /**
  * Create tasks recursively. Called by `make_tasks_from_operator`.
@@ -49,6 +45,37 @@ std::shared_ptr<OperatorTask> add_operator_tasks_recursively(const std::shared_p
   return task;
 }
 
+/**
+ * Sets tasks that can be used to prune chunks by predicates with uncorrelated subqueries as successors of the GetTable
+ * tasks. Guarantees that the resulting task graph is still acyclic.
+ */
+void link_tasks_for_subquery_pruning(const std::unordered_set<std::shared_ptr<OperatorTask>>& tasks) {
+  for (const auto& task : tasks) {
+    const auto& op = task->get_operator();
+    if (op->type() != OperatorType::GetTable) {
+      continue;
+    }
+
+    const auto& get_table = static_cast<GetTable&>(*op);
+    for (const auto& table_scan : get_table.prunable_subquery_predicates()) {
+      for (const auto& subquery : table_scan->uncorrelated_subqueries()) {
+        // All tasks have already been created, so we must be able to get the cached task from each operator.
+        const auto& subquery_root = subquery->get_or_create_operator_task();
+        Assert(tasks.contains(subquery_root), "Unknown OperatorTask.");
+
+        // Cycles in the task graph would lead to deadlocks during execution. This could happen if a table can be pruned
+        // using a predicate on itself (e.g., `SELECT * FROM a_table WHERE x > (SELECT AVG(x) FROM a_table)`) and the
+        // LQPTranslator created a single GetTable operator due to operator deduplication. To make sure we do not
+        // introduce cycles, we include the prunable_subquery_predicates of a StoredTableNode in its equality check.
+        // Thus, we have two unequal nodes that are translated to distinct operators by the LQPTranslator (and no
+        // further sanity check should be necessary). However, we still check for cycles after linking all tasks in
+        // debug builds.
+        subquery_root->set_as_predecessor_of(task);
+      }
+    }
+  }
+}
+
 }  // namespace
 
 namespace hyrise {
@@ -61,8 +88,33 @@ std::string OperatorTask::description() const {
 
 std::pair<std::vector<std::shared_ptr<AbstractTask>>, std::shared_ptr<OperatorTask>>
 OperatorTask::make_tasks_from_operator(const std::shared_ptr<AbstractOperator>& op) {
-  std::unordered_set<std::shared_ptr<OperatorTask>> operator_tasks_set;
+  auto operator_tasks_set = std::unordered_set<std::shared_ptr<OperatorTask>>{};
   const auto& root_operator_task = add_operator_tasks_recursively(op, operator_tasks_set);
+
+  // GetTable operators can store references to TableScans as prunable subquery predicates (see get_table.hpp for
+  // details).
+  // We set the tasks associated with the uncorrelated subqueries as predecessors of the GetTable tasks so the GetTable
+  // operators can extract the predicate values and perform dynamic chunk pruning. However, we cannot link the tasks
+  // during the recursive creation of operator tasks (see map_prunable_subquery_predicates.hpp). Potentially, not all
+  // tasks are yet created when reaching the GetTable tasks. Furthermore, we need the entire task graph to ensure that
+  // it is acyclic.
+  link_tasks_for_subquery_pruning(operator_tasks_set);
+
+  // Ensure the task graph is acyclic, i.e., no task is any (n-th) successor of itself. Tasks in cycles would end up in
+  // a deadlock during execution, mutually waiting for the other tasks' execution. Even if the tasks are never executed,
+  // cycles create memory leaks since tasks hold shared pointers to their predecessors.
+  if constexpr (HYRISE_DEBUG) {
+    visit_tasks(root_operator_task, [](const auto& task) {
+      for (const auto& direct_successor : task->successors()) {
+        visit_tasks_upwards(direct_successor, [&](const auto& successor) {
+          Assert(task != successor, "Task graph contains a cycle.");
+          return TaskUpwardVisitation::VisitSuccessors;
+        });
+      }
+
+      return TaskVisitation::VisitPredecessors;
+    });
+  }
 
   return std::make_pair(
       std::vector<std::shared_ptr<AbstractTask>>(operator_tasks_set.begin(), operator_tasks_set.end()),
@@ -116,10 +168,10 @@ void OperatorTask::_on_execute() {
         return;
       case TransactionPhase::Committing:
       case TransactionPhase::Committed:
-        Fail("Trying to execute an operator for a transaction that is already committed");
+        Fail("Trying to execute an operator for a transaction that is already committed.");
 
       case TransactionPhase::RolledBackByUser:
-        Fail("Trying to execute an operator for a transaction that has been rolled back by the user");
+        Fail("Trying to execute an operator for a transaction that has been rolled back by the user.");
     }
   }
 

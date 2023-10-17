@@ -5,7 +5,6 @@
 #include "abstract_read_only_operator.hpp"
 
 #include "all_type_variant.hpp"
-#include "storage/index/chunk_index_type.hpp"
 #include "storage/pos_lists/row_id_pos_list.hpp"
 #include "types.hpp"
 
@@ -15,20 +14,20 @@ class Table;
 class AbstractTask;
 
 /**
- * Operator that performs a predicate search using indexes
- *
- * Note: Scans only the set of chunks passed to the constructor
+ * Operator that performs a predicate search using indexes.
+ * Note: IndexScan only scans the set of chunks passed to the constructor.
  */
 class IndexScan : public AbstractReadOnlyOperator {
  public:
-  IndexScan(const std::shared_ptr<const AbstractOperator>& input_operator, const ChunkIndexType index_type,
-            const std::vector<ColumnID>& left_column_ids, const PredicateCondition predicate_condition,
-            const std::vector<AllTypeVariant>& right_values, const std::vector<AllTypeVariant>& right_values2 = {});
+  IndexScan(const std::shared_ptr<const AbstractOperator>& input_operator, const ColumnID indexed_column_id,
+            const PredicateCondition predicate_condition, const AllTypeVariant scan_value);
 
   const std::string& name() const final;
 
-  // If set, only the specified chunks will be scanned. See TableScan::excluded_chunk_ids for usage.
-  std::vector<ChunkID> included_chunk_ids;
+  // Must not be empty because only the specified chunks will be scanned. See TableScan::excluded_chunk_ids for usage.
+  // Note: These ChunkIDs are referring to the ChunkIDs of the input operator (i.e., GetTable) at optimization-time.
+  // Due to dynamic pruning, the included ChunkIDs must potentially be updated for further pruned chunks.
+  std::shared_ptr<std::vector<ChunkID>> included_chunk_ids;
 
  protected:
   std::shared_ptr<const Table> _on_execute() final;
@@ -39,16 +38,10 @@ class IndexScan : public AbstractReadOnlyOperator {
       std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& /*copied_ops*/) const override;
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
 
-  void _validate_input();
-  std::shared_ptr<AbstractTask> _create_job(const ChunkID chunk_id, std::mutex& output_mutex);
-  RowIDPosList _scan_chunk(const ChunkID chunk_id);
-
  private:
-  const ChunkIndexType _index_type;
-  const std::vector<ColumnID> _left_column_ids;
+  ColumnID _indexed_column_id;
   const PredicateCondition _predicate_condition;
-  const std::vector<AllTypeVariant> _right_values;
-  const std::vector<AllTypeVariant> _right_values2;
+  const AllTypeVariant _scan_value;
 
   std::shared_ptr<const Table> _in_table;
   std::shared_ptr<Table> _out_table;

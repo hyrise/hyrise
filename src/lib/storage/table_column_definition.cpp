@@ -16,11 +16,4 @@ size_t TableColumnDefinition::hash() const {
   boost::hash_combine(hash, nullable);
   return hash;
 }
-
-TableColumnDefinitions concatenated(const TableColumnDefinitions& lhs, const TableColumnDefinitions& rhs) {
-  auto column_definitions = lhs;
-  column_definitions.insert(column_definitions.end(), rhs.begin(), rhs.end());
-  return column_definitions;
-}
-
 }  // namespace hyrise

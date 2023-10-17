@@ -78,7 +78,7 @@ TEST_F(StorageChunkTest, FinalizingAFinalizedChunkThrows) {
 }
 
 TEST_F(StorageChunkTest, FinalizeSetsMaxBeginCid) {
-  auto mvcc_data = std::make_shared<MvccData>(3, CommitID{0});
+  const auto mvcc_data = std::make_shared<MvccData>(3, CommitID{0});
   mvcc_data->set_begin_cid(ChunkOffset{0}, CommitID{1});
   mvcc_data->set_begin_cid(ChunkOffset{1}, CommitID{2});
   mvcc_data->set_begin_cid(ChunkOffset{2}, CommitID{3});
@@ -86,8 +86,8 @@ TEST_F(StorageChunkTest, FinalizeSetsMaxBeginCid) {
   chunk = std::make_shared<Chunk>(Segments({vs_int, vs_str}), mvcc_data);
   chunk->finalize();
 
-  auto mvcc_data_chunk = chunk->mvcc_data();
-  EXPECT_EQ(mvcc_data_chunk->max_begin_cid, 3);
+  const auto mvcc_data_chunk = chunk->mvcc_data();
+  EXPECT_EQ(mvcc_data_chunk->max_begin_cid.load(), 3);
 }
 
 TEST_F(StorageChunkTest, AddIndexByColumnID) {

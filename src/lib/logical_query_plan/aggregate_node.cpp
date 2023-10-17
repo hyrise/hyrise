@@ -1,15 +1,8 @@
 #include "aggregate_node.hpp"
 
-#include <algorithm>
-#include <memory>
-#include <optional>
-#include <sstream>
-#include <string>
-#include <vector>
-
-#include "expression/aggregate_expression.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_column_expression.hpp"
+#include "expression/window_function_expression.hpp"
 #include "lqp_utils.hpp"
 #include "resolve_type.hpp"
 #include "types.hpp"
@@ -28,8 +21,13 @@ AggregateNode::AggregateNode(const std::vector<std::shared_ptr<AbstractExpressio
       aggregate_expressions_begin_idx{group_by_expressions.size()} {
   if constexpr (HYRISE_DEBUG) {
     for (const auto& aggregate_expression : aggregate_expressions) {
-      Assert(aggregate_expression->type == ExpressionType::Aggregate,
-             "Expression used as aggregate expression must be of type AggregateExpression.");
+      Assert(aggregate_expression->type == ExpressionType::WindowFunction,
+             "Expression used as aggregate expression must be of type WindowFunctionExpression.");
+      const auto& window_function = static_cast<const WindowFunctionExpression&>(*aggregate_expression);
+      Assert(!window_function.window(), "Aggregates must not define a window.");
+      Assert(
+          aggregate_functions.contains(window_function.window_function),
+          window_function_to_string.left.at(window_function.window_function) + " is not a valid aggregate function.");
     }
   }
 
@@ -77,10 +75,8 @@ std::vector<std::shared_ptr<AbstractExpression>> AggregateNode::output_expressio
   for (auto expression_idx = aggregate_expressions_begin_idx; expression_idx < output_expression_count;
        ++expression_idx) {
     auto& output_expression = output_expressions[expression_idx];
-    DebugAssert(output_expression->type == ExpressionType::Aggregate,
-                "Unexpected non-aggregate in list of aggregates.");
-    const auto& aggregate_expression = static_cast<AggregateExpression&>(*output_expression);
-    if (aggregate_expression.aggregate_function == AggregateFunction::Any) {
+    const auto& aggregate_expression = static_cast<WindowFunctionExpression&>(*output_expression);
+    if (aggregate_expression.window_function == WindowFunction::Any) {
       output_expression = output_expression->arguments[0];
     }
   }
@@ -164,7 +160,7 @@ UniqueColumnCombinations AggregateNode::unique_column_combinations() const {
 FunctionalDependencies AggregateNode::non_trivial_functional_dependencies() const {
   auto non_trivial_fds = left_input()->non_trivial_functional_dependencies();
 
-  // In AggregateNode, some expressions get wrapped inside of AggregateExpressions. Therefore, we have to discard
+  // In AggregateNode, some expressions get wrapped inside of WindowFunctionExpressions. Therefore, we have to discard
   // all FDs whose expressions are no longer part of the node's output expressions.
   remove_invalid_fds(shared_from_this(), non_trivial_fds);
 

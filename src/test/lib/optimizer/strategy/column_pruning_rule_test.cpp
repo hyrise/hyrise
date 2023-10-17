@@ -14,6 +14,7 @@
 #include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/union_node.hpp"
 #include "logical_query_plan/update_node.hpp"
+#include "logical_query_plan/window_node.hpp"
 #include "optimizer/strategy/column_pruning_rule.hpp"
 
 namespace hyrise {
@@ -46,7 +47,8 @@ class ColumnPruningRuleTest : public StrategyBaseTest {
   }
 
   std::shared_ptr<ColumnPruningRule> rule;
-  std::shared_ptr<MockNode> node_abc, node_uvw;
+  std::shared_ptr<MockNode> node_abc;
+  std::shared_ptr<MockNode> node_uvw;
   std::shared_ptr<LQPColumnExpression> a, b, c, u, v, w;
 };
 
@@ -417,6 +419,40 @@ TEST_F(ColumnPruningRuleTest, DoNotPruneChangeMetaTableInputs) {
   const auto actual_lqp = apply_rule(rule, lqp);
   const auto expected_lqp = lqp->deep_copy();
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(ColumnPruningRuleTest, DoNotPruneWindowNodeInputs) {
+  // Do not prune away the window function argument, the PARTITION BY columns, and the ORDER BY columns.
+  auto frame_description = FrameDescription{FrameType::Range, FrameBound{0, FrameBoundType::Preceding, true},
+                                            FrameBound{0, FrameBoundType::CurrentRow, false}};
+  const auto window = window_(expression_vector(a), expression_vector(b), std::vector<SortMode>{SortMode::Ascending},
+                              std::move(frame_description));
+
+  // clang-format off
+  const auto lqp =
+  ProjectionNode::make(expression_vector(1),
+    WindowNode::make(min_(c, window), node_abc));
+  // clang-format on
+  const auto expected_lqp = lqp->deep_copy();
+  apply_rule(rule, lqp);
+  EXPECT_LQP_EQ(lqp, expected_lqp);
+}
+
+TEST_F(ColumnPruningRuleTest, PruneInputsNotNeededByWindowNode) {
+  // Do not prune away the window the PARTITION BY columns and the ORDER BY columns, but prune additional columns.
+  auto frame_description = FrameDescription{FrameType::Range, FrameBound{0, FrameBoundType::Preceding, true},
+                                            FrameBound{0, FrameBoundType::CurrentRow, false}};
+  const auto window = window_(expression_vector(a), expression_vector(b), std::vector<SortMode>{SortMode::Ascending},
+                              std::move(frame_description));
+
+  // clang-format off
+  const auto lqp =
+  ProjectionNode::make(expression_vector(1),
+    WindowNode::make(rank_(window), node_abc));
+  // clang-format on
+
+  apply_rule(rule, lqp);
+  EXPECT_EQ(node_abc->pruned_column_ids(), std::vector<ColumnID>{ColumnID{2}});
 }
 
 TEST_F(ColumnPruningRuleTest, AnnotatePrunableJoinInput) {

@@ -7,6 +7,7 @@
 #include "hyrise.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/task_queue.hpp"
+#include "utils/atomic_max.hpp"
 
 namespace hyrise {
 
@@ -245,7 +246,7 @@ TEST_F(StressTest, NodeSchedulerStressTest) {
 
   // In the default case, tasks are added to node 0 when its load is low. In this test, tasks cannot be processed until
   // `start_jobs` is set, leading to a high queue load that cannot be processed. New tasks that are scheduled should
-  // thus be assigned to different task queues to distribute the load.
+  // thus be assigned to different TaskQueues to distribute the load.
   auto second_worker = std::next(node_queue_scheduler->workers().cbegin());
   EXPECT_TRUE(std::any_of(second_worker, node_queue_scheduler->workers().cend(),
                           [](const auto& worker) { return worker->queue()->estimate_load() > 0; }));
@@ -260,6 +261,30 @@ TEST_F(StressTest, NodeSchedulerStressTest) {
   // expected value.
   const auto job_count_sum = std::accumulate(job_counts.cbegin(), job_counts.cend(), size_t{0});
   EXPECT_EQ(num_finished_jobs, job_count_sum);
+}
+
+TEST_F(StressTest, AtomicMaxConcurrentUpdate) {
+  auto counter = std::atomic_uint32_t{0};
+  const auto thread_count = 100;
+  const auto repetitions = 1'000;
+
+  auto threads = std::vector<std::thread>{};
+  threads.reserve(thread_count);
+
+  for (auto thread_id = uint32_t{1}; thread_id <= thread_count; ++thread_id) {
+    threads.emplace_back(std::thread{[thread_id, &counter]() {
+      for (auto i = uint32_t{1}; i <= repetitions; ++i) {
+        set_atomic_max(counter, thread_id + i);
+      }
+    }});
+  }
+
+  for (auto& thread : threads) {
+    thread.join();
+  }
+
+  // Highest thread ID is 100, 1'000 repetitions. 100 + 1'000 = 1'100.
+  EXPECT_EQ(counter.load(), 1'100);
 }
 
 }  // namespace hyrise

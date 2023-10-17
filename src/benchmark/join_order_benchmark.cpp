@@ -172,7 +172,7 @@ int main(int argc, char* argv[]) {
 
     // ["a", " b", " c", " d"] -> ["a", "b", "c", "d"]
     query_subset.emplace();
-    for (auto& query_name : query_subset_untrimmed) {
+    for (const auto& query_name : query_subset_untrimmed) {
       query_subset->emplace(boost::trim_copy(query_name));
     }
   }
