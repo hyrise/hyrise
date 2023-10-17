@@ -173,6 +173,7 @@ set(
     lossy_cast.hpp
     memory/boost_default_memory_resource.cpp
     memory/zero_allocator.hpp
+    noncopyable.hpp
     null_value.hpp
     operators/abstract_aggregate_operator.cpp
     operators/abstract_aggregate_operator.hpp
@@ -439,6 +440,8 @@ set(
     storage/base_segment_accessor.hpp
     storage/base_segment_encoder.hpp
     storage/base_value_segment.hpp
+    storage/buffer/buffer_manager.cpp
+    storage/buffer/buffer_manager.hpp
     storage/buffer/buffer_pool.cpp
     storage/buffer/buffer_pool.hpp
     storage/buffer/frame.cpp

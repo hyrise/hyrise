@@ -14,9 +14,9 @@
 #include <boost/container/pmr/polymorphic_allocator.hpp>
 #include <boost/operators.hpp>
 
+#include "noncopyable.hpp"
 #include "strong_typedef.hpp"
 #include "utils/assert.hpp"
-
 /**
  * We use STRONG_TYPEDEF to avoid things like adding chunk ids and value ids. Because implicit constructors are
  * deleted, you cannot initialize a ChunkID like this:
@@ -261,16 +261,6 @@ struct SortColumnDefinition final {
 inline bool operator==(const SortColumnDefinition& lhs, const SortColumnDefinition& rhs) {
   return lhs.column == rhs.column && lhs.sort_mode == rhs.sort_mode;
 }
-
-class Noncopyable {
- protected:
-  Noncopyable() = default;
-  Noncopyable(Noncopyable&&) noexcept = default;
-  Noncopyable& operator=(Noncopyable&&) noexcept = default;
-  ~Noncopyable() = default;
-  Noncopyable(const Noncopyable&) = delete;
-  const Noncopyable& operator=(const Noncopyable&) = delete;
-};
 
 // Dummy type, can be used to overload functions with a variant accepting a Null value
 struct Null {};

@@ -1,0 +1,125 @@
+#pragma once
+
+#include <boost/container/pmr/memory_resource.hpp>
+#include <filesystem>
+#include <memory>
+#include <tuple>
+#include "noncopyable.hpp"
+#include "storage/buffer/buffer_pool.hpp"
+#include "storage/buffer/frame.hpp"
+#include "storage/buffer/metrics.hpp"
+#include "storage/buffer/persistence_mamaber.hpp"
+#include "storage/buffer/volatile_region.hpp"
+#include "types.hpp"
+#include "utils/pausable_loop_thread.hpp"
+
+namespace hyrise {
+
+/**
+ * The buffer manager is responsible for managing the working memory of Hyrise. The buffer manager can automatically offload pages to another NUMA node or to the SSD if 
+ * the used amount of memory exceeds the sytem amount of memory. Pinning ensures that pages are not evicted from the buffer pool during an operation. Compared to umap, mmap etc.
+ * this implementation is transaction-safe, thread-safe, extendable and allows fine-grained control over the memory management. In constrast to tiering, the buffer manager does not
+ * require a placement algorithm and is therefore more flexible.
+ * 
+ * Instead of relying on traditional buffer manager techniques with a global hash map or pointer swizzling, we leverage anonymous virtual memory and manual page table manipulation.
+ * This basic implementation was presented in the SIGMOD'23 paper "Virtual-Memory Assisted Buffer Management" by Leis et. al. We further support explicitly defined variable sized pages to handle differently sized segments. For this, 
+ * we employ a Second-Chance FIFO for page replacement when a memory limit is reached.
+ * 
+ * 
+ * Usage:
+ * Usually, the global buffer manager is accessed via the Hyrise singleton to ensure proper creation and cleanup order. We provide several Guard primitives (defined in pin_guard.hpp) 
+ * so simplify the usage of the buffer manager with vectors and segments in operators. For better memory allocation, we usually proxy allocations through an additional, stateless JemallocMemoryResource.
+ *  * TODO: Pinning, concurrreny,  NUMA, SSD, metrics, debugging
+
+ * Future Work: The low-level API presented here can be used to implement a variety of buffer management techniques. We see the following extensions to improve the performance:
+ * - Use Async I/O for reading and writing pages to the SSD with libaio or io_uring
+ * - Improve NUMA-awareness and support more complex topologies; currently only one NUMA node for execution and one memory node are supported
+ * - Rethink handling of variable-sized pages
+ * - Implemented custom data structures with the buffer manager in mind
+ * - MVCC, Recovery using WAL
+ * - Optimistic Latching without using the locking mechanism
+*/
+class BufferManager final : public boost::container::pmr::memory_resource, public Noncopyable {
+ public:
+  // One buffer pool per node. Currently we support only one single node
+
+  // Create a buffer manager with the default configuration
+  BufferManager();
+
+  BufferManager(const uint64_t pool_size, const std::string& ssd_path, const NodeID node_id);
+
+  // Destructor which cleanups all resources
+  ~BufferManager() override;
+
+  // Move assignment operator. The operation is not thread-safe.
+  BufferManager& operator=(BufferManager&& other) noexcept;
+
+  // Pin a page exclusively in the buffer pool for single writers. This ensures that the page is not evicted from the buffer pool.
+  void pin_exclusive(const PageID page_id);
+
+  // Pin a page in shared mode in the buffer pool for multiple readers. This ensures that the page is not evicted from the buffer pool.
+  void pin_shared(const PageID page_id);
+
+  // Unpin a page from the buffer pool. This allows the page to be evicted from the buffer pool.
+  void unpin_exclusive(const PageID page_id);
+
+  // Unpin a page from the buffer pool. This allows the page to be evicted from the buffer pool.
+  void unpin_shared(const PageID page_id);
+
+  // Mark a page as dirty
+  void set_dirty(const PageID page_id);
+
+  // Find the page id for a given virtual memory address. The PageID can be invalid if the address is not part of the buffer pool.
+  PageID find_page(const void* ptr) const;
+
+  // Allocate a number of bytes. Allocated memory is rounded up to the next page size type e.g. 6 KiB result in the allocation of a 8KiB page.
+  void* do_allocate(std::size_t bytes, std::size_t alignment) override;
+
+  // Deallocate a given page. The page must be unpinned before.
+  void do_deallocate(void* p, std::size_t bytes, std::size_t alignment) override;
+
+  bool do_is_equal(const boost::container::pmr::memory_resource& other) const noexcept override;
+
+  // Metrics and stats
+  std::shared_ptr<BufferManagerMetrics> metrics();
+
+  // Get an approximation of the memory consumption of the buffer manager in bytes. This does not include the memory consumption of the buffer pools.
+  size_t memory_consumption() const;
+
+  // Get the buffer pools of the buffer manager. The result also provides the memory consumption of each buffer pool.
+  const BufferPool& buffer_pool() const;
+
+  const PersistenceManager& persistence_manager() const;
+
+  // Debugging method for printing the getting of the buffer manager
+  Frame::StateVersionType _state(const PageID page_id);
+
+ private:
+  friend class Hyrise;
+  friend class BufferManagerSetting;
+
+  std::shared_ptr<VolatileRegion> get_region(const PageID page_id);
+
+  void protect_page(const PageID page_id);
+
+  void unprotect_page(const PageID page_id);
+
+  void make_resident(const PageID page_id, const AccessIntent access_intent,
+                     const Frame::StateVersionType previous_state_version);
+
+  void add_to_eviction_queue(const PageID page_id, Frame* frame);
+
+  BufferManagerConfig _config;
+
+  std::byte* _mapped_region;
+
+  std::shared_ptr<BufferManagerMetrics> _metrics;
+
+  std::array<std::shared_ptr<VolatileRegion>, NUM_PAGE_SIZE_TYPES> _volatile_regions;
+
+  std::shared_ptr<SSDRegion> _ssd_region;
+
+  BufferPool _buffer_pools;
+};
+
+}  // namespace hyrise
