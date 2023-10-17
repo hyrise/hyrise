@@ -6,6 +6,7 @@
 #include <map>
 #include "storage/buffer/persistence_manager.hpp"
 #include "types.hpp"
+#include "utils/list_directory.hpp"
 
 namespace hyrise {
 
@@ -21,19 +22,12 @@ class PersistenceManagerTest : public BaseTest {
     region = std::make_unique<PersistenceManager>(db_path);
   }
 
-  void files_in_directory(const std::filesystem::path& path, std::vector<std::filesystem::path>& files) {
-    for (const auto& entry : std::filesystem::directory_iterator(path)) {
-      files.push_back(entry.path());
-    }
-  }
-
   const std::string db_path = test_data_path + "buffer_manager_data";
   std::unique_ptr<PersistenceManager> region;
 };
 
 TEST_F(PersistenceManagerTest, TestWriteAndReadPagesOnRegularFile) {
-  auto files = std::vector<std::filesystem::path>{};
-  files_in_directory(db_path, files);
+  const auto files = list_directory(db_path);
 
   EXPECT_EQ(files.size(), NUM_PAGE_SIZE_TYPES) << "Expected one file per page size type";
   EXPECT_EQ(region->mode(), PersistenceManager::Mode::FILE_PER_SIZE_TYPE);
@@ -69,8 +63,7 @@ TEST_F(PersistenceManagerTest, TestWriteAndReadPagesOnRegularFile) {
             2 * bytes_for_size_type(PageSizeType::KiB16) + bytes_for_size_type(PageSizeType::KiB32));
 
   region = nullptr;
-  auto files_after_cleanup = std::vector<std::filesystem::path>{};
-  files_in_directory(db_path, files_after_cleanup);
+  const auto files_after_cleanup = list_directory(db_path);
   EXPECT_EQ(files_after_cleanup.size(), 0);
 }
 
