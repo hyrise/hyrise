@@ -439,6 +439,15 @@ set(
     storage/base_segment_accessor.hpp
     storage/base_segment_encoder.hpp
     storage/base_value_segment.hpp
+    storage/buffer/buffer_pool.cpp
+    storage/buffer/buffer_pool.hpp
+    storage/buffer/frame.cpp
+    storage/buffer/frame.hpp
+    storage/buffer/page_id.hpp
+    storage/buffer/persistence_manager.cpp
+    storage/buffer/persistence_manager.hpp
+    storage/buffer/volatile_region.cpp
+    storage/buffer/volatile_region.hpp
     storage/chunk.cpp
     storage/chunk.hpp
     storage/chunk_encoder.cpp

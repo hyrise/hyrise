@@ -176,6 +176,11 @@ set(
     lib/statistics/statistics_objects/string_histogram_domain_test.cpp
     lib/statistics/table_statistics_test.cpp
     lib/storage/any_segment_iterable_test.cpp
+    lib/storage/buffer/buffer_pool_test.cpp
+    lib/storage/buffer/page_id_test.cpp
+    lib/storage/buffer/frame_test.cpp
+    lib/storage/buffer/persistence_manager_test.cpp
+    lib/storage/buffer/volatile_region_test.cpp
     lib/storage/chunk_encoder_test.cpp
     lib/storage/chunk_test.cpp
     lib/storage/compressed_vector_test.cpp
