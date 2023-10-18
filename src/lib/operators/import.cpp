@@ -5,9 +5,9 @@
 #include "hyrise.hpp"
 #include "import_export/binary/binary_parser.hpp"
 #include "import_export/csv/csv_parser.hpp"
+#include "storage/chunk_encoder.hpp"
 #include "utils/assert.hpp"
 #include "utils/load_table.hpp"
-#include "storage/chunk_encoder.hpp"
 
 namespace hyrise {
 

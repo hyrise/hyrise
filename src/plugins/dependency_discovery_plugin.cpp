@@ -118,7 +118,13 @@ DependencyCandidates DependencyDiscoveryPlugin::_identify_dependency_candidates(
 void DependencyDiscoveryPlugin::_validate_dependency_candidates(
     const DependencyCandidates& dependency_candidates) const {
   auto validation_timer = Timer{};
-  for (const auto& candidate : dependency_candidates) {
+  auto ordered_candidates = std::vector<std::shared_ptr<AbstractDependencyCandidate>>{dependency_candidates.cbegin(),
+                                                                                      dependency_candidates.cend()};
+
+  std::sort(ordered_candidates.begin(), ordered_candidates.end(),
+            [](const auto& lhs, const auto& rhs) { return lhs->type < rhs->type; });
+
+  for (const auto& candidate : ordered_candidates) {
     auto message = std::stringstream{};
     DebugAssert(_validation_rules.contains(candidate->type),
                 "Unsupported dependency: " + std::string{magic_enum::enum_name(candidate->type)});
@@ -155,9 +161,12 @@ void DependencyDiscoveryPlugin::_validate_dependency_candidates(
                                             " candidates in " + validation_timer.lap_formatted(),
                                         LogLevel::Info);
 
-  Hyrise::get().log_manager.add_message("DependencyDiscoveryPlugin", "Clearing LQP and PQP cache...", LogLevel::Debug);
-  Hyrise::get().default_lqp_cache->clear();
-  Hyrise::get().default_pqp_cache->clear();
+  // Hyrise::get().default_lqp_cache->clear();
+  // Hyrise::get().default_pqp_cache->clear();
+  Hyrise::get().default_pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
+  Hyrise::get().default_lqp_cache = std::make_shared<SQLLogicalPlanCache>();
+  Hyrise::get().log_manager.add_message(
+      "DependencyDiscoveryPlugin", "Cleared LQP and PQP caches in " + validation_timer.lap_formatted(), LogLevel::Info);
 }
 
 void DependencyDiscoveryPlugin::_add_candidate_rule(std::unique_ptr<AbstractDependencyCandidateRule> rule) {

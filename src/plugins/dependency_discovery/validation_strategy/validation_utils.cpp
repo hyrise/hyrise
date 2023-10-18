@@ -75,14 +75,14 @@ namespace hyrise {
 template <typename T>
 typename ValidationUtils<T>::ColumnStatistics ValidationUtils<T>::collect_column_statistics(
     const std::shared_ptr<const Table>& table, const ColumnID column_id, bool early_out) {
-  auto min_max_ordered = std::map<T, std::vector<std::shared_ptr<std::pair<T, T>>>>{};
-  auto is_unique = true;
+  auto min_max_ordered = std::map<T, std::shared_ptr<std::pair<T, T>>>{};
   auto column_statistics = ValidationUtils<T>::ColumnStatistics{};
   column_statistics.contains_only_nulls = true;
   column_statistics.all_segments_unique = true;
-  column_statistics.segments_continuous = true;
+  column_statistics.segments_disjoint = true;
 
   const auto chunk_count = table->chunk_count();
+  auto previous_it = min_max_ordered.begin();
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto& chunk = table->get_chunk(chunk_id);
     if (!chunk || chunk->size() == 0) {
@@ -109,65 +109,31 @@ typename ValidationUtils<T>::ColumnStatistics ValidationUtils<T>::collect_column
 
     const auto& min = *segment_statistics.min;
     const auto& max = *segment_statistics.max;
-    const auto& min_max_pair = std::make_shared<std::pair<T, T>>(min, max);
-    min_max_ordered[min].emplace_back(min_max_pair);
-    min_max_ordered[max].emplace_back(min_max_pair);
+    const auto min_max_pair = std::make_shared<std::pair<T, T>>(min, max);
 
-    if constexpr (std::is_integral_v<T>) {
-      column_statistics.segments_continuous &= max - min == static_cast<int64_t>(chunk->size() - 1);
+    const auto min_it = min_max_ordered.emplace_hint(previous_it, min, min_max_pair);
+    const auto max_it = min_max_ordered.emplace_hint(min_it, max, min_max_pair);
+    previous_it = max_it;
+
+    if (!column_statistics.segments_disjoint) {
+      continue;
+    }
+
+    // Not disjoint if key already exists or if there is another value between min and max.
+    if (min_it->second != min_max_pair || max_it->second != min_max_pair || std::next(min_it)->first != max) {
+      column_statistics.segments_disjoint = false;
+      continue;
     }
   }
 
   column_statistics.min = min_max_ordered.cbegin()->first;
   column_statistics.max = min_max_ordered.crbegin()->first;
-  column_statistics.all_segments_unique = is_unique;
-
-  if (!column_statistics.all_segments_unique) {
-    return column_statistics;
+  if constexpr (std::is_integral_v<T>) {
+    column_statistics.segments_continuous =
+        column_statistics.segments_disjoint &&
+        *column_statistics.max - *column_statistics.min == static_cast<int64_t>(table->row_count() - 1);
   }
 
-  // check if everything is disjoint and continuous
-  for (auto it = min_max_ordered.cbegin(); it != min_max_ordered.cend(); ++it) {
-    // if list contains more than 1 value: not continuous, not disjoint.
-    const auto& min_max_pairs = it->second;
-    if (min_max_pairs.size() != 1) {
-      return column_statistics;
-    }
-
-    // check if next or previous item is same --> no overlap.
-    const auto& min_max_pair = min_max_pairs.front();
-    // no overlap possible if only one value in segment
-    if (min_max_pair->first == min_max_pair->second) {
-      continue;
-    }
-
-    auto neighbor_identical = false;
-    if (it != min_max_ordered.cbegin()) {
-      // we already visited that list and ensured it is unique.
-      neighbor_identical = min_max_pair == std::prev(it)->second.front();
-    }
-
-    if (!neighbor_identical && std::next(it) != min_max_ordered.cend()) {
-      // we will check that list in the next step and ensure it is unique.
-      neighbor_identical = min_max_pair == std::next(it)->second.front();
-    }
-
-    if (!neighbor_identical) {
-      column_statistics.segments_continuous = false;
-      return column_statistics;
-    }
-
-    if constexpr (std::is_integral_v<T>) {
-      if (it->first == min_max_pair->second && std::next(it) != min_max_ordered.cend()) {
-        column_statistics.segments_continuous &= it->first + 1 == std::next(it)->first;
-      }
-    }
-  }
-
-  if constexpr (!std::is_integral_v<T>) {
-    column_statistics.segments_continuous = false;
-  }
-  column_statistics.segments_disjoint = true;
   return column_statistics;
 }
 

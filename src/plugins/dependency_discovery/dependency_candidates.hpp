@@ -10,7 +10,7 @@ namespace hyrise {
  * (referencing the table by name and the column by ID). They are used to first collect all candidates for dependency
  * validation before actually validating them in the DependencyDiscoveryPlugin.
  */
-enum class DependencyType { UniqueColumn, Order, Inclusion, Functional };
+enum class DependencyType { Inclusion, UniqueColumn, Functional, Order };
 
 class AbstractDependencyCandidate : public Noncopyable {
  public:

@@ -102,6 +102,8 @@ class GDFSCache : public AbstractCache<Key, Value> {
     std::unique_lock<std::shared_mutex> lock(_mutex);
     _map.clear();
     _queue.clear();
+    _map = CacheMap{};
+    _queue = boost::heap::fibonacci_heap<GDFSCacheEntry>{};
   }
 
   void resize(size_t capacity) final {
