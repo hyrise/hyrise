@@ -1,8 +1,7 @@
 #pragma once
 
-#include <bit>
-
 #include <atomic>
+#include <bit>
 
 #include "types.hpp"
 
