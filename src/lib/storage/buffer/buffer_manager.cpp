@@ -72,14 +72,13 @@ void BufferManager::pin_shared(const PageID page_id) {
   DebugAssert(page_id.valid(), "Invalid page id");
 
   const auto frame = get_region(page_id)->get_frame(page_id);
-  // TODO: Another, make_resident?
+
   retry_with_backoff([&]() {
     const auto state_and_version = frame->state_and_version();
     switch (Frame::state(state_and_version)) {
       case Frame::LOCKED: {
         return false;
       }
-      // case Frame::MARKED: TODO
       case Frame::EVICTED: {
         if (frame->try_lock_exclusive(state_and_version)) {
           make_resident(page_id, state_and_version);
@@ -88,8 +87,6 @@ void BufferManager::pin_shared(const PageID page_id) {
         return false;
       }
       default: {
-        // TODO: Still call make resident here? we actually have many reads now
-        // and we should leverage the mechanism, addtional reads would benefit
         if (frame->try_lock_shared(state_and_version)) {
           return true;
         }
@@ -139,6 +136,7 @@ void BufferManager::unpin_shared(const PageID page_id) {
   if (frame->unlock_shared()) {
     _buffer_pool.add_to_eviction_queue(page_id);
   }
+  _total_pins.fetch_sub(1, std::memory_order_relaxed);
 }
 
 void BufferManager::unpin_exclusive(const PageID page_id) {
@@ -148,6 +146,7 @@ void BufferManager::unpin_exclusive(const PageID page_id) {
   auto frame = get_region(page_id)->get_frame(page_id);
   frame->unlock_exclusive();
   _buffer_pool.add_to_eviction_queue(page_id);
+  _total_pins.fetch_sub(1, std::memory_order_relaxed);
 }
 
 void BufferManager::set_dirty(const PageID page_id) {
@@ -156,7 +155,7 @@ void BufferManager::set_dirty(const PageID page_id) {
   get_region(page_id)->get_frame(page_id)->set_dirty(true);
 }
 
-Frame::StateVersionType BufferManager::_state(const PageID page_id) {
+Frame::StateVersionType BufferManager::page_state(const PageID page_id) {
   const auto frame = _volatile_regions[static_cast<uint64_t>(page_id.size_type())]->get_frame(page_id);
   return Frame::state(frame->state_and_version());
 }
@@ -188,6 +187,18 @@ size_t BufferManager::memory_consumption() const {
 
 const BufferPool& BufferManager::buffer_pool() const {
   return _buffer_pool;
+}
+
+uint64_t BufferManager::total_hits() const {
+  return _total_hits.load(std::memory_order_relaxed);
+}
+
+uint64_t BufferManager::total_misses() const {
+  return _total_misses.load(std::memory_order_relaxed);
+}
+
+uint64_t BufferManager::total_pins() const {
+  return _total_pins.load(std::memory_order_relaxed);
 }
 
 }  // namespace hyrise

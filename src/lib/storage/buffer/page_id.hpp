@@ -56,7 +56,7 @@ struct PageID {
 
   PageID() = default;
 
-  constexpr PageID(const PageSizeType size_type, const PageIDType index, bool valid = true)
+  constexpr PageID(const PageSizeType size_type, const uint64_t index, bool valid = true)
       : _valid(valid), _size_type(static_cast<PageIDType>(size_type)), index(index) {}
 };
 

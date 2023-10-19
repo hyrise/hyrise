@@ -9,21 +9,22 @@
 namespace hyrise {
 
 /**
- * The PageAllocator allocates pages on the buffer pool using the buffer manager.
+ * The PageMemoryResource allocates pages on the buffer pool using the buffer manager.
+ * 
  * Given a number of bytes, it rounds up the page size type to the next page size type e.g. 6 KiB result in the allocation of a 8KiB page.
 */
-class PageAllocator : public boost::container::pmr::memory_resource {
+class PageMemoryResource : public boost::container::pmr::memory_resource {
  public:
-  // Create a PageAllocator for a given buffer manager
-  PageAllocator(BufferManager* _buffer_manager);
+  // Create a PageMemoryResource for a given buffer manager
+  PageMemoryResource(BufferManager* _buffer_manager);
 
-  // Allocate a number of bytes. Allocated memory is rounded up to the next page size type e.g. 6 KiB result in the allocation of a 8KiB page.
+  // Allocate a number of bytes. Allocated memory is rounded up to the next page size type.
   void* do_allocate(std::size_t bytes, std::size_t alignment) override;
 
   // Deallocate a given page. The page must be unpinned.
   void do_deallocate(void* p, std::size_t bytes, std::size_t alignment) override;
 
-  // Check if two PageAllocators are equal
+  // Check if two PageMemoryResources are equal
   bool do_is_equal(const boost::container::pmr::memory_resource& other) const noexcept override;
 
   // Get the number of allocations

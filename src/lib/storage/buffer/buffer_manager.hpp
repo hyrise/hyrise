@@ -41,8 +41,7 @@ class BufferManager final : public Noncopyable {
  public:
   // Create a buffer manager with the given pool size and path to the SSD storage
   explicit BufferManager(const uint64_t pool_size = get_default_pool_size(),
-                         const std::filesystem::path ssd_path = std::filesystem::current_path() /
-                                                                 "buffer_manager_data",
+                         const std::filesystem::path ssd_path = std::filesystem::current_path() / "buffer_manager_data",
                          const NodeID node_id = NodeID{0});
 
   // Destructor which cleanups all resources
@@ -69,39 +68,62 @@ class BufferManager final : public Noncopyable {
   // Find the page id for a given virtual memory address. The PageID can be invalid if the address is not part of the buffer pool.
   PageID find_page(const void* ptr) const;
 
+  // Helper method for return the state of a page in the buffer manager
+  Frame::StateVersionType page_state(const PageID page_id);
+
   // Get an approximation of the memory consumption of the buffer manager in bytes. This does not include the memory consumption of the buffer pools.
   size_t memory_consumption() const;
 
   // Get the buffer pools of the buffer manager. The result also provides the memory consumption of each buffer pool.
   const BufferPool& buffer_pool() const;
 
+  // Get the persistence manager of the buffer manager. The persistence manager is responsible for reading and writing pages to the disk.
   const PersistenceManager& persistence_manager() const;
 
-  // Debugging method for printing the getting of the buffer manager
-  Frame::StateVersionType _state(const PageID page_id);
+  // Get the total number of hits in the buffer manager
+  uint64_t total_hits() const;
+
+  // Get the total number of misses in the buffer manager
+  uint64_t total_misses() const;
+
+  // Get the total number of pins in the buffer manager
+  uint64_t total_pins() const;
 
  private:
   friend class Hyrise;
-  friend class PageAllocator;
+  friend class PageMemoryResource;
 
-  std::shared_ptr<VolatileRegion> get_region(const PageID page_id);
+  // Get the region for the given page id
+  std::shared_ptr<VolatileRegion> _get_region(const PageID page_id);
 
-  void protect_page(const PageID page_id);
+  // Protect a page from access
+  void _protect_page(const PageID page_id);
 
-  void unprotect_page(const PageID page_id);
+  // Unprotect a page from access
+  void _unprotect_page(const PageID page_id);
 
-  void make_resident(const PageID page_id, const Frame::StateVersionType previous_state_version);
+  // Load a page into the main memory
+  void _make_resident(const PageID page_id, const Frame::StateVersionType previous_state_version);
 
+  // The complete memory region of the buffer manager
   std::byte* _mapped_region;
 
+  // A fixed size array of volatile regions for each page size type
   std::array<std::shared_ptr<VolatileRegion>, NUM_PAGE_SIZE_TYPES> _volatile_regions;
 
+  // The persistence manager is responsible for reading and writing pages to the disk
   std::shared_ptr<PersistenceManager> _persistence_manager;
 
+  // The buffer pool is responsible for managing the memory of the buffer manager
   BufferPool _buffer_pool;
 
+  // The total number of hits in the buffer manager
   std::atomic_uint64_t _total_hits;
+
+  // The total number of misses in the buffer manager
   std::atomic_uint64_t _total_misses;
+
+  // The total number of pins in the buffer manager
   std::atomic_uint64_t _total_pins;
 };
 

@@ -3,7 +3,7 @@
 
 namespace hyrise {
 
-class PageAllocatorTest : public BaseTest {
+class PageMemoryResourceTest : public BaseTest {
  public:
   void SetUp() override {
     std::filesystem::create_directory(db_path);
@@ -18,8 +18,8 @@ class PageAllocatorTest : public BaseTest {
   std::unique_ptr<BufferManager> buffer_manager;
 };
 
-TEST_F(PageAllocatorTest, TestAllocationAndDeallocation) {
-  auto allocator = PageAllocator(buffer_manager.get());
+TEST_F(PageMemoryResourceTest, TestAllocationAndDeallocation) {
+  auto allocator = PageMemoryResource(buffer_manager.get());
 
   EXPECT_EQ(allocator.allocation_count(), 0);
   EXPECT_EQ(allocator.deallocation_count(), 0);
@@ -50,13 +50,13 @@ TEST_F(PageAllocatorTest, TestAllocationAndDeallocation) {
   allocator.deallocate(small_page_ptr, bytes_for_size_type(PageSizeType::KiB16));
   EXPECT_EQ(allocator.allocation_count(), 3);
   EXPECT_EQ(allocator.deallocation_count(), 2);
-  EXPECT_EQ(allocator.allocated_bytes(), 0);
+  EXPECT_EQ(allocator.allocated_bytes(), bytes_for_size_type(PageSizeType::KiB16));
 
   // Check that we reuse the same page id for the same size type if deallocated
   auto small_page_ptr3 = allocator.allocate(bytes_for_size_type(PageSizeType::KiB16));
   EXPECT_EQ(allocator.allocation_count(), 4);
   EXPECT_EQ(allocator.deallocation_count(), 2);
-  EXPECT_EQ(allocator.allocated_bytes(), bytes_for_size_type(PageSizeType::KiB16));
+  EXPECT_EQ(allocator.allocated_bytes(), 2 * bytes_for_size_type(PageSizeType::KiB16));
   EXPECT_EQ(small_page_ptr, small_page_ptr3);
   EXPECT_NE(small_page_ptr, small_page_ptr2);
 }

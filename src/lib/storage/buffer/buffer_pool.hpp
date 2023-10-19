@@ -52,7 +52,7 @@ class BufferPool final : public Noncopyable {
  private:
   friend class BufferManager;
   friend class BufferPoolTest;
-  friend class PageAllocator;
+  friend class PageMemoryResource;
 
   // Item for the Eviction Queue
   struct EvictionItem final {

@@ -440,8 +440,8 @@ set(
     storage/base_segment_accessor.hpp
     storage/base_segment_encoder.hpp
     storage/base_value_segment.hpp
-    storage/buffer/allocator.cpp
-    storage/buffer/allocator.hpp
+    storage/buffer/page_memory_resource.cpp
+    storage/buffer/page_memory_resource.hpp
     storage/buffer/buffer_manager.cpp
     storage/buffer/buffer_manager.hpp
     storage/buffer/buffer_pool.cpp

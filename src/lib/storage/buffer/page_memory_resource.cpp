@@ -13,10 +13,10 @@ constexpr PageSizeType find_fitting_page_size_type(const std::size_t bytes) {
   Fail("Cannot fit value of " + std::to_string(bytes) + " bytes to a PageSizeType");
 }
 
-PageAllocator::PageAllocator(BufferManager* buffer_manager)
+PageMemoryResource::PageMemoryResource(BufferManager* buffer_manager)
     : _buffer_manager(buffer_manager), _mutexes(), _num_pages() {}
 
-PageID PageAllocator::new_page_id(const PageSizeType size_type) {
+PageID PageMemoryResource::new_page_id(const PageSizeType size_type) {
   auto lock_guard = std::scoped_lock{_mutexes[static_cast<uint64_t>(size_type)]};
 
   if (_free_page_ids[static_cast<uint64_t>(size_type)].empty()) {
@@ -29,12 +29,12 @@ PageID PageAllocator::new_page_id(const PageSizeType size_type) {
   }
 }
 
-void PageAllocator::free_page_id(const PageID page_id) {
+void PageMemoryResource::free_page_id(const PageID page_id) {
   auto lock_guard = std::scoped_lock{_mutexes[static_cast<uint64_t>(page_id.size_type())]};
   _free_page_ids[static_cast<uint64_t>(page_id.size_type())].push(page_id);
 }
 
-void* PageAllocator::do_allocate(std::size_t bytes, std::size_t alignment) {
+void* PageMemoryResource::do_allocate(std::size_t bytes, std::size_t alignment) {
   const auto size_type = find_fitting_page_size_type(bytes);
   const auto page_id = new_page_id(size_type);
   const auto region = _buffer_manager->_volatile_regions[static_cast<uint64_t>(size_type)];
@@ -60,7 +60,7 @@ void* PageAllocator::do_allocate(std::size_t bytes, std::size_t alignment) {
   return ptr;
 }
 
-void PageAllocator::do_deallocate(void* ptr, std::size_t bytes, std::size_t alignment) {
+void PageMemoryResource::do_deallocate(void* ptr, std::size_t bytes, std::size_t alignment) {
   const auto page_id = _buffer_manager->find_page(ptr);
 
   const auto region = _buffer_manager->_volatile_regions[static_cast<uint64_t>(page_id.size_type())];
@@ -78,19 +78,19 @@ void PageAllocator::do_deallocate(void* ptr, std::size_t bytes, std::size_t alig
   _allocated_bytes.fetch_sub(bytes_for_size_type(page_id.size_type()), std::memory_order_relaxed);
 }
 
-bool PageAllocator::do_is_equal(const boost::container::pmr::memory_resource& other) const noexcept {
+bool PageMemoryResource::do_is_equal(const boost::container::pmr::memory_resource& other) const noexcept {
   return this == &other;
 }
 
-uint64_t PageAllocator::allocation_count() const {
+uint64_t PageMemoryResource::allocation_count() const {
   return _allocation_count.load(std::memory_order_relaxed);
 }
 
-uint64_t PageAllocator::deallocation_count() const {
+uint64_t PageMemoryResource::deallocation_count() const {
   return _deallocation_count.load(std::memory_order_relaxed);
 }
 
-uint64_t PageAllocator::allocated_bytes() const {
+uint64_t PageMemoryResource::allocated_bytes() const {
   return _allocated_bytes.load(std::memory_order_relaxed);
 }
 
