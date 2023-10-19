@@ -21,42 +21,42 @@ class PageAllocatorTest : public BaseTest {
 TEST_F(PageAllocatorTest, TestAllocationAndDeallocation) {
   auto allocator = PageAllocator(buffer_manager.get());
 
-  EXPECT_EQ(allocator.num_allocs(), 0);
-  EXPECT_EQ(allocator.num_deallocs(), 0);
-  EXPECT_EQ(allocator.total_allocated_bytes(), 0);
+  EXPECT_EQ(allocator.allocation_count(), 0);
+  EXPECT_EQ(allocator.deallocation_count(), 0);
+  EXPECT_EQ(allocator.allocated_bytes(), 0);
 
   auto large_page_ptr = allocator.allocate(bytes_for_size_type(PageSizeType::KiB256));
-  EXPECT_EQ(allocator.num_allocs(), 1);
-  EXPECT_EQ(allocator.num_deallocs(), 0);
-  EXPECT_EQ(allocator.total_allocated_bytes(), bytes_for_size_type(PageSizeType::KiB256));
+  EXPECT_EQ(allocator.allocation_count(), 1);
+  EXPECT_EQ(allocator.deallocation_count(), 0);
+  EXPECT_EQ(allocator.allocated_bytes(), bytes_for_size_type(PageSizeType::KiB256));
 
   auto small_page_ptr = allocator.allocate(bytes_for_size_type(PageSizeType::KiB16));
-  EXPECT_EQ(allocator.num_allocs(), 2);
-  EXPECT_EQ(allocator.num_deallocs(), 0);
-  EXPECT_EQ(allocator.total_allocated_bytes(),
+  EXPECT_EQ(allocator.allocation_count(), 2);
+  EXPECT_EQ(allocator.deallocation_count(), 0);
+  EXPECT_EQ(allocator.allocated_bytes(),
             bytes_for_size_type(PageSizeType::KiB256) + bytes_for_size_type(PageSizeType::KiB16));
 
   auto small_page_ptr2 = allocator.allocate(bytes_for_size_type(PageSizeType::KiB16));
-  EXPECT_EQ(allocator.num_allocs(), 3);
-  EXPECT_EQ(allocator.num_deallocs(), 0);
-  EXPECT_EQ(allocator.total_allocated_bytes(),
+  EXPECT_EQ(allocator.allocation_count(), 3);
+  EXPECT_EQ(allocator.deallocation_count(), 0);
+  EXPECT_EQ(allocator.allocated_bytes(),
             bytes_for_size_type(PageSizeType::KiB256) + 2 * bytes_for_size_type(PageSizeType::KiB16));
 
   allocator.deallocate(large_page_ptr, bytes_for_size_type(PageSizeType::KiB256));
-  EXPECT_EQ(allocator.num_allocs(), 3);
-  EXPECT_EQ(allocator.num_deallocs(), 1);
-  EXPECT_EQ(allocator.total_allocated_bytes(), 2 * bytes_for_size_type(PageSizeType::KiB16));
+  EXPECT_EQ(allocator.allocation_count(), 3);
+  EXPECT_EQ(allocator.deallocation_count(), 1);
+  EXPECT_EQ(allocator.allocated_bytes(), 2 * bytes_for_size_type(PageSizeType::KiB16));
 
   allocator.deallocate(small_page_ptr, bytes_for_size_type(PageSizeType::KiB16));
-  EXPECT_EQ(allocator.num_allocs(), 3);
-  EXPECT_EQ(allocator.num_deallocs(), 2);
-  EXPECT_EQ(allocator.total_allocated_bytes(), 0);
+  EXPECT_EQ(allocator.allocation_count(), 3);
+  EXPECT_EQ(allocator.deallocation_count(), 2);
+  EXPECT_EQ(allocator.allocated_bytes(), 0);
 
   // Check that we reuse the same page id for the same size type if deallocated
   auto small_page_ptr3 = allocator.allocate(bytes_for_size_type(PageSizeType::KiB16));
-  EXPECT_EQ(allocator.num_allocs(), 4);
-  EXPECT_EQ(allocator.num_deallocs(), 2);
-  EXPECT_EQ(allocator.total_allocated_bytes(), bytes_for_size_type(PageSizeType::KiB16));
+  EXPECT_EQ(allocator.allocation_count(), 4);
+  EXPECT_EQ(allocator.deallocation_count(), 2);
+  EXPECT_EQ(allocator.allocated_bytes(), bytes_for_size_type(PageSizeType::KiB16));
   EXPECT_EQ(small_page_ptr, small_page_ptr3);
   EXPECT_NE(small_page_ptr, small_page_ptr2);
 }
