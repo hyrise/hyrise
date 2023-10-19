@@ -84,14 +84,18 @@ NodeID Frame::node_id(const Frame::StateVersionType state_and_version) {
 bool Frame::try_lock_shared(const Frame::StateVersionType old_state_and_version) {
   auto old_state = state(old_state_and_version);
   auto state_and_version = old_state_and_version;
+
+  // Multiple threads can try to lock shared concurrently until the state reaches MAX_LOCKED_SHARED
   if (old_state < MAX_LOCKED_SHARED) {
     // Increment the state by 1 to add a new concurrent reader
     return _state_and_version.compare_exchange_strong(
         state_and_version, _update_state_with_same_version(old_state_and_version, old_state + 1));
   }
+
+  // If the state is MARKED, we just set the frame to 1 reader.
   if (old_state == MARKED) {
-    return _state_and_version.compare_exchange_strong(state_and_version,
-                                                      _update_state_with_same_version(old_state_and_version, 1));
+    return _state_and_version.compare_exchange_strong(
+        state_and_version, _update_state_with_same_version(old_state_and_version, SINGLE_LOCKED_SHARED));
   }
   return false;
 }
