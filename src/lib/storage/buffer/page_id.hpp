@@ -75,7 +75,8 @@ struct PageID {
   }
 
   bool operator==(const PageID& other) const {
-    return (_valid == other._valid == 0) || (_size_type == other._size_type && _index == other._index);
+    return (_valid == other._valid) &&
+           (!_valid || (_valid && _size_type == other._size_type && _index == other._index));
   }
 
  private:
