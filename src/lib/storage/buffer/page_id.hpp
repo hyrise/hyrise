@@ -5,14 +5,16 @@
 namespace hyrise {
 
 #ifdef __APPLE__
-// OS pages on Mac OS are 16 KiB according to https://developer.apple.com/library/archive/documentation/Performance/Conceptual/ManagingMemory/Articles/AboutMemory.html
+// OS pages on Mac OS are 16 KiB according to
+// https://developer.apple.com/library/archive/documentation/Performance/Conceptual/ManagingMemory/Articles/AboutMemory.html
 constexpr size_t OS_PAGE_SIZE = 16384;
 #elif __linux__
 // OS pages on Linux are usually 4 KiB
 constexpr size_t OS_PAGE_SIZE = 4096;
 #endif
 
-// Pages sizes are always a multiple of the OS page size and increase by powers of two. The smallest page size is 16 KiB on Mac OS and 4 KiB on Linux.
+// Pages sizes are always a multiple of the OS page size and increase by powers of two.
+// The smallest page size is  16 KiB on Mac OS and 4 KiB on Linux.
 #ifdef __APPLE__
 enum class PageSizeType { KiB4, KiB8, KiB16, KiB32, KiB64, KiB128, KiB256, KiB512, MiB1, MiB2 };
 #elif __linux__
@@ -21,7 +23,8 @@ enum class PageSizeType { KiB16, KiB32, KiB64, KiB128, KiB256, KiB512, MiB1, MiB
 
 // Get the number of bytes for a given PageSizeType
 constexpr inline size_t bytes_for_size_type(const PageSizeType size) {
-  // We assume that the OS page size is either 4096 on Linux or 16384 on Mac OS. The page size types increase by power of two.
+  // We assume that the OS page size is either 4096 on Linux or 16384 on Mac OS.
+  // The page size types increase by power of two.
   return OS_PAGE_SIZE << static_cast<size_t>(size);
 }
 
@@ -86,14 +89,13 @@ struct PageID {
 };
 
 inline std::ostream& operator<<(std::ostream& os, const PageID& page_id) {
-  auto ss = std::stringstream{};
-  ss << "PageID(valid = " << page_id.valid() << ", size_type = " << magic_enum::enum_name(page_id.size_type())
+  os << "PageID(valid = " << page_id.valid() << ", size_type = " << magic_enum::enum_name(page_id.size_type())
      << ", index = " << page_id.index() << ")";
-  os << ss.str();
   return os;
 }
 
-// The invalid page id is used to indicate that a page id is not part of a buffer pool. The valid flag is set to false. All other values are ignored.
+// The invalid page id is used to indicate that a page id is not part of a buffer pool. The valid flag is set to false.
+// All other values are ignored.
 static constexpr PageID INVALID_PAGE_ID = PageID{MIN_PAGE_SIZE_TYPE, 0, false};
 
 }  // namespace hyrise

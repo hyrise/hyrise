@@ -89,7 +89,10 @@ class Frame final : private Noncopyable {
   // Get the NUMA node of the frame.
   NodeID node_id() const;
 
-  // Try to latch in frame in shared node by incrementing the state. Fails if the frame is not in state UNLOCKED, MARKED or reaches MAX_LOCKED_SHARED.
+  /**
+   * Try to latch in frame in shared node by incrementing the state. Fails if the frame is 
+   * not in state UNLOCKED, MARKED or reaches MAX_LOCKED_SHARED.
+   */
   bool try_lock_shared(const StateVersionType old_state_and_version);
 
   // Try to latch in frame in exclusive node. Fails if the frame is not in state UNLOCKED or MARKED.

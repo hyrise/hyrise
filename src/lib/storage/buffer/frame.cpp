@@ -155,29 +155,28 @@ std::ostream& operator<<(std::ostream& os, const Frame& frame) {
   const auto node_id = frame.node_id();
   const auto dirty = frame.is_dirty();
 
-  auto ss = std::stringstream{};
-  ss << "Frame { state = ";
+  os << "Frame { state = ";
 
   switch (state) {
     case Frame::UNLOCKED:
-      ss << "UNLOCKED";
+      os << "UNLOCKED";
       break;
     case Frame::LOCKED:
-      ss << "LOCKED";
+      os << "LOCKED";
       break;
     case Frame::MARKED:
-      ss << "MARKED";
+      os << "MARKED";
       break;
     case Frame::EVICTED:
-      ss << "EVICTED";
+      os << "EVICTED";
       break;
     default:
-      ss << "LOCKED_SHARED (" << state << ")";
+      os << "LOCKED_SHARED (" << state << ")";
       break;
   }
 
-  ss << ", node_id = " << node_id << ", dirty = " << dirty << ", version = " << version << "}";
-  os << ss.str();
+  os << ", node_id = " << node_id << ", dirty = " << dirty << ", version = " << version << "}";
+
   return os;
 }
 }  // namespace hyrise
