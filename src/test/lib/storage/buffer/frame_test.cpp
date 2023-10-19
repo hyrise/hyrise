@@ -97,35 +97,35 @@ TEST_F(FrameTest, TestSetDirty) {
 TEST_F(FrameTest, TestStreamOperator) {
   auto frame = Frame{};
   {
-    std::stringstream out;
+    auto out = std::stringstream{};
     out << frame;
     EXPECT_EQ(out.str(), "Frame { state = EVICTED, node_id = 0, dirty = 0, version = 0}");
   }
 
   frame.try_lock_exclusive(frame.state_and_version());
   {
-    std::stringstream out;
+    auto out = std::stringstream{};
     out << frame;
     EXPECT_EQ(out.str(), "Frame { state = LOCKED, node_id = 0, dirty = 0, version = 0}");
   }
 
   frame.mark_dirty();
   {
-    std::stringstream out;
+    auto out = std::stringstream{};
     out << frame;
     EXPECT_EQ(out.str(), "Frame { state = LOCKED, node_id = 0, dirty = 1, version = 0}");
   }
 
   frame.set_node_id(NodeID{13});
   {
-    std::stringstream out;
+    auto out = std::stringstream{};
     out << frame;
     EXPECT_EQ(out.str(), "Frame { state = LOCKED, node_id = 13, dirty = 1, version = 0}");
   }
 
   frame.unlock_exclusive();
   {
-    std::stringstream out;
+    auto out = std::stringstream{};
     out << frame;
     EXPECT_EQ(out.str(), "Frame { state = UNLOCKED, node_id = 13, dirty = 1, version = 1}");
   }
@@ -133,7 +133,7 @@ TEST_F(FrameTest, TestStreamOperator) {
   frame.try_lock_shared(frame.state_and_version());
   frame.try_lock_shared(frame.state_and_version());
   {
-    std::stringstream out;
+    auto out = std::stringstream{};
     out << frame;
     EXPECT_EQ(out.str(), "Frame { state = LOCKED_SHARED (2), node_id = 13, dirty = 1, version = 1}");
   }
@@ -141,7 +141,7 @@ TEST_F(FrameTest, TestStreamOperator) {
   frame.unlock_shared();
   frame.try_mark(frame.state_and_version());
   {
-    std::stringstream out;
+    auto out = std::stringstream{};
     out << frame;
     EXPECT_EQ(out.str(), "Frame { state = MARKED, node_id = 13, dirty = 1, version = 1}");
   }
