@@ -84,9 +84,9 @@ TEST_F(FrameTest, TestSetDirty) {
   auto frame = Frame{};
   frame.try_lock_exclusive(frame.state_and_version());
   EXPECT_FALSE(frame.is_dirty());
-  frame.set_dirty(true);
+  frame.mark_dirty();
   EXPECT_TRUE(frame.is_dirty());
-  frame.set_dirty(true);
+  frame.mark_dirty();
   EXPECT_TRUE(frame.is_dirty());
   frame.reset_dirty();
   EXPECT_FALSE(frame.is_dirty());
@@ -109,7 +109,7 @@ TEST_F(FrameTest, TestStreamOperator) {
     EXPECT_EQ(out.str(), "Frame { state = LOCKED, node_id = 0, dirty = 0, version = 0}");
   }
 
-  frame.set_dirty(true);
+  frame.mark_dirty();
   {
     std::stringstream out;
     out << frame;

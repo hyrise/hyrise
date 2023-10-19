@@ -40,22 +40,22 @@ namespace hyrise {
  * Graphic was created with https://github.com/ggerganov/dot-to-ascii
 */
 
-class Frame final {
+class Frame final : private Noncopyable {
  public:
   using StateVersionType = uint64_t;
 
   // State constants
   static constexpr StateVersionType UNLOCKED = 0;
-  static constexpr StateVersionType LOCKED_SHARED = 0xFFFF - 3;  // 252 if 8 bits, 65532
-  static constexpr StateVersionType LOCKED = 0xFFFF - 2;         // 253 if 8 bits, 65533
-  static constexpr StateVersionType MARKED = 0xFFFF - 1;         // 254 if 8 bits, 65534
-  static constexpr StateVersionType EVICTED = 0xFFFF;            // 255 if 8 bits, 65535 for 16 bits
+  static constexpr StateVersionType MAX_LOCKED_SHARED = 0xFFFF - 3;  // 65532
+  static constexpr StateVersionType LOCKED = 0xFFFF - 2;             // 65533
+  static constexpr StateVersionType MARKED = 0xFFFF - 1;             // 65534
+  static constexpr StateVersionType EVICTED = 0xFFFF;                // 65535
 
   Frame();
 
   // Flags and other metadata
   void set_node_id(const NodeID node_id);
-  void set_dirty(const bool new_dirty);
+  void mark_dirty();
   bool is_dirty() const;
   void reset_dirty();
   NodeID node_id() const;
@@ -63,11 +63,11 @@ class Frame final {
   // State transitions
   void unlock_exclusive_and_set_evicted();
 
-  bool try_mark(StateVersionType old_state_and_version);
+  bool try_mark(const StateVersionType old_state_and_version);
 
-  bool try_lock_shared(StateVersionType old_state_and_version);
+  bool try_lock_shared(const StateVersionType old_state_and_version);
 
-  bool try_lock_exclusive(StateVersionType old_state_and_version);
+  bool try_lock_exclusive(const StateVersionType old_state_and_version);
 
   // Removes a shared locked and returns true if the frame is now unlocked
   bool unlock_shared();
@@ -78,30 +78,32 @@ class Frame final {
 
   // State and version helper
   StateVersionType state_and_version() const;
-  static StateVersionType state(StateVersionType state_and_version);
-  static StateVersionType version(StateVersionType state_and_version);
-  static NodeID node_id(StateVersionType state_and_version);
-
-  void _debug_print();
+  static StateVersionType state(const StateVersionType state_and_version);
+  static StateVersionType version(const StateVersionType state_and_version);
+  static NodeID node_id(const StateVersionType state_and_version);
 
  private:
+  //TODO: Explan bit usage
   // clang-format off
-  static constexpr uint64_t NODE_ID_MASK   = 0x00000F0000000000;
-  static constexpr uint64_t DIRTY_MASK       = 0x0000F00000000000;
-  static constexpr uint64_t STATE_MASK       = 0xFFFF000000000000;
-  static constexpr uint64_t VERSION_MASK     = 0x000000FFFFFFFFFF;
+  static constexpr uint64_t _NODE_ID_MASK     = 0x00000F0000000000;
+  static constexpr uint64_t _DIRTY_MASK       = 0x0000F00000000000;
+  static constexpr uint64_t _STATE_MASK       = 0xFFFF000000000000;
+  static constexpr uint64_t _VERSION_MASK     = 0x000000FFFFFFFFFF;
   // clang-format on
-  static_assert((NODE_ID_MASK ^ DIRTY_MASK ^ STATE_MASK ^ VERSION_MASK) == std::numeric_limits<StateVersionType>::max(),
-                "The given masks do not cover the whole StateVersionType");
 
-  static constexpr uint64_t NUM_BITS = sizeof(StateVersionType) * CHAR_BIT;
-  static constexpr uint64_t NODE_ID_SHIFT = std::countr_zero(NODE_ID_MASK);
-  static constexpr uint64_t DIRTY_SHIFT = std::countr_zero(DIRTY_MASK);
-  static constexpr uint64_t STATE_SHIFT = std::countr_zero(STATE_MASK);
+  static_assert((_NODE_ID_MASK ^ _DIRTY_MASK ^ _STATE_MASK ^ _VERSION_MASK) ==
+                    std::numeric_limits<StateVersionType>::max(),
+                "The given masks either overlap or do not cover the whole StateVersionType.");
 
-  StateVersionType update_state_with_same_version(StateVersionType old_version_and_state, StateVersionType new_state);
-  StateVersionType update_state_with_increment_version(StateVersionType old_version_and_state,
-                                                       StateVersionType new_state);
+  static constexpr uint64_t _BIT_WIDTH = sizeof(StateVersionType) * std::numeric_limits<unsigned char>::digits;
+  static constexpr uint64_t _NODE_ID_SHIFT = std::countr_zero(_NODE_ID_MASK);
+  static constexpr uint64_t _DIRTY_SHIFT = std::countr_zero(_DIRTY_MASK);
+  static constexpr uint64_t _STATE_SHIFT = std::countr_zero(_STATE_MASK);
+
+  StateVersionType _update_state_with_same_version(const StateVersionType old_version_and_state,
+                                                   const StateVersionType new_state);
+  StateVersionType _update_state_with_increment_version(const StateVersionType old_version_and_state,
+                                                        const StateVersionType new_state);
 
   std::atomic<StateVersionType> _state_and_version;
 };
