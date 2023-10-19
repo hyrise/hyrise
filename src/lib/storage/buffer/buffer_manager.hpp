@@ -1,19 +1,17 @@
 #pragma once
 
-#include <boost/container/pmr/memory_resource.hpp>
 #include <filesystem>
 #include <memory>
 #include <tuple>
 #include "noncopyable.hpp"
 #include "storage/buffer/buffer_pool.hpp"
 #include "storage/buffer/frame.hpp"
-#include "storage/buffer/metrics.hpp"
-#include "storage/buffer/persistence_mamaber.hpp"
+#include "storage/buffer/persistence_manager.hpp"
 #include "storage/buffer/volatile_region.hpp"
-#include "types.hpp"
-#include "utils/pausable_loop_thread.hpp"
 
 namespace hyrise {
+
+uint64_t get_default_pool_size();
 
 /**
  * The buffer manager is responsible for managing the working memory of Hyrise. The buffer manager can automatically offload pages to another NUMA node or to the SSD if 
@@ -39,17 +37,16 @@ namespace hyrise {
  * - MVCC, Recovery using WAL
  * - Optimistic Latching without using the locking mechanism
 */
-class BufferManager final : public boost::container::pmr::memory_resource, public Noncopyable {
+class BufferManager final : public Noncopyable {
  public:
-  // One buffer pool per node. Currently we support only one single node
-
-  // Create a buffer manager with the default configuration
-  BufferManager();
-
-  BufferManager(const uint64_t pool_size, const std::string& ssd_path, const NodeID node_id);
+  // Create a buffer manager with the given pool size and path to the SSD storage
+  explicit BufferManager(const uint64_t pool_size = get_default_pool_size(),
+                         const std::filesystem::path ssd_path = std::filesystem::current_path() /
+                                                                 "buffer_manager_data",
+                         const NodeID node_id = NodeID{0});
 
   // Destructor which cleanups all resources
-  ~BufferManager() override;
+  ~BufferManager();
 
   // Move assignment operator. The operation is not thread-safe.
   BufferManager& operator=(BufferManager&& other) noexcept;
@@ -72,17 +69,6 @@ class BufferManager final : public boost::container::pmr::memory_resource, publi
   // Find the page id for a given virtual memory address. The PageID can be invalid if the address is not part of the buffer pool.
   PageID find_page(const void* ptr) const;
 
-  // Allocate a number of bytes. Allocated memory is rounded up to the next page size type e.g. 6 KiB result in the allocation of a 8KiB page.
-  void* do_allocate(std::size_t bytes, std::size_t alignment) override;
-
-  // Deallocate a given page. The page must be unpinned before.
-  void do_deallocate(void* p, std::size_t bytes, std::size_t alignment) override;
-
-  bool do_is_equal(const boost::container::pmr::memory_resource& other) const noexcept override;
-
-  // Metrics and stats
-  std::shared_ptr<BufferManagerMetrics> metrics();
-
   // Get an approximation of the memory consumption of the buffer manager in bytes. This does not include the memory consumption of the buffer pools.
   size_t memory_consumption() const;
 
@@ -96,7 +82,7 @@ class BufferManager final : public boost::container::pmr::memory_resource, publi
 
  private:
   friend class Hyrise;
-  friend class BufferManagerSetting;
+  friend class PageAllocator;
 
   std::shared_ptr<VolatileRegion> get_region(const PageID page_id);
 
@@ -104,22 +90,19 @@ class BufferManager final : public boost::container::pmr::memory_resource, publi
 
   void unprotect_page(const PageID page_id);
 
-  void make_resident(const PageID page_id, const AccessIntent access_intent,
-                     const Frame::StateVersionType previous_state_version);
-
-  void add_to_eviction_queue(const PageID page_id, Frame* frame);
-
-  BufferManagerConfig _config;
+  void make_resident(const PageID page_id, const Frame::StateVersionType previous_state_version);
 
   std::byte* _mapped_region;
 
-  std::shared_ptr<BufferManagerMetrics> _metrics;
-
   std::array<std::shared_ptr<VolatileRegion>, NUM_PAGE_SIZE_TYPES> _volatile_regions;
 
-  std::shared_ptr<SSDRegion> _ssd_region;
+  std::shared_ptr<PersistenceManager> _persistence_manager;
 
-  BufferPool _buffer_pools;
+  BufferPool _buffer_pool;
+
+  std::atomic_uint64_t _total_hits;
+  std::atomic_uint64_t _total_misses;
+  std::atomic_uint64_t _total_pins;
 };
 
 }  // namespace hyrise

@@ -11,9 +11,9 @@ bool BufferPool::EvictionItem::can_mark(Frame::StateVersionType state_and_versio
   return Frame::state(state_and_version) == Frame::UNLOCKED && Frame::version(state_and_version) == timestamp;
 }
 
-BufferPool::BufferPool(const size_t pool_size,
+BufferPool::BufferPool(const size_t pool_size, const NodeID numa_node,
                        const std::array<std::shared_ptr<VolatileRegion>, NUM_PAGE_SIZE_TYPES> volatile_regions,
-                       const std::shared_ptr<PersistenceManager> persistence_manager, const NodeID numa_node)
+                       const std::shared_ptr<PersistenceManager> persistence_manager)
     : _max_bytes(pool_size),
       _used_bytes(0),
       _volatile_regions(volatile_regions),
@@ -176,6 +176,10 @@ void BufferPool::resize(const uint64_t new_size) {
   if (!ensure_free_pages(0)) {
     Fail("Failed to resize buffer pool");
   }
+}
+
+void swap(BufferPool& first, BufferPool& second) noexcept {
+  Fail("Not implemented");
 }
 
 }  // namespace hyrise

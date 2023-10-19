@@ -25,6 +25,10 @@ class VolatileRegion final : public Noncopyable {
 
   constexpr static uint64_t DEFAULT_RESERVED_VIRTUAL_MEMORY = 1UL << 38;  // 256 GiB
 
+  constexpr static uint64_t DEFAULT_RESERVED_VIRTUAL_MEMORY_PER_REGION =
+      (DEFAULT_RESERVED_VIRTUAL_MEMORY / NUM_PAGE_SIZE_TYPES) / bytes_for_size_type(MAX_PAGE_SIZE_TYPE) *
+      bytes_for_size_type(MAX_PAGE_SIZE_TYPE);
+
   // Create a VolatileRegion in a virtual memory region for a givem size_type. The approximate_size_bytes defines a initial number of frames to be created.
   VolatileRegion(const PageSizeType size_type, std::byte* region_start, std::byte* region_end);
 

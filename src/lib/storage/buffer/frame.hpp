@@ -106,13 +106,11 @@ class Frame final {
   std::atomic<StateVersionType> _state_and_version;
 };
 
-/**
- * retry_with_backoff is a helper function to retry a function with exponential backoff when performing a latching operation
- * on a frame. It can be further improved with a "Parking Lot" as described in Böttcher et al. "Scalable and Robust Latches for Database Systems"
-*/
 template <typename Func>
 inline void retry_with_backoff(const Func& func, const size_t max_repeat_count = 1000000) {
-  for (auto repeat = uint64_t{0}; repeat < max_repeat_count; ++repeat) {
+  // TODO: This function could be improved with a "Parking Lot" as described in
+  // Böttcher et al. "Scalable and Robust Latches for Database Systems"
+  for (auto repeat = size_t{0}; repeat < max_repeat_count; ++repeat) {
     if (func()) {
       return;
     }

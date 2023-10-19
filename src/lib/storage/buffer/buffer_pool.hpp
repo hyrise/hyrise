@@ -1,6 +1,7 @@
 #pragma once
 
 #include "concurrentqueue.h"
+#include "noncopyable.hpp"
 #include "persistence_manager.hpp"
 #include "types.hpp"
 #include "volatile_region.hpp"
@@ -17,7 +18,7 @@ class VolatileRegion;
  * 
  * The implementation is inspired by DuckDB (https://github.com/duckdb/duckdb) and Kuzu (https://github.com/kuzudb/kuzu).
 */
-class BufferPool final {
+class BufferPool final : public Noncopyable {
  public:
   // Current NUMA node of the buffer pool
   NodeID node_id() const;
@@ -46,9 +47,12 @@ class BufferPool final {
   // Resize the buffer pool. This is not thread-safe and should only be called when no other threads are accessing the buffer pool.
   void resize(const uint64_t new_size);
 
+  friend void swap(BufferPool& first, BufferPool& second) noexcept;
+
  private:
   friend class BufferManager;
   friend class BufferPoolTest;
+  friend class PageAllocator;
 
   // Item for the Eviction Queue
   struct EvictionItem final {
@@ -69,9 +73,9 @@ class BufferPool final {
 
   static constexpr size_t PURGE_INTERVAL = 1024;
 
-  BufferPool(const size_t pool_size,
+  BufferPool(const size_t pool_size, const NodeID numa_node,
              const std::array<std::shared_ptr<VolatileRegion>, NUM_PAGE_SIZE_TYPES> volatile_regions,
-             const std::shared_ptr<PersistenceManager> persistence_manager, const NodeID numa_node);
+             const std::shared_ptr<PersistenceManager> persistence_manager);
 
   // Reserve the given number of bytes. If there is not enough space, the eviction queue is used for eviction
   bool ensure_free_pages(const uint64_t bytes);

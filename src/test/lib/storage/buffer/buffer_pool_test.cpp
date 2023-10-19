@@ -11,7 +11,7 @@ class BufferPoolTest : public BaseTest {
     region = VolatileRegion::create_mapped_region();
     volatile_regions = VolatileRegion::create_volatile_regions(region);
     buffer_pool =
-        create_buffer_pool(bytes_for_size_type(PageSizeType::KiB16), volatile_regions, persistence_manager, NodeID{0});
+        create_buffer_pool(bytes_for_size_type(PageSizeType::KiB16), NodeID{0}, volatile_regions, persistence_manager);
   }
 
   void TearDown() override {
@@ -131,7 +131,7 @@ TEST_F(BufferPoolTest, TestMemoryConsumption) {
 
 TEST_F(BufferPoolTest, TestGetNodeId) {
   buffer_pool =
-      create_buffer_pool(bytes_for_size_type(PageSizeType::KiB16), volatile_regions, persistence_manager, NodeID{2});
+      create_buffer_pool(bytes_for_size_type(PageSizeType::KiB16), NodeID{2}, volatile_regions, persistence_manager);
   EXPECT_EQ(buffer_pool->node_id(), NodeID{2});
 }
 
