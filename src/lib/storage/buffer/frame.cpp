@@ -10,30 +10,32 @@ Frame::Frame() {
 }
 
 void Frame::set_node_id(const NodeID node_id) {
-  DebugAssert(node_id <= (_NODE_ID_MASK >> _NODE_ID_SHIFT), "Node ID must be smaller than 16.");
-  DebugAssert(node_id != INVALID_NODE_ID, "Cannot set empty numa node");
-  DebugAssert(state(_state_and_version.load()) == LOCKED, "Frame must be locked to set memory node.");
+  DebugAssert(node_id <= (_NODE_ID_MASK >> _NODE_ID_SHIFT), "NUMA node must be smaller than 16.");
+  DebugAssert(node_id != INVALID_NODE_ID, "Cannot set empty NUMA node");
+  DebugAssert(state(_state_and_version.load()) == LOCKED, "Frame must be locked to set NUMA node.");
   auto old_state_and_version = _state_and_version.load();
+
+  // Execute a compare-and-swap loop to set the NUMA node
   while (true) {
     auto new_state_and_version =
         old_state_and_version ^
         ((old_state_and_version ^ static_cast<Frame::StateVersionType>(node_id) << _NODE_ID_SHIFT) & _NODE_ID_MASK);
     if (_state_and_version.compare_exchange_strong(old_state_and_version, new_state_and_version)) {
       DebugAssert((old_state_and_version & ~_NODE_ID_MASK) == (new_state_and_version & ~_NODE_ID_MASK),
-                  "Settings the numa node failed");
+                  "Settings the NUMA node failed");
       break;
     }
   }
 
   DebugAssert(Frame::node_id(_state_and_version.load()) == node_id,
-              "Setting numa node didnt work: " + std::to_string(Frame::node_id(_state_and_version.load())));
+              "Setting NUMA node didnt work: " + std::to_string(Frame::node_id(_state_and_version.load())));
 }
 
 void Frame::mark_dirty() {
   DebugAssert(state(_state_and_version.load()) == LOCKED, "Frame must be locked to set dirty flag.");
   const auto new_dirty = StateVersionType{1};
   _state_and_version.fetch_or(_DIRTY_MASK & (new_dirty << _DIRTY_SHIFT));
-  DebugAssert(is_dirty(), "Setting dirty didnt work");
+  DebugAssert(is_dirty(), "Marking the flag as dirty did not succeed.");
 }
 
 void Frame::reset_dirty() {
@@ -47,8 +49,9 @@ void Frame::unlock_exclusive_and_set_evicted() {
 }
 
 bool Frame::try_mark(const Frame::StateVersionType old_state_and_version) {
-  DebugAssert(state(_state_and_version.load()) == UNLOCKED,
-              "Frame must be unlocked to mark, instead: " + std::to_string(state(_state_and_version.load())));
+  DebugAssert(
+      state(_state_and_version.load()) == UNLOCKED,
+      "Frame must be UNLOCKED to transition to MARKED, instead: " + std::to_string(state(_state_and_version.load())));
   auto state_and_version = old_state_and_version;
   return _state_and_version.compare_exchange_strong(state_and_version,
                                                     _update_state_with_same_version(old_state_and_version, MARKED));
@@ -82,6 +85,7 @@ bool Frame::try_lock_shared(const Frame::StateVersionType old_state_and_version)
   auto old_state = state(old_state_and_version);
   auto state_and_version = old_state_and_version;
   if (old_state < MAX_LOCKED_SHARED) {
+    // Increment the state by 1 to add a new concurrent reader
     return _state_and_version.compare_exchange_strong(
         state_and_version, _update_state_with_same_version(old_state_and_version, old_state + 1));
   }
@@ -105,12 +109,14 @@ bool Frame::try_lock_exclusive(const Frame::StateVersionType old_state_and_versi
 bool Frame::unlock_shared() {
   while (true) {
     auto old_state_and_version = _state_and_version.load();
-    auto old_state = state(old_state_and_version);
+    const auto old_state = state(old_state_and_version);
     DebugAssert(old_state > 0 && old_state <= MAX_LOCKED_SHARED, "Frame must be locked shared to unlock shared.");
-    auto new_state = old_state - 1;
+    // Decrement the state by 1 to remove a concurrent reader
+    const auto new_state = old_state - 1;
     if (_state_and_version.compare_exchange_strong(old_state_and_version,
                                                    _update_state_with_same_version(old_state_and_version, new_state))) {
-      return new_state == Frame::UNLOCKED;  // return true if last shared lock was released
+      // Return true if last shared latch has been released
+      return new_state == Frame::UNLOCKED;
     }
   }
 }
@@ -125,14 +131,12 @@ void Frame::unlock_exclusive() {
 Frame::StateVersionType Frame::_update_state_with_same_version(const Frame::StateVersionType old_version_and_state,
                                                                const Frame::StateVersionType new_state) {
   constexpr auto SHIFT = _BIT_WIDTH - _STATE_SHIFT;
-  static_assert(SHIFT == 16, "Shift must be 16.");
   return ((old_version_and_state << SHIFT) >> SHIFT) | (new_state << _STATE_SHIFT);
 }
 
 Frame::StateVersionType Frame::_update_state_with_increment_version(const Frame::StateVersionType old_version_and_state,
                                                                     const Frame::StateVersionType new_state) {
   constexpr auto SHIFT = _BIT_WIDTH - _STATE_SHIFT;
-  static_assert(SHIFT == 16, "Shift must be 16.");
   return (((old_version_and_state << SHIFT) >> SHIFT) + 1) | (new_state << _STATE_SHIFT);
 }
 
