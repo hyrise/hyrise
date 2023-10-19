@@ -136,6 +136,7 @@ class Frame final : private Noncopyable {
 
   // The version is encoded in the lower 40 bits.
   static constexpr uint64_t _VERSION_MASK     = 0x000000FFFFFFFFFF;
+
   // clang-format on
 
   static_assert((_NODE_ID_MASK ^ _DIRTY_MASK ^ _STATE_MASK ^ _VERSION_MASK) ==
