@@ -24,6 +24,16 @@ TEST_F(PageIDTest, TestInvalidPageID) {
   EXPECT_FALSE(INVALID_PAGE_ID.valid());
 }
 
+TEST_F(PageIDTest, TestEqualityOperator) {
+  EXPECT_EQ(INVALID_PAGE_ID, PageID(PageSizeType::KiB16, 29, false));
+  EXPECT_EQ(INVALID_PAGE_ID, PageID(PageSizeType::KiB256, 29, false));
+  EXPECT_NE(INVALID_PAGE_ID, PageID(PageSizeType::KiB256, 29, true));
+
+  EXPECT_EQ(PageID(PageSizeType::KiB16, 29, true), PageID(PageSizeType::KiB16, 29, true));
+  EXPECT_NE(PageID(PageSizeType::KiB16, 28, true), PageID(PageSizeType::KiB16, 29, true));
+  EXPECT_NE(PageID(PageSizeType::KiB256, 28, true), PageID(PageSizeType::KiB16, 28, true));
+}
+
 TEST_F(PageIDTest, TestStreamOperator) {
   const auto page_id = PageID{PageSizeType::KiB16, 29, true};
   std::stringstream stream;
