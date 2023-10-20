@@ -81,12 +81,10 @@ void PersistenceManager::write_page(PageID page_id, std::byte* data) {
   const auto num_bytes = page_id.num_bytes();
   const size_t pos = handle.offset + num_bytes * page_id.index;
   DebugAssertPageAlignment(data);
-  const auto result = pwrite(handle.fd, data, num_bytes, pos);
-  if (result < 0) {
+  if (pwrite(handle.fd, data, num_bytes, pos) < 0) {
     const auto error = errno;
     Fail("Error while writing to PersistenceManager: " + strerror(error));
   }
-  std::cout << "Writen" << num_bytes << " bytes" << std::endl;
   _total_bytes_written.fetch_add(num_bytes, std::memory_order_relaxed);
 }
 
@@ -96,8 +94,7 @@ void PersistenceManager::read_page(PageID page_id, std::byte* data) {
   const auto num_bytes = page_id.num_bytes();
   const auto pos = handle.offset + num_bytes * page_id.index;
   DebugAssertPageAlignment(data);
-  const auto result = pread(handle.fd, data, num_bytes, pos);
-  if (result < 0) {
+  if (pread(handle.fd, data, num_bytes, pos) < 0) {
     const auto error = errno;
     Fail("Error while reading from PersistenceManager: " + strerror(error));
   }
