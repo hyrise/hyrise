@@ -14,7 +14,7 @@ constexpr uint64_t OS_PAGE_SIZE = 4096;
 #endif
 
 // Pages sizes are always a multiple of the OS page size and increase by powers of two.
-// The smallest page size is  16 KiB on Mac OS and 4 KiB on Linux.
+// The smallest page size is 16 KiB on Mac OS and 4 KiB on Linux.
 #ifdef __APPLE__
 enum class PageSizeType { KiB16, KiB32, KiB64, KiB128, KiB256, KiB512, MiB1, MiB2 };
 #elif __linux__
@@ -23,7 +23,7 @@ enum class PageSizeType { KiB4, KiB8, KiB16, KiB32, KiB64, KiB128, KiB256, KiB51
 
 // Get the number of bytes for a given PageSizeType
 constexpr inline uint64_t bytes_for_size_type(const PageSizeType size) {
-  // We assume that the OS page size is either 4096 on Linux or 16384 on Mac OS.
+  // We assume that the OS page size is either 4KiB on Linux or 16 KiB on Mac OS.
   // The page size types increase by power of two.
   return OS_PAGE_SIZE << static_cast<uint64_t>(size);
 }
