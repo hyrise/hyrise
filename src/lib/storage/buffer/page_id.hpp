@@ -7,29 +7,29 @@ namespace hyrise {
 #ifdef __APPLE__
 // OS pages on Mac OS are 16 KiB according to
 // https://developer.apple.com/library/archive/documentation/Performance/Conceptual/ManagingMemory/Articles/AboutMemory.html
-constexpr size_t OS_PAGE_SIZE = 16384;
+constexpr uint64_t OS_PAGE_SIZE = 16384;
 #elif __linux__
 // OS pages on Linux are usually 4 KiB
-constexpr size_t OS_PAGE_SIZE = 4096;
+constexpr uint64_t OS_PAGE_SIZE = 4096;
 #endif
 
 // Pages sizes are always a multiple of the OS page size and increase by powers of two.
 // The smallest page size is  16 KiB on Mac OS and 4 KiB on Linux.
 #ifdef __APPLE__
-enum class PageSizeType { KiB4, KiB8, KiB16, KiB32, KiB64, KiB128, KiB256, KiB512, MiB1, MiB2 };
-#elif __linux__
 enum class PageSizeType { KiB16, KiB32, KiB64, KiB128, KiB256, KiB512, MiB1, MiB2 };
+#elif __linux__
+enum class PageSizeType { KiB4, KiB8, KiB16, KiB32, KiB64, KiB128, KiB256, KiB512, MiB1, MiB2 };
 #endif
 
 // Get the number of bytes for a given PageSizeType
-constexpr inline size_t bytes_for_size_type(const PageSizeType size) {
+constexpr inline uint64_t bytes_for_size_type(const PageSizeType size) {
   // We assume that the OS page size is either 4096 on Linux or 16384 on Mac OS.
   // The page size types increase by power of two.
-  return OS_PAGE_SIZE << static_cast<size_t>(size);
+  return OS_PAGE_SIZE << static_cast<uint64_t>(size);
 }
 
 // Get number of PageSizeTypes
-constexpr size_t PAGE_SIZE_TYPES_COUNT = magic_enum::enum_count<PageSizeType>();
+constexpr uint64_t PAGE_SIZE_TYPES_COUNT = magic_enum::enum_count<PageSizeType>();
 
 // Get the minimum PageSizeType. KiB16 on Mac OS and KiB4 on Linux
 constexpr PageSizeType MIN_PAGE_SIZE_TYPE = magic_enum::enum_value<PageSizeType>(0);
@@ -38,7 +38,7 @@ constexpr PageSizeType MIN_PAGE_SIZE_TYPE = magic_enum::enum_value<PageSizeType>
 constexpr PageSizeType MAX_PAGE_SIZE_TYPE = magic_enum::enum_value<PageSizeType>(PAGE_SIZE_TYPES_COUNT - 1);
 
 // Get the number of bits required to store a PageSizeType
-constexpr size_t PAGE_SIZE_TYPE_BITS = std::bit_width(PAGE_SIZE_TYPES_COUNT);
+constexpr uint64_t PAGE_SIZE_TYPE_BITS = std::bit_width(PAGE_SIZE_TYPES_COUNT);
 
 /**
  * PageIDs are used for addressing pages. They consist of a valid flag, a PageSizeType, and an index. A Page ID can be unambiguously
@@ -54,21 +54,22 @@ struct PageID {
 
   PageID() = default;
 
-  constexpr PageID(const PageSizeType size_type, const PageIDType index, bool valid = true)
+  constexpr PageID(const PageSizeType size_type, const uint64_t index, bool valid = true)
       : _valid(valid), _size_type(static_cast<PageIDType>(size_type)), _index(index) {}
 
   // Get the PageSizeType for the page
+
   PageSizeType size_type() const {
     return magic_enum::enum_value<PageSizeType>(_size_type);
   }
 
   // Get the number of bytes for the page
-  size_t byte_count() const {
+  uint64_t byte_count() const {
     return bytes_for_size_type(size_type());
   }
 
   // Get the index of the page of a size type
-  PageIDType index() const {
+  uint64_t index() const {
     return _index;
   }
 
