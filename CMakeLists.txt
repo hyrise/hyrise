@@ -3,6 +3,8 @@ cmake_minimum_required(VERSION 3.18 FATAL_ERROR)
 
 project(Hyrise)
 
+enable_testing()
+
 if(APPLE)
     set(CMAKE_EXE_LINKER_FLAGS -Wl,-export_dynamic)
 else()
@@ -185,6 +187,7 @@ foreach(no_lto_target gtest gtest_main gmock gmock_main)
         set_property(TARGET ${no_lto_target} PROPERTY INTERPROCEDURAL_OPTIMIZATION FALSE)
     endif()
 endforeach(no_lto_target)
+
 add_subdirectory(src)
 
 
