@@ -19,76 +19,78 @@ class PersistenceManagerTest : public BaseTest {
 
   void SetUp() override {
     std::filesystem::create_directory(db_path);
-    region = std::make_unique<PersistenceManager>(db_path);
+    persistence_manager = std::make_unique<PersistenceManager>(db_path);
   }
 
   const std::string db_path = test_data_path + "buffer_manager_data";
-  std::unique_ptr<PersistenceManager> region;
+  std::unique_ptr<PersistenceManager> persistence_manager;
 };
 
 TEST_F(PersistenceManagerTest, TestWriteAndReadPagesOnRegularFile) {
   const auto files = list_directory(db_path);
 
   EXPECT_EQ(files.size(), NUM_PAGE_SIZE_TYPES) << "Expected one file per page size type";
-  EXPECT_EQ(region->mode(), PersistenceManager::Mode::FILE_PER_SIZE_TYPE);
+  EXPECT_EQ(persistence_manager->mode(), PersistenceManager::Mode::FILE_PER_SIZE_TYPE);
 
   auto write_pages = std::map<PageID, Page>{{PageID{PageSizeType::KiB16, 20}, Page{{std::byte{0x11}}}},
                                             {PageID{PageSizeType::KiB32, 20}, Page{{std::byte{0x22}}}},
                                             {PageID{PageSizeType::KiB16, 13}, Page{{std::byte{0x33}}}}};
+  std::cout << "Size" << write_pages.size() << std::endl;
 
   for (auto& [page_id, page] : write_pages) {
-    // Copy oper the first byte to the whole page
+    // Copy over the first byte to the whole page
     std::memset(page.data.data(), std::to_integer<int>(*page.data.data()), page_id.num_bytes());
-    region->write_page(page_id, page.data.data());
+    std::cout << page_id << std::endl;
+    persistence_manager->write_page(page_id, page.data.data());
   }
 
   auto read_pages = std::map<PageID, Page>{{PageID{PageSizeType::KiB16, 20}, Page{{}}},
                                            {PageID{PageSizeType::KiB32, 20}, Page{{}}},
                                            {PageID{PageSizeType::KiB16, 13}, Page{{}}}};
   for (auto& [page_id, page] : write_pages) {
-    EXPECT_FALSE(std::memcmp(page.data.data(), read_pages[page_id].data.data(), page_id.num_bytes()));
+    EXPECT_NE(std::memcmp(page.data.data(), read_pages[page_id].data.data(), page_id.num_bytes()), 0);
   }
 
   for (auto& [page_id, page] : read_pages) {
-    region->read_page(page_id, page.data.data());
+    persistence_manager->read_page(page_id, page.data.data());
   }
 
   for (auto& [page_id, page] : write_pages) {
-    EXPECT_TRUE(std::memcmp(page.data.data(), read_pages[page_id].data.data(), page_id.num_bytes()));
+    EXPECT_EQ(std::memcmp(page.data.data(), read_pages[page_id].data.data(), page_id.num_bytes()), 0);
   }
 
-  EXPECT_EQ(region->total_bytes_written(),
+  EXPECT_EQ(persistence_manager->total_bytes_written(),
             2 * bytes_for_size_type(PageSizeType::KiB16) + bytes_for_size_type(PageSizeType::KiB32));
-  EXPECT_EQ(region->total_bytes_read(),
+  EXPECT_EQ(persistence_manager->total_bytes_read(),
             2 * bytes_for_size_type(PageSizeType::KiB16) + bytes_for_size_type(PageSizeType::KiB32));
 
-  region = nullptr;
+  persistence_manager = nullptr;
   const auto files_after_cleanup = list_directory(db_path);
   EXPECT_EQ(files_after_cleanup.size(), 0);
 }
 
 TEST_F(PersistenceManagerTest, TestWriteFailsInvalidPageID) {
   auto page = Page{};
-  EXPECT_ANY_THROW(region->write_page(INVALID_PAGE_ID, page.data.data()));
-  EXPECT_EQ(region->total_bytes_written(), 0);
+  EXPECT_ANY_THROW(persistence_manager->write_page(INVALID_PAGE_ID, page.data.data()));
+  EXPECT_EQ(persistence_manager->total_bytes_written(), 0);
 }
 
 TEST_F(PersistenceManagerTest, TestReadFailsInvalidPageID) {
   auto page = Page{};
-  EXPECT_ANY_THROW(region->read_page(INVALID_PAGE_ID, page.data.data()));
-  EXPECT_EQ(region->total_bytes_read(), 0);
+  EXPECT_ANY_THROW(persistence_manager->read_page(INVALID_PAGE_ID, page.data.data()));
+  EXPECT_EQ(persistence_manager->total_bytes_read(), 0);
 }
 
 TEST_F(PersistenceManagerTest, TestWriteFailsWithUnalignedData) {
   auto page = Page{};
-  EXPECT_ANY_THROW(region->write_page(PageID{PageSizeType::KiB16, 20}, page.data.data() + 5));
-  EXPECT_EQ(region->total_bytes_written(), 0);
+  EXPECT_ANY_THROW(persistence_manager->write_page(PageID{PageSizeType::KiB16, 20}, page.data.data() + 5));
+  EXPECT_EQ(persistence_manager->total_bytes_written(), 0);
 }
 
 TEST_F(PersistenceManagerTest, TestReadFailsWithUnalignedData) {
   auto page = Page{};
-  EXPECT_ANY_THROW(region->read_page(PageID{PageSizeType::KiB16, 0}, page.data.data() + 5));
-  EXPECT_EQ(region->total_bytes_read(), 0);
+  EXPECT_ANY_THROW(persistence_manager->read_page(PageID{PageSizeType::KiB16, 0}, page.data.data() + 5));
+  EXPECT_EQ(persistence_manager->total_bytes_read(), 0);
 }
 
 }  // namespace hyrise

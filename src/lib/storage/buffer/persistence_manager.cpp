@@ -86,6 +86,7 @@ void PersistenceManager::write_page(PageID page_id, std::byte* data) {
     const auto error = errno;
     Fail("Error while writing to PersistenceManager: " + strerror(error));
   }
+  std::cout << "Writen" << num_bytes << " bytes" << std::endl;
   _total_bytes_written.fetch_add(num_bytes, std::memory_order_relaxed);
 }
 

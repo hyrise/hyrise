@@ -47,11 +47,15 @@ struct PageID {
   }
 
   bool operator<(const PageID& other) const {
-    return this->index < other.index && this->size_type() < other.size_type();
+    if (_size_type == other._size_type) {
+      return index < other.index;
+    } else {
+      return _size_type < other._size_type;
+    }
   }
 
   bool operator==(const PageID& other) const {
-    return this->index == other.index && this->size_type() == other.size_type();
+    return this->index == other.index && this->_size_type == other._size_type;
   }
 
   PageID() = default;
