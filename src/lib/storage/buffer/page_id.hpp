@@ -42,24 +42,21 @@ constexpr PageSizeType MAX_PAGE_SIZE_TYPE = magic_enum::enum_value<PageSizeType>
 constexpr uint64_t PAGE_SIZE_TYPE_BITS = std::bit_width(PAGE_SIZE_TYPES_COUNT);
 
 /**
- * PageIDs are used for addressing pages. They consist of a valid flag, a PageSizeType, and an index. A Page ID can be unambiguously
- * converted into a virtual address and back. If the valid flag is set, the page is stored in the buffer pool. Otherwise, the page
+ * PageIDs are used for addressing pages. They consist of a validity flag, a PageSizeType, and an index. A Page ID can be unambiguously
+ * converted into a virtual address and back. The valid flag indicates that the page is stored in the buffer pool. Otherwise, the page
  * does not exist or the virtual memory address is outside of the buffer pool.
  * 
- * For the implementation, we use C++ bitfields to compress multiple fields into a single 64-bit values without manual shifting. 
- * The valid flag is stored in the least significant bit. The PageSizeType is stored in the next PAGE_SIZE_TYPE_BITS bits. The index 
+ * For the implementation, we use C++ bitfields to compress multiple fields into a single 64-bit values without manual bit shifting. 
+ * The valid flag is stored in the most significant bit. The PageSizeType is stored in the next PAGE_SIZE_TYPE_BITS bits. The index 
  * is stored in the remaining bits.
 */
 struct PageID {
   using PageIDType = uint64_t;
 
-  PageID() = default;
-
-  constexpr PageID(const PageSizeType size_type, const uint64_t index, bool valid = true)
+  constexpr explicit PageID(const PageSizeType size_type, const uint64_t index, bool valid = true)
       : _valid(valid), _size_type(static_cast<PageIDType>(size_type)), _index(index) {}
 
   // Get the PageSizeType for the page
-
   PageSizeType size_type() const {
     return magic_enum::enum_value<PageSizeType>(_size_type);
   }
@@ -89,6 +86,8 @@ struct PageID {
   PageIDType _size_type : PAGE_SIZE_TYPE_BITS;
   PageIDType _index : sizeof(PageIDType) * std::numeric_limits<unsigned char>::digits - PAGE_SIZE_TYPE_BITS - 1;
 };
+
+static_assert(sizeof(PageID) == 8, "PageID must be 64 bit");
 
 inline std::ostream& operator<<(std::ostream& os, const PageID& page_id) {
   os << "PageID(valid = " << page_id.valid() << ", size_type = " << magic_enum::enum_name(page_id.size_type())
