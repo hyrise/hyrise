@@ -35,18 +35,19 @@ TEST_F(PersistenceManagerTest, TestWriteAndReadPagesOnRegularFile) {
   auto write_pages = std::map<PageID, Page>{{PageID{PageSizeType::KiB16, 20}, Page{{std::byte{0x11}}}},
                                             {PageID{PageSizeType::KiB32, 20}, Page{{std::byte{0x22}}}},
                                             {PageID{PageSizeType::KiB16, 13}, Page{{std::byte{0x33}}}}};
-  std::cout << "Size" << write_pages.size() << std::endl;
+  EXPECT_EQ(write_pages.size(), 3);
 
   for (auto& [page_id, page] : write_pages) {
     // Copy over the first byte to the whole page
     std::memset(page.data.data(), std::to_integer<int>(*page.data.data()), page_id.num_bytes());
-    std::cout << page_id << std::endl;
     persistence_manager->write_page(page_id, page.data.data());
   }
 
   auto read_pages = std::map<PageID, Page>{{PageID{PageSizeType::KiB16, 20}, Page{{}}},
                                            {PageID{PageSizeType::KiB32, 20}, Page{{}}},
                                            {PageID{PageSizeType::KiB16, 13}, Page{{}}}};
+  EXPECT_EQ(read_pages.size(), 3);
+
   for (auto& [page_id, page] : write_pages) {
     EXPECT_NE(std::memcmp(page.data.data(), read_pages[page_id].data.data(), page_id.num_bytes()), 0);
   }
