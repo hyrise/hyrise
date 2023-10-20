@@ -291,6 +291,9 @@ include_directories(../../third_party/googletest/googletest/)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
+# include GoogleTest cmake for test discovery
+include(GoogleTest)
+
 # Configure hyriseTest
 add_executable(hyriseTest ${HYRISE_UNIT_TEST_SOURCES})
 add_dependencies(hyriseTest hyriseSecondTestPlugin hyriseTestPlugin hyriseMvccDeletePlugin hyriseTestNonInstantiablePlugin hyriseUccDiscoveryPlugin)
@@ -306,10 +309,7 @@ target_precompile_headers(hyriseTest PRIVATE
     [["storage/table.hpp"]]
     [["types.hpp"]]
 )
-
-include(GoogleTest)
 gtest_discover_tests(hyriseTest WORKING_DIRECTORY ${PROJECT_SOURCE_DIR} DISCOVERY_TIMEOUT 60)
-
 
 # Configure hyriseSystemTest
 add_executable(hyriseSystemTest ${SYSTEM_TEST_SOURCES})
