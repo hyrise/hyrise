@@ -26,13 +26,13 @@ static PersistenceManager::Mode find_mode_or_fail(const std::filesystem::path& f
 
 PersistenceManager::PersistenceManager(const std::filesystem::path& path)
     : _mode(find_mode_or_fail(path)),
-      _file_handles(_mode == Mode::FILE_PER_SIZE_TYPE ? open_file_handles_in_directory(path)
-                                                      : open_file_handles_block(path))
+      _file_handles(_mode == Mode::FILE_PER_SIZE_TYPE ? _open_file_handles_in_directory(path)
+                                                      : _open_file_handles_block(path))
 
 {}
 
 PersistenceManager::~PersistenceManager() {
-  for (auto& file_handle : _file_handles) {
+  for (const auto& file_handle : _file_handles) {
     // We do not handle errors of the close syscall, since we are already in the destructor
     close(file_handle.fd);
     if (_mode == Mode::FILE_PER_SIZE_TYPE) {
@@ -45,16 +45,16 @@ PersistenceManager::Mode PersistenceManager::mode() const {
   return _mode;
 }
 
-int PersistenceManager::open_file_descriptor(const std::filesystem::path& file_name) {
+int PersistenceManager::_open_file_descriptor(const std::filesystem::path& file_name) {
   // Partially taken from
   // DuckDB: https://github.com/duckdb/duckdb/blob/60ed227816669be497fa4ba53e593d3899479c43/src/common/local_file_system.cpp
   // LevelDB: https://github.com/google/leveldb/commit/296de8d5b8e4e57bd1e46c981114dfbe58a8c4fa
 #ifdef __APPLE__
-  int flags = O_RDWR | O_CREAT | O_DSYNC;
+  const int flags = O_RDWR | O_CREAT | O_DSYNC;
 #elif __linux__
-  int flags = O_RDWR | O_CREAT | O_DIRECT | O_DSYNC;
+  const int flags = O_RDWR | O_CREAT | O_DIRECT | O_DSYNC;
 #endif
-  int fd = open(file_name.string().c_str(), flags, 0666);
+  const int fd = open(file_name.string().c_str(), flags, 0666);
   if (fd < 0) {
     const auto error = errno;
     close(fd);
@@ -64,8 +64,7 @@ int PersistenceManager::open_file_descriptor(const std::filesystem::path& file_n
 
 // Set F_NOCACHE on OS X, which is equivalent to O_DIRECT on Linux
 #ifdef __APPLE__
-  int res = fcntl(fd, F_NOCACHE, 1);
-  if (res == -1) {
+  if (fcntl(fd, F_NOCACHE, 1) == -1) {
     const auto error = errno;
     close(fd);
     Fail("Error while setting F_NOCACHE on __APPLE__: " + strerror(error));
@@ -79,7 +78,7 @@ void PersistenceManager::write_page(PageID page_id, std::byte* data) {
   Assert(page_id.valid(), "PageID must be valid");
   const auto handle = _file_handles[page_id._size_type];
   const auto num_bytes = page_id.num_bytes();
-  const size_t pos = handle.offset + num_bytes * page_id.index;
+  const auto pos = handle.offset + num_bytes * page_id.index;
   DebugAssertPageAlignment(data);
   if (pwrite(handle.fd, data, num_bytes, pos) < 0) {
     const auto error = errno;
@@ -105,7 +104,7 @@ size_t PersistenceManager::memory_consumption() const {
   return sizeof(*this);
 }
 
-std::array<PersistenceManager::FileHandle, NUM_PAGE_SIZE_TYPES> PersistenceManager::open_file_handles_in_directory(
+std::array<PersistenceManager::FileHandle, NUM_PAGE_SIZE_TYPES> PersistenceManager::_open_file_handles_in_directory(
     const std::filesystem::path& path) {
   DebugAssert(std::filesystem::is_directory(path), "PersistenceManager path must be a directory");
   auto array = std::array<PersistenceManager::FileHandle, NUM_PAGE_SIZE_TYPES>{};
@@ -116,21 +115,21 @@ std::array<PersistenceManager::FileHandle, NUM_PAGE_SIZE_TYPES> PersistenceManag
   for (auto i = size_t{0}; i < NUM_PAGE_SIZE_TYPES; ++i) {
     const auto file_name =
         path / ("hyrise-buffer-pool-" + std::to_string(timestamp) + "-type-" + std::to_string(i) + ".bin");
-    array[i] = {open_file_descriptor(file_name), file_name};
+    array[i] = {_open_file_descriptor(file_name), file_name};
     std::filesystem::resize_file(file_name, 1UL << 25);
   }
 
   return array;
 }
 
-std::array<PersistenceManager::FileHandle, NUM_PAGE_SIZE_TYPES> PersistenceManager::open_file_handles_block(
+std::array<PersistenceManager::FileHandle, NUM_PAGE_SIZE_TYPES> PersistenceManager::_open_file_handles_block(
     const std::filesystem::path& path) {
   DebugAssert(std::filesystem::is_block_file(path), "PersistenceManager path must be a directory");
   auto array = std::array<PersistenceManager::FileHandle, NUM_PAGE_SIZE_TYPES>{};
 
-  const auto fd = open_file_descriptor(path);
+  const auto fd = _open_file_descriptor(path);
 
-  auto block_size = size_t{0};
+  auto block_size = uint64_t{0};
 
 #ifdef __APPLE__
   Fail("Block device not supported on Mac");
@@ -143,9 +142,9 @@ std::array<PersistenceManager::FileHandle, NUM_PAGE_SIZE_TYPES> PersistenceManag
 
   // Divide block device into equal chunks and align to page boundary
   const auto bytes_per_size_type = ((block_size / NUM_PAGE_SIZE_TYPES) / OS_PAGE_SIZE) * OS_PAGE_SIZE;
-  for (auto i = size_t{0}; i < NUM_PAGE_SIZE_TYPES; ++i) {
-    const auto block_offset = i * bytes_per_size_type;
-    array[i] = {fd, path, block_offset};
+  for (auto page_size_type_index = uint64_t{0}; page_size_type_index < NUM_PAGE_SIZE_TYPES; ++page_size_type_index) {
+    const auto block_offset = page_size_type_index * bytes_per_size_type;
+    array[page_size_type_index] = {fd, path, block_offset};
   }
 
   return array;

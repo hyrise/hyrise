@@ -72,11 +72,11 @@ class PersistenceManager final : public Noncopyable {
   std::atomic_uint64_t _total_bytes_read = 0;
 
   // Open file handles for the given path. If the path is a directory, a file is created for each page size type.
-  std::array<FileHandle, NUM_PAGE_SIZE_TYPES> open_file_handles_in_directory(const std::filesystem::path& path);
+  std::array<FileHandle, NUM_PAGE_SIZE_TYPES> _open_file_handles_in_directory(const std::filesystem::path& path);
 
   // Open file handles for the given path. If the path is a block device, the device is divided into equal-sized regions for each page size type.
-  std::array<FileHandle, NUM_PAGE_SIZE_TYPES> open_file_handles_block(const std::filesystem::path& path);
+  std::array<FileHandle, NUM_PAGE_SIZE_TYPES> _open_file_handles_block(const std::filesystem::path& path);
 
-  static int open_file_descriptor(const std::filesystem::path& file_name);
+  static int _open_file_descriptor(const std::filesystem::path& file_name);
 };
 }  // namespace hyrise
