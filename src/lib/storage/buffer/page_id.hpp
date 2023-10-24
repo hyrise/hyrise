@@ -39,7 +39,9 @@ constexpr PageSizeType MIN_PAGE_SIZE_TYPE = magic_enum::enum_value<PageSizeType>
 constexpr PageSizeType MAX_PAGE_SIZE_TYPE = magic_enum::enum_value<PageSizeType>(PAGE_SIZE_TYPES_COUNT - 1);
 
 // Get the number of bits required to store a PageSizeType
-constexpr uint64_t PAGE_SIZE_TYPE_BITS = std::bit_width(PAGE_SIZE_TYPES_COUNT);
+// TODO(nikriek): Replace with std::bit_width once we get rid of gcc9
+constexpr uint64_t PAGE_SIZE_TYPE_BITS =
+    std::numeric_limits<uint64_t>::digits - std::countl_zero(PAGE_SIZE_TYPES_COUNT);
 
 /**
  * PageIDs are used for addressing pages. They consist of a validity flag, a PageSizeType, and an index. A Page ID can be unambiguously
