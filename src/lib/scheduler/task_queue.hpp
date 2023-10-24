@@ -60,6 +60,7 @@ class TaskQueue {
  private:
   NodeID _node_id{INVALID_NODE_ID};
   std::array<moodycamel::ConcurrentQueue<std::shared_ptr<AbstractTask>>, NUM_PRIORITY_LEVELS> _queues;
+  [[maybe_unused]] std::array<size_t, 12> _pull_latencies{};
 };
 
 }  // namespace hyrise

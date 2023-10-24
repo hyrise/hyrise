@@ -1,5 +1,6 @@
 #include "abstract_task.hpp"
 
+#include <chrono>
 #include <memory>
 #include <string>
 #include <utility>
@@ -13,7 +14,7 @@
 
 namespace hyrise {
 
-AbstractTask::AbstractTask(SchedulePriority priority, bool stealable) : _priority{priority}, _stealable{stealable} {}
+AbstractTask::AbstractTask(SchedulePriority priority, bool stealable) : tp{std::chrono::steady_clock::now()}, _priority{priority}, _stealable{stealable} {}
 
 TaskID AbstractTask::id() const {
   return _id;

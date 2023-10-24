@@ -176,6 +176,8 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
   void execute();
 
   TaskState state() const;
+  
+  std::chrono::time_point<std::chrono::steady_clock> tp;
 
  protected:
   virtual void _on_execute() = 0;
