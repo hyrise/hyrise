@@ -84,6 +84,10 @@ struct PageID {
            (!_valid || (_valid && _size_type == other._size_type && _index == other._index));
   }
 
+  bool operator!=(const PageID& other) const {
+    return !operator==(other);
+  }
+
  private:
   PageIDType _valid : 1;
   PageIDType _size_type : PAGE_SIZE_TYPE_BITS;
