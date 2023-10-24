@@ -47,7 +47,7 @@ plot <- function(df, df_fake, name) {
     theme(legend.position="top")
   
   print(g)
-  ggsave(name, g, width=5.25, height=5.5)
+  ggsave(name, g, width=5.25, height=6.0)
 }
 
 plot(results_agg, results_fake, "data_integration__loading.pdf")
