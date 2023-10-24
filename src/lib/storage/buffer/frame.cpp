@@ -33,9 +33,7 @@ void Frame::set_node_id(const NodeID node_id) {
 
 void Frame::mark_dirty() {
   DebugAssert(state(_state_and_version.load()) == LOCKED, "Frame must be locked to set dirty flag.");
-  const auto new_dirty = StateVersionType{1};
-  _state_and_version.fetch_or(_DIRTY_MASK & (new_dirty << _DIRTY_SHIFT));
-  DebugAssert(is_dirty(), "Marking the flag as dirty did not succeed.");
+  _state_and_version |= _DIRTY_MASK;
 }
 
 void Frame::reset_dirty() {
@@ -155,7 +153,7 @@ std::ostream& operator<<(std::ostream& os, const Frame& frame) {
   const auto node_id = frame.node_id();
   const auto dirty = frame.is_dirty();
 
-  os << "Frame { state = ";
+  os << "Frame(state = ";
 
   switch (state) {
     case Frame::UNLOCKED:
@@ -175,7 +173,7 @@ std::ostream& operator<<(std::ostream& os, const Frame& frame) {
       break;
   }
 
-  os << ", node_id = " << node_id << ", dirty = " << dirty << ", version = " << version << "}";
+  os << ", node_id = " << node_id << ", dirty = " << dirty << ", version = " << version << ")";
 
   return os;
 }

@@ -102,7 +102,7 @@ class Frame final : private Noncopyable {
   // Try to mark the frame. Fails if the frame is not in state UNLOCKED.
   bool try_mark(const StateVersionType old_state_and_version);
 
-  // Decrement the shared latch. Reaches UNLOCKED if the state is 0.
+  // Decrement the shared latch. Returns true if the last shared latch has been released (state is UNLOCKED).
   bool unlock_shared();
 
   // Unlocks the frame after an exclusive lock and sets the state to EVICTED.
@@ -123,7 +123,7 @@ class Frame final : private Noncopyable {
   // Extract the version from the atomic integer. The version is encoded in 40 bits.
   static StateVersionType version(const StateVersionType state_and_version);
 
-  // Extract the node id from the atomic integer. The node id is encoded in 4 bits.
+  // Extract the node id from the atomic integer. The node id is encoded in 7 bits.
   static NodeID node_id(const StateVersionType state_and_version);
 
  private:

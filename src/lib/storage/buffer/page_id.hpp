@@ -8,10 +8,10 @@ namespace hyrise {
 
 #ifdef __APPLE__
 // OS pages on Mac OS are 16 KiB according to
-// https://developer.apple.com/library/archive/documentation/Performance/Conceptual/ManagingMemory/Articles/AboutMemory.html
+// https://developer.apple.com/library/archive/documentation/Performance/Conceptual/ManagingMemory/Articles/AboutMemory.html.
 constexpr uint64_t OS_PAGE_SIZE = 16384;
 #elif __linux__
-// OS pages on Linux are usually 4 KiB
+// OS pages on Linux are usually 4 KiB.
 constexpr uint64_t OS_PAGE_SIZE = 4096;
 #endif
 
@@ -23,9 +23,9 @@ enum class PageSizeType { KiB16, KiB32, KiB64, KiB128, KiB256, KiB512, MiB1, MiB
 enum class PageSizeType { KiB4, KiB8, KiB16, KiB32, KiB64, KiB128, KiB256, KiB512, MiB1, MiB2 };
 #endif
 
-// Get the number of bytes for a given PageSizeType
+// Get the number of bytes for a given PageSizeType.
 constexpr inline uint64_t bytes_for_size_type(const PageSizeType size) {
-  // We assume that the OS page size is either 4KiB on Linux or 16 KiB on Mac OS.
+  // We assume that the OS page size is either 4 KiB on Linux or 16 KiB on Mac OS.
   // The page size types increase by power of two.
   return OS_PAGE_SIZE << static_cast<uint64_t>(size);
 }
@@ -45,7 +45,7 @@ constexpr uint64_t PAGE_SIZE_TYPE_BITS =
     std::numeric_limits<uint64_t>::digits - std::countl_zero(PAGE_SIZE_TYPES_COUNT);
 
 /**
- * PageIDs are used for addressing pages. They consist of a validity flag, a PageSizeType, and an index. A Page ID can be unambiguously
+ * PageIDs are used for addressing pages. They consist of a validity flag, a PageSizeType, and an index. A PageID can be unambiguously
  * converted into a virtual address and back. The valid flag indicates that the page is stored in the buffer pool. Otherwise, the page
  * does not exist or the virtual memory address is outside of the buffer pool.
  * 
@@ -74,7 +74,7 @@ struct PageID {
     return _index;
   }
 
-  // Returns if the page id is valid or not in the buffer pool
+  // Returns if the PageID is valid or not in the buffer pool
   bool valid() const {
     return _valid;
   }
@@ -98,7 +98,7 @@ inline std::ostream& operator<<(std::ostream& os, const PageID& page_id) {
   return os;
 }
 
-// The invalid page id is used to indicate that a page id is not part of a buffer pool. The valid flag is set to false.
+// The invalid PageID is used to indicate that a PageID is not part of a buffer pool. The valid flag is set to false.
 // All other values are ignored.
 static constexpr PageID INVALID_PAGE_ID = PageID{MIN_PAGE_SIZE_TYPE, 0, false};
 
