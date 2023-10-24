@@ -107,22 +107,36 @@ mk_cust(DSS_HUGE n_cust, customer_t * c)
 	static int      bInit = 0;
 	static char     szFormat[100];
 
+	const char* env_column_configuration = getenv("COLUMN_CONFIGURATION");
+
 	if (!bInit)
 	{
 		sprintf(szFormat, C_NAME_FMT, 9, HUGE_FORMAT + 1);
 		bInit = 1;
 	}
 	c->custkey = n_cust;
-	sprintf(c->name, szFormat, C_NAME_TAG, n_cust);
-	V_STR(C_ADDR_LEN, C_ADDR_SD, c->address);
-	c->alen = (int)strlen(c->address);
-	RANDOM(i, 0, (nations.count - 1), C_NTRG_SD);
-	c->nation_code = i;
-	gen_phone(i, c->phone, (long) C_PHNE_SD);
-	RANDOM(c->acctbal, C_ABAL_MIN, C_ABAL_MAX, C_ABAL_SD);
-	pick_str(&c_mseg_set, C_MSEG_SD, c->mktsegment);
-	TEXT(C_CMNT_LEN, C_CMNT_SD, c->comment);
-	c->clen = (int)strlen(c->comment);
+	// Duplication to reducing branches.
+	if (!env_column_configuration || (strcmp(env_column_configuration, "NONE") == 0 ||
+									  strcmp(env_column_configuration, "DB_CUSTKEY_AND_MKTSEGMENT") == 0 ||
+									  strcmp(env_column_configuration, "DB_CUSTKEY_ONLY") == 0)) {
+		sprintf(c->name, szFormat, C_NAME_TAG, n_cust);
+		V_STR(C_ADDR_LEN, C_ADDR_SD, c->address);
+		c->alen = (int)strlen(c->address);
+		RANDOM(i, 0, (nations.count - 1), C_NTRG_SD);
+		c->nation_code = i;
+		gen_phone(i, c->phone, (long) C_PHNE_SD);
+		RANDOM(c->acctbal, C_ABAL_MIN, C_ABAL_MAX, C_ABAL_SD);
+		pick_str(&c_mseg_set, C_MSEG_SD, c->mktsegment);
+		TEXT(C_CMNT_LEN, C_CMNT_SD, c->comment);
+		c->clen = (int)strlen(c->comment);
+	} else if (strcmp(env_column_configuration, "CUSTKEY_ONLY") == 0) {
+		// We are already good.
+	} else if (strcmp(env_column_configuration, "CUSTKEY_AND_MKTSEGMENT") == 0) {
+		pick_str(&c_mseg_set, C_MSEG_SD, c->mktsegment);
+	} else {
+		printf("Unexpected column configuration.\n");
+		exit(1);
+	}
 
 	return (0);
 }

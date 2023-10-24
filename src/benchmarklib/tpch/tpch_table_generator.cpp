@@ -121,57 +121,12 @@ TPCHTableGenerator::TPCHTableGenerator(float scale_factor, ClusteringConfigurati
       _scale_factor(scale_factor),
       _clustering_configuration(clustering_configuration) {}
 
-std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate() {
-  Assert(_scale_factor < 1.0f || std::round(_scale_factor) == _scale_factor,
-         "Due to tpch_dbgen limitations, only scale factors less than one can have a fractional part.");
-
-  const auto cache_directory = std::string{"tpch_cached_tables/sf-"} + std::to_string(_scale_factor);  // NOLINT
-  if (_benchmark_config->cache_binary_tables && std::filesystem::is_directory(cache_directory)) {
-    return _load_binary_tables_from_path(cache_directory);
-  }
-
-  // Init tpch_dbgen - it is important this is done before any data structures from tpch_dbgen are read.
-  dbgen_reset_seeds();
-  dbgen_init_scale_factor(_scale_factor);
-
-  const auto customer_count = static_cast<ChunkOffset>(tdefs[CUST].base * scale);
-  const auto order_count = static_cast<ChunkOffset>(tdefs[ORDER].base * scale);
-  const auto part_count = static_cast<ChunkOffset>(tdefs[PART].base * scale);
-  const auto supplier_count = static_cast<ChunkOffset>(tdefs[SUPP].base * scale);
-  const auto nation_count = static_cast<ChunkOffset>(tdefs[NATION].base);
-  const auto region_count = static_cast<ChunkOffset>(tdefs[REGION].base);
-
-  // The `* 4` part is defined in the TPC-H specification.
-  auto customer_builder =
-      TableBuilder{_benchmark_config->chunk_size, customer_column_types, customer_column_names, customer_count};
-  auto order_builder = TableBuilder{_benchmark_config->chunk_size, order_column_types, order_column_names, order_count};
+std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TPCHTableGenerator::create_orders_and_lineitem_tables(const size_t order_count, const size_t index_offset) const {
+  auto order_builder = TableBuilder{_benchmark_config->chunk_size, order_column_types, order_column_names, ChunkOffset{order_count}};
   auto lineitem_builder = TableBuilder{_benchmark_config->chunk_size, lineitem_column_types, lineitem_column_names,
                                        ChunkOffset{order_count * 4}};
-  auto part_builder = TableBuilder{_benchmark_config->chunk_size, part_column_types, part_column_names, part_count};
-  auto partsupp_builder = TableBuilder{_benchmark_config->chunk_size, partsupp_column_types, partsupp_column_names,
-                                       ChunkOffset{part_count * 4}};
-  auto supplier_builder =
-      TableBuilder{_benchmark_config->chunk_size, supplier_column_types, supplier_column_names, supplier_count};
-  auto nation_builder =
-      TableBuilder{_benchmark_config->chunk_size, nation_column_types, nation_column_names, nation_count};
-  auto region_builder =
-      TableBuilder{_benchmark_config->chunk_size, region_column_types, region_column_names, region_count};
 
-  /**
-   * CUSTOMER
-   */
-
-  for (auto row_idx = size_t{0}; row_idx < customer_count; row_idx++) {
-    auto customer = call_dbgen_mk<customer_t>(row_idx + 1, mk_cust, TPCHTable::Customer);
-    customer_builder.append_row(customer.custkey, customer.name, customer.address, customer.nation_code, customer.phone,
-                                convert_money(customer.acctbal), customer.mktsegment, customer.comment);
-  }
-
-  /**
-   * ORDER and LINEITEM
-   */
-
-  for (auto order_idx = size_t{0}; order_idx < order_count; ++order_idx) {
+  for (auto order_idx = index_offset; order_idx < order_count + index_offset; ++order_idx) {
     const auto order = call_dbgen_mk<order_t>(order_idx + 1, mk_order, TPCHTable::Orders, 0l);
 
     order_builder.append_row(order.okey, order.custkey, pmr_string(1, order.orderstatus),
@@ -188,6 +143,113 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate
                                   lineitem.shipinstruct, lineitem.shipmode, lineitem.comment);
     }
   }
+
+  return {order_builder.finish_table(), lineitem_builder.finish_table()};
+}
+
+
+std::shared_ptr<Table> TPCHTableGenerator::create_customer_table(const size_t customer_count, const size_t index_offset) const {
+  const auto* env_column_configuration = std::getenv("COLUMN_CONFIGURATION");
+
+  /**
+   * Not the nicest solution here, but it's simple and avoids too many branches.
+   */
+
+  if (env_column_configuration && (std::string{env_column_configuration} == "NONE")) {
+    //
+    //  NONE
+    //
+    auto builder =
+      TableBuilder{_benchmark_config->chunk_size, customer_column_types, customer_column_names, ChunkOffset{customer_count}};
+
+    for (auto row_idx = index_offset; row_idx < customer_count + index_offset; row_idx++) {
+      auto customer = call_dbgen_mk<customer_t>(row_idx + 1, mk_cust, TPCHTable::Customer);
+      builder.append_row(customer.custkey, customer.name, customer.address, customer.nation_code, customer.phone,
+                                  convert_money(customer.acctbal), customer.mktsegment, customer.comment);
+    }
+
+    return builder.finish_table();
+  } else if (env_column_configuration && (std::string{env_column_configuration} == "CUSTKEY_ONLY" || std::string{env_column_configuration} == "DB_CUSTKEY_ONLY")) {
+    //
+    //  CUSTKEY ONLY
+    //
+    const auto customer_column_types = boost::hana::tuple      <int32_t>();
+    const auto customer_column_names = boost::hana::make_tuple("c_custkey");
+
+    auto builder =
+      TableBuilder{_benchmark_config->chunk_size, customer_column_types, customer_column_names, ChunkOffset{customer_count}};
+
+    for (auto row_idx = index_offset; row_idx < customer_count + index_offset; row_idx++) {
+      auto customer = call_dbgen_mk<customer_t>(row_idx + 1, mk_cust, TPCHTable::Customer);
+      builder.append_row(customer.custkey);
+    }
+
+    return builder.finish_table();
+  } else if (env_column_configuration && (std::string{env_column_configuration} == "CUSTKEY_AND_MKTSEGMENT" || std::string{env_column_configuration} == "DB_CUSTKEY_AND_MKTSEGMENT")) {
+    //
+    //  CUSTKEY AND MKTSEGMENT
+    //
+    const auto customer_column_types = boost::hana::tuple      <int32_t,    pmr_string>();
+    const auto customer_column_names = boost::hana::make_tuple("c_custkey", "c_mktsegment");
+
+    auto builder =
+      TableBuilder{_benchmark_config->chunk_size, customer_column_types, customer_column_names, ChunkOffset{customer_count}};
+
+    for (auto row_idx = index_offset; row_idx < customer_count + index_offset; row_idx++) {
+      auto customer = call_dbgen_mk<customer_t>(row_idx + 1, mk_cust, TPCHTable::Customer);
+      builder.append_row(customer.custkey, customer.mktsegment);
+    }
+
+    return builder.finish_table();
+  }
+
+  Fail("Unexpected");
+}
+
+size_t TPCHTableGenerator::customer_row_count() const {
+  return static_cast<size_t>(static_cast<double>(tdefs[CUST].base) * _scale_factor);
+}
+
+std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate() {
+  Assert(_scale_factor < 1.0f || std::round(_scale_factor) == _scale_factor,
+         "Due to tpch_dbgen limitations, only scale factors less than one can have a fractional part.");
+
+  const auto cache_directory = std::string{"tpch_cached_tables/sf-"} + std::to_string(_scale_factor);  // NOLINT
+  if (_benchmark_config->cache_binary_tables && std::filesystem::is_directory(cache_directory)) {
+    return _load_binary_tables_from_path(cache_directory);
+  }
+
+  // Init tpch_dbgen - it is important this is done before any data structures from tpch_dbgen are read.
+  dbgen_reset_seeds();
+  dbgen_init_scale_factor(_scale_factor);
+
+  const auto order_count = static_cast<size_t>(tdefs[ORDER].base * scale);
+  const auto part_count = static_cast<size_t>(tdefs[PART].base * scale);
+  const auto supplier_count = static_cast<size_t>(tdefs[SUPP].base * scale);
+  const auto nation_count = static_cast<size_t>(tdefs[NATION].base);
+  const auto region_count = static_cast<size_t>(tdefs[REGION].base);
+
+  // The `* 4` part is defined in the TPC-H specification.
+  auto part_builder = TableBuilder{_benchmark_config->chunk_size, part_column_types, part_column_names, part_count};
+  auto partsupp_builder = TableBuilder{_benchmark_config->chunk_size, partsupp_column_types, partsupp_column_names,
+                                       part_count * 4};
+  auto supplier_builder =
+      TableBuilder{_benchmark_config->chunk_size, supplier_column_types, supplier_column_names, supplier_count};
+  auto nation_builder =
+      TableBuilder{_benchmark_config->chunk_size, nation_column_types, nation_column_names, nation_count};
+  auto region_builder =
+      TableBuilder{_benchmark_config->chunk_size, region_column_types, region_column_names, region_count};
+
+  /**
+   * CUSTOMER
+   */
+  const auto customer_table = create_customer_table(customer_row_count(), 0);
+  
+
+  /**
+   * ORDER and LINEITEM
+   */
+  const auto& [orders_table, lineitem_table] = create_orders_and_lineitem_tables(order_count, 0);
 
   /**
    * PART and PARTSUPP
@@ -263,13 +325,8 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate
    */
   std::unordered_map<std::string, BenchmarkTableInfo> table_info_by_name;
 
-  auto customer_table = customer_builder.finish_table();
   table_info_by_name["customer"].table = customer_table;
-
-  auto orders_table = order_builder.finish_table();
   table_info_by_name["orders"].table = orders_table;
-
-  auto lineitem_table = lineitem_builder.finish_table();
   table_info_by_name["lineitem"].table = lineitem_table;
 
   auto part_table = part_builder.finish_table();

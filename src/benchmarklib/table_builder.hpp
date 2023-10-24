@@ -46,7 +46,7 @@ class OptionalConstexpr<T, _has_value, std::enable_if_t<!_has_value>> {
   static constexpr bool has_value = false;
 
   T& value() {
-    Assert(false, "empty optional has no value");
+    Fail("Empty optional has no value.");
     return {};
   }
 };
@@ -110,8 +110,8 @@ class TableBuilder {
   // types may contain std::optional<?>, which will result in a nullable column, otherwise columns are not nullable
   template <typename Names>
   TableBuilder(const ChunkOffset chunk_size, const boost::hana::tuple<DataTypes...>& types, const Names& names,
-               const ChunkOffset estimated_rows = ChunkOffset{0})
-      : _estimated_rows_per_chunk(std::min(estimated_rows, chunk_size)), _row_count{0} {
+               const size_t estimated_rows = 0)
+      : _estimated_rows_per_chunk(std::min(estimated_rows, static_cast<size_t>(chunk_size))), _row_count{0} {
     BOOST_HANA_CONSTANT_ASSERT(boost::hana::size(names) == boost::hana::size(types));
 
     // Iterate over the column types/names and create the columns.

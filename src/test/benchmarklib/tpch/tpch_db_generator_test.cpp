@@ -1,6 +1,13 @@
 #include "base_test.hpp"
 
+extern "C" {
+#include <dss.h>
+#include <dsstypes.h>
+#include <rnd.h>
+}
+
 #include "hyrise.hpp"
+#include "table_builder.hpp"
 #include "tpch/tpch_constants.hpp"
 #include "tpch/tpch_table_generator.hpp"
 #include "utils/load_table.hpp"
@@ -76,6 +83,9 @@ TEST_F(TPCHTableGeneratorTest, RowCountsMediumScaleFactor) {
   EXPECT_EQ(table_info_by_name.at("orders").table->row_count(), std::floor(1'500'000 * scale_factor));
   EXPECT_EQ(table_info_by_name.at("nation").table->row_count(), std::floor(25));
   EXPECT_EQ(table_info_by_name.at("region").table->row_count(), std::floor(5));
+
+  // Each order has in averge 4 lineitems. The number slightly changes for varying dbgen seeds.
+  EXPECT_LT(static_cast<double>(table_info_by_name.at("lineitem").table->row_count()) - std::floor(6'000'000 * scale_factor), 6'000'000 * scale_factor / 100);
 }
 
 TEST_F(TPCHTableGeneratorTest, GenerateAndStore) {
@@ -98,4 +108,18 @@ TEST_F(TPCHTableGeneratorTest, GenerateAndStore) {
   EXPECT_TRUE(Hyrise::get().storage_manager.has_table("nation"));
   EXPECT_TRUE(Hyrise::get().storage_manager.has_table("region"));
 }
+
+TEST_F(TPCHTableGeneratorTest, PartialGeneration) {
+  const auto tpch_table_generator = TPCHTableGenerator(17.0, ClusteringConfiguration::None);
+  const auto [orders_table, lineitem_table] = tpch_table_generator.create_orders_and_lineitem_tables(Chunk::DEFAULT_SIZE, 0);
+  std::cout << "orders: " << orders_table->row_count() << " - " << orders_table->chunk_count() << std::endl;
+  std::cout << "lineitem: " << lineitem_table->row_count() << " - " << lineitem_table->chunk_count() << std::endl;
+  for (auto chunk_id = ChunkID{0}; chunk_id < lineitem_table->chunk_count(); ++chunk_id) {
+    std::cout << "Size of chunk #" << chunk_id << ": " << lineitem_table->get_chunk(chunk_id)->size() << std::endl;
+  }
+
+  const auto customer_table = tpch_table_generator.create_customer_table(Chunk::DEFAULT_SIZE, 0);
+  std::cout << "customer: " << customer_table->row_count() << " - " << customer_table->chunk_count() << std::endl;
+}
+
 }  // namespace hyrise

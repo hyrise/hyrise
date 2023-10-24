@@ -15,9 +15,6 @@
 
 namespace hyrise {
 
-class Chunk;
-class Table;
-
 enum class TPCHTable { Part, PartSupp, Supplier, Customer, Orders, LineItem, Nation, Region };
 
 extern const std::unordered_map<TPCHTable, std::string> tpch_table_names;
@@ -39,6 +36,11 @@ class TPCHTableGenerator : virtual public AbstractTableGenerator {
                               const std::shared_ptr<BenchmarkConfig>& benchmark_config);
 
   std::unordered_map<std::string, BenchmarkTableInfo> generate() override;
+
+  std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> create_orders_and_lineitem_tables(const size_t order_count, const size_t index_offset) const;
+  std::shared_ptr<Table> create_customer_table(const size_t customer_count, const size_t index_offset) const;
+
+  size_t customer_row_count() const;
 
  protected:
   IndexesByTable _indexes_by_table() const override;
