@@ -1,6 +1,7 @@
 #pragma once
 
 #include <bit>
+
 #include "magic_enum.hpp"
 
 namespace hyrise {
