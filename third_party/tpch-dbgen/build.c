@@ -232,8 +232,8 @@ mk_order(DSS_HUGE index, order_t * o, long upd_num)
 		// Q3 need l_orderkey, l_discount, l_extendedprice, and l_shipdate.
 		o->l[lcnt].okey = o->okey;;
 		o->l[lcnt].lcnt = lcnt + 1;
-		RANDOM(o->l[lcnt].discount, L_DCNT_MIN, L_DCNT_MAX, L_DCNT_SD);
 		RANDOM(o->l[lcnt].quantity, L_QTY_MIN, L_QTY_MAX, L_QTY_SD);
+		RANDOM(o->l[lcnt].discount, L_DCNT_MIN, L_DCNT_MAX, L_DCNT_SD);
 
 		if (scale >= 30000)
 			RANDOM64(o->l[lcnt].partkey, L_PKEY_MIN, L_PKEY_MAX, L_PKEY_SD);

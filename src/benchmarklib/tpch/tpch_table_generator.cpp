@@ -245,8 +245,9 @@ size_t TPCHTableGenerator::customer_row_count() const {
   return static_cast<size_t>(static_cast<double>(tdefs[CUST].base) * _scale_factor);
 }
 
-void TPCHTableGenerator::reset_seeds() {
+void TPCHTableGenerator::reset_and_initialize() {
   dbgen_reset_seeds();
+  dbgen_init_scale_factor(_scale_factor);
 }
 
 std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate() {
@@ -259,8 +260,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate
   }
 
   // Init tpch_dbgen - it is important this is done before any data structures from tpch_dbgen are read.
-  reset_seeds();
-  dbgen_init_scale_factor(_scale_factor);
+  reset_and_initialize();
 
   const auto part_count = static_cast<size_t>(tdefs[PART].base * scale);
   const auto supplier_count = static_cast<size_t>(tdefs[SUPP].base * scale);
