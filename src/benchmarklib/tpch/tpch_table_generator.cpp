@@ -122,29 +122,68 @@ TPCHTableGenerator::TPCHTableGenerator(float scale_factor, ClusteringConfigurati
       _clustering_configuration(clustering_configuration) {}
 
 std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TPCHTableGenerator::create_orders_and_lineitem_tables(const size_t order_count, const size_t index_offset) const {
-  auto order_builder = TableBuilder{_benchmark_config->chunk_size, order_column_types, order_column_names, ChunkOffset{order_count}};
-  auto lineitem_builder = TableBuilder{_benchmark_config->chunk_size, lineitem_column_types, lineitem_column_names,
-                                       ChunkOffset{order_count * 4}};
+  const auto* env_column_configuration = std::getenv("COLUMN_CONFIGURATION");
 
-  for (auto order_idx = index_offset; order_idx < order_count + index_offset; ++order_idx) {
-    const auto order = call_dbgen_mk<order_t>(order_idx + 1, mk_order, TPCHTable::Orders, 0l);
+  /**
+   * Not the nicest solution here, but it's simple and avoids too many branches.
+   */
 
-    order_builder.append_row(order.okey, order.custkey, pmr_string(1, order.orderstatus),
-                             convert_money(order.totalprice), order.odate, order.opriority, order.clerk,
-                             order.spriority, order.comment);
+  if (!env_column_configuration || (env_column_configuration && (std::string{env_column_configuration} == "NONE"))) {  
+    //
+    //  NONE
+    //
+    auto order_builder = TableBuilder{_benchmark_config->chunk_size, order_column_types, order_column_names, ChunkOffset{order_count}};
+    auto lineitem_builder = TableBuilder{_benchmark_config->chunk_size, lineitem_column_types, lineitem_column_names,
+                                         ChunkOffset{order_count * 4}};
 
-    for (auto line_idx = int64_t{0}; line_idx < order.lines; ++line_idx) {
-      const auto& lineitem = order.l[line_idx];
+    for (auto order_idx = index_offset; order_idx < order_count + index_offset; ++order_idx) {
+      const auto order = call_dbgen_mk<order_t>(order_idx + 1, mk_order, TPCHTable::Orders, 0l);
 
-      lineitem_builder.append_row(lineitem.okey, lineitem.partkey, lineitem.suppkey, lineitem.lcnt, lineitem.quantity,
-                                  convert_money(lineitem.eprice), convert_money(lineitem.discount),
-                                  convert_money(lineitem.tax), pmr_string(1, lineitem.rflag[0]),
-                                  pmr_string(1, lineitem.lstatus[0]), lineitem.sdate, lineitem.cdate, lineitem.rdate,
-                                  lineitem.shipinstruct, lineitem.shipmode, lineitem.comment);
+      order_builder.append_row(order.okey, order.custkey, pmr_string(1, order.orderstatus),
+                               convert_money(order.totalprice), order.odate, order.opriority, order.clerk,
+                               order.spriority, order.comment);
+
+      for (auto line_idx = int64_t{0}; line_idx < order.lines; ++line_idx) {
+        const auto& lineitem = order.l[line_idx];
+
+        lineitem_builder.append_row(lineitem.okey, lineitem.partkey, lineitem.suppkey, lineitem.lcnt, lineitem.quantity,
+                                    convert_money(lineitem.eprice), convert_money(lineitem.discount),
+                                    convert_money(lineitem.tax), pmr_string(1, lineitem.rflag[0]),
+                                    pmr_string(1, lineitem.lstatus[0]), lineitem.sdate, lineitem.cdate, lineitem.rdate,
+                                    lineitem.shipinstruct, lineitem.shipmode, lineitem.comment);
+      }
     }
+    return {order_builder.finish_table(), lineitem_builder.finish_table()};
+  } else if (env_column_configuration && (std::string{env_column_configuration} == "DB_Q3_COLUMNS" || std::string{env_column_configuration} == "Q3_COLUMNS")) {
+    //
+    //  Q3 COLUMNS
+    //
+
+    const auto order_column_types = boost::hana::tuple      <int32_t,     int32_t,     pmr_string,    int32_t       >();  // NOLINT
+    const auto order_column_names = boost::hana::make_tuple("o_orderkey", "o_custkey", "o_orderdate", "o_shippriority");  // NOLINT
+
+    const auto lineitem_column_types = boost::hana::tuple      <int32_t,     float,             float,        pmr_string>();  // NOLINT
+    const auto lineitem_column_names = boost::hana::make_tuple("l_orderkey", "l_extendedprice", "l_discount", "l_shipdate");  // NOLINT
+
+    auto order_builder = TableBuilder{_benchmark_config->chunk_size, order_column_types, order_column_names, ChunkOffset{order_count}};
+    auto lineitem_builder = TableBuilder{_benchmark_config->chunk_size, lineitem_column_types, lineitem_column_names,
+                                         ChunkOffset{order_count * 4}};
+
+    for (auto order_idx = index_offset; order_idx < order_count + index_offset; ++order_idx) {
+      const auto order = call_dbgen_mk<order_t>(order_idx + 1, mk_order, TPCHTable::Orders, 0l);
+
+      order_builder.append_row(order.okey, order.custkey, order.odate, order.spriority);
+
+      for (auto line_idx = int64_t{0}; line_idx < order.lines; ++line_idx) {
+        const auto& lineitem = order.l[line_idx];
+
+        lineitem_builder.append_row(lineitem.okey, convert_money(lineitem.eprice), convert_money(lineitem.discount), lineitem.sdate);
+      }
+    }
+    return {order_builder.finish_table(), lineitem_builder.finish_table()};
   }
 
-  return {order_builder.finish_table(), lineitem_builder.finish_table()};
+  Fail("Unexpected");
 }
 
 
@@ -155,7 +194,7 @@ std::shared_ptr<Table> TPCHTableGenerator::create_customer_table(const size_t cu
    * Not the nicest solution here, but it's simple and avoids too many branches.
    */
 
-  if (env_column_configuration && (std::string{env_column_configuration} == "NONE")) {
+  if (!env_column_configuration || (env_column_configuration && (std::string{env_column_configuration} == "NONE"))) {
     //
     //  NONE
     //
@@ -169,25 +208,9 @@ std::shared_ptr<Table> TPCHTableGenerator::create_customer_table(const size_t cu
     }
 
     return builder.finish_table();
-  } else if (env_column_configuration && (std::string{env_column_configuration} == "CUSTKEY_ONLY" || std::string{env_column_configuration} == "DB_CUSTKEY_ONLY")) {
+  } else if (env_column_configuration && (std::string{env_column_configuration} == "DB_Q3_COLUMNS" || std::string{env_column_configuration} == "Q3_COLUMNS")) {
     //
-    //  CUSTKEY ONLY
-    //
-    const auto customer_column_types = boost::hana::tuple      <int32_t>();
-    const auto customer_column_names = boost::hana::make_tuple("c_custkey");
-
-    auto builder =
-      TableBuilder{_benchmark_config->chunk_size, customer_column_types, customer_column_names, ChunkOffset{customer_count}};
-
-    for (auto row_idx = index_offset; row_idx < customer_count + index_offset; row_idx++) {
-      auto customer = call_dbgen_mk<customer_t>(row_idx + 1, mk_cust, TPCHTable::Customer);
-      builder.append_row(customer.custkey);
-    }
-
-    return builder.finish_table();
-  } else if (env_column_configuration && (std::string{env_column_configuration} == "CUSTKEY_AND_MKTSEGMENT" || std::string{env_column_configuration} == "DB_CUSTKEY_AND_MKTSEGMENT")) {
-    //
-    //  CUSTKEY AND MKTSEGMENT
+    //  Q3 COLUMNS
     //
     const auto customer_column_types = boost::hana::tuple      <int32_t,    pmr_string>();
     const auto customer_column_names = boost::hana::make_tuple("c_custkey", "c_mktsegment");
@@ -206,7 +229,19 @@ std::shared_ptr<Table> TPCHTableGenerator::create_customer_table(const size_t cu
   Fail("Unexpected");
 }
 
+size_t TPCHTableGenerator::orders_row_count() const {
+  if (scale == 1) {
+    return static_cast<size_t>(tdefs[ORDER].base);
+  }
+
+  return static_cast<size_t>(static_cast<double>(tdefs[ORDER].base) * _scale_factor);
+}
+
 size_t TPCHTableGenerator::customer_row_count() const {
+  if (scale == 1) {
+    return static_cast<size_t>(tdefs[CUST].base);
+  }
+
   return static_cast<size_t>(static_cast<double>(tdefs[CUST].base) * _scale_factor);
 }
 
@@ -223,7 +258,6 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate
   dbgen_reset_seeds();
   dbgen_init_scale_factor(_scale_factor);
 
-  const auto order_count = static_cast<size_t>(tdefs[ORDER].base * scale);
   const auto part_count = static_cast<size_t>(tdefs[PART].base * scale);
   const auto supplier_count = static_cast<size_t>(tdefs[SUPP].base * scale);
   const auto nation_count = static_cast<size_t>(tdefs[NATION].base);
@@ -249,7 +283,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate
   /**
    * ORDER and LINEITEM
    */
-  const auto& [orders_table, lineitem_table] = create_orders_and_lineitem_tables(order_count, 0);
+  const auto& [orders_table, lineitem_table] = create_orders_and_lineitem_tables(orders_row_count(), 0);
 
   /**
    * PART and PARTSUPP

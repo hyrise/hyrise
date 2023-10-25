@@ -41,6 +41,7 @@ class TPCHTableGenerator : virtual public AbstractTableGenerator {
   std::shared_ptr<Table> create_customer_table(const size_t customer_count, const size_t index_offset) const;
 
   size_t customer_row_count() const;
+  size_t orders_row_count() const;
 
  protected:
   IndexesByTable _indexes_by_table() const override;

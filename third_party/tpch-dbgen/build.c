@@ -114,11 +114,13 @@ mk_cust(DSS_HUGE n_cust, customer_t * c)
 		sprintf(szFormat, C_NAME_FMT, 9, HUGE_FORMAT + 1);
 		bInit = 1;
 	}
+
+	// Q3 needs c_custkey and c_mktsegment.
 	c->custkey = n_cust;
-	// Duplication to reducing branches.
-	if (!env_column_configuration || (strcmp(env_column_configuration, "NONE") == 0 ||
-									  strcmp(env_column_configuration, "DB_CUSTKEY_AND_MKTSEGMENT") == 0 ||
-									  strcmp(env_column_configuration, "DB_CUSTKEY_ONLY") == 0)) {
+	pick_str(&c_mseg_set, C_MSEG_SD, c->mktsegment);
+
+	if (!env_column_configuration || strcmp(env_column_configuration, "NONE") == 0 ||
+									 strcmp(env_column_configuration, "DB_Q3_COLUMNS") == 0) {
 		sprintf(c->name, szFormat, C_NAME_TAG, n_cust);
 		V_STR(C_ADDR_LEN, C_ADDR_SD, c->address);
 		c->alen = (int)strlen(c->address);
@@ -126,13 +128,10 @@ mk_cust(DSS_HUGE n_cust, customer_t * c)
 		c->nation_code = i;
 		gen_phone(i, c->phone, (long) C_PHNE_SD);
 		RANDOM(c->acctbal, C_ABAL_MIN, C_ABAL_MAX, C_ABAL_SD);
-		pick_str(&c_mseg_set, C_MSEG_SD, c->mktsegment);
 		TEXT(C_CMNT_LEN, C_CMNT_SD, c->comment);
 		c->clen = (int)strlen(c->comment);
-	} else if (strcmp(env_column_configuration, "CUSTKEY_ONLY") == 0) {
-		// We are already good.
-	} else if (strcmp(env_column_configuration, "CUSTKEY_AND_MKTSEGMENT") == 0) {
-		pick_str(&c_mseg_set, C_MSEG_SD, c->mktsegment);
+	} else if (strcmp(env_column_configuration, "Q3_COLUMNS") == 0) {
+		// We are already good.	
 	} else {
 		printf("Unexpected column configuration.\n");
 		exit(1);
@@ -200,81 +199,97 @@ mk_order(DSS_HUGE index, order_t * o, long upd_num)
 		delta *= -1;
 	}
 
+	const char* env_column_configuration = getenv("COLUMN_CONFIGURATION");
 
+	// Q3 needs o_orderkey, o_custkey, o_orderdate, and o_shippriority
 	RANDOM(tmp_date, O_ODATE_MIN, O_ODATE_MAX, O_ODATE_SD);
 	// HYRISE: We know that dates are always yyyy-mm-dd + \0.
 	memcpy(o->odate, asc_date[tmp_date - STARTDATE], 11);
-
-	pick_str(&o_priority_set, O_PRIO_SD, o->opriority);
-	RANDOM(clk_num, 1, MAX((scale * O_CLRK_SCL), O_CLRK_SCL), O_CLRK_SD);
-	sprintf(o->clerk, szFormat, O_CLRK_TAG, clk_num);
-	TEXT(O_CMNT_LEN, O_CMNT_SD, o->comment);
-	o->clen = (int)strlen(o->comment);
-#ifdef DEBUG
-	if (o->clen > O_CMNT_MAX)
-		fprintf(stderr, "comment error: O%d\n", index);
-#endif				/* DEBUG */
 	o->spriority = 0;
 
-	o->totalprice = 0;
-	o->orderstatus = 'O';
-	ocnt = 0;
+	if (!env_column_configuration || strcmp(env_column_configuration, "NONE") == 0 ||
+									 strcmp(env_column_configuration, "DB_Q3_COLUMNS") == 0) {
+		pick_str(&o_priority_set, O_PRIO_SD, o->opriority);
+		RANDOM(clk_num, 1, MAX((scale * O_CLRK_SCL), O_CLRK_SCL), O_CLRK_SD);
+		sprintf(o->clerk, szFormat, O_CLRK_TAG, clk_num);
+		TEXT(O_CMNT_LEN, O_CMNT_SD, o->comment);
+		o->clen = (int)strlen(o->comment);
+	#ifdef DEBUG
+		if (o->clen > O_CMNT_MAX)
+			fprintf(stderr, "comment error: O%d\n", index);
+	#endif				/* DEBUG */
+
+		o->totalprice = 0;
+		o->orderstatus = 'O';
+		ocnt = 0;
+	} else if (strcmp(env_column_configuration, "Q3_COLUMNS") == 0) {
+		// We are already good.	
+	} 
 
 	RANDOM(o->lines, O_LCNT_MIN, O_LCNT_MAX, O_LCNT_SD);
 	for (lcnt = 0; lcnt < o->lines; lcnt++)
 	{
+		// Q3 need l_orderkey, l_discount, l_extendedprice, and l_shipdate.
 		o->l[lcnt].okey = o->okey;;
 		o->l[lcnt].lcnt = lcnt + 1;
-		RANDOM(o->l[lcnt].quantity, L_QTY_MIN, L_QTY_MAX, L_QTY_SD);
 		RANDOM(o->l[lcnt].discount, L_DCNT_MIN, L_DCNT_MAX, L_DCNT_SD);
-		RANDOM(o->l[lcnt].tax, L_TAX_MIN, L_TAX_MAX, L_TAX_SD);
-		pick_str(&l_instruct_set, L_SHIP_SD, o->l[lcnt].shipinstruct);
-		pick_str(&l_smode_set, L_SMODE_SD, o->l[lcnt].shipmode);
-		TEXT(L_CMNT_LEN, L_CMNT_SD, o->l[lcnt].comment);
-		o->l[lcnt].clen = (int)strlen(o->l[lcnt].comment);
+		RANDOM(o->l[lcnt].quantity, L_QTY_MIN, L_QTY_MAX, L_QTY_SD);
+
 		if (scale >= 30000)
 			RANDOM64(o->l[lcnt].partkey, L_PKEY_MIN, L_PKEY_MAX, L_PKEY_SD);
 		else
 			RANDOM(o->l[lcnt].partkey, L_PKEY_MIN, L_PKEY_MAX, L_PKEY_SD);
 		rprice = rpb_routine(o->l[lcnt].partkey);
-		RANDOM(supp_num, 0, 3, L_SKEY_SD);
-		PART_SUPP_BRIDGE(o->l[lcnt].suppkey, o->l[lcnt].partkey, supp_num);
 		o->l[lcnt].eprice = rprice * o->l[lcnt].quantity;
-
-		o->totalprice +=
-			((o->l[lcnt].eprice *
-		     ((long) 100 - o->l[lcnt].discount)) / (long) PENNIES) *
-			((long) 100 + o->l[lcnt].tax)
-			/ (long) PENNIES;
 
 		RANDOM(s_date, L_SDTE_MIN, L_SDTE_MAX, L_SDTE_SD);
 		s_date += tmp_date;
-		RANDOM(c_date, L_CDTE_MIN, L_CDTE_MAX, L_CDTE_SD);
-		c_date += tmp_date;
-		RANDOM(r_date, L_RDTE_MIN, L_RDTE_MAX, L_RDTE_SD);
-		r_date += s_date;
-
-    // HYRISE: We know that dates are always yyyy-mm-dd + \0.
 		memcpy(o->l[lcnt].sdate, asc_date[s_date - STARTDATE], 11);
-		memcpy(o->l[lcnt].cdate, asc_date[c_date - STARTDATE], 11);
-		memcpy(o->l[lcnt].rdate, asc_date[r_date - STARTDATE], 11);
 
+		if (!env_column_configuration || strcmp(env_column_configuration, "NONE") == 0 ||
+										 strcmp(env_column_configuration, "DB_Q3_COLUMNS") == 0) {
 
-		if (julian(r_date) <= CURRENTDATE)
-		{
-			pick_str(&l_rflag_set, L_RFLG_SD, tmp_str);
-			o->l[lcnt].rflag[0] = *tmp_str;
-		}
-		else
-			o->l[lcnt].rflag[0] = 'N';
+			RANDOM(o->l[lcnt].tax, L_TAX_MIN, L_TAX_MAX, L_TAX_SD);
+			pick_str(&l_instruct_set, L_SHIP_SD, o->l[lcnt].shipinstruct);
+			pick_str(&l_smode_set, L_SMODE_SD, o->l[lcnt].shipmode);
+			TEXT(L_CMNT_LEN, L_CMNT_SD, o->l[lcnt].comment);
+			o->l[lcnt].clen = (int)strlen(o->l[lcnt].comment);
+			RANDOM(supp_num, 0, 3, L_SKEY_SD);
+			PART_SUPP_BRIDGE(o->l[lcnt].suppkey, o->l[lcnt].partkey, supp_num);
 
-		if (julian(s_date) <= CURRENTDATE)
-		{
-			ocnt++;
-			o->l[lcnt].lstatus[0] = 'F';
-		}
-		else
-			o->l[lcnt].lstatus[0] = 'O';
+			o->totalprice +=
+				((o->l[lcnt].eprice *
+			     ((long) 100 - o->l[lcnt].discount)) / (long) PENNIES) *
+				((long) 100 + o->l[lcnt].tax)
+				/ (long) PENNIES;
+
+			RANDOM(c_date, L_CDTE_MIN, L_CDTE_MAX, L_CDTE_SD);
+			c_date += tmp_date;
+			RANDOM(r_date, L_RDTE_MIN, L_RDTE_MAX, L_RDTE_SD);
+			r_date += s_date;
+
+	    	// HYRISE: We know that dates are always yyyy-mm-dd + \0.
+			memcpy(o->l[lcnt].cdate, asc_date[c_date - STARTDATE], 11);
+			memcpy(o->l[lcnt].rdate, asc_date[r_date - STARTDATE], 11);
+
+			if (julian(r_date) <= CURRENTDATE)
+			{
+				pick_str(&l_rflag_set, L_RFLG_SD, tmp_str);
+				o->l[lcnt].rflag[0] = *tmp_str;
+			}
+			else
+				o->l[lcnt].rflag[0] = 'N';
+
+			if (julian(s_date) <= CURRENTDATE)
+			{
+				ocnt++;
+				o->l[lcnt].lstatus[0] = 'F';
+			}
+			else
+				o->l[lcnt].lstatus[0] = 'O';
+		} else if (strcmp(env_column_configuration, "Q3_COLUMNS") == 0) {
+			// We are already good.	
+		} 
 	}
 
 	if (ocnt > 0)
