@@ -98,20 +98,28 @@ do
     runtime=$((sf * 6))
     runtime=$(( runtime > 60 ? runtime : 60 ))
 
-    echo "Running $benchmark for $commit... (single-threaded, SF ${sf}) SCHEMA CONSTRAINTS, PLUGIN, ALL ON"
-    ( SCHEMA_CONSTRAINTS=1 "${build_folder}"/"$benchmark" -s ${sf} -r ${runs} -t ${runtime} -p "${build_folder}/lib/libhyriseDependencyDiscoveryPlugin.${lib_suffix}" 2>&1 ) | tee "${build_folder}/benchmark_plugin_results/${benchmark}_${commit}_st_s${sf}_schema_plugin.log"
+    caching=""
 
+    if [[ "$sf" != "10" && "$sf" != "1" ]]; then
+      caching="--dont_cache_binary_tables"
+    fi
     echo "Running $benchmark for $commit... (single-threaded, SF ${sf}) NO SCHEMA CONSTRAINTS, PLUGIN, ALL ON"
-    ( SCHEMA_CONSTRAINTS=0 "${build_folder}"/"$benchmark" -s ${sf} -r ${runs} -t ${runtime} -p "${build_folder}/lib/libhyriseDependencyDiscoveryPlugin.${lib_suffix}" 2>&1 ) | tee "${build_folder}/benchmark_plugin_results/${benchmark}_${commit}_st_s${sf}_plugin.log"
+    ( SCHEMA_CONSTRAINTS=0 "${build_folder}"/"$benchmark" -s ${sf} -r ${runs} -t ${runtime} -p "${build_folder}/lib/libhyriseDependencyDiscoveryPlugin.${lib_suffix}" ${caching} 2>&1 ) | tee "${build_folder}/benchmark_plugin_results/${benchmark}_${commit}_st_s${sf}_plugin.log"
 
-    echo "Running $benchmark for $commit... (single-threaded, SF ${sf}) NO SCHEMA CONSTRAINTS, ONLY DEPENDENT_GROUPBY"
-    ( SCHEMA_CONSTRAINTS=0 DEPENDENT_GROUPBY=1 JOIN_TO_SEMI=0 JOIN_TO_PREDICATE=0 "${build_folder}"/"$benchmark" -s ${sf} -r ${runs} -t ${runtime} -p "${build_folder}/lib/libhyriseDependencyDiscoveryPlugin.${lib_suffix}" 2>&1 ) | tee "${build_folder}/benchmark_plugin_results/${benchmark}_${commit}_st_s${sf}_plugin_dgr.log"
+    if [ "$sf" = "10" ]; then
 
-    echo "Running $benchmark for $commit... (single-threaded, SF ${sf}) NO SCHEMA CONSTRAINTS, ONLY JOIN_TO_SEMI"
-    ( SCHEMA_CONSTRAINTS=0 DEPENDENT_GROUPBY=0 JOIN_TO_SEMI=1 JOIN_TO_PREDICATE=0 "${build_folder}"/"$benchmark" -s ${sf} -r ${runs} -t ${runtime} -p "${build_folder}/lib/libhyriseDependencyDiscoveryPlugin.${lib_suffix}" 2>&1 ) | tee "${build_folder}/benchmark_plugin_results/${benchmark}_${commit}_st_s${sf}_plugin_jts.log"
+      echo "Running $benchmark for $commit... (single-threaded, SF ${sf}) SCHEMA CONSTRAINTS, PLUGIN, ALL ON"
+      ( SCHEMA_CONSTRAINTS=1 "${build_folder}"/"$benchmark" -s ${sf} -r ${runs} -t ${runtime} -p "${build_folder}/lib/libhyriseDependencyDiscoveryPlugin.${lib_suffix}" ${caching} 2>&1 ) | tee "${build_folder}/benchmark_plugin_results/${benchmark}_${commit}_st_s${sf}_schema_plugin.log"
 
-    echo "Running $benchmark for $commit... (single-threaded, SF ${sf}) NO SCHEMA CONSTRAINTS, ONLY JOIN_TO_PREDICATE"
-    ( SCHEMA_CONSTRAINTS=0 DEPENDENT_GROUPBY=0 JOIN_TO_SEMI=0 JOIN_TO_PREDICATE=1 "${build_folder}"/"$benchmark" -s ${sf} -r ${runs} -t ${runtime} -p "${build_folder}/lib/libhyriseDependencyDiscoveryPlugin.${lib_suffix}" 2>&1 ) | tee "${build_folder}/benchmark_plugin_results/${benchmark}_${commit}_st_s${sf}_plugin_jtp.log"
+      echo "Running $benchmark for $commit... (single-threaded, SF ${sf}) NO SCHEMA CONSTRAINTS, ONLY DEPENDENT_GROUPBY"
+      ( SCHEMA_CONSTRAINTS=0 DEPENDENT_GROUPBY=1 JOIN_TO_SEMI=0 JOIN_TO_PREDICATE=0 "${build_folder}"/"$benchmark" -s ${sf} -r ${runs} -t ${runtime} -p "${build_folder}/lib/libhyriseDependencyDiscoveryPlugin.${lib_suffix}" ${caching} 2>&1 ) | tee "${build_folder}/benchmark_plugin_results/${benchmark}_${commit}_st_s${sf}_plugin_dgr.log"
+
+      echo "Running $benchmark for $commit... (single-threaded, SF ${sf}) NO SCHEMA CONSTRAINTS, ONLY JOIN_TO_SEMI"
+      ( SCHEMA_CONSTRAINTS=0 DEPENDENT_GROUPBY=0 JOIN_TO_SEMI=1 JOIN_TO_PREDICATE=0 "${build_folder}"/"$benchmark" -s ${sf} -r ${runs} -t ${runtime} -p "${build_folder}/lib/libhyriseDependencyDiscoveryPlugin.${lib_suffix}" ${caching} 2>&1 ) | tee "${build_folder}/benchmark_plugin_results/${benchmark}_${commit}_st_s${sf}_plugin_jts.log"
+
+      echo "Running $benchmark for $commit... (single-threaded, SF ${sf}) NO SCHEMA CONSTRAINTS, ONLY JOIN_TO_PREDICATE"
+      ( SCHEMA_CONSTRAINTS=0 DEPENDENT_GROUPBY=0 JOIN_TO_SEMI=0 JOIN_TO_PREDICATE=1 "${build_folder}"/"$benchmark" -s ${sf} -r ${runs} -t ${runtime} -p "${build_folder}/lib/libhyriseDependencyDiscoveryPlugin.${lib_suffix}" ${caching} 2>&1 ) | tee "${build_folder}/benchmark_plugin_results/${benchmark}_${commit}_st_s${sf}_plugin_jtp.log"
+    fi
   done
 done
 
