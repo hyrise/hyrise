@@ -9,18 +9,17 @@ print(getwd())
 source("ggplot_theme.R")
 
 
-results <- read.csv("/Users/martin/Programming/OpossumDB2/data_integration__loading_results_q3.csv")
+results <- read.csv("data_integration__loading_results_q3.csv")
 results$RUNTIME_S <- results$RUNTIME_US / 1000 / 1000
 results$COLUMN_CONFIGURATION <- as.factor(results$COLUMN_CONFIGURATION)
 results$RUN_CONFIG <- as.factor(results$RUN_CONFIG)
 results$STEP <- as.factor(results$STEP)
 results$SCALE_FACTOR <- as.factor(results$SCALE_FACTOR)
 
-# levels(results$COLUMN_CONFIGURATION) <- c("Post-DBgen Filtering:\ngenerate only accessed columns", "Default:\ngenerate and load all columns", "DBgen Modification:\ngenerate only accessed columns")
 levels(results$COLUMN_CONFIGURATION) <- list("DBgen Modification:\ngenerate only accessed columns" = "Q3_COLUMNS", "Post-DBgen Filtering:\ngenerate only accessed columns" = "DB_Q3_COLUMNS", "Default:\ngenerate and load all columns" = "NONE")
 levels(results$RUN_CONFIG) <- c("", "Single-\nThreaded")
 levels(results$STEP) <- c("#3 Statistic Generation", "#2 Data Encoding", "#1 Generating Table Data", "#4 Query")
-levels(results$SCALE_FACTOR) <- c("SF 10", "SF 50")
+levels(results$SCALE_FACTOR) <- list("SF 1" = 1, "SF 5" = 5,"SF 10" = 10, "SF 50" = 50)
 # levels(results$SCALE_FACTOR) <- c("SF 10", "SF 30", "SF 60", "SF 100", "SF 200")
 
 results_agg <- results %>% group_by(COLUMN_CONFIGURATION, SCALE_FACTOR, RUN_CONFIG, STEP) %>%
