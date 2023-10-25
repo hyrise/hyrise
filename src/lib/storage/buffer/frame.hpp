@@ -148,7 +148,7 @@ class Frame final : private Noncopyable {
                 "The given masks either overlap or do not cover the whole StateVersionType.");
 
   // The number of bits for the state and version. It should be 64.
-  static constexpr uint64_t _BIT_WIDTH = sizeof(StateVersionType) * std::numeric_limits<unsigned char>::digits;
+  static constexpr uint64_t _BIT_WIDTH = std::numeric_limits<StateVersionType>::digits;
 
   // The number of bits to shift to the right to get the node id.
   static constexpr uint64_t _NODE_ID_SHIFT = std::countr_zero(_NODE_ID_MASK);
