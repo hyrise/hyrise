@@ -22,4 +22,4 @@ for scale_factor in scale_factors:
   for config in ["NONE", "DB_Q3_COLUMNS", "Q3_COLUMNS"]:
     subprocess.run([f"./{args.hyrise_path}/hyrisePlayground", str(scale_factor)], env={"COLUMN_CONFIGURATION": config}) 
 
-subprocess.run(["Rscript", "data_integration__plot.R"])
+	subprocess.run(["Rscript", "data_integration__plot.R"])
