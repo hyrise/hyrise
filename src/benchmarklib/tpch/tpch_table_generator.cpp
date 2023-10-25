@@ -245,6 +245,10 @@ size_t TPCHTableGenerator::customer_row_count() const {
   return static_cast<size_t>(static_cast<double>(tdefs[CUST].base) * _scale_factor);
 }
 
+void TPCHTableGenerator::reset_seeds() {
+  dbgen_reset_seeds();
+}
+
 std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate() {
   Assert(_scale_factor < 1.0f || std::round(_scale_factor) == _scale_factor,
          "Due to tpch_dbgen limitations, only scale factors less than one can have a fractional part.");
@@ -255,7 +259,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate
   }
 
   // Init tpch_dbgen - it is important this is done before any data structures from tpch_dbgen are read.
-  dbgen_reset_seeds();
+  reset_seeds();
   dbgen_init_scale_factor(_scale_factor);
 
   const auto part_count = static_cast<size_t>(tdefs[PART].base * scale);

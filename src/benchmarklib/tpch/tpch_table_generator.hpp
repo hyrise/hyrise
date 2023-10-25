@@ -43,6 +43,8 @@ class TPCHTableGenerator : virtual public AbstractTableGenerator {
   size_t customer_row_count() const;
   size_t orders_row_count() const;
 
+  void reset_seeds();
+
  protected:
   IndexesByTable _indexes_by_table() const override;
   SortOrderByTable _sort_order_by_table() const override;

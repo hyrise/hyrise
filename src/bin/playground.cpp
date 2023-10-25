@@ -72,7 +72,8 @@ int main(int argc, char** argv) {
       //
 
       const auto begin_table_creation = std::chrono::steady_clock::now();
-      const auto tpch_table_generator = TPCHTableGenerator(scale_factor, ClusteringConfiguration::None);
+      auto tpch_table_generator = TPCHTableGenerator(scale_factor, ClusteringConfiguration::None);
+      tpch_table_generator.reset_seeds();
       const auto customer_row_count = tpch_table_generator.customer_row_count();
       const auto orders_row_count = tpch_table_generator.orders_row_count();
 
