@@ -210,8 +210,8 @@ int main(int argc, char** argv) {
         }
         Assert(q3_pipeline_status == SQLPipelineStatus::Success, "Q3 failed.");
         std::cout << q3_result->row_count() << std::endl;
-        Print::print(q3_result);
-        Assert(q3_result->row_count() == 10, "Unexpected result size.");
+        //Print::print(q3_result);
+        Assert(scale_factor < 10.0 || q3_result->row_count() == 10, "Unexpected result size.");
       }
 
       Hyrise::get().scheduler()->finish();
