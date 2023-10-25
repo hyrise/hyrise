@@ -96,7 +96,10 @@ class Frame final : private Noncopyable {
    */
   bool try_lock_shared(const StateVersionType old_state_and_version);
 
-  // Try to latch in frame in exclusive node. Fails if the frame is not in state UNLOCKED or MARKED. Returns true on success.
+  /**
+   * Try to latch in frame in exclusive node. Fails if the frame is not in state UNLOCKED or MARKED. 
+   * Returns true on success.
+   */
   bool try_lock_exclusive(const StateVersionType old_state_and_version);
 
   // Try to mark the frame. Fails if the frame is not in state UNLOCKED. Returns true on success.
