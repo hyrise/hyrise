@@ -13,6 +13,7 @@ Hyrise::Hyrise() {
   // destructed last.
   boost::container::pmr::get_default_resource();
 
+  buffer_manager = BufferManager{};
   storage_manager = StorageManager{};
   plugin_manager = PluginManager{};
   transaction_manager = TransactionManager{};

@@ -27,7 +27,8 @@ BufferManager::BufferManager(const uint64_t pool_size, const std::filesystem::pa
     : _mapped_region(VolatileRegion::create_mapped_region()),
       _volatile_regions(VolatileRegion::create_volatile_regions(_mapped_region)),
       _persistence_manager(std::make_shared<PersistenceManager>(ssd_path)),
-      _buffer_pool(pool_size, node_id, _volatile_regions, _persistence_manager) {}
+      _buffer_pool(pool_size, node_id, _volatile_regions, _persistence_manager),
+      _page_memory_resource(this) {}
 
 BufferManager::~BufferManager() {
   VolatileRegion::unmap_region(_mapped_region);
@@ -45,7 +46,7 @@ BufferManager& BufferManager::operator=(BufferManager&& other) noexcept {
 }
 
 // TODO: This can take several templates to improve branching
-void BufferManager::make_resident(const PageID page_id, const Frame::StateVersionType state_before_exclusive) {
+void BufferManager::_make_resident(const PageID page_id, const Frame::StateVersionType state_before_exclusive) {
   // Check if the page was freshly allocated by checking the version. In this case, we want to use either DRAM or NUMA
   const auto version = Frame::version(state_before_exclusive);
   const auto is_evicted = Frame::state(state_before_exclusive) == Frame::EVICTED;
@@ -57,7 +58,7 @@ void BufferManager::make_resident(const PageID page_id, const Frame::StateVersio
   }
 
   // Case 2: The page is not on DRAM and we don't have it on another memory node, so we need to load it from SSD
-  auto region = get_region(page_id);
+  auto region = _get_region(page_id);
   region->_unprotect_page(page_id);
   DebugAssert(Frame::node_id(state_before_exclusive) == _buffer_pool.node_id(), "Not on DRAM node");
   retry_with_backoff([&, page_id = page_id]() { return _buffer_pool.ensure_free_pages(page_id.num_bytes()); });
@@ -71,7 +72,7 @@ void BufferManager::make_resident(const PageID page_id, const Frame::StateVersio
 void BufferManager::pin_shared(const PageID page_id) {
   DebugAssert(page_id.valid(), "Invalid page id");
 
-  const auto frame = get_region(page_id)->get_frame(page_id);
+  const auto frame = _get_region(page_id)->get_frame(page_id);
 
   retry_with_backoff([&]() {
     const auto state_and_version = frame->state_and_version();
@@ -81,7 +82,7 @@ void BufferManager::pin_shared(const PageID page_id) {
       }
       case Frame::EVICTED: {
         if (frame->try_lock_exclusive(state_and_version)) {
-          make_resident(page_id, state_and_version);
+          _make_resident(page_id, state_and_version);
           frame->unlock_exclusive();
         }
         return false;
@@ -101,14 +102,14 @@ void BufferManager::pin_shared(const PageID page_id) {
 void BufferManager::pin_exclusive(const PageID page_id) {
   DebugAssert(page_id.valid(), "Invalid page id");
 
-  const auto frame = get_region(page_id)->get_frame(page_id);
+  const auto frame = _get_region(page_id)->get_frame(page_id);
 
   retry_with_backoff([&]() {
     auto state_and_version = frame->state_and_version();
     switch (Frame::state(state_and_version)) {
       case Frame::EVICTED: {
         if (frame->try_lock_exclusive(state_and_version)) {
-          make_resident(page_id, state_and_version);
+          _make_resident(page_id, state_and_version);
           return true;
         }
         return false;
@@ -116,7 +117,7 @@ void BufferManager::pin_exclusive(const PageID page_id) {
       case Frame::MARKED:
       case Frame::UNLOCKED: {
         if (frame->try_lock_exclusive(state_and_version)) {
-          make_resident(page_id, state_and_version);
+          _make_resident(page_id, state_and_version);
           return true;
         }
         return false;
@@ -132,7 +133,7 @@ void BufferManager::unpin_shared(const PageID page_id) {
   DebugAssert(page_id.valid(), "Invalid page id");
 
   // increment_metric_counter(_metrics->current_pins, -1);
-  auto frame = get_region(page_id)->get_frame(page_id);
+  auto frame = _get_region(page_id)->get_frame(page_id);
   if (frame->unlock_shared()) {
     _buffer_pool.add_to_eviction_queue(page_id);
   }
@@ -143,7 +144,7 @@ void BufferManager::unpin_exclusive(const PageID page_id) {
   DebugAssert(page_id.valid(), "Invalid page id");
 
   // increment_metric_counter(_metrics->current_pins, -1);
-  auto frame = get_region(page_id)->get_frame(page_id);
+  auto frame = _get_region(page_id)->get_frame(page_id);
   frame->unlock_exclusive();
   _buffer_pool.add_to_eviction_queue(page_id);
   _total_pins.fetch_sub(1, std::memory_order_relaxed);
@@ -152,7 +153,7 @@ void BufferManager::unpin_exclusive(const PageID page_id) {
 void BufferManager::set_dirty(const PageID page_id) {
   DebugAssert(page_id.valid(), "Invalid page id");
 
-  get_region(page_id)->get_frame(page_id)->set_dirty(true);
+  _get_region(page_id)->get_frame(page_id)->set_dirty(true);
 }
 
 Frame::StateVersionType BufferManager::page_state(const PageID page_id) {
@@ -172,7 +173,7 @@ PageID BufferManager::find_page(const void* ptr) const {
   return PageID{size_type, static_cast<PageID::PageIDType>(page_idx), valid};
 }
 
-std::shared_ptr<VolatileRegion> BufferManager::get_region(const PageID page_id) {
+std::shared_ptr<VolatileRegion> BufferManager::_get_region(const PageID page_id) {
   return _volatile_regions[static_cast<uint64_t>(page_id.size_type())];
 }
 
@@ -199,6 +200,10 @@ uint64_t BufferManager::total_misses() const {
 
 uint64_t BufferManager::total_pins() const {
   return _total_pins.load(std::memory_order_relaxed);
+}
+
+boost::container::pmr::memory_resource* BufferManager::get_memory_resource() {
+  return &_page_memory_resource;
 }
 
 }  // namespace hyrise

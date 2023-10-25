@@ -4,9 +4,11 @@
 #include <boost/container/pmr/memory_resource.hpp>
 #include <mutex>
 #include <stack>
-#include "buffer_manager.hpp"
+#include "page_id.hpp"
 
 namespace hyrise {
+
+class BufferManager;
 
 /**
  * The PageMemoryResource allocates pages on the buffer pool using the buffer manager.
@@ -55,12 +57,12 @@ class PageMemoryResource : public boost::container::pmr::memory_resource {
   std::array<std::stack<PageID>, NUM_PAGE_SIZE_TYPES> _free_page_ids;
 
   // Tracks the number of allocations
-  std::atomic_uint64_t _allocation_count;
+  std::atomic_uint64_t _allocation_count{0};
 
   // Tracks the number of deallocations
-  std::atomic_uint64_t _deallocation_count;
+  std::atomic_uint64_t _deallocation_count{0};
 
   // Tracks the number of allocated bytes
-  std::atomic_uint64_t _allocated_bytes;
+  std::atomic_uint64_t _allocated_bytes{0};
 };
 }  // namespace hyrise

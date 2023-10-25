@@ -4,6 +4,7 @@
 #include <memory>
 #include <tuple>
 #include "noncopyable.hpp"
+#include "page_memory_resource.hpp"
 #include "storage/buffer/buffer_pool.hpp"
 #include "storage/buffer/frame.hpp"
 #include "storage/buffer/persistence_manager.hpp"
@@ -89,6 +90,9 @@ class BufferManager final : public Noncopyable {
   // Get the total number of pins in the buffer manager
   uint64_t total_pins() const;
 
+  // Get a PageMemoryResource
+  boost::container::pmr::memory_resource* get_memory_resource();
+
  private:
   friend class Hyrise;
   friend class PageMemoryResource;
@@ -116,6 +120,9 @@ class BufferManager final : public Noncopyable {
 
   // The buffer pool is responsible for managing the memory of the buffer manager
   BufferPool _buffer_pool;
+
+  // Memory resource for allocations associated with this buffer manager
+  PageMemoryResource _page_memory_resource;
 
   // The total number of hits in the buffer manager
   std::atomic_uint64_t _total_hits;

@@ -1,5 +1,5 @@
 #include "base_test.hpp"
-#include "storage/buffer/allocator.hpp"
+#include "storage/buffer/page_memory_resource.hpp"
 
 namespace hyrise {
 

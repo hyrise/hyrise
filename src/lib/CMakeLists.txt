@@ -451,6 +451,8 @@ set(
     storage/buffer/page_id.hpp
     storage/buffer/persistence_manager.cpp
     storage/buffer/persistence_manager.hpp
+    storage/buffer/pin_guard.cpp
+    storage/buffer/pin_guard.hpp
     storage/buffer/volatile_region.cpp
     storage/buffer/volatile_region.hpp
     storage/chunk.cpp

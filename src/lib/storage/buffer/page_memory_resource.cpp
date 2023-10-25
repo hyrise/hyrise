@@ -1,4 +1,5 @@
-#include "allocator.hpp"
+#include "page_memory_resource.hpp"
+#include "buffer_manager.hpp"
 #include "page_id.hpp"
 
 namespace hyrise {
