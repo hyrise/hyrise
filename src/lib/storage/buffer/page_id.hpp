@@ -69,7 +69,7 @@ struct PageID {
     return bytes_for_size_type(size_type());
   }
 
-  // Get the index of the page of a size type
+  // Get the index of the page of a size type.
   uint64_t index() const {
     return _index;
   }
