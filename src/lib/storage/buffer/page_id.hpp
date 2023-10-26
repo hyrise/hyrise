@@ -74,7 +74,7 @@ struct PageID {
     return _index;
   }
 
-  // Returns if the PageID is valid or not in the buffer pool
+  // Returns if the PageID is valid or not in the buffer pool.
   bool valid() const {
     return _valid;
   }
