@@ -23,7 +23,7 @@ ValidationResult UccValidationRule::_on_validate(const AbstractDependencyCandida
     using ColumnDataType = typename decltype(data_type_t)::type;
 
     // Utilize efficient check for uniqueness inside each dictionary segment for a potential early out.
-    const auto& column_statistics = ValidationUtils<ColumnDataType>::collect_column_statistics(table, column_id);
+    const auto& column_statistics = ValidationUtils<ColumnDataType>::collect_column_statistics(table, column_id, true);
     if (column_statistics.all_segments_dictionary) {
       if (!column_statistics.all_segments_unique) {
         status = ValidationStatus::Invalid;
@@ -56,7 +56,7 @@ bool UccValidationRule::_uniqueness_holds_across_segments(const std::shared_ptr<
                                                           const ColumnID column_id) {
   const auto chunk_count = table->chunk_count();
   // `distinct_values` collects the segment values from all chunks.
-  auto distinct_values = std::unordered_set<ColumnDataType>{};
+  auto distinct_values = std::unordered_set<ColumnDataType>(table->row_count());
 
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto source_chunk = table->get_chunk(chunk_id);
