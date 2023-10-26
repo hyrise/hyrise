@@ -125,6 +125,10 @@ class RowIDPosList final : public AbstractPosList, private pmr_vector<RowID> {
   using Vector::resize;
   using Vector::swap;
 
+  const RowID* data() const final {
+    return Vector::data();
+  }
+
   size_t memory_usage(const MemoryUsageCalculationMode /*mode*/) const final;
 
  private:

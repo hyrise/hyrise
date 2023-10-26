@@ -3,6 +3,7 @@
 #include <utility>
 #include <vector>
 
+#include "storage/buffer/pin_guard.hpp"
 #include "storage/pos_lists/abstract_pos_list.hpp"
 #include "storage/segment_iterables.hpp"
 #include "storage/value_segment.hpp"
@@ -19,7 +20,9 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
   template <typename Functor>
   void _on_with_iterators(const Functor& functor) const {
     _segment.access_counter[SegmentAccessCounter::AccessType::Sequential] += _segment.size();
+    const auto values_pin_guard = SharedPinGuard{_segment.values()};
     if (_segment.is_nullable()) {
+      const auto null_values_pin_guard = SharedPinGuard{_segment.values()};
       auto begin = Iterator{_segment.values().cbegin(), _segment.values().cbegin(), _segment.null_values().cbegin()};
       auto end = Iterator{_segment.values().cbegin(), _segment.values().cend(), _segment.null_values().cend()};
       functor(begin, end);
@@ -35,8 +38,11 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
     _segment.access_counter[SegmentAccessCounter::access_type(*position_filter)] += position_filter->size();
 
     using PosListIteratorType = std::decay_t<decltype(position_filter->cbegin())>;
+    const auto values_pin_guard = SharedPinGuard{_segment.values()};
+    // TODO: const auto pos_list_pin_guard = SharedPinGuard{*position_filter};
 
     if (_segment.is_nullable()) {
+      const auto null_values_pin_guard = SharedPinGuard{_segment.null_values()};
       auto begin = PointAccessIterator<PosListIteratorType>{_segment.values().cbegin(), _segment.null_values().cbegin(),
                                                             position_filter->cbegin(), position_filter->cbegin()};
       auto end = PointAccessIterator<PosListIteratorType>{_segment.values().cbegin(), _segment.null_values().cbegin(),

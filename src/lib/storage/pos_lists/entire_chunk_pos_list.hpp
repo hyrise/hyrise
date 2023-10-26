@@ -33,6 +33,10 @@ class EntireChunkPosList : public AbstractPosList {
   PosListIterator<EntireChunkPosList, RowID> cbegin() const;
   PosListIterator<EntireChunkPosList, RowID> cend() const;
 
+  const RowID* data() const final {
+    return nullptr;
+  }
+
  private:
   const ChunkID _common_chunk_id;
 

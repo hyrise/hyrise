@@ -76,6 +76,8 @@ class AbstractPosList : private Noncopyable {
   virtual bool empty() const = 0;
   virtual size_t size() const = 0;
 
+  virtual const RowID* data() const = 0;
+
   virtual size_t memory_usage(const MemoryUsageCalculationMode) const = 0;
 
   friend bool operator==(const AbstractPosList& lhs, const AbstractPosList& rhs);
