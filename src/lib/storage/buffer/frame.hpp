@@ -163,12 +163,12 @@ class Frame final : private Noncopyable {
   static constexpr uint64_t _state_shift = std::countr_zero(_state_mask);
 
   // Update the state and keep the same version. The new state is encoded in the lower 16 bits without the version.
-  StateVersionType _update_state_with_same_version(const StateVersionType old_version_and_state,
-                                                   const StateVersionType new_state);
+  static StateVersionType _update_state_with_same_version(const StateVersionType old_version_and_state,
+                                                          const StateVersionType new_state);
 
   // Update the state and incremente the version. The new state is encoded in the lower 16 bits without the version.
-  StateVersionType _update_state_with_increment_version(const StateVersionType old_version_and_state,
-                                                        const StateVersionType new_state);
+  static StateVersionType _update_state_with_increment_version(const StateVersionType old_version_and_state,
+                                                               const StateVersionType new_state);
 
   std::atomic<StateVersionType> _state_and_version;
 };
