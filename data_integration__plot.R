@@ -1,6 +1,7 @@
 library(dplyr)
 library(ggplot2)
 library(ggthemes)
+library(stringr)
 
 if (Sys.getenv("RSTUDIO") == "1") {
   setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
@@ -19,23 +20,24 @@ results$SCALE_FACTOR <- as.factor(results$SCALE_FACTOR)
 levels(results$COLUMN_CONFIGURATION) <- list("DBgen Modification:\ngenerate only accessed columns" = "Q3_COLUMNS", "Post-DBgen Filtering:\ngenerate only accessed columns" = "DB_Q3_COLUMNS", "Default:\ngenerate and load all columns" = "NONE")
 levels(results$RUN_CONFIG) <- c("", "Single-\nThreaded")
 levels(results$STEP) <- c("#3 Statistic Generation", "#2 Data Encoding", "#1 Generating Table Data", "#4 Query")
-levels(results$SCALE_FACTOR) <- list("SF 1" = 1, "SF 5" = 5,"SF 10" = 10, "SF 50" = 50)
-# levels(results$SCALE_FACTOR) <- c("SF 10", "SF 30", "SF 60", "SF 100", "SF 200")
 
-results_agg <- results %>% group_by(COLUMN_CONFIGURATION, SCALE_FACTOR, RUN_CONFIG, STEP) %>%
+results_agg <- results %>% filter(STEP != "#4 Query") %>%
+                           group_by(COLUMN_CONFIGURATION, SCALE_FACTOR, RUN_CONFIG, STEP) %>%
                            summarize(RUNTIME_S_MEAN = mean(RUNTIME_S), .groups="keep")
 
-results_fake <- results %>% group_by(COLUMN_CONFIGURATION, SCALE_FACTOR, RUN_CONFIG, STEP) %>%
+results_fake <- results %>% filter(STEP != "#4 Query") %>%
+                            group_by(COLUMN_CONFIGURATION, SCALE_FACTOR, RUN_CONFIG, STEP) %>%
                             summarize(INTERMEDIATE = mean(RUNTIME_S), .groups="keep") %>%
                             group_by(COLUMN_CONFIGURATION, SCALE_FACTOR, RUN_CONFIG) %>%
                             summarize(STEP_SUM = sum(INTERMEDIATE) * 1.2, .groups="keep")
 
 query_runtimes_debug <- results %>% filter(STEP == "#4 Query") %>%
+                                    mutate(RUNTIME_S = RUNTIME_S / 10) %>%  # we run queries 10 times (11 with warmup)
                                     group_by(SCALE_FACTOR, RUN_CONFIG) %>%
                                     summarize(MIN_RUNTIME = min(RUNTIME_S),
                                               MAX_RUNTIME = max(RUNTIME_S),
                                               MEAN_RUNTIME = mean(RUNTIME_S), .groups="keep") %>%
-                                    mutate(SCALE_FACTOR_RUNTIME_LABEL = paste0(SCALE_FACTOR, " (", round(MEAN_RUNTIME, 2), " s)"))
+                                    mutate(SCALE_FACTOR_RUNTIME_LABEL = paste0("SF ", SCALE_FACTOR, " (", round(MEAN_RUNTIME, 2), " s)"))
 
 query_runtimes <- query_runtimes_debug %>% filter(RUN_CONFIG == "")
 
@@ -51,7 +53,7 @@ ggplot(results %>% filter(RUN_CONFIG == ""),
   scale_colour_tableau(palette="Superfishel Stone") +
   scale_fill_tableau(palette="Superfishel Stone", name="Step:", guide = guide_legend(reverse=TRUE)) +
   theme.paper_plot +
-  facet_wrap(SCALE_FACTOR ~ COLUMN_CONFIGURATION, scales = "free") +
+  facet_wrap(SCALE_FACTOR ~ COLUMN_CONFIGURATION, ncol=3, scales = "free") +
   # stat_summary(fun = sum, aes(y = RUNTIME_S_MEAN, label = paste(round(after_stat(y), 2), "s"),
   #                             group = RUN_CONFIG), geom = "text", vjust = -0.5, family="Times", size=3) +
   # stat_summary(fun.data = mean_se, aes(y = RUNTIME_US, group = RUN_CONFIG), geom = "errorbar", position = "dodge") +
@@ -60,6 +62,8 @@ ggplot(results %>% filter(RUN_CONFIG == ""),
   theme(legend.position="top") +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
 
+results_agg <- results_agg %>% mutate(SCALE_FACTOR_RUNTIME_LABEL = factor(SCALE_FACTOR_RUNTIME_LABEL, stringr::str_sort(unique(SCALE_FACTOR_RUNTIME_LABEL), numeric = TRUE)))
+results_fake <- results_fake %>% mutate(SCALE_FACTOR_RUNTIME_LABEL = factor(SCALE_FACTOR_RUNTIME_LABEL, stringr::str_sort(unique(SCALE_FACTOR_RUNTIME_LABEL), numeric = TRUE)))
 
 plot <- function(df, df_fake, name) {
   g <- ggplot(df, # %>% filter(SCALE_FACTOR != "SF 1"),
