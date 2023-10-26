@@ -64,7 +64,7 @@ struct PageID {
     return magic_enum::enum_value<PageSizeType>(_size_type);
   }
 
-  // Get the number of bytes for the page
+  // Get the number of bytes for the page.
   uint64_t byte_count() const {
     return bytes_for_size_type(size_type());
   }
