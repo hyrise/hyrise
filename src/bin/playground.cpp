@@ -53,8 +53,13 @@ int main(int argc, char** argv) {
     result_file << "COLUMN_CONFIGURATION,SCALE_FACTOR,RUN_ID,RUN_CONFIG,TABLE_NAMES,STEP,RUNTIME_US" << std::endl;
   }
 
+  /*
   const auto run_configs = std::vector<std::pair<std::string, std::shared_ptr<AbstractScheduler>>>{
     {std::string{"SINGLE-THREADED"}, std::make_shared<ImmediateExecutionScheduler>()},
+    {std::string{"MULTI-THREADED"}, std::make_shared<NodeQueueScheduler>()}
+  };
+  */
+  const auto run_configs = std::vector<std::pair<std::string, std::shared_ptr<AbstractScheduler>>>{
     {std::string{"MULTI-THREADED"}, std::make_shared<NodeQueueScheduler>()}
   };
 
@@ -151,8 +156,11 @@ int main(int argc, char** argv) {
       const auto begin_finalization_and_encoding = std::chrono::steady_clock::now();
       auto encoding_jobs = std::vector<std::shared_ptr<AbstractTask>>{};
       encoding_jobs.reserve(3);
-      for (const auto& table : {customer_table, orders_table, lineitem_table}) {
-        encoding_jobs.emplace_back(std::make_shared<JobTask>([&, table]() {
+      for (const auto& [table_name, table] : std::vector<std::pair<std::string, std::shared_ptr<Table>>>
+                                                        {{std::string{"customer"}, customer_table},
+                                                         {std::string{"orders"}, orders_table},
+                                                         {std::string{"lineitem"}, lineitem_table}}) {
+        encoding_jobs.emplace_back(std::make_shared<JobTask>([&, table_name=table_name, table=table]() {
           const auto chunk_count = table->chunk_count();
           for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
             const auto& chunk = table->get_chunk(chunk_id);
@@ -162,7 +170,7 @@ int main(int argc, char** argv) {
           }
 
           const auto benchmark_config = BenchmarkConfig::get_default_config();
-          BenchmarkTableEncoder::encode("no_mapping", table, benchmark_config.encoding_config);
+          BenchmarkTableEncoder::encode(table_name, table, benchmark_config.encoding_config);
         }));
       }
       Hyrise::get().scheduler()->schedule_and_wait_for_tasks(encoding_jobs);
@@ -173,7 +181,6 @@ int main(int argc, char** argv) {
       //
       //      STATISTICS
       //
-
       auto& storage_manager = Hyrise::get().storage_manager;
       for (const auto& table_name : {std::string{"customer"}, std::string{"orders"}, std::string{"lineitem"}}) {
         if (storage_manager.has_table(table_name)) {
@@ -202,15 +209,15 @@ int main(int argc, char** argv) {
       const auto end_query = std::chrono::steady_clock::now();
 
       if (run_id == 0) {  // Run 0 has the "expected" seed.
+        /*
         for (const auto& [table_name, table] : std::vector<std::pair<std::string, std::shared_ptr<Table>>>
                                                           {{std::string{"customer"}, customer_table},
                                                            {std::string{"orders"}, orders_table},
                                                            {std::string{"lineitem"}, lineitem_table}}) {
           std::cout << "table_name: " << table_name << " >> " << storage_manager.get_table(table_name)->row_count() << std::endl;
         }
+        */
         Assert(q3_pipeline_status == SQLPipelineStatus::Success, "Q3 failed.");
-        std::cout << q3_result->row_count() << std::endl;
-        //Print::print(q3_result);
         Assert(scale_factor < 10.0 || q3_result->row_count() == 10, "Unexpected result size.");
       }
 
