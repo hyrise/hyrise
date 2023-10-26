@@ -78,6 +78,10 @@ void DependencyDiscoveryPlugin::_discover_dependencies() const {
   auto message = std::stringstream{};
   message << "Executed dependency discovery in " << discovery_timer.lap_formatted();
   Hyrise::get().log_manager.add_message("DependencyDiscoveryPlugin", message.str(), LogLevel::Info);
+  Hyrise::get().default_pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
+  Hyrise::get().default_lqp_cache = std::make_shared<SQLLogicalPlanCache>();
+  Hyrise::get().log_manager.add_message(
+      "DependencyDiscoveryPlugin", "Cleared LQP and PQP caches in " + discovery_timer.lap_formatted(), LogLevel::Info);
 }
 
 DependencyCandidates DependencyDiscoveryPlugin::_identify_dependency_candidates() const {
@@ -160,13 +164,6 @@ void DependencyDiscoveryPlugin::_validate_dependency_candidates(
                                         "Validated " + std::to_string(dependency_candidates.size()) +
                                             " candidates in " + validation_timer.lap_formatted(),
                                         LogLevel::Info);
-
-  // Hyrise::get().default_lqp_cache->clear();
-  // Hyrise::get().default_pqp_cache->clear();
-  Hyrise::get().default_pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
-  Hyrise::get().default_lqp_cache = std::make_shared<SQLLogicalPlanCache>();
-  Hyrise::get().log_manager.add_message(
-      "DependencyDiscoveryPlugin", "Cleared LQP and PQP caches in " + validation_timer.lap_formatted(), LogLevel::Info);
 }
 
 void DependencyDiscoveryPlugin::_add_candidate_rule(std::unique_ptr<AbstractDependencyCandidateRule> rule) {
