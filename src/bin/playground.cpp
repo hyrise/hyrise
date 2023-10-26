@@ -202,24 +202,21 @@ int main(int argc, char** argv) {
       Hyrise::get().scheduler()->schedule_and_wait_for_tasks(sm_adding_jobs);
       const auto end_table_adding = std::chrono::steady_clock::now();
 
-      const auto begin_query = std::chrono::steady_clock::now();
-      auto q3_pipeline = SQLPipelineBuilder{std::string{"SELECT l_orderkey, SUM(l_extendedprice*(1.0-l_discount)) as revenue, o_orderdate, o_shippriority FROM customer, orders, lineitem WHERE c_mktsegment = 'BUILDING' AND c_custkey = o_custkey AND l_orderkey = o_orderkey AND o_orderdate < '1995-03-15' AND l_shipdate > '1995-03-15' GROUP BY l_orderkey, o_orderdate, o_shippriority ORDER BY revenue DESC, o_orderdate LIMIT 10;"}}
-                                   .create_pipeline();
-      const auto [q3_pipeline_status, q3_result] = q3_pipeline.get_result_table();
-      const auto end_query = std::chrono::steady_clock::now();
-
-      if (run_id == 0) {  // Run 0 has the "expected" seed.
-        /*
-        for (const auto& [table_name, table] : std::vector<std::pair<std::string, std::shared_ptr<Table>>>
-                                                          {{std::string{"customer"}, customer_table},
-                                                           {std::string{"orders"}, orders_table},
-                                                           {std::string{"lineitem"}, lineitem_table}}) {
-          std::cout << "table_name: " << table_name << " >> " << storage_manager.get_table(table_name)->row_count() << std::endl;
+      auto begin_query = std::chrono::steady_clock::now();
+      for (auto query_run_id = size_t{0}; query_run_id < 11; ++query_run_id) {
+        if (query_run_id == 1) {
+          // Run 0 is warmup.
+          begin_query = std::chrono::steady_clock::now();
         }
-        */
+
+        auto q3_pipeline = SQLPipelineBuilder{std::string{"SELECT l_orderkey, SUM(l_extendedprice*(1.0-l_discount)) as revenue, o_orderdate, o_shippriority FROM customer, orders, lineitem WHERE c_mktsegment = 'BUILDING' AND c_custkey = o_custkey AND l_orderkey = o_orderkey AND o_orderdate < '1995-03-15' AND l_shipdate > '1995-03-15' GROUP BY l_orderkey, o_orderdate, o_shippriority ORDER BY revenue DESC, o_orderdate LIMIT 10;"}}
+                                             .create_pipeline();
+        const auto [q3_pipeline_status, q3_result] = q3_pipeline.get_result_table();
+
         Assert(q3_pipeline_status == SQLPipelineStatus::Success, "Q3 failed.");
         Assert(scale_factor < 10.0 || q3_result->row_count() == 10, "Unexpected result size.");
       }
+      const auto end_query = std::chrono::steady_clock::now();
 
       Hyrise::get().scheduler()->finish();
 
