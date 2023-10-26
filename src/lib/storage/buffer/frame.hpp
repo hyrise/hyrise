@@ -9,7 +9,7 @@
 namespace hyrise {
 
 /**
- * Frames are the metadata objects for each page. We are using a 64 bit atomic integer to store the (latching) state, NUMA node, dirty flag and the version of the frame.
+ * Frames are the metadata objects for each page. We use a 64-bit atomic integer to store the (latching) state, NUMA node, dirty flag, and the frame version.
  * All operations are atomic. The basic idea and most of the code is based on the SIGMOD'23 paper "Virtual-Memory Assisted Buffer Management" by Leis et al.
  * 
  * The frame's upper 16 bits encode the (latching) state (see below). 1 bit is used for the dirty flag. 7 bits are used for the NUMA node. The lower 40 bits are used for the version. 

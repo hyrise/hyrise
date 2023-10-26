@@ -15,7 +15,7 @@ constexpr uint64_t OS_PAGE_SIZE = 16384;
 constexpr uint64_t OS_PAGE_SIZE = 4096;
 #endif
 
-// Pages sizes are always a multiple of the OS page size and increase by powers of two.
+// Page sizes are always a multiple of the OS page size and increase by powers of two.
 // The smallest page size is 16 KiB on Mac OS and 4 KiB on Linux.
 #ifdef __APPLE__
 enum class PageSizeType { KiB16, KiB32, KiB64, KiB128, KiB256, KiB512, MiB1, MiB2 };
@@ -30,13 +30,13 @@ constexpr inline uint64_t bytes_for_size_type(const PageSizeType size) {
   return OS_PAGE_SIZE << static_cast<uint64_t>(size);
 }
 
-// Get number of PageSizeTypes
+// The number of PageSizeTypes.
 constexpr uint64_t PAGE_SIZE_TYPES_COUNT = magic_enum::enum_count<PageSizeType>();
 
 // Get the minimum PageSizeType. KiB16 on Mac OS and KiB4 on Linux
 constexpr PageSizeType MIN_PAGE_SIZE_TYPE = magic_enum::enum_value<PageSizeType>(0);
 
-// Get the maximum PageSizeType. MiB2 on Mac OS and Linux
+// The maximum PageSizeType. MiB2 on Mac OS and Linux.
 constexpr PageSizeType MAX_PAGE_SIZE_TYPE = magic_enum::enum_value<PageSizeType>(PAGE_SIZE_TYPES_COUNT - 1);
 
 // Get the number of bits required to store a PageSizeType
@@ -81,7 +81,7 @@ struct PageID {
 
   bool operator==(const PageID& other) const {
     return (_valid == other._valid) &&
-           (!_valid || (_valid && _size_type == other._size_type && _index == other._index));
+           (!_valid || (_size_type == other._size_type && _index == other._index));
   }
 
   bool operator!=(const PageID& other) const {
