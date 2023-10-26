@@ -113,7 +113,7 @@ bool Frame::unlock_shared() {
     auto old_state_and_version = _state_and_version.load();
     const auto old_state = state(old_state_and_version);
     DebugAssert(old_state > 0 && old_state <= MAX_LOCKED_SHARED, "Frame must be locked shared to unlock shared.");
-    // Decrement the state by 1 to remove a concurrent reader
+    // Decrement the state by 1 to remove a concurrent reader, the version stays the same for shared unlocks
     const auto new_state = old_state - 1;
     if (_state_and_version.compare_exchange_strong(old_state_and_version,
                                                    _update_state_with_same_version(old_state_and_version, new_state))) {
