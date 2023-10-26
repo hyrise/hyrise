@@ -2,6 +2,7 @@
 
 import argparse
 import subprocess
+import sys
 
 from pathlib import Path
 
@@ -15,11 +16,11 @@ assert Path(args.hyrise_path).exists()
 
 subprocess.run(["ninja", "-C", args.hyrise_path])
 
-scale_factors = [args.scale_factor] if args.scale_factor else [1.0, 5.0, 10.0, 50.0, 100.0, 500.0, 1000.0]
+scale_factors = [args.scale_factor] if args.scale_factor else [1.0, 5.0, 10.0, 50.0, 100.0, 150.0, 200.0, 250.0, 300.0, 350.0, 400.0, 450.0, 500.0]
 
 for scale_factor in scale_factors:
   for config in ["NONE", "DB_Q3_COLUMNS", "Q3_COLUMNS"]:
-    print(f"####\n#### SF {scale_factor} - {config}\n####")
+    sys.stderr.write(f"####\n#### SF {scale_factor} - {config}\n####")
 
     subprocess.run([f"./{args.hyrise_path}/hyrisePlayground", str(scale_factor)], env={"COLUMN_CONFIGURATION": config}) 
 
