@@ -59,22 +59,22 @@ struct PageID {
   constexpr explicit PageID(const PageSizeType size_type, const uint64_t index, bool valid = true)
       : _valid(valid), _size_type(static_cast<PageIDType>(size_type)), _index(index) {}
 
-  // Get the PageSizeType for the page
+  // Get the PageSizeType for the page.
   PageSizeType size_type() const {
     return magic_enum::enum_value<PageSizeType>(_size_type);
   }
 
-  // Get the number of bytes for the page
+  // Get the number of bytes for the page.
   uint64_t byte_count() const {
     return bytes_for_size_type(size_type());
   }
 
-  // Get the index of the page of a size type
+  // Get the index of the page of a size type.
   uint64_t index() const {
     return _index;
   }
 
-  // Returns if the PageID is valid or not in the buffer pool
+  // Returns if the PageID is valid or not in the buffer pool.
   bool valid() const {
     return _valid;
   }

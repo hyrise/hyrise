@@ -54,22 +54,22 @@ class Frame final : private Noncopyable {
   // Type of state and version
   using StateVersionType = uint64_t;
 
-  // UNLOCKED has a value of 0
+  // Signifes no reader or writer
   static constexpr StateVersionType UNLOCKED = 0;
 
-  // SINGLE_LOCKED_SHARED signifies that the frame has a single reader. It has a value of 1. Used for convenience.
+  // Signifies that the frame has a single reader. It has a value of 1. Used for convenience.
   static constexpr StateVersionType SINGLE_LOCKED_SHARED = 1;
 
-  // LOCKED_SHARED signifies that the frame has the maxium amount of shared readers. It has a value of 65532.
+  // Maxium amount of shared readers. It has a value of 65532.
   static constexpr StateVersionType MAX_LOCKED_SHARED = 0xFFFF - 3;
 
-  // LOCKED signifies that the frame is locked exclusively. It has a value of 65533.
+  // Signifies that the frame is locked exclusively. It has a value of 65533.
   static constexpr StateVersionType LOCKED = 0xFFFF - 2;
 
-  // MARKED signifies that the frame is marked for eviction. It has a value of 65534.
+  // Signifies that the frame is marked for eviction. It has a value of 65534.
   static constexpr StateVersionType MARKED = 0xFFFF - 1;
 
-  // EVICTED has a value of 65535 and is the initial state of the frame.
+  // Signies and evicted page with a value of 65535 and is the initial state of the frame.
   static constexpr StateVersionType EVICTED = 0xFFFF;
 
   // Constructs the frame in state EVICTED and version 0.
@@ -167,8 +167,8 @@ class Frame final : private Noncopyable {
                                                           const StateVersionType new_state);
 
   // Update the state and incremente the version. The new state is encoded in the lower 16 bits without the version.
-  static StateVersionType _update_state_with_increment_version(const StateVersionType old_version_and_state,
-                                                               const StateVersionType new_state);
+  static StateVersionType _update_state_with_incremented_version(const StateVersionType old_version_and_state,
+                                                                 const StateVersionType new_state);
 
   std::atomic<StateVersionType> _state_and_version;
 };

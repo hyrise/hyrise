@@ -5,24 +5,24 @@
 namespace hyrise {
 
 Frame::Frame() {
-  // The frame should have an initial state of EVICTED and version 0
+  // The frame should have an initial state of EVICTED and version 0.
   _state_and_version.store(_update_state_with_same_version(0, EVICTED), std::memory_order_release);
 }
 
 void Frame::set_node_id(const NodeID node_id) {
-  DebugAssert(node_id <= (_node_id_mask >> _node_id_shift), "NUMA node must be smaller than 16.");
+  DebugAssert(node_id <= (_node_id_mask >> _node_id_shift), "NUMA node must be smaller than 128.");
   DebugAssert(node_id != INVALID_NODE_ID, "Cannot set empty NUMA node");
   DebugAssert(state(_state_and_version.load()) == LOCKED, "Frame must be locked to set NUMA node.");
   auto old_state_and_version = _state_and_version.load();
 
-  // Execute a compare-and-swap loop to set the NUMA node
+  // Execute a compare-and-swap loop to set the NUMA node.
   while (true) {
     auto new_state_and_version =
         old_state_and_version ^
         ((old_state_and_version ^ static_cast<Frame::StateVersionType>(node_id) << _node_id_shift) & _node_id_mask);
     if (_state_and_version.compare_exchange_strong(old_state_and_version, new_state_and_version)) {
       DebugAssert((old_state_and_version & ~_node_id_mask) == (new_state_and_version & ~_node_id_mask),
-                  "Settings the NUMA node failed");
+                  "Settings the NUMA node failed.");
       break;
     }
   }
@@ -42,7 +42,7 @@ void Frame::reset_dirty() {
 
 void Frame::unlock_exclusive_and_set_evicted() {
   DebugAssert(state(_state_and_version.load()) == LOCKED, "Frame must be marked to set evicted flag.");
-  _state_and_version.store(_update_state_with_increment_version(_state_and_version.load(), EVICTED),
+  _state_and_version.store(_update_state_with_incremented_version(_state_and_version.load(), EVICTED),
                            std::memory_order_release);
 }
 
@@ -83,7 +83,7 @@ bool Frame::try_lock_shared(const Frame::StateVersionType old_state_and_version)
   auto old_state = state(old_state_and_version);
   auto state_and_version = old_state_and_version;
 
-  // Multiple threads can try to lock shared concurrently until the state reaches MAX_LOCKED_SHARED
+  // Multiple threads can try to lock shared concurrently until the state reaches MAX_LOCKED_SHARED.
   if (old_state < MAX_LOCKED_SHARED) {
     // Increment the state by 1 to add a new concurrent reader
     return _state_and_version.compare_exchange_strong(
@@ -113,11 +113,11 @@ bool Frame::unlock_shared() {
     auto old_state_and_version = _state_and_version.load();
     const auto old_state = state(old_state_and_version);
     DebugAssert(old_state > 0 && old_state <= MAX_LOCKED_SHARED, "Frame must be locked shared to unlock shared.");
-    // Decrement the state by 1 to remove a concurrent reader, the version stays the same for shared unlocks
+    // Decrement the state by 1 to remove a concurrent reader, the version stays the same for shared unlocks.
     const auto new_state = old_state - 1;
     if (_state_and_version.compare_exchange_strong(old_state_and_version,
                                                    _update_state_with_same_version(old_state_and_version, new_state))) {
-      // Return true if last shared latch has been released
+      // Return true if last shared latch has been released.
       return new_state == Frame::UNLOCKED;
     }
   }
@@ -126,7 +126,7 @@ bool Frame::unlock_shared() {
 void Frame::unlock_exclusive() {
   DebugAssert(state(_state_and_version.load()) == LOCKED,
               "Frame must be locked to unlock exclusive. " + std::to_string(state(_state_and_version.load())));
-  _state_and_version.store(_update_state_with_increment_version(_state_and_version.load(), UNLOCKED),
+  _state_and_version.store(_update_state_with_incremented_version(_state_and_version.load(), UNLOCKED),
                            std::memory_order_release);
 }
 
@@ -136,8 +136,8 @@ Frame::StateVersionType Frame::_update_state_with_same_version(const Frame::Stat
   return ((old_version_and_state << SHIFT) >> SHIFT) | (new_state << _state_shift);
 }
 
-Frame::StateVersionType Frame::_update_state_with_increment_version(const Frame::StateVersionType old_version_and_state,
-                                                                    const Frame::StateVersionType new_state) {
+Frame::StateVersionType Frame::_update_state_with_incremented_version(
+    const Frame::StateVersionType old_version_and_state, const Frame::StateVersionType new_state) {
   constexpr auto SHIFT = _bit_width - _state_shift;
   return (((old_version_and_state << SHIFT) >> SHIFT) + 1) | (new_state << _state_shift);
 }
