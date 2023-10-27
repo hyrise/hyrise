@@ -33,7 +33,7 @@ constexpr inline uint64_t bytes_for_size_type(const PageSizeType size) {
 // The number of PageSizeTypes.
 constexpr uint64_t PAGE_SIZE_TYPES_COUNT = magic_enum::enum_count<PageSizeType>();
 
-// Get the minimum PageSizeType. KiB16 on Mac OS and KiB4 on Linux
+// The minimum PageSizeType. KiB16 on Mac OS and KiB4 on Linux
 constexpr PageSizeType MIN_PAGE_SIZE_TYPE = magic_enum::enum_value<PageSizeType>(0);
 
 // The maximum PageSizeType. MiB2 on Mac OS and Linux.
