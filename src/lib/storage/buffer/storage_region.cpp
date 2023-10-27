@@ -1,4 +1,4 @@
-#include "persistence_manager.hpp"
+#include "storage_region.hpp"
 #ifdef __linux__
 #include <linux/fs.h>
 #include <sys/ioctl.h>
@@ -14,26 +14,26 @@ inline void DebugAssertPageAlignment(const std::byte* data) {
                   std::to_string(reinterpret_cast<std::uintptr_t>(data) % 512));
 }
 
-static PersistenceManager::Mode find_mode_or_fail(const std::filesystem::path& file_name) {
+static StorageRegion::Mode find_mode_or_fail(const std::filesystem::path& file_name) {
   if (std::filesystem::is_directory(file_name)) {
-    return PersistenceManager::Mode::FILE_PER_SIZE_TYPE;
+    return StorageRegion::Mode::FILE_PER_SIZE_TYPE;
   } else if (std::filesystem::is_block_file(file_name)) {
-    return PersistenceManager::Mode::BLOCK;
+    return StorageRegion::Mode::BLOCK;
   } else {
     Fail("The backing file has to be either a directory or a block device: " + file_name.string());
   }
 }
 
-PersistenceManager::PersistenceManager(const std::filesystem::path& path)
+StorageRegion::StorageRegion(const std::filesystem::path& path)
     : _mode(find_mode_or_fail(path)),
       _file_handles(_mode == Mode::FILE_PER_SIZE_TYPE ? _open_file_handles_in_directory(path)
                                                       : _open_file_handles_block(path))
 
 {}
 
-PersistenceManager::~PersistenceManager() {
+StorageRegion::~StorageRegion() {
   for (const auto& file_handle : _file_handles) {
-    // We do not handle errors of the close syscall, since we are already in the destructor
+    // We do not handle errors of the close syscall, since we are already in the destructor.
     close(file_handle.fd);
     if (_mode == Mode::FILE_PER_SIZE_TYPE) {
       std::filesystem::remove(file_handle.backing_file_name);
@@ -41,14 +41,18 @@ PersistenceManager::~PersistenceManager() {
   }
 }
 
-PersistenceManager::Mode PersistenceManager::mode() const {
+StorageRegion::Mode StorageRegion::mode() const {
   return _mode;
 }
 
-int PersistenceManager::_open_file_descriptor(const std::filesystem::path& file_name) {
+int StorageRegion::_open_file_descriptor(const std::filesystem::path& file_name) {
   // Partially taken from
   // DuckDB: https://github.com/duckdb/duckdb/blob/60ed227816669be497fa4ba53e593d3899479c43/src/common/local_file_system.cpp
   // LevelDB: https://github.com/google/leveldb/commit/296de8d5b8e4e57bd1e46c981114dfbe58a8c4fa
+
+  // On Linux, we use O_DIRECT to bypass the page cache. This is not supported on Mac, but we use the fcntl(F_NOCACHE) call below.
+  // Other nan that, files are opened in read-write mode and created if they do not exist. O_DSYNC ensures that all file data and metadata is
+  // written to the disk before the syscall returns. This eliminates the need for explict fsync calls after each write.
 #ifdef __APPLE__
   const int flags = O_RDWR | O_CREAT | O_DSYNC;
 #elif __linux__
@@ -62,7 +66,7 @@ int PersistenceManager::_open_file_descriptor(const std::filesystem::path& file_
          ". Did you open a file on tmpfs or a network mount?");
   }
 
-// Set F_NOCACHE on OS X, which is equivalent to O_DIRECT on Linux
+// In comparison to O_DIRECT on Linux, we need to use fcntl(F_NOCACHE) for direct IO. See comment above.
 #ifdef __APPLE__
   if (fcntl(fd, F_NOCACHE, 1) == -1) {
     const auto error = errno;
@@ -74,63 +78,65 @@ int PersistenceManager::_open_file_descriptor(const std::filesystem::path& file_
   return fd;
 }
 
-void PersistenceManager::write_page(PageID page_id, std::byte* data) {
+void StorageRegion::write_page(PageID page_id, std::byte* data) {
   Assert(page_id.valid(), "PageID must be valid");
   const auto handle = _file_handles[page_id._size_type];
-  const auto num_bytes = page_id.num_bytes();
-  const auto pos = handle.offset + num_bytes * page_id.index;
+  const auto byte_count = page_id.num_bytes();
+  const auto offset = handle.offset + byte_count * page_id.index;
   DebugAssertPageAlignment(data);
-  if (pwrite(handle.fd, data, num_bytes, pos) < 0) {
+  if (pwrite(handle.fd, data, byte_count, offset) < 0) {
     const auto error = errno;
-    Fail("Error while writing to PersistenceManager: " + strerror(error));
+    Fail("Error while writing to StorageRegion: " + strerror(error));
   }
-  _total_bytes_written.fetch_add(num_bytes, std::memory_order_relaxed);
+  _total_bytes_written.fetch_add(byte_count, std::memory_order_relaxed);
 }
 
-void PersistenceManager::read_page(PageID page_id, std::byte* data) {
+void StorageRegion::read_page(PageID page_id, std::byte* data) {
   Assert(page_id.valid(), "PageID must be valid");
   const auto handle = _file_handles[page_id._size_type];
-  const auto num_bytes = page_id.num_bytes();
-  const auto pos = handle.offset + num_bytes * page_id.index;
+  const auto byte_count = page_id.num_bytes();
+  const auto offset = handle.offset + byte_count * page_id.index;
   DebugAssertPageAlignment(data);
-  if (pread(handle.fd, data, num_bytes, pos) < 0) {
+  if (pread(handle.fd, data, byte_count, offset) < 0) {
     const auto error = errno;
-    Fail("Error while reading from PersistenceManager: " + strerror(error));
+    Fail("Error while reading from StorageRegion: " + strerror(error));
   }
-  _total_bytes_read.fetch_add(num_bytes, std::memory_order_relaxed);
+  _total_bytes_read.fetch_add(byte_count, std::memory_order_relaxed);
 }
 
-size_t PersistenceManager::memory_consumption() const {
+size_t StorageRegion::memory_consumption() const {
   return sizeof(*this);
 }
 
-std::array<PersistenceManager::FileHandle, NUM_PAGE_SIZE_TYPES> PersistenceManager::_open_file_handles_in_directory(
+std::array<StorageRegion::FileHandle, NUM_PAGE_SIZE_TYPES> StorageRegion::_open_file_handles_in_directory(
     const std::filesystem::path& path) {
-  DebugAssert(std::filesystem::is_directory(path), "PersistenceManager path must be a directory");
-  auto array = std::array<PersistenceManager::FileHandle, NUM_PAGE_SIZE_TYPES>{};
+  DebugAssert(std::filesystem::is_directory(path), "StorageRegion path must be a directory");
+  auto array = std::array<StorageRegion::FileHandle, NUM_PAGE_SIZE_TYPES>{};
 
   const auto now = std::chrono::system_clock::now();
   const auto timestamp = std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch()).count();
 
-  for (auto i = size_t{0}; i < NUM_PAGE_SIZE_TYPES; ++i) {
-    const auto file_name =
-        path / ("hyrise-buffer-pool-" + std::to_string(timestamp) + "-type-" + std::to_string(i) + ".bin");
-    array[i] = {_open_file_descriptor(file_name), file_name};
+  for (auto page_size_type_index = size_t{0}; page_size_type_index < NUM_PAGE_SIZE_TYPES; ++page_size_type_index) {
+    const auto file_name = path / ("hyrise-buffer-pool-" + std::to_string(timestamp) + "-type-" +
+                                   std::to_string(page_size_type_index) + ".bin");
+    array[page_size_type_index] = {_open_file_descriptor(file_name), file_name};
+    // We initialize the file with 32 MiB.
     std::filesystem::resize_file(file_name, 1UL << 25);
   }
 
   return array;
 }
 
-std::array<PersistenceManager::FileHandle, NUM_PAGE_SIZE_TYPES> PersistenceManager::_open_file_handles_block(
+std::array<StorageRegion::FileHandle, NUM_PAGE_SIZE_TYPES> StorageRegion::_open_file_handles_block(
     const std::filesystem::path& path) {
-  DebugAssert(std::filesystem::is_block_file(path), "PersistenceManager path must be a directory");
-  auto array = std::array<PersistenceManager::FileHandle, NUM_PAGE_SIZE_TYPES>{};
+  DebugAssert(std::filesystem::is_block_file(path), "StorageRegion path must be a directory");
+  auto array = std::array<StorageRegion::FileHandle, NUM_PAGE_SIZE_TYPES>{};
 
   const auto fd = _open_file_descriptor(path);
 
+  // ioctl with the BLKGETSIZE64 allows us to get the size of the block device on Linux
+  // It is not supported on Mac
   auto block_size = uint64_t{0};
-
 #ifdef __APPLE__
   Fail("Block device not supported on Mac");
 #elif __linux__
@@ -150,25 +156,25 @@ std::array<PersistenceManager::FileHandle, NUM_PAGE_SIZE_TYPES> PersistenceManag
   return array;
 }
 
-void swap(PersistenceManager& first, PersistenceManager& second) noexcept {
+void swap(StorageRegion& first, StorageRegion& second) noexcept {
   std::swap(first._file_handles, second._file_handles);
   std::swap(first._mode, second._mode);
 
   // The exchange is not atomic
-  const auto copied_to_ssd_tmp = first._total_bytes_written.load();
+  const auto total_bytes_written_tmp = first._total_bytes_written.load();
   first._total_bytes_written = second._total_bytes_written.load();
-  second._total_bytes_written = copied_to_ssd_tmp;
+  second._total_bytes_written = total_bytes_written_tmp;
 
-  const auto copied_from_ssd_tmp = first._total_bytes_read.load();
+  const auto total_bytes_read_tmp = first._total_bytes_read.load();
   first._total_bytes_read = second._total_bytes_read.load();
-  second._total_bytes_read = copied_from_ssd_tmp;
+  second._total_bytes_read = total_bytes_read_tmp;
 }
 
-uint64_t PersistenceManager::total_bytes_written() const {
+uint64_t StorageRegion::total_bytes_written() const {
   return _total_bytes_written.load(std::memory_order_relaxed);
 }
 
-uint64_t PersistenceManager::total_bytes_read() const {
+uint64_t StorageRegion::total_bytes_read() const {
   return _total_bytes_read.load(std::memory_order_relaxed);
 }
 }  // namespace hyrise

@@ -4,33 +4,33 @@
 
 #include <filesystem>
 #include <map>
-#include "storage/buffer/persistence_manager.hpp"
+#include "storage/buffer/storage_region.hpp"
 #include "types.hpp"
 #include "utils/list_directory.hpp"
 
 namespace hyrise {
 
-class PersistenceManagerTest : public BaseTest {
+class StorageRegionTest : public BaseTest {
  public:
   struct alignas(512) Page {
-    // Just use the biggest possible size to avoid different allocations sizes
+    // Use the biggest possible size to avoid different allocations sizes
     std::array<std::byte, bytes_for_size_type(MAX_PAGE_SIZE_TYPE)> data;
   };
 
   void SetUp() override {
     std::filesystem::create_directory(db_path);
-    persistence_manager = std::make_unique<PersistenceManager>(db_path);
+    storage_region = std::make_unique<StorageRegion>(db_path);
   }
 
   const std::string db_path = test_data_path + "buffer_manager_data";
-  std::unique_ptr<PersistenceManager> persistence_manager;
+  std::unique_ptr<StorageRegion> storage_region;
 };
 
-TEST_F(PersistenceManagerTest, TestWriteAndReadPagesOnRegularFile) {
+TEST_F(StorageRegionTest, WriteAndReadPagesOnRegularFile) {
   // Check that one file is created per page size type
   const auto files = list_directory(db_path);
   EXPECT_EQ(files.size(), NUM_PAGE_SIZE_TYPES) << "Expected one file per page size type";
-  EXPECT_EQ(persistence_manager->mode(), PersistenceManager::Mode::FILE_PER_SIZE_TYPE);
+  EXPECT_EQ(storage_region->mode(), StorageRegion::Mode::FILE_PER_SIZE_TYPE);
 
   // Write out 3 different pages
   auto write_pages = std::map<PageID, Page>{{PageID{PageSizeType::KiB16, 20}, Page{{std::byte{0x11}}}},
@@ -40,7 +40,7 @@ TEST_F(PersistenceManagerTest, TestWriteAndReadPagesOnRegularFile) {
   for (auto& [page_id, page] : write_pages) {
     // Copy over the first byte to the whole page
     std::memset(page.data.data(), std::to_integer<int>(*page.data.data()), page_id.num_bytes());
-    persistence_manager->write_page(page_id, page.data.data());
+    storage_region->write_page(page_id, page.data.data());
   }
 
   // Create buffers to read into to check if reading works after writing to the same page id
@@ -52,46 +52,46 @@ TEST_F(PersistenceManagerTest, TestWriteAndReadPagesOnRegularFile) {
     EXPECT_NE(std::memcmp(page.data.data(), read_pages[page_id].data.data(), page_id.num_bytes()), 0);
   }
   for (auto& [page_id, page] : read_pages) {
-    persistence_manager->read_page(page_id, page.data.data());
+    storage_region->read_page(page_id, page.data.data());
   }
   for (auto& [page_id, page] : write_pages) {
     EXPECT_EQ(std::memcmp(page.data.data(), read_pages[page_id].data.data(), page_id.num_bytes()), 0);
   }
 
   // Verifiy that the same amount of bytes was written and read
-  EXPECT_EQ(persistence_manager->total_bytes_written(),
+  EXPECT_EQ(storage_region->total_bytes_written(),
             2 * bytes_for_size_type(PageSizeType::KiB16) + bytes_for_size_type(PageSizeType::KiB32));
-  EXPECT_EQ(persistence_manager->total_bytes_read(),
+  EXPECT_EQ(storage_region->total_bytes_read(),
             2 * bytes_for_size_type(PageSizeType::KiB16) + bytes_for_size_type(PageSizeType::KiB32));
 
   // Check the the buffer manager files are deleted after the persistence manager is destroyed
-  persistence_manager = nullptr;
+  storage_region = nullptr;
   const auto files_after_cleanup = list_directory(db_path);
   EXPECT_EQ(files_after_cleanup.size(), 0);
 }
 
-TEST_F(PersistenceManagerTest, TestWriteFailsInvalidPageID) {
+TEST_F(StorageRegionTest, WriteFailsInvalidPageID) {
   auto page = Page{};
-  EXPECT_ANY_THROW(persistence_manager->write_page(INVALID_PAGE_ID, page.data.data()));
-  EXPECT_EQ(persistence_manager->total_bytes_written(), 0);
+  EXPECT_ANY_THROW(storage_region->write_page(INVALID_PAGE_ID, page.data.data()));
+  EXPECT_EQ(storage_region->total_bytes_written(), 0);
 }
 
-TEST_F(PersistenceManagerTest, TestReadFailsInvalidPageID) {
+TEST_F(StorageRegionTest, ReadFailsInvalidPageID) {
   auto page = Page{};
-  EXPECT_ANY_THROW(persistence_manager->read_page(INVALID_PAGE_ID, page.data.data()));
-  EXPECT_EQ(persistence_manager->total_bytes_read(), 0);
+  EXPECT_ANY_THROW(storage_region->read_page(INVALID_PAGE_ID, page.data.data()));
+  EXPECT_EQ(storage_region->total_bytes_read(), 0);
 }
 
-TEST_F(PersistenceManagerTest, TestWriteFailsWithUnalignedData) {
+TEST_F(StorageRegionTest, WriteFailsWithUnalignedData) {
   auto page = Page{};
-  EXPECT_ANY_THROW(persistence_manager->write_page(PageID{PageSizeType::KiB16, 20}, page.data.data() + 5));
-  EXPECT_EQ(persistence_manager->total_bytes_written(), 0);
+  EXPECT_ANY_THROW(storage_region->write_page(PageID{PageSizeType::KiB16, 20}, page.data.data() + 5));
+  EXPECT_EQ(storage_region->total_bytes_written(), 0);
 }
 
-TEST_F(PersistenceManagerTest, TestReadFailsWithUnalignedData) {
+TEST_F(StorageRegionTest, ReadFailsWithUnalignedData) {
   auto page = Page{};
-  EXPECT_ANY_THROW(persistence_manager->read_page(PageID{PageSizeType::KiB16, 0}, page.data.data() + 5));
-  EXPECT_EQ(persistence_manager->total_bytes_read(), 0);
+  EXPECT_ANY_THROW(storage_region->read_page(PageID{PageSizeType::KiB16, 0}, page.data.data() + 5));
+  EXPECT_EQ(storage_region->total_bytes_read(), 0);
 }
 
 }  // namespace hyrise
