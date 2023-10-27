@@ -13,7 +13,7 @@ namespace hyrise {
  * All operations are atomic. The basic idea and most of the code is based on the SIGMOD'23 paper "Virtual-Memory Assisted Buffer Management" by Leis et al.
  * 
  * The frame's upper 16 bits encode the (latching) state (see below). 1 bit is used for the dirty flag. 7 bits are used for the NUMA node. The lower 40 bits are used for the version. 
- * The version is used to detect concurrent changes to the state of the frame. The version is incremented after unlocking the frame.
+ * The version is used to tract concurrent changes to the state of the frame. The version is incremented after exclusively unlocking the frame. It is not incremented when unlocking in shared mode.
  * 
  *  +-----------+-------+-----------+----------------+
  *  | State     | Dirty | NUMA node | Version        |

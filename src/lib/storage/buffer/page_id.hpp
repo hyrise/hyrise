@@ -80,8 +80,7 @@ struct PageID {
   }
 
   bool operator==(const PageID& other) const {
-    return (_valid == other._valid) &&
-           (!_valid || (_size_type == other._size_type && _index == other._index));
+    return (_valid == other._valid) && (!_valid || (_size_type == other._size_type && _index == other._index));
   }
 
   bool operator!=(const PageID& other) const {
@@ -96,7 +95,7 @@ struct PageID {
 
 static_assert(sizeof(PageID) == 8, "PageID must be 64 bit");
 
-inline std::ostream& operator<<(std::ostream& os, const PageID& page_id) {
+std::ostream& operator<<(std::ostream& os, const PageID& page_id) {
   os << "PageID(valid = " << page_id.valid() << ", size_type = " << magic_enum::enum_name(page_id.size_type())
      << ", index = " << page_id.index() << ")";
   return os;
