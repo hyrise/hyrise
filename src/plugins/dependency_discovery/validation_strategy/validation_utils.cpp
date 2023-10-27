@@ -80,6 +80,7 @@ typename ValidationUtils<T>::ColumnStatistics ValidationUtils<T>::collect_column
   column_statistics.contains_only_nulls = true;
   column_statistics.all_segments_unique = true;
   column_statistics.segments_disjoint = true;
+  column_statistics.all_segments_dictionary = true;
 
   const auto chunk_count = table->chunk_count();
   auto previous_it = min_max_ordered.begin();
@@ -95,7 +96,7 @@ typename ValidationUtils<T>::ColumnStatistics ValidationUtils<T>::collect_column
 
     column_statistics.all_segments_unique &= segment_statistics.all_segments_unique;
     if (!column_statistics.all_segments_unique && early_out) {
-      return {};
+      return column_statistics;
     }
 
     if (segment_statistics.contains_only_nulls) {

@@ -128,6 +128,9 @@ void DependencyDiscoveryPlugin::_validate_dependency_candidates(
   std::sort(ordered_candidates.begin(), ordered_candidates.end(),
             [](const auto& lhs, const auto& rhs) { return lhs->type < rhs->type; });
 
+  auto valid_count = uint32_t{0};
+  auto invalid_count = uint32_t{0};
+
   for (const auto& candidate : ordered_candidates) {
     auto message = std::stringstream{};
     DebugAssert(_validation_rules.contains(candidate->type),
@@ -141,14 +144,17 @@ void DependencyDiscoveryPlugin::_validate_dependency_candidates(
     switch (result.status) {
       case ValidationStatus::Invalid:
         message << " [rejected in " << candidate_timer.lap_formatted() << "]";
+        ++invalid_count;
         break;
       case ValidationStatus::AlreadyKnown:
         message << " [skipped (already known) in " << candidate_timer.lap_formatted() << "]";
+        ++valid_count;
         break;
       case ValidationStatus::Valid:
         message << " [confirmed in " << candidate_timer.lap_formatted() << "]";
         Assert(!result.constraints.empty(),
                "Expected validation to yield constraint(s) for " + candidate->description());
+        ++valid_count;
         break;
       case ValidationStatus::Uncertain:
         Fail("Expected explicit validation result for " + candidate->description());
@@ -160,10 +166,12 @@ void DependencyDiscoveryPlugin::_validate_dependency_candidates(
     Hyrise::get().log_manager.add_message("DependencyDiscoveryPlugin", message.str(), LogLevel::Info);
   }
 
-  Hyrise::get().log_manager.add_message("DependencyDiscoveryPlugin",
-                                        "Validated " + std::to_string(dependency_candidates.size()) +
-                                            " candidates in " + validation_timer.lap_formatted(),
-                                        LogLevel::Info);
+  Assert(valid_count + invalid_count == dependency_candidates.size(), "Numbers of candidates do not add up.");
+  auto message = std::stringstream{};
+  message << "Validated " << dependency_candidates.size() << " candidates (" << valid_count << " valid, "
+          << invalid_count << " invalid) in " << validation_timer.lap_formatted();
+
+  Hyrise::get().log_manager.add_message("DependencyDiscoveryPlugin", message.str(), LogLevel::Info);
 }
 
 void DependencyDiscoveryPlugin::_add_candidate_rule(std::unique_ptr<AbstractDependencyCandidateRule> rule) {
