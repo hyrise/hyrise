@@ -94,4 +94,16 @@ TEST_F(StorageRegionTest, ReadFailsWithUnalignedData) {
   EXPECT_EQ(storage_region->total_bytes_read(), 0);
 }
 
+TEST_F(StorageRegionTest, WriteTwiceOverridesPreviousData) {
+  auto write_page = Page{};
+  auto read_page = Page{};
+  std::memset(write_page.data.data(), 0x1, page_id.num_bytes());
+  storage_region->write_page(page_id, write_page.data.data());
+  storage_region->read_page(page_id, read_page.data.data());
+  EXPECT_EQ(std::memcmp(read_page.data.data(), read_pages[page_id].data.data(), page_id.num_bytes()), 0);
+  // TODO
+  std::memset(write_page.data.data(), 0x2, page_id.num_bytes());
+  storage_region->write_page(page_id, write_page.data.data());
+}
+
 }  // namespace hyrise

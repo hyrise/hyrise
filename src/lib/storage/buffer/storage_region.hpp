@@ -23,7 +23,7 @@ namespace hyrise {
 class StorageRegion final : public Noncopyable {
  public:
   // The mode can be either a block device or a directory with one file for each page size type.
-  enum class Mode { BLOCK, FILE_PER_SIZE_TYPE };
+  enum class Mode { BLOCK, FILE_PER_PAGE_SIZE };
 
   // Creates a new StorageRegion. The path can either be a directory or a block device. If the path is a directory, a file is created for each page size type.
   StorageRegion(const std::filesystem::path& path);
@@ -65,8 +65,8 @@ class StorageRegion final : public Noncopyable {
     size_t offset = 0;
   };
 
-  Mode _mode;
-  std::array<FileHandle, NUM_PAGE_SIZE_TYPES> _file_handles;
+  const Mode _mode;
+  const std::array<FileHandle, NUM_PAGE_SIZE_TYPES> _file_handles;
 
   // Internal metrics
   std::atomic_uint64_t _total_bytes_written = 0;

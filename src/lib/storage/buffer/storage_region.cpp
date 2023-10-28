@@ -16,7 +16,7 @@ inline void DebugAssertPageAlignment(const std::byte* data) {
 
 static StorageRegion::Mode find_mode_or_fail(const std::filesystem::path& file_name) {
   if (std::filesystem::is_directory(file_name)) {
-    return StorageRegion::Mode::FILE_PER_SIZE_TYPE;
+    return StorageRegion::Mode::FILE_PER_PAGE_SIZE;
   } else if (std::filesystem::is_block_file(file_name)) {
     return StorageRegion::Mode::BLOCK;
   } else {
@@ -26,7 +26,7 @@ static StorageRegion::Mode find_mode_or_fail(const std::filesystem::path& file_n
 
 StorageRegion::StorageRegion(const std::filesystem::path& path)
     : _mode(find_mode_or_fail(path)),
-      _file_handles(_mode == Mode::FILE_PER_SIZE_TYPE ? _open_file_handles_in_directory(path)
+      _file_handles(_mode == Mode::FILE_PER_PAGE_SIZE ? _open_file_handles_in_directory(path)
                                                       : _open_file_handles_block(path))
 
 {}
@@ -35,7 +35,7 @@ StorageRegion::~StorageRegion() {
   for (const auto& file_handle : _file_handles) {
     // We do not handle errors of the close syscall, since we are already in the destructor.
     close(file_handle.fd);
-    if (_mode == Mode::FILE_PER_SIZE_TYPE) {
+    if (_mode == Mode::FILE_PER_PAGE_SIZE) {
       std::filesystem::remove(file_handle.backing_file_name);
     }
   }
