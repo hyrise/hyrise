@@ -10,6 +10,16 @@
 
 namespace hyrise {
 
+template <>
+struct Pinnable<std::shared_ptr<const AbstractPosList>> {
+  static PageIDContainer get_page_ids(const BufferManager& buffer_manager,
+                                      const std::shared_ptr<const AbstractPosList>& pinnable) {
+    /*   TODO: resolve_pos_list_type(position_filter, [&](auto resolved_position_filter) {
+          }); */
+    return PageIDContainer{};
+  }
+};
+
 template <typename T>
 class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentIterable<T>> {
  public:
@@ -39,10 +49,10 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
 
     using PosListIteratorType = std::decay_t<decltype(position_filter->cbegin())>;
     const auto values_pin_guard = SharedPinGuard{_segment.values()};
-    // TODO: const auto pos_list_pin_guard = SharedPinGuard{*position_filter};
+    const auto pos_list_pin_guard = SharedPinGuard{position_filter};
 
     if (_segment.is_nullable()) {
-      const auto null_values_pin_guard = SharedPinGuard{_segment.null_values()};
+      // TODO: const auto null_values_pin_guard = SharedPinGuard{_segment.null_values()};
       auto begin = PointAccessIterator<PosListIteratorType>{_segment.values().cbegin(), _segment.null_values().cbegin(),
                                                             position_filter->cbegin(), position_filter->cbegin()};
       auto end = PointAccessIterator<PosListIteratorType>{_segment.values().cbegin(), _segment.null_values().cbegin(),

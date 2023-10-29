@@ -19,6 +19,10 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
   template <typename Functor>
   void _on_with_iterators(const Functor& functor) const {
     _segment.access_counter[SegmentAccessCounter::AccessType::Sequential] += _segment.size();
+    auto values_pin_guard = SharedPinGuard{_segment.values()};
+    // TODO: auto null_values_pin_guard = SharedPinGuard{_segment.null_values()};
+    auto end_positions_pin_guard = SharedPinGuard{_segment.end_positions()};
+
     auto begin = Iterator{_segment.values(), _segment.null_values(), _segment.end_positions(),
                           _segment.end_positions()->cbegin(), ChunkOffset{0}};
     auto end = Iterator{_segment.values(), _segment.null_values(), _segment.end_positions(),
@@ -32,6 +36,12 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
     _segment.access_counter[SegmentAccessCounter::access_type(*position_filter)] += position_filter->size();
 
     using PosListIteratorType = decltype(position_filter->cbegin());
+
+     auto values_pin_guard = SharedPinGuard{_segment.values()};
+    // TODO: auto null_values_pin_guard = SharedPinGuard{_segment.null_values()};
+    auto end_positions_pin_guard = SharedPinGuard{_segment.end_positions()};
+    auto pos_list_pin_guard = SharedPinGuard{position_filter};
+
     auto begin =
         PointAccessIterator<PosListIteratorType>{_segment.values(), _segment.null_values(), _segment.end_positions(),
                                                  position_filter->cbegin(), position_filter->cbegin()};

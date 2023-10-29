@@ -6,6 +6,8 @@ namespace hyrise {
 
 class PinGuardTest : public BaseTest {
  public:
+  struct PinnableTestType {};
+
   void SetUp() override {
     std::filesystem::create_directory(db_path);
     buffer_manager = std::make_unique<BufferManager>(1 << 20, db_path);
@@ -19,12 +21,34 @@ class PinGuardTest : public BaseTest {
   std::unique_ptr<BufferManager> buffer_manager;
 };
 
-TEST_F(PinGuardTest, TestExclusivePinGuard) {
-    {
-        auto pin_guard = Excl
-    }
+template <>
+struct Pinnnable<PinnableTestType> {
+  static PageIDContainer get_page_ids(const T& pinnable) {
+    return PageIDContainer{1337};
+  }
+};
+
+// TODO Test Movable
+
+TEST_F(PinGuardTest, ExclusivePinGuard) {
+  {
+    auto test_type = PinnableTestType{};
+    auto pin_guard = ExclusivePinGuard{test_type, *buffer_manager};
+  }
+
+  {
+    // TODO: leak, test mark dirty
+    auto test_type = PolymorphicAllocator<PinnableTestType>{buffer_manager->get_memory_resource()}.allocate(1);
+    auto pin_guard = ExclusivePinGuard{test_type, *buffer_manager};
+  }
+  {
+    // Test movable
+    auto test_type = PinnableTestType{};
+    auto pin_guard = ExclusivePinGuard{test_type, *buffer_manager};
+    auto pin_guard2 = std::move(pin_guard);
+  }
 }
 
-TEST_F(PinGuardTest, TestSharedPinGuard) {}
+TEST_F(PinGuardTest, SharedPinGuard) {}
 
 }  // namespace hyrise

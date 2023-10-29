@@ -65,4 +65,11 @@ class FixedWidthIntegerVector : public CompressedVector<FixedWidthIntegerVector<
   const pmr_vector<UnsignedIntType> _data;
 };
 
+template <typename UnsignedIntType>
+struct Pinnable<FixedWidthIntegerVector<UnsignedIntType>> {
+  static PageIDContainer get_page_ids(const BufferManager& buffer_manager, const FixedWidthIntegerVector<UnsignedIntType>& pinnable) {
+    return Pinnable<pmr_vector<UnsignedIntType>>::get_page_ids(buffer_manager, pinnable.data());
+  }
+};
+
 }  // namespace hyrise

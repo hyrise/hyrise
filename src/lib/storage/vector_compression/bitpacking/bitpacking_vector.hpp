@@ -38,4 +38,11 @@ class BitPackingVector : public CompressedVector<BitPackingVector> {
   const pmr_compact_vector _data;
 };
 
+template <>
+struct Pinnable<BitPackingVector> {
+  static PageIDContainer get_page_ids(const BufferManager& buffer_manager, const BitPackingVector& pinnable) {
+    return Pinnable<pmr_compact_vector>::get_page_ids(buffer_manager, pinnable.data());
+  }
+};
+
 }  // namespace hyrise
