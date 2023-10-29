@@ -51,7 +51,7 @@ constexpr uint64_t PAGE_SIZE_TYPE_BITS =
  * 
  * For the implementation, we use C++ bitfields to compress multiple fields into a single 64-bit values without manual bit shifting. 
  * The valid flag is stored in the most significant bit. The PageSizeType is stored in the next PAGE_SIZE_TYPE_BITS bits. The index 
- * is stored in the remaining bits.
+ * is stored in the remaining bits. The state and address of each page can be accessed via the PageSizeType and the index. 
 */
 struct PageID {
   using PageIDType = uint64_t;
