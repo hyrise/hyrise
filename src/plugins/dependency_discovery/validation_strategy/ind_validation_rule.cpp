@@ -62,8 +62,8 @@ ValidationStatus perform_set_based_inclusion_check(
       }
 
       // Skip probing if primary key continuous.
-      if (domain == including_values.size() - 1 && including_min_max && included_min_max &&
-          including_min_max->first <= included_min_max->first &&
+      Assert(included_min_max, "Could not obtain min/max values.");
+      if (domain == including_values.size() - 1 && including_min_max->first <= included_min_max->first &&
           including_min_max->second >= included_min_max->second) {
         return ValidationStatus::Valid;
       }
@@ -181,6 +181,7 @@ ValidationResult IndValidationRule::_on_validate(const AbstractDependencyCandida
         if (including_statistics.min && including_statistics.max) {
           const auto min = *including_statistics.min;
           const auto max = *including_statistics.max;
+          including_min_max = std::make_pair(min, max);
           if (min > included_min_max->first || max < included_min_max->second) {
             result.status = ValidationStatus::Invalid;
             return;

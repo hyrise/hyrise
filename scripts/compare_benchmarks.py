@@ -372,3 +372,5 @@ else:
     table_string = create_context_overview(old_data, new_data, github_format) + "\n\n" + table_string
 
 print(table_string)
+
+print((total_runtime_new - total_runtime_old) / 1e9)
