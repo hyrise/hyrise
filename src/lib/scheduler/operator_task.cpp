@@ -128,10 +128,10 @@ void OperatorTask::_on_execute() {
         return;
       case TransactionPhase::Committing:
       case TransactionPhase::Committed:
-        Fail("Trying to execute an operator for a transaction that is already committed");
+        Fail("Trying to execute an operator for a transaction that is already committed.");
 
       case TransactionPhase::RolledBackByUser:
-        Fail("Trying to execute an operator for a transaction that has been rolled back by the user");
+        Fail("Trying to execute an operator for a transaction that has been rolled back by the user.");
     }
   }
 

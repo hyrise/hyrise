@@ -57,14 +57,14 @@ void AbstractBenchmarkItemRunner::on_tables_loaded() {}
 
 std::tuple<bool, std::vector<SQLPipelineMetrics>, bool> AbstractBenchmarkItemRunner::execute_item(
     const BenchmarkItemID item_id) {
-  std::optional<std::string> visualize_prefix;
+  auto visualize_prefix = std::optional<std::string>{};
   if (_config->enable_visualization) {
     auto name = item_name(item_id);
     boost::replace_all(name, " ", "_");
     visualize_prefix = std::move(name);
   }
 
-  BenchmarkSQLExecutor sql_executor(_sqlite_wrapper, visualize_prefix);
+  auto sql_executor = BenchmarkSQLExecutor(_sqlite_wrapper, visualize_prefix);
   auto success = _on_execute_item(item_id, sql_executor);
   return {success, std::move(sql_executor.metrics), sql_executor.any_verification_failed};
 }
@@ -74,7 +74,7 @@ void AbstractBenchmarkItemRunner::set_sqlite_wrapper(const std::shared_ptr<SQLit
 }
 
 const std::vector<int>& AbstractBenchmarkItemRunner::weights() const {
-  static const std::vector<int> empty_vector;
+  static const auto empty_vector = std::vector<int>{};
   return empty_vector;
 }
 

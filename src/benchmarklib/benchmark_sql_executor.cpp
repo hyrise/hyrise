@@ -109,7 +109,7 @@ void BenchmarkSQLExecutor::_verify_with_sqlite(SQLPipeline& pipeline) {
 void BenchmarkSQLExecutor::_compare_tables(const std::shared_ptr<const Table>& actual_result_table,
                                            const std::shared_ptr<const Table>& expected_result_table,
                                            const std::optional<const std::string>& description) {
-  Timer timer;
+  auto timer = Timer{};
 
   if (actual_result_table->row_count() > 0) {
     Assert(expected_result_table, "Verifying SQL statement on sqlite failed: No SQLite result");
