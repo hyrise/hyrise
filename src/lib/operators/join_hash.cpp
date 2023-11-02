@@ -10,14 +10,13 @@
 #include <vector>
 
 #include "bytell_hash_map.hpp"
+
 #include "hyrise.hpp"
 #include "join_hash/join_hash_steps.hpp"
 #include "join_hash/join_hash_traits.hpp"
 #include "join_helper/join_output_writing.hpp"
-#include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
 #include "type_comparison.hpp"
-#include "utils/assert.hpp"
 #include "utils/format_duration.hpp"
 #include "utils/timer.hpp"
 
