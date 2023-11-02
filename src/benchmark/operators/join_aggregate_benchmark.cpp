@@ -158,8 +158,8 @@ void BM_Join_Aggregate(benchmark::State& state) {
   auto operator_join_predicate =
       OperatorJoinPredicate(std::make_pair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals);
 
-  auto aggregates = std::vector<std::shared_ptr<AggregateExpression>>{
-      std::static_pointer_cast<AggregateExpression>(avg_(pqp_column_(ColumnID{0}, DataType::Int, false, "b")))};
+  auto aggregates = std::vector<std::shared_ptr<WindowFunctionExpression>>{
+      std::static_pointer_cast<WindowFunctionExpression>(avg_(pqp_column_(ColumnID{0}, DataType::Int, false, "b")))};
 
   std::vector<ColumnID> groupby = {ColumnID{0}, ColumnID{2}};
 

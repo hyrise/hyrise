@@ -22,8 +22,8 @@
 
 #include "abstract_aggregate_operator.hpp"
 #include "abstract_read_only_operator.hpp"
-#include "aggregate/aggregate_traits.hpp"
-#include "expression/aggregate_expression.hpp"
+#include "aggregate/window_function_traits.hpp"
+#include "expression/window_function_expression.hpp"
 #include "resolve_type.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/value_segment.hpp"
@@ -62,9 +62,9 @@ Optionally, the result may also contain:
 - a set of DISTINCT values OR
 - secondary aggregates, which are currently only used by STDDEV_SAMP
 */
-template <typename ColumnDataType, AggregateFunction aggregate_function>
+template <typename ColumnDataType, WindowFunction aggregate_function>
 struct AggregateResult {
-  using AggregateType = typename AggregateTraits<ColumnDataType, aggregate_function>::AggregateType;
+  using AggregateType = typename WindowFunctionTraits<ColumnDataType, aggregate_function>::ReturnType;
 
   using DistinctValues = tsl::robin_set<ColumnDataType, std::hash<ColumnDataType>, std::equal_to<ColumnDataType>,
                                         PolymorphicAllocator<ColumnDataType>>;
@@ -72,9 +72,9 @@ struct AggregateResult {
   // Find the correct accumulator type using nested conditionals.
   using AccumulatorType = std::conditional_t<
       // For StandardDeviationSample, use StandardDeviationSampleData as the accumulator,
-      aggregate_function == AggregateFunction::StandardDeviationSample, StandardDeviationSampleData,
+      aggregate_function == WindowFunction::StandardDeviationSample, StandardDeviationSampleData,
       // for CountDistinct, use DistinctValues, otherwise use AggregateType
-      std::conditional_t<aggregate_function == AggregateFunction::CountDistinct, DistinctValues, AggregateType>>;
+      std::conditional_t<aggregate_function == WindowFunction::CountDistinct, DistinctValues, AggregateType>>;
 
   AccumulatorType accumulator{};
   size_t aggregate_count = 0;
@@ -91,7 +91,7 @@ struct AggregateResult {
 };
 
 // This vector holds the results for every group that was encountered and is indexed by AggregateResultId.
-template <typename ColumnDataType, AggregateFunction aggregate_function>
+template <typename ColumnDataType, WindowFunction aggregate_function>
 using AggregateResults = pmr_vector<AggregateResult<ColumnDataType, aggregate_function>>;
 using AggregateResultId = size_t;
 
@@ -139,7 +139,7 @@ using DistinctAggregateType = int8_t;
 class AggregateHash : public AbstractAggregateOperator {
  public:
   AggregateHash(const std::shared_ptr<AbstractOperator>& input_operator,
-                const std::vector<std::shared_ptr<AggregateExpression>>& aggregates,
+                const std::vector<std::shared_ptr<WindowFunctionExpression>>& aggregates,
                 const std::vector<ColumnID>& groupby_column_ids);
 
   const std::string& name() const override;
@@ -172,16 +172,16 @@ class AggregateHash : public AbstractAggregateOperator {
 
   void _write_groupby_output(RowIDPosList& pos_list);
 
-  template <typename ColumnDataType, AggregateFunction aggregate_function>
+  template <typename ColumnDataType, WindowFunction aggregate_function>
   void _write_aggregate_output(ColumnID aggregate_index);
 
-  template <typename ColumnDataType, AggregateFunction aggregate_function, typename AggregateKey>
+  template <typename ColumnDataType, WindowFunction aggregate_function, typename AggregateKey>
   void _aggregate_segment(ChunkID chunk_id, ColumnID column_index, const AbstractSegment& abstract_segment,
                           KeysPerChunk<AggregateKey>& keys_per_chunk);
 
   template <typename AggregateKey>
   std::shared_ptr<SegmentVisitorContext> _create_aggregate_context(const DataType data_type,
-                                                                   const AggregateFunction aggregate_function) const;
+                                                                   const WindowFunction aggregate_function) const;
 
   std::vector<std::shared_ptr<BaseValueSegment>> _groupby_segments;
   std::vector<std::shared_ptr<SegmentVisitorContext>> _contexts_per_column;

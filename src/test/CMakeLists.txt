@@ -69,6 +69,7 @@ set(
     lib/logical_query_plan/union_node_test.cpp
     lib/logical_query_plan/update_node_test.cpp
     lib/logical_query_plan/validate_node_test.cpp
+    lib/logical_query_plan/window_node_test.cpp
     lib/lossless_cast_test.cpp
     lib/lossy_cast_test.cpp
     lib/memory/segments_using_allocators_test.cpp
