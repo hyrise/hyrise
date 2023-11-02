@@ -68,6 +68,25 @@ const std::vector<ColumnID>& StoredTableNode::pruned_column_ids() const {
   return _pruned_column_ids;
 }
 
+void StoredTableNode::set_prunable_subquery_predicates(
+    const std::vector<std::weak_ptr<AbstractLQPNode>>& predicate_nodes) {
+  DebugAssert(std::all_of(predicate_nodes.cbegin(), predicate_nodes.cend(),
+                          [](const auto& node) { return node.lock() && node.lock()->type == LQPNodeType::Predicate; }),
+              "No PredicateNode set as prunable predicate.");
+  _prunable_subquery_predicates = predicate_nodes;
+}
+
+std::vector<std::shared_ptr<AbstractLQPNode>> StoredTableNode::prunable_subquery_predicates() const {
+  auto subquery_predicates = std::vector<std::shared_ptr<AbstractLQPNode>>{};
+  subquery_predicates.reserve(_prunable_subquery_predicates.size());
+  for (const auto& subquery_predicate_ref : _prunable_subquery_predicates) {
+    const auto& subquery_predicate = subquery_predicate_ref.lock();
+    Assert(subquery_predicate, "Referenced PredicateNode expired. LQP is invalid.");
+    subquery_predicates.emplace_back(subquery_predicate);
+  }
+  return subquery_predicates;
+}
+
 std::string StoredTableNode::description(const DescriptionMode /*mode*/) const {
   const auto& stored_table = Hyrise::get().storage_manager.get_table(table_name);
 
@@ -193,20 +212,52 @@ size_t StoredTableNode::_on_shallow_hash() const {
   for (const auto& pruned_column_id : _pruned_column_ids) {
     boost::hash_combine(hash, static_cast<size_t>(pruned_column_id));
   }
+  // We intentionally force a hash collision for StoredTableNodes with the same number of prunable subquery predicates
+  // even though these predicates are different. Since we assume that (i) these predicates are not often set and (ii) we
+  // hash LQPs often, this reduces the hash overhead, makes the code simpler, and triggers an in-depth equality check
+  // for the rare cases with (the same number of) prunable subquery predicates.
+  boost::hash_combine(hash, _prunable_subquery_predicates.size());
   return hash;
 }
 
 std::shared_ptr<AbstractLQPNode> StoredTableNode::_on_shallow_copy(LQPNodeMapping& /*node_mapping*/) const {
+  // We cannot copy _prunable_subquery_predicated here since deep_copy() recurses into the input nodes and the
+  // StoredTableNodes are the first ones to be copied. Instead, AbstractLQPNode::deep_copy() sets the copied
+  // PredicateNodes after the entire LQP has been copied.
   const auto copy = make(table_name);
   copy->set_pruned_chunk_ids(_pruned_chunk_ids);
   copy->set_pruned_column_ids(_pruned_column_ids);
   return copy;
 }
 
-bool StoredTableNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& /*node_mapping*/) const {
+bool StoredTableNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
   const auto& stored_table_node = static_cast<const StoredTableNode&>(rhs);
-  return table_name == stored_table_node.table_name && _pruned_chunk_ids == stored_table_node._pruned_chunk_ids &&
-         _pruned_column_ids == stored_table_node._pruned_column_ids;
+  if (table_name != stored_table_node.table_name || _pruned_chunk_ids != stored_table_node._pruned_chunk_ids ||
+      _pruned_column_ids != stored_table_node._pruned_column_ids) {
+    return false;
+  }
+
+  // Check equality of prunable subquery predicates. For now, the order of the predicates matters. Though this is a
+  // missed opportunity for LQP deduplication, we do not consider this a problem for now.
+  const auto& prunable_subquery_predicates = this->prunable_subquery_predicates();
+  const auto& rhs_prunable_subquery_predicates = stored_table_node.prunable_subquery_predicates();
+  const auto subquery_predicate_count = prunable_subquery_predicates.size();
+
+  if (subquery_predicate_count != rhs_prunable_subquery_predicates.size()) {
+    return false;
+  }
+
+  for (auto predicate_idx = size_t{0}; predicate_idx < subquery_predicate_count; ++predicate_idx) {
+    // We cannot check that the PredicateNodes are equal since this equality check recurses into the inputs und we do
+    // not terminate. We have to compare the predicate expressions.
+    if (!expressions_equal_to_expressions_in_different_lqp(
+            prunable_subquery_predicates[predicate_idx]->node_expressions,
+            rhs_prunable_subquery_predicates[predicate_idx]->node_expressions, node_mapping)) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 void StoredTableNode::_set_output_expressions() const {
