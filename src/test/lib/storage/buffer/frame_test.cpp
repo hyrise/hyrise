@@ -45,7 +45,7 @@ TEST_F(FrameTest, TestStateTransitions) {
 
   EXPECT_FALSE(frame.unlock_shared());
   EXPECT_EQ(Frame::version(frame.state_and_version()), 1);
-  EXPECT_EQ(Frame::state(frame.state_and_version()), 1);
+  EXPECT_EQ(Frame::state(frame.state_and_version()), Frame::SINGLE_LOCKED_SHARED);
 
   EXPECT_TRUE(frame.unlock_shared());
   EXPECT_EQ(Frame::version(frame.state_and_version()), 1);
@@ -56,6 +56,13 @@ TEST_F(FrameTest, TestStateTransitions) {
   EXPECT_TRUE(frame.try_mark(old_state_and_version));
   EXPECT_EQ(Frame::version(frame.state_and_version()), 1);
   EXPECT_EQ(Frame::state(frame.state_and_version()), Frame::MARKED);
+
+  // Lock shared again and unlock
+  old_state_and_version = frame.state_and_version();
+  EXPECT_TRUE(frame.try_lock_shared(old_state_and_version));
+  EXPECT_EQ(Frame::version(frame.state_and_version()), 1);
+  EXPECT_EQ(Frame::state(frame.state_and_version()), Frame::SINGLE_LOCKED_SHARED);
+  frame.unlock_shared();
 
   // Evict again after locking
   frame.try_lock_exclusive(frame.state_and_version());
@@ -77,14 +84,67 @@ TEST_F(FrameTest, TestSetDirty) {
   auto frame = Frame{};
   frame.try_lock_exclusive(frame.state_and_version());
   EXPECT_FALSE(frame.is_dirty());
-  frame.set_dirty(true);
+  frame.mark_dirty();
   EXPECT_TRUE(frame.is_dirty());
-  frame.set_dirty(true);
+  frame.mark_dirty();
   EXPECT_TRUE(frame.is_dirty());
   frame.reset_dirty();
   EXPECT_FALSE(frame.is_dirty());
 
   frame.unlock_exclusive();
+}
+
+TEST_F(FrameTest, TestStreamOperator) {
+  auto frame = Frame{};
+  {
+    auto out = std::stringstream{};
+    out << frame;
+    EXPECT_EQ(out.str(), "Frame(state = EVICTED, node_id = 0, dirty = 0, version = 0)");
+  }
+
+  frame.try_lock_exclusive(frame.state_and_version());
+  {
+    auto out = std::stringstream{};
+    out << frame;
+    EXPECT_EQ(out.str(), "Frame(state = LOCKED, node_id = 0, dirty = 0, version = 0)");
+  }
+
+  frame.mark_dirty();
+  {
+    auto out = std::stringstream{};
+    out << frame;
+    EXPECT_EQ(out.str(), "Frame(state = LOCKED, node_id = 0, dirty = 1, version = 0)");
+  }
+
+  frame.set_node_id(NodeID{13});
+  {
+    auto out = std::stringstream{};
+    out << frame;
+    EXPECT_EQ(out.str(), "Frame(state = LOCKED, node_id = 13, dirty = 1, version = 0)");
+  }
+
+  frame.unlock_exclusive();
+  {
+    auto out = std::stringstream{};
+    out << frame;
+    EXPECT_EQ(out.str(), "Frame(state = UNLOCKED, node_id = 13, dirty = 1, version = 1)");
+  }
+
+  frame.try_lock_shared(frame.state_and_version());
+  frame.try_lock_shared(frame.state_and_version());
+  {
+    auto out = std::stringstream{};
+    out << frame;
+    EXPECT_EQ(out.str(), "Frame(state = LOCKED_SHARED (2), node_id = 13, dirty = 1, version = 1)");
+  }
+  frame.unlock_shared();
+  frame.unlock_shared();
+  frame.try_mark(frame.state_and_version());
+  {
+    auto out = std::stringstream{};
+    out << frame;
+    EXPECT_EQ(out.str(), "Frame(state = MARKED, node_id = 13, dirty = 1, version = 1)");
+  }
 }
 
 }  // namespace hyrise

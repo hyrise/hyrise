@@ -178,7 +178,6 @@ set(
     lib/storage/any_segment_iterable_test.cpp
     lib/storage/buffer/page_id_test.cpp
     lib/storage/buffer/frame_test.cpp
-    lib/storage/buffer/persistence_manager_test.cpp
     lib/storage/chunk_encoder_test.cpp
     lib/storage/chunk_test.cpp
     lib/storage/compressed_vector_test.cpp
