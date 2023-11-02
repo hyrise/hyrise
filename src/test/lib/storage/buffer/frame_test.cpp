@@ -57,6 +57,13 @@ TEST_F(FrameTest, TestStateTransitions) {
   EXPECT_EQ(Frame::version(frame.state_and_version()), 1);
   EXPECT_EQ(Frame::state(frame.state_and_version()), Frame::MARKED);
 
+  // Lock shared again and unlock
+  old_state_and_version = frame.state_and_version();
+  EXPECT_TRUE(frame.try_lock_shared(old_state_and_version));
+  EXPECT_EQ(Frame::version(frame.state_and_version()), 1);
+  EXPECT_EQ(Frame::state(frame.state_and_version()), 1);
+  frame.unlock_shared();
+
   // Evict again after locking
   frame.try_lock_exclusive(frame.state_and_version());
   EXPECT_EQ(Frame::state(frame.state_and_version()), Frame::LOCKED);
