@@ -146,26 +146,23 @@ std::ostream& operator<<(std::ostream& os, const Frame& frame) {
 
   switch (state) {
     case Frame::UNLOCKED:
-      os << "UNLOCKED";
-      break;
-    case Frame::LOCKED_SHARED:
-      os << "LOCKED_SHARED (" << state << ")";
+      ss << "UNLOCKED";
       break;
     case Frame::LOCKED:
-      os << "LOCKED";
+      ss << "LOCKED";
       break;
     case Frame::MARKED:
-      os << "MARKED";
+      ss << "MARKED";
       break;
     case Frame::EVICTED:
-      os << "EVICTED";
+      ss << "EVICTED";
       break;
     default:
-      Fail("Unknown state: " + std::to_string(state));
+      ss << "LOCKED_SHARED (" << state << ")";
       break;
   }
 
-  ss << state << ", node_id = " << node_id << ", dirty = " << dirty << ", version = " << version << "}";
+  ss << ", node_id = " << node_id << ", dirty = " << dirty << ", version = " << version << "}";
   os << ss.str();
   return os;
 }

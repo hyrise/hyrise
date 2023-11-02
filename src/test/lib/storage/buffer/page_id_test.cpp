@@ -24,4 +24,11 @@ TEST_F(PageIDTest, TestInvalidPageID) {
   EXPECT_FALSE(INVALID_PAGE_ID.valid());
 }
 
+TEST_F(PageIDTest, TestStreamOperator) {
+  const auto page_id = PageID{PageSizeType::KiB16, 29, true};
+  std::stringstream stream;
+  stream << page_id;
+  EXPECT_EQ(stream.str(), "PageID(valid = 1, size_type = KiB16, index = 29)");
+}
+
 }  // namespace hyrise
