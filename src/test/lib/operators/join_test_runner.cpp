@@ -564,7 +564,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
           if (input_table_type == InputTableType::SharedPosList) {
             const auto pos_list = std::make_shared<RowIDPosList>();
             for (auto chunk_offset = ChunkOffset{0}; chunk_offset < input_chunk->size(); ++chunk_offset) {
-              pos_list->emplace_back(RowID{chunk_id, chunk_offset});
+              pos_list->emplace_back(chunk_id, chunk_offset);
             }
 
             if (chunk_id >= single_chunk_reference_range.first && chunk_id < single_chunk_reference_range.second) {
@@ -579,7 +579,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
             for (auto column_id = ColumnID{0}; column_id < data_table->column_count(); ++column_id) {
               const auto pos_list = std::make_shared<RowIDPosList>();
               for (auto chunk_offset = ChunkOffset{0}; chunk_offset < input_chunk->size(); ++chunk_offset) {
-                pos_list->emplace_back(RowID{chunk_id, chunk_offset});
+                pos_list->emplace_back(chunk_id, chunk_offset);
               }
               if (chunk_id >= single_chunk_reference_range.first && chunk_id < single_chunk_reference_range.second) {
                 pos_list->guarantee_single_chunk();
