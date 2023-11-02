@@ -38,7 +38,7 @@ void assert_chunk_encoding(const std::shared_ptr<Chunk>& chunk, const ChunkEncod
 
 inline std::string all_segment_encoding_specs_formatter(
     const testing::TestParamInfo<EncodingTest::ParamType>& param_info) {
-  std::stringstream stringstream;
+  auto stringstream = std::stringstream{};
   stringstream << param_info.param;
   auto string = stringstream.str();
   boost::remove_erase_if(string, boost::is_any_of("() -"));

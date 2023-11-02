@@ -20,9 +20,9 @@ std::shared_ptr<Table> create_table_from_header(std::ifstream& infile, ChunkOffs
   std::string line;
   std::getline(infile, line);
   Assert(line.find('\r') == std::string::npos, "Windows encoding is not supported, use dos2unix");
-  std::vector<std::string> column_names = split_string_by_delimiter(line, '|');
+  const auto column_names = split_string_by_delimiter(line, '|');
   std::getline(infile, line);
-  std::vector<std::string> column_types = split_string_by_delimiter(line, '|');
+  auto column_types = split_string_by_delimiter(line, '|');
 
   auto column_nullable = std::vector<bool>{};
   for (auto& type : column_types) {

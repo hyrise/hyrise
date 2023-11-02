@@ -10,7 +10,7 @@
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "utils/assert.hpp"
-#include "utils/column_pruning_utils.hpp"
+#include "utils/pruning_utils.hpp"
 
 namespace {
 
@@ -31,7 +31,7 @@ StoredTableNode::StoredTableNode(const std::string& init_table_name)
     : AbstractLQPNode(LQPNodeType::StoredTable), table_name(init_table_name) {}
 
 std::shared_ptr<LQPColumnExpression> StoredTableNode::get_column(const std::string& name) const {
-  const auto table = Hyrise::get().storage_manager.get_table(table_name);
+  const auto& table = Hyrise::get().storage_manager.get_table(table_name);
   const auto column_id = table->column_id_by_name(name);
   return std::make_shared<LQPColumnExpression>(shared_from_this(), column_id);
 }
@@ -69,7 +69,7 @@ const std::vector<ColumnID>& StoredTableNode::pruned_column_ids() const {
 }
 
 std::string StoredTableNode::description(const DescriptionMode /*mode*/) const {
-  const auto stored_table = Hyrise::get().storage_manager.get_table(table_name);
+  const auto& stored_table = Hyrise::get().storage_manager.get_table(table_name);
 
   std::ostringstream stream;
   stream << "[StoredTable] Name: '" << table_name << "' pruned: ";
@@ -88,7 +88,7 @@ std::vector<std::shared_ptr<AbstractExpression>> StoredTableNode::output_express
 }
 
 bool StoredTableNode::is_column_nullable(const ColumnID column_id) const {
-  const auto table = Hyrise::get().storage_manager.get_table(table_name);
+  const auto& table = Hyrise::get().storage_manager.get_table(table_name);
   return table->column_is_nullable(column_id);
 }
 
@@ -120,31 +120,29 @@ UniqueColumnCombinations StoredTableNode::unique_column_combinations() const {
 std::vector<ChunkIndexStatistics> StoredTableNode::chunk_indexes_statistics() const {
   DebugAssert(!left_input() && !right_input(), "StoredTableNode must be a leaf");
 
-  const auto table = Hyrise::get().storage_manager.get_table(table_name);
-  auto pruned_indexes_statistics = table->chunk_indexes_statistics();
-
+  const auto& table = Hyrise::get().storage_manager.get_table(table_name);
   if (_pruned_column_ids.empty()) {
-    return pruned_indexes_statistics;
+    return table->chunk_indexes_statistics();
   }
 
-  const auto column_id_mapping = column_ids_after_pruning(table->column_count(), _pruned_column_ids);
+  auto pruned_indexes_statistics = table->chunk_indexes_statistics();
+  const auto column_id_mapping = pruned_column_id_mapping(table->column_count(), _pruned_column_ids);
 
   // Update index statistics
   // Note: The lambda also modifies statistics.column_ids. This is done because a regular for loop runs into issues
   // when remove(iterator) invalidates the iterator.
-  // TODO(anyone): Theoretically, we could keep multi-column indexes where only the last column was pruned
   pruned_indexes_statistics.erase(std::remove_if(pruned_indexes_statistics.begin(), pruned_indexes_statistics.end(),
                                                  [&](auto& statistics) {
                                                    for (auto& original_column_id : statistics.column_ids) {
-                                                     const auto& updated_column_id =
+                                                     const auto updated_column_id =
                                                          column_id_mapping[original_column_id];
-                                                     if (!updated_column_id) {
+                                                     if (updated_column_id == INVALID_COLUMN_ID) {
                                                        // Indexed column was pruned - remove index from statistics
                                                        return true;
                                                      }
 
                                                      // Update column id
-                                                     original_column_id = *updated_column_id;
+                                                     original_column_id = updated_column_id;
                                                    }
                                                    return false;
                                                  }),
@@ -153,8 +151,41 @@ std::vector<ChunkIndexStatistics> StoredTableNode::chunk_indexes_statistics() co
   return pruned_indexes_statistics;
 }
 
+std::vector<TableIndexStatistics> StoredTableNode::table_indexes_statistics() const {
+  const auto& table = Hyrise::get().storage_manager.get_table(table_name);
+
+  if (_pruned_column_ids.empty()) {
+    return table->table_indexes_statistics();
+  }
+
+  const auto input_table_column_count = table->column_count();
+  const auto& index_statistics = table->table_indexes_statistics();
+  const auto column_id_mapping = pruned_column_id_mapping(input_table_column_count, _pruned_column_ids);
+
+  auto pruned_index_statistics = std::vector<TableIndexStatistics>{};
+  pruned_index_statistics.reserve(input_table_column_count - _pruned_column_ids.size());
+
+  for (const auto& index_statistic : index_statistics) {
+    // TODO(anyone): When chunk indexes are removed, TableIndexStatistics should no longer store a vector of ColumnIDs
+    // as multi-column indexes are no longer supported.
+    DebugAssert(index_statistic.column_ids.size() == 1, "Unexpected multi-column index");
+
+    const auto& updated_column_id = column_id_mapping[index_statistic.column_ids[0]];
+    if (updated_column_id == INVALID_COLUMN_ID) {
+      // Indexed column was pruned.
+      continue;
+    }
+
+    // Append statistic and update its column id.
+    pruned_index_statistics.push_back(index_statistic);
+    pruned_index_statistics.back().column_ids[0] = updated_column_id;
+  }
+
+  return pruned_index_statistics;
+}
+
 size_t StoredTableNode::_on_shallow_hash() const {
-  size_t hash{0};
+  auto hash = size_t{0};
   boost::hash_combine(hash, table_name);
   for (const auto& pruned_chunk_id : _pruned_chunk_ids) {
     boost::hash_combine(hash, static_cast<size_t>(pruned_chunk_id));
