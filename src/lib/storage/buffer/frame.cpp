@@ -33,9 +33,7 @@ void Frame::set_node_id(const NodeID node_id) {
 
 void Frame::mark_dirty() {
   DebugAssert(state(_state_and_version.load()) == LOCKED, "Frame must be locked to set dirty flag.");
-  const auto new_dirty = StateVersionType{1};
-  _state_and_version.fetch_or(_DIRTY_MASK & (new_dirty << _DIRTY_SHIFT));
-  DebugAssert(is_dirty(), "Marking the flag as dirty did not succeed.");
+  _state_and_version |= _DIRTY_MASK;
 }
 
 void Frame::reset_dirty() {
@@ -84,14 +82,18 @@ NodeID Frame::node_id(const Frame::StateVersionType state_and_version) {
 bool Frame::try_lock_shared(const Frame::StateVersionType old_state_and_version) {
   auto old_state = state(old_state_and_version);
   auto state_and_version = old_state_and_version;
+
+  // Multiple threads can try to lock shared concurrently until the state reaches MAX_LOCKED_SHARED
   if (old_state < MAX_LOCKED_SHARED) {
     // Increment the state by 1 to add a new concurrent reader
     return _state_and_version.compare_exchange_strong(
         state_and_version, _update_state_with_same_version(old_state_and_version, old_state + 1));
   }
+
+  // If the state is MARKED, we just set the frame to 1 reader.
   if (old_state == MARKED) {
-    return _state_and_version.compare_exchange_strong(state_and_version,
-                                                      _update_state_with_same_version(old_state_and_version, 1));
+    return _state_and_version.compare_exchange_strong(
+        state_and_version, _update_state_with_same_version(old_state_and_version, SINGLE_LOCKED_SHARED));
   }
   return false;
 }
@@ -151,29 +153,28 @@ std::ostream& operator<<(std::ostream& os, const Frame& frame) {
   const auto node_id = frame.node_id();
   const auto dirty = frame.is_dirty();
 
-  auto ss = std::stringstream{};
-  ss << "Frame { state = ";
+  os << "Frame(state = ";
 
   switch (state) {
     case Frame::UNLOCKED:
-      ss << "UNLOCKED";
+      os << "UNLOCKED";
       break;
     case Frame::LOCKED:
-      ss << "LOCKED";
+      os << "LOCKED";
       break;
     case Frame::MARKED:
-      ss << "MARKED";
+      os << "MARKED";
       break;
     case Frame::EVICTED:
-      ss << "EVICTED";
+      os << "EVICTED";
       break;
     default:
-      ss << "LOCKED_SHARED (" << state << ")";
+      os << "LOCKED_SHARED (" << state << ")";
       break;
   }
 
-  ss << ", node_id = " << node_id << ", dirty = " << dirty << ", version = " << version << "}";
-  os << ss.str();
+  os << ", node_id = " << node_id << ", dirty = " << dirty << ", version = " << version << ")";
+
   return os;
 }
 }  // namespace hyrise

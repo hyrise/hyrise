@@ -23,10 +23,14 @@ class VolatileRegionTest : public BaseTest {
   };
 
   void SetUp() override {
-    memory_region = MemoryRegion{};
+    memory_region = VolatileRegion::create_mapped_region();
   }
 
-  MemoryRegion memory_region{};
+  void TearDown() override {
+    VolatileRegion::unmap_region(memory_region);
+  }
+
+  VolatileRegion::MappedPageRegion memory_region = {nullptr, VolatileRegion::DEFAULT_RESERVED_VIRTUAL_MEMORY};
 
   NodeID get_numa_node_of_page(std::byte* page) {
 #if HYRISE_NUMA_SUPPORT
@@ -41,8 +45,7 @@ class VolatileRegionTest : public BaseTest {
 };
 
 TEST_F(VolatileRegionTest, TestGetPage) {
-  auto volatile_region = VolatileRegion{PageSizeType::KiB16, memory_region.data.data(),
-                                        memory_region.data.data() + memory_region.data.size()};
+  auto volatile_region = VolatileRegion{PageSizeType::KiB16, memory_region};
   EXPECT_EQ(volatile_region.size(), memory_region.data.size() / bytes_for_size_type(PageSizeType::KiB16));
 
   EXPECT_ANY_THROW(volatile_region.get_page(PageID{PageSizeType::KiB32, 0}));
@@ -105,6 +108,25 @@ TEST_F(VolatileRegionTest, TestMovePageToNumaNode) {
   EXPECT_EQ(get_numa_node_of_page(volatile_region.get_page(PageID{PageSizeType::KiB16, 7})), NodeID{1});
 }
 
+TEST_F(VolatileRegionTest, TestMemcpyToNumaNode) {
+#if !HYRISE_NUMA_SUPPORT
+  GTEST_SKIP() << "NUMA support is not enabled";
+#endif
+  // TODO: Test memcopy calls
+  auto volatile_region = VolatileRegion{PageSizeType::KiB16, memory_region.data.data(),
+                                        memory_region.data.data() + memory_region.data.size()};
+  EXPECT_EQ(volatile_region.size(), memory_region.data.size() / bytes_for_size_type(PageSizeType::KiB16));
+
+  auto frame = volatile_region.get_frame(PageID{PageSizeType::KiB16, 7});
+
+  EXPECT_EQ(frame->node_id(), NodeID{0});
+  // TODO: Loop all pages, test equality
+  EXPECT_EQ(get_numa_node_of_page(volatile_region.get_page(PageID{PageSizeType::KiB16, 7})), NodeID{0});
+  volatile_region.memcpy_page_to_numa_node(PageID{PageSizeType::KiB16, 7}, NodeID{1});
+  EXPECT_EQ(frame->node_id(), NodeID{1});
+  EXPECT_EQ(get_numa_node_of_page(volatile_region.get_page(PageID{PageSizeType::KiB16, 7})), NodeID{1});
+}
+
 TEST_F(VolatileRegionTest, TestCreateVolatileRegions) {
   auto nullfd = open("/dev/random", O_WRONLY);
   auto region = VolatileRegion::create_mapped_region();
@@ -120,7 +142,7 @@ TEST_F(VolatileRegionTest, TestCreateVolatileRegions) {
   VolatileRegion::unmap_region(region);
 
   // Testing a write to an invalid memory region is the only way to test if the memory region is actually unmapped.
-  EXPECT_EQ(write(nullfd, region, 1024), -1) << "Writing to an invalid memory region should fail with -1";
+  EXPECT_EQ(write(nullfd, region.data(), 1024), -1) << "Writing to an invalid memory region should fail with -1";
   // TODO: This leaks the fd if the test fails
   close(nullfd);
 }
