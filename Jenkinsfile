@@ -378,25 +378,32 @@ try {
   parallel clangDebugMacX64: {
     node('mac') {
       stage("clangDebugMacX64") {
-        if (env.BRANCH_NAME == 'master' || full_ci) {
-          try {
-            checkout scm
-
-            // We do not use install_dependencies.sh here as there is no way to run OS X in a Docker container
-            sh "git submodule update --init --recursive --jobs 4 --depth=1"
-
-            sh "mkdir clang-debug && cd clang-debug && /usr/local/bin/cmake ${debug} ${unity} -DCMAKE_C_COMPILER=/usr/local/opt/llvm@15/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm@15/bin/clang++ .."
-            sh "cd clang-debug && make -j \$(sysctl -n hw.logicalcpu)"
-            sh "./clang-debug/hyriseTest"
-            sh "./clang-debug/hyriseSystemTest --gtest_filter=\"-TPCCTest*:TPCDSTableGeneratorTest.*:TPCHTableGeneratorTest.RowCountsMediumScaleFactor:*.CompareToSQLite/Line1*WithLZ4\""
-            sh "PATH=/usr/local/bin/:$PATH ./scripts/test/hyriseConsole_test.py clang-debug"
-            sh "PATH=/usr/local/bin/:$PATH ./scripts/test/hyriseServer_test.py clang-debug"
-            sh "PATH=/usr/local/bin/:$PATH ./scripts/test/hyriseBenchmarkFileBased_test.py clang-debug"
-          } finally {
-            sh "ls -A1 | xargs rm -rf"
+        // We experienced frequently network problems with this CI machine. So far, we have not found a reason.
+        // Since we run this stage very late and it frequently fails for network problems, we retry the stage
+        // three times as (i) we can be rather sure that most problems have been already found in earlier stages
+        // and fails in this stage are probably network issues, and (ii) we avoid re-runs of entire Full CI runs
+        // that failed in the vary last stage due to a single network issue.
+        retry(3) {
+          if (env.BRANCH_NAME == 'master' || full_ci) {
+            try {
+              checkout scm
+  
+              // We do not use install_dependencies.sh here as there is no way to run OS X in a Docker container
+              sh "git submodule update --init --recursive --jobs 4 --depth=1"
+  
+              sh "mkdir clang-debug && cd clang-debug && /usr/local/bin/cmake ${debug} ${unity} -DCMAKE_C_COMPILER=/usr/local/opt/llvm@15/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm@15/bin/clang++ .."
+              sh "cd clang-debug && make -j \$(sysctl -n hw.logicalcpu)"
+              sh "./clang-debug/hyriseTest"
+              sh "./clang-debug/hyriseSystemTest --gtest_filter=\"-TPCCTest*:TPCDSTableGeneratorTest.*:TPCHTableGeneratorTest.RowCountsMediumScaleFactor:*.CompareToSQLite/Line1*WithLZ4\""
+              sh "PATH=/usr/local/bin/:$PATH ./scripts/test/hyriseConsole_test.py clang-debug"
+              sh "PATH=/usr/local/bin/:$PATH ./scripts/test/hyriseServer_test.py clang-debug"
+              sh "PATH=/usr/local/bin/:$PATH ./scripts/test/hyriseBenchmarkFileBased_test.py clang-debug"
+            } finally {
+              sh "ls -A1 | xargs rm -rf"
+            }
+          } else {
+            Utils.markStageSkippedForConditional("clangDebugMacX64")
           }
-        } else {
-          Utils.markStageSkippedForConditional("clangDebugMacX64")
         }
       }
     }
