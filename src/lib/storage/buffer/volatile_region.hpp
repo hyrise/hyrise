@@ -23,9 +23,10 @@ class VolatileRegion final : public Noncopyable {
   // Enable mprotect class for debugging purposes
   constexpr static bool ENABLE_MPROTECT = false;
 
+  // Default size of the virtual memory region for all page size types
   constexpr static uint64_t DEFAULT_RESERVED_VIRTUAL_MEMORY = 1UL << 38;  // 256 GiB
 
-  // Create a VolatileRegion in a virtual memory region for a givem size_type. The approximate_size_bytes defines a initial number of frames to be created.
+  // Create a VolatileRegion in a memory region for a givem size_type.
   VolatileRegion(const PageSizeType size_type, std::byte* region_start, std::byte* region_end);
 
   // Get the frame of a given page
@@ -34,18 +35,22 @@ class VolatileRegion final : public Noncopyable {
   // Get the start address of a given page
   std::byte* get_page(PageID page_id);
 
-  // Use mbind for page movement
+  // Use mbind for page movement. This is not portable and only works on Linux with NUMA support.
   void mbind_to_numa_node(PageID page_id, const NodeID target_memory_node);
 
-  // Use move_pages for page movement
+  // Use move_pages for page movement. This is not portable and only works on Linux with NUMA support.
   void move_page_to_numa_node(PageID page_id, const NodeID target_memory_node);
 
-  // Free a page using madvise
+  // Free a page using madvise(MAV_FREE_REUSABLE) on OS X and madvise(MADV_DONTNEED) on Linux
   void free(PageID page_id);
+
+  // Mark a page as reusable using madvise(MADV_FREE_REUSE) on OS X to update memory accounting. Not implemented on Linux.
+  void reuse(PageID page_id);
 
   // Returns the number of pages this region can manage
   size_t size() const;
 
+  // Returns the size type of this region
   PageSizeType size_type() const;
 
   // Calculate the approximate memory used by this object
@@ -67,9 +72,18 @@ class VolatileRegion final : public Noncopyable {
   static std::array<std::shared_ptr<VolatileRegion>, NUM_PAGE_SIZE_TYPES> create_volatile_regions(
       std::byte* mapped_region);
 
+  // Returns the number of madvice(MADV_FREE_REUSABLE) calls on OS X or madvice(MADV_DONTNEED) calls on Linux
+  uint64_t madvice_free_call_count() const;
+
+  // Returns the number of page moevements using mbind or move_pages
+  uint64_t numa_page_movement_count() const;
+
  private:
-  std::atomic_uint64_t num_madvice_free_calls = 0;
-  std::atomic_uint64_t num_numa_page_movements = 0;
+  // Number of madvice(MADV_FREE_REUSABLE) calls on OS X or madvice(MADV_DONTNEED) calls on Linux
+  std::atomic_uint64_t _madvice_free_call_count = 0;
+
+  // Number of page moevements using mbind or move_pages
+  std::atomic_uint64_t _numa_page_movement_count = 0;
 
   const PageSizeType _size_type;
 

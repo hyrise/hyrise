@@ -16,9 +16,7 @@ VolatileRegion::VolatileRegion(const PageSizeType size_type, std::byte* region_s
       _region_end(region_end),
       _frames((_region_end - _region_start) / bytes_for_size_type(size_type)) {
   DebugAssert(_region_start < _region_end, "Region is too small");
-  // DebugAssert(static_cast<size_t>(region_end - region_start) < BufferManagerConfig::DEFAULT_RESERVED_VIRTUAL_MEMORY,
-  // "Region start and end dont match");
-  DebugAssert(_frames.size() > 0, "Region is too small");
+  DebugAssert(_frames.size() > 0, "Not enough space for frames");
   if constexpr (ENABLE_MPROTECT) {
     if (mprotect(_region_start, _region_end - _region_start, PROT_NONE) != 0) {
       const auto error = errno;
@@ -43,7 +41,7 @@ void VolatileRegion::move_page_to_numa_node(PageID page_id, const NodeID target_
     const auto error = errno;
     Fail("Move pages failed: " + strerror(error));
   }
-  num_numa_page_movements.fetch_add(1, std::memory_order_relaxed);
+  _numa_page_movement_count.fetch_add(1, std::memory_order_relaxed);
   _frames[page_id.index].set_node_id(target_memory_node);
 #endif
 }
@@ -65,29 +63,28 @@ void VolatileRegion::mbind_to_numa_node(PageID page_id, const NodeID target_memo
          " . Either no space is left or vm map count is exhausted. Try: \"sudo sysctl vm.max_map_count=X\"");
   }
   numa_bitmask_free(nodes);
-  num_numa_page_movements.fetch_add(1, std::memory_order_relaxed);
-#endif
+  _numa_page_movement_count.fetch_add(1, std::memory_order_relaxed);
   _frames[page_id.index].set_node_id(target_memory_node);
+#endif
 }
 
 void VolatileRegion::free(PageID page_id) {
   DebugAssert(page_id.size_type() == _size_type, "Page does not belong to this region.");
-
+  // Use MADV_FREE_REUSABLE on OS X and MADV_DONTNEED on Linux
   // https://bugs.chromium.org/p/chromium/issues/detail?id=823915
 #ifdef __APPLE__
   const int flags = MADV_FREE_REUSABLE;
 #elif __linux__
   const int flags = MADV_DONTNEED;
 #endif
-  const auto num_bytes = bytes_for_size_type(_size_type);
   auto ptr = get_page(page_id);
   _unprotect_page(page_id);
-  if (madvise(ptr, num_bytes, flags) < 0) {
+  if (madvise(ptr, page_id.num_bytes(), flags) < 0) {
     const auto error = errno;
-    Fail("Failed to madvice region: " + strerror(error));
+    Fail("Failed to call madvise(MADV_DONTNEED / MADV_FREE_REUSABLE): " + strerror(error));
   }
   _protect_page(page_id);
-  num_madvice_free_calls.fetch_add(1, std::memory_order_relaxed);
+  _madvice_free_call_count.fetch_add(1, std::memory_order_relaxed);
 }
 
 std::byte* VolatileRegion::get_page(PageID page_id) {
@@ -112,6 +109,18 @@ size_t VolatileRegion::size() const {
 
 PageSizeType VolatileRegion::size_type() const {
   return _size_type;
+}
+
+void VolatileRegion::reuse(PageID page_id) {
+// On OS X, we can use MADV_FREE_REUSE to update the memory accounting.
+// Source: https://bugs.chromium.org/p/chromium/issues/detail?id=823915
+#ifdef __APPLE__
+  const auto ptr = get_page(page_id);
+  if (madvise(ptr, page_id.num_bytes(), MADV_FREE_REUSE) < 0) {
+    const auto error = errno;
+    Fail("Failed to call madvise(MADV_FREE_REUSE): " + strerror(error));
+  }
+#endif
 }
 
 void VolatileRegion::_protect_page(const PageID page_id) {
@@ -184,6 +193,14 @@ void VolatileRegion::unmap_region(std::byte* region) {
     const auto error = errno;
     Fail("Failed to unmap volatile pool region: " + strerror(error));
   }
+}
+
+uint64_t VolatileRegion::madvice_free_call_count() const {
+  return _madvice_free_call_count.load(std::memory_order_relaxed);
+}
+
+uint64_t VolatileRegion::numa_page_movement_count() const {
+  return _numa_page_movement_count.load(std::memory_order_relaxed);
 }
 
 }  // namespace hyrise
