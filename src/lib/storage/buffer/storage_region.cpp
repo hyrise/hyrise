@@ -80,9 +80,9 @@ int StorageRegion::_open_file_descriptor(const std::filesystem::path& file_name)
 
 void StorageRegion::write_page(PageID page_id, std::byte* data) {
   Assert(page_id.valid(), "PageID must be valid");
-  const auto handle = _file_handles[page_id._size_type];
-  const auto byte_count = page_id.num_bytes();
-  const auto offset = handle.offset + byte_count * page_id.index;
+  const auto handle = _file_handles[static_cast<uint64_t>(page_id.size_type())];
+  const auto byte_count = page_id.byte_count();
+  const auto offset = handle.offset + byte_count * page_id.index();
   DebugAssertPageAlignment(data);
   if (pwrite(handle.fd, data, byte_count, offset) < 0) {
     const auto error = errno;
@@ -93,9 +93,9 @@ void StorageRegion::write_page(PageID page_id, std::byte* data) {
 
 void StorageRegion::read_page(PageID page_id, std::byte* data) {
   Assert(page_id.valid(), "PageID must be valid");
-  const auto handle = _file_handles[page_id._size_type];
-  const auto byte_count = page_id.num_bytes();
-  const auto offset = handle.offset + byte_count * page_id.index;
+  const auto handle = _file_handles[static_cast<uint64_t>(page_id.size_type())];
+  const auto byte_count = page_id.byte_count();
+  const auto offset = handle.offset + byte_count * page_id.index();
   DebugAssertPageAlignment(data);
   if (pread(handle.fd, data, byte_count, offset) < 0) {
     const auto error = errno;
@@ -108,15 +108,15 @@ size_t StorageRegion::memory_consumption() const {
   return sizeof(*this);
 }
 
-std::array<StorageRegion::FileHandle, NUM_PAGE_SIZE_TYPES> StorageRegion::_open_file_handles_in_directory(
+std::array<StorageRegion::FileHandle, PAGE_SIZE_TYPES_COUNT> StorageRegion::_open_file_handles_in_directory(
     const std::filesystem::path& path) {
   DebugAssert(std::filesystem::is_directory(path), "StorageRegion path must be a directory");
-  auto array = std::array<StorageRegion::FileHandle, NUM_PAGE_SIZE_TYPES>{};
+  auto array = std::array<StorageRegion::FileHandle, PAGE_SIZE_TYPES_COUNT>{};
 
   const auto now = std::chrono::system_clock::now();
   const auto timestamp = std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch()).count();
 
-  for (auto page_size_type_index = size_t{0}; page_size_type_index < NUM_PAGE_SIZE_TYPES; ++page_size_type_index) {
+  for (auto page_size_type_index = size_t{0}; page_size_type_index < PAGE_SIZE_TYPES_COUNT; ++page_size_type_index) {
     const auto file_name = path / ("hyrise-buffer-pool-" + std::to_string(timestamp) + "-type-" +
                                    std::to_string(page_size_type_index) + ".bin");
     array[page_size_type_index] = {_open_file_descriptor(file_name), file_name};
@@ -127,10 +127,10 @@ std::array<StorageRegion::FileHandle, NUM_PAGE_SIZE_TYPES> StorageRegion::_open_
   return array;
 }
 
-std::array<StorageRegion::FileHandle, NUM_PAGE_SIZE_TYPES> StorageRegion::_open_file_handles_block(
+std::array<StorageRegion::FileHandle, PAGE_SIZE_TYPES_COUNT> StorageRegion::_open_file_handles_block(
     const std::filesystem::path& path) {
   DebugAssert(std::filesystem::is_block_file(path), "StorageRegion path must be a directory");
-  auto array = std::array<StorageRegion::FileHandle, NUM_PAGE_SIZE_TYPES>{};
+  auto array = std::array<StorageRegion::FileHandle, PAGE_SIZE_TYPES_COUNT>{};
 
   const auto fd = _open_file_descriptor(path);
 
@@ -147,27 +147,13 @@ std::array<StorageRegion::FileHandle, NUM_PAGE_SIZE_TYPES> StorageRegion::_open_
 #endif
 
   // Divide block device into equal chunks and align to page boundary
-  const auto bytes_per_size_type = ((block_size / NUM_PAGE_SIZE_TYPES) / OS_PAGE_SIZE) * OS_PAGE_SIZE;
-  for (auto page_size_type_index = uint64_t{0}; page_size_type_index < NUM_PAGE_SIZE_TYPES; ++page_size_type_index) {
+  const auto bytes_per_size_type = ((block_size / PAGE_SIZE_TYPES_COUNT) / OS_PAGE_SIZE) * OS_PAGE_SIZE;
+  for (auto page_size_type_index = uint64_t{0}; page_size_type_index < PAGE_SIZE_TYPES_COUNT; ++page_size_type_index) {
     const auto block_offset = page_size_type_index * bytes_per_size_type;
     array[page_size_type_index] = {fd, path, block_offset};
   }
 
   return array;
-}
-
-void swap(StorageRegion& first, StorageRegion& second) noexcept {
-  std::swap(first._file_handles, second._file_handles);
-  std::swap(first._mode, second._mode);
-
-  // The exchange is not atomic
-  const auto total_bytes_written_tmp = first._total_bytes_written.load();
-  first._total_bytes_written = second._total_bytes_written.load();
-  second._total_bytes_written = total_bytes_written_tmp;
-
-  const auto total_bytes_read_tmp = first._total_bytes_read.load();
-  first._total_bytes_read = second._total_bytes_read.load();
-  second._total_bytes_read = total_bytes_read_tmp;
 }
 
 uint64_t StorageRegion::total_bytes_written() const {

@@ -43,9 +43,6 @@ class StorageRegion final : public Noncopyable {
   // Returns the consumed memory in bytes for debugging purposes.
   size_t memory_consumption() const;
 
-  // Swap the contents of two StorageRegions. This is not thread-safe.
-  friend void swap(StorageRegion& first, StorageRegion& second) noexcept;
-
   // Returns the total number of bytes written to the disk.
   uint64_t total_bytes_written() const;
 
@@ -66,17 +63,17 @@ class StorageRegion final : public Noncopyable {
   };
 
   const Mode _mode;
-  const std::array<FileHandle, NUM_PAGE_SIZE_TYPES> _file_handles;
+  const std::array<FileHandle, PAGE_SIZE_TYPES_COUNT> _file_handles;
 
   // Internal metrics
   std::atomic_uint64_t _total_bytes_written = 0;
   std::atomic_uint64_t _total_bytes_read = 0;
 
-  // Open file handles for the given path. If the path is a directory, a file is created for each page size type.
-  std::array<FileHandle, NUM_PAGE_SIZE_TYPES> _open_file_handles_in_directory(const std::filesystem::path& path);
+  // Open file haswndles for the given path. If the path is a directory, a file is created for each page size type.
+  std::array<FileHandle, PAGE_SIZE_TYPES_COUNT> _open_file_handles_in_directory(const std::filesystem::path& path);
 
   // Open file handles for the given path. If the path is a block device, the device is divided into equal-sized regions for each page size type.
-  std::array<FileHandle, NUM_PAGE_SIZE_TYPES> _open_file_handles_block(const std::filesystem::path& path);
+  std::array<FileHandle, PAGE_SIZE_TYPES_COUNT> _open_file_handles_block(const std::filesystem::path& path);
 
   static int _open_file_descriptor(const std::filesystem::path& file_name);
 };

@@ -113,7 +113,7 @@ class BufferManager final : public Noncopyable {
   std::byte* _mapped_region;
 
   // A fixed size array of volatile regions for each page size type
-  std::array<std::shared_ptr<VolatileRegion>, NUM_PAGE_SIZE_TYPES> _volatile_regions;
+  std::array<std::shared_ptr<VolatileRegion>, PAGE_SIZE_TYPES_COUNT> _volatile_regions;
 
   // The persistence manager is responsible for reading and writing pages to the disk
   std::shared_ptr<PersistenceManager> _storage_region;

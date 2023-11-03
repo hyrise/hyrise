@@ -87,6 +87,10 @@ struct PageID {
     return !operator==(other);
   }
 
+  bool operator<(const PageID& other) const {
+    return this->index() < other.index() && this->size_type() < other.size_type();
+  }
+
  private:
   PageIDType _valid : 1;
   PageIDType _size_type : PAGE_SIZE_TYPE_BITS;

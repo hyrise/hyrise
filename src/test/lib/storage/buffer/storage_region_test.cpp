@@ -29,8 +29,8 @@ class StorageRegionTest : public BaseTest {
 TEST_F(StorageRegionTest, WriteAndReadPagesOnRegularFile) {
   // Check that one file is created per page size type
   const auto files = list_directory(db_path);
-  EXPECT_EQ(files.size(), NUM_PAGE_SIZE_TYPES) << "Expected one file per page size type";
-  EXPECT_EQ(storage_region->mode(), StorageRegion::Mode::FILE_PER_SIZE_TYPE);
+  EXPECT_EQ(files.size(), PAGE_SIZE_TYPES_COUNT) << "Expected one file per page size type";
+  EXPECT_EQ(storage_region->mode(), StorageRegion::Mode::FILE_PER_PAGE_SIZE);
 
   // Write out 3 different pages
   auto write_pages = std::map<PageID, Page>{{PageID{PageSizeType::KiB16, 20}, Page{{std::byte{0x11}}}},
@@ -39,7 +39,7 @@ TEST_F(StorageRegionTest, WriteAndReadPagesOnRegularFile) {
   EXPECT_EQ(write_pages.size(), 3);
   for (auto& [page_id, page] : write_pages) {
     // Copy over the first byte to the whole page
-    std::memset(page.data.data(), std::to_integer<int>(*page.data.data()), page_id.num_bytes());
+    std::memset(page.data.data(), std::to_integer<int>(*page.data.data()), page_id.byte_count());
     storage_region->write_page(page_id, page.data.data());
   }
 
@@ -49,13 +49,13 @@ TEST_F(StorageRegionTest, WriteAndReadPagesOnRegularFile) {
                                            {PageID{PageSizeType::KiB16, 13}, Page{{}}}};
   EXPECT_EQ(read_pages.size(), 3);
   for (auto& [page_id, page] : write_pages) {
-    EXPECT_NE(std::memcmp(page.data.data(), read_pages[page_id].data.data(), page_id.num_bytes()), 0);
+    EXPECT_NE(std::memcmp(page.data.data(), read_pages[page_id].data.data(), page_id.byte_count()), 0);
   }
   for (auto& [page_id, page] : read_pages) {
     storage_region->read_page(page_id, page.data.data());
   }
   for (auto& [page_id, page] : write_pages) {
-    EXPECT_EQ(std::memcmp(page.data.data(), read_pages[page_id].data.data(), page_id.num_bytes()), 0);
+    EXPECT_EQ(std::memcmp(page.data.data(), read_pages[page_id].data.data(), page_id.byte_count()), 0);
   }
 
   // Verifiy that the same amount of bytes was written and read
@@ -97,12 +97,13 @@ TEST_F(StorageRegionTest, ReadFailsWithUnalignedData) {
 TEST_F(StorageRegionTest, WriteTwiceOverridesPreviousData) {
   auto write_page = Page{};
   auto read_page = Page{};
-  std::memset(write_page.data.data(), 0x1, page_id.num_bytes());
+  auto page_id = PageID{PageSizeType::KiB16, 20};
+  std::memset(write_page.data.data(), 0x1, page_id.byte_count());
   storage_region->write_page(page_id, write_page.data.data());
   storage_region->read_page(page_id, read_page.data.data());
-  EXPECT_EQ(std::memcmp(read_page.data.data(), read_pages[page_id].data.data(), page_id.num_bytes()), 0);
+  EXPECT_EQ(std::memcmp(read_page.data.data(), read_page.data.data(), page_id.byte_count()), 0);
   // TODO
-  std::memset(write_page.data.data(), 0x2, page_id.num_bytes());
+  std::memset(write_page.data.data(), 0x2, page_id.byte_count());
   storage_region->write_page(page_id, write_page.data.data());
 }
 
