@@ -309,7 +309,8 @@ target_precompile_headers(hyriseTest PRIVATE
     [["storage/table.hpp"]]
     [["types.hpp"]]
 )
-gtest_discover_tests(hyriseTest WORKING_DIRECTORY ${PROJECT_SOURCE_DIR} DISCOVERY_TIMEOUT 60)
+$ Discover tests by running the hyriseTest binary with the --gtest_list_tests flag. Increase the timeout to 30 seconds as the default was not enough.
+gtest_discover_tests(hyriseTest WORKING_DIRECTORY ${PROJECT_SOURCE_DIR} DISCOVERY_TIMEOUT 30)
 
 # Configure hyriseSystemTest
 add_executable(hyriseSystemTest ${SYSTEM_TEST_SOURCES})
