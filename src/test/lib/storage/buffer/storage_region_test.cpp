@@ -10,17 +10,11 @@
 
 namespace hyrise {
 
-struct PageIDComparator {
-  bool operator()(const PageID& a, const PageID& b) const {
-    return a.size_type() < b.size_type() || (a.size_type() == b.size_type() && a.index() < b.index());
-  }
-};
-
 class StorageRegionTest : public BaseTest {
  public:
   struct alignas(512) Page {
-    // Use the biggest possible size to avoid different allocations sizes
-    std::array<std::byte, bytes_for_size_type(MAX_PAGE_SIZE_TYPE)> data;
+    // We use only pages up to 32 KiB for testing. Larger pages may lead to a stack overflow.
+    std::array<std::byte, bytes_for_size_type(PageSizeType::KiB32)> data{};
   };
 
   void SetUp() override {
@@ -40,9 +34,8 @@ TEST_F(StorageRegionTest, WriteAndReadPagesOnRegularFile) {
 
   const auto page_ids = std::vector<PageID>{PageID{PageSizeType::KiB16, 20}, PageID{PageSizeType::KiB32, 20},
                                             PageID{PageSizeType::KiB16, 13}};
-
-  auto write_pages = std::vector<Page>{Page{}, Page{}, Page{}};
-  auto read_pages = std::vector<Page>{Page{}, Page{}, Page{}};
+  auto write_pages = std::vector<Page>{3, Page{}};
+  auto read_pages = std::vector<Page>{3, Page{}};
 
   // Write out 3 different pages
   for (auto index = size_t{0}; index < page_ids.size(); ++index) {
@@ -50,14 +43,13 @@ TEST_F(StorageRegionTest, WriteAndReadPagesOnRegularFile) {
     storage_region->write_page(page_ids[index], write_pages[index].data.data());
   }
 
-  //  Create buffers to read into to check if reading works after writing to the same page id
-
-  // Verify that reading the page ids returns the written data
+  // Read from all pages and check if the data is equal to the written data
   for (auto index = size_t{0}; index < page_ids.size(); ++index) {
-    // EXPECT_NE(std::memcmp(read_pages[index].data.data(), write_pages[index].data.data(), page_ids[index].byte_count()), 0);
-    // storage_region->read_page(page_ids[index], read_pages[index].data.data());
-    // EXPECT_EQ(std::memcmp(read_pages[index].data.data(), write_pages[index].data.data(), page_ids[index].byte_count()),
-    //           0);
+    EXPECT_NE(std::memcmp(read_pages[index].data.data(), write_pages[index].data.data(), page_ids[index].byte_count()),
+              0);
+    storage_region->read_page(page_ids[index], read_pages[index].data.data());
+    EXPECT_EQ(std::memcmp(read_pages[index].data.data(), write_pages[index].data.data(), page_ids[index].byte_count()),
+              0);
   }
 
   // Verifiy that the same amount of bytes was written and read
