@@ -1,4 +1,5 @@
 #include "frame.hpp"
+
 #include <bitset>
 
 namespace hyrise {

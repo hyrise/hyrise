@@ -5,7 +5,7 @@ namespace hyrise {
 
 class PageIDTest : public BaseTest {};
 
-TEST_F(PageIDTest, TestPageIDForDifferentSizeTypes) {
+TEST_F(PageIDTest, PageIDForDifferentSizeTypes) {
   const auto small_page = PageID{PageSizeType::KiB16, 29, true};
   EXPECT_EQ(small_page.size_type(), PageSizeType::KiB16);
   EXPECT_EQ(small_page.byte_count(), 16384);
@@ -19,12 +19,12 @@ TEST_F(PageIDTest, TestPageIDForDifferentSizeTypes) {
   EXPECT_EQ(larger_page.index(), 59);
 }
 
-TEST_F(PageIDTest, TestInvalidPageID) {
+TEST_F(PageIDTest, InvalidPageID) {
   EXPECT_FALSE(PageID(PageSizeType::KiB16, 29, false).valid());
   EXPECT_FALSE(INVALID_PAGE_ID.valid());
 }
 
-TEST_F(PageIDTest, TestEqualityOperator) {
+TEST_F(PageIDTest, EqualityOperator) {
   EXPECT_EQ(INVALID_PAGE_ID, PageID(PageSizeType::KiB16, 29, false));
   EXPECT_EQ(INVALID_PAGE_ID, PageID(PageSizeType::KiB256, 29, false));
   EXPECT_NE(INVALID_PAGE_ID, PageID(PageSizeType::KiB256, 29, true));
@@ -34,7 +34,7 @@ TEST_F(PageIDTest, TestEqualityOperator) {
   EXPECT_NE(PageID(PageSizeType::KiB256, 28, true), PageID(PageSizeType::KiB16, 28, true));
 }
 
-TEST_F(PageIDTest, TestStreamOperator) {
+TEST_F(PageIDTest, StreamOperator) {
   const auto page_id = PageID{PageSizeType::KiB16, 29, true};
   std::stringstream stream;
   stream << page_id;
