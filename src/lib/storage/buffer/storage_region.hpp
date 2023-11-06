@@ -54,7 +54,8 @@ class StorageRegion final : public Noncopyable {
   uint64_t total_bytes_read() const;
 
  private:
-  // Each page size type has its own file handle. The file handle contains the file descriptor and the backing file name.
+  // Each page size type has its own file handle. The file handle contains
+  // the file descriptor and the backing file name.
   struct FileHandle {
     // File descriptor of backing file
     int fd;

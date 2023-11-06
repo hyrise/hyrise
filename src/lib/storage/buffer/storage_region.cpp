@@ -50,9 +50,11 @@ int StorageRegion::_open_file_descriptor(const std::filesystem::path& file_name)
   // DuckDB: https://github.com/duckdb/duckdb/blob/60ed227816669be497fa4ba53e593d3899479c43/src/common/local_file_system.cpp
   // LevelDB: https://github.com/google/leveldb/commit/296de8d5b8e4e57bd1e46c981114dfbe58a8c4fa
 
-  // On Linux, we use O_DIRECT to bypass the page cache. This is not supported on Mac, but we use the fcntl(F_NOCACHE) call below.
-  // Other nan that, files are opened in read-write mode and created if they do not exist. O_DSYNC ensures that all file data and metadata is
-  // written to the disk before the syscall returns. This eliminates the need for explict fsync calls after each write.
+  // On Linux, we use O_DIRECT to bypass the page cache. This is not supported on Mac,
+  // but we use the fcntl(F_NOCACHE) call below. Other nan that, files are opened in
+  // read-write mode and created if they do not exist. O_DSYNC ensures that all file
+  // data and metadata is written to the disk before the syscall returns. This
+  // eliminates the need for explict fsync calls after each write.
 #ifdef __APPLE__
   const int flags = O_RDWR | O_CREAT | O_DSYNC;
 #elif __linux__
