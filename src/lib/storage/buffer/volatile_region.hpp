@@ -1,12 +1,13 @@
 #pragma once
 
 #include <atomic>
-#include <boost/dynamic_bitset.hpp>
 #include <forward_list>
 #include <memory>
 #include <mutex>
 #include <span>
 #include <tuple>
+
+#include "boost/dynamic_bitset.hpp"
 #include "frame.hpp"
 #include "page_id.hpp"
 #include "types.hpp"
@@ -31,16 +32,16 @@ class VolatileRegion final : public Noncopyable {
   using MappedPageRegion = std::span<std::byte, DEFAULT_RESERVED_VIRTUAL_MEMORY_PER_REGION>;
 
   // Enable mprotect class for debugging purposes
-  constexpr static bool ENABLE_MPROTECT = false;
+  constexpr static bool ENABLE_MPROTECT = HYRISE_DEBUG;
 
   // Create a VolatileRegion in a memory region for a given size_type.
   VolatileRegion(const PageSizeType size_type, MappedPageRegion region);
 
   // Get the frame of a given page.
-  Frame* get_frame(const PageID page_id);
+  Frame& get_frame(const PageID page_id) const;
 
   // Get the start address of a given page.
-  std::byte* get_page(const PageID page_id);
+  std::byte* get_page(const PageID page_id) const;
 
   // Use mbind for page movement. This is not portable and only works on Linux with NUMA support.
   void mbind_to_numa_node(const PageID page_id, const NodeID target_memory_node);
@@ -54,7 +55,8 @@ class VolatileRegion final : public Noncopyable {
   // Free a page using madvise(MAV_FREE_REUSABLE) on OS X and madvise(MADV_DONTNEED) on Linux.
   void free(const PageID page_id);
 
-  // Mark a page as reusable using madvise(MADV_FREE_REUSE) on OS X to update memory accounting. Not implemented on Linux.
+  // Mark a page as reusable using madvise(MADV_FREE_REUSE) on OS X to update memory accounting.
+  // Not implemented on Linux as pages are automatically accounted for on first-touch.
   void reuse(const PageID page_id);
 
   // Returns the number of pages this region can manage.
@@ -76,10 +78,10 @@ class VolatileRegion final : public Noncopyable {
   static std::array<std::shared_ptr<VolatileRegion>, PAGE_SIZE_TYPES_COUNT> create_volatile_regions(
       MappedRegion mapped_region);
 
-  // Returns the number of madvice(MADV_FREE_REUSABLE) calls on OS X or madvice(MADV_DONTNEED) calls on Linux.
+  // Returns the number of madvice(MADV_FREE_REUSABLE) calls on Mac OS X or madvice(MADV_DONTNEED) calls on Linux.
   uint64_t madvice_free_call_count() const;
 
-  // Returns the number of page moevements using mbind or move_pages.
+  // Returns the number of page movements using mbind or move_pages.
   uint64_t numa_page_movement_count() const;
 
  private:
@@ -89,10 +91,10 @@ class VolatileRegion final : public Noncopyable {
   // Calls mprotect on a given page to unprotect it. Used for debugging.
   void _unprotect_page(const PageID page_id);
 
-  // Number of madvice(MADV_FREE_REUSABLE) calls on OS X or madvice(MADV_DONTNEED) calls on Linux
+  // Number of madvice(MADV_FREE_REUSABLE) calls on Mac OS X or madvice(MADV_DONTNEED) calls on Linux
   std::atomic_uint64_t _madvice_free_call_count = 0;
 
-  // Number of page moevements using mbind or move_pages
+  // Number of page movements using mbind or move_pages
   std::atomic_uint64_t _numa_page_movement_count = 0;
 
   const PageSizeType _size_type;

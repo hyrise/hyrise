@@ -26,20 +26,24 @@ void VolatileRegion::move_page_to_numa_node(const PageID page_id, const NodeID t
   DebugAssert(page_id.size_type() == _size_type, "Page does not belong to this region.");
 #if HYRISE_NUMA_SUPPORT
   DebugAssert(target_memory_node != INVALID_NODE_ID, "Numa node has not been set.");
-  static thread_local std::vector<void*> pages_to_move{bytes_for_size_type(_size_type) / OS_PAGE_SIZE};
-  static thread_local std::vector<int> nodes{static_cast<int>(bytes_for_size_type(_size_type) / OS_PAGE_SIZE)};
-  static thread_local std::vector<int> status{static_cast<int>(bytes_for_size_type(_size_type) / OS_PAGE_SIZE)};
+  const auto pages_to_move_count = static_cast<int>(bytes_for_size_type(_size_type) / OS_PAGE_SIZE);
+  static thread_local std::vector<void*> pages_to_move{pages_to_move_count};
+  static thread_local std::vector<int> nodespages_to_move_count
+};
+static thread_local std::vector<int> status{pages_to_move_count};
 
-  for (auto i = 0u; i < pages_to_move.size(); ++i) {
-    pages_to_move[i] = get_page(page_id) + i * OS_PAGE_SIZE;
-    nodes[i] = target_memory_node;
-  }
-  if (move_pages(0, pages_to_move.size(), pages_to_move.data(), nodes.data(), status.data(), MPOL_MF_MOVE) < 0) {
-    const auto error = errno;
-    Fail("Move pages failed: " + strerror(error));
-  }
-  _numa_page_movement_count.fetch_add(1, std::memory_order_relaxed);
-  _frames[page_id.index()].set_node_id(target_memory_node);
+for (auto i = 0u; i < pages_to_move.size(); ++i) {
+  pages_to_move[i] = get_page(page_id) + i * OS_PAGE_SIZE;
+  nodes[i] = target_memory_node;
+}
+if (move_pages(0, pages_to_move.size(), pages_to_move.data(), nodes.data(), status.data(), MPOL_MF_MOVE) < 0) {
+  const auto error = errno;
+  Fail("Move pages failed: " + strerror(error));
+}
+_numa_page_movement_count.fetch_add(1, std::memory_order_relaxed);
+_frames[page_id.index()].set_node_id(target_memory_node);
+#else
+  Fail("move_page_to_numa_node() is not implemented on this platform.");
 #endif
 }
 
@@ -56,17 +60,22 @@ void VolatileRegion::mbind_to_numa_node(const PageID page_id, const NodeID targe
             MPOL_MF_MOVE | MPOL_MF_STRICT) != 0) {
     const auto error = errno;
     numa_bitmask_free(nodes);
-    Fail("Mbind failed: " + strerror(error) +
+    Fail("mbind failed: " + strerror(error) +
          " . Either no space is left or vm map count is exhausted. Try: \"sudo sysctl vm.max_map_count=X\"");
   }
   numa_bitmask_free(nodes);
   _numa_page_movement_count.fetch_add(1, std::memory_order_relaxed);
   _frames[page_id.index()].set_node_id(target_memory_node);
+#else
+  Fail("mbind_to_numa_node() is not implemented on this platform.");
 #endif
 }
 
 void VolatileRegion::memcpy_page_to_numa_node(const PageID page_id, const NodeID target_memory_node) {
-  // From Yan et. al "Nimble Page Management for Tiered Memory Systems", we know that large page movemments
+#if !HYRISE_NUMA_SUPPORT
+  Fail("memcpy_page_to_numa_node() is not implemented on this platform.");
+#else
+  // From Yan et. al "Nimble Page Management for Tiered Memory Systems", we know that large page movements
   // spend up to 50% in the copy operation. Since syscalls are serialized, we also unnecessarily serialize copy operations
   // in a multit-threaded environment. We circument this by using an intermediate buffer and two explicit memcpy operations:
   // 1. Memcpy from page to intermediate buffer
@@ -79,18 +88,12 @@ void VolatileRegion::memcpy_page_to_numa_node(const PageID page_id, const NodeID
   // We create one buffer per thread to avoid contention. This buffer is divided into intermediate pages
   // for each potential NUMA node. For simplicity, we use of the maximum page size to accommodate all page sizes.
   static thread_local auto intermediate_buffer = []() {
-#if HYRISE_NUMA_SUPPORT
     static const auto numa_node_count = numa_num_configured_nodes();
-#else
-    static const auto numa_node_count = 1;
-#endif
     const auto num_bytes = bytes_for_size_type(MAX_PAGE_SIZE_TYPE);
     auto buffer = std::make_unique_for_overwrite<uint8_t[]>(numa_node_count * num_bytes);
     for (auto numa_node = uint64_t{0}; numa_node < numa_node_count; ++numa_node) {
       const auto buffer_offset = buffer.get() + numa_node * num_bytes;
-#if HYRISE_NUMA_SUPPORT
       numa_tonode_memory(buffer_offset, num_bytes, numa_node);
-#endif
     }
     return buffer;
   }();
@@ -102,6 +105,7 @@ void VolatileRegion::memcpy_page_to_numa_node(const PageID page_id, const NodeID
   free(page_id);
   mbind_to_numa_node(page_id, target_memory_node);
   std::memcpy(page_ptr, target_buffer, page_id.byte_count());
+#endif
 }
 
 void VolatileRegion::free(const PageID page_id) {
@@ -123,16 +127,16 @@ void VolatileRegion::free(const PageID page_id) {
   _madvice_free_call_count.fetch_add(1, std::memory_order_relaxed);
 }
 
-std::byte* VolatileRegion::get_page(const PageID page_id) {
+std::byte* VolatileRegion::get_page(const PageID page_id) const {
   DebugAssert(page_id.size_type() == _size_type, "Page does not belong to this region.");
   const auto num_bytes = bytes_for_size_type(_size_type);
   const auto data = _region.data() + page_id.index() * num_bytes;
   return data;
 }
 
-Frame* VolatileRegion::get_frame(const PageID page_id) {
+Frame& VolatileRegion::get_frame(const PageID page_id) const {
   DebugAssert(page_id.size_type() == _size_type, "Page does not belong to this region.");
-  return &_frames[page_id.index()];
+  return _frames[page_id.index()];
 }
 
 size_t VolatileRegion::memory_consumption() const {
