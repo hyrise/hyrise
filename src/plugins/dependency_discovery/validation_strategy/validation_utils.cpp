@@ -75,7 +75,7 @@ namespace hyrise {
 template <typename T>
 typename ValidationUtils<T>::ColumnStatistics ValidationUtils<T>::collect_column_statistics(
     const std::shared_ptr<const Table>& table, const ColumnID column_id, bool early_out) {
-  auto min_max_ordered = std::map<T, std::shared_ptr<std::pair<T, T>>>{};
+  auto min_max_ordered = std::map<T, ChunkID>{};
   auto column_statistics = ValidationUtils<T>::ColumnStatistics{};
   column_statistics.contains_only_nulls = true;
   column_statistics.all_segments_unique = true;
@@ -110,10 +110,9 @@ typename ValidationUtils<T>::ColumnStatistics ValidationUtils<T>::collect_column
 
     const auto& min = *segment_statistics.min;
     const auto& max = *segment_statistics.max;
-    const auto min_max_pair = std::make_shared<std::pair<T, T>>(min, max);
 
-    const auto min_it = min_max_ordered.emplace_hint(previous_it, min, min_max_pair);
-    const auto max_it = min_max_ordered.emplace_hint(min_it, max, min_max_pair);
+    const auto min_it = min_max_ordered.emplace_hint(previous_it, min, chunk_id);
+    const auto max_it = min_max_ordered.emplace_hint(min_it, max, chunk_id);
     previous_it = max_it;
 
     if (!column_statistics.segments_disjoint) {
@@ -121,7 +120,7 @@ typename ValidationUtils<T>::ColumnStatistics ValidationUtils<T>::collect_column
     }
 
     // Not disjoint if key already exists or if there is another value between min and max.
-    if (min_it->second != min_max_pair || max_it->second != min_max_pair || std::next(min_it)->first != max) {
+    if (min_it->second != chunk_id || max_it->second != chunk_id || std::next(min_it) != max_it) {
       column_statistics.segments_disjoint = false;
       continue;
     }

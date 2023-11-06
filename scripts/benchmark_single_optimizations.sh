@@ -12,8 +12,6 @@ then
 fi
 
 benchmarks='hyriseBenchmarkTPCH hyriseBenchmarkTPCDS hyriseBenchmarkStarSchema hyriseBenchmarkJoinOrder'
-scale_factors="1 20 30 50 70 100"
-scale_factors="10 100"
 scale_factors="10"
 # Set to 1 because even a single warmup run of a query makes the observed runtimes much more stable. See discussion in #2405 for some preliminary reasoning.
 warmup_seconds=1
@@ -98,36 +96,48 @@ do
     runtime=$((sf * 6))
     runtime=$(( runtime > 60 ? runtime : 60 ))
 
+    echo "Running $benchmark for $commit... (single-threaded, SF ${sf}) NO SCHEMA CONSTRAINTS, ALL OFF"
+    ( SCHEMA_CONSTRAINTS=0 DEPENDENT_GROUPBY=0 JOIN_TO_SEMI=0 JOIN_TO_PREDICATE=0 "${build_folder}"/"$benchmark" -s ${sf} -r ${runs} -t ${runtime} -w ${warmup_seconds} -o "${build_folder}/benchmark_plugin_results/${benchmark}_${commit}_st_s${sf}_all_off.json" 2>&1 ) | tee "${build_folder}/benchmark_plugin_results/${benchmark}_${commit}_st_s${sf}_all_off.log"
+
     echo "Running $benchmark for $commit... (single-threaded, SF ${sf}) SCHEMA CONSTRAINTS, ALL ON"
-    ( SCHEMA_CONSTRAINTS=1 "${build_folder}"/"$benchmark" -s ${sf} -r ${runs} -t ${runtime} -w ${warmup_seconds} -o "${build_folder}/benchmark_plugin_results/${benchmark}_${commit}_st_s${sf}_schema.json" 2>&1 ) | tee "${build_folder}/benchmark_plugin_results/${benchmark}_${commit}_st_s${sf}_schema.log"
+    ( SCHEMA_CONSTRAINTS=1 DEPENDENT_GROUPBY=1 JOIN_TO_SEMI=1 JOIN_TO_PREDICATE=1 "${build_folder}"/"$benchmark" -s ${sf} -r ${runs} -t ${runtime} -w ${warmup_seconds} -o "${build_folder}/benchmark_plugin_results/${benchmark}_${commit}_st_s${sf}_schema.json" 2>&1 ) | tee "${build_folder}/benchmark_plugin_results/${benchmark}_${commit}_st_s${sf}_schema.log"
 
     echo "Running $benchmark for $commit... (single-threaded, SF ${sf}) SCHEMA CONSTRAINTS, PLUGIN, ALL ON"
-    ( SCHEMA_CONSTRAINTS=1 "${build_folder}"/"$benchmark" -s ${sf} -r ${runs} -t ${runtime} -w ${warmup_seconds} -o "${build_folder}/benchmark_plugin_results/${benchmark}_${commit}_st_s${sf}_schema_plugin.json" -p "${build_folder}/lib/libhyriseDependencyDiscoveryPlugin.${lib_suffix}" 2>&1 ) | tee "${build_folder}/benchmark_plugin_results/${benchmark}_${commit}_st_s${sf}_schema_plugin.log"
+    ( SCHEMA_CONSTRAINTS=1 DEPENDENT_GROUPBY=1 JOIN_TO_SEMI=1 JOIN_TO_PREDICATE=1 "${build_folder}"/"$benchmark" -s ${sf} -r ${runs} -t ${runtime} -w ${warmup_seconds} -o "${build_folder}/benchmark_plugin_results/${benchmark}_${commit}_st_s${sf}_schema_plugin.json" -p "${build_folder}/lib/libhyriseDependencyDiscoveryPlugin.${lib_suffix}" 2>&1 ) | tee "${build_folder}/benchmark_plugin_results/${benchmark}_${commit}_st_s${sf}_schema_plugin.log"
 
-    echo "Running $benchmark for $commit... (single-threaded, SF ${sf}) NO SCHEMA CONSTRAINTS, ONLY DEPENDENT_GROUPBY"
+    echo "Running $benchmark for $commit... (single-threaded, SF ${sf}) NO SCHEMA CONSTRAINTS, PLUGIN, ALL ON"
+    ( SCHEMA_CONSTRAINTS=0 DEPENDENT_GROUPBY=1 JOIN_TO_SEMI=1 JOIN_TO_PREDICATE=1 "${build_folder}"/"$benchmark" -s ${sf} -r ${runs} -t ${runtime} -w ${warmup_seconds} -o "${build_folder}/benchmark_plugin_results/${benchmark}_${commit}_st_s${sf}_plugin.json" -p "${build_folder}/lib/libhyriseDependencyDiscoveryPlugin.${lib_suffix}" 2>&1 ) | tee "${build_folder}/benchmark_plugin_results/${benchmark}_${commit}_st_s${sf}_plugin.log"
+
+    echo "Running $benchmark for $commit... (single-threaded, SF ${sf}) NO SCHEMA CONSTRAINTS, PLUGIN, ONLY DEPENDENT_GROUPBY"
     ( SCHEMA_CONSTRAINTS=0 DEPENDENT_GROUPBY=1 JOIN_TO_SEMI=0 JOIN_TO_PREDICATE=0 "${build_folder}"/"$benchmark" -s ${sf} -r ${runs} -t ${runtime} -w ${warmup_seconds} -o "${build_folder}/benchmark_plugin_results/${benchmark}_${commit}_st_s${sf}_plugin_dgr.json" -p "${build_folder}/lib/libhyriseDependencyDiscoveryPlugin.${lib_suffix}" 2>&1 ) | tee "${build_folder}/benchmark_plugin_results/${benchmark}_${commit}_st_s${sf}_plugin_dgr.log"
 
-    echo "Running $benchmark for $commit... (single-threaded, SF ${sf}) NO SCHEMA CONSTRAINTS, ONLY JOIN_TO_SEMI"
+    echo "Running $benchmark for $commit... (single-threaded, SF ${sf}) NO SCHEMA CONSTRAINTS, PLUGIN, ONLY JOIN_TO_SEMI"
     ( SCHEMA_CONSTRAINTS=0 DEPENDENT_GROUPBY=0 JOIN_TO_SEMI=1 JOIN_TO_PREDICATE=0 "${build_folder}"/"$benchmark" -s ${sf} -r ${runs} -t ${runtime} -w ${warmup_seconds} -o "${build_folder}/benchmark_plugin_results/${benchmark}_${commit}_st_s${sf}_plugin_jts.json" -p "${build_folder}/lib/libhyriseDependencyDiscoveryPlugin.${lib_suffix}" 2>&1 ) | tee "${build_folder}/benchmark_plugin_results/${benchmark}_${commit}_st_s${sf}_plugin_jts.log"
 
-    echo "Running $benchmark for $commit... (single-threaded, SF ${sf}) NO SCHEMA CONSTRAINTS, ONLY JOIN_TO_PREDICATE"
+    echo "Running $benchmark for $commit... (single-threaded, SF ${sf}) NO SCHEMA CONSTRAINTS, PLUGIN, ONLY JOIN_TO_PREDICATE"
     ( SCHEMA_CONSTRAINTS=0 DEPENDENT_GROUPBY=0 JOIN_TO_SEMI=0 JOIN_TO_PREDICATE=1 "${build_folder}"/"$benchmark" -s ${sf} -r ${runs} -t ${runtime} -w ${warmup_seconds} -o "${build_folder}/benchmark_plugin_results/${benchmark}_${commit}_st_s${sf}_plugin_jtp.json" -p "${build_folder}/lib/libhyriseDependencyDiscoveryPlugin.${lib_suffix}" 2>&1 ) | tee "${build_folder}/benchmark_plugin_results/${benchmark}_${commit}_st_s${sf}_plugin_jtp.log"
   done
 done
 
+echo "Running hyriseBenchmarkJoinOrder for $commit... (single-threaded) NO SCHEMA CONSTRAINTS, ALL OFF"
+( SCHEMA_CONSTRAINTS=0 DEPENDENT_GROUPBY=0 JOIN_TO_SEMI=0 JOIN_TO_PREDICATE=0  "${build_folder}"/hyriseBenchmarkJoinOrder -r ${runs} -w ${warmup_seconds} -o "${build_folder}/benchmark_plugin_results/hyriseBenchmarkJoinOrder_${commit}_st_all_off.json" 2>&1 ) | tee "${build_folder}/benchmark_plugin_results/hyriseBenchmarkJoinOrder_${commit}_st_all_off.log"
+
 echo "Running hyriseBenchmarkJoinOrder for $commit... (single-threaded), SCHEMA CONSTRAINTS, ALL ON"
-( SCHEMA_CONSTRAINTS=1 "${build_folder}"/hyriseBenchmarkJoinOrder -r ${runs} -w ${warmup_seconds} -o "${build_folder}/benchmark_plugin_results/hyriseBenchmarkJoinOrder_${commit}_st_schema.json" -p "${build_folder}/lib/libhyriseDependencyDiscoveryPlugin.${lib_suffix}" 2>&1 ) | tee "${build_folder}/benchmark_plugin_results/hyriseBenchmarkJoinOrder_${commit}_st_schema.log"
+( SCHEMA_CONSTRAINTS=1 DEPENDENT_GROUPBY=1 JOIN_TO_SEMI=1 JOIN_TO_PREDICATE=1 "${build_folder}"/hyriseBenchmarkJoinOrder -r ${runs} -w ${warmup_seconds} -o "${build_folder}/benchmark_plugin_results/hyriseBenchmarkJoinOrder_${commit}_st_schema.json" 2>&1 ) | tee "${build_folder}/benchmark_plugin_results/hyriseBenchmarkJoinOrder_${commit}_st_schema.log"
+
+echo "Running hyriseBenchmarkJoinOrder for $commit... (single-threaded), NO SCHEMA CONSTRAINTS, PLUGIN, ALL ON"
+( SCHEMA_CONSTRAINTS=0 DEPENDENT_GROUPBY=1 JOIN_TO_SEMI=1 JOIN_TO_PREDICATE=1 "${build_folder}"/hyriseBenchmarkJoinOrder -r ${runs} -w ${warmup_seconds} -o "${build_folder}/benchmark_plugin_results/hyriseBenchmarkJoinOrder_${commit}_st_plugin.json" -p "${build_folder}/lib/libhyriseDependencyDiscoveryPlugin.${lib_suffix}" 2>&1 ) | tee "${build_folder}/benchmark_plugin_results/hyriseBenchmarkJoinOrder_${commit}_st_plugin.log"
 
 echo "Running hyriseBenchmarkJoinOrder for $commit... (single-threaded), SCHEMA CONSTRAINTS, PLUGIN, ALL ON"
-( SCHEMA_CONSTRAINTS=1 "${build_folder}"/hyriseBenchmarkJoinOrder -r ${runs} -w ${warmup_seconds} -o "${build_folder}/benchmark_plugin_results/hyriseBenchmarkJoinOrder_${commit}_st_schema_plugin.json" 2>&1 ) | tee "${build_folder}/benchmark_plugin_results/hyriseBenchmarkJoinOrder_${commit}_st_schema_plugin.log"
+( SCHEMA_CONSTRAINTS=1 DEPENDENT_GROUPBY=1 JOIN_TO_SEMI=1 JOIN_TO_PREDICATE=1 "${build_folder}"/hyriseBenchmarkJoinOrder -r ${runs} -w ${warmup_seconds} -o "${build_folder}/benchmark_plugin_results/hyriseBenchmarkJoinOrder_${commit}_st_schema_plugin.json" -p "${build_folder}/lib/libhyriseDependencyDiscoveryPlugin.${lib_suffix}" 2>&1 ) | tee "${build_folder}/benchmark_plugin_results/hyriseBenchmarkJoinOrder_${commit}_st_schema_plugin.log"
 
-echo "Running hyriseBenchmarkJoinOrder for $commit... (single-threaded), NO SCHEMA CONSTRAINTS, ONLY DEPENDENT_GROUPBY"
+echo "Running hyriseBenchmarkJoinOrder for $commit... (single-threaded), NO SCHEMA CONSTRAINTS, PLUGIN, ONLY DEPENDENT_GROUPBY"
 ( SCHEMA_CONSTRAINTS=0 DEPENDENT_GROUPBY=1 JOIN_TO_SEMI=0 JOIN_TO_PREDICATE=0 "${build_folder}"/hyriseBenchmarkJoinOrder -r ${runs} -w ${warmup_seconds} -o "${build_folder}/benchmark_plugin_results/hyriseBenchmarkJoinOrder_${commit}_st_plugin_dgr.json" -p "${build_folder}/lib/libhyriseDependencyDiscoveryPlugin.${lib_suffix}" 2>&1 ) | tee "${build_folder}/benchmark_plugin_results/hyriseBenchmarkJoinOrder_${commit}_st_plugin_dgr.log"
 
-echo "Running hyriseBenchmarkJoinOrder for $commit... (single-threaded), NO SCHEMA CONSTRAINTS, ONLY JOIN_TO_SEMI"
+echo "Running hyriseBenchmarkJoinOrder for $commit... (single-threaded), NO SCHEMA CONSTRAINTS, PLUGIN, ONLY JOIN_TO_SEMI"
 ( SCHEMA_CONSTRAINTS=0 DEPENDENT_GROUPBY=0 JOIN_TO_SEMI=1 JOIN_TO_PREDICATE=0 "${build_folder}"/hyriseBenchmarkJoinOrder -r ${runs} -w ${warmup_seconds} -o "${build_folder}/benchmark_plugin_results/hyriseBenchmarkJoinOrder_${commit}_st_plugin_jts.json" -p "${build_folder}/lib/libhyriseDependencyDiscoveryPlugin.${lib_suffix}" 2>&1 ) | tee "${build_folder}/benchmark_plugin_results/hyriseBenchmarkJoinOrder_${commit}_st_plugin_jts.log"
 
-echo "Running hyriseBenchmarkJoinOrder for $commit... (single-threaded), NO SCHEMA CONSTRAINTS, ONLY JOIN_TO_PREDICATE"
+echo "Running hyriseBenchmarkJoinOrder for $commit... (single-threaded), NO SCHEMA CONSTRAINTS, PLUGIN, ONLY JOIN_TO_PREDICATE"
 ( SCHEMA_CONSTRAINTS=0 DEPENDENT_GROUPBY=0 JOIN_TO_SEMI=0 JOIN_TO_PREDICATE=1 "${build_folder}"/hyriseBenchmarkJoinOrder -r ${runs} -w ${warmup_seconds} -o "${build_folder}/benchmark_plugin_results/hyriseBenchmarkJoinOrder_${commit}_st_plugin_jtp.json" -p "${build_folder}/lib/libhyriseDependencyDiscoveryPlugin.${lib_suffix}" 2>&1 ) | tee "${build_folder}/benchmark_plugin_results/hyriseBenchmarkJoinOrder_${commit}_st_plugin_jtp.log"
 
 cd "${build_folder}"
