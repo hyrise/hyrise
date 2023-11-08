@@ -64,7 +64,7 @@ void JoinToPredicateCandidateRule::apply_to_node(const std::shared_ptr<const Abs
 
   // Candidates for the OD-based rewrite also require an IND. This IND will be destroyed if there is another predicate
   // on the candidate table. Thus, we only add them if the candidate predicate is the only predicate on the table.
-  auto od_candidates = DependencyCandidates{};
+  auto od_candidates = std::vector<std::shared_ptr<AbstractDependencyCandidate>>{};
   auto predicate_count = size_t{0};
 
   visit_lqp(subtree_root, [&](const auto& node) {
@@ -137,23 +137,38 @@ void JoinToPredicateCandidateRule::apply_to_node(const std::shared_ptr<const Abs
     }
 
     if (join_node.join_mode != JoinMode::Semi) {
-      od_candidates.emplace(
+      od_candidates.emplace_back(
           std::make_shared<UccCandidate>(stored_table_node.table_name, join_lqp_column_expression->original_column_id));
     }
 
-    od_candidates.emplace(std::make_shared<OdCandidate>(stored_table_node.table_name,
-                                                        join_lqp_column_expression->original_column_id,
-                                                        column_expression->original_column_id));
+    auto od_candidate =
+        std::make_shared<OdCandidate>(stored_table_node.table_name, join_lqp_column_expression->original_column_id,
+                                      column_expression->original_column_id);
+    od_candidates.emplace_back(od_candidate);
 
-    od_candidates.emplace(std::make_shared<IndCandidate>(
+    auto ind_candidate = std::make_shared<IndCandidate>(
         other_stored_table_node->table_name, join_key_column_expression->original_column_id,
-        stored_table_node.table_name, join_lqp_column_expression->original_column_id));
+        stored_table_node.table_name, join_lqp_column_expression->original_column_id);
+    ind_candidate->dependents.emplace(od_candidate);
+
+    od_candidates.emplace_back(ind_candidate);
 
     return LQPVisitation::VisitInputs;
   });
 
   if (predicate_count == 1 && !od_candidates.empty()) {
-    candidates.insert(od_candidates.begin(), od_candidates.end());
+    for (const auto& candidate : od_candidates) {
+      const auto [it, inserted] = candidates.emplace(candidate);
+      if (candidate->type == DependencyType::Inclusion && !inserted) {
+        const auto& ind_candidate = static_cast<const IndCandidate&>(*candidate);
+        const auto& existing_candidate = static_cast<IndCandidate&>(**it);
+        for (const auto& dependent : ind_candidate.dependents) {
+          const auto dependent_it = candidates.find(dependent);
+          Assert(dependent_it != candidates.end(), "Could not map dependent of IND candidate.");
+          existing_candidate.dependents.emplace(*dependent_it);
+        }
+      }
+    }
   }
 }
 

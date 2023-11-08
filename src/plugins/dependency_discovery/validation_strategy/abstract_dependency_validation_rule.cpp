@@ -7,25 +7,11 @@
 #include "storage/constraints/table_key_constraint.hpp"
 #include "storage/constraints/table_order_constraint.hpp"
 
-namespace hyrise {
+namespace {
 
-ValidationResult::ValidationResult(const ValidationStatus init_status) : status{init_status} {}
+using namespace hyrise;  // NOLINT(build/namespaces)
 
-AbstractDependencyValidationRule::AbstractDependencyValidationRule(const DependencyType init_dependency_type)
-    : dependency_type(init_dependency_type) {}
-
-ValidationResult AbstractDependencyValidationRule::validate(const AbstractDependencyCandidate& candidate) const {
-  Assert(candidate.type == dependency_type, "Wrong dependency type: Expected " +
-                                                std::string{magic_enum::enum_name(dependency_type)} + ", got " +
-                                                std::string{magic_enum::enum_name(candidate.type)});
-  if (_dependency_already_known(candidate)) {
-    return ValidationResult{ValidationStatus::AlreadyKnown};
-  }
-
-  return _on_validate(candidate);
-}
-
-bool AbstractDependencyValidationRule::_dependency_already_known(const AbstractDependencyCandidate& candidate) {
+bool dependency_already_known(const AbstractDependencyCandidate& candidate) {
   switch (candidate.type) {
     case DependencyType::Order: {
       const auto& od_candidate = static_cast<const OdCandidate&>(candidate);
@@ -94,6 +80,41 @@ bool AbstractDependencyValidationRule::_dependency_already_known(const AbstractD
   }
 
   Fail("Invalid table constraint.");
+}
+
+bool dependency_superfluous(const AbstractDependencyCandidate& candidate) {
+  if (candidate.type != DependencyType::Inclusion) {
+    return false;
+  }
+
+  const auto& dependents = static_cast<const IndCandidate&>(candidate).dependents;
+
+  return std::all_of(dependents.cbegin(), dependents.cend(),
+                     [](const auto& dependent) { return dependent->status == ValidationStatus::Invalid; });
+}
+
+}  // namespace
+
+namespace hyrise {
+
+ValidationResult::ValidationResult(const ValidationStatus init_status) : status{init_status} {}
+
+AbstractDependencyValidationRule::AbstractDependencyValidationRule(const DependencyType init_dependency_type)
+    : dependency_type(init_dependency_type) {}
+
+ValidationResult AbstractDependencyValidationRule::validate(const AbstractDependencyCandidate& candidate) const {
+  Assert(candidate.type == dependency_type, "Wrong dependency type: Expected " +
+                                                std::string{magic_enum::enum_name(dependency_type)} + ", got " +
+                                                std::string{magic_enum::enum_name(candidate.type)});
+  if (dependency_already_known(candidate)) {
+    return ValidationResult{ValidationStatus::AlreadyKnown};
+  }
+
+  if (dependency_superfluous(candidate)) {
+    return ValidationResult{ValidationStatus::Superfluous};
+  }
+
+  return _on_validate(candidate);
 }
 
 std::shared_ptr<AbstractTableConstraint> AbstractDependencyValidationRule::_constraint_from_candidate(

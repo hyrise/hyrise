@@ -9,8 +9,6 @@ namespace hyrise {
 
 class Table;
 
-enum class ValidationStatus { Uncertain, Valid, Invalid, AlreadyKnown };
-
 struct ValidationResult {
  public:
   explicit ValidationResult(const ValidationStatus init_status);
@@ -34,8 +32,6 @@ class AbstractDependencyValidationRule {
 
  protected:
   virtual ValidationResult _on_validate(const AbstractDependencyCandidate& candidate) const = 0;
-
-  static bool _dependency_already_known(const AbstractDependencyCandidate& candidate);
 
   // Pointer is required for polymorphism.
   static std::shared_ptr<AbstractTableConstraint> _constraint_from_candidate(

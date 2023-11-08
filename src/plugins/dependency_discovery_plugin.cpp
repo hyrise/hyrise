@@ -130,6 +130,7 @@ void DependencyDiscoveryPlugin::_validate_dependency_candidates(
 
   auto valid_count = uint32_t{0};
   auto invalid_count = uint32_t{0};
+  auto skipped_count = uint32_t{0};
 
   for (const auto& candidate : ordered_candidates) {
     auto message = std::stringstream{};
@@ -156,9 +157,14 @@ void DependencyDiscoveryPlugin::_validate_dependency_candidates(
                "Expected validation to yield constraint(s) for " + candidate->description());
         ++valid_count;
         break;
+      case ValidationStatus::Superfluous:
+        message << " [skipped (not required anymore) in " << candidate_timer.lap_formatted() << "]";
+        ++skipped_count;
+        break;
       case ValidationStatus::Uncertain:
         Fail("Expected explicit validation result for " + candidate->description());
     }
+    candidate->status = result.status;
 
     for (const auto& [table, constraint] : result.constraints) {
       _add_constraint(table, constraint);
@@ -166,10 +172,11 @@ void DependencyDiscoveryPlugin::_validate_dependency_candidates(
     Hyrise::get().log_manager.add_message("DependencyDiscoveryPlugin", message.str(), LogLevel::Info);
   }
 
-  Assert(valid_count + invalid_count == dependency_candidates.size(), "Numbers of candidates do not add up.");
+  Assert(valid_count + invalid_count + skipped_count == dependency_candidates.size(),
+         "Numbers of candidates do not add up.");
   auto message = std::stringstream{};
   message << "Validated " << dependency_candidates.size() << " candidates (" << valid_count << " valid, "
-          << invalid_count << " invalid) in " << validation_timer.lap_formatted();
+          << invalid_count << " invalid, " << skipped_count << " superfluous) in " << validation_timer.lap_formatted();
 
   Hyrise::get().log_manager.add_message("DependencyDiscoveryPlugin", message.str(), LogLevel::Info);
 }

@@ -10,7 +10,9 @@ namespace hyrise {
  * (referencing the table by name and the column by ID). They are used to first collect all candidates for dependency
  * validation before actually validating them in the DependencyDiscoveryPlugin.
  */
-enum class DependencyType { Inclusion, UniqueColumn, Functional, Order };
+enum class DependencyType { Order, Inclusion, UniqueColumn, Functional };
+
+enum class ValidationStatus { Uncertain, Valid, Invalid, AlreadyKnown, Superfluous };
 
 class AbstractDependencyCandidate : public Noncopyable {
  public:
@@ -27,12 +29,47 @@ class AbstractDependencyCandidate : public Noncopyable {
 
   const DependencyType type;
 
+  mutable ValidationStatus status{ValidationStatus::Uncertain};
+
  protected:
   virtual size_t _on_hash() const = 0;
   virtual bool _on_equals(const AbstractDependencyCandidate& rhs) const = 0;
 };
 
 std::ostream& operator<<(std::ostream& stream, const AbstractDependencyCandidate& dependency_candidate);
+
+// Wrapper around dependency_candidate->hash(), to enable hash based containers containing
+// std::shared_ptr<AbstractDependencyCandidate>. Since we want to hold all candidates in a single data structure, we
+// have to use pointers for the polymorphism to work.
+struct DependencyCandidateSharedPtrHash final {
+  size_t operator()(const std::shared_ptr<AbstractDependencyCandidate>& dependency_candidate) const {
+    return dependency_candidate->hash();
+  }
+
+  size_t operator()(const std::shared_ptr<const AbstractDependencyCandidate>& dependency_candidate) const {
+    return dependency_candidate->hash();
+  }
+};
+
+// Wrapper around AbstractDependencyCandidate::operator==(), to enable hash based containers containing
+// std::shared_ptr<AbstractDependencyCandidate>
+struct DependencyCandidateSharedPtrEqual final {
+  size_t operator()(const std::shared_ptr<const AbstractDependencyCandidate>& dependency_candidate_a,
+                    const std::shared_ptr<const AbstractDependencyCandidate>& dependency_candidate_b) const {
+    return dependency_candidate_a == dependency_candidate_b || *dependency_candidate_a == *dependency_candidate_b;
+  }
+
+  size_t operator()(const std::shared_ptr<AbstractDependencyCandidate>& dependency_candidate_a,
+                    const std::shared_ptr<AbstractDependencyCandidate>& dependency_candidate_b) const {
+    return dependency_candidate_a == dependency_candidate_b || *dependency_candidate_a == *dependency_candidate_b;
+  }
+};
+
+// Note that operator== ignores the equality functions:
+// https://stackoverflow.com/questions/36167764/can-not-compare-stdunorded-set-with-custom-keyequal
+// If we want to prioritize dependency candidates in the future, this might be replaced or extended by a priority queue.
+using DependencyCandidates = std::unordered_set<std::shared_ptr<AbstractDependencyCandidate>,
+                                                DependencyCandidateSharedPtrHash, DependencyCandidateSharedPtrEqual>;
 
 class UccCandidate : public AbstractDependencyCandidate {
  public:
@@ -77,6 +114,8 @@ class IndCandidate : public AbstractDependencyCandidate {
   const std::string primary_key_table;
   const ColumnID primary_key_column_id;
 
+  mutable DependencyCandidates dependents;
+
  protected:
   size_t _on_hash() const final;
   bool _on_equals(const AbstractDependencyCandidate& rhs) const final;
@@ -96,39 +135,6 @@ class FdCandidate : public AbstractDependencyCandidate {
   size_t _on_hash() const final;
   bool _on_equals(const AbstractDependencyCandidate& rhs) const final;
 };
-
-// Wrapper around dependency_candidate->hash(), to enable hash based containers containing
-// std::shared_ptr<AbstractDependencyCandidate>. Since we want to hold all candidates in a single data structure, we
-// have to use pointers for the polymorphism to work.
-struct DependencyCandidateSharedPtrHash final {
-  size_t operator()(const std::shared_ptr<AbstractDependencyCandidate>& dependency_candidate) const {
-    return dependency_candidate->hash();
-  }
-
-  size_t operator()(const std::shared_ptr<const AbstractDependencyCandidate>& dependency_candidate) const {
-    return dependency_candidate->hash();
-  }
-};
-
-// Wrapper around AbstractDependencyCandidate::operator==(), to enable hash based containers containing
-// std::shared_ptr<AbstractDependencyCandidate>
-struct DependencyCandidateSharedPtrEqual final {
-  size_t operator()(const std::shared_ptr<const AbstractDependencyCandidate>& dependency_candidate_a,
-                    const std::shared_ptr<const AbstractDependencyCandidate>& dependency_candidate_b) const {
-    return dependency_candidate_a == dependency_candidate_b || *dependency_candidate_a == *dependency_candidate_b;
-  }
-
-  size_t operator()(const std::shared_ptr<AbstractDependencyCandidate>& dependency_candidate_a,
-                    const std::shared_ptr<AbstractDependencyCandidate>& dependency_candidate_b) const {
-    return dependency_candidate_a == dependency_candidate_b || *dependency_candidate_a == *dependency_candidate_b;
-  }
-};
-
-// Note that operator== ignores the equality functions:
-// https://stackoverflow.com/questions/36167764/can-not-compare-stdunorded-set-with-custom-keyequal
-// If we want to prioritize dependency candidates in the future, this might be replaced or extended by a priority queue.
-using DependencyCandidates = std::unordered_set<std::shared_ptr<AbstractDependencyCandidate>,
-                                                DependencyCandidateSharedPtrHash, DependencyCandidateSharedPtrEqual>;
 
 }  // namespace hyrise
 
