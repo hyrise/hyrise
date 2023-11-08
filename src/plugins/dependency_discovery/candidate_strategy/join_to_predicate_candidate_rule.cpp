@@ -132,14 +132,13 @@ void JoinToPredicateCandidateRule::apply_to_node(const std::shared_ptr<const Abs
 
       // Candidates will also be generated for equals predicate.
     }
-
-    if (join_node.join_mode != JoinMode::Semi) {
-      candidates.emplace(
-          std::make_shared<UccCandidate>(stored_table_node.table_name, join_lqp_column_expression->original_column_id));
-    }
-
     if (!other_stored_table_node) {
       return LQPVisitation::VisitInputs;
+    }
+
+    if (join_node.join_mode != JoinMode::Semi) {
+      od_candidates.emplace(
+          std::make_shared<UccCandidate>(stored_table_node.table_name, join_lqp_column_expression->original_column_id));
     }
 
     od_candidates.emplace(std::make_shared<OdCandidate>(stored_table_node.table_name,

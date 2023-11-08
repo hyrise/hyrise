@@ -19,8 +19,14 @@ using namespace hyrise::expression_functional;  // NOLINT(build/namespaces)
 bool qualifies_for_od_rewrite(const std::shared_ptr<PredicateNode>& predicate_node,
                               const std::shared_ptr<AbstractExpression>& candidate_column_expression,
                               const std::shared_ptr<AbstractExpression>& exchangeable_column_expression,
-                              const std::shared_ptr<AbstractLQPNode>& join_node,
-                              const LQPInputSide removable_input_side) {
+                              const std::shared_ptr<JoinNode>& join_node, const LQPInputSide removable_input_side) {
+  // Test that exchangeable_column_expression is unique. Otherwise, there could be multiple matches and we must perform
+  // the original join.
+  const auto join_input = join_node->input(removable_input_side);
+  if (join_node->join_mode == JoinMode::Inner && !join_input->has_matching_ucc({exchangeable_column_expression})) {
+    return false;
+  }
+
   // Test that OD candidate_expression |-> exchangeable_column_expression holds.
   if (!predicate_node->has_matching_od({exchangeable_column_expression}, {candidate_column_expression})) {
     return false;
@@ -30,8 +36,7 @@ bool qualifies_for_od_rewrite(const std::shared_ptr<PredicateNode>& predicate_no
   // predicate. We check this by removing the predicate and look if the IND holds.
   const auto& left_input = predicate_node->left_input();
   lqp_remove_node(predicate_node);
-  const auto rewritable =
-      join_node->input(removable_input_side)->has_matching_ind({exchangeable_column_expression}, *join_node);
+  const auto rewritable = join_input->has_matching_ind({exchangeable_column_expression}, *join_node);
   lqp_insert_node_above(left_input, predicate_node);
   return rewritable;
 }
@@ -110,11 +115,6 @@ void try_rewrite(const std::shared_ptr<JoinNode>& join_node) {
 
   Assert(exchangeable_column_expression,
          "Neither column of the join predicate could be evaluated on the removable input.");
-
-  // Check for uniqueness.
-  if (!removable_subtree->has_matching_ucc({exchangeable_column_expression})) {
-    return;
-  }
 
   // Now, we look for a predicate that can potentially be used in a subquery to replace the join. If we find an equals
   // predicate that filters on a UCC, a maximum of one tuple remains in the result relation. Since at this point, we al-
