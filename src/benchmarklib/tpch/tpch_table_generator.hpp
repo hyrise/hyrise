@@ -42,6 +42,14 @@ class TPCHTableGenerator : virtual public AbstractTableGenerator {
 
   size_t customer_row_count() const;
   size_t orders_row_count() const;
+  size_t part_row_count() const;
+  size_t supplier_row_count() const;
+  size_t nation_row_count() const;
+  size_t region_row_count() const;
+
+  std::tuple<std::vector<DataType>, std::vector<std::string>, std::vector<bool>> get_table_column_information(const auto& table_name) const;
+
+  std::shared_ptr<Table> create_empty_table(std::string&& table_name) const;
 
   void reset_and_initialize();
 

@@ -91,7 +91,7 @@ TEST_F(ChunkPruningRuleTest, SimplePruningTest) {
 
   const auto& column_statistics =
       dynamic_cast<AttributeStatistics<int32_t>&>(*stored_table_node->table_statistics->column_statistics[0]);
-  const auto& actual_histogram = dynamic_cast<GenericHistogram<int32_t>&>(*column_statistics.histogram);
+  const auto& actual_histogram = dynamic_cast<GenericHistogram<int32_t>&>(*column_statistics.histogram());
   EXPECT_EQ(actual_histogram, expected_histogram);
 }
 

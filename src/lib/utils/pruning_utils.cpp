@@ -32,18 +32,18 @@ bool can_prune(const BaseAttributeStatistics& base_segment_statistics, const Pre
 
     // Range filters are only available for arithmetic (non-string) types.
     if constexpr (std::is_arithmetic_v<ColumnDataType>) {
-      if (segment_statistics.range_filter) {
-        if (segment_statistics.range_filter->does_not_contain(predicate_condition, variant_value, variant_value2)) {
+      if (segment_statistics.range_filter()) {
+        if (segment_statistics.range_filter()->does_not_contain(predicate_condition, variant_value, variant_value2)) {
           can_prune = true;
         }
       }
       // RangeFilters contain all the information stored in a MinMaxFilter. There is no point in having both.
-      DebugAssert(!segment_statistics.min_max_filter,
+      DebugAssert(!segment_statistics.min_max_filter(),
                   "Segment should not have a MinMaxFilter and a RangeFilter at the same time");
     }
 
-    if (segment_statistics.min_max_filter) {
-      if (segment_statistics.min_max_filter->does_not_contain(predicate_condition, variant_value, variant_value2)) {
+    if (segment_statistics.min_max_filter()) {
+      if (segment_statistics.min_max_filter()->does_not_contain(predicate_condition, variant_value, variant_value2)) {
         can_prune = true;
       }
     }

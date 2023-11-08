@@ -201,6 +201,9 @@ void BinaryWriter::_write_segment(const ReferenceSegment& reference_segment, boo
   });
 }
 
+void BinaryWriter::_write_segment(const PlaceHolderSegment& /*segment*/, bool /*column_is_nullable*/,
+                                  std::ofstream& /*ofstream*/) {}
+
 template <typename T>
 void BinaryWriter::_write_segment(const DictionarySegment<T>& dictionary_segment, bool /*column_is_nullable*/,
                                   std::ofstream& ofstream) {

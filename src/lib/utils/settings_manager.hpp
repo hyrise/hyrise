@@ -29,6 +29,7 @@ class SettingsManager : public Noncopyable {
 
  private:
   std::unordered_map<std::string, std::shared_ptr<AbstractSetting>> _settings;
+  std::mutex _mutex;
 };
 
 }  // namespace hyrise

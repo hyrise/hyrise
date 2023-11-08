@@ -16,6 +16,8 @@ enum class FinalizeLastChunk : bool { Yes = true, No = false };
 std::shared_ptr<Table> load_table(const std::string& file_name, ChunkOffset chunk_size = Chunk::DEFAULT_SIZE,
                                   FinalizeLastChunk finalize_last_chunk = FinalizeLastChunk::Yes);
 
+void load_table(std::shared_ptr<Table>& table, std::ifstream& infile, FinalizeLastChunk finalize_last_chunk = FinalizeLastChunk::Yes);
+
 /**
  * Creates an empty table based on the meta information in the first lines of the file without loading the data itself.
  */

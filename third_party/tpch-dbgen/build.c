@@ -119,7 +119,8 @@ mk_cust(DSS_HUGE n_cust, customer_t * c)
 	c->custkey = n_cust;
 	pick_str(&c_mseg_set, C_MSEG_SD, c->mktsegment);
 
-	if (!env_column_configuration || strcmp(env_column_configuration, "NONE") == 0 ||
+	if (!env_column_configuration || strcmp(env_column_configuration, "CSV") == 0 ||
+									 strcmp(env_column_configuration, "NONE") == 0 ||
 									 strcmp(env_column_configuration, "DB_Q3_COLUMNS") == 0) {
 		sprintf(c->name, szFormat, C_NAME_TAG, n_cust);
 		V_STR(C_ADDR_LEN, C_ADDR_SD, c->address);
@@ -207,7 +208,8 @@ mk_order(DSS_HUGE index, order_t * o, long upd_num)
 	memcpy(o->odate, asc_date[tmp_date - STARTDATE], 11);
 	o->spriority = 0;
 
-	if (!env_column_configuration || strcmp(env_column_configuration, "NONE") == 0 ||
+	if (!env_column_configuration || strcmp(env_column_configuration, "CSV") == 0 ||
+									 strcmp(env_column_configuration, "NONE") == 0 ||
 									 strcmp(env_column_configuration, "DB_Q3_COLUMNS") == 0) {
 		pick_str(&o_priority_set, O_PRIO_SD, o->opriority);
 		RANDOM(clk_num, 1, MAX((scale * O_CLRK_SCL), O_CLRK_SCL), O_CLRK_SD);
@@ -246,7 +248,8 @@ mk_order(DSS_HUGE index, order_t * o, long upd_num)
 		s_date += tmp_date;
 		memcpy(o->l[lcnt].sdate, asc_date[s_date - STARTDATE], 11);
 
-		if (!env_column_configuration || strcmp(env_column_configuration, "NONE") == 0 ||
+		if (!env_column_configuration || strcmp(env_column_configuration, "CSV") == 0 ||
+										 strcmp(env_column_configuration, "NONE") == 0 ||
 										 strcmp(env_column_configuration, "DB_Q3_COLUMNS") == 0) {
 
 			RANDOM(o->l[lcnt].tax, L_TAX_MIN, L_TAX_MAX, L_TAX_SD);

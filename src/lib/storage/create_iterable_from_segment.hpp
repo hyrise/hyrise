@@ -22,6 +22,10 @@ class FrameOfReferenceSegment;
 template <typename T>
 class LZ4Segment;
 
+class PlaceHolderSegment;
+template <typename T>
+class PlaceHolderSegmentIterable;
+
 class ReferenceSegment;
 template <typename T, EraseReferencedSegmentType>
 class ReferenceSegmentIterable;
@@ -67,6 +71,9 @@ auto create_iterable_from_segment(const FrameOfReferenceSegment<T, Enabled>& seg
 
 template <typename T, bool EraseSegmentType = true>
 auto create_iterable_from_segment(const LZ4Segment<T>& segment);
+
+template <typename T, bool EraseSegmentType = true>
+auto create_iterable_from_segment(const PlaceHolderSegment& segment);
 
 template <typename T, bool EraseSegmentType = HYRISE_DEBUG,
           EraseReferencedSegmentType = (HYRISE_DEBUG ? EraseReferencedSegmentType::Yes

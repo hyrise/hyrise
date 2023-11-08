@@ -194,22 +194,22 @@ TEST_F(CardinalityEstimatorTest, JoinNumericEquiInner) {
 
   const auto column_statistics_b_a =
       std::dynamic_pointer_cast<AttributeStatistics<int32_t>>(result_statistics->column_statistics.at(0));
-  const auto join_histogram_b_a = column_statistics_b_a->histogram;
+  const auto join_histogram_b_a = column_statistics_b_a->histogram();
   EXPECT_EQ(join_histogram_b_a->bin_count(), 4u);
 
   const auto column_statistics_b_b =
       std::dynamic_pointer_cast<AttributeStatistics<int32_t>>(result_statistics->column_statistics[1]);
-  const auto scaled_histogram_b_b = column_statistics_b_b->histogram;
+  const auto scaled_histogram_b_b = column_statistics_b_b->histogram();
   EXPECT_EQ(scaled_histogram_b_b->total_count(), 32 * 4);
 
   const auto column_statistics_c_x =
       std::dynamic_pointer_cast<AttributeStatistics<int32_t>>(result_statistics->column_statistics[2]);
-  const auto join_histogram_c_x = column_statistics_c_x->histogram;
+  const auto join_histogram_c_x = column_statistics_c_x->histogram();
   EXPECT_EQ(join_histogram_c_x->bin_count(), 4u);
 
   const auto column_statistics_c_y =
       std::dynamic_pointer_cast<AttributeStatistics<int32_t>>(result_statistics->column_statistics[3]);
-  const auto scaled_histogram_c_y = column_statistics_c_y->histogram;
+  const auto scaled_histogram_c_y = column_statistics_c_y->histogram();
   EXPECT_EQ(scaled_histogram_c_y->total_count(), 64 * 2);
 }
 
@@ -284,19 +284,19 @@ TEST_F(CardinalityEstimatorTest, JoinCross) {
 
   const auto column_statistics_b_a =
       std::dynamic_pointer_cast<AttributeStatistics<int32_t>>(result_statistics->column_statistics.at(0));
-  EXPECT_EQ(column_statistics_b_a->histogram->total_count(), 32u * 64u);
+  EXPECT_EQ(column_statistics_b_a->histogram()->total_count(), 32u * 64u);
 
   const auto column_statistics_b_b =
       std::dynamic_pointer_cast<AttributeStatistics<int32_t>>(result_statistics->column_statistics.at(1));
-  EXPECT_EQ(column_statistics_b_b->histogram->total_count(), 32u * 64u);
+  EXPECT_EQ(column_statistics_b_b->histogram()->total_count(), 32u * 64u);
 
   const auto column_statistics_c_x =
       std::dynamic_pointer_cast<AttributeStatistics<int32_t>>(result_statistics->column_statistics.at(2));
-  EXPECT_EQ(column_statistics_c_x->histogram->total_count(), 32u * 64u);
+  EXPECT_EQ(column_statistics_c_x->histogram()->total_count(), 32u * 64u);
 
   const auto column_statistics_c_y =
       std::dynamic_pointer_cast<AttributeStatistics<int32_t>>(result_statistics->column_statistics.at(3));
-  EXPECT_EQ(column_statistics_c_y->histogram->total_count(), 32u * 64u);
+  EXPECT_EQ(column_statistics_c_y->histogram()->total_count(), 32u * 64u);
 }
 
 TEST_F(CardinalityEstimatorTest, JoinBinsInnerEqui) {
@@ -425,7 +425,7 @@ TEST_F(CardinalityEstimatorTest, JoinSemiHistograms) {
   EXPECT_EQ(join_estimation->column_statistics.size(), 2);
 
   const auto& first_column_histogram =
-      *static_cast<const AttributeStatistics<int32_t>&>(*join_estimation->column_statistics[0]).histogram;
+      *static_cast<const AttributeStatistics<int32_t>&>(*join_estimation->column_statistics[0]).histogram();
   EXPECT_EQ(first_column_histogram.bin_count(), 4);
   EXPECT_EQ(first_column_histogram.bin(0), HistogramBin<int32_t>(20, 29, 10, 3));
   EXPECT_EQ(first_column_histogram.bin(1), HistogramBin<int32_t>(30, 39, 5, 2));
@@ -433,7 +433,7 @@ TEST_F(CardinalityEstimatorTest, JoinSemiHistograms) {
   EXPECT_EQ(first_column_histogram.bin(3), HistogramBin<int32_t>(60, 69, 5, 1));
 
   const auto& second_column_histogram =
-      *static_cast<const AttributeStatistics<int32_t>&>(*join_estimation->column_statistics[1]).histogram;
+      *static_cast<const AttributeStatistics<int32_t>&>(*join_estimation->column_statistics[1]).histogram();
   EXPECT_EQ(second_column_histogram.bin_count(), 3);
   const auto selectivity = 27.5f / 90;
   EXPECT_EQ(second_column_histogram.bin(0), HistogramBin<int32_t>(0, 4, 20 * selectivity, 1));
@@ -467,9 +467,9 @@ TEST_F(CardinalityEstimatorTest, LimitWithValueExpression) {
 
   // Limit doesn't write out StatisticsObjects
   ASSERT_TRUE(column_statistics_a);
-  EXPECT_FALSE(column_statistics_a->histogram);
+  EXPECT_FALSE(column_statistics_a->histogram());
   ASSERT_TRUE(column_statistics_b);
-  EXPECT_FALSE(column_statistics_b->histogram);
+  EXPECT_FALSE(column_statistics_b->histogram());
 }
 
 TEST_F(CardinalityEstimatorTest, LimitWithValueExpressionExeedingInputRowCount) {
@@ -513,18 +513,18 @@ TEST_F(CardinalityEstimatorTest, PredicateWithOneSimplePredicate) {
   ASSERT_TRUE(plan_output_statistics_a);
   ASSERT_TRUE(plan_output_statistics_b);
 
-  ASSERT_TRUE(plan_output_statistics_a->histogram);
-  ASSERT_TRUE(plan_output_statistics_b->histogram);
+  ASSERT_TRUE(plan_output_statistics_a->histogram());
+  ASSERT_TRUE(plan_output_statistics_b->histogram());
 
-  ASSERT_EQ(plan_output_statistics_a->histogram->bin_count(), 1u);
-  EXPECT_EQ(plan_output_statistics_a->histogram->bin_minimum(BinID{0}), 51);
-  EXPECT_EQ(plan_output_statistics_a->histogram->bin_maximum(BinID{0}), 100);
-  EXPECT_EQ(plan_output_statistics_a->histogram->bin_height(BinID{0}), 50);
+  ASSERT_EQ(plan_output_statistics_a->histogram()->bin_count(), 1u);
+  EXPECT_EQ(plan_output_statistics_a->histogram()->bin_minimum(BinID{0}), 51);
+  EXPECT_EQ(plan_output_statistics_a->histogram()->bin_maximum(BinID{0}), 100);
+  EXPECT_EQ(plan_output_statistics_a->histogram()->bin_height(BinID{0}), 50);
 
-  ASSERT_EQ(plan_output_statistics_b->histogram->bin_count(), 1u);
-  EXPECT_EQ(plan_output_statistics_b->histogram->bin_minimum(BinID{0}), 10);
-  EXPECT_EQ(plan_output_statistics_b->histogram->bin_maximum(BinID{0}), 129);
-  EXPECT_EQ(plan_output_statistics_b->histogram->bin_height(BinID{0}), 35);
+  ASSERT_EQ(plan_output_statistics_b->histogram()->bin_count(), 1u);
+  EXPECT_EQ(plan_output_statistics_b->histogram()->bin_minimum(BinID{0}), 10);
+  EXPECT_EQ(plan_output_statistics_b->histogram()->bin_maximum(BinID{0}), 129);
+  EXPECT_EQ(plan_output_statistics_b->histogram()->bin_height(BinID{0}), 35);
 }
 
 TEST_F(CardinalityEstimatorTest, PredicateWithOneBetweenPredicate) {
@@ -553,13 +553,13 @@ TEST_F(CardinalityEstimatorTest, PredicateWithOneBetweenPredicate) {
     ASSERT_TRUE(plan_output_statistics_a);
     ASSERT_TRUE(plan_output_statistics_b);
 
-    ASSERT_TRUE(plan_output_statistics_a->histogram);
-    ASSERT_TRUE(plan_output_statistics_b->histogram);
+    ASSERT_TRUE(plan_output_statistics_a->histogram());
+    ASSERT_TRUE(plan_output_statistics_b->histogram());
 
-    ASSERT_EQ(plan_output_statistics_a->histogram->bin_count(), 1u);
-    EXPECT_EQ(plan_output_statistics_a->histogram->bin_minimum(BinID{0}), 10);
-    EXPECT_EQ(plan_output_statistics_a->histogram->bin_maximum(BinID{0}), 89);
-    EXPECT_EQ(plan_output_statistics_a->histogram->bin_height(BinID{0}), 80);
+    ASSERT_EQ(plan_output_statistics_a->histogram()->bin_count(), 1u);
+    EXPECT_EQ(plan_output_statistics_a->histogram()->bin_minimum(BinID{0}), 10);
+    EXPECT_EQ(plan_output_statistics_a->histogram()->bin_maximum(BinID{0}), 89);
+    EXPECT_EQ(plan_output_statistics_a->histogram()->bin_height(BinID{0}), 80);
   }
 }
 
@@ -751,8 +751,8 @@ TEST_F(CardinalityEstimatorTest, PredicateColumnVsColumnDifferentDataTypes) {
   ASSERT_TRUE(estimated_column_statistics_a);
   ASSERT_TRUE(estimated_column_statistics_b);
 
-  EXPECT_TRUE(estimated_column_statistics_a->histogram);
-  EXPECT_TRUE(estimated_column_statistics_b->histogram);
+  EXPECT_TRUE(estimated_column_statistics_a->histogram());
+  EXPECT_TRUE(estimated_column_statistics_b->histogram());
 }
 
 TEST_F(CardinalityEstimatorTest, PredicateWithMissingStatistics) {
@@ -789,10 +789,10 @@ TEST_F(CardinalityEstimatorTest, PredicateWithMissingStatistics) {
   ASSERT_TRUE(estimated_column_statistics_b_a);
   ASSERT_TRUE(estimated_column_statistics_b_b);
 
-  EXPECT_TRUE(estimated_column_statistics_a_a->histogram);
-  EXPECT_FALSE(estimated_column_statistics_a_b->histogram);
-  EXPECT_TRUE(estimated_column_statistics_b_a->histogram);
-  EXPECT_FALSE(estimated_column_statistics_b_b->histogram);
+  EXPECT_TRUE(estimated_column_statistics_a_a->histogram());
+  EXPECT_FALSE(estimated_column_statistics_a_b->histogram());
+  EXPECT_TRUE(estimated_column_statistics_b_a->histogram());
+  EXPECT_FALSE(estimated_column_statistics_b_b->histogram());
 }
 
 TEST_F(CardinalityEstimatorTest, PredicateString) {

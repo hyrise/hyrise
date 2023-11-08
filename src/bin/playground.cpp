@@ -5,6 +5,8 @@
 #include "benchmark_config.hpp"
 #include "benchmark_table_encoder.hpp"
 #include "hyrise.hpp"
+#include "import_export/csv/csv_meta.hpp"
+#include "import_export/csv/csv_parser.hpp"
 #include "operators/print.hpp"
 #include "scheduler/immediate_execution_scheduler.hpp"
 #include "scheduler/job_task.hpp"
@@ -14,11 +16,13 @@
 #include "storage/table.hpp"
 #include "types.hpp"
 #include "tpch/tpch_table_generator.hpp"
+#include "utils/load_table.hpp"
 
 using namespace hyrise;  // NOLINT(build/namespaces)
 
 /**
  * Measure:
+ *  -  CSV      CSV-loading path
  *  -  NONE     default
  *  -         Load filtering
  *    -  DB_CUSTKEY_ONLY                 NODBGEN and custkey
@@ -41,7 +45,8 @@ int main(int argc, char** argv) {
   const auto* env_column_configuration = std::getenv("COLUMN_CONFIGURATION");
   Assert(env_column_configuration, "Column configuration is required.");
   const auto column_configuration = std::string{env_column_configuration};
-  Assert(column_configuration == "NONE" ||
+  Assert(column_configuration == "CSV" ||
+         column_configuration == "NONE" ||
          column_configuration == "DB_Q3_COLUMNS" ||
          column_configuration == "Q3_COLUMNS", "Unexpected column_configuration.");
 
@@ -64,8 +69,6 @@ int main(int argc, char** argv) {
   };
 
   constexpr auto RUN_COUNT = size_t{11};
-  const auto ROW_COUNT_PER_GENERATE_TASK = size_t{5 * Chunk::DEFAULT_SIZE};  // 327.680 rows.
-  constexpr auto PARALLEL_GENERATION = false;
 
   for (auto run_id = size_t{0}; run_id < RUN_COUNT + 1 /* one warmup run */; ++run_id) {
     for (const auto& [scheduler_str, scheduler] : run_configs) {
@@ -86,55 +89,39 @@ int main(int argc, char** argv) {
       auto orders_table = std::shared_ptr<Table>{};
       auto lineitem_table = std::shared_ptr<Table>{};
 
-      if constexpr (PARALLEL_GENERATION) {
-        auto column_definitions = std::optional<std::vector<TableColumnDefinition>>{};
-        const auto job_count = static_cast<size_t>(std::ceil(static_cast<double>(customer_row_count) / static_cast<double>(ROW_COUNT_PER_GENERATE_TASK)));
-        const auto generated_chunk_count = static_cast<size_t>(std::ceil(static_cast<double>(customer_row_count) / static_cast<double>(Chunk::DEFAULT_SIZE)));
-        const auto max_chunk_count_per_job = ROW_COUNT_PER_GENERATE_TASK / Chunk::DEFAULT_SIZE;
-        auto generated_chunks = std::vector<std::shared_ptr<Chunk>>(generated_chunk_count);
-        auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
-        jobs.reserve(job_count);
-
-        auto accumulated_rows = size_t{0};
-        auto job_id = size_t{0};
-
-        while (accumulated_rows < customer_row_count) {
-          const auto remaining = customer_row_count - accumulated_rows;
-          const auto rows_to_generate = std::min(ROW_COUNT_PER_GENERATE_TASK, remaining);
-          const auto job_chunk_count = static_cast<size_t>(std::ceil(static_cast<double>(rows_to_generate) / static_cast<double>(Chunk::DEFAULT_SIZE)));
-
-          const auto start_offset = job_id == 0 ? 0 : job_id * max_chunk_count_per_job;
-          jobs.emplace_back(std::make_shared<JobTask>([&, rows_to_generate, accumulated_rows, job_id, job_chunk_count, start_offset]() {
-            std::printf("job_id %zu started.\n", job_id);
-            const auto partial_table = tpch_table_generator.create_customer_table(rows_to_generate, accumulated_rows);
-            Assert(partial_table->chunk_count() == job_chunk_count,
-                   "Unexpected chunk count of " + std::to_string(partial_table->chunk_count()) + " (expected " +
-                   std::to_string(job_chunk_count) + " chunks).");
-            Assert(partial_table->row_count() == rows_to_generate, "Unexpected row count.");
-
-            for (auto chunk_id = ChunkID{0}; chunk_id < job_chunk_count; ++chunk_id) {
-              // std::printf("job id %zu appends to position %zu (job_chunk_count is %zu)\n", job_id, start_offset + chunk_id, job_chunk_count);
-              generated_chunks[start_offset + chunk_id] = partial_table->get_chunk(chunk_id);
-            }
-
-            if (!column_definitions) {
-              column_definitions = partial_table->column_definitions();
-            }
-            std::printf("job_id %zu finished.\n", job_id);
-          }));
-
-          accumulated_rows += rows_to_generate;
-          ++job_id;
-        }
-        Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
-
-        Assert(column_definitions, "Unexpected nullopt for column definitions.");
-        customer_table = std::make_shared<Table>(*column_definitions, TableType::Data, std::move(generated_chunks), UseMvcc::Yes);
-      } else {
+      if (column_configuration != "CSV") {
         customer_table = tpch_table_generator.create_customer_table(customer_row_count, 0);
         const auto& orders_and_lineitem = tpch_table_generator.create_orders_and_lineitem_tables(orders_row_count, 0);
         orders_table = orders_and_lineitem.first;
         lineitem_table = orders_and_lineitem.second;
+      } else {
+        const auto initial_path = std::filesystem::current_path();
+
+        const auto dbgen_path = std::string{"./tpch-dbgen/"};
+        Assert(std::filesystem::exists(std::filesystem::path{dbgen_path}), "dbgen directory (./tpch-dbgen) not found.");
+
+        std::filesystem::current_path(dbgen_path);
+        Assert(std::filesystem::exists(std::filesystem::path{"dbgen"}), "Cannot find dbgen in given directory.");
+        const auto command = "./dbgen -f -q -s " + std::to_string(scale_factor);
+        const auto result = std::system(command.c_str());
+        Assert(result == 0, "dbgen call ('" + command + "') failed with return code " + std::to_string(result) + ".");
+        std::filesystem::current_path(initial_path);
+
+        customer_table = tpch_table_generator.create_customer_table(0, 0);
+        const auto& orders_and_lineitem = tpch_table_generator.create_orders_and_lineitem_tables(0, 0);
+
+        orders_table = orders_and_lineitem.first;
+        lineitem_table = orders_and_lineitem.second;
+
+        for (auto& [table, file_name] : std::vector<std::tuple<std::shared_ptr<Table>, std::string>>{
+                                          {customer_table, dbgen_path + "customer.tbl"},
+                                          {orders_table, dbgen_path + "orders.tbl"},
+                                          {lineitem_table, dbgen_path + "lineitem.tbl"}}) {
+          auto infile = std::ifstream{file_name};
+          Assert(infile.is_open(), "load_table: Could not find file " + file_name);
+
+          load_table(table, infile);
+        }
       }
 
       const auto end_table_creation = std::chrono::steady_clock::now();

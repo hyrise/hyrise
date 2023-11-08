@@ -35,7 +35,7 @@ std::vector<PluginName> PluginManager::loaded_plugins() const {
   return plugin_names;
 }
 
-std::unordered_map<std::pair<PluginName, PluginFunctionName>, PluginFunctionPointer, plugin_name_function_name_hash>
+const std::unordered_map<std::pair<PluginName, PluginFunctionName>, PluginFunctionPointer, plugin_name_function_name_hash>&
 PluginManager::user_executable_functions() const {
   return _user_executable_functions;
 }

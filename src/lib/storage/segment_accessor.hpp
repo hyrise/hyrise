@@ -50,7 +50,12 @@ class SegmentAccessor final : public AbstractSegmentAccessor<T> {
 
   const std::optional<T> access(ChunkOffset offset) const final {
     ++_accesses;
-    return _segment.get_typed_value(offset);
+    if constexpr (std::is_same_v<SegmentType, PlaceHolderSegment>) {
+      std::cerr << "SLKDFJ" << std::endl;
+      return std::nullopt;
+    } else {
+      return _segment.get_typed_value(offset);
+    }
   }
 
   ~SegmentAccessor() override {
@@ -113,7 +118,12 @@ class SingleChunkReferenceSegmentAccessor final : public AbstractSegmentAccessor
   const std::optional<T> access(ChunkOffset offset) const final {
     ++_accesses;
     const auto referenced_chunk_offset = _pos_list[offset].chunk_offset;
-    return _segment.get_typed_value(referenced_chunk_offset);
+    if constexpr (std::is_same_v<Segment, PlaceHolderSegment>) {
+      std::cerr << "SLKDFJ" << std::endl;
+      return std::nullopt;
+    } else {
+      return _segment.get_typed_value(referenced_chunk_offset);
+    }
   }
 
   ~SingleChunkReferenceSegmentAccessor() override {

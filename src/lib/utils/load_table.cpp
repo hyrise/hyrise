@@ -53,12 +53,18 @@ std::shared_ptr<Table> create_table_from_header(const std::string& file_name, Ch
 
 std::shared_ptr<Table> load_table(const std::string& file_name, ChunkOffset chunk_size,
                                   FinalizeLastChunk finalize_last_chunk) {
-  std::ifstream infile(file_name);
+  auto infile = std::ifstream{file_name};
   Assert(infile.is_open(), "load_table: Could not find file " + file_name);
 
   auto table = create_table_from_header(infile, chunk_size);
 
-  std::string line;
+  load_table(table, infile, finalize_last_chunk);
+
+  return table;
+}
+
+void load_table(std::shared_ptr<Table>& table, std::ifstream& infile, FinalizeLastChunk finalize_last_chunk) {
+  auto line = std::string{};
   while (std::getline(infile, line)) {
     auto string_values = split_string_by_delimiter(line, '|');
     auto variant_values = std::vector<AllTypeVariant>(string_values.size());
@@ -85,8 +91,6 @@ std::shared_ptr<Table> load_table(const std::string& file_name, ChunkOffset chun
   if (!table->empty() && finalize_last_chunk == FinalizeLastChunk::Yes) {
     table->last_chunk()->finalize();
   }
-
-  return table;
 }
 
 }  // namespace hyrise

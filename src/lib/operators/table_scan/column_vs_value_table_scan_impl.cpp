@@ -179,6 +179,8 @@ void ColumnVsValueTableScanImpl::_scan_sorted_segment(const AbstractSegment& seg
 
     if constexpr (std::is_same_v<std::decay_t<decltype(typed_segment)>, ReferenceSegment>) {
       Fail("Expected ReferenceSegments to be handled before calling this method");
+    } else if constexpr (std::is_same_v<std::decay_t<decltype(typed_segment)>, PlaceHolderSegment>) {
+      Fail("Expected PlaceHolderSegments to be handled before calling this method");
     } else {
       auto segment_iterable = create_iterable_from_segment(typed_segment);
       segment_iterable.with_iterators(position_filter, [&](auto segment_begin, auto segment_end) {

@@ -214,6 +214,7 @@ std::unique_ptr<RangeFilter<T>> RangeFilter<T>::build_filter(const pmr_vector<T>
 template <typename T>
 bool RangeFilter<T>::does_not_contain(const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
                                       const std::optional<AllTypeVariant>& variant_value2) const {
+  std::cout << "RangeFilter<T>::does_not_contain" << std::endl;
   // Early exit for NULL-checking predicates and NULL variants. Predicates with one or more variant parameter being NULL
   // are not prunable. Malformed predicates such as can_prune(PredicateCondition::LessThan, {5}, NULL_VALUE) are not
   // pruned either. While this call might be considered nonsensical (everything compared to NULL is null), we do not

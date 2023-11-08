@@ -45,7 +45,7 @@ class PluginManager : public Noncopyable {
 
   std::vector<PluginName> loaded_plugins() const;
 
-  UserExecutableFunctionMap user_executable_functions() const;
+  const UserExecutableFunctionMap& user_executable_functions() const;
 
   bool has_pre_benchmark_hook(const PluginName& plugin_name) const;
   bool has_post_benchmark_hook(const PluginName& plugin_name) const;

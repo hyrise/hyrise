@@ -516,6 +516,8 @@ set(
     storage/materialize.hpp
     storage/mvcc_data.cpp
     storage/mvcc_data.hpp
+    storage/place_holder_segment.cpp
+    storage/place_holder_segment.hpp
     storage/pos_lists/abstract_pos_list.cpp
     storage/pos_lists/abstract_pos_list.hpp
     storage/pos_lists/entire_chunk_pos_list.cpp

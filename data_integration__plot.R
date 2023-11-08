@@ -16,8 +16,12 @@ results$COLUMN_CONFIGURATION <- as.factor(results$COLUMN_CONFIGURATION)
 results$RUN_CONFIG <- as.factor(results$RUN_CONFIG)
 results$STEP <- as.factor(results$STEP)
 results$SCALE_FACTOR <- as.factor(results$SCALE_FACTOR)
+results$RUNTIME_S <- results$RUNTIME_S / 10  # we run queries 10 times (11 with warmup)
 
-levels(results$COLUMN_CONFIGURATION) <- list("DBgen Modification:\ngenerate only accessed columns" = "Q3_COLUMNS", "Post-DBgen Filtering:\ngenerate only accessed columns" = "DB_Q3_COLUMNS", "Default:\ngenerate and load all columns" = "NONE")
+levels(results$COLUMN_CONFIGURATION) <- list("DBgen Modification:\ngenerate only accessed columns" = "Q3_COLUMNS",
+                                             "Post-DBgen Filtering:\ngenerate only accessed columns" = "DB_Q3_COLUMNS",
+                                             "Hyrise Default:\ngenerate and load all columns" = "NONE",
+                                             "DBgen Default:\n.tbl file creation & loading" = "CSV")
 levels(results$RUN_CONFIG) <- c("", "Single-\nThreaded")
 levels(results$STEP) <- c("#3 Statistic Generation", "#2 Data Encoding", "#1 Generating Table Data", "#4 Query")
 
@@ -32,14 +36,18 @@ results_fake <- results %>% filter(STEP != "#4 Query") %>%
                             summarize(STEP_SUM = sum(INTERMEDIATE) * 1.2, .groups="keep")
 
 query_runtimes_debug <- results %>% filter(STEP == "#4 Query") %>%
-                                    mutate(RUNTIME_S = RUNTIME_S / 10) %>%  # we run queries 10 times (11 with warmup)
-                                    group_by(SCALE_FACTOR, RUN_CONFIG) %>%
+                                    group_by(SCALE_FACTOR, COLUMN_CONFIGURATION, RUN_CONFIG) %>%
                                     summarize(MIN_RUNTIME = min(RUNTIME_S),
                                               MAX_RUNTIME = max(RUNTIME_S),
-                                              MEAN_RUNTIME = mean(RUNTIME_S), .groups="keep") %>%
+                                              MEAN_RUNTIME = mean(RUNTIME_S),
+                                              MEDINA_RUNTIME = median(RUNTIME_S), .groups="keep") %>%
                                     mutate(SCALE_FACTOR_RUNTIME_LABEL = paste0("SF ", SCALE_FACTOR, " (", round(MEAN_RUNTIME, 2), " s)"))
 
-query_runtimes <- query_runtimes_debug %>% filter(RUN_CONFIG == "")
+query_runtimes <- results %>% filter(STEP == "#4 Query") %>%
+                                    filter(RUN_CONFIG == "") %>%
+                                    group_by(SCALE_FACTOR, RUN_CONFIG) %>%
+                                    summarize(MEAN_RUNTIME = mean(RUNTIME_S), .groups="keep") %>%
+                                    mutate(SCALE_FACTOR_RUNTIME_LABEL = paste0("SF ", SCALE_FACTOR, " (", round(MEAN_RUNTIME, 2), " s)"))
 
 
 results_agg <- results_agg %>% inner_join(query_runtimes, by = c("SCALE_FACTOR", "RUN_CONFIG"))
@@ -53,7 +61,24 @@ ggplot(results %>% filter(RUN_CONFIG == ""),
   scale_colour_tableau(palette="Superfishel Stone") +
   scale_fill_tableau(palette="Superfishel Stone", name="Step:", guide = guide_legend(reverse=TRUE)) +
   theme.paper_plot +
-  facet_wrap(SCALE_FACTOR ~ COLUMN_CONFIGURATION, ncol=3, scales = "free") +
+  facet_wrap(SCALE_FACTOR ~ COLUMN_CONFIGURATION, ncol=n_distinct(results$COLUMN_CONFIGURATION), scales = "free") +
+  # stat_summary(fun = sum, aes(y = RUNTIME_S_MEAN, label = paste(round(after_stat(y), 2), "s"),
+  #                             group = RUN_CONFIG), geom = "text", vjust = -0.5, family="Times", size=3) +
+  # stat_summary(fun.data = mean_se, aes(y = RUNTIME_US, group = RUN_CONFIG), geom = "errorbar", position = "dodge") +
+  coord_cartesian(clip = "off") +
+  labs(x= "Threading Configuration", y="Runtime [s]") +
+  theme(legend.position="top") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
+ggplot(results %>% filter(RUN_CONFIG == "" & STEP == "#4 Query"),
+       aes(x=STEP)) +
+  geom_hline(data = query_runtimes, aes(yintercept = MEAN_RUNTIME)) +
+  geom_boxplot(aes(y=RUNTIME_S, fill=STEP)) +
+  theme_bw() +
+  scale_colour_tableau(palette="Superfishel Stone") +
+  scale_fill_tableau(palette="Superfishel Stone", name="Step:", guide = guide_legend(reverse=TRUE)) +
+  theme.paper_plot +
+  facet_grid(SCALE_FACTOR ~ COLUMN_CONFIGURATION, scales = "free_y") + # wrap: ncol=n_distinct(results$COLUMN_CONFIGURATION), 
   # stat_summary(fun = sum, aes(y = RUNTIME_S_MEAN, label = paste(round(after_stat(y), 2), "s"),
   #                             group = RUN_CONFIG), geom = "text", vjust = -0.5, family="Times", size=3) +
   # stat_summary(fun.data = mean_se, aes(y = RUNTIME_US, group = RUN_CONFIG), geom = "errorbar", position = "dodge") +

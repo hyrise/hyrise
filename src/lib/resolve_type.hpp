@@ -11,6 +11,7 @@
 #include <boost/hana/size.hpp>
 
 #include "all_type_variant.hpp"
+#include "storage/place_holder_segment.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/resolve_encoded_segment_type.hpp"
 #include "storage/value_segment.hpp"
@@ -31,20 +32,19 @@ namespace hana = boost::hana;
  *
  * Note on hana::type (taken from Boost.Hana documentation):
  *
- * For subtle reasons having to do with ADL, the actual representation of hana::type is
- * implementation-defined. In particular, hana::type may be a dependent type, so one
- * should not attempt to do pattern matching on it. However, one can assume that hana::type
- * inherits from hana::basic_type, which can be useful when declaring overloaded functions.
+ * For subtle reasons having to do with ADL, the actual representation of hana::type is implementation-defined. In
+ * particular, hana::type may be a dependent type, so one should not attempt to do pattern matching on it. However, one
+ * can assume that hana::type inherits from hana::basic_type, which can be useful when declaring overloaded functions.
  *
- * This means that we need to use hana::basic_type as a parameter in methods so that the
- * underlying type can be deduced from the object.
+ * This means that we need to use hana::basic_type as a parameter in methods so that the underlying type can be deduced
+ * from the object.
  *
  *
  * Note on generic lambdas (taken from paragraph 5.1.2/5 of the C++14 Standard Draft n3690):
  *
- * For a generic lambda, the closure type has a public inline function call operator member template (14.5.2)
- * whose template-parameter-list consists of one invented type template-parameter for each occurrence of auto
- * in the lambda’s parameter-declaration-clause, in order of appearance. Example:
+ * For a generic lambda, the closure type has a public inline function call operator member template (14.5.2) whose
+ * template-parameter-list consists of one invented type template-parameter for each occurrence of auto in the lambda’s
+ * parameter-declaration-clause, in order of appearance. Example:
  *
  *   auto lambda = [] (auto a) { return a; };
  *
@@ -114,12 +114,15 @@ std::enable_if_t<std::is_same_v<AbstractSegment, std::remove_const_t<AbstractSeg
 /*void*/ resolve_segment_type(AbstractSegmentType& segment, const Functor& functor) {
   using ValueSegmentPtr = ConstOutIfConstIn<AbstractSegmentType, ValueSegment<ColumnDataType>>*;
   using ReferenceSegmentPtr = ConstOutIfConstIn<AbstractSegmentType, ReferenceSegment>*;
+  using PlaceHolderSegmentPtr = ConstOutIfConstIn<AbstractSegmentType, PlaceHolderSegment>*;
   using EncodedSegmentPtr = ConstOutIfConstIn<AbstractSegmentType, AbstractEncodedSegment>*;
 
   if (const auto value_segment = dynamic_cast<ValueSegmentPtr>(&segment)) {
     functor(*value_segment);
   } else if (const auto reference_segment = dynamic_cast<ReferenceSegmentPtr>(&segment)) {
     functor(*reference_segment);
+  } else if (const auto place_holder_segment = dynamic_cast<PlaceHolderSegmentPtr>(&segment)) {
+    functor(*place_holder_segment);
   } else if (const auto encoded_segment = dynamic_cast<EncodedSegmentPtr>(&segment)) {
     resolve_encoded_segment_type<ColumnDataType>(*encoded_segment, functor);
   } else {

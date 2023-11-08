@@ -123,12 +123,14 @@ TPCHTableGenerator::TPCHTableGenerator(float scale_factor, ClusteringConfigurati
 
 std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TPCHTableGenerator::create_orders_and_lineitem_tables(const size_t order_count, const size_t index_offset) const {
   const auto* env_column_configuration = std::getenv("COLUMN_CONFIGURATION");
+  const auto column_definition = std::string{env_column_configuration};
 
   /**
    * Not the nicest solution here, but it's simple and avoids too many branches.
    */
 
-  if (!env_column_configuration || (env_column_configuration && (std::string{env_column_configuration} == "NONE"))) {  
+  if (!env_column_configuration || (env_column_configuration && (column_definition == "CSV" ||
+                                                                 column_definition == "NONE"))) {  
     //
     //  NONE
     //
@@ -154,7 +156,7 @@ std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TPCHTableGenerator::cr
       }
     }
     return {order_builder.finish_table(), lineitem_builder.finish_table()};
-  } else if (env_column_configuration && (std::string{env_column_configuration} == "DB_Q3_COLUMNS" || std::string{env_column_configuration} == "Q3_COLUMNS")) {
+  } else if (env_column_configuration && (column_definition == "DB_Q3_COLUMNS" || column_definition == "Q3_COLUMNS")) {
     //
     //  Q3 COLUMNS
     //
@@ -189,12 +191,14 @@ std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TPCHTableGenerator::cr
 
 std::shared_ptr<Table> TPCHTableGenerator::create_customer_table(const size_t customer_count, const size_t index_offset) const {
   const auto* env_column_configuration = std::getenv("COLUMN_CONFIGURATION");
+  const auto column_definition = std::string{env_column_configuration};
 
   /**
    * Not the nicest solution here, but it's simple and avoids too many branches.
    */
 
-  if (!env_column_configuration || (env_column_configuration && (std::string{env_column_configuration} == "NONE"))) {
+  if (!env_column_configuration || (env_column_configuration && (column_definition == "CSV" ||
+                                                                 column_definition == "NONE"))) {
     //
     //  NONE
     //
@@ -208,7 +212,7 @@ std::shared_ptr<Table> TPCHTableGenerator::create_customer_table(const size_t cu
     }
 
     return builder.finish_table();
-  } else if (env_column_configuration && (std::string{env_column_configuration} == "DB_Q3_COLUMNS" || std::string{env_column_configuration} == "Q3_COLUMNS")) {
+  } else if (env_column_configuration && (column_definition == "DB_Q3_COLUMNS" || column_definition == "Q3_COLUMNS")) {
     //
     //  Q3 COLUMNS
     //
@@ -245,6 +249,55 @@ size_t TPCHTableGenerator::customer_row_count() const {
   return static_cast<size_t>(static_cast<double>(tdefs[CUST].base) * _scale_factor);
 }
 
+size_t TPCHTableGenerator::part_row_count() const {
+  if (scale == 1) {
+    return static_cast<size_t>(tdefs[PART].base);
+  }
+
+  return static_cast<size_t>(static_cast<double>(tdefs[PART].base) * _scale_factor);
+}
+
+size_t TPCHTableGenerator::supplier_row_count() const {
+  if (scale == 1) {
+    return static_cast<size_t>(tdefs[SUPP].base);
+  }
+
+  return static_cast<size_t>(static_cast<double>(tdefs[SUPP].base) * _scale_factor);
+}
+
+size_t TPCHTableGenerator::nation_row_count() const {
+  return static_cast<size_t>(tdefs[NATION].base);
+}
+
+size_t TPCHTableGenerator::region_row_count() const {
+  return static_cast<size_t>(tdefs[REGION].base);
+}
+
+std::tuple<std::vector<DataType>, std::vector<std::string>, std::vector<bool>> TPCHTableGenerator::get_table_column_information(const auto& table_name) const {
+  auto data_types = std::vector<DataType>{};
+  auto names = std::vector<std::string>{};
+  auto nullable = std::vector<bool>{};
+
+  if (table_name == "lineitem") {
+    const auto column_count = boost::hana::size(order_column_types);
+    data_types.reserve(column_count);
+    names.reserve(column_count);
+    nullable.reserve(column_count);
+  }
+
+  return {data_types, names, nullable};
+}
+
+std::shared_ptr<Table> TPCHTableGenerator::create_empty_table(std::string&& table_name) const {
+  if (table_name == "lineitem") {
+    return TableBuilder{_benchmark_config->chunk_size, lineitem_column_types, lineitem_column_names, ChunkOffset{0}}.finish_table();
+  } else if (table_name == "orders") {
+    return TableBuilder{_benchmark_config->chunk_size, order_column_types, order_column_names, ChunkOffset{0}}.finish_table();
+  }
+
+  Fail("Lazy Martin has not yet implemented the empty table creation for " + table_name);
+}
+
 void TPCHTableGenerator::reset_and_initialize() {
   dbgen_reset_seeds();
   dbgen_init_scale_factor(_scale_factor);
@@ -262,10 +315,12 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate
   // Init tpch_dbgen - it is important this is done before any data structures from tpch_dbgen are read.
   reset_and_initialize();
 
-  const auto part_count = static_cast<size_t>(tdefs[PART].base * scale);
-  const auto supplier_count = static_cast<size_t>(tdefs[SUPP].base * scale);
-  const auto nation_count = static_cast<size_t>(tdefs[NATION].base);
-  const auto region_count = static_cast<size_t>(tdefs[REGION].base);
+  create_empty_table("lineitem");
+
+  const auto part_count = part_row_count();
+  const auto supplier_count = supplier_row_count();
+  const auto nation_count = nation_row_count();
+  const auto region_count = region_row_count();
 
   // The `* 4` part is defined in the TPC-H specification.
   auto part_builder = TableBuilder{_benchmark_config->chunk_size, part_column_types, part_column_names, part_count};

@@ -120,6 +120,9 @@ TEST_F(TPCHTableGeneratorTest, PartialGeneration) {
 
   const auto customer_table = tpch_table_generator.create_customer_table(Chunk::DEFAULT_SIZE, 0);
   std::cout << "customer: " << customer_table->row_count() << " - " << customer_table->chunk_count() << std::endl;
+
+  const auto empty_lineitem_table = tpch_table_generator.create_empty_table("lineitem");
+  EXPECT_EQ(empty_lineitem_table->row_count(), 0);
 }
 
 }  // namespace hyrise

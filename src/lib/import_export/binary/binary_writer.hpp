@@ -8,6 +8,7 @@
 #include "storage/fixed_string_dictionary_segment.hpp"
 #include "storage/frame_of_reference_segment.hpp"
 #include "storage/lz4_segment.hpp"
+#include "storage/place_holder_segment.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/run_length_segment.hpp"
 #include "storage/value_segment.hpp"
@@ -94,6 +95,8 @@ class BinaryWriter {
   static void _write_segment(const ReferenceSegment& reference_segment, bool column_is_nullable,
                              std::ofstream& ofstream);
 
+  static void _write_segment(const PlaceHolderSegment& /* segment */, bool /*column_is_nullable*/,
+                             std::ofstream& /*ofstream*/);
   /**
    * DictionarySegments are dumped with the following layout:
    *
