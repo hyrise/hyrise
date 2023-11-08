@@ -77,12 +77,18 @@ TEST_F(StorageRegionTest, ReadFailsInvalidPageID) {
 }
 
 TEST_F(StorageRegionTest, WriteFailsWithUnalignedData) {
+  if constexpr (!HYRISE_DEBUG) {
+    GTEST_SKIP();
+  }
   auto page = Page{};
   EXPECT_ANY_THROW(storage_region->write_page(PageID{PageSizeType::KiB16, 20}, page.data.data() + 5));
   EXPECT_EQ(storage_region->total_bytes_written(), 0);
 }
 
 TEST_F(StorageRegionTest, ReadFailsWithUnalignedData) {
+  if constexpr (!HYRISE_DEBUG) {
+    GTEST_SKIP();
+  }
   auto page = Page{};
   EXPECT_ANY_THROW(storage_region->read_page(PageID{PageSizeType::KiB16, 0}, page.data.data() + 5));
   EXPECT_EQ(storage_region->total_bytes_read(), 0);
