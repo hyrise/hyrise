@@ -22,8 +22,8 @@ bool qualifies_for_od_rewrite(const std::shared_ptr<PredicateNode>& predicate_no
                               const std::shared_ptr<JoinNode>& join_node, const LQPInputSide removable_input_side) {
   // Test that exchangeable_column_expression is unique. Otherwise, there could be multiple matches and we must perform
   // the original join.
-  const auto join_input = join_node->input(removable_input_side);
-  if (join_node->join_mode == JoinMode::Inner && !join_input->has_matching_ucc({exchangeable_column_expression})) {
+  if (join_node->join_mode == JoinMode::Inner &&
+      !join_node->input(removable_input_side)->has_matching_ucc({exchangeable_column_expression})) {
     return false;
   }
 
@@ -36,7 +36,8 @@ bool qualifies_for_od_rewrite(const std::shared_ptr<PredicateNode>& predicate_no
   // predicate. We check this by removing the predicate and look if the IND holds.
   const auto& left_input = predicate_node->left_input();
   lqp_remove_node(predicate_node);
-  const auto rewritable = join_input->has_matching_ind({exchangeable_column_expression}, *join_node);
+  const auto rewritable =
+      join_node->input(removable_input_side)->has_matching_ind({exchangeable_column_expression}, *join_node);
   lqp_insert_node_above(left_input, predicate_node);
   return rewritable;
 }
