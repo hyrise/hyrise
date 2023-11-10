@@ -186,6 +186,7 @@ ValidationResult OdValidationRule::_on_validate(const AbstractDependencyCandidat
   sort->execute();
   const auto& result_table = sort->get_output();
 
+  status = ValidationStatus::Valid;
   resolve_data_type(result_table->column_data_type(check_column_id), [&](const auto data_type_t) {
     using ColumnDataType = typename decltype(data_type_t)::type;
 
@@ -220,8 +221,6 @@ ValidationResult OdValidationRule::_on_validate(const AbstractDependencyCandidat
         }
       });
     }
-
-    status = ValidationStatus::Valid;
   });
 
   auto result = ValidationResult(status);
