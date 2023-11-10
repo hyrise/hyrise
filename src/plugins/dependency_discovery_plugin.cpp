@@ -16,6 +16,29 @@
 #include "utils/format_duration.hpp"
 #include "utils/timer.hpp"
 
+namespace {
+
+using namespace hyrise;  // NOLINT(build/namespaces)
+
+void add_constraint(const std::shared_ptr<Table>& table, const std::shared_ptr<AbstractTableConstraint>& constraint) {
+  if (const auto& order_constraint = std::dynamic_pointer_cast<TableOrderConstraint>(constraint)) {
+    table->add_soft_order_constraint(*order_constraint);
+    return;
+  }
+  if (const auto& key_constraint = std::dynamic_pointer_cast<TableKeyConstraint>(constraint)) {
+    table->add_soft_key_constraint(*key_constraint);
+    return;
+  }
+  if (const auto& foreign_key_constraint = std::dynamic_pointer_cast<ForeignKeyConstraint>(constraint)) {
+    table->add_soft_foreign_key_constraint(*foreign_key_constraint);
+    return;
+  }
+
+  Fail("Invalid table constraint.");
+}
+
+}  // namespace
+
 namespace hyrise {
 
 DependencyDiscoveryPlugin::DependencyDiscoveryPlugin() {
@@ -128,46 +151,110 @@ void DependencyDiscoveryPlugin::_validate_dependency_candidates(
   std::sort(ordered_candidates.begin(), ordered_candidates.end(),
             [](const auto& lhs, const auto& rhs) { return lhs->type < rhs->type; });
 
+  auto num_repetitions = uint32_t{1};
+  const auto loop_count = std::getenv("VALIDATION_LOOPS");
+  if (loop_count) {
+    const auto requested_repetitions = std::atol(loop_count);
+    Assert(requested_repetitions > 0, "Validation must be executed at least once!");
+    num_repetitions = static_cast<uint32_t>(requested_repetitions);
+    if (num_repetitions > 1) {
+      const auto allow_constraints = std::getenv("SCHEMA_CONSTRAINTS");
+      Assert(allow_constraints && !std::strcmp(allow_constraints, "0"),
+             "Looping validation only permitted if no schema constraints are added as it resets all constrints.");
+    }
+  }
+
+  const auto candidate_count = ordered_candidates.size();
+  auto candidate_times = std::vector<std::chrono::nanoseconds>(candidate_count);
+
   auto valid_count = uint32_t{0};
   auto invalid_count = uint32_t{0};
   auto skipped_count = uint32_t{0};
 
-  for (const auto& candidate : ordered_candidates) {
+  const auto setup_time = validation_timer.lap();
+  auto loop_times = std::chrono::nanoseconds{};
+  for (auto repetition = uint32_t{0}; repetition < num_repetitions; ++repetition) {
+    // Reset all validation results and constraints.
+    if (num_repetitions > 1) {
+      valid_count = uint32_t{0};
+      invalid_count = uint32_t{0};
+      skipped_count = uint32_t{0};
+
+      for (const auto& candidate : ordered_candidates) {
+        candidate->status = ValidationStatus::Uncertain;
+      }
+
+      for (const auto& [_, table] : Hyrise::get().storage_manager.tables()) {
+        table->_table_key_constraints.clear();
+        table->_table_order_constraints.clear();
+        table->_foreign_key_constraints.clear();
+        table->_referenced_foreign_key_constraints.clear();
+      }
+    }
+
+    auto loop_timer = Timer{};
+
+    for (auto candidate_id = size_t{0}; candidate_id < candidate_count; ++candidate_id) {
+      const auto& candidate = ordered_candidates[candidate_id];
+      DebugAssert(_validation_rules.contains(candidate->type),
+                  "Unsupported dependency: " + std::string{magic_enum::enum_name(candidate->type)});
+
+      auto candidate_timer = Timer{};
+      const auto& validation_rule = _validation_rules.at(candidate->type);
+      const auto& result = validation_rule->validate(*candidate);
+
+      switch (result.status) {
+        case ValidationStatus::Invalid:
+          ++invalid_count;
+          break;
+        case ValidationStatus::AlreadyKnown:
+          ++valid_count;
+          break;
+        case ValidationStatus::Valid:
+          Assert(!result.constraints.empty(),
+                 "Expected validation to yield constraint(s) for " + candidate->description());
+          ++valid_count;
+          break;
+        case ValidationStatus::Superfluous:
+          ++skipped_count;
+          break;
+        case ValidationStatus::Uncertain:
+          Fail("Expected explicit validation result for " + candidate->description());
+      }
+      candidate_times[candidate_id] += candidate_timer.lap();
+      candidate->status = result.status;
+
+      for (const auto& [table, constraint] : result.constraints) {
+        add_constraint(table, constraint);
+      }
+    }
+    loop_times += loop_timer.lap();
+  }
+
+  for (auto candidate_id = size_t{0}; candidate_id < candidate_count; ++candidate_id) {
+    const auto& candidate = ordered_candidates[candidate_id];
     auto message = std::stringstream{};
     DebugAssert(_validation_rules.contains(candidate->type),
                 "Unsupported dependency: " + std::string{magic_enum::enum_name(candidate->type)});
 
-    auto candidate_timer = Timer{};
-    const auto& validation_rule = _validation_rules.at(candidate->type);
     message << "Checking " << *candidate;
-    const auto& result = validation_rule->validate(*candidate);
+    const auto mean_candidate_time = candidate_times[candidate_id] / num_repetitions;
 
-    switch (result.status) {
+    switch (candidate->status) {
       case ValidationStatus::Invalid:
-        message << " [rejected in " << candidate_timer.lap_formatted() << "]";
-        ++invalid_count;
+        message << " [rejected in " << format_duration(mean_candidate_time) << "]";
         break;
       case ValidationStatus::AlreadyKnown:
-        message << " [skipped (already known) in " << candidate_timer.lap_formatted() << "]";
-        ++valid_count;
+        message << " [skipped (already known) in " << format_duration(mean_candidate_time) << "]";
         break;
       case ValidationStatus::Valid:
-        message << " [confirmed in " << candidate_timer.lap_formatted() << "]";
-        Assert(!result.constraints.empty(),
-               "Expected validation to yield constraint(s) for " + candidate->description());
-        ++valid_count;
+        message << " [confirmed in " << format_duration(mean_candidate_time) << "]";
         break;
       case ValidationStatus::Superfluous:
-        message << " [skipped (not required anymore) in " << candidate_timer.lap_formatted() << "]";
-        ++skipped_count;
+        message << " [skipped (not required anymore) in " << format_duration(mean_candidate_time) << "]";
         break;
       case ValidationStatus::Uncertain:
         Fail("Expected explicit validation result for " + candidate->description());
-    }
-    candidate->status = result.status;
-
-    for (const auto& [table, constraint] : result.constraints) {
-      _add_constraint(table, constraint);
     }
     Hyrise::get().log_manager.add_message("DependencyDiscoveryPlugin", message.str(), LogLevel::Info);
   }
@@ -175,9 +262,9 @@ void DependencyDiscoveryPlugin::_validate_dependency_candidates(
   Assert(valid_count + invalid_count + skipped_count == dependency_candidates.size(),
          "Numbers of candidates do not add up.");
   auto message = std::stringstream{};
+  const auto validation_time = setup_time + (loop_times / num_repetitions);
   message << "Validated " << dependency_candidates.size() << " candidates (" << valid_count << " valid, "
-          << invalid_count << " invalid, " << skipped_count << " superfluous) in " << validation_timer.lap_formatted();
-
+          << invalid_count << " invalid, " << skipped_count << " superfluous) in " << format_duration(validation_time);
   Hyrise::get().log_manager.add_message("DependencyDiscoveryPlugin", message.str(), LogLevel::Info);
 }
 
@@ -187,24 +274,6 @@ void DependencyDiscoveryPlugin::_add_candidate_rule(std::unique_ptr<AbstractDepe
 
 void DependencyDiscoveryPlugin::_add_validation_rule(std::unique_ptr<AbstractDependencyValidationRule> rule) {
   _validation_rules[rule->dependency_type] = std::move(rule);
-}
-
-void DependencyDiscoveryPlugin::_add_constraint(const std::shared_ptr<Table>& table,
-                                                const std::shared_ptr<AbstractTableConstraint>& constraint) const {
-  if (const auto& order_constraint = std::dynamic_pointer_cast<TableOrderConstraint>(constraint)) {
-    table->add_soft_order_constraint(*order_constraint);
-    return;
-  }
-  if (const auto& key_constraint = std::dynamic_pointer_cast<TableKeyConstraint>(constraint)) {
-    table->add_soft_key_constraint(*key_constraint);
-    return;
-  }
-  if (const auto& foreign_key_constraint = std::dynamic_pointer_cast<ForeignKeyConstraint>(constraint)) {
-    table->add_soft_foreign_key_constraint(*foreign_key_constraint);
-    return;
-  }
-
-  Fail("Invalid table constraint.");
 }
 
 EXPORT_PLUGIN(DependencyDiscoveryPlugin);
