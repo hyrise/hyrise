@@ -23,6 +23,8 @@ std::unordered_set<T> collect_values(const std::shared_ptr<const Table>& table, 
     }
 
     const auto& segment = chunk->get_segment(column_id);
+    // UNOPT: Do not only collect dictionaries.
+    /*
     if (const auto& value_segment = std::dynamic_pointer_cast<ValueSegment<T>>(segment)) {
       // Directly insert all values.
       const auto& values = value_segment->values();
@@ -31,14 +33,14 @@ std::unordered_set<T> collect_values(const std::shared_ptr<const Table>& table, 
       // Directly insert dictionary entries.
       const auto& dictionary = dictionary_segment->dictionary();
       distinct_values.insert(dictionary->cbegin(), dictionary->cend());
-    } else {
+    } else { */
       // Fallback: Iterate the whole segment and decode its values.
       segment_iterate<T>(*segment, [&](const auto& position) {
         if (!position.is_null()) {
           distinct_values.insert(position.value());
         }
       });
-    }
+    // }
   }
 
   return distinct_values;
@@ -47,11 +49,16 @@ std::unordered_set<T> collect_values(const std::shared_ptr<const Table>& table, 
 template <typename T>
 ValidationStatus perform_set_based_inclusion_check(
     const std::shared_ptr<Table>& including_table, const ColumnID including_column_id,
-    const std::shared_ptr<Table>& included_table, const ColumnID included_column_id,
+    const std::shared_ptr<Table>& included_table, const ColumnID included_column_id) {
+    // UNOPT: Do not validate UCC of including side.
+    /*
     std::unordered_map<std::shared_ptr<Table>, std::shared_ptr<AbstractTableConstraint>>& constraints,
-    const std::optional<std::pair<T, T>>& including_min_max, const std::optional<std::pair<T, T>>& included_min_max) {
+    const std::optional<std::pair<T, T>>& including_min_max, const std::optional<std::pair<T, T>>& included_min_max)
+    */
   const auto including_values = collect_values<T>(including_table, including_column_id);
 
+  // UNOPT: Do not use continuuousness for shortcut.
+  /*
   if constexpr (std::is_integral_v<T>) {
     Assert(!including_values.empty(), "Exmpty tables not considered.");
     if (including_min_max) {
@@ -71,6 +78,7 @@ ValidationStatus perform_set_based_inclusion_check(
       PerformanceWarning("Could not obtain min/max values.");
     }
   }
+  */
 
   auto status = ValidationStatus::Valid;
   const auto chunk_count = included_table->chunk_count();
@@ -84,6 +92,8 @@ ValidationStatus perform_set_based_inclusion_check(
     }
 
     const auto& segment = chunk->get_segment(included_column_id);
+    // UNOPT: Probe all (duplicate) values insted of only dictionaries.
+    /*
     if (const auto& dictionary_segment = std::dynamic_pointer_cast<DictionarySegment<T>>(segment)) {
       for (const auto& value : *dictionary_segment->dictionary()) {
         if (!including_values.contains(value)) {
@@ -92,6 +102,7 @@ ValidationStatus perform_set_based_inclusion_check(
         }
       }
     } else {
+      */
       segment_with_iterators<T>(*segment, [&](auto it, const auto end) {
         while (it != end) {
           if (!it->is_null() && !including_values.contains(it->value())) {
@@ -101,7 +112,7 @@ ValidationStatus perform_set_based_inclusion_check(
           ++it;
         }
       });
-    }
+    // }
   }
 
   return status;
@@ -130,7 +141,8 @@ ValidationResult IndValidationRule::_on_validate(const AbstractDependencyCandida
   resolve_data_type(included_table->column_data_type(included_column_id), [&](const auto data_type_t) {
     using ColumnDataType = typename decltype(data_type_t)::type;
 
-    const auto& included_min_max =
+    // UNOPT: Alwyas perform set-based check.
+    /*const auto& included_min_max =
         ValidationUtils<ColumnDataType>::get_column_min_max_value(included_table, included_column_id);
 
     if (!included_min_max) {
@@ -209,11 +221,13 @@ ValidationResult IndValidationRule::_on_validate(const AbstractDependencyCandida
         result.status = ValidationStatus::Invalid;
         return;
       }
-    }
+    }*/
 
     result.status = perform_set_based_inclusion_check<ColumnDataType>(
-        including_table, including_column_id, included_table, included_column_id, result.constraints, including_min_max,
+        including_table, including_column_id, included_table, included_column_id);
+    /*, result.constraints, including_min_max,
         included_min_max);
+        */
   });
 
   if (result.status == ValidationStatus::Valid) {

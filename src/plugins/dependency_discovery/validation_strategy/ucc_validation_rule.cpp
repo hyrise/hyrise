@@ -23,6 +23,8 @@ ValidationResult UccValidationRule::_on_validate(const AbstractDependencyCandida
     using ColumnDataType = typename decltype(data_type_t)::type;
 
     // Utilize efficient check for uniqueness inside each dictionary segment for a potential early out.
+    // UNOPT: No metadata-aware UCC validation.
+    /*
     const auto& column_statistics = ValidationUtils<ColumnDataType>::collect_column_statistics(table, column_id, true);
     if (column_statistics.all_segments_dictionary) {
       if (!column_statistics.all_segments_unique) {
@@ -33,6 +35,7 @@ ValidationResult UccValidationRule::_on_validate(const AbstractDependencyCandida
         return;
       }
     }
+    */
 
     // If we reach here, we have to run the more expensive cross-segment duplicate check.
     if (!_uniqueness_holds_across_segments<ColumnDataType>(table, column_id)) {
@@ -69,33 +72,21 @@ bool UccValidationRule::_uniqueness_holds_across_segments(const std::shared_ptr<
     }
 
     const auto expected_distinct_value_count = distinct_values.size() + source_segment->size();
-
-    if (const auto& value_segment = std::dynamic_pointer_cast<ValueSegment<ColumnDataType>>(source_segment)) {
-      // Directly insert all values.
-      const auto& values = value_segment->values();
-      distinct_values.insert(values.cbegin(), values.cend());
-    } else if (const auto& dictionary_segment =
-                   std::dynamic_pointer_cast<DictionarySegment<ColumnDataType>>(source_segment)) {
-      // Directly insert dictionary entries.
-      const auto& dictionary = dictionary_segment->dictionary();
-      distinct_values.insert(dictionary->cbegin(), dictionary->cend());
-    } else {
-      // Fallback: Iterate the whole segment and decode its values.
-      auto distinct_value_count = distinct_values.size();
-      segment_with_iterators<ColumnDataType>(*source_segment, [&](auto it, const auto end) {
-        while (it != end) {
-          if (it->is_null()) {
-            break;
-          }
-          distinct_values.insert(it->value());
-          if (distinct_value_count + 1 != distinct_values.size()) {
-            break;
-          }
-          ++distinct_value_count;
-          ++it;
+    // Fallback: Iterate the whole segment and decode its values.
+    auto distinct_value_count = distinct_values.size();
+    segment_with_iterators<ColumnDataType>(*source_segment, [&](auto it, const auto end) {
+      while (it != end) {
+        if (it->is_null()) {
+          break;
         }
-      });
-    }
+        distinct_values.insert(it->value());
+        if (distinct_value_count + 1 != distinct_values.size()) {
+          break;
+        }
+        ++distinct_value_count;
+        ++it;
+      }
+    });
 
     // If not all elements have been inserted, there must be a duplicate, so the UCC is violated.
     if (distinct_values.size() != expected_distinct_value_count) {
@@ -105,4 +96,5 @@ bool UccValidationRule::_uniqueness_holds_across_segments(const std::shared_ptr<
 
   return true;
 }
+
 }  // namespace hyrise

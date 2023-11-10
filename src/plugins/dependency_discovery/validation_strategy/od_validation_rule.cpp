@@ -11,6 +11,7 @@
 #include "storage/table.hpp"
 #include "utils/performance_warning.hpp"
 
+/*
 namespace {
 
 using namespace hyrise;  // NOLINT(build/namespaces)
@@ -127,6 +128,7 @@ bool sample_ordered(const std::shared_ptr<const Table>& table, const ColumnID or
 }
 
 }  // namespace
+*/
 
 namespace hyrise {
 
@@ -140,6 +142,8 @@ ValidationResult OdValidationRule::_on_validate(const AbstractDependencyCandidat
   const auto ordered_column_id = od_candidate.ordered_column_id;
 
   auto status = ValidationStatus::Uncertain;
+  // UNOPT: No sampling.
+  /*
   const auto row_count = table->row_count();
   resolve_data_type(table->column_data_type(ordering_column_id), [&](const auto ordering_data_type_t) {
     using OrderingColumnDataType = typename decltype(ordering_data_type_t)::type;
@@ -165,6 +169,7 @@ ValidationResult OdValidationRule::_on_validate(const AbstractDependencyCandidat
     }
     return result;
   }
+  */
 
   auto pruned_column_ids = std::vector<ColumnID>{};
   const auto column_count = table->column_count();
@@ -186,6 +191,7 @@ ValidationResult OdValidationRule::_on_validate(const AbstractDependencyCandidat
   sort->execute();
   const auto& result_table = sort->get_output();
 
+  status = ValidationStatus::Valid;
   resolve_data_type(result_table->column_data_type(check_column_id), [&](const auto data_type_t) {
     using ColumnDataType = typename decltype(data_type_t)::type;
 
@@ -220,8 +226,6 @@ ValidationResult OdValidationRule::_on_validate(const AbstractDependencyCandidat
         }
       });
     }
-
-    status = ValidationStatus::Valid;
   });
 
   auto result = ValidationResult(status);
