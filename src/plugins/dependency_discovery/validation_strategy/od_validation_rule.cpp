@@ -214,7 +214,7 @@ ValidationResult OdValidationRule::_on_validate(const AbstractDependencyCandidat
             return;
           }
 
-          const auto& value = it->value();
+          auto value = it->value();
           if (is_initialized && value < last_value) {
             status = ValidationStatus::Invalid;
             return;
@@ -222,7 +222,7 @@ ValidationResult OdValidationRule::_on_validate(const AbstractDependencyCandidat
 
           is_initialized = true;
           ++it;
-          last_value = value;
+          last_value = std::move(value);
         }
       });
     }
