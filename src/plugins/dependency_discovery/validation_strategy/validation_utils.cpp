@@ -125,7 +125,14 @@ typename ValidationUtils<T>::ColumnStatistics ValidationUtils<T>::collect_column
     }
 
     // Not disjoint if key already exists or if there is another value between min and max.
-    if (min_it->second != chunk_id || max_it->second != chunk_id || std::next(min_it) != max_it) {
+    const auto min_max_is_duplicate = min_it->second != chunk_id || max_it->second != chunk_id;
+    if (min_max_is_duplicate && early_out) {
+      column_statistics.segments_disjoint = false;
+      column_statistics.all_segments_unique = false;
+      return column_statistics;
+    }
+
+    if (min_max_is_duplicate || std::next(min_it) != max_it) {
       column_statistics.segments_disjoint = false;
       continue_index_build = !early_out;
     }
