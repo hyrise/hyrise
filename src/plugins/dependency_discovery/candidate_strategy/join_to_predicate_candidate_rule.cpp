@@ -149,7 +149,7 @@ void JoinToPredicateCandidateRule::apply_to_node(const std::shared_ptr<const Abs
     auto ind_candidate = std::make_shared<IndCandidate>(
         other_stored_table_node->table_name, join_key_column_expression->original_column_id,
         stored_table_node.table_name, join_lqp_column_expression->original_column_id);
-    ind_candidate->dependents.emplace(od_candidate);
+    ind_candidate->dependents->emplace(od_candidate);
 
     od_candidates.emplace_back(ind_candidate);
 
@@ -159,14 +159,23 @@ void JoinToPredicateCandidateRule::apply_to_node(const std::shared_ptr<const Abs
   if (predicate_count == 1 && !od_candidates.empty()) {
     for (const auto& candidate : od_candidates) {
       const auto [it, inserted] = candidates.emplace(candidate);
-      if (candidate->type == DependencyType::Inclusion && !inserted) {
-        const auto& ind_candidate = static_cast<const IndCandidate&>(*candidate);
-        const auto& existing_candidate = static_cast<IndCandidate&>(**it);
-        for (const auto& dependent : ind_candidate.dependents) {
-          const auto dependent_it = candidates.find(dependent);
-          Assert(dependent_it != candidates.end(), "Could not map dependent of IND candidate.");
-          existing_candidate.dependents.emplace(*dependent_it);
-        }
+      if (candidate->type != DependencyType::Inclusion) {
+        continue;
+      }
+      const auto& ind_candidate = static_cast<const IndCandidate&>(*candidate);
+      const auto& existing_candidate = static_cast<IndCandidate&>(**it);
+      const auto dependents = ind_candidate.dependents;
+      Assert(dependents, "Dependent ODs must be set.");
+      if (inserted) {
+        // We inserted the IND candidate, but the OD it depends on might have been added by another candidate. Thus, we
+        // have to map the IND candidate, too and remove our OD candidate from the set.
+        existing_candidate.dependents = std::make_shared<DependencyCandidates>();
+      }
+
+      for (const auto& dependent : *dependents) {
+        const auto dependent_it = candidates.find(dependent);
+        Assert(dependent_it != candidates.end(), "Could not map dependent of IND candidate.");
+        existing_candidate.dependents->emplace(*dependent_it);
       }
     }
   }

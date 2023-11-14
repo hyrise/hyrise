@@ -114,7 +114,7 @@ class IndCandidate : public AbstractDependencyCandidate {
   const std::string primary_key_table;
   const ColumnID primary_key_column_id;
 
-  mutable DependencyCandidates dependents;
+  mutable std::shared_ptr<DependencyCandidates> dependents{std::make_shared<DependencyCandidates>()};
 
  protected:
   size_t _on_hash() const final;

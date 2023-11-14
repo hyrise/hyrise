@@ -88,11 +88,11 @@ bool dependency_superfluous(const AbstractDependencyCandidate& candidate) {
   }
 
   const auto& dependents = static_cast<const IndCandidate&>(candidate).dependents;
-  if (dependents.empty()) {
+  if (!dependents || dependents->empty()) {
     return false;
   }
 
-  return std::all_of(dependents.cbegin(), dependents.cend(),
+  return std::all_of(dependents->cbegin(), dependents->cend(),
                      [](const auto& dependent) { return dependent->status == ValidationStatus::Invalid; });
 }
 

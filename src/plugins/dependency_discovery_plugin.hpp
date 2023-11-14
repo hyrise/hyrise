@@ -54,6 +54,8 @@ class DependencyDiscoveryPlugin : public AbstractPlugin {
   std::unordered_map<LQPNodeType, std::vector<std::unique_ptr<AbstractDependencyCandidateRule>>> _candidate_rules{};
 
   std::unordered_map<DependencyType, std::unique_ptr<AbstractDependencyValidationRule>> _validation_rules{};
+
+  uint32_t _validation_repetitions{1};
 };
 
 }  // namespace hyrise
