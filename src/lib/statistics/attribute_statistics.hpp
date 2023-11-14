@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <memory>
+#include <thread>
 
 #include "base_attribute_statistics.hpp"
 #include "hyrise.hpp"
@@ -9,7 +10,10 @@
 #include "statistics/statistics_objects/equal_distinct_count_histogram.hpp"
 #include "statistics/statistics_objects/generic_histogram.hpp"
 #include "statistics/statistics_objects/null_value_ratio_statistics.hpp"
+#include "statistics/table_statistics.hpp"
 #include "types.hpp"
+#include "utils/data_loading_utils.hpp"
+#include "utils/settings/data_loading_setting.hpp"
 
 namespace hyrise {
 
@@ -45,12 +49,14 @@ class AttributeStatistics : public BaseAttributeStatistics {
 
   const std::shared_ptr<AbstractHistogram<T>>& histogram() const {
     if (!_histogram) {
-      const auto shared_ptr_table = _table.lock();
-      Assert(shared_ptr_table, "AttributeStatistics not set up properly.");
-      std::cout << &*shared_ptr_table << ":col" << _column_id << " WE NEED TO LOAD HISTOGRAM." << std::endl;
+      if (_column_id != INVALID_COLUMN_ID) {
+        data_loading_utils::load_column_when_necessary(_table_name, _column_id);
+        const auto& table_statistics = Hyrise::get().storage_manager.get_table(_table_name)->table_statistics();
+        const auto& attribute_statistics = static_cast<const AttributeStatistics<T>&>(*(table_statistics->column_statistics[_column_id]));
+        Assert(attribute_statistics.histogram(), "Table should have a set histogram.");
+        return attribute_statistics.histogram();
+      }
     }
-
-    // TODO: fetch created histogram from storage_manager, where the new table now is.
 
     return _histogram;
   }
@@ -60,20 +66,13 @@ class AttributeStatistics : public BaseAttributeStatistics {
   }
 
   const std::shared_ptr<MinMaxFilter<T>>& min_max_filter() const {
-    const auto shared_ptr_table = _table.lock();
     if (!_min_max_filter) {
-      std::cout << &*shared_ptr_table << ":col" << _column_id << " WE NEED TO LOAD MIN/MAX." << std::endl;
-
-      auto& plugin_manager = Hyrise::get().plugin_manager;
-      const auto& plugins = plugin_manager.loaded_plugins();
-      Assert(std::binary_search(plugins.cbegin(), plugins.cend(), "hyriseDataLoadingPlugin"),
-             "Data Loading plugin is not loaded.");
-      Assert(plugin_manager.user_executable_functions().contains({"hyriseDataLoadingPlugin", "LoadTableAndStatistics"}),
-             "Function 'LoadTableAndStatistics' not found.");
-
-      plugin_manager.exec_user_function("hyriseDataLoadingPlugin", "LoadTableAndStatistics");
+      if (_column_id != INVALID_COLUMN_ID) {
+        data_loading_utils::load_column_when_necessary(_table_name, _column_id);
+        // We do not have no min_max filters here as column statistics don't have them (only chunk/pruning statistics).
+        // Request loading nonetheless.
+      }
     }
-    // Assert(shared_ptr_table, "AttributeStatistics not set up properly.");
 
     return _min_max_filter;
   }
@@ -108,49 +107,24 @@ class AttributeStatistics : public BaseAttributeStatistics {
     _distinct_value_count = distinct_value_count;
   }
 
-  void set_table_origin(const std::shared_ptr<Table>& table, const ColumnID column_id, const std::optional<ChunkID> chunk_id = std::nullopt) {
+  void set_table_origin(const std::shared_ptr<Table>& table, const std::string& table_name, const ColumnID column_id, const std::optional<ChunkID> chunk_id = std::nullopt) {
     auto shared_ptr_table = _table.lock();
 
-    if constexpr (std::is_arithmetic_v<T>) {
-      Assert(!shared_ptr_table && !_histogram && !_min_max_filter  && !_null_value_ratio&& !_distinct_value_count,
+    Assert(table, "Passed table not initialized.");
+    Assert(!shared_ptr_table && !_histogram && !_min_max_filter && !_null_value_ratio&& !_distinct_value_count,
              "Expected statistics to be uninitialized.");
-    } else {
-      // Assert(!shared_ptr_table && !_histogram && !_range_filter && !_min_max_filter  && !_null_value_ratio&& !_distinct_value_count,
-             // "Expected statistics to be uninitialized.");
+    if constexpr (std::is_arithmetic_v<T>) {
+      Assert(!_range_filter,
+             "Expected statistics to be uninitialized.");
     }
 
     _table = table;
+    _table_name = table_name;
     _column_id = column_id;
     if (chunk_id) {
       _chunk_id = chunk_id;
     }
   }
-
-  void load_column_when_necessary() const {
-    // We assume that all desired statistics are created once we found at least one.
-    if (_histogram || _null_value_ratio || _min_max_filter || _distinct_value_count) {
-      auto shared_ptr_table = _table.lock();
-      std::cout << &*shared_ptr_table << ":col" << _column_id << " ALREADY LOADED." << std::endl;
-      return;
-    }
-
-    auto shared_ptr_table = _table.lock();
-
-    std::cout << &*shared_ptr_table << ":col" << _column_id << " WE NEED TO LOAD." << std::endl;
-
-    Assert(shared_ptr_table, "Cannot lazily create statistics if base table is not set.");
-
-    auto& plugin_manager = Hyrise::get().plugin_manager;
-    const auto& plugins = plugin_manager.loaded_plugins();
-    if (!std::binary_search(plugins.cbegin(), plugins.cend(), "DataLoadingPlugin")) {
-      Fail("Data Loading plugin is not loaded.");
-    }
-
-    if (plugin_manager.user_executable_functions().contains({"DataLoadingPlugin", "load_table_and_statistics"})) {
-      std::cout << "Function 'load_table_and_statistics' not found." << std::endl;
-    }
-  }
-
 
  private:
   std::shared_ptr<AbstractHistogram<T>> _histogram{};
@@ -159,8 +133,11 @@ class AttributeStatistics : public BaseAttributeStatistics {
   std::shared_ptr<NullValueRatioStatistics> _null_value_ratio{};
   std::shared_ptr<DistinctValueCount> _distinct_value_count{};
 
+  std::mutex _load_mutex{};
+
   std::weak_ptr<Table> _table{};
-  ColumnID _column_id{0};
+  std::string _table_name{};
+  ColumnID _column_id{INVALID_COLUMN_ID};
   std::optional<ChunkID> _chunk_id{std::nullopt};
 };
 

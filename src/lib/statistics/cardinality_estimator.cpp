@@ -80,7 +80,6 @@ Cardinality CardinalityEstimator::estimate_cardinality(const std::shared_ptr<con
 
 std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
     const std::shared_ptr<const AbstractLQPNode>& lqp) const {
-  std::cout << "CardinalityEstimator::estimate_statistics()" << std::endl;
   /**
    * 1. Try a cache lookup for requested LQP.
    *
@@ -793,7 +792,6 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_operator_scan_pr
         return;
       }
     } else {
-      std::cout << "CardinalityEstimator::estimate_operator_scan_predicate() .... ELSE\n";
       const auto scan_statistics_object = left_input_column_statistics->histogram();
       // If there are no statistics available for this segment, assume a selectivity of 1, as no magic number makes real
       // sense here.
@@ -806,7 +804,6 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_operator_scan_pr
        * Estimate ColumnVsColumn
        */
       if (predicate.value.type() == typeid(ColumnID)) {
-        std::cout << "CardinalityEstimator::estimate_operator_scan_predicate() .... vs value\n";
         right_column_id = boost::get<ColumnID>(predicate.value);
 
         const auto right_data_type = input_table_statistics->column_data_type(*right_column_id);

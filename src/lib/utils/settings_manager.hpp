@@ -9,12 +9,15 @@
 namespace hyrise {
 
 /**
- * The SettingsManager is the central point for accessing all Setting objects.
- * Settings registered here can be changed from everywhere.
- * Users change settings through the settings meta table
+ * The SettingsManager is the central point for accessing all Setting objects. Settings registered here can be changed
+ * from everywhere. Users change settings through the settings meta table.
  */
 class SettingsManager : public Noncopyable {
  public:
+  SettingsManager& operator=(SettingsManager const& other) {
+    return *this;
+  }
+
   bool has_setting(const std::string& name) const;
   std::shared_ptr<AbstractSetting> get_setting(const std::string& name) const;
   std::vector<std::string> setting_names() const;
@@ -29,7 +32,7 @@ class SettingsManager : public Noncopyable {
 
  private:
   std::unordered_map<std::string, std::shared_ptr<AbstractSetting>> _settings;
-  std::mutex _mutex;
+  mutable std::mutex _mutex;
 };
 
 }  // namespace hyrise

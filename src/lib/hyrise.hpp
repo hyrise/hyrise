@@ -23,10 +23,9 @@ class BenchmarkRunner;
 // order fiasco, which would otherwise make the initialization/destruction order hard to control.
 class Hyrise : public Singleton<Hyrise> {
  public:
-  // Resets the Hyrise state by deleting its members (e.g., StorageManager) and
-  // creating new ones. This is used especially in tests and can lead to a lot of
-  // issues if there are still running tasks / threads that want to access a resource.
-  // You should be very sure that this is what you want.
+  // Resets the Hyrise state by deleting its members (e.g., StorageManager) and creating new ones. This is used
+  // especially in tests and can lead to a lot of issues if there are still running tasks / threads that want to access
+  // a resource. You should be very sure that this is what you want.
   static void reset();
 
   // The scheduler is always set. However, the ImmediateExecutionScheduler does not involve any multi-threading. This
@@ -36,10 +35,10 @@ class Hyrise : public Singleton<Hyrise> {
 
   void set_scheduler(const std::shared_ptr<AbstractScheduler>& new_scheduler);
 
-  // The order of these members is important because it defines in which order their destructors are called.
-  // For example, the StorageManager's destructor should not be called before the PluginManager's destructor.
-  // The latter stops all plugins which, in turn, might access tables during their shutdown procedure. This
-  // could not work without the StorageManager still in place.
+  // The order of these members is important because it defines in which order their destructors are called. For
+  // example, the StorageManager's destructor should not be called before the PluginManager's destructor. The latter
+  // stops all plugins which, in turn, might access tables during their shutdown procedure. This could not work without
+  // the StorageManager still in place.
   StorageManager storage_manager;
   PluginManager plugin_manager;
   TransactionManager transaction_manager;
@@ -53,8 +52,8 @@ class Hyrise : public Singleton<Hyrise> {
   std::shared_ptr<SQLPhysicalPlanCache> default_pqp_cache;
   std::shared_ptr<SQLLogicalPlanCache> default_lqp_cache;
 
-  // The BenchmarkRunner is available here so that non-benchmark components can add information to the benchmark
-  // result JSON.
+  // The BenchmarkRunner is available here so that non-benchmark components can add information to the benchmark result
+  // JSON.
   std::weak_ptr<BenchmarkRunner> benchmark_runner;
 
  private:

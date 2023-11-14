@@ -3,14 +3,11 @@
 namespace hyrise {
 
 Hyrise::Hyrise() {
-  // The default_memory_resource must be initialized before Hyrise's members so that
-  // it is destructed after them and remains accessible during their deconstruction.
-  // For example, when the StorageManager is destructed, it causes its stored tables
-  // to be deconstructed, too. As these might call deallocate on the
-  // default_memory_resource, it is important that the resource has not been
-  // destructed before. As objects are destructed in the reverse order of their
-  // construction, explicitly initializing the resource first means that it is
-  // destructed last.
+  // The default_memory_resource must be initialized before Hyrise's members so that it is destructed after them and
+  // remains accessible during their deconstruction. For example, when the StorageManager is destructed, it causes its
+  // stored tables to be deconstructed, too. As these might call deallocate on the default_memory_resource, it is
+  // important that the resource has not been destructed before. As objects are destructed in the reverse order of
+  // their construction, explicitly initializing the resource first means that it is destructed last.
   boost::container::pmr::get_default_resource();
 
   storage_manager = StorageManager{};

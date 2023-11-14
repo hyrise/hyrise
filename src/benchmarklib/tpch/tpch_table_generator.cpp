@@ -123,7 +123,10 @@ TPCHTableGenerator::TPCHTableGenerator(float scale_factor, ClusteringConfigurati
 
 std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TPCHTableGenerator::create_orders_and_lineitem_tables(const size_t order_count, const size_t index_offset) const {
   const auto* env_column_configuration = std::getenv("COLUMN_CONFIGURATION");
-  const auto column_definition = std::string{env_column_configuration};
+  auto column_definition = std::string{"NONE"};
+  if (env_column_configuration) {
+    column_definition = std::string{env_column_configuration};
+  }
 
   /**
    * Not the nicest solution here, but it's simple and avoids too many branches.
@@ -191,7 +194,10 @@ std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TPCHTableGenerator::cr
 
 std::shared_ptr<Table> TPCHTableGenerator::create_customer_table(const size_t customer_count, const size_t index_offset) const {
   const auto* env_column_configuration = std::getenv("COLUMN_CONFIGURATION");
-  const auto column_definition = std::string{env_column_configuration};
+  auto column_definition = std::string{"NONE"};
+  if (env_column_configuration) {
+    column_definition = std::string{env_column_configuration};
+  }
 
   /**
    * Not the nicest solution here, but it's simple and avoids too many branches.
@@ -288,11 +294,13 @@ std::tuple<std::vector<DataType>, std::vector<std::string>, std::vector<bool>> T
   return {data_types, names, nullable};
 }
 
-std::shared_ptr<Table> TPCHTableGenerator::create_empty_table(std::string&& table_name) const {
+std::shared_ptr<Table> TPCHTableGenerator::create_empty_table(const std::string& table_name) const {
   if (table_name == "lineitem") {
     return TableBuilder{_benchmark_config->chunk_size, lineitem_column_types, lineitem_column_names, ChunkOffset{0}}.finish_table();
   } else if (table_name == "orders") {
     return TableBuilder{_benchmark_config->chunk_size, order_column_types, order_column_names, ChunkOffset{0}}.finish_table();
+  } else if (table_name == "customer") {
+    return TableBuilder{_benchmark_config->chunk_size, customer_column_types, customer_column_names, ChunkOffset{0}}.finish_table();
   }
 
   Fail("Lazy Martin has not yet implemented the empty table creation for " + table_name);

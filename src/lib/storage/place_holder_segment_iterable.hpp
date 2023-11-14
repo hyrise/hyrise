@@ -3,8 +3,10 @@
 #include <type_traits>
 #include <vector>
 
+#include "hyrise.hpp"
 #include "storage/segment_iterables.hpp"
 #include "storage/place_holder_segment.hpp"
+#include "utils/data_loading_utils.hpp"
 
 namespace hyrise {
 
@@ -19,10 +21,11 @@ class PlaceHolderSegmentIterable : public PointAccessibleSegmentIterable<PlaceHo
   void _on_with_iterators(const Functor& functor) const {
     _segment.access_counter[SegmentAccessCounter::AccessType::Sequential] += _segment.size();
 
-    // std::cout << "Sequential filter iterable" << std::endl;
-
-    auto v = std::vector<SegmentPosition<T>>{};
-    functor(v.begin(), v.end());
+    const auto& loaded_segment = _segment.load_and_return_segment();
+    auto iterable = create_any_segment_iterable<T>(*loaded_segment);
+    iterable.with_iterators([&](auto it, const auto end) {
+      functor(it, end);
+    });
   }
 
   template <typename Functor, typename PosListType>
@@ -30,10 +33,11 @@ class PlaceHolderSegmentIterable : public PointAccessibleSegmentIterable<PlaceHo
     const auto position_filter_size = position_filter->size();
     _segment.access_counter[SegmentAccessCounter::access_type(*position_filter)] += position_filter_size;
 
-    // std::cout << "Positional filter iterable" << std::endl;
-
-    auto v = std::vector<SegmentPosition<T>>{};
-    functor(v.begin(), v.end());
+    const auto& loaded_segment = _segment.load_and_return_segment();
+    auto iterable = create_any_segment_iterable<T>(*loaded_segment);
+    iterable.with_iterators(position_filter, [&](auto it, const auto end) {
+      functor(it, end);
+    });
   }
 
   size_t _on_size() const {

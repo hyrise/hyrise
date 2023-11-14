@@ -7,37 +7,13 @@
 
 #include "operators/table_wrapper.hpp"
 #include "resolve_type.hpp"
-#include "statistics/attribute_statistics.hpp"
 #include "statistics/statistics_objects/distinct_value_count.hpp"
 #include "statistics/statistics_objects/equal_distinct_count_histogram.hpp"
 #include "statistics/statistics_objects/generic_histogram_builder.hpp"
-#include "statistics/statistics_objects/min_max_filter.hpp"
 #include "statistics/statistics_objects/null_value_ratio_statistics.hpp"
-#include "statistics/statistics_objects/range_filter.hpp"
 #include "statistics/table_statistics.hpp"
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/table.hpp"
-
-namespace {
-
-using namespace hyrise;  // NOLINT
-
-template <typename T>
-void create_pruning_statistics_for_segment(AttributeStatistics<T>& segment_statistics,
-                                           const pmr_vector<T>& dictionary) {
-  if constexpr (std::is_arithmetic_v<T>) {
-    segment_statistics.set_statistics_object(RangeFilter<T>::build_filter(dictionary));
-  } else {
-    if (!dictionary.empty()) {
-      segment_statistics.set_statistics_object(
-          std::make_shared<MinMaxFilter<T>>(dictionary.front(), dictionary.back()));
-    }
-  }
-
-  segment_statistics.set_statistics_object(std::make_shared<DistinctValueCount>(dictionary.size()));
-}
-
-}  // namespace
 
 namespace hyrise {
 

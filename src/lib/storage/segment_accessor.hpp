@@ -51,8 +51,15 @@ class SegmentAccessor final : public AbstractSegmentAccessor<T> {
   const std::optional<T> access(ChunkOffset offset) const final {
     ++_accesses;
     if constexpr (std::is_same_v<SegmentType, PlaceHolderSegment>) {
-      std::cerr << "SLKDFJ" << std::endl;
-      return std::nullopt;
+      const auto& loaded_segment = _segment.load_and_return_segment();
+      auto value = std::optional<T>{};
+      resolve_segment_type<T>(*loaded_segment, [&](const auto& typed_segment) {
+        using LoadedSegmentType = std::decay_t<decltype(typed_segment)>;
+        if constexpr (!std::is_same_v<LoadedSegmentType, ReferenceSegment> && !std::is_same_v<LoadedSegmentType, PlaceHolderSegment>) {
+          value = typed_segment.get_typed_value(offset);
+        }
+      });
+      return value;
     } else {
       return _segment.get_typed_value(offset);
     }
@@ -119,8 +126,15 @@ class SingleChunkReferenceSegmentAccessor final : public AbstractSegmentAccessor
     ++_accesses;
     const auto referenced_chunk_offset = _pos_list[offset].chunk_offset;
     if constexpr (std::is_same_v<Segment, PlaceHolderSegment>) {
-      std::cerr << "SLKDFJ" << std::endl;
-      return std::nullopt;
+      const auto& loaded_segment = _segment.load_and_return_segment();
+      auto value = std::optional<T>{};
+      resolve_segment_type<T>(*loaded_segment, [&](const auto& typed_segment) {
+        using LoadedSegmentType = std::decay_t<decltype(typed_segment)>;
+        if constexpr (!std::is_same_v<LoadedSegmentType, ReferenceSegment> && !std::is_same_v<LoadedSegmentType, PlaceHolderSegment>) {
+          value = typed_segment.get_typed_value(offset);
+        }
+      });
+      return value;
     } else {
       return _segment.get_typed_value(referenced_chunk_offset);
     }

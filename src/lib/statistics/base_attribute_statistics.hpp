@@ -59,13 +59,8 @@ class BaseAttributeStatistics {
 
   const DataType data_type;
 
-  void set_table_origin(const std::shared_ptr<Table>& table, const ColumnID column_id, const std::optional<ChunkID> chunk_id = std::nullopt) {
-    std::cerr << "Warning: called on BaseAttributeStatistics" << std::endl;
-  }
-
-  void load_column_when_necessary() {
-    std::cerr << "Warning: called on BaseAttributeStatistics" << std::endl;
-  }
+   [[noreturn]] void set_table_origin(const std::shared_ptr<Table>& table, const std::string& table_name, const ColumnID column_id,
+                                      const std::optional<ChunkID> chunk_id = std::nullopt);
 };
 
 }  // namespace hyrise

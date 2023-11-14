@@ -4,7 +4,9 @@
 
 #include "abstract_segment.hpp"
 #include "chunk.hpp"
+#include "hyrise.hpp"
 #include "table.hpp"
+#include "utils/data_loading_utils.hpp"
 
 namespace hyrise {
 
@@ -12,7 +14,8 @@ namespace hyrise {
 // created/loaded.
 class PlaceHolderSegment : public AbstractSegment {
  public:
-  explicit PlaceHolderSegment(const std::shared_ptr<Table>& base_table, const ColumnID column_id, bool nullable = false, ChunkOffset capacity = Chunk::DEFAULT_SIZE);
+  explicit PlaceHolderSegment(const std::shared_ptr<Table>& init_base_table, const std::string& init_table_name, const ChunkID init_chunk_id,
+                              const ColumnID init_column_id, bool init_nullable, ChunkOffset init_capacity = Chunk::DEFAULT_SIZE);
 
   // Return the value at a certain position. If you want to write efficient operators, back off!
   // Use values() and null_values() to get the vectors and check the content yourself.
@@ -26,13 +29,14 @@ class PlaceHolderSegment : public AbstractSegment {
 
   size_t memory_usage(const MemoryUsageCalculationMode mode) const override;
 
- protected:
-  // We don't use ChunkID for now as TPC-H's dbgen does not allow chunk-wise data generation.
-  std::shared_ptr<Table> _base_table{};
-  ColumnID _column_id{};
+  std::shared_ptr<AbstractSegment> load_and_return_segment() const;
 
-  bool _nullable{true};
-  ChunkOffset _capacity{Chunk::DEFAULT_SIZE};
+  std::shared_ptr<Table> base_table{};
+  std::string table_name{};
+  ChunkID chunk_id{INVALID_CHUNK_ID};
+  ColumnID column_id{INVALID_COLUMN_ID};
+  bool nullable{true};
+  ChunkOffset capacity{Chunk::DEFAULT_SIZE};
 };
 
 }  // namespace hyrise

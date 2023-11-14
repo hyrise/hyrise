@@ -49,7 +49,7 @@ class TPCHTableGenerator : virtual public AbstractTableGenerator {
 
   std::tuple<std::vector<DataType>, std::vector<std::string>, std::vector<bool>> get_table_column_information(const auto& table_name) const;
 
-  std::shared_ptr<Table> create_empty_table(std::string&& table_name) const;
+  std::shared_ptr<Table> create_empty_table(const std::string& table_name) const;
 
   void reset_and_initialize();
 

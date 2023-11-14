@@ -283,18 +283,50 @@ bool JCCHBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, Be
     }
 
     case 18 - 1: {
-      static auto warned_compliance = false;
-      if (!warned_compliance) {
-        std::cerr << "\nWarning: JCC-H Query 18 as used by Hyrise slightly diverges from the specification.\n";
-        std::cerr << "         See jcch_benchmark_item_runner.cpp for details.\n\n";
-        warned_compliance = true;
-      }
 
       // JCC-H has a second parameter to this query:
       //   https://github.com/ldbc/dbgen.JCC-H/commit/d42a7ebc2617ec31de55b00425c23ab7885beeeb#diff-c448b6246f882ef1a5fd8e7ded77b8134addba8443ce2b43425e563045895fc4  // NOLINT
       // We do not use this parameter as it would bring a structural change to the SQL query template, which is also
       // used for TPC-H.
-      parameters.emplace_back(raw_params_iter->at(0));
+
+      auto query_18 = std::string{"select "
+                                  "  c_name, "
+                                  "  c_custkey, "
+                                  "  o_orderkey, "
+                                  "  o_orderdate, "
+                                  "  o_totalprice, "
+                                  "  sum(l_quantity) "
+                                  "from "
+                                  "  customer, "
+                                  "  orders, "
+                                  "  lineitem "
+                                  "where "
+                                  "  o_orderkey in ( "
+                                  "    select "
+                                  "      l_orderkey "
+                                  "    from "
+                                  "      lineitem "
+                                  "    group by "
+                                  "      l_orderkey having "
+                                  "        sum(l_quantity) between $between_low$ and $between_high$ "
+                                  "  ) "
+                                  "  and c_custkey = o_custkey "
+                                  "  and o_orderkey = l_orderkey "
+                                  "group by "
+                                  "  c_name, "
+                                  "  c_custkey, "
+                                  "  o_orderkey, "
+                                  "  o_orderdate, "
+                                  "  o_totalprice "
+                                  "order by "
+                                  "  o_totalprice desc, "
+                                  "  o_orderdate "
+                                  "limit 100;"};
+
+      boost::replace_all(query_18, std::string{"$between_low$"}, raw_params_iter->at(0));
+      boost::replace_all(query_18, std::string{"$between_high$"}, raw_params_iter->at(1));
+
+      sql = query_18;
       break;
     }
 

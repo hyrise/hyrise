@@ -17,21 +17,13 @@ assert Path(args.hyrise_path).exists()
 
 subprocess.run(["ninja", "-C", args.hyrise_path])
 
-<<<<<<< HEAD
-scale_factors = [args.scale_factor] if args.scale_factor else [1.0, 5.0, 10.0, 50.0, 100.0, 500.0, 1000.0]
+scale_factors = [args.scale_factor] if args.scale_factor else [1.0, 5.0, 10.0, 50.0, 100.0, 150.0, 200.0, 250.0, 300.0, 350.0, 400.0, 450.0, 500.0]
 if args.debug and not args.scale_factor:
     scale_factors = [args.scale_factor] if args.scale_factor else [0.1, 1.0, 10.0]
 
 for scale_factor in scale_factors:
   for config in ["CSV", "NONE", "DB_Q3_COLUMNS", "Q3_COLUMNS"]:
     print(f"####\n#### SF {scale_factor} - {config}\n####")
-=======
-scale_factors = [args.scale_factor] if args.scale_factor else [1.0, 5.0, 10.0, 50.0, 100.0, 150.0, 200.0, 250.0, 300.0, 350.0, 400.0, 450.0, 500.0]
-
-for scale_factor in scale_factors:
-  for config in ["NONE", "DB_Q3_COLUMNS", "Q3_COLUMNS"]:
-    sys.stderr.write(f"####\n#### SF {scale_factor} - {config}\n####")
->>>>>>> 277e714c5661b64f7780c4af49848a4c72428066
 
     subprocess.run([f"./{args.hyrise_path}/hyrisePlayground", str(scale_factor)], env={"COLUMN_CONFIGURATION": config}) 
 

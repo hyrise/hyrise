@@ -269,8 +269,6 @@ std::shared_ptr<AbstractLQPNode> Optimizer::optimize(
   // optimized plan.
   Assert(input.use_count() == 1, "Optimizer should have exclusive ownership of plan.");
 
-  std::cout << "CALLED OPTIMIZER" << std::endl;
-
   // Add explicit root node, so the rules can freely change the tree below it without having to maintain a root node
   // to return to the Optimizer
   const auto root_node = LogicalPlanRootNode::make(std::move(input));

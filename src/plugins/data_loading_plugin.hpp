@@ -17,10 +17,13 @@ class DataLoadingPlugin : public AbstractPlugin {
   void _load_table_and_statistics();
   std::mutex _dbgen_mutex{};
   std::mutex _settings_mutex{};
-  std::unordered_map<std::string, std::mutex> _table_mutexes{};
-  std::vector<std::pair<std::string, ColumnID>> _loaded_columns{};
+  std::mutex _tables_mutex{};
+  std::mutex _columns_mutex{};
 
-  std::chrono::microseconds _background_job_sleep_time{50};
+  std::vector<std::pair<std::pair<std::string, ColumnID>, std::string>> _columns{};
+  std::vector<std::pair<std::string, std::string>> _tables{};
+
+  std::unordered_map<std::string, std::shared_ptr<Table>> _table_cache;
 };
 
 }  // namespace hyrise

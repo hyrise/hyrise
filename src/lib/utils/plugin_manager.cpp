@@ -3,10 +3,10 @@
 #include <filesystem>
 
 #include "hyrise.hpp"
+#include "plugin_manager.hpp"
 #include "utils/abstract_plugin.hpp"
 #include "utils/assert.hpp"
-
-#include "plugin_manager.hpp"
+#include "utils/settings/data_loading_setting.hpp"
 
 namespace hyrise {
 

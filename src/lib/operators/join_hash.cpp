@@ -74,7 +74,7 @@ size_t JoinHash::calculate_radix_bits(const size_t build_side_size, const size_t
       other join operators might be more efficient. We emit performance warning in this case. In the future, the
       optimizer could identify these cases of potentially inefficient hash joins and switch to other join algorithms.
     */
-    PerformanceWarning("Build side larger than probe side in hash join");
+    PerformanceWarning("Build side larger than probe side in hash join.");
   }
 
   // We assume a cache of 1024 KB for an Intel Xeon Platinum 8180. For local deployments or other CPUs, this size might
@@ -95,11 +95,15 @@ size_t JoinHash::calculate_radix_bits(const size_t build_side_size, const size_t
 
   const auto cluster_count = std::max(1.0, complete_hash_map_size / L2_CACHE_MAX_USABLE);
 
+  const auto* env_radix_cluster_factor_configuration = std::getenv("RADIX_CLUSTER_FACTOR");
+  Assert(env_radix_cluster_factor_configuration, "Environment variable RADIX_CLUSTER_FACTOR must be set.");
+  const auto radix_cluster_factor = std::strtod(env_radix_cluster_factor_configuration, nullptr);
+
   // We limit the max fan out for radix partitioning to 8 bits (i.e., 256 partitions). "An Experimental Comparison of
   // Thirteen Relational Equi-Joins in Main Memory" by Schuh et al. analyzed the number of radix bits and how much
   // large fan outs hurt performance due to TLB misses. As we do not use software-managed buffers, a smaller number of
   // bits has shown the best results.
-  return std::min(size_t{8}, static_cast<size_t>(std::ceil(std::log2(cluster_count))));
+  return std::min(size_t{8}, static_cast<size_t>(std::ceil(radix_cluster_factor * std::log2(cluster_count))));
 }
 
 std::shared_ptr<const Table> JoinHash::_on_execute() {

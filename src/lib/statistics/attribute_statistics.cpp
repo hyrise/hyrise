@@ -45,7 +45,6 @@ void AttributeStatistics<T>::set_statistics_object(const std::shared_ptr<Abstrac
 
 template <typename T>
 std::shared_ptr<BaseAttributeStatistics> AttributeStatistics<T>::scaled(const Selectivity selectivity) const {
-  load_column_when_necessary();
   const auto statistics = std::make_shared<AttributeStatistics<T>>();
 
   if (_histogram) {
@@ -77,7 +76,6 @@ template <typename T>
 std::shared_ptr<BaseAttributeStatistics> AttributeStatistics<T>::sliced(
     const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
     const std::optional<AllTypeVariant>& variant_value2) const {
-  load_column_when_necessary();
   const auto statistics = std::make_shared<AttributeStatistics<T>>();
 
   if (_histogram) {
@@ -107,7 +105,6 @@ template <typename T>
 std::shared_ptr<BaseAttributeStatistics> AttributeStatistics<T>::pruned(
     const size_t num_values_pruned, const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
     const std::optional<AllTypeVariant>& variant_value2) const {
-  load_column_when_necessary();
   const auto statistics = std::make_shared<AttributeStatistics<T>>();
 
   if (_histogram) {

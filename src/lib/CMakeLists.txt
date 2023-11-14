@@ -595,6 +595,8 @@ set(
     utils/check_table_equal.cpp
     utils/check_table_equal.hpp
     utils/copyable_atomic.hpp
+    utils/data_loading_utils.cpp
+    utils/data_loading_utils.hpp
     utils/date_time_utils.cpp
     utils/date_time_utils.hpp
     utils/enum_constant.hpp
