@@ -163,6 +163,7 @@ void DependencyDiscoveryPlugin::_validate_dependency_candidates(
              "Looping validation only permitted if no schema constraints are added as it resets all constrints.");
     }
   }
+  std::cout << "- Execute " << num_repetitions << " validation runs" << std::endl;
 
   const auto candidate_count = ordered_candidates.size();
   auto candidate_times = std::vector<std::chrono::nanoseconds>(candidate_count);

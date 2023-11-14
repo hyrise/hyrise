@@ -4,28 +4,18 @@ set -e
 
 if [ $# -ne 1 ]
 then
-  echo 'This script is used to compare the performance impact of a change. Running it takes a few hours.'
-  echo '  It compares two git revisions using various benchmarks (see below) and prints the result in a format'
-  echo '  that is copyable to Github.'
-  echo 'Typical call (in a release build folder): ../scripts/benchmark_all.sh origin/master HEAD'
+  echo 'Please provide a git revision!.'
+  echo 'Typical call (in a release build folder): ../scripts/benchmark_compare_plugin_sf.sh HEAD'
   exit 1
 fi
 
 benchmarks='hyriseBenchmarkTPCH hyriseBenchmarkTPCDS hyriseBenchmarkStarSchema'
-scale_factors="1 20 30 40 50 60 80 100"
+scale_factors="1 20 30 40 50 60 70 80 90 100"
 # Set to 1 because even a single warmup run of a query makes the observed runtimes much more stable. See discussion in #2405 for some preliminary reasoning.
 warmup_seconds=1
-mt_shuffled_runtime=1200
 runs=100
 
-# Setting the number of clients used for the multi-threaded scenario to the machine's physical core count. This only works for macOS and Linux.
 output="$(uname -s)"
-case "${output}" in
-    Linux*)     num_phy_cores="$(lscpu -p | egrep -v '^#' | grep '^[0-9]*,[0-9]*,0,0' | sort -u -t, -k 2,4 | wc -l)";;
-    Darwin*)    num_phy_cores="$(sysctl -n hw.physicalcpu)";;
-    *)          echo 'Unsupported operating system. Aborting.' && exit 1;;
-esac
-
 case "${output}" in
     Linux*)     lib_suffix="so";;
     Darwin*)    lib_suffix="dylib";;
