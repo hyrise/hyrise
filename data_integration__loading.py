@@ -15,7 +15,7 @@ args = parser.parse_args()
 
 assert Path(args.hyrise_path).exists()
 
-subprocess.run(["ninja", "-C", args.hyrise_path])
+subprocess.run(["ninja", "-C", args.hyrise_path, "hyrisePlayground"])
 
 scale_factors = [args.scale_factor] if args.scale_factor else [1.0, 5.0, 10.0, 50.0, 100.0, 150.0, 200.0, 250.0, 300.0, 350.0, 400.0, 450.0, 500.0]
 if args.debug and not args.scale_factor:

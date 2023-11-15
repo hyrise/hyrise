@@ -33,7 +33,8 @@ results_agg_agg_norm <- results_agg_agg %>% group_by(BENCHMARK, SCALE_FACTOR, SC
                                             mutate(NORM_AVG_RUNTIME_S = AVG_RUNTIME_S / min(AVG_RUNTIME_S), .groups="keep")
 
 ggplot(results_agg_agg_norm %>% filter(SCHEDULER_MODE == "mt"),
-       aes(x=RADIX_CLUSTER_FACTOR, group=BENCHMARK, y=NORM_AVG_RUNTIME_S, fill=BENCHMARK, shape=BENCHMARK, color=BENCHMARK)) +
+       aes(x=RADIX_CLUSTER_FACTOR, group=BENCHMARK, y=NORM_AVG_RUNTIME_S,
+           fill=BENCHMARK, shape=BENCHMARK, color=BENCHMARK, linetype=BENCHMARK)) +
   geom_line() +
   geom_point() +
   theme_bw() +
@@ -46,7 +47,8 @@ ggplot(results_agg_agg_norm %>% filter(SCHEDULER_MODE == "mt"),
   theme(legend.position="top")
 
 plot <- ggplot(results_agg_agg_norm %>% filter(SCHEDULER_MODE == "mt"),
-               aes(x=RADIX_CLUSTER_FACTOR, group=BENCHMARK, y=NORM_AVG_RUNTIME_S, fill=BENCHMARK, shape=BENCHMARK, color=BENCHMARK)) +
+               aes(x=RADIX_CLUSTER_FACTOR, group=BENCHMARK, y=NORM_AVG_RUNTIME_S,
+                   fill=BENCHMARK, shape=BENCHMARK, color=BENCHMARK, linetype=BENCHMARK)) +
   geom_line() +
   geom_point() +
   theme_bw() +
@@ -55,11 +57,14 @@ plot <- ggplot(results_agg_agg_norm %>% filter(SCHEDULER_MODE == "mt"),
   theme.paper_plot +
   facet_wrap( ~ SCALE_FACTOR, ncol=2, scales = "free_y") +
   labs(x= "Radix Cluster Factor", y="Norm. Cumu. Runtime") +
-  theme(legend.position=c(.75,.675)) +
+  # theme(legend.position=c(.55,.675)) +
   theme(legend.title = element_blank()) +
+  theme(legend.direction = "horizontal") +
   theme(legend.background=element_blank()) +
-  theme(legend.key.size = unit(4, "mm")) +
+  theme(legend.key = element_blank()) +
+  # theme(legend.key.size = unit(4, "mm")) +
   theme(plot.margin=unit(c(1,1,0,1), 'mm')) +
-  theme(axis.title.y = element_text(hjust=0.7))
+  theme(axis.title.y = element_text(hjust=0.7)) +
+  theme(legend.position="top")
 print(plot)
-ggsave("radix_cluster_plot.pdf", plot, width=5, height=1.25)
+ggsave("radix_cluster_plot.pdf", plot, width=5, height=3.0)
