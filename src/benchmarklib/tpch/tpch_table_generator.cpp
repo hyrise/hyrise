@@ -121,6 +121,15 @@ TPCHTableGenerator::TPCHTableGenerator(float scale_factor, ClusteringConfigurati
       _scale_factor(scale_factor),
       _clustering_configuration(clustering_configuration) {}
 
+
+size_t TPCHTableGenerator::orders_row_count() const {
+  if (scale == 1) {
+    return static_cast<size_t>(tdefs[ORDER].base);
+  }
+
+  return static_cast<size_t>(static_cast<double>(tdefs[ORDER].base) * _scale_factor);
+}
+
 std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TPCHTableGenerator::create_orders_and_lineitem_tables(const size_t order_count, const size_t index_offset) const {
   const auto* env_column_configuration = std::getenv("COLUMN_CONFIGURATION");
   auto column_definition = std::string{"NONE"};
@@ -191,6 +200,13 @@ std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TPCHTableGenerator::cr
   Fail("Unexpected");
 }
 
+size_t TPCHTableGenerator::customer_row_count() const {
+  if (scale == 1) {
+    return static_cast<size_t>(tdefs[CUST].base);
+  }
+
+  return static_cast<size_t>(static_cast<double>(tdefs[CUST].base) * _scale_factor);
+}
 
 std::shared_ptr<Table> TPCHTableGenerator::create_customer_table(const size_t customer_count, const size_t index_offset) const {
   const auto* env_column_configuration = std::getenv("COLUMN_CONFIGURATION");
@@ -239,22 +255,6 @@ std::shared_ptr<Table> TPCHTableGenerator::create_customer_table(const size_t cu
   Fail("Unexpected");
 }
 
-size_t TPCHTableGenerator::orders_row_count() const {
-  if (scale == 1) {
-    return static_cast<size_t>(tdefs[ORDER].base);
-  }
-
-  return static_cast<size_t>(static_cast<double>(tdefs[ORDER].base) * _scale_factor);
-}
-
-size_t TPCHTableGenerator::customer_row_count() const {
-  if (scale == 1) {
-    return static_cast<size_t>(tdefs[CUST].base);
-  }
-
-  return static_cast<size_t>(static_cast<double>(tdefs[CUST].base) * _scale_factor);
-}
-
 size_t TPCHTableGenerator::part_row_count() const {
   if (scale == 1) {
     return static_cast<size_t>(tdefs[PART].base);
@@ -263,98 +263,11 @@ size_t TPCHTableGenerator::part_row_count() const {
   return static_cast<size_t>(static_cast<double>(tdefs[PART].base) * _scale_factor);
 }
 
-size_t TPCHTableGenerator::supplier_row_count() const {
-  if (scale == 1) {
-    return static_cast<size_t>(tdefs[SUPP].base);
-  }
-
-  return static_cast<size_t>(static_cast<double>(tdefs[SUPP].base) * _scale_factor);
-}
-
-size_t TPCHTableGenerator::nation_row_count() const {
-  return static_cast<size_t>(tdefs[NATION].base);
-}
-
-size_t TPCHTableGenerator::region_row_count() const {
-  return static_cast<size_t>(tdefs[REGION].base);
-}
-
-std::tuple<std::vector<DataType>, std::vector<std::string>, std::vector<bool>> TPCHTableGenerator::get_table_column_information(const auto& table_name) const {
-  auto data_types = std::vector<DataType>{};
-  auto names = std::vector<std::string>{};
-  auto nullable = std::vector<bool>{};
-
-  if (table_name == "lineitem") {
-    const auto column_count = boost::hana::size(order_column_types);
-    data_types.reserve(column_count);
-    names.reserve(column_count);
-    nullable.reserve(column_count);
-  }
-
-  return {data_types, names, nullable};
-}
-
-std::shared_ptr<Table> TPCHTableGenerator::create_empty_table(const std::string& table_name) const {
-  if (table_name == "lineitem") {
-    return TableBuilder{_benchmark_config->chunk_size, lineitem_column_types, lineitem_column_names, ChunkOffset{0}}.finish_table();
-  } else if (table_name == "orders") {
-    return TableBuilder{_benchmark_config->chunk_size, order_column_types, order_column_names, ChunkOffset{0}}.finish_table();
-  } else if (table_name == "customer") {
-    return TableBuilder{_benchmark_config->chunk_size, customer_column_types, customer_column_names, ChunkOffset{0}}.finish_table();
-  }
-
-  Fail("Lazy Martin has not yet implemented the empty table creation for " + table_name);
-}
-
-void TPCHTableGenerator::reset_and_initialize() {
-  dbgen_reset_seeds();
-  dbgen_init_scale_factor(_scale_factor);
-}
-
-std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate() {
-  Assert(_scale_factor < 1.0f || std::round(_scale_factor) == _scale_factor,
-         "Due to tpch_dbgen limitations, only scale factors less than one can have a fractional part.");
-
-  const auto cache_directory = std::string{"tpch_cached_tables/sf-"} + std::to_string(_scale_factor);  // NOLINT
-  if (_benchmark_config->cache_binary_tables && std::filesystem::is_directory(cache_directory)) {
-    return _load_binary_tables_from_path(cache_directory);
-  }
-
-  // Init tpch_dbgen - it is important this is done before any data structures from tpch_dbgen are read.
-  reset_and_initialize();
-
-  create_empty_table("lineitem");
-
-  const auto part_count = part_row_count();
-  const auto supplier_count = supplier_row_count();
-  const auto nation_count = nation_row_count();
-  const auto region_count = region_row_count();
-
+std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TPCHTableGenerator::create_part_and_partsupp_tables(const size_t part_count, const size_t index_offset) const {
   // The `* 4` part is defined in the TPC-H specification.
   auto part_builder = TableBuilder{_benchmark_config->chunk_size, part_column_types, part_column_names, part_count};
   auto partsupp_builder = TableBuilder{_benchmark_config->chunk_size, partsupp_column_types, partsupp_column_names,
                                        part_count * 4};
-  auto supplier_builder =
-      TableBuilder{_benchmark_config->chunk_size, supplier_column_types, supplier_column_names, supplier_count};
-  auto nation_builder =
-      TableBuilder{_benchmark_config->chunk_size, nation_column_types, nation_column_names, nation_count};
-  auto region_builder =
-      TableBuilder{_benchmark_config->chunk_size, region_column_types, region_column_names, region_count};
-
-  /**
-   * CUSTOMER
-   */
-  const auto customer_table = create_customer_table(customer_row_count(), 0);
-  
-
-  /**
-   * ORDER and LINEITEM
-   */
-  const auto& [orders_table, lineitem_table] = create_orders_and_lineitem_tables(orders_row_count(), 0);
-
-  /**
-   * PART and PARTSUPP
-   */
 
   for (auto part_idx = size_t{0}; part_idx < part_count; ++part_idx) {
     const auto part = call_dbgen_mk<part_t>(part_idx + 1, mk_part, TPCHTable::Part);
@@ -387,34 +300,110 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate
     }
   }
 
-  /**
-   * SUPPLIER
-   */
+  return {part_builder.finish_table(), partsupp_builder.finish_table()};
+}
+
+size_t TPCHTableGenerator::supplier_row_count() const {
+  if (scale == 1) {
+    return static_cast<size_t>(tdefs[SUPP].base);
+  }
+
+  return static_cast<size_t>(static_cast<double>(tdefs[SUPP].base) * _scale_factor);
+}
+
+std::shared_ptr<Table> TPCHTableGenerator::create_supplier_table(const size_t supplier_count, const size_t index_offset) const {
+  auto builder = TableBuilder{_benchmark_config->chunk_size, supplier_column_types, supplier_column_names, supplier_count};
 
   for (auto supplier_idx = size_t{0}; supplier_idx < supplier_count; ++supplier_idx) {
     const auto supplier = call_dbgen_mk<supplier_t>(supplier_idx + 1, mk_supp, TPCHTable::Supplier);
 
-    supplier_builder.append_row(supplier.suppkey, supplier.name, supplier.address, supplier.nation_code, supplier.phone,
-                                convert_money(supplier.acctbal), supplier.comment);
+    builder.append_row(supplier.suppkey, supplier.name, supplier.address, supplier.nation_code, supplier.phone,
+                       convert_money(supplier.acctbal), supplier.comment);
   }
 
-  /**
-   * NATION
-   */
+  return builder.finish_table();
+}
+
+size_t TPCHTableGenerator::nation_row_count() const {
+  return static_cast<size_t>(tdefs[NATION].base);
+}
+
+std::shared_ptr<Table> TPCHTableGenerator::create_nation_table(const size_t nation_count, const size_t index_offset) const {
+  auto builder = TableBuilder{_benchmark_config->chunk_size, nation_column_types, nation_column_names, nation_count};
 
   for (auto nation_idx = size_t{0}; nation_idx < nation_count; ++nation_idx) {
     const auto nation = call_dbgen_mk<code_t>(nation_idx + 1, mk_nation, TPCHTable::Nation);
-    nation_builder.append_row(nation.code, nation.text, nation.join, nation.comment);
+    builder.append_row(nation.code, nation.text, nation.join, nation.comment);
   }
 
-  /**
-   * REGION
-   */
+  return builder.finish_table();
+}
+
+size_t TPCHTableGenerator::region_row_count() const {
+  return static_cast<size_t>(tdefs[REGION].base);
+}
+
+std::shared_ptr<Table> TPCHTableGenerator::create_region_table(const size_t region_count, const size_t index_offset) const {
+  auto builder = TableBuilder{_benchmark_config->chunk_size, region_column_types, region_column_names, region_count};
 
   for (auto region_idx = size_t{0}; region_idx < region_count; ++region_idx) {
     const auto region = call_dbgen_mk<code_t>(region_idx + 1, mk_region, TPCHTable::Region);
-    region_builder.append_row(region.code, region.text, region.comment);
+    builder.append_row(region.code, region.text, region.comment);
   }
+
+  return builder.finish_table();
+}
+
+std::shared_ptr<Table> TPCHTableGenerator::create_empty_table(const std::string& table_name) const {
+  if (table_name == "lineitem") {
+    return TableBuilder{_benchmark_config->chunk_size, lineitem_column_types, lineitem_column_names, ChunkOffset{0}}.finish_table();
+  } else if (table_name == "orders") {
+    return TableBuilder{_benchmark_config->chunk_size, order_column_types, order_column_names, ChunkOffset{0}}.finish_table();
+  } else if (table_name == "customer") {
+    return TableBuilder{_benchmark_config->chunk_size, customer_column_types, customer_column_names, ChunkOffset{0}}.finish_table();
+  } else if (table_name == "part") {
+    return TableBuilder{_benchmark_config->chunk_size, part_column_types, part_column_names, ChunkOffset{0}}.finish_table();
+  } else if (table_name == "partsupp") {
+    return TableBuilder{_benchmark_config->chunk_size, partsupp_column_types, partsupp_column_names, ChunkOffset{0}}.finish_table();
+  } else if (table_name == "supplier") {
+    return TableBuilder{_benchmark_config->chunk_size, supplier_column_types, supplier_column_names, ChunkOffset{0}}.finish_table();
+  } else if (table_name == "nation") {
+    return TableBuilder{_benchmark_config->chunk_size, nation_column_types, nation_column_names, ChunkOffset{0}}.finish_table();
+  } else if (table_name == "region") {
+    return TableBuilder{_benchmark_config->chunk_size, region_column_types, region_column_names, ChunkOffset{0}}.finish_table();
+  }
+
+  Fail("Lazy Martin has not yet implemented the empty table creation for " + table_name);
+}
+
+void TPCHTableGenerator::reset_and_initialize() {
+  dbgen_reset_seeds();
+  dbgen_init_scale_factor(_scale_factor);
+}
+
+std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate() {
+  Assert(_scale_factor < 1.0f || std::round(_scale_factor) == _scale_factor,
+         "Due to tpch_dbgen limitations, only scale factors less than one can have a fractional part.");
+
+  const auto cache_directory = std::string{"tpch_cached_tables/sf-"} + std::to_string(_scale_factor);  // NOLINT
+  if (_benchmark_config->cache_binary_tables && std::filesystem::is_directory(cache_directory)) {
+    return _load_binary_tables_from_path(cache_directory);
+  }
+
+  // Init tpch_dbgen - it is important this is done before any data structures from tpch_dbgen are read.
+  reset_and_initialize();
+
+  const auto region_count = region_row_count();
+
+  auto region_builder =
+      TableBuilder{_benchmark_config->chunk_size, region_column_types, region_column_names, region_count};
+
+  const auto customer_table = create_customer_table(customer_row_count(), 0);
+  const auto [orders_table, lineitem_table] = create_orders_and_lineitem_tables(orders_row_count(), 0);
+  const auto [part_table, partsupp_table] = create_part_and_partsupp_tables(part_row_count(), 0);
+  const auto supplier_table = create_supplier_table(supplier_row_count(), 0);
+  const auto nation_table = create_nation_table(nation_row_count(), 0);
+  const auto region_table = create_region_table(region_row_count(), 0);
 
   /**
    * Clean up dbgen every time we finish table generation to avoid memory leaks in dbgen
@@ -429,20 +418,10 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate
   table_info_by_name["customer"].table = customer_table;
   table_info_by_name["orders"].table = orders_table;
   table_info_by_name["lineitem"].table = lineitem_table;
-
-  auto part_table = part_builder.finish_table();
   table_info_by_name["part"].table = part_table;
-
-  auto partsupp_table = partsupp_builder.finish_table();
   table_info_by_name["partsupp"].table = partsupp_table;
-
-  auto supplier_table = supplier_builder.finish_table();
   table_info_by_name["supplier"].table = supplier_table;
-
-  auto nation_table = nation_builder.finish_table();
   table_info_by_name["nation"].table = nation_table;
-
-  auto region_table = region_builder.finish_table();
   table_info_by_name["region"].table = region_table;
 
   if (_benchmark_config->cache_binary_tables) {

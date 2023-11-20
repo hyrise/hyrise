@@ -13,13 +13,15 @@ source("ggplot_theme.R")
 
 results <- read.csv("data_loading_main.csv")
 results$RUNTIME_S <- results$RUNTIME_NS / 1000 / 1000 / 1000
+results$RADIX_CLUSTER_FACTOR <- results$RADIX_CLUSTER_FACTOR / 2  # Adapt to AMD with half the cache size
 results$SCHEDULER_MODE <- as.factor(results$SCHEDULER_MODE)
 results$BENCHMARK <- as.factor(results$BENCHMARK)
 results$SCALE_FACTOR <- as.factor(results$SCALE_FACTOR)
-results$RADIX_CLUSTER_FACTOR <- as.factor(results$RADIX_CLUSTER_FACTOR)
+# results$RADIX_CLUSTER_FACTOR <- as.factor(results$RADIX_CLUSTER_FACTOR)
 
 levels(results$SCALE_FACTOR) <- list("Scale Factor 10" = 10,
-                                     "Scale Factor 1" = 1)
+                                     "Scale Factor 1" = 1,
+                                     "Scale Factor 50" = 50)
 
 results <- extract(results, NAME, into = c('discard', 'BENCHMARK_ITEM'), '(.*)\\s+([^ ]+)$')
 
@@ -48,7 +50,7 @@ ggplot(results_agg_agg_norm %>% filter(SCHEDULER_MODE == "mt"),
 
 plot <- ggplot(results_agg_agg_norm %>% filter(SCHEDULER_MODE == "mt"),
                aes(x=RADIX_CLUSTER_FACTOR, group=BENCHMARK, y=NORM_AVG_RUNTIME_S,
-                   fill=BENCHMARK, shape=BENCHMARK, color=BENCHMARK, linetype=BENCHMARK)) +
+                   fill=BENCHMARK, shape=BENCHMARK, color=BENCHMARK)) + #, linetype=BENCHMARK)) +
   geom_line() +
   geom_point() +
   theme_bw() +
@@ -62,9 +64,12 @@ plot <- ggplot(results_agg_agg_norm %>% filter(SCHEDULER_MODE == "mt"),
   theme(legend.direction = "horizontal") +
   theme(legend.background=element_blank()) +
   theme(legend.key = element_blank()) +
+  theme(legend.margin=margin(t=0, b=-2, unit="mm")) +
   # theme(legend.key.size = unit(4, "mm")) +
   theme(plot.margin=unit(c(1,1,0,1), 'mm')) +
-  theme(axis.title.y = element_text(hjust=0.7)) +
-  theme(legend.position="top")
+  # theme(axis.title.y = element_text(hjust=0.7)) +
+  # theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+  theme(legend.position="top") +
+  scale_x_continuous(labels=function(x) sprintf("%.2f", x))
 print(plot)
-ggsave("radix_cluster_plot.pdf", plot, width=5, height=3.0)
+ggsave("radix_cluster_plot.pdf", plot, width=5, height=2.5)

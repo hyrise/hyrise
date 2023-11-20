@@ -450,24 +450,19 @@ class Sort::SortImpl {
 
   // When there was a preceding sorting run, we materialize by retaining the order of the values in the passed PosList.
   void _materialize_column_from_pos_list(const RowIDPosList& pos_list) {
-    const auto input_chunk_count = _table_in->chunk_count();
-    auto accessor_by_chunk_id =
-        std::vector<std::unique_ptr<AbstractSegmentAccessor<SortColumnType>>>(input_chunk_count);
-    for (auto input_chunk_id = ChunkID{0}; input_chunk_id < input_chunk_count; ++input_chunk_id) {
-      const auto& abstract_segment = _table_in->get_chunk(input_chunk_id)->get_segment(_column_id);
-      accessor_by_chunk_id[input_chunk_id] = create_segment_accessor<SortColumnType>(abstract_segment);
-    }
-
     for (auto row_id : pos_list) {
       const auto [chunk_id, chunk_offset] = row_id;
 
-      auto& accessor = accessor_by_chunk_id[chunk_id];
-      const auto typed_value = accessor->access(chunk_offset);
-      if (!typed_value) {
-        _null_value_rows.emplace_back(row_id, SortColumnType{});
-      } else {
-        _row_id_value_vector.emplace_back(row_id, typed_value.value());
-      }
+      const auto segment = _table_in->get_chunk(chunk_id)->get_segment(_column_id);
+      resolve_segment_type<SortColumnType>(*segment, [&, chunk_offset=chunk_offset](const auto& typed_segment) {
+        const auto value = typed_segment[chunk_offset];
+
+        if (variant_is_null(value)) {
+          _null_value_rows.emplace_back(row_id, SortColumnType{});
+        } else {
+          _row_id_value_vector.emplace_back(row_id, boost::get<SortColumnType>(value));
+        }  
+      });
     }
   }
 

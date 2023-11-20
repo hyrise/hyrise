@@ -53,8 +53,13 @@ class AttributeStatistics : public BaseAttributeStatistics {
         data_loading_utils::load_column_when_necessary(_table_name, _column_id);
         const auto& table_statistics = Hyrise::get().storage_manager.get_table(_table_name)->table_statistics();
         const auto& attribute_statistics = static_cast<const AttributeStatistics<T>&>(*(table_statistics->column_statistics[_column_id]));
-        Assert(attribute_statistics.histogram(), "Table should have a set histogram.");
-        return attribute_statistics.histogram();
+        Assert(!std::get<0>(attribute_statistics.get_table_origin()), "Received attribute statistics should not have an origin (marker for place holder).");
+        // if (std::get<0>(attribute_statistics.get_table_origin())) {
+        //   std::cerr << "Sleeping as attribute has not yet been replaced.\n";
+        //   std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        //   return attribute_statistics.histogram();  
+        // }
+        return attribute_statistics.histogram();  
       }
     }
 
@@ -124,6 +129,10 @@ class AttributeStatistics : public BaseAttributeStatistics {
     if (chunk_id) {
       _chunk_id = chunk_id;
     }
+  }
+
+  std::tuple<std::shared_ptr<Table>, std::string, ColumnID> get_table_origin() const {
+    return {_table.lock(), _table_name, _column_id};
   }
 
  private:

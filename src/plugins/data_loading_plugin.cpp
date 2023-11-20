@@ -10,6 +10,7 @@
 #include "hyrise.hpp"
 #include "operators/delete.hpp"
 #include "operators/table_wrapper.hpp"
+#include "scheduler/job_task.hpp"
 #include "statistics/attribute_statistics.hpp"
 #include "statistics/generate_pruning_statistics.hpp"
 #include "statistics/table_statistics.hpp"
@@ -19,6 +20,7 @@
 #include "storage/place_holder_segment.hpp"
 #include "storage/pos_lists/entire_chunk_pos_list.hpp"
 #include "tpch/tpch_table_generator.hpp"
+#include "utils/format_duration.hpp"
 #include "utils/timer.hpp"
 
 namespace std {
@@ -37,12 +39,8 @@ struct hash<std::pair<std::shared_ptr<hyrise::Table>, hyrise::ColumnID>> {
 
 namespace {
 
-constexpr auto SCALE_FACTOR = 1.0;
-
 void log(const uint32_t call_id, const std::string& log_message) {
-  auto sstream = std::stringstream{};
-  sstream << "#" << call_id << ": \t" << log_message.c_str() << '\n';
-  std::cout << sstream.str() << std::flush;
+  std::cerr << std::format("#{}: {}\n", call_id, log_message) << std::flush;
 }
 
 }  // namespace
@@ -55,23 +53,40 @@ std::string DataLoadingPlugin::description() const {
 
 /**
  * Right now, we only support a single generated data set. Our idea of passing attributes to a table (e.g.,
- * `where _dbgen.SF=10`) needs to be intercepted before the SQL translation (at least here the storage manager is accessed).
+ * `where _dbgen.SF=10`) needs to be intercepted before the SQL translation (at least here, the storage manager is accessed).
  * Ideas:
- 	* "Dynamic views" would be one idea but there are pretty early rewritten to actual queries. So probably no.
- 	* Intercept at the SQL translation and creation of a lazy table at this point might work.
+ *    - "Dynamic views" would be one idea but there are pretty early rewritten to actual queries. So probably no.
+ *    - Intercept at the SQL translation and creation of a lazy table at this point might work.
  */
 void DataLoadingPlugin::start() {
-  // TODO: read configuration parametes which are later required. They state the generator and which tables to create.
+  // I am too tired. How can we have settings (registered at start) and read these settings at start?
+  // Do we need to have the set up in a plugin-callable function?
 
-  auto tpch_table_generator = TPCHTableGenerator(SCALE_FACTOR, ClusteringConfiguration::None);
+  // auto& settings_manager = Hyrise::get().settings_manager;
+  // const auto scale_factor_setting_name = std::string{"data_loading_scale_factor"};
+  // auto scale_factor_setting = std::make_shared<DataLoadingSetting>("data_loading_scale_factor");
+  // scale_factor_setting->register_at_settings_manager();
+  // Assert(settings_manager.has_setting("data_loading_scale_factor"), "Please set setting '" + scale_factor_setting_name + "' before starting plugin.");
+  // const auto scale_factor_setting = settings_manager.get_setting(scale_factor_setting_name);
+
+  const auto* env_scale_factor = std::getenv("SCALE_FACTOR");
+  Assert(env_scale_factor, "Environment variable SCALE_FACTOR must be set.");
+  _scale_factor = std::strtof(env_scale_factor, nullptr);
+
+  auto tpch_table_generator = TPCHTableGenerator(_scale_factor, ClusteringConfiguration::None);
   tpch_table_generator.reset_and_initialize();
 
-  std::cout << "Setting up place holder tables for TPC-H" << std::endl;
+  std::cout << "Setting up place holder tables for TPC-H." << std::endl;
 
   for (const auto& [table_name, estimated_row_count] :
     std::initializer_list<std::tuple<std::string, size_t>>{{"lineitem", static_cast<size_t>(static_cast<double>(tpch_table_generator.orders_row_count() * 4.0) * 1.1)},
-                                                          {"orders", tpch_table_generator.orders_row_count()},
-                                                          {"customer", tpch_table_generator.orders_row_count()}}) {
+                                                           {"orders", tpch_table_generator.orders_row_count()},
+                                                           {"customer", tpch_table_generator.customer_row_count()},
+                                                           {"part", tpch_table_generator.part_row_count()},
+                                                           {"partsupp", tpch_table_generator.part_row_count() * 4},
+                                                           {"supplier", tpch_table_generator.supplier_row_count()},
+                                                           {"nation", tpch_table_generator.nation_row_count()},
+                                                           {"region", tpch_table_generator.region_row_count()}}) {
     const auto chunk_count = static_cast<size_t>(std::ceil(static_cast<double>(estimated_row_count) / static_cast<double>(Chunk::DEFAULT_SIZE)));
 
     auto table = tpch_table_generator.create_empty_table(table_name);
@@ -112,12 +127,13 @@ void DataLoadingPlugin::start() {
       table->get_chunk(chunk_id)->set_pruning_statistics(chunk_statistics);
     }
 
-    // First generate mock stats ...
+    // Generate place holder statistics.
     table->set_table_statistics(std::make_shared<TableStatistics>(std::move(table_statistics), estimated_row_count));
     generate_chunk_pruning_statistics(table);
 
     auto& storage_manager = Hyrise::get().storage_manager;
     storage_manager.add_table(table_name, table);
+    std::cout << "Added table " << table_name << " to the storage manager." << std::endl;
   }
 }
 
@@ -147,6 +163,7 @@ void DataLoadingPlugin::_load_table_and_statistics() {
   auto generator = std::mt19937{random_device()};
   std::shuffle(settings_names.begin(), settings_names.end(), generator);
 
+  auto& log_manager = Hyrise::get().log_manager;
   const auto settings_key = std::string{"dbgen_request__"};
   for (const auto& setting_name : settings_names) {
     // log(call_id.load(), "entering loop");
@@ -193,31 +210,51 @@ void DataLoadingPlugin::_load_table_and_statistics() {
     Assert(!load_table || load_column, "Cannot load table but no column.");
 
     if (load_table || load_column) {
-      log(call_id.load(), std::format("Load reqeusted: table '{}': {}\tColumn '{}': {}", table_name, load_table, static_cast<size_t>(column_id), load_column));
+      log(call_id.load(), std::format("Load requested: table '{}': {}\t-\tcolumn ID {}: {}", table_name, load_table, static_cast<size_t>(column_id), load_column));
+    }
+
+    if (!load_table && !load_column) {
+      log(call_id.load(), std::format("No load request obtained: table '{}': {}\t-\tcolumn ID {}: {}", table_name, load_table, static_cast<size_t>(column_id), load_column)); 
     }
 
     if (load_table) {
       {
         auto dbgen_lock = std::lock_guard<std::mutex>{_dbgen_mutex}; 
 
-        auto tpch_table_generator = TPCHTableGenerator(SCALE_FACTOR, ClusteringConfiguration::None);
-        tpch_table_generator.reset_and_initialize();
-
-        std::printf("Generating %s table ...\n", table_name.c_str());
-        auto timer = Timer{};
-        if (table_name == "orders" || table_name == "lineitem") {
-          const auto& [orders_table, lineitem_table] = tpch_table_generator.create_orders_and_lineitem_tables(tpch_table_generator.orders_row_count(), 0);
-          _table_cache["orders"] = orders_table;
-          _table_cache["lineitem"] = lineitem_table;
-          std::cout << std::flush;
-        } else if (table_name == "customer") {
-          const auto& customer_table = tpch_table_generator.create_customer_table(tpch_table_generator.customer_row_count(), 0);
-          _table_cache["customer"] = customer_table;
+        if (_table_cache.contains(table_name)) {
+          std::cout << "We have already created " << table_name << " and can skip generation." << std::endl;
         } else {
-          Fail("Table loading not implemented yet.");
+          auto tpch_table_generator = TPCHTableGenerator(_scale_factor, ClusteringConfiguration::None);
+          tpch_table_generator.reset_and_initialize();
+
+          std::printf("Generating %s table ...\n", table_name.c_str());
+          auto timer = Timer{};
+          if (table_name == "orders" || table_name == "lineitem") {
+            const auto& [orders_table, lineitem_table] = tpch_table_generator.create_orders_and_lineitem_tables(tpch_table_generator.orders_row_count(), 0);
+            _table_cache["orders"] = orders_table;
+            _table_cache["lineitem"] = lineitem_table;
+          } else if (table_name == "customer") {
+            const auto& customer_table = tpch_table_generator.create_customer_table(tpch_table_generator.customer_row_count(), 0);
+            _table_cache["customer"] = customer_table;
+          } else if (table_name == "part" || table_name == "partsupp") {
+            const auto& [part_table, partsupp_table] = tpch_table_generator.create_part_and_partsupp_tables(tpch_table_generator.part_row_count(), 0);
+            _table_cache["part"] = part_table;
+            _table_cache["partsupp"] = partsupp_table;
+          } else if (table_name == "supplier") {
+            const auto& supplier_table = tpch_table_generator.create_supplier_table(tpch_table_generator.supplier_row_count(), 0);
+            _table_cache["supplier"] = supplier_table;
+          } else if (table_name == "nation") {
+            const auto& nation_table = tpch_table_generator.create_nation_table(tpch_table_generator.nation_row_count(), 0);
+            _table_cache["nation"] = nation_table;
+          } else if (table_name == "region") {
+            const auto& region_table = tpch_table_generator.create_region_table(tpch_table_generator.region_row_count(), 0);
+            _table_cache["region"] = region_table;
+          } else {
+            Fail("Table loading not implemented yet.");
+          }
+          std::cerr << std::format("Generating {} table done ({}).\n", table_name, timer.lap_formatted());
+          std::cerr << std::flush;
         }
-        std::printf("Generating %s table done (%s).\n", table_name.c_str(), timer.lap_formatted().c_str());
-        std::cout << std::flush;
       }
 
       auto place_holder_table = Hyrise::get().storage_manager.get_table(table_name);
@@ -229,9 +266,9 @@ void DataLoadingPlugin::_load_table_and_statistics() {
 
       if (chunk_count_place_holder_table != chunk_count_generated_table) {
         auto sstream = std::stringstream{};
-        sstream << "WARNING: chunk count betwenn place holder (" << chunk_count_place_holder_table;
+        sstream << "WARNING: chunk count of '" << table_name << "' between place holder (" << chunk_count_place_holder_table;
         sstream << " chunks) and generated table (" << chunk_count_generated_table << " chunks) differs.\n";
-        std::cerr << sstream.str();
+        std::cout << sstream.str();
 
         for (auto chunk_id = ChunkID{chunk_count_generated_table}; chunk_id < chunk_count_place_holder_table; ++chunk_id) {
           // A lot of boiler plate for deletion, but a clean delete might be a benefit in the long run.
@@ -256,14 +293,26 @@ void DataLoadingPlugin::_load_table_and_statistics() {
         }
       }
 
+      const auto success_log_message = std::string{"dbgen_success__"} + table_name + "::";
+      log_manager.add_message("", success_log_message);
       auto tables_lock = std::lock_guard<std::mutex>{_tables_mutex};
       _tables.emplace_back(std::pair{table_name, std::string{"generated"}});
     }
 
     // Encode and load table.
     if (load_column) {
-      Assert(_table_cache.contains(table_name), "Table not yet reacted.");
+      auto histogram_duration_string = std::string{};
+      Assert(column_id != INVALID_COLUMN_ID, "Cannot load invalid column.");
+      std::cerr << std::format("Attempting to process column {}@{} ...\n", table_name, static_cast<size_t>(column_id));
+
+      // If we are here, tables has either been created (load_table==true) or it is currently being created.
+      data_loading_utils::wait_for_table(std::string{"dbgen_success__"} + table_name + "::");
+      std::cerr << std::format("Processing column {}@{} ...\n", table_name, static_cast<size_t>(column_id));
+
+      Assert(_table_cache.contains(table_name), "Table '" + table_name + "' not yet created.");
       auto table = _table_cache[table_name];
+      Assert(table->row_count() > 0, "Table '" + table_name + "' is still empty.");
+      auto timer = Timer{};
 
       const auto chunk_count = table->chunk_count();
       for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
@@ -275,77 +324,113 @@ void DataLoadingPlugin::_load_table_and_statistics() {
 
       const auto histogram_bin_count = std::min<size_t>(100, std::max<size_t>(5, table->row_count() / 2'000));
 
+      auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+      jobs.reserve(1 + chunk_count);
       const auto column_data_type = table->column_data_type(column_id);
-      resolve_data_type(column_data_type, [&](auto type) {
-        using ColumnDataType = typename decltype(type)::type;
-
-        const auto output_column_statistics = std::make_shared<AttributeStatistics<ColumnDataType>>();
-
-        const auto histogram =
-            EqualDistinctCountHistogram<ColumnDataType>::from_column(*table, column_id, histogram_bin_count);
-
-        if (histogram) {
-          output_column_statistics->set_statistics_object(histogram);
-
-          // Use the insight that the histogram will only contain non-null values to generate the NullValueRatio
-          // property
-          const auto null_value_ratio =
-              table->row_count() == 0
-                  ? 0.0f
-                  : 1.0f - (static_cast<float>(histogram->total_count()) / static_cast<float>(table->row_count()));
-          output_column_statistics->set_statistics_object(std::make_shared<NullValueRatioStatistics>(null_value_ratio));
-        } else {
-          // Failure to generate a histogram currently only stems from all-null segments.
-          // TODO(anybody) this is a slippery assumption. But the alternative would be a full segment scan...
-          output_column_statistics->set_statistics_object(std::make_shared<NullValueRatioStatistics>(1.0f));
-        }
-
-        auto updated_table_statistics = Hyrise::get().storage_manager.get_table(table_name)->table_statistics()->column_statistics;
-        updated_table_statistics[column_id] = output_column_statistics;
-        Hyrise::get().storage_manager.get_table(table_name)->set_table_statistics(std::make_shared<TableStatistics>(std::move(updated_table_statistics), static_cast<float>(table->row_count())));
-      });
-
-      for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-        const auto chunk = table->get_chunk(chunk_id);
-        const auto segment = chunk->get_segment(column_id);
-        resolve_data_and_segment_type(*segment, [&](auto type, auto& typed_segment) {
-          using SegmentType = std::decay_t<decltype(typed_segment)>;
+      jobs.emplace_back(std::make_shared<JobTask>([&]() {
+        resolve_data_type(column_data_type, [&](auto type) {
+          std::cerr << std::format("Processing column {}@{}: creating histogram\n", table_name, static_cast<size_t>(column_id));
+          auto timer = Timer{};
           using ColumnDataType = typename decltype(type)::type;
 
-          const auto segment_statistics = std::make_shared<AttributeStatistics<ColumnDataType>>();
+          const auto output_column_statistics = std::make_shared<AttributeStatistics<ColumnDataType>>();
 
-          if constexpr (std::is_same_v<SegmentType, DictionarySegment<ColumnDataType>>) {
-            // we can use the fact that dictionary segments have an accessor for the dictionary
-            const auto& dictionary = *typed_segment.dictionary();
-            create_pruning_statistics_for_segment(*segment_statistics, dictionary);
+          const auto histogram =
+              EqualDistinctCountHistogram<ColumnDataType>::from_column(*table, column_id, histogram_bin_count);
+
+          if (histogram) {
+            output_column_statistics->set_statistics_object(histogram);
+
+            // Use the insight that the histogram will only contain non-null values to generate the NullValueRatio
+            // property
+            const auto null_value_ratio =
+                table->row_count() == 0
+                    ? 0.0f
+                    : 1.0f - (static_cast<float>(histogram->total_count()) / static_cast<float>(table->row_count()));
+            output_column_statistics->set_statistics_object(std::make_shared<NullValueRatioStatistics>(null_value_ratio));
           } else {
-            // if we have a generic segment we create the dictionary ourselves
-            auto iterable = create_iterable_from_segment<ColumnDataType>(typed_segment);
-            std::unordered_set<ColumnDataType> values;
-            iterable.for_each([&](const auto& value) {
-              // we are only interested in non-null values
-              if (!value.is_null()) {
-                values.insert(value.value());
-              }
-            });
-            pmr_vector<ColumnDataType> dictionary{values.cbegin(), values.cend()};
-            std::sort(dictionary.begin(), dictionary.end());
-            create_pruning_statistics_for_segment(*segment_statistics, dictionary);
+            // Failure to generate a histogram currently only stems from all-null segments.
+            // TODO(anybody) this is a slippery assumption. But the alternative would be a full segment scan...
+            output_column_statistics->set_statistics_object(std::make_shared<NullValueRatioStatistics>(1.0f));
           }
 
-          auto updated_chunk_statistics = Hyrise::get().storage_manager.get_table(table_name)->get_chunk(chunk_id)->pruning_statistics();
-          (*updated_chunk_statistics)[column_id] = segment_statistics;
-          Hyrise::get().storage_manager.get_table(table_name)->get_chunk(chunk_id)->set_pruning_statistics(updated_chunk_statistics);
-        });
-      }
+          {
+            const auto lock_guard = std::lock_guard<std::mutex>{_histograms_mutex};
+            auto updated_table_statistics = Hyrise::get().storage_manager.get_table(table_name)->table_statistics()->column_statistics;
+            updated_table_statistics[column_id] = output_column_statistics;
+            Hyrise::get().storage_manager.get_table(table_name)->set_table_statistics(std::make_shared<TableStatistics>(std::move(updated_table_statistics),
+                                                                                                                      static_cast<float>(table->row_count())));
+          }
 
-      std::cout << "NOT ENCODING YET" << std::endl;
+          histogram_duration_string = timer.lap_formatted();
+          std::cerr << std::format("Processing column {}@{} done: created histogram\n", table_name, static_cast<size_t>(column_id));
+        });
+      }));
+
+      auto pruning_statistics_ns = std::atomic<uint64_t>{0};
+      auto encoding_ns = std::atomic<uint64_t>{0};
+      for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+        jobs.emplace_back(std::make_shared<JobTask>([&, chunk_id]() {
+          std::cerr << std::format("Processing column {}@{}: processing chunk {} of {}.\n",
+                                   table_name, static_cast<size_t>(column_id),
+                                   static_cast<size_t>(chunk_id), static_cast<size_t>(chunk_count));
+          const auto chunk = table->get_chunk(chunk_id);
+          const auto segment = chunk->get_segment(column_id);
+          auto timer = Timer{};
+
+          // We don't parallelize encoding and chunk statistics, as the statistics can profit from dictionary encoding.
+          const auto encoded_segment = ChunkEncoder::encode_segment(segment, table->column_data_type(column_id), SegmentEncodingSpec{EncodingType::Dictionary});
+          chunk->replace_segment(column_id, encoded_segment);
+          encoding_ns += timer.lap().count();
+          
+          resolve_data_and_segment_type(*(chunk->get_segment(column_id)), [&](auto type, auto& typed_segment) {
+            using SegmentType = std::decay_t<decltype(typed_segment)>;
+            using ColumnDataType = typename decltype(type)::type;
+
+            const auto segment_statistics = std::make_shared<AttributeStatistics<ColumnDataType>>();
+
+            if constexpr (std::is_same_v<SegmentType, DictionarySegment<ColumnDataType>>) {
+              // we can use the fact that dictionary segments have an accessor for the dictionary
+              const auto& dictionary = *typed_segment.dictionary();
+              create_pruning_statistics_for_segment(*segment_statistics, dictionary);
+            } else {
+              // if we have a generic segment we create the dictionary ourselves
+              auto iterable = create_iterable_from_segment<ColumnDataType>(typed_segment);
+              auto values = std::unordered_set<ColumnDataType>{};
+              iterable.for_each([&](const auto& value) {
+                // we are only interested in non-null values
+                if (!value.is_null()) {
+                  values.insert(value.value());
+                }
+              });
+              pmr_vector<ColumnDataType> dictionary{values.cbegin(), values.cend()};
+              std::sort(dictionary.begin(), dictionary.end());
+              create_pruning_statistics_for_segment(*segment_statistics, dictionary);
+            }
+
+            const auto lock_guard = std::lock_guard<std::mutex>{_chunk_statistics_mutex};
+            auto updated_chunk_statistics = Hyrise::get().storage_manager.get_table(table_name)->get_chunk(chunk_id)->pruning_statistics();
+            (*updated_chunk_statistics)[column_id] = segment_statistics;
+            Hyrise::get().storage_manager.get_table(table_name)->get_chunk(chunk_id)->set_pruning_statistics(updated_chunk_statistics);
+          });
+          pruning_statistics_ns += timer.lap().count();
+          std::cerr << std::format("Processing column {}@{} done: processed chunk {} of {}.\n",
+                                   table_name, static_cast<size_t>(column_id),
+                                   static_cast<size_t>(chunk_id), static_cast<size_t>(chunk_count));
+        }));
+      }
+      Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
+
+      std::cerr << std::format("Processing column {}@{} done ({} [histogram: {}, encoding: {}, chunk stats: {}]).\n",
+                  table_name, static_cast<size_t>(column_id), timer.lap_formatted(), histogram_duration_string,
+                  format_duration(std::chrono::nanoseconds{encoding_ns}),
+                  format_duration(std::chrono::nanoseconds{pruning_statistics_ns}));
+      std::cerr << std::flush;
 
       Hyrise::get().default_lqp_cache->clear();
       Hyrise::get().default_pqp_cache->clear();
 
-      const auto success_log_message = std::string{"dbgen_success__"} + table_name + "::" + std::to_string(column_id);
-      auto& log_manager = Hyrise::get().log_manager;
+      const auto success_log_message = std::string{"dbgen_success__"} + table_name + "::" + std::to_string(column_id) + "__";
       log_manager.add_message("", success_log_message);
     }
   }

@@ -10,6 +10,7 @@
 #include "tpcds/tpcds_table_generator.hpp"
 #include "tpch/tpch_constants.hpp"
 #include "tpch/tpch_table_generator.hpp"
+#include "utils/performance_warning.hpp"
 
 namespace {
 
@@ -34,7 +35,8 @@ void generate_benchmark_data(std::string argument_string) {
          "Benchmark data generation is only supported for TPC-C, TPC-DS, and TPC-H.");
 
   auto config = std::make_shared<hyrise::BenchmarkConfig>(hyrise::BenchmarkConfig::get_default_config());
-  config->cache_binary_tables = true;
+  std::cerr << "We modified the default server code to no longer load benchmark data from binary tables." << std::endl;
+  config->cache_binary_tables = false;
   if (benchmark_name == "tpcc") {
     hyrise::TPCCTableGenerator{static_cast<uint32_t>(sizing_factor), config}.generate_and_store();
   } else if (benchmark_name == "tpcds") {
@@ -68,6 +70,8 @@ cxxopts::Options get_server_cli_options() {
 }
 
 int main(int argc, char* argv[]) {
+  const auto performance_warning_disabler = hyrise::PerformanceWarningDisabler{};
+
   auto cli_options = get_server_cli_options();
   const auto parsed_options = cli_options.parse(argc, argv);
 

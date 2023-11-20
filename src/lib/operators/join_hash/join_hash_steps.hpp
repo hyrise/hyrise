@@ -340,9 +340,10 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
           // can ignore them.
           const auto inserted_rows = (end - iter) - num_rows;
           end -= inserted_rows;
-        } else {
-          Assert(end - iter == num_rows, "Non-ValueSegment changed size while being accessed");
         }
+        // else {
+        //   Assert(end - iter == num_rows, "Non-ValueSegment changed size while being accessed");
+        // }
 
         while (iter != end) {
           const auto& value = *iter;

@@ -19,11 +19,15 @@ class DataLoadingPlugin : public AbstractPlugin {
   std::mutex _settings_mutex{};
   std::mutex _tables_mutex{};
   std::mutex _columns_mutex{};
+  std::mutex _histograms_mutex{};
+  std::mutex _chunk_statistics_mutex{};
 
   std::vector<std::pair<std::pair<std::string, ColumnID>, std::string>> _columns{};
   std::vector<std::pair<std::string, std::string>> _tables{};
 
   std::unordered_map<std::string, std::shared_ptr<Table>> _table_cache;
+
+  float _scale_factor{10.0};
 };
 
 }  // namespace hyrise

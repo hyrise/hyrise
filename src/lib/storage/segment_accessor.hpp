@@ -131,7 +131,13 @@ class SingleChunkReferenceSegmentAccessor final : public AbstractSegmentAccessor
       resolve_segment_type<T>(*loaded_segment, [&](const auto& typed_segment) {
         using LoadedSegmentType = std::decay_t<decltype(typed_segment)>;
         if constexpr (!std::is_same_v<LoadedSegmentType, ReferenceSegment> && !std::is_same_v<LoadedSegmentType, PlaceHolderSegment>) {
-          value = typed_segment.get_typed_value(offset);
+          if (offset < typed_segment.size()) {
+            // We might end up reading an EntirePosList with positios that (after loading the table) no longer exist.
+            value = typed_segment.get_typed_value(offset);
+          }
+          // else {
+          //   std::cerr << "Potential problem as PosList access to PlaceHolderSegment was beyond actually loaded segment." << std::endl;
+          // }
         }
       });
       return value;

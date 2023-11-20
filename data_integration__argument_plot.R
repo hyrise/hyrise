@@ -50,7 +50,7 @@ query_selection_argument <- ggplot(results_query_grouped %>% filter(SCHEDULER_MO
   theme.paper_plot +
   coord_cartesian(clip = "off") +
   labs(x= "TPC-H Query", y="Norm. Runtime") +
-  theme(legend.position=c(.14,.675)) +
+  theme(legend.position=c(.14,.82)) +
   theme(legend.title = element_blank()) +
   theme(legend.background=element_blank()) +
   theme(legend.key.size = unit(4, "mm")) +
@@ -59,4 +59,4 @@ query_selection_argument <- ggplot(results_query_grouped %>% filter(SCHEDULER_MO
   theme(plot.margin=unit(c(1,1,0,1), 'mm')) +
   theme(axis.title.y = element_text(hjust=0.7))
 print(query_selection_argument)
-ggsave("query_selection_argument.pdf", query_selection_argument, width=5, height=1.25)
+ggsave("query_selection_argument.pdf", query_selection_argument, width=5, height=1.5)

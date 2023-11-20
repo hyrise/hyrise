@@ -9,6 +9,7 @@
 #include "strategy/between_composition_rule.hpp"
 #include "strategy/chunk_pruning_rule.hpp"
 #include "strategy/column_pruning_rule.hpp"
+#include "strategy/data_loading_trigger_rule.hpp"
 #include "strategy/dependent_group_by_reduction_rule.hpp"
 #include "strategy/expression_reduction_rule.hpp"
 #include "strategy/in_expression_rewrite_rule.hpp"
@@ -176,6 +177,8 @@ OptimizerRuleMetrics::OptimizerRuleMetrics(const std::string& init_rule_name,
  */
 std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   auto optimizer = std::make_shared<Optimizer>();
+
+  optimizer->add_rule(std::make_unique<DataLoadingTriggerRule>());
 
   optimizer->add_rule(std::make_unique<ExpressionReductionRule>());
 

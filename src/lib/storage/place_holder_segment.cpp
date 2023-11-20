@@ -12,7 +12,11 @@ PlaceHolderSegment::PlaceHolderSegment(const std::shared_ptr<Table>& init_base_t
                                        ChunkOffset init_capacity)
     : AbstractSegment(init_base_table->column_data_type(init_column_id)),
       base_table{init_base_table}, table_name{init_table_name}, chunk_id{init_chunk_id}, column_id{init_column_id}, 
-      nullable{init_nullable}, capacity{init_capacity} {}
+      nullable{init_nullable}, capacity{init_capacity} {
+        Assert(init_table_name != "", "Narf1");
+        Assert(init_chunk_id != INVALID_CHUNK_ID, "Narf1");
+        Assert(init_column_id != INVALID_COLUMN_ID, "Narf1");
+      }
 
 AllTypeVariant PlaceHolderSegment::operator[](const ChunkOffset chunk_offset) const {
   data_loading_utils::load_column_when_necessary(table_name, column_id);
@@ -41,11 +45,20 @@ size_t PlaceHolderSegment::memory_usage(const MemoryUsageCalculationMode mode) c
 }
 
 std::shared_ptr<AbstractSegment> PlaceHolderSegment::load_and_return_segment() const {
-  Assert(table_name != "" && column_id != INVALID_COLUMN_ID, "PlaceHolderSegment not correctly initialized.");
+  const auto local_table_name = table_name;
+  const auto local_column_id = column_id;
+  const auto local_chunk_id = chunk_id;
 
-  data_loading_utils::load_column_when_necessary(table_name, column_id);
-  const auto& segment = Hyrise::get().storage_manager.get_table(table_name)->get_chunk(chunk_id)->get_segment(column_id);
+  Assert(local_table_name != "" && local_column_id != INVALID_COLUMN_ID, "PlaceHolderSegment not correctly initialized or already being destructed.");
+
+  data_loading_utils::load_column_when_necessary(local_table_name, local_column_id);
+  
+  const auto& segment = Hyrise::get().storage_manager.get_table(local_table_name)->get_chunk(local_chunk_id)->get_segment(local_column_id);
   Assert(!std::dynamic_pointer_cast<PlaceHolderSegment>(segment), "Unexpected PlaceHolder segment.");
+
+  if (table_name != local_table_name) {
+    std::cout << "WARNING: table name differs ('" << table_name << "' and '" << local_table_name << "').\n" << std::endl;
+  }
 
   return segment;
 }

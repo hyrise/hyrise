@@ -37,17 +37,23 @@ class TPCHTableGenerator : virtual public AbstractTableGenerator {
 
   std::unordered_map<std::string, BenchmarkTableInfo> generate() override;
 
+  size_t orders_row_count() const;
   std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> create_orders_and_lineitem_tables(const size_t order_count, const size_t index_offset) const;
-  std::shared_ptr<Table> create_customer_table(const size_t customer_count, const size_t index_offset) const;
 
   size_t customer_row_count() const;
-  size_t orders_row_count() const;
-  size_t part_row_count() const;
-  size_t supplier_row_count() const;
-  size_t nation_row_count() const;
-  size_t region_row_count() const;
+  std::shared_ptr<Table> create_customer_table(const size_t customer_count, const size_t index_offset) const;
 
-  std::tuple<std::vector<DataType>, std::vector<std::string>, std::vector<bool>> get_table_column_information(const auto& table_name) const;
+  size_t part_row_count() const;
+  std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> create_part_and_partsupp_tables(const size_t part_count, const size_t index_offset) const;
+
+  size_t supplier_row_count() const;
+  std::shared_ptr<Table> create_supplier_table(const size_t supplier_count, const size_t index_offset) const;
+
+  size_t nation_row_count() const;
+  std::shared_ptr<Table> create_nation_table(const size_t nation_count, const size_t index_offset) const;
+
+  size_t region_row_count() const;
+  std::shared_ptr<Table> create_region_table(const size_t region_count, const size_t index_offset) const;
 
   std::shared_ptr<Table> create_empty_table(const std::string& table_name) const;
 
