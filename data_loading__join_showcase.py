@@ -42,10 +42,13 @@ subprocess.run(["ninja", "-C", args.hyrise_path, "hyriseBenchmarkTPCH"])
 
 scale_factors = [args.scale_factor] if args.scale_factor else [10.0, 50.0]
 scheduler_modes = [("mt", "--scheduler"), ("st", "")]
+scheduler_modes = [("mt", "--scheduler")]
 queries = "7,8,17,20"
+max_query_runtime = 7200
 
 if args.debug:
   scheduler_modes = [("mt", "--scheduler")]
+  max_query_runtime = 300
   if not args.scale_factor:
     scale_factors = [args.scale_factor] if args.scale_factor else [0.1, 1.0]
 
@@ -57,13 +60,13 @@ for scale_factor in scale_factors:
                                                                  ("JCC-H (normal)", "jcch_normal", "--jcch=normal"),
                                                                  ("JCC-H (skewed)", "jcch_skewed", "--jcch=skewed")]:
     for scheduler_mode_name, scheduler_mode_command in scheduler_modes:
-      for radix_cluster_factor in [0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0, 2.25, 2.5, 2.75, 3.0, 4.0]:
-	      print(f"####\n#### SF {scale_factor} - {benchmark_name} - Radix cluster factor: {radix_cluster_factor}\n####")
+      for radix_cluster_factor in [1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 5.0, 6.0, 7.0, 8.0]:
+	      print(f"####\n#### SF {scale_factor} - {benchmark_name} - Radix cluster factor: {radix_cluster_factor}\n####", file=sys.stderr)
 	      result_filename = f"{benchmark_shortname}__sf{int(scale_factor)}_{scheduler_mode_name}__radix_{str(radix_cluster_factor).replace('.', '_')}.json"
 
 	      if args.process_result_files:
 	        if not Path(result_filename).exists():
-	          print(f"File '{result_filename}' does not exist.")
+	          print(f"File '{result_filename}' does not exist.", file=sys.stderr)
 	          continue
 
 	        main_df = write_csv_file(result_filename, main_df, scheduler_mode_name, scale_factor, benchmark_name, radix_cluster_factor)
@@ -73,7 +76,7 @@ for scale_factor in scale_factors:
 	                 "-q", queries,
 	                 "-o", result_filename,
 	                 benchmark_command,
-	                 "-t", "300",
+	                 "-t", str(max_query_runtime),
 	                 "-r", "51",
 	                 "-w", "1",
 	                 "--cores", "64"]
