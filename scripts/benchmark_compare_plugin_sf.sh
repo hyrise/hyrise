@@ -92,7 +92,7 @@ do
     ( SCHEMA_CONSTRAINTS=0 DEPENDENT_GROUPBY=0 JOIN_TO_SEMI=0 JOIN_TO_PREDICATE=0 "${build_folder}"/"$benchmark" -s ${sf} ${caching} -r ${runs} -t ${runtime} -w ${warmup_seconds} -o "${build_folder}/benchmark_plugin_results/${benchmark}_${commit}_st_s${sf}_all_off.json" 2>&1 ) | tee "${build_folder}/benchmark_plugin_results/${benchmark}_${commit}_st_s${sf}_all_off.log"
 
     echo "Running $benchmark for $commit... (single-threaded, SF ${sf}) w/ plugin NO SCHEMA CONSTRAINTS, PLUGIN, ALL ON"
-    ( SCHEMA_CONSTRAINTS=0 DEPENDENT_GROUPBY=1 JOIN_TO_SEMI=1 JOIN_TO_PREDICATE=1 "${build_folder}"/"$benchmark" -s ${sf} ${caching} -r ${runs} -t ${runtime} -w ${warmup_seconds} -o "${build_folder}/benchmark_plugin_results/${benchmark}_${commit}_st_s${sf}_plugin.json" -p "${build_folder}/lib/libhyriseDependencyDiscoveryPlugin.${lib_suffix}" 2>&1 ) | tee "${build_folder}/benchmark_plugin_results/${benchmark}_${commit}_st_s${sf}_plugin.log"
+    ( SCHEMA_CONSTRAINTS=0 DEPENDENT_GROUPBY=1 JOIN_TO_SEMI=1 JOIN_TO_PREDICATE=1 VALIDATION_LOOPS=1000 "${build_folder}"/"$benchmark" -s ${sf} ${caching} -r ${runs} -t ${runtime} -w ${warmup_seconds} -o "${build_folder}/benchmark_plugin_results/${benchmark}_${commit}_st_s${sf}_plugin.json" -p "${build_folder}/lib/libhyriseDependencyDiscoveryPlugin.${lib_suffix}" 2>&1 ) | tee "${build_folder}/benchmark_plugin_results/${benchmark}_${commit}_st_s${sf}_plugin.log"
   done
 done
 
