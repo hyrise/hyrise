@@ -39,9 +39,9 @@ struct hash<std::pair<std::shared_ptr<hyrise::Table>, hyrise::ColumnID>> {
 
 namespace {
 
-void log(const uint32_t call_id, const std::string& log_message) {
-  std::cerr << std::format("#{}: {}\n", call_id, log_message) << std::flush;
-}
+//void log(const uint32_t call_id, const std::string& log_message) {
+  //std::cerr << std::format("#{}: {}\n", call_id, log_message) << std::flush;
+//}
 
 }  // namespace
 
@@ -210,11 +210,11 @@ void DataLoadingPlugin::_load_table_and_statistics() {
     Assert(!load_table || load_column, "Cannot load table but no column.");
 
     if (load_table || load_column) {
-      log(call_id.load(), std::format("Load requested: table '{}': {}\t-\tcolumn ID {}: {}", table_name, load_table, static_cast<size_t>(column_id), load_column));
+      //log(call_id.load(), std::format("Load requested: table '{}': {}\t-\tcolumn ID {}: {}", table_name, load_table, static_cast<size_t>(column_id), load_column));
     }
 
     if (!load_table && !load_column) {
-      log(call_id.load(), std::format("No load request obtained: table '{}': {}\t-\tcolumn ID {}: {}", table_name, load_table, static_cast<size_t>(column_id), load_column)); 
+      //log(call_id.load(), std::format("No load request obtained: table '{}': {}\t-\tcolumn ID {}: {}", table_name, load_table, static_cast<size_t>(column_id), load_column)); 
     }
 
     if (load_table) {
@@ -252,8 +252,8 @@ void DataLoadingPlugin::_load_table_and_statistics() {
           } else {
             Fail("Table loading not implemented yet.");
           }
-          std::cerr << std::format("Generating {} table done ({}).\n", table_name, timer.lap_formatted());
-          std::cerr << std::flush;
+          //std::cerr << std::format("Generating {} table done ({}).\n", table_name, timer.lap_formatted());
+          //std::cerr << std::flush;
         }
       }
 
@@ -303,11 +303,11 @@ void DataLoadingPlugin::_load_table_and_statistics() {
     if (load_column) {
       auto histogram_duration_string = std::string{};
       Assert(column_id != INVALID_COLUMN_ID, "Cannot load invalid column.");
-      std::cerr << std::format("Attempting to process column {}@{} ...\n", table_name, static_cast<size_t>(column_id));
+      //std::cerr << std::format("Attempting to process column {}@{} ...\n", table_name, static_cast<size_t>(column_id));
 
       // If we are here, tables has either been created (load_table==true) or it is currently being created.
       data_loading_utils::wait_for_table(std::string{"dbgen_success__"} + table_name + "::");
-      std::cerr << std::format("Processing column {}@{} ...\n", table_name, static_cast<size_t>(column_id));
+      //std::cerr << std::format("Processing column {}@{} ...\n", table_name, static_cast<size_t>(column_id));
 
       Assert(_table_cache.contains(table_name), "Table '" + table_name + "' not yet created.");
       auto table = _table_cache[table_name];
@@ -329,7 +329,7 @@ void DataLoadingPlugin::_load_table_and_statistics() {
       const auto column_data_type = table->column_data_type(column_id);
       jobs.emplace_back(std::make_shared<JobTask>([&]() {
         resolve_data_type(column_data_type, [&](auto type) {
-          std::cerr << std::format("Processing column {}@{}: creating histogram\n", table_name, static_cast<size_t>(column_id));
+          //std::cerr << std::format("Processing column {}@{}: creating histogram\n", table_name, static_cast<size_t>(column_id));
           auto timer = Timer{};
           using ColumnDataType = typename decltype(type)::type;
 
@@ -363,7 +363,7 @@ void DataLoadingPlugin::_load_table_and_statistics() {
           }
 
           histogram_duration_string = timer.lap_formatted();
-          std::cerr << std::format("Processing column {}@{} done: created histogram\n", table_name, static_cast<size_t>(column_id));
+          //std::cerr << std::format("Processing column {}@{} done: created histogram\n", table_name, static_cast<size_t>(column_id));
         });
       }));
 
@@ -371,9 +371,9 @@ void DataLoadingPlugin::_load_table_and_statistics() {
       auto encoding_ns = std::atomic<uint64_t>{0};
       for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
         jobs.emplace_back(std::make_shared<JobTask>([&, chunk_id]() {
-          std::cerr << std::format("Processing column {}@{}: processing chunk {} of {}.\n",
-                                   table_name, static_cast<size_t>(column_id),
-                                   static_cast<size_t>(chunk_id), static_cast<size_t>(chunk_count));
+          //std::cerr << std::format("Processing column {}@{}: processing chunk {} of {}.\n",
+                                   //table_name, static_cast<size_t>(column_id),
+                                   //static_cast<size_t>(chunk_id), static_cast<size_t>(chunk_count));
           const auto chunk = table->get_chunk(chunk_id);
           const auto segment = chunk->get_segment(column_id);
           auto timer = Timer{};
@@ -414,18 +414,18 @@ void DataLoadingPlugin::_load_table_and_statistics() {
             Hyrise::get().storage_manager.get_table(table_name)->get_chunk(chunk_id)->set_pruning_statistics(updated_chunk_statistics);
           });
           pruning_statistics_ns += timer.lap().count();
-          std::cerr << std::format("Processing column {}@{} done: processed chunk {} of {}.\n",
-                                   table_name, static_cast<size_t>(column_id),
-                                   static_cast<size_t>(chunk_id), static_cast<size_t>(chunk_count));
+          //std::cerr << std::format("Processing column {}@{} done: processed chunk {} of {}.\n",
+                                   //table_name, static_cast<size_t>(column_id),
+                                   //static_cast<size_t>(chunk_id), static_cast<size_t>(chunk_count));
         }));
       }
       Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
 
-      std::cerr << std::format("Processing column {}@{} done ({} [histogram: {}, encoding: {}, chunk stats: {}]).\n",
-                  table_name, static_cast<size_t>(column_id), timer.lap_formatted(), histogram_duration_string,
-                  format_duration(std::chrono::nanoseconds{encoding_ns}),
-                  format_duration(std::chrono::nanoseconds{pruning_statistics_ns}));
-      std::cerr << std::flush;
+      //std::cerr << std::format("Processing column {}@{} done ({} [histogram: {}, encoding: {}, chunk stats: {}]).\n",
+                  //table_name, static_cast<size_t>(column_id), timer.lap_formatted(), histogram_duration_string,
+                  //format_duration(std::chrono::nanoseconds{encoding_ns}),
+                  //format_duration(std::chrono::nanoseconds{pruning_statistics_ns}));
+      //std::cerr << std::flush;
 
       Hyrise::get().default_lqp_cache->clear();
       Hyrise::get().default_pqp_cache->clear();

@@ -24,6 +24,8 @@ if args.debug and not args.scale_factor:
 for scale_factor in scale_factors:
   for config in ["CSV", "NONE", "DB_Q3_COLUMNS", "Q3_COLUMNS"]:
     print(f"####\n#### SF {scale_factor} - {config}\n####")
+    if config == "CSV" and scale_factor > 50.0:
+      continue
 
     subprocess.run([f"./{args.hyrise_path}/hyrisePlayground", str(scale_factor)], env={"COLUMN_CONFIGURATION": config, "RADIX_CLUSTER_FACTOR": str(1.0)}) 
 

@@ -79,7 +79,9 @@ int main(int argc, char** argv) {
       //      LOADING AND MERGING OF SUBTABLES
       //
 
-      const auto begin_table_creation = std::chrono::steady_clock::now();
+      auto begin_table_generation = std::chrono::steady_clock::now();
+      auto end_table_generation = std::chrono::steady_clock::now();
+      auto begin_table_loading = std::chrono::steady_clock::now();
       auto tpch_table_generator = TPCHTableGenerator(scale_factor, ClusteringConfiguration::None);
       tpch_table_generator.reset_and_initialize();
       const auto customer_row_count = tpch_table_generator.customer_row_count();
@@ -102,8 +104,10 @@ int main(int argc, char** argv) {
 
         std::filesystem::current_path(dbgen_path);
         Assert(std::filesystem::exists(std::filesystem::path{"dbgen"}), "Cannot find dbgen in given directory.");
+        begin_table_generation = std::chrono::steady_clock::now();
         const auto command = "./dbgen -f -q -s " + std::to_string(scale_factor);
         const auto result = std::system(command.c_str());
+        end_table_generation = std::chrono::steady_clock::now();
         Assert(result == 0, "dbgen call ('" + command + "') failed with return code " + std::to_string(result) + ".");
         std::filesystem::current_path(initial_path);
 
@@ -113,6 +117,7 @@ int main(int argc, char** argv) {
         orders_table = orders_and_lineitem.first;
         lineitem_table = orders_and_lineitem.second;
 
+        begin_table_loading = std::chrono::steady_clock::now();
         for (auto& [table, file_name] : std::vector<std::tuple<std::shared_ptr<Table>, std::string>>{
                                           {customer_table, dbgen_path + "customer.tbl"},
                                           {orders_table, dbgen_path + "orders.tbl"},
@@ -124,7 +129,7 @@ int main(int argc, char** argv) {
         }
       }
 
-      const auto end_table_creation = std::chrono::steady_clock::now();
+      const auto end_table_loading = std::chrono::steady_clock::now();
 
       Assert(customer_table->row_count() == customer_row_count, "Expected and actual row count differ for customer table.");
       Assert(orders_table->row_count() == orders_row_count, "Expected and actual row count differ for orders table.");
@@ -212,7 +217,8 @@ int main(int argc, char** argv) {
         continue;
       }
 
-      for (const auto& [step_name, runtimes] : std::vector{std::pair{std::string{"LOADING"}, std::pair{begin_table_creation, end_table_creation}},
+      for (const auto& [step_name, runtimes] : std::vector{std::pair{std::string{"GENERATION"}, std::pair{begin_table_generation, end_table_generation}},
+                                                           std::pair{std::string{"LOADING"}, std::pair{begin_table_loading, end_table_loading}},
                                                            std::pair{std::string{"ENCODING"}, std::pair{begin_finalization_and_encoding, end_finalization_and_encoding}},
                                                            std::pair{std::string{"ADDING"}, std::pair{begin_table_adding, end_table_adding}},
                                                            std::pair{std::string{"QUERY"}, std::pair{begin_query, end_query}}}) {
