@@ -157,7 +157,7 @@ for scale_factor in scale_factors:
                                    "SERVER_CONFIG": server_config_name, "WARMUP_RUNS": WARMUP_RUNS, "QUERY_EXECUTIONS": query_runs,
                                    "QUERY_RUNTIME_S": query_duration, "TIME_PASSED_S": time_passed})
 
-            print(f"Server start time: {server_start_duration}s - Time passed: {time.time() - server_start_time}", flush=True)
+            print(f"Server start time: {server_start_duration}s - Time passed: {time_passed}", flush=True)
             df = pd.concat([df, pd.DataFrame(measurements)], ignore_index=True)
             df.to_csv("data_loading__random_query_subsets.csv", index=None)
 

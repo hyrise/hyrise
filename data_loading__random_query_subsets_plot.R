@@ -11,8 +11,8 @@ print(getwd())
 source("ggplot_theme.R")
 
 
-results <- read.csv("data_loading__random_query_subsets__plotting.csv")
-# results <- read.csv("data_loading__random_query_subsets.csv")
+# results <- read.csv("data_loading__random_query_subsets__plotting.csv")
+results <- read.csv("data_loading__random_query_subsets.csv")
 
 # Filter out TPC-H full (it's already gone in the Python script)
 results <- results %>% filter(QUERY_SET != "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22")
@@ -32,10 +32,11 @@ results$SERVER_CONFIG <- as.factor(results$SERVER_CONFIG)
 levels(results$SERVER_CONFIG) <- list("Lazy Loading" = "DATA_LOADING",
                                       "Upfront Loading" = "DEFAULT")
 
-results$QUERY_EXECUTIONS <- as.factor(results$QUERY_EXECUTIONS)
-levels(results$QUERY_EXECUTIONS) <- list("10 Executions / Query" = 10,
-                                         "50 Executions / Query" = 50,
-                                         "100 Executions / Query" = 100)
+results$QUERY_EXECUTIONS_STR <- as.factor(results$QUERY_EXECUTIONS)
+levels(results$QUERY_EXECUTIONS_STR) <- list("1 Execution / Query" = 1,
+                                             "10 Executions / Query" = 10,
+                                             "50 Executions / Query" = 50,
+                                             "100 Executions / Query" = 100)
 
 results$QUERY_RUNTIME_S <- results$QUERY_RUNTIME_S / results$QUERY_EXECUTIONS
 results$PLOT_KEY <- paste0(results$SERVER_CONFIG, "_", results$QUERY_SET_KIND, "_", results$QUERY_SET)
@@ -45,7 +46,7 @@ results$PLOT_KIND_KEY <- paste0(results$SERVER_CONFIG, "_", results$QUERY_SET_KI
 
 results_agg <- results %>% group_by(SERVER_CONFIG, SCALE_FACTOR, QUERY_SET_KIND, QUERY_SET, SCALE_FACTOR_LABEL,
                                     QUERY_ID, QUERY_SET_ID, PLOT_KEY, PLOT_KIND_KEY, QUERY_SET_KIND_GROUP,
-                                    QUERY_EXECUTIONS) %>%
+                                    QUERY_EXECUTIONS, QUERY_EXECUTIONS_STR) %>%
                                     summarize(AVG_QUERY_RUNTIME_S = mean(QUERY_RUNTIME_S),
                                               AVG_TIME_PASSED_S = mean(TIME_PASSED_S),
                                               .groups="keep")
@@ -55,18 +56,13 @@ results_agg <- results %>% group_by(SERVER_CONFIG, SCALE_FACTOR, QUERY_SET_KIND,
 ###############
 
 final_bar_chart_data <- results_agg %>% filter(QUERY_SET_KIND == "ORIGINAL" & QUERY_ID == 4)
-final_bar_chart_data_sf50 <- final_bar_chart_data
-# TODO: wait for final data.
-final_bar_chart_data_sf50$AVG_TIME_PASSED_S <- final_bar_chart_data_sf50$AVG_TIME_PASSED_S * 5.2
-final_bar_chart_data_sf50$AVG_TIME_PASSED_S <- final_bar_chart_data_sf50$AVG_TIME_PASSED_S - 7 * final_bar_chart_data_sf50$SCALE_FACTOR
-final_bar_chart_data_sf50$SCALE_FACTOR_LABEL <- "Scale Factor 50"
 
-final_bar_chart_data <- rbind(final_bar_chart_data, final_bar_chart_data_sf50)
-
-plot2 <- ggplot(final_bar_chart_data,
+plot2 <- ggplot(final_bar_chart_data %>% filter(QUERY_EXECUTIONS == 10),
                 aes(x=SERVER_CONFIG, y=AVG_TIME_PASSED_S, group=SERVER_CONFIG,
                    fill=SERVER_CONFIG, shape=SERVER_CONFIG, color=SERVER_CONFIG)) +
   geom_col() +
+  geom_text(aes(y=AVG_TIME_PASSED_S/2, label=paste(round(AVG_TIME_PASSED_S, 1), "s")),
+            color="white", family="Times", size=3) +
   theme_bw() +
   scale_colour_tableau(palette="Superfishel Stone") +
   scale_fill_tableau(palette="Superfishel Stone") +
@@ -100,7 +96,7 @@ plot <- ggplot(results_agg,
   scale_colour_tableau(palette="Superfishel Stone") +
   scale_fill_tableau(palette="Superfishel Stone") +
   theme.paper_plot +
-  facet_grid(SCALE_FACTOR_LABEL ~ QUERY_EXECUTIONS, scales = "free_y") +
+  facet_grid(SCALE_FACTOR_LABEL ~ QUERY_EXECUTIONS_STR, scales = "free_y") +
   labs(x= "#Query", y="Runtime [s]") +
   # theme(legend.position=c(.55,.675)) +
   theme(legend.title = element_blank()) +
@@ -117,5 +113,5 @@ plot <- ggplot(results_agg,
   scale_x_continuous(breaks=c(NULL,1,2,3,4)) +
   scale_linetype_manual(values=c("solid", "longdash"))
 print(plot)
-ggsave("data_loading__random_query_subsets.pdf", plot, width=5, height=2.25)
+ggsave("data_loading__random_query_subsets.pdf", plot, width=5, height=3.5)
 

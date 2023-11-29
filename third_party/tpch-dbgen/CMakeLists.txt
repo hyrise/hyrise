@@ -49,6 +49,7 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
     tpch_dbgen
     PRIVATE
 
+    -fPIC
     -Wno-string-plus-int
   )
 endif()
