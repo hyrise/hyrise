@@ -14,10 +14,10 @@ import time
 
 from pathlib import Path
 
-JCCH_SET_VARIANTS = 10
-ADDITIONAL_QUERY_SET_VARIANTS = 0
+JCCH_SET_VARIANTS = 1
+ADDITIONAL_QUERY_SET_VARIANTS = 70
 WARMUP_RUNS = 1
-QUERY_RUNS = [10, 100]
+QUERY_RUNS = [1, 10, 100]
 MEASUREMENT_RUNS = 5
 
 # JCCH_SET_VARIANTS = 2
@@ -27,6 +27,8 @@ MEASUREMENT_RUNS = 5
 # MEASUREMENT_RUNS = 5
 
 PLUGIN_FILETYPE = '.so' if sys.platform == "linux" else '.dylib'
+
+FILENAME_TIMESTAMP = int(time.time())
 
 random.seed(17)
 
@@ -159,7 +161,7 @@ for scale_factor in scale_factors:
 
             print(f"Server start time: {server_start_duration}s - Time passed: {time_passed}", flush=True)
             df = pd.concat([df, pd.DataFrame(measurements)], ignore_index=True)
-            df.to_csv("data_loading__random_query_subsets.csv", index=None)
+            df.to_csv(f"data_loading__random_query_subsets_{FILENAME_TIMESTAMP}.csv", index=None)
 
             hyrise_server_process.kill()
             while hyrise_server_process.poll() is None:
