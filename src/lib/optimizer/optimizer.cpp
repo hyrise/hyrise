@@ -178,7 +178,7 @@ OptimizerRuleMetrics::OptimizerRuleMetrics(const std::string& init_rule_name,
 std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   auto optimizer = std::make_shared<Optimizer>();
 
-  optimizer->add_rule(std::make_unique<DataLoadingTriggerRule>());
+  optimizer->add_rule(std::make_unique<DataLoadingTriggerRule>(true));
 
   optimizer->add_rule(std::make_unique<ExpressionReductionRule>());
 
@@ -252,6 +252,8 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   optimizer->add_rule(std::make_unique<IndexScanRule>());
 
   optimizer->add_rule(std::make_unique<PredicateMergeRule>());
+
+  optimizer->add_rule(std::make_unique<DataLoadingTriggerRule>(false));
 
   return optimizer;
 }
