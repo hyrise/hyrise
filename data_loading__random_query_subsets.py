@@ -59,7 +59,8 @@ elif args.query_set == "ALL_TPCH":
 elif args.query_set == "JCCH_VARIANTS":
   assert args.query_set_size is not None, "--query_set_size needs to be set for query set selection."
 
-  while len(query_sets) < args.query_set_size:
+  # with four queries, we will not have more than 24 sets (minus 1 for the original one)
+  while len(query_sets) < min(args.query_set_size, 23):
     queries_copy = eval_query_set.copy()
     random.shuffle(queries_copy)  # I don't like the sample() work-around for in-place shuffle.
 
