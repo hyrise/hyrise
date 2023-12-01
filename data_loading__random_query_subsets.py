@@ -44,7 +44,8 @@ args = parser.parse_args()
 
 assert Path(args.hyrise_path).exists()
 
-subprocess.run(["ninja", "-C", args.hyrise_path, "hyriseServer", "hyriseDataLoadingPlugin"])
+# Skipping for now due to some clang17 issues and parallel work on other branches.
+# subprocess.run(["ninja", "-C", args.hyrise_path, "hyriseServer", "hyriseDataLoadingPlugin"])
 
 eval_query_set = [7, 8, 17, 20]
 query_sets = set()
@@ -112,7 +113,7 @@ for query_set_name, query_set_kind, query_set in query_sets_sorted:
         server_start_time = time.time()
         if not args.skip_server_start:
           command = [f"./{args.hyrise_path}/hyriseServer", data_command]
-          print(f"#### Starting server: ", " ".join(command))
+          print(f"#### Starting server (attempt {attempt_id}: ", " ".join(command))
           hyrise_server_process = subprocess.Popen(command,
                                                    env={"RADIX_CLUSTER_FACTOR": str(1.0),
                                                         "SCALE_FACTOR": str(args.scale_factor)},

@@ -11,8 +11,8 @@ print(getwd())
 source("ggplot_theme.R")
 
 
-# results <- read.csv("data_loading__random_query_subsets__plotting.csv")
-results <- read.csv("data_loading__random_query_subsets.csv")
+# results <- read.csv("../results/data_loading__random_query_subsets__plotting.csv")
+results <- read.csv("../results/data_loading__random_query_subsets.csv")
 
 # Filter out TPC-H full (it's already gone in the Python script)
 results <- results %>% filter(QUERY_SET != "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22")
