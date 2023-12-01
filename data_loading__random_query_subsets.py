@@ -103,7 +103,8 @@ for query_set_name, query_set_kind, query_set in query_sets_sorted:
     while run_id < MEASUREMENT_RUNS:
       attempt_id += 1
       if attempt_id > 15:
-        sys.exit(f"Too many unsuccessful attempts to run {query_set=}.")
+        print(f"Too many unsuccessful attempts to run {query_set=}.")
+        break
 
       global hyrise_server_process
       hyrise_server_process = None
