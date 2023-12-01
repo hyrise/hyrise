@@ -78,6 +78,8 @@ elif args.query_set == "RANDOM_VARIANTS":
       query_set.add(random.randint(1, 22))
     query_sets.add(("RANDOM", "RANDOM", tuple(query_set)))
 
+# query_sets = set()
+# query_sets.add(("X", "X", tuple([4, 10, 11, 5])))
 
 # No particular reason to sort, it's just easier to debug and with server restarts, we should not run into caching issues.
 query_sets_sorted = sorted(query_sets, key=lambda x: x[0] + x[1] + "".join([str(y) for y in x[2]]))
@@ -86,6 +88,7 @@ query_sets_sorted = sorted(query_sets, key=lambda x: x[0] + x[1] + "".join([str(
 df = pd.DataFrame()
 measurements = []
 measurement_id = 0
+plugin_is_loaded = False
 
 query_set_id = 0
 for query_set_name, query_set_kind, query_set in query_sets_sorted:
@@ -95,8 +98,13 @@ for query_set_name, query_set_kind, query_set in query_sets_sorted:
                                                         ("DEFAULT", f"--benchmark_data=TPC-H:{args.scale_factor}", False)
                                                         ]:
 
+    attempt_id = 0
     run_id = 0
     while run_id < MEASUREMENT_RUNS:
+      attempt_id += 1
+      if attempt_id > 15:
+        sys.exit(f"Too many unsuccessful attempts to run {query_set=}.")
+
       global hyrise_server_process
       hyrise_server_process = None
       try:
@@ -120,14 +128,16 @@ for query_set_name, query_set_kind, query_set in query_sets_sorted:
             if time.time() - min(1200, 300 * args.scale_factor) > server_start_time:
               print("Error: time out during server start")
               sys.exit()
+
         server_start_duration = time.time() - server_start_time
 
         connection = psycopg2.connect("host=localhost sslmode='disable' gssencmode='disable'")
         connection.autocommit = True
         cursor = connection.cursor()
 
-        if load_plugin:
+        if load_plugin and (not args.skip_server_start or not plugin_is_loaded):
           cursor.execute(f"INSERT INTO meta_plugins(name) VALUES('./{args.hyrise_path}/lib/libhyriseDataLoadingPlugin{PLUGIN_FILETYPE}');")
+          plugin_is_loaded = True
 
         measurements.append({"MEASUREMENT_ID": measurement_id, "QUERY_SET_ID": query_set_id, 
                                "QUERY_SET": ",".join([str(q) for q in query_set]), "QUERY_SET_KIND": query_set_kind,
@@ -162,14 +172,11 @@ for query_set_name, query_set_kind, query_set in query_sets_sorted:
         df = pd.concat([df, pd.DataFrame(measurements)], ignore_index=True)
         df.to_csv(f"data_loading__results_sf{int(args.scale_factor)}__{args.query_run_count}runs__set_{args.query_set.replace('_', '').upper()}__{args.query_set_size}perms.csv", index=None)
 
-        hyrise_server_process.kill()
-        while hyrise_server_process.poll() is None:
-          time.sleep(1)
+        run_id += 1
       except Exception as e:
         print("ERROR: ", e)
 
-      run_id += 1
-
-    cleanup()
+      if not args.skip_server_start:
+        cleanup()
 
   query_set_id += 1

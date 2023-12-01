@@ -39,9 +39,9 @@ struct hash<std::pair<std::shared_ptr<hyrise::Table>, hyrise::ColumnID>> {
 
 namespace {
 
-//void log(const uint32_t call_id, const std::string& log_message) {
-  //std::cerr << std::format("#{}: {}\n", call_id, log_message) << std::flush;
-//}
+void log(const uint32_t call_id, const std::string& log_message) {
+  // std::cerr << std::format("#{}: {}\n", call_id, log_message) << std::flush;
+}
 
 }  // namespace
 
@@ -210,11 +210,11 @@ void DataLoadingPlugin::_load_table_and_statistics() {
     Assert(!load_table || load_column, "Cannot load table but no column.");
 
     if (load_table || load_column) {
-      //log(call_id.load(), std::format("Load requested: table '{}': {}\t-\tcolumn ID {}: {}", table_name, load_table, static_cast<size_t>(column_id), load_column));
+      log(call_id.load(), std::format("Load requested: table '{}': {}\t-\tcolumn ID {}: {}", table_name, load_table, static_cast<size_t>(column_id), load_column));
     }
 
     if (!load_table && !load_column) {
-      //log(call_id.load(), std::format("No load request obtained: table '{}': {}\t-\tcolumn ID {}: {}", table_name, load_table, static_cast<size_t>(column_id), load_column)); 
+      log(call_id.load(), std::format("No load request obtained: table '{}': {}\t-\tcolumn ID {}: {}", table_name, load_table, static_cast<size_t>(column_id), load_column)); 
     }
 
     if (load_table) {
@@ -222,12 +222,12 @@ void DataLoadingPlugin::_load_table_and_statistics() {
         auto dbgen_lock = std::lock_guard<std::mutex>{_dbgen_mutex}; 
 
         if (_table_cache.contains(table_name)) {
-          std::cout << "We have already created " << table_name << " and can skip generation." << std::endl;
+          log(call_id.load(), std::format("We have already created {} and can skip generation.", table_name));
         } else {
           auto tpch_table_generator = TPCHTableGenerator(_scale_factor, ClusteringConfiguration::None);
           tpch_table_generator.reset_and_initialize();
 
-          std::printf("Generating %s table ...\n", table_name.c_str());
+          log(call_id.load(), std::format("Generating {} table ...", table_name));
           auto timer = Timer{};
           if (table_name == "orders" || table_name == "lineitem") {
             const auto& [orders_table, lineitem_table] = tpch_table_generator.create_orders_and_lineitem_tables(tpch_table_generator.orders_row_count(), 0);
@@ -252,8 +252,7 @@ void DataLoadingPlugin::_load_table_and_statistics() {
           } else {
             Fail("Table loading not implemented yet.");
           }
-          //std::cerr << std::format("Generating {} table done ({}).\n", table_name, timer.lap_formatted());
-          //std::cerr << std::flush;
+          log(call_id.load(), std::format("Generating {} table done ({}).", table_name, timer.lap_formatted()));
         }
       }
 
@@ -303,11 +302,11 @@ void DataLoadingPlugin::_load_table_and_statistics() {
     if (load_column) {
       auto histogram_duration_string = std::string{};
       Assert(column_id != INVALID_COLUMN_ID, "Cannot load invalid column.");
-      //std::cerr << std::format("Attempting to process column {}@{} ...\n", table_name, static_cast<size_t>(column_id));
+      log(call_id.load(), std::format("Attempting to process column {}@{} ...", table_name, static_cast<size_t>(column_id)));
 
       // If we are here, tables has either been created (load_table==true) or it is currently being created.
       data_loading_utils::wait_for_table(std::string{"dbgen_success__"} + table_name + "::");
-      //std::cerr << std::format("Processing column {}@{} ...\n", table_name, static_cast<size_t>(column_id));
+      log(call_id.load(), std::format("Processing column {}@{} ...", table_name, static_cast<size_t>(column_id)));
 
       Assert(_table_cache.contains(table_name), "Table '" + table_name + "' not yet created.");
       auto table = _table_cache[table_name];
@@ -329,7 +328,7 @@ void DataLoadingPlugin::_load_table_and_statistics() {
       const auto column_data_type = table->column_data_type(column_id);
       jobs.emplace_back(std::make_shared<JobTask>([&]() {
         resolve_data_type(column_data_type, [&](auto type) {
-          //std::cerr << std::format("Processing column {}@{}: creating histogram\n", table_name, static_cast<size_t>(column_id));
+          log(call_id.load(), std::format("Processing column {}@{}: creating histogram", table_name, static_cast<size_t>(column_id)));
           auto timer = Timer{};
           using ColumnDataType = typename decltype(type)::type;
 
@@ -363,7 +362,7 @@ void DataLoadingPlugin::_load_table_and_statistics() {
           }
 
           histogram_duration_string = timer.lap_formatted();
-          //std::cerr << std::format("Processing column {}@{} done: created histogram\n", table_name, static_cast<size_t>(column_id));
+          log(call_id.load(), std::format("Processing column {}@{} done: created histogram", table_name, static_cast<size_t>(column_id)));
         });
       }));
 
@@ -421,11 +420,10 @@ void DataLoadingPlugin::_load_table_and_statistics() {
       }
       Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
 
-      //std::cerr << std::format("Processing column {}@{} done ({} [histogram: {}, encoding: {}, chunk stats: {}]).\n",
-                  //table_name, static_cast<size_t>(column_id), timer.lap_formatted(), histogram_duration_string,
-                  //format_duration(std::chrono::nanoseconds{encoding_ns}),
-                  //format_duration(std::chrono::nanoseconds{pruning_statistics_ns}));
-      //std::cerr << std::flush;
+      log(call_id.load(), std::format("Processing column {}@{} done ({} [histogram: {}, encoding: {}, chunk stats: {}]).",
+                                      table_name, static_cast<size_t>(column_id), timer.lap_formatted(), histogram_duration_string,
+                                      format_duration(std::chrono::nanoseconds{encoding_ns}),
+                                      format_duration(std::chrono::nanoseconds{pruning_statistics_ns})));
 
       Hyrise::get().default_lqp_cache->clear();
       Hyrise::get().default_pqp_cache->clear();

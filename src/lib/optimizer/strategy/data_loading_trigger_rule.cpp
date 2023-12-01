@@ -53,6 +53,7 @@ void DataLoadingTriggerRule::_apply_to_plan_without_subqueries(const std::shared
 
   auto columns_to_access = std::unordered_set<std::pair<std::shared_ptr<Table>, ColumnID>>{};
 
+  // auto sstream = std::stringstream{};
   if (_load_predicates_only) {
     visit_lqp(lqp_root, [&](const auto& node) {
       switch (node->type) {
@@ -82,13 +83,15 @@ void DataLoadingTriggerRule::_apply_to_plan_without_subqueries(const std::shared
           // At the very beginning, join predicates are not yet assigned to a join (i.e., all joins are cross joins).
           auto sstream = std::stringstream{};
           sstream << *node;
-          Assert(join_node->join_mode == JoinMode::Cross || join_node->join_mode == JoinMode::Left, "Expected this rule to run before any other rules. Node: " + sstream.str());
+          Assert(join_node->join_mode == JoinMode::Cross || join_node->join_mode == JoinMode::Left,
+                 "Expected this rule to run before any other rules. Node: " + sstream.str());
         } break;
         default:
           break;
       }
       return LQPVisitation::VisitInputs;
     });
+    // sstream << "Loading predicate columns: ";
   } else {
     visit_lqp(lqp_root, [&](const auto& node) {
       for (const auto& node_expression : node->node_expressions) {
@@ -103,13 +106,23 @@ void DataLoadingTriggerRule::_apply_to_plan_without_subqueries(const std::shared
             return ExpressionVisitation::VisitArguments;
           }
 
-          columns_to_access.emplace(Hyrise::get().storage_manager.get_table(stored_table_node->table_name), column_expression->original_column_id);
+          columns_to_access.emplace(Hyrise::get().storage_manager.get_table(stored_table_node->table_name),
+                                                                            column_expression->original_column_id);
           return ExpressionVisitation::VisitArguments;
         });
       }
       return LQPVisitation::VisitInputs;
     });
+
+    // TODO: is it worth it to only reuest columns that have not been loaded already?
+    
+    // sstream << "Loading ALL columns: ";
   }
+  // for (const auto& [table, column_id] : columns_to_access) {
+  //   sstream << column_id << "@" << &*table << " - ";
+  // }
+  // sstream << "\n";
+  // std::cerr << sstream.str();
 
   // Sort columns by table sizes (i.e., processing of large columns starts earlier).
   auto sorted_columns_to_access = std::vector(columns_to_access.begin(), columns_to_access.end());
@@ -120,8 +133,14 @@ void DataLoadingTriggerRule::_apply_to_plan_without_subqueries(const std::shared
   auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
   jobs.reserve(columns_to_access.size());
   for (const auto& [table, column_id] : sorted_columns_to_access) {
+    const auto chunk = table->get_chunk(ChunkID{0});
+    if (column_id > chunk->column_count()) {
+      // std::cerr << std::format("Skipping the loading of columnID {}.\n", static_cast<size_t>(column_id));
+      continue;
+    }
+
     // std::cout << "We should load " << &*table << " and " << column_id << std::endl;
-    const auto segment = table->get_chunk(ChunkID{0})->get_segment(column_id);
+    const auto segment = chunk->get_segment(column_id);
     if (!std::dynamic_pointer_cast<PlaceHolderSegment>(segment)) {
       // Only access histogram, when first segment is a PlaceHolderSegment (remember, we replace all segments of a columns).
       continue;
@@ -131,13 +150,14 @@ void DataLoadingTriggerRule::_apply_to_plan_without_subqueries(const std::shared
       resolve_data_type(table->column_data_type(column_id), [&, table=table, column_id=column_id](const auto& data_type) {
         using ColumnDataType = typename std::decay_t<decltype(data_type)>::type;
 
-        const auto attribute_statistics = std::dynamic_pointer_cast<AttributeStatistics<ColumnDataType>>(table->table_statistics()->column_statistics[column_id]);
+        const auto column_statistics = table->table_statistics()->column_statistics;
+        const auto attribute_statistics = std::dynamic_pointer_cast<AttributeStatistics<ColumnDataType>>(column_statistics[column_id]);
         attribute_statistics->histogram();
       });
     }));
   }
   Hyrise::get().scheduler()->schedule_tasks(jobs);
-  std::cerr << "Optimizer issued loading for all predicate columns.\n";
+  // std::cerr << "Optimizer issued loading for all predicate columns.\n";
 }
 
 }  // namespace hyrise

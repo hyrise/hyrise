@@ -84,7 +84,42 @@ ggsave("data_loading__evaluation_barchart.pdf", plot2, width=5, height=2.0)
 
 
 ###############
-###############  Evaluation #2: Queries over Time
+###############  Evaluation #2: JCCH-Eval Queries over Time
+###############
+
+plot <- ggplot(results_agg,
+               aes(x=QUERY_ID, y=AVG_TIME_PASSED_S, group=PLOT_KEY,
+                   fill=SERVER_CONFIG, shape=SERVER_CONFIG, color=SERVER_CONFIG, linetype=SERVER_CONFIG)) +
+  geom_line(linewidth=0.2) +
+  # geom_point() +
+  theme_bw() +
+  scale_colour_tableau(palette="Superfishel Stone") +
+  scale_fill_tableau(palette="Superfishel Stone") +
+  theme.paper_plot +
+  facet_grid(SCALE_FACTOR_LABEL ~ QUERY_EXECUTIONS_STR, scales = "free_y") +
+  labs(x= "#Query", y="Runtime [s]") +
+  # theme(legend.position=c(.55,.675)) +
+  theme(legend.title = element_blank()) +
+  theme(legend.direction = "horizontal") +
+  theme(legend.background=element_blank()) +
+  theme(legend.key = element_blank()) +
+  theme(legend.margin=margin(t=0, b=-2, unit="mm")) +
+  # theme(legend.key.size = unit(4, "mm")) +
+  theme(plot.margin=unit(c(1,1,0,1), 'mm')) +
+  # theme(axis.title.y = element_text(hjust=0.7)) +
+  # theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+  theme(legend.position="top") +
+  # scale_x_continuous(labels=function(x) sprintf("%.2f", x))
+  scale_x_continuous(breaks=c(NULL,1,2,3,4)) +
+  scale_linetype_manual(values=c("solid", "longdash"))
+print(plot)
+ggsave("data_loading__random_query_subsets.pdf", plot, width=5, height=3.5)
+
+
+
+
+###############
+###############  Evaluation #3: Random TPC-H Queries over Time
 ###############
 
 plot <- ggplot(results_agg,

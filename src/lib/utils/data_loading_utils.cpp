@@ -18,7 +18,7 @@ const auto scale_factor = std::strtof(env_scale_factor, nullptr);
 
 void wait_for_column(const std::string& success_log_message) {
   auto& log_manager = Hyrise::get().log_manager;
-  auto sleep_time = std::chrono::microseconds{100};
+  auto sleep_time = std::chrono::microseconds{50};
   const auto timeout = std::chrono::seconds{static_cast<size_t>(60 * scale_factor)}.count();
 
   const auto begin = std::chrono::system_clock::now();
