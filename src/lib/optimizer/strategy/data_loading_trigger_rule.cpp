@@ -118,8 +118,20 @@ void DataLoadingTriggerRule::_apply_to_plan_without_subqueries(const std::shared
     
     // sstream << "Loading ALL columns: ";
   }
+
+  // const auto tables = Hyrise::get().storage_manager.tables();
   // for (const auto& [table, column_id] : columns_to_access) {
-  //   sstream << column_id << "@" << &*table << " - ";
+  //   auto table_found = false;
+  //   auto table_name = std::string{};
+  //   for (const auto& [_table_name, _table] : tables) {
+  //     if (table == _table) {
+  //       table_name = _table_name;
+  //       table_found = true;
+  //       break;
+  //     }
+  //   }
+  //   Assert(table_found, "No table name found in storage manager.");
+  //   sstream << table_name << "::" << table->column_name(column_id) << " - ";
   // }
   // sstream << "\n";
   // std::cerr << sstream.str();
@@ -156,7 +168,16 @@ void DataLoadingTriggerRule::_apply_to_plan_without_subqueries(const std::shared
       });
     }));
   }
-  Hyrise::get().scheduler()->schedule_tasks(jobs);
+
+  if (_load_predicates_only) {
+    // There are currently too many parts in the optimizer that access statistics. Hence, we block here and wait as we
+    // don't want to examine all paths.
+    // The issue is relevant as some queries (e.g., Q7) produce massive cross joins when histograms are missing. Leading
+    // to 100 GB Hyrise instances for scales factors < 1.0.
+    Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
+  } else {
+    Hyrise::get().scheduler()->schedule_tasks(jobs);
+  }
   // std::cerr << "Optimizer issued loading for all predicate columns.\n";
 }
 

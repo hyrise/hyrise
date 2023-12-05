@@ -51,6 +51,5 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 
     -fPIC
     -Wno-string-plus-int
-    -fPIC
   )
 endif()

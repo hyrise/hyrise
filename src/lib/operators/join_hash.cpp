@@ -98,6 +98,7 @@ size_t JoinHash::calculate_radix_bits(const size_t build_side_size, const size_t
   const auto* env_radix_cluster_factor_configuration = std::getenv("RADIX_CLUSTER_FACTOR");
   Assert(env_radix_cluster_factor_configuration, "Environment variable RADIX_CLUSTER_FACTOR must be set.");
   const auto radix_cluster_factor = std::strtod(env_radix_cluster_factor_configuration, nullptr);
+  // const auto radix_cluster_factor = 1.0;
 
   // We limit the max fan out for radix partitioning to 8 bits (i.e., 256 partitions). "An Experimental Comparison of
   // Thirteen Relational Equi-Joins in Main Memory" by Schuh et al. analyzed the number of radix bits and how much
@@ -341,6 +342,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
      * 1.2. Materialize the larger probe partition. Use the Bloom filter from the probe partition to skip rows that
      *       will not find a join partner.
      */
+
     const auto materialize_probe_side = [&](const auto& input_bloom_filter) {
       if (keep_nulls_probe_column) {
         materialized_probe_column = materialize_input<ProbeColumnType, HashedType, true>(

@@ -253,6 +253,11 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
 
   optimizer->add_rule(std::make_unique<PredicateMergeRule>());
 
+  // Short note: the second call right now is really needed right now. We cannot load columns later "on demand" in
+  // operators. Scenario: all worker process an aggregate with an unloaded column. All columns will request this column
+  // and loop, but we cannot spawn new jobs for encoding since all workers are looping while waiting.
+  // We could load columns in a single job, but having many waiting for the job while we load single-threaded doesn't
+  // make sense. .... TODO:
   optimizer->add_rule(std::make_unique<DataLoadingTriggerRule>(false));
 
   return optimizer;
@@ -268,6 +273,8 @@ void Optimizer::add_rule(std::unique_ptr<AbstractRule> rule) {
 std::shared_ptr<AbstractLQPNode> Optimizer::optimize(
     std::shared_ptr<AbstractLQPNode> input,
     const std::shared_ptr<std::vector<OptimizerRuleMetrics>>& rule_durations) const {
+  std::cerr << *input << std::endl;
+
   // We cannot allow multiple owners of the LQP as one owner could decide to optimize the plan and others might hold a
   // pointer to a node that is not even part of the plan anymore after optimization. Thus, callers of this method need
   // to relinquish their ownership (i.e., move their shared_ptr into the method) and take ownership of the resulting
@@ -299,6 +306,8 @@ std::shared_ptr<AbstractLQPNode> Optimizer::optimize(
   // Remove LogicalPlanRootNode.
   auto optimized_node = root_node->left_input();
   root_node->set_left_input(nullptr);
+
+  std::cerr << *optimized_node << std::endl;
 
   return optimized_node;
 }

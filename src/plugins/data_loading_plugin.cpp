@@ -69,9 +69,11 @@ void DataLoadingPlugin::start() {
   // Assert(settings_manager.has_setting("data_loading_scale_factor"), "Please set setting '" + scale_factor_setting_name + "' before starting plugin.");
   // const auto scale_factor_setting = settings_manager.get_setting(scale_factor_setting_name);
 
+  // This is currently the easier approach.
   const auto* env_scale_factor = std::getenv("SCALE_FACTOR");
   Assert(env_scale_factor, "Environment variable SCALE_FACTOR must be set.");
   _scale_factor = std::strtof(env_scale_factor, nullptr);
+  // _scale_factor = 0.6f;
 
   auto tpch_table_generator = TPCHTableGenerator(_scale_factor, ClusteringConfiguration::None);
   tpch_table_generator.reset_and_initialize();
@@ -370,9 +372,9 @@ void DataLoadingPlugin::_load_table_and_statistics() {
       auto encoding_ns = std::atomic<uint64_t>{0};
       for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
         jobs.emplace_back(std::make_shared<JobTask>([&, chunk_id]() {
-          //std::cerr << std::format("Processing column {}@{}: processing chunk {} of {}.\n",
-                                   //table_name, static_cast<size_t>(column_id),
-                                   //static_cast<size_t>(chunk_id), static_cast<size_t>(chunk_count));
+          // std::cerr << std::format("Processing column {}@{}: processing chunk {} of {}.\n",
+          //                          table_name, static_cast<size_t>(column_id),
+          //                          static_cast<size_t>(chunk_id), static_cast<size_t>(chunk_count));
           const auto chunk = table->get_chunk(chunk_id);
           const auto segment = chunk->get_segment(column_id);
           auto timer = Timer{};
@@ -413,9 +415,9 @@ void DataLoadingPlugin::_load_table_and_statistics() {
             Hyrise::get().storage_manager.get_table(table_name)->get_chunk(chunk_id)->set_pruning_statistics(updated_chunk_statistics);
           });
           pruning_statistics_ns += timer.lap().count();
-          //std::cerr << std::format("Processing column {}@{} done: processed chunk {} of {}.\n",
-                                   //table_name, static_cast<size_t>(column_id),
-                                   //static_cast<size_t>(chunk_id), static_cast<size_t>(chunk_count));
+          // std::cerr << std::format("Processing column {}@{} done: processed chunk {} of {}.\n",
+          //                          table_name, static_cast<size_t>(column_id),
+          //                          static_cast<size_t>(chunk_id), static_cast<size_t>(chunk_count));
         }));
       }
       Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);

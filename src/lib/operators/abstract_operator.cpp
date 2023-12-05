@@ -64,6 +64,7 @@ bool AbstractOperator::executed() const {
 }
 
 void AbstractOperator::execute() {
+  // std::cerr << description() << "\n";
   /**
    * If an operator has already executed, we return immediately. Either because
    *    a) the output has already been set, or

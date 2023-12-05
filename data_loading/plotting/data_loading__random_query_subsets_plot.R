@@ -14,7 +14,24 @@ source("ggplot_theme.R")
 # results <- read.csv("../results/data_loading__random_query_subsets__plotting.csv")
 results <- read.csv("../results/data_loading__random_query_subsets.csv")
 
-# Filter out TPC-H full (it's already gone in the Python script)
+results <- data.frame()
+for (scale_factor in c(1, 10, 50)) {
+  for (query_set in c("JCCHEVALSET", "ALLTPCH", "JCCHVARIANTS", "RANDOMVARIANTS")) {
+    for (query_set_size in c(100)) {
+      for (run_count in c(1, 10, 100)) {
+        filename <- paste0("../results/data_loading__results_sf", scale_factor, "__", run_count, "runs__set_", query_set, "__", query_set_size, "perms.csv")
+        
+        if (!file.exists(filename)) {
+          next
+        }
+        results_to_append <- read.csv(filename)
+        results <- rbind(results, results_to_append)
+      }
+    }
+  }
+}
+
+# Filter out TPC-H full
 results <- results %>% filter(QUERY_SET != "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22")
 
 results <- results %>% mutate(QUERY_SET_KIND_GROUP = case_when(
@@ -87,7 +104,10 @@ ggsave("data_loading__evaluation_barchart.pdf", plot2, width=5, height=2.0)
 ###############  Evaluation #2: JCCH-Eval Queries over Time
 ###############
 
-plot <- ggplot(results_agg,
+jcch_eval_set_results <- results_agg %>% filter(QUERY_SET_KIND_GROUP == "Queries 7, 8, 17, 20") #%>% 
+                                         #filter(SCALE_FACTOR == 50)
+
+plot <- ggplot(jcch_eval_set_results,
                aes(x=QUERY_ID, y=AVG_TIME_PASSED_S, group=PLOT_KEY,
                    fill=SERVER_CONFIG, shape=SERVER_CONFIG, color=SERVER_CONFIG, linetype=SERVER_CONFIG)) +
   geom_line(linewidth=0.2) +
@@ -122,7 +142,10 @@ ggsave("data_loading__random_query_subsets.pdf", plot, width=5, height=3.5)
 ###############  Evaluation #3: Random TPC-H Queries over Time
 ###############
 
-plot <- ggplot(results_agg,
+random_set_results <- results_agg %>% filter(QUERY_SET_KIND_GROUP == "Random Sets (four Queries)") #%>% 
+                                     #filter(SCALE_FACTOR == 50)
+
+plot <- ggplot(random_set_results,
                aes(x=QUERY_ID, y=AVG_TIME_PASSED_S, group=PLOT_KEY,
                    fill=SERVER_CONFIG, shape=SERVER_CONFIG, color=SERVER_CONFIG, linetype=SERVER_CONFIG)) +
   geom_line(linewidth=0.2) +

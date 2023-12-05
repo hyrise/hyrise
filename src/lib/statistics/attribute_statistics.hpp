@@ -54,12 +54,9 @@ class AttributeStatistics : public BaseAttributeStatistics {
         const auto& table_statistics = Hyrise::get().storage_manager.get_table(_table_name)->table_statistics();
         const auto& attribute_statistics = static_cast<const AttributeStatistics<T>&>(*(table_statistics->column_statistics[_column_id]));
         Assert(!std::get<0>(attribute_statistics.get_table_origin()), "Received attribute statistics should not have an origin (marker for place holder).");
-        // if (std::get<0>(attribute_statistics.get_table_origin())) {
-        //   std::cerr << "Sleeping as attribute has not yet been replaced.\n";
-        //   std::this_thread::sleep_for(std::chrono::milliseconds(1));
-        //   return attribute_statistics.histogram();  
-        // }
-        return attribute_statistics.histogram();  
+
+        // std::cout << "Histogram for " << _table_name << " column " << Hyrise::get().storage_manager.get_table(_table_name)->column_name(_column_id) << ":\n" << attribute_statistics.histogram()->description();
+        return attribute_statistics.histogram();
       }
     }
 

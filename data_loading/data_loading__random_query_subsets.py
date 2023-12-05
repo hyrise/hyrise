@@ -63,7 +63,7 @@ elif args.query_set == "JCCH_VARIANTS":
   # with four queries, we will not have more than 24 sets (minus 1 for the original one)
   while len(query_sets) < min(args.query_set_size, 23):
     queries_copy = eval_query_set.copy()
-    random.shuffle(queries_copy)  # I don't like the sample() work-around for in-place shuffle.
+    random.shuffle(queries_copy)  # I don't like the sample() work-around for non-in-place shuffle.
 
     if queries_copy == eval_query_set:
       continue  # only permutations distinct from "original".
@@ -73,18 +73,33 @@ elif args.query_set == "JCCH_VARIANTS":
 elif args.query_set == "RANDOM_VARIANTS":
   assert args.query_set_size is not None, "--query_set_size needs to be set for query set selection."
 
+  # cheap and expensive queries
+  # expensive ones are [1, 9, 10, 13, 18], cheap ones are [2, 6, 17, 22]
+  query_sets.add(("RANDOM", "SLOW", (9, 18, 13, 1)))
+  query_sets.add(("RANDOM", "FAST", (6, 2, 22, 17)))
+  while len(query_sets) < (args.query_set_size / 2):
+    query_set = set()
+    while len(query_set) < 4:
+      query_set.add(random.choice([1, 9, 10, 13, 18, 2, 6, 17, 22]))
+    query_sets.add(("RANDOM", "FAST_SLOW", tuple(query_set)))
+
+  # real random ones
   while len(query_sets) < args.query_set_size:
     query_set = set()
     while len(query_set) < 4:
       query_set.add(random.randint(1, 22))
     query_sets.add(("RANDOM", "RANDOM", tuple(query_set)))
 
-# query_sets = set()
-# query_sets.add(("X", "X", tuple([4, 10, 11, 5])))
+query_sets = set()
+query_sets.add(("X", "X", tuple([17, 7, 11, 5])))
 
-# No particular reason to sort, it's just easier to debug and with server restarts, we should not run into caching issues.
-query_sets_sorted = sorted(query_sets, key=lambda x: x[0] + x[1] + "".join([str(y) for y in x[2]]))
+# No particular reason to sort, it's just easier to debug and with server restarts, we should not run into
+# caching issues.
+# query_sets_sorted = sorted(query_sets, key=lambda x: x[0] + x[1] + "".join([str(y) for y in x[2]]))
 
+# Taking intermediate results sucks when queries are sorted. Shuffling them now.
+query_sets_sorted = list(query_sets)
+random.shuffle(query_sets_sorted)
 
 df = pd.DataFrame()
 measurements = []
@@ -141,14 +156,10 @@ for query_set_name, query_set_kind, query_set in query_sets_sorted:
           cursor.execute(f"INSERT INTO meta_plugins(name) VALUES('./{args.hyrise_path}/lib/libhyriseDataLoadingPlugin{PLUGIN_FILETYPE}');")
           plugin_is_loaded = True
 
-        measurements.append({"MEASUREMENT_ID": measurement_id, "QUERY_SET_ID": query_set_id, 
-                               "QUERY_SET": ",".join([str(q) for q in query_set]), "QUERY_SET_KIND": query_set_kind,
-                               "QUERY_ID": 0, "RUN_ID": run_id, "SCALE_FACTOR": args.scale_factor,
-                               "SERVER_CONFIG": server_config_name, "WARMUP_RUNS": WARMUP_RUNS, "QUERY_EXECUTIONS": args.query_run_count,
-                               "QUERY_RUNTIME_S": 0, "TIME_PASSED_S": 0})
+        wrote_initial_measurement = False
         for query_id, query in enumerate(query_set):
           print(f"Executing query #{query}: ", end="", flush=True)
-          
+
           query_sql = static_tpch_queries.queries[query - 1]
           for warmup_run in range(WARMUP_RUNS):
             print(" warm", end="", flush=True)
@@ -164,6 +175,17 @@ for query_set_name, query_set_kind, query_set in query_sets_sorted:
           query_duration = time.time() - query_start
           time_passed = time.time() - server_start_time
           print(f"Query #{query}: {query_duration}s - Time passed: {time_passed}", flush=True)
+
+          if not wrote_initial_measurement:
+            # Only append when we end up here (i.e., a query succeeded). With failing queries, we end up with many
+            # initial lines otherwise.
+            measurements.append({"MEASUREMENT_ID": measurement_id, "QUERY_SET_ID": query_set_id, 
+                                 "QUERY_SET": ",".join([str(q) for q in query_set]), "QUERY_SET_KIND": query_set_kind,
+                                 "QUERY_ID": 0, "RUN_ID": run_id, "SCALE_FACTOR": args.scale_factor,
+                                 "SERVER_CONFIG": server_config_name, "WARMUP_RUNS": WARMUP_RUNS, "QUERY_EXECUTIONS": args.query_run_count,
+                                 "QUERY_RUNTIME_S": 0, "TIME_PASSED_S": 0})
+            wrote_initial_measurement = True
+
           measurements.append({"MEASUREMENT_ID": measurement_id, "QUERY_SET_ID": query_set_id, 
                                "QUERY_SET": ",".join([str(q) for q in query_set]), "QUERY_SET_KIND": query_set_kind,
                                "QUERY_ID": query_id+1, "RUN_ID": run_id, "SCALE_FACTOR": args.scale_factor,
