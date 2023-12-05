@@ -90,9 +90,6 @@ elif args.query_set == "RANDOM_VARIANTS":
       query_set.add(random.randint(1, 22))
     query_sets.add(("RANDOM", "RANDOM", tuple(query_set)))
 
-query_sets = set()
-query_sets.add(("X", "X", tuple([17, 7, 11, 5])))
-
 # No particular reason to sort, it's just easier to debug and with server restarts, we should not run into
 # caching issues.
 # query_sets_sorted = sorted(query_sets, key=lambda x: x[0] + x[1] + "".join([str(y) for y in x[2]]))
