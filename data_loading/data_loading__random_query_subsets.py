@@ -44,8 +44,8 @@ args = parser.parse_args()
 
 assert Path(args.hyrise_path).exists()
 
-# Skipping for now due to some clang17 issues and parallel work on other branches.
-# subprocess.run(["ninja", "-C", args.hyrise_path, "hyriseServer", "hyriseDataLoadingPlugin"])
+# -- Skipping for now due to some clang17 issues and parallel work on other branches.
+subprocess.run(["ninja", "-C", args.hyrise_path, "hyriseServer", "hyriseDataLoadingPlugin"])
 
 eval_query_set = [7, 8, 17, 20]
 query_sets = set()
@@ -89,6 +89,9 @@ elif args.query_set == "RANDOM_VARIANTS":
     while len(query_set) < 4:
       query_set.add(random.randint(1, 22))
     query_sets.add(("RANDOM", "RANDOM", tuple(query_set)))
+
+# query_sets = set()
+# query_sets.add(("X", "X", tuple([1, 17, 13])))
 
 # No particular reason to sort, it's just easier to debug and with server restarts, we should not run into
 # caching issues.

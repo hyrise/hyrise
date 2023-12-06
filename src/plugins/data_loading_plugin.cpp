@@ -153,8 +153,6 @@ void DataLoadingPlugin::_load_table_and_statistics() {
   thread_local static auto call_id = std::atomic<uint32_t>{0};
   ++call_id;
 
-  // log(call_id.load(), "function entered");
-
   // We copy and shuffle the settings vector, hoping that not all callers are trying the create the same tables and
   // columns in the same order.
   auto settings_lock = std::unique_lock<std::mutex>{_settings_mutex};
@@ -168,7 +166,6 @@ void DataLoadingPlugin::_load_table_and_statistics() {
   auto& log_manager = Hyrise::get().log_manager;
   const auto settings_key = std::string{"dbgen_request__"};
   for (const auto& setting_name : settings_names) {
-    // log(call_id.load(), "entering loop");
     auto table_name = std::string{};
     auto column_id = ColumnID{INVALID_COLUMN_ID};
     auto load_table = false;
@@ -186,7 +183,6 @@ void DataLoadingPlugin::_load_table_and_statistics() {
     }
 
     if (table_name == "" && column_id == INVALID_COLUMN_ID) {
-      // log(call_id.load(), "No setting, continue loop.");
       continue;
     }
 
@@ -421,6 +417,14 @@ void DataLoadingPlugin::_load_table_and_statistics() {
         }));
       }
       Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
+
+      // auto sstream = std::stringstream{};
+      // sstream << "Histogram and Compression: we scheduled tasks IDs: ";
+      // for (const auto& job : jobs) {
+      //   sstream << job->id() << ", ";
+      // }
+      // sstream << "\n";
+      // std::cerr << sstream.str();
 
       log(call_id.load(), std::format("Processing column {}@{} done ({} [histogram: {}, encoding: {}, chunk stats: {}]).",
                                       table_name, static_cast<size_t>(column_id), timer.lap_formatted(), histogram_duration_string,

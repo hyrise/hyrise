@@ -6,6 +6,7 @@
 #include <condition_variable>
 #include <memory>
 
+#include "magic_enum.hpp"
 #include "concurrentqueue.h"
 #include "lightweightsemaphore.h"
 
@@ -20,7 +21,7 @@ class AbstractTask;
  */
 class TaskQueue {
  public:
-  static constexpr uint32_t NUM_PRIORITY_LEVELS = 2;
+  static constexpr uint32_t NUM_PRIORITY_LEVELS = magic_enum::enum_count<SchedulePriority>();
 
   explicit TaskQueue(NodeID node_id);
 

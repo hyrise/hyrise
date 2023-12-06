@@ -253,12 +253,21 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
 
   optimizer->add_rule(std::make_unique<PredicateMergeRule>());
 
-  // Short note: the second call right now is really needed right now. We cannot load columns later "on demand" in
-  // operators. Scenario: all worker process an aggregate with an unloaded column. All columns will request this column
-  // and loop, but we cannot spawn new jobs for encoding since all workers are looping while waiting.
-  // We could load columns in a single job, but having many waiting for the job while we load single-threaded doesn't
-  // make sense. .... TODO:
-  optimizer->add_rule(std::make_unique<DataLoadingTriggerRule>(false));
+  // Short note: the second call right now is needed right now. We cannot load columns later "on demand" in operators.
+  // Example scenario: all worker process an aggregate with an unloaded column. All workers will request this column
+  // and loop waiting for it, but we there might be not-yet-executed jobs for the encoding of the columns and thus, all
+  // workers are looping to wait for the column.
+  // We could load columns in a single job, but having many workers waiting while we load single-threaded doesn't sound
+  // right.
+  // 
+  //     REMOVED FOR NOW: We use blocking load calls before opt to have the histograms.
+  //                      Non-blocking load calls here can interfere with early operators that highly parallel request
+  //                      the column (all workers run the operator, each worker than waits for the column, but a few
+  //                      encoding tasks might still be in the queue >> deadlock).
+  //                      Thus, we currently create the tasks when building the query graph and add the tasks as
+  //                      predecessors to the column-requesting operator.
+  //     
+  // optimizer->add_rule(std::make_unique<DataLoadingTriggerRule>(false));
 
   return optimizer;
 }

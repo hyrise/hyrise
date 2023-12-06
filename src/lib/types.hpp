@@ -161,8 +161,9 @@ const size_t SSO_STRING_CAPACITY = pmr_string{"."}.capacity();
 
 // The Scheduler currently supports just these two priorities.
 enum class SchedulePriority {
-  Default = 1,  // Schedule task of normal priority.
-  High = 0      // Schedule task of high priority, subject to be preferred in scheduling.
+  Background = 2,  // Priority for background jobs that users usually do not wait for.
+  Default = 1,     // Schedule task of normal priority.
+  High = 0         // Schedule task of high priority, subject to be preferred in scheduling.
 };
 
 enum class PredicateCondition {

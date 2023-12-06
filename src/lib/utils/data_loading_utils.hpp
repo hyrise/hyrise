@@ -8,7 +8,7 @@ namespace hyrise {
 
 namespace data_loading_utils {
 
-void load_column_when_necessary(const std::string& table_name, const ColumnID column_id);
+void load_column_when_necessary(const std::string& table_name, const ColumnID column_id, const bool allow_wait = true);
 
 void wait_for_table(const std::string& success_log_message);
 

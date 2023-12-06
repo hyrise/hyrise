@@ -27,7 +27,8 @@ void wait_for_column(const std::string& success_log_message) {
   const auto scale_factor = get_scale_factor();
   auto& log_manager = Hyrise::get().log_manager;
   auto sleep_time = std::chrono::microseconds{50};
-  const auto timeout = std::chrono::seconds{static_cast<size_t>(60 * scale_factor)}.count();
+  // const auto timeout = std::chrono::seconds{static_cast<size_t>(60 * scale_factor)}.count();
+  const auto timeout = std::chrono::seconds{static_cast<size_t>(10 * scale_factor)}.count();
 
   const auto begin = std::chrono::system_clock::now();
   while (true) {
@@ -37,13 +38,14 @@ void wait_for_column(const std::string& success_log_message) {
     // }
     if (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() - begin).count() > timeout) {
       auto sstream = std::stringstream{};
-      sstream << "I was looking for success_log_message >> " << success_log_message << " <<, but failed (sleeptime: " << sleep_time.count() << " us).\n";
+      sstream << "I was looking for success_log_message >> " << success_log_message << " <<, but failed (sleeptime: " << static_cast<size_t>(sleep_time.count()) << " us).\n";
       std::time_t t0 = std::chrono::system_clock::to_time_t(begin);
       sstream << "Begin: " << std::put_time(std::localtime(&t0), "%FT%T%z");
       std::time_t t1 = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
       sstream << " - Now: " << std::put_time(std::localtime(&t1), "%FT%T%z") << "\n";
       sstream << "Log entries:\n";
-      for (const auto& log_entry : log_manager.log_entries()) {
+      const auto log_entries = log_manager.log_entries();
+    for (const auto& log_entry : log_entries) {
         sstream << "\t" << log_entry.message << "\n";
       }
 
@@ -61,14 +63,15 @@ void wait_for_column(const std::string& success_log_message) {
       Fail("Timed out while waiting for column generation (" + std::to_string(timeout) + " s time out).\n\n" + sstream.str() + "\n\n");
     }
 
-    for (const auto& log_entry : log_manager.log_entries()) {
+    const auto log_entries = log_manager.log_entries();
+    for (const auto& log_entry : log_entries) {
       const auto& message = log_entry.message;
       if (message == success_log_message) {
         return;
       }
     }
 
-    std::this_thread::sleep_for(std::min(std::chrono::microseconds{1'000}, sleep_time));
+    std::this_thread::sleep_for(std::min(std::chrono::microseconds{10'000}, sleep_time));
     sleep_time *= 2;
   }
 }
@@ -78,7 +81,7 @@ void wait_for_column(const std::string& success_log_message) {
 
 namespace hyrise::data_loading_utils {
 
-void load_column_when_necessary(const std::string& table_name, const ColumnID column_id) {
+void load_column_when_necessary(const std::string& table_name, const ColumnID column_id, const bool allow_wait) {
   static auto request_id = std::atomic<uint32_t>{0};
 
   Assert(column_id != INVALID_COLUMN_ID, "Cannot lazily create statistics if columnID is not set.");
@@ -86,7 +89,8 @@ void load_column_when_necessary(const std::string& table_name, const ColumnID co
   // First: check if table is already created.
   auto& log_manager = Hyrise::get().log_manager;
   const auto success_log_message = std::string{"dbgen_success__"} + table_name + "::" + std::to_string(column_id) + "__";
-  for (const auto& log_entry : log_manager.log_entries()) {
+  const auto log_entries = log_manager.log_entries();
+  for (const auto& log_entry : log_entries) {
     const auto& message = log_entry.message;
     if (message == success_log_message) {
       return;
@@ -107,7 +111,9 @@ void load_column_when_necessary(const std::string& table_name, const ColumnID co
   }
 
   if (column_already_requested) {
-    wait_for_column(success_log_message);
+    if (allow_wait) {
+      wait_for_column(success_log_message);
+    }
     return;
   }
 
@@ -127,7 +133,9 @@ void load_column_when_necessary(const std::string& table_name, const ColumnID co
 
   plugin_manager.exec_user_function("hyriseDataLoadingPlugin", "LoadTableAndStatistics");
 
-  wait_for_column(success_log_message);
+  if (allow_wait) {
+    wait_for_column(success_log_message);
+  }
 }
 
 void wait_for_table(const std::string& success_log_message) {
@@ -143,7 +151,8 @@ void wait_for_table(const std::string& success_log_message) {
       auto sstream = std::stringstream{};
       sstream << "I was looking for success_log_message >> " << success_log_message << " <<, but failed with a sleeptime now of " << sleep_time.count() << ").\n";
       sstream << "Log entries\n";
-      for (const auto& log_entry : log_manager.log_entries()) {
+      const auto log_entries = log_manager.log_entries();
+      for (const auto& log_entry : log_entries) {
         sstream << "\t" << log_entry.message << "\n";
       }
 

@@ -31,6 +31,10 @@ for (scale_factor in c(1, 10, 50)) {
   }
 }
 
+results <- results %>% group_by(SERVER_CONFIG, QUERY_SET_KIND, QUERY_SET,
+                                     SCALE_FACTOR, QUERY_SET_ID, QUERY_EXECUTIONS) %>%
+                            filter(max(QUERY_ID) == 4)
+
 # Filter out TPC-H full
 results <- results %>% filter(QUERY_SET != "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22")
 
@@ -43,7 +47,8 @@ results <- results %>% mutate(QUERY_SET_KIND_GROUP = case_when(
 results$SCALE_FACTOR_LABEL <- as.factor(results$SCALE_FACTOR)
 levels(results$SCALE_FACTOR_LABEL) <- list("Scale Factor 1" = 1,
                                            "Scale Factor 10" = 10,
-                                           "Scale Factor 50" = 50)
+                                           "Scale Factor 50" = 50,
+                                           "Scale Factor 100" = 100)
 
 results$SERVER_CONFIG <- as.factor(results$SERVER_CONFIG)
 levels(results$SERVER_CONFIG) <- list("Lazy Loading" = "DATA_LOADING",
@@ -105,7 +110,7 @@ ggsave("data_loading__evaluation_barchart.pdf", plot2, width=5, height=2.0)
 ###############
 
 jcch_eval_set_results <- results_agg %>% filter(QUERY_SET_KIND_GROUP == "Queries 7, 8, 17, 20") #%>% 
-                                         #filter(SCALE_FACTOR == 50)
+                                         #filter(SCALE_FACTOR == 100)
 
 plot <- ggplot(jcch_eval_set_results,
                aes(x=QUERY_ID, y=AVG_TIME_PASSED_S, group=PLOT_KEY,
@@ -116,8 +121,8 @@ plot <- ggplot(jcch_eval_set_results,
   scale_colour_tableau(palette="Superfishel Stone") +
   scale_fill_tableau(palette="Superfishel Stone") +
   theme.paper_plot +
-  facet_grid(SCALE_FACTOR_LABEL ~ QUERY_EXECUTIONS_STR, scales = "free_y") +
-  labs(x= "#Query", y="Runtime [s]") +
+  facet_wrap(SCALE_FACTOR_LABEL ~ QUERY_EXECUTIONS_STR, scales = "free_y") +
+  labs(x= "#Query", y="Time Passed [s]") +
   # theme(legend.position=c(.55,.675)) +
   theme(legend.title = element_blank()) +
   theme(legend.direction = "horizontal") +
@@ -133,7 +138,7 @@ plot <- ggplot(jcch_eval_set_results,
   scale_x_continuous(breaks=c(NULL,1,2,3,4)) +
   scale_linetype_manual(values=c("solid", "longdash"))
 print(plot)
-ggsave("data_loading__random_query_subsets.pdf", plot, width=5, height=3.5)
+ggsave("data_loading__evaluation_query_set.pdf", plot, width=5, height=3.5)
 
 
 
@@ -142,20 +147,31 @@ ggsave("data_loading__random_query_subsets.pdf", plot, width=5, height=3.5)
 ###############  Evaluation #3: Random TPC-H Queries over Time
 ###############
 
-random_set_results <- results_agg %>% filter(QUERY_SET_KIND_GROUP == "Random Sets (four Queries)") #%>% 
-                                     #filter(SCALE_FACTOR == 50)
+random_set_results <- results_agg %>% filter(QUERY_SET_KIND_GROUP == "Random Sets (four Queries)") %>% 
+                                      #filter(SCALE_FACTOR == 50)
+                                      filter(SCALE_FACTOR == 10)
+
+random_set_results_selection <- random_set_results %>% group_by(PLOT_KEY, SERVER_CONFIG, QUERY_EXECUTIONS, SCALE_FACTOR) %>%
+                                                       mutate(query_set_runtime = max(AVG_TIME_PASSED_S))
+
+random_set_results_selection <- random_set_results_selection %>% group_by(SERVER_CONFIG, QUERY_EXECUTIONS, SCALE_FACTOR) %>%
+                                                                 mutate(is_slowest = query_set_runtime == max(query_set_runtime),
+                                                                        is_fastest = query_set_runtime == min(query_set_runtime))
+
+random_set_results_selection <- random_set_results_selection %>% filter(is_fastest == TRUE | is_slowest == TRUE)
 
 plot <- ggplot(random_set_results,
                aes(x=QUERY_ID, y=AVG_TIME_PASSED_S, group=PLOT_KEY,
-                   fill=SERVER_CONFIG, shape=SERVER_CONFIG, color=SERVER_CONFIG, linetype=SERVER_CONFIG)) +
+                   fill=SERVER_CONFIG, shape=SERVER_CONFIG, color=SERVER_CONFIG)) + #, linetype=SERVER_CONFIG
   geom_line(linewidth=0.2) +
+  geom_line(data=random_set_results_selection, linewidth=2, aes(color=SERVER_CONFIG)) +
   # geom_point() +
   theme_bw() +
   scale_colour_tableau(palette="Superfishel Stone") +
   scale_fill_tableau(palette="Superfishel Stone") +
   theme.paper_plot +
-  facet_grid(SCALE_FACTOR_LABEL ~ QUERY_EXECUTIONS_STR, scales = "free_y") +
-  labs(x= "#Query", y="Runtime [s]") +
+  facet_wrap(SCALE_FACTOR_LABEL ~ QUERY_EXECUTIONS_STR, scales = "free_y") +
+  labs(x= "#Query", y="Time Passed [s]") +
   # theme(legend.position=c(.55,.675)) +
   theme(legend.title = element_blank()) +
   theme(legend.direction = "horizontal") +

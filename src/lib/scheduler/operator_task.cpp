@@ -1,9 +1,28 @@
 #include "operator_task.hpp"
 
+#include "expression/expression_utils.hpp"
+#include "logical_query_plan/lqp_utils.hpp"
+#include "logical_query_plan/stored_table_node.hpp"
 #include "operators/abstract_operator.hpp"
 #include "operators/abstract_read_write_operator.hpp"
 #include "operators/get_table.hpp"
+#include "scheduler/job_task.hpp"
 #include "scheduler/task_utils.hpp"
+
+namespace std {
+
+template <>
+struct hash<std::tuple<std::string, std::shared_ptr<hyrise::Table>, hyrise::ColumnID>> {
+  size_t operator()(const std::tuple<std::string, std::shared_ptr<hyrise::Table>, hyrise::ColumnID>& table_column_identifier) const {
+  auto hash = size_t{0};
+  boost::hash_combine(hash, std::get<0>(table_column_identifier));
+  boost::hash_combine(hash, std::get<1>(table_column_identifier));
+  boost::hash_combine(hash, std::get<2>(table_column_identifier));
+  return hash;
+  }
+};
+
+}  // namespace std
 
 namespace {
 
@@ -33,6 +52,81 @@ std::shared_ptr<OperatorTask> add_operator_tasks_recursively(const std::shared_p
     const auto& right_subtree_root = add_operator_tasks_recursively(right, tasks);
     right_subtree_root->set_as_predecessor_of(task);
   }
+
+  auto columns_to_load = std::unordered_set<std::tuple<std::string, std::shared_ptr<Table>, ColumnID>>{};
+  columns_to_load.reserve(16);
+
+  const auto& storage_manager = Hyrise::get().storage_manager;
+  visit_lqp(op->lqp_node, [&](const auto& node) {
+    for (const auto& node_expression : node->node_expressions) {
+      visit_expression(node_expression, [&](const auto& expression) {
+        if (expression->type != ExpressionType::LQPColumn) {
+          return ExpressionVisitation::VisitArguments;
+        }
+
+        const auto& column_expression = std::static_pointer_cast<LQPColumnExpression>(expression);
+        const auto& stored_table_node = std::dynamic_pointer_cast<const StoredTableNode>(column_expression->original_node.lock());
+        if (!stored_table_node) {
+          return ExpressionVisitation::VisitArguments;
+        }
+
+        columns_to_load.emplace(stored_table_node->table_name,
+                                storage_manager.get_table(stored_table_node->table_name),
+                                column_expression->original_column_id);
+
+        return ExpressionVisitation::VisitArguments;
+      });
+    }
+    return LQPVisitation::VisitInputs;
+  });
+
+  auto sorted_columns_to_load = std::vector(columns_to_load.begin(), columns_to_load.end());
+  std::sort(sorted_columns_to_load.begin(), sorted_columns_to_load.end(), [](const auto& lhs, const auto& rhs) {
+    return std::get<1>(lhs)->row_count() > std::get<1>(rhs)->row_count();
+  });
+
+  // auto sstream = std::stringstream{};
+
+  auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+  jobs.reserve(columns_to_load.size());
+  for (const auto& [table_name, table, column_id] : sorted_columns_to_load) {
+    if (column_id == INVALID_COLUMN_ID) {
+      continue;
+    }
+
+    const auto chunk = table->get_chunk(ChunkID{0});
+    // if (column_id > chunk->column_count()) {
+    //   // std::cerr << std::format("Skipping the loading of columnID {}.\n", static_cast<size_t>(column_id));
+    //   continue;
+    // }
+
+    // std::cout << "We should load " << &*table << " and " << column_id << std::endl;
+    const auto segment = chunk->get_segment(column_id);
+    if (!std::dynamic_pointer_cast<PlaceHolderSegment>(segment)) {
+      // Only access histogram, when first segment is a PlaceHolderSegment (remember, we replace all segments of a columns).
+      continue;
+    }
+
+    // sstream << table_name << "::" << column_id << " \t--\t ";
+
+    jobs.emplace_back(std::make_shared<JobTask>([&, table_name=table_name, column_id=column_id]() {
+      data_loading_utils::load_column_when_necessary(table_name, column_id, false);
+      // resolve_data_type(table->column_data_type(column_id), [&, table=table, column_id=column_id](const auto& data_type) {
+      //   using ColumnDataType = typename std::decay_t<decltype(data_type)>::type;
+
+      //   // Just use data utils load column?!?!?
+      //   const auto column_statistics = table->table_statistics()->column_statistics;
+      //   const auto attribute_statistics = std::dynamic_pointer_cast<AttributeStatistics<ColumnDataType>>(column_statistics[column_id]);
+      //   attribute_statistics->histogram();
+      // });
+    }, SchedulePriority::Background));
+    jobs.back()->set_as_predecessor_of(task);
+  }
+
+  // sstream << "\nNow operator task for >> " << *op << " << has " << task->predecessors().size() << " predecessors.\n\n";
+  // std::cerr << sstream.str();
+
+  Hyrise::get().scheduler()->schedule_tasks(jobs);
 
   for (const auto& subquery : op->uncorrelated_subqueries()) {
     // The `subquery_root` is the operator referenced by any PQPSubqueryExpression required by the operator (e.g., a
@@ -151,6 +245,7 @@ void OperatorTask::skip_operator_task() {
 }
 
 void OperatorTask::_on_execute() {
+  // std::cerr << std::format("Operator task ({}) running with taskID {} and #predecessors: {}.\n", description(), static_cast<size_t>(id()), predecessors().size());
   auto context = _op->transaction_context();
   if (context) {
     switch (context->phase()) {
