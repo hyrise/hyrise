@@ -39,7 +39,7 @@ void wait_for_column(const std::string& table_name, const ColumnID column_id, co
 
     if (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() - begin).count() > try_again_duration) {
       // Request again. TODO: check if we can run into recursion depth problems here when stuck.
-      std::cerr "\nTime out load\n";
+      std::cerr << "\nTime out load\n";
       hyrise::data_loading_utils::load_column_when_necessary(table_name, column_id, false);
     }
 
