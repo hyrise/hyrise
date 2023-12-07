@@ -69,8 +69,8 @@ results$PLOT_KIND_KEY <- paste0(results$SERVER_CONFIG, "_", results$QUERY_SET_KI
 results_agg <- results %>% group_by(SERVER_CONFIG, SCALE_FACTOR, QUERY_SET_KIND, QUERY_SET, SCALE_FACTOR_LABEL,
                                     QUERY_ID, QUERY_SET_ID, PLOT_KEY, PLOT_KIND_KEY, QUERY_SET_KIND_GROUP,
                                     QUERY_EXECUTIONS, QUERY_EXECUTIONS_STR) %>%
-                                    summarize(AVG_QUERY_RUNTIME_S = mean(QUERY_RUNTIME_S),
-                                              AVG_TIME_PASSED_S = mean(TIME_PASSED_S),
+                                    summarize(MEDIAN_QUERY_RUNTIME_S = median(QUERY_RUNTIME_S),
+                                              MEDIAN_TIME_PASSED_S = median(TIME_PASSED_S),
                                               .groups="keep")
 
 ###############
@@ -80,10 +80,10 @@ results_agg <- results %>% group_by(SERVER_CONFIG, SCALE_FACTOR, QUERY_SET_KIND,
 final_bar_chart_data <- results_agg %>% filter(QUERY_SET_KIND == "ORIGINAL" & QUERY_ID == 4)
 
 plot2 <- ggplot(final_bar_chart_data %>% filter(QUERY_EXECUTIONS == 10),
-                aes(x=SERVER_CONFIG, y=AVG_TIME_PASSED_S, group=SERVER_CONFIG,
+                aes(x=SERVER_CONFIG, y=MEDIAN_TIME_PASSED_S, group=SERVER_CONFIG,
                    fill=SERVER_CONFIG, shape=SERVER_CONFIG, color=SERVER_CONFIG)) +
   geom_col() +
-  geom_text(aes(y=AVG_TIME_PASSED_S/2, label=paste(round(AVG_TIME_PASSED_S, 1), "s")),
+  geom_text(aes(y=MEDIAN_TIME_PASSED_S/2, label=paste(round(MEDIAN_TIME_PASSED_S, 1), "s")),
             color="white", family="Times", size=3) +
   theme_bw() +
   scale_colour_tableau(palette="Superfishel Stone") +
@@ -113,7 +113,7 @@ jcch_eval_set_results <- results_agg %>% filter(QUERY_SET_KIND_GROUP == "Queries
                                          #filter(SCALE_FACTOR == 100)
 
 plot <- ggplot(jcch_eval_set_results,
-               aes(x=QUERY_ID, y=AVG_TIME_PASSED_S, group=PLOT_KEY,
+               aes(x=QUERY_ID, y=MEDIAN_TIME_PASSED_S, group=PLOT_KEY,
                    fill=SERVER_CONFIG, shape=SERVER_CONFIG, color=SERVER_CONFIG, linetype=SERVER_CONFIG)) +
   geom_line(linewidth=0.2) +
   # geom_point() +
@@ -152,7 +152,7 @@ random_set_results <- results_agg %>% filter(QUERY_SET_KIND_GROUP == "Random Set
                                       filter(SCALE_FACTOR == 10)
 
 random_set_results_selection <- random_set_results %>% group_by(PLOT_KEY, SERVER_CONFIG, QUERY_EXECUTIONS, SCALE_FACTOR) %>%
-                                                       mutate(query_set_runtime = max(AVG_TIME_PASSED_S))
+                                                       mutate(query_set_runtime = max(MEDIAN_TIME_PASSED_S))
 
 random_set_results_selection <- random_set_results_selection %>% group_by(SERVER_CONFIG, QUERY_EXECUTIONS, SCALE_FACTOR) %>%
                                                                  mutate(is_slowest = query_set_runtime == max(query_set_runtime),
@@ -161,7 +161,7 @@ random_set_results_selection <- random_set_results_selection %>% group_by(SERVER
 random_set_results_selection <- random_set_results_selection %>% filter(is_fastest == TRUE | is_slowest == TRUE)
 
 plot <- ggplot(random_set_results,
-               aes(x=QUERY_ID, y=AVG_TIME_PASSED_S, group=PLOT_KEY,
+               aes(x=QUERY_ID, y=MEDIAN_TIME_PASSED_S, group=PLOT_KEY,
                    fill=SERVER_CONFIG, shape=SERVER_CONFIG, color=SERVER_CONFIG)) + #, linetype=SERVER_CONFIG
   geom_line(linewidth=0.2) +
   geom_line(data=random_set_results_selection, linewidth=2, aes(color=SERVER_CONFIG)) +
@@ -170,7 +170,7 @@ plot <- ggplot(random_set_results,
   scale_colour_tableau(palette="Superfishel Stone") +
   scale_fill_tableau(palette="Superfishel Stone") +
   theme.paper_plot +
-  facet_wrap(SCALE_FACTOR_LABEL ~ QUERY_EXECUTIONS_STR, scales = "free_y") +
+  facet_wrap( ~ QUERY_EXECUTIONS_STR, scales = "free_y") +
   labs(x= "#Query", y="Time Passed [s]") +
   # theme(legend.position=c(.55,.675)) +
   theme(legend.title = element_blank()) +
@@ -187,5 +187,5 @@ plot <- ggplot(random_set_results,
   scale_x_continuous(breaks=c(NULL,1,2,3,4)) +
   scale_linetype_manual(values=c("solid", "longdash"))
 print(plot)
-ggsave("data_loading__random_query_subsets.pdf", plot, width=5, height=3.5)
+ggsave("data_loading__random_query_subsets.pdf", plot, width=5, height=2.5)
 
