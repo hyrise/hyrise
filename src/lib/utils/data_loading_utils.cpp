@@ -24,11 +24,17 @@ float get_scale_factor() {
 }
 
 void wait_for_column(const std::string& table_name, const ColumnID column_id, const std::string& success_log_message) {
+  static auto call_id = std::atomic<uint64_t>{0};
+  ++call_id;
+
   const auto scale_factor = get_scale_factor();
   auto& log_manager = Hyrise::get().log_manager;
   auto sleep_time = std::chrono::microseconds{50};
-  const auto try_again_duration = std::chrono::seconds{static_cast<size_t>(2 * scale_factor)}.count();
-  const auto timeout = 5 * try_again_duration;
+  const auto tries = size_t{5};
+
+  const auto timeout = std::chrono::seconds{static_cast<size_t>(10 * scale_factor)}.count();
+  const auto try_again_duration_increase = std::chrono::seconds{timeout / tries}.count();
+  auto try_again_duration = try_again_duration_increase;
 
   const auto begin = std::chrono::system_clock::now();
   while (true) {
@@ -39,16 +45,20 @@ void wait_for_column(const std::string& table_name, const ColumnID column_id, co
 
     if (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() - begin).count() > try_again_duration) {
       // Request again. TODO: check if we can run into recursion depth problems here when stuck.
-      std::cerr << "\nTime out load\n";
+
+      std::cerr << std::format("\n#{} - Time out load of {}::{}", call_id.load(), table_name, static_cast<size_t>(column_id));
+
       hyrise::data_loading_utils::load_column_when_necessary(table_name, column_id, false);
+      try_again_duration += try_again_duration;
     }
 
     if (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() - begin).count() > timeout) {
       auto sstream = std::stringstream{};
-      sstream << "I was looking for success_log_message >> " << success_log_message << " <<, but failed (sleeptime: " << sleep_time.count() << " us).\n";
-      std::time_t t0 = std::chrono::system_clock::to_time_t(begin);
+      sstream << std::format("#{} was looking for success_log_message >>{}<<, but failed (sleeptime: {} us).\n", call_id.load(), success_log_message, sleep_time.count());
+      auto t0 = std::chrono::system_clock::to_time_t(begin);
+      auto t1 = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+
       sstream << "Begin: " << std::put_time(std::localtime(&t0), "%FT%T%z");
-      std::time_t t1 = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
       sstream << " - Now: " << std::put_time(std::localtime(&t1), "%FT%T%z") << "\n";
       sstream << "Log entries:\n";
       const auto log_entries = log_manager.log_entries();
