@@ -148,7 +148,7 @@ ggsave("data_loading__evaluation_query_set.pdf", plot, width=5, height=3.5)
 ###############
 
 random_set_results <- results_agg %>% filter(QUERY_SET_KIND_GROUP == "Random Sets (four Queries)") %>% 
-                                      #filter(SCALE_FACTOR == 50)
+                                      # filter(SCALE_FACTOR == 50)
                                       filter(SCALE_FACTOR == 10)
 
 random_set_results_selection <- random_set_results %>% group_by(PLOT_KEY, SERVER_CONFIG, QUERY_EXECUTIONS, SCALE_FACTOR) %>%
@@ -156,36 +156,43 @@ random_set_results_selection <- random_set_results %>% group_by(PLOT_KEY, SERVER
 
 random_set_results_selection <- random_set_results_selection %>% group_by(SERVER_CONFIG, QUERY_EXECUTIONS, SCALE_FACTOR) %>%
                                                                  mutate(is_slowest = query_set_runtime == max(query_set_runtime),
-                                                                        is_fastest = query_set_runtime == min(query_set_runtime))
+                                                                        is_fastest = query_set_runtime == min(query_set_runtime),
+                                                                        is_slow_fast_string = ifelse(query_set_runtime == min(query_set_runtime), "Shortest", "Longest"))  # Since we later filter all others, just use 1/0 here.
 
 random_set_results_selection <- random_set_results_selection %>% filter(is_fastest == TRUE | is_slowest == TRUE)
 
+random_set_results_selection$SERVER_CONFIG2 <- paste0("_", random_set_results_selection$SERVER_CONFIG)
+
 plot <- ggplot(random_set_results,
                aes(x=QUERY_ID, y=MEDIAN_TIME_PASSED_S, group=PLOT_KEY,
-                   fill=SERVER_CONFIG, shape=SERVER_CONFIG, color=SERVER_CONFIG)) + #, linetype=SERVER_CONFIG
-  geom_line(linewidth=0.2) +
-  geom_line(data=random_set_results_selection, linewidth=2, aes(color=SERVER_CONFIG)) +
+                   fill=SERVER_CONFIG, shape=SERVER_CONFIG)) + #, linetype=SERVER_CONFIG
+  geom_line(linewidth=0.2, aes(color=SERVER_CONFIG)) +
+  geom_line(data=random_set_results_selection %>% filter(SERVER_CONFIG == "Lazy Loading" & is_slowest), linewidth=1, aes(color=SERVER_CONFIG, linetype=is_slow_fast_string)) +#, color="#8CC2CAFF") +
+  geom_line(data=random_set_results_selection %>% filter(SERVER_CONFIG == "Lazy Loading" & is_fastest), linewidth=1, aes(color=SERVER_CONFIG, linetype=is_slow_fast_string)) +#, color="#8CC2CAFF") +
+  geom_line(data=random_set_results_selection %>% filter(SERVER_CONFIG == "Upfront Loading" & is_slowest), linewidth=1, aes(color=SERVER_CONFIG, linetype=is_slow_fast_string)) +#, color="#EF6F6AFF") +
+  geom_line(data=random_set_results_selection %>% filter(SERVER_CONFIG == "Upfront Loading" & is_fastest), linewidth=1, aes(color=SERVER_CONFIG, linetype=is_slow_fast_string)) +#, color="#EF6F6AFF") +
   # geom_point() +
   theme_bw() +
-  scale_colour_tableau(palette="Superfishel Stone") +
-  scale_fill_tableau(palette="Superfishel Stone") +
+  # https://emilhvitfeldt.github.io/r-color-palettes/discrete/ggthemes/Superfishel_Stone/
+  scale_colour_manual(name="Data Loading Type", values=c("#6388B4FF", "#FFAE34FF", "#EF6F6AFF", "#8CC2CAFF", "#55AD89FF", "#C3BC3FFF", "#BB7693FF", "#BAA094FF", "#A9B5AEFF", "#767676FF")) +
+  scale_fill_manual(values=c("#6388B4FF", "#FFAE34FF", "#EF6F6AFF", "#8CC2CAFF", "#55AD89FF", "#C3BC3FFF", "#BB7693FF", "#BAA094FF", "#A9B5AEFF", "#767676FF")) +
+  scale_linetype_manual(name="Shortest/Longest End-to-End Runtime", values=c("twodash", "dashed")) +
   theme.paper_plot +
   facet_wrap( ~ QUERY_EXECUTIONS_STR, scales = "free_y") +
   labs(x= "#Query", y="Time Passed [s]") +
   # theme(legend.position=c(.55,.675)) +
-  theme(legend.title = element_blank()) +
-  theme(legend.direction = "horizontal") +
+  # theme(legend.title = element_blank()) +
+  theme(legend.direction = "vertical") +
   theme(legend.background=element_blank()) +
-  theme(legend.key = element_blank()) +
-  theme(legend.margin=margin(t=0, b=-2, unit="mm")) +
+  # theme(legend.key = element_blank()) +
+  # theme(legend.margin=margin(t=0, b=-2, unit="mm")) +
   # theme(legend.key.size = unit(4, "mm")) +
-  theme(plot.margin=unit(c(1,1,0,1), 'mm')) +
+  theme(plot.margin=unit(c(t=1,r=1,b=-4,l=1), 'mm')) +
   # theme(axis.title.y = element_text(hjust=0.7)) +
   # theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
   theme(legend.position="top") +
   # scale_x_continuous(labels=function(x) sprintf("%.2f", x))
-  scale_x_continuous(breaks=c(NULL,1,2,3,4)) +
-  scale_linetype_manual(values=c("solid", "longdash"))
+  scale_x_continuous(breaks=c(NULL,1,2,3,4))
 print(plot)
-ggsave("data_loading__random_query_subsets.pdf", plot, width=5, height=2.5)
+ggsave("data_loading__random_query_subsets.pdf", plot, width=5, height=3.0)
 

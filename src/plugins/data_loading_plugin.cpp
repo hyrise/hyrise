@@ -40,7 +40,7 @@ struct hash<std::pair<std::shared_ptr<hyrise::Table>, hyrise::ColumnID>> {
 namespace {
 
 void log(const uint32_t call_id, const std::string& log_message) {
-  std::cerr << std::format("#{}: {}\n", call_id, log_message) << std::flush;
+  // std::cerr << std::format("#{}: {}\n", call_id, log_message) << std::flush;
 }
 
 }  // namespace

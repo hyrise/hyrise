@@ -36,6 +36,8 @@ parser.add_argument("--scale_factor", required=True, type=float)
 parser.add_argument("--query_run_count", required=True, type=int)
 parser.add_argument("--query_set", required=True, choices=["JCCH_EVAL_SET", "ALL_TPCH", "JCCH_VARIANTS", "RANDOM_VARIANTS"], type=str)
 parser.add_argument("--query_set_size", type=int)
+parser.add_argument("--modulo_id", required=True, type=int)
+parser.add_argument("--modulo_count", required=True, type=int)
 
 parser.add_argument('--debug', action='store_true')
 parser.add_argument('--skip_server_start', action='store_true')
@@ -108,7 +110,11 @@ plugin_is_loaded = False
 
 query_set_id = 0
 for query_set_name, query_set_kind, query_set in query_sets_sorted:
-  print(f"####\n#### SF {args.scale_factor} - Query set: {query_set} - Query runs: {args.query_run_count} ####\n####")
+  hash_query_set = hash(query_set)
+  print(f"{query_set} >> {hash_query_set=} % {args.modulo_count=} = {args.modulo_id=} >> skip? {hash_query_set % args.modulo_count != args.modulo_id}")
+  if hash_query_set % args.modulo_count != args.modulo_id:
+    continue
+
   for server_config_name, data_command, load_plugin in [
                                                         ("DATA_LOADING", "", True),
                                                         ("DEFAULT", f"--benchmark_data=TPC-H:{args.scale_factor}", False)
@@ -194,7 +200,7 @@ for query_set_name, query_set_kind, query_set in query_sets_sorted:
 
         print(f"Server start time: {server_start_duration}s - Time passed: {time_passed}", flush=True)
         df = pd.concat([df, pd.DataFrame(measurements)], ignore_index=True)
-        df.to_csv(f"data_loading__results_sf{int(args.scale_factor)}__{args.query_run_count}runs__set_{args.query_set.replace('_', '').upper()}__{args.query_set_size}perms.csv", index=None)
+        df.to_csv(f"data_loading__results_sf{int(args.scale_factor)}__{args.query_run_count}runs__set_{args.query_set.replace('_', '').upper()}__{args.query_set_size}perms__mod{args.modulo_id}of{args.modulo_count}.csv", index=None)
 
         run_id += 1
       except Exception as e:
