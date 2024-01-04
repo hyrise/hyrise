@@ -94,7 +94,7 @@ void dbgen_cleanup() {
   }
 
   if (asc_date) {
-    for (size_t idx = 0; idx < TOTDATE; ++idx) {
+    for (auto idx = size_t{0}; idx < TOTDATE; ++idx) {
       free((void*)asc_date[idx]);  // NOLINT
     }
     free(asc_date);  // NOLINT
@@ -142,24 +142,26 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate
   const auto region_count = static_cast<ChunkOffset>(tdefs[REGION].base);
 
   // The `* 4` part is defined in the TPC-H specification.
-  TableBuilder customer_builder{_benchmark_config->chunk_size, customer_column_types, customer_column_names,
-                                customer_count};
-  TableBuilder order_builder{_benchmark_config->chunk_size, order_column_types, order_column_names, order_count};
-  TableBuilder lineitem_builder{_benchmark_config->chunk_size, lineitem_column_types, lineitem_column_names,
-                                ChunkOffset{order_count * 4}};
-  TableBuilder part_builder{_benchmark_config->chunk_size, part_column_types, part_column_names, part_count};
-  TableBuilder partsupp_builder{_benchmark_config->chunk_size, partsupp_column_types, partsupp_column_names,
-                                ChunkOffset{part_count * 4}};
-  TableBuilder supplier_builder{_benchmark_config->chunk_size, supplier_column_types, supplier_column_names,
-                                supplier_count};
-  TableBuilder nation_builder{_benchmark_config->chunk_size, nation_column_types, nation_column_names, nation_count};
-  TableBuilder region_builder{_benchmark_config->chunk_size, region_column_types, region_column_names, region_count};
+  auto customer_builder =
+      TableBuilder{_benchmark_config->chunk_size, customer_column_types, customer_column_names, customer_count};
+  auto order_builder = TableBuilder{_benchmark_config->chunk_size, order_column_types, order_column_names, order_count};
+  auto lineitem_builder = TableBuilder{_benchmark_config->chunk_size, lineitem_column_types, lineitem_column_names,
+                                       ChunkOffset{order_count * 4}};
+  auto part_builder = TableBuilder{_benchmark_config->chunk_size, part_column_types, part_column_names, part_count};
+  auto partsupp_builder = TableBuilder{_benchmark_config->chunk_size, partsupp_column_types, partsupp_column_names,
+                                       ChunkOffset{part_count * 4}};
+  auto supplier_builder =
+      TableBuilder{_benchmark_config->chunk_size, supplier_column_types, supplier_column_names, supplier_count};
+  auto nation_builder =
+      TableBuilder{_benchmark_config->chunk_size, nation_column_types, nation_column_names, nation_count};
+  auto region_builder =
+      TableBuilder{_benchmark_config->chunk_size, region_column_types, region_column_names, region_count};
 
   /**
    * CUSTOMER
    */
 
-  for (size_t row_idx = 0; row_idx < customer_count; row_idx++) {
+  for (auto row_idx = size_t{0}; row_idx < customer_count; row_idx++) {
     auto customer = call_dbgen_mk<customer_t>(row_idx + 1, mk_cust, TPCHTable::Customer);
     customer_builder.append_row(customer.custkey, customer.name, customer.address, customer.nation_code, customer.phone,
                                 convert_money(customer.acctbal), customer.mktsegment, customer.comment);
@@ -169,14 +171,14 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate
    * ORDER and LINEITEM
    */
 
-  for (size_t order_idx = 0; order_idx < order_count; ++order_idx) {
+  for (auto order_idx = size_t{0}; order_idx < order_count; ++order_idx) {
     const auto order = call_dbgen_mk<order_t>(order_idx + 1, mk_order, TPCHTable::Orders, 0l);
 
     order_builder.append_row(order.okey, order.custkey, pmr_string(1, order.orderstatus),
                              convert_money(order.totalprice), order.odate, order.opriority, order.clerk,
                              order.spriority, order.comment);
 
-    for (auto line_idx = 0; line_idx < order.lines; ++line_idx) {
+    for (auto line_idx = int64_t{0}; line_idx < order.lines; ++line_idx) {
       const auto& lineitem = order.l[line_idx];
 
       lineitem_builder.append_row(lineitem.okey, lineitem.partkey, lineitem.suppkey, lineitem.lcnt, lineitem.quantity,
@@ -191,7 +193,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate
    * PART and PARTSUPP
    */
 
-  for (size_t part_idx = 0; part_idx < part_count; ++part_idx) {
+  for (auto part_idx = size_t{0}; part_idx < part_count; ++part_idx) {
     const auto part = call_dbgen_mk<part_t>(part_idx + 1, mk_part, TPCHTable::Part);
 
     part_builder.append_row(part.partkey, part.name, part.mfgr, part.brand, part.type, part.size, part.container,
@@ -226,7 +228,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate
    * SUPPLIER
    */
 
-  for (size_t supplier_idx = 0; supplier_idx < supplier_count; ++supplier_idx) {
+  for (auto supplier_idx = size_t{0}; supplier_idx < supplier_count; ++supplier_idx) {
     const auto supplier = call_dbgen_mk<supplier_t>(supplier_idx + 1, mk_supp, TPCHTable::Supplier);
 
     supplier_builder.append_row(supplier.suppkey, supplier.name, supplier.address, supplier.nation_code, supplier.phone,
@@ -237,7 +239,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate
    * NATION
    */
 
-  for (size_t nation_idx = 0; nation_idx < nation_count; ++nation_idx) {
+  for (auto nation_idx = size_t{0}; nation_idx < nation_count; ++nation_idx) {
     const auto nation = call_dbgen_mk<code_t>(nation_idx + 1, mk_nation, TPCHTable::Nation);
     nation_builder.append_row(nation.code, nation.text, nation.join, nation.comment);
   }
@@ -246,7 +248,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate
    * REGION
    */
 
-  for (size_t region_idx = 0; region_idx < region_count; ++region_idx) {
+  for (auto region_idx = size_t{0}; region_idx < region_count; ++region_idx) {
     const auto region = call_dbgen_mk<code_t>(region_idx + 1, mk_region, TPCHTable::Region);
     region_builder.append_row(region.code, region.text, region.comment);
   }
@@ -296,17 +298,14 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate
 }
 
 AbstractTableGenerator::IndexesByTable TPCHTableGenerator::_indexes_by_table() const {
-  return {
-      {"part", {{"p_partkey"}}},
-      {"supplier", {{"s_suppkey"}, {"s_nationkey"}}},
-      {"partsupp", {{"ps_partkey"}, {"ps_suppkey"}}},
-      // ps_partkey is subset of {ps_partkey, ps_suppkey}
-      {"customer", {{"c_custkey"}, {"c_nationkey"}}},
-      {"orders", {{"o_orderkey"}, {"o_custkey"}}},
-      {"lineitem", {{"l_orderkey"}, {"l_partkey"}}},
-      {"nation", {{"n_nationkey"}, {"n_regionkey"}}},
-      {"region", {{"r_regionkey"}}},
-  };
+  return {{"part", {{"p_partkey"}}},
+          {"supplier", {{"s_suppkey"}, {"s_nationkey"}}},
+          {"partsupp", {{"ps_partkey"}, {"ps_suppkey"}}},
+          {"customer", {{"c_custkey"}, {"c_nationkey"}}},
+          {"orders", {{"o_orderkey"}, {"o_custkey"}}},
+          {"lineitem", {{"l_orderkey"}, {"l_partkey"}}},
+          {"nation", {{"n_nationkey"}, {"n_regionkey"}}},
+          {"region", {{"r_regionkey"}}}};
 }
 
 AbstractTableGenerator::SortOrderByTable TPCHTableGenerator::_sort_order_by_table() const {

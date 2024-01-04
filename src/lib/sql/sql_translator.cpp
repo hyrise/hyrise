@@ -288,9 +288,7 @@ SQLTranslationResult SQLTranslator::translate_parser_result(const hsql::SQLParse
   _cacheable = true;
 
   auto result_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
-  const std::vector<hsql::SQLStatement*>& statements = result.getStatements();
-
-  for (const hsql::SQLStatement* stmt : statements) {
+  for (const hsql::SQLStatement* stmt : result.getStatements()) {
     auto result_node = _translate_statement(*stmt);
     result_nodes.push_back(result_node);
   }

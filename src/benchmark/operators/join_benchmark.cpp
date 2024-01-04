@@ -22,7 +22,7 @@ constexpr auto TABLE_SIZE_MEDIUM = size_t{100'000};
 constexpr auto TABLE_SIZE_BIG = size_t{10'000'000};
 
 void clear_cache() {
-  std::vector<int> clear = std::vector<int>();
+  auto clear = std::vector<int>();
   clear.resize(500 * 1000 * 1000, 42);
   const auto clear_cache_size = clear.size();
   for (auto index = size_t{0}; index < clear_cache_size; index++) {

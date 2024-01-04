@@ -306,7 +306,8 @@ KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() {
     auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
     jobs.reserve(_groupby_column_ids.size());
 
-    for (size_t group_column_index = 0; group_column_index < _groupby_column_ids.size(); ++group_column_index) {
+    const auto groupby_column_count = _groupby_column_ids.size();
+    for (auto group_column_index = size_t{0}; group_column_index < groupby_column_count; ++group_column_index) {
       jobs.emplace_back(std::make_shared<JobTask>([&input_table, group_column_index, &keys_per_chunk, chunk_count,
                                                    this]() {
         const auto groupby_column_id = _groupby_column_ids.at(group_column_index);
@@ -414,7 +415,7 @@ KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() {
 
             auto id_map = tsl::robin_map<ColumnDataType, AggregateKeyEntry, std::hash<ColumnDataType>, std::equal_to<>,
                                          decltype(allocator)>(allocator);
-            AggregateKeyEntry id_counter = 1u;
+            auto id_counter = AggregateKeyEntry{1};
 
             if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
               // We store strings shorter than five characters without using the id_map. For that, we need to reserve
@@ -431,7 +432,7 @@ KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() {
               auto& keys = keys_per_chunk[chunk_id];
 
               const auto abstract_segment = chunk_in->get_segment(groupby_column_id);
-              ChunkOffset chunk_offset{0};
+              auto chunk_offset = ChunkOffset{0};
               segment_iterate<ColumnDataType>(*abstract_segment, [&](const auto& position) {
                 if (position.is_null()) {
                   if constexpr (std::is_same_v<AggregateKey, AggregateKeyEntry>) {
@@ -558,7 +559,7 @@ void AggregateHash::_aggregate() {
   _validate_aggregates();
 
   auto& step_performance_data = dynamic_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);
-  Timer timer;
+  auto timer = Timer{};
 
   /**
    * PARTITIONING STEP

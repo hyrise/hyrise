@@ -216,8 +216,8 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_ScanAggregate)(benchmark::State& s
   sorted_lineitem->never_clear_output();
   sorted_lineitem->execute();
   const auto mocked_table_scan_output = sorted_lineitem->get_output();
-  const ColumnID group_by_column = l_orderkey_id;
-  const std::vector<ColumnID> group_by = {l_orderkey_id};
+  const auto group_by_column = l_orderkey_id;
+  const auto group_by = std::vector<ColumnID>{l_orderkey_id};
   const auto aggregate_expressions = std::vector<std::shared_ptr<WindowFunctionExpression>>{
       count_(pqp_column_(group_by_column, mocked_table_scan_output->column_data_type(group_by_column),
                          mocked_table_scan_output->column_is_nullable(group_by_column),

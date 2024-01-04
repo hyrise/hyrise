@@ -137,12 +137,20 @@ BenchmarkConfig CLIConfigParser::parse_cli_options(const cxxopts::ParseResult& p
     std::cout << "- Not caching tables as binary files" << std::endl;
   }
 
-  const auto metrics = parse_result["metrics"].as<bool>();
-  if (metrics) {
-    Assert(!output_file_string.empty(), "--metrics only makes sense when an output file is set.");
-    std::cout << "- Tracking SQL metrics" << std::endl;
+  const auto system_metrics = parse_result["system_metrics"].as<bool>();
+  if (system_metrics) {
+    Assert(!output_file_string.empty(), "--system_metrics only makes sense when an output file is set.");
+    std::cout << "- Tracking system metrics." << std::endl;
   } else {
-    std::cout << "- Not tracking SQL metrics" << std::endl;
+    std::cout << "- Not tracking system metrics." << std::endl;
+  }
+
+  const auto pipeline_metrics = parse_result["pipeline_metrics"].as<bool>();
+  if (pipeline_metrics) {
+    Assert(!output_file_string.empty(), "--pipeline_metrics only makes sense when an output file is set.");
+    std::cout << "- Tracking SQL pipeline metrics." << std::endl;
+  } else {
+    std::cout << "- Not tracking SQL pipeline metrics." << std::endl;
   }
 
   auto plugins = std::vector<std::string>{};
@@ -168,7 +176,8 @@ BenchmarkConfig CLIConfigParser::parse_cli_options(const cxxopts::ParseResult& p
                          enable_visualization,
                          verify,
                          cache_binary_tables,
-                         metrics,
+                         system_metrics,
+                         pipeline_metrics,
                          plugins};
 }
 

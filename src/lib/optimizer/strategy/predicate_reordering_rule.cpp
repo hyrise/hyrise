@@ -61,13 +61,13 @@ void PredicateReorderingRule::_apply_to_plan_without_subqueries(
   auto reordered_predicate_nodes = std::unordered_set<std::shared_ptr<AbstractLQPNode>>{};
   visit_lqp(lqp_root, [&](const auto& node) {
     if (is_predicate_style_node(node) && !reordered_predicate_nodes.contains(node)) {
-      std::vector<std::shared_ptr<AbstractLQPNode>> predicate_nodes;
+      auto predicate_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
 
-      // Gather adjacent PredicateNodes
+      // Gather adjacent PredicateNodes.
       auto current_node = node;
       while (is_predicate_style_node(current_node)) {
-        // Once a node has multiple outputs, we're not talking about a predicate chain anymore. However, a new chain can
-        // start here.
+        // Once a node has multiple outputs, we're not talking about a predicate chain anymore. However, a new chain
+        // can start here.
         if (current_node->outputs().size() > 1 && !predicate_nodes.empty()) {
           break;
         }
@@ -77,9 +77,8 @@ void PredicateReorderingRule::_apply_to_plan_without_subqueries(
       }
 
       /**
-       * A chain of predicates was found.
-       * Sort PredicateNodes in descending order with regards to the expected row_count
-       * Continue rule in deepest input
+       * A chain of predicates was found. Sort PredicateNodes in descending order with regards to the expected
+       * row_count. Continue rule in deepest input.
        */
       if (predicate_nodes.size() > 1) {
         _reorder_predicates(predicate_nodes);

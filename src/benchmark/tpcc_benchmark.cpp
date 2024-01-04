@@ -40,13 +40,13 @@ int main(int argc, char* argv[]) {
   // clang-format off
   cli_options.add_options()
     // We use -s instead of -w for consistency with the options of our other TPC-x binaries.
-    ("s,scale", "Scale factor (warehouses)", cxxopts::value<size_t>()->default_value("1")) // NOLINT
-    ("consistency_checks", "Run TPC-C consistency checks after benchmark (included with --verify)", cxxopts::value<bool>()->default_value("false")); // NOLINT
+    ("s,scale", "Scale factor (warehouses)", cxxopts::value<size_t>()->default_value("10"))
+    ("consistency_checks", "Run TPC-C consistency checks after benchmark (included with --verify)", cxxopts::value<bool>()->default_value("false"));  // NOLINT(whitespace/line_length)
   // clang-format on
 
-  std::shared_ptr<BenchmarkConfig> config;
-  size_t num_warehouses;
-  bool consistency_checks;
+  auto config = std::shared_ptr<BenchmarkConfig>{};
+  auto num_warehouses = size_t{0};
+  auto consistency_checks = false;
 
   // Parse command line args
   const auto cli_parse_result = cli_options.parse(argc, argv);
@@ -97,7 +97,8 @@ bool floats_near(T a, T b) {
 void check_consistency(const size_t num_warehouses) {
   // new_order_counts[5-1][2-1] will hold the number of new_orders for W_ID 5, D_ID 2.
   // Filled as a byproduct of check 2, validated in check 3.
-  std::vector<std::vector<int64_t>> new_order_counts(num_warehouses, std::vector<int64_t>(NUM_DISTRICTS_PER_WAREHOUSE));
+  auto new_order_counts =
+      std::vector<std::vector<int64_t>>(num_warehouses, std::vector<int64_t>(NUM_DISTRICTS_PER_WAREHOUSE));
 
   const auto total_num_districts = static_cast<size_t>(num_warehouses * NUM_DISTRICTS_PER_WAREHOUSE);
 

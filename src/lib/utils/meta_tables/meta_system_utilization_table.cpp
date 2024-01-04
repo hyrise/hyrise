@@ -60,7 +60,7 @@ std::shared_ptr<Table> MetaSystemUtilizationTable::_on_generate() const {
 }
 
 /**
-  * Returns the load average values for 1min, 5min, and 15min.
+ * Returns the load average values for 1min, 5min, and 15min.
  */
 MetaSystemUtilizationTable::LoadAvg MetaSystemUtilizationTable::_get_load_avg() {
   auto load_avg = std::array<double, 3>{};
@@ -70,19 +70,17 @@ MetaSystemUtilizationTable::LoadAvg MetaSystemUtilizationTable::_get_load_avg() 
 }
 
 /**
-  * Returns the time in ns since epoch.
-*/
+ * Returns the time in ns since epoch.
+ */
 uint64_t MetaSystemUtilizationTable::_get_total_time() {
   auto time = std::chrono::steady_clock::now().time_since_epoch();
   return std::chrono::nanoseconds{time}.count();
 }
 
 /**
- * Returns the time in ns that ALL processes have spent on the CPU
- * since an arbitrary point in the past.
- * This might be used to differentiate between CPU time consumed by this process 
- * and by other processes on the same machine.
-*/
+ * Returns the time in ns that ALL processes have spent on the CPU since an arbitrary point in the past. This might be
+ *  used to differentiate between CPU time consumed by this process and by other processes on the same machine.
+ */
 uint64_t MetaSystemUtilizationTable::_get_system_cpu_time() {
 #ifdef __linux__
   auto stat_file = std::ifstream{};
@@ -132,8 +130,7 @@ uint64_t MetaSystemUtilizationTable::_get_system_cpu_time() {
 }
 
 /**
- * Returns the time in ns that THIS process has spent on the CPU
- * since an arbitrary point in the past.
+ * Returns the time in ns that THIS process has spent on the CPU since an arbitrary point in the past.
  */
 uint64_t MetaSystemUtilizationTable::_get_process_cpu_time() {
   // CLOCK_PROCESS_CPUTIME_ID:
@@ -162,10 +159,8 @@ uint64_t MetaSystemUtilizationTable::_get_process_cpu_time() {
 /**
  * Returns a struct that contains the available and free memory size in bytes.
  * - Free memory is unallocated memory.
- * - Available memory includes free memory and currently allocated memory that
- *   could be made available (e.g. buffers, caches ...).
- *   This is not equivalent to the total memory size, since certain data can not
- *   be paged at any time.
+ * - Available memory includes free memory and currently allocated memory that could be made available (e.g. buffers,
+ *   caches ...). This is not equivalent to the total memory size, since certain data cannot be paged at any time.
  */
 MetaSystemUtilizationTable::SystemMemoryUsage MetaSystemUtilizationTable::_get_system_memory_usage() {
 #ifdef __linux__
@@ -217,8 +212,8 @@ MetaSystemUtilizationTable::SystemMemoryUsage MetaSystemUtilizationTable::_get_s
 
 /**
  * Returns a struct that contains the virtual and physical memory used by this process in bytes.
- * - Virtual Memory is the total memory usage of the process
- * - Physical Memory is the resident set size (RSS), the portion of memory that is held in RAM
+ * - Virtual Memory is the total memory usage of the process.
+ * - Physical Memory is the resident set size (RSS), the portion of memory that is held in RAM.
  */
 MetaSystemUtilizationTable::ProcessMemoryUsage MetaSystemUtilizationTable::_get_process_memory_usage() {
 #ifdef __linux__
@@ -258,17 +253,17 @@ MetaSystemUtilizationTable::ProcessMemoryUsage MetaSystemUtilizationTable::_get_
 }
 
 /**
- * This returns the actually allocated memory. It differs from _get_process_memory_usage in that it only returns
- * memory that has been allocated. The reported virtual memory consumption is usually higher than the amount of
- * allocated memory as free'd memory is not immediately returned to the system (either due to internal page
- * fragmentation or because jemalloc keeps empty pages for future use). In rare cases, it can also be higher than
- * the amount of virtual memory if memory has been allocated but not committed yet.
+ * This returns the actually allocated memory. It differs from _get_process_memory_usage in that it only returns memory
+ * that has been allocated. The reported virtual memory consumption is usually higher than the amount of allocated
+ * memory as free'd memory is not immediately returned to the system (either due to internal page fragmentation or
+ * because jemalloc keeps empty pages for future use). In rare cases, it can also be higher than the amount of virtual
+ * memory if memory has been allocated but not committed yet.
  *
  * jemalloc's memory allocation uses different size classes, each with a different number of bytes to allocate. If a
  * data structure's allocator requests a specific amount of bytes that exceeds a certain size class by only one byte,
- * the next larger size class is used and the full amount of bytes of this class is allocated. The spacing between
- * size classes doubles every 4th class. Consequently, the larger the size class that the requested amount of memory
- * slightly exceeds, the larger the difference between the actually allocated and the requested memory.
+ * the next larger size class is used and the full amount of bytes of this class is allocated. The spacing between size
+ * classes doubles every 4th class. Consequently, the larger the size class that the requested amount of memory slightly
+ * exceeds, the larger the difference between the actually allocated and the requested memory.
  *
  * Example:
  *   Assumed size classes: ... 20 KiB, 24 KiB, ..., 256 KiB, 320 KiB, ...
@@ -283,13 +278,13 @@ MetaSystemUtilizationTable::ProcessMemoryUsage MetaSystemUtilizationTable::_get_
  */
 std::optional<size_t> MetaSystemUtilizationTable::_get_allocated_memory() {
 #ifdef HYRISE_WITH_JEMALLOC
-  if (HYRISE_DEBUG) {
-    // Check that jemalloc was built with statistics support
+  if constexpr (HYRISE_DEBUG) {
+    // Check that jemalloc was built with statistics support.
 
     auto stats_enabled = false;
     auto stats_enabled_size = sizeof(stats_enabled);
 
-    auto error_code = mallctl("config.stats", &stats_enabled, &stats_enabled_size, nullptr, 0);
+    const auto error_code = mallctl("config.stats", &stats_enabled, &stats_enabled_size, nullptr, 0);
     Assert(!error_code, "Cannot check if jemalloc was built with --stats_enabled.");
     Assert(stats_enabled, "Hyrise's jemalloc was not build with --stats_enabled.");
   }
@@ -299,14 +294,14 @@ std::optional<size_t> MetaSystemUtilizationTable::_get_allocated_memory() {
   {
     auto epoch = uint64_t{1};
     auto epoch_size = sizeof(epoch);
-    auto error_code = mallctl("epoch", &epoch, &epoch_size, &epoch, epoch_size);
+    const auto error_code = mallctl("epoch", &epoch, &epoch_size, &epoch, epoch_size);
     Assert(!error_code, "Setting epoch failed.");
   }
 
   auto allocated = size_t{0};
   auto allocated_size = sizeof(allocated);
 
-  auto error_code = mallctl("stats.allocated", &allocated, &allocated_size, nullptr, 0);
+  const auto error_code = mallctl("stats.allocated", &allocated, &allocated_size, nullptr, 0);
   Assert(!error_code, std::string{"mallctl failed with error code "} + std::to_string(error_code) + ".");
 
   return allocated;

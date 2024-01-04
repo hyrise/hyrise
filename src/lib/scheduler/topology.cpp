@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <iomanip>
 #include <memory>
+#include <numeric>
 #include <sstream>
 #include <thread>
 #include <utility>
@@ -127,7 +128,7 @@ void Topology::_init_non_numa_topology(uint32_t max_num_cores) {
     _num_cpus = std::min(_num_cpus, max_num_cores);
   }
 
-  auto cpus = std::vector<TopologyCpu>();
+  auto cpus = std::vector<TopologyCpu>{};
 
   for (auto cpu_id = CpuID{0}; cpu_id < _num_cpus; ++cpu_id) {
     cpus.emplace_back(cpu_id);
@@ -135,29 +136,6 @@ void Topology::_init_non_numa_topology(uint32_t max_num_cores) {
 
   auto node = TopologyNode(std::move(cpus));
   _nodes.emplace_back(std::move(node));
-}
-
-void Topology::_init_fake_numa_topology(std::vector<uint32_t>&& worker_per_node, const int32_t hardware_threads) {
-  const auto hardware_threads = std::thread::hardware_concurrency();
-  _nodes.reserve(worker_per_node.size());
-
-  const auto total_worker_count = std::min(uint32_t{hardware_threads}, std::reduce(worker_per_node.cbegin(), worker_per_node.cend());
-
-  auto cpu_id = CpuID{0};
-  for (const auto worker_count : worker_per_node) {
-    auto cpus = std::vector<TopologyCpu>();
-
-    for (auto worker_id = uint32_t{0}; worker_id < worker_count && cpu_id < hardware_threads; ++worker_id) {
-      cpus.emplace_back(cpu_id);
-      ++cpu_id;
-    }
-
-    auto node = TopologyNode(std::move(cpus));
-
-    _nodes.emplace_back(std::move(node));
-  }
-
-  _num_cpus = num_workers;
 }
 
 void Topology::_init_fake_numa_topology(uint32_t max_num_workers, uint32_t workers_per_node) {
@@ -173,6 +151,25 @@ void Topology::_init_fake_numa_topology(uint32_t max_num_workers, uint32_t worke
   if (num_workers % workers_per_node != 0) {
     num_nodes++;
   }
+
+  _nodes.reserve(num_nodes);
+
+  auto cpu_id = CpuID{0};
+
+  for (auto node_id = uint32_t{0}; node_id < num_nodes; ++node_id) {
+    auto cpus = std::vector<TopologyCpu>();
+
+    for (auto worker_id = uint32_t{0}; worker_id < workers_per_node && cpu_id < num_workers; ++worker_id) {
+      cpus.emplace_back(cpu_id);
+      ++cpu_id;
+    }
+
+    auto node = TopologyNode(std::move(cpus));
+
+    _nodes.emplace_back(std::move(node));
+  }
+
+  _num_cpus = num_workers;
 }
 
 const std::vector<TopologyNode>& Topology::nodes() const {
