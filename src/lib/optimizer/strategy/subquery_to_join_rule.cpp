@@ -482,7 +482,8 @@ std::shared_ptr<AggregateNode> SubqueryToJoinRule::adapt_aggregate_node(
   auto group_by_expressions = std::vector<std::shared_ptr<AbstractExpression>>(
       node->node_expressions.cbegin(), node->node_expressions.cbegin() + static_cast<NodeExpressionsDifferenceType>(
                                                                              node->aggregate_expressions_begin_idx));
-  auto original_group_by_expressions = ExpressionUnorderedSet(group_by_expressions.cbegin(), group_by_expressions.cend());
+  auto original_group_by_expressions =
+      ExpressionUnorderedSet(group_by_expressions.cbegin(), group_by_expressions.cend());
 
   const auto not_found_it = original_group_by_expressions.cend();
   for (const auto& expression : required_output_expressions) {

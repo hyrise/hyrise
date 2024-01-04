@@ -107,8 +107,8 @@ bool JCCHBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, Be
   const auto& this_item_params = _all_params[item_id];
 
   // Choose a random parameterization from _all_params
-  static thread_local std::minstd_rand random_engine{_random_seed++};
-  std::uniform_int_distribution<> params_dist{0, static_cast<int>(this_item_params.size() - 1)};
+  static thread_local auto random_engine = std::minstd_rand{_random_seed++};
+  auto params_dist = std::uniform_int_distribution<>{0, static_cast<int>(this_item_params.size() - 1)};
   const auto raw_params_iter = this_item_params.begin() + params_dist(random_engine);
 
   auto parameters = std::vector<std::string>{};

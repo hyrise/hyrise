@@ -767,7 +767,8 @@ void AggregateHash::_aggregate() {
             case WindowFunction::PercentRank:
             case WindowFunction::Rank:
             case WindowFunction::RowNumber:
-              Fail("Unsupported aggregate function " + window_function_to_string.left.at(aggregate->window_function) + ".");
+              Fail("Unsupported aggregate function " + window_function_to_string.left.at(aggregate->window_function) +
+                   ".");
           }
         });
 

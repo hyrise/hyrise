@@ -8,20 +8,20 @@ namespace hyrise {
 
 TPCCNewOrder::TPCCNewOrder(const int num_warehouses, BenchmarkSQLExecutor& sql_executor)
     : AbstractTPCCProcedure(sql_executor), c_id{static_cast<int>(_tpcc_random_generator.nurand(1023, 1, 3000))} {
-  std::uniform_int_distribution<> warehouse_dist{1, num_warehouses};
+  auto warehouse_dist = std::uniform_int_distribution<>{1, num_warehouses};
   w_id = warehouse_dist(_random_engine);
 
-  std::uniform_int_distribution<> district_dist{1, 10};
+  auto district_dist = std::uniform_int_distribution<>{1, 10};
   d_id = district_dist(_random_engine);
 
-  std::uniform_int_distribution<> num_items_dist{5, 15};
+  auto num_items_dist = std::uniform_int_distribution<>{5, 15};
   ol_cnt = num_items_dist(_random_engine);
 
   order_lines.resize(ol_cnt);
   for (auto& order_line : order_lines) {
     order_line.ol_i_id = static_cast<int32_t>(_tpcc_random_generator.nurand(8191, 1, 100'000));
 
-    std::uniform_int_distribution<> home_warehouse_dist{1, 100};
+    auto home_warehouse_dist = std::uniform_int_distribution<>{1, 100};
     // 1% chance of remote warehouses (if more than one).
     const auto is_home_warehouse = num_warehouses == 1 || home_warehouse_dist(_random_engine) > 1;
     if (is_home_warehouse) {
@@ -34,11 +34,11 @@ TPCCNewOrder::TPCCNewOrder(const int num_warehouses, BenchmarkSQLExecutor& sql_e
       } while (order_line.ol_supply_w_id == w_id);
     }
 
-    std::uniform_int_distribution<> quantity_dist{1, 10};
+    auto quantity_dist = std::uniform_int_distribution<>{1, 10};
     order_line.ol_quantity = quantity_dist(_random_engine);
   }
 
-  std::uniform_int_distribution<> is_erroneous_dist{1, 100};
+  auto is_erroneous_dist = std::uniform_int_distribution<>{1, 100};
   // 1% chance of erroneous procedures.
   if (is_erroneous_dist(_random_engine) == 1) {
     order_lines.back().ol_i_id = UNUSED_ITEM_ID;  // A non-existing item ID

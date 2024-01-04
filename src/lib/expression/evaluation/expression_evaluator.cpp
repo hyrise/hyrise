@@ -390,7 +390,7 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
   const auto& right_expression = *in_expression.set();
 
   auto result_values = pmr_vector<ExpressionEvaluator::Bool>{};
-  auto result_nulls = pmr_vector<bool> {};
+  auto result_nulls = pmr_vector<bool>{};
 
   if (right_expression.type == ExpressionType::List) {
     const auto& list_expression = static_cast<const ListExpression&>(right_expression);

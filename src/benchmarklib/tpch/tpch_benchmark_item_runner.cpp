@@ -83,7 +83,7 @@ void TPCHBenchmarkItemRunner::on_tables_loaded() {
   if (_use_prepared_statements) {
     std::cout << " - Preparing queries" << std::endl;
 
-    std::stringstream sql;
+    auto sql = std::stringstream{};
     for (auto item_id = BenchmarkItemID{0}; item_id < 22; ++item_id) {
       if (item_id + 1 == 15) {
         // We cannot prepare query 15, because the SELECT relies on a view that is generated in the first step. We'll

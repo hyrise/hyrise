@@ -50,7 +50,7 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config,
     std::cout << Hyrise::get().topology;
 
     // Add NUMA topology information to the context, for processing in the benchmark_multithreaded.py script.
-    auto numa_cores_per_node = std::vector<size_t>();
+    auto numa_cores_per_node = std::vector<size_t>{};
     for (const auto& node : Hyrise::get().topology.nodes()) {
       numa_cores_per_node.push_back(node.cpus.size());
     }
@@ -260,7 +260,7 @@ void BenchmarkRunner::_benchmark_shuffled() {
 
       _schedule_item_run(item_id);
     } else {
-      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+      std::this_thread::sleep_for(std::chrono::milliseconds{10});
     }
   }
   _state.set_done();
@@ -297,7 +297,7 @@ void BenchmarkRunner::_benchmark_ordered() {
       if (_currently_running_clients.load(std::memory_order_relaxed) < _config.clients) {
         _schedule_item_run(item_id);
       } else {
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        std::this_thread::sleep_for(std::chrono::milliseconds{10});
       }
     }
     _state.set_done();
@@ -392,7 +392,7 @@ void BenchmarkRunner::_warmup(const BenchmarkItemID item_id) {
     if (_currently_running_clients.load(std::memory_order_relaxed) < _config.clients) {
       _schedule_item_run(item_id);
     } else {
-      std::this_thread::sleep_for(std::chrono::microseconds{250});
+      std::this_thread::sleep_for(std::chrono::milliseconds{10});
     }
   }
 
@@ -566,11 +566,11 @@ nlohmann::json BenchmarkRunner::create_context(const BenchmarkConfig& config) {
   // Generate YY-MM-DD hh:mm::ss
   auto current_time = std::time(nullptr);
   auto local_time = *std::localtime(&current_time);  // NOLINT(concurrency-mt-unsafe) - not called in parallel
-  std::stringstream timestamp_stream;
+  auto timestamp_stream = std::stringstream{};
   timestamp_stream << std::put_time(&local_time, "%Y-%m-%d %H:%M:%S");
 
   // clang-format off
-  std::stringstream compiler;
+  auto compiler = std::stringstream{};
   #if defined(__clang__)
     compiler << "clang " << __clang_major__ << "." << __clang_minor__ << "." << __clang_patchlevel__;
   #elif defined(__GNUC__)

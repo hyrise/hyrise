@@ -411,7 +411,6 @@ TEST_F(SchedulerTest, ShutdownTaskDecrement) {
   EXPECT_THROW(shutdown_task_2.execute(), std::logic_error);
 }
 
-
 // Check that spawned jobs increment the semaphore correctly.
 // First, create jobs but not schedule them to check if semaphore is zero. Second, we spwan blocked jobs and check the
 // semaphore to have the correct value. Third, we unblock all jobs and check that the semaphore is zero again.
@@ -496,7 +495,7 @@ TEST_F(SchedulerTest, SemaphoreInrementsDependentTasks) {
     }));
     // We create runs of dependent jobs and set the current job as a predecessor of the previous job.
     if (job_id % DEPENDENT_JOB_TASKS_LENGTH != 0) {
-      waiting_jobs.back()->set_as_predecessor_of(waiting_jobs[job_id-1]);
+      waiting_jobs.back()->set_as_predecessor_of(waiting_jobs[job_id - 1]);
     }
   }
 

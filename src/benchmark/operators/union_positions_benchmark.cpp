@@ -23,12 +23,12 @@ constexpr auto GENERATED_TABLE_NUM_CHUNKS = 4;
  * and ChunkOffsets within [0, std::floor(referenced_table_chunk_size))
  */
 std::shared_ptr<hyrise::RowIDPosList> generate_pos_list(float referenced_table_chunk_size, size_t pos_list_size) {
-  std::random_device random_device;
-  std::default_random_engine random_engine(random_device());
+  auto random_device = std::random_device{};
+  auto random_engine = std::default_random_engine(random_device());
 
-  std::uniform_int_distribution<hyrise::ChunkID::base_type> chunk_id_distribution(
+  auto chunk_id_distribution = std::uniform_int_distribution<hyrise::ChunkID::base_type>(
       0, static_cast<hyrise::ChunkID::base_type>(REFERENCED_TABLE_CHUNK_COUNT - 1));
-  std::uniform_int_distribution<hyrise::ChunkOffset::base_type> chunk_offset_distribution(
+  auto chunk_offset_distribution = std::uniform_int_distribution<hyrise::ChunkOffset::base_type>(
       hyrise::ChunkOffset{0}, static_cast<hyrise::ChunkOffset::base_type>(referenced_table_chunk_size - 1));
 
   auto pos_list = std::make_shared<hyrise::RowIDPosList>();
@@ -51,13 +51,13 @@ std::shared_ptr<Table> create_reference_table(std::shared_ptr<Table> referenced_
                                               size_t num_columns) {
   const auto num_rows_per_chunk = num_rows / GENERATED_TABLE_NUM_CHUNKS;
 
-  TableColumnDefinitions column_definitions;
-  for (size_t column_idx = 0; column_idx < num_columns; ++column_idx) {
+  auto column_definitions = TableColumnDefinitions{};
+  for (auto column_idx = size_t{0}; column_idx < num_columns; ++column_idx) {
     column_definitions.emplace_back("c" + std::to_string(column_idx), DataType::Int, false);
   }
   auto table = std::make_shared<Table>(column_definitions, TableType::References);
 
-  for (size_t row_idx = 0; row_idx < num_rows;) {
+  for (auto row_idx = size_t{0}; row_idx < num_rows;) {
     const auto num_rows_in_this_chunk = std::min(num_rows_per_chunk, num_rows - row_idx);
 
     auto segments = Segments{};

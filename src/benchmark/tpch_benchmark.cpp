@@ -53,11 +53,11 @@ int main(int argc, char* argv[]) {
                    "legal TPC-H input data.", cxxopts::value<std::string>()->default_value("None")); // NOLINT
   // clang-format on
 
-  std::shared_ptr<BenchmarkConfig> config;
-  std::string comma_separated_queries;
-  float scale_factor;
-  bool use_prepared_statements;
-  bool jcch;
+  auto config = std::shared_ptr<BenchmarkConfig>{};
+  auto comma_separated_queries = std::string{};
+  auto scale_factor = float{};
+  auto use_prepared_statements = false;
+  auto jcch = false;
   auto jcch_skewed = false;
 
   // Parse command line args
