@@ -384,7 +384,7 @@ void BenchmarkRunner::_warmup(const BenchmarkItemID item_id) {
     if (_currently_running_clients.load(std::memory_order_relaxed) < _config.clients) {
       _schedule_item_run(item_id);
     } else {
-      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+      std::this_thread::sleep_for(std::chrono::microseconds{250});
     }
   }
 
