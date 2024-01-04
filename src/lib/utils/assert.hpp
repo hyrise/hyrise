@@ -52,10 +52,10 @@ namespace detail {
 
 #define Fail(msg)                                                                                             \
   hyrise::detail::fail(hyrise::trim_source_file_path(__FILE__) + ":" BOOST_PP_STRINGIZE(__LINE__) " " + msg); \
-  static_assert(true, "End call of macro with a semicolon")
+  static_assert(true, "End call of macro with a semicolon.")
 
 [[noreturn]] inline void FailInput(const std::string& msg) {
-  throw InvalidInputException(std::string("Invalid input error: ") + msg);
+  throw InvalidInputException(std::string("Invalid input error: ") + msg + ".");
 }
 
 }  // namespace hyrise
@@ -64,13 +64,13 @@ namespace detail {
   if (!static_cast<bool>(expr)) { \
     Fail(msg);                    \
   }                               \
-  static_assert(true, "End call of macro with a semicolon")
+  static_assert(true, "End call of macro with a semicolon.")
 
 #define AssertInput(expr, msg)                                               \
   if (!static_cast<bool>(expr)) {                                            \
     throw InvalidInputException(std::string("Invalid input error: ") + msg); \
   }                                                                          \
-  static_assert(true, "End call of macro with a semicolon")
+  static_assert(true, "End call of macro with a semicolon.")
 
 #if HYRISE_DEBUG
 #define DebugAssert(expr, msg) Assert(expr, msg)

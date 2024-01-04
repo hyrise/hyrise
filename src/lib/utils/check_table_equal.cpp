@@ -284,13 +284,13 @@ std::optional<std::string> check_table_equal(const std::shared_ptr<const Table>&
       } else if (actual_table->column_data_type(column_id) == DataType::Float) {
         auto left_val = static_cast<double>(boost::get<float>(actual_matrix[row_id][column_id]));
         auto right_val = lossless_variant_cast<double>(expected_matrix[row_id][column_id]);
-        Assert(right_val, "Expected double or float in expected_matrix");
+        Assert(right_val, "Expected double or float in expected_matrix.");
 
         highlight_if(!almost_equals(left_val, *right_val, float_comparison_mode), row_id, column_id);
       } else if (actual_table->column_data_type(column_id) == DataType::Double) {
         auto left_val = boost::get<double>(actual_matrix[row_id][column_id]);
         auto right_val = lossless_variant_cast<double>(expected_matrix[row_id][column_id]);
-        Assert(right_val, "Expected double or float in expected_matrix");
+        Assert(right_val, "Expected double or float in expected_matrix.");
 
         highlight_if(!almost_equals(left_val, *right_val, float_comparison_mode), row_id, column_id);
       } else {
@@ -298,7 +298,7 @@ std::optional<std::string> check_table_equal(const std::shared_ptr<const Table>&
                                                       actual_table->column_data_type(column_id) == DataType::Long)) {
           auto left_val = lossless_variant_cast<int64_t>(actual_matrix[row_id][column_id]);
           auto right_val = lossless_variant_cast<int64_t>(expected_matrix[row_id][column_id]);
-          Assert(left_val && right_val, "Expected int or long in actual_matrix and expected_matrix");
+          Assert(left_val && right_val, "Expected int or long in actual_matrix and expected_matrix.");
 
           highlight_if(*left_val != *right_val, row_id, column_id);
         } else {

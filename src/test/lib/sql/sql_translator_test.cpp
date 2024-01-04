@@ -88,7 +88,7 @@ class SQLTranslatorTest : public BaseTest {
     const auto translation_result = SQLTranslator{use_mvcc}.translate_parser_result(parser_result);
     const auto lqps = translation_result.lqp_nodes;
 
-    Assert(lqps.size() == 1, "Expected just one LQP");
+    Assert(lqps.size() == 1, "Expected just one LQP.");
     return {lqps.at(0), translation_result.translation_info};
   }
 

@@ -210,7 +210,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate
       {
         // Make sure we do not generate non-unique combinations (see above)
         if (partsupp.partkey != last_partkey) {
-          Assert(partsupp.partkey > last_partkey, "Expected partkey to be generated in ascending order");
+          Assert(partsupp.partkey > last_partkey, "Expected partkey to be generated in ascending order.");
           last_partkey = partsupp.partkey;
           suppkeys.clear();
         }

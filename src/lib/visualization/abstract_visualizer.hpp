@@ -117,7 +117,7 @@ class AbstractVisualizer {
 
     char* tmpname = strdup("/tmp/hyrise_viz_XXXXXX");
     auto file_descriptor = mkstemp(tmpname);
-    Assert(file_descriptor > 0, "mkstemp failed");
+    Assert(file_descriptor > 0, "mkstemp failed.");
 
     // mkstemp returns a file descriptor. Unfortunately, we cannot directly create an ofstream from a file descriptor.
     close(file_descriptor);

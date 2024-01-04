@@ -22,7 +22,7 @@ string_heap_size(const T& string) {
     return string.capacity() + 1;
   }
 
-  DebugAssert(string.capacity() == SSO_STRING_CAPACITY, "SSO does not meet expectations");
+  DebugAssert(string.capacity() == SSO_STRING_CAPACITY, "SSO does not meet expectations.");
   return 0;
 }
 

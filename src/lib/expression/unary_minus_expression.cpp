@@ -8,7 +8,7 @@ namespace hyrise {
 
 UnaryMinusExpression::UnaryMinusExpression(const std::shared_ptr<AbstractExpression>& argument)
     : AbstractExpression(ExpressionType::UnaryMinus, {argument}) {
-  Assert(argument->data_type() != DataType::String, "Can't negate strings");
+  Assert(argument->data_type() != DataType::String, "Cannot negate strings.");
 }
 
 std::shared_ptr<AbstractExpression> UnaryMinusExpression::argument() const {
@@ -32,7 +32,7 @@ DataType UnaryMinusExpression::data_type() const {
 
 bool UnaryMinusExpression::_shallow_equals(const AbstractExpression& expression) const {
   DebugAssert(dynamic_cast<const UnaryMinusExpression*>(&expression),
-              "Different expression type should have been caught by AbstractExpression::operator==");
+              "Different expression type should have been caught by AbstractExpression::operator==.");
   return true;
 }
 

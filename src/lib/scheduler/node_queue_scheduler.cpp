@@ -63,6 +63,9 @@ void NodeQueueScheduler::begin() {
             std::make_shared<Worker>(queue, WorkerID{_worker_id_allocator->allocate()}, topology_cpu.cpu_id));
       }
     }
+
+    // Tracked per node as core restrictions can lead to unbalanced core counts.
+    _workers_per_node.emplace_back(topology_node.cpus.size());
   }
 
   Assert(!_active_nodes.empty(), "None of the system nodes has active workers.");
@@ -177,9 +180,11 @@ void NodeQueueScheduler::finish() {
     worker->join();
   }
 
+  _task_counter = 0;
   _workers = {};
   _queues = {};
-  _task_counter = 0;
+  _active_nodes = {};
+  _workers_per_node = {};
 }
 
 bool NodeQueueScheduler::active() const {

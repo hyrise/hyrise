@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <iomanip>
 #include <memory>
+#include <numeric>
 #include <sstream>
 #include <thread>
 #include <utility>
@@ -127,7 +128,7 @@ void Topology::_init_non_numa_topology(uint32_t max_num_cores) {
     _num_cpus = std::min(_num_cpus, max_num_cores);
   }
 
-  auto cpus = std::vector<TopologyCpu>();
+  auto cpus = std::vector<TopologyCpu>{};
 
   for (auto cpu_id = CpuID{0}; cpu_id < _num_cpus; ++cpu_id) {
     cpus.emplace_back(cpu_id);
