@@ -1,11 +1,13 @@
 #pragma once
 
 #include <stdint.h>
+
 #include <array>
 #include <atomic>
 #include <condition_variable>
 #include <memory>
 
+#include <tbb/concurrent_queue.h>
 #include "concurrentqueue.h"
 #include "lightweightsemaphore.h"
 
@@ -44,7 +46,7 @@ class TaskQueue {
 
   /**
    * Returns the estimated load for the TaskQueue (i.e., all queues of the TaskQueue instance). The load is "estimated"
-   * as the used concurrent queue does not guarantee that `size_approx()` returns the correct size at a given point in
+   * as TBB's concurrent queue does not guarantee that `unsafe_size()` returns the correct size at a given point in
    * time. The priority queues are weighted, i.e., a task in the high priority queue leads to a larger load than a task
    * in the default priority queue.
    */
@@ -59,7 +61,7 @@ class TaskQueue {
 
  private:
   NodeID _node_id{INVALID_NODE_ID};
-  std::array<moodycamel::ConcurrentQueue<std::shared_ptr<AbstractTask>>, NUM_PRIORITY_LEVELS> _queues;
+  std::array<tbb::concurrent_queue<std::shared_ptr<AbstractTask>>, NUM_PRIORITY_LEVELS> _queues;
   [[maybe_unused]] std::array<size_t, 12> _pull_latencies{};
 };
 

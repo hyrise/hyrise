@@ -82,30 +82,32 @@ bool TransactionContext::aborted() const {
 }
 
 void TransactionContext::rollback(RollbackReason rollback_reason) {
-  auto marked = false;
-  std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
+  //auto marked = false;
+  //std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
   if (rollback_reason == RollbackReason::Conflict) {
     _mark_as_conflicted();
-    marked = true;
+    //marked = true;
   } else {
     // We directly go to RolledBackByUser, skipping Conflicted
     Assert(_num_active_operators == 0, "For a user-initiated rollback, no operators should be active");
   }
 
-  std::chrono::steady_clock::time_point begin2 = std::chrono::steady_clock::now();
+  //std::chrono::steady_clock::time_point begin2 = std::chrono::steady_clock::now();
   for (const auto& op : _read_write_operators) {
     op->rollback_records();
   }
 
-  std::chrono::steady_clock::time_point begin3 = std::chrono::steady_clock::now();
+  //std::chrono::steady_clock::time_point begin3 = std::chrono::steady_clock::now();
   _mark_as_rolled_back(rollback_reason);
 
+  /*
   std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
   const auto part1 = static_cast<size_t>(std::chrono::duration_cast<std::chrono::microseconds>(begin2 - begin).count());
   const auto part2 = static_cast<size_t>(std::chrono::duration_cast<std::chrono::microseconds>(begin3 - begin2).count());
   const auto part3 = static_cast<size_t>(std::chrono::duration_cast<std::chrono::microseconds>(end - begin3).count());
   if (part1 + part2 + part3 > 90)
     std::printf("#%zu\t\tmarked? %zu\t\t#1 %zuu\t#2 %zuus \t#3 %zuus\n",  static_cast<size_t>(std::hash<std::thread::id>{}(std::this_thread::get_id())), static_cast<size_t>(marked), part1, part2, part3);
+  */
 }
 
 void TransactionContext::commit_async(const std::function<void(TransactionID)>& callback) {
@@ -119,7 +121,7 @@ void TransactionContext::commit_async(const std::function<void(TransactionID)>& 
 }
 
 void TransactionContext::commit() {
-  std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
+  //std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
   Assert(_phase == TransactionPhase::Active, "TransactionContext must be active to be committed.");
 
   // No modifications made, nothing to commit, no need to acquire a commit ID
@@ -135,12 +137,14 @@ void TransactionContext::commit() {
   commit_async(callback);
 
   committed_future.wait();
+  /*
   std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
   const auto part1 = static_cast<size_t>(std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count());
   if (part1 > 200) {
     std::printf("#%zu\t\t#1 %zuus\n",  static_cast<size_t>(std::hash<std::thread::id>{}(std::this_thread::get_id())), part1);
     std::cout << std::flush;
   }
+  */
 }
 
 void TransactionContext::_mark_as_conflicted() {

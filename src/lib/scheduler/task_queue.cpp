@@ -13,6 +13,7 @@
 namespace { 
 
 void print_predecessors(const auto begin, std::ostream& out, const auto& task, const size_t indent_width = 0) {
+return;
   if (task->predecessors().empty()) {
     return;
   }
@@ -38,7 +39,7 @@ TaskQueue::TaskQueue(NodeID node_id) : _node_id{node_id}, _pull_latencies{} {}
 
 bool TaskQueue::empty() const {
   for (const auto& queue : _queues) {
-    if (queue.size_approx() > size_t{0}) {
+    if (!queue.empty()) {
       return false;
     }
   }
@@ -65,18 +66,17 @@ void TaskQueue::push(const std::shared_ptr<AbstractTask>& task, const SchedulePr
   //std::cout << task->description() << std::endl;
   //std::cout << _node_id << " is node_id " << std::endl;
   task->set_node_id(_node_id);
-  [[maybe_unused]] const auto enqueue_successful = _queues[priority_uint].enqueue(task);
+  _queues[priority_uint].push(task);
   //const auto queue_size = _queues[priority_uint].size_approx();
   //if (queue_size > 2000 && queue_size % 1018 == 0) 
   //  std::printf("size of queue: %zu\n", queue_size);
-  DebugAssert(enqueue_successful, "Enqueuing did not succeed.");
   semaphore.signal();
 }
 
 std::shared_ptr<AbstractTask> TaskQueue::pull() {
   auto task = std::shared_ptr<AbstractTask>{};
   for (auto& queue : _queues) {
-    if (queue.try_dequeue(task)) {
+    if (queue.try_pop(task)) {
       std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
       const auto age = static_cast<size_t>(std::chrono::duration_cast<std::chrono::microseconds>(now - task->tp).count());
       
@@ -99,13 +99,14 @@ std::shared_ptr<AbstractTask> TaskQueue::pull() {
         ss_1 << '\n' << ss_2.str() << '\n';
         std::cout << ss_1.str();
       }
-      
-      if (age > 100'000'000) {  // older than 10s.
+ 
+      if (age > 500'000) {  // older than 100 ms.
         auto ss = std::stringstream{};
-        ss << "Current size of queues >> high: " << _queues[0].size_approx() << ", low: " << _queues[1].size_approx() << '\n';
+        ss << "\n\nCurrent size of queues >> high: " << _queues[0].unsafe_size() << ", low: " << _queues[1].unsafe_size() << '\n';
         ss << "Task's age: " << age / 1'000 << " ms >> " << task->description() << '\n';
         ss << "Task's predecessors/successors/: #" << task->predecessors().size() << " & #" << task->successors().size() << '\n';
         print_predecessors(now, ss, task);
+
         /*
         if (!task->predecessors().empty()) {
           for (const auto&  pre_weak : task->predecessors()) {
@@ -114,7 +115,6 @@ std::shared_ptr<AbstractTask> TaskQueue::pull() {
             ss << "Predecessor age: " << pre_age / 1'000 << " ms >> " << pre->description() << '\n';
           }
         }
-        */
 
         const int size = 20;
         void *buffer[size];
@@ -133,6 +133,7 @@ std::shared_ptr<AbstractTask> TaskQueue::pull() {
 
         // once done, remember to de-allocate ptr
         free(ptr);
+        */
         std::cout << ss.str();
       }
       return task;
@@ -147,13 +148,12 @@ std::shared_ptr<AbstractTask> TaskQueue::pull() {
 std::shared_ptr<AbstractTask> TaskQueue::steal() {
   auto task = std::shared_ptr<AbstractTask>{};
   for (auto& queue : _queues) {
-    if (queue.try_dequeue(task)) {
+    if (queue.try_pop(task)) {
       if (task->is_stealable()) {
         return task;
       }
 
-      [[maybe_unused]] const auto enqueue_successful = queue.enqueue(task);
-      DebugAssert(enqueue_successful, "Enqueuing stolen task did not succeed.");
+      queue.push(task);
       semaphore.signal();
     }
   }
@@ -170,7 +170,7 @@ size_t TaskQueue::estimate_load() const {
   // (starting with 2^0) to calculate the cost factor per priority level.
   for (auto queue_id = size_t{0}; queue_id < NUM_PRIORITY_LEVELS; ++queue_id) {
     // The lowest priority has a multiplier of 2^0, the next higher priority 2^1, and so on.
-    estimated_load += _queues[queue_id].size_approx() * (size_t{1} << (NUM_PRIORITY_LEVELS - 1 - queue_id));
+    estimated_load += _queues[queue_id].unsafe_size() * (size_t{1} << (NUM_PRIORITY_LEVELS - 1 - queue_id));
   }
 
   return estimated_load;
