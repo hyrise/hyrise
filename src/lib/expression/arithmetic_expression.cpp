@@ -88,7 +88,7 @@ ExpressionPrecedence ArithmeticExpression::_precedence() const {
     case ArithmeticOperator::Modulo:
       return ExpressionPrecedence::MultiplicationDivision;
   }
-  Fail("Invalid enum value");
+  Fail("Invalid enum value.");
 }
 
 }  // namespace hyrise

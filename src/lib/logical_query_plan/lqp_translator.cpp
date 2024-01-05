@@ -188,7 +188,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node(
       return _translate_predicate_node_to_index_scan(predicate_node, input_operator);
   }
 
-  Fail("Invalid enum value");
+  Fail("Invalid enum value.");
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_index_scan(

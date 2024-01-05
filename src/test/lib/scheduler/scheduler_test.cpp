@@ -414,7 +414,7 @@ TEST_F(SchedulerTest, ShutdownTaskDecrement) {
 // Check that spawned jobs increment the semaphore correctly.
 // First, create jobs but not schedule them to check if semaphore is zero. Second, we spwan blocked jobs and check the
 // semaphore to have the correct value. Third, we unblock all jobs and check that the semaphore is zero again.
-TEST_F(SchedulerTest, SemaphoreInrements) {
+TEST_F(SchedulerTest, SemaphoreIncrements) {
   constexpr auto SLEEP_TIME = std::chrono::microseconds{500};
 
   const auto thread_count = std::thread::hardware_concurrency();
@@ -469,7 +469,7 @@ TEST_F(SchedulerTest, SemaphoreInrements) {
 
 // Similar to test above, but here we make tasks dependent of each other which means only non-dependent tasks will be
 // scheduled.
-TEST_F(SchedulerTest, SemaphoreInrementsDependentTasks) {
+TEST_F(SchedulerTest, SemaphoreIncrementsDependentTasks) {
   constexpr auto SLEEP_TIME = std::chrono::microseconds{500};
   constexpr auto DEPENDENT_JOB_TASKS_LENGTH = size_t{10};
 

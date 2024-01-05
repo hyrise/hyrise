@@ -43,7 +43,7 @@ void Chunk::replace_segment(size_t column_id, const std::shared_ptr<AbstractSegm
 }
 
 void Chunk::append(const std::vector<AllTypeVariant>& values) {
-  DebugAssert(is_mutable(), "Cannot append to immutable Chunk.");
+  DebugAssert(is_mutable(), "Cannot append to immutable chunk.");
 
   if (has_mvcc_data()) {
     // Make the row visible - mvcc_data has been pre-allocated

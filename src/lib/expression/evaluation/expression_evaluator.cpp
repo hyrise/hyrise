@@ -94,7 +94,7 @@ std::shared_ptr<AbstractExpression> rewrite_in_list_expression(const InExpressio
    * "a NOT IN (x, y, z)"   ---->   "a != x AND a != y AND a != z"
    *
    * Out of array_expression.elements(), pick those expressions whose type can be compared with
-   * in_expression.operand() so we're not getting "Can't compare Int and String" when doing something crazy like
+   * in_expression.operand() so we're not getting "Cannot compare Int and String" when doing something crazy like
    * "5 IN (6, 5, "Hello")
    */
 
@@ -409,7 +409,7 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
 
     /**
      * Out of array_expression.elements(), pick those expressions whose type can be compared with
-     * in_expression.operand() so we're not getting "Can't compare Int and String" when doing something crazy like
+     * in_expression.operand() so we're not getting "Cannot compare Int and String" when doing something crazy like
      * "5 IN (6, 5, "Hello")
      */
     const auto left_is_string = left_expression.data_type() == DataType::String;
@@ -443,7 +443,7 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
     // If all elements of the list are simple values (e.g., `IN (1, 2, 3)`), iterate over the column and directly
     // compare the left value with the values in the list.
     //
-    // If we can't store the values in a vector (because they are of non-literals or of different types), we translate
+    // If we cannot store the values in a vector (because they are of non-literals or of different types), we translate
     // the IN clause to a series of ORs:
     // "a IN (x, y, z)"   ---->   "a = x OR a = y OR a = z"
     // The first path is faster, while the second one is more flexible.
@@ -505,7 +505,7 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
       const auto subquery_results = _prune_tables_to_expression_results<SubqueryDataType>(subquery_result_tables);
       Assert(subquery_results.size() == 1 || subquery_results.size() == _output_row_count,
              "Unexpected number of lists returned from Subquery. "
-             "Should be one (if the Subquery is not correlated), or one per row (if it is).");
+             "Should be one (if the subquery is not correlated), or one per row (if it is).");
 
       _resolve_to_expression_result_view(left_expression, [&](const auto& left_view) {
         using ValueDataType = typename std::decay_t<decltype(left_view)>::Type;
@@ -519,9 +519,9 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
 
           for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(result_size);
                ++chunk_offset) {
-            // If the SELECT returned just one list, always perform the IN check with that one list
-            // If the SELECT returned multiple lists, then the Subquery was correlated and we need to do the IN check
-            // against the list of the current row
+            // If the SELECT returned just one list, always perform the IN check with that one list.
+            // If the SELECT returned multiple lists, then the subquery was correlated and we need to do the IN check
+            // against the list of the current row.
             const auto& list = *subquery_results[subquery_results.size() == 1 ? 0 : chunk_offset];
 
             auto list_contains_null = false;
@@ -628,7 +628,7 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_predica
 template <typename Result>
 std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_column_expression(
     const PQPColumnExpression& column_expression) {
-  Assert(_chunk, "Cannot access columns in this Expression as it doesn't operate on a table/chunk.");
+  Assert(_chunk, "Cannot access columns in this expression as it does not operate on a table/chunk.");
 
   const auto& segment = *_chunk->get_segment(column_expression.column_id);
   Assert(segment.data_type() == data_type_from_type<Result>(), "Cannot evaluate segment to different type.");
@@ -882,7 +882,7 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_unary_m
       }
       nulls = argument_result.nulls;
     } else {
-      Fail("Can't negate a Strings, can't negate an argument to a different type.");
+      Fail("Cannot negate a Strings, cannot negate an argument to a different type.");
     }
   });
 
@@ -998,7 +998,7 @@ std::shared_ptr<BaseValueSegment> ExpressionEvaluator::evaluate_expression_to_se
     using ColumnDataType = typename std::decay_t<decltype(view)>::Type;
 
     if constexpr (std::is_same_v<ColumnDataType, NullValue>) {
-      Fail("Can't create a Segment from a NULL.");
+      Fail("Cannot create a Segment from a NULL.");
     } else {
       auto values = pmr_vector<ColumnDataType>(_output_row_count);
 
@@ -1327,10 +1327,10 @@ void ExpressionEvaluator::_resolve_to_expression_results(const AbstractExpressio
 
 template <typename Functor>
 void ExpressionEvaluator::_resolve_to_expression_result(const AbstractExpression& expression, const Functor& functor) {
-  Assert(expression.type != ExpressionType::List, "Can't resolve ListExpression to ExpressionResult.");
+  Assert(expression.type != ExpressionType::List, "Cannot resolve ListExpression to ExpressionResult.");
 
   if (expression.data_type() == DataType::Null) {
-    // resolve_data_type() doesn't support Null, so we have handle it explicitly
+    // resolve_data_type() does not support Null, so we have handle it explicitly
     const auto null_value_result = ExpressionResult<NullValue>{{NullValue{}}, {true}};
 
     functor(null_value_result);
@@ -1395,7 +1395,7 @@ pmr_vector<bool> ExpressionEvaluator::_evaluate_default_null_logic(const pmr_vec
 }
 
 void ExpressionEvaluator::_materialize_segment_if_not_yet_materialized(const ColumnID column_id) {
-  Assert(_chunk, "Cannot access columns in this Expression as it doesn't operate on a table/chunk.");
+  Assert(_chunk, "Cannot access columns in this expression as it does not operate on a table/chunk.");
 
   if (_segment_materializations[column_id]) {
     return;
@@ -1569,7 +1569,7 @@ std::shared_ptr<ExpressionResult<pmr_string>> ExpressionEvaluator::_evaluate_con
       argument_result->as_view([&](const auto& argument_view) {
         for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(result_size); ++chunk_offset) {
           // This was `result_nulls[chunk_offset] = result_nulls[chunk_offset] || argument_view.is_null(chunk_offset);`
-          // but valgrind reported access to uninitialized memory in release builds (and ONLY in them!). I can't see
+          // but valgrind reported access to uninitialized memory in release builds (and ONLY in them!). I cannot see
           // how there was anything uninitialised given the `result_nulls.resize(result_size, false);` above.
           // Anyway, changing it to the line below silences valgrind.
           if (argument_view.is_null(chunk_offset)) {

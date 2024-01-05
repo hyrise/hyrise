@@ -127,7 +127,7 @@ std::shared_ptr<LQPColumnExpression> expression_adapt_to_different_lqp(const LQP
   Assert(node, "LQPColumnExpression is expired.");
   const auto node_mapping_iter = node_mapping.find(node);
   Assert(node_mapping_iter != node_mapping.end(),
-         "Couldn't find referenced node (" + node->description() + ") in NodeMapping.");
+         "Could not find referenced node (" + node->description() + ") in NodeMapping.");
 
   return std::make_shared<LQPColumnExpression>(node_mapping_iter->second, lqp_column_expression.original_column_id);
 }
@@ -148,7 +148,7 @@ std::string expression_descriptions(const std::vector<std::shared_ptr<AbstractEx
 }
 
 DataType expression_common_type(const DataType lhs, const DataType rhs) {
-  Assert(lhs != DataType::Null || rhs != DataType::Null, "Can't deduce common type if both sides are NULL.");
+  Assert(lhs != DataType::Null || rhs != DataType::Null, "Cannot deduce common type if both sides are NULL.");
   Assert((lhs == DataType::String) == (rhs == DataType::String), "Strings only compatible with strings.");
 
   // Long+NULL -> Long; NULL+Long -> Long
@@ -332,7 +332,7 @@ bool expression_contains_correlated_parameter(const std::shared_ptr<AbstractExpr
 
 std::optional<AllTypeVariant> expression_get_value_or_parameter(const AbstractExpression& expression) {
   if (const auto* correlated_parameter_expression = dynamic_cast<const CorrelatedParameterExpression*>(&expression)) {
-    DebugAssert(correlated_parameter_expression->value(), "CorrelatedParameterExpression doesn't have a value set.");
+    DebugAssert(correlated_parameter_expression->value(), "CorrelatedParameterExpression does not have a value set.");
     return *correlated_parameter_expression->value();
   }
 
@@ -362,7 +362,7 @@ std::optional<AllTypeVariant> expression_get_value_or_parameter(const AbstractEx
         result = *lossy_variant_cast<TargetDataType>(value_expression.value);
       } catch (boost::bad_lexical_cast&) {
         Fail("Cannot cast " + cast_expression.argument()->as_column_name() + " as " +
-             std::string{magic_enum::enum_name(expression.data_type())});
+             std::string{magic_enum::enum_name(expression.data_type())} + ".");
       }
     });
     return result;

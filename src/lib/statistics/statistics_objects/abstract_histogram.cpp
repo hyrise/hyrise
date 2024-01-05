@@ -611,7 +611,7 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::sliced(
       Fail("PredicateCondition not supported by Histograms");
   }
 
-  Fail("Invalid enum value");
+  Fail("Invalid enum value.");
 }
 
 template <typename T>
