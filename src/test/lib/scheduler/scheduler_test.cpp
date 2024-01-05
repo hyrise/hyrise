@@ -415,7 +415,7 @@ TEST_F(SchedulerTest, ShutdownTaskDecrement) {
 // First, create jobs but not schedule them to check if semaphore is zero. Second, we spwan blocked jobs and check the
 // semaphore to have the correct value. Third, we unblock all jobs and check that the semaphore is zero again.
 TEST_F(SchedulerTest, SemaphoreInrements) {
-  constexpr auto SLEEP_TIME = std::chrono::microseconds{500};
+  constexpr auto SLEEP_TIME = std::chrono::milliseconds{5};
 
   const auto thread_count = std::thread::hardware_concurrency();
   const auto job_count = thread_count * 100;
