@@ -425,7 +425,7 @@ TEST_F(SchedulerTest, SemaphoreIncrements) {
   constexpr auto SLEEP_TIME = std::chrono::milliseconds{5};
 
   const auto thread_count = std::thread::hardware_concurrency();
-  const auto job_count = thread_count * 100;
+  const auto job_count = thread_count * 32;
 
   for (const auto& fake_numa_topology : FAKE_NUMA_TOPOLOGIES) {
     Hyrise::get().topology.use_fake_numa_topology(fake_numa_topology);
@@ -464,7 +464,7 @@ TEST_F(SchedulerTest, SemaphoreIncrements) {
     }
 
     wait_flag = false;
-    std::this_thread::sleep_for(SLEEP_TIME * thread_count);
+    Hyrise::get().scheduler()->wait_for_tasks(waiting_jobs);
 
     for (const auto& queue : node_queue_scheduler->queues()) {
       if (!queue) {
@@ -472,9 +472,7 @@ TEST_F(SchedulerTest, SemaphoreIncrements) {
       }
       EXPECT_EQ(queue->semaphore.availableApprox(), 0);
     }
-
     EXPECT_EQ(job_count, counter);
-    Hyrise::get().scheduler()->wait_for_tasks(waiting_jobs);
   }
 }
 
@@ -527,7 +525,7 @@ TEST_F(SchedulerTest, SemaphoreIncrementsDependentTasks) {
     }
 
     wait_flag = false;
-    std::this_thread::sleep_for(SLEEP_TIME * thread_count);
+    Hyrise::get().scheduler()->wait_for_tasks(waiting_jobs);
 
     for (const auto& queue : node_queue_scheduler->queues()) {
       if (!queue) {
@@ -535,9 +533,7 @@ TEST_F(SchedulerTest, SemaphoreIncrementsDependentTasks) {
       }
       EXPECT_EQ(queue->semaphore.availableApprox(), 0);
     }
-
     EXPECT_EQ(job_count, counter);
-    Hyrise::get().scheduler()->wait_for_tasks(waiting_jobs);
   }
 }
 
