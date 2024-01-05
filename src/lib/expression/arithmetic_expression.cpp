@@ -5,8 +5,12 @@
 #include <boost/container_hash/hash.hpp>
 
 #include "expression_utils.hpp"
+#include "expression/abstract_expression.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
+
+class AbstractOperator;
 
 std::ostream& operator<<(std::ostream& stream, const ArithmeticOperator arithmetic_operator) {
   switch (arithmetic_operator) {

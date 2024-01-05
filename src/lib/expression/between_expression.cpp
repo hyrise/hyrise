@@ -1,6 +1,9 @@
 #include "between_expression.hpp"
 
+#include <memory>
 #include <sstream>
+#include <string>
+#include <unordered_map>
 
 #include "utils/assert.hpp"
 

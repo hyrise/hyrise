@@ -30,7 +30,6 @@ class StressTest : public BaseTest {
   const std::vector<std::vector<uint32_t>> FAKE_MULTI_NODE_NUMA_TOPOLOGIES = {{CORES_PER_NODE, CORES_PER_NODE, 0, 0},
                                                                               {0, CORES_PER_NODE, CORES_PER_NODE, 0},
                                                                               {0, 0, CORES_PER_NODE, CORES_PER_NODE}};
-
 };
 
 TEST_F(StressTest, TestTransactionConflicts) {

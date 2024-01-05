@@ -3,6 +3,7 @@
 #include <sstream>
 
 #include "expression_utils.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 

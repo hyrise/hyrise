@@ -1,5 +1,6 @@
 #include "binary_predicate_expression.hpp"
 
+#include <algorithm>
 #include <sstream>
 
 #include "types.hpp"

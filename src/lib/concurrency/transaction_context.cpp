@@ -1,11 +1,16 @@
 #include "transaction_context.hpp"
 
+#include <algorithm>
 #include <future>
 #include <memory>
+#include <mutex>
+#include <optional>
+#include <ostream>
 
 #include "commit_context.hpp"
 #include "hyrise.hpp"
 #include "operators/abstract_read_write_operator.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {
