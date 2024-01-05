@@ -1700,15 +1700,15 @@ TEST_F(SQLTranslatorTest, LimitExpression) {
 }
 
 TEST_F(SQLTranslatorTest, Extract) {
-  std::vector<DatetimeComponent> components{DatetimeComponent::Year,   DatetimeComponent::Month,
-                                            DatetimeComponent::Day,    DatetimeComponent::Hour,
-                                            DatetimeComponent::Minute, DatetimeComponent::Second};
+  auto components =
+      std::vector<DatetimeComponent>{DatetimeComponent::Year, DatetimeComponent::Month,  DatetimeComponent::Day,
+                                     DatetimeComponent::Hour, DatetimeComponent::Minute, DatetimeComponent::Second};
 
-  std::shared_ptr<AbstractLQPNode> actual_lqp;
-  std::shared_ptr<AbstractLQPNode> expected_lqp;
+  auto actual_lqp = std::shared_ptr<AbstractLQPNode>{};
+  auto expected_lqp = std::shared_ptr<AbstractLQPNode>{};
 
   for (const auto& component : components) {
-    std::stringstream query_str;
+    auto query_str = std::stringstream{};
     query_str << "SELECT EXTRACT(" << component << " FROM '1993-08-01');";
 
     const auto [actual_lqp, translation_info] = sql_to_lqp_helper(query_str.str());

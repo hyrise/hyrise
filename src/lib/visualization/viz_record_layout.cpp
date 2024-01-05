@@ -16,7 +16,7 @@ VizRecordLayout& VizRecordLayout::add_sublayout() {
 }
 
 std::string VizRecordLayout::to_label_string() const {
-  std::stringstream stream;
+  auto stream = std::stringstream{};
   stream << "{";
 
   const auto content_size = content.size();

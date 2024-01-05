@@ -36,7 +36,7 @@ TEST_F(PageIDTest, TestEqualityOperator) {
 
 TEST_F(PageIDTest, TestStreamOperator) {
   const auto page_id = PageID{PageSizeType::KiB16, 29, true};
-  std::stringstream stream;
+  auto stream = std::stringstream{};
   stream << page_id;
   EXPECT_EQ(stream.str(), "PageID(valid = 1, size_type = KiB16, index = 29)");
 }

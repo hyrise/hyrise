@@ -24,7 +24,7 @@ const std::shared_ptr<AbstractExpression>& CaseExpression::otherwise() const {
 }
 
 std::string CaseExpression::description(const DescriptionMode mode) const {
-  std::stringstream stream;
+  auto stream = std::stringstream{};
 
   stream << "CASE WHEN " << when()->description(mode) << " THEN " << then()->description(mode) << " ELSE "
          << otherwise()->description(mode) << " END";

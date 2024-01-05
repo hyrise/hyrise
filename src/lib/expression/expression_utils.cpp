@@ -134,7 +134,7 @@ std::shared_ptr<LQPColumnExpression> expression_adapt_to_different_lqp(const LQP
 
 std::string expression_descriptions(const std::vector<std::shared_ptr<AbstractExpression>>& expressions,
                                     const AbstractExpression::DescriptionMode mode) {
-  std::stringstream stream;
+  auto stream = std::stringstream{};
 
   if (!expressions.empty()) {
     stream << expressions.front()->description(mode);

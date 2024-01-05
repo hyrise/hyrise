@@ -29,7 +29,7 @@ std::string LQPColumnExpression::description(const DescriptionMode mode) const {
     return "<Expired Column>";
   }
 
-  std::stringstream output;
+  auto output = std::stringstream{};
   if (mode == AbstractExpression::DescriptionMode::Detailed) {
     output << original_node_locked << ".";
   }

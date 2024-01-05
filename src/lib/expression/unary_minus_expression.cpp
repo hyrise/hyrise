@@ -21,7 +21,7 @@ std::shared_ptr<AbstractExpression> UnaryMinusExpression::_on_deep_copy(
 }
 
 std::string UnaryMinusExpression::description(const DescriptionMode mode) const {
-  std::stringstream stream;
+  auto stream = std::stringstream{};
   stream << "-" << _enclose_argument(*argument(), mode);
   return stream.str();
 }

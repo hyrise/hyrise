@@ -43,7 +43,7 @@ void NodeQueueScheduler::begin() {
   _queues.resize(_node_count);
   _workers_per_node.reserve(_node_count);
 
-  for (auto node_id = NodeID{0}; node_id < Hyrise::get().topology.nodes().size(); ++node_id) {
+  for (auto node_id = NodeID{0}; node_id < _node_count; ++node_id) {
     const auto& topology_node = Hyrise::get().topology.nodes()[node_id];
 
     // Tracked per node as core restrictions can lead to unbalanced core counts.
@@ -63,9 +63,6 @@ void NodeQueueScheduler::begin() {
             std::make_shared<Worker>(queue, WorkerID{_worker_id_allocator->allocate()}, topology_cpu.cpu_id));
       }
     }
-
-    // Tracked per node as core restrictions can lead to unbalanced core counts.
-    _workers_per_node.emplace_back(topology_node.cpus.size());
   }
 
   Assert(!_active_nodes.empty(), "None of the system nodes has active workers.");

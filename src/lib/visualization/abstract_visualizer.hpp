@@ -251,7 +251,7 @@ class AbstractVisualizer {
     if (label.length() <= MAX_LABEL_WIDTH) {
       return label;
     }
-    std::stringstream label_stream;
+    auto label_stream = std::stringstream{};
 
     // 1. Split label into lines
     auto lines = std::vector<std::string>();

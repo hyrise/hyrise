@@ -114,7 +114,7 @@ TEST_F(FixedStringTest, Swap) {
 }
 
 TEST_F(FixedStringTest, OutputToStream) {
-  std::stringstream sstream;
+  auto sstream = std::stringstream{};
   sstream << fixed_string1;
   EXPECT_EQ(sstream.str().find("foo"), 0u);
 }

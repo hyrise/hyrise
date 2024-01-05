@@ -31,7 +31,7 @@ std::pair<ExecutionInformation, std::shared_ptr<TransactionContext>> QueryHandle
     _handle_transaction_statement_message(execution_info, sql_pipeline);
 
     if (send_execution_info == SendExecutionInfo::Yes) {
-      std::stringstream stream;
+      auto stream = std::stringstream{};
       stream << sql_pipeline.metrics();
       execution_info.pipeline_metrics = stream.str();
     }

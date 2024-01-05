@@ -44,7 +44,7 @@ Matrix table_to_matrix(const std::shared_ptr<const Table>& table) {
 
 std::string matrix_to_string(const Matrix& matrix, const std::vector<std::pair<uint64_t, uint16_t>>& highlight_cells,
                              const std::string& highlight_color, const std::string& highlight_color_bg) {
-  std::stringstream stream;
+  auto stream = std::stringstream{};
   bool previous_row_highlighted = false;
 
   for (auto row_id = size_t{0}; row_id < matrix.size(); ++row_id) {

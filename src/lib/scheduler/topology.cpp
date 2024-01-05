@@ -54,7 +54,27 @@ void Topology::use_non_numa_topology(uint32_t max_num_cores) {
 }
 
 void Topology::use_fake_numa_topology(uint32_t max_num_workers, uint32_t workers_per_node) {
-  _init_fake_numa_topology(max_num_workers, workers_per_node);
+  auto num_workers = std::thread::hardware_concurrency();
+  if (max_num_workers != 0) {
+    num_workers = std::min<uint32_t>(num_workers, max_num_workers);
+  }
+
+  auto num_nodes = num_workers / workers_per_node;
+  if (num_workers % workers_per_node != 0) {
+    num_nodes++;
+  }
+
+  auto worker_count_per_node = std::vector<uint32_t>{};
+  for (auto node_id = uint32_t{0}; node_id < num_nodes; ++node_id) {
+    worker_count_per_node.emplace_back(std::min(num_workers, workers_per_node));
+    num_workers -= workers_per_node;
+  }
+
+  _init_fake_numa_topology(worker_count_per_node);
+}
+
+void Topology::use_fake_numa_topology(const std::vector<uint32_t>& workers_per_node) {
+  _init_fake_numa_topology(std::move(workers_per_node));
 }
 
 void Topology::_init_default_topology(uint32_t max_num_cores) {
@@ -67,11 +87,11 @@ void Topology::_init_default_topology(uint32_t max_num_cores) {
 
 void Topology::_init_numa_topology(uint32_t max_num_cores) {
 #if !HYRISE_NUMA_SUPPORT
-  _init_fake_numa_topology(max_num_cores);
+  use_fake_numa_topology(max_num_cores);
 #else
 
   if (numa_available() < 0) {
-    return _init_fake_numa_topology(max_num_cores);
+    return use_fake_numa_topology(max_num_cores);
   }
 
   _clear();
@@ -138,38 +158,23 @@ void Topology::_init_non_numa_topology(uint32_t max_num_cores) {
   _nodes.emplace_back(std::move(node));
 }
 
-void Topology::_init_fake_numa_topology(uint32_t max_num_workers, uint32_t workers_per_node) {
+void Topology::_init_fake_numa_topology(const std::vector<uint32_t>& workers_per_node) {
   _clear();
   _fake_numa_topology = true;
 
-  auto num_workers = std::thread::hardware_concurrency();
-  if (max_num_workers != 0) {
-    num_workers = std::min<uint32_t>(num_workers, max_num_workers);
-  }
-
-  auto num_nodes = num_workers / workers_per_node;
-  if (num_workers % workers_per_node != 0) {
-    num_nodes++;
-  }
-
-  _nodes.reserve(num_nodes);
-
   auto cpu_id = CpuID{0};
-
-  for (auto node_id = uint32_t{0}; node_id < num_nodes; ++node_id) {
+  for (const auto& node_worker_count : workers_per_node) {
     auto cpus = std::vector<TopologyCpu>();
 
-    for (auto worker_id = uint32_t{0}; worker_id < workers_per_node && cpu_id < num_workers; ++worker_id) {
+    for (auto worker_id = uint32_t{0}; worker_id < node_worker_count; ++worker_id) {
       cpus.emplace_back(cpu_id);
       ++cpu_id;
     }
 
-    auto node = TopologyNode(std::move(cpus));
-
-    _nodes.emplace_back(std::move(node));
+    _nodes.emplace_back(TopologyNode{std::move(cpus)});
   }
 
-  _num_cpus = num_workers;
+  _num_cpus = std::reduce(workers_per_node.cbegin(), workers_per_node.cend());
 }
 
 const std::vector<TopologyNode>& Topology::nodes() const {

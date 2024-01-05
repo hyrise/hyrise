@@ -32,7 +32,7 @@ std::shared_ptr<AbstractExpression> FunctionExpression::_on_deep_copy(
 }
 
 std::string FunctionExpression::description(const DescriptionMode mode) const {
-  std::stringstream stream;
+  auto stream = std::stringstream{};
 
   stream << function_type << "(";
   for (auto argument_idx = size_t{0}; argument_idx < arguments.size(); ++argument_idx) {

@@ -54,7 +54,7 @@ DataType ArithmeticExpression::data_type() const {
 }
 
 std::string ArithmeticExpression::description(const DescriptionMode mode) const {
-  std::stringstream stream;
+  auto stream = std::stringstream{};
 
   stream << _enclose_argument(*left_operand(), mode) << " " << arithmetic_operator << " "
          << _enclose_argument(*right_operand(), mode);

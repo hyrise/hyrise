@@ -38,7 +38,7 @@ std::shared_ptr<AbstractExpression> BinaryPredicateExpression::_on_deep_copy(
 }
 
 std::string BinaryPredicateExpression::description(const DescriptionMode mode) const {
-  std::stringstream stream;
+  auto stream = std::stringstream{};
 
   stream << _enclose_argument(*left_operand(), mode) << " ";
   stream << predicate_condition << " ";

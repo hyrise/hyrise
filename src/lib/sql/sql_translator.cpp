@@ -1700,7 +1700,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_prepare(const hsql::P
   auto prepared_plan_translator = SQLTranslator{_use_mvcc};
 
   const auto translation_result = prepared_plan_translator.translate_parser_result(parse_result);
-  Assert(translation_result.translation_info.cacheable, "Non-cacheable LQP nodes can't be part of prepared statements.");
+  Assert(translation_result.translation_info.cacheable,
+         "Non-cacheable LQP nodes can't be part of prepared statements.");
 
   const auto lqp = translation_result.lqp_nodes.at(0);
 
