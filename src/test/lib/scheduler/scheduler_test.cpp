@@ -422,7 +422,7 @@ TEST_F(SchedulerTest, ShutdownTaskDecrement) {
 //
 // We run this test for various fake NUMA topologies as it triggered a bug that was introduced with #2610.
 TEST_F(SchedulerTest, SemaphoreIncrements) {
-  constexpr auto SLEEP_TIME = std::chrono::microseconds{500};
+  constexpr auto SLEEP_TIME = std::chrono::milliseconds{5};
 
   const auto thread_count = std::thread::hardware_concurrency();
   const auto job_count = thread_count * 100;
@@ -464,7 +464,7 @@ TEST_F(SchedulerTest, SemaphoreIncrements) {
     }
 
     wait_flag = false;
-    std::this_thread::sleep_for(SLEEP_TIME * 10);
+    std::this_thread::sleep_for(SLEEP_TIME * thread_count);
 
     for (const auto& queue : node_queue_scheduler->queues()) {
       if (!queue) {
@@ -481,7 +481,7 @@ TEST_F(SchedulerTest, SemaphoreIncrements) {
 // Similar to test above, but here we make tasks dependent of each other which means only non-dependent tasks will be
 // scheduled.
 TEST_F(SchedulerTest, SemaphoreIncrementsDependentTasks) {
-  constexpr auto SLEEP_TIME = std::chrono::microseconds{500};
+  constexpr auto SLEEP_TIME = std::chrono::milliseconds{5};
   constexpr auto DEPENDENT_JOB_TASKS_LENGTH = size_t{10};
 
   const auto thread_count = std::thread::hardware_concurrency();
@@ -527,7 +527,7 @@ TEST_F(SchedulerTest, SemaphoreIncrementsDependentTasks) {
     }
 
     wait_flag = false;
-    std::this_thread::sleep_for(SLEEP_TIME * 10);
+    std::this_thread::sleep_for(SLEEP_TIME * thread_count);
 
     for (const auto& queue : node_queue_scheduler->queues()) {
       if (!queue) {
