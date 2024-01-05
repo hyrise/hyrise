@@ -23,10 +23,11 @@ using namespace expression_functional;  // NOLINT(build/namespaces)
 
 class SchedulerTest : public BaseTest {
  protected:
-  const std::vector<std::vector<uint32_t>> FAKE_NUMA_TOPOLOGIES = {{std::thread::hardware_concurrency()},
-                                                                   {std::thread::hardware_concurrency(), 0, 0},
-                                                                   {0, std::thread::hardware_concurrency(), 0},
-                                                                   {0, 0, std::thread::hardware_concurrency()}};
+  const uint32_t CORES_PER_NODE = std::thread::hardware_concurrency();
+  const std::vector<std::vector<uint32_t>> FAKE_NUMA_TOPOLOGIES = {{CORES_PER_NODE},
+                                                                   {CORES_PER_NODE, 0, 0},
+                                                                   {0, CORES_PER_NODE, 0},
+                                                                   {0, 0, CORES_PER_NODE}};
 
   void stress_linear_dependencies(std::atomic_uint32_t& counter) {
     const auto task1 = std::make_shared<JobTask>([&]() {
@@ -422,10 +423,8 @@ TEST_F(SchedulerTest, ShutdownTaskDecrement) {
 //
 // We run this test for various fake NUMA topologies as it triggered a bug that was introduced with #2610.
 TEST_F(SchedulerTest, SemaphoreIncrements) {
-  constexpr auto SLEEP_TIME = std::chrono::milliseconds{5};
-
-  const auto thread_count = std::thread::hardware_concurrency();
-  const auto job_count = thread_count * 32;
+  constexpr auto SLEEP_TIME = std::chrono::milliseconds{1};
+  const auto job_count = CORES_PER_NODE * 32;
 
   for (const auto& fake_numa_topology : FAKE_NUMA_TOPOLOGIES) {
     Hyrise::get().topology.use_fake_numa_topology(fake_numa_topology);
@@ -455,12 +454,13 @@ TEST_F(SchedulerTest, SemaphoreIncrements) {
     }
 
     Hyrise::get().scheduler()->schedule_tasks(waiting_jobs);
+    std::this_thread::sleep_for(10 * SLEEP_TIME);  // Wait a bit for workers to pull jobs and decrement semaphore.
 
     for (const auto& queue : node_queue_scheduler->queues()) {
       if (!queue) {
         continue;
       }
-      EXPECT_EQ(queue->semaphore.availableApprox(), job_count - thread_count);
+      EXPECT_EQ(queue->semaphore.availableApprox(), job_count - CORES_PER_NODE);
     }
 
     wait_flag = false;
@@ -481,9 +481,7 @@ TEST_F(SchedulerTest, SemaphoreIncrements) {
 TEST_F(SchedulerTest, SemaphoreIncrementsDependentTasks) {
   constexpr auto SLEEP_TIME = std::chrono::milliseconds{5};
   constexpr auto DEPENDENT_JOB_TASKS_LENGTH = size_t{10};
-
-  const auto thread_count = std::thread::hardware_concurrency();
-  const auto job_count = thread_count * 100;
+  const auto job_count = CORES_PER_NODE * 32;
 
   for (const auto& fake_numa_topology : FAKE_NUMA_TOPOLOGIES) {
     Hyrise::get().topology.use_fake_numa_topology(fake_numa_topology);
