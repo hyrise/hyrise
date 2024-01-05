@@ -33,6 +33,7 @@ void TaskQueue::push(const std::shared_ptr<AbstractTask>& task, const SchedulePr
     return;
   }
 
+  std::cout << "Setting node id on task: " << _node_id << std::endl;
   task->set_node_id(_node_id);
   _queues[priority_uint].push(task);
   semaphore.signal();

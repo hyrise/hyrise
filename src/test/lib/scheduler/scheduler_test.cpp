@@ -453,7 +453,7 @@ TEST_F(SchedulerTest, SemaphoreInrements) {
   }
 
   wait_flag = false;
-  std::this_thread::sleep_for(SLEEP_TIME * 10);
+  std::this_thread::sleep_for(SLEEP_TIME * thread_count);
 
   for (const auto& queue : node_queue_scheduler->queues()) {
     if (!queue) {
@@ -513,7 +513,7 @@ TEST_F(SchedulerTest, SemaphoreInrementsDependentTasks) {
   }
 
   wait_flag = false;
-  std::this_thread::sleep_for(SLEEP_TIME * 10);
+  std::this_thread::sleep_for(SLEEP_TIME * thread_count);
 
   for (const auto& queue : node_queue_scheduler->queues()) {
     if (!queue) {
