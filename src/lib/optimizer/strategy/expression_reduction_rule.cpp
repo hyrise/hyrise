@@ -25,7 +25,7 @@ std::string ExpressionReductionRule::name() const {
 
 void ExpressionReductionRule::_apply_to_plan_without_subqueries(
     const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
-  Assert(lqp_root->type == LQPNodeType::Root, "ExpressionReductionRule needs root to hold onto");
+  Assert(lqp_root->type == LQPNodeType::Root, "ExpressionReductionRule needs root to hold onto.");
 
   visit_lqp(lqp_root, [&](const auto& sub_node) {
     if (sub_node->type == LQPNodeType::Aggregate) {
@@ -142,7 +142,7 @@ const std::shared_ptr<AbstractExpression>& ExpressionReductionRule::reduce_distr
       input_expression = common_conjunction_expression;
     } else {
       Assert(inflated_disjunction_remainder,
-             "Bug detected. inflated_disjunction_remainder should contain an expression");
+             "Bug detected. inflated_disjunction_remainder should contain an expression.");
       input_expression = inflated_disjunction_remainder;
     }
   }
@@ -176,7 +176,7 @@ void ExpressionReductionRule::reduce_constant_expression(std::shared_ptr<Abstrac
   resolve_data_type(input_expression->data_type(), [&](const auto data_type_t) {
     using ExpressionDataType = typename decltype(data_type_t)::type;
     const auto result = ExpressionEvaluator{}.evaluate_expression_to_result<ExpressionDataType>(*input_expression);
-    Assert(result->is_literal(), "Expected Literal");
+    Assert(result->is_literal(), "Expected literal.");
 
     if (result->is_null(0)) {
       input_expression = std::make_shared<ValueExpression>(NullValue{});
@@ -242,9 +242,9 @@ void ExpressionReductionRule::remove_duplicate_aggregate(
     std::vector<std::shared_ptr<AbstractExpression>>& input_expressions,
     const std::shared_ptr<AbstractLQPNode>& aggregate_node, const std::shared_ptr<AbstractLQPNode>& root_node) {
   // Create a list of all sums, counts, and averages in the aggregate node.
-  std::vector<std::reference_wrapper<const std::shared_ptr<AbstractExpression>>> sums;
-  std::vector<std::reference_wrapper<const std::shared_ptr<AbstractExpression>>> counts;
-  std::vector<std::reference_wrapper<const std::shared_ptr<AbstractExpression>>> avgs;
+  auto sums = std::vector<std::reference_wrapper<const std::shared_ptr<AbstractExpression>>>{};
+  auto counts = std::vector<std::reference_wrapper<const std::shared_ptr<AbstractExpression>>>{};
+  auto avgs = std::vector<std::reference_wrapper<const std::shared_ptr<AbstractExpression>>>{};
   for (auto& input_expression : input_expressions) {
     if (input_expression->type != ExpressionType::WindowFunction) {
       continue;
@@ -334,7 +334,7 @@ void ExpressionReductionRule::remove_duplicate_aggregate(
   lqp_insert_node(projection_node, LQPInputSide::Left, aggregate_node);
 
   // Now update the AVG expression in all nodes that might refer to it, starting with the ProjectionNode
-  bool updated_an_alias = false;
+  auto updated_an_alias = false;
   visit_lqp_upwards(projection_node, [&](const auto& node) {
     for (auto& expression : node->node_expressions) {
       expression_deep_replace(expression, replacements);

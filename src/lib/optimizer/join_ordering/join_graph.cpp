@@ -51,7 +51,7 @@ JoinGraph::JoinGraph(const std::vector<std::shared_ptr<AbstractLQPNode>>& init_v
     : vertices(init_vertices), edges(init_edges) {}
 
 std::vector<std::shared_ptr<AbstractExpression>> JoinGraph::find_local_predicates(const size_t vertex_idx) const {
-  std::vector<std::shared_ptr<AbstractExpression>> predicates;
+  auto predicates = std::vector<std::shared_ptr<AbstractExpression>>{};
 
   auto vertex_set = JoinGraphVertexSet{vertices.size()};
   vertex_set.set(vertex_idx);
@@ -71,9 +71,9 @@ std::vector<std::shared_ptr<AbstractExpression>> JoinGraph::find_local_predicate
 
 std::vector<std::shared_ptr<AbstractExpression>> JoinGraph::find_join_predicates(
     const JoinGraphVertexSet& vertex_set_a, const JoinGraphVertexSet& vertex_set_b) const {
-  DebugAssert((vertex_set_a & vertex_set_b).none(), "Vertex sets are not distinct");
+  DebugAssert((vertex_set_a & vertex_set_b).none(), "Vertex sets are not distinct.");
 
-  std::vector<std::shared_ptr<AbstractExpression>> predicates;
+  auto predicates = std::vector<std::shared_ptr<AbstractExpression>>{};
 
   for (const auto& edge : edges) {
     if ((edge.vertex_set & vertex_set_a).none() || (edge.vertex_set & vertex_set_b).none()) {

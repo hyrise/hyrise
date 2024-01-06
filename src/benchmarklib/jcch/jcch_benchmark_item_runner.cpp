@@ -36,7 +36,7 @@ JCCHBenchmarkItemRunner::JCCHBenchmarkItemRunner(const bool skewed, const std::s
 }
 
 std::string JCCHBenchmarkItemRunner::item_name(const BenchmarkItemID item_id) const {
-  Assert(item_id < 22u, "item_id out of range");
+  Assert(item_id < 22u, "item_id out of range.");
   return std::string("JCC-H ") + (_skewed ? "(skewed) " : "(normal) ") + (item_id + 1 < 10 ? "0" : "") +
          std::to_string(item_id + 1);
 }
@@ -62,12 +62,12 @@ void JCCHBenchmarkItemRunner::_load_params() {
 
     // Create local directory and copy query templates if needed
     const auto local_queries_dir_created = std::filesystem::create_directory(local_queries_path);
-    Assert(std::filesystem::exists(local_queries_path), "Creating JCC-H queries folder failed");
+    Assert(std::filesystem::exists(local_queries_path), "Creating JCC-H queries folder failed.");
     if (local_queries_dir_created) {
       auto cmd = std::stringstream{};
       cmd << "cd " << local_queries_path << " && ln -s " << _dbgen_path << "/queries/*.sql .";
       auto ret = system(cmd.str().c_str());
-      Assert(!ret, "Creating symlinks to query templates failed");
+      Assert(!ret, "Creating symlinks to query templates failed.");
     }
 
     // Call qgen a couple of times with different PRNG seeds and store the resulting query parameters in queries/params.
@@ -78,7 +78,7 @@ void JCCHBenchmarkItemRunner::_load_params() {
           << _scale_factor << " -b " << _dbgen_path << "/dists.dss -r " << seed << " -l " << params_path
           << " >/dev/null";
       auto ret = system(cmd.str().c_str());
-      Assert(!ret, "Calling qgen failed");
+      Assert(!ret, "Calling qgen failed.");
     }
     // NOLINTEND(concurrency-mt-unsafe)
 
@@ -95,7 +95,7 @@ void JCCHBenchmarkItemRunner::_load_params() {
     // Load the parameter into the corresponding entry in _all_params
     auto string_values = split_string_by_delimiter(line, '\t');
     const auto query_id = std::stoi(string_values[0]);
-    Assert(query_id >= 1 && query_id <= 22, "Invalid query_id");
+    Assert(query_id >= 1 && query_id <= 22, "Invalid query_id.");
     string_values.erase(string_values.begin());
     _all_params[query_id - 1].emplace_back(string_values);
   }
@@ -107,8 +107,8 @@ bool JCCHBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, Be
   const auto& this_item_params = _all_params[item_id];
 
   // Choose a random parameterization from _all_params
-  static thread_local std::minstd_rand random_engine{_random_seed++};
-  std::uniform_int_distribution<> params_dist{0, static_cast<int>(this_item_params.size() - 1)};
+  static thread_local auto random_engine = std::minstd_rand{_random_seed++};
+  auto params_dist = std::uniform_int_distribution<>{0, static_cast<int>(this_item_params.size() - 1)};
   const auto raw_params_iter = this_item_params.begin() + params_dist(random_engine);
 
   auto parameters = std::vector<std::string>{};
@@ -341,7 +341,7 @@ bool JCCHBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, Be
     }
 
     default:
-      Fail("There are only 22 JCC-H queries");
+      Fail("There are only 22 JCC-H queries.");
   }
 
   if (sql.empty()) {
@@ -349,7 +349,7 @@ bool JCCHBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, Be
   }
 
   const auto [status, table] = sql_executor.execute(sql, nullptr);
-  Assert(status == SQLPipelineStatus::Success, "JCC-H items should not fail");
+  Assert(status == SQLPipelineStatus::Success, "JCC-H items should not fail.");
   return true;
 }
 

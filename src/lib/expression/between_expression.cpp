@@ -1,6 +1,9 @@
 #include "between_expression.hpp"
 
+#include <memory>
 #include <sstream>
+#include <string>
+#include <unordered_map>
 
 #include "utils/assert.hpp"
 
@@ -35,7 +38,7 @@ std::shared_ptr<AbstractExpression> BetweenExpression::_on_deep_copy(
 }
 
 std::string BetweenExpression::description(const DescriptionMode mode) const {
-  std::stringstream stream;
+  auto stream = std::stringstream{};
   stream << _enclose_argument(*operand(), mode) << " " << predicate_condition << " "
          << _enclose_argument(*lower_bound(), mode) << " AND " << _enclose_argument(*upper_bound(), mode);
   return stream.str();

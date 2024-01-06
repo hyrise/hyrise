@@ -35,7 +35,7 @@ const HistogramDomain<T>& AbstractHistogram<T>::domain() const {
 
 template <typename T>
 std::string AbstractHistogram<T>::description() const {
-  std::stringstream stream;
+  auto stream = std::stringstream{};
 
   stream << name();
   stream << " value count: " << total_count() << ";";
@@ -611,7 +611,7 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::sliced(
       Fail("PredicateCondition not supported by Histograms");
   }
 
-  Fail("Invalid enum value");
+  Fail("Invalid enum value.");
 }
 
 template <typename T>

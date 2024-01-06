@@ -5,8 +5,12 @@
 #include <boost/container_hash/hash.hpp>
 
 #include "expression_utils.hpp"
+#include "expression/abstract_expression.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
+
+class AbstractOperator;
 
 std::ostream& operator<<(std::ostream& stream, const ArithmeticOperator arithmetic_operator) {
   switch (arithmetic_operator) {
@@ -54,7 +58,7 @@ DataType ArithmeticExpression::data_type() const {
 }
 
 std::string ArithmeticExpression::description(const DescriptionMode mode) const {
-  std::stringstream stream;
+  auto stream = std::stringstream{};
 
   stream << _enclose_argument(*left_operand(), mode) << " " << arithmetic_operator << " "
          << _enclose_argument(*right_operand(), mode);
@@ -88,7 +92,7 @@ ExpressionPrecedence ArithmeticExpression::_precedence() const {
     case ArithmeticOperator::Modulo:
       return ExpressionPrecedence::MultiplicationDivision;
   }
-  Fail("Invalid enum value");
+  Fail("Invalid enum value.");
 }
 
 }  // namespace hyrise

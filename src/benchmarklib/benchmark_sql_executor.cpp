@@ -32,12 +32,12 @@ std::pair<SQLPipelineStatus, std::shared_ptr<const Table>> BenchmarkSQLExecutor:
   if (pipeline_status == SQLPipelineStatus::Failure) {
     return {pipeline_status, nullptr};
   }
-  Assert(pipeline_status == SQLPipelineStatus::Success, "Unexpected pipeline status");
+  Assert(pipeline_status == SQLPipelineStatus::Success, "Unexpected pipeline status.");
 
   metrics.emplace_back(std::move(pipeline.metrics()));
 
   if (expected_result_table) {
-    _compare_tables(result_table, expected_result_table, "Using dedicated expected result table");
+    _compare_tables(result_table, expected_result_table, "Using dedicated expected result table.");
   } else if (_sqlite_connection) {
     _verify_with_sqlite(pipeline);
   }
@@ -54,7 +54,7 @@ BenchmarkSQLExecutor::~BenchmarkSQLExecutor() {
     Assert(transaction_context->phase() == TransactionPhase::Committed ||
                transaction_context->phase() == TransactionPhase::RolledBackByUser ||
                transaction_context->phase() == TransactionPhase::RolledBackAfterConflict,
-           "Explicitly created transaction context should have been explicitly committed or rolled back");
+           "Explicitly created transaction context should have been explicitly committed or rolled back.");
   }
 
   // If the benchmark item does not explicitly manage the transaction life time by calling commit or rollback,
@@ -68,7 +68,7 @@ BenchmarkSQLExecutor::~BenchmarkSQLExecutor() {
 void BenchmarkSQLExecutor::commit() {
   Assert(transaction_context && !transaction_context->is_auto_commit(),
          "Can only explicitly commit transaction if auto-commit is disabled");
-  Assert(transaction_context->phase() == TransactionPhase::Active, "Expected transaction to be active");
+  Assert(transaction_context->phase() == TransactionPhase::Active, "Expected transaction to be active.");
   transaction_context->commit();
   if (_sqlite_connection) {
     _sqlite_transaction_open = false;
@@ -79,7 +79,7 @@ void BenchmarkSQLExecutor::commit() {
 void BenchmarkSQLExecutor::rollback() {
   Assert(transaction_context && !transaction_context->is_auto_commit(),
          "Can only explicitly roll back transaction if auto-commit is disabled");
-  Assert(transaction_context->phase() == TransactionPhase::Active, "Expected transaction to be active");
+  Assert(transaction_context->phase() == TransactionPhase::Active, "Expected transaction to be active.");
   transaction_context->rollback(RollbackReason::User);
   if (_sqlite_connection) {
     _sqlite_transaction_open = false;
@@ -88,12 +88,12 @@ void BenchmarkSQLExecutor::rollback() {
 }
 
 void BenchmarkSQLExecutor::_verify_with_sqlite(SQLPipeline& pipeline) {
-  Assert(pipeline.statement_count() == 1, "Expecting single statement for SQLite verification");
+  Assert(pipeline.statement_count() == 1, "Expecting single statement for SQLite verification.");
 
   DebugAssert(_sqlite_connection, "Expected an open connection to SQLite.");
   const auto sqlite_result = _sqlite_connection->execute_query(pipeline.get_sql());
   const auto [pipeline_status, result_table] = pipeline.get_result_table();
-  Assert(pipeline_status == SQLPipelineStatus::Success, "Non-successful pipeline should have been caught earlier");
+  Assert(pipeline_status == SQLPipelineStatus::Success, "Non-successful pipeline should have been caught earlier.");
 
   // Modifications (INSERT, UPDATE, DELETE) do not return a table. We do not know what changed - we do not even know
   // which table has been modified. Extracting that info from the plan and verifying the entire table would take way
@@ -103,7 +103,7 @@ void BenchmarkSQLExecutor::_verify_with_sqlite(SQLPipeline& pipeline) {
     return;
   }
 
-  _compare_tables(result_table, sqlite_result, "Using SQLite's result table as expected result table");
+  _compare_tables(result_table, sqlite_result, "Using SQLite's result table as expected result table.");
 }
 
 void BenchmarkSQLExecutor::_compare_tables(const std::shared_ptr<const Table>& actual_result_table,
@@ -112,7 +112,7 @@ void BenchmarkSQLExecutor::_compare_tables(const std::shared_ptr<const Table>& a
   auto timer = Timer{};
 
   if (actual_result_table->row_count() > 0) {
-    Assert(expected_result_table, "Verifying SQL statement on sqlite failed: No SQLite result");
+    Assert(expected_result_table, "Verifying SQL statement on sqlite failed: No SQLite result.");
     if (expected_result_table->row_count() == 0) {
       any_verification_failed = true;
       if (description) {

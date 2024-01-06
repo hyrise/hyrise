@@ -6,7 +6,7 @@
 namespace hyrise {
 
 std::string format_bytes(size_t bytes) {
-  std::stringstream stream;
+  auto stream = std::stringstream{};
 
   const auto gigabytes = bytes / 1'000'000'000;
   const auto megabytes = (bytes / 1'000'000) % 1'000;

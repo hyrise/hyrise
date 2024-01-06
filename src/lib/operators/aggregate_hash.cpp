@@ -733,7 +733,7 @@ void AggregateHash::_aggregate() {
 
   if constexpr (HYRISE_DEBUG) {
     for (const auto& groupby_column_id : _groupby_column_ids) {
-      Assert(groupby_column_id < input_table->column_count(), "GroupBy column index out of bounds");
+      Assert(groupby_column_id < input_table->column_count(), "GroupBy column index out of bounds.");
     }
   }
 
@@ -779,8 +779,8 @@ void AggregateHash::_aggregate() {
     const auto input_column_id = pqp_column.column_id;
 
     if (input_column_id == INVALID_COLUMN_ID) {
-      Assert(aggregate->window_function == WindowFunction::Count, "Only COUNT may have an invalid ColumnID");
-      // SELECT COUNT(*) - we know the template arguments, so we do not need a visitor.
+      Assert(aggregate->window_function == WindowFunction::Count, "Only COUNT may have an invalid ColumnID.");
+      // SELECT COUNT(*) - we know the template arguments, so we don't need a visitor.
       auto context = std::make_shared<AggregateContext<CountColumnType, WindowFunction::Count, AggregateKey>>(
           _expected_result_size);
 
@@ -856,7 +856,7 @@ void AggregateHash::_aggregate() {
         const auto input_column_id = pqp_column.column_id;
 
         if (input_column_id == INVALID_COLUMN_ID) {
-          Assert(aggregate->window_function == WindowFunction::Count, "Only COUNT may have an invalid ColumnID");
+          Assert(aggregate->window_function == WindowFunction::Count, "Only COUNT may have an invalid ColumnID.");
           auto context =
               std::static_pointer_cast<AggregateContext<CountColumnType, WindowFunction::Count, AggregateKey>>(
                   _contexts_per_column[aggregate_idx]);
@@ -948,7 +948,8 @@ void AggregateHash::_aggregate() {
             case WindowFunction::PercentRank:
             case WindowFunction::Rank:
             case WindowFunction::RowNumber:
-              Fail("Unsupported aggregate function " + window_function_to_string.left.at(aggregate->window_function));
+              Fail("Unsupported aggregate function " + window_function_to_string.left.at(aggregate->window_function) +
+                   ".");
           }
         });
 
@@ -1042,7 +1043,7 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
         case WindowFunction::PercentRank:
         case WindowFunction::Rank:
         case WindowFunction::RowNumber:
-          Fail("Unsupported aggregate function " + window_function_to_string.left.at(aggregate->window_function));
+          Fail("Unsupported aggregate function " + window_function_to_string.left.at(aggregate->window_function) + ".");
       }
     });
 
@@ -1268,7 +1269,7 @@ std::enable_if_t<aggregate_func == WindowFunction::Avg && !std::is_arithmetic_v<
 write_aggregate_values(const AggregateResults<ColumnDataType, aggregate_func>& /*results*/,
                        std::vector<pmr_vector<AggregateType>>& /* values */,
                        std::vector<pmr_vector<bool>>& /* null_vectors */) {
-  Fail("Invalid aggregate");
+  Fail("Invalid aggregate.");
 }
 
 // STDDEV_SAMP writes the calculated standard deviation from current aggregate and the aggregate counter.
@@ -1309,10 +1310,11 @@ write_aggregate_values(const AggregateResults<ColumnDataType, aggregate_func>& r
 template <typename ColumnDataType, typename AggregateType, WindowFunction aggregate_func>
 std::enable_if_t<aggregate_func == WindowFunction::StandardDeviationSample && !std::is_arithmetic_v<AggregateType>,
                  void>
+
 write_aggregate_values(const AggregateResults<ColumnDataType, aggregate_func>& /*results*/,
                        std::vector<pmr_vector<AggregateType>>& /* values */,
                        std::vector<pmr_vector<bool>>& /* null_vectors */) {
-  Fail("Invalid aggregate");
+  Fail("Invalid aggregate.");
 }
 
 template <typename ColumnDataType, WindowFunction aggregate_function>
@@ -1355,7 +1357,7 @@ void AggregateHash::_write_aggregate_output(ColumnID aggregate_index) {
   auto value_vectors = std::vector<pmr_vector<decltype(aggregate_type)>>{};
   auto null_vectors = std::vector<pmr_vector<bool>>{};
 
-  constexpr bool NEEDS_NULL =
+  constexpr auto NEEDS_NULL =
       (aggregate_function != WindowFunction::Count && aggregate_function != WindowFunction::CountDistinct);
   const auto output_column_id = _groupby_column_ids.size() + aggregate_index;
 
@@ -1375,7 +1377,7 @@ void AggregateHash::_write_aggregate_output(ColumnID aggregate_index) {
     }
   }
 
-  DebugAssert(NEEDS_NULL || null_vectors.empty(), "write_aggregate_values unexpectedly wrote NULL values");
+  DebugAssert(NEEDS_NULL || null_vectors.empty(), "write_aggregate_values unexpectedly wrote NULL values.");
 
   prepare_output(_intermediate_result, value_vectors.size(), _output_column_definitions.size());
 

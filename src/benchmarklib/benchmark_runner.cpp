@@ -50,7 +50,7 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config,
     std::cout << Hyrise::get().topology;
 
     // Add NUMA topology information to the context, for processing in the benchmark_multithreaded.py script.
-    auto numa_cores_per_node = std::vector<size_t>();
+    auto numa_cores_per_node = std::vector<size_t>{};
     for (const auto& node : Hyrise::get().topology.nodes()) {
       numa_cores_per_node.push_back(node.cpus.size());
     }
@@ -203,11 +203,11 @@ void BenchmarkRunner::run() {
         continue;
       }
       const auto verification_status = result.verification_passed.load();
-      Assert(verification_status, "Verification result should have been set");
+      Assert(verification_status, "Verification result should have been set.");
       any_verification_failed |= !(*verification_status);
     }
 
-    Assert(!any_verification_failed, "Verification failed");
+    Assert(!any_verification_failed, "Verification failed.");
   }
 
   if (Hyrise::get().scheduler()) {
@@ -242,7 +242,7 @@ void BenchmarkRunner::_benchmark_shuffled() {
   auto random_device = std::random_device{};
   auto random_generator = std::mt19937(random_device());
 
-  Assert(_currently_running_clients == 0, "Did not expect any clients to run at this time");
+  Assert(_currently_running_clients == 0, "Did not expect any clients to run at this time.");
 
   _state = BenchmarkState{_config.max_duration};
 
@@ -260,7 +260,7 @@ void BenchmarkRunner::_benchmark_shuffled() {
 
       _schedule_item_run(item_id);
     } else {
-      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+      std::this_thread::sleep_for(std::chrono::milliseconds{10});
     }
   }
   _state.set_done();
@@ -272,7 +272,7 @@ void BenchmarkRunner::_benchmark_shuffled() {
 
   // Wait for the rest of the tasks that didn't make it in time - they will not count towards the results.
   Hyrise::get().scheduler()->wait_for_all_tasks();
-  Assert(_currently_running_clients == 0, "All runs must be finished at this point");
+  Assert(_currently_running_clients == 0, "All runs must be finished at this point.");
 
   _snapshot_segment_access_counters("End of Benchmark");
 }
@@ -286,7 +286,7 @@ void BenchmarkRunner::_benchmark_ordered() {
 
     auto& result = _results[item_id];
 
-    Assert(_currently_running_clients == 0, "Did not expect any clients to run at this time");
+    Assert(_currently_running_clients == 0, "Did not expect any clients to run at this time.");
 
     _state = BenchmarkState{_config.max_duration};
 
@@ -297,7 +297,7 @@ void BenchmarkRunner::_benchmark_ordered() {
       if (_currently_running_clients.load(std::memory_order_relaxed) < _config.clients) {
         _schedule_item_run(item_id);
       } else {
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        std::this_thread::sleep_for(std::chrono::milliseconds{10});
       }
     }
     _state.set_done();
@@ -307,7 +307,7 @@ void BenchmarkRunner::_benchmark_ordered() {
       std::cout << "  -> Waiting for clients that are still running" << std::endl;
     }
     Hyrise::get().scheduler()->wait_for_all_tasks();
-    Assert(_currently_running_clients == 0, "All runs must be finished at this point");
+    Assert(_currently_running_clients == 0, "All runs must be finished at this point.");
 
     result.duration = _state.benchmark_duration;
     // chrono::seconds uses an integer precision duration type, but we need a floating-point value.
@@ -383,7 +383,7 @@ void BenchmarkRunner::_warmup(const BenchmarkItemID item_id) {
   const auto& name = _benchmark_item_runner->item_name(item_id);
   std::cout << "- Warming up for " << name << std::endl;
 
-  Assert(_currently_running_clients == 0, "Did not expect any clients to run at this time");
+  Assert(_currently_running_clients == 0, "Did not expect any clients to run at this time.");
 
   _state = BenchmarkState{_config.warmup_duration};
 
@@ -392,7 +392,7 @@ void BenchmarkRunner::_warmup(const BenchmarkItemID item_id) {
     if (_currently_running_clients.load(std::memory_order_relaxed) < _config.clients) {
       _schedule_item_run(item_id);
     } else {
-      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+      std::this_thread::sleep_for(std::chrono::milliseconds{10});
     }
   }
 
@@ -405,7 +405,7 @@ void BenchmarkRunner::_warmup(const BenchmarkItemID item_id) {
 
   // Wait for the rest of the tasks that didn't make it in time.
   Hyrise::get().scheduler()->wait_for_all_tasks();
-  Assert(_currently_running_clients == 0, "All runs must be finished at this point");
+  Assert(_currently_running_clients == 0, "All runs must be finished at this point.");
 }
 
 nlohmann::json BenchmarkRunner::_create_report() const {
@@ -566,11 +566,11 @@ nlohmann::json BenchmarkRunner::create_context(const BenchmarkConfig& config) {
   // Generate YY-MM-DD hh:mm::ss
   auto current_time = std::time(nullptr);
   auto local_time = *std::localtime(&current_time);  // NOLINT(concurrency-mt-unsafe) - not called in parallel
-  std::stringstream timestamp_stream;
+  auto timestamp_stream = std::stringstream{};
   timestamp_stream << std::put_time(&local_time, "%Y-%m-%d %H:%M:%S");
 
   // clang-format off
-  std::stringstream compiler;
+  auto compiler = std::stringstream{};
   #if defined(__clang__)
     compiler << "clang " << __clang_major__ << "." << __clang_minor__ << "." << __clang_patchlevel__;
   #elif defined(__GNUC__)
@@ -602,7 +602,7 @@ nlohmann::json BenchmarkRunner::create_context(const BenchmarkConfig& config) {
 nlohmann::json BenchmarkRunner::_sql_to_json(const std::string& sql) {
   auto pipeline = SQLPipelineBuilder{sql}.create_pipeline();
   const auto& [pipeline_status, table] = pipeline.get_result_table();
-  Assert(pipeline_status == SQLPipelineStatus::Success, "_sql_to_json failed");
+  Assert(pipeline_status == SQLPipelineStatus::Success, "_sql_to_json failed.");
 
   auto output = nlohmann::json::array();
   for (auto row_nr = uint64_t{0}; row_nr < table->row_count(); ++row_nr) {

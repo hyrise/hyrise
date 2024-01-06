@@ -333,7 +333,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
           lz4_stream, reinterpret_cast<char*>(values.data()) + value_offset, compressed_block.data(),
           static_cast<int>(decompressed_block_size), static_cast<int>(block_bound));
 
-      Assert(compression_result > 0, "LZ4 stream compression failed");
+      Assert(compression_result > 0, "LZ4 stream compression failed.");
 
       // shrink the block vector to the actual size of the compressed result
       compressed_block.resize(static_cast<size_t>(compression_result));
@@ -413,8 +413,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     }
 
     DebugAssert(dictionary_size <= max_dictionary_size,
-                "Generated ZSTD dictionary in LZ4 compression is larger than "
-                "the memory allocated for it.");
+                "Generated ZSTD dictionary in LZ4 compression is larger than the memory allocated for it.");
 
     // Shrink the allocated dictionary size to the actual size.
     dictionary.resize(dictionary_size);
