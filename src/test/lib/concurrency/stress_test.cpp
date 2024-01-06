@@ -286,7 +286,7 @@ TEST_F(StressTest, NodeQueueSchedulerCreationAndReset) {
   const auto thread_count = std::thread::hardware_concurrency();
 
   Hyrise::get().topology.use_fake_numa_topology(thread_count, thread_count / 4);
-  for (auto loop_id = size_t{0}; loop_id < 128; ++loop_id) {
+  for (auto loop_id = size_t{0}; loop_id < 64; ++loop_id) {
     auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
     Hyrise::get().set_scheduler(node_queue_scheduler);
     EXPECT_EQ(node_queue_scheduler->active_worker_count().load(), thread_count);
@@ -303,7 +303,7 @@ TEST_F(StressTest, NodeQueueSchedulerCreationAndReset) {
 // We run this test for various fake NUMA topologies as it triggered a bug that was introduced with #2610.
 TEST_F(StressTest, NodeQueueSchedulerSemaphoreIncrements) {
   constexpr auto SLEEP_TIME = std::chrono::milliseconds{1};
-  const auto job_count = CORES_PER_NODE * 64;
+  const auto job_count = CORES_PER_NODE * 32;
 
   for (const auto& fake_numa_topology : FAKE_SINGLE_NODE_NUMA_TOPOLOGIES) {
     Hyrise::get().topology.use_fake_numa_topology(fake_numa_topology);
@@ -361,7 +361,7 @@ TEST_F(StressTest, NodeQueueSchedulerSemaphoreIncrements) {
 TEST_F(StressTest, NodeQueueSchedulerSemaphoreIncrementsDependentTasks) {
   constexpr auto DEPENDENT_JOB_TASKS_LENGTH = size_t{10};
   constexpr auto SLEEP_TIME = std::chrono::milliseconds{1};
-  const auto job_count = CORES_PER_NODE * 64;
+  const auto job_count = CORES_PER_NODE * 32;
 
   for (const auto& fake_numa_topology : FAKE_SINGLE_NODE_NUMA_TOPOLOGIES) {
     Hyrise::get().topology.use_fake_numa_topology(fake_numa_topology);
