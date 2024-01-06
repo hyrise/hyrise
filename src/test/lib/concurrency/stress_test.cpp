@@ -312,7 +312,7 @@ TEST_F(StressTest, NodeQueueSchedulerSemaphoreIncrements) {
     Hyrise::get().set_scheduler(node_queue_scheduler);
 
     auto counter = std::atomic<uint32_t>{0};
-    auto wait_flag = true;
+    auto wait_flag = std::atomic<bool>{true};
 
     auto waiting_jobs = std::vector<std::shared_ptr<AbstractTask>>{};
     waiting_jobs.reserve(job_count);
@@ -369,7 +369,7 @@ TEST_F(StressTest, NodeQueueSchedulerSemaphoreIncrementsDependentTasks) {
     Hyrise::get().set_scheduler(node_queue_scheduler);
 
     auto counter = std::atomic<uint32_t>{0};
-    auto wait_flag = true;
+    auto wait_flag = std::atomic<bool>{true};
 
     auto waiting_jobs = std::vector<std::shared_ptr<AbstractTask>>{};
     waiting_jobs.reserve(job_count);
