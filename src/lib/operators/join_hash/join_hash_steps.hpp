@@ -135,8 +135,6 @@ class PosHashTable {
 
   // Rewrite the SmallPosLists into one giant UnifiedPosList (see above).
   void finalize() {
-    // TODO(Martin): why did we rehash here? Expensive?
-    // _offset_hash_table.shrink_to_fit();
     const auto hash_table_size = _offset_hash_table.size();
 
     if (_mode == JoinHashBuildMode::AllPositions) {
