@@ -23,7 +23,7 @@
 | python                    | >= 3.6           |    All   |         Yes (linting and tests in CI) |
 | readline                  | >= 7             |    All   |                                    No |
 | sqlite3                   | >= 3             |    All   |                                    No |
-| tbb/libtbb-dev            | any              |    All   |                                    No |
+| tbb/libtbb-dev (oneTBB)   | any              |    All   |                                    No |
 | valgrind                  | any              |    All   |            Yes, memory checking in CI |
 
 
