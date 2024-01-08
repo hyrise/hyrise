@@ -25,9 +25,9 @@ namespace {
 using namespace hyrise;  // NOLINT(build/namespaces)
 
 /**
- * Helper to split results into chunks and prepare output vectors. Consumers receive iterators to parts of the results
- * and are called concurrently.
- * Function is user either to process RowIDs (for group-by columns) or actual values (for aggregation results).
+ * Helper to split results into chunks and prepare output vectors. Callers pass a function to consume the split results.
+ * This function receives iterators to the result split. Consumer functions are executed via the scheduler.
+ * Function is used either to process RowIDs (for group-by columns) or actual values (for aggregation results).
  */
 template <typename ColumnDataType, WindowFunction aggregate_func, typename ResultConsumer, typename ValueVectorType>
 void split_results_chunk_wise(const bool write_nulls, const AggregateResults<ColumnDataType, aggregate_func>& results,
@@ -465,7 +465,7 @@ KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() {
     // keys_per_chunk[chunk_id][chunk_offset] with something that uniquely identifies the group into which that
     // position belongs. There are a couple of options here (cf. AggregateHash::_on_execute):
     //
-    // 0 GROUP BY columns:   No partitioning needed; we don't reach this point because of the check for
+    // 0 GROUP BY columns:   No partitioning needed; we do not reach this point because of the check for
     //                       EmptyAggregateKey above
     // 1 GROUP BY column:    The AggregateKey is one dimensional, i.e., the same as AggregateKeyEntry
     // > 1 GROUP BY columns: The AggregateKey is multi-dimensional. The value in
@@ -624,7 +624,7 @@ KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() {
                   }
                 } else {
                   // We need to generate an ID that is unique for the value. In some cases, we can use an optimization,
-                  // in others, we can't. We need to somehow track whether we have found an ID or not. For this, we
+                  // in others, we cannot. We need to somehow track whether we have found an ID or not. For this, we
                   // first set `value_id` to its maximum value. If after all branches it is still that max value, no
                   // optimized  ID generation was applied and we need to generate the ID using the value->ID map.
                   auto value_id = std::numeric_limits<AggregateKeyEntry>::max();
@@ -687,7 +687,7 @@ KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() {
 
                     value_id = inserted.first->second;
 
-                    // if the id_map didn't have the value as a key and a new element was inserted.
+                    // If the id_map did not have the value as a key and a new element was inserted.
                     if (inserted.second) {
                       ++id_counter;
                     }
@@ -780,7 +780,7 @@ void AggregateHash::_aggregate() {
 
     if (input_column_id == INVALID_COLUMN_ID) {
       Assert(aggregate->window_function == WindowFunction::Count, "Only COUNT may have an invalid ColumnID.");
-      // SELECT COUNT(*) - we know the template arguments, so we don't need a visitor.
+      // SELECT COUNT(*) - we know the template arguments, so we do not need a visitor.
       auto context = std::make_shared<AggregateContext<CountColumnType, WindowFunction::Count, AggregateKey>>(
           _expected_result_size);
 
@@ -846,10 +846,9 @@ void AggregateHash::_aggregate() {
       for (const auto& aggregate : _aggregates) {
         /**
          * Special COUNT(*) implementation.
-         * Because COUNT(*) does not have a specific target column, we use the maximum ColumnID.
-         * We then go through the keys_per_chunk map and count the occurrences of each group key.
-         * The results are saved in the regular aggregate_count variable so that we don't need a
-         * specific output logic for COUNT(*).
+         * Because COUNT(*) does not have a specific target column, we use the maximum ColumnID. We then go through the
+         * keys_per_chunk map and count the occurrences of each group key. The results are saved in the regular
+         * aggregate_count variable so that we do not need a specific output logic for COUNT(*).
          */
 
         const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->argument());
@@ -1051,13 +1050,13 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
   }
 
   // At this point, we collected the group-by columns as reference segments which are split using the default chunk size
-  // (minus gap rows, see comments on NULL_ID). In contrast, the aggregate values are consecutively materialized. We
-  // will now split these and create a temporary table of reference segments (temporary as life time is set by
-  // shared_ptr via ReferenceSegment::_referenced_table). This temporary table stores reference segments for the group
-  // by columns and reference segments to materialized columns (of the temporary table, using EntireChunkPosList) for
-  // the aggregate columns.
+  // (minus gap rows, see comments on NULL_ID). Similarly, the aggregate values are split into chunks. We create a
+  // temporary table of reference segments (temporary as life time is set by shared_ptr via
+  // ReferenceSegment::_referenced_table). This temporary table stores reference segments for the group by columns and
+  // reference segments to materialized columns (of the temporary table, using EntireChunkPosList) for the aggregate
+  // columns.
 
-  // Write the output
+  // Write the output.
   auto timer = Timer{};
 
   auto reference_segment_indexes = std::vector<ColumnID>{};
@@ -1103,6 +1102,11 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
   if (!_intermediate_result.empty() && _intermediate_result.front()[0]->size() > 0) {
     const auto output_table_chunk_count = _intermediate_result.size();
     for (auto chunk_id = ChunkID{0}; chunk_id < output_table_chunk_count; ++chunk_id) {
+      if (!_intermediate_result[chunk_id][0]) {
+        // When vectors have been oversized (see get_or_add_result()), intermediate chunks might be completely empty.
+        continue;
+      }
+
       auto reference_segments = Segments{};
       reference_segments.resize(num_output_columns);
 
@@ -1320,7 +1324,7 @@ write_aggregate_values(const AggregateResults<ColumnDataType, aggregate_func>& /
 template <typename ColumnDataType, WindowFunction aggregate_function>
 void AggregateHash::_write_aggregate_output(ColumnID aggregate_index) {
   // Used to track the duration of groupby columns writing, which is done for the first aggregate column only. Value is
-  // subtracted from the runtime of this method (thus, it's either non-zero for the first aggregate column or zero for
+  // subtracted from the runtime of this method (thus, it is either non-zero for the first aggregate column or zero for
   // the remaining columns).
   auto excluded_time = std::chrono::nanoseconds{};
   auto timer = Timer{};
@@ -1371,7 +1375,7 @@ void AggregateHash::_write_aggregate_output(ColumnID aggregate_index) {
     value_vectors.emplace_back();
     value_vectors[0].emplace_back();
     if constexpr (NEEDS_NULL) {
-      Assert(null_vectors.empty(), "Unexpected non-empty state of null values.");
+      Assert(null_vectors.empty(), "Unexpected non-empty state of NULL values.");
       null_vectors.emplace_back();
       null_vectors[0].emplace_back(true);
     }
