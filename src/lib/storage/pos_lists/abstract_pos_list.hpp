@@ -46,7 +46,7 @@ class AbstractPosList : private Noncopyable {
     }
 
     DereferenceReturnType dereference() const {
-      DebugAssert(_chunk_offset < _pos_list->size(), "past-the-end PosListIterator dereferenced.");
+      DebugAssert(_chunk_offset < _pos_list->size(), "Past-the-end PosListIterator dereferenced.");
       return (*_pos_list)[_chunk_offset];
     }
 

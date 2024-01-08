@@ -593,7 +593,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
   // Determines the smallest value in a sorted materialized table.
   const T& _table_min_value(const MaterializedSegmentList<T>& sorted_table) {
     DebugAssert(_primary_predicate_condition != PredicateCondition::Equals,
-                "The table needs to be sorted for _table_min_value() which is only the case for non-equi joins.");
+                "The table needs to be sorted for _table_min_value(), which is only the case for non-equi joins.");
     DebugAssert(!sorted_table.empty(), "Sorted table has no partitions.");
 
     for (const auto& partition : sorted_table) {

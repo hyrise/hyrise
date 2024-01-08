@@ -8,7 +8,6 @@
 #include <memory>
 
 #include <tbb/concurrent_queue.h>  // NOLINT
-
 #include "concurrentqueue.h"
 #include "lightweightsemaphore.h"
 

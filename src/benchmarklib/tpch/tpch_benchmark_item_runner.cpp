@@ -5,10 +5,12 @@ extern "C" {
 }
 
 #include <iomanip>
+#include <memory>
 #include <numeric>
 #include <random>
 #include <sstream>
 
+#include <boost/date_time/gregorian/gregorian.hpp>
 #include <boost/algorithm/string/join.hpp>
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
@@ -505,7 +507,7 @@ std::string TPCHBenchmarkItemRunner::_build_deterministic_query(const BenchmarkI
 }
 
 std::string TPCHBenchmarkItemRunner::item_name(const BenchmarkItemID item_id) const {
-  Assert(item_id < 22u, "item_id out of range.");
+  Assert(item_id < 22, "item_id out of range.");
   return std::string("TPC-H ") + (item_id + 1 < 10 ? "0" : "") + std::to_string(item_id + 1);
 }
 

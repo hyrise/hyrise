@@ -223,9 +223,8 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::evaluate_expressi
       Fail("Cannot evaluate an LQP expression, those need to be translated by the LQPTranslator first.");
 
     case ExpressionType::Placeholder:
-      Fail(
-          "Cannot evaluate an expression still containing placeholders. Are you trying to execute a prepared plan "
-          "without instantiating it first?");
+      Fail("Cannot evaluate an expression still containing placeholders. Are you trying to execute a prepared plan "
+           "without instantiating it first?");
 
     case ExpressionType::Interval:
       Fail("IntervalExpression should have been resolved by SQLTranslator.");
@@ -853,7 +852,7 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_extract
         // do lazy checks only whenever required. Though parsing the string values leads to degraded performance
         // compared to, e.g., accessing substrings or accessing member variables, we ensure correct results.
         // TODO(anyone): Revisit for performance if we use this in actual benchmarks.
-        Assert(value.size() >= 10u, "Invalid ISO 8601 extended timestamp '" + value + "'.");
+        Assert(value.size() >= 10, "Invalid ISO 8601 extended timestamp '" + value + "'.");
         const auto& timestamp = string_to_timestamp(value);
         Assert(timestamp, "Invalid ISO 8601 extended timestamp '" + value + "'.");
         values[chunk_offset] = extract_component(*timestamp);
@@ -877,12 +876,12 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_unary_m
       const auto argument_result_count = static_cast<ChunkOffset>(argument_result.size());
       values.resize(argument_result_count);
       for (auto chunk_offset = ChunkOffset{0}; chunk_offset < argument_result_count; ++chunk_offset) {
-        // NOTE: Actual negation happens in this line
+        // NOTE: Actual negation happens in this line.
         values[chunk_offset] = -argument_result.values[chunk_offset];
       }
       nulls = argument_result.nulls;
     } else {
-      Fail("Cannot negate a Strings, cannot negate an argument to a different type.");
+      Fail("Cannot negate: type is either a string or argument has wrong type.");
     }
   });
 

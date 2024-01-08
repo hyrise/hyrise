@@ -3,6 +3,7 @@
 #include <cmath>
 #include <memory>
 
+#include "cost_estimation/abstract_cost_estimator.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_utils.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
@@ -14,8 +15,6 @@
 #include "utils/assert.hpp"
 
 namespace hyrise {
-
-class AbstractCostEstimator;
 
 std::shared_ptr<AbstractCostEstimator> CostEstimatorLogical::new_instance() const {
   return std::make_shared<CostEstimatorLogical>(cardinality_estimator->new_instance());

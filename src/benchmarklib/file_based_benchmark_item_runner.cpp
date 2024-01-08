@@ -23,7 +23,7 @@ FileBasedBenchmarkItemRunner::FileBasedBenchmarkItemRunner(
   Assert(std::filesystem::exists(path), "No such file or directory '" + query_path + "'");
 
   if (std::filesystem::is_regular_file(path)) {
-    Assert(is_sql_file(query_path), "Specified file '" + query_path + "' is not an .sql file.");
+    Assert(is_sql_file(query_path), "Specified file '" + query_path + "' is not a .sql file.");
     _parse_query_file(query_path, query_subset);
   } else {
     // Recursively walk through the specified directory and add all files on the way

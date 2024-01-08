@@ -6,11 +6,10 @@
 
 #include "expression_utils.hpp"
 #include "expression/abstract_expression.hpp"
+#include "operators/abstract_operator.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {
-
-class AbstractOperator;
 
 std::ostream& operator<<(std::ostream& stream, const ArithmeticOperator arithmetic_operator) {
   switch (arithmetic_operator) {
