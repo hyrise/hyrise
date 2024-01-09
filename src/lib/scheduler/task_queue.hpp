@@ -7,11 +7,13 @@
 #include <condition_variable>
 #include <memory>
 
-#include <tbb/concurrent_queue.h>  // NOLINT
-#include "concurrentqueue.h"
-#include "lightweightsemaphore.h"
+#include <tbb/concurrent_queue.h>  // NOLINT(build/include_order): wronlgy identified as a C header.
 
 #include "types.hpp"
+
+namespace moodycamel {  //
+class LightweightSemaphore;
+}
 
 namespace hyrise {
 

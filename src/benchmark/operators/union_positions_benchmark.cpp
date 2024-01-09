@@ -57,7 +57,7 @@ std::shared_ptr<Table> create_reference_table(std::shared_ptr<Table> referenced_
   }
   auto table = std::make_shared<Table>(column_definitions, TableType::References);
 
-  for (auto row_id = size_t{0}; row_id < num_rows;) {
+  for (auto row_id = ChunkOffset{0}; row_id < num_rows;) {
     const auto num_rows_in_this_chunk = std::min(num_rows_per_chunk, num_rows - row_id);
 
     auto segments = Segments{};

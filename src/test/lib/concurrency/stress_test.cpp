@@ -397,7 +397,7 @@ TEST_F(StressTest, NodeQueueSchedulerSemaphoreIncrementsDependentTasks) {
     // Wait a bit for workers to pull jobs and decrement semaphore.
     std::this_thread::sleep_for(5 * CORES_PER_NODE * SLEEP_TIME);
 
-    // The number of scheduled jobs depends on DEPENDENT_JOB_TASKS_LENGTH (see job definition above; due the jobs
+    // The number of scheduled jobs depends on DEPENDENT_JOB_TASKS_LENGTH (see job definition above; due to the jobs
     // dependencies, jobs are only scheduled when they have no predecessors).
     const auto executable_jobs = static_cast<float>(job_count) / static_cast<float>(DEPENDENT_JOB_TASKS_LENGTH);
     for (const auto& queue : node_queue_scheduler->queues()) {

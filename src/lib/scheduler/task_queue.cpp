@@ -3,6 +3,9 @@
 #include <memory>
 #include <utility>
 
+#include "concurrentqueue.h"  // The lightweight semaphore uses definitions of concurrentqueue.h.
+#include "lightweightsemaphore.h"
+
 #include "abstract_task.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"

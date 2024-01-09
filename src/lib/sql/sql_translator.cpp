@@ -2081,7 +2081,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
         return std::make_shared<FunctionExpression>(function_iter->second, arguments);
       }
 
-      FailInput("Could not resolve function '"s + name + "'.");
+      FailInput("Could not resolve function '" + name + "'.");
     }
 
     case hsql::kExprOperator: {
@@ -2330,7 +2330,7 @@ SQLTranslator::TableSourceState::TableSourceState(
 void SQLTranslator::TableSourceState::append(TableSourceState&& rhs) {
   for (auto& table_name_and_elements : rhs.elements_by_table_name) {
     const auto unique = !elements_by_table_name.contains(table_name_and_elements.first);
-    AssertInput(unique, "Table name '"s + table_name_and_elements.first + "' in FROM clause is not unique.");
+    AssertInput(unique, "Table name '" + table_name_and_elements.first + "' in FROM clause is not unique.");
   }
 
   elements_by_table_name.merge(std::move(rhs.elements_by_table_name));
