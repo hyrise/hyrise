@@ -16,9 +16,9 @@ RUN apt-get update \
         cmake \
         curl \
         dos2unix \
-        g++-10 \
+        g++-9 \
         g++-11 \
-        gcc-10 \
+        gcc-9 \
         gcc-11 \
         gcovr \
         git \

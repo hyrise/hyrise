@@ -52,7 +52,7 @@ try {
       // Print the hostname to let us know on which node the docker image was executed for reproducibility.
       sh "hostname"
     }
-  
+
     // The empty '' results in using the default registry: https://index.docker.io/v1/
     docker.withRegistry('', 'docker') {
       def hyriseCI = docker.image('hyrise/hyrise-ci:22.04');
@@ -81,7 +81,7 @@ try {
 
             // We don't use unity builds with GCC 9 as it triggers https://github.com/google/googletest/issues/3552
             unity = '-DCMAKE_UNITY_BUILD=ON'
- 
+
             // With Hyrise, we aim to support the most recent compiler versions and do not invest a lot of work to
             // support older versions. We test the oldest LLVM version shipped with Ubuntu 22.04 (i.e., LLVM 11) and
             // GCC 9 (oldest version supported by Hyrise). We execute at least debug runs for them.
@@ -90,7 +90,7 @@ try {
             clang = '-DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++'
             clang11 = '-DCMAKE_C_COMPILER=clang-11 -DCMAKE_CXX_COMPILER=clang++-11'
             gcc = '-DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++'
-            gcc10 = '-DCMAKE_C_COMPILER=gcc-10 -DCMAKE_CXX_COMPILER=g++-10'
+            gcc9 = '-DCMAKE_C_COMPILER=gcc-9 -DCMAKE_CXX_COMPILER=g++-9'
 
             debug = '-DCMAKE_BUILD_TYPE=Debug'
             release = '-DCMAKE_BUILD_TYPE=Release'
@@ -114,7 +114,7 @@ try {
             mkdir gcc-debug && cd gcc-debug &&                                                           ${cmake} ${debug}          ${gcc}              .. &\
             mkdir gcc-release && cd gcc-release &&                                                       ${cmake} ${release}        ${gcc}              .. &\
             mkdir clang-11-debug && cd clang-11-debug &&                                                 ${cmake} ${debug}          ${clang11}          .. &\
-            mkdir gcc-10-debug && cd gcc-10-debug &&                                                       ${cmake} ${debug}          ${gcc10}             .. &\
+            mkdir gcc-9-debug && cd gcc-9-debug &&                                                       ${cmake} ${debug}          ${gcc9}             .. &\
             wait"
           }
 
@@ -133,10 +133,10 @@ try {
               sh "cd gcc-debug && make all -j \$(( \$(nproc) / 4))"
               sh "cd gcc-debug && ./hyriseTest"
             }
-          }, gcc10Debug: {
-            stage("gcc-10-debug") {
-              sh "cd gcc-10-debug && make all -j \$(( \$(nproc) / 4))"
-              sh "cd gcc-10-debug && ./hyriseTest"
+          }, gcc9Debug: {
+            stage("gcc-9-debug") {
+              sh "cd gcc-9-debug && make all -j \$(( \$(nproc) / 4))"
+              sh "cd gcc-9-debug && ./hyriseTest"
             }
           }, lint: {
             stage("Linting") {
@@ -174,12 +174,14 @@ try {
                 sh "./scripts/test/hyriseBenchmarkFileBased_test.py clang-debug"
                 sh "cd clang-debug && ../scripts/test/hyriseBenchmarkTPCH_test.py ." // Own folder to isolate visualization
                 sh "cd clang-debug && ../scripts/test/hyriseBenchmarkJCCH_test.py ." // Own folder to isolate cached data
+                sh "cd clang-debug && ../scripts/test/hyriseBenchmarkStarSchema_test.py ." // Own folder to isolate cached data
                 sh "./scripts/test/hyriseConsole_test.py gcc-debug"
                 sh "./scripts/test/hyriseServer_test.py gcc-debug"
                 sh "./scripts/test/hyriseBenchmarkJoinOrder_test.py gcc-debug"
                 sh "./scripts/test/hyriseBenchmarkFileBased_test.py gcc-debug"
                 sh "cd gcc-debug && ../scripts/test/hyriseBenchmarkTPCH_test.py ." // Own folder to isolate visualization
                 sh "cd gcc-debug && ../scripts/test/hyriseBenchmarkJCCH_test.py ." // Own folder to isolate cached data
+                sh "cd gcc-debug && ../scripts/test/hyriseBenchmarkStarSchema_test.py ." // Own folder to isolate cached data
 
               } else {
                 Utils.markStageSkippedForConditional("debugSystemTests")
@@ -294,15 +296,6 @@ try {
               } else {
                 Utils.markStageSkippedForConditional("clangDebugCoverage")
               }
-            }
-          }
-
-          // We run this test in an own stage since we encountered issues with multiple concurrent calls to the external DB generator.
-          stage("clangDebugSSBTest") {
-            if (env.BRANCH_NAME == 'master' || full_ci) {
-              sh "./scripts/test/hyriseBenchmarkStarSchema_test.py clang-debug"
-            } else {
-              Utils.markStageSkippedForConditional("clangDebugSSBTest")
             }
           }
 
@@ -425,7 +418,7 @@ try {
         if (env.BRANCH_NAME == 'master' || full_ci) {
           try {
             checkout scm
-            
+
             // We do not use install_dependencies.sh here as there is no way to run OS X in a Docker container
             sh "git submodule update --init --recursive --jobs 4 --depth=1"
 
