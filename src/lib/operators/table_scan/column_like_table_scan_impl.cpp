@@ -75,7 +75,7 @@ void ColumnLikeTableScanImpl::_scan_dictionary_segment(const BaseDictionarySegme
   // First, build a bitmap containing 1s/0s for matching/non-matching dictionary values. Second, iterate over the
   // attribute vector and check against the bitmap. If too many input rows have already been removed (are not part of
   // position_filter), this optimization is detrimental. See caller for that case.
-  std::pair<size_t, std::vector<bool>> result;
+  auto result = std::pair<size_t, std::vector<bool>>{};
 
   switch (segment.encoding_type()) {
     case EncodingType::Dictionary: {
@@ -94,7 +94,7 @@ void ColumnLikeTableScanImpl::_scan_dictionary_segment(const BaseDictionarySegme
       break;
     }
     default: {
-      Fail("Dictionary encoding is not implemented.");
+      Fail("Segment is either not dictionary-encoded or encoding specialization is not implemented.");
     }
   }
 

@@ -27,22 +27,20 @@ template <typename T, EraseReferencedSegmentType>
 class ReferenceSegmentIterable;
 
 template <typename T>
-requires(std::is_same_v<T, pmr_string>) class VariableStringDictionarySegment;
+class VariableStringDictionarySegment;
 
 /**
  * @defgroup Uniform interface to create an iterable from a segment
  *
- * These methods cannot be part of the segments' interfaces because
- * reference segment are not templated and thus don’t know their type.
+ * These methods cannot be part of the segments' interfaces because reference segment are not templated and thus don’t
+ * know their type.
  *
- * All iterables implement the same interface using static polymorphism
- * (i.e. the CRTP pattern, see segment_iterables/.hpp).
+ * All iterables implement the same interface using static polymorphism (i.e. the CRTP pattern, see
+ * segment_iterables/.hpp).
  *
- * In debug mode, create_iterable_from_segment returns a type erased
- * iterable, i.e., all iterators have the same type
+ * In debug mode, create_iterable_from_segment returns a type erased iterable, i.e., all iterators have the same type.
  *
- * Functions must be forward-declared because otherwise, we run into
- * circular include dependencies.
+ * Functions must be forward-declared because otherwise, we run into circular include dependencies.
  *
  * @{
  */
