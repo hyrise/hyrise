@@ -49,11 +49,11 @@
 * Miscellaneous
   * Prefer `if (object)` over `if (object != nullptr)` or `if (object.has_value())`.
   * Don't write `this->` if you don't have to.
-  * Be explicit with types: Use `[u]int(8|16|32|64)_t` instead of `int, long, uint` etc.
-  * Use [auto-to-stick](https://www.fluentcpp.com/2018/09/28/auto-stick-changing-style/): `auto x = 17;` or
+  * Be explicit with types: Use `[u]int(8|16|32|64)_t` instead of `int, long, uint` and prefer `uint32_t{0}` over `0u`.
+  * Use [auto-to-stick](https://www.fluentcpp.com/2018/09/28/auto-stick-changing-style/): `auto x = int64_t{17};` or
     `auto y = std::vector<size_t>{};`.
   * Namespaces: Do not create nested namespaces, do not import namespaces.
-  * Prefer pre-increment over post-increment. See the [LLVM Coding Standards](https://llvm.org/docs/CodingStandards.html#prefer-preincrement)
+  * Prefer pre-increment over post-increment. See the [LLVM Coding Standards](https://llvm.org/docs/CodingStandards.html#prefer-preincrement).
   * Consider structured bindings: `const auto& [iterator, added] = unordered_map.emplace(...);`
   * Use braced control statements, even for single-line blocks. Moreover, unless the block
     is empty (e.g., `while (!ready) {}`), add line breaks. Instead of `if (...) x();` (or `if (...) { x(); }`), write:
@@ -66,9 +66,9 @@
 
 
 # Formatting and Naming
-* Much of this is enforced by clang-tidy. However, clang-tidy does not yet cover hpp files (see #1901). Also, while
+* Much of our formatting and naming conventions is enforced by clang-tidy. However, clang-tidy does not yet cover hpp files (see #1901). Also, while
   clang-tidy is a great help, do not rely on it.
-* Call ./scripts/format.sh before committing your code.
+* Call `./scripts/format.sh` before committing your code.
 * Choose clear and concise names, and avoid, e.g., `i`, `j`, `ch_ptr`.
 * Formatting details: 2 spaces for indentation, 120 columns, comments above code.
 * Use empty lines to structure your code.
