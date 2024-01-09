@@ -448,7 +448,7 @@ TEST_F(StressTest, NodeQueueSchedulerMultiNumaNodeTPCHQ13) {
 
     auto sql_pipeline = SQLPipelineBuilder{tpch_q13}.create_pipeline();
     const auto& [pipeline_status, _] = sql_pipeline.get_result_tables();
-    EXPECT_EQ(pipeline_status, SQLPipelineStatus::Failure);
+    EXPECT_EQ(pipeline_status, SQLPipelineStatus::Success);
   }
 }
 
