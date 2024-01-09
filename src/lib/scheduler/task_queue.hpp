@@ -9,6 +9,9 @@
 
 #include <tbb/concurrent_queue.h>  // NOLINT(build/include_order): wronlgy identified as a C header.
 
+#include "concurrentqueue.h"  // The lightweight semaphore uses definitions of concurrentqueue.h.
+#include "lightweightsemaphore.h"
+
 #include "types.hpp"
 
 namespace moodycamel {  //
