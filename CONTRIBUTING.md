@@ -82,7 +82,7 @@
     * Classes that are used only to have a non-templated base class are named `BaseXY` (e.g., `BaseValueSegment`, while
       classes that have multiple differing implementations are named `AbstractXY` (e.g., `AbstractOperator`).
     * In cases where a constructor parameter would have the same name as the member it initializes, prefix it with
-      `init`: `C(int init_foo) : foo(init_foo) {}`.
+      `init`: `C(int32_t init_foo) : foo(init_foo) {}`.
     * If an identifier contains a verb or an adjective in addition to a noun, the schema [verb|adjective]\[noun] is
       preferred, e.g., use `left_input` rather than ~~`input_left`~~ and `set_left_input()` rather than
       ~~`set_input_left()`~~.
@@ -94,8 +94,8 @@
   ```c++
   class Foo {
     ...
-    int a;
-    int b;
+    int32_t a;
+    int32_t b;
   };
   ```
   However, certain test classes have many member variables of the same type, e.g., `std::shared_ptr<LQPColumnExpression>` for LQP node tests. Declarations with more than one variable can be used in such test classes if the number of variables is high (see below). Please use common sense to decide on which format you use.
