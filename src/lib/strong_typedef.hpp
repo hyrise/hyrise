@@ -65,6 +65,9 @@
     static typename std::enable_if_t<std::is_arithmetic_v<T>, ::hyrise::D> max() {                                \
       return ::hyrise::D(numeric_limits<T>::max());                                                               \
     }                                                                                                             \
+    static typename std::enable_if_t<std::is_arithmetic_v<T>, ::hyrise::D> lowest() {                             \
+      return ::hyrise::D(numeric_limits<T>::lowest());                                                            \
+    }                                                                                                             \
   };                                                                                                              \
   } /* NOLINT */                                                                                                  \
   namespace hyrise {                                                                                              \
