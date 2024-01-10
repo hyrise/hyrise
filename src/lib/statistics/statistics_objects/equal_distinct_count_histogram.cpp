@@ -23,7 +23,7 @@ using namespace hyrise;  // NOLINT
 // so reduces the cost of rehashing at the cost of slightly higher memory consumption. We only do it for strings,
 // where hashing is somewhat expensive.
 template <typename T>
-using ValueDistributionMap = std::unordered_map<T, HistogramCountType>;
+using ValueDistributionMap = boost::unordered_flat_map<T, HistogramCountType>;
 
 template <typename T>
 void add_segment_to_value_distribution(const AbstractSegment& segment, ValueDistributionMap<T>& value_distribution,
