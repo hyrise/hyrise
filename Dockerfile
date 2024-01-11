@@ -9,16 +9,16 @@ RUN apt-get update \
         autoconf \
         bash-completion \
         bc \
-        clang-11 \
+        clang-13 \
         clang-14 \
         clang-format-14 \
         clang-tidy-14 \
         cmake \
         curl \
         dos2unix \
-        g++-9 \
+        g++-10 \
         g++-11 \
-        gcc-9 \
+        gcc-10 \
         gcc-11 \
         gcovr \
         git \

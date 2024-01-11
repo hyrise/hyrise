@@ -595,6 +595,7 @@ set(
     utils/atomic_max.hpp
     utils/check_table_equal.cpp
     utils/check_table_equal.hpp
+    utils/comparator_concepts.hpp
     utils/copyable_atomic.hpp
     utils/date_time_utils.cpp
     utils/date_time_utils.hpp
@@ -660,6 +661,8 @@ set(
     utils/settings_manager.hpp
     utils/singleton.hpp
     utils/size_estimation_utils.hpp
+    utils/small_min_heap.hpp
+    utils/sort_utils.hpp
     utils/sqlite_add_indices.cpp
     utils/sqlite_add_indices.hpp
     utils/sqlite_wrapper.cpp
