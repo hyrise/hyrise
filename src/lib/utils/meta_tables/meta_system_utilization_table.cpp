@@ -64,7 +64,7 @@ std::shared_ptr<Table> MetaSystemUtilizationTable::_on_generate() const {
 MetaSystemUtilizationTable::LoadAvg MetaSystemUtilizationTable::_get_load_avg() {
   std::array<double, 3> load_avg{};
   const int nelem = getloadavg(load_avg.data(), 3);
-  Assert(nelem == 3, "Failed to read load averages");
+  Assert(nelem == 3, "Failed to read load averages.");
   return {static_cast<float>(load_avg[0]), static_cast<float>(load_avg[1]), static_cast<float>(load_avg[2])};
 }
 
@@ -92,7 +92,7 @@ uint64_t MetaSystemUtilizationTable::_get_system_cpu_time() {
     std::getline(stat_file, cpu_line);
     stat_file.close();
   } catch (std::ios_base::failure& fail) {
-    Fail("Failed to read /proc/stat (" + fail.what() + ")");
+    Fail("Failed to read /proc/stat (" + fail.what() + ").");
   }
 
   const auto cpu_ticks = _parse_value_string(cpu_line);
@@ -115,7 +115,7 @@ uint64_t MetaSystemUtilizationTable::_get_system_cpu_time() {
   mach_msg_type_number_t count = HOST_CPU_LOAD_INFO_COUNT;
   const auto ret =
       host_statistics(mach_host_self(), HOST_CPU_LOAD_INFO, reinterpret_cast<host_info_t>(&cpu_info), &count);
-  Assert(ret == KERN_SUCCESS, "Failed to get host_statistics");
+  Assert(ret == KERN_SUCCESS, "Failed to get host_statistics.");
 
   const auto active_ticks =
       cpu_info.cpu_ticks[CPU_STATE_SYSTEM] + cpu_info.cpu_ticks[CPU_STATE_USER] + cpu_info.cpu_ticks[CPU_STATE_NICE];
@@ -127,7 +127,7 @@ uint64_t MetaSystemUtilizationTable::_get_system_cpu_time() {
   return active_ns;
 #endif
 
-  Fail("Method not implemented for this platform");
+  Fail("Method not implemented for this platform.");
 }
 
 /**
@@ -140,7 +140,7 @@ uint64_t MetaSystemUtilizationTable::_get_process_cpu_time() {
 #ifdef __linux__
   struct timespec time_spec {};
   const auto ret = clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &time_spec);
-  Assert(ret == 0, "Failed in clock_gettime");
+  Assert(ret == 0, "Failed in clock_gettime.");
 
   const auto active_ns = (time_spec.tv_sec * std::nano::den + time_spec.tv_nsec);
 
@@ -149,12 +149,12 @@ uint64_t MetaSystemUtilizationTable::_get_process_cpu_time() {
 
 #ifdef __APPLE__
   const auto active_ns = clock_gettime_nsec_np(CLOCK_PROCESS_CPUTIME_ID);
-  Assert(active_ns != 0, "Failed in clock_gettime_nsec_np");
+  Assert(active_ns != 0, "Failed in clock_gettime_nsec_np.");
 
   return active_ns;
 #endif
 
-  Fail("Method not implemented for this platform");
+  Fail("Method not implemented for this platform.");
 }
 
 /**
@@ -182,7 +182,7 @@ MetaSystemUtilizationTable::SystemMemoryUsage MetaSystemUtilizationTable::_get_s
     }
     meminfo_file.close();
   } catch (std::ios_base::failure& fail) {
-    Fail("Failed to read /proc/meminfo (" + fail.what() + ")");
+    Fail("Failed to read /proc/meminfo (" + fail.what() + ").");
   }
 
   return memory_usage;
@@ -192,16 +192,16 @@ MetaSystemUtilizationTable::SystemMemoryUsage MetaSystemUtilizationTable::_get_s
   int64_t physical_memory;
   size_t size = sizeof(physical_memory);
   auto ret = sysctlbyname("hw.memsize", &physical_memory, &size, nullptr, 0);
-  Assert(ret == 0, "Failed to call sysctl hw.memsize");
+  Assert(ret == 0, "Failed to call sysctl hw.memsize.");
 
   // see reference: https://stackoverflow.com/a/1911863
   vm_size_t page_size;
   vm_statistics64_data_t vm_statistics;
   mach_msg_type_number_t count = sizeof(vm_statistics) / sizeof(natural_t);
   ret = host_page_size(mach_host_self(), &page_size);
-  Assert(ret == KERN_SUCCESS, "Failed to get page size");
+  Assert(ret == KERN_SUCCESS, "Failed to get page size.");
   ret = host_statistics64(mach_host_self(), HOST_VM_INFO, reinterpret_cast<host_info64_t>(&vm_statistics), &count);
-  Assert(ret == KERN_SUCCESS, "Failed to get host_statistics64");
+  Assert(ret == KERN_SUCCESS, "Failed to get host_statistics64.");
 
   auto memory_usage = MetaSystemUtilizationTable::SystemMemoryUsage{};
   memory_usage.free_memory = vm_statistics.free_count * page_size;
@@ -210,7 +210,7 @@ MetaSystemUtilizationTable::SystemMemoryUsage MetaSystemUtilizationTable::_get_s
   return memory_usage;
 #endif
 
-  Fail("Method not implemented for this platform");
+  Fail("Method not implemented for this platform.");
 }
 
 /**
@@ -246,12 +246,12 @@ MetaSystemUtilizationTable::ProcessMemoryUsage MetaSystemUtilizationTable::_get_
   struct task_basic_info info {};
   mach_msg_type_number_t count = TASK_BASIC_INFO_COUNT;
   const auto ret = task_info(mach_task_self(), TASK_BASIC_INFO, reinterpret_cast<task_info_t>(&info), &count);
-  Assert(ret == KERN_SUCCESS, "Failed to get task_info");
+  Assert(ret == KERN_SUCCESS, "Failed to get task_info.");
 
   return {info.virtual_size, info.resident_size};
 #endif
 
-  Fail("Method not implemented for this platform");
+  Fail("Method not implemented for this platform.");
 }
 
 /**
@@ -287,8 +287,8 @@ std::optional<size_t> MetaSystemUtilizationTable::_get_allocated_memory() {
     size_t stats_enabled_size{sizeof(stats_enabled)};
 
     auto error_code = mallctl("config.stats", &stats_enabled, &stats_enabled_size, nullptr, 0);
-    Assert(!error_code, "Cannot check if jemalloc was built with --stats_enabled");
-    Assert(stats_enabled, "Hyrise's jemalloc was not build with --stats_enabled");
+    Assert(!error_code, "Cannot check if jemalloc was built with --stats_enabled.");
+    Assert(stats_enabled, "Hyrise's jemalloc was not build with --stats_enabled.");
   }
 
   // Before retrieving the statistics, we need to update jemalloc's epoch to get current values. See the mallctl
@@ -297,14 +297,14 @@ std::optional<size_t> MetaSystemUtilizationTable::_get_allocated_memory() {
     uint64_t epoch = 1;
     auto epoch_size = sizeof(epoch);
     auto error_code = mallctl("epoch", &epoch, &epoch_size, &epoch, epoch_size);
-    Assert(!error_code, "Setting epoch failed");
+    Assert(!error_code, "Setting epoch failed.");
   }
 
   size_t allocated;
   auto allocated_size = sizeof(allocated);
 
   auto error_code = mallctl("stats.allocated", &allocated, &allocated_size, nullptr, 0);
-  Assert(!error_code, std::string{"mallctl failed with error code "} + std::to_string(error_code));
+  Assert(!error_code, std::string{"mallctl failed with error code '"} + std::to_string(error_code) + "'.");
 
   return allocated;
 #else
