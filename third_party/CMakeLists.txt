@@ -134,6 +134,16 @@ if(NOT APPLE)
     message(FATAL_ERROR "jemalloc cannot be built with whitespaces in the directory path. Please make sure Hyrise is being compiled with a path not containing any whitespaces.")
   endif()
 
+  # The following configuration for jemalloc is used since we switched from jemalloc 4 to 5.3. As found by others as
+  # well (see https://github.com/jemalloc/jemalloc/issues/1621), setting oversize_threshold to 0 helps to alleviate most
+  # performance regression for multi-threaded applications. Further, we use the recommended performance tuning settings
+  # (see https://github.com/jemalloc/jemalloc/blob/dev/TUNING.md) for high resource consumption applications. However,
+  # there is an issue with jemalloc's percpu_arena setting that does not work well with CPU affinities (e.g., when using
+  # numactl). The workaround is to explicitely set `narenas` to the number of cores (which is also the default; see
+  # https://github.com/jemalloc/jemalloc/issues/2054).
+  execute_process(COMMAND bash "-c" "getconf _NPROCESSORS_ONLN" OUTPUT_VARIABLE ARENA_COUNT OUTPUT_STRIP_TRAILING_WHITESPACE)
+  set(JEMALLOC_CONFIG "--with-malloc-conf=\"oversize_threshold:0,background_thread:true,narenas:${ARENA_COUNT},percpu_arena:percpu,metadata_thp:auto,muzzy_decay_ms:20000,dirty_decay_ms:20000\"")
+
   include(ExternalProject)
   set(JEMALLOC_COMPILER_ENVIRONMENT "CC=\"${CMAKE_C_COMPILER_LAUNCHER} ${CMAKE_C_COMPILER}\" CXX=\"${CMAKE_CXX_COMPILER_LAUNCHER} ${CMAKE_CXX_COMPILER}\"")
   externalproject_add(
@@ -141,9 +151,9 @@ if(NOT APPLE)
 
       SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/jemalloc
       BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/jemalloc
-      # Executing autoconf and the configure script with suppressed output, only printing it in case of non-zero return
-      CONFIGURE_COMMAND bash -c "cd <SOURCE_DIR> && if [ ! -f ./configure ] $<SEMICOLON> then autoconf $<SEMICOLON> fi && \
-                                 cd <BINARY_DIR> && output=$(${JEMALLOC_COMPILER_ENVIRONMENT} <SOURCE_DIR>/configure --prefix=<BINARY_DIR> 2>&1) || \
+
+      # Executing configure script with suppressed output, only printing it in case of non-zero return.
+      CONFIGURE_COMMAND bash -c "cd <BINARY_DIR> && output=$(${JEMALLOC_COMPILER_ENVIRONMENT} <SOURCE_DIR>/configure --prefix=<BINARY_DIR> ${JEMALLOC_CONFIG} 2>&1) || \
                                  (printf \"$output\\n\" && false)"
       BUILD_COMMAND bash -c "output=$(${MAC_INCLUDES} make 2>&1) || (printf \"$output\\n\" && false)"
       INSTALL_COMMAND false  # install should never be called, this is a safe guard that fails if it is

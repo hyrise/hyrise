@@ -3,8 +3,10 @@
 #include <atomic>
 #include <chrono>
 #include <iostream>
+#include <limits>
 #include <memory>
 #include <optional>
+#include <semaphore>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -102,6 +104,11 @@ class BenchmarkRunner : public Noncopyable {
   // The atomic uints are modified by other threads when finishing an item, to keep track of when we can
   // let a simulated client schedule the next item, as well as the total number of finished items so far.
   std::atomic_uint32_t _currently_running_clients{0};
+
+  // We schedule as many items simultaneously as we have simulated clients. We use a counting semaphore for this
+  // purpose. We initialize it to a maximum value of int32_t::max(), which should be sufficient for reasonable clients
+  // counts.
+  std::counting_semaphore<std::numeric_limits<int32_t>::max()> _running_clients_semaphore{0};
 
   // For BenchmarkMode::Shuffled, we count the number of runs executed across all items. This also includes items that
   // were unsuccessful (e.g., because of transaction aborts).
