@@ -49,7 +49,7 @@ struct MvccData {
   size_t memory_usage() const;
 
   // Register and deregister Insert operators that write to the chunk. We use this information to notice when all
-  // Inserts are either commited or rolled back and if we can finalize a chunk. For more details, see chunk.hpp.
+  // Inserts are either committed or rolled back and if we can finalize a chunk. For more details, see chunk.hpp.
   void register_insert();
   void deregister_insert();
   uint32_t pending_inserts() const;
