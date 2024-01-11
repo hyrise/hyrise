@@ -86,9 +86,6 @@ class PosHashTable {
  public:
   // If we end up with a partition that has more values than Offset can hold, the partitioning algorithm is at fault.
   using Offset = uint32_t;
-
-  // In case we consider runtime to be more relevant, the flat hash map performs better (measured to be mostly on par
-  // with bytell hash map and in some cases up to 5% faster) but is significantly larger than the bytell hash map.
   using OffsetHashTable = boost::unordered_flat_map<HashedType, Offset>;
 
   // The small_vector holds the first n values in local storage and only resorts to heap storage after that. 1 is chosen

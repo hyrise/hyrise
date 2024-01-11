@@ -41,9 +41,6 @@
 	path = third_party/nlohmann_json
 	url = https://github.com/nlohmann/json.git
 	shallow = true
-[submodule "third_party/robin-map"]
-	path = third_party/robin-map
-	url = https://github.com/Tessil/robin-map.git
 [submodule "third_party/sparse-map"]
 	path = third_party/sparse-map
 	url = https://github.com/Tessil/sparse-map.git
