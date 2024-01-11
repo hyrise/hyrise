@@ -39,7 +39,7 @@ JoinNode::JoinNode(const JoinMode init_join_mode,
 std::string JoinNode::description(const DescriptionMode mode) const {
   const auto expression_mode = _expression_description_mode(mode);
 
-  std::stringstream stream;
+  auto stream = std::stringstream{};
   stream << "[Join] Mode: " << join_mode;
 
   for (const auto& predicate : join_predicates()) {

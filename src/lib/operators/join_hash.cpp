@@ -103,7 +103,7 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
                    left_input_table()->column_data_type(_primary_predicate.column_ids.first),
                    right_input_table()->column_data_type(_primary_predicate.column_ids.second),
                    !_secondary_predicates.empty(), left_input_table()->type(), right_input_table()->type()}),
-         "JoinHash doesn't support these parameters");
+         "JoinHash does not support these parameters.");
 
   auto build_input_table = std::shared_ptr<const Table>{};
   auto probe_input_table = std::shared_ptr<const Table>{};
