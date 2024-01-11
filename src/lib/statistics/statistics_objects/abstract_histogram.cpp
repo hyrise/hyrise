@@ -19,6 +19,7 @@
 #include "lossy_cast.hpp"
 #include "resolve_type.hpp"
 #include "statistics/statistics_objects/abstract_statistics_object.hpp"
+#include "statistics/statistics_objects/scaled_histogram.hpp"
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/segment_iterate.hpp"
 
@@ -214,7 +215,7 @@ bool AbstractHistogram<T>::does_not_contain(const PredicateCondition predicate_c
 
   switch (predicate_condition) {
     case PredicateCondition::Equals: {
-      const auto bin_id = _bin_for_value(*value);
+      const auto bin_id = bin_for_value(*value);
       // It is possible for EqualWidthHistograms to have empty bins.
       return bin_id == INVALID_BIN_ID || bin_height(bin_id) == 0ul;
     }
@@ -248,13 +249,13 @@ bool AbstractHistogram<T>::does_not_contain(const PredicateCondition predicate_c
         return true;
       }
 
-      const auto value_bin = _bin_for_value(*value);
-      const auto value2_bin = _bin_for_value(*value2);
+      const auto value_bin = bin_for_value(*value);
+      const auto value2_bin = bin_for_value(*value2);
 
       // In an EqualDistinctCountHistogram, if both values fall into the same gap, we can prune the predicate.
       // We need to have at least two bins to rule out pruning if value < min and value2 > max.
       if (value_bin == INVALID_BIN_ID && value2_bin == INVALID_BIN_ID && bin_count() > 1ul &&
-          _next_bin_for_value(*value) == _next_bin_for_value(*value2)) {
+          next_bin_for_value(*value) == next_bin_for_value(*value2)) {
         return true;
       }
 
@@ -310,7 +311,7 @@ std::pair<Cardinality, DistinctCount> AbstractHistogram<T>::estimate_cardinality
 
   switch (predicate_condition) {
     case PredicateCondition::Equals: {
-      const auto bin_id = _bin_for_value(*value);
+      const auto bin_id = bin_for_value(*value);
       const auto bin_distinct_count = this->bin_distinct_count(bin_id);
 
       if (bin_distinct_count == 0) {
@@ -334,12 +335,12 @@ std::pair<Cardinality, DistinctCount> AbstractHistogram<T>::estimate_cardinality
 
       auto cardinality = Cardinality{0};
       auto distinct_count = 0.f;
-      auto bin_id = _bin_for_value(*value);
+      auto bin_id = bin_for_value(*value);
 
       if (bin_id == INVALID_BIN_ID) {
         // The value is within the range of the histogram, but does not belong to a bin.
         // Therefore, we need to sum up the counts of all bins with a max < value.
-        bin_id = _next_bin_for_value(*value);
+        bin_id = next_bin_for_value(*value);
       } else if (value == bin_minimum(bin_id) || bin_height(bin_id) == 0u) {
         // If the value is exactly the lower bin edge or the bin is empty,
         // we do not have to add anything of that bin and know the cardinality exactly.
@@ -398,16 +399,16 @@ std::pair<Cardinality, DistinctCount> AbstractHistogram<T>::estimate_cardinality
 
       // Adjust value (lower_bound) and value2 (lower_bin_id) so that both values are contained within a bin
       auto lower_bound = *value;
-      auto lower_bin_id = _bin_for_value(*value);
+      auto lower_bin_id = bin_for_value(*value);
       if (lower_bin_id == INVALID_BIN_ID) {
-        lower_bin_id = _next_bin_for_value(*value);
+        lower_bin_id = next_bin_for_value(*value);
         lower_bound = bin_minimum(lower_bin_id);
       }
 
       auto upper_bound = *value2;
-      auto upper_bin_id = _bin_for_value(*value2);
+      auto upper_bin_id = bin_for_value(*value2);
       if (upper_bin_id == INVALID_BIN_ID) {
-        upper_bin_id = _next_bin_for_value(*value2);
+        upper_bin_id = next_bin_for_value(*value2);
         if (upper_bin_id == INVALID_BIN_ID) {
           upper_bin_id = bin_count() - 1;
         } else {
@@ -492,7 +493,7 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::sliced(
     }
 
     case PredicateCondition::NotEquals: {
-      const auto value_bin_id = _bin_for_value(*value);
+      const auto value_bin_id = bin_for_value(*value);
       if (value_bin_id == INVALID_BIN_ID) {
         return clone();
       }
@@ -539,10 +540,10 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::sliced(
       return sliced(PredicateCondition::LessThan, _domain.next_value_clamped(*value));
 
     case PredicateCondition::LessThan: {
-      auto last_included_bin_id = _bin_for_value(*value);
+      auto last_included_bin_id = bin_for_value(*value);
 
       if (last_included_bin_id == INVALID_BIN_ID) {
-        const auto next_bin_id_after_value = _next_bin_for_value(*value);
+        const auto next_bin_id_after_value = next_bin_for_value(*value);
 
         if (next_bin_id_after_value == INVALID_BIN_ID) {
           last_included_bin_id = bin_count() - 1;
@@ -574,10 +575,10 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::sliced(
       return sliced(PredicateCondition::GreaterThanEquals, _domain.next_value_clamped(*value));
 
     case PredicateCondition::GreaterThanEquals: {
-      auto first_new_bin_id = _bin_for_value(*value);
+      auto first_new_bin_id = bin_for_value(*value);
 
       if (first_new_bin_id == INVALID_BIN_ID) {
-        first_new_bin_id = _next_bin_for_value(*value);
+        first_new_bin_id = next_bin_for_value(*value);
       }
 
       DebugAssert(first_new_bin_id < bin_count(), "This should have been caught by does_not_contain().");
@@ -738,7 +739,7 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::pruned(
 template <typename T>
 std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::scaled(const Selectivity selectivity) const {
   Assert(!std::isnan(selectivity), "Unexpected selectivity.");
-  GenericHistogramBuilder<T> builder(bin_count(), _domain);
+  /*GenericHistogramBuilder<T> builder(bin_count(), _domain);
 
   // Scale the number of values in the bin with the given selectivity.
   for (auto bin_id = BinID{0}; bin_id < bin_count(); ++bin_id) {
@@ -746,7 +747,9 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::scaled(const Sel
                     _scale_distinct_count(bin_height(bin_id), bin_distinct_count(bin_id), selectivity));
   }
 
-  return builder.build();
+  return builder.build();*/
+  return ScaledHistogram<T>::from_referenced_histogram(this->shared_from_this(), selectivity);
+  //return std::make_shared<ScaledHistogram<T>>(this->shared_from_this(), selectivity, _domain);
 }
 
 template <typename T>

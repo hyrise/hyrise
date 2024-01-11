@@ -54,9 +54,8 @@ class EqualDistinctCountHistogram : public AbstractHistogram<T> {
   HistogramCountType bin_height(const BinID index) const override;
   HistogramCountType bin_distinct_count(const BinID index) const override;
 
- protected:
-  BinID _bin_for_value(const T& value) const override;
-  BinID _next_bin_for_value(const T& value) const override;
+  BinID bin_for_value(const T& value) const override;
+  BinID next_bin_for_value(const T& value) const override;
 
  private:
   /**

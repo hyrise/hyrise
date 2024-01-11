@@ -74,7 +74,7 @@ std::ostream& operator<<(std::ostream& stream, const HistogramBin<T>& bin) {
  * (see StringHistogramDomain).
  */
 template <typename T>
-class AbstractHistogram : public AbstractStatisticsObject {
+class AbstractHistogram : public AbstractStatisticsObject, public std::enable_shared_from_this<AbstractHistogram<T>> {
  public:
   /**
    * Strings are internally transformed to a number, such that a bin can have a numerical width.
@@ -224,6 +224,20 @@ class AbstractHistogram : public AbstractStatisticsObject {
    */
   float bin_ratio_between(const BinID bin_id, const T& value, const T& value2) const;
 
+  /**
+   * Returns the id of the bin that holds the given `value`.
+   * Returns INVALID_BIN_ID if `value` does not belong to any bin.
+   */
+  virtual BinID bin_for_value(const T& value) const = 0;
+
+  /**
+   * Returns the id of the bin after the one that holds the given `value`.
+   * If `value` does not belong to any bin but is smaller than max(), it is in a gap.
+   * In that case return the bin right after the gap.
+   * If the bin that holds the value is the last bin or it is greater than max, return INVALID_BIN_ID.
+   */
+  virtual BinID next_bin_for_value(const T& value) const = 0;
+
  protected:
   // Call after constructor of the derived histogram has finished to check whether the bins are valid
   // (e.g. do not overlap).
@@ -247,20 +261,6 @@ class AbstractHistogram : public AbstractStatisticsObject {
    * @return total_[distinct_]count() - estimate
    */
   std::pair<Cardinality, DistinctCount> _invert_estimate(const std::pair<Cardinality, DistinctCount>& estimate) const;
-
-  /**
-   * Returns the id of the bin that holds the given `value`.
-   * Returns INVALID_BIN_ID if `value` does not belong to any bin.
-   */
-  virtual BinID _bin_for_value(const T& value) const = 0;
-
-  /**
-   * Returns the id of the bin after the one that holds the given `value`.
-   * If `value` does not belong to any bin but is smaller than max(), it is in a gap.
-   * In that case return the bin right after the gap.
-   * If the bin that holds the value is the last bin or it is greater than max, return INVALID_BIN_ID.
-   */
-  virtual BinID _next_bin_for_value(const T& value) const = 0;
 
   HistogramDomain<T> _domain;
 };

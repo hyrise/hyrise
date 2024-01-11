@@ -429,6 +429,8 @@ set(
     statistics/statistics_objects/null_value_ratio_statistics.hpp
     statistics/statistics_objects/range_filter.cpp
     statistics/statistics_objects/range_filter.hpp
+    statistics/statistics_objects/scaled_histogram.cpp
+    statistics/statistics_objects/scaled_histogram.hpp
     statistics/table_statistics.cpp
     statistics/table_statistics.hpp
     storage/abstract_encoded_segment.cpp
