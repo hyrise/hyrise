@@ -43,7 +43,7 @@ void NodeQueueScheduler::begin() {
   _queues.resize(_node_count);
   _workers_per_node.reserve(_node_count);
 
-  for (auto node_id = NodeID{0}; node_id < Hyrise::get().topology.nodes().size(); ++node_id) {
+  for (auto node_id = NodeID{0}; node_id < _node_count; ++node_id) {
     const auto& topology_node = Hyrise::get().topology.nodes()[node_id];
 
     // Tracked per node as core restrictions can lead to unbalanced core counts.
@@ -177,9 +177,11 @@ void NodeQueueScheduler::finish() {
     worker->join();
   }
 
+  _task_counter = 0;
   _workers = {};
   _queues = {};
-  _task_counter = 0;
+  _active_nodes = {};
+  _workers_per_node = {};
 }
 
 bool NodeQueueScheduler::active() const {
@@ -199,8 +201,8 @@ void NodeQueueScheduler::schedule(std::shared_ptr<AbstractTask> task, NodeID pre
   /**
    * Add task to the queue of the preferred node if it is ready for execution.
    */
-  DebugAssert(_active, "Can't schedule more tasks after the NodeQueueScheduler was shut down.");
-  DebugAssert(task->is_scheduled(), "Don't call NodeQueueScheduler::schedule(), call schedule() on the task.");
+  DebugAssert(_active, "Cannot schedule more tasks after the NodeQueueScheduler was shut down.");
+  DebugAssert(task->is_scheduled(), "Do not call NodeQueueScheduler::schedule(), call schedule() on the task.");
 
   const auto task_counter = _task_counter++;  // Atomically take snapshot of counter
   task->set_id(TaskID{task_counter});

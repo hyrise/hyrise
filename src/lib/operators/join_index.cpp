@@ -88,7 +88,7 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
                 left_input_table()->column_data_type(_primary_predicate.column_ids.first),
                 right_input_table()->column_data_type(_primary_predicate.column_ids.second),
                 !_secondary_predicates.empty(), left_input_table()->type(), right_input_table()->type(), _index_side}),
-      "JoinIndex doesn't support these parameters");
+      "JoinIndex does not support these parameters.");
 
   if (_index_side == IndexSide::Left) {
     _probe_input_table = right_input_table();

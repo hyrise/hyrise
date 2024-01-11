@@ -36,10 +36,10 @@ pmr_vector<int32_t> generate_ids(const size_t table_size) {
   const auto max_value = static_cast<int32_t>(TABLE_SIZE * SELECTIVITY) + 1;
   // Use const seed to always generate the same tables. This is important to
   // compare benchmarks
-  std::default_random_engine random_engine(SEED);
-  std::uniform_int_distribution<int32_t> dist(1, max_value);
+  auto random_engine = std::default_random_engine(SEED);
+  auto dist = std::uniform_int_distribution<int32_t>(1, max_value);
 
-  for (size_t row_index = 0; row_index < table_size; ++row_index) {
+  for (auto row_index = size_t{0}; row_index < table_size; ++row_index) {
     values[row_index] = dist(random_engine);
   }
 
@@ -76,11 +76,11 @@ pmr_vector<int32_t> generate_zip_codes(const size_t table_size) {
 
 pmr_vector<int32_t> generate_ages(const size_t table_size) {
   auto values = pmr_vector<int32_t>(table_size);
-  std::default_random_engine random_engine(SEED);
+  auto random_engine = std::default_random_engine(SEED);
 
   // The result ages are always the same in each table because of the constant seed
-  std::uniform_int_distribution<int32_t> dist(1, 100);
-  for (size_t row_index = 0; row_index < table_size; ++row_index) {
+  auto dist = std::uniform_int_distribution<int32_t>(1, 100);
+  for (auto row_index = size_t{0}; row_index < table_size; ++row_index) {
     values[row_index] = dist(random_engine);
   }
 
@@ -92,7 +92,7 @@ pmr_vector<int32_t> generate_ages(const size_t table_size) {
 std::shared_ptr<Table> create_table(const size_t table_size, const pmr_vector<int32_t>& values) {
   const auto chunk_size = static_cast<ChunkOffset>(table_size / NUMBER_OF_CHUNKS_JOIN_AGGREGATE);
 
-  auto table_column_definitions = TableColumnDefinitions();
+  auto table_column_definitions = TableColumnDefinitions{};
   table_column_definitions.emplace_back("a", DataType::Int, false);
   table_column_definitions.emplace_back("b", DataType::Int, false);
 

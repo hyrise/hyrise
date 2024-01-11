@@ -1,5 +1,9 @@
 #include "cost_estimator_logical.hpp"
 
+#include <cmath>
+#include <memory>
+
+#include "cost_estimation/abstract_cost_estimator.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_utils.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
@@ -7,6 +11,7 @@
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/union_node.hpp"
 #include "statistics/cardinality_estimator.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {
@@ -39,7 +44,7 @@ Cost CostEstimatorLogical::estimate_node_cost(const std::shared_ptr<AbstractLQPN
           return left_input_row_count * std::log(left_input_row_count) +
                  right_input_row_count * std::log(right_input_row_count);
         default:
-          Fail("Invalid enum value");
+          Fail("Invalid enum value.");
       }
     }
 

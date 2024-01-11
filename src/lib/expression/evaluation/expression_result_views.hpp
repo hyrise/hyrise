@@ -23,7 +23,7 @@ class ExpressionResultNullableSeries {
 
   ExpressionResultNullableSeries(const pmr_vector<T>& values, const pmr_vector<bool>& nulls)
       : _values(values), _nulls(nulls) {
-    DebugAssert(values.size() == nulls.size(), "Need as many values as nulls");
+    DebugAssert(values.size() == nulls.size(), "Need as many values as NULLs.");
   }
 
   bool is_series() const {
@@ -39,7 +39,7 @@ class ExpressionResultNullableSeries {
   }
 
   const T& value(const size_t idx) const {
-    DebugAssert(idx < _values.size(), "Index out of range");
+    DebugAssert(idx < _values.size(), "Index out of range.");
     return _values[idx];
   }
 
@@ -48,7 +48,7 @@ class ExpressionResultNullableSeries {
   }
 
   bool is_null(const size_t idx) const {
-    DebugAssert(idx < _nulls.size(), "Index out of range");
+    DebugAssert(idx < _nulls.size(), "Index out of range.");
     return _nulls[idx];
   }
 
@@ -85,7 +85,7 @@ class ExpressionResultNonNullSeries {
   }
 
   const T& value(const size_t idx) const {
-    DebugAssert(idx < _values.size(), "Index out of range");
+    DebugAssert(idx < _values.size(), "Index out of range.");
     return _values[idx];
   }
 

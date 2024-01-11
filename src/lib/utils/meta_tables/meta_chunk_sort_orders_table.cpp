@@ -33,7 +33,7 @@ std::shared_ptr<Table> MetaChunkSortOrdersTable::_on_generate() const {
       const auto& sorted_by = chunk->individually_sorted_by();
       if (!sorted_by.empty()) {
         for (const auto& [sorted_by_column_id, sort_mode] : sorted_by) {
-          std::stringstream sort_mode_stream;
+          auto sort_mode_stream = std::stringstream{};
           sort_mode_stream << sort_mode;
           output_table->append({pmr_string{table_name}, static_cast<int32_t>(chunk_id),
                                 static_cast<int32_t>(sorted_by_column_id), pmr_string{sort_mode_stream.str()}});
