@@ -334,7 +334,7 @@ BENCHMARK_DEFINE_F(TPCHDataMicroBenchmarkFixture, BM_LineitemHistogramCreation)(
     }
   });
 }
-constexpr auto LINEITEM_COLUMN15
-BENCHMARK_REGISTER_F(TPCHDataMicroBenchmarkFixture, BM_LineitemHistogramCreation)->DenseRange(0, );
+constexpr auto LINEITEM_COLUMN_COUNT = 15;
+BENCHMARK_REGISTER_F(TPCHDataMicroBenchmarkFixture, BM_LineitemHistogramCreation)->DenseRange(0, LINEITEM_COLUMN_COUNT);
 
 }  // namespace hyrise
