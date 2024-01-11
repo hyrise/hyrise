@@ -38,7 +38,7 @@ std::shared_ptr<TableWrapper> generate_table(const size_t number_of_rows) {
   auto table_generator = std::make_shared<SyntheticTableGenerator>();
 
   const auto chunk_size = static_cast<ChunkOffset>(number_of_rows / NUMBER_OF_CHUNKS);
-  Assert(chunk_size > 0, "The chunk size is 0 or less, can not generate such a table.");
+  Assert(chunk_size > 0, "The chunk size is 0 or less, cannot generate such a table.");
 
   auto table =
       table_generator->generate_table(1ul, number_of_rows, chunk_size, SegmentEncodingSpec{EncodingType::Dictionary});

@@ -431,7 +431,7 @@ SubqueryToJoinRule::try_to_extract_join_predicates(
     const auto& binary_predicate_expression = std::static_pointer_cast<BinaryPredicateExpression>(predicate_expression);
     const auto& left_side = binary_predicate_expression->left_operand();
     const auto& right_side = binary_predicate_expression->right_operand();
-    auto parameter_id = ParameterID{};
+    auto parameter_id = ParameterID{0};
     auto right_operand = std::shared_ptr<AbstractExpression>{};
     if (left_side->type == ExpressionType::CorrelatedParameter) {
       parameter_id = std::static_pointer_cast<CorrelatedParameterExpression>(left_side)->parameter_id;

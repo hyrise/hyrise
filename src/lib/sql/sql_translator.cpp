@@ -1695,7 +1695,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_prepare(const hsql::P
   hsql::SQLParser::parse(prepare_statement.query, &parse_result);
 
   AssertInput(parse_result.isValid(), create_sql_parser_error_message(prepare_statement.query, parse_result));
-  AssertInput(parse_result.size() == 1u, "PREPAREd statement can only contain a single SQL statement.");
+  AssertInput(parse_result.size() == 1, "PREPAREd statement can only contain a single SQL statement.");
 
   auto prepared_plan_translator = SQLTranslator{_use_mvcc};
 
@@ -2081,17 +2081,17 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
         return std::make_shared<FunctionExpression>(function_iter->second, arguments);
       }
 
-      FailInput("Couldn't resolve function '"s + name + "'");
+      FailInput("Could not resolve function '" + name + "'.");
     }
 
     case hsql::kExprOperator: {
-      // Translate ArithmeticExpression
+      // Translate ArithmeticExpression.
       const auto arithmetic_operators_iter = hsql_arithmetic_operators.find(expr.opType);
       if (arithmetic_operators_iter != hsql_arithmetic_operators.end()) {
         Assert(left && right, "Unexpected SQLParserResult. Didn't receive two arguments for binary expression.");
         const auto arithmetic_operator = arithmetic_operators_iter->second;
 
-        // Handle intervals
+        // Handle intervals.
         if (right->type == ExpressionType::Interval) {
           AssertInput(left->type == ExpressionType::Value && left->data_type() == DataType::String,
                       "Interval can only be applied to ValueExpression with String value.");
@@ -2109,7 +2109,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
         return std::make_shared<ArithmeticExpression>(arithmetic_operator, left, right);
       }
 
-      // Translate PredicateExpression
+      // Translate PredicateExpression.
       const auto predicate_condition_iter = hsql_predicate_condition.find(expr.opType);
       if (predicate_condition_iter != hsql_predicate_condition.end()) {
         const auto predicate_condition = predicate_condition_iter->second;
@@ -2126,7 +2126,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
         }
       }
 
-      // Translate other expression types that can be expected at this point
+      // Translate other expression types that can be expected at this point.
       switch (expr.opType) {
         case hsql::kOpUnaryMinus:
           return unary_minus_(left);
@@ -2168,7 +2168,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
           return exists_(_translate_hsql_subquery(*expr.select, sql_identifier_resolver));
 
         default:
-          Fail("Unexpected expression type.");  // There are 19 of these, so we make an exception here and use default
+          Fail("Unexpected expression type.");  // There are 19 of these, so we make an exception here and use default.
       }
     }
 
@@ -2330,7 +2330,7 @@ SQLTranslator::TableSourceState::TableSourceState(
 void SQLTranslator::TableSourceState::append(TableSourceState&& rhs) {
   for (auto& table_name_and_elements : rhs.elements_by_table_name) {
     const auto unique = !elements_by_table_name.contains(table_name_and_elements.first);
-    AssertInput(unique, "Table name '"s + table_name_and_elements.first + "' in FROM clause is not unique.");
+    AssertInput(unique, "Table name '" + table_name_and_elements.first + "' in FROM clause is not unique.");
   }
 
   elements_by_table_name.merge(std::move(rhs.elements_by_table_name));

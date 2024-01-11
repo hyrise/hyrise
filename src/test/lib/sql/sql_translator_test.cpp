@@ -1700,9 +1700,9 @@ TEST_F(SQLTranslatorTest, LimitExpression) {
 }
 
 TEST_F(SQLTranslatorTest, Extract) {
-  auto components =
-      std::vector<DatetimeComponent>{DatetimeComponent::Year, DatetimeComponent::Month,  DatetimeComponent::Day,
-                                     DatetimeComponent::Hour, DatetimeComponent::Minute, DatetimeComponent::Second};
+  const auto components =
+      std::vector{DatetimeComponent::Year, DatetimeComponent::Month,  DatetimeComponent::Day,
+                  DatetimeComponent::Hour, DatetimeComponent::Minute, DatetimeComponent::Second};
 
   auto actual_lqp = std::shared_ptr<AbstractLQPNode>{};
   auto expected_lqp = std::shared_ptr<AbstractLQPNode>{};

@@ -61,7 +61,7 @@ void Topology::use_fake_numa_topology(uint32_t max_num_workers, uint32_t workers
 
   auto num_nodes = num_workers / workers_per_node;
   if (num_workers % workers_per_node != 0) {
-    num_nodes++;
+    ++num_nodes;
   }
 
   auto worker_count_per_node = std::vector<uint32_t>{};
@@ -91,7 +91,8 @@ void Topology::_init_numa_topology(uint32_t max_num_cores) {
 #else
 
   if (numa_available() < 0) {
-    return use_fake_numa_topology(max_num_cores);
+    use_fake_numa_topology(max_num_cores);
+    return;
   }
 
   _clear();
@@ -120,9 +121,9 @@ void Topology::_init_numa_topology(uint32_t max_num_cores) {
         if (cpu_is_part_of_node && cpu_is_part_of_affinity) {
           if (max_num_cores == 0 || core_count < max_num_cores) {
             cpus.emplace_back(cpu_id);
-            _num_cpus++;
+            ++_num_cpus;
           }
-          core_count++;
+          ++core_count;
         }
         if (!cpu_is_part_of_affinity) {
           _filtered_by_affinity = true;

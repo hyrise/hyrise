@@ -397,14 +397,17 @@ TEST_F(StressTest, NodeQueueSchedulerSemaphoreIncrementsDependentTasks) {
     // Wait a bit for workers to pull jobs and decrement semaphore.
     std::this_thread::sleep_for(5 * CORES_PER_NODE * SLEEP_TIME);
 
+    // The number of scheduled jobs depends on DEPENDENT_JOB_TASKS_LENGTH (see job definition above; due to the jobs
+    // dependencies, jobs are only scheduled when they have no predecessors).
+    const auto executable_jobs = static_cast<float>(job_count) / static_cast<float>(DEPENDENT_JOB_TASKS_LENGTH);
     for (const auto& queue : node_queue_scheduler->queues()) {
       if (!queue) {
         continue;
       }
-      EXPECT_EQ(queue->semaphore.availableApprox(),
-                static_cast<size_t>(
-                    std::ceil(static_cast<float>(job_count) / static_cast<float>(DEPENDENT_JOB_TASKS_LENGTH))) -
-                    CORES_PER_NODE);
+
+      // We started scheduled jobs, which block all workers due to `wait_flag` being true. Thus, the semaphore should be
+      // reduced by the number of workers (i.e., CORES_PER_NODE).
+      EXPECT_EQ(queue->semaphore.availableApprox(), static_cast<size_t>(std::ceil(executable_jobs)) - CORES_PER_NODE);
     }
 
     wait_flag = false;
@@ -444,7 +447,8 @@ TEST_F(StressTest, NodeQueueSchedulerMultiNumaNodeTPCHQ13) {
     Hyrise::get().set_scheduler(node_queue_scheduler);
 
     auto sql_pipeline = SQLPipelineBuilder{tpch_q13}.create_pipeline();
-    sql_pipeline.get_result_tables();
+    const auto& [pipeline_status, _] = sql_pipeline.get_result_tables();
+    EXPECT_EQ(pipeline_status, SQLPipelineStatus::Success);
   }
 }
 

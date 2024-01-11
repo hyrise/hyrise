@@ -203,7 +203,7 @@ void TransactionContext::on_operator_started() {
 }
 
 void TransactionContext::on_operator_finished() {
-  DebugAssert((_num_active_operators > 0), "Unexpected number of active operators detected.");
+  DebugAssert(_num_active_operators > 0, "Unexpected number of active operators.");
   const auto num_before = _num_active_operators--;
 
   if (num_before == 1) {
@@ -227,7 +227,7 @@ void TransactionContext::_transition(TransactionPhase from_phase, TransactionPha
   DebugAssert(_is_auto_commit == AutoCommit::No || to_phase != TransactionPhase::RolledBackByUser,
               "Auto-commit transactions cannot be manually rolled back.");
   const auto success = _phase.compare_exchange_strong(from_phase, to_phase);
-  Assert(success, "Illegal phase transition detected.");
+  Assert(success, "Illegal phase transition.");
 }
 
 std::ostream& operator<<(std::ostream& stream, const TransactionPhase& phase) {

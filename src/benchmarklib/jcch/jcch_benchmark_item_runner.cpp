@@ -1,8 +1,15 @@
 #include "jcch_benchmark_item_runner.hpp"
 
 #include <fstream>
+#include <memory>
 #include <random>
+#include <string>
 
+#include <boost/date_time/gregorian/gregorian.hpp>
+#include <boost/date_time/posix_time/posix_time.hpp>
+
+#include "benchmark_config.hpp"
+#include "tpch/tpch_constants.hpp"
 #include "tpch/tpch_queries.hpp"
 #include "utils/date_time_utils.hpp"
 #include "utils/string_utils.hpp"
@@ -72,7 +79,7 @@ void JCCHBenchmarkItemRunner::_load_params() {
 
     // Call qgen a couple of times with different PRNG seeds and store the resulting query parameters in queries/params.
     // dbgen doesn't like `-r 0`, so we start at 1.
-    for (auto seed = 1; seed <= (_config->max_runs > 0 ? _config->max_runs : 100'000); ++seed) {
+    for (auto seed = int64_t{1}; seed <= (_config->max_runs > 0 ? _config->max_runs : 100'000); ++seed) {
       auto cmd = std::stringstream{};
       cmd << "cd " << local_queries_path << " && " << _dbgen_path << "/qgen " << (_skewed ? "-k" : "") << " -s "
           << _scale_factor << " -b " << _dbgen_path << "/dists.dss -r " << seed << " -l " << params_path

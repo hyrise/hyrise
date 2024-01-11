@@ -115,7 +115,7 @@ void PredicateMergeRule::_apply_to_plan_without_subqueries(const std::shared_ptr
  * Merge "simple" diamonds, which only consist of one UnionNode, having two PredicateNodes as inputs
  */
 void PredicateMergeRule::_merge_disjunction(const std::shared_ptr<UnionNode>& union_node) const {
-  Assert(union_node->set_operation_mode == SetOperationMode::Positions, "Cannot merge union_node into disjunction.");
+  Assert(union_node->set_operation_mode == SetOperationMode::Positions, "Cannot merge UnionNode into disjunction.");
   const auto left_predicate_node = std::dynamic_pointer_cast<PredicateNode>(union_node->left_input());
   const auto right_predicate_node = std::dynamic_pointer_cast<PredicateNode>(union_node->right_input());
 

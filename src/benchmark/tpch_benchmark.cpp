@@ -84,7 +84,7 @@ int main(int argc, char* argv[]) {
     } else if (jcch_mode == "normal") {  // NOLINT
       jcch_skewed = false;
     } else {
-      Fail("Invalid jcch mode, use skewed or normal.");
+      Fail("Invalid JCC-H mode, use skewed or normal.");
     }
   }
 

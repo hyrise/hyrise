@@ -168,7 +168,7 @@ class TableBuilder {
       constexpr auto column_is_nullable = std::decay_t<decltype(null_values)>::has_value;
       auto value_is_null = table_builder::is_null(optional_or_value);
 
-      DebugAssert(column_is_nullable || !value_is_null, "cannot insert null value into not-NULL column.");
+      DebugAssert(column_is_nullable || !value_is_null, "Cannot insert null value into not-NULL column.");
 
       if (value_is_null) {
         values.emplace_back();
