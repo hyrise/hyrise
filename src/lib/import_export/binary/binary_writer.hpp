@@ -223,6 +223,10 @@ class BinaryWriter {
   static void _write_segment(const LZ4Segment<T>& lz4_segment, bool /*column_is_nullable*/, std::ofstream& ofstream);
 
   template <typename T>
+  static void _write_segment(const VariableStringDictionarySegment<T>& dictionary_segment, bool /*column_is_nullable*/,
+                             std::ofstream& ofstream);
+
+  template <typename T>
   static CompressedVectorTypeID _compressed_vector_type_id(const AbstractEncodedSegment& abstract_encoded_segment);
 
   // Chooses the right Compressed Vector depending on the CompressedVectorType and exports it.

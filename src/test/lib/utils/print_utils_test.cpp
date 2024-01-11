@@ -79,7 +79,8 @@ TEST_F(PrintUtilsTest, print_table_key_constraints) {
 }
 
 TEST_F(PrintUtilsTest, all_encoding_options) {
-  EXPECT_EQ(all_encoding_options(), "Unencoded, Dictionary, RunLength, FixedStringDictionary, FrameOfReference, LZ4");
+  EXPECT_EQ(all_encoding_options(),
+            "Unencoded, Dictionary, RunLength, FixedStringDictionary, FrameOfReference, LZ4, VariableStringDictionary");
 }
 
 }  // namespace hyrise

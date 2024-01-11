@@ -90,7 +90,7 @@ try {
             clang = '-DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++'
             clang11 = '-DCMAKE_C_COMPILER=clang-11 -DCMAKE_CXX_COMPILER=clang++-11'
             gcc = '-DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++'
-            gcc9 = '-DCMAKE_C_COMPILER=gcc-9 -DCMAKE_CXX_COMPILER=g++-9'
+            gcc10 = '-DCMAKE_C_COMPILER=gcc-10 -DCMAKE_CXX_COMPILER=g++-10'
 
             debug = '-DCMAKE_BUILD_TYPE=Debug'
             release = '-DCMAKE_BUILD_TYPE=Release'
@@ -114,7 +114,7 @@ try {
             mkdir gcc-debug && cd gcc-debug &&                                                           ${cmake} ${debug}          ${gcc}              .. &\
             mkdir gcc-release && cd gcc-release &&                                                       ${cmake} ${release}        ${gcc}              .. &\
             mkdir clang-11-debug && cd clang-11-debug &&                                                 ${cmake} ${debug}          ${clang11}          .. &\
-            mkdir gcc-9-debug && cd gcc-9-debug &&                                                       ${cmake} ${debug}          ${gcc9}             .. &\
+            mkdir gcc-10-debug && cd gcc-10-debug &&                                                       ${cmake} ${debug}          ${gcc10}             .. &\
             wait"
           }
 
@@ -133,10 +133,10 @@ try {
               sh "cd gcc-debug && make all -j \$(( \$(nproc) / 4))"
               sh "cd gcc-debug && ./hyriseTest"
             }
-          }, gcc9Debug: {
-            stage("gcc-9-debug") {
-              sh "cd gcc-9-debug && make all -j \$(( \$(nproc) / 4))"
-              sh "cd gcc-9-debug && ./hyriseTest"
+          }, gcc10Debug: {
+            stage("gcc-10-debug") {
+              sh "cd gcc-10-debug && make all -j \$(( \$(nproc) / 4))"
+              sh "cd gcc-10-debug && ./hyriseTest"
             }
           }, lint: {
             stage("Linting") {

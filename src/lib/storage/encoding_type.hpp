@@ -20,7 +20,15 @@ namespace hyrise {
 
 namespace hana = boost::hana;
 
-enum class EncodingType : uint8_t { Unencoded, Dictionary, RunLength, FixedStringDictionary, FrameOfReference, LZ4 };
+enum class EncodingType : uint8_t {
+  Unencoded,
+  Dictionary,
+  RunLength,
+  FixedStringDictionary,
+  FrameOfReference,
+  LZ4,
+  VariableStringDictionary
+};
 
 std::ostream& operator<<(std::ostream& stream, const EncodingType encoding_type);
 
@@ -37,6 +45,7 @@ constexpr auto supported_data_types_for_encoding_type = hana::make_map(
     hana::make_pair(enum_c<EncodingType, EncodingType::Dictionary>, data_types),
     hana::make_pair(enum_c<EncodingType, EncodingType::RunLength>, data_types),
     hana::make_pair(enum_c<EncodingType, EncodingType::FixedStringDictionary>, hana::tuple_t<pmr_string>),
+    hana::make_pair(enum_c<EncodingType, EncodingType::VariableStringDictionary>, hana::tuple_t<pmr_string>),
     hana::make_pair(enum_c<EncodingType, EncodingType::FrameOfReference>, hana::tuple_t<int32_t>),
     hana::make_pair(enum_c<EncodingType, EncodingType::LZ4>, data_types));
 

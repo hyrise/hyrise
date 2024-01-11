@@ -103,7 +103,8 @@ const SegmentEncodingSpec all_segment_encoding_specs[]{
     SegmentEncodingSpec{EncodingType::FixedStringDictionary, VectorCompressionType::BitPacking},
     SegmentEncodingSpec{EncodingType::FrameOfReference},
     SegmentEncodingSpec{EncodingType::LZ4},
-    SegmentEncodingSpec{EncodingType::RunLength}};
+    SegmentEncodingSpec{EncodingType::RunLength},
+    SegmentEncodingSpec{EncodingType::VariableStringDictionary}};
 
 template <typename EnumType>
 inline auto enum_formatter =

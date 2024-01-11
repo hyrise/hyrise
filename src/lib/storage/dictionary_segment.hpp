@@ -12,7 +12,7 @@ namespace hyrise {
 class BaseCompressedVector;
 
 /**
- * @brief Segment implementing dictionary encoding
+ * @brief Segment implementing dictionary encoding.
  *
  * Uses vector compression schemes for its attribute vector.
  */

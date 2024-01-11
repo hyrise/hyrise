@@ -207,6 +207,7 @@ void registerTableScanSortedBenchmarks() {
       {"None", EncodingAndSupportedDataTypes(EncodingType::Unencoded, {"Int", "String"})},
       {"Dictionary", EncodingAndSupportedDataTypes(EncodingType::Dictionary, {"Int", "String"})},
       {"FixedStringDictionary", EncodingAndSupportedDataTypes(EncodingType::FixedStringDictionary, {"String"})},
+      {"VariableStringDictionary", EncodingAndSupportedDataTypes(EncodingType::VariableStringDictionary, {"String"})},
       {"FrameOfReference", EncodingAndSupportedDataTypes(EncodingType::FrameOfReference, {"Int"})},
       {"RunLength", EncodingAndSupportedDataTypes(EncodingType::RunLength, {"Int", "String"})},
       {"LZ4", EncodingAndSupportedDataTypes(EncodingType::LZ4, {"Int", "String"})}};
