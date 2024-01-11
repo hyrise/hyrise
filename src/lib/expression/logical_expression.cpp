@@ -40,7 +40,7 @@ std::shared_ptr<AbstractExpression> LogicalExpression::_on_deep_copy(
 }
 
 std::string LogicalExpression::description(const DescriptionMode mode) const {
-  std::stringstream stream;
+  auto stream = std::stringstream{};
   stream << _enclose_argument(*left_operand(), mode) << " " << logical_operator << " "
          << _enclose_argument(*right_operand(), mode);
   return stream.str();

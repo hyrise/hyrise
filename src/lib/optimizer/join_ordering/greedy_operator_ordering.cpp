@@ -13,7 +13,7 @@ namespace hyrise {
 
 std::shared_ptr<AbstractLQPNode> GreedyOperatorOrdering::operator()(
     const JoinGraph& join_graph, const std::shared_ptr<AbstractCostEstimator>& cost_estimator) {
-  DebugAssert(!join_graph.vertices.empty(), "Code below relies on there being at least one vertex");
+  DebugAssert(!join_graph.vertices.empty(), "Code below relies on there being at least one vertex.");
 
   /**
    * 1. Initialize
@@ -136,7 +136,7 @@ GreedyOperatorOrdering::PlanCardinalityPair GreedyOperatorOrdering::_build_plan_
   }
 
   DebugAssert(!joined_clusters.empty(),
-              "Edge appearing passed to this function should reference at least one vertex cluster");
+              "Edge appearing passed to this function should reference at least one vertex cluster.");
 
   const auto& cardinality_estimator = cost_estimator->cardinality_estimator;
 

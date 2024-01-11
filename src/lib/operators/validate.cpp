@@ -70,7 +70,7 @@ std::shared_ptr<AbstractOperator> Validate::_on_deep_copy(
 void Validate::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 std::shared_ptr<const Table> Validate::_on_execute() {
-  Fail("Validate can't be called without a transaction context.");
+  Fail("Validate cannot be called without a transaction context.");
 }
 
 std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionContext> transaction_context) {
