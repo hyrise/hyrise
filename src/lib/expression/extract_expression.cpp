@@ -38,7 +38,7 @@ std::shared_ptr<AbstractExpression> ExtractExpression::_on_deep_copy(
 }
 
 std::string ExtractExpression::description(const DescriptionMode mode) const {
-  std::stringstream stream;
+  auto stream = std::stringstream{};
   stream << "EXTRACT(" << datetime_component << " FROM " << from()->description(mode) << ")";
   return stream.str();
 }

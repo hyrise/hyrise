@@ -23,7 +23,7 @@ PredicateNode::PredicateNode(const std::shared_ptr<AbstractExpression>& predicat
 std::string PredicateNode::description(const DescriptionMode mode) const {
   const auto expression_mode = _expression_description_mode(mode);
 
-  std::stringstream stream;
+  auto stream = std::stringstream{};
   stream << "[Predicate] " << predicate()->description(expression_mode);
   return stream.str();
 }

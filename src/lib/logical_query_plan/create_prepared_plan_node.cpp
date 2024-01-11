@@ -11,7 +11,7 @@ CreatePreparedPlanNode::CreatePreparedPlanNode(const std::string& init_name,
     : AbstractNonQueryNode(LQPNodeType::CreatePreparedPlan), name(init_name), prepared_plan(init_prepared_plan) {}
 
 std::string CreatePreparedPlanNode::description(const DescriptionMode /*mode*/) const {
-  std::stringstream stream;
+  auto stream = std::stringstream{};
   stream << "[CreatePreparedPlan] '" << name << "' {\n";
   stream << *prepared_plan;
   stream << "}";

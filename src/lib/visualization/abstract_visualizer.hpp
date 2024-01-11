@@ -117,7 +117,7 @@ class AbstractVisualizer {
 
     char* tmpname = strdup("/tmp/hyrise_viz_XXXXXX");
     auto file_descriptor = mkstemp(tmpname);
-    Assert(file_descriptor > 0, "mkstemp failed");
+    Assert(file_descriptor > 0, "mkstemp failed.");
 
     // mkstemp returns a file descriptor. Unfortunately, we cannot directly create an ofstream from a file descriptor.
     close(file_descriptor);
@@ -251,7 +251,7 @@ class AbstractVisualizer {
     if (label.length() <= MAX_LABEL_WIDTH) {
       return label;
     }
-    std::stringstream label_stream;
+    auto label_stream = std::stringstream{};
 
     // 1. Split label into lines
     auto lines = std::vector<std::string>();

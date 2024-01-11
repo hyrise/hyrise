@@ -19,7 +19,7 @@ std::shared_ptr<AbstractExpression> IntervalExpression::_on_deep_copy(
 }
 
 std::string IntervalExpression::description(const DescriptionMode /*mode*/) const {
-  std::stringstream stream;
+  auto stream = std::stringstream{};
   stream << "INTERVAL '" << duration << "' " << magic_enum::enum_name(unit);
   return stream.str();
 }

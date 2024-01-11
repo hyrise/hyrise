@@ -233,7 +233,7 @@ MetaSystemUtilizationTable::ProcessMemoryUsage MetaSystemUtilizationTable::_get_
 
     self_status_file.close();
   } catch (std::ios_base::failure& fail) {
-    Fail("Failed to read /proc/self/status (" + fail.what() + ")");
+    Fail("Failed to read /proc/self/status (" + fail.what() + ").");
   }
 
   return memory_usage;

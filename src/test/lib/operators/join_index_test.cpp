@@ -220,7 +220,7 @@ TEST_F(OperatorsJoinIndexTest, PerformanceDataOutputToStream) {
   performance_data.chunks_scanned_without_index = 5u;
 
   {
-    std::stringstream stream;
+    auto stream = std::stringstream{};
     stream << performance_data;
     EXPECT_EQ(stream.str(),
               "Output: 2 rows in 1 chunk, 999 ns. Operator step runtimes: IndexJoining 17 ns, "
@@ -228,7 +228,7 @@ TEST_F(OperatorsJoinIndexTest, PerformanceDataOutputToStream) {
   }
 
   {
-    std::stringstream stream;
+    auto stream = std::stringstream{};
     performance_data.output_to_stream(stream, DescriptionMode::MultiLine);
     EXPECT_EQ(stream.str(),
               "Output: 2 rows in 1 chunk, 999 ns.\nOperator step runtimes:\n IndexJoining 17 ns\n "
