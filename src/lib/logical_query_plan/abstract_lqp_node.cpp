@@ -1,9 +1,12 @@
 #include "abstract_lqp_node.hpp"
 
 #include <algorithm>
+#include <optional>
+#include <ostream>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
+#include <vector>
 
 #include <boost/container_hash/hash.hpp>
 
@@ -15,6 +18,7 @@
 #include "logical_query_plan/stored_table_node.hpp"
 #include "lqp_utils.hpp"
 #include "predicate_node.hpp"
+#include "types.hpp"
 #include "update_node.hpp"
 #include "utils/assert.hpp"
 #include "utils/map_prunable_subquery_predicates.hpp"
