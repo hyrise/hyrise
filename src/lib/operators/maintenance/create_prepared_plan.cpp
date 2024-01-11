@@ -17,7 +17,7 @@ const std::string& CreatePreparedPlan::name() const {
 }
 
 std::string CreatePreparedPlan::description(DescriptionMode description_mode) const {
-  std::stringstream stream;
+  auto stream = std::stringstream{};
   stream << AbstractOperator::description(description_mode) << " '" << _prepared_plan_name << "' {\n";
   stream << *_prepared_plan;
   stream << "}";

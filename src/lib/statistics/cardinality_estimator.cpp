@@ -676,7 +676,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_join_node(
           case PredicateCondition::IsNotNull:
             Fail("IS NULL is an invalid join predicate");
         }
-        Fail("Invalid enum value");
+        Fail("Invalid enum value.");
 
       case JoinMode::Cross:
         // Should have been forwarded to estimate_cross_join()
@@ -696,7 +696,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_join_node(
   // TODO(anybody) For now, estimate a selectivity of one. #1830
   return estimate_cross_join(*left_input_table_statistics, *right_input_table_statistics);
 
-  Fail("Invalid enum value");
+  Fail("Invalid enum value.");
 }
 
 std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_union_node(

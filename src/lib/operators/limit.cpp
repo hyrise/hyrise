@@ -47,15 +47,15 @@ std::shared_ptr<const Table> Limit::_on_execute() {
     if constexpr (std::is_integral_v<LimitDataType>) {
       const auto num_rows_expression_result =
           ExpressionEvaluator{}.evaluate_expression_to_result<LimitDataType>(*_row_count_expression);
-      Assert(num_rows_expression_result->size() == 1, "Expected exactly one row for Limit");
-      Assert(!num_rows_expression_result->is_null(0), "Expected non-null for Limit");
+      Assert(num_rows_expression_result->size() == 1, "Expected exactly one row for LIMIT.");
+      Assert(!num_rows_expression_result->is_null(0), "Expected non-NULL for LIMIT,");
 
       const auto signed_num_rows = num_rows_expression_result->value(0);
-      Assert(signed_num_rows >= 0, "Can't Limit to a negative number of Rows");
+      Assert(signed_num_rows >= 0, "Cannot limit to a negative number of rows.");
 
       num_rows = static_cast<size_t>(signed_num_rows);
     } else {
-      Fail("Non-integral types not allowed in Limit");
+      Fail("Non-integral types not allowed in LIMIT.");
     }
   });
 

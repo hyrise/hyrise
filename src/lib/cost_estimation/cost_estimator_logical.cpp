@@ -1,5 +1,9 @@
 #include "cost_estimator_logical.hpp"
 
+#include <cmath>
+#include <memory>
+
+#include "cost_estimation/abstract_cost_estimator.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/list_expression.hpp"
@@ -9,6 +13,8 @@
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/union_node.hpp"
 #include "statistics/cardinality_estimator.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace {
 

@@ -18,7 +18,7 @@ bool RowIDPosList::references_single_chunk() const {
             return row_id.chunk_id == common_chunk_id && row_id.chunk_offset != INVALID_CHUNK_OFFSET;
           });
         }(),
-        "RowIDPosList was marked as referencing a single chunk, but references more");
+        "RowIDPosList was marked as referencing a single chunk, but references more.");
   }
   return _references_single_chunk;
 }
