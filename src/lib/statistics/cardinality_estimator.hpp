@@ -27,8 +27,6 @@ class UnionNode;
 class ValidateNode;
 class WindowNode;
 
-enum class LQPNodeType;
-
 /**
  * Hyrise's default, statistics-based cardinality estimator
  */
@@ -45,35 +43,35 @@ class CardinalityEstimator : public AbstractCardinalityEstimator {
    * Per-node-type estimation functions
    * @{
    */
-  std::shared_ptr<TableStatistics> estimate_alias_node(
-      const AliasNode& alias_node, const std::shared_ptr<TableStatistics>& input_table_statistics) const;
+  static std::shared_ptr<TableStatistics> estimate_alias_node(
+      const AliasNode& alias_node, const std::shared_ptr<TableStatistics>& input_table_statistics);
 
-  std::shared_ptr<TableStatistics> estimate_projection_node(
-      const ProjectionNode& projection_node, const std::shared_ptr<TableStatistics>& input_table_statistics) const;
+  static std::shared_ptr<TableStatistics> estimate_projection_node(
+      const ProjectionNode& projection_node, const std::shared_ptr<TableStatistics>& input_table_statistics);
 
   std::shared_ptr<TableStatistics> estimate_window_node(
       const WindowNode& window_node, const std::shared_ptr<TableStatistics>& input_table_statistics) const;
 
-  std::shared_ptr<TableStatistics> estimate_aggregate_node(
-      const AggregateNode& aggregate_node, const std::shared_ptr<TableStatistics>& input_table_statistics) const;
+  static std::shared_ptr<TableStatistics> estimate_aggregate_node(
+      const AggregateNode& aggregate_node, const std::shared_ptr<TableStatistics>& input_table_statistics);
 
-  std::shared_ptr<TableStatistics> estimate_validate_node(
-      const ValidateNode& /*validate_node*/, const std::shared_ptr<TableStatistics>& input_table_statistics) const;
+  static std::shared_ptr<TableStatistics> estimate_validate_node(
+      const ValidateNode& /*validate_node*/, const std::shared_ptr<TableStatistics>& input_table_statistics);
 
   std::shared_ptr<TableStatistics> estimate_predicate_node(
       const PredicateNode& predicate_node, const std::shared_ptr<TableStatistics>& input_table_statistics,
       const bool cacheable) const;
 
-  std::shared_ptr<TableStatistics> estimate_join_node(
+  static std::shared_ptr<TableStatistics> estimate_join_node(
       const JoinNode& join_node, const std::shared_ptr<TableStatistics>& left_input_table_statistics,
-      const std::shared_ptr<TableStatistics>& right_input_table_statistics) const;
+      const std::shared_ptr<TableStatistics>& right_input_table_statistics);
 
-  std::shared_ptr<TableStatistics> estimate_union_node(
+  static std::shared_ptr<TableStatistics> estimate_union_node(
       const UnionNode& /*union_node*/, const std::shared_ptr<TableStatistics>& left_input_table_statistics,
-      const std::shared_ptr<TableStatistics>& right_input_table_statistics) const;
+      const std::shared_ptr<TableStatistics>& right_input_table_statistics);
 
-  std::shared_ptr<TableStatistics> estimate_limit_node(
-      const LimitNode& limit_node, const std::shared_ptr<TableStatistics>& input_table_statistics) const;
+  static std::shared_ptr<TableStatistics> estimate_limit_node(
+      const LimitNode& limit_node, const std::shared_ptr<TableStatistics>& input_table_statistics);
   /** @} */
 
   /**
@@ -85,8 +83,8 @@ class CardinalityEstimator : public AbstractCardinalityEstimator {
    * Estimate a simple scanning predicate. This function analyses the given predicate and dispatches the actual
    * estimation algorithm.
    */
-  std::shared_ptr<TableStatistics> estimate_operator_scan_predicate(
-      const std::shared_ptr<TableStatistics>& input_table_statistics, const OperatorScanPredicate& predicate) const;
+  static std::shared_ptr<TableStatistics> estimate_operator_scan_predicate(
+      const std::shared_ptr<TableStatistics>& input_table_statistics, const OperatorScanPredicate& predicate);
 
   /**
    * Estimation of an equi scan between two histograms. Estimating equi scans without correlation information is
@@ -151,17 +149,18 @@ class CardinalityEstimator : public AbstractCardinalityEstimator {
    * Join estimations
    * @{
    */
-  std::shared_ptr<TableStatistics> estimate_inner_equi_join(const ColumnID left_column_id,
-                                                            const ColumnID right_column_id,
-                                                            const TableStatistics& left_input_table_statistics,
-                                                            const TableStatistics& right_input_table_statistics) const;
+  static std::shared_ptr<TableStatistics> estimate_inner_equi_join(const ColumnID left_column_id,
+                                                                   const ColumnID right_column_id,
+                                                                   const TableStatistics& left_input_table_statistics,
+                                                                   const TableStatistics& right_input_table_statistics);
 
-  std::shared_ptr<TableStatistics> estimate_semi_join(const ColumnID left_column_id, const ColumnID right_column_id,
-                                                      const TableStatistics& left_input_table_statistics,
-                                                      const TableStatistics& right_input_table_statistics) const;
+  static std::shared_ptr<TableStatistics> estimate_semi_join(const ColumnID left_column_id,
+                                                             const ColumnID right_column_id,
+                                                             const TableStatistics& left_input_table_statistics,
+                                                             const TableStatistics& right_input_table_statistics);
 
-  std::shared_ptr<TableStatistics> estimate_cross_join(const TableStatistics& left_input_table_statistics,
-                                                       const TableStatistics& right_input_table_statistics) const;
+  static std::shared_ptr<TableStatistics> estimate_cross_join(const TableStatistics& left_input_table_statistics,
+                                                              const TableStatistics& right_input_table_statistics);
 
   template <typename T>
   static std::shared_ptr<GenericHistogram<T>> estimate_inner_equi_join_with_histograms(
@@ -238,12 +237,5 @@ class CardinalityEstimator : public AbstractCardinalityEstimator {
       const std::shared_ptr<TableStatistics>& table_statistics, const std::vector<ColumnID>& pruned_column_ids);
 
   /** @} */
-
-  mutable std::chrono::nanoseconds slicing_time{0};
-  mutable std::chrono::nanoseconds scaling_time{0};
-  mutable std::chrono::nanoseconds cache_time{0};
-  mutable std::chrono::nanoseconds store_time{0};
-  mutable std::unordered_map<LQPNodeType, std::chrono::nanoseconds> node_times;
-  mutable std::chrono::nanoseconds op_scan_time{0};
 };
 }  // namespace hyrise
