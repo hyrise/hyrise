@@ -55,7 +55,6 @@ class ScaledHistogram : public AbstractHistogram<T> {
   const Selectivity _selectivity;
 
   const HistogramCountType _total_count;
-
 };
 
 // For gtest.

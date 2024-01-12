@@ -91,6 +91,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
    * Lookup in `join_graph_statistics_cache` is expected to have a higher hit rate (since every bitmask represents
    * multiple LQPs) than `statistics_by_lqp`. Thus lookup in `join_graph_statistics_cache` is performed first.
    */
+  auto timer = Timer{};
   auto join_graph_bitmask = std::optional<JoinGraphStatisticsCache::Bitmask>{};
   if (cardinality_estimation_cache.join_graph_statistics_cache) {
     join_graph_bitmask = cardinality_estimation_cache.join_graph_statistics_cache->bitmask(lqp);
@@ -112,6 +113,8 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
     }
   }
 
+  cache_time += timer.lap();
+
   /**
    * 2. Cache lookup failed - perform an actual cardinality estimation.
    */
@@ -121,6 +124,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
   const auto right_input_table_statistics =
       lqp->right_input() ? estimate_statistics(lqp->right_input(), cacheable) : nullptr;
 
+  auto est_timer = Timer{};
   switch (lqp->type) {
     case LQPNodeType::Aggregate: {
       const auto aggregate_node = std::dynamic_pointer_cast<const AggregateNode>(lqp);
@@ -233,6 +237,11 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
       Fail("Cardinality of a node of this type should never be requested.");
   }
 
+  //std::cout << "node " << magic_enum::enum_name(lqp->type) << " " << est_timer.lap() << std::endl;
+  node_times[lqp->type] += est_timer.lap();
+
+  auto t2 = Timer{};
+
   /**
    * 3. Store output_table_statistics in cache.
    */
@@ -244,6 +253,8 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
   if (cardinality_estimation_cache.statistics_by_lqp && cacheable) {
     cardinality_estimation_cache.statistics_by_lqp->emplace(lqp, output_table_statistics);
   }
+
+  store_time += t2.lap();
 
   return output_table_statistics;
 }
@@ -625,9 +636,11 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_predicate_node(
 
   // Scale the input statistics consequently for each predicate, assuming there are no correlations between them.
   auto output_table_statistics = input_table_statistics;
+  auto op_scan_t = Timer{};
   for (const auto& operator_scan_predicate : *operator_scan_predicates) {
     output_table_statistics = estimate_operator_scan_predicate(output_table_statistics, operator_scan_predicate);
   }
+  op_scan_time += op_scan_t.lap();
 
   return output_table_statistics;
 }

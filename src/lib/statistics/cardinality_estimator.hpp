@@ -27,6 +27,8 @@ class UnionNode;
 class ValidateNode;
 class WindowNode;
 
+enum class LQPNodeType;
+
 /**
  * Hyrise's default, statistics-based cardinality estimator
  */
@@ -239,5 +241,9 @@ class CardinalityEstimator : public AbstractCardinalityEstimator {
 
   mutable std::chrono::nanoseconds slicing_time{0};
   mutable std::chrono::nanoseconds scaling_time{0};
+  mutable std::chrono::nanoseconds cache_time{0};
+  mutable std::chrono::nanoseconds store_time{0};
+  mutable std::unordered_map<LQPNodeType, std::chrono::nanoseconds> node_times;
+  mutable std::chrono::nanoseconds op_scan_time{0};
 };
 }  // namespace hyrise
