@@ -44,7 +44,7 @@ bool is_predicate_style_node(const std::shared_ptr<AbstractLQPNode>& node) {
 void reorder_predicates(const std::vector<std::shared_ptr<AbstractLQPNode>>& predicates,
                         const std::shared_ptr<const AbstractCostEstimator>& cost_estimator) {
   // Store original input and output.
-  auto input = predicates.back()->left_input();
+  const auto& input = predicates.back()->left_input();
   const auto outputs = predicates.front()->outputs();
   const auto input_sides = predicates.front()->get_input_sides();
 
@@ -131,6 +131,10 @@ void reorder_predicates_recursively(const std::shared_ptr<AbstractLQPNode>& node
   auto current_node = node;
 
   while (is_predicate_style_node(current_node)) {
+    // Make sure to reorder right input of semi-joins first. Otherwise, we might already cache statistics of predicates
+    // we reorder later.
+    reorder_predicates_recursively(node->right_input(), cost_estimator, visited_nodes);
+
     // Once a node has multiple outputs, we are not talking about a predicate chain anymore. However, a new chain can
     // start here.
     if (current_node->outputs().size() > 1 && !predicate_nodes.empty()) {
@@ -169,11 +173,12 @@ std::string PredicateReorderingRule::name() const {
 void PredicateReorderingRule::_apply_to_plan_without_subqueries(
     const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
   // We reorder recursively from leaves to root. Thus, the CardinalityEstimator may cache already estimated statistics.
-  cost_estimator->cardinality_estimator->guarantee_bottom_up_construction();
+  const auto caching_cost_estimator = cost_estimator->new_instance();
+  caching_cost_estimator->cardinality_estimator->guarantee_bottom_up_construction();
 
   // We keep track of visited nodes, so that this rule touches nodes once only.
   auto visited_nodes = std::unordered_set<std::shared_ptr<AbstractLQPNode>>{};
-  reorder_predicates_recursively(lqp_root, cost_estimator, visited_nodes);
+  reorder_predicates_recursively(lqp_root, caching_cost_estimator, visited_nodes);
   //const auto& cardinality_estimator = static_cast<const CardinalityEstimator&>(*cost_estimator->cardinality_estimator);
   //std::cout << "slice " << static_cast<double>(cardinality_estimator.slicing_time.count()) / 1000000.0 << "\nscale "
   //          << static_cast<double>(cardinality_estimator.scaling_time.count()) / 1000000.0 << std::endl;
