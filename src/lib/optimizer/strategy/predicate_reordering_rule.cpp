@@ -44,7 +44,7 @@ bool is_predicate_style_node(const std::shared_ptr<AbstractLQPNode>& node) {
 void reorder_predicates(const std::vector<std::shared_ptr<AbstractLQPNode>>& predicates,
                         const std::shared_ptr<const AbstractCostEstimator>& cost_estimator) {
   // Store original input and output.
-  const auto input& = predicates.back()->left_input();
+  const auto& input = predicates.back()->left_input();
   const auto outputs = predicates.front()->outputs();
   const auto input_sides = predicates.front()->get_input_sides();
 
