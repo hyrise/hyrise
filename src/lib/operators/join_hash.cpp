@@ -80,7 +80,7 @@ size_t JoinHash::calculate_radix_bits(const size_t build_side_size, const size_t
   constexpr auto L2_CACHE_SIZE = 1'024'000;                   // bytes
   constexpr auto L2_CACHE_MAX_USABLE = L2_CACHE_SIZE * 0.75;  // use 75% of the L2 cache size
 
-  // Since it's hard to estimate the number of distinct values in a radix partition (and thus the size of each hash
+  // Since it is hard to estimate the number of distinct values in a radix partition (and, thus, the size of each hash
   // table), we accomodate a little bit extra space for slightly skewed data distributions and aim for a fill level of
   // 80%.
   const auto complete_hash_map_size =

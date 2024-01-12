@@ -1,21 +1,26 @@
 #!/bin/bash
 
 if [[ -z $HYRISE_HEADLESS_SETUP ]]; then
-    BOOST_INSTALLED=$(dpkg-query -W --showformat='${Status}\n' libboost-dev 2>/dev/null | grep "install ok installed")
-    if [ "" != "$BOOST_INSTALLED" ]; then
-        BOOST_VERSION=$(apt-cache policy libboost-dev | grep Installed | cut -d ':' -f 2 | xargs)  # xargs trims whitespace
-        if [[ $BOOST_VERSION != *"1.81"* ]]; then
-            read -p "libboost-dev ${BOOST_VERSION} is installed, but version 1.81 is required. You can resolve manually or remove automatically. Ok to remove libboost-dev?" -n 1 -r < /dev/tty
+    read -p 'This script installs the dependencies of Hyrise. It might upgrade already installed packages. Continue? [y|n] ' -n 1 -r < /dev/tty
+else
+    REPLY="y"
+fi
+
+
+BOOST_INSTALLED=$(dpkg-query -W --showformat='${Status}\n' libboost-dev 2>/dev/null | grep "install ok installed")
+if [ "" != "$BOOST_INSTALLED" ]; then
+    BOOST_VERSION=$(apt-cache policy libboost-dev | grep Installed | cut -d ':' -f 2 | xargs)  # xargs trims whitespace
+    if [[ $BOOST_VERSION != *"1.81"* ]]; then
+        # if [[ -z $HYRISE_HEADLESS_SETUP ]]; then
+            read -p "Before we continue, libboost-dev ${BOOST_VERSION} needs to be removed as we require 1.81. You can resolve manually or remove automatically. Ok to remove libboost-dev?" -n 1 -r < /dev/tty
             echo
             if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
                 sudo apt-get remove libboost-dev
             fi
-        fi
+        # else
+        #     sudo apt-get remove libboost-dev -y
+        # fi
     fi
-    read -p 'This script installs the dependencies of Hyrise. It might upgrade already installed packages. Continue? [y|n] ' -n 1 -r < /dev/tty
-else
-    REPLY="y"
-    sudo apt-get remove -y libboost-dev
 fi
 
 echo
