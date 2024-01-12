@@ -11,15 +11,15 @@ BOOST_INSTALLED=$(dpkg-query -W --showformat='${Status}\n' libboost-dev 2>/dev/n
 if [ "" != "$BOOST_INSTALLED" ]; then
     BOOST_VERSION=$(apt-cache policy libboost-dev | grep Installed | cut -d ':' -f 2 | xargs)  # xargs trims whitespace
     if [[ $BOOST_VERSION != *"1.81"* ]]; then
-        # if [[ -z $HYRISE_HEADLESS_SETUP ]]; then
-            read -p "Before we continue, libboost-dev ${BOOST_VERSION} needs to be removed as we require 1.81. You can resolve manually or remove automatically. Ok to remove libboost-dev? [y|n] " -n 1 -r < /dev/tty
+        if [[ -z $HYRISE_HEADLESS_SETUP ]]; then
+            read -p "Before we continue, libboost-dev ${BOOST_VERSION} needs to be removed as Hyrise requires version 1.81. You can resolve manually or remove automatically. Ok to remove libboost-dev? [y|n] " -n 1 -r < /dev/tty
             echo
             if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
                 sudo apt-get remove -y libboost-dev
             fi
-        # else
-        #     sudo apt-get remove libboost-dev -y
-        # fi
+        else
+            sudo apt-get remove libboost-dev -y
+        fi
     fi
 fi
 
