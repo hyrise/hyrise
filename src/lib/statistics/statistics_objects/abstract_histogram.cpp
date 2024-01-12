@@ -739,17 +739,10 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::pruned(
 template <typename T>
 std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::scaled(const Selectivity selectivity) const {
   Assert(!std::isnan(selectivity), "Unexpected selectivity.");
-  /*GenericHistogramBuilder<T> builder(bin_count(), _domain);
 
-  // Scale the number of values in the bin with the given selectivity.
-  for (auto bin_id = BinID{0}; bin_id < bin_count(); ++bin_id) {
-    builder.add_bin(bin_minimum(bin_id), bin_maximum(bin_id), bin_height(bin_id) * selectivity,
-                    _scale_distinct_count(bin_height(bin_id), bin_distinct_count(bin_id), selectivity));
-  }
-
-  return builder.build();*/
+  // Return a ScaledHistogram to wrap the source histogram rather than copying all buckets over. This significantly
+  // benefits the runtime of short-running queries.
   return ScaledHistogram<T>::from_referenced_histogram(this->shared_from_this(), selectivity);
-  //return std::make_shared<ScaledHistogram<T>>(this->shared_from_this(), selectivity, _domain);
 }
 
 template <typename T>

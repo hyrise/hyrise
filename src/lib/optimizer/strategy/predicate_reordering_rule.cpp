@@ -174,9 +174,9 @@ void PredicateReorderingRule::_apply_to_plan_without_subqueries(
   // We keep track of visited nodes, so that this rule touches nodes once only.
   auto visited_nodes = std::unordered_set<std::shared_ptr<AbstractLQPNode>>{};
   reorder_predicates_recursively(lqp_root, cost_estimator, visited_nodes);
-  const auto& cardinality_estimator = static_cast<const CardinalityEstimator&>(*cost_estimator->cardinality_estimator);
-  std::cout << "slice " << static_cast<double>(cardinality_estimator.slicing_time.count()) / 1000000.0 << "\nscale "
-            << static_cast<double>(cardinality_estimator.scaling_time.count()) / 1000000.0 << std::endl;
+  //const auto& cardinality_estimator = static_cast<const CardinalityEstimator&>(*cost_estimator->cardinality_estimator);
+  //std::cout << "slice " << static_cast<double>(cardinality_estimator.slicing_time.count()) / 1000000.0 << "\nscale "
+  //          << static_cast<double>(cardinality_estimator.scaling_time.count()) / 1000000.0 << std::endl;
 }
 
 }  // namespace hyrise
