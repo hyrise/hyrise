@@ -20,7 +20,7 @@ if [ "" != "$BOOST_INSTALLED" ]; then
             fi
         fi
 
-        if [[ -z $HYRISE_HEADLESS_SETUP | "$remove_boost" == true ]]; then
+        if [[ -z $HYRISE_HEADLESS_SETUP || "$remove_boost" == true ]]; then
             sudo apt-get remove -y libboost-dev
         fi
     fi
