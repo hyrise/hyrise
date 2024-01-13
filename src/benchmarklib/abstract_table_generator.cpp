@@ -147,7 +147,7 @@ void AbstractTableGenerator::generate_and_store() {
 
             for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
               const auto& chunk = table->get_chunk(chunk_id);
-              Assert(chunk->individually_sorted_by().empty(), "Chunk SortColumnDefinitions need to be empty");
+              Assert(chunk->individually_sorted_by().empty(), "Chunk SortColumnDefinitions need to be empty.");
               chunk->set_individually_sorted_by(sort_column);
             }
 
@@ -168,7 +168,7 @@ void AbstractTableGenerator::generate_and_store() {
           sort->execute();
           const auto immutable_sorted_table = sort->get_output();
 
-          Assert(immutable_sorted_table->chunk_count() == table->chunk_count(), "Mismatching chunk_count");
+          Assert(immutable_sorted_table->chunk_count() == table->chunk_count(), "Mismatching chunk_count.");
 
           table = std::make_shared<Table>(immutable_sorted_table->column_definitions(), TableType::Data,
                                           table->target_chunk_size(), UseMvcc::Yes);
@@ -339,11 +339,13 @@ void AbstractTableGenerator::_create_chunk_indexes(
     std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) {
   auto timer = Timer{};
   std::cout << "- Creating chunk indexes" << std::endl;
+
   const auto& indexes_by_table = _indexes_by_table();
   if (indexes_by_table.empty()) {
     std::cout << "-  No indexes defined by benchmark" << std::endl;
     return;
   }
+
   for (const auto& [table_name, indexes] : indexes_by_table) {
     const auto& table = table_info_by_name[table_name].table;
 
@@ -375,11 +377,13 @@ void AbstractTableGenerator::_create_table_indexes(
     std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) {
   auto timer = Timer{};
   std::cout << "- Creating table indexes" << std::endl;
+
   const auto& indexes_by_table = _indexes_by_table();
   if (indexes_by_table.empty()) {
     std::cout << "-  No indexes defined by benchmark" << std::endl;
     return;
   }
+
   for (const auto& [table_name, indexes] : indexes_by_table) {
     const auto& table = table_info_by_name[table_name].table;
 
@@ -389,13 +393,12 @@ void AbstractTableGenerator::_create_table_indexes(
       Assert(index_column_names.size() == 1, "Multi-column indexes are currently not supported.");
 
       for (const auto& column_name : index_column_names) {
-        std::cout << "-  Creating an index on table " << table_name << " (" << column_name << ") covering "
-                  << chunk_ids.size() << " (all finalized) chunks]" << std::flush;
+        std::cout << "-  Creating index on '" << table_name << "." << column_name << "'" << std::flush;
 
         auto per_table_index_timer = Timer{};
         table->create_partial_hash_index(table->column_id_by_name(column_name), chunk_ids);
 
-        std::cout << "(" << per_table_index_timer.lap_formatted() << ")" << std::endl;
+        std::cout << " (" << per_table_index_timer.lap_formatted() << ")" << std::endl;
       }
     }
   }
@@ -426,7 +429,7 @@ bool AbstractTableGenerator::_all_chunks_sorted_by(const std::shared_ptr<Table>&
     auto chunk_sorted = false;
     for (const auto& sorted_column : sorted_columns) {
       if (sorted_column.column == sort_column.column) {
-        Assert(sorted_column.sort_mode == sort_column.sort_mode, "Column is already sorted by another SortMode");
+        Assert(sorted_column.sort_mode == sort_column.sort_mode, "Column is already sorted by another SortMode.");
         chunk_sorted = true;
       }
     }

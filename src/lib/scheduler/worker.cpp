@@ -8,6 +8,8 @@
 #include <thread>
 #include <vector>
 
+#include <boost/atomic/detail/pause.hpp>
+
 #include "abstract_scheduler.hpp"
 #include "abstract_task.hpp"
 #include "hyrise.hpp"
@@ -19,7 +21,7 @@ namespace {
 using namespace hyrise;  // NOLINT(build/namespaces)
 
 /**
- * On worker threads, this references the Worker running on this thread, on all other threads, this is empty.
+ * On worker threads, this references the worker running on this thread, on all other threads, this is empty.
  * Uses a weak_ptr, because otherwise the ref-count of it would not reach zero within the main() scope of the program.
  */
 thread_local std::weak_ptr<Worker> this_thread_worker;  // NOLINT (clang-tidy wants this const)
@@ -53,7 +55,7 @@ CpuID Worker::cpu_id() const {
 }
 
 void Worker::operator()() {
-  Assert(this_thread_worker.expired(), "Thread already has a worker");
+  Assert(this_thread_worker.expired(), "Thread already has a worker.");
 
   this_thread_worker = shared_from_this();
 
@@ -66,21 +68,43 @@ void Worker::operator()() {
 }
 
 void Worker::_work(const AllowSleep allow_sleep) {
-  // If execute_next has been called, run that task first, otherwise try to retrieve a task from the queue.
-  auto task = std::shared_ptr<AbstractTask>{};
-  if (_next_task) {
-    task = std::move(_next_task);
-    _next_task = nullptr;
-  } else {
-    if (_queue->semaphore.tryWait()) {
-      task = _queue->pull();
-    }
-  }
+  const auto& queues = Hyrise::get().scheduler()->queues();
+  // Optional to only fetch current time when needed later.
+  auto first_sleep_try = std::optional<std::chrono::steady_clock::time_point>{};
 
-  if (!task) {
-    // Simple work stealing without explicitly transferring data between nodes.
-    for (const auto& queue : Hyrise::get().scheduler()->queues()) {
-      if (queue == _queue) {
+  auto task = std::shared_ptr<AbstractTask>{};
+  auto spin_count = int64_t{-1};
+
+  // auto break_at_next_task = false;
+  // auto break_at_local_task = false;
+  // auto break_at_distant_task = false;
+  // auto break_at_no_sleep = false;
+  // auto break_at_wake = false;
+
+  while (true) {
+    ++spin_count;
+
+    // If execute_next has been called, run that task first, otherwise try to retrieve a task from the queue.
+    if (_next_task) {
+      task = std::move(_next_task);
+      _next_task = nullptr;
+      break;
+    } else {
+      if (_queue->semaphore.tryWait()) {
+        task = _queue->pull();
+        break;
+      }
+    }
+
+    if (spin_count < 4 && allow_sleep == AllowSleep::Yes) {
+      // Do not immediately steal tasks but first spin a few times on the local queue. In case the worker is not
+      // allowed to sleep, directly try to steal.
+      continue;
+    }
+
+    // No workable task on local queue: try to steal from other queues.
+    for (const auto& queue : queues) {
+      if (!queue || queue == _queue) {
         continue;
       }
 
@@ -92,13 +116,42 @@ void Worker::_work(const AllowSleep allow_sleep) {
         }
       }
     }
-  }
 
-  // If there is no ready task neither in our queue nor in any other and we are allowed to sleep, wait on the
-  // semaphore.
-  if (!task && allow_sleep == AllowSleep::Yes) {
-    _queue->semaphore.wait();
-    task = _queue->pull();
+    if (task || allow_sleep == AllowSleep::No) {
+      // Exit loop when task successfully pulled from distant queue or when worker is not allowed to sleep or spin (see
+      // _work() call in _wait_for_tasks()).
+      break;
+    }
+
+
+    // Exponential back off. Do not pause more than 1024 times.
+    const auto pause_loop_count = std::min(1024, 1 << std::min(int64_t{10}, spin_count));
+    DebugAssert(pause_loop_count >= 0 && pause_loop_count < 1025, "Unexpected spin count (over-/underflow?).");
+    for (auto loop_id = int32_t{0}; loop_id < pause_loop_count; ++loop_id) {
+      // boost::atomics::detail::pause() executes a pause/yield instruction to signal the CPU that the process is
+      // spinning to wait, which can be more energy efficient and puts less pressure on the cache than a pause-less
+      // spinning loop (see
+      // https://www.intel.com/content/www/us/en/developer/articles/technical/a-common-construct-to-avoid-the-contention-of-threads-architecture-agnostic-spin-wait-loops.html).
+      boost::atomics::detail::pause();
+    }
+
+    if (spin_count < 16) {
+      // Continue spinning without checking for the overall spin time if spin count is small.
+      continue;
+    }
+
+    if (!first_sleep_try) {
+      // Set start time here to avoid obtaining the clock in the spinning loop unnecessarily.
+      first_sleep_try = std::chrono::steady_clock::now();
+    }
+
+    const auto time_passed_spinning = std::chrono::nanoseconds{std::chrono::steady_clock::now() - *first_sleep_try};
+    if (time_passed_spinning.count() > 10'000'000) {
+      // We only yield the worker thread after we have spinned for 10 ms.
+      _queue->semaphore.wait();
+      task = _queue->pull();
+      break;
+    }
   }
 
   if (!task) {
@@ -118,14 +171,14 @@ void Worker::_work(const AllowSleep allow_sleep) {
     _active = false;
   }
 
-  // This is part of the Scheduler shutdown system. Count the number of tasks a Worker executed to allow the
-  // Scheduler to determine whether all tasks finished
+  // This is part of the Scheduler shutdown system. Count the number of tasks a worker executed to allow the
+  // Scheduler to determine whether all tasks finished.
   _num_finished_tasks++;
 }
 
 void Worker::execute_next(const std::shared_ptr<AbstractTask>& task) {
   DebugAssert(&*get_this_thread_worker() == this,
-              "execute_next must be called from the same thread that the worker works in");
+              "execute_next must be called from the same thread that the worker works in.");
   if (!_next_task) {
     const auto successfully_enqueued = task->try_mark_as_enqueued();
     if (!successfully_enqueued) {
@@ -137,7 +190,7 @@ void Worker::execute_next(const std::shared_ptr<AbstractTask>& task) {
       // If successfully_enqueued is false, we lost, and the task is already in one of the TaskQueues.
       return;
     }
-    Assert(successfully_enqueued, "Task was already enqueued, expected to be solely responsible for execution");
+    Assert(successfully_enqueued, "Task was already enqueued, expected to be solely responsible for execution.");
     _next_task = task;
   } else {
     _queue->push(task, SchedulePriority::Default);
@@ -149,7 +202,7 @@ void Worker::start() {
 }
 
 void Worker::join() {
-  Assert(!Hyrise::get().scheduler()->active(), "Worker can't be join()-ed while the scheduler is still active");
+  Assert(!Hyrise::get().scheduler()->active(), "Worker cannot be join()-ed while the scheduler is still active.");
   _thread.join();
 }
 

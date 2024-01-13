@@ -9,61 +9,36 @@
 
 namespace hyrise {
 
-/*
- * GENERAL SCHEDULING CONCEPT
- *
- * The scheduler is the main entry point and there are currently two alternative implementations: the
- * ImmediateExecutionScheduler (single-threaded, for benchmarking and debugging) and the NodeQueueScheduler (multi-
- * threaded).
- *
- * Everything that needs to be processed is encapsulated in tasks. A task will be pushed into a TaskQueue by a
- * scheduler and pulled by a Worker to be processed.
- *
- *
- * TASK DEPENDENCIES
- *
- * Tasks can be dependent on each other. For example, a TableScan operation can depend on a GetTable operation and so
- * do the tasks that encapsulate these operations. Tasks with predecessors are not scheduled (i.e., not added to the
- * TaskQueues). Once tasks with successors are processed, the executing Worker tries to execute the successors before
- * pulling new tasks from the TaskQueues.
- *
- *
- * TASKS
- *
- * The two main task types in Hyrise are OperatorTasks and JobTasks. OperatorTasks encapsulate database operators
- * (here, they only encapsulate the execute function). JobTasks can be used by any component to parallelize arbitrary
- * parts of its work by taking a void-returning lambda. If a task itself spawns tasks to be executed, the Worker
- * executing the main task executes these tasks directly when possible or waits for their completion in case other
- * Workers already process these tasks (during this wait time, the Worker pulls tasks from the TaskQueues to avoid
- * idling).
- *
+/**
  *
  * SCHEDULER AND TOPOLOGY
  *
  * For setting up the NodeQueueScheduler, the server's topology is used. A topology encapsulates the
  * machine's architecture, e.g., the number of CPU threads and NUMA nodes, where a node is typically a socket or CPU
  * (usually having multiple threads/cores).
- * Each node owns a TaskQueue. Furthermore, one Worker is assigned to one CPU thread. The Worker running on one CPU
+ * Each node owns a TaskQueue. Furthermore, one worker is assigned to one CPU thread. A worker running on one CPU
  * thread of a node is primarily pulling from the local TaskQueue of this node.
  *
  * A topology can also be created with Hyrise::get().topology.use_fake_numa_topology() to simulate a NUMA system with
- * multiple nodes (thus, TaskQueues) and Workers and should mainly be used for testing NUMA-concepts on non-NUMA
+ * multiple nodes (thus, TaskQueues) and workers and should mainly be used for testing NUMA concepts on non-NUMA
  * development machines.
  *
  *
  * WORK STEALING
  *
- * Currently, a simple work stealing is implemented. Work stealing is useful to avoid idle Workers (and therefore idle
- * CPU threads) while there are still tasks in the system that need to be processed. A Worker gets idle when its local
- * TaskQueue is empty. In this case, the Worker is checking non-local TaskQueues of other NUMA nodes for tasks. The
- * Worker pulls a task from a remote TaskQueue and checks if this task is stealable. If not, the task is pushed to the
+ * Currently, a simple work stealing is implemented. Work stealing is useful to avoid idle workers (and therefore idle
+ * CPU threads) while there are still tasks in the system that need to be processed. A worker gets idle when its local
+ * TaskQueue is empty. In this case, the worker is checking non-local TaskQueues of other NUMA nodes for tasks. The
+ * worker pulls a task from a remote TaskQueue and checks if this task is stealable. If not, the task is pushed to the
  * TaskQueue again.
- * In case no tasks can be processed, the Worker thread is put to sleep and waits on the semaphore of its node-local
+ * In case no tasks can be processed, the worker thread is put to sleep and waits on the semaphore of its node-local
  * TaskQueue.
  *
- * Note: currently, TaskQueues are not explicitly allocated on a NUMA node. This means most Workers will frequently
+ * Note: currently, TaskQueues are not explicitly allocated on a NUMA node. This means most workers will frequently
  * access distant TaskQueues, which is ~1.6 times slower than accessing a local node [1]. 
- * [1] http://frankdenneman.nl/2016/07/13/numa-deep-dive-4-local-memory-optimization/
+ *
+ *  [1] http://frankdenneman.nl/2016/07/13/numa-deep-dive-4-local-memory-optimization/
+ *
  */
 
 class Worker;
@@ -79,7 +54,7 @@ class NodeQueueScheduler : public AbstractScheduler {
   ~NodeQueueScheduler() override;
 
   /**
-   * Create a TaskQueue on every node and a Worker for every core.
+   * Create a TaskQueue on every node and a worker for every core.
    */
   void begin() override;
 
@@ -123,6 +98,7 @@ class NodeQueueScheduler : public AbstractScheduler {
   std::shared_ptr<UidAllocator> _worker_id_allocator;
   std::vector<std::shared_ptr<TaskQueue>> _queues;
   std::vector<std::shared_ptr<Worker>> _workers;
+  std::vector<NodeID> _active_nodes;
 
   std::atomic_bool _active{false};
   std::atomic_int64_t _active_worker_count{0};

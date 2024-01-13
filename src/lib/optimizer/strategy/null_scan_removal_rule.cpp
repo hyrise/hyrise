@@ -28,7 +28,7 @@ std::string NullScanRemovalRule::name() const {
 }
 
 void NullScanRemovalRule::apply_to_plan(const std::shared_ptr<LogicalPlanRootNode>& root) const {
-  Assert(root->type == LQPNodeType::Root, "NullScanRemovalRule needs root to hold onto");
+  Assert(root->type == LQPNodeType::Root, "NullScanRemovalRule needs root to hold onto.");
 
   std::vector<std::shared_ptr<AbstractLQPNode>> nodes_to_remove;
 

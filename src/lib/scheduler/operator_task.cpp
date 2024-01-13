@@ -45,6 +45,37 @@ std::shared_ptr<OperatorTask> add_operator_tasks_recursively(const std::shared_p
   return task;
 }
 
+/**
+ * Sets tasks that can be used to prune chunks by predicates with uncorrelated subqueries as successors of the GetTable
+ * tasks. Guarantees that the resulting task graph is still acyclic.
+ */
+void link_tasks_for_subquery_pruning(const std::unordered_set<std::shared_ptr<OperatorTask>>& tasks) {
+  for (const auto& task : tasks) {
+    const auto& op = task->get_operator();
+    if (op->type() != OperatorType::GetTable) {
+      continue;
+    }
+
+    const auto& get_table = static_cast<GetTable&>(*op);
+    for (const auto& table_scan : get_table.prunable_subquery_predicates()) {
+      for (const auto& subquery : table_scan->uncorrelated_subqueries()) {
+        // All tasks have already been created, so we must be able to get the cached task from each operator.
+        const auto& subquery_root = subquery->get_or_create_operator_task();
+        Assert(tasks.contains(subquery_root), "Unknown OperatorTask.");
+
+        // Cycles in the task graph would lead to deadlocks during execution. This could happen if a table can be pruned
+        // using a predicate on itself (e.g., `SELECT * FROM a_table WHERE x > (SELECT AVG(x) FROM a_table)`) and the
+        // LQPTranslator created a single GetTable operator due to operator deduplication. To make sure we do not
+        // introduce cycles, we include the prunable_subquery_predicates of a StoredTableNode in its equality check.
+        // Thus, we have two unequal nodes that are translated to distinct operators by the LQPTranslator (and no
+        // further sanity check should be necessary). However, we still check for cycles after linking all tasks in
+        // debug builds.
+        subquery_root->set_as_predecessor_of(task);
+      }
+    }
+  }
+}
+
 }  // namespace
 
 namespace hyrise {
@@ -59,6 +90,15 @@ std::pair<std::vector<std::shared_ptr<AbstractTask>>, std::shared_ptr<OperatorTa
 OperatorTask::make_tasks_from_operator(const std::shared_ptr<AbstractOperator>& op) {
   auto operator_tasks_set = std::unordered_set<std::shared_ptr<OperatorTask>>{};
   const auto& root_operator_task = add_operator_tasks_recursively(op, operator_tasks_set);
+
+  // GetTable operators can store references to TableScans as prunable subquery predicates (see get_table.hpp for
+  // details).
+  // We set the tasks associated with the uncorrelated subqueries as predecessors of the GetTable tasks so the GetTable
+  // operators can extract the predicate values and perform dynamic chunk pruning. However, we cannot link the tasks
+  // during the recursive creation of operator tasks (see map_prunable_subquery_predicates.hpp). Potentially, not all
+  // tasks are yet created when reaching the GetTable tasks. Furthermore, we need the entire task graph to ensure that
+  // it is acyclic.
+  link_tasks_for_subquery_pruning(operator_tasks_set);
 
   // Ensure the task graph is acyclic, i.e., no task is any (n-th) successor of itself. Tasks in cycles would end up in
   // a deadlock during execution, mutually waiting for the other tasks' execution. Even if the tasks are never executed,

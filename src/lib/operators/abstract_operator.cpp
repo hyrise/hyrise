@@ -13,6 +13,7 @@
 #include "utils/assert.hpp"
 #include "utils/format_bytes.hpp"
 #include "utils/format_duration.hpp"
+#include "utils/map_prunable_subquery_predicates.hpp"
 #include "utils/print_utils.hpp"
 #include "utils/timer.hpp"
 
@@ -199,7 +200,14 @@ std::string AbstractOperator::description(DescriptionMode /*description_mode*/) 
 
 std::shared_ptr<AbstractOperator> AbstractOperator::deep_copy() const {
   auto copied_ops = std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>{};
-  return deep_copy(copied_ops);
+  const auto copy = deep_copy(copied_ops);
+
+  // GetTable operators can store references to TableScans as prunable subquery predicates (see get_table.hpp for
+  // details). We must assign the copies of these TableScans after copying the entire PQP (see
+  // map_prunable_subquery_predicates.hpp).
+  map_prunable_subquery_predicates(copied_ops);
+
+  return copy;
 }
 
 std::shared_ptr<AbstractOperator> AbstractOperator::deep_copy(

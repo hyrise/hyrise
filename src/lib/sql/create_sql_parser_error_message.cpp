@@ -8,10 +8,10 @@
 namespace hyrise {
 
 std::string create_sql_parser_error_message(const std::string& sql, const hsql::SQLParserResult& result) {
-  std::stringstream error_msg;
+  auto error_msg = std::stringstream{};
   error_msg << "SQL query not valid.\n";
 
-  std::vector<std::string> sql_lines;
+  auto sql_lines = std::vector<std::string>{};
   boost::algorithm::split(sql_lines, sql, boost::is_any_of("\n"));
 
   error_msg << "SQL query:\n==========\n";

@@ -53,11 +53,11 @@ int main(int argc, char* argv[]) {
                    "legal TPC-H input data.", cxxopts::value<std::string>()->default_value("None")); // NOLINT
   // clang-format on
 
-  std::shared_ptr<BenchmarkConfig> config;
-  std::string comma_separated_queries;
-  float scale_factor;
-  bool use_prepared_statements;
-  bool jcch;
+  auto config = std::shared_ptr<BenchmarkConfig>{};
+  auto comma_separated_queries = std::string{};
+  auto scale_factor = float{};
+  auto use_prepared_statements = false;
+  auto jcch = false;
   auto jcch_skewed = false;
 
   // Parse command line args
@@ -84,7 +84,7 @@ int main(int argc, char* argv[]) {
     } else if (jcch_mode == "normal") {  // NOLINT
       jcch_skewed = false;
     } else {
-      Fail("Invalid jcch mode, use skewed or normal");
+      Fail("Invalid JCC-H mode, use skewed or normal.");
     }
   }
 
@@ -94,7 +94,7 @@ int main(int argc, char* argv[]) {
     if (clustering_configuration_parameter == "Pruning") {
       clustering_configuration = ClusteringConfiguration::Pruning;
     } else if (clustering_configuration_parameter != "None") {
-      Fail("Invalid clustering config: '" + clustering_configuration_parameter + "'");
+      Fail("Invalid clustering config: '" + clustering_configuration_parameter + "'.");
     }
 
     std::cout << "- Clustering with '" << magic_enum::enum_name(clustering_configuration) << "' configuration"
@@ -115,7 +115,7 @@ int main(int argc, char* argv[]) {
     std::transform(item_ids_str.begin(), item_ids_str.end(), std::back_inserter(item_ids), [](const auto& item_id_str) {
       const auto item_id =
           BenchmarkItemID{boost::lexical_cast<BenchmarkItemID::base_type, std::string>(item_id_str) - 1};
-      DebugAssert(item_id < 22, "There are only 22 queries");
+      DebugAssert(item_id < 22, "There are only 22 queries.");
       return item_id;
     });
   }
@@ -128,7 +128,7 @@ int main(int argc, char* argv[]) {
 
   auto context = BenchmarkRunner::create_context(*config);
 
-  Assert(!use_prepared_statements || !config->verify, "SQLite validation does not work with prepared statements");
+  Assert(!use_prepared_statements || !config->verify, "SQLite validation does not work with prepared statements.");
 
   if (config->verify) {
     // Hack: We cannot verify Q15, thus we remove it from the list of queries
