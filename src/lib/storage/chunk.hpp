@@ -30,9 +30,8 @@ using Indexes = pmr_vector<std::shared_ptr<AbstractChunkIndex>>;
 using ChunkPruningStatistics = std::vector<std::shared_ptr<BaseAttributeStatistics>>;
 
 /**
- * A Chunk is a horizontal partition of a table.
- * It stores the table's data segment by segment.
- * Optionally, mostly applying to StoredTables, it may also hold MvccData.
+ * A Chunk is a horizontal partition of a table. It stores the table's data segment by segment. Optionally, mostly
+ * applying to stored tables, it may also hold MvccData.
  *
  * Find more information about this in our wiki: https://github.com/hyrise/hyrise/wiki/chunk-concept
  */
@@ -47,9 +46,9 @@ class Chunk : private Noncopyable {
   //
   // The default chunk size was determined to give the best performance for single-threaded TPC-H, SF1. By all means,
   // feel free to re-evaluate this. 2^16 is a good size because it means that on a unique column, dictionary
-  // requires up to 16 bits for the value ids. A chunk size of 100'000 would put us just slightly over that 16 bits,
+  // requires up to 16 bits for the value IDs. A chunk size of 100'000 would put us just slightly over that 16 bits,
   // meaning that FixedWidthInteger vectors would use 32 instead of 16 bits. We do not use 65'536 because we need to
-  // account for NULL being encoded as a separate value id.
+  // account for NULL being encoded as a separate value ID.
   static constexpr auto DEFAULT_SIZE = ChunkOffset{65'535};
 
   Chunk(Segments segments, const std::shared_ptr<MvccData>& mvcc_data = nullptr,
@@ -58,28 +57,25 @@ class Chunk : private Noncopyable {
   // Returns whether new rows can be appended to this Chunk. Chunks are set immutable during finalize().
   bool is_mutable() const;
 
-  // Atomically replaces the current segment at column_id with the passed segment
+  // Atomically replaces the current segment at column_id with the passed segment.
   void replace_segment(size_t column_id, const std::shared_ptr<AbstractSegment>& segment);
 
-  // returns the number of columns, which is equal to the number of segments (cannot exceed ColumnID (uint16_t))
+  // Returns the number of columns, which is equal to the number of segments (cannot exceed ColumnID (uint16_t)).
   ColumnCount column_count() const;
 
-  // returns the number of rows (cannot exceed ChunkOffset (uint32_t))
+  // Returns the number of rows (cannot exceed ChunkOffset (uint32_t)).
   ChunkOffset size() const;
 
-  // adds a new row, given as a list of values, to the chunk
-  // note this is slow and not thread-safe and should be used for testing purposes only
+  // Adds a new row, given as a list of values, to the chunk. Note this is slow and not thread-safe and should be used
+  // for testing purposes only.
   void append(const std::vector<AllTypeVariant>& values);
 
   /**
-   * Atomically accesses and returns the segment at a given position
+   * Atomically accesses and returns the segment at a given position.
    *
-   * Note: Concurrently with the execution of operators,
-   *       ValueSegments might be exchanged with DictionarySegments.
-   *       Therefore, if you hold a pointer to a segment, you can
-   *       continue to use it without any inconsistencies.
-   *       However, if you call get_segment again, be aware that
-   *       the return type might have changed.
+   * Note: Concurrently with the execution of operators, ValueSegments might be exchanged with encoded segments. Thus,
+   *       if you hold a pointer to a segment, you can continue to use it without any inconsistencies. However, if you
+   *       call `get_segment again`, be aware that the returned object might have changed.
    */
   std::shared_ptr<AbstractSegment> get_segment(ColumnID column_id) const;
 
@@ -134,7 +130,7 @@ class Chunk : private Noncopyable {
   /** @} */
 
   /**
-   * For debugging purposes, makes an estimation about the memory used by this chunk and its segments
+   * For debugging purposes, makes an estimation about the memory used by this chunk and its segments.
    */
   size_t memory_usage(const MemoryUsageCalculationMode mode) const;
 
@@ -143,7 +139,7 @@ class Chunk : private Noncopyable {
    * it is sorted will be returned.
    *
    * In a chunk, multiple segments may be sorted independently. For example, in a table storing orders, both the order
-   * id and date of incoming orders might have incrementing values. In this case, sorted_by has two entries (assuming
+   * ID and date of incoming orders might have incrementing values. In this case, sorted_by has two entries (assuming
    * this knowledge is available to the database). However, for cases where the data is first orderered by one column,
    * then by another (e.g. ORDER_BY last_name, first_name), only the primary order is stored.
    *
@@ -156,25 +152,25 @@ class Chunk : private Noncopyable {
 
   /**
    * Returns the count of deleted/invalidated rows within this chunk resulting from already committed transactions.
-   * However, `size() - invalid_row_count()` does not necessarily tell you how many rows are visible for
-   * the current transaction.
+   * However, `size() - invalid_row_count()` does not necessarily tell you how many rows are visible for the current
+   * transaction.
    */
   ChunkOffset invalid_row_count() const {
     return ChunkOffset{_invalid_row_count};
   }
 
   /**
-   * Atomically increases the counter of deleted/invalidated rows within this chunk.
-   * (The function is marked as const, as otherwise it could not be called by the Delete operator.)
+   * Atomically increases the counter of deleted/invalidated rows within this chunk. The function is marked as const,
+   * as otherwise it could not be called by the Delete operator.
    */
   void increase_invalid_row_count(ChunkOffset count) const;
 
   /**
    * Chunks with few visible entries can be cleaned up periodically by the MvccDeletePlugin in a two-step process.
    * Within the first step (clean up transaction), the plugin deletes rows from this chunk and re-inserts them at the
-   * end of the table. Thus, future transactions will find the still valid rows at the end of the table and do not
-   * have to look at this chunk anymore.
-   * The cleanup commit id represents the snapshot commit id at which transactions can ignore this chunk.
+   * end of the table. Thus, future transactions will find the still valid rows at the end of the table and do not have
+   * to look at this chunk anymore.
+   * The cleanup CommitID represents the snapshot CommitID at which transactions can ignore this chunk.
    */
   std::optional<CommitID> get_cleanup_commit_id() const;
 
@@ -189,10 +185,9 @@ class Chunk : private Noncopyable {
   /**
    * Insert operators mark that they appended a new chunk to the table. From this moment on, the former last chunk can
    * be finalized as soon as all pending Inserts committed or rolled back. If there are no pending Inserts, i.e., the
-   * chunk was filled exactly to its target size and all Inserts are commited/rolled back, the chunk is immediately
-   * finalized. Otherwiese, each Insert operator tries to finalize the chunks it inserted data into on commit or
-   * rollback. If a chunk is finalizable (i.e., it reached the target size and a new chunk was added to the table) and
-   * no Inserts are pending, the chunk is set to be immutable.
+   * chunk was filled to its target size and all Inserts are committed/rolled back, the chunk is immediately finalized.
+   * Otherwise, each Insert operator tries to finalize the chunks it inserted data into on commit or rollback.
+   * Finalizing marks the chunk as immutable.
    */
   void mark_as_finalizable();
   void try_finalize();
@@ -211,7 +206,7 @@ class Chunk : private Noncopyable {
   std::vector<SortColumnDefinition> _sorted_by;
   mutable std::atomic<ChunkOffset::base_type> _invalid_row_count{ChunkOffset::base_type{0}};
 
-  // Default value of zero means "not set"
+  // Default value of zero means "not set".
   std::atomic<CommitID> _cleanup_commit_id{CommitID{0}};
   static_assert(std::is_same<uint32_t, CommitID::base_type>::value,
                 "Type of _cleanup_commit_id does not match type of CommitID.");

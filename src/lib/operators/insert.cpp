@@ -108,10 +108,9 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
 
       // If the last chunk of the target table is either immutable or full, append a new mutable chunk.
       if (!target_chunk->is_mutable() || target_chunk->size() == _target_table->target_chunk_size()) {
-        // Allow the chunk to be finalized since no new Insert operators will write to it. Then try to finalize it
-        // because the chunk reached its target size. If there are no other pending Insert operators inserting into this
-        // chunk, `try_finalize()` makes the chunk immutable. Otherwise, the pending Insert operators will do this once
-        // they are done.
+        // Allow the chunk to be finalized as it has reached its target size and no incoming Insert operators will try
+        // to write to it. If all Insert operators writing to this chunk have already finished, `try_finalize()` makes
+        // the chunk immutable. Otherwise, the pending Insert operators will do this once they commit/roll back.
         target_chunk->mark_as_finalizable();
         target_chunk->try_finalize();
         _target_table->append_mutable_chunk();
@@ -243,7 +242,8 @@ void Insert::_on_commit_records(const CommitID cid) {
 
     // Deregister the pending Insert and try to finalize the chunk. We might be the last committing Insert operator
     // inserting into a chunk that reached its target size. In this case, the Insert operator that added a new chunk to
-    // the table allowed the chunk to be finalized and `try_finalize()` actually does that. Otherwise, this is a no-op.
+    // the table allowed the chunk to be finalized, i.e., it set the _is_finalizable flag. Then, `try_finalize()`
+    // actually finalizes the chunk. Otherwise, this is a no-op.
     mvcc_data->deregister_insert();
     target_chunk->try_finalize();
   }
@@ -290,7 +290,8 @@ void Insert::_on_rollback_records() {
 
     // Deregister the pending Insert and try to finalize the chunk. We might be the last rolling back Insert operator
     // inserting into a chunk that reached its target size. In this case, the Insert operator that added a new chunk to
-    // the table allowed the chunk to be finalized and `try_finalize()` actually does that. Otherwise, this is a no-op.
+    // the table allowed the chunk to be finalized, i.e., it set the _is_finalizable flag. Then, `try_finalize()`
+    // actually finalizes the chunk. Otherwise, this is a no-op.
     mvcc_data->deregister_insert();
     target_chunk->try_finalize();
   }
