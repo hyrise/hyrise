@@ -7,8 +7,8 @@
 #include <utility>
 #include <vector>
 
-#include "boost/sort/sort.hpp"
-#include "tsl/robin_map.h"
+#include <boost/sort/sort.hpp>
+#include <boost/unordered/unordered_flat_map.hpp>
 
 #include "generic_histogram.hpp"
 #include "resolve_type.hpp"
@@ -23,9 +23,7 @@ using namespace hyrise;  // NOLINT
 // so reduces the cost of rehashing at the cost of slightly higher memory consumption. We only do it for strings,
 // where hashing is somewhat expensive.
 template <typename T>
-using ValueDistributionMap =
-    tsl::robin_map<T, HistogramCountType, std::hash<T>, std::equal_to<T>,
-                   std::allocator<std::pair<T, HistogramCountType>>, std::is_same_v<std::decay_t<T>, pmr_string>>;
+using ValueDistributionMap = boost::unordered_flat_map<T, HistogramCountType>;
 
 template <typename T>
 void add_segment_to_value_distribution(const AbstractSegment& segment, ValueDistributionMap<T>& value_distribution,
