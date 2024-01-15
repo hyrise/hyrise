@@ -76,6 +76,11 @@ class GenericHistogramTest : public BaseTest {
   }
 };
 
+TEST_F(GenericHistogramTest, Name) {
+  const auto histogram = GenericHistogram<int32_t>::with_single_bin(1, 100, 50, 10);
+  EXPECT_EQ(histogram->name(), "Generic");
+}
+
 TEST_F(GenericHistogramTest, EstimateCardinalityAndPruningBasicInt) {
   const auto histogram = GenericHistogram<int32_t>{{12, 12345}, {123, 123456}, {2, 5}, {2, 2}};
   EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 0), 0.f);
@@ -1154,14 +1159,14 @@ TEST_F(GenericHistogramTest, SplitAtBinBoundsTwoHistograms) {
 
 TEST_F(GenericHistogramTest, ScaledWithSelectivity) {
   // clang-format off
-  const auto histogram = GenericHistogram<int32_t>(
+  const auto histogram = std::make_shared<GenericHistogram<int32_t>>(
     std::vector<int32_t>{1,  30, 60, 80},
     std::vector<int32_t>{25, 50, 75, 100},
     std::vector<HistogramCountType>{40, 30, 20, 10},
     std::vector<HistogramCountType>{10, 20, 15, 5});
   // clang-format on
 
-  const auto scaled_statistics_object_05 = histogram.scaled(0.5f);
+  const auto scaled_statistics_object_05 = histogram->scaled(0.5f);
   const auto scaled_histogram_05 =
       std::dynamic_pointer_cast<const AbstractHistogram<int32_t>>(scaled_statistics_object_05);
   ASSERT_TRUE(scaled_histogram_05);
@@ -1170,7 +1175,7 @@ TEST_F(GenericHistogramTest, ScaledWithSelectivity) {
   EXPECT_FLOAT_EQ(scaled_histogram_05->bin_height(BinID{3}), 5.0f);
   EXPECT_FLOAT_EQ(scaled_histogram_05->bin_distinct_count(BinID{3}), 5.0f);
 
-  const auto scaled_statistics_object_01 = histogram.scaled(0.1f);
+  const auto scaled_statistics_object_01 = histogram->scaled(0.1f);
   const auto scaled_histogram_01 =
       std::dynamic_pointer_cast<const AbstractHistogram<int32_t>>(scaled_statistics_object_01);
   ASSERT_TRUE(scaled_histogram_01);
@@ -1179,7 +1184,7 @@ TEST_F(GenericHistogramTest, ScaledWithSelectivity) {
   EXPECT_FLOAT_EQ(scaled_histogram_01->bin_height(BinID{3}), 1.0f);
   EXPECT_FLOAT_EQ(scaled_histogram_01->bin_distinct_count(BinID{3}), 1.0f);
 
-  const auto scaled_statistics_object_10 = histogram.scaled(10.0f);
+  const auto scaled_statistics_object_10 = histogram->scaled(10.0f);
   const auto scaled_histogram_10 =
       std::dynamic_pointer_cast<const AbstractHistogram<int32_t>>(scaled_statistics_object_10);
   ASSERT_TRUE(scaled_histogram_10);

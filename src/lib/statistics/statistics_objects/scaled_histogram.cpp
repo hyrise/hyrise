@@ -21,10 +21,11 @@ std::shared_ptr<ScaledHistogram<T>> ScaledHistogram<T>::from_referenced_histogra
   // Reference the original histogram and adapt the selectivity if the input itself is a ScaledHistogram.
   if (const auto scaled_histogram = std::dynamic_pointer_cast<const ScaledHistogram>(referenced_histogram)) {
     return std::make_shared<ScaledHistogram<T>>(scaled_histogram->_referenced_histogram,
-                                                scaled_histogram->_selectivity * selectivity);
+                                                scaled_histogram->_selectivity * selectivity,
+                                                referenced_histogram->domain());
   }
 
-  return std::make_shared<ScaledHistogram<T>>(referenced_histogram, selectivity);
+  return std::make_shared<ScaledHistogram<T>>(referenced_histogram, selectivity, referenced_histogram->domain());
 }
 
 template <typename T>

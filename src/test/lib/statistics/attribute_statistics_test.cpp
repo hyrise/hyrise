@@ -66,6 +66,32 @@ TEST_F(AttributeStatisticsTest, Scaled) {
   EXPECT_EQ(scaled_attribute_statistics->distinct_value_count->count, 123);
 }
 
+// Scalin with a selectivity of 1 does noch generate a new object.
+TEST_F(AttributeStatisticsTest, ScaledWithIdentity) {
+  const auto attribute_statistics = std::make_shared<AttributeStatistics<int32_t>>();
+  const auto histogram = GenericHistogram<int32_t>::with_single_bin(0, 100, 40, 20);
+  const auto min_max_filter = std::make_shared<MinMaxFilter<int32_t>>(0, 100);
+  const auto range_filter = std::make_shared<RangeFilter<int32_t>>(std::vector{std::pair<int32_t, int32_t>(0, 100)});
+  const auto null_value_ratio = std::make_shared<NullValueRatioStatistics>(0.2f);
+  const auto distinct_value_count = std::make_shared<DistinctValueCount>(123);
+
+  attribute_statistics->histogram = histogram;
+  attribute_statistics->min_max_filter = min_max_filter;
+  attribute_statistics->range_filter = range_filter;
+  attribute_statistics->null_value_ratio = null_value_ratio;
+  attribute_statistics->distinct_value_count = distinct_value_count;
+
+  const auto scaled_attribute_statistics =
+      std::dynamic_pointer_cast<const AttributeStatistics<int32_t>>(attribute_statistics->scaled(1.0f));
+  ASSERT_TRUE(scaled_attribute_statistics);
+  EXPECT_EQ(scaled_attribute_statistics, attribute_statistics);
+  EXPECT_EQ(scaled_attribute_statistics->histogram, histogram);
+  EXPECT_EQ(scaled_attribute_statistics->min_max_filter, min_max_filter);
+  EXPECT_EQ(scaled_attribute_statistics->range_filter, range_filter);
+  EXPECT_EQ(scaled_attribute_statistics->null_value_ratio, null_value_ratio);
+  EXPECT_EQ(scaled_attribute_statistics->distinct_value_count, distinct_value_count);
+}
+
 TEST_F(AttributeStatisticsTest, Sliced) {
   auto attribute_statistics = AttributeStatistics<int32_t>{};
   attribute_statistics.histogram = GenericHistogram<int32_t>::with_single_bin(1, 100, 40, 20);
@@ -118,8 +144,8 @@ TEST_F(AttributeStatisticsTest, OutputToStream) {
 Generic value count: 40; distinct count: 20; bin count: 1;  Bins
   [1 -> 100]: Height: 40; DistinctCount: 20
 
-Has MinMaxFilter
-Has RangeFilter
+MinMaxFilter: {0 100}
+RangeFilter: { 0->100 }
 NullValueRatio: 0.2
 DistinctValueCount: 123
 }

@@ -57,7 +57,7 @@ class RangeFilter : public AbstractStatisticsObject, public std::enable_shared_f
 
 template <typename T>
 std::ostream& operator<<(std::ostream& stream, const RangeFilter<T>& filter) {
-  stream << "{";
+  stream << "{ ";
 
   for (const auto& range : filter.ranges) {
     stream << range.first << "->" << range.second << " ";

@@ -864,7 +864,6 @@ void AbstractHistogram<T>::_assert_bin_validity() {
       Assert(bin_maximum(bin_id) < bin_minimum(bin_id + 1), "Bins must be sorted and cannot overlap.");
     }
 
-    // NOLINTNEXTLINE clang-tidy is crazy and sees a "potentially unintended semicolon" here...
     if constexpr (std::is_same_v<T, pmr_string>) {
       Assert(_domain.contains(bin_minimum(bin_id)), "Invalid string bin minimum");
       Assert(_domain.contains(bin_maximum(bin_id)), "Invalid string bin maximum");
