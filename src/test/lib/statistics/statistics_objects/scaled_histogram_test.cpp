@@ -114,8 +114,8 @@ TEST_P(ScaledHistogramTest, ReferencesGenericHistogram) {
     const auto generic_histogram = GenericHistogram<HistogramDataType>::with_single_bin(min, max, 10, 5);
 
     const auto scaled_histogram = ScaledHistogram<HistogramDataType>{generic_histogram, 0.5f};
-    EXPECT_EQ(this->referenced_histogram(scaled_histogram), generic_histogram);
-    EXPECT_EQ(this->selectivity(scaled_histogram), 0.5f);
+    EXPECT_EQ(referenced_histogram(scaled_histogram), generic_histogram);
+    EXPECT_EQ(selectivity(scaled_histogram), 0.5f);
   });
 }
 
@@ -130,8 +130,8 @@ TEST_P(ScaledHistogramTest, ReferencesEqualDistinctCountHistogram) {
         std::move(bin_minima), std::move(bin_maxima), std::move(bin_heights), 5, BinID{0});
 
     const auto scaled_histogram = ScaledHistogram<HistogramDataType>{equal_distinct_count_histogram, 0.5f};
-    EXPECT_EQ(this->referenced_histogram(scaled_histogram), equal_distinct_count_histogram);
-    EXPECT_EQ(this->selectivity(scaled_histogram), 0.5f);
+    EXPECT_EQ(referenced_histogram(scaled_histogram), equal_distinct_count_histogram);
+    EXPECT_EQ(selectivity(scaled_histogram), 0.5f);
   });
 }
 
