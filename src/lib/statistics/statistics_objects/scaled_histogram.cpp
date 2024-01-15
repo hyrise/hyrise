@@ -13,10 +13,7 @@ namespace hyrise {
 template <typename T>
 ScaledHistogram<T>::ScaledHistogram(const std::shared_ptr<const AbstractHistogram<T>>& referenced_histogram,
                                     const Selectivity selectivity, const HistogramDomain<T>& domain)
-    : AbstractHistogram<T>(domain),
-      _referenced_histogram(referenced_histogram),
-      _selectivity{selectivity},
-      _total_count{referenced_histogram->total_count() * selectivity} {}
+    : AbstractHistogram<T>(domain), _referenced_histogram(referenced_histogram), _selectivity{selectivity} {}
 
 template <typename T>
 std::shared_ptr<ScaledHistogram<T>> ScaledHistogram<T>::from_referenced_histogram(
@@ -72,7 +69,7 @@ HistogramCountType ScaledHistogram<T>::bin_distinct_count(const BinID index) con
 
 template <typename T>
 HistogramCountType ScaledHistogram<T>::total_count() const {
-  return _total_count;
+  return _referenced_histogram->total_count() * _selectivity;
 }
 
 template <typename T>

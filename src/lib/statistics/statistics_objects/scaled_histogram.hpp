@@ -15,11 +15,11 @@ namespace hyrise {
  * "Scaled" histogram for temporary statistics objects, e.g., during cardinality estimation. This class is a wrapper
  * around a referenced histogram that adds a selectivity for scaling, which forwards most calls to the original
  * histogram. Thus, we do not have to copy all bins of the original histogram over and over. As is the case for
- * ReferenceSegments, we always keep one single level of indirection. Doing so has shown significant improvements on the
- * runtime of short-running queries.
+ * ReferenceSegments, we always keep one single level of indirection. Doing so has shown significant improvements in the
+ * cardinality estimation.
  *
- * Currently, we only use this wrapper for scaled histograms, but we could also use them for sliced and pruned
- * histograms where (ranges of) bins are simply sliced/pruned away.
+ * Currently, we only use this wrapper for scaled histograms, but we could also use it for sliced and pruned histograms
+ * where (ranges of) bins are simply sliced/pruned away.
  * TODO(anyone): Add support for sliced and pruned histograms when we consider copying them a problem.
  */
 template <typename T>
@@ -53,8 +53,6 @@ class ScaledHistogram : public AbstractHistogram<T> {
   const std::shared_ptr<const AbstractHistogram<T>> _referenced_histogram;
 
   const Selectivity _selectivity;
-
-  const HistogramCountType _total_count;
 };
 
 // For gtest.

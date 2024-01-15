@@ -5,6 +5,7 @@
 #include "hyrise.hpp"
 #include "resolve_type.hpp"
 #include "statistics/attribute_statistics.hpp"
+#include "statistics/statistics_objects/distinct_value_count.hpp"
 #include "storage/abstract_encoded_segment.hpp"
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/dictionary_segment.hpp"

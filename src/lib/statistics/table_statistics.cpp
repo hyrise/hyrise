@@ -9,6 +9,8 @@
 #include "resolve_type.hpp"
 #include "scheduler/job_task.hpp"
 #include "statistics/statistics_objects/abstract_histogram.hpp"
+#include "statistics/statistics_objects/equal_distinct_count_histogram.hpp"
+#include "statistics/statistics_objects/null_value_ratio_statistics.hpp"
 #include "storage/table.hpp"
 #include "utils/assert.hpp"
 
@@ -16,7 +18,7 @@ namespace hyrise {
 
 std::shared_ptr<TableStatistics> TableStatistics::from_table(const Table& table) {
   const auto column_count = table.column_count();
-  auto column_statistics = std::vector<std::shared_ptr<BaseAttributeStatistics>>{column_count};
+  auto column_statistics = std::vector<std::shared_ptr<const BaseAttributeStatistics>>{column_count};
 
   /**
    * Determine bin count, within mostly arbitrarily chosen bounds: 5 (for tables with <=2k rows) up to 100 bins
@@ -69,7 +71,7 @@ std::shared_ptr<TableStatistics> TableStatistics::from_table(const Table& table)
   return std::make_shared<TableStatistics>(std::move(column_statistics), table.row_count());
 }
 
-TableStatistics::TableStatistics(std::vector<std::shared_ptr<BaseAttributeStatistics>>&& init_column_statistics,
+TableStatistics::TableStatistics(std::vector<std::shared_ptr<const BaseAttributeStatistics>>&& init_column_statistics,
                                  const Cardinality init_row_count)
     : column_statistics(std::move(init_column_statistics)), row_count(init_row_count) {}
 
@@ -85,7 +87,7 @@ std::ostream& operator<<(std::ostream& stream, const TableStatistics& table_stat
   for (const auto& column_statistics : table_statistics.column_statistics) {
     resolve_data_type(column_statistics->data_type, [&](const auto data_type_t) {
       using ColumnDataType = typename decltype(data_type_t)::type;
-      stream << *std::dynamic_pointer_cast<AttributeStatistics<ColumnDataType>>(column_statistics) << std::endl;
+      stream << *std::dynamic_pointer_cast<const AttributeStatistics<ColumnDataType>>(column_statistics) << std::endl;
     });
   }
 

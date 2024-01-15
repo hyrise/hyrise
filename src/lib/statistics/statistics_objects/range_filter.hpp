@@ -30,7 +30,7 @@ static constexpr uint32_t DEFAULT_MAX_RANGES_COUNT = 10;
  * instead of only looking at the distinct values (which is significantly cheaper for dictionary encoding).
  */
 template <typename T>
-class RangeFilter : public AbstractStatisticsObject {
+class RangeFilter : public AbstractStatisticsObject, public std::enable_shared_from_this<RangeFilter<T>> {
  public:
   static_assert(std::is_arithmetic_v<T>, "RangeFilter should not be instantiated for strings.");  // #1536
 
@@ -43,11 +43,11 @@ class RangeFilter : public AbstractStatisticsObject {
                                    const AllTypeVariant& /*variant_value*/,
                                    const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const;
 
-  std::shared_ptr<AbstractStatisticsObject> sliced(
+  std::shared_ptr<const AbstractStatisticsObject> sliced(
       const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
       const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const override;
 
-  std::shared_ptr<AbstractStatisticsObject> scaled(const Selectivity selectivity) const override;
+  std::shared_ptr<const AbstractStatisticsObject> scaled(const Selectivity selectivity) const override;
 
   bool does_not_contain(const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
                         const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const;

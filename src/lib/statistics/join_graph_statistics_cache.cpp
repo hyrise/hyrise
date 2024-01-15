@@ -116,7 +116,8 @@ std::shared_ptr<TableStatistics> JoinGraphStatisticsCache::get(
   }
 
   // Allocate the TableStatistics to be returned
-  auto output_column_statistics = std::vector<std::shared_ptr<BaseAttributeStatistics>>{requested_column_order_size};
+  auto output_column_statistics =
+      std::vector<std::shared_ptr<const BaseAttributeStatistics>>{requested_column_order_size};
 
   // Bring AttributeStatistics into the requested order for each statistics slice
   for (auto column_id = ColumnID{0}; column_id < requested_column_order_size; ++column_id) {

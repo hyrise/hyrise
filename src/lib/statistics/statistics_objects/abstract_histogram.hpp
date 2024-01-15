@@ -112,15 +112,15 @@ class AbstractHistogram : public AbstractStatisticsObject, public std::enable_sh
       const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
       const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const;
 
-  std::shared_ptr<AbstractStatisticsObject> sliced(
+  std::shared_ptr<const AbstractStatisticsObject> sliced(
       const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
       const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const override;
 
-  std::shared_ptr<AbstractStatisticsObject> pruned(
+  std::shared_ptr<const AbstractStatisticsObject> pruned(
       const size_t num_values_pruned, const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
       const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const override;
 
-  std::shared_ptr<AbstractStatisticsObject> scaled(const Selectivity selectivity) const override;
+  std::shared_ptr<const AbstractStatisticsObject> scaled(const Selectivity selectivity) const override;
 
   /**
    * Returns whether a given predicate type and its parameter(s) can belong to a bin or not.

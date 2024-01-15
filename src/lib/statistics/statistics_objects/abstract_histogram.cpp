@@ -473,7 +473,7 @@ Cardinality AbstractHistogram<T>::estimate_cardinality(const PredicateCondition 
 }
 
 template <typename T>
-std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::sliced(
+std::shared_ptr<const AbstractStatisticsObject> AbstractHistogram<T>::sliced(
     const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
     const std::optional<AllTypeVariant>& variant_value2) const {
   if (does_not_contain(predicate_condition, variant_value, variant_value2)) {
@@ -481,11 +481,11 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::sliced(
   }
 
   const auto value = lossy_variant_cast<T>(variant_value);
-  DebugAssert(value, "sliced() cannot be called with NULL");
+  DebugAssert(value, "sliced() cannot be called with NULL.");
 
   switch (predicate_condition) {
     case PredicateCondition::Equals: {
-      GenericHistogramBuilder<T> builder{1, _domain};
+      auto builder = GenericHistogramBuilder<T>{1, _domain};
       builder.add_bin(*value, *value,
                       static_cast<HistogramCountType>(estimate_cardinality(PredicateCondition::Equals, variant_value)),
                       1);
@@ -495,7 +495,7 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::sliced(
     case PredicateCondition::NotEquals: {
       const auto value_bin_id = bin_for_value(*value);
       if (value_bin_id == INVALID_BIN_ID) {
-        return clone();
+        return this->shared_from_this();
       }
 
       auto minimum = bin_minimum(value_bin_id);
@@ -505,7 +505,7 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::sliced(
       // Do not create empty bin if `value` is the only value in the bin
       const auto new_bin_count = minimum == maximum ? bin_count() - 1 : bin_count();
 
-      GenericHistogramBuilder<T> builder{new_bin_count, _domain};
+      auto builder = GenericHistogramBuilder<T>{new_bin_count, _domain};
 
       builder.add_copied_bins(*this, BinID{0}, value_bin_id);
 
@@ -564,7 +564,7 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::sliced(
         last_bin_maximum = std::min(bin_maximum(last_included_bin_id), *value);
       }
 
-      GenericHistogramBuilder<T> builder{last_included_bin_id + 1, _domain};
+      auto builder = GenericHistogramBuilder<T>{last_included_bin_id + 1, _domain};
       builder.add_copied_bins(*this, BinID{0}, last_included_bin_id);
       builder.add_sliced_bin(*this, last_included_bin_id, bin_minimum(last_included_bin_id), last_bin_maximum);
 
@@ -583,7 +583,7 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::sliced(
 
       DebugAssert(first_new_bin_id < bin_count(), "This should have been caught by does_not_contain().");
 
-      GenericHistogramBuilder<T> builder{bin_count() - first_new_bin_id, _domain};
+      auto builder = GenericHistogramBuilder<T>{bin_count() - first_new_bin_id, _domain};
 
       builder.add_sliced_bin(*this, first_new_bin_id, std::max(*value, bin_minimum(first_new_bin_id)),
                              bin_maximum(first_new_bin_id));
@@ -602,8 +602,8 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::sliced(
 
     case PredicateCondition::Like:
     case PredicateCondition::NotLike:
-      // TODO(anybody) Slicing for (NOT) LIKE not supported, yet
-      return clone();
+      // TODO(anybody) Slicing for (NOT) LIKE not supported, yet.
+      return this->shared_from_this();
 
     case PredicateCondition::In:
     case PredicateCondition::NotIn:
@@ -616,16 +616,16 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::sliced(
 }
 
 template <typename T>
-std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::pruned(
+std::shared_ptr<const AbstractStatisticsObject> AbstractHistogram<T>::pruned(
     const size_t num_values_pruned, const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
     const std::optional<AllTypeVariant>& variant_value2) const {
   const auto value = lossy_variant_cast<T>(variant_value);
-  DebugAssert(value, "pruned() cannot be called with NULL");
+  DebugAssert(value, "pruned() cannot be called with NULL,");
 
   // For each bin, bin_prunable_height holds the number of values that do not fulfill the predicate. If we had some
   // information about the sort order of the table, we might start pruning a GreaterThan predicate with the lowest
   // value instead of uniformly pruning across all affected chunks as a future optimization.
-  std::vector<HistogramCountType> bin_prunable_height(bin_count());
+  auto bin_prunable_height = std::vector<HistogramCountType>(bin_count());
 
   switch (predicate_condition) {
     case PredicateCondition::Equals: {
@@ -699,7 +699,7 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::pruned(
     case PredicateCondition::Like:
     case PredicateCondition::NotLike:
       // TODO(anybody) Pruning for (NOT) LIKE not supported, yet
-      return clone();
+      return this->shared_from_this();
 
     case PredicateCondition::In:
     case PredicateCondition::NotIn:
@@ -715,14 +715,14 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::pruned(
 
   // Without prunable values, the histogram is out-of-date. Return an unmodified histogram to avoid DIV/0 below.
   if (total_prunable_values == HistogramCountType{0}) {
-    return clone();
+    return this->shared_from_this();
   }
 
   // For an up-to-date histogram, the pruning ratio should never exceed 100%. If, however, the histogram is outdated
   // we must make sure that no bin becomes more than empty and that we do not touch the unpruned part of the bin.
   const auto pruning_ratio = std::min(static_cast<Selectivity>(num_values_pruned) / total_prunable_values, 1.0f);
 
-  GenericHistogramBuilder<T> builder(bin_count(), _domain);
+  auto builder = GenericHistogramBuilder<T>(bin_count(), _domain);
   for (auto bin_id = BinID{0}; bin_id < bin_count(); ++bin_id) {
     const auto pruned_height = bin_prunable_height[bin_id] * pruning_ratio;
     const auto new_bin_height = bin_height(bin_id) - pruned_height;
@@ -737,8 +737,8 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::pruned(
 }
 
 template <typename T>
-std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::scaled(const Selectivity selectivity) const {
-  Assert(!std::isnan(selectivity), "Unexpected selectivity.");
+std::shared_ptr<const AbstractStatisticsObject> AbstractHistogram<T>::scaled(const Selectivity selectivity) const {
+  Assert(!std::isnan(selectivity), "pUnexpected selectivity.");
 
   // Return a ScaledHistogram to wrap the source histogram rather than copying all buckets over. This significantly
   // benefits the runtime of short-running queries.
@@ -748,9 +748,8 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::scaled(const Sel
 template <typename T>
 std::shared_ptr<AbstractHistogram<T>> AbstractHistogram<T>::split_at_bin_bounds(
     const std::vector<std::pair<T, T>>& additional_bin_edges) const {
-  // NOLINTNEXTLINE clang-tidy is crazy and sees a "potentially unintended semicolon" here...
   if constexpr (std::is_same_v<T, pmr_string>) {
-    Fail("Cannot split_at_bin_bounds() on string histogram");
+    Fail("Cannot split_at_bin_bounds() on string histogram.");
   }
 
   const auto input_bin_count = bin_count();
@@ -769,7 +768,6 @@ std::shared_ptr<AbstractHistogram<T>> AbstractHistogram<T>::split_at_bin_bounds(
   for (auto bin_id = BinID{0}; bin_id < input_bin_count; ++bin_id) {
     const auto bin_min = bin_minimum(bin_id);
     const auto bin_max = bin_maximum(bin_id);
-    // NOLINTNEXTLINE clang-tidy is crazy and sees a "potentially unintended semicolon" here...
     if constexpr (std::is_arithmetic_v<T>) {
       candidate_split_set.insert(std::make_pair(_domain.previous_value_clamped(bin_min), bin_min));
       candidate_split_set.insert(std::make_pair(bin_max, _domain.next_value_clamped(bin_max)));
@@ -777,7 +775,6 @@ std::shared_ptr<AbstractHistogram<T>> AbstractHistogram<T>::split_at_bin_bounds(
   }
 
   for (const auto& edge_pair : additional_bin_edges) {
-    // NOLINTNEXTLINE clang-tidy is crazy and sees a "potentially unintended semicolon" here...
     if constexpr (std::is_arithmetic_v<T>) {
       candidate_split_set.insert(std::make_pair(_domain.previous_value_clamped(edge_pair.first), edge_pair.first));
       candidate_split_set.insert(std::make_pair(edge_pair.second, _domain.next_value_clamped(edge_pair.second)));
@@ -785,7 +782,7 @@ std::shared_ptr<AbstractHistogram<T>> AbstractHistogram<T>::split_at_bin_bounds(
   }
 
   if (candidate_split_set.empty()) {
-    GenericHistogramBuilder<T> builder{0, _domain};
+    auto builder = GenericHistogramBuilder<T>{0, _domain};
     return builder.build();
   }
 
@@ -827,7 +824,7 @@ std::shared_ptr<AbstractHistogram<T>> AbstractHistogram<T>::split_at_bin_bounds(
    * in the original histogram, the resulting histogram is {[0, 5], [6, 10], [15, 15], [16, 18], [19, 20]}
    */
   const auto result_bin_count = candidate_edges.size() / 2;
-  GenericHistogramBuilder<T> builder{result_bin_count, _domain};
+  auto builder = GenericHistogramBuilder<T>{result_bin_count, _domain};
 
   for (auto bin_id = BinID{0}; bin_id < result_bin_count; ++bin_id) {
     const auto bin_min = candidate_edges[bin_id * 2];

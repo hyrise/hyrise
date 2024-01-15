@@ -4,9 +4,11 @@
 
 #include "resolve_type.hpp"
 #include "statistics/statistics_objects/abstract_histogram.hpp"
-#include "statistics/statistics_objects/generic_histogram.hpp"
+#include "statistics/statistics_objects/distinct_value_count.hpp"
 #include "statistics/statistics_objects/min_max_filter.hpp"
+#include "statistics/statistics_objects/null_value_ratio_statistics.hpp"
 #include "statistics/statistics_objects/range_filter.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 
@@ -14,26 +16,27 @@ template <typename T>
 AttributeStatistics<T>::AttributeStatistics() : BaseAttributeStatistics(data_type_from_type<T>()) {}
 
 template <typename T>
-void AttributeStatistics<T>::set_statistics_object(const std::shared_ptr<AbstractStatisticsObject>& statistics_object) {
+void AttributeStatistics<T>::set_statistics_object(
+    const std::shared_ptr<const AbstractStatisticsObject>& statistics_object) {
   // We allow call patterns like `c.set_statistics_object(o.scaled(0.1f))` where `o.scaled()` might return nullptr
   // because, e.g., scaling is not possible for `o`.
   if (!statistics_object) {
     return;
   }
 
-  if (const auto histogram_object = std::dynamic_pointer_cast<AbstractHistogram<T>>(statistics_object)) {
+  if (const auto histogram_object = std::dynamic_pointer_cast<const AbstractHistogram<T>>(statistics_object)) {
     histogram = histogram_object;
-  } else if (const auto min_max_object = std::dynamic_pointer_cast<MinMaxFilter<T>>(statistics_object)) {
+  } else if (const auto min_max_object = std::dynamic_pointer_cast<const MinMaxFilter<T>>(statistics_object)) {
     min_max_filter = min_max_object;
   } else if (const auto null_value_ratio_object =
-                 std::dynamic_pointer_cast<NullValueRatioStatistics>(statistics_object)) {
+                 std::dynamic_pointer_cast<const NullValueRatioStatistics>(statistics_object)) {
     null_value_ratio = null_value_ratio_object;
   } else if (const auto distinct_value_count_object =
-                 std::dynamic_pointer_cast<DistinctValueCount>(statistics_object)) {
+                 std::dynamic_pointer_cast<const DistinctValueCount>(statistics_object)) {
     distinct_value_count = distinct_value_count_object;
   } else {
     if constexpr (std::is_arithmetic_v<T>) {
-      if (const auto range_object = std::dynamic_pointer_cast<RangeFilter<T>>(statistics_object)) {
+      if (const auto range_object = std::dynamic_pointer_cast<const RangeFilter<T>>(statistics_object)) {
         range_filter = range_object;
         return;
       }
@@ -44,7 +47,11 @@ void AttributeStatistics<T>::set_statistics_object(const std::shared_ptr<Abstrac
 }
 
 template <typename T>
-std::shared_ptr<BaseAttributeStatistics> AttributeStatistics<T>::scaled(const Selectivity selectivity) const {
+std::shared_ptr<const BaseAttributeStatistics> AttributeStatistics<T>::scaled(const Selectivity selectivity) const {
+  if (std::fabs(selectivity - 1.f) <= std::numeric_limits<Selectivity>::epsilon()) {
+    return this->shared_from_this();
+  }
+
   const auto statistics = std::make_shared<AttributeStatistics<T>>();
 
   if (histogram) {
@@ -73,7 +80,7 @@ std::shared_ptr<BaseAttributeStatistics> AttributeStatistics<T>::scaled(const Se
 }
 
 template <typename T>
-std::shared_ptr<BaseAttributeStatistics> AttributeStatistics<T>::sliced(
+std::shared_ptr<const BaseAttributeStatistics> AttributeStatistics<T>::sliced(
     const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
     const std::optional<AllTypeVariant>& variant_value2) const {
   const auto statistics = std::make_shared<AttributeStatistics<T>>();
@@ -94,15 +101,14 @@ std::shared_ptr<BaseAttributeStatistics> AttributeStatistics<T>::sliced(
     if (range_filter) {
       statistics->set_statistics_object(range_filter->sliced(predicate_condition, variant_value, variant_value2));
     }
-
-    // We do not slice the distinct value count, since we do not know how it changes.
   }
 
+  // We do not slice the distinct value count, since we do not know how it changes.
   return statistics;
 }
 
 template <typename T>
-std::shared_ptr<BaseAttributeStatistics> AttributeStatistics<T>::pruned(
+std::shared_ptr<const BaseAttributeStatistics> AttributeStatistics<T>::pruned(
     const size_t num_values_pruned, const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
     const std::optional<AllTypeVariant>& variant_value2) const {
   const auto statistics = std::make_shared<AttributeStatistics<T>>();
@@ -121,17 +127,17 @@ std::shared_ptr<BaseAttributeStatistics> AttributeStatistics<T>::pruned(
   // statistics such as the filters below.
 
   if (min_max_filter) {
-    Fail("Pruning is not implemented for min/max filters");
+    Fail("Pruning is not implemented for min/max filters.");
   }
 
   if constexpr (std::is_arithmetic_v<T>) {
     if (range_filter) {
-      Fail("Pruning is not implemented for range filters");
+      Fail("Pruning is not implemented for range filters.");
     }
   }
 
   if (distinct_value_count) {
-    Fail("Pruning is not implemented for distinct value count");
+    Fail("Pruning is not implemented for distinct value count.");
   }
 
   return statistics;

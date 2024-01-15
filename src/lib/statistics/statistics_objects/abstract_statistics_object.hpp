@@ -20,7 +20,7 @@ class AbstractStatisticsObject : private Noncopyable {
   /**
    * @return A statistics object that represents the data after the predicate has been applied.
    */
-  virtual std::shared_ptr<AbstractStatisticsObject> sliced(
+  virtual std::shared_ptr<const AbstractStatisticsObject> sliced(
       const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
       const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const = 0;
 
@@ -29,14 +29,14 @@ class AbstractStatisticsObject : private Noncopyable {
    * pruned. That is, remove num_values_pruned that DO NOT satisfy the predicate from the statistics, assuming
    * equidistribution.
    */
-  virtual std::shared_ptr<AbstractStatisticsObject> pruned(
+  virtual std::shared_ptr<const AbstractStatisticsObject> pruned(
       const size_t num_values_pruned, const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
       const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const;
 
   /**
    * @return a statistics object that represents the data after a filter with the given selectivity has been applied.
    */
-  virtual std::shared_ptr<AbstractStatisticsObject> scaled(const Selectivity selectivity) const = 0;
+  virtual std::shared_ptr<const AbstractStatisticsObject> scaled(const Selectivity selectivity) const = 0;
 
   /**
    * DataType of the data that this statistics object represents
