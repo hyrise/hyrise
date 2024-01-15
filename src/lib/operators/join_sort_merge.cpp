@@ -50,7 +50,7 @@ JoinSortMerge::JoinSortMerge(const std::shared_ptr<const AbstractOperator>& left
 std::shared_ptr<AbstractOperator> JoinSortMerge::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_left_input,
     const std::shared_ptr<AbstractOperator>& copied_right_input,
-    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& /*copied_ops*/) const {
   return std::make_shared<JoinSortMerge>(copied_left_input, copied_right_input, _mode, _primary_predicate,
                                          _secondary_predicates);
 }
@@ -62,7 +62,7 @@ std::shared_ptr<const Table> JoinSortMerge::_on_execute() {
                    left_input_table()->column_data_type(_primary_predicate.column_ids.first),
                    right_input_table()->column_data_type(_primary_predicate.column_ids.second),
                    !_secondary_predicates.empty(), left_input_table()->type(), right_input_table()->type()}),
-         "JoinSortMerge doesn't support these parameters");
+         "JoinSortMerge does not support these parameters.");
 
   std::shared_ptr<const Table> left_input_table_ptr = _left_input->get_output();
   std::shared_ptr<const Table> right_input_table_ptr = _right_input->get_output();
@@ -70,7 +70,7 @@ std::shared_ptr<const Table> JoinSortMerge::_on_execute() {
   // Check column types
   const auto& left_column_type = left_input_table()->column_data_type(_primary_predicate.column_ids.first);
   DebugAssert(left_column_type == right_input_table()->column_data_type(_primary_predicate.column_ids.second),
-              "Left and right column types do not match. The sort merge join requires matching column types");
+              "Left and right column types do not match. The sort merge join requires matching column types.");
 
   // Create implementation to compute the join result
   resolve_data_type(left_column_type, [&](const auto type) {
@@ -116,6 +116,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
   }
 
  protected:
+  // NOLINTBEGIN(cppcoreguidelines-avoid-const-or-ref-data-members)
   JoinSortMerge& _sort_merge_join;
   const std::shared_ptr<const Table> _left_input_table, _right_input_table;
 
@@ -125,7 +126,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
   MaterializedSegmentList<T> _sorted_left_table;
   MaterializedSegmentList<T> _sorted_right_table;
 
-  // Contains the null value row ids if a join column is an outer join column
+  // Contains the null value row ids if a join column is an outer join column.
   RowIDPosList _null_rows_left;
   RowIDPosList _null_rows_right;
 
@@ -136,11 +137,12 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
   const JoinMode _mode;
 
   const std::vector<OperatorJoinPredicate>& _secondary_join_predicates;
+  // NOLINTEND(cppcoreguidelines-avoid-const-or-ref-data-members)
 
   // The cluster count must be a power of two, i.e. 1, 2, 4, 8, 16, ...
   size_t _cluster_count;
 
-  // Contains the output row ids for each cluster
+  // Contains the output row ids for each cluster.
   std::vector<RowIDPosList> _output_pos_lists_left;
   std::vector<RowIDPosList> _output_pos_lists_right;
 
@@ -196,8 +198,10 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     template <typename F>
     void for_every_row_id(const MaterializedSegmentList<T>& table, const F& action) {
 // False positive with gcc and tsan (https://gcc.gnu.org/bugzilla/show_bug.cgi?id=92194)
+#ifndef __clang__
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#endif
       for (auto cluster = start.cluster; cluster <= end.cluster; ++cluster) {
         const auto start_index = (cluster == start.cluster) ? start.index : 0;
         const auto end_index = (cluster == end.cluster) ? end.index : table[cluster].size();
@@ -205,7 +209,9 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
           action(table[cluster][index].row_id);
         }
       }
+#ifndef __clang__
 #pragma GCC diagnostic pop
+#endif
     }
   };
 
@@ -224,7 +230,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
 
   // Gets the table position corresponding to the end of the table, i.e. the last entry of the last cluster.
   static TablePosition _end_of_table(const MaterializedSegmentList<T>& table) {
-    DebugAssert(!table.empty(), "table has no chunks");
+    DebugAssert(!table.empty(), "Table has no chunks.");
     auto last_cluster = table.size() - 1;
     return TablePosition(last_cluster, table[last_cluster].size());
   }
@@ -295,7 +301,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
         }
         break;
       default:
-        throw std::logic_error("Unknown PredicateCondition");
+        throw std::logic_error("Unknown PredicateCondition.");
     }
   }
 
@@ -546,8 +552,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
 
       const auto compare_result = _compare(left_value, right_value);
 
-      TableRange left_run(cluster_id, left_run_start, left_run_end);
-      TableRange right_run(cluster_id, right_run_start, right_run_end);
+      const auto left_run = TableRange(cluster_id, left_run_start, left_run_end);
+      const auto right_run = TableRange(cluster_id, right_run_start, right_run_end);
       _join_runs(left_run, right_run, compare_result, multi_predicate_join_evaluator, cluster_id);
 
       // Advance to the next run on the smaller side or both if equal
@@ -570,7 +576,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
           right_run_end = right_run_start + _run_length(right_run_start, right_cluster);
           break;
         default:
-          throw std::logic_error("Unknown CompareResult");
+          throw std::logic_error("Unknown CompareResult.");
       }
     }
 
@@ -587,8 +593,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
   // Determines the smallest value in a sorted materialized table.
   const T& _table_min_value(const MaterializedSegmentList<T>& sorted_table) {
     DebugAssert(_primary_predicate_condition != PredicateCondition::Equals,
-                "Complete table order is required for _table_min_value() which is only available in the non-equi case");
-    DebugAssert(!sorted_table.empty(), "Sorted table has no partitions");
+                "The table needs to be sorted for _table_min_value(), which is only the case for non-equi joins.");
+    DebugAssert(!sorted_table.empty(), "Sorted table has no partitions.");
 
     for (const auto& partition : sorted_table) {
       if (!partition.empty()) {
@@ -596,14 +602,14 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       }
     }
 
-    Fail("Every partition is empty");
+    Fail("All partitions are empty.");
   }
 
   // Determines the largest value in a sorted materialized table.
   const T& _table_max_value(const MaterializedSegmentList<T>& sorted_table) {
     DebugAssert(_primary_predicate_condition != PredicateCondition::Equals,
-                "The table needs to be sorted for _table_max_value() which is only the case for non-equi joins");
-    DebugAssert(!sorted_table.empty(), "Sorted table is empty");
+                "The table needs to be sorted for _table_max_value() which is only the case for non-equi joins.");
+    DebugAssert(!sorted_table.empty(), "Sorted table is empty.");
 
     for (auto partition_iter = sorted_table.rbegin(); partition_iter != sorted_table.rend(); ++partition_iter) {
       if (!partition_iter->empty()) {
@@ -611,7 +617,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       }
     }
 
-    Fail("Every partition is empty");
+    Fail("All partitions are empty.");
   }
 
   // Looks for the first value in a sorted materialized table that fulfills the specified condition.
@@ -895,7 +901,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       }
 
       DebugAssert(null_output_left.size() == null_output_right.size(),
-                  "Null positions lists are expected to be of equal length.");
+                  "Null position lists are expected to be of equal length.");
       if (!null_output_left.empty()) {
         _output_pos_lists_left.push_back(std::move(null_output_left));
         _output_pos_lists_right.push_back(std::move(null_output_right));

@@ -23,14 +23,14 @@ CorrelatedParameterExpression::CorrelatedParameterExpression(const ParameterID i
       _referenced_expression_info(referenced_expression_info) {}
 
 std::shared_ptr<AbstractExpression> CorrelatedParameterExpression::_on_deep_copy(
-    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& /*copied_ops*/) const {
   auto copy = std::make_shared<CorrelatedParameterExpression>(parameter_id, _referenced_expression_info);
   copy->_value = _value;
   return copy;
 }
 
-std::string CorrelatedParameterExpression::description(const DescriptionMode mode) const {
-  std::stringstream stream;
+std::string CorrelatedParameterExpression::description(const DescriptionMode /*mode*/) const {
+  auto stream = std::stringstream{};
   stream << "Parameter[";
   stream << "name=" << _referenced_expression_info.column_name << "; ";
   stream << "ParameterID=" << std::to_string(parameter_id);
@@ -76,7 +76,7 @@ size_t CorrelatedParameterExpression::_shallow_hash() const {
   return hash;
 }
 
-bool CorrelatedParameterExpression::_on_is_nullable_on_lqp(const AbstractLQPNode& lqp) const {
+bool CorrelatedParameterExpression::_on_is_nullable_on_lqp(const AbstractLQPNode& /*lqp*/) const {
   // Assume all correlated expression to be nullable - it is very taxing, code-wise, to determine whether
   // it actually is
   return true;

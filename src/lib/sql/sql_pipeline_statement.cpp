@@ -41,7 +41,8 @@ SQLPipelineStatement::SQLPipelineStatement(const std::string& sql, std::shared_p
       _metrics(std::make_shared<SQLPipelineStatementMetrics>()) {
   Assert(!_parsed_sql_statement || _parsed_sql_statement->size() == 1,
          "SQLPipelineStatement must hold exactly one SQL statement");
-  DebugAssert(!_sql_string.empty(), "An SQLPipelineStatement should always contain a SQL statement string for caching");
+  DebugAssert(!_sql_string.empty(),
+              "An SQLPipelineStatement should always contain a SQL statement string for caching.");
 }
 
 void SQLPipelineStatement::set_transaction_context(const std::shared_ptr<TransactionContext>& transaction_context) {
@@ -89,7 +90,7 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_unoptimized_lo
   SQLTranslator sql_translator{_use_mvcc};
 
   auto translation_result = sql_translator.translate_parser_result(*parsed_sql);
-  std::vector<std::shared_ptr<AbstractLQPNode>> lqp_roots = translation_result.lqp_nodes;
+  const auto lqp_roots = translation_result.lqp_nodes;
   _translation_info = translation_result.translation_info;
 
   DebugAssert(lqp_roots.size() == 1, "LQP translation returned no or more than one LQP root for a single statement.");
@@ -223,8 +224,8 @@ const std::vector<std::shared_ptr<AbstractTask>>& SQLPipelineStatement::get_task
 
 std::vector<std::shared_ptr<AbstractTask>> SQLPipelineStatement::_get_transaction_tasks() {
   const auto& sql_statement = get_parsed_sql_statement();
-  const std::vector<hsql::SQLStatement*>& statements = sql_statement->getStatements();
-  const auto& transaction_statement = static_cast<const hsql::TransactionStatement&>(*statements.front());
+  const auto& transaction_statement =
+      static_cast<const hsql::TransactionStatement&>(*sql_statement->getStatements().front());
 
   switch (transaction_statement.command) {
     case hsql::kBeginTransaction:
@@ -367,7 +368,7 @@ void SQLPipelineStatement::_precheck_ddl_operators(const std::shared_ptr<Abstrac
     }
     case OperatorType::Import: {
       const auto import = std::dynamic_pointer_cast<Import>(pqp);
-      std::ifstream file(import->filename);
+      const auto file = std::ifstream{import->filename};
       AssertInput(file.good(), "There is no file '" + import->filename + "'.");
       break;
     }

@@ -46,7 +46,7 @@ class OptionalConstexpr<T, _has_value, std::enable_if_t<!_has_value>> {
   static constexpr bool has_value = false;
 
   T& value() {
-    Assert(false, "empty optional has no value");
+    Fail("Empty optional has no value.");
     return {};
   }
 };
@@ -79,7 +79,7 @@ using get_value_type = typename GetValueType<T>::value_type;
 template <typename T>
 constexpr bool is_null(const T& optional_or_value) {
   if constexpr (is_optional_v<T>) {
-    return !optional_or_value.has_value();
+    return !optional_or_value;
   } else {
     return false;
   }
@@ -89,7 +89,7 @@ constexpr bool is_null(const T& optional_or_value) {
 template <typename T>
 get_value_type<T>& get_value(T& optional_or_value) {
   if constexpr (is_optional_v<T>) {
-    return optional_or_value.value();
+    return *optional_or_value;
   } else {
     return optional_or_value;
   }
@@ -168,7 +168,7 @@ class TableBuilder {
       constexpr auto column_is_nullable = std::decay_t<decltype(null_values)>::has_value;
       auto value_is_null = table_builder::is_null(optional_or_value);
 
-      DebugAssert(column_is_nullable || !value_is_null, "cannot insert null value into not-null-column");
+      DebugAssert(column_is_nullable || !value_is_null, "Cannot insert null value into not-NULL column.");
 
       if (value_is_null) {
         values.emplace_back();

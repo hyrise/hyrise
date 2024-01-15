@@ -27,9 +27,8 @@ namespace hyrise {
 
 using namespace expression_functional;  // NOLINT(build/namespaces)
 
-// At the moment all the deep_copy() methods just call the constructor again. At first sight, these tests
-// do not seem to add too much value because. This might change in the future. Then, these tests will
-// make much more sense.
+// At the moment, all the deep_copy() methods just call the constructor again. At first sight, these tests do not seem
+// to add too much value because. This might change in the future. Then, these tests will make much more sense.
 
 class OperatorDeepCopyTest : public BaseTest {
  protected:
@@ -284,8 +283,8 @@ TEST_F(OperatorDeepCopyTest, DeduplicationAmongRootAndSubqueryPQPs) {
 
 TEST_F(OperatorDeepCopyTest, DeduplicationAmongSubqueries) {
   /**
-   * In this test, we check whether deep copies preserve deduplication for
-   *  uncorrelated subqueries that share parts of their PQP among each other. Similar to TPC-DS Q9.
+   * In this test, we check whether deep copies preserve deduplication for uncorrelated subqueries that share parts of
+   * their PQP among each other. Similar to TPC-DS Q9.
    */
   auto get_table_a = std::make_shared<GetTable>(_table_name_a);
   auto get_table_b = std::make_shared<GetTable>(_table_name_b);
@@ -293,7 +292,7 @@ TEST_F(OperatorDeepCopyTest, DeduplicationAmongSubqueries) {
   // Prepare three subqueries for Case expression
   auto group_by_columns = std::vector<ColumnID>{ColumnID{0}, ColumnID{1}};
   auto count_star = count_(pqp_column_(INVALID_COLUMN_ID, DataType::Long, false, "*"));
-  auto aggregates = std::vector<std::shared_ptr<AggregateExpression>>{count_star};
+  auto aggregates = std::vector<std::shared_ptr<WindowFunctionExpression>>{count_star};
   auto aggregate_hash = std::make_shared<AggregateHash>(get_table_a, aggregates, group_by_columns);
   auto when_subquery = std::make_shared<PQPSubqueryExpression>(aggregate_hash);
 

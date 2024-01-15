@@ -4,8 +4,8 @@
 #include "logical_query_plan/alias_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/mock_node.hpp"
-#include "storage/table_key_constraint.hpp"
-#include "utils/constraint_test_utils.hpp"
+#include "storage/constraints/table_key_constraint.hpp"
+#include "utils/data_dependency_test_utils.hpp"
 
 namespace hyrise {
 
@@ -17,20 +17,31 @@ class AliasNodeTest : public BaseTest {
     b = mock_node->get_column("b");
 
     aliases = {"x", "y"};
+    partial_aliases = {"b", "z"};
     expressions = {b, a};
     alias_node = AliasNode::make(expressions, aliases, mock_node);
+    partial_alias_node = AliasNode::make(expressions, partial_aliases, mock_node);
   }
 
   std::vector<std::string> aliases;
+  std::vector<std::string> partial_aliases;
   std::vector<std::shared_ptr<AbstractExpression>> expressions;
   std::shared_ptr<MockNode> mock_node;
 
-  std::shared_ptr<AbstractExpression> a, b;
+  std::shared_ptr<AbstractExpression> a;
+  std::shared_ptr<AbstractExpression> b;
+  std::shared_ptr<AbstractExpression> c;
   std::shared_ptr<AliasNode> alias_node;
+  std::shared_ptr<AliasNode> partial_alias_node;
 };
 
+TEST_F(AliasNodeTest, NodeDescription) {
+  EXPECT_EQ(alias_node->description(), "[Alias] b AS x, a AS y");
+  EXPECT_EQ(partial_alias_node->description(), "[Alias] b, a AS z");
+}
+
 TEST_F(AliasNodeTest, NodeExpressions) {
-  ASSERT_EQ(alias_node->node_expressions.size(), 2u);
+  ASSERT_EQ(alias_node->node_expressions.size(), 2);
   EXPECT_EQ(alias_node->node_expressions.at(0), b);
   EXPECT_EQ(alias_node->node_expressions.at(1), a);
 }
@@ -71,23 +82,23 @@ TEST_F(AliasNodeTest, HashingAndEqualityCheck) {
   EXPECT_EQ(b->hash(), expr_b->hash());
 }
 
-TEST_F(AliasNodeTest, UniqueConstraintsEmpty) {
-  EXPECT_TRUE(mock_node->unique_constraints()->empty());
-  EXPECT_TRUE(alias_node->unique_constraints()->empty());
+TEST_F(AliasNodeTest, UniqueColumnCombinationsEmpty) {
+  EXPECT_TRUE(mock_node->unique_column_combinations().empty());
+  EXPECT_TRUE(alias_node->unique_column_combinations().empty());
 }
 
-TEST_F(AliasNodeTest, UniqueConstraintsForwarding) {
-  // Add constraints to MockNode
+TEST_F(AliasNodeTest, UniqueColumnCombinationsForwarding) {
+  // Add constraints to MockNode.
   const auto key_constraint_a_b = TableKeyConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::PRIMARY_KEY};
   const auto key_constraint_b = TableKeyConstraint{{ColumnID{1}}, KeyConstraintType::UNIQUE};
   mock_node->set_key_constraints({key_constraint_a_b, key_constraint_b});
 
-  // Basic check
-  const auto& unique_constraints = alias_node->unique_constraints();
-  EXPECT_EQ(unique_constraints->size(), 2);
-  // In-depth check
-  EXPECT_TRUE(find_unique_constraint_by_key_constraint(key_constraint_a_b, unique_constraints));
-  EXPECT_TRUE(find_unique_constraint_by_key_constraint(key_constraint_b, unique_constraints));
+  // Basic check.
+  const auto& unique_column_combinations = alias_node->unique_column_combinations();
+  EXPECT_EQ(unique_column_combinations.size(), 2);
+  // In-depth check.
+  EXPECT_TRUE(find_ucc_by_key_constraint(key_constraint_a_b, unique_column_combinations));
+  EXPECT_TRUE(find_ucc_by_key_constraint(key_constraint_b, unique_column_combinations));
 }
 
 }  // namespace hyrise

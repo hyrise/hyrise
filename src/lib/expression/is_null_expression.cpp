@@ -23,7 +23,7 @@ std::shared_ptr<AbstractExpression> IsNullExpression::_on_deep_copy(
 }
 
 std::string IsNullExpression::description(const DescriptionMode mode) const {
-  std::stringstream stream;
+  auto stream = std::stringstream{};
 
   if (predicate_condition == PredicateCondition::IsNull) {
     stream << _enclose_argument(*operand(), mode) << " IS NULL";
@@ -38,7 +38,7 @@ ExpressionPrecedence IsNullExpression::_precedence() const {
   return ExpressionPrecedence::UnaryPredicate;
 }
 
-bool IsNullExpression::_on_is_nullable_on_lqp(const AbstractLQPNode& lqp) const {
+bool IsNullExpression::_on_is_nullable_on_lqp(const AbstractLQPNode& /*lqp*/) const {
   // IS NULL always returns a boolean value, never NULL
   return false;
 }

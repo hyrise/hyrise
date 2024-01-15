@@ -2,7 +2,7 @@
 
 #include <sstream>
 
-#include <magic_enum.hpp>
+#include "magic_enum.hpp"
 
 namespace hyrise {
 
@@ -14,12 +14,12 @@ DataType IntervalExpression::data_type() const {
 }
 
 std::shared_ptr<AbstractExpression> IntervalExpression::_on_deep_copy(
-    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& /*copied_ops*/) const {
   return std::make_shared<IntervalExpression>(duration, unit);
 }
 
-std::string IntervalExpression::description(const DescriptionMode mode) const {
-  std::stringstream stream;
+std::string IntervalExpression::description(const DescriptionMode /*mode*/) const {
+  auto stream = std::stringstream{};
   stream << "INTERVAL '" << duration << "' " << magic_enum::enum_name(unit);
   return stream.str();
 }

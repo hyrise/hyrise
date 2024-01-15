@@ -1,9 +1,5 @@
 #include "lqp_translator.hpp"
 
-#include <memory>
-#include <string>
-#include <vector>
-
 #include <boost/hana/for_each.hpp>
 #include <boost/hana/tuple.hpp>
 
@@ -53,6 +49,7 @@
 #include "operators/maintenance/drop_view.hpp"
 #include "operators/operator_join_predicate.hpp"
 #include "operators/operator_scan_predicate.hpp"
+#include "operators/pqp_utils.hpp"
 #include "operators/product.hpp"
 #include "operators/projection.hpp"
 #include "operators/sort.hpp"
@@ -66,15 +63,28 @@
 #include "projection_node.hpp"
 #include "sort_node.hpp"
 #include "static_table_node.hpp"
+#include "storage/index/partial_hash/partial_hash_index.hpp"
 #include "stored_table_node.hpp"
 #include "union_node.hpp"
 #include "update_node.hpp"
-
-using namespace std::string_literals;  // NOLINT
+#include "utils/map_prunable_subquery_predicates.hpp"
+#include "utils/pruning_utils.hpp"
 
 namespace hyrise {
 
 std::shared_ptr<AbstractOperator> LQPTranslator::translate_node(const std::shared_ptr<AbstractLQPNode>& node) const {
+  const auto pqp = _translate_node_recursively(node);
+
+  // StoredTableNodes can store references to PredicateNodes as prunable subquery predicates (see get_table.hpp for
+  // details). We must assign the TableScans translated from these PredicateNodes after translating the entire LQP (see
+  // map_prunable_subquery_predicates.hpp).
+  map_prunable_subquery_predicates(_operator_by_lqp_node);
+
+  return pqp;
+}
+
+std::shared_ptr<AbstractOperator> LQPTranslator::_translate_node_recursively(
+    const std::shared_ptr<AbstractLQPNode>& node) const {
   /**
    * Translate a node (i.e. call `_translate_by_node_type`) only if it hasn't been translated before, otherwise just
    * retrieve it from cache
@@ -106,7 +116,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::translate_node(const std::share
     return operator_iter->second;
   }
 
-  auto pqp = _translate_by_node_type(node->type, node);
+  const auto pqp = _translate_by_node_type(node->type, node);
 
   // Adding the actual LQP node that led to the creation of the PQP node.  Note, the LQP needs to be set in
   // _translate_predicate_node_to_index_scan() as well, because the function creates two scans operators and returns
@@ -121,24 +131,25 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_by_node_type(
     LQPNodeType type, const std::shared_ptr<AbstractLQPNode>& node) const {
   switch (type) {
     // clang-format off
+    case LQPNodeType::Aggregate:          return _translate_aggregate_node(node);
     case LQPNodeType::Alias:              return _translate_alias_node(node);
-    case LQPNodeType::StoredTable:        return _translate_stored_table_node(node);
+    case LQPNodeType::ChangeMetaTable:    return _translate_change_meta_table_node(node);
+    case LQPNodeType::Delete:             return _translate_delete_node(node);
+    case LQPNodeType::DummyTable:         return _translate_dummy_table_node(node);
+    case LQPNodeType::Except:             return _translate_except_node(node);
+    case LQPNodeType::Insert:             return _translate_insert_node(node);
+    case LQPNodeType::Intersect:          return _translate_intersect_node(node);
+    case LQPNodeType::Join:               return _translate_join_node(node);
+    case LQPNodeType::Limit:              return _translate_limit_node(node);
     case LQPNodeType::Predicate:          return _translate_predicate_node(node);
     case LQPNodeType::Projection:         return _translate_projection_node(node);
     case LQPNodeType::Sort:               return _translate_sort_node(node);
-    case LQPNodeType::Join:               return _translate_join_node(node);
-    case LQPNodeType::Aggregate:          return _translate_aggregate_node(node);
-    case LQPNodeType::Limit:              return _translate_limit_node(node);
-    case LQPNodeType::Insert:             return _translate_insert_node(node);
-    case LQPNodeType::Delete:             return _translate_delete_node(node);
-    case LQPNodeType::DummyTable:         return _translate_dummy_table_node(node);
     case LQPNodeType::StaticTable:        return _translate_static_table_node(node);
+    case LQPNodeType::StoredTable:        return _translate_stored_table_node(node);
+    case LQPNodeType::Union:              return _translate_union_node(node);
     case LQPNodeType::Update:             return _translate_update_node(node);
     case LQPNodeType::Validate:           return _translate_validate_node(node);
-    case LQPNodeType::Union:              return _translate_union_node(node);
-    case LQPNodeType::Intersect:          return _translate_intersect_node(node);
-    case LQPNodeType::Except:             return _translate_except_node(node);
-    case LQPNodeType::ChangeMetaTable:    return _translate_change_meta_table_node(node);
+    case LQPNodeType::Window:             return _translate_window_node(node);
 
     // Maintenance operators
     case LQPNodeType::CreateView:         return _translate_create_view_node(node);
@@ -148,7 +159,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_by_node_type(
     case LQPNodeType::Import:             return _translate_import_node(node);
     case LQPNodeType::Export:             return _translate_export_node(node);
     case LQPNodeType::CreatePreparedPlan: return _translate_create_prepared_plan_node(node);
-      // clang-format on
+    // clang-format on
 
     default:
       Fail("Unknown node type encountered.");
@@ -159,6 +170,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_by_node_type(
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_stored_table_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto stored_table_node = std::dynamic_pointer_cast<StoredTableNode>(node);
+  Assert(!stored_table_node->left_input() && !stored_table_node->right_input(), "StoredTableNode must be a leaf.");
   return std::make_shared<GetTable>(stored_table_node->table_name, stored_table_node->pruned_chunk_ids(),
                                     stored_table_node->pruned_column_ids());
 }
@@ -166,7 +178,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_stored_table_node(
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto input_node = node->left_input();
-  const auto input_operator = translate_node(input_node);
+  const auto input_operator = _translate_node_recursively(input_node);
   const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(node);
 
   switch (predicate_node->scan_type) {
@@ -176,47 +188,36 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node(
       return _translate_predicate_node_to_index_scan(predicate_node, input_operator);
   }
 
-  Fail("Invalid enum value");
+  Fail("Invalid enum value.");
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_index_scan(
     const std::shared_ptr<PredicateNode>& node, const std::shared_ptr<AbstractOperator>& input_operator) const {
   /**
-   * Not using OperatorScanPredicate, since it splits up BETWEEN into two scans for some cases that TableScan cannot handle
+   * Not using OperatorScanPredicate, since it splits up BETWEEN into two scans for some cases that TableScan cannot
+   * handle.
    */
 
   auto column_id = ColumnID{0};
   auto value_variant = AllTypeVariant{NullValue{}};
-  auto value2_variant = std::optional<AllTypeVariant>{};
 
   // Currently, we will only use IndexScans if the PredicateNode directly follows a StoredTableNode.
   // Our IndexScan implementation does not work on reference segments yet.
   Assert(node->left_input()->type == LQPNodeType::StoredTable, "IndexScan must follow a StoredTableNode.");
 
   const auto predicate = std::dynamic_pointer_cast<AbstractPredicateExpression>(node->predicate());
-  Assert(predicate, "Expected predicate");
-  Assert(!predicate->arguments.empty(), "Expected arguments");
+  Assert(predicate, "Expected predicate.");
+  Assert(!predicate->arguments.empty(), "Expected arguments.");
 
   column_id = node->left_input()->get_column_id(*predicate->arguments[0]);
   if (predicate->arguments.size() > 1) {
     const auto value_expression = std::dynamic_pointer_cast<ValueExpression>(predicate->arguments[1]);
     // This is necessary because we currently support single column indexes only
-    Assert(value_expression, "Expected value as second argument for IndexScan");
+    Assert(value_expression, "Expected value as second argument for IndexScan.");
     value_variant = value_expression->value;
   }
-  if (predicate->arguments.size() > 2) {
-    const auto value_expression = std::dynamic_pointer_cast<ValueExpression>(predicate->arguments[2]);
-    // This is necessary because we currently support single column indexes only
-    Assert(value_expression, "Expected value as third argument for IndexScan");
-    value2_variant = value_expression->value;
-  }
 
-  const std::vector<ColumnID> column_ids = {column_id};
-  const std::vector<AllTypeVariant> right_values = {value_variant};
-  std::vector<AllTypeVariant> right_values2 = {};
-  if (value2_variant) {
-    right_values2.emplace_back(*value2_variant);
-  }
+  const auto right_values = std::vector<AllTypeVariant>{value_variant};
 
   const auto stored_table_node = std::dynamic_pointer_cast<StoredTableNode>(node->left_input());
   const auto& pruned_chunk_ids = stored_table_node->pruned_chunk_ids();
@@ -225,39 +226,55 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_in
               "Expected sorted vector of ColumnIDs");
 
   const auto table_name = stored_table_node->table_name;
-  const auto table = Hyrise::get().storage_manager.get_table(table_name);
-  std::vector<ChunkID> indexed_chunks;
+  const auto& table = Hyrise::get().storage_manager.get_table(table_name);
 
-  auto pruned_table_chunk_id = ChunkID{0};
+  // Create a vector of chunk ids that have an index and are not pruned.
+  const auto& indexes = table->get_table_indexes(column_id);
+  Assert(!indexes.empty(), "No indexes for the requested ColumnID available.");
+
+  Assert(indexes.size() == 1, "We do not support the handling of multiple indexes for the same column.");
+  const auto& index = indexes.front();
+  const auto& indexed_chunk_ids = index->get_indexed_chunk_ids();
+
+  const auto chunk_count = table->chunk_count();
+
+  auto indexed_chunks = std::make_shared<std::vector<ChunkID>>();
+  indexed_chunks->reserve(chunk_count - pruned_chunk_ids.size());
+  auto chunk_id_after_pruning = ChunkID{0};
   auto pruned_chunk_ids_iter = pruned_chunk_ids.cbegin();
 
-  // Create a vector of chunk ids that have a GroupKey index and are not pruned.
-  const auto chunk_count = table->chunk_count();
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-    // Check if chunk is pruned
+    // Check if chunk is pruned.
     if (pruned_chunk_ids_iter != pruned_chunk_ids.cend() && chunk_id == *pruned_chunk_ids_iter) {
       ++pruned_chunk_ids_iter;
       continue;
     }
-    // Check if chunk has GroupKey index
-    const auto chunk = table->get_chunk(chunk_id);
-    if (chunk && chunk->get_index(SegmentIndexType::GroupKey, column_ids)) {
-      indexed_chunks.emplace_back(pruned_table_chunk_id);
+
+    // Check if chunk is indexed.
+    if (indexed_chunk_ids.contains(chunk_id)) {
+      indexed_chunks->emplace_back(chunk_id_after_pruning);
     }
-    ++pruned_table_chunk_id;
+    ++chunk_id_after_pruning;
   }
 
   // All chunks that have an index on column_ids are handled by an IndexScan. All other chunks are handled by
-  // TableScan(s).
-  auto index_scan = std::make_shared<IndexScan>(input_operator, SegmentIndexType::GroupKey, column_ids,
-                                                predicate->predicate_condition, right_values, right_values2);
+  // TableScan(s). We can skip the IndexScan if all indexed chunks have been pruned. However, we can never skip the
+  // TableScan as it is also responsible for filtering rows in chunks which are not yet indexed (or not even
+  // immutable).
+  if (indexed_chunks->empty()) {
+    return _translate_predicate_node_to_table_scan(node, input_operator);
+  }
 
+  const auto index_scan =
+      std::make_shared<IndexScan>(input_operator, column_id, predicate->predicate_condition, value_variant);
   const auto table_scan = _translate_predicate_node_to_table_scan(node, input_operator);
 
+  DebugAssert(std::is_sorted(indexed_chunks->cbegin(), indexed_chunks->cend()),
+              "Included/excluded ChunkIDs should be sorted.");
   index_scan->included_chunk_ids = indexed_chunks;
   table_scan->excluded_chunk_ids = indexed_chunks;
 
-  // set lqp node
+  // Set LQP node.
   index_scan->lqp_node = node;
   table_scan->lqp_node = node;
 
@@ -274,7 +291,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_alias_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto alias_node = std::dynamic_pointer_cast<AliasNode>(node);
   const auto input_node = alias_node->left_input();
-  const auto input_operator = translate_node(input_node);
+  const auto input_operator = _translate_node_recursively(input_node);
 
   const auto& output_expressions = alias_node->output_expressions();
   const auto& input_expressions = alias_node->left_input()->output_expressions();
@@ -283,7 +300,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_alias_node(
 
   for (const auto& expression : output_expressions) {
     const auto column_id = find_expression_idx(*expression, input_expressions);
-    Assert(column_id, "Could not resolve " + expression->as_column_name());
+    Assert(column_id, "Could not resolve " + expression->as_column_name() + ".");
     column_ids.emplace_back(*column_id);
   }
 
@@ -294,7 +311,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_projection_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto input_node = node->left_input();
   const auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(node);
-  const auto input_operator = translate_node(input_node);
+  const auto input_operator = _translate_node_recursively(input_node);
 
   return std::make_shared<Projection>(input_operator,
                                       _translate_expressions(projection_node->node_expressions, input_node));
@@ -303,7 +320,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_projection_node(
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_sort_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto sort_node = std::dynamic_pointer_cast<SortNode>(node);
-  auto input_operator = translate_node(node->left_input());
+  auto input_operator = _translate_node_recursively(node->left_input());
 
   std::shared_ptr<AbstractOperator> current_pqp = input_operator;
   const auto& pqp_expressions = _translate_expressions(sort_node->node_expressions, node->left_input());
@@ -311,15 +328,15 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_sort_node(
   auto pqp_expression_iter = pqp_expressions.begin();
   auto sort_mode_iter = sort_node->sort_modes.begin();
 
-  std::vector<SortColumnDefinition> column_definitions;
+  auto column_definitions = std::vector<SortColumnDefinition>{};
   column_definitions.reserve(pqp_expressions.size());
   for (; pqp_expression_iter != pqp_expressions.end(); ++pqp_expression_iter, ++sort_mode_iter) {
     const auto& pqp_expression = *pqp_expression_iter;
     const auto pqp_column_expression = std::dynamic_pointer_cast<PQPColumnExpression>(pqp_expression);
     Assert(pqp_column_expression,
-           "Sort Expression '"s + pqp_expression->as_column_name() + "' must be available as column, LQP is invalid");
+           "Sort Expression '" + pqp_expression->as_column_name() + "' must be available as column, LQP is invalid.");
 
-    column_definitions.emplace_back(SortColumnDefinition{pqp_column_expression->column_id, *sort_mode_iter});
+    column_definitions.emplace_back(pqp_column_expression->column_id, *sort_mode_iter);
   }
   current_pqp = std::make_shared<Sort>(current_pqp, column_definitions);
 
@@ -328,8 +345,8 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_sort_node(
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
-  const auto left_input_operator = translate_node(node->left_input());
-  const auto right_input_operator = translate_node(node->right_input());
+  const auto left_input_operator = _translate_node_recursively(node->left_input());
+  const auto right_input_operator = _translate_node_recursively(node->right_input());
 
   auto join_node = std::dynamic_pointer_cast<JoinNode>(node);
 
@@ -338,9 +355,9 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
     return std::make_shared<Product>(left_input_operator, right_input_operator);
   }
 
-  Assert(!join_node->join_predicates().empty(), "Need predicate for non Cross Join");
+  Assert(!join_node->join_predicates().empty(), "Need predicate for non Cross Join.");
 
-  std::vector<OperatorJoinPredicate> join_predicates;
+  auto join_predicates = std::vector<OperatorJoinPredicate>{};
   join_predicates.reserve(join_node->join_predicates().size());
 
   for (const auto& predicate_expression : join_node->join_predicates()) {
@@ -348,12 +365,13 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
         OperatorJoinPredicate::from_expression(*predicate_expression, *node->left_input(), *node->right_input());
     // Assert that the Join Predicates are simple, e.g. of the form <column_a> <predicate> <column_b>.
     // <column_a> and <column_b> must be on separate sides, but <column_a> need not be on the left.
-    Assert(join_predicate, "Couldn't translate join predicate: "s + predicate_expression->as_column_name());
+    Assert(join_predicate, "Couldn't translate join predicate: " + predicate_expression->as_column_name() + ".");
     join_predicates.emplace_back(*join_predicate);
   }
 
   const auto& primary_join_predicate = join_predicates.front();
-  std::vector<OperatorJoinPredicate> secondary_join_predicates(join_predicates.cbegin() + 1, join_predicates.cend());
+  auto secondary_join_predicates =
+      std::vector<OperatorJoinPredicate>(join_predicates.cbegin() + 1, join_predicates.cend());
 
   auto join_operator = std::shared_ptr<AbstractOperator>{};
 
@@ -381,7 +399,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
     }
     // NOLINTEND(bugprone-use-after-move, hicpp-invalid-access-moved)
   });
-  Assert(join_operator, "No operator implementation available for join '"s + join_node->description() + "'");
+  Assert(join_operator, "No operator implementation available for join '" + join_node->description() + "'.");
 
   return join_operator;
 }
@@ -390,36 +408,36 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_aggregate_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto aggregate_node = std::dynamic_pointer_cast<AggregateNode>(node);
 
-  const auto input_operator = translate_node(node->left_input());
+  const auto input_operator = _translate_node_recursively(node->left_input());
   const auto& input_expressions = node->left_input()->output_expressions();
   const auto& node_expressions = aggregate_node->node_expressions;
   const auto node_expression_count = node_expressions.size();
 
-  std::vector<std::shared_ptr<AggregateExpression>> pqp_aggregate_expressions;
+  auto pqp_aggregate_expressions = std::vector<std::shared_ptr<WindowFunctionExpression>>{};
   pqp_aggregate_expressions.reserve(node_expression_count - aggregate_node->aggregate_expressions_begin_idx);
   for (auto expression_idx = aggregate_node->aggregate_expressions_begin_idx; expression_idx < node_expression_count;
        ++expression_idx) {
     const auto& lqp_expression = aggregate_node->node_expressions[expression_idx];
 
-    Assert(lqp_expression->type == ExpressionType::Aggregate,
+    Assert(lqp_expression->type == ExpressionType::WindowFunction,
            "Expression '" + lqp_expression->as_column_name() +
-               "' used as AggregateExpression is not an AggregateExpression");
+               "' used as WindowFunctionExpression is not an WindowFunctionExpression.");
 
     const auto pqp_expression = _translate_expression(lqp_expression, node->left_input(), input_expressions);
-    const auto aggregate_expression = std::static_pointer_cast<AggregateExpression>(pqp_expression);
+    const auto aggregate_expression = std::static_pointer_cast<WindowFunctionExpression>(pqp_expression);
     pqp_aggregate_expressions.emplace_back(aggregate_expression);
   }
 
   // Create GroupByColumns from the GroupBy expressions. For now, we expect all GroupBy expressions to be already
   // present, i.e., we do not calculate them on the fly.
-  std::vector<ColumnID> group_by_column_ids;
+  auto group_by_column_ids = std::vector<ColumnID>{};
   group_by_column_ids.reserve(aggregate_node->aggregate_expressions_begin_idx);
 
   for (auto expression_idx = ColumnID{0}; expression_idx < aggregate_node->aggregate_expressions_begin_idx;
        ++expression_idx) {
     const auto& expression = aggregate_node->node_expressions[expression_idx];
     const auto column_id = find_expression_idx(*expression, input_expressions);
-    Assert(column_id, "GroupBy expression '"s + expression->as_column_name() + "' not available as column");
+    Assert(column_id, "GroupBy expression '" + expression->as_column_name() + "' not available as column.");
     group_by_column_ids.emplace_back(*column_id);
   }
   return std::make_shared<AggregateHash>(input_operator, pqp_aggregate_expressions, group_by_column_ids);
@@ -427,7 +445,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_aggregate_node(
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_limit_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
-  const auto input_operator = translate_node(node->left_input());
+  const auto input_operator = _translate_node_recursively(node->left_input());
   auto limit_node = std::dynamic_pointer_cast<LimitNode>(node);
   return std::make_shared<Limit>(
       input_operator, _translate_expressions({limit_node->num_rows_expression()}, node->left_input()).front());
@@ -435,14 +453,14 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_limit_node(
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_insert_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
-  const auto input_operator = translate_node(node->left_input());
+  const auto input_operator = _translate_node_recursively(node->left_input());
   auto insert_node = std::dynamic_pointer_cast<InsertNode>(node);
   return std::make_shared<Insert>(insert_node->table_name, input_operator);
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_delete_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
-  const auto input_operator = translate_node(node->left_input());
+  const auto input_operator = _translate_node_recursively(node->left_input());
   auto delete_node = std::dynamic_pointer_cast<DeleteNode>(node);
   return std::make_shared<Delete>(input_operator);
 }
@@ -451,8 +469,8 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_update_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   auto update_node = std::dynamic_pointer_cast<UpdateNode>(node);
 
-  const auto input_operator_left = translate_node(node->left_input());
-  const auto input_operator_right = translate_node(node->right_input());
+  const auto input_operator_left = _translate_node_recursively(node->left_input());
+  const auto input_operator_right = _translate_node_recursively(node->right_input());
 
   return std::make_shared<Update>(update_node->table_name, input_operator_left, input_operator_right);
 }
@@ -461,12 +479,12 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_union_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto union_node = std::dynamic_pointer_cast<UnionNode>(node);
 
-  const auto input_operator_left = translate_node(node->left_input());
-  const auto input_operator_right = translate_node(node->right_input());
+  const auto input_operator_left = _translate_node_recursively(node->left_input());
+  const auto input_operator_right = _translate_node_recursively(node->right_input());
 
   switch (union_node->set_operation_mode) {
     case SetOperationMode::Unique:
-      Fail("Currently, only the All and Positions modes are implemented for the union operation");
+      Fail("Currently, only the All and Positions modes are implemented for the union operation.");
     case SetOperationMode::All:
       return std::make_shared<UnionAll>(input_operator_left, input_operator_right);
     case SetOperationMode::Positions:
@@ -477,26 +495,32 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_union_node(
 
 // NOLINTNEXTLINE - while this particular method could be made static, others cannot.
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_intersect_node(
-    const std::shared_ptr<AbstractLQPNode>& node) const {
-  FailInput("Hyrise does not yet support set operations");
+    const std::shared_ptr<AbstractLQPNode>& /*node*/) const {
+  FailInput("Hyrise does not yet support set operations.");
 }
 
 // NOLINTNEXTLINE - while this particular method could be made static, others cannot.
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_except_node(
-    const std::shared_ptr<AbstractLQPNode>& node) const {
-  FailInput("Hyrise does not yet support set operations");
+    const std::shared_ptr<AbstractLQPNode>& /*node*/) const {
+  FailInput("Hyrise does not yet support set operations.");
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_validate_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
-  const auto input_operator = translate_node(node->left_input());
+  const auto input_operator = _translate_node_recursively(node->left_input());
   return std::make_shared<Validate>(input_operator);
+}
+
+// NOLINTNEXTLINE - while this particular method could be made static, others cannot.
+std::shared_ptr<AbstractOperator> LQPTranslator::_translate_window_node(
+    const std::shared_ptr<AbstractLQPNode>& node) const {
+  FailInput("Hyrise does not yet support window functions.");
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_change_meta_table_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
-  const auto input_operator_left = translate_node(node->left_input());
-  const auto input_operator_right = translate_node(node->right_input());
+  const auto input_operator_left = _translate_node_recursively(node->left_input());
+  const auto input_operator_right = _translate_node_recursively(node->right_input());
   const auto change_meta_table_node = std::dynamic_pointer_cast<ChangeMetaTableNode>(node);
   return std::make_shared<ChangeMetaTable>(change_meta_table_node->table_name, change_meta_table_node->change_type,
                                            input_operator_left, input_operator_right);
@@ -523,7 +547,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_create_table_node(
   const auto create_table_node = std::dynamic_pointer_cast<CreateTableNode>(node);
   const auto input_node = create_table_node->left_input();
   return std::make_shared<CreateTable>(create_table_node->table_name, create_table_node->if_not_exists,
-                                       translate_node(input_node));
+                                       _translate_node_recursively(input_node));
 }
 
 // NOLINTNEXTLINE - while this particular method could be made static, others cannot.
@@ -551,7 +575,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_import_node(
 // NOLINTNEXTLINE - while this particular method could be made static, others cannot.
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_export_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
-  const auto input_operator = translate_node(node->left_input());
+  const auto input_operator = _translate_node_recursively(node->left_input());
   const auto export_node = std::dynamic_pointer_cast<ExportNode>(node);
   return std::make_shared<Export>(input_operator, export_node->file_name, export_node->file_type);
 }
@@ -566,7 +590,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_create_prepared_plan
 
 // NOLINTNEXTLINE - while this particular method could be made static, others cannot.
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_dummy_table_node(
-    const std::shared_ptr<AbstractLQPNode>& node) const {
+    const std::shared_ptr<AbstractLQPNode>& /*node*/) const {
   return std::make_shared<TableWrapper>(Projection::dummy_table());
 }
 
@@ -592,16 +616,15 @@ std::shared_ptr<AbstractExpression> LQPTranslator::_translate_expression(
     }
 
     // Resolve COUNT(*)
-    if (AggregateExpression::is_count_star(*expression)) {
+    if (WindowFunctionExpression::is_count_star(*expression)) {
       const auto star = std::make_shared<PQPColumnExpression>(INVALID_COLUMN_ID, DataType::Long, false, "*");
-      expression = std::make_shared<AggregateExpression>(AggregateFunction::Count, star);
+      expression = std::make_shared<WindowFunctionExpression>(WindowFunction::Count, star);
       return ExpressionVisitation::DoNotVisitArguments;
     }
 
     // Resolve SubqueryExpression
     if (expression->type == ExpressionType::LQPSubquery) {
-      const auto subquery_expression = std::dynamic_pointer_cast<LQPSubqueryExpression>(expression);
-      Assert(subquery_expression, "Expected LQPSubqueryExpression");
+      const auto subquery_expression = std::static_pointer_cast<LQPSubqueryExpression>(expression);
 
       /**
        * Notes on generating subquery PQPs:
@@ -620,7 +643,7 @@ std::shared_ptr<AbstractExpression> LQPTranslator::_translate_expression(
       if (subquery_expression->is_correlated()) {
         subquery_pqp = LQPTranslator{}.translate_node(subquery_expression->lqp);
       } else {
-        subquery_pqp = translate_node(subquery_expression->lqp);
+        subquery_pqp = _translate_node_recursively(subquery_expression->lqp);
       }
 
       auto subquery_parameters = PQPSubqueryExpression::Parameters{};
@@ -640,7 +663,7 @@ std::shared_ptr<AbstractExpression> LQPTranslator::_translate_expression(
 
       // Only specify a type for the Subquery if it has exactly one column. Otherwise the DataType of the Expression
       // is undefined and obtaining it will result in a runtime error.
-      if (subquery_expression->lqp->output_expressions().size() == 1u) {
+      if (subquery_expression->lqp->output_expressions().size() == 1) {
         const auto subquery_data_type = subquery_expression->data_type();
         const auto subquery_nullable = subquery_expression->lqp->is_column_nullable(ColumnID{0});
 
@@ -649,11 +672,12 @@ std::shared_ptr<AbstractExpression> LQPTranslator::_translate_expression(
       } else {
         expression = std::make_shared<PQPSubqueryExpression>(subquery_pqp, subquery_parameters);
       }
+
       return ExpressionVisitation::DoNotVisitArguments;
     }
 
     AssertInput(expression->type != ExpressionType::LQPColumn,
-                "Failed to resolve Column '"s + expression->as_column_name() + "', LQP is invalid");
+                "Failed to resolve column '" + expression->as_column_name() + "', LQP is invalid.");
 
     return ExpressionVisitation::VisitArguments;
   });

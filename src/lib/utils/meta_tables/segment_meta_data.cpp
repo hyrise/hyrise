@@ -1,5 +1,7 @@
 #include "segment_meta_data.hpp"
 
+#include "magic_enum.hpp"
+
 #include "hyrise.hpp"
 #include "resolve_type.hpp"
 #include "statistics/attribute_statistics.hpp"
@@ -31,10 +33,10 @@ void gather_segment_meta_data(const std::shared_ptr<Table>& meta_table, const Me
         auto encoding = NULL_VALUE;
         auto vector_compression = NULL_VALUE;
         if (const auto& encoded_segment = std::dynamic_pointer_cast<AbstractEncodedSegment>(segment)) {
-          encoding = pmr_string{encoding_type_to_string.left.at(encoded_segment->encoding_type())};
+          encoding = pmr_string{magic_enum::enum_name(encoded_segment->encoding_type())};
 
           if (encoded_segment->compressed_vector_type()) {
-            std::stringstream sstream;
+            auto sstream = std::stringstream{};
             sstream << *encoded_segment->compressed_vector_type();
             vector_compression = pmr_string{sstream.str()};
           }
@@ -43,7 +45,7 @@ void gather_segment_meta_data(const std::shared_ptr<Table>& meta_table, const Me
         auto distinct_value_count = NULL_VALUE;
         const auto& pruning_statistics = chunk->pruning_statistics();
         if (pruning_statistics) {
-          Assert(pruning_statistics->size() > column_id, "Malformed pruning statistics");
+          Assert(pruning_statistics->size() > column_id, "Malformed pruning statistics.");
           resolve_data_type(data_type, [&](auto type) {
             using ColumnDataType = typename decltype(type)::type;
 

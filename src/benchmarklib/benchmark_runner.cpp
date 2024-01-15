@@ -7,19 +7,18 @@
 #include <boost/accumulators/accumulators.hpp>
 #include <boost/accumulators/statistics/mean.hpp>
 #include <boost/accumulators/statistics/stats.hpp>
-
 #include <boost/algorithm/string/join.hpp>
 #include <boost/range/adaptors.hpp>
 #include "cxxopts.hpp"
 
 #include "benchmark_config.hpp"
-#include "constant_mappings.hpp"
 #include "hyrise.hpp"
 #include "scheduler/job_task.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "storage/chunk.hpp"
 #include "tpch/tpch_table_generator.hpp"
 #include "utils/format_duration.hpp"
+#include "utils/print_utils.hpp"
 #include "utils/sqlite_wrapper.hpp"
 #include "utils/timer.hpp"
 #include "version.hpp"
@@ -33,17 +32,25 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config,
       _benchmark_item_runner(std::move(benchmark_item_runner)),
       _table_generator(std::move(table_generator)),
       _context(context) {
-  Hyrise::get().default_pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
-  Hyrise::get().default_lqp_cache = std::make_shared<SQLLogicalPlanCache>();
+  // Enable caching only if no metrics are requested. When metrics are desired, we want to explicitly measure
+  // translation and optimization runtimes for each SQL statement. These stages are skipped for cached plans, making it
+  // hard to interpret the measurements.
+  if (!_config.pipeline_metrics) {
+    Hyrise::get().default_pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
+    Hyrise::get().default_lqp_cache = std::make_shared<SQLLogicalPlanCache>();
+    std::cout << "- SQL plan caching switched on." << std::endl;
+  } else {
+    std::cout << "- SQL plan caching switched off since SQL pipeline metrics tracking is requested." << std::endl;
+  }
 
-  // Initialise the scheduler if the benchmark was requested to run multi-threaded
+  // Initialise the scheduler if the benchmark was requested to run multi-threaded.
   if (config.enable_scheduler) {
     Hyrise::get().topology.use_default_topology(config.cores);
     std::cout << "- Multi-threaded Topology:" << std::endl;
     std::cout << Hyrise::get().topology;
 
-    // Add NUMA topology information to the context, for processing in the benchmark_multithreaded.py script
-    auto numa_cores_per_node = std::vector<size_t>();
+    // Add NUMA topology information to the context, for processing in the benchmark_multithreaded.py script.
+    auto numa_cores_per_node = std::vector<size_t>{};
     for (const auto& node : Hyrise::get().topology.nodes()) {
       numa_cores_per_node.push_back(node.cpus.size());
     }
@@ -63,7 +70,7 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config,
     std::cout << "- Loading tables into SQLite for verification." << std::endl;
     Timer timer;
 
-    // Load the data into SQLite
+    // Load the data into SQLite.
     sqlite_wrapper = std::make_shared<SQLiteWrapper>();
     for (const auto& [table_name, table] : Hyrise::get().storage_manager.tables()) {
       std::cout << "-  Loading '" << table_name << "' into SQLite " << std::flush;
@@ -74,6 +81,16 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config,
     std::cout << "- All tables loaded into SQLite (" << timer.lap_formatted() << ")" << std::endl;
     _benchmark_item_runner->set_sqlite_wrapper(sqlite_wrapper);
   }
+
+  if (!_config.plugins.empty()) {
+    _loaded_plugins.reserve(_config.plugins.size());
+    for (const auto& plugin : _config.plugins) {
+      const auto& plugin_name = plugin_name_from_path(plugin);
+      std::cout << "- Load plugin " << plugin_name << " from " << plugin << std::endl;
+      Hyrise::get().plugin_manager.load_plugin(plugin);
+      _loaded_plugins.emplace_back(plugin_name);
+    }
+  }
 }
 
 void BenchmarkRunner::run() {
@@ -82,13 +99,13 @@ void BenchmarkRunner::run() {
   _benchmark_start = std::chrono::steady_clock::now();
   _benchmark_wall_clock_start = std::chrono::system_clock::now();
 
-  auto track_system_utilization = std::atomic_bool{_config.metrics};
+  auto track_system_utilization = std::atomic_bool{_config.system_metrics};
   auto system_utilization_tracker = std::thread{[&] {
     if (!track_system_utilization) {
       return;
     }
 
-    // Start tracking the system utilization
+    // Start tracking the system utilization.
     SQLPipelineBuilder{
         "CREATE TABLE benchmark_system_utilization_log AS SELECT CAST(0 as LONG) AS \"timestamp\", * FROM "
         "meta_system_utilization"}
@@ -108,18 +125,28 @@ void BenchmarkRunner::run() {
     }
   }};
 
-  if (_config.metrics) {
-    // Create a table for the segment access counter log
+  if (_config.system_metrics) {
+    // Create a table for the segment access counter log.
     SQLPipelineBuilder{
         "CREATE TABLE benchmark_segments_log AS SELECT 0 AS snapshot_id, 'init' AS moment, * FROM meta_segments"}
         .create_pipeline()
         .get_result_table();
   }
 
-  // Retrieve the items to be executed and prepare the result vector
+  // Retrieve the items to be executed and prepare the result vector.
   const auto& items = _benchmark_item_runner->items();
   if (!items.empty()) {
     _results = std::vector<BenchmarkItemResult>{*std::max_element(items.begin(), items.end()) + 1u};
+  }
+
+  // Execute pre-benchmark hooks of plugins required by the user.
+  for (const auto& plugin : _loaded_plugins) {
+    if (!Hyrise::get().plugin_manager.has_pre_benchmark_hook(plugin)) {
+      continue;
+    }
+
+    std::cout << "- Run pre-benchmark hook of '" << plugin << "'" << std::endl;
+    Hyrise::get().plugin_manager.exec_pre_benchmark_hook(plugin, *_benchmark_item_runner);
   }
 
   switch (_config.benchmark_mode) {
@@ -133,17 +160,29 @@ void BenchmarkRunner::run() {
     }
   }
 
-  // Create report
-  if (_config.output_file_path) {
-    if (!_config.verify && !_config.enable_visualization) {
-      write_report_to_file();
-    } else {
-      std::cout << "- Not writing JSON result as either verification or visualization are activated." << std::endl;
-      std::cout << "  These options make the results meaningless." << std::endl;
+  // Create report.
+  const auto write_report = _config.output_file_path && (!_config.verify && !_config.enable_visualization);
+  auto report = write_report ? _create_report() : nlohmann::json{};
+
+  // Execute post-benchmark hooks of plugins required by the user.
+  for (const auto& plugin : _loaded_plugins) {
+    if (!Hyrise::get().plugin_manager.has_post_benchmark_hook(plugin)) {
+      continue;
     }
+
+    std::cout << "- Run post-benchmark hook of '" << plugin << "'" << std::endl;
+    Hyrise::get().plugin_manager.exec_post_benchmark_hook(plugin, report);
   }
 
-  // For the Ordered mode, results have already been printed to the console
+  // Write report to file.
+  if (write_report) {
+    _write_report_to_file(*_config.output_file_path, report);
+  } else if (_config.output_file_path) {
+    std::cout << "- Not writing JSON result as either verification or visualization are activated." << std::endl;
+    std::cout << "  These options make the results meaningless." << std::endl;
+  }
+
+  // For the Ordered mode, results have already been printed to the console.
   if (_config.benchmark_mode == BenchmarkMode::Shuffled && !_config.verify && !_config.enable_visualization) {
     for (const auto& item_id : items) {
       std::cout << "- Results for " << _benchmark_item_runner->item_name(item_id) << std::endl;
@@ -154,7 +193,7 @@ void BenchmarkRunner::run() {
     }
   }
 
-  // Fail if verification against SQLite was requested and failed
+  // Fail if verification against SQLite was requested and failed.
   if (_config.verify) {
     auto any_verification_failed = false;
 
@@ -163,11 +202,12 @@ void BenchmarkRunner::run() {
       if (result.successful_runs.empty()) {
         continue;
       }
-      Assert(result.verification_passed.load(), "Verification result should have been set");
-      any_verification_failed |= !(*result.verification_passed.load());
+      const auto verification_status = result.verification_passed.load();
+      Assert(verification_status, "Verification result should have been set.");
+      any_verification_failed |= !(*verification_status);
     }
 
-    Assert(!any_verification_failed, "Verification failed");
+    Assert(!any_verification_failed, "Verification failed.");
   }
 
   if (Hyrise::get().scheduler()) {
@@ -175,7 +215,7 @@ void BenchmarkRunner::run() {
     Hyrise::get().set_scheduler(std::make_shared<ImmediateExecutionScheduler>());
   }
 
-  // Stop the thread that tracks the system utilization
+  // Stop the thread that tracks the system utilization.
   track_system_utilization = false;
   system_utilization_tracker.join();
 }
@@ -198,17 +238,17 @@ void BenchmarkRunner::_benchmark_shuffled() {
     _warmup(item_id);
   }
 
-  // For shuffling the item order
+  // For shuffling the item order.
   std::random_device random_device;
   std::mt19937 random_generator(random_device());
 
-  Assert(_currently_running_clients == 0, "Did not expect any clients to run at this time");
+  Assert(_currently_running_clients == 0, "Did not expect any clients to run at this time.");
 
   _state = BenchmarkState{_config.max_duration};
 
   while (_state.keep_running() && (_config.max_runs < 0 || _total_finished_runs.load(std::memory_order_relaxed) <
                                                                static_cast<size_t>(_config.max_runs))) {
-    // We want to only schedule as many items simultaneously as we have simulated clients
+    // We want to only schedule as many items simultaneously as we have simulated clients.
     if (_currently_running_clients.load(std::memory_order_relaxed) < _config.clients) {
       if (item_ids_shuffled.empty()) {
         item_ids_shuffled = item_ids;
@@ -220,19 +260,19 @@ void BenchmarkRunner::_benchmark_shuffled() {
 
       _schedule_item_run(item_id);
     } else {
-      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+      std::this_thread::sleep_for(std::chrono::milliseconds{10});
     }
   }
   _state.set_done();
 
   for (auto& result : _results) {
-    // As the execution of benchmark items is intermingled, we use the total duration for all items
+    // As the execution of benchmark items is intermingled, we use the total duration for all items.
     result.duration = _state.benchmark_duration;
   }
 
-  // Wait for the rest of the tasks that didn't make it in time - they will not count towards the results
+  // Wait for the rest of the tasks that didn't make it in time - they will not count towards the results.
   Hyrise::get().scheduler()->wait_for_all_tasks();
-  Assert(_currently_running_clients == 0, "All runs must be finished at this point");
+  Assert(_currently_running_clients == 0, "All runs must be finished at this point.");
 
   _snapshot_segment_access_counters("End of Benchmark");
 }
@@ -246,37 +286,37 @@ void BenchmarkRunner::_benchmark_ordered() {
 
     auto& result = _results[item_id];
 
-    Assert(_currently_running_clients == 0, "Did not expect any clients to run at this time");
+    Assert(_currently_running_clients == 0, "Did not expect any clients to run at this time.");
 
     _state = BenchmarkState{_config.max_duration};
 
     while (_state.keep_running() &&
            (_config.max_runs < 0 || (result.successful_runs.size() + result.unsuccessful_runs.size()) <
                                         static_cast<size_t>(_config.max_runs))) {
-      // We want to only schedule as many items simultaneously as we have simulated clients
+      // We want to only schedule as many items simultaneously as we have simulated clients.
       if (_currently_running_clients.load(std::memory_order_relaxed) < _config.clients) {
         _schedule_item_run(item_id);
       } else {
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        std::this_thread::sleep_for(std::chrono::milliseconds{10});
       }
     }
     _state.set_done();
 
-    // Wait for the rest of the tasks that didn't make it in time - they will not count toward the results
+    // Wait for the rest of the tasks that didn't make it in time - they will not count toward the results.
     if (_currently_running_clients > 0) {
       std::cout << "  -> Waiting for clients that are still running" << std::endl;
     }
     Hyrise::get().scheduler()->wait_for_all_tasks();
-    Assert(_currently_running_clients == 0, "All runs must be finished at this point");
+    Assert(_currently_running_clients == 0, "All runs must be finished at this point.");
 
     result.duration = _state.benchmark_duration;
     // chrono::seconds uses an integer precision duration type, but we need a floating-point value.
     const auto duration_seconds = std::chrono::duration<double>{_state.benchmark_duration}.count();
     const auto items_per_second = static_cast<double>(result.successful_runs.size()) / duration_seconds;
 
-    // Compute mean by using accumulators
-    boost::accumulators::accumulator_set<double, boost::accumulators::stats<boost::accumulators::tag::mean>>
-        accumulator;
+    // Compute mean by using accumulators.
+    auto accumulator =
+        boost::accumulators::accumulator_set<double, boost::accumulators::stats<boost::accumulators::tag::mean>>{};
     for (const auto& entry : result.successful_runs) {
       // For readability and to be consistent with compare_benchmarks.py, query latencies should be in milliseconds.
       // chrono::milliseconds uses an integer precision duration type, but we need a floating-point value.
@@ -316,8 +356,9 @@ void BenchmarkRunner::_schedule_item_run(const BenchmarkItemID item_id) {
         // If result.verification_passed was previously unset, set it; otherwise only invalidate it if the run failed.
         result.verification_passed = result.verification_passed.load().value_or(true) && !any_run_verification_failed;
 
-        if (!_state.is_done()) {  // To prevent items from adding their result after the time is up
-          if (!_config.metrics) {
+        // Prevent items from adding their result after the time is up.
+        if (!_state.is_done()) {
+          if (!_config.pipeline_metrics) {
             metrics.clear();
           }
           const auto item_result =
@@ -342,35 +383,35 @@ void BenchmarkRunner::_warmup(const BenchmarkItemID item_id) {
   const auto& name = _benchmark_item_runner->item_name(item_id);
   std::cout << "- Warming up for " << name << std::endl;
 
-  Assert(_currently_running_clients == 0, "Did not expect any clients to run at this time");
+  Assert(_currently_running_clients == 0, "Did not expect any clients to run at this time.");
 
   _state = BenchmarkState{_config.warmup_duration};
 
   while (_state.keep_running()) {
-    // We want to only schedule as many items simultaneously as we have simulated clients
+    // We want to only schedule as many items simultaneously as we have simulated clients.
     if (_currently_running_clients.load(std::memory_order_relaxed) < _config.clients) {
       _schedule_item_run(item_id);
     } else {
-      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+      std::this_thread::sleep_for(std::chrono::milliseconds{10});
     }
   }
 
-  // Clear the results
+  // Clear the results.
   _results[item_id].successful_runs = {};
   _results[item_id].unsuccessful_runs = {};
   _results[item_id].duration = {};
 
   _state.set_done();
 
-  // Wait for the rest of the tasks that didn't make it in time
+  // Wait for the rest of the tasks that didn't make it in time.
   Hyrise::get().scheduler()->wait_for_all_tasks();
-  Assert(_currently_running_clients == 0, "All runs must be finished at this point");
+  Assert(_currently_running_clients == 0, "All runs must be finished at this point.");
 }
 
-void BenchmarkRunner::write_report_to_file() const {
+nlohmann::json BenchmarkRunner::_create_report() const {
   const std::chrono::nanoseconds total_duration = std::chrono::steady_clock::now() - _benchmark_start;
 
-  nlohmann::json benchmarks;
+  auto benchmarks = nlohmann::json{};
 
   for (const auto& item_id : _benchmark_item_runner->items()) {
     const auto& name = _benchmark_item_runner->item_name(item_id);
@@ -379,9 +420,9 @@ void BenchmarkRunner::write_report_to_file() const {
     const auto runs_to_json = [](auto runs) {
       auto runs_json = nlohmann::json::array();
       for (const auto& run_result : runs) {
-        // Convert the SQLPipelineMetrics for each run of the BenchmarkItem into JSON
+        // Convert the SQLPipelineMetrics for each run of the BenchmarkItem into JSON.
         auto all_pipeline_metrics_json = nlohmann::json::array();
-        // metrics can be empty if _config.metrics is false
+        // metrics can be empty if _config.pipeline_metrics is false.
         for (const auto& pipeline_metrics : run_result.metrics) {
           auto pipeline_metrics_json = nlohmann::json{{"parse_duration", pipeline_metrics.parse_time_nanos.count()},
                                                       {"statements", nlohmann::json::array()}};
@@ -408,15 +449,15 @@ void BenchmarkRunner::write_report_to_file() const {
 
         runs_json.push_back(nlohmann::json{{"begin", run_result.begin.count()},
                                            {"duration", run_result.duration.count()},
-                                           {"metrics", all_pipeline_metrics_json}});
+                                           {"pipeline_metrics", all_pipeline_metrics_json}});
       }
       return runs_json;
     };
 
-    nlohmann::json benchmark{{"name", name},
-                             {"duration", result.duration.count()},
-                             {"successful_runs", runs_to_json(result.successful_runs)},
-                             {"unsuccessful_runs", runs_to_json(result.unsuccessful_runs)}};
+    auto benchmark = nlohmann::json{{"name", name},
+                                    {"duration", result.duration.count()},
+                                    {"successful_runs", runs_to_json(result.successful_runs)},
+                                    {"unsuccessful_runs", runs_to_json(result.unsuccessful_runs)}};
 
     // For ordered benchmarks, report the time that this individual item ran. For shuffled benchmarks, return the
     // duration of the entire benchmark. This means that items_per_second of ordered and shuffled runs are not
@@ -436,13 +477,13 @@ void BenchmarkRunner::write_report_to_file() const {
     benchmarks.push_back(benchmark);
   }
 
-  // Gather information on the table size
+  // Gather information on the table size.
   auto table_size = size_t{0};
   for (const auto& [_, table] : Hyrise::get().storage_manager.tables()) {
     table_size += table->memory_usage(MemoryUsageCalculationMode::Full);
   }
 
-  nlohmann::json summary{{"table_size_in_bytes", table_size}, {"total_duration", total_duration.count()}};
+  auto summary = nlohmann::json{{"table_size_in_bytes", table_size}, {"total_duration", total_duration.count()}};
 
   // To get timestamps relative to the benchmark start, we substract the benchmark start timepoint.
   // We have to use system_clock here, as the LogManager uses it to provide human-readable timestamps.
@@ -451,13 +492,13 @@ void BenchmarkRunner::write_report_to_file() const {
   auto log_json = _sql_to_json(std::string{"SELECT \"timestamp\" - "} + std::to_string(benchmark_start_ns) +
                                " AS \"timestamp\", log_level, reporter, message FROM meta_log");
 
-  nlohmann::json report{{"context", _context},
-                        {"benchmarks", std::move(benchmarks)},
-                        {"log", std::move(log_json)},
-                        {"summary", std::move(summary)},
-                        {"table_generation", _table_generator->metrics}};
+  auto report = nlohmann::json{{"context", _context},
+                               {"benchmarks", std::move(benchmarks)},
+                               {"log", std::move(log_json)},
+                               {"summary", std::move(summary)},
+                               {"table_generation", _table_generator->metrics}};
 
-  // Add information that was temporarily stored in the `benchmark_...` tables during the benchmark execution
+  // Add information that was temporarily stored in the `benchmark_...` tables during the benchmark execution.
   if (Hyrise::get().storage_manager.has_table("benchmark_system_utilization_log")) {
     report["system_utilization"] = _sql_to_json("SELECT * FROM benchmark_system_utilization_log");
   }
@@ -465,17 +506,18 @@ void BenchmarkRunner::write_report_to_file() const {
   if (Hyrise::get().storage_manager.has_table("benchmark_segments_log")) {
     report["segments"] = _sql_to_json("SELECT * FROM benchmark_segments_log");
   }
+  return report;
+}
 
-  // Write the output file
-  std::ofstream{_config.output_file_path.value()} << std::setw(2) << report << std::endl;
+void BenchmarkRunner::_write_report_to_file(const std::string& file_name, const nlohmann::json& report) {
+  std::ofstream{file_name} << std::setw(2) << report << std::endl;
 }
 
 cxxopts::Options BenchmarkRunner::get_basic_cli_options(const std::string& benchmark_name) {
   cxxopts::Options cli_options{benchmark_name};
 
-  // Create a comma separated strings with the encoding and compression options
-  const auto get_first = boost::adaptors::transformed([](auto it) { return it.first; });
-  const auto encoding_strings_option = boost::algorithm::join(encoding_type_to_string.right | get_first, ", ");
+  // Create a comma separated strings with the encoding and compression options.
+  const auto get_first = boost::adaptors::transformed([](const auto it) { return it.first; });
   const auto compression_strings_option =
       boost::algorithm::join(vector_compression_type_to_string.right | get_first, ", ");
 
@@ -484,6 +526,11 @@ cxxopts::Options BenchmarkRunner::get_basic_cli_options(const std::string& bench
   // method and not a class, retrieving this default value properly would require some major refactoring of how
   // benchmarks interact with the BenchmarkRunner. At this moment, that does not seem to be worth the effort.
   const auto* const default_mode = (benchmark_name == "TPC-C Benchmark" ? "Shuffled" : "Ordered");
+  // Similar to the mode of the benchmark, we set a different setting for table indexes when TPC-C is run. For
+  // analytical benchmarks, we do not create indexes unless the user requests them as they are usually not used by the
+  // query optimizer. In contrast, we create table indexes for TPC-C as they improve the performance of selections on
+  // primary key columns.
+  const auto* const default_table_indexes = (benchmark_name == "TPC-C Benchmark" ? "true" : "false");
 
   // clang-format off
   cli_options.add_options()
@@ -495,16 +542,19 @@ cxxopts::Options BenchmarkRunner::get_basic_cli_options(const std::string& bench
     ("w,warmup", "Number of seconds that each item is run for warm up. Warming up also caches the query plans", cxxopts::value<uint64_t>()->default_value("0"))  // NOLINT(whitespace/line_length)
     ("o,output", "JSON file to output results to, don't specify for stdout", cxxopts::value<std::string>()->default_value(""))  // NOLINT(whitespace/line_length)
     ("m,mode", "Ordered or Shuffled", cxxopts::value<std::string>()->default_value(default_mode))
-    ("e,encoding", "Specify Chunk encoding as a string or as a JSON config file (for more detailed configuration, see --full_help). String options: " + encoding_strings_option, cxxopts::value<std::string>()->default_value("Dictionary"))  // NOLINT(whitespace/line_length)
+    ("e,encoding", "Specify Chunk encoding as a string or as a JSON config file (for more detailed configuration, see --full_help). String options: " + all_encoding_options(), cxxopts::value<std::string>()->default_value("Dictionary"))  // NOLINT(whitespace/line_length)
+    ("p,plugins", "Specify plugins to be loaded and execute their pre-/post-benchmark hooks (comma-separated paths to shared libraries w/o whitespaces)", cxxopts::value<std::string>()->default_value(""))  // NOLINT(whitespace/line_length)
     ("compression", "Specify vector compression as a string. Options: " + compression_strings_option, cxxopts::value<std::string>()->default_value(""))  // NOLINT(whitespace/line_length)
-    ("indexes", "Create indexes (where defined by benchmark)", cxxopts::value<bool>()->default_value("false"))
+    ("chunk_indexes", "Create chunk indexes (separate index per chunk; columns defined by benchmark)", cxxopts::value<bool>()->default_value("false"))  // NOLINT(whitespace/line_length)
+    ("table_indexes", "Create table indexes (index per table column; columns defined by benchmark)", cxxopts::value<bool>()->default_value(default_table_indexes))  // NOLINT(whitespace/line_length)
     ("scheduler", "Enable or disable the scheduler", cxxopts::value<bool>()->default_value("false"))
     ("cores", "Specify the number of cores used by the scheduler (if active). 0 means all available cores", cxxopts::value<uint32_t>()->default_value("0"))  // NOLINT(whitespace/line_length)
     ("clients", "Specify how many items should run in parallel if the scheduler is active", cxxopts::value<uint32_t>()->default_value("1"))  // NOLINT(whitespace/line_length)
     ("visualize", "Create a visualization image of one LQP and PQP for each query, do not properly run the benchmark", cxxopts::value<bool>()->default_value("false"))  // NOLINT(whitespace/line_length)
     ("verify", "Verify each query by comparing it with the SQLite result", cxxopts::value<bool>()->default_value("false"))  // NOLINT(whitespace/line_length)
     ("dont_cache_binary_tables", "Do not cache tables as binary files for faster loading on subsequent runs", cxxopts::value<bool>()->default_value("false"))  // NOLINT(whitespace/line_length)
-    ("metrics", "Track more metrics (steps in SQL pipeline, system utilization, etc.) and add them to the output JSON (see -o)", cxxopts::value<bool>()->default_value("false"))  // NOLINT(whitespace/line_length)
+    ("system_metrics", "Track system metrics (system utilization, segment accesses, etc.) and add them to the output JSON (see -o).", cxxopts::value<bool>()->default_value("false"))  // NOLINT(whitespace/line_length)
+    ("pipeline_metrics", "Track SQL pipeline metrics (runtime of steps in SQL pipeline, optimizer rule durations) and add them to the output JSON (see -o). Tracking pipeline metrics switches off plan caching.", cxxopts::value<bool>()->default_value("false"))  // NOLINT(whitespace/line_length)
     // This option is only advised when the underlying system's memory capacity is overleaded by the preparation phase.
     ("data_preparation_cores", "Specify the number of cores used by the scheduler for data preparation, i.e., sorting and encoding tables and generating table statistics. 0 means all available cores.", cxxopts::value<uint32_t>()->default_value("0"));  // NOLINT(whitespace/line_length)
   // clang-format on
@@ -516,11 +566,11 @@ nlohmann::json BenchmarkRunner::create_context(const BenchmarkConfig& config) {
   // Generate YY-MM-DD hh:mm::ss
   auto current_time = std::time(nullptr);
   auto local_time = *std::localtime(&current_time);  // NOLINT(concurrency-mt-unsafe) - not called in parallel
-  std::stringstream timestamp_stream;
+  auto timestamp_stream = std::stringstream{};
   timestamp_stream << std::put_time(&local_time, "%Y-%m-%d %H:%M:%S");
 
   // clang-format off
-  std::stringstream compiler;
+  auto compiler = std::stringstream{};
   #if defined(__clang__)
     compiler << "clang " << __clang_major__ << "." << __clang_minor__ << "." << __clang_patchlevel__;
   #elif defined(__GNUC__)
@@ -535,7 +585,7 @@ nlohmann::json BenchmarkRunner::create_context(const BenchmarkConfig& config) {
                         {"compiler", compiler.str()},
                         {"build_type", HYRISE_DEBUG ? "debug" : "release"},
                         {"encoding", config.encoding_config.to_json()},
-                        {"indexes", config.indexes},
+                        {"chunk_indexes", config.chunk_indexes},
                         {"benchmark_mode", magic_enum::enum_name(config.benchmark_mode)},
                         {"max_runs", config.max_runs},
                         {"max_duration", config.max_duration.count()},
@@ -552,7 +602,7 @@ nlohmann::json BenchmarkRunner::create_context(const BenchmarkConfig& config) {
 nlohmann::json BenchmarkRunner::_sql_to_json(const std::string& sql) {
   auto pipeline = SQLPipelineBuilder{sql}.create_pipeline();
   const auto& [pipeline_status, table] = pipeline.get_result_table();
-  Assert(pipeline_status == SQLPipelineStatus::Success, "_sql_to_json failed");
+  Assert(pipeline_status == SQLPipelineStatus::Success, "_sql_to_json failed.");
 
   auto output = nlohmann::json::array();
   for (auto row_nr = uint64_t{0}; row_nr < table->row_count(); ++row_nr) {
@@ -579,7 +629,7 @@ nlohmann::json BenchmarkRunner::_sql_to_json(const std::string& sql) {
 }
 
 void BenchmarkRunner::_snapshot_segment_access_counters(const std::string& moment) {
-  if (!_config.metrics) {
+  if (!_config.system_metrics) {
     return;
   }
 

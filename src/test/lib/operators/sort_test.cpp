@@ -110,13 +110,13 @@ TEST_P(SortTest, UnchangedNullability) {
 inline std::string sort_test_formatter(const testing::TestParamInfo<SortTestParam>& param_info) {
   const auto& param = param_info.param;
 
-  std::stringstream stream;
+  auto stream = std::stringstream{};
   if (param.input_is_empty) {
     stream << "Empty";
   }
   stream << (param.input_is_reference ? "Reference" : "Data") << "Input";
   for (const auto& sort_column : param.sort_columns) {
-    stream << "Col" << sort_column.column << sort_mode_to_string.left.at(sort_column.sort_mode);
+    stream << "Col" << sort_column.column << sort_column.sort_mode;
   }
 
   if (param.output_chunk_size != Chunk::DEFAULT_SIZE) {
@@ -188,9 +188,9 @@ TEST_F(SortTest, InputReferencesDifferentTables) {
       TableColumnDefinitions{TableColumnDefinition{"a", DataType::Int, true}}, TableType::References);
 
   auto pos_list = std::make_shared<RowIDPosList>();
-  pos_list->emplace_back(RowID{ChunkID{0}, ChunkOffset{0}});
-  pos_list->emplace_back(RowID{ChunkID{0}, ChunkOffset{1}});
-  pos_list->emplace_back(RowID{ChunkID{1}, ChunkOffset{0}});
+  pos_list->emplace_back(ChunkID{0}, ChunkOffset{0});
+  pos_list->emplace_back(ChunkID{0}, ChunkOffset{1});
+  pos_list->emplace_back(ChunkID{1}, ChunkOffset{0});
 
   auto first_reference_segment = std::make_shared<ReferenceSegment>(input_table, ColumnID{0}, pos_list);
   union_table->append_chunk(Segments{first_reference_segment});
@@ -216,9 +216,9 @@ TEST_F(SortTest, InputReferencesDifferentColumns) {
       TableColumnDefinitions{TableColumnDefinition{"a", DataType::Int, true}}, TableType::References);
 
   auto pos_list = std::make_shared<RowIDPosList>();
-  pos_list->emplace_back(RowID{ChunkID{0}, ChunkOffset{0}});
-  pos_list->emplace_back(RowID{ChunkID{0}, ChunkOffset{1}});
-  pos_list->emplace_back(RowID{ChunkID{1}, ChunkOffset{0}});
+  pos_list->emplace_back(ChunkID{0}, ChunkOffset{0});
+  pos_list->emplace_back(ChunkID{0}, ChunkOffset{1});
+  pos_list->emplace_back(ChunkID{1}, ChunkOffset{0});
 
   auto first_reference_segment = std::make_shared<ReferenceSegment>(input_table, ColumnID{0}, pos_list);
   weird_table->append_chunk(Segments{first_reference_segment});

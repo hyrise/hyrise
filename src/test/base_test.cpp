@@ -98,7 +98,7 @@ void set_statistics_for_mock_node(const std::shared_ptr<MockNode>& mock_node, co
 std::shared_ptr<MockNode> create_mock_node_with_statistics(
     const MockNode::ColumnDefinitions& column_definitions, const size_t row_count,
     const std::vector<std::shared_ptr<AbstractStatisticsObject>>& statistics_objects) {
-  Assert(column_definitions.size() == statistics_objects.size(), "Column count mismatch");
+  Assert(column_definitions.size() == statistics_objects.size(), "Column count mismatch.");
 
   const auto mock_node = MockNode::make(column_definitions);
 
@@ -179,10 +179,10 @@ bool file_exists(const std::string& name) {
 
 bool compare_files(const std::string& original_file, const std::string& created_file) {
   std::ifstream original(original_file);
-  Assert(original.is_open(), "compare_file: Could not find file " + original_file);
+  Assert(original.is_open(), "compare_file: Could not find file '" + original_file + "'.");
 
   std::ifstream created(created_file);
-  Assert(created.is_open(), "compare_file: Could not find file " + created_file);
+  Assert(created.is_open(), "compare_file: Could not find file '" + created_file + "'.");
 
   std::istreambuf_iterator<char> iterator_original(original);
   std::istreambuf_iterator<char> iterator_created(created);
@@ -199,7 +199,7 @@ bool compare_files(const std::string& original_file, const std::string& created_
 }
 
 std::shared_ptr<const Table> to_simple_reference_table(const std::shared_ptr<const Table>& table) {
-  Assert(table->type() == TableType::Data, "Input table already is a reference table");
+  Assert(table->type() == TableType::Data, "Input table already is a reference table.");
 
   auto pos_list = std::make_shared<RowIDPosList>();
   pos_list->reserve(table->row_count());
@@ -214,11 +214,11 @@ std::shared_ptr<const Table> to_simple_reference_table(const std::shared_ptr<con
   }
 
   const auto column_count = table->column_count();
-  Segments segments;
+  auto segments = Segments{};
   segments.reserve(column_count);
   TableColumnDefinitions column_definitions;
 
-  for (auto column_id = ColumnID{0u}; column_id < column_count; ++column_id) {
+  for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
     column_definitions.emplace_back(table->column_name(column_id), table->column_data_type(column_id),
                                     table->column_is_nullable(column_id));
 

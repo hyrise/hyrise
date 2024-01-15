@@ -6,7 +6,7 @@ from hyriseBenchmarkCore import close_benchmark, check_exit_status, initialize, 
 def main():
     build_dir = initialize()
 
-    # Run JCC-H and validate its output using pexpect and check if all queries were successfully verified with sqlite.
+    # Run JCC-H, validate its output using pexpect, and check if all queries were successfully verified with sqlite.
     arguments = {}
     arguments["--scale"] = ".01"
     arguments["--chunk_size"] = "10000"
@@ -16,7 +16,7 @@ def main():
     arguments["--warmup"] = "10"
     arguments["--encoding"] = "'LZ4'"
     arguments["--compression"] = "'Bit-packing'"
-    arguments["--indexes"] = "false"
+    arguments["--chunk_indexes"] = "false"
     arguments["--scheduler"] = "true"
     arguments["--clients"] = "4"
     arguments["--jcch"] = "skewed"
@@ -33,6 +33,9 @@ def main():
     benchmark.expect_exact("Max runs per item is 100")
     benchmark.expect_exact("Max duration per item is 10 seconds")
     benchmark.expect_exact("Warmup duration per item is 10 seconds")
+    benchmark.expect_exact(
+        "- Automatically verifying results with SQLite. This will make the performance numbers invalid."
+    )
     benchmark.expect_exact("Benchmarking Queries: [ 2, 4, 6 ]")
     benchmark.expect_exact("JCC-H scale factor is 0.01")
     benchmark.expect_exact("Using prepared statements: no")

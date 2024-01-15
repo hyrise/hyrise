@@ -1,13 +1,11 @@
 #include "abstract_operator.hpp"
 
-#include <chrono>
-#include <memory>
-#include <string>
-#include <vector>
-
 #include "concurrency/transaction_context.hpp"
+#include "expression/expression_utils.hpp"
+#include "expression/pqp_subquery_expression.hpp"
 #include "logical_query_plan/abstract_non_query_node.hpp"
 #include "logical_query_plan/dummy_table_node.hpp"
+#include "operators/get_table.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/operator_task.hpp"
 #include "storage/table.hpp"
@@ -15,6 +13,7 @@
 #include "utils/assert.hpp"
 #include "utils/format_bytes.hpp"
 #include "utils/format_duration.hpp"
+#include "utils/map_prunable_subquery_predicates.hpp"
 #include "utils/print_utils.hpp"
 #include "utils/timer.hpp"
 
@@ -24,7 +23,10 @@ AbstractOperator::AbstractOperator(const OperatorType type, const std::shared_pt
                                    const std::shared_ptr<const AbstractOperator>& right,
                                    std::unique_ptr<AbstractOperatorPerformanceData> init_performance_data)
     : performance_data(std::move(init_performance_data)), _type(type), _left_input(left), _right_input(right) {
-  // Tell input operators that we want to consume their output
+  // This operator informs all input operators that it wants to consume their output (so it is not deleted until this
+  // operator eventually executes). Operators that use expressions that might contain uncorrelated subqueries have to
+  // call `_search_and_register_uncorrelated_subqueries` to also register as a consumer of these subqueries (see, e.g.,
+  // the constructors of TableScan or Projection).
   if (_left_input) {
     mutable_left_input()->register_consumer();
   }
@@ -44,7 +46,7 @@ AbstractOperator::~AbstractOperator() {
    *  the description() function.
    */
   if constexpr (HYRISE_DEBUG) {
-    auto transaction_context = _transaction_context.has_value() ? _transaction_context->lock() : nullptr;
+    auto transaction_context = _transaction_context ? _transaction_context->lock() : nullptr;
     auto aborted = transaction_context ? transaction_context->aborted() : false;
     auto left_has_executed = _left_input ? _left_input->executed() : false;
     auto right_has_executed = _right_input ? _right_input->executed() : false;
@@ -80,7 +82,7 @@ void AbstractOperator::execute() {
     Assert(!_right_input || _right_input->get_output(), "Right input has no output data.");
   }
 
-  Timer performance_timer;
+  auto performance_timer = Timer{};
 
   auto transaction_context = this->transaction_context();
   if (transaction_context) {
@@ -121,25 +123,27 @@ void AbstractOperator::execute() {
     mutable_right_input()->deregister_consumer();
   }
 
+  for (const auto& subquery_expression : _uncorrelated_subquery_expressions) {
+    subquery_expression->pqp->deregister_consumer();
+  }
+
   if constexpr (HYRISE_DEBUG) {
     // Verify that LQP (if set) and PQP match.
     if (lqp_node) {
       const auto& lqp_expressions = lqp_node->output_expressions();
       if (!_output) {
         Assert(lqp_expressions.empty(), "Operator did not produce a result, but the LQP expects it to");
-      } else if (std::dynamic_pointer_cast<const AbstractNonQueryNode>(lqp_node) ||
-                 std::dynamic_pointer_cast<const DummyTableNode>(lqp_node)) {
-        // AbstractNonQueryNodes do not have any consumable output_expressions, but the corresponding operators return
-        // 'OK' for better compatibility with the console and the server. We do not assert anything here.
-        // Similarly, DummyTableNodes do not produce expressions that are used in the remainder of the LQP and do not
-        // need to be tested.
+      } else if (std::dynamic_pointer_cast<const DummyTableNode>(lqp_node)) {
+        // DummyTableNodes do not produce expressions that are used in the remainder of the LQP and do not need to be
+        // tested.
       } else {
         // Check that LQP expressions and PQP columns match. If they do not, this is a severe bug as the operators might
         // be operating on the wrong column. This should not only be caught here, but also by more detailed tests.
         // We cannot check the name of the column as LQP expressions do not know their alias.
-        Assert(_output->column_count() == lqp_expressions.size(),
+        const auto column_count = _output->column_count();
+        Assert(column_count == lqp_expressions.size(),
                std::string{"Mismatching number of output columns for "} + name());
-        for (auto column_id = ColumnID{0}; column_id < _output->column_count(); ++column_id) {
+        for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
           if (_type != OperatorType::Alias) {
             const auto lqp_type = lqp_expressions[column_id]->data_type();
             const auto pqp_type = _output->column_data_type(column_id);
@@ -151,11 +155,13 @@ void AbstractOperator::execute() {
       }
     }
 
-    // Verify that nullability of columns and segments match for ValueSegments
-    // Only ValueSegments have an individual is_nullable attribute
+    // Verify that nullability of columns and segments match for ValueSegments. Only ValueSegments have an individual
+    // `is_nullable` attribute.
     if (_output && _output->type() == TableType::Data) {
-      for (auto chunk_id = ChunkID{0}; chunk_id < _output->chunk_count(); ++chunk_id) {
-        for (auto column_id = ColumnID{0}; column_id < _output->column_count(); ++column_id) {
+      const auto column_count = _output->column_count();
+      const auto chunk_count = _output->chunk_count();
+      for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+        for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
           const auto& abstract_segment = _output->get_chunk(chunk_id)->get_segment(column_id);
           resolve_data_and_segment_type(*abstract_segment, [&](const auto data_type_t, const auto& segment) {
             using ColumnDataType = typename decltype(data_type_t)::type;
@@ -188,13 +194,20 @@ void AbstractOperator::clear_output() {
   _output = nullptr;
 }
 
-std::string AbstractOperator::description(DescriptionMode description_mode) const {
+std::string AbstractOperator::description(DescriptionMode /*description_mode*/) const {
   return name();
 }
 
 std::shared_ptr<AbstractOperator> AbstractOperator::deep_copy() const {
-  std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>> copied_ops;
-  return deep_copy(copied_ops);
+  auto copied_ops = std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>{};
+  const auto copy = deep_copy(copied_ops);
+
+  // GetTable operators can store references to TableScans as prunable subquery predicates (see get_table.hpp for
+  // details). We must assign the copies of these TableScans after copying the entire PQP (see
+  // map_prunable_subquery_predicates.hpp).
+  map_prunable_subquery_predicates(copied_ops);
+
+  return copy;
 }
 
 std::shared_ptr<AbstractOperator> AbstractOperator::deep_copy(
@@ -209,7 +222,8 @@ std::shared_ptr<AbstractOperator> AbstractOperator::deep_copy(
   const auto copied_right_input =
       right_input() ? right_input()->deep_copy(copied_ops) : std::shared_ptr<AbstractOperator>{};
 
-  auto copied_op = _on_deep_copy(copied_left_input, copied_right_input, copied_ops);
+  const auto copied_op = _on_deep_copy(copied_left_input, copied_right_input, copied_ops);
+  copied_op->lqp_node = lqp_node;
 
   /**
    * Set the transaction context so that we can execute the copied plan in the current transaction
@@ -251,9 +265,9 @@ void AbstractOperator::deregister_consumer() {
   //     clear_output() for the first time.
   //  3) T1 wakes up and continues with the if statement. Since _consumer_count equals zero, it also calls
   //     clear_output(), which leads to an illegal state transition ExecutedAndCleared -> ExecutedAndCleared.
-  std::lock_guard<std::mutex> lock(_deregister_consumer_mutex);
+  const auto lock = std::lock_guard<std::mutex>{_deregister_consumer_mutex};
 
-  _consumer_count--;
+  --_consumer_count;
   if (_consumer_count == 0) {
     clear_output();
   }
@@ -329,10 +343,11 @@ OperatorState AbstractOperator::state() const {
 }
 
 std::shared_ptr<OperatorTask> AbstractOperator::get_or_create_operator_task() {
-  std::lock_guard<std::mutex> lock(_operator_task_mutex);
+  auto lock = std::lock_guard<std::mutex>{_operator_task_mutex};
   // Return the OperatorTask that owns this operator if it already exists.
-  if (!_operator_task.expired()) {
-    return _operator_task.lock();
+  auto operator_task = _operator_task.lock();
+  if (operator_task) {
+    return operator_task;
   }
 
   if constexpr (HYRISE_DEBUG) {
@@ -344,8 +359,8 @@ std::shared_ptr<OperatorTask> AbstractOperator::get_or_create_operator_task() {
     Assert(is_uninitialized || executed(), "This operator was owned by an OperatorTask that did not execute.");
   }
 
-  auto operator_task = std::make_shared<OperatorTask>(shared_from_this());
-  _operator_task = std::weak_ptr<OperatorTask>(operator_task);
+  operator_task = std::make_shared<OperatorTask>(shared_from_this());
+  _operator_task = operator_task;
   if (executed()) {
     // Skip task to reduce scheduling overhead.
     operator_task->skip_operator_task();
@@ -355,13 +370,50 @@ std::shared_ptr<OperatorTask> AbstractOperator::get_or_create_operator_task() {
   return operator_task;
 }
 
+std::vector<std::shared_ptr<AbstractOperator>> AbstractOperator::uncorrelated_subqueries() const {
+  auto subquery_pqps = std::vector<std::shared_ptr<AbstractOperator>>{};
+  subquery_pqps.reserve(_uncorrelated_subquery_expressions.size());
+
+  for (const auto& subquery_expression : _uncorrelated_subquery_expressions) {
+    subquery_pqps.emplace_back(subquery_expression->pqp);
+  }
+
+  return subquery_pqps;
+}
+
 void AbstractOperator::_on_set_transaction_context(const std::weak_ptr<TransactionContext>& transaction_context) {}
 
 void AbstractOperator::_on_cleanup() {}
 
+void AbstractOperator::_search_and_register_uncorrelated_subqueries(
+    const std::shared_ptr<AbstractExpression>& expression) {
+  /**
+   * Register this operator as a consumer of all uncorrelated subqueries found in `expression` or any of its input
+   * expressions. In contrast, we do not register as a consumer of correlated subqueries, which cannot be reused by
+   * design. They are fully owned and managed by the ExpressionEvaluator.
+   */
+  const auto& pqp_subquery_expressions = find_pqp_subquery_expressions(expression);
+  const auto total_subuery_count = _uncorrelated_subquery_expressions.size() + pqp_subquery_expressions.size();
+  _uncorrelated_subquery_expressions.reserve(total_subuery_count);
+
+  for (const auto& subquery_expression : pqp_subquery_expressions) {
+    if (subquery_expression->is_correlated()) {
+      continue;
+    }
+    /**
+     * The results of uncorrelated subqueries might be used in the operator's _on_execute() method. Therefore, we
+     * 1. register as a consumer and
+     * 2. store pointers to (i) return the uncorrelated subqueries when the OperatorTasks are created and (ii)
+     *    deregister after execution.
+     */
+    subquery_expression->pqp->register_consumer();
+    _uncorrelated_subquery_expressions.emplace_back(subquery_expression);
+  }
+}
+
 std::ostream& operator<<(std::ostream& stream, const AbstractOperator& abstract_operator) {
   const auto get_children_fn = [](const auto& op) {
-    std::vector<std::shared_ptr<const AbstractOperator>> children;
+    auto children = std::vector<std::shared_ptr<const AbstractOperator>>{};
     if (op->left_input()) {
       children.emplace_back(op->left_input());
     }
@@ -392,8 +444,8 @@ std::ostream& operator<<(std::ostream& stream, const AbstractOperator& abstract_
   return stream;
 }
 
-void AbstractOperator::_transition_to(OperatorState new_state) {
-  OperatorState previous_state = _state.exchange(new_state);
+void AbstractOperator::_transition_to(const OperatorState new_state) {
+  const auto previous_state = _state.exchange(new_state);
 
   // Check the validity of the state transition
   switch (new_state) {

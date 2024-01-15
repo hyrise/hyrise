@@ -1,9 +1,5 @@
 #pragma once
 
-#include <algorithm>
-#include <memory>
-#include <vector>
-
 #include "cost_estimation/cost_estimator_logical.hpp"
 #include "optimizer/strategy/abstract_rule.hpp"
 #include "statistics/cardinality_estimator.hpp"
@@ -11,6 +7,7 @@
 namespace hyrise {
 
 struct OptimizerRuleMetrics {
+  explicit OptimizerRuleMetrics(const std::string& init_rule_name, const std::chrono::nanoseconds init_duration);
   std::string rule_name;
   std::chrono::nanoseconds duration;
 };

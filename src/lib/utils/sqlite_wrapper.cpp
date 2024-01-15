@@ -9,7 +9,6 @@
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/trim.hpp>
 
-#include "constant_mappings.hpp"
 #include "sql/sql_pipeline.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "storage/table.hpp"
@@ -72,7 +71,7 @@ std::shared_ptr<Table> create_hyrise_table_from_result(sqlite3_stmt* sqlite_stat
   // If this fails, this is likely because of a transaction conflict within sqlite. This means that the Hyrise
   // and the sqlite states have diverged. When using the SQLite wrapper, the caller must ensure that parallel
   // operations do not conflict.
-  Assert(return_code == SQLITE_ROW || return_code == SQLITE_DONE, "Unexpected sqlite state");
+  Assert(return_code == SQLITE_ROW || return_code == SQLITE_DONE, "Unexpected sqlite state.");
 
   if (!no_result) {
     auto column_definitions = TableColumnDefinitions{};
@@ -102,18 +101,17 @@ void copy_row_from_sqlite_to_hyrise(const std::shared_ptr<Table>& table, sqlite3
   for (auto column_id = int{0}; column_id < column_count; ++column_id) {
     switch (sqlite3_column_type(sqlite_statement, column_id)) {
       case SQLITE_INTEGER: {
-        row.emplace_back(AllTypeVariant{sqlite3_column_int(sqlite_statement, column_id)});
+        row.emplace_back(sqlite3_column_int(sqlite_statement, column_id));
         break;
       }
 
       case SQLITE_FLOAT: {
-        row.emplace_back(AllTypeVariant{sqlite3_column_double(sqlite_statement, column_id)});
+        row.emplace_back(sqlite3_column_double(sqlite_statement, column_id));
         break;
       }
 
       case SQLITE_TEXT: {
-        row.emplace_back(AllTypeVariant{
-            pmr_string(reinterpret_cast<const char*>(sqlite3_column_text(sqlite_statement, column_id)))});
+        row.emplace_back(pmr_string(reinterpret_cast<const char*>(sqlite3_column_text(sqlite_statement, column_id))));
         break;
       }
 
@@ -144,7 +142,7 @@ SQLiteWrapper::SQLiteWrapper()
     : _uri{std::string{"file:sqlitewrapper_"} + std::to_string(reinterpret_cast<uintptr_t>(this)) +  // NOLINT
            "?mode=memory&cache=shared"},
       main_connection{_uri} {
-  Assert(sqlite3_threadsafe(), "Expected sqlite to be compiled with thread-safety");
+  Assert(sqlite3_threadsafe(), "Expected sqlite to be compiled with thread safety.");
 }
 
 SQLiteWrapper::Connection::Connection(const std::string& uri) {
@@ -154,7 +152,7 @@ SQLiteWrapper::Connection::Connection(const std::string& uri) {
                       nullptr);
   if (ret != SQLITE_OK) {
     sqlite3_close(db);
-    Fail("Cannot open database: " + std::string(sqlite3_errmsg(db)));
+    Fail("Cannot open database '" + std::string(sqlite3_errmsg(db)) + "'.");
   }
 
   // Make LIKE case sensitive, just like in Hyrise
@@ -176,22 +174,22 @@ SQLiteWrapper::Connection SQLiteWrapper::new_connection() const {
 }
 
 std::shared_ptr<Table> SQLiteWrapper::Connection::execute_query(const std::string& sql) const {
-  sqlite3_stmt* sqlite_statement;
+  sqlite3_stmt* sqlite_statement = nullptr;
 
   auto sql_pipeline = SQLPipelineBuilder{sql}.create_pipeline();
   const auto& queries = sql_pipeline.get_sql_per_statement();
 
   // We need to split the queries such that we only create columns/add rows from the final SELECT query
-  std::vector<std::string> queries_before_select(queries.begin(), queries.end() - 1);
-  std::string select_query = queries.back();
+  const auto queries_before_select = std::vector<std::string>(queries.begin(), queries.end() - 1);
+  const auto& select_query = queries.back();
 
-  auto return_code = int{};
+  auto return_code = int{0};
   for (const auto& query : queries_before_select) {
     return_code = sqlite3_prepare_v2(db, query.c_str(), -1, &sqlite_statement, nullptr);
 
     if (return_code != SQLITE_OK) {
       sqlite3_finalize(sqlite_statement);
-      Fail("Failed to execute query \"" + query + "\": " + std::string(sqlite3_errmsg(db)) + "\n");
+      Fail("Failed to execute query \"" + query + "\": " + std::string(sqlite3_errmsg(db)) + ".");
     }
 
     while (sqlite3_step(sqlite_statement) != SQLITE_DONE) {}
@@ -200,7 +198,7 @@ std::shared_ptr<Table> SQLiteWrapper::Connection::execute_query(const std::strin
   return_code = sqlite3_prepare_v2(db, select_query.c_str(), -1, &sqlite_statement, nullptr);
 
   if (return_code != SQLITE_OK) {
-    auto error_message = "Failed to execute query \"" + select_query + "\": " + std::string(sqlite3_errmsg(db));
+    auto error_message = "Failed to execute query \"" + select_query + "\": " + std::string(sqlite3_errmsg(db)) + ".";
     sqlite3_finalize(sqlite_statement);
     Fail(error_message);
   }
@@ -210,7 +208,7 @@ std::shared_ptr<Table> SQLiteWrapper::Connection::execute_query(const std::strin
   if (!sqlite3_stmt_readonly(sqlite_statement)) {
     // We need to make sure that we do not call sqlite3_reset below on a modifying statement - otherwise, we would
     // re-execute the modification
-    Assert(!result_table, "Modifying statement was expected to return empty table");
+    Assert(!result_table, "Modifying statement was expected to return empty table.");
     sqlite3_finalize(sqlite_statement);
     return nullptr;
   }
@@ -221,14 +219,14 @@ std::shared_ptr<Table> SQLiteWrapper::Connection::execute_query(const std::strin
     copy_row_from_sqlite_to_hyrise(result_table, sqlite_statement, sqlite3_column_count(sqlite_statement));
   }
 
-  Assert(return_code == SQLITE_DONE, "Unexpected sqlite state");
+  Assert(return_code == SQLITE_DONE, "Unexpected sqlite state.");
 
   sqlite3_finalize(sqlite_statement);
   return result_table;
 }
 
-void SQLiteWrapper::Connection::raw_execute_query(const std::string& sql, const bool allow_failure) const {
-  char* err_msg;
+void SQLiteWrapper::Connection::raw_execute_query(const std::string& sql) const {
+  char* err_msg = nullptr;
   auto return_code = sqlite3_exec(db, sql.c_str(), nullptr, nullptr, &err_msg);
 
   if (return_code != SQLITE_OK) {
@@ -288,12 +286,12 @@ void SQLiteWrapper::create_sqlite_table(const Table& table, const std::string& t
   insert_into_stream << ");";
   const auto insert_into_str = insert_into_stream.str();
 
-  sqlite3_stmt* insert_into_statement;
+  sqlite3_stmt* insert_into_statement = nullptr;
   const auto sqlite3_prepare_return_code =
       sqlite3_prepare_v2(main_connection.db, insert_into_str.c_str(), static_cast<int>(insert_into_str.size() + 1),
                          &insert_into_statement, nullptr);
   Assert(sqlite3_prepare_return_code == SQLITE_OK,
-         "Failed to prepare statement: " + std::string(sqlite3_errmsg(main_connection.db)));
+         "Failed to prepare statement: " + std::string(sqlite3_errmsg(main_connection.db)) + ".");
 
   // Insert values row-by-row
   const auto chunk_count = table.chunk_count();
@@ -347,16 +345,16 @@ void SQLiteWrapper::create_sqlite_table(const Table& table, const std::string& t
         }
 
         Assert(sqlite3_bind_return_code == SQLITE_OK,
-               "Failed to bind value: " + std::string(sqlite3_errmsg(main_connection.db)));
+               "Failed to bind value: " + std::string(sqlite3_errmsg(main_connection.db)) + ".");
       }
 
       const auto sqlite3_step_return_code = sqlite3_step(insert_into_statement);
       Assert(sqlite3_step_return_code == SQLITE_DONE,
-             "Failed to step INSERT: " + std::string(sqlite3_errmsg(main_connection.db)));
+             "Failed to step INSERT: " + std::string(sqlite3_errmsg(main_connection.db)) + ".");
 
       const auto sqlite3_reset_return_code = sqlite3_reset(insert_into_statement);
       Assert(sqlite3_reset_return_code == SQLITE_OK,
-             "Failed to reset statement: " + std::string(sqlite3_errmsg(main_connection.db)));
+             "Failed to reset statement: " + std::string(sqlite3_errmsg(main_connection.db)) + ".");
     }
   }
 

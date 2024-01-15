@@ -16,7 +16,7 @@ AliasNode::AliasNode(const std::vector<std::shared_ptr<AbstractExpression>>& exp
 
 std::string AliasNode::description(const DescriptionMode mode) const {
   const auto expression_mode = _expression_description_mode(mode);
-  std::stringstream stream;
+  auto stream = std::stringstream{};
   stream << "[Alias] ";
   for (auto column_id = ColumnID{0}; column_id < node_expressions.size(); ++column_id) {
     if (node_expressions[column_id]->description(expression_mode) == aliases[column_id]) {
@@ -36,8 +36,8 @@ std::vector<std::shared_ptr<AbstractExpression>> AliasNode::output_expressions()
   return node_expressions;
 }
 
-std::shared_ptr<LQPUniqueConstraints> AliasNode::unique_constraints() const {
-  return _forward_left_unique_constraints();
+UniqueColumnCombinations AliasNode::unique_column_combinations() const {
+  return _forward_left_unique_column_combinations();
 }
 
 size_t AliasNode::_on_shallow_hash() const {

@@ -32,7 +32,7 @@ std::shared_ptr<AbstractExpression> PQPSubqueryExpression::_on_deep_copy(
 
 DataType PQPSubqueryExpression::data_type() const {
   Assert(_data_type_info,
-         "Can't determine the DataType of this SubqueryExpression, probably because it returns multiple columns");
+         "Cannot determine the DataType of this SubqueryExpression, probably because it returns multiple columns");
   return _data_type_info->data_type;
 }
 
@@ -40,9 +40,9 @@ bool PQPSubqueryExpression::is_correlated() const {
   return !parameters.empty();
 }
 
-std::string PQPSubqueryExpression::description(const DescriptionMode mode) const {
-  std::stringstream stream;
-  stream << "SUBQUERY (PQP, " << pqp.get() << ")";
+std::string PQPSubqueryExpression::description(const DescriptionMode /*mode*/) const {
+  auto stream = std::stringstream{};
+  stream << "SUBQUERY (PQP, " << pqp << ")";
   return stream.str();
 }
 
@@ -64,7 +64,7 @@ size_t PQPSubqueryExpression::_shallow_hash() const {
   return hash;
 }
 
-bool PQPSubqueryExpression::_on_is_nullable_on_lqp(const AbstractLQPNode& lqp) const {
+bool PQPSubqueryExpression::_on_is_nullable_on_lqp(const AbstractLQPNode& /*lqp*/) const {
   Fail("Nullability 'on lqp' should never be queried from a PQPSelect");
 }
 

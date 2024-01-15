@@ -1,7 +1,13 @@
 #include "print_utils.hpp"
 
-#include <magic_enum.hpp>
+#include <unordered_map>
 
+#include <boost/algorithm/string/join.hpp>
+#include <boost/range/adaptors.hpp>
+#include "magic_enum.hpp"
+
+#include "logical_query_plan/abstract_lqp_node.hpp"
+#include "storage/encoding_type.hpp"
 #include "storage/table.hpp"
 
 namespace {
@@ -77,8 +83,8 @@ namespace hyrise {
 template <typename Node>
 void print_directed_acyclic_graph(const std::shared_ptr<Node>& node, const NodeGetChildrenFn<Node>& get_children_fn,
                                   const NodePrintFn<Node>& print_node_fn, std::ostream& stream) {
-  std::vector<bool> levels;
-  std::unordered_map<std::shared_ptr<Node>, size_t> id_by_node;
+  auto levels = std::vector<bool>{};
+  auto id_by_node = std::unordered_map<std::shared_ptr<Node>, size_t>{};
   auto id_counter = size_t{0};
 
   print_directed_acyclic_graph_impl<Node>(node, get_children_fn, print_node_fn, stream, levels, id_by_node, id_counter);
@@ -86,17 +92,18 @@ void print_directed_acyclic_graph(const std::shared_ptr<Node>& node, const NodeG
 
 void print_table_key_constraints(const std::shared_ptr<const Table>& table, std::ostream& stream,
                                  const std::string& separator) {
-  const auto& table_key_constraints = table->soft_key_constraints();
+  const auto& table_key_constraints =
+      std::set<TableKeyConstraint>{table->soft_key_constraints().cbegin(), table->soft_key_constraints().cend()};
   if (table_key_constraints.empty()) {
     return;
   }
 
-  const auto& last_constraint = *(--table_key_constraints.cend());
+  const auto& last_constraint = *std::prev(table_key_constraints.cend());
   for (const auto& constraint : table_key_constraints) {
     stream << magic_enum::enum_name(constraint.key_type()) << "(";
     const auto& columns = constraint.columns();
-    Assert(!columns.empty(), "Did not expect useless constraint");
-    const auto& last_column = *(--columns.cend());
+    Assert(!columns.empty(), "Did not expect useless constraint.");
+    const auto& last_column = *std::prev(columns.cend());
     for (auto column : columns) {
       stream << table->column_name(column);
       if (column != last_column) {
@@ -118,5 +125,11 @@ template void print_directed_acyclic_graph<const AbstractOperator>(
     const std::shared_ptr<const AbstractOperator>& node,
     const NodeGetChildrenFn<const AbstractOperator>& get_children_fn,
     const NodePrintFn<const AbstractOperator>& print_node_fn, std::ostream& stream);
+
+std::string all_encoding_options() {
+  return boost::algorithm::join(magic_enum::enum_names<EncodingType>() |
+                                    boost::adaptors::transformed([](const auto it) { return std::string{it}; }),
+                                ", ");
+}
 
 }  // namespace hyrise

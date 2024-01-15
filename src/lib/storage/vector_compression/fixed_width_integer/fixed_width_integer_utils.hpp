@@ -15,7 +15,7 @@ inline bool is_fixed_width_integer(CompressedVectorType type) {
       return false;
   }
 
-  Fail("GCC thinks this is reachable");
+  Fail("GCC thinks this is reachable.");
 }
 
 inline size_t byte_width_for_fixed_width_integer_type(CompressedVectorType type) {
@@ -32,7 +32,7 @@ inline size_t byte_width_for_fixed_width_integer_type(CompressedVectorType type)
       return 0u;
   }
 
-  Fail("GCC thinks this is reachable");
+  Fail("GCC thinks this is reachable.");
 }
 
 }  // namespace hyrise

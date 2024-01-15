@@ -21,7 +21,7 @@ def main():
     server = pexpect.spawn(f"{build_dir}/hyriseServer --benchmark_data=tpc-h:0.01 -p 0", timeout=10)
 
     server.expect_exact("Loading/Generating tables", timeout=120)
-    server.expect_exact("Encoding 'lineitem'", timeout=120)
+    server.expect_exact("Processing 'lineitem'", timeout=120)
     search_regex = r"Server started at 0.0.0.0 and port (\d+)"
     server.expect(search_regex, timeout=120)
 
@@ -49,7 +49,15 @@ def main():
 
     # Not using close_benchmark() here, as a server is started and a timeout of None would wait forever.
     client.close()
-    server.close()
+
+    # Give the server a bit more time to shut down, see https://github.com/pexpect/pexpect/issues/462.
+    # We found hyriseServer on large machines, such as the CI server, to take a considerable amount of time to boot up
+    # and shut down (e.g., the used CI server in 2023 has 128 hardware threads and thus spawns 128 worker threads). We
+    # use `terminate()` instead of `close()` here. pexpect's `terminate` waits three times before raising a timeout
+    # error as it exposes the underlying PtyProcess's shutdown logic, allowing to modify the delay.
+    # `close` eventually also calls the same shutdown logic, but does not consider the increased delay.
+    server.delayafterterminate = 5  # 5 seconds * 3 tries = 15 seconds overall waiting.
+    server.terminate()
 
 
 if __name__ == "__main__":

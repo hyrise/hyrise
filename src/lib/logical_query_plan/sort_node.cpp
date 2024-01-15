@@ -4,7 +4,6 @@
 #include <string>
 #include <vector>
 
-#include "constant_mappings.hpp"
 #include "expression/expression_utils.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
@@ -20,7 +19,7 @@ SortNode::SortNode(const std::vector<std::shared_ptr<AbstractExpression>>& expre
 std::string SortNode::description(const DescriptionMode mode) const {
   const auto expression_mode = _expression_description_mode(mode);
 
-  std::stringstream stream;
+  auto stream = std::stringstream{};
 
   stream << "[Sort] ";
 
@@ -36,8 +35,8 @@ std::string SortNode::description(const DescriptionMode mode) const {
   return stream.str();
 }
 
-std::shared_ptr<LQPUniqueConstraints> SortNode::unique_constraints() const {
-  return _forward_left_unique_constraints();
+UniqueColumnCombinations SortNode::unique_column_combinations() const {
+  return _forward_left_unique_column_combinations();
 }
 
 size_t SortNode::_on_shallow_hash() const {

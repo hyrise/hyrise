@@ -123,6 +123,7 @@ pmr_string boolean_to_string(bool boolean) {
 
 pmr_string zip_to_string(int32_t zip) {
   auto result = pmr_string(5, '?');
+  // NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg,hicpp-vararg)
   const auto snprintf_rc = std::snprintf(result.data(), result.size() + 1, "%05d", zip);
   Assert(snprintf_rc > 0, "Unexpected string to parse.");
   return result;
@@ -138,8 +139,10 @@ std::optional<pmr_string> resolve_date_id(int column_id, ds_key_t date_id) {
   jtodt(&date, static_cast<int>(date_id));
 
   auto result = pmr_string(10, '?');
+  // NOLINTBEGIN(cppcoreguidelines-pro-type-vararg,hicpp-vararg)
   const auto snprintf_rc =
       std::snprintf(result.data(), result.size() + 1, "%4d-%02d-%02d", date.year, date.month, date.day);
+  // NOLINTEND(cppcoreguidelines-pro-type-vararg,hicpp-vararg)
   Assert(snprintf_rc > 0, "Unexpected string to parse.");
 
   return result;
@@ -433,8 +436,10 @@ std::shared_ptr<Table> TPCDSTableGenerator::generate_catalog_page(ds_key_t max_r
                                            catalog_page_column_names, static_cast<ChunkOffset>(catalog_page_count)};
 
   auto catalog_page = CATALOG_PAGE_TBL{};
+  // NOLINTBEGIN(cppcoreguidelines-pro-type-vararg,hicpp-vararg)
   const auto snprintf_rc =
       std::snprintf(catalog_page.cp_department, sizeof(catalog_page.cp_department), "%s", "DEPARTMENT");
+  // NOLINTEND(cppcoreguidelines-pro-type-vararg,hicpp-vararg)
   Assert(snprintf_rc > 0, "Unexpected string to parse.");
   for (auto catalog_page_index = ds_key_t{0}; catalog_page_index < catalog_page_count; ++catalog_page_index) {
     // need a pointer to the previous result of mk_w_catalog_page, because cp_department is only set once
@@ -1148,6 +1153,7 @@ std::shared_ptr<Table> TPCDSTableGenerator::generate_web_site(ds_key_t max_rows)
 
   auto web_site = W_WEB_SITE_TBL{};
   static_assert(sizeof(web_site.web_class) == 51);
+  // NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg,hicpp-vararg)
   const auto snprintf_rc = std::snprintf(web_site.web_class, sizeof(web_site.web_class), "%s", "Unknown");
   Assert(snprintf_rc > 0, "Unexpected string to parse.");
   for (auto web_site_index = ds_key_t{0}; web_site_index < web_site_count; ++web_site_index) {
@@ -1181,6 +1187,33 @@ std::shared_ptr<Table> TPCDSTableGenerator::generate_web_site(ds_key_t max_rows)
   }
 
   return web_site_builder.finish_table();
+}
+
+AbstractTableGenerator::IndexesByTable TPCDSTableGenerator::_indexes_by_table() const {
+  return {{"store_sales", {{"ss_item_sk"}, {"ss_ticket_number"}}},
+          {"store_returns", {{"sr_item_sk"}, {"sr_ticket_number"}}},
+          {"catalog_sales", {{"cs_item_sk"}, {"cs_order_number"}}},
+          {"catalog_returns", {{"cr_item_sk"}, {"cr_order_number"}}},
+          {"web_sales", {{"ws_item_sk"}, {"ws_order_number"}}},
+          {"web_returns", {{"wr_item_sk"}, {"wr_order_number"}}},
+          {"inventory", {{"inv_date_sk"}, {"inv_item_sk"}, {"inv_warehouse_sk"}}},
+          {"store", {{"s_store_sk"}}},
+          {"call_center", {{"cc_call_center_sk"}}},
+          {"catalog_page", {{"cp_catalog_page_sk"}}},
+          {"web_site", {{"web_site_sk"}}},
+          {"web_page", {{"wp_web_page_sk"}}},
+          {"warehouse", {{"w_warehouse_sk"}}},
+          {"customer", {{"c_customer_sk"}}},
+          {"customer_address", {{"ca_address_sk"}}},
+          {"customer_demographics", {{"cd_demo_sk"}}},
+          {"date_dim", {{"d_date_sk"}}},
+          {"household_demographics", {{"hd_demo_sk"}}},
+          {"item", {{"i_item_sk"}}},
+          {"income_band", {{"ib_income_band_sk"}}},
+          {"promotion", {{"p_promo_sk"}}},
+          {"reason", {{"r_reason_sk"}}},
+          {"ship_mode", {{"sm_ship_mode_sk"}}},
+          {"time_dim", {{"t_time_sk"}}}};
 }
 
 void TPCDSTableGenerator::_add_constraints(

@@ -25,7 +25,7 @@ std::string ExpressionReductionRule::name() const {
 
 void ExpressionReductionRule::_apply_to_plan_without_subqueries(
     const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
-  Assert(lqp_root->type == LQPNodeType::Root, "ExpressionReductionRule needs root to hold onto");
+  Assert(lqp_root->type == LQPNodeType::Root, "ExpressionReductionRule needs root to hold onto.");
 
   visit_lqp(lqp_root, [&](const auto& sub_node) {
     if (sub_node->type == LQPNodeType::Aggregate) {
@@ -67,7 +67,7 @@ const std::shared_ptr<AbstractExpression>& ExpressionReductionRule::reduce_distr
 
   // Step 3 Recurse into `a, b, c, d, e` and look for possible reductions there. Do this here because we have
   //        `flat_disjunction_and_conjunction` handily available here (it gets modified later).
-  if (flat_disjunction_and_conjunction.size() == 1u && flat_disjunction_and_conjunction.front().size() == 1u) {
+  if (flat_disjunction_and_conjunction.size() == 1 && flat_disjunction_and_conjunction.front().size() == 1) {
     // input_expression is neither AND nor OR - continue with its argument
     for (auto& argument : input_expression->arguments) {
       reduce_distributivity(argument);
@@ -142,7 +142,7 @@ const std::shared_ptr<AbstractExpression>& ExpressionReductionRule::reduce_distr
       input_expression = common_conjunction_expression;
     } else {
       Assert(inflated_disjunction_remainder,
-             "Bug detected. inflated_disjunction_remainder should contain an expression");
+             "Bug detected. inflated_disjunction_remainder should contain an expression.");
       input_expression = inflated_disjunction_remainder;
     }
   }
@@ -176,7 +176,7 @@ void ExpressionReductionRule::reduce_constant_expression(std::shared_ptr<Abstrac
   resolve_data_type(input_expression->data_type(), [&](const auto data_type_t) {
     using ExpressionDataType = typename decltype(data_type_t)::type;
     const auto result = ExpressionEvaluator{}.evaluate_expression_to_result<ExpressionDataType>(*input_expression);
-    Assert(result->is_literal(), "Expected Literal");
+    Assert(result->is_literal(), "Expected literal.");
 
     if (result->is_null(0)) {
       input_expression = std::make_shared<ValueExpression>(NullValue{});
@@ -242,24 +242,24 @@ void ExpressionReductionRule::remove_duplicate_aggregate(
     std::vector<std::shared_ptr<AbstractExpression>>& input_expressions,
     const std::shared_ptr<AbstractLQPNode>& aggregate_node, const std::shared_ptr<AbstractLQPNode>& root_node) {
   // Create a list of all sums, counts, and averages in the aggregate node.
-  std::vector<std::reference_wrapper<const std::shared_ptr<AbstractExpression>>> sums;
-  std::vector<std::reference_wrapper<const std::shared_ptr<AbstractExpression>>> counts;
-  std::vector<std::reference_wrapper<const std::shared_ptr<AbstractExpression>>> avgs;
+  auto sums = std::vector<std::reference_wrapper<const std::shared_ptr<AbstractExpression>>>{};
+  auto counts = std::vector<std::reference_wrapper<const std::shared_ptr<AbstractExpression>>>{};
+  auto avgs = std::vector<std::reference_wrapper<const std::shared_ptr<AbstractExpression>>>{};
   for (auto& input_expression : input_expressions) {
-    if (input_expression->type != ExpressionType::Aggregate) {
+    if (input_expression->type != ExpressionType::WindowFunction) {
       continue;
     }
-    auto& aggregate_expression = static_cast<AggregateExpression&>(*input_expression);
-    switch (aggregate_expression.aggregate_function) {
-      case AggregateFunction::Sum: {
+    auto& aggregate_expression = static_cast<WindowFunctionExpression&>(*input_expression);
+    switch (aggregate_expression.window_function) {
+      case WindowFunction::Sum: {
         sums.emplace_back(input_expression);
         break;
       }
-      case AggregateFunction::Count: {
+      case WindowFunction::Count: {
         counts.emplace_back(input_expression);
         break;
       }
-      case AggregateFunction::Avg: {
+      case WindowFunction::Avg: {
         avgs.emplace_back(input_expression);
         break;
       }
@@ -276,14 +276,14 @@ void ExpressionReductionRule::remove_duplicate_aggregate(
 
   // Iterate over the AVGs, check if matching SUMs and COUNTs exist, and add a suitable replacement to `replacements`.
   for (const auto& avg_expression_ptr : avgs) {
-    const auto& avg_expression = static_cast<AggregateExpression&>(*avg_expression_ptr.get());
+    const auto& avg_expression = static_cast<WindowFunctionExpression&>(*avg_expression_ptr.get());
 
     const auto& avg_argument = avg_expression.argument();
     const auto avg_argument_is_nullable = avg_argument->is_nullable_on_lqp(*aggregate_input_node);
 
     // A helper function that checks whether SUMs and COUNTs match the AVG
     const auto finder = [&](const auto& other_expression) {
-      const auto other_argument = static_cast<const AggregateExpression&>(*other_expression.get()).argument();
+      const auto other_argument = static_cast<const WindowFunctionExpression&>(*other_expression.get()).argument();
       const auto column_expression = std::dynamic_pointer_cast<const LQPColumnExpression>(other_argument);
 
       if (column_expression && column_expression->original_column_id == INVALID_COLUMN_ID) {
@@ -334,7 +334,7 @@ void ExpressionReductionRule::remove_duplicate_aggregate(
   lqp_insert_node(projection_node, LQPInputSide::Left, aggregate_node);
 
   // Now update the AVG expression in all nodes that might refer to it, starting with the ProjectionNode
-  bool updated_an_alias = false;
+  auto updated_an_alias = false;
   visit_lqp_upwards(projection_node, [&](const auto& node) {
     for (auto& expression : node->node_expressions) {
       expression_deep_replace(expression, replacements);

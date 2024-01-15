@@ -22,7 +22,7 @@ class ExportNodeTest : public BaseTest {
 };
 
 TEST_F(ExportNodeTest, Description) {
-  EXPECT_EQ(_export_node->description(), "[Export] to 'file_name'");
+  EXPECT_EQ(_export_node->description(), "[Export] to 'file_name' (csv)");
 }
 
 TEST_F(ExportNodeTest, HashingAndEqualityCheck) {
@@ -42,6 +42,10 @@ TEST_F(ExportNodeTest, ColumnExpressions) {
 
 TEST_F(ExportNodeTest, Copy) {
   EXPECT_EQ(*_export_node, *_export_node->deep_copy());
+}
+
+TEST_F(ExportNodeTest, NoUniqueColumnCombinations) {
+  EXPECT_THROW(_export_node->unique_column_combinations(), std::logic_error);
 }
 
 }  // namespace hyrise

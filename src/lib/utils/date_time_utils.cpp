@@ -1,6 +1,6 @@
 #include "date_time_utils.hpp"
 
-#include <magic_enum.hpp>
+#include "magic_enum.hpp"
 
 namespace hyrise {
 
@@ -44,7 +44,7 @@ boost::gregorian::date date_interval(const boost::gregorian::date& start_date, i
       Fail("Invalid time unit for date interval: " + std::string{magic_enum::enum_name(unit)});
   }
 
-  Fail("Invalid enum value");
+  Fail("Invalid enum value.");
 }
 
 std::string date_to_string(const boost::gregorian::date& date) {

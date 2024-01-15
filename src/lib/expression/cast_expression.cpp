@@ -2,8 +2,6 @@
 
 #include <sstream>
 
-#include "constant_mappings.hpp"
-
 namespace hyrise {
 
 CastExpression::CastExpression(const std::shared_ptr<AbstractExpression>& argument, const DataType data_type)
@@ -15,7 +13,7 @@ std::shared_ptr<AbstractExpression> CastExpression::_on_deep_copy(
 }
 
 std::string CastExpression::description(const DescriptionMode mode) const {
-  std::stringstream stream;
+  auto stream = std::stringstream{};
   stream << "CAST(" << argument()->description(mode) << " AS " << _data_type << ")";
   return stream.str();
 }

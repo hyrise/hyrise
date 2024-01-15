@@ -15,12 +15,12 @@ bool ValueExpression::requires_computation() const {
 }
 
 std::shared_ptr<AbstractExpression> ValueExpression::_on_deep_copy(
-    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& /*copied_ops*/) const {
   return std::make_shared<ValueExpression>(value);
 }
 
-std::string ValueExpression::description(const DescriptionMode mode) const {
-  std::stringstream stream;
+std::string ValueExpression::description(const DescriptionMode /*mode*/) const {
+  auto stream = std::stringstream{};
 
   if (value.type() == typeid(pmr_string)) {
     stream << "'" << value << "'";
@@ -60,7 +60,7 @@ size_t ValueExpression::_shallow_hash() const {
   return std::hash<AllTypeVariant>{}(value);
 }
 
-bool ValueExpression::_on_is_nullable_on_lqp(const AbstractLQPNode& lqp) const {
+bool ValueExpression::_on_is_nullable_on_lqp(const AbstractLQPNode& /*lqp*/) const {
   return value.type() == typeid(NullValue);
 }
 

@@ -5,7 +5,6 @@
 
 #include "base_test.hpp"
 
-#include "constant_mappings.hpp"
 #include "import_export/csv/csv_meta.hpp"
 #include "operators/export.hpp"
 #include "operators/table_scan.hpp"
@@ -47,12 +46,8 @@ class OperatorsExportTest : public BaseTest {
 
 class OperatorsExportMultiFileTypeTest : public OperatorsExportTest, public ::testing::WithParamInterface<FileType> {};
 
-auto export_test_formatter = [](const ::testing::TestParamInfo<FileType> info) {
-  return std::string{magic_enum::enum_name(info.param)};
-};
-
 INSTANTIATE_TEST_SUITE_P(FileTypes, OperatorsExportMultiFileTypeTest,
-                         ::testing::Values(FileType::Csv, FileType::Binary), export_test_formatter);
+                         ::testing::Values(FileType::Csv, FileType::Binary), enum_formatter<FileType>);
 
 TEST_P(OperatorsExportMultiFileTypeTest, ExportWithFileType) {
   auto table =

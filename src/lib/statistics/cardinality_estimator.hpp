@@ -17,14 +17,15 @@ template <typename T>
 class GenericHistogram;
 template <typename T>
 class AttributeStatistics;
-class AliasNode;
-class ProjectionNode;
 class AggregateNode;
-class ValidateNode;
-class PredicateNode;
+class AliasNode;
 class JoinNode;
-class UnionNode;
 class LimitNode;
+class PredicateNode;
+class ProjectionNode;
+class UnionNode;
+class ValidateNode;
+class WindowNode;
 
 /**
  * Hyrise's default, statistics-based cardinality estimator
@@ -46,21 +47,24 @@ class CardinalityEstimator : public AbstractCardinalityEstimator {
   static std::shared_ptr<TableStatistics> estimate_projection_node(
       const ProjectionNode& projection_node, const std::shared_ptr<TableStatistics>& input_table_statistics);
 
+  std::shared_ptr<TableStatistics> estimate_window_node(
+      const WindowNode& window_node, const std::shared_ptr<TableStatistics>& input_table_statistics) const;
+
   static std::shared_ptr<TableStatistics> estimate_aggregate_node(
       const AggregateNode& aggregate_node, const std::shared_ptr<TableStatistics>& input_table_statistics);
 
   static std::shared_ptr<TableStatistics> estimate_validate_node(
-      const ValidateNode& validate_node, const std::shared_ptr<TableStatistics>& input_table_statistics);
+      const ValidateNode& /*validate_node*/, const std::shared_ptr<TableStatistics>& input_table_statistics);
 
-  static std::shared_ptr<TableStatistics> estimate_predicate_node(
-      const PredicateNode& predicate_node, const std::shared_ptr<TableStatistics>& input_table_statistics);
+  std::shared_ptr<TableStatistics> estimate_predicate_node(
+      const PredicateNode& predicate_node, const std::shared_ptr<TableStatistics>& input_table_statistics) const;
 
   static std::shared_ptr<TableStatistics> estimate_join_node(
       const JoinNode& join_node, const std::shared_ptr<TableStatistics>& left_input_table_statistics,
       const std::shared_ptr<TableStatistics>& right_input_table_statistics);
 
   static std::shared_ptr<TableStatistics> estimate_union_node(
-      const UnionNode& union_node, const std::shared_ptr<TableStatistics>& left_input_table_statistics,
+      const UnionNode& /*union_node*/, const std::shared_ptr<TableStatistics>& left_input_table_statistics,
       const std::shared_ptr<TableStatistics>& right_input_table_statistics);
 
   static std::shared_ptr<TableStatistics> estimate_limit_node(

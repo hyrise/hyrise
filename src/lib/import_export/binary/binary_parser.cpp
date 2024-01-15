@@ -8,7 +8,6 @@
 #include <string>
 #include <utility>
 
-#include "constant_mappings.hpp"
 #include "hyrise.hpp"
 #include "resolve_type.hpp"
 #include "storage/chunk.hpp"
@@ -114,7 +113,7 @@ void BinaryParser::_import_chunk(std::ifstream& file, std::shared_ptr<Table>& ta
   for (ColumnID sorted_column_id{0}; sorted_column_id < num_sorted_columns; ++sorted_column_id) {
     const auto column_id = _read_value<ColumnID>(file);
     const auto sort_mode = _read_value<SortMode>(file);
-    sorted_columns.emplace_back(SortColumnDefinition{column_id, sort_mode});
+    sorted_columns.emplace_back(column_id, sort_mode);
   }
 
   Segments output_segments;
@@ -215,7 +214,7 @@ std::shared_ptr<FixedStringDictionarySegment<pmr_string>> BinaryParser::_import_
 
 template <typename T>
 std::shared_ptr<RunLengthSegment<T>> BinaryParser::_import_run_length_segment(std::ifstream& file,
-                                                                              ChunkOffset row_count) {
+                                                                              ChunkOffset /*row_count*/) {
   const auto size = _read_value<uint32_t>(file);
   const auto values = std::make_shared<pmr_vector<T>>(_read_values<T>(file, size));
   const auto null_values = std::make_shared<pmr_vector<bool>>(_read_values<bool>(file, size));

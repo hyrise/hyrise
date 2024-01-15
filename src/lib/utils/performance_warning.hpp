@@ -67,11 +67,11 @@ class PerformanceWarningDisabler {
   }
 };
 
-#define PerformanceWarning(text)                                                                       \
-  {                                                                                                    \
-    static PerformanceWarningClass warn(std::string(text) + " at " + trim_source_file_path(__FILE__) + \
-                                        ":" BOOST_PP_STRINGIZE(__LINE__));                             \
-  }                                                                                                    \
+#define PerformanceWarning(text)                                                                             \
+  {                                                                                                          \
+    static const PerformanceWarningClass warn(std::string(text) + " at " + trim_source_file_path(__FILE__) + \
+                                              ":" BOOST_PP_STRINGIZE(__LINE__));                             \
+  }                                                                                                          \
   static_assert(true, "End call of macro with a semicolon")
 
 }  // namespace hyrise

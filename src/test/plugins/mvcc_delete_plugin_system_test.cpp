@@ -42,7 +42,7 @@ class MvccDeletePluginSystemTest : public BaseTest {
       std::iota(values.begin(), values.end(), begin_value);
 
       const auto value_segment = std::make_shared<ValueSegment<int>>(std::move(values));
-      Segments segments;
+      auto segments = Segments{};
       segments.emplace_back(value_segment);
       const auto mvcc_data = std::make_shared<MvccData>(segments.front()->size(), CommitID{0});
       _table->append_chunk(segments, mvcc_data);
@@ -113,7 +113,7 @@ class MvccDeletePluginSystemTest : public BaseTest {
 
     const auto sum = sum_(pqp_column_(ColumnID{0}, DataType::Int, false, "number"));
     const auto aggregate_definition =
-        std::vector<std::shared_ptr<AggregateExpression>>{std::static_pointer_cast<AggregateExpression>(sum)};
+        std::vector<std::shared_ptr<WindowFunctionExpression>>{std::static_pointer_cast<WindowFunctionExpression>(sum)};
     const auto group_by = std::vector<ColumnID>{};
     const auto aggregate = std::make_shared<AggregateHash>(validate, aggregate_definition, group_by);
 

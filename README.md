@@ -52,13 +52,17 @@ Hyrise is developed for Linux (preferrably the most current Ubuntu version) and 
 ## Supported Benchmarks
 We support a number of benchmarks out of the box. This makes it easy to generate performance numbers without having to set up the data generation, loading CSVs, and finding a query runner. You can run them using the `./hyriseBenchmark*` binaries.
 
-| Benchmark  | Notes                                                                                                                    |
-| ---------- | ------------------------------------------------------------------------------------------------------------------------ |
-| TPC-DS     | [Query Plans](https://hyrise-ci.epic-hpi.de/job/hyrise/job/hyrise/job/master/lastStableBuild/artifact/query_plans/tpcds) |
-| TPC-H      | [Query Plans](https://hyrise-ci.epic-hpi.de/job/hyrise/job/hyrise/job/master/lastStableBuild/artifact/query_plans/tpch)  |
-| Join Order | [Query Plans](https://hyrise-ci.epic-hpi.de/job/hyrise/job/hyrise/job/master/lastStableBuild/artifact/query_plans/job)   |
-| JCC-H      | Call the hyriseBenchmarkTPCH binary with the -j flag.                                                                    | 
-| TPC-C      | In development, no proper optimization done yet                                                                          |
+Note that the query plans are generated in our CI pipeline with possibly many stages in parallel and different CI runs
+might be executed on different machines. Reported runtimes are not to be taken as solid benchmark performance numbers.
+
+| Benchmark   | Notes                                                                                                                    |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------ |
+| TPC-DS      | [Query Plans](https://hyrise-ci.epic-hpi.de/job/hyrise/job/hyrise/job/master/lastStableBuild/artifact/query_plans/tpcds) |
+| TPC-H       | [Query Plans](https://hyrise-ci.epic-hpi.de/job/hyrise/job/hyrise/job/master/lastStableBuild/artifact/query_plans/tpch)  |
+| Join Order  | [Query Plans](https://hyrise-ci.epic-hpi.de/job/hyrise/job/hyrise/job/master/lastStableBuild/artifact/query_plans/job)   |
+| Star Schema | [Query Plans](https://hyrise-ci.epic-hpi.de/job/hyrise/job/hyrise/job/master/lastStableBuild/artifact/query_plans/ssb)   |
+| JCC-H       | Call the hyriseBenchmarkTPCH binary with the -j flag.                                                                    |
+| TPC-C       | In development, no proper optimization done yet                                                                          |
 
 # Getting started
 
@@ -159,6 +163,7 @@ Contact: firstname.lastname@hpi.de
 ## Contributors
 -   Yannick   Bäumer
 -   Lawrence  Benson
+-   Jasper    Blum
 -   Lukas     Budach
 -   Timo      Djürken
 -   Alexander Dubrawski
@@ -166,6 +171,7 @@ Contact: firstname.lastname@hpi.de
 -   Leonard   Geier
 -   Richard   Ebeling
 -   Fabian    Engel
+-   Ben-Noah  Engelhaupt
 -   Moritz    Eyssen
 -   Martin    Fischer
 -   Christian Flach
@@ -175,12 +181,14 @@ Contact: firstname.lastname@hpi.de
 -   Pascal    Führlich
 -   Carl      Gödecken
 -   Adrian    Holfter
+-   Theresa   Hradilak
 -   Ben       Hurdelhey
 -   Sven      Ihde
 -   Ivan      Illic
 -   Jonathan  Janetzki
 -   Michael   Janke
 -   Max       Jendruk
+-   Tobias    Jordan
 -   David     Justen
 -   Youri     Kaminsky
 -   Marvin    Keller
@@ -197,12 +205,16 @@ Contact: firstname.lastname@hpi.de
 -   Julian    Menzler
 -   Torben    Meyer
 -   Leander   Neiß
+-   Vincent   Rahn
 -   Hendrik   Rätz
+-   Niklas    Riekenbrauck
 -   Alexander Riese
+-   Marc      Rosenau
 -   Johannes  Schneider
 -   David     Schumann
 -   Simon     Siegert
 -   Arthur    Silber
+-   Furkan    Simsek
 -   Toni      Stachewicz
 -   Daniel    Stolpe
 -   Jonathan  Striebel
@@ -210,6 +222,7 @@ Contact: firstname.lastname@hpi.de
 -   Hendrik   Tjabben
 -   Justin    Trautmann
 -   Carsten   Walther
+-   Leo       Wendt
 -   Lukas     Wenzel
 -   Fabian    Wiebe
 -   Tim       Zimmermann

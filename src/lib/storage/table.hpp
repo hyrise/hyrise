@@ -11,9 +11,12 @@
 #include "abstract_segment.hpp"
 #include "chunk.hpp"
 #include "memory/zero_allocator.hpp"
-#include "storage/index/index_statistics.hpp"
+#include "storage/constraints/foreign_key_constraint.hpp"
+#include "storage/constraints/table_key_constraint.hpp"
+#include "storage/constraints/table_order_constraint.hpp"
+#include "storage/index/chunk_index_statistics.hpp"
+#include "storage/index/table_index_statistics.hpp"
 #include "storage/table_column_definition.hpp"
-#include "table_key_constraint.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
@@ -35,10 +38,12 @@ class Table : private Noncopyable {
   // segments (TableType::References). The attribute target_chunk_size is only used for data tables. If it is unset,
   // Chunk::DEFAULT_SIZE is used. It must not be set for reference tables.
   Table(const TableColumnDefinitions& column_definitions, const TableType type,
-        const std::optional<ChunkOffset> target_chunk_size = std::nullopt, const UseMvcc use_mvcc = UseMvcc::No);
+        const std::optional<ChunkOffset> target_chunk_size = std::nullopt, const UseMvcc use_mvcc = UseMvcc::No,
+        pmr_vector<std::shared_ptr<PartialHashIndex>> const& table_indexes = {});
 
   Table(const TableColumnDefinitions& column_definitions, const TableType type,
-        std::vector<std::shared_ptr<Chunk>>&& chunks, const UseMvcc use_mvcc = UseMvcc::No);
+        std::vector<std::shared_ptr<Chunk>>&& chunks, const UseMvcc use_mvcc = UseMvcc::No,
+        pmr_vector<std::shared_ptr<PartialHashIndex>> const& table_indexes = {});
 
   /**
    * @defgroup Getter and convenience functions for the column definitions
@@ -183,29 +188,44 @@ class Table : private Noncopyable {
   void set_table_statistics(const std::shared_ptr<TableStatistics>& table_statistics);
   /** @} */
 
-  std::vector<IndexStatistics> indexes_statistics() const;
+  std::vector<ChunkIndexStatistics> chunk_indexes_statistics() const;
 
-  template <typename Index>
-  void create_index(const std::vector<ColumnID>& column_ids, const std::string& name = "") {
-    SegmentIndexType index_type = get_index_type_of<Index>();
-
-    const auto chunk_count = _chunks.size();
-    for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-      auto chunk = std::atomic_load(&_chunks[chunk_id]);
-      Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
-
-      chunk->create_index<Index>(column_ids);
-    }
-    IndexStatistics index_statistics = {column_ids, name, index_type};
-    _indexes.emplace_back(index_statistics);
-  }
+  std::vector<TableIndexStatistics> table_indexes_statistics() const;
 
   /**
-   * NOTE: Key constraints are currently NOT ENFORCED and are only used to develop optimization rules.
-   * We call them "soft" key constraints to draw attention to that.
+   * Creates a PartialHashIndex on a set of chunks of a specific column and adds the index to the
+   * table's index statistics. Table indexes can only be created on a set of immutable chunks.
+   */
+  void create_partial_hash_index(const ColumnID column_id, const std::vector<ChunkID>& chunk_ids);
+
+  template <typename Index>
+  void create_chunk_index(const std::vector<ColumnID>& column_ids, const std::string& name = "");
+
+  /**
+   * NOTE: constraints are currently NOT ENFORCED and are only used to develop optimization rules.
+   * We call them "soft" constraints to draw attention to that.
    */
   void add_soft_key_constraint(const TableKeyConstraint& table_key_constraint);
   const TableKeyConstraints& soft_key_constraints() const;
+
+  // Adds foreign key constraint so it can be retrieved by soft_foreign_key_constraints() of this table and by
+  // referenced_foreign_key_constraints() of the table that has the primary key columns.
+  void add_soft_foreign_key_constraint(const ForeignKeyConstraint& foreign_key_constraint);
+  const ForeignKeyConstraints& soft_foreign_key_constraints() const;
+  const ForeignKeyConstraints& referenced_foreign_key_constraints() const;
+
+  void add_soft_order_constraint(const TableOrderConstraint& table_order_constraint);
+  const TableOrderConstraints& soft_order_constraints() const;
+
+  /**
+   * Returns all table indexes created for this table.
+   */
+  pmr_vector<std::shared_ptr<PartialHashIndex>> get_table_indexes() const;
+
+  /**
+   * Returns all table indexes created for this table that index a specific ColumnID.
+   */
+  std::vector<std::shared_ptr<PartialHashIndex>> get_table_indexes(const ColumnID column_id) const;
 
   /**
    * For debugging purposes, makes an estimation about the memory used by this Table (including Chunk and Segments)
@@ -243,11 +263,22 @@ class Table : private Noncopyable {
   tbb::concurrent_vector<std::shared_ptr<Chunk>, ZeroAllocator<std::shared_ptr<Chunk>>> _chunks;
 
   TableKeyConstraints _table_key_constraints;
+  TableOrderConstraints _table_order_constraints;
+  ForeignKeyConstraints _foreign_key_constraints;
+
+  /**
+   * Stores the ForeignKeyCostraints of another table that reference this table. Since we translate foreign key
+   * constraints to inclusion dependencies (INDs) in the LQP, which we maintain on the primary key table's nodes, we
+   * need this information to maintain inclusion dependencies in the query plan.
+   */
+  ForeignKeyConstraints _referenced_foreign_key_constraints;
 
   std::vector<ColumnID> _value_clustered_by;
   std::shared_ptr<TableStatistics> _table_statistics;
   std::unique_ptr<std::mutex> _append_mutex;
-  std::vector<IndexStatistics> _indexes;
+  std::vector<ChunkIndexStatistics> _chunk_indexes_statistics;
+  std::vector<TableIndexStatistics> _table_indexes_statistics;
+  pmr_vector<std::shared_ptr<PartialHashIndex>> _table_indexes;
 
   // For tables with _type==Reference, the row count will not vary. As such, there is no need to iterate over all
   // chunks more than once.

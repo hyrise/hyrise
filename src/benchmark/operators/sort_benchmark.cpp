@@ -22,9 +22,9 @@ static std::shared_ptr<Table> generate_custom_table(const size_t row_count, cons
   constexpr auto NUM_COLUMNS = 2;
   constexpr auto LARGEST_VALUE = 10'000;
 
-  const std::vector<DataType> column_data_types = {NUM_COLUMNS, data_type};
+  const auto column_data_types = std::vector<DataType>{NUM_COLUMNS, data_type};
 
-  std::vector<ColumnSpecification> column_specifications = std::vector(
+  auto column_specifications = std::vector<ColumnSpecification>(
       NUM_COLUMNS, ColumnSpecification(ColumnDataDistribution::make_uniform_config(0.0, LARGEST_VALUE), data_type,
                                        SegmentEncodingSpec{EncodingType::Unencoded}, std::nullopt, null_ratio));
 

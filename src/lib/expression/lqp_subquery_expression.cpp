@@ -19,7 +19,7 @@ LQPSubqueryExpression::LQPSubqueryExpression(
       lqp(init_lqp),
       parameter_ids(init_parameter_ids) {
   Assert(parameter_ids.size() == parameter_expressions.size(),
-         "Need exactly as many ParameterIDs as parameter Expressions");
+         "Need exactly as many ParameterIDs as parameter Expressions.");
 }
 
 size_t LQPSubqueryExpression::parameter_count() const {
@@ -27,20 +27,20 @@ size_t LQPSubqueryExpression::parameter_count() const {
 }
 
 std::shared_ptr<AbstractExpression> LQPSubqueryExpression::parameter_expression(const size_t parameter_idx) const {
-  Assert(parameter_idx < parameter_count(), "Parameter index out of range");
+  Assert(parameter_idx < parameter_count(), "Parameter index out of range.");
   return arguments[parameter_idx];
 }
 
 std::shared_ptr<AbstractExpression> LQPSubqueryExpression::_on_deep_copy(
-    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& /*copied_ops*/) const {
   const auto lqp_copy = lqp->deep_copy();
 
   return std::make_shared<LQPSubqueryExpression>(lqp_copy, parameter_ids, expressions_deep_copy(arguments));
 }
 
 std::string LQPSubqueryExpression::description(const DescriptionMode mode) const {
-  std::stringstream stream;
-  stream << "SUBQUERY (LQP, " << lqp.get();
+  auto stream = std::stringstream{};
+  stream << "SUBQUERY (LQP, " << lqp;
 
   if (!arguments.empty()) {
     stream << ", Parameters: ";
@@ -60,13 +60,13 @@ std::string LQPSubqueryExpression::description(const DescriptionMode mode) const
 DataType LQPSubqueryExpression::data_type() const {
   const auto& output_expressions = lqp->output_expressions();
   Assert(output_expressions.size() == 1,
-         "Can only determine the DataType of SubqueryExpressions that return exactly one column");
+         "Can only determine the DataType of SubqueryExpressions that return exactly one column.");
   return output_expressions[0]->data_type();
 }
 
 bool LQPSubqueryExpression::_on_is_nullable_on_lqp(const AbstractLQPNode& /*node*/) const {
   Assert(lqp->output_expressions().size() == 1,
-         "Can only determine the nullability of SelectExpressions that return exactly one column");
+         "Can only determine the nullability of SelectExpressions that return exactly one column.");
   return lqp->is_column_nullable(ColumnID{0});
 }
 
@@ -76,15 +76,15 @@ bool LQPSubqueryExpression::is_correlated() const {
 
 bool LQPSubqueryExpression::_shallow_equals(const AbstractExpression& expression) const {
   DebugAssert(dynamic_cast<const LQPSubqueryExpression*>(&expression),
-              "Different expression type should have been caught by AbstractExpression::operator==");
+              "Different expression type should have been caught by AbstractExpression::operator==.");
   const auto& subquery_expression = static_cast<const LQPSubqueryExpression&>(expression);
   return *lqp == *subquery_expression.lqp && parameter_ids == subquery_expression.parameter_ids;
 }
 
 size_t LQPSubqueryExpression::_shallow_hash() const {
-  // Return 0, thus forcing a hash collision for LQPSubqueryExpressions and triggering a full equality check.
-  // TODO(moritz) LQP hashing will be introduced with the JoinOrdering optimizer, until then we live with these
-  //              collisions
+  // Return AbstractExpression::_shallow_hash() (i.e., 0), thus forcing a hash collision for LQPSubqueryExpressions and
+  // triggering a full equality check. Though we often hash entire query plans, we expect most plans to contain only few
+  // LQPSubqueryExpressions. Thus, these hash collisions should be fine.
   return AbstractExpression::_shallow_hash();
 }
 

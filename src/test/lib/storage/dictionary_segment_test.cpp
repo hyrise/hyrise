@@ -20,20 +20,9 @@ class StorageDictionarySegmentTest : public BaseTestWithParam<VectorCompressionT
   std::shared_ptr<ValueSegment<double>> vs_double = std::make_shared<ValueSegment<double>>();
 };
 
-auto dictionary_segment_test_formatter = [](const ::testing::TestParamInfo<VectorCompressionType> info) {
-  const auto vector_compression = info.param;
-
-  auto stream = std::stringstream{};
-  stream << vector_compression;
-  auto string = stream.str();
-  string.erase(std::remove_if(string.begin(), string.end(), [](char c) { return !std::isalnum(c); }), string.end());
-
-  return string;
-};
-
 INSTANTIATE_TEST_SUITE_P(VectorCompressionTypes, StorageDictionarySegmentTest,
                          ::testing::Values(VectorCompressionType::FixedWidthInteger, VectorCompressionType::BitPacking),
-                         dictionary_segment_test_formatter);
+                         enum_formatter<VectorCompressionType>);
 
 TEST_P(StorageDictionarySegmentTest, LowerUpperBound) {
   for (auto value = int32_t{0}; value <= 10; value += 2) {

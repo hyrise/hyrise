@@ -6,7 +6,6 @@
 #include <string>
 #include <vector>
 
-#include "constant_mappings.hpp"
 #include "cost_estimation/abstract_cost_estimator.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
@@ -37,8 +36,7 @@ bool is_predicate_style_node(const std::shared_ptr<AbstractLQPNode>& node) {
   // from multiple tables), the ValidateNode will still be able to operate on the semi join's output.
   if (node->type == LQPNodeType::Join) {
     const auto& join_node = static_cast<JoinNode&>(*node);
-    if (join_node.join_mode == JoinMode::Semi || join_node.join_mode == JoinMode::AntiNullAsTrue ||
-        join_node.join_mode == JoinMode::AntiNullAsFalse) {
+    if (is_semi_or_anti_join(join_node.join_mode)) {
       return true;
     }
   }
@@ -56,20 +54,20 @@ std::string PredicateReorderingRule::name() const {
 
 void PredicateReorderingRule::_apply_to_plan_without_subqueries(
     const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
-  DebugAssert(cost_estimator, "PredicateReorderingRule requires cost estimator to be set");
-  Assert(lqp_root->type == LQPNodeType::Root, "PredicateReorderingRule needs root to hold onto");
+  DebugAssert(cost_estimator, "PredicateReorderingRule requires cost estimator to be set.");
+  Assert(lqp_root->type == LQPNodeType::Root, "PredicateReorderingRule needs root to hold onto.");
 
   // We keep track of reordered predicate nodes, so that this rule touches predicate nodes once only.
-  std::unordered_set<std::shared_ptr<AbstractLQPNode>> reordered_predicate_nodes;
+  auto reordered_predicate_nodes = std::unordered_set<std::shared_ptr<AbstractLQPNode>>{};
   visit_lqp(lqp_root, [&](const auto& node) {
     if (is_predicate_style_node(node) && !reordered_predicate_nodes.contains(node)) {
-      std::vector<std::shared_ptr<AbstractLQPNode>> predicate_nodes;
+      auto predicate_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
 
-      // Gather adjacent PredicateNodes
+      // Gather adjacent PredicateNodes.
       auto current_node = node;
       while (is_predicate_style_node(current_node)) {
-        // Once a node has multiple outputs, we're not talking about a predicate chain anymore. However, a new chain can
-        // start here.
+        // Once a node has multiple outputs, we're not talking about a predicate chain anymore. However, a new chain
+        // can start here.
         if (current_node->outputs().size() > 1 && !predicate_nodes.empty()) {
           break;
         }
@@ -79,9 +77,8 @@ void PredicateReorderingRule::_apply_to_plan_without_subqueries(
       }
 
       /**
-       * A chain of predicates was found.
-       * Sort PredicateNodes in descending order with regards to the expected row_count
-       * Continue rule in deepest input
+       * A chain of predicates was found. Sort PredicateNodes in descending order with regards to the expected
+       * row_count. Continue rule in deepest input.
        */
       if (predicate_nodes.size() > 1) {
         _reorder_predicates(predicate_nodes);
@@ -128,11 +125,13 @@ void PredicateReorderingRule::_reorder_predicates(
   // Ensure that nodes are chained correctly
   nodes_and_cardinalities.back().first->set_left_input(input);
 
-  for (size_t output_idx = 0; output_idx < outputs.size(); ++output_idx) {
+  const auto output_count = outputs.size();
+  for (auto output_idx = size_t{0}; output_idx < output_count; ++output_idx) {
     outputs[output_idx]->set_input(input_sides[output_idx], nodes_and_cardinalities.front().first);
   }
 
-  for (size_t predicate_index = 0; predicate_index + 1 < nodes_and_cardinalities.size(); predicate_index++) {
+  const auto nodes_and_cardinalities_count = nodes_and_cardinalities.size();
+  for (auto predicate_index = size_t{0}; predicate_index + 1 < nodes_and_cardinalities_count; ++predicate_index) {
     nodes_and_cardinalities[predicate_index].first->set_left_input(nodes_and_cardinalities[predicate_index + 1].first);
   }
 }

@@ -78,7 +78,7 @@ TEST_F(StorageChunkTest, FinalizingAFinalizedChunkThrows) {
 }
 
 TEST_F(StorageChunkTest, FinalizeSetsMaxBeginCid) {
-  auto mvcc_data = std::make_shared<MvccData>(3, CommitID{0});
+  const auto mvcc_data = std::make_shared<MvccData>(3, CommitID{0});
   mvcc_data->set_begin_cid(ChunkOffset{0}, CommitID{1});
   mvcc_data->set_begin_cid(ChunkOffset{1}, CommitID{2});
   mvcc_data->set_begin_cid(ChunkOffset{2}, CommitID{3});
@@ -86,8 +86,8 @@ TEST_F(StorageChunkTest, FinalizeSetsMaxBeginCid) {
   chunk = std::make_shared<Chunk>(Segments({vs_int, vs_str}), mvcc_data);
   chunk->finalize();
 
-  auto mvcc_data_chunk = chunk->mvcc_data();
-  EXPECT_EQ(mvcc_data_chunk->max_begin_cid, 3);
+  const auto mvcc_data_chunk = chunk->mvcc_data();
+  EXPECT_EQ(mvcc_data_chunk->max_begin_cid.load(), 3);
 }
 
 TEST_F(StorageChunkTest, AddIndexByColumnID) {
@@ -118,12 +118,12 @@ TEST_F(StorageChunkTest, GetIndexByColumnID) {
   auto index_int_str =
       chunk->create_index<CompositeGroupKeyIndex>(std::vector<std::shared_ptr<const AbstractSegment>>{ds_int, ds_str});
 
-  EXPECT_EQ(chunk->get_index(SegmentIndexType::GroupKey, std::vector<ColumnID>{ColumnID{0}}), index_int);
-  EXPECT_EQ(chunk->get_index(SegmentIndexType::CompositeGroupKey, std::vector<ColumnID>{ColumnID{0}}), index_int_str);
-  EXPECT_EQ(chunk->get_index(SegmentIndexType::CompositeGroupKey, std::vector<ColumnID>{ColumnID{0}, ColumnID{1}}),
+  EXPECT_EQ(chunk->get_index(ChunkIndexType::GroupKey, std::vector<ColumnID>{ColumnID{0}}), index_int);
+  EXPECT_EQ(chunk->get_index(ChunkIndexType::CompositeGroupKey, std::vector<ColumnID>{ColumnID{0}}), index_int_str);
+  EXPECT_EQ(chunk->get_index(ChunkIndexType::CompositeGroupKey, std::vector<ColumnID>{ColumnID{0}, ColumnID{1}}),
             index_int_str);
-  EXPECT_EQ(chunk->get_index(SegmentIndexType::GroupKey, std::vector<ColumnID>{ColumnID{1}}), index_str);
-  EXPECT_EQ(chunk->get_index(SegmentIndexType::CompositeGroupKey, std::vector<ColumnID>{ColumnID{1}}), nullptr);
+  EXPECT_EQ(chunk->get_index(ChunkIndexType::GroupKey, std::vector<ColumnID>{ColumnID{1}}), index_str);
+  EXPECT_EQ(chunk->get_index(ChunkIndexType::CompositeGroupKey, std::vector<ColumnID>{ColumnID{1}}), nullptr);
 }
 
 TEST_F(StorageChunkTest, GetIndexBySegmentPointer) {
@@ -133,19 +133,19 @@ TEST_F(StorageChunkTest, GetIndexBySegmentPointer) {
   auto index_int_str =
       chunk->create_index<CompositeGroupKeyIndex>(std::vector<std::shared_ptr<const AbstractSegment>>{ds_int, ds_str});
 
-  EXPECT_EQ(chunk->get_index(SegmentIndexType::GroupKey, std::vector<std::shared_ptr<const AbstractSegment>>{ds_int}),
+  EXPECT_EQ(chunk->get_index(ChunkIndexType::GroupKey, std::vector<std::shared_ptr<const AbstractSegment>>{ds_int}),
             index_int);
-  EXPECT_EQ(chunk->get_index(SegmentIndexType::CompositeGroupKey,
-                             std::vector<std::shared_ptr<const AbstractSegment>>{ds_int}),
-            index_int_str);
-  EXPECT_EQ(chunk->get_index(SegmentIndexType::CompositeGroupKey,
+  EXPECT_EQ(
+      chunk->get_index(ChunkIndexType::CompositeGroupKey, std::vector<std::shared_ptr<const AbstractSegment>>{ds_int}),
+      index_int_str);
+  EXPECT_EQ(chunk->get_index(ChunkIndexType::CompositeGroupKey,
                              std::vector<std::shared_ptr<const AbstractSegment>>{ds_int, ds_str}),
             index_int_str);
-  EXPECT_EQ(chunk->get_index(SegmentIndexType::GroupKey, std::vector<std::shared_ptr<const AbstractSegment>>{ds_str}),
+  EXPECT_EQ(chunk->get_index(ChunkIndexType::GroupKey, std::vector<std::shared_ptr<const AbstractSegment>>{ds_str}),
             index_str);
-  EXPECT_EQ(chunk->get_index(SegmentIndexType::CompositeGroupKey,
-                             std::vector<std::shared_ptr<const AbstractSegment>>{ds_str}),
-            nullptr);
+  EXPECT_EQ(
+      chunk->get_index(ChunkIndexType::CompositeGroupKey, std::vector<std::shared_ptr<const AbstractSegment>>{ds_str}),
+      nullptr);
 }
 
 TEST_F(StorageChunkTest, GetIndexesByColumnIDs) {

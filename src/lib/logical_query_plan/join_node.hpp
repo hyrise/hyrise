@@ -32,11 +32,11 @@ class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
   bool is_column_nullable(const ColumnID column_id) const override;
 
   /**
-   * (1) Forwards left input node's unique constraints for JoinMode::Semi and JoinMode::AntiNullAsTrue/False
-   * (2) Discards all input unique constraints for Cross Joins, Multi-Predicate Joins and Non-Equi-Joins
-   * (3) Forwards selected input unique constraints for Inner and Outer Equi-Joins based on join column uniqueness.
+   * (1) Forwards left input node's unique column combinations for JoinMode::Semi and JoinMode::AntiNullAsTrue/False.
+   * (2) Discards all input UCCs for Cross Joins, Multi-Predicate Joins and Non-Equi-Joins.
+   * (3) Forwards selected input UCCs for Inner and Outer Equi-Joins based on join column uniqueness.
    */
-  std::shared_ptr<LQPUniqueConstraints> unique_constraints() const override;
+  UniqueColumnCombinations unique_column_combinations() const override;
 
   /**
    * (a) Semi- & Anti-Joins:
@@ -46,9 +46,9 @@ class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
    * (c) Inner-/Outer-Joins:
    *      - Forwards non-trivial FDs from both input nodes whose determinant expressions stay non-nullable.
    *      - Turns derived, trivial FDs from the left and/or right input node into non-trivial FDs if the underlying
-   *        unique constraints do not survive the join.
+   *        unique column combinations do not survive the join.
    */
-  std::vector<FunctionalDependency> non_trivial_functional_dependencies() const override;
+  FunctionalDependencies non_trivial_functional_dependencies() const override;
 
   const std::vector<std::shared_ptr<AbstractExpression>>& join_predicates() const;
 
@@ -111,19 +111,19 @@ class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
   std::optional<LQPInputSide> _prunable_input_side = std::nullopt;
 
   /**
-   * @return A subset of the given LQPUniqueConstraints @param left_unique_constraints and @param
-   *         right_unique_constraints that remains valid despite the join operation.
+   * @return A subset of the given UniqueColumnCombinations @param left_unique_column_combinations and @param
+   *         right_unique_column_combinations that remains valid despite the join operation.
    *         Depending on the join columns,
    *          (a) the left,
    *          (b) the right,
    *          (c) both or
    *          (d) none
-   *         of the given unique constraint sets are returned.
+   *         of the given unique column combinations sets are returned.
    * Please note: This helper function can be called for all joins, except for Semi- and Anti-Join types.
    */
-  std::shared_ptr<LQPUniqueConstraints> _output_unique_constraints(
-      const std::shared_ptr<LQPUniqueConstraints>& left_unique_constraints,
-      const std::shared_ptr<LQPUniqueConstraints>& right_unique_constraints) const;
+  UniqueColumnCombinations _output_unique_column_combinations(
+      const UniqueColumnCombinations& left_unique_column_combinations,
+      const UniqueColumnCombinations& right_unique_column_combinations) const;
 
   size_t _on_shallow_hash() const override;
   std::shared_ptr<AbstractLQPNode> _on_shallow_copy(LQPNodeMapping& node_mapping) const override;

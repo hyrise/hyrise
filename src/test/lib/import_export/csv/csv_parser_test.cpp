@@ -283,7 +283,7 @@ TEST_F(CsvParserTest, WithScheduler) {
 
   auto table = CsvParser::parse("resources/test_data/csv/float_int_large.csv");
 
-  TableColumnDefinitions column_definitions{{"b", DataType::Float, false}, {"a", DataType::Int, false}};
+  auto column_definitions = TableColumnDefinitions{{"b", DataType::Float, false}, {"a", DataType::Int, false}};
   auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{20});
 
   for (int i = 0; i < 100; ++i) {

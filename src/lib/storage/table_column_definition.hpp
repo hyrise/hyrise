@@ -1,7 +1,6 @@
 #pragma once
 
 #include "all_type_variant.hpp"
-#include "constant_mappings.hpp"
 #include "types.hpp"
 
 namespace hyrise {
@@ -27,7 +26,5 @@ inline std::ostream& operator<<(std::ostream& stream, const TableColumnDefinitio
 }
 
 using TableColumnDefinitions = std::vector<TableColumnDefinition>;
-
-TableColumnDefinitions concatenated(const TableColumnDefinitions& lhs, const TableColumnDefinitions& rhs);
 
 }  // namespace hyrise

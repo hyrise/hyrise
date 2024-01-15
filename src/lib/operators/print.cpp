@@ -9,7 +9,6 @@
 
 #include <boost/lexical_cast.hpp>
 
-#include "constant_mappings.hpp"
 #include "operators/table_wrapper.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "storage/abstract_encoded_segment.hpp"
@@ -44,8 +43,8 @@ const std::string& Print::name() const {
 
 std::shared_ptr<AbstractOperator> Print::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_left_input,
-    const std::shared_ptr<AbstractOperator>& copied_right_input,
-    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
+    const std::shared_ptr<AbstractOperator>& /*copied_right_input*/,
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& /*copied_ops*/) const {
   return std::make_shared<Print>(copied_left_input, _flags, _out);
 }
 
@@ -188,7 +187,6 @@ std::vector<uint16_t> Print::_column_string_widths(uint16_t min, uint16_t max,
       continue;
     }
 
-    const auto column_count = chunk->column_count();
     for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
       const auto chunk_size = chunk->size();
       for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
@@ -212,8 +210,8 @@ std::string Print::_truncate_cell(const AllTypeVariant& cell, uint16_t max_width
 }
 
 std::string Print::_segment_type(const std::shared_ptr<AbstractSegment>& segment) {
-  std::string segment_type;
-  segment_type.reserve(8);
+  auto segment_type = std::string{};
+  segment_type.reserve(10);
   segment_type += "<";
 
   if (std::dynamic_pointer_cast<BaseValueSegment>(segment)) {

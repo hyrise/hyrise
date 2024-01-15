@@ -1,7 +1,7 @@
 #include <filesystem>
 
 #include <boost/algorithm/string.hpp>
-#include <cxxopts.hpp>
+#include "cxxopts.hpp"
 
 #include "benchmark_runner.hpp"
 #include "cli_config_parser.hpp"
@@ -119,11 +119,11 @@ int main(int argc, char* argv[]) {
   ("q,queries", "Subset of queries to run as a comma separated list", cxxopts::value<std::string>()->default_value("all")); // NOLINT
   // clang-format on
 
-  std::shared_ptr<BenchmarkConfig> benchmark_config;
-  std::string query_path;
-  std::string table_path;
+  auto benchmark_config = std::shared_ptr<BenchmarkConfig>{};
+  auto query_path = std::string{};
+  auto table_path = std::string{};
   // Comma-separated query names or "all"
-  std::string queries_str;
+  auto queries_str = std::string{};
 
   // Parse command line args
   const auto cli_parse_result = cli_options.parse(argc, argv);
@@ -172,7 +172,7 @@ int main(int argc, char* argv[]) {
 
     // ["a", " b", " c", " d"] -> ["a", "b", "c", "d"]
     query_subset.emplace();
-    for (auto& query_name : query_subset_untrimmed) {
+    for (const auto& query_name : query_subset_untrimmed) {
       query_subset->emplace(boost::trim_copy(query_name));
     }
   }

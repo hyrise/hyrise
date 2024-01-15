@@ -4,7 +4,6 @@
 #include <string>
 #include <utility>
 
-#include "constant_mappings.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 
@@ -65,7 +64,7 @@ std::string AbstractJoinOperator::description(DescriptionMode description_mode) 
   };
 
   const auto separator = (description_mode == DescriptionMode::SingleLine ? ' ' : '\n');
-  std::stringstream stream;
+  auto stream = std::stringstream{};
   stream << AbstractOperator::description(description_mode);
   if (_mode == JoinMode::Semi && lqp_node && std::static_pointer_cast<const JoinNode>(lqp_node)->is_semi_reduction()) {
     stream << " (Semi Reduction)" << separator;

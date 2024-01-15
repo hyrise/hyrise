@@ -23,11 +23,13 @@ struct OperatorJoinPredicate;
  */
 class LQPTranslator {
  public:
-  virtual ~LQPTranslator() = default;
+  ~LQPTranslator() = default;
 
-  virtual std::shared_ptr<AbstractOperator> translate_node(const std::shared_ptr<AbstractLQPNode>& node) const;
+  std::shared_ptr<AbstractOperator> translate_node(const std::shared_ptr<AbstractLQPNode>& node) const;
 
  private:
+  std::shared_ptr<AbstractOperator> _translate_node_recursively(const std::shared_ptr<AbstractLQPNode>& node) const;
+
   std::shared_ptr<AbstractOperator> _translate_by_node_type(LQPNodeType type,
                                                             const std::shared_ptr<AbstractLQPNode>& node) const;
 
@@ -45,15 +47,16 @@ class LQPTranslator {
   std::shared_ptr<AbstractOperator> _translate_limit_node(const std::shared_ptr<AbstractLQPNode>& node) const;
   std::shared_ptr<AbstractOperator> _translate_insert_node(const std::shared_ptr<AbstractLQPNode>& node) const;
   std::shared_ptr<AbstractOperator> _translate_delete_node(const std::shared_ptr<AbstractLQPNode>& node) const;
-  std::shared_ptr<AbstractOperator> _translate_dummy_table_node(const std::shared_ptr<AbstractLQPNode>& node) const;
+  std::shared_ptr<AbstractOperator> _translate_dummy_table_node(const std::shared_ptr<AbstractLQPNode>& /*node*/) const;
   std::shared_ptr<AbstractOperator> _translate_static_table_node(const std::shared_ptr<AbstractLQPNode>& node) const;
   std::shared_ptr<AbstractOperator> _translate_update_node(const std::shared_ptr<AbstractLQPNode>& node) const;
   std::shared_ptr<AbstractOperator> _translate_union_node(const std::shared_ptr<AbstractLQPNode>& node) const;
-  std::shared_ptr<AbstractOperator> _translate_intersect_node(const std::shared_ptr<AbstractLQPNode>& node) const;
-  std::shared_ptr<AbstractOperator> _translate_except_node(const std::shared_ptr<AbstractLQPNode>& node) const;
+  std::shared_ptr<AbstractOperator> _translate_intersect_node(const std::shared_ptr<AbstractLQPNode>& /*node*/) const;
+  std::shared_ptr<AbstractOperator> _translate_except_node(const std::shared_ptr<AbstractLQPNode>& /*node*/) const;
   std::shared_ptr<AbstractOperator> _translate_change_meta_table_node(
       const std::shared_ptr<AbstractLQPNode>& node) const;
   std::shared_ptr<AbstractOperator> _translate_validate_node(const std::shared_ptr<AbstractLQPNode>& node) const;
+  std::shared_ptr<AbstractOperator> _translate_window_node(const std::shared_ptr<AbstractLQPNode>& node) const;
 
   // Maintenance operators
   std::shared_ptr<AbstractOperator> _translate_show_tables_node(const std::shared_ptr<AbstractLQPNode>& node) const;

@@ -17,7 +17,7 @@ const std::string& CreatePreparedPlan::name() const {
 }
 
 std::string CreatePreparedPlan::description(DescriptionMode description_mode) const {
-  std::stringstream stream;
+  auto stream = std::stringstream{};
   stream << AbstractOperator::description(description_mode) << " '" << _prepared_plan_name << "' {\n";
   stream << *_prepared_plan;
   stream << "}";
@@ -41,9 +41,9 @@ std::shared_ptr<const Table> CreatePreparedPlan::_on_execute() {
 void CreatePreparedPlan::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 std::shared_ptr<AbstractOperator> CreatePreparedPlan::_on_deep_copy(
-    const std::shared_ptr<AbstractOperator>& copied_left_input,
-    const std::shared_ptr<AbstractOperator>& copied_right_input,
-    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
+    const std::shared_ptr<AbstractOperator>& /*copied_left_input*/,
+    const std::shared_ptr<AbstractOperator>& /*copied_right_input*/,
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& /*copied_ops*/) const {
   return std::make_shared<CreatePreparedPlan>(_prepared_plan_name, _prepared_plan->deep_copy());
 }
 

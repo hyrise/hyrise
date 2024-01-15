@@ -1,6 +1,8 @@
 #include "types.hpp"
 
-#include "utils/make_bimap.hpp"
+#include <unordered_map>
+
+#include "magic_enum.hpp"
 
 namespace hyrise {
 
@@ -64,9 +66,9 @@ PredicateCondition flip_predicate_condition(const PredicateCondition predicate_c
     case PredicateCondition::NotLike:
     case PredicateCondition::IsNull:
     case PredicateCondition::IsNotNull:
-      Fail("Can't flip specified PredicateCondition");
+      Fail("Cannot flip specified PredicateCondition.");
   }
-  Fail("Invalid enum value");
+  Fail("Invalid enum value.");
 }
 
 PredicateCondition inverse_predicate_condition(const PredicateCondition predicate_condition) {
@@ -97,7 +99,7 @@ PredicateCondition inverse_predicate_condition(const PredicateCondition predicat
       return PredicateCondition::In;
 
     default:
-      Fail("Can't inverse the specified PredicateCondition");
+      Fail("Cannot inverse the specified PredicateCondition.");
   }
 }
 
@@ -112,7 +114,7 @@ std::pair<PredicateCondition, PredicateCondition> between_to_conditions(const Pr
     case PredicateCondition::BetweenExclusive:
       return {PredicateCondition::GreaterThan, PredicateCondition::LessThan};
     default:
-      Fail("Input was not a between condition");
+      Fail("Input was not a between condition.");
   }
 }
 
@@ -134,71 +136,50 @@ PredicateCondition conditions_to_between(const PredicateCondition lower, const P
       return PredicateCondition::BetweenInclusive;
     }
   }
-  Fail("Unexpected PredicateCondition");
+  Fail("Unexpected PredicateCondition.");
 }
 
-const boost::bimap<PredicateCondition, std::string> predicate_condition_to_string =
-    make_bimap<PredicateCondition, std::string>({
-        {PredicateCondition::Equals, "="},
-        {PredicateCondition::NotEquals, "!="},
-        {PredicateCondition::LessThan, "<"},
-        {PredicateCondition::LessThanEquals, "<="},
-        {PredicateCondition::GreaterThan, ">"},
-        {PredicateCondition::GreaterThanEquals, ">="},
-        {PredicateCondition::BetweenInclusive, "BETWEEN INCLUSIVE"},
-        {PredicateCondition::BetweenLowerExclusive, "BETWEEN LOWER EXCLUSIVE"},
-        {PredicateCondition::BetweenUpperExclusive, "BETWEEN UPPER EXCLUSIVE"},
-        {PredicateCondition::BetweenExclusive, "BETWEEN EXCLUSIVE"},
-        {PredicateCondition::Like, "LIKE"},
-        {PredicateCondition::NotLike, "NOT LIKE"},
-        {PredicateCondition::In, "IN"},
-        {PredicateCondition::NotIn, "NOT IN"},
-        {PredicateCondition::IsNull, "IS NULL"},
-        {PredicateCondition::IsNotNull, "IS NOT NULL"},
-    });
-
-const boost::bimap<SortMode, std::string> sort_mode_to_string = make_bimap<SortMode, std::string>({
-    {SortMode::Ascending, "Ascending"},
-    {SortMode::Descending, "Descending"},
-});
-
-const boost::bimap<JoinMode, std::string> join_mode_to_string = make_bimap<JoinMode, std::string>({
-    {JoinMode::Cross, "Cross"},
-    {JoinMode::Inner, "Inner"},
-    {JoinMode::Left, "Left"},
-    {JoinMode::FullOuter, "FullOuter"},
-    {JoinMode::Right, "Right"},
-    {JoinMode::Semi, "Semi"},
-    {JoinMode::AntiNullAsTrue, "AntiNullAsTrue"},
-    {JoinMode::AntiNullAsFalse, "AntiNullAsFalse"},
-});
-
-const boost::bimap<TableType, std::string> table_type_to_string =
-    make_bimap<TableType, std::string>({{TableType::Data, "Data"}, {TableType::References, "References"}});
-
-const boost::bimap<SetOperationMode, std::string> set_operation_mode_to_string =
-    make_bimap<SetOperationMode, std::string>({{SetOperationMode::Unique, "Unique"},
-                                               {SetOperationMode::All, "All"},
-                                               {SetOperationMode::Positions, "Positions"}});
+bool is_semi_or_anti_join(const JoinMode join_mode) {
+  return join_mode == JoinMode::Semi || join_mode == JoinMode::AntiNullAsFalse || join_mode == JoinMode::AntiNullAsTrue;
+}
 
 std::ostream& operator<<(std::ostream& stream, PredicateCondition predicate_condition) {
-  return stream << predicate_condition_to_string.left.at(predicate_condition);
+  static const auto predicate_condition_to_string = std::unordered_map<PredicateCondition, std::string>({
+      {PredicateCondition::Equals, "="},
+      {PredicateCondition::NotEquals, "!="},
+      {PredicateCondition::LessThan, "<"},
+      {PredicateCondition::LessThanEquals, "<="},
+      {PredicateCondition::GreaterThan, ">"},
+      {PredicateCondition::GreaterThanEquals, ">="},
+      {PredicateCondition::BetweenInclusive, "BETWEEN INCLUSIVE"},
+      {PredicateCondition::BetweenLowerExclusive, "BETWEEN LOWER EXCLUSIVE"},
+      {PredicateCondition::BetweenUpperExclusive, "BETWEEN UPPER EXCLUSIVE"},
+      {PredicateCondition::BetweenExclusive, "BETWEEN EXCLUSIVE"},
+      {PredicateCondition::Like, "LIKE"},
+      {PredicateCondition::NotLike, "NOT LIKE"},
+      {PredicateCondition::In, "IN"},
+      {PredicateCondition::NotIn, "NOT IN"},
+      {PredicateCondition::IsNull, "IS NULL"},
+      {PredicateCondition::IsNotNull, "IS NOT NULL"},
+  });
+
+  return stream << predicate_condition_to_string.at(predicate_condition);
 }
 
 std::ostream& operator<<(std::ostream& stream, SortMode sort_mode) {
-  return stream << sort_mode_to_string.left.at(sort_mode);
+  return stream << magic_enum::enum_name(sort_mode);
 }
 
 std::ostream& operator<<(std::ostream& stream, JoinMode join_mode) {
-  return stream << join_mode_to_string.left.at(join_mode);
+  return stream << magic_enum::enum_name(join_mode);
 }
 
 std::ostream& operator<<(std::ostream& stream, SetOperationMode set_operation_mode) {
-  return stream << set_operation_mode_to_string.left.at(set_operation_mode);
+  return stream << magic_enum::enum_name(set_operation_mode);
 }
 
 std::ostream& operator<<(std::ostream& stream, TableType table_type) {
-  return stream << table_type_to_string.left.at(table_type);
+  return stream << magic_enum::enum_name(table_type);
 }
 
 }  // namespace hyrise

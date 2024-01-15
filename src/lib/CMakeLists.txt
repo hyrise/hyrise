@@ -17,8 +17,6 @@ set(
     concurrency/transaction_context.hpp
     concurrency/transaction_manager.cpp
     concurrency/transaction_manager.hpp
-    constant_mappings.cpp
-    constant_mappings.hpp
     cost_estimation/abstract_cost_estimator.cpp
     cost_estimation/abstract_cost_estimator.hpp
     cost_estimation/cost_estimator_logical.cpp
@@ -27,8 +25,6 @@ set(
     expression/abstract_expression.hpp
     expression/abstract_predicate_expression.cpp
     expression/abstract_predicate_expression.hpp
-    expression/aggregate_expression.cpp
-    expression/aggregate_expression.hpp
     expression/arithmetic_expression.cpp
     expression/arithmetic_expression.hpp
     expression/between_expression.cpp
@@ -83,6 +79,10 @@ set(
     expression/unary_minus_expression.hpp
     expression/value_expression.cpp
     expression/value_expression.hpp
+    expression/window_expression.cpp
+    expression/window_expression.hpp
+    expression/window_function_expression.cpp
+    expression/window_function_expression.hpp
     hyrise.cpp
     hyrise.hpp
     import_export/binary/binary_parser.cpp
@@ -115,6 +115,10 @@ set(
     logical_query_plan/create_table_node.hpp
     logical_query_plan/create_view_node.cpp
     logical_query_plan/create_view_node.hpp
+    logical_query_plan/data_dependencies/functional_dependency.cpp
+    logical_query_plan/data_dependencies/functional_dependency.hpp
+    logical_query_plan/data_dependencies/unique_column_combination.cpp
+    logical_query_plan/data_dependencies/unique_column_combination.hpp
     logical_query_plan/delete_node.cpp
     logical_query_plan/delete_node.hpp
     logical_query_plan/drop_table_node.cpp
@@ -128,8 +132,6 @@ set(
     logical_query_plan/except_node.hpp
     logical_query_plan/export_node.cpp
     logical_query_plan/export_node.hpp
-    logical_query_plan/functional_dependency.cpp
-    logical_query_plan/functional_dependency.hpp
     logical_query_plan/import_node.cpp
     logical_query_plan/import_node.hpp
     logical_query_plan/insert_node.cpp
@@ -144,8 +146,6 @@ set(
     logical_query_plan/logical_plan_root_node.hpp
     logical_query_plan/lqp_translator.cpp
     logical_query_plan/lqp_translator.hpp
-    logical_query_plan/lqp_unique_constraint.cpp
-    logical_query_plan/lqp_unique_constraint.hpp
     logical_query_plan/lqp_utils.cpp
     logical_query_plan/lqp_utils.hpp
     logical_query_plan/mock_node.cpp
@@ -166,6 +166,8 @@ set(
     logical_query_plan/update_node.hpp
     logical_query_plan/validate_node.cpp
     logical_query_plan/validate_node.hpp
+    logical_query_plan/window_node.cpp
+    logical_query_plan/window_node.hpp
     lossless_cast.cpp
     lossless_cast.hpp
     lossy_cast.hpp
@@ -182,7 +184,7 @@ set(
     operators/abstract_read_only_operator.hpp
     operators/abstract_read_write_operator.cpp
     operators/abstract_read_write_operator.hpp
-    operators/aggregate/aggregate_traits.hpp
+    operators/aggregate/window_function_traits.hpp
     operators/aggregate_hash.cpp
     operators/aggregate_hash.hpp
     operators/aggregate_sort.cpp
@@ -205,6 +207,7 @@ set(
     operators/index_scan.hpp
     operators/insert.cpp
     operators/insert.hpp
+    operators/join_helper/join_output_writing.cpp
     operators/join_helper/join_output_writing.hpp
     operators/join_hash.cpp
     operators/join_hash.hpp
@@ -240,6 +243,7 @@ set(
     operators/operator_performance_data.hpp
     operators/operator_scan_predicate.cpp
     operators/operator_scan_predicate.hpp
+    operators/pqp_utils.cpp
     operators/pqp_utils.hpp
     operators/print.cpp
     operators/print.hpp
@@ -346,8 +350,11 @@ set(
     scheduler/node_queue_scheduler.hpp
     scheduler/operator_task.cpp
     scheduler/operator_task.hpp
+    scheduler/shutdown_task.cpp
+    scheduler/shutdown_task.hpp
     scheduler/task_queue.cpp
     scheduler/task_queue.hpp
+    scheduler/task_utils.hpp
     scheduler/topology.cpp
     scheduler/topology.hpp
     scheduler/worker.cpp
@@ -432,14 +439,21 @@ set(
     storage/base_segment_accessor.hpp
     storage/base_segment_encoder.hpp
     storage/base_value_segment.hpp
-    storage/abstract_table_constraint.cpp
-    storage/abstract_table_constraint.hpp
-    storage/table_key_constraint.cpp
-    storage/table_key_constraint.hpp
+    storage/buffer/frame.cpp
+    storage/buffer/frame.hpp
+    storage/buffer/page_id.hpp
     storage/chunk.cpp
     storage/chunk.hpp
     storage/chunk_encoder.cpp
     storage/chunk_encoder.hpp
+    storage/constraints/abstract_table_constraint.cpp
+    storage/constraints/abstract_table_constraint.hpp
+    storage/constraints/foreign_key_constraint.cpp
+    storage/constraints/foreign_key_constraint.hpp
+    storage/constraints/table_key_constraint.cpp
+    storage/constraints/table_key_constraint.hpp
+    storage/constraints/table_order_constraint.cpp
+    storage/constraints/table_order_constraint.hpp
     storage/create_iterable_from_reference_segment.ipp
     storage/create_iterable_from_segment.hpp
     storage/create_iterable_from_segment.ipp
@@ -461,8 +475,8 @@ set(
     storage/frame_of_reference_segment.hpp
     storage/frame_of_reference_segment/frame_of_reference_encoder.hpp
     storage/frame_of_reference_segment/frame_of_reference_segment_iterable.hpp
-    storage/index/abstract_index.cpp
-    storage/index/abstract_index.hpp
+    storage/index/abstract_chunk_index.cpp
+    storage/index/abstract_chunk_index.hpp
     storage/index/adaptive_radix_tree/adaptive_radix_tree_index.cpp
     storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp
     storage/index/adaptive_radix_tree/adaptive_radix_tree_nodes.cpp
@@ -483,9 +497,19 @@ set(
     storage/index/group_key/variable_length_key_proxy.hpp
     storage/index/group_key/variable_length_key_store.cpp
     storage/index/group_key/variable_length_key_store.hpp
-    storage/index/index_statistics.cpp
-    storage/index/index_statistics.hpp
-    storage/index/segment_index_type.hpp
+    storage/index/chunk_index_statistics.cpp
+    storage/index/chunk_index_statistics.hpp
+    storage/index/table_index_statistics.cpp
+    storage/index/table_index_statistics.hpp
+    storage/index/partial_hash/flat_map_iterator.cpp
+    storage/index/partial_hash/flat_map_iterator.hpp
+    storage/index/partial_hash/flat_map_iterator_impl.cpp
+    storage/index/partial_hash/flat_map_iterator_impl.hpp
+    storage/index/partial_hash/partial_hash_index.cpp
+    storage/index/partial_hash/partial_hash_index.hpp
+    storage/index/partial_hash/partial_hash_index_impl.cpp
+    storage/index/partial_hash/partial_hash_index_impl.hpp
+    storage/index/chunk_index_type.hpp
     storage/lqp_view.cpp
     storage/lqp_view.hpp
     storage/lz4_segment.cpp
@@ -540,6 +564,7 @@ set(
     storage/vector_compression/base_compressed_vector.hpp
     storage/vector_compression/base_vector_compressor.hpp
     storage/vector_compression/base_vector_decompressor.hpp
+    storage/vector_compression/compressed_vector_type.cpp
     storage/vector_compression/compressed_vector_type.hpp
     storage/vector_compression/fixed_width_integer/fixed_width_integer_compressor.cpp
     storage/vector_compression/fixed_width_integer/fixed_width_integer_compressor.hpp
@@ -567,12 +592,9 @@ set(
     utils/abstract_plugin.hpp
     utils/aligned_size.hpp
     utils/assert.hpp
-    utils/boost_bimap_core_override.hpp
-    utils/boost_curry_override.hpp
+    utils/atomic_max.hpp
     utils/check_table_equal.cpp
     utils/check_table_equal.hpp
-    utils/column_ids_after_pruning.cpp
-    utils/column_ids_after_pruning.hpp
     utils/copyable_atomic.hpp
     utils/date_time_utils.cpp
     utils/date_time_utils.hpp
@@ -591,6 +613,7 @@ set(
     utils/lossless_predicate_cast.cpp
     utils/lossless_predicate_cast.hpp
     utils/make_bimap.hpp
+    utils/map_prunable_subquery_predicates.hpp
     utils/meta_table_manager.cpp
     utils/meta_table_manager.hpp
     utils/meta_tables/abstract_meta_table.cpp
@@ -629,6 +652,8 @@ set(
     utils/plugin_manager.hpp
     utils/print_utils.cpp
     utils/print_utils.hpp
+    utils/pruning_utils.cpp
+    utils/pruning_utils.hpp
     utils/settings/abstract_setting.cpp
     utils/settings/abstract_setting.hpp
     utils/settings_manager.cpp
@@ -721,11 +746,13 @@ target_link_libraries_system(
     hyrise_impl
 
     ${BOOST_LIBS}
+    concurrentqueue
     cpp-btree
     cxxopts
     flat-hash-map
     nlohmann_json::nlohmann_json
     robin_map
+    sparse_map
     SQLite::SQLite3
     tbb
 )
@@ -741,14 +768,12 @@ target_include_directories(hyrise_impl PUBLIC ${CMAKE_BINARY_DIR})
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 target_compile_options(hyrise_impl PUBLIC -Xclang -fno-pch-timestamp)
 endif()
-if(NOT ${CMAKE_VERSION} VERSION_LESS "3.16.0")
-    target_precompile_headers(hyrise_impl PRIVATE
-      all_parameter_variant.hpp
-      storage/create_iterable_from_segment.hpp
-      storage/table.hpp
-      types.hpp
-    )
-endif()
+target_precompile_headers(hyrise_impl PRIVATE
+  all_parameter_variant.hpp
+  storage/create_iterable_from_segment.hpp
+  storage/table.hpp
+  types.hpp
+)
 
 # -fPIC generates position independent code which is necessary because plugins might access hyrise functions.
 target_compile_options(hyrise_impl PRIVATE -fPIC)

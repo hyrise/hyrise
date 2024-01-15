@@ -13,7 +13,7 @@ std::string format_duration(const std::chrono::nanoseconds& total_nanoseconds) {
   constexpr auto TIME_UNIT_ORDER =
       boost::hana::to_tuple(boost::hana::tuple_t<std::chrono::minutes, std::chrono::seconds, std::chrono::milliseconds,
                                                  std::chrono::microseconds, std::chrono::nanoseconds>);
-  const std::vector<std::string> unit_strings = {" min", " s", " ms", " µs", " ns"};
+  const auto unit_strings = std::vector<std::string>{" min", " s", " ms", " µs", " ns"};
 
   auto remaining_nanoseconds = total_nanoseconds;
   auto floor_durations = std::vector<uint64_t>{};

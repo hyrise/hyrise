@@ -67,7 +67,7 @@ bool StorageManager::has_table(const std::string& name) const {
 }
 
 std::vector<std::string> StorageManager::table_names() const {
-  std::vector<std::string> table_names;
+  auto table_names = std::vector<std::string>{};
   table_names.reserve(_tables.size());
 
   for (const auto& table_item : _tables) {
@@ -78,6 +78,7 @@ std::vector<std::string> StorageManager::table_names() const {
     table_names.emplace_back(table_item.first);
   }
 
+  std::sort(table_names.begin(), table_names.end());
   return table_names;
 }
 
@@ -221,7 +222,8 @@ void StorageManager::export_all_tables_as_csv(const std::string& path) {
       auto table_wrapper = std::make_shared<TableWrapper>(table);
       table_wrapper->execute();
 
-      auto export_csv = std::make_shared<Export>(table_wrapper, path + "/" + name + ".csv", FileType::Csv);  // NOLINT
+      // NOLINTNEXTLINE(performance-inefficient-string-concatenation): not worth it, no performance-critical path.
+      auto export_csv = std::make_shared<Export>(table_wrapper, path + "/" + name + ".csv", FileType::Csv);
       export_csv->execute();
     });
     tasks.push_back(job_task);

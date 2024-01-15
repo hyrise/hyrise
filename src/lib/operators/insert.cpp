@@ -1,17 +1,12 @@
 #include "insert.hpp"
 
-#include <algorithm>
-#include <memory>
-#include <string>
-#include <vector>
-
 #include "concurrency/transaction_context.hpp"
 #include "hyrise.hpp"
 #include "resolve_type.hpp"
 #include "storage/abstract_encoded_segment.hpp"
 #include "storage/segment_iterate.hpp"
 #include "storage/value_segment.hpp"
-#include "utils/assert.hpp"
+#include "utils/atomic_max.hpp"
 
 namespace {
 
@@ -50,7 +45,7 @@ void copy_value_range(const std::shared_ptr<const AbstractSegment>& source_abstr
       }
     }
   } else {
-    segment_with_iterators<T>(*source_abstract_segment, [&](const auto source_begin, const auto source_end) {
+    segment_with_iterators<T>(*source_abstract_segment, [&](const auto source_begin, const auto /*source_end*/) {
       auto source_iter = source_begin + source_begin_offset;
       auto target_iter = target_values.begin() + target_begin_offset;
 
@@ -232,6 +227,8 @@ void Insert::_on_commit_records(const CommitID cid) {
       mvcc_data->set_tid(chunk_offset, TransactionID{0}, std::memory_order_relaxed);
     }
 
+    set_atomic_max(mvcc_data->max_begin_cid, cid);
+
     // This fence ensures that the changes to TID (which are not sequentially consistent) are visible to other threads.
     std::atomic_thread_fence(std::memory_order_release);
   }
@@ -280,8 +277,8 @@ void Insert::_on_rollback_records() {
 
 std::shared_ptr<AbstractOperator> Insert::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_left_input,
-    const std::shared_ptr<AbstractOperator>& copied_right_input,
-    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
+    const std::shared_ptr<AbstractOperator>& /*copied_right_input*/,
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& /*copied_ops*/) const {
   return std::make_shared<Insert>(_target_table_name, copied_left_input);
 }
 

@@ -79,3 +79,13 @@
    ...
    fun:_ZN7testing8internal20PrintBytesInObjectToEPKhmPSo
 }
+
+# Similar to the suppression introduced via https://github.com/hyrise/hyrise/pull/1851#issuecomment-618937388, we need
+# to suppress a conditional jump check. Seems to be an issue with Valgrind and GoogleTest, see
+# https://github.com/google/googletest/issues/3805.
+{
+   <PR_2448_memcheck>>
+   Memcheck:Value8
+   ...
+   fun:_ZN7testing8internal20PrintBytesInObjectToEPKhmPSo
+}

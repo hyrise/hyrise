@@ -10,14 +10,13 @@
 #include <vector>
 
 #include "bytell_hash_map.hpp"
+
 #include "hyrise.hpp"
 #include "join_hash/join_hash_steps.hpp"
 #include "join_hash/join_hash_traits.hpp"
 #include "join_helper/join_output_writing.hpp"
-#include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
 #include "type_comparison.hpp"
-#include "utils/assert.hpp"
 #include "utils/format_duration.hpp"
 #include "utils/timer.hpp"
 
@@ -48,14 +47,14 @@ const std::string& JoinHash::name() const {
 std::shared_ptr<AbstractOperator> JoinHash::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_left_input,
     const std::shared_ptr<AbstractOperator>& copied_right_input,
-    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& /*copied_ops*/) const {
   return std::make_shared<JoinHash>(copied_left_input, copied_right_input, _mode, _primary_predicate,
                                     _secondary_predicates, _radix_bits);
 }
 
 void JoinHash::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
-size_t JoinHash::calculate_radix_bits(const size_t build_side_size, const size_t probe_side_size, const JoinMode mode) {
+size_t JoinHash::calculate_radix_bits(const size_t build_side_size, const size_t probe_side_size) {
   /*
     The number of radix bits is used to determine the number of build partitions. The idea is to size the partitions in
     a way that keeps the whole hash map cache resident. We aim for the largest unshared cache (for most Intel systems
@@ -108,10 +107,10 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
                    left_input_table()->column_data_type(_primary_predicate.column_ids.first),
                    right_input_table()->column_data_type(_primary_predicate.column_ids.second),
                    !_secondary_predicates.empty(), left_input_table()->type(), right_input_table()->type()}),
-         "JoinHash doesn't support these parameters");
+         "JoinHash does not support these parameters.");
 
-  std::shared_ptr<const Table> build_input_table;
-  std::shared_ptr<const Table> probe_input_table;
+  auto build_input_table = std::shared_ptr<const Table>{};
+  auto probe_input_table = std::shared_ptr<const Table>{};
   auto build_column_id = ColumnID{};
   auto probe_column_id = ColumnID{};
 
@@ -164,7 +163,7 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
   // For other join modes, we need to check which side has been chosen as the probe side (see variable
   // `build_hash_table_for_right_input` for more details).
   auto output_column_order = OutputColumnOrder{};
-  if (_mode == JoinMode::Semi || _mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse) {
+  if (is_semi_or_anti_join(_mode)) {
     output_column_order = OutputColumnOrder::RightOnly;
   } else if (build_hash_table_for_right_input) {
     output_column_order = OutputColumnOrder::RightFirstLeftSecond;
@@ -185,7 +184,7 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
 
       if constexpr (BOTH_ARE_STRING || NEITHER_IS_STRING) {
         if (!_radix_bits) {
-          _radix_bits = calculate_radix_bits(build_input_table->row_count(), probe_input_table->row_count(), _mode);
+          _radix_bits = calculate_radix_bits(build_input_table->row_count(), probe_input_table->row_count());
         }
 
         // It needs to be ensured that the build partitions do not get too large, because the used offsets in the
@@ -276,17 +275,17 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
 
     // Containers used to store histograms for (potentially subsequent) radix partitioning step (in cases
     // _radix_bits > 0). Created during materialization step.
-    std::vector<std::vector<size_t>> histograms_build_column;
-    std::vector<std::vector<size_t>> histograms_probe_column;
+    auto histograms_build_column = std::vector<std::vector<size_t>>{};
+    auto histograms_probe_column = std::vector<std::vector<size_t>>{};
 
     // Output containers of materialization step. Uses the same output type as the radix partitioning step to allow
     // shortcut for _radix_bits == 0 (in this case, we can skip the partitioning altogether).
-    RadixContainer<BuildColumnType> materialized_build_column;
-    RadixContainer<ProbeColumnType> materialized_probe_column;
+    auto materialized_build_column = RadixContainer<BuildColumnType>{};
+    auto materialized_probe_column = RadixContainer<ProbeColumnType>{};
 
     // Containers for potential (skipped when build side small) radix partitioning step
-    RadixContainer<BuildColumnType> radix_build_column;
-    RadixContainer<ProbeColumnType> radix_probe_column;
+    auto radix_build_column = RadixContainer<BuildColumnType>{};
+    auto radix_probe_column = RadixContainer<ProbeColumnType>{};
 
     // HashTables for the build column, one for each partition
     std::vector<std::optional<PosHashTable<HashedType>>> hash_tables;
@@ -350,7 +349,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
       }
     };
 
-    Timer timer_materialization;
+    auto timer_materialization = Timer{};
     if (_build_input_table->row_count() < _probe_input_table->row_count()) {
       // When materializing the first side (here: the build side), we do not yet have a Bloom filter. To keep the number
       // of code paths low, materialize_*_side always expects a Bloom filter. For the first step, we thus pass in a
@@ -385,7 +384,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
      *    within partition_by_radix.
      */
     if (_radix_bits > 0) {
-      Timer timer_clustering;
+      auto timer_clustering = Timer{};
       auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
 
       jobs.emplace_back(std::make_shared<JobTask>([&]() {
@@ -436,9 +435,8 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
      *    We use the probe side's Bloom filter to exclude values from the hash table that will not be accessed in the
      *    probe step.
      */
-    Timer timer_hash_map_building;
-    if (_secondary_predicates.empty() &&
-        (_mode == JoinMode::Semi || _mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse)) {
+    auto timer_hash_map_building = Timer{};
+    if (_secondary_predicates.empty() && is_semi_or_anti_join(_mode)) {
       hash_tables = build<BuildColumnType, HashedType>(radix_build_column, JoinHashBuildMode::ExistenceOnly,
                                                        _radix_bits, probe_side_bloom_filter);
     } else {
@@ -474,7 +472,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
       for (const auto& build_side_partition : radix_build_column) {
         for (const auto null_value : build_side_partition.null_values) {
           if (null_value) {
-            Timer timer_output_writing;
+            auto timer_output_writing = Timer{};
             const auto result = _join_hash._build_output_table({});
             _performance_data.set_step_runtime(OperatorSteps::OutputWriting, timer_output_writing.lap());
             return result;
@@ -488,8 +486,8 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
     /**
      * 4. Probe step
      */
-    std::vector<RowIDPosList> build_side_pos_lists;
-    std::vector<RowIDPosList> probe_side_pos_lists;
+    auto build_side_pos_lists = std::vector<RowIDPosList>{};
+    auto probe_side_pos_lists = std::vector<RowIDPosList>{};
     const size_t partition_count = radix_probe_column.size();
     build_side_pos_lists.resize(partition_count);
     probe_side_pos_lists.resize(partition_count);

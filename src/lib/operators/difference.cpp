@@ -28,7 +28,7 @@ const std::string& Difference::name() const {
 std::shared_ptr<AbstractOperator> Difference::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_left_input,
     const std::shared_ptr<AbstractOperator>& copied_right_input,
-    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& /*copied_ops*/) const {
   return std::make_shared<Difference>(copied_left_input, copied_right_input);
 }
 
@@ -139,7 +139,7 @@ std::shared_ptr<const Table> Difference::_on_execute() {
           if (pos_list_pair.first) {
             pos_list_pair.second->emplace_back((*pos_list_pair.first)[chunk_offset]);
           } else {
-            pos_list_pair.second->emplace_back(RowID{chunk_id, chunk_offset});
+            pos_list_pair.second->emplace_back(chunk_id, chunk_offset);
           }
         }
       }

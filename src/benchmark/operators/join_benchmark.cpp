@@ -22,7 +22,7 @@ constexpr auto TABLE_SIZE_MEDIUM = size_t{100'000};
 constexpr auto TABLE_SIZE_BIG = size_t{10'000'000};
 
 void clear_cache() {
-  std::vector<int> clear = std::vector<int>();
+  auto clear = std::vector<int>();
   clear.resize(500 * 1000 * 1000, 42);
   const auto clear_cache_size = clear.size();
   for (auto index = size_t{0}; index < clear_cache_size; index++) {
@@ -38,7 +38,7 @@ std::shared_ptr<TableWrapper> generate_table(const size_t number_of_rows) {
   auto table_generator = std::make_shared<SyntheticTableGenerator>();
 
   const auto chunk_size = static_cast<ChunkOffset>(number_of_rows / NUMBER_OF_CHUNKS);
-  Assert(chunk_size > 0, "The chunk size is 0 or less, can not generate such a table");
+  Assert(chunk_size > 0, "The chunk size is 0 or less, cannot generate such a table.");
 
   auto table =
       table_generator->generate_table(1ul, number_of_rows, chunk_size, SegmentEncodingSpec{EncodingType::Dictionary});

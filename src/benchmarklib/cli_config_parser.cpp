@@ -4,9 +4,8 @@
 #include <iostream>
 
 #include <boost/algorithm/string.hpp>
-#include <magic_enum.hpp>
+#include "magic_enum.hpp"
 
-#include "constant_mappings.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
 
@@ -46,7 +45,7 @@ BenchmarkConfig CLIConfigParser::parse_cli_options(const cxxopts::ParseResult& p
     }
   }
 
-  Assert(clients > 0, "Invalid value for --clients");
+  Assert(clients > 0, "Invalid value for --clients.");
 
   if (enable_scheduler && clients == 1) {
     std::cout << "\n\n- WARNING: You are running in multi-threaded (MT) mode but have set --clients=1.\n";
@@ -68,7 +67,7 @@ BenchmarkConfig CLIConfigParser::parse_cli_options(const cxxopts::ParseResult& p
 
   const auto enable_visualization = parse_result["visualize"].as<bool>();
   if (enable_visualization) {
-    Assert(clients == 1, "Cannot visualize plans with multiple clients as files may be overwritten");
+    Assert(clients == 1, "Cannot visualize plans with multiple clients as files may be overwritten.");
     std::cout << "- Visualizing the plans into SVG files. This will make the performance numbers invalid." << std::endl;
   }
 
@@ -88,9 +87,18 @@ BenchmarkConfig CLIConfigParser::parse_cli_options(const cxxopts::ParseResult& p
     std::cout << "- Encoding is '" << encoding_type_str << "'" << std::endl;
   }
 
-  const auto indexes = parse_result["indexes"].as<bool>();
-  if (indexes) {
-    std::cout << "- Creating indexes (as defined by the benchmark)" << std::endl;
+  const auto chunk_indexes = parse_result["chunk_indexes"].as<bool>();
+  if (chunk_indexes) {
+    std::cout << "- Creating chunk indexes (separate index per chunk; columns defined by benchmark)" << std::endl;
+  }
+
+  const auto table_indexes = parse_result["table_indexes"].as<bool>();
+  if (table_indexes) {
+    std::cout << "- Creating table indexes (index per table column; columns defined by benchmark)" << std::endl;
+  }
+
+  if (chunk_indexes && table_indexes) {
+    std::cout << "WARNING: Creating chunk and table indexes simultaneously." << std::endl;
   }
 
   // Get all other variables
@@ -129,18 +137,34 @@ BenchmarkConfig CLIConfigParser::parse_cli_options(const cxxopts::ParseResult& p
     std::cout << "- Not caching tables as binary files" << std::endl;
   }
 
-  const auto metrics = parse_result["metrics"].as<bool>();
-  if (metrics) {
-    Assert(!output_file_string.empty(), "--metrics only makes sense when an output file is set.");
-    std::cout << "- Tracking SQL metrics" << std::endl;
+  const auto system_metrics = parse_result["system_metrics"].as<bool>();
+  if (system_metrics) {
+    Assert(!output_file_string.empty(), "--system_metrics only makes sense when an output file is set.");
+    std::cout << "- Tracking system metrics." << std::endl;
   } else {
-    std::cout << "- Not tracking SQL metrics" << std::endl;
+    std::cout << "- Not tracking system metrics." << std::endl;
+  }
+
+  const auto pipeline_metrics = parse_result["pipeline_metrics"].as<bool>();
+  if (pipeline_metrics) {
+    Assert(!output_file_string.empty(), "--pipeline_metrics only makes sense when an output file is set.");
+    std::cout << "- Tracking SQL pipeline metrics." << std::endl;
+  } else {
+    std::cout << "- Not tracking SQL pipeline metrics." << std::endl;
+  }
+
+  auto plugins = std::vector<std::string>{};
+  auto comma_separated_plugins = parse_result["plugins"].as<std::string>();
+  if (!comma_separated_plugins.empty()) {
+    boost::trim_if(comma_separated_plugins, boost::is_any_of(","));
+    boost::split(plugins, comma_separated_plugins, boost::is_any_of(","), boost::token_compress_on);
   }
 
   return BenchmarkConfig{benchmark_mode,
                          chunk_size,
                          *encoding_config,
-                         indexes,
+                         chunk_indexes,
+                         table_indexes,
                          max_runs,
                          timeout_duration,
                          warmup_duration,
@@ -152,7 +176,9 @@ BenchmarkConfig CLIConfigParser::parse_cli_options(const cxxopts::ParseResult& p
                          enable_visualization,
                          verify,
                          cache_binary_tables,
-                         metrics};
+                         system_metrics,
+                         pipeline_metrics,
+                         plugins};
 }
 
 EncodingConfig CLIConfigParser::parse_encoding_config(const std::string& encoding_file_str) {

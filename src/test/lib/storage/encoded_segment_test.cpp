@@ -5,7 +5,6 @@
 #include "base_test.hpp"
 #include "lib/storage/encoding_test.hpp"
 
-#include "constant_mappings.hpp"
 #include "operators/get_table.hpp"
 #include "operators/print.hpp"
 #include "operators/table_scan.hpp"
@@ -86,17 +85,17 @@ class EncodedSegmentTest : public BaseTestWithParam<SegmentEncodingSpec> {
   }
 
   static std::shared_ptr<RowIDPosList> _create_sequential_position_filter(size_t row_count) {
-    auto list = std::make_shared<RowIDPosList>();
-    list->guarantee_single_chunk();
+    auto position_list = std::make_shared<RowIDPosList>();
+    position_list->guarantee_single_chunk();
 
     for (auto offset_in_referenced_chunk = ChunkOffset{0}; offset_in_referenced_chunk < row_count;
          ++offset_in_referenced_chunk) {
       if (offset_in_referenced_chunk % 2) {
-        list->push_back(RowID{ChunkID{0}, offset_in_referenced_chunk});
+        position_list->emplace_back(ChunkID{0}, offset_in_referenced_chunk);
       }
     }
 
-    return list;
+    return position_list;
   }
 
   std::shared_ptr<RowIDPosList> _create_random_access_position_filter() {
@@ -141,24 +140,9 @@ class EncodedSegmentTest : public BaseTestWithParam<SegmentEncodingSpec> {
   }
 };
 
-auto encoded_segment_test_formatter = [](const ::testing::TestParamInfo<SegmentEncodingSpec> info) {
-  const auto spec = info.param;
-
-  auto stream = std::stringstream{};
-  stream << spec.encoding_type;
-  if (spec.vector_compression_type) {
-    stream << "-" << *spec.vector_compression_type;
-  }
-
-  auto string = stream.str();
-  string.erase(std::remove_if(string.begin(), string.end(), [](char c) { return !std::isalnum(c); }), string.end());
-
-  return string;
-};
-
 INSTANTIATE_TEST_SUITE_P(SegmentEncodingSpecs, EncodedSegmentTest,
                          ::testing::ValuesIn(get_supporting_segment_encodings_specs(DataType::Int, false)),
-                         encoded_segment_test_formatter);
+                         segment_encoding_formatter);
 
 TEST_P(EncodedSegmentTest, EncodeEmptyIntSegment) {
   auto value_segment = std::make_shared<ValueSegment<int32_t>>(pmr_vector<int32_t>{});

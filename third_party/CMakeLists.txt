@@ -17,6 +17,7 @@ add_subdirectory(libpqxx)
 add_subdirectory(magic_enum)
 add_subdirectory(nlohmann_json)
 add_subdirectory(robin-map)
+add_subdirectory(sparse-map)
 add_subdirectory(tpch-dbgen)
 add_subdirectory(zstd/build/cmake)
 # The library target provided by the zstd library is incomplete, see https://github.com/facebook/zstd/issues/2377
@@ -35,6 +36,7 @@ add_library(
 
     ${PARSER_DIR}/src/parser/bison_parser.cpp
     ${PARSER_DIR}/src/parser/flex_lexer.cpp
+    ${PARSER_DIR}/src/sql/CreateStatement.cpp
     ${PARSER_DIR}/src/sql/Expr.cpp
     ${PARSER_DIR}/src/sql/PrepareStatement.cpp
     ${PARSER_DIR}/src/sql/SQLStatement.cpp
@@ -67,6 +69,10 @@ endif()
 # Build cpp-btree library
 add_library(cpp-btree INTERFACE)
 target_include_directories(cpp-btree INTERFACE cpp-btree/include/btree)
+
+# Build concurrentqueue
+add_library(concurrentqueue INTERFACE)
+target_include_directories(concurrentqueue INTERFACE concurrentqueue)
 
 
 # Build flat-hash-map
@@ -311,4 +317,25 @@ externalproject_add_step(
   DEPENDERS configure
   DEPENDS "${JCCH_DBGEN_FILES}"
   COMMAND bash -c "(cd ${CMAKE_CURRENT_BINARY_DIR}/jcch-dbgen && make distclean >/dev/null 2>/dev/null) || true"
+)
+
+externalproject_add(
+    ssbDbgen
+
+    SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/ssb-dbgen
+    BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/ssb-dbgen
+    CONFIGURE_COMMAND bash -c "cp -r ${CMAKE_CURRENT_SOURCE_DIR}/ssb-dbgen/* ."
+    BUILD_COMMAND bash -c "output=$(make 2>&1) || (printf \"$output\\n\" && false)"
+    INSTALL_COMMAND false  # install should never be called, this is a safe guard that fails if it is
+    STEP_TARGETS build
+)
+
+file(GLOB_RECURSE SSB_DBGEN_FILES ${CMAKE_CURRENT_SOURCE_DIR}/ssb-dbgen/*)
+externalproject_add_step(
+  ssbDbgen
+  check_for_changes
+  # Make sure that we rebuild ssb-dbgen when a file changes
+  DEPENDERS configure
+  DEPENDS "${SSB_DBGEN_FILES}"
+  COMMAND bash -c "(cd ${CMAKE_CURRENT_BINARY_DIR}/ssb-dbgen && make distclean >/dev/null 2>/dev/null) || true"
 )

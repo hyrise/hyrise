@@ -14,9 +14,12 @@ class AbstractNonQueryNode : public AbstractLQPNode {
   using AbstractLQPNode::AbstractLQPNode;
 
   std::vector<std::shared_ptr<AbstractExpression>> output_expressions() const override;
-  std::shared_ptr<LQPUniqueConstraints> unique_constraints() const override;
-  std::vector<FunctionalDependency> non_trivial_functional_dependencies() const override;
-  bool is_column_nullable(const ColumnID column_id) const override;
+
+  UniqueColumnCombinations unique_column_combinations() const override;
+
+  FunctionalDependencies non_trivial_functional_dependencies() const override;
+
+  bool is_column_nullable(const ColumnID /*column_id*/) const override;
 };
 
 }  // namespace hyrise

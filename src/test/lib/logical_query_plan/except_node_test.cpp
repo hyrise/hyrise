@@ -2,6 +2,7 @@
 
 #include "base_test.hpp"
 
+#include "logical_query_plan/data_dependencies/functional_dependency.hpp"
 #include "logical_query_plan/except_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/mock_node.hpp"
@@ -23,10 +24,16 @@ class ExceptNodeTest : public BaseTest {
     _except_node = ExceptNode::make(SetOperationMode::Positions);
     _except_node->set_left_input(_mock_node1);
     _except_node->set_right_input(_mock_node1);
+
+    _except_node_without_right_input = ExceptNode::make(SetOperationMode::Positions);
+    _except_node_without_right_input->set_left_input(_mock_node1);
   }
 
-  std::shared_ptr<MockNode> _mock_node1, _mock_node2, _mock_node3;
+  std::shared_ptr<MockNode> _mock_node1;
+  std::shared_ptr<MockNode> _mock_node2;
+  std::shared_ptr<MockNode> _mock_node3;
   std::shared_ptr<ExceptNode> _except_node;
+  std::shared_ptr<ExceptNode> _except_node_without_right_input;
   std::shared_ptr<LQPColumnExpression> _a;
   std::shared_ptr<LQPColumnExpression> _b;
   std::shared_ptr<LQPColumnExpression> _c;
@@ -34,6 +41,29 @@ class ExceptNodeTest : public BaseTest {
 
 TEST_F(ExceptNodeTest, Description) {
   EXPECT_EQ(_except_node->description(), "[ExceptNode] Mode: Positions");
+}
+
+TEST_F(ExceptNodeTest, IsColumnNullable) {
+  // Columns of a MockNode are never nullable.
+  const auto column_count = _mock_node1->column_definitions().size();
+  for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
+    EXPECT_FALSE(_except_node->is_column_nullable(column_id));
+  }
+
+  // Both left_input and right_input need to be set.
+  EXPECT_THROW(_except_node_without_right_input->is_column_nullable(ColumnID{0}), std::logic_error);
+}
+
+TEST_F(ExceptNodeTest, NonTrivialFunctionalDependencies) {
+  const auto fd_a = FunctionalDependency({_a}, {_b, _c});
+  const auto fd_b_two_dependents = FunctionalDependency({_b}, {_a, _c});
+
+  const auto non_trivial_dependencies = FunctionalDependencies{fd_a, fd_b_two_dependents};
+  _mock_node1->set_non_trivial_functional_dependencies(non_trivial_dependencies);
+
+  EXPECT_EQ(_except_node->non_trivial_functional_dependencies(), non_trivial_dependencies);
+  // Also works if right_input is not set.
+  EXPECT_EQ(_except_node_without_right_input->non_trivial_functional_dependencies(), non_trivial_dependencies);
 }
 
 TEST_F(ExceptNodeTest, OutputColumnExpressions) {
@@ -68,6 +98,19 @@ TEST_F(ExceptNodeTest, Copy) {
 
 TEST_F(ExceptNodeTest, NodeExpressions) {
   EXPECT_EQ(_except_node->node_expressions.size(), 0u);
+}
+
+TEST_F(ExceptNodeTest, ForwardUniqueColumnCombinations) {
+  EXPECT_TRUE(_mock_node1->unique_column_combinations().empty());
+  EXPECT_TRUE(_except_node->unique_column_combinations().empty());
+
+  const auto key_constraint_a = TableKeyConstraint{{_a->original_column_id}, KeyConstraintType::UNIQUE};
+  _mock_node1->set_key_constraints({key_constraint_a});
+  EXPECT_EQ(_mock_node1->unique_column_combinations().size(), 1);
+
+  const auto& unique_column_combinations = _except_node->unique_column_combinations();
+  EXPECT_EQ(unique_column_combinations.size(), 1);
+  EXPECT_TRUE(unique_column_combinations.contains({UniqueColumnCombination{{_a}}}));
 }
 
 }  // namespace hyrise

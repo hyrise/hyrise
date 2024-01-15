@@ -48,10 +48,10 @@ class OperatorsTableScanStringTest : public BaseTest, public ::testing::WithPara
       // Not all tests are parameterized - only those using compressed segments are. We have to ask the testing
       // framework if a parameter is set. Otherwise, GetParam would fail.
       auto test_table_string_compressed = load_table("resources/test_data/tbl/int_string_like.tbl", ChunkOffset{5});
-      std::vector<ChunkEncodingSpec> spec = {
+      const auto specs = std::vector<ChunkEncodingSpec>{
           {SegmentEncodingSpec{EncodingType::Unencoded}, SegmentEncodingSpec{GetParam()}},
           {SegmentEncodingSpec{EncodingType::Unencoded}, SegmentEncodingSpec{GetParam()}}};
-      ChunkEncoder::encode_all_chunks(test_table_string_compressed, spec);
+      ChunkEncoder::encode_all_chunks(test_table_string_compressed, specs);
 
       _tw_string_compressed = std::make_shared<TableWrapper>(test_table_string_compressed);
       _tw_string_compressed->never_clear_output();
@@ -62,14 +62,10 @@ class OperatorsTableScanStringTest : public BaseTest, public ::testing::WithPara
   std::shared_ptr<TableWrapper> _tw, _tw_special_chars, _tw_string, _tw_string_compressed;
 };
 
-auto table_scan_scring_test_formatter = [](const ::testing::TestParamInfo<EncodingType> info) {
-  return std::to_string(static_cast<uint32_t>(info.param));
-};
-
 INSTANTIATE_TEST_SUITE_P(EncodingTypes, OperatorsTableScanStringTest,
                          ::testing::Values(EncodingType::Unencoded, EncodingType::Dictionary,
                                            EncodingType::FixedStringDictionary, EncodingType::RunLength),
-                         table_scan_scring_test_formatter);
+                         enum_formatter<EncodingType>);
 
 TEST_P(OperatorsTableScanStringTest, ScanEquals) {
   auto scan = create_table_scan(_tw_string_compressed, ColumnID{1}, PredicateCondition::Equals, "Reeperbahn");

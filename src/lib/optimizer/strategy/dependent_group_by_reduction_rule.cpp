@@ -2,7 +2,6 @@
 
 #include <unordered_map>
 
-#include "expression/abstract_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
 #include "hyrise.hpp"
@@ -26,10 +25,10 @@ bool remove_dependent_group_by_columns(const FunctionalDependency& fd, Aggregate
                                        const ExpressionUnorderedSet& group_by_columns) {
   auto group_by_list_changed = false;
 
-  // To benefit from this rule, the FD's columns have to be part of the group-by list
+  // To benefit from this rule, the FD's columns have to be part of the group-by list.
   if (!std::all_of(fd.determinants.cbegin(), fd.determinants.cend(),
-                   [&group_by_columns](const std::shared_ptr<AbstractExpression>& constraint_expression) {
-                     return group_by_columns.contains(constraint_expression);
+                   [&group_by_columns](const std::shared_ptr<AbstractExpression>& expression) {
+                     return group_by_columns.contains(expression);
                    })) {
     return false;
   }
@@ -81,21 +80,10 @@ void DependentGroupByReductionRule::_apply_to_plan_without_subqueries(
     }
     auto& aggregate_node = static_cast<AggregateNode&>(*node);
 
-    // Early exit: If there are no functional dependencies, we can skip this rule.
-    auto fds = aggregate_node.functional_dependencies();
-    if (fds.empty()) {
-      return LQPVisitation::VisitInputs;
-    }
-
-    // --- Preparation ---
-    // Store a copy of the root's output expressions before applying the rule
-    const auto root_output_expressions = lqp_root->output_expressions();
-    // Also store a copy of the aggregate's output expressions to verify the output column order later on.
-    const auto initial_aggregate_output_expressions = aggregate_node.output_expressions();
-
-    // Gather group-by columns
+    // --- Preparation --
+    // Gather group-by columns.
     const auto fetch_group_by_columns = [&aggregate_node]() {
-      ExpressionUnorderedSet group_by_columns(aggregate_node.aggregate_expressions_begin_idx + 1);
+      auto group_by_columns = ExpressionUnorderedSet{aggregate_node.aggregate_expressions_begin_idx + 1};
       auto node_expressions_iter = aggregate_node.node_expressions.cbegin();
       std::copy(node_expressions_iter, node_expressions_iter + aggregate_node.aggregate_expressions_begin_idx,
                 std::inserter(group_by_columns, group_by_columns.end()));
@@ -103,23 +91,83 @@ void DependentGroupByReductionRule::_apply_to_plan_without_subqueries(
     };
     auto group_by_columns = fetch_group_by_columns();
 
+    // Early exit (i): To guarantee distinct results for SELECT DISTINCT clauses, the SQLTranslator adds an
+    // AggregateNode with the selected attributes as group by columns. If the AggregateNode's input is already unique
+    // for these columns, remove the entire node.
+    // Example: SELECT DISTINCT n_nationkey FROM nation is reflected as [ Aggregate GROUP BY n_nationkey ]. The
+    // AggregateNode does not have more node expressions than the single GROUP BY column and the input (StoredTableNode
+    // in this case) has a UCC for { n_nationkey }.
+    if (group_by_columns.size() == node->node_expressions.size() &&
+        node->left_input()->has_matching_ucc(group_by_columns)) {
+      const auto& output_expressions = aggregate_node.output_expressions();
+      // Remove the AggregateNode if it does not limit or reorder the output expressions.
+      if (expressions_equal(output_expressions, node->left_input()->output_expressions())) {
+        lqp_remove_node(node);
+        return LQPVisitation::VisitInputs;
+      }
+
+      // Else, replace it with a ProjectionNode. For instance, SELECT DISTINCT n_name, n_regionkey FROM nation (the
+      // column order is different than in the original table) turns from [ Aggregate GROUP BY n_name, n_regionkey ] to
+      // [ Projection n_name, n_regionkey ].
+      const auto projection_node = ProjectionNode::make(output_expressions);
+      lqp_replace_node(node, projection_node);
+      return LQPVisitation::VisitInputs;
+    }
+
+    // Early exit (ii): If there are no functional dependencies, we can skip this rule.
+    const auto& fds = aggregate_node.functional_dependencies();
+    if (fds.empty()) {
+      return LQPVisitation::VisitInputs;
+    }
+
+    // Store a copy of the root's output expressions before applying the rule.
+    const auto& root_output_expressions = lqp_root->output_expressions();
+    // Also store a copy of the aggregate's output expressions to verify the output column order later on.
+    const auto& initial_aggregate_output_expressions = aggregate_node.output_expressions();
+
+    // Get a sorted list of ColumnIDs from an FD's set of determinants.
+    const auto get_column_ids = [&](const auto& determinants) {
+      auto column_ids = std::vector<ColumnID>{};
+      column_ids.reserve(determinants.size());
+      for (const auto& expression : determinants) {
+        const auto column_id = find_expression_idx(*expression, initial_aggregate_output_expressions);
+        Assert(column_id, "Could not find column " + expression->as_column_name());
+        column_ids.emplace_back(*column_id);
+      }
+      std::sort(column_ids.begin(), column_ids.end());
+      return column_ids;
+    };
+
     // Sort the FDs by their left set's column count in hope that the shortest will later form the group-by clause.
-    std::sort(fds.begin(), fds.end(), [](const auto& fd_left, const auto& fd_right) {
-      return fd_left.determinants.size() < fd_right.determinants.size();
+    auto ordered_fds = std::vector<FunctionalDependency>{fds.cbegin(), fds.cend()};
+    std::sort(ordered_fds.begin(), ordered_fds.end(), [&](const auto& fd_left, const auto& fd_right) {
+      const auto left_determinant_size = fd_left.determinants.size();
+      const auto right_determinant_size = fd_right.determinants.size();
+      if (left_determinant_size != right_determinant_size) {
+        return left_determinant_size < right_determinant_size;
+      }
+
+      // The FDs are expected to be equally useful for the rewrite. However, we have to decide on semantics here to make
+      // the order independent of the position of the FDs in the original set (which might differ due to standard
+      // library implementation details). Thus, we compare the ColumnIDs of the determinants.
+      const auto& left_column_ids = get_column_ids(fd_left.determinants);
+      const auto& right_column_ids = get_column_ids(fd_right.determinants);
+      return left_column_ids < right_column_ids;
     });
 
     // --- Main: Reduction phase ---
-    // Try to reduce the group-by list one constraint at a time, starting with the shortest constraint.
+    // Try to reduce the group-by list by one dependency at a time, starting with the dependency with the fewest
+    // determinants.
     auto group_by_list_changed = false;
-    for (const auto& fd : fds) {
-      // Early exit: The FD's left column set has to be a subset of the group-by columns
+    for (const auto& fd : ordered_fds) {
+      // Early exit: The FD's determinants have to be a subset of the group-by columns.
       if (group_by_columns.size() < fd.determinants.size()) {
         continue;
       }
 
-      bool success = remove_dependent_group_by_columns(fd, aggregate_node, group_by_columns);
+      const auto success = remove_dependent_group_by_columns(fd, aggregate_node, group_by_columns);
       if (success) {
-        // Refresh data structures correspondingly
+        // Refresh data structures correspondingly.
         group_by_list_changed = true;
         group_by_columns = fetch_group_by_columns();
       }

@@ -112,7 +112,7 @@ void Product::_add_product_of_two_chunks(const std::shared_ptr<Table>& output, C
           if (pos_list_in) {
             pos_list_out->emplace_back((*pos_list_in)[offset]);
           } else {
-            pos_list_out->emplace_back(RowID{is_left_side ? chunk_id_left : chunk_id_right, offset});
+            pos_list_out->emplace_back(is_left_side ? chunk_id_left : chunk_id_right, offset);
           }
         }
       }
@@ -128,7 +128,7 @@ void Product::_add_product_of_two_chunks(const std::shared_ptr<Table>& output, C
 std::shared_ptr<AbstractOperator> Product::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_left_input,
     const std::shared_ptr<AbstractOperator>& copied_right_input,
-    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& /*copied_ops*/) const {
   return std::make_shared<Product>(copied_left_input, copied_right_input);
 }
 

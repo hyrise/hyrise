@@ -7,10 +7,10 @@ namespace hyrise {
 
 TPCCDelivery::TPCCDelivery(const int num_warehouses, BenchmarkSQLExecutor& sql_executor)
     : AbstractTPCCProcedure(sql_executor), ol_delivery_d{static_cast<int32_t>(std::time(nullptr))} {
-  std::uniform_int_distribution<> warehouse_dist{1, num_warehouses};
+  auto warehouse_dist = std::uniform_int_distribution<>{1, num_warehouses};
   w_id = warehouse_dist(_random_engine);
 
-  std::uniform_int_distribution<> carrier_dist{1, 10};
+  auto carrier_dist = std::uniform_int_distribution<>{1, 10};
   o_carrier_id = carrier_dist(_random_engine);
 }
 
@@ -18,18 +18,16 @@ bool TPCCDelivery::_on_execute() {
   for (auto d_id = 1; d_id <= 10; ++d_id) {
     // TODO(anyone): This could be optimized by querying only once and grouping by NO_D_ID
     const auto new_order_select_pair =
-        _sql_executor.execute(std::string{"SELECT MIN(NO_O_ID) IS NULL, MIN(NO_O_ID) FROM NEW_ORDER WHERE NO_W_ID = "} +
+        _sql_executor.execute(std::string{"SELECT MIN(NO_O_ID) FROM NEW_ORDER WHERE NO_W_ID = "} +
                               std::to_string(w_id) + " AND NO_D_ID = " + std::to_string(d_id));
     const auto& new_order_table = new_order_select_pair.second;
-
-    // TODO(anyone): Selecting MIN(NO_O_ID) IS NULL and using it here would not be necessary if get_value returned
-    // NULLs as nullopt
-    if (*new_order_table->get_value<int32_t>(ColumnID{0}, 0) == 1) {
+    const auto min_no_o_id = new_order_table->get_value<int32_t>(ColumnID{0}, 0);
+    if (!min_no_o_id) {
       continue;
     }
 
     // The oldest undelivered order in that district
-    const auto no_o_id = *new_order_table->get_value<int32_t>(ColumnID{1}, 0);
+    const auto no_o_id = *min_no_o_id;
 
     // Delete from NEW_ORDER
     const auto new_order_update_pair =
@@ -44,8 +42,8 @@ bool TPCCDelivery::_on_execute() {
         _sql_executor.execute(std::string{"SELECT O_C_ID FROM \"ORDER\" WHERE O_W_ID = "} + std::to_string(w_id) +
                               " AND O_D_ID = " + std::to_string(d_id) + " AND O_ID = " + std::to_string(no_o_id));
     const auto& order_table = order_select_pair.second;
-    Assert(order_table && order_table->row_count() == 1, "Did not find order");
-    auto o_c_id = *order_table->get_value<int32_t>(ColumnID{0}, 0);
+    Assert(order_table && order_table->row_count() == 1, "Unexpected state of ORDER table.");
+    const auto o_c_id = *order_table->get_value<int32_t>(ColumnID{0}, 0);
 
     // Update ORDER
     const auto order_update_pair =
@@ -61,7 +59,7 @@ bool TPCCDelivery::_on_execute() {
         std::string{"SELECT SUM(OL_AMOUNT) FROM ORDER_LINE WHERE OL_W_ID = "} + std::to_string(w_id) +
         " AND OL_D_ID = " + std::to_string(d_id) + " AND OL_O_ID = " + std::to_string(no_o_id));
     const auto& order_line_table = order_line_select_pair.second;
-    Assert(order_line_table && order_line_table->row_count() == 1, "Did not find order lines");
+    Assert(order_line_table && order_line_table->row_count() == 1, "Unexpected state of ORDER_LINE table.");
     const auto amount = *order_line_table->get_value<double>(ColumnID{0}, 0);
 
     // Set delivery date in ORDER_LINE

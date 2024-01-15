@@ -15,13 +15,13 @@ LimitNode::LimitNode(const std::shared_ptr<AbstractExpression>& num_rows_express
 std::string LimitNode::description(const DescriptionMode mode) const {
   const auto expression_mode = _expression_description_mode(mode);
 
-  std::stringstream stream;
+  auto stream = std::stringstream{};
   stream << "[Limit] " << num_rows_expression()->description(expression_mode);
   return stream.str();
 }
 
-std::shared_ptr<LQPUniqueConstraints> LimitNode::unique_constraints() const {
-  return _forward_left_unique_constraints();
+UniqueColumnCombinations LimitNode::unique_column_combinations() const {
+  return _forward_left_unique_column_combinations();
 }
 
 std::shared_ptr<AbstractExpression> LimitNode::num_rows_expression() const {

@@ -146,7 +146,7 @@ TEST_F(OperatorsValidateTest, ChunkEntirelyVisibleThrowsOnRefChunk) {
 
   auto snapshot_cid = CommitID{1};
   auto pos_list = std::make_shared<RowIDPosList>(std::initializer_list<RowID>({RowID{ChunkID{0}, ChunkOffset{0}}}));
-  Segments segments = {std::make_shared<ReferenceSegment>(_test_table, ColumnID{0}, pos_list)};
+  auto segments = Segments{std::make_shared<ReferenceSegment>(_test_table, ColumnID{0}, pos_list)};
   auto chunk = std::make_shared<Chunk>(segments);
 
   auto validate = std::make_shared<Validate>(nullptr);
@@ -224,12 +224,13 @@ TEST_F(OperatorsValidateTest, ValidateReferenceSegmentWithMultipleChunks) {
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk_size = _test_table->get_chunk(chunk_id)->size();
     for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
-      pos_list->emplace_back(RowID{chunk_id, chunk_offset});
+      pos_list->emplace_back(chunk_id, chunk_offset);
     }
   }
 
-  Segments segments;
-  for (auto column_id = ColumnID{0}; column_id < _test_table->column_count(); ++column_id) {
+  auto segments = Segments{};
+  const auto column_count = _test_table->column_count();
+  for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
     segments.emplace_back(std::make_shared<ReferenceSegment>(_test_table, column_id, pos_list));
   }
 

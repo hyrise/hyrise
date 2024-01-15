@@ -3,7 +3,7 @@
 #include "logical_query_plan/static_table_node.hpp"
 #include "storage/table.hpp"
 #include "storage/table_column_definition.hpp"
-#include "utils/constraint_test_utils.hpp"
+#include "utils/data_dependency_test_utils.hpp"
 
 namespace hyrise {
 
@@ -80,24 +80,24 @@ TEST_F(StaticTableNodeTest, Copy) {
   EXPECT_EQ(*static_table_node, *static_table_node->deep_copy());
 }
 
-TEST_F(StaticTableNodeTest, UniqueConstraintsEmpty) {
+TEST_F(StaticTableNodeTest, UniqueColumnCombinationsEmpty) {
   EXPECT_TRUE(dummy_table->soft_key_constraints().empty());
-  EXPECT_TRUE(static_table_node->unique_constraints()->empty());
+  EXPECT_TRUE(static_table_node->unique_column_combinations().empty());
 }
 
-TEST_F(StaticTableNodeTest, UniqueConstraints) {
-  // Prepare two unique constraints
+TEST_F(StaticTableNodeTest, UniqueColumnCombinations) {
+  // Prepare two unique constraints.
   const auto key_constraint_a = TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE};
-  const auto key_constraint_a_b = TableKeyConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::UNIQUE};
+  const auto key_constraint_b = TableKeyConstraint{{ColumnID{1}}, KeyConstraintType::UNIQUE};
   dummy_table->add_soft_key_constraint(key_constraint_a);
-  dummy_table->add_soft_key_constraint(key_constraint_a_b);
+  dummy_table->add_soft_key_constraint(key_constraint_b);
 
-  // Basic check
-  const auto& unique_constraints = static_table_node->unique_constraints();
-  EXPECT_EQ(unique_constraints->size(), 2);
-  // In-depth check
-  EXPECT_TRUE(find_unique_constraint_by_key_constraint(key_constraint_a, unique_constraints));
-  EXPECT_TRUE(find_unique_constraint_by_key_constraint(key_constraint_a_b, unique_constraints));
+  // Basic check.
+  const auto& unique_column_combinations = static_table_node->unique_column_combinations();
+  EXPECT_EQ(unique_column_combinations.size(), 2);
+  // In-depth check.
+  EXPECT_TRUE(find_ucc_by_key_constraint(key_constraint_a, unique_column_combinations));
+  EXPECT_TRUE(find_ucc_by_key_constraint(key_constraint_b, unique_column_combinations));
 }
 
 }  // namespace hyrise
