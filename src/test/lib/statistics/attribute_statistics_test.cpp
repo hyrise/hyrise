@@ -13,27 +13,27 @@ class AttributeStatisticsTest : public BaseTest {};
 TEST_F(AttributeStatisticsTest, SetStatisticsObject) {
   auto attribute_statistics = AttributeStatistics<int32_t>{};
 
-  EXPECT_EQ(attribute_statistics.histogram, nullptr);
-  EXPECT_EQ(attribute_statistics.min_max_filter, nullptr);
-  EXPECT_EQ(attribute_statistics.range_filter, nullptr);
-  EXPECT_EQ(attribute_statistics.null_value_ratio, nullptr);
-  EXPECT_EQ(attribute_statistics.distinct_value_count, nullptr);
+  EXPECT_FALSE(attribute_statistics.histogram);
+  EXPECT_FALSE(attribute_statistics.min_max_filter);
+  EXPECT_FALSE(attribute_statistics.range_filter);
+  EXPECT_FALSE(attribute_statistics.null_value_ratio);
+  EXPECT_FALSE(attribute_statistics.distinct_value_count);
 
   attribute_statistics.set_statistics_object(GenericHistogram<int32_t>::with_single_bin(0, 100, 40, 20));
-  EXPECT_NE(attribute_statistics.histogram, nullptr);
+  EXPECT_TRUE(attribute_statistics.histogram);
 
   attribute_statistics.set_statistics_object(std::make_shared<MinMaxFilter<int32_t>>(0, 100));
-  EXPECT_NE(attribute_statistics.min_max_filter, nullptr);
+  EXPECT_TRUE(attribute_statistics.min_max_filter);
 
   attribute_statistics.set_statistics_object(
       std::make_shared<RangeFilter<int32_t>>(std::vector{std::pair<int32_t, int32_t>(0, 100)}));
-  EXPECT_NE(attribute_statistics.range_filter, nullptr);
+  EXPECT_TRUE(attribute_statistics.range_filter);
 
   attribute_statistics.set_statistics_object(std::make_shared<NullValueRatioStatistics>(0.2f));
-  EXPECT_NE(attribute_statistics.null_value_ratio, nullptr);
+  EXPECT_TRUE(attribute_statistics.null_value_ratio);
 
   attribute_statistics.set_statistics_object(std::make_shared<DistinctValueCount>(123));
-  EXPECT_NE(attribute_statistics.distinct_value_count, nullptr);
+  EXPECT_TRUE(attribute_statistics.distinct_value_count);
 }
 
 TEST_F(AttributeStatisticsTest, Scaled) {
@@ -46,13 +46,13 @@ TEST_F(AttributeStatisticsTest, Scaled) {
   attribute_statistics.distinct_value_count = std::make_shared<DistinctValueCount>(123);
 
   const auto scaled_attribute_statistics =
-      std::dynamic_pointer_cast<AttributeStatistics<int32_t>>(attribute_statistics.scaled(0.5f));
-  ASSERT_NE(scaled_attribute_statistics, nullptr);
-  EXPECT_NE(scaled_attribute_statistics->histogram, nullptr);
-  EXPECT_NE(scaled_attribute_statistics->min_max_filter, nullptr);
-  EXPECT_NE(scaled_attribute_statistics->range_filter, nullptr);
-  EXPECT_NE(scaled_attribute_statistics->null_value_ratio, nullptr);
-  EXPECT_NE(scaled_attribute_statistics->distinct_value_count, nullptr);
+      std::dynamic_pointer_cast<const AttributeStatistics<int32_t>>(attribute_statistics.scaled(0.5f));
+  ASSERT_TRUE(scaled_attribute_statistics);
+  EXPECT_TRUE(scaled_attribute_statistics->histogram);
+  EXPECT_TRUE(scaled_attribute_statistics->min_max_filter);
+  EXPECT_TRUE(scaled_attribute_statistics->range_filter);
+  EXPECT_TRUE(scaled_attribute_statistics->null_value_ratio);
+  EXPECT_TRUE(scaled_attribute_statistics->distinct_value_count);
 
   EXPECT_FLOAT_EQ(scaled_attribute_statistics->histogram->total_count(), 20);
 
@@ -75,14 +75,14 @@ TEST_F(AttributeStatisticsTest, Sliced) {
   attribute_statistics.null_value_ratio = std::make_shared<NullValueRatioStatistics>(0.2f);
   attribute_statistics.distinct_value_count = std::make_shared<DistinctValueCount>(123);
 
-  const auto sliced_attribute_statistics = std::dynamic_pointer_cast<AttributeStatistics<int32_t>>(
+  const auto sliced_attribute_statistics = std::dynamic_pointer_cast<const AttributeStatistics<int32_t>>(
       attribute_statistics.sliced(PredicateCondition::GreaterThanEquals, 51));
-  ASSERT_NE(sliced_attribute_statistics, nullptr);
-  EXPECT_NE(sliced_attribute_statistics->histogram, nullptr);
-  EXPECT_NE(sliced_attribute_statistics->min_max_filter, nullptr);
-  EXPECT_NE(sliced_attribute_statistics->range_filter, nullptr);
-  EXPECT_NE(sliced_attribute_statistics->null_value_ratio, nullptr);
-  EXPECT_EQ(sliced_attribute_statistics->distinct_value_count, nullptr);
+  ASSERT_TRUE(sliced_attribute_statistics);
+  EXPECT_TRUE(sliced_attribute_statistics->histogram);
+  EXPECT_TRUE(sliced_attribute_statistics->min_max_filter);
+  EXPECT_TRUE(sliced_attribute_statistics->range_filter);
+  EXPECT_TRUE(sliced_attribute_statistics->null_value_ratio);
+  EXPECT_FALSE(sliced_attribute_statistics->distinct_value_count);
 
   EXPECT_FLOAT_EQ(sliced_attribute_statistics->histogram->total_count(), 20);
 

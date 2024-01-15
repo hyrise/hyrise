@@ -64,7 +64,8 @@ class GenericHistogramTest : public BaseTest {
         const auto cardinality =
             histogram->estimate_cardinality(predicate.predicate_condition, predicate.value, predicate.value2);
 
-        if (const auto sliced_histogram = std::dynamic_pointer_cast<AbstractHistogram<T>>(sliced_statistics_object)) {
+        if (const auto sliced_histogram =
+                std::dynamic_pointer_cast<const AbstractHistogram<T>>(sliced_statistics_object)) {
           SCOPED_TRACE(sliced_histogram->description());
           EXPECT_NEAR(sliced_histogram->total_count(), cardinality, 0.005f);
         } else {
@@ -171,7 +172,7 @@ TEST_F(GenericHistogramTest, StringLessThan) {
                                                       {"efgh", "mnop", "qrst", "yyzz"},
                                                       {4, 6, 3, 3},
                                                       {3, 3, 3, 3},
-                                                      StringHistogramDomain{'a', 'z', 4u}};
+                                                      StringHistogramDomain{'a', 'z', 4}};
 
   // "abcd"
   const auto bin_1_lower = 0 * (ipow(26, 3) + ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 +
@@ -359,7 +360,7 @@ TEST_F(GenericHistogramTest, StringLessThan) {
 
 TEST_F(GenericHistogramTest, StringLikeEstimation) {
   const auto histogram =
-      GenericHistogram<pmr_string>::with_single_bin("a", "z", 100, 40, StringHistogramDomain{'a', 'z', 4u});
+      GenericHistogram<pmr_string>::with_single_bin("a", "z", 100, 40, StringHistogramDomain{'a', 'z', 4});
 
   // (NOT) LIKE is not estimated and has a selectivity of 1
   EXPECT_FLOAT_EQ(histogram->estimate_cardinality(PredicateCondition::Like, "aa_zz%"), 100.f);
@@ -553,7 +554,7 @@ TEST_F(GenericHistogramTest, EstimateCardinalityString) {
   std::vector<pmr_string>        {"as", "ax", "dr"},
   std::vector<HistogramCountType>{  17,   30,   40},
   std::vector<HistogramCountType>{   5,    3,   27},
-  StringHistogramDomain{'a', 'z', 2u});
+  StringHistogramDomain{'a', 'z', 2});
   // clang-format on
 
   auto estimate = histogram->estimate_cardinality(PredicateCondition::Equals, "a");
@@ -765,7 +766,7 @@ TEST_F(GenericHistogramTest, PrunedInt) {
 
   {
     // Prune half of the values from the first bin
-    const auto pruned = std::static_pointer_cast<GenericHistogram<int32_t>>(
+    const auto pruned = std::static_pointer_cast<const GenericHistogram<int32_t>>(
         histogram->pruned(20, PredicateCondition::GreaterThanEquals, 26));
 
     // clang-format off
@@ -783,8 +784,8 @@ TEST_F(GenericHistogramTest, PrunedInt) {
 
   {
     // Prune all values from the first bin and half of the values from the second bin
-    const auto pruned =
-        std::static_pointer_cast<GenericHistogram<int32_t>>(histogram->pruned(55, PredicateCondition::GreaterThan, 40));
+    const auto pruned = std::static_pointer_cast<const GenericHistogram<int32_t>>(
+        histogram->pruned(55, PredicateCondition::GreaterThan, 40));
     // clang-format off
     const auto expected_histogram = GenericHistogram<int32_t>{
       std::vector<int32_t>            {31, 60, 80},
@@ -798,7 +799,7 @@ TEST_F(GenericHistogramTest, PrunedInt) {
 
   {
     // Prune three values from the last bin with the boundary being outside of any bin
-    const auto pruned = std::static_pointer_cast<GenericHistogram<int32_t>>(
+    const auto pruned = std::static_pointer_cast<const GenericHistogram<int32_t>>(
         histogram->pruned(3, PredicateCondition::LessThanEquals, 70));
     // clang-format off
     const auto expected_histogram = GenericHistogram<int32_t>{
@@ -813,8 +814,8 @@ TEST_F(GenericHistogramTest, PrunedInt) {
 
   {
     // Prune eight values from the last two bins with the boundary being on a single bin's value
-    const auto pruned =
-        std::static_pointer_cast<GenericHistogram<int32_t>>(histogram->pruned(8, PredicateCondition::LessThan, 60));
+    const auto pruned = std::static_pointer_cast<const GenericHistogram<int32_t>>(
+        histogram->pruned(8, PredicateCondition::LessThan, 60));
     const auto remaining_ratio = 1.0f - 8.0f / (5.0f + 10.0f);
     // clang-format off
     const auto expected_histogram = GenericHistogram<int32_t>{
@@ -829,8 +830,8 @@ TEST_F(GenericHistogramTest, PrunedInt) {
 
   {
     // Prune by equals predicate with value found in first bin
-    const auto pruned =
-        std::static_pointer_cast<GenericHistogram<int32_t>>(histogram->pruned(27, PredicateCondition::Equals, 17));
+    const auto pruned = std::static_pointer_cast<const GenericHistogram<int32_t>>(
+        histogram->pruned(27, PredicateCondition::Equals, 17));
     // clang-format off
     const auto expected_histogram = GenericHistogram<int32_t>{
       std::vector<int32_t>            { 1, 31, 60, 80},
@@ -844,8 +845,8 @@ TEST_F(GenericHistogramTest, PrunedInt) {
 
   {
     // Prune by equals predicate with value not found anywhere
-    const auto pruned =
-        std::static_pointer_cast<GenericHistogram<int32_t>>(histogram->pruned(17, PredicateCondition::Equals, 61));
+    const auto pruned = std::static_pointer_cast<const GenericHistogram<int32_t>>(
+        histogram->pruned(17, PredicateCondition::Equals, 61));
 
     // clang-format off
     const auto expected_histogram = GenericHistogram<int32_t>{
@@ -860,8 +861,8 @@ TEST_F(GenericHistogramTest, PrunedInt) {
 
   {
     // Prune by not equals predicate from first bin
-    const auto pruned =
-        std::static_pointer_cast<GenericHistogram<int32_t>>(histogram->pruned(3, PredicateCondition::NotEquals, 21));
+    const auto pruned = std::static_pointer_cast<const GenericHistogram<int32_t>>(
+        histogram->pruned(3, PredicateCondition::NotEquals, 21));
     // clang-format off
     const auto expected_histogram = GenericHistogram<int32_t>{
       std::vector<int32_t>            { 1, 31, 60, 80},
@@ -875,15 +876,15 @@ TEST_F(GenericHistogramTest, PrunedInt) {
 
   {
     // Prune by not equals predicate not found in any bin
-    const auto pruned =
-        std::static_pointer_cast<GenericHistogram<int32_t>>(histogram->pruned(15, PredicateCondition::NotEquals, 28));
+    const auto pruned = std::static_pointer_cast<const GenericHistogram<int32_t>>(
+        histogram->pruned(15, PredicateCondition::NotEquals, 28));
 
     EXPECT_EQ(*pruned, *histogram);
   }
 
   {
     // Prune by Between entirely contained in one bin
-    const auto pruned = std::static_pointer_cast<GenericHistogram<int32_t>>(
+    const auto pruned = std::static_pointer_cast<const GenericHistogram<int32_t>>(
         histogram->pruned(14, PredicateCondition::BetweenInclusive, 41, 50));
     // clang-format off
     const auto expected_histogram = GenericHistogram<int32_t>{
@@ -898,7 +899,7 @@ TEST_F(GenericHistogramTest, PrunedInt) {
 
   {
     // Prune by Between spanning three bins, covering half of the bins on both ends
-    const auto pruned = std::static_pointer_cast<GenericHistogram<int32_t>>(
+    const auto pruned = std::static_pointer_cast<const GenericHistogram<int32_t>>(
         histogram->pruned(24, PredicateCondition::BetweenExclusive, 41, 89));
     // clang-format off
     const auto expected_histogram = GenericHistogram<int32_t>{
@@ -914,7 +915,7 @@ TEST_F(GenericHistogramTest, PrunedInt) {
   {
     // Prune by Between spanning two bins, with the begin value being outside of the histogram and the end value in the
     // middle of the second bin
-    const auto pruned = std::static_pointer_cast<GenericHistogram<int32_t>>(
+    const auto pruned = std::static_pointer_cast<const GenericHistogram<int32_t>>(
         histogram->pruned(12, PredicateCondition::BetweenLowerExclusive, -10, 40));
     // clang-format off
     const auto expected_histogram = GenericHistogram<int32_t>{
@@ -929,7 +930,7 @@ TEST_F(GenericHistogramTest, PrunedInt) {
 
   {
     // Prune from the first and second bin. Prune more values than the bins contain.
-    const auto pruned = std::static_pointer_cast<GenericHistogram<int32_t>>(
+    const auto pruned = std::static_pointer_cast<const GenericHistogram<int32_t>>(
         histogram->pruned(100, PredicateCondition::GreaterThan, 40));
     // clang-format off
     const auto expected_histogram = GenericHistogram<int32_t>{
@@ -947,16 +948,16 @@ TEST_F(GenericHistogramTest, PrunedString) {
   // Same cardinalities as in PrunedInt, just with string values. Strings are chosen so that their numeric
   // representation is the same as the numbers used in PrunedInt, too.
   // clang-format off
-  const auto histogram = std::make_shared<GenericHistogram<pmr_string>>(std::vector<pmr_string>        { "a", "bc", "ce", "cy"},  // NOLINT
-                                                                        std::vector<pmr_string>        {"ax", "bv", "ce", "dq"},  // NOLINT
-                                                                        std::vector<HistogramCountType>{40,   30,   5,    10},    // NOLINT
-                                                                        std::vector<HistogramCountType>{10,   20,   1,    1},     // NOLINT
-                                                                        StringHistogramDomain{'a', 'z', 2u});
+  const auto histogram = std::make_shared<GenericHistogram<pmr_string>>(std::vector<pmr_string>        { "a", "bc", "ce", "cy"},  // NOLINT(whitespace/line_length)
+                                                                        std::vector<pmr_string>        {"ax", "bv", "ce", "dq"},  // NOLINT(whitespace/line_length)
+                                                                        std::vector<HistogramCountType>{40,   30,   5,    10},    // NOLINT(whitespace/line_length)
+                                                                        std::vector<HistogramCountType>{10,   20,   1,    1},     // NOLINT(whitespace/line_length)
+                                                                        StringHistogramDomain{'a', 'z', 2});
   // clang-format on
 
   {
     // Prune half of the values from the first bin
-    const auto pruned = std::static_pointer_cast<GenericHistogram<pmr_string>>(
+    const auto pruned = std::static_pointer_cast<const GenericHistogram<pmr_string>>(
         histogram->pruned(20, PredicateCondition::GreaterThanEquals, "ay"));
 
     // clang-format off
@@ -965,7 +966,7 @@ TEST_F(GenericHistogramTest, PrunedString) {
       std::vector<pmr_string>        {"ax", "bv", "ce", "dq"},
       std::vector<HistogramCountType>{20,   30,   5,    10},
       std::vector<HistogramCountType>{10,   20,   1,    1},
-      StringHistogramDomain{'a', 'z', 2u}};
+      StringHistogramDomain{'a', 'z', 2}};
     // clang-format on
 
     EXPECT_EQ(*pruned, expected_histogram);
@@ -973,7 +974,7 @@ TEST_F(GenericHistogramTest, PrunedString) {
 
   {
     // Prune all values from the first bin and half of the values from the second bin
-    const auto pruned = std::static_pointer_cast<GenericHistogram<pmr_string>>(
+    const auto pruned = std::static_pointer_cast<const GenericHistogram<pmr_string>>(
         histogram->pruned(55, PredicateCondition::GreaterThan, "bl"));
     // clang-format off
     const auto expected_histogram = GenericHistogram<pmr_string>{
@@ -981,7 +982,7 @@ TEST_F(GenericHistogramTest, PrunedString) {
       std::vector<pmr_string>        {"bv", "ce", "dq"},
       std::vector<HistogramCountType>{15,   5,    10},
       std::vector<HistogramCountType>{20,   1,    1},
-      StringHistogramDomain{'a', 'z', 2u}};
+      StringHistogramDomain{'a', 'z', 2}};
     // clang-format on
 
     EXPECT_EQ(*pruned, expected_histogram);
@@ -989,7 +990,7 @@ TEST_F(GenericHistogramTest, PrunedString) {
 
   {
     // Prune by Between entirely contained in one bin
-    const auto pruned = std::static_pointer_cast<GenericHistogram<pmr_string>>(
+    const auto pruned = std::static_pointer_cast<const GenericHistogram<pmr_string>>(
         histogram->pruned(14, PredicateCondition::BetweenInclusive, "bl", "bu"));
     // clang-format off
     const auto expected_histogram = GenericHistogram<pmr_string>{
@@ -997,7 +998,7 @@ TEST_F(GenericHistogramTest, PrunedString) {
       std::vector<pmr_string>        {"ax", "bv", "ce", "dq"},
       std::vector<HistogramCountType>{32,   27,   4,    8},
       std::vector<HistogramCountType>{10,   20,   1,    1},
-      StringHistogramDomain{'a', 'z', 2u}};
+      StringHistogramDomain{'a', 'z', 2}};
     // clang-format on
 
     EXPECT_EQ(*pruned, expected_histogram);
@@ -1005,7 +1006,7 @@ TEST_F(GenericHistogramTest, PrunedString) {
 
   {
     // Prune by Between spanning three bins, covering half of the bins on both ends
-    const auto pruned = std::static_pointer_cast<GenericHistogram<pmr_string>>(
+    const auto pruned = std::static_pointer_cast<const GenericHistogram<pmr_string>>(
         histogram->pruned(24, PredicateCondition::BetweenExclusive, "bm", "dg"));
     // clang-format off
     const auto expected_histogram = GenericHistogram<pmr_string>{
@@ -1013,7 +1014,7 @@ TEST_F(GenericHistogramTest, PrunedString) {
       std::vector<pmr_string>        {"ax", "bv", "ce", "dq"},
       std::vector<HistogramCountType>{24,   24,   5,    8},
       std::vector<HistogramCountType>{10,   20,   1,    1},
-      StringHistogramDomain{'a', 'z', 2u}};
+      StringHistogramDomain{'a', 'z', 2}};
     // clang-format on
 
     EXPECT_EQ(*pruned, expected_histogram);
@@ -1022,7 +1023,7 @@ TEST_F(GenericHistogramTest, PrunedString) {
   {
     // Same as the last test, but this time, the search values are longer than the domain's common prefix.
     // Remember that string_to_number adds 1 for strings that are longer than the prefix.
-    const auto pruned = std::static_pointer_cast<GenericHistogram<pmr_string>>(
+    const auto pruned = std::static_pointer_cast<const GenericHistogram<pmr_string>>(
         histogram->pruned(24, PredicateCondition::BetweenExclusive, "blaba", "dfqfqs"));
     // clang-format off
     const auto expected_histogram = GenericHistogram<pmr_string>{
@@ -1030,7 +1031,7 @@ TEST_F(GenericHistogramTest, PrunedString) {
       std::vector<pmr_string>        {"ax", "bv", "ce", "dq"},
       std::vector<HistogramCountType>{24,   24,   5,    8},
       std::vector<HistogramCountType>{10,   20,   1,    1},
-      StringHistogramDomain{'a', 'z', 2u}};
+      StringHistogramDomain{'a', 'z', 2}};
     // clang-format on
 
     EXPECT_EQ(*pruned, expected_histogram);
@@ -1040,7 +1041,7 @@ TEST_F(GenericHistogramTest, PrunedString) {
     // Same as the last test, but this time, the search values contain characters outside of the domain.
     // cX should be converted to ca. This way, the third bin should be included fully and the fourth bin
     // partially.
-    const auto pruned = std::static_pointer_cast<GenericHistogram<pmr_string>>(
+    const auto pruned = std::static_pointer_cast<const GenericHistogram<pmr_string>>(
         histogram->pruned(15, PredicateCondition::BetweenExclusive, "cX", "dg"));
     // clang-format off
     const auto expected_histogram = GenericHistogram<pmr_string>{
@@ -1048,7 +1049,7 @@ TEST_F(GenericHistogramTest, PrunedString) {
       std::vector<pmr_string>        {"ax", "bv", "ce", "dq"},
       std::vector<HistogramCountType>{32,   24,   5,    9},
       std::vector<HistogramCountType>{10,   20,   1,    1},
-      StringHistogramDomain{'a', 'z', 2u}};
+      StringHistogramDomain{'a', 'z', 2}};
     // clang-format on
 
     EXPECT_EQ(*pruned, expected_histogram);
@@ -1161,7 +1162,8 @@ TEST_F(GenericHistogramTest, ScaledWithSelectivity) {
   // clang-format on
 
   const auto scaled_statistics_object_05 = histogram.scaled(0.5f);
-  const auto scaled_histogram_05 = std::dynamic_pointer_cast<AbstractHistogram<int32_t>>(scaled_statistics_object_05);
+  const auto scaled_histogram_05 =
+      std::dynamic_pointer_cast<const AbstractHistogram<int32_t>>(scaled_statistics_object_05);
   ASSERT_TRUE(scaled_histogram_05);
   EXPECT_FLOAT_EQ(scaled_histogram_05->bin_height(BinID{0}), 20.0f);
   EXPECT_FLOAT_EQ(scaled_histogram_05->bin_distinct_count(BinID{0}), 10.0f);
@@ -1169,7 +1171,8 @@ TEST_F(GenericHistogramTest, ScaledWithSelectivity) {
   EXPECT_FLOAT_EQ(scaled_histogram_05->bin_distinct_count(BinID{3}), 5.0f);
 
   const auto scaled_statistics_object_01 = histogram.scaled(0.1f);
-  const auto scaled_histogram_01 = std::dynamic_pointer_cast<AbstractHistogram<int32_t>>(scaled_statistics_object_01);
+  const auto scaled_histogram_01 =
+      std::dynamic_pointer_cast<const AbstractHistogram<int32_t>>(scaled_statistics_object_01);
   ASSERT_TRUE(scaled_histogram_01);
   EXPECT_FLOAT_EQ(scaled_histogram_01->bin_height(BinID{0}), 4.0f);
   EXPECT_FLOAT_EQ(scaled_histogram_01->bin_distinct_count(BinID{0}), 4.0f);
@@ -1177,7 +1180,8 @@ TEST_F(GenericHistogramTest, ScaledWithSelectivity) {
   EXPECT_FLOAT_EQ(scaled_histogram_01->bin_distinct_count(BinID{3}), 1.0f);
 
   const auto scaled_statistics_object_10 = histogram.scaled(10.0f);
-  const auto scaled_histogram_10 = std::dynamic_pointer_cast<AbstractHistogram<int32_t>>(scaled_statistics_object_10);
+  const auto scaled_histogram_10 =
+      std::dynamic_pointer_cast<const AbstractHistogram<int32_t>>(scaled_statistics_object_10);
   ASSERT_TRUE(scaled_histogram_10);
   EXPECT_FLOAT_EQ(scaled_histogram_10->bin_height(BinID{0}), 400.0f);
   EXPECT_FLOAT_EQ(scaled_histogram_10->bin_distinct_count(BinID{0}), 10.0f);

@@ -16,6 +16,7 @@
 #include "logical_query_plan/stored_table_node.hpp"
 #include "optimizer/strategy/index_scan_rule.hpp"
 #include "statistics/attribute_statistics.hpp"
+#include "statistics/base_attribute_statistics.hpp"
 #include "statistics/table_statistics.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/dictionary_segment.hpp"
@@ -42,13 +43,16 @@ class IndexScanRuleTest : public StrategyBaseTest {
   }
 
   void generate_mock_statistics(float row_count = 10.0f) {
-    const auto table_statistics = table->table_statistics();
-    table_statistics->row_count = row_count;
+    auto column_statistics = std::vector<std::shared_ptr<const BaseAttributeStatistics>>(2);
+    const auto statistics_a = std::make_shared<AttributeStatistics<int32_t>>();
+    statistics_a->set_statistics_object(GenericHistogram<int32_t>::with_single_bin(0, 20, row_count, 10));
+    column_statistics[0] = statistics_a;
+    const auto statistics_b = std::make_shared<AttributeStatistics<float>>();
+    statistics_b->set_statistics_object(GenericHistogram<float>::with_single_bin(0, 20, row_count, 10));
+    column_statistics[1] = statistics_b;
 
-    table_statistics->column_statistics.at(0)->set_statistics_object(
-        GenericHistogram<int32_t>::with_single_bin(0, 20, row_count, 10));
-    table_statistics->column_statistics.at(1)->set_statistics_object(
-        GenericHistogram<float>::with_single_bin(0, 20, row_count, 10));
+    const auto table_statistics = std::make_shared<TableStatistics>(std::move(column_statistics), row_count);
+    table->set_table_statistics(table_statistics);
   }
 
   std::shared_ptr<IndexScanRule> rule;

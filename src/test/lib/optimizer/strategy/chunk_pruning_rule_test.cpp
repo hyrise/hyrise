@@ -90,8 +90,8 @@ TEST_F(ChunkPruningRuleTest, SimplePruningTest) {
   // clang-format on
 
   const auto& column_statistics =
-      dynamic_cast<AttributeStatistics<int32_t>&>(*stored_table_node->table_statistics->column_statistics[0]);
-  const auto& actual_histogram = dynamic_cast<GenericHistogram<int32_t>&>(*column_statistics.histogram);
+      dynamic_cast<const AttributeStatistics<int32_t>&>(*stored_table_node->table_statistics->column_statistics[0]);
+  const auto& actual_histogram = dynamic_cast<const GenericHistogram<int32_t>&>(*column_statistics.histogram);
   EXPECT_EQ(actual_histogram, expected_histogram);
 }
 
