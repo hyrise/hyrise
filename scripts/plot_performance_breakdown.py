@@ -83,7 +83,7 @@ total_time = benchmark_df.iloc[:, 1:].apply(lambda x: x.sum(), axis=1)
 # Normalize data from nanoseconds to percentage of total cost
 benchmark_df.iloc[:, 1:] = benchmark_df.iloc[:, 1:].apply(lambda x: x / x.sum(), axis=1)
 print(benchmark_df)
-ax = benchmark_df.plot.bar(x="Benchmark", stacked=True)
+ax = benchmark_df.plot.bar(x="Benchmark", stacked=True, zorder=3)
 ax.set_ylabel("Share of Query Runtime")
 
 ax.yaxis.set_major_locator(mplticker.FixedLocator(y_ticks))
@@ -108,7 +108,7 @@ ax.set_xticklabels(xlabels)
 
 if apply_wide_layout:
     plt.gcf().set_size_inches(wide_layout_threshold + added_figure_width, 4.8)
-
+plt.grid(axis="y", visible=True, zorder=0, color="black")
 plt.tight_layout()
 basename = sys.argv[1].replace(".json", "")
 plt.savefig(basename + "_breakdown.pdf")
@@ -135,7 +135,7 @@ for index, benchmark in rule_benchmark_df[sum_optimizer_rule_durations.keys()].i
 rule_benchmark_df.dropna(how="all", axis=1, inplace=True)
 
 plt.figure()
-ax = rule_benchmark_df.plot.bar(x="Benchmark", stacked=True)
+ax = rule_benchmark_df.plot.bar(x="Benchmark", stacked=True, zorder=3)
 ax.set_ylabel("Share of Optimizer Runtime")
 
 ax.yaxis.set_major_locator(mplticker.FixedLocator(y_ticks))
@@ -153,5 +153,6 @@ ax.set_xticklabels(xlabels)
 
 if apply_wide_layout:
     plt.gcf().set_size_inches(wide_layout_threshold + added_figure_width, 4.8)
+plt.grid(axis="y", visible=True, zorder=0, color="black")
 plt.tight_layout()
 plt.savefig(basename + "_optimizer_breakdown.pdf")
