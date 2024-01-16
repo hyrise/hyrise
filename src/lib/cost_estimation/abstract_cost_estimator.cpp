@@ -13,11 +13,12 @@ AbstractCostEstimator::AbstractCostEstimator(
     const std::shared_ptr<AbstractCardinalityEstimator>& init_cardinality_estimator)
     : cardinality_estimator(init_cardinality_estimator) {}
 
-Cost AbstractCostEstimator::estimate_plan_cost(const std::shared_ptr<AbstractLQPNode>& lqp) const {
+Cost AbstractCostEstimator::estimate_plan_cost(const std::shared_ptr<AbstractLQPNode>& lqp,
+                                               const bool cacheable) const {
   // Sum up the costs of all operators in the plan, while making sure to cost each operator exactly once, even in the
   // presence of diamond shapes.
 
-  // Breadth-first iteration of plan
+  // Breadth-first iteration of plan.
   auto bfs_queue = std::queue<std::shared_ptr<AbstractLQPNode>>{};
   auto visited = std::unordered_set<std::shared_ptr<AbstractLQPNode>>{};
 
@@ -40,7 +41,7 @@ Cost AbstractCostEstimator::estimate_plan_cost(const std::shared_ptr<AbstractLQP
     // because their costs are never aggregated due to the traversal being a breadth-first search.
     const auto cached_cost = _get_subplan_cost_from_cache(current_node, visited);
     if (cached_cost) {
-      // Cost for subplan successfully retrieved from cache, no need to look at the inputs of the current_node
+      // Cost for subplan successfully retrieved from cache, no need to look at the inputs of the current_node.
       cost += *cached_cost;
       continue;
     }
@@ -55,8 +56,8 @@ Cost AbstractCostEstimator::estimate_plan_cost(const std::shared_ptr<AbstractLQP
     }
   }
 
-  // Store cost in cache
-  if (cost_estimation_by_lqp_cache) {
+  // Store cost in cache.
+  if (cacheable && cost_estimation_by_lqp_cache) {
     cost_estimation_by_lqp_cache->emplace(lqp, cost);
   }
 
@@ -83,9 +84,8 @@ std::optional<Cost> AbstractCostEstimator::_get_subplan_cost_from_cache(
     return std::nullopt;
   }
 
-  // Check whether the cache entry can be used: This is only the case if the entire subplan has not yet been
-  // visited. If any node in it has already been visited, and we'd use the cache entry anyway, costs would get
-  // counted twice
+  // Check whether the cache entry can be used: This is only the case if the entire subplan has not yet been visited. If
+  // any node in it has already been visited, and we'd use the cache entry anyway, costs would get counted twice.
   auto subplan_already_visited = false;
   auto subplan_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
 
@@ -105,7 +105,7 @@ std::optional<Cost> AbstractCostEstimator::_get_subplan_cost_from_cache(
     return std::nullopt;
   }
 
-  // The subplan is "clean"/unvisited, mark all nodes in it as "visited" and return the cost from the cache entry
+  // The subplan is "clean"/unvisited, mark all nodes in it as "visited" and return the cost from the cache entry.
   for (const auto& subplan_node : subplan_nodes) {
     visited.emplace(subplan_node);
   }

@@ -16,49 +16,6 @@
 #include "types.hpp"
 #include "utils/assert.hpp"
 
-namespace {
-
-using namespace hyrise;  // NOLINT(build/namespaces)
-
-float expression_cost_multiplier(const std::shared_ptr<AbstractExpression>& expression) {
-  auto multiplier = 0.0f;
-
-  // Number of different columns accessed to factor in expression complexity. Also add a factor for correlated
-  // subqueries since we have to evaluate the subquery for each tuple again. In the past, we added to the factor for
-  // each expression in the predicate. This led to too pessimistic cost estimations for PredicateNodes compared to
-  // (semi-)joins. We start with a weight of 0 to ease, e.g., the estimation of column vs. column predicates of nested
-  // predicates (SELECT ... WHERE column_a = column_b OR column_3 = 'a' needs to evaluate three columns).
-  // Returning the maximum of `multiplier` and 1 accounts for tautologies (SELECT ... WHERE 1 = 1), which we currently
-  // do not optimize and pass to the ExpressionEvaluator.
-  visit_expression(expression, [&](const auto& sub_expression) {
-    if (sub_expression->type == ExpressionType::LQPColumn ||
-        (sub_expression->type == ExpressionType::LQPSubquery &&
-         static_cast<LQPSubqueryExpression&>(*sub_expression).is_correlated())) {
-      multiplier += 1.0f;
-      // We do not return here. Thus, we continue to add a penalty for each parameter of a correlated subquery.
-    } else if (sub_expression->type == ExpressionType::List) {
-      // ListExpressions can have many elements, all of which should be values or simple operations. Thus, we do not
-      // visit all of them separately as they cannot increase the multiplier.
-      if constexpr (HYRISE_DEBUG) {
-        for (const auto& list_element : static_cast<const ListExpression&>(*sub_expression).elements()) {
-          const auto element_is_column_like = list_element->type == ExpressionType::LQPColumn ||
-                                              (sub_expression->type == ExpressionType::LQPSubquery &&
-                                               static_cast<LQPSubqueryExpression&>(*sub_expression).is_correlated());
-          Assert(!element_is_column_like, "Did not expect columns or correlated subqueries in ListExpression.");
-        }
-      }
-
-      return ExpressionVisitation::DoNotVisitArguments;
-    }
-
-    return ExpressionVisitation::VisitArguments;
-  });
-
-  return std::max(1.0f, multiplier);
-}
-
-}  // namespace
-
 namespace hyrise {
 
 std::shared_ptr<AbstractCostEstimator> CostEstimatorLogical::new_instance() const {
@@ -108,12 +65,52 @@ Cost CostEstimatorLogical::estimate_node_cost(const std::shared_ptr<AbstractLQPN
     case LQPNodeType::Predicate: {
       const auto& predicate = static_cast<const PredicateNode&>(*node).predicate();
       // n * number of scanned columns + output writing.
-      return left_input_row_count * expression_cost_multiplier(predicate) + output_row_count;
+      return left_input_row_count * _expression_cost_multiplier(predicate, cacheable) + output_row_count;
     }
 
     default:
       return left_input_row_count + output_row_count;
   }
+}
+
+float CostEstimatorLogical::_expression_cost_multiplier(const std::shared_ptr<AbstractExpression>& expression,
+                                                        const bool cacheable) const {
+  auto multiplier = 0.0f;
+
+  // Number of different columns accessed to factor in expression complexity. Also add a factor for correlated
+  // subqueries since we have to evaluate the subquery for each tuple again. In the past, we added to the factor for
+  // each expression in the predicate. This led to too pessimistic cost estimations for PredicateNodes compared to
+  // (semi-)joins. We start with a weight of 0 to ease, e.g., the estimation of column vs. column predicates of nested
+  // predicates (SELECT ... WHERE column_a = column_b OR column_3 = 'a' needs to evaluate three columns).
+  // Returning the maximum of `multiplier` and 1 accounts for tautologies (SELECT ... WHERE 1 = 1), which we currently
+  // do not optimize and pass to the ExpressionEvaluator.
+  visit_expression(expression, [&](const auto& sub_expression) {
+    if (sub_expression->type == ExpressionType::LQPColumn) {
+      multiplier += 1.0f;
+    } else if (sub_expression->type == ExpressionType::LQPSubquery) {
+      const auto& subquery = static_cast<const LQPSubqueryExpression&>(*sub_expression);
+      if (subquery.is_correlated()) {
+        multiplier += estimate_plan_cost(subquery.lqp, cacheable);
+      }
+    } else if (sub_expression->type == ExpressionType::List) {
+      // ListExpressions can have many elements, all of which should be values or simple operations. Thus, we do not
+      // visit all of them separately as they cannot increase the multiplier.
+      if constexpr (HYRISE_DEBUG) {
+        for (const auto& list_element : static_cast<const ListExpression&>(*sub_expression).elements()) {
+          const auto element_is_column_like = list_element->type == ExpressionType::LQPColumn ||
+                                              (sub_expression->type == ExpressionType::LQPSubquery &&
+                                               static_cast<LQPSubqueryExpression&>(*sub_expression).is_correlated());
+          Assert(!element_is_column_like, "Did not expect columns or correlated subqueries in ListExpression.");
+        }
+      }
+
+      return ExpressionVisitation::DoNotVisitArguments;
+    }
+
+    return ExpressionVisitation::VisitArguments;
+  });
+
+  return std::max(1.0f, multiplier);
 }
 
 }  // namespace hyrise
