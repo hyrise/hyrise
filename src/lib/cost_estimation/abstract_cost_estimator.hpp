@@ -26,7 +26,7 @@ class AbstractCostEstimator {
    *     `cost_estimation_by_lqp_cache` cache
    * @return The estimated cost of an @param lqp. Calls estimate_node_cost() on each individual node of the plan.
    */
-  Cost estimate_plan_cost(const std::shared_ptr<AbstractLQPNode>& lqp, const bool cacheable = true) const;
+  Cost estimate_plan_cost(const std::shared_ptr<AbstractLQPNode>& lqp) const;
 
   /**
    * @return the estimated cost of a single node. The `cost_estimation_by_lqp_cache` will not be used
