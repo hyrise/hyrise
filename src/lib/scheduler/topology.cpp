@@ -74,7 +74,7 @@ void Topology::use_fake_numa_topology(uint32_t max_num_workers, uint32_t workers
 }
 
 void Topology::use_fake_numa_topology(const std::vector<uint32_t>& workers_per_node) {
-  _init_fake_numa_topology(std::move(workers_per_node));
+  _init_fake_numa_topology(workers_per_node);
 }
 
 void Topology::_init_default_topology(uint32_t max_num_cores) {
@@ -164,8 +164,16 @@ void Topology::_init_fake_numa_topology(const std::vector<uint32_t>& workers_per
   _fake_numa_topology = true;
 
   auto cpu_id = CpuID{0};
-  for (const auto& node_worker_count : workers_per_node) {
+  const auto node_count = workers_per_node.size();
+  for (auto node_id = NodeID{0}; node_id < node_count; ++node_id) {
+    const auto& node_worker_count = workers_per_node[node_id];
     auto cpus = std::vector<TopologyCpu>();
+
+    if (node_id == 0) {
+      // Reserved CPU core for main thread.
+      cpus.emplace_back(cpu_id);
+      ++cpu_id;
+    }
 
     for (auto worker_id = uint32_t{0}; worker_id < node_worker_count; ++worker_id) {
       cpus.emplace_back(cpu_id);
@@ -175,7 +183,7 @@ void Topology::_init_fake_numa_topology(const std::vector<uint32_t>& workers_per
     _nodes.emplace_back(TopologyNode{std::move(cpus)});
   }
 
-  _num_cpus = std::reduce(workers_per_node.cbegin(), workers_per_node.cend());
+  _num_cpus = std::reduce(_nodes.cbegin(), _nodes.cend(), size_t{0}, [](const auto& init, const auto& node) { return init + node.cpus.size(); });
 }
 
 const std::vector<TopologyNode>& Topology::nodes() const {

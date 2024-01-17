@@ -41,8 +41,10 @@ void NodeQueueScheduler::begin() {
 
   // One thread is reserved for the Hyrise main thread.
   const auto worker_count = Hyrise::get().topology.num_cpus() - 1;
-
-  Assert(worker_count > 1, "Topology too small for NodeQueueScheduler.");
+  std::cout << Hyrise::get().topology << std::endl;
+  std::cout << "NUMCPUs: " << Hyrise::get().topology.num_cpus() << std::endl;
+  std::cout << "worker count: " << worker_count << std::endl;
+  Assert(worker_count >= 1, "Topology too small for NodeQueueScheduler.");
 
   _workers.reserve(worker_count);
   _node_count = Hyrise::get().topology.nodes().size();
@@ -57,11 +59,11 @@ void NodeQueueScheduler::begin() {
     // add tasks to these queues that can never be directly pulled and must be stolen by other nodes' workers. As
     // ShutdownTasks are not stealable, placing tasks on nodes without workers can lead to failing shutdowns.
     if (!topology_node.cpus.empty()) {
-      // Tracked per node as core restrictions can lead to unbalanced core counts. Main thread is pinned to first CPU of
-      // first node.
+      // We track workers per node as core restrictions can lead to unbalanced core counts. Main thread is pinned to
+      // the first core of the first node.
       _workers_per_node[node_id] = topology_node.cpus.size() - static_cast<size_t>(!pinned_main_thread);
 
-      // Some single node systems (e.g., recent ARM-based MacBooks) have a topology of multiple nodes with a single CPU
+      // Some single node systems (e.g., recent ARM-based MacBooks) have a topology of multiple nodes with a single core
       // per node. Thus, it can happen, that a node that is part of the current topology, does not have any workers,
       // because the only CPU on this node is reserved for the main thread.
       auto queue = std::shared_ptr<TaskQueue>{};

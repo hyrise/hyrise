@@ -58,9 +58,6 @@ class Worker : public std::enable_shared_from_this<Worker>, private Noncopyable 
   void _wait_for_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks);
 
  private:
-  // Pin a worker to a particular core. As of now, this does not work on non-NUMA systems.
-  void _set_affinity();
-
   std::shared_ptr<AbstractTask> _next_task{};
   std::shared_ptr<TaskQueue> _queue{};
   WorkerID _id{0};
