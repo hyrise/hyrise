@@ -13,8 +13,7 @@ void SetThreadAffinity(const CpuID cpu_id) {
   CPU_ZERO(&cpuset);
   CPU_SET(cpu_id, &cpuset);
   const auto return_code = pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuset);
-  Assert(return_code != 0, "Error calling pthread_setaffinity_np (return code: " + return_code + ").");
-  }
+  Assert(return_code == 0, "Error calling pthread_setaffinity_np (return code: " + std::to_string(return_code) + ").");
 #endif
 }
 
