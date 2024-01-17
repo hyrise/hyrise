@@ -667,6 +667,8 @@ set(
     utils/string_utils.cpp
     utils/string_utils.hpp
     utils/template_type.hpp
+    utils/threading_utils.cpp
+    utils/threading_utils.hpp
     utils/timer.cpp
     utils/timer.hpp
     visualization/abstract_visualizer.hpp

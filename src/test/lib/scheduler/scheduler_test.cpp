@@ -302,7 +302,7 @@ TEST_F(SchedulerTest, TaskToNodeAssignment) {
 }
 
 TEST_F(SchedulerTest, SingleWorkerGuaranteeProgress) {
-  Hyrise::get().topology.use_default_topology(1);
+  Hyrise::get().topology.use_default_topology(2);  // One CPU reserved for main thread.
   Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
 
   auto task_done = false;

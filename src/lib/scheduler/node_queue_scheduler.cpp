@@ -19,6 +19,7 @@
 #include "types.hpp"
 #include "uid_allocator.hpp"
 #include "utils/assert.hpp"
+#include "utils/threading_utils.hpp"
 #include "worker.hpp"
 
 namespace hyrise {
@@ -38,26 +39,47 @@ NodeQueueScheduler::~NodeQueueScheduler() {
 void NodeQueueScheduler::begin() {
   DebugAssert(!_active, "Scheduler is already active.");
 
-  _workers.reserve(Hyrise::get().topology.num_cpus());
+  // One thread is reserved for the Hyrise main thread.
+  const auto worker_count = Hyrise::get().topology.num_cpus() - 1;
+
+  Assert(worker_count > 1, "Topology too small for NodeQueueScheduler.");
+
+  _workers.reserve(worker_count);
   _node_count = Hyrise::get().topology.nodes().size();
   _queues.resize(_node_count);
-  _workers_per_node.reserve(_node_count);
+  _workers_per_node.resize(_node_count);
 
+  auto pinned_main_thread = false;
   for (auto node_id = NodeID{0}; node_id < _node_count; ++node_id) {
     const auto& topology_node = Hyrise::get().topology.nodes()[node_id];
-
-    // Tracked per node as core restrictions can lead to unbalanced core counts.
-    _workers_per_node.emplace_back(topology_node.cpus.size());
 
     // Only create queues for nodes with CPUs assigned. Otherwise, no workers are active on these nodes and we might
     // add tasks to these queues that can never be directly pulled and must be stolen by other nodes' workers. As
     // ShutdownTasks are not stealable, placing tasks on nodes without workers can lead to failing shutdowns.
     if (!topology_node.cpus.empty()) {
-      _active_nodes.push_back(node_id);
-      auto queue = std::make_shared<TaskQueue>(node_id);
-      _queues[node_id] = queue;
+      // Tracked per node as core restrictions can lead to unbalanced core counts. Main thread is pinned to first CPU of
+      // first node.
+      _workers_per_node[node_id] = topology_node.cpus.size() - static_cast<size_t>(!pinned_main_thread);
+
+      // Some single node systems (e.g., recent ARM-based MacBooks) have a topology of multiple nodes with a single CPU
+      // per node. Thus, it can happen, that a node that is part of the current topology, does not have any workers,
+      // because the only CPU on this node is reserved for the main thread.
+      auto queue = std::shared_ptr<TaskQueue>{};
+      if (_workers_per_node[node_id] > 0) {
+        _nodes_with_workers.push_back(node_id);
+        queue = std::make_shared<TaskQueue>(node_id);
+        _queues[node_id] = queue;
+      }
 
       for (const auto& topology_cpu : topology_node.cpus) {
+        if (!pinned_main_thread) {
+          std::cerr << "Pinning main thread to : " << topology_cpu.cpu_id << "\n";
+          SetThreadAffinity(topology_cpu.cpu_id);
+          pinned_main_thread = true;
+          continue;
+        }
+        std::cerr << "Pinning worker on: " << topology_cpu.cpu_id << "\n";
+
         // TODO(anybody): Place queues on the actual NUMA node once we have NUMA-aware allocators.
         _workers.emplace_back(
             std::make_shared<Worker>(queue, WorkerID{_worker_id_allocator->allocate()}, topology_cpu.cpu_id));
@@ -65,7 +87,7 @@ void NodeQueueScheduler::begin() {
     }
   }
 
-  Assert(!_active_nodes.empty(), "None of the system nodes has active workers.");
+  Assert(!_nodes_with_workers.empty(), "None of the system nodes has active workers.");
   _active = true;
 
   for (auto& worker : _workers) {
@@ -180,7 +202,7 @@ void NodeQueueScheduler::finish() {
   _task_counter = 0;
   _workers = {};
   _queues = {};
-  _active_nodes = {};
+  _nodes_with_workers = {};
   _workers_per_node = {};
 }
 
@@ -218,11 +240,11 @@ void NodeQueueScheduler::schedule(std::shared_ptr<AbstractTask> task, NodeID pre
 }
 
 NodeID NodeQueueScheduler::determine_queue_id(const NodeID preferred_node_id) const {
-  const auto active_node_count = _active_nodes.size();
+  const auto active_node_count = _nodes_with_workers.size();
 
   // Early out: no need to check for preferred node or other queues, if there is only a single node queue.
   if (active_node_count == 1) {
-    return _active_nodes[0];
+    return _nodes_with_workers[0];
   }
 
   if (preferred_node_id != CURRENT_NODE_ID) {
@@ -236,7 +258,14 @@ NodeID NodeQueueScheduler::determine_queue_id(const NodeID preferred_node_id) co
   }
 
   // Initialize minimal values with first active node.
-  auto min_load_node_id = _active_nodes[0];
+  // auto first_active_node_id = NodeID{0};
+  // for (const auto active_node_id : _nodes_with_workers) {
+  //   if (_workers_per_node[active_node_id] > 0) {
+  //     first_active_node_id = active_node_id;
+  //     break;
+  //   }
+  // }
+  auto min_load_node_id = _nodes_with_workers[0];
   auto min_load = _queues[min_load_node_id]->estimate_load();
 
   // When the load of the initial node is small (less tasks than threads on first node), do not check other queues.
@@ -246,10 +275,10 @@ NodeID NodeQueueScheduler::determine_queue_id(const NodeID preferred_node_id) co
 
   // Check remaining nodes.
   for (auto node_id_offset = size_t{1}; node_id_offset < active_node_count; ++node_id_offset) {
-    const auto node_id = _active_nodes[node_id_offset];
+    const auto node_id = _nodes_with_workers[node_id_offset];
     const auto queue_load = _queues[node_id]->estimate_load();
     if (queue_load < min_load) {
-      min_load_node_id = _active_nodes[node_id];
+      min_load_node_id = _nodes_with_workers[node_id];
       min_load = queue_load;
     }
   }

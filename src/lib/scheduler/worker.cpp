@@ -1,7 +1,5 @@
 #include "worker.hpp"
 
-#include <pthread.h>
-#include <sched.h>
 #include <unistd.h>
 
 #include <random>
@@ -13,6 +11,7 @@
 #include "hyrise.hpp"
 #include "shutdown_task.hpp"
 #include "task_queue.hpp"
+#include "utils/threading_utils.hpp"
 
 namespace {
 
@@ -57,7 +56,7 @@ void Worker::operator()() {
 
   this_thread_worker = shared_from_this();
 
-  _set_affinity();
+  SetThreadAffinity(_cpu_id);
 
   while (Hyrise::get().scheduler()->active() && _active) {
     // Worker is allowed to sleep (when queue is empty) as long as the scheduler is not shutting down.
@@ -220,20 +219,6 @@ void Worker::_wait_for_tasks(const std::vector<std::shared_ptr<AbstractTask>>& t
     // We do not allow the worker to sleep here as we know that the passed task list is not yet fully processed.
     _work(AllowSleep::No);
   }
-}
-
-void Worker::_set_affinity() {
-#if HYRISE_NUMA_SUPPORT
-  cpu_set_t cpuset;
-  CPU_ZERO(&cpuset);
-  CPU_SET(_cpu_id, &cpuset);
-  const auto return_code = pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuset);
-  if (return_code != 0) {
-    // This is not an Assert(), though maybe it should be. Not being able to pin the threads doesn't make the database
-    // unfunctional, but probably slower.
-    std::cerr << "Error calling pthread_setaffinity_np (return code: " << return_code << ")." << std::endl;
-  }
-#endif
 }
 
 }  // namespace hyrise
