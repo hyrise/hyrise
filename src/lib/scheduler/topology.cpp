@@ -98,8 +98,8 @@ void Topology::_init_numa_topology(uint32_t max_num_cores) {
   _clear();
   _fake_numa_topology = false;
 
-  auto max_node = numa_max_node();
-  auto num_configured_cpus = static_cast<CpuID>(numa_num_configured_cpus());
+  const auto max_node_id = numa_max_node();
+  const auto num_configured_cpus = CpuID{numa_num_configured_cpus()};
 
   // We take the CPU affinity (set, e.g., by numactl) of our process into account.
   // Otherwise, we would always start with the first CPU, even if a specific NUMA node was selected.
@@ -109,21 +109,25 @@ void Topology::_init_numa_topology(uint32_t max_num_cores) {
   auto* this_node_cpu_bitmask = numa_allocate_cpumask();
   auto core_count = uint32_t{0};
 
-  for (auto node_id = 0; node_id <= max_node; ++node_id) {
+  for (auto node_id = 0; node_id <= max_node_id; ++node_id) {
     if (max_num_cores == 0 || core_count < max_num_cores) {
-      auto cpus = std::vector<TopologyCpu>();
+      auto cpus = std::vector<TopologyCpu>{};
 
       numa_node_to_cpus(node_id, this_node_cpu_bitmask);
 
       for (auto cpu_id = CpuID{0}; cpu_id < num_configured_cpus; ++cpu_id) {
         const auto cpu_is_part_of_node = numa_bitmask_isbitset(this_node_cpu_bitmask, cpu_id);
+	std::cout << "cpu_is_part_of_node: " << cpu_is_part_of_node << std::endl;
         const auto cpu_is_part_of_affinity = numa_bitmask_isbitset(affinity_cpu_bitmask, cpu_id);
+	std::cout << "cpu_is_part_of_affinity: " << cpu_is_part_of_affinity << std::endl;
         if (cpu_is_part_of_node && cpu_is_part_of_affinity) {
           if (max_num_cores == 0 || core_count < max_num_cores) {
             cpus.emplace_back(cpu_id);
             ++_num_cpus;
+	    std::cout << "adding cpu\n";
           }
           ++core_count;
+	  std::cout << "adding core\n";
         }
         if (!cpu_is_part_of_affinity) {
           _filtered_by_affinity = true;
@@ -183,7 +187,7 @@ void Topology::_init_fake_numa_topology(const std::vector<uint32_t>& workers_per
     _nodes.emplace_back(TopologyNode{std::move(cpus)});
   }
 
-  _num_cpus = std::reduce(_nodes.cbegin(), _nodes.cend(), size_t{0}, [](const auto& init, const auto& node) { return init + node.cpus.size(); });
+  _num_cpus = std::accumulate(_nodes.cbegin(), _nodes.cend(), size_t{0}, [](const auto& init, const auto& node) { return init + node.cpus.size(); });
 }
 
 const std::vector<TopologyNode>& Topology::nodes() const {

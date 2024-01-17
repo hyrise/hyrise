@@ -51,6 +51,7 @@ void NodeQueueScheduler::begin() {
   _queues.resize(_node_count);
   _workers_per_node.resize(_node_count);
 
+  auto main_thread_cpu_id = CpuID{};
   auto pinned_main_thread = false;
   for (auto node_id = NodeID{0}; node_id < _node_count; ++node_id) {
     const auto& topology_node = Hyrise::get().topology.nodes()[node_id];
@@ -76,7 +77,7 @@ void NodeQueueScheduler::begin() {
       for (const auto& topology_cpu : topology_node.cpus) {
         if (!pinned_main_thread) {
           std::cerr << "Pinning main thread to : " << topology_cpu.cpu_id << "\n";
-          SetThreadAffinity(topology_cpu.cpu_id);
+          main_thread_cpu_id = topology_cpu.cpu_id;
           pinned_main_thread = true;
           continue;
         }
@@ -96,6 +97,7 @@ void NodeQueueScheduler::begin() {
     worker->start();
     ++_active_worker_count;
   }
+  //SetThreadAffinity(main_thread_cpu_id);
 }
 
 void NodeQueueScheduler::wait_for_all_tasks() {
@@ -177,6 +179,8 @@ void NodeQueueScheduler::finish() {
   }
 
   wait_for_all_tasks();
+
+  //UnsetThreadAffinity();
 
   Assert(static_cast<size_t>(_active_worker_count.load()) == _workers.size(), "Expected all workers to be active.");
   for (auto node_id = NodeID{0}; node_id < _node_count; ++node_id) {
