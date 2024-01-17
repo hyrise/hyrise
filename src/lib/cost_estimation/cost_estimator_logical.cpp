@@ -91,6 +91,7 @@ float CostEstimatorLogical::_expression_cost_multiplier(const std::shared_ptr<Ab
       const auto& subquery = static_cast<const LQPSubqueryExpression&>(*sub_expression);
       if (subquery.is_correlated()) {
         multiplier += estimate_plan_cost(subquery.lqp, cacheable);
+        return ExpressionVisitation::DoNotVisitArguments;
       }
     } else if (sub_expression->type == ExpressionType::List) {
       // ListExpressions can have many elements, all of which should be values or simple operations. Thus, we do not
