@@ -435,7 +435,7 @@ TEST_F(OperatorsGetTableTest, DynamicSubqueryPruningSubqueryNotExecuted) {
   EXPECT_THROW(get_table->execute(), std::logic_error);
 }
 
-TEST_F(OperatorsGetTableTest, FinalizedChunks) {
+TEST_F(OperatorsGetTableTest, ImmutableChunks) {
   // Insert one tuple into int_int_float to create a mutable chunk.
   const auto& table = Hyrise::get().storage_manager.get_table("int_int_float");
   EXPECT_EQ(table->chunk_count(), 4);

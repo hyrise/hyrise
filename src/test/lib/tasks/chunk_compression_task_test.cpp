@@ -89,11 +89,11 @@ TEST_F(ChunkCompressionTaskTest, CompressionWithAbortedInsert) {
 
   ASSERT_EQ(table->chunk_count(), 4);
 
-  // The last two chunks were created by the Insert operator. Even though it was rolled back, it finalized the first
-  // chunk it created. The last created chunk was not finalized yet.
+  // The last two chunks were created by the Insert operator. Even though it was rolled back, it marks the first chunk
+  // it created as immutable. The last created chunk was not marked yet.
   EXPECT_FALSE(table->get_chunk(ChunkID{2})->is_mutable());
   EXPECT_TRUE(table->get_chunk(ChunkID{3})->is_mutable());
-  table->get_chunk(ChunkID{3})->finalize();
+  table->get_chunk(ChunkID{3})->set_immutable();
 
   const auto compression = std::make_shared<ChunkCompressionTask>(
       "table_insert", std::vector<ChunkID>{ChunkID{0}, ChunkID{1}, ChunkID{2}, ChunkID{3}});

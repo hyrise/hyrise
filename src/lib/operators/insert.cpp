@@ -108,11 +108,12 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
 
       // If the last chunk of the target table is either immutable or full, append a new mutable chunk.
       if (!target_chunk->is_mutable() || target_chunk->size() == _target_table->target_chunk_size()) {
-        // Allow the chunk to be finalized as it has reached its target size and no incoming Insert operators will try
-        // to write to it. If all Insert operators writing to this chunk have already finished, `try_finalize()` makes
-        // the chunk immutable. Otherwise, the pending Insert operators will do this once they commit/roll back.
-        target_chunk->mark_as_finalizable();
-        target_chunk->try_finalize();
+        // Allow the chunk to be marked as immutable as it has reached its target size and no incoming Insert operators
+        // will try to write to it. If all Insert operators writing to this chunk have already finished,
+        // `try_set_immutable()` makes the chunk immutable. Otherwise, the pending Insert operators will do this
+        // once they commit/roll back.
+        target_chunk->reached_target_size();
+        target_chunk->try_set_immutable();
         _target_table->append_mutable_chunk();
         ++target_chunk_id;
         target_chunk = _target_table->get_chunk(target_chunk_id);
@@ -240,12 +241,12 @@ void Insert::_on_commit_records(const CommitID cid) {
     // This fence ensures that the changes to TID (which are not sequentially consistent) are visible to other threads.
     std::atomic_thread_fence(std::memory_order_release);
 
-    // Deregister the pending Insert and try to finalize the chunk. We might be the last committing Insert operator
-    // inserting into a chunk that reached its target size. In this case, the Insert operator that added a new chunk to
-    // the table allowed the chunk to be finalized, i.e., it set the _is_finalizable flag. Then, `try_finalize()`
-    // actually finalizes the chunk. Otherwise, this is a no-op.
+    // Deregister the pending Insert and try to mark the chunk as immutable. We might be the last committing Insert
+    // operator inserting into a chunk that reached its target size. In this case, the Insert operator that added a new
+    // chunk to the table allowed the chunk to be marked, i.e., it set the `reached_target_size` flag. Then,
+    // `try_set_immutable()` actually marks the chunk. Otherwise, this is a no-op.
     mvcc_data->deregister_insert();
-    target_chunk->try_finalize();
+    target_chunk->try_set_immutable();
   }
 }
 
@@ -288,12 +289,12 @@ void Insert::_on_rollback_records() {
     // This fence ensures that the changes to TID (which are not sequentially consistent) are visible to other threads.
     std::atomic_thread_fence(std::memory_order_release);
 
-    // Deregister the pending Insert and try to finalize the chunk. We might be the last rolling back Insert operator
-    // inserting into a chunk that reached its target size. In this case, the Insert operator that added a new chunk to
-    // the table allowed the chunk to be finalized, i.e., it set the _is_finalizable flag. Then, `try_finalize()`
-    // actually finalizes the chunk. Otherwise, this is a no-op.
+    // Deregister the pending Insert and try to mark the chunk as immutable. We might be the last rolling back Insert
+    // operator inserting into a chunk that reached its target size. In this case, the Insert operator that added a new
+    // chunk to the table allowed the chunk to be marked, i.e., it set the `reached_target_size` flag. Then,
+    // `try_set_immutable()` actually marks the chunk. Otherwise, this is a no-op.
     mvcc_data->deregister_insert();
-    target_chunk->try_finalize();
+    target_chunk->try_set_immutable();
   }
 }
 

@@ -477,10 +477,10 @@ TEST_F(StressTest, AtomicMaxConcurrentUpdate) {
   EXPECT_EQ(counter.load(), 1'100);
 }
 
-// Insert operators automatically finalize chunks when they are full and the operator (i) appends a new chunk and all
-// other Inserts finished or (ii) they finish (commit/roll back) and are the last pending Insert operator for this
-// chunk. To test all of these cases in a stress test, we let threads concurrently insert and commit/roll back.
-TEST_F(StressTest, ConcurrentInsertsFinalizeChunks) {
+// Insert operators automatically mark chunks as immutable when they are full and the operator (i) appends a new chunk
+// and all other Inserts finished or (ii) they finish (commit/roll back) and are the last pending Insert operator for
+// this chunk. To test all of these cases in a stress test, we let threads concurrently insert and commit/roll back.
+TEST_F(StressTest, ConcurrentInsertsSetChunksImmutable) {
   const auto table = std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Int, false}}, TableType::Data,
                                              ChunkOffset{3}, UseMvcc::Yes);
   Hyrise::get().storage_manager.add_table("table_a", table);
@@ -501,8 +501,8 @@ TEST_F(StressTest, ConcurrentInsertsFinalizeChunks) {
   for (auto thread_id = uint32_t{0}; thread_id < thread_count; ++thread_id) {
     threads.emplace_back([&]() {
       for (auto iteration = uint32_t{0}; iteration < insert_count; ++iteration) {
-        // Commit only 50% of transactions. Thus, there should be committed and rolled back operators that both finalize
-        // chunks.
+        // Commit only 50% of transactions. Thus, there should be committed and rolled back operators that both mark
+        // chunks as immutable.
         const auto do_commit = iteration % 2 == 0;
         const auto insert = std::make_shared<Insert>("table_a", table_wrapper);
         const auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
@@ -526,7 +526,7 @@ TEST_F(StressTest, ConcurrentInsertsFinalizeChunks) {
   EXPECT_EQ(table->chunk_count(), 20'000);
   EXPECT_EQ(table->row_count(), 60'000);
 
-  // All but the final chunk should be full and finalized.
+  // All but the final chunk should be full and marked as immutable.
   const auto immutable_chunk_count = table->chunk_count() - 1;
   for (auto chunk_id = ChunkID{0}; chunk_id < immutable_chunk_count; ++chunk_id) {
     const auto& chunk = table->get_chunk(chunk_id);

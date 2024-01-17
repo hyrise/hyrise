@@ -159,7 +159,7 @@ TEST_F(OperatorsValidateTest, ChunkNotEntirelyVisibleWithoutMaxBeginCid) {
   auto vs_int = std::make_shared<ValueSegment<int32_t>>();
   vs_int->append(4);
   auto chunk = std::make_shared<Chunk>(Segments{vs_int}, std::make_shared<MvccData>(1, CommitID{0}));
-  // We explicitly do not finalize the chunk so that max_begin_cid remains emtpy
+  // We explicitly do not mark the chunk as immutable so that max_begin_cid remains emtpy.
 
   auto validate = std::make_shared<Validate>(nullptr);
 
@@ -173,7 +173,7 @@ TEST_F(OperatorsValidateTest, ChunkNotEntirelyVisibleWithLowerSnapshotCid) {
   vs_int->append(4);
 
   auto chunk = std::make_shared<Chunk>(Segments{vs_int}, std::make_shared<MvccData>(1, begin_cid));
-  chunk->finalize();
+  chunk->set_immutable();
 
   auto validate = std::make_shared<Validate>(nullptr);
 
@@ -188,7 +188,7 @@ TEST_F(OperatorsValidateTest, ChunkNotEntirelyVisibleWithInvalidRows) {
 
   auto chunk = std::make_shared<Chunk>(Segments{vs_int}, std::make_shared<MvccData>(1, begin_cid));
   chunk->increase_invalid_row_count(ChunkOffset{1});
-  chunk->finalize();
+  chunk->set_immutable();
 
   auto validate = std::make_shared<Validate>(nullptr);
 
@@ -201,7 +201,7 @@ TEST_F(OperatorsValidateTest, ChunkEntirelyVisible) {
   auto vs_int = std::make_shared<ValueSegment<int32_t>>();
   vs_int->append(4);
   auto chunk = std::make_shared<Chunk>(Segments{vs_int}, std::make_shared<MvccData>(1, begin_cid));
-  chunk->finalize();
+  chunk->set_immutable();
 
   auto validate = std::make_shared<Validate>(nullptr);
 

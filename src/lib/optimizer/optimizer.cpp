@@ -4,6 +4,7 @@
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_subquery_expression.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
+#include "logical_query_plan/change_meta_table_node.hpp"
 #include "logical_query_plan/logical_plan_root_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "strategy/between_composition_rule.hpp"
@@ -141,13 +142,18 @@ void validate_lqp_with_uncorrelated_subqueries(const std::shared_ptr<const Abstr
         break;
 
       case LQPNodeType::Join:
-      case LQPNodeType::ChangeMetaTable:
       case LQPNodeType::Update:
       case LQPNodeType::Union:
       case LQPNodeType::Intersect:
       case LQPNodeType::Except:
         num_expected_inputs = 2;
         break;
+
+      // Depending of the type of the change, ChangeMetaTableNodes have one (Insert, Delete) or two (Update) inputs.
+      case LQPNodeType::ChangeMetaTable: {
+        const auto& change_meta_table_node = static_cast<const ChangeMetaTableNode&>(*node);
+        num_expected_inputs = change_meta_table_node.change_type == MetaTableChangeType::Update ? 2 : 1;
+      }
     }
     Assert(node->input_count() == num_expected_inputs, std::string{"Node "} + node->description() + " has " +
                                                            std::to_string(node->input_count()) + " inputs, while " +

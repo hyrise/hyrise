@@ -54,7 +54,7 @@ class Chunk : private Noncopyable {
   Chunk(Segments segments, const std::shared_ptr<MvccData>& mvcc_data = nullptr,
         const std::optional<PolymorphicAllocator<Chunk>>& alloc = std::nullopt, Indexes indexes = {});
 
-  // Returns whether new rows can be appended to this Chunk. Chunks are set immutable during finalize().
+  // Returns whether new rows can be appended to this Chunk. Chunks are set immutable during `set_immutable().
   bool is_mutable() const;
 
   // Atomically replaces the current segment at column_id with the passed segment.
@@ -177,20 +177,19 @@ class Chunk : private Noncopyable {
   void set_cleanup_commit_id(CommitID cleanup_commit_id);
 
   /**
-   * Executes tasks that are connected with finalizing a chunk. Currently, chunks are made immutable, and if not already
-   * done by Insert operators, the MVCC max_begin_cid is set. Finalizing a chunk is the inserter's responsibility.
+   * Makes chunks immutable, and if not already done by Insert operators, the MVCC `max_begin_cid` is set. Marking a
+   * chunk as immutable is the inserter's responsibility.
    */
-  void finalize();
+  void set_immutable();
 
   /**
-   * Insert operators mark that they appended a new chunk to the table. From this moment on, the former last chunk can
-   * be finalized as soon as all pending Inserts committed or rolled back. If there are no pending Inserts, i.e., the
-   * chunk was filled to its target size and all Inserts are committed/rolled back, the chunk is immediately finalized.
-   * Otherwise, each Insert operator tries to finalize the chunks it inserted data into on commit or rollback.
-   * Finalizing marks the chunk as immutable.
+   * Insert operators indicate that the chunk is full when appending a new chunk to the table. From this moment on, the
+   * former last chunk can be marked as immutable as soon as all pending Inserts commit or roll back and try to mark the
+   * chunks they interted into. If there are no pending Inserts, i.e., the chunk was filled to its target size and all
+   * Inserts are committed/rolled back, the chunk is immediately marked.
    */
-  void mark_as_finalizable();
-  void try_finalize();
+  void reached_target_size();
+  void try_set_immutable();
 
  private:
   std::vector<std::shared_ptr<const AbstractSegment>> _get_segments_for_ids(
@@ -202,7 +201,7 @@ class Chunk : private Noncopyable {
   Indexes _indexes;
   std::optional<ChunkPruningStatistics> _pruning_statistics;
   std::atomic_bool _is_mutable{true};
-  std::atomic_bool _is_finalizable{false};
+  std::atomic_bool _reached_target_size{false};
   std::vector<SortColumnDefinition> _sorted_by;
   mutable std::atomic<ChunkOffset::base_type> _invalid_row_count{ChunkOffset::base_type{0}};
 

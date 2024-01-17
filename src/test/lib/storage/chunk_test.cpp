@@ -68,23 +68,23 @@ TEST_F(StorageChunkTest, RetrieveSegment) {
   EXPECT_EQ(abstract_segment->size(), 4);
 }
 
-TEST_F(StorageChunkTest, FinalizingAFinalizedChunkThrows) {
+TEST_F(StorageChunkTest, SetImmutableTwiceThrows) {
   chunk = std::make_shared<Chunk>(Segments({vs_int, vs_str}));
   chunk->append({2, "two"});
 
-  chunk->finalize();
+  chunk->set_immutable();
 
-  EXPECT_THROW(chunk->finalize(), std::logic_error);
+  EXPECT_THROW(chunk->set_immutable(), std::logic_error);
 }
 
-TEST_F(StorageChunkTest, FinalizeSetsMaxBeginCid) {
+TEST_F(StorageChunkTest, SetImmutableSetsMaxBeginCid) {
   const auto mvcc_data = std::make_shared<MvccData>(3, CommitID{0});
   mvcc_data->set_begin_cid(ChunkOffset{0}, CommitID{1});
   mvcc_data->set_begin_cid(ChunkOffset{1}, CommitID{2});
   mvcc_data->set_begin_cid(ChunkOffset{2}, CommitID{3});
 
   chunk = std::make_shared<Chunk>(Segments({vs_int, vs_str}), mvcc_data);
-  chunk->finalize();
+  chunk->set_immutable();
 
   const auto mvcc_data_chunk = chunk->mvcc_data();
   EXPECT_EQ(mvcc_data_chunk->max_begin_cid.load(), 3);
@@ -233,7 +233,7 @@ TEST_F(StorageChunkTest, RemoveIndex) {
 TEST_F(StorageChunkTest, SetSortedInformationSingle) {
   EXPECT_TRUE(chunk->individually_sorted_by().empty());
   const auto sorted_by = SortColumnDefinition(ColumnID{0}, SortMode::Ascending);
-  chunk->finalize();
+  chunk->set_immutable();
   chunk->set_individually_sorted_by(sorted_by);
   EXPECT_EQ(chunk->individually_sorted_by().size(), 1);
   EXPECT_EQ(chunk->individually_sorted_by().front(), sorted_by);
@@ -243,7 +243,7 @@ TEST_F(StorageChunkTest, SetSortedInformationVector) {
   EXPECT_TRUE(chunk->individually_sorted_by().empty());
   const auto sorted_by_vector = std::vector{SortColumnDefinition(ColumnID{0}, SortMode::Ascending),
                                             SortColumnDefinition(ColumnID{1}, SortMode::Descending)};
-  chunk->finalize();
+  chunk->set_immutable();
   chunk->set_individually_sorted_by(sorted_by_vector);
   EXPECT_EQ(chunk->individually_sorted_by(), sorted_by_vector);
 
@@ -259,7 +259,7 @@ TEST_F(StorageChunkTest, SetSortedInformationAscendingWithNulls) {
   const auto value_segment = std::make_shared<ValueSegment<int32_t>>(pmr_vector<int32_t>{17, 0, 1, 1},
                                                                      pmr_vector<bool>{true, true, false, false});
   const auto chunk_with_nulls = std::make_shared<Chunk>(Segments{value_segment});
-  chunk_with_nulls->finalize();
+  chunk_with_nulls->set_immutable();
   EXPECT_TRUE(chunk_with_nulls->individually_sorted_by().empty());
 
   EXPECT_NO_THROW(chunk_with_nulls->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Ascending)));
@@ -275,7 +275,7 @@ TEST_F(StorageChunkTest, SetSortedInformationDescendingWithNulls) {
   const auto value_segment = std::make_shared<ValueSegment<int32_t>>(pmr_vector<int32_t>{0, 2, 1, 1},
                                                                      pmr_vector<bool>{true, false, false, false});
   const auto chunk_with_nulls = std::make_shared<Chunk>(Segments{value_segment});
-  chunk_with_nulls->finalize();
+  chunk_with_nulls->set_immutable();
   EXPECT_TRUE(chunk_with_nulls->individually_sorted_by().empty());
 
   // Currently, NULL values always come first when sorted.
@@ -293,7 +293,7 @@ TEST_F(StorageChunkTest, SetSortedInformationUnsortedNULLs) {
   const auto value_segment =
       std::make_shared<ValueSegment<int32_t>>(pmr_vector<int32_t>{1, 1, 1}, pmr_vector<bool>{false, true, false});
   const auto chunk_with_nulls = std::make_shared<Chunk>(Segments{value_segment});
-  chunk_with_nulls->finalize();
+  chunk_with_nulls->set_immutable();
   EXPECT_TRUE(chunk_with_nulls->individually_sorted_by().empty());
 
   // Sorted values, but NULLs always come first in Hyrise when vector is sorted.
@@ -311,7 +311,7 @@ TEST_F(StorageChunkTest, SetSortedInformationNULLsLast) {
   const auto value_segment =
       std::make_shared<ValueSegment<int32_t>>(pmr_vector<int32_t>{1, 1, 1}, pmr_vector<bool>{false, false, true});
   const auto chunk_with_nulls = std::make_shared<Chunk>(Segments{value_segment});
-  chunk_with_nulls->finalize();
+  chunk_with_nulls->set_immutable();
   EXPECT_TRUE(chunk_with_nulls->individually_sorted_by().empty());
 
   // Sorted values, but NULLs always come first in Hyrise when vector is sorted.
@@ -338,11 +338,11 @@ TEST_F(StorageChunkTest, MemoryUsageEstimation) {
   EXPECT_GT(chunk->memory_usage(MemoryUsageCalculationMode::Sampled), segment_sizes + mvcc_size);
 }
 
-// A concurrency stress test can be found at `stress_test.cpp` (ConcurrentInsertsFinalizeChunks).
-TEST_F(StorageChunkTest, TryFinalize) {
+// A concurrency stress test can be found at `stress_test.cpp` (ConcurrentInsertsSetChunksImmutable).
+TEST_F(StorageChunkTest, TrySetImmutable) {
   if constexpr (HYRISE_DEBUG) {
-    // try_finalize() should only be called when the chunk is part of a stored table, i.e., it must have MVCC data.
-    EXPECT_THROW(chunk->try_finalize(), std::logic_error);
+    // try_set_immutable() should only be called when the chunk is part of a stored table, i.e., it must have MVCC data.
+    EXPECT_THROW(chunk->try_set_immutable(), std::logic_error);
   }
 
   const auto mvcc_data = std::make_shared<MvccData>(ChunkOffset{3}, CommitID{0});
@@ -350,23 +350,23 @@ TEST_F(StorageChunkTest, TryFinalize) {
 
   EXPECT_TRUE(chunk->is_mutable());
 
-  // Nothing happens if chunk is not marked as finalizable.
-  chunk->try_finalize();
+  // Nothing happens if chunk is not marked as full.
+  chunk->try_set_immutable();
   EXPECT_TRUE(chunk->is_mutable());
 
-  // Finalization works if chunk is marked.
-  chunk->mark_as_finalizable();
-  chunk->try_finalize();
+  // Marking as immutable works if chunk is marked as full.
+  chunk->reached_target_size();
+  chunk->try_set_immutable();
   EXPECT_FALSE(chunk->is_mutable());
 
   // Multiple calls are okay.
-  chunk->try_finalize();
+  chunk->try_set_immutable();
   EXPECT_FALSE(chunk->is_mutable());
 
-  // However, chunk should not be marked as finalizable multiple times.
+  // However, chunk should not be marked as full multiple times.
   chunk = std::make_shared<Chunk>(Segments{vs_int, vs_str}, mvcc_data);
-  chunk->mark_as_finalizable();
-  EXPECT_THROW(chunk->mark_as_finalizable(), std::logic_error);
+  chunk->reached_target_size();
+  EXPECT_THROW(chunk->reached_target_size(), std::logic_error);
 }
 
 }  // namespace hyrise

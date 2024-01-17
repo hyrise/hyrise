@@ -105,28 +105,28 @@ TEST_F(CsvParserTest, SemicolonSeparator) {
 TEST_F(CsvParserTest, ChunkSize) {
   auto table = CsvParser::parse("resources/test_data/csv/float_int_large.csv", ChunkOffset{20});
 
-  // check if chunk_size property is correct
-  EXPECT_EQ(table->target_chunk_size(), 20U);
+  // Check if chunk_size property is correct.
+  EXPECT_EQ(table->target_chunk_size(), 20);
 
-  // check if actual chunk_size is correct
-  EXPECT_EQ(table->get_chunk(ChunkID{0})->size(), 20U);
-  EXPECT_EQ(table->get_chunk(ChunkID{1})->size(), 20U);
+  // Check if actual chunk_size is correct.
+  EXPECT_EQ(table->get_chunk(ChunkID{0})->size(), 20);
+  EXPECT_EQ(table->get_chunk(ChunkID{1})->size(), 20);
 }
 
 TEST_F(CsvParserTest, TargetChunkSize) {
   auto table = CsvParser::parse("resources/test_data/csv/float_int_large_chunksize_max.csv", Chunk::DEFAULT_SIZE);
 
-  // check if chunk_size property is correct (target chunk size)
+  // Check if chunk_size property is correct (target chunk size).
   EXPECT_EQ(table->target_chunk_size(), Chunk::DEFAULT_SIZE);
 
-  // check if actual chunk_size and chunk_count is correct
-  EXPECT_EQ(table->get_chunk(ChunkID{0})->size(), 100U);
+  // Check if actual chunk_size and chunk_count is correct.
+  EXPECT_EQ(table->get_chunk(ChunkID{0})->size(), 100);
   EXPECT_EQ(table->chunk_count(), ChunkID{1});
 
   TableColumnDefinitions column_definitions{{"b", DataType::Float, false}, {"a", DataType::Int, false}};
   auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{20});
 
-  for (int i = 0; i < 100; ++i) {
+  for (auto i = uint32_t{0}; i < 100; ++i) {
     expected_table->append({458.7f, 12345});
   }
 
@@ -286,7 +286,7 @@ TEST_F(CsvParserTest, WithScheduler) {
   auto column_definitions = TableColumnDefinitions{{"b", DataType::Float, false}, {"a", DataType::Int, false}};
   auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{20});
 
-  for (int i = 0; i < 100; ++i) {
+  for (auto i = uint32_t{0}; i < 100; ++i) {
     expected_table->append({458.7f, 12345});
   }
 
@@ -295,12 +295,12 @@ TEST_F(CsvParserTest, WithScheduler) {
   Hyrise::get().set_scheduler(scheduler);
 }
 
-TEST_F(CsvParserTest, FinalizedChunks) {
+TEST_F(CsvParserTest, ImmutableChunks) {
   const auto table = CsvParser::parse("resources/test_data/csv/float_int_large.csv", ChunkOffset{40});
 
-  EXPECT_EQ(table->chunk_count(), 3U);
+  EXPECT_EQ(table->chunk_count(), 3);
 
-  // check if all chunks are finalized
+  // Check if all chunks are marked as immmutable.
   EXPECT_FALSE(table->get_chunk(ChunkID{0})->is_mutable());
   EXPECT_FALSE(table->get_chunk(ChunkID{1})->is_mutable());
   EXPECT_FALSE(table->get_chunk(ChunkID{2})->is_mutable());

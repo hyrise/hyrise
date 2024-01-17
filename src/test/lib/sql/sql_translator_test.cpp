@@ -1700,9 +1700,8 @@ TEST_F(SQLTranslatorTest, LimitExpression) {
 }
 
 TEST_F(SQLTranslatorTest, Extract) {
-  const auto components =
-      std::vector{DatetimeComponent::Year, DatetimeComponent::Month,  DatetimeComponent::Day,
-                  DatetimeComponent::Hour, DatetimeComponent::Minute, DatetimeComponent::Second};
+  const auto components = std::vector{DatetimeComponent::Year, DatetimeComponent::Month,  DatetimeComponent::Day,
+                                      DatetimeComponent::Hour, DatetimeComponent::Minute, DatetimeComponent::Second};
 
   auto actual_lqp = std::shared_ptr<AbstractLQPNode>{};
   auto expected_lqp = std::shared_ptr<AbstractLQPNode>{};
@@ -2181,7 +2180,6 @@ TEST_F(SQLTranslatorTest, InsertValuesToMetaTable) {
   // clang-format off
   const auto expected_lqp =
   ChangeMetaTableNode::make("meta_plugins", MetaTableChangeType::Insert,
-    DummyTableNode::make(),
     ProjectionNode::make(expression_vector("foo"),
       DummyTableNode::make()));
   // clang-format on
@@ -2232,8 +2230,7 @@ TEST_F(SQLTranslatorTest, DeleteFromMetaTable) {
   const auto expected_lqp =
    ChangeMetaTableNode::make("meta_plugins", MetaTableChangeType::Delete,
     PredicateNode::make(equals_(lqp_column_(select_node, meta_table->column_id_by_name("name")), "foo"),
-                        select_node),
-    DummyTableNode::make());
+                        select_node));
   // clang-format on
 
   EXPECT_FALSE(translation_info.cacheable);

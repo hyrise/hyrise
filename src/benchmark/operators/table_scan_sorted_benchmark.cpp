@@ -89,11 +89,11 @@ std::shared_ptr<TableWrapper> create_table(const DataType data_type, const int t
 
     const auto value_segment = std::make_shared<ValueSegment<Type>>(std::move(value_vector), std::move(null_values));
     table->append_chunk({value_segment});
-    table->last_chunk()->finalize();
+    table->last_chunk()->set_immutable();
   }
 
   if (encoding_type != EncodingType::Unencoded) {
-    // chunks are already finalized
+    // Chunks are already marked as immutable.
     ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec(encoding_type));
   }
 

@@ -13,11 +13,8 @@ std::shared_ptr<Table> AbstractMetaTable::_generate() const {
   auto table = _on_generate();
 
   if (table->chunk_count()) {
-    table->last_chunk()->finalize();
+    table->last_chunk()->set_immutable();
   }
-
-  table->set_table_statistics(TableStatistics::from_table(*table));
-
   return table;
 }
 

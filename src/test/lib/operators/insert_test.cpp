@@ -190,16 +190,16 @@ TEST_F(OperatorsInsertTest, RollbackIncreaseInvalidRowCount) {
   ins->execute();
 
   EXPECT_EQ(Hyrise::get().storage_manager.get_table(t_name)->row_count(), row_count * 2);
-  EXPECT_EQ(Hyrise::get().storage_manager.get_table(t_name)->chunk_count(),
-            2);  // load_table() has finalized first chunk
-  EXPECT_EQ(Hyrise::get().storage_manager.get_table(t_name)->get_chunk(ChunkID{0})->invalid_row_count(), uint32_t{0});
-  EXPECT_EQ(Hyrise::get().storage_manager.get_table(t_name)->get_chunk(ChunkID{1})->invalid_row_count(), uint32_t{0});
+  // `load_table()` has marked the first chunk as immutable.
+  EXPECT_EQ(Hyrise::get().storage_manager.get_table(t_name)->chunk_count(), 2);
+  EXPECT_EQ(Hyrise::get().storage_manager.get_table(t_name)->get_chunk(ChunkID{0})->invalid_row_count(), 0);
+  EXPECT_EQ(Hyrise::get().storage_manager.get_table(t_name)->get_chunk(ChunkID{1})->invalid_row_count(), 0);
 
   // Rollback Insert - invalidate inserted rows
   context1->rollback(RollbackReason::User);
 
-  EXPECT_EQ(Hyrise::get().storage_manager.get_table(t_name)->get_chunk(ChunkID{0})->invalid_row_count(), uint32_t{0});
-  EXPECT_EQ(Hyrise::get().storage_manager.get_table(t_name)->get_chunk(ChunkID{1})->invalid_row_count(), uint32_t{3});
+  EXPECT_EQ(Hyrise::get().storage_manager.get_table(t_name)->get_chunk(ChunkID{0})->invalid_row_count(), 0);
+  EXPECT_EQ(Hyrise::get().storage_manager.get_table(t_name)->get_chunk(ChunkID{1})->invalid_row_count(), 3);
 }
 
 TEST_F(OperatorsInsertTest, InsertStringNullValue) {
@@ -354,8 +354,8 @@ TEST_F(OperatorsInsertTest, SetMaxBeginCID) {
   EXPECT_EQ(chunk->mvcc_data()->max_begin_cid.load(), CommitID{2});
 }
 
-// We are the last pending Insert operator for a chunk. Thus, we finalize it on commit/rollback.
-TEST_F(OperatorsInsertTest, FinalizeSingleChunk) {
+// We are the last pending Insert operator for a chunk. Thus, we mark the chunk as immutable on commit/rollback.
+TEST_F(OperatorsInsertTest, MarkSingleChunkImmutable) {
   for (const auto do_commit : {true, false}) {
     const auto column_definitions = TableColumnDefinitions{{"a", DataType::Int, false}};
     const auto target_table =
@@ -381,8 +381,8 @@ TEST_F(OperatorsInsertTest, FinalizeSingleChunk) {
 
     EXPECT_TRUE(target_table->last_chunk()->is_mutable());
     EXPECT_EQ(target_table->last_chunk()->mvcc_data()->pending_inserts(), 1);
-    // Allow Insert to finalize chunk.
-    target_table->last_chunk()->mark_as_finalizable();
+    // Allow Insert to mark the chunk as immutable.
+    target_table->last_chunk()->reached_target_size();
 
     if (do_commit) {
       transaction_context->commit();
@@ -395,9 +395,9 @@ TEST_F(OperatorsInsertTest, FinalizeSingleChunk) {
   }
 }
 
-// Multiple Insert operators insert into the same chunk. The operator that finishes last finalizes the chunk on commit/
-// rollback. A concurrency stress test can be found at `stress_test.cpp` (ConcurrentInsertsFinalizeChunks).
-TEST_F(OperatorsInsertTest, FinalizeSingleChunkMultipleOperators) {
+// Multiple Insert operators insert into the same chunk. The operator that finishes last marks the chunk as immutable on
+// commit/rollback. A concurrency stress test can be found at `stress_test.cpp` (ConcurrentInsertsSetChunksImmutable).
+TEST_F(OperatorsInsertTest, MarkSingleChunkImmutableMultipleOperators) {
   for (const auto do_commit : {true, false}) {
     const auto column_definitions = TableColumnDefinitions{{"a", DataType::Int, false}};
     const auto target_table =
@@ -429,10 +429,10 @@ TEST_F(OperatorsInsertTest, FinalizeSingleChunkMultipleOperators) {
     ASSERT_EQ(target_table->chunk_count(), 1);
     EXPECT_TRUE(target_table->last_chunk()->is_mutable());
     EXPECT_EQ(target_table->last_chunk()->mvcc_data()->pending_inserts(), 2);
-    // Allow Inserts to finalize chunk.
-    target_table->last_chunk()->mark_as_finalizable();
+    // Allow Inserts to mark chunk as immutable.
+    target_table->last_chunk()->reached_target_size();
 
-    // The first operator finishes, but it does not finalize the chunk since the second operator is still pending.
+    // The first operator finishes, but it does not mark the chunk since the second operator is still pending.
     if (do_commit) {
       transaction_contexts[0]->commit();
     } else {
@@ -441,7 +441,7 @@ TEST_F(OperatorsInsertTest, FinalizeSingleChunkMultipleOperators) {
     EXPECT_TRUE(target_table->last_chunk()->is_mutable());
     EXPECT_EQ(target_table->last_chunk()->mvcc_data()->pending_inserts(), 1);
 
-    // The second operator finalizes the chunk once it finishes.
+    // The second operator marks the chunk as immutable once it finishes.
     if (do_commit) {
       transaction_contexts[1]->commit();
     } else {
@@ -452,8 +452,8 @@ TEST_F(OperatorsInsertTest, FinalizeSingleChunkMultipleOperators) {
   }
 }
 
-// We insert into multiple chunks, which we finalize on commit/rollback.
-TEST_F(OperatorsInsertTest, FinalizeMultipleChunks) {
+// We insert into multiple chunks, which we mark as immutable on commit/rollback.
+TEST_F(OperatorsInsertTest, MarkMultipleChunksImmutable) {
   for (const auto do_commit : {true, false}) {
     const auto column_definitions = TableColumnDefinitions{{"a", DataType::Int, false}};
     const auto target_table =
@@ -489,11 +489,11 @@ TEST_F(OperatorsInsertTest, FinalizeMultipleChunks) {
       transaction_context->rollback(RollbackReason::User);
     }
 
-    // The last chunk is not finalized since it is not full.
+    // The last chunk is not marked as immutable because it is not full.
     EXPECT_TRUE(target_table->last_chunk()->is_mutable());
     EXPECT_EQ(target_table->last_chunk()->mvcc_data()->pending_inserts(), 0);
 
-    // Previous chunks are finalized by ourselves.
+    // Previous chunks are marked as immutable by ourselves.
     for (auto chunk_id = ChunkID{0}; chunk_id < 4; ++chunk_id) {
       EXPECT_FALSE(target_table->get_chunk(chunk_id)->is_mutable());
       EXPECT_EQ(target_table->get_chunk(chunk_id)->mvcc_data()->pending_inserts(), 0);
@@ -501,14 +501,14 @@ TEST_F(OperatorsInsertTest, FinalizeMultipleChunks) {
   }
 }
 
-// No Insert operator is pending for the last completely filled chunk and we add a new one. Thus, we finalize it
-// immediately on execution.
-TEST_F(OperatorsInsertTest, FinalizePreviousChunk) {
+// No Insert operator is pending for the last completely filled chunk and we add a new one. Thus, we mark the chunk as
+// immutable immediately on execution.
+TEST_F(OperatorsInsertTest, MarkPreviousChunkImmutable) {
   const auto column_definitions = TableColumnDefinitions{{"a", DataType::Int, false}};
   const auto target_table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2}, UseMvcc::Yes);
   Hyrise::get().storage_manager.add_table("target_table", target_table);
 
-  // The first Insert operator creates and fills the first chunk but does not finalize it itself.
+  // The first Insert operator creates and fills the first chunk but does not mark it as immutable itself.
   {
     const auto values_to_insert = std::make_shared<Table>(column_definitions, TableType::Data);
     values_to_insert->append({int32_t{1}});
@@ -526,11 +526,11 @@ TEST_F(OperatorsInsertTest, FinalizePreviousChunk) {
     transaction_context->commit();
   }
 
-  // The first chunk is full, but it is not finalized yet: No new mutable chunk has been appended yet.
+  // The first chunk is full, but it is not marked as immutable yet: No new mutable chunk has been appended yet.
   EXPECT_TRUE(target_table->last_chunk()->is_mutable());
   EXPECT_EQ(target_table->last_chunk()->mvcc_data()->pending_inserts(), 0);
 
-  // The second Insert operator creates the second chunk and immediately finalizes the first chunk.
+  // The second Insert operator creates the second chunk and immediately marks the first chunk as immutable.
   {
     const auto values_to_insert = std::make_shared<Table>(column_definitions, TableType::Data);
     values_to_insert->append({int32_t{1}});
@@ -544,7 +544,7 @@ TEST_F(OperatorsInsertTest, FinalizePreviousChunk) {
     execute_all({table_wrapper, insert});
     EXPECT_FALSE(insert->execute_failed());
 
-    // When adding the new chunk, the Insert operator finalizes the previous chunk.
+    // When adding the new chunk, the Insert operator marks the previous chunk as immutable.
     ASSERT_EQ(target_table->chunk_count(), 2);
     EXPECT_FALSE(target_table->get_chunk(ChunkID{0})->is_mutable());
     EXPECT_TRUE(target_table->get_chunk(ChunkID{1})->is_mutable());
