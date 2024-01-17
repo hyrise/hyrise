@@ -35,8 +35,10 @@ float expression_cost_multiplier(const std::shared_ptr<AbstractExpression>& expr
         (sub_expression->type == ExpressionType::LQPSubquery &&
          static_cast<LQPSubqueryExpression&>(*sub_expression).is_correlated())) {
       multiplier += 1.0f;
-      // We do not return here. Thus, we continue to add a penalty for each parameter of a correlated subquery.
-    } else if (sub_expression->type == ExpressionType::List) {
+      return ExpressionVisitation::DoNotVisitArguments;
+    }
+
+    if (sub_expression->type == ExpressionType::List) {
       // ListExpressions can have many elements, all of which should be values or simple operations. Thus, we do not
       // visit all of them separately as they cannot increase the multiplier.
       if constexpr (HYRISE_DEBUG) {
