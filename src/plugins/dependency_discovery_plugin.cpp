@@ -121,57 +121,61 @@ void DependencyDiscoveryPlugin::_discover_dependencies() const {
 }
 
 DependencyCandidates DependencyDiscoveryPlugin::_identify_dependency_candidates() const {
-  auto generation_timer = Timer{};
   const auto lqp_cache = Hyrise::get().default_lqp_cache;
   if (!lqp_cache) {
     return {};
   }
 
-  // Get a snapshot of the current LQP cache to work on all currently cached queries.
-  const auto& snapshot = Hyrise::get().default_lqp_cache->snapshot();
   auto dependency_candidates = DependencyCandidates{};
 
-  for (const auto& [_, entry] : snapshot) {
-    const auto& root_node = entry.value;
-    visit_lqp(root_node, [&](const auto& node) {
-      const auto type = node->type;
+  auto loop_times = std::chrono::nanoseconds{};
+  for (auto repetition = uint32_t{0}; repetition < _validation_repetitions; ++repetition) {
+    if (_validation_repetitions > 1) {
+      dependency_candidates.clear();
+    }
 
-      const auto& rule_it = _candidate_rules.find(type);
-      if (rule_it == _candidate_rules.end()) {
+    auto loop_timer = Timer{};
+    // Get a snapshot of the current LQP cache to work on all currently cached queries.
+    const auto& snapshot = Hyrise::get().default_lqp_cache->snapshot();
+
+    for (const auto& [_, entry] : snapshot) {
+      const auto& root_node = entry.value;
+      visit_lqp(root_node, [&](const auto& node) {
+        const auto type = node->type;
+
+        const auto& rule_it = _candidate_rules.find(type);
+        if (rule_it == _candidate_rules.end()) {
+          return LQPVisitation::VisitInputs;
+        }
+
+        for (const auto& candidate_rule : rule_it->second) {
+          candidate_rule->apply_to_node(node, dependency_candidates);
+        }
+
         return LQPVisitation::VisitInputs;
-      }
+      });
+    }
 
-      for (const auto& candidate_rule : rule_it->second) {
-        candidate_rule->apply_to_node(node, dependency_candidates);
-      }
-
-      return LQPVisitation::VisitInputs;
-    });
+    loop_times += loop_timer.lap();
   }
 
+  const auto generation_time = loop_times / _validation_repetitions;
   auto message = std::stringstream{};
-  message << "Generated " << dependency_candidates.size() << " candidates in " << generation_timer.lap_formatted();
+  message << "Generated " << dependency_candidates.size() << " candidates in " << format_duration(generation_time);
   Hyrise::get().log_manager.add_message("DependencyDiscoveryPlugin", message.str(), LogLevel::Info);
   return dependency_candidates;
 }
 
 void DependencyDiscoveryPlugin::_validate_dependency_candidates(
     const DependencyCandidates& dependency_candidates) const {
-  auto validation_timer = Timer{};
-  auto ordered_candidates = std::vector<std::shared_ptr<AbstractDependencyCandidate>>{dependency_candidates.cbegin(),
-                                                                                      dependency_candidates.cend()};
-
-  std::sort(ordered_candidates.begin(), ordered_candidates.end(),
-            [](const auto& lhs, const auto& rhs) { return lhs->type < rhs->type; });
-
-  const auto candidate_count = ordered_candidates.size();
+  const auto candidate_count = dependency_candidates.size();
   auto candidate_times = std::vector<std::chrono::nanoseconds>(candidate_count);
+  auto ordered_candidates = std::vector<std::shared_ptr<AbstractDependencyCandidate>>{};
 
   auto valid_count = uint32_t{0};
   auto invalid_count = uint32_t{0};
   auto skipped_count = uint32_t{0};
 
-  const auto setup_time = validation_timer.lap();
   auto loop_times = std::chrono::nanoseconds{};
   for (auto repetition = uint32_t{0}; repetition < _validation_repetitions; ++repetition) {
     // Reset all validation results and constraints.
@@ -180,7 +184,7 @@ void DependencyDiscoveryPlugin::_validate_dependency_candidates(
       invalid_count = uint32_t{0};
       skipped_count = uint32_t{0};
 
-      for (const auto& candidate : ordered_candidates) {
+      for (const auto& candidate : dependency_candidates) {
         candidate->status = ValidationStatus::Uncertain;
       }
 
@@ -193,6 +197,11 @@ void DependencyDiscoveryPlugin::_validate_dependency_candidates(
     }
 
     auto loop_timer = Timer{};
+    ordered_candidates = std::vector<std::shared_ptr<AbstractDependencyCandidate>>{dependency_candidates.cbegin(),
+                                                                                   dependency_candidates.cend()};
+
+    std::sort(ordered_candidates.begin(), ordered_candidates.end(),
+              [](const auto& lhs, const auto& rhs) { return lhs->type < rhs->type; });
 
     for (auto candidate_id = size_t{0}; candidate_id < candidate_count; ++candidate_id) {
       const auto& candidate = ordered_candidates[candidate_id];
@@ -262,7 +271,7 @@ void DependencyDiscoveryPlugin::_validate_dependency_candidates(
   Assert(valid_count + invalid_count + skipped_count == dependency_candidates.size(),
          "Numbers of candidates do not add up.");
   auto message = std::stringstream{};
-  const auto validation_time = setup_time + (loop_times / _validation_repetitions);
+  const auto validation_time = loop_times / _validation_repetitions;
   message << "Validated " << dependency_candidates.size() << " candidates (" << valid_count << " valid, "
           << invalid_count << " invalid, " << skipped_count << " superfluous) in " << format_duration(validation_time);
   Hyrise::get().log_manager.add_message("DependencyDiscoveryPlugin", message.str(), LogLevel::Info);
