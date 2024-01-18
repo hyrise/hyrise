@@ -3,9 +3,11 @@
 #include <numeric>
 #include <random>
 
+#include "dependency_discovery/validation_strategy/validation_utils.hpp"
 #include "hyrise.hpp"
 #include "operators/get_table.hpp"
 #include "operators/sort.hpp"
+#include "operators/table_wrapper.hpp"
 #include "resolve_type.hpp"
 #include "storage/segment_iterate.hpp"
 #include "storage/table.hpp"
@@ -126,6 +128,64 @@ bool sample_ordered(const std::shared_ptr<const Table>& table, const ColumnID or
   return true;
 }
 
+template <typename T>
+bool check_column_sortedness(const std::shared_ptr<const Table> table, const ColumnID column_id,
+                             const ChunkID chunk_count) {
+  auto ordered = true;
+  auto is_initialized = false;
+  auto last_value = T{};
+
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+    if (!ordered) {
+      return false;
+    }
+
+    const auto& chunk = table->get_chunk(chunk_id);
+    Assert(chunk, "Physically deleted chunks shouldn't reach this point.");
+
+    segment_with_iterators<T>(*chunk->get_segment(column_id), [&](auto it, const auto end) {
+      while (it != end) {
+        if (it->is_null()) {
+          ordered = false;
+          return;
+        }
+
+        auto value = it->value();
+        if (is_initialized && value < last_value) {
+          ordered = false;
+          return;
+        }
+
+        is_initialized = true;
+        ++it;
+        last_value = std::move(value);
+      }
+    });
+  }
+
+  return ordered;
+}
+
+template <typename T>
+bool add_to_index(const ChunkID chunk_id, const std::shared_ptr<const Chunk>& chunk, const ColumnID column_id,
+                  std::map<T, ChunkID>& index, typename std::map<T, ChunkID>::iterator& previous_it) {
+  const auto segment_statistics = ValidationUtils<T>::gather_segment_statistics(chunk, column_id);
+  const auto& min = *segment_statistics.min;
+  const auto& max = *segment_statistics.max;
+
+  const auto min_it = index.emplace_hint(previous_it, min, chunk_id);
+  const auto max_it = index.emplace_hint(min_it, max, chunk_id);
+  previous_it = max_it;
+
+  // Not disjoint if key already exists or if there is another value between min and max.
+  const auto min_max_is_duplicate = min_it->second != chunk_id || max_it->second != chunk_id;
+  if (min_max_is_duplicate || std::next(min_it) != max_it) {
+    return false;
+  }
+
+  return true;
+}
+
 }  // namespace
 
 namespace hyrise {
@@ -145,6 +205,8 @@ ValidationResult OdValidationRule::_on_validate(const AbstractDependencyCandidat
     using OrderingColumnDataType = typename decltype(ordering_data_type_t)::type;
     resolve_data_type(table->column_data_type(ordered_column_id), [&](const auto ordered_data_type_t) {
       using OrderedColumnDataType = typename decltype(ordered_data_type_t)::type;
+
+      // Check ordering for sample.
       const auto ordered = sample_ordered<OrderingColumnDataType, OrderedColumnDataType>(table, ordering_column_id,
                                                                                          ordered_column_id, row_count);
       if (!ordered) {
@@ -152,75 +214,119 @@ ValidationResult OdValidationRule::_on_validate(const AbstractDependencyCandidat
         return;
       }
 
+      // If sample covers entire table, orderd sample means column ordered.
       if (row_count <= SAMPLE_SIZE) {
         status = ValidationStatus::Valid;
-      }
-    });
-  });
-
-  if (status != ValidationStatus::Uncertain) {
-    auto result = ValidationResult{status};
-    if (status == ValidationStatus::Valid) {
-      result.constraints[table] = _constraint_from_candidate(candidate);
-    }
-    return result;
-  }
-
-  auto pruned_column_ids = std::vector<ColumnID>{};
-  const auto column_count = table->column_count();
-  pruned_column_ids.reserve(std::max(column_count - 2, 0));
-  for (auto pruned_column_id = ColumnID{0}; pruned_column_id < column_count; ++pruned_column_id) {
-    if (pruned_column_id != ordering_column_id && pruned_column_id != ordered_column_id) {
-      pruned_column_ids.emplace_back(pruned_column_id);
-    }
-  }
-
-  const auto ordered_column_last = ordered_column_id > ordering_column_id;
-  const auto sort_column_id = ordered_column_last ? ColumnID{0} : ColumnID{1};
-  const auto check_column_id = ordered_column_last ? ColumnID{1} : ColumnID{0};
-
-  const auto get_table = std::make_shared<GetTable>(od_candidate.table_name, std::vector<ChunkID>{}, pruned_column_ids);
-  const auto sort_definitions = std::vector<SortColumnDefinition>{SortColumnDefinition{sort_column_id}};
-  const auto sort = std::make_shared<Sort>(get_table, sort_definitions);
-  get_table->execute();
-  sort->execute();
-  const auto& result_table = sort->get_output();
-
-  status = ValidationStatus::Valid;
-  resolve_data_type(result_table->column_data_type(check_column_id), [&](const auto data_type_t) {
-    using ColumnDataType = typename decltype(data_type_t)::type;
-
-    auto is_initialized = false;
-    auto last_value = ColumnDataType{};
-
-    const auto chunk_count = result_table->chunk_count();
-    for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-      if (status == ValidationStatus::Invalid) {
         return;
       }
 
-      const auto& chunk = result_table->get_chunk(chunk_id);
-      Assert(chunk, "Physically deleted chunks shouldn't reach this point.");
+      status = ValidationStatus::Valid;
+      const auto chunk_count = table->chunk_count();
 
-      segment_with_iterators<ColumnDataType>(*chunk->get_segment(check_column_id), [&](auto it, const auto end) {
-        while (it != end) {
-          if (it->is_null()) {
-            status = ValidationStatus::Invalid;
-            return;
+      // For tables with more chunks, check if we can order chunnks individually for result:
+      //   - For each column, domains of segments do not overlap.
+      //   - Order of segments is the same for both columns.
+      if (chunk_count > 1) {
+        auto sort_column_min_max_ordered = std::map<OrderingColumnDataType, ChunkID>{};
+        auto check_column_min_max_ordered = std::map<OrderedColumnDataType, ChunkID>{};
+
+        // Add all segments of both columns to indexes, abort if there are overlaps.
+        auto sort_column_it = sort_column_min_max_ordered.begin();
+        auto check_column_it = check_column_min_max_ordered.begin();
+        auto both_columns_disjoint = true;
+
+        for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+          const auto& chunk = table->get_chunk(chunk_id);
+          if (!chunk || chunk->size() == 0) {
+            continue;
           }
 
-          auto value = it->value();
-          if (is_initialized && value < last_value) {
-            status = ValidationStatus::Invalid;
-            return;
+          if (!(add_to_index(chunk_id, chunk, ordering_column_id, sort_column_min_max_ordered, sort_column_it) &&
+                add_to_index(chunk_id, chunk, ordered_column_id, check_column_min_max_ordered, check_column_it))) {
+            both_columns_disjoint = false;
+            break;
           }
-
-          is_initialized = true;
-          ++it;
-          last_value = std::move(value);
         }
-      });
-    }
+
+        if (both_columns_disjoint) {
+          // Check that order of segments is the same. If not, OD cannot hold.
+          sort_column_it = sort_column_min_max_ordered.begin();
+          check_column_it = check_column_min_max_ordered.begin();
+
+          while (sort_column_it != sort_column_min_max_ordered.end()) {
+            if (sort_column_it->second != check_column_it->second) {
+              status = ValidationStatus::Invalid;
+              return;
+            }
+
+            ++sort_column_it;
+            ++check_column_it;
+          }
+          Assert(check_column_it == check_column_min_max_ordered.end(), "Both indexes should have same size!");
+
+          // Sort chunks individually, abort if any chunk not ordered.
+          const auto& original_column_definitions = table->column_definitions();
+          const auto column_definitions = std::vector{original_column_definitions[ordering_column_id],
+                                                      original_column_definitions[ordered_column_id]};
+          const auto sort_definitions = std::vector<SortColumnDefinition>{SortColumnDefinition{ColumnID{0}}};
+
+          for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+            const auto& chunk = table->get_chunk(chunk_id);
+            if (!chunk || chunk->size() == 0) {
+              continue;
+            }
+
+            auto segments_to_sort =
+                Segments{chunk->get_segment(ordering_column_id), chunk->get_segment(ordered_column_id)};
+            auto chunk_to_sort = std::make_shared<Chunk>(std::move(segments_to_sort));
+            auto chunks_to_sort = std::vector<std::shared_ptr<Chunk>>{std::move(chunk_to_sort)};
+
+            const auto table_to_sort =
+                std::make_shared<Table>(column_definitions, TableType::Data, std::move(chunks_to_sort));
+            const auto table_wrapper = std::make_shared<TableWrapper>(table_to_sort);
+            const auto sort = std::make_shared<Sort>(table_wrapper, sort_definitions);
+            table_wrapper->execute();
+            sort->execute();
+            const auto& result_table = sort->get_output();
+
+            if (!check_column_sortedness<OrderedColumnDataType>(result_table, ColumnID{1}, ChunkID{1})) {
+              status = ValidationStatus::Invalid;
+              return;
+            }
+          }
+          status = ValidationStatus::Valid;
+          return;
+        }
+      }
+
+      // Fallback: Sort entire relation.
+      auto pruned_column_ids = std::vector<ColumnID>{};
+      const auto column_count = table->column_count();
+      if (column_count > 2) {
+        pruned_column_ids.reserve(column_count - 2);
+
+        for (auto pruned_column_id = ColumnID{0}; pruned_column_id < column_count; ++pruned_column_id) {
+          if (pruned_column_id != ordering_column_id && pruned_column_id != ordered_column_id) {
+            pruned_column_ids.emplace_back(pruned_column_id);
+          }
+        }
+      }
+
+      const auto ordered_column_last = ordered_column_id > ordering_column_id;
+      const auto sort_column_id = ordered_column_last ? ColumnID{0} : ColumnID{1};
+      const auto check_column_id = ordered_column_last ? ColumnID{1} : ColumnID{0};
+      const auto sort_definitions = std::vector<SortColumnDefinition>{SortColumnDefinition{sort_column_id}};
+      const auto get_table =
+          std::make_shared<GetTable>(od_candidate.table_name, std::vector<ChunkID>{}, pruned_column_ids);
+      const auto sort = std::make_shared<Sort>(get_table, sort_definitions);
+      get_table->execute();
+      sort->execute();
+      const auto& result_table = sort->get_output();
+
+      if (!check_column_sortedness<OrderedColumnDataType>(result_table, check_column_id, result_table->chunk_count())) {
+        status = ValidationStatus::Invalid;
+      }
+    });
   });
 
   auto result = ValidationResult(status);

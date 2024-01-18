@@ -8,13 +8,11 @@
 #include "storage/dictionary_segment.hpp"
 #include "storage/table.hpp"
 
-namespace {
-
-using namespace hyrise;  // NOLINT(build/namespaces)
+namespace hyrise {
 
 template <typename T>
-typename ValidationUtils<T>::ColumnStatistics gather_segment_statistics(const std::shared_ptr<const Chunk>& chunk,
-                                                                        const ColumnID column_id) {
+typename ValidationUtils<T>::ColumnStatistics ValidationUtils<T>::gather_segment_statistics(
+    const std::shared_ptr<const Chunk>& chunk, const ColumnID column_id) {
   const auto& segment = chunk->get_segment(column_id);
   auto statistics = typename ValidationUtils<T>::ColumnStatistics{};
 
@@ -68,10 +66,6 @@ typename ValidationUtils<T>::ColumnStatistics gather_segment_statistics(const st
   return statistics;
 }
 
-}  // namespace
-
-namespace hyrise {
-
 template <typename T>
 typename ValidationUtils<T>::ColumnStatistics ValidationUtils<T>::collect_column_statistics(
     const std::shared_ptr<const Table>& table, const ColumnID column_id, bool early_out) {
@@ -91,7 +85,7 @@ typename ValidationUtils<T>::ColumnStatistics ValidationUtils<T>::collect_column
       continue;
     }
 
-    const auto& segment_statistics = gather_segment_statistics<T>(chunk, column_id);
+    const auto& segment_statistics = gather_segment_statistics(chunk, column_id);
 
     column_statistics.all_segments_dictionary &= segment_statistics.all_segments_dictionary;
 
@@ -166,7 +160,7 @@ std::optional<std::pair<T, T>> ValidationUtils<T>::get_column_min_max_value(cons
       continue;
     }
 
-    const auto& segment_statistics = gather_segment_statistics<T>(chunk, column_id);
+    const auto& segment_statistics = gather_segment_statistics(chunk, column_id);
 
     if (segment_statistics.contains_only_nulls) {
       continue;

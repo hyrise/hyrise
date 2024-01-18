@@ -6,6 +6,7 @@
 namespace hyrise {
 
 class Table;
+class Chunk;
 
 template <typename T>
 class ValidationUtils {
@@ -19,6 +20,9 @@ class ValidationUtils {
     bool contains_only_nulls{false};
     bool all_segments_dictionary{false};
   };
+
+  static ColumnStatistics gather_segment_statistics(const std::shared_ptr<const Chunk>& chunk,
+                                                    const ColumnID column_id);
 
   // Allow to early out if not (proven) unique.
   static ColumnStatistics collect_column_statistics(const std::shared_ptr<const Table>& table, const ColumnID column_id,
