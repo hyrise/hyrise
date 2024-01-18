@@ -41,9 +41,6 @@ void NodeQueueScheduler::begin() {
 
   // One thread is reserved for the Hyrise main thread.
   const auto worker_count = Hyrise::get().topology.num_cpus() - 1;
-  std::cout << Hyrise::get().topology << std::endl;
-  std::cout << "NUMCPUs: " << Hyrise::get().topology.num_cpus() << std::endl;
-  std::cout << "worker count: " << worker_count << std::endl;
   Assert(worker_count >= 1, "Topology too small for NodeQueueScheduler.");
 
   _workers.reserve(worker_count);
@@ -51,7 +48,6 @@ void NodeQueueScheduler::begin() {
   _queues.resize(_node_count);
   _workers_per_node.resize(_node_count);
 
-  auto main_thread_cpu_id = CpuID{};
   auto pinned_main_thread = false;
   for (auto node_id = NodeID{0}; node_id < _node_count; ++node_id) {
     const auto& topology_node = Hyrise::get().topology.nodes()[node_id];
@@ -76,12 +72,9 @@ void NodeQueueScheduler::begin() {
 
       for (const auto& topology_cpu : topology_node.cpus) {
         if (!pinned_main_thread) {
-          std::cerr << "Pinning main thread to : " << topology_cpu.cpu_id << "\n";
-          main_thread_cpu_id = topology_cpu.cpu_id;
           pinned_main_thread = true;
           continue;
         }
-        std::cerr << "Pinning worker on: " << topology_cpu.cpu_id << "\n";
 
         // TODO(anybody): Place queues on the actual NUMA node once we have NUMA-aware allocators.
         _workers.emplace_back(
@@ -97,7 +90,6 @@ void NodeQueueScheduler::begin() {
     worker->start();
     ++_active_worker_count;
   }
-  //SetThreadAffinity(main_thread_cpu_id);
 }
 
 void NodeQueueScheduler::wait_for_all_tasks() {
@@ -179,8 +171,6 @@ void NodeQueueScheduler::finish() {
   }
 
   wait_for_all_tasks();
-
-  //UnsetThreadAffinity();
 
   Assert(static_cast<size_t>(_active_worker_count.load()) == _workers.size(), "Expected all workers to be active.");
   for (auto node_id = NodeID{0}; node_id < _node_count; ++node_id) {
@@ -264,13 +254,6 @@ NodeID NodeQueueScheduler::determine_queue_id(const NodeID preferred_node_id) co
   }
 
   // Initialize minimal values with first active node.
-  // auto first_active_node_id = NodeID{0};
-  // for (const auto active_node_id : _nodes_with_workers) {
-  //   if (_workers_per_node[active_node_id] > 0) {
-  //     first_active_node_id = active_node_id;
-  //     break;
-  //   }
-  // }
   auto min_load_node_id = _nodes_with_workers[0];
   auto min_load = _queues[min_load_node_id]->estimate_load();
 

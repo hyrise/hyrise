@@ -117,17 +117,13 @@ void Topology::_init_numa_topology(uint32_t max_num_cores) {
 
       for (auto cpu_id = CpuID{0}; cpu_id < num_configured_cpus; ++cpu_id) {
         const auto cpu_is_part_of_node = numa_bitmask_isbitset(this_node_cpu_bitmask, cpu_id);
-	std::cout << "cpu_is_part_of_node: " << cpu_is_part_of_node << std::endl;
         const auto cpu_is_part_of_affinity = numa_bitmask_isbitset(affinity_cpu_bitmask, cpu_id);
-	std::cout << "cpu_is_part_of_affinity: " << cpu_is_part_of_affinity << std::endl;
         if (cpu_is_part_of_node && cpu_is_part_of_affinity) {
           if (max_num_cores == 0 || core_count < max_num_cores) {
             cpus.emplace_back(cpu_id);
             ++_num_cpus;
-	    std::cout << "adding cpu\n";
           }
           ++core_count;
-	  std::cout << "adding core\n";
         }
         if (!cpu_is_part_of_affinity) {
           _filtered_by_affinity = true;
