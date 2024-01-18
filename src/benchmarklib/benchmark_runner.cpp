@@ -283,14 +283,13 @@ void BenchmarkRunner::_benchmark_shuffled() {
   _running_clients_semaphore.release(_config.clients);
   while (_state.keep_running() && (_config.max_runs < 0 || _total_finished_runs.load(std::memory_order_relaxed) <
                                                                static_cast<size_t>(_config.max_runs))) {
-    _running_clients_semaphore.acquire();
     if (item_id_counter == benchmark_item_count) {
       std::shuffle(item_ids.begin(), item_ids.end(), random_generator);
       item_id_counter = 0;
     }
 
+    _running_clients_semaphore.acquire();
     const auto item_id = item_ids[item_id_counter];
-    std::cerr << "Executing " << item_id << "\n";
     _schedule_item_run(item_id);
     ++item_id_counter;
   }
@@ -379,8 +378,8 @@ void BenchmarkRunner::_schedule_item_run(const BenchmarkItemID item_id) {
         auto [success, metrics, any_run_verification_failed] = _benchmark_item_runner->execute_item(item_id);
         const auto run_end = std::chrono::steady_clock::now();
 
-        --_currently_running_clients;
         _running_clients_semaphore.release();
+        --_currently_running_clients;
         ++_total_finished_runs;
 
         // If result.verification_passed was previously unset, set it; otherwise only invalidate it if the run failed.
