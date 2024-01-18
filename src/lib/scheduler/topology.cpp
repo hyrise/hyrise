@@ -183,7 +183,8 @@ void Topology::_init_fake_numa_topology(const std::vector<uint32_t>& workers_per
     _nodes.emplace_back(TopologyNode{std::move(cpus)});
   }
 
-  _num_cpus = std::accumulate(_nodes.cbegin(), _nodes.cend(), size_t{0}, [](const auto& init, const auto& node) { return init + node.cpus.size(); });
+  _num_cpus = std::accumulate(_nodes.cbegin(), _nodes.cend(), size_t{0},
+                              [](const auto& init, const auto& node) { return init + node.cpus.size(); });
 }
 
 const std::vector<TopologyNode>& Topology::nodes() const {

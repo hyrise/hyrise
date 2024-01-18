@@ -17,7 +17,6 @@
 #include "scheduler/shutdown_task.hpp"
 #include "scheduler/task_queue.hpp"
 
-
 namespace hyrise {
 
 using namespace expression_functional;  // NOLINT(build/namespaces)
