@@ -305,7 +305,7 @@ void Chunk::reached_target_size() {
 void Chunk::try_set_immutable() {
   DebugAssert(_mvcc_data, "Expected to be executed with MVCC enabled.");
   // Mark the chunk as immutable if (i) it reached the target size and a new chunk was added to the table, (ii) it is
-  // still mutable, and (iii) all pending Insert operators are either commited or rolled back. We do not have to set the
+  // still mutable, and (iii) all pending Insert operators are either committed or rolled back. We do not have to set the
   // `max_begin_cid` here because committed Insert operators already set it.
   if (!_reached_target_size || !is_mutable() || _mvcc_data->pending_inserts() != 0) {
     return;
@@ -316,10 +316,10 @@ void Chunk::try_set_immutable() {
   if (_is_mutable.compare_exchange_strong(success, false)) {
     // We were the first ones to mark the chunk as immutable. Thus, we have to take care of anything else that needs to
     // be done. In the future, this can mean to start background statistics generation, encoding, etc.
-    DebugAssert(success, "Value exchanged but value was actually false.");
+    Assert(success, "Value exchanged but value was actually false.");
   } else {
     // Another thread is about to mark this chunk as immutable. Do nothing.
-    DebugAssert(!success, "Value not exchanged but value was actually true.");
+    Assert(!success, "Value not exchanged but value was actually true.");
   }
 }
 

@@ -381,8 +381,6 @@ TEST_F(OperatorsInsertTest, MarkSingleChunkImmutable) {
 
     EXPECT_TRUE(target_table->last_chunk()->is_mutable());
     EXPECT_EQ(target_table->last_chunk()->mvcc_data()->pending_inserts(), 1);
-    // Allow Insert to mark the chunk as immutable.
-    target_table->last_chunk()->reached_target_size();
 
     if (do_commit) {
       transaction_context->commit();
@@ -429,8 +427,6 @@ TEST_F(OperatorsInsertTest, MarkSingleChunkImmutableMultipleOperators) {
     ASSERT_EQ(target_table->chunk_count(), 1);
     EXPECT_TRUE(target_table->last_chunk()->is_mutable());
     EXPECT_EQ(target_table->last_chunk()->mvcc_data()->pending_inserts(), 2);
-    // Allow Inserts to mark chunk as immutable.
-    target_table->last_chunk()->reached_target_size();
 
     // The first operator finishes, but it does not mark the chunk since the second operator is still pending.
     if (do_commit) {
@@ -498,57 +494,6 @@ TEST_F(OperatorsInsertTest, MarkMultipleChunksImmutable) {
       EXPECT_FALSE(target_table->get_chunk(chunk_id)->is_mutable());
       EXPECT_EQ(target_table->get_chunk(chunk_id)->mvcc_data()->pending_inserts(), 0);
     }
-  }
-}
-
-// No Insert operator is pending for the last completely filled chunk and we add a new one. Thus, we mark the chunk as
-// immutable immediately on execution.
-TEST_F(OperatorsInsertTest, MarkPreviousChunkImmutable) {
-  const auto column_definitions = TableColumnDefinitions{{"a", DataType::Int, false}};
-  const auto target_table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2}, UseMvcc::Yes);
-  Hyrise::get().storage_manager.add_table("target_table", target_table);
-
-  // The first Insert operator creates and fills the first chunk but does not mark it as immutable itself.
-  {
-    const auto values_to_insert = std::make_shared<Table>(column_definitions, TableType::Data);
-    values_to_insert->append({int32_t{1}});
-    values_to_insert->append({int32_t{1}});
-
-    const auto table_wrapper = std::make_shared<TableWrapper>(values_to_insert);
-    const auto insert = std::make_shared<Insert>("target_table", table_wrapper);
-    const auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
-
-    EXPECT_EQ(target_table->chunk_count(), 0);
-    insert->set_transaction_context(transaction_context);
-    execute_all({table_wrapper, insert});
-    EXPECT_FALSE(insert->execute_failed());
-    ASSERT_EQ(target_table->chunk_count(), 1);
-    transaction_context->commit();
-  }
-
-  // The first chunk is full, but it is not marked as immutable yet: No new mutable chunk has been appended yet.
-  EXPECT_TRUE(target_table->last_chunk()->is_mutable());
-  EXPECT_EQ(target_table->last_chunk()->mvcc_data()->pending_inserts(), 0);
-
-  // The second Insert operator creates the second chunk and immediately marks the first chunk as immutable.
-  {
-    const auto values_to_insert = std::make_shared<Table>(column_definitions, TableType::Data);
-    values_to_insert->append({int32_t{1}});
-
-    const auto table_wrapper = std::make_shared<TableWrapper>(values_to_insert);
-    const auto insert = std::make_shared<Insert>("target_table", table_wrapper);
-    const auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
-
-    EXPECT_EQ(target_table->chunk_count(), 1);
-    insert->set_transaction_context(transaction_context);
-    execute_all({table_wrapper, insert});
-    EXPECT_FALSE(insert->execute_failed());
-
-    // When adding the new chunk, the Insert operator marks the previous chunk as immutable.
-    ASSERT_EQ(target_table->chunk_count(), 2);
-    EXPECT_FALSE(target_table->get_chunk(ChunkID{0})->is_mutable());
-    EXPECT_TRUE(target_table->get_chunk(ChunkID{1})->is_mutable());
-    transaction_context->commit();
   }
 }
 

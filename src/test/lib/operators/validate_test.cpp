@@ -159,7 +159,7 @@ TEST_F(OperatorsValidateTest, ChunkNotEntirelyVisibleWithoutMaxBeginCid) {
   auto vs_int = std::make_shared<ValueSegment<int32_t>>();
   vs_int->append(4);
   auto chunk = std::make_shared<Chunk>(Segments{vs_int}, std::make_shared<MvccData>(1, CommitID{0}));
-  // We explicitly do not mark the chunk as immutable so that max_begin_cid remains emtpy.
+  // We explicitly do not mark the chunk as immutable so that max_begin_cid remains unset.
 
   auto validate = std::make_shared<Validate>(nullptr);
 

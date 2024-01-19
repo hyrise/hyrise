@@ -13,6 +13,7 @@ std::shared_ptr<Table> AbstractMetaTable::_generate() const {
   auto table = _on_generate();
 
   if (table->chunk_count()) {
+    // Previous chunks were marked as immutable by `Table::append()`.
     table->last_chunk()->set_immutable();
   }
   return table;

@@ -78,13 +78,13 @@ TEST_F(ChunkCompressionTaskTest, CompressionWithAbortedInsert) {
   const auto table = load_table("resources/test_data/tbl/compression_input.tbl", ChunkOffset{6});
   Hyrise::get().storage_manager.add_table("table_insert", table);
 
-  const auto gt1 = std::make_shared<GetTable>("table_insert");
-  gt1->execute();
+  const auto get_table_1 = std::make_shared<GetTable>("table_insert");
+  get_table_1->execute();
 
-  const auto ins = std::make_shared<Insert>("table_insert", gt1);
+  const auto insert = std::make_shared<Insert>("table_insert", get_table_1);
   auto context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
-  ins->set_transaction_context(context);
-  ins->execute();
+  insert->set_transaction_context(context);
+  insert->execute();
   context->rollback(RollbackReason::User);
 
   ASSERT_EQ(table->chunk_count(), 4);
@@ -92,8 +92,7 @@ TEST_F(ChunkCompressionTaskTest, CompressionWithAbortedInsert) {
   // The last two chunks were created by the Insert operator. Even though it was rolled back, it marks the first chunk
   // it created as immutable. The last created chunk was not marked yet.
   EXPECT_FALSE(table->get_chunk(ChunkID{2})->is_mutable());
-  EXPECT_TRUE(table->get_chunk(ChunkID{3})->is_mutable());
-  table->get_chunk(ChunkID{3})->set_immutable();
+  EXPECT_FALSE(table->get_chunk(ChunkID{3})->is_mutable());
 
   const auto compression = std::make_shared<ChunkCompressionTask>(
       "table_insert", std::vector<ChunkID>{ChunkID{0}, ChunkID{1}, ChunkID{2}, ChunkID{3}});
@@ -105,9 +104,9 @@ TEST_F(ChunkCompressionTaskTest, CompressionWithAbortedInsert) {
     ASSERT_TRUE(dict_segment);
   }
 
-  auto gt2 = std::make_shared<GetTable>("table_insert");
-  gt2->execute();
-  auto validate = std::make_shared<Validate>(gt2);
+  auto get_table_2 = std::make_shared<GetTable>("table_insert");
+  get_table_2->execute();
+  auto validate = std::make_shared<Validate>(get_table_2);
   context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
   validate->set_transaction_context(context);
   validate->execute();

@@ -30,8 +30,8 @@ using Indexes = pmr_vector<std::shared_ptr<AbstractChunkIndex>>;
 using ChunkPruningStatistics = std::vector<std::shared_ptr<BaseAttributeStatistics>>;
 
 /**
- * A Chunk is a horizontal partition of a table. It stores the table's data segment by segment. Optionally, mostly
- * applying to stored tables, it may also hold MvccData.
+ * Chunks are horizontal partitions of a table. They stores the table's data segment by segment. Optionally, mostly
+ * applying to stored tables, they may also hold MvccData.
  *
  * Find more information about this in our wiki: https://github.com/hyrise/hyrise/wiki/chunk-concept
  */
@@ -54,7 +54,7 @@ class Chunk : private Noncopyable {
   Chunk(Segments segments, const std::shared_ptr<MvccData>& mvcc_data = nullptr,
         const std::optional<PolymorphicAllocator<Chunk>>& alloc = std::nullopt, Indexes indexes = {});
 
-  // Returns whether new rows can be appended to this Chunk. Chunks are set immutable during `set_immutable().
+  // Returns whether new rows can be appended to this chunk. Chunks are set immutable during `set_immutable().
   bool is_mutable() const;
 
   // Atomically replaces the current segment at column_id with the passed segment.

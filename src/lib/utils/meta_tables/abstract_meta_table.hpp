@@ -42,7 +42,7 @@ class AbstractMetaTable : public Noncopyable {
   virtual ~AbstractMetaTable() = default;
 
   /**
-   * Generates the meta table on the fly by calling `_on_generate()`. It marks the last chunk of the table as immutable.
+   * Generates the meta table on the fly by calling `_on_generate()`. It ensures that all chunks are immutable.
    */
   std::shared_ptr<Table> _generate() const;
 

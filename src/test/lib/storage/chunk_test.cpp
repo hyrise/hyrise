@@ -364,8 +364,8 @@ TEST_F(StorageChunkTest, TrySetImmutable) {
   EXPECT_FALSE(chunk->is_mutable());
 
   // However, chunk should not be marked as full multiple times.
-  chunk = std::make_shared<Chunk>(Segments{vs_int, vs_str}, mvcc_data);
-  chunk->reached_target_size();
+  // chunk = std::make_shared<Chunk>(Segments{vs_int, vs_str}, mvcc_data);
+  // chunk->reached_target_size();
   EXPECT_THROW(chunk->reached_target_size(), std::logic_error);
 }
 

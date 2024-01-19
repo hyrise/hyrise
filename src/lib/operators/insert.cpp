@@ -105,15 +105,10 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
     while (remaining_rows > 0) {
       auto target_chunk_id = ChunkID{_target_table->chunk_count() - 1};
       auto target_chunk = _target_table->get_chunk(target_chunk_id);
+      const auto target_size = _target_table->target_chunk_size();
 
       // If the last chunk of the target table is either immutable or full, append a new mutable chunk.
-      if (!target_chunk->is_mutable() || target_chunk->size() == _target_table->target_chunk_size()) {
-        // Allow the chunk to be marked as immutable as it has reached its target size and no incoming Insert operators
-        // will try to write to it. If all Insert operators writing to this chunk have already finished,
-        // `try_set_immutable()` makes the chunk immutable. Otherwise, the pending Insert operators will do this
-        // once they commit/roll back.
-        target_chunk->reached_target_size();
-        target_chunk->try_set_immutable();
+      if (!target_chunk->is_mutable() || target_chunk->size() == target_size) {
         _target_table->append_mutable_chunk();
         ++target_chunk_id;
         target_chunk = _target_table->get_chunk(target_chunk_id);
@@ -149,7 +144,8 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
       // Grow data Segments.
       // Do so in REVERSE column order so that the resize of `Chunk::_segments.front()` happens last. It is this last
       // resize that makes the new row count visible to the outside world.
-      auto old_size = target_chunk->size();
+      const auto old_size = target_chunk->size();
+      const auto new_size = old_size + num_rows_for_target_chunk;
       const auto column_count = target_chunk->column_count();
       for (auto reverse_column_id = ColumnID{0}; reverse_column_id < column_count; ++reverse_column_id) {
         const auto column_id = static_cast<ColumnID>(column_count - reverse_column_id - 1);
@@ -161,8 +157,6 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
               std::dynamic_pointer_cast<ValueSegment<ColumnDataType>>(target_chunk->get_segment(column_id));
           Assert(value_segment, "Cannot insert into non-ValueSegments.");
 
-          const auto new_size = old_size + num_rows_for_target_chunk;
-
           // Cannot guarantee resize without reallocation. The ValueSegment should have been allocated with the target
           // table's target chunk size reserved.
           Assert(value_segment->values().capacity() >= new_size, "ValueSegment too small.");
@@ -171,6 +165,13 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
 
         // Make sure the first column's resize actually happens last and does not get reordered.
         std::atomic_thread_fence(std::memory_order_seq_cst);
+      }
+
+      if (new_size == target_size) {
+        // Allow the chunk to be marked as immutable as it has reached its target size and no incoming Insert operators
+        // will try to write to it. Pending Insert operators (including us) will call `try_set_immutable()` to make the
+        // chunk immutable once they commit/roll back.
+        target_chunk->reached_target_size();
       }
 
       remaining_rows -= num_rows_for_target_chunk;

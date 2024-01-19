@@ -26,8 +26,9 @@ TEST_F(MvccDataTest, MemoryUsage) {
   //   - 3 end CIDs (uint32_t)
   //   - 3 TIDs (atomic uint32_t)
   //   - max begin and end CIDs (atomic uint32_t)
-  //   - number of pending inserts (atimic uint32_t)
-  // Thus, the size should be larger than 12 * 8 B = 96 B.
+  //   - number of pending inserts (atomic uint32_t)
+  // We do not check for the exact value to avoid calculating the memory overhead added by atomics, inlining, sizes of
+  // the vector objects, and the actual vector capacity. Thus, the size should be larger than 12 * 4 B = 96 B.
   EXPECT_GT(_mvcc_data->memory_usage(), 96);
 }
 
