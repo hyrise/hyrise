@@ -68,13 +68,13 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config,
   // items exist for which no dedicated result could be loaded.
   if (_config.verify && _benchmark_item_runner->has_item_without_dedicated_result()) {
     std::cout << "- Loading tables into SQLite for verification." << std::endl;
-    Timer timer;
+    auto timer = Timer{};
 
     // Load the data into SQLite.
     sqlite_wrapper = std::make_shared<SQLiteWrapper>();
     for (const auto& [table_name, table] : Hyrise::get().storage_manager.tables()) {
       std::cout << "-  Loading '" << table_name << "' into SQLite " << std::flush;
-      Timer per_table_timer;
+      auto per_table_timer = Timer{};
       sqlite_wrapper->create_sqlite_table(*table, table_name);
       std::cout << "(" << per_table_timer.lap_formatted() << ")" << std::endl;
     }
@@ -222,6 +222,7 @@ void BenchmarkRunner::run() {
 
 void BenchmarkRunner::_benchmark_shuffled() {
   auto item_ids = _benchmark_item_runner->items();
+  const auto benchmark_item_count = item_ids.size();
 
   if (const auto& weights = _benchmark_item_runner->weights(); !weights.empty()) {
     auto item_ids_weighted = std::vector<BenchmarkItemID>{};
@@ -232,36 +233,33 @@ void BenchmarkRunner::_benchmark_shuffled() {
     item_ids = item_ids_weighted;
   }
 
-  auto item_ids_shuffled = std::vector<BenchmarkItemID>{};
-
   for (const auto& item_id : item_ids) {
     _warmup(item_id);
   }
 
   // For shuffling the item order.
-  std::random_device random_device;
-  std::mt19937 random_generator(random_device());
+  auto random_device = std::random_device{};
+  auto random_generator = std::mt19937{random_device()};
+
+  std::shuffle(item_ids.begin(), item_ids.end(), random_generator);
+  auto item_id_counter = size_t{0};
 
   Assert(_currently_running_clients == 0, "Did not expect any clients to run at this time.");
 
   _state = BenchmarkState{_config.max_duration};
-
+ 
+  _running_clients_semaphore.release(_config.clients);
   while (_state.keep_running() && (_config.max_runs < 0 || _total_finished_runs.load(std::memory_order_relaxed) <
                                                                static_cast<size_t>(_config.max_runs))) {
-    // We want to only schedule as many items simultaneously as we have simulated clients.
-    if (_currently_running_clients.load(std::memory_order_relaxed) < _config.clients) {
-      if (item_ids_shuffled.empty()) {
-        item_ids_shuffled = item_ids;
-        std::shuffle(item_ids_shuffled.begin(), item_ids_shuffled.end(), random_generator);
-      }
-
-      const auto item_id = item_ids_shuffled.back();
-      item_ids_shuffled.pop_back();
-
-      _schedule_item_run(item_id);
-    } else {
-      std::this_thread::sleep_for(std::chrono::milliseconds{10});
+    if (item_id_counter == benchmark_item_count) {
+      std::shuffle(item_ids.begin(), item_ids.end(), random_generator);
+      item_id_counter = 0;
     }
+
+    _running_clients_semaphore.acquire();
+    const auto item_id = item_ids[item_id_counter];
+    _schedule_item_run(item_id);
+    ++item_id_counter;
   }
   _state.set_done();
 
@@ -290,15 +288,12 @@ void BenchmarkRunner::_benchmark_ordered() {
 
     _state = BenchmarkState{_config.max_duration};
 
+    _running_clients_semaphore.release(_config.clients);
     while (_state.keep_running() &&
            (_config.max_runs < 0 || (result.successful_runs.size() + result.unsuccessful_runs.size()) <
                                         static_cast<size_t>(_config.max_runs))) {
-      // We want to only schedule as many items simultaneously as we have simulated clients.
-      if (_currently_running_clients.load(std::memory_order_relaxed) < _config.clients) {
-        _schedule_item_run(item_id);
-      } else {
-        std::this_thread::sleep_for(std::chrono::milliseconds{10});
-      }
+      _running_clients_semaphore.acquire();
+      _schedule_item_run(item_id);
     }
     _state.set_done();
 
@@ -341,8 +336,8 @@ void BenchmarkRunner::_benchmark_ordered() {
 }
 
 void BenchmarkRunner::_schedule_item_run(const BenchmarkItemID item_id) {
-  _currently_running_clients++;
-  BenchmarkItemResult& result = _results[item_id];
+  ++_currently_running_clients;
+  auto& result = _results[item_id];
 
   auto task = std::make_shared<JobTask>(
       [&, item_id]() {
@@ -350,6 +345,7 @@ void BenchmarkRunner::_schedule_item_run(const BenchmarkItemID item_id) {
         auto [success, metrics, any_run_verification_failed] = _benchmark_item_runner->execute_item(item_id);
         const auto run_end = std::chrono::steady_clock::now();
 
+        _running_clients_semaphore.release();
         --_currently_running_clients;
         ++_total_finished_runs;
 
@@ -387,13 +383,10 @@ void BenchmarkRunner::_warmup(const BenchmarkItemID item_id) {
 
   _state = BenchmarkState{_config.warmup_duration};
 
+  _running_clients_semaphore.release(_config.clients);
   while (_state.keep_running()) {
-    // We want to only schedule as many items simultaneously as we have simulated clients.
-    if (_currently_running_clients.load(std::memory_order_relaxed) < _config.clients) {
-      _schedule_item_run(item_id);
-    } else {
-      std::this_thread::sleep_for(std::chrono::milliseconds{10});
-    }
+    _running_clients_semaphore.acquire();
+    _schedule_item_run(item_id);
   }
 
   // Clear the results.
@@ -514,7 +507,7 @@ void BenchmarkRunner::_write_report_to_file(const std::string& file_name, const 
 }
 
 cxxopts::Options BenchmarkRunner::get_basic_cli_options(const std::string& benchmark_name) {
-  cxxopts::Options cli_options{benchmark_name};
+  auto cli_options = cxxopts::Options{benchmark_name};
 
   // Create a comma separated strings with the encoding and compression options.
   const auto get_first = boost::adaptors::transformed([](const auto it) { return it.first; });
@@ -605,7 +598,8 @@ nlohmann::json BenchmarkRunner::_sql_to_json(const std::string& sql) {
   Assert(pipeline_status == SQLPipelineStatus::Success, "_sql_to_json failed.");
 
   auto output = nlohmann::json::array();
-  for (auto row_nr = uint64_t{0}; row_nr < table->row_count(); ++row_nr) {
+  const auto row_count = table->row_count();
+  for (auto row_nr = uint64_t{0}; row_nr < row_count; ++row_nr) {
     auto row = table->get_row(row_nr);
     auto entry = nlohmann::json{};
 
