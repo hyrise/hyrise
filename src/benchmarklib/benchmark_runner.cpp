@@ -336,7 +336,7 @@ void BenchmarkRunner::_benchmark_ordered() {
 }
 
 void BenchmarkRunner::_schedule_item_run(const BenchmarkItemID item_id) {
-  _currently_running_clients++;
+  ++_currently_running_clients;
   auto& result = _results[item_id];
 
   auto task = std::make_shared<JobTask>(
