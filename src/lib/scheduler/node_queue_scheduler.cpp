@@ -36,9 +36,8 @@ namespace {
   constexpr auto NUM_GROUPS_MAX_FACTOR = 4.0f;
   constexpr auto NUM_GROUPS_RANGE = NUM_GROUPS_MAX_FACTOR - NUM_GROUPS_MIN_FACTOR;
 
-  // This factor is used to determine at which queue load we use the maximum number of groups. Arbitrarily high queue
-  // loads should not lead to an arbitrary number of groups, which hampers scheduler progress.
-  constexpr auto UPPER_LIMIT_QUEUE_SIZE_FACTOR = size_t{6};
+  // This factor is used to determine at which queue load we use the maximum number of groups.
+  constexpr auto UPPER_LIMIT_QUEUE_SIZE_FACTOR = size_t{10};
 }
 
 namespace hyrise {
@@ -64,8 +63,9 @@ void NodeQueueScheduler::begin() {
   _queues.resize(_node_count);
   _workers_per_node.reserve(_node_count);
 
-  // For task lists with less tasks, we do not dynically determine the number of groups to use.
-  _min_task_count_for_regrouping = std::max(size_t{16}, _worker_count);
+  // For task lists with less tasks, we do not determine the number of groups to avoid grouping overheads.
+  // Assuming NUM_GROUPS_MIN_FACTOR=0.1 and 128 workers, we would not group tasks with less than 25 tasks (2 * 128 * 0.1).
+  _min_task_count_for_regrouping = static_cast<size_t>(2.0f * static_cast<float>(_worker_count) * NUM_GROUPS_MIN_FACTOR);
 
   // Everything above this limit yields the max value for grouping.
   _regrouping_upper_limit = _worker_count * UPPER_LIMIT_QUEUE_SIZE_FACTOR;
@@ -241,6 +241,7 @@ void NodeQueueScheduler::schedule(std::shared_ptr<AbstractTask> task, NodeID pre
   const auto node_id_for_queue = determine_queue_id(preferred_node_id);
   DebugAssert((static_cast<size_t>(node_id_for_queue) < _queues.size()),
               "Node ID is not within range of available nodes.");
+  DebugAssert(_queues[node_id_for_queue], "Selected queue of queueless node (node not active).");
   _queues[node_id_for_queue]->push(task, priority);
 }
 
@@ -285,6 +286,17 @@ NodeID NodeQueueScheduler::determine_queue_id(const NodeID preferred_node_id) co
 }
 
 std::optional<size_t> NodeQueueScheduler::determine_group_count(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const {
+
+  /**
+   * 64 cores ...
+   *     min_group_count: 0.1 * 128 == 12
+   *     min_group_count: 2.0 * 128 == 256
+   *     
+   *     36 tasks   >>> 3er Gruppen bis hin zu 1er Gruppen
+   *     256 tasks  >>> 21er Gruppen bis hin zu 1er Gruppen
+   *     1024 tasks >>> 85er Gruppen bis hin zu 4er Gruppen
+   *     Early out, wenn size(tasks) < 2 * min_group_count (2*12 = 24)
+   */
   if (tasks.size() < _min_task_count_for_regrouping) {
     // For small task lists, we use a group count equal to the number of workers.
     return std::nullopt;
@@ -294,19 +306,20 @@ std::optional<size_t> NodeQueueScheduler::determine_group_count(const std::vecto
   // nodes. If this assumption becomes invalid (e.g., due to work on NUMA optimizations), the current code should be
   // revisited (see check for common NodeID in _group_tasks()).
   const auto first_task_node_id = tasks[0]->node_id();
-  const auto node_id_for_queue_check = (first_task_node_id == CURRENT_NODE_ID || first_task_node_id == INVALID_NODE_ID) ? _active_nodes[0] : first_task_node_id;
-  std::cout << "Using " << node_id_for_queue_check << std::endl;
-  const auto queue_load = _queues[node_id_for_queue_check]->estimate_load();
+  const auto node_id_for_queue_check = (first_task_node_id == CURRENT_NODE_ID || first_task_node_id == INVALID_NODE_ID) ? determine_queue_id(first_task_node_id) : first_task_node_id;
 
-  const auto fill_level = std::min(queue_load, _regrouping_upper_limit);
-  const auto fill_degree = 1.0f - (static_cast<float>(fill_level) / static_cast<float>(_regrouping_upper_limit));
-  const auto fill_factor = NUM_GROUPS_MIN_FACTOR + (NUM_GROUPS_RANGE * fill_degree);
+  const auto queue_load = std::min(_queues[node_id_for_queue_check]->estimate_load(), _regrouping_upper_limit);
 
+  const auto fill_level = 1.0f - (static_cast<float>(fill_level) / static_cast<float>(_regrouping_upper_limit));
+  const auto fill_factor = NUM_GROUPS_MIN_FACTOR + (NUM_GROUPS_RANGE * fill_level);
+
+  std::cout << std::format("returning {}\n", std::max(size_t{2}, static_cast<size_t>(static_cast<float>(_worker_count) * fill_factor)));
   return std::max(size_t{2}, static_cast<size_t>(static_cast<float>(_worker_count) * fill_factor));
 }
 
 
 void NodeQueueScheduler::_group_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const {
+  const auto task_count = tasks.size();
   // Adds predecessor/successor relationships between tasks so that only N tasks (determiend by determine_group_count())
   // can be executed in parallel (tasks with predecessors/successors ares not scheduled).
   // Grouping thus reduces load on the task queues and allows workers to process up to N tasks without coordinating
@@ -318,7 +331,7 @@ void NodeQueueScheduler::_group_tasks(const std::vector<std::shared_ptr<Abstract
   // Approach: Skip all tasks that already have predecessors or successors, as adding relationships to these could
   // introduce cyclic dependencies.
 
-  auto round_robin_counter = 0;
+  auto round_robin_counter = uint32_t{0};
   auto common_node_id = std::optional<NodeID>{};
 
   const auto num_groups = determine_group_count(tasks);
@@ -326,7 +339,9 @@ void NodeQueueScheduler::_group_tasks(const std::vector<std::shared_ptr<Abstract
     return;
   }
 
-  auto grouped_tasks = std::vector<std::shared_ptr<AbstractTask>>(*num_groups);
+  // std::cerr << std::format("task count is: {} and groups: {}\n", tasks.size(), *num_groups);
+
+  auto grouped_task_offsets = std::vector<int32_t>(*num_groups, -1);
   // Tasks are iterated in reverse as we set tasks as predecessors.
   for (auto iter = tasks.rbegin(); iter != tasks.rend(); ++iter) {
     const auto& task = *iter;
@@ -348,11 +363,16 @@ void NodeQueueScheduler::_group_tasks(const std::vector<std::shared_ptr<Abstract
     }
 
     const auto group_id = round_robin_counter % *num_groups;
-    const auto& previous_task_in_group = grouped_tasks[group_id];
-    if (previous_task_in_group) {
-      task->set_as_predecessor_of(previous_task_in_group);
+    // std::cerr << std::format("group id: {}\n", group_id);
+    const auto& previous_task_offset_in_group = grouped_task_offsets[group_id];
+    // std::cerr << std::format("offset into tasks: {}\n", previous_task_offset_in_group);
+    if (previous_task_offset_in_group > -1) {
+      task->set_as_predecessor_of(tasks[previous_task_offset_in_group]);
     }
-    grouped_tasks[group_id] = task;
+    grouped_task_offsets[group_id] = static_cast<uint32_t>(task_count - std::distance(tasks.rbegin(), iter) - 1);
+    // std::cerr << std::format("pure distance: {}\n", std::distance(tasks.rbegin(), iter));
+    // std::cerr << std::format("distance: {}\n", grouped_task_offsets[group_id]);
+    
     ++round_robin_counter;
   }
 }
