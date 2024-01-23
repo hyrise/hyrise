@@ -561,7 +561,7 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
     }
   }
 
-  std::vector<std::shared_ptr<AbstractTask>> jobs;
+  auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
   jobs.reserve(input_partition_count);
 
   for (auto input_partition_idx = ChunkID{0}; input_partition_idx < input_partition_count; ++input_partition_idx) {

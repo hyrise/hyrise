@@ -1,5 +1,6 @@
 #include <chrono>
 #include <memory>
+#include <thread>
 #include <utility>
 #include <vector>
 
@@ -27,17 +28,17 @@ class SchedulerTest : public BaseTest {
   void stress_linear_dependencies(std::atomic_uint32_t& counter) {
     const auto task1 = std::make_shared<JobTask>([&]() {
       auto current_value = 0u;
-      auto successful = counter.compare_exchange_strong(current_value, 1u);
+      auto successful = counter.compare_exchange_strong(current_value, 1);
       ASSERT_TRUE(successful);
     });
     const auto task2 = std::make_shared<JobTask>([&]() {
       auto current_value = 1u;
-      auto successful = counter.compare_exchange_strong(current_value, 2u);
+      auto successful = counter.compare_exchange_strong(current_value, 2);
       ASSERT_TRUE(successful);
     });
     const auto task3 = std::make_shared<JobTask>([&]() {
       auto current_value = 2u;
-      auto successful = counter.compare_exchange_strong(current_value, 3u);
+      auto successful = counter.compare_exchange_strong(current_value, 3);
       ASSERT_TRUE(successful);
     });
 
@@ -54,7 +55,7 @@ class SchedulerTest : public BaseTest {
     const auto task2 = std::make_shared<JobTask>([&]() { counter += 2u; });
     const auto task3 = std::make_shared<JobTask>([&]() {
       auto current_value = 3u;
-      auto successful = counter.compare_exchange_strong(current_value, 4u);
+      auto successful = counter.compare_exchange_strong(current_value, 4);
       ASSERT_TRUE(successful);
     });
 
@@ -69,14 +70,14 @@ class SchedulerTest : public BaseTest {
   void stress_diamond_dependencies(std::atomic_uint32_t& counter) {
     const auto task1 = std::make_shared<JobTask>([&]() {
       auto current_value = 0u;
-      auto successful = counter.compare_exchange_strong(current_value, 1u);
+      auto successful = counter.compare_exchange_strong(current_value, 1);
       ASSERT_TRUE(successful);
     });
     const auto task2 = std::make_shared<JobTask>([&]() { counter += 2u; });
     const auto task3 = std::make_shared<JobTask>([&]() { counter += 3u; });
     const auto task4 = std::make_shared<JobTask>([&]() {
       auto current_value = 6u;
-      auto successful = counter.compare_exchange_strong(current_value, 7u);
+      auto successful = counter.compare_exchange_strong(current_value, 7);
       ASSERT_TRUE(successful);
     });
 
@@ -124,7 +125,7 @@ TEST_F(SchedulerTest, BasicTest) {
 
   Hyrise::get().scheduler()->finish();
 
-  ASSERT_EQ(counter, 30u);
+  ASSERT_EQ(counter, 30);
 
   Hyrise::get().set_scheduler(std::make_shared<ImmediateExecutionScheduler>());
 }
@@ -132,20 +133,20 @@ TEST_F(SchedulerTest, BasicTest) {
 TEST_F(SchedulerTest, BasicTestWithoutScheduler) {
   std::atomic_uint32_t counter{0};
   increment_counter_in_subtasks(counter);
-  ASSERT_EQ(counter, 30u);
+  ASSERT_EQ(counter, 30);
 }
 
 TEST_F(SchedulerTest, LinearDependenciesWithScheduler) {
   Hyrise::get().topology.use_fake_numa_topology(8, 4);
   Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
 
-  std::atomic_uint32_t counter{0u};
+  std::atomic_uint32_t counter{0};
 
   stress_linear_dependencies(counter);
 
   Hyrise::get().scheduler()->finish();
 
-  ASSERT_EQ(counter, 3u);
+  ASSERT_EQ(counter, 3);
 }
 
 TEST_F(SchedulerTest, Grouping) {
@@ -187,13 +188,13 @@ TEST_F(SchedulerTest, MultipleDependenciesWithScheduler) {
   Hyrise::get().topology.use_fake_numa_topology(8, 4);
   Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
 
-  std::atomic_uint32_t counter{0u};
+  std::atomic_uint32_t counter{0};
 
   stress_multiple_dependencies(counter);
 
   Hyrise::get().scheduler()->finish();
 
-  ASSERT_EQ(counter, 4u);
+  ASSERT_EQ(counter, 4);
 }
 
 TEST_F(SchedulerTest, DiamondDependenciesWithScheduler) {
@@ -206,25 +207,25 @@ TEST_F(SchedulerTest, DiamondDependenciesWithScheduler) {
 
   Hyrise::get().scheduler()->finish();
 
-  ASSERT_EQ(counter, 7u);
+  ASSERT_EQ(counter, 7);
 }
 
 TEST_F(SchedulerTest, LinearDependenciesWithoutScheduler) {
-  std::atomic_uint32_t counter{0u};
+  std::atomic_uint32_t counter{0};
   stress_linear_dependencies(counter);
-  ASSERT_EQ(counter, 3u);
+  ASSERT_EQ(counter, 3);
 }
 
 TEST_F(SchedulerTest, MultipleDependenciesWithoutScheduler) {
-  std::atomic_uint32_t counter{0u};
+  std::atomic_uint32_t counter{0};
   stress_multiple_dependencies(counter);
-  ASSERT_EQ(counter, 4u);
+  ASSERT_EQ(counter, 4);
 }
 
 TEST_F(SchedulerTest, DiamondDependenciesWithoutScheduler) {
   std::atomic_uint32_t counter{0};
   stress_diamond_dependencies(counter);
-  ASSERT_EQ(counter, 7u);
+  ASSERT_EQ(counter, 7);
 }
 
 TEST_F(SchedulerTest, MultipleOperators) {
@@ -245,7 +246,7 @@ TEST_F(SchedulerTest, MultipleOperators) {
   gt_task->schedule();
   ts_task->schedule();
 
-  Hyrise::get().scheduler()->finish();
+  Hyrise::get().scheduler()->wait_for_all_tasks();
 
   const auto expected_result = load_table("resources/test_data/tbl/int_float_filtered2.tbl", ChunkOffset{1});
   EXPECT_TABLE_EQ_UNORDERED(ts->get_output(), expected_result);
@@ -345,7 +346,7 @@ TEST_F(SchedulerTest, NumGroupDetermination) {
     Hyrise::get().set_scheduler(node_queue_scheduler);
 
     const auto tasks = std::vector<std::shared_ptr<AbstractTask>>{std::make_shared<JobTask>([&]() {})};
-    EXPECT_EQ(WORKER_COUNT, node_queue_scheduler->determine_group_count(tasks));
+    EXPECT_FALSE(node_queue_scheduler->determine_group_count(tasks));
   }
 
   // Test that minimally sized topology yields valid group counts.
@@ -354,14 +355,14 @@ TEST_F(SchedulerTest, NumGroupDetermination) {
     const auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
     Hyrise::get().set_scheduler(node_queue_scheduler);
 
-    // Create 64 tasks to avoid early out.
-    constexpr auto TASK_COUNT = size_t{64};
+    // Create a large number of tasks to avoid early out.
+    const auto task_count = std::thread::hardware_concurrency() * 10;
     auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
-    tasks.reserve(TASK_COUNT);
-    for (auto index = size_t{0}; index < TASK_COUNT; ++index) {
+    tasks.reserve(task_count);
+    for (auto task_id = TaskID{0}; task_id < task_count; ++task_id) {
       tasks.push_back(std::make_shared<JobTask>([&]() {}));
     }
-    EXPECT_LT(size_t{0}, node_queue_scheduler->determine_group_count(tasks));
+    EXPECT_LT(1, node_queue_scheduler->determine_group_count(tasks));
   }
 }
 
@@ -370,30 +371,34 @@ TEST_F(SchedulerTest, NumGroupDeterminationDifferentLoads) {
   const auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
   Hyrise::get().set_scheduler(node_queue_scheduler);
 
-  // Create 64 tasks to avoid early out.
-  constexpr auto TASK_COUNT = size_t{64};
+  // Create a large number of tasks to avoid early out.
+  const auto task_count = std::thread::hardware_concurrency() * 10;
   auto tasks_1 = std::vector<std::shared_ptr<AbstractTask>>{};
-  tasks_1.reserve(TASK_COUNT);
-  for (auto index = size_t{0}; index < TASK_COUNT; ++index) {
+  tasks_1.reserve(task_count);
+  for (auto task_id = TaskID{0}; task_id < task_count; ++task_id) {
     tasks_1.push_back(std::make_shared<JobTask>([&]() {}));
   }
 
-  const auto num_groups_without_load =  node_queue_scheduler->determine_group_count(tasks_1);
+  const auto num_groups_without_load = node_queue_scheduler->determine_group_count(tasks_1);
+  EXPECT_TRUE(num_groups_without_load);
 
-  // Create load on queue
+  // Create load on queue.
   volatile auto block_jobs = std::atomic_bool{true};
   auto tasks_2 = std::vector<std::shared_ptr<AbstractTask>>{};
-  for (auto task_count = size_t{0}; task_count < TASK_COUNT; ++task_count) {
+  for (auto task_id = TaskID{0}; task_id < task_count; ++task_id) {
     tasks_2.push_back(std::make_shared<JobTask>([&]() {
-      while (block_jobs) {}
+      while (block_jobs) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+      }
     }));
     tasks_2.back()->schedule();
   }
 
-  const auto num_groups_with_load =  node_queue_scheduler->determine_group_count(tasks_2);
+  const auto num_groups_with_load = node_queue_scheduler->determine_group_count(tasks_2);
+  EXPECT_TRUE(num_groups_with_load);
 
-  // We should receive a large group count when the queue load is low.
-  EXPECT_GT(num_groups_without_load, num_groups_with_load);
+  // We should receive a larger group count when the queue load is low.
+  EXPECT_GT(*num_groups_without_load, *num_groups_with_load);
 
   // Shutdown. Finish scheduled jobs.
   block_jobs = false;
