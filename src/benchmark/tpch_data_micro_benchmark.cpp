@@ -15,6 +15,8 @@
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "scheduler/operator_task.hpp"
+#include "scheduler/node_queue_scheduler.hpp"
+#include "statistics/statistics_objects/equal_distinct_count_histogram.hpp"
 #include "storage/encoding_type.hpp"
 #include "tpch/tpch_constants.hpp"
 #include "tpch/tpch_table_generator.hpp"
@@ -31,7 +33,7 @@ class TPCHDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
  public:
   void SetUp(::benchmark::State& state) override {
     auto& sm = Hyrise::get().storage_manager;
-    const auto scale_factor = 0.01f;
+    const auto scale_factor = 10.0f;
     const auto default_encoding = EncodingType::Dictionary;
 
     auto benchmark_config = BenchmarkConfig::get_default_config();
@@ -311,5 +313,28 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_HashSemiProbeRelationLarger)(bench
     join->execute();
   }
 }
+
+BENCHMARK_DEFINE_F(TPCHDataMicroBenchmarkFixture, BM_LineitemHistogramCreation)(benchmark::State& state) {
+  const auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
+  Hyrise::get().set_scheduler(node_queue_scheduler);
+
+  const auto column_id = ColumnID{static_cast<ColumnID::base_type>(state.range(0))};
+
+  const auto& sm = Hyrise::get().storage_manager;
+  const auto& lineitem_table = sm.get_table("lineitem");
+
+  const auto histogram_bin_count = std::min<size_t>(100, std::max<size_t>(5, lineitem_table->row_count() / 2'000));
+
+  const auto column_data_type = lineitem_table->column_data_type(column_id);
+
+  resolve_data_type(column_data_type, [&](auto type) {
+    using ColumnDataType = typename decltype(type)::type;
+    for (auto _ : state) {
+      EqualDistinctCountHistogram<ColumnDataType>::from_column(*lineitem_table, column_id, histogram_bin_count);
+    }
+  });
+}
+constexpr auto LINEITEM_COLUMN_COUNT = 15;
+BENCHMARK_REGISTER_F(TPCHDataMicroBenchmarkFixture, BM_LineitemHistogramCreation)->DenseRange(0, LINEITEM_COLUMN_COUNT);
 
 }  // namespace hyrise
