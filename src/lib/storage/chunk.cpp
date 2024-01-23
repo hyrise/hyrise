@@ -297,7 +297,7 @@ void Chunk::set_cleanup_commit_id(const CommitID cleanup_commit_id) {
   _cleanup_commit_id.store(cleanup_commit_id);
 }
 
-void Chunk::reached_target_size() {
+void Chunk::mark_as_full() {
   Assert(!_reached_target_size, "Chunk should not be marked as full multiple times.");
   _reached_target_size = true;
 }
@@ -305,8 +305,8 @@ void Chunk::reached_target_size() {
 void Chunk::try_set_immutable() {
   DebugAssert(_mvcc_data, "Expected to be executed with MVCC enabled.");
   // Mark the chunk as immutable if (i) it reached the target size and a new chunk was added to the table, (ii) it is
-  // still mutable, and (iii) all pending Insert operators are either committed or rolled back. We do not have to set the
-  // `max_begin_cid` here because committed Insert operators already set it.
+  // still mutable, and (iii) all pending Insert operators are either committed or rolled back. We do not have to set
+  // the `max_begin_cid` here because committed Insert operators already set it.
   if (!_reached_target_size || !is_mutable() || _mvcc_data->pending_inserts() != 0) {
     return;
   }

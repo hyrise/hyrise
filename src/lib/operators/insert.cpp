@@ -171,7 +171,7 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
         // Allow the chunk to be marked as immutable as it has reached its target size and no incoming Insert operators
         // will try to write to it. Pending Insert operators (including us) will call `try_set_immutable()` to make the
         // chunk immutable once they commit/roll back.
-        target_chunk->reached_target_size();
+        target_chunk->mark_as_full();
       }
 
       remaining_rows -= num_rows_for_target_chunk;

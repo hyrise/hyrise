@@ -188,7 +188,7 @@ class Chunk : private Noncopyable {
    * chunks they interted into. If there are no pending Inserts, i.e., the chunk was filled to its target size and all
    * Inserts are committed/rolled back, the chunk is immediately marked.
    */
-  void reached_target_size();
+  void mark_as_full();
   void try_set_immutable();
 
  private:

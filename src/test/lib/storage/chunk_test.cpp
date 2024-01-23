@@ -355,7 +355,7 @@ TEST_F(StorageChunkTest, TrySetImmutable) {
   EXPECT_TRUE(chunk->is_mutable());
 
   // Marking as immutable works if chunk is marked as full.
-  chunk->reached_target_size();
+  chunk->mark_as_full();
   chunk->try_set_immutable();
   EXPECT_FALSE(chunk->is_mutable());
 
@@ -364,9 +364,7 @@ TEST_F(StorageChunkTest, TrySetImmutable) {
   EXPECT_FALSE(chunk->is_mutable());
 
   // However, chunk should not be marked as full multiple times.
-  // chunk = std::make_shared<Chunk>(Segments{vs_int, vs_str}, mvcc_data);
-  // chunk->reached_target_size();
-  EXPECT_THROW(chunk->reached_target_size(), std::logic_error);
+  EXPECT_THROW(chunk->mark_as_full(), std::logic_error);
 }
 
 }  // namespace hyrise
