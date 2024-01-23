@@ -3,7 +3,7 @@
 | Name                      | Version          | Platform |                              Optional |
 | ------------------------- | ---------------- | -------- | ------------------------------------- |
 | autoconf                  | >= 2.69          |    All   |                                    No |
-| boost                     | >= 1.70.0        |    All   |                                    No |
+| boost                     | >= 1.81.0        |    All   |                                    No |
 | clang                     | >= 11.0          |    All   |                 Yes, if gcc installed |
 | clang-format              | >= 11.0          |    All   |                      Yes (formatting) |
 | clang-tidy                | >= 11.0          |    All   |                         Yes (linting) |
@@ -23,7 +23,7 @@
 | python                    | >= 3.6           |    All   |         Yes (linting and tests in CI) |
 | readline                  | >= 7             |    All   |                                    No |
 | sqlite3                   | >= 3             |    All   |                                    No |
-| tbb/libtbb-dev            | any              |    All   |                                    No |
+| tbb/libtbb-dev (oneTBB)   | any              |    All   |                                    No |
 | valgrind                  | any              |    All   |            Yes, memory checking in CI |
 
 
