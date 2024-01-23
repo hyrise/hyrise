@@ -1,12 +1,16 @@
 #pragma once
 
 #include <unordered_set>
+#include <utility>
 
 #include "abstract_dependency_validation_rule.hpp"
 
 namespace hyrise {
 
 class Table;
+
+enum class SegmentDomainBound { Min, Max, MinMax };
+using SegmentDomainInfo = std::pair<ChunkID, SegmentDomainBound>;
 
 class OdValidationRule : public AbstractDependencyValidationRule {
  public:

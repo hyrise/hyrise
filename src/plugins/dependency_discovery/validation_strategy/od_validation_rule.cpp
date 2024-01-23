@@ -168,22 +168,50 @@ bool check_column_sortedness(const std::shared_ptr<const Table> table, const Col
 
 template <typename T>
 bool add_to_index(const ChunkID chunk_id, const std::shared_ptr<const Chunk>& chunk, const ColumnID column_id,
-                  std::map<T, ChunkID>& index, typename std::map<T, ChunkID>::iterator& previous_it) {
+                  std::map<T, SegmentDomainInfo>& index,
+                  typename std::map<T, SegmentDomainInfo>::iterator& previous_it) {
   const auto segment_statistics = ValidationUtils<T>::gather_segment_statistics(chunk, column_id);
   const auto& min = *segment_statistics.min;
   const auto& max = *segment_statistics.max;
 
-  const auto min_it = index.emplace_hint(previous_it, min, chunk_id);
-  const auto max_it = index.emplace_hint(min_it, max, chunk_id);
-  previous_it = max_it;
+  const auto segment_is_constant = min == max;
+  if (!segment_is_constant) {
+    const auto min_it = index.emplace_hint(previous_it, min, std::make_pair(chunk_id, SegmentDomainBound::Min));
+    const auto max_it = index.emplace_hint(min_it, max, std::make_pair(chunk_id, SegmentDomainBound::Max));
+    previous_it = max_it;
 
-  // Not disjoint if key already exists or if there is another value between min and max.
-  const auto min_max_is_duplicate = min_it->second != chunk_id || max_it->second != chunk_id;
-  if (min_max_is_duplicate || std::next(min_it) != max_it) {
-    return false;
+    if (min_it != index.begin()) {
+      const auto prev_it = std::prev(min_it);
+      const auto next_it = std::next(max_it);
+      // domain is completely inside domain of other segment
+      if (next_it != index.end() && prev_it->second.first == next_it->second.first) {
+        return false;
+      }
+    }
+
+    const auto max_duplicate = max_it->second.first != chunk_id;
+    const auto max_continues = max_duplicate && max_it->second.second == SegmentDomainBound::Min;
+
+    // Make sure there is always an index entry for segment at max position.
+    if (max_continues) {
+      max_it->second = std::make_pair(chunk_id, SegmentDomainBound::Max);
+    }
+
+    // min/max are duplicates. domain overlaps with other segment if it does not perfectly continue its domain.
+    if ((min_it->second.first != chunk_id && min_it->second.second != SegmentDomainBound::Max) ||
+        (max_duplicate && !max_continues)) {
+      return false;
+    }
+
+    // entries between min and max, domain overlaps with other segment
+    if (max_it != std::next(min_it)) {
+      return false;
+    }
+
+    return true;
   }
 
-  return true;
+  return false;
 }
 
 }  // namespace
@@ -227,8 +255,8 @@ ValidationResult OdValidationRule::_on_validate(const AbstractDependencyCandidat
       //   - For each column, domains of segments do not overlap.
       //   - Order of segments is the same for both columns.
       if (chunk_count > 1) {
-        auto sort_column_min_max_ordered = std::map<OrderingColumnDataType, ChunkID>{};
-        auto check_column_min_max_ordered = std::map<OrderedColumnDataType, ChunkID>{};
+        auto sort_column_min_max_ordered = std::map<OrderingColumnDataType, SegmentDomainInfo>{};
+        auto check_column_min_max_ordered = std::map<OrderedColumnDataType, SegmentDomainInfo>{};
 
         // Add all segments of both columns to indexes, abort if there are overlaps.
         auto sort_column_it = sort_column_min_max_ordered.begin();
@@ -253,49 +281,80 @@ ValidationResult OdValidationRule::_on_validate(const AbstractDependencyCandidat
           sort_column_it = sort_column_min_max_ordered.begin();
           check_column_it = check_column_min_max_ordered.begin();
 
-          while (sort_column_it != sort_column_min_max_ordered.end()) {
-            if (sort_column_it->second != check_column_it->second) {
-              status = ValidationStatus::Invalid;
-              return;
+          auto left_chunk_id = sort_column_it->second.first;
+          auto right_chunk_id = check_column_it->second.first;
+          auto abort = false;
+
+          while (sort_column_it != sort_column_min_max_ordered.end() &&
+                 check_column_it != check_column_min_max_ordered.end()) {
+            if (left_chunk_id != right_chunk_id) {
+              abort = true;
+              break;
             }
 
-            ++sort_column_it;
-            ++check_column_it;
-          }
-          Assert(check_column_it == check_column_min_max_ordered.end(), "Both indexes should have same size!");
-
-          // Sort chunks individually, abort if any chunk not ordered.
-          const auto& original_column_definitions = table->column_definitions();
-          const auto column_definitions = std::vector{original_column_definitions[ordering_column_id],
-                                                      original_column_definitions[ordered_column_id]};
-          const auto sort_definitions = std::vector<SortColumnDefinition>{SortColumnDefinition{ColumnID{0}}};
-
-          for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-            const auto& chunk = table->get_chunk(chunk_id);
-            if (!chunk || chunk->size() == 0) {
-              continue;
+            while (sort_column_it != sort_column_min_max_ordered.end() &&
+                   sort_column_it->second.first == left_chunk_id) {
+              ++sort_column_it;
             }
 
-            auto segments_to_sort =
-                Segments{chunk->get_segment(ordering_column_id), chunk->get_segment(ordered_column_id)};
-            auto chunk_to_sort = std::make_shared<Chunk>(std::move(segments_to_sort));
-            auto chunks_to_sort = std::vector<std::shared_ptr<Chunk>>{std::move(chunk_to_sort)};
+            if (sort_column_it != sort_column_min_max_ordered.end()) {
+              left_chunk_id = sort_column_it->second.first;
+            }
+            while (check_column_it != check_column_min_max_ordered.end() &&
+                   check_column_it->second.first == right_chunk_id) {
+              ++check_column_it;
+            }
+            if (check_column_it != check_column_min_max_ordered.end()) {
+              right_chunk_id = check_column_it->second.first;
+            }
 
-            const auto table_to_sort =
-                std::make_shared<Table>(column_definitions, TableType::Data, std::move(chunks_to_sort));
-            const auto table_wrapper = std::make_shared<TableWrapper>(table_to_sort);
-            const auto sort = std::make_shared<Sort>(table_wrapper, sort_definitions);
-            table_wrapper->execute();
-            sort->execute();
-            const auto& result_table = sort->get_output();
-
-            if (!check_column_sortedness<OrderedColumnDataType>(result_table, ColumnID{1}, ChunkID{1})) {
-              status = ValidationStatus::Invalid;
-              return;
+            // Break if sort column segment perfectly continues other segment, but check column segment does not. That
+            // means there are different values in LHS for same in RHS, which breaks OD.
+            if (sort_column_it->second.second == SegmentDomainBound::Max &&
+                check_column_it->second.second != SegmentDomainBound::Max) {
+              abort = true;
+              break;
             }
           }
-          status = ValidationStatus::Valid;
-          return;
+
+          if (!abort) {
+            Assert(check_column_it == check_column_min_max_ordered.end() ||
+                       std::next(check_column_it) == check_column_min_max_ordered.end(),
+                   "Both indexes should have same size!");
+
+            // Sort chunks individually, abort if any chunk not ordered.
+            const auto& original_column_definitions = table->column_definitions();
+            const auto column_definitions = std::vector{original_column_definitions[ordering_column_id],
+                                                        original_column_definitions[ordered_column_id]};
+            const auto sort_definitions = std::vector<SortColumnDefinition>{SortColumnDefinition{ColumnID{0}}};
+
+            for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+              const auto& chunk = table->get_chunk(chunk_id);
+              if (!chunk || chunk->size() == 0) {
+                continue;
+              }
+
+              auto segments_to_sort =
+                  Segments{chunk->get_segment(ordering_column_id), chunk->get_segment(ordered_column_id)};
+              auto chunk_to_sort = std::make_shared<Chunk>(std::move(segments_to_sort));
+              auto chunks_to_sort = std::vector<std::shared_ptr<Chunk>>{std::move(chunk_to_sort)};
+
+              const auto table_to_sort =
+                  std::make_shared<Table>(column_definitions, TableType::Data, std::move(chunks_to_sort));
+              const auto table_wrapper = std::make_shared<TableWrapper>(table_to_sort);
+              const auto sort = std::make_shared<Sort>(table_wrapper, sort_definitions);
+              table_wrapper->execute();
+              sort->execute();
+              const auto& result_table = sort->get_output();
+
+              if (!check_column_sortedness<OrderedColumnDataType>(result_table, ColumnID{1}, ChunkID{1})) {
+                status = ValidationStatus::Invalid;
+                return;
+              }
+            }
+            status = ValidationStatus::Valid;
+            return;
+          }
         }
       }
 

@@ -53,7 +53,7 @@ ValidationStatus perform_set_based_inclusion_check(
   const auto including_values = collect_values<T>(including_table, including_column_id);
 
   if constexpr (std::is_integral_v<T>) {
-    Assert(!including_values.empty(), "Exmpty tables not considered.");
+    Assert(!including_values.empty(), "Empty tables not considered.");
     if (including_min_max) {
       const auto domain = static_cast<size_t>(including_min_max->second - including_min_max->first);
       if (domain == including_table->row_count() - 1) {
