@@ -63,7 +63,7 @@ BENCHMARK_F(BenchmarkPlaygroundFixture, BM_Playground_Reference)(benchmark::Stat
   // Add some benchmark-specific setup here
 
   for (auto _ : state) {
-    std::vector<size_t> result;
+    auto result = std::vector<size_t>{};
     benchmark::DoNotOptimize(result.data());  // Do not optimize out the vector
     const auto size = _vec.size();
     for (auto index = size_t{0}; index < size; ++index) {

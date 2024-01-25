@@ -333,7 +333,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
           lz4_stream, reinterpret_cast<char*>(values.data()) + value_offset, compressed_block.data(),
           static_cast<int>(decompressed_block_size), static_cast<int>(block_bound));
 
-      Assert(compression_result > 0, "LZ4 stream compression failed");
+      Assert(compression_result > 0, "LZ4 stream compression failed.");
 
       // shrink the block vector to the actual size of the compressed result
       compressed_block.resize(static_cast<size_t>(compression_result));
@@ -363,6 +363,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
    */
   template <typename T>
   pmr_vector<char> _train_dictionary(const pmr_vector<T>& values) {
+    static_assert(std::is_arithmetic_v<T>);
     const auto min_sample_size = size_t{8u};
     const auto values_size = values.size() * sizeof(T);
     const auto sample_size = std::max(sizeof(T), min_sample_size);
@@ -396,7 +397,6 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     max_dictionary_size = std::max(max_dictionary_size, _minimum_dictionary_size);
 
     auto dictionary = pmr_vector<char>{values.get_allocator()};
-    size_t dictionary_size;
 
     // If the input does not contain enough values, it won't be possible to train a dictionary for it.
     if (values.size() < _minimum_value_size) {
@@ -404,8 +404,8 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     }
 
     dictionary.resize(max_dictionary_size);
-    dictionary_size = ZDICT_trainFromBuffer(dictionary.data(), max_dictionary_size, values.data(), sample_sizes.data(),
-                                            static_cast<unsigned>(sample_sizes.size()));
+    const auto dictionary_size = ZDICT_trainFromBuffer(dictionary.data(), max_dictionary_size, values.data(),
+                                                       sample_sizes.data(), static_cast<unsigned>(sample_sizes.size()));
 
     // If the generation failed, then compress without a dictionary (the compression ratio will suffer).
     if (ZDICT_isError(dictionary_size)) {
@@ -413,8 +413,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     }
 
     DebugAssert(dictionary_size <= max_dictionary_size,
-                "Generated ZSTD dictionary in LZ4 compression is larger than "
-                "the memory allocated for it.");
+                "Generated ZSTD dictionary in LZ4 compression is larger than the memory allocated for it.");
 
     // Shrink the allocated dictionary size to the actual size.
     dictionary.resize(dictionary_size);

@@ -1,13 +1,22 @@
 #pragma once
 
 #include <stdint.h>
-#include <tbb/concurrent_queue.h>
+
 #include <array>
 #include <atomic>
 #include <condition_variable>
 #include <memory>
 
+#include <tbb/concurrent_queue.h>  // NOLINT(build/include_order): wronlgy identified as a C header.
+
+#include "concurrentqueue.h"  // The lightweight semaphore uses definitions of concurrentqueue.h.
+#include "lightweightsemaphore.h"
+
 #include "types.hpp"
+
+namespace moodycamel {  //
+class LightweightSemaphore;
+}
 
 namespace hyrise {
 
@@ -19,6 +28,8 @@ class AbstractTask;
 class TaskQueue {
  public:
   static constexpr uint32_t NUM_PRIORITY_LEVELS = 2;
+
+  TaskQueue() = delete;
 
   explicit TaskQueue(NodeID node_id);
 
@@ -39,25 +50,22 @@ class TaskQueue {
   std::shared_ptr<AbstractTask> steal();
 
   /**
-   * Returns an estimated load for the task queue (i.e., all queues of the TaskQueue instance). The load is "estimated"
-   * as the used TBB queue does not guarantee that `unsafe_size()` returns the correct size at a given point in time.
-   * The priority queues are weighted, i.e., a task in the high priority queue leads to a larger load than a task in the
-   * default priority queue.
+   * Returns the estimated load for the TaskQueue (i.e., all queues of the TaskQueue instance). The load is "estimated"
+   * as TBB's concurrent queue does not guarantee that `unsafe_size()` returns the correct size at a given point in
+   * time. The priority queues are weighted, i.e., a task in the high priority queue leads to a larger load than a task
+   * in the default priority queue.
    */
-  size_t estimate_load();
+  size_t estimate_load() const;
+
+  void signal(const size_t count);
 
   /**
-   * Notifies one worker as soon as a new task gets pushed into the queue
+   * Semaphore to signal waiting workers for new tasks.
    */
-  std::condition_variable new_task;
-
-  /**
-   * Mutex accessed by workers in order to notify them using condition variable
-   */
-  std::mutex lock;
+  moodycamel::LightweightSemaphore semaphore;
 
  private:
-  NodeID _node_id;
+  NodeID _node_id{INVALID_NODE_ID};
   std::array<tbb::concurrent_queue<std::shared_ptr<AbstractTask>>, NUM_PRIORITY_LEVELS> _queues;
 };
 

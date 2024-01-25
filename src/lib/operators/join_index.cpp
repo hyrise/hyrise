@@ -88,7 +88,7 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
                 left_input_table()->column_data_type(_primary_predicate.column_ids.first),
                 right_input_table()->column_data_type(_primary_predicate.column_ids.second),
                 !_secondary_predicates.empty(), left_input_table()->type(), right_input_table()->type(), _index_side}),
-      "JoinIndex doesn't support these parameters");
+      "JoinIndex does not support these parameters.");
 
   if (_index_side == IndexSide::Left) {
     _probe_input_table = right_input_table();
@@ -460,7 +460,7 @@ void JoinIndex::_append_matches(const AbstractChunkIndex::Iterator& range_begin,
 void JoinIndex::_append_matches_dereferenced(const ChunkID& probe_chunk_id, const ChunkOffset& probe_chunk_offset,
                                              const RowIDPosList& index_table_matches) {
   for (const auto& index_side_row_id : index_table_matches) {
-    _probe_pos_list->emplace_back(RowID{probe_chunk_id, probe_chunk_offset});
+    _probe_pos_list->emplace_back(probe_chunk_id, probe_chunk_offset);
     _index_pos_list->emplace_back(index_side_row_id);
     _index_pos_dereferenced.emplace_back(true);
   }
@@ -475,7 +475,7 @@ void JoinIndex::_append_matches_non_inner(const bool is_semi_or_anti_join) {
       for (ChunkOffset chunk_offset{0}; chunk_offset < static_cast<ChunkOffset>(_probe_matches[probe_chunk_id].size());
            ++chunk_offset) {
         if (!_probe_matches[probe_chunk_id][chunk_offset]) {
-          _probe_pos_list->emplace_back(RowID{probe_chunk_id, chunk_offset});
+          _probe_pos_list->emplace_back(probe_chunk_id, chunk_offset);
           _index_pos_list->emplace_back(NULL_ROW_ID);
         }
       }
@@ -490,7 +490,7 @@ void JoinIndex::_append_matches_non_inner(const bool is_semi_or_anti_join) {
       for (ChunkOffset chunk_offset{0}; chunk_offset < static_cast<ChunkOffset>(_index_matches[chunk_id].size());
            ++chunk_offset) {
         if (!_index_matches[chunk_id][chunk_offset]) {
-          _index_pos_list->emplace_back(RowID{chunk_id, chunk_offset});
+          _index_pos_list->emplace_back(chunk_id, chunk_offset);
           _probe_pos_list->emplace_back(NULL_ROW_ID);
         }
       }
@@ -513,7 +513,7 @@ void JoinIndex::_append_matches_non_inner(const bool is_semi_or_anti_join) {
         const auto chunk_size = chunk->size();
         for (ChunkOffset chunk_offset{0}; chunk_offset < chunk_size; ++chunk_offset) {
           if (_probe_matches[chunk_id][chunk_offset] ^ invert) {
-            _probe_pos_list->emplace_back(RowID{chunk_id, chunk_offset});
+            _probe_pos_list->emplace_back(chunk_id, chunk_offset);
           }
         }
       }
@@ -526,7 +526,7 @@ void JoinIndex::_append_matches_non_inner(const bool is_semi_or_anti_join) {
         const auto chunk_size = chunk->size();
         for (ChunkOffset chunk_offset{0}; chunk_offset < chunk_size; ++chunk_offset) {
           if (_index_matches[chunk_id][chunk_offset] ^ invert) {
-            _index_pos_list->emplace_back(RowID{chunk_id, chunk_offset});
+            _index_pos_list->emplace_back(chunk_id, chunk_offset);
           }
         }
       }

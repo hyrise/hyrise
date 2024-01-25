@@ -140,7 +140,7 @@ TEST_P(SegmentsUsingAllocatorsTest, CountersAfterMigration) {
 
 inline std::string segments_using_allocator_test_formatter(
     const testing::TestParamInfo<std::tuple<DataType, SegmentEncodingSpec, bool>>& param_info) {
-  std::stringstream stringstream;
+  auto stringstream = std::stringstream{};
   stringstream << std::get<0>(param_info.param);
   stringstream << all_segment_encoding_specs_formatter(
       testing::TestParamInfo<EncodingTest::ParamType>{std::get<1>(param_info.param), 0});

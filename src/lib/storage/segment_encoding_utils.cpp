@@ -67,7 +67,7 @@ VectorCompressionType parent_vector_compression_type(const CompressedVectorType 
     case CompressedVectorType::BitPacking:
       return VectorCompressionType::BitPacking;
   }
-  Fail("Invalid enum value");
+  Fail("Invalid enum value.");
 }
 
 }  // namespace hyrise

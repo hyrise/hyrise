@@ -25,8 +25,8 @@ void lqp_create_node_mapping_impl(LQPNodeMapping& mapping, const std::shared_ptr
     return;
   }
 
-  Assert(lhs && rhs, "LQPs aren't equally structured, can't create mapping");
-  Assert(lhs->type == rhs->type, "LQPs aren't equally structured, can't create mapping");
+  Assert(lhs && rhs, "LQPs aren't equally structured, cannot create mapping.");
+  Assert(lhs->type == rhs->type, "LQPs aren't equally structured, cannot create mapping.");
 
   // To avoid traversing subgraphs of ORs twice, check whether we've been here already
   const auto mapping_iter = mapping.find(lhs);
@@ -103,7 +103,7 @@ void lqp_find_subplan_roots_impl(std::vector<std::shared_ptr<AbstractLQPNode>>& 
 
 void recursively_collect_lqp_subquery_expressions_by_lqp(
     SubqueryExpressionsByLQP& subquery_expressions_by_lqp, const std::shared_ptr<AbstractLQPNode>& node,
-    std::unordered_set<std::shared_ptr<AbstractLQPNode>>& visited_nodes) {
+    std::unordered_set<std::shared_ptr<AbstractLQPNode>>& visited_nodes, const bool only_correlated) {
   if (!node || !visited_nodes.emplace(node).second) {
     return;
   }
@@ -115,35 +115,40 @@ void recursively_collect_lqp_subquery_expressions_by_lqp(
         return ExpressionVisitation::VisitArguments;
       }
 
-      for (auto& [lqp, subquery_expressions] : subquery_expressions_by_lqp) {
-        if (*lqp == *subquery_expression->lqp) {
-          subquery_expressions.emplace_back(subquery_expression);
-          return ExpressionVisitation::DoNotVisitArguments;
+      if (subquery_expression->is_correlated() || !only_correlated) {
+        for (auto& [lqp, subquery_expressions] : subquery_expressions_by_lqp) {
+          if (*lqp == *subquery_expression->lqp) {
+            subquery_expressions.emplace_back(subquery_expression);
+            return ExpressionVisitation::DoNotVisitArguments;
+          }
         }
+        subquery_expressions_by_lqp.emplace(subquery_expression->lqp,
+                                            std::vector{std::weak_ptr<LQPSubqueryExpression>(subquery_expression)});
       }
-      subquery_expressions_by_lqp.emplace(subquery_expression->lqp,
-                                          std::vector{std::weak_ptr<LQPSubqueryExpression>(subquery_expression)});
 
       // Subqueries can be nested. We are also interested in the LQPs from deeply nested subqueries.
       recursively_collect_lqp_subquery_expressions_by_lqp(subquery_expressions_by_lqp, subquery_expression->lqp,
-                                                          visited_nodes);
+                                                          visited_nodes, only_correlated);
 
       return ExpressionVisitation::DoNotVisitArguments;
     });
   }
 
-  recursively_collect_lqp_subquery_expressions_by_lqp(subquery_expressions_by_lqp, node->left_input(), visited_nodes);
-  recursively_collect_lqp_subquery_expressions_by_lqp(subquery_expressions_by_lqp, node->right_input(), visited_nodes);
+  recursively_collect_lqp_subquery_expressions_by_lqp(subquery_expressions_by_lqp, node->left_input(), visited_nodes,
+                                                      only_correlated);
+  recursively_collect_lqp_subquery_expressions_by_lqp(subquery_expressions_by_lqp, node->right_input(), visited_nodes,
+                                                      only_correlated);
 }
 
 }  // namespace
 
 namespace hyrise {
 
-SubqueryExpressionsByLQP collect_lqp_subquery_expressions_by_lqp(const std::shared_ptr<AbstractLQPNode>& node) {
+SubqueryExpressionsByLQP collect_lqp_subquery_expressions_by_lqp(const std::shared_ptr<AbstractLQPNode>& node,
+                                                                 const bool only_correlated) {
   auto visited_nodes = std::unordered_set<std::shared_ptr<AbstractLQPNode>>();
   auto subqueries_by_lqp = SubqueryExpressionsByLQP{};
-  recursively_collect_lqp_subquery_expressions_by_lqp(subqueries_by_lqp, node, visited_nodes);
+  recursively_collect_lqp_subquery_expressions_by_lqp(subqueries_by_lqp, node, visited_nodes, only_correlated);
 
   return subqueries_by_lqp;
 }
@@ -174,9 +179,9 @@ std::optional<LQPMismatch> lqp_find_subplan_mismatch(const std::shared_ptr<const
 
 void lqp_replace_node(const std::shared_ptr<AbstractLQPNode>& original_node,
                       const std::shared_ptr<AbstractLQPNode>& replacement_node) {
-  DebugAssert(replacement_node->outputs().empty(), "Node can't have outputs");
+  DebugAssert(replacement_node->outputs().empty(), "Node cannot have outputs.");
   DebugAssert(!replacement_node->left_input() && !replacement_node->right_input(),
-              "Replacement node can't have inputs");
+              "Replacement node cannot have inputs.");
 
   const auto outputs = original_node->outputs();
   const auto input_sides = original_node->get_input_sides();
@@ -321,6 +326,7 @@ std::set<std::string> lqp_find_modified_tables(const std::shared_ptr<AbstractLQP
       case LQPNodeType::Intersect:
       case LQPNodeType::Except:
       case LQPNodeType::Mock:
+      case LQPNodeType::Window:
         return LQPVisitation::VisitInputs;
     }
     return LQPVisitation::VisitInputs;
@@ -398,7 +404,7 @@ std::vector<std::shared_ptr<AbstractLQPNode>> lqp_find_subplan_roots(const std::
 
 std::vector<std::shared_ptr<AbstractLQPNode>> lqp_find_nodes_by_type(const std::shared_ptr<AbstractLQPNode>& lqp,
                                                                      const LQPNodeType type) {
-  std::vector<std::shared_ptr<AbstractLQPNode>> nodes;
+  auto nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
   visit_lqp(lqp, [&](const auto& node) {
     if (node->type == type) {
       nodes.emplace_back(node);
@@ -410,7 +416,7 @@ std::vector<std::shared_ptr<AbstractLQPNode>> lqp_find_nodes_by_type(const std::
 }
 
 std::vector<std::shared_ptr<AbstractLQPNode>> lqp_find_leaves(const std::shared_ptr<AbstractLQPNode>& lqp) {
-  std::vector<std::shared_ptr<AbstractLQPNode>> nodes;
+  auto nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
   visit_lqp(lqp, [&](const auto& node) {
     if (node->input_count() > 0) {
       return LQPVisitation::VisitInputs;
@@ -428,7 +434,7 @@ ExpressionUnorderedSet find_column_expressions(const AbstractLQPNode& lqp_node, 
   DebugAssert(lqp_node.type == LQPNodeType::StoredTable || lqp_node.type == LQPNodeType::StaticTable ||
                   lqp_node.type == LQPNodeType::Mock,
               "Did not expect other node types than StoredTableNode, StaticTableNode and MockNode.");
-  DebugAssert(!lqp_node.left_input(), "Only valid for data source nodes");
+  DebugAssert(!lqp_node.left_input(), "Only valid for data source nodes.");
 
   const auto& output_expressions = lqp_node.output_expressions();
   auto column_expressions = ExpressionUnorderedSet{};
@@ -444,7 +450,7 @@ ExpressionUnorderedSet find_column_expressions(const AbstractLQPNode& lqp_node, 
     if (std::find(column_ids.cbegin(), column_ids.cend(), original_column_id) != column_ids.cend() &&
         *column_expression->original_node.lock() == lqp_node) {
       [[maybe_unused]] const auto [_, success] = column_expressions.emplace(column_expression);
-      DebugAssert(success, "Did not expect multiple column expressions for the same column id.");
+      DebugAssert(success, "Did not expect multiple column expressions for the same ColumnID.");
     }
   }
 
@@ -585,7 +591,7 @@ std::shared_ptr<AbstractLQPNode> find_diamond_origin_node(const std::shared_ptr<
   Assert(union_root_node->type == LQPNodeType::Union, "Expecting UnionNode as the diamond's root node.");
   DebugAssert(union_root_node->input_count() > 1, "Diamond root node does not have two inputs.");
   bool is_diamond = true;
-  std::optional<std::shared_ptr<AbstractLQPNode>> diamond_origin_node;
+  auto diamond_origin_node = std::optional<std::shared_ptr<AbstractLQPNode>>{};
   visit_lqp(union_root_node, [&](const auto& diamond_node) {
     if (diamond_node == union_root_node) {
       return LQPVisitation::VisitInputs;

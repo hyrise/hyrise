@@ -14,7 +14,7 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
 
         echo "Installing dependencies (this may take a while)..."
         if brew update >/dev/null; then
-            # check, for each program (aka. formula) individually with brew, whether it is already installed due to brew issues on MacOS after system upgrade
+            # check, for each program (aka. formula) individually with brew, whether it is already installed due to brew issues on macOS after system upgrade
             # NOTE: The Mac CI server does not execute the install_dependencies.sh - formulas need to be installed manually.
             for formula in autoconf boost cmake coreutils dos2unix graphviz libpq ncurses parallel pkg-config postgresql readline sqlite3 tbb; do
                 # if brew formula is installed
@@ -49,8 +49,16 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
         if [ -f /etc/lsb-release ] && cat /etc/lsb-release | grep DISTRIB_ID | grep Ubuntu >/dev/null; then
             echo "Installing dependencies (this may take a while)..."
             if sudo apt-get update >/dev/null; then
+                sudo apt-get install --no-install-recommends -y software-properties-common lsb-release
+                if [[ "$(lsb_release -sr)" < "23.10" ]]; then
+                    # The boost versions shipped with Ubuntu before 23.10 do not provide
+                    # boost::unordered_flat_map. Thus, we manually retrieve it.
+                    sudo add-apt-repository -y ppa:mhier/libboost-latest
+                    sudo apt-get update
+                fi
+
                 # Packages added here should also be added to the Dockerfile
-                sudo apt-get install --no-install-recommends -y autoconf bash-completion bc clang-11 clang-14 clang-format-14 clang-tidy-14 cmake curl dos2unix g++-9 gcc-9 g++-11 gcc-11 gcovr git graphviz libboost-all-dev libhwloc-dev libncurses5-dev libnuma-dev libnuma1 libpq-dev libreadline-dev libsqlite3-dev libtbb-dev lld man parallel postgresql-server-dev-all python3 python3-pip valgrind &
+                sudo apt-get install --no-install-recommends -y autoconf bash-completion bc clang-11 clang-14 clang-format-14 clang-tidy-14 cmake curl dos2unix g++-9 gcc-9 g++-11 gcc-11 gcovr git graphviz libboost1.81-all-dev libhwloc-dev libncurses5-dev libnuma-dev libnuma1 libpq-dev libreadline-dev libsqlite3-dev libtbb-dev lld man parallel postgresql-server-dev-all python3 python3-pip valgrind &
 
                 if ! git submodule update --jobs 5 --init --recursive; then
                     echo "Error during git fetching submodules."

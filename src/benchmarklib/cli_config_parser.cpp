@@ -45,7 +45,7 @@ BenchmarkConfig CLIConfigParser::parse_cli_options(const cxxopts::ParseResult& p
     }
   }
 
-  Assert(clients > 0, "Invalid value for --clients");
+  Assert(clients > 0, "Invalid value for --clients.");
 
   if (enable_scheduler && clients == 1) {
     std::cout << "\n\n- WARNING: You are running in multi-threaded (MT) mode but have set --clients=1.\n";
@@ -67,7 +67,7 @@ BenchmarkConfig CLIConfigParser::parse_cli_options(const cxxopts::ParseResult& p
 
   const auto enable_visualization = parse_result["visualize"].as<bool>();
   if (enable_visualization) {
-    Assert(clients == 1, "Cannot visualize plans with multiple clients as files may be overwritten");
+    Assert(clients == 1, "Cannot visualize plans with multiple clients as files may be overwritten.");
     std::cout << "- Visualizing the plans into SVG files. This will make the performance numbers invalid." << std::endl;
   }
 
@@ -137,12 +137,20 @@ BenchmarkConfig CLIConfigParser::parse_cli_options(const cxxopts::ParseResult& p
     std::cout << "- Not caching tables as binary files" << std::endl;
   }
 
-  const auto metrics = parse_result["metrics"].as<bool>();
-  if (metrics) {
-    Assert(!output_file_string.empty(), "--metrics only makes sense when an output file is set.");
-    std::cout << "- Tracking SQL metrics" << std::endl;
+  const auto system_metrics = parse_result["system_metrics"].as<bool>();
+  if (system_metrics) {
+    Assert(!output_file_string.empty(), "--system_metrics only makes sense when an output file is set.");
+    std::cout << "- Tracking system metrics." << std::endl;
   } else {
-    std::cout << "- Not tracking SQL metrics" << std::endl;
+    std::cout << "- Not tracking system metrics." << std::endl;
+  }
+
+  const auto pipeline_metrics = parse_result["pipeline_metrics"].as<bool>();
+  if (pipeline_metrics) {
+    Assert(!output_file_string.empty(), "--pipeline_metrics only makes sense when an output file is set.");
+    std::cout << "- Tracking SQL pipeline metrics." << std::endl;
+  } else {
+    std::cout << "- Not tracking SQL pipeline metrics." << std::endl;
   }
 
   auto plugins = std::vector<std::string>{};
@@ -168,7 +176,8 @@ BenchmarkConfig CLIConfigParser::parse_cli_options(const cxxopts::ParseResult& p
                          enable_visualization,
                          verify,
                          cache_binary_tables,
-                         metrics,
+                         system_metrics,
+                         pipeline_metrics,
                          plugins};
 }
 

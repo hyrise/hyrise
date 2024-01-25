@@ -83,41 +83,37 @@ TEST_F(OperatorScanPredicateTest, FromExpressionColumnRight) {
   EXPECT_EQ(operator_predicate_a.value, AllParameterVariant{5});
 }
 
-TEST_F(OperatorScanPredicateTest, SimpleBetweenInclusive) {
-  const auto between_inclusive = OperatorScanPredicate::from_expression(*between_inclusive_(a, 5, 7), *node);
-  ASSERT_TRUE(between_inclusive);
-  ASSERT_EQ(between_inclusive->size(), 1u);
+TEST_F(OperatorScanPredicateTest, OutputToStream) {
+  const auto test_cases = std::vector<std::pair<std::shared_ptr<AbstractPredicateExpression>, std::string>>(
+      {{between_inclusive_(5, a, b), "Column #0 <= 5\nColumn #1 >= 5\n"},
+       {greater_than_(a, 5), "Column #0 > 5\n"},
+       {less_than_(a, 5), "Column #0 < 5\n"},
+       {greater_than_(a, b), "Column #0 > Column #1\n"}});
 
-  EXPECT_EQ(between_inclusive->at(0), OperatorScanPredicate(ColumnID{0}, PredicateCondition::BetweenInclusive, 5, 7));
-
-  const auto between_upper_exclusive =
-      OperatorScanPredicate::from_expression(*between_upper_exclusive_(a, 5, 7), *node);
-  ASSERT_TRUE(between_upper_exclusive);
-  ASSERT_EQ(between_upper_exclusive->size(), 1u);
-
-  EXPECT_EQ(between_upper_exclusive->at(0),
-            OperatorScanPredicate(ColumnID{0}, PredicateCondition::BetweenUpperExclusive, 5, 7));
-
-  const auto between_lower_exclusive =
-      OperatorScanPredicate::from_expression(*between_lower_exclusive_(a, 5, 7), *node);
-  ASSERT_TRUE(between_lower_exclusive);
-  ASSERT_EQ(between_lower_exclusive->size(), 1u);
-
-  EXPECT_EQ(between_lower_exclusive->at(0),
-            OperatorScanPredicate(ColumnID{0}, PredicateCondition::BetweenLowerExclusive, 5, 7));
-
-  const auto between_exclusive = OperatorScanPredicate::from_expression(*between_exclusive_(a, 5, 7), *node);
-  ASSERT_TRUE(between_exclusive);
-  ASSERT_EQ(between_exclusive->size(), 1u);
-
-  EXPECT_EQ(between_exclusive->at(0), OperatorScanPredicate(ColumnID{0}, PredicateCondition::BetweenExclusive, 5, 7));
+  auto actual = std::stringstream{};
+  for (const auto& [expression, expected] : test_cases) {
+    const auto operator_predicates = OperatorScanPredicate::from_expression(*expression, *node);
+    ASSERT_TRUE(operator_predicates);
+    for (const auto& predicate : *operator_predicates) {
+      actual << predicate << '\n';
+    }
+    EXPECT_EQ(actual.str(), expected);
+    actual.str("");
+  }
 }
 
-TEST_F(OperatorScanPredicateTest, SimpleBetweenUpperExclusive) {}
+TEST_F(OperatorScanPredicateTest, SimpleBetween) {
+  for (const auto predicate_condition :
+       {PredicateCondition::BetweenInclusive, PredicateCondition::BetweenLowerExclusive,
+        PredicateCondition::BetweenUpperExclusive, PredicateCondition::BetweenExclusive}) {
+    const auto predicate_expression = std::make_shared<BetweenExpression>(predicate_condition, a, value_(5), value_(7));
+    const auto operator_predicates = OperatorScanPredicate::from_expression(*predicate_expression, *node);
+    ASSERT_TRUE(operator_predicates);
+    ASSERT_EQ(operator_predicates->size(), 1);
 
-TEST_F(OperatorScanPredicateTest, SimpleBetweenLowerExclusive) {}
-
-TEST_F(OperatorScanPredicateTest, SimpleBetweenExclusive) {}
+    EXPECT_EQ(operator_predicates->at(0), OperatorScanPredicate(ColumnID{0}, predicate_condition, 5, 7));
+  }
+}
 
 TEST_F(OperatorScanPredicateTest, ComplicatedBetween) {
   // `5 BETWEEN INCLUSIVE a AND b` becomes `a <= 5 AND b >= 5`

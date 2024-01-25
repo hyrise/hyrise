@@ -1,5 +1,4 @@
 #include "strategy_base_test.hpp"
-#include "utils/assert.hpp"
 
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_functional.hpp"
@@ -23,7 +22,7 @@ using namespace expression_functional;  // NOLINT(build/namespaces)
 class IndexScanRuleTest : public StrategyBaseTest {
  public:
   void SetUp() override {
-    table = load_table("resources/test_data/tbl/int_int_int.tbl");
+    table = load_table("resources/test_data/tbl/int_float4.tbl");
     Hyrise::get().storage_manager.add_table("a", table);
     ChunkEncoder::encode_all_chunks(Hyrise::get().storage_manager.get_table("a"));
 
@@ -32,7 +31,6 @@ class IndexScanRuleTest : public StrategyBaseTest {
     stored_table_node = StoredTableNode::make("a");
     a = stored_table_node->get_column("a");
     b = stored_table_node->get_column("b");
-    c = stored_table_node->get_column("c");
   }
 
   void generate_mock_statistics(float row_count = 10.0f) {
@@ -42,9 +40,7 @@ class IndexScanRuleTest : public StrategyBaseTest {
     table_statistics->column_statistics.at(0)->set_statistics_object(
         GenericHistogram<int32_t>::with_single_bin(0, 20, row_count, 10));
     table_statistics->column_statistics.at(1)->set_statistics_object(
-        GenericHistogram<int32_t>::with_single_bin(0, 20, row_count, 10));
-    table_statistics->column_statistics.at(2)->set_statistics_object(
-        GenericHistogram<int32_t>::with_single_bin(0, 20'000, row_count, 10));
+        GenericHistogram<float>::with_single_bin(0, 20, row_count, 10));
   }
 
   std::shared_ptr<IndexScanRule> rule;
@@ -52,13 +48,12 @@ class IndexScanRuleTest : public StrategyBaseTest {
   std::shared_ptr<Table> table;
   std::shared_ptr<LQPColumnExpression> a;
   std::shared_ptr<LQPColumnExpression> b;
-  std::shared_ptr<LQPColumnExpression> c;
 };
 
 TEST_F(IndexScanRuleTest, NoIndexScanWithoutIndex) {
   generate_mock_statistics();
 
-  _lqp = PredicateNode::make(greater_than_(a, 10));
+  _lqp = PredicateNode::make(equals_(a, 10));
   _lqp->set_left_input(stored_table_node);
 
   const auto predicate_node = std::static_pointer_cast<PredicateNode>(_lqp);
@@ -68,25 +63,13 @@ TEST_F(IndexScanRuleTest, NoIndexScanWithoutIndex) {
 }
 
 TEST_F(IndexScanRuleTest, NoIndexScanWithIndexOnOtherColumn) {
-  table->create_chunk_index<GroupKeyIndex>({ColumnID{2}});
+  auto chunk_ids = std::vector<ChunkID>(table->chunk_count());
+  std::iota(chunk_ids.begin(), chunk_ids.end(), 0);
+  table->create_partial_hash_index(ColumnID{1}, chunk_ids);
 
   generate_mock_statistics();
 
-  _lqp = PredicateNode::make(greater_than_(a, 10));
-  _lqp->set_left_input(stored_table_node);
-
-  const auto predicate_node = std::static_pointer_cast<PredicateNode>(_lqp);
-  EXPECT_EQ(predicate_node->scan_type, ScanType::TableScan);
-  _apply_rule(rule, _lqp);
-  EXPECT_EQ(predicate_node->scan_type, ScanType::TableScan);
-}
-
-TEST_F(IndexScanRuleTest, NoIndexScanWithMultiSegmentIndex) {
-  table->create_chunk_index<CompositeGroupKeyIndex>({ColumnID{2}, ColumnID{1}});
-
-  generate_mock_statistics();
-
-  _lqp = PredicateNode::make(greater_than_(c, 10));
+  _lqp = PredicateNode::make(equals_(a, 10));
   _lqp->set_left_input(stored_table_node);
 
   const auto predicate_node = std::static_pointer_cast<PredicateNode>(_lqp);
@@ -98,7 +81,7 @@ TEST_F(IndexScanRuleTest, NoIndexScanWithMultiSegmentIndex) {
 TEST_F(IndexScanRuleTest, NoIndexScanWithTwoColumnPredicate) {
   generate_mock_statistics();
 
-  _lqp = PredicateNode::make(greater_than_(c, b));
+  _lqp = PredicateNode::make(equals_(b, b));
   _lqp->set_left_input(stored_table_node);
 
   const auto predicate_node = std::static_pointer_cast<PredicateNode>(_lqp);
@@ -108,25 +91,13 @@ TEST_F(IndexScanRuleTest, NoIndexScanWithTwoColumnPredicate) {
 }
 
 TEST_F(IndexScanRuleTest, NoIndexScanWithHighSelectivity) {
-  table->create_chunk_index<GroupKeyIndex>({ColumnID{2}});
+  auto chunk_ids = std::vector<ChunkID>(table->chunk_count());
+  std::iota(chunk_ids.begin(), chunk_ids.end(), 0);
+  table->create_partial_hash_index(ColumnID{1}, chunk_ids);
 
   generate_mock_statistics(80'000);
 
-  _lqp = PredicateNode::make(greater_than_(c, 10));
-  _lqp->set_left_input(stored_table_node);
-
-  const auto predicate_node = std::static_pointer_cast<PredicateNode>(_lqp);
-  EXPECT_EQ(predicate_node->scan_type, ScanType::TableScan);
-  _apply_rule(rule, _lqp);
-  EXPECT_EQ(predicate_node->scan_type, ScanType::TableScan);
-}
-
-TEST_F(IndexScanRuleTest, NoIndexScanIfNotGroupKey) {
-  table->create_chunk_index<AdaptiveRadixTreeIndex>({ColumnID{2}});
-
-  generate_mock_statistics(1'000'000);
-
-  _lqp = PredicateNode::make(greater_than_(c, 10));
+  _lqp = PredicateNode::make(not_equals_(b, 10));
   _lqp->set_left_input(stored_table_node);
 
   const auto predicate_node = std::static_pointer_cast<PredicateNode>(_lqp);
@@ -136,11 +107,13 @@ TEST_F(IndexScanRuleTest, NoIndexScanIfNotGroupKey) {
 }
 
 TEST_F(IndexScanRuleTest, IndexScanWithIndex) {
-  table->create_chunk_index<GroupKeyIndex>({ColumnID{2}});
+  auto chunk_ids = std::vector<ChunkID>(table->chunk_count());
+  std::iota(chunk_ids.begin(), chunk_ids.end(), 0);
+  table->create_partial_hash_index(ColumnID{1}, chunk_ids);
 
   generate_mock_statistics(1'000'000);
 
-  _lqp = PredicateNode::make(greater_than_(c, 19'900));
+  _lqp = PredicateNode::make(equals_(b, 19'900));
   _lqp->set_left_input(stored_table_node);
 
   const auto predicate_node = std::static_pointer_cast<PredicateNode>(_lqp);
@@ -150,12 +123,15 @@ TEST_F(IndexScanRuleTest, IndexScanWithIndex) {
 }
 
 TEST_F(IndexScanRuleTest, IndexScanWithIndexPrunedColumn) {
-  table->create_chunk_index<GroupKeyIndex>({ColumnID{2}});
+  auto chunk_ids = std::vector<ChunkID>(table->chunk_count());
+  std::iota(chunk_ids.begin(), chunk_ids.end(), 0);
+  table->create_partial_hash_index(ColumnID{1}, chunk_ids);
+
   stored_table_node->set_pruned_column_ids({ColumnID{0}});
 
   generate_mock_statistics(1'000'000);
 
-  _lqp = PredicateNode::make(greater_than_(c, 19'900));
+  _lqp = PredicateNode::make(equals_(b, 19'900));
   _lqp->set_left_input(stored_table_node);
 
   const auto predicate_node = std::static_pointer_cast<PredicateNode>(_lqp);
@@ -165,19 +141,51 @@ TEST_F(IndexScanRuleTest, IndexScanWithIndexPrunedColumn) {
 }
 
 TEST_F(IndexScanRuleTest, IndexScanOnlyOnOutputOfStoredTableNode) {
-  table->create_chunk_index<GroupKeyIndex>({ColumnID{2}});
+  auto chunk_ids = std::vector<ChunkID>(table->chunk_count());
+  std::iota(chunk_ids.begin(), chunk_ids.end(), 0);
+  table->create_partial_hash_index(ColumnID{1}, chunk_ids);
 
   generate_mock_statistics(1'000'000);
 
-  const auto predicate_node_0 = PredicateNode::make(greater_than_(c, 19'900));
-  predicate_node_0->set_left_input(stored_table_node);
-
   _lqp = PredicateNode::make(less_than_(b, 15));
-  _lqp->set_left_input(predicate_node_0);
+  const auto predicate_node_0 = std::static_pointer_cast<PredicateNode>(_lqp);
+  const auto predicate_node_1 = PredicateNode::make(equals_(b, 19'900));
+  predicate_node_0->set_left_input(predicate_node_1);
+  predicate_node_1->set_left_input(stored_table_node);
+
+  EXPECT_EQ(predicate_node_0->scan_type, ScanType::TableScan);
+  EXPECT_EQ(predicate_node_1->scan_type, ScanType::TableScan);
 
   _apply_rule(rule, _lqp);
-  const auto predicate_node_1 = std::static_pointer_cast<PredicateNode>(_lqp);
-  EXPECT_EQ(predicate_node_0->scan_type, ScanType::IndexScan);
+
+  EXPECT_EQ(predicate_node_0->scan_type, ScanType::TableScan);
+  EXPECT_EQ(predicate_node_1->scan_type, ScanType::IndexScan);
+}
+
+// Same test as before, but placing the predicate with a high selectivity first, which does not trigger an index
+// scan. The seoond predicate has a very low selectivity, but does not follow a stored table node.
+TEST_F(IndexScanRuleTest, NoIndexScanForSecondPredicate) {
+  auto chunk_ids = std::vector<ChunkID>(table->chunk_count());
+  std::iota(chunk_ids.begin(), chunk_ids.end(), 0);
+  table->create_partial_hash_index(ColumnID{1}, chunk_ids);
+
+  generate_mock_statistics(1'000'000);
+
+  const auto predicate_node_0 = PredicateNode::make(equals_(c, 19'900));
+  predicate_node_0->set_left_input(stored_table_node);
+
+  _lqp = PredicateNode::make(equals_(b, 19'900));
+  const auto predicate_node_0 = std::static_pointer_cast<PredicateNode>(_lqp);
+  const auto predicate_node_1 = PredicateNode::make(less_than_(b, 15));
+  predicate_node_0->set_left_input(predicate_node_1);
+  predicate_node_1->set_left_input(stored_table_node);
+
+  EXPECT_EQ(predicate_node_0->scan_type, ScanType::TableScan);
+  EXPECT_EQ(predicate_node_1->scan_type, ScanType::TableScan);
+
+  _apply_rule(rule, _lqp);
+
+  EXPECT_EQ(predicate_node_0->scan_type, ScanType::TableScan);
   EXPECT_EQ(predicate_node_1->scan_type, ScanType::TableScan);
 }
 

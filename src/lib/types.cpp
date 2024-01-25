@@ -66,9 +66,9 @@ PredicateCondition flip_predicate_condition(const PredicateCondition predicate_c
     case PredicateCondition::NotLike:
     case PredicateCondition::IsNull:
     case PredicateCondition::IsNotNull:
-      Fail("Can't flip specified PredicateCondition");
+      Fail("Cannot flip specified PredicateCondition.");
   }
-  Fail("Invalid enum value");
+  Fail("Invalid enum value.");
 }
 
 PredicateCondition inverse_predicate_condition(const PredicateCondition predicate_condition) {
@@ -99,7 +99,7 @@ PredicateCondition inverse_predicate_condition(const PredicateCondition predicat
       return PredicateCondition::In;
 
     default:
-      Fail("Can't inverse the specified PredicateCondition");
+      Fail("Cannot inverse the specified PredicateCondition.");
   }
 }
 
@@ -114,7 +114,7 @@ std::pair<PredicateCondition, PredicateCondition> between_to_conditions(const Pr
     case PredicateCondition::BetweenExclusive:
       return {PredicateCondition::GreaterThan, PredicateCondition::LessThan};
     default:
-      Fail("Input was not a between condition");
+      Fail("Input was not a between condition.");
   }
 }
 
@@ -136,7 +136,7 @@ PredicateCondition conditions_to_between(const PredicateCondition lower, const P
       return PredicateCondition::BetweenInclusive;
     }
   }
-  Fail("Unexpected PredicateCondition");
+  Fail("Unexpected PredicateCondition.");
 }
 
 bool is_semi_or_anti_join(const JoinMode join_mode) {
