@@ -65,7 +65,7 @@ std::pair<bool, bool> calculate_safe_recursion_sides(const std::shared_ptr<Abstr
     default:
       return {false, false};
   }
-  Fail("Invalid enum value");
+  Fail("Invalid enum value.");
 }
 
 /**
@@ -130,7 +130,7 @@ std::pair<SubqueryToJoinRule::PredicatePullUpResult, bool> pull_up_correlated_pr
         result.adapted_lqp = PredicateNode::make(remaining_expression, left_input_adapted);
       } else {
         result.adapted_lqp = left_input_adapted;
-        DebugAssert(!node->right_input(), "PredicateNodes should not have right inputs");
+        DebugAssert(!node->right_input(), "PredicateNodes should not have right inputs.");
       }
       if (!join_predicates.empty()) {
         result.pulled_predicate_node_count++;
@@ -182,7 +182,7 @@ std::pair<SubqueryToJoinRule::PredicatePullUpResult, bool> pull_up_correlated_pr
     default:
       // Nodes of any other type stop the recursion and thus don't need to be adapted
       DebugAssert(!should_recurse_left && !should_recurse_right,
-                  "Nodes that don't stop the recursion need to be adapted/copied");
+                  "Nodes that do not stop the recursion need to be adapted/copied.");
       result.adapted_lqp = node;
       break;
   }
@@ -201,7 +201,7 @@ void push_arithmetic_expression_into_subquery(const std::shared_ptr<BinaryPredic
                                               bool subquery_expression_is_left) {
   DebugAssert(
       subquery_expression->lqp->node_expressions.size() == 1,
-      "Subqueries used in arithmetic expressions must return a single value, so they must have one node_expression");
+      "Subqueries used in arithmetic expressions must return a single value, so they must have one node_expression.");
 
   // (1) Create a new arithmetic expression that takes the result expression of the subquery and applies the arithmetic
   //     operation on it.
@@ -232,7 +232,7 @@ std::string SubqueryToJoinRule::name() const {
 
 std::optional<SubqueryToJoinRule::PredicateNodeInfo> SubqueryToJoinRule::is_predicate_node_join_candidate(
     const PredicateNode& predicate_node) {
-  PredicateNodeInfo result;
+  auto result = PredicateNodeInfo{};
 
   if (const auto in_expression = std::dynamic_pointer_cast<InExpression>(predicate_node.predicate())) {
     // Only optimize if the set is a subquery and not a static list
@@ -425,8 +425,8 @@ SubqueryToJoinRule::try_to_extract_join_predicates(
     const auto& binary_predicate_expression = std::static_pointer_cast<BinaryPredicateExpression>(predicate_expression);
     const auto& left_side = binary_predicate_expression->left_operand();
     const auto& right_side = binary_predicate_expression->right_operand();
-    ParameterID parameter_id;
-    std::shared_ptr<AbstractExpression> right_operand;
+    auto parameter_id = ParameterID{0};
+    auto right_operand = std::shared_ptr<AbstractExpression>{};
     if (left_side->type == ExpressionType::CorrelatedParameter) {
       parameter_id = std::static_pointer_cast<CorrelatedParameterExpression>(left_side)->parameter_id;
       right_operand = right_side;
@@ -473,10 +473,11 @@ SubqueryToJoinRule::try_to_extract_join_predicates(
 std::shared_ptr<AggregateNode> SubqueryToJoinRule::adapt_aggregate_node(
     const std::shared_ptr<AggregateNode>& node,
     const std::vector<std::shared_ptr<AbstractExpression>>& required_output_expressions) {
-  std::vector<std::shared_ptr<AbstractExpression>> group_by_expressions(
+  auto group_by_expressions = std::vector<std::shared_ptr<AbstractExpression>>(
       node->node_expressions.cbegin(), node->node_expressions.cbegin() + static_cast<NodeExpressionsDifferenceType>(
                                                                              node->aggregate_expressions_begin_idx));
-  ExpressionUnorderedSet original_group_by_expressions(group_by_expressions.cbegin(), group_by_expressions.cend());
+  auto original_group_by_expressions =
+      ExpressionUnorderedSet(group_by_expressions.cbegin(), group_by_expressions.cend());
 
   const auto not_found_it = original_group_by_expressions.cend();
   for (const auto& expression : required_output_expressions) {
@@ -485,7 +486,7 @@ std::shared_ptr<AggregateNode> SubqueryToJoinRule::adapt_aggregate_node(
     }
   }
 
-  std::vector<std::shared_ptr<AbstractExpression>> aggregate_expressions(
+  auto aggregate_expressions = std::vector<std::shared_ptr<AbstractExpression>>(
       node->node_expressions.cbegin() +
           static_cast<NodeExpressionsDifferenceType>(node->aggregate_expressions_begin_idx),
       node->node_expressions.cend());
@@ -499,7 +500,7 @@ std::shared_ptr<AliasNode> SubqueryToJoinRule::adapt_alias_node(
   // columns.
   auto expressions = node->node_expressions;
   auto aliases = node->aliases;
-  ExpressionUnorderedSet original_expressions(expressions.cbegin(), expressions.cend());
+  auto original_expressions = ExpressionUnorderedSet(expressions.cbegin(), expressions.cend());
 
   const auto not_found_it = original_expressions.cend();
   for (const auto& expression : required_output_expressions) {
@@ -518,7 +519,7 @@ std::shared_ptr<ProjectionNode> SubqueryToJoinRule::adapt_projection_node(
   // We don't want to add columns that are already in the projection node. We also don't want to remove duplicates in
   // the expressions of the projection node, so we can't simply build one set containing all expressions
   auto expressions = node->node_expressions;
-  ExpressionUnorderedSet original_expressions(expressions.cbegin(), expressions.cend());
+  auto original_expressions = ExpressionUnorderedSet(expressions.cbegin(), expressions.cend());
 
   const auto not_found_it = original_expressions.cend();
   for (const auto& expression : required_output_expressions) {
@@ -540,8 +541,8 @@ SubqueryToJoinRule::PredicatePullUpResult SubqueryToJoinRule::pull_up_correlated
 void SubqueryToJoinRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
   // While visiting the LQP, PredicateNodes might become replaced with JoinNodes. Instead of using recursion, we use
   // a node queue to schedule visitation of replaced/newly-inserted nodes.
-  std::unordered_set<std::shared_ptr<AbstractLQPNode>> visited_nodes;
-  std::queue<std::shared_ptr<AbstractLQPNode>> node_queue;
+  auto visited_nodes = std::unordered_set<std::shared_ptr<AbstractLQPNode>>{};
+  auto node_queue = std::queue<std::shared_ptr<AbstractLQPNode>>{};
   node_queue.push(lqp_root);
 
   while (!node_queue.empty()) {
@@ -597,7 +598,7 @@ void SubqueryToJoinRule::_apply_to_plan_without_subqueries(const std::shared_ptr
        * 3. Count the number of PredicateNodes in the Subquery-LQP using correlated parameters. Abort if any
        *    non-PredicateNodes or nested subquery-LQPs use correlated parameters.
        */
-      std::map<ParameterID, std::shared_ptr<AbstractExpression>> parameter_mapping;
+      auto parameter_mapping = std::map<ParameterID, std::shared_ptr<AbstractExpression>>{};
       for (size_t parameter_idx = 0; parameter_idx < predicate_node_info->subquery->parameter_count();
            ++parameter_idx) {
         const auto& parameter_expression = predicate_node_info->subquery->parameter_expression(parameter_idx);
@@ -617,7 +618,7 @@ void SubqueryToJoinRule::_apply_to_plan_without_subqueries(const std::shared_ptr
       if (pull_up_result.pulled_predicate_node_count != correlated_predicate_node_count) {
         // Not all correlated PredicateNodes can be pulled up
         DebugAssert(pull_up_result.pulled_predicate_node_count < correlated_predicate_node_count,
-                    "Inconsistent results from scan for correlated PredicateNodes");
+                    "Inconsistent results from scan for correlated PredicateNodes.");
         return LQPVisitation::VisitInputs;
       }
 

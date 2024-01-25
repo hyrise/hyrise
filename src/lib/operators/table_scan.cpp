@@ -22,6 +22,7 @@
 #include "hyrise.hpp"
 #include "lossless_cast.hpp"
 #include "operators/operator_scan_predicate.hpp"
+#include "operators/pqp_utils.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
 #include "storage/abstract_segment.hpp"
@@ -46,7 +47,8 @@ using namespace expression_functional;  // NOLINT(build/namespaces)
 TableScan::TableScan(const std::shared_ptr<const AbstractOperator>& input_operator,
                      const std::shared_ptr<AbstractExpression>& predicate)
     : AbstractReadOnlyOperator{OperatorType::TableScan, input_operator, nullptr, std::make_unique<PerformanceData>()},
-      _predicate(predicate) {
+      excluded_chunk_ids{std::make_shared<std::vector<ChunkID>>()},
+      _predicate{predicate} {
   _search_and_register_uncorrelated_subqueries(predicate);
 }
 
@@ -83,10 +85,19 @@ std::shared_ptr<AbstractOperator> TableScan::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_left_input,
     const std::shared_ptr<AbstractOperator>& /*copied_right_input*/,
     std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
-  return std::make_shared<TableScan>(copied_left_input, _predicate->deep_copy(copied_ops));
+  const auto table_scan = std::make_shared<TableScan>(copied_left_input, _predicate->deep_copy(copied_ops));
+
+  // Excluded ChunkIDs are set when an IndexScan scans those chunks in parallel using a secondary index and the result
+  // of both operators is unioned. When the PQP is later copied due to a PQP cache hit, we need to set
+  // included/excluded chunks again in both operators. Otherwise, the index scan would not scan any chunks.
+  table_scan->excluded_chunk_ids = excluded_chunk_ids;
+  return table_scan;
 }
 
 std::shared_ptr<const Table> TableScan::_on_execute() {
+  DebugAssert(excluded_chunk_ids, "Excluded ChunkIDs vector has not been initialized.");
+  DebugAssert(std::is_sorted(excluded_chunk_ids->cbegin(), excluded_chunk_ids->cend()),
+              "Excluded ChunkIDs must be sorted.");
   const auto in_table = left_input_table();
 
   _impl = create_impl();
@@ -94,20 +105,24 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
 
   auto output_mutex = std::mutex{};
 
-  const auto excluded_chunk_set = std::unordered_set<ChunkID>{excluded_chunk_ids.cbegin(), excluded_chunk_ids.cend()};
+  const auto chunk_count = in_table->chunk_count();
+  const auto chunks_to_scan = chunk_count - excluded_chunk_ids->size();
+
+  auto excluded_chunk_ids_iter = excluded_chunk_ids->cbegin();
 
   auto output_chunks = std::vector<std::shared_ptr<Chunk>>{};
-  output_chunks.reserve(in_table->chunk_count() - excluded_chunk_set.size());
+  output_chunks.reserve(chunks_to_scan);
 
   auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
-  jobs.reserve(in_table->chunk_count() - excluded_chunk_set.size());
+  jobs.reserve(chunks_to_scan);
 
-  const auto chunk_count = in_table->chunk_count();
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-    if (excluded_chunk_set.contains(chunk_id)) {
+    if (excluded_chunk_ids_iter != excluded_chunk_ids->cend() && chunk_id == *excluded_chunk_ids_iter) {
+      ++excluded_chunk_ids_iter;
       continue;
     }
-    const auto chunk_in = in_table->get_chunk(chunk_id);
+
+    const auto& chunk_in = in_table->get_chunk(chunk_id);
     Assert(chunk_in, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
     // chunk_in – Copy by value since copy by reference is not possible due to the limited scope of the for-iteration.
@@ -244,7 +259,7 @@ std::shared_ptr<const AbstractExpression> TableScan::_resolve_uncorrelated_subqu
    *      - resolve arguments of type uncorrelated subquery, and create ValueExpressions from the results
    *      - create deep copies for all other arguments
    */
-  auto arguments_count = predicate->arguments.size();
+  const auto arguments_count = predicate->arguments.size();
   auto new_arguments = std::vector<std::shared_ptr<AbstractExpression>>();
   new_arguments.reserve(arguments_count);
   auto computed_subqueries_count = size_t{0};
@@ -256,29 +271,7 @@ std::shared_ptr<const AbstractExpression> TableScan::_resolve_uncorrelated_subqu
       continue;
     }
 
-    auto subquery_result = NULL_VALUE;
-    const auto subquery_pqp = subquery->pqp;
-    Assert(subquery_pqp->state() == OperatorState::ExecutedAndAvailable,
-           "Uncorrelated subquery was not executed or has already been cleared.");
-    const auto& subquery_result_table = subquery_pqp->get_output();
-    const auto row_count = subquery_result_table->row_count();
-    Assert(subquery_result_table->column_count() == 1 && row_count <= 1,
-           "Uncorrelated subqueries may return at most one single value.");
-
-    if (row_count == 1) {
-      const auto chunk = subquery_result_table->get_chunk(ChunkID{0});
-      Assert(chunk, "Subquery results cannot be physically deleted.");
-      resolve_data_type(subquery->data_type(), [&](const auto data_type_t) {
-        using ColumnDataType = typename decltype(data_type_t)::type;
-        segment_iterate<ColumnDataType>(*chunk->get_segment(ColumnID{0}), [&](const auto& position) {
-          if (!position.is_null()) {
-            subquery_result = position.value();
-          }
-        });
-      });
-    }
-
-    new_arguments.emplace_back(value_(subquery_result));
+    new_arguments.emplace_back(value_(resolve_uncorrelated_subquery(subquery->pqp)));
     ++computed_subqueries_count;
   }
   DebugAssert(new_arguments.size() == predicate->arguments.size(), "Unexpected number of arguments.");

@@ -19,8 +19,10 @@ class DependentGroupByReductionRuleTest : public StrategyBaseTest {
   void SetUp() override {
     auto& storage_manager = Hyrise::get().storage_manager;
 
-    TableColumnDefinitions column_definitions{
-        {"column0", DataType::Int, false}, {"column1", DataType::Int, false}, {"column2", DataType::Int, false}};
+    TableColumnDefinitions column_definitions{{"column0", DataType::Int, false},
+                                              {"column1", DataType::Int, false},
+                                              {"column2", DataType::Int, false},
+                                              {"column3", DataType::Int, false}};
 
     table_a = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2}, UseMvcc::Yes);
     table_a->add_soft_key_constraint({{ColumnID{0}}, KeyConstraintType::PRIMARY_KEY});
@@ -60,6 +62,7 @@ class DependentGroupByReductionRuleTest : public StrategyBaseTest {
     column_e_0 = stored_table_node_e->get_column("column0");
     column_e_1 = stored_table_node_e->get_column("column1");
     column_e_2 = stored_table_node_e->get_column("column2");
+    column_e_3 = stored_table_node_e->get_column("column3");
 
     rule = std::make_shared<DependentGroupByReductionRule>();
   }
@@ -73,7 +76,7 @@ class DependentGroupByReductionRuleTest : public StrategyBaseTest {
   std::shared_ptr<LQPColumnExpression> column_b_0, column_b_1, column_b_2;
   std::shared_ptr<LQPColumnExpression> column_c_0, column_c_1, column_c_2;
   std::shared_ptr<LQPColumnExpression> column_d_0;
-  std::shared_ptr<LQPColumnExpression> column_e_0, column_e_1, column_e_2;
+  std::shared_ptr<LQPColumnExpression> column_e_0, column_e_1, column_e_2, column_e_3;
 };
 
 // Test simple cases.
@@ -82,8 +85,8 @@ TEST_F(DependentGroupByReductionRuleTest, SimpleCases) {
   {
     const auto lqp = PredicateNode::make(equals_(column_a_0, 17), stored_table_node_a);
 
-    const auto actual_lqp = apply_rule(rule, lqp);
     const auto expected_lqp = lqp->deep_copy();
+    const auto actual_lqp = apply_rule(rule, lqp);
     EXPECT_LQP_EQ(actual_lqp, expected_lqp);
   }
 
@@ -92,8 +95,8 @@ TEST_F(DependentGroupByReductionRuleTest, SimpleCases) {
     const auto lqp =
         AggregateNode::make(expression_vector(column_d_0), expression_vector(sum_(column_d_0)), stored_table_node_d);
 
-    const auto actual_lqp = apply_rule(rule, lqp);
     const auto expected_lqp = lqp->deep_copy();
+    const auto actual_lqp = apply_rule(rule, lqp);
     EXPECT_LQP_EQ(actual_lqp, expected_lqp);
   }
 }
@@ -141,8 +144,8 @@ TEST_F(DependentGroupByReductionRuleTest, IncompleteKey) {
     stored_table_node_b);
   // clang-format on
 
-  const auto actual_lqp = apply_rule(rule, lqp);
   const auto expected_lqp = lqp->deep_copy();
+  const auto actual_lqp = apply_rule(rule, lqp);
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
@@ -155,8 +158,8 @@ TEST_F(DependentGroupByReductionRuleTest, FullKeyGroupBy) {
     stored_table_node_b);
   // clang-format on
 
-  const auto actual_lqp = apply_rule(rule, lqp);
   const auto expected_lqp = lqp->deep_copy();
+  const auto actual_lqp = apply_rule(rule, lqp);
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
@@ -291,8 +294,8 @@ TEST_F(DependentGroupByReductionRuleTest, NoAdaptionForNullableColumns) {
       stored_table_node_b));
   // clang-format on
 
-  const auto actual_lqp = apply_rule(rule, lqp);
   const auto expected_lqp = lqp->deep_copy();
+  const auto actual_lqp = apply_rule(rule, lqp);
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
@@ -301,12 +304,12 @@ TEST_F(DependentGroupByReductionRuleTest, NoAdaptionForNullableColumns) {
 TEST_F(DependentGroupByReductionRuleTest, ShortConstraintsFirst) {
   // clang-format off
   const auto lqp =
-  AggregateNode::make(expression_vector(column_e_0, column_e_1, column_e_2), expression_vector(),
+  AggregateNode::make(expression_vector(column_e_0, column_e_1, column_e_2), expression_vector(min_(column_e_3)),
     stored_table_node_e);
 
   const auto expected_lqp =
-  ProjectionNode::make(expression_vector(column_e_0, column_e_1, column_e_2),
-    AggregateNode::make(expression_vector(column_e_2), expression_vector(any_(column_e_1), any_(column_e_0)),
+  ProjectionNode::make(expression_vector(column_e_0, column_e_1, column_e_2, min_(column_e_3)),
+    AggregateNode::make(expression_vector(column_e_2), expression_vector(min_(column_e_3), any_(column_e_1), any_(column_e_0)),  // NOLINT(whitespace/line_length)
       stored_table_node_e));
   // clang-format on
 
@@ -344,6 +347,111 @@ TEST_F(DependentGroupByReductionRuleTest, MultiKeyReduction) {
   const auto actual_lqp = apply_rule(rule, lqp);
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(DependentGroupByReductionRuleTest, RemoveSuperfluousDistinctAggregateSimple) {
+  // To guarantee distinct results for SELECT DISTINCT clauses, the SQLTranslator adds an AggregateNode with the
+  // selected attributes as group by columns. If the AggregateNode's input is already unique for these columns,
+  // remove the entire node.
+
+  // Basic case: Column is unique due to a constraint (e.g., it is a primary key).
+  // Example query: SELECT DISTINCT column0 FROM table_a;
+  {
+    // clang-format off
+    const auto lqp =
+    AggregateNode::make(expression_vector(column_a_0), expression_vector(),
+      stored_table_node_a);
+    // clang-format on
+
+    stored_table_node_a->set_pruned_column_ids({ColumnID{1}, ColumnID{2}, ColumnID{3}});
+
+    const auto expected_lqp = stored_table_node_a->deep_copy();
+    const auto actual_lqp = apply_rule(rule, lqp);
+    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  }
+
+  // More advanced case: Column is unique due to another operation (e.g., we grouped by it before).
+  // Example query: SELECT DISTINCT column1, MIN(column2) FROM table_a GROUP BY column1;
+  {
+    // clang-format off
+    const auto lqp =
+    AggregateNode::make(expression_vector(column_a_1, min_(column_a_2)), expression_vector(),
+      AggregateNode::make(expression_vector(column_a_1), expression_vector(min_(column_a_2)),
+        stored_table_node_a));
+
+    const auto expected_lqp =
+    AggregateNode::make(expression_vector(column_a_1), expression_vector(min_(column_a_2)),
+      stored_table_node_a);
+    // clang-format on
+
+    const auto actual_lqp = apply_rule(rule, lqp);
+    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  }
+}
+
+TEST_F(DependentGroupByReductionRuleTest, RemoveSuperfluousDistinctAggregateProjectColumns) {
+  // Remove the AggregateNode completely when it is used to for SELECT DISTINCT on a unique column, but add a
+  // ProjectionNode to output only the desired column.
+  {
+    // clang-format off
+    const auto lqp =
+    AggregateNode::make(expression_vector(column_a_0), expression_vector(),
+      stored_table_node_a);
+
+    const auto expected_lqp =
+    ProjectionNode::make(expression_vector(column_a_0),
+      stored_table_node_a);
+    // clang-format on
+
+    const auto actual_lqp = apply_rule(rule, lqp);
+    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  }
+
+  // All columns are part of the grouped columns, but the order changes. Thus, we need a ProjectionNode that changes the
+  // order.
+  {
+    // clang-format off
+    const auto lqp =
+    AggregateNode::make(expression_vector(column_e_3, column_e_2, column_e_1, column_e_0), expression_vector(),
+      stored_table_node_e);
+
+    const auto expected_lqp =
+    ProjectionNode::make(expression_vector(column_e_3, column_e_2, column_e_1, column_e_0),
+      stored_table_node_e);
+    // clang-format on
+
+    const auto actual_lqp = apply_rule(rule, lqp);
+    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  }
+}
+
+TEST_F(DependentGroupByReductionRuleTest, DoNotRemoveRequiredDistinctAggregate) {
+  // Do not remove the AggregateNode when the grouped column is not unique (only a combination of the two columns
+  // column0 and column1 is unique).
+  {
+    // clang-format off
+    const auto lqp =
+    AggregateNode::make(expression_vector(column_b_0), expression_vector(),
+      stored_table_node_b);
+    // clang-format on
+
+    const auto expected_lqp = lqp->deep_copy();
+    const auto actual_lqp = apply_rule(rule, lqp);
+    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  }
+
+  // Do not remove the AggregateNode when the grouped column is unique but there are further aggregates.
+  {
+    // clang-format off
+    const auto lqp =
+    AggregateNode::make(expression_vector(column_a_0), expression_vector(min_(column_a_1)),
+      stored_table_node_a);
+    // clang-format on
+
+    const auto expected_lqp = lqp->deep_copy();
+    const auto actual_lqp = apply_rule(rule, lqp);
+    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  }
 }
 
 }  // namespace hyrise

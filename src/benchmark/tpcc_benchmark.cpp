@@ -40,13 +40,13 @@ int main(int argc, char* argv[]) {
   // clang-format off
   cli_options.add_options()
     // We use -s instead of -w for consistency with the options of our other TPC-x binaries.
-    ("s,scale", "Scale factor (warehouses)", cxxopts::value<size_t>()->default_value("1")) // NOLINT
-    ("consistency_checks", "Run TPC-C consistency checks after benchmark (included with --verify)", cxxopts::value<bool>()->default_value("false")); // NOLINT
+    ("s,scale", "Scale factor (warehouses)", cxxopts::value<size_t>()->default_value("10"))
+    ("consistency_checks", "Run TPC-C consistency checks after benchmark (included with --verify)", cxxopts::value<bool>()->default_value("false"));  // NOLINT(whitespace/line_length)
   // clang-format on
 
-  std::shared_ptr<BenchmarkConfig> config;
-  size_t num_warehouses;
-  bool consistency_checks;
+  auto config = std::shared_ptr<BenchmarkConfig>{};
+  auto num_warehouses = size_t{0};
+  auto consistency_checks = false;
 
   // Parse command line args
   const auto cli_parse_result = cli_options.parse(argc, argv);
@@ -62,7 +62,7 @@ int main(int argc, char* argv[]) {
 
   // As TPC-C procedures may run into conflicts on both the Hyrise and the SQLite side, we cannot guarantee that the
   // two databases stay in sync.
-  Assert(!config->verify || config->clients == 1, "Cannot run verification with more than one client");
+  Assert(!config->verify || config->clients == 1, "Cannot run verification with more than one client.");
 
   auto context = BenchmarkRunner::create_context(*config);
 
@@ -97,7 +97,8 @@ bool floats_near(T a, T b) {
 void check_consistency(const size_t num_warehouses) {
   // new_order_counts[5-1][2-1] will hold the number of new_orders for W_ID 5, D_ID 2.
   // Filled as a byproduct of check 2, validated in check 3.
-  std::vector<std::vector<int64_t>> new_order_counts(num_warehouses, std::vector<int64_t>(NUM_DISTRICTS_PER_WAREHOUSE));
+  auto new_order_counts =
+      std::vector<std::vector<int64_t>>(num_warehouses, std::vector<int64_t>(NUM_DISTRICTS_PER_WAREHOUSE));
 
   const auto total_num_districts = static_cast<size_t>(num_warehouses * NUM_DISTRICTS_PER_WAREHOUSE);
 
@@ -109,13 +110,13 @@ void check_consistency(const size_t num_warehouses) {
             "SELECT W_ID, MAX(W_YTD), SUM(D_YTD) FROM WAREHOUSE, DISTRICT WHERE W_ID = D_W_ID GROUP BY W_ID"}
             .create_pipeline();
     const auto [pipeline_status, table] = pipeline.get_result_table();
-    Assert(table && table->row_count() == static_cast<size_t>(num_warehouses), "Lost a warehouse");
+    Assert(table && table->row_count() == static_cast<size_t>(num_warehouses), "Lost a warehouse.");
     const auto row_count = table->row_count();
     for (auto row_id = size_t{0}; row_id < row_count; ++row_id) {
       const auto w_ytd = double{*table->get_value<float>(ColumnID{1}, row_id)};
       const auto d_ytd_sum = *table->get_value<double>(ColumnID{2}, row_id);
 
-      Assert(floats_near(w_ytd, d_ytd_sum), "Mismatching YTD for WAREHOUSE and DISTRICT");
+      Assert(floats_near(w_ytd, d_ytd_sum), "Mismatching YTD for WAREHOUSE and DISTRICT.");
     }
   }
 
@@ -126,7 +127,7 @@ void check_consistency(const size_t num_warehouses) {
                                                   std::to_string(w_id) + " ORDER BY D_ID"}
                                    .create_pipeline();
       const auto [district_pipeline_status, district_table] = district_pipeline.get_result_table();
-      Assert(district_table && district_table->row_count() == NUM_DISTRICTS_PER_WAREHOUSE, "Lost a district");
+      Assert(district_table && district_table->row_count() == NUM_DISTRICTS_PER_WAREHOUSE, "Lost a district.");
       for (auto d_id = 1; d_id <= NUM_DISTRICTS_PER_WAREHOUSE; ++d_id) {
         const auto district_max_o_id = *district_table->get_value<int32_t>(ColumnID{0}, d_id - 1);
 
@@ -135,18 +136,18 @@ void check_consistency(const size_t num_warehouses) {
                                   .create_pipeline();
         const auto [order_pipeline_status, order_table] = order_pipeline.get_result_table();
         Assert(order_table && order_table->row_count() == 1, "Did not find MAX(O_ID)");
-        Assert(*order_table->get_value<int32_t>(ColumnID{0}, 0) == district_max_o_id, "Mismatching order IDs");
+        Assert(*order_table->get_value<int32_t>(ColumnID{0}, 0) == district_max_o_id, "Mismatching order IDs.");
 
         auto new_order_pipeline =
             SQLPipelineBuilder{std::string{"SELECT COUNT(*), MAX(NO_O_ID) FROM NEW_ORDER WHERE NO_W_ID = "} +
                                std::to_string(w_id) + " AND NO_D_ID = " + std::to_string(d_id)}
                 .create_pipeline();
         const auto [new_order_pipeline_status, new_order_table] = new_order_pipeline.get_result_table();
-        Assert(order_table && order_table->row_count() == 1, "Could not retrieve new_orders");
+        Assert(order_table && order_table->row_count() == 1, "Could not retrieve new_orders.");
         const auto new_order_count = *new_order_table->get_value<int64_t>(ColumnID{0}, 0);
         new_order_counts[w_id - 1][d_id - 1] = new_order_count;
         if (new_order_count > 0) {
-          Assert(*new_order_table->get_value<int32_t>(ColumnID{1}, 0) == district_max_o_id, "Mismatching order IDs");
+          Assert(*new_order_table->get_value<int32_t>(ColumnID{1}, 0) == district_max_o_id, "Mismatching order IDs.");
         }
       }
     }
@@ -159,14 +160,14 @@ void check_consistency(const size_t num_warehouses) {
             "SELECT NO_W_ID, NO_D_ID, MIN(NO_O_ID), MAX(NO_O_ID) FROM NEW_ORDER GROUP BY NO_W_ID, NO_D_ID"}
             .create_pipeline();
     const auto [new_order_pipeline_status, new_order_table] = new_order_pipeline.get_result_table();
-    Assert(new_order_table, "Could not retrieve new_orders");
+    Assert(new_order_table, "Could not retrieve new_orders.");
     const auto& row_count = new_order_table->row_count();
     for (auto row_id = size_t{0}; row_id < row_count; ++row_id) {
       const auto w_id = *new_order_table->get_value<int32_t>(ColumnID{0}, row_id);
       const auto d_id = *new_order_table->get_value<int32_t>(ColumnID{1}, row_id);
       const auto min_o_id = *new_order_table->get_value<int32_t>(ColumnID{2}, row_id);
       const auto max_o_id = *new_order_table->get_value<int32_t>(ColumnID{3}, row_id);
-      Assert(max_o_id - min_o_id + 1 == new_order_counts[w_id - 1][d_id - 1], "Mismatching order IDs");
+      Assert(max_o_id - min_o_id + 1 == new_order_counts[w_id - 1][d_id - 1], "Mismatching order IDs.");
     }
   }
 
@@ -178,7 +179,7 @@ void check_consistency(const size_t num_warehouses) {
             .create_pipeline();
     const auto [order_pipeline_status, order_table] = order_pipeline.get_result_table();
     Assert(order_table && order_table->row_count() == total_num_districts,
-           "Did not find SUM(O_OL_CNT) for all districts");
+           "Did not find SUM(O_OL_CNT) for all districts.");
 
     auto order_line_pipeline =
         SQLPipelineBuilder{
@@ -186,13 +187,13 @@ void check_consistency(const size_t num_warehouses) {
             .create_pipeline();
     const auto [order_line_pipeline_status, order_line_table] = order_line_pipeline.get_result_table();
     Assert(order_line_table && order_line_table->row_count() == total_num_districts,
-           "Did not find COUNT(*) FROM ORDER_LINE for all districts");
+           "Did not find COUNT(*) FROM ORDER_LINE for all districts.");
 
     const auto row_count = order_line_table->row_count();
     for (auto row_id = size_t{0}; row_id < row_count; ++row_id) {
       Assert(*order_table->get_value<int64_t>(ColumnID{2}, row_id) ==
                  *order_line_table->get_value<int64_t>(ColumnID{2}, row_id),
-             "Mismatching order_line count");
+             "Mismatching order_line count.");
     }
   }
 
@@ -211,7 +212,7 @@ void check_consistency(const size_t num_warehouses) {
                     )"}.create_pipeline();
     // clang-format on
     const auto [pipeline_status, table] = pipeline.get_result_table();
-    Assert(table && table->row_count() == size_t{0}, "Found fulfilled order without O_CARRIER_ID");
+    Assert(table && table->row_count() == size_t{0}, "Found fulfilled order without O_CARRIER_ID.");
   }
 
   {
@@ -228,11 +229,11 @@ void check_consistency(const size_t num_warehouses) {
                     )"}.create_pipeline();
     // clang-format on
     const auto [pipeline_status, table] = pipeline.get_result_table();
-    Assert(table && table->row_count() > size_t{0}, "Failed to retrieve order / order lines");
+    Assert(table && table->row_count() > size_t{0}, "Failed to retrieve order / order lines.");
     const auto row_count = table->row_count();
     for (auto row_id = size_t{0}; row_id < row_count; ++row_id) {
       Assert(*table->get_value<int32_t>(ColumnID{3}, row_id) == *table->get_value<int64_t>(ColumnID{4}, row_id),
-             "Mismatching number of order lines");
+             "Mismatching number of order lines.");
     }
   }
 
@@ -245,7 +246,7 @@ void check_consistency(const size_t num_warehouses) {
             .create_pipeline();
     const auto [pipeline_status, table] = pipeline.get_result_table();
     Assert(table && table->row_count() == size_t{0},
-           "Found order line without OL_DELIVERY_D even though the order was delivered");
+           "Found order line without OL_DELIVERY_D even though the order was delivered.");
   }
 
   {
@@ -255,13 +256,13 @@ void check_consistency(const size_t num_warehouses) {
             "SELECT W_ID, MAX(W_YTD), SUM(H_AMOUNT) FROM WAREHOUSE, HISTORY WHERE W_ID = H_W_ID GROUP BY W_ID"}
             .create_pipeline();
     const auto [pipeline_status, table] = pipeline.get_result_table();
-    Assert(table && table->row_count() == static_cast<size_t>(num_warehouses), "Lost a warehouse");
+    Assert(table && table->row_count() == static_cast<size_t>(num_warehouses), "Lost a warehouse.");
     const auto row_count = table->row_count();
     for (auto row_id = size_t{0}; row_id < row_count; ++row_id) {
       const auto w_ytd = double{*table->get_value<float>(ColumnID{1}, row_id)};
       const auto h_amount = *table->get_value<double>(ColumnID{2}, row_id);
 
-      Assert(floats_near(w_ytd, h_amount), "Mismatching YTD for WAREHOUSE and HISTORY");
+      Assert(floats_near(w_ytd, h_amount), "Mismatching YTD for WAREHOUSE and HISTORY.");
     }
   }
 
@@ -273,13 +274,13 @@ void check_consistency(const size_t num_warehouses) {
             "= H_D_ID GROUP BY D_W_ID, D_ID"}
             .create_pipeline();
     const auto [pipeline_status, table] = pipeline.get_result_table();
-    Assert(table && table->row_count() == total_num_districts, "Lost a district");
+    Assert(table && table->row_count() == total_num_districts, "Lost a district.");
     const auto row_count = table->row_count();
     for (auto row_id = size_t{0}; row_id < row_count; ++row_id) {
       const auto d_ytd = double{*table->get_value<float>(ColumnID{2}, row_id)};
       const auto h_amount = *table->get_value<double>(ColumnID{3}, row_id);
 
-      Assert(floats_near(d_ytd, h_amount), "Mismatching YTD for DISTRICT and HISTORY");
+      Assert(floats_near(d_ytd, h_amount), "Mismatching YTD for DISTRICT and HISTORY.");
     }
   }
 
@@ -313,14 +314,14 @@ void check_consistency(const size_t num_warehouses) {
       const auto [pipeline_status, table] = pipeline.get_result_table();
       Assert(table && table->row_count() == static_cast<size_t>(num_warehouses * NUM_DISTRICTS_PER_WAREHOUSE *
                                                                 NUM_CUSTOMERS_PER_DISTRICT),
-             "Lost a customer");
+             "Lost a customer.");
       const auto row_count = table->row_count();
       for (auto row_id = size_t{0}; row_id < row_count; ++row_id) {
         const auto c_balance = double{*table->get_value<float>(ColumnID{3}, row_id)};
         const auto sum_h_amount = *table->get_value<double>(ColumnID{4}, row_id);
         const auto sum_ol_amount = *table->get_value<double>(ColumnID{5}, row_id);
 
-        Assert(floats_near(sum_ol_amount - sum_h_amount, c_balance), "Mismatching amounts for customer");
+        Assert(floats_near(sum_ol_amount - sum_h_amount, c_balance), "Mismatching amounts for customer.");
       }
     }
   }
@@ -351,14 +352,14 @@ void check_consistency(const size_t num_warehouses) {
     const auto [pipeline_status, table] = pipeline.get_result_table();
     Assert(table && table->row_count() ==
                         static_cast<size_t>(num_warehouses * NUM_DISTRICTS_PER_WAREHOUSE * NUM_CUSTOMERS_PER_DISTRICT),
-           "Lost a customer");
+           "Lost a customer.");
     const auto row_count = table->row_count();
     for (auto row_id = size_t{0}; row_id < row_count; ++row_id) {
       const auto c_balance = double{*table->get_value<float>(ColumnID{3}, row_id)};
       const auto c_ytd_payment = double{*table->get_value<float>(ColumnID{4}, row_id)};
       const auto sum_ol_amount = *table->get_value<double>(ColumnID{5}, row_id);
 
-      Assert(floats_near(c_balance + c_ytd_payment, sum_ol_amount), "Mismatching YTD for CUSTOMER and ORDER");
+      Assert(floats_near(c_balance + c_ytd_payment, sum_ol_amount), "Mismatching YTD for CUSTOMER and ORDER.");
     }
   }
 }

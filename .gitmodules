@@ -16,9 +16,6 @@
 [submodule "third_party/cxxopts"]
 	path = third_party/cxxopts
 	url = https://github.com/jarro2783/cxxopts.git
-[submodule "flat_hash_map"]
-	path = third_party/flat_hash_map
-	url = https://github.com/skarupke/flat_hash_map.git
 [submodule "third_party/googletest"]
 	path = third_party/googletest
 	url = https://github.com/google/googletest.git
@@ -44,18 +41,21 @@
 	path = third_party/nlohmann_json
 	url = https://github.com/nlohmann/json.git
 	shallow = true
-[submodule "third_party/robin-map"]
-	path = third_party/robin-map
-	url = https://github.com/Tessil/robin-map.git
 [submodule "third_party/sparse-map"]
 	path = third_party/sparse-map
 	url = https://github.com/Tessil/sparse-map.git
 [submodule "third_party/sql-parser"]
 	path = third_party/sql-parser
 	url = https://github.com/hyrise/sql-parser.git
+[submodule "third_party/ssb-dbgen"]
+	path = third_party/ssb-dbgen
+	url = https://github.com/hyrise/ssb-dbgen.git
 [submodule "third_party/tpcds-kit"]
 	path = third_party/tpcds-kit
 	url = https://github.com/hyrise-mp/tpcds-kit.git
 [submodule "third_party/zstd"]
 	path = third_party/zstd
 	url = https://github.com/facebook/zstd.git
+[submodule "third_party/concurrentqueue"]
+	path = third_party/concurrentqueue
+	url = https://github.com/cameron314/concurrentqueue.git

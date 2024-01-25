@@ -104,9 +104,9 @@ std::shared_ptr<const Table> JoinNestedLoop::_on_execute() {
                    left_input_table()->column_data_type(_primary_predicate.column_ids.first),
                    right_input_table()->column_data_type(_primary_predicate.column_ids.second),
                    !_secondary_predicates.empty(), left_input_table()->type(), right_input_table()->type()}),
-         "JoinNestedLoop doesn't support these parameters");
+         "JoinNestedLoop does not support these parameters.");
 
-  PerformanceWarning("Nested Loop Join used");
+  PerformanceWarning("Nested Loop Join used.");
 
   auto left_table = left_input_table();
   auto right_table = right_input_table();
@@ -189,7 +189,7 @@ std::shared_ptr<const Table> JoinNestedLoop::_on_execute() {
       // Add unmatched rows on the left for Left and Full Outer joins
       for (ChunkOffset chunk_offset{0}; chunk_offset < static_cast<ChunkOffset>(left_matches.size()); ++chunk_offset) {
         if (!left_matches[chunk_offset]) {
-          pos_list_left->emplace_back(RowID{chunk_id_left, chunk_offset});
+          pos_list_left->emplace_back(chunk_id_left, chunk_offset);
           pos_list_right->emplace_back(NULL_ROW_ID);
         }
       }
@@ -209,7 +209,7 @@ std::shared_ptr<const Table> JoinNestedLoop::_on_execute() {
       for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
         if (!right_matches_by_chunk[chunk_id_right][chunk_offset]) {
           pos_list_left->emplace_back(NULL_ROW_ID);
-          pos_list_right->emplace_back(RowID{chunk_id_right, chunk_offset});
+          pos_list_right->emplace_back(chunk_id_right, chunk_offset);
         }
       }
     }
@@ -226,7 +226,7 @@ std::shared_ptr<const Table> JoinNestedLoop::_on_execute() {
       const auto chunk_size = chunk_left->size();
       for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
         if (left_matches_by_chunk[chunk_id][chunk_offset] ^ invert) {
-          pos_list_left->emplace_back(RowID{chunk_id, chunk_offset});
+          pos_list_left->emplace_back(chunk_id, chunk_offset);
         }
       }
     }

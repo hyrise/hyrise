@@ -1,17 +1,12 @@
 #include "insert.hpp"
 
-#include <algorithm>
-#include <memory>
-#include <string>
-#include <vector>
-
 #include "concurrency/transaction_context.hpp"
 #include "hyrise.hpp"
 #include "resolve_type.hpp"
 #include "storage/abstract_encoded_segment.hpp"
 #include "storage/segment_iterate.hpp"
 #include "storage/value_segment.hpp"
-#include "utils/assert.hpp"
+#include "utils/atomic_max.hpp"
 
 namespace {
 
@@ -231,6 +226,8 @@ void Insert::_on_commit_records(const CommitID cid) {
       mvcc_data->set_begin_cid(chunk_offset, cid);
       mvcc_data->set_tid(chunk_offset, TransactionID{0}, std::memory_order_relaxed);
     }
+
+    set_atomic_max(mvcc_data->max_begin_cid, cid);
 
     // This fence ensures that the changes to TID (which are not sequentially consistent) are visible to other threads.
     std::atomic_thread_fence(std::memory_order_release);

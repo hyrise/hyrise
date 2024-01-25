@@ -114,7 +114,7 @@ ColumnCount Table::column_count() const {
 }
 
 const std::string& Table::column_name(const ColumnID column_id) const {
-  DebugAssert(column_id < _column_definitions.size(), "ColumnID out of range");
+  Assert(column_id < _column_definitions.size(), "ColumnID out of range.");
   return _column_definitions[column_id].name;
 }
 
@@ -128,7 +128,7 @@ std::vector<std::string> Table::column_names() const {
 }
 
 DataType Table::column_data_type(const ColumnID column_id) const {
-  DebugAssert(column_id < _column_definitions.size(), "ColumnID out of range");
+  Assert(column_id < _column_definitions.size(), "ColumnID out of range.");
   return _column_definitions[column_id].data_type;
 }
 
@@ -142,7 +142,7 @@ std::vector<DataType> Table::column_data_types() const {
 }
 
 bool Table::column_is_nullable(const ColumnID column_id) const {
-  DebugAssert(column_id < _column_definitions.size(), "ColumnID out of range");
+  Assert(column_id < _column_definitions.size(), "ColumnID out of range.");
   return _column_definitions[column_id].nullable;
 }
 
@@ -157,7 +157,7 @@ std::vector<bool> Table::columns_are_nullable() const {
 ColumnID Table::column_id_by_name(const std::string& column_name) const {
   const auto iter = std::find_if(_column_definitions.begin(), _column_definitions.end(),
                                  [&](const auto& column_definition) { return column_definition.name == column_name; });
-  Assert(iter != _column_definitions.end(), "Couldn't find column '" + column_name + "'");
+  Assert(iter != _column_definitions.end(), "Couldn't find column '" + column_name + "'.");
   return ColumnID{static_cast<ColumnID::base_type>(std::distance(_column_definitions.begin(), iter))};
 }
 
@@ -382,6 +382,10 @@ void Table::set_table_statistics(const std::shared_ptr<TableStatistics>& table_s
 
 std::vector<ChunkIndexStatistics> Table::chunk_indexes_statistics() const {
   return _chunk_indexes_statistics;
+}
+
+std::vector<TableIndexStatistics> Table::table_indexes_statistics() const {
+  return _table_indexes_statistics;
 }
 
 template <typename Index>

@@ -12,7 +12,7 @@ bool SQLIdentifier::operator==(const SQLIdentifier& rhs) const {
 }
 
 std::string SQLIdentifier::as_string() const {
-  std::stringstream sstream;
+  auto sstream = std::stringstream{};
   if (table_name) {
     sstream << *table_name << ".";
   }

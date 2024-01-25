@@ -20,7 +20,7 @@ std::shared_ptr<AbstractExpression> ValueExpression::_on_deep_copy(
 }
 
 std::string ValueExpression::description(const DescriptionMode /*mode*/) const {
-  std::stringstream stream;
+  auto stream = std::stringstream{};
 
   if (value.type() == typeid(pmr_string)) {
     stream << "'" << value << "'";

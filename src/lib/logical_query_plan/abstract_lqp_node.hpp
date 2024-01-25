@@ -1,6 +1,7 @@
 #pragma once
 
 #include <array>
+#include <unordered_map>
 
 #include "enable_make_for_lqp_node.hpp"
 #include "logical_query_plan/data_dependencies/functional_dependency.hpp"
@@ -36,6 +37,7 @@ enum class LQPNodeType {
   Update,
   Union,
   Validate,
+  Window,
   Mock
 };
 
@@ -87,7 +89,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   LQPInputSide get_input_side(const std::shared_ptr<AbstractLQPNode>& output) const;
 
   /**
-   * @returns {get_output_side(outputs()[0], ..., get_output_side(outputs()[n-1])}
+   * @return {get_output_side(outputs()[0], ..., get_output_side(outputs()[n-1])}
    */
   std::vector<LQPInputSide> get_input_sides() const;
 
@@ -202,8 +204,8 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    * This is a helper method that returns non-trivial FDs valid for the current node. We consider FDs as non-trivial if
    *  we cannot derive them from the current node's unique column combinations.
    *
-   * @return The default implementation returns non-trivial FDs from the left input node, if available. Otherwise
-   * an empty vector.
+   * @return The default implementation returns non-trivial FDs from the left input node, if available. Otherwise an
+   *         empty vector.
    *
    * Nodes should override this function
    *  - to add additional non-trivial FDs. For example, {a} -> {a + 1} (which is not yet implemented).
@@ -241,8 +243,8 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    * E.g., for the PredicateNode, this will be a single predicate expression; for a ProjectionNode it holds one
    * expression for each column.
    *
-   * WARNING: When changing the length of this vector, **absolutely make sure** any data associated with the
-   * expressions (e.g. column names in the AliasNode, SortModes in the SortNode) gets adjusted accordingly.
+   * WARNING: When changing the length of this vector, **absolutely make sure** any data associated with the expressions
+   *          (e.g. column names in the AliasNode, SortModes in the SortNode) gets adjusted accordingly.
    */
   std::vector<std::shared_ptr<AbstractExpression>> node_expressions;
 
@@ -251,7 +253,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    * the optimizer explaining that a node was added as a semi-join reduction node (see SubqueryToJoinRule). It is not
    * automatically added to the description.
    */
-  std::string comment;
+  std::string comment{};
 
  protected:
   /**

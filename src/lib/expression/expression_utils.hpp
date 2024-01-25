@@ -92,22 +92,20 @@ std::string expression_descriptions(const std::vector<std::shared_ptr<AbstractEx
 enum class ExpressionVisitation { VisitArguments, DoNotVisitArguments };
 
 /**
- * Calls the passed @param visitor on each sub-expression of the @param expression.
- * The visitor returns `ExpressionVisitation`, indicating whether the current expression's arguments should be visited
- * as well.
+ * Calls the passed @param visitor on each sub-expression of the @param expression. The visitor returns
+ * `ExpressionVisitation`, indicating whether the current expression's arguments should be visited as well.
  *
- * @tparam Expression   Either `std::shared_ptr<AbstractExpression>` or `const std::shared_ptr<AbstractExpression>`
- * @tparam Visitor      Functor called with every sub expression as a param.
- *                      Return `ExpressionVisitation`
+ * @tparam Expression   Either `std::shared_ptr<AbstractExpression>` or `const std::shared_ptr<AbstractExpression>`.
+ * @tparam Visitor      Functor called with every sub expression as a param. Returns `ExpressionVisitation`.
  */
 template <typename Expression, typename Visitor>
 void visit_expression(Expression& expression, Visitor visitor) {
-  // The reference wrapper bit is important so we can manipulate the Expression even by replacing sub expression
-  std::queue<std::reference_wrapper<Expression>> expression_queue;
+  // The reference wrapper bit is important so we can manipulate the Expression even by replacing sub-expression.
+  auto expression_queue = std::queue<std::reference_wrapper<Expression>>{};
   expression_queue.push(expression);
 
   while (!expression_queue.empty()) {
-    auto expression_reference = expression_queue.front();
+    const auto expression_reference = expression_queue.front();
     expression_queue.pop();
 
     if (visitor(expression_reference.get()) == ExpressionVisitation::VisitArguments) {

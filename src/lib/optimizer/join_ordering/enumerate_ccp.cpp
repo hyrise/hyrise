@@ -20,13 +20,13 @@ namespace hyrise {
 EnumerateCcp::EnumerateCcp(const size_t num_vertices, std::vector<std::pair<size_t, size_t>> edges)
     : _num_vertices(num_vertices), _edges(std::move(edges)) {
   // DPccp should not be used for queries with a table count on the scale of 64 because of complexity reasons
-  Assert(num_vertices < sizeof(unsigned long) * 8, "Too many vertices, EnumerateCcp relies on to_ulong()");  // NOLINT
+  Assert(num_vertices < sizeof(unsigned long) * 8, "Too many vertices, EnumerateCcp relies on to_ulong().");  // NOLINT
 
   if constexpr (HYRISE_DEBUG) {
     // Test the input data for validity, i.e. whether all mentioned vertex indices in the edges are smaller than
     // _num_vertices
     for (const auto& edge : _edges) {
-      Assert(edge.first < _num_vertices && edge.second < _num_vertices, "Vertex Index out of range");
+      Assert(edge.first < _num_vertices && edge.second < _num_vertices, "Vertex index out of range.");
     }
   }
 }
@@ -78,9 +78,9 @@ std::vector<std::pair<JoinGraphVertexSet, JoinGraphVertexSet>> EnumerateCcp::ope
 
       enumerated_subsets.emplace(csg_cmp_pair.first | csg_cmp_pair.second);
 
-      Assert(enumerated_ccps.emplace(csg_cmp_pair).second, "Duplicate CCP was generated");
+      Assert(enumerated_ccps.emplace(csg_cmp_pair).second, "Duplicate CCP was generated.");
       std::swap(csg_cmp_pair.first, csg_cmp_pair.second);
-      Assert(enumerated_ccps.emplace(csg_cmp_pair).second, "Duplicate CCP was generated");
+      Assert(enumerated_ccps.emplace(csg_cmp_pair).second, "Duplicate CCP was generated.");
     }
   }
 
@@ -119,9 +119,10 @@ void EnumerateCcp::_enumerate_cmp(const JoinGraphVertexSet& primary_vertex_set) 
     return;
   }
 
-  std::vector<size_t> reverse_vertex_indices;
+  auto reverse_vertex_indices = std::vector<size_t>{};
   auto current_vertex_idx = neighborhood.find_first();
 
+  // NOLINTNEXTLINE(cppcoreguidelines-avoid-do-while)
   do {
     reverse_vertex_indices.emplace_back(current_vertex_idx);
   } while ((current_vertex_idx = neighborhood.find_next(current_vertex_idx)) != JoinGraphVertexSet::npos);
@@ -149,7 +150,7 @@ JoinGraphVertexSet EnumerateCcp::_exclusion_set(const size_t vertex_idx) const {
    * All vertices with an index lower than `vertex_idx`
    */
 
-  JoinGraphVertexSet exclusion_set(_num_vertices);
+  auto exclusion_set = JoinGraphVertexSet(_num_vertices);
   for (size_t exclusion_vertex_idx = 0; exclusion_vertex_idx < vertex_idx; ++exclusion_vertex_idx) {
     exclusion_set.set(exclusion_vertex_idx);
   }

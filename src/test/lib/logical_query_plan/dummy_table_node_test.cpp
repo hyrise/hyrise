@@ -19,7 +19,7 @@ TEST_F(DummyTableNodeTest, Description) {
 }
 
 TEST_F(DummyTableNodeTest, OutputColumnExpressions) {
-  EXPECT_EQ(_dummy_table_node->output_expressions().size(), 0u);
+  EXPECT_EQ(_dummy_table_node->output_expressions().size(), 0);
 }
 
 TEST_F(DummyTableNodeTest, HashingAndEqualityCheck) {
@@ -35,7 +35,7 @@ TEST_F(DummyTableNodeTest, Copy) {
 }
 
 TEST_F(DummyTableNodeTest, NodeExpressions) {
-  ASSERT_EQ(_dummy_table_node->node_expressions.size(), 0u);
+  ASSERT_EQ(_dummy_table_node->node_expressions.size(), 0);
 }
 
 TEST_F(DummyTableNodeTest, NoUniqueColumnCombinations) {
@@ -47,6 +47,10 @@ TEST_F(DummyTableNodeTest, NoUniqueColumnCombinations) {
 TEST_F(DummyTableNodeTest, NoOrderDependencies) {
   // A DummyTableNode is just a wrapper for a single value and should not provide meaningful data dependencies.
   EXPECT_TRUE(_dummy_table_node->order_dependencies().empty());
+}
+
+TEST_F(DummyTableNodeTest, IsColumnNullable) {
+  EXPECT_THROW(_dummy_table_node->is_column_nullable(ColumnID{0}), std::logic_error);
 }
 
 }  // namespace hyrise

@@ -14,7 +14,7 @@ SortNode::SortNode(const std::vector<std::shared_ptr<AbstractExpression>>& expre
 std::string SortNode::description(const DescriptionMode mode) const {
   const auto expression_mode = _expression_description_mode(mode);
 
-  std::stringstream stream;
+  auto stream = std::stringstream{};
 
   stream << "[Sort] ";
 
