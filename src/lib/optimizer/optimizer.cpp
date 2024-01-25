@@ -183,7 +183,7 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   // JoinOrderingRule cannot handle UnionNodes (#1829), do not split disjunctions just yet.
   optimizer->add_rule(std::make_unique<PredicateSplitUpRule>(false));
 
-  // The JoinOrderingRule cannot proceed past Semi/Anti Joins. These may be part of the initial query plan (in which
+  // The JoinOrderingRule cannot proceed past semi-/anti-joins. These may be part of the initial query plan (in which
   // case we are out of luck and the join ordering will be sub-optimal) but many of them are also introduced by the
   // SubqueryToJoinRule. As such, we run the JoinOrderingRule before the SubqueryToJoinRule.
   optimizer->add_rule(std::make_unique<JoinOrderingRule>());
@@ -206,29 +206,24 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   optimizer->add_rule(std::make_unique<ColumnPruningRule>());
 
   // Run the JoinToSemiJoinRule and the JoinToPredicateRewriteRule before the PredicatePlacementRule, as they might turn
-  // joins into semi joins (which are treated as predicates) or predicates that can be pushed further down. For the same
-  // reason, run them after the JoinOrderingRule, which does not like semi joins (see above). Furthermore, these two
+  // joins into semi-joins (which are treated as predicates) or predicates that can be pushed further down. For the same
+  // reason, run them after the JoinOrderingRule, which does not like semi-joins (see above). Furthermore, these two
   // rules depend on the ColumnPruningRule that flags joins where one input is not used later in the query plan.
   optimizer->add_rule(std::make_unique<JoinToSemiJoinRule>());
 
   optimizer->add_rule(std::make_unique<JoinToPredicateRewriteRule>());
 
-  // Run the PredicatePlacementRule a second time so that semi/anti joins created by the SubqueryToJoinRule, the
+  // Run the PredicatePlacementRule a second time so that semi-/anti-joins created by the SubqueryToJoinRule, the
   // JoinToSemiJoinRule, or predicates created by the JoinToPredicateRewriteRule are properly placed, too. Also run the
-  // PredicateReorderingRule before the SemiJoinReductionRule to order semi/anti joins before we add semi join
+  // PredicateReorderingRule before the SemiJoinReductionRule to order semi-/anti-joins before we add semi-join
   // reductions. Otherwise, we might add unnecessary reductions.
-  // Note: Pushing all newly created predicates down is not always beneficial. Examples are the TPC-DS queries 13 and
-  // 48. Here, we join a table with a foreign-key relationship and no additional filters on that table without using it
-  // further. The superfluous semi-join is pushed down, degrading performance.
-  // TODO(dey4ss): Revisit and improve this once Hyrise really supports foreign keys/INDs and all FKs are set - either
-  // improve cardinality estimation or implement join avoidance.
   optimizer->add_rule(std::make_unique<PredicatePlacementRule>());
 
   optimizer->add_rule(std::make_unique<PredicateReorderingRule>());
 
   optimizer->add_rule(std::make_unique<SemiJoinReductionRule>());
 
-  // Run the PredicatePlacementRule a third time to place semi joins created by the SemiJoinReductionRule.
+  // Run the PredicatePlacementRule a third time to place semi-joins created by the SemiJoinReductionRule.
   optimizer->add_rule(std::make_unique<PredicatePlacementRule>());
 
   optimizer->add_rule(std::make_unique<JoinPredicateOrderingRule>());

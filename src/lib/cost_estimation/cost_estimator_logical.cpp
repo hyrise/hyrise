@@ -23,19 +23,28 @@ using namespace hyrise;  // NOLINT(build/namespaces)
 float expression_cost_multiplier(const std::shared_ptr<AbstractExpression>& expression) {
   auto multiplier = 0.0f;
 
-  // Number of different columns accessed to factor in expression complexity. Also add a factor for correlated
-  // subqueries since we have to evaluate the subquery for each tuple again. In the past, we added to the factor for
-  // each expression in the predicate. This led to too pessimistic cost estimations for PredicateNodes compared to
-  // (semi-)joins. We start with a weight of 0 to ease, e.g., the estimation of column vs. column predicates of nested
-  // predicates (SELECT ... WHERE column_a = column_b OR column_3 = 'a' needs to evaluate three columns).
-  // Returning the maximum of `multiplier` and 1 accounts for tautologies (SELECT ... WHERE 1 = 1), which we currently
+  // Determine the number of columns accessed by the predicate to factor in expression complexity. Also add a factor for
+  // correlated subqueries as we have to evaluate the subquery for each tuple again.
+  // We start with a factor of 0 and continuously add 1 for each column to ease, e.g., the estimation of column vs.
+  // column predicates of nested predicates ('SELECT ... WHERE column_a = column_b OR column_c = 4` needs to evaluate
+  // three columns).
+  // Returning the maximum of `multiplier` and 1 accounts for tautologies (`SELECT ... WHERE 1 = 1`), which we currently
   // do not optimize and pass to the ExpressionEvaluator.
+  //
+  // In the past, we added to the factor for each expression in the predicate. This resulted in to too pessimistic cost
+  // estimations for PredicateNodes compared to (semi-)joins., which turned to be a problem when we switched to
+  // cost-based predicate ordering (see PredicateReorderingRule) in #2590. For example, the predicate `column_c = 4`
+  // would end up with a factor of 4 (1 for the binary predicate, 1 for each argument of the predicate, and 1 for the
+  // LQPColumnExpression), making its cost way higher than the cost of a semi-join with worse selectivity.
   visit_expression(expression, [&](const auto& sub_expression) {
     if (sub_expression->type == ExpressionType::LQPColumn ||
         (sub_expression->type == ExpressionType::LQPSubquery &&
          static_cast<LQPSubqueryExpression&>(*sub_expression).is_correlated())) {
       multiplier += 1.0f;
-      // We do not return here. Thus, we continue to add a penalty for each parameter of a correlated subquery.
+      // We do not return here. Thus, we continue to add a penalty for each parameter of a correlated subquery. We tried
+      // adding the subplan cost here, as well as ignoring the number of parameters. Both approaches did not yield
+      // satisfactory benchmark performance, see #2590.
+      // LQPColumnExpressions do not have arguments anyway, so we just save an if branch and do continue for them, too.
     } else if (sub_expression->type == ExpressionType::List) {
       // ListExpressions can have many elements, all of which should be values or simple operations. Thus, we do not
       // visit all of them separately as they cannot increase the multiplier.

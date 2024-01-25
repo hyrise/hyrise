@@ -1,5 +1,8 @@
 #include "predicate_reordering_rule.hpp"
 
+#include <memory>
+#include <string>
+
 #include "cost_estimation/abstract_cost_estimator.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
@@ -60,14 +63,14 @@ void reorder_predicates(const std::vector<std::shared_ptr<AbstractLQPNode>>& pre
   // based on input cardinalities and selectivities of predicates (in fact, it simplifies to summing up scanned input
   // tuples and expected output tuples, see CostEstimatorLogical).
   //
-  // We experimented with the following optimization goals:
+  // We experimented with the following optimization goals in #2590:
   //   0) min #out                         (Minimal output cardinality, baseline)
   //   1) max (#in - #out) / (cost - #out) ("Most filtered-out rows per cost")
   //   2) min cost                         (Minimal cost)
   //   3) min #out * cost                  (Minimal output cardinality with cost penalty, also tried +, log, sqrt, ...)
   //   4) min (cost - out) * p + #out      (Cost with a penalty for joins, chosen approach. p = 1.5 for joins, 1 else.)
   //
-  // We ended up using 2) the estimated cost to account for the fact that joins are more expensive than predicates.
+  // We ended up using 4) the estimated cost to account for the fact that joins are more expensive than predicates.
   // Furthermore, we add a penalty to the input cardinalities since joins always have more overhead than predicates. The
   // factor was derived experimentally, which is far from being a perfect solution, but still better than not
   // incorporating join overhead at all.
@@ -77,9 +80,9 @@ void reorder_predicates(const std::vector<std::shared_ptr<AbstractLQPNode>>& pre
     predicate->set_left_input(input);
     // Estimate the cardinality and cost of the predicate without caching. As the predicate order is not yet determined,
     // caching leads to wrong estimates in the cache.
-    constexpr auto do_cache = false;
-    const auto output_cardinality = cardinality_estimator->estimate_cardinality(predicate, do_cache);
-    const auto estimated_cost = cost_estimator->estimate_node_cost(predicate, do_cache) - output_cardinality;
+    constexpr auto DO_CACHE = false;
+    const auto output_cardinality = cardinality_estimator->estimate_cardinality(predicate, DO_CACHE);
+    const auto estimated_cost = cost_estimator->estimate_node_cost(predicate, DO_CACHE) - output_cardinality;
     const auto penalty = predicate->type == LQPNodeType::Join ? PredicateReorderingRule::JOIN_PENALTY : 1.0f;
     const auto weighted_cost = estimated_cost * penalty + output_cardinality;
     nodes_and_costs.emplace_back(predicate, weighted_cost);
