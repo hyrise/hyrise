@@ -31,7 +31,7 @@ namespace {
    * We scale number of groups linearly between (NUM_GROUPS_MIN_FACTOR * _workers_per_node) and (NUM_GROUPS_MAX_FACTOR *
    * _workers_per_node).
    */
-constexpr auto NUM_GROUPS_MIN_FACTOR = 0.25f;
+constexpr auto NUM_GROUPS_MIN_FACTOR = 0.05f;
 constexpr auto NUM_GROUPS_MAX_FACTOR = 4.0f;
 constexpr auto NUM_GROUPS_RANGE = NUM_GROUPS_MAX_FACTOR - NUM_GROUPS_MIN_FACTOR;
 
