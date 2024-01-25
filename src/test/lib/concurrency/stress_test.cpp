@@ -495,7 +495,7 @@ TEST_F(StressTest, ConcurrentInsertsSetChunksImmutable) {
   table_wrapper->execute();
 
   const auto thread_count = uint32_t{100};
-  const auto insert_count = uint32_t{300};
+  const auto insert_count = uint32_t{301};
   auto threads = std::vector<std::thread>{};
   threads.reserve(thread_count);
 
@@ -523,18 +523,21 @@ TEST_F(StressTest, ConcurrentInsertsSetChunksImmutable) {
     thread.join();
   }
 
-  // 100 threads * 300 insertions * 2 values = 60'000 tuples in 20'000 chunks with chunk size 3.
-  const auto chunk_count = table->chunk_count();
-  EXPECT_EQ(chunk_count, 20'000);
-  EXPECT_EQ(table->row_count(), 60'000);
+  // 100 threads * 301 insertions * 2 values = 60'200 tuples in 20'067 chunks with chunk size 3.
+  EXPECT_EQ(table->row_count(), 60'200);
+  EXPECT_EQ(table->chunk_count(), 20'067);
 
-  // All chunks should be full and marked as immutable.
-  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+  // Only the final chunk is not full and not immutable.
+  const auto immutable_chunk_count = table->chunk_count() - 1;
+  for (auto chunk_id = ChunkID{0}; chunk_id < immutable_chunk_count; ++chunk_id) {
     const auto& chunk = table->get_chunk(chunk_id);
     ASSERT_TRUE(chunk);
     EXPECT_EQ(chunk->size(), 3);
     EXPECT_FALSE(chunk->is_mutable());
   }
+
+  EXPECT_EQ(table->last_chunk()->size(), 2);
+  EXPECT_TRUE(table->last_chunk()->is_mutable());
 }
 
 }  // namespace hyrise
