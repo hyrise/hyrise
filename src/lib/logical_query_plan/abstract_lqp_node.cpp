@@ -17,6 +17,7 @@
 #include "predicate_node.hpp"
 #include "update_node.hpp"
 #include "utils/assert.hpp"
+#include "utils/map_prunable_subquery_predicates.hpp"
 #include "utils/print_utils.hpp"
 
 namespace {
@@ -85,7 +86,7 @@ AbstractLQPNode::~AbstractLQPNode() {
 }
 
 size_t AbstractLQPNode::hash() const {
-  size_t hash{0};
+  auto hash = size_t{0};
 
   visit_lqp(shared_from_this(), [&hash](const auto& node) {
     if (node) {
@@ -174,7 +175,7 @@ LQPInputSide AbstractLQPNode::get_input_side(const std::shared_ptr<AbstractLQPNo
 }
 
 std::vector<LQPInputSide> AbstractLQPNode::get_input_sides() const {
-  std::vector<LQPInputSide> input_sides;
+  auto input_sides = std::vector<LQPInputSide>{};
   input_sides.reserve(_outputs.size());
 
   for (const auto& output_weak_ptr : _outputs) {
@@ -187,7 +188,7 @@ std::vector<LQPInputSide> AbstractLQPNode::get_input_sides() const {
 }
 
 std::vector<std::shared_ptr<AbstractLQPNode>> AbstractLQPNode::outputs() const {
-  std::vector<std::shared_ptr<AbstractLQPNode>> outputs;
+  auto outputs = std::vector<std::shared_ptr<AbstractLQPNode>>{};
   outputs.reserve(_outputs.size());
 
   for (const auto& output_weak_ptr : _outputs) {
@@ -217,7 +218,7 @@ void AbstractLQPNode::clear_outputs() {
 }
 
 std::vector<LQPOutputRelation> AbstractLQPNode::output_relations() const {
-  std::vector<LQPOutputRelation> output_relations(output_count());
+  auto output_relations = std::vector<LQPOutputRelation>(output_count());
 
   const auto outputs = this->outputs();
   const auto input_sides = get_input_sides();
@@ -235,7 +236,14 @@ size_t AbstractLQPNode::output_count() const {
 }
 
 std::shared_ptr<AbstractLQPNode> AbstractLQPNode::deep_copy(LQPNodeMapping node_mapping) const {
-  return _deep_copy_impl(node_mapping);
+  const auto copy = _deep_copy_impl(node_mapping);
+
+  // StoredTableNodes can store references to PredicateNodes as prunable subquery predicates (see get_table.hpp for
+  // details). We must assign the copies of these PredicateNodes after copying the entire LQP (see
+  // map_prunable_subquery_predicates.hpp).
+  map_prunable_subquery_predicates(node_mapping);
+
+  return copy;
 }
 
 bool AbstractLQPNode::shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {

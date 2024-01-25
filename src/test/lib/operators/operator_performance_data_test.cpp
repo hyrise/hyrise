@@ -388,13 +388,13 @@ TEST_F(OperatorPerformanceDataTest, JoinHashPerformanceToOutputStream) {
 
   if constexpr (HYRISE_DEBUG) {
     performance_data.walltime = std::chrono::nanoseconds{2u};
-    std::stringstream stringstream_throw;
+    auto stringstream_throw = std::stringstream{};
     // output_to_stream() throws when cumulative step runtimes are larger than operator runtime.
     EXPECT_THROW(performance_data.output_to_stream(stringstream_throw, DescriptionMode::SingleLine), std::logic_error);
   }
 
   performance_data.walltime = std::chrono::nanoseconds{35u};
-  std::stringstream stringstream;
+  auto stringstream = std::stringstream{};
   stringstream << performance_data;
   EXPECT_TRUE(
       stringstream.str().starts_with("Output: 1 row in 1 chunk, 35 ns. Operator step runtimes: BuildSideMaterializing"
@@ -405,12 +405,12 @@ TEST_F(OperatorPerformanceDataTest, JoinHashPerformanceToOutputStream) {
 TEST_F(OperatorPerformanceDataTest, OutputToStream) {
   auto performance_data = OperatorPerformanceData<AbstractOperatorPerformanceData::NoSteps>{};
   {
-    std::stringstream stream;
+    auto stream = std::stringstream{};
     stream << performance_data;
     EXPECT_EQ(stream.str(), "No output.");
   }
   {
-    std::stringstream stream;
+    auto stream = std::stringstream{};
     performance_data.has_output = true;
     performance_data.output_row_count = 2u;
     performance_data.output_chunk_count = 1u;

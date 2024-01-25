@@ -47,12 +47,9 @@ bool Validate::_is_entire_chunk_visible(const std::shared_ptr<const Chunk>& chun
               "_is_entire_chunk_visible cannot be called on reference chunks.");
 
   const auto& mvcc_data = chunk->mvcc_data();
-  const auto max_begin_cid = mvcc_data->max_begin_cid;
-  if (!max_begin_cid) {
-    return false;
-  }
+  const auto max_begin_cid = mvcc_data->max_begin_cid.load();
 
-  return snapshot_commit_id >= max_begin_cid && chunk->invalid_row_count() == 0;
+  return !chunk->is_mutable() && snapshot_commit_id >= max_begin_cid && chunk->invalid_row_count() == 0;
 }
 
 Validate::Validate(const std::shared_ptr<AbstractOperator>& input_operator)
@@ -73,7 +70,7 @@ std::shared_ptr<AbstractOperator> Validate::_on_deep_copy(
 void Validate::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 std::shared_ptr<const Table> Validate::_on_execute() {
-  Fail("Validate can't be called without a transaction context.");
+  Fail("Validate cannot be called without a transaction context.");
 }
 
 std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionContext> transaction_context) {

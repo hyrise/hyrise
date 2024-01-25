@@ -110,7 +110,7 @@ TEST_P(SortTest, UnchangedNullability) {
 inline std::string sort_test_formatter(const testing::TestParamInfo<SortTestParam>& param_info) {
   const auto& param = param_info.param;
 
-  std::stringstream stream;
+  auto stream = std::stringstream{};
   if (param.input_is_empty) {
     stream << "Empty";
   }

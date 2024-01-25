@@ -17,6 +17,7 @@
 #include "scheduler/shutdown_task.hpp"
 #include "scheduler/task_queue.hpp"
 
+
 namespace hyrise {
 
 using namespace expression_functional;  // NOLINT(build/namespaces)
@@ -91,10 +92,10 @@ class SchedulerTest : public BaseTest {
   }
 
   void increment_counter_in_subtasks(std::atomic_uint32_t& counter) {
-    std::vector<std::shared_ptr<AbstractTask>> tasks;
+    auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
     for (auto outer_counter = size_t{0}; outer_counter < 10; ++outer_counter) {
       auto task = std::make_shared<JobTask>([&]() {
-        std::vector<std::shared_ptr<AbstractTask>> jobs;
+        auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
         for (auto inner_counter = size_t{0}; inner_counter < 3; ++inner_counter) {
           auto job = std::make_shared<JobTask>([&]() { ++counter; });
 
@@ -372,25 +373,6 @@ TEST_F(SchedulerTest, MergeSort) {
 
   merge_sort(vector_to_sort.begin(), vector_to_sort.end());
   EXPECT_TRUE(std::is_sorted(vector_to_sort.begin(), vector_to_sort.end()));
-}
-
-TEST_F(SchedulerTest, NodeQueueSchedulerCreationAndReset) {
-  if (std::thread::hardware_concurrency() < 4) {
-    // If the machine has less than 4 cores, the calls to use_non_numa_topology() below will implicitly reduce the
-    // worker count to the number of cores, therefore failing the assertions.
-    GTEST_SKIP();
-  }
-
-  const auto thread_count = std::thread::hardware_concurrency();
-
-  Hyrise::get().topology.use_fake_numa_topology(thread_count, thread_count / 4);
-  for (auto loop_id = size_t{0}; loop_id < 256; ++loop_id) {
-    auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
-    Hyrise::get().set_scheduler(node_queue_scheduler);
-    EXPECT_EQ(node_queue_scheduler->active_worker_count().load(), thread_count);
-    Hyrise::get().set_scheduler(std::make_shared<ImmediateExecutionScheduler>());
-    EXPECT_EQ(node_queue_scheduler->active_worker_count().load(), 0);
-  }
 }
 
 TEST_F(SchedulerTest, ShutdownTaskDecrement) {

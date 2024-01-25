@@ -299,7 +299,7 @@ int Console::_eval_sql(const std::string& sql) {
 
   const auto [pipeline_status, table] = _sql_pipeline->get_result_table();
   // Failed (i.e., conflicted) pipelines should be impossible in the single-user console
-  Assert(pipeline_status == SQLPipelineStatus::Success, "Unexpected pipeline status");
+  Assert(pipeline_status == SQLPipelineStatus::Success, "Unexpected pipeline status.");
 
   const auto row_count = table ? table->row_count() : 0;
 

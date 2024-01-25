@@ -4,6 +4,7 @@
 #include <iostream>
 
 #include "all_parameter_variant.hpp"
+#include "expression/abstract_predicate_expression.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_subquery_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
@@ -162,16 +163,82 @@ void ChunkPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<A
     }
 
     // (2.2) Calculate the intersection of pruned chunks across all predicate pruning chains.
-    auto pruned_chunk_ids = _intersect_chunk_ids(pruned_chunk_id_sets);
-    if (pruned_chunk_ids.empty()) {
-      continue;
+    const auto& pruned_chunk_ids = _intersect_chunk_ids(pruned_chunk_id_sets);
+    if (!pruned_chunk_ids.empty()) {
+      // (2.3) Set the pruned ChunkIds of stored_table_node.
+      DebugAssert(stored_table_node->pruned_chunk_ids().empty(),
+                  "Did not expect a StoredTableNode with an already existing set of pruned ChunkIDs.");
+      // Wanted side effect of using std::set: pruned_chunk_ids vector is already sorted.
+      stored_table_node->set_pruned_chunk_ids(std::vector<ChunkID>(pruned_chunk_ids.begin(), pruned_chunk_ids.end()));
     }
 
-    // (2.3) Set the pruned chunk ids of stored_table_node.
-    DebugAssert(stored_table_node->pruned_chunk_ids().empty(),
-                "Did not expect a StoredTableNode with an already existing set of pruned chunk ids.");
-    // Wanted side effect of using sets: pruned_chunk_ids vector is already sorted.
-    stored_table_node->set_pruned_chunk_ids(std::vector<ChunkID>(pruned_chunk_ids.begin(), pruned_chunk_ids.end()));
+    // (2.4) Collect predicates with uncorrelated subqueries that we can use for dynamic pruning during execution and
+    //       set them as prunable_subquery_predicates of the respective StoredTableNodes (for more details, see
+    //       get_table.hpp).
+    // (2.4.1) Collect predicates with uncorrelated subqueries that are part of each chain in a new "pseudo" chain. When
+    //         we want to use them for pruning during execution, it is safe to add the chunks pruned by them to the
+    //         already pruned chunks.
+    const auto chain_count = predicate_pruning_chains.size();
+    auto chain_count_per_subquery_predicate = std::unordered_map<std::shared_ptr<PredicateNode>, uint64_t>{};
+    auto prunable_subquery_predicates = std::vector<std::weak_ptr<AbstractLQPNode>>{};
+    for (const auto& predicate_chain : predicate_pruning_chains) {
+      for (const auto& predicate_node : predicate_chain) {
+        // Only use binary and between predicates that can easily be used for pruning. Do not use, e.g, InExpressions
+        // etc., which might end up in the ExpressionEvaluator anyways.
+        const auto& predicate = std::dynamic_pointer_cast<AbstractPredicateExpression>(predicate_node->predicate());
+        if (!predicate) {
+          continue;
+        }
+        const auto predicate_condition = predicate->predicate_condition;
+        if (!is_binary_numeric_predicate_condition(predicate_condition) &&
+            !is_between_predicate_condition(predicate_condition)) {
+          continue;
+        }
+
+        for (auto& argument : predicate->arguments) {
+          if (argument->type == ExpressionType::LQPSubquery &&
+              !static_cast<const LQPSubqueryExpression&>(*argument).is_correlated()) {
+            /**
+             * Count the number of occurrences and add the predicate iff it appears in all chains. Otherwise, we could
+             * produce incorrect query results.
+             *   Example query: SELECT * FROM orders
+             *                   WHERE o_totalprice > (SELECT AVG(c_acctbal) FROM customer)
+             *                      OR o_orderstatus = 'O'
+             *   (Select orders that are above the average customer's account balance or that are still open.)
+             *   The LQP of this query looks like the following:
+             *
+             *                     [UnionPositions]
+             *             ________/              \_________
+             *            /                                 \
+             *      [Predicate] o_orderstatus = 'O'     [Predicate] o_totalprice > SUBQUERY
+             *           |                                   |                        *
+             *           |                                   |                        * uncorrelated subquery
+             *           |                                   |                        *
+             *           |                                   |                   [Aggregate] AVG(c_acctbal)
+             *           \___________             ___________/                        |
+             *                       \           /                                    |
+             *                       [StoredTable] orders                       [StoredTable] customer
+             *
+             * Usually, we would intersect the ChunkIDs that can be pruned for both predicates. Since we do not know the
+             * predicate value for the uncorrelated subquery, this is not possible. However, we cannot prune orders with
+             * o_totalprice > AVG(c_acctbal) since we could prune away open orders. Thus, we have to ensure the
+             * predicate in question is part of every chain. For the example query, this means using AND rather than OR.
+             */
+            const auto occurrence_count = ++chain_count_per_subquery_predicate[predicate_node];
+            if (occurrence_count == chain_count) {
+              prunable_subquery_predicates.emplace_back(predicate_node);
+            }
+            // Make sure we do not count `x BETWEEN (SELECT MIN(y) ...) AND (SELECT (MAX(y) ...)` twice.
+            break;
+          }
+        }
+      }
+    }
+
+    // (2.4.2) Set the predicates that might be used for pruning during execution.
+    if (!prunable_subquery_predicates.empty()) {
+      stored_table_node->set_prunable_subquery_predicates(prunable_subquery_predicates);
+    }
   }
 }
 

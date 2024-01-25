@@ -138,7 +138,7 @@ std::shared_ptr<Table> TPCCTableGenerator::generate_stock_table() {
   _add_column<int32_t>(segments_by_chunk, column_definitions, "S_QUANTITY", cardinalities,
                        [&](const std::vector<size_t>& /*indices*/) { return _random_gen.random_number(10, 100); });
   for (auto district_i = int32_t{1}; district_i <= 10; district_i++) {
-    std::stringstream district_i_str;
+    auto district_i_str = std::stringstream{};
     district_i_str << std::setw(2) << std::setfill('0') << district_i;
     _add_column<pmr_string>(
         segments_by_chunk, column_definitions, "S_DIST_" + district_i_str.str(), cardinalities,
@@ -152,7 +152,7 @@ std::shared_ptr<Table> TPCCTableGenerator::generate_stock_table() {
                        [&](const std::vector<size_t>& /*indices*/) { return 0; });
   _add_column<pmr_string>(
       segments_by_chunk, column_definitions, "S_DATA", cardinalities, [&](const std::vector<size_t>& indices) {
-        std::string data = _random_gen.astring(26, 50);
+        auto data = _random_gen.astring(26, 50);
         const auto is_original = original_ids.find(indices[1]) != original_ids.end();
         if (is_original) {
           const auto original_string = std::string{"ORIGINAL"};

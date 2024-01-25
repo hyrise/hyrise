@@ -212,7 +212,7 @@ std::shared_ptr<const Table> UnionPositions::_on_execute() {
 
 std::shared_ptr<const Table> UnionPositions::_prepare_operator() {
   Assert(left_input_table()->column_definitions() == right_input_table()->column_definitions(),
-         "Input tables don't have the same layout");
+         "Input tables do not have the same layout.");
 
   // Later code relies on input tables containing columns. This is guaranteed by the AbstractOperator.
 
@@ -232,7 +232,7 @@ std::shared_ptr<const Table> UnionPositions::_prepare_operator() {
    * Both tables must contain only ReferenceSegments
    */
   Assert(left_input_table()->type() == TableType::References && right_input_table()->type() == TableType::References,
-         "UnionPositions doesn't support non-reference tables yet");
+         "UnionPositions does not support non-reference tables yet.");
 
   /**
    * Identify the ColumnClusters (verification that this is the same for all chunks happens in the #if HYRISE_DEBUG block
@@ -308,14 +308,14 @@ std::shared_ptr<const Table> UnionPositions::_prepare_operator() {
           Assert(ref_segment->referenced_table() == _referenced_tables[next_cluster_id - 1],
                  "ReferenceSegment (Chunk: " + std::to_string(chunk_id) + ", Column: " + std::to_string(column_id) +
                      ") "
-                     "doesn't reference the same table as the segment at the same index in the first chunk "
-                     "of the left input table does");
+                     "does not reference the same table as the segment at the same index in the first chunk "
+                     "of the left input table does.");
           Assert(ref_segment->referenced_column_id() == _referenced_column_ids[column_id],
                  "ReferenceSegment (Chunk: " + std::to_string(chunk_id) + ", Column: " + std::to_string(column_id) +
                      ")"
-                     " doesn't reference the same column as the segment at the same index in the first chunk "
-                     "of the left input table does");
-          Assert(current_pos_list == pos_list, "Different PosLists in ColumnCluster");
+                     " does not reference the same column as the segment at the same index in the first chunk "
+                     "of the left input table does.");
+          Assert(current_pos_list == pos_list, "Different PosLists in ColumnCluster.");
         }
       }
     };

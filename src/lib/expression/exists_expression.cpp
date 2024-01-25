@@ -21,7 +21,7 @@ std::shared_ptr<AbstractExpression> ExistsExpression::subquery() const {
 }
 
 std::string ExistsExpression::description(const DescriptionMode mode) const {
-  std::stringstream stream;
+  auto stream = std::stringstream{};
   stream << (exists_expression_type == ExistsExpressionType::Exists ? "EXISTS" : "NOT EXISTS");
   stream << "(" << subquery()->description(mode) << ")";
   return stream.str();
