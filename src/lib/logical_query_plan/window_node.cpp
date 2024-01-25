@@ -55,6 +55,10 @@ UniqueColumnCombinations WindowNode::unique_column_combinations() const {
   return _forward_left_unique_column_combinations();
 }
 
+OrderDependencies WindowNode::order_dependencies() const {
+  return _forward_left_order_dependencies();
+}
+
 size_t WindowNode::_on_shallow_hash() const {
   // The WindowFunctionExpression contains everything that is required for the hash. Its hash is combined with the
   // WindowNode's hash in AbstractLQPNode::hash().
