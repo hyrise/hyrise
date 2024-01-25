@@ -1,6 +1,10 @@
 #pragma once
 
+#include <memory>
+#include <string>
+
 #include "abstract_rule.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
 
 namespace hyrise {
 
@@ -16,6 +20,15 @@ namespace hyrise {
  * between two chains of PredicateNodes we won't order all of them, but only each chain separately.
  * A potential optimization would be to ignore certain intermediate nodes, such as ProjectionNode or SortNode, but
  * respect others, such as JoinNode or UnionNode.
+ *
+ * Furthermore, we found some cases where the cost-based ordering of predicates and semi-joins is not beneficial. In
+ * these cases, we push "expensive" predicates below semi-joins.
+ * Examples are:
+ *   - IS (NOT) NULL or LIKE predicates that are not executed as efficiently as other scans. On a logical basis, we do
+ *     not account for execution details.
+ *   - Predicates with rather high estimated selectivities (~0.3-0.4) on large inputs combined with a very powerful
+ *     semi-join reducer (few tuples) that has a small right input. The penalty factor and the large input outweigh the
+ *     cardinality reduction and the scan suffers from large output writing.
  */
 class PredicateReorderingRule : public AbstractRule {
  public:
