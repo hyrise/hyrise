@@ -400,13 +400,13 @@ TEST_F(ColumnPruningRuleTest, DoNotPruneWindowNodeInputs) {
                               std::move(frame_description));
 
   // clang-format off
-  const auto lqp =
+  _lqp =
   ProjectionNode::make(expression_vector(1),
     WindowNode::make(min_(c, window), node_abc));
   // clang-format on
-  const auto expected_lqp = lqp->deep_copy();
-  apply_rule(rule, lqp);
-  EXPECT_LQP_EQ(lqp, expected_lqp);
+  const auto expected_lqp = _lqp->deep_copy();
+  _apply_rule(rule, _lqp);
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(ColumnPruningRuleTest, PruneInputsNotNeededByWindowNode) {
@@ -417,12 +417,12 @@ TEST_F(ColumnPruningRuleTest, PruneInputsNotNeededByWindowNode) {
                               std::move(frame_description));
 
   // clang-format off
-  const auto lqp =
+  _lqp =
   ProjectionNode::make(expression_vector(1),
     WindowNode::make(rank_(window), node_abc));
   // clang-format on
 
-  apply_rule(rule, lqp);
+  _apply_rule(rule, _lqp);
   EXPECT_EQ(node_abc->pruned_column_ids(), std::vector<ColumnID>{ColumnID{2}});
 }
 

@@ -333,7 +333,7 @@ TEST_F(DependentGroupByReductionRuleTest, RemoveSuperfluousDistinctAggregateSimp
   // Example query: SELECT DISTINCT column0 FROM table_a;
   {
     // clang-format off
-    const auto lqp =
+    _lqp =
     AggregateNode::make(expression_vector(column_a_0), expression_vector(),
       stored_table_node_a);
     // clang-format on
@@ -341,15 +341,15 @@ TEST_F(DependentGroupByReductionRuleTest, RemoveSuperfluousDistinctAggregateSimp
     stored_table_node_a->set_pruned_column_ids({ColumnID{1}, ColumnID{2}, ColumnID{3}});
 
     const auto expected_lqp = stored_table_node_a->deep_copy();
-    const auto actual_lqp = apply_rule(rule, lqp);
-    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+    _apply_rule(rule, _lqp);
+    EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 
   // More advanced case: Column is unique due to another operation (e.g., we grouped by it before).
   // Example query: SELECT DISTINCT column1, MIN(column2) FROM table_a GROUP BY column1;
   {
     // clang-format off
-    const auto lqp =
+    _lqp =
     AggregateNode::make(expression_vector(column_a_1, min_(column_a_2)), expression_vector(),
       AggregateNode::make(expression_vector(column_a_1), expression_vector(min_(column_a_2)),
         stored_table_node_a));
@@ -359,8 +359,8 @@ TEST_F(DependentGroupByReductionRuleTest, RemoveSuperfluousDistinctAggregateSimp
       stored_table_node_a);
     // clang-format on
 
-    const auto actual_lqp = apply_rule(rule, lqp);
-    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+    _apply_rule(rule, _lqp);
+    EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 }
 
@@ -369,7 +369,7 @@ TEST_F(DependentGroupByReductionRuleTest, RemoveSuperfluousDistinctAggregateProj
   // ProjectionNode to output only the desired column.
   {
     // clang-format off
-    const auto lqp =
+    _lqp =
     AggregateNode::make(expression_vector(column_a_0), expression_vector(),
       stored_table_node_a);
 
@@ -378,15 +378,15 @@ TEST_F(DependentGroupByReductionRuleTest, RemoveSuperfluousDistinctAggregateProj
       stored_table_node_a);
     // clang-format on
 
-    const auto actual_lqp = apply_rule(rule, lqp);
-    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+    _apply_rule(rule, _lqp);
+    EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 
   // All columns are part of the grouped columns, but the order changes. Thus, we need a ProjectionNode that changes the
   // order.
   {
     // clang-format off
-    const auto lqp =
+    _lqp =
     AggregateNode::make(expression_vector(column_e_3, column_e_2, column_e_1, column_e_0), expression_vector(),
       stored_table_node_e);
 
@@ -395,8 +395,8 @@ TEST_F(DependentGroupByReductionRuleTest, RemoveSuperfluousDistinctAggregateProj
       stored_table_node_e);
     // clang-format on
 
-    const auto actual_lqp = apply_rule(rule, lqp);
-    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+    _apply_rule(rule, _lqp);
+    EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 }
 
@@ -405,27 +405,27 @@ TEST_F(DependentGroupByReductionRuleTest, DoNotRemoveRequiredDistinctAggregate) 
   // column0 and column1 is unique).
   {
     // clang-format off
-    const auto lqp =
+    _lqp =
     AggregateNode::make(expression_vector(column_b_0), expression_vector(),
       stored_table_node_b);
     // clang-format on
 
-    const auto expected_lqp = lqp->deep_copy();
-    const auto actual_lqp = apply_rule(rule, lqp);
-    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+    const auto expected_lqp = _lqp->deep_copy();
+    _apply_rule(rule, _lqp);
+    EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 
   // Do not remove the AggregateNode when the grouped column is unique but there are further aggregates.
   {
     // clang-format off
-    const auto lqp =
+    _lqp =
     AggregateNode::make(expression_vector(column_a_0), expression_vector(min_(column_a_1)),
       stored_table_node_a);
     // clang-format on
 
-    const auto expected_lqp = lqp->deep_copy();
-    const auto actual_lqp = apply_rule(rule, lqp);
-    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+    const auto expected_lqp = _lqp->deep_copy();
+    _apply_rule(rule, _lqp);
+    EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 }
 

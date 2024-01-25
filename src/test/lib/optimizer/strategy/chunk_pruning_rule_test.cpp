@@ -471,16 +471,15 @@ TEST_F(ChunkPruningRuleTest, SetPrunableSubqueryScans) {
     AggregateNode::make(expression_vector(), expression_vector(max_(stored_table_node_2_col_a)),
     stored_table_node_2));
 
-  const auto input_lqp =
+  _lqp =
   PredicateNode::make(greater_than_(stored_table_node_1_col_a, lqp_subquery_(subquery)),
     stored_table_node_1);
   // clang-format on
 
-  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
-  EXPECT_EQ(actual_lqp, input_lqp);
+  _apply_rule(_rule, _lqp);
   EXPECT_TRUE(stored_table_node_1->pruned_chunk_ids().empty());
   ASSERT_EQ(stored_table_node_1->prunable_subquery_predicates().size(), 1);
-  EXPECT_EQ(stored_table_node_1->prunable_subquery_predicates().front(), input_lqp);
+  EXPECT_EQ(stored_table_node_1->prunable_subquery_predicates().front(), _lqp);
 }
 
 TEST_F(ChunkPruningRuleTest, DoNotSetPrunableSubqueryScansWhenNotInAllChains) {
@@ -500,7 +499,7 @@ TEST_F(ChunkPruningRuleTest, DoNotSetPrunableSubqueryScansWhenNotInAllChains) {
     AggregateNode::make(expression_vector(), expression_vector(max_(stored_table_node_2_col_a)),
     stored_table_node_2));
 
-  const auto input_lqp =
+  _lqp =
   UnionNode::make(SetOperationMode::Positions,
     PredicateNode::make(equals_(stored_table_node_1_col_a, lqp_subquery_(subquery_min)),
       stored_table_node_1),
@@ -508,8 +507,7 @@ TEST_F(ChunkPruningRuleTest, DoNotSetPrunableSubqueryScansWhenNotInAllChains) {
       stored_table_node_1));
   // clang-format on
 
-  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
-  EXPECT_EQ(actual_lqp, input_lqp);
+  _apply_rule(_rule, _lqp);
   EXPECT_TRUE(stored_table_node_1->pruned_chunk_ids().empty());
   ASSERT_TRUE(stored_table_node_1->prunable_subquery_predicates().empty());
 }
@@ -526,13 +524,12 @@ TEST_F(ChunkPruningRuleTest, DoNotSetPrunableSubqueryScansComplicatedPredicate) 
     AggregateNode::make(expression_vector(stored_table_node_2_col_a), expression_vector(),
     stored_table_node_2));
 
-  const auto input_lqp =
+  _lqp =
   PredicateNode::make(in_(stored_table_node_1_col_a, lqp_subquery_(subquery)),
     stored_table_node_1);
   // clang-format on
 
-  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
-  EXPECT_EQ(actual_lqp, input_lqp);
+  _apply_rule(_rule, _lqp);
   EXPECT_TRUE(stored_table_node_1->pruned_chunk_ids().empty());
   ASSERT_TRUE(stored_table_node_1->prunable_subquery_predicates().empty());
 }
