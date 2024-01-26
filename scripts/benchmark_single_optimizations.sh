@@ -15,7 +15,6 @@ sf='10'
 warmup_seconds=1
 runs=100
 
-
 if [[ -n "$SCALE_FACTOR" ]]
 then
   sf=${SCALE_FACTOR}
