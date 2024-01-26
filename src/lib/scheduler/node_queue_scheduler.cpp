@@ -32,7 +32,7 @@ namespace {
    * _workers_per_node).
    */
 constexpr auto NUM_GROUPS_MIN_FACTOR = 0.1f;
-constexpr auto NUM_GROUPS_MAX_FACTOR = 8.0f;
+constexpr auto NUM_GROUPS_MAX_FACTOR = 6.0f;
 constexpr auto NUM_GROUPS_RANGE = NUM_GROUPS_MAX_FACTOR - NUM_GROUPS_MIN_FACTOR;
 
 // This factor is used to determine at which queue load we use the maximum number of groups.
