@@ -96,7 +96,7 @@ do
   runtime=$(( runtime > 60 ? runtime : 60 ))
 
   echo "Running $benchmark for $commit... (multi-threaded, ordered, 1 client, SF ${sf}) NO SCHEMA CONSTRAINTS, ALL OFF"
-  ( SCHEMA_CONSTRAINTS=0 DEPENDENT_GROUPBY=0 JOIN_TO_SEMI=0 JOIN_TO_PREDICATE=0 "${build_folder}"/"$benchmark" -s ${sf} -t ${runtime} --scheduler --clients 1 --cores ${num_phy_cores} -m Ordered -o "${build_folder}/benchmark_plugin_results/${benchmark}_${commit}_mt_ordered_s${sf}_all_off.json" 2>&1 ) | tee "${build_folder}/benchmark_plugin_results/${benchmark}_${commit}_mt_ordered_s${sf}_all_off.log"
+  ( SCHEMA_CONSTRAINTS=0 DEPENDENT_GROUPBY=0 JOIN_TO_SEMI=0 JOIN_TO_PREDICATE=0 "${build_folder}"/"$benchmark" -s ${sf} -t ${runtime} --scheduler --clients 1 --cores ${num_phy_cores} -m Ordered -w ${warmup_seconds} -o "${build_folder}/benchmark_plugin_results/${benchmark}_${commit}_mt_ordered_s${sf}_all_off.json" 2>&1 ) | tee "${build_folder}/benchmark_plugin_results/${benchmark}_${commit}_mt_ordered_s${sf}_all_off.log"
 
   echo "Running $benchmark for $commit... (multi-threaded, ordered, 1 client, SF ${sf}) SCHEMA CONSTRAINTS, ALL ON"
   ( SCHEMA_CONSTRAINTS=1 DEPENDENT_GROUPBY=1 JOIN_TO_SEMI=1 JOIN_TO_PREDICATE=1 "${build_folder}"/"$benchmark" -s ${sf} -t ${runtime} --scheduler --clients 1 --cores ${num_phy_cores} -m Ordered -w ${warmup_seconds} -o "${build_folder}/benchmark_plugin_results/${benchmark}_${commit}_mt_ordered_s${sf}_schema.json" 2>&1 ) | tee "${build_folder}/benchmark_plugin_results/${benchmark}_${commit}_mt_ordered_s${sf}_schema.log"
