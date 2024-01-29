@@ -31,7 +31,7 @@ void PQPVisualizer::_build_graph(const std::vector<std::shared_ptr<AbstractOpera
   {
     // Print the "Total by operator" box using graphviz's record type. Using HTML labels would be slightly nicer, but
     // boost always encloses the label in quotes, which breaks them.
-    std::stringstream operator_breakdown_stream;
+    auto operator_breakdown_stream = std::stringstream{};
     operator_breakdown_stream << "{Total by operator|{";
 
     auto sorted_duration_by_operator_name = std::vector<std::pair<std::string, std::chrono::nanoseconds>>{
@@ -145,7 +145,7 @@ void PQPVisualizer::_build_dataflow(const std::shared_ptr<const AbstractOperator
 
   const auto& performance_data = *source_node->performance_data;
   if (source_node->executed() && performance_data.has_output) {
-    std::stringstream stream;
+    auto stream = std::stringstream{};
 
     // Use a copy of the stream's default locale with thousands separators: Dynamically allocated raw pointers should
     // be avoided whenever possible. Unfortunately, std::locale stores pointers to the facets and does internal
@@ -177,7 +177,7 @@ void PQPVisualizer::_add_operator(const std::shared_ptr<const AbstractOperator>&
     label += "\n\n" + format_duration(total);
     info.pen_width = static_cast<double>(total.count());
 
-    std::stringstream operator_performance_data_stream;
+    auto operator_performance_data_stream = std::stringstream{};
     performance_data.output_to_stream(operator_performance_data_stream, DescriptionMode::MultiLine);
     info.tooltip = operator_performance_data_stream.str();
   } else {

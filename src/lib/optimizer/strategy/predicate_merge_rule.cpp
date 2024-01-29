@@ -39,7 +39,7 @@ std::string PredicateMergeRule::name() const {
  * rule might be adapted to make more sophisticated decisions on which predicates to include.
  */
 void PredicateMergeRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
-  Assert(lqp_root->type == LQPNodeType::Root, "PredicateMergeRule needs root to hold onto");
+  Assert(lqp_root->type == LQPNodeType::Root, "PredicateMergeRule needs root to hold onto.");
 
   // (Potentially mergeable) subplans are identified by their topmost UnionNode. node_to_topmost holds a mapping from
   // PredicateNodes and UnionNodes within such subplans to the respective topmost UnionNode.
@@ -115,7 +115,7 @@ void PredicateMergeRule::_apply_to_plan_without_subqueries(const std::shared_ptr
  * Merge "simple" diamonds, which only consist of one UnionNode, having two PredicateNodes as inputs
  */
 void PredicateMergeRule::_merge_disjunction(const std::shared_ptr<UnionNode>& union_node) const {
-  Assert(union_node->set_operation_mode == SetOperationMode::Positions, "Cannot merge union_node into disjunction");
+  Assert(union_node->set_operation_mode == SetOperationMode::Positions, "Cannot merge UnionNode into disjunction.");
   const auto left_predicate_node = std::dynamic_pointer_cast<PredicateNode>(union_node->left_input());
   const auto right_predicate_node = std::dynamic_pointer_cast<PredicateNode>(union_node->right_input());
 

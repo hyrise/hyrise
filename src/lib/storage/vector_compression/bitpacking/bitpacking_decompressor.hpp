@@ -16,12 +16,12 @@ class BitPackingDecompressor : public BaseVectorDecompressor {
   BitPackingDecompressor(BitPackingDecompressor&& other) = default;
 
   BitPackingDecompressor& operator=(const BitPackingDecompressor& other) {
-    DebugAssert(&_data == &other._data, "Cannot reassign BitPackingDecompressor");
+    DebugAssert(&_data == &other._data, "Cannot reassign BitPackingDecompressor.");
     return *this;
   }
 
   BitPackingDecompressor& operator=(BitPackingDecompressor&& other) {
-    DebugAssert(&_data == &other._data, "Cannot reassign BitPackingDecompressor");
+    DebugAssert(&_data == &other._data, "Cannot reassign BitPackingDecompressor.");
     return *this;
   }
 

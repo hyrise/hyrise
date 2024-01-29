@@ -23,12 +23,12 @@ constexpr auto GENERATED_TABLE_NUM_CHUNKS = 4;
  * and ChunkOffsets within [0, std::floor(referenced_table_chunk_size))
  */
 std::shared_ptr<hyrise::RowIDPosList> generate_pos_list(float referenced_table_chunk_size, size_t pos_list_size) {
-  std::random_device random_device;
-  std::default_random_engine random_engine(random_device());
+  auto random_device = std::random_device{};
+  auto random_engine = std::default_random_engine(random_device());
 
-  std::uniform_int_distribution<hyrise::ChunkID::base_type> chunk_id_distribution(
+  auto chunk_id_distribution = std::uniform_int_distribution<hyrise::ChunkID::base_type>(
       0, static_cast<hyrise::ChunkID::base_type>(REFERENCED_TABLE_CHUNK_COUNT - 1));
-  std::uniform_int_distribution<hyrise::ChunkOffset::base_type> chunk_offset_distribution(
+  auto chunk_offset_distribution = std::uniform_int_distribution<hyrise::ChunkOffset::base_type>(
       hyrise::ChunkOffset{0}, static_cast<hyrise::ChunkOffset::base_type>(referenced_table_chunk_size - 1));
 
   auto pos_list = std::make_shared<hyrise::RowIDPosList>();
@@ -51,28 +51,28 @@ std::shared_ptr<Table> create_reference_table(std::shared_ptr<Table> referenced_
                                               size_t num_columns) {
   const auto num_rows_per_chunk = num_rows / GENERATED_TABLE_NUM_CHUNKS;
 
-  TableColumnDefinitions column_definitions;
-  for (size_t column_idx = 0; column_idx < num_columns; ++column_idx) {
-    column_definitions.emplace_back("c" + std::to_string(column_idx), DataType::Int, false);
+  auto column_definitions = TableColumnDefinitions{};
+  for (auto column_id = ColumnID{0}; column_id < num_columns; ++column_id) {
+    column_definitions.emplace_back("c" + std::to_string(column_id), DataType::Int, false);
   }
   auto table = std::make_shared<Table>(column_definitions, TableType::References);
 
-  for (size_t row_idx = 0; row_idx < num_rows;) {
-    const auto num_rows_in_this_chunk = std::min(num_rows_per_chunk, num_rows - row_idx);
+  for (auto row_id = ChunkOffset{0}; row_id < num_rows;) {
+    const auto num_rows_in_this_chunk = std::min(num_rows_per_chunk, num_rows - row_id);
 
     auto segments = Segments{};
-    for (auto column_idx = ColumnID{0}; column_idx < num_columns; ++column_idx) {
+    for (auto column_id = ColumnID{0}; column_id < num_columns; ++column_id) {
       /**
        * By specifying a chunk size of num_rows * 0.2f for the referenced table, we're emulating a referenced table
        * of (num_rows * 0.2f) * REFERENCED_TABLE_CHUNK_COUNT rows - i.e. twice as many rows as the referencing table
        * we're creating. So when creating TWO referencing tables, there should be a fair amount of overlap.
        */
       auto pos_list = generate_pos_list(static_cast<float>(num_rows) * 0.2f, num_rows_per_chunk);
-      segments.push_back(std::make_shared<ReferenceSegment>(referenced_table, column_idx, pos_list));
+      segments.push_back(std::make_shared<ReferenceSegment>(referenced_table, column_id, pos_list));
     }
     table->append_chunk(segments);
 
-    row_idx += num_rows_in_this_chunk;
+    row_id += num_rows_in_this_chunk;
   }
 
   return table;

@@ -9,8 +9,6 @@
 #include <utility>
 #include <vector>
 
-#include "bytell_hash_map.hpp"
-
 #include "hyrise.hpp"
 #include "join_hash/join_hash_steps.hpp"
 #include "join_hash/join_hash_traits.hpp"
@@ -82,11 +80,9 @@ size_t JoinHash::calculate_radix_bits(const size_t build_side_size, const size_t
   constexpr auto L2_CACHE_SIZE = 1'024'000;                   // bytes
   constexpr auto L2_CACHE_MAX_USABLE = L2_CACHE_SIZE * 0.75;  // use 75% of the L2 cache size
 
-  // For information about the sizing of the bytell hash map, see the comments:
-  // https://probablydance.com/2018/05/28/a-new-fast-hash-table-in-response-to-googles-new-fast-hash-table/
-  // Bytell hash map has a maximum fill factor of 0.9375. Since it's hard to estimate the number of distinct values in
-  // a radix partition (and thus the size of each hash table), we accomodate a little bit extra space for
-  // slightly skewed data distributions and aim for a fill level of 80%.
+  // Since it is hard to estimate the number of distinct values in a radix partition (and, thus, the size of each hash
+  // table), we accomodate a little bit extra space for slightly skewed data distributions and aim for a fill level of
+  // 80%.
   const auto complete_hash_map_size =
       // number of items in map
       static_cast<double>(build_side_size) *
@@ -107,7 +103,7 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
                    left_input_table()->column_data_type(_primary_predicate.column_ids.first),
                    right_input_table()->column_data_type(_primary_predicate.column_ids.second),
                    !_secondary_predicates.empty(), left_input_table()->type(), right_input_table()->type()}),
-         "JoinHash doesn't support these parameters");
+         "JoinHash does not support these parameters.");
 
   auto build_input_table = std::shared_ptr<const Table>{};
   auto probe_input_table = std::shared_ptr<const Table>{};
