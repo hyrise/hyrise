@@ -35,7 +35,7 @@ end_commit=$(git rev-parse "$end_commit_reference" | head -n 1)
 # Check status of repository
 if [[ $(git status --untracked-files=no --porcelain) ]]
 then
-  echo 'Cowardly refusing to execute on a dirty workspace'
+  echo 'Cowardly refusing to execute on a dirty workspace.'
   exit 1
 fi
 
@@ -43,11 +43,11 @@ fi
 output=$(grep 'CMAKE_BUILD_TYPE:STRING=Release' CMakeCache.txt || true)
 if [ -z "$output" ]
 then
-  echo 'Current folder is not configured as a release build'
+  echo 'Current folder is not configured as a release build.'
   exit 1
 fi
 
-# Check whether to use ninja or make
+# Check whether to use ninja or make.
 output=$(grep 'CMAKE_MAKE_PROGRAM' CMakeCache.txt | grep ninja || true)
 if [ -n "$output" ]
 then
@@ -56,32 +56,32 @@ else
   build_system='make'
 fi
 
-# Create the result folder if necessary
+# Create the result folder if necessary.
 mkdir benchmark_all_results 2>/dev/null || true
 
 build_folder=$(pwd)
 
-# Here comes the actual work
+# Here comes the actual work.
 for commit in $start_commit $end_commit
 do
-  # Skip commits where we already have all results
+  # Skip commits where we already have all results.
   if [ -f "benchmark_all_results/complete_${commit}" ]
   then
     echo "Benchmarks have already been executed for ${commit}. Skipping."
     echo "Run rm benchmark_all_results/*${commit}* to re-execute."
-    sleep 1  # Easiest way to make sure the above is read
+    sleep 1  # Easiest way to make sure the above is read.
     continue
   fi
 
-  # Checkout and build from scratch, tracking the compile time
+  # Checkout and build from scratch, tracking the compile time.
   git checkout "$commit"
   git submodule update --init --recursive
   echo "Building $commit..."
   $build_system clean
   /usr/bin/time -p sh -c "( $build_system -j $(nproc) ${benchmarks} 2>&1 ) | tee benchmark_all_results/build_${commit}.log" 2>"benchmark_all_results/build_time_${commit}.txt"
 
-  # Run the benchmarks
-  cd ..  # hyriseBenchmarkJoinOrder needs to run from project root
+  # Run the benchmarks.
+  cd ..  # hyriseBenchmarkJoinOrder needs to run from project root.
   for benchmark in $benchmarks
   do
     if [ "$benchmark" = "hyriseBenchmarkTPCC" ]; then
@@ -98,7 +98,7 @@ do
       ( "${build_folder}"/"$benchmark" -s .01 -r ${runs} -w ${warmup_seconds} -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st_s01.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st_s01.log"
 
       echo "Running $benchmark for $commit... (multi-threaded, ordered, 1 client)"
-      ( "${build_folder}"/"$benchmark" --scheduler --clients 1 --cores ${num_phy_cores} -m Ordered -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt_ordered.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt_ordered.log"
+      ( "${build_folder}"/"$benchmark" --scheduler --clients 1 --cores ${num_phy_cores} -m Ordered -r ${runs} -w ${warmup_seconds} -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt_ordered.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt_ordered.log"
     fi
 
     echo "Running $benchmark for $commit... (multi-threaded, shuffled, $num_phy_cores clients)"
@@ -106,7 +106,7 @@ do
   done
   cd "${build_folder}"
 
-  # After all benchmarks are done, leave a marker so that this commit can be skipped next time
+  # After all benchmarks are done, leave a marker so that this commit can be skipped next time.
   touch "benchmark_all_results/complete_${commit}"
 done
 
@@ -116,7 +116,7 @@ echo ""
 echo "==========="
 echo ""
 
-# Print information about the system
+# Print information about the system.
 echo "**System**"
 echo "<details>"
 echo "<summary>$(hostname) - click to expand</summary>"
