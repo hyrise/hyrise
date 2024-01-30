@@ -1,6 +1,8 @@
 #include "abstract_meta_table.hpp"
 
-#include "statistics/table_statistics.hpp"
+#include "storage/chunk.hpp"
+#include "storage/table.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/meta_table_manager.hpp"
 
@@ -32,20 +34,20 @@ bool AbstractMetaTable::can_delete() const {
 }
 
 void AbstractMetaTable::_insert(const std::vector<AllTypeVariant>& values) {
-  Assert(can_insert(), "Cannot insert into " + name() + ".");
+  Assert(can_insert(), "Cannot insert into " + MetaTableManager::META_PREFIX + name() + ".");
   _validate_data_types(values);
   _on_insert(values);
 }
 
 void AbstractMetaTable::_remove(const std::vector<AllTypeVariant>& values) {
-  Assert(can_delete(), "Cannot delete from " + name() + ".");
+  Assert(can_delete(), "Cannot delete from " + MetaTableManager::META_PREFIX + name() + ".");
   _validate_data_types(values);
   _on_remove(values);
 }
 
 void AbstractMetaTable::_update(const std::vector<AllTypeVariant>& selected_values,
                                 const std::vector<AllTypeVariant>& update_values) {
-  Assert(can_update(), "Cannot update " + name() + ".");
+  Assert(can_update(), "Cannot update " + MetaTableManager::META_PREFIX + name() + ".");
   _validate_data_types(selected_values);
   _validate_data_types(update_values);
   _on_update(selected_values, update_values);
@@ -65,11 +67,12 @@ void AbstractMetaTable::_on_update(const std::vector<AllTypeVariant>& /*selected
 }
 
 void AbstractMetaTable::_validate_data_types(const std::vector<AllTypeVariant>& values) const {
-  Assert(values.size() == column_definitions().size(), "Number of values must match column definitions.");
+  const auto column_count = values.size();
+  Assert(column_count == _column_definitions.size(), "Number of values must match column definitions.");
 
-  for (size_t column = 0; column < values.size(); column++) {
-    const auto value_type = data_type_from_all_type_variant(values[column]);
-    const auto column_type = column_definitions()[column].data_type;
+  for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
+    const auto value_type = data_type_from_all_type_variant(values[column_id]);
+    const auto column_type = _column_definitions[column_id].data_type;
     Assert(value_type == column_type, "Data types must match column definitions.");
   }
 }
