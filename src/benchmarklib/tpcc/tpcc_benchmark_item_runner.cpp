@@ -39,7 +39,7 @@ bool TPCCBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, Be
       Fail("Invalid item_id");
   }
   if (_config->clients == 1) {
-    Assert(successful, "TPC-C transactions should always be successful if using a single client");
+    Assert(successful, "TPC-C transactions should always be successful if using a single client.");
   }
   return successful;
 }

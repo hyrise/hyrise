@@ -8,20 +8,20 @@ namespace hyrise {
 
 TPCCNewOrder::TPCCNewOrder(const int num_warehouses, BenchmarkSQLExecutor& sql_executor)
     : AbstractTPCCProcedure(sql_executor), c_id{static_cast<int>(_tpcc_random_generator.nurand(1023, 1, 3000))} {
-  std::uniform_int_distribution<> warehouse_dist{1, num_warehouses};
+  auto warehouse_dist = std::uniform_int_distribution<>{1, num_warehouses};
   w_id = warehouse_dist(_random_engine);
 
-  std::uniform_int_distribution<> district_dist{1, 10};
+  auto district_dist = std::uniform_int_distribution<>{1, 10};
   d_id = district_dist(_random_engine);
 
-  std::uniform_int_distribution<> num_items_dist{5, 15};
+  auto num_items_dist = std::uniform_int_distribution<>{5, 15};
   ol_cnt = num_items_dist(_random_engine);
 
   order_lines.resize(ol_cnt);
   for (auto& order_line : order_lines) {
     order_line.ol_i_id = static_cast<int32_t>(_tpcc_random_generator.nurand(8191, 1, 100'000));
 
-    std::uniform_int_distribution<> home_warehouse_dist{1, 100};
+    auto home_warehouse_dist = std::uniform_int_distribution<>{1, 100};
     // 1% chance of remote warehouses (if more than one).
     const auto is_home_warehouse = num_warehouses == 1 || home_warehouse_dist(_random_engine) > 1;
     if (is_home_warehouse) {
@@ -34,11 +34,11 @@ TPCCNewOrder::TPCCNewOrder(const int num_warehouses, BenchmarkSQLExecutor& sql_e
       } while (order_line.ol_supply_w_id == w_id);
     }
 
-    std::uniform_int_distribution<> quantity_dist{1, 10};
+    auto quantity_dist = std::uniform_int_distribution<>{1, 10};
     order_line.ol_quantity = quantity_dist(_random_engine);
   }
 
-  std::uniform_int_distribution<> is_erroneous_dist{1, 100};
+  auto is_erroneous_dist = std::uniform_int_distribution<>{1, 100};
   // 1% chance of erroneous procedures.
   if (is_erroneous_dist(_random_engine) == 1) {
     order_lines.back().ol_i_id = UNUSED_ITEM_ID;  // A non-existing item ID
@@ -55,7 +55,7 @@ bool TPCCNewOrder::_on_execute() {
   Assert(warehouse_table && warehouse_table->row_count() == 1, "Did not find warehouse (or found more than one)");
 
   const auto w_tax = *warehouse_table->get_value<float>(ColumnID{0}, 0);
-  Assert(w_tax >= 0.f && w_tax <= .2f, "Invalid warehouse tax rate encountered");
+  Assert(w_tax >= 0.f && w_tax <= .2f, "Invalid warehouse tax rate encountered.");
 
   // Find the district tax rate and the next order ID
   const auto district_select_pair =
@@ -64,13 +64,13 @@ bool TPCCNewOrder::_on_execute() {
   const auto& district_table = district_select_pair.second;
   Assert(district_table && district_table->row_count() == 1, "Did not find district (or found more than one)");
   const auto d_tax = *district_table->get_value<float>(ColumnID{0}, 0);
-  Assert(d_tax >= 0.f && d_tax <= .2f, "Invalid warehouse tax rate encountered");
+  Assert(d_tax >= 0.f && d_tax <= .2f, "Invalid warehouse tax rate encountered.");
   const auto d_next_o_id = *district_table->get_value<int32_t>(ColumnID{1}, 0);
   o_id = d_next_o_id;
 
   // The TPC-C requires D_NEXT_O_ID to have a capacity of 10,000,000, so int is enough. For long runs, we still
   // might want to change this. Remember to touch all *_O_ID fields.
-  Assert(d_next_o_id < std::numeric_limits<int>::max(), "Reached maximum for D_NEXT_O_ID, consider using LONG");
+  Assert(d_next_o_id < std::numeric_limits<int>::max(), "Reached maximum for D_NEXT_O_ID, consider using LONG.");
   // Update the next order ID (D_NEXT_O_ID). This is probably the biggest bottleneck as it leads to a high number of
   // MVCC conflicts.
   const auto district_update_pair =
@@ -85,12 +85,12 @@ bool TPCCNewOrder::_on_execute() {
       std::string{"SELECT C_DISCOUNT, C_LAST, C_CREDIT FROM CUSTOMER WHERE C_W_ID = "} + std::to_string(w_id) +
       " AND C_D_ID = " + std::to_string(d_id) + " AND C_ID = " + std::to_string(c_id));
   const auto& customer_table = customer_select_pair.second;
-  Assert(customer_table && customer_table->row_count() == 1, "Did not find customer (or found more than one)");
+  Assert(customer_table && customer_table->row_count() == 1, "Did not find customer (or found more than one).");
   const auto c_discount = *customer_table->get_value<float>(ColumnID{0}, 0);
-  Assert(c_discount >= 0.f && c_discount <= .5f, "Invalid customer discount rate encountered");
+  Assert(c_discount >= 0.f && c_discount <= .5f, "Invalid customer discount rate encountered.");
   const auto c_last = *customer_table->get_value<pmr_string>(ColumnID{1}, 0);
   const auto c_credit = *customer_table->get_value<pmr_string>(ColumnID{2}, 0);
-  Assert(c_credit == "GC" || c_credit == "BC", "Invalid customer credit encountered");
+  Assert(c_credit == "GC" || c_credit == "BC", "Invalid customer credit encountered.");
 
   // Check if all order lines are local
   auto o_all_local = true;
@@ -105,7 +105,7 @@ bool TPCCNewOrder::_on_execute() {
   const auto new_order_insert_pair =
       _sql_executor.execute(std::string{"INSERT INTO NEW_ORDER (NO_O_ID, NO_D_ID, NO_W_ID) VALUES ("} +
                             std::to_string(o_id) + ", " + std::to_string(d_id) + ", " + std::to_string(w_id) + ")");
-  Assert(new_order_insert_pair.first == SQLPipelineStatus::Success, "INSERT should not fail");
+  Assert(new_order_insert_pair.first == SQLPipelineStatus::Success, "INSERT should not fail.");
 
   // Insert row into ORDER
   const auto order_insert_pair = _sql_executor.execute(
@@ -113,7 +113,7 @@ bool TPCCNewOrder::_on_execute() {
                   "O_OL_CNT, O_ALL_LOCAL) VALUES ("} +
       std::to_string(o_id) + ", " + std::to_string(d_id) + ", " + std::to_string(w_id) + ", " + std::to_string(c_id) +
       ", " + std::to_string(o_entry_d) + ", NULL, " + std::to_string(ol_cnt) + ", " + (o_all_local ? "1" : "0") + ")");
-  Assert(order_insert_pair.first == SQLPipelineStatus::Success, "INSERT should not fail");
+  Assert(order_insert_pair.first == SQLPipelineStatus::Success, "INSERT should not fail.");
 
   // Iterate over order lines
   auto order_line_idx = size_t{0};
@@ -183,7 +183,7 @@ bool TPCCNewOrder::_on_execute() {
         std::to_string(order_line_idx) + ", " + std::to_string(order_line.ol_i_id) + ", " +
         std::to_string(order_line.ol_supply_w_id) + ", NULL, " + std::to_string(order_line.ol_quantity) + ", " +
         std::to_string(ol_amount) + ", '" + std::string{s_dist} + "')");
-    Assert(order_line_insert_pair.first == SQLPipelineStatus::Success, "INSERT should not fail");
+    Assert(order_line_insert_pair.first == SQLPipelineStatus::Success, "INSERT should not fail.");
   }
 
   _sql_executor.commit();

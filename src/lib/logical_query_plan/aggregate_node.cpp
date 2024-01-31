@@ -39,7 +39,7 @@ AggregateNode::AggregateNode(const std::vector<std::shared_ptr<AbstractExpressio
 
 std::string AggregateNode::description(const DescriptionMode mode) const {
   const auto expression_mode = _expression_description_mode(mode);
-  std::stringstream stream;
+  auto stream = std::stringstream{};
 
   stream << "[Aggregate] ";
 

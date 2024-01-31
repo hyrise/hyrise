@@ -24,7 +24,7 @@ const std::unordered_set<std::string> filename_blacklist() {
   if (!blacklist_file) {
     std::cerr << "Cannot open the blacklist file: " << blacklist_file_path << "\n";
   } else {
-    std::string filename;
+    auto filename = std::string{};
     while (std::getline(blacklist_file, filename)) {
       if (filename.size() > 0 && filename.at(0) != '#') {
         filename_blacklist.emplace(filename);

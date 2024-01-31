@@ -45,7 +45,7 @@ BenchmarkConfig CLIConfigParser::parse_cli_options(const cxxopts::ParseResult& p
     }
   }
 
-  Assert(clients > 0, "Invalid value for --clients");
+  Assert(clients > 0, "Invalid value for --clients.");
 
   if (enable_scheduler && clients == 1) {
     std::cout << "\n\n- WARNING: You are running in multi-threaded (MT) mode but have set --clients=1.\n";
@@ -67,7 +67,7 @@ BenchmarkConfig CLIConfigParser::parse_cli_options(const cxxopts::ParseResult& p
 
   const auto enable_visualization = parse_result["visualize"].as<bool>();
   if (enable_visualization) {
-    Assert(clients == 1, "Cannot visualize plans with multiple clients as files may be overwritten");
+    Assert(clients == 1, "Cannot visualize plans with multiple clients as files may be overwritten.");
     std::cout << "- Visualizing the plans into SVG files. This will make the performance numbers invalid." << std::endl;
   }
 
