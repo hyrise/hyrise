@@ -75,6 +75,10 @@ target_include_directories(cpp-btree INTERFACE cpp-btree/include/btree)
 add_library(flat-hash-map INTERFACE)
 target_include_directories(flat-hash-map INTERFACE flat_hash_map)
 
+# Build concurrentqueue
+add_library(concurrentqueue INTERFACE)
+target_include_directories(concurrentqueue INTERFACE concurrentqueue)
+
 
 # Build cxxopts library
 add_library(cxxopts INTERFACE)
