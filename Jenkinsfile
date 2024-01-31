@@ -79,18 +79,18 @@ try {
 
             cmake = 'cmake -DCI_BUILD=ON'
 
-            // We don't use unity builds with GCC 9 as it triggers https://github.com/google/googletest/issues/3552
+            // TODO(Martin): GCC and unity?
             unity = '-DCMAKE_UNITY_BUILD=ON'
 
             // With Hyrise, we aim to support the most recent compiler versions and do not invest a lot of work to
-            // support older versions. We test the oldest LLVM version shipped with Ubuntu 22.04 (i.e., LLVM 11) and
-            // GCC 9 (oldest version supported by Hyrise). We execute at least debug runs for them.
+            // support older versions. We test the oldest LLVM version shipped with Ubuntu 23.10 (i.e., LLVM 15) and
+            // GCC 11 (oldest version supported by Hyrise). We execute at least debug runs for them.
             // If you want to upgrade compiler versions, please update install_dependencies.sh,  DEPENDENCIES.md, and
             // the documentation (README, Wiki).
             clang = '-DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++'
-            clang11 = '-DCMAKE_C_COMPILER=clang-15 -DCMAKE_CXX_COMPILER=clang++-15'
+            clang15 = '-DCMAKE_C_COMPILER=clang-15 -DCMAKE_CXX_COMPILER=clang++-15'
             gcc = '-DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++'
-            gcc9 = '-DCMAKE_C_COMPILER=gcc-11 -DCMAKE_CXX_COMPILER=g++-11'
+            gcc11 = '-DCMAKE_C_COMPILER=gcc-11 -DCMAKE_CXX_COMPILER=g++-11'
 
             debug = '-DCMAKE_BUILD_TYPE=Debug'
             release = '-DCMAKE_BUILD_TYPE=Release'
@@ -98,7 +98,6 @@ try {
 
             // jemalloc's autoconf operates outside of the build folder (#1413). If we start two cmake instances at the same time, we run into conflicts.
             // Thus, run this one (any one, really) first, so that the autoconf step can finish in peace.
-
             sh "mkdir clang-debug && cd clang-debug &&                                                   ${cmake} ${debug}          ${clang}  ${unity}  .. && make -j libjemalloc-build"
 
             // Configure the rest in parallel.
@@ -109,12 +108,13 @@ try {
             mkdir clang-debug-disable-precompile-headers && cd clang-debug-disable-precompile-headers && ${cmake} ${debug}          ${clang}            -DCMAKE_DISABLE_PRECOMPILE_HEADERS=On .. &\
             mkdir clang-debug-addr-ub-sanitizers && cd clang-debug-addr-ub-sanitizers &&                 ${cmake} ${debug}          ${clang}            -DENABLE_ADDR_UB_SANITIZATION=ON .. &\
             mkdir clang-release-addr-ub-sanitizers && cd clang-release-addr-ub-sanitizers &&             ${cmake} ${release}        ${clang}   ${unity} -DENABLE_ADDR_UB_SANITIZATION=ON .. &\
+            mkdir clang-release-memory-sanitizers && cd clang-release-memory-sanitizers &&               ${cmake} ${release}        ${clang}   ${unity} -DENABLE_MEMORY_SANITIZATION=ON .. &\
+            mkdir clang-relwithdebinfo-thread-sanitizer && cd clang-relwithdebinfo-thread-sanitizer &&   ${cmake} ${relwithdebinfo} ${clang}   ${unity} -DENABLE_THREAD_SANITIZATION=ON .. &\
             mkdir clang-release && cd clang-release &&                                                   ${cmake} ${release}        ${clang}            .. &\
-            mkdir clang-relwithdebinfo-thread-sanitizer && cd clang-relwithdebinfo-thread-sanitizer &&   ${cmake} ${relwithdebinfo} ${clang}            -DENABLE_THREAD_SANITIZATION=ON .. &\
             mkdir gcc-debug && cd gcc-debug &&                                                           ${cmake} ${debug}          ${gcc}              .. &\
             mkdir gcc-release && cd gcc-release &&                                                       ${cmake} ${release}        ${gcc}              .. &\
-            mkdir clang-11-debug && cd clang-11-debug &&                                                 ${cmake} ${debug}          ${clang11}          .. &\
-            mkdir gcc-9-debug && cd gcc-9-debug &&                                                       ${cmake} ${debug}          ${gcc9}             .. &\
+            mkdir clang-15-debug && cd clang-15-debug &&                                                 ${cmake} ${debug}          ${clang15}          .. &\
+            mkdir gcc-11-debug && cd gcc-11-debug &&                                                     ${cmake} ${debug}          ${gcc11}            .. &\
             wait"
           }
 
@@ -123,24 +123,24 @@ try {
               sh "cd clang-debug && make all -j \$(( \$(nproc) / 4))"
               sh "./clang-debug/hyriseTest clang-debug"
             }
-          }, clang11Debug: {
-            stage("clang-11-debug") {
-              sh "cd clang-11-debug && make all -j \$(( \$(nproc) / 4))"
-              sh "./clang-11-debug/hyriseTest clang-11-debug"
+          }, clang15Debug: {
+            stage("clang-15-debug") {
+              sh "cd clang-15-debug && make all -j \$(( \$(nproc) / 4))"
+              sh "./clang-15-debug/hyriseTest clang-15-debug"
             }
           }, gccDebug: {
             stage("gcc-debug") {
               sh "cd gcc-debug && make all -j \$(( \$(nproc) / 4))"
               sh "cd gcc-debug && ./hyriseTest"
             }
-          }, gcc9Debug: {
-            stage("gcc-9-debug") {
-              sh "cd gcc-9-debug && make all -j \$(( \$(nproc) / 4))"
-              sh "cd gcc-9-debug && ./hyriseTest"
+          }, gcc11Debug: {
+            stage("gcc-11-debug") {
+              sh "cd gcc-11-debug && make all -j \$(( \$(nproc) / 4))"
+              sh "cd gcc-11-debug && ./hyriseTest"
             }
           }, lint: {
             stage("Linting") {
-              sh "scripts/lint.sh | grep 'src'"
+              sh "scripts/lint.sh"
             }
           }
 
@@ -261,6 +261,18 @@ try {
                 Utils.markStageSkippedForConditional("clangReleaseAddrUBSanitizers")
               }
             }
+          }, clangReleaseMemorySanitizers: {
+            stage("clang-release:memory-sanitizers") {
+              if (env.BRANCH_NAME == 'master' || full_ci) {
+                sh "cd clang-release-memory-sanitizers && make hyriseTest hyriseSystemTest hyriseBenchmarkTPCH hyriseBenchmarkTPCC -j \$(( \$(nproc) / 10))"
+                sh "./clang-release-memory-sanitizers/hyriseTest clang-release-memory-sanitizers"
+                sh "./clang-release-memory-sanitizers/hyriseSystemTest ${tests_excluded_in_sanitizer_builds} clang-release-memory-sanitizers"
+                sh "./clang-release-memory-sanitizers/hyriseBenchmarkTPCH -s .01 --verify -r 100 --scheduler --clients 10 --cores \$(( \$(nproc) / 4))"
+                sh "cd clang-release-memory-sanitizers && ../scripts/test/hyriseBenchmarkTPCC_test.py ." // Own folder to isolate binary export tests
+              } else {
+                Utils.markStageSkippedForConditional("clangReleaseAddrUBSanitizers")
+              }
+            }
           }, clangRelWithDebInfoThreadSanitizer: {
             stage("clang-relwithdebinfo:thread-sanitizer") {
               if (env.BRANCH_NAME == 'master' || full_ci) {
@@ -305,9 +317,9 @@ try {
               if (env.BRANCH_NAME == 'master' || full_ci) {
                 sh "mkdir ./clang-release-memcheck-test"
                 // If this shows a leak, try --leak-check=full, which is slower but more precise
-                sh "valgrind --tool=memcheck --error-exitcode=1 --gen-suppressions=all --num-callers=25 --suppressions=resources/.valgrind-ignore.txt ./gcc-release/hyriseTest clang-release-memcheck-test --gtest_filter=-NUMAMemoryResourceTest.BasicAllocate"
-                sh "valgrind --tool=memcheck --error-exitcode=1 --gen-suppressions=all --num-callers=25 --suppressions=resources/.valgrind-ignore.txt ./gcc-release/hyriseBenchmarkTPCH -s .01 -r 1 --scheduler --cores 10"
-                sh "valgrind --tool=memcheck --error-exitcode=1 --gen-suppressions=all --num-callers=25 --suppressions=resources/.valgrind-ignore.txt ./gcc-release/hyriseBenchmarkTPCC -s 1 --scheduler --cores 10"
+                sh "valgrind --tool=memcheck --error-exitcode=1 --gen-suppressions=all --num-callers=25 --suppressions=resources/.valgrind-ignore.txt ./clang-release/hyriseTest clang-release-memcheck-test --gtest_filter=-NUMAMemoryResourceTest.BasicAllocate"
+                sh "valgrind --tool=memcheck --error-exitcode=1 --gen-suppressions=all --num-callers=25 --suppressions=resources/.valgrind-ignore.txt ./clang-release/hyriseBenchmarkTPCH -s .01 -r 1 --scheduler --cores 10"
+                sh "valgrind --tool=memcheck --error-exitcode=1 --gen-suppressions=all --num-callers=25 --suppressions=resources/.valgrind-ignore.txt ./clang-release/hyriseBenchmarkTPCC -s 1 --scheduler --cores 10"
               } else {
                 Utils.markStageSkippedForConditional("memcheckReleaseTest")
               }
