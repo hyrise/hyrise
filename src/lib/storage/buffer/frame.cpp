@@ -1,6 +1,9 @@
 #include "frame.hpp"
 
 #include <bitset>
+#include <ostream>
+
+#include "types.hpp"
 
 namespace hyrise {
 

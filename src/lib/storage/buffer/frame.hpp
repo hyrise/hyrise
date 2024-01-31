@@ -1,8 +1,8 @@
 #pragma once
 
 #include <atomic>
-
-#include <bit>
+#include <bit>  // NOLINT(build/include_order)
+#include <ostream>
 
 #include "types.hpp"
 
