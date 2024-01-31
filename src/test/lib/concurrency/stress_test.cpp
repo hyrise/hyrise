@@ -490,9 +490,6 @@ TEST_F(StressTest, ConcurrentInsertsSetChunksImmutable) {
       std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Int, false}}, TableType::Data);
   values_to_insert->append({int32_t{1}});
   values_to_insert->append({int32_t{1}});
-  const auto table_wrapper = std::make_shared<TableWrapper>(values_to_insert);
-  table_wrapper->never_clear_output();
-  table_wrapper->execute();
 
   const auto thread_count = uint32_t{100};
   const auto insert_count = uint32_t{301};
@@ -502,12 +499,15 @@ TEST_F(StressTest, ConcurrentInsertsSetChunksImmutable) {
   for (auto thread_id = uint32_t{0}; thread_id < thread_count; ++thread_id) {
     threads.emplace_back([&]() {
       for (auto iteration = uint32_t{0}; iteration < insert_count; ++iteration) {
+        const auto table_wrapper = std::make_shared<TableWrapper>(values_to_insert);
+        const auto insert = std::make_shared<Insert>("table_a", table_wrapper);
+
         // Commit only 50% of transactions. Thus, there should be committed and rolled back operators that both mark
         // chunks as immutable.
         const auto do_commit = iteration % 2 == 0;
-        const auto insert = std::make_shared<Insert>("table_a", table_wrapper);
         const auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
         insert->set_transaction_context(transaction_context);
+        table_wrapper->execute();
         insert->execute();
         EXPECT_FALSE(insert->execute_failed());
         if (do_commit) {
