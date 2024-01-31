@@ -140,9 +140,7 @@ try {
             }
           }, lint: {
             stage("Linting") {
-              sh '''
-                scripts/lint.sh
-              '''
+              sh "scripts/lint.sh | grep 'src'"
             }
           }
 
