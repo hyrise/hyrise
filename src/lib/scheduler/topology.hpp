@@ -54,7 +54,7 @@ class Topology final : public Noncopyable {
   /**
    * Use a non-NUMA topology.
    * The topology has one node, and a number of cores equal to either max_num_cores or the number of physically
-   * availyble cores, whichever one is lower.
+   * available cores, whichever one is lower.
    *
    * Calls _init_non_numa_topology() internally.
    */
@@ -69,6 +69,14 @@ class Topology final : public Noncopyable {
    */
   void use_fake_numa_topology(uint32_t max_num_workers = 0, uint32_t workers_per_node = 1);
 
+  /**
+   * Use a fake-NUMA topology with a pre-defined distribution of workers per node. For example, a topology can be
+   * defined that has three nodes which have 0, 0, and 8 workers.
+   *
+   * Calls _init_fake_numa_topology() internally.
+   */
+  void use_fake_numa_topology(const std::vector<uint32_t>& workers_per_node);
+
   const std::vector<TopologyNode>& nodes() const;
 
   size_t num_cpus() const;
@@ -82,7 +90,7 @@ class Topology final : public Noncopyable {
   void _init_default_topology(uint32_t max_num_cores = 0);
   void _init_numa_topology(uint32_t max_num_cores = 0);
   void _init_non_numa_topology(uint32_t max_num_cores = 0);
-  void _init_fake_numa_topology(uint32_t max_num_workers = 0, uint32_t workers_per_node = 1);
+  void _init_fake_numa_topology(const std::vector<uint32_t>& workers_per_node);
 
   void _clear();
 

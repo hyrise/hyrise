@@ -4,11 +4,12 @@
 #include <utility>
 
 #include "abstract_task.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {
 
-TaskQueue::TaskQueue(NodeID node_id) : _node_id(node_id) {}
+TaskQueue::TaskQueue(NodeID node_id) : _node_id{node_id} {}
 
 bool TaskQueue::empty() const {
   for (const auto& queue : _queues) {
@@ -25,7 +26,7 @@ NodeID TaskQueue::node_id() const {
 
 void TaskQueue::push(const std::shared_ptr<AbstractTask>& task, const SchedulePriority priority) {
   const auto priority_uint = static_cast<uint32_t>(priority);
-  DebugAssert(priority_uint < NUM_PRIORITY_LEVELS, "Illegal priority level");
+  DebugAssert(priority_uint < NUM_PRIORITY_LEVELS, "Illegal priority level.");
 
   // Someone else was first to enqueue this task? No problem!
   if (!task->try_mark_as_enqueued()) {
@@ -34,22 +35,24 @@ void TaskQueue::push(const std::shared_ptr<AbstractTask>& task, const SchedulePr
 
   task->set_node_id(_node_id);
   _queues[priority_uint].push(task);
-
-  new_task.notify_one();
+  semaphore.signal();
 }
 
 std::shared_ptr<AbstractTask> TaskQueue::pull() {
-  std::shared_ptr<AbstractTask> task;
+  auto task = std::shared_ptr<AbstractTask>{};
   for (auto& queue : _queues) {
     if (queue.try_pop(task)) {
       return task;
     }
   }
+
+  // We waited for the semaphore to enter pull() but did not receive a task. Ensure that queues are checked again.
+  semaphore.signal();
   return nullptr;
 }
 
 std::shared_ptr<AbstractTask> TaskQueue::steal() {
-  std::shared_ptr<AbstractTask> task;
+  auto task = std::shared_ptr<AbstractTask>{};
   for (auto& queue : _queues) {
     if (queue.try_pop(task)) {
       if (task->is_stealable()) {
@@ -57,12 +60,16 @@ std::shared_ptr<AbstractTask> TaskQueue::steal() {
       }
 
       queue.push(task);
+      semaphore.signal();
     }
   }
+
+  // We waited for the semaphore to enter steal() but did not receive a task. Ensure that queues are checked again.
+  semaphore.signal();
   return nullptr;
 }
 
-size_t TaskQueue::estimate_load() {
+size_t TaskQueue::estimate_load() const {
   auto estimated_load = size_t{0};
 
   // Simple heuristic to estimate the load: the higher the priority, the higher the costs. We use powers of two
@@ -73,6 +80,10 @@ size_t TaskQueue::estimate_load() {
   }
 
   return estimated_load;
+}
+
+void TaskQueue::signal(const size_t count) {
+  semaphore.signal(count);
 }
 
 }  // namespace hyrise

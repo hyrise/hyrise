@@ -136,6 +136,18 @@ std::shared_ptr<AbstractExpression> rewrite_in_list_expression(const InExpressio
   return rewritten_expression;
 }
 
+void execute_correlated_subquery_recursively(const std::shared_ptr<AbstractOperator>& op, std::unordered_set<std::shared_ptr<AbstractOperator>>& visited_operators) {
+  if (!op || visited_operators.contains(op)) {
+    return;
+  }
+
+  execute_correlated_subquery_recursively(op->mutable_left_input(), visited_operators);
+  execute_correlated_subquery_recursively(op->mutable_right_input(), visited_operators);
+
+  DebugAssert(op->state() == OperatorState::Created, "ExpressionEvaluator should exclusively manage operators of correlated subqueries.");
+  op->execute();
+}
+
 }  // namespace
 
 namespace hyrise {
@@ -977,8 +989,10 @@ std::shared_ptr<const Table> ExpressionEvaluator::_evaluate_subquery_expression_
     // Therefore, PQPs are deep-copied to ensure that we start without cached results.
     row_pqp = expression.pqp->deep_copy();
     row_pqp->set_parameters(parameters);
-    const auto& [tasks, _] = OperatorTask::make_tasks_from_operator(row_pqp);
-    Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
+    //const auto& [tasks, _] = OperatorTask::make_tasks_from_operator(row_pqp);
+    //Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
+    auto visited_operators = std::unordered_set<std::shared_ptr<AbstractOperator>>{};
+    execute_correlated_subquery_recursively(row_pqp, visited_operators);
   } else {
     // Uncorrelated subqueries should have been scheduled and executed just like regular input operators.
     Assert(row_pqp->state() == OperatorState::ExecutedAndAvailable,

@@ -7,14 +7,13 @@
 
 #include "abstract_scheduler.hpp"
 #include "hyrise.hpp"
-#include "task_queue.hpp"
 #include "worker.hpp"
 
 #include "utils/assert.hpp"
 
 namespace hyrise {
 
-AbstractTask::AbstractTask(SchedulePriority priority, bool stealable) : _priority(priority), _stealable(stealable) {}
+AbstractTask::AbstractTask(SchedulePriority priority, bool stealable) : _priority{priority}, _stealable{stealable} {}
 
 TaskID AbstractTask::id() const {
   return _id;
@@ -91,7 +90,7 @@ bool AbstractTask::try_mark_as_assigned_to_worker() {
 }
 
 void AbstractTask::set_done_callback(const std::function<void()>& done_callback) {
-  DebugAssert(!is_scheduled(), "Possible race: Don't set callback after the Task was scheduled");
+  DebugAssert(!is_scheduled(), "Possible race: Don't set callback after the Task was scheduled.");
 
   _done_callback = done_callback;
 }
@@ -119,16 +118,16 @@ void AbstractTask::_join() {
     return;
   }
 
-  DebugAssert(is_scheduled(), "Task must be scheduled before it can be waited for");
+  DebugAssert(is_scheduled(), "Task must be scheduled before it can be waited for.");
   _done_condition_variable.wait(lock, [&]() { return is_done(); });
 }
 
 void AbstractTask::execute() {
   {
-    auto success_started = _try_transition_to(TaskState::Started);
+    const auto success_started = _try_transition_to(TaskState::Started);
     Assert(success_started, "Expected successful transition to TaskState::Started.");
   }
-  DebugAssert(is_ready(), "Task must not be executed before its dependencies are done");
+  DebugAssert(is_ready(), "Task must not be executed before its dependencies are done.");
 
   std::atomic_thread_fence(std::memory_order_seq_cst);  // See documentation in AbstractTask::schedule
 
@@ -140,7 +139,7 @@ void AbstractTask::execute() {
   _on_execute();
 
   {
-    auto success_done = _try_transition_to(TaskState::Done);
+    const auto success_done = _try_transition_to(TaskState::Done);
     Assert(success_done, "Expected successful transition to TaskState::Done.");
   }
 
@@ -218,21 +217,21 @@ bool AbstractTask::_try_transition_to(TaskState new_state) {
       if (_state >= TaskState::Enqueued) {
         return false;
       }
-      Assert(TaskState::Scheduled, "Illegal state transition to TaskState::Enqueued");
+      Assert(TaskState::Scheduled, "Illegal state transition to TaskState::Enqueued.");
       break;
     case TaskState::AssignedToWorker:
       if (_state >= TaskState::AssignedToWorker) {
         return false;
       }
       Assert(_state == TaskState::Scheduled || _state == TaskState::Enqueued,
-             "Illegal state transition to TaskState::AssignedToWorker");
+             "Illegal state transition to TaskState::AssignedToWorker.");
       break;
     case TaskState::Started:
       Assert(_state == TaskState::Scheduled || _state == TaskState::AssignedToWorker,
              "Illegal state transition to TaskState::Started: Task should have been scheduled before being executed.");
       break;
     case TaskState::Done:
-      Assert(_state == TaskState::Started, "Illegal state transition to TaskState::Done");
+      Assert(_state == TaskState::Started, "Illegal state transition to TaskState::Done.");
       break;
     default:
       Fail("Unexpected target state in AbstractTask.");
