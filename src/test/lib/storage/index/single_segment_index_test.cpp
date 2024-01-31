@@ -10,7 +10,6 @@
 #include "storage/abstract_segment.hpp"
 #include "storage/chunk.hpp"
 #include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
-#include "storage/index/b_tree/b_tree_index.hpp"
 #include "storage/index/group_key/composite_group_key_index.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
 #include "types.hpp"
@@ -211,7 +210,7 @@ class SingleSegmentIndexTest : public BaseTest {
 };
 
 // List of indexes to test
-typedef ::testing::Types<AdaptiveRadixTreeIndex, BTreeIndex, /*CompositeGroupKeyIndex,*/ GroupKeyIndex> DerivedIndexes;
+typedef ::testing::Types<AdaptiveRadixTreeIndex, /*CompositeGroupKeyIndex,*/ GroupKeyIndex> DerivedIndexes;
 TYPED_TEST_SUITE(SingleSegmentIndexTest, DerivedIndexes, );  // NOLINT(whitespace/parens)
 
 /*
@@ -471,8 +470,6 @@ TYPED_TEST(SingleSegmentIndexTest, NullCBeginCEndTest) {
 TYPED_TEST(SingleSegmentIndexTest, SegmentIndexTypeTest) {
   if constexpr (std::is_same_v<TypeParam, AdaptiveRadixTreeIndex>) {
     EXPECT_EQ(this->index_int_no_nulls->type(), ChunkIndexType::AdaptiveRadixTree);
-  } else if constexpr (std::is_same_v<TypeParam, BTreeIndex>) {
-    EXPECT_EQ(this->index_int_no_nulls->type(), ChunkIndexType::BTree);
   } else if constexpr (std::is_same_v<TypeParam, CompositeGroupKeyIndex>) {
     EXPECT_EQ(this->index_int_no_nulls->type(), ChunkIndexType::CompositeGroupKey);
   } else if constexpr (std::is_same_v<TypeParam, GroupKeyIndex>) {
@@ -656,10 +653,6 @@ TYPED_TEST(SingleSegmentIndexTest, RangeQueryOpenBegin) {
 }
 
 TYPED_TEST(SingleSegmentIndexTest, IndexOnNonDictionaryThrows) {
-  if (!HYRISE_DEBUG || std::is_same_v<TypeParam, BTreeIndex>) {
-    GTEST_SKIP();
-  }
-
   auto vs_int = std::make_shared<ValueSegment<int>>();
   vs_int->append(4);
 

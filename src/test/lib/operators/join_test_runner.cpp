@@ -9,7 +9,6 @@
 #include "operators/join_verification.hpp"
 #include "operators/print.hpp"
 #include "operators/table_wrapper.hpp"
-#include "storage/index/b_tree/b_tree_index.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
 #include "utils/load_table.hpp"
 
@@ -219,6 +218,10 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
         // Currently the Index Join cannot deal with configurations where the join column
         // data types are different, see Issue #2077
         if (configuration.data_type_left != configuration.data_type_right) {
+          return std::vector<JoinTestConfiguration>{};
+        }
+
+        if (configuration.left_input.encoding_type != EncodingType::Dictionary || configuration.right_input.encoding_type != EncodingType::Dictionary) {
           return std::vector<JoinTestConfiguration>{};
         }
 
@@ -594,17 +597,13 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
 
       /**
        * To sufficiently test IndexJoins, indexes have to be created. Therefore, if index_side is set in the configuration,
-       * indexes for the data table are created. The index type is either GroupKeyIndex for dictionary segments or BTreeIndex
-       * for non-dictionary segments.
+       * indexes for the data table are created.
        */
 
       for (auto chunk_id = indexed_chunk_range.first; chunk_id < indexed_chunk_range.second; ++chunk_id) {
         for (auto column_id = ColumnID{0}; column_id < data_table->column_count(); ++column_id) {
-          if (encoding_type == EncodingType::Dictionary) {
-            data_table->get_chunk(chunk_id)->create_index<GroupKeyIndex>(std::vector<ColumnID>{column_id});
-          } else {
-            data_table->get_chunk(chunk_id)->create_index<BTreeIndex>(std::vector<ColumnID>{column_id});
-          }
+          Assert(encoding_type == EncodingType::Dictionary, "Only dictionary encoding is supported.");
+          data_table->get_chunk(chunk_id)->create_index<GroupKeyIndex>(std::vector<ColumnID>{column_id});
         }
       }
 
