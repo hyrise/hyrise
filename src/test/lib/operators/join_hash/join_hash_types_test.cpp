@@ -15,9 +15,9 @@ class JoinHashTypesTest : public BaseTest {};
 
 template <typename T, typename HashType>
 void test_hash_map(const std::vector<T>& values) {
-  Partition<T> partition;
-  for (ChunkOffset i = ChunkOffset{0}; i < values.size(); ++i) {
-    RowID row_id{ChunkID{17}, i};
+  auto partition = Partition<T>{.elements{}, .null_values{}};  // See https://stackoverflow.com/a/17264506/1147726
+  for (auto i = ChunkOffset{0}; i < values.size(); ++i) {
+    auto row_id = RowID{ChunkID{17}, i};
     partition.elements.emplace_back(PartitionedElement<T>{row_id, static_cast<T>(values.at(i))});
     partition.null_values.emplace_back(false);
   }
@@ -33,14 +33,14 @@ void test_hash_map(const std::vector<T>& values) {
 
   const auto& first_hash_map = *hash_maps.at(0);
 
-  ChunkOffset offset = ChunkOffset{0};
+  auto offset = ChunkOffset{0};
   for (const auto& element : partition.elements) {
     const auto probe_value = element.value;
 
     const auto [begin, end] = first_hash_map.find(probe_value);
     const auto result_list = RowIDPosList{begin, end};
 
-    const RowID probe_row_id{ChunkID{17}, offset};
+    const auto probe_row_id = RowID{ChunkID{17}, offset};
     EXPECT_TRUE(std::find(result_list.begin(), result_list.end(), probe_row_id) != result_list.end());
     ++offset;
   }
@@ -50,20 +50,20 @@ using JoinHashTypesTestDataTypes = ::testing::Types<int, float, double>;
 TYPED_TEST_SUITE(JoinHashTypesTest, JoinHashTypesTestDataTypes, );  // NOLINT(whitespace/parens)
 
 TYPED_TEST(JoinHashTypesTest, BuildSingleValueLargePosList) {
-  int test_item_count = 500;
-  std::vector<TypeParam> values;
-  for (int i = 0; i < test_item_count; ++i) {
-    values.push_back(static_cast<TypeParam>(17));
+  const auto test_item_count = size_t{500};
+  auto values = std::vector<TypeParam>{};
+  for (auto i = size_t{0}; i < test_item_count; ++i) {
+    values.emplace_back(static_cast<TypeParam>(17));
   }
 
   test_hash_map<TypeParam, TypeParam>(values);
 }
 
 TYPED_TEST(JoinHashTypesTest, BuildSingleRowIds) {
-  int test_item_count = 500;
-  std::vector<TypeParam> values;
-  for (int i = 0; i < test_item_count; ++i) {
-    values.push_back(static_cast<TypeParam>(pow(i, 3)));
+  const auto test_item_count = size_t{500};
+  auto values = std::vector<TypeParam>{};
+  for (auto i = size_t{0}; i < test_item_count; ++i) {
+    values.emplace_back(static_cast<TypeParam>(pow(i, 3)));
   }
 
   test_hash_map<TypeParam, TypeParam>(values);

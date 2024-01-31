@@ -6,6 +6,7 @@
 
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/join_node.hpp"
+#include "operators/print.hpp"
 
 using namespace std::string_literals;  // NOLINT
 
@@ -96,7 +97,7 @@ std::shared_ptr<Table> AbstractJoinOperator::_build_output_table(std::vector<std
   const bool left_may_produce_null = (_mode == JoinMode::Right || _mode == JoinMode::FullOuter);
   const bool right_may_produce_null = (_mode == JoinMode::Left || _mode == JoinMode::FullOuter);
 
-  TableColumnDefinitions output_column_definitions;
+  auto output_column_definitions = TableColumnDefinitions{};
 
   // Preparing output table by adding segments from left table
   for (auto column_id = ColumnID{0}; column_id < left_in_table->column_count(); ++column_id) {
@@ -113,6 +114,12 @@ std::shared_ptr<Table> AbstractJoinOperator::_build_output_table(std::vector<std
                                              right_in_table->column_data_type(column_id), nullable);
     }
   }
+
+  // std::cerr << "print()\n";
+  // auto a = std::make_shared<Table>(output_column_definitions, table_type, std::move(chunks));
+  // std::cerr << "print() call\n";
+  // Print::print(a);
+  // std::cerr << "/print()\n";
 
   return std::make_shared<Table>(output_column_definitions, table_type, std::move(chunks));
 }

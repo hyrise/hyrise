@@ -80,6 +80,8 @@ std::shared_ptr<AbstractOperator> LQPTranslator::translate_node(const std::share
   // map_prunable_subquery_predicates.hpp).
   map_prunable_subquery_predicates(_operator_by_lqp_node);
 
+  // std::cerr << *node << std::endl;
+
   return pqp;
 }
 

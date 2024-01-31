@@ -23,7 +23,7 @@ namespace hyrise {
 using namespace expression_functional;  // NOLINT(build/namespaces)
 
 JoinNode::JoinNode(const JoinMode init_join_mode) : AbstractLQPNode(LQPNodeType::Join), join_mode(init_join_mode) {
-  Assert(join_mode == JoinMode::Cross, "Only Cross Joins can be constructed without predicate");
+  Assert(join_mode == JoinMode::Cross, "Only Cross Joins can be constructed without predicate.");
 }
 
 JoinNode::JoinNode(const JoinMode init_join_mode, const std::shared_ptr<AbstractExpression>& join_predicate)
@@ -32,8 +32,8 @@ JoinNode::JoinNode(const JoinMode init_join_mode, const std::shared_ptr<Abstract
 JoinNode::JoinNode(const JoinMode init_join_mode,
                    const std::vector<std::shared_ptr<AbstractExpression>>& init_join_predicates)
     : AbstractLQPNode(LQPNodeType::Join, init_join_predicates), join_mode(init_join_mode) {
-  Assert(join_mode != JoinMode::Cross, "Cross Joins take no predicate");
-  Assert(!join_predicates().empty(), "Non-Cross Joins require predicates");
+  Assert(join_mode != JoinMode::Cross, "Cross Joins take no predicate.");
+  Assert(!join_predicates().empty(), "Non-Cross Joins require predicates.");
 }
 
 std::string JoinNode::description(const DescriptionMode mode) const {
@@ -50,7 +50,7 @@ std::string JoinNode::description(const DescriptionMode mode) const {
 }
 
 std::vector<std::shared_ptr<AbstractExpression>> JoinNode::output_expressions() const {
-  Assert(left_input() && right_input(), "Both inputs need to be set to determine a JoinNode's output expressions");
+  Assert(left_input() && right_input(), "Both inputs need to be set to determine a JoinNode's output expressions.");
 
   /**
    * Update the JoinNode's output expressions every time they are requested. An overhead, but keeps the LQP code simple.
@@ -107,7 +107,7 @@ UniqueColumnCombinations JoinNode::_output_unique_column_combinations(
 
   DebugAssert(join_mode == JoinMode::Inner || join_mode == JoinMode::Left || join_mode == JoinMode::Right ||
                   join_mode == JoinMode::FullOuter,
-              "Unhandled JoinMode");
+              "Unhandled JoinMode.");
 
   const auto join_predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(join_predicates().front());
   if (!join_predicate || join_predicate->predicate_condition != PredicateCondition::Equals) {

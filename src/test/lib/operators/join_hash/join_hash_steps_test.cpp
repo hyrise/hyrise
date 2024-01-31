@@ -68,7 +68,9 @@ TEST_F(JoinHashStepsTest, SmallHashTableAllPositions) {
   const auto expected_pos_list =
       RowIDPosList{RowID{ChunkID{105}, ChunkOffset{205}}, RowID{ChunkID{105}, ChunkOffset{206}}};
 
+  std::cout << "finalize" << std::endl;
   table.finalize();
+  std::cout << "/finalize" << std::endl;
   {
     EXPECT_TRUE(table.contains(5));
     EXPECT_FALSE(table.contains(1000));

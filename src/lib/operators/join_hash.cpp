@@ -68,7 +68,7 @@ size_t JoinHash::calculate_radix_bits(const size_t build_side_size, const size_t
   if (build_side_size > probe_side_size) {
     /*
       Hash joins perform best when the build side is small. For inner joins, we can simply select the smaller input
-      table as the build side. For other joins, such as semi or outer joins, the build side is fixed. In this case,
+      table as the build side. For other joins, such outer joins, the build side is fixed. In this case,
       other join operators might be more efficient. We emit performance warning in this case. In the future, the
       optimizer could identify these cases of potentially inefficient hash joins and switch to other join algorithms.
     */
@@ -113,18 +113,20 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
   /**
    * The hash join works best when the table being probed is larger than the side for which the hash table is built
    * (i.e., the build side). As consequence, when we are to freely determine the build side, we chose the smaller
-   * input table. For other cases, we cannot freely decide.
+   * input table. However, for some cases, we cannot freely decide.
    *
    * Build and probe side are assigned as follows:
-   *   JoinMode::Inner        The smaller table becomes the build side, the bigger the probe side
-   *   JoinMode::Left/Right   The outer table becomes the probe side, the inner table becomes the build side
-   *   JoinMode::FullOuter    Not supported by JoinHash
-   *   JoinMode::Semi/Anti*   The left table becomes the probe side, the right table becomes the build side
+   *   JoinMode::Inner        The smaller table becomes the build side, the bigger the probe side.
+   *   JoinMode::Semi/Anti*   In Hyrise, the column to be filtered through the semi-/anti-join is the left input. If
+   *                          this input is smaller than the right input, we build the hash table on the left side, but
+   *                          using a hash map that stores accesses (see PosHashTable). If the right side is smaller,
+   *                          we build a hash table on the right side.
+   *   JoinMode::Left/Right   The outer table becomes the probe side, the inner table becomes the build side.
+   *   JoinMode::FullOuter    Currently, not supported by JoinHash.
    */
   const auto build_hash_table_for_right_input =
-      _mode == JoinMode::Left || _mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse ||
-      _mode == JoinMode::Semi ||
-      (_mode == JoinMode::Inner && _left_input->get_output()->row_count() > _right_input->get_output()->row_count());
+      _mode == JoinMode::Left ||
+      ((_mode == JoinMode::Inner || _mode == JoinMode::Semi || _mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse) && _left_input->get_output()->row_count() > _right_input->get_output()->row_count());
 
   if (build_hash_table_for_right_input) {
     // We don't have to swap the operation itself here, because we only support the commutative Equi Join.
@@ -155,12 +157,16 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
   const auto probe_column_type = probe_input_table->column_data_type(probe_column_id);
 
   // Depending on which input table became the build/probe table we have to order the columns of the output table.
-  // Semi/Anti* Joins only emit tuples from the probe table, which is given by the right input table in Hyrise.
-  // For other join modes, we need to check which side has been chosen as the probe side (see variable
+  // Anti* Joins only emit tuples from the probe table, which is given by the right input table in Hyrise. For other
+  // join modes, we need to check which side has been chosen as the probe side (see variable
   // `build_hash_table_for_right_input` for more details).
   auto output_column_order = OutputColumnOrder{};
   if (is_semi_or_anti_join(_mode)) {
-    output_column_order = OutputColumnOrder::RightOnly;
+    if (build_hash_table_for_right_input) {
+      output_column_order = OutputColumnOrder::RightOnly;
+    } else {
+      output_column_order = OutputColumnOrder::LeftOnly;
+    }
   } else if (build_hash_table_for_right_input) {
     output_column_order = OutputColumnOrder::RightFirstLeftSecond;
   } else {
@@ -194,8 +200,8 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
 
         _impl = std::make_unique<JoinHashImpl<BuildColumnDataType, ProbeColumnDataType>>(
             *this, build_input_table, probe_input_table, _mode, adjusted_column_ids,
-            _primary_predicate.predicate_condition, output_column_order, *_radix_bits, join_hash_performance_data,
-            adjusted_secondary_predicates);
+            _primary_predicate.predicate_condition, output_column_order, *_radix_bits, build_hash_table_for_right_input,
+            join_hash_performance_data, adjusted_secondary_predicates);
       } else {
         Fail("Cannot join String with non-String column");
       }
@@ -220,7 +226,8 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
                const std::shared_ptr<const Table>& probe_input_table, const JoinMode mode,
                const ColumnIDPair& column_ids, const PredicateCondition predicate_condition,
                const OutputColumnOrder output_column_order, const size_t radix_bits,
-               JoinHash::PerformanceData& performance_data, std::vector<OperatorJoinPredicate>& secondary_predicates)
+               const bool build_hash_table_for_right_input, JoinHash::PerformanceData& performance_data,
+               std::vector<OperatorJoinPredicate>& secondary_predicates)
       : _join_hash(join_hash),
         _build_input_table(build_input_table),
         _probe_input_table(probe_input_table),
@@ -230,7 +237,8 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
         _performance_data(performance_data),
         _output_column_order(output_column_order),
         _secondary_predicates(secondary_predicates),
-        _radix_bits(radix_bits) {}
+        _radix_bits(radix_bits),
+        _build_hash_table_for_right_input{build_hash_table_for_right_input} {}
 
  protected:
   const JoinHash& _join_hash;
@@ -247,6 +255,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
   std::shared_ptr<Table> _output_table;
 
   const size_t _radix_bits;
+  const bool _build_hash_table_for_right_input;
 
   // Determine correct type for hashing
   using HashedType = typename JoinHashTraits<BuildColumnType, ProbeColumnType>::HashType;
@@ -284,7 +293,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
     auto radix_probe_column = RadixContainer<ProbeColumnType>{};
 
     // HashTables for the build column, one for each partition
-    std::vector<std::optional<PosHashTable<HashedType>>> hash_tables;
+    auto hash_tables = std::vector<std::optional<PosHashTable<HashedType>>>{};
 
     /**
      * Depiction of the hash join parallelization (radix partitioning can be skipped when radix_bits = 0)
@@ -432,14 +441,39 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
      *    probe step.
      */
     auto timer_hash_map_building = Timer{};
-    if (_secondary_predicates.empty() && is_semi_or_anti_join(_mode)) {
-      hash_tables = build<BuildColumnType, HashedType>(radix_build_column, JoinHashBuildMode::ExistenceOnly,
-                                                       _radix_bits, probe_side_bloom_filter);
+    if (is_semi_or_anti_join(_mode)) {
+      // TODO(Martin): add comment and see if we can simplify.
+      if (_build_hash_table_for_right_input) {
+        if (_secondary_predicates.empty()) {
+          std::cerr << "IMPLEXE1\n";
+          hash_tables = build<BuildColumnType, HashedType>(radix_build_column, JoinHashBuildMode::ExistenceOnly,
+                                                           _radix_bits, probe_side_bloom_filter);
+        } else {
+          std::cerr << "IMPLEXE2\n";
+          hash_tables = build<BuildColumnType, HashedType>(radix_build_column, JoinHashBuildMode::AllPositions,
+                                                           _radix_bits, probe_side_bloom_filter);
+        }
+      } else {
+        std::cerr << "IMPLEXE3\n";
+        hash_tables = build<BuildColumnType, HashedType>(radix_build_column, JoinHashBuildMode::AllPositionsWithAccessMarker,
+                                                         _radix_bits, probe_side_bloom_filter);
+      }
     } else {
-      hash_tables = build<BuildColumnType, HashedType>(radix_build_column, JoinHashBuildMode::AllPositions, _radix_bits,
-                                                       probe_side_bloom_filter);
+      std::cerr << "IMPLEXE4\n";
+      hash_tables = build<BuildColumnType, HashedType>(radix_build_column, JoinHashBuildMode::AllPositions,
+                                                       _radix_bits, probe_side_bloom_filter);
     }
     _performance_data.set_step_runtime(OperatorSteps::Building, timer_hash_map_building.lap());
+
+    // std::cerr << "PRINT\n";
+    for (auto& ht : hash_tables) {
+      if (!ht) {
+        std::cerr << "skip\n";
+      }
+
+      ht->print();
+    }
+    // std::cerr << "/PRINT\n";
 
     // Store the element counts of the built hash tables. Depending on the Bloom filter, we might have significantly
     // less values stored than in the initial input table.
@@ -479,6 +513,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
 
     radix_build_column.clear();
 
+    std::cerr << "PROBE\n";
     /**
      * 4. Probe step
      */
@@ -496,7 +531,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
       probe_side_pos_lists[partition_index].reserve(result_rows_per_partition);
     }
 
-    Timer timer_probing;
+    auto timer_probing = Timer{};
     switch (_mode) {
       case JoinMode::Inner:
         probe<ProbeColumnType, HashedType, false>(radix_probe_column, hash_tables, build_side_pos_lists,
@@ -513,20 +548,22 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
 
       case JoinMode::Semi:
         probe_semi_anti<ProbeColumnType, HashedType, JoinMode::Semi>(radix_probe_column, hash_tables,
-                                                                     probe_side_pos_lists, *_build_input_table,
-                                                                     *_probe_input_table, _secondary_predicates);
+                                                                     _build_hash_table_for_right_input ? probe_side_pos_lists : 
+                                                                     build_side_pos_lists, *_build_input_table,
+                                                                     *_probe_input_table, _secondary_predicates,
+                                                                     _build_hash_table_for_right_input);
         break;
 
       case JoinMode::AntiNullAsTrue:
         probe_semi_anti<ProbeColumnType, HashedType, JoinMode::AntiNullAsTrue>(
             radix_probe_column, hash_tables, probe_side_pos_lists, *_build_input_table, *_probe_input_table,
-            _secondary_predicates);
+            _secondary_predicates, _build_hash_table_for_right_input);
         break;
 
       case JoinMode::AntiNullAsFalse:
         probe_semi_anti<ProbeColumnType, HashedType, JoinMode::AntiNullAsFalse>(
             radix_probe_column, hash_tables, probe_side_pos_lists, *_build_input_table, *_probe_input_table,
-            _secondary_predicates);
+            _secondary_predicates, _build_hash_table_for_right_input);
         break;
 
       default:
@@ -547,7 +584,9 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
      * probe_side_pos_lists[p][r].
      */
 
-    Timer timer_output_writing;
+    std::cerr << "OUTPUT\n";
+
+    auto timer_output_writing = Timer{};
 
     const auto create_left_side_pos_lists_by_segment =
         (_build_input_table->type() == TableType::References && _output_column_order != OutputColumnOrder::RightOnly);

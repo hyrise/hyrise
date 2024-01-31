@@ -206,6 +206,8 @@ std::vector<std::shared_ptr<Chunk>> write_output_chunks(
   auto left_side_pos_lists_by_column = PosListsByColumn{};
   auto right_side_pos_lists_by_column = PosListsByColumn{};
 
+  std::cerr << "write_output_chunks()\n";
+
   if (create_left_side_pos_lists_by_column) {
     left_side_pos_lists_by_column = setup_pos_list_mapping(left_input_table);
   }
@@ -221,6 +223,8 @@ std::vector<std::shared_ptr<Chunk>> write_output_chunks(
       ++expected_output_chunk_count;
     }
   }
+
+  std::cerr << "write_output_chunks()\n";
 
   auto output_chunks = std::vector<std::shared_ptr<Chunk>>(expected_output_chunk_count);
   auto write_output_segments_tasks = std::vector<std::shared_ptr<AbstractTask>>{};
@@ -289,6 +293,10 @@ std::vector<std::shared_ptr<Chunk>> write_output_chunks(
           write_output_segments(output_segments, left_input_table, left_side_pos_lists_by_column, left_side_pos_list);
           break;
 
+        case OutputColumnOrder::LeftOnly:
+          write_output_segments(output_segments, left_input_table, left_side_pos_lists_by_column, left_side_pos_list);
+          break;
+
         case OutputColumnOrder::RightOnly:
           write_output_segments(output_segments, right_input_table, right_side_pos_lists_by_column,
                                 right_side_pos_list);
@@ -307,7 +315,6 @@ std::vector<std::shared_ptr<Chunk>> write_output_chunks(
     ++partition_id;
     ++chunk_input_position;
   }
-
   Hyrise::get().scheduler()->wait_for_tasks(write_output_segments_tasks);
 
   output_chunks.resize(chunk_input_position);

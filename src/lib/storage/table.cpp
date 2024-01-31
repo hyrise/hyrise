@@ -74,27 +74,37 @@ Table::Table(const TableColumnDefinitions& column_definitions, const TableType t
              pmr_vector<std::shared_ptr<PartialHashIndex>> const& table_indexes)
     : Table(column_definitions, type, type == TableType::Data ? std::optional{Chunk::DEFAULT_SIZE} : std::nullopt,
             use_mvcc, table_indexes) {
+
   _chunks = {chunks.begin(), chunks.end()};
 
   if constexpr (HYRISE_DEBUG) {
     const auto chunk_count = _chunks.size();
-    const auto num_columns = column_count();
+    const auto num_columns = column_count();    
     for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+      // std::cerr << "Table::Table()" << chunk_id << "\n";
       const auto chunk = get_chunk(chunk_id);
       if (!chunk) {
+        // std::cerr << "cont" << chunk_id << "\n";
         continue;
       }
 
+      // std::cerr << "Assert" << chunk_id << "\n";
+      // std::cerr << chunk->size()  << " type: " << static_cast<int>(type) << " mutable: " << chunk->is_mutable() << std::endl;
       Assert(chunk->size() > 0 || (type == TableType::Data && chunk_id == chunk_count - 1 && chunk->is_mutable()),
-             "Empty chunk other than mutable chunk at the end was found");
-      Assert(chunk->has_mvcc_data() == (_use_mvcc == UseMvcc::Yes), "Supply MvccData for Chunks iff Table uses MVCC");
-      Assert(chunk->column_count() == num_columns, "Invalid Chunk column count");
+             "Empty chunk other than mutable chunk at the end was found.");
+      // std::cerr << "Assert" << chunk_id << "\n";
+      Assert(chunk->has_mvcc_data() == (_use_mvcc == UseMvcc::Yes), "Supply MvccData for Chunks iff Table uses MVCC.");
+      // std::cerr << "Assert" << chunk_id << "\n";
+      Assert(chunk->column_count() == num_columns, "Invalid Chunk column count.");
+      // std::cerr << "Assert" << chunk_id << "\n";
 
       for (auto column_id = ColumnID{0}; column_id < num_columns; ++column_id) {
-        Assert(chunk->get_segment(column_id)->data_type() == column_data_type(column_id), "Invalid Segment DataType");
+        // std::cerr << "AssertLoop" << chunk_id << "\n";
+        Assert(chunk->get_segment(column_id)->data_type() == column_data_type(column_id), "Invalid Segment DataType.");
       }
     }
   }
+  // std::cerr << "/Table::Table()\n";
 }
 
 const TableColumnDefinitions& Table::column_definitions() const {

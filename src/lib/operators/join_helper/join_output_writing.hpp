@@ -8,7 +8,7 @@
 
 namespace hyrise {
 
-enum class OutputColumnOrder { LeftFirstRightSecond, RightFirstLeftSecond, RightOnly };
+enum class OutputColumnOrder { LeftFirstRightSecond, RightFirstLeftSecond, LeftOnly, RightOnly };
 
 /**
  *  General description

@@ -1,5 +1,8 @@
 #pragma once
 
+#include <mutex>
+#include <vector>
+
 #include <boost/container/pmr/monotonic_buffer_resource.hpp>
 #include <boost/container/pmr/unsynchronized_pool_resource.hpp>
 #include <boost/container/small_vector.hpp>
@@ -26,10 +29,14 @@
 namespace hyrise {
 
 // For most join types, we are interested in retrieving the positions (i.e., the RowIDs) on the left and the right side.
-// For semi and anti joins, we only care whether a value exists or not, so there is no point in tracking the position
-// in the input table of more than one occurrence of a value. However, if we have secondary predicates, we do need to
-// track all occurrences of a value as that first position might be disqualified later.
-enum class JoinHashBuildMode { AllPositions, ExistenceOnly };
+// For semi and anti joins when the larger table is filtered (probed), we only care whether a value exists or not, so
+// there is no point in tracking the position in the input table of more than one occurrence of a value.
+// However, there are exceptions:
+//   - If we have secondary predicates, we do need to track all occurrences of a value as that first position might be
+//     disqualified later.
+//   - If the smaller input table is filter in anti/semi joins, we use need the positions as well as a flag that
+//     indicates whether a RowID did match the join predicate.
+enum class JoinHashBuildMode { AllPositions, AllPositionsWithAccessMarker, ExistenceOnly };
 
 using Hash = size_t;
 
@@ -81,6 +88,9 @@ using RadixContainer = std::vector<Partition<T>>;
 // into a single, contiguous RowIDPosList. This significantly reduces the memory footprint and thus improves the cache
 // behavior of the following probe phase. In the probe phase, the find() method returns a pair of pointers to the range
 // in the compressed RowIDPosList. This is comparable to the interface of std::equal_range.
+// 
+// We do not use templating for the value type (with  marker or not) as hash maps are passed around quite a lot and we
+// don't want to have different types of the map (apart from HashedType).
 template <typename HashedType>
 class PosHashTable {
  public:
@@ -91,27 +101,83 @@ class PosHashTable {
   // The small_vector holds the first n values in local storage and only resorts to heap storage after that. 1 is chosen
   // as n because in many cases, we join on primary key attributes where by definition we have only one match on the
   // smaller side.
-  using SmallPosList = boost::container::small_vector<RowID, 1, PolymorphicAllocator<RowID>>;
+  using ValueTypeAllPositions = RowID;
+  using ValueTypeAccessMarkers = std::pair<RowID, bool>;
+
+  using SmallPosList = boost::container::small_vector<ValueTypeAllPositions, 1, PolymorphicAllocator<ValueTypeAllPositions>>;
+  using SmallPosListWithAccessMarkers = boost::container::small_vector<ValueTypeAccessMarkers, 1, PolymorphicAllocator<ValueTypeAccessMarkers>>;
 
   // After finalize() is called, the UnifiedPosList holds the concatenation of all SmallPosLists. The SmallPosList at
   // position n can be found at the half-open range [ pos_list[offsets[n]], pos_list[offsets[n+1]] ).
+  template <typename ValueType>
   struct UnifiedPosList {
-    RowIDPosList pos_list;
+    using UnifiedPosListType = std::vector<ValueType>;
+
+    UnifiedPosListType pos_list;
     std::vector<size_t> offsets;
   };
 
   explicit PosHashTable(const JoinHashBuildMode mode, const size_t max_size)
       : _mode(mode),
         _small_pos_lists(mode == JoinHashBuildMode::AllPositions ? max_size + 1 : 0,
-                         SmallPosList{SmallPosList::allocator_type(_memory_pool.get())}) {
+                         SmallPosList{SmallPosList::allocator_type(_memory_pool.get())}),
+        _small_pos_lists_marked(mode == JoinHashBuildMode::AllPositionsWithAccessMarker ? max_size + 1 : 0,
+                         SmallPosListWithAccessMarkers{SmallPosListWithAccessMarkers::allocator_type(_memory_pool.get())}) {
     // _small_pos_lists is initialized with an additional element to make the enforcement of the assertions easier. For
     // _JoinHashBuildMode::ExistenceOnly, we do not store positions and thus do not initialize _small_pos_lists.
     _offset_hash_table.reserve(max_size);
   }
 
-  // For a value seen on the build side, add the value to the hash map.
-  // The row id is only added in the AllPositions mode. For ExistenceOnly, as used e.g., by semi joins, the actual
-  // row id is irrelevant and is not stored.
+  void print() {
+    // if (!_unified_pos_list && !_unified_pos_list_marked) {
+    //   for (const auto& [k,v] : _offset_hash_table) {
+    //     std::cerr << "key: " << k << "\tvalue (offset): ";
+    //     if (_mode == JoinHashBuildMode::AllPositions) {
+    //       for (auto el : _small_pos_lists[v]) {
+    //         std::cerr << el;
+    //       }
+    //     } else if (_mode == JoinHashBuildMode::AllPositionsWithAccessMarker) {
+    //       for (auto el : _small_pos_lists_marked[v]) {
+    //         std::cerr << "(" << el.first << ",marked:" << el.second << ")";
+    //       }
+    //     } else {
+    //       std::cerr << "ExstncOnly";
+    //     }
+    //     std::cerr << "\n";
+    //   }
+    // } else {
+    //   for (const auto& [k,v] : _offset_hash_table) {
+    //     std::cerr << "key: " << k << "\tvalue (offset): ";
+    //     if (_mode == JoinHashBuildMode::AllPositions) {
+    //       for (auto index = _unified_pos_list->offsets[v];
+    //            index < _unified_pos_list->offsets[v + 1];
+    //            ++index) {
+    //         std::cerr << _unified_pos_list->pos_list[index];
+    //       }
+    //     } else if (_mode == JoinHashBuildMode::AllPositionsWithAccessMarker) {
+    //       for (auto index = _unified_pos_list_marked->offsets[v];
+    //            index < _unified_pos_list_marked->offsets[v + 1];
+    //            ++index) {
+    //         std::cerr << "(" << _unified_pos_list_marked->pos_list[index].first << ",marked:" << _unified_pos_list_marked->pos_list[index].second << ")";
+    //       }
+    //     } else {
+    //       std::cerr << "ExstncOnly";
+    //     }
+    //     std::cerr << "\n";
+    //   }
+    // }
+  }
+
+  void iterate_row_ids(auto functor) const {
+    DebugAssert(_mode == JoinHashBuildMode::AllPositionsWithAccessMarker,
+                "Unexpected." + std::to_string(static_cast<size_t>(_mode)));
+    DebugAssert(_unified_pos_list_marked, "_unified_pos_list_marked not set - was finalize called?");
+    // std::cerr << "_unified_pos_list_marked->pos_list.size() is << " << _unified_pos_list_marked->pos_list.size() << "\n";
+    functor(_unified_pos_list_marked->pos_list.cbegin(), _unified_pos_list_marked->pos_list.cend());
+  }
+
+  // For a value seen on the build side, add the value to the hash map. The row id is only added in the AllPositions
+  // mode. For ExistenceOnly, as used e.g., by semi joins, the actual row id is irrelevant and is not stored.
   template <typename InputType>
   void emplace(const InputType& value, RowID row_id) {
     const auto casted_value = static_cast<HashedType>(value);
@@ -125,50 +191,82 @@ class PosHashTable {
       pos_list.emplace_back(row_id);
 
       DebugAssert(_offset_hash_table.size() < _small_pos_lists.size(),
-                  "Hash table too big for pre-allocated data structures");
-      DebugAssert(_offset_hash_table.size() < std::numeric_limits<Offset>::max(), "Hash table too big for offset");
+                  "Hash table too big for pre-allocated data structures.");
+    } else if (_mode == JoinHashBuildMode::AllPositionsWithAccessMarker) {
+      auto& pos_list = _small_pos_lists_marked[iter.first->second];
+      pos_list.emplace_back(row_id, false);
+
+      DebugAssert(_offset_hash_table.size() < _small_pos_lists_marked.size(),
+                  "Hash table too big for pre-allocated data structures.");
     }
+    DebugAssert(_offset_hash_table.size() < std::numeric_limits<Offset>::max(), "Hash table too big for offset.");
   }
 
   // Rewrite the SmallPosLists into one giant UnifiedPosList (see above).
   void finalize() {
+    switch (_mode) {
+      case JoinHashBuildMode::ExistenceOnly: {
+        return;
+      }
+      case JoinHashBuildMode::AllPositions: {
+        _finalize(_unified_pos_list, _small_pos_lists);
+        return;
+      }
+      case JoinHashBuildMode::AllPositionsWithAccessMarker: {
+        _finalize(_unified_pos_list_marked, _small_pos_lists_marked);
+        return;
+      }
+      default: {
+        Fail("Unexpected JoinHashBuildMode.");
+      }
+    }
+  }
+
+  // template <JoinHashBuildMode mode>
+  void _finalize(auto& unified_pos_list, auto& small_pos_lists) {
+    // static_assert(!std::is_same_v<mode, JoinHashBuildMode::ExistenceOnly>);
+
+    // using UnifiedPosListType = std::conditional_t<std::is_same_v<mode, JoinHashBuildMode::AllPositions>,
+    //                                               UnifiedPosList<ValueTypeAllPositions>,
+    //                                               UnifiedPosList<ValueTypeAccessMarkers>>;
+
     const auto hash_table_size = _offset_hash_table.size();
 
-    if (_mode == JoinHashBuildMode::AllPositions) {
-      _unified_pos_list = UnifiedPosList{};
-      // Resize so that we can store the start offset of each range as well as the final end offset.
-      _unified_pos_list->offsets.resize(hash_table_size + 1);
+    using UnifiedPosListType = typename std::decay_t<decltype(unified_pos_list)>::value_type;
+    unified_pos_list = UnifiedPosListType{};
+    // Resize so that we can store the start offset of each range as well as the final end offset.
+    unified_pos_list->offsets.resize(hash_table_size + 1);
 
-      auto total_size = size_t{0};
-      for (auto hash_table_idx = size_t{0}; hash_table_idx < hash_table_size; ++hash_table_idx) {
-        _unified_pos_list->offsets[hash_table_idx] = total_size;
-        total_size += _small_pos_lists[hash_table_idx].size();
-      }
-      _unified_pos_list->offsets.back() = total_size;
-
-      _unified_pos_list->pos_list.resize(total_size);
-      auto offset = size_t{0};
-      for (auto hash_table_idx = size_t{0}; hash_table_idx < hash_table_size; ++hash_table_idx) {
-        std::copy(_small_pos_lists[hash_table_idx].begin(), _small_pos_lists[hash_table_idx].end(),
-                  _unified_pos_list->pos_list.begin() + offset);
-        offset += _small_pos_lists[hash_table_idx].size();
-      }
-
-      // The SmallPosLists are no longer needed. Delete both the lists and the associated memory resources.
-      _small_pos_lists = {};
-      _memory_pool = {};
-      _monotonic_buffer = {};
+    auto total_size = size_t{0};
+    for (auto hash_table_idx = size_t{0}; hash_table_idx < hash_table_size; ++hash_table_idx) {
+      unified_pos_list->offsets[hash_table_idx] = total_size;
+      total_size += small_pos_lists[hash_table_idx].size();
     }
+    unified_pos_list->offsets.back() = total_size;
+
+    unified_pos_list->pos_list.resize(total_size);
+    auto offset = size_t{0};
+    for (auto hash_table_idx = size_t{0}; hash_table_idx < hash_table_size; ++hash_table_idx) {
+      std::copy(small_pos_lists[hash_table_idx].begin(), small_pos_lists[hash_table_idx].end(),
+                unified_pos_list->pos_list.begin() + offset);
+      offset += small_pos_lists[hash_table_idx].size();
+    }
+
+    // The SmallPosLists are no longer needed. Delete the lists and the associated memory resources.
+    _small_pos_lists = {};
+    _small_pos_lists_marked = {};
+    _memory_pool = {};
+    _monotonic_buffer = {};
   }
 
   // For a value seen on the probe side, return an iterator pair into the matching positions on the build side
   template <typename InputType>
-  const std::pair<RowIDPosList::const_iterator, RowIDPosList::const_iterator> find(const InputType& value) const {
-    DebugAssert(_mode == JoinHashBuildMode::AllPositions, "find is invalid for ExistenceOnly mode, use contains");
+  std::pair<typename std::vector<RowID>::const_iterator, typename std::vector<RowID>::const_iterator> find(const InputType& value) const {
+    DebugAssert(_mode == JoinHashBuildMode::AllPositions, "find is only valid for AllPositions mode.");
     DebugAssert(_unified_pos_list, "_unified_pos_list not set - was finalize called?");
 
-    const auto casted_value = static_cast<HashedType>(value);
-    const auto hash_table_iter = _offset_hash_table.find(casted_value);
+    auto casted_value = static_cast<HashedType>(value);
+    auto hash_table_iter = _offset_hash_table.find(casted_value);
 
     if (hash_table_iter == _offset_hash_table.end()) {
       // Not found, return an empty range
@@ -179,6 +277,59 @@ class PosHashTable {
     // value and ending at the first value of the next value. This is what we added `total_size` to the offset list for.
     return {_unified_pos_list->pos_list.begin() + _unified_pos_list->offsets[hash_table_iter->second],
             _unified_pos_list->pos_list.begin() + _unified_pos_list->offsets[hash_table_iter->second + 1]};
+  }
+
+  template <typename InputType>
+  void find_and_mark(const InputType& value) {
+    DebugAssert(_mode == JoinHashBuildMode::AllPositionsWithAccessMarker,
+                "find_and_mark is only valid for AllPositionsWithAccessMarker mode.");
+    DebugAssert(_unified_pos_list_marked, "_unified_pos_list_marked not set - was finalize called?");
+
+    auto casted_value = static_cast<HashedType>(value);
+    auto hash_table_iter = _offset_hash_table.find(casted_value);
+
+    if (hash_table_iter == _offset_hash_table.end()) {
+      return;
+    }
+
+    // auto pos_list_begin = _unified_pos_list_marked->pos_list.begin();
+    auto& offsets = _unified_pos_list_marked->offsets;
+    // auto iter = pos_list_begin + offsets[hash_table_iter->second];
+    // const auto end = pos_list_begin + offsets[hash_table_iter->second + 1];
+    // for (; iter < end; ++iter) {
+    //   iter->second = true;
+    // }
+    for (auto index = offsets[hash_table_iter->second]; index < offsets[hash_table_iter->second + 1]; ++index) {
+      _unified_pos_list_marked->pos_list[index].second = true;
+    }
+  }
+
+  template <typename InputType>
+  void find_and_mark_if(const InputType& value, const auto functor) {
+    DebugAssert(_mode == JoinHashBuildMode::AllPositionsWithAccessMarker,
+                "find_and_mark is only valid for AllPositionsWithAccessMarker mode.");
+    DebugAssert(_unified_pos_list_marked, "_unified_pos_list_marked not set - was finalize called?");
+
+    auto casted_value = static_cast<HashedType>(value);
+    auto hash_table_iter = _offset_hash_table.find(casted_value);
+
+    if (hash_table_iter == _offset_hash_table.end()) {
+      return;
+    }
+
+    // auto pos_list_begin = _unified_pos_list_marked->pos_list.begin();
+    auto& offsets = _unified_pos_list_marked->offsets;
+    // auto iter = pos_list_begin + offsets[hash_table_iter->second];
+    // const auto end = pos_list_begin + offsets[hash_table_iter->second + 1];
+    // for (; iter < end; ++iter) {
+    //   iter->second = true;
+    // }
+    for (auto index = offsets[hash_table_iter->second]; index < offsets[hash_table_iter->second + 1]; ++index) {
+      const auto& row_id = _unified_pos_list_marked->pos_list[index].first;
+      if (functor(row_id)) {
+        _unified_pos_list_marked->pos_list[index].second = true;  
+      }
+    }
   }
 
   // For a value seen on the probe side, return whether it has been seen on the build side
@@ -203,6 +354,12 @@ class PosHashTable {
     return std::nullopt;
   }
 
+  void clear() {
+    _offset_hash_table = {};
+    _unified_pos_list = {};
+    _unified_pos_list_marked = {};
+  }
+
  private:
   // During the build phase, the small_vectors cause many small allocations. Instead of going to malloc every time,
   // we create our own pool, which is discarded once finalize() is called. The pool is unsynchronized (i.e., non-thread-
@@ -216,9 +373,12 @@ class PosHashTable {
 
   JoinHashBuildMode _mode{};
   OffsetHashTable _offset_hash_table{};
-  std::vector<SmallPosList> _small_pos_lists{};
 
-  std::optional<UnifiedPosList> _unified_pos_list{};
+  // We have members for two types of small and unified PosLists, dependingon the JoinHashBuildMode.
+  std::vector<SmallPosList> _small_pos_lists{};
+  std::vector<SmallPosListWithAccessMarkers> _small_pos_lists_marked{};
+  std::optional<UnifiedPosList<ValueTypeAllPositions>> _unified_pos_list{};
+  std::optional<UnifiedPosList<ValueTypeAccessMarkers>> _unified_pos_list_marked{};
 };
 
 // The Bloom filter (with k=1) is used during the materialization and build phases. It contains `true` for each
@@ -265,7 +425,7 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
   // Retrieve input chunk_count as it might change during execution if we work on a non-reference table
   auto chunk_count = in_table->chunk_count();
 
-  const std::hash<HashedType> hash_function;
+  const auto hash_function = std::hash<HashedType>{};
   // List of all elements that will be partitioned
   auto radix_container = RadixContainer<T>{};
   radix_container.resize(chunk_count);
@@ -279,7 +439,7 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
 
   Assert(output_bloom_filter.empty(), "output_bloom_filter should be empty");
   output_bloom_filter.resize(BLOOM_FILTER_SIZE);
-  std::mutex output_bloom_filter_mutex;
+  auto output_bloom_filter_mutex = std::mutex{};
 
   Assert(input_bloom_filter.size() == BLOOM_FILTER_SIZE, "Invalid input_bloom_filter");
 
@@ -433,11 +593,8 @@ std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<
     return {};
   }
 
-  /*
-  NUMA notes:
-  The hash tables for each partition P should also reside on the same node as the build and probe partitions.
-  */
-  std::vector<std::optional<PosHashTable<HashedType>>> hash_tables;
+  // NUMA note: Hash tables for each partition should also reside on the same node as the build and probe partitions.
+  auto hash_tables = std::vector<std::optional<PosHashTable<HashedType>>>{};
 
   if (radix_bits == 0) {
     auto total_size = size_t{0};
@@ -450,15 +607,15 @@ std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<
     hash_tables.resize(radix_container.size());
   }
 
-  std::vector<std::shared_ptr<AbstractTask>> jobs;
+  auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
   jobs.reserve(radix_container.size());
 
-  for (size_t partition_idx = 0; partition_idx < radix_container.size(); ++partition_idx) {
+  for (auto partition_idx = size_t{0}; partition_idx < radix_container.size(); ++partition_idx) {
     // Skip empty partitions, so that we don't have too many empty jobs and hash tables
     if (radix_container[partition_idx].elements.empty()) {
       continue;
     }
-    const std::hash<HashedType> hash_function;
+    const auto hash_function = std::hash<HashedType>{};
 
     const auto& elements = radix_container[partition_idx].elements;
     const auto elements_count = elements.size();
@@ -520,14 +677,14 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
            "value information");
   }
 
-  const std::hash<HashedType> hash_function;
+  const auto hash_function = std::hash<HashedType>{};
 
   const auto input_partition_count = radix_container.size();
   const auto output_partition_count = size_t{1} << radix_bits;
 
-  // currently, we just do one pass
-  const size_t pass = 0;
-  const size_t radix_mask = static_cast<uint32_t>(std::pow(2, radix_bits * (pass + 1)) - 1);
+  // Currently, we just do one pass
+  const auto pass = size_t{0};
+  const auto radix_mask = static_cast<size_t>(std::pow(2, radix_bits * (pass + 1)) - 1);
 
   // allocate new (shared) output
   auto output = RadixContainer<T>(output_partition_count);
@@ -557,7 +714,7 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
     }
   }
 
-  std::vector<std::shared_ptr<AbstractTask>> jobs;
+  auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
   jobs.reserve(input_partition_count);
 
   for (auto input_partition_idx = ChunkID{0}; input_partition_idx < input_partition_count; ++input_partition_idx) {
@@ -626,11 +783,11 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
   */
 template <typename ProbeColumnType, typename HashedType, bool keep_null_values>
 void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
-           const std::vector<std::optional<PosHashTable<HashedType>>>& hash_tables,
+           std::vector<std::optional<PosHashTable<HashedType>>>& hash_tables,
            std::vector<RowIDPosList>& pos_lists_build_side, std::vector<RowIDPosList>& pos_lists_probe_side,
            const JoinMode mode, const Table& build_table, const Table& probe_table,
            const std::vector<OperatorJoinPredicate>& secondary_join_predicates) {
-  std::vector<std::shared_ptr<AbstractTask>> jobs;
+  auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
   jobs.reserve(probe_radix_container.size());
 
   /*
@@ -641,7 +798,7 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
     and the job that probes that partition should also be on that NUMA node.
   */
 
-  for (size_t partition_idx = 0; partition_idx < probe_radix_container.size(); ++partition_idx) {
+  for (auto partition_idx = size_t{0}; partition_idx < probe_radix_container.size(); ++partition_idx) {
     // Skip empty partitions to avoid empty output chunks
     if (probe_radix_container[partition_idx].elements.empty()) {
       continue;
@@ -654,8 +811,8 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
     const auto probe_partition = [&, partition_idx, elements_count]() {
       const auto& null_values = partition.null_values;
 
-      RowIDPosList pos_list_build_side_local;
-      RowIDPosList pos_list_probe_side_local;
+      auto pos_list_build_side_local = RowIDPosList{};
+      auto pos_list_probe_side_local = RowIDPosList{};
 
       if constexpr (keep_null_values) {
         Assert(elements.size() == null_values.size(),
@@ -666,16 +823,16 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
       if (!hash_tables.empty() && hash_tables.at(hash_table_idx)) {
         const auto& hash_table = *hash_tables[hash_table_idx];
 
-        // The MultiPredicateJoinEvaluator use accessors internally. Those are not thread-safe, so we create one
+        // The MultiPredicateJoinEvaluator uses accessors internally. Those are not thread-safe, so we create one
         // evaluator per job.
-        std::optional<MultiPredicateJoinEvaluator> multi_predicate_join_evaluator;
+        auto multi_predicate_join_evaluator = std::optional<MultiPredicateJoinEvaluator>{};
         if (!secondary_join_predicates.empty()) {
           multi_predicate_join_evaluator.emplace(build_table, probe_table, mode, secondary_join_predicates);
         }
 
-        // Simple heuristic to estimate result size: half of the partition's rows will match
-        // a more conservative pre-allocation would be the size of the build cluster
-        const size_t expected_output_size = static_cast<size_t>(std::max(10.0, std::ceil(elements.size() / 2)));
+        // Simple heuristic to estimate result size: half of the partition's rows will match. A more conservative
+        // pre-allocation would be the size of the build cluster.
+        const auto expected_output_size = static_cast<size_t>(std::max(10.0, std::ceil(elements.size() / 2)));
         pos_list_build_side_local.reserve(static_cast<size_t>(expected_output_size));
         pos_list_probe_side_local.reserve(static_cast<size_t>(expected_output_size));
 
@@ -786,12 +943,34 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
 
 template <typename ProbeColumnType, typename HashedType, JoinMode mode>
 void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_container,
-                     const std::vector<std::optional<PosHashTable<HashedType>>>& hash_tables,
+                     std::vector<std::optional<PosHashTable<HashedType>>>& hash_tables,
                      std::vector<RowIDPosList>& pos_lists, const Table& build_table, const Table& probe_table,
-                     const std::vector<OperatorJoinPredicate>& secondary_join_predicates) {
-  std::vector<std::shared_ptr<AbstractTask>> jobs;
+                     const std::vector<OperatorJoinPredicate>& secondary_join_predicates,
+                     const bool build_hash_table_for_right_input) {
+
+  // For radix bits == 0, we do not cluster but still materialize into multiple partitions (one partition per input
+  // chunk). All these partitions share the same hash table.
+  const auto partitions_share_hash_table = hash_tables.size() == 1;
+
+  auto write_marked_rows = [&] <bool WriteMatches>(const auto& hash_table, auto& pos_list) {
+    hash_table.iterate_row_ids([&](auto iter, auto end) {
+      for (; iter < end; ++iter) {
+        const auto& [row_id, marker] = *iter;
+        if constexpr (WriteMatches) {
+          if (marker) {
+            pos_list.emplace_back(row_id);
+          }
+        } else {
+          if (!marker) {
+            pos_list.emplace_back(row_id);
+          }
+        }
+      }
+    });
+  };
 
   const auto probe_radix_container_count = probe_radix_container.size();
+  auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
   jobs.reserve(probe_radix_container_count);
 
   for (auto partition_idx = size_t{0}; partition_idx < probe_radix_container_count; ++partition_idx) {
@@ -808,16 +987,20 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_containe
       // Get information from work queue
       const auto& null_values = partition.null_values;
 
-      RowIDPosList pos_list_local;
+      auto pos_list_local = RowIDPosList{};
 
-      const auto hash_table_idx = hash_tables.size() > 1 ? partition_idx : 0;
+      const auto hash_table_idx = partitions_share_hash_table ? 0 : partition_idx;
+      hash_tables[hash_table_idx]->print();
       if (!hash_tables.empty() && hash_tables.at(hash_table_idx)) {
         // Valid hash table found, so there is at least one match in this partition
-        const auto& hash_table = *hash_tables[hash_table_idx];
+        auto& hash_table = *hash_tables[hash_table_idx];
 
-        // Accessors are not thread-safe, so we create one evaluator per job
-        MultiPredicateJoinEvaluator multi_predicate_join_evaluator(build_table, probe_table, mode,
-                                                                   secondary_join_predicates);
+        // The MultiPredicateJoinEvaluator uses accessors internally. Those are not thread-safe, so we create one
+        // evaluator per job.
+        auto multi_predicate_join_evaluator = std::optional<MultiPredicateJoinEvaluator>{};
+        if (!secondary_join_predicates.empty()) {
+          multi_predicate_join_evaluator.emplace(build_table, probe_table, mode, secondary_join_predicates);
+        }
 
         for (auto partition_offset = size_t{0}; partition_offset < elements_count; ++partition_offset) {
           const auto& probe_column_element = elements[partition_offset];
@@ -828,14 +1011,14 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_containe
               // Could be either skipped or NULL
               continue;
             }
-          } else if constexpr (mode == JoinMode::AntiNullAsFalse) {  // NOLINT - doesn't like `else if`
+          } else if constexpr (mode == JoinMode::AntiNullAsFalse) {
             // NULL values on the probe side always lead to the tuple being emitted for AntiNullAsFalse, irrespective
             // of secondary predicates (`NULL("as false") AND <anything>` is always false)
             if (null_values[partition_offset]) {
               pos_list_local.emplace_back(probe_column_element.row_id);
               continue;
             }
-          } else if constexpr (mode == JoinMode::AntiNullAsTrue) {  // NOLINT - doesn't like `else if`
+          } else if constexpr (mode == JoinMode::AntiNullAsTrue) {
             if (null_values[partition_offset]) {
               // Primary predicate is TRUE, as long as we do not support secondary predicates with AntiNullAsTrue.
               // This means that the probe value never gets emitted
@@ -843,9 +1026,24 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_containe
             }
           }
 
+          if (!build_hash_table_for_right_input) {
+            // TODO(Martin): concurrent writes ?!?!?!
+            if (multi_predicate_join_evaluator) {
+              std::cerr << "find_and_mark_if\n";
+              hash_table.find_and_mark_if(static_cast<HashedType>(probe_column_element.value), [&](const auto& row_id) {
+                return multi_predicate_join_evaluator->satisfies_all_predicates(row_id, probe_column_element.row_id);
+              });
+            } else {
+              std::cerr << "find_and_mark\n";
+              hash_table.find_and_mark(static_cast<HashedType>(probe_column_element.value));
+            }
+
+            continue;
+          }
+
           auto any_build_column_value_matches = false;
 
-          if (secondary_join_predicates.empty()) {
+          if (!multi_predicate_join_evaluator) {
             any_build_column_value_matches = hash_table.contains(static_cast<HashedType>(probe_column_element.value));
           } else {
             auto [primary_predicate_matching_rows_iter, primary_predicate_matching_rows_end] =
@@ -854,7 +1052,7 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_containe
             for (; primary_predicate_matching_rows_iter != primary_predicate_matching_rows_end;
                  ++primary_predicate_matching_rows_iter) {
               const auto row_id = *primary_predicate_matching_rows_iter;
-              if (multi_predicate_join_evaluator.satisfies_all_predicates(row_id, probe_column_element.row_id)) {
+              if (multi_predicate_join_evaluator->satisfies_all_predicates(row_id, probe_column_element.row_id)) {
                 any_build_column_value_matches = true;
                 break;
               }
@@ -867,7 +1065,19 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_containe
             pos_list_local.emplace_back(probe_column_element.row_id);
           }
         }
-      } else if constexpr (mode == JoinMode::AntiNullAsFalse) {  // NOLINT - doesn't like `else if`
+
+        // We first marked all RowIDs matched in the semi join and now write them to the PosList.
+        if (!build_hash_table_for_right_input) {
+          if (!partitions_share_hash_table) {
+            std::cout << "Local write" << std::endl;
+            if (mode == JoinMode::Semi) {
+              write_marked_rows.template operator()<true>(hash_table, pos_list_local);
+            } else {
+              write_marked_rows.template operator()<false>(hash_table, pos_list_local);
+            }
+          }
+        }
+      } else if constexpr (mode == JoinMode::AntiNullAsFalse) {
         // no hash table on other side, but we are in AntiNullAsFalse mode which means all tuples from the probing side
         // get emitted.
         pos_list_local.reserve(elements.size());
@@ -875,7 +1085,7 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_containe
           auto& probe_column_element = elements[partition_offset];
           pos_list_local.emplace_back(probe_column_element.row_id);
         }
-      } else if constexpr (mode == JoinMode::AntiNullAsTrue) {  // NOLINT - doesn't like `else if`
+      } else if constexpr (mode == JoinMode::AntiNullAsTrue) {
         // no hash table on other side, but we are in AntiNullAsTrue mode which means all tuples from the probing side
         // get emitted. That is, except NULL values, which only get emitted if the build table is empty.
         const auto build_table_is_empty = build_table.row_count() == 0;
@@ -902,6 +1112,18 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_containe
   }
 
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
+
+  // We first marked all RowIDs matched in the semi join and now write them to the PosList.
+  if (mode == JoinMode::Semi && !build_hash_table_for_right_input) {
+    if (partitions_share_hash_table) {
+      std::cout << "Late write" << std::endl;
+      if (mode == JoinMode::Semi) {
+        write_marked_rows.template operator()<true>(*hash_tables[0], pos_lists[0]);
+      } else {
+        write_marked_rows.template operator()<false>(*hash_tables[0], pos_lists[0]);
+      }
+    }
+  }
 }
 
 }  // namespace hyrise
