@@ -1,6 +1,14 @@
 #include "cast_expression.hpp"
 
+#include <cstddef>
+#include <functional>
+#include <memory>
 #include <sstream>
+#include <unordered_map>
+
+#include "expression/abstract_expression.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 

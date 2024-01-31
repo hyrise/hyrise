@@ -1,8 +1,11 @@
 #include "expression_utils.hpp"
 
 #include <algorithm>
+#include <memory>
 #include <queue>
 #include <sstream>
+#include <string>
+#include <vector>
 
 #include "expression_functional.hpp"
 #include "logical_expression.hpp"
@@ -11,7 +14,9 @@
 #include "lqp_subquery_expression.hpp"
 #include "operators/abstract_operator.hpp"
 #include "pqp_subquery_expression.hpp"
+#include "types.hpp"
 #include "value_expression.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 

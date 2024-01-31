@@ -1,5 +1,16 @@
 #include "expression_functional.hpp"
 
+#include <memory>
+#include <vector>
+
+#include "expression/abstract_expression.hpp"
+#include "expression/exists_expression.hpp"
+#include "expression/interval_expression.hpp"
+#include "expression/lqp_column_expression.hpp"
+#include "expression/placeholder_expression.hpp"
+#include "expression/value_expression.hpp"
+#include "types.hpp"
+
 namespace hyrise::expression_functional {
 
 std::shared_ptr<AbstractExpression> to_expression(const std::shared_ptr<AbstractExpression>& expression) {

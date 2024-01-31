@@ -1,5 +1,6 @@
 #include "aggregate_sort.hpp"
 
+#include <cstddef>
 #include <algorithm>
 #include <memory>
 #include <vector>
@@ -7,11 +8,16 @@
 #include "aggregate/window_function_traits.hpp"
 #include "all_type_variant.hpp"
 #include "expression/pqp_column_expression.hpp"
+#include "operators/abstract_operator.hpp"
 #include "operators/sort.hpp"
+#include "resolve_type.hpp"
+#include "storage/table.hpp"
 #include "storage/pos_lists/entire_chunk_pos_list.hpp"
+#include "storage/value_segment.hpp"
 #include "storage/segment_iterate.hpp"
 #include "table_wrapper.hpp"
 #include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace {
 
@@ -570,7 +576,7 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
       auto null_values = pmr_vector<bool>(column_is_nullable ? group_boundaries.size() + 1 : 0);
 
       const auto value_count = values.size();
-      for (size_t value_index = 0; value_index < value_count; ++value_index) {
+      for (auto value_index = size_t{0}; value_index < value_count; ++value_index) {
         RowID group_start;
         if (value_index == 0) {
           // First group starts in the first row, but there is no corresponding entry in the set. See above for reasons.

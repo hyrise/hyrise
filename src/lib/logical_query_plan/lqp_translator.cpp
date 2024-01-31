@@ -1,5 +1,8 @@
 #include "lqp_translator.hpp"
 
+#include <memory>
+#include <vector> 
+
 #include <boost/hana/for_each.hpp>
 #include <boost/hana/tuple.hpp>
 
@@ -65,8 +68,10 @@
 #include "static_table_node.hpp"
 #include "storage/index/partial_hash/partial_hash_index.hpp"
 #include "stored_table_node.hpp"
+#include "types.hpp"
 #include "union_node.hpp"
 #include "update_node.hpp"
+#include "utils/assert.hpp"
 #include "utils/map_prunable_subquery_predicates.hpp"
 #include "utils/pruning_utils.hpp"
 

@@ -1,12 +1,17 @@
 #include "join_output_writing.hpp"
 
+#include <algorithm>
+#include <memory>
+#include <optional>
 #include <unordered_map>
-
-#include <boost/functional/hash_fwd.hpp>
+#include <utility>
+#include <vector>
 
 #include "hyrise.hpp"
 #include "scheduler/job_task.hpp"
-#include "storage/segment_iterate.hpp"
+#include "storage/reference_segment.hpp"
+#include "storage/table.hpp"
+#include "types.hpp"
 
 namespace {
 

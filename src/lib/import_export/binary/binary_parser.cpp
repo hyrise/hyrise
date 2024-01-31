@@ -1,6 +1,6 @@
 #include "binary_parser.hpp"
 
-#include <cstdint>
+#include <cstddef>
 #include <fstream>
 #include <memory>
 #include <numeric>
@@ -8,13 +8,12 @@
 #include <string>
 #include <utility>
 
-#include "hyrise.hpp"
 #include "resolve_type.hpp"
 #include "storage/chunk.hpp"
 #include "storage/encoding_type.hpp"
 #include "storage/vector_compression/bitpacking/bitpacking_vector.hpp"
 #include "storage/vector_compression/fixed_width_integer/fixed_width_integer_vector.hpp"
-
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {

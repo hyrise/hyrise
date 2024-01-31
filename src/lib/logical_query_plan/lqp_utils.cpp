@@ -1,5 +1,10 @@
 #include "lqp_utils.hpp"
 
+#include <memory>
+#include <optional>
+#include <set>
+#include <unordered_set>
+
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
@@ -12,6 +17,7 @@
 #include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/union_node.hpp"
 #include "logical_query_plan/update_node.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace {

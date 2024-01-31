@@ -120,7 +120,7 @@ class AnySegmentIterator : public AbstractSegmentIterator<AnySegmentIterator<T>,
 
   template <typename Iterator>
   explicit AnySegmentIterator(const Iterator& iterator)
-      : _wrapper{std::make_unique<detail::AnySegmentIteratorWrapper<T, Iterator>>(iterator)} {}
+      : _wrapper{std::make_unique<hyrise::detail::AnySegmentIteratorWrapper<T, Iterator>>(iterator)} {}
 
   /**@}*/
 

@@ -1,11 +1,19 @@
 #include "insert.hpp"
 
+#include <atomic>
+#include <cstddef>
+#include <memory>
+#include <unordered_map>
+
 #include "concurrency/transaction_context.hpp"
 #include "hyrise.hpp"
+#include "operators/abstract_operator.hpp"
 #include "resolve_type.hpp"
 #include "storage/abstract_encoded_segment.hpp"
 #include "storage/segment_iterate.hpp"
 #include "storage/value_segment.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 #include "utils/atomic_max.hpp"
 
 namespace {

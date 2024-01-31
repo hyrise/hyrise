@@ -1,9 +1,14 @@
 #include "get_table.hpp"
 
+#include <cstddef>
 #include <algorithm>
+#include <iterator>
+#include <memory>
+#include <set>
 #include <sstream>
-#include <unordered_set>
+#include <unordered_map>
 
+#include "abstract_read_only_operator.hpp"
 #include "expression/expression_functional.hpp"
 #include "hyrise.hpp"
 #include "logical_query_plan/predicate_node.hpp"
@@ -11,6 +16,7 @@
 #include "operators/pqp_utils.hpp"
 #include "operators/table_scan.hpp"
 #include "storage/index/partial_hash/partial_hash_index.hpp"
+#include "types.hpp"
 #include "utils/pruning_utils.hpp"
 
 namespace hyrise {

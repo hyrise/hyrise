@@ -79,7 +79,8 @@ try {
 
             cmake = 'cmake -DCI_BUILD=ON'
 
-            // TODO(Martin): GCC and unity?
+            // We don't use unity builds with clang-tidy (see below) and GCC 11 builds as it triggers a GoogleTest
+            // issue (see https://github.com/google/googletest/issues/3552).
             unity = '-DCMAKE_UNITY_BUILD=ON'
 
             // With Hyrise, we aim to support the most recent compiler versions and do not invest a lot of work to
@@ -121,22 +122,25 @@ try {
 
           parallel clangDebug: {
             stage("clang-debug") {
-              sh "cd clang-debug && make all -j \$(( \$(nproc) / 4))"
+              sh "cd clang-debug && make all -j \$(( \$(nproc) / 5))"
               sh "./clang-debug/hyriseTest clang-debug"
             }
           }, clang15Debug: {
             stage("clang-15-debug") {
-              sh "cd clang-15-debug && make all -j \$(( \$(nproc) / 4))"
+              sh "cd clang-15-debug && make all -j \$(( \$(nproc) / 5))"
               sh "./clang-15-debug/hyriseTest clang-15-debug"
             }
           }, gccDebug: {
             stage("gcc-debug") {
-              sh "cd gcc-debug && make all -j \$(( \$(nproc) / 4))"
+              sh "cd gcc-debug && make all -j \$(( \$(nproc) / 5))"
               sh "cd gcc-debug && ./hyriseTest"
             }
           }, gcc11Debug: {
             stage("gcc-11-debug") {
-              sh "cd gcc-11-debug && make all -j \$(( \$(nproc) / 4))"
+               // We give more cores to GCC 11 as it is the only configuration that has issues with unity builds
+               // (GoogleTest cannot be compiled). When switching to a more recent GCC version, this should be evaluated
+               // again.
+              sh "cd gcc-11-debug && make all -j \$(( \$(nproc) / 3))"
               sh "cd gcc-11-debug && ./hyriseTest"
             }
           }, lint: {
@@ -256,7 +260,7 @@ try {
                 sh "cd clang-release-addr-ub-sanitizers && make hyriseTest hyriseSystemTest hyriseBenchmarkTPCH hyriseBenchmarkTPCC -j \$(( \$(nproc) / 10))"
                 sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=strict_string_checks=1:detect_stack_use_after_return=1:check_initialization_order=1:strict_init_order=1:detect_leaks=1,suppressions=resources/.asan-ignore.txt ./clang-release-addr-ub-sanitizers/hyriseTest clang-release-addr-ub-sanitizers"
                 sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=strict_string_checks=1:detect_stack_use_after_return=1:check_initialization_order=1:strict_init_order=1:detect_leaks=1,suppressions=resources/.asan-ignore.txt ./clang-release-addr-ub-sanitizers/hyriseSystemTest ${tests_excluded_in_sanitizer_builds} clang-release-addr-ub-sanitizers"
-                sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=strict_string_checks=1:detect_stack_use_after_return=1:check_initialization_order=1:strict_init_order=1:detect_leaks=1,suppressions=resources/.asan-ignore.txt ./clang-release-addr-ub-sanitizers/hyriseBenchmarkTPCH -s .01 --verify -r 100 --scheduler --clients 10 --cores \$(( \$(nproc) / 4))"
+                sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=strict_string_checks=1:detect_stack_use_after_return=1:check_initialization_order=1:strict_init_order=1:detect_leaks=1,suppressions=resources/.asan-ignore.txt ./clang-release-addr-ub-sanitizers/hyriseBenchmarkTPCH -s .01 --verify -r 100 --scheduler --clients 10 --cores \$(( \$(nproc) / 10))"
                 sh "cd clang-release-addr-ub-sanitizers && LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=strict_string_checks=1:detect_stack_use_after_return=1:check_initialization_order=1:strict_init_order=1:detect_leaks=1,suppressions=resources/.asan-ignore.txt ../scripts/test/hyriseBenchmarkTPCC_test.py ." // Own folder to isolate binary export tests
               } else {
                 Utils.markStageSkippedForConditional("clangReleaseAddrUBSanitizers")
@@ -268,7 +272,7 @@ try {
                 sh "cd clang-release-memory-sanitizers && make hyriseTest hyriseSystemTest hyriseBenchmarkTPCH hyriseBenchmarkTPCC -j \$(( \$(nproc) / 10))"
                 sh "./clang-release-memory-sanitizers/hyriseTest clang-release-memory-sanitizers"
                 sh "./clang-release-memory-sanitizers/hyriseSystemTest ${tests_excluded_in_sanitizer_builds} clang-release-memory-sanitizers"
-                sh "./clang-release-memory-sanitizers/hyriseBenchmarkTPCH -s .01 --verify -r 100 --scheduler --clients 10 --cores \$(( \$(nproc) / 4))"
+                sh "./clang-release-memory-sanitizers/hyriseBenchmarkTPCH -s .01 --verify -r 100 --scheduler --clients 10 --cores \$(( \$(nproc) / 10))"
                 sh "cd clang-release-memory-sanitizers && ../scripts/test/hyriseBenchmarkTPCC_test.py ." // Own folder to isolate binary export tests
               } else {
                 Utils.markStageSkippedForConditional("clangReleaseAddrUBSanitizers")
