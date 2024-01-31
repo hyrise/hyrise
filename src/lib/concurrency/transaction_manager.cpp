@@ -1,8 +1,13 @@
 #include "transaction_manager.hpp"
 
+#include <algorithm>
+#include <atomic>
+#include <mutex>
+#include <optional>
+
 #include "commit_context.hpp"
-#include "storage/mvcc_data.hpp"
 #include "transaction_context.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {

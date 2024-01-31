@@ -1,9 +1,9 @@
 #include "lqp_translator.hpp"
 
+#include <cstddef>
 #include <memory>
-#include <vector> 
+#include <vector>
 
-#include <boost/hana/for_each.hpp>
 #include <boost/hana/tuple.hpp>
 
 #include "abstract_lqp_node.hpp"
@@ -16,19 +16,16 @@
 #include "delete_node.hpp"
 #include "drop_table_node.hpp"
 #include "drop_view_node.hpp"
-#include "except_node.hpp"
 #include "export_node.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/abstract_predicate_expression.hpp"
 #include "expression/expression_utils.hpp"
-#include "expression/lqp_column_expression.hpp"
 #include "expression/lqp_subquery_expression.hpp"
 #include "expression/pqp_column_expression.hpp"
 #include "expression/pqp_subquery_expression.hpp"
 #include "expression/value_expression.hpp"
 #include "hyrise.hpp"
 #include "import_node.hpp"
-#include "insert_node.hpp"
 #include "intersect_node.hpp"
 #include "join_node.hpp"
 #include "limit_node.hpp"
@@ -52,7 +49,6 @@
 #include "operators/maintenance/drop_view.hpp"
 #include "operators/operator_join_predicate.hpp"
 #include "operators/operator_scan_predicate.hpp"
-#include "operators/pqp_utils.hpp"
 #include "operators/product.hpp"
 #include "operators/projection.hpp"
 #include "operators/sort.hpp"
@@ -66,7 +62,6 @@
 #include "projection_node.hpp"
 #include "sort_node.hpp"
 #include "static_table_node.hpp"
-#include "storage/index/partial_hash/partial_hash_index.hpp"
 #include "stored_table_node.hpp"
 #include "types.hpp"
 #include "union_node.hpp"
@@ -135,7 +130,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_node_recursively(
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_by_node_type(
     LQPNodeType type, const std::shared_ptr<AbstractLQPNode>& node) const {
   switch (type) {
-    // clang-format off
+      // clang-format off
     case LQPNodeType::Aggregate:          return _translate_aggregate_node(node);
     case LQPNodeType::Alias:              return _translate_alias_node(node);
     case LQPNodeType::ChangeMetaTable:    return _translate_change_meta_table_node(node);
@@ -164,7 +159,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_by_node_type(
     case LQPNodeType::Import:             return _translate_import_node(node);
     case LQPNodeType::Export:             return _translate_export_node(node);
     case LQPNodeType::CreatePreparedPlan: return _translate_create_prepared_plan_node(node);
-    // clang-format on
+      // clang-format on
 
     default:
       Fail("Unknown node type encountered.");

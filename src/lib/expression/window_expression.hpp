@@ -50,8 +50,8 @@ std::ostream& operator<<(std::ostream& stream, const FrameDescription& frame_des
  */
 class WindowExpression : public AbstractExpression {
  public:
-  WindowExpression(std::vector<std::shared_ptr<AbstractExpression>>&& partition_by_expressions,
-                   std::vector<std::shared_ptr<AbstractExpression>>&& order_by_expressions,
+  WindowExpression(const std::vector<std::shared_ptr<AbstractExpression>>& partition_by_expressions,
+                   const std::vector<std::shared_ptr<AbstractExpression>>& order_by_expressions,
                    std::vector<SortMode>&& init_sort_modes, FrameDescription&& init_frame_description);
 
   std::string description(const DescriptionMode mode) const override;

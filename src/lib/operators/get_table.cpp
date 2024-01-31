@@ -1,7 +1,7 @@
 #include "get_table.hpp"
 
-#include <cstddef>
 #include <algorithm>
+#include <cstddef>
 #include <iterator>
 #include <memory>
 #include <set>

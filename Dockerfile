@@ -23,7 +23,7 @@ RUN apt-get update \
         gcovr \
         git \
         graphviz \
-        libboost1.81-dev \
+        libboost1.81-all-dev \
         libhwloc-dev \
         libncurses5-dev \
         libnuma-dev \

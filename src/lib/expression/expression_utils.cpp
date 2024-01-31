@@ -15,8 +15,8 @@
 #include "operators/abstract_operator.hpp"
 #include "pqp_subquery_expression.hpp"
 #include "types.hpp"
-#include "value_expression.hpp"
 #include "utils/assert.hpp"
+#include "value_expression.hpp"
 
 namespace hyrise {
 

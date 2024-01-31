@@ -1,7 +1,7 @@
 #include "aggregate_sort.hpp"
 
-#include <cstddef>
 #include <algorithm>
+#include <cstddef>
 #include <memory>
 #include <vector>
 
@@ -11,10 +11,10 @@
 #include "operators/abstract_operator.hpp"
 #include "operators/sort.hpp"
 #include "resolve_type.hpp"
-#include "storage/table.hpp"
 #include "storage/pos_lists/entire_chunk_pos_list.hpp"
-#include "storage/value_segment.hpp"
 #include "storage/segment_iterate.hpp"
+#include "storage/table.hpp"
+#include "storage/value_segment.hpp"
 #include "table_wrapper.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"

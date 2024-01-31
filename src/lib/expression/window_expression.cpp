@@ -1,6 +1,10 @@
 #include "window_expression.hpp"
 
+#include <algorithm>
+#include <cstddef>
+#include <ostream>
 #include <sstream>
+#include <string>
 
 #include <boost/container_hash/hash.hpp>
 
@@ -90,12 +94,12 @@ std::ostream& operator<<(std::ostream& stream, const FrameDescription& frame_des
   return stream;
 }
 
-WindowExpression::WindowExpression(std::vector<std::shared_ptr<AbstractExpression>>&& partition_by_expressions,
-                                   std::vector<std::shared_ptr<AbstractExpression>>&& order_by_expressions,
+WindowExpression::WindowExpression(const std::vector<std::shared_ptr<AbstractExpression>>& partition_by_expressions,
+                                   const std::vector<std::shared_ptr<AbstractExpression>>& order_by_expressions,
                                    std::vector<SortMode>&& init_sort_modes, FrameDescription&& init_frame_description)
     : AbstractExpression{ExpressionType::Window, {/* Expressions added below. */}},
-      sort_modes{init_sort_modes},
-      frame_description{init_frame_description},
+      sort_modes{std::move(init_sort_modes)},
+      frame_description{std::move(init_frame_description)},
       order_by_expressions_begin_idx{partition_by_expressions.size()} {
   const auto order_by_expression_count = order_by_expressions.size();
   Assert(order_by_expression_count == sort_modes.size(), "Passed sort modes do not match ORDER BY expressions.");

@@ -4,8 +4,8 @@
 #include <memory>
 #include <unordered_map>
 
-#include "operators/abstract_operator.hpp"
 #include "operators/abstract_join_operator.hpp"
+#include "operators/abstract_operator.hpp"
 #include "operators/operator_join_predicate.hpp"
 #include "resolve_type.hpp"
 #include "storage/table.hpp"
