@@ -5,6 +5,9 @@
 #include <string>
 #include <unordered_map>
 
+#include "expression/abstract_expression.hpp"
+#include "expression/abstract_predicate_expression.hpp"
+#include "expression/expression_precedence.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {

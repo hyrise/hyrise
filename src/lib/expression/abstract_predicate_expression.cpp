@@ -1,10 +1,15 @@
 #include "abstract_predicate_expression.hpp"
 
-#include <sstream>
+#include <cstddef>
+#include <memory>
+#include <vector>
 
-#include <boost/container_hash/hash.hpp>
+#include <boost/functional/hash.hpp>
 
+#include "expression/abstract_expression.hpp"
 #include "expression/evaluation/expression_evaluator.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 

@@ -1,10 +1,12 @@
 #include "all_type_variant.hpp"
 
-#include <cmath>
+#include <cstddef>
+#include <functional>
+#include <ostream>
 
-#include <boost/container_hash/hash.hpp>
+#include <boost/functional/hash.hpp>
 
-#include "utils/assert.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 

@@ -1,6 +1,10 @@
+#include "commit_context.hpp"
+
+#include <atomic>
+#include <functional>
 #include <memory>
 
-#include "commit_context.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {

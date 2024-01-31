@@ -1,12 +1,15 @@
 #include "placeholder_expression.hpp"
 
+#include <cstddef>
 #include <sstream>
 #include <string>
 #include <type_traits>
 
-#include <boost/container_hash/hash.hpp>
+#include <boost/functional/hash.hpp>
 
+#include "expression/abstract_expression.hpp"
 #include "resolve_type.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 
