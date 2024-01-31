@@ -5,12 +5,13 @@
 #include <string>
 #include <unordered_map>
 
-#include "expression/abstract_expression.hpp"
 #include "expression/abstract_predicate_expression.hpp"
 #include "expression/expression_precedence.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {
+
+class AbstractExpression;
 
 BetweenExpression::BetweenExpression(const PredicateCondition init_predicate_condition,
                                      const std::shared_ptr<AbstractExpression>& operand,

@@ -1,8 +1,17 @@
 #include "interval_expression.hpp"
 
+#include <cstddef>
 #include <sstream>
+#include <string>
+#include <unordered_map>
+
+#include <boost/functional/hash.hpp>
 
 #include "magic_enum.hpp"
+
+#include "expression/abstract_expression.hpp"
+#include "operators/abstract_operator.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 

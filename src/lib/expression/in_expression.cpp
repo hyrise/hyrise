@@ -4,12 +4,13 @@
 #include <sstream>
 #include <string>
 
-#include "expression/abstract_expression.hpp"
 #include "expression/abstract_predicate_expression.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {
+
+class AbstractExpression;
 
 InExpression::InExpression(const PredicateCondition init_predicate_condition,
                            const std::shared_ptr<AbstractExpression>& operand,

@@ -8,6 +8,7 @@
 #include <boost/functional/hash.hpp>
 
 #include "expression/abstract_expression.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
 #include "resolve_type.hpp"
 #include "types.hpp"
 
