@@ -1,7 +1,7 @@
 #pragma once
 
 #include <atomic>
-#include <bit>  // NOLINT(build/include_order)
+#include <bit>
 #include <ostream>
 
 #include "types.hpp"
