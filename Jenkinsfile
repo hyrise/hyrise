@@ -84,10 +84,10 @@ try {
             unity = '-DCMAKE_UNITY_BUILD=ON'
 
             // With Hyrise, we aim to support the most recent compiler versions and do not invest a lot of work to
-            // support older versions. We test the oldest LLVM version shipped with Ubuntu 23.10 (i.e., LLVM 14) and
-            // GCC 11 (oldest version supported by Hyrise). We execute at least debug runs for them.
-            // If you want to upgrade compiler versions, please update install_dependencies.sh,  DEPENDENCIES.md, and
-            // the documentation (README, Wiki).
+            // support older versions. We test LLVM 14 (oldest LLVM version shipped with Ubuntu 23.10 that works with
+            // more recent libstdc++ versions) and GCC 11 (oldest version supported by Hyrise). We execute at least
+            // debug runs for them. If you want to upgrade compiler versions, please update install_dependencies.sh,
+            // DEPENDENCIES.md, and the documentation (README, Wiki).
             clang = '-DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++'
             clang14 = '-DCMAKE_C_COMPILER=clang-14 -DCMAKE_CXX_COMPILER=clang++-14'
             gcc = '-DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++'

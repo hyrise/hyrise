@@ -4,7 +4,7 @@
 | ------------------------- | ---------------- | -------- | ------------------------------------- |
 | autoconf                  | >= 2.69          |    All   |                                    No |
 | boost                     | >= 1.81.0        |    All   |                                    No |
-| clang                     | >= 13.0          |    All   |                 Yes, if gcc installed |
+| clang                     | >= 14.0          |    All   |                 Yes, if gcc installed |
 | clang-format              | >= 17.0          |    All   |                      Yes (formatting) |
 | clang-tidy                | >= 17.0          |    All   |                         Yes (linting) |
 | coreutils                 | any              |    Mac   |                         Yes (scripts) |
@@ -25,6 +25,5 @@
 | sqlite3                   | >= 3             |    All   |                                    No |
 | tbb/libtbb-dev (oneTBB)   | any              |    All   |                                    No |
 | valgrind                  | >= 3.20          |    All   |            Yes, memory checking in CI |
-
 
 For dependencies that are integrated in our build process via git submodules, please check .gitmodules.
