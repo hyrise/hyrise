@@ -4,9 +4,9 @@
 | ------------------------- | ---------------- | -------- | ------------------------------------- |
 | autoconf                  | >= 2.69          |    All   |                                    No |
 | boost                     | >= 1.81.0        |    All   |                                    No |
-| clang                     | >= 15.0          |    All   |                 Yes, if gcc installed |
-| clang-format              | >= 15.0          |    All   |                      Yes (formatting) |
-| clang-tidy                | >= 15.0          |    All   |                         Yes (linting) |
+| clang                     | >= 13.0          |    All   |                 Yes, if gcc installed |
+| clang-format              | >= 17.0          |    All   |                      Yes (formatting) |
+| clang-tidy                | >= 17.0          |    All   |                         Yes (linting) |
 | coreutils                 | any              |    Mac   |                         Yes (scripts) |
 | cmake                     | >= 3.18          |    All   |                                    No |
 | dos2unix                  | any              |    All   |                         Yes (linting) |

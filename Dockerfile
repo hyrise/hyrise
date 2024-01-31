@@ -11,7 +11,7 @@ RUN apt-get update \
         autoconf \
         bash-completion \
         bc \
-        clang-14 \
+        clang-13 \
         clang-17 \
         clang-format \
         clang-tidy \
