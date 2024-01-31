@@ -9,7 +9,7 @@
 #include <utility>
 #include <vector>
 
-#include "tsl/robin_map.h"
+#include <boost/container/pmr/monotonic_buffer_resource.hpp>
 
 #include "aggregate/window_function_traits.hpp"
 #include "expression/pqp_column_expression.hpp"
@@ -595,8 +595,8 @@ KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() {
             auto temp_buffer = boost::container::pmr::monotonic_buffer_resource(1'000'000);
             auto allocator = PolymorphicAllocator<std::pair<const ColumnDataType, AggregateKeyEntry>>{&temp_buffer};
 
-            auto id_map = tsl::robin_map<ColumnDataType, AggregateKeyEntry, std::hash<ColumnDataType>, std::equal_to<>,
-                                         decltype(allocator)>(allocator);
+            auto id_map = boost::unordered_flat_map<ColumnDataType, AggregateKeyEntry, std::hash<ColumnDataType>,
+                                                    std::equal_to<>, decltype(allocator)>(allocator);
             auto id_counter = AggregateKeyEntry{1};
 
             if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
