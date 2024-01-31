@@ -221,7 +221,10 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
           return std::vector<JoinTestConfiguration>{};
         }
 
-        if (configuration.left_input.encoding_type != EncodingType::Dictionary || configuration.right_input.encoding_type != EncodingType::Dictionary) {
+        // Since not all indexes support all encodings, we keep it simple and run tests only for dictionary encoded
+        // data.
+        if (configuration.left_input.encoding_type != EncodingType::Dictionary ||
+            configuration.right_input.encoding_type != EncodingType::Dictionary) {
           return std::vector<JoinTestConfiguration>{};
         }
 
