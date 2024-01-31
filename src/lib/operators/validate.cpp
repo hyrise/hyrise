@@ -285,7 +285,7 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& input_table,
       // The validate operator does not affect the sorted_by property. If a chunk has been sorted before, it still is
       // after the validate operator.
       const auto chunk = std::make_shared<Chunk>(output_segments);
-      chunk->finalize();
+      chunk->set_immutable();
 
       const auto& sorted_by = chunk_in->individually_sorted_by();
       if (!sorted_by.empty()) {

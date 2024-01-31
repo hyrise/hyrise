@@ -161,9 +161,26 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
     } break;
 
     case LQPNodeType::StaticTable: {
-      const auto static_table_node = std::dynamic_pointer_cast<const StaticTableNode>(lqp);
-      output_table_statistics = static_table_node->table->table_statistics();
-      Assert(output_table_statistics, "This StaticTableNode has no statistics");
+      const auto& static_table_node = static_cast<const StaticTableNode&>(*lqp);
+      output_table_statistics = static_table_node.table->table_statistics();
+
+      // StaticTableNodes may or may not provide statistics. If there are no statistics, provide dummy statistics.
+      if (!output_table_statistics) {
+        const auto cardinality = static_cast<Cardinality>(static_table_node.table->row_count());
+
+        const auto& column_definitions = static_table_node.table->column_definitions();
+        auto column_statistics = std::vector<std::shared_ptr<BaseAttributeStatistics>>{};
+        column_statistics.reserve(column_definitions.size());
+
+        for (const auto& column_definition : column_definitions) {
+          resolve_data_type(column_definition.data_type, [&](const auto data_type_t) {
+            using ColumnDataType = typename decltype(data_type_t)::type;
+            column_statistics.emplace_back(std::make_shared<AttributeStatistics<ColumnDataType>>());
+          });
+        }
+
+        output_table_statistics = std::make_shared<TableStatistics>(std::move(column_statistics), cardinality);
+      }
     } break;
 
     case LQPNodeType::StoredTable: {
@@ -202,14 +219,14 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
       output_table_statistics = estimate_window_node(*window_node, left_input_table_statistics);
     } break;
 
-    // Currently there is no actual estimation being done and we always apply the worst case
+    // Currently there is no actual estimation being done and we always apply the worst case.
     case LQPNodeType::Intersect:
     case LQPNodeType::Except: {
       output_table_statistics = left_input_table_statistics;
     } break;
 
     // These Node types should not be relevant during query optimization. Return an empty TableStatistics object for
-    // them
+    // them.
     case LQPNodeType::CreateTable:
     case LQPNodeType::CreatePreparedPlan:
     case LQPNodeType::CreateView:
@@ -231,7 +248,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
   }
 
   /**
-   * 3. Store output_table_statistics in cache
+   * 3. Store output_table_statistics in cache.
    */
   if (join_graph_bitmask) {
     cardinality_estimation_cache.join_graph_statistics_cache->set(*join_graph_bitmask, lqp->output_expressions(),
@@ -247,7 +264,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
 
 std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_alias_node(
     const AliasNode& alias_node, const std::shared_ptr<TableStatistics>& input_table_statistics) {
-  // For AliasNodes, just reorder/remove AttributeStatistics from the input
+  // For AliasNodes, just reorder/remove AttributeStatistics from the input.
 
   const auto& output_expressions = alias_node.output_expressions();
   const auto output_expression_count = output_expressions.size();

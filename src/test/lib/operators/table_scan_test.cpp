@@ -154,7 +154,7 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
       table->append({i});
     }
 
-    table->get_chunk(static_cast<ChunkID>(ChunkID{0}))->finalize();
+    table->get_chunk(static_cast<ChunkID>(ChunkID{0}))->set_immutable();
 
     ChunkEncoder::encode_chunks(table, {ChunkID{0}}, SegmentEncodingSpec{_encoding_type});
 
@@ -1197,8 +1197,8 @@ TEST_P(OperatorsTableScanTest, SortedFlagReferenceSegments) {
   const auto segment_2 = std::make_shared<ReferenceSegment>(table, ColumnID{0}, pos_list_2);
   ref_table->append_chunk({segment_2});
 
-  ref_table->get_chunk(ChunkID{0})->finalize();
-  ref_table->get_chunk(ChunkID{1})->finalize();
+  ref_table->get_chunk(ChunkID{0})->set_immutable();
+  ref_table->get_chunk(ChunkID{1})->set_immutable();
   ref_table->get_chunk(ChunkID{0})->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Ascending));
   ref_table->get_chunk(ChunkID{1})->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Ascending));
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(ref_table));
@@ -1241,8 +1241,8 @@ TEST_P(OperatorsTableScanTest, SortedFlagSingleChunkNotGuaranteed) {
   const auto segment_2 = std::make_shared<ReferenceSegment>(table, ColumnID{0}, pos_list_2);
   ref_table->append_chunk({segment_2});
 
-  ref_table->get_chunk(ChunkID{0})->finalize();
-  ref_table->get_chunk(ChunkID{1})->finalize();
+  ref_table->get_chunk(ChunkID{0})->set_immutable();
+  ref_table->get_chunk(ChunkID{1})->set_immutable();
   ref_table->get_chunk(ChunkID{0})->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Ascending));
   ref_table->get_chunk(ChunkID{1})->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Ascending));
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(ref_table));
@@ -1288,7 +1288,7 @@ TEST_P(OperatorsTableScanTest, SortedFlagMultipleChunksReferenced) {
   const auto segment = std::make_shared<ReferenceSegment>(table, ColumnID{0}, pos_list_1);
   ref_table->append_chunk({segment});
 
-  ref_table->get_chunk(ChunkID{0})->finalize();
+  ref_table->get_chunk(ChunkID{0})->set_immutable();
   ref_table->get_chunk(ChunkID{0})->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Ascending));
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(ref_table));
   table_wrapper->execute();

@@ -14,15 +14,15 @@ namespace hyrise {
 class ChangeMetaTableTest : public BaseTest {
  protected:
   void SetUp() override {
-    auto column_definitions = MetaMockTable().column_definitions();
-    auto mock_table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2});
+    const auto column_definitions = MetaMockTable().column_definitions();
+    const auto mock_table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2});
     mock_table->append({pmr_string{"foo"}});
-    left_input = std::make_shared<TableWrapper>(std::move(mock_table));
+    left_input = std::make_shared<TableWrapper>(mock_table);
     left_input->never_clear_output();
 
-    auto other_mock_table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2});
+    const auto other_mock_table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2});
     other_mock_table->append({pmr_string{"bar"}});
-    right_input = std::make_shared<TableWrapper>(std::move(other_mock_table));
+    right_input = std::make_shared<TableWrapper>(other_mock_table);
     right_input->never_clear_output();
 
     left_input->execute();
@@ -42,7 +42,7 @@ class ChangeMetaTableTest : public BaseTest {
 
 TEST_F(ChangeMetaTableTest, Insert) {
   auto change_meta_table =
-      std::make_shared<ChangeMetaTable>("meta_mock", MetaTableChangeType::Insert, left_input, right_input);
+      std::make_shared<ChangeMetaTable>("meta_mock", MetaTableChangeType::Insert, left_input, nullptr);
 
   change_meta_table->set_transaction_context(context);
   change_meta_table->execute();
@@ -50,12 +50,12 @@ TEST_F(ChangeMetaTableTest, Insert) {
   context->commit();
 
   EXPECT_EQ(meta_mock_table->insert_calls(), 1);
-  EXPECT_EQ(meta_mock_table->insert_values(), right_input->get_output()->get_row(0));
+  EXPECT_EQ(meta_mock_table->insert_values(), left_input->get_output()->get_row(0));
 }
 
 TEST_F(ChangeMetaTableTest, Delete) {
   auto change_meta_table =
-      std::make_shared<ChangeMetaTable>("meta_mock", MetaTableChangeType::Delete, left_input, right_input);
+      std::make_shared<ChangeMetaTable>("meta_mock", MetaTableChangeType::Delete, left_input, nullptr);
 
   change_meta_table->set_transaction_context(context);
   change_meta_table->execute();

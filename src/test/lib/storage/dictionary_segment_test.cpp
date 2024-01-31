@@ -200,7 +200,7 @@ TEST_F(StorageDictionarySegmentTest, FixedWidthIntegerMemoryUsageEstimation) {
       vs_int, DataType::Int, SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedWidthInteger});
   const auto dictionary_segment = std::dynamic_pointer_cast<DictionarySegment<int>>(compressed_segment);
 
-  static constexpr auto size_of_attribute = 1u;
+  static constexpr auto size_of_attribute = 1;
 
   EXPECT_GE(dictionary_segment->memory_usage(MemoryUsageCalculationMode::Sampled),
             empty_memory_usage + 3 * size_of_attribute);
