@@ -84,12 +84,12 @@ try {
             unity = '-DCMAKE_UNITY_BUILD=ON'
 
             // With Hyrise, we aim to support the most recent compiler versions and do not invest a lot of work to
-            // support older versions. We test the oldest LLVM version shipped with Ubuntu 23.10 (i.e., LLVM 13) and
+            // support older versions. We test the oldest LLVM version shipped with Ubuntu 23.10 (i.e., LLVM 14) and
             // GCC 11 (oldest version supported by Hyrise). We execute at least debug runs for them.
             // If you want to upgrade compiler versions, please update install_dependencies.sh,  DEPENDENCIES.md, and
             // the documentation (README, Wiki).
             clang = '-DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++'
-            clang13 = '-DCMAKE_C_COMPILER=clang-13 -DCMAKE_CXX_COMPILER=clang++-13'
+            clang14 = '-DCMAKE_C_COMPILER=clang-14 -DCMAKE_CXX_COMPILER=clang++-14'
             gcc = '-DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++'
             gcc11 = '-DCMAKE_C_COMPILER=gcc-11 -DCMAKE_CXX_COMPILER=g++-11'
 
@@ -115,7 +115,7 @@ try {
             mkdir clang-release && cd clang-release &&                                                   ${cmake} ${release}        ${clang}   ${unity} .. &\
             mkdir gcc-debug && cd gcc-debug &&                                                           ${cmake} ${debug}          ${gcc}     ${unity} .. &\
             mkdir gcc-release && cd gcc-release &&                                                       ${cmake} ${release}        ${gcc}     ${unity} .. &\
-            mkdir clang-13-debug && cd clang-13-debug &&                                                 ${cmake} ${debug}          ${clang13} ${unity} .. &\
+            mkdir clang-14-debug && cd clang-14-debug &&                                                 ${cmake} ${debug}          ${clang14} ${unity} .. &\
             mkdir gcc-11-debug && cd gcc-11-debug &&                                                     ${cmake} ${debug}          ${gcc11}            .. &\
             wait"
           }
@@ -125,10 +125,10 @@ try {
               sh "cd clang-debug && make all -j \$(( \$(nproc) / 5))"
               sh "./clang-debug/hyriseTest clang-debug"
             }
-          }, clang13Debug: {
-            stage("clang-13-debug") {
-              sh "cd clang-13-debug && make all -j \$(( \$(nproc) / 5))"
-              sh "./clang-13-debug/hyriseTest clang-13-debug"
+          }, clang14Debug: {
+            stage("clang-14-debug") {
+              sh "cd clang-14-debug && make all -j \$(( \$(nproc) / 5))"
+              sh "./clang-14-debug/hyriseTest clang-14-debug"
             }
           }, gccDebug: {
             stage("gcc-debug") {

@@ -2,19 +2,21 @@
 # You need to build and push it manually, see the wiki for details:
 # https://github.com/hyrise/hyrise/wiki/Docker-Image
 
+# While it would be desirable to use Python's virtual environments, they are not straightforward to use in Jenkins'
+# scripted pipelines.
+
 FROM ubuntu:23.10
 ENV DEBIAN_FRONTEND noninteractive
-ENV HYRISE_VENV_PATH "/hyrise_venv"
-ENV PATH "${HYRISE_VENV_PATH}/bin:$PATH"
 RUN apt-get update \
     && apt-get install -y \
         autoconf \
         bash-completion \
         bc \
-        clang-13 \
+        clang-14 \
         clang-17 \
-        clang-format \
-        clang-tidy \
+        clang-format-17 \
+        clang-tidy-17 \
+        clang-tools-17 \
         cmake \
         curl \
         dos2unix \
@@ -46,7 +48,6 @@ RUN apt-get update \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* \
     && ln -sf /usr/bin/llvm-symbolizer-14 /usr/bin/llvm-symbolizer \
-    && python3 -m venv "${HYRISE_VENV_PATH}/" \
     && pip3 install scipy pandas matplotlib # preload large Python packages (installs numpy and others)
 
 ENV HYRISE_HEADLESS_SETUP=true
