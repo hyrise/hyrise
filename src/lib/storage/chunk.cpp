@@ -35,7 +35,7 @@ Chunk::Chunk(Segments segments, const std::shared_ptr<MvccData>& mvcc_data,
 }
 
 bool Chunk::is_mutable() const {
-  return _is_mutable;
+  return _is_mutable.load();
 }
 
 void Chunk::replace_segment(size_t column_id, const std::shared_ptr<AbstractSegment>& segment) {
@@ -96,14 +96,15 @@ std::vector<std::shared_ptr<AbstractChunkIndex>> Chunk::get_indexes(
   return result;
 }
 
-void Chunk::finalize() {
-  Assert(is_mutable(), "Only mutable chunks can be finalized. Chunks cannot be finalized twice.");
-  _is_mutable = false;
+void Chunk::set_immutable() {
+  auto success = true;
+  Assert(_is_mutable.compare_exchange_strong(success, false), "Only mutable chunks can be set immutable.");
+  DebugAssert(success, "Value exchanged but value was actually false.");
 
-  // Only perform the max_begin_cid check if it hasn't already been set.
+  // Only perform the `max_begin_cid` check if it has not already been set.
   if (has_mvcc_data() && _mvcc_data->max_begin_cid.load() == MvccData::MAX_COMMIT_ID) {
     const auto chunk_size = size();
-    Assert(chunk_size > 0, "finalize() should not be called on an empty chunk.");
+    Assert(chunk_size > 0, "`set_immutable()` should not be called on an empty chunk.");
     auto max_begin_cid = CommitID{0};
     for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
       max_begin_cid = std::max(max_begin_cid, _mvcc_data->get_begin_cid(chunk_offset));
@@ -111,8 +112,7 @@ void Chunk::finalize() {
     set_atomic_max(_mvcc_data->max_begin_cid, max_begin_cid);
 
     Assert(_mvcc_data->max_begin_cid != MvccData::MAX_COMMIT_ID,
-           "max_begin_cid should not be MAX_COMMIT_ID when finalizing a chunk. This probably means the chunk was "
-           "finalized before all transactions committed/rolled back.");
+           "`max_begin_cid` should not be MAX_COMMIT_ID when marking a chunk as immutable.");
   }
 }
 
@@ -295,6 +295,32 @@ std::optional<CommitID> Chunk::get_cleanup_commit_id() const {
 void Chunk::set_cleanup_commit_id(const CommitID cleanup_commit_id) {
   Assert(!get_cleanup_commit_id(), "Cleanup-commit-ID can only be set once.");
   _cleanup_commit_id.store(cleanup_commit_id);
+}
+
+void Chunk::mark_as_full() {
+  Assert(!_reached_target_size, "Chunk should not be marked as full multiple times.");
+  _reached_target_size = true;
+}
+
+void Chunk::try_set_immutable() {
+  DebugAssert(_mvcc_data, "Expected to be executed with MVCC enabled.");
+  // Mark the chunk as immutable if (i) it reached the target size and a new chunk was added to the table, (ii) it is
+  // still mutable, and (iii) all pending Insert operators are either committed or rolled back. We do not have to set
+  // the `max_begin_cid` here because committed Insert operators already set it.
+  if (!_reached_target_size || !is_mutable() || _mvcc_data->pending_inserts() != 0) {
+    return;
+  }
+
+  // Mark chunk as immutable. `fetch_and() is only defined for integral types, so we use `compare_exchange_strong()`.
+  auto success = true;
+  if (_is_mutable.compare_exchange_strong(success, false)) {
+    // We were the first ones to mark the chunk as immutable. Thus, we have to take care of anything else that needs to
+    // be done. In the future, this can mean to start background statistics generation, encoding, etc.
+    Assert(success, "Value exchanged but value was actually false.");
+  } else {
+    // Another thread is about to mark this chunk as immutable. Do nothing.
+    Assert(!success, "Value not exchanged but value was actually true.");
+  }
 }
 
 }  // namespace hyrise

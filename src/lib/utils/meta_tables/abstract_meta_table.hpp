@@ -7,13 +7,12 @@
 namespace hyrise {
 
 /**
- * This is an abstract class for all meta table objects.
- * Meta tables are significantly different from normal tables.
+ * This is an abstract class for all meta table objects. Meta tables are significantly different from normal tables.
  * Information provided by the table is usually not persisted, but gathered on the fly.
  *
- * A meta table may provide methods for retrieving, inserting, deleting or updating.
- * Not all of these operations are allowed for all meta tables. Therefore, they also provide methods
- * that indicate whether the particular operation is allowed, e.g., can_insert().
+ * A meta table may provide methods for retrieving, inserting, deleting or updating. Not all of these operations are
+ * allowed for all meta tables. Therefore, they also provide methods that indicate whether the particular operation is
+ * allowed, e.g., `can_insert()`.
  *
  * Modifications of a meta table's values usually trigger some actions, like loading plugins.
  *
@@ -42,15 +41,14 @@ class AbstractMetaTable : public Noncopyable {
 
   virtual ~AbstractMetaTable() = default;
 
-  /*
-   * Generates the meta table on the fly by calling _on_generate().
-   * It finalizes the last chunk of the table and sets table statistics.
+  /**
+   * Generates the meta table on the fly by calling `_on_generate()`. It ensures that all chunks are immutable.
    */
   std::shared_ptr<Table> _generate() const;
 
-  /*
-   * Manipulates the meta table by calling _on_insert() / _on_remove.
-   * Additionally, checks if the input values match the column definitions.
+  /**
+   * Manipulates the meta table by calling `_on_insert()` / `_on_remove()`. Additionally, checks if the input values
+   * match the column definitions.
    */
   void _insert(const std::vector<AllTypeVariant>& values);
   void _remove(const std::vector<AllTypeVariant>& values);

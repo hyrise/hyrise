@@ -6,8 +6,12 @@
 
 #include "benchmark_config.hpp"
 #include "hyrise.hpp"
+#include "operators/insert.hpp"
+#include "operators/projection.hpp"
+#include "operators/table_wrapper.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/task_queue.hpp"
+#include "sql/sql_pipeline_builder.hpp"
 #include "tpch/tpch_constants.hpp"
 #include "tpch/tpch_table_generator.hpp"
 #include "utils/atomic_max.hpp"
@@ -22,10 +26,8 @@ class StressTest : public BaseTest {
   }
 
   const uint32_t CORES_PER_NODE = std::thread::hardware_concurrency();
-  const std::vector<std::vector<uint32_t>> FAKE_SINGLE_NODE_NUMA_TOPOLOGIES = {{CORES_PER_NODE},
-                                                                               {CORES_PER_NODE, 0, 0},
-                                                                               {0, CORES_PER_NODE, 0},
-                                                                               {0, 0, CORES_PER_NODE}};
+  const std::vector<std::vector<uint32_t>> FAKE_SINGLE_NODE_NUMA_TOPOLOGIES = {
+      {CORES_PER_NODE}, {CORES_PER_NODE, 0, 0}, {0, CORES_PER_NODE, 0}, {0, 0, CORES_PER_NODE}};
 
   const std::vector<std::vector<uint32_t>> FAKE_MULTI_NODE_NUMA_TOPOLOGIES = {{CORES_PER_NODE, CORES_PER_NODE, 0, 0},
                                                                               {0, CORES_PER_NODE, CORES_PER_NODE, 0},
@@ -35,9 +37,9 @@ class StressTest : public BaseTest {
 TEST_F(StressTest, TestTransactionConflicts) {
   // Update a table with two entries and a chunk size of 2. This will lead to a high number of transaction conflicts
   // and many chunks being created
-  auto table_a = load_table("resources/test_data/tbl/int_float.tbl", ChunkOffset{2});
+  const auto table_a = load_table("resources/test_data/tbl/int_float.tbl", ChunkOffset{2});
   Hyrise::get().storage_manager.add_table("table_a", table_a);
-  auto initial_sum = int64_t{};
+  auto initial_sum = int64_t{0};
 
   {
     auto pipeline = SQLPipelineBuilder{std::string{"SELECT SUM(a) FROM table_a"}}.create_pipeline();
@@ -45,15 +47,15 @@ TEST_F(StressTest, TestTransactionConflicts) {
     initial_sum = *verification_table->get_value<int64_t>(ColumnID{0}, 0);
   }
 
-  std::atomic_int successful_increments{0};
-  std::atomic_int conflicted_increments{0};
-  const auto iterations_per_thread = 20;
+  auto successful_increments = std::atomic_uint32_t{0};
+  auto conflicted_increments = std::atomic_uint32_t{0};
+  const auto iterations_per_thread = uint32_t{20};
 
   // Define the work package
   const auto run = [&]() {
-    int my_successful_increments{0};
-    int my_conflicted_increments{0};
-    for (auto iteration = 0; iteration < iterations_per_thread; ++iteration) {
+    auto my_successful_increments = uint32_t{0};
+    auto my_conflicted_increments = uint32_t{0};
+    for (auto iteration = uint32_t{0}; iteration < iterations_per_thread; ++iteration) {
       const std::string sql = "UPDATE table_a SET a = a + 1 WHERE a = (SELECT MIN(a) FROM table_a);";
       auto pipeline = SQLPipelineBuilder{sql}.create_pipeline();
       const auto [status, _] = pipeline.get_result_table();
@@ -67,21 +69,21 @@ TEST_F(StressTest, TestTransactionConflicts) {
     conflicted_increments += my_conflicted_increments;
   };
 
-  // Create the async objects and spawn them asynchronously (i.e., as their own threads)
+  // Create the async objects and spawn them asynchronously (i.e., as their own threads).
   // Note that async has a bunch of issues:
   //  - https://stackoverflow.com/questions/12508653/what-is-the-issue-with-stdasync
   //  - Mastering the C++17 STL, pages 205f
   // TODO(anyone): Change this to proper threads+futures, or at least do not reuse this code.
   const auto num_threads = uint32_t{100};
-  std::vector<std::future<void>> thread_futures;
+  auto thread_futures = std::vector<std::future<void>>{};
   thread_futures.reserve(num_threads);
 
   for (auto thread_num = uint32_t{0}; thread_num < num_threads; ++thread_num) {
-    // We want a future to the thread running, so we can kill it after a future.wait(timeout) or the test would freeze
+    // We want a future to the thread running, so we can kill it after a future.wait(timeout) or the test would freeze.
     thread_futures.emplace_back(std::async(std::launch::async, run));
   }
 
-  // Wait for completion or timeout (should not occur)
+  // Wait for completion or timeout (should not occur).
   for (auto& thread_future : thread_futures) {
     // We give this a lot of time, not because we usually need that long for 100 threads to finish, but because
     // sanitizers and other tools like valgrind sometimes bring a high overhead.
@@ -93,7 +95,7 @@ TEST_F(StressTest, TestTransactionConflicts) {
   }
 
   // Verify results
-  auto final_sum = int64_t{};
+  auto final_sum = int64_t{0};
   {
     auto pipeline = SQLPipelineBuilder{std::string{"SELECT SUM(a) FROM table_a"}}.create_pipeline();
     const auto [_, verification_table] = pipeline.get_result_table();
@@ -112,19 +114,19 @@ TEST_F(StressTest, TestTransactionInsertsSmallChunks) {
   // different from TestTransactionConflicts, in that each thread has its own logical row and no transaction
   // conflicts occur. In the other test, a failed "mark for deletion" (i.e., swap of the row's tid) would lead to
   // no row being appended.
-  TableColumnDefinitions column_definitions;
+  auto column_definitions = TableColumnDefinitions{};
   column_definitions.emplace_back("a", DataType::Int, false);
   column_definitions.emplace_back("b", DataType::Int, false);
   const auto table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{3}, UseMvcc::Yes);
   Hyrise::get().storage_manager.add_table("table_b", table);
 
-  const auto iterations_per_thread = 20;
+  const auto iterations_per_thread = uint32_t{20};
 
   // Define the work package - the job id is used so that each thread has its own logical row to work on
-  std::atomic_int job_id{0};
+  auto job_id = std::atomic_uint32_t{0};
   const auto run = [&]() {
     const auto my_job_id = job_id++;
-    for (auto iteration = 0; iteration < iterations_per_thread; ++iteration) {
+    for (auto iteration = uint32_t{0}; iteration < iterations_per_thread; ++iteration) {
       auto pipeline =
           SQLPipelineBuilder{
               iteration == 0 ? std::string{"INSERT INTO table_b (a, b) VALUES ("} + std::to_string(my_job_id) + ", 1)"
@@ -136,11 +138,11 @@ TEST_F(StressTest, TestTransactionInsertsSmallChunks) {
   };
 
   // Create the async objects and spawn them asynchronously (i.e., as their own threads)
-  const auto num_threads = 100u;
-  std::vector<std::future<void>> thread_futures;
+  const auto num_threads = uint32_t{100};
+  auto thread_futures = std::vector<std::future<void>>{};
   thread_futures.reserve(num_threads);
 
-  for (auto thread_num = 0u; thread_num < num_threads; ++thread_num) {
+  for (auto thread_num = uint32_t{0}; thread_num < num_threads; ++thread_num) {
     // We want a future to the thread running, so we can kill it after a future.wait(timeout) or the test would freeze
     thread_futures.emplace_back(std::async(std::launch::async, run));
   }
@@ -150,7 +152,7 @@ TEST_F(StressTest, TestTransactionInsertsSmallChunks) {
     // We give this a lot of time, not because we usually need that long for 100 threads to finish, but because
     // sanitizers and other tools like valgrind sometimes bring a high overhead.
     if (thread_future.wait_for(std::chrono::seconds(600)) == std::future_status::timeout) {
-      ASSERT_TRUE(false) << "At least one thread got stuck and did not commit.";
+      FAIL() << "At least one thread got stuck and did not commit.";
     }
     // Retrieve the future so that exceptions stored in its state are thrown
     thread_future.get();
@@ -168,19 +170,19 @@ TEST_F(StressTest, TestTransactionInsertsPackedNullValues) {
   // As ValueSegments store their null flags in a vector<bool>, which is not safe to be modified concurrently,
   // conflicts may (and have) occurred when that vector was written without any type of protection.
 
-  TableColumnDefinitions column_definitions;
+  auto column_definitions = TableColumnDefinitions{};
   column_definitions.emplace_back("a", DataType::Int, false);
   column_definitions.emplace_back("b", DataType::Int, true);
   const auto table = std::make_shared<Table>(column_definitions, TableType::Data, Chunk::DEFAULT_SIZE, UseMvcc::Yes);
   Hyrise::get().storage_manager.add_table("table_c", table);
 
-  const auto iterations_per_thread = 200;
+  const auto iterations_per_thread = uint32_t{200};
 
-  // Define the work package - each job writes a=job_id, b=(NULL or 1, depending on job_id)
-  std::atomic_int job_id{0};
+  // Define the work package - each job writes a=job_id, b=(NULL or 1, depending on job_id).
+  auto job_id = std::atomic_uint32_t{0};
   const auto run = [&]() {
     const auto my_job_id = job_id++;
-    for (auto iteration = 0; iteration < iterations_per_thread; ++iteration) {
+    for (auto iteration = uint32_t{0}; iteration < iterations_per_thread; ++iteration) {
       // b is set to NULL by half of the jobs.
       auto pipeline = SQLPipelineBuilder{std::string{"INSERT INTO table_c (a, b) VALUES ("} +
                                          std::to_string(my_job_id) + ", " + (my_job_id % 2 ? "NULL" : "1") + ")"}
@@ -190,12 +192,12 @@ TEST_F(StressTest, TestTransactionInsertsPackedNullValues) {
     }
   };
 
-  // Create the async objects and spawn them asynchronously (i.e., as their own threads)
-  const auto num_threads = 20u;
-  std::vector<std::future<void>> thread_futures;
+  // Create the async objects and spawn them asynchronously (i.e., as their own threads).
+  const auto num_threads = uint32_t{20};
+  auto thread_futures = std::vector<std::future<void>>{};
   thread_futures.reserve(num_threads);
 
-  for (auto thread_num = 0u; thread_num < num_threads; ++thread_num) {
+  for (auto thread_num = uint32_t{0}; thread_num < num_threads; ++thread_num) {
     // We want a future to the thread running, so we can kill it after a future.wait(timeout) or the test would freeze
     thread_futures.emplace_back(std::async(std::launch::async, run));
   }
@@ -205,7 +207,7 @@ TEST_F(StressTest, TestTransactionInsertsPackedNullValues) {
     // We give this a lot of time, not because we usually need that long for 100 threads to finish, but because
     // sanitizers and other tools like valgrind sometimes bring a high overhead.
     if (thread_future.wait_for(std::chrono::seconds(600)) == std::future_status::timeout) {
-      ASSERT_TRUE(false) << "At least one thread got stuck and did not commit.";
+      FAIL() << "At least one thread got stuck and did not commit.";
     }
     // Retrieve the future so that exceptions stored in its state are thrown
     thread_future.get();
@@ -294,7 +296,6 @@ TEST_F(StressTest, NodeQueueSchedulerCreationAndReset) {
     EXPECT_EQ(node_queue_scheduler->active_worker_count().load(), 0);
   }
 }
-
 
 // Check that spawned jobs increment the semaphore correctly.
 // First, create jobs but not schedule them to check if semaphore is zero. Second, we spwan blocked jobs and check the
@@ -462,11 +463,11 @@ TEST_F(StressTest, AtomicMaxConcurrentUpdate) {
   threads.reserve(thread_count);
 
   for (auto thread_id = uint32_t{1}; thread_id <= thread_count; ++thread_id) {
-    threads.emplace_back(std::thread{[thread_id, &counter]() {
+    threads.emplace_back([thread_id, &counter]() {
       for (auto i = uint32_t{1}; i <= repetitions; ++i) {
         set_atomic_max(counter, thread_id + i);
       }
-    }});
+    });
   }
 
   for (auto& thread : threads) {
@@ -475,6 +476,68 @@ TEST_F(StressTest, AtomicMaxConcurrentUpdate) {
 
   // Highest thread ID is 100, 1'000 repetitions. 100 + 1'000 = 1'100.
   EXPECT_EQ(counter.load(), 1'100);
+}
+
+// Insert operators automatically mark chunks as immutable when they are full and the operator (i) appends a new chunk
+// and all other Inserts finished or (ii) they finish (commit/roll back) and are the last pending Insert operator for
+// this chunk. To test all of these cases in a stress test, we let threads concurrently insert and commit/roll back.
+TEST_F(StressTest, ConcurrentInsertsSetChunksImmutable) {
+  const auto table = std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Int, false}}, TableType::Data,
+                                             ChunkOffset{3}, UseMvcc::Yes);
+  Hyrise::get().storage_manager.add_table("table_a", table);
+
+  const auto values_to_insert =
+      std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Int, false}}, TableType::Data);
+  values_to_insert->append({int32_t{1}});
+  values_to_insert->append({int32_t{1}});
+
+  const auto thread_count = uint32_t{100};
+  const auto insert_count = uint32_t{301};
+  auto threads = std::vector<std::thread>{};
+  threads.reserve(thread_count);
+
+  for (auto thread_id = uint32_t{0}; thread_id < thread_count; ++thread_id) {
+    threads.emplace_back([&]() {
+      for (auto iteration = uint32_t{0}; iteration < insert_count; ++iteration) {
+        const auto table_wrapper = std::make_shared<TableWrapper>(values_to_insert);
+        const auto insert = std::make_shared<Insert>("table_a", table_wrapper);
+
+        // Commit only 50% of transactions. Thus, there should be committed and rolled back operators that both mark
+        // chunks as immutable.
+        const auto do_commit = iteration % 2 == 0;
+        const auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
+        insert->set_transaction_context(transaction_context);
+        table_wrapper->execute();
+        insert->execute();
+        EXPECT_FALSE(insert->execute_failed());
+        if (do_commit) {
+          transaction_context->commit();
+        } else {
+          transaction_context->rollback(RollbackReason::User);
+        }
+      }
+    });
+  }
+
+  for (auto& thread : threads) {
+    thread.join();
+  }
+
+  // 100 threads * 301 insertions * 2 values = 60'200 tuples in 20'067 chunks with chunk size 3.
+  EXPECT_EQ(table->row_count(), 60'200);
+  EXPECT_EQ(table->chunk_count(), 20'067);
+
+  // Only the final chunk is not full and not immutable.
+  const auto immutable_chunk_count = table->chunk_count() - 1;
+  for (auto chunk_id = ChunkID{0}; chunk_id < immutable_chunk_count; ++chunk_id) {
+    const auto& chunk = table->get_chunk(chunk_id);
+    ASSERT_TRUE(chunk);
+    EXPECT_EQ(chunk->size(), 3);
+    EXPECT_FALSE(chunk->is_mutable());
+  }
+
+  EXPECT_EQ(table->last_chunk()->size(), 2);
+  EXPECT_TRUE(table->last_chunk()->is_mutable());
 }
 
 }  // namespace hyrise

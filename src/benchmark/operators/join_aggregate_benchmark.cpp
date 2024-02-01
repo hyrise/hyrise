@@ -123,7 +123,7 @@ std::shared_ptr<TableWrapper> create_zip_table(const size_t table_size) {
   const auto chunk_count = zip_table->chunk_count();
   for (auto chunk_index = ChunkID{0}; chunk_index < chunk_count; ++chunk_index) {
     auto chunk = zip_table->get_chunk(chunk_index);
-    chunk->finalize();
+    chunk->set_immutable();
     chunk->set_individually_sorted_by({SortColumnDefinition(ColumnID{0}, SortMode::Ascending),
                                        SortColumnDefinition(ColumnID{1}, SortMode::Ascending)});
   }
@@ -139,7 +139,7 @@ std::shared_ptr<TableWrapper> create_ages_table(const size_t table_size) {
   const auto chunk_count = ages_table->chunk_count();
   for (auto chunk_index = ChunkID{0}; chunk_index < chunk_count; ++chunk_index) {
     auto chunk = ages_table->get_chunk(chunk_index);
-    chunk->finalize();
+    chunk->set_immutable();
     chunk->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Ascending));
   }
 
