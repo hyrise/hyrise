@@ -77,7 +77,7 @@ using RadixContainer = std::vector<Partition<T>>;
 // hashmap (think map<HashedType, PosList>), we store an offset - thus OffsetHashTable. This keeps the hashmap small and
 // makes it easier to cache. The PosHashTable has a separate build and probe phase. In the build phase, the
 // OffsetHashTable and the corresponding SmallPosLists (see below) are filled. If the SmallPosLists allocated heap
-// storage, it is scattered across the heap and likely to be over-allocated. By calling finalize(), we compress them
+// storage, it is scattered across the heap and likely to be over-allocated. By calling `finalize()`, we compress them
 // into a single, contiguous RowIDPosList. This significantly reduces the memory footprint and thus improves the cache
 // behavior of the following probe phase. In the probe phase, the find() method returns a pair of pointers to the range
 // in the compressed RowIDPosList. This is comparable to the interface of std::equal_range.
@@ -164,8 +164,9 @@ class PosHashTable {
   // For a value seen on the probe side, return an iterator pair into the matching positions on the build side
   template <typename InputType>
   const std::pair<RowIDPosList::const_iterator, RowIDPosList::const_iterator> find(const InputType& value) const {
-    DebugAssert(_mode == JoinHashBuildMode::AllPositions, "find is invalid for ExistenceOnly mode, use contains");
-    DebugAssert(_unified_pos_list, "_unified_pos_list not set - was finalize called?");
+    DebugAssert(_mode == JoinHashBuildMode::AllPositions,
+                "`find()` is invalid for ExistenceOnly mode, use `contains()`.");
+    DebugAssert(_unified_pos_list, "_unified_pos_list not set - was `finalize()` called?");
 
     const auto casted_value = static_cast<HashedType>(value);
     const auto hash_table_iter = _offset_hash_table.find(casted_value);
@@ -498,7 +499,7 @@ std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<
   }
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
 
-  // If radix partitioning is used, finalize is called above.
+  // If radix partitioning is used, `finalize()` is called above.
   if (radix_bits == 0) {
     hash_tables[0]->finalize();
   }

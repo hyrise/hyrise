@@ -20,7 +20,7 @@ bool MetaSettingsTable::can_update() const {
 }
 
 std::shared_ptr<Table> MetaSettingsTable::_on_generate() const {
-  auto output_table = std::make_shared<Table>(_column_definitions, TableType::Data, std::nullopt, UseMvcc::Yes);
+  auto output_table = std::make_shared<Table>(_column_definitions, TableType::Data);
   const auto setting_names = Hyrise::get().settings_manager.setting_names();
 
   for (const auto& setting_name : setting_names) {
