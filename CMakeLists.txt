@@ -77,16 +77,6 @@ if (${ENABLE_THREAD_SANITIZATION})
     set(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=thread")
 endif()
 
-# Enable memory sanitization if requested
-option(ENABLE_MEMORY_SANITIZATION "Set to ON to build Hyrise with MSAN enabled. Default: OFF" OFF)
-if (${ENABLE_MEMORY_SANITIZATION})
-    # add_compile_options() wants list, CMAKE_EXE_LINKER_FLAGS a string. There are probably cleverer ways than
-    # duplicating the flags, but this is probably the simplest solution.
-    add_compile_options(-fsanitize=memory -O1)
-    add_link_options(-fsanitize=memory)
-    set(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=memory")
-endif()
-
 # Set default build type if none was passed on the command line
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "Debug")
