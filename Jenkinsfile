@@ -84,12 +84,12 @@ try {
             unity = '-DCMAKE_UNITY_BUILD=ON'
 
             // With Hyrise, we aim to support the most recent compiler versions and do not invest a lot of work to
-            // support older versions. We test LLVM 14 (oldest LLVM version shipped with Ubuntu 23.10 that works with
+            // support older versions. We test LLVM 15 (oldest LLVM version shipped with Ubuntu 23.10 that works with
             // more recent libstdc++ versions) and GCC 11 (oldest version supported by Hyrise). We execute at least
             // debug runs for them. If you want to upgrade compiler versions, please update install_dependencies.sh,
             // DEPENDENCIES.md, and the documentation (README, Wiki).
             clang = '-DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++'
-            clang14 = '-DCMAKE_C_COMPILER=clang-14 -DCMAKE_CXX_COMPILER=clang++-14'
+            clang15 = '-DCMAKE_C_COMPILER=clang-15 -DCMAKE_CXX_COMPILER=clang++-15'
             gcc = '-DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++'
             gcc11 = '-DCMAKE_C_COMPILER=gcc-11 -DCMAKE_CXX_COMPILER=g++-11'
 
@@ -115,7 +115,7 @@ try {
             mkdir clang-release && cd clang-release &&                                                   ${cmake} ${release}        ${clang}   ${unity} .. &\
             mkdir gcc-debug && cd gcc-debug &&                                                           ${cmake} ${debug}          ${gcc}     ${unity} .. &\
             mkdir gcc-release && cd gcc-release &&                                                       ${cmake} ${release}        ${gcc}     ${unity} .. &\
-            mkdir clang-14-debug && cd clang-14-debug &&                                                 ${cmake} ${debug}          ${clang14} ${unity} .. &\
+            mkdir clang-15-debug && cd clang-15-debug &&                                                 ${cmake} ${debug}          ${clang15} ${unity} .. &\
             mkdir gcc-11-debug && cd gcc-11-debug &&                                                     ${cmake} ${debug}          ${gcc11}            .. &\
             wait"
           }
@@ -125,10 +125,10 @@ try {
               sh "cd clang-debug && make all -j \$(( \$(nproc) / 5))"
               sh "./clang-debug/hyriseTest clang-debug"
             }
-          }, clang14Debug: {
-            stage("clang-14-debug") {
-              sh "cd clang-14-debug && make all -j \$(( \$(nproc) / 5))"
-              sh "./clang-14-debug/hyriseTest clang-14-debug"
+          }, clang15Debug: {
+            stage("clang-15-debug") {
+              sh "cd clang-15-debug && make all -j \$(( \$(nproc) / 5))"
+              sh "./clang-15-debug/hyriseTest clang-15-debug"
             }
           }, gccDebug: {
             stage("gcc-debug") {
@@ -316,9 +316,7 @@ try {
 
           parallel memcheckReleaseTest: {
             stage("memcheckReleaseTest") {
-              // Runs after the other sanitizers as it depends on gcc-release to be built. With #2402, valgrind now
-              // uses the GCC build instead of the clang build as there are issues with valgrind and the debug symbols
-              // of clang 14 (https://bugs.kde.org/show_bug.cgi?id=452758).
+              // Runs after the other sanitizers as it depends on clang-release to be built.
               if (env.BRANCH_NAME == 'master' || full_ci) {
                 sh "mkdir ./clang-release-memcheck-test"
                 // If this shows a leak, try --leak-check=full, which is slower but more precise
@@ -410,7 +408,7 @@ try {
               sh "./clang-apple-debug/hyriseTest"
 
               // Build Hyrise with a recent clang compiler version (as recommended for Hyrise on macOS) and run various tests.
-              sh "mkdir clang-debug && cd clang-debug && /usr/local/bin/cmake ${debug} ${unity} -DCMAKE_C_COMPILER=/usr/local/opt/llvm@16/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm@16/bin/clang++ .."
+              sh "mkdir clang-debug && cd clang-debug && /usr/local/bin/cmake ${debug} ${unity} -DCMAKE_C_COMPILER=/usr/local/opt/llvm@17/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm@17/bin/clang++ .."
               sh "cd clang-debug && make -j \$(sysctl -n hw.logicalcpu)"
               sh "./clang-debug/hyriseTest"
               sh "./clang-debug/hyriseSystemTest --gtest_filter=\"-TPCCTest*:TPCDSTableGeneratorTest.*:TPCHTableGeneratorTest.RowCountsMediumScaleFactor:*.CompareToSQLite/Line1*WithLZ4\""
@@ -444,7 +442,7 @@ try {
 
             // Build Hyrise with a recent clang compiler version (as recommended for Hyrise on macOS) and run various tests.
             // NOTE: These paths differ from x64 - brew on ARM uses /opt (https://docs.brew.sh/Installation)
-            sh "mkdir clang-release && cd clang-release && cmake ${release} -DCMAKE_C_COMPILER=/opt/homebrew/opt/llvm@16/bin/clang -DCMAKE_CXX_COMPILER=/opt/homebrew/opt/llvm@16/bin/clang++ .."
+            sh "mkdir clang-release && cd clang-release && cmake ${release} -DCMAKE_C_COMPILER=/opt/homebrew/opt/llvm@17/bin/clang -DCMAKE_CXX_COMPILER=/opt/homebrew/opt/llvm@17/bin/clang++ .."
             sh "cd clang-release && make -j \$(sysctl -n hw.logicalcpu)"
 
             // Check whether arm64 binaries are built to ensure that we are not accidentally running rosetta that
