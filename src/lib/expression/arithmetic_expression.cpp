@@ -1,12 +1,14 @@
 #include "arithmetic_expression.hpp"
 
+#include <cstddef>
+#include <memory>
+#include <ostream>
 #include <sstream>
-
-#include <boost/container_hash/hash.hpp>
 
 #include "expression_utils.hpp"
 #include "expression/abstract_expression.hpp"
 #include "operators/abstract_operator.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {
@@ -72,7 +74,7 @@ bool ArithmeticExpression::_shallow_equals(const AbstractExpression& expression)
 }
 
 size_t ArithmeticExpression::_shallow_hash() const {
-  return boost::hash_value(static_cast<size_t>(arithmetic_operator));
+  return std::hash<size_t>{}(static_cast<size_t>(arithmetic_operator));
 }
 
 bool ArithmeticExpression::_on_is_nullable_on_lqp(const AbstractLQPNode& lqp) const {

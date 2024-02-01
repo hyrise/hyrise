@@ -2,7 +2,6 @@
 
 #include <sstream>
 
-#include <boost/container_hash/hash.hpp>
 #include "expression/evaluation/expression_evaluator.hpp"
 
 namespace hyrise {
@@ -57,7 +56,7 @@ bool LogicalExpression::_shallow_equals(const AbstractExpression& expression) co
 }
 
 size_t LogicalExpression::_shallow_hash() const {
-  return boost::hash_value(static_cast<size_t>(logical_operator));
+  return std::hash<size_t>{}(static_cast<size_t>(logical_operator));
 }
 
 ExpressionPrecedence LogicalExpression::_precedence() const {

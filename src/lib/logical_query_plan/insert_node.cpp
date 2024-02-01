@@ -1,6 +1,7 @@
 #include "insert_node.hpp"
 
 #include <algorithm>
+#include <cstddef>
 #include <memory>
 #include <sstream>
 #include <string>
@@ -14,15 +15,13 @@ InsertNode::InsertNode(const std::string& init_table_name)
     : AbstractNonQueryNode(LQPNodeType::Insert), table_name(init_table_name) {}
 
 std::string InsertNode::description(const DescriptionMode /*mode*/) const {
-  std::ostringstream desc;
-
+  auto desc = std::ostringstream{};
   desc << "[Insert] Into table '" << table_name << "'";
-
   return desc.str();
 }
 
 size_t InsertNode::_on_shallow_hash() const {
-  return boost::hash_value(table_name);
+  return std::hash<std::string>{}(table_name);
 }
 
 std::shared_ptr<AbstractLQPNode> InsertNode::_on_shallow_copy(LQPNodeMapping& /*node_mapping*/) const {

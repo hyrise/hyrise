@@ -2,8 +2,6 @@
 
 #include <sstream>
 
-#include <boost/container_hash/hash.hpp>
-
 #include "expression_utils.hpp"
 #include "lqp_column_expression.hpp"
 #include "operators/aggregate/window_function_traits.hpp"
@@ -165,7 +163,7 @@ bool WindowFunctionExpression::_shallow_equals(const AbstractExpression& express
 }
 
 size_t WindowFunctionExpression::_shallow_hash() const {
-  return boost::hash_value(static_cast<size_t>(window_function));
+  return std::hash<size_t>{}(static_cast<size_t>(window_function));
 }
 
 bool WindowFunctionExpression::_on_is_nullable_on_lqp(const AbstractLQPNode& /*lqp*/) const {

@@ -64,7 +64,7 @@ bool FunctionExpression::_shallow_equals(const AbstractExpression& expression) c
 }
 
 size_t FunctionExpression::_shallow_hash() const {
-  return boost::hash_value(static_cast<size_t>(function_type));
+  return std::hash<size_t>{}(static_cast<size_t>(function_type));
 }
 
 std::ostream& operator<<(std::ostream& stream, const FunctionType function_type) {

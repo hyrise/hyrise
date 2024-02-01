@@ -33,7 +33,8 @@ bool UccCandidate::operator!=(const UccCandidate& other) const {
 }
 
 size_t UccCandidate::hash() const {
-  auto hash = boost::hash_value(table_name);
+  auto hash = size_t{0};
+  boost::hash_combine(hash, table_name);
   boost::hash_combine(hash, column_id);
   return hash;
 }

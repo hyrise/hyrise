@@ -1,5 +1,10 @@
 #include "drop_table_node.hpp"
 
+#include <cstddef>
+#include <string>
+
+#include "types.hpp"
+
 namespace hyrise {
 
 DropTableNode::DropTableNode(const std::string& init_table_name, const bool init_if_exists)
@@ -10,7 +15,8 @@ std::string DropTableNode::description(const DescriptionMode /*mode*/) const {
 }
 
 size_t DropTableNode::_on_shallow_hash() const {
-  auto hash = boost::hash_value(table_name);
+  auto hash = size_t{0};
+  boost::hash_combine(hash, table_name);
   boost::hash_combine(hash, if_exists);
   return hash;
 }

@@ -163,7 +163,7 @@ class AnySegmentIterator : public AbstractSegmentIterator<AnySegmentIterator<T>,
   }
 
  private:
-  std::unique_ptr<detail::AnySegmentIteratorWrapperBase<T>> _wrapper;
+  std::unique_ptr<hyrise::detail::AnySegmentIteratorWrapperBase<T>> _wrapper;
 };
 
 }  // namespace hyrise

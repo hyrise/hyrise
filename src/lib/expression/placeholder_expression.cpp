@@ -5,8 +5,6 @@
 #include <string>
 #include <type_traits>
 
-#include <boost/functional/hash.hpp>
-
 #include "expression/abstract_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "resolve_type.hpp"
@@ -44,7 +42,7 @@ bool PlaceholderExpression::_shallow_equals(const AbstractExpression& expression
 }
 
 size_t PlaceholderExpression::_shallow_hash() const {
-  return boost::hash_value(static_cast<ParameterID::base_type>(parameter_id));
+  return std::hash<ParameterID::base_type>{}(static_cast<ParameterID::base_type>(parameter_id));
 }
 
 bool PlaceholderExpression::_on_is_nullable_on_lqp(const AbstractLQPNode& /*lqp*/) const {

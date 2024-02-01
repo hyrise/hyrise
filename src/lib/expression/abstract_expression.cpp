@@ -1,11 +1,13 @@
 #include "abstract_expression.hpp"
 
+#include <memory>
 #include <queue>
 #include <string>
-
-#include <boost/container_hash/hash.hpp>
+#include <vector>
+#include <unordered_map>
 
 #include "expression_utils.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {
@@ -64,7 +66,8 @@ bool AbstractExpression::operator!=(const AbstractExpression& other) const {
 }
 
 size_t AbstractExpression::hash() const {
-  auto hash = boost::hash_value(type);
+  auto hash = size_t{0};
+  boost::hash_combine(hash, type);
   for (const auto& argument : arguments) {
     // Include the hash value of the inputs, but do not recurse any deeper. We will have to perform a deep comparison
     // anyway.

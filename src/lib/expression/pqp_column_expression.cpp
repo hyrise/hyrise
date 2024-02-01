@@ -1,6 +1,6 @@
 #include "pqp_column_expression.hpp"
 
-#include <boost/container_hash/hash.hpp>
+#include <boost/functional/hash.hpp>
 
 #include "storage/table.hpp"
 
@@ -51,7 +51,7 @@ bool PQPColumnExpression::_shallow_equals(const AbstractExpression& expression) 
 }
 
 size_t PQPColumnExpression::_shallow_hash() const {
-  return boost::hash_value(static_cast<size_t>(column_id));
+  return std::hash<size_t>{}(static_cast<size_t>(column_id));
 }
 
 bool PQPColumnExpression::_on_is_nullable_on_lqp(const AbstractLQPNode& /*lqp*/) const {

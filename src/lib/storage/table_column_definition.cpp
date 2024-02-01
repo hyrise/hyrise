@@ -11,7 +11,8 @@ bool TableColumnDefinition::operator==(const TableColumnDefinition& rhs) const {
 }
 
 size_t TableColumnDefinition::hash() const {
-  auto hash = boost::hash_value(name);
+  auto hash = size_t{0};
+  boost::hash_combine(hash, name);
   boost::hash_combine(hash, data_type);
   boost::hash_combine(hash, nullable);
   return hash;

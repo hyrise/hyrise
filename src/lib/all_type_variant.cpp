@@ -4,7 +4,7 @@
 #include <functional>
 #include <ostream>
 
-#include <boost/functional/hash.hpp>
+#include <boost/variant/detail/hash_variant.hpp>
 
 #include "types.hpp"
 

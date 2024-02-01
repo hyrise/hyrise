@@ -4,7 +4,7 @@
 #include <memory>
 #include <vector>
 
-#include <boost/functional/hash.hpp>
+#include <boost/variant/detail/hash_variant.hpp>
 
 #include "expression/abstract_expression.hpp"
 #include "expression/evaluation/expression_evaluator.hpp"
@@ -29,7 +29,7 @@ bool AbstractPredicateExpression::_shallow_equals(const AbstractExpression& expr
 }
 
 size_t AbstractPredicateExpression::_shallow_hash() const {
-  return boost::hash_value(static_cast<size_t>(predicate_condition));
+  return std::hash<size_t>{}(static_cast<size_t>(predicate_condition));
 }
 
 }  // namespace hyrise
