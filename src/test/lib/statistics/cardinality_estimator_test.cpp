@@ -848,6 +848,30 @@ TEST_F(CardinalityEstimatorTest, StoredTable) {
   EXPECT_EQ(estimator.estimate_cardinality(StoredTableNode::make("t")), 3);
 }
 
+TEST_F(CardinalityEstimatorTest, StaticTable) {
+  const auto table = load_table("resources/test_data/tbl/int.tbl");
+  const auto static_table_node = StaticTableNode::make(table);
+
+  // Case (i): No statistics available, create dummy statistics.
+  const auto dummy_statistics = estimator.estimate_statistics(static_table_node);
+  EXPECT_FLOAT_EQ(dummy_statistics->row_count, 3.0f);
+  ASSERT_EQ(dummy_statistics->column_statistics.size(), 1);
+  ASSERT_EQ(dummy_statistics->column_statistics[0]->data_type, DataType::Int);
+
+  const auto& attribute_statistics =
+      static_cast<const AttributeStatistics<int32_t>&>(*dummy_statistics->column_statistics[0]);
+  EXPECT_FALSE(attribute_statistics.histogram);
+  EXPECT_FALSE(attribute_statistics.min_max_filter);
+  EXPECT_FALSE(attribute_statistics.range_filter);
+  EXPECT_FALSE(attribute_statistics.null_value_ratio);
+  EXPECT_FALSE(attribute_statistics.distinct_value_count);
+
+  // Case (ii): Statistics available, simply forward them.
+  table->set_table_statistics(TableStatistics::from_table(*table));
+  const auto forwarded_statistics = estimator.estimate_statistics(static_table_node);
+  EXPECT_EQ(forwarded_statistics, table->table_statistics());
+}
+
 TEST_F(CardinalityEstimatorTest, Validate) {
   // Test Validate doesn't break the TableStatistics. The CardinalityEstimator is not estimating anything for Validate
   // as there are no statistics available atm to base such an estimation on.

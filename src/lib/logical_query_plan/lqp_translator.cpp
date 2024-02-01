@@ -130,7 +130,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_node_recursively(
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_by_node_type(
     LQPNodeType type, const std::shared_ptr<AbstractLQPNode>& node) const {
   switch (type) {
-    // clang-format off
+      // clang-format off
     case LQPNodeType::Aggregate:          return _translate_aggregate_node(node);
     case LQPNodeType::Alias:              return _translate_alias_node(node);
     case LQPNodeType::ChangeMetaTable:    return _translate_change_meta_table_node(node);
@@ -159,7 +159,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_by_node_type(
     case LQPNodeType::Import:             return _translate_import_node(node);
     case LQPNodeType::Export:             return _translate_export_node(node);
     case LQPNodeType::CreatePreparedPlan: return _translate_create_prepared_plan_node(node);
-    // clang-format on
+      // clang-format on
 
     default:
       Fail("Unknown node type encountered.");
@@ -519,11 +519,15 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_window_node(
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_change_meta_table_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
-  const auto input_operator_left = _translate_node_recursively(node->left_input());
-  const auto input_operator_right = _translate_node_recursively(node->right_input());
-  const auto change_meta_table_node = std::dynamic_pointer_cast<ChangeMetaTableNode>(node);
-  return std::make_shared<ChangeMetaTable>(change_meta_table_node->table_name, change_meta_table_node->change_type,
-                                           input_operator_left, input_operator_right);
+  const auto left_input_operator = _translate_node_recursively(node->left_input());
+  auto right_input_operator = std::shared_ptr<AbstractOperator>{};
+  const auto& right_input_node = node->right_input();
+  if (right_input_node) {
+    right_input_operator = _translate_node_recursively(node->right_input());
+  }
+  const auto& change_meta_table_node = static_cast<const ChangeMetaTableNode&>(*node);
+  return std::make_shared<ChangeMetaTable>(change_meta_table_node.table_name, change_meta_table_node.change_type,
+                                           left_input_operator, right_input_operator);
 }
 
 // NOLINTNEXTLINE - while this particular method could be made static, others cannot.

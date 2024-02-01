@@ -22,7 +22,7 @@ bool MetaPluginsTable::can_delete() const {
 }
 
 std::shared_ptr<Table> MetaPluginsTable::_on_generate() const {
-  auto output_table = std::make_shared<Table>(_column_definitions, TableType::Data, std::nullopt, UseMvcc::Yes);
+  auto output_table = std::make_shared<Table>(_column_definitions, TableType::Data);
 
   for (const auto& plugin : Hyrise::get().plugin_manager.loaded_plugins()) {
     output_table->append({pmr_string{plugin}});

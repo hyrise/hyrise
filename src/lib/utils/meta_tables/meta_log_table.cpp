@@ -21,7 +21,7 @@ const std::string& MetaLogTable::name() const {
 }
 
 std::shared_ptr<Table> MetaLogTable::_on_generate() const {
-  auto output_table = std::make_shared<Table>(_column_definitions, TableType::Data, std::nullopt, UseMvcc::Yes);
+  auto output_table = std::make_shared<Table>(_column_definitions, TableType::Data);
 
   for (const auto& entry : Hyrise::get().log_manager.log_entries()) {
     const auto timestamp_ns = std::chrono::nanoseconds{entry.timestamp.time_since_epoch()}.count();
