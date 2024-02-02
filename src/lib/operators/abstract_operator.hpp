@@ -276,11 +276,11 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   // Determines whether operator results can be cleared via clear_output().
   bool _never_clear_output{false};
 
-  // State management
+  // State management.
   std::atomic<OperatorState> _state{OperatorState::Created};
   void _transition_to(const OperatorState new_state);
 
-  // To prevent race conditions in `get_or_create_operator_task.
+  // To prevent race conditions in `get_or_create_operator_task`.
   std::mutex _operator_task_mutex;
 };
 

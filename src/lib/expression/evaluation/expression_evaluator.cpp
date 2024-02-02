@@ -971,7 +971,7 @@ std::shared_ptr<const Table> ExpressionEvaluator::_evaluate_subquery_expression_
     const PQPSubqueryExpression& expression, const ChunkOffset chunk_offset) {
   DebugAssert(expression.is_correlated(), "Uncorrelated subqueries should not reach this point.");
   Assert(expression.parameters.empty() || _chunk,
-         "Sub-SELECT references external Columns but Expression does not operate on a table/chunk.");
+         "Sub-SELECT references external columns but expression does not operate on a table/chunk.");
 
   const auto expression_parameter_count = expression.parameters.size();
   auto parameters = std::unordered_map<ParameterID, AllTypeVariant>{};
