@@ -150,7 +150,7 @@ std::shared_ptr<const Table> Difference::_on_execute() {
       // The difference operator does not change the sorted_by property of chunks. If the chunk was sorted before, it
       // will be sorted after the difference operation as well.
       const auto chunk = std::make_shared<Chunk>(output_segments);
-      chunk->finalize();
+      chunk->set_immutable();
       const auto& sorted_by = in_chunk->individually_sorted_by();
       if (!sorted_by.empty()) {
         chunk->set_individually_sorted_by(sorted_by);

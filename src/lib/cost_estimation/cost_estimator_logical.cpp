@@ -31,11 +31,11 @@ float expression_cost_multiplier(const std::shared_ptr<AbstractExpression>& expr
   // Returning the maximum of `multiplier` and 1 accounts for tautologies (`SELECT ... WHERE 1 = 1`), which we currently
   // do not optimize and pass to the ExpressionEvaluator.
   //
-  // In the past, we added to the factor for each expression in the predicate. This resulted in to too pessimistic cost
-  // estimations for PredicateNodes compared to (semi-)joins., which turned to be a problem when we switched to
+  // In the past, we added to the factor for each expression in the predicate. This resulted in too pessimistic cost
+  // estimations for PredicateNodes compared to (semi-)joins, which turned out to be a problem when we switched to
   // cost-based predicate ordering (see PredicateReorderingRule) in #2590. For example, the predicate `column_c = 4`
-  // would end up with a factor of 4 (1 for the binary predicate, 1 for each argument of the predicate, and 1 for the
-  // LQPColumnExpression), making its cost way higher than the cost of a semi-join with worse selectivity.
+  // would end up with a factor of 4 (1 for the binary predicate, 1 for each argument of the predicate, and 1 additional
+  // for the LQPColumnExpression), making its cost way higher than the cost of a semi-join with worse selectivity.
   visit_expression(expression, [&](const auto& sub_expression) {
     if (sub_expression->type == ExpressionType::LQPColumn ||
         (sub_expression->type == ExpressionType::LQPSubquery &&

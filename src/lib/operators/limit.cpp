@@ -102,7 +102,7 @@ std::shared_ptr<const Table> Limit::_on_execute() {
 
     index += output_chunk_row_count;
     auto output_chunk = std::make_shared<Chunk>(std::move(output_segments));
-    output_chunk->finalize();
+    output_chunk->set_immutable();
     // The limit operator does not affect sorted_by property. If a chunk was sorted before, it still is after the limit
     // operator.
     const auto& sorted_by = input_chunk->individually_sorted_by();
