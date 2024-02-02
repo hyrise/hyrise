@@ -576,8 +576,7 @@ TEST_F(ExpressionEvaluatorToValuesTest, InSubqueryUncorrelatedNotPrecalculated) 
   table_wrapper->execute();
   const auto table_scan = std::make_shared<TableScan>(table_wrapper, equals_(a, 3));
   table_scan->execute();
-  const auto projection =
-      std::make_shared<Projection>(table_scan, expression_vector(PQPColumnExpression::from_table(*table_a, "b")));
+  const auto projection = std::make_shared<Projection>(table_scan, expression_vector(b));
 
   const auto subquery = pqp_subquery_(projection, DataType::Int, true);
 
@@ -587,7 +586,7 @@ TEST_F(ExpressionEvaluatorToValuesTest, InSubqueryUncorrelatedNotPrecalculated) 
 }
 
 TEST_F(ExpressionEvaluatorToValuesTest, InSubqueryCorrelated) {
-  // PQP that returns the column "b" multiplied with the current value in "a"
+  // PQP that returns the column "b" multiplied with the current value in "a".
   //
   // row   list returned from subquery
   //  0      (1, 2, 3, 4)
@@ -612,7 +611,7 @@ TEST_F(ExpressionEvaluatorToValuesTest, InSubqueryCorrelated) {
   EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(null_(), subquery_a),
                                        {std::nullopt, std::nullopt, std::nullopt, std::nullopt}));
 
-  // PQP that returns the column "c" added to the current value in "a"
+  // PQP that returns the column "c" added to the current value in "a".
   //
   // row   list returned from subquery
   //  0      (34, NULL, 35, NULL)
@@ -646,6 +645,17 @@ TEST_F(ExpressionEvaluatorToValuesTest, InSubqueryCorrelated) {
   // subquery operator should have been executed.
   EXPECT_FALSE(pqp_a->executed());
   EXPECT_FALSE(pqp_b->executed());
+}
+
+TEST_F(ExpressionEvaluatorToValuesTest, CorrelatedSubqueryPrecalculated) {
+  const auto table_wrapper = std::make_shared<TableWrapper>(table_a);
+  const auto projection = std::make_shared<Projection>(table_wrapper, expression_vector(a));
+  const auto subquery = pqp_subquery_(projection, DataType::Int, false, std::make_pair(ParameterID{0}, ColumnID{0}));
+
+  // Operators for correlated subqueries must not be reused, and the ExpressionEvaluator creates a copy for each row.
+  // Thus, the input PQP must not be executed before.
+  execute_all({table_wrapper, projection});
+  EXPECT_THROW(test_expression<int32_t>(table_a, *in_(4, subquery), {1, 1, 0, 1}), std::logic_error);
 }
 
 TEST_F(ExpressionEvaluatorToValuesTest, NotInListLiterals) {

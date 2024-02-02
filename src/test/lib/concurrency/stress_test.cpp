@@ -1,17 +1,22 @@
+#include "base_test.hpp"
+
+#include <atomic>
+#include <chrono>
 #include <future>
 #include <numeric>
 #include <thread>
-
-#include "base_test.hpp"
 
 #include "benchmark_config.hpp"
 #include "hyrise.hpp"
 #include "operators/insert.hpp"
 #include "operators/projection.hpp"
 #include "operators/table_wrapper.hpp"
+#include "operators/union_all.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/task_queue.hpp"
 #include "sql/sql_pipeline_builder.hpp"
+#include "storage/table.hpp"
+#include "storage/table_column_definition.hpp"
 #include "tpch/tpch_constants.hpp"
 #include "tpch/tpch_table_generator.hpp"
 #include "utils/atomic_max.hpp"
@@ -538,6 +543,54 @@ TEST_F(StressTest, ConcurrentInsertsSetChunksImmutable) {
 
   EXPECT_EQ(table->last_chunk()->size(), 2);
   EXPECT_TRUE(table->last_chunk()->is_mutable());
+}
+
+// Consuming operators register at their inputs and deregister when they are executed. Thus, operators can clear
+// intermediate results. Consumer deregistration must work properly in concurrent scenarios.
+TEST_F(StressTest, OperatorRegistration) {
+  const auto repetition_count = uint32_t{100};
+  const auto consumer_count = uint32_t{50};
+  const auto sleep_time = std::chrono::milliseconds{10};
+
+  const auto dummy_table = Table::create_dummy_table({{"a", DataType::Int, false}});
+
+  for (auto repetition = uint32_t{0}; repetition < repetition_count; ++repetition) {
+    const auto table_wrapper = std::make_shared<TableWrapper>(dummy_table);
+    table_wrapper->execute();
+    auto threads = std::vector<std::thread>{};
+    threads.reserve(consumer_count);
+    auto start_execution = std::atomic_bool{false};
+
+    // Generate some consumers that try to deregister concurrently once they are allowed.
+    for (auto consumer_id = uint32_t{0}; consumer_id < consumer_count; ++consumer_id) {
+      threads.emplace_back([&]() {
+        const auto union_all = std::make_shared<UnionAll>(table_wrapper, table_wrapper);
+
+        // Wait for the signal to execute the operator.
+        while (!start_execution) {
+          std::this_thread::sleep_for(sleep_time);
+        }
+
+        union_all->execute();
+      });
+    }
+
+    // Give the consumers some time for construction.
+    std::this_thread::sleep_for(sleep_time);
+
+    // 100 consumers because UnionAll has the input on both sides.
+    EXPECT_EQ(table_wrapper->consumer_count(), 100);
+
+    start_execution = true;
+    for (auto& thread : threads) {
+      thread.join();
+    }
+
+    EXPECT_EQ(table_wrapper->consumer_count(), 0);
+
+    // One additional deregistration (without prior registration) is not allowed.
+    EXPECT_THROW(table_wrapper->deregister_consumer(), std::logic_error);
+  }
 }
 
 }  // namespace hyrise

@@ -136,6 +136,18 @@ std::shared_ptr<AbstractExpression> rewrite_in_list_expression(const InExpressio
   return rewritten_expression;
 }
 
+// Traverse the PQP of a correlated subquery and execute each operator.
+void execute_correlated_subquery_recursively(const std::shared_ptr<AbstractOperator>& op,
+                                             std::unordered_set<std::shared_ptr<AbstractOperator>>& visited_operators) {
+  if (!op || visited_operators.contains(op)) {
+    return;
+  }
+
+  execute_correlated_subquery_recursively(op->mutable_left_input(), visited_operators);
+  execute_correlated_subquery_recursively(op->mutable_right_input(), visited_operators);
+  op->execute();
+}
+
 }  // namespace
 
 namespace hyrise {
@@ -223,8 +235,9 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::evaluate_expressi
       Fail("Cannot evaluate an LQP expression, those need to be translated by the LQPTranslator first.");
 
     case ExpressionType::Placeholder:
-      Fail("Cannot evaluate an expression still containing placeholders. Are you trying to execute a prepared plan "
-           "without instantiating it first?");
+      Fail(
+          "Cannot evaluate an expression still containing placeholders. Are you trying to execute a prepared plan "
+          "without instantiating it first?");
 
     case ExpressionType::Interval:
       Fail("IntervalExpression should have been resolved by SQLTranslator.");
@@ -943,8 +956,10 @@ std::vector<std::shared_ptr<const Table>> ExpressionEvaluator::_evaluate_subquer
     _materialize_segment_if_not_yet_materialized(parameter.second);
   }
 
+  // Ensure we are the only ones to execute the input PQP for correlated subqueries and set their parameters.
+  Assert(expression.pqp->state() == OperatorState::Created,
+         "ExpressionEvaluator manages operators of correlated subqueries.");
   auto results = std::vector<std::shared_ptr<const Table>>{_output_row_count};
-
   for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(_output_row_count); ++chunk_offset) {
     results[chunk_offset] = _evaluate_subquery_expression_for_row(expression, chunk_offset);
   }
@@ -954,6 +969,7 @@ std::vector<std::shared_ptr<const Table>> ExpressionEvaluator::_evaluate_subquer
 
 std::shared_ptr<const Table> ExpressionEvaluator::_evaluate_subquery_expression_for_row(
     const PQPSubqueryExpression& expression, const ChunkOffset chunk_offset) {
+  DebugAssert(expression.is_correlated(), "Uncorrelated subqueries should not reach this point.");
   Assert(expression.parameters.empty() || _chunk,
          "Sub-SELECT references external Columns but Expression does not operate on a table/chunk.");
 
@@ -971,20 +987,14 @@ std::shared_ptr<const Table> ExpressionEvaluator::_evaluate_subquery_expression_
     parameters.emplace(parameter_id, value);
   }
 
-  auto row_pqp = expression.pqp;
-  if (expression.is_correlated()) {
-    // Operators cache results which we cannot reuse in correlated subqueries due to changing parameters.
-    // Therefore, PQPs are deep-copied to ensure that we start without cached results.
-    row_pqp = expression.pqp->deep_copy();
-    row_pqp->set_parameters(parameters);
-    const auto& [tasks, _] = OperatorTask::make_tasks_from_operator(row_pqp);
-    Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
-  } else {
-    // Uncorrelated subqueries should have been scheduled and executed just like regular input operators.
-    Assert(row_pqp->state() == OperatorState::ExecutedAndAvailable,
-           "Uncorrelated subquery was not executed or has already been cleared.");
-  }
-
+  // Operators cache results which we cannot reuse in correlated subqueries due to changing parameters. Thus, PQPs are
+  // deep-copied to ensure that we start without cached results. We do NOT create tasks and schedule them accordingly.
+  // As we execute the subquery for each row, this would easily trigger thousands of schedulings with high overhead.
+  // Operators that must (and can) parallelize should spawn own tasks anyways.
+  const auto row_pqp = expression.pqp->deep_copy();
+  row_pqp->set_parameters(parameters);
+  auto visited_operators = std::unordered_set<std::shared_ptr<AbstractOperator>>{};
+  execute_correlated_subquery_recursively(row_pqp, visited_operators);
   return row_pqp->get_output();
 }
 
