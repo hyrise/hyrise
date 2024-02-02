@@ -1,10 +1,10 @@
-#include "base_test.hpp"
-
 #include <atomic>
 #include <chrono>
 #include <future>
 #include <numeric>
 #include <thread>
+
+#include "base_test.hpp"
 
 #include "benchmark_config.hpp"
 #include "hyrise.hpp"
