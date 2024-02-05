@@ -6,8 +6,6 @@
 
 #include <boost/variant/detail/hash_variant.hpp>
 
-#include "types.hpp"
-
 namespace hyrise {
 
 bool is_floating_point_data_type(const DataType data_type) {

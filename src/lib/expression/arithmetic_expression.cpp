@@ -5,8 +5,8 @@
 #include <ostream>
 #include <sstream>
 
-#include "expression_utils.hpp"
 #include "expression/abstract_expression.hpp"
+#include "expression_utils.hpp"
 #include "operators/abstract_operator.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"

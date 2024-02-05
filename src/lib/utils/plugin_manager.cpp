@@ -1,12 +1,23 @@
+#include "plugin_manager.hpp"
+
 #include <dlfcn.h>
 
+#include <algorithm>
+#include <cstddef>
 #include <filesystem>
+#include <memory>
+#include <mutex>
+#include <string>
+#include <unordered_map>
+#include <utility>
+#include <vector>
+
+#include "nlohmann/json.hpp"
 
 #include "hyrise.hpp"
+#include "log_manager.hpp"
 #include "utils/abstract_plugin.hpp"
 #include "utils/assert.hpp"
-
-#include "plugin_manager.hpp"
 
 namespace hyrise {
 

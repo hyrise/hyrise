@@ -1,9 +1,18 @@
 #include "pruning_utils.hpp"
 
+#include <algorithm>
 #include <cstdlib>
+#include <memory>
 #include <optional>
+#include <set>
+#include <unordered_map>
+#include <utility>
 #include <vector>
 
+#include <boost/functional/hash.hpp>
+#include <boost/variant/get.hpp>
+
+#include "all_type_variant.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
 #include "hyrise.hpp"
@@ -15,6 +24,8 @@
 #include "statistics/statistics_objects/min_max_filter.hpp"
 #include "statistics/statistics_objects/range_filter.hpp"
 #include "statistics/table_statistics.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace {
 

@@ -1,12 +1,26 @@
 #include "check_table_equal.hpp"
 
+#include <algorithm>
+#include <cstddef>
 #include <iomanip>
 #include <iostream>
+#include <memory>
+#include <optional>
+#include <sstream>
+#include <string>
+#include <vector>
 
-#include <boost/algorithm/string.hpp>
+#include <boost/algorithm/string/predicate.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/variant/get.hpp>
 
+#include "all_type_variant.hpp"
 #include "lossless_cast.hpp"
+#include "storage/abstract_segment.hpp"
+#include "storage/reference_segment.hpp"
+#include "storage/table.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 static constexpr auto ANSI_COLOR_RED = "\x1B[31m";
 static constexpr auto ANSI_COLOR_GREEN = "\x1B[32m";
@@ -54,7 +68,7 @@ std::string matrix_to_string(const Matrix& matrix, const std::vector<std::pair<u
     if (it != highlight_cells.end()) {
       highlight = true;
       if (!previous_row_highlighted) {
-        stream << "<<<<<" << std::endl;
+        stream << "<<<<<\n";
         previous_row_highlighted = true;
       }
     } else {
@@ -82,7 +96,7 @@ std::string matrix_to_string(const Matrix& matrix, const std::vector<std::pair<u
       }
       stream << coloring << std::setw(8) << cell << ANSI_COLOR_RESET << " ";
     }
-    stream << std::endl;
+    stream << '\n';
   }
   return stream.str();
 }
@@ -159,16 +173,16 @@ std::optional<std::string> check_table_equal(const std::shared_ptr<const Table>&
 
   const auto print_table_comparison = [&](const std::string& error_type, const std::string& error_msg,
                                           const std::vector<std::pair<uint64_t, uint16_t>>& highlighted_cells = {}) {
-    stream << "===================== Tables are not equal =====================" << std::endl;
-    stream << "------------------------- Actual Result ------------------------" << std::endl;
+    stream << "===================== Tables are not equal =====================\n";
+    stream << "------------------------- Actual Result ------------------------\n";
     stream << matrix_to_string(actual_matrix, highlighted_cells, ANSI_COLOR_RED, ANSI_COLOR_BG_RED);
-    stream << "----------------------------------------------------------------" << std::endl << std::endl;
-    stream << "------------------------ Expected Result -----------------------" << std::endl;
+    stream << "----------------------------------------------------------------\n\n";
+    stream << "------------------------ Expected Result -----------------------\n";
     stream << matrix_to_string(expected_matrix, highlighted_cells, ANSI_COLOR_GREEN, ANSI_COLOR_BG_GREEN);
-    stream << "----------------------------------------------------------------" << std::endl;
-    stream << "Type of error: " << error_type << std::endl;
-    stream << "================================================================" << std::endl << std::endl;
-    stream << error_msg << std::endl << std::endl;
+    stream << "----------------------------------------------------------------\n";
+    stream << "Type of error: " << error_type << '\n';
+    stream << "================================================================\n\n";
+    stream << error_msg << "\n\n";
   };
 
   // compare schema of tables

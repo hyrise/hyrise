@@ -1,9 +1,12 @@
 #include "aggregate_hash.hpp"
 
-#include <cmath>
+#include <array>
+#include <chrono>
+#include <cstddef>
 #include <memory>
 #include <optional>
 #include <string>
+#include <type_traits>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -17,6 +20,8 @@
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
 #include "storage/segment_iterate.hpp"
+#include "storage/table_column_definition.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/timer.hpp"
 

@@ -3,8 +3,8 @@
 #include <memory>
 #include <queue>
 #include <string>
-#include <vector>
 #include <unordered_map>
+#include <vector>
 
 #include "expression_utils.hpp"
 #include "types.hpp"

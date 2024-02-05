@@ -2,11 +2,15 @@
 
 #include <algorithm>
 #include <memory>
-#include <queue>
+#include <optional>
 #include <sstream>
 #include <string>
+#include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
+#include "all_type_variant.hpp"
+#include "expression/abstract_expression.hpp"
 #include "expression_functional.hpp"
 #include "logical_expression.hpp"
 #include "lossy_cast.hpp"
@@ -63,14 +67,14 @@ bool expression_equal_to_expression_in_different_lqp(const AbstractExpression& e
 
 std::vector<std::shared_ptr<AbstractExpression>> expressions_deep_copy(
     const std::vector<std::shared_ptr<AbstractExpression>>& expressions) {
-  std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>> copied_ops;
+  auto copied_ops = std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>{};
   return expressions_deep_copy(expressions, copied_ops);
 }
 
 std::vector<std::shared_ptr<AbstractExpression>> expressions_deep_copy(
     const std::vector<std::shared_ptr<AbstractExpression>>& expressions,
     std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) {
-  std::vector<std::shared_ptr<AbstractExpression>> copied_expressions;
+  auto copied_expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
   copied_expressions.reserve(expressions.size());
   for (const auto& expression : expressions) {
     copied_expressions.emplace_back(expression->deep_copy(copied_ops));
@@ -93,7 +97,7 @@ void expression_deep_replace(std::shared_ptr<AbstractExpression>& expression,
 
 std::vector<std::shared_ptr<AbstractExpression>> expressions_copy_and_adapt_to_different_lqp(
     const std::vector<std::shared_ptr<AbstractExpression>>& expressions, const LQPNodeMapping& node_mapping) {
-  std::vector<std::shared_ptr<AbstractExpression>> copied_expressions;
+  auto copied_expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
   copied_expressions.reserve(expressions.size());
 
   for (const auto& expression : expressions) {

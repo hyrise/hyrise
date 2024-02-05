@@ -1,17 +1,23 @@
 #include "lqp_visualizer.hpp"
 
+#include <cmath>
 #include <iomanip>
+#include <locale>
 #include <memory>
+#include <ostream>
 #include <string>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_subquery_expression.hpp"
 #include "logical_query_plan/abstract_non_query_node.hpp"
+#include "logical_query_plan/data_dependencies/functional_dependency.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
-#include "logical_query_plan/projection_node.hpp"
+#include "types.hpp"
+#include "visualization/abstract_visualizer.hpp"
 
 namespace hyrise {
 
@@ -92,7 +98,7 @@ void LQPVisualizer::_build_subtree(const std::shared_ptr<AbstractLQPNode>& node,
 void LQPVisualizer::_build_dataflow(const std::shared_ptr<AbstractLQPNode>& source_node,
                                     const std::shared_ptr<AbstractLQPNode>& target_node, const InputSide side) {
   float row_count = NAN;
-  double pen_width = 1.0;
+  auto pen_width = 1.0;
   auto row_percentage = 100.0f;
 
   try {

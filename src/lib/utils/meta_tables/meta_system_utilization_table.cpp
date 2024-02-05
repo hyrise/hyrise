@@ -1,17 +1,34 @@
+#include "meta_system_utilization_table.hpp"
+
+#include <array>
 #include <chrono>
+#include <cstddef>
 #include <fstream>
+#include <ios>
+#include <memory>
+#include <optional>
+#include <sstream>
+#include <string>
+#include <vector>
 
 #ifdef __APPLE__
 #include <mach/mach.h>
 #include <sys/sysctl.h>
+#else
+#include <stdlib.h>
+#include <time.h>
+#include <unistd.h>
 #endif
 
 #ifdef HYRISE_WITH_JEMALLOC
 #include <jemalloc/jemalloc.h>
 #endif
 
+#include "all_type_variant.hpp"
 #include "hyrise.hpp"
-#include "meta_system_utilization_table.hpp"
+#include "storage/table.hpp"
+#include "utils/assert.hpp"
+#include "utils/meta_tables/abstract_meta_table.hpp"
 
 namespace hyrise {
 

@@ -1,11 +1,11 @@
 #include "abstract_predicate_expression.hpp"
 
 #include <cstddef>
+#include <functional>
 #include <memory>
 #include <vector>
 
-#include <boost/variant/detail/hash_variant.hpp>
-
+#include "all_type_variant.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/evaluation/expression_evaluator.hpp"
 #include "types.hpp"

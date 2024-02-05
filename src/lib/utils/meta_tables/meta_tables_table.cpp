@@ -1,6 +1,13 @@
 #include "meta_tables_table.hpp"
 
+#include <cstddef>
+#include <memory>
+#include <optional>
+#include <string>
+
+#include "all_type_variant.hpp"
 #include "hyrise.hpp"
+#include "storage/table_column_definition.hpp"
 
 namespace hyrise {
 

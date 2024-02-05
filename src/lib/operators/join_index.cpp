@@ -1,20 +1,18 @@
 #include "join_index.hpp"
 
-#include <map>
+#include <algorithm>
+#include <cstddef>
 #include <memory>
-#include <numeric>
 #include <set>
 #include <string>
 #include <utility>
 #include <vector>
 
-#include "all_type_variant.hpp"
 #include "join_nested_loop.hpp"
 #include "multi_predicate_join/multi_predicate_join_evaluator.hpp"
-#include "resolve_type.hpp"
 #include "storage/index/abstract_chunk_index.hpp"
 #include "storage/segment_iterate.hpp"
-#include "type_comparison.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
 #include "utils/timer.hpp"

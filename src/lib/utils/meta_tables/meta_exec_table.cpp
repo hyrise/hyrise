@@ -1,8 +1,16 @@
 #include "meta_exec_table.hpp"
 
-#include <boost/algorithm/string.hpp>
+#include <memory>
+#include <optional>
+#include <string>
+#include <vector>
 
+#include <boost/variant/get.hpp>
+
+#include "all_type_variant.hpp"
 #include "hyrise.hpp"
+#include "types.hpp"
+#include "utils/plugin_manager.hpp"
 
 namespace hyrise {
 

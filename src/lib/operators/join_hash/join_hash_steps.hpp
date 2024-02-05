@@ -1,5 +1,10 @@
 #pragma once
 
+#include <cstddef>
+#include <mutex>
+#include <utility>
+#include <vector>
+
 #include <boost/container/pmr/monotonic_buffer_resource.hpp>
 #include <boost/container/pmr/unsynchronized_pool_resource.hpp>
 #include <boost/container/small_vector.hpp>
@@ -17,6 +22,7 @@
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/segment_iterate.hpp"
 #include "type_comparison.hpp"
+#include "types.hpp"
 
 /*
   This file includes the functions that cover the main steps of our hash join implementation
@@ -279,7 +285,7 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
 
   Assert(output_bloom_filter.empty(), "output_bloom_filter should be empty");
   output_bloom_filter.resize(BLOOM_FILTER_SIZE);
-  std::mutex output_bloom_filter_mutex;
+  auto output_bloom_filter_mutex = std::mutex{};
 
   Assert(input_bloom_filter.size() == BLOOM_FILTER_SIZE, "Invalid input_bloom_filter");
 

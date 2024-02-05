@@ -22,10 +22,8 @@ class StressTest : public BaseTest {
   }
 
   const uint32_t CORES_PER_NODE = std::thread::hardware_concurrency();
-  const std::vector<std::vector<uint32_t>> FAKE_SINGLE_NODE_NUMA_TOPOLOGIES = {{CORES_PER_NODE},
-                                                                               {CORES_PER_NODE, 0, 0},
-                                                                               {0, CORES_PER_NODE, 0},
-                                                                               {0, 0, CORES_PER_NODE}};
+  const std::vector<std::vector<uint32_t>> FAKE_SINGLE_NODE_NUMA_TOPOLOGIES = {
+      {CORES_PER_NODE}, {CORES_PER_NODE, 0, 0}, {0, CORES_PER_NODE, 0}, {0, 0, CORES_PER_NODE}};
 
   const std::vector<std::vector<uint32_t>> FAKE_MULTI_NODE_NUMA_TOPOLOGIES = {{CORES_PER_NODE, CORES_PER_NODE, 0, 0},
                                                                               {0, CORES_PER_NODE, CORES_PER_NODE, 0},
@@ -45,8 +43,8 @@ TEST_F(StressTest, TestTransactionConflicts) {
     initial_sum = *verification_table->get_value<int64_t>(ColumnID{0}, 0);
   }
 
-  std::atomic_int successful_increments{0};
-  std::atomic_int conflicted_increments{0};
+  auto successful_increments = std::atomic_int{0};
+  auto conflicted_increments = std::atomic_int{0};
   const auto iterations_per_thread = 20;
 
   // Define the work package
@@ -73,7 +71,7 @@ TEST_F(StressTest, TestTransactionConflicts) {
   //  - Mastering the C++17 STL, pages 205f
   // TODO(anyone): Change this to proper threads+futures, or at least do not reuse this code.
   const auto num_threads = uint32_t{100};
-  std::vector<std::future<void>> thread_futures;
+  auto thread_futures = std::vector<std::future<void>>{};
   thread_futures.reserve(num_threads);
 
   for (auto thread_num = uint32_t{0}; thread_num < num_threads; ++thread_num) {
@@ -294,7 +292,6 @@ TEST_F(StressTest, NodeQueueSchedulerCreationAndReset) {
     EXPECT_EQ(node_queue_scheduler->active_worker_count().load(), 0);
   }
 }
-
 
 // Check that spawned jobs increment the semaphore correctly.
 // First, create jobs but not schedule them to check if semaphore is zero. Second, we spwan blocked jobs and check the

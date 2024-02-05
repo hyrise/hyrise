@@ -12,6 +12,7 @@
 #include "operators/sort.hpp"
 #include "resolve_type.hpp"
 #include "storage/pos_lists/entire_chunk_pos_list.hpp"
+#include "storage/reference_segment.hpp"
 #include "storage/segment_iterate.hpp"
 #include "storage/table.hpp"
 #include "storage/value_segment.hpp"
