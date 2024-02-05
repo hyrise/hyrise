@@ -1,16 +1,6 @@
 #include "meta_system_information_table.hpp"
 
-#include <cstddef>
-#include <fstream>
-#include <ios>
-#include <memory>
-#include <optional>
-#include <string>
-
-#include "all_type_variant.hpp"
-#include "types.hpp"
-#include "utils/assert.hpp"
-
+// clang-format off
 #ifdef __linux__
 #include <sys/sysinfo.h>
 #endif
@@ -19,6 +9,14 @@
 #include <mach/mach.h>
 #include <sys/sysctl.h>
 #endif
+// clang-format on
+
+#include <cstddef>
+#include <fstream>
+#include <ios>
+#include <memory>
+#include <optional>
+#include <string>
 
 #include "all_type_variant.hpp"
 #include "types.hpp"

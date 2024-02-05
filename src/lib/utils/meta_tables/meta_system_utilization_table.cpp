@@ -1,19 +1,6 @@
 #include "meta_system_utilization_table.hpp"
 
-#include <array>
-#include <chrono>
-#include <cstddef>
-#include <fstream>
-#include <ios>
-#include <memory>
-#include <optional>
-#include <sstream>
-#include <string>
-#include <vector>
-
-#include "all_type_variant.hpp"
-#include "utils/assert.hpp"
-
+// clang-format off
 #ifdef __APPLE__
 #include <mach/mach.h>
 #include <sys/sysctl.h>
@@ -26,6 +13,18 @@
 #ifdef HYRISE_WITH_JEMALLOC
 #include <jemalloc/jemalloc.h>
 #endif
+// clang-format on
+
+#include <array>
+#include <chrono>
+#include <cstddef>
+#include <fstream>
+#include <ios>
+#include <memory>
+#include <optional>
+#include <sstream>
+#include <string>
+#include <vector>
 
 #include "all_type_variant.hpp"
 #include "hyrise.hpp"
