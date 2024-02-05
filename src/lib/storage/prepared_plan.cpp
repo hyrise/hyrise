@@ -1,11 +1,19 @@
 #include "prepared_plan.hpp"
 
+#include <cstddef>
+#include <memory>
+#include <ostream>
+#include <string>
+#include <unordered_map>
+#include <unordered_set>
+
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_subquery_expression.hpp"
 #include "expression/placeholder_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace {
 

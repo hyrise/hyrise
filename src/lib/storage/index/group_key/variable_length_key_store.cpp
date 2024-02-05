@@ -1,5 +1,6 @@
 #include "variable_length_key_store.hpp"
 
+#include <cstddef>
 #include <iterator>
 #include <vector>
 

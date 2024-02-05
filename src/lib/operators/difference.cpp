@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <iterator>
 #include <memory>
+#include <ostream>
 #include <sstream>
 #include <string>
 #include <unordered_map>
@@ -12,7 +13,9 @@
 
 #include <boost/lexical_cast.hpp>
 
+#include "all_type_variant.hpp"
 #include "storage/reference_segment.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {

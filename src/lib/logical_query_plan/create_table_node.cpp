@@ -1,7 +1,11 @@
 #include "create_table_node.hpp"
 
+#include <cstddef>
+#include <memory>
 #include <sstream>
+#include <string>
 
+#include "logical_query_plan/abstract_lqp_node.hpp"
 #include "static_table_node.hpp"
 
 namespace hyrise {

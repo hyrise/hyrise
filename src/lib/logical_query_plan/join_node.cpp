@@ -1,5 +1,6 @@
 #include "join_node.hpp"
 
+#include <cstddef>
 #include <limits>
 #include <memory>
 #include <numeric>
@@ -13,6 +14,7 @@
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_column_expression.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
 #include "lqp_utils.hpp"
 #include "operators/operator_join_predicate.hpp"
 #include "types.hpp"

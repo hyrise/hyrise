@@ -1,8 +1,15 @@
 #include "logical_expression.hpp"
 
+#include <cstddef>
+#include <memory>
+#include <ostream>
 #include <sstream>
+#include <string>
+#include <unordered_map>
 
+#include "all_type_variant.hpp"
 #include "expression/evaluation/expression_evaluator.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 

@@ -1,16 +1,19 @@
 #include "table_scan.hpp"
 
+#include <cstddef>
 #include <map>
 #include <memory>
 #include <mutex>
 #include <optional>
 #include <sstream>
 #include <string>
+#include <unordered_map>
 #include <unordered_set>
 #include <utility>
 #include <vector>
 
 #include "all_parameter_variant.hpp"
+#include "all_type_variant.hpp"
 #include "expression/between_expression.hpp"
 #include "expression/binary_predicate_expression.hpp"
 #include "expression/correlated_parameter_expression.hpp"
@@ -36,6 +39,7 @@
 #include "table_scan/column_vs_column_table_scan_impl.hpp"
 #include "table_scan/column_vs_value_table_scan_impl.hpp"
 #include "table_scan/expression_evaluator_table_scan_impl.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/lossless_predicate_cast.hpp"
 #include "utils/performance_warning.hpp"

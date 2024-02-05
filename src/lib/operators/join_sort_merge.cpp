@@ -1,6 +1,7 @@
 #include "join_sort_merge.hpp"
 
 #include <algorithm>
+#include <cstddef>
 #include <memory>
 #include <optional>
 #include <string>
@@ -12,6 +13,7 @@
 
 #include <boost/functional/hash_fwd.hpp>
 
+#include "all_type_variant.hpp"
 #include "hyrise.hpp"
 #include "join_helper/join_output_writing.hpp"
 #include "join_sort_merge/radix_cluster_sort.hpp"
@@ -20,6 +22,8 @@
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
 #include "storage/reference_segment.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 

@@ -3,6 +3,7 @@
 #include <memory>
 #include <sstream>
 #include <string>
+#include <unordered_map>
 
 #include "expression/abstract_predicate_expression.hpp"
 #include "types.hpp"

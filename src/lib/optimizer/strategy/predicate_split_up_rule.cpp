@@ -1,11 +1,18 @@
 #include "predicate_split_up_rule.hpp"
 
+#include <cstddef>
+#include <memory>
+#include <string>
+
 #include "expression/binary_predicate_expression.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/logical_expression.hpp"
 #include "expression/value_expression.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/union_node.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace {
 

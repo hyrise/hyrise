@@ -1,8 +1,17 @@
 #include "join_graph_statistics_cache.hpp"
 
+#include <cstddef>
+#include <memory>
+#include <optional>
+#include <utility>
+
+#include "all_type_variant.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "optimizer/join_ordering/join_graph.hpp"
 #include "statistics/table_statistics.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 

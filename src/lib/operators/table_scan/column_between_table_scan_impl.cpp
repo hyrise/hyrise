@@ -4,18 +4,18 @@
 #include <string>
 #include <type_traits>
 
+#include "all_type_variant.hpp"
 #include "expression/between_expression.hpp"
+#include "resolve_type.hpp"
 #include "sorted_segment_search.hpp"
 #include "storage/chunk.hpp"
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/segment_iterables/create_iterable_from_attribute_vector.hpp"
 #include "storage/segment_iterate.hpp"
 #include "storage/table.hpp"
-
-#include "utils/assert.hpp"
-
-#include "resolve_type.hpp"
 #include "type_comparison.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 

@@ -1,5 +1,8 @@
 #include "mvcc_data.hpp"
 
+#include <cstddef>
+#include <ostream>
+
 #include "utils/assert.hpp"
 
 namespace hyrise {

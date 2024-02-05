@@ -1,12 +1,14 @@
 #include "vector_compression.hpp"
 
+#include <cstddef>
 #include <map>
 #include <memory>
-
-#include "utils/assert.hpp"
+#include <ostream>
 
 #include "bitpacking/bitpacking_compressor.hpp"
 #include "fixed_width_integer/fixed_width_integer_compressor.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 

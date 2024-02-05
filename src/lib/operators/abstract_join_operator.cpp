@@ -1,11 +1,16 @@
 #include "abstract_join_operator.hpp"
 
 #include <memory>
+#include <sstream>
 #include <string>
+#include <unordered_map>
 #include <utility>
 
+#include "all_type_variant.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/join_node.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 using namespace std::string_literals;  // NOLINT
 

@@ -7,6 +7,7 @@
 #include <string>
 #include <vector>
 
+#include "logical_query_plan/abstract_lqp_node.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {

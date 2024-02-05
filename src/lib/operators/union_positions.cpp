@@ -2,18 +2,22 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cstddef>
 #include <memory>
 #include <numeric>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
 #include <boost/sort/sort.hpp>
 
+#include "all_type_variant.hpp"
 #include "storage/chunk.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
+#include "utils/assert.hpp"
 
 /**
  * ### UnionPositions implementation

@@ -1,13 +1,17 @@
 #include "table.hpp"
 
 #include <algorithm>
+#include <cstddef>
 #include <limits>
 #include <memory>
 #include <numeric>
+#include <optional>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
+#include "all_type_variant.hpp"
 #include "concurrency/transaction_manager.hpp"
 #include "hyrise.hpp"
 #include "resolve_type.hpp"

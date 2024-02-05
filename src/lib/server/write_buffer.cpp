@@ -1,6 +1,10 @@
 #include "write_buffer.hpp"
 
+#include <cstddef>
+#include <string>
+
 #include "client_disconnect_exception.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 

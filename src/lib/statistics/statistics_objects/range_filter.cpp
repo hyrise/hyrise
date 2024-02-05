@@ -1,6 +1,7 @@
 #include "range_filter.hpp"
 
 #include <algorithm>
+#include <cstddef>
 #include <memory>
 #include <optional>
 #include <type_traits>
@@ -8,6 +9,7 @@
 #include <vector>
 
 #include "abstract_statistics_object.hpp"
+#include "all_type_variant.hpp"
 #include "resolve_type.hpp"
 #include "statistics/statistics_objects/min_max_filter.hpp"
 #include "types.hpp"
@@ -270,7 +272,6 @@ bool RangeFilter<T>::does_not_contain(const PredicateCondition predicate_conditi
       if (is_inclusive ? value2 < value : value2 <= value) {
         return true;
       }
-
 
       // For the following code, consider the running example of a RangeFilter with two ranges: [2, 4] [7, 10].
       // The predicate is `a BETWEEN x AND y`.

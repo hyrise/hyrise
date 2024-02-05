@@ -1,11 +1,15 @@
 #include "group_key_index.hpp"
 
+#include <cstddef>
 #include <memory>
+#include <utility>
 #include <vector>
 
+#include "all_type_variant.hpp"
 #include "storage/base_dictionary_segment.hpp"
 #include "storage/index/abstract_chunk_index.hpp"
 #include "storage/vector_compression/resolve_compressed_vector_type.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 

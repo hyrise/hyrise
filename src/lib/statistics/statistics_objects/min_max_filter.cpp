@@ -10,6 +10,7 @@
 #include "lossless_cast.hpp"
 #include "resolve_type.hpp"
 #include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 

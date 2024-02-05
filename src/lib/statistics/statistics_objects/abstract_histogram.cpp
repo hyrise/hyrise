@@ -2,9 +2,12 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstddef>
 #include <limits>
 #include <map>
 #include <memory>
+#include <optional>
+#include <sstream>
 #include <string>
 #include <unordered_set>
 #include <utility>
@@ -13,6 +16,7 @@
 #include <boost/container_hash/hash.hpp>
 #include <boost/lexical_cast.hpp>
 
+#include "all_type_variant.hpp"
 #include "expression/evaluation/like_matcher.hpp"
 #include "generic_histogram.hpp"
 #include "generic_histogram_builder.hpp"
@@ -21,6 +25,8 @@
 #include "statistics/statistics_objects/abstract_statistics_object.hpp"
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/segment_iterate.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 

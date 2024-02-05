@@ -1,6 +1,14 @@
 #include "result_serializer.hpp"
+
+#include <memory>
+#include <optional>
+#include <string>
+
+#include "all_type_variant.hpp"
 #include "lossy_cast.hpp"
 #include "query_handler.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 

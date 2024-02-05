@@ -2,10 +2,14 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <memory>
 #include <ostream>
 #include <sstream>
 #include <string>
+#include <unordered_map>
+#include <utility>
 
+#include "all_type_variant.hpp"
 #include "expression_utils.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"

@@ -1,8 +1,14 @@
 #include "export.hpp"
 
+#include <memory>
+#include <string>
+#include <unordered_map>
+
 #include <boost/algorithm/string.hpp>
+
 #include "magic_enum.hpp"
 
+#include "all_type_variant.hpp"
 #include "hyrise.hpp"
 #include "import_export/binary/binary_writer.hpp"
 #include "import_export/csv/csv_writer.hpp"

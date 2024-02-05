@@ -1,5 +1,11 @@
 #include "change_meta_table_node.hpp"
 
+#include <cstddef>
+#include <memory>
+#include <string>
+
+#include "logical_query_plan/abstract_lqp_node.hpp"
+
 namespace hyrise {
 
 ChangeMetaTableNode::ChangeMetaTableNode(const std::string& init_table_name,

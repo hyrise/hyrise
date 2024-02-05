@@ -1,7 +1,13 @@
 #include "chunk_pruning_rule.hpp"
 
 #include <algorithm>
+#include <cstddef>
 #include <iostream>
+#include <memory>
+#include <string>
+#include <unordered_map>
+#include <unordered_set>
+#include <utility>
 
 #include "all_parameter_variant.hpp"
 #include "expression/abstract_predicate_expression.hpp"

@@ -12,6 +12,7 @@
 #include "storage/segment_iterate.hpp"
 #include "storage/table.hpp"
 #include "type_comparison.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {

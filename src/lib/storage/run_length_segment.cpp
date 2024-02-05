@@ -1,8 +1,13 @@
 #include "run_length_segment.hpp"
 
 #include <algorithm>
+#include <cstddef>
+#include <memory>
+#include <optional>
 
+#include "all_type_variant.hpp"
 #include "resolve_type.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
 #include "utils/size_estimation_utils.hpp"

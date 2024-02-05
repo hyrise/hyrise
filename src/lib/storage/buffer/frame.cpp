@@ -2,8 +2,10 @@
 
 #include <bitset>
 #include <ostream>
+#include <string>
 
 #include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 

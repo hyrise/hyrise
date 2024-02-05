@@ -1,9 +1,14 @@
 #include "lqp_subquery_expression.hpp"
 
+#include <cstddef>
+#include <memory>
 #include <sstream>
+#include <string>
+#include <unordered_map>
 
 #include <boost/container_hash/hash.hpp>
 
+#include "all_type_variant.hpp"
 #include "expression_utils.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"

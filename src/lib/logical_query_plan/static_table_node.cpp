@@ -1,9 +1,15 @@
 #include "static_table_node.hpp"
 
+#include <cstddef>
+#include <memory>
 #include <sstream>
+#include <string>
 
 #include "expression/lqp_column_expression.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
 #include "lqp_utils.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 #include "utils/print_utils.hpp"
 
 namespace hyrise {

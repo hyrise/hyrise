@@ -4,8 +4,10 @@
 #include <sched.h>
 #include <unistd.h>
 
+#include <memory>
 #include <random>
 #include <thread>
+#include <utility>
 #include <vector>
 
 #include "abstract_scheduler.hpp"
@@ -13,6 +15,7 @@
 #include "hyrise.hpp"
 #include "shutdown_task.hpp"
 #include "task_queue.hpp"
+#include "utils/assert.hpp"
 
 namespace {
 

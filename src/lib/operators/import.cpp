@@ -1,7 +1,13 @@
 #include "import.hpp"
 
+#include <memory>
+#include <optional>
+#include <string>
+#include <unordered_map>
+
 #include <boost/algorithm/string.hpp>
 
+#include "all_type_variant.hpp"
 #include "hyrise.hpp"
 #include "import_export/binary/binary_parser.hpp"
 #include "import_export/csv/csv_parser.hpp"

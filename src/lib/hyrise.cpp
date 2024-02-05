@@ -1,5 +1,7 @@
 #include "hyrise.hpp"
 
+#include <memory>
+
 namespace hyrise {
 
 Hyrise::Hyrise() {

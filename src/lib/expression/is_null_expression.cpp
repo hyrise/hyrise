@@ -1,7 +1,11 @@
 #include "is_null_expression.hpp"
 
+#include <memory>
 #include <sstream>
+#include <string>
+#include <unordered_map>
 
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {

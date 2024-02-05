@@ -1,5 +1,9 @@
 #include "bitpacking_vector.hpp"
 
+#include <cstddef>
+#include <memory>
+#include <utility>
+
 #include "bitpacking_decompressor.hpp"
 #include "bitpacking_iterator.hpp"
 

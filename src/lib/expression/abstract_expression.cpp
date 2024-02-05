@@ -1,5 +1,6 @@
 #include "abstract_expression.hpp"
 
+#include <cstddef>
 #include <memory>
 #include <queue>
 #include <string>

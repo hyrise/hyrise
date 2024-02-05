@@ -6,9 +6,11 @@
 #include <memory>
 #include <numeric>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
+#include "all_type_variant.hpp"
 #include "expression/evaluation/expression_evaluator.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/pqp_column_expression.hpp"
@@ -19,6 +21,7 @@
 #include "storage/resolve_encoded_segment_type.hpp"
 #include "storage/segment_iterate.hpp"
 #include "storage/vector_compression/vector_compression.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/timer.hpp"
 

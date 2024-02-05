@@ -1,6 +1,11 @@
 #include "date_time_utils.hpp"
 
+#include <optional>
+#include <string>
+
 #include "magic_enum.hpp"
+
+#include "utils/assert.hpp"
 
 namespace hyrise {
 

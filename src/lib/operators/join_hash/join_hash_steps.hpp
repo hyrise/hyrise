@@ -11,7 +11,8 @@
 #include <boost/dynamic_bitset.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/unordered/unordered_flat_map.hpp>
-#include <uninitialized_vector.hpp>
+
+#include "uninitialized_vector.hpp"
 
 #include "hyrise.hpp"
 #include "operators/join_hash.hpp"

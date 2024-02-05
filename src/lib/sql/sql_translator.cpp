@@ -1,5 +1,16 @@
 #include "sql_translator.hpp"
 
+#include <algorithm>
+#include <cstddef>
+#include <memory>
+#include <optional>
+#include <string>
+#include <unordered_map>
+#include <utility>
+
+#include "SQLParser.h"
+
+#include "all_type_variant.hpp"
 #include "create_sql_parser_error_message.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/abstract_predicate_expression.hpp"
@@ -53,10 +64,10 @@
 #include "logical_query_plan/window_node.hpp"
 #include "storage/lqp_view.hpp"
 #include "storage/table.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 #include "utils/date_time_utils.hpp"
 #include "utils/meta_table_manager.hpp"
-
-#include "SQLParser.h"
 
 namespace {
 

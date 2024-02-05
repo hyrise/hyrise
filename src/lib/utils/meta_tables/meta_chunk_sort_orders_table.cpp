@@ -1,6 +1,12 @@
 #include "meta_chunk_sort_orders_table.hpp"
 
+#include <memory>
+#include <sstream>
+#include <string>
+
+#include "all_type_variant.hpp"
 #include "hyrise.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 

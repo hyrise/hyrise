@@ -3,7 +3,6 @@
 #include <thread>
 
 #include "base_test.hpp"
-
 #include "benchmark_config.hpp"
 #include "hyrise.hpp"
 #include "scheduler/node_queue_scheduler.hpp"

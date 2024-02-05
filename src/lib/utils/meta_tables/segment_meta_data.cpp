@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <memory>
+#include <sstream>
 #include <unordered_set>
 
 #include "magic_enum.hpp"

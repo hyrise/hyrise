@@ -1,12 +1,18 @@
 #include "correlated_parameter_expression.hpp"
 
+#include <cstddef>
+#include <memory>
+#include <optional>
 #include <sstream>
 #include <string>
 #include <type_traits>
+#include <unordered_map>
 
 #include <boost/container_hash/hash.hpp>
 
+#include "all_type_variant.hpp"
 #include "resolve_type.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 

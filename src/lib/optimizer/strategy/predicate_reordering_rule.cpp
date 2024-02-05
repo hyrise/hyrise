@@ -1,9 +1,12 @@
 #include "predicate_reordering_rule.hpp"
 
 #include <algorithm>
+#include <cstddef>
 #include <iostream>
 #include <memory>
 #include <string>
+#include <unordered_set>
+#include <utility>
 #include <vector>
 
 #include "cost_estimation/abstract_cost_estimator.hpp"

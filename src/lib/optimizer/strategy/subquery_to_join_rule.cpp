@@ -1,9 +1,13 @@
 #include "subquery_to_join_rule.hpp"
 
 #include <algorithm>
+#include <cstddef>
 #include <iterator>
 #include <map>
 #include <memory>
+#include <optional>
+#include <string>
+#include <unordered_set>
 #include <utility>
 
 #include "expression/abstract_expression.hpp"
@@ -23,6 +27,7 @@
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/validate_node.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace {

@@ -1,5 +1,12 @@
 #include "in_expression_rewrite_rule.hpp"
 
+#include <cstddef>
+#include <memory>
+#include <optional>
+#include <string>
+#include <utility>
+
+#include "all_type_variant.hpp"
 #include "cost_estimation/abstract_cost_estimator.hpp"
 #include "expression/binary_predicate_expression.hpp"
 #include "expression/expression_functional.hpp"
@@ -16,6 +23,8 @@
 #include "statistics/cardinality_estimator.hpp"
 #include "statistics/table_statistics.hpp"
 #include "storage/table.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace {
 

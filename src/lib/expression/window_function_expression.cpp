@@ -1,7 +1,13 @@
 #include "window_function_expression.hpp"
 
+#include <cstddef>
+#include <memory>
+#include <ostream>
 #include <sstream>
+#include <string>
+#include <unordered_map>
 
+#include "all_type_variant.hpp"
 #include "expression_utils.hpp"
 #include "lqp_column_expression.hpp"
 #include "operators/aggregate/window_function_traits.hpp"

@@ -7,6 +7,10 @@
 #include <optional>
 #include <string>
 
+#include "all_type_variant.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
+
 #ifdef __linux__
 #include <sys/sysinfo.h>
 #endif

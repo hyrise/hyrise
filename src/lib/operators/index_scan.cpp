@@ -1,19 +1,20 @@
 #include "index_scan.hpp"
 
 #include <algorithm>
+#include <cstddef>
+#include <memory>
+#include <string>
+#include <unordered_map>
 
+#include "all_type_variant.hpp"
 #include "expression/between_expression.hpp"
-
 #include "hyrise.hpp"
-
 #include "operators/get_table.hpp"
-
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
-
 #include "storage/index/partial_hash/partial_hash_index.hpp"
 #include "storage/reference_segment.hpp"
-
+#include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/pruning_utils.hpp"
 

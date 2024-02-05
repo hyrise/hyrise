@@ -8,6 +8,7 @@
 #include "all_type_variant.hpp"
 #include "hyrise.hpp"
 #include "storage/table_column_definition.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 

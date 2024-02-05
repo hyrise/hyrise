@@ -1,7 +1,10 @@
 #include "abstract_read_write_operator.hpp"
 
 #include <memory>
+#include <ostream>
 #include <vector>
+
+#include "utils/assert.hpp"
 
 namespace hyrise {
 

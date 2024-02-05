@@ -1,12 +1,17 @@
 #include "mock_node.hpp"
 
+#include <algorithm>
+#include <cstddef>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_column_expression.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
 #include "lqp_utils.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 using namespace std::string_literals;  // NOLINT

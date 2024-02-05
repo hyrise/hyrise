@@ -1,6 +1,8 @@
 #include "create_sql_parser_error_message.hpp"
 
+#include <cstddef>
 #include <sstream>
+#include <string>
 
 #include <boost/algorithm/string/classification.hpp>
 #include <boost/algorithm/string/split.hpp>

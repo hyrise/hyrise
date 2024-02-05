@@ -1,9 +1,16 @@
 #include "operator_scan_predicate.hpp"
 
+#include <memory>
+#include <optional>
+#include <ostream>
+#include <string>
+
+#include "all_type_variant.hpp"
 #include "expression/abstract_predicate_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/value_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
 

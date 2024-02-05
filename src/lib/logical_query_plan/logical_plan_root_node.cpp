@@ -1,8 +1,10 @@
 #include "logical_plan_root_node.hpp"
 
+#include <memory>
 #include <string>
 
 #include "abstract_lqp_node.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 

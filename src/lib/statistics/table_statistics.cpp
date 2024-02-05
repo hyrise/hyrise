@@ -1,15 +1,21 @@
 #include "table_statistics.hpp"
 
 #include <algorithm>
+#include <cstddef>
+#include <memory>
 #include <numeric>
+#include <ostream>
 #include <thread>
+#include <utility>
 
+#include "all_type_variant.hpp"
 #include "attribute_statistics.hpp"
 #include "hyrise.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/job_task.hpp"
 #include "statistics/statistics_objects/abstract_histogram.hpp"
 #include "storage/table.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {

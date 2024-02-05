@@ -1,8 +1,11 @@
 #include "create_view_node.hpp"
 
+#include <cstddef>
+#include <memory>
 #include <sstream>
 #include <string>
 
+#include "logical_query_plan/abstract_lqp_node.hpp"
 #include "lqp_utils.hpp"
 
 namespace hyrise {

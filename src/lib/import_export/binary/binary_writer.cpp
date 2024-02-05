@@ -14,6 +14,7 @@
 #include "storage/vector_compression/fixed_width_integer/fixed_width_integer_utils.hpp"
 #include "storage/vector_compression/fixed_width_integer/fixed_width_integer_vector.hpp"
 #include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace {
 

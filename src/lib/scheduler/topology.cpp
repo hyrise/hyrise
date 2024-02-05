@@ -1,5 +1,8 @@
 #include "topology.hpp"
 
+#include <cstddef>
+#include <ostream>
+
 #if HYRISE_NUMA_SUPPORT
 
 #include <numa.h>

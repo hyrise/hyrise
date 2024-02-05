@@ -8,6 +8,7 @@
 #include <string>
 #include <utility>
 
+#include "all_type_variant.hpp"
 #include "resolve_type.hpp"
 #include "storage/chunk.hpp"
 #include "storage/encoding_type.hpp"

@@ -1,11 +1,13 @@
 #include "multi_predicate_join_evaluator.hpp"
 
+#include <memory>
 #include <vector>
 
 #include "operators/operator_join_predicate.hpp"
 #include "storage/table.hpp"
 #include "type_comparison.hpp"
 #include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 

@@ -1,5 +1,10 @@
 #include "table_column_definition.hpp"
 
+#include <cstddef>
+#include <string>
+
+#include "all_type_variant.hpp"
+
 namespace hyrise {
 
 TableColumnDefinition::TableColumnDefinition(const std::string& init_name, const DataType init_data_type,

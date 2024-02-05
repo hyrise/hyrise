@@ -1,7 +1,14 @@
 #include "window_node.hpp"
 
+#include <cstddef>
+#include <memory>
+#include <sstream>
+#include <string>
+
 #include "expression/expression_utils.hpp"
 #include "expression/window_function_expression.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {

@@ -1,7 +1,14 @@
 #include "frame_of_reference_segment.hpp"
 
+#include <cstddef>
+#include <memory>
+#include <optional>
+#include <utility>
+
+#include "all_type_variant.hpp"
 #include "resolve_type.hpp"
 #include "storage/vector_compression/base_compressed_vector.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
 

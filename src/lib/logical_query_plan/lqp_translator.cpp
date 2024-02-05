@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <memory>
+#include <utility>
 #include <vector>
 
 #include <boost/hana/tuple.hpp>
@@ -9,6 +10,7 @@
 #include "abstract_lqp_node.hpp"
 #include "aggregate_node.hpp"
 #include "alias_node.hpp"
+#include "all_type_variant.hpp"
 #include "change_meta_table_node.hpp"
 #include "create_prepared_plan_node.hpp"
 #include "create_table_node.hpp"

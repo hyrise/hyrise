@@ -1,9 +1,17 @@
 #include "abstract_aggregate_operator.hpp"
 
+#include <cstddef>
+#include <memory>
+#include <sstream>
+#include <string>
+#include <utility>
+
 #include "abstract_operator.hpp"
 #include "abstract_read_only_operator.hpp"
+#include "all_type_variant.hpp"
 #include "expression/pqp_column_expression.hpp"
 #include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 

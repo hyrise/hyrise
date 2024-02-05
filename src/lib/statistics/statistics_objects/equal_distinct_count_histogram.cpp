@@ -1,6 +1,7 @@
 #include "equal_distinct_count_histogram.hpp"
 
 #include <cmath>
+#include <cstddef>
 #include <memory>
 #include <numeric>
 #include <string>
@@ -13,6 +14,8 @@
 #include "generic_histogram.hpp"
 #include "resolve_type.hpp"
 #include "storage/segment_iterate.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace {
 

@@ -6,6 +6,7 @@
 #include <string>
 #include <unordered_map>
 
+#include "all_type_variant.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/evaluation/expression_evaluator.hpp"
 #include "lqp_subquery_expression.hpp"

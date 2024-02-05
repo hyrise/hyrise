@@ -1,5 +1,9 @@
 #include "abstract_scheduler.hpp"
 
+#include <memory>
+
+#include "utils/assert.hpp"
+
 namespace hyrise {
 
 void AbstractScheduler::wait_for_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) {

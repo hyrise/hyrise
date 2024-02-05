@@ -1,9 +1,16 @@
 #include "predicate_merge_rule.hpp"
 
+#include <cstddef>
+#include <map>
+#include <memory>
+#include <string>
+
 #include "expression/expression_functional.hpp"
 #include "expression/logical_expression.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/union_node.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 

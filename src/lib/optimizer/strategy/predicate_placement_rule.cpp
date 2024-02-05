@@ -1,5 +1,9 @@
 #include "predicate_placement_rule.hpp"
 
+#include <cstddef>
+#include <memory>
+#include <string>
+
 #include "all_parameter_variant.hpp"
 #include "cost_estimation/abstract_cost_estimator.hpp"
 #include "expression/expression_utils.hpp"
@@ -15,6 +19,7 @@
 #include "logical_query_plan/union_node.hpp"
 #include "operators/operator_scan_predicate.hpp"
 #include "statistics/cardinality_estimator.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 

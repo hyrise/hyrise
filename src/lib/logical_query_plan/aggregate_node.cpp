@@ -1,8 +1,14 @@
 #include "aggregate_node.hpp"
 
+#include <cstddef>
+#include <memory>
+#include <sstream>
+#include <string>
+
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_column_expression.hpp"
 #include "expression/window_function_expression.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
 #include "lqp_utils.hpp"
 #include "resolve_type.hpp"
 #include "types.hpp"

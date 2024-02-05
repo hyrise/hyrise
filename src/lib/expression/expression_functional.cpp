@@ -1,8 +1,11 @@
 #include "expression_functional.hpp"
 
 #include <memory>
+#include <string>
+#include <utility>
 #include <vector>
 
+#include "all_type_variant.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/exists_expression.hpp"
 #include "expression/interval_expression.hpp"

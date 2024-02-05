@@ -1,5 +1,6 @@
 #include "abstract_task.hpp"
 
+#include <algorithm>
 #include <memory>
 #include <string>
 #include <utility>
@@ -7,9 +8,8 @@
 
 #include "abstract_scheduler.hpp"
 #include "hyrise.hpp"
-#include "worker.hpp"
-
 #include "utils/assert.hpp"
+#include "worker.hpp"
 
 namespace hyrise {
 

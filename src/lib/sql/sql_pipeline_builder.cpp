@@ -1,4 +1,8 @@
 #include "sql_pipeline_builder.hpp"
+
+#include <memory>
+#include <string>
+
 #include "hyrise.hpp"
 
 namespace hyrise {

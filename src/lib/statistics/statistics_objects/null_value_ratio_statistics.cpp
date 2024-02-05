@@ -1,5 +1,10 @@
 #include "null_value_ratio_statistics.hpp"
 
+#include <memory>
+#include <optional>
+
+#include "all_type_variant.hpp"
+
 namespace hyrise {
 
 NullValueRatioStatistics::NullValueRatioStatistics(const float init_ratio)

@@ -1,9 +1,13 @@
 #include "session.hpp"
 
+#include <memory>
+#include <string>
+
 #include "client_disconnect_exception.hpp"
 #include "postgres_message_type.hpp"
 #include "query_handler.hpp"
 #include "result_serializer.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 

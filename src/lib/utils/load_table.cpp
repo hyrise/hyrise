@@ -1,5 +1,6 @@
 #include "load_table.hpp"
 
+#include <cstddef>
 #include <fstream>
 #include <memory>
 #include <string>
@@ -7,10 +8,12 @@
 
 #include <boost/lexical_cast.hpp>
 
-#include "storage/table.hpp"
-
+#include "all_type_variant.hpp"
 #include "resolve_type.hpp"
+#include "storage/table.hpp"
 #include "string_utils.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 using namespace std::string_literals;  // NOLINT
 

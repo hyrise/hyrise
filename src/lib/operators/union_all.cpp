@@ -1,10 +1,14 @@
 #include "union_all.hpp"
 
+#include <cstddef>
 #include <memory>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
+#include "all_type_variant.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {

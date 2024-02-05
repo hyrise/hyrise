@@ -7,6 +7,7 @@
 
 #include <boost/variant/get.hpp>
 
+#include "all_type_variant.hpp"
 #include "hyrise.hpp"
 #include "types.hpp"
 

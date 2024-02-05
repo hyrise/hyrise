@@ -1,7 +1,9 @@
 #include "enumerate_ccp.hpp"
 
+#include <cstddef>
 #include <set>
 #include <sstream>
+#include <utility>
 
 #include "utils/assert.hpp"
 

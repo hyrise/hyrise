@@ -1,9 +1,15 @@
 #include "operator_task.hpp"
 
+#include <memory>
+#include <string>
+#include <unordered_set>
+#include <utility>
+
 #include "operators/abstract_operator.hpp"
 #include "operators/abstract_read_write_operator.hpp"
 #include "operators/get_table.hpp"
 #include "scheduler/task_utils.hpp"
+#include "utils/assert.hpp"
 
 namespace {
 

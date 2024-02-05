@@ -1,9 +1,13 @@
 #include "expression_reduction_rule.hpp"
 
 #include <algorithm>
+#include <cstddef>
 #include <functional>
+#include <memory>
+#include <string>
 #include <unordered_set>
 
+#include "all_type_variant.hpp"
 #include "expression/evaluation/expression_evaluator.hpp"
 #include "expression/evaluation/like_matcher.hpp"
 #include "expression/expression_functional.hpp"
@@ -13,6 +17,8 @@
 #include "logical_query_plan/alias_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 

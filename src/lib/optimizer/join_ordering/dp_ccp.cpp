@@ -1,6 +1,10 @@
 #include "dp_ccp.hpp"
 
+#include <cstddef>
+#include <map>
+#include <memory>
 #include <unordered_map>
+#include <utility>
 
 #include "cost_estimation/abstract_cost_estimator.hpp"
 #include "enumerate_ccp.hpp"
@@ -9,6 +13,7 @@
 #include "operators/operator_join_predicate.hpp"
 #include "statistics/abstract_cardinality_estimator.hpp"
 #include "statistics/cardinality_estimator.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 

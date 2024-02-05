@@ -14,6 +14,7 @@
 #include <boost/container/pmr/monotonic_buffer_resource.hpp>
 
 #include "aggregate/window_function_traits.hpp"
+#include "all_type_variant.hpp"
 #include "expression/pqp_column_expression.hpp"
 #include "hyrise.hpp"
 #include "resolve_type.hpp"

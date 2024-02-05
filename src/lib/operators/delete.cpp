@@ -1,9 +1,16 @@
 #include "delete.hpp"
 
+#include <memory>
+#include <string>
+#include <unordered_map>
+
+#include "all_type_variant.hpp"
 #include "concurrency/transaction_context.hpp"
 #include "operators/validate.hpp"
 #include "statistics/table_statistics.hpp"
 #include "storage/reference_segment.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 #include "utils/atomic_max.hpp"
 
 namespace {

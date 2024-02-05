@@ -3,9 +3,12 @@
 #include <algorithm>
 #include <memory>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
+#include "all_type_variant.hpp"
 #include "hyrise.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 

@@ -1,10 +1,12 @@
 #include "dummy_table_node.hpp"
 
+#include <memory>
 #include <optional>
 #include <string>
 #include <vector>
 
 #include "expression/value_expression.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 

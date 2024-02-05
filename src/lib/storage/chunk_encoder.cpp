@@ -1,9 +1,13 @@
 #include "chunk_encoder.hpp"
 
+#include <cstddef>
+#include <map>
 #include <memory>
 #include <thread>
+#include <utility>
 #include <vector>
 
+#include "all_type_variant.hpp"
 #include "base_value_segment.hpp"
 #include "chunk.hpp"
 #include "resolve_type.hpp"

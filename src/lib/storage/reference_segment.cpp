@@ -1,9 +1,12 @@
 #include "reference_segment.hpp"
 
+#include <cstddef>
 #include <memory>
 #include <string>
 #include <utility>
 
+#include "all_type_variant.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
 

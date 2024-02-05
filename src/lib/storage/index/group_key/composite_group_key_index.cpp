@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <climits>
+#include <cstddef>
 #include <cstdint>
 #include <iterator>
 #include <memory>
@@ -10,10 +11,12 @@
 #include <utility>
 #include <vector>
 
+#include "all_type_variant.hpp"
 #include "storage/base_dictionary_segment.hpp"
 #include "storage/vector_compression/base_compressed_vector.hpp"
 #include "storage/vector_compression/base_vector_decompressor.hpp"
 #include "storage/vector_compression/fixed_width_integer/fixed_width_integer_utils.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 #include "variable_length_key_proxy.hpp"
 

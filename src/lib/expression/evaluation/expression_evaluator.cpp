@@ -1,12 +1,19 @@
 #include "expression_evaluator.hpp"
 
+#include <cstddef>
 #include <iterator>
+#include <memory>
+#include <sstream>
+#include <string>
 #include <type_traits>
+#include <unordered_map>
+#include <utility>
 
 #include <boost/lexical_cast.hpp>
 #include <boost/variant/apply_visitor.hpp>
 
 #include "all_parameter_variant.hpp"
+#include "all_type_variant.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/abstract_predicate_expression.hpp"
 #include "expression/arithmetic_expression.hpp"
@@ -33,6 +40,7 @@
 #include "scheduler/operator_task.hpp"
 #include "storage/segment_iterate.hpp"
 #include "storage/value_segment.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/date_time_utils.hpp"
 #include "utils/performance_warning.hpp"
@@ -223,8 +231,9 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::evaluate_expressi
       Fail("Cannot evaluate an LQP expression, those need to be translated by the LQPTranslator first.");
 
     case ExpressionType::Placeholder:
-      Fail("Cannot evaluate an expression still containing placeholders. Are you trying to execute a prepared plan "
-           "without instantiating it first?");
+      Fail(
+          "Cannot evaluate an expression still containing placeholders. Are you trying to execute a prepared plan "
+          "without instantiating it first?");
 
     case ExpressionType::Interval:
       Fail("IntervalExpression should have been resolved by SQLTranslator.");

@@ -1,20 +1,26 @@
 #include "join_hash.hpp"
 
 #include <cmath>
+#include <cstddef>
 #include <memory>
 #include <numeric>
+#include <optional>
+#include <ostream>
 #include <string>
 #include <type_traits>
 #include <unordered_map>
 #include <utility>
 #include <vector>
 
+#include "all_type_variant.hpp"
 #include "hyrise.hpp"
 #include "join_hash/join_hash_steps.hpp"
 #include "join_hash/join_hash_traits.hpp"
 #include "join_helper/join_output_writing.hpp"
 #include "scheduler/job_task.hpp"
 #include "type_comparison.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 #include "utils/format_duration.hpp"
 #include "utils/timer.hpp"
 

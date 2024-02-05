@@ -1,6 +1,7 @@
 #include "lqp_utils.hpp"
 
 #include <algorithm>
+#include <cstddef>
 #include <memory>
 #include <optional>
 #include <set>

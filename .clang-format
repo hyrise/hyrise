@@ -67,7 +67,7 @@ IncludeCategories:
     Priority:        2
 
     # This list needs to be kept up to date to order third party libraries properly.
-  - Regex:           '^"(magic_enum|nlohmann|lz4\.h|compact_vector\.hpp|concurrentqueue\.h|lightweightsemaphore\.h|uninitialized_vector\.hpp|tsl\/sparse\_.+\.h|lz4hc\.h|zdict\.h).*\"$'
+  - Regex:           '^"(magic_enum|nlohmann|lz4\.h|compact_vector\.hpp|concurrentqueue\.h|lightweightsemaphore\.h|uninitialized_vector\.hpp|tsl\/sparse\_.+\.h|lz4hc\.h|zdict\.h|SQLParser\.h).*\"$'
     Priority:        4
   - Regex:           '.*'
     Priority:        5

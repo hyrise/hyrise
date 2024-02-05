@@ -2,9 +2,11 @@
 
 #include <memory>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
+#include "all_type_variant.hpp"
 #include "hyrise.hpp"
 
 namespace hyrise {

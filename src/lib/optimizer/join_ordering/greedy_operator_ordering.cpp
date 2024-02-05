@@ -1,5 +1,9 @@
 #include "greedy_operator_ordering.hpp"
 
+#include <algorithm>
+#include <cstddef>
+#include <map>
+#include <memory>
 #include <numeric>
 #include <unordered_map>
 #include <unordered_set>

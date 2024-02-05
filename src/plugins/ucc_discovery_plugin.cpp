@@ -2,6 +2,8 @@
 
 #include <boost/container_hash/hash.hpp>
 
+#include "magic_enum.hpp"
+
 #include "../benchmarklib/abstract_benchmark_item_runner.hpp"
 #include "expression/binary_predicate_expression.hpp"
 #include "expression/expression_utils.hpp"
@@ -12,7 +14,6 @@
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
-#include "magic_enum.hpp"
 #include "resolve_type.hpp"
 #include "storage/fixed_string_dictionary_segment.hpp"
 #include "storage/segment_iterate.hpp"

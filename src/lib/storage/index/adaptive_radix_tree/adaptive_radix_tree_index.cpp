@@ -1,6 +1,7 @@
 #include "adaptive_radix_tree_index.hpp"
 
 #include <algorithm>
+#include <cstddef>
 #include <iterator>
 #include <limits>
 #include <memory>

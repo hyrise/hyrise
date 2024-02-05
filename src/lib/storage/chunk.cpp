@@ -1,10 +1,20 @@
 #include "chunk.hpp"
 
+#include <algorithm>
+#include <cstddef>
+#include <memory>
+#include <optional>
+#include <string>
+#include <utility>
+
 #include "abstract_segment.hpp"
+#include "all_type_variant.hpp"
 #include "index/abstract_chunk_index.hpp"
 #include "reference_segment.hpp"
 #include "resolve_type.hpp"
 #include "storage/segment_iterate.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 #include "utils/atomic_max.hpp"
 
 namespace hyrise {

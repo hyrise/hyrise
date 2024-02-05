@@ -1,10 +1,15 @@
 #include "dictionary_segment.hpp"
 
+#include <cstddef>
 #include <memory>
+#include <optional>
 #include <string>
+#include <utility>
 
+#include "all_type_variant.hpp"
 #include "resolve_type.hpp"
 #include "storage/vector_compression/base_compressed_vector.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
 #include "utils/size_estimation_utils.hpp"

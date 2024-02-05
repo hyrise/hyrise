@@ -1,5 +1,6 @@
 #include "fixed_string_vector.hpp"
 
+#include <cstddef>
 #include <limits>
 #include <memory>
 #include <sstream>
@@ -7,6 +8,8 @@
 #include <utility>
 #include <vector>
 
+#include "types.hpp"
+#include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
 
 namespace hyrise {

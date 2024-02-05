@@ -2,9 +2,13 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstddef>
+#include <memory>
 #include <type_traits>
+#include <utility>
 
 #include "bitpacking_vector_type.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 

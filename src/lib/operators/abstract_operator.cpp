@@ -1,5 +1,13 @@
 #include "abstract_operator.hpp"
 
+#include <cstddef>
+#include <memory>
+#include <ostream>
+#include <string>
+#include <unordered_map>
+#include <utility>
+
+#include "all_type_variant.hpp"
 #include "concurrency/transaction_context.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/pqp_subquery_expression.hpp"
@@ -10,6 +18,7 @@
 #include "scheduler/operator_task.hpp"
 #include "storage/table.hpp"
 #include "storage/value_segment.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/format_bytes.hpp"
 #include "utils/format_duration.hpp"

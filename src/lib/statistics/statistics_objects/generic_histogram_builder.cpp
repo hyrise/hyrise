@@ -1,5 +1,9 @@
 #include "generic_histogram_builder.hpp"
 
+#include <cstddef>
+#include <memory>
+#include <utility>
+
 #include "utils/assert.hpp"
 
 namespace hyrise {

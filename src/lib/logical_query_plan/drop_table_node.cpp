@@ -1,8 +1,10 @@
 #include "drop_table_node.hpp"
 
 #include <cstddef>
+#include <memory>
 #include <string>
 
+#include "logical_query_plan/abstract_lqp_node.hpp"
 #include "types.hpp"
 
 namespace hyrise {

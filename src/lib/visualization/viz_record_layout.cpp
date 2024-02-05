@@ -1,5 +1,6 @@
 #include "viz_record_layout.hpp"
 
+#include <cstddef>
 #include <sstream>
 #include <string>
 

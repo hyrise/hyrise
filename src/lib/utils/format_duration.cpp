@@ -1,6 +1,8 @@
 #include "format_duration.hpp"
 
+#include <cstddef>
 #include <sstream>
+#include <string>
 
 #include <boost/hana/for_each.hpp>
 #include <boost/hana/tuple.hpp>

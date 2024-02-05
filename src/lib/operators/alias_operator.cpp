@@ -1,10 +1,18 @@
 #include "alias_operator.hpp"
 
+#include <algorithm>
+#include <memory>
 #include <sstream>
+#include <string>
+#include <unordered_map>
+#include <utility>
 
 #include <boost/algorithm/string/join.hpp>
 
+#include "all_type_variant.hpp"
 #include "storage/table.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 using namespace std::string_literals;  // NOLINT
 

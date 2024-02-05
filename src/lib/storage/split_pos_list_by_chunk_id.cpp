@@ -1,5 +1,10 @@
 #include "split_pos_list_by_chunk_id.hpp"
 
+#include <cstddef>
+#include <memory>
+
+#include "utils/assert.hpp"
+
 namespace hyrise {
 
 PosListsByChunkID split_pos_list_by_chunk_id(const std::shared_ptr<const AbstractPosList>& input_pos_list,

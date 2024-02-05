@@ -1,6 +1,11 @@
 #include "table_key_constraint.hpp"
 
+#include <cstddef>
+
 #include <boost/container_hash/hash.hpp>
+
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 

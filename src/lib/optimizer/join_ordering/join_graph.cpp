@@ -1,8 +1,13 @@
 #include "join_graph.hpp"
 
-#include "utils/assert.hpp"
+#include <cstddef>
+#include <memory>
+#include <optional>
+#include <ostream>
+#include <unordered_set>
 
 #include "join_graph_builder.hpp"
+#include "utils/assert.hpp"
 
 namespace {
 

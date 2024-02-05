@@ -1,5 +1,9 @@
 #include "sql_identifier_resolver.hpp"
 
+#include <algorithm>
+#include <memory>
+#include <string>
+
 #include "sql_identifier_resolver_proxy.hpp"
 #include "utils/assert.hpp"
 

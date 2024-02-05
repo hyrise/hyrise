@@ -3,10 +3,13 @@
 #include <pthread.h>
 
 #include <iostream>
+#include <memory>
+#include <string>
 #include <thread>
 
 #include "hyrise.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 

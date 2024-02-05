@@ -1,5 +1,7 @@
 #include "file_type.hpp"
 
+#include <string>
+
 #include <boost/algorithm/string/case_conv.hpp>
 
 #include "utils/assert.hpp"

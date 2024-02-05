@@ -1,6 +1,9 @@
 #include "segment_accessor.hpp"
 
+#include <memory>
+
 #include "resolve_type.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise::detail {
 template <typename T>

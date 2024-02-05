@@ -1,9 +1,15 @@
 #include "export_node.hpp"
 
+#include <cstddef>
+#include <memory>
 #include <sstream>
+#include <string>
 
 #include <boost/algorithm/string.hpp>
+
 #include "magic_enum.hpp"
+
+#include "logical_query_plan/abstract_lqp_node.hpp"
 
 namespace hyrise {
 

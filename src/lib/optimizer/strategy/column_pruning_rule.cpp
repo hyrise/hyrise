@@ -1,5 +1,9 @@
 #include "column_pruning_rule.hpp"
 
+#include <algorithm>
+#include <cstddef>
+#include <memory>
+#include <string>
 #include <unordered_map>
 
 #include "expression/abstract_expression.hpp"
@@ -20,6 +24,8 @@
 #include "logical_query_plan/union_node.hpp"
 #include "logical_query_plan/update_node.hpp"
 #include "logical_query_plan/window_node.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace {
 

@@ -5,6 +5,7 @@
 #include <locale>
 #include <memory>
 #include <ostream>
+#include <sstream>
 #include <string>
 #include <unordered_set>
 #include <utility>

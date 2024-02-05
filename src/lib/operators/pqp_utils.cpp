@@ -1,6 +1,11 @@
 #include "pqp_utils.hpp"
 
+#include <memory>
+
+#include "all_type_variant.hpp"
 #include "storage/segment_iterate.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 

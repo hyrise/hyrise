@@ -1,11 +1,16 @@
 #include "fixed_string_dictionary_segment.hpp"
 
 #include <algorithm>
+#include <cstddef>
 #include <memory>
+#include <optional>
 #include <string>
+#include <utility>
 
+#include "all_type_variant.hpp"
 #include "resolve_type.hpp"
 #include "storage/vector_compression/base_compressed_vector.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
 

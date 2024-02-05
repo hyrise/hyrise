@@ -3,11 +3,13 @@
 #include <fstream>
 #include <iomanip>
 #include <memory>
+#include <string>
 #include <utility>
 
 #include <boost/algorithm/string.hpp>
 
 #include "SQLParser.h"
+
 #include "create_sql_parser_error_message.hpp"
 #include "expression/value_expression.hpp"
 #include "hyrise.hpp"

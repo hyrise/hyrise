@@ -13,6 +13,7 @@
 #include "all_type_variant.hpp"
 #include "hyrise.hpp"
 #include "storage/table.hpp"
+#include "types.hpp"
 #include "utils/meta_tables/abstract_meta_table.hpp"
 
 namespace hyrise {

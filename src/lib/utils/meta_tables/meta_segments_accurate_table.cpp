@@ -1,5 +1,9 @@
 #include "meta_segments_accurate_table.hpp"
 
+#include <memory>
+#include <string>
+
+#include "all_type_variant.hpp"
 #include "hyrise.hpp"
 #include "utils/meta_tables/segment_meta_data.hpp"
 

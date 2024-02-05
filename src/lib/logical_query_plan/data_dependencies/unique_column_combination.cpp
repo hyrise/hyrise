@@ -1,5 +1,12 @@
 #include "unique_column_combination.hpp"
 
+#include <cstddef>
+#include <memory>
+#include <ostream>
+#include <utility>
+
+#include "utils/assert.hpp"
+
 namespace hyrise {
 
 UniqueColumnCombination::UniqueColumnCombination(ExpressionUnorderedSet init_expressions)

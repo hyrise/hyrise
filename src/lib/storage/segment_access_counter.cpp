@@ -1,6 +1,10 @@
 #include "segment_access_counter.hpp"
 
+#include <cstddef>
 #include <sstream>
+#include <string>
+
+#include "utils/assert.hpp"
 
 namespace hyrise {
 

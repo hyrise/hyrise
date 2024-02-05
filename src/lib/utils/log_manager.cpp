@@ -1,5 +1,7 @@
 #include "log_manager.hpp"
 
+#include <string>
+
 namespace hyrise {
 
 void LogManager::add_message(const std::string& reporter, const std::string& message, const LogLevel log_level) {

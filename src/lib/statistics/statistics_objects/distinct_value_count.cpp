@@ -1,5 +1,13 @@
 #include "distinct_value_count.hpp"
 
+#include <cstddef>
+#include <memory>
+#include <optional>
+
+#include "all_type_variant.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
+
 namespace hyrise {
 
 DistinctValueCount::DistinctValueCount(const size_t init_count)

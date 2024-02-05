@@ -1,8 +1,14 @@
 #include "foreign_key_constraint.hpp"
 
+#include <algorithm>
+#include <cstddef>
+#include <memory>
 #include <numeric>
 
 #include <boost/container_hash/hash.hpp>
+
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace {
 

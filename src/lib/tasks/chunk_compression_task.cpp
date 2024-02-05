@@ -1,5 +1,6 @@
 #include "chunk_compression_task.hpp"
 
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -7,7 +8,6 @@
 #include "storage/chunk.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/table.hpp"
-
 #include "types.hpp"
 #include "utils/assert.hpp"
 

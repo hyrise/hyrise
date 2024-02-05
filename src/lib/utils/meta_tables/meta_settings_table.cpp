@@ -1,6 +1,11 @@
 #include "meta_settings_table.hpp"
 
+#include <memory>
+#include <string>
+
+#include "all_type_variant.hpp"
 #include "hyrise.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {

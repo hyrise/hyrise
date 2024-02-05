@@ -1,10 +1,12 @@
 #include "drop_view_node.hpp"
 
 #include <algorithm>
+#include <cstddef>
 #include <memory>
 #include <sstream>
 #include <string>
 
+#include "logical_query_plan/abstract_lqp_node.hpp"
 #include "utils/assert.hpp"
 
 using namespace std::string_literals;  // NOLINT

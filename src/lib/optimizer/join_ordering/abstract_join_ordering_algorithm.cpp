@@ -1,5 +1,10 @@
 #include "abstract_join_ordering_algorithm.hpp"
 
+#include <algorithm>
+#include <cstddef>
+#include <memory>
+#include <utility>
+
 #include "cost_estimation/abstract_cost_estimator.hpp"
 #include "join_graph.hpp"
 #include "operators/operator_join_predicate.hpp"

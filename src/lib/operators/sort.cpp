@@ -1,6 +1,16 @@
 #include "sort.hpp"
 
+#include <cstddef>
+#include <memory>
+#include <optional>
+#include <string>
+#include <unordered_map>
+#include <utility>
+
+#include "all_type_variant.hpp"
 #include "storage/segment_iterate.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 #include "utils/timer.hpp"
 
 namespace {

@@ -1,5 +1,9 @@
 #include "immediate_execution_scheduler.hpp"
 
+#include <memory>
+
+#include "utils/assert.hpp"
+
 namespace hyrise {
 
 void ImmediateExecutionScheduler::begin() {}

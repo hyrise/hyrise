@@ -1,5 +1,11 @@
 #include "create_prepared_plan.hpp"
 
+#include <memory>
+#include <sstream>
+#include <string>
+#include <unordered_map>
+
+#include "all_type_variant.hpp"
 #include "hyrise.hpp"
 #include "storage/prepared_plan.hpp"
 

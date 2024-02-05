@@ -1,10 +1,14 @@
 #include "projection_node.hpp"
 
+#include <memory>
 #include <sstream>
+#include <string>
 
 #include "expression/expression_utils.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
 #include "lqp_utils.hpp"
 #include "resolve_type.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {

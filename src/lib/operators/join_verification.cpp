@@ -2,8 +2,10 @@
 
 #include <cstddef>
 #include <memory>
+#include <string>
 #include <unordered_map>
 
+#include "all_type_variant.hpp"
 #include "operators/abstract_join_operator.hpp"
 #include "operators/abstract_operator.hpp"
 #include "operators/operator_join_predicate.hpp"
@@ -11,6 +13,7 @@
 #include "storage/table.hpp"
 #include "type_comparison.hpp"
 #include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace {
 

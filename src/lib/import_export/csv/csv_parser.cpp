@@ -1,5 +1,6 @@
 #include "csv_parser.hpp"
 
+#include <cstddef>
 #include <fstream>
 #include <list>
 #include <memory>
@@ -15,6 +16,7 @@
 #include "resolve_type.hpp"
 #include "scheduler/job_task.hpp"
 #include "storage/table.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/load_table.hpp"
 

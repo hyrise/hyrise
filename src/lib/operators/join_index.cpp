@@ -3,8 +3,10 @@
 #include <algorithm>
 #include <cstddef>
 #include <memory>
+#include <ostream>
 #include <set>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 

@@ -2,6 +2,7 @@
 
 #include <atomic>
 #include <iostream>
+#include <memory>
 #include <thread>
 #include <unordered_set>
 
@@ -17,6 +18,7 @@
 #include "statistics/table_statistics.hpp"
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/table.hpp"
+#include "types.hpp"
 
 namespace {
 

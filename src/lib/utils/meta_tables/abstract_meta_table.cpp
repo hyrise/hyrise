@@ -1,5 +1,9 @@
 #include "abstract_meta_table.hpp"
 
+#include <cstddef>
+#include <memory>
+
+#include "all_type_variant.hpp"
 #include "statistics/table_statistics.hpp"
 #include "utils/assert.hpp"
 #include "utils/meta_table_manager.hpp"

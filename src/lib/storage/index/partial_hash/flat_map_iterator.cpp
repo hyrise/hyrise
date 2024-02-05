@@ -1,5 +1,8 @@
 #include "flat_map_iterator.hpp"
 
+#include <memory>
+#include <utility>
+
 #include "all_type_variant.hpp"
 #include "flat_map_iterator_impl.hpp"
 

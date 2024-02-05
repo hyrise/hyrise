@@ -1,6 +1,7 @@
 #include "value_segment.hpp"
 
 #include <climits>
+#include <cstddef>
 #include <limits>
 #include <memory>
 #include <sstream>
@@ -8,7 +9,9 @@
 #include <utility>
 #include <vector>
 
+#include "all_type_variant.hpp"
 #include "resolve_type.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
 #include "utils/size_estimation_utils.hpp"

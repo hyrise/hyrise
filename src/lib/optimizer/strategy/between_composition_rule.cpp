@@ -1,9 +1,12 @@
 #include "between_composition_rule.hpp"
 
 #include <algorithm>
+#include <cstddef>
 #include <iostream>
 #include <memory>
 #include <string>
+#include <unordered_set>
+#include <utility>
 #include <vector>
 
 #include "expression/expression_utils.hpp"
@@ -11,6 +14,7 @@
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "statistics/table_statistics.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace {

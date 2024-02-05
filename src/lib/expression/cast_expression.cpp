@@ -4,8 +4,10 @@
 #include <functional>
 #include <memory>
 #include <sstream>
+#include <string>
 #include <unordered_map>
 
+#include "all_type_variant.hpp"
 #include "expression/abstract_expression.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"

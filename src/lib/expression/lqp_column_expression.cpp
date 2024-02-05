@@ -1,10 +1,19 @@
 #include "lqp_column_expression.hpp"
 
+#include <cstddef>
+#include <memory>
+#include <sstream>
+#include <string>
+#include <unordered_map>
+
+#include "all_type_variant.hpp"
 #include "hyrise.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/static_table_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "storage/table.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {

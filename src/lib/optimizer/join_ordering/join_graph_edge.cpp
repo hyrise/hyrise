@@ -1,5 +1,8 @@
 #include "join_graph_edge.hpp"
 
+#include <memory>
+#include <ostream>
+
 #include "expression/abstract_expression.hpp"
 
 namespace hyrise {

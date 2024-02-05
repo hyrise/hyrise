@@ -1,6 +1,14 @@
 #include "functional_dependency.hpp"
 
+#include <algorithm>
+#include <cstddef>
+#include <memory>
+#include <ostream>
+#include <utility>
+
 #include <boost/container_hash/hash.hpp>
+
+#include "utils/assert.hpp"
 
 namespace hyrise {
 

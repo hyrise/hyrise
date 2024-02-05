@@ -1,8 +1,16 @@
 #include "pqp_column_expression.hpp"
 
+#include <cstddef>
+#include <memory>
+#include <string>
+#include <unordered_map>
+
 #include <boost/functional/hash.hpp>
 
+#include "all_type_variant.hpp"
 #include "storage/table.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 

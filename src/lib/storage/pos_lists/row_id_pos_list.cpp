@@ -1,5 +1,9 @@
 #include "row_id_pos_list.hpp"
 
+#include <cstddef>
+
+#include "utils/assert.hpp"
+
 namespace hyrise {
 
 void RowIDPosList::guarantee_single_chunk() {

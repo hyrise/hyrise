@@ -1,9 +1,15 @@
 #include "function_expression.hpp"
 
+#include <cstddef>
+#include <memory>
+#include <ostream>
 #include <sstream>
+#include <string>
+#include <unordered_map>
 
 #include <boost/container_hash/hash.hpp>
 
+#include "all_type_variant.hpp"
 #include "expression_utils.hpp"
 #include "utils/assert.hpp"
 

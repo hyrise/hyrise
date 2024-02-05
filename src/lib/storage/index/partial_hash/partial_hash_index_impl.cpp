@@ -1,6 +1,13 @@
 #include "partial_hash_index_impl.hpp"
 
+#include <cstddef>
+#include <memory>
+#include <unordered_set>
+#include <utility>
+
+#include "all_type_variant.hpp"
 #include "storage/segment_iterate.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 

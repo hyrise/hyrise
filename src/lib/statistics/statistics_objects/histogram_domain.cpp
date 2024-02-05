@@ -1,5 +1,8 @@
 #include "histogram_domain.hpp"
 
+#include <cstddef>
+
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {

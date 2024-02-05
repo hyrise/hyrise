@@ -1,12 +1,17 @@
 #include "product.hpp"
 
+#include <cstddef>
 #include <map>
 #include <memory>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
+#include "all_type_variant.hpp"
 #include "storage/reference_segment.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 Product::Product(const std::shared_ptr<const AbstractOperator>& left,

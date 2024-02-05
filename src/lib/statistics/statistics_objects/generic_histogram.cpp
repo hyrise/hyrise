@@ -6,6 +6,8 @@
 #include <utility>
 #include <vector>
 
+#include "utils/assert.hpp"
+
 namespace hyrise {
 
 template <typename T>

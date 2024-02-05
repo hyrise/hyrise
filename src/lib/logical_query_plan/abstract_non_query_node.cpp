@@ -1,5 +1,8 @@
 #include "abstract_non_query_node.hpp"
 
+#include <memory>
+
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {

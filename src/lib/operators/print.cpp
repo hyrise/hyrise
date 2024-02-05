@@ -5,16 +5,20 @@
 #include <iostream>
 #include <memory>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include <boost/lexical_cast.hpp>
 
+#include "all_type_variant.hpp"
 #include "operators/table_wrapper.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "storage/abstract_encoded_segment.hpp"
 #include "storage/abstract_segment.hpp"
 #include "storage/base_value_segment.hpp"
 #include "storage/reference_segment.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
 
 namespace {

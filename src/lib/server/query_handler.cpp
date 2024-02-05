@@ -1,9 +1,16 @@
 #include "query_handler.hpp"
 
+#include <cstddef>
+#include <memory>
+#include <sstream>
+#include <string>
+#include <utility>
+
 #include "expression/value_expression.hpp"
 #include "optimizer/optimizer.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "sql/sql_translator.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 

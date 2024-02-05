@@ -1,7 +1,11 @@
 #include "unary_minus_expression.hpp"
 
+#include <memory>
 #include <sstream>
+#include <string>
+#include <unordered_map>
 
+#include "all_type_variant.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {

@@ -1,5 +1,6 @@
 #include "operator_performance_data.hpp"
 
+#include <ostream>
 #include <string>
 
 #include "utils/format_duration.hpp"

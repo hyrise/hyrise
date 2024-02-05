@@ -2,9 +2,11 @@
 
 #include <memory>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
+#include "all_type_variant.hpp"
 #include "concurrency/transaction_context.hpp"
 #include "delete.hpp"
 #include "hyrise.hpp"
