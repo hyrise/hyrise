@@ -46,13 +46,31 @@ DisableFormat:   false
 EmptyLineBeforeAccessModifier: LogicalBlock
 ExperimentalAutoDetectBinPacking: false
 ForEachMacros:   [ foreach, Q_FOREACH, BOOST_FOREACH ]
+IncludeBlocks:  Regroup
 IncludeCategories:
+    # clang-format uses the first hit (thus mixing boost with C system headers). As we cannot exclude <boost/...> with
+    # clang-format's Posix extended regrexes, we first check for boost headers with a higher priority than STL
+    # headers.
+  - Regex:           '^<tbb\/.*>$'
+    Priority:        3
+
+  # C system headers as the first category (e.g., <stdlib.h>).
   - Regex:           '^<.*\.h>'
     Priority:        1
+
+    # See comment for TBB. boost headers are not mixed with C headers but STL headers.
+  - Regex:           '^<boost\/.*>$'
+    Priority:        3
+
+  # STL headers as the second category (e.g., <vector>).
   - Regex:           '^<.*'
     Priority:        2
+
+    # This list needs to be kept up to date to order third party libraries properly.
+  - Regex:           '^"(magic_enum|nlohmann|lz4\.h|compact_vector\.hpp|concurrentqueue\.h|lightweightsemaphore\.h|uninitialized_vector\.hpp|tsl\/sparse\_.+\.h|lz4hc\.h|zdict\.h).*\"$'
+    Priority:        4
   - Regex:           '.*'
-    Priority:        3
+    Priority:        5
 IndentCaseLabels: true
 IndentWidth:     2
 IndentWrappedFunctionNames: false
@@ -74,7 +92,7 @@ PenaltyReturnTypeOnItsOwnLine: 200
 PointerAlignment: Left
 ReflowComments:  false
 SeparateDefinitionBlocks: Always
-SortIncludes:    true
+SortIncludes:    CaseInsensitive
 SpaceAfterCStyleCast: false
 SpaceBeforeAssignmentOperators: true
 SpaceBeforeParens: ControlStatements
