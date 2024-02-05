@@ -16,6 +16,7 @@ benchmarks='hyriseBenchmarkTPCH hyriseBenchmarkTPCDS hyriseBenchmarkTPCC hyriseB
 warmup_seconds=1
 mt_shuffled_runtime=1200
 runs=100
+mt_ordered_runs=30
 
 # Setting the number of clients used for the multi-threaded scenario to the machine's physical core count. This only works for macOS and Linux.
 output="$(uname -s)"
@@ -96,9 +97,11 @@ do
     if [ "$benchmark" = "hyriseBenchmarkTPCH" ]; then
       echo "Running $benchmark for $commit... (single-threaded, SF 0.01)"
       ( "${build_folder}"/"$benchmark" -s .01 -r ${runs} -w ${warmup_seconds} -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st_s01.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st_s01.log"
+    fi
 
+    if [ "$benchmark" != "hyriseBenchmarkTPCC" ]; then
       echo "Running $benchmark for $commit... (multi-threaded, ordered, 1 client)"
-      ( "${build_folder}"/"$benchmark" --scheduler --clients 1 --cores ${num_phy_cores} -m Ordered -r ${runs} -w ${warmup_seconds} -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt_ordered.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt_ordered.log"
+      ( "${build_folder}"/"$benchmark" --scheduler --clients 1 --cores ${num_phy_cores} -m Ordered -r ${mt_ordered_runs} -w ${warmup_seconds} -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt_ordered.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt_ordered.log"
     fi
 
     echo "Running $benchmark for $commit... (multi-threaded, shuffled, $num_phy_cores clients)"
@@ -156,10 +159,11 @@ xargs < "${build_folder}/benchmark_all_results/build_time_${end_commit}.txt" | a
 # Print information for each benchmark
 for benchmark in $benchmarks
 do
-  configs="st mt"
-  if [ "$benchmark" = "hyriseBenchmarkTPCH" ]; then
-    configs="st st_s01 mt_ordered mt"
-  fi
+  case "${benchmark}" in
+    "hyriseBenchmarkTPCC"*)  configs="st mt";;
+    "hyriseBenchmarkTPCH"*)  configs="st st_s01 mt_ordered mt";;
+    *)                       configs="st mt_ordered mt";;
+  esac
 
   for config in $configs
   do
@@ -178,6 +182,7 @@ do
       case "${config}" in
         "st") echo -n "single-threaded" ;;
         "mt") echo -n "multi-threaded, shuffled, ${num_phy_cores} clients, ${num_phy_cores} cores" ;;
+        "mt_ordered") echo -n "multi-threaded, ordered, 1 client, ${num_phy_cores} cores" ;;
       esac
     fi
 
