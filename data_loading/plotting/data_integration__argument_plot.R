@@ -11,7 +11,7 @@ print(getwd())
 source("ggplot_theme.R")
 
 
-results <- read.csv("data_loading_main_argument.csv")
+results <- read.csv("../results/data_loading_main_argument.csv")
 results$RUNTIME_S <- results$RUNTIME_NS / 1000 / 1000 / 1000
 results$SCHEDULER_MODE <- as.factor(results$SCHEDULER_MODE)
 results$BENCHMARK <- as.factor(results$BENCHMARK)
@@ -42,21 +42,26 @@ ggplot(results_agg %>% filter(SCHEDULER_MODE == "mt"),
 
 query_selection_argument <- ggplot(results_query_grouped %>% filter(SCHEDULER_MODE == "mt") %>% filter(SCALE_FACTOR == 10),
                                    aes(x=BENCHMARK_ITEM, group=BENCHMARK, y=NORM_RUNTIME, fill=BENCHMARK)) +
-  geom_hline(aes(yintercept = 1.0), color="#adadad") +
+  geom_hline(aes(yintercept = 1.0), color="#adadad", linewidth=0.2) +
   geom_col(position = "dodge") +
   theme_bw() +
   scale_colour_tableau(palette="Superfishel Stone") +
   scale_fill_tableau(palette="Superfishel Stone") +
   theme.paper_plot +
   coord_cartesian(clip = "off") +
-  labs(x= "TPC-H Query", y="Norm. Runtime") +
-  theme(legend.position=c(.14,.82)) +
+  labs(x= "TPC-H Query", y="Relative\nRuntime") +
+  theme(legend.position=c(.14,.62)) +
   theme(legend.title = element_blank()) +
   theme(legend.background=element_blank()) +
   theme(legend.key.size = unit(4, "mm")) +
   theme(panel.grid.major = element_blank(),
         panel.grid.minor = element_blank()) +
   theme(plot.margin=unit(c(1,1,0,1), 'mm')) +
-  theme(axis.title.y = element_text(hjust=0.7))
+  theme(axis.text.y = element_text(margin = margin(t = 0, r = 7, b = 0, l = 0))) # hjust=0.7, 
+
+Cairo("query_selection_argument__cairo.pdf", type="pdf", plot, width=5.3, height=1.1, pointsize=9, bg="white", canvas="white", units="in", dpi="auto")
 print(query_selection_argument)
-ggsave("query_selection_argument.pdf", query_selection_argument, width=5, height=1.5)
+dev.off()
+
+print(query_selection_argument)
+ggsave("query_selection_argument.pdf", query_selection_argument, width=5, height=1.1, device=cairo_pdf)

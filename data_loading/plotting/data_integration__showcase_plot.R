@@ -11,7 +11,7 @@ print(getwd())
 source("ggplot_theme.R")
 
 
-results <- read.csv("data_loading_main.csv")
+results <- read.csv("../results/data_loading_main.csv")
 results$RUNTIME_S <- results$RUNTIME_NS / 1000 / 1000 / 1000
 results$RADIX_CLUSTER_FACTOR <- results$RADIX_CLUSTER_FACTOR / 2  # Adapt to AMD with half the cache size
 results$SCHEDULER_MODE <- as.factor(results$SCHEDULER_MODE)
@@ -58,7 +58,7 @@ plot <- ggplot(results_agg_agg_norm %>% filter(SCHEDULER_MODE == "mt"),
   scale_fill_tableau(palette="Superfishel Stone") +
   theme.paper_plot +
   facet_wrap( ~ SCALE_FACTOR, ncol=2, scales = "free_y") +
-  labs(x= "Radix Cluster Factor", y="Norm. Cumu. Runtime") +
+  labs(x= "Radix Cluster Factor", y="Slowdown Factor") +
   # theme(legend.position=c(.55,.675)) +
   theme(legend.title = element_blank()) +
   theme(legend.direction = "horizontal") +
@@ -66,10 +66,14 @@ plot <- ggplot(results_agg_agg_norm %>% filter(SCHEDULER_MODE == "mt"),
   theme(legend.key = element_blank()) +
   theme(legend.margin=margin(t=0, b=-2, unit="mm")) +
   # theme(legend.key.size = unit(4, "mm")) +
-  theme(plot.margin=unit(c(1,1,0,1), 'mm')) +
+  theme(plot.margin=unit(c(0,1,0,1), 'mm')) +
   # theme(axis.title.y = element_text(hjust=0.7)) +
   # theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
   theme(legend.position="top") +
   scale_x_continuous(labels=function(x) sprintf("%.2f", x))
+
+Cairo("radix_cluster_plot__cairo.pdf", type="pdf", plot, width=5.3, height=2.0, pointsize=9, bg="white", canvas="white", units="in", dpi="auto")
 print(plot)
-ggsave("radix_cluster_plot.pdf", plot, width=5, height=2.5)
+dev.off()
+
+ggsave("radix_cluster_plot.pdf", plot, width=5, height=2.5, device=cairo_pdf)

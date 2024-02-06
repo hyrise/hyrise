@@ -10,7 +10,7 @@ print(getwd())
 source("ggplot_theme.R")
 
 
-results <- read.csv("data_integration__loading_results_q3.csv")
+results <- read.csv("../results/data_integration__loading_results_q3.csv")
 results$RUNTIME_S <- results$RUNTIME_US / 1000 / 1000
 results$COLUMN_CONFIGURATION <- as.factor(results$COLUMN_CONFIGURATION)
 results$RUN_CONFIG <- as.factor(results$RUN_CONFIG)
@@ -19,7 +19,7 @@ results$STEP <- as.factor(results$STEP)
 results$RUNTIME_S <- results$RUNTIME_S / 10  # we run queries 10 times (11 with warmup)
 
 levels(results$COLUMN_CONFIGURATION) <- list("DBgen Modification:\ngenerate only accessed columns" = "Q3_COLUMNS",
-                                             "Post-DBgen Filtering:\ngenerate only accessed columns" = "DB_Q3_COLUMNS",
+                                             "Post-DBgen Filtering:\nload only accessed columns" = "DB_Q3_COLUMNS",
                                              "Hyrise Default:\ngenerate and load all columns" = "NONE",
                                              "DBgen Default:\n.tbl file creation & loading" = "CSV")
 levels(results$RUN_CONFIG) <- c("", "Single-\nThreaded")
@@ -86,9 +86,9 @@ ggplot(results %>% filter(RUN_CONFIG == ""),
   coord_cartesian(clip = "off") +
   labs(x= "Threading Configuration", y="Runtime [s]") +
   theme(legend.position="top") +
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+  theme(axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=1))
 
-ggplot(results %>% filter(RUN_CONFIG == "" & STEP == "#4 Query"),
+ggplot(results %>% filter(RUN_CONFIG == "" & STEP == "#5 Query"),
        aes(x=STEP)) +
   geom_hline(data = query_runtimes, aes(yintercept = MEAN_RUNTIME)) +
   geom_boxplot(aes(y=RUNTIME_S, fill=STEP)) +
@@ -111,7 +111,7 @@ results_fake <- results_fake %>% mutate(SCALE_FACTOR_RUNTIME_LABEL = factor(SCAL
 plot <- function(df, df_fake, qr, name) {
   g <- ggplot(df,
               aes(x=RUN_CONFIG)) +
-    geom_hline(data = qr, aes(yintercept = MEAN_RUNTIME)) +
+    # geom_hline(data = qr, aes(yintercept = MEAN_RUNTIME)) +
     geom_col(aes(y=RUNTIME_S_MEAN, fill=STEP)) +
     geom_point(data=df_fake, aes(y=STEP_SUM), alpha = 0.0) +
     theme_bw() +
@@ -124,15 +124,26 @@ plot <- function(df, df_fake, qr, name) {
     coord_cartesian(clip = "off") +
     labs(x= "", y="Runtime [s]") +
     theme(legend.position="top") +
+    theme(legend.margin=margin(t=0, b=-2, unit="mm"),
+          legend.spacing.x = unit(2, "mm"),
+          legend.text = element_text(margin = margin(r = 10, unit = "mm"))) +
+    theme(axis.text.x=element_blank(),
+          axis.ticks.x=element_blank()) +
     theme(plot.margin=unit(c(1,1,-5,1), 'mm')) +
     guides(fill=guide_legend(nrow=1, byrow=TRUE))
   
+  Cairo(paste0(name, "__cairo.pdf"), type="pdf", plot, width=9.0, height=2.4, pointsize=9, bg="white", canvas="white", units="in", dpi="auto")
   print(g)
-  ggsave(name, g, width=9.0, height=3.25)
+  dev.off()
+
+  print(g)
+  ggsave(paste0(name, ".pdf"), g, width=9.0, height=3.25, device=cairo_pdf)
 }
 
-plot(results_agg, results_fake, query_runtimes, "data_integration__loading_q3.pdf")
+plot(results_agg, results_fake, query_runtimes, "data_integration__loading_q3")
 plot(results_agg %>% filter(RUN_CONFIG == "" & SCALE_FACTOR > 9 & SCALE_FACTOR < 51),
      results_fake %>% filter(RUN_CONFIG == "" & SCALE_FACTOR > 9 & SCALE_FACTOR < 51),
      query_runtimes %>% filter(RUN_CONFIG == "" & SCALE_FACTOR > 9 & SCALE_FACTOR < 51),
-     "data_integration__loading_simplified_q3.pdf")
+     "data_integration__loading_simplified_q3")
+
+debug <- results_agg %>% filter(RUN_CONFIG == "" & SCALE_FACTOR > 9 & SCALE_FACTOR < 51)
