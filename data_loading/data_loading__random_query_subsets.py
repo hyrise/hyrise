@@ -148,7 +148,7 @@ for query_set_name, query_set_kind, query_set in query_sets_sorted:
               if 'Server started at' in line:
                 print("done.")
                 break
-            if time.time() - min(1200, 300 * args.scale_factor) > server_start_time:
+            if time.time() - min(3600, 300 * args.scale_factor) > server_start_time:
               print("Error: time out during server start")
               sys.exit()
 
