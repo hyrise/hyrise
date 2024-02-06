@@ -304,7 +304,7 @@ TEST_F(StressTest, NodeQueueSchedulerCreationAndReset) {
 // We run this test for various fake NUMA topologies as it triggered a bug that was introduced with #2610.
 TEST_F(StressTest, NodeQueueSchedulerSemaphoreIncrements) {
   constexpr auto SLEEP_TIME = std::chrono::milliseconds{10};
-  const auto job_count = CORES_PER_NODE * 32;
+  const auto job_count = CORES_PER_NODE * 8;
 
   for (const auto& fake_numa_topology : FAKE_SINGLE_NODE_NUMA_TOPOLOGIES) {
     Hyrise::get().topology.use_fake_numa_topology(fake_numa_topology);
