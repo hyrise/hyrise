@@ -4,6 +4,7 @@
 #include <memory>
 #include <utility>
 
+#include "statistics/statistics_objects/abstract_histogram.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {

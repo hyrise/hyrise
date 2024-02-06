@@ -6,6 +6,7 @@
 #include <utility>
 #include <vector>
 
+#include "concurrency/transaction_context.hpp"
 #include "operators/abstract_operator.hpp"
 #include "operators/abstract_read_write_operator.hpp"
 #include "operators/get_table.hpp"

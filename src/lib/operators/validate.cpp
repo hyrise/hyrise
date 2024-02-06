@@ -1,7 +1,9 @@
 #include "validate.hpp"
 
 #include <cstddef>
+#include <cstdint>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -11,10 +13,12 @@
 #include "concurrency/transaction_context.hpp"
 #include "hyrise.hpp"
 #include "operators/abstract_operator.hpp"
+#include "operators/abstract_read_only_operator.hpp"
 #include "operators/abstract_read_write_operator.hpp"
 #include "operators/delete.hpp"
 #include "scheduler/job_task.hpp"
 #include "storage/chunk.hpp"
+#include "storage/mvcc_data.hpp"
 #include "storage/pos_lists/abstract_pos_list.hpp"
 #include "storage/pos_lists/entire_chunk_pos_list.hpp"
 #include "storage/pos_lists/row_id_pos_list.hpp"

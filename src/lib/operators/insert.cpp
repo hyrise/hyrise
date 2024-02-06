@@ -1,5 +1,6 @@
 #include "insert.hpp"
 
+#include <algorithm>
 #include <atomic>
 #include <cstddef>
 #include <memory>
@@ -13,6 +14,7 @@
 #include "resolve_type.hpp"
 #include "storage/abstract_encoded_segment.hpp"
 #include "storage/abstract_segment.hpp"
+#include "storage/mvcc_data.hpp"
 #include "storage/segment_iterate.hpp"
 #include "storage/value_segment.hpp"
 #include "types.hpp"

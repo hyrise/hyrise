@@ -1,6 +1,8 @@
 #include "expression_evaluator.hpp"
 
+#include <algorithm>
 #include <cstddef>
+#include <cstdint>
 #include <iterator>
 #include <memory>
 #include <sstream>
@@ -23,6 +25,8 @@
 #include "expression/binary_predicate_expression.hpp"
 #include "expression/case_expression.hpp"
 #include "expression/cast_expression.hpp"
+#include "expression/correlated_parameter_expression.hpp"
+#include "expression/evaluation/expression_result.hpp"
 #include "expression/exists_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"

@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <cstdint>
 #include <memory>
 #include <ostream>
 #include <sstream>
@@ -108,10 +109,11 @@ std::ostream& operator<<(std::ostream& stream, const FrameDescription& frame_des
 
 WindowExpression::WindowExpression(const std::vector<std::shared_ptr<AbstractExpression>>& partition_by_expressions,
                                    const std::vector<std::shared_ptr<AbstractExpression>>& order_by_expressions,
-                                   std::vector<SortMode>&& init_sort_modes, FrameDescription&& init_frame_description)
+                                   std::vector<SortMode>&& init_sort_modes,
+                                   const FrameDescription init_frame_description)
     : AbstractExpression{ExpressionType::Window, {/* Expressions added below. */}},
       sort_modes{std::move(init_sort_modes)},
-      frame_description{std::move(init_frame_description)},
+      frame_description{init_frame_description},
       order_by_expressions_begin_idx{partition_by_expressions.size()} {
   const auto order_by_expression_count = order_by_expressions.size();
   Assert(order_by_expression_count == sort_modes.size(), "Passed sort modes do not match ORDER BY expressions.");
@@ -119,7 +121,7 @@ WindowExpression::WindowExpression(const std::vector<std::shared_ptr<AbstractExp
   arguments.resize(order_by_expressions_begin_idx + order_by_expression_count);
   std::copy(partition_by_expressions.begin(), partition_by_expressions.end(), arguments.begin());
   std::copy(order_by_expressions.begin(), order_by_expressions.end(),
-            arguments.begin() + order_by_expressions_begin_idx);
+            arguments.begin() + static_cast<int64_t>(order_by_expressions_begin_idx));
 }
 
 std::shared_ptr<AbstractExpression> WindowExpression::_on_deep_copy(
@@ -141,7 +143,7 @@ std::shared_ptr<AbstractExpression> WindowExpression::_on_deep_copy(
   auto sort_modes_copy = sort_modes;
 
   return std::make_shared<WindowExpression>(std::move(partition_by_expressions), std::move(order_by_expressions),
-                                            std::move(sort_modes_copy), std::move(frame_description_copy));
+                                            std::move(sort_modes_copy), frame_description_copy);
 }
 
 std::string WindowExpression::description(const DescriptionMode mode) const {

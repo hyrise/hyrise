@@ -13,7 +13,6 @@
 #include "expression/expression_precedence.hpp"
 #include "expression_utils.hpp"
 #include "operators/abstract_operator.hpp"
-#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {

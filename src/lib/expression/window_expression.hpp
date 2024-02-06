@@ -52,7 +52,7 @@ class WindowExpression : public AbstractExpression {
  public:
   WindowExpression(const std::vector<std::shared_ptr<AbstractExpression>>& partition_by_expressions,
                    const std::vector<std::shared_ptr<AbstractExpression>>& order_by_expressions,
-                   std::vector<SortMode>&& init_sort_modes, FrameDescription&& init_frame_description);
+                   std::vector<SortMode>&& init_sort_modes, const FrameDescription init_frame_description);
 
   std::string description(const DescriptionMode mode) const override;
   DataType data_type() const override;

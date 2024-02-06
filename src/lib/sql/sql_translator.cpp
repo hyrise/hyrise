@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <string>
@@ -10,6 +11,7 @@
 #include <vector>
 
 #include "magic_enum.hpp"
+#include "sql/ColumnType.h"
 #include "SQLParser.h"
 
 #include "all_type_variant.hpp"
@@ -66,6 +68,7 @@
 #include "logical_query_plan/window_node.hpp"
 #include "storage/lqp_view.hpp"
 #include "storage/table.hpp"
+#include "storage/table_column_definition.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/date_time_utils.hpp"

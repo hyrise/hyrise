@@ -1,7 +1,6 @@
 #include "list_expression.hpp"
 
 #include <memory>
-#include <sstream>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -31,7 +30,7 @@ std::shared_ptr<AbstractExpression> ListExpression::_on_deep_copy(
 }
 
 std::string ListExpression::description(const DescriptionMode mode) const {
-  return std::string("(") + expression_descriptions(arguments, mode) + ")";
+  return std::string{"("} + expression_descriptions(arguments, mode) + ")";
 }
 
 bool ListExpression::_shallow_equals(const AbstractExpression& expression) const {

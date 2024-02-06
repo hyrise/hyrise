@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <cstdint>
 #include <iomanip>
 #include <iostream>
 #include <memory>
@@ -13,12 +14,15 @@
 
 #include "all_type_variant.hpp"
 #include "operators/abstract_operator.hpp"
+#include "operators/abstract_read_only_operator.hpp"
 #include "operators/abstract_read_write_operator.hpp"
 #include "operators/table_wrapper.hpp"
 #include "sql/sql_pipeline_builder.hpp"
+#include "sql/sql_pipeline_statement.hpp"
 #include "storage/abstract_encoded_segment.hpp"
 #include "storage/abstract_segment.hpp"
 #include "storage/base_value_segment.hpp"
+#include "storage/mvcc_data.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"

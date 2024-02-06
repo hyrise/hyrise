@@ -26,6 +26,7 @@
 #include "statistics/cardinality_estimator.hpp"
 #include "statistics/table_statistics.hpp"
 #include "storage/table.hpp"
+#include "storage/table_column_definition.hpp"
 #include "storage/value_segment.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"

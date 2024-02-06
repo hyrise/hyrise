@@ -4,6 +4,7 @@
 #include <ostream>
 #include <vector>
 
+#include "concurrency/transaction_context.hpp"
 #include "operators/abstract_operator.hpp"
 #include "utils/assert.hpp"
 

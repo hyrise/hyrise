@@ -1,6 +1,7 @@
 #include "variable_length_key.hpp"
 
 #include <algorithm>
+#include <cstdint>
 #include <memory>
 #include <ostream>
 #include <utility>

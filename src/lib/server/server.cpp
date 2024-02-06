@@ -2,6 +2,7 @@
 
 #include <pthread.h>
 
+#include <cstdint>
 #include <iostream>
 #include <memory>
 #include <string>

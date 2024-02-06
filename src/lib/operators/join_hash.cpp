@@ -1,7 +1,9 @@
 #include "join_hash.hpp"
 
+#include <algorithm>
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <memory>
 #include <numeric>
 #include <optional>

@@ -4,6 +4,7 @@
 #include <sched.h>
 #include <unistd.h>
 
+#include <cstdint>
 #include <memory>
 #include <random>
 #include <thread>

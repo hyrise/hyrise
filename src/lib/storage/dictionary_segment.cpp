@@ -1,6 +1,7 @@
 #include "dictionary_segment.hpp"
 
 #include <cstddef>
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <string>

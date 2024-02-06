@@ -1,6 +1,7 @@
 #include "abstract_chunk_index.hpp"
 
 #include <cstddef>
+#include <cstdint>
 #include <memory>
 #include <vector>
 

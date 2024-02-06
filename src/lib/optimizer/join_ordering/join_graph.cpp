@@ -101,17 +101,17 @@ std::vector<std::shared_ptr<AbstractExpression>> JoinGraph::find_join_predicates
 }
 
 std::ostream& operator<<(std::ostream& stream, const JoinGraph& join_graph) {
-  stream << "==== Vertices ====" << std::endl;
+  stream << "==== Vertices ====\n";
   if (join_graph.vertices.empty()) {
-    stream << "<none>" << std::endl;
+    stream << "<none>\n";
   } else {
     for (const auto& vertex : join_graph.vertices) {
-      stream << vertex->description() << std::endl;
+      stream << vertex->description() << '\n';
     }
   }
-  stream << "===== Edges ======" << std::endl;
+  stream << "===== Edges ======\n";
   if (join_graph.edges.empty()) {
-    stream << "<none>" << std::endl;
+    stream << "<none>\n";
   } else {
     for (const auto& edge : join_graph.edges) {
       stream << edge;

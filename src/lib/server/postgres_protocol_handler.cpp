@@ -1,6 +1,7 @@
 #include "postgres_protocol_handler.hpp"
 
 #include <cstddef>
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <string>

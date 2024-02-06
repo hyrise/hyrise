@@ -13,6 +13,7 @@
 
 #include "generic_histogram.hpp"
 #include "resolve_type.hpp"
+#include "statistics/statistics_objects/abstract_histogram.hpp"
 #include "storage/segment_iterate.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"

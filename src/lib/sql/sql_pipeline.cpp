@@ -13,8 +13,10 @@
 
 #include "SQLParser.h"
 
+#include "concurrency/transaction_context.hpp"
 #include "create_sql_parser_error_message.hpp"
 #include "hyrise.hpp"
+#include "sql/sql_pipeline_statement.hpp"
 #include "sql_plan_cache.hpp"
 #include "storage/table.hpp"
 #include "utils/assert.hpp"

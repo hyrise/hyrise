@@ -25,6 +25,7 @@
 #include "hyrise.hpp"
 #include "lossless_cast.hpp"
 #include "operators/abstract_operator.hpp"
+#include "operators/abstract_read_only_operator.hpp"
 #include "operators/abstract_read_write_operator.hpp"
 #include "operators/operator_scan_predicate.hpp"
 #include "operators/pqp_utils.hpp"

@@ -1,6 +1,7 @@
 #include "variable_length_key_proxy.hpp"
 
 #include <algorithm>
+#include <cstdint>
 #include <ostream>
 
 #include "utils/assert.hpp"

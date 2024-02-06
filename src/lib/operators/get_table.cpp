@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <cstdint>
 #include <iterator>
 #include <memory>
 #include <optional>
@@ -14,6 +15,7 @@
 
 #include "abstract_read_only_operator.hpp"
 #include "all_type_variant.hpp"
+#include "concurrency/transaction_context.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "hyrise.hpp"
@@ -24,6 +26,7 @@
 #include "operators/table_scan.hpp"
 #include "storage/chunk.hpp"
 #include "storage/index/partial_hash/partial_hash_index.hpp"
+#include "storage/table_column_definition.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/pruning_utils.hpp"

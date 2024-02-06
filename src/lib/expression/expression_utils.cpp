@@ -7,13 +7,17 @@
 #include <sstream>
 #include <string>
 #include <unordered_map>
-#include <unordered_set>
 #include <vector>
+
+#include <boost/lexical_cast.hpp>
 
 #include "magic_enum.hpp"
 
 #include "all_type_variant.hpp"
 #include "expression/abstract_expression.hpp"
+#include "expression/cast_expression.hpp"
+#include "expression/correlated_parameter_expression.hpp"
+#include "expression/placeholder_expression.hpp"
 #include "expression/window_function_expression.hpp"
 #include "expression_functional.hpp"
 #include "logical_expression.hpp"

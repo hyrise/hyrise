@@ -1,6 +1,7 @@
 #include "group_key_index.hpp"
 
 #include <cstddef>
+#include <cstdint>
 #include <memory>
 #include <utility>
 #include <vector>

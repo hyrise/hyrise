@@ -11,6 +11,7 @@
 
 #include "SQLParser.h"
 
+#include "concurrency/transaction_context.hpp"
 #include "create_sql_parser_error_message.hpp"
 #include "expression/value_expression.hpp"
 #include "hyrise.hpp"

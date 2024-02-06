@@ -6,6 +6,7 @@
 #include <utility>
 #include <vector>
 
+#include "statistics/statistics_objects/abstract_histogram.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {

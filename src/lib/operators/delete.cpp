@@ -10,6 +10,7 @@
 #include "operators/validate.hpp"
 #include "statistics/table_statistics.hpp"
 #include "storage/chunk.hpp"
+#include "storage/mvcc_data.hpp"
 #include "storage/pos_lists/abstract_pos_list.hpp"
 #include "storage/reference_segment.hpp"
 #include "types.hpp"

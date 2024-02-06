@@ -1,6 +1,8 @@
 #include "histogram_domain.hpp"
 
+#include <algorithm>
 #include <cstddef>
+#include <cstdint>
 
 #include "types.hpp"
 #include "utils/assert.hpp"

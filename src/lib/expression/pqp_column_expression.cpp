@@ -6,8 +6,6 @@
 #include <string>
 #include <unordered_map>
 
-#include <boost/functional/hash.hpp>
-
 #include "all_type_variant.hpp"
 #include "expression/abstract_expression.hpp"
 #include "operators/abstract_operator.hpp"

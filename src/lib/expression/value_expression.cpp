@@ -1,6 +1,7 @@
 #include "value_expression.hpp"
 
 #include <cstddef>
+#include <cstdint>
 #include <functional>
 #include <memory>
 #include <sstream>

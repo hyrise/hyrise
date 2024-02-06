@@ -1,23 +1,28 @@
 #include "csv_parser.hpp"
 
 #include <cstddef>
+#include <cstdint>
 #include <fstream>
 #include <ios>
 #include <list>
 #include <memory>
+#include <mutex>
 #include <optional>
 #include <string>
 #include <string_view>
 #include <utility>
 #include <vector>
 
+#include "all_type_variant.hpp"
 #include "hyrise.hpp"
 #include "import_export/csv/csv_converter.hpp"
 #include "import_export/csv/csv_meta.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/job_task.hpp"
 #include "storage/chunk.hpp"
+#include "storage/mvcc_data.hpp"
 #include "storage/table.hpp"
+#include "storage/table_column_definition.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/load_table.hpp"

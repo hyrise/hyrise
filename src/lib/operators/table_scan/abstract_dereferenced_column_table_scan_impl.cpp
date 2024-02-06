@@ -11,6 +11,7 @@
 #include "storage/split_pos_list_by_chunk_id.hpp"
 #include "storage/table.hpp"
 #include "storage/value_segment.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 

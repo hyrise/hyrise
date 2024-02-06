@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <array>
 #include <cstddef>
+#include <cstdint>
 #include <iterator>
 #include <limits>
 #include <memory>
@@ -10,6 +11,7 @@
 #include <vector>
 
 #include "adaptive_radix_tree_nodes.hpp"
+#include "all_type_variant.hpp"
 #include "storage/base_dictionary_segment.hpp"
 #include "storage/index/abstract_chunk_index.hpp"
 #include "storage/vector_compression/resolve_compressed_vector_type.hpp"

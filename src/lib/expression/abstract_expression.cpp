@@ -3,7 +3,6 @@
 #include <algorithm>
 #include <cstddef>
 #include <memory>
-#include <queue>
 #include <string>
 #include <type_traits>
 #include <unordered_map>
@@ -14,7 +13,6 @@
 #include "expression/expression_precedence.hpp"
 #include "expression_utils.hpp"
 #include "types.hpp"
-#include "utils/assert.hpp"
 
 namespace hyrise {
 

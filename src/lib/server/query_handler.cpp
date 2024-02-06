@@ -12,6 +12,7 @@
 #include "operators/abstract_operator.hpp"
 #include "optimizer/optimizer.hpp"
 #include "sql/sql_pipeline_builder.hpp"
+#include "sql/sql_pipeline_statement.hpp"
 #include "sql/sql_translator.hpp"
 #include "utils/assert.hpp"
 

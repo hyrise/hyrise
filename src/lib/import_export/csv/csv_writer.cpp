@@ -5,6 +5,8 @@
 #include <string>
 #include <vector>
 
+#include "nlohmann/json.hpp"
+
 #include "all_type_variant.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"

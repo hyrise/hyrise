@@ -1,6 +1,7 @@
 #include "multi_predicate_join_evaluator.hpp"
 
 #include <memory>
+#include <type_traits>
 #include <vector>
 
 #include "operators/operator_join_predicate.hpp"

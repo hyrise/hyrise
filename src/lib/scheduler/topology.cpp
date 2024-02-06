@@ -1,6 +1,7 @@
 #include "topology.hpp"
 
 #include <cstddef>
+#include <cstdint>
 #include <ostream>
 
 #if HYRISE_NUMA_SUPPORT

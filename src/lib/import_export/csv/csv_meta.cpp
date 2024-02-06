@@ -4,6 +4,8 @@
 #include <string>
 #include <vector>
 
+#include "nlohmann/json.hpp"
+
 #include "utils/assert.hpp"
 
 namespace hyrise {

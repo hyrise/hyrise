@@ -12,6 +12,7 @@
 #include "import_export/binary/binary_parser.hpp"
 #include "import_export/csv/csv_parser.hpp"
 #include "operators/abstract_operator.hpp"
+#include "operators/abstract_read_only_operator.hpp"
 #include "operators/abstract_read_write_operator.hpp"
 #include "utils/assert.hpp"
 #include "utils/load_table.hpp"

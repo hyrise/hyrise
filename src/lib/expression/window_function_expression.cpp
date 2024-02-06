@@ -16,6 +16,7 @@
 #include "operators/abstract_operator.hpp"
 #include "operators/aggregate/window_function_traits.hpp"
 #include "resolve_type.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {
