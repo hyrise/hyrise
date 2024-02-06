@@ -2,6 +2,8 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <functional>
+#include <vector>
 
 #include <boost/container_hash/hash.hpp>
 

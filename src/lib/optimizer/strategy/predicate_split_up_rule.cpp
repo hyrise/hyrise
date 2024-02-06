@@ -3,7 +3,9 @@
 #include <cstddef>
 #include <memory>
 #include <string>
+#include <vector>
 
+#include "expression/abstract_expression.hpp"
 #include "expression/binary_predicate_expression.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/logical_expression.hpp"

@@ -7,6 +7,7 @@
 #include <ostream>
 #include <thread>
 #include <utility>
+#include <vector>
 
 #include "all_type_variant.hpp"
 #include "attribute_statistics.hpp"

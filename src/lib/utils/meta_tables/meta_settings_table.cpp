@@ -1,10 +1,13 @@
 #include "meta_settings_table.hpp"
 
 #include <memory>
+#include <optional>
 #include <string>
+#include <vector>
 
 #include "all_type_variant.hpp"
 #include "hyrise.hpp"
+#include "storage/table.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 

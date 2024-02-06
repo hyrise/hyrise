@@ -6,6 +6,7 @@
 #include <unordered_map>
 
 #include "expression/abstract_predicate_expression.hpp"
+#include "operators/abstract_operator.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 

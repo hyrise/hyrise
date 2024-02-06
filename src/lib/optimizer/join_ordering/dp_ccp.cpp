@@ -3,14 +3,17 @@
 #include <cstddef>
 #include <map>
 #include <memory>
-#include <unordered_map>
 #include <utility>
+#include <vector>
+
+#include <boost/dynamic_bitset.hpp>
 
 #include "cost_estimation/abstract_cost_estimator.hpp"
 #include "enumerate_ccp.hpp"
 #include "join_graph.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "operators/operator_join_predicate.hpp"
+#include "optimizer/join_ordering/join_graph_edge.hpp"
 #include "statistics/abstract_cardinality_estimator.hpp"
 #include "statistics/cardinality_estimator.hpp"
 #include "utils/assert.hpp"

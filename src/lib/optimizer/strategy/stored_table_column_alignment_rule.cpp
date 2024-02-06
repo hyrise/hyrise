@@ -9,6 +9,8 @@
 #include <utility>
 #include <vector>
 
+#include <boost/container_hash/hash.hpp>
+
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/logical_plan_root_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"

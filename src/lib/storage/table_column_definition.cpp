@@ -3,6 +3,8 @@
 #include <cstddef>
 #include <string>
 
+#include <boost/container_hash/hash.hpp>
+
 #include "all_type_variant.hpp"
 
 namespace hyrise {

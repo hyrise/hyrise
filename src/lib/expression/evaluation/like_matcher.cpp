@@ -1,15 +1,18 @@
 #include "like_matcher.hpp"
 
+#include <array>
 #include <cstddef>
 #include <optional>
 #include <ostream>
+#include <regex>
 #include <string>
 #include <utility>
+#include <variant>
+#include <vector>
 
 #include <boost/algorithm/string/replace.hpp>
 
 #include "types.hpp"
-#include "utils/assert.hpp"
 
 namespace hyrise {
 

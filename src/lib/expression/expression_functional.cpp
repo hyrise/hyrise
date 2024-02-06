@@ -1,5 +1,6 @@
 #include "expression_functional.hpp"
 
+#include <cstddef>
 #include <memory>
 #include <string>
 #include <utility>
@@ -11,7 +12,11 @@
 #include "expression/interval_expression.hpp"
 #include "expression/lqp_column_expression.hpp"
 #include "expression/placeholder_expression.hpp"
+#include "expression/pqp_column_expression.hpp"
 #include "expression/value_expression.hpp"
+#include "expression/window_expression.hpp"
+#include "expression/window_function_expression.hpp"
+#include "null_value.hpp"
 #include "types.hpp"
 
 namespace hyrise::expression_functional {

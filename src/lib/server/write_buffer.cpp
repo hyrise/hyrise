@@ -1,5 +1,6 @@
 #include "write_buffer.hpp"
 
+#include <array>
 #include <cstddef>
 #include <string>
 

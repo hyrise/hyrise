@@ -7,7 +7,9 @@
 #include <string>
 #include <unordered_map>
 #include <utility>
+#include <vector>
 
+#include "magic_enum.hpp"
 #include "SQLParser.h"
 
 #include "all_type_variant.hpp"
@@ -68,6 +70,7 @@
 #include "utils/assert.hpp"
 #include "utils/date_time_utils.hpp"
 #include "utils/meta_table_manager.hpp"
+#include "utils/performance_warning.hpp"
 
 namespace {
 

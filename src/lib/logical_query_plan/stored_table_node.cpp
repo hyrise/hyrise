@@ -1,14 +1,19 @@
 #include "stored_table_node.hpp"
 
+#include <algorithm>
 #include <cstddef>
 #include <memory>
 #include <string>
+#include <vector>
+
+#include <boost/container_hash/hash.hpp>
 
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_column_expression.hpp"
 #include "hyrise.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
+#include "logical_query_plan/data_dependencies/unique_column_combination.hpp"
 #include "lqp_utils.hpp"
 #include "statistics/table_statistics.hpp"
 #include "storage/index/chunk_index_statistics.hpp"

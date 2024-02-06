@@ -1,16 +1,15 @@
 #include "placeholder_expression.hpp"
 
 #include <cstddef>
+#include <functional>
 #include <memory>
 #include <sstream>
 #include <string>
-#include <type_traits>
 #include <unordered_map>
 
 #include "all_type_variant.hpp"
 #include "expression/abstract_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
-#include "resolve_type.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 

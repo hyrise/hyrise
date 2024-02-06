@@ -1,10 +1,12 @@
 #include "meta_segments_table.hpp"
 
 #include <memory>
+#include <optional>
 #include <string>
 
 #include "all_type_variant.hpp"
 #include "hyrise.hpp"
+#include "storage/table.hpp"
 #include "utils/meta_tables/segment_meta_data.hpp"
 
 namespace hyrise {

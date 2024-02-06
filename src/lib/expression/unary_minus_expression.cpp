@@ -6,6 +6,8 @@
 #include <unordered_map>
 
 #include "all_type_variant.hpp"
+#include "expression/abstract_expression.hpp"
+#include "operators/abstract_operator.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {

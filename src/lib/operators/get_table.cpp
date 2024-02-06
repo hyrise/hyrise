@@ -10,15 +10,19 @@
 #include <string>
 #include <unordered_map>
 #include <utility>
+#include <vector>
 
 #include "abstract_read_only_operator.hpp"
 #include "all_type_variant.hpp"
+#include "expression/abstract_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "hyrise.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
+#include "operators/abstract_operator.hpp"
 #include "operators/pqp_utils.hpp"
 #include "operators/table_scan.hpp"
+#include "storage/chunk.hpp"
 #include "storage/index/partial_hash/partial_hash_index.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"

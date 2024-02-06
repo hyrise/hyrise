@@ -4,8 +4,10 @@
 #include <memory>
 #include <unordered_set>
 #include <utility>
+#include <vector>
 
 #include "all_type_variant.hpp"
+#include "storage/chunk.hpp"
 #include "storage/segment_iterate.hpp"
 #include "types.hpp"
 

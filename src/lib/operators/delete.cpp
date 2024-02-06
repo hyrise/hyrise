@@ -6,8 +6,11 @@
 
 #include "all_type_variant.hpp"
 #include "concurrency/transaction_context.hpp"
+#include "operators/abstract_operator.hpp"
 #include "operators/validate.hpp"
 #include "statistics/table_statistics.hpp"
+#include "storage/chunk.hpp"
+#include "storage/pos_lists/abstract_pos_list.hpp"
 #include "storage/reference_segment.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"

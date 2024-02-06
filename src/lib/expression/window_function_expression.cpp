@@ -1,6 +1,7 @@
 #include "window_function_expression.hpp"
 
 #include <cstddef>
+#include <functional>
 #include <memory>
 #include <ostream>
 #include <sstream>
@@ -8,8 +9,11 @@
 #include <unordered_map>
 
 #include "all_type_variant.hpp"
+#include "expression/abstract_expression.hpp"
 #include "expression_utils.hpp"
 #include "lqp_column_expression.hpp"
+#include "null_value.hpp"
+#include "operators/abstract_operator.hpp"
 #include "operators/aggregate/window_function_traits.hpp"
 #include "resolve_type.hpp"
 #include "utils/assert.hpp"

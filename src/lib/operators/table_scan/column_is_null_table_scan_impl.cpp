@@ -4,11 +4,9 @@
 #include <memory>
 #include <string>
 
-#include "resolve_type.hpp"
+#include "storage/abstract_segment.hpp"
 #include "storage/base_value_segment.hpp"
-#include "storage/create_iterable_from_segment.hpp"
-#include "storage/resolve_encoded_segment_type.hpp"
-#include "storage/segment_iterables/create_iterable_from_attribute_vector.hpp"
+#include "storage/pos_lists/row_id_pos_list.hpp"
 #include "storage/segment_iterate.hpp"
 #include "storage/value_segment/null_value_vector_iterable.hpp"
 #include "types.hpp"

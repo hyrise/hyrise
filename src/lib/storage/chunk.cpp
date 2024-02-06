@@ -6,6 +6,7 @@
 #include <optional>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "abstract_segment.hpp"
 #include "all_type_variant.hpp"

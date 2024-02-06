@@ -1,13 +1,19 @@
 #include "union_node.hpp"
 
 #include <cstddef>
+#include <functional>
 #include <memory>
 #include <numeric>
 #include <string>
 #include <vector>
 
+#include "magic_enum.hpp"
+
+#include "expression/abstract_expression.hpp"
 #include "expression/expression_utils.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
+#include "logical_query_plan/data_dependencies/functional_dependency.hpp"
+#include "logical_query_plan/data_dependencies/unique_column_combination.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 

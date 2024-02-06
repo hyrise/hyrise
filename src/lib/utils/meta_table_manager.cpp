@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "all_type_variant.hpp"
 #include "utils/assert.hpp"

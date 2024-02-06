@@ -1,5 +1,6 @@
 #include "column_vs_column_table_scan_impl.hpp"
 
+#include <functional>
 #include <memory>
 #include <string>
 #include <type_traits>
@@ -7,13 +8,14 @@
 #include "resolve_type.hpp"
 #include "storage/chunk.hpp"
 #include "storage/create_iterable_from_segment.hpp"
+#include "storage/pos_lists/row_id_pos_list.hpp"
 #include "storage/reference_segment/reference_segment_iterable.hpp"
 #include "storage/segment_iterables/any_segment_iterable.hpp"
-#include "storage/segment_iterate.hpp"
 #include "storage/table.hpp"
 #include "type_comparison.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
+#include "utils/performance_warning.hpp"
 
 namespace hyrise {
 

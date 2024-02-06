@@ -11,8 +11,10 @@
 #include <utility>
 #include <vector>
 
+#include "expression/abstract_expression.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/pqp_subquery_expression.hpp"
+#include "operators/abstract_operator.hpp"
 #include "operators/limit.hpp"
 #include "operators/projection.hpp"
 #include "operators/table_scan.hpp"

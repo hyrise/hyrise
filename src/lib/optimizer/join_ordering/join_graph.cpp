@@ -5,8 +5,11 @@
 #include <optional>
 #include <ostream>
 #include <unordered_set>
+#include <vector>
 
+#include "expression/abstract_expression.hpp"
 #include "join_graph_builder.hpp"
+#include "optimizer/join_ordering/join_graph_edge.hpp"
 #include "utils/assert.hpp"
 
 namespace {

@@ -6,6 +6,7 @@
 #include <string>
 
 #include <boost/algorithm/string.hpp>
+#include <boost/container_hash/hash.hpp>
 
 #include "magic_enum.hpp"
 

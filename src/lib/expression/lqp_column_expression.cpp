@@ -6,13 +6,16 @@
 #include <string>
 #include <unordered_map>
 
+#include <boost/container_hash/hash.hpp>
+
 #include "all_type_variant.hpp"
+#include "expression/abstract_expression.hpp"
 #include "hyrise.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/static_table_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
-#include "storage/table.hpp"
+#include "operators/abstract_operator.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 

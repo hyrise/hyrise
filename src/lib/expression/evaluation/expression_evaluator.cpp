@@ -8,9 +8,12 @@
 #include <type_traits>
 #include <unordered_map>
 #include <utility>
+#include <vector>
 
 #include <boost/lexical_cast.hpp>
 #include <boost/variant/apply_visitor.hpp>
+
+#include "magic_enum.hpp"
 
 #include "all_parameter_variant.hpp"
 #include "all_type_variant.hpp"
@@ -35,9 +38,11 @@
 #include "hyrise.hpp"
 #include "like_matcher.hpp"
 #include "lossy_cast.hpp"
+#include "null_value.hpp"
 #include "operators/abstract_operator.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/operator_task.hpp"
+#include "storage/pos_lists/row_id_pos_list.hpp"
 #include "storage/segment_iterate.hpp"
 #include "storage/value_segment.hpp"
 #include "types.hpp"

@@ -11,7 +11,9 @@
 #include <boost/container_hash/hash.hpp>
 
 #include "all_type_variant.hpp"
-#include "resolve_type.hpp"
+#include "expression/abstract_expression.hpp"
+#include "operators/abstract_operator.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {

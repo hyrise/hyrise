@@ -13,8 +13,10 @@
 #include <regex>
 
 #include <boost/algorithm/string/join.hpp>
+#include <boost/lexical_cast.hpp>
 
 #include "SQLParser.h"
+
 #include "concurrency/transaction_context.hpp"
 #include "hyrise.hpp"
 #include "import_export/file_type.hpp"

@@ -7,6 +7,7 @@
 #include <queue>
 #include <stack>
 #include <unordered_set>
+#include <vector>
 
 #include "expression/expression_functional.hpp"
 #include "join_graph_edge.hpp"

@@ -9,6 +9,7 @@
 #include <string>
 #include <unordered_set>
 #include <utility>
+#include <vector>
 
 #include "expression/abstract_expression.hpp"
 #include "expression/abstract_predicate_expression.hpp"

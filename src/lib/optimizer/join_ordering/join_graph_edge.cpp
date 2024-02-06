@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <ostream>
+#include <vector>
 
 #include "expression/abstract_expression.hpp"
 

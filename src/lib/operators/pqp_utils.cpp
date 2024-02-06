@@ -3,6 +3,7 @@
 #include <memory>
 
 #include "all_type_variant.hpp"
+#include "operators/abstract_operator.hpp"
 #include "storage/segment_iterate.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"

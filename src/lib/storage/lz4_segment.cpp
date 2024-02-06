@@ -16,6 +16,7 @@
 #include "all_type_variant.hpp"
 #include "resolve_type.hpp"
 #include "storage/abstract_encoded_segment.hpp"
+#include "storage/abstract_segment.hpp"
 #include "storage/vector_compression/base_compressed_vector.hpp"
 #include "storage/vector_compression/base_vector_decompressor.hpp"
 #include "types.hpp"

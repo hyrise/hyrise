@@ -12,10 +12,13 @@
 
 #include "aggregate/window_function_traits.hpp"
 #include "all_type_variant.hpp"
+#include "expression/abstract_expression.hpp"
 #include "expression/pqp_column_expression.hpp"
+#include "expression/window_function_expression.hpp"
 #include "operators/abstract_operator.hpp"
 #include "operators/sort.hpp"
 #include "resolve_type.hpp"
+#include "storage/chunk.hpp"
 #include "storage/pos_lists/entire_chunk_pos_list.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/segment_iterate.hpp"

@@ -2,7 +2,9 @@
 
 #include <algorithm>
 #include <memory>
+#include <optional>
 #include <string>
+#include <vector>
 
 #include "sql_identifier_resolver_proxy.hpp"
 #include "utils/assert.hpp"

@@ -11,17 +11,21 @@
 #include <utility>
 #include <vector>
 
+#include <boost/container_hash/hash.hpp>
 #include <boost/functional/hash_fwd.hpp>
 
 #include "all_type_variant.hpp"
 #include "hyrise.hpp"
 #include "join_helper/join_output_writing.hpp"
 #include "join_sort_merge/radix_cluster_sort.hpp"
+#include "operators/abstract_operator.hpp"
 #include "operators/multi_predicate_join/multi_predicate_join_evaluator.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
+#include "storage/pos_lists/row_id_pos_list.hpp"
 #include "storage/reference_segment.hpp"
+#include "storage/table.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 

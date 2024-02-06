@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <fstream>
+#include <ios>
 #include <list>
 #include <memory>
 #include <optional>
@@ -15,6 +16,7 @@
 #include "import_export/csv/csv_meta.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/job_task.hpp"
+#include "storage/chunk.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"

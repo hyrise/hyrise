@@ -10,15 +10,21 @@
 #include <unordered_set>
 #include <vector>
 
+#include "magic_enum.hpp"
+
 #include "all_type_variant.hpp"
 #include "expression/abstract_expression.hpp"
+#include "expression/window_function_expression.hpp"
 #include "expression_functional.hpp"
 #include "logical_expression.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
+#include "logical_query_plan/lqp_utils.hpp"
 #include "lossy_cast.hpp"
 #include "lqp_column_expression.hpp"
 #include "lqp_subquery_expression.hpp"
 #include "operators/abstract_operator.hpp"
 #include "pqp_subquery_expression.hpp"
+#include "resolve_type.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 #include "value_expression.hpp"

@@ -9,6 +9,7 @@
 
 #include "all_type_variant.hpp"
 #include "hyrise.hpp"
+#include "storage/table.hpp"
 #include "types.hpp"
 #include "utils/plugin_manager.hpp"
 

@@ -3,9 +3,11 @@
 #include <cstddef>
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "all_parameter_variant.hpp"
 #include "cost_estimation/abstract_cost_estimator.hpp"
+#include "expression/abstract_expression.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/logical_expression.hpp"
 #include "expression/lqp_subquery_expression.hpp"

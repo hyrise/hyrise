@@ -1,5 +1,6 @@
 #include "date_time_utils.hpp"
 
+#include <cstddef>
 #include <optional>
 #include <string>
 

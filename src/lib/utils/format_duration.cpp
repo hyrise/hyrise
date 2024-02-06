@@ -1,8 +1,10 @@
 #include "format_duration.hpp"
 
+#include <chrono>
 #include <cstddef>
 #include <sstream>
 #include <string>
+#include <vector>
 
 #include <boost/hana/for_each.hpp>
 #include <boost/hana/tuple.hpp>

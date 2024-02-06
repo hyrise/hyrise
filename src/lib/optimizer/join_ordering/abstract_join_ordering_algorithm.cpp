@@ -4,11 +4,13 @@
 #include <cstddef>
 #include <memory>
 #include <utility>
+#include <vector>
 
 #include "cost_estimation/abstract_cost_estimator.hpp"
 #include "join_graph.hpp"
 #include "operators/operator_join_predicate.hpp"
 #include "statistics/cardinality_estimator.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 

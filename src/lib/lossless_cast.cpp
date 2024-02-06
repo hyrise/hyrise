@@ -3,6 +3,7 @@
 #include <optional>
 
 #include "all_type_variant.hpp"
+#include "null_value.hpp"
 #include "resolve_type.hpp"
 
 namespace hyrise {

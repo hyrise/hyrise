@@ -1,6 +1,7 @@
 #include "abstract_scheduler.hpp"
 
 #include <memory>
+#include <vector>
 
 #include "utils/assert.hpp"
 

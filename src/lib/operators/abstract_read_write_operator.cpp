@@ -4,6 +4,7 @@
 #include <ostream>
 #include <vector>
 
+#include "operators/abstract_operator.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {

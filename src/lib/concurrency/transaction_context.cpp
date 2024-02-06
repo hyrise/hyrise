@@ -1,10 +1,9 @@
 #include "transaction_context.hpp"
 
-#include <algorithm>
+#include <functional>
 #include <future>
 #include <memory>
 #include <mutex>
-#include <optional>
 #include <ostream>
 
 #include "commit_context.hpp"

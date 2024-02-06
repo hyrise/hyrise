@@ -1,11 +1,13 @@
 #include "sql_pipeline.hpp"
 
 #include <algorithm>
+#include <chrono>
 #include <cstddef>
 #include <memory>
 #include <ostream>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include <boost/algorithm/string.hpp>
 
@@ -14,6 +16,7 @@
 #include "create_sql_parser_error_message.hpp"
 #include "hyrise.hpp"
 #include "sql_plan_cache.hpp"
+#include "storage/table.hpp"
 #include "utils/assert.hpp"
 #include "utils/format_duration.hpp"
 

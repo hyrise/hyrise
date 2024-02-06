@@ -1,9 +1,11 @@
 #include "segment_access_counter.hpp"
 
+#include <array>
 #include <cstddef>
 #include <sstream>
 #include <string>
 
+#include "storage/pos_lists/abstract_pos_list.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {

@@ -8,6 +8,7 @@
 
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_precedence.hpp"
+#include "operators/abstract_operator.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 

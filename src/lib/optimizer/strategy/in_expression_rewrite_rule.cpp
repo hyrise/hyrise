@@ -5,9 +5,11 @@
 #include <optional>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "all_type_variant.hpp"
 #include "cost_estimation/abstract_cost_estimator.hpp"
+#include "expression/abstract_expression.hpp"
 #include "expression/binary_predicate_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/in_expression.hpp"
@@ -20,9 +22,11 @@
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/static_table_node.hpp"
 #include "logical_query_plan/union_node.hpp"
+#include "resolve_type.hpp"
 #include "statistics/cardinality_estimator.hpp"
 #include "statistics/table_statistics.hpp"
 #include "storage/table.hpp"
+#include "storage/value_segment.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 

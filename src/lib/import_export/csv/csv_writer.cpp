@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "all_type_variant.hpp"
+#include "storage/table.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 

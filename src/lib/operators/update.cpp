@@ -11,7 +11,9 @@
 #include "delete.hpp"
 #include "hyrise.hpp"
 #include "insert.hpp"
+#include "operators/abstract_operator.hpp"
 #include "storage/reference_segment.hpp"
+#include "storage/table.hpp"
 #include "table_wrapper.hpp"
 #include "utils/assert.hpp"
 

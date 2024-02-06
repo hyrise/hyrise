@@ -1,14 +1,25 @@
 #include "sort.hpp"
 
+#include <chrono>
 #include <cstddef>
 #include <memory>
 #include <optional>
 #include <string>
 #include <unordered_map>
 #include <utility>
+#include <vector>
 
 #include "all_type_variant.hpp"
+#include "operators/abstract_operator.hpp"
+#include "operators/abstract_read_write_operator.hpp"
+#include "resolve_type.hpp"
+#include "storage/abstract_segment.hpp"
+#include "storage/chunk.hpp"
+#include "storage/pos_lists/row_id_pos_list.hpp"
+#include "storage/reference_segment.hpp"
 #include "storage/segment_iterate.hpp"
+#include "storage/table.hpp"
+#include "storage/value_segment.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/timer.hpp"
@@ -394,7 +405,7 @@ class Sort::SortImpl {
   // Returns a PosList, which can either be used as an input to the next call of sort or for materializing the
   // output table.
   RowIDPosList sort(const std::optional<RowIDPosList>& previously_sorted_pos_list) {
-    Timer timer;
+    auto timer = Timer{};
     // 1. Prepare Sort: Creating RowID-value-Structure
     _materialize_sort_column(previously_sorted_pos_list);
     materialization_time = timer.lap();
@@ -422,7 +433,7 @@ class Sort::SortImpl {
       _row_id_value_vector.insert(_row_id_value_vector.begin(), _null_value_rows.begin(), _null_value_rows.end());
     }
 
-    RowIDPosList pos_list{};
+    auto pos_list = RowIDPosList{};
     pos_list.reserve(_row_id_value_vector.size());
     for (const auto& [row_id, _] : _row_id_value_vector) {
       pos_list.emplace_back(row_id);

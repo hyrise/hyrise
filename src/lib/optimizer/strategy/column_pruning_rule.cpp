@@ -5,6 +5,7 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_utils.hpp"

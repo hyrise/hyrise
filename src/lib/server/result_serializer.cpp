@@ -1,12 +1,17 @@
 #include "result_serializer.hpp"
 
+#include <cstddef>
 #include <memory>
 #include <optional>
 #include <string>
+#include <vector>
 
 #include "all_type_variant.hpp"
 #include "lossy_cast.hpp"
+#include "operators/abstract_operator.hpp"
 #include "query_handler.hpp"
+#include "storage/chunk.hpp"
+#include "storage/table.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 

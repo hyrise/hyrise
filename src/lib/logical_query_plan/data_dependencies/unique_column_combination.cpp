@@ -1,9 +1,11 @@
 #include "unique_column_combination.hpp"
 
 #include <cstddef>
+#include <functional>
 #include <memory>
 #include <ostream>
 #include <utility>
+#include <vector>
 
 #include "utils/assert.hpp"
 

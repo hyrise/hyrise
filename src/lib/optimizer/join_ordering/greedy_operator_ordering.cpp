@@ -7,9 +7,12 @@
 #include <numeric>
 #include <unordered_map>
 #include <unordered_set>
+#include <vector>
 
 #include "cost_estimation/abstract_cost_estimator.hpp"
+#include "expression/abstract_expression.hpp"
 #include "join_graph.hpp"
+#include "optimizer/join_ordering/join_graph_edge.hpp"
 #include "statistics/abstract_cardinality_estimator.hpp"
 #include "utils/assert.hpp"
 

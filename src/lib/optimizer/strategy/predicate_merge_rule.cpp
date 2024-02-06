@@ -4,6 +4,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "expression/expression_functional.hpp"
 #include "expression/logical_expression.hpp"

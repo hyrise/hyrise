@@ -1,7 +1,9 @@
 #include "adaptive_radix_tree_nodes.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cstddef>
+#include <functional>
 #include <iterator>
 #include <memory>
 #include <utility>

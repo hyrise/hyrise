@@ -3,8 +3,11 @@
 #include <cstddef>
 #include <memory>
 #include <utility>
+#include <vector>
 
 #include "all_type_variant.hpp"
+#include "resolve_type.hpp"
+#include "storage/chunk.hpp"
 #include "storage/segment_iterate.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"

@@ -1,5 +1,6 @@
 #include "chunk_compression_task.hpp"
 
+#include <cstddef>
 #include <memory>
 #include <string>
 #include <vector>

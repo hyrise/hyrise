@@ -1,6 +1,7 @@
 #include "read_buffer.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cstddef>
 #include <string>
 

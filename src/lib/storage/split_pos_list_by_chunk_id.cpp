@@ -3,6 +3,8 @@
 #include <cstddef>
 #include <memory>
 
+#include "storage/pos_lists/abstract_pos_list.hpp"
+#include "storage/pos_lists/row_id_pos_list.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {

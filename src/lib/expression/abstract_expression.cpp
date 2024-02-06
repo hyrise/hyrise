@@ -1,12 +1,17 @@
 #include "abstract_expression.hpp"
 
+#include <algorithm>
 #include <cstddef>
 #include <memory>
 #include <queue>
 #include <string>
+#include <type_traits>
 #include <unordered_map>
 #include <vector>
 
+#include <boost/container_hash/hash.hpp>
+
+#include "expression/expression_precedence.hpp"
 #include "expression_utils.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"

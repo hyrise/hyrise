@@ -1,5 +1,7 @@
 #include "abstract_pos_list.hpp"
 
+#include "utils/performance_warning.hpp"
+
 namespace hyrise {
 AbstractPosList::PosListIterator<> AbstractPosList::begin() const {
   PerformanceWarning("Unresolved iterator created for AbstractPosList");

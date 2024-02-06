@@ -2,18 +2,25 @@
 
 #include <cstddef>
 #include <fstream>
+#include <ios>
 #include <memory>
 #include <numeric>
 #include <optional>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "all_type_variant.hpp"
 #include "resolve_type.hpp"
 #include "storage/chunk.hpp"
+#include "storage/dictionary_segment.hpp"
 #include "storage/encoding_type.hpp"
+#include "storage/fixed_string_dictionary_segment.hpp"
 #include "storage/fixed_string_dictionary_segment/fixed_string_vector.hpp"
+#include "storage/table.hpp"
+#include "storage/value_segment.hpp"
 #include "storage/vector_compression/bitpacking/bitpacking_vector.hpp"
+#include "storage/vector_compression/bitpacking/bitpacking_vector_type.hpp"
 #include "storage/vector_compression/compressed_vector_type.hpp"
 #include "storage/vector_compression/fixed_width_integer/fixed_width_integer_vector.hpp"
 #include "types.hpp"

@@ -1,5 +1,6 @@
 #include "join_nested_loop.hpp"
 
+#include <functional>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -7,10 +8,14 @@
 #include <vector>
 
 #include "all_type_variant.hpp"
+#include "operators/abstract_operator.hpp"
 #include "resolve_type.hpp"
+#include "storage/chunk.hpp"
 #include "storage/create_iterable_from_segment.hpp"
+#include "storage/pos_lists/row_id_pos_list.hpp"
 #include "storage/segment_iterables/any_segment_iterable.hpp"
 #include "storage/segment_iterate.hpp"
+#include "storage/table.hpp"
 #include "type_comparison.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"

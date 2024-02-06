@@ -8,9 +8,16 @@
 #include <string>
 #include <unordered_map>
 #include <utility>
+#include <vector>
+
+#include <boost/container_hash/hash.hpp>
+
+#include "magic_enum.hpp"
 
 #include "all_type_variant.hpp"
+#include "expression/abstract_expression.hpp"
 #include "expression_utils.hpp"
+#include "operators/abstract_operator.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 

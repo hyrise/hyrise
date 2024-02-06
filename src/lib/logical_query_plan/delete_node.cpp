@@ -4,7 +4,9 @@
 #include <memory>
 #include <sstream>
 #include <string>
+#include <vector>
 
+#include "expression/abstract_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"

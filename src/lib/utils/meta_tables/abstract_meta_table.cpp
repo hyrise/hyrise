@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <memory>
+#include <vector>
 
 #include "all_type_variant.hpp"
 #include "statistics/table_statistics.hpp"

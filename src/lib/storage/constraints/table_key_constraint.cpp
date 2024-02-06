@@ -1,6 +1,7 @@
 #include "table_key_constraint.hpp"
 
 #include <cstddef>
+#include <functional>
 
 #include <boost/container_hash/hash.hpp>
 

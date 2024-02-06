@@ -1,6 +1,7 @@
 #include "arithmetic_expression.hpp"
 
 #include <cstddef>
+#include <functional>
 #include <memory>
 #include <ostream>
 #include <sstream>
@@ -9,6 +10,7 @@
 
 #include "all_type_variant.hpp"
 #include "expression/abstract_expression.hpp"
+#include "expression/expression_precedence.hpp"
 #include "expression_utils.hpp"
 #include "operators/abstract_operator.hpp"
 #include "types.hpp"

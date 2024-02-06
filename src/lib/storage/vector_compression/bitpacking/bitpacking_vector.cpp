@@ -6,6 +6,7 @@
 
 #include "bitpacking_decompressor.hpp"
 #include "bitpacking_iterator.hpp"
+#include "storage/vector_compression/bitpacking/bitpacking_vector_type.hpp"
 
 namespace hyrise {
 

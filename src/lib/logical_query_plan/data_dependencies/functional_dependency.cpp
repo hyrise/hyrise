@@ -2,9 +2,11 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <functional>
 #include <memory>
 #include <ostream>
 #include <utility>
+#include <vector>
 
 #include <boost/container_hash/hash.hpp>
 
