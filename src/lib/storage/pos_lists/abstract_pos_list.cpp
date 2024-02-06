@@ -1,5 +1,6 @@
 #include "abstract_pos_list.hpp"
 
+#include "types.hpp"
 #include "utils/performance_warning.hpp"
 
 namespace hyrise {

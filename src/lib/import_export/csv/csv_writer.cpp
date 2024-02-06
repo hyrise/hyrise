@@ -5,6 +5,8 @@
 #include <string>
 #include <vector>
 
+#include <boost/variant/get.hpp>
+
 #include "nlohmann/json.hpp"
 
 #include "all_type_variant.hpp"

@@ -3,6 +3,7 @@
 #include <cstddef>
 #include <ostream>
 
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {

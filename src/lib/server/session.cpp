@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <memory>
 #include <string>
+#include <tuple>
 
 #include "client_disconnect_exception.hpp"
 #include "postgres_message_type.hpp"

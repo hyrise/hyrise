@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "operators/operator_join_predicate.hpp"
+#include "resolve_type.hpp"
 #include "storage/table.hpp"
 #include "type_comparison.hpp"
 #include "types.hpp"

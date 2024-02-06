@@ -5,6 +5,7 @@
 #include "resolve_type.hpp"
 #include "storage/abstract_segment.hpp"
 #include "storage/reference_segment.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise::detail {

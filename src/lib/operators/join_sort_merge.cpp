@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <memory>
 #include <optional>
+#include <set>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -19,6 +20,8 @@
 #include "join_sort_merge/radix_cluster_sort.hpp"
 #include "operators/abstract_operator.hpp"
 #include "operators/multi_predicate_join/multi_predicate_join_evaluator.hpp"
+#include "operators/operator_join_predicate.hpp"
+#include "operators/operator_performance_data.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"

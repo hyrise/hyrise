@@ -7,6 +7,7 @@
 #include <string>
 
 #include "logical_query_plan/abstract_lqp_node.hpp"
+#include "logical_query_plan/abstract_non_query_node.hpp"
 
 namespace hyrise {
 

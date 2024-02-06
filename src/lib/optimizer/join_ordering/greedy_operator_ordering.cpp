@@ -14,6 +14,7 @@
 #include "join_graph.hpp"
 #include "optimizer/join_ordering/join_graph_edge.hpp"
 #include "statistics/abstract_cardinality_estimator.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {

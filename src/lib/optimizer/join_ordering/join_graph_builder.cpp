@@ -15,6 +15,7 @@
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/union_node.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {

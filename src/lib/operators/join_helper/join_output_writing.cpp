@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <iterator>
 #include <memory>
 #include <optional>
 #include <unordered_map>
@@ -11,6 +12,7 @@
 #include <boost/container_hash/hash.hpp>
 
 #include "hyrise.hpp"
+#include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
 #include "storage/chunk.hpp"
 #include "storage/pos_lists/abstract_pos_list.hpp"

@@ -4,6 +4,8 @@
 #include <iterator>
 #include <vector>
 
+#include "storage/index/group_key/variable_length_key_base.hpp"
+#include "types.hpp"
 #include "variable_length_key_proxy.hpp"
 
 namespace hyrise {

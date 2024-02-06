@@ -2,6 +2,7 @@
 
 #include <chrono>
 #include <cstddef>
+#include <cstdint>
 #include <ctime>
 #include <iomanip>
 #include <memory>
@@ -13,6 +14,7 @@
 #include "all_type_variant.hpp"
 #include "hyrise.hpp"
 #include "storage/table.hpp"
+#include "storage/table_column_definition.hpp"
 #include "types.hpp"
 #include "utils/meta_tables/abstract_meta_table.hpp"
 

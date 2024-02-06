@@ -3,6 +3,7 @@
 #include <cstddef>
 
 #include "storage/pos_lists/abstract_pos_list.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 

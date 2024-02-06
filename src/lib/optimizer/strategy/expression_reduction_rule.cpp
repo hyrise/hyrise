@@ -8,6 +8,8 @@
 #include <unordered_set>
 #include <vector>
 
+#include <boost/variant/get.hpp>
+
 #include "all_type_variant.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/evaluation/expression_evaluator.hpp"
@@ -15,6 +17,7 @@
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/in_expression.hpp"
+#include "expression/value_expression.hpp"
 #include "expression/window_function_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/alias_node.hpp"

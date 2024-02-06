@@ -4,6 +4,7 @@
 #include <optional>
 
 #include "all_type_variant.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 

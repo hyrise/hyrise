@@ -1,6 +1,7 @@
 #include "fixed_string_vector.hpp"
 
 #include <cstddef>
+#include <iterator>
 #include <limits>
 #include <memory>
 #include <sstream>

@@ -4,6 +4,7 @@
 #include <string>
 
 #include "hyrise.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 

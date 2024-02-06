@@ -6,6 +6,7 @@
 
 #include "storage/abstract_segment.hpp"
 #include "storage/dictionary_segment/dictionary_encoder.hpp"
+#include "storage/encoding_type.hpp"
 #include "storage/frame_of_reference_segment/frame_of_reference_encoder.hpp"
 #include "storage/lz4_segment/lz4_encoder.hpp"
 #include "storage/reference_segment.hpp"

@@ -20,6 +20,7 @@
 #include "storage/abstract_encoded_segment.hpp"
 #include "storage/abstract_segment.hpp"
 #include "storage/base_value_segment.hpp"
+#include "storage/encoding_type.hpp"
 #include "storage/mvcc_data.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/table.hpp"

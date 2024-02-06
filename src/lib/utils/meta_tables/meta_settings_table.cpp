@@ -5,9 +5,12 @@
 #include <string>
 #include <vector>
 
+#include <boost/variant/get.hpp>
+
 #include "all_type_variant.hpp"
 #include "hyrise.hpp"
 #include "storage/table.hpp"
+#include "storage/table_column_definition.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 

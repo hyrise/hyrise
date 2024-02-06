@@ -15,6 +15,7 @@
 #include "storage/reference_segment.hpp"
 #include "storage/table.hpp"
 #include "table_wrapper.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {

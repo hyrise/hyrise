@@ -4,6 +4,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <limits>
 #include <memory>
 #include <optional>
 #include <ostream>
@@ -19,7 +20,10 @@
 #include "join_hash/join_hash_traits.hpp"
 #include "join_helper/join_output_writing.hpp"
 #include "operators/abstract_operator.hpp"
+#include "operators/operator_join_predicate.hpp"
+#include "operators/operator_performance_data.hpp"
 #include "resolve_type.hpp"
+#include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
 #include "storage/pos_lists/row_id_pos_list.hpp"
 #include "storage/table.hpp"

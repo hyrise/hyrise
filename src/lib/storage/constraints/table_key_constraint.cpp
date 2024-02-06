@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <functional>
+#include <set>
 
 #include <boost/container_hash/hash.hpp>
 

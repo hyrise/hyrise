@@ -1,7 +1,9 @@
 #include "segment_access_counter.hpp"
 
+#include <algorithm>
 #include <array>
 #include <cstddef>
+#include <cstdint>
 #include <sstream>
 #include <string>
 

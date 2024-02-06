@@ -8,6 +8,7 @@
 #include <utility>
 #include <vector>
 
+#include "expression/abstract_expression.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {

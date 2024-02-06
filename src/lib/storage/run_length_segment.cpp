@@ -7,7 +7,9 @@
 
 #include "all_type_variant.hpp"
 #include "resolve_type.hpp"
+#include "storage/abstract_encoded_segment.hpp"
 #include "storage/abstract_segment.hpp"
+#include "storage/encoding_type.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"

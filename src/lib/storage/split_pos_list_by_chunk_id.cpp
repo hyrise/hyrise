@@ -5,6 +5,7 @@
 
 #include "storage/pos_lists/abstract_pos_list.hpp"
 #include "storage/pos_lists/row_id_pos_list.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {

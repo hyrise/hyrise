@@ -11,9 +11,11 @@
 #include "all_type_variant.hpp"
 #include "import_export/binary/binary_writer.hpp"
 #include "import_export/csv/csv_writer.hpp"
+#include "import_export/file_type.hpp"
 #include "operators/abstract_operator.hpp"
 #include "operators/abstract_read_only_operator.hpp"
 #include "storage/table.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {

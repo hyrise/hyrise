@@ -11,6 +11,8 @@
 #include <utility>
 #include <vector>
 
+#include <boost/variant/get.hpp>
+
 #include "all_type_variant.hpp"
 #include "expression/between_expression.hpp"
 #include "expression/binary_predicate_expression.hpp"

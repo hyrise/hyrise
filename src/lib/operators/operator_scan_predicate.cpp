@@ -6,6 +6,8 @@
 #include <string>
 #include <vector>
 
+#include <boost/variant/get.hpp>
+
 #include "all_type_variant.hpp"
 #include "expression/abstract_predicate_expression.hpp"
 #include "expression/correlated_parameter_expression.hpp"

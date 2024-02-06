@@ -1,8 +1,11 @@
 #include "date_time_utils.hpp"
 
 #include <cstddef>
+#include <cstdint>
 #include <optional>
 #include <string>
+
+#include <boost/lexical_cast/bad_lexical_cast.hpp>
 
 #include "magic_enum.hpp"
 

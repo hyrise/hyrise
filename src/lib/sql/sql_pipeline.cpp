@@ -12,13 +12,16 @@
 #include <boost/algorithm/string.hpp>
 
 #include "SQLParser.h"
+#include "SQLParserResult.h"
 
 #include "concurrency/transaction_context.hpp"
 #include "create_sql_parser_error_message.hpp"
 #include "hyrise.hpp"
+#include "scheduler/abstract_task.hpp"
 #include "sql/sql_pipeline_statement.hpp"
 #include "sql_plan_cache.hpp"
 #include "storage/table.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/format_duration.hpp"
 

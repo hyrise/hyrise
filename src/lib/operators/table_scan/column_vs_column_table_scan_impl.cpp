@@ -11,6 +11,7 @@
 #include "storage/pos_lists/row_id_pos_list.hpp"
 #include "storage/reference_segment/reference_segment_iterable.hpp"
 #include "storage/segment_iterables/any_segment_iterable.hpp"
+#include "storage/segment_iterables/segment_positions.hpp"
 #include "storage/table.hpp"
 #include "type_comparison.hpp"
 #include "types.hpp"

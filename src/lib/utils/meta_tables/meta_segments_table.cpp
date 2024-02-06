@@ -7,6 +7,8 @@
 #include "all_type_variant.hpp"
 #include "hyrise.hpp"
 #include "storage/table.hpp"
+#include "storage/table_column_definition.hpp"
+#include "types.hpp"
 #include "utils/meta_tables/segment_meta_data.hpp"
 
 namespace hyrise {

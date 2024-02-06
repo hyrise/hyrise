@@ -1,6 +1,7 @@
 #include "vector_compression.hpp"
 
 #include <cstddef>
+#include <cstdint>
 #include <map>
 #include <memory>
 #include <ostream>

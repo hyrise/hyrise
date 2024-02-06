@@ -5,8 +5,6 @@
 #include <mach/mach.h>
 #include <sys/sysctl.h>
 #else
-#include <stdlib.h>
-#include <time.h>
 #include <unistd.h>
 #endif
 
@@ -18,6 +16,8 @@
 #include <array>
 #include <chrono>
 #include <cstddef>
+#include <cstdint>
+#include <ctime>
 #include <fstream>
 #include <ios>
 #include <memory>
@@ -29,6 +29,8 @@
 #include "all_type_variant.hpp"
 #include "hyrise.hpp"
 #include "storage/table.hpp"
+#include "storage/table_column_definition.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/meta_tables/abstract_meta_table.hpp"
 

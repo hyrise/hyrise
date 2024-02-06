@@ -3,6 +3,7 @@
 #include <memory>
 #include <vector>
 
+#include "scheduler/abstract_task.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {

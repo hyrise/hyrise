@@ -11,6 +11,7 @@
 #include "operators/abstract_read_only_operator.hpp"
 #include "storage/prepared_plan.hpp"
 #include "storage/table.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 

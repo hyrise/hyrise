@@ -1,6 +1,7 @@
 #include "meta_tables_table.hpp"
 
 #include <cstddef>
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <string>

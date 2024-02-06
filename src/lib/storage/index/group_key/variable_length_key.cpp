@@ -6,6 +6,7 @@
 #include <ostream>
 #include <utility>
 
+#include "storage/index/group_key/variable_length_key_base.hpp"
 #include "variable_length_key_proxy.hpp"
 #include "variable_length_key_store.hpp"
 

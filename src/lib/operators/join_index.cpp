@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <chrono>
 #include <cstdint>
+#include <iterator>
 #include <memory>
 #include <ostream>
 #include <string>
@@ -14,6 +15,8 @@
 #include "multi_predicate_join/multi_predicate_join_evaluator.hpp"
 #include "operators/abstract_join_operator.hpp"
 #include "operators/abstract_operator.hpp"
+#include "operators/operator_join_predicate.hpp"
+#include "operators/operator_performance_data.hpp"
 #include "storage/chunk.hpp"
 #include "storage/index/abstract_chunk_index.hpp"
 #include "storage/pos_lists/abstract_pos_list.hpp"

@@ -12,6 +12,7 @@
 #include "logical_query_plan/join_node.hpp"
 #include "operators/abstract_operator.hpp"
 #include "operators/abstract_read_only_operator.hpp"
+#include "operators/operator_join_predicate.hpp"
 #include "storage/chunk.hpp"
 #include "storage/table.hpp"
 #include "storage/table_column_definition.hpp"

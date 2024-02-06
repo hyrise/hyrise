@@ -5,6 +5,7 @@
 #include <optional>
 
 #include "all_type_variant.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {

@@ -10,6 +10,7 @@
 #include "operators/abstract_read_only_operator.hpp"
 #include "storage/lqp_view.hpp"
 #include "storage/table.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 

@@ -5,6 +5,7 @@
 #include "expression/correlated_parameter_expression.hpp"
 #include "parameter_id_allocator.hpp"
 #include "sql_identifier_resolver.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 

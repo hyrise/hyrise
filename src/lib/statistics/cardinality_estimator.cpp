@@ -7,6 +7,8 @@
 #include <utility>
 #include <vector>
 
+#include <boost/variant/get.hpp>
+
 #include "all_type_variant.hpp"
 #include "attribute_statistics.hpp"
 #include "expression/abstract_expression.hpp"
@@ -38,10 +40,10 @@
 #include "resolve_type.hpp"
 #include "statistics/attribute_statistics.hpp"
 #include "statistics/cardinality_estimation_cache.hpp"
+#include "statistics/statistics_objects/abstract_histogram.hpp"
 #include "statistics/statistics_objects/equal_distinct_count_histogram.hpp"
 #include "statistics/statistics_objects/generic_histogram.hpp"
 #include "statistics/statistics_objects/generic_histogram_builder.hpp"
-#include "statistics/statistics_objects/abstract_histogram.hpp"
 #include "storage/table.hpp"
 #include "table_statistics.hpp"
 #include "types.hpp"

@@ -3,16 +3,22 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
+#include <iostream>
+#include <limits>
 #include <memory>
 #include <optional>
+#include <set>
 #include <string>
 #include <unordered_map>
 #include <utility>
 #include <vector>
 
+#include <boost/variant/get.hpp>
+
 #include "magic_enum.hpp"
 #include "sql/ColumnType.h"
 #include "SQLParser.h"
+#include "SQLParserResult.h"
 
 #include "all_type_variant.hpp"
 #include "create_sql_parser_error_message.hpp"
@@ -66,6 +72,7 @@
 #include "logical_query_plan/update_node.hpp"
 #include "logical_query_plan/validate_node.hpp"
 #include "logical_query_plan/window_node.hpp"
+#include "sql/sql_identifier_resolver.hpp"
 #include "storage/lqp_view.hpp"
 #include "storage/table.hpp"
 #include "storage/table_column_definition.hpp"

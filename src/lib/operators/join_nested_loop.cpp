@@ -10,6 +10,7 @@
 
 #include "all_type_variant.hpp"
 #include "operators/abstract_operator.hpp"
+#include "operators/operator_join_predicate.hpp"
 #include "resolve_type.hpp"
 #include "storage/chunk.hpp"
 #include "storage/create_iterable_from_segment.hpp"
