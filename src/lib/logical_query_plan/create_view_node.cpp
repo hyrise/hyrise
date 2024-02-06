@@ -8,7 +8,6 @@
 #include <boost/container_hash/hash.hpp>
 
 #include "logical_query_plan/abstract_lqp_node.hpp"
-#include "lqp_utils.hpp"
 
 namespace hyrise {
 

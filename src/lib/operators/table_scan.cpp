@@ -8,35 +8,27 @@
 #include <sstream>
 #include <string>
 #include <unordered_map>
-#include <unordered_set>
 #include <utility>
 #include <vector>
 
-#include "all_parameter_variant.hpp"
 #include "all_type_variant.hpp"
 #include "expression/between_expression.hpp"
 #include "expression/binary_predicate_expression.hpp"
-#include "expression/correlated_parameter_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/is_null_expression.hpp"
 #include "expression/pqp_column_expression.hpp"
-#include "expression/value_expression.hpp"
 #include "hyrise.hpp"
-#include "lossless_cast.hpp"
 #include "operators/abstract_operator.hpp"
 #include "operators/abstract_read_only_operator.hpp"
-#include "operators/abstract_read_write_operator.hpp"
 #include "operators/operator_scan_predicate.hpp"
 #include "operators/pqp_utils.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
-#include "storage/abstract_segment.hpp"
 #include "storage/chunk.hpp"
 #include "storage/pos_lists/abstract_pos_list.hpp"
 #include "storage/pos_lists/row_id_pos_list.hpp"
 #include "storage/reference_segment.hpp"
-#include "storage/segment_iterate.hpp"
 #include "storage/table.hpp"
 #include "table_scan/column_between_table_scan_impl.hpp"
 #include "table_scan/column_is_null_table_scan_impl.hpp"
@@ -47,7 +39,6 @@
 #include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/lossless_predicate_cast.hpp"
-#include "utils/performance_warning.hpp"
 
 namespace hyrise {
 

@@ -6,7 +6,6 @@
 #include <string>
 #include <vector>
 
-#include <boost/algorithm/string/join.hpp>
 #include <boost/container_hash/hash.hpp>
 
 #include "expression/abstract_expression.hpp"
@@ -35,7 +34,7 @@ std::string AliasNode::description(const DescriptionMode mode) const {
       stream << node_expressions[column_id]->description(expression_mode) << " AS " << aliases[column_id];
     }
 
-    if (column_id + 1u < node_expressions.size()) {
+    if (column_id + 1 < node_expressions.size()) {
       stream << ", ";
     }
   }
@@ -51,7 +50,7 @@ UniqueColumnCombinations AliasNode::unique_column_combinations() const {
 }
 
 size_t AliasNode::_on_shallow_hash() const {
-  size_t hash{0};
+  auto hash = size_t{0};
   for (const auto& alias : aliases) {
     boost::hash_combine(hash, alias);
   }

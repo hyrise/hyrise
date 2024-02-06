@@ -8,7 +8,6 @@
 
 #include <boost/container_hash/hash.hpp>
 
-#include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_column_expression.hpp"
 #include "hyrise.hpp"
@@ -16,9 +15,7 @@
 #include "logical_query_plan/data_dependencies/unique_column_combination.hpp"
 #include "lqp_utils.hpp"
 #include "statistics/table_statistics.hpp"
-#include "storage/index/chunk_index_statistics.hpp"
 #include "storage/storage_manager.hpp"
-#include "storage/table.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/pruning_utils.hpp"
@@ -35,8 +32,6 @@ bool contains_any_column_id(const std::set<ColumnID>& search_columns, const std:
 }  // namespace
 
 namespace hyrise {
-
-using namespace expression_functional;  // NOLINT(build/namespaces)
 
 StoredTableNode::StoredTableNode(const std::string& init_table_name)
     : AbstractLQPNode(LQPNodeType::StoredTable), table_name(init_table_name) {}

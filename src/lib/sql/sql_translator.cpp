@@ -1964,9 +1964,8 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
                         (end.type != FrameBoundType::Preceding || !end.unbounded) && end_offset >= start_offset,
                     "Frame starting from " + start.description() + " cannot end at " + end.description() + ".");
 
-        auto frame_description = FrameDescription{frame_type, start, end};
         window_description = window_(std::move(partition_by_expressions), std::move(order_by_expressions),
-                                     std::move(sort_modes), std::move(frame_description));
+                                     std::move(sort_modes), FrameDescription{frame_type, start, end});
       }
 
       // Convert to upper-case to find mapping.

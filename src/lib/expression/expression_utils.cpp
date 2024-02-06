@@ -9,7 +9,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include <boost/lexical_cast.hpp>
+#include <boost/lexical_cast/bad_lexical_cast.hpp>
 
 #include "magic_enum.hpp"
 

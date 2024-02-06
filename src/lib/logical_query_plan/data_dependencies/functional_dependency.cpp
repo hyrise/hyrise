@@ -8,8 +8,6 @@
 #include <utility>
 #include <vector>
 
-#include <boost/container_hash/hash.hpp>
-
 #include "utils/assert.hpp"
 
 namespace hyrise {

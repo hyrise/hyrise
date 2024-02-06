@@ -1,10 +1,8 @@
 #include "change_meta_table.hpp"
 
-#include <algorithm>
 #include <memory>
 #include <string>
 #include <unordered_map>
-#include <vector>
 
 #include "all_type_variant.hpp"
 #include "hyrise.hpp"
@@ -28,7 +26,7 @@ const std::string& ChangeMetaTable::name() const {
 }
 
 std::shared_ptr<const Table> ChangeMetaTable::_on_execute(std::shared_ptr<TransactionContext> context) {
-  Assert(context->is_auto_commit(), "Meta tables cannot be modified during transactions");
+  Assert(context->is_auto_commit(), "Meta tables cannot be modified during transactions.");
 
   switch (_change_type) {
     case MetaTableChangeType::Insert:

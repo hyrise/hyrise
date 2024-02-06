@@ -6,14 +6,12 @@
 #include <memory>
 #include <optional>
 #include <string>
-#include <type_traits>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
 #include <vector>
 
 #include <boost/container_hash/hash.hpp>
-#include <boost/functional/hash_fwd.hpp>
 
 #include "all_type_variant.hpp"
 #include "hyrise.hpp"
@@ -25,7 +23,6 @@
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
 #include "storage/pos_lists/row_id_pos_list.hpp"
-#include "storage/reference_segment.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"

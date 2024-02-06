@@ -1,12 +1,7 @@
 #include "column_like_table_scan_impl.hpp"
 
-#include <algorithm>
-#include <array>
 #include <cstddef>
-#include <map>
 #include <memory>
-#include <regex>
-#include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
@@ -16,11 +11,8 @@
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/pos_lists/abstract_pos_list.hpp"
 #include "storage/pos_lists/row_id_pos_list.hpp"
-#include "storage/resolve_encoded_segment_type.hpp"
 #include "storage/segment_iterables/create_iterable_from_attribute_vector.hpp"
 #include "storage/segment_iterate.hpp"
-#include "storage/value_segment.hpp"
-#include "storage/value_segment/value_segment_iterable.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 

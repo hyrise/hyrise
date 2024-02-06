@@ -5,7 +5,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <memory>
-#include <numeric>
 #include <optional>
 #include <ostream>
 #include <string>
@@ -24,10 +23,8 @@
 #include "scheduler/job_task.hpp"
 #include "storage/pos_lists/row_id_pos_list.hpp"
 #include "storage/table.hpp"
-#include "type_comparison.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
-#include "utils/format_duration.hpp"
 #include "utils/performance_warning.hpp"
 #include "utils/timer.hpp"
 

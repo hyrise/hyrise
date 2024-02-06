@@ -278,7 +278,7 @@ std::shared_ptr<IntervalExpression> interval_(const int64_t duration, const Date
 
 std::shared_ptr<WindowExpression> window_(std::vector<std::shared_ptr<AbstractExpression>>&& partition_by_expressions,
                                           std::vector<std::shared_ptr<AbstractExpression>>&& order_by_expressions,
-                                          std::vector<SortMode>&& sort_modes, FrameDescription&& frame_description);
+                                          std::vector<SortMode>&& sort_modes, FrameDescription frame_description);
 
 }  // namespace expression_functional
 

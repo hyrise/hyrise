@@ -1,15 +1,12 @@
 #include "insert_node.hpp"
 
-#include <algorithm>
 #include <cstddef>
 #include <functional>
 #include <memory>
 #include <sstream>
 #include <string>
-#include <vector>
 
 #include "logical_query_plan/abstract_lqp_node.hpp"
-#include "utils/assert.hpp"
 
 namespace hyrise {
 

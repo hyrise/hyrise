@@ -4,7 +4,6 @@
 #include <string>
 
 #include "expression/evaluation/expression_evaluator.hpp"
-#include "expression/expression_utils.hpp"
 #include "storage/pos_lists/row_id_pos_list.hpp"
 
 namespace hyrise {

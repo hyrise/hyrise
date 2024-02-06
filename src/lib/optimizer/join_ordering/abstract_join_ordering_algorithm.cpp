@@ -7,7 +7,8 @@
 #include <vector>
 
 #include "cost_estimation/abstract_cost_estimator.hpp"
-#include "join_graph.hpp"
+#include "logical_query_plan/join_node.hpp"
+#include "logical_query_plan/predicate_node.hpp"
 #include "operators/operator_join_predicate.hpp"
 #include "statistics/cardinality_estimator.hpp"
 #include "types.hpp"

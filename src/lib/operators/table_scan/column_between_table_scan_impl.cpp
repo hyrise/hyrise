@@ -5,7 +5,6 @@
 #include <type_traits>
 
 #include "all_type_variant.hpp"
-#include "expression/between_expression.hpp"
 #include "resolve_type.hpp"
 #include "sorted_segment_search.hpp"
 #include "storage/base_dictionary_segment.hpp"

@@ -3,14 +3,11 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
-#include <utility>
-#include <vector>
 
 #include "all_type_variant.hpp"
 #include "hyrise.hpp"
 #include "operators/abstract_operator.hpp"
 #include "operators/abstract_read_only_operator.hpp"
-#include "operators/abstract_read_write_operator.hpp"
 #include "storage/lqp_view.hpp"
 #include "storage/table.hpp"
 
@@ -45,7 +42,7 @@ std::shared_ptr<AbstractOperator> CreateView::_on_deep_copy(
 void CreateView::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 std::shared_ptr<const Table> CreateView::_on_execute() {
-  // If IF NOT EXISTS is not set and the view already exists, StorageManager throws an exception
+  // If IF NOT EXISTS is not set and the view already exists, StorageManager throws an exception.
   if (!_if_not_exists || !Hyrise::get().storage_manager.has_view(_view_name)) {
     Hyrise::get().storage_manager.add_view(_view_name, _view);
   }

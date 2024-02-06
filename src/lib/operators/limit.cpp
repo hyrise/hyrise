@@ -14,7 +14,6 @@
 #include "expression/expression_utils.hpp"
 #include "operators/abstract_operator.hpp"
 #include "operators/abstract_read_only_operator.hpp"
-#include "operators/abstract_read_write_operator.hpp"
 #include "resolve_type.hpp"
 #include "storage/chunk.hpp"
 #include "storage/pos_lists/row_id_pos_list.hpp"

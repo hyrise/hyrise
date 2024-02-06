@@ -5,13 +5,11 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
-#include <utility>
 #include <vector>
 
 #include "all_type_variant.hpp"
 #include "operators/abstract_operator.hpp"
 #include "operators/abstract_read_only_operator.hpp"
-#include "operators/abstract_read_write_operator.hpp"
 #include "storage/chunk.hpp"
 #include "storage/pos_lists/abstract_pos_list.hpp"
 #include "storage/pos_lists/row_id_pos_list.hpp"

@@ -1,6 +1,5 @@
 #include <cstddef>
 #include <cstdlib>
-#include <iostream>
 
 #include <boost/container/pmr/memory_resource.hpp>
 #include <boost/core/no_exceptions_support.hpp>

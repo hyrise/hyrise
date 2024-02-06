@@ -10,7 +10,6 @@
 #include <optional>
 #include <string>
 #include <string_view>
-#include <utility>
 #include <vector>
 
 #include "all_type_variant.hpp"
@@ -228,8 +227,7 @@ size_t CsvParser::_parse_into_chunk(std::string_view csv_chunk, const std::vecto
       }
     }
   } catch (const std::exception& exception) {
-    throw std::logic_error("Exception while parsing CSV, row " + std::to_string(row_id) + ", column " +
-                           std::to_string(column_id) + ":\n" + exception.what());
+    Fail("Exception while parsing CSV, row " + std::to_string(row_id) + ", column " + std::to_string(column_id) + ":\n" + exception.what());
   }
 
   // Transform the field_offsets to segments and add segments to chunk.

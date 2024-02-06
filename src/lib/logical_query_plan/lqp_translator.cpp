@@ -30,7 +30,6 @@
 #include "hyrise.hpp"
 #include "import_node.hpp"
 #include "insert_node.hpp"
-#include "intersect_node.hpp"
 #include "join_node.hpp"
 #include "limit_node.hpp"
 #include "null_value.hpp"

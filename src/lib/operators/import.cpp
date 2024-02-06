@@ -5,8 +5,6 @@
 #include <string>
 #include <unordered_map>
 
-#include <boost/algorithm/string.hpp>
-
 #include "all_type_variant.hpp"
 #include "hyrise.hpp"
 #include "import_export/binary/binary_parser.hpp"
@@ -39,11 +37,11 @@ const std::string& Import::name() const {
 
 std::shared_ptr<const Table> Import::_on_execute() {
   // Check if file exists before giving it to the parser
-  std::ifstream file(filename);
+  auto file = std::ifstream{filename};
   Assert(file.is_open(), "Import: Could not find file " + filename);
   file.close();
 
-  std::shared_ptr<Table> table;
+  auto table = std::shared_ptr<Table>{};
 
   switch (_file_type) {
     case FileType::Csv:
