@@ -34,7 +34,7 @@ std::string AliasNode::description(const DescriptionMode mode) const {
       stream << node_expressions[column_id]->description(expression_mode) << " AS " << aliases[column_id];
     }
 
-    if (column_id + 1 < node_expressions.size()) {
+    if (column_id + size_t{1} < node_expressions.size()) {
       stream << ", ";
     }
   }
