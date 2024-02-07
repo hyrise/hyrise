@@ -83,6 +83,9 @@ try {
             // issue (see https://github.com/google/googletest/issues/3552).
             unity = '-DCMAKE_UNITY_BUILD=ON'
 
+            // To speed compiling up, we use ninja.
+            ninja = '-GNinja'
+
             // With Hyrise, we aim to support the most recent compiler versions and do not invest a lot of work to
             // support older versions. We test LLVM 15 (oldest LLVM version shipped with Ubuntu 23.10 that works with
             // more recent libstdc++ versions) and GCC 11 (oldest version supported by Hyrise). We execute at least
@@ -99,39 +102,39 @@ try {
 
             // jemalloc's autoconf operates outside of the build folder (#1413). If we start two cmake instances at the same time, we run into conflicts.
             // Thus, run this one (any one, really) first, so that the autoconf step can finish in peace.
-            sh "mkdir clang-debug && cd clang-debug &&                                                   ${cmake} ${debug}          ${clang}  ${unity}  .. && make -j libjemalloc-build"
+            sh "mkdir clang-debug && cd clang-debug &&                                                   ${cmake} ${debug}          ${clang}  ${unity}  ${ninja} .. && ninja -j \$(nproc) libjemalloc-build"
 
             // Configure the rest in parallel.
             // Note on the clang-debug-tidy stage: clang-tidy misses some flaws when running in a unity build. However, it runs very long and we agreed to life with that for now.
             // See: https://gitlab.kitware.com/cmake/cmake/-/issues/20058
             // TODO(Martin): update comment ... measure runtime
-            sh "mkdir clang-debug-tidy && cd clang-debug-tidy &&                                         ${cmake} ${debug}          ${clang}            -DENABLE_CLANG_TIDY=ON .. &\
-            mkdir clang-debug-unity-odr && cd clang-debug-unity-odr &&                                   ${cmake} ${debug}          ${clang}   ${unity} -DCMAKE_UNITY_BUILD_BATCH_SIZE=0 .. &\
-            mkdir clang-debug-disable-precompile-headers && cd clang-debug-disable-precompile-headers && ${cmake} ${debug}          ${clang}   ${unity} -DCMAKE_DISABLE_PRECOMPILE_HEADERS=On .. &\
-            mkdir clang-debug-addr-ub-sanitizers && cd clang-debug-addr-ub-sanitizers &&                 ${cmake} ${debug}          ${clang}   ${unity} -DENABLE_ADDR_UB_SANITIZATION=ON .. &\
-            mkdir clang-release-addr-ub-sanitizers && cd clang-release-addr-ub-sanitizers &&             ${cmake} ${release}        ${clang}   ${unity} -DENABLE_ADDR_UB_SANITIZATION=ON .. &\
-            mkdir clang-relwithdebinfo-thread-sanitizer && cd clang-relwithdebinfo-thread-sanitizer &&   ${cmake} ${relwithdebinfo} ${clang}   ${unity} -DENABLE_THREAD_SANITIZATION=ON .. &\
-            mkdir clang-release && cd clang-release &&                                                   ${cmake} ${release}        ${clang}   ${unity} .. &\
-            mkdir gcc-debug && cd gcc-debug &&                                                           ${cmake} ${debug}          ${gcc}     ${unity} .. &\
-            mkdir gcc-release && cd gcc-release &&                                                       ${cmake} ${release}        ${gcc}     ${unity} .. &\
-            mkdir clang-15-debug && cd clang-15-debug &&                                                 ${cmake} ${debug}          ${clang15} ${unity} .. &\
-            mkdir gcc-11-debug && cd gcc-11-debug &&                                                     ${cmake} ${debug}          ${gcc11}            .. &\
+            sh "mkdir clang-debug-tidy && cd clang-debug-tidy &&                                         ${cmake} ${debug}          ${clang}             ${ninja} -DENABLE_CLANG_TIDY=ON .. &\
+            mkdir clang-debug-unity-odr && cd clang-debug-unity-odr &&                                   ${cmake} ${debug}          ${clang}   ${unity}  ${ninja} -DCMAKE_UNITY_BUILD_BATCH_SIZE=0 .. &\
+            mkdir clang-debug-disable-precompile-headers && cd clang-debug-disable-precompile-headers && ${cmake} ${debug}          ${clang}   ${unity}  ${ninja} -DCMAKE_DISABLE_PRECOMPILE_HEADERS=On .. &\
+            mkdir clang-debug-addr-ub-sanitizers && cd clang-debug-addr-ub-sanitizers &&                 ${cmake} ${debug}          ${clang}   ${unity}  ${ninja} -DENABLE_ADDR_UB_SANITIZATION=ON .. &\
+            mkdir clang-release-addr-ub-sanitizers && cd clang-release-addr-ub-sanitizers &&             ${cmake} ${release}        ${clang}   ${unity}  ${ninja} -DENABLE_ADDR_UB_SANITIZATION=ON .. &\
+            mkdir clang-relwithdebinfo-thread-sanitizer && cd clang-relwithdebinfo-thread-sanitizer &&   ${cmake} ${relwithdebinfo} ${clang}   ${unity}  ${ninja} -DENABLE_THREAD_SANITIZATION=ON .. &\
+            mkdir clang-release && cd clang-release &&                                                   ${cmake} ${release}        ${clang}   ${unity}  ${ninja} .. &\
+            mkdir gcc-debug && cd gcc-debug &&                                                           ${cmake} ${debug}          ${gcc}     ${unity}  ${ninja} .. &\
+            mkdir gcc-release && cd gcc-release &&                                                       ${cmake} ${release}        ${gcc}     ${unity}  ${ninja} .. &\
+            mkdir clang-15-debug && cd clang-15-debug &&                                                 ${cmake} ${debug}          ${clang15} ${unity}  ${ninja} .. &\
+            mkdir gcc-11-debug && cd gcc-11-debug &&                                                     ${cmake} ${debug}          ${gcc11}             ${ninja} .. &\
             wait"
           }
 
           parallel clangDebug: {
             stage("clang-debug") {
-              sh "cd clang-debug && make all -j \$(( \$(nproc) / 5))"
+              sh "cd clang-debug && ninja all -j \$(( \$(nproc) / 5))"
               sh "./clang-debug/hyriseTest clang-debug"
             }
           }, clang15Debug: {
             stage("clang-15-debug") {
-              sh "cd clang-15-debug && make all -j \$(( \$(nproc) / 5))"
+              sh "cd clang-15-debug && ninja all -j \$(( \$(nproc) / 5))"
               sh "./clang-15-debug/hyriseTest clang-15-debug"
             }
           }, gccDebug: {
             stage("gcc-debug") {
-              sh "cd gcc-debug && make all -j \$(( \$(nproc) / 5))"
+              sh "cd gcc-debug && ninja all -j \$(( \$(nproc) / 5))"
               sh "cd gcc-debug && ./hyriseTest"
             }
           }, gcc11Debug: {
@@ -139,7 +142,7 @@ try {
                // We give more cores to GCC 11 as it is the only configuration that has issues with unity builds
                // (GoogleTest cannot be compiled). When switching to a more recent GCC version, this should be evaluated
                // again.
-              sh "cd gcc-11-debug && make all -j \$(( \$(nproc) / 3))"
+              sh "cd gcc-11-debug && ninja all -j \$(( \$(nproc) / 3))"
               sh "cd gcc-11-debug && ./hyriseTest"
             }
           }, lint: {
@@ -151,7 +154,7 @@ try {
           parallel clangRelease: {
             stage("clang-release") {
               if (env.BRANCH_NAME == 'master' || full_ci) {
-                sh "cd clang-release && make all -j \$(( \$(nproc) / 10))"
+                sh "cd clang-release && ninja all -j \$(( \$(nproc) / 10))"
                 sh "./clang-release/hyriseTest clang-release"
                 sh "./clang-release/hyriseSystemTest clang-release"
                 sh "./scripts/test/hyriseConsole_test.py clang-release"
@@ -203,7 +206,7 @@ try {
             stage("clang-debug-unity-odr") {
               if (env.BRANCH_NAME == 'master' || full_ci) {
                 // Check if unity builds work even if everything is batched into a single compilation unit. This helps prevent ODR (one definition rule) issues.
-                sh "cd clang-debug-unity-odr && make all -j \$(( \$(nproc) / 10))"
+                sh "cd clang-debug-unity-odr && ninja all -j \$(( \$(nproc) / 10))"
               } else {
                 Utils.markStageSkippedForConditional("clangDebugUnityODR")
               }
@@ -212,7 +215,7 @@ try {
             stage("clang-debug:tidy") {
               if (env.BRANCH_NAME == 'master' || full_ci) {
                 // We do not run tidy checks on the src/test folder, so there is no point in running the expensive clang-tidy for those files
-                sh "cd clang-debug-tidy && make hyrise_impl hyriseBenchmarkFileBased hyriseBenchmarkTPCH hyriseBenchmarkTPCDS hyriseBenchmarkJoinOrder hyriseConsole hyriseServer hyriseMvccDeletePlugin hyriseUccDiscoveryPlugin -k -j \$(( \$(nproc) / 10))"
+                sh "cd clang-debug-tidy && ninja hyrise_impl hyriseBenchmarkFileBased hyriseBenchmarkTPCH hyriseBenchmarkTPCDS hyriseBenchmarkJoinOrder hyriseConsole hyriseServer hyriseMvccDeletePlugin hyriseUccDiscoveryPlugin -k -j \$(( \$(nproc) / 10))"
               } else {
                 Utils.markStageSkippedForConditional("clangDebugTidy")
               }
@@ -221,7 +224,7 @@ try {
             stage("clang-debug:disable-precompile-headers") {
               if (env.BRANCH_NAME == 'master' || full_ci) {
                 // Check if builds work even when precompile headers is turned off. Executing the binaries is unnecessary as the observed errors are missing includes.
-                sh "cd clang-debug-disable-precompile-headers && make hyriseTest hyriseBenchmarkFileBased hyriseBenchmarkTPCH hyriseBenchmarkTPCDS hyriseBenchmarkJoinOrder hyriseConsole hyriseServer -k -j \$(( \$(nproc) / 10))"
+                sh "cd clang-debug-disable-precompile-headers && ninja hyriseTest hyriseBenchmarkFileBased hyriseBenchmarkTPCH hyriseBenchmarkTPCDS hyriseBenchmarkJoinOrder hyriseConsole hyriseServer -k -j \$(( \$(nproc) / 10))"
               } else {
                 Utils.markStageSkippedForConditional("clangDebugDisablePrecompileHeaders")
               }
@@ -229,7 +232,7 @@ try {
           }, clangDebugAddrUBSanitizers: {
             stage("clang-debug:addr-ub-sanitizers") {
               if (env.BRANCH_NAME == 'master' || full_ci) {
-                sh "cd clang-debug-addr-ub-sanitizers && make hyriseTest hyriseSystemTest hyriseBenchmarkTPCH hyriseBenchmarkTPCC -j \$(( \$(nproc) / 10))"
+                sh "cd clang-debug-addr-ub-sanitizers && ninja hyriseTest hyriseSystemTest hyriseBenchmarkTPCH hyriseBenchmarkTPCC -j \$(( \$(nproc) / 10))"
                 sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=strict_string_checks=1:detect_stack_use_after_return=1:check_initialization_order=1:strict_init_order=1:detect_leaks=1,suppressions=resources/.asan-ignore.txt ./clang-debug-addr-ub-sanitizers/hyriseTest clang-debug-addr-ub-sanitizers"
                 sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=strict_string_checks=1:detect_stack_use_after_return=1:check_initialization_order=1:strict_init_order=1:detect_leaks=1,suppressions=resources/.asan-ignore.txt ./clang-debug-addr-ub-sanitizers/hyriseSystemTest ${tests_excluded_in_sanitizer_builds} clang-debug-addr-ub-sanitizers"
                 sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=strict_string_checks=1:detect_stack_use_after_return=1:check_initialization_order=1:strict_init_order=1:detect_leaks=1,suppressions=resources/.asan-ignore.txt ./clang-debug-addr-ub-sanitizers/hyriseBenchmarkTPCH -s .01 --verify -r 1"
@@ -240,7 +243,7 @@ try {
           }, gccRelease: {
             if (env.BRANCH_NAME == 'master' || full_ci) {
               stage("gcc-release") {
-                sh "cd gcc-release && make all -j \$(( \$(nproc) / 10))"
+                sh "cd gcc-release && ninja all -j \$(( \$(nproc) / 10))"
                 sh "./gcc-release/hyriseTest gcc-release"
                 sh "./gcc-release/hyriseSystemTest gcc-release"
                 sh "./scripts/test/hyriseConsole_test.py gcc-release"
@@ -256,7 +259,7 @@ try {
           }, clangReleaseAddrUBSanitizers: {
             stage("clang-release:addr-ub-sanitizers") {
               if (env.BRANCH_NAME == 'master' || full_ci) {
-                sh "cd clang-release-addr-ub-sanitizers && make hyriseTest hyriseSystemTest hyriseBenchmarkTPCH hyriseBenchmarkTPCC -j \$(( \$(nproc) / 10))"
+                sh "cd clang-release-addr-ub-sanitizers && ninja hyriseTest hyriseSystemTest hyriseBenchmarkTPCH hyriseBenchmarkTPCC -j \$(( \$(nproc) / 10))"
                 sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=strict_string_checks=1:detect_stack_use_after_return=1:check_initialization_order=1:strict_init_order=1:detect_leaks=1,suppressions=resources/.asan-ignore.txt ./clang-release-addr-ub-sanitizers/hyriseTest clang-release-addr-ub-sanitizers"
                 sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=strict_string_checks=1:detect_stack_use_after_return=1:check_initialization_order=1:strict_init_order=1:detect_leaks=1,suppressions=resources/.asan-ignore.txt ./clang-release-addr-ub-sanitizers/hyriseSystemTest ${tests_excluded_in_sanitizer_builds} clang-release-addr-ub-sanitizers"
                 sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=strict_string_checks=1:detect_stack_use_after_return=1:check_initialization_order=1:strict_init_order=1:detect_leaks=1,suppressions=resources/.asan-ignore.txt ./clang-release-addr-ub-sanitizers/hyriseBenchmarkTPCH -s .01 --verify -r 100 --scheduler --clients 10 --cores \$(( \$(nproc) / 10))"
@@ -268,7 +271,7 @@ try {
           }, clangRelWithDebInfoThreadSanitizer: {
             stage("clang-relwithdebinfo:thread-sanitizer") {
               if (env.BRANCH_NAME == 'master' || full_ci) {
-                sh "cd clang-relwithdebinfo-thread-sanitizer && make hyriseTest hyriseSystemTest hyriseBenchmarkTPCH -j \$(( \$(nproc) / 10))"
+                sh "cd clang-relwithdebinfo-thread-sanitizer && ninja hyriseTest hyriseSystemTest hyriseBenchmarkTPCH -j \$(( \$(nproc) / 10))"
                 sh "TSAN_OPTIONS=\"history_size=7 suppressions=resources/.tsan-ignore.txt\" ./clang-relwithdebinfo-thread-sanitizer/hyriseTest clang-relwithdebinfo-thread-sanitizer"
                 sh "TSAN_OPTIONS=\"history_size=7 suppressions=resources/.tsan-ignore.txt\" ./clang-relwithdebinfo-thread-sanitizer/hyriseSystemTest ${tests_excluded_in_sanitizer_builds} clang-relwithdebinfo-thread-sanitizer"
                 sh "TSAN_OPTIONS=\"history_size=7 suppressions=resources/.tsan-ignore.txt\" ./clang-relwithdebinfo-thread-sanitizer/hyriseBenchmarkTPCH -s .01 --verify -r 100 --scheduler --clients 10 --cores \$(( \$(nproc) / 10))"
@@ -391,12 +394,12 @@ try {
 
               // Build hyriseTest with macOS's default compiler (Apple clang) and run it.
               sh "mkdir clang-apple-debug && cd clang-apple-debug && /usr/local/bin/cmake ${debug} ${unity} .."
-              sh "cd clang-apple-debug && make -j \$(sysctl -n hw.logicalcpu)"
+              sh "cd clang-apple-debug && ninja -j \$(sysctl -n hw.logicalcpu)"
               sh "./clang-apple-debug/hyriseTest"
 
               // Build Hyrise with a recent clang compiler version (as recommended for Hyrise on macOS) and run various tests.
               sh "mkdir clang-debug && cd clang-debug && /usr/local/bin/cmake ${debug} ${unity} -DCMAKE_C_COMPILER=/usr/local/opt/llvm@17/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm@17/bin/clang++ .."
-              sh "cd clang-debug && make -j \$(sysctl -n hw.logicalcpu)"
+              sh "cd clang-debug && ninja -j \$(sysctl -n hw.logicalcpu)"
               sh "./clang-debug/hyriseTest"
               sh "./clang-debug/hyriseSystemTest --gtest_filter=\"-TPCCTest*:TPCDSTableGeneratorTest.*:TPCHTableGeneratorTest.RowCountsMediumScaleFactor:*.CompareToSQLite/Line1*WithLZ4\""
               sh "PATH=/usr/local/bin/:$PATH ./scripts/test/hyriseConsole_test.py clang-debug"
@@ -424,13 +427,13 @@ try {
 
             // Build hyriseTest with macOS's default compiler (Apple clang) and run it.
             sh "mkdir clang-apple-release && cd clang-apple-release && cmake ${release} .."
-            sh "cd clang-apple-release && make -j \$(sysctl -n hw.logicalcpu)"
+            sh "cd clang-apple-release && ninja -j \$(sysctl -n hw.logicalcpu)"
             sh "./clang-apple-release/hyriseTest"
 
             // Build Hyrise with a recent clang compiler version (as recommended for Hyrise on macOS) and run various tests.
             // NOTE: These paths differ from x64 - brew on ARM uses /opt (https://docs.brew.sh/Installation)
             sh "mkdir clang-release && cd clang-release && cmake ${release} -DCMAKE_C_COMPILER=/opt/homebrew/opt/llvm@17/bin/clang -DCMAKE_CXX_COMPILER=/opt/homebrew/opt/llvm@17/bin/clang++ .."
-            sh "cd clang-release && make -j \$(sysctl -n hw.logicalcpu)"
+            sh "cd clang-release && ninja -j \$(sysctl -n hw.logicalcpu)"
 
             // Check whether arm64 binaries are built to ensure that we are not accidentally running rosetta that
             // executes x86 binaries on arm.
