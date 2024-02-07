@@ -102,7 +102,7 @@ try {
 
             // jemalloc's autoconf operates outside of the build folder (#1413). If we start two cmake instances at the same time, we run into conflicts.
             // Thus, run this one (any one, really) first, so that the autoconf step can finish in peace.
-            sh "mkdir clang-debug && cd clang-debug &&                                                   ${cmake} ${debug}          ${clang}  ${unity}  ${ninja} .. && ninja -j \$(nproc) libjemalloc-build"
+            sh "mkdir clang-debug && cd clang-debug &&                                                   ${cmake} ${debug}          ${clang}  ${unity}  ${ninja} .. && ninja libjemalloc-build"
 
             // Configure the rest in parallel.
             // Note on the clang-debug-tidy stage: clang-tidy misses some flaws when running in a unity build. However, it runs very long and we agreed to life with that for now.
@@ -215,7 +215,7 @@ try {
             stage("clang-debug:tidy") {
               if (env.BRANCH_NAME == 'master' || full_ci) {
                 // We do not run tidy checks on the src/test folder, so there is no point in running the expensive clang-tidy for those files
-                sh "cd clang-debug-tidy && ninja hyrise_impl hyriseBenchmarkFileBased hyriseBenchmarkTPCH hyriseBenchmarkTPCDS hyriseBenchmarkJoinOrder hyriseConsole hyriseServer hyriseMvccDeletePlugin hyriseUccDiscoveryPlugin -k -j \$(( \$(nproc) / 10))"
+                sh "cd clang-debug-tidy && ninja hyrise_impl hyriseBenchmarkFileBased hyriseBenchmarkTPCH hyriseBenchmarkTPCDS hyriseBenchmarkJoinOrder hyriseConsole hyriseServer hyriseMvccDeletePlugin hyriseUccDiscoveryPlugin -k 0 -j \$(( \$(nproc) / 10))"
               } else {
                 Utils.markStageSkippedForConditional("clangDebugTidy")
               }
@@ -224,7 +224,7 @@ try {
             stage("clang-debug:disable-precompile-headers") {
               if (env.BRANCH_NAME == 'master' || full_ci) {
                 // Check if builds work even when precompile headers is turned off. Executing the binaries is unnecessary as the observed errors are missing includes.
-                sh "cd clang-debug-disable-precompile-headers && ninja hyriseTest hyriseBenchmarkFileBased hyriseBenchmarkTPCH hyriseBenchmarkTPCDS hyriseBenchmarkJoinOrder hyriseConsole hyriseServer -k -j \$(( \$(nproc) / 10))"
+                sh "cd clang-debug-disable-precompile-headers && ninja hyriseTest hyriseBenchmarkFileBased hyriseBenchmarkTPCH hyriseBenchmarkTPCDS hyriseBenchmarkJoinOrder hyriseConsole hyriseServer -k 0 -j \$(( \$(nproc) / 10))"
               } else {
                 Utils.markStageSkippedForConditional("clangDebugDisablePrecompileHeaders")
               }
@@ -260,10 +260,10 @@ try {
             stage("clang-release:addr-ub-sanitizers") {
               if (env.BRANCH_NAME == 'master' || full_ci) {
                 sh "cd clang-release-addr-ub-sanitizers && ninja hyriseTest hyriseSystemTest hyriseBenchmarkTPCH hyriseBenchmarkTPCC -j \$(( \$(nproc) / 10))"
-                sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=strict_string_checks=1:detect_stack_use_after_return=1:check_initialization_order=1:strict_init_order=1:detect_leaks=1,suppressions=resources/.asan-ignore.txt ./clang-release-addr-ub-sanitizers/hyriseTest clang-release-addr-ub-sanitizers"
-                sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=strict_string_checks=1:detect_stack_use_after_return=1:check_initialization_order=1:strict_init_order=1:detect_leaks=1,suppressions=resources/.asan-ignore.txt ./clang-release-addr-ub-sanitizers/hyriseSystemTest ${tests_excluded_in_sanitizer_builds} clang-release-addr-ub-sanitizers"
-                sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=strict_string_checks=1:detect_stack_use_after_return=1:check_initialization_order=1:strict_init_order=1:detect_leaks=1,suppressions=resources/.asan-ignore.txt ./clang-release-addr-ub-sanitizers/hyriseBenchmarkTPCH -s .01 --verify -r 100 --scheduler --clients 10 --cores \$(( \$(nproc) / 10))"
-                sh "cd clang-release-addr-ub-sanitizers && LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=strict_string_checks=1:detect_stack_use_after_return=1:check_initialization_order=1:strict_init_order=1:detect_leaks=1,suppressions=resources/.asan-ignore.txt ../scripts/test/hyriseBenchmarkTPCC_test.py ." // Own folder to isolate binary export tests
+                sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=strict_string_checks=1:detect_stack_use_after_return=1:check_initialization_order=1:use_odr_indicator=1:strict_init_order=1:detect_leaks=1,suppressions=resources/.asan-ignore.txt ./clang-release-addr-ub-sanitizers/hyriseTest clang-release-addr-ub-sanitizers"
+                sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=strict_string_checks=1:detect_stack_use_after_return=1:check_initialization_order=1:use_odr_indicator=1:strict_init_order=1:detect_leaks=1,suppressions=resources/.asan-ignore.txt ./clang-release-addr-ub-sanitizers/hyriseSystemTest ${tests_excluded_in_sanitizer_builds} clang-release-addr-ub-sanitizers"
+                sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=strict_string_checks=1:detect_stack_use_after_return=1:check_initialization_order=1:use_odr_indicator=1:strict_init_order=1:detect_leaks=1,suppressions=resources/.asan-ignore.txt ./clang-release-addr-ub-sanitizers/hyriseBenchmarkTPCH -s .01 --verify -r 100 --scheduler --clients 10 --cores \$(( \$(nproc) / 10))"
+                sh "cd clang-release-addr-ub-sanitizers && LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=strict_string_checks=1:detect_stack_use_after_return=1:check_initialization_order=1:use_odr_indicator=1:strict_init_order=1:detect_leaks=1,suppressions=resources/.asan-ignore.txt ../scripts/test/hyriseBenchmarkTPCC_test.py ." // Own folder to isolate binary export tests
               } else {
                 Utils.markStageSkippedForConditional("clangReleaseAddrUBSanitizers")
               }

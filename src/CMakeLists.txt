@@ -85,7 +85,7 @@ include_directories(
 set(ENABLE_CLANG_TIDY OFF CACHE BOOL "Run clang-tidy")
 if (ENABLE_CLANG_TIDY)
     message(STATUS "clang-tidy enabled")
-    set(CMAKE_CXX_CLANG_TIDY "${CMAKE_SOURCE_DIR}/scripts/clang_tidy_wrapper.sh;${CMAKE_SOURCE_DIR}")
+    set(CMAKE_CXX_CLANG_TIDY "clang-tidy")
 endif()
 
 add_subdirectory(benchmarklib)
