@@ -140,10 +140,10 @@ try {
             }
           }, gcc11Debug: {
             stage("gcc-11-debug") {
-               // We give more cores to GCC 11 as it is the only configuration that has issues with unity builds
-               // (GoogleTest cannot be compiled). When switching to a more recent GCC version, this should be evaluated
-               // again.
-              sh "cd gcc-11-debug && ninja all -j \$(( \$(nproc) / 2.5))"
+               // We give more cores (ncores / 2.5) to GCC 11 as it is the only configuration that has issues with unity
+               // builds (GoogleTest cannot be compiled). When switching to a more recent GCC version, this should be
+               // evaluated again.
+              sh "cd gcc-11-debug && ninja all -j \$(( \$(nproc) * 2 / 5))"
               sh "cd gcc-11-debug && ./hyriseTest"
             }
           }, lint: {
