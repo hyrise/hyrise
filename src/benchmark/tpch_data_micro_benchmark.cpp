@@ -1,5 +1,3 @@
-#include "micro_benchmark_basic_fixture.hpp"
-
 #include "benchmark_config.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/window_function_expression.hpp"
@@ -9,13 +7,14 @@
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
+#include "micro_benchmark_basic_fixture.hpp"
 #include "operators/aggregate_sort.hpp"
 #include "operators/join_hash.hpp"
 #include "operators/sort.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
-#include "scheduler/operator_task.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
+#include "scheduler/operator_task.hpp"
 #include "statistics/statistics_objects/equal_distinct_count_histogram.hpp"
 #include "storage/encoding_type.hpp"
 #include "tpch/tpch_constants.hpp"
@@ -334,6 +333,7 @@ BENCHMARK_DEFINE_F(TPCHDataMicroBenchmarkFixture, BM_LineitemHistogramCreation)(
     }
   });
 }
+
 constexpr auto LINEITEM_COLUMN_COUNT = 15;
 BENCHMARK_REGISTER_F(TPCHDataMicroBenchmarkFixture, BM_LineitemHistogramCreation)->DenseRange(0, LINEITEM_COLUMN_COUNT);
 

@@ -1,5 +1,3 @@
-#include "tpcc/tpcc_table_generator.hpp"
-
 #include <algorithm>
 
 #include "benchmark_runner.hpp"
@@ -7,6 +5,7 @@
 #include "sql/sql_pipeline_builder.hpp"
 #include "tpcc/constants.hpp"
 #include "tpcc/tpcc_benchmark_item_runner.hpp"
+#include "tpcc/tpcc_table_generator.hpp"
 
 using namespace hyrise;  // NOLINT
 

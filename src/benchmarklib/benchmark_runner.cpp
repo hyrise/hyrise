@@ -18,11 +18,11 @@
 #include <boost/algorithm/string/join.hpp>
 #include <boost/range/adaptor/transformed.hpp>
 
+#include "cxxopts.hpp"
 #include "magic_enum.hpp"
 #include "nlohmann/json.hpp"
 
 #include "benchmark_config.hpp"
-#include "cxxopts.hpp"
 #include "hyrise.hpp"
 #include "null_value.hpp"
 #include "scheduler/job_task.hpp"

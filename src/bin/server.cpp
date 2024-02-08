@@ -9,8 +9,9 @@
 #include <boost/algorithm/string.hpp>  // IWYU pragma: keep
 #include <boost/lexical_cast.hpp>
 
-#include "benchmark_config.hpp"
 #include "cxxopts.hpp"
+
+#include "benchmark_config.hpp"
 #include "tpcc/tpcc_table_generator.hpp"
 #include "tpcds/tpcds_table_generator.hpp"
 #include "tpch/tpch_constants.hpp"

@@ -1,6 +1,7 @@
 #include <filesystem>
 
 #include <boost/algorithm/string.hpp>
+
 #include "cxxopts.hpp"
 
 #include "benchmark_runner.hpp"

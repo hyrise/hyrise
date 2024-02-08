@@ -285,7 +285,8 @@ void AbstractTableGenerator::generate_and_store() {
       std::cout << "(" << per_table_timer.lap_formatted() << ")\n";
     }
     metrics.binary_caching_duration = timer.lap();
-    std::cout << "- Writing tables into binary files done (" << format_duration(metrics.binary_caching_duration) << ")\n";
+    std::cout << "- Writing tables into binary files done (" << format_duration(metrics.binary_caching_duration)
+              << ")\n";
   }
 
   /**
