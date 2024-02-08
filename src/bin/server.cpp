@@ -6,11 +6,10 @@
 #include <string>
 #include <vector>
 
-#include <boost/algorithm/string.hpp>
+#include <boost/algorithm/string.hpp>  // IWYU pragma: keep
 #include <boost/lexical_cast.hpp>
 
 #include "benchmark_config.hpp"
-#include "cli_config_parser.hpp"
 #include "cxxopts.hpp"
 #include "tpcc/tpcc_table_generator.hpp"
 #include "tpcds/tpcds_table_generator.hpp"
@@ -80,7 +79,7 @@ int main(int argc, char* argv[]) {
 
   // Print help and exit
   if (parsed_options.count("help")) {
-    std::cout << cli_options.help() << std::endl;
+    std::cout << cli_options.help() << '\n';
     return 0;
   }
 

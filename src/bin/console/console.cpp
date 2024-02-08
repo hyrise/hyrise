@@ -2,14 +2,14 @@
 
 #include <readline/history.h>
 #include <readline/readline.h>
+#include <setjmp.h>
 
-#include <chrono>
-#include <csetjmp>
 #include <csignal>
 #include <cstdint>
 #include <cstdlib>
 #include <ctime>
 #include <filesystem>
+#include <functional>
 #include <iomanip>
 #include <iostream>
 #include <memory>
@@ -24,9 +24,7 @@
 #include "SQLParser.h"
 #include "SQLParserResult.h"
 
-#include "concurrency/transaction_context.hpp"
 #include "hyrise.hpp"
-#include "import_export/file_type.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "operators/export.hpp"
 #include "operators/get_table.hpp"

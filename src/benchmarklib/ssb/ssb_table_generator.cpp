@@ -7,7 +7,7 @@
 
 #include "external_dbgen_utils.hpp"
 #include "storage/constraints/table_key_constraint.hpp"
-#include "storage/table.hpp"
+#include "storage/table.hpp"  // IWYU pragma: keep
 #include "types.hpp"
 
 namespace hyrise {

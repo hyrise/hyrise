@@ -77,7 +77,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> FileBasedTableGenerator::gen
 
       if (last_binary_write < last_text_write) {
         std::cout << "-  Binary file '" << (*table_info.binary_file_path)
-                  << "' is out of date and needs to be re-exported" << std::endl;
+                  << "' is out of date and needs to be re-exported\n";
         table_info.binary_file_out_of_date = true;
       }
     }
@@ -108,7 +108,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> FileBasedTableGenerator::gen
       }
     }
 
-    std::cout << " (" << table_info.table->row_count() << " rows; " << timer.lap_formatted() << ")" << std::endl;
+    std::cout << " (" << table_info.table->row_count() << " rows; " << timer.lap_formatted() << ")\n";
   }
 
   return table_info_by_name;

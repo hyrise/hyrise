@@ -37,6 +37,7 @@
 #include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/format_duration.hpp"
+#include "utils/log_manager.hpp"
 #include "utils/timer.hpp"
 
 namespace hyrise {

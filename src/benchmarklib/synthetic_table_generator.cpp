@@ -1,12 +1,10 @@
 #include "synthetic_table_generator.hpp"
 
-#include <algorithm>
 #include <cstddef>
 #include <functional>
 #include <memory>
 #include <random>
 #include <string>
-#include <thread>
 #include <utility>
 #include <vector>
 
@@ -20,7 +18,6 @@
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
-#include "scheduler/topology.hpp"
 #include "statistics/generate_pruning_statistics.hpp"
 #include "storage/chunk.hpp"
 #include "storage/chunk_encoder.hpp"

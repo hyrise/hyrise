@@ -235,7 +235,7 @@ void Worker::_set_affinity() {
   if (return_code != 0) {
     // This is not an Assert(), though maybe it should be. Not being able to pin the threads doesn't make the database
     // unfunctional, but probably slower.
-    std::cerr << "Error calling pthread_setaffinity_np (return code: " << return_code << ")." << std::endl;
+    std::cerr << "Error calling pthread_setaffinity_np (return code: " << return_code << ").\n";
   }
 #endif
 }

@@ -11,18 +11,14 @@
 #include <utility>
 #include <vector>
 
-#include "storage/constraints/table_key_constraint.hpp"
-#include "storage/table.hpp"
-#include "types.hpp"
-#include "utils/assert.hpp"
-
 extern "C" {
-#include "tpcds-kit/tools/config.h"
+#include "tpcds-kit/tools/columns.h"
 #include "tpcds-kit/tools/dbgen_version.h"
 #include "tpcds-kit/tools/decimal.h"
 #include "tpcds-kit/tools/genrand.h"
 #include "tpcds-kit/tools/nulls.h"
 #include "tpcds-kit/tools/parallel.h"
+#include "tpcds-kit/tools/porting.h"
 #include "tpcds-kit/tools/r_params.h"
 #include "tpcds-kit/tools/tables.h"
 #include "tpcds-kit/tools/tdefs.h"
@@ -53,7 +49,11 @@ extern "C" {
 }
 
 #include "benchmark_config.hpp"
+#include "storage/constraints/table_key_constraint.hpp"
+#include "storage/table.hpp"
 #include "table_builder.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 #include "utils/timer.hpp"
 
 namespace {

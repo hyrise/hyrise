@@ -10,9 +10,6 @@
 #include <string>
 #include <vector>
 
-#include <boost/date_time/gregorian/gregorian.hpp>
-#include <boost/date_time/posix_time/posix_time.hpp>
-
 #include "benchmark_config.hpp"
 #include "sql/sql_pipeline_statement.hpp"
 #include "tpch/tpch_constants.hpp"
@@ -97,7 +94,7 @@ void JCCHBenchmarkItemRunner::_load_params() {
     }
     // NOLINTEND(concurrency-mt-unsafe)
 
-    std::cout << " (" << timer.lap_formatted() << ")" << std::endl;
+    std::cout << " (" << timer.lap_formatted() << ")\n";
   }
 
   // Open the params file, which looks like this:

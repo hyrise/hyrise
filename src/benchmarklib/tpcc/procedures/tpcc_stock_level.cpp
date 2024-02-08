@@ -1,11 +1,9 @@
 #include "tpcc_stock_level.hpp"
 
 #include <cstdint>
-#include <ctime>
 #include <random>
 #include <string>
 
-#include "operators/print.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 

@@ -676,47 +676,44 @@ TEST_P(JoinTestRunner, TestJoin) {
   auto table_difference_message = std::optional<std::string>{};
 
   const auto print_configuration_info = [&]() {
-    std::cout << "====================== JoinOperator ========================" << std::endl;
-    std::cout << join_op->description(DescriptionMode::MultiLine) << std::endl;
-    std::cout << "===================== Left Input Table =====================" << std::endl;
+    std::cout << "====================== JoinOperator ========================\n";
+    std::cout << join_op->description(DescriptionMode::MultiLine);
+    std::cout << "\n===================== Left Input Table =====================\n";
     Print::print(left_input_table, PrintFlags::IgnoreChunkBoundaries);
-    std::cout << "Chunk size: " << configuration.left_input.chunk_size << std::endl;
-    std::cout << "Table type: " << input_table_type_to_string.at(configuration.left_input.table_type) << std::endl;
-    std::cout << "Indexed chunk range: [" << configuration.left_input.indexed_chunk_range.first << ", "
-              << configuration.left_input.indexed_chunk_range.second << ")" << std::endl;
-    std::cout << "Chunk range with single chunk ref. guarantee: ["
+    std::cout << "Chunk size: " << configuration.left_input.chunk_size;
+    std::cout << "\nTable type: " << input_table_type_to_string.at(configuration.left_input.table_type);
+    std::cout << "\nIndexed chunk range: [" << configuration.left_input.indexed_chunk_range.first << ", "
+              << configuration.left_input.indexed_chunk_range.second;
+    std::cout << "\nChunk range with single chunk ref. guarantee: ["
               << configuration.left_input.single_chunk_reference_range.first << ", "
-              << configuration.left_input.single_chunk_reference_range.second << ")" << std::endl;
-    std::cout << get_table_path(configuration.left_input) << std::endl;
-    std::cout << std::endl;
-    std::cout << "===================== Right Input Table ====================" << std::endl;
+              << configuration.left_input.single_chunk_reference_range.second << ")\n";
+    std::cout << get_table_path(configuration.left_input);
+    std::cout << "\n\n===================== Right Input Table ====================\n";
     Print::print(right_input_table, PrintFlags::IgnoreChunkBoundaries);
-    std::cout << "Chunk size: " << configuration.right_input.chunk_size << std::endl;
-    std::cout << "Table size: " << input_table_type_to_string.at(configuration.right_input.table_type) << std::endl;
-    std::cout << "Indexed chunk range: [" << configuration.right_input.indexed_chunk_range.first << ", "
-              << configuration.right_input.indexed_chunk_range.second << ")" << std::endl;
-    std::cout << "Chunk range with single chunk ref. guarantee: ["
+    std::cout << "Chunk size: " << configuration.right_input.chunk_size;
+    std::cout << "\nTable size: " << input_table_type_to_string.at(configuration.right_input.table_type);
+    std::cout << "\nIndexed chunk range: [" << configuration.right_input.indexed_chunk_range.first << ", "
+              << configuration.right_input.indexed_chunk_range.second;
+    std::cout << "\nChunk range with single chunk ref. guarantee: ["
               << configuration.right_input.single_chunk_reference_range.first << ", "
-              << configuration.right_input.single_chunk_reference_range.second << ")" << std::endl;
-    std::cout << get_table_path(configuration.right_input) << std::endl;
-    std::cout << std::endl;
-    std::cout << "==================== Actual Output Table ===================" << std::endl;
+              << configuration.right_input.single_chunk_reference_range.second << ")\n";
+    std::cout << get_table_path(configuration.right_input);
+    std::cout << "\n\n==================== Actual Output Table ===================\n";
     if (actual_table) {
       Print::print(actual_table, PrintFlags::IgnoreChunkBoundaries);
-      std::cout << std::endl;
     } else {
-      std::cout << "No Table produced by the join operator under test" << std::endl;
+      std::cout << "No Table produced by the join operator under test";
     }
-    std::cout << "=================== Expected Output Table ==================" << std::endl;
+    std::cout << "\n=================== Expected Output Table ==================\n";
     if (expected_table) {
       Print::print(expected_table, PrintFlags::IgnoreChunkBoundaries);
-      std::cout << std::endl;
+      std::cout << '\n';
     } else {
-      std::cout << "No Table produced by the reference join operator" << std::endl;
+      std::cout << "No Table produced by the reference join operator\n";
     }
-    std::cout << "======================== Difference ========================" << std::endl;
-    std::cout << *table_difference_message << std::endl;
-    std::cout << "============================================================" << std::endl;
+    std::cout << "======================== Difference ========================\n";
+    std::cout << *table_difference_message;
+    std::cout << "\n============================================================\n";
   };
 
   try {

@@ -57,7 +57,7 @@ class TaskQueue {
    */
   size_t estimate_load() const;
 
-  void signal(const size_t count);
+  void signal(const int32_t count);
 
   /**
    * Semaphore to signal waiting workers for new tasks.

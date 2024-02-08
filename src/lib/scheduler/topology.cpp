@@ -196,14 +196,13 @@ void Topology::_clear() {
 }
 
 std::ostream& operator<<(std::ostream& stream, const Topology& topology) {
-  stream << "Number of CPUs: " << topology.num_cpus() << std::endl;
+  stream << "Number of CPUs: " << topology.num_cpus() << '\n';
   if (topology._filtered_by_affinity) {
-    stream << "Available CPUs / nodes were filtered by externally set CPU affinity (e.g., numactl)." << std::endl;
+    stream << "Available CPUs / nodes were filtered by externally set CPU affinity (e.g., numactl).\n";
   }
   for (auto node_idx = size_t{0}; node_idx < topology.nodes().size(); ++node_idx) {
     stream << "Node #" << node_idx << " - ";
-    stream << topology.nodes()[node_idx];
-    stream << std::endl;
+    stream << topology.nodes()[node_idx] << '\n';
   }
 
   return stream;

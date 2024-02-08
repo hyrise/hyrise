@@ -1,14 +1,12 @@
 #include "union_positions.hpp"
 
 #include <algorithm>
-#include <chrono>
 #include <cstddef>
 #include <iterator>
 #include <memory>
 #include <numeric>
 #include <string>
 #include <unordered_map>
-#include <utility>
 #include <vector>
 
 #include <boost/sort/sort.hpp>

@@ -66,7 +66,7 @@ int main(int argc, char* argv[]) {
 
   auto context = BenchmarkRunner::create_context(*config);
 
-  std::cout << "- TPC-C scale factor (number of warehouses) is " << num_warehouses << std::endl;
+  std::cout << "- TPC-C scale factor (number of warehouses) is " << num_warehouses << '\n';
 
   // Add TPC-C-specific information
   context.emplace("scale_factor", num_warehouses);
@@ -78,9 +78,9 @@ int main(int argc, char* argv[]) {
       .run();
 
   if (consistency_checks || config->verify) {
-    std::cout << "- Running consistency checks at the end of the benchmark" << std::endl;
+    std::cout << "- Running consistency checks at the end of the benchmark\n";
     check_consistency(num_warehouses);
-    std::cout << "- Consistency checks passed" << std::endl;
+    std::cout << "- Consistency checks passed\n";
   }
 }
 
@@ -103,7 +103,7 @@ void check_consistency(const size_t num_warehouses) {
   const auto total_num_districts = static_cast<size_t>(num_warehouses * NUM_DISTRICTS_PER_WAREHOUSE);
 
   {
-    std::cout << "  -> Running consistency check 1" << std::endl;  // see 3.3.2.1
+    std::cout << "  -> Running consistency check 1\n";  // see 3.3.2.1
     // There is only one value for W_YTD. We select MAX() because we need an aggregate column.
     auto pipeline =
         SQLPipelineBuilder{
@@ -121,7 +121,7 @@ void check_consistency(const size_t num_warehouses) {
   }
 
   {
-    std::cout << "  -> Running consistency check 2" << std::endl;
+    std::cout << "  -> Running consistency check 2\n";
     for (size_t w_id = 1; w_id <= num_warehouses; ++w_id) {
       auto district_pipeline = SQLPipelineBuilder{std::string{"SELECT D_NEXT_O_ID - 1 FROM DISTRICT WHERE D_W_ID = "} +
                                                   std::to_string(w_id) + " ORDER BY D_ID"}
@@ -154,7 +154,7 @@ void check_consistency(const size_t num_warehouses) {
   }
 
   {
-    std::cout << "  -> Running consistency check 3" << std::endl;
+    std::cout << "  -> Running consistency check 3\n";
     auto new_order_pipeline =
         SQLPipelineBuilder{
             "SELECT NO_W_ID, NO_D_ID, MIN(NO_O_ID), MAX(NO_O_ID) FROM NEW_ORDER GROUP BY NO_W_ID, NO_D_ID"}
@@ -172,7 +172,7 @@ void check_consistency(const size_t num_warehouses) {
   }
 
   {
-    std::cout << "  -> Running consistency check 4" << std::endl;
+    std::cout << "  -> Running consistency check 4\n";
     auto order_pipeline =
         SQLPipelineBuilder{
             "SELECT O_W_ID, O_D_ID, SUM(O_OL_CNT) FROM \"ORDER\" GROUP BY O_W_ID, O_D_ID ORDER BY O_W_ID, O_D_ID"}
@@ -198,7 +198,7 @@ void check_consistency(const size_t num_warehouses) {
   }
 
   {
-    std::cout << "  -> Running consistency check 5" << std::endl;
+    std::cout << "  -> Running consistency check 5\n";
     // clang-format off
     auto pipeline = SQLPipelineBuilder{R"(
                       SELECT *
@@ -216,7 +216,7 @@ void check_consistency(const size_t num_warehouses) {
   }
 
   {
-    std::cout << "  -> Running consistency check 6" << std::endl;
+    std::cout << "  -> Running consistency check 6\n";
     // clang-format off
     auto pipeline = SQLPipelineBuilder{R"(
                       SELECT O_W_ID, O_D_ID, O_ID, MAX(O_OL_CNT), COUNT(*)
@@ -238,7 +238,7 @@ void check_consistency(const size_t num_warehouses) {
   }
 
   {
-    std::cout << "  -> Running consistency check 7" << std::endl;
+    std::cout << "  -> Running consistency check 7\n";
     auto pipeline =
         SQLPipelineBuilder{
             "SELECT * FROM ORDER_LINE LEFT JOIN \"ORDER\" ON OL_W_ID = O_W_ID AND OL_D_ID = O_D_ID AND OL_O_ID = O_ID "
@@ -250,7 +250,7 @@ void check_consistency(const size_t num_warehouses) {
   }
 
   {
-    std::cout << "  -> Running consistency check 8" << std::endl;
+    std::cout << "  -> Running consistency check 8\n";
     auto pipeline =
         SQLPipelineBuilder{
             "SELECT W_ID, MAX(W_YTD), SUM(H_AMOUNT) FROM WAREHOUSE, HISTORY WHERE W_ID = H_W_ID GROUP BY W_ID"}
@@ -267,7 +267,7 @@ void check_consistency(const size_t num_warehouses) {
   }
 
   {
-    std::cout << "  -> Running consistency check 9" << std::endl;
+    std::cout << "  -> Running consistency check 9\n";
     auto pipeline =
         SQLPipelineBuilder{
             "SELECT D_W_ID, D_ID, MAX(D_YTD), SUM(H_AMOUNT) FROM DISTRICT, HISTORY WHERE D_W_ID = H_W_ID AND D_ID "
@@ -285,8 +285,8 @@ void check_consistency(const size_t num_warehouses) {
   }
 
   {
-    std::cout << "  -> Running consistency check 10" << std::endl;
-    std::cout << "  -> Skipped because of #1771" << std::endl;
+    std::cout << "  -> Running consistency check 10\n";
+    std::cout << "  -> Skipped because of #1771\n";
     if ((false)) {
       // clang-format off
     auto pipeline = SQLPipelineBuilder{R"(
@@ -327,15 +327,15 @@ void check_consistency(const size_t num_warehouses) {
   }
 
   {
-    std::cout << "  -> Running consistency check 11" << std::endl;
-    std::cout << "  -> Skipped because it only relates to the unmodified database" << std::endl;
+    std::cout << "  -> Running consistency check 11\n";
+    std::cout << "  -> Skipped because it only relates to the unmodified database\n";
     // The consistency condition as defined in 3.3.2.11 is only valid for the initial state of the database. Once the
     // new-order and delivery transactions have executed, rows have been added to / deleted from the order and
     // new_order tables. Thus, we are skipping this check.
   }
 
   {
-    std::cout << "  -> Running consistency check 12" << std::endl;
+    std::cout << "  -> Running consistency check 12\n";
     // clang-format off
     auto pipeline = SQLPipelineBuilder{R"(
                       SELECT C_W_ID, C_D_ID, C_ID, C_BALANCE, C_YTD_PAYMENT,

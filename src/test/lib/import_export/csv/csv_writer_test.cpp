@@ -43,12 +43,10 @@ class CsvWriterTest : public BaseTest {
 
     int equality = content.compare(expected_content);
     if (equality != 0) {
-      std::cout << equality << std::endl;
-      std::cout << "Comparison of file to expected content failed. " << std::endl;
-      std::cout << "Expected:" << std::endl;
-      std::cout << expected_content << std::endl;
-      std::cout << "Actual:" << std::endl;
-      std::cout << content << std::endl;
+      std::cout << equality << "\nComparison of file to expected content failed. \n";
+      std::cout << "Expected:\n" << expected_content;
+      std::cout << "\nActual:\n";
+      std::cout << content << '\n';
     }
     return equality == 0;
   }

@@ -140,8 +140,8 @@ int main(int argc, char* argv[]) {
 
   // Check that the options "query_path" and "table_path" were specified
   if (query_path.empty() || table_path.empty()) {
-    std::cerr << "Need to specify --query_path=path/to/queries and --table_path=path/to/table_files" << std::endl;
-    std::cerr << cli_options.help({}) << std::endl;
+    std::cerr << "Need to specify --query_path=path/to/queries and --table_path=path/to/table_files\n";
+    std::cerr << cli_options.help({}) << '\n';
     return 1;
   }
 
@@ -157,14 +157,14 @@ int main(int argc, char* argv[]) {
   // as they do not contains actual queries
   const auto non_query_file_names = std::unordered_set<std::string>{"fkindexes.sql", "schema.sql"};
 
-  std::cout << "- Benchmarking queries from " << query_path << std::endl;
-  std::cout << "- Running on tables from " << table_path << std::endl;
+  std::cout << "- Benchmarking queries from " << query_path << '\n';
+  std::cout << "- Running on tables from " << table_path << '\n';
 
-  std::optional<std::unordered_set<std::string>> query_subset;
+  auto query_subset = std::optional<std::unordered_set<std::string>>{};
   if (queries_str == "all") {
-    std::cout << "- Running all queries from specified path" << std::endl;
+    std::cout << "- Running all queries from specified path\n";
   } else {
-    std::cout << "- Running subset of queries: " << queries_str << std::endl;
+    std::cout << "- Running subset of queries: " << queries_str << '\n';
 
     // "a, b, c, d" -> ["a", " b", " c", " d"]
     auto query_subset_untrimmed = std::vector<std::string>{};
@@ -197,7 +197,7 @@ int main(int argc, char* argv[]) {
     add_indices_to_sqlite(query_path + "/schema.sql", query_path + "/fkindexes.sql", benchmark_runner->sqlite_wrapper);
   }
 
-  std::cout << "done." << std::endl;
+  std::cout << "done.\n";
 
   benchmark_runner->run();
 }

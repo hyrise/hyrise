@@ -6,7 +6,7 @@
 #include <utility>
 #include <vector>
 
-#include <boost/dynamic_bitset.hpp>  // IWYU pragma: keep
+#include <boost/dynamic_bitset/dynamic_bitset.hpp>
 
 #include "cost_estimation/abstract_cost_estimator.hpp"
 #include "enumerate_ccp.hpp"

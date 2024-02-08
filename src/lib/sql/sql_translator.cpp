@@ -1911,7 +1911,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
         auto partition_by_expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
         if (hsql_window_description.partitionList) {
           partition_by_expressions.reserve(hsql_window_description.partitionList->size());
-          for (const auto expression : *hsql_window_description.partitionList) {
+          for (const auto* expression : *hsql_window_description.partitionList) {
             partition_by_expressions.emplace_back(_translate_hsql_expr(*expression, sql_identifier_resolver));
           }
         }
@@ -1922,7 +1922,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
           const auto expression_count = order_list.size();
           order_by_expressions.reserve(expression_count);
           sort_modes.reserve(expression_count);
-          for (const auto order_description : order_list) {
+          for (const auto* order_description : order_list) {
             order_by_expressions.emplace_back(_translate_hsql_expr(*order_description->expr, sql_identifier_resolver));
             sort_modes.emplace_back(order_type_to_sort_mode.at(order_description->type));
           }

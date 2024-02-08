@@ -10,9 +10,12 @@
 #include <utility>
 #include <vector>
 
-#include <boost/algorithm/string.hpp>
+#include <boost/algorithm/string/case_conv.hpp>
+#include <boost/algorithm/string/classification.hpp>
+#include <boost/algorithm/string/predicate.hpp>
+#include <boost/algorithm/string/split.hpp>
+#include <boost/algorithm/string/trim.hpp>
 
-#include "magic_enum.hpp"
 #include "nlohmann/json.hpp"
 
 #include "all_type_variant.hpp"
@@ -30,7 +33,7 @@ BenchmarkConfig CLIConfigParser::parse_cli_options(const cxxopts::ParseResult& p
   const auto output_file_string = parse_result["output"].as<std::string>();
   if (!output_file_string.empty()) {
     output_file_path = output_file_string;
-    std::cout << "- Writing benchmark results to '" << *output_file_path << "'" << std::endl;
+    std::cout << "- Writing benchmark results to '" << *output_file_path << "'\n";
   }
 
   const auto enable_scheduler = parse_result["scheduler"].as<bool>();
@@ -38,17 +41,17 @@ BenchmarkConfig CLIConfigParser::parse_cli_options(const cxxopts::ParseResult& p
   const auto number_of_cores_str = (cores == 0) ? "all available" : std::to_string(cores);
   const auto core_info = enable_scheduler ? " using " + number_of_cores_str + " cores" : "";
   std::cout << "- Running in " + std::string(enable_scheduler ? "multi" : "single") + "-threaded mode" << core_info
-            << std::endl;
+            << '\n';
   const auto data_preparation_cores = parse_result["data_preparation_cores"].as<uint32_t>();
   const auto number_of_data_preparation_cores_str =
       (data_preparation_cores == 0) ? "all available" : std::to_string(data_preparation_cores);
   std::cout << "- Data preparation will use " << number_of_data_preparation_cores_str
-            << (data_preparation_cores == 1 ? " core" : " cores") << std::endl;
+            << (data_preparation_cores == 1 ? " core" : " cores") << '\n';
 
   const auto clients = parse_result["clients"].as<uint32_t>();
   std::cout << "- " + std::to_string(clients) + " simulated ";
   std::cout << (clients == 1 ? "client is " : "clients are ") << "scheduling items";
-  std::cout << (clients > 1 ? " in parallel" : "") << std::endl;
+  std::cout << (clients > 1 ? " in parallel" : "") << '\n';
 
   if (cores != default_config.cores || clients != default_config.clients) {
     if (!enable_scheduler) {
@@ -60,8 +63,7 @@ BenchmarkConfig CLIConfigParser::parse_cli_options(const cxxopts::ParseResult& p
 
   if (enable_scheduler && clients == 1) {
     std::cout << "\n\n- WARNING: You are running in multi-threaded (MT) mode but have set --clients=1.\n";
-    std::cout << "           You will achieve better MT performance by executing multiple queries in parallel.\n";
-    std::cout << std::endl;
+    std::cout << "           You will achieve better MT performance by executing multiple queries in parallel.\n\n";
   }
 
   // Determine benchmark and display it
@@ -74,12 +76,12 @@ BenchmarkConfig CLIConfigParser::parse_cli_options(const cxxopts::ParseResult& p
   } else {
     throw std::runtime_error("Invalid benchmark mode: '" + benchmark_mode_str + "'");
   }
-  std::cout << "- Running benchmark in '" << benchmark_mode_str << "' mode" << std::endl;
+  std::cout << "- Running benchmark in '" << benchmark_mode_str << "' mode\n";
 
   const auto enable_visualization = parse_result["visualize"].as<bool>();
   if (enable_visualization) {
     Assert(clients == 1, "Cannot visualize plans with multiple clients as files may be overwritten.");
-    std::cout << "- Visualizing the plans into SVG files. This will make the performance numbers invalid." << std::endl;
+    std::cout << "- Visualizing the plans into SVG files. This will make the performance numbers invalid.\n";
   }
 
   // Get the specified encoding type
@@ -89,79 +91,78 @@ BenchmarkConfig CLIConfigParser::parse_cli_options(const cxxopts::ParseResult& p
   if (boost::algorithm::ends_with(encoding_type_str, ".json")) {
     // Use encoding file instead of default type
     encoding_config = std::make_unique<EncodingConfig>(parse_encoding_config(encoding_type_str));
-    std::cout << "- Encoding is custom from " << encoding_type_str << "" << std::endl;
+    std::cout << "- Encoding is custom from " << encoding_type_str << "\n";
 
     Assert(compression_type_str.empty(), "Specified both compression type and an encoding file. Invalid combination.");
   } else {
     encoding_config = std::make_unique<EncodingConfig>(
         EncodingConfig::encoding_spec_from_strings(encoding_type_str, compression_type_str));
-    std::cout << "- Encoding is '" << encoding_type_str << "'" << std::endl;
+    std::cout << "- Encoding is '" << encoding_type_str << "'\n";
   }
 
   const auto chunk_indexes = parse_result["chunk_indexes"].as<bool>();
   if (chunk_indexes) {
-    std::cout << "- Creating chunk indexes (separate index per chunk; columns defined by benchmark)" << std::endl;
+    std::cout << "- Creating chunk indexes (separate index per chunk; columns defined by benchmark)\n";
   }
 
   const auto table_indexes = parse_result["table_indexes"].as<bool>();
   if (table_indexes) {
-    std::cout << "- Creating table indexes (index per table column; columns defined by benchmark)" << std::endl;
+    std::cout << "- Creating table indexes (index per table column; columns defined by benchmark)\n";
   }
 
   if (chunk_indexes && table_indexes) {
-    std::cout << "WARNING: Creating chunk and table indexes simultaneously." << std::endl;
+    std::cout << "WARNING: Creating chunk and table indexes simultaneously.\n";
   }
 
   // Get all other variables
   const auto chunk_size = parse_result["chunk_size"].as<ChunkOffset>();
-  std::cout << "- Chunk size is " << chunk_size << std::endl;
+  std::cout << "- Chunk size is " << chunk_size << '\n';
 
   const auto max_runs = parse_result["runs"].as<int64_t>();
   if (max_runs >= 0) {
-    std::cout << "- Max runs per item is " << max_runs << std::endl;
+    std::cout << "- Max runs per item is " << max_runs << '\n';
   } else {
-    std::cout << "- Executing items until max duration is up:" << std::endl;
+    std::cout << "- Executing items until max duration is up:\n";
   }
 
   const auto max_duration = parse_result["time"].as<uint64_t>();
-  std::cout << "- Max duration per item is " << max_duration << " seconds" << std::endl;
+  std::cout << "- Max duration per item is " << max_duration << " seconds\n";
   const Duration timeout_duration = std::chrono::seconds{max_duration};
 
   const auto warmup = parse_result["warmup"].as<uint64_t>();
   if (warmup > 0) {
-    std::cout << "- Warmup duration per item is " << warmup << " seconds" << std::endl;
+    std::cout << "- Warmup duration per item is " << warmup << " seconds\n";
   } else {
-    std::cout << "- No warmup runs are performed" << std::endl;
+    std::cout << "- No warmup runs are performed\n";
   }
   const Duration warmup_duration = std::chrono::seconds{warmup};
 
   const auto verify = parse_result["verify"].as<bool>();
   if (verify) {
-    std::cout << "- Automatically verifying results with SQLite. This will make the performance numbers invalid."
-              << std::endl;
+    std::cout << "- Automatically verifying results with SQLite. This will make the performance numbers invalid.\n";
   }
 
   const auto cache_binary_tables = !parse_result["dont_cache_binary_tables"].as<bool>();
   if (cache_binary_tables) {
-    std::cout << "- Caching tables as binary files" << std::endl;
+    std::cout << "- Caching tables as binary files\n";
   } else {
-    std::cout << "- Not caching tables as binary files" << std::endl;
+    std::cout << "- Not caching tables as binary files\n";
   }
 
   const auto system_metrics = parse_result["system_metrics"].as<bool>();
   if (system_metrics) {
     Assert(!output_file_string.empty(), "--system_metrics only makes sense when an output file is set.");
-    std::cout << "- Tracking system metrics." << std::endl;
+    std::cout << "- Tracking system metrics.\n";
   } else {
-    std::cout << "- Not tracking system metrics." << std::endl;
+    std::cout << "- Not tracking system metrics.\n";
   }
 
   const auto pipeline_metrics = parse_result["pipeline_metrics"].as<bool>();
   if (pipeline_metrics) {
     Assert(!output_file_string.empty(), "--pipeline_metrics only makes sense when an output file is set.");
-    std::cout << "- Tracking SQL pipeline metrics." << std::endl;
+    std::cout << "- Tracking SQL pipeline metrics.\n";
   } else {
-    std::cout << "- Not tracking SQL pipeline metrics." << std::endl;
+    std::cout << "- Not tracking SQL pipeline metrics.\n";
   }
 
   auto plugins = std::vector<std::string>{};
@@ -261,12 +262,12 @@ bool CLIConfigParser::print_help_if_requested(const cxxopts::Options& options,
     return false;
   }
 
-  std::cout << options.help() << std::endl;
+  std::cout << options.help() << '\n';
 
   if (parse_result.count("full_help")) {
-    std::cout << EncodingConfig::description << std::endl;
+    std::cout << EncodingConfig::description << '\n';
   } else {
-    std::cout << "Use --full_help for more configuration options" << std::endl << std::endl;
+    std::cout << "Use --full_help for more configuration options\n\n";
   }
 
   return true;

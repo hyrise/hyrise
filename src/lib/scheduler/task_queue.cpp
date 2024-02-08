@@ -84,7 +84,7 @@ size_t TaskQueue::estimate_load() const {
   return estimated_load;
 }
 
-void TaskQueue::signal(const size_t count) {
+void TaskQueue::signal(const int32_t count) {
   semaphore.signal(count);
 }
 

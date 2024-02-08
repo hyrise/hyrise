@@ -123,10 +123,9 @@ class ExpressionEvaluatorToValuesTest : public BaseTest {
 
     std::cout << "Actual:\n  ";
     print(actual_normalized);
-    std::cout << std::endl;
-    std::cout << "Expected:\n  ";
+    std::cout << "\nExpected:\n  ";
     print(expected);
-    std::cout << std::endl;
+    std::cout << '\n';
 
     return false;
   }
@@ -141,10 +140,9 @@ class ExpressionEvaluatorToValuesTest : public BaseTest {
 
     std::cout << "Actual:\n  ";
     print(actual_normalized);
-    std::cout << std::endl;
-    std::cout << "Expected:\n  ";
+    std::cout << "\nExpected:\n  ";
     print(expected);
-    std::cout << std::endl;
+    std::cout << '\n';
 
     return false;
   }

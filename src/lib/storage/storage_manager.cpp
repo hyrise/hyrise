@@ -238,30 +238,27 @@ void StorageManager::export_all_tables_as_csv(const std::string& path) {
 }
 
 std::ostream& operator<<(std::ostream& stream, const StorageManager& storage_manager) {
-  stream << "==================" << std::endl;
-  stream << "===== Tables =====" << std::endl << std::endl;
+  stream << "==================\n";
+  stream << "===== Tables =====\n\n";
 
   for (auto const& table : storage_manager.tables()) {
     stream << "==== table >> " << table.first << " <<";
     stream << " (" << table.second->column_count() << " columns, " << table.second->row_count() << " rows in "
-           << table.second->chunk_count() << " chunks)";
-    stream << std::endl;
+           << table.second->chunk_count() << " chunks)\n";
   }
 
-  stream << "==================" << std::endl;
-  stream << "===== Views ======" << std::endl << std::endl;
+  stream << "==================\n";
+  stream << "===== Views ======\n\n";
 
   for (auto const& view : storage_manager.views()) {
-    stream << "==== view >> " << view.first << " <<";
-    stream << std::endl;
+    stream << "==== view >> " << view.first << " <<\n";
   }
 
-  stream << "==================" << std::endl;
-  stream << "= PreparedPlans ==" << std::endl << std::endl;
+  stream << "==================\n";
+  stream << "= PreparedPlans ==\n\n";
 
   for (auto const& prepared_plan : storage_manager.prepared_plans()) {
-    stream << "==== prepared plan >> " << prepared_plan.first << " <<";
-    stream << std::endl;
+    stream << "==== prepared plan >> " << prepared_plan.first << " <<\n";
   }
 
   return stream;

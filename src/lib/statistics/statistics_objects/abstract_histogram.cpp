@@ -48,7 +48,7 @@ std::string AbstractHistogram<T>::description() const {
   stream << " distinct count: " << total_distinct_count() << ";";
   stream << " bin count: " << bin_count() << ";";
 
-  stream << "  Bins" << std::endl;
+  stream << "  Bins\n";
   for (BinID bin_id = 0u; bin_id < bin_count(); ++bin_id) {
     if constexpr (std::is_same_v<T, pmr_string>) {
       stream << "  ['" << bin_minimum(bin_id) << "' (" << _domain.string_to_number(bin_minimum(bin_id)) << ") -> '";
@@ -56,7 +56,7 @@ std::string AbstractHistogram<T>::description() const {
     } else {
       stream << "  [" << bin_minimum(bin_id) << " -> " << bin_maximum(bin_id) << "]: ";
     }
-    stream << "Height: " << bin_height(bin_id) << "; DistinctCount: " << bin_distinct_count(bin_id) << std::endl;
+    stream << "Height: " << bin_height(bin_id) << "; DistinctCount: " << bin_distinct_count(bin_id) << '\n';
   }
 
   return stream.str();

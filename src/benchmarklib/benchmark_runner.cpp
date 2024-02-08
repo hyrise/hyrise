@@ -12,11 +12,11 @@
 #include <utility>
 #include <vector>
 
-#include <boost/accumulators/accumulators.hpp>
+#include <boost/accumulators/framework/accumulator_set.hpp>
 #include <boost/accumulators/statistics/mean.hpp>
 #include <boost/accumulators/statistics/stats.hpp>
 #include <boost/algorithm/string/join.hpp>
-#include <boost/range/adaptors.hpp>
+#include <boost/range/adaptor/transformed.hpp>
 
 #include "magic_enum.hpp"
 #include "nlohmann/json.hpp"
@@ -53,15 +53,15 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config,
   if (!_config.pipeline_metrics) {
     Hyrise::get().default_pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
     Hyrise::get().default_lqp_cache = std::make_shared<SQLLogicalPlanCache>();
-    std::cout << "- SQL plan caching switched on." << std::endl;
+    std::cout << "- SQL plan caching switched on.\n";
   } else {
-    std::cout << "- SQL plan caching switched off since SQL pipeline metrics tracking is requested." << std::endl;
+    std::cout << "- SQL plan caching switched off since SQL pipeline metrics tracking is requested.\n";
   }
 
   // Initialise the scheduler if the benchmark was requested to run multi-threaded.
   if (config.enable_scheduler) {
     Hyrise::get().topology.use_default_topology(config.cores);
-    std::cout << "- Multi-threaded Topology:" << std::endl;
+    std::cout << "- Multi-threaded Topology:\n";
     std::cout << Hyrise::get().topology;
 
     // Add NUMA topology information to the context, for processing in the benchmark_multithreaded.py script.
@@ -82,7 +82,7 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config,
   // SQLite data is only loaded if the dedicated result set is not complete, i.e,
   // items exist for which no dedicated result could be loaded.
   if (_config.verify && _benchmark_item_runner->has_item_without_dedicated_result()) {
-    std::cout << "- Loading tables into SQLite for verification." << std::endl;
+    std::cout << "- Loading tables into SQLite for verification.\n";
     Timer timer;
 
     // Load the data into SQLite.
@@ -91,9 +91,9 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config,
       std::cout << "-  Loading '" << table_name << "' into SQLite " << std::flush;
       Timer per_table_timer;
       sqlite_wrapper->create_sqlite_table(*table, table_name);
-      std::cout << "(" << per_table_timer.lap_formatted() << ")" << std::endl;
+      std::cout << "(" << per_table_timer.lap_formatted() << ")\n";
     }
-    std::cout << "- All tables loaded into SQLite (" << timer.lap_formatted() << ")" << std::endl;
+    std::cout << "- All tables loaded into SQLite (" << timer.lap_formatted() << ")\n";
     _benchmark_item_runner->set_sqlite_wrapper(sqlite_wrapper);
   }
 
@@ -101,7 +101,7 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config,
     _loaded_plugins.reserve(_config.plugins.size());
     for (const auto& plugin : _config.plugins) {
       const auto& plugin_name = plugin_name_from_path(plugin);
-      std::cout << "- Load plugin " << plugin_name << " from " << plugin << std::endl;
+      std::cout << "- Load plugin " << plugin_name << " from " << plugin << '\n';
       Hyrise::get().plugin_manager.load_plugin(plugin);
       _loaded_plugins.emplace_back(plugin_name);
     }
@@ -109,7 +109,7 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config,
 }
 
 void BenchmarkRunner::run() {
-  std::cout << "- Starting Benchmark..." << std::endl;
+  std::cout << "- Starting Benchmark...\n";
 
   _benchmark_start = std::chrono::steady_clock::now();
   _benchmark_wall_clock_start = std::chrono::system_clock::now();
@@ -160,7 +160,7 @@ void BenchmarkRunner::run() {
       continue;
     }
 
-    std::cout << "- Run pre-benchmark hook of '" << plugin << "'" << std::endl;
+    std::cout << "- Run pre-benchmark hook of '" << plugin << "'\n";
     Hyrise::get().plugin_manager.exec_pre_benchmark_hook(plugin, *_benchmark_item_runner);
   }
 
@@ -185,7 +185,7 @@ void BenchmarkRunner::run() {
       continue;
     }
 
-    std::cout << "- Run post-benchmark hook of '" << plugin << "'" << std::endl;
+    std::cout << "- Run post-benchmark hook of '" << plugin << "'\n";
     Hyrise::get().plugin_manager.exec_post_benchmark_hook(plugin, report);
   }
 
@@ -193,17 +193,17 @@ void BenchmarkRunner::run() {
   if (write_report) {
     _write_report_to_file(*_config.output_file_path, report);
   } else if (_config.output_file_path) {
-    std::cout << "- Not writing JSON result as either verification or visualization are activated." << std::endl;
-    std::cout << "  These options make the results meaningless." << std::endl;
+    std::cout << "- Not writing JSON result as either verification or visualization are activated.\n";
+    std::cout << "  These options make the results meaningless.\n";
   }
 
   // For the Ordered mode, results have already been printed to the console.
   if (_config.benchmark_mode == BenchmarkMode::Shuffled && !_config.verify && !_config.enable_visualization) {
     for (const auto& item_id : items) {
-      std::cout << "- Results for " << _benchmark_item_runner->item_name(item_id) << std::endl;
-      std::cout << "  -> Executed " << _results[item_id].successful_runs.size() << " times" << std::endl;
+      std::cout << "- Results for " << _benchmark_item_runner->item_name(item_id) << '\n';
+      std::cout << "  -> Executed " << _results[item_id].successful_runs.size() << " times\n";
       if (!_results[item_id].unsuccessful_runs.empty()) {
-        std::cout << "  -> " << _results[item_id].unsuccessful_runs.size() << " additional runs failed" << std::endl;
+        std::cout << "  -> " << _results[item_id].unsuccessful_runs.size() << " additional runs failed\n";
       }
     }
   }
@@ -297,7 +297,7 @@ void BenchmarkRunner::_benchmark_ordered() {
     _warmup(item_id);
 
     const auto& name = _benchmark_item_runner->item_name(item_id);
-    std::cout << "- Benchmarking " << name << std::endl;
+    std::cout << "- Benchmarking " << name << '\n';
 
     auto& result = _results[item_id];
 
@@ -319,7 +319,7 @@ void BenchmarkRunner::_benchmark_ordered() {
 
     // Wait for the rest of the tasks that didn't make it in time - they will not count toward the results.
     if (_currently_running_clients > 0) {
-      std::cout << "  -> Waiting for clients that are still running" << std::endl;
+      std::cout << "  -> Waiting for clients that are still running\n";
     }
     Hyrise::get().scheduler()->wait_for_all_tasks();
     Assert(_currently_running_clients == 0, "All runs must be finished at this point.");
@@ -342,9 +342,9 @@ void BenchmarkRunner::_benchmark_ordered() {
     if (!_config.verify && !_config.enable_visualization) {
       std::cout << "  -> Executed " << result.successful_runs.size() << " times in " << duration_seconds
                 << " seconds (Latency: " << mean_in_milliseconds << " ms/iter, Throughput: " << items_per_second
-                << " iter/s)" << std::endl;
+                << " iter/s)\n";
       if (!result.unsuccessful_runs.empty()) {
-        std::cout << "  -> " << result.unsuccessful_runs.size() << " additional runs failed" << std::endl;
+        std::cout << "  -> " << result.unsuccessful_runs.size() << " additional runs failed\n";
       }
     }
 
@@ -396,7 +396,7 @@ void BenchmarkRunner::_warmup(const BenchmarkItemID item_id) {
   }
 
   const auto& name = _benchmark_item_runner->item_name(item_id);
-  std::cout << "- Warming up for " << name << std::endl;
+  std::cout << "- Warming up for " << name << '\n';
 
   Assert(_currently_running_clients == 0, "Did not expect any clients to run at this time.");
 
@@ -525,7 +525,7 @@ nlohmann::json BenchmarkRunner::_create_report() const {
 }
 
 void BenchmarkRunner::_write_report_to_file(const std::string& file_name, const nlohmann::json& report) {
-  std::ofstream{file_name} << std::setw(2) << report << std::endl;
+  std::ofstream{file_name} << std::setw(2) << report << '\n';
 }
 
 cxxopts::Options BenchmarkRunner::get_basic_cli_options(const std::string& benchmark_name) {

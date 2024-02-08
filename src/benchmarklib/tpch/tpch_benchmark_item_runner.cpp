@@ -1,7 +1,6 @@
 #include "tpch_benchmark_item_runner.hpp"
 
 #include <cstddef>
-#include <iomanip>
 #include <iostream>
 #include <memory>
 #include <numeric>
@@ -12,8 +11,6 @@
 
 #include <boost/algorithm/string/join.hpp>
 #include <boost/algorithm/string/replace.hpp>
-#include <boost/date_time/gregorian/gregorian.hpp>
-#include <boost/date_time/posix_time/posix_time.hpp>
 
 extern "C" {
 #include "tpch_dbgen.h"
@@ -90,7 +87,7 @@ void TPCHBenchmarkItemRunner::on_tables_loaded() {
   Assert(!orders_table->soft_key_constraints().empty(), "Constraints were lost.");
 
   if (_use_prepared_statements) {
-    std::cout << " - Preparing queries" << std::endl;
+    std::cout << " - Preparing queries\n";
 
     auto sql = std::stringstream{};
     for (auto item_id = BenchmarkItemID{0}; item_id < 22; ++item_id) {

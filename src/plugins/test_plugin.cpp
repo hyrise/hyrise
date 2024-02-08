@@ -34,7 +34,7 @@ void TestPlugin::a_user_executable_function() {
 }
 
 void TestPlugin::a_static_user_executable_function() {
-  std::cout << "This is never being called!" << std::endl;
+  std::cout << "This is never being called!\n";
 }
 
 std::optional<PreBenchmarkHook> TestPlugin::pre_benchmark_hook() {

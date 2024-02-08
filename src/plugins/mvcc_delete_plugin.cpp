@@ -7,12 +7,9 @@
 #include <vector>
 
 #include "operators/get_table.hpp"
-#include "operators/table_wrapper.hpp"
 #include "operators/update.hpp"
 #include "operators/validate.hpp"
 #include "storage/mvcc_data.hpp"
-#include "storage/pos_lists/row_id_pos_list.hpp"
-#include "storage/reference_segment.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"

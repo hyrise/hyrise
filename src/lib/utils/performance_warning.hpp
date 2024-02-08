@@ -17,7 +17,7 @@
  *
  * {
  *   auto performance_warning_disabler = PerformanceWarningDisabler{};
- *   std::cout << abstract_segment[5] << std::endl; // this does not cause a warning
+ *   std::cout << abstract_segment[5] << '\n'; // this does not cause a warning
  * }
  * // warnings are enabled again
  *
@@ -34,8 +34,7 @@ class PerformanceWarningClass {
     if (_disabled) {
       return;
     }
-    std::cerr << "[PERF] " << text << "\n\tPerformance can be affected. This warning is only shown once.\n"
-              << std::endl;
+    std::cerr << "[PERF] " << text << "\n\tPerformance can be affected. This warning is only shown once.\n";
   }
 
  protected:

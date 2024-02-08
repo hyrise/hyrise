@@ -2,7 +2,6 @@
 
 #include <cstddef>
 #include <memory>
-#include <sstream>
 #include <string>
 
 #include <boost/container_hash/hash.hpp>

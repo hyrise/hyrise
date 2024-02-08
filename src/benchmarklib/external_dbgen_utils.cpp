@@ -66,7 +66,7 @@ void generate_csv_tables_with_external_dbgen(const std::string& dbgen_path, cons
       }
     }
 
-    std::cout << " (" << timer.lap_formatted() << ")" << std::endl;
+    std::cout << " (" << timer.lap_formatted() << ")\n";
   }
   // NOLINTEND(concurrency-mt-unsafe)
 }

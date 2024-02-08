@@ -13,12 +13,9 @@
 
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_utils.hpp"
-#include "expression/lqp_column_expression.hpp"
 #include "expression/lqp_subquery_expression.hpp"
-#include "join_node.hpp"
 #include "logical_query_plan/data_dependencies/functional_dependency.hpp"
 #include "logical_query_plan/data_dependencies/unique_column_combination.hpp"
-#include "logical_query_plan/stored_table_node.hpp"
 #include "lqp_utils.hpp"
 #include "predicate_node.hpp"
 #include "types.hpp"
@@ -488,12 +485,12 @@ std::ostream& operator<<(std::ostream& stream, const AbstractLQPNode& node) {
     return stream;
   }
 
-  stream << "-------- Subqueries ---------" << std::endl;
+  stream << "-------- Subqueries ---------\n";
 
   for (const auto& lqp : lqps) {
-    stream << lqp.get() << ": " << std::endl;
+    stream << lqp.get() << ": \n";
     output_lqp_to_stream(*lqp);
-    stream << std::endl;
+    stream << '\n';
   }
 
   return stream;

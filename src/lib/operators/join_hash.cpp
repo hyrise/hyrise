@@ -248,19 +248,19 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
 
  protected:
   const JoinHash& _join_hash;
-  const std::shared_ptr<const Table> _build_input_table, _probe_input_table;
-  const JoinMode _mode;
-  const ColumnIDPair _column_ids;
-  const PredicateCondition _predicate_condition;
+  std::shared_ptr<const Table> _build_input_table, _probe_input_table;
+  JoinMode _mode;
+  ColumnIDPair _column_ids;
+  PredicateCondition _predicate_condition;
   JoinHash::PerformanceData& _performance_data;
 
   OutputColumnOrder _output_column_order;
 
-  const std::vector<OperatorJoinPredicate>& _secondary_predicates;
+  std::vector<OperatorJoinPredicate>& _secondary_predicates;
 
   std::shared_ptr<Table> _output_table;
 
-  const size_t _radix_bits;
+  size_t _radix_bits;
 
   // Determine correct type for hashing
   using HashedType = typename JoinHashTraits<BuildColumnType, ProbeColumnType>::HashType;
