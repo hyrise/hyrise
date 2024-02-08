@@ -1,3 +1,4 @@
+#include <cmath>
 #include <future>
 #include <numeric>
 #include <thread>
@@ -25,13 +26,15 @@ class StressTest : public BaseTest {
     Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
   }
 
-  const uint32_t CORES_PER_NODE = std::thread::hardware_concurrency();
-  const std::vector<std::vector<uint32_t>> FAKE_SINGLE_NODE_NUMA_TOPOLOGIES = {
-      {CORES_PER_NODE}, {CORES_PER_NODE, 0, 0}, {0, CORES_PER_NODE, 0}, {0, 0, CORES_PER_NODE}};
+  static constexpr auto SMALL_SANITIZER_LOAD_FACTOR = uint32_t{4};
+  static constexpr auto MEDIUM_SANITIZER_LOAD_FACTOR = uint32_t{10};
 
-  const std::vector<std::vector<uint32_t>> FAKE_MULTI_NODE_NUMA_TOPOLOGIES = {{CORES_PER_NODE, CORES_PER_NODE, 0, 0},
-                                                                              {0, CORES_PER_NODE, CORES_PER_NODE, 0},
-                                                                              {0, 0, CORES_PER_NODE, CORES_PER_NODE}};
+  const uint32_t CPU_COUNT = std::thread::hardware_concurrency();
+  const std::vector<std::vector<uint32_t>> FAKE_SINGLE_NODE_NUMA_TOPOLOGIES = {
+      {CPU_COUNT}, {CPU_COUNT, 0, 0}, {0, CPU_COUNT, 0}, {0, 0, CPU_COUNT}};
+
+  const std::vector<std::vector<uint32_t>> FAKE_MULTI_NODE_NUMA_TOPOLOGIES = {
+      {CPU_COUNT, CPU_COUNT, 0, 0}, {0, CPU_COUNT, CPU_COUNT, 0}, {0, 0, CPU_COUNT, CPU_COUNT}};
 };
 
 TEST_F(StressTest, TestTransactionConflicts) {
@@ -304,7 +307,7 @@ TEST_F(StressTest, NodeQueueSchedulerCreationAndReset) {
 // We run this test for various fake NUMA topologies as it triggered a bug that was introduced with #2610.
 TEST_F(StressTest, NodeQueueSchedulerSemaphoreIncrements) {
   constexpr auto SLEEP_TIME = std::chrono::milliseconds{10};
-  const auto job_count = CORES_PER_NODE * 8;
+  const auto job_count = CPU_COUNT * 8 * (HYRISE_WITH_TSAN ? 1 : SMALL_SANITIZER_LOAD_FACTOR);
 
   for (const auto& fake_numa_topology : FAKE_SINGLE_NODE_NUMA_TOPOLOGIES) {
     Hyrise::get().topology.use_fake_numa_topology(fake_numa_topology);
@@ -335,13 +338,13 @@ TEST_F(StressTest, NodeQueueSchedulerSemaphoreIncrements) {
 
     Hyrise::get().scheduler()->schedule_tasks(waiting_jobs);
     // Wait a bit for workers to pull jobs and decrement semaphore.
-    std::this_thread::sleep_for(CORES_PER_NODE * SLEEP_TIME);
+    std::this_thread::sleep_for(CPU_COUNT * SLEEP_TIME);
 
     for (const auto& queue : node_queue_scheduler->queues()) {
       if (!queue) {
         continue;
       }
-      EXPECT_EQ(queue->semaphore.availableApprox(), job_count - CORES_PER_NODE);
+      EXPECT_EQ(queue->semaphore.availableApprox(), job_count - CPU_COUNT);
     }
 
     wait_flag = false;
@@ -361,9 +364,12 @@ TEST_F(StressTest, NodeQueueSchedulerSemaphoreIncrements) {
 // Similar to test above, but here we make tasks dependent of each other which means only non-dependent tasks will be
 // scheduled.
 TEST_F(StressTest, NodeQueueSchedulerSemaphoreIncrementsDependentTasks) {
-  constexpr auto DEPENDENT_JOB_TASKS_LENGTH = size_t{10};
+  constexpr auto DEPENDENT_JOB_TASKS_LENGTH = uint32_t{10};
   constexpr auto SLEEP_TIME = std::chrono::milliseconds{1};
-  const auto job_count = CORES_PER_NODE * 32;
+
+  // Ensure there is at least one job left after each worker pulled one.
+  const auto min_job_count = DEPENDENT_JOB_TASKS_LENGTH * CPU_COUNT + 1;
+  const auto job_count = std::max(min_job_count, CPU_COUNT * 8 * (HYRISE_WITH_TSAN ? 1 : SMALL_SANITIZER_LOAD_FACTOR));
 
   for (const auto& fake_numa_topology : FAKE_SINGLE_NODE_NUMA_TOPOLOGIES) {
     Hyrise::get().topology.use_fake_numa_topology(fake_numa_topology);
@@ -375,7 +381,7 @@ TEST_F(StressTest, NodeQueueSchedulerSemaphoreIncrementsDependentTasks) {
 
     auto waiting_jobs = std::vector<std::shared_ptr<AbstractTask>>{};
     waiting_jobs.reserve(job_count);
-    for (auto job_id = size_t{0}; job_id < job_count; ++job_id) {
+    for (auto job_id = uint32_t{0}; job_id < job_count; ++job_id) {
       waiting_jobs.emplace_back(std::make_shared<JobTask>([&] {
         while (wait_flag) {
           std::this_thread::sleep_for(SLEEP_TIME);
@@ -397,7 +403,7 @@ TEST_F(StressTest, NodeQueueSchedulerSemaphoreIncrementsDependentTasks) {
 
     Hyrise::get().scheduler()->schedule_tasks(waiting_jobs);
     // Wait a bit for workers to pull jobs and decrement semaphore.
-    std::this_thread::sleep_for(5 * CORES_PER_NODE * SLEEP_TIME);
+    std::this_thread::sleep_for(5 * CPU_COUNT * SLEEP_TIME);
 
     // The number of scheduled jobs depends on DEPENDENT_JOB_TASKS_LENGTH (see job definition above; due to the jobs
     // dependencies, jobs are only scheduled when they have no predecessors).
@@ -408,8 +414,8 @@ TEST_F(StressTest, NodeQueueSchedulerSemaphoreIncrementsDependentTasks) {
       }
 
       // We started scheduled jobs, which block all workers due to `wait_flag` being true. Thus, the semaphore should be
-      // reduced by the number of workers (i.e., CORES_PER_NODE).
-      EXPECT_EQ(queue->semaphore.availableApprox(), static_cast<size_t>(std::ceil(executable_jobs)) - CORES_PER_NODE);
+      // reduced by the number of workers (i.e., CPU_COUNT).
+      EXPECT_EQ(queue->semaphore.availableApprox(), static_cast<size_t>(std::ceil(executable_jobs)) - CPU_COUNT);
     }
 
     wait_flag = false;
@@ -491,8 +497,10 @@ TEST_F(StressTest, ConcurrentInsertsSetChunksImmutable) {
   values_to_insert->append({int32_t{1}});
   values_to_insert->append({int32_t{1}});
 
+  // We observed long runtimes in Debug builds, especially with UBSan enabled. Thus, we reduce the load a bit in this
+  // case.
+  const auto insert_count = 30 * (HYRISE_DEBUG && HYRISE_WITH_UBSAN ? 1 : MEDIUM_SANITIZER_LOAD_FACTOR) + 1;
   const auto thread_count = uint32_t{100};
-  const auto insert_count = uint32_t{301};
   auto threads = std::vector<std::thread>{};
   threads.reserve(thread_count);
 
@@ -523,9 +531,11 @@ TEST_F(StressTest, ConcurrentInsertsSetChunksImmutable) {
     thread.join();
   }
 
-  // 100 threads * 301 insertions * 2 values = 60'200 tuples in 20'067 chunks with chunk size 3.
-  EXPECT_EQ(table->row_count(), 60'200);
-  EXPECT_EQ(table->chunk_count(), 20'067);
+  // Each iteration of a thread inserts two rows, which are stored in chunks with a target size of 3.
+  const auto inserted_rows = insert_count * thread_count * 2;
+  const auto expected_chunks = static_cast<ChunkID::base_type>(std::ceil(static_cast<double>(inserted_rows) / 3.0));
+  EXPECT_EQ(table->row_count(), inserted_rows);
+  EXPECT_EQ(table->chunk_count(), expected_chunks);
 
   // Only the final chunk is not full and not immutable.
   const auto immutable_chunk_count = table->chunk_count() - 1;
