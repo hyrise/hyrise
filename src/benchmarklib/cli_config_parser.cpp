@@ -1,11 +1,22 @@
 #include "cli_config_parser.hpp"
 
+#include <cstdint>
 #include <fstream>
 #include <iostream>
+#include <memory>
+#include <optional>
+#include <string>
+#include <unordered_map>
+#include <utility>
+#include <vector>
 
 #include <boost/algorithm/string.hpp>
-#include "magic_enum.hpp"
 
+#include "magic_enum.hpp"
+#include "nlohmann/json.hpp"
+
+#include "all_type_variant.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
 

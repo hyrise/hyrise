@@ -73,6 +73,7 @@
 #include "logical_query_plan/validate_node.hpp"
 #include "logical_query_plan/window_node.hpp"
 #include "sql/sql_identifier_resolver.hpp"
+#include "storage/constraints/table_key_constraint.hpp"
 #include "storage/lqp_view.hpp"
 #include "storage/table.hpp"
 #include "storage/table_column_definition.hpp"

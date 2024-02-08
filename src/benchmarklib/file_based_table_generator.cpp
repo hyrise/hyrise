@@ -1,5 +1,10 @@
 #include "file_based_table_generator.hpp"
 
+#include <functional>
+#include <iostream>
+#include <memory>
+#include <string>
+#include <unordered_map>
 #include <unordered_set>
 
 #include <boost/algorithm/string.hpp>
@@ -8,6 +13,7 @@
 #include "benchmark_table_encoder.hpp"
 #include "import_export/binary/binary_parser.hpp"
 #include "import_export/csv/csv_parser.hpp"
+#include "utils/assert.hpp"
 #include "utils/format_duration.hpp"
 #include "utils/list_directory.hpp"
 #include "utils/load_table.hpp"

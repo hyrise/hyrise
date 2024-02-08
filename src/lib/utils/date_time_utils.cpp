@@ -9,6 +9,7 @@
 
 #include "magic_enum.hpp"
 
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {

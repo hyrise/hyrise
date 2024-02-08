@@ -1,6 +1,16 @@
 #include "benchmark_sql_executor.hpp"
 
+#include <iostream>
+#include <memory>
+#include <optional>
+#include <string>
+#include <utility>
+
+#include "concurrency/transaction_context.hpp"
 #include "sql/sql_pipeline_builder.hpp"
+#include "sql/sql_pipeline_statement.hpp"
+#include "storage/table.hpp"
+#include "utils/assert.hpp"
 #include "utils/check_table_equal.hpp"
 #include "utils/timer.hpp"
 #include "visualization/lqp_visualizer.hpp"

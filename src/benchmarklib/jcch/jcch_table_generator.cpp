@@ -1,6 +1,12 @@
 #include "jcch_table_generator.hpp"
 
+#include <memory>
+#include <string>
+#include <unordered_map>
+#include <vector>
+
 #include "external_dbgen_utils.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 

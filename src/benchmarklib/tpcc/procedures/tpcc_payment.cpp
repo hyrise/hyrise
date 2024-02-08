@@ -1,7 +1,18 @@
-#include <ctime>
-#include <random>
-
 #include "tpcc_payment.hpp"
+
+#include <algorithm>
+#include <cstdint>
+#include <ctime>
+#include <memory>
+#include <random>
+#include <sstream>
+#include <string>
+#include <tuple>
+
+#include "sql/sql_pipeline_statement.hpp"
+#include "storage/table.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 

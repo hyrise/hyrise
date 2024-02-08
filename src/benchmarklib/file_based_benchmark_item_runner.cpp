@@ -1,12 +1,23 @@
 #include "file_based_benchmark_item_runner.hpp"
 
+#include <algorithm>
+#include <cstddef>
 #include <filesystem>
 #include <fstream>
+#include <memory>
+#include <optional>
+#include <string>
+#include <unordered_set>
+#include <vector>
 
 #include <boost/algorithm/string.hpp>
 
 #include "SQLParser.h"
+#include "SQLParserResult.h"
+
 #include "sql/create_sql_parser_error_message.hpp"
+#include "sql/sql_pipeline_statement.hpp"
+#include "storage/table.hpp"
 #include "utils/assert.hpp"
 #include "utils/list_directory.hpp"
 

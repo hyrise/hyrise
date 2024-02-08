@@ -1,7 +1,10 @@
 #include "abstract_tpcc_procedure.hpp"
 
+#include "concurrency/transaction_context.hpp"
 #include "hyrise.hpp"
 #include "sql/sql_pipeline_builder.hpp"
+#include "utils/assert.hpp"
+#include "utils/performance_warning.hpp"
 
 namespace hyrise {
 

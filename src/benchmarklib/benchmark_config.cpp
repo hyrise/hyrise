@@ -1,5 +1,12 @@
 #include "benchmark_config.hpp"
 
+#include <cstdint>
+#include <optional>
+#include <string>
+#include <vector>
+
+#include "types.hpp"
+
 namespace hyrise {
 
 BenchmarkConfig::BenchmarkConfig(const BenchmarkMode init_benchmark_mode, const ChunkOffset init_chunk_size,

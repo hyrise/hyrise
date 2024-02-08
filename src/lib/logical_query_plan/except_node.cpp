@@ -1,6 +1,7 @@
 #include "except_node.hpp"
 
 #include <cstddef>
+#include <functional>
 #include <memory>
 #include <string>
 #include <vector>

@@ -1,9 +1,14 @@
 #include "external_dbgen_utils.hpp"
 
 #include <filesystem>
+#include <iostream>
+#include <sstream>
+#include <string>
 #include <utility>
+#include <vector>
 
 #include "abstract_table_generator.hpp"
+#include "utils/assert.hpp"
 #include "utils/timer.hpp"
 
 namespace hyrise {

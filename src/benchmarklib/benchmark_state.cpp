@@ -2,6 +2,8 @@
 
 #include <chrono>
 
+#include "utils/assert.hpp"
+
 namespace hyrise {
 
 BenchmarkState::BenchmarkState(const Duration init_max_duration) : max_duration(init_max_duration) {}

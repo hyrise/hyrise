@@ -1,18 +1,28 @@
 #include "tpch_table_generator.hpp"
 
-extern "C" {
-#include <dss.h>
-#include <dsstypes.h>
-#include <rnd.h>
-}
-
+#include <algorithm>
+#include <cstddef>
+#include <cstdint>
 #include <filesystem>
+#include <memory>
+#include <string>
+#include <type_traits>
+#include <unordered_map>
 #include <utility>
+#include <vector>
+
+extern "C" {
+#include "dss.h"
+#include "dsstypes.h"
+#include "rnd.h"
+}
 
 #include "benchmark_config.hpp"
 #include "storage/chunk.hpp"
 #include "storage/constraints/table_key_constraint.hpp"
 #include "table_builder.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 #include "utils/timer.hpp"
 
 extern const char** asc_date;  // NOLINT

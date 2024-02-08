@@ -1,5 +1,16 @@
 #include "abstract_table_generator.hpp"
 
+#include <filesystem>
+#include <iostream>
+#include <memory>
+#include <optional>
+#include <sstream>
+#include <string>
+#include <unordered_map>
+#include <vector>
+
+#include "nlohmann/json.hpp"
+
 #include "benchmark_config.hpp"
 #include "benchmark_table_encoder.hpp"
 #include "hyrise.hpp"
@@ -7,12 +18,18 @@
 #include "import_export/binary/binary_writer.hpp"
 #include "operators/sort.hpp"
 #include "operators/table_wrapper.hpp"
+#include "resolve_type.hpp"
+#include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
+#include "storage/chunk.hpp"
 #include "storage/index/group_key/composite_group_key_index.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
 #include "storage/index/partial_hash/partial_hash_index.hpp"
+#include "storage/mvcc_data.hpp"
 #include "storage/segment_iterate.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 #include "utils/format_duration.hpp"
 #include "utils/list_directory.hpp"
 #include "utils/timer.hpp"

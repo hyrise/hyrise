@@ -1,7 +1,14 @@
 #include "ssb_table_generator.hpp"
 
+#include <memory>
+#include <string>
+#include <unordered_map>
+#include <vector>
+
 #include "external_dbgen_utils.hpp"
+#include "storage/constraints/table_key_constraint.hpp"
 #include "storage/table.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 

@@ -1,8 +1,15 @@
-#include <ctime>
-#include <random>
-
-#include "tpcc/tpcc_random_generator.hpp"
 #include "tpcc_new_order.hpp"
+
+#include <cstdint>
+#include <ctime>
+#include <limits>
+#include <random>
+#include <string>
+
+#include "sql/sql_pipeline_statement.hpp"
+#include "tpcc/tpcc_random_generator.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 

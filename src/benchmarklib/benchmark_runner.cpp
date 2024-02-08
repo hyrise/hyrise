@@ -1,22 +1,37 @@
 #include "benchmark_runner.hpp"
 
 #include <chrono>
+#include <cstddef>
+#include <cstdint>
 #include <fstream>
+#include <iostream>
+#include <memory>
 #include <random>
+#include <sstream>
+#include <string>
+#include <utility>
+#include <vector>
 
 #include <boost/accumulators/accumulators.hpp>
 #include <boost/accumulators/statistics/mean.hpp>
 #include <boost/accumulators/statistics/stats.hpp>
 #include <boost/algorithm/string/join.hpp>
 #include <boost/range/adaptors.hpp>
-#include "cxxopts.hpp"
+
+#include "magic_enum.hpp"
+#include "nlohmann/json.hpp"
 
 #include "benchmark_config.hpp"
+#include "cxxopts.hpp"
 #include "hyrise.hpp"
+#include "null_value.hpp"
 #include "scheduler/job_task.hpp"
 #include "sql/sql_pipeline_builder.hpp"
+#include "sql/sql_pipeline_statement.hpp"
 #include "storage/chunk.hpp"
 #include "tpch/tpch_table_generator.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 #include "utils/format_duration.hpp"
 #include "utils/print_utils.hpp"
 #include "utils/sqlite_wrapper.hpp"

@@ -1,10 +1,15 @@
 #include "tpcc_benchmark_item_runner.hpp"
 
+#include <memory>
+#include <string>
+#include <vector>
+
 #include "tpcc/procedures/tpcc_delivery.hpp"
 #include "tpcc/procedures/tpcc_new_order.hpp"
 #include "tpcc/procedures/tpcc_order_status.hpp"
 #include "tpcc/procedures/tpcc_payment.hpp"
 #include "tpcc/procedures/tpcc_stock_level.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 

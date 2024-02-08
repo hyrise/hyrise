@@ -1,16 +1,24 @@
 #include "jcch_benchmark_item_runner.hpp"
 
+#include <cstddef>
+#include <cstdint>
 #include <fstream>
+#include <iostream>
 #include <memory>
 #include <random>
+#include <sstream>
 #include <string>
+#include <vector>
 
 #include <boost/date_time/gregorian/gregorian.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 
 #include "benchmark_config.hpp"
+#include "sql/sql_pipeline_statement.hpp"
 #include "tpch/tpch_constants.hpp"
 #include "tpch/tpch_queries.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 #include "utils/date_time_utils.hpp"
 #include "utils/string_utils.hpp"
 #include "utils/timer.hpp"

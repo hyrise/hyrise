@@ -1,20 +1,27 @@
 #include "tpcc_table_generator.hpp"
 
+#include <cstddef>
+#include <cstdint>
 #include <functional>
 #include <future>
 #include <iomanip>
 #include <map>
 #include <memory>
+#include <optional>
 #include <sstream>
 #include <string>
 #include <thread>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
 #include "constants.hpp"
 #include "resolve_type.hpp"
 #include "storage/chunk.hpp"
+#include "storage/constraints/table_key_constraint.hpp"
+#include "storage/mvcc_data.hpp"
 #include "storage/table.hpp"
+#include "storage/table_column_definition.hpp"
 #include "storage/value_segment.hpp"
 #include "types.hpp"
 

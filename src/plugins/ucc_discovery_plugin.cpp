@@ -1,5 +1,17 @@
 #include "ucc_discovery_plugin.hpp"
 
+#include <algorithm>
+#include <cstddef>
+#include <cstdint>
+#include <functional>
+#include <memory>
+#include <optional>
+#include <sstream>
+#include <string>
+#include <unordered_set>
+#include <utility>
+#include <vector>
+
 #include <boost/container_hash/hash.hpp>
 
 #include "magic_enum.hpp"
@@ -9,14 +21,21 @@
 #include "expression/expression_utils.hpp"
 #include "expression/value_expression.hpp"
 #include "hyrise.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "resolve_type.hpp"
+#include "storage/constraints/table_key_constraint.hpp"
+#include "storage/dictionary_segment.hpp"
 #include "storage/fixed_string_dictionary_segment.hpp"
 #include "storage/segment_iterate.hpp"
+#include "storage/table.hpp"
+#include "storage/value_segment.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 #include "utils/format_duration.hpp"
 #include "utils/timer.hpp"
 

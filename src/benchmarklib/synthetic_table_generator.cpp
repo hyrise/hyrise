@@ -1,6 +1,7 @@
 #include "synthetic_table_generator.hpp"
 
 #include <algorithm>
+#include <cstddef>
 #include <functional>
 #include <memory>
 #include <random>
@@ -13,6 +14,7 @@
 #include <boost/math/distributions/skew_normal.hpp>
 #include <boost/math/distributions/uniform.hpp>
 
+#include "all_type_variant.hpp"
 #include "hyrise.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/abstract_task.hpp"
@@ -22,9 +24,12 @@
 #include "statistics/generate_pruning_statistics.hpp"
 #include "storage/chunk.hpp"
 #include "storage/chunk_encoder.hpp"
+#include "storage/mvcc_data.hpp"
 #include "storage/table.hpp"
+#include "storage/table_column_definition.hpp"
 #include "storage/value_segment.hpp"
 #include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace {
 

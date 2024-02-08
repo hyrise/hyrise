@@ -1,23 +1,30 @@
 #include "tpch_benchmark_item_runner.hpp"
 
-extern "C" {
-#include <tpch_dbgen.h>
-}
-
+#include <cstddef>
 #include <iomanip>
+#include <iostream>
 #include <memory>
 #include <numeric>
 #include <random>
 #include <sstream>
+#include <string>
+#include <vector>
 
-#include <boost/date_time/gregorian/gregorian.hpp>
 #include <boost/algorithm/string/join.hpp>
 #include <boost/algorithm/string/replace.hpp>
+#include <boost/date_time/gregorian/gregorian.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
+
+extern "C" {
+#include "tpch_dbgen.h"
+}
 
 #include "hyrise.hpp"
 #include "sql/sql_pipeline_builder.hpp"
+#include "sql/sql_pipeline_statement.hpp"
+#include "storage/table.hpp"
 #include "tpch_queries.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/date_time_utils.hpp"
 

@@ -1,9 +1,19 @@
 #include "abstract_benchmark_item_runner.hpp"
 
+#include <algorithm>
+#include <filesystem>
+#include <iostream>
+#include <memory>
+#include <optional>
+#include <string>
+#include <utility>
+#include <vector>
+
 #include <boost/algorithm/string.hpp>
 
 #include "benchmark_sql_executor.hpp"
 #include "sql/sql_pipeline_builder.hpp"
+#include "utils/assert.hpp"
 #include "utils/list_directory.hpp"
 #include "utils/load_table.hpp"
 

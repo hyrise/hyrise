@@ -6,16 +6,23 @@
 #include <chrono>
 #include <csetjmp>
 #include <csignal>
+#include <cstdint>
 #include <cstdlib>
 #include <ctime>
 #include <filesystem>
 #include <iomanip>
+#include <iostream>
+#include <memory>
 #include <regex>
+#include <sstream>
+#include <string>
+#include <vector>
 
 #include <boost/algorithm/string/join.hpp>
 #include <boost/lexical_cast.hpp>
 
 #include "SQLParser.h"
+#include "SQLParserResult.h"
 
 #include "concurrency/transaction_context.hpp"
 #include "hyrise.hpp"
@@ -37,10 +44,13 @@
 #include "sql/sql_translator.hpp"
 #include "ssb/ssb_table_generator.hpp"
 #include "storage/chunk_encoder.hpp"
+#include "storage/encoding_type.hpp"
 #include "tpcc/tpcc_table_generator.hpp"
 #include "tpcds/tpcds_table_generator.hpp"
 #include "tpch/tpch_constants.hpp"
 #include "tpch/tpch_table_generator.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 #include "utils/invalid_input_exception.hpp"
 #include "utils/load_table.hpp"
 #include "utils/meta_table_manager.hpp"

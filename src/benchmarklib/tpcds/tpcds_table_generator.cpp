@@ -1,8 +1,24 @@
 #include "tpcds_table_generator.hpp"
 
+#include <algorithm>
+#include <cstddef>
+#include <cstdint>
+#include <limits>
+#include <memory>
+#include <optional>
+#include <string>
+#include <unordered_map>
+#include <utility>
+#include <vector>
+
+#include "storage/constraints/table_key_constraint.hpp"
+#include "storage/table.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
+
 extern "C" {
-#include "tpcds-kit/tools/dbgen_version.h"
 #include "tpcds-kit/tools/config.h"
+#include "tpcds-kit/tools/dbgen_version.h"
 #include "tpcds-kit/tools/decimal.h"
 #include "tpcds-kit/tools/genrand.h"
 #include "tpcds-kit/tools/nulls.h"
@@ -10,7 +26,6 @@ extern "C" {
 #include "tpcds-kit/tools/r_params.h"
 #include "tpcds-kit/tools/tables.h"
 #include "tpcds-kit/tools/tdefs.h"
-
 #include "tpcds-kit/tools/w_call_center.h"
 #include "tpcds-kit/tools/w_catalog_page.h"
 #include "tpcds-kit/tools/w_catalog_returns.h"

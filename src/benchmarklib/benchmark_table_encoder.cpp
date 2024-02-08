@@ -1,18 +1,25 @@
 #include "benchmark_table_encoder.hpp"
 
 #include <atomic>
+#include <iostream>
+#include <memory>
+#include <string>
+#include <vector>
 
 #include "encoding_config.hpp"
 #include "hyrise.hpp"
 #include "resolve_type.hpp"
+#include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
 #include "statistics/generate_pruning_statistics.hpp"
 #include "storage/abstract_encoded_segment.hpp"
 #include "storage/base_value_segment.hpp"
 #include "storage/chunk_encoder.hpp"
+#include "storage/encoding_type.hpp"
 #include "storage/segment_encoding_utils.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace {
 
