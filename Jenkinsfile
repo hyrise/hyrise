@@ -11,19 +11,6 @@ try {
       def cause = currentBuild.getBuildCauses('hudson.model.Cause$UserIdCause')[0]
       def jenkinsUserName = cause ? cause['userId'] : null
 
-      try {
-        // Ensure ninja-build is installed. As make is sufficient to work with Hyrise, ninja-build is not installed via
-        // install_dependencies.sh but is part of the hyrise-ci docker image.
-        sh "ninja -v"
-      } catch (error) {
-        stage ("ninja-build not installed.") {
-            script {
-              githubNotify context: 'CI Pipeline', status: 'FAILURE', description: 'ninja-build is not installed.'
-            }
-          }
-          throw error
-      }
-
       if (jenkinsUserName != "admin" && env.BRANCH_NAME != "master") {
         try {
           withCredentials([usernamePassword(credentialsId: 'github', usernameVariable: 'GITHUB_USERNAME', passwordVariable: 'GITHUB_TOKEN')]) {
@@ -79,6 +66,10 @@ try {
         try {
           stage("Setup") {
             checkout scm
+
+            // Check if ninja-build is installed. As make is sufficient to work with Hyrise, ninja-build is not
+            // installed via install_dependencies.sh but is part of the hyrise-ci docker image.
+            sh "ninja -v > /dev/null"
 
             // During CI runs, the user is different from the owner of the directories, which blocks the execution of git
             // commands since the fix of the git vulnerability CVE-2022-24765. git commands can then only be executed if

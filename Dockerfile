@@ -49,6 +49,6 @@ RUN apt-get update \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* \
     && ln -sf /usr/bin/llvm-symbolizer-14 /usr/bin/llvm-symbolizer \
-    && pip3 install scipy pandas matplotlib # preload large Python packages (installs numpy and others)
+    && pip3 install --break-system-packages scipy pandas matplotlib  # preload large Python packages (installs numpy and others)
 
 ENV HYRISE_HEADLESS_SETUP=true
