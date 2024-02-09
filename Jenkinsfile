@@ -11,6 +11,19 @@ try {
       def cause = currentBuild.getBuildCauses('hudson.model.Cause$UserIdCause')[0]
       def jenkinsUserName = cause ? cause['userId'] : null
 
+      try {
+        // Ensure ninja-build is installed. As make is sufficient to work with Hyrise, ninja-build is not installed via
+        // install_dependencies.sh but is part of the hyrise-ci docker image.
+        sh "ninja -v"
+      } catch (error) {
+        stage ("ninja-build not installed.") {
+            script {
+              githubNotify context: 'CI Pipeline', status: 'FAILURE', description: 'ninja-build is not installed.'
+            }
+          }
+          throw error
+      }
+
       if (jenkinsUserName != "admin" && env.BRANCH_NAME != "master") {
         try {
           withCredentials([usernamePassword(credentialsId: 'github', usernameVariable: 'GITHUB_USERNAME', passwordVariable: 'GITHUB_TOKEN')]) {
@@ -20,9 +33,9 @@ try {
             '''
           }
         } catch (error) {
-          stage ("User unknown") {
+          stage ("User unknown.") {
             script {
-              githubNotify context: 'CI Pipeline', status: 'FAILURE', description: 'User is not a collaborator'
+              githubNotify context: 'CI Pipeline', status: 'FAILURE', description: 'User is not a collaborator.'
             }
           }
           throw error
@@ -112,8 +125,8 @@ try {
             sh "mkdir clang-debug-tidy && cd clang-debug-tidy &&                                         ${cmake} ${debug}          ${clang}             ${ninja} -DENABLE_CLANG_TIDY=ON .. &\
             mkdir clang-debug-unity-odr && cd clang-debug-unity-odr &&                                   ${cmake} ${debug}          ${clang}   ${unity}  ${ninja} -DCMAKE_UNITY_BUILD_BATCH_SIZE=0 .. &\
             mkdir clang-debug-disable-precompile-headers && cd clang-debug-disable-precompile-headers && ${cmake} ${debug}          ${clang}   ${unity}  ${ninja} -DCMAKE_DISABLE_PRECOMPILE_HEADERS=On .. &\
-            mkdir clang-debug-addr-ub-leak-sanitizers && cd clang-debug-addr-ub-leak-sanitizers &&                 ${cmake} ${debug}          ${clang}   ${unity}  ${ninja} -DENABLE_ADDR_UB_SANITIZATION=ON .. &\
-            mkdir clang-release-addr-ub-leak-sanitizers && cd clang-release-addr-ub-leak-sanitizers &&             ${cmake} ${release}        ${clang}   ${unity}  ${ninja} -DENABLE_ADDR_UB_SANITIZATION=ON .. &\
+            mkdir clang-debug-addr-ub-leak-sanitizers && cd clang-debug-addr-ub-leak-sanitizers &&       ${cmake} ${debug}          ${clang}   ${unity}  ${ninja} -DENABLE_ADDR_UB_SANITIZATION=ON .. &\
+            mkdir clang-release-addr-ub-leak-sanitizers && cd clang-release-addr-ub-leak-sanitizers &&   ${cmake} ${release}        ${clang}   ${unity}  ${ninja} -DENABLE_ADDR_UB_SANITIZATION=ON .. &\
             mkdir clang-relwithdebinfo-thread-sanitizer && cd clang-relwithdebinfo-thread-sanitizer &&   ${cmake} ${relwithdebinfo} ${clang}   ${unity}  ${ninja} -DENABLE_THREAD_SANITIZATION=ON .. &\
             mkdir clang-release && cd clang-release &&                                                   ${cmake} ${release}        ${clang}   ${unity}  ${ninja} .. &\
             mkdir gcc-debug && cd gcc-debug &&                                                           ${cmake} ${debug}          ${gcc}     ${unity}  ${ninja} .. &\
@@ -152,6 +165,9 @@ try {
             }
           }
 
+          // We distribute the cores to processes in a way to even the running times. With an even distributions,
+          // clang-tidy builds take up to 3h (galileo server). In addition to compile time, the distribution also
+          // considers the long test runtimes of clangRelWithDebInfoThreadSanitizer (~50 minutes).
           parallel clangRelease: {
             stage("clang-release") {
               if (env.BRANCH_NAME == 'master' || full_ci) {
@@ -207,7 +223,7 @@ try {
             stage("clang-debug-unity-odr") {
               if (env.BRANCH_NAME == 'master' || full_ci) {
                 // Check if unity builds work even if everything is batched into a single compilation unit. This helps prevent ODR (one definition rule) issues.
-                sh "cd clang-debug-unity-odr && ninja all -j \$(( \$(nproc) / 10))"
+                sh "cd clang-debug-unity-odr && ninja all -j \$(( \$(nproc) / 20))"
               } else {
                 Utils.markStageSkippedForConditional("clangDebugUnityODR")
               }
@@ -216,7 +232,7 @@ try {
             stage("clang-debug:tidy") {
               if (env.BRANCH_NAME == 'master' || full_ci) {
                 // We do not run tidy checks on the src/test folder, so there is no point in running the expensive clang-tidy for those files
-                sh "cd clang-debug-tidy && ninja hyrise_impl hyriseBenchmarkFileBased hyriseBenchmarkTPCH hyriseBenchmarkTPCDS hyriseBenchmarkJoinOrder hyriseConsole hyriseServer hyriseMvccDeletePlugin hyriseUccDiscoveryPlugin -k 0 -j \$(( \$(nproc) / 10))"
+                sh "cd clang-debug-tidy && ninja hyrise_impl hyriseBenchmarkFileBased hyriseBenchmarkTPCH hyriseBenchmarkTPCDS hyriseBenchmarkJoinOrder hyriseConsole hyriseServer hyriseMvccDeletePlugin hyriseUccDiscoveryPlugin -k 0 -j \$(( \$(nproc) / 5))"
               } else {
                 Utils.markStageSkippedForConditional("clangDebugTidy")
               }
@@ -225,7 +241,7 @@ try {
             stage("clang-debug:disable-precompile-headers") {
               if (env.BRANCH_NAME == 'master' || full_ci) {
                 // Check if builds work even when precompile headers is turned off. Executing the binaries is unnecessary as the observed errors are missing includes.
-                sh "cd clang-debug-disable-precompile-headers && ninja hyriseTest hyriseBenchmarkFileBased hyriseBenchmarkTPCH hyriseBenchmarkTPCDS hyriseBenchmarkJoinOrder hyriseConsole hyriseServer -k 0 -j \$(( \$(nproc) / 10))"
+                sh "cd clang-debug-disable-precompile-headers && ninja hyriseTest hyriseBenchmarkFileBased hyriseBenchmarkTPCH hyriseBenchmarkTPCDS hyriseBenchmarkJoinOrder hyriseConsole hyriseServer -k 0 -j \$(( \$(nproc) / 20))"
               } else {
                 Utils.markStageSkippedForConditional("clangDebugDisablePrecompileHeaders")
               }
@@ -233,7 +249,7 @@ try {
           }, clangDebugAddrUBLeakSanitizers: {
             stage("clang-debug:addr-ub-sanitizers") {
               if (env.BRANCH_NAME == 'master' || full_ci) {
-                sh "cd clang-debug-addr-ub-leak-sanitizers && ninja hyriseTest hyriseSystemTest hyriseBenchmarkTPCH hyriseBenchmarkTPCC -j \$(( \$(nproc) / 10))"
+                sh "cd clang-debug-addr-ub-leak-sanitizers && ninja hyriseTest hyriseSystemTest hyriseBenchmarkTPCH hyriseBenchmarkTPCC -j \$(( \$(nproc) / 20))"
                 sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=strict_string_checks=1:detect_stack_use_after_return=1:check_initialization_order=1:strict_init_order=1:detect_leaks=1,suppressions=resources/.asan-ignore.txt ./clang-debug-addr-ub-leak-sanitizers/hyriseTest clang-debug-addr-ub-leak-sanitizers"
                 sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=strict_string_checks=1:detect_stack_use_after_return=1:check_initialization_order=1:strict_init_order=1:detect_leaks=1,suppressions=resources/.asan-ignore.txt ./clang-debug-addr-ub-leak-sanitizers/hyriseSystemTest --gtest_filter=-${tests_excluded_in_all_sanitizer_builds}:${tests_excluded_in_addr_sanitizer_builds} clang-debug-addr-ub-leak-sanitizers"
                 sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=strict_string_checks=1:detect_stack_use_after_return=1:check_initialization_order=1:strict_init_order=1:detect_leaks=1,suppressions=resources/.asan-ignore.txt ./clang-debug-addr-ub-leak-sanitizers/hyriseBenchmarkTPCH -s .01 --verify -r 1"
@@ -260,7 +276,7 @@ try {
           }, clangReleaseAddrUBLeakSanitizers: {
             stage("clang-release:addr-ub-sanitizers") {
               if (env.BRANCH_NAME == 'master' || full_ci) {
-                sh "cd clang-release-addr-ub-leak-sanitizers && ninja hyriseTest hyriseSystemTest hyriseBenchmarkTPCH hyriseBenchmarkTPCC -j \$(( \$(nproc) / 10))"
+                sh "cd clang-release-addr-ub-leak-sanitizers && ninja hyriseTest hyriseSystemTest hyriseBenchmarkTPCH hyriseBenchmarkTPCC -j \$(( \$(nproc) / 5))"
                 sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=strict_string_checks=1:detect_stack_use_after_return=1:check_initialization_order=1:use_odr_indicator=1:strict_init_order=1:detect_leaks=1,suppressions=resources/.asan-ignore.txt ./clang-release-addr-ub-leak-sanitizers/hyriseTest clang-release-addr-ub-leak-sanitizers"
                 sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=strict_string_checks=1:detect_stack_use_after_return=1:check_initialization_order=1:use_odr_indicator=1:strict_init_order=1:detect_leaks=1,suppressions=resources/.asan-ignore.txt ./clang-release-addr-ub-leak-sanitizers/hyriseSystemTest --gtest_filter=-${tests_excluded_in_all_sanitizer_builds}:${tests_excluded_in_addr_sanitizer_builds} clang-release-addr-ub-leak-sanitizers"
                 sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=strict_string_checks=1:detect_stack_use_after_return=1:check_initialization_order=1:use_odr_indicator=1:strict_init_order=1:detect_leaks=1,suppressions=resources/.asan-ignore.txt ./clang-release-addr-ub-leak-sanitizers/hyriseBenchmarkTPCH -s .01 --verify -r 100 --scheduler --clients 10 --cores \$(( \$(nproc) / 10))"
@@ -272,7 +288,7 @@ try {
           }, clangRelWithDebInfoThreadSanitizer: {
             stage("clang-relwithdebinfo:thread-sanitizer") {
               if (env.BRANCH_NAME == 'master' || full_ci) {
-                sh "cd clang-relwithdebinfo-thread-sanitizer && ninja hyriseTest hyriseSystemTest hyriseBenchmarkTPCH -j \$(( \$(nproc) / 10))"
+                sh "cd clang-relwithdebinfo-thread-sanitizer && ninja hyriseTest hyriseSystemTest hyriseBenchmarkTPCH -j \$(( \$(nproc) / 5))"
                 sh "TSAN_OPTIONS=\"history_size=7 suppressions=resources/.tsan-ignore.txt\" ./clang-relwithdebinfo-thread-sanitizer/hyriseTest clang-relwithdebinfo-thread-sanitizer"
                 sh "TSAN_OPTIONS=\"history_size=7 suppressions=resources/.tsan-ignore.txt\" ./clang-relwithdebinfo-thread-sanitizer/hyriseSystemTest --gtest_filter=-${tests_excluded_in_all_sanitizer_builds} clang-relwithdebinfo-thread-sanitizer"
                 sh "TSAN_OPTIONS=\"history_size=7 suppressions=resources/.tsan-ignore.txt\" ./clang-relwithdebinfo-thread-sanitizer/hyriseBenchmarkTPCH -s .01 --verify -r 100 --scheduler --clients 10 --cores \$(( \$(nproc) / 10))"

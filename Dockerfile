@@ -37,6 +37,7 @@ RUN apt-get update \
         lld \
         lsb-release \
         man \
+        ninja-build \
         parallel \
         postgresql-server-dev-all \
         python3 \

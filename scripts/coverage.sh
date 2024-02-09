@@ -50,7 +50,7 @@ fi
 cmake -DCMAKE_CXX_COMPILER_LAUNCHER=$launcher -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=${path_to_compiler}${c_compiler} -DCMAKE_CXX_COMPILER=${path_to_compiler}${cxx_compiler} -DENABLE_COVERAGE=ON ..
 
 cores=$(grep -c ^processor /proc/cpuinfo 2>/dev/null || sysctl -n hw.ncpu)
-make hyriseTest -j $((cores / 10))
+make hyriseTest -j $((cores / 20))
 cd -
 
 rm -fr coverage; mkdir coverage
