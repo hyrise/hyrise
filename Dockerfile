@@ -3,7 +3,7 @@
 # https://github.com/hyrise/hyrise/wiki/Docker-Image
 
 # While it would be desirable to use Python's virtual environments, they are not straightforward to use in Jenkins'
-# scripted pipelines.
+# scripted pipelines. With Python >= 3.11, we need to use --break-system-packages.
 
 FROM ubuntu:23.10
 ENV DEBIAN_FRONTEND noninteractive
@@ -49,6 +49,7 @@ RUN apt-get update \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* \
     && ln -sf /usr/bin/llvm-symbolizer-14 /usr/bin/llvm-symbolizer \
-    && pip3 install --break-system-packages scipy pandas matplotlib  # preload large Python packages (installs numpy and others)
+    && pip3 install --break-system-packages scipy pandas matplotlib  # preload large Python packages (installs numpy and
+                                                                       others).
 
 ENV HYRISE_HEADLESS_SETUP=true

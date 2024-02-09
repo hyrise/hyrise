@@ -65,7 +65,7 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
                     exit 1
                 fi
 
-                if ! pip3 install -r requirements.txt; then
+                if ! pip3 install --break-system-packages -r requirements.txt; then
                     echo "Error during installation of python requirements."
                     exit 1
                 fi
