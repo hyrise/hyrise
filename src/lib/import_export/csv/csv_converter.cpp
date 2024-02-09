@@ -4,6 +4,8 @@
 #include <string>
 #include <utility>
 
+#include "import_export/csv/csv_meta.hpp"
+
 namespace hyrise {
 
 void BaseCsvConverter::unescape(std::string& field, const ParseConfig& config) {

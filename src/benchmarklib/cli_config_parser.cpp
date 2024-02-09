@@ -19,6 +19,8 @@
 #include "nlohmann/json.hpp"
 
 #include "all_type_variant.hpp"
+#include "benchmark_config.hpp"
+#include "encoding_config.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"

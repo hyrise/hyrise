@@ -15,6 +15,7 @@
 #include "storage/encoding_type.hpp"
 #include "storage/segment_access_counter.hpp"
 #include "storage/vector_compression/base_compressed_vector.hpp"
+#include "storage/vector_compression/compressed_vector_type.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"

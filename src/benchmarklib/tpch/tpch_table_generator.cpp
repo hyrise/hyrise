@@ -11,6 +11,9 @@
 #include <utility>
 #include <vector>
 
+#include "abstract_table_generator.hpp"
+#include "tpch_constants.hpp"
+
 extern "C" {
 #include "dss.h"
 #include "dsstypes.h"

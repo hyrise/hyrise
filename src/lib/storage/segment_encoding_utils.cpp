@@ -11,6 +11,7 @@
 #include "storage/lz4_segment/lz4_encoder.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/run_length_segment/run_length_encoder.hpp"
+#include "storage/vector_compression/compressed_vector_type.hpp"
 #include "utils/assert.hpp"
 #include "utils/enum_constant.hpp"
 

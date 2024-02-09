@@ -1,5 +1,6 @@
 #include "tpch_benchmark_item_runner.hpp"
 
+#include <algorithm>
 #include <cstddef>
 #include <iostream>
 #include <memory>
@@ -7,10 +8,17 @@
 #include <random>
 #include <sstream>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include <boost/algorithm/string/join.hpp>
 #include <boost/algorithm/string/replace.hpp>
+#include <boost/date_time/gregorian/gregorian_types.hpp>
+
+#include "abstract_benchmark_item_runner.hpp"
+#include "benchmark_config.hpp"
+#include "benchmark_sql_executor.hpp"
+#include "tpch_constants.hpp"
 
 extern "C" {
 #include "tpch_dbgen.h"

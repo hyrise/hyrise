@@ -1,5 +1,6 @@
 #include "abstract_rule.hpp"
 
+#include <algorithm>
 #include <memory>
 
 #include "expression/expression_utils.hpp"

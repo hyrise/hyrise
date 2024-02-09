@@ -5,6 +5,8 @@
 #include <unordered_map>
 #include <vector>
 
+#include "abstract_table_generator.hpp"
+#include "benchmark_config.hpp"
 #include "external_dbgen_utils.hpp"
 #include "storage/constraints/table_key_constraint.hpp"
 #include "storage/table.hpp"  // IWYU pragma: keep

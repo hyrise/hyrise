@@ -9,6 +9,7 @@
 
 #include "expression/abstract_expression.hpp"
 #include "expression/value_expression.hpp"
+#include "hyrise.hpp"
 #include "operators/abstract_operator.hpp"
 #include "optimizer/optimizer.hpp"
 #include "server/postgres_message_type.hpp"

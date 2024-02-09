@@ -9,6 +9,7 @@
 #include <random>
 #include <sstream>
 #include <string>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -22,6 +23,8 @@
 #include "magic_enum.hpp"
 #include "nlohmann/json.hpp"
 
+#include "abstract_benchmark_item_runner.hpp"
+#include "abstract_table_generator.hpp"
 #include "benchmark_config.hpp"
 #include "hyrise.hpp"
 #include "null_value.hpp"

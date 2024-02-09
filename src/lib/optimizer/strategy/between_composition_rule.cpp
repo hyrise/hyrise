@@ -9,6 +9,7 @@
 #include <utility>
 #include <vector>
 
+#include "expression/binary_predicate_expression.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/value_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"

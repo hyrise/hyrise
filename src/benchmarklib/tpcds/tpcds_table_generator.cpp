@@ -11,6 +11,8 @@
 #include <utility>
 #include <vector>
 
+#include "abstract_table_generator.hpp"
+
 extern "C" {
 #include "tpcds-kit/tools/columns.h"
 #include "tpcds-kit/tools/dbgen_version.h"

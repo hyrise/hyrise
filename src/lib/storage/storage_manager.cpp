@@ -17,6 +17,7 @@
 #include "scheduler/job_task.hpp"
 #include "statistics/generate_pruning_statistics.hpp"
 #include "statistics/table_statistics.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/meta_table_manager.hpp"
 

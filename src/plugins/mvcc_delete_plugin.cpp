@@ -3,9 +3,11 @@
 #include <cstddef>
 #include <memory>
 #include <mutex>
+#include <ostream>
 #include <string>
 #include <vector>
 
+#include "hyrise.hpp"
 #include "operators/get_table.hpp"
 #include "operators/update.hpp"
 #include "operators/validate.hpp"

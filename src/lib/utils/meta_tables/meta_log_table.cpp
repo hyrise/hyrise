@@ -7,6 +7,7 @@
 #include <iomanip>
 #include <memory>
 #include <optional>
+#include <ostream>
 #include <string>
 
 #include "magic_enum.hpp"

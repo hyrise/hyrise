@@ -1,5 +1,6 @@
 #include "export.hpp"
 
+#include <algorithm>
 #include <memory>
 #include <string>
 #include <unordered_map>

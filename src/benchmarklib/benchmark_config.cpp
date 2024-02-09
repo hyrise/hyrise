@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 
+#include "encoding_config.hpp"
 #include "types.hpp"
 
 namespace hyrise {

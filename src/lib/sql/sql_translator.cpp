@@ -17,6 +17,7 @@
 
 #include "magic_enum.hpp"
 #include "sql/ColumnType.h"
+#include "sql/CreateStatement.h"
 #include "SQLParser.h"
 #include "SQLParserResult.h"
 

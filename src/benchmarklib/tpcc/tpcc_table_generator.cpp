@@ -3,6 +3,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <functional>
+#include <initializer_list>
 #include <iomanip>
 #include <memory>
 #include <optional>
@@ -12,6 +13,8 @@
 #include <utility>
 #include <vector>
 
+#include "abstract_table_generator.hpp"
+#include "benchmark_config.hpp"
 #include "constants.hpp"
 #include "storage/chunk.hpp"
 #include "storage/constraints/table_key_constraint.hpp"

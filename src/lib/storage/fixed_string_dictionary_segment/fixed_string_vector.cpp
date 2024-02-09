@@ -9,6 +9,7 @@
 #include <utility>
 #include <vector>
 
+#include "storage/fixed_string_dictionary_segment/fixed_string_vector_iterator.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"

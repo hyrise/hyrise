@@ -11,9 +11,11 @@
 #include <boost/sort/sort.hpp>
 #include <boost/unordered/unordered_flat_map.hpp>
 
+#include "all_type_variant.hpp"
 #include "generic_histogram.hpp"
 #include "resolve_type.hpp"
 #include "statistics/statistics_objects/abstract_histogram.hpp"
+#include "statistics/statistics_objects/histogram_domain.hpp"
 #include "storage/abstract_segment.hpp"
 #include "storage/segment_iterate.hpp"
 #include "types.hpp"

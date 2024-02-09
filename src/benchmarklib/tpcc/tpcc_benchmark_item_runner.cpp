@@ -4,6 +4,9 @@
 #include <string>
 #include <vector>
 
+#include "abstract_benchmark_item_runner.hpp"
+#include "benchmark_config.hpp"
+#include "benchmark_sql_executor.hpp"
 #include "tpcc/procedures/tpcc_delivery.hpp"
 #include "tpcc/procedures/tpcc_new_order.hpp"
 #include "tpcc/procedures/tpcc_order_status.hpp"

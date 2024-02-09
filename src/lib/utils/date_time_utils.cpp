@@ -5,6 +5,7 @@
 #include <optional>
 #include <string>
 
+#include <boost/date_time/gregorian/gregorian_types.hpp>
 #include <boost/lexical_cast/bad_lexical_cast.hpp>
 
 #include "magic_enum.hpp"

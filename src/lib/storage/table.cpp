@@ -27,6 +27,7 @@
 #include "storage/index/group_key/composite_group_key_index.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
 #include "storage/index/partial_hash/partial_hash_index.hpp"
+#include "storage/index/table_index_statistics.hpp"
 #include "storage/mvcc_data.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/segment_iterate.hpp"

@@ -23,6 +23,7 @@
 #include "lossy_cast.hpp"
 #include "resolve_type.hpp"
 #include "statistics/statistics_objects/abstract_statistics_object.hpp"
+#include "statistics/statistics_objects/histogram_domain.hpp"
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/segment_iterate.hpp"
 #include "types.hpp"

@@ -17,6 +17,7 @@
 #include "operators/operator_performance_data.hpp"
 #include "resolve_type.hpp"
 #include "storage/abstract_segment.hpp"
+#include "storage/base_segment_accessor.hpp"
 #include "storage/chunk.hpp"
 #include "storage/pos_lists/row_id_pos_list.hpp"
 #include "storage/reference_segment.hpp"

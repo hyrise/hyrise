@@ -5,7 +5,10 @@
 #include <unordered_map>
 #include <vector>
 
+#include "abstract_table_generator.hpp"
+#include "benchmark_config.hpp"
 #include "external_dbgen_utils.hpp"
+#include "tpch_constants.hpp"
 #include "types.hpp"
 
 namespace hyrise {

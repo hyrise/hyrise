@@ -15,6 +15,9 @@
 #include "SQLParser.h"
 #include "SQLParserResult.h"
 
+#include "abstract_benchmark_item_runner.hpp"
+#include "benchmark_config.hpp"
+#include "benchmark_sql_executor.hpp"
 #include "sql/create_sql_parser_error_message.hpp"
 #include "sql/sql_pipeline_statement.hpp"
 #include "storage/table.hpp"

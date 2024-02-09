@@ -8,9 +8,14 @@
 #include <random>
 #include <sstream>
 #include <string>
+#include <string_view>
 #include <vector>
 
+#include <boost/date_time/gregorian/gregorian_types.hpp>
+
+#include "abstract_benchmark_item_runner.hpp"
 #include "benchmark_config.hpp"
+#include "benchmark_sql_executor.hpp"
 #include "sql/sql_pipeline_statement.hpp"
 #include "tpch/tpch_constants.hpp"
 #include "tpch/tpch_queries.hpp"

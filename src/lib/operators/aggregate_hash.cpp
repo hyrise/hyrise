@@ -1,5 +1,6 @@
 #include "aggregate_hash.hpp"
 
+#include <algorithm>
 #include <array>
 #include <chrono>
 #include <cstddef>
@@ -27,6 +28,7 @@
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
 #include "storage/abstract_segment.hpp"
+#include "storage/base_segment_accessor.hpp"
 #include "storage/pos_lists/row_id_pos_list.hpp"
 #include "storage/segment_iterate.hpp"
 #include "storage/table.hpp"

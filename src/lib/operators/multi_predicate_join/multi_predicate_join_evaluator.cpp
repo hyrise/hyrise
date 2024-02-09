@@ -6,6 +6,7 @@
 
 #include "operators/operator_join_predicate.hpp"
 #include "resolve_type.hpp"
+#include "storage/base_segment_accessor.hpp"
 #include "storage/table.hpp"
 #include "type_comparison.hpp"
 #include "types.hpp"

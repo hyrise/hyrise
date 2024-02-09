@@ -11,6 +11,7 @@
 
 #include <boost/algorithm/string.hpp>
 
+#include "benchmark_config.hpp"
 #include "benchmark_sql_executor.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "utils/assert.hpp"

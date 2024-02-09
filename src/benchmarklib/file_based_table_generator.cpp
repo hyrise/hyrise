@@ -9,6 +9,7 @@
 
 #include <boost/algorithm/string.hpp>
 
+#include "abstract_table_generator.hpp"
 #include "benchmark_config.hpp"
 #include "benchmark_table_encoder.hpp"
 #include "import_export/binary/binary_parser.hpp"

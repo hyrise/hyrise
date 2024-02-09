@@ -14,6 +14,7 @@
 #include "index/abstract_chunk_index.hpp"
 #include "reference_segment.hpp"
 #include "resolve_type.hpp"
+#include "storage/index/chunk_index_type.hpp"
 #include "storage/mvcc_data.hpp"
 #include "storage/segment_iterate.hpp"
 #include "types.hpp"

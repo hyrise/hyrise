@@ -4,6 +4,7 @@
 #include <random>
 #include <string>
 
+#include "benchmark_sql_executor.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 

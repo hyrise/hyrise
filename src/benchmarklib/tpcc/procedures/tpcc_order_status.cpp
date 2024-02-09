@@ -8,6 +8,7 @@
 #include <string>
 #include <tuple>
 
+#include "benchmark_sql_executor.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"

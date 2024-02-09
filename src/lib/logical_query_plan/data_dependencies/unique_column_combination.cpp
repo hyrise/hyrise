@@ -1,5 +1,6 @@
 #include "unique_column_combination.hpp"
 
+#include <algorithm>
 #include <cstddef>
 #include <functional>
 #include <memory>

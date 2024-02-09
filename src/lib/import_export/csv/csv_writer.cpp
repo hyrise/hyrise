@@ -10,6 +10,7 @@
 #include "nlohmann/json.hpp"
 
 #include "all_type_variant.hpp"
+#include "import_export/csv/csv_meta.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"

@@ -19,6 +19,7 @@
 #include "join_helper/join_output_writing.hpp"
 #include "join_sort_merge/radix_cluster_sort.hpp"
 #include "operators/abstract_operator.hpp"
+#include "operators/join_sort_merge/column_materializer.hpp"
 #include "operators/multi_predicate_join/multi_predicate_join_evaluator.hpp"
 #include "operators/operator_join_predicate.hpp"
 #include "operators/operator_performance_data.hpp"

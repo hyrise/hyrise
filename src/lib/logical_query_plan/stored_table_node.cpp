@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cstddef>
 #include <memory>
+#include <ostream>
 #include <set>
 #include <string>
 #include <vector>
@@ -16,6 +17,7 @@
 #include "logical_query_plan/data_dependencies/unique_column_combination.hpp"
 #include "lqp_utils.hpp"
 #include "statistics/table_statistics.hpp"
+#include "storage/index/table_index_statistics.hpp"
 #include "storage/storage_manager.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"

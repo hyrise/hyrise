@@ -6,6 +6,7 @@
 #include <tuple>
 
 #include "client_disconnect_exception.hpp"
+#include "hyrise.hpp"
 #include "postgres_message_type.hpp"
 #include "query_handler.hpp"
 #include "result_serializer.hpp"

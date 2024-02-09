@@ -5,6 +5,7 @@
 #include <random>
 #include <string>
 
+#include "benchmark_sql_executor.hpp"
 #include "sql/sql_pipeline_statement.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
