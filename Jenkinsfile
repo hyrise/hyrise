@@ -69,7 +69,7 @@ try {
 
             // Check if ninja-build is installed. As make is sufficient to work with Hyrise, ninja-build is not
             // installed via install_dependencies.sh but is part of the hyrise-ci docker image.
-            sh "ninja -v > /dev/null"
+            sh "ninja --version > /dev/null"
 
             // During CI runs, the user is different from the owner of the directories, which blocks the execution of git
             // commands since the fix of the git vulnerability CVE-2022-24765. git commands can then only be executed if
