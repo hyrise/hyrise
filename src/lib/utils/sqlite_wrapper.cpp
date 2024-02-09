@@ -1,6 +1,5 @@
 #include "sqlite_wrapper.hpp"
 
-#include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <sstream>

@@ -3,7 +3,6 @@
 #include <dlfcn.h>
 
 #include <algorithm>
-#include <cstddef>
 #include <cstdint>
 #include <filesystem>
 #include <memory>

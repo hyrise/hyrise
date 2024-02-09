@@ -1,6 +1,7 @@
 #include "tpcc_payment.hpp"
 
 #include <algorithm>
+#include <cmath>
 #include <cstdint>
 #include <ctime>
 #include <memory>

@@ -1,6 +1,5 @@
 #include "meta_chunks_table.hpp"
 
-#include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <optional>

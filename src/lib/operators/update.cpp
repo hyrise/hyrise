@@ -3,8 +3,6 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
-#include <utility>
-#include <vector>
 
 #include "all_type_variant.hpp"
 #include "concurrency/transaction_context.hpp"
@@ -12,9 +10,7 @@
 #include "hyrise.hpp"
 #include "insert.hpp"
 #include "operators/abstract_operator.hpp"
-#include "storage/reference_segment.hpp"
 #include "storage/table.hpp"
-#include "table_wrapper.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 

@@ -1,6 +1,5 @@
 #include "validate.hpp"
 
-#include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <mutex>

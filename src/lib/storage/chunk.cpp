@@ -9,11 +9,12 @@
 #include <utility>
 #include <vector>
 
+#include <boost/container/pmr/memory_resource.hpp>
+
 #include "abstract_segment.hpp"
 #include "all_type_variant.hpp"
 #include "index/abstract_chunk_index.hpp"
 #include "reference_segment.hpp"
-#include "resolve_type.hpp"
 #include "storage/index/chunk_index_type.hpp"
 #include "storage/mvcc_data.hpp"
 #include "storage/segment_iterate.hpp"

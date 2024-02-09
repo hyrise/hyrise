@@ -1,6 +1,7 @@
 #include "tpcc_order_status.hpp"
 
 #include <algorithm>
+#include <cmath>
 #include <cstdint>
 #include <ctime>
 #include <memory>

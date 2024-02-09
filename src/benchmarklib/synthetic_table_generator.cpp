@@ -1,5 +1,6 @@
 #include "synthetic_table_generator.hpp"
 
+#include <cmath>
 #include <cstddef>
 #include <functional>
 #include <memory>

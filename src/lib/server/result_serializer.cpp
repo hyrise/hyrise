@@ -1,6 +1,5 @@
 #include "result_serializer.hpp"
 
-#include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <optional>

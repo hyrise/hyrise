@@ -1,7 +1,6 @@
 #include "meta_log_table.hpp"
 
 #include <chrono>
-#include <cstddef>
 #include <cstdint>
 #include <ctime>
 #include <iomanip>

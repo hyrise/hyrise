@@ -13,6 +13,7 @@
 
 #include "abstract_table_generator.hpp"
 #include "tpch/tpch_constants.hpp"
+#include "tpch_constants.hpp"
 
 extern "C" {
 #include "dss.h"

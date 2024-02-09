@@ -2,8 +2,8 @@
 
 #include <readline/history.h>
 #include <readline/readline.h>
-#include <setjmp.h>
 
+#include <csetjmp>
 #include <csignal>
 #include <cstdint>
 #include <cstdlib>
@@ -18,7 +18,12 @@
 #include <string>
 #include <vector>
 
+#include <boost/algorithm/string/case_conv.hpp>
+#include <boost/algorithm/string/classification.hpp>
 #include <boost/algorithm/string/join.hpp>
+#include <boost/algorithm/string/predicate.hpp>
+#include <boost/algorithm/string/split.hpp>
+#include <boost/algorithm/string/trim.hpp>
 #include <boost/lexical_cast.hpp>
 
 #include "SQLParser.h"

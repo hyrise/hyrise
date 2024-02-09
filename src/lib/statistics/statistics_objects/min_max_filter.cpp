@@ -2,12 +2,10 @@
 
 #include <memory>
 #include <optional>
-#include <utility>
 
 #include "abstract_statistics_object.hpp"
 #include "all_type_variant.hpp"
 #include "expression/evaluation/like_matcher.hpp"
-#include "lossless_cast.hpp"
 #include "resolve_type.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"

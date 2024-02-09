@@ -4,7 +4,6 @@
 #include <iostream>
 #include <sstream>
 #include <string>
-#include <utility>
 #include <vector>
 
 #include "abstract_table_generator.hpp"

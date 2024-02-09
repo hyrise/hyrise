@@ -1,6 +1,5 @@
 #include "meta_plugins_table.hpp"
 
-#include <cstddef>
 #include <memory>
 #include <optional>
 #include <string>

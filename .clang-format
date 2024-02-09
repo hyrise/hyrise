@@ -58,8 +58,8 @@ IncludeCategories:
   - Regex:           '^<.*\.h>'
     Priority:        1
 
-    # See comment for TBB. boost headers are not mixed with C headers but STL headers.
-  - Regex:           '^<boost\/.*>$'
+    # See comment for TBB. boost and readline headers are not mixed with C headers but STL headers.
+  - Regex:           '^<(boost\/.*|readline\/.*)>$'
     Priority:        3
 
   # STL headers as the second category (e.g., <vector>).

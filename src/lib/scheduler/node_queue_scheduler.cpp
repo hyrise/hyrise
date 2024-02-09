@@ -10,7 +10,6 @@
 #include <optional>
 #include <sstream>
 #include <thread>
-#include <utility>
 #include <vector>
 
 #include "abstract_task.hpp"

@@ -6,7 +6,13 @@
 #include <string>
 #include <vector>
 
-#include <boost/algorithm/string.hpp>  // IWYU pragma: keep
+#include <boost/algorithm/string/case_conv.hpp>
+#include <boost/algorithm/string/classification.hpp>
+#include <boost/algorithm/string/predicate.hpp>
+#include <boost/algorithm/string/replace.hpp>
+#include <boost/algorithm/string/split.hpp>
+#include <boost/algorithm/string/trim.hpp>
+#include <boost/asio/ip/address.hpp>
 #include <boost/lexical_cast.hpp>
 
 #include "cxxopts.hpp"

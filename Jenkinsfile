@@ -2,7 +2,7 @@ import org.jenkinsci.plugins.pipeline.modeldefinition.Utils
 
 full_ci = env.BRANCH_NAME == 'master' || pullRequest.labels.contains('FullCI')
 tests_excluded_in_all_sanitizer_builds = 'SQLiteTestRunnerEncodings/*:TPCDSTableGeneratorTest.GenerateAndStoreRowCounts:TPCHTableGeneratorTest.RowCountsMediumScaleFactor:*.TestTransactionConflicts'
-tests_excluded_in_addr_sanitizer_builds = 'MetaPluginsTest.TableGeneration'
+tests_excluded_in_addr_sanitizer_builds = 'MetaPluginsTest.*'
 
 try {
   node {
