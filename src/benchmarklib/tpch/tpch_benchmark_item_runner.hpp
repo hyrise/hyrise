@@ -3,7 +3,7 @@
 #include <atomic>
 
 #include "abstract_benchmark_item_runner.hpp"
-#include "tpch_constants.hpp"
+#include "tpch/tpch_constants.hpp"
 
 namespace hyrise {
 

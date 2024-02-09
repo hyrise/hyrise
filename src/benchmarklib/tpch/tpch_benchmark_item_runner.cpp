@@ -18,7 +18,7 @@
 #include "abstract_benchmark_item_runner.hpp"
 #include "benchmark_config.hpp"
 #include "benchmark_sql_executor.hpp"
-#include "tpch_constants.hpp"
+#include "tpch/tpch_constants.hpp"
 
 extern "C" {
 #include "tpch_dbgen.h"
