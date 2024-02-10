@@ -149,7 +149,7 @@ bool JCCHBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, Be
 
     case 2 - 1: {
       parameters.emplace_back(raw_params_iter->at(0));
-      parameters.emplace_back("'%"s + raw_params_iter->at(1) + "'");
+      parameters.emplace_back("'%" + raw_params_iter->at(1) + "'");
       parameters.emplace_back("'" + raw_params_iter->at(2) + "'");
       parameters.emplace_back("'" + raw_params_iter->at(2) + "'");
       break;
@@ -219,7 +219,7 @@ bool JCCHBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, Be
         warned_performance = true;
       }
 
-      parameters.emplace_back("'%"s + raw_params_iter->at(0) + "%'");
+      parameters.emplace_back("'%" + raw_params_iter->at(0) + "%'");
       break;
     }
 
@@ -248,7 +248,7 @@ bool JCCHBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, Be
     }
 
     case 13 - 1: {
-      parameters.emplace_back("'%"s + raw_params_iter->at(0) + '%' + raw_params_iter->at(1) + "%'");
+      parameters.emplace_back("'%" + raw_params_iter->at(0) + '%' + raw_params_iter->at(1) + "%'");
       break;
     }
 
