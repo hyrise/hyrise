@@ -5,14 +5,13 @@
 #include <utility>
 
 #include <boost/algorithm/string.hpp>
+#include <boost/graph/graphviz.hpp>
 
 // False positive with gcc and tsan (https://gcc.gnu.org/bugzilla/show_bug.cgi?id=92194)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
 #include <boost/graph/adjacency_list.hpp>
 #pragma GCC diagnostic pop
-
-#include <boost/graph/graphviz.hpp>
 
 #include "operators/print.hpp"
 

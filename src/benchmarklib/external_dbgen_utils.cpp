@@ -1,12 +1,12 @@
 #include "external_dbgen_utils.hpp"
 
+#include <cstdlib>
 #include <filesystem>
 #include <iostream>
 #include <sstream>
 #include <string>
 #include <vector>
 
-#include "abstract_table_generator.hpp"
 #include "utils/assert.hpp"
 #include "utils/timer.hpp"
 
@@ -15,10 +15,6 @@ namespace hyrise {
 void generate_csv_tables_with_external_dbgen(const std::string& dbgen_path, const std::vector<std::string>& table_names,
                                              const std::string& csv_meta_path, const std::string& tables_path,
                                              const float scale_factor, const std::string& additional_cli_args) {
-  // NOLINTBEGIN(concurrency-mt-unsafe)
-  // clang-tidy complains that system() is not thread-safe. We ignore this warning as we expect that users will not call
-  // table generator executables in parallel.
-
   // Check if table data has already been generated (and converted to .bin by the FileBasedTableGenerator).
   if (!std::filesystem::exists(tables_path + "customer.bin")) {
     auto timer = Timer{};
@@ -32,7 +28,7 @@ void generate_csv_tables_with_external_dbgen(const std::string& dbgen_path, cons
       auto cmd = std::stringstream{};
       cmd << "cd " << tables_path << " && " << dbgen_path << "/dbgen -f -s " << scale_factor << " "
           << additional_cli_args << "  -b " << dbgen_path << "/dists.dss >/dev/null 2>&1";
-      auto ret = system(cmd.str().c_str());
+      auto ret = std::system(cmd.str().c_str());
       Assert(!ret, "Calling dbgen failed.");
     }
 
@@ -51,7 +47,7 @@ void generate_csv_tables_with_external_dbgen(const std::string& dbgen_path, cons
 
         auto cmd = std::stringstream{};
         cmd << "sed -Ee 's/\\|$//' " << sed_inplace << " " << tables_path << table_name << ".csv";
-        const auto ret = system(cmd.str().c_str());
+        const auto ret = std::system(cmd.str().c_str());
         Assert(!ret, "Removing trailing separators using sed failed.");
       }
 
@@ -60,14 +56,13 @@ void generate_csv_tables_with_external_dbgen(const std::string& dbgen_path, cons
       {
         auto cmd = std::stringstream{};
         cmd << "cp  " << csv_meta_path << "/" << table_name << ".csv.json " << tables_path << table_name << ".csv.json";
-        const auto ret = system(cmd.str().c_str());
+        const auto ret = std::system(cmd.str().c_str());
         Assert(!ret, "Copying csv.json files failed.");
       }
     }
 
     std::cout << " (" << timer.lap_formatted() << ")\n";
   }
-  // NOLINTEND(concurrency-mt-unsafe)
 }
 
 void remove_csv_tables(const std::string& tables_path) {
@@ -75,7 +70,7 @@ void remove_csv_tables(const std::string& tables_path) {
     auto cmd = std::stringstream{};
     cmd << "rm " << tables_path << "*.csv*";
     // NOLINTNEXTLINE(concurrency-mt-unsafe)
-    const auto ret = system(cmd.str().c_str());
+    const auto ret = std::system(cmd.str().c_str());
     Assert(!ret, "Removing csv/csv.json files failed.");
   }
 }

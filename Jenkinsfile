@@ -1,8 +1,12 @@
 import org.jenkinsci.plugins.pipeline.modeldefinition.Utils
 
 full_ci = env.BRANCH_NAME == 'master' || pullRequest.labels.contains('FullCI')
+// Due to their long runtime, we skip several tests in sanitizer builds.
 tests_excluded_in_all_sanitizer_builds = 'SQLiteTestRunnerEncodings/*:TPCDSTableGeneratorTest.GenerateAndStoreRowCounts:TPCHTableGeneratorTest.RowCountsMediumScaleFactor:*.TestTransactionConflicts'
-tests_excluded_in_addr_sanitizer_builds = 'MetaPluginsTest.*'
+
+// Dynamically loaded plugins currently violate the "one defintion rule" (ODR). We thus skip tests that load plugins.
+// The issue is listed as #2632.
+tests_excluded_in_addr_sanitizer_builds = 'MetaPluginsTest.*:PluginManagerTest.*'
 
 try {
   node {

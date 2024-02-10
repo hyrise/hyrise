@@ -2,20 +2,22 @@
 
 #include <algorithm>
 #include <cstddef>
-#include <iostream>
 #include <memory>
+#include <queue>
 #include <string>
 #include <unordered_set>
 #include <utility>
 #include <vector>
 
+#include "expression/abstract_expression.hpp"
+#include "expression/between_expression.hpp"
 #include "expression/binary_predicate_expression.hpp"
 #include "expression/expression_utils.hpp"
+#include "expression/logical_expression.hpp"
 #include "expression/value_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/predicate_node.hpp"
-#include "statistics/table_statistics.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 

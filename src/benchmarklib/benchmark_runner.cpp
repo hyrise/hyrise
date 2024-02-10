@@ -1,14 +1,20 @@
 #include "benchmark_runner.hpp"
 
+#include <algorithm>
+#include <atomic>
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
+#include <ctime>
 #include <fstream>
+#include <iomanip>
 #include <iostream>
 #include <memory>
 #include <random>
+#include <ratio>
 #include <sstream>
 #include <string>
+#include <thread>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -26,18 +32,25 @@
 #include "abstract_benchmark_item_runner.hpp"
 #include "abstract_table_generator.hpp"
 #include "benchmark_config.hpp"
+#include "benchmark_item_result.hpp"
+#include "benchmark_item_run_result.hpp"
+#include "benchmark_state.hpp"
 #include "hyrise.hpp"
 #include "null_value.hpp"
+#include "scheduler/immediate_execution_scheduler.hpp"
 #include "scheduler/job_task.hpp"
+#include "scheduler/node_queue_scheduler.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "sql/sql_pipeline_statement.hpp"
+#include "sql/sql_plan_cache.hpp"
 #include "storage/chunk.hpp"
+#include "storage/vector_compression/vector_compression.hpp"
 #include "tpch/tpch_table_generator.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
-#include "utils/format_duration.hpp"
 #include "utils/print_utils.hpp"
 #include "utils/sqlite_wrapper.hpp"
+#include "utils/string_utils.hpp"
 #include "utils/timer.hpp"
 #include "version.hpp"
 

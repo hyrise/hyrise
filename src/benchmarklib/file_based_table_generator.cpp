@@ -1,5 +1,6 @@
 #include "file_based_table_generator.hpp"
 
+#include <filesystem>
 #include <functional>
 #include <iostream>
 #include <memory>
@@ -7,20 +8,16 @@
 #include <unordered_map>
 #include <unordered_set>
 
-#include <boost/algorithm/string.hpp>
-
 #include "abstract_table_generator.hpp"
 #include "benchmark_config.hpp"
-#include "benchmark_table_encoder.hpp"
 #include "import_export/binary/binary_parser.hpp"
 #include "import_export/csv/csv_parser.hpp"
 #include "utils/assert.hpp"
-#include "utils/format_duration.hpp"
 #include "utils/list_directory.hpp"
 #include "utils/load_table.hpp"
 #include "utils/timer.hpp"
 
-using namespace std::string_literals;  // NOLINT
+using namespace std::literals::string_literals;  // NOLINT
 
 namespace hyrise {
 

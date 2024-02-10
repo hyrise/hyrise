@@ -5,11 +5,14 @@
 #include <cmath>
 #include <locale>
 #include <memory>
+#include <ratio>
 #include <sstream>
 #include <string>
 #include <unordered_set>
 #include <utility>
 #include <vector>
+
+#include <boost/graph/graphviz.hpp>
 
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_utils.hpp"

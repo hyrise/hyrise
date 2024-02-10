@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 
+#include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "optimizer/join_ordering/join_graph.hpp"

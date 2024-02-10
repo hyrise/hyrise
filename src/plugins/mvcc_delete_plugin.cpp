@@ -3,10 +3,13 @@
 #include <cstddef>
 #include <memory>
 #include <mutex>
+#include <numeric>
 #include <ostream>
+#include <sstream>
 #include <string>
 #include <vector>
 
+#include "concurrency/transaction_context.hpp"
 #include "hyrise.hpp"
 #include "operators/get_table.hpp"
 #include "operators/update.hpp"
@@ -14,7 +17,10 @@
 #include "storage/mvcc_data.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
+#include "utils/abstract_plugin.hpp"
 #include "utils/assert.hpp"
+#include "utils/log_manager.hpp"
+#include "utils/pausable_loop_thread.hpp"
 
 namespace hyrise {
 

@@ -5,6 +5,7 @@
 #include <string>
 #include <type_traits>
 
+#include "operators/table_scan/abstract_table_scan_impl.hpp"
 #include "resolve_type.hpp"
 #include "storage/chunk.hpp"
 #include "storage/create_iterable_from_segment.hpp"

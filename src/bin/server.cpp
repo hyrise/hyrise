@@ -8,12 +8,13 @@
 
 #include <boost/algorithm/string/case_conv.hpp>
 #include <boost/algorithm/string/classification.hpp>
-#include <boost/algorithm/string/predicate.hpp>
+#include <boost/algorithm/string/constants.hpp>
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/trim.hpp>
 #include <boost/asio/ip/address.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/system/error_code.hpp>
 
 #include "cxxopts.hpp"
 
@@ -105,7 +106,7 @@ int main(int argc, char* argv[]) {
   const auto execution_info = parsed_options["execution_info"].as<bool>();
   const auto port = parsed_options["port"].as<uint16_t>();
 
-  boost::system::error_code error;
+  auto error = boost::system::error_code{};
   const auto address = boost::asio::ip::make_address(parsed_options["address"].as<std::string>(), error);
 
   Assert(!error, "Not a valid IPv4 address: " + parsed_options["address"].as<std::string>() + ", terminating...");

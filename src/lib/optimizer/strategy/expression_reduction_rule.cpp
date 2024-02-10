@@ -5,7 +5,6 @@
 #include <functional>
 #include <memory>
 #include <string>
-#include <unordered_set>
 #include <vector>
 
 #include <boost/variant/get.hpp>
@@ -16,7 +15,7 @@
 #include "expression/evaluation/like_matcher.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
-#include "expression/in_expression.hpp"
+#include "expression/logical_expression.hpp"
 #include "expression/value_expression.hpp"
 #include "expression/window_function_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"

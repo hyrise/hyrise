@@ -2,6 +2,7 @@
 
 #include <cmath>
 #include <iomanip>
+#include <ios>
 #include <locale>
 #include <memory>
 #include <ostream>
@@ -11,6 +12,7 @@
 #include <utility>
 #include <vector>
 
+#include "expression/abstract_expression.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_subquery_expression.hpp"
 #include "logical_query_plan/abstract_non_query_node.hpp"

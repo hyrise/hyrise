@@ -8,7 +8,9 @@
 #include "abstract_table_generator.hpp"
 #include "benchmark_config.hpp"
 #include "external_dbgen_utils.hpp"
+#include "file_based_table_generator.hpp"
 #include "tpch/tpch_constants.hpp"
+#include "tpch/tpch_table_generator.hpp"
 #include "types.hpp"
 
 namespace hyrise {

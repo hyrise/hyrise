@@ -2,6 +2,7 @@
 
 #include <chrono>
 
+#include "benchmark_config.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {

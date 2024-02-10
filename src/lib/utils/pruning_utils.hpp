@@ -5,7 +5,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include <boost/functional/hash.hpp>
+#include <boost/container_hash/hash.hpp>
 
 #include "types.hpp"
 

@@ -1,6 +1,7 @@
 #include "tpch_table_generator.hpp"
 
 #include <algorithm>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>

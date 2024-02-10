@@ -9,6 +9,7 @@
 
 #include "all_type_variant.hpp"
 #include "storage/encoding_type.hpp"
+#include "storage/vector_compression/vector_compression.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {

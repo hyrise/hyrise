@@ -10,7 +10,7 @@
 #include <utility>
 #include <vector>
 
-#include <boost/functional/hash.hpp>
+#include <boost/container_hash/hash.hpp>
 #include <boost/variant/get.hpp>
 
 #include "all_type_variant.hpp"
@@ -18,14 +18,14 @@
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
 #include "hyrise.hpp"
-#include "logical_query_plan/predicate_node.hpp"
+#include "logical_query_plan/predicate_node.hpp"  // IWYU pragma: keep
 #include "logical_query_plan/stored_table_node.hpp"
 #include "lossless_cast.hpp"
 #include "operators/operator_scan_predicate.hpp"
 #include "resolve_type.hpp"
 #include "statistics/attribute_statistics.hpp"
-#include "statistics/statistics_objects/min_max_filter.hpp"
-#include "statistics/statistics_objects/range_filter.hpp"
+#include "statistics/statistics_objects/min_max_filter.hpp"  // IWYU pragma: keep
+#include "statistics/statistics_objects/range_filter.hpp"    // IWYU pragma: keep
 #include "statistics/table_statistics.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"

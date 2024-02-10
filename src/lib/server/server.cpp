@@ -8,8 +8,11 @@
 #include <string>
 #include <thread>
 
+#include <boost/system/error_code.hpp>
+
 #include "hyrise.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
+#include "server/server_types.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {

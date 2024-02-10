@@ -1,10 +1,13 @@
 #include "cli_config_parser.hpp"
 
+#include <chrono>
 #include <cstdint>
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <memory>
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -12,15 +15,19 @@
 
 #include <boost/algorithm/string/case_conv.hpp>
 #include <boost/algorithm/string/classification.hpp>
+#include <boost/algorithm/string/constants.hpp>
 #include <boost/algorithm/string/predicate.hpp>
+#include <boost/algorithm/string/replace.hpp>
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/trim.hpp>
 
+#include "cxxopts.hpp"
 #include "nlohmann/json.hpp"
 
 #include "all_type_variant.hpp"
 #include "benchmark_config.hpp"
 #include "encoding_config.hpp"
+#include "storage/encoding_type.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"

@@ -69,8 +69,8 @@ void PluginManager::load_plugin(const std::filesystem::path& path) {
   // factory method. See the sources of AbstractPlugin and TestPlugin for further details.
   void* factory = dlsym(plugin_handle, "factory");
   Assert(factory,
-         "Instantiating plugin failed: Use the EXPORT_PLUGIN (abstract_plugin.hpp) macro to export a factory method "
-         "for your plugin!");
+         "Instantiating plugin failed: Use the EXPORT_PLUGIN (see abstract_plugin.hpp) macro to export a factory "
+         "method for your plugin.");
 
   using PluginGetter = AbstractPlugin* (*)();
   auto plugin_get = reinterpret_cast<PluginGetter>(factory);

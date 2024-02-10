@@ -14,9 +14,6 @@
 
 #include <boost/container_hash/hash.hpp>
 
-#include "magic_enum.hpp"
-
-#include "../benchmarklib/abstract_benchmark_item_runner.hpp"
 #include "expression/binary_predicate_expression.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/value_expression.hpp"
@@ -35,8 +32,8 @@
 #include "storage/table.hpp"
 #include "storage/value_segment.hpp"
 #include "types.hpp"
+#include "utils/abstract_plugin.hpp"
 #include "utils/assert.hpp"
-#include "utils/format_duration.hpp"
 #include "utils/log_manager.hpp"
 #include "utils/timer.hpp"
 

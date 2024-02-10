@@ -6,6 +6,8 @@
 #include <iterator>
 #include <string>
 
+#include <boost/system/error_code.hpp>
+
 #include "client_disconnect_exception.hpp"
 #include "utils/assert.hpp"
 
@@ -29,7 +31,7 @@ bool WriteBuffer<SocketType>::full() const {
 
 template <typename SocketType>
 void WriteBuffer<SocketType>::put_string(const std::string& value, const HasNullTerminator has_null_terminator) {
-  auto position_in_string = 0u;
+  auto position_in_string = uint32_t{0};
 
   // Use available space first
   if (!full()) {
@@ -61,7 +63,7 @@ void WriteBuffer<SocketType>::flush(const size_t bytes_required) {
   const auto bytes_to_send = bytes_required ? bytes_required : size();
   auto bytes_sent = size_t{0};
 
-  boost::system::error_code error_code;
+  auto error_code = boost::system::error_code{};
   if (std::distance(&*_start_position, &*_current_position) < 0) {
     // Data not continuously stored in buffer
     bytes_sent =

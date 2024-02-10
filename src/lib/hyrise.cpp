@@ -2,7 +2,7 @@
 
 #include <memory>
 
-#include <boost/container/pmr/memory_resource.hpp>
+#include <boost/container/pmr/global_resource.hpp>
 
 #include "concurrency/transaction_manager.hpp"
 #include "scheduler/abstract_scheduler.hpp"

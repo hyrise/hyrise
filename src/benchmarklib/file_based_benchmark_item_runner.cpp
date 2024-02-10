@@ -4,13 +4,16 @@
 #include <cstddef>
 #include <filesystem>
 #include <fstream>
+#include <iterator>
 #include <memory>
+#include <numeric>
 #include <optional>
 #include <string>
 #include <unordered_set>
 #include <vector>
 
-#include <boost/algorithm/string.hpp>
+#include <boost/algorithm/string/predicate.hpp>
+#include <boost/algorithm/string/trim.hpp>
 
 #include "SQLParser.h"
 #include "SQLParserResult.h"

@@ -1,7 +1,10 @@
 #include "jcch_benchmark_item_runner.hpp"
 
+#include <atomic>
 #include <cstddef>
 #include <cstdint>
+#include <cstdlib>
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <memory>
@@ -11,12 +14,14 @@
 #include <string_view>
 #include <vector>
 
+#include <boost/algorithm/string/replace.hpp>
 #include <boost/date_time/gregorian/gregorian_types.hpp>
 
 #include "abstract_benchmark_item_runner.hpp"
 #include "benchmark_config.hpp"
 #include "benchmark_sql_executor.hpp"
 #include "sql/sql_pipeline_statement.hpp"
+#include "tpch/tpch_benchmark_item_runner.hpp"
 #include "tpch/tpch_constants.hpp"
 #include "tpch/tpch_queries.hpp"
 #include "types.hpp"
@@ -53,7 +58,7 @@ JCCHBenchmarkItemRunner::JCCHBenchmarkItemRunner(const bool skewed, const std::s
 }
 
 std::string JCCHBenchmarkItemRunner::item_name(const BenchmarkItemID item_id) const {
-  Assert(item_id < 22u, "item_id out of range.");
+  Assert(item_id < 22, "item_id out of range.");
   return std::string("JCC-H ") + (_skewed ? "(skewed) " : "(normal) ") + (item_id + 1 < 10 ? "0" : "") +
          std::to_string(item_id + 1);
 }
@@ -72,18 +77,13 @@ void JCCHBenchmarkItemRunner::_load_params() {
     const auto dbgen_queries_path = _dbgen_path + "/queries/";
     Assert(std::filesystem::exists(dbgen_queries_path),
            std::string{"Query templates not found at "} + dbgen_queries_path);
-
-    // NOLINTBEGIN(concurrency-mt-unsafe)
-    // clang-tidy complains that system() is not thread-safe. We can ignore this warning, because _load_params is only
-    // called in the constructor once.
-
     // Create local directory and copy query templates if needed
     const auto local_queries_dir_created = std::filesystem::create_directory(local_queries_path);
     Assert(std::filesystem::exists(local_queries_path), "Creating JCC-H queries folder failed.");
     if (local_queries_dir_created) {
       auto cmd = std::stringstream{};
       cmd << "cd " << local_queries_path << " && ln -s " << _dbgen_path << "/queries/*.sql .";
-      auto ret = system(cmd.str().c_str());
+      const auto ret = std::system(cmd.str().c_str());
       Assert(!ret, "Creating symlinks to query templates failed.");
     }
 
@@ -94,10 +94,9 @@ void JCCHBenchmarkItemRunner::_load_params() {
       cmd << "cd " << local_queries_path << " && " << _dbgen_path << "/qgen " << (_skewed ? "-k" : "") << " -s "
           << _scale_factor << " -b " << _dbgen_path << "/dists.dss -r " << seed << " -l " << params_path
           << " >/dev/null";
-      auto ret = system(cmd.str().c_str());
+      const auto ret = std::system(cmd.str().c_str());
       Assert(!ret, "Calling qgen failed.");
     }
-    // NOLINTEND(concurrency-mt-unsafe)
 
     std::cout << " (" << timer.lap_formatted() << ")\n";
   }
@@ -119,7 +118,7 @@ void JCCHBenchmarkItemRunner::_load_params() {
 }
 
 bool JCCHBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, BenchmarkSQLExecutor& sql_executor) {
-  using namespace std::string_literals;  // NOLINT
+  using namespace std::literals::string_literals;  // NOLINT(build/namespaces_literals)
 
   const auto& this_item_params = _all_params[item_id];
 
