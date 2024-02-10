@@ -22,8 +22,8 @@
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/trim.hpp>
 #include <boost/lexical_cast.hpp>
-#include <readline/history.h>
-#include <readline/readline.h>
+#include <readline/history.h>   // NOLINT(build/include_order)
+#include <readline/readline.h>  // NOLINT(build/include_order)
 
 #include "magic_enum.hpp"
 #include "SQLParser.h"

@@ -17,8 +17,6 @@
 #include "utils/load_table.hpp"
 #include "utils/timer.hpp"
 
-using namespace std::string_literals;  // NOLINT
-
 namespace hyrise {
 
 FileBasedTableGenerator::FileBasedTableGenerator(const std::shared_ptr<BenchmarkConfig>& benchmark_config,
@@ -56,10 +54,12 @@ std::unordered_map<std::string, BenchmarkTableInfo> FileBasedTableGenerator::gen
     auto& table_info = table_info_by_name_iter->second;
 
     if (extension == ".bin") {
-      Assert(!table_info.binary_file_path, std::string{"Multiple binary files found for table '"} + table_name.string() + "'");
+      Assert(!table_info.binary_file_path,
+             std::string{"Multiple binary files found for table '"} + table_name.string() + "'");
       table_info.binary_file_path = directory_entry;
     } else {
-      Assert(!table_info.text_file_path, std::string{"Multiple text files found for table '"} + table_name.string() + "'");
+      Assert(!table_info.text_file_path,
+             std::string{"Multiple text files found for table '"} + table_name.string() + "'");
       table_info.text_file_path = directory_entry;
     }
   }

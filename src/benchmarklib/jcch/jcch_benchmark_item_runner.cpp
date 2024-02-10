@@ -123,8 +123,6 @@ void JCCHBenchmarkItemRunner::_load_params() {
 }
 
 bool JCCHBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, BenchmarkSQLExecutor& sql_executor) {
-  using namespace std::string_literals;  // NOLINT(build/namespaces_literals)
-
   const auto& this_item_params = _all_params[item_id];
 
   // Choose a random parameterization from _all_params

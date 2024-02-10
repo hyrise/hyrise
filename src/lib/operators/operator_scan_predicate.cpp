@@ -4,8 +4,8 @@
 #include <optional>
 #include <ostream>
 #include <string>
-#include <vector>
 #include <utility>
+#include <vector>
 
 #include <boost/variant/get.hpp>
 
