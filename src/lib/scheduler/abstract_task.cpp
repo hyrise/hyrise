@@ -9,6 +9,7 @@
 
 #include "abstract_scheduler.hpp"
 #include "hyrise.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 #include "worker.hpp"
 

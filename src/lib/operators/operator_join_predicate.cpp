@@ -2,6 +2,7 @@
 
 #include <optional>
 #include <tuple>
+#include <utility>
 
 #include "expression/abstract_predicate_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"

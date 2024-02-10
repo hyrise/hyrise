@@ -1,6 +1,7 @@
 #include "chunk.hpp"
 
 #include <algorithm>
+#include <atomic>
 #include <cstddef>
 #include <iterator>
 #include <memory>

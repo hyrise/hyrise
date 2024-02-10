@@ -19,6 +19,8 @@
 #include <utility>
 #include <vector>
 
+#include "types.hpp"
+
 namespace hyrise {
 
 #if HYRISE_NUMA_SUPPORT
@@ -176,7 +178,7 @@ void Topology::_init_fake_numa_topology(const std::vector<uint32_t>& workers_per
       ++cpu_id;
     }
 
-    _nodes.emplace_back(TopologyNode{std::move(cpus)});
+    _nodes.emplace_back(std::move(cpus));
   }
 
   _num_cpus = std::reduce(workers_per_node.cbegin(), workers_per_node.cend());

@@ -1,5 +1,6 @@
 #include "frame.hpp"
 
+#include <atomic>
 #include <bitset>
 #include <ostream>
 #include <string>
@@ -151,35 +152,35 @@ bool Frame::is_unlocked() const {
   return state(_state_and_version.load()) == UNLOCKED;
 }
 
-std::ostream& operator<<(std::ostream& os, const Frame& frame) {
+std::ostream& operator<<(std::ostream& ostream, const Frame& frame) {
   const auto state_and_version = frame.state_and_version();
   const auto state = Frame::state(state_and_version);
   const auto version = Frame::version(state_and_version);
   const auto node_id = frame.node_id();
   const auto dirty = frame.is_dirty();
 
-  os << "Frame(state = ";
+  ostream << "Frame(state = ";
 
   switch (state) {
     case Frame::UNLOCKED:
-      os << "UNLOCKED";
+      ostream << "UNLOCKED";
       break;
     case Frame::LOCKED:
-      os << "LOCKED";
+      ostream << "LOCKED";
       break;
     case Frame::MARKED:
-      os << "MARKED";
+      ostream << "MARKED";
       break;
     case Frame::EVICTED:
-      os << "EVICTED";
+      ostream << "EVICTED";
       break;
     default:
-      os << "LOCKED_SHARED (" << state << ")";
+      ostream << "LOCKED_SHARED (" << state << ")";
       break;
   }
 
-  os << ", node_id = " << node_id << ", dirty = " << dirty << ", version = " << version << ")";
+  ostream << ", node_id = " << node_id << ", dirty = " << dirty << ", version = " << version << ")";
 
-  return os;
+  return ostream;
 }
 }  // namespace hyrise

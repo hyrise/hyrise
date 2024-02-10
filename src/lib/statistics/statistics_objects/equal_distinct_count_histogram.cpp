@@ -1,6 +1,5 @@
 #include "equal_distinct_count_histogram.hpp"
 
-#include <cmath>
 #include <cstddef>
 #include <memory>
 #include <numeric>
@@ -8,12 +7,10 @@
 #include <utility>
 #include <vector>
 
-#include <boost/sort/sort.hpp>
+#include <boost/sort/sort.hpp>  // IWYU pragma: keep
 #include <boost/unordered/unordered_flat_map.hpp>
 
 #include "all_type_variant.hpp"
-#include "generic_histogram.hpp"
-#include "resolve_type.hpp"
 #include "statistics/statistics_objects/abstract_histogram.hpp"
 #include "statistics/statistics_objects/histogram_domain.hpp"
 #include "storage/abstract_segment.hpp"

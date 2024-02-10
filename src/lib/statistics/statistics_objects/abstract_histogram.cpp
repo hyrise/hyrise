@@ -4,7 +4,6 @@
 #include <cmath>
 #include <cstddef>
 #include <limits>
-#include <map>
 #include <memory>
 #include <optional>
 #include <sstream>
@@ -14,18 +13,13 @@
 #include <vector>
 
 #include <boost/container_hash/hash.hpp>
-#include <boost/lexical_cast.hpp>
 
 #include "all_type_variant.hpp"
-#include "expression/evaluation/like_matcher.hpp"
-#include "generic_histogram.hpp"
 #include "generic_histogram_builder.hpp"
 #include "lossy_cast.hpp"
 #include "resolve_type.hpp"
 #include "statistics/statistics_objects/abstract_statistics_object.hpp"
 #include "statistics/statistics_objects/histogram_domain.hpp"
-#include "storage/create_iterable_from_segment.hpp"
-#include "storage/segment_iterate.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
