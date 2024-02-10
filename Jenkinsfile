@@ -6,7 +6,7 @@ tests_excluded_in_all_sanitizer_builds = 'SQLiteTestRunnerEncodings/*:TPCDSTable
 
 // Dynamically loaded plugins currently violate the "one defintion rule" (ODR). We thus skip tests that load plugins.
 // The issue is listed as #2632.
-tests_excluded_in_addr_sanitizer_builds = 'MetaPluginsTest.*:PluginManagerTest.*'
+tests_excluded_in_addr_sanitizer_builds = 'MetaPluginsTest.*:PluginManagerTest.*:MetaExecTest.*'
 
 try {
   node {
@@ -125,7 +125,7 @@ try {
             mkdir clang-relwithdebinfo-thread-sanitizer && cd clang-relwithdebinfo-thread-sanitizer &&   ${cmake} ${relwithdebinfo} ${clang}   ${unity}  ${ninja} -DENABLE_THREAD_SANITIZATION=ON .. &\
             mkdir clang-release && cd clang-release &&                                                   ${cmake} ${release}        ${clang}   ${unity}  ${ninja} .. &\
             mkdir gcc-debug && cd gcc-debug &&                                                           ${cmake} ${debug}          ${gcc}     ${unity}  ${ninja} .. &\
-            mkdir gcc-release && cd gcc-release &&                                                       ${cmake} ${release}        ${gcc}               ${ninja} .. &\
+            mkdir gcc-release && cd gcc-release &&                                                       ${cmake} ${release}        ${gcc}     ${unity}  ${ninja} .. &\
             mkdir clang-15-debug && cd clang-15-debug &&                                                 ${cmake} ${debug}          ${clang15} ${unity}  ${ninja} .. &\
             mkdir gcc-11-debug && cd gcc-11-debug &&                                                     ${cmake} ${debug}          ${gcc11}             ${ninja} .. &\
             wait"
