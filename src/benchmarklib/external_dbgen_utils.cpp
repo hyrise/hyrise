@@ -15,6 +15,9 @@ namespace hyrise {
 void generate_csv_tables_with_external_dbgen(const std::string& dbgen_path, const std::vector<std::string>& table_names,
                                              const std::string& csv_meta_path, const std::string& tables_path,
                                              const float scale_factor, const std::string& additional_cli_args) {
+  // NOLINTBEGIN(concurrency-mt-unsafe): std::system() is not thread-safe. We ignore this warning as we expect that
+  // users will not call table generator executables in parallel.
+
   // Check if table data has already been generated (and converted to .bin by the FileBasedTableGenerator).
   if (!std::filesystem::exists(tables_path + "customer.bin")) {
     auto timer = Timer{};
@@ -63,6 +66,7 @@ void generate_csv_tables_with_external_dbgen(const std::string& dbgen_path, cons
 
     std::cout << " (" << timer.lap_formatted() << ")\n";
   }
+  // NOLINTEND(concurrency-mt-unsafe)
 }
 
 void remove_csv_tables(const std::string& tables_path) {

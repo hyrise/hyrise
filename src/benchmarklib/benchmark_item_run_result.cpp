@@ -5,7 +5,6 @@
 
 #include "benchmark_config.hpp"
 #include "sql/sql_pipeline.hpp"
-#include "types.hpp"
 
 namespace hyrise {
 

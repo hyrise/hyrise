@@ -1,13 +1,12 @@
 #include "console.hpp"
 
-#include <readline/history.h>
-#include <readline/readline.h>
+#include <setjmp.h>
 
-#include <csetjmp>
 #include <csignal>
 #include <cstdint>
 #include <cstdlib>
 #include <ctime>
+#include <exception>
 #include <filesystem>
 #include <functional>
 #include <iomanip>
@@ -18,14 +17,15 @@
 #include <string>
 #include <vector>
 
-#include <boost/algorithm/string/case_conv.hpp>
 #include <boost/algorithm/string/classification.hpp>
 #include <boost/algorithm/string/join.hpp>
-#include <boost/algorithm/string/predicate.hpp>
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/trim.hpp>
 #include <boost/lexical_cast.hpp>
+#include <readline/history.h>
+#include <readline/readline.h>
 
+#include "magic_enum.hpp"
 #include "SQLParser.h"
 #include "SQLParserResult.h"
 
@@ -41,6 +41,7 @@
 #include "pagination.hpp"
 #include "scheduler/immediate_execution_scheduler.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
+#include "sql/sql_pipeline.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "sql/sql_pipeline_statement.hpp"
 #include "sql/sql_plan_cache.hpp"

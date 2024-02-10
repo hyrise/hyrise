@@ -1,11 +1,9 @@
 #include <fstream>
 #include <future>
+#include <pqxx/pqxx>
 #include <thread>
 
-#include <pqxx/pqxx>
-
 #include "base_test.hpp"
-
 #include "hyrise.hpp"
 #include "operators/get_table.hpp"
 #include "operators/validate.hpp"

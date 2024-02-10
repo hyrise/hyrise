@@ -14,11 +14,12 @@
 #include <boost/algorithm/string/trim.hpp>
 #include <boost/asio/ip/address.hpp>
 #include <boost/lexical_cast.hpp>
-#include <boost/system/error_code.hpp>
+#include <boost/system/detail/error_code.hpp>
 
 #include "cxxopts.hpp"
 
 #include "benchmark_config.hpp"
+#include "server/server_types.hpp"
 #include "tpcc/tpcc_table_generator.hpp"
 #include "tpcds/tpcds_table_generator.hpp"
 #include "tpch/tpch_constants.hpp"

@@ -51,15 +51,15 @@ IncludeCategories:
     # clang-format uses the first hit (thus mixing boost with C system headers). As we cannot exclude <boost/...> with
     # clang-format's Posix extended regrexes, we first check for boost headers with a higher priority than STL
     # headers.
-  - Regex:           '^<tbb\/.*>$'
+  - Regex:           '^<(tbb\/.*|readline\/.*)>$'
     Priority:        3
 
   # C system headers as the first category (e.g., <stdlib.h>).
   - Regex:           '^<.*\.h>'
     Priority:        1
 
-    # See comment for TBB. boost and readline headers are not mixed with C headers but STL headers.
-  - Regex:           '^<(boost\/.*|readline\/.*)>$'
+    # See comment for TBB. boost headers are not mixed with C headers but STL headers.
+  - Regex:           '^<boost\/.*>$'
     Priority:        3
 
   # STL headers as the second category (e.g., <vector>).
