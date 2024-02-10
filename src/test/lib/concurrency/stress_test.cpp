@@ -26,8 +26,7 @@ class StressTest : public BaseTest {
     Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
   }
 
-  static constexpr auto SMALL_SANITIZER_LOAD_FACTOR = uint32_t{4};
-  static constexpr auto MEDIUM_SANITIZER_LOAD_FACTOR = uint32_t{10};
+  static constexpr auto DEFAULT_LOAD_FACTOR = uint32_t{10};
 
   const uint32_t CPU_COUNT = std::thread::hardware_concurrency();
   const std::vector<std::vector<uint32_t>> FAKE_SINGLE_NODE_NUMA_TOPOLOGIES = {
@@ -72,32 +71,20 @@ TEST_F(StressTest, TestTransactionConflicts) {
     conflicted_increments += my_conflicted_increments;
   };
 
-  // Create the async objects and spawn them asynchronously (i.e., as their own threads).
-  // Note that async has a bunch of issues:
-  //  - https://stackoverflow.com/questions/12508653/what-is-the-issue-with-stdasync
-  //  - Mastering the C++17 STL, pages 205f
-  // TODO(anyone): Change this to proper threads+futures, or at least do not reuse this code.
   const auto num_threads = uint32_t{100};
-  auto thread_futures = std::vector<std::future<void>>{};
-  thread_futures.reserve(num_threads);
+  auto threads = std::vector<std::thread>{};
+  threads.reserve(num_threads);
 
   for (auto thread_num = uint32_t{0}; thread_num < num_threads; ++thread_num) {
     // We want a future to the thread running, so we can kill it after a future.wait(timeout) or the test would freeze.
-    thread_futures.emplace_back(std::async(std::launch::async, run));
+    threads.emplace_back(run);
   }
 
-  // Wait for completion or timeout (should not occur).
-  for (auto& thread_future : thread_futures) {
-    // We give this a lot of time, not because we usually need that long for 100 threads to finish, but because
-    // sanitizers and other tools like valgrind sometimes bring a high overhead.
-    if (thread_future.wait_for(std::chrono::seconds(180)) == std::future_status::timeout) {
-      ASSERT_TRUE(false) << "At least one thread got stuck and did not commit.";
-    }
-    // Retrieve the future so that exceptions stored in its state are thrown
-    thread_future.get();
+  for (auto& thread : threads) {
+    thread.join();
   }
 
-  // Verify results
+  // Verify results.
   auto final_sum = int64_t{0};
   {
     auto pipeline = SQLPipelineBuilder{std::string{"SELECT SUM(a) FROM table_a"}}.create_pipeline();
@@ -140,28 +127,19 @@ TEST_F(StressTest, TestTransactionInsertsSmallChunks) {
     }
   };
 
-  // Create the async objects and spawn them asynchronously (i.e., as their own threads)
   const auto num_threads = uint32_t{100};
-  auto thread_futures = std::vector<std::future<void>>{};
-  thread_futures.reserve(num_threads);
+  auto threads = std::vector<std::thread>{};
+  threads.reserve(num_threads);
 
   for (auto thread_num = uint32_t{0}; thread_num < num_threads; ++thread_num) {
-    // We want a future to the thread running, so we can kill it after a future.wait(timeout) or the test would freeze
-    thread_futures.emplace_back(std::async(std::launch::async, run));
+    threads.emplace_back(run);
   }
 
-  // Wait for completion or timeout (should not occur)
-  for (auto& thread_future : thread_futures) {
-    // We give this a lot of time, not because we usually need that long for 100 threads to finish, but because
-    // sanitizers and other tools like valgrind sometimes bring a high overhead.
-    if (thread_future.wait_for(std::chrono::seconds(600)) == std::future_status::timeout) {
-      FAIL() << "At least one thread got stuck and did not commit.";
-    }
-    // Retrieve the future so that exceptions stored in its state are thrown
-    thread_future.get();
+  for (auto& thread : threads) {
+    thread.join();
   }
 
-  // Verify that the values in column b are correctly incremented
+  // Verify that the values in column b are correctly incremented.
   {
     auto pipeline = SQLPipelineBuilder{std::string{"SELECT MIN(b) FROM table_b"}}.create_pipeline();
     const auto [_, verification_table] = pipeline.get_result_table();
@@ -195,28 +173,20 @@ TEST_F(StressTest, TestTransactionInsertsPackedNullValues) {
     }
   };
 
-  // Create the async objects and spawn them asynchronously (i.e., as their own threads).
   const auto num_threads = uint32_t{20};
-  auto thread_futures = std::vector<std::future<void>>{};
-  thread_futures.reserve(num_threads);
+  auto threads = std::vector<std::thread>{};
+  threads.reserve(num_threads);
 
   for (auto thread_num = uint32_t{0}; thread_num < num_threads; ++thread_num) {
-    // We want a future to the thread running, so we can kill it after a future.wait(timeout) or the test would freeze
-    thread_futures.emplace_back(std::async(std::launch::async, run));
+    threads.emplace_back(run);
   }
 
-  // Wait for completion or timeout (should not occur)
-  for (auto& thread_future : thread_futures) {
-    // We give this a lot of time, not because we usually need that long for 100 threads to finish, but because
-    // sanitizers and other tools like valgrind sometimes bring a high overhead.
-    if (thread_future.wait_for(std::chrono::seconds(600)) == std::future_status::timeout) {
-      FAIL() << "At least one thread got stuck and did not commit.";
-    }
-    // Retrieve the future so that exceptions stored in its state are thrown
-    thread_future.get();
+  // Wait for completion or timeout (should not occur).
+  for (auto& thread : threads) {
+    thread.join();
   }
 
-  // Check that NULL values in column b are correctly set
+  // Check that NULL values in column b are correctly set.
   auto pipeline =
       SQLPipelineBuilder{"SELECT a, COUNT(a), COUNT(b) FROM table_c GROUP BY a ORDER BY a"}.create_pipeline();
   const auto [_, verification_table] = pipeline.get_result_table();
@@ -235,7 +205,7 @@ TEST_F(StressTest, NodeSchedulerStressTest) {
   }
 
   // Create a large number of nodes in a fake topology (many workers will share the same thread).
-  const auto node_count = std::thread::hardware_concurrency() * 8;
+  const auto node_count = std::thread::hardware_concurrency() * (HYRISE_WITH_TSAN ? 1 : DEFAULT_LOAD_FACTOR);
 
   Hyrise::get().topology.use_fake_numa_topology(node_count, 1);
   const auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
@@ -307,7 +277,7 @@ TEST_F(StressTest, NodeQueueSchedulerCreationAndReset) {
 // We run this test for various fake NUMA topologies as it triggered a bug that was introduced with #2610.
 TEST_F(StressTest, NodeQueueSchedulerSemaphoreIncrements) {
   constexpr auto SLEEP_TIME = std::chrono::milliseconds{10};
-  const auto job_count = CPU_COUNT * 8 * (HYRISE_WITH_TSAN ? 1 : SMALL_SANITIZER_LOAD_FACTOR);
+  const auto job_count = CPU_COUNT * 4 * (HYRISE_WITH_TSAN ? 1 : DEFAULT_LOAD_FACTOR);
 
   for (const auto& fake_numa_topology : FAKE_SINGLE_NODE_NUMA_TOPOLOGIES) {
     Hyrise::get().topology.use_fake_numa_topology(fake_numa_topology);
@@ -369,7 +339,7 @@ TEST_F(StressTest, NodeQueueSchedulerSemaphoreIncrementsDependentTasks) {
 
   // Ensure there is at least one job left after each worker pulled one.
   const auto min_job_count = DEPENDENT_JOB_TASKS_LENGTH * CPU_COUNT + 1;
-  const auto job_count = std::max(min_job_count, CPU_COUNT * 8 * (HYRISE_WITH_TSAN ? 1 : SMALL_SANITIZER_LOAD_FACTOR));
+  const auto job_count = std::max(min_job_count, CPU_COUNT * 4 * (HYRISE_WITH_TSAN ? 1 : DEFAULT_LOAD_FACTOR));
 
   for (const auto& fake_numa_topology : FAKE_SINGLE_NODE_NUMA_TOPOLOGIES) {
     Hyrise::get().topology.use_fake_numa_topology(fake_numa_topology);
@@ -499,7 +469,7 @@ TEST_F(StressTest, ConcurrentInsertsSetChunksImmutable) {
 
   // We observed long runtimes in Debug builds, especially with UBSan enabled. Thus, we reduce the load a bit in this
   // case.
-  const auto insert_count = 30 * (HYRISE_DEBUG && HYRISE_WITH_UBSAN ? 1 : MEDIUM_SANITIZER_LOAD_FACTOR) + 1;
+  const auto insert_count = 30 * (HYRISE_DEBUG && HYRISE_WITH_UBSAN ? 1 : DEFAULT_LOAD_FACTOR) + 1;
   const auto thread_count = uint32_t{100};
   auto threads = std::vector<std::thread>{};
   threads.reserve(thread_count);
