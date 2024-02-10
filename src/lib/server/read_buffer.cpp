@@ -9,6 +9,7 @@
 #include <boost/system/detail/error_code.hpp>
 
 #include "client_disconnect_exception.hpp"
+#include "server/server_types.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {

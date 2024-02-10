@@ -10,6 +10,7 @@
 
 #include "all_type_variant.hpp"
 #include "server/postgres_message_type.hpp"
+#include "server/server_types.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
