@@ -1,8 +1,8 @@
-#include <pqxx/pqxx>
-
 #include <fstream>
 #include <future>
 #include <thread>
+
+#include <pqxx/pqxx>
 
 #include "base_test.hpp"
 
@@ -286,8 +286,8 @@ TEST_F(ServerTestRunner, TestMultipleConnections) {
 }
 
 TEST_F(ServerTestRunner, TestSimpleInsertSelect) {
-  pqxx::connection connection{_connection_string};
-  pqxx::nontransaction transaction{connection};
+  auto connection = pqxx::connection{_connection_string};
+  auto transaction = pqxx::nontransaction{connection};
 
   const auto expected_num_rows = _table_a->row_count() + 1;
   transaction.exec("INSERT INTO table_a VALUES (1, 1.0);");
@@ -327,10 +327,10 @@ TEST_F(ServerTestRunner, TestShutdownDuringExecution) {
 }
 
 TEST_F(ServerTestRunner, TestPreparedStatement) {
-  pqxx::connection connection{_connection_string};
-  pqxx::nontransaction transaction{connection};
+  auto connection = pqxx::connection{_connection_string};
+  auto transaction = pqxx::nontransaction{connection};
 
-  const std::string prepared_name = "statement1";
+  const auto prepared_name = std::string{"statement1"};
   connection.prepare(prepared_name, "SELECT * FROM table_a WHERE a > ?");
 
   const auto param = 1234u;
@@ -345,8 +345,8 @@ TEST_F(ServerTestRunner, TestPreparedStatement) {
 }
 
 TEST_F(ServerTestRunner, TestUnnamedPreparedStatement) {
-  pqxx::connection connection{_connection_string};
-  pqxx::nontransaction transaction{connection};
+  auto connection = pqxx::connection{_connection_string};
+  auto transaction = pqxx::nontransaction{connection};
 
   const std::string prepared_name = "";
   connection.prepare(prepared_name, "SELECT * FROM table_a WHERE a > ?");
@@ -362,8 +362,8 @@ TEST_F(ServerTestRunner, TestUnnamedPreparedStatement) {
 }
 
 TEST_F(ServerTestRunner, TestInvalidPreparedStatement) {
-  pqxx::connection connection{_connection_string};
-  pqxx::nontransaction transaction{connection};
+  auto connection = pqxx::connection{_connection_string};
+  auto transaction = pqxx::nontransaction{connection};
 
   const std::string prepared_name = "";
   const auto param = 1234u;

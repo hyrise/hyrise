@@ -92,7 +92,7 @@ try {
             // issue (see https://github.com/google/googletest/issues/3552).
             unity = '-DCMAKE_UNITY_BUILD=ON'
 
-            // To speed compiling up, we use ninja.
+            // To speed compiling up, we use ninja for most builds.
             ninja = '-GNinja'
 
             // With Hyrise, we aim to support the most recent compiler versions and do not invest a lot of work to
@@ -124,7 +124,7 @@ try {
             mkdir clang-release-addr-ub-leak-sanitizers && cd clang-release-addr-ub-leak-sanitizers &&   ${cmake} ${release}        ${clang}   ${unity}  ${ninja} -DENABLE_ADDR_UB_SANITIZATION=ON .. &\
             mkdir clang-relwithdebinfo-thread-sanitizer && cd clang-relwithdebinfo-thread-sanitizer &&   ${cmake} ${relwithdebinfo} ${clang}   ${unity}  ${ninja} -DENABLE_THREAD_SANITIZATION=ON .. &\
             mkdir clang-release && cd clang-release &&                                                   ${cmake} ${release}        ${clang}   ${unity}  ${ninja} .. &\
-            mkdir gcc-debug && cd gcc-debug &&                                                           ${cmake} ${debug}          ${gcc}     ${unity}  ${ninja} .. &\
+            mkdir gcc-debug && cd gcc-debug &&                                                           ${cmake} ${debug}          ${gcc}     ${unity}           .. &\
             mkdir gcc-release && cd gcc-release &&                                                       ${cmake} ${release}        ${gcc}     ${unity}  ${ninja} .. &\
             mkdir clang-15-debug && cd clang-15-debug &&                                                 ${cmake} ${debug}          ${clang15} ${unity}  ${ninja} .. &\
             mkdir gcc-11-debug && cd gcc-11-debug &&                                                     ${cmake} ${debug}          ${gcc11}             ${ninja} .. &\
@@ -143,7 +143,8 @@ try {
             }
           }, gccDebug: {
             stage("gcc-debug") {
-              sh "cd gcc-debug && ninja all -j \$(( \$(nproc) / 5))"
+              // We build gcc-debug using make.
+              sh "cd gcc-debug && make all -j \$(( \$(nproc) / 5))"
               sh "cd gcc-debug && ./hyriseTest"
             }
           }, gcc11Debug: {
