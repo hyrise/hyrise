@@ -174,9 +174,9 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
       const auto* const region = regions.list[region_dist(random_engine)].text;
 
       parameters.emplace_back(std::to_string(size));
-      parameters.emplace_back("'%" + material + "'");
-      parameters.emplace_back("'" + region + "'");
-      parameters.emplace_back("'" + region + "'");
+      parameters.emplace_back(std::string{"'%"} + material + "'");
+      parameters.emplace_back(std::string{"'"} + region + "'");
+      parameters.emplace_back(std::string{"'"} + region + "'");
       break;
     }
 
@@ -186,7 +186,7 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
       const auto date =
           date_interval(boost::gregorian::date{1995, 03, 01}, date_diff_dist(random_engine), DatetimeComponent::Day);
 
-      parameters.emplace_back("'" + segment + "'");
+      parameters.emplace_back(std::string{"'"} + segment + "'");
       parameters.emplace_back("'" + date_to_string(date) + "'");
       parameters.emplace_back("'" + date_to_string(date) + "'");
       break;
@@ -211,7 +211,7 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
       const auto begin_date = date_interval(boost::gregorian::date{1993, 01, 01}, diff, DatetimeComponent::Year);
       const auto end_date = date_interval(begin_date, 1, DatetimeComponent::Year);
 
-      parameters.emplace_back("'" + region + "'");
+      parameters.emplace_back(std::string{"'"} + region + "'");
       parameters.emplace_back("'" + date_to_string(begin_date) + "'");
       parameters.emplace_back("'" + date_to_string(end_date) + "'");
       break;
@@ -245,10 +245,10 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
         nation2 = nations.list[nation_dist(random_engine)].text;
       } while (nation1 == nation2);
 
-      parameters.emplace_back("'" + nation1 + "'");
-      parameters.emplace_back("'" + nation2 + "'");
-      parameters.emplace_back("'" + nation2 + "'");
-      parameters.emplace_back("'" + nation1 + "'");
+      parameters.emplace_back(std::string{"'"} + nation1 + "'");
+      parameters.emplace_back(std::string{"'"} + nation2 + "'");
+      parameters.emplace_back(std::string{"'"} + nation2 + "'");
+      parameters.emplace_back(std::string{"'"} + nation1 + "'");
 
       // Hard-coded in TPC-H, but used in JCC-H
       parameters.emplace_back("'1995-01-01'");
@@ -266,14 +266,14 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
 
       const auto* const type = p_types_set.list[type_dist(random_engine)].text;
 
-      parameters.emplace_back("'" + nation + "'");
-      parameters.emplace_back("'" + region + "'");
+      parameters.emplace_back(std::string{"'"} + nation + "'");
+      parameters.emplace_back(std::string{"'"} + region + "'");
 
       // Hard-coded in TPC-H, but used in JCC-H
       parameters.emplace_back("'1995-01-01'");
       parameters.emplace_back("'1996-12-31'");
 
-      parameters.emplace_back("'" + type + "'");
+      parameters.emplace_back(std::string{"'"} + type + "'");
 
       break;
     }
@@ -281,7 +281,7 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
     case 9 - 1: {
       const auto* const color = colors.list[color_dist(random_engine)].text;
 
-      parameters.emplace_back("'%" + color + "%'");
+      parameters.emplace_back(std::string{"'%"} + color + "%'");
       break;
     }
 
@@ -300,9 +300,9 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
       const auto* const nation = nations.list[nation_dist(random_engine)].text;
       const auto fraction = 0.0001 / (_scale_factor > 0 ? _scale_factor : 1);
 
-      parameters.emplace_back("'" + nation + "'");
+      parameters.emplace_back(std::string{"'"} + nation + "'");
       parameters.emplace_back(std::to_string(fraction));
-      parameters.emplace_back("'" + nation + "'");
+      parameters.emplace_back(std::string{"'"} + nation + "'");
       break;
     }
 
@@ -319,8 +319,8 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
       const auto begin_date = date_interval(boost::gregorian::date{1993, 01, 01}, diff, DatetimeComponent::Year);
       const auto end_date = date_interval(begin_date, 1, DatetimeComponent::Year);
 
-      parameters.emplace_back("'" + shipmode1 + "'");
-      parameters.emplace_back("'" + shipmode2 + "'");
+      parameters.emplace_back(std::string{"'"} + shipmode1 + "'");
+      parameters.emplace_back(std::string{"'"} + shipmode2 + "'");
       parameters.emplace_back("'" + date_to_string(begin_date) + "'");
       parameters.emplace_back("'" + date_to_string(end_date) + "'");
       break;
@@ -332,7 +332,7 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
 
       auto word_dist = std::uniform_int_distribution<>{0, 3};
 
-      parameters.emplace_back("'%" + words1[word_dist(random_engine)] + '%' + words2[word_dist(random_engine)] + "%'");
+      parameters.emplace_back(std::string{"'%"} + words1[word_dist(random_engine)] + '%' + words2[word_dist(random_engine)] + "%'");
       break;
     }
 
@@ -395,7 +395,7 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
       const auto* const container = p_cntr_set.list[container_dist(random_engine)].text;
 
       parameters.emplace_back("'Brand#" + std::to_string(brand) + "'");
-      parameters.emplace_back("'" + container + "'");
+      parameters.emplace_back(std::string{"'"} + container + "'");
       break;
     }
 
@@ -439,17 +439,17 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
       const auto end_date = date_interval(begin_date, 1, DatetimeComponent::Year);
       const auto* const nation = nations.list[nation_dist(random_engine)].text;
 
-      parameters.emplace_back("'" + color + "%'");
+      parameters.emplace_back(std::string{"'"} + color + "%'");
       parameters.emplace_back("'" + date_to_string(begin_date) + "'");
       parameters.emplace_back("'" + date_to_string(end_date) + "'");
-      parameters.emplace_back("'" + nation + "'");
+      parameters.emplace_back(std::string{"'"} + nation + "'");
       break;
     }
 
     case 21 - 1: {
       const auto* const nation = nations.list[nation_dist(random_engine)].text;
 
-      parameters.emplace_back("'" + nation + "'");
+      parameters.emplace_back(std::string{"'"} + nation + "'");
       break;
     }
 
