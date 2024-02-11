@@ -59,7 +59,7 @@ IncludeCategories:
     Priority:        1
 
     # See comment for TBB. boost headers are not mixed with C headers but STL headers.
-  - Regex:           '^<boost\/.*>$'
+  - Regex:           '^<(boost\/.*|pqxx\/.*)>$'
     Priority:        3
 
   # STL headers as the second category (e.g., <vector>).

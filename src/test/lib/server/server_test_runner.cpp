@@ -1,7 +1,9 @@
 #include <fstream>
 #include <future>
-#include <pqxx/pqxx>
 #include <thread>
+
+#include <pqxx/connection>      // NOLINT(build/include_order): cpplint considers pqxx as C system headers
+#include <pqxx/nontransaction>  // NOLINT(build/include_order)
 
 #include "base_test.hpp"
 #include "hyrise.hpp"
