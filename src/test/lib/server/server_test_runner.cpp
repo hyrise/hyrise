@@ -1,7 +1,6 @@
-#include <pqxx/pqxx>
-
 #include <fstream>
 #include <future>
+#include <pqxx/pqxx>
 #include <thread>
 
 #include "base_test.hpp"

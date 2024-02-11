@@ -332,7 +332,8 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
 
       auto word_dist = std::uniform_int_distribution<>{0, 3};
 
-      parameters.emplace_back(std::string{"'%"} + words1[word_dist(random_engine)] + '%' + words2[word_dist(random_engine)] + "%'");
+      parameters.emplace_back(std::string{"'%"} + words1[word_dist(random_engine)] + '%' +
+                              words2[word_dist(random_engine)] + "%'");
       break;
     }
 
