@@ -207,11 +207,6 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     // Executes the given action for every row id of the table in this range.
     template <typename F>
     void for_every_row_id(const MaterializedSegmentList<T>& table, const F& action) {
-// False positive with gcc and tsan (https://gcc.gnu.org/bugzilla/show_bug.cgi?id=92194)
-#ifndef __clang__
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
-#endif
       for (auto cluster = start.cluster; cluster <= end.cluster; ++cluster) {
         const auto start_index = (cluster == start.cluster) ? start.index : 0;
         const auto end_index = (cluster == end.cluster) ? end.index : table[cluster].size();
@@ -219,9 +214,6 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
           action(table[cluster][index].row_id);
         }
       }
-#ifndef __clang__
-#pragma GCC diagnostic pop
-#endif
     }
   };
 

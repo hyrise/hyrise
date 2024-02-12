@@ -31,9 +31,6 @@ extern "C" {
 extern const char** asc_date;  // NOLINT
 extern seed_t seed[];          // NOLINT
 
-#pragma clang diagnostic ignored "-Wshorten-64-to-32"
-#pragma clang diagnostic ignored "-Wfloat-conversion"
-
 namespace {
 
 using namespace hyrise;  // NOLINT
