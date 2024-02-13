@@ -1,5 +1,8 @@
 #include "meta_system_utilization_table.hpp"
 
+#include <stdlib.h>
+#include <time.h>
+
 // clang-format off
 #ifdef __APPLE__
 #include <mach/mach.h>
@@ -22,6 +25,7 @@
 #include <ios>
 #include <memory>
 #include <optional>
+#include <ratio>
 #include <sstream>
 #include <string>
 #include <vector>

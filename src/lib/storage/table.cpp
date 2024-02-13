@@ -5,26 +5,26 @@
 #include <cstddef>
 #include <cstdint>
 #include <iterator>
-#include <limits>
 #include <memory>
 #include <mutex>
-#include <numeric>
 #include <optional>
 #include <set>
 #include <string>
+#include <type_traits>
 #include <unordered_map>
 #include <utility>
 #include <vector>
 
 #include "all_type_variant.hpp"
-#include "concurrency/transaction_manager.hpp"
-#include "hyrise.hpp"
 #include "resolve_type.hpp"
-#include "statistics/attribute_statistics.hpp"
 #include "statistics/table_statistics.hpp"
 #include "storage/chunk.hpp"
+#include "storage/constraints/foreign_key_constraint.hpp"
+#include "storage/constraints/functional_dependency.hpp"
 #include "storage/constraints/table_key_constraint.hpp"
+#include "storage/constraints/table_order_constraint.hpp"
 #include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
+#include "storage/index/chunk_index_statistics.hpp"
 #include "storage/index/group_key/composite_group_key_index.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
 #include "storage/index/partial_hash/partial_hash_index.hpp"
@@ -86,7 +86,7 @@ Table::Table(const TableColumnDefinitions& column_definitions, const TableType t
 }
 
 Table::Table(const TableColumnDefinitions& column_definitions, const TableType type,
-             std::vector<std::shared_ptr<Chunk>>&& chunks, const UseMvcc use_mvcc,
+             const std::vector<std::shared_ptr<Chunk>>& chunks, const UseMvcc use_mvcc,
              pmr_vector<std::shared_ptr<PartialHashIndex>> const& table_indexes)
     : Table(column_definitions, type, type == TableType::Data ? std::optional{Chunk::DEFAULT_SIZE} : std::nullopt,
             use_mvcc, table_indexes) {

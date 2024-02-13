@@ -10,11 +10,10 @@
 #include <vector>
 
 #include <boost/algorithm/string/join.hpp>
-#include <boost/range/adaptors.hpp>
+#include <boost/range/adaptor/transformed.hpp>
 
 #include "magic_enum.hpp"
 
-#include "logical_query_plan/abstract_lqp_node.hpp"
 #include "storage/constraints/table_key_constraint.hpp"
 #include "storage/encoding_type.hpp"
 #include "storage/table.hpp"

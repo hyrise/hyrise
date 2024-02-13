@@ -48,7 +48,7 @@ class Table : private Noncopyable {
         pmr_vector<std::shared_ptr<PartialHashIndex>> const& table_indexes = {});
 
   Table(const TableColumnDefinitions& column_definitions, const TableType type,
-        std::vector<std::shared_ptr<Chunk>>&& chunks, const UseMvcc use_mvcc = UseMvcc::No,
+        const std::vector<std::shared_ptr<Chunk>>& chunks, const UseMvcc use_mvcc = UseMvcc::No,
         pmr_vector<std::shared_ptr<PartialHashIndex>> const& table_indexes = {});
 
   /**

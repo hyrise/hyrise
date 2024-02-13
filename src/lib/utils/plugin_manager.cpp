@@ -14,10 +14,12 @@
 
 #include "nlohmann/json.hpp"
 
+#include "abstract_benchmark_item_runner.hpp"
 #include "hyrise.hpp"
 #include "log_manager.hpp"
 #include "utils/abstract_plugin.hpp"
 #include "utils/assert.hpp"
+#include "utils/string_utils.hpp"
 
 namespace hyrise {
 

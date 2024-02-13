@@ -13,6 +13,7 @@
 #include <boost/container_hash/hash.hpp>
 #include <boost/variant/get.hpp>
 
+#include "all_parameter_variant.hpp"
 #include "all_type_variant.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_functional.hpp"

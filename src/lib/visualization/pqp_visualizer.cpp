@@ -12,7 +12,12 @@
 #include <utility>
 #include <vector>
 
-#include <boost/graph/graphviz.hpp>
+// False positive with GCC, finding accesses to unitialized memory in adjacency_list.hpp
+// (https://gcc.gnu.org/bugzilla/show_bug.cgi?id=92194).
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#include <boost/graph/adjacency_list.hpp>
+#pragma GCC diagnostic pop
 
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_utils.hpp"

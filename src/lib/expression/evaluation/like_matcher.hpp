@@ -10,6 +10,7 @@
 #include <variant>
 
 #include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 

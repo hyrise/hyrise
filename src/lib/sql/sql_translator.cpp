@@ -16,10 +16,15 @@
 #include <boost/variant/get.hpp>
 
 #include "magic_enum.hpp"
+// TODO(Martin): can we use umbrella sql/statements.h somehow?
 #include "sql/ColumnType.h"
 #include "sql/CreateStatement.h"
+#include "sql/DeleteStatement.h"
+#include "sql/DropStatement.h"
+#include "sql/ExecuteStatement.h"
 #include "sql/ExportStatement.h"
 #include "sql/Expr.h"
+#include "sql/PrepareStatement.h"
 #include "sql/SelectStatement.h"
 #include "sql/ShowStatement.h"
 #include "sql/SQLStatement.h"

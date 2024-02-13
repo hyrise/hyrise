@@ -1,12 +1,14 @@
 #include "meta_log_table.hpp"
 
+#include <time.h>
+
 #include <chrono>
 #include <cstdint>
 #include <ctime>
 #include <iomanip>
 #include <memory>
 #include <optional>
-#include <ostream>
+#include <sstream>
 #include <string>
 
 #include "magic_enum.hpp"
