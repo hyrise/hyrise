@@ -1,5 +1,7 @@
 #include "partial_hash_index_impl.hpp"
 
+#include <tsl/sparse_set.h>
+
 #include <cstddef>
 #include <memory>
 #include <unordered_set>

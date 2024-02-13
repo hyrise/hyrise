@@ -1,6 +1,7 @@
 #include "update_node.hpp"
 
 #include <cstddef>
+#include <functional>
 #include <memory>
 #include <sstream>
 #include <string>

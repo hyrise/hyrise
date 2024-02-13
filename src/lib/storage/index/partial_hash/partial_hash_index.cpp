@@ -1,7 +1,10 @@
 #include "partial_hash_index.hpp"
 
+#include <tsl/sparse_set.h>
+
 #include <cstddef>
 #include <memory>
+#include <mutex>
 #include <utility>
 #include <vector>
 

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <tsl/sparse_map.h>
+
 #include "flat_map_iterator_impl.hpp"
 #include "types.hpp"
 

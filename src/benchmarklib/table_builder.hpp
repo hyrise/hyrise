@@ -7,6 +7,7 @@
 
 #include <boost/hana/assert.hpp>
 #include <boost/hana/for_each.hpp>
+#include <boost/hana/size.hpp>
 #include <boost/hana/tuple.hpp>
 #include <boost/hana/zip_with.hpp>
 

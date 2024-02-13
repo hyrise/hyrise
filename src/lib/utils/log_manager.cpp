@@ -3,7 +3,8 @@
 #include <chrono>
 #include <string>
 
-#include <tbb/concurrent_vector.h>  // NOLINT(build/include_order): wronlgy identified as a C header.
+// NOLINTNEXTLINE(build/include_order): wronlgy identified as a C header.
+#include <tbb/concurrent_vector.h>  // IWYU pragma: keep
 
 namespace hyrise {
 

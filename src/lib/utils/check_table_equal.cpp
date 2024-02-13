@@ -4,7 +4,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <iomanip>
-#include <iostream>
 #include <memory>
 #include <optional>
 #include <sstream>
@@ -21,6 +20,7 @@
 #include "storage/abstract_segment.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/table.hpp"
+#include "storage/table_column_definition.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 

@@ -1,7 +1,7 @@
 #include "meta_system_utilization_table.hpp"
 
-#include <stdlib.h>
-#include <time.h>
+#include <stdlib.h>  // NOLINT(hicpp-deprecated-headers,modernize-deprecated-headers): For localtime_r.
+#include <time.h>    // NOLINT(hicpp-deprecated-headers,modernize-deprecated-headers): For localtime_r.
 
 // clang-format off
 #ifdef __APPLE__

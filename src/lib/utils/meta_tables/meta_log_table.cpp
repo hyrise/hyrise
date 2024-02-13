@@ -1,6 +1,6 @@
 #include "meta_log_table.hpp"
 
-#include <time.h>
+#include <time.h>  // NOLINT(hicpp-deprecated-headers,modernize-deprecated-headers): For localtime_r.
 
 #include <chrono>
 #include <cstdint>
