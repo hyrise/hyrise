@@ -16,11 +16,11 @@
 #include <vector>
 
 #include "all_type_variant.hpp"
+#include "logical_query_plan/data_dependencies/functional_dependency.hpp"
 #include "resolve_type.hpp"
 #include "statistics/table_statistics.hpp"
 #include "storage/chunk.hpp"
 #include "storage/constraints/foreign_key_constraint.hpp"
-#include "storage/constraints/functional_dependency.hpp"
 #include "storage/constraints/table_key_constraint.hpp"
 #include "storage/constraints/table_order_constraint.hpp"
 #include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
