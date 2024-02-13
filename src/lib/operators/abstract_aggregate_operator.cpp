@@ -13,6 +13,7 @@
 #include "expression/abstract_expression.hpp"
 #include "expression/pqp_column_expression.hpp"
 #include "expression/window_function_expression.hpp"
+#include "operators/operator_performance_data.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 

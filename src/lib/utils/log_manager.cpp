@@ -1,6 +1,9 @@
 #include "log_manager.hpp"
 
+#include <chrono>
 #include <string>
+
+#include <tbb/concurrent_vector.h>
 
 namespace hyrise {
 

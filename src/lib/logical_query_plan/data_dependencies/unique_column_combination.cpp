@@ -37,7 +37,7 @@ size_t UniqueColumnCombination::hash() const {
     hash = hash ^ expression->hash();
   }
 
-  return boost::hash_value(hash - expressions.size());
+  return std::hash<size_t>{}(hash - expressions.size());
 }
 
 std::ostream& operator<<(std::ostream& stream, const UniqueColumnCombination& ucc) {

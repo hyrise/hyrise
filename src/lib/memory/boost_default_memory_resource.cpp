@@ -1,8 +1,8 @@
 #include <cstddef>
 #include <cstdlib>
 
+#include <boost/config.hpp>
 #include <boost/container/pmr/memory_resource.hpp>
-#include <boost/core/no_exceptions_support.hpp>
 
 namespace boost::container::pmr {
 

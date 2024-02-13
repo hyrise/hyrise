@@ -8,6 +8,7 @@
 
 #include "all_type_variant.hpp"
 #include "storage/chunk.hpp"
+#include "storage/index/partial_hash/flat_map_iterator.hpp"
 #include "storage/segment_iterate.hpp"
 #include "types.hpp"
 

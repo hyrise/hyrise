@@ -13,6 +13,7 @@
 #include "operators/abstract_operator.hpp"
 #include "operators/abstract_read_only_operator.hpp"
 #include "operators/operator_join_predicate.hpp"
+#include "operators/operator_performance_data.hpp"
 #include "storage/chunk.hpp"
 #include "storage/table.hpp"
 #include "storage/table_column_definition.hpp"
@@ -72,7 +73,7 @@ std::string AbstractJoinOperator::description(DescriptionMode description_mode) 
     }
 
     // Fallback - use column ID
-    return "Column #"s + std::to_string(column_id);
+    return "Column #" + std::to_string(column_id);
   };
 
   const auto separator = (description_mode == DescriptionMode::SingleLine ? ' ' : '\n');

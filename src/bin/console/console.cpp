@@ -1,13 +1,16 @@
 #include "console.hpp"
 
-#include <setjmp.h>
+#include <setjmp.h>  // NOLINT(hicpp-deprecated-headers,modernize-deprecated-headers)
 
+#include <algorithm>
 #include <csignal>
+#include <cstdio>
 #include <cstdint>
 #include <cstdlib>
 #include <ctime>
 #include <exception>
 #include <filesystem>
+#include <fstream>
 #include <functional>
 #include <iomanip>
 #include <iostream>
@@ -1078,7 +1081,7 @@ char* Console::_command_generator(const char* text, int state, const std::vector
     if (command.find(text) != std::string::npos) {
       auto completion = new char[command.size()];  // NOLINT (legacy API)
       // NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg,hicpp-vararg)
-      static_cast<void>(snprintf(completion, command.size() + 1, "%s", command.c_str()));
+      static_cast<void>(std::snprintf(completion, command.size() + 1, "%s", command.c_str()));
       return completion;
     }
   }

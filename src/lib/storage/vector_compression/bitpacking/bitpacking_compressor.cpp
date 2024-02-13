@@ -9,6 +9,7 @@
 #include <utility>
 
 #include "bitpacking_vector_type.hpp"
+#include "storage/vector_compression/base_compressed_vector.hpp"
 #include "types.hpp"
 
 namespace hyrise {

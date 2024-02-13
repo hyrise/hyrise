@@ -24,6 +24,7 @@
 #include <boost/accumulators/statistics/stats.hpp>
 #include <boost/algorithm/string/join.hpp>
 #include <boost/range/adaptor/transformed.hpp>
+#include <boost/variant/apply_visitor.hpp>
 
 #include "cxxopts.hpp"
 #include "magic_enum.hpp"

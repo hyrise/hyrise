@@ -16,6 +16,7 @@
 #include "expression/expression_utils.hpp"
 #include "expression/pqp_subquery_expression.hpp"
 #include "logical_query_plan/dummy_table_node.hpp"
+#include "operators/operator_performance_data.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/operator_task.hpp"
 #include "storage/table.hpp"

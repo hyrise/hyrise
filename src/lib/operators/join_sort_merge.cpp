@@ -182,8 +182,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
 
     TablePosition(size_t init_cluster, size_t init_index) : cluster{init_cluster}, index{init_index} {}
 
-    size_t cluster;
-    size_t index;
+    size_t cluster{0};
+    size_t index{0};
 
     TableRange to(TablePosition position) {
       return TableRange(*this, position);

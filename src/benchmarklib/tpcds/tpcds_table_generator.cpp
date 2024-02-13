@@ -1,7 +1,9 @@
 #include "tpcds_table_generator.hpp"
 
 #include <algorithm>
+#include <climits>
 #include <cstddef>
+#include <cstdio>
 #include <cstdint>
 #include <filesystem>
 #include <limits>
@@ -15,9 +17,11 @@
 #include "abstract_table_generator.hpp"
 
 extern "C" {
+#include "tpcds-kit/tools/address.h"
 #include "tpcds-kit/tools/columns.h"
-#include "tpcds-kit/tools/dbgen_version.h"
+#include "tpcds-kit/tools/date.h"
 #include "tpcds-kit/tools/decimal.h"
+#include "tpcds-kit/tools/dist.h"
 #include "tpcds-kit/tools/genrand.h"
 #include "tpcds-kit/tools/nulls.h"
 #include "tpcds-kit/tools/parallel.h"
@@ -57,7 +61,6 @@ extern "C" {
 #include "table_builder.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
-#include "utils/timer.hpp"
 
 namespace {
 using namespace hyrise;  // NOLINT

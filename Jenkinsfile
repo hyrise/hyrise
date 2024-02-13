@@ -317,17 +317,42 @@ try {
             }
           }
 
-          parallel memcheckReleaseTest: {
-            stage("memcheckReleaseTest") {
+          parallel memcheckReleaseTestShard1: {
+            stage("memcheckReleaseTestShard1") {
               // Runs after the other sanitizers as it depends on clang-release to be built.
               if (env.BRANCH_NAME == 'master' || full_ci) {
                 sh "mkdir ./clang-release-memcheck-test"
                 // If this shows a leak, try --leak-check=full, which is slower but more precise
-                sh "valgrind --tool=memcheck --error-exitcode=1 --gen-suppressions=all --num-callers=25 --suppressions=resources/.valgrind-ignore.txt ./clang-release/hyriseTest clang-release-memcheck-test --gtest_filter=-NUMAMemoryResourceTest.BasicAllocate"
+                sh "GTEST_TOTAL_SHARDS=5 GTEST_SHARD_INDEX=0 valgrind --tool=memcheck --error-exitcode=1 --gen-suppressions=all --num-callers=25 --suppressions=resources/.valgrind-ignore.txt ./clang-release/hyriseTest clang-release-memcheck-test --gtest_filter=-NUMAMemoryResourceTest.BasicAllocate"
                 sh "valgrind --tool=memcheck --error-exitcode=1 --gen-suppressions=all --num-callers=25 --suppressions=resources/.valgrind-ignore.txt ./clang-release/hyriseBenchmarkTPCH -s .01 -r 1 --scheduler --cores 10"
+                sh "valgrind --tool=memcheck --error-exitcode=1 --gen-suppressions=all --num-callers=25 --suppressions=resources/.valgrind-ignore.txt ./clang-release/hyriseBenchmarkTPCDS -s 1 -r 1 --scheduler --cores 10"
                 sh "valgrind --tool=memcheck --error-exitcode=1 --gen-suppressions=all --num-callers=25 --suppressions=resources/.valgrind-ignore.txt ./clang-release/hyriseBenchmarkTPCC -s 1 --scheduler --cores 10"
               } else {
-                Utils.markStageSkippedForConditional("memcheckReleaseTest")
+                Utils.markStageSkippedForConditional("memcheckReleaseTestShard1")
+              }
+            }
+          }, memcheckReleaseTestShard2: {
+            stage("memcheckReleaseTestShard2") {
+              // Runs after the other sanitizers as it depends on clang-release to be built.
+              if (env.BRANCH_NAME == 'master' || full_ci) {
+                sh "mkdir ./clang-release-memcheck-test"
+                // If this shows a leak, try --leak-check=full, which is slower but more precise
+                sh "GTEST_TOTAL_SHARDS=5 GTEST_SHARD_INDEX=1 valgrind --tool=memcheck --error-exitcode=1 --gen-suppressions=all --num-callers=25 --suppressions=resources/.valgrind-ignore.txt ./clang-release/hyriseTest clang-release-memcheck-test --gtest_filter=-NUMAMemoryResourceTest.BasicAllocate"
+                sh "GTEST_TOTAL_SHARDS=5 GTEST_SHARD_INDEX=2 valgrind --tool=memcheck --error-exitcode=1 --gen-suppressions=all --num-callers=25 --suppressions=resources/.valgrind-ignore.txt ./clang-release/hyriseTest clang-release-memcheck-test --gtest_filter=-NUMAMemoryResourceTest.BasicAllocate"
+              } else {
+                Utils.markStageSkippedForConditional("memcheckReleaseTestShard2")
+              }
+            }
+          }, memcheckReleaseTestShard3: {
+            stage("memcheckReleaseTestShard3") {
+              // Runs after the other sanitizers as it depends on clang-release to be built.
+              if (env.BRANCH_NAME == 'master' || full_ci) {
+                sh "mkdir ./clang-release-memcheck-test"
+                // If this shows a leak, try --leak-check=full, which is slower but more precise
+                sh "GTEST_TOTAL_SHARDS=5 GTEST_SHARD_INDEX=3 valgrind --tool=memcheck --error-exitcode=1 --gen-suppressions=all --num-callers=25 --suppressions=resources/.valgrind-ignore.txt ./clang-release/hyriseTest clang-release-memcheck-test --gtest_filter=-NUMAMemoryResourceTest.BasicAllocate"
+                sh "GTEST_TOTAL_SHARDS=5 GTEST_SHARD_INDEX=4 valgrind --tool=memcheck --error-exitcode=1 --gen-suppressions=all --num-callers=25 --suppressions=resources/.valgrind-ignore.txt ./clang-release/hyriseTest clang-release-memcheck-test --gtest_filter=-NUMAMemoryResourceTest.BasicAllocate"
+              } else {
+                Utils.markStageSkippedForConditional("memcheckReleaseTestShard3")
               }
             }
           }, tpchVerification: {

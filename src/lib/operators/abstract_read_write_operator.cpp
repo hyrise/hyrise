@@ -2,10 +2,10 @@
 
 #include <memory>
 #include <ostream>
-#include <vector>
 
 #include "concurrency/transaction_context.hpp"
 #include "operators/abstract_operator.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {

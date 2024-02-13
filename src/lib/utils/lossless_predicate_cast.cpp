@@ -4,6 +4,8 @@
 #include <optional>
 #include <utility>
 
+#include <boost/variant/apply_visitor.hpp>
+
 #include "all_type_variant.hpp"
 #include "types.hpp"
 

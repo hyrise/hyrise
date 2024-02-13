@@ -5,6 +5,8 @@
 #include <string>
 #include <vector>
 
+#include <boost/variant/apply_visitor.hpp>
+
 #include "expression/abstract_expression.hpp"
 #include "expression/binary_predicate_expression.hpp"
 #include "expression/expression_utils.hpp"

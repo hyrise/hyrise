@@ -1,6 +1,8 @@
 #include "aggregate_node.hpp"
 
+#include <algorithm>
 #include <cstddef>
+#include <iterator>
 #include <memory>
 #include <sstream>
 #include <string>

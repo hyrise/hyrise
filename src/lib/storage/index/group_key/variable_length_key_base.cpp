@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <cstring>
 #include <iomanip>
+#include <ios>
 #include <ostream>
 #include <type_traits>
 #include <utility>

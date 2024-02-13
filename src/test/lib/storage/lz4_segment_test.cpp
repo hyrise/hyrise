@@ -2,9 +2,8 @@
 #include <string>
 #include <utility>
 
-#include "base_test.hpp"
-
 #include "all_type_variant.hpp"
+#include "base_test.hpp"
 #include "storage/chunk.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/lz4_segment.hpp"

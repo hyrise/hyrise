@@ -22,6 +22,7 @@
 #include "statistics/generate_pruning_statistics.hpp"
 #include "storage/chunk.hpp"
 #include "storage/chunk_encoder.hpp"
+#include "storage/encoding_type.hpp"
 #include "storage/mvcc_data.hpp"
 #include "storage/table.hpp"
 #include "storage/table_column_definition.hpp"

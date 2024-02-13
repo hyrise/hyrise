@@ -1,5 +1,6 @@
 #include "csv_converter.hpp"
 
+#include <algorithm>
 #include <iterator>
 #include <string>
 #include <utility>

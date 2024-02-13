@@ -1,5 +1,4 @@
 #include "mock_node.hpp"
-
 #include <algorithm>
 #include <cstddef>
 #include <memory>
@@ -17,6 +16,7 @@
 #include "logical_query_plan/data_dependencies/functional_dependency.hpp"
 #include "logical_query_plan/data_dependencies/unique_column_combination.hpp"
 #include "lqp_utils.hpp"
+#include "storage/constraints/table_key_constraint.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
@@ -36,7 +36,7 @@ std::shared_ptr<LQPColumnExpression> MockNode::get_column(const std::string& col
     }
   }
 
-  Fail("Couldn't find column named '"s + column_name + "' in MockNode");
+  Fail("Couldn't find column named '" + column_name + "' in MockNode");
 }
 
 const MockNode::ColumnDefinitions& MockNode::column_definitions() const {

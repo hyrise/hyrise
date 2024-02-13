@@ -13,7 +13,7 @@
 #include <utility>
 #include <vector>
 
-#include <boost/hana/type.hpp>
+#include <boost/hana/fwd/type.hpp>
 #include <boost/lexical_cast/bad_lexical_cast.hpp>
 #include <boost/variant/get.hpp>
 
@@ -59,7 +59,6 @@
 
 namespace {
 
-using namespace std::string_literals;           // NOLINT(build/namespaces)
 using namespace hyrise;                         // NOLINT(build/namespaces)
 using namespace hyrise::expression_functional;  // NOLINT(build/namespaces)
 

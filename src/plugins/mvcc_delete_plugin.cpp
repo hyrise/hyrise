@@ -1,6 +1,7 @@
 #include "mvcc_delete_plugin.hpp"
 
 #include <cstddef>
+#include <iomanip>
 #include <memory>
 #include <mutex>
 #include <numeric>

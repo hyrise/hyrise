@@ -14,6 +14,7 @@
 #include "all_type_variant.hpp"
 #include "storage/abstract_segment.hpp"
 #include "storage/base_dictionary_segment.hpp"
+#include "storage/index/abstract_chunk_index.hpp"
 #include "storage/index/group_key/variable_length_key_base.hpp"
 #include "storage/vector_compression/base_compressed_vector.hpp"
 #include "storage/vector_compression/base_vector_decompressor.hpp"

@@ -18,7 +18,7 @@ UpdateNode::UpdateNode(const std::string& init_table_name)
     : AbstractNonQueryNode(LQPNodeType::Update), table_name(init_table_name) {}
 
 std::string UpdateNode::description(const DescriptionMode /*mode*/) const {
-  std::ostringstream desc;
+  auto desc = std::ostringstream{};
 
   desc << "[Update] Table: '" << table_name << "'";
 
@@ -38,7 +38,7 @@ std::vector<std::shared_ptr<AbstractExpression>> UpdateNode::output_expressions(
 }
 
 size_t UpdateNode::_on_shallow_hash() const {
-  return boost::hash_value(table_name);
+  return std::hash<std::string>{}(table_name);
 }
 
 bool UpdateNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& /*node_mapping*/) const {

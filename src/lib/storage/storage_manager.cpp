@@ -17,6 +17,8 @@
 #include "scheduler/job_task.hpp"
 #include "statistics/generate_pruning_statistics.hpp"
 #include "statistics/table_statistics.hpp"
+#include "storage/lqp_view.hpp"
+#include "storage/prepared_plan.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/meta_table_manager.hpp"
@@ -40,7 +42,6 @@ void StorageManager::add_table(const std::string& name, std::shared_ptr<Table> t
   }
 
   // Create table statistics and chunk pruning statistics for added table.
-
   table->set_table_statistics(TableStatistics::from_table(*table));
   generate_chunk_pruning_statistics(table);
 
