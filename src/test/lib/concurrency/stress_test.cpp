@@ -5,6 +5,7 @@
 #include "base_test.hpp"
 #include "benchmark_config.hpp"
 #include "hyrise.hpp"
+#include "scheduler/immediate_execution_scheduler.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/task_queue.hpp"
 #include "tpch/tpch_constants.hpp"
