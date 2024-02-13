@@ -400,29 +400,16 @@ TEST_F(ServerTestRunner, TestParallelConnections) {
     EXPECT_EQ(result.size(), expected_num_rows);
   };
 
-  // Create the async objects and spawn them asynchronously (i.e., as their own threads)
-  // Note that async has a bunch of issues:
-  //  - https://stackoverflow.com/questions/12508653/what-is-the-issue-with-stdasync
-  //  - Mastering the C++17 STL, pages 205f
-  // TODO(anyone): Change this to proper threads+futures, or at least do not reuse this code.
   const auto num_threads = size_t{100};
-  auto thread_futures = std::vector<std::future<void>>{};
-  thread_futures.reserve(num_threads);
+  auto threads = std::vector<std::thread>{};
+  threads.reserve(num_threads);
 
-  for (auto thread_num = 0u; thread_num < num_threads; ++thread_num) {
-    // We want a future to the thread running, so we can kill it after a future.wait(timeout) or the test would freeze
-    thread_futures.emplace_back(std::async(std::launch::async, connection_run));
+  for (auto thread_num = size_t{0}; thread_num < num_threads; ++thread_num) {
+    threads.emplace_back(connection_run);
   }
 
-  // Wait for completion or timeout (should not occur)
-  for (auto& thread_future : thread_futures) {
-    // We give this a lot of time, not because we need that long for 100 threads to finish, but because sanitizers and
-    // other tools like valgrind sometimes bring a high overhead that exceeds 10 seconds.
-    if (thread_future.wait_for(std::chrono::seconds(150)) == std::future_status::timeout) {
-      ASSERT_TRUE(false) << "At least one thread got stuck and did not commit.";
-      // Retrieve the future so that exceptions stored in its state are thrown
-      thread_future.get();
-    }
+  for (auto& thread : threads) {
+    thread.join();
   }
 }
 
@@ -456,36 +443,27 @@ TEST_F(ServerTestRunner, TestTransactionConflicts) {
     }
   };
 
-  // Create the async objects and spawn them asynchronously (i.e., as their own threads)
   const auto num_threads = size_t{100};
-  auto thread_futures = std::vector<std::future<void>>{};
-  thread_futures.reserve(num_threads);
+  auto threads = std::vector<std::thread>{};
+  threads.reserve(num_threads);
 
-  for (auto thread_num = 0u; thread_num < num_threads; ++thread_num) {
-    // We want a future to the thread running, so we can kill it after a future.wait(timeout) or the test would freeze
-    thread_futures.emplace_back(std::async(std::launch::async, connection_run));
+  for (auto thread_num = size_t{0}; thread_num < num_threads; ++thread_num) {
+    threads.emplace_back(connection_run);
   }
 
-  // Wait for completion or timeout (should not occur)
-  for (auto& thread_future : thread_futures) {
-    // We give this a lot of time, not because we need that long for 100 threads to finish, but because sanitizers and
-    // other tools like valgrind sometimes bring a high overhead that exceeds 10 seconds.
-    if (thread_future.wait_for(std::chrono::seconds(180)) == std::future_status::timeout) {
-      ASSERT_TRUE(false) << "At least one thread got stuck and did not commit.";
-      // Retrieve the future so that exceptions stored in its state are thrown
-      thread_future.get();
-    }
+  for (auto& thread : threads) {
+    thread.join();
   }
 
-  // Verify results
-  auto final_sum = int64_t{};
+  // Verify results.
+  auto final_sum = int64_t{0};
   {
     auto pipeline = SQLPipelineBuilder{std::string{"SELECT SUM(a) FROM table_a"}}.create_pipeline();
     const auto [_, table] = pipeline.get_result_table();
     final_sum = *table->get_value<int64_t>(ColumnID{0}, 0);
   }
 
-  // Really pessimistic, but at least 2 statements should have made it
+  // Really pessimistic, but at least 2 statements should have made it.
   EXPECT_GT(successful_increments, 2);
 
   // We also want to see at least one conflict so that we can be sure that conflict handling in the server works.

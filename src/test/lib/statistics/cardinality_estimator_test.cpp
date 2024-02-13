@@ -1111,4 +1111,25 @@ TEST_F(CardinalityEstimatorTest, WindowNode) {
   EXPECT_TRUE(result_table_statistics->column_statistics.at(2));
 }
 
+TEST_F(CardinalityEstimatorTest, StatisticsCaching) {
+  // Enable statistics caching.
+  estimator.guarantee_bottom_up_construction();
+  const auto& statistics_cache = estimator.cardinality_estimation_cache.statistics_by_lqp;
+  ASSERT_TRUE(statistics_cache);
+  EXPECT_TRUE(statistics_cache->empty());
+
+  // Estimate the cardinality of a node with statistics caching enabled.
+  const auto predicate_node_1 = PredicateNode::make(greater_than_(a_a, 50), node_a);
+  estimator.estimate_cardinality(predicate_node_1);
+  EXPECT_EQ(statistics_cache->size(), 2);
+  EXPECT_TRUE(statistics_cache->contains(node_a));
+  EXPECT_TRUE(statistics_cache->contains(predicate_node_1));
+
+  // Estimate the cardinality of a node with statistics caching disabled.
+  const auto predicate_node_2 = PredicateNode::make(less_than_(a_b, 55), node_a);
+  estimator.estimate_cardinality(predicate_node_2, false);
+  EXPECT_EQ(statistics_cache->size(), 2);
+  EXPECT_FALSE(statistics_cache->contains(predicate_node_2));
+}
+
 }  // namespace hyrise
