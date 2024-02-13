@@ -1,9 +1,12 @@
 #include "abstract_lqp_node.hpp"
 
 #include <algorithm>
+#include <optional>
+#include <ostream>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
+#include <vector>
 
 #include <boost/container_hash/hash.hpp>
 
@@ -15,6 +18,7 @@
 #include "logical_query_plan/stored_table_node.hpp"
 #include "lqp_utils.hpp"
 #include "predicate_node.hpp"
+#include "types.hpp"
 #include "update_node.hpp"
 #include "utils/assert.hpp"
 #include "utils/map_prunable_subquery_predicates.hpp"
@@ -126,10 +130,10 @@ void AbstractLQPNode::set_left_input(const std::shared_ptr<AbstractLQPNode>& lef
 }
 
 void AbstractLQPNode::set_right_input(const std::shared_ptr<AbstractLQPNode>& right) {
-  DebugAssert(right == nullptr || type == LQPNodeType::Join || type == LQPNodeType::Union ||
-                  type == LQPNodeType::Update || type == LQPNodeType::Intersect || type == LQPNodeType::Except ||
+  DebugAssert(!right || type == LQPNodeType::Join || type == LQPNodeType::Union || type == LQPNodeType::Update ||
+                  type == LQPNodeType::Intersect || type == LQPNodeType::Except ||
                   type == LQPNodeType::ChangeMetaTable || type == LQPNodeType::Mock,
-              "This node type does not accept a right input");
+              "This node type does not accept a right input.");
   set_input(LQPInputSide::Right, right);
 }
 
