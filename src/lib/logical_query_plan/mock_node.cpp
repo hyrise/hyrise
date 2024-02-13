@@ -1,4 +1,5 @@
 #include "mock_node.hpp"
+
 #include <algorithm>
 #include <cstddef>
 #include <memory>

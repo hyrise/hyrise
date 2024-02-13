@@ -1,20 +1,17 @@
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
-#include <iostream>
+#include <functional>
 #include <limits>
-#include <optional>
 #include <string>
-#include <tuple>
+#include <string_view>
+#include <utility>
 #include <vector>
 
-#include <boost/circular_buffer.hpp>
 #include <boost/container/pmr/polymorphic_allocator.hpp>
-#include <boost/operators.hpp>
-#include <tbb/concurrent_vector.h>
 
 #include "strong_typedef.hpp"
-#include "utils/assert.hpp"
 
 /**
  * We use STRONG_TYPEDEF to avoid things like adding chunk ids and value ids. Because implicit constructors are
@@ -92,9 +89,6 @@ using pmr_string = std::basic_string<char, std::char_traits<char>, PolymorphicAl
 //   a = b;  // a does NOT use alloc, neither for its current values, nor for future allocations (#623).
 template <typename T>
 using pmr_vector = std::vector<T, PolymorphicAllocator<T>>;
-
-template <typename T>
-using pmr_ring_buffer = boost::circular_buffer<T, PolymorphicAllocator<T>>;
 
 constexpr ChunkOffset INVALID_CHUNK_OFFSET{std::numeric_limits<ChunkOffset::base_type>::max()};
 constexpr ChunkID INVALID_CHUNK_ID{std::numeric_limits<ChunkID::base_type>::max()};
@@ -184,10 +178,10 @@ enum class PredicateCondition {
 };
 
 // @return whether the PredicateCondition takes exactly two arguments
-bool is_binary_predicate_condition(const PredicateCondition predicate_condition);
+bool is_binary_predicate_condition(PredicateCondition predicate_condition);
 
 // @return whether the PredicateCondition takes exactly two arguments and is not one of LIKE or IN
-bool is_binary_numeric_predicate_condition(const PredicateCondition predicate_condition);
+bool is_binary_numeric_predicate_condition(PredicateCondition predicate_condition);
 
 bool is_between_predicate_condition(PredicateCondition predicate_condition);
 
@@ -196,16 +190,16 @@ bool is_lower_inclusive_between(PredicateCondition predicate_condition);
 bool is_upper_inclusive_between(PredicateCondition predicate_condition);
 
 // ">" becomes "<" etc.
-PredicateCondition flip_predicate_condition(const PredicateCondition predicate_condition);
+PredicateCondition flip_predicate_condition(PredicateCondition predicate_condition);
 
 // ">" becomes "<=" etc.
-PredicateCondition inverse_predicate_condition(const PredicateCondition predicate_condition);
+PredicateCondition inverse_predicate_condition(PredicateCondition predicate_condition);
 
 // Split up, e.g., BetweenUpperExclusive into {GreaterThanEquals, LessThan}
-std::pair<PredicateCondition, PredicateCondition> between_to_conditions(const PredicateCondition predicate_condition);
+std::pair<PredicateCondition, PredicateCondition> between_to_conditions(PredicateCondition predicate_condition);
 
 // Join, e.g., {GreaterThanEquals, LessThan} into BetweenUpperExclusive
-PredicateCondition conditions_to_between(const PredicateCondition lower, const PredicateCondition upper);
+PredicateCondition conditions_to_between(PredicateCondition lower, PredicateCondition upper);
 
 // Let R and S be two tables and we want to perform `R <JoinMode> S ON <condition>`
 // AntiNullAsTrue:    If for a tuple Ri in R, there is a tuple Sj in S so that <condition> is NULL or TRUE, Ri is
@@ -214,7 +208,7 @@ PredicateCondition conditions_to_between(const PredicateCondition lower, const P
 //                      dropped. This behavior mirrors NOT EXISTS
 enum class JoinMode { Inner, Left, Right, FullOuter, Cross, Semi, AntiNullAsTrue, AntiNullAsFalse };
 
-bool is_semi_or_anti_join(const JoinMode join_mode);
+bool is_semi_or_anti_join(JoinMode join_mode);
 
 // SQL set operations come in two flavors, with and without `ALL`, e.g., `UNION` and `UNION ALL`.
 // We have a third mode (Positions) that is used to intersect position lists that point to the same table,
@@ -262,13 +256,15 @@ inline bool operator==(const SortColumnDefinition& lhs, const SortColumnDefiniti
 }
 
 class Noncopyable {
+ public:
+  Noncopyable(const Noncopyable&) = delete;
+  const Noncopyable& operator=(const Noncopyable&) = delete;
+
  protected:
   Noncopyable() = default;
   Noncopyable(Noncopyable&&) noexcept = default;
   Noncopyable& operator=(Noncopyable&&) noexcept = default;
   ~Noncopyable() = default;
-  Noncopyable(const Noncopyable&) = delete;
-  const Noncopyable& operator=(const Noncopyable&) = delete;
 };
 
 // Dummy type, can be used to overload functions with a variant accepting a Null value

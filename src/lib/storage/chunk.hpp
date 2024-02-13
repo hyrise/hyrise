@@ -16,6 +16,7 @@
 #include "mvcc_data.hpp"
 #include "table_column_definition.hpp"
 #include "types.hpp"
+#include "utils/assert.hpp"
 #include "utils/copyable_atomic.hpp"
 
 namespace hyrise {

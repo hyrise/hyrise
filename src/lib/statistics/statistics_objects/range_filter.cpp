@@ -270,7 +270,7 @@ bool RangeFilter<T>::does_not_contain(const PredicateCondition predicate_conditi
       const auto is_upper_inclusive = is_upper_inclusive_between(predicate_condition);
 
       // "X BETWEEN Y AND Z" is equivalent to "X>=Y AND X<=Z" [SQL-92]. Thus, `a BETWEEN 5 AND 4` will always be empty.
-      const auto is_inclusive = is_lower_inclusive && is_lower_inclusive;
+      const auto is_inclusive = is_lower_inclusive && is_upper_inclusive;
       if (is_inclusive ? value2 < value : value2 <= value) {
         return true;
       }

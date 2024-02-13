@@ -15,6 +15,8 @@
 #include "expression/abstract_predicate_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
+#include "expression/in_expression.hpp"
+#include "expression/list_expression.hpp"
 #include "expression/logical_expression.hpp"
 #include "expression/lqp_subquery_expression.hpp"
 #include "expression/value_expression.hpp"
@@ -28,7 +30,6 @@
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
-#include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/static_table_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/union_node.hpp"
@@ -38,12 +39,13 @@
 #include "operators/operator_join_predicate.hpp"
 #include "operators/operator_scan_predicate.hpp"
 #include "resolve_type.hpp"
+#include "statistics/abstract_cardinality_estimator.hpp"
 #include "statistics/attribute_statistics.hpp"
 #include "statistics/cardinality_estimation_cache.hpp"
+#include "statistics/join_graph_statistics_cache.hpp"
 #include "statistics/statistics_objects/abstract_histogram.hpp"
-#include "statistics/statistics_objects/equal_distinct_count_histogram.hpp"
-#include "statistics/statistics_objects/generic_histogram.hpp"
 #include "statistics/statistics_objects/generic_histogram_builder.hpp"
+#include "statistics/statistics_objects/null_value_ratio_statistics.hpp"
 #include "storage/table.hpp"
 #include "table_statistics.hpp"
 #include "types.hpp"
@@ -307,7 +309,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_projection_node(
 }
 
 std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_window_node(
-    const WindowNode& window_node, const std::shared_ptr<TableStatistics>& input_table_statistics) const {
+    const WindowNode& window_node, const std::shared_ptr<TableStatistics>& input_table_statistics) {
   // Forward the input statistics for all but the last column (which contains the window function result).
   const auto& output_expressions = window_node.output_expressions();
   const auto output_expression_count = output_expressions.size();
