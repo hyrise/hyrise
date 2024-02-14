@@ -16,8 +16,7 @@ benchmarks='hyriseBenchmarkTPCH hyriseBenchmarkTPCDS hyriseBenchmarkTPCC hyriseB
 # #2405 for some preliminary reasoning.
 warmup_seconds=1
 mt_shuffled_runtime=1200
-runs=100
-mt_ordered_runs=30
+runs=50
 
 # Setting the number of clients used for the multi-threaded scenario to the machine's physical core count. This only
 # works for macOS and Linux. We do not use hyper-threads because the benchmark results are more unstable on them. We
@@ -106,7 +105,7 @@ do
 
     if [ "$benchmark" != "hyriseBenchmarkTPCC" ]; then
       echo "Running $benchmark for $commit... (multi-threaded, ordered, 1 client)"
-      ( "${build_folder}"/"$benchmark" --scheduler --clients 1 --cores ${num_phy_cores} -m Ordered -r ${mt_ordered_runs} -w ${warmup_seconds} -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt_ordered.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt_ordered.log"
+      ( "${build_folder}"/"$benchmark" --scheduler --clients 1 --cores ${num_phy_cores} -m Ordered -r ${runs} -w ${warmup_seconds} -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt_ordered.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt_ordered.log"
     fi
 
     echo "Running $benchmark for $commit... (multi-threaded, shuffled, $num_phy_cores clients)"
