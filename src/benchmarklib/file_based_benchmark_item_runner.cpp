@@ -117,7 +117,7 @@ void FileBasedBenchmarkItemRunner::_parse_query_file(
    * Add queries to _queries and _item_names if query_subset allows it
    */
   for (const auto& query : queries_in_file) {
-    if (!query_subset || query_subset->count(query.name)) {
+    if (!query_subset || query_subset->contains(query.name)) {
       _queries.emplace_back(query);
     }
   }

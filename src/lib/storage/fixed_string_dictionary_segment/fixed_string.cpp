@@ -2,15 +2,12 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <cstring>
 #include <iostream>
 #include <iterator>
-#include <memory>
 #include <string>
 #include <string_view>
-#include <vector>
 
-#include "all_type_variant.hpp"
-#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {
@@ -103,7 +100,7 @@ bool FixedString::operator==(const FixedString& other) const {
   return memcmp(_mem, other._mem, size()) == 0;
 }
 
-void FixedString::swap(FixedString& other) {
+void FixedString::swap(FixedString& other) noexcept {
   DebugAssert(_maximum_length == other.maximum_length(),
               "FixedStrings must have the same maximum_length in order to swap them");
   std::swap_ranges(_mem, _mem + _maximum_length, other._mem);
@@ -113,7 +110,7 @@ std::ostream& operator<<(std::ostream& stream, const FixedString& obj) {
   return stream << obj.string();
 }
 
-void swap(FixedString lhs, FixedString rhs) {
+void swap(FixedString lhs, FixedString rhs) noexcept {
   lhs.swap(rhs);
 }
 

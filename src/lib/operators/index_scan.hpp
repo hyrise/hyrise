@@ -3,7 +3,6 @@
 #include <memory>
 
 #include "abstract_read_only_operator.hpp"
-
 #include "all_type_variant.hpp"
 #include "storage/pos_lists/row_id_pos_list.hpp"
 #include "types.hpp"

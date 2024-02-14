@@ -87,7 +87,7 @@ int main(int argc, char* argv[]) {
   const auto parsed_options = cli_options.parse(argc, argv);
 
   // Print help and exit
-  if (parsed_options.count("help")) {
+  if (parsed_options.count("help") > 0) {
     std::cout << cli_options.help() << '\n';
     return 0;
   }
@@ -100,7 +100,7 @@ int main(int argc, char* argv[]) {
     * We do not plan on exposing other parameters, such as the encoding or the chunk size via this facility. You can
     * change the modify the config object as needed.
     */
-  if (parsed_options.count("benchmark_data")) {
+  if (parsed_options.count("benchmark_data") > 0) {
     generate_benchmark_data(parsed_options["benchmark_data"].as<std::string>());
   }
 

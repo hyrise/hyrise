@@ -11,6 +11,7 @@
 #include "storage/table.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
+#include "utils/meta_table_manager.hpp"
 
 namespace hyrise {
 

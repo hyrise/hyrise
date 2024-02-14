@@ -266,13 +266,13 @@ EncodingConfig CLIConfigParser::parse_encoding_config(const std::string& encodin
 
 bool CLIConfigParser::print_help_if_requested(const cxxopts::Options& options,
                                               const cxxopts::ParseResult& parse_result) {
-  if (!parse_result.count("help") && !parse_result.count("full_help")) {
+  if (parse_result.count("help") == 0 && parse_result.count("full_help") == 0) {
     return false;
   }
 
   std::cout << options.help() << '\n';
 
-  if (parse_result.count("full_help")) {
+  if (parse_result.count("full_help") > 0) {
     std::cout << EncodingConfig::description << '\n';
   } else {
     std::cout << "Use --full_help for more configuration options\n\n";

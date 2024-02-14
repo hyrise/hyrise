@@ -71,10 +71,10 @@ class FixedString {
   friend std::ostream& operator<<(std::ostream& stream, const FixedString& obj);
 
   // Support swappable concept needed for sorting values. See: http://en.cppreference.com/w/cpp/concept/Swappable
-  friend void swap(FixedString lhs, FixedString rhs);
+  friend void swap(FixedString lhs, FixedString rhs) noexcept;
 
   // Swap two FixedStrings by exchanging the underlying memory's content
-  void swap(FixedString& other);
+  void swap(FixedString& other) noexcept;
 
  protected:
   char* const _mem;

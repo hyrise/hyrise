@@ -2,10 +2,6 @@
 
 #include <cstddef>
 #include <iterator>
-#include <limits>
-#include <memory>
-#include <sstream>
-#include <string>
 #include <vector>
 
 #include "fixed_string.hpp"

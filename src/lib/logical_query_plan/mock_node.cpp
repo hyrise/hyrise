@@ -37,7 +37,7 @@ std::shared_ptr<LQPColumnExpression> MockNode::get_column(const std::string& col
     }
   }
 
-  Fail("Couldn't find column named '" + column_name + "' in MockNode");
+  Fail("Couldn't find column named '" + column_name + "' in MockNode.");
 }
 
 const MockNode::ColumnDefinitions& MockNode::column_definitions() const {
@@ -70,15 +70,15 @@ std::vector<std::shared_ptr<AbstractExpression>> MockNode::output_expressions() 
 }
 
 bool MockNode::is_column_nullable(const ColumnID column_id) const {
-  Assert(column_id < _column_definitions.size(), "ColumnID out of range");
+  Assert(column_id < _column_definitions.size(), "ColumnID out of range.");
   return false;
 }
 
 void MockNode::set_pruned_column_ids(const std::vector<ColumnID>& pruned_column_ids) {
   DebugAssert(std::is_sorted(pruned_column_ids.begin(), pruned_column_ids.end()),
-              "Expected sorted vector of ColumnIDs");
+              "Expected sorted vector of ColumnIDs.");
   DebugAssert(std::adjacent_find(pruned_column_ids.begin(), pruned_column_ids.end()) == pruned_column_ids.end(),
-              "Expected vector of unique ColumnIDs");
+              "Expected vector of unique ColumnIDs.");
 
   _pruned_column_ids = pruned_column_ids;
 
@@ -91,8 +91,8 @@ const std::vector<ColumnID>& MockNode::pruned_column_ids() const {
 }
 
 std::string MockNode::description(const DescriptionMode /*mode*/) const {
-  std::ostringstream stream;
-  stream << "[MockNode '"s << name.value_or("Unnamed") << "'] Columns:";
+  auto stream = std::ostringstream{};
+  stream << "[MockNode '" << name.value_or("Unnamed") << "'] Columns:";
 
   auto column_id = ColumnID{0};
   for (const auto& column : _column_definitions) {

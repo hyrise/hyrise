@@ -187,7 +187,7 @@ int Console::read() {
 
   // Prompt user for input
   buffer = readline(_prompt.c_str());
-  if (!buffer) {
+  if (buffer == nullptr) {
     return ReturnCode::Quit;
   }
 
@@ -411,7 +411,7 @@ void Console::out(const std::shared_ptr<const Table>& table, const PrintFlags fl
   stream.str(stream_backup);
 
   static bool pagination_disabled = false;
-  if (!fits_on_one_page && !std::getenv("TERM") && !pagination_disabled) {  // NOLINT(concurrency-mt-unsafe)
+  if (!fits_on_one_page && std::getenv("TERM") == nullptr && !pagination_disabled) {  // NOLINT(concurrency-mt-unsafe)
     out("Your TERM environment variable is not set - most likely because you are running the console from an IDE. "
         "Pagination is disabled.\n\n");
     pagination_disabled = true;
@@ -732,7 +732,7 @@ int Console::_visualize(const std::string& input) {
    * "visualize" supports three dimensions of options:
    *    - "noexec"; or implicit "exec", the execution of the specified query
    *    - "lqp", "unoptlqp", "joins"; or implicit "pqp"
-   *    - a sql query can either be specified or not. If it isn't, the last previously executed query is visualized
+   *    - A sql query can either be specified or not. If it is not, the previously executed query is visualized.
    */
 
   auto input_words = std::vector<std::string>{};
@@ -848,7 +848,7 @@ int Console::_visualize(const std::string& input) {
     }
   } catch (const InvalidInputException& exception) {
     out(std::string(exception.what()) + '\n');
-    return false;
+    return 0;
   }
 
   // NOLINTBEGIN(concurrency-mt-unsafe) - system() is not thread-safe, but it's not used concurrently here.

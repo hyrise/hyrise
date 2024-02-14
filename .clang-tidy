@@ -4,7 +4,6 @@ Checks: '
          -*braces-around-statements,
          -google-build-using-namespace,
          -clang-analyzer-security.insecureAPI.rand,
-         -readability-implicit-bool-conversion,
          -cppcoreguidelines-pro-type-reinterpret-cast,
          -modernize-pass-by-value,
          -cppcoreguidelines-pro-bounds-constant-array-index,
@@ -48,10 +47,9 @@ Checks: '
 WarningsAsErrors: '*'
 
 # Explanation of disabled checks:
-#   - *-default-arguments*                                      We do use default arguments (and like them)
-#   - google-build-using-namespace                              We use `using namespace` a lot (see anonymous namespaces and expression_functional)
-#   - clang-analyzer-security.insecureAPI.rand                  We don't care about cryptographically unsafe rand() calls
-#   - readability-implicit-bool-conversion                      Doesn't like if(map.count(foo))
+#   - *-default-arguments*                                      We do use default arguments (and like them).
+#   - google-build-using-namespace                              We use `using namespace` a lot (see anonymous namespaces and expression_functional).
+#   - clang-analyzer-security.insecureAPI.rand                  We don't care about cryptographically unsafe rand() calls.
 #   - cppcoreguidelines-pro-type-reinterpret-cast               We use reinterpret_cast
 #   - modernize-pass-by-value                                   We don't trust people to properly use std::move
 #   - cppcoreguidelines-pro-bounds-constant-array-index         "Do not use array subscript when the index is not an integer constant expression"?!
@@ -71,7 +69,7 @@ WarningsAsErrors: '*'
 #   - cert-msc32-c, -cert-msc51-cpp                             Ok, so our generated tables are not cryptographically safe
 #   - fuchsia-statically-constructed-objects                    We have too many static objects
 #   - bugprone-exception-escape                                 We throw exceptions in many places (even destructors) and are completely fine with std::terminate
-#   - *-uppercase-literal-suffix                                Don't really care if it's 1.0f or 1.0F
+#   - *-uppercase-literal-suffix                                We do not really care if it is 1.0f or 1.0F.
 #   - cert-dcl16-c                                               (same)
 #   - *-magic-numbers                                           Too many false positives
 #   - *-non-private-member-variables-in-classes                 We like making things public
@@ -134,4 +132,4 @@ CheckOptions:
   - { key: readability-identifier-length.IgnoredVariableNames, value: "^(it|fd|op)$" }
 
   # Boost makes wide use of umbrella headers which clang-tidy's include cleaner does not yet handle well.
-  - { key: misc-include-cleaner.IgnoreHeaders, value: "boost/.*\.hpp" }
+  - { key: misc-include-cleaner.IgnoreHeaders, value: "boost/.*;" }

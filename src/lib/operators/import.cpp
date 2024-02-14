@@ -1,5 +1,6 @@
 #include "import.hpp"
 
+#include <fstream>
 #include <memory>
 #include <optional>
 #include <string>
@@ -8,11 +9,11 @@
 #include "all_type_variant.hpp"
 #include "hyrise.hpp"
 #include "import_export/binary/binary_parser.hpp"
+#include "import_export/csv/csv_meta.hpp"
 #include "import_export/csv/csv_parser.hpp"
 #include "import_export/file_type.hpp"
 #include "operators/abstract_operator.hpp"
 #include "operators/abstract_read_only_operator.hpp"
-#include "operators/abstract_read_write_operator.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/load_table.hpp"
