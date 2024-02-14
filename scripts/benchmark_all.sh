@@ -12,13 +12,18 @@ then
 fi
 
 benchmarks='hyriseBenchmarkTPCH hyriseBenchmarkTPCDS hyriseBenchmarkTPCC hyriseBenchmarkJoinOrder hyriseBenchmarkStarSchema'
-# Set to 1 because even a single warmup run of a query makes the observed runtimes much more stable. See discussion in #2405 for some preliminary reasoning.
+# Set to 1 because even a single warmup run of a query makes the observed runtimes much more stable. See discussion in
+# #2405 for some preliminary reasoning.
 warmup_seconds=1
 mt_shuffled_runtime=1200
 runs=100
 mt_ordered_runs=30
 
-# Setting the number of clients used for the multi-threaded scenario to the machine's physical core count. This only works for macOS and Linux.
+# Setting the number of clients used for the multi-threaded scenario to the machine's physical core count. This only
+# works for macOS and Linux. We do not use hyper-threads because the benchmark results are more unstable on them. We
+# assume that the physical cores have lower IDs than the hyper-threads. Furthermore, we restrict the benchmarks to run
+# on one NUMA node, even if the script is not orchestrated via numactl, as Hyrise is not optimized for multiple nodes.
+# To obtain the number of cores per node, we just count the physical cores for the node with ID 0.
 output="$(uname -s)"
 case "${output}" in
     Linux*)     num_phy_cores="$(lscpu -p | egrep -v '^#' | grep '^[0-9]*,[0-9]*,0,0' | sort -u -t, -k 2,4 | wc -l)";;
@@ -113,7 +118,7 @@ do
   touch "benchmark_all_results/complete_${commit}"
 done
 
-# Print the results
+# Print the results.
 
 echo ""
 echo "==========="
@@ -146,7 +151,7 @@ else
 fi
 echo "</details>"
 
-# Print information about the time spent building the commits
+# Print information about the time spent building the commits.
 echo ""
 echo "**Commit Info and Build Time**"
 echo "| commit | date | message | build time |"
@@ -156,13 +161,13 @@ xargs < "${build_folder}/benchmark_all_results/build_time_${start_commit}.txt" |
 echo -n "| $(git show -s --date=format:'%d.%m.%Y %H:%M' --format='%h | %cd | %s' "${end_commit}") | "
 xargs < "${build_folder}/benchmark_all_results/build_time_${end_commit}.txt" | awk '{printf $0 "|\n"}'
 
-# Print information for each benchmark
+# Print information for each benchmark.
 for benchmark in $benchmarks
 do
   case "${benchmark}" in
-    "hyriseBenchmarkTPCC"*)  configs="st mt";;
-    "hyriseBenchmarkTPCH"*)  configs="st st_s01 mt_ordered mt";;
-    *)                       configs="st mt_ordered mt";;
+    "hyriseBenchmarkTPCC")  configs="st mt";;
+    "hyriseBenchmarkTPCH")  configs="st st_s01 mt_ordered mt";;
+    *)                      configs="st mt_ordered mt";;
   esac
 
   for config in $configs
