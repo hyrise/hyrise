@@ -530,7 +530,7 @@ TEST_F(StressTest, ConcurrentInsertsSetChunksImmutable) {
 TEST_F(StressTest, OperatorRegistration) {
   const auto repetition_count = uint32_t{100};
   const auto consumer_count = uint32_t{50};
-  const auto sleep_time = std::chrono::milliseconds{10};
+  const auto sleep_time = std::chrono::milliseconds{5};
 
   const auto dummy_table = Table::create_dummy_table({{"a", DataType::Int, false}});
 
@@ -539,12 +539,16 @@ TEST_F(StressTest, OperatorRegistration) {
     table_wrapper->execute();
     auto threads = std::vector<std::thread>{};
     threads.reserve(consumer_count);
+    auto waiting_consumer_count = std::atomic_uint32_t{0};
     auto start_execution = std::atomic_bool{false};
 
-    // Generate some consumers that try to deregister concurrently once they are allowed.
+    // Generate consumers that try to deregister concurrently once they are executed.
     for (auto consumer_id = uint32_t{0}; consumer_id < consumer_count; ++consumer_id) {
       threads.emplace_back([&]() {
         const auto union_all = std::make_shared<UnionAll>(table_wrapper, table_wrapper);
+
+        // Mark that the consumer is set up.
+        ++waiting_consumer_count;
 
         // Wait for the signal to execute the operator.
         while (!start_execution) {
@@ -555,10 +559,12 @@ TEST_F(StressTest, OperatorRegistration) {
       });
     }
 
-    // Give the consumers some time for construction.
-    std::this_thread::sleep_for(sleep_time);
+    // Wait until the consumers are constructed.
+    while (waiting_consumer_count < consumer_count) {
+      std::this_thread::sleep_for(sleep_time);
+    }
 
-    // 100 consumers because UnionAll has the input on both sides.
+    // 100 consumers because the UnionAll operators have the input on both sides.
     EXPECT_EQ(table_wrapper->consumer_count(), 100);
 
     start_execution = true;
