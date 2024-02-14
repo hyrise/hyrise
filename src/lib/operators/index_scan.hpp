@@ -20,7 +20,7 @@ class AbstractTask;
 class IndexScan : public AbstractReadOnlyOperator {
  public:
   IndexScan(const std::shared_ptr<const AbstractOperator>& input_operator, const ColumnID indexed_column_id,
-            const PredicateCondition predicate_condition, const AllTypeVariant scan_value);
+            const PredicateCondition predicate_condition, const AllTypeVariant& scan_value);
 
   const std::string& name() const final;
 

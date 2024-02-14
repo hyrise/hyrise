@@ -2,7 +2,6 @@
 
 #include <memory>
 
-#include "storage/chunk.hpp"
 #include "storage/pos_lists/row_id_pos_list.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/split_pos_list_by_chunk_id.hpp"

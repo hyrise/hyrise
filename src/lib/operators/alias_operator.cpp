@@ -15,6 +15,7 @@
 #include "operators/abstract_read_only_operator.hpp"
 #include "storage/chunk.hpp"
 #include "storage/table.hpp"
+#include "storage/table_column_definition.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
