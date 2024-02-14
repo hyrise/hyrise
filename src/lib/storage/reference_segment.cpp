@@ -2,7 +2,6 @@
 
 #include <cstddef>
 #include <memory>
-#include <string>
 
 #include "all_type_variant.hpp"
 #include "storage/abstract_segment.hpp"

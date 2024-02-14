@@ -4,7 +4,6 @@
 #include <map>
 #include <memory>
 #include <optional>
-#include <queue>
 #include <stack>
 #include <unordered_set>
 #include <vector>
@@ -14,7 +13,7 @@
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
-#include "logical_query_plan/union_node.hpp"
+#include "optimizer/join_ordering/join_graph.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 

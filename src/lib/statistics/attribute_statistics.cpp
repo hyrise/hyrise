@@ -7,7 +7,6 @@
 #include "all_type_variant.hpp"
 #include "resolve_type.hpp"
 #include "statistics/statistics_objects/abstract_histogram.hpp"
-#include "statistics/statistics_objects/generic_histogram.hpp"
 #include "statistics/statistics_objects/min_max_filter.hpp"
 #include "statistics/statistics_objects/range_filter.hpp"
 #include "types.hpp"

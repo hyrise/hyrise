@@ -10,8 +10,6 @@
 #include <boost/hana/for_each.hpp>
 #include <boost/hana/tuple.hpp>
 
-#include "utils/assert.hpp"
-
 namespace hyrise {
 
 std::string format_duration(const std::chrono::nanoseconds& total_nanoseconds) {

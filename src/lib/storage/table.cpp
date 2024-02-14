@@ -16,7 +16,6 @@
 #include <vector>
 
 #include "all_type_variant.hpp"
-#include "logical_query_plan/data_dependencies/functional_dependency.hpp"
 #include "resolve_type.hpp"
 #include "statistics/table_statistics.hpp"
 #include "storage/chunk.hpp"
@@ -25,9 +24,9 @@
 #include "storage/constraints/table_order_constraint.hpp"
 #include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
 #include "storage/index/chunk_index_statistics.hpp"
-#include "storage/index/group_key/composite_group_key_index.hpp"
-#include "storage/index/group_key/group_key_index.hpp"
-#include "storage/index/partial_hash/partial_hash_index.hpp"
+#include "storage/index/group_key/composite_group_key_index.hpp"  // IWYU pragma: keep
+#include "storage/index/group_key/group_key_index.hpp"            // IWYU pragma: keep
+#include "storage/index/partial_hash/partial_hash_index.hpp"      // IWYU pragma: keep
 #include "storage/index/table_index_statistics.hpp"
 #include "storage/mvcc_data.hpp"
 #include "storage/reference_segment.hpp"

@@ -207,7 +207,7 @@ std::shared_ptr<Table> SQLiteWrapper::Connection::execute_query(const std::strin
 
   auto result_table = create_hyrise_table_from_result(sqlite_statement, sqlite3_column_count(sqlite_statement));
 
-  if (!sqlite3_stmt_readonly(sqlite_statement)) {
+  if (sqlite3_stmt_readonly(sqlite_statement) == 0) {
     // We need to make sure that we do not call sqlite3_reset below on a modifying statement - otherwise, we would
     // re-execute the modification
     Assert(!result_table, "Modifying statement was expected to return empty table.");

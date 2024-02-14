@@ -25,7 +25,6 @@
 #include "operators/pqp_utils.hpp"
 #include "operators/table_scan.hpp"
 #include "storage/chunk.hpp"
-#include "storage/index/partial_hash/partial_hash_index.hpp"
 #include "storage/table_column_definition.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"

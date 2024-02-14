@@ -1,5 +1,6 @@
 #include "lqp_translator.hpp"
 
+#include <algorithm>
 #include <cstddef>
 #include <memory>
 #include <utility>
@@ -67,7 +68,6 @@
 #include "sort_node.hpp"
 #include "static_table_node.hpp"
 #include "storage/chunk.hpp"
-#include "storage/index/partial_hash/partial_hash_index.hpp"
 #include "stored_table_node.hpp"
 #include "types.hpp"
 #include "union_node.hpp"
@@ -520,7 +520,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_validate_node(
 
 // NOLINTNEXTLINE - while this particular method could be made static, others cannot.
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_window_node(
-    const std::shared_ptr<AbstractLQPNode>& node) const {
+    const std::shared_ptr<AbstractLQPNode>& /* node */) const {
   FailInput("Hyrise does not yet support window functions.");
 }
 

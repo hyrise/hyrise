@@ -8,7 +8,6 @@
 #include "hyrise.hpp"
 #include "operators/abstract_operator.hpp"
 #include "operators/abstract_read_only_operator.hpp"
-#include "operators/abstract_read_write_operator.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
 

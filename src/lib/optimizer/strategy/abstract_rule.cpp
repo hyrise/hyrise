@@ -3,10 +3,9 @@
 #include <algorithm>
 #include <memory>
 
-#include "expression/expression_utils.hpp"
-#include "expression/lqp_subquery_expression.hpp"
-#include "logical_query_plan/abstract_lqp_node.hpp"
+#include "expression/lqp_subquery_expression.hpp"  // IWYU pragma: keep
 #include "logical_query_plan/logical_plan_root_node.hpp"
+#include "logical_query_plan/lqp_utils.hpp"
 
 namespace hyrise {
 

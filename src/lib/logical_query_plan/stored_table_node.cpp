@@ -17,7 +17,7 @@
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/data_dependencies/unique_column_combination.hpp"
 #include "lqp_utils.hpp"
-#include "statistics/table_statistics.hpp"
+#include "storage/index/chunk_index_statistics.hpp"
 #include "storage/index/table_index_statistics.hpp"
 #include "storage/storage_manager.hpp"
 #include "types.hpp"

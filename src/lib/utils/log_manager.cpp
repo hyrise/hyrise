@@ -1,10 +1,9 @@
 #include "log_manager.hpp"
 
+#include <oneapi/tbb/concurrent_vector.h>  // NOLINT(build/include_order): wronlgy identified as a C header.
+
 #include <chrono>
 #include <string>
-
-// NOLINTNEXTLINE(build/include_order): wronlgy identified as a C header.
-#include <tbb/concurrent_vector.h>  // IWYU pragma: keep
 
 namespace hyrise {
 

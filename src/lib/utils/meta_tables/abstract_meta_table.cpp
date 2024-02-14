@@ -18,7 +18,7 @@ AbstractMetaTable::AbstractMetaTable(const TableColumnDefinitions& column_defini
 std::shared_ptr<Table> AbstractMetaTable::_generate() const {
   auto table = _on_generate();
 
-  if (table->chunk_count()) {
+  if (table->chunk_count() != 0) {
     table->last_chunk()->finalize();
   }
 

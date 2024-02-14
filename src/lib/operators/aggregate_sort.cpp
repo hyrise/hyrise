@@ -17,6 +17,7 @@
 #include "expression/abstract_expression.hpp"
 #include "expression/pqp_column_expression.hpp"
 #include "expression/window_function_expression.hpp"
+#include "operators/abstract_aggregate_operator.hpp"
 #include "operators/abstract_operator.hpp"
 #include "operators/sort.hpp"
 #include "resolve_type.hpp"

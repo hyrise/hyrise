@@ -9,7 +9,9 @@
 #include <vector>
 
 #include "all_type_variant.hpp"
+#include "operators/abstract_join_operator.hpp"
 #include "operators/abstract_operator.hpp"
+#include "operators/multi_predicate_join/multi_predicate_join_evaluator.hpp"
 #include "operators/operator_join_predicate.hpp"
 #include "resolve_type.hpp"
 #include "storage/chunk.hpp"

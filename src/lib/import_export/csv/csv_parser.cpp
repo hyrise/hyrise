@@ -2,6 +2,8 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <cstdio>
+#include <exception>
 #include <fstream>
 #include <ios>
 #include <list>

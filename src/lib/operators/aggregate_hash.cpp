@@ -22,6 +22,7 @@
 #include "expression/pqp_column_expression.hpp"
 #include "expression/window_function_expression.hpp"
 #include "hyrise.hpp"
+#include "operators/abstract_aggregate_operator.hpp"
 #include "operators/abstract_operator.hpp"
 #include "operators/operator_performance_data.hpp"
 #include "resolve_type.hpp"
@@ -1137,8 +1138,8 @@ void AggregateHash::_write_aggregate_output(ColumnID aggregate_index) {
   auto excluded_time = std::chrono::nanoseconds{};
   auto timer = Timer{};
 
-  // retrieve type information from the aggregation traits
-  typename WindowFunctionTraits<ColumnDataType, aggregate_function>::ReturnType aggregate_type;
+  // Retrieve type information from the aggregation traits.
+  using aggregate_type = typename WindowFunctionTraits<ColumnDataType, aggregate_function>::ReturnType;
   auto RESULT_TYPE = WindowFunctionTraits<ColumnDataType, aggregate_function>::RESULT_TYPE;
 
   const auto& aggregate = _aggregates[aggregate_index];
@@ -1176,17 +1177,17 @@ void AggregateHash::_write_aggregate_output(ColumnID aggregate_index) {
   // Write aggregated values into the segment. While write_aggregate_values could track if an actual NULL value was
   // written or not, we rather make the output types consistent independent of the input types. Not sure what the
   // standard says about this.
-  auto values = pmr_vector<decltype(aggregate_type)>{};
+  auto values = pmr_vector<aggregate_type>{};
   auto null_values = pmr_vector<bool>{};
 
   constexpr auto NEEDS_NULL =
       (aggregate_function != WindowFunction::Count && aggregate_function != WindowFunction::CountDistinct);
 
-  write_aggregate_values<ColumnDataType, decltype(aggregate_type), aggregate_function>(values, null_values, results);
+  write_aggregate_values<ColumnDataType, aggregate_type, aggregate_function>(values, null_values, results);
 
   if (_groupby_column_ids.empty() && values.empty()) {
     // If we did not GROUP BY anything and we have no results, we need to add NULL for most aggregates and 0 for count
-    values.push_back(decltype(aggregate_type){});
+    values.push_back(aggregate_type{});
     if (NEEDS_NULL) {
       null_values.push_back(true);
     }
@@ -1197,12 +1198,11 @@ void AggregateHash::_write_aggregate_output(ColumnID aggregate_index) {
   _output_column_definitions[output_column_id] =
       TableColumnDefinition{aggregate->as_column_name(), RESULT_TYPE, NEEDS_NULL};
 
-  auto output_segment = std::shared_ptr<ValueSegment<decltype(aggregate_type)>>{};
+  auto output_segment = std::shared_ptr<ValueSegment<aggregate_type>>{};
   if (!NEEDS_NULL) {
-    output_segment = std::make_shared<ValueSegment<decltype(aggregate_type)>>(std::move(values));
+    output_segment = std::make_shared<ValueSegment<aggregate_type>>(std::move(values));
   } else {
-    output_segment =
-        std::make_shared<ValueSegment<decltype(aggregate_type)>>(std::move(values), std::move(null_values));
+    output_segment = std::make_shared<ValueSegment<aggregate_type>>(std::move(values), std::move(null_values));
   }
   _output_segments[output_column_id] = output_segment;
 

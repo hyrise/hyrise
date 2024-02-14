@@ -6,6 +6,8 @@
 #include <memory>
 #include <ostream>
 
+#include "base_compressed_vector.hpp"
+#include "base_vector_decompressor.hpp"
 #include "bitpacking/bitpacking_compressor.hpp"
 #include "fixed_width_integer/fixed_width_integer_compressor.hpp"
 #include "types.hpp"

@@ -4,7 +4,6 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
-#include <sstream>
 #include <string>
 
 #include "storage/pos_lists/abstract_pos_list.hpp"

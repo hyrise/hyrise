@@ -4,6 +4,8 @@
 #include <vector>
 
 #include "scheduler/abstract_task.hpp"
+#include "scheduler/task_queue.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {

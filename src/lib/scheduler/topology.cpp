@@ -1,20 +1,14 @@
 #include "topology.hpp"
 
-#include <cstddef>
-#include <cstdint>
-#include <ostream>
-
 #if HYRISE_NUMA_SUPPORT
-
 #include <numa.h>
-
 #endif
 
 #include <algorithm>
-#include <iomanip>
-#include <memory>
+#include <cstddef>
+#include <cstdint>
 #include <numeric>
-#include <sstream>
+#include <ostream>
 #include <thread>
 #include <utility>
 #include <vector>
@@ -80,7 +74,7 @@ void Topology::use_fake_numa_topology(uint32_t max_num_workers, uint32_t workers
 }
 
 void Topology::use_fake_numa_topology(const std::vector<uint32_t>& workers_per_node) {
-  _init_fake_numa_topology(std::move(workers_per_node));
+  _init_fake_numa_topology(workers_per_node);
 }
 
 void Topology::_init_default_topology(uint32_t max_num_cores) {
@@ -124,14 +118,14 @@ void Topology::_init_numa_topology(uint32_t max_num_cores) {
       for (auto cpu_id = CpuID{0}; cpu_id < num_configured_cpus; ++cpu_id) {
         const auto cpu_is_part_of_node = numa_bitmask_isbitset(this_node_cpu_bitmask, cpu_id);
         const auto cpu_is_part_of_affinity = numa_bitmask_isbitset(affinity_cpu_bitmask, cpu_id);
-        if (cpu_is_part_of_node && cpu_is_part_of_affinity) {
+        if (cpu_is_part_of_node != 0 && cpu_is_part_of_affinity != 0) {
           if (max_num_cores == 0 || core_count < max_num_cores) {
             cpus.emplace_back(cpu_id);
             ++_num_cpus;
           }
           ++core_count;
         }
-        if (!cpu_is_part_of_affinity) {
+        if (cpu_is_part_of_affinity == 0) {
           _filtered_by_affinity = true;
         }
       }

@@ -14,7 +14,6 @@
 #include "storage/vector_compression/compressed_vector_type.hpp"
 #include "storage/vector_compression/vector_compression.hpp"
 #include "utils/assert.hpp"
-#include "utils/enum_constant.hpp"
 
 namespace hyrise {
 

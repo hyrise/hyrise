@@ -16,7 +16,8 @@
 namespace hyrise {
 
 std::optional<boost::posix_time::ptime> string_to_timestamp(const std::string& timestamp_string) {
-  // We catch parsing exceptions since we return a std::nullopt if the input string is not a valid timestamp.
+  // NOLINTBEGIN(bugprone-empty-catch) - We catch parsing exceptions since we return a std::nullopt if the input string
+  // is not a valid timestamp.
   try {
     if (timestamp_string.size() == 10) {
       // This is a date without time information.
@@ -36,6 +37,7 @@ std::optional<boost::posix_time::ptime> string_to_timestamp(const std::string& t
   } catch (const boost::wrapexcept<boost::bad_lexical_cast>& /* exception */) {
   } catch (const std::out_of_range& /* exception */) {}
   return std::nullopt;
+  // NOLINTEND(bugprone-empty-catch)
 }
 
 boost::gregorian::date date_interval(const boost::gregorian::date& start_date, int64_t offset, DatetimeComponent unit) {

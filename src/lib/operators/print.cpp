@@ -26,6 +26,7 @@
 #include "storage/mvcc_data.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/table.hpp"
+#include "storage/vector_compression/compressed_vector_type.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
@@ -35,11 +36,11 @@ namespace {
 using namespace hyrise;  // NOLINT
 
 bool has_print_mvcc_flag(const PrintFlags flags) {
-  return static_cast<uint32_t>(PrintFlags::Mvcc) & static_cast<uint32_t>(flags);
+  return (static_cast<uint32_t>(PrintFlags::Mvcc) & static_cast<uint32_t>(flags)) != 0;
 }
 
 bool has_print_ignore_chunk_boundaries_flag(const PrintFlags flags) {
-  return static_cast<uint32_t>(PrintFlags::IgnoreChunkBoundaries) & static_cast<uint32_t>(flags);
+  return (static_cast<uint32_t>(PrintFlags::IgnoreChunkBoundaries) & static_cast<uint32_t>(flags)) != 0;
 }
 
 }  // namespace

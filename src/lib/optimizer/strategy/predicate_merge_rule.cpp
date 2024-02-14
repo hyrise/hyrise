@@ -3,15 +3,16 @@
 #include <cstddef>
 #include <map>
 #include <memory>
+#include <queue>
 #include <string>
 #include <vector>
 
 #include "expression/expression_functional.hpp"
-#include "expression/logical_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/union_node.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {
@@ -150,7 +151,7 @@ void PredicateMergeRule::_merge_disjunction(const std::shared_ptr<UnionNode>& un
     _merge_disjunction(parent_union_node);
   }
 
-  if (merged_predicate_node->output_count()) {
+  if (merged_predicate_node->output_count() > 0) {
     // There was no disjunction above that could be merged. But there could be a predicate chain that just became simple
     // so that it can be merged.
     const auto parent_predicate_node =

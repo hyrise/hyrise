@@ -417,7 +417,7 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
     if (list_expression.elements().empty()) {
       // `x IN ()` is false/`x NOT IN ()` is true, even if this is not supported by SQL
       return std::make_shared<ExpressionResult<ExpressionEvaluator::Bool>>(
-          pmr_vector<ExpressionEvaluator::Bool>{in_expression.is_negated()});
+          pmr_vector<ExpressionEvaluator::Bool>{static_cast<ExpressionEvaluator::Bool>(in_expression.is_negated())});
     }
 
     if (left_expression.data_type() == DataType::Null) {
@@ -456,7 +456,7 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
     if (type_compatible_elements.empty()) {
       // `x IN ()` is false/`x NOT IN ()` is true, even if this is not supported by SQL
       return std::make_shared<ExpressionResult<ExpressionEvaluator::Bool>>(
-          pmr_vector<ExpressionEvaluator::Bool>{in_expression.is_negated()});
+          pmr_vector<ExpressionEvaluator::Bool>{static_cast<ExpressionEvaluator::Bool>(in_expression.is_negated())});
     }
 
     // If all elements of the list are simple values (e.g., `IN (1, 2, 3)`), iterate over the column and directly
@@ -750,13 +750,15 @@ ExpressionEvaluator::_evaluate_exists_expression<ExpressionEvaluator::Bool>(cons
   switch (exists_expression.exists_expression_type) {
     case ExistsExpressionType::Exists:
       for (auto chunk_offset = ChunkOffset{0}; chunk_offset < subquery_result_table_count; ++chunk_offset) {
-        result_values[chunk_offset] = subquery_result_tables[chunk_offset]->row_count() > 0;
+        result_values[chunk_offset] =
+            static_cast<ExpressionEvaluator::Bool>(subquery_result_tables[chunk_offset]->row_count() > 0);
       }
       break;
 
     case ExistsExpressionType::NotExists:
       for (auto chunk_offset = ChunkOffset{0}; chunk_offset < subquery_result_table_count; ++chunk_offset) {
-        result_values[chunk_offset] = subquery_result_tables[chunk_offset]->row_count() == 0;
+        result_values[chunk_offset] =
+            static_cast<ExpressionEvaluator::Bool>(subquery_result_tables[chunk_offset]->row_count() == 0);
       }
       break;
   }
