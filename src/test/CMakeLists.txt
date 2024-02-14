@@ -22,6 +22,7 @@ set(
     lib/concurrency/transaction_context_test.cpp
     lib/concurrency/transaction_manager_test.cpp
     lib/cost_estimation/abstract_cost_estimator_test.cpp
+    lib/cost_estimation/cost_estimator_logical_test.cpp
     lib/expression/evaluation/expression_result_test.cpp
     lib/expression/evaluation/like_matcher_test.cpp
     lib/expression/expression_evaluator_to_pos_list_test.cpp
