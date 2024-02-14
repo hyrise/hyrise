@@ -133,3 +133,5 @@ CheckOptions:
   - { key: readability-identifier-length.IgnoredParameterNames, value: "^(it|fd|op)$" }
   - { key: readability-identifier-length.IgnoredVariableNames, value: "^(it|fd|op)$" }
 
+  # Boost makes wide use of umbrella headers which clang-tidy's include cleaner does not yet handle well.
+  - { key: misc-include-cleaner.IgnoreHeaders, value: "boost/.*\.hpp" }

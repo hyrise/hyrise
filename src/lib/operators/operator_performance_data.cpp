@@ -2,6 +2,8 @@
 
 #include <ostream>
 
+#include "types.hpp"
+
 namespace hyrise {
 
 std::ostream& operator<<(std::ostream& stream, const AbstractOperatorPerformanceData& performance_data) {

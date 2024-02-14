@@ -1,7 +1,7 @@
 #include <cstddef>
 #include <cstdlib>
 
-#include <boost/config.hpp>
+#include <boost/config.hpp>  // IWYU pragma: keep
 #include <boost/container/pmr/memory_resource.hpp>
 
 namespace boost::container::pmr {
