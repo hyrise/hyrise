@@ -1,7 +1,18 @@
 #include "test_plugin.hpp"
 
-#include "../benchmarklib/abstract_benchmark_item_runner.hpp"
+#include <cstdint>
+#include <iostream>
+#include <memory>
+#include <optional>
+#include <string>
+#include <vector>
+#include <utility>
+
+#include "hyrise.hpp"
 #include "storage/table.hpp"
+#include "storage/table_column_definition.hpp"
+#include "types.hpp"
+#include "utils/abstract_plugin.hpp"
 
 namespace hyrise {
 

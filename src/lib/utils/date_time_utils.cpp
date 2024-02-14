@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <optional>
+#include <stdexcept>
 #include <string>
 
 #include <boost/date_time/gregorian/gregorian.hpp>  // IWYU pragma: keep

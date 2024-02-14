@@ -1,6 +1,14 @@
 #include "second_test_plugin.hpp"
 
+#include <memory>
+#include <string>
+#include <vector>
+#include <utility>
+
 #include "storage/table.hpp"
+#include "storage/table_column_definition.hpp"
+#include "types.hpp"
+#include "utils/abstract_plugin.hpp"
 
 namespace hyrise {
 
@@ -18,7 +26,7 @@ SecondTestPlugin::provided_user_executable_functions() {
 }
 
 void SecondTestPlugin::a_user_executable_function() const {
-  TableColumnDefinitions column_definitions;
+  auto column_definitions = TableColumnDefinitions{};
   column_definitions.emplace_back("col_A", DataType::Int, false);
   auto table = std::make_shared<Table>(column_definitions, TableType::Data);
 
