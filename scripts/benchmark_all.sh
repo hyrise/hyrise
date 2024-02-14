@@ -25,19 +25,19 @@ runs=50
 # To obtain the number of cores per node, we just count the physical cores for the node with ID 0.
 output="$(uname -s)"
 case "${output}" in
-    Linux*)     num_phy_cores="$(lscpu -p | egrep -v '^#' | grep '^[0-9]*,[0-9]*,0,0' | sort -u -t, -k 2,4 | wc -l)";;
-    Darwin*)    num_phy_cores="$(sysctl -n hw.physicalcpu)";;
-    *)          echo 'Unsupported operating system. Aborting.' && exit 1;;
+  Linux*)   num_phy_cores="$(lscpu -p | egrep -v '^#' | grep '^[0-9]*,[0-9]*,0,0' | sort -u -t, -k 2,4 | wc -l)";;
+  Darwin*)  num_phy_cores="$(sysctl -n hw.physicalcpu)";;
+  *)        echo 'Unsupported operating system. Aborting.' && exit 1;;
 esac
 
-# Retrieve SHA-1 hashes from arguments (e.g., translate "master" into an actual hash)
+# Retrieve SHA-1 hashes from arguments (e.g., translate "master" into an actual hash).
 start_commit_reference=$1
 end_commit_reference=$2
 
 start_commit=$(git rev-parse "$start_commit_reference" | head -n 1)
 end_commit=$(git rev-parse "$end_commit_reference" | head -n 1)
 
-# Check status of repository
+# Check status of repository.
 if [[ $(git status --untracked-files=no --porcelain) ]]
 then
   echo 'Cowardly refusing to execute on a dirty workspace.'
@@ -177,16 +177,16 @@ do
     echo -n "**${benchmark} - "
     if [ "$benchmark" = "hyriseBenchmarkTPCH" ]; then
       case "${config}" in
-        "st") echo -n "single-threaded, SF 10.0" ;;
-        "st_s01") echo -n "single-threaded, SF 0.01" ;;
-        "mt_ordered") echo -n "multi-threaded, ordered, 1 client, ${num_phy_cores} cores, SF 10.0" ;;
-        "mt") echo -n "multi-threaded, shuffled, ${num_phy_cores} clients, ${num_phy_cores} cores, SF 10.0" ;;
+        "st")          echo -n "single-threaded, SF 10.0" ;;
+        "st_s01")      echo -n "single-threaded, SF 0.01" ;;
+        "mt")          echo -n "multi-threaded, shuffled, ${num_phy_cores} clients, ${num_phy_cores} cores, SF 10.0" ;;
+        "mt_ordered")  echo -n "multi-threaded, ordered, 1 client, ${num_phy_cores} cores, SF 10.0" ;;
       esac
     else
       case "${config}" in
-        "st") echo -n "single-threaded" ;;
-        "mt") echo -n "multi-threaded, shuffled, ${num_phy_cores} clients, ${num_phy_cores} cores" ;;
-        "mt_ordered") echo -n "multi-threaded, ordered, 1 client, ${num_phy_cores} cores" ;;
+        "st")          echo -n "single-threaded" ;;
+        "mt")          echo -n "multi-threaded, shuffled, ${num_phy_cores} clients, ${num_phy_cores} cores" ;;
+        "mt_ordered")  echo -n "multi-threaded, ordered, 1 client, ${num_phy_cores} cores" ;;
       esac
     fi
 
