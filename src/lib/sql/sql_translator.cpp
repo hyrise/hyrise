@@ -2376,7 +2376,7 @@ void SQLTranslator::TableSourceState::append(TableSourceState& rhs) {
 
   elements_by_table_name.merge(std::move(rhs.elements_by_table_name));
   elements_in_order.insert(elements_in_order.end(), rhs.elements_in_order.begin(), rhs.elements_in_order.end());
-  sql_identifier_resolver->append(std::move(*rhs.sql_identifier_resolver));
+  sql_identifier_resolver->append(*rhs.sql_identifier_resolver);
 }
 
 }  // namespace hyrise
