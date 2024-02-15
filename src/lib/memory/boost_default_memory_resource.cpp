@@ -10,7 +10,7 @@ namespace boost::container::pmr {
 // implementations, it is fine.
 // NOLINTBEGIN(cppcoreguidelines-no-malloc,cppcoreguidelines-owning-memory,hicpp-no-malloc)
 
-class default_resource_impl : public memory_resource {
+class DefaultResourceImpl : public memory_resource {
  public:
   void* do_allocate(std::size_t bytes, std::size_t /*alignment*/) override {
     return std::malloc(bytes);
@@ -31,7 +31,7 @@ memory_resource* get_default_resource() BOOST_NOEXCEPT {
   // running into races over and over again.
 
   // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables,bugprone-unhandled-exception-at-new)
-  static auto* default_resource_instance = new default_resource_impl();
+  static auto* default_resource_instance = new DefaultResourceImpl();
   return default_resource_instance;
 }
 

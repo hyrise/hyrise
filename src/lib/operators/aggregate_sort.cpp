@@ -803,15 +803,15 @@ void AggregateSort::_create_aggregate_column_definitions(boost::hana::basic_type
 template <typename ColumnType, WindowFunction aggregate_function>
 void AggregateSort::create_aggregate_column_definitions(ColumnID column_index) {
   // retrieve type information from the aggregation traits
-  auto RESULT_TYPE = WindowFunctionTraits<ColumnType, aggregate_function>::RESULT_TYPE;
+  auto result_type = WindowFunctionTraits<ColumnType, aggregate_function>::RESULT_TYPE;
 
   const auto& aggregate = _aggregates[column_index];
   const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->argument());
   const auto input_column_id = pqp_column.column_id;
 
-  if (RESULT_TYPE == DataType::Null) {
+  if (result_type == DataType::Null) {
     // if not specified, it’s the input column’s type
-    RESULT_TYPE = left_input_table()->column_data_type(input_column_id);
+    result_type = left_input_table()->column_data_type(input_column_id);
   }
 
   const auto nullable =
@@ -820,6 +820,6 @@ void AggregateSort::create_aggregate_column_definitions(ColumnID column_index) {
       (aggregate_function == WindowFunction::Any && left_input_table()->column_is_nullable(input_column_id));
   const auto column_name =
       aggregate->window_function == WindowFunction::Any ? pqp_column.as_column_name() : aggregate->as_column_name();
-  _output_column_definitions.emplace_back(column_name, RESULT_TYPE, nullable);
+  _output_column_definitions.emplace_back(column_name, result_type, nullable);
 }
 }  // namespace hyrise

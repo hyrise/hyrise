@@ -33,9 +33,10 @@ bool AbstractTPCCProcedure::execute() {
   return success;
 }
 
+// NOLINTNEXTLINE(cert-oop54-cpp)
 AbstractTPCCProcedure& AbstractTPCCProcedure::operator=(const AbstractTPCCProcedure& other) {
   DebugAssert(&_sql_executor == &other._sql_executor,
-              "Can only assign AbstractTPCCProcedure if the sql_executors are the same");
+              "Can only assign AbstractTPCCProcedure if the sql_executors are the same.");
   // Doesn't assign anything as the only member _sql_executor is already the same.
   return *this;
 }

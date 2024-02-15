@@ -25,8 +25,8 @@
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/trim.hpp>
 #include <boost/lexical_cast.hpp>
-#include <readline/history.h>
-#include <readline/readline.h>
+#include <readline/history.h>   // NOLINT(build/include_order): cpplint considers readline headers as C system headers.
+#include <readline/readline.h>  // NOLINT(build/include_order)
 
 #include "magic_enum.hpp"
 #include "SQLParser.h"
@@ -204,7 +204,7 @@ int Console::read() {
   }
 
   // Free buffer, since readline() allocates new string every time.
-  free(buffer);  // NOLINT(cppcoreguidelines-no-malloc,hicpp-no-malloc)
+  free(buffer);  // NOLINT(cppcoreguidelines-no-malloc,hicpp-no-malloc,cppcoreguidelines-owning-memory)
 
   return _eval(input);
 }

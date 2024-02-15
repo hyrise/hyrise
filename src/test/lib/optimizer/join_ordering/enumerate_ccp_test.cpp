@@ -9,9 +9,9 @@ namespace {
 using namespace hyrise;  // NOLINT
 
 bool equals(const std::pair<boost::dynamic_bitset<>, boost::dynamic_bitset<>>& lhs,
-            const std::pair<unsigned long, unsigned long>& rhs) {
+            const std::pair<unsigned long, unsigned long>& rhs) {  // NOLINT(runtime/int): cpplint does not like unsigned long.
   Assert(lhs.first.size() == lhs.second.size() && lhs.first.size() <= sizeof(unsigned long) * 8,  // NOLINT
-         "Bitset has too many bits for comparison");
+         "Bitset has too many bits for comparison.");
   return lhs.first.to_ulong() == rhs.first && lhs.second.to_ulong() == rhs.second;
 }
 }  // namespace
