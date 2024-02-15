@@ -1,6 +1,6 @@
 #include "fixed_string.hpp"
 
-#include <string.h>  // IWYU pragma: keep
+#include <string.h>  // NOLINT(hicpp-deprecated-headers,modernize-deprecated-headers): for strnlen
 
 #include <algorithm>
 #include <cstddef>
