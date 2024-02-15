@@ -33,7 +33,6 @@ bool AbstractTPCCProcedure::execute() {
   return success;
 }
 
-// NOLINTNEXTLINE - we know that this is not a proper assignment
 AbstractTPCCProcedure& AbstractTPCCProcedure::operator=(const AbstractTPCCProcedure& other) {
   DebugAssert(&_sql_executor == &other._sql_executor,
               "Can only assign AbstractTPCCProcedure if the sql_executors are the same");

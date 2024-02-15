@@ -12,7 +12,6 @@
 
 #include <boost/algorithm/string/trim.hpp>
 
-#include "sql/SQLStatement.h"
 #include "SQLParser.h"
 #include "SQLParserResult.h"
 

@@ -115,7 +115,6 @@ void ColumnBetweenTableScanImpl::_scan_dictionary_segment(
   /**
    * Early out: All entries (possibly except NULLs) match
    */
-  // NOLINTNEXTLINE - cpplint is drunk
   if (lower_bound_value_id == ValueID{0} && upper_bound_value_id == INVALID_VALUE_ID) {
     if (_column_is_nullable) {
       // We still have to check for NULLs

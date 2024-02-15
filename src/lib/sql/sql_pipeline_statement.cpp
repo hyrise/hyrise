@@ -10,8 +10,6 @@
 
 #include <boost/algorithm/string.hpp>
 
-#include "sql/SQLStatement.h"
-#include "sql/TransactionStatement.h"
 #include "SQLParser.h"
 #include "SQLParserResult.h"
 

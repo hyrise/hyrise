@@ -213,7 +213,7 @@ struct AggregateContext : public AggregateResultContext<ColumnDataType, aggregat
 
     // Unused if AggregateKey == EmptyAggregateKey, but we initialize it anyway to reduce the number of diverging code
     // paths.
-    // NOLINTNEXTLINE(clang-analyzer-core.CallAndMessage) - false warning: called C++ object (result_ids) is null
+    // NOLINTNEXTLINE(clang-analyzer-core.CallAndMessage): false warning: called C++ object (result_ids) is null.
     result_ids = std::make_unique<AggregateResultIdMap<AggregateKey>>(allocator);
   }
 

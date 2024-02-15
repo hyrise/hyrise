@@ -81,9 +81,9 @@ std::shared_ptr<AbstractLQPNode> JoinOrderingRule::_perform_join_ordering_recurs
     // a join graph with only one vertex is no actual join and needs no ordering
     result_lqp = lqp;
   } else if (join_graph->vertices.size() < 9) {
-    result_lqp = DpCcp{}(*join_graph, caching_cost_estimator);  // NOLINT - doesn't like `{}()`
+    result_lqp = DpCcp{}(*join_graph, caching_cost_estimator);
   } else {
-    result_lqp = GreedyOperatorOrdering{}(*join_graph, caching_cost_estimator);  // NOLINT - doesn't like `{}()`
+    result_lqp = GreedyOperatorOrdering{}(*join_graph, caching_cost_estimator);
   }
 
   for (const auto& vertex : join_graph->vertices) {

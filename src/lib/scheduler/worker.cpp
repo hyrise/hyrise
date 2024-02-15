@@ -29,7 +29,7 @@ using namespace hyrise;  // NOLINT(build/namespaces)
  * On worker threads, this references the worker running on this thread, on all other threads, this is empty.
  * Uses a weak_ptr, because otherwise the ref-count of it would not reach zero within the main() scope of the program.
  */
-thread_local std::weak_ptr<Worker> this_thread_worker;  // NOLINT (clang-tidy wants this const)
+thread_local std::weak_ptr<Worker> this_thread_worker;
 
 }  // namespace
 
@@ -231,7 +231,7 @@ void Worker::_wait_for_tasks(const std::vector<std::shared_ptr<AbstractTask>>& t
 
 void Worker::_set_affinity() {
 #if HYRISE_NUMA_SUPPORT
-  auto cpuset = cpu_set_t{};  // NOLINT(misc-include-cleaner) - cpu_set_t of sched.h is not recognized.
+  auto cpuset = cpu_set_t{};  // NOLINT(misc-include-cleaner): cpu_set_t is defined by another include of sched.h.
   CPU_ZERO(&cpuset);
   CPU_SET(_cpu_id, &cpuset);
   const auto return_code = pthread_setaffinity_np(pthread_self(), sizeof(cpuset), &cpuset);

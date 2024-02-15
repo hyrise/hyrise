@@ -173,7 +173,6 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_by_node_type(
   }
 }
 
-// NOLINTNEXTLINE - while this particular method could be made static, others cannot.
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_stored_table_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto stored_table_node = std::dynamic_pointer_cast<StoredTableNode>(node);

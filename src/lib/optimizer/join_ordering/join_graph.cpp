@@ -44,7 +44,7 @@ void build_all_in_lqp_impl(const std::shared_ptr<AbstractLQPNode>& lqp, std::vec
 namespace hyrise {
 
 std::optional<JoinGraph> JoinGraph::build_from_lqp(const std::shared_ptr<AbstractLQPNode>& lqp) {
-  return JoinGraphBuilder{}(lqp);  // NOLINT - doesn't like {} followed by ()
+  return JoinGraphBuilder{}(lqp);
 }
 
 std::vector<JoinGraph> JoinGraph::build_all_in_lqp(const std::shared_ptr<AbstractLQPNode>& lqp) {

@@ -36,7 +36,6 @@ Checks: '
          -abseil-*,
          -readability-avoid-const-params-in-decls,
          -readability-function-cognitive-complexity,
-         -readability-identifier-naming,
          -readability-use-anyofallof,
          -misc-no-recursion,
          -bugprone-easily-swappable-parameters,
@@ -82,8 +81,6 @@ WarningsAsErrors: '*'
 #   - readability-avoid-const-params-in-decls                   Even though they might not have an effect, we prefer declarations to mirror implementations.
 #   - readability-function-cognitive-complexity                 When appropriate, long functions with a sequential data flow (which is sometimes easier to read) are fine. In many
 #                                                                places, the rule catches functions where the code could be improved, but will likely not be due to a lack of time.
-#   - readability-identifier-naming                             Error spamming on non-Hyrise code. LLVM Bug. TODO(anyone): test renabling with newer LLVM versions which fixes
-#                                                                https://github.com/llvm/llvm-project/issues/46097
 #   - readability-use-anyofallof                                We prefer `for (auto item : items)` over `std::ranges::all_of()` with a lambda.
 #   - misc-no-recursion                                         Ignore general recommendation to avoid recursion, which we commonly use when working with query plans.
 #   - bugprone-easily-swappable-parameters                      Ignore issues with swappable parameters as we found them to be of no help.
@@ -128,11 +125,11 @@ CheckOptions:
   - { key: readability-identifier-naming.VariableCase, value: lower_case }
 
   # Iff(!) the context is clear, 'it' for iterator, 'op' for operator, or 'fd' for functional dependency are fine.
-  - { key: readability-identifier-length.IgnoredParameterNames, value: "^(it|fd|op)$" }
-  - { key: readability-identifier-length.IgnoredVariableNames, value: "^(it|fd|op)$" }
+  - { key: readability-identifier-length.IgnoredParameterNames, value: '^(it|fd|op)$' }
+  - { key: readability-identifier-length.IgnoredVariableNames, value: '^(it|fd|op)$' }
 
-  # Boost makes wide use of umbrella headers which clang-tidy's include cleaner does not yet handle well.
-  - { key: misc-include-cleaner.IgnoreHeaders, value: "boost/.*;" }
+  # Boost and SQLParser make wide use of umbrella headers which clang-tidy's include cleaner does not (yet) handle well.
+  - { key: misc-include-cleaner.IgnoreHeaders, value: 'boost/.*;sql/.*\.h' }
 
   # We allow checking `if (var)` without a bool conversion in case var is of type pointer or std::optional.
   - { key: readability-implicit-bool-conversion.AllowPointerConditions, value: true }

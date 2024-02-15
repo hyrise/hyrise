@@ -92,7 +92,7 @@ sigjmp_buf jmp_env;  // NOLINT(cppcoreguidelines-avoid-non-const-global-variable
 // Returns a string containing a timestamp of the current date and time
 std::string current_timestamp() {
   auto time = std::time(nullptr);
-  const auto local_time = *std::localtime(&time);  // NOLINT(concurrency-mt-unsafe) - not called concurrently
+  const auto local_time = *std::localtime(&time);  // NOLINT(concurrency-mt-unsafe): not called concurrently
 
   auto oss = std::ostringstream{};
   oss << std::put_time(&local_time, "%Y-%m-%d %H:%M:%S");
@@ -206,7 +206,7 @@ int Console::read() {
   }
 
   // Free buffer, since readline() allocates new string every time
-  free(buffer);  // NOLINT (legacy API)
+  free(buffer);
 
   return _eval(input);
 }
@@ -429,7 +429,7 @@ void Console::out(const std::shared_ptr<const Table>& table, const PrintFlags fl
 
 // Command functions
 
-// NOLINTNEXTLINE - while this particular method could be made static, others cannot.
+// NOLINTNEXTLINE: while this particular method could be made static, others cannot.
 int Console::_exit(const std::string& /*args*/) {
   return ReturnCode::Quit;
 }
@@ -851,7 +851,7 @@ int Console::_visualize(const std::string& input) {
     return 0;
   }
 
-  // NOLINTBEGIN(concurrency-mt-unsafe) - system() is not thread-safe, but it's not used concurrently here.
+  // NOLINTBEGIN(concurrency-mt-unsafe): system() is not thread-safe, but it's not used concurrently here.
   auto scripts_dir = std::string{"./scripts/"};
   auto ret = system((scripts_dir + "planviz/is_iterm2.sh 2>/dev/null").c_str());
   if (ret != 0) {
@@ -1079,7 +1079,7 @@ char* Console::_command_generator(const char* text, int state, const std::vector
   for (; it != commands.end(); ++it) {
     const auto& command = *it;
     if (command.find(text) != std::string::npos) {
-      auto completion = new char[command.size()];  // NOLINT (legacy API)
+      auto completion = new char[command.size()];
       // NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg,hicpp-vararg)
       static_cast<void>(std::snprintf(completion, command.size() + 1, "%s", command.c_str()));
       return completion;

@@ -16,7 +16,7 @@
 namespace hyrise {
 
 std::optional<boost::posix_time::ptime> string_to_timestamp(const std::string& timestamp_string) {
-  // NOLINTBEGIN(bugprone-empty-catch) - We catch parsing exceptions since we return a std::nullopt if the input string
+  // NOLINTBEGIN(bugprone-empty-catch): We catch parsing exceptions since we return a std::nullopt if the input string
   // is not a valid timestamp.
   try {
     if (timestamp_string.size() == 10) {

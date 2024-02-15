@@ -16,22 +16,6 @@
 #include <boost/variant/get.hpp>
 
 #include "magic_enum.hpp"
-// TODO(Martin): can we use umbrella sql/statements.h somehow?
-#include "sql/ColumnType.h"
-#include "sql/CreateStatement.h"
-#include "sql/DeleteStatement.h"
-#include "sql/DropStatement.h"
-#include "sql/ExecuteStatement.h"
-#include "sql/ExportStatement.h"
-#include "sql/Expr.h"
-#include "sql/ImportStatement.h"
-#include "sql/InsertStatement.h"
-#include "sql/PrepareStatement.h"
-#include "sql/SelectStatement.h"
-#include "sql/ShowStatement.h"
-#include "sql/SQLStatement.h"
-#include "sql/Table.h"
-#include "sql/UpdateStatement.h"
 #include "SQLParser.h"
 #include "SQLParserResult.h"
 
@@ -1513,7 +1497,6 @@ void SQLTranslator::_translate_limit(const hsql::LimitDescription& limit) {
   _current_lqp = LimitNode::make(num_rows_expression, _current_lqp);
 }
 
-// NOLINTNEXTLINE - while this particular method could be made static, others cannot.
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_show(const hsql::ShowStatement& show_statement) {
   _cacheable = false;
 
@@ -1717,7 +1700,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hs
   return CreateTableNode::make(create_statement.tableName, create_statement.ifNotExists, input_node);
 }
 
-// NOLINTNEXTLINE - while this particular method could be made static, others cannot.
+// NOLINTNEXTLINE: while this particular method could be made static, others cannot.
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_drop(const hsql::DropStatement& drop_statement) {
   switch (drop_statement.type) {
     case hsql::DropType::kDropView:
@@ -1769,7 +1752,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_execute(const hsql::E
   return prepared_plan->instantiate(parameters);
 }
 
-// NOLINTNEXTLINE - while this particular method could be made static, others cannot.
+// NOLINTNEXTLINE: while this particular method could be made static, others cannot.
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_import(const hsql::ImportStatement& import_statement) {
   // Querying tables that are freshly loaded is not easy as we need meta information, such as column names and data
   // types, to resolve queries and build the query plans. For instance, we need an origin node for column expressions
@@ -1781,7 +1764,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_import(const hsql::Im
                           import_type_to_file_type(import_statement.type));
 }
 
-// NOLINTNEXTLINE - while this particular method could be made static, others cannot.
+// NOLINTNEXTLINE: while this particular method could be made static, others cannot.
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_export(const hsql::ExportStatement& export_statement) {
   auto sql_identifier_resolver = std::make_shared<SQLIdentifierResolver>();
   auto lqp = std::shared_ptr<AbstractLQPNode>{};
