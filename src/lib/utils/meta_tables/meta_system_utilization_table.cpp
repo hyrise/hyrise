@@ -127,8 +127,9 @@ uint64_t MetaSystemUtilizationTable::_get_system_cpu_time() {
 
   const auto active_ticks = user_ticks + user_nice_ticks + kernel_ticks;
 
-  // The amount of time in /proc/stat is measured in units of clock ticks.
-  // sysconf(_SC_CLK_TCK) can be used to convert it to ns.
+  // The amount of time in /proc/stat is measured in units of clock ticks. sysconf(_SC_CLK_TCK) can be used to convert
+  // it to ns.
+  // NOLINTNEXTLINE(misc-include-cleaner): <stdlib.h> only indirectly defines _SC_CLK_TCK via bits/confname.h).
   const auto active_ns = (active_ticks * std::nano::den) / sysconf(_SC_CLK_TCK);
 
   return active_ns;
@@ -163,7 +164,7 @@ uint64_t MetaSystemUtilizationTable::_get_process_cpu_time() {
 #ifdef __linux__
   struct timespec time_spec {};
 
-  const auto ret = clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &time_spec);
+  const auto ret = clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &time_spec);  // NOLINT(misc-include-cleaner)
   Assert(ret == 0, "Failed in clock_gettime.");
 
   const auto active_ns = (time_spec.tv_sec * std::nano::den + time_spec.tv_nsec);
@@ -172,7 +173,7 @@ uint64_t MetaSystemUtilizationTable::_get_process_cpu_time() {
 #endif
 
 #ifdef __APPLE__
-  const auto active_ns = clock_gettime_nsec_np(CLOCK_PROCESS_CPUTIME_ID);
+  const auto active_ns = clock_gettime_nsec_np(CLOCK_PROCESS_CPUTIME_ID);  // NOLINT(misc-include-cleaner)
   Assert(active_ns != 0, "Failed in clock_gettime_nsec_np.");
 
   return active_ns;

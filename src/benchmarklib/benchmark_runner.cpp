@@ -19,12 +19,12 @@
 #include <utility>
 #include <vector>
 
-#include <boost/accumulators/framework/accumulator_set.hpp>
+#include <boost/accumulators/accumulators.hpp>
 #include <boost/accumulators/statistics/mean.hpp>
 #include <boost/accumulators/statistics/stats.hpp>
 #include <boost/algorithm/string/join.hpp>
 #include <boost/range/adaptor/transformed.hpp>
-#include <boost/variant/apply_visitor.hpp>  // IWYU pragma: keep
+#include <boost/variant/apply_visitor.hpp>
 
 #include "cxxopts.hpp"
 #include "magic_enum.hpp"

@@ -2,7 +2,6 @@
 
 #include <pthread.h>
 #include <sched.h>
-#include <struct.h>  // cpu_set_t
 
 #include <algorithm>
 #include <cstdint>
@@ -232,10 +231,10 @@ void Worker::_wait_for_tasks(const std::vector<std::shared_ptr<AbstractTask>>& t
 
 void Worker::_set_affinity() {
 #if HYRISE_NUMA_SUPPORT
-  auto cpuset = cpu_set_t{};
+  auto cpuset = cpu_set_t{};  // NOLINT(misc-include-cleaner) - cpu_set_t of sched.h is not recognized.
   CPU_ZERO(&cpuset);
   CPU_SET(_cpu_id, &cpuset);
-  const auto return_code = pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuset);
+  const auto return_code = pthread_setaffinity_np(pthread_self(), sizeof(cpuset), &cpuset);
   Assert(return_code == 0, "Error calling pthread_setaffinity_np (return code: " + std::to_string(return_code) + ").");
 #endif
 }

@@ -87,7 +87,7 @@ size_t MetaSystemInformationTable::_cpu_count() {
 // Returns the physical memory size
 size_t MetaSystemInformationTable::_ram_size() {
 #ifdef __linux__
-  struct sysinfo memory_info {};
+  struct sysinfo memory_info {};  // NOLINT(misc-include-cleaner) - sysinfo of sys/sysinfo.h is not recognized
 
   const auto ret = sysinfo(&memory_info);
   Assert(ret == 0, "Failed to get sysinfo");

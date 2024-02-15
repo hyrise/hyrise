@@ -1,5 +1,7 @@
 #include "fixed_string.hpp"
 
+#include <string.h>  // IWYU pragma: keep
+
 #include <algorithm>
 #include <cstddef>
 #include <cstring>
