@@ -1,6 +1,5 @@
 #include "index_scan_rule.hpp"
 
-#include <algorithm>
 #include <memory>
 #include <string>
 #include <vector>

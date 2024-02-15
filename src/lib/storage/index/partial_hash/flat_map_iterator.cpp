@@ -8,6 +8,7 @@
 
 #include "all_type_variant.hpp"
 #include "flat_map_iterator_impl.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 

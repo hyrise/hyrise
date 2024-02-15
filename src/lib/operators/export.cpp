@@ -1,7 +1,7 @@
 #include "export.hpp"
 
 #include <algorithm>
-#include <locale>
+#include <cctype>
 #include <memory>
 #include <string>
 #include <unordered_map>

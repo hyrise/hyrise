@@ -1,5 +1,6 @@
 #include "create_sql_parser_error_message.hpp"
 
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <sstream>

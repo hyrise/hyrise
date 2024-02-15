@@ -7,6 +7,9 @@
 #include <memory>
 
 #include "storage/vector_compression/base_compressed_vector.hpp"
+#include "storage/vector_compression/base_vector_compressor.hpp"
+#include "storage/vector_compression/fixed_width_integer/fixed_width_integer_vector.hpp"
+#include "storage/vector_compression/vector_compression.hpp"
 #include "types.hpp"
 
 namespace hyrise {

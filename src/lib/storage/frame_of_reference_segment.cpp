@@ -1,5 +1,6 @@
 #include "frame_of_reference_segment.hpp"
 
+#include <climits>
 #include <cstddef>
 #include <cstdint>
 #include <memory>

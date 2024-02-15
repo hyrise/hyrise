@@ -1,5 +1,6 @@
 #include "mvcc_data.hpp"
 
+#include <atomic>
 #include <cstddef>
 #include <ostream>
 

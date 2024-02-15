@@ -12,6 +12,7 @@
 #include "all_type_variant.hpp"
 #include "resolve_type.hpp"
 #include "storage/chunk.hpp"
+#include "storage/index/partial_hash/partial_hash_index_impl.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 

@@ -1,13 +1,13 @@
 #include "abstract_task.hpp"
 
 #include <algorithm>
+#include <atomic>
 #include <functional>
 #include <memory>
 #include <mutex>
 #include <string>
 #include <vector>
 
-#include "abstract_scheduler.hpp"
 #include "hyrise.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"

@@ -1,11 +1,12 @@
 #include "worker.hpp"
 
 #include <pthread.h>
-#include <sched.h>
-#include <unistd.h>
+#include <sched.h>  // cpu_set_t
 
+#include <algorithm>
 #include <cstdint>
 #include <memory>
+#include <numeric>
 #include <random>
 #include <thread>
 #include <utility>
@@ -16,6 +17,7 @@
 #include "hyrise.hpp"
 #include "shutdown_task.hpp"
 #include "task_queue.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace {
@@ -228,15 +230,11 @@ void Worker::_wait_for_tasks(const std::vector<std::shared_ptr<AbstractTask>>& t
 
 void Worker::_set_affinity() {
 #if HYRISE_NUMA_SUPPORT
-  cpu_set_t cpuset;
+  auto cpuset = cpu_set_t{};
   CPU_ZERO(&cpuset);
   CPU_SET(_cpu_id, &cpuset);
   const auto return_code = pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuset);
-  if (return_code != 0) {
-    // This is not an Assert(), though maybe it should be. Not being able to pin the threads doesn't make the database
-    // unfunctional, but probably slower.
-    std::cerr << "Error calling pthread_setaffinity_np (return code: " << return_code << ").\n";
-  }
+  Assert(return_code == 0, "Error calling pthread_setaffinity_np (return code: " + std::to_string{return_code} + ").");
 #endif
 }
 

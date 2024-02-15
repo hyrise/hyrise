@@ -7,7 +7,6 @@
 #include <vector>
 
 #include "sql_identifier_resolver_proxy.hpp"
-#include "utils/assert.hpp"
 
 using namespace std::string_literals;  // NOLINT
 
@@ -86,7 +85,7 @@ std::vector<std::shared_ptr<AbstractExpression>> SQLIdentifierResolver::resolve_
   return expressions;
 }
 
-void SQLIdentifierResolver::append(SQLIdentifierResolver&& rhs) {
+void SQLIdentifierResolver::append(const SQLIdentifierResolver& rhs) {
   _entries.insert(_entries.end(), rhs._entries.begin(), rhs._entries.end());
 }
 

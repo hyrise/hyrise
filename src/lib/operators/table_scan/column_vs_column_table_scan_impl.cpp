@@ -7,7 +7,6 @@
 
 #include "operators/table_scan/abstract_table_scan_impl.hpp"
 #include "resolve_type.hpp"
-#include "storage/chunk.hpp"
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/pos_lists/row_id_pos_list.hpp"
 #include "storage/reference_segment/reference_segment_iterable.hpp"

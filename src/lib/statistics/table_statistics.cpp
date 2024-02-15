@@ -3,9 +3,7 @@
 #include <algorithm>
 #include <cstddef>
 #include <memory>
-#include <numeric>
 #include <ostream>
-#include <thread>
 #include <utility>
 #include <vector>
 
@@ -15,7 +13,8 @@
 #include "resolve_type.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
-#include "statistics/statistics_objects/abstract_histogram.hpp"
+#include "statistics/statistics_objects/equal_distinct_count_histogram.hpp"
+#include "statistics/statistics_objects/null_value_ratio_statistics.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"

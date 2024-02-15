@@ -13,13 +13,17 @@
 #include "expression/abstract_expression.hpp"
 #include "expression/value_expression.hpp"
 #include "hyrise.hpp"
+#include "logical_query_plan/lqp_translator.hpp"
 #include "operators/abstract_operator.hpp"
 #include "optimizer/optimizer.hpp"
 #include "server/postgres_message_type.hpp"
+#include "server/postgres_protocol_handler.hpp"
 #include "server/server_types.hpp"
+#include "sql/sql_pipeline.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "sql/sql_pipeline_statement.hpp"
 #include "sql/sql_translator.hpp"
+#include "storage/prepared_plan.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {

@@ -14,7 +14,6 @@
 
 #include "abstract_task.hpp"
 #include "hyrise.hpp"
-#include "job_task.hpp"
 #include "shutdown_task.hpp"
 #include "task_queue.hpp"
 #include "types.hpp"

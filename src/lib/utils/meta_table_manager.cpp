@@ -22,6 +22,7 @@
 #include "utils/meta_tables/meta_system_information_table.hpp"
 #include "utils/meta_tables/meta_system_utilization_table.hpp"
 #include "utils/meta_tables/meta_tables_table.hpp"
+#include "utils/performance_warning.hpp"
 
 namespace {
 

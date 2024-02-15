@@ -5,7 +5,6 @@
 #include <limits>
 #include <memory>
 #include <optional>
-#include <string>
 #include <utility>
 
 #include "all_type_variant.hpp"

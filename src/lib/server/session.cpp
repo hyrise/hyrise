@@ -1,6 +1,8 @@
 #include "session.hpp"
 
 #include <cstdint>
+#include <exception>
+#include <iostream>
 #include <memory>
 #include <string>
 #include <tuple>
@@ -8,8 +10,11 @@
 #include "client_disconnect_exception.hpp"
 #include "hyrise.hpp"
 #include "postgres_message_type.hpp"
+#include "postgres_protocol_handler.hpp"
 #include "query_handler.hpp"
 #include "result_serializer.hpp"
+#include "server_types.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {

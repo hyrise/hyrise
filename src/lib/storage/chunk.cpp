@@ -14,6 +14,7 @@
 
 #include "abstract_segment.hpp"
 #include "all_type_variant.hpp"
+#include "base_value_segment.hpp"
 #include "index/abstract_chunk_index.hpp"
 #include "reference_segment.hpp"
 #include "storage/index/chunk_index_type.hpp"

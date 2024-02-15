@@ -1,11 +1,13 @@
 #include "table_key_constraint.hpp"
 
+#include <algorithm>
 #include <cstddef>
 #include <functional>
 #include <set>
 
 #include <boost/container_hash/hash.hpp>
 
+#include "storage/constraints/abstract_table_constraint.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
@@ -23,7 +25,8 @@ const std::set<ColumnID>& TableKeyConstraint::columns() const {
 }
 
 size_t TableKeyConstraint::hash() const {
-  auto hash = boost::hash_value(_key_type);
+  auto hash = size_t{0};
+  boost::hash_combine(hash, _key_type);
   for (const auto& column : _columns) {
     boost::hash_combine(hash, column);
   }

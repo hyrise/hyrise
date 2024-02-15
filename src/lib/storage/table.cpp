@@ -22,7 +22,7 @@
 #include "storage/constraints/foreign_key_constraint.hpp"
 #include "storage/constraints/table_key_constraint.hpp"
 #include "storage/constraints/table_order_constraint.hpp"
-#include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
+#include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"  // IWYU pragma: keep
 #include "storage/index/chunk_index_statistics.hpp"
 #include "storage/index/group_key/composite_group_key_index.hpp"  // IWYU pragma: keep
 #include "storage/index/group_key/group_key_index.hpp"            // IWYU pragma: keep

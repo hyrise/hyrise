@@ -104,28 +104,23 @@ void LQPVisualizer::_build_dataflow(const std::shared_ptr<AbstractLQPNode>& sour
   auto pen_width = 1.0;
   auto row_percentage = 100.0f;
 
-  try {
-    row_count = _cardinality_estimator.estimate_cardinality(source_node);
+  const auto estimated_cardinality = _cardinality_estimator.estimate_cardinality(source_node);
+  if (estimated_cardinality > 0.0) {
+    row_count = estimated_cardinality;
     pen_width = row_count;
-  } catch (...) {
-    // statistics don't exist for this edge
   }
 
   if (source_node->left_input()) {
-    try {
-      float input_count = _cardinality_estimator.estimate_cardinality(source_node->left_input());
+    float input_count = _cardinality_estimator.estimate_cardinality(source_node->left_input());
 
-      // Include right side in cardinality estimation unless it is a semi/anti join
-      const auto join_node = std::dynamic_pointer_cast<JoinNode>(source_node);
-      if (source_node->right_input() &&
-          (!join_node || (join_node->join_mode != JoinMode::Semi && join_node->join_mode != JoinMode::AntiNullAsTrue &&
-                          join_node->join_mode != JoinMode::AntiNullAsFalse))) {
-        input_count *= _cardinality_estimator.estimate_cardinality(source_node->right_input());
-      }
-      row_percentage = 100 * row_count / input_count;
-    } catch (...) {
-      // Couldn't create statistics. Using default value of 100%
+    // Include right side in cardinality estimation unless it is a semi/anti join
+    const auto join_node = std::dynamic_pointer_cast<JoinNode>(source_node);
+    if (source_node->right_input() &&
+        (!join_node || (join_node->join_mode != JoinMode::Semi && join_node->join_mode != JoinMode::AntiNullAsTrue &&
+                        join_node->join_mode != JoinMode::AntiNullAsFalse))) {
+      input_count *= _cardinality_estimator.estimate_cardinality(source_node->right_input());
     }
+    row_percentage = 100 * row_count / input_count;
   }
 
   auto label_stream = std::ostringstream{};

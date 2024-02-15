@@ -1,5 +1,6 @@
 #include "write_buffer.hpp"
 
+#include <algorithm>
 #include <array>
 #include <cstddef>
 #include <cstdint>
@@ -9,6 +10,7 @@
 #include <boost/system/detail/error_code.hpp>
 
 #include "client_disconnect_exception.hpp"
+#include "server/ring_buffer_iterator.hpp"
 #include "server/server_types.hpp"
 #include "utils/assert.hpp"
 
@@ -61,7 +63,7 @@ void WriteBuffer<SocketType>::put_string(const std::string& value, const HasNull
 template <typename SocketType>
 void WriteBuffer<SocketType>::flush(const size_t bytes_required) {
   Assert(bytes_required <= size(), "Cannot flush more byte than available");
-  const auto bytes_to_send = bytes_required ? bytes_required : size();
+  const auto bytes_to_send = bytes_required > 0 ? bytes_required : size();
   auto bytes_sent = size_t{0};
 
   auto error_code = boost::system::error_code{};

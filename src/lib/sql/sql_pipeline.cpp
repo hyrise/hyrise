@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <chrono>
 #include <cstddef>
+#include <functional>
 #include <memory>
 #include <ostream>
 #include <string>
@@ -20,7 +21,8 @@
 #include "optimizer/optimizer.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "sql/sql_pipeline_statement.hpp"
-#include "sql_plan_cache.hpp"
+#include "sql/sql_plan_cache.hpp"
+#include "sql/sql_translator.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"

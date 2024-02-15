@@ -4,6 +4,7 @@
 #include <string>
 #include <type_traits>
 
+#include "abstract_dereferenced_column_table_scan_impl.hpp"
 #include "all_type_variant.hpp"
 #include "resolve_type.hpp"
 #include "sorted_segment_search.hpp"

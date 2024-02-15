@@ -9,6 +9,7 @@
 #include "all_type_variant.hpp"
 #include "lossy_cast.hpp"
 #include "operators/abstract_operator.hpp"
+#include "postgres_protocol_handler.hpp"
 #include "query_handler.hpp"
 #include "storage/chunk.hpp"
 #include "storage/table.hpp"

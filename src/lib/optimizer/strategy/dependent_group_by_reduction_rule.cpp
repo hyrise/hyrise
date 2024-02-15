@@ -1,6 +1,7 @@
 #include "dependent_group_by_reduction_rule.hpp"
 
 #include <algorithm>
+#include <iterator>
 #include <memory>
 #include <string>
 #include <vector>

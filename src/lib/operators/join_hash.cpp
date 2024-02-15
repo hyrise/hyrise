@@ -19,6 +19,7 @@
 #include "join_hash/join_hash_steps.hpp"
 #include "join_hash/join_hash_traits.hpp"
 #include "join_helper/join_output_writing.hpp"
+#include "operators/abstract_join_operator.hpp"
 #include "operators/abstract_operator.hpp"
 #include "operators/operator_join_predicate.hpp"
 #include "operators/operator_performance_data.hpp"

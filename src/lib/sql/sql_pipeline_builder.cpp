@@ -3,7 +3,10 @@
 #include <memory>
 #include <string>
 
+#include "concurrency/transaction_context.hpp"
 #include "hyrise.hpp"
+#include "sql/sql_pipeline.hpp"
+#include "sql/sql_plan_cache.hpp"
 #include "types.hpp"
 
 namespace hyrise {

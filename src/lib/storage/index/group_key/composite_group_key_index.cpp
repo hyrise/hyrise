@@ -7,7 +7,6 @@
 #include <iterator>
 #include <memory>
 #include <numeric>
-#include <string>
 #include <utility>
 #include <vector>
 
@@ -15,8 +14,9 @@
 #include "storage/abstract_segment.hpp"
 #include "storage/base_dictionary_segment.hpp"
 #include "storage/index/abstract_chunk_index.hpp"
+#include "storage/index/chunk_index_type.hpp"
 #include "storage/index/group_key/variable_length_key_base.hpp"
-#include "storage/vector_compression/base_compressed_vector.hpp"
+#include "storage/index/group_key/variable_length_key_store.hpp"
 #include "storage/vector_compression/base_vector_decompressor.hpp"
 #include "storage/vector_compression/fixed_width_integer/fixed_width_integer_utils.hpp"
 #include "types.hpp"

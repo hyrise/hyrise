@@ -12,6 +12,7 @@
 #include "expression/abstract_expression.hpp"
 #include "expression/binary_predicate_expression.hpp"
 #include "expression/expression_functional.hpp"
+#include "expression/function_expression.hpp"
 #include "expression/in_expression.hpp"
 #include "expression/list_expression.hpp"
 #include "expression/lqp_column_expression.hpp"

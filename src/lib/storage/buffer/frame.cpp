@@ -1,7 +1,6 @@
 #include "frame.hpp"
 
 #include <atomic>
-#include <bitset>
 #include <ostream>
 #include <string>
 
@@ -62,7 +61,7 @@ bool Frame::try_mark(const Frame::StateVersionType old_state_and_version) {
 }
 
 bool Frame::is_dirty() const {
-  return (_state_and_version.load() & _dirty_mask) >> _dirty_shift;
+  return ((_state_and_version.load() & _dirty_mask) >> _dirty_shift) != 0;
 }
 
 Frame::StateVersionType Frame::state(const Frame::StateVersionType state_and_version) {

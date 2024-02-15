@@ -1,5 +1,6 @@
 #include "table_scan.hpp"
 
+#include <algorithm>
 #include <cstddef>
 #include <map>
 #include <memory>
@@ -29,9 +30,11 @@
 #include "scheduler/job_task.hpp"
 #include "storage/chunk.hpp"
 #include "storage/pos_lists/abstract_pos_list.hpp"
+#include "storage/pos_lists/entire_chunk_pos_list.hpp"
 #include "storage/pos_lists/row_id_pos_list.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/table.hpp"
+#include "table_scan/abstract_table_scan_impl.hpp"
 #include "table_scan/column_between_table_scan_impl.hpp"
 #include "table_scan/column_is_null_table_scan_impl.hpp"
 #include "table_scan/column_like_table_scan_impl.hpp"

@@ -12,6 +12,7 @@
 #include "operators/get_table.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/task_utils.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace {

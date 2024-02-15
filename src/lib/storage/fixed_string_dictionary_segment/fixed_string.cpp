@@ -1,5 +1,7 @@
 #include "fixed_string.hpp"
 
+#include <string.h>
+
 #include <algorithm>
 #include <cstddef>
 #include <cstring>

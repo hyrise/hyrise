@@ -1,5 +1,6 @@
 #include "run_length_segment.hpp"
 
+#include <climits>
 #include <cstddef>
 #include <memory>
 #include <optional>
