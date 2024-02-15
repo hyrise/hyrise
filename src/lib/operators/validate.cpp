@@ -135,7 +135,7 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
         _validate_chunks(input_table, job_start_chunk_id, job_end_chunk_id, our_tid, snapshot_commit_id, output_chunks,
                          output_mutex);
       } else {
-        jobs.push_back(std::make_shared<JobTask>([=, this, &output_chunks, &output_mutex] {
+        jobs.push_back(std::make_shared<JobTask>([&, input_table, job_start_chunk_id, job_end_chunk_id] {
           _validate_chunks(input_table, job_start_chunk_id, job_end_chunk_id, our_tid, snapshot_commit_id,
                            output_chunks, output_mutex);
         }));

@@ -6,6 +6,7 @@
 
 #include "types.hpp"
 #include "utils/assert.hpp"
+#include "utils/copyable_atomic.hpp"
 
 namespace hyrise {
 

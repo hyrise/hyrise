@@ -48,17 +48,23 @@ ExperimentalAutoDetectBinPacking: false
 ForEachMacros:   [ foreach, Q_FOREACH, BOOST_FOREACH ]
 IncludeBlocks:  Regroup
 IncludeCategories:
-    # clang-format uses the first hit (thus mixing boost with C system headers). As we cannot exclude <boost/...> with
-    # clang-format's Posix extended regrexes, we first check for boost headers with a higher priority than STL
+    # We follow the include order of google's style guide (https://google.github.io/styleguide/cppguide.html#Names_and_Order_of_Includes)
+    # with the addition of grouping third party headers into system header (e.g., TBB or boost) and one located in
+    # ./third_party/.
+    #
+    # clang-format places includes into the first group (order by priority) where they match. Thus, it might mix TBB or
+    # readline headers (both using .h) with system headers (e.g., pthread.h). Thus, before defining priority one, we
+    # put TBB and reaadline headers into category 3 (i.e., third party system headers).
     # headers.
   - Regex:           '^<(tbb\/.*|readline\/.*)>$'
     Priority:        3
 
-  # C system headers as the first category (e.g., <stdlib.h>).
+  # C system headers as the first category (e.g., <stdlib.h>). Note: the parent/main header is implicitely priority 0.
   - Regex:           '^<.*\.h>'
     Priority:        1
 
-    # See comment for TBB. boost headers are not mixed with C headers but STL headers.
+    # See comment for TBB. Boost headers are not mixed with C headers but STL headers. As we cannot exclude <boost/...>
+    # with clang-format's Posix extended regrexes, we first check for boost headers before turning to STL headers.
   - Regex:           '^<(boost\/.*|pqxx\/.*)>$'
     Priority:        3
 
@@ -66,8 +72,8 @@ IncludeCategories:
   - Regex:           '^<.*'
     Priority:        2
 
-    # This list needs to be kept up to date to order third party libraries properly. If third party files are missed,
-    # they are grouped with Hyrise files.
+    # This list needs to be kept up to date to order non-system third party libraries properly. If third party files are
+    # missed, it is not a real issue. They are simply grouped with Hyrise headers.
   - Regex:           '^"(magic_enum|nlohmann|lz4\.h|cxxopts\.hpp|compact_vector\.hpp|concurrentqueue\.h|lightweightsemaphore\.h|uninitialized_vector\.hpp|tsl\/sparse\_.+\.h|lz4hc\.h|zdict\.h|SQLParser\.h|SQLParserResult\.h|sql\/.+\.h\").*$'
     Priority:        4
   - Regex:           '.*'

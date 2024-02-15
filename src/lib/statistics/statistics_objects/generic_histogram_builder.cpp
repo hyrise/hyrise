@@ -1,7 +1,6 @@
 #include "generic_histogram_builder.hpp"
 
 #include <cstddef>
-#include <cstdint>
 #include <memory>
 #include <utility>
 

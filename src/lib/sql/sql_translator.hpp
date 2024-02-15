@@ -90,7 +90,7 @@ class SQLTranslator final {
                      const std::vector<SelectListElement>& init_elements_in_order,
                      const std::shared_ptr<SQLIdentifierResolver>& init_sql_identifier_resolver);
 
-    void append(TableSourceState&& rhs);
+    void append(TableSourceState& rhs);
 
     std::shared_ptr<AbstractLQPNode> lqp;
 

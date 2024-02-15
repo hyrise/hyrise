@@ -1,13 +1,15 @@
 #include "worker.hpp"
 
 #include <pthread.h>
-#include <sched.h>  // cpu_set_t
+#include <sched.h>
+#include <struct.h>  // cpu_set_t
 
 #include <algorithm>
 #include <cstdint>
 #include <memory>
 #include <numeric>
 #include <random>
+#include <string>
 #include <thread>
 #include <utility>
 #include <vector>

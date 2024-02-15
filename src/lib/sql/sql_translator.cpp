@@ -984,7 +984,7 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_predicated_join(const 
 
   // left_state becomes the result state
   auto result_state = std::move(left_state);
-  result_state.append(std::move(right_state));
+  result_state.append(right_state);
 
   /**
    * Hyrise doesn't have support for complex join predicates in OUTER JOINs
@@ -1149,7 +1149,7 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_cross_product(const st
     auto table_source_state = _translate_table_ref(*tables[table_idx]);
     result_table_source_state.lqp =
         JoinNode::make(JoinMode::Cross, result_table_source_state.lqp, table_source_state.lqp);
-    result_table_source_state.append(std::move(table_source_state));
+    result_table_source_state.append(table_source_state);
   }
 
   return result_table_source_state;
@@ -1459,7 +1459,7 @@ void SQLTranslator::_translate_set_operation(const hsql::SetOperation& set_opera
 void SQLTranslator::_translate_distinct_order_by(const std::vector<hsql::OrderDescription*>* order_list,
                                                  const std::vector<std::shared_ptr<AbstractExpression>>& select_list,
                                                  const bool distinct) {
-  const auto perform_sort = order_list && !order_list->empty();
+  const auto perform_sort = order_list != nullptr && !order_list->empty();
   auto expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
   auto sort_modes = std::vector<SortMode>{};
 
@@ -2368,7 +2368,7 @@ SQLTranslator::TableSourceState::TableSourceState(
       elements_in_order(init_elements_in_order),
       sql_identifier_resolver(init_sql_identifier_resolver) {}
 
-void SQLTranslator::TableSourceState::append(TableSourceState&& rhs) {
+void SQLTranslator::TableSourceState::append(TableSourceState& rhs) {
   for (auto& table_name_and_elements : rhs.elements_by_table_name) {
     const auto unique = !elements_by_table_name.contains(table_name_and_elements.first);
     AssertInput(unique, "Table name '" + table_name_and_elements.first + "' in FROM clause is not unique.");
