@@ -277,7 +277,7 @@ TEST_F(StressTest, NodeQueueSchedulerCreationAndReset) {
 // We run this test for various fake NUMA topologies as it triggered a bug that was introduced with #2610.
 TEST_F(StressTest, NodeQueueSchedulerSemaphoreIncrements) {
   constexpr auto SLEEP_TIME = std::chrono::milliseconds{1};
-  const auto job_count = CPU_COUNT * 4 * (HYRISE_WITH_ADDR_UB_LEAK_SAN ? 1 : DEFAULT_LOAD_FACTOR);
+  const auto job_count = CPU_COUNT * 4 * (HYRISE_WITH_TSAN ? 1 : DEFAULT_LOAD_FACTOR);
 
   for (const auto& fake_numa_topology : FAKE_SINGLE_NODE_NUMA_TOPOLOGIES) {
     Hyrise::get().topology.use_fake_numa_topology(fake_numa_topology);
@@ -339,8 +339,7 @@ TEST_F(StressTest, NodeQueueSchedulerSemaphoreIncrementsDependentTasks) {
 
   // Ensure there is at least one job left after each worker pulled one.
   const auto min_job_count = DEPENDENT_JOB_TASKS_LENGTH * CPU_COUNT + 1;
-  const auto job_count =
-      std::max(min_job_count, CPU_COUNT * 4 * (HYRISE_WITH_ADDR_UB_LEAK_SAN ? 1 : DEFAULT_LOAD_FACTOR));
+  const auto job_count = std::max(min_job_count, CPU_COUNT * 4 * (HYRISE_WITH_TSAN ? 1 : DEFAULT_LOAD_FACTOR));
 
   for (const auto& fake_numa_topology : FAKE_SINGLE_NODE_NUMA_TOPOLOGIES) {
     Hyrise::get().topology.use_fake_numa_topology(fake_numa_topology);
