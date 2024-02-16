@@ -1,12 +1,12 @@
 #include "abstract_meta_table.hpp"
 
-#include <cstddef>
 #include <memory>
 #include <vector>
 
 #include "all_type_variant.hpp"
 #include "statistics/table_statistics.hpp"
 #include "storage/table_column_definition.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/meta_table_manager.hpp"
 

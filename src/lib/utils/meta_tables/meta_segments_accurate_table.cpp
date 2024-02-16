@@ -1,7 +1,6 @@
 #include "meta_segments_accurate_table.hpp"
 
 #include <memory>
-#include <optional>
 #include <string>
 
 #include "all_type_variant.hpp"

@@ -16,7 +16,6 @@
 #include <fstream>
 #include <ios>
 #include <memory>
-#include <optional>
 #include <string>
 
 #include "all_type_variant.hpp"
