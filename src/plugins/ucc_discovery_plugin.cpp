@@ -36,6 +36,7 @@
 #include "utils/assert.hpp"
 #include "utils/log_manager.hpp"
 #include "utils/timer.hpp"
+#include "../benchmarklib/abstract_benchmark_item_runner.hpp"
 
 namespace hyrise {
 

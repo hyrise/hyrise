@@ -14,6 +14,7 @@
 #include "storage/table_column_definition.hpp"
 #include "types.hpp"
 #include "utils/abstract_plugin.hpp"
+#include "../benchmarklib/abstract_benchmark_item_runner.hpp"
 
 namespace hyrise {
 

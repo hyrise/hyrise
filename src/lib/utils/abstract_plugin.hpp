@@ -6,11 +6,13 @@
 
 #include "nlohmann/json.hpp"
 
-#include "abstract_benchmark_item_runner.hpp"
 #include "types.hpp"
 #include "utils/singleton.hpp"
 
 namespace hyrise {
+
+class AbstractBenchmarkItemRunner;
+
 // This is necessary to make the plugin instantiable, it leads to plain C linkage to avoid ugly mangled names. Use
 // EXPORT in the implementation file of your plugin.
 // clang-format off
