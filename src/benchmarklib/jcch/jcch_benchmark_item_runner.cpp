@@ -15,7 +15,7 @@
 #include <vector>
 
 #include <boost/algorithm/string/replace.hpp>
-#include <boost/date_time/gregorian/greg_date.hpp>
+#include <boost/date_time/gregorian/gregorian.hpp>
 
 #include "abstract_benchmark_item_runner.hpp"
 #include "benchmark_config.hpp"

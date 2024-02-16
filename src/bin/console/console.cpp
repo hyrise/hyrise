@@ -185,7 +185,7 @@ int Console::read() {
 
   // Prompt user for input.
   buffer = readline(_prompt.c_str());
-  if (buffer == nullptr) {
+  if (!buffer) {
     return ReturnCode::Quit;
   }
 
@@ -409,7 +409,7 @@ void Console::out(const std::shared_ptr<const Table>& table, const PrintFlags fl
   stream.str(stream_backup);
 
   static bool pagination_disabled = false;
-  if (!fits_on_one_page && std::getenv("TERM") == nullptr && !pagination_disabled) {  // NOLINT(concurrency-mt-unsafe)
+  if (!fits_on_one_page && !std::getenv("TERM") && !pagination_disabled) {  // NOLINT(concurrency-mt-unsafe)
     out("Your TERM environment variable is not set - most likely because you are running the console from an IDE. "
         "Pagination is disabled.\n\n");
     pagination_disabled = true;
@@ -938,7 +938,7 @@ void Console::handle_signal(int sig) {
       console._multiline_input = "";
       console.set_prompt("!> ");
       console._verbose = false;
-      // Restore program state stored in jmp_env set with sigsetjmp(2). See comment on jmp_env for details
+      // Restore program state stored in jmp_env set with sigsetjmp(2). See comment on jmp_env for details.
       siglongjmp(jmp_env, 1);
     }
   }
@@ -1162,7 +1162,7 @@ int main(int argc, char** argv) {
     console.out(" build.\n\n");
   }
 
-  // Set jmp_env to current program state in preparation for siglongjmp(2). See comment on jmp_env for details
+  // Set jmp_env to current program state in preparation for siglongjmp(2). See comment on jmp_env for details.
   while (sigsetjmp(jmp_env, 1) != 0) {}
 
   // Main REPL loop.

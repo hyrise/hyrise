@@ -25,7 +25,7 @@ class TransactionContext;
 class ChangeMetaTable : public AbstractReadWriteOperator {
  public:
   explicit ChangeMetaTable(const std::string& table_name, const MetaTableChangeType& change_type,
-                           const std::shared_ptr<const AbstractOperator>& left_input,
+                           const std::shared_ptr<const AbstractOperator>& values_to_modify,
                            const std::shared_ptr<const AbstractOperator>& modification_values);
 
   const std::string& name() const override;
