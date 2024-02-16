@@ -1,5 +1,6 @@
 #include "cost_estimator_logical.hpp"
 
+#include <algorithm>
 #include <cmath>
 #include <memory>
 
