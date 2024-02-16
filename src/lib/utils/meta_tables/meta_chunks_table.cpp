@@ -27,12 +27,12 @@ const std::string& MetaChunksTable::name() const {
 }
 
 std::shared_ptr<Table> MetaChunksTable::_on_generate() const {
-  auto output_table = std::make_shared<Table>(_column_definitions, TableType::Data, std::nullopt, UseMvcc::Yes);
+  auto output_table = std::make_shared<Table>(_column_definitions, TableType::Data);
 
   for (const auto& [table_name, table] : Hyrise::get().storage_manager.tables()) {
     for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
       const auto& chunk = table->get_chunk(chunk_id);
-      // Skip physically deleted chunks
+      // Skip physically deleted chunks.
       if (!chunk) {
         continue;
       }

@@ -134,7 +134,7 @@ Subsets of all available tests can be selected via `--gtest_filter=`.
 *Requires clang on macOS and Linux.*
 
 ### Address/UndefinedBehavior Sanitizers
-`cmake -DENABLE_ADDR_UB_SANITIZATION=ON` will generate Makefiles with AddressSanitizer, LeakSanitizer, and Undefined Behavior options.
+`cmake -DENABLE_ADDR_UB_LEAK_SANITIZATION=ON` will generate Makefiles with AddressSanitizer, LeakSanitizer, and Undefined Behavior options.
 Compile and run them as normal - if any issues are detected, they will be printed to the console.
 It will fail on the first detected error and will print a summary.
 To convert addresses to actual source code locations, make sure llvm-symbolizer is installed (included in the llvm package) and is available in `$PATH`.

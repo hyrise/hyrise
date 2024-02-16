@@ -106,7 +106,7 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const Chunk
     DebugAssert(!segments.empty(), "Empty chunks shouldn't occur when importing CSV");
     const auto mvcc_data = std::make_shared<MvccData>(segments.front()->size(), CommitID{0});
     table->append_chunk(segments, mvcc_data);
-    table->last_chunk()->finalize();
+    table->last_chunk()->set_immutable();
   }
 
   return table;

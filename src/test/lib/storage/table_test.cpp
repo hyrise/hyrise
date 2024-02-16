@@ -135,7 +135,7 @@ TEST_F(StorageTableTest, GetRows) {
   EXPECT_TRUE(variant_is_null(rows.at(3).at(1)));
 }
 
-TEST_F(StorageTableTest, FillingUpAChunkFinalizesIt) {
+TEST_F(StorageTableTest, FillingUpAChunkSetImmutable) {
   table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2}, UseMvcc::Yes);
 
   table->append({4, "Hello,"});

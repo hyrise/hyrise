@@ -31,7 +31,7 @@ class AbstractCostEstimator {
   /**
    * @return the estimated cost of a single node. The `cost_estimation_by_lqp_cache` will not be used
    */
-  virtual Cost estimate_node_cost(const std::shared_ptr<AbstractLQPNode>& node) const = 0;
+  virtual Cost estimate_node_cost(const std::shared_ptr<AbstractLQPNode>& node, const bool cacheable = true) const = 0;
 
   /**
    * @return a new instance of this estimator with a new instance of the wrapped cardinality estimator, both with empty

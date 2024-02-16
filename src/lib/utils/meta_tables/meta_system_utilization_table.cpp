@@ -60,7 +60,7 @@ const std::string& MetaSystemUtilizationTable::name() const {
 }
 
 std::shared_ptr<Table> MetaSystemUtilizationTable::_on_generate() const {
-  auto output_table = std::make_shared<Table>(_column_definitions, TableType::Data, std::nullopt, UseMvcc::Yes);
+  auto output_table = std::make_shared<Table>(_column_definitions, TableType::Data);
 
   const auto system_cpu_ticks = _get_system_cpu_time();
   const auto process_cpu_ticks = _get_process_cpu_time();

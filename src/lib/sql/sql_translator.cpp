@@ -633,7 +633,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_insert(const hsql::In
               "INSERT: Column count mismatch");
 
   if (is_meta_table) {
-    return ChangeMetaTableNode::make(table_name, MetaTableChangeType::Insert, DummyTableNode::make(), insert_data_node);
+    return ChangeMetaTableNode::make(table_name, MetaTableChangeType::Insert, insert_data_node);
   }
 
   /**
@@ -664,8 +664,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_delete(const hsql::De
   }
 
   if (is_meta_table) {
-    return ChangeMetaTableNode::make(table_name, MetaTableChangeType::Delete, data_to_delete_node,
-                                     DummyTableNode::make());
+    return ChangeMetaTableNode::make(table_name, MetaTableChangeType::Delete, data_to_delete_node);
   }
   return DeleteNode::make(data_to_delete_node);
 }

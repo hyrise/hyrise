@@ -130,10 +130,10 @@ void AbstractLQPNode::set_left_input(const std::shared_ptr<AbstractLQPNode>& lef
 }
 
 void AbstractLQPNode::set_right_input(const std::shared_ptr<AbstractLQPNode>& right) {
-  DebugAssert(right == nullptr || type == LQPNodeType::Join || type == LQPNodeType::Union ||
-                  type == LQPNodeType::Update || type == LQPNodeType::Intersect || type == LQPNodeType::Except ||
+  DebugAssert(!right || type == LQPNodeType::Join || type == LQPNodeType::Union || type == LQPNodeType::Update ||
+                  type == LQPNodeType::Intersect || type == LQPNodeType::Except ||
                   type == LQPNodeType::ChangeMetaTable || type == LQPNodeType::Mock,
-              "This node type does not accept a right input");
+              "This node type does not accept a right input.");
   set_input(LQPInputSide::Right, right);
 }
 

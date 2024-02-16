@@ -16,12 +16,10 @@
 #include "types.hpp"
 #include "utils/assert.hpp"
 
-using namespace std::string_literals;  // NOLINT
-
 namespace hyrise {
 
 std::shared_ptr<Table> create_table_from_header(std::ifstream& infile, ChunkOffset chunk_size) {
-  std::string line;
+  auto line = std::string{};
   std::getline(infile, line);
   Assert(line.find('\r') == std::string::npos, "Windows encoding is not supported, use dos2unix.");
   const auto column_names = split_string_by_delimiter(line, '|');
@@ -29,11 +27,12 @@ std::shared_ptr<Table> create_table_from_header(std::ifstream& infile, ChunkOffs
   auto column_types = split_string_by_delimiter(line, '|');
 
   auto column_nullable = std::vector<bool>{};
+  column_nullable.reserve(column_types.size());
   for (auto& type : column_types) {
-    auto type_nullable = split_string_by_delimiter(type, '_');
+    const auto type_nullable = split_string_by_delimiter(type, '_');
     type = type_nullable[0];
 
-    auto nullable = type_nullable.size() > 1 && type_nullable[1] == "null";
+    const auto nullable = type_nullable.size() > 1 && type_nullable[1] == "null";
     column_nullable.push_back(nullable);
   }
 
@@ -50,21 +49,21 @@ std::shared_ptr<Table> create_table_from_header(std::ifstream& infile, ChunkOffs
 }
 
 std::shared_ptr<Table> create_table_from_header(const std::string& file_name, ChunkOffset chunk_size) {
-  std::ifstream infile(file_name);
+  auto infile = std::ifstream{file_name};
   Assert(infile.is_open(), "load_table: Could not find file '" + file_name + "'.");
   return create_table_from_header(infile, chunk_size);
 }
 
 std::shared_ptr<Table> load_table(const std::string& file_name, ChunkOffset chunk_size,
-                                  FinalizeLastChunk finalize_last_chunk) {
-  std::ifstream infile(file_name);
+                                  SetLastChunkImmutable mark_last_chunk_immutable) {
+  auto infile = std::ifstream{file_name};
   Assert(infile.is_open(), "load_table: Could not find file '" + file_name + "'.");
 
   auto table = create_table_from_header(infile, chunk_size);
 
-  std::string line;
+  auto line = std::string{};
   while (std::getline(infile, line)) {
-    auto string_values = split_string_by_delimiter(line, '|');
+    const auto string_values = split_string_by_delimiter(line, '|');
     auto variant_values = std::vector<AllTypeVariant>(string_values.size());
 
     const auto string_value_count = string_values.size();
@@ -81,13 +80,13 @@ std::shared_ptr<Table> load_table(const std::string& file_name, ChunkOffset chun
 
     table->append(variant_values);
 
-    auto mvcc_data = table->last_chunk()->mvcc_data();
+    const auto mvcc_data = table->last_chunk()->mvcc_data();
     mvcc_data->set_begin_cid(ChunkOffset{table->last_chunk()->size() - 1}, CommitID{0});
   }
 
-  // All other chunks have been finalized by Table::append() when they reached their capacity.
-  if (!table->empty() && finalize_last_chunk == FinalizeLastChunk::Yes) {
-    table->last_chunk()->finalize();
+  // All other chunks have been marked as immutable by `Table::append()` when they reached their capacity.
+  if (!table->empty() && mark_last_chunk_immutable == SetLastChunkImmutable::Yes) {
+    table->last_chunk()->set_immutable();
   }
 
   return table;

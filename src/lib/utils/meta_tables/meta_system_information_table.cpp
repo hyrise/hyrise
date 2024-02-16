@@ -39,7 +39,7 @@ const std::string& MetaSystemInformationTable::name() const {
 }
 
 std::shared_ptr<Table> MetaSystemInformationTable::_on_generate() const {
-  auto output_table = std::make_shared<Table>(_column_definitions, TableType::Data, std::nullopt, UseMvcc::Yes);
+  auto output_table = std::make_shared<Table>(_column_definitions, TableType::Data);
 
   const auto cpus = _cpu_count();
   const auto ram = _ram_size();

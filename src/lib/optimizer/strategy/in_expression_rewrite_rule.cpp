@@ -105,8 +105,8 @@ void rewrite_to_disjunction(const std::shared_ptr<AbstractLQPNode>& node,
     last_node = UnionNode::make(SetOperationMode::All, last_node, predicate_nodes[predicate_node_idx]);
   }
 
-  // Attach the final UnionNode (or PredicateNode if only one) to the original plan. As this replaces the original
-  // input(s), the IN PredicateNode is deleted automatically.
+  // Attach the final UnionNode (or PredicateNode if only one) to the original plan.
+  node->set_left_input(nullptr);
   for (const auto& [output, input_side] : old_output_relations) {
     output->set_input(input_side, last_node);
   }

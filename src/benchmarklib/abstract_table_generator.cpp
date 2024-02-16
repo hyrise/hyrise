@@ -67,16 +67,15 @@ void AbstractTableGenerator::generate_and_store() {
   std::cout << "- Loading/Generating tables done (" << format_duration(metrics.generation_duration) << ")\n";
 
   /**
-   * Finalizing all chunks of all tables that are still mutable.
+   * Mark all chunks of the table as immutable.
    */
-  // TODO(any): Finalization might trigger encoding in the future.
   for (auto& [table_name, table_info] : table_info_by_name) {
     auto& table = table_info_by_name[table_name].table;
     const auto chunk_count = table->chunk_count();
     for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
       const auto chunk = table->get_chunk(chunk_id);
       if (chunk->is_mutable()) {
-        chunk->finalize();
+        chunk->set_immutable();
       }
     }
   }
@@ -96,9 +95,8 @@ void AbstractTableGenerator::generate_and_store() {
         for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
           const auto& chunk = table->get_chunk(chunk_id);
           Assert(chunk->individually_sorted_by().empty(),
-                 "Tables are sorted, but no clustering has been requested. "
-                 "This might be case when clustered data is loaded from "
-                 "mismatching binary exports.");
+                 "Tables are sorted, but no clustering has been requested. This might be case when clustered data is "
+                 "loaded from mismatching binary exports.");
         }
       }
     } else {
@@ -198,7 +196,7 @@ void AbstractTableGenerator::generate_and_store() {
               segments.emplace_back(chunk->get_segment(column_id));
             }
             table->append_chunk(segments, mvcc_data);
-            table->get_chunk(chunk_id)->finalize();
+            table->get_chunk(chunk_id)->set_immutable();
             table->get_chunk(chunk_id)->set_individually_sorted_by(SortColumnDefinition(sort_column_id, sort_mode));
           }
 

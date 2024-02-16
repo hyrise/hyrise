@@ -281,9 +281,9 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
                                                     stored_chunk->get_allocator(), std::move(output_indexes));
 
       if (!stored_chunk->is_mutable()) {
-        // Finalizing is cheap here: the MvccData's max_begin_cid is already set, so finalize() only sets the flag and
-        // does not trigger anything else.
-        (*output_chunks_iter)->finalize();
+        // Marking the chunk as immutable is cheap here: the MvccData's `max_begin_cid` is already set, so
+        // `set_immutable()` only sets the flag and does not trigger anything else.
+        (*output_chunks_iter)->set_immutable();
       }
 
       if (chunk_sort_definition) {

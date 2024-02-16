@@ -179,9 +179,9 @@ ColumnID Table::column_id_by_name(const std::string& column_name) const {
 void Table::append(const std::vector<AllTypeVariant>& values) {
   auto last_chunk = !_chunks.empty() ? get_chunk(ChunkID{chunk_count() - 1}) : nullptr;
   if (!last_chunk || last_chunk->size() >= _target_chunk_size || !last_chunk->is_mutable()) {
-    // One chunk reached its capacity and was not finalized before.
+    // One chunk reached its capacity and was not marked as immutable before.
     if (last_chunk && last_chunk->is_mutable()) {
-      last_chunk->finalize();
+      last_chunk->set_immutable();
     }
 
     append_mutable_chunk();
@@ -535,7 +535,7 @@ const std::vector<ColumnID>& Table::value_clustered_by() const {
 }
 
 void Table::set_value_clustered_by(const std::vector<ColumnID>& value_clustered_by) {
-  // Ensure that all chunks are finalized because the table should not be altered afterwards.
+  // Ensure that all chunks are marked as immutable because the table should not be altered afterwards.
   const auto chunk_count = _chunks.size();
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk = get_chunk(chunk_id);

@@ -526,11 +526,15 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_window_node(
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_change_meta_table_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
-  const auto input_operator_left = _translate_node_recursively(node->left_input());
-  const auto input_operator_right = _translate_node_recursively(node->right_input());
-  const auto change_meta_table_node = std::dynamic_pointer_cast<ChangeMetaTableNode>(node);
-  return std::make_shared<ChangeMetaTable>(change_meta_table_node->table_name, change_meta_table_node->change_type,
-                                           input_operator_left, input_operator_right);
+  const auto left_input_operator = _translate_node_recursively(node->left_input());
+  auto right_input_operator = std::shared_ptr<AbstractOperator>{};
+  const auto& right_input_node = node->right_input();
+  if (right_input_node) {
+    right_input_operator = _translate_node_recursively(node->right_input());
+  }
+  const auto& change_meta_table_node = static_cast<const ChangeMetaTableNode&>(*node);
+  return std::make_shared<ChangeMetaTable>(change_meta_table_node.table_name, change_meta_table_node.change_type,
+                                           left_input_operator, right_input_operator);
 }
 
 // NOLINTNEXTLINE(readability-convert-member-functions-to-static): Align methods, even though some can be static.

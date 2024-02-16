@@ -32,7 +32,7 @@ std::shared_ptr<const Table> ChangeMetaTable::_on_execute(std::shared_ptr<Transa
 
   switch (_change_type) {
     case MetaTableChangeType::Insert:
-      Hyrise::get().meta_table_manager.insert_into(_meta_table_name, right_input_table());
+      Hyrise::get().meta_table_manager.insert_into(_meta_table_name, left_input_table());
       break;
     case MetaTableChangeType::Update:
       Hyrise::get().meta_table_manager.update(_meta_table_name, left_input_table(), right_input_table());
