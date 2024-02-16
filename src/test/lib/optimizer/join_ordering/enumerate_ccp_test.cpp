@@ -9,7 +9,7 @@ namespace {
 using namespace hyrise;  // NOLINT
 
 bool equals(const std::pair<boost::dynamic_bitset<>, boost::dynamic_bitset<>>& lhs,
-            const std::pair<unsigned long, unsigned long>& rhs) {  // NOLINT(runtime/int): cpplint does not like unsigned long.
+            const std::pair<size_t, size_t>& rhs) {
   Assert(lhs.first.size() == lhs.second.size() && lhs.first.size() <= sizeof(unsigned long) * 8,  // NOLINT
          "Bitset has too many bits for comparison.");
   return lhs.first.to_ulong() == rhs.first && lhs.second.to_ulong() == rhs.second;
@@ -31,7 +31,7 @@ TEST_F(EnumerateCcpTest, Simple) {
 
   ASSERT_EQ(pairs.size(), 1u);
 
-  EXPECT_TRUE(equals(pairs[0], std::make_pair(0b01ul, 0b10ul)));
+  EXPECT_TRUE(equals(pairs[0], std::make_pair(0b01, 0b10)));
 }
 
 TEST_F(EnumerateCcpTest, Chain) {
@@ -41,16 +41,16 @@ TEST_F(EnumerateCcpTest, Chain) {
 
   ASSERT_EQ(pairs.size(), 10u);
 
-  EXPECT_TRUE(equals(pairs[0], std::make_pair(0b0100ul, 0b1000ul)));
-  EXPECT_TRUE(equals(pairs[1], std::make_pair(0b0010ul, 0b0100ul)));
-  EXPECT_TRUE(equals(pairs[2], std::make_pair(0b0010ul, 0b1100ul)));
-  EXPECT_TRUE(equals(pairs[3], std::make_pair(0b0110ul, 0b1000ul)));
-  EXPECT_TRUE(equals(pairs[4], std::make_pair(0b0001ul, 0b0010ul)));
-  EXPECT_TRUE(equals(pairs[5], std::make_pair(0b0001ul, 0b0110ul)));
-  EXPECT_TRUE(equals(pairs[6], std::make_pair(0b0001ul, 0b1110ul)));
-  EXPECT_TRUE(equals(pairs[7], std::make_pair(0b0011ul, 0b0100ul)));
-  EXPECT_TRUE(equals(pairs[8], std::make_pair(0b0011ul, 0b1100ul)));
-  EXPECT_TRUE(equals(pairs[9], std::make_pair(0b0111ul, 0b1000ul)));
+  EXPECT_TRUE(equals(pairs[0], std::make_pair(0b0100, 0b1000)));
+  EXPECT_TRUE(equals(pairs[1], std::make_pair(0b0010, 0b0100)));
+  EXPECT_TRUE(equals(pairs[2], std::make_pair(0b0010, 0b1100)));
+  EXPECT_TRUE(equals(pairs[3], std::make_pair(0b0110, 0b1000)));
+  EXPECT_TRUE(equals(pairs[4], std::make_pair(0b0001, 0b0010)));
+  EXPECT_TRUE(equals(pairs[5], std::make_pair(0b0001, 0b0110)));
+  EXPECT_TRUE(equals(pairs[6], std::make_pair(0b0001, 0b1110)));
+  EXPECT_TRUE(equals(pairs[7], std::make_pair(0b0011, 0b0100)));
+  EXPECT_TRUE(equals(pairs[8], std::make_pair(0b0011, 0b1100)));
+  EXPECT_TRUE(equals(pairs[9], std::make_pair(0b0111, 0b1000)));
 }
 
 TEST_F(EnumerateCcpTest, Ring) {
@@ -60,12 +60,12 @@ TEST_F(EnumerateCcpTest, Ring) {
 
   ASSERT_EQ(pairs.size(), 6u);
 
-  EXPECT_TRUE(equals(pairs[0], std::make_pair(0b010ul, 0b100ul)));
-  EXPECT_TRUE(equals(pairs[1], std::make_pair(0b001ul, 0b100ul)));
-  EXPECT_TRUE(equals(pairs[2], std::make_pair(0b001ul, 0b010ul)));
-  EXPECT_TRUE(equals(pairs[3], std::make_pair(0b001ul, 0b110ul)));
-  EXPECT_TRUE(equals(pairs[4], std::make_pair(0b011ul, 0b100ul)));
-  EXPECT_TRUE(equals(pairs[5], std::make_pair(0b101ul, 0b010ul)));
+  EXPECT_TRUE(equals(pairs[0], std::make_pair(0b010, 0b100)));
+  EXPECT_TRUE(equals(pairs[1], std::make_pair(0b001, 0b100)));
+  EXPECT_TRUE(equals(pairs[2], std::make_pair(0b001, 0b010)));
+  EXPECT_TRUE(equals(pairs[3], std::make_pair(0b001, 0b110)));
+  EXPECT_TRUE(equals(pairs[4], std::make_pair(0b011, 0b100)));
+  EXPECT_TRUE(equals(pairs[5], std::make_pair(0b101, 0b010)));
 }
 
 TEST_F(EnumerateCcpTest, Star) {
@@ -75,18 +75,18 @@ TEST_F(EnumerateCcpTest, Star) {
 
   ASSERT_EQ(pairs.size(), 12u);
 
-  EXPECT_TRUE(equals(pairs[0], std::make_pair(0b0001ul, 0b1000ul)));
-  EXPECT_TRUE(equals(pairs[1], std::make_pair(0b0001ul, 0b0100ul)));
-  EXPECT_TRUE(equals(pairs[2], std::make_pair(0b0001ul, 0b0010ul)));
-  EXPECT_TRUE(equals(pairs[3], std::make_pair(0b0011ul, 0b1000ul)));
-  EXPECT_TRUE(equals(pairs[4], std::make_pair(0b0011ul, 0b0100ul)));
-  EXPECT_TRUE(equals(pairs[5], std::make_pair(0b0101ul, 0b1000ul)));
-  EXPECT_TRUE(equals(pairs[6], std::make_pair(0b0101ul, 0b0010ul)));
-  EXPECT_TRUE(equals(pairs[7], std::make_pair(0b0111ul, 0b1000ul)));
-  EXPECT_TRUE(equals(pairs[8], std::make_pair(0b1001ul, 0b0100ul)));
-  EXPECT_TRUE(equals(pairs[9], std::make_pair(0b1001ul, 0b0010ul)));
-  EXPECT_TRUE(equals(pairs[10], std::make_pair(0b1011ul, 0b0100ul)));
-  EXPECT_TRUE(equals(pairs[11], std::make_pair(0b1101ul, 0b0010ul)));
+  EXPECT_TRUE(equals(pairs[0], std::make_pair(0b0001, 0b1000)));
+  EXPECT_TRUE(equals(pairs[1], std::make_pair(0b0001, 0b0100)));
+  EXPECT_TRUE(equals(pairs[2], std::make_pair(0b0001, 0b0010)));
+  EXPECT_TRUE(equals(pairs[3], std::make_pair(0b0011, 0b1000)));
+  EXPECT_TRUE(equals(pairs[4], std::make_pair(0b0011, 0b0100)));
+  EXPECT_TRUE(equals(pairs[5], std::make_pair(0b0101, 0b1000)));
+  EXPECT_TRUE(equals(pairs[6], std::make_pair(0b0101, 0b0010)));
+  EXPECT_TRUE(equals(pairs[7], std::make_pair(0b0111, 0b1000)));
+  EXPECT_TRUE(equals(pairs[8], std::make_pair(0b1001, 0b0100)));
+  EXPECT_TRUE(equals(pairs[9], std::make_pair(0b1001, 0b0010)));
+  EXPECT_TRUE(equals(pairs[10], std::make_pair(0b1011, 0b0100)));
+  EXPECT_TRUE(equals(pairs[11], std::make_pair(0b1101, 0b0010)));
 }
 
 TEST_F(EnumerateCcpTest, Clique) {
@@ -95,31 +95,31 @@ TEST_F(EnumerateCcpTest, Clique) {
   const auto pairs = EnumerateCcp{4, edges}();
   ASSERT_EQ(pairs.size(), 25u);
 
-  EXPECT_TRUE(equals(pairs[0], std::make_pair(0b0100ul, 0b1000ul)));
-  EXPECT_TRUE(equals(pairs[1], std::make_pair(0b0010ul, 0b1000ul)));
-  EXPECT_TRUE(equals(pairs[2], std::make_pair(0b0010ul, 0b0100ul)));
-  EXPECT_TRUE(equals(pairs[3], std::make_pair(0b0010ul, 0b1100ul)));
-  EXPECT_TRUE(equals(pairs[4], std::make_pair(0b0110ul, 0b1000ul)));
-  EXPECT_TRUE(equals(pairs[5], std::make_pair(0b1010ul, 0b0100ul)));
-  EXPECT_TRUE(equals(pairs[6], std::make_pair(0b0001ul, 0b1000ul)));
-  EXPECT_TRUE(equals(pairs[7], std::make_pair(0b0001ul, 0b0100ul)));
-  EXPECT_TRUE(equals(pairs[8], std::make_pair(0b0001ul, 0b1100ul)));
-  EXPECT_TRUE(equals(pairs[9], std::make_pair(0b0001ul, 0b0010ul)));
-  EXPECT_TRUE(equals(pairs[10], std::make_pair(0b0001ul, 0b0110ul)));
-  EXPECT_TRUE(equals(pairs[11], std::make_pair(0b0001ul, 0b1010ul)));
-  EXPECT_TRUE(equals(pairs[12], std::make_pair(0b0001ul, 0b1110ul)));
-  EXPECT_TRUE(equals(pairs[13], std::make_pair(0b0011ul, 0b1000ul)));
-  EXPECT_TRUE(equals(pairs[14], std::make_pair(0b0011ul, 0b0100ul)));
-  EXPECT_TRUE(equals(pairs[15], std::make_pair(0b0011ul, 0b1100ul)));
-  EXPECT_TRUE(equals(pairs[16], std::make_pair(0b0101ul, 0b1000ul)));
-  EXPECT_TRUE(equals(pairs[17], std::make_pair(0b0101ul, 0b0010ul)));
-  EXPECT_TRUE(equals(pairs[18], std::make_pair(0b0101ul, 0b1010ul)));
-  EXPECT_TRUE(equals(pairs[19], std::make_pair(0b0111ul, 0b1000ul)));
-  EXPECT_TRUE(equals(pairs[20], std::make_pair(0b1001ul, 0b0100ul)));
-  EXPECT_TRUE(equals(pairs[21], std::make_pair(0b1001ul, 0b0010ul)));
-  EXPECT_TRUE(equals(pairs[22], std::make_pair(0b1001ul, 0b0110ul)));
-  EXPECT_TRUE(equals(pairs[23], std::make_pair(0b1011ul, 0b0100ul)));
-  EXPECT_TRUE(equals(pairs[24], std::make_pair(0b1101ul, 0b0010ul)));
+  EXPECT_TRUE(equals(pairs[0], std::make_pair(0b0100, 0b1000)));
+  EXPECT_TRUE(equals(pairs[1], std::make_pair(0b0010, 0b1000)));
+  EXPECT_TRUE(equals(pairs[2], std::make_pair(0b0010, 0b0100)));
+  EXPECT_TRUE(equals(pairs[3], std::make_pair(0b0010, 0b1100)));
+  EXPECT_TRUE(equals(pairs[4], std::make_pair(0b0110, 0b1000)));
+  EXPECT_TRUE(equals(pairs[5], std::make_pair(0b1010, 0b0100)));
+  EXPECT_TRUE(equals(pairs[6], std::make_pair(0b0001, 0b1000)));
+  EXPECT_TRUE(equals(pairs[7], std::make_pair(0b0001, 0b0100)));
+  EXPECT_TRUE(equals(pairs[8], std::make_pair(0b0001, 0b1100)));
+  EXPECT_TRUE(equals(pairs[9], std::make_pair(0b0001, 0b0010)));
+  EXPECT_TRUE(equals(pairs[10], std::make_pair(0b0001, 0b0110)));
+  EXPECT_TRUE(equals(pairs[11], std::make_pair(0b0001, 0b1010)));
+  EXPECT_TRUE(equals(pairs[12], std::make_pair(0b0001, 0b1110)));
+  EXPECT_TRUE(equals(pairs[13], std::make_pair(0b0011, 0b1000)));
+  EXPECT_TRUE(equals(pairs[14], std::make_pair(0b0011, 0b0100)));
+  EXPECT_TRUE(equals(pairs[15], std::make_pair(0b0011, 0b1100)));
+  EXPECT_TRUE(equals(pairs[16], std::make_pair(0b0101, 0b1000)));
+  EXPECT_TRUE(equals(pairs[17], std::make_pair(0b0101, 0b0010)));
+  EXPECT_TRUE(equals(pairs[18], std::make_pair(0b0101, 0b1010)));
+  EXPECT_TRUE(equals(pairs[19], std::make_pair(0b0111, 0b1000)));
+  EXPECT_TRUE(equals(pairs[20], std::make_pair(0b1001, 0b0100)));
+  EXPECT_TRUE(equals(pairs[21], std::make_pair(0b1001, 0b0010)));
+  EXPECT_TRUE(equals(pairs[22], std::make_pair(0b1001, 0b0110)));
+  EXPECT_TRUE(equals(pairs[23], std::make_pair(0b1011, 0b0100)));
+  EXPECT_TRUE(equals(pairs[24], std::make_pair(0b1101, 0b0010)));
 }
 
 TEST_F(EnumerateCcpTest, RandomJoinGraphShape) {
@@ -135,21 +135,21 @@ TEST_F(EnumerateCcpTest, RandomJoinGraphShape) {
 
   ASSERT_EQ(pairs.size(), 15u);
 
-  EXPECT_TRUE(equals(pairs[0], std::make_pair(0b00010ul, 0b01000ul)));
-  EXPECT_TRUE(equals(pairs[1], std::make_pair(0b00010ul, 0b00100ul)));
-  EXPECT_TRUE(equals(pairs[2], std::make_pair(0b00110ul, 0b01000ul)));
-  EXPECT_TRUE(equals(pairs[3], std::make_pair(0b01010ul, 0b00100ul)));
-  EXPECT_TRUE(equals(pairs[4], std::make_pair(0b00001ul, 0b00100ul)));
-  EXPECT_TRUE(equals(pairs[5], std::make_pair(0b00001ul, 0b00010ul)));
-  EXPECT_TRUE(equals(pairs[6], std::make_pair(0b00001ul, 0b00110ul)));
-  EXPECT_TRUE(equals(pairs[7], std::make_pair(0b00001ul, 0b01010ul)));
-  EXPECT_TRUE(equals(pairs[8], std::make_pair(0b00001ul, 0b01110ul)));
-  EXPECT_TRUE(equals(pairs[9], std::make_pair(0b00011ul, 0b01000ul)));
-  EXPECT_TRUE(equals(pairs[10], std::make_pair(0b00011ul, 0b00100ul)));
-  EXPECT_TRUE(equals(pairs[11], std::make_pair(0b00101ul, 0b00010ul)));
-  EXPECT_TRUE(equals(pairs[12], std::make_pair(0b00101ul, 0b01010ul)));
-  EXPECT_TRUE(equals(pairs[13], std::make_pair(0b00111ul, 0b01000ul)));
-  EXPECT_TRUE(equals(pairs[14], std::make_pair(0b01011ul, 0b00100ul)));
+  EXPECT_TRUE(equals(pairs[0], std::make_pair(0b00010, 0b01000)));
+  EXPECT_TRUE(equals(pairs[1], std::make_pair(0b00010, 0b00100)));
+  EXPECT_TRUE(equals(pairs[2], std::make_pair(0b00110, 0b01000)));
+  EXPECT_TRUE(equals(pairs[3], std::make_pair(0b01010, 0b00100)));
+  EXPECT_TRUE(equals(pairs[4], std::make_pair(0b00001, 0b00100)));
+  EXPECT_TRUE(equals(pairs[5], std::make_pair(0b00001, 0b00010)));
+  EXPECT_TRUE(equals(pairs[6], std::make_pair(0b00001, 0b00110)));
+  EXPECT_TRUE(equals(pairs[7], std::make_pair(0b00001, 0b01010)));
+  EXPECT_TRUE(equals(pairs[8], std::make_pair(0b00001, 0b01110)));
+  EXPECT_TRUE(equals(pairs[9], std::make_pair(0b00011, 0b01000)));
+  EXPECT_TRUE(equals(pairs[10], std::make_pair(0b00011, 0b00100)));
+  EXPECT_TRUE(equals(pairs[11], std::make_pair(0b00101, 0b00010)));
+  EXPECT_TRUE(equals(pairs[12], std::make_pair(0b00101, 0b01010)));
+  EXPECT_TRUE(equals(pairs[13], std::make_pair(0b00111, 0b01000)));
+  EXPECT_TRUE(equals(pairs[14], std::make_pair(0b01011, 0b00100)));
 }
 
 TEST_F(EnumerateCcpTest, ArbitraryVertexNumbering) {
@@ -158,10 +158,10 @@ TEST_F(EnumerateCcpTest, ArbitraryVertexNumbering) {
   const auto pairs = EnumerateCcp{3, edges}();
   ASSERT_EQ(pairs.size(), 4u);
 
-  EXPECT_TRUE(equals(pairs[0], std::make_pair(0b010ul, 0b100ul)));
-  EXPECT_TRUE(equals(pairs[1], std::make_pair(0b001ul, 0b100ul)));
-  EXPECT_TRUE(equals(pairs[2], std::make_pair(0b001ul, 0b110ul)));
-  EXPECT_TRUE(equals(pairs[3], std::make_pair(0b101ul, 0b010ul)));
+  EXPECT_TRUE(equals(pairs[0], std::make_pair(0b010, 0b100)));
+  EXPECT_TRUE(equals(pairs[1], std::make_pair(0b001, 0b100)));
+  EXPECT_TRUE(equals(pairs[2], std::make_pair(0b001, 0b110)));
+  EXPECT_TRUE(equals(pairs[3], std::make_pair(0b101, 0b010)));
 }
 
 }  // namespace hyrise
