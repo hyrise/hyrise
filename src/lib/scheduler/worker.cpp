@@ -29,7 +29,8 @@ using namespace hyrise;  // NOLINT(build/namespaces)
  * On worker threads, this references the worker running on this thread, on all other threads, this is empty.
  * Uses a weak_ptr, because otherwise the ref-count of it would not reach zero within the main() scope of the program.
  */
-thread_local std::weak_ptr<Worker> this_thread_worker;
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables): clang-tidy wants `this_thread_worker` const.
+thread_local const std::weak_ptr<Worker> this_thread_worker;
 
 }  // namespace
 

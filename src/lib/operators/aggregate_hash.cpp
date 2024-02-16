@@ -1140,16 +1140,16 @@ void AggregateHash::_write_aggregate_output(ColumnID aggregate_index) {
 
   // Retrieve type information from the aggregation traits.
   using aggregate_type = typename WindowFunctionTraits<ColumnDataType, aggregate_function>::ReturnType;
-  auto RESULT_TYPE = WindowFunctionTraits<ColumnDataType, aggregate_function>::RESULT_TYPE;
+  auto result_type = WindowFunctionTraits<ColumnDataType, aggregate_function>::RESULT_TYPE;
 
   const auto& aggregate = _aggregates[aggregate_index];
 
   const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->argument());
   const auto input_column_id = pqp_column.column_id;
 
-  if (RESULT_TYPE == DataType::Null) {
+  if (result_type == DataType::Null) {
     // if not specified, it’s the input column’s type
-    RESULT_TYPE = left_input_table()->column_data_type(input_column_id);
+    result_type = left_input_table()->column_data_type(input_column_id);
   }
 
   auto context = std::static_pointer_cast<AggregateResultContext<ColumnDataType, aggregate_function>>(
@@ -1196,7 +1196,7 @@ void AggregateHash::_write_aggregate_output(ColumnID aggregate_index) {
   DebugAssert(NEEDS_NULL || null_values.empty(), "write_aggregate_values unexpectedly wrote NULL values.");
   const auto output_column_id = _groupby_column_ids.size() + aggregate_index;
   _output_column_definitions[output_column_id] =
-      TableColumnDefinition{aggregate->as_column_name(), RESULT_TYPE, NEEDS_NULL};
+      TableColumnDefinition{aggregate->as_column_name(), result_type, NEEDS_NULL};
 
   auto output_segment = std::shared_ptr<ValueSegment<aggregate_type>>{};
   if (!NEEDS_NULL) {

@@ -12,9 +12,9 @@
 #include <utility>
 
 namespace {
-template <typename uintX_t>
-std::pair<uintX_t, uintX_t> shift_left_with_borrow(uintX_t value, hyrise::CompositeKeyLength bits) {
-  const auto bits_for_type = sizeof(uintX_t) * CHAR_BIT;
+template <typename UintX_t>
+std::pair<UintX_t, UintX_t> shift_left_with_borrow(UintX_t value, hyrise::CompositeKeyLength bits) {
+  const auto bits_for_type = sizeof(UintX_t) * CHAR_BIT;
   assert(bits <= bits_for_type);
   auto borrow = value;
   borrow >>= bits_for_type - bits;
