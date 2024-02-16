@@ -9,26 +9,19 @@
 
 namespace hyrise {
 
-struct plugin_name_function_name_hash;
-
 using PluginHandle = void*;
 using PluginName = std::string;
-using UserExecutableFunctionMap = std::unordered_map<std::pair<PluginName, PluginFunctionName>, PluginFunctionPointer,
-                                                     plugin_name_function_name_hash>;
+
+struct PluginNameFunctionNameHash {
+  size_t operator()(const std::pair<PluginName, PluginFunctionName>& exec_function_identifier) const;
+};
+
+using UserExecutableFunctionMap =
+    std::unordered_map<std::pair<PluginName, PluginFunctionName>, PluginFunctionPointer, PluginNameFunctionNameHash>;
 
 struct PluginHandleWrapper {
   PluginHandle handle;
   std::unique_ptr<AbstractPlugin> plugin;
-};
-
-struct plugin_name_function_name_hash {
-  size_t operator()(const std::pair<PluginName, PluginFunctionName>& p) const {
-    auto hash = size_t{0};
-    boost::hash_combine(hash, p.first);
-    boost::hash_combine(hash, p.second);
-
-    return hash;
-  }
 };
 
 class PluginManager : public Noncopyable {
