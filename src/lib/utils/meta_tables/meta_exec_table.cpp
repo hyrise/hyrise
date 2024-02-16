@@ -1,7 +1,6 @@
 #include "meta_exec_table.hpp"
 
 #include <memory>
-#include <optional>
 #include <string>
 #include <vector>
 

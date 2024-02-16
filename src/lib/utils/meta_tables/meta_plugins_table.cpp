@@ -1,7 +1,6 @@
 #include "meta_plugins_table.hpp"
 
 #include <memory>
-#include <optional>
 #include <string>
 #include <vector>
 
