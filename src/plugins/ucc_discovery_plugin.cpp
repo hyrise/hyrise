@@ -14,6 +14,7 @@
 
 #include <boost/container_hash/hash.hpp>
 
+#include "../benchmarklib/abstract_benchmark_item_runner.hpp"
 #include "expression/binary_predicate_expression.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/value_expression.hpp"
@@ -36,7 +37,6 @@
 #include "utils/assert.hpp"
 #include "utils/log_manager.hpp"
 #include "utils/timer.hpp"
-#include "../benchmarklib/abstract_benchmark_item_runner.hpp"
 
 namespace hyrise {
 

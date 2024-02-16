@@ -8,13 +8,13 @@
 #include <utility>
 #include <vector>
 
+#include "../benchmarklib/abstract_benchmark_item_runner.hpp"
 #include "all_type_variant.hpp"
 #include "hyrise.hpp"
 #include "storage/table.hpp"
 #include "storage/table_column_definition.hpp"
 #include "types.hpp"
 #include "utils/abstract_plugin.hpp"
-#include "../benchmarklib/abstract_benchmark_item_runner.hpp"
 
 namespace hyrise {
 
