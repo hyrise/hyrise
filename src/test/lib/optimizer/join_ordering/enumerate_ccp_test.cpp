@@ -6,11 +6,12 @@ namespace {
 
 using namespace hyrise;  // NOLINT
 
-bool equals(const std::pair<boost::dynamic_bitset<>, boost::dynamic_bitset<>>& lhs,
-            const std::pair<size_t, size_t>& rhs) {
+template <typename T>
+bool equals(const std::pair<boost::dynamic_bitset<>, boost::dynamic_bitset<>>& lhs, const std::pair<T, T>& rhs) {
   Assert(lhs.first.size() == lhs.second.size() && lhs.first.size() <= sizeof(unsigned long) * 8,  // NOLINT
          "Bitset has too many bits for comparison.");
-  return lhs.first.to_ulong() == rhs.first && lhs.second.to_ulong() == rhs.second;
+  return lhs.first.to_ulong() == static_cast<unsigned long>(rhs.first) &&
+         lhs.second.to_ulong() == static_cast<unsigned long>(rhs.second);
 }
 }  // namespace
 
