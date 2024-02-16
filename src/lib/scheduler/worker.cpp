@@ -30,7 +30,7 @@ using namespace hyrise;  // NOLINT(build/namespaces)
  * Uses a weak_ptr, because otherwise the ref-count of it would not reach zero within the main() scope of the program.
  */
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables): clang-tidy wants `this_thread_worker` const.
-thread_local const std::weak_ptr<Worker> this_thread_worker;
+thread_local std::weak_ptr<Worker> this_thread_worker;
 
 }  // namespace
 
