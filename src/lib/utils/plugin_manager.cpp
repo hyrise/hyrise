@@ -195,10 +195,8 @@ PluginManager::~PluginManager() {
 
 size_t PluginNameFunctionNameHash::operator()(
     const std::pair<PluginName, PluginFunctionName>& exec_function_identifier) const {
-  auto hash = boost::hash_value(exec_function_identifier.first);
-  boost::hash_combine(hash, exec_function_identifier.second);
+  return boost::hash_value(exec_function_identifier);
 
-  return hash;
 }
 
 }  // namespace hyrise
