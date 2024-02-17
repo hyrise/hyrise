@@ -1,11 +1,10 @@
 #include "tpch_table_generator.hpp"
 
-#include <stdlib.h>
-
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <cstdlib>
 #include <filesystem>
 #include <memory>
 #include <string>
@@ -101,16 +100,16 @@ void dbgen_cleanup() {
                              &nouns,       &adjectives,     &adverbs,        &prepositions,
                              &verbs,       &terminators,    &auxillaries,    &np,
                              &vp,          &grammar}) {
-    free(distribution->permute);  // NOLINT(cppcoreguidelines-no-malloc,hicpp-no-malloc,cppcoreguidelines-owning-memory)
+    std::free(distribution->permute);  // NOLINT(cppcoreguidelines-no-malloc,hicpp-no-malloc,cppcoreguidelines-owning-memory)
     distribution->permute = nullptr;
   }
 
   if (asc_date) {
     for (auto idx = size_t{0}; idx < TOTDATE; ++idx) {
       // NOLINTNEXTLINE(cppcoreguidelines-no-malloc,hicpp-no-malloc,cppcoreguidelines-owning-memory)
-      free(reinterpret_cast<void*>(const_cast<char*>(asc_date[idx])));
+      std::free(reinterpret_cast<void*>(const_cast<char*>(asc_date[idx])));
     }
-    free(asc_date);  // NOLINT(cppcoreguidelines-no-malloc,hicpp-no-malloc,cppcoreguidelines-owning-memory)
+    std::free(asc_date);  // NOLINT(cppcoreguidelines-no-malloc,hicpp-no-malloc,cppcoreguidelines-owning-memory)
   }
   asc_date = nullptr;
 }
