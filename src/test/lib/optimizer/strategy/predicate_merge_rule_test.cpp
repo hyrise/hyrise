@@ -25,7 +25,7 @@ class PredicateMergeRuleTest : public StrategyBaseTest {
 
     rule = std::make_shared<PredicateMergeRule>();
 
-    // Reducing the minimum_union_count so that plans are merged earlier, making the test cases shorter
+    // Reducing the minimum_union_count so that plans are merged earlier, making the test cases shorter.
     rule->minimum_union_count = 1;
   }
 

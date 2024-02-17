@@ -15,8 +15,7 @@ namespace hyrise {
  * minimum_union_count, this rule reverts the PredicateSplitUpRule's changes by merging multiple PredicateNodes and
  * UnionNodes into single a PredicateNode.
  *
- * EXAMPLE:
- *   TPC-DS query 41 benefits from this rule because the PredicateSplitUpRule creates a huge LQP.
+ * Example: TPC-DS query 41 benefits from this rule because the PredicateSplitUpRule creates a huge LQP.
  */
 class PredicateMergeRule : public AbstractRule {
  public:
