@@ -100,7 +100,8 @@ void dbgen_cleanup() {
                              &nouns,       &adjectives,     &adverbs,        &prepositions,
                              &verbs,       &terminators,    &auxillaries,    &np,
                              &vp,          &grammar}) {
-    std::free(distribution->permute);  // NOLINT(cppcoreguidelines-no-malloc,hicpp-no-malloc,cppcoreguidelines-owning-memory)
+    // NOLINTNEXTLINE(cppcoreguidelines-no-malloc,hicpp-no-malloc,cppcoreguidelines-owning-memory)
+    std::free(distribution->permute);
     distribution->permute = nullptr;
   }
 
