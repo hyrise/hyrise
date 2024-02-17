@@ -9,23 +9,23 @@
 
 namespace hyrise {
 
-// A simple polymorphic memory resource that tracks how much memory was allocated
+// A simple polymorphic memory resource that tracks how much memory was allocated.
 class SimpleTrackingMemoryResource : public boost::container::pmr::memory_resource {
  public:
   size_t allocated{0};
 
   void* do_allocate(std::size_t bytes, std::size_t alignment) override {
     allocated += bytes;
-    return std::malloc(bytes);  // NOLINT
+    return std::malloc(bytes);  // NOLINT(cppcoreguidelines-no-malloc,hicpp-no-malloc,cppcoreguidelines-owning-memory)
   }
 
   void do_deallocate(void* p, std::size_t bytes, std::size_t alignment) override {
     allocated -= bytes;
-    std::free(p);  // NOLINT
+    std::free(p);  // NOLINT(cppcoreguidelines-no-malloc,hicpp-no-malloc,cppcoreguidelines-owning-memory)
   }
 
   bool do_is_equal(const memory_resource& other) const noexcept override {
-    Fail("Not implemented");
+    Fail("Not implemented.");
   }
 };
 

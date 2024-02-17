@@ -13,7 +13,6 @@
 #include <utility>
 #include <vector>
 
-#include <boost/hana/fwd/type.hpp>
 #include <boost/lexical_cast/bad_lexical_cast.hpp>
 #include <boost/variant/get.hpp>
 

@@ -90,7 +90,7 @@ float convert_money(DSS_HUGE cents) {
 }
 
 /**
- * Call this after using dbgen to avoid memory leaks
+ * Call this after using dbgen to avoid memory leaks.
  */
 void dbgen_cleanup() {
   for (auto* distribution : {&nations,     &regions,        &o_priority_set, &l_instruct_set,
@@ -99,15 +99,16 @@ void dbgen_cleanup() {
                              &nouns,       &adjectives,     &adverbs,        &prepositions,
                              &verbs,       &terminators,    &auxillaries,    &np,
                              &vp,          &grammar}) {
-    free(distribution->permute);  // NOLINT
+    free(distribution->permute);  // NOLINT(cppcoreguidelines-no-malloc,hicpp-no-malloc,cppcoreguidelines-owning-memory)
     distribution->permute = nullptr;
   }
 
-  if (asc_date != nullptr) {
+  if (asc_date) {
     for (auto idx = size_t{0}; idx < TOTDATE; ++idx) {
-      free((void*)asc_date[idx]);  // NOLINT
+      // NOLINTNEXTLINE(cppcoreguidelines-no-malloc,hicpp-no-malloc,cppcoreguidelines-owning-memory)
+      free(reinterpret_cast<void*>(const_cast<char*>(asc_date[idx])));
     }
-    free(asc_date);  // NOLINT
+    free(asc_date);  // NOLINT(cppcoreguidelines-no-malloc,hicpp-no-malloc,cppcoreguidelines-owning-memory)
   }
   asc_date = nullptr;
 }

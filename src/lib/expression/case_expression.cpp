@@ -7,7 +7,7 @@
 
 #include "all_type_variant.hpp"
 #include "expression/abstract_expression.hpp"
-#include "expression_utils.hpp"
+#include "expression/expression_utils.hpp"
 #include "operators/abstract_operator.hpp"
 #include "utils/assert.hpp"
 
