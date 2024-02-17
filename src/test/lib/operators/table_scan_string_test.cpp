@@ -17,8 +17,6 @@
 #include "storage/table.hpp"
 #include "types.hpp"
 
-using namespace std::string_literals;  // NOLINT
-
 namespace hyrise {
 
 class OperatorsTableScanStringTest : public BaseTest, public ::testing::WithParamInterface<EncodingType> {

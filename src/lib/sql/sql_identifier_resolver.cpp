@@ -8,8 +8,6 @@
 
 #include "sql_identifier_resolver_proxy.hpp"
 
-using namespace std::string_literals;  // NOLINT
-
 namespace hyrise {
 
 void SQLIdentifierResolver::add_column_name(const std::shared_ptr<AbstractExpression>& expression,

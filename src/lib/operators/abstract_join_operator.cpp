@@ -20,8 +20,6 @@
 #include "types.hpp"
 #include "utils/assert.hpp"
 
-using namespace std::string_literals;  // NOLINT
-
 namespace hyrise {
 
 AbstractJoinOperator::AbstractJoinOperator(const OperatorType type, const std::shared_ptr<const AbstractOperator>& left,

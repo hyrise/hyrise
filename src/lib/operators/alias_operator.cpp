@@ -19,8 +19,6 @@
 #include "types.hpp"
 #include "utils/assert.hpp"
 
-using namespace std::string_literals;  // NOLINT
-
 namespace hyrise {
 
 AliasOperator::AliasOperator(const std::shared_ptr<const AbstractOperator>& input,

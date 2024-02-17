@@ -5,8 +5,6 @@
 
 #include "expression/evaluation/like_matcher.hpp"
 
-using namespace std::string_literals;  // NOLINT
-
 namespace hyrise {
 
 class LikeMatcherTest : public BaseTest {

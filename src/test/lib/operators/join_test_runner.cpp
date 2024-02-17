@@ -18,11 +18,11 @@
  * number of configurations (i.e. JoinModes, predicates, data types, ...)
  */
 
-using namespace std::string_literals;  // NOLINT
+using namespace std::string_literals;  // NOLINT(build/namespaces)
 
 namespace {
 
-using namespace hyrise;  // NOLINT
+using namespace hyrise;  // NOLINT(build/namespaces)
 
 using ChunkRange = std::pair<ChunkID, ChunkID>;
 

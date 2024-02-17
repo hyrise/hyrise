@@ -21,8 +21,6 @@
 #include "types.hpp"
 #include "utils/assert.hpp"
 
-using namespace std::string_literals;  // NOLINT
-
 namespace hyrise {
 
 MockNode::MockNode(const ColumnDefinitions& column_definitions, const std::optional<std::string>& init_name)

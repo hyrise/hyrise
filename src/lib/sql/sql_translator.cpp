@@ -86,7 +86,6 @@
 
 namespace {
 
-using namespace std::string_literals;           // NOLINT(build/namespaces)
 using namespace hyrise;                         // NOLINT(build/namespaces)
 using namespace hyrise::expression_functional;  // NOLINT(build/namespaces)
 
