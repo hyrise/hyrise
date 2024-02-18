@@ -107,8 +107,11 @@ void dbgen_cleanup() {
 
   if (asc_date) {
     for (auto idx = size_t{0}; idx < TOTDATE; ++idx) {
-      // NOLINTNEXTLINE(cppcoreguidelines-no-malloc,hicpp-no-malloc,cppcoreguidelines-owning-memory)
-      std::free(reinterpret_cast<void*>(const_cast<char*>(asc_date[idx])));
+      // NOLINTBEGIN(cppcoreguidelines-no-malloc,hicpp-no-malloc)
+      // NOLINTBEGIN(cppcoreguidelines-owning-memory,cppcoreguidelines-pro-type-const-cast)
+      std::free(const_cast<char*>(asc_date[idx]));
+      // NOLINTEND(cppcoreguidelines-owning-memory,cppcoreguidelines-pro-type-const-cast)
+      // NOLINTEND(cppcoreguidelines-no-malloc,hicpp-no-malloc)
     }
     std::free(asc_date);  // NOLINT(cppcoreguidelines-no-malloc,hicpp-no-malloc,cppcoreguidelines-owning-memory)
   }
