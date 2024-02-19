@@ -5,10 +5,6 @@ full_ci = env.BRANCH_NAME == 'master' || pullRequest.labels.contains('FullCI')
 // Due to their long runtime, we skip several tests in sanitizer builds.
 tests_excluded_in_all_sanitizer_builds = 'SQLiteTestRunnerEncodings/*:TPCDSTableGeneratorTest.GenerateAndStoreRowCounts:TPCHTableGeneratorTest.RowCountsMediumScaleFactor'
 
-// Dynamically loaded plugins currently violate the "one defintion rule" (ODR). We thus skip tests that load plugins.
-// The issue is listed as #2632.
-tests_excluded_in_addr_sanitizer_builds = 'MetaPluginsTest.*:PluginManagerTest.*:MetaExecTest.*:HyriseTest.GetAndResetHyrise'
-
 // We run the strict ("more aggressive") checks for the address sanitizer
 // (see https://github.com/google/sanitizers/wiki/AddressSanitizer#faq). Moreover, we activate the leak sanitizer and
 // add the asan-ignore.txt file.
@@ -252,7 +248,7 @@ try {
             stage("clang-debug:addr-ub-sanitizers") {
               if (env.BRANCH_NAME == 'master' || full_ci) {
                 sh "cd clang-debug-addr-ub-leak-sanitizers && ninja hyriseTest hyriseSystemTest hyriseBenchmarkTPCH hyriseBenchmarkTPCC -j \$(( \$(nproc) / 20))"
-                sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=\${asan_options} ./clang-debug-addr-ub-leak-sanitizers/hyriseTest --gtest_filter=-${tests_excluded_in_addr_sanitizer_builds} clang-debug-addr-ub-leak-sanitizers"
+                sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=\${asan_options} ./clang-debug-addr-ub-leak-sanitizers/hyriseTest clang-debug-addr-ub-leak-sanitizers"
                 sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=\${asan_options} ./clang-debug-addr-ub-leak-sanitizers/hyriseSystemTest --gtest_filter=-${tests_excluded_in_all_sanitizer_builds} clang-debug-addr-ub-leak-sanitizers"
                 sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=\${asan_options} ./clang-debug-addr-ub-leak-sanitizers/hyriseBenchmarkTPCH -s .01 --verify -r 1"
               } else {
@@ -279,7 +275,7 @@ try {
             stage("clang-release:addr-ub-sanitizers") {
               if (env.BRANCH_NAME == 'master' || full_ci) {
                 sh "cd clang-release-addr-ub-leak-sanitizers && ninja hyriseTest hyriseSystemTest hyriseBenchmarkTPCH hyriseBenchmarkTPCC -j \$(( \$(nproc) / 5))"
-                sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=\${asan_options} ./clang-release-addr-ub-leak-sanitizers/hyriseTest --gtest_filter=-${tests_excluded_in_addr_sanitizer_builds} clang-release-addr-ub-leak-sanitizers"
+                sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=\${asan_options} ./clang-release-addr-ub-leak-sanitizers/hyriseTest clang-release-addr-ub-leak-sanitizers"
                 sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=\${asan_options} ./clang-release-addr-ub-leak-sanitizers/hyriseSystemTest --gtest_filter=-${tests_excluded_in_all_sanitizer_builds} clang-release-addr-ub-leak-sanitizers"
                 sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=\${asan_options} ./clang-release-addr-ub-leak-sanitizers/hyriseBenchmarkTPCH -s .01 --verify -r 100 --scheduler --clients 10 --cores \$(( \$(nproc) / 10))"
                 sh "cd clang-release-addr-ub-leak-sanitizers && LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=\${asan_options} ../scripts/test/hyriseBenchmarkTPCC_test.py ." // Own folder to isolate binary export tests

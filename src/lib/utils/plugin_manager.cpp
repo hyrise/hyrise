@@ -3,6 +3,7 @@
 #include <dlfcn.h>
 
 #include <algorithm>
+#include <cstddef>
 #include <cstdint>
 #include <filesystem>
 #include <memory>
@@ -12,13 +13,15 @@
 #include <utility>
 #include <vector>
 
+#include <boost/container_hash/hash.hpp>
+
 #include "nlohmann/json.hpp"
 
 #include "abstract_benchmark_item_runner.hpp"
 #include "hyrise.hpp"
-#include "log_manager.hpp"
 #include "utils/abstract_plugin.hpp"
 #include "utils/assert.hpp"
+#include "utils/log_manager.hpp"
 #include "utils/string_utils.hpp"
 
 namespace hyrise {
@@ -48,7 +51,7 @@ std::vector<PluginName> PluginManager::loaded_plugins() const {
   return plugin_names;
 }
 
-std::unordered_map<std::pair<PluginName, PluginFunctionName>, PluginFunctionPointer, plugin_name_function_name_hash>
+std::unordered_map<std::pair<PluginName, PluginFunctionName>, PluginFunctionPointer, PluginNameFunctionNameHash>
 PluginManager::user_executable_functions() const {
   return _user_executable_functions;
 }
@@ -189,6 +192,11 @@ void PluginManager::_clean_up() {
 
 PluginManager::~PluginManager() {
   _clean_up();
+}
+
+size_t PluginNameFunctionNameHash::operator()(
+    const std::pair<PluginName, PluginFunctionName>& exec_function_identifier) const {
+  return boost::hash_value(exec_function_identifier);
 }
 
 }  // namespace hyrise

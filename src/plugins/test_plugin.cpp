@@ -8,6 +8,7 @@
 #include <utility>
 #include <vector>
 
+#include "../benchmarklib/abstract_benchmark_item_runner.hpp"
 #include "all_type_variant.hpp"
 #include "hyrise.hpp"
 #include "storage/table.hpp"

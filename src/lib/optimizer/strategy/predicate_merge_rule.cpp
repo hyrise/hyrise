@@ -64,8 +64,8 @@ void PredicateMergeRule::_apply_to_plan_without_subqueries(const std::shared_ptr
   // Step 1: Collect mergeable nodes.
   visit_lqp(lqp_root, [&](const auto& node) {
     const auto& union_node = std::dynamic_pointer_cast<UnionNode>(node);
-    // We need to check for SetOperationMode::Positions as other SetOperationModes are
-    // not guaranteed to represent a disjunction.
+    // We need to check for SetOperationMode::Positions as other SetOperationModes are not guaranteed to represent a
+    // disjunction.
     if (node->type == LQPNodeType::Predicate ||
         (union_node && union_node->set_operation_mode == SetOperationMode::Positions)) {
       const auto& outputs = node->outputs();
@@ -90,34 +90,27 @@ void PredicateMergeRule::_apply_to_plan_without_subqueries(const std::shared_ptr
     return LQPVisitation::VisitInputs;
   });
 
-  // Step 2: Try to merge each node
+  // Step 2: Try to merge each node.
   while (!node_queue.empty()) {
     const auto& node = node_queue.front();
-    node_queue.pop();
 
     if (node->output_count() == 0 || topmost_to_union_count[node_to_topmost[node]] < minimum_union_count) {
       // The node was already removed due to a previous merge or its subplan is too small to be merged.
+      node_queue.pop();
       continue;
     }
 
-    switch (node->type) {
-      // _merge_disjunction() and _merge_conjunction() merge UnionNodes and PredicateNodes by:
-      //   a) being called on any node inside a mergable subplan
-      //   b) calling each other recursively after a merge to check whether they can merge right again.
-      case LQPNodeType::Union: {
-        const auto& union_node = std::static_pointer_cast<UnionNode>(node);
-        _merge_disjunction(union_node);
-        break;
-      }
-
-      case LQPNodeType::Predicate: {
-        _merge_conjunction(std::static_pointer_cast<PredicateNode>(node));
-        break;
-      }
-
-      default: {
-      }
+    // `_merge_disjunction()` and `_merge_conjunction()` merge UnionNodes and PredicateNodes by:
+    //   a) being called on any node inside a mergable subplan
+    //   b) calling each other recursively after a merge to check whether they can merge right again.
+    const auto node_type = node->type;
+    if (node_type == LQPNodeType::Union) {
+      _merge_disjunction(std::static_pointer_cast<UnionNode>(node));
+    } else if (node_type == LQPNodeType::Predicate) {
+      _merge_conjunction(std::static_pointer_cast<PredicateNode>(node));
     }
+
+    node_queue.pop();
   }
 }
 
