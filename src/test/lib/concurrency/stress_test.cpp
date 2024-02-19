@@ -286,12 +286,14 @@ TEST_F(StressTest, NodeQueueSchedulerSemaphoreIncrements) {
     Hyrise::get().set_scheduler(node_queue_scheduler);
 
     auto counter = std::atomic<uint32_t>{0};
+    auto active_task_count = std::atomic<uint32_t>{0};
     auto wait_flag = std::atomic_flag{};
 
     auto waiting_jobs = std::vector<std::shared_ptr<AbstractTask>>{};
     waiting_jobs.reserve(job_count);
     for (auto job_id = size_t{0}; job_id < job_count; ++job_id) {
       waiting_jobs.emplace_back(std::make_shared<JobTask>([&] {
+        ++active_task_count;
         wait_flag.wait(false);
         ++counter;
       }));
@@ -307,7 +309,9 @@ TEST_F(StressTest, NodeQueueSchedulerSemaphoreIncrements) {
 
     Hyrise::get().scheduler()->schedule_tasks(waiting_jobs);
     // Wait a bit for workers to pull jobs and decrement semaphore.
-    std::this_thread::sleep_for(CPU_COUNT * SLEEP_TIME);
+    while (active_task_count < CPU_COUNT) {
+      std::this_thread::sleep_for(SLEEP_TIME);
+    }
 
     for (const auto& queue : node_queue_scheduler->queues()) {
       if (!queue) {
@@ -347,12 +351,14 @@ TEST_F(StressTest, NodeQueueSchedulerSemaphoreIncrementsDependentTasks) {
     Hyrise::get().set_scheduler(node_queue_scheduler);
 
     auto counter = std::atomic<uint32_t>{0};
+    auto active_task_count = std::atomic<uint32_t>{0};
     auto wait_flag = std::atomic<bool>{true};
 
     auto waiting_jobs = std::vector<std::shared_ptr<AbstractTask>>{};
     waiting_jobs.reserve(job_count);
     for (auto job_id = uint32_t{0}; job_id < job_count; ++job_id) {
       waiting_jobs.emplace_back(std::make_shared<JobTask>([&] {
+        ++active_task_count;
         while (wait_flag) {
           std::this_thread::sleep_for(SLEEP_TIME);
         }
@@ -373,7 +379,9 @@ TEST_F(StressTest, NodeQueueSchedulerSemaphoreIncrementsDependentTasks) {
 
     Hyrise::get().scheduler()->schedule_tasks(waiting_jobs);
     // Wait a bit for workers to pull jobs and decrement semaphore.
-    std::this_thread::sleep_for(5 * CPU_COUNT * SLEEP_TIME);
+    while (active_task_count < CPU_COUNT) {
+      std::this_thread::sleep_for(SLEEP_TIME);
+    }
 
     // The number of scheduled jobs depends on DEPENDENT_JOB_TASKS_LENGTH (see job definition above; due to the jobs
     // dependencies, jobs are only scheduled when they have no predecessors).
