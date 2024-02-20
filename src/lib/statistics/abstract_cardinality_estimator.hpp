@@ -26,7 +26,8 @@ class AbstractCardinalityEstimator {
   /**
    * @return the estimated output row count of @param lqp
    */
-  virtual Cardinality estimate_cardinality(const std::shared_ptr<const AbstractLQPNode>& lqp) const = 0;
+  virtual Cardinality estimate_cardinality(const std::shared_ptr<const AbstractLQPNode>& lqp,
+                                           const bool cacheable = true) const = 0;
 
   /**
    * For increased cardinality estimation performance:

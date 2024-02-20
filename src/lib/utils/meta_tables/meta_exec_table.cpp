@@ -20,7 +20,7 @@ bool MetaExecTable::can_insert() const {
 }
 
 std::shared_ptr<Table> MetaExecTable::_on_generate() const {
-  auto output_table = std::make_shared<Table>(_column_definitions, TableType::Data, std::nullopt, UseMvcc::Yes);
+  auto output_table = std::make_shared<Table>(_column_definitions, TableType::Data);
 
   for (const auto& [key, _] : Hyrise::get().plugin_manager.user_executable_functions()) {
     const auto& [plugin_name, function_name] = key;

@@ -250,14 +250,14 @@ std::shared_ptr<const Table> Projection::_on_execute() {
     if (output_table_type == TableType::Data) {
       chunk = std::make_shared<Chunk>(std::move(output_segments_by_chunk[chunk_id]), input_chunk->mvcc_data());
       chunk->increase_invalid_row_count(input_chunk->invalid_row_count());
-      chunk->finalize();
+      chunk->set_immutable();
 
       DebugAssert(projection_result_segments.empty(),
                   "For TableType::Data, projection_result_segments should be unused");
     } else {
       chunk = std::make_shared<Chunk>(std::move(output_segments_by_chunk[chunk_id]));
       // No need to increase_invalid_row_count here, as it is ignored for reference chunks anyway
-      chunk->finalize();
+      chunk->set_immutable();
 
       if (projection_result_table) {
         projection_result_table->append_chunk(projection_result_segments, input_chunk->mvcc_data());

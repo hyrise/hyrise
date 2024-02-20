@@ -848,6 +848,30 @@ TEST_F(CardinalityEstimatorTest, StoredTable) {
   EXPECT_EQ(estimator.estimate_cardinality(StoredTableNode::make("t")), 3);
 }
 
+TEST_F(CardinalityEstimatorTest, StaticTable) {
+  const auto table = load_table("resources/test_data/tbl/int.tbl");
+  const auto static_table_node = StaticTableNode::make(table);
+
+  // Case (i): No statistics available, create dummy statistics.
+  const auto dummy_statistics = estimator.estimate_statistics(static_table_node);
+  EXPECT_FLOAT_EQ(dummy_statistics->row_count, 3.0f);
+  ASSERT_EQ(dummy_statistics->column_statistics.size(), 1);
+  ASSERT_EQ(dummy_statistics->column_statistics[0]->data_type, DataType::Int);
+
+  const auto& attribute_statistics =
+      static_cast<const AttributeStatistics<int32_t>&>(*dummy_statistics->column_statistics[0]);
+  EXPECT_FALSE(attribute_statistics.histogram);
+  EXPECT_FALSE(attribute_statistics.min_max_filter);
+  EXPECT_FALSE(attribute_statistics.range_filter);
+  EXPECT_FALSE(attribute_statistics.null_value_ratio);
+  EXPECT_FALSE(attribute_statistics.distinct_value_count);
+
+  // Case (ii): Statistics available, simply forward them.
+  table->set_table_statistics(TableStatistics::from_table(*table));
+  const auto forwarded_statistics = estimator.estimate_statistics(static_table_node);
+  EXPECT_EQ(forwarded_statistics, table->table_statistics());
+}
+
 TEST_F(CardinalityEstimatorTest, Validate) {
   // Test Validate doesn't break the TableStatistics. The CardinalityEstimator is not estimating anything for Validate
   // as there are no statistics available atm to base such an estimation on.
@@ -1085,6 +1109,27 @@ TEST_F(CardinalityEstimatorTest, WindowNode) {
   EXPECT_EQ(result_table_statistics->column_statistics.at(0), input_table_statistics->column_statistics.at(0));
   EXPECT_EQ(result_table_statistics->column_statistics.at(1), input_table_statistics->column_statistics.at(1));
   EXPECT_TRUE(result_table_statistics->column_statistics.at(2));
+}
+
+TEST_F(CardinalityEstimatorTest, StatisticsCaching) {
+  // Enable statistics caching.
+  estimator.guarantee_bottom_up_construction();
+  const auto& statistics_cache = estimator.cardinality_estimation_cache.statistics_by_lqp;
+  ASSERT_TRUE(statistics_cache);
+  EXPECT_TRUE(statistics_cache->empty());
+
+  // Estimate the cardinality of a node with statistics caching enabled.
+  const auto predicate_node_1 = PredicateNode::make(greater_than_(a_a, 50), node_a);
+  estimator.estimate_cardinality(predicate_node_1);
+  EXPECT_EQ(statistics_cache->size(), 2);
+  EXPECT_TRUE(statistics_cache->contains(node_a));
+  EXPECT_TRUE(statistics_cache->contains(predicate_node_1));
+
+  // Estimate the cardinality of a node with statistics caching disabled.
+  const auto predicate_node_2 = PredicateNode::make(less_than_(a_b, 55), node_a);
+  estimator.estimate_cardinality(predicate_node_2, false);
+  EXPECT_EQ(statistics_cache->size(), 2);
+  EXPECT_FALSE(statistics_cache->contains(predicate_node_2));
 }
 
 }  // namespace hyrise
