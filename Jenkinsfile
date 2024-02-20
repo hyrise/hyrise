@@ -86,7 +86,7 @@ try {
             grep path .gitmodules | sed 's/.*=//' | xargs -n 1 -I '{}' git config --global --add safe.directory $WORKSPACE/'{}'
             '''
 
-            // sh "./install_dependencies.sh"
+            sh "./install_dependencies.sh"
 
             cmake = 'cmake -DCI_BUILD=ON'
 
@@ -113,7 +113,7 @@ try {
 
             // jemalloc's autoconf operates outside of the build folder (#1413). If we start two cmake instances at the same time, we run into conflicts.
             // Thus, run this one (any one, really) first, so that the autoconf step can finish in peace.
-            // sh "mkdir clang-debug && cd clang-debug &&                                                   ${cmake} ${debug}          ${clang}  ${unity}  ${ninja} .. && ninja libjemalloc-build"
+            sh "mkdir clang-debug && cd clang-debug &&                                                   ${cmake} ${debug}          ${clang}  ${unity}  ${ninja} .. && ninja libjemalloc-build"
 
             // Configure the rest in parallel.
             // Note on the clang-debug-tidy stage: clang-tidy misses some flaws when running in a unity build. However, it runs very long and we agreed to life with that for now.
