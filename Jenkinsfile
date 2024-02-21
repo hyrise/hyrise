@@ -3,12 +3,11 @@ import org.jenkinsci.plugins.pipeline.modeldefinition.Utils
 full_ci = env.BRANCH_NAME == 'master' || pullRequest.labels.contains('FullCI')
 
 // Due to their long runtime, we skip several tests in sanitizer builds.
-tests_excluded_in_all_sanitizer_builds = 'SQLiteTestRunnerEncodings/*:TPCDSTableGeneratorTest.GenerateAndStoreRowCounts:TPCHTableGeneratorTest.RowCountsMediumScaleFactor'
+tests_excluded_in_sanitizer_builds = 'SQLiteTestRunnerEncodings/*:TPCDSTableGeneratorTest.GenerateAndStoreRowCounts:TPCHTableGeneratorTest.RowCountsMediumScaleFactor'
 
 // We run the strict ("more aggressive") checks for the address sanitizer
-// (see https://github.com/google/sanitizers/wiki/AddressSanitizer#faq). Moreover, we activate the leak sanitizer and
-// add the asan-ignore.txt file.
-asan_options = 'strict_string_checks=1:detect_stack_use_after_return=1:check_initialization_order=1:use_odr_indicator=1:strict_init_order=1:detect_leaks=1,suppressions=resources/.asan-ignore.txt'
+// (see https://github.com/google/sanitizers/wiki/AddressSanitizer#faq). Moreover, we activate the leak sanitizer.
+asan_options = 'strict_string_checks=1:detect_stack_use_after_return=1:check_initialization_order=1:use_odr_indicator=1:strict_init_order=1:detect_leaks=1'
 
 try {
   node {
@@ -249,7 +248,7 @@ try {
               if (env.BRANCH_NAME == 'master' || full_ci) {
                 sh "cd clang-debug-addr-ub-leak-sanitizers && ninja hyriseTest hyriseSystemTest hyriseBenchmarkTPCH hyriseBenchmarkTPCC -j \$(( \$(nproc) / 20))"
                 sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=\${asan_options} ./clang-debug-addr-ub-leak-sanitizers/hyriseTest clang-debug-addr-ub-leak-sanitizers"
-                sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=\${asan_options} ./clang-debug-addr-ub-leak-sanitizers/hyriseSystemTest --gtest_filter=-${tests_excluded_in_all_sanitizer_builds} clang-debug-addr-ub-leak-sanitizers"
+                sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=\${asan_options} ./clang-debug-addr-ub-leak-sanitizers/hyriseSystemTest --gtest_filter=-${tests_excluded_in_sanitizer_builds} clang-debug-addr-ub-leak-sanitizers"
                 sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=\${asan_options} ./clang-debug-addr-ub-leak-sanitizers/hyriseBenchmarkTPCH -s .01 --verify -r 1"
               } else {
                 Utils.markStageSkippedForConditional("clangDebugAddrUBLeakSanitizers")
@@ -276,7 +275,7 @@ try {
               if (env.BRANCH_NAME == 'master' || full_ci) {
                 sh "cd clang-release-addr-ub-leak-sanitizers && ninja hyriseTest hyriseSystemTest hyriseBenchmarkTPCH hyriseBenchmarkTPCC -j \$(( \$(nproc) / 5))"
                 sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=\${asan_options} ./clang-release-addr-ub-leak-sanitizers/hyriseTest clang-release-addr-ub-leak-sanitizers"
-                sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=\${asan_options} ./clang-release-addr-ub-leak-sanitizers/hyriseSystemTest --gtest_filter=-${tests_excluded_in_all_sanitizer_builds} clang-release-addr-ub-leak-sanitizers"
+                sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=\${asan_options} ./clang-release-addr-ub-leak-sanitizers/hyriseSystemTest --gtest_filter=-${tests_excluded_in_sanitizer_builds} clang-release-addr-ub-leak-sanitizers"
                 sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=\${asan_options} ./clang-release-addr-ub-leak-sanitizers/hyriseBenchmarkTPCH -s .01 --verify -r 100 --scheduler --clients 10 --cores \$(( \$(nproc) / 10))"
                 sh "cd clang-release-addr-ub-leak-sanitizers && LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=\${asan_options} ../scripts/test/hyriseBenchmarkTPCC_test.py ." // Own folder to isolate binary export tests
               } else {
@@ -286,10 +285,11 @@ try {
           }, clangRelWithDebInfoThreadSanitizer: {
             stage("clang-relwithdebinfo:thread-sanitizer") {
               if (env.BRANCH_NAME == 'master' || full_ci) {
-                sh "cd clang-relwithdebinfo-thread-sanitizer && ninja hyriseTest hyriseSystemTest hyriseBenchmarkTPCH -j \$(( \$(nproc) / 5))"
+                sh "cd clang-relwithdebinfo-thread-sanitizer && ninja hyriseTest hyriseSystemTest hyriseBenchmarkTPCH hyriseBenchmarkTPCDS -j \$(( \$(nproc) / 5))"
                 sh "TSAN_OPTIONS=\"history_size=7 suppressions=resources/.tsan-ignore.txt\" ./clang-relwithdebinfo-thread-sanitizer/hyriseTest clang-relwithdebinfo-thread-sanitizer"
-                sh "TSAN_OPTIONS=\"history_size=7 suppressions=resources/.tsan-ignore.txt\" ./clang-relwithdebinfo-thread-sanitizer/hyriseSystemTest --gtest_filter=-${tests_excluded_in_all_sanitizer_builds} clang-relwithdebinfo-thread-sanitizer"
-                sh "TSAN_OPTIONS=\"history_size=7 suppressions=resources/.tsan-ignore.txt\" ./clang-relwithdebinfo-thread-sanitizer/hyriseBenchmarkTPCH -s .01 --verify -r 100 --scheduler --clients 10 --cores \$(( \$(nproc) / 10))"
+                sh "TSAN_OPTIONS=\"history_size=7 suppressions=resources/.tsan-ignore.txt\" ./clang-relwithdebinfo-thread-sanitizer/hyriseSystemTest --gtest_filter=-${tests_excluded_in_sanitizer_builds} clang-relwithdebinfo-thread-sanitizer"
+                sh "TSAN_OPTIONS=\"history_size=7 suppressions=resources/.tsan-ignore.txt\" ./clang-relwithdebinfo-thread-sanitizer/hyriseBenchmarkTPCH -s .01 -r 100 --scheduler --clients 10 --cores \$(( \$(nproc) / 10))"
+                sh "TSAN_OPTIONS=\"history_size=7 suppressions=resources/.tsan-ignore.txt\" ./clang-relwithdebinfo-thread-sanitizer/hyriseBenchmarkTPCDS -s 1 -r 5 --scheduler --clients 5 --cores \$(( \$(nproc) / 10))"
               } else {
                 Utils.markStageSkippedForConditional("clangRelWithDebInfoThreadSanitizer")
               }
@@ -324,11 +324,16 @@ try {
               // Runs after the other sanitizers as it depends on clang-release to be built.
               if (env.BRANCH_NAME == 'master' || full_ci) {
                 sh "mkdir ./clang-release-memcheck-test"
-                // If this shows a leak, try --leak-check=full, which is slower but more precise
-                sh "valgrind --tool=memcheck --error-exitcode=1 --gen-suppressions=all --num-callers=25 --suppressions=resources/.valgrind-ignore.txt ./clang-release/hyriseTest clang-release-memcheck-test --gtest_filter=-NUMAMemoryResourceTest.BasicAllocate"
-                sh "valgrind --tool=memcheck --error-exitcode=1 --gen-suppressions=all --num-callers=25 --suppressions=resources/.valgrind-ignore.txt ./clang-release/hyriseBenchmarkTPCH -s .01 -r 1 --scheduler --cores 10"
-                sh "valgrind --tool=memcheck --error-exitcode=1 --gen-suppressions=all --num-callers=25 --suppressions=resources/.valgrind-ignore.txt ./clang-release/hyriseBenchmarkTPCDS -s 1 -r 1 --scheduler --cores 10"
-                sh "valgrind --tool=memcheck --error-exitcode=1 --gen-suppressions=all --num-callers=25 --suppressions=resources/.valgrind-ignore.txt ./clang-release/hyriseBenchmarkTPCC -s 1 --scheduler --cores 10"
+                // If this shows a leak, try --leak-check=full, which is slower but more precise. Valgrind serializes
+                // concurrent threads into a single one. Thus, we limit the cores and data preparation cores for the
+                // benchmark runs to reduce this serialization overhead. According to the Valgrind documentation,
+                // --fair-sched=yes "improves overall responsiveness if you are running an interactive multithreaded
+                // program" and "produces better reproducibility of thread scheduling for different executions of a
+                // multithreaded application" (i.e., there are no runs that are randomly faster or slower).
+                sh "valgrind --tool=memcheck --error-exitcode=1 --gen-suppressions=all --num-callers=25 --fair-sched=yes --suppressions=resources/.valgrind-ignore.txt ./clang-release/hyriseTest clang-release-memcheck-test --gtest_filter=-NUMAMemoryResourceTest.BasicAllocate"
+                sh "valgrind --tool=memcheck --error-exitcode=1 --gen-suppressions=all --num-callers=25 --fair-sched=yes --suppressions=resources/.valgrind-ignore.txt ./clang-release/hyriseBenchmarkTPCH -s .01 -r 1 --scheduler --cores 4 --data_preparation_cores 4"
+                sh "valgrind --tool=memcheck --error-exitcode=1 --gen-suppressions=all --num-callers=25 --fair-sched=yes --suppressions=resources/.valgrind-ignore.txt ./clang-release/hyriseBenchmarkTPCDS -s 1 -r 1 --scheduler --cores 4 --data_preparation_cores 4"
+                sh "valgrind --tool=memcheck --error-exitcode=1 --gen-suppressions=all --num-callers=25 --fair-sched=yes --suppressions=resources/.valgrind-ignore.txt ./clang-release/hyriseBenchmarkTPCC -s 1 --scheduler --cores 4 --data_preparation_cores 4"
               } else {
                 Utils.markStageSkippedForConditional("memcheckReleaseTest")
               }
@@ -336,7 +341,9 @@ try {
           }, tpchVerification: {
             stage("tpchVerification") {
               if (env.BRANCH_NAME == 'master' || full_ci) {
+                // Verify both single- and multithreaded results.
                 sh "./clang-release/hyriseBenchmarkTPCH --dont_cache_binary_tables -r 1 -s 1 --verify"
+                sh "./clang-release/hyriseBenchmarkTPCH --dont_cache_binary_tables -r 1 -s 1 --verify --scheduler --clients 1 --cores 10"
               } else {
                 Utils.markStageSkippedForConditional("tpchVerification")
               }
@@ -392,69 +399,36 @@ try {
     }
   }
 
-  parallel x64: {
+  parallel clangMacX64: {
     node('mac') {
-      stage("clangDebugMacX64") {
-        // We have experienced frequent network problems with this CI machine. So far, we have not found the cause.
-        // Since we run this stage very late and it frequently fails due to network problems, we retry the stage three
-        // times as (i) we can be rather sure that most problems with the current pull request have already been found
-        // in earlier stages and fails in this stage are probably network issues, and (ii) we avoid re-runs of entire
-        // Full CI runs that failed in the very last stage due to a single network issue.
-        retry(3) {
-          if (env.BRANCH_NAME == 'master' || full_ci) {
-            try {
-              checkout scm
-
-              // We do not use install_dependencies.sh here as there is no way to run OS X in a Docker container
-              sh "git submodule update --init --recursive --jobs 4 --depth=1"
-
-              // Build hyriseTest with macOS's default compiler (Apple clang) and run it.
-              sh "mkdir clang-apple-debug && cd clang-apple-debug && /usr/local/bin/cmake ${debug} ${unity} ${ninja} .."
-              sh "cd clang-apple-debug && ninja"
-              sh "./clang-apple-debug/hyriseTest"
-
-              // Build Hyrise with a recent clang compiler version (as recommended for Hyrise on macOS) and run various tests.
-              sh "mkdir clang-debug && cd clang-debug && /usr/local/bin/cmake ${debug} ${unity} ${ninja} -DCMAKE_C_COMPILER=/usr/local/opt/llvm@17/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm@17/bin/clang++ .."
-              sh "cd clang-debug && ninja"
-              sh "./clang-debug/hyriseTest"
-              sh "./clang-debug/hyriseSystemTest --gtest_filter=\"-TPCCTest*:TPCDSTableGeneratorTest.*:TPCHTableGeneratorTest.RowCountsMediumScaleFactor:*.CompareToSQLite/Line1*WithLZ4\""
-              sh "PATH=/usr/local/bin/:$PATH ./scripts/test/hyriseConsole_test.py clang-debug"
-              sh "PATH=/usr/local/bin/:$PATH ./scripts/test/hyriseServer_test.py clang-debug"
-              sh "PATH=/usr/local/bin/:$PATH ./scripts/test/hyriseBenchmarkFileBased_test.py clang-debug"
-            } finally {
-              sh "ls -A1 | xargs rm -rf"
-            }
-          } else {
-            Utils.markStageSkippedForConditional("clangDebugMacX64")
-          }
-        }
-      }
-    }
-  }, clangReleaseMacArm: {
-    // For this to work, we installed a native non-standard JDK (zulu) via brew. See #2339 for more details.
-    node('mac-arm') {
-      stage("clangReleaseMacArm") {
+      stage("clangMacX64") {
         if (env.BRANCH_NAME == 'master' || full_ci) {
           try {
-            checkout scm
+            // We have experienced frequent network problems with this CI machine. So far, we have not found the cause.
+            // Since we run this stage very late and it frequently fails due to network problems, we retry pulling the
+            // sources five times to avoid re-runs of entire Full CI runs that failed in the very last stage due to a
+            // single network issue.
+            retry(5) {
+              try {
+                checkout scm
 
-            // We do not use install_dependencies.sh here as there is no way to run OS X in a Docker container
-            sh "git submodule update --init --recursive --jobs 4 --depth=1"
+                // We do not use install_dependencies.sh here as there is no way to run OS X in a Docker container.
+                sh "git submodule update --init --recursive --jobs 4 --depth=1"
+              } catch (error) {
+                sh "ls -A1 | xargs rm -rf"
+                throw error
+              }
+            }
 
-            // Build hyriseTest with macOS's default compiler (Apple clang) and run it.
-            sh "mkdir clang-apple-release && cd clang-apple-release && cmake ${release} ${ninja} .."
-            sh "cd clang-apple-release && ninja"
-            sh "./clang-apple-release/hyriseTest"
+            // Build hyriseTest (Debug) with macOS's default compiler (Apple clang) and run it.
+            sh "mkdir clang-apple-debug && cd clang-apple-release && PATH=/usr/local/bin/:$PATH cmake ${debug} ${unity} ${ninja} .."
+            sh "cd clang-apple-debug && PATH=/usr/local/bin/:$PATH ninja"
+            sh "./clang-apple-debug/hyriseTest"
 
-            // Build Hyrise with a recent clang compiler version (as recommended for Hyrise on macOS) and run various tests.
-            // NOTE: These paths differ from x64 - brew on ARM uses /opt (https://docs.brew.sh/Installation)
-            sh "mkdir clang-release && cd clang-release && cmake ${release} ${ninja} -DCMAKE_C_COMPILER=/opt/homebrew/opt/llvm@17/bin/clang -DCMAKE_CXX_COMPILER=/opt/homebrew/opt/llvm@17/bin/clang++ .."
-            sh "cd clang-release && ninja"
-
-            // Check whether arm64 binaries are built to ensure that we are not accidentally running rosetta that
-            // executes x86 binaries on arm.
-            sh "file ./clang-release/hyriseTest | grep arm64"
-
+            // Build Hyrise (Release) with a recent clang compiler version (as recommended for Hyrise on macOS) and run
+            // various tests.
+            sh "mkdir clang-release && cd clang-release && PATH=/usr/local/bin/:$PATH /usr/local/bin/cmake ${release} ${ninja} -DCMAKE_C_COMPILER=/usr/local/opt/llvm@17/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm@17/bin/clang++ .."
+            sh "cd clang-release && PATH=/usr/local/bin/:$PATH ninja"
             sh "./clang-release/hyriseTest"
             sh "./clang-release/hyriseSystemTest --gtest_filter=\"-TPCCTest*:TPCDSTableGeneratorTest.*:TPCHTableGeneratorTest.RowCountsMediumScaleFactor:*.CompareToSQLite/Line1*WithLZ4\""
             sh "PATH=/usr/local/bin/:$PATH ./scripts/test/hyriseConsole_test.py clang-release"
@@ -464,7 +438,46 @@ try {
             sh "ls -A1 | xargs rm -rf"
           }
         } else {
-          Utils.markStageSkippedForConditional("clangReleaseMacArm")
+          Utils.markStageSkippedForConditional("clangMacX64")
+        }
+      }
+    }
+  }, clangMacArm: {
+    // For this to work, we installed a native non-standard JDK (zulu) via brew. See #2339 for more details.
+    node('mac-arm') {
+      stage("clangMacArm") {
+        if (env.BRANCH_NAME == 'master' || full_ci) {
+          try {
+            checkout scm
+
+            // We do not use install_dependencies.sh here as there is no way to run OS X in a Docker container
+            sh "git submodule update --init --recursive --jobs 4 --depth=1"
+
+            // Build hyriseTest (Release) with macOS's default compiler (Apple clang) and run it.
+            sh "mkdir clang-apple-release && cd clang-apple-debug && cmake ${release} ${ninja} .."
+            sh "cd clang-apple-release && ninja"
+            sh "./clang-apple-release/hyriseTest"
+
+            // Build Hyrise (Debug) with a recent clang compiler version (as recommended for Hyrise on macOS) and run
+            // various tests.
+            // NOTE: These paths differ from x64 - brew on ARM uses /opt (https://docs.brew.sh/Installation)
+            sh "mkdir clang-debug && cd clang-debug && cmake ${debug} ${unity} ${ninja} -DCMAKE_C_COMPILER=/opt/homebrew/opt/llvm@17/bin/clang -DCMAKE_CXX_COMPILER=/opt/homebrew/opt/llvm@17/bin/clang++ .."
+            sh "cd clang-debug && ninja"
+
+            // Check whether arm64 binaries are built to ensure that we are not accidentally running rosetta that
+            // executes x86 binaries on arm.
+            sh "file ./clang-debug/hyriseTest | grep arm64"
+
+            sh "./clang-debug/hyriseTest"
+            sh "./clang-debug/hyriseSystemTest --gtest_filter=\"-TPCCTest*:TPCDSTableGeneratorTest.*:TPCHTableGeneratorTest.RowCountsMediumScaleFactor:*.CompareToSQLite/Line1*WithLZ4\""
+            sh "PATH=/usr/local/bin/:$PATH ./scripts/test/hyriseConsole_test.py clang-debug"
+            sh "PATH=/usr/local/bin/:$PATH ./scripts/test/hyriseServer_test.py clang-debug"
+            sh "PATH=/usr/local/bin/:$PATH ./scripts/test/hyriseBenchmarkFileBased_test.py clang-debug"
+          } finally {
+            sh "ls -A1 | xargs rm -rf"
+          }
+        } else {
+          Utils.markStageSkippedForConditional("clangMacArm")
         }
       }
     }
