@@ -323,17 +323,17 @@ try {
             stage("memcheckReleaseTest") {
               // Runs after the other sanitizers as it depends on clang-release to be built.
               if (env.BRANCH_NAME == 'master' || full_ci) {
-                sh "mkdir ./gcc-release-memcheck-test"
+                sh "mkdir ./clang-release-memcheck-test"
                 // If this shows a leak, try --leak-check=full, which is slower but more precise. Valgrind serializes
                 // concurrent threads into a single one. Thus, we limit the cores and data preparation cores for the
                 // benchmark runs to reduce this serialization overhead. According to the Valgrind documentation,
                 // --fair-sched=yes "improves overall responsiveness if you are running an interactive multithreaded
                 // program" and "produces better reproducibility of thread scheduling for different executions of a
                 // multithreaded application" (i.e., there are no runs that are randomly faster or slower).
-                sh "valgrind --tool=memcheck --error-exitcode=1 --gen-suppressions=all --num-callers=25 --fair-sched=yes --suppressions=resources/.valgrind-ignore.txt ./gcc-release/hyriseTest gcc-release-memcheck-test --gtest_filter=-NUMAMemoryResourceTest.BasicAllocate"
-                sh "valgrind --tool=memcheck --error-exitcode=1 --gen-suppressions=all --num-callers=25 --fair-sched=yes --suppressions=resources/.valgrind-ignore.txt ./gcc-release/hyriseBenchmarkTPCH -s .01 -r 1 --scheduler --cores 4 --data_preparation_cores 4"
-                sh "valgrind --tool=memcheck --error-exitcode=1 --gen-suppressions=all --num-callers=25 --fair-sched=yes --suppressions=resources/.valgrind-ignore.txt ./gcc-release/hyriseBenchmarkTPCDS -s 1 -r 1 --scheduler --cores 4 --data_preparation_cores 4"
-                sh "valgrind --tool=memcheck --error-exitcode=1 --gen-suppressions=all --num-callers=25 --fair-sched=yes --suppressions=resources/.valgrind-ignore.txt ./gcc-release/hyriseBenchmarkTPCC -s 1 --scheduler --cores 4 --data_preparation_cores 4"
+                sh "valgrind --tool=memcheck --error-exitcode=1 --gen-suppressions=all --num-callers=25 --fair-sched=yes --suppressions=resources/.valgrind-ignore.txt ./clang-release/hyriseTest clang-release-memcheck-test --gtest_filter=-NUMAMemoryResourceTest.BasicAllocate"
+                sh "valgrind --tool=memcheck --error-exitcode=1 --gen-suppressions=all --num-callers=25 --fair-sched=yes --suppressions=resources/.valgrind-ignore.txt ./clang-release/hyriseBenchmarkTPCH -s .01 -r 1 --scheduler --cores 4 --data_preparation_cores 4"
+                sh "valgrind --tool=memcheck --error-exitcode=1 --gen-suppressions=all --num-callers=25 --fair-sched=yes --suppressions=resources/.valgrind-ignore.txt ./clang-release/hyriseBenchmarkTPCDS -s 1 -r 1 --scheduler --cores 4 --data_preparation_cores 4"
+                sh "valgrind --tool=memcheck --error-exitcode=1 --gen-suppressions=all --num-callers=25 --fair-sched=yes --suppressions=resources/.valgrind-ignore.txt ./clang-release/hyriseBenchmarkTPCC -s 1 --scheduler --cores 4 --data_preparation_cores 4"
               } else {
                 Utils.markStageSkippedForConditional("memcheckReleaseTest")
               }
