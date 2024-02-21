@@ -1,6 +1,8 @@
 #include <filesystem>
 
-#include <boost/algorithm/string.hpp>
+#include <boost/algorithm/string/predicate.hpp>
+#include <boost/algorithm/string/split.hpp>
+#include <boost/algorithm/string/trim.hpp>
 
 #include "cxxopts.hpp"
 
@@ -149,8 +151,8 @@ int main(int argc, char* argv[]) {
    * Use a Python script to download and unzip the IMDB. We do this in Python and not in C++ because downloading and
    * unzipping is straight forward in Python (and we suspect in C++ it might be... cumbersome).
    */
-  const auto setup_imdb_command = std::string{"python3 scripts/setup_imdb.py "} + table_path;
-  const auto setup_imdb_return_code = system(setup_imdb_command.c_str());
+  const auto setup_imdb_command = "python3 scripts/setup_imdb.py " + table_path;
+  const auto setup_imdb_return_code = std::system(setup_imdb_command.c_str());
   Assert(setup_imdb_return_code == 0, "setup_imdb.py failed. Did you run the benchmark from the project root dir?");
 
   // The join-order-benchmark ships with these two .sql scripts, but we do not want to run them as part of the benchmark
