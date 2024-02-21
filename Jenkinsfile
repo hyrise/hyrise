@@ -399,9 +399,9 @@ try {
     }
   }
 
-  parallel clangReleaseMacX64: {
+  parallel clangMacX64: {
     node('mac') {
-      stage("clangReleaseMacX64") {
+      stage("clangMacX64") {
         if (env.BRANCH_NAME == 'master' || full_ci) {
           try {
             // We have experienced frequent network problems with this CI machine. So far, we have not found the cause.
@@ -420,12 +420,13 @@ try {
               }
             }
 
-            // Build hyriseTest with macOS's default compiler (Apple clang) and run it.
-            sh "mkdir clang-apple-release && cd clang-apple-release && PATH=/usr/local/bin/:$PATH cmake ${release} ${ninja} .."
-            sh "cd clang-apple-release && PATH=/usr/local/bin/:$PATH ninja"
-            sh "./clang-apple-release/hyriseTest"
+            // Build hyriseTest (Debug) with macOS's default compiler (Apple clang) and run it.
+            sh "mkdir clang-apple-debug && cd clang-apple-release && PATH=/usr/local/bin/:$PATH cmake ${debug} ${unity} ${ninja} .."
+            sh "cd clang-apple-debug && PATH=/usr/local/bin/:$PATH ninja"
+            sh "./clang-apple-debug/hyriseTest"
 
-            // Build Hyrise with a recent clang compiler version (as recommended for Hyrise on macOS) and run various tests.
+            // Build Hyrise (Release) with a recent clang compiler version (as recommended for Hyrise on macOS) and run
+            // various tests.
             sh "mkdir clang-release && cd clang-release && PATH=/usr/local/bin/:$PATH /usr/local/bin/cmake ${release} ${ninja} -DCMAKE_C_COMPILER=/usr/local/opt/llvm@17/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm@17/bin/clang++ .."
             sh "cd clang-release && PATH=/usr/local/bin/:$PATH ninja"
             sh "./clang-release/hyriseTest"
@@ -437,14 +438,14 @@ try {
             sh "ls -A1 | xargs rm -rf"
           }
         } else {
-          Utils.markStageSkippedForConditional("clangReleaseMacX64")
+          Utils.markStageSkippedForConditional("clangMacX64")
         }
       }
     }
-  }, clangDebugMacArm: {
+  }, clangMacArm: {
     // For this to work, we installed a native non-standard JDK (zulu) via brew. See #2339 for more details.
     node('mac-arm') {
-      stage("clangDebugMacArm") {
+      stage("clangMacArm") {
         if (env.BRANCH_NAME == 'master' || full_ci) {
           try {
             checkout scm
@@ -452,12 +453,13 @@ try {
             // We do not use install_dependencies.sh here as there is no way to run OS X in a Docker container
             sh "git submodule update --init --recursive --jobs 4 --depth=1"
 
-            // Build hyriseTest with macOS's default compiler (Apple clang) and run it.
-            sh "mkdir clang-apple-debug && cd clang-apple-debug && /usr/local/bin/cmake ${debug} ${unity} ${ninja} .."
-            sh "cd clang-apple-debug && ninja"
-            sh "./clang-apple-debug/hyriseTest"
+            // Build hyriseTest (Release) with macOS's default compiler (Apple clang) and run it.
+            sh "mkdir clang-apple-release && cd clang-apple-debug && cmake ${release} ${ninja} .."
+            sh "cd clang-apple-release && ninja"
+            sh "./clang-apple-release/hyriseTest"
 
-            // Build Hyrise with a recent clang compiler version (as recommended for Hyrise on macOS) and run various tests.
+            // Build Hyrise (Debug) with a recent clang compiler version (as recommended for Hyrise on macOS) and run
+            // various tests.
             // NOTE: These paths differ from x64 - brew on ARM uses /opt (https://docs.brew.sh/Installation)
             sh "mkdir clang-debug && cd clang-debug && cmake ${debug} ${unity} ${ninja} -DCMAKE_C_COMPILER=/opt/homebrew/opt/llvm@17/bin/clang -DCMAKE_CXX_COMPILER=/opt/homebrew/opt/llvm@17/bin/clang++ .."
             sh "cd clang-debug && ninja"
@@ -475,7 +477,7 @@ try {
             sh "ls -A1 | xargs rm -rf"
           }
         } else {
-          Utils.markStageSkippedForConditional("clangDebugMacArm")
+          Utils.markStageSkippedForConditional("clangMacArm")
         }
       }
     }
