@@ -4,9 +4,8 @@
 #include <utility>
 #include <vector>
 
-#include "base_test.hpp"
-
 #include "all_type_variant.hpp"
+#include "base_test.hpp"
 #include "operators/join_index.hpp"
 #include "operators/join_verification.hpp"
 #include "operators/table_scan.hpp"

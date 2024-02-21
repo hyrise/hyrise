@@ -5,7 +5,6 @@
 #include <vector>
 
 #include "base_test.hpp"
-
 #include "statistics/statistics_objects/generic_histogram.hpp"
 #include "utils/load_table.hpp"
 

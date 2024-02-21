@@ -1,7 +1,6 @@
 #include <algorithm>
 
 #include "base_test.hpp"
-
 #include "operators/join_hash/join_hash_steps.hpp"
 #include "operators/table_wrapper.hpp"
 #include "resolve_type.hpp"

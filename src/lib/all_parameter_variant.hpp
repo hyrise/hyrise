@@ -1,6 +1,6 @@
-#include <algorithm>
 #pragma once
 
+#include <algorithm>
 #include <string>
 
 #include <boost/lexical_cast.hpp>

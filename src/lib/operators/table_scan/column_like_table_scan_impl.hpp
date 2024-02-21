@@ -11,7 +11,6 @@
 
 #include "abstract_dereferenced_column_table_scan_impl.hpp"
 #include "expression/evaluation/like_matcher.hpp"
-
 #include "types.hpp"
 
 namespace hyrise {

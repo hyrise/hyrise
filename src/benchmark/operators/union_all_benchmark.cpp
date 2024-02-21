@@ -1,7 +1,8 @@
 #include <memory>
 
-#include "../micro_benchmark_basic_fixture.hpp"
 #include "benchmark/benchmark.h"
+
+#include "../micro_benchmark_basic_fixture.hpp"
 #include "operators/table_wrapper.hpp"
 #include "operators/union_all.hpp"
 

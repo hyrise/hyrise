@@ -1,7 +1,6 @@
 #include <optional>
 
 #include "base_test.hpp"
-
 #include "utils/load_table.hpp"
 #include "utils/sqlite_wrapper.hpp"
 

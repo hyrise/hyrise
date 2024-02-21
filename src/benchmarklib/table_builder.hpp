@@ -1,7 +1,7 @@
-#include <algorithm>
-#include <memory>
 #pragma once
 
+#include <algorithm>
+#include <memory>
 #include <optional>
 #include <type_traits>
 #include <utility>

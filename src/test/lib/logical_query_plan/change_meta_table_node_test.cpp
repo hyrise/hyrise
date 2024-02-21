@@ -1,7 +1,6 @@
 #include <memory>
 
 #include "base_test.hpp"
-
 #include "expression/expression_utils.hpp"
 #include "logical_query_plan/change_meta_table_node.hpp"
 #include "logical_query_plan/mock_node.hpp"

@@ -2,11 +2,10 @@
 #include <numeric>
 #include <thread>
 
-#include "base_test.hpp"
-#include "lib/utils/plugin_test_utils.hpp"
-
 #include "../../plugins/mvcc_delete_plugin.hpp"
+#include "base_test.hpp"
 #include "expression/expression_functional.hpp"
+#include "lib/utils/plugin_test_utils.hpp"
 #include "operators/aggregate_hash.hpp"
 #include "operators/get_table.hpp"
 #include "operators/insert.hpp"
@@ -155,8 +154,9 @@ TEST_F(MvccDeletePluginSystemTest, CheckPlugin) {
   // (4.1) Create and run a thread that invalidates and reinserts rows of chunk 2 and 3
   // It calls update_next_row() continuously. As a PausableLoopThread, it gets terminated together with the
   // test.
-  auto table_update_thread =
-      std::make_unique<PausableLoopThread>(std::chrono::milliseconds(10), [&](size_t) { update_next_row(); });
+  auto table_update_thread = std::make_unique<PausableLoopThread>(std::chrono::milliseconds(10), [&](size_t) {
+    update_next_row();
+  });
 
   // (4.2) Wait until the thread has finished invalidating rows in chunk 2
   while (_counter < CHUNK_SIZE * 2) {  // -> if(_counter < 400)...

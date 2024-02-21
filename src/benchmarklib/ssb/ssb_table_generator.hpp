@@ -1,7 +1,8 @@
+#pragma once
+
 #include <memory>
 #include <string>
 #include <unordered_map>
-#pragma once
 
 #include "file_based_table_generator.hpp"
 

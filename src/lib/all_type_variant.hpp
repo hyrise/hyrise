@@ -1,11 +1,11 @@
-#include <algorithm>
-#include <utility>
 #pragma once
 
+#include <algorithm>
 #include <cstdint>
 #include <functional>
 #include <ostream>
 #include <string>
+#include <utility>
 
 #include <boost/bimap.hpp>
 #include <boost/hana/core/to.hpp>

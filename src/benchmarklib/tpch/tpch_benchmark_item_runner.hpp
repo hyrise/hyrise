@@ -1,9 +1,8 @@
+#pragma once
+#include <atomic>
 #include <memory>
 #include <string>
 #include <vector>
-#pragma once
-
-#include <atomic>
 
 #include "abstract_benchmark_item_runner.hpp"
 #include "tpch/tpch_constants.hpp"

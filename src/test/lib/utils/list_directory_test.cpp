@@ -1,10 +1,9 @@
 #include <filesystem>
 #include <fstream>
-#include <unordered_set>
 #include <limits>
+#include <unordered_set>
 
 #include "base_test.hpp"
-
 #include "utils/list_directory.hpp"
 
 namespace hyrise {

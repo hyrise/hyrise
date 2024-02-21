@@ -1,10 +1,8 @@
-#include "base_test.hpp"
-
-#include "hyrise.hpp"
-#include "utils/singleton.hpp"
-
 #include "../plugins/test_plugin.hpp"
 #include "./plugin_test_utils.hpp"
+#include "base_test.hpp"
+#include "hyrise.hpp"
+#include "utils/singleton.hpp"
 
 namespace hyrise {
 

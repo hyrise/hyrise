@@ -4,14 +4,13 @@
 #include "expression/expression_functional.hpp"
 #include "hyrise.hpp"
 #include "logical_query_plan/lqp_translator.hpp"
+#include "micro_benchmark_utils.hpp"
 #include "operators/limit.hpp"
 #include "operators/sort.hpp"
 #include "operators/table_wrapper.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "sql/sql_translator.hpp"
 #include "synthetic_table_generator.hpp"
-
-#include "micro_benchmark_utils.hpp"
 
 namespace hyrise {
 

@@ -49,13 +49,13 @@ ExperimentalAutoDetectBinPacking: false
 ForEachMacros:   [ foreach, Q_FOREACH, BOOST_FOREACH ]
 IncludeBlocks:  Regroup
 IncludeCategories:
-    # We follow the include order of google's style guide (https://google.github.io/styleguide/cppguide.html#Names_and_Order_of_Includes)
-    # with the addition of grouping third party headers into system header (e.g., TBB or boost) and one located in
-    # ./third_party/.
+    # We follow the include order of Google's style guide (https://google.github.io/styleguide/cppguide.html#Names_and_Order_of_Includes)
+    # with the addition of grouping third-party headers into (1) system headers (e.g., TBB or boost) or (2) submodule
+    # headers located in ./third_party/.
     #
-    # clang-format places includes into the first group (order by priority) where they match. Thus, it might mix TBB or
-    # readline headers (both using .h) with system headers (e.g., pthread.h). Thus, before defining priority one, we
-    # put TBB and reaadline headers into category 3 (i.e., third party system headers).
+    # clang-format places includes into the first group (ordered by priority) where they match. Thus, it might mix TBB
+    # or readline headers (both using .h) with system headers (e.g., pthread.h). Thus, before defining priority one, we
+    # put TBB and readline headers into category 3 (i.e., third-party system headers).
     # headers.
   - Regex:           '^<(oneapi\/tbb\/.*|readline\/.*)>$'
     Priority:        3
@@ -75,7 +75,7 @@ IncludeCategories:
 
     # This list needs to be kept up to date to order non-system third party libraries properly. If third party files are
     # missed, it is not a real issue. They are simply grouped with Hyrise headers.
-  - Regex:           '^"(magic_enum|nlohmann|lz4\.h|cxxopts\.hpp|compact_vector\.hpp|concurrentqueue\.h|lightweightsemaphore\.h|uninitialized_vector\.hpp|tsl\/sparse\_.+\.h|lz4hc\.h|zdict\.h|SQLParser\.h|SQLParserResult\.h|sql\/.+\.h\").*$'
+  - Regex:           '^"(magic_enum|nlohmann|lz4\.h|cxxopts\.hpp|compact_vector\.hpp|concurrentqueue\.h|lightweightsemaphore\.h|uninitialized_vector\.hpp|tsl\/sparse\_.+\.h|lz4hc\.h|zdict\.h|SQLParser\.h|benchmark\/benchmark\.h|SQLParserResult\.h|sql\/.+\.h\").*$'
     Priority:        4
   - Regex:           '.*'
     Priority:        5
