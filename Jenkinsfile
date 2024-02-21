@@ -421,7 +421,7 @@ try {
             }
 
             // Build hyriseTest (Debug) with macOS's default compiler (Apple clang) and run it.
-            sh "mkdir clang-apple-debug && cd clang-apple-release && PATH=/usr/local/bin/:$PATH cmake ${debug} ${unity} ${ninja} .."
+            sh "mkdir clang-apple-debug && cd clang-apple-debug && PATH=/usr/local/bin/:$PATH cmake ${debug} ${unity} ${ninja} .."
             sh "cd clang-apple-debug && PATH=/usr/local/bin/:$PATH ninja"
             sh "./clang-apple-debug/hyriseTest"
 
@@ -454,7 +454,7 @@ try {
             sh "git submodule update --init --recursive --jobs 4 --depth=1"
 
             // Build hyriseTest (Release) with macOS's default compiler (Apple clang) and run it.
-            sh "mkdir clang-apple-release && cd clang-apple-debug && cmake ${release} ${ninja} .."
+            sh "mkdir clang-apple-release && cd clang-apple-release && cmake ${release} ${ninja} .."
             sh "cd clang-apple-release && ninja"
             sh "./clang-apple-release/hyriseTest"
 
