@@ -121,7 +121,9 @@ void AbstractTask::_join() {
   }
 
   DebugAssert(is_scheduled(), "Task must be scheduled before it can be waited for.");
-  _done_condition_variable.wait(lock, [&]() { return is_done(); });
+  _done_condition_variable.wait(lock, [&]() {
+    return is_done();
+  });
 }
 
 void AbstractTask::execute() {

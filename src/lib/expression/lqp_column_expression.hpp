@@ -1,7 +1,9 @@
+#include <memory>
+#include <string>
+#include <unordered_map>
 #pragma once
 
 #include "abstract_expression.hpp"
-
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "types.hpp"
 

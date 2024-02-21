@@ -56,7 +56,9 @@ void ColumnLikeTableScanImpl::_scan_generic_segment(
 
       if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
         _matcher.resolve(_invert_results, [&](const auto& resolved_matcher) {
-          const auto functor = [&](const auto& position) { return resolved_matcher(position.value()); };
+          const auto functor = [&](const auto& position) {
+            return resolved_matcher(position.value());
+          };
           _scan_with_iterators<true>(functor, iter, end, chunk_id, matches);
         });
       } else {
@@ -92,7 +94,9 @@ void ColumnLikeTableScanImpl::_scan_dictionary_segment(const BaseDictionarySegme
   // LIKE matches all rows, but we still need to check for NULL
   if (match_count == dictionary_matches.size()) {
     attribute_vector_iterable.with_iterators(position_filter, [&](auto iter, auto end) {
-      static const auto always_true = [](const auto&) { return true; };
+      static const auto always_true = [](const auto&) {
+        return true;
+      };
       _scan_with_iterators<true>(always_true, iter, end, chunk_id, matches);
     });
 

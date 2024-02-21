@@ -39,8 +39,9 @@ CompositeGroupKeyIndex::CompositeGroupKeyIndex(
   if constexpr (HYRISE_DEBUG) {
     auto first_size = segments_to_index.front()->size();
     auto all_segments_have_same_size =
-        std::all_of(segments_to_index.cbegin(), segments_to_index.cend(),
-                    [first_size](const auto& segment) { return segment->size() == first_size; });
+        std::all_of(segments_to_index.cbegin(), segments_to_index.cend(), [first_size](const auto& segment) {
+          return segment->size() == first_size;
+        });
 
     Assert(all_segments_have_same_size,
            "CompositeGroupKey requires same length of all segments that should be indexed.");
@@ -95,8 +96,9 @@ CompositeGroupKeyIndex::CompositeGroupKeyIndex(
   }
 
   // sort keys and their positions
-  std::sort(_position_list.begin(), _position_list.end(),
-            [&keys](auto left, auto right) { return keys[left] < keys[right]; });
+  std::sort(_position_list.begin(), _position_list.end(), [&keys](auto left, auto right) {
+    return keys[left] < keys[right];
+  });
 
   _keys = VariableLengthKeyStore(static_cast<ChunkOffset>(segment_size), bytes_per_key);
   for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(segment_size); ++chunk_offset) {

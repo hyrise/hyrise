@@ -66,7 +66,9 @@ size_t PartialHashIndexImpl<DataType>::remove(const std::vector<ChunkID>& chunks
   }
 
   // Checks whether a given RowID's ChunkID is in the set of ChunkIDs to be unindexed.
-  auto is_to_remove = [&indexed_chunks](const RowID& row_id) { return indexed_chunks.contains(row_id.chunk_id); };
+  auto is_to_remove = [&indexed_chunks](const RowID& row_id) {
+    return indexed_chunks.contains(row_id.chunk_id);
+  };
 
   // Iterate over all values stored in the index.
   auto map_iter = _positions.begin();

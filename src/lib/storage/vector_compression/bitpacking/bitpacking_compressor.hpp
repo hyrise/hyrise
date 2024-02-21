@@ -1,3 +1,4 @@
+#include <memory>
 #pragma once
 
 #include "bitpacking_vector.hpp"

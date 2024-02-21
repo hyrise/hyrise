@@ -200,8 +200,9 @@ void BetweenCompositionRule::_substitute_predicates_with_between_expressions(con
     column_boundaries_sorted.emplace_back(std::move(boundaries));
   }
   column_boundaries.clear();
-  std::sort(column_boundaries_sorted.begin(), column_boundaries_sorted.end(),
-            [](const auto& left, const auto& right) { return left[0]->id < right[0]->id; });
+  std::sort(column_boundaries_sorted.begin(), column_boundaries_sorted.end(), [](const auto& left, const auto& right) {
+    return left[0]->id < right[0]->id;
+  });
 
   for (const auto& boundaries : column_boundaries_sorted) {
     for (const auto& boundary : boundaries) {

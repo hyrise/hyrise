@@ -182,7 +182,9 @@ std::enable_if_t<std::is_same_v<AbstractSegment, std::remove_const_t<AbstractSeg
   resolve_data_type(segment.data_type(), [&](auto type) {
     using ColumnDataType = typename decltype(type)::type;
 
-    resolve_segment_type<ColumnDataType>(segment, [&](auto& typed_segment) { functor(type, typed_segment); });
+    resolve_segment_type<ColumnDataType>(segment, [&](auto& typed_segment) {
+      functor(type, typed_segment);
+    });
   });
 }
 

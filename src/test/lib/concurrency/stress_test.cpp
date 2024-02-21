@@ -236,8 +236,9 @@ TEST_F(StressTest, NodeSchedulerStressTest) {
   // `start_jobs` is set, leading to a high queue load that cannot be processed. New tasks that are scheduled should
   // thus be assigned to different TaskQueues to distribute the load.
   auto second_worker = std::next(node_queue_scheduler->workers().cbegin());
-  EXPECT_TRUE(std::any_of(second_worker, node_queue_scheduler->workers().cend(),
-                          [](const auto& worker) { return worker->queue()->estimate_load() > 0; }));
+  EXPECT_TRUE(std::any_of(second_worker, node_queue_scheduler->workers().cend(), [](const auto& worker) {
+    return worker->queue()->estimate_load() > 0;
+  }));
 
   // Set flag to allow tasks to continue.
   start_jobs = true;

@@ -249,7 +249,9 @@ void JoinNode::mark_as_semi_reduction(const std::shared_ptr<JoinNode>& reduced_j
   DebugAssert(join_predicates().size() == 1,
               "Currently, semi join reductions are expected to have a single join predicate.");
   DebugAssert(std::any_of(reduced_join_node->join_predicates().cbegin(), reduced_join_node->join_predicates().cend(),
-                          [&](const auto predicate) { return *predicate == *join_predicates()[0]; }),
+                          [&](const auto predicate) {
+                            return *predicate == *join_predicates()[0];
+                          }),
               "Both semi join reduction node and the reduced join should have a common join predicate.");
   _is_semi_reduction = true;
   _reduced_join_node = std::weak_ptr<JoinNode>(reduced_join_node);
@@ -284,7 +286,9 @@ std::shared_ptr<JoinNode> JoinNode::get_or_find_reduced_join_node() const {
       }
       const auto join_node = std::static_pointer_cast<JoinNode>(current_node);
       if (std::none_of(join_node->join_predicates().begin(), join_node->join_predicates().end(),
-                       [&](const auto& predicate) { return *predicate == reduction_predicate; })) {
+                       [&](const auto& predicate) {
+                         return *predicate == reduction_predicate;
+                       })) {
         return LQPUpwardVisitation::VisitOutputs;
       }
 

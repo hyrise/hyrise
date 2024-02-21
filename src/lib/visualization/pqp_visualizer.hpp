@@ -1,3 +1,5 @@
+#include <unordered_set>
+#include <vector>
 #pragma once
 
 #include <memory>

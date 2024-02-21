@@ -1,3 +1,5 @@
+#include <algorithm>
+#include <utility>
 #pragma once
 
 #include <cstdint>
@@ -54,7 +56,9 @@ static constexpr auto data_type_enum_values =
     hana::make_tuple(BOOST_PP_SEQ_ENUM(BOOST_PP_SEQ_TRANSFORM(APPEND_ENUM_NAMESPACE, _, DATA_TYPE_ENUM_VALUES)));
 static constexpr auto data_type_strings = hana::make_tuple(BOOST_PP_SEQ_ENUM(DATA_TYPE_STRINGS));
 
-constexpr auto to_pair = [](auto tuple) { return hana::make_pair(hana::at_c<0>(tuple), hana::at_c<1>(tuple)); };
+constexpr auto to_pair = [](auto tuple) {
+  return hana::make_pair(hana::at_c<0>(tuple), hana::at_c<1>(tuple));
+};
 
 static constexpr auto data_type_enum_pairs = hana::transform(hana::zip(data_type_enum_values, data_types), to_pair);
 static constexpr auto data_type_enum_string_pairs =

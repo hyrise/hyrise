@@ -23,7 +23,9 @@ void SecondTestPlugin::stop() {}
 
 std::vector<std::pair<PluginFunctionName, PluginFunctionPointer>>
 SecondTestPlugin::provided_user_executable_functions() {
-  return {{"OurFreelyChoosableFunctionName", [&]() { this->a_user_executable_function(); }}};
+  return {{"OurFreelyChoosableFunctionName", [&]() {
+             this->a_user_executable_function();
+           }}};
 }
 
 void SecondTestPlugin::a_user_executable_function() const {

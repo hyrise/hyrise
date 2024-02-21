@@ -245,11 +245,15 @@ std::vector<std::shared_ptr<AbstractTask>> SQLPipelineStatement::_get_transactio
     case hsql::kCommitTransaction:
       AssertInput(_transaction_context && !_transaction_context->is_auto_commit(),
                   "Cannot commit since there is no active transaction.");
-      return {std::make_shared<JobTask>([this] { _transaction_context->commit(); })};
+      return {std::make_shared<JobTask>([this] {
+        _transaction_context->commit();
+      })};
     case hsql::kRollbackTransaction:
       AssertInput(_transaction_context && !_transaction_context->is_auto_commit(),
                   "Cannot rollback since there is no active transaction.");
-      return {std::make_shared<JobTask>([this] { _transaction_context->rollback(RollbackReason::User); })};
+      return {std::make_shared<JobTask>([this] {
+        _transaction_context->rollback(RollbackReason::User);
+      })};
     default:
       Fail("Unexpected transaction command!");
   }

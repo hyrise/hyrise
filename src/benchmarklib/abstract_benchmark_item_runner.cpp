@@ -31,7 +31,9 @@ void AbstractBenchmarkItemRunner::load_dedicated_expected_results(
   Assert(std::filesystem::is_directory(expected_results_directory_path),
          "Expected results path (" + expected_results_directory_path.string() + ") has to be a directory.");
 
-  const auto is_tbl_file = [](const std::string& filename) { return boost::algorithm::ends_with(filename, ".tbl"); };
+  const auto is_tbl_file = [](const std::string& filename) {
+    return boost::algorithm::ends_with(filename, ".tbl");
+  };
 
   _dedicated_expected_results.resize(items().size());
 

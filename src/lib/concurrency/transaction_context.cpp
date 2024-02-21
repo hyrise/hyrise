@@ -121,7 +121,9 @@ void TransactionContext::commit() {
 
   auto committed = std::promise<void>{};
   const auto committed_future = committed.get_future();
-  const auto callback = [&committed](TransactionID /*unused*/) { committed.set_value(); };
+  const auto callback = [&committed](TransactionID /*unused*/) {
+    committed.set_value();
+  };
 
   commit_async(callback);
 
@@ -219,7 +221,9 @@ void TransactionContext::_wait_for_active_operators_to_finish() const {
   if (_num_active_operators == 0) {
     return;
   }
-  _active_operators_cv.wait(lock, [&] { return _num_active_operators != 0; });
+  _active_operators_cv.wait(lock, [&] {
+    return _num_active_operators != 0;
+  });
 }
 
 void TransactionContext::_transition(TransactionPhase from_phase, TransactionPhase to_phase) {

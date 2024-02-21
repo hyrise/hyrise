@@ -1,3 +1,4 @@
+#include <string>
 #pragma once
 
 #include <algorithm>
@@ -5,7 +6,6 @@
 #include <memory>
 
 #include "abstract_dereferenced_column_table_scan_impl.hpp"
-
 #include "types.hpp"
 #include "utils/assert.hpp"
 

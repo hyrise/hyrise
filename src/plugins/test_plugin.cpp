@@ -34,8 +34,13 @@ void TestPlugin::stop() {
 }
 
 std::vector<std::pair<PluginFunctionName, PluginFunctionPointer>> TestPlugin::provided_user_executable_functions() {
-  return {{"OurFreelyChoosableFunctionName", [&]() { this->a_user_executable_function(); }},
-          {"SpecialFunction17", [&]() { hyrise::TestPlugin::a_static_user_executable_function(); }}};
+  return {{"OurFreelyChoosableFunctionName",
+           [&]() {
+             this->a_user_executable_function();
+           }},
+          {"SpecialFunction17", [&]() {
+             hyrise::TestPlugin::a_static_user_executable_function();
+           }}};
 }
 
 void TestPlugin::a_user_executable_function() {

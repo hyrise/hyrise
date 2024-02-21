@@ -29,8 +29,9 @@ namespace {
 using namespace hyrise;  // NOLINT(build/namespaces)
 
 bool contains_any_column_id(const std::set<ColumnID>& search_columns, const std::vector<ColumnID>& columns) {
-  return std::any_of(columns.cbegin(), columns.cend(),
-                     [&](const auto& column_id) { return search_columns.contains(column_id); });
+  return std::any_of(columns.cbegin(), columns.cend(), [&](const auto& column_id) {
+    return search_columns.contains(column_id);
+  });
 }
 
 }  // namespace
@@ -81,7 +82,9 @@ const std::vector<ColumnID>& StoredTableNode::pruned_column_ids() const {
 void StoredTableNode::set_prunable_subquery_predicates(
     const std::vector<std::weak_ptr<AbstractLQPNode>>& predicate_nodes) {
   DebugAssert(std::all_of(predicate_nodes.cbegin(), predicate_nodes.cend(),
-                          [](const auto& node) { return node.lock() && node.lock()->type == LQPNodeType::Predicate; }),
+                          [](const auto& node) {
+                            return node.lock() && node.lock()->type == LQPNodeType::Predicate;
+                          }),
               "No PredicateNode set as prunable predicate.");
   _prunable_subquery_predicates = predicate_nodes;
 }

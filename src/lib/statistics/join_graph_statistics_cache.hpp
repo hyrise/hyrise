@@ -1,3 +1,5 @@
+#include <memory>
+#include <vector>
 #pragma once
 
 #include <map>

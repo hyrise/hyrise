@@ -69,8 +69,9 @@ void PredicateMergeRule::_apply_to_plan_without_subqueries(const std::shared_ptr
     if (node->type == LQPNodeType::Predicate ||
         (union_node && union_node->set_operation_mode == SetOperationMode::Positions)) {
       const auto& outputs = node->outputs();
-      const auto parent = std::find_if(outputs.begin(), outputs.end(),
-                                       [&](const auto& output) { return node_to_topmost.count(output); });
+      const auto parent = std::find_if(outputs.begin(), outputs.end(), [&](const auto& output) {
+        return node_to_topmost.count(output);
+      });
 
       if (parent == outputs.end() && union_node) {
         // New subplan found.

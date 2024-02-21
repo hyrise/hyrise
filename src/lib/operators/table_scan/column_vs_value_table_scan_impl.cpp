@@ -125,7 +125,9 @@ void ColumnVsValueTableScanImpl::_scan_dictionary_segment(
     if (_column_is_nullable) {
       // We still have to check for NULLs
       iterable.with_iterators(position_filter, [&](auto it, auto end) {
-        static const auto always_true = [](const auto&) { return true; };
+        static const auto always_true = [](const auto&) {
+          return true;
+        };
         _scan_with_iterators<true>(always_true, it, end, chunk_id, matches);
       });
     } else {

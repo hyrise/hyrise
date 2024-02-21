@@ -550,7 +550,9 @@ cxxopts::Options BenchmarkRunner::get_basic_cli_options(const std::string& bench
   cxxopts::Options cli_options{benchmark_name};
 
   // Create a comma separated strings with the encoding and compression options.
-  const auto get_first = boost::adaptors::transformed([](const auto it) { return it.first; });
+  const auto get_first = boost::adaptors::transformed([](const auto it) {
+    return it.first;
+  });
   const auto compression_strings_option =
       boost::algorithm::join(vector_compression_type_to_string.right | get_first, ", ");
 

@@ -1,3 +1,5 @@
+#include <memory>
+#include <string>
 #pragma once
 
 #ifdef __AVX512VL__

@@ -68,8 +68,9 @@ std::vector<std::pair<T, HistogramCountType>> value_distribution_from_column(con
   auto value_distribution =
       std::vector<std::pair<T, HistogramCountType>>{value_distribution_map.begin(), value_distribution_map.end()};
   value_distribution_map.clear();  // Maps can be large and sorting slow. Free space early.
-  boost::sort::pdqsort(value_distribution.begin(), value_distribution.end(),
-                       [&](const auto& lhs, const auto& rhs) { return lhs.first < rhs.first; });
+  boost::sort::pdqsort(value_distribution.begin(), value_distribution.end(), [&](const auto& lhs, const auto& rhs) {
+    return lhs.first < rhs.first;
+  });
 
   return value_distribution;
 }

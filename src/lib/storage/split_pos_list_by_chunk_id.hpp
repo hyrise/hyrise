@@ -1,11 +1,13 @@
+#include <memory>
 #pragma once
 
 #include <unordered_map>
 #include <vector>
 
+#include "uninitialized_vector.hpp"
+
 #include "storage/pos_lists/row_id_pos_list.hpp"
 #include "types.hpp"
-#include "uninitialized_vector.hpp"
 
 namespace hyrise {
 

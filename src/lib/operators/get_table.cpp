@@ -101,7 +101,9 @@ const std::vector<ColumnID>& GetTable::pruned_column_ids() const {
 void GetTable::set_prunable_subquery_predicates(
     const std::vector<std::weak_ptr<const AbstractOperator>>& subquery_scans) const {
   DebugAssert(std::all_of(subquery_scans.cbegin(), subquery_scans.cend(),
-                          [](const auto& op) { return op.lock() && op.lock()->type() == OperatorType::TableScan; }),
+                          [](const auto& op) {
+                            return op.lock() && op.lock()->type() == OperatorType::TableScan;
+                          }),
               "No TableScan set as prunable predicate.");
 
   _prunable_subquery_scans = subquery_scans;
@@ -193,7 +195,9 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
   Assert(_pruned_column_ids.size() < static_cast<size_t>(stored_table->column_count()),
          "Cannot prune all columns from Table");
   DebugAssert(std::all_of(_pruned_column_ids.begin(), _pruned_column_ids.end(),
-                          [&](const auto column_id) { return column_id < stored_table->column_count(); }),
+                          [&](const auto column_id) {
+                            return column_id < stored_table->column_count();
+                          }),
               "ColumnID out of range");
 
   /**

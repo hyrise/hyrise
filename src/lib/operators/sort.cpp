@@ -417,9 +417,10 @@ class Sort::SortImpl {
 
     // 2. After we got our ValueRowID Map we sort the map by the value of the pair
     const auto sort_with_comparator = [&](auto comparator) {
-      std::stable_sort(
-          _row_id_value_vector.begin(), _row_id_value_vector.end(),
-          [comparator](RowIDValuePair lhs, RowIDValuePair rhs) { return comparator(lhs.second, rhs.second); });
+      std::stable_sort(_row_id_value_vector.begin(), _row_id_value_vector.end(),
+                       [comparator](RowIDValuePair lhs, RowIDValuePair rhs) {
+                         return comparator(lhs.second, rhs.second);
+                       });
     };
     if (_sort_mode == SortMode::Ascending) {
       sort_with_comparator(std::less<>{});

@@ -1,10 +1,11 @@
+#include <memory>
+#include <utility>
 #pragma once
 
 #include <algorithm>
 
 #include "storage/run_length_segment.hpp"
 #include "storage/segment_iterables.hpp"
-
 #include "utils/performance_warning.hpp"
 
 namespace hyrise {
@@ -109,7 +110,9 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
       return std::lower_bound(end_positions->cbegin(), end_positions->cbegin() + previous_end_position_index,
                               new_chunk_offset);
     } else if (step_size < static_cast<int64_t>(linear_search_threshold)) {
-      const auto less_than_current = [&](const ChunkOffset offset) { return offset < new_chunk_offset; };
+      const auto less_than_current = [&](const ChunkOffset offset) {
+        return offset < new_chunk_offset;
+      };
       return std::find_if_not(end_positions->cbegin() + previous_end_position_index, end_positions->cend(),
                               less_than_current);
     } else {

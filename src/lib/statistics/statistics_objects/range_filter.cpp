@@ -55,8 +55,9 @@ std::shared_ptr<AbstractStatisticsObject> RangeFilter<T>::sliced(
     case PredicateCondition::LessThan:
     case PredicateCondition::LessThanEquals: {
       const auto end_iter =
-          std::lower_bound(ranges.cbegin(), ranges.cend(), value,
-                           [](const auto& range, const auto search_value) { return range.second < search_value; });
+          std::lower_bound(ranges.cbegin(), ranges.cend(), value, [](const auto& range, const auto search_value) {
+            return range.second < search_value;
+          });
 
       // Copy all the ranges before the value.
       auto iter = ranges.cbegin();
@@ -72,8 +73,9 @@ std::shared_ptr<AbstractStatisticsObject> RangeFilter<T>::sliced(
     case PredicateCondition::GreaterThan:
     case PredicateCondition::GreaterThanEquals: {
       auto iter =
-          std::lower_bound(ranges.cbegin(), ranges.cend(), value,
-                           [](const auto& range, const auto search_value) { return range.second < search_value; });
+          std::lower_bound(ranges.cbegin(), ranges.cend(), value, [](const auto& range, const auto search_value) {
+            return range.second < search_value;
+          });
       DebugAssert(iter != ranges.cend(), "does_not_contain() should have caught that.");
 
       // If value is in a gap, use the next range, otherwise limit the next range's upper bound to value.
@@ -187,8 +189,9 @@ std::unique_ptr<RangeFilter<T>> RangeFilter<T>::build_filter(const pmr_vector<T>
   }
 
   // 2. Sort the vector in descending order by the size of the gaps.
-  std::sort(distances.begin(), distances.end(),
-            [](const auto& pair1, const auto& pair2) { return pair1.first > pair2.first; });
+  std::sort(distances.begin(), distances.end(), [](const auto& pair1, const auto& pair2) {
+    return pair1.first > pair2.first;
+  });
 
   // 3. Shorten the vector to containt the `max_ranges_count - 1` biggest gaps
   if ((max_ranges_count - 1) < distances.size()) {
@@ -196,8 +199,9 @@ std::unique_ptr<RangeFilter<T>> RangeFilter<T>::build_filter(const pmr_vector<T>
   }
 
   // 4. Restore the original order of the dictionary by sorting on the second field.
-  std::sort(distances.begin(), distances.end(),
-            [](const auto& pair1, const auto& pair2) { return pair1.second < pair2.second; });
+  std::sort(distances.begin(), distances.end(), [](const auto& pair1, const auto& pair2) {
+    return pair1.second < pair2.second;
+  });
 
   // 5. Add the highest value in the dictionary (more correctly, its index).
   distances.emplace_back(T{}, dictionary.size() - 1);
@@ -298,8 +302,9 @@ bool RangeFilter<T>::does_not_contain(const PredicateCondition predicate_conditi
       //             We know that y >(=) 2. Thus, we find the range whose minimum is >= y. If we cannot find such a
       //             range, y is greater than the segment's maximum (and thus, in a gap).
       const auto upper_bound_range =
-          std::lower_bound(ranges.cbegin(), ranges.cend(), value2,
-                           [](const auto& range, const auto compare_value) { return range.first < compare_value; });
+          std::lower_bound(ranges.cbegin(), ranges.cend(), value2, [](const auto& range, const auto compare_value) {
+            return range.first < compare_value;
+          });
 
       // If we find a range, y can still be the exact range border (e.g., y = 7). For upper inclusive predicates, there
       // can be matches if this is the case.

@@ -118,7 +118,9 @@ TEST_P(SegmentsUsingAllocatorsTest, CountersAfterMigration) {
   if (encoding_spec.encoding_type != EncodingType::Unencoded) {
     encoded_segment = ChunkEncoder::encode_segment(original_segment, data_type, encoding_spec);
   }
-  segment_iterate(*encoded_segment, [](const auto position) { (void)position.value(); });
+  segment_iterate(*encoded_segment, [](const auto position) {
+    (void)position.value();
+  });
 
   resolve_data_type(data_type, [&](const auto data_type_t) {
     using ColumnDataType = typename decltype(data_type_t)::type;

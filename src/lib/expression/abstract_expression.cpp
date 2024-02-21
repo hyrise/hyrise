@@ -91,8 +91,9 @@ size_t AbstractExpression::_shallow_hash() const {
 }
 
 bool AbstractExpression::_on_is_nullable_on_lqp(const AbstractLQPNode& lqp) const {
-  return std::any_of(arguments.begin(), arguments.end(),
-                     [&](const auto& expression) { return expression->is_nullable_on_lqp(lqp); });
+  return std::any_of(arguments.begin(), arguments.end(), [&](const auto& expression) {
+    return expression->is_nullable_on_lqp(lqp);
+  });
 }
 
 ExpressionPrecedence AbstractExpression::_precedence() const {

@@ -96,8 +96,9 @@ void reorder_predicates(const std::vector<std::shared_ptr<AbstractLQPNode>>& pre
   }
 
   // Sort in descending order. The "most beneficial" predicate (i.e., with the lowest cost) is at the end.
-  std::sort(nodes_and_costs.begin(), nodes_and_costs.end(),
-            [&](auto& left, auto& right) { return left.second > right.second; });
+  std::sort(nodes_and_costs.begin(), nodes_and_costs.end(), [&](auto& left, auto& right) {
+    return left.second > right.second;
+  });
 
   // Ensure that nodes are chained correctly. The predicate at the vector end is placed after the input.
   nodes_and_costs.back().first->set_left_input(input);

@@ -65,8 +65,9 @@ std::string matrix_to_string(const Matrix& matrix, const std::vector<std::pair<u
 
   for (auto row_id = size_t{0}; row_id < matrix.size(); ++row_id) {
     auto highlight = false;
-    auto it = std::find_if(highlight_cells.begin(), highlight_cells.end(),
-                           [&](const auto& element) { return element.first == row_id; });
+    auto it = std::find_if(highlight_cells.begin(), highlight_cells.end(), [&](const auto& element) {
+      return element.first == row_id;
+    });
     if (it != highlight_cells.end()) {
       highlight = true;
       if (!previous_row_highlighted) {

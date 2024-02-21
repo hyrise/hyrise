@@ -355,8 +355,9 @@ ExpressionEvaluator::_evaluate_like_expression<ExpressionEvaluator::Bool>(const 
   } else {
     // E.g., `'hello' LIKE b` -- A new matcher for each row but the value to check is constant
     for (auto row_idx = ChunkOffset{0}; row_idx < result_size; ++row_idx) {
-      LikeMatcher{right_results->values[row_idx]}.resolve(
-          invert_results, [&](const auto& matcher) { result_values[row_idx] = matcher(left_results->values.front()); });
+      LikeMatcher{right_results->values[row_idx]}.resolve(invert_results, [&](const auto& matcher) {
+        result_values[row_idx] = matcher(left_results->values.front());
+      });
     }
   }
 
@@ -827,20 +828,25 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_extract
   if constexpr (std::is_same_v<Result, int32_t>) {
     switch (datetime_component) {
       case DatetimeComponent::Year:
-        return _evaluate_extract_component<int32_t>(from_result,
-                                                    [](const auto& timestamp) { return timestamp.date().year(); });
+        return _evaluate_extract_component<int32_t>(from_result, [](const auto& timestamp) {
+          return timestamp.date().year();
+        });
       case DatetimeComponent::Month:
-        return _evaluate_extract_component<int32_t>(from_result,
-                                                    [](const auto& timestamp) { return timestamp.date().month(); });
+        return _evaluate_extract_component<int32_t>(from_result, [](const auto& timestamp) {
+          return timestamp.date().month();
+        });
       case DatetimeComponent::Day:
-        return _evaluate_extract_component<int32_t>(from_result,
-                                                    [](const auto& timestamp) { return timestamp.date().day(); });
+        return _evaluate_extract_component<int32_t>(from_result, [](const auto& timestamp) {
+          return timestamp.date().day();
+        });
       case DatetimeComponent::Hour:
-        return _evaluate_extract_component<int32_t>(
-            from_result, [](const auto& timestamp) { return timestamp.time_of_day().hours(); });
+        return _evaluate_extract_component<int32_t>(from_result, [](const auto& timestamp) {
+          return timestamp.time_of_day().hours();
+        });
       case DatetimeComponent::Minute:
-        return _evaluate_extract_component<int32_t>(
-            from_result, [](const auto& timestamp) { return timestamp.time_of_day().minutes(); });
+        return _evaluate_extract_component<int32_t>(from_result, [](const auto& timestamp) {
+          return timestamp.time_of_day().minutes();
+        });
       case DatetimeComponent::Second:
         Fail("SECOND must be extracted as Double.");
     }
@@ -937,8 +943,10 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_subquer
   }
 
   // Optionally materialize nulls if any row returned a nullable result.
-  const auto nullable = std::any_of(subquery_results.begin(), subquery_results.end(),
-                                    [&](const auto& expression_result) { return expression_result->is_nullable(); });
+  const auto nullable =
+      std::any_of(subquery_results.begin(), subquery_results.end(), [&](const auto& expression_result) {
+        return expression_result->is_nullable();
+      });
 
   if (nullable) {
     result_nulls.resize(subquery_result_count);
@@ -1319,20 +1327,25 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_binary_
 template <typename Functor>
 void ExpressionEvaluator::_resolve_to_expression_result_view(const AbstractExpression& expression,
                                                              const Functor& functor) {
-  _resolve_to_expression_result(expression,
-                                [&](const auto& result) { result.as_view([&](const auto& view) { functor(view); }); });
+  _resolve_to_expression_result(expression, [&](const auto& result) {
+    result.as_view([&](const auto& view) {
+      functor(view);
+    });
+  });
 }
 
 template <typename Functor>
 void ExpressionEvaluator::_resolve_to_expression_result_views(const AbstractExpression& left_expression,
                                                               const AbstractExpression& right_expression,
                                                               const Functor& functor) {
-  _resolve_to_expression_results(
-      left_expression, right_expression, [&](const auto& left_result, const auto& right_result) {
-        left_result.as_view([&](const auto& left_view) {
-          right_result.as_view([&](const auto& right_view) { functor(left_view, right_view); });
-        });
-      });
+  _resolve_to_expression_results(left_expression, right_expression,
+                                 [&](const auto& left_result, const auto& right_result) {
+                                   left_result.as_view([&](const auto& left_view) {
+                                     right_result.as_view([&](const auto& right_view) {
+                                       functor(left_view, right_view);
+                                     });
+                                   });
+                                 });
 }
 
 template <typename Functor>
@@ -1340,8 +1353,9 @@ void ExpressionEvaluator::_resolve_to_expression_results(const AbstractExpressio
                                                          const AbstractExpression& right_expression,
                                                          const Functor& functor) {
   _resolve_to_expression_result(left_expression, [&](const auto& left_result) {
-    _resolve_to_expression_result(right_expression,
-                                  [&](const auto& right_result) { functor(left_result, right_result); });
+    _resolve_to_expression_result(right_expression, [&](const auto& right_result) {
+      functor(left_result, right_result);
+    });
   });
 }
 
@@ -1388,8 +1402,9 @@ pmr_vector<bool> ExpressionEvaluator::_evaluate_default_null_logic(const pmr_vec
                                                                    const pmr_vector<bool>& right) {
   if (left.size() == right.size()) {
     auto nulls = pmr_vector<bool>(left.size());
-    std::transform(left.begin(), left.end(), right.begin(), nulls.begin(),
-                   [](const auto lhs, const auto rhs) { return lhs || rhs; });
+    std::transform(left.begin(), left.end(), right.begin(), nulls.begin(), [](const auto lhs, const auto rhs) {
+      return lhs || rhs;
+    });
     return nulls;
   }
 

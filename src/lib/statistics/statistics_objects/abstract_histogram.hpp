@@ -1,3 +1,4 @@
+#include <algorithm>
 #pragma once
 
 #include <limits>

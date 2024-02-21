@@ -108,8 +108,9 @@ std::shared_ptr<MvccData> Chunk::mvcc_data() const {
 std::vector<std::shared_ptr<AbstractChunkIndex>> Chunk::get_indexes(
     const std::vector<std::shared_ptr<const AbstractSegment>>& segments) const {
   auto result = std::vector<std::shared_ptr<AbstractChunkIndex>>();
-  std::copy_if(_indexes.cbegin(), _indexes.cend(), std::back_inserter(result),
-               [&](const auto& index) { return index->is_index_for(segments); });
+  std::copy_if(_indexes.cbegin(), _indexes.cend(), std::back_inserter(result), [&](const auto& index) {
+    return index->is_index_for(segments);
+  });
   return result;
 }
 
@@ -236,8 +237,9 @@ std::vector<std::shared_ptr<const AbstractSegment>> Chunk::_get_segments_for_ids
 
   auto segments = std::vector<std::shared_ptr<const AbstractSegment>>{};
   segments.reserve(column_ids.size());
-  std::transform(column_ids.cbegin(), column_ids.cend(), std::back_inserter(segments),
-                 [&](const auto& column_id) { return get_segment(column_id); });
+  std::transform(column_ids.cbegin(), column_ids.cend(), std::back_inserter(segments), [&](const auto& column_id) {
+    return get_segment(column_id);
+  });
   return segments;
 }
 

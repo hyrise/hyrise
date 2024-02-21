@@ -119,7 +119,9 @@ void ColumnBetweenTableScanImpl::_scan_dictionary_segment(
     if (_column_is_nullable) {
       // We still have to check for NULLs
       attribute_vector_iterable.with_iterators(position_filter, [&](auto left_it, auto left_end) {
-        static const auto always_true = [](const auto&) { return true; };
+        static const auto always_true = [](const auto&) {
+          return true;
+        };
         _scan_with_iterators<true>(always_true, left_it, left_end, chunk_id, matches);
       });
     } else {

@@ -1,3 +1,4 @@
+#include <memory>
 #pragma once
 
 #include "abstract_cost_estimator.hpp"

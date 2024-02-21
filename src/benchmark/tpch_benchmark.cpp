@@ -105,8 +105,9 @@ int main(int argc, char* argv[]) {
 
   // Build list of query ids to be benchmarked and display it
   if (comma_separated_queries.empty()) {
-    std::transform(tpch_queries.begin(), tpch_queries.end(), std::back_inserter(item_ids),
-                   [](auto& pair) { return BenchmarkItemID{pair.first - 1}; });
+    std::transform(tpch_queries.begin(), tpch_queries.end(), std::back_inserter(item_ids), [](auto& pair) {
+      return BenchmarkItemID{pair.first - 1};
+    });
   } else {
     // Split the input into query ids, ignoring leading, trailing, or duplicate commas
     auto item_ids_str = std::vector<std::string>();
@@ -122,8 +123,9 @@ int main(int argc, char* argv[]) {
 
   std::cout << "- Benchmarking Queries: [ ";
   auto printable_item_ids = std::vector<std::string>();
-  std::for_each(item_ids.begin(), item_ids.end(),
-                [&printable_item_ids](auto& id) { printable_item_ids.push_back(std::to_string(id + 1)); });
+  std::for_each(item_ids.begin(), item_ids.end(), [&printable_item_ids](auto& id) {
+    printable_item_ids.push_back(std::to_string(id + 1));
+  });
   std::cout << boost::algorithm::join(printable_item_ids, ", ") << " ]\n";
 
   auto context = BenchmarkRunner::create_context(*config);

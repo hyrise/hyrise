@@ -1,9 +1,9 @@
+#include <string>
 #pragma once
 
 #include <memory>
 
 #include "abstract_table_scan_impl.hpp"
-
 #include "types.hpp"
 
 namespace hyrise {

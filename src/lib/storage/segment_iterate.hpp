@@ -1,3 +1,4 @@
+#include <memory>
 #pragma once
 
 #include "pos_lists/row_id_pos_list.hpp"

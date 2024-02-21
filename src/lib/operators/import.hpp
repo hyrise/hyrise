@@ -1,14 +1,16 @@
+#include <memory>
+#include <unordered_map>
 #pragma once
 
 #include <optional>
 #include <string>
 
+#include "SQLParser.h"
+
 #include "abstract_read_only_operator.hpp"
 #include "import_export/csv/csv_meta.hpp"
 #include "import_export/file_type.hpp"
 #include "types.hpp"
-
-#include "SQLParser.h"
 
 namespace hyrise {
 

@@ -1,3 +1,5 @@
+#include <string>
+#include <vector>
 #pragma once
 
 #include <functional>

@@ -1,3 +1,6 @@
+#include <algorithm>
+#include <limits>
+#include <memory>
 #pragma once
 
 #include <cstddef>

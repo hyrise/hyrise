@@ -40,7 +40,9 @@ using namespace expression_functional;  // NOLINT(build/namespaces)
 bool expressions_equal(const std::vector<std::shared_ptr<AbstractExpression>>& expressions_a,
                        const std::vector<std::shared_ptr<AbstractExpression>>& expressions_b) {
   return std::equal(expressions_a.begin(), expressions_a.end(), expressions_b.begin(), expressions_b.end(),
-                    [&](const auto& expression_a, const auto& expression_b) { return *expression_a == *expression_b; });
+                    [&](const auto& expression_a, const auto& expression_b) {
+                      return *expression_a == *expression_b;
+                    });
 }
 
 bool expressions_equal_to_expressions_in_different_lqp(
@@ -432,8 +434,9 @@ bool contains_all_expressions(const ExpressionContainer& search_expressions,
   }
 
   for (const auto& expression : search_expressions) {
-    if (!std::any_of(expression_vector.cbegin(), expression_vector.cend(),
-                     [&](const auto& output_expression) { return *output_expression == *expression; })) {
+    if (!std::any_of(expression_vector.cbegin(), expression_vector.cend(), [&](const auto& output_expression) {
+          return *output_expression == *expression;
+        })) {
       return false;
     }
   }

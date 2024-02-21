@@ -472,15 +472,17 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
   // Emits all combinations of row ids from the left table range and a NULL value on the right side
   // (regarding the primary predicate) to the join output.
   void _emit_right_primary_null_combinations(size_t output_cluster, TableRange left_range) {
-    left_range.for_every_row_id(
-        _sorted_left_table, [&](RowID left_row_id) { _emit_combination(output_cluster, left_row_id, NULL_ROW_ID); });
+    left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
+      _emit_combination(output_cluster, left_row_id, NULL_ROW_ID);
+    });
   }
 
   // Emits all combinations of row ids from the right table range and a NULL value on the left side
   // (regarding the primary predicate) to the join output.
   void _emit_left_primary_null_combinations(size_t output_cluster, TableRange right_range) {
-    right_range.for_every_row_id(
-        _sorted_right_table, [&](RowID right_row_id) { _emit_combination(output_cluster, NULL_ROW_ID, right_row_id); });
+    right_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
+      _emit_combination(output_cluster, NULL_ROW_ID, right_row_id);
+    });
   }
 
   // Determines the length of the run starting at start_index in the values vector. A run is a series of the same
@@ -504,8 +506,9 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       end = values.end();
     }
 
-    const auto linear_search_result =
-        std::find_if(begin, end, [&](const auto& mat_value) { return mat_value.value > run_value; });
+    const auto linear_search_result = std::find_if(begin, end, [&](const auto& mat_value) {
+      return mat_value.value > run_value;
+    });
     if (linear_search_result != end) {
       // Match found within the linearly scanned part.
       return std::distance(begin, linear_search_result);
@@ -518,8 +521,9 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     }
 
     // Binary search in case the run did not end within the linearly scanned part.
-    const auto binary_search_result = std::upper_bound(
-        end, values.end(), *end, [](const auto& lhs, const auto& rhs) { return lhs.value < rhs.value; });
+    const auto binary_search_result = std::upper_bound(end, values.end(), *end, [](const auto& lhs, const auto& rhs) {
+      return lhs.value < rhs.value;
+    });
     return std::distance(begin, binary_search_result);
   }
 
@@ -686,29 +690,33 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
 
     if (_primary_predicate_condition == PredicateCondition::LessThan) {
       // Look for the first right value that is bigger than the smallest left value.
-      auto result =
-          _first_value_that_satisfies(_sorted_right_table, [&](const T& value) { return value > left_min_value; });
+      auto result = _first_value_that_satisfies(_sorted_right_table, [&](const T& value) {
+        return value > left_min_value;
+      });
       if (result) {
         unmatched_range = TablePosition(0, 0).to(*result);
       }
     } else if (_primary_predicate_condition == PredicateCondition::LessThanEquals) {
       // Look for the first right value that is bigger or equal to the smallest left value.
-      auto result =
-          _first_value_that_satisfies(_sorted_right_table, [&](const T& value) { return value >= left_min_value; });
+      auto result = _first_value_that_satisfies(_sorted_right_table, [&](const T& value) {
+        return value >= left_min_value;
+      });
       if (result) {
         unmatched_range = TablePosition(0, 0).to(*result);
       }
     } else if (_primary_predicate_condition == PredicateCondition::GreaterThan) {
       // Look for the first right value that is smaller than the biggest left value.
-      auto result = _first_value_that_satisfies_reverse(_sorted_right_table,
-                                                        [&](const T& value) { return value < left_max_value; });
+      auto result = _first_value_that_satisfies_reverse(_sorted_right_table, [&](const T& value) {
+        return value < left_max_value;
+      });
       if (result) {
         unmatched_range = (*result).to(end_of_right_table);
       }
     } else if (_primary_predicate_condition == PredicateCondition::GreaterThanEquals) {
       // Look for the first right value that is smaller or equal to the biggest left value.
-      auto result = _first_value_that_satisfies_reverse(_sorted_right_table,
-                                                        [&](const T& value) { return value <= left_max_value; });
+      auto result = _first_value_that_satisfies_reverse(_sorted_right_table, [&](const T& value) {
+        return value <= left_max_value;
+      });
       if (result) {
         unmatched_range = (*result).to(end_of_right_table);
       }
@@ -753,29 +761,33 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
 
     if (_primary_predicate_condition == PredicateCondition::LessThan) {
       // Look for the last left value that is smaller than the biggest right value.
-      auto result = _first_value_that_satisfies_reverse(_sorted_left_table,
-                                                        [&](const T& value) { return value < right_max_value; });
+      auto result = _first_value_that_satisfies_reverse(_sorted_left_table, [&](const T& value) {
+        return value < right_max_value;
+      });
       if (result) {
         unmatched_range = (*result).to(end_of_left_table);
       }
     } else if (_primary_predicate_condition == PredicateCondition::LessThanEquals) {
       // Look for the last left value that is smaller or equal than the biggest right value.
-      auto result = _first_value_that_satisfies_reverse(_sorted_left_table,
-                                                        [&](const T& value) { return value <= right_max_value; });
+      auto result = _first_value_that_satisfies_reverse(_sorted_left_table, [&](const T& value) {
+        return value <= right_max_value;
+      });
       if (result) {
         unmatched_range = (*result).to(end_of_left_table);
       }
     } else if (_primary_predicate_condition == PredicateCondition::GreaterThan) {
       // Look for the first left value that is bigger than the smallest right value.
-      auto result =
-          _first_value_that_satisfies(_sorted_left_table, [&](const T& value) { return value > right_min_value; });
+      auto result = _first_value_that_satisfies(_sorted_left_table, [&](const T& value) {
+        return value > right_min_value;
+      });
       if (result) {
         unmatched_range = TablePosition(0, 0).to(*result);
       }
     } else if (_primary_predicate_condition == PredicateCondition::GreaterThanEquals) {
       // Look for the first left value that is bigger or equal to the smallest right value.
-      auto result =
-          _first_value_that_satisfies(_sorted_left_table, [&](const T& value) { return value >= right_min_value; });
+      auto result = _first_value_that_satisfies(_sorted_left_table, [&](const T& value) {
+        return value >= right_min_value;
+      });
       if (result) {
         unmatched_range = TablePosition(0, 0).to(*result);
       }

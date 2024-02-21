@@ -31,7 +31,9 @@ constexpr uint8_t INVALID_INDEX = 255u;
 ARTNode4::ARTNode4(std::vector<std::pair<uint8_t, std::shared_ptr<ARTNode>>>& children) {
   std::sort(children.begin(), children.end(),
             [](const std::pair<uint8_t, std::shared_ptr<ARTNode>>& left,
-               const std::pair<uint8_t, std::shared_ptr<ARTNode>>& right) { return left.first < right.first; });
+               const std::pair<uint8_t, std::shared_ptr<ARTNode>>& right) {
+              return left.first < right.first;
+            });
   _partial_keys.fill(INVALID_INDEX);
   const auto child_count = children.size();
   for (auto index = size_t{0}; index < child_count; ++index) {
@@ -126,7 +128,9 @@ AbstractChunkIndex::Iterator ARTNode4::end() const {
 ARTNode16::ARTNode16(std::vector<std::pair<uint8_t, std::shared_ptr<ARTNode>>>& children) {
   std::sort(children.begin(), children.end(),
             [](const std::pair<uint8_t, std::shared_ptr<ARTNode>>& left,
-               const std::pair<uint8_t, std::shared_ptr<ARTNode>>& right) { return left.first < right.first; });
+               const std::pair<uint8_t, std::shared_ptr<ARTNode>>& right) {
+              return left.first < right.first;
+            });
   _partial_keys.fill(INVALID_INDEX);
   const auto child_count = children.size();
   for (auto index = uint32_t{0}; index < child_count; ++index) {
@@ -183,7 +187,9 @@ AbstractChunkIndex::Iterator ARTNode16::lower_bound(const AdaptiveRadixTreeIndex
   return _delegate_to_child(
       key, depth,
       [&key, this](std::iterator_traits<std::array<uint8_t, 16>::iterator>::difference_type partial_key_pos,
-                   size_t new_depth) { return _children[partial_key_pos]->lower_bound(key, new_depth); });
+                   size_t new_depth) {
+        return _children[partial_key_pos]->lower_bound(key, new_depth);
+      });
 }
 
 AbstractChunkIndex::Iterator ARTNode16::upper_bound(const AdaptiveRadixTreeIndex::BinaryComparable& key,
@@ -191,7 +197,9 @@ AbstractChunkIndex::Iterator ARTNode16::upper_bound(const AdaptiveRadixTreeIndex
   return _delegate_to_child(
       key, depth,
       [&key, this](std::iterator_traits<std::array<uint8_t, 16>::iterator>::difference_type partial_key_pos,
-                   size_t new_depth) { return _children[partial_key_pos]->upper_bound(key, new_depth); });
+                   size_t new_depth) {
+        return _children[partial_key_pos]->upper_bound(key, new_depth);
+      });
 }
 
 AbstractChunkIndex::Iterator ARTNode16::begin() const {

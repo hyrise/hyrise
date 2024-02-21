@@ -1,3 +1,4 @@
+#include <memory>
 #pragma once
 
 #include "abstract_statistics_object.hpp"

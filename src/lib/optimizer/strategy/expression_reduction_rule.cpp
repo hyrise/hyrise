@@ -180,8 +180,9 @@ void ExpressionReductionRule::reduce_constant_expression(std::shared_ptr<Abstrac
   }
 
   const auto all_arguments_are_values =
-      std::all_of(input_expression->arguments.begin(), input_expression->arguments.end(),
-                  [&](const auto& argument) { return argument->type == ExpressionType::Value; });
+      std::all_of(input_expression->arguments.begin(), input_expression->arguments.end(), [&](const auto& argument) {
+        return argument->type == ExpressionType::Value;
+      });
 
   if (!all_arguments_are_values) {
     return;
@@ -336,10 +337,11 @@ void ExpressionReductionRule::remove_duplicate_aggregate(
   {
     // Remove the AVG() expression from the AggregateNode
     auto& expressions = aggregate_node->node_expressions;
-    expressions.erase(
-        std::remove_if(expressions.begin(), expressions.end(),
-                       [&](const auto& expression) { return replacements.find(expression) != replacements.end(); }),
-        expressions.end());
+    expressions.erase(std::remove_if(expressions.begin(), expressions.end(),
+                                     [&](const auto& expression) {
+                                       return replacements.find(expression) != replacements.end();
+                                     }),
+                      expressions.end());
   }
 
   // Add a ProjectionNode that calculates AVG(a) as SUM(a)/COUNT(a).

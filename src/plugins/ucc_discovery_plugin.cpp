@@ -69,7 +69,9 @@ void UccDiscoveryPlugin::stop() {}
 
 std::vector<std::pair<PluginFunctionName, PluginFunctionPointer>>
 UccDiscoveryPlugin::provided_user_executable_functions() {
-  return {{"DiscoverUCCs", [&]() { _validate_ucc_candidates(_identify_ucc_candidates()); }}};
+  return {{"DiscoverUCCs", [&]() {
+             _validate_ucc_candidates(_identify_ucc_candidates());
+           }}};
 }
 
 std::optional<PreBenchmarkHook> UccDiscoveryPlugin::pre_benchmark_hook() {

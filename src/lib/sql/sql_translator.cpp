@@ -1256,8 +1256,9 @@ void SQLTranslator::_translate_select_groupby_having(const hsql::SelectStatement
     if (!pre_aggregate_expressions.empty()) {
       const auto& output_expressions = _current_lqp->output_expressions();
       const auto any_expression_not_yet_available = std::any_of(
-          pre_aggregate_expressions.cbegin(), pre_aggregate_expressions.cend(),
-          [&](const auto& expression) { return !find_expression_idx(*expression, output_expressions).has_value(); });
+          pre_aggregate_expressions.cbegin(), pre_aggregate_expressions.cend(), [&](const auto& expression) {
+            return !find_expression_idx(*expression, output_expressions).has_value();
+          });
 
       if (any_expression_not_yet_available) {
         _current_lqp = ProjectionNode::make(pre_aggregate_expressions, _current_lqp);
@@ -1334,8 +1335,9 @@ void SQLTranslator::_translate_select_groupby_having(const hsql::SelectStatement
           if (hsql_expr->table) {
             // Dealing with SELECT t.* here
             auto identifiers = _sql_identifier_resolver->get_expression_identifiers(pre_aggregate_expression);
-            if (std::any_of(identifiers.begin(), identifiers.end(),
-                            [&](const auto& identifier) { return identifier.table_name != hsql_expr->table; })) {
+            if (std::any_of(identifiers.begin(), identifiers.end(), [&](const auto& identifier) {
+                  return identifier.table_name != hsql_expr->table;
+                })) {
               // The pre_aggregate_expression may or may not be part of the GROUP BY clause, but since it comes from a
               // different table, it is not included in the `SELECT t.*`.
               continue;
@@ -1472,7 +1474,9 @@ void SQLTranslator::_translate_distinct_order_by(const std::vector<hsql::OrderDe
       // (DISTINCT will be applied before ORDER BY).
       const auto& select_expressions_set = ExpressionUnorderedSet{select_list.begin(), select_list.end()};
       AssertInput(std::all_of(expressions.cbegin(), expressions.cend(),
-                              [&](const auto& expression) { return select_expressions_set.contains(expression); }),
+                              [&](const auto& expression) {
+                                return select_expressions_set.contains(expression);
+                              }),
                   "For SELECT DISTINCT, ORDER BY expressions must appear in the SELECT list.");
     }
 
@@ -1975,8 +1979,9 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
       }
 
       // Convert to upper-case to find mapping.
-      std::transform(name.cbegin(), name.cend(), name.begin(),
-                     [](const auto character) { return std::toupper(character); });
+      std::transform(name.cbegin(), name.cend(), name.begin(), [](const auto character) {
+        return std::toupper(character);
+      });
 
       // Some SQL functions have aliases, which we map to one unique identifier here.
       static const auto function_aliases = std::unordered_map<std::string, std::string>{{{"SUBSTRING"}, {"SUBSTR"}}};

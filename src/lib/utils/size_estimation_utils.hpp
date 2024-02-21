@@ -1,3 +1,7 @@
+#include <algorithm>
+#include <set>
+#include <string>
+#include <vector>
 #pragma once
 
 #include <random>

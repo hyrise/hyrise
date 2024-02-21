@@ -20,8 +20,9 @@ void SQLIdentifierResolver::add_column_name(const std::shared_ptr<AbstractExpres
 }
 
 void SQLIdentifierResolver::reset_column_names(const std::shared_ptr<AbstractExpression>& expression) {
-  auto entry_iter = std::find_if(_entries.begin(), _entries.end(),
-                                 [&](const auto& entry) { return *entry.expression == *expression; });
+  auto entry_iter = std::find_if(_entries.begin(), _entries.end(), [&](const auto& entry) {
+    return *entry.expression == *expression;
+  });
   if (entry_iter == _entries.end()) {
     return;
   }
@@ -59,8 +60,9 @@ std::shared_ptr<AbstractExpression> SQLIdentifierResolver::resolve_identifier_re
 
 std::vector<SQLIdentifier> SQLIdentifierResolver::get_expression_identifiers(
     const std::shared_ptr<AbstractExpression>& expression) const {
-  auto entry_iter = std::find_if(_entries.begin(), _entries.end(),
-                                 [&](const auto& entry) { return *entry.expression == *expression; });
+  auto entry_iter = std::find_if(_entries.begin(), _entries.end(), [&](const auto& entry) {
+    return *entry.expression == *expression;
+  });
 
   std::vector<SQLIdentifier> identifiers;
   if (entry_iter == _entries.end()) {
@@ -89,8 +91,9 @@ void SQLIdentifierResolver::append(const SQLIdentifierResolver& rhs) {
 
 SQLIdentifierContextEntry& SQLIdentifierResolver::_find_or_create_expression_entry(
     const std::shared_ptr<AbstractExpression>& expression) {
-  auto entry_iter = std::find_if(_entries.begin(), _entries.end(),
-                                 [&](const auto& entry) { return *entry.expression == *expression; });
+  auto entry_iter = std::find_if(_entries.begin(), _entries.end(), [&](const auto& entry) {
+    return *entry.expression == *expression;
+  });
 
   // If there is no entry for this Expression, just add one
   if (entry_iter == _entries.end()) {

@@ -1,3 +1,5 @@
+#include <memory>
+#include <utility>
 #pragma once
 
 #include <type_traits>
@@ -95,7 +97,9 @@ class SegmentIterable {
   void materialize_values(Container& container) const {
     size_t index = container.size();
     container.resize(container.size() + _self()._on_size());
-    for_each([&](const auto& value) { container[index++] = value.value(); });
+    for_each([&](const auto& value) {
+      container[index++] = value.value();
+    });
   }
 
   /**
@@ -109,7 +113,9 @@ class SegmentIterable {
   void materialize_values_and_nulls(Container& container) const {
     size_t index = container.size();
     container.resize(container.size() + _self()._on_size());
-    for_each([&](const auto& value) { container[index++] = std::make_pair(value.is_null(), value.value()); });
+    for_each([&](const auto& value) {
+      container[index++] = std::make_pair(value.is_null(), value.value());
+    });
   }
 
   /**
@@ -120,7 +126,9 @@ class SegmentIterable {
   void materialize_nulls(Container& container) const {
     size_t index = container.size();
     container.resize(container.size() + _self()._on_size());
-    for_each([&](const auto& value) { container[index++] = value.is_null(); });
+    for_each([&](const auto& value) {
+      container[index++] = value.is_null();
+    });
   }
 
   /** @} */

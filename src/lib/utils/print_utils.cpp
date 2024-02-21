@@ -136,9 +136,11 @@ template void print_directed_acyclic_graph<const AbstractOperator>(
     const NodePrintFn<const AbstractOperator>& print_node_fn, std::ostream& stream);
 
 std::string all_encoding_options() {
-  return boost::algorithm::join(magic_enum::enum_names<EncodingType>() |
-                                    boost::adaptors::transformed([](const auto it) { return std::string{it}; }),
-                                ", ");
+  return boost::algorithm::join(
+      magic_enum::enum_names<EncodingType>() | boost::adaptors::transformed([](const auto it) {
+        return std::string{it};
+      }),
+      ", ");
 }
 
 }  // namespace hyrise

@@ -1,3 +1,4 @@
+#include <set>
 #pragma once
 
 #include "../base_test.hpp"

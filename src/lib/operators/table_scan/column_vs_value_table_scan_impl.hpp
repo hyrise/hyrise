@@ -1,3 +1,4 @@
+#include <string>
 #pragma once
 
 #include <functional>
@@ -7,7 +8,6 @@
 #include <vector>
 
 #include "abstract_dereferenced_column_table_scan_impl.hpp"
-
 #include "all_type_variant.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"

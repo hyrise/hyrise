@@ -28,7 +28,9 @@ class ServerTestRunner : public BaseTest {
     _table_a = load_table("resources/test_data/tbl/int_float.tbl", ChunkOffset{2});
     Hyrise::get().storage_manager.add_table("table_a", _table_a);
 
-    auto server_runner = [](Server& server) { server.run(); };
+    auto server_runner = [](Server& server) {
+      server.run();
+    };
 
     _server_thread = std::make_unique<std::thread>(server_runner, std::ref(*_server));
 

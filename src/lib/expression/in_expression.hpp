@@ -1,3 +1,6 @@
+#include <memory>
+#include <string>
+#include <unordered_map>
 #pragma once
 
 #include "abstract_predicate_expression.hpp"

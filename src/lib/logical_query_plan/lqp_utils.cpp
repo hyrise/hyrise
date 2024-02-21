@@ -483,8 +483,9 @@ bool contains_matching_unique_column_combination(const UniqueColumnCombinations&
   // Look for a unique column combination that is based on a subset of the given expressions.
   for (const auto& ucc : unique_column_combinations) {
     if (ucc.expressions.size() <= expressions.size() &&
-        std::all_of(ucc.expressions.cbegin(), ucc.expressions.cend(),
-                    [&](const auto& ucc_expression) { return expressions.contains(ucc_expression); })) {
+        std::all_of(ucc.expressions.cbegin(), ucc.expressions.cend(), [&](const auto& ucc_expression) {
+          return expressions.contains(ucc_expression);
+        })) {
       // Found a matching UCC.
       return true;
     }

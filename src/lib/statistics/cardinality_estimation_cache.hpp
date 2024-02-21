@@ -1,3 +1,5 @@
+#include <memory>
+#include <unordered_map>
 #pragma once
 
 #include "join_graph_statistics_cache.hpp"

@@ -263,11 +263,13 @@ __attribute__((hot)) void AggregateHash::_aggregate_segment(ChunkID chunk_id, Co
   // Furthermore, if we use the immediate key shortcut (which uses the same code path as caching), we need to pass
   // true_type so that the aggregate keys are checked for immediate access values.
   if (_contexts_per_column.size() > 1 || _use_immediate_key_shortcut) {
-    segment_iterate<ColumnDataType>(abstract_segment,
-                                    [&](const auto& position) { process_position(std::true_type{}, position); });
+    segment_iterate<ColumnDataType>(abstract_segment, [&](const auto& position) {
+      process_position(std::true_type{}, position);
+    });
   } else {
-    segment_iterate<ColumnDataType>(abstract_segment,
-                                    [&](const auto& position) { process_position(std::false_type{}, position); });
+    segment_iterate<ColumnDataType>(abstract_segment, [&](const auto& position) {
+      process_position(std::false_type{}, position);
+    });
   }
 }
 

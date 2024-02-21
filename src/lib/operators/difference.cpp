@@ -77,8 +77,9 @@ std::shared_ptr<const Table> Difference::_on_execute() {
 
     // Remove duplicate rows by adding all rows to a unordered set
     std::transform(string_row_vector.cbegin(), string_row_vector.cend(),
-                   std::inserter(right_input_row_set, right_input_row_set.end()),
-                   [](auto& item) { return item.str(); });
+                   std::inserter(right_input_row_set, right_input_row_set.end()), [](auto& item) {
+                     return item.str();
+                   });
   }
 
   // 2. Now we check for each chunk of the left input which rows can be added to the output

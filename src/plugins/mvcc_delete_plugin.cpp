@@ -30,11 +30,14 @@ std::string MvccDeletePlugin::description() const {
 }
 
 void MvccDeletePlugin::start() {
-  _loop_thread_logical_delete = std::make_unique<PausableLoopThread>(
-      IDLE_DELAY_LOGICAL_DELETE, [&](size_t /*unused*/) { _logical_delete_loop(); });
+  _loop_thread_logical_delete = std::make_unique<PausableLoopThread>(IDLE_DELAY_LOGICAL_DELETE, [&](size_t /*unused*/) {
+    _logical_delete_loop();
+  });
 
-  _loop_thread_physical_delete = std::make_unique<PausableLoopThread>(
-      IDLE_DELAY_PHYSICAL_DELETE, [&](size_t /*unused*/) { _physical_delete_loop(); });
+  _loop_thread_physical_delete =
+      std::make_unique<PausableLoopThread>(IDLE_DELAY_PHYSICAL_DELETE, [&](size_t /*unused*/) {
+        _physical_delete_loop();
+      });
 }
 
 void MvccDeletePlugin::stop() {

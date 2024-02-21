@@ -1,6 +1,10 @@
+#include <memory>
+#include <string>
+#include <utility>
 #pragma once
 
 #include <variant>
+
 #include "hyrise.hpp"
 #include "operators/abstract_operator.hpp"
 #include "postgres_protocol_handler.hpp"

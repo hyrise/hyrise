@@ -1,3 +1,5 @@
+#include <utility>
+#include <vector>
 #pragma once
 
 #include <array>
@@ -11,8 +13,9 @@
 #include <boost/hana/tuple.hpp>
 #include <boost/hana/type.hpp>
 
-#include "all_type_variant.hpp"
 #include "magic_enum.hpp"
+
+#include "all_type_variant.hpp"
 #include "storage/vector_compression/vector_compression.hpp"
 #include "utils/enum_constant.hpp"
 

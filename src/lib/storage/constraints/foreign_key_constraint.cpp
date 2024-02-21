@@ -24,16 +24,18 @@ std::vector<size_t> sort_indexes(const std::vector<ColumnID>& column_ids) {
   auto permutation = std::vector<size_t>(column_ids.size());
   // Fill permutation with [0, 1, ..., n - 1] and order the permutation by sorting column_ids.
   std::iota(permutation.begin(), permutation.end(), 0);
-  std::sort(permutation.begin(), permutation.end(),
-            [&](auto lhs, auto rhs) { return column_ids[lhs] < column_ids[rhs]; });
+  std::sort(permutation.begin(), permutation.end(), [&](auto lhs, auto rhs) {
+    return column_ids[lhs] < column_ids[rhs];
+  });
   return permutation;
 }
 
 std::vector<ColumnID> apply_permutation(std::vector<ColumnID>& column_ids, const std::vector<size_t>& permutation) {
   auto sorted_column_ids = std::vector<ColumnID>(column_ids.size());
 
-  std::transform(permutation.begin(), permutation.end(), sorted_column_ids.begin(),
-                 [&](const auto position) { return column_ids[position]; });
+  std::transform(permutation.begin(), permutation.end(), sorted_column_ids.begin(), [&](const auto position) {
+    return column_ids[position];
+  });
   return sorted_column_ids;
 }
 

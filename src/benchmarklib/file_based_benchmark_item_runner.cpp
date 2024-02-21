@@ -34,7 +34,9 @@ FileBasedBenchmarkItemRunner::FileBasedBenchmarkItemRunner(
     const std::unordered_set<std::string>& filename_blacklist,
     const std::optional<std::unordered_set<std::string>>& query_subset)
     : AbstractBenchmarkItemRunner(config) {
-  const auto is_sql_file = [](const std::string& filename) { return boost::algorithm::ends_with(filename, ".sql"); };
+  const auto is_sql_file = [](const std::string& filename) {
+    return boost::algorithm::ends_with(filename, ".sql");
+  };
 
   const auto path = std::filesystem::path{query_path};
   Assert(std::filesystem::exists(path), "No such file or directory '" + query_path + "'");
@@ -58,7 +60,9 @@ FileBasedBenchmarkItemRunner::FileBasedBenchmarkItemRunner(
   std::iota(_items.begin(), _items.end(), BenchmarkItemID{0});
 
   // Sort queries by name
-  std::sort(_queries.begin(), _queries.end(), [](const Query& lhs, const Query& rhs) { return lhs.name < rhs.name; });
+  std::sort(_queries.begin(), _queries.end(), [](const Query& lhs, const Query& rhs) {
+    return lhs.name < rhs.name;
+  });
 }
 
 bool FileBasedBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, BenchmarkSQLExecutor& sql_executor) {

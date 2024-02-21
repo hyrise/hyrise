@@ -1,3 +1,5 @@
+#include <algorithm>
+#include <memory>
 #pragma once
 
 #include <optional>
@@ -129,7 +131,9 @@ class TableBuilder {
     _table = std::make_shared<Table>(column_definitions, TableType::Data, chunk_size, UseMvcc::Yes);
 
     // Reserve some space in the vectors
-    boost::hana::for_each(_value_vectors, [&](auto& values) { values.reserve(_estimated_rows_per_chunk); });
+    boost::hana::for_each(_value_vectors, [&](auto& values) {
+      values.reserve(_estimated_rows_per_chunk);
+    });
     boost::hana::for_each(_null_value_vectors, [&](auto& null_values) {
       if constexpr (std::decay_t<decltype(null_values)>::has_value) {
         null_values.value().reserve(_estimated_rows_per_chunk);

@@ -1,9 +1,12 @@
+#include <utility>
+#include <vector>
 #pragma once
 
 #include <memory>
 #include <string>
 
 #include "SQLParserResult.h"
+
 #include "cache/gdfs_cache.hpp"
 #include "concurrency/transaction_context.hpp"
 #include "logical_query_plan/lqp_translator.hpp"

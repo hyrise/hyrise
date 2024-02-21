@@ -239,7 +239,8 @@ void AbstractTableGenerator::generate_and_store() {
         auto output = std::stringstream{};
         output << "-  Processing '" + table_name << "' - "
                << (table_info.re_encoded ? "encoding applied" : "no encoding necessary") << " ("
-               << per_table_timer.lap_formatted() << ")\n" << std::flush;
+               << per_table_timer.lap_formatted() << ")\n"
+               << std::flush;
         std::cout << output.str() << std::flush;
       };
       jobs.emplace_back(std::make_shared<JobTask>(encode_table));

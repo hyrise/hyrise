@@ -1,3 +1,4 @@
+#include <string>
 #pragma once
 
 #include <filesystem>

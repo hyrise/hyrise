@@ -1,3 +1,5 @@
+#include <memory>
+#include <string>
 #pragma once
 
 #include "utils/meta_tables/abstract_meta_table.hpp"

@@ -101,8 +101,9 @@ std::shared_ptr<const Table> AliasOperator::_on_execute() {
         // issue #2321 for more details). We thus iterate over the output columns to (potentially) mark multiple
         // columns that reference the same input column as sorted.
         const auto it =
-            std::find_if(input_sorted_by.cbegin(), input_sorted_by.cend(),
-                         [&](const auto& sorted_information) { return column_id == sorted_information.column; });
+            std::find_if(input_sorted_by.cbegin(), input_sorted_by.cend(), [&](const auto& sorted_information) {
+              return column_id == sorted_information.column;
+            });
         if (it != input_sorted_by.cend()) {
           sort_definitions.emplace_back(output_column_id, it->sort_mode);
         }

@@ -1,3 +1,6 @@
+#include <memory>
+#include <string>
+#include <vector>
 #pragma once
 
 #include <array>
