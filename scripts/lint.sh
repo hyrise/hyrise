@@ -2,8 +2,12 @@
 
 exitcode=0
 
-# Run cpplint
-find src \( -iname "*.cpp" -o -iname "*.hpp" \) -print0 | parallel --null --no-notice -j 100% --nice 17 /usr/bin/env python3 ./third_party/cpplint/cpplint.py --verbose=0 --extensions=hpp,cpp --counting=detailed --filter=-legal/copyright,-whitespace/newline,-runtime/references,-build/c++11,-build/include_what_you_use,-readability/nolint,-whitespace/braces,-build/include_subdir --linelength=120 {} 2\>\&1 \| grep -v \'\^Done processing\' \| grep -v \'\^Total errors found: 0\' \; test \${PIPESTATUS[0]} -eq 0
+# Run cpplint. Excluded checks:
+#  - build/include_subdir: do not work well with our structure of using lib, test, and third_party directories.
+#  - whitespace/braces: does not work with {} initialization (https://github.com/cpplint/cpplint/issues/204#issuecomment-1146769949).
+#  - readability/nolint: cpplint complains about excluded clang-tidy categories.
+#    
+find src \( -iname "*.cpp" -o -iname "*.hpp" \) -print0 | parallel --null --no-notice -j 100% --nice 17 /usr/bin/env python3 ./third_party/cpplint/cpplint.py --verbose=0 --extensions=hpp,cpp --counting=detailed --filter=-legal/copyright,-whitespace/newline,-runtime/references,-build/c++11,-readability/nolint,-whitespace/braces,-build/include_subdir --linelength=120 {} 2\>\&1 \| grep -v \'\^Done processing\' \| grep -v \'\^Total errors found: 0\' \; test \${PIPESTATUS[0]} -eq 0
 let "exitcode |= $?"
 #                             /------------------ runs in parallel -------------------\
 # Conceptual: find | parallel python cpplint \| grep -v \| test \${PIPESTATUS[0]} -eq 0

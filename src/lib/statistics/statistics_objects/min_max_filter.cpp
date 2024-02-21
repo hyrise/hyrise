@@ -14,7 +14,7 @@ namespace hyrise {
 
 template <typename T>
 MinMaxFilter<T>::MinMaxFilter(T init_min, T init_max)
-    : AbstractStatisticsObject(data_type_from_type<T>()), min(init_min), max(init_max) {}
+    : AbstractStatisticsObject{data_type_from_type<T>()}, min{init_min}, max{init_max} {}
 
 template <typename T>
 Cardinality MinMaxFilter<T>::estimate_cardinality(const PredicateCondition /*predicate_condition*/,

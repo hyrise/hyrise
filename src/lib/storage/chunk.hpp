@@ -1,7 +1,5 @@
 #pragma once
 
-#include <oneapi/tbb/concurrent_vector.h>  // NOLINT(build/include_order): wronlgy identified as a C header.
-
 #include <algorithm>
 #include <atomic>
 #include <memory>
@@ -11,6 +9,7 @@
 #include <vector>
 
 #include <boost/container/pmr/memory_resource.hpp>
+#include <oneapi/tbb/concurrent_vector.h>  // NOLINT(build/include_order): wronlgy identified as a C header.
 
 #include "all_type_variant.hpp"
 #include "index/chunk_index_type.hpp"

@@ -314,7 +314,7 @@ void BenchmarkRunner::_benchmark_ordered() {
     _warmup(item_id);
 
     const auto& name = _benchmark_item_runner->item_name(item_id);
-    std::cout << "- Benchmarking " << name << '\n';
+    std::cout << "- Benchmarking " << name << '\n' << std::flush;
 
     auto& result = _results[item_id];
 
@@ -336,7 +336,7 @@ void BenchmarkRunner::_benchmark_ordered() {
 
     // Wait for the rest of the tasks that didn't make it in time - they will not count toward the results.
     if (_currently_running_clients > 0) {
-      std::cout << "  -> Waiting for clients that are still running\n";
+      std::cout << "  -> Waiting for clients that are still running\n" << std::flush;
     }
     Hyrise::get().scheduler()->wait_for_all_tasks();
     Assert(_currently_running_clients == 0, "All runs must be finished at this point.");
@@ -359,9 +359,10 @@ void BenchmarkRunner::_benchmark_ordered() {
     if (!_config.verify && !_config.enable_visualization) {
       std::cout << "  -> Executed " << result.successful_runs.size() << " times in " << duration_seconds
                 << " seconds (Latency: " << mean_in_milliseconds << " ms/iter, Throughput: " << items_per_second
-                << " iter/s)\n";
+                << " iter/s)\n"
+                << std::flush;
       if (!result.unsuccessful_runs.empty()) {
-        std::cout << "  -> " << result.unsuccessful_runs.size() << " additional runs failed\n";
+        std::cout << "  -> " << result.unsuccessful_runs.size() << " additional runs failed\n" << std::flush;
       }
     }
 

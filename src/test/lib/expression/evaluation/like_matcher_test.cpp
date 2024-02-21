@@ -2,7 +2,6 @@
 #include <utility>
 
 #include "base_test.hpp"
-
 #include "expression/evaluation/like_matcher.hpp"
 
 namespace hyrise {

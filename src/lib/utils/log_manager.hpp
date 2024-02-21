@@ -1,10 +1,10 @@
 #pragma once
 
-#include <oneapi/tbb/concurrent_vector.h>  // NOLINT(build/include_order): wronlgy identified as a C header.
-
 #include <chrono>
 #include <functional>
 #include <string>
+
+#include <oneapi/tbb/concurrent_vector.h>  // NOLINT(build/include_order): wronlgy identified as a C header.
 
 #include "types.hpp"
 

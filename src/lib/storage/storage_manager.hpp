@@ -1,13 +1,13 @@
 #pragma once
 
-#include <oneapi/tbb/concurrent_unordered_map.h>  // NOLINT(build/include_order): wronlgy identified as a C header.
-
 #include <iostream>
 #include <map>
 #include <memory>
 #include <shared_mutex>
 #include <string>
 #include <vector>
+
+#include <oneapi/tbb/concurrent_unordered_map.h>  // NOLINT(build/include_order): wronlgy identified as a C header.
 
 #include "lqp_view.hpp"
 #include "prepared_plan.hpp"

@@ -19,7 +19,7 @@
  * Its 113 queries are obtained from the "third_party/join-order-benchmark" submodule
  */
 
-using namespace hyrise;                // NOLINT(build/namespaces)
+using namespace hyrise;  // NOLINT(build/namespaces)
 
 /**
  * Each of the 21 JOB tables has one surrogate key. This function registers key constraints for all of them.

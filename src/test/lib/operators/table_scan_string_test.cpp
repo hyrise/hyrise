@@ -6,7 +6,6 @@
 #include <utility>
 
 #include "base_test.hpp"
-
 #include "expression/evaluation/like_matcher.hpp"
 #include "operators/abstract_read_only_operator.hpp"
 #include "operators/get_table.hpp"

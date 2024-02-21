@@ -1,5 +1,9 @@
 #include "meta_mock_table.hpp"
 
+#include <memory>
+#include <string>
+#include <vector>
+
 namespace hyrise {
 
 MetaMockTable::MetaMockTable() : AbstractMetaTable(TableColumnDefinitions{{"mock", DataType::String, false}}) {}

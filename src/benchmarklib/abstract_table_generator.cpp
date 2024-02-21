@@ -61,10 +61,11 @@ void AbstractTableGenerator::generate_and_store() {
   Hyrise::get().topology.use_default_topology(_benchmark_config->data_preparation_cores);
   Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
 
-  std::cout << "- Loading/Generating tables\n";
+  std::cout << "- Loading/Generating tables\n" << std::flush;
   auto table_info_by_name = generate();
   metrics.generation_duration = timer.lap();
-  std::cout << "- Loading/Generating tables done (" << format_duration(metrics.generation_duration) << ")\n";
+  std::cout << "- Loading/Generating tables done (" << format_duration(metrics.generation_duration) << ")\n"
+            << std::flush;
 
   /**
    * Mark all chunks of the table as immutable.
@@ -210,7 +211,7 @@ void AbstractTableGenerator::generate_and_store() {
       Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
 
       metrics.sort_duration = timer.lap();
-      std::cout << "- Sorting tables done (" << format_duration(metrics.sort_duration) << ")n";
+      std::cout << "- Sorting tables done (" << format_duration(metrics.sort_duration) << ")\n" << std::flush;
     }
   }
 
@@ -223,7 +224,7 @@ void AbstractTableGenerator::generate_and_store() {
    * Encode the tables
    */
   {
-    std::cout << "- Encoding tables (if necessary) and generating pruning statistics\n";
+    std::cout << "- Encoding tables (if necessary) and generating pruning statistics\n" << std::flush;
 
     auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
     jobs.reserve(table_info_by_name.size());
@@ -238,7 +239,7 @@ void AbstractTableGenerator::generate_and_store() {
         auto output = std::stringstream{};
         output << "-  Processing '" + table_name << "' - "
                << (table_info.re_encoded ? "encoding applied" : "no encoding necessary") << " ("
-               << per_table_timer.lap_formatted() << ")\n";
+               << per_table_timer.lap_formatted() << ")\n" << std::flush;
         std::cout << output.str() << std::flush;
       };
       jobs.emplace_back(std::make_shared<JobTask>(encode_table));
@@ -247,7 +248,8 @@ void AbstractTableGenerator::generate_and_store() {
 
     metrics.encoding_duration = timer.lap();
     std::cout << "- Encoding tables and generating pruning statistic done ("
-              << format_duration(metrics.encoding_duration) << ")\n";
+              << format_duration(metrics.encoding_duration) << ")\n"
+              << std::flush;
   }
 
   /**
@@ -281,18 +283,19 @@ void AbstractTableGenerator::generate_and_store() {
       std::cout << "-  Writing '" << table_name << "' into binary file " << binary_file_path << " " << std::flush;
       auto per_table_timer = Timer{};
       BinaryWriter::write(*table_info.table, binary_file_path);
-      std::cout << "(" << per_table_timer.lap_formatted() << ")\n";
+      std::cout << "(" << per_table_timer.lap_formatted() << ")\n" << std::flush;
     }
     metrics.binary_caching_duration = timer.lap();
     std::cout << "- Writing tables into binary files done (" << format_duration(metrics.binary_caching_duration)
-              << ")\n";
+              << ")\n"
+              << std::flush;
   }
 
   /**
    * Add the Tables to the StorageManager
    */
   {
-    std::cout << "- Adding tables to StorageManager and generating table statistics\n";
+    std::cout << "- Adding tables to StorageManager and generating table statistics.\n" << std::flush;
     auto& storage_manager = Hyrise::get().storage_manager;
     auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
     jobs.reserve(table_info_by_name.size());
@@ -317,7 +320,8 @@ void AbstractTableGenerator::generate_and_store() {
     metrics.store_duration = timer.lap();
 
     std::cout << "- Adding tables to StorageManager and generating table statistics done ("
-              << format_duration(metrics.store_duration) << ")\n";
+              << format_duration(metrics.store_duration) << ")\n"
+              << std::flush;
   }
 
   /**
@@ -326,7 +330,7 @@ void AbstractTableGenerator::generate_and_store() {
   if (_benchmark_config->chunk_indexes) {
     _create_chunk_indexes(table_info_by_name);
   } else {
-    std::cout << "- No chunk indexes created as --chunk_indexes was not specified or set to false\n";
+    std::cout << "- No chunk indexes created as --chunk_indexes was not specified or set to false.\n";
   }
 
   /**
@@ -335,7 +339,7 @@ void AbstractTableGenerator::generate_and_store() {
   if (_benchmark_config->table_indexes) {
     _create_table_indexes(table_info_by_name);
   } else {
-    std::cout << "- No table indexes created as --table_indexes was not specified or set to false\n";
+    std::cout << "- No table indexes created as --table_indexes was not specified or set to false.\n";
   }
 
   // Set scheduler back to previously used scheduler.

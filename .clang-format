@@ -56,7 +56,7 @@ IncludeCategories:
     # readline headers (both using .h) with system headers (e.g., pthread.h). Thus, before defining priority one, we
     # put TBB and reaadline headers into category 3 (i.e., third party system headers).
     # headers.
-  - Regex:           '^<(tbb\/.*|readline\/.*)>$'
+  - Regex:           '^<(oneapi\/tbb\/.*|readline\/.*)>$'
     Priority:        3
 
   # C system headers as the first category (e.g., <stdlib.h>). Note: the parent/main header is implicitely priority 0.
