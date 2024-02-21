@@ -1,6 +1,7 @@
+#pragma once
+
 #include <memory>
 #include <vector>
-#pragma once
 
 #include "tsl/sparse_map.h"
 

@@ -1,7 +1,8 @@
+#pragma once
+
 #include <memory>
 #include <string>
 #include <unordered_map>
-#pragma once
 
 #include "operators/abstract_read_write_operator.hpp"
 #include "operators/insert.hpp"

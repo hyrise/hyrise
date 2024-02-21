@@ -1,7 +1,7 @@
-#include <utility>
 #pragma once
 
 #include <memory>
+#include <utility>
 
 #include <boost/hana/fold.hpp>
 #include <boost/hana/map.hpp>

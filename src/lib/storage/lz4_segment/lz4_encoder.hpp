@@ -1,4 +1,3 @@
-#include <utility>
 #pragma once
 
 #include <algorithm>
@@ -6,6 +5,7 @@
 #include <limits>
 #include <memory>
 #include <string>
+#include <utility>
 
 #include "lz4hc.h"
 #include "zdict.h"

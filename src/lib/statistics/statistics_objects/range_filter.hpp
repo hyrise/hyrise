@@ -1,8 +1,8 @@
-#include <utility>
 #pragma once
 
 #include <memory>
 #include <optional>
+#include <utility>
 #include <vector>
 
 #include "abstract_statistics_object.hpp"

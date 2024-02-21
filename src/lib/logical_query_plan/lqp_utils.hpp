@@ -1,13 +1,13 @@
-#include <memory>
-#include <string>
-#include <unordered_map>
-#include <utility>
-#include <vector>
 #pragma once
 
+#include <memory>
 #include <queue>
 #include <set>
+#include <string>
+#include <unordered_map>
 #include <unordered_set>
+#include <utility>
+#include <vector>
 
 #include "logical_query_plan/abstract_lqp_node.hpp"
 

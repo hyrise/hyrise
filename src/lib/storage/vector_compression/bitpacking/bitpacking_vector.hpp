@@ -1,5 +1,6 @@
-#include <memory>
 #pragma once
+
+#include <memory>
 
 #include "compact_vector.hpp"
 

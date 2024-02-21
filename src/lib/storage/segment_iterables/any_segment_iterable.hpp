@@ -1,7 +1,7 @@
-#include <memory>
 #pragma once
 
 #include <iterator>
+#include <memory>
 #include <type_traits>
 
 #include "storage/segment_iterables.hpp"

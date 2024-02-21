@@ -1,7 +1,7 @@
-#include <string>
 #pragma once
 
 #include <memory>
+#include <string>
 
 #include "abstract_dereferenced_column_table_scan_impl.hpp"
 #include "all_type_variant.hpp"

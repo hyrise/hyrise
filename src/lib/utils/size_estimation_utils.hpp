@@ -1,10 +1,10 @@
+#pragma once
+
 #include <algorithm>
+#include <random>
 #include <set>
 #include <string>
 #include <vector>
-#pragma once
-
-#include <random>
 
 #include "types.hpp"
 

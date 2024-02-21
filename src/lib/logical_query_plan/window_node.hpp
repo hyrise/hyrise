@@ -1,7 +1,8 @@
+#pragma once
+
 #include <memory>
 #include <string>
 #include <vector>
-#pragma once
 
 #include "abstract_lqp_node.hpp"
 

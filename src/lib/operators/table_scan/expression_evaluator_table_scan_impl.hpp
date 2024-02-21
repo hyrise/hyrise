@@ -1,6 +1,7 @@
+#pragma once
+
 #include <memory>
 #include <string>
-#pragma once
 
 #include "abstract_table_scan_impl.hpp"
 #include "expression/abstract_expression.hpp"

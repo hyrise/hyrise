@@ -1,5 +1,6 @@
-#include <set>
 #pragma once
+
+#include <set>
 
 #include "../base_test.hpp"
 

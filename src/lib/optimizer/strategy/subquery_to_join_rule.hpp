@@ -1,10 +1,10 @@
+#pragma once
+
+#include <map>
 #include <memory>
 #include <string>
 #include <utility>
 #include <vector>
-#pragma once
-
-#include <map>
 
 #include "abstract_rule.hpp"
 #include "expression/abstract_expression.hpp"

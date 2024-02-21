@@ -1,9 +1,9 @@
-#include <vector>
 #pragma once
 
 #include <algorithm>
 #include <limits>
 #include <memory>
+#include <vector>
 
 #include "storage/base_segment_encoder.hpp"
 #include "storage/dictionary_segment.hpp"

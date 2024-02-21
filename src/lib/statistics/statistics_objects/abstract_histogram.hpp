@@ -1,6 +1,6 @@
-#include <algorithm>
 #pragma once
 
+#include <algorithm>
 #include <limits>
 #include <memory>
 #include <optional>

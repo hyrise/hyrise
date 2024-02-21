@@ -1,8 +1,9 @@
+#pragma once
+
 #include <memory>
 #include <string>
 #include <utility>
 #include <vector>
-#pragma once
 
 #include "scheduler/abstract_task.hpp"
 

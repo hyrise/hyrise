@@ -1,9 +1,9 @@
-#include <memory>
-#include <vector>
 #pragma once
 
 #include <map>
+#include <memory>
 #include <unordered_map>
+#include <vector>
 
 #include <boost/dynamic_bitset.hpp>
 

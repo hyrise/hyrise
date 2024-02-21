@@ -1,9 +1,9 @@
-#include <string>
-#include <unordered_map>
-#include <vector>
 #pragma once
 
 #include <memory>
+#include <string>
+#include <unordered_map>
+#include <vector>
 
 #include "abstract_read_only_operator.hpp"
 #include "all_type_variant.hpp"

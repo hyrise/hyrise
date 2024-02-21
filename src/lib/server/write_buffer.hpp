@@ -1,6 +1,7 @@
+#pragma once
+
 #include <memory>
 #include <string>
-#pragma once
 
 #include "ring_buffer_iterator.hpp"
 #include "server_types.hpp"

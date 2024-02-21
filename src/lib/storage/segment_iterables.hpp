@@ -1,8 +1,8 @@
-#include <memory>
-#include <utility>
 #pragma once
 
+#include <memory>
 #include <type_traits>
+#include <utility>
 
 #include "resolve_type.hpp"
 #include "storage/segment_iterables/abstract_segment_iterators.hpp"

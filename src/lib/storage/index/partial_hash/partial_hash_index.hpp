@@ -1,7 +1,8 @@
+#pragma once
+
 #include <memory>
 #include <utility>
 #include <vector>
-#pragma once
 
 #include "tsl/sparse_set.h"
 

@@ -1,7 +1,8 @@
+#pragma once
+
 #include <memory>
 #include <string>
 #include <vector>
-#pragma once
 
 #include "expression/window_function_expression.hpp"
 #include "operators/abstract_operator.hpp"

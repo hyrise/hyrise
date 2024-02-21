@@ -1,10 +1,10 @@
-#include <memory>
-#include <string>
-#include <vector>
 #pragma once
 
 #include <array>
+#include <memory>
+#include <string>
 #include <unordered_map>
+#include <vector>
 
 #include "enable_make_for_lqp_node.hpp"
 #include "expression/abstract_expression.hpp"

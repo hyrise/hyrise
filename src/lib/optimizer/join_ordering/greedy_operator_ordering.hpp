@@ -1,8 +1,8 @@
-#include <utility>
 #pragma once
 
 #include <map>
 #include <memory>
+#include <utility>
 
 #include "abstract_join_ordering_algorithm.hpp"
 #include "join_graph_edge.hpp"

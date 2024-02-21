@@ -1,7 +1,7 @@
-#include <string>
 #pragma once
 
 #include <memory>
+#include <string>
 
 #include "operators/abstract_operator.hpp"
 #include "postgres_protocol_handler.hpp"

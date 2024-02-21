@@ -1,7 +1,7 @@
-#include <string>
 #pragma once
 
 #include <memory>
+#include <string>
 
 #include "abstract_table_scan_impl.hpp"
 #include "types.hpp"

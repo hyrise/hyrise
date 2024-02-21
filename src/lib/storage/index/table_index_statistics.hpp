@@ -1,7 +1,8 @@
+#pragma once
+
 #include <memory>
 #include <utility>
 #include <vector>
-#pragma once
 
 #include "storage/chunk.hpp"
 #include "types.hpp"

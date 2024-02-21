@@ -1,10 +1,10 @@
-#include <utility>
 #pragma once
 
 #include <algorithm>
 #include <array>
 #include <limits>
 #include <memory>
+#include <utility>
 
 #include "storage/base_segment_encoder.hpp"
 #include "storage/frame_of_reference_segment.hpp"

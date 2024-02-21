@@ -1,8 +1,8 @@
-#include <vector>
 #pragma once
 
 #include <memory>
 #include <unordered_map>
+#include <vector>
 
 #include "abstract_lqp_node.hpp"
 #include "all_type_variant.hpp"

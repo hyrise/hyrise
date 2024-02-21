@@ -1,4 +1,3 @@
-#include <vector>
 #pragma once
 
 #include <array>
@@ -9,6 +8,7 @@
 #include <string>
 #include <utility>
 #include <variant>
+#include <vector>
 
 #include "types.hpp"
 #include "utils/assert.hpp"

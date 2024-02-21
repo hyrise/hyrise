@@ -1,7 +1,7 @@
-#include <utility>
 #pragma once
 
 #include <cstdint>
+#include <utility>
 
 #include <boost/hana/at_key.hpp>
 #include <boost/hana/map.hpp>

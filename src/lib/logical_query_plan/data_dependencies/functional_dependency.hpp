@@ -1,5 +1,6 @@
-#include <unordered_set>
 #pragma once
+
+#include <unordered_set>
 
 #include "expression/abstract_expression.hpp"
 

@@ -1,6 +1,7 @@
+#pragma once
+
 #include <memory>
 #include <string>
-#pragma once
 
 #include "storage/table.hpp"
 

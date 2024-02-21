@@ -1,8 +1,8 @@
-#include <string>
-#include <vector>
 #pragma once
 
 #include <memory>
+#include <string>
+#include <vector>
 
 #include "optimizer/join_ordering/join_graph.hpp"
 #include "visualization/abstract_visualizer.hpp"

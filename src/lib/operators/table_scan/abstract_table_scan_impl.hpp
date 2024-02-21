@@ -1,6 +1,7 @@
+#pragma once
+
 #include <memory>
 #include <string>
-#pragma once
 
 #ifdef __AVX512VL__
 #include <x86intrin.h>

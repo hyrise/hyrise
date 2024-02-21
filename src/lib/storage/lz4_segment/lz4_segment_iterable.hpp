@@ -1,9 +1,9 @@
-#include <memory>
-#include <utility>
-#include <vector>
 #pragma once
 
+#include <memory>
 #include <type_traits>
+#include <utility>
+#include <vector>
 
 #include "storage/lz4_segment.hpp"
 #include "storage/segment_iterables.hpp"

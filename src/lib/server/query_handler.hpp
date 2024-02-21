@@ -1,8 +1,8 @@
+#pragma once
+
 #include <memory>
 #include <string>
 #include <utility>
-#pragma once
-
 #include <variant>
 
 #include "hyrise.hpp"

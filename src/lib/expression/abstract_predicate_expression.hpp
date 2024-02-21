@@ -1,6 +1,7 @@
+#pragma once
+
 #include <memory>
 #include <vector>
-#pragma once
 
 #include "abstract_expression.hpp"
 #include "types.hpp"

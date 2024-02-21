@@ -1,8 +1,9 @@
+#pragma once
+
 #include <memory>
 #include <string>
 #include <unordered_map>
 #include <vector>
-#pragma once
 
 #include "operators/abstract_join_operator.hpp"
 

@@ -1,7 +1,8 @@
+#pragma once
+
 #include <memory>
 #include <string>
 #include <unordered_map>
-#pragma once
 
 #include "concurrency/transaction_context.hpp"
 #include "operators/abstract_operator.hpp"

@@ -1,8 +1,8 @@
-#include <memory>
-#include <utility>
 #pragma once
 
 #include <algorithm>
+#include <memory>
+#include <utility>
 
 #include "storage/run_length_segment.hpp"
 #include "storage/segment_iterables.hpp"

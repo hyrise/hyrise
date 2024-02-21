@@ -1,6 +1,7 @@
+#pragma once
+
 #include <memory>
 #include <string>
-#pragma once
 
 #include "logical_query_plan/abstract_non_query_node.hpp"
 

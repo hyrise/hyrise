@@ -1,6 +1,7 @@
+#pragma once
+
 #include <limits>
 #include <utility>
-#pragma once
 
 #include "lossless_cast.hpp"
 #include "types.hpp"

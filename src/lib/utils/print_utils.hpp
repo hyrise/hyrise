@@ -1,11 +1,11 @@
-#include <string>
-#include <vector>
 #pragma once
 
 #include <functional>
 #include <iostream>
 #include <memory>
 #include <ostream>
+#include <string>
+#include <vector>
 
 namespace hyrise {
 

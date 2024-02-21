@@ -1,8 +1,8 @@
-#include <memory>
 #pragma once
 
 #include <algorithm>
 #include <limits>
+#include <memory>
 
 #include "fixed_width_integer_vector.hpp"
 #include "storage/vector_compression/base_vector_compressor.hpp"

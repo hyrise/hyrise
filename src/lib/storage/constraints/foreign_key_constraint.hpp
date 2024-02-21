@@ -1,8 +1,8 @@
-#include <memory>
-#include <vector>
 #pragma once
 
+#include <memory>
 #include <unordered_set>
+#include <vector>
 
 #include "abstract_table_constraint.hpp"
 

@@ -1,7 +1,7 @@
-#include <string>
 #pragma once
 
 #include <filesystem>
+#include <string>
 #include <vector>
 
 namespace hyrise {

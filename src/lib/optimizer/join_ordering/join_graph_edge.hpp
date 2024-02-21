@@ -1,8 +1,8 @@
-#include <vector>
 #pragma once
 
 #include <iostream>
 #include <memory>
+#include <vector>
 
 #include <boost/container_hash/hash.hpp>
 #include <boost/dynamic_bitset.hpp>

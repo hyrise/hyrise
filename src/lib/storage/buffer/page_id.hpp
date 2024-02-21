@@ -1,7 +1,7 @@
-#include <limits>
 #pragma once
 
 #include <bit>
+#include <limits>
 
 #include "magic_enum.hpp"
 

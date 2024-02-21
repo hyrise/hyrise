@@ -1,8 +1,9 @@
+#pragma once
+
 #include <memory>
 #include <string>
 #include <unordered_map>
 #include <vector>
-#pragma once
 
 #include "abstract_operator.hpp"
 #include "abstract_read_only_operator.hpp"

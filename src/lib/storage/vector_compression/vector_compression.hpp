@@ -1,9 +1,9 @@
-#include <string>
 #pragma once
 
 #include <cstdint>
 #include <memory>
 #include <optional>
+#include <string>
 
 #include "base_compressed_vector.hpp"
 #include "types.hpp"

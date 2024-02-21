@@ -1,10 +1,10 @@
-#include <memory>
-#include <string>
-#include <vector>
 #pragma once
 
 #include <functional>
+#include <memory>
+#include <string>
 #include <unordered_map>
+#include <vector>
 
 #include "types.hpp"
 #include "utils/settings/abstract_setting.hpp"

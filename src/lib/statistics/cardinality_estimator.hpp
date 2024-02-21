@@ -1,9 +1,9 @@
-#include <utility>
-#include <vector>
 #pragma once
 
 #include <algorithm>
 #include <memory>
+#include <utility>
+#include <vector>
 
 #include <boost/dynamic_bitset.hpp>
 

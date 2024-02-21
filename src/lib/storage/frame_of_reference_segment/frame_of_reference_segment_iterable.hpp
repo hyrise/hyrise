@@ -1,8 +1,8 @@
-#include <memory>
-#include <utility>
 #pragma once
 
+#include <memory>
 #include <type_traits>
+#include <utility>
 
 #include "storage/abstract_segment.hpp"
 #include "storage/frame_of_reference_segment.hpp"
