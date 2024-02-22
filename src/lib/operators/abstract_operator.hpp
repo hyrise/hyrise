@@ -16,6 +16,12 @@ class Table;
 class TransactionContext;
 class PQPSubqueryExpression;
 
+enum class SinkType {
+  PipelineStart,
+  Forwarding,
+  PipelineEnd
+};
+
 enum class OperatorType {
   Aggregate,
   Alias,
@@ -41,6 +47,7 @@ enum class OperatorType {
   Print,
   Product,
   Projection,
+  Sink,
   Sort,
   TableScan,
   TableWrapper,
@@ -210,6 +217,11 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
    */
   std::vector<std::shared_ptr<AbstractOperator>> uncorrelated_subqueries() const;
 
+  void set_output_sink(std::shared_ptr<AbstractOperator> output_sink) {
+    Assert(output_sink->type() == OperatorType::Sink, "Expected a sink.");
+    _output_sink = output_sink;
+  }
+
   // LQP node with which this operator has been created. Might be uninitialized.
   std::shared_ptr<const AbstractLQPNode> lqp_node;
 
@@ -268,6 +280,8 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
    * point to operators, which would otherwise create cyclic dependencies.
    */
   std::weak_ptr<OperatorTask> _operator_task;
+
+  std::shared_ptr<AbstractOperator> _output_sink;
 
  private:
   // We track the number of consuming operators to automate the clearing of operator results.

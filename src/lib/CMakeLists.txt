@@ -249,6 +249,9 @@ set(
     operators/print.hpp
     operators/product.cpp
     operators/product.hpp
+    operators/progressive/proxy_table_scan.cpp
+    operators/progressive/proxy_table_scan.hpp
+    operators/progressive/chunk_sink.hpp
     operators/projection.cpp
     operators/projection.hpp
     operators/sort.cpp
