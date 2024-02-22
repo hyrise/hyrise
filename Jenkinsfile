@@ -65,8 +65,8 @@ try {
       hyriseCI.pull()
 
       // LSAN (executed as part of ASAN) requires elevated privileges. Therefore, we had to add --cap-add SYS_PTRACE.
-      // Even if the CI run sometimes succeeds without SYS_PTRACE, you should not remove it until you know what you are doing.
-      // See also: https://github.com/google/sanitizers/issues/764
+      // Even if the CI run sometimes succeeds without SYS_PTRACE, you should not remove it until you know what you are
+      // doing. See also: https://github.com/google/sanitizers/issues/764
       hyriseCI.inside("--cap-add SYS_PTRACE -u 0:0") {
         try {
           stage("Setup") {
@@ -76,9 +76,9 @@ try {
             // installed via install_dependencies.sh but is part of the hyrise-ci docker image.
             sh "ninja --version > /dev/null"
 
-            // During CI runs, the user is different from the owner of the directories, which blocks the execution of git
-            // commands since the fix of the git vulnerability CVE-2022-24765. git commands can then only be executed if
-            // the corresponding directories are added as safe directories.
+            // During CI runs, the user is different from the owner of the directories, which blocks the execution of
+            // git commands since the fix of the git vulnerability CVE-2022-24765. git commands can then only be
+            // executed if the corresponding directories are added as safe directories.
             sh '''
             git config --global --add safe.directory $WORKSPACE
             # Get the paths of the submodules; for each path, add it as a git safe.directory
@@ -110,14 +110,14 @@ try {
             release = '-DCMAKE_BUILD_TYPE=Release'
             relwithdebinfo = '-DCMAKE_BUILD_TYPE=RelWithDebInfo'
 
-            // jemalloc's autoconf operates outside of the build folder (#1413). If we start two cmake instances at the same time, we run into conflicts.
-            // Thus, run this one (any one, really) first, so that the autoconf step can finish in peace.
+            // jemalloc's autoconf operates outside of the build folder (#1413). If we start two cmake instances at the
+            // same time, we run into conflicts. Thus, run this one (any one, really) first, so that the autoconf step
+            // can finish in peace.
             sh "mkdir clang-debug && cd clang-debug &&                                                   ${cmake} ${debug}          ${clang}  ${unity}  ${ninja} .. && ninja libjemalloc-build"
 
-            // Configure the rest in parallel.
-            // Note on the clang-debug-tidy stage: clang-tidy misses some flaws when running in a unity build. However, it runs very long and we agreed to life with that for now.
-            // See: https://gitlab.kitware.com/cmake/cmake/-/issues/20058
-            // TODO(Martin): update comment ... measure runtime
+            // Configure the rest in parallel. We use unity builds to decrease build times, except for two
+            // configurations: (1) clang tidy as it might otherwise miss issues on unity builds (e.g., missing includes)
+            // and (2) GCC 11 debug (TODO).
             sh "mkdir clang-debug-tidy && cd clang-debug-tidy &&                                         ${cmake} ${debug}          ${clang}             ${ninja} -DENABLE_CLANG_TIDY=ON .. &\
             mkdir clang-debug-unity-odr && cd clang-debug-unity-odr &&                                   ${cmake} ${debug}          ${clang}   ${unity}  ${ninja} -DCMAKE_UNITY_BUILD_BATCH_SIZE=0 .. &\
             mkdir clang-debug-disable-precompile-headers && cd clang-debug-disable-precompile-headers && ${cmake} ${debug}          ${clang}   ${unity}  ${ninja} -DCMAKE_DISABLE_PRECOMPILE_HEADERS=On .. &\
@@ -128,7 +128,7 @@ try {
             mkdir gcc-debug && cd gcc-debug &&                                                           ${cmake} ${debug}          ${gcc}     ${unity}           .. &\
             mkdir gcc-release && cd gcc-release &&                                                       ${cmake} ${release}        ${gcc}     ${unity}  ${ninja} .. &\
             mkdir clang-15-debug && cd clang-15-debug &&                                                 ${cmake} ${debug}          ${clang15} ${unity}  ${ninja} .. &\
-            mkdir gcc-11-debug && cd gcc-11-debug &&                                                     ${cmake} ${debug}          ${gcc11}             ${ninja} .. &\
+            mkdir gcc-11-debug && cd gcc-11-debug &&                                                     ${cmake} ${debug}          ${gcc11}   ${unity}  ${ninja} .. &\
             wait"
           }
 
