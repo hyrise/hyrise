@@ -7,8 +7,9 @@ pkgs.mkShellNoCC {
   packages = with pkgs; [
     autoconf
     boost
-    clang
+    llvmPackages_14.libcxxClang
     gcc13
+    gcc11
     coreutils
     cmake
     dos2unix
@@ -22,6 +23,7 @@ pkgs.mkShellNoCC {
     sqlite
     tbb
     valgrind
+    numactl
     ninja
   ];
 }
