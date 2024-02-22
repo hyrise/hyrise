@@ -5,9 +5,12 @@
 #include <utility>
 #include <vector>
 
+// clang-format off
+#include "gtest/gtest.h"
+// clang-format on
+
 #include "cache/gdfs_cache.hpp"
 #include "expression/expression_functional.hpp"
-#include "gtest/gtest.h"
 #include "hyrise.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "operators/abstract_operator.hpp"

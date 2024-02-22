@@ -2,7 +2,7 @@
 
 #include <set>
 
-#include "../base_test.hpp"
+#include "base_test.hpp"
 
 namespace hyrise {
 

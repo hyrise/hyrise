@@ -106,7 +106,8 @@ std::shared_ptr<Table> ForeignKeyConstraint::primary_key_table() const {
 }
 
 size_t ForeignKeyConstraint::hash() const {
-  auto hash = boost::hash_value(foreign_key_table());
+  auto hash = size_t{0};
+  boost::hash_combine(hash, foreign_key_table());
   boost::hash_combine(hash, primary_key_table());
   boost::hash_combine(hash, _foreign_key_columns.size());
   boost::hash_combine(hash, _foreign_key_columns);

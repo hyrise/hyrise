@@ -89,7 +89,7 @@ size_t StaticTableNode::_on_shallow_hash() const {
     hash = hash ^ table_key_constraint.hash();
   }
 
-  return boost::hash_value(hash - soft_key_constraints.size());
+  return std::hash<size_t>{}(hash - soft_key_constraints.size());
 }
 
 std::shared_ptr<AbstractLQPNode> StaticTableNode::_on_shallow_copy(LQPNodeMapping& /*node_mapping*/) const {

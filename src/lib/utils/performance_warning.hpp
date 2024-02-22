@@ -9,15 +9,15 @@
 
 /**
  * Performance Warnings can be used in places where slow workarounds are used. This includes AbstractSegment[] or the
- * use of a cross join followed by a projection instead of an equijoin.
+ * use of a cross join followed by a projection instead of an equi-join.
  *
  * The warnings are printed only once per program execution. This is achieved by using static variables.
  *
  * Performance warnings can be disabled using the RAII-style PerformanceWarningDisabler:
  *
  * {
- *   auto performance_warning_disabler = PerformanceWarningDisabler{};
- *   std::cout << abstract_segment[5] << '\n'; // this does not cause a warning
+ *   const auto performance_warning_disabler = PerformanceWarningDisabler{};
+ *   std::cout << abstract_segment[5] << '\n';  // This does not cause a warning.
  * }
  * // warnings are enabled again
  *

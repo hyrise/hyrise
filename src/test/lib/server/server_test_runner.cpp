@@ -6,7 +6,7 @@
 // positive.
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
-#include <pqxx/connection>      // NOLINT(build/include_order): cpplint considers pqxx as C system headers
+#include <pqxx/connection>      // NOLINT(build/include_order): cpplint considers pqxx as C system headers.
 #include <pqxx/nontransaction>  // NOLINT(build/include_order)
 #pragma GCC diagnostic pop
 

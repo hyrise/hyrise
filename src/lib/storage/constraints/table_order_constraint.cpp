@@ -33,7 +33,8 @@ const std::vector<ColumnID>& TableOrderConstraint::ordered_columns() const {
 }
 
 size_t TableOrderConstraint::hash() const {
-  auto hash = boost::hash_value(_ordering_columns);
+  auto hash = size_t{0};
+  boost::hash_combine(hash, _ordering_columns);
   boost::hash_combine(hash, _ordered_columns);
   return hash;
 }

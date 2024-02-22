@@ -8,7 +8,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include <oneapi/tbb/concurrent_unordered_map.h>  // NOLINT(build/include_order): wronlgy identified as a C header.
+#include <oneapi/tbb/concurrent_unordered_map.h>  // NOLINT(build/include_order): Identified as C system headers.
 
 #include "lqp_view.hpp"
 #include "prepared_plan.hpp"

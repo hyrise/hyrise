@@ -3,7 +3,6 @@
 #include <boost/hana/fold.hpp>
 #include <boost/hana/value.hpp>
 
-// Include your compressed vector file here!
 #include "bitpacking/bitpacking_vector.hpp"
 #include "compressed_vector_type.hpp"
 #include "fixed_width_integer/fixed_width_integer_vector.hpp"

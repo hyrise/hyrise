@@ -4,7 +4,7 @@
 #include <functional>
 #include <string>
 
-#include <oneapi/tbb/concurrent_vector.h>  // NOLINT(build/include_order): wronlgy identified as a C header.
+#include <oneapi/tbb/concurrent_vector.h>  // NOLINT(build/include_order): cpplint identifies TBB as C system headers.
 
 #include "types.hpp"
 

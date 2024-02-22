@@ -3,8 +3,8 @@
 
 #include "benchmark/benchmark.h"
 
-#include "../micro_benchmark_basic_fixture.hpp"
 #include "expression/expression_functional.hpp"
+#include "micro_benchmark_basic_fixture.hpp"
 #include "operators/aggregate_hash.hpp"
 #include "operators/aggregate_sort.hpp"
 #include "operators/sort.hpp"

@@ -159,7 +159,8 @@ FunctionalDependencies MockNode::non_trivial_functional_dependencies() const {
 }
 
 size_t MockNode::_on_shallow_hash() const {
-  auto hash = boost::hash_value(_table_statistics);
+  auto hash = size_t{0};
+  boost::hash_combine(hash, _table_statistics);
   for (const auto& pruned_column_id : _pruned_column_ids) {
     boost::hash_combine(hash, static_cast<size_t>(pruned_column_id));
   }

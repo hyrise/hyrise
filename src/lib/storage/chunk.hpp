@@ -10,7 +10,7 @@
 #include <vector>
 
 #include <boost/container/pmr/memory_resource.hpp>
-#include <oneapi/tbb/concurrent_vector.h>  // NOLINT(build/include_order): wronlgy identified as a C header.
+#include <oneapi/tbb/concurrent_vector.h>  // NOLINT(build/include_order): cpplint identifies TBB as C system headers.
 
 #include "all_type_variant.hpp"
 #include "index/chunk_index_type.hpp"

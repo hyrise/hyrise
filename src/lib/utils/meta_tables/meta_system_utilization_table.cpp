@@ -1,6 +1,6 @@
 #include "meta_system_utilization_table.hpp"
 
-#include <stdlib.h>  // NOLINT(hicpp-deprecated-headers,modernize-deprecated-headers): For localtime_r.
+#include <stdlib.h>  // NOLINT(hicpp-deprecated-headers,modernize-deprecated-headers): For _SC_CLK_TCK and others.
 #include <time.h>    // NOLINT(hicpp-deprecated-headers,modernize-deprecated-headers): For localtime_r.
 
 // clang-format off
@@ -129,7 +129,7 @@ uint64_t MetaSystemUtilizationTable::_get_system_cpu_time() {
 
   // The amount of time in /proc/stat is measured in units of clock ticks. sysconf(_SC_CLK_TCK) can be used to convert
   // it to ns.
-  // NOLINTNEXTLINE(misc-include-cleaner): <stdlib.h> only indirectly defines _SC_CLK_TCK via bits/confname.h).
+  // NOLINTNEXTLINE(misc-include-cleaner): <stdlib.h> only indirectly defines _SC_CLK_TCK via bits/confname.h.
   const auto active_ns = (active_ticks * std::nano::den) / sysconf(_SC_CLK_TCK);
 
   return active_ns;

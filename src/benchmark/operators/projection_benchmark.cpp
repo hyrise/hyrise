@@ -3,9 +3,9 @@
 
 #include "benchmark/benchmark.h"
 
-#include "../micro_benchmark_basic_fixture.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/pqp_column_expression.hpp"
+#include "micro_benchmark_basic_fixture.hpp"
 #include "operators/projection.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
