@@ -2,7 +2,6 @@
 
 #include "base_test.hpp"
 #include "expression/expression_functional.hpp"
-#include "strategy_base_test.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/logical_plan_root_node.hpp"
@@ -14,6 +13,7 @@
 #include "logical_query_plan/update_node.hpp"
 #include "logical_query_plan/validate_node.hpp"
 #include "optimizer/strategy/predicate_placement_rule.hpp"
+#include "strategy_base_test.hpp"
 #include "types.hpp"
 
 namespace hyrise {

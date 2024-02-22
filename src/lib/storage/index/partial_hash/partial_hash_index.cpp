@@ -1,13 +1,13 @@
 #include "partial_hash_index.hpp"
 
-#include <tsl/sparse_set.h>
-
 #include <cstddef>
 #include <memory>
 #include <mutex>
 #include <shared_mutex>
 #include <utility>
 #include <vector>
+
+#include "tsl/sparse_set.h"
 
 #include "all_type_variant.hpp"
 #include "resolve_type.hpp"

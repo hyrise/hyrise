@@ -7,7 +7,7 @@
 #include <utility>
 #include <vector>
 
-#include <boost/sort/sort.hpp>  // IWYU pragma: keep
+#include <boost/sort/sort.hpp>
 #include <boost/unordered/unordered_flat_map.hpp>
 
 #include "all_type_variant.hpp"

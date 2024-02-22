@@ -44,7 +44,7 @@ std::string AbstractHistogram<T>::description() const {
   stream << " bin count: " << bin_count() << ";";
 
   stream << "  Bins\n";
-  for (BinID bin_id = 0u; bin_id < bin_count(); ++bin_id) {
+  for (auto bin_id = BinID{0}; bin_id < bin_count(); ++bin_id) {
     if constexpr (std::is_same_v<T, pmr_string>) {
       stream << "  ['" << bin_minimum(bin_id) << "' (" << _domain.string_to_number(bin_minimum(bin_id)) << ") -> '";
       stream << bin_maximum(bin_id) << "' (" << _domain.string_to_number(bin_maximum(bin_id)) << ")]: ";

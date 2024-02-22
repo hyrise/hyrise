@@ -2,7 +2,6 @@
 
 #include "base_test.hpp"
 #include "expression/arithmetic_expression.hpp"
-#include "strategy_base_test.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/alias_node.hpp"
 #include "logical_query_plan/join_node.hpp"
@@ -12,6 +11,7 @@
 #include "logical_query_plan/stored_table_node.hpp"
 #include "optimizer/strategy/expression_reduction_rule.hpp"
 #include "storage/table_column_definition.hpp"
+#include "strategy_base_test.hpp"
 #include "types.hpp"
 
 namespace hyrise {

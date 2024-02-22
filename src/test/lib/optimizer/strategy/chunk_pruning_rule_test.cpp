@@ -1,7 +1,6 @@
 #include "base_test.hpp"
 #include "expression/expression_functional.hpp"
 #include "hyrise.hpp"
-#include "strategy_base_test.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/dummy_table_node.hpp"
 #include "logical_query_plan/join_node.hpp"
@@ -19,6 +18,7 @@
 #include "storage/chunk.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/table.hpp"
+#include "strategy_base_test.hpp"
 
 namespace hyrise {
 

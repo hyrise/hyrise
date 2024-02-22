@@ -86,8 +86,7 @@ DataType TableStatistics::column_data_type(const ColumnID column_id) const {
 }
 
 std::ostream& operator<<(std::ostream& stream, const TableStatistics& table_statistics) {
-  stream << "TableStatistics {\n";
-  stream << "  RowCount: " << table_statistics.row_count << "; \n";
+  stream << "TableStatistics {\n  RowCount: " << table_statistics.row_count << ";\n";
 
   for (const auto& column_statistics : table_statistics.column_statistics) {
     resolve_data_type(column_statistics->data_type, [&](const auto data_type_t) {
