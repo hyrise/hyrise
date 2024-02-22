@@ -1,10 +1,10 @@
 #include "flat_map_iterator.hpp"
 
-#include "tsl/sparse_map.h"
-
 #include <memory>
 #include <utility>
 #include <vector>
+
+#include "tsl/sparse_map.h"
 
 #include "all_type_variant.hpp"
 #include "flat_map_iterator_impl.hpp"

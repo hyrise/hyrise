@@ -1,12 +1,12 @@
 #include "partial_hash_index_impl.hpp"
 
-#include "tsl/sparse_set.h"
-
 #include <cstddef>
 #include <memory>
 #include <unordered_set>
 #include <utility>
 #include <vector>
+
+#include "tsl/sparse_set.h"
 
 #include "all_type_variant.hpp"
 #include "storage/chunk.hpp"
