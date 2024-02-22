@@ -31,7 +31,7 @@ std::string StaticTableNode::description(const DescriptionMode /*mode*/) const {
     const auto& column_definition = table->column_definitions()[column_id];
     stream << column_definition;
 
-    if (column_id + 1 < table->column_definitions().size()) {
+    if (column_id + size_t{1} < table->column_definitions().size()) {
       stream << ", ";
     }
   }
