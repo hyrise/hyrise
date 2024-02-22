@@ -116,8 +116,8 @@ try {
             sh "mkdir clang-debug && cd clang-debug &&                                                   ${cmake} ${debug}          ${clang}  ${unity}  ${ninja} .. && ninja libjemalloc-build"
 
             // Configure the rest in parallel. We use unity builds to decrease build times, except for two
-            // configurations: (1) clang tidy as it might otherwise miss issues on unity builds (e.g., missing includes)
-            // and (2) GCC 11 debug (TODO).
+            // configurations: (1) clang tidy as it might otherwise miss issues with unity builds (e.g., missing
+            // includes) and (2) GCC 11 debug builds of GTest (see https://github.com/google/googletest/issues/3552).
             sh "mkdir clang-debug-tidy && cd clang-debug-tidy &&                                         ${cmake} ${debug}          ${clang}             ${ninja} -DENABLE_CLANG_TIDY=ON .. &\
             mkdir clang-debug-unity-odr && cd clang-debug-unity-odr &&                                   ${cmake} ${debug}          ${clang}   ${unity}  ${ninja} -DCMAKE_UNITY_BUILD_BATCH_SIZE=0 .. &\
             mkdir clang-debug-disable-precompile-headers && cd clang-debug-disable-precompile-headers && ${cmake} ${debug}          ${clang}   ${unity}  ${ninja} -DCMAKE_DISABLE_PRECOMPILE_HEADERS=On .. &\
@@ -128,7 +128,7 @@ try {
             mkdir gcc-debug && cd gcc-debug &&                                                           ${cmake} ${debug}          ${gcc}     ${unity}           .. &\
             mkdir gcc-release && cd gcc-release &&                                                       ${cmake} ${release}        ${gcc}     ${unity}  ${ninja} .. &\
             mkdir clang-15-debug && cd clang-15-debug &&                                                 ${cmake} ${debug}          ${clang15} ${unity}  ${ninja} .. &\
-            mkdir gcc-11-debug && cd gcc-11-debug &&                                                     ${cmake} ${debug}          ${gcc11}   ${unity}  ${ninja} .. &\
+            mkdir gcc-11-debug && cd gcc-11-debug &&                                                     ${cmake} ${debug}          ${gcc11}             ${ninja} .. &\
             wait"
           }
 

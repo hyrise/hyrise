@@ -206,7 +206,7 @@ int Console::read() {
   }
 
   // Free buffer, since readline() allocates new string every time.
-  free(buffer);  // NOLINT(cppcoreguidelines-no-malloc,hicpp-no-malloc,cppcoreguidelines-owning-memory)
+  std::free(buffer);  // NOLINT(cppcoreguidelines-no-malloc,hicpp-no-malloc,cppcoreguidelines-owning-memory)
 
   return _eval(input);
 }
