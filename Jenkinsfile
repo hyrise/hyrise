@@ -67,29 +67,29 @@ try {
           '''
         }
 
-        parallel clangDebug: {
-          stage("clangDebug") {
+        parallel clangNixDebug: {
+          stage("clangNixDebug") {
             clang = "-DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++"
             sh '''
               nix-shell --command "mkdir cmake-build-debug && cd "$_" && cmake -GNinja -DCMAKE_BUILD_TYPE=Debug ${clang} .. && ninja"
             '''
           }
-        }, clangRelease: {
-          stage("clangRelease") {
+        }, clangNixRelease: {
+          stage("clangNixRelease") {
             clang = "-DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++"
             sh '''
               nix-shell --command "mkdir cmake-build-debug && cd "$_" && cmake -GNinja -DCMAKE_BUILD_TYPE=Release ${clang} .. && ninja"
             '''
           }
-        }, gccDebug: {
-          stage("gccDebug") {
+        }, gccNixDebug: {
+          stage("gccNixDebug") {
             gcc = "-DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++"
             sh '''
               nix-shell --command "mkdir cmake-build-debug && cd "$_" && cmake -GNinja -DCMAKE_BUILD_TYPE=Debug ${gcc} .. && ninja"
             '''
           }
-        }, gccRelease: {
-          stage("gccRelease") {
+        }, gccNixRelease: {
+          stage("gccNixRelease") {
             gcc = "-DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++"
             sh '''
               nix-shell --command "mkdir cmake-build-debug && cd "$_" && cmake -GNinja -DCMAKE_BUILD_TYPE=Release ${gcc} .. && ninja"
