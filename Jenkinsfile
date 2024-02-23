@@ -66,13 +66,21 @@ try {
 
           nix_version = "2.9.2"
 
+          // Add root privileges to nixuser
+          sh '''
+            apk add --no-cache su-exec \
+            && echo '%wheel ALL=(ALL) ALL' > /etc/sudoers.d/wheel
+            && adduser -D nixuser --home /home/nixuser \
+            && adduser nixuser wheel
+          '''
+
           // Setup the Nix Multi Users.
           sh '''
-            sudo addgroup -g 30000 -S nixbld \
-            && for i in $(seq 1 32); do sudo adduser -S -D -h /var/empty -g "Nix User $i" -u $((30000 + i)) -G nixbld nixbld$i ; done \
-            && sudo adduser -D nixuser --home /home/nixuser \
-            && sudo mkdir -m 0755 /nix && sudo chown nixuser /nix \
-            && sudo mkdir -p /etc/nix && sudo touch /etc/nix/nix.conf
+            exec su-exec nixuser addgroup -g 30000 -S nixbld \
+            && for i in $(seq 1 32); do adduser -S -D -h /var/empty -g "Nix User $i" -u $((30000 + i)) -G nixbld nixbld$i ; done \
+            && adduser -D nixuser --home /home/nixuser \
+            && exec su-exec nixuser mkdir -m 0755 /nix && sudo chown nixuser /nix \
+            && exec su-exec nixuser mdkir -p /etc/nix && sudo touch /etc/nix/nix.conf
           '''
 
           // Setup the actually needed software.
