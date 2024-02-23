@@ -21,7 +21,7 @@ pkgs.mkShell {
   packages = with pkgs; [
     autoconf
     boost
-    llvmPackages_16.libcxxClang
+    libclang
     libgcc
     coreutils
     cmake
