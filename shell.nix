@@ -22,6 +22,7 @@ pkgs.mkShell {
     autoconf
     boost
     llvmPackages_16.libcxxClang
+    libgcc
     coreutils
     cmake
     dos2unix
