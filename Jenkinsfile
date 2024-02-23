@@ -59,7 +59,6 @@ try {
       def nixOSImage = docker.image('nixos/nix:latest');
       nixOSImage.pull()
 
-      // See https://github.com/fretlink/docker-nix/blob/master/alpine/Dockerfile
       nixOSImage.inside() {
         stage("Setup") {
           checkout scm
@@ -99,7 +98,7 @@ try {
               nix-shell --command "mkdir cmake-build-debug && cd "$_" && cmake -GNinja -DCMAKE_BUILD_TYPE=Release ${gcc} .. && ninja"
             '''
           }
-        },
+        }
       }
 
       def hyriseCI = docker.image('hyrise/hyrise-ci:22.04');
