@@ -304,16 +304,15 @@ void write_groupby_output(const std::shared_ptr<const Table>& input_table,
           });
     }
 
-    // if (referenced_table) {  // Can be unset for empty result.
-      const auto intermediate_result_chunk_count = pos_lists.size();
-      prepare_output(intermediate_result, intermediate_result_chunk_count,
-                     intermediate_result_column_definitions.size());
-      for (auto output_chunk_id = ChunkID{0}; output_chunk_id < intermediate_result_chunk_count; ++output_chunk_id) {
-        const auto& pos_list = pos_lists[output_chunk_id];
-        intermediate_result[output_chunk_id][output_column_id] =
-            std::make_shared<ReferenceSegment>(referenced_table, referenced_column_id, pos_list);
-      }
-    // }
+    Assert(referenced_table, "This assert should always succeed, but I somewhat remember issues with something?!?!");
+    const auto intermediate_result_chunk_count = pos_lists.size();
+    prepare_output(intermediate_result, intermediate_result_chunk_count,
+                   intermediate_result_column_definitions.size());
+    for (auto output_chunk_id = ChunkID{0}; output_chunk_id < intermediate_result_chunk_count; ++output_chunk_id) {
+      const auto& pos_list = pos_lists[output_chunk_id];
+      intermediate_result[output_chunk_id][output_column_id] =
+          std::make_shared<ReferenceSegment>(referenced_table, referenced_column_id, pos_list);
+    }
   }
 }
 
