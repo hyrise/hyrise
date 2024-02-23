@@ -61,40 +61,38 @@ try {
 
       // See https://github.com/fretlink/docker-nix/blob/master/alpine/Dockerfile
       hyriseNixCI.inside() {
-        try {
-          stage("Setup") {
-            checkout scm
+        stage("Setup") {
+          checkout scm
 
-            nix_version = "2.9.2"
- 
-            // Setup the Nix Multi Users.
-            sh '''
-              addgroup -g 30000 -S nixbld \
-              && for i in $(seq 1 32); do adduser -S -D -h /var/empty -g "Nix User $i" -u $((30000 + i)) -G nixbld nixbld$i ; done \
-              && adduser -D nixuser \
-              && mkdir -m 0755 /nix && chown nixuser /nix \
-              && mkdir -p /etc/nix && touch /etc/nix/nix.conf
-              && adduser nixuser --home /home/nixuser --shell /bin/bash --gecos ""
-            '''
+          nix_version = "2.9.2"
 
-            // Setup the actually needed software.
-            sh '''
-              apk add --no-cache bash xz wget tar \
-              && export HOME=/home/nixuser \
-              && export USER=nixuser \
-              && export NIX_SYSTEM_PATH="/nix/var/nix/profiles/system" \
-              && export NIX_PROFILE="/home/nixuser/nix-envs" \
-              && cd && wget https://nixos.org/releases/nix/nix-${nix_version}/nix-${nix_version}-x86_64-linux.tar.xz \
-              && tar "./nix-${nix_version}-x86_64.tar.xz" \
-              && ./nix-${nix_version}-x86_64/install \
-              && echo "experimental-features = nix-command flakes" >> /etc/nix/nix.conf
-            '''
+          // Setup the Nix Multi Users.
+          sh '''
+            addgroup -g 30000 -S nixbld \
+            && for i in $(seq 1 32); do adduser -S -D -h /var/empty -g "Nix User $i" -u $((30000 + i)) -G nixbld nixbld$i ; done \
+            && adduser -D nixuser \
+            && mkdir -m 0755 /nix && chown nixuser /nix \
+            && mkdir -p /etc/nix && touch /etc/nix/nix.conf
+            && adduser nixuser --home /home/nixuser --shell /bin/bash --gecos ""
+          '''
 
-            // Test if Nix running (even with flakes)
-            sh '''
-              nix shell nixpkgs#cowsay --command cowsay "Hello World"
-            '''
-          }
+          // Setup the actually needed software.
+          sh '''
+            apk add --no-cache bash xz wget tar \
+            && export HOME=/home/nixuser \
+            && export USER=nixuser \
+            && export NIX_SYSTEM_PATH="/nix/var/nix/profiles/system" \
+            && export NIX_PROFILE="/home/nixuser/nix-envs" \
+            && cd && wget https://nixos.org/releases/nix/nix-${nix_version}/nix-${nix_version}-x86_64-linux.tar.xz \
+            && tar "./nix-${nix_version}-x86_64.tar.xz" \
+            && ./nix-${nix_version}-x86_64/install \
+            && echo "experimental-features = nix-command flakes" >> /etc/nix/nix.conf
+          '''
+
+          // Test if Nix running (even with flakes)
+          sh '''
+            nix shell nixpkgs#cowsay --command cowsay "Hello World"
+          '''
         }
       }
 
