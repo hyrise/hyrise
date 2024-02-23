@@ -1057,7 +1057,7 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
   auto timer = Timer{};
 
   auto reference_segment_indexes = std::vector<ColumnID>(_groupby_column_ids.size());
-  auto entireposlist_indexes = std::vector<ColumnID>(_aggregates.size());
+  auto entireposlist_indexes = std::vector<ColumnID>{};
   entireposlist_indexes.reserve(_aggregates.size());
 
   std::iota(reference_segment_indexes.begin(), reference_segment_indexes.end(), ColumnID{0});
