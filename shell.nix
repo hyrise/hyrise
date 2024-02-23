@@ -18,6 +18,8 @@ let
 in 
 
 pkgs.mkShell {
+  name = "hyrise-shell";
+
   packages = with pkgs; [
     autoconf
     boost
