@@ -62,12 +62,6 @@ try {
       nixOSImage.inside() {
         stage("Setup") {
           checkout scm
-          
-          sh '''
-            export HOME="/home/nixuser"
-            export USER="nixuser"
-            nix shell --extra-experimental-features nix-command nixpkgs#cowsay --command cowsay "Hello World"
-          '''
         }
 
         parallel clangNixDebug: {
