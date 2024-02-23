@@ -38,6 +38,7 @@ pkgs.mkShell {
   ];
 
   hardeningDisable = [ 
+    "format"
     "fortify"
     "fortify3"
   ];
