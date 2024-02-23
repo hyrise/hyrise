@@ -63,9 +63,6 @@ try {
         stage("Setup") {
           checkout scm
           sh '''
-            git config --global --add safe.directoy $WORKSPACE
-            grep path .gitmodules | sed 's/.*=//' | xargs -n 1 -I '{}' git config --global --add safe.directory $WORKSPACE/'{}'
-
             nix shell --extra-experimental-features=nix-command nixpkgs#cowsay --command cowsay "Hello World"
           '''
         }
