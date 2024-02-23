@@ -56,51 +56,50 @@ try {
 
     // The empty '' results in using the default registry: https://index.docker.io/v1/
     docker.withRegistry('', 'docker') {
-      def hyriseNixCI = docker.image('alpine:latest');
-      hyriseNixCI.pull()
+      def nixOSImage = docker.image('nixos/nix:latest');
+      nixOSImage.pull()
 
       // See https://github.com/fretlink/docker-nix/blob/master/alpine/Dockerfile
-      hyriseNixCI.inside() {
+      nixOSImage.inside() {
         stage("Setup") {
           checkout scm
-
-          nix_version = "2.9.2"
-
-          // Add root privileges to nixuser
           sh '''
-            apk add --no-cache su-exec \
-            && echo '%wheel ALL=(ALL) ALL' > /etc/sudoers.d/wheel
-            && adduser -D nixuser --home /home/nixuser \
-            && adduser nixuser wheel
-          '''
+            git config --global --add safe.directoy $WORKSPACE
+            grep path .gitmodules | sed 's/.*=//' | xargs -n 1 -I '{}' git config --global --add safe.directory $WORKSPACE/'{}'
 
-          // Setup the Nix Multi Users.
-          sh '''
-            exec su-exec nixuser addgroup -g 30000 -S nixbld \
-            && for i in $(seq 1 32); do adduser -S -D -h /var/empty -g "Nix User $i" -u $((30000 + i)) -G nixbld nixbld$i ; done \
-            && adduser -D nixuser --home /home/nixuser \
-            && exec su-exec nixuser mkdir -m 0755 /nix && sudo chown nixuser /nix \
-            && exec su-exec nixuser mdkir -p /etc/nix && sudo touch /etc/nix/nix.conf
-          '''
-
-          // Setup the actually needed software.
-          sh '''
-            apk add --no-cache bash xz wget tar \
-            && export HOME=/home/nixuser \
-            && export USER=nixuser \
-            && export NIX_SYSTEM_PATH="/nix/var/nix/profiles/system" \
-            && export NIX_PROFILE="/home/nixuser/nix-envs" \
-            && cd && wget https://nixos.org/releases/nix/nix-${nix_version}/nix-${nix_version}-x86_64-linux.tar.xz \
-            && tar "./nix-${nix_version}-x86_64.tar.xz" \
-            && ./nix-${nix_version}-x86_64/install \
-            && echo "experimental-features = nix-command flakes" >> /etc/nix/nix.conf
-          '''
-
-          // Test if Nix running (even with flakes)
-          sh '''
-            nix shell nixpkgs#cowsay --command cowsay "Hello World"
+            nix shell --extra-experimental-features=nix-command nixpkgs#cowsay --command cowsay "Hello World"
           '''
         }
+
+        parallel clangDebug: {
+          stage("clangDebug") {
+            clang = "-DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++"
+            sh '''
+              nix-shell --command "mkdir cmake-build-debug && cd "$_" && cmake -GNinja -DCMAKE_BUILD_TYPE=Debug ${clang} .. && ninja"
+            '''
+          }
+        }, clangRelease: {
+          stage("clangRelease") {
+            clang = "-DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++"
+            sh '''
+              nix-shell --command "mkdir cmake-build-debug && cd "$_" && cmake -GNinja -DCMAKE_BUILD_TYPE=Release ${clang} .. && ninja"
+            '''
+          }
+        }, gccDebug: {
+          stage("gccDebug") {
+            gcc = "-DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++"
+            sh '''
+              nix-shell --command "mkdir cmake-build-debug && cd "$_" && cmake -GNinja -DCMAKE_BUILD_TYPE=Debug ${gcc} .. && ninja"
+            '''
+          }
+        }, gccRelease: {
+          stage("gccRelease") {
+            gcc = "-DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++"
+            sh '''
+              nix-shell --command "mkdir cmake-build-debug && cd "$_" && cmake -GNinja -DCMAKE_BUILD_TYPE=Release ${gcc} .. && ninja"
+            '''
+          }
+        },
       }
 
       def hyriseCI = docker.image('hyrise/hyrise-ci:22.04');
