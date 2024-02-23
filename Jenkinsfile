@@ -68,12 +68,11 @@ try {
 
           // Setup the Nix Multi Users.
           sh '''
-            addgroup -g 30000 -S nixbld \
-            && for i in $(seq 1 32); do adduser -S -D -h /var/empty -g "Nix User $i" -u $((30000 + i)) -G nixbld nixbld$i ; done \
-            && adduser -D nixuser \
-            && mkdir -m 0755 /nix && chown nixuser /nix \
-            && mkdir -p /etc/nix && touch /etc/nix/nix.conf
-            && adduser nixuser --home /home/nixuser --shell /bin/bash --gecos ""
+            sudo addgroup -g 30000 -S nixbld \
+            && for i in $(seq 1 32); do sudo adduser -S -D -h /var/empty -g "Nix User $i" -u $((30000 + i)) -G nixbld nixbld$i ; done \
+            && sudo adduser -D nixuser --home /home/nixuser \
+            && sudo mkdir -m 0755 /nix && sudo chown nixuser /nix \
+            && sudo mkdir -p /etc/nix && sudo touch /etc/nix/nix.conf
           '''
 
           // Setup the actually needed software.
