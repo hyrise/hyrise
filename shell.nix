@@ -10,13 +10,14 @@
 # - x86_64 Linux
 # - x86_64 MacOS
 # - ARM MacOS
+#
 
 let
   nixPkgsUrl = fetchTarball "https://github.com/NixOS/nixpkgs/tarball/nixos-23.11";
   pkgs = import nixPkgsUrl { config = {}; overlays = []; };
 in 
 
-pkgs.mkShellNoCC {
+pkgs.mkShell {
   packages = with pkgs; [
     autoconf
     boost
@@ -34,6 +35,11 @@ pkgs.mkShellNoCC {
     sqlite
     tbb
     ninja
+  ];
+
+  hardeningDisable = [ 
+    "fortify"
+    "fortify3"
   ];
 }
 
