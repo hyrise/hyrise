@@ -56,25 +56,68 @@ try {
 
     // The empty '' results in using the default registry: https://index.docker.io/v1/
     docker.withRegistry('', 'docker') {
-      def hyriseCI = docker.image('hyrise/hyrise-ci:22.04');
-      hyriseCI.pull()
+      def hyriseNixCI = docker.image('alpine:latest');
+      hyriseNixCI.pull()
 
-      // LSAN (executed as part of ASAN) requires elevated privileges. Therefore, we had to add --cap-add SYS_PTRACE.
-      // Even if the CI run sometimes succeeds without SYS_PTRACE, you should not remove it until you know what you are doing.
-      // See also: https://github.com/google/sanitizers/issues/764
-      hyriseCI.inside("--cap-add SYS_PTRACE -u 0:0") {
+      // See https://github.com/fretlink/docker-nix/blob/master/alpine/Dockerfile
+      hyriseNixCI.inside() {
         try {
           stage("Setup") {
             checkout scm
 
-            // During CI runs, the user is different from the owner of the directories, which blocks the execution of git
-            // commands since the fix of the git vulnerability CVE-2022-24765. git commands can then only be executed if
-            // the corresponding directories are added as safe directories.
+            nix_version = "2.9.2"
+ 
+            // Setup the Nix Multi Users.
             sh '''
-            git config --global --add safe.directory $WORKSPACE
-            # Get the paths of the submodules; for each path, add it as a git safe.directory
-            grep path .gitmodules | sed 's/.*=//' | xargs -n 1 -I '{}' git config --global --add safe.directory $WORKSPACE/'{}'
+              addgroup -g 30000 -S nixbld \
+              && for i in $(seq 1 32); do adduser -S -D -h /var/empty -g "Nix User $i" -u $((30000 + i)) -G nixbld nixbld$i ; done \
+              && adduser -D nixuser \
+              && mkdir -m 0755 /nix && chown nixuser /nix \
+              && mkdir -p /etc/nix && touch /etc/nix/nix.conf
+              && adduser nixuser --home /home/nixuser --shell /bin/bash --gecos ""
             '''
+
+            // Setup the actually needed software.
+            sh '''
+              apk add --no-cache bash xz wget tar \
+              && export HOME=/home/nixuser \
+              && export USER=nixuser \
+              && export NIX_SYSTEM_PATH="/nix/var/nix/profiles/system" \
+              && export NIX_PROFILE="/home/nixuser/nix-envs" \
+              && cd && wget https://nixos.org/releases/nix/nix-${nix_version}/nix-${nix_version}-x86_64-linux.tar.xz \
+              && tar ./nix-${nix_version}-x86_64.tar.xz \ // TODO(everyone): Do not pin versions.
+              && ./nix-${nix_version}-x86_64/install \
+              && echo "experimental-features = nix-command flakes" >> /etc/nix/nix.conf
+            '''
+
+            // Test if Nix running (even with flakes)
+            sh '''
+              nix shell nixpkgs#cowsay --command cowsay "Hello World"
+            '''
+          }
+        }
+      }
+
+      def hyriseCI = docker.image('hyrise/hyrise-ci:22.04'); hyriseCI.pull()
+
+      // LSAN (executed as part of ASAN) requires elevated privileges.
+      // Therefore, we had to add --cap-add SYS_PTRACE. Even if the CI run
+      // sometimes succeeds without SYS_PTRACE, you should not remove it until
+      // you know what you are doing. See also:
+      // https://github.com/google/sanitizers/issues/764
+      hyriseCI.inside("--cap-add SYS_PTRACE -u 0:0") { try { stage("Setup") {
+        checkout scm
+
+            // During CI runs, the user is different from the owner of the
+            // directories, which blocks the execution of git commands since
+            // the fix of the git vulnerability CVE-2022-24765. git commands
+            // can then only be executed if the corresponding directories are
+            // added as safe directories.
+            sh ''' git config --global --add safe.directory $WORKSPACE
+            # Get the paths of the submodules; for each path, add it as a git
+            # safe.directory
+            grep path .gitmodules | sed 's/.*=//' | xargs -n 1 -I '{}' git
+            config --global --add safe.directory $WORKSPACE/'{}' '''
 
             sh "./install_dependencies.sh"
 
