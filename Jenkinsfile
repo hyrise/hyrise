@@ -85,7 +85,7 @@ try {
               && export NIX_SYSTEM_PATH="/nix/var/nix/profiles/system" \
               && export NIX_PROFILE="/home/nixuser/nix-envs" \
               && cd && wget https://nixos.org/releases/nix/nix-${nix_version}/nix-${nix_version}-x86_64-linux.tar.xz \
-              && tar ./nix-${nix_version}-x86_64.tar.xz \ // TODO(everyone): Do not pin versions.
+              && tar "./nix-${nix_version}-x86_64.tar.xz" \
               && ./nix-${nix_version}-x86_64/install \
               && echo "experimental-features = nix-command flakes" >> /etc/nix/nix.conf
             '''
