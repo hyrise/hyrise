@@ -98,26 +98,25 @@ try {
         }
       }
 
-      def hyriseCI = docker.image('hyrise/hyrise-ci:22.04'); hyriseCI.pull()
+      def hyriseCI = docker.image('hyrise/hyrise-ci:22.04');
+      hyriseCI.pull()
 
-      // LSAN (executed as part of ASAN) requires elevated privileges.
-      // Therefore, we had to add --cap-add SYS_PTRACE. Even if the CI run
-      // sometimes succeeds without SYS_PTRACE, you should not remove it until
-      // you know what you are doing. See also:
-      // https://github.com/google/sanitizers/issues/764
-      hyriseCI.inside("--cap-add SYS_PTRACE -u 0:0") { try { stage("Setup") {
-        checkout scm
+      // LSAN (executed as part of ASAN) requires elevated privileges. Therefore, we had to add --cap-add SYS_PTRACE.
+      // Even if the CI run sometimes succeeds without SYS_PTRACE, you should not remove it until you know what you are doing.
+      // See also: https://github.com/google/sanitizers/issues/764
+      hyriseCI.inside("--cap-add SYS_PTRACE -u 0:0") {
+        try {
+          stage("Setup") {
+            checkout scm
 
-            // During CI runs, the user is different from the owner of the
-            // directories, which blocks the execution of git commands since
-            // the fix of the git vulnerability CVE-2022-24765. git commands
-            // can then only be executed if the corresponding directories are
-            // added as safe directories.
-            sh ''' git config --global --add safe.directory $WORKSPACE
-            # Get the paths of the submodules; for each path, add it as a git
-            # safe.directory
-            grep path .gitmodules | sed 's/.*=//' | xargs -n 1 -I '{}' git
-            config --global --add safe.directory $WORKSPACE/'{}' '''
+            // During CI runs, the user is different from the owner of the directories, which blocks the execution of git
+            // commands since the fix of the git vulnerability CVE-2022-24765. git commands can then only be executed if
+            // the corresponding directories are added as safe directories.
+            sh '''
+            git config --global --add safe.directory $WORKSPACE
+            # Get the paths of the submodules; for each path, add it as a git safe.directory
+            grep path .gitmodules | sed 's/.*=//' | xargs -n 1 -I '{}' git config --global --add safe.directory $WORKSPACE/'{}'
+            '''
 
             sh "./install_dependencies.sh"
 
