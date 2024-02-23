@@ -55,7 +55,7 @@ namespace detail {
   static_assert(true, "End call of macro with a semicolon.")
 
 [[noreturn]] inline void FailInput(const std::string& msg) {
-  throw InvalidInputException(std::string("Invalid input error: ") + msg + ".");
+  throw InvalidInputException(std::string("Invalid input error: ") + msg);
 }
 
 }  // namespace hyrise

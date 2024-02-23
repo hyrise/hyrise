@@ -16,8 +16,6 @@
 
 namespace hyrise {
 
-class AbstractCostEstimator;
-
 std::shared_ptr<AbstractCostEstimator> CostEstimatorLogical::new_instance() const {
   return std::make_shared<CostEstimatorLogical>(cardinality_estimator->new_instance());
 }

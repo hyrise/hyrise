@@ -11,8 +11,6 @@
 
 namespace hyrise {
 
-class AbstractOperator;
-
 std::ostream& operator<<(std::ostream& stream, const ArithmeticOperator arithmetic_operator) {
   switch (arithmetic_operator) {
     case ArithmeticOperator::Addition:
