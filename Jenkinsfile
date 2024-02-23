@@ -66,7 +66,7 @@ try {
           sh '''
             export HOME="/home/nixuser"
             export USER="nixuser"
-            nix shell --extra-experimental-features=nix-command nixpkgs#cowsay --command cowsay "Hello World"
+            nix shell --extra-experimental-features nix-command nixpkgs#cowsay --command cowsay "Hello World"
           '''
         }
 
