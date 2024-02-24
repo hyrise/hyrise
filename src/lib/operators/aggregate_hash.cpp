@@ -304,14 +304,15 @@ void write_groupby_output(const std::shared_ptr<const Table>& input_table,
           });
     }
 
-    Assert(referenced_table, "This assert should always succeed, but I somewhat remember issues with something?!?!");
-    const auto intermediate_result_chunk_count = pos_lists.size();
-    prepare_output(intermediate_result, intermediate_result_chunk_count,
-                   intermediate_result_column_definitions.size());
-    for (auto output_chunk_id = ChunkID{0}; output_chunk_id < intermediate_result_chunk_count; ++output_chunk_id) {
-      const auto& pos_list = pos_lists[output_chunk_id];
-      intermediate_result[output_chunk_id][output_column_id] =
-          std::make_shared<ReferenceSegment>(referenced_table, referenced_column_id, pos_list);
+    if (referenced_table) {  // `referenced_table` is unset for empty inputs. No reason to prepare and create output.
+      const auto intermediate_result_chunk_count = pos_lists.size();
+      prepare_output(intermediate_result, intermediate_result_chunk_count,
+                     intermediate_result_column_definitions.size());
+      for (auto output_chunk_id = ChunkID{0}; output_chunk_id < intermediate_result_chunk_count; ++output_chunk_id) {
+        const auto& pos_list = pos_lists[output_chunk_id];
+        intermediate_result[output_chunk_id][output_column_id] =
+            std::make_shared<ReferenceSegment>(referenced_table, referenced_column_id, pos_list);
+      }
     }
   }
 }
@@ -1045,14 +1046,16 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
     ++aggregate_idx;
   }
 
-  // At this point, we collected the GROUP BY columns as reference segments, which are split using the default chunk
-  // size (minus gap rows, see comments on NULL_ID). Similarly, the aggregate values are split into chunks. We create a
-  // temporary table of reference segments (temporary as life time is set by `shared_ptr` via
-  // `ReferenceSegment::_referenced_table`). This temporary table stores reference segments for the GROUP BY columns and
-  // reference segments to materialized columns (of the temporary table, using `EntireChunkPosList`) for the aggregate
-  // columns.
-
-  // Write the output.
+  /**
+   * Write the output.
+   *
+   * At this point, we collected the GROUP BY columns as reference segments, which are split using the default chunk
+   * size (minus gap rows, see comments on NULL_ID). Similarly, the aggregate values are split into chunks. We create a
+   * temporary table of reference segments (temporary as life time is set by `shared_ptr` via
+   * `ReferenceSegment::_referenced_table`). This temporary table stores reference segments for the GROUP BY columns and
+   * reference segments to materialized columns (of the temporary table, using `EntireChunkPosList`) for the aggregate
+   * columns.
+  */
   auto timer = Timer{};
 
   auto reference_segment_indexes = std::vector<ColumnID>(_groupby_column_ids.size());
@@ -1070,6 +1073,8 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
     ++output_column_id;
   }
 
+  // Create temporary table storing materialized columns. The operator output references this table's columns via
+  // `EntireChunkPosList` reference segments.
   auto aggregate_columns_result_table = std::shared_ptr<Table>{};
   if (!entireposlist_indexes.empty()) {
     const auto materialized_column_count = entireposlist_indexes.size();
@@ -1093,6 +1098,8 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
     }
   }
 
+  // Create final operator output. We now combine actual reference segments (e.g., of GROUP BY columns) with segments
+  // that reference the temporary materialized table create above.
   auto operator_output = std::make_shared<Table>(_output_column_definitions, TableType::References);
   if (!_intermediate_result.empty() && _intermediate_result.front()[0]->size() > 0) {
     const auto output_table_chunk_count = _intermediate_result.size();
@@ -1102,8 +1109,7 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
         continue;
       }
 
-      auto reference_segments = Segments{};
-      reference_segments.resize(num_output_columns);
+      auto reference_segments = Segments(num_output_columns);
 
       for (const auto column_id : reference_segment_indexes) {
         DebugAssert(std::dynamic_pointer_cast<const ReferenceSegment>(_intermediate_result[chunk_id][column_id]),
