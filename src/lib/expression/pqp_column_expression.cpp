@@ -60,7 +60,7 @@ bool PQPColumnExpression::_shallow_equals(const AbstractExpression& expression) 
 }
 
 size_t PQPColumnExpression::_shallow_hash() const {
-  return std::hash<size_t>{}(static_cast<size_t>(column_id));
+  return std::hash<ColumnID::base_type>{}(column_id);
 }
 
 bool PQPColumnExpression::_on_is_nullable_on_lqp(const AbstractLQPNode& /*lqp*/) const {

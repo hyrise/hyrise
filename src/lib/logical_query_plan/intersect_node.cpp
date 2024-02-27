@@ -51,7 +51,7 @@ FunctionalDependencies IntersectNode::non_trivial_functional_dependencies() cons
 }
 
 size_t IntersectNode::_on_shallow_hash() const {
-  return std::hash<size_t>{}(static_cast<size_t>(set_operation_mode));
+  return std::hash<SetOperationMode>{}(set_operation_mode);
 }
 
 std::shared_ptr<AbstractLQPNode> IntersectNode::_on_shallow_copy(LQPNodeMapping& /*node_mapping*/) const {
