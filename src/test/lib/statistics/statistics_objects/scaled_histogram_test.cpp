@@ -102,15 +102,15 @@ TEST_F(ScaledHistogramTest, CopiesDomain) {
   const auto actual_domain = static_cast<const StringHistogramDomain&>(scaled_histogram->domain());
   const auto expected_domain = static_cast<const StringHistogramDomain&>(generic_histogram->domain());
 
-  EXPECT_TRUE(actual_domain == expected_domain);
+  EXPECT_EQ(actual_domain, expected_domain);
 }
 
 TEST_P(ScaledHistogramTest, ReferencesGenericHistogram) {
   resolve_data_type(GetParam(), [&](auto type) {
     using HistogramDataType = typename decltype(type)::type;
 
-    auto min = HistogramDataType{70};
-    auto max = HistogramDataType{80};
+    const auto min = HistogramDataType{70};
+    const auto max = HistogramDataType{80};
     const auto generic_histogram = GenericHistogram<HistogramDataType>::with_single_bin(min, max, 10, 5);
 
     const auto scaled_histogram = ScaledHistogram<HistogramDataType>{generic_histogram, 0.5f};

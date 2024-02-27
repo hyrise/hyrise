@@ -187,7 +187,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
         const auto cardinality = static_cast<Cardinality>(static_table_node.table->row_count());
 
         const auto& column_definitions = static_table_node.table->column_definitions();
-        auto column_statistics = std::vector<std::shared_ptr<BaseAttributeStatistics>>{};
+        auto column_statistics = std::vector<std::shared_ptr<const BaseAttributeStatistics>>{};
         column_statistics.reserve(column_definitions.size());
 
         for (const auto& column_definition : column_definitions) {
