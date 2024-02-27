@@ -5,7 +5,6 @@
 #include <optional>
 #include <sstream>
 #include <string>
-#include <type_traits>
 #include <unordered_map>
 
 #include <boost/container_hash/hash.hpp>
