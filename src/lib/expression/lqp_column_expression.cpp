@@ -127,7 +127,7 @@ size_t LQPColumnExpression::_shallow_hash() const {
   // LQPColumnExpressions or child nodes with LQPColumnExpressions would have different hash codes.
   auto hash = size_t{0};
   boost::hash_combine(hash, original_node.lock()->hash());
-  boost::hash_combine(hash, static_cast<size_t>(original_column_id));
+  boost::hash_combine(hash, original_column_id);
   return hash;
 }
 

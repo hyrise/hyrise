@@ -46,7 +46,7 @@ bool IntervalExpression::_shallow_equals(const AbstractExpression& expression) c
 
 size_t IntervalExpression::_shallow_hash() const {
   auto hash = size_t{0};
-  boost::hash_combine(hash, static_cast<size_t>(unit));
+  boost::hash_combine(hash, unit);
   boost::hash_combine(hash, duration);
   return hash;
 }

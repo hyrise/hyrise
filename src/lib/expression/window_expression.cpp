@@ -48,8 +48,8 @@ bool FrameBound::operator==(const FrameBound& rhs) const {
 size_t FrameBound::hash() const {
   auto hash_value = size_t{0};
   boost::hash_combine(hash_value, offset);
-  boost::hash_combine(hash_value, static_cast<size_t>(type));
-  boost::hash_combine(hash_value, static_cast<size_t>(unbounded));
+  boost::hash_combine(hash_value, type);
+  boost::hash_combine(hash_value, unbounded);
   return hash_value;
 }
 
@@ -98,7 +98,7 @@ std::string FrameDescription::description() const {
 
 size_t FrameDescription::hash() const {
   auto hash_value = size_t{0};
-  boost::hash_combine(hash_value, static_cast<size_t>(type));
+  boost::hash_combine(hash_value, type);
   boost::hash_combine(hash_value, start.hash());
   boost::hash_combine(hash_value, end.hash());
   return hash_value;
@@ -192,7 +192,7 @@ size_t WindowExpression::_shallow_hash() const {
   auto hash_value = size_t{0};
   boost::hash_combine(hash_value, sort_modes.size());
   for (const auto sort_mode : sort_modes) {
-    boost::hash_combine(hash_value, static_cast<size_t>(sort_mode));
+    boost::hash_combine(hash_value, sort_mode);
   }
   boost::hash_combine(hash_value, frame_description.hash());
   return hash_value;

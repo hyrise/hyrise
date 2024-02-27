@@ -220,10 +220,10 @@ size_t StoredTableNode::_on_shallow_hash() const {
   auto hash = size_t{0};
   boost::hash_combine(hash, table_name);
   for (const auto& pruned_chunk_id : _pruned_chunk_ids) {
-    boost::hash_combine(hash, static_cast<size_t>(pruned_chunk_id));
+    boost::hash_combine(hash, pruned_chunk_id);
   }
   for (const auto& pruned_column_id : _pruned_column_ids) {
-    boost::hash_combine(hash, static_cast<size_t>(pruned_column_id));
+    boost::hash_combine(hash, pruned_column_id);
   }
   // We intentionally force a hash collision for StoredTableNodes with the same number of prunable subquery predicates
   // even though these predicates are different. Since we assume that (i) these predicates are not often set and (ii) we

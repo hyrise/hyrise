@@ -162,7 +162,7 @@ size_t MockNode::_on_shallow_hash() const {
   auto hash = size_t{0};
   boost::hash_combine(hash, _table_statistics);
   for (const auto& pruned_column_id : _pruned_column_ids) {
-    boost::hash_combine(hash, static_cast<size_t>(pruned_column_id));
+    boost::hash_combine(hash, pruned_column_id);
   }
   for (const auto& [type, column_name] : _column_definitions) {
     boost::hash_combine(hash, type);
