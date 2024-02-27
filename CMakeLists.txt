@@ -65,6 +65,9 @@ if (${ENABLE_ADDR_UB_SANITIZATION})
     add_compile_options(-fsanitize=address,undefined -fno-sanitize-recover=all -fsanitize-blacklist=${CMAKE_CURRENT_SOURCE_DIR}/resources/.ubsan-blacklist.txt -fno-omit-frame-pointer -mllvm -asan-use-private-alias=1)
     add_link_options(-fsanitize=address,undefined)
     set(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=address,undefined -fno-sanitize-recover=all -fsanitize-blacklist=${CMAKE_CURRENT_SOURCE_DIR}/resources/.ubsan-blacklist.txt -fno-omit-frame-pointer")
+    add_definitions(-DHYRISE_WITH_UBSAN=1)
+else()
+    add_definitions(-DHYRISE_WITH_UBSAN=0)
 endif()
 
 # Enable thread sanitization if requested
@@ -75,6 +78,9 @@ if (${ENABLE_THREAD_SANITIZATION})
     add_compile_options(-fsanitize=thread -O1)
     add_link_options(-fsanitize=thread)
     set(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=thread")
+    add_definitions(-DHYRISE_WITH_TSAN=1)
+else()
+    add_definitions(-DHYRISE_WITH_TSAN=0)
 endif()
 
 # Set default build type if none was passed on the command line
