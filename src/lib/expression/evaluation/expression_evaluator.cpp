@@ -136,15 +136,15 @@ std::shared_ptr<AbstractExpression> rewrite_in_list_expression(const InExpressio
   return rewritten_expression;
 }
 
-// Traverse the PQP of a correlated subquery and execute each operator.
-void execute_correlated_subquery_recursively(const std::shared_ptr<AbstractOperator>& op,
-                                             std::unordered_set<std::shared_ptr<AbstractOperator>>& visited_operators) {
-  if (!op || visited_operators.contains(op)) {
+// Traverse the PQP of a correlated subquery and execute each operator. `AbstractOperator::execute()` ensures that no
+// operator is executed multiple times, even for diamonds.
+void execute_correlated_subquery_recursively(const std::shared_ptr<AbstractOperator>& op) {
+  if (!op) {
     return;
   }
 
-  execute_correlated_subquery_recursively(op->mutable_left_input(), visited_operators);
-  execute_correlated_subquery_recursively(op->mutable_right_input(), visited_operators);
+  execute_correlated_subquery_recursively(op->mutable_left_input());
+  execute_correlated_subquery_recursively(op->mutable_right_input());
   op->execute();
 }
 
@@ -993,8 +993,7 @@ std::shared_ptr<const Table> ExpressionEvaluator::_evaluate_subquery_expression_
   // Operators that must (and can) parallelize should spawn own tasks anyways.
   const auto row_pqp = expression.pqp->deep_copy();
   row_pqp->set_parameters(parameters);
-  auto visited_operators = std::unordered_set<std::shared_ptr<AbstractOperator>>{};
-  execute_correlated_subquery_recursively(row_pqp, visited_operators);
+  execute_correlated_subquery_recursively(row_pqp);
   return row_pqp->get_output();
 }
 

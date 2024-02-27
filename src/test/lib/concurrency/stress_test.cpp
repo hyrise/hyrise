@@ -540,7 +540,7 @@ TEST_F(StressTest, OperatorRegistration) {
     auto threads = std::vector<std::thread>{};
     threads.reserve(consumer_count);
     auto waiting_consumer_count = std::atomic_uint32_t{0};
-    auto start_execution = std::atomic_bool{false};
+    auto start_execution = std::atomic_flag{};
 
     // Generate consumers that try to deregister concurrently once they are executed.
     for (auto consumer_id = uint32_t{0}; consumer_id < consumer_count; ++consumer_id) {
@@ -551,9 +551,7 @@ TEST_F(StressTest, OperatorRegistration) {
         ++waiting_consumer_count;
 
         // Wait for the signal to execute the operator.
-        while (!start_execution) {
-          std::this_thread::sleep_for(sleep_time);
-        }
+        start_execution.wait(false);
 
         union_all->execute();
       });
@@ -564,15 +562,17 @@ TEST_F(StressTest, OperatorRegistration) {
       std::this_thread::sleep_for(sleep_time);
     }
 
-    // 100 consumers because the UnionAll operators have the input on both sides.
-    EXPECT_EQ(table_wrapper->consumer_count(), 100);
+    // The UnionAll operators have the input on both sides.
+    EXPECT_EQ(table_wrapper->consumer_count(), consumer_count * 2);
 
-    start_execution = true;
+    start_execution.test_and_set();
+    start_execution.notify_all();
     for (auto& thread : threads) {
       thread.join();
     }
 
     EXPECT_EQ(table_wrapper->consumer_count(), 0);
+    EXPECT_EQ(table_wrapper->state(), OperatorState::ExecutedAndCleared);
 
     // One additional deregistration (without prior registration) is not allowed.
     EXPECT_THROW(table_wrapper->deregister_consumer(), std::logic_error);

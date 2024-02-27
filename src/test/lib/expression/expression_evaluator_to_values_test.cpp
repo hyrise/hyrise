@@ -21,6 +21,7 @@
 #include "operators/projection.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
+#include "operators/union_all.hpp"
 #include "storage/table.hpp"
 #include "utils/load_table.hpp"
 
@@ -655,7 +656,17 @@ TEST_F(ExpressionEvaluatorToValuesTest, CorrelatedSubqueryPrecalculated) {
   // Operators for correlated subqueries must not be reused, and the ExpressionEvaluator creates a copy for each row.
   // Thus, the input PQP must not be executed before.
   execute_all({table_wrapper, projection});
-  EXPECT_THROW(test_expression<int32_t>(table_a, *in_(4, subquery), {1, 1, 0, 1}), std::logic_error);
+  EXPECT_THROW(test_expression<int32_t>(table_a, *in_(4, subquery), {1, 1, 1, 1}), std::logic_error);
+}
+
+TEST_F(ExpressionEvaluatorToValuesTest, CorrelatedSubqueryDiamond) {
+  const auto table_wrapper = std::make_shared<TableWrapper>(table_a);
+  const auto projection = std::make_shared<Projection>(table_wrapper, expression_vector(a));
+  const auto union_all = std::make_shared<UnionAll>(projection, projection);
+  const auto subquery = pqp_subquery_(union_all, DataType::Int, false, std::make_pair(ParameterID{0}, ColumnID{0}));
+
+  // While executing the subquery LQP, the ExpressionEvaluator must execute each operator once, also for diamonds.
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(4, subquery), {1, 1, 1, 1}));
 }
 
 TEST_F(ExpressionEvaluatorToValuesTest, NotInListLiterals) {

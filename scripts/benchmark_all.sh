@@ -19,10 +19,13 @@ mt_shuffled_runtime=1200
 runs=50
 
 # Setting the number of clients used for the multi-threaded scenario to the machine's physical core count. This only
-# works for macOS and Linux. We do not use hyper-threads because the benchmark results are more unstable on them. We
+# works for macOS and Linux. We do not use hyper-threads because the benchmark results are less stable on them. We
 # assume that the physical cores have lower IDs than the hyper-threads. Furthermore, we restrict the benchmarks to run
 # on one NUMA node, even if the script is not orchestrated via numactl, as Hyrise is not optimized for multiple nodes.
 # To obtain the number of cores per node, we just count the physical cores for the node with ID 0.
+#
+# Note: there is no limitation of running Hyrise on all CPU threads and multiple NUMA nodes. However, we are not
+# actively testing and optimizing for these scenarios. Hence, we do not test them in this script.
 output="$(uname -s)"
 case "${output}" in
   Linux*)   num_phy_cores="$(lscpu -p | egrep -v '^#' | grep '^[0-9]*,[0-9]*,0,0' | sort -u -t, -k 2,4 | wc -l)";;
