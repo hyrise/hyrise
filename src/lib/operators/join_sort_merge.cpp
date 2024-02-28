@@ -11,6 +11,7 @@
 #include <vector>
 
 #include <boost/functional/hash_fwd.hpp>
+#include <boost/unordered/unordered_flat_set.hpp>
 
 #include "hyrise.hpp"
 #include "join_helper/join_output_writing.hpp"
@@ -362,7 +363,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
                                                       MultiPredicateJoinEvaluator& multi_predicate_join_evaluator) {
     if (_primary_predicate_condition == PredicateCondition::Equals) {
       left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
-        bool left_row_id_matched = false;
+        auto left_row_id_matched = false;
         right_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
           if (multi_predicate_join_evaluator.satisfies_all_predicates(left_row_id, right_row_id)) {
             _emit_combination(output_cluster, left_row_id, right_row_id);
@@ -395,7 +396,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
                                                        MultiPredicateJoinEvaluator& multi_predicate_join_evaluator) {
     if (_primary_predicate_condition == PredicateCondition::Equals) {
       right_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
-        bool right_row_id_matched = false;
+        auto right_row_id_matched = false;
         left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
           if (multi_predicate_join_evaluator.satisfies_all_predicates(left_row_id, right_row_id)) {
             _emit_combination(output_cluster, left_row_id, right_row_id);
@@ -428,7 +429,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
                                                       TableRange right_range,
                                                       MultiPredicateJoinEvaluator& multi_predicate_join_evaluator) {
     if (_primary_predicate_condition == PredicateCondition::Equals) {
-      std::set<RowID> matched_right_row_ids;
+      auto matched_right_row_ids = RowHashSet{};
 
       left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
         bool left_row_id_matched = false;
@@ -443,9 +444,9 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
           _emit_combination(output_cluster, left_row_id, NULL_ROW_ID);
         }
       });
-      // add null value combinations for right row ids that have no match.
+      // Add null value combinations for right row ids that have no match.
       right_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
-        // right_row_ids_with_match has no key `right_row_id`
+        // Right_row_ids_with_match has no key `right_row_id`.
         if (!matched_right_row_ids.contains(right_row_id)) {
           _emit_combination(output_cluster, NULL_ROW_ID, right_row_id);
         }
