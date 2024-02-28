@@ -1,7 +1,6 @@
 #include <optional>
 
 #include "base_test.hpp"
-
 #include "expression/arithmetic_expression.hpp"
 #include "expression/binary_predicate_expression.hpp"
 #include "expression/case_expression.hpp"
@@ -124,10 +123,9 @@ class ExpressionEvaluatorToValuesTest : public BaseTest {
 
     std::cout << "Actual:\n  ";
     print(actual_normalized);
-    std::cout << std::endl;
-    std::cout << "Expected:\n  ";
+    std::cout << "\nExpected:\n  ";
     print(expected);
-    std::cout << std::endl;
+    std::cout << '\n';
 
     return false;
   }
@@ -142,10 +140,9 @@ class ExpressionEvaluatorToValuesTest : public BaseTest {
 
     std::cout << "Actual:\n  ";
     print(actual_normalized);
-    std::cout << std::endl;
-    std::cout << "Expected:\n  ";
+    std::cout << "\nExpected:\n  ";
     print(expected);
-    std::cout << std::endl;
+    std::cout << '\n';
 
     return false;
   }

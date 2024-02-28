@@ -2,7 +2,10 @@
 
 #include <fstream>
 #include <string>
+#include <tuple>
 #include <vector>
+
+#include "nlohmann/json.hpp"
 
 #include "utils/assert.hpp"
 

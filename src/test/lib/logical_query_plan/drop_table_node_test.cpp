@@ -1,5 +1,4 @@
 #include "base_test.hpp"
-
 #include "logical_query_plan/drop_table_node.hpp"
 
 namespace hyrise {

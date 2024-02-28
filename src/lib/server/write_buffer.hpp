@@ -1,5 +1,8 @@
 #pragma once
 
+#include <memory>
+#include <string>
+
 #include "ring_buffer_iterator.hpp"
 #include "server_types.hpp"
 #include "types.hpp"

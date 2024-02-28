@@ -1,9 +1,8 @@
 #pragma once
 
-#include <tbb/concurrent_vector.h>
-
 #include <algorithm>
 #include <atomic>
+#include <limits>
 #include <memory>
 #include <optional>
 #include <shared_mutex>
@@ -11,12 +10,14 @@
 #include <vector>
 
 #include <boost/container/pmr/memory_resource.hpp>
+#include <oneapi/tbb/concurrent_vector.h>  // NOLINT(build/include_order): cpplint identifies TBB as C system headers.
 
 #include "all_type_variant.hpp"
 #include "index/chunk_index_type.hpp"
 #include "mvcc_data.hpp"
 #include "table_column_definition.hpp"
 #include "types.hpp"
+#include "utils/assert.hpp"
 #include "utils/copyable_atomic.hpp"
 
 namespace hyrise {

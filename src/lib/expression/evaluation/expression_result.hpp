@@ -1,5 +1,8 @@
 #pragma once
 
+#include <algorithm>
+#include <memory>
+#include <utility>
 #include <vector>
 
 #include <boost/variant.hpp>

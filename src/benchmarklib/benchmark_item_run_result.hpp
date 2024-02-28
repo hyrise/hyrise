@@ -1,6 +1,6 @@
 #pragma once
 
-#include <atomic>
+#include <vector>
 
 #include "benchmark_config.hpp"
 #include "sql/sql_pipeline.hpp"

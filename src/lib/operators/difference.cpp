@@ -1,8 +1,10 @@
 #include "difference.hpp"
 
 #include <algorithm>
+#include <cstdint>
 #include <iterator>
 #include <memory>
+#include <ostream>
 #include <sstream>
 #include <string>
 #include <unordered_map>
@@ -12,7 +14,15 @@
 
 #include <boost/lexical_cast.hpp>
 
+#include "all_type_variant.hpp"
+#include "operators/abstract_operator.hpp"
+#include "operators/abstract_read_only_operator.hpp"
+#include "storage/chunk.hpp"
+#include "storage/pos_lists/abstract_pos_list.hpp"
+#include "storage/pos_lists/row_id_pos_list.hpp"
 #include "storage/reference_segment.hpp"
+#include "storage/table.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {
@@ -67,8 +77,9 @@ std::shared_ptr<const Table> Difference::_on_execute() {
 
     // Remove duplicate rows by adding all rows to a unordered set
     std::transform(string_row_vector.cbegin(), string_row_vector.cend(),
-                   std::inserter(right_input_row_set, right_input_row_set.end()),
-                   [](auto& item) { return item.str(); });
+                   std::inserter(right_input_row_set, right_input_row_set.end()), [](auto& item) {
+                     return item.str();
+                   });
   }
 
   // 2. Now we check for each chunk of the left input which rows can be added to the output

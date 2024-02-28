@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <string>
 #include <unordered_map>
 #include <vector>
 
@@ -54,7 +55,7 @@ class SQLIdentifierResolver final {
   /**
    * Move all entries from another resolver @param rhs into this resolver
    */
-  void append(SQLIdentifierResolver&& rhs);
+  void append(const SQLIdentifierResolver& rhs);
 
  private:
   SQLIdentifierContextEntry& _find_or_create_expression_entry(const std::shared_ptr<AbstractExpression>& expression);

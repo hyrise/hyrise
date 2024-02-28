@@ -1,5 +1,12 @@
 #include "histogram_domain.hpp"
 
+#include <algorithm>
+#include <cmath>
+#include <cstddef>
+#include <cstdint>
+#include <limits>
+
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {
@@ -115,13 +122,13 @@ uint64_t ipow(uint64_t base, uint64_t exp) {
   uint64_t result = 1;
 
   for (;;) {
-    if (exp & 1u) {
+    if ((exp & 1u) != 0) {
       result *= base;
     }
 
     exp >>= 1u;
 
-    if (!exp) {
+    if (exp == 0) {
       break;
     }
 

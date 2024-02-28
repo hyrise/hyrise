@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <optional>
+#include <utility>
 
 #include <boost/hana/equal.hpp>
 #include <boost/hana/fold.hpp>

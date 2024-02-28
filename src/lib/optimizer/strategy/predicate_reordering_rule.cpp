@@ -1,17 +1,19 @@
 #include "predicate_reordering_rule.hpp"
 
+#include <algorithm>
+#include <cstddef>
 #include <memory>
 #include <string>
+#include <unordered_set>
+#include <utility>
+#include <vector>
 
 #include "cost_estimation/abstract_cost_estimator.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
+#include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
-#include "logical_query_plan/predicate_node.hpp"
-#include "optimizer/join_ordering/join_graph.hpp"
-#include "statistics/cardinality_estimation_cache.hpp"
 #include "statistics/cardinality_estimator.hpp"
-#include "statistics/table_statistics.hpp"
-#include "utils/assert.hpp"
+#include "types.hpp"
 
 namespace {
 using namespace hyrise;  // NOLINT(build/namespaces)
@@ -94,8 +96,9 @@ void reorder_predicates(const std::vector<std::shared_ptr<AbstractLQPNode>>& pre
   }
 
   // Sort in descending order. The "most beneficial" predicate (i.e., with the lowest cost) is at the end.
-  std::sort(nodes_and_costs.begin(), nodes_and_costs.end(),
-            [&](auto& left, auto& right) { return left.second > right.second; });
+  std::sort(nodes_and_costs.begin(), nodes_and_costs.end(), [&](auto& left, auto& right) {
+    return left.second > right.second;
+  });
 
   // Ensure that nodes are chained correctly. The predicate at the vector end is placed after the input.
   nodes_and_costs.back().first->set_left_input(input);

@@ -1,5 +1,4 @@
 #include "base_test.hpp"
-
 #include "import_export/csv/csv_meta.hpp"
 
 namespace hyrise {

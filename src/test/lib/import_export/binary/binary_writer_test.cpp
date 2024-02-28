@@ -6,7 +6,6 @@
 #include <vector>
 
 #include "base_test.hpp"
-
 #include "import_export/binary/binary_writer.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/chunk_encoder.hpp"

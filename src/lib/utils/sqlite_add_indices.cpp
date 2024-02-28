@@ -2,12 +2,12 @@
 
 #include <fstream>
 #include <iostream>
+#include <iterator>
+#include <memory>
 #include <string>
 
-#include "operators/print.hpp"
-
 #include "hyrise.hpp"
-#include "utils/meta_table_manager.hpp"
+#include "utils/assert.hpp"
 #include "utils/sqlite_wrapper.hpp"
 #include "utils/timer.hpp"
 
@@ -17,7 +17,7 @@ void add_indices_to_sqlite(const std::string& schema_file_path, const std::strin
                            std::shared_ptr<SQLiteWrapper>& sqlite_wrapper) {
   Assert(sqlite_wrapper, "sqlite_wrapper should be set.");
 
-  std::cout << "- Adding indexes to SQLite" << std::endl;
+  std::cout << "- Adding indexes to SQLite\n";
   auto timer = Timer{};
 
   // SQLite does not support adding primary keys to non-empty tables, so we rename the table, create an empty one from
@@ -65,10 +65,10 @@ void add_indices_to_sqlite(const std::string& schema_file_path, const std::strin
                                                           .append(table_name)
                                                           .append("_unindexed"));
 
-    std::cout << " (" << per_table_time.lap_formatted() << ")" << std::endl;
+    std::cout << " (" << per_table_time.lap_formatted() << ")\n";
   }
 
-  std::cout << "- Added indexes to SQLite (" << timer.lap_formatted() << ")" << std::endl;
+  std::cout << "- Added indexes to SQLite (" << timer.lap_formatted() << ")\n";
 }
 
 }  // namespace hyrise

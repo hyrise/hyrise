@@ -1,7 +1,6 @@
 #include <optional>
 
 #include "base_test.hpp"
-
 #include "expression/arithmetic_expression.hpp"
 #include "expression/binary_predicate_expression.hpp"
 #include "expression/case_expression.hpp"

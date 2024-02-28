@@ -1,10 +1,27 @@
 #include "chunk.hpp"
 
+#include <algorithm>
+#include <atomic>
+#include <cstddef>
+#include <iterator>
+#include <memory>
+#include <optional>
+#include <string>
+#include <utility>
+#include <vector>
+
+#include <boost/container/pmr/memory_resource.hpp>
+
 #include "abstract_segment.hpp"
+#include "all_type_variant.hpp"
+#include "base_value_segment.hpp"
 #include "index/abstract_chunk_index.hpp"
 #include "reference_segment.hpp"
-#include "resolve_type.hpp"
+#include "storage/index/chunk_index_type.hpp"
+#include "storage/mvcc_data.hpp"
 #include "storage/segment_iterate.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 #include "utils/atomic_max.hpp"
 
 namespace hyrise {
@@ -91,8 +108,9 @@ std::shared_ptr<MvccData> Chunk::mvcc_data() const {
 std::vector<std::shared_ptr<AbstractChunkIndex>> Chunk::get_indexes(
     const std::vector<std::shared_ptr<const AbstractSegment>>& segments) const {
   auto result = std::vector<std::shared_ptr<AbstractChunkIndex>>();
-  std::copy_if(_indexes.cbegin(), _indexes.cend(), std::back_inserter(result),
-               [&](const auto& index) { return index->is_index_for(segments); });
+  std::copy_if(_indexes.cbegin(), _indexes.cend(), std::back_inserter(result), [&](const auto& index) {
+    return index->is_index_for(segments);
+  });
   return result;
 }
 
@@ -219,8 +237,9 @@ std::vector<std::shared_ptr<const AbstractSegment>> Chunk::_get_segments_for_ids
 
   auto segments = std::vector<std::shared_ptr<const AbstractSegment>>{};
   segments.reserve(column_ids.size());
-  std::transform(column_ids.cbegin(), column_ids.cend(), std::back_inserter(segments),
-                 [&](const auto& column_id) { return get_segment(column_id); });
+  std::transform(column_ids.cbegin(), column_ids.cend(), std::back_inserter(segments), [&](const auto& column_id) {
+    return get_segment(column_id);
+  });
   return segments;
 }
 

@@ -1,6 +1,16 @@
 #include "encoding_config.hpp"
 
+#include <optional>
+#include <string>
+#include <utility>
+
 #include "magic_enum.hpp"
+#include "nlohmann/json.hpp"
+
+#include "all_type_variant.hpp"
+#include "storage/encoding_type.hpp"
+#include "storage/vector_compression/vector_compression.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 

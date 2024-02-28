@@ -1,12 +1,29 @@
 #include "file_based_benchmark_item_runner.hpp"
 
+#include <algorithm>
+#include <cstddef>
 #include <filesystem>
 #include <fstream>
+#include <iterator>
+#include <memory>
+#include <numeric>
+#include <optional>
+#include <string>
+#include <unordered_set>
+#include <vector>
 
-#include <boost/algorithm/string.hpp>
+#include <boost/algorithm/string/predicate.hpp>
+#include <boost/algorithm/string/trim.hpp>
 
 #include "SQLParser.h"
+#include "SQLParserResult.h"
+
+#include "abstract_benchmark_item_runner.hpp"
+#include "benchmark_config.hpp"
+#include "benchmark_sql_executor.hpp"
 #include "sql/create_sql_parser_error_message.hpp"
+#include "sql/sql_pipeline_statement.hpp"
+#include "storage/table.hpp"
 #include "utils/assert.hpp"
 #include "utils/list_directory.hpp"
 
@@ -17,7 +34,9 @@ FileBasedBenchmarkItemRunner::FileBasedBenchmarkItemRunner(
     const std::unordered_set<std::string>& filename_blacklist,
     const std::optional<std::unordered_set<std::string>>& query_subset)
     : AbstractBenchmarkItemRunner(config) {
-  const auto is_sql_file = [](const std::string& filename) { return boost::algorithm::ends_with(filename, ".sql"); };
+  const auto is_sql_file = [](const std::string& filename) {
+    return boost::algorithm::ends_with(filename, ".sql");
+  };
 
   const auto path = std::filesystem::path{query_path};
   Assert(std::filesystem::exists(path), "No such file or directory '" + query_path + "'");
@@ -41,7 +60,9 @@ FileBasedBenchmarkItemRunner::FileBasedBenchmarkItemRunner(
   std::iota(_items.begin(), _items.end(), BenchmarkItemID{0});
 
   // Sort queries by name
-  std::sort(_queries.begin(), _queries.end(), [](const Query& lhs, const Query& rhs) { return lhs.name < rhs.name; });
+  std::sort(_queries.begin(), _queries.end(), [](const Query& lhs, const Query& rhs) {
+    return lhs.name < rhs.name;
+  });
 }
 
 bool FileBasedBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, BenchmarkSQLExecutor& sql_executor) {
@@ -100,7 +121,7 @@ void FileBasedBenchmarkItemRunner::_parse_query_file(
    * Add queries to _queries and _item_names if query_subset allows it
    */
   for (const auto& query : queries_in_file) {
-    if (!query_subset || query_subset->count(query.name)) {
+    if (!query_subset || query_subset->contains(query.name)) {
       _queries.emplace_back(query);
     }
   }

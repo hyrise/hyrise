@@ -1,7 +1,6 @@
 #include "base_test.hpp"
-#include "lib/storage/encoding_test.hpp"
-
 #include "hyrise.hpp"
+#include "lib/storage/encoding_test.hpp"
 #include "storage/encoding_type.hpp"
 #include "storage/table.hpp"
 #include "synthetic_table_generator.hpp"

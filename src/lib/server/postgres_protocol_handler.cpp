@@ -1,5 +1,19 @@
 #include "postgres_protocol_handler.hpp"
 
+#include <cstddef>
+#include <cstdint>
+#include <memory>
+#include <optional>
+#include <string>
+#include <utility>
+#include <vector>
+
+#include "all_type_variant.hpp"
+#include "server/postgres_message_type.hpp"
+#include "server/server_types.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
+
 namespace hyrise {
 
 template <typename SocketType>

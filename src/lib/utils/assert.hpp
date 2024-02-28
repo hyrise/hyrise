@@ -1,14 +1,12 @@
 #pragma once
 
-#include <exception>
-#include <iostream>
 #include <stdexcept>
 #include <string>
 
 #include <boost/preprocessor/stringize.hpp>
 
 #include "invalid_input_exception.hpp"
-#include "string_utils.hpp"
+#include "utils/string_utils.hpp"
 
 /**
  * This file provides better assertions than the std cassert/assert.h - DebugAssert(condition, msg) and Fail(msg) can be
@@ -32,8 +30,8 @@
  *     default: Fail("Illegal parameter");
  * }
  *
- * --> Use Assert() whenever an invariant should be checked even in release builds, either because testing it is
- *     very cheap or the invariant is considered very important.
+ * --> Use Assert() whenever an invariant should be checked even in release builds, either because testing it is very
+ *     cheap or the invariant is considered very important.
  *
  * --> Use AssertInput() to check if the user input is correct. This provides a more specific error handling since an
  *     invalid input might want to be caught.

@@ -1,8 +1,10 @@
 #pragma once
 
 #include <functional>
+#include <memory>
 #include <optional>
 #include <type_traits>
+#include <utility>
 
 #include <boost/range.hpp>
 #include <boost/range/join.hpp>

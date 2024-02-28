@@ -1,5 +1,12 @@
 #include "table_column_definition.hpp"
 
+#include <cstddef>
+#include <string>
+
+#include <boost/container_hash/hash.hpp>
+
+#include "all_type_variant.hpp"
+
 namespace hyrise {
 
 TableColumnDefinition::TableColumnDefinition(const std::string& init_name, const DataType init_data_type,
@@ -11,7 +18,8 @@ bool TableColumnDefinition::operator==(const TableColumnDefinition& rhs) const {
 }
 
 size_t TableColumnDefinition::hash() const {
-  auto hash = boost::hash_value(name);
+  auto hash = size_t{0};
+  boost::hash_combine(hash, name);
   boost::hash_combine(hash, data_type);
   boost::hash_combine(hash, nullable);
   return hash;
