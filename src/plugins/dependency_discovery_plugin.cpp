@@ -5,6 +5,7 @@
 
 #include "../benchmarklib/abstract_benchmark_item_runner.hpp"
 #include "dependency_discovery/candidate_strategy/dependent_group_by_reduction_candidate_rule.hpp"
+#include "dependency_discovery/candidate_strategy/join_avoidance_candidate_rule.hpp"
 #include "dependency_discovery/candidate_strategy/join_to_predicate_candidate_rule.hpp"
 #include "dependency_discovery/candidate_strategy/join_to_semi_join_candidate_rule.hpp"
 #include "dependency_discovery/validation_strategy/fd_validation_rule.hpp"
@@ -63,7 +64,7 @@ DependencyDiscoveryPlugin::DependencyDiscoveryPlugin() {
   const auto allow_join_avoidance = std::getenv("JOIN_AVOIDANCE");
   if (allow_join_avoidance && !std::strcmp(allow_join_avoidance, "1")) {
     std::cout << "- Enable Join Avoidance" << std::endl;
-    Fail("JoinAvoidanceCandidateRule is not implemented.");
+    _add_candidate_rule(std::make_unique<JoinAvoidanceCandidateRule>());
   }
 
   _add_validation_rule(std::make_unique<UccValidationRule>());

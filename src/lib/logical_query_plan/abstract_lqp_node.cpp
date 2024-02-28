@@ -325,13 +325,15 @@ bool AbstractLQPNode::has_matching_ucc(const ExpressionUnorderedSet& expressions
   return contains_matching_unique_column_combination(unique_column_combinations, expressions);
 }
 
-bool AbstractLQPNode::has_matching_ind(const ExpressionUnorderedSet& foreign_key_expressions, const ExpressionUnorderedSet& key_expressions,
+bool AbstractLQPNode::has_matching_ind(const ExpressionUnorderedSet& foreign_key_expressions,
+                                       const ExpressionUnorderedSet& key_expressions,
                                        const AbstractLQPNode& included_node) const {
   Assert(!key_expressions.empty(), "Invalid input. Set of expressions should not be empty.");
   DebugAssert(key_expressions.size() == foreign_key_expressions.size(), "Invlid IND requested.");
   DebugAssert(has_output_expressions(key_expressions),
               "The given expressions are not a subset of the LQP's output expressions.");
-  DebugAssert(included_node.has_output_expressions(foreign_key_expressions), "The given expressions are not a subset of the LQP's output expressions.");
+  DebugAssert(included_node.has_output_expressions(foreign_key_expressions),
+              "The given expressions are not a subset of the LQP's output expressions.");
 
   // Check if there is an IND matching the expressions.
   const auto& inclusion_dependencies = this->inclusion_dependencies();
@@ -345,8 +347,7 @@ bool AbstractLQPNode::has_matching_ind(const ExpressionUnorderedSet& foreign_key
   }
 
   // Check that the referenced columns match the requested columns.
-  auto required_column_ids_per_table =
-      std::unordered_map<std::shared_ptr<Table>, std::vector<ColumnID>>{};
+  auto required_column_ids_per_table = std::unordered_map<std::shared_ptr<Table>, std::vector<ColumnID>>{};
   for (const auto& expression : foreign_key_expressions) {
     DebugAssert(expression->type == ExpressionType::LQPColumn, "Expected column expression.");
     const auto& lqp_column_expression = static_cast<const LQPColumnExpression&>(*expression);
@@ -370,8 +371,9 @@ bool AbstractLQPNode::has_matching_ind(const ExpressionUnorderedSet& foreign_key
       continue;
     }
     const auto& ind_column_ids = ind.included_column_ids;
-    if (std::all_of(required_column_ids.cbegin(), required_column_ids.cend(),
-                    [&](const auto column_id) { return std::find(ind_column_ids.cbegin(), ind_column_ids.cend(), column_id) != ind_column_ids.cend(); })) {
+    if (std::all_of(required_column_ids.cbegin(), required_column_ids.cend(), [&](const auto column_id) {
+          return std::find(ind_column_ids.cbegin(), ind_column_ids.cend(), column_id) != ind_column_ids.cend();
+        })) {
       return true;
     }
   }

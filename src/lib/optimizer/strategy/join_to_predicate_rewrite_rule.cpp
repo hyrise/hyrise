@@ -38,7 +38,8 @@ bool qualifies_for_od_rewrite(const std::shared_ptr<PredicateNode>& predicate_no
   const auto& left_input = predicate_node->left_input();
   lqp_remove_node(predicate_node);
   const auto rewritable =
-      join_node->input(removable_input_side)->has_matching_ind({join_column_expression}, {exchangeable_column_expression}, *join_node);
+      join_node->input(removable_input_side)
+          ->has_matching_ind({join_column_expression}, {exchangeable_column_expression}, *join_node);
   lqp_insert_node_above(left_input, predicate_node);
   return rewritable;
 }
@@ -183,8 +184,8 @@ void try_rewrite(const std::shared_ptr<JoinNode>& join_node) {
     }
 
     // Check if we can perform an OD-based rewrite.
-    if (qualifies_for_od_rewrite(candidate, candidate_column_expression, exchangeable_column_expression, used_join_column_expression, join_node,
-                                 *prunable_side)) {
+    if (qualifies_for_od_rewrite(candidate, candidate_column_expression, exchangeable_column_expression,
+                                 used_join_column_expression, join_node, *prunable_side)) {
       perform_od_rewrite(join_node, *prunable_side, removable_subtree, used_join_column_expression,
                          exchangeable_column_expression);
       performed_rewrite = true;

@@ -42,6 +42,8 @@ set(
     dependency_discovery/candidate_strategy/abstract_dependency_candidate_rule.hpp
     dependency_discovery/candidate_strategy/dependent_group_by_reduction_candidate_rule.cpp
     dependency_discovery/candidate_strategy/dependent_group_by_reduction_candidate_rule.hpp
+    dependency_discovery/candidate_strategy/join_avoidance_candidate_rule.cpp
+    dependency_discovery/candidate_strategy/join_avoidance_candidate_rule.hpp
     dependency_discovery/candidate_strategy/join_to_predicate_candidate_rule.cpp
     dependency_discovery/candidate_strategy/join_to_predicate_candidate_rule.hpp
     dependency_discovery/candidate_strategy/join_to_semi_join_candidate_rule.cpp
