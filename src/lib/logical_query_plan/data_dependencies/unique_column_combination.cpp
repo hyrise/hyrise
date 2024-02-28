@@ -1,5 +1,16 @@
 #include "unique_column_combination.hpp"
 
+#include <algorithm>
+#include <cstddef>
+#include <functional>
+#include <memory>
+#include <ostream>
+#include <utility>
+#include <vector>
+
+#include "expression/abstract_expression.hpp"
+#include "utils/assert.hpp"
+
 namespace hyrise {
 
 UniqueColumnCombination::UniqueColumnCombination(ExpressionUnorderedSet init_expressions)
@@ -11,8 +22,9 @@ bool UniqueColumnCombination::operator==(const UniqueColumnCombination& rhs) con
   if (expressions.size() != rhs.expressions.size()) {
     return false;
   }
-  return std::all_of(expressions.cbegin(), expressions.cend(),
-                     [&rhs](const auto column_expression) { return rhs.expressions.contains(column_expression); });
+  return std::all_of(expressions.cbegin(), expressions.cend(), [&rhs](const auto column_expression) {
+    return rhs.expressions.contains(column_expression);
+  });
 }
 
 bool UniqueColumnCombination::operator!=(const UniqueColumnCombination& rhs) const {
@@ -26,7 +38,7 @@ size_t UniqueColumnCombination::hash() const {
     hash = hash ^ expression->hash();
   }
 
-  return boost::hash_value(hash - expressions.size());
+  return std::hash<size_t>{}(hash - expressions.size());
 }
 
 std::ostream& operator<<(std::ostream& stream, const UniqueColumnCombination& ucc) {

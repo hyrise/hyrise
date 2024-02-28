@@ -7,10 +7,9 @@
 #include <vector>
 
 #include "all_type_variant.hpp"
-#include "types.hpp"
-
 #include "storage/encoding_type.hpp"
 #include "storage/vector_compression/vector_compression.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 

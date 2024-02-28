@@ -1,5 +1,6 @@
 #include "cost_estimator_logical.hpp"
 
+#include <algorithm>
 #include <cmath>
 #include <memory>
 
@@ -9,7 +10,6 @@
 #include "expression/list_expression.hpp"
 #include "expression/lqp_subquery_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
-#include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/union_node.hpp"
 #include "statistics/cardinality_estimator.hpp"

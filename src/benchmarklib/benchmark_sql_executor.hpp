@@ -1,5 +1,10 @@
 #pragma once
 
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
+
 #include "sql/sql_pipeline.hpp"
 #include "utils/sqlite_wrapper.hpp"
 

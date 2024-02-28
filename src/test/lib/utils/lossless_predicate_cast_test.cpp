@@ -1,5 +1,4 @@
 #include "base_test.hpp"
-
 #include "utils/lossless_predicate_cast.hpp"
 
 namespace hyrise {

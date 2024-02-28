@@ -1,5 +1,6 @@
 #include "load_table.hpp"
 
+#include <cstddef>
 #include <fstream>
 #include <memory>
 #include <string>
@@ -7,11 +8,13 @@
 
 #include <boost/lexical_cast.hpp>
 
+#include "all_type_variant.hpp"
 #include "resolve_type.hpp"
 #include "storage/table.hpp"
+#include "storage/table_column_definition.hpp"
 #include "string_utils.hpp"
-
-using namespace std::string_literals;  // NOLINT(build/namespaces)
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 

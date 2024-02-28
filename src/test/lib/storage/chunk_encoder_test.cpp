@@ -3,9 +3,8 @@
 #include <memory>
 #include <vector>
 
-#include "base_test.hpp"
-
 #include "all_type_variant.hpp"
+#include "base_test.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/abstract_encoded_segment.hpp"

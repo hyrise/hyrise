@@ -1,5 +1,12 @@
 #include "abstract_non_query_node.hpp"
 
+#include <memory>
+#include <vector>
+
+#include "expression/abstract_expression.hpp"
+#include "logical_query_plan/data_dependencies/functional_dependency.hpp"
+#include "logical_query_plan/data_dependencies/unique_column_combination.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {

@@ -1,5 +1,4 @@
 #include "base_test.hpp"
-
 #include "expression/abstract_expression.hpp"
 #include "expression/binary_predicate_expression.hpp"
 #include "expression/expression_functional.hpp"

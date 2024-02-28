@@ -6,10 +6,9 @@
 #include <utility>
 #include <vector>
 
-#include "types.hpp"
-
 #include "abstract_lqp_node.hpp"
 #include "expression/abstract_expression.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 

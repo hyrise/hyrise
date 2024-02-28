@@ -1,14 +1,26 @@
 #include "segment_meta_data.hpp"
 
+#include <cstddef>
+#include <cstdint>
+#include <memory>
+#include <sstream>
+#include <unordered_set>
+
 #include "magic_enum.hpp"
 
+#include "all_type_variant.hpp"
 #include "hyrise.hpp"
 #include "resolve_type.hpp"
 #include "statistics/attribute_statistics.hpp"
 #include "storage/abstract_encoded_segment.hpp"
+#include "storage/abstract_segment.hpp"
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/dictionary_segment.hpp"
 #include "storage/fixed_string_dictionary_segment.hpp"
+#include "storage/segment_access_counter.hpp"
+#include "storage/table.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 

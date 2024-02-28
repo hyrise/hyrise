@@ -1,7 +1,6 @@
 #include "base_test.hpp"
-
-#include "./mock_setting.hpp"
 #include "hyrise.hpp"
+#include "mock_setting.hpp"
 
 namespace hyrise {
 

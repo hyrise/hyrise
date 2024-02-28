@@ -1,20 +1,31 @@
 #include "csv_parser.hpp"
 
+#include <cstddef>
+#include <cstdint>
+#include <cstdio>
+#include <exception>
 #include <fstream>
+#include <ios>
 #include <list>
 #include <memory>
+#include <mutex>
 #include <optional>
 #include <string>
 #include <string_view>
-#include <utility>
 #include <vector>
 
+#include "all_type_variant.hpp"
 #include "hyrise.hpp"
 #include "import_export/csv/csv_converter.hpp"
 #include "import_export/csv/csv_meta.hpp"
 #include "resolve_type.hpp"
+#include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
+#include "storage/chunk.hpp"
+#include "storage/mvcc_data.hpp"
 #include "storage/table.hpp"
+#include "storage/table_column_definition.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/load_table.hpp"
 
@@ -219,8 +230,8 @@ size_t CsvParser::_parse_into_chunk(std::string_view csv_chunk, const std::vecto
       }
     }
   } catch (const std::exception& exception) {
-    throw std::logic_error("Exception while parsing CSV, row " + std::to_string(row_id) + ", column " +
-                           std::to_string(column_id) + ":\n" + exception.what());
+    Fail("Exception while parsing CSV, row " + std::to_string(row_id) + ", column " + std::to_string(column_id) +
+         ":\n" + exception.what());
   }
 
   // Transform the field_offsets to segments and add segments to chunk.

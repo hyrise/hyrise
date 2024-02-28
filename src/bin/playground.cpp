@@ -129,7 +129,5 @@ int main() {
 
   Hyrise::get().scheduler()->finish();
 
-  
-
   return 0;
 }

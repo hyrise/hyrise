@@ -1,5 +1,3 @@
-#include "lib/optimizer/strategy/strategy_base_test.hpp"
-
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/static_table_node.hpp"
@@ -7,6 +5,7 @@
 #include "optimizer/strategy/in_expression_rewrite_rule.hpp"
 #include "statistics/cardinality_estimator.hpp"
 #include "storage/table.hpp"
+#include "strategy_base_test.hpp"
 
 namespace hyrise {
 

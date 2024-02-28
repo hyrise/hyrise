@@ -1,5 +1,11 @@
 #include "lossless_cast.hpp"
 
+#include <optional>
+
+#include <boost/variant/apply_visitor.hpp>
+
+#include "all_type_variant.hpp"
+#include "null_value.hpp"
 #include "resolve_type.hpp"
 
 namespace hyrise {

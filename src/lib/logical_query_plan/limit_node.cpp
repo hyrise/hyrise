@@ -1,11 +1,13 @@
 #include "limit_node.hpp"
 
+#include <memory>
 #include <sstream>
 #include <string>
 
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_utils.hpp"
-#include "utils/assert.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
+#include "logical_query_plan/data_dependencies/unique_column_combination.hpp"
 
 namespace hyrise {
 

@@ -1,6 +1,8 @@
 #pragma once
 
 #include <memory>
+#include <unordered_map>
+#include <unordered_set>
 
 #include "statistics/cardinality_estimation_cache.hpp"
 #include "types.hpp"

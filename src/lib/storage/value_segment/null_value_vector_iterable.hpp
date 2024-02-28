@@ -1,6 +1,7 @@
 #pragma once
 
 #include <iterator>
+#include <memory>
 #include <utility>
 
 #include "storage/segment_iterables.hpp"

@@ -1,16 +1,31 @@
 #include "jcch_benchmark_item_runner.hpp"
 
+#include <atomic>
+#include <cstddef>
+#include <cstdint>
+#include <cstdlib>
+#include <filesystem>
 #include <fstream>
+#include <iostream>
 #include <memory>
 #include <random>
+#include <sstream>
 #include <string>
+#include <string_view>
+#include <vector>
 
+#include <boost/algorithm/string/replace.hpp>
 #include <boost/date_time/gregorian/gregorian.hpp>
-#include <boost/date_time/posix_time/posix_time.hpp>
 
+#include "abstract_benchmark_item_runner.hpp"
 #include "benchmark_config.hpp"
+#include "benchmark_sql_executor.hpp"
+#include "sql/sql_pipeline_statement.hpp"
+#include "tpch/tpch_benchmark_item_runner.hpp"
 #include "tpch/tpch_constants.hpp"
 #include "tpch/tpch_queries.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 #include "utils/date_time_utils.hpp"
 #include "utils/string_utils.hpp"
 #include "utils/timer.hpp"
@@ -43,7 +58,7 @@ JCCHBenchmarkItemRunner::JCCHBenchmarkItemRunner(const bool skewed, const std::s
 }
 
 std::string JCCHBenchmarkItemRunner::item_name(const BenchmarkItemID item_id) const {
-  Assert(item_id < 22u, "item_id out of range.");
+  Assert(item_id < 22, "item_id out of range.");
   return std::string("JCC-H ") + (_skewed ? "(skewed) " : "(normal) ") + (item_id + 1 < 10 ? "0" : "") +
          std::to_string(item_id + 1);
 }
@@ -63,9 +78,8 @@ void JCCHBenchmarkItemRunner::_load_params() {
     Assert(std::filesystem::exists(dbgen_queries_path),
            std::string{"Query templates not found at "} + dbgen_queries_path);
 
-    // NOLINTBEGIN(concurrency-mt-unsafe)
-    // clang-tidy complains that system() is not thread-safe. We can ignore this warning, because _load_params is only
-    // called in the constructor once.
+    // NOLINTBEGIN(concurrency-mt-unsafe): std::system() is not thread-safe. We can ignore this warning, because
+    // _load_params is only called in the constructor once.
 
     // Create local directory and copy query templates if needed
     const auto local_queries_dir_created = std::filesystem::create_directory(local_queries_path);
@@ -73,7 +87,7 @@ void JCCHBenchmarkItemRunner::_load_params() {
     if (local_queries_dir_created) {
       auto cmd = std::stringstream{};
       cmd << "cd " << local_queries_path << " && ln -s " << _dbgen_path << "/queries/*.sql .";
-      auto ret = system(cmd.str().c_str());
+      const auto ret = std::system(cmd.str().c_str());
       Assert(!ret, "Creating symlinks to query templates failed.");
     }
 
@@ -84,12 +98,12 @@ void JCCHBenchmarkItemRunner::_load_params() {
       cmd << "cd " << local_queries_path << " && " << _dbgen_path << "/qgen " << (_skewed ? "-k" : "") << " -s "
           << _scale_factor << " -b " << _dbgen_path << "/dists.dss -r " << seed << " -l " << params_path
           << " >/dev/null";
-      auto ret = system(cmd.str().c_str());
+      const auto ret = std::system(cmd.str().c_str());
       Assert(!ret, "Calling qgen failed.");
     }
     // NOLINTEND(concurrency-mt-unsafe)
 
-    std::cout << " (" << timer.lap_formatted() << ")" << std::endl;
+    std::cout << " (" << timer.lap_formatted() << ")\n";
   }
 
   // Open the params file, which looks like this:
@@ -109,8 +123,6 @@ void JCCHBenchmarkItemRunner::_load_params() {
 }
 
 bool JCCHBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, BenchmarkSQLExecutor& sql_executor) {
-  using namespace std::string_literals;  // NOLINT
-
   const auto& this_item_params = _all_params[item_id];
 
   // Choose a random parameterization from _all_params
@@ -131,22 +143,22 @@ bool JCCHBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, Be
       // dereferencing the optionals.
       const auto date = date_interval(boost::gregorian::date{1998, 12, 01}, -std::stoi(raw_params_iter->at(0)),
                                       DatetimeComponent::Day);
-      parameters.emplace_back("'"s + date_to_string(date) + "'");
+      parameters.emplace_back("'" + date_to_string(date) + "'");
       break;
     }
 
     case 2 - 1: {
       parameters.emplace_back(raw_params_iter->at(0));
-      parameters.emplace_back("'%"s + raw_params_iter->at(1) + "'");
-      parameters.emplace_back("'"s + raw_params_iter->at(2) + "'");
-      parameters.emplace_back("'"s + raw_params_iter->at(2) + "'");
+      parameters.emplace_back("'%" + raw_params_iter->at(1) + "'");
+      parameters.emplace_back("'" + raw_params_iter->at(2) + "'");
+      parameters.emplace_back("'" + raw_params_iter->at(2) + "'");
       break;
     }
 
     case 3 - 1: {
-      parameters.emplace_back("'"s + raw_params_iter->at(0) + "'");
-      parameters.emplace_back("'"s + raw_params_iter->at(1) + "'");
-      parameters.emplace_back("'"s + raw_params_iter->at(1) + "'");
+      parameters.emplace_back("'" + raw_params_iter->at(0) + "'");
+      parameters.emplace_back("'" + raw_params_iter->at(1) + "'");
+      parameters.emplace_back("'" + raw_params_iter->at(1) + "'");
       break;
     }
 
@@ -154,8 +166,8 @@ bool JCCHBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, Be
       const auto begin_date = string_to_timestamp(raw_params_iter->at(0))->date();
       const auto end_date = date_interval(begin_date, 3, DatetimeComponent::Month);
 
-      parameters.emplace_back("'"s + raw_params_iter->at(0) + "'");
-      parameters.emplace_back("'"s + date_to_string(end_date) + "'");
+      parameters.emplace_back("'" + raw_params_iter->at(0) + "'");
+      parameters.emplace_back("'" + date_to_string(end_date) + "'");
       break;
     }
 
@@ -163,9 +175,9 @@ bool JCCHBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, Be
       const auto begin_date = string_to_timestamp(raw_params_iter->at(1))->date();
       const auto end_date = date_interval(begin_date, 1, DatetimeComponent::Year);
 
-      parameters.emplace_back("'"s + raw_params_iter->at(0) + "'");
-      parameters.emplace_back("'"s + raw_params_iter->at(1) + "'");
-      parameters.emplace_back("'"s + date_to_string(end_date) + "'");
+      parameters.emplace_back("'" + raw_params_iter->at(0) + "'");
+      parameters.emplace_back("'" + raw_params_iter->at(1) + "'");
+      parameters.emplace_back("'" + date_to_string(end_date) + "'");
       break;
     }
 
@@ -173,8 +185,8 @@ bool JCCHBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, Be
       const auto begin_date = string_to_timestamp(raw_params_iter->at(0))->date();
       const auto end_date = date_interval(begin_date, 1, DatetimeComponent::Year);
 
-      parameters.emplace_back("'"s + raw_params_iter->at(0) + "'");
-      parameters.emplace_back("'"s + date_to_string(end_date) + "'");
+      parameters.emplace_back("'" + raw_params_iter->at(0) + "'");
+      parameters.emplace_back("'" + date_to_string(end_date) + "'");
       parameters.emplace_back(raw_params_iter->at(1));
       parameters.emplace_back(raw_params_iter->at(1));
       parameters.emplace_back(raw_params_iter->at(2));
@@ -182,21 +194,21 @@ bool JCCHBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, Be
     }
 
     case 7 - 1: {
-      parameters.emplace_back("'"s + raw_params_iter->at(0) + "'");
-      parameters.emplace_back("'"s + raw_params_iter->at(1) + "'");
-      parameters.emplace_back("'"s + raw_params_iter->at(1) + "'");
-      parameters.emplace_back("'"s + raw_params_iter->at(0) + "'");
-      parameters.emplace_back("'"s + raw_params_iter->at(2) + "'");
-      parameters.emplace_back("'"s + raw_params_iter->at(3) + "'");
+      parameters.emplace_back("'" + raw_params_iter->at(0) + "'");
+      parameters.emplace_back("'" + raw_params_iter->at(1) + "'");
+      parameters.emplace_back("'" + raw_params_iter->at(1) + "'");
+      parameters.emplace_back("'" + raw_params_iter->at(0) + "'");
+      parameters.emplace_back("'" + raw_params_iter->at(2) + "'");
+      parameters.emplace_back("'" + raw_params_iter->at(3) + "'");
       break;
     }
 
     case 8 - 1: {
-      parameters.emplace_back("'"s + raw_params_iter->at(0) + "'");
-      parameters.emplace_back("'"s + raw_params_iter->at(1) + "'");
-      parameters.emplace_back("'"s + raw_params_iter->at(2) + "'");
-      parameters.emplace_back("'"s + raw_params_iter->at(3) + "'");
-      parameters.emplace_back("'"s + raw_params_iter->at(4) + "'");
+      parameters.emplace_back("'" + raw_params_iter->at(0) + "'");
+      parameters.emplace_back("'" + raw_params_iter->at(1) + "'");
+      parameters.emplace_back("'" + raw_params_iter->at(2) + "'");
+      parameters.emplace_back("'" + raw_params_iter->at(3) + "'");
+      parameters.emplace_back("'" + raw_params_iter->at(4) + "'");
       break;
     }
 
@@ -207,20 +219,20 @@ bool JCCHBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, Be
         warned_performance = true;
       }
 
-      parameters.emplace_back("'%"s + raw_params_iter->at(0) + "%'");
+      parameters.emplace_back("'%" + raw_params_iter->at(0) + "%'");
       break;
     }
 
     case 10 - 1: {
-      parameters.emplace_back("'"s + raw_params_iter->at(0) + "'");
-      parameters.emplace_back("'"s + raw_params_iter->at(1) + "'");
+      parameters.emplace_back("'" + raw_params_iter->at(0) + "'");
+      parameters.emplace_back("'" + raw_params_iter->at(1) + "'");
       break;
     }
 
     case 11 - 1: {
-      parameters.emplace_back("'"s + raw_params_iter->at(0) + "'");
+      parameters.emplace_back("'" + raw_params_iter->at(0) + "'");
       parameters.emplace_back(raw_params_iter->at(1));
-      parameters.emplace_back("'"s + raw_params_iter->at(0) + "'");
+      parameters.emplace_back("'" + raw_params_iter->at(0) + "'");
       break;
     }
 
@@ -228,15 +240,15 @@ bool JCCHBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, Be
       const auto begin_date = string_to_timestamp(raw_params_iter->at(2))->date();
       const auto end_date = date_interval(begin_date, 1, DatetimeComponent::Year);
 
-      parameters.emplace_back("'"s + raw_params_iter->at(0) + "'");
-      parameters.emplace_back("'"s + raw_params_iter->at(1) + "'");
-      parameters.emplace_back("'"s + raw_params_iter->at(2) + "'");
-      parameters.emplace_back("'"s + date_to_string(end_date) + "'");
+      parameters.emplace_back("'" + raw_params_iter->at(0) + "'");
+      parameters.emplace_back("'" + raw_params_iter->at(1) + "'");
+      parameters.emplace_back("'" + raw_params_iter->at(2) + "'");
+      parameters.emplace_back("'" + date_to_string(end_date) + "'");
       break;
     }
 
     case 13 - 1: {
-      parameters.emplace_back("'%"s + raw_params_iter->at(0) + '%' + raw_params_iter->at(1) + "%'");
+      parameters.emplace_back("'%" + raw_params_iter->at(0) + '%' + raw_params_iter->at(1) + "%'");
       break;
     }
 
@@ -244,8 +256,8 @@ bool JCCHBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, Be
       const auto begin_date = string_to_timestamp(raw_params_iter->at(0))->date();
       const auto end_date = date_interval(begin_date, 1, DatetimeComponent::Month);
 
-      parameters.emplace_back("'"s + raw_params_iter->at(0) + "'");
-      parameters.emplace_back("'"s + date_to_string(end_date) + "'");
+      parameters.emplace_back("'" + raw_params_iter->at(0) + "'");
+      parameters.emplace_back("'" + date_to_string(end_date) + "'");
       break;
     }
 
@@ -275,8 +287,8 @@ bool JCCHBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, Be
     }
 
     case 16 - 1: {
-      parameters.emplace_back("'"s + raw_params_iter->at(0) + "'");
-      parameters.emplace_back("'"s + raw_params_iter->at(1) + "'");
+      parameters.emplace_back("'" + raw_params_iter->at(0) + "'");
+      parameters.emplace_back("'" + raw_params_iter->at(1) + "'");
       for (auto index = size_t{0}; index < 8; ++index) {
         parameters.emplace_back(raw_params_iter->at(2 + index));
       }
@@ -284,8 +296,8 @@ bool JCCHBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, Be
     }
 
     case 17 - 1: {
-      parameters.emplace_back("'"s + raw_params_iter->at(0) + "'");
-      parameters.emplace_back("'"s + raw_params_iter->at(1) + "'");
+      parameters.emplace_back("'" + raw_params_iter->at(0) + "'");
+      parameters.emplace_back("'" + raw_params_iter->at(1) + "'");
       break;
     }
 
@@ -306,13 +318,13 @@ bool JCCHBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, Be
     }
 
     case 19 - 1: {
-      parameters.emplace_back("'"s + raw_params_iter->at(0) + "'");
+      parameters.emplace_back("'" + raw_params_iter->at(0) + "'");
       parameters.emplace_back(raw_params_iter->at(3));
       parameters.emplace_back(raw_params_iter->at(3));
-      parameters.emplace_back("'"s + raw_params_iter->at(1) + "'");
+      parameters.emplace_back("'" + raw_params_iter->at(1) + "'");
       parameters.emplace_back(raw_params_iter->at(4));
       parameters.emplace_back(raw_params_iter->at(4));
-      parameters.emplace_back("'"s + raw_params_iter->at(2) + "'");
+      parameters.emplace_back("'" + raw_params_iter->at(2) + "'");
       parameters.emplace_back(raw_params_iter->at(5));
       parameters.emplace_back(raw_params_iter->at(5));
 
@@ -323,26 +335,26 @@ bool JCCHBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, Be
       const auto begin_date = string_to_timestamp(raw_params_iter->at(1))->date();
       const auto end_date = date_interval(begin_date, 1, DatetimeComponent::Year);
 
-      parameters.emplace_back("'"s + raw_params_iter->at(0) + "%'");
-      parameters.emplace_back("'"s + raw_params_iter->at(1) + "'");
-      parameters.emplace_back("'"s + date_to_string(end_date) + "'");
-      parameters.emplace_back("'"s + raw_params_iter->at(2) + "'");
+      parameters.emplace_back("'" + raw_params_iter->at(0) + "%'");
+      parameters.emplace_back("'" + raw_params_iter->at(1) + "'");
+      parameters.emplace_back("'" + date_to_string(end_date) + "'");
+      parameters.emplace_back("'" + raw_params_iter->at(2) + "'");
       break;
     }
 
     case 21 - 1: {
-      parameters.emplace_back("'"s + raw_params_iter->at(0) + "'");
+      parameters.emplace_back("'" + raw_params_iter->at(0) + "'");
       break;
     }
 
     case 22 - 1: {
       // We need the same country code twice - have a look at the query
       for (auto index = size_t{0}; index < 7; ++index) {
-        parameters.emplace_back("'"s + raw_params_iter->at(index) + "'");
+        parameters.emplace_back("'" + raw_params_iter->at(index) + "'");
       }
 
       for (auto index = size_t{0}; index < 7; ++index) {
-        parameters.emplace_back("'"s + raw_params_iter->at(index) + "'");
+        parameters.emplace_back("'" + raw_params_iter->at(index) + "'");
       }
       break;
     }

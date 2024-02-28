@@ -1,10 +1,16 @@
 #include "projection_node.hpp"
 
+#include <memory>
 #include <sstream>
+#include <string>
+#include <vector>
 
 #include "expression/expression_utils.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
+#include "logical_query_plan/data_dependencies/functional_dependency.hpp"
+#include "logical_query_plan/data_dependencies/unique_column_combination.hpp"
 #include "lqp_utils.hpp"
-#include "resolve_type.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {
@@ -16,9 +22,7 @@ std::string ProjectionNode::description(const DescriptionMode mode) const {
   const auto expression_mode = _expression_description_mode(mode);
 
   auto stream = std::stringstream{};
-
   stream << "[Projection] " << expression_descriptions(node_expressions, expression_mode);
-
   return stream.str();
 }
 

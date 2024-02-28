@@ -6,8 +6,7 @@
 namespace hyrise {
 
 struct SQLIdentifier final {
-  SQLIdentifier(const std::string& init_column_name, const std::optional<std::string>& init_table_name =
-                                                         std::nullopt);  // NOLINT - Implicit conversion is intended
+  SQLIdentifier(const std::string& init_column_name, const std::optional<std::string>& init_table_name = std::nullopt);
 
   bool operator==(const SQLIdentifier& rhs) const;
 

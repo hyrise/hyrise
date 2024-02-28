@@ -1,7 +1,6 @@
 #include <memory>
 
 #include "base_test.hpp"
-
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/validate_node.hpp"
 

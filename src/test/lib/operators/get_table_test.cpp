@@ -1,5 +1,4 @@
 #include "base_test.hpp"
-
 #include "concurrency/transaction_context.hpp"
 #include "expression/expression_functional.hpp"
 #include "hyrise.hpp"

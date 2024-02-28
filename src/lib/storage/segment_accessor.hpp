@@ -3,6 +3,7 @@
 #include <memory>
 #include <optional>
 #include <type_traits>
+#include <vector>
 
 #include "storage/base_segment_accessor.hpp"
 #include "storage/dictionary_segment.hpp"

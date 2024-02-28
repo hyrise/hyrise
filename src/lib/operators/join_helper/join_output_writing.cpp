@@ -1,12 +1,27 @@
 #include "join_output_writing.hpp"
 
+#include <algorithm>
+#include <cstddef>
+#include <functional>
+#include <iterator>
+#include <memory>
+#include <optional>
 #include <unordered_map>
+#include <utility>
+#include <vector>
 
-#include <boost/functional/hash_fwd.hpp>
+#include <boost/container_hash/hash.hpp>
 
 #include "hyrise.hpp"
+#include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
-#include "storage/segment_iterate.hpp"
+#include "storage/chunk.hpp"
+#include "storage/pos_lists/abstract_pos_list.hpp"
+#include "storage/pos_lists/row_id_pos_list.hpp"
+#include "storage/reference_segment.hpp"
+#include "storage/table.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace {
 
@@ -78,8 +93,7 @@ PosListsByColumn setup_pos_list_mapping(const std::shared_ptr<const Table>& inpu
  * @param pos_list contains the positions of rows to use from the input table
  */
 void write_output_segments(Segments& output_segments, const std::shared_ptr<const Table>& input_table,
-                           const PosListsByColumn& input_pos_lists_by_column,
-                           std::shared_ptr<RowIDPosList>& pos_list) {
+                           const PosListsByColumn& input_pos_lists_by_column, std::shared_ptr<RowIDPosList>& pos_list) {
   auto output_pos_list_cache = std::unordered_map<std::shared_ptr<PosLists>, std::shared_ptr<RowIDPosList>>{};
 
   auto dummy_table = std::shared_ptr<Table>{};

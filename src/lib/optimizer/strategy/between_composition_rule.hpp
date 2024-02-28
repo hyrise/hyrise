@@ -6,7 +6,6 @@
 
 #include "abstract_rule.hpp"
 #include "expression/expression_functional.hpp"
-
 #include "types.hpp"
 
 namespace hyrise {

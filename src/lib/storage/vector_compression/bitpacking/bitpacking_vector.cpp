@@ -1,7 +1,17 @@
 #include "bitpacking_vector.hpp"
 
+#include <algorithm>
+#include <cstddef>
+#include <memory>
+#include <type_traits>
+#include <utility>
+
 #include "bitpacking_decompressor.hpp"
 #include "bitpacking_iterator.hpp"
+#include "storage/vector_compression/base_compressed_vector.hpp"
+#include "storage/vector_compression/base_vector_decompressor.hpp"
+#include "storage/vector_compression/bitpacking/bitpacking_vector_type.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 

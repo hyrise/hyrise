@@ -1,9 +1,7 @@
 #include "base_test.hpp"
-
-#include "../benchmarklib/tpch/tpch_benchmark_item_runner.hpp"
 #include "hyrise.hpp"
-
-#include "./plugin_test_utils.hpp"
+#include "plugin_test_utils.hpp"
+#include "tpch/tpch_benchmark_item_runner.hpp"
 
 namespace hyrise {
 

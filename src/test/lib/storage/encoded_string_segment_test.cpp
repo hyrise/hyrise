@@ -4,13 +4,11 @@
 #include <sstream>
 
 #include "encoding_test.hpp"
-
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/encoding_type.hpp"
 #include "storage/resolve_encoded_segment_type.hpp"
 #include "storage/segment_encoding_utils.hpp"
 #include "storage/value_segment.hpp"
-
 #include "types.hpp"
 
 namespace hyrise {
