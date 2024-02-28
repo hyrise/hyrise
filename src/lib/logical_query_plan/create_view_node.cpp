@@ -1,8 +1,14 @@
 #include "create_view_node.hpp"
 
+#include <cstddef>
+#include <memory>
 #include <sstream>
 
-#include "lqp_utils.hpp"
+#include <boost/container_hash/hash.hpp>
+
+#include "logical_query_plan/abstract_lqp_node.hpp"
+#include "logical_query_plan/abstract_non_query_node.hpp"
+#include "storage/lqp_view.hpp"
 
 namespace hyrise {
 
@@ -28,7 +34,8 @@ std::string CreateViewNode::description(const DescriptionMode /*mode*/) const {
 }
 
 size_t CreateViewNode::_on_shallow_hash() const {
-  auto hash = boost::hash_value(view_name);
+  auto hash = size_t{0};
+  boost::hash_combine(hash, view_name);
   boost::hash_combine(hash, view);
   boost::hash_combine(hash, if_not_exists);
   return hash;

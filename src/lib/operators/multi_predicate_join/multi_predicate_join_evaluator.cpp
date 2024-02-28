@@ -1,11 +1,17 @@
 #include "multi_predicate_join_evaluator.hpp"
 
+#include <memory>
+#include <type_traits>
+#include <utility>
 #include <vector>
 
 #include "operators/operator_join_predicate.hpp"
+#include "resolve_type.hpp"
+#include "storage/base_segment_accessor.hpp"
 #include "storage/table.hpp"
 #include "type_comparison.hpp"
 #include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 
@@ -56,10 +62,10 @@ bool MultiPredicateJoinEvaluator::satisfies_all_predicates(const RowID& left_row
 template <typename T>
 std::vector<std::unique_ptr<AbstractSegmentAccessor<T>>> MultiPredicateJoinEvaluator::_create_accessors(
     const Table& table, const ColumnID column_id) {
-  std::vector<std::unique_ptr<AbstractSegmentAccessor<T>>> accessors;
+  auto accessors = std::vector<std::unique_ptr<AbstractSegmentAccessor<T>>>{};
   accessors.resize(table.chunk_count());
   const auto chunk_count = table.chunk_count();
-  for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk = table.get_chunk(chunk_id);
     Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 

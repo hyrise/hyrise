@@ -1,5 +1,4 @@
 #include "base_test.hpp"
-
 #include "storage/table.hpp"
 #include "utils/load_table.hpp"
 
@@ -16,14 +15,14 @@ TEST_F(LoadTableTest, EmptyTableFromHeader) {
   EXPECT_TABLE_EQ_UNORDERED(tbl_header_table, expected_table);
 }
 
-TEST_F(LoadTableTest, AllChunksFinalized) {
+TEST_F(LoadTableTest, AllChunksImmutable) {
   const auto table = load_table("resources/test_data/tbl/float_int.tbl", ChunkOffset{2});
 
   EXPECT_EQ(table->row_count(), 3);
+  const auto chunk_count = table->chunk_count();
   EXPECT_EQ(table->chunk_count(), 2);
 
-  for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
-    // During finalization, chunks are set to immutable
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     EXPECT_FALSE(table->get_chunk(chunk_id)->is_mutable());
   }
 }

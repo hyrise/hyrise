@@ -1,11 +1,22 @@
 #include "prepared_plan.hpp"
 
+#include <cstddef>
+#include <memory>
+#include <ostream>
+#include <string>
+#include <unordered_map>
+#include <unordered_set>
+#include <vector>
+
+#include <boost/container_hash/hash.hpp>
+
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_subquery_expression.hpp"
 #include "expression/placeholder_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace {
 
@@ -67,9 +78,10 @@ std::shared_ptr<PreparedPlan> PreparedPlan::deep_copy() const {
 }
 
 size_t PreparedPlan::hash() const {
-  auto hash = lqp->hash();
+  auto hash = size_t{0};
+  boost::hash_combine(hash, lqp->hash());
   for (const auto& parameter_id : parameter_ids) {
-    boost::hash_combine(hash, static_cast<size_t>(parameter_id));
+    boost::hash_combine(hash, parameter_id);
   }
   return hash;
 }

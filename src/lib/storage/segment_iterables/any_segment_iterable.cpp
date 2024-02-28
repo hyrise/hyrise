@@ -1,7 +1,14 @@
 #include "any_segment_iterable.hpp"
 
+#include <optional>
+#include <type_traits>
+#include <utility>
+
+#include "all_type_variant.hpp"
+#include "resolve_type.hpp"
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/segment_iterables/any_segment_iterable.hpp"
+#include "types.hpp"
 
 namespace hyrise::detail {
 template <typename T>

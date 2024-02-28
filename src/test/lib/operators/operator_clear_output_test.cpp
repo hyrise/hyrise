@@ -2,7 +2,6 @@
 #include <vector>
 
 #include "base_test.hpp"
-
 #include "expression/abstract_expression.hpp"
 #include "expression/pqp_column_expression.hpp"
 #include "expression/window_function_expression.hpp"

@@ -1,15 +1,30 @@
 #include "lqp_utils.hpp"
 
+#include <algorithm>
+#include <cstddef>
+#include <memory>
+#include <optional>
+#include <set>
+#include <string>
+#include <unordered_set>
+#include <utility>
+#include <vector>
+
+#include "expression/abstract_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
+#include "expression/lqp_subquery_expression.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/change_meta_table_node.hpp"
+#include "logical_query_plan/data_dependencies/functional_dependency.hpp"
+#include "logical_query_plan/data_dependencies/unique_column_combination.hpp"
 #include "logical_query_plan/insert_node.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
-#include "logical_query_plan/static_table_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/union_node.hpp"
 #include "logical_query_plan/update_node.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace {
@@ -488,8 +503,9 @@ bool contains_matching_unique_column_combination(const UniqueColumnCombinations&
   // Look for a unique column combination that is based on a subset of the given expressions.
   for (const auto& ucc : unique_column_combinations) {
     if (ucc.expressions.size() <= expressions.size() &&
-        std::all_of(ucc.expressions.cbegin(), ucc.expressions.cend(),
-                    [&](const auto& ucc_expression) { return expressions.contains(ucc_expression); })) {
+        std::all_of(ucc.expressions.cbegin(), ucc.expressions.cend(), [&](const auto& ucc_expression) {
+          return expressions.contains(ucc_expression);
+        })) {
       // Found a matching UCC.
       return true;
     }

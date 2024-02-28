@@ -1,5 +1,10 @@
 #pragma once
 
+#include <memory>
+#include <sstream>
+#include <unordered_set>
+#include <vector>
+
 #include "expression/abstract_expression.hpp"
 #include "types.hpp"
 

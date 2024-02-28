@@ -1,9 +1,20 @@
 #include "static_table_node.hpp"
 
+#include <cstddef>
+#include <functional>
+#include <memory>
 #include <sstream>
+#include <string>
+#include <vector>
+
+#include <boost/container_hash/hash.hpp>
 
 #include "expression/lqp_column_expression.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
+#include "logical_query_plan/data_dependencies/unique_column_combination.hpp"
 #include "lqp_utils.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 #include "utils/print_utils.hpp"
 
 namespace hyrise {
@@ -20,7 +31,7 @@ std::string StaticTableNode::description(const DescriptionMode /*mode*/) const {
     const auto& column_definition = table->column_definitions()[column_id];
     stream << column_definition;
 
-    if (column_id + 1u < table->column_definitions().size()) {
+    if (column_id + size_t{1} < table->column_definitions().size()) {
       stream << ", ";
     }
   }
@@ -83,7 +94,7 @@ size_t StaticTableNode::_on_shallow_hash() const {
     hash = hash ^ table_key_constraint.hash();
   }
 
-  return boost::hash_value(hash - soft_key_constraints.size());
+  return std::hash<size_t>{}(hash - soft_key_constraints.size());
 }
 
 std::shared_ptr<AbstractLQPNode> StaticTableNode::_on_shallow_copy(LQPNodeMapping& /*node_mapping*/) const {

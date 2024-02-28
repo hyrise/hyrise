@@ -1,7 +1,11 @@
 #pragma once
 
 #include <functional>
+#include <memory>
 #include <queue>
+#include <string>
+#include <unordered_map>
+#include <vector>
 
 #include "abstract_expression.hpp"
 #include "logical_query_plan/lqp_utils.hpp"

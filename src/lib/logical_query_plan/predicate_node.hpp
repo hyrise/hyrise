@@ -1,5 +1,8 @@
 #pragma once
 
+#include <memory>
+#include <string>
+
 #include "abstract_lqp_node.hpp"
 #include "all_parameter_variant.hpp"
 

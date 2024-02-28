@@ -1,13 +1,26 @@
 #include "stored_table_node.hpp"
 
-#include "expression/expression_functional.hpp"
+#include <algorithm>
+#include <cstddef>
+#include <memory>
+#include <ostream>
+#include <set>
+#include <sstream>
+#include <string>
+#include <vector>
+
+#include <boost/container_hash/hash.hpp>
+
 #include "expression/expression_utils.hpp"
+#include "expression/lqp_column_expression.hpp"
 #include "hyrise.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
+#include "logical_query_plan/data_dependencies/unique_column_combination.hpp"
 #include "lqp_utils.hpp"
-#include "statistics/table_statistics.hpp"
 #include "storage/index/chunk_index_statistics.hpp"
+#include "storage/index/table_index_statistics.hpp"
 #include "storage/storage_manager.hpp"
-#include "storage/table.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/pruning_utils.hpp"
 
@@ -25,8 +38,6 @@ bool contains_any_column_id(const ColumnIDs& search_columns, const std::vector<C
 }  // namespace
 
 namespace hyrise {
-
-using namespace expression_functional;  // NOLINT(build/namespaces)
 
 StoredTableNode::StoredTableNode(const std::string& init_table_name)
     : AbstractLQPNode(LQPNodeType::StoredTable), table_name(init_table_name) {}
@@ -72,7 +83,9 @@ const std::vector<ColumnID>& StoredTableNode::pruned_column_ids() const {
 void StoredTableNode::set_prunable_subquery_predicates(
     const std::vector<std::weak_ptr<AbstractLQPNode>>& predicate_nodes) {
   DebugAssert(std::all_of(predicate_nodes.cbegin(), predicate_nodes.cend(),
-                          [](const auto& node) { return node.lock() && node.lock()->type == LQPNodeType::Predicate; }),
+                          [](const auto& node) {
+                            return node.lock() && node.lock()->type == LQPNodeType::Predicate;
+                          }),
               "No PredicateNode set as prunable predicate.");
   _prunable_subquery_predicates = predicate_nodes;
 }
@@ -236,10 +249,10 @@ size_t StoredTableNode::_on_shallow_hash() const {
   auto hash = size_t{0};
   boost::hash_combine(hash, table_name);
   for (const auto& pruned_chunk_id : _pruned_chunk_ids) {
-    boost::hash_combine(hash, static_cast<size_t>(pruned_chunk_id));
+    boost::hash_combine(hash, pruned_chunk_id);
   }
   for (const auto& pruned_column_id : _pruned_column_ids) {
-    boost::hash_combine(hash, static_cast<size_t>(pruned_column_id));
+    boost::hash_combine(hash, pruned_column_id);
   }
   // We intentionally force a hash collision for StoredTableNodes with the same number of prunable subquery predicates
   // even though these predicates are different. Since we assume that (i) these predicates are not often set and (ii) we

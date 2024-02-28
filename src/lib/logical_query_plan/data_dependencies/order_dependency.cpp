@@ -1,5 +1,8 @@
 #include "order_dependency.hpp"
 
+#include <memory>
+#include <vector>
+
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_column_expression.hpp"

@@ -1,6 +1,18 @@
 #include "sort_node.hpp"
 
+#include <cstddef>
+#include <memory>
+#include <sstream>
+#include <string>
+#include <vector>
+
+#include <boost/container_hash/hash.hpp>
+
+#include "expression/abstract_expression.hpp"
 #include "expression/expression_utils.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
+#include "logical_query_plan/data_dependencies/unique_column_combination.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {
@@ -15,7 +27,6 @@ std::string SortNode::description(const DescriptionMode mode) const {
   const auto expression_mode = _expression_description_mode(mode);
 
   auto stream = std::stringstream{};
-
   stream << "[Sort] ";
 
   const auto node_expression_count = node_expressions.size();
@@ -23,7 +34,7 @@ std::string SortNode::description(const DescriptionMode mode) const {
     stream << node_expressions[expression_idx]->description(expression_mode) << " ";
     stream << "(" << sort_modes[expression_idx] << ")";
 
-    if (expression_idx + 1u < node_expression_count) {
+    if (expression_idx + size_t{1} < node_expression_count) {
       stream << ", ";
     }
   }

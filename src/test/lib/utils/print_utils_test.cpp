@@ -1,5 +1,4 @@
 #include "base_test.hpp"
-
 #include "logical_query_plan/mock_node.hpp"
 #include "storage/table.hpp"
 #include "utils/print_utils.hpp"

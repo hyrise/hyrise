@@ -1,5 +1,4 @@
 #include "base_test.hpp"
-
 #include "utils/date_time_utils.hpp"
 
 namespace hyrise {

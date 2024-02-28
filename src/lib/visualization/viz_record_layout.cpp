@@ -1,7 +1,10 @@
 #include "viz_record_layout.hpp"
 
-#include <iostream>
+#include <cstddef>
 #include <sstream>
+#include <string>
+
+#include <boost/variant/get.hpp>
 
 namespace hyrise {
 
@@ -38,7 +41,7 @@ std::string VizRecordLayout::to_label_string() const {
 }
 
 std::string VizRecordLayout::escape(const std::string& input) {
-  std::ostringstream stream;
+  auto stream = std::ostringstream{};
 
   for (const auto& character : input) {
     switch (character) {

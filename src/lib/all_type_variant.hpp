@@ -1,17 +1,20 @@
 #pragma once
 
+#include <algorithm>
 #include <cstdint>
+#include <functional>
+#include <ostream>
+#include <string>
+#include <utility>
 
 #include <boost/bimap.hpp>
 #include <boost/hana/core/to.hpp>
 #include <boost/hana/ext/boost/mpl/vector.hpp>
 #include <boost/hana/fold.hpp>
-#include <boost/hana/map.hpp>
 #include <boost/hana/prepend.hpp>
 #include <boost/hana/transform.hpp>
 #include <boost/hana/tuple.hpp>
 #include <boost/hana/zip.hpp>
-#include <boost/mpl/push_front.hpp>
 #include <boost/preprocessor/seq/enum.hpp>
 #include <boost/preprocessor/seq/for_each.hpp>
 #include <boost/preprocessor/seq/size.hpp>
@@ -53,7 +56,9 @@ static constexpr auto data_type_enum_values =
     hana::make_tuple(BOOST_PP_SEQ_ENUM(BOOST_PP_SEQ_TRANSFORM(APPEND_ENUM_NAMESPACE, _, DATA_TYPE_ENUM_VALUES)));
 static constexpr auto data_type_strings = hana::make_tuple(BOOST_PP_SEQ_ENUM(DATA_TYPE_STRINGS));
 
-constexpr auto to_pair = [](auto tuple) { return hana::make_pair(hana::at_c<0>(tuple), hana::at_c<1>(tuple)); };
+constexpr auto to_pair = [](auto tuple) {
+  return hana::make_pair(hana::at_c<0>(tuple), hana::at_c<1>(tuple));
+};
 
 static constexpr auto data_type_enum_pairs = hana::transform(hana::zip(data_type_enum_values, data_types), to_pair);
 static constexpr auto data_type_enum_string_pairs =

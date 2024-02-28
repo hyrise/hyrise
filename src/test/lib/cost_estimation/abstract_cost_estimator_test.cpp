@@ -1,7 +1,6 @@
 #include <unordered_map>
 
 #include "base_test.hpp"
-
 #include "cost_estimation/abstract_cost_estimator.hpp"
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/mock_node.hpp"
@@ -26,7 +25,7 @@ class MockCostEstimator : public AbstractCostEstimator {
     Fail("Shouldn't be called");
   }
 
-  Cost estimate_node_cost(const std::shared_ptr<AbstractLQPNode>& node) const override {
+  Cost estimate_node_cost(const std::shared_ptr<AbstractLQPNode>& node, const bool cacheable = true) const override {
     return mock_costs.at(node);
   }
 };

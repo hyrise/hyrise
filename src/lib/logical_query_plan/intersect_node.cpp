@@ -1,6 +1,19 @@
 #include "intersect_node.hpp"
 
+#include <cstddef>
+#include <functional>
+#include <memory>
+#include <string>
+#include <vector>
+
+#include "magic_enum.hpp"
+
+#include "expression/abstract_expression.hpp"
 #include "expression/expression_utils.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
+#include "logical_query_plan/data_dependencies/functional_dependency.hpp"
+#include "logical_query_plan/data_dependencies/unique_column_combination.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {
@@ -44,7 +57,7 @@ FunctionalDependencies IntersectNode::non_trivial_functional_dependencies() cons
 }
 
 size_t IntersectNode::_on_shallow_hash() const {
-  return boost::hash_value(set_operation_mode);
+  return std::hash<SetOperationMode>{}(set_operation_mode);
 }
 
 std::shared_ptr<AbstractLQPNode> IntersectNode::_on_shallow_copy(LQPNodeMapping& /*node_mapping*/) const {

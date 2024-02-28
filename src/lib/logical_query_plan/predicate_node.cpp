@@ -1,16 +1,15 @@
 #include "predicate_node.hpp"
 
+#include <cstddef>
+#include <functional>
+#include <memory>
 #include <sstream>
+#include <string>
 
-#include "expression/between_expression.hpp"
-#include "expression/binary_predicate_expression.hpp"
 #include "expression/expression_utils.hpp"
-#include "expression/is_null_expression.hpp"
-#include "expression/lqp_column_expression.hpp"
-#include "expression/value_expression.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
+#include "logical_query_plan/data_dependencies/unique_column_combination.hpp"
 #include "operators/operator_scan_predicate.hpp"
-#include "types.hpp"
-#include "utils/assert.hpp"
 
 namespace hyrise {
 
@@ -38,7 +37,7 @@ std::shared_ptr<AbstractExpression> PredicateNode::predicate() const {
 }
 
 size_t PredicateNode::_on_shallow_hash() const {
-  return boost::hash_value(scan_type);
+  return std::hash<ScanType>{}(scan_type);
 }
 
 std::shared_ptr<AbstractLQPNode> PredicateNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {

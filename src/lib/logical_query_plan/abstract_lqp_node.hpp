@@ -1,7 +1,10 @@
 #pragma once
 
 #include <array>
+#include <memory>
+#include <string>
 #include <unordered_map>
+#include <vector>
 
 #include "enable_make_for_lqp_node.hpp"
 #include "logical_query_plan/data_dependencies/functional_dependency.hpp"

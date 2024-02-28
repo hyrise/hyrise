@@ -1,5 +1,13 @@
 #pragma once
 
+#include <memory>
+#include <optional>
+#include <string>
+#include <utility>
+#include <vector>
+
+#include <boost/variant.hpp>
+
 #include "abstract_lqp_node.hpp"
 #include "storage/constraints/table_key_constraint.hpp"
 #include "storage/constraints/table_order_constraint.hpp"

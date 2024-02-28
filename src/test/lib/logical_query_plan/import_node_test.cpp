@@ -1,5 +1,4 @@
 #include "base_test.hpp"
-
 #include "expression/expression_utils.hpp"
 #include "import_export/file_type.hpp"
 #include "logical_query_plan/import_node.hpp"

@@ -1,6 +1,15 @@
 #include "functional_dependency.hpp"
 
-#include <boost/container_hash/hash.hpp>
+#include <algorithm>
+#include <cstddef>
+#include <functional>
+#include <memory>
+#include <ostream>
+#include <utility>
+#include <vector>
+
+#include "expression/abstract_expression.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 
@@ -47,7 +56,7 @@ size_t FunctionalDependency::hash() const {
     hash = hash ^ expression->hash();
   }
 
-  return boost::hash_value(hash - determinants.size());
+  return std::hash<size_t>{}(hash - determinants.size());
 }
 
 std::ostream& operator<<(std::ostream& stream, const FunctionalDependency& expression) {

@@ -1,5 +1,9 @@
 #pragma once
 
+#include <memory>
+#include <string>
+#include <vector>
+
 #include "abstract_non_query_node.hpp"
 #include "enable_make_for_lqp_node.hpp"
 #include "storage/table.hpp"

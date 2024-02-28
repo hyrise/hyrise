@@ -1,5 +1,9 @@
 #pragma once
 
+#include <memory>
+#include <string>
+#include <vector>
+
 #include "abstract_lqp_node.hpp"
 
 namespace hyrise {

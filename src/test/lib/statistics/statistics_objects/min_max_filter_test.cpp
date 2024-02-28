@@ -5,10 +5,9 @@
 #include <vector>
 
 #include "base_test.hpp"
-#include "utils/assert.hpp"
-
 #include "statistics/statistics_objects/min_max_filter.hpp"
 #include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 

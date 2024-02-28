@@ -1,12 +1,27 @@
 #include "subquery_to_join_rule.hpp"
 
+#include <algorithm>
+#include <cstddef>
+#include <iterator>
+#include <map>
+#include <memory>
+#include <optional>
+#include <queue>
+#include <string>
+#include <unordered_set>
+#include <utility>
+#include <vector>
+
 #include "expression/abstract_expression.hpp"
 #include "expression/abstract_predicate_expression.hpp"
+#include "expression/arithmetic_expression.hpp"
 #include "expression/binary_predicate_expression.hpp"
+#include "expression/correlated_parameter_expression.hpp"
 #include "expression/exists_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/in_expression.hpp"
+#include "expression/logical_expression.hpp"
 #include "expression/lqp_subquery_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
@@ -17,6 +32,7 @@
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/validate_node.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace {

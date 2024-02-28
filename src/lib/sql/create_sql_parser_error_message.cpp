@@ -1,9 +1,16 @@
 #include "create_sql_parser_error_message.hpp"
 
+#include <algorithm>
+#include <cstddef>
+#include <cstdint>
 #include <sstream>
+#include <string>
+#include <vector>
 
 #include <boost/algorithm/string/classification.hpp>
 #include <boost/algorithm/string/split.hpp>
+
+#include "SQLParserResult.h"
 
 namespace hyrise {
 

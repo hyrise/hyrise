@@ -1,26 +1,29 @@
 #include "column_pruning_rule.hpp"
 
+#include <algorithm>
+#include <cstddef>
+#include <memory>
+#include <string>
 #include <unordered_map>
+#include <vector>
 
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_column_expression.hpp"
 #include "expression/window_expression.hpp"
 #include "expression/window_function_expression.hpp"
-#include "hyrise.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
-#include "logical_query_plan/dummy_table_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
-#include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/union_node.hpp"
 #include "logical_query_plan/update_node.hpp"
-#include "logical_query_plan/window_node.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace {
 
@@ -36,8 +39,9 @@ void gather_expressions_not_computed_by_expression_evaluator(
   // required_expressions, as it is not a top-level expression.
 
   // If an expression that is not a top-level expression is already an input, we require it
-  if (std::find_if(input_expressions.begin(), input_expressions.end(),
-                   [&expression](const auto& other) { return *expression == *other; }) != input_expressions.end()) {
+  if (std::find_if(input_expressions.begin(), input_expressions.end(), [&expression](const auto& other) {
+        return *expression == *other;
+      }) != input_expressions.end()) {
     if (!top_level) {
       required_expressions.emplace(expression);
     }
