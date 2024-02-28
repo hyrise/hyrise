@@ -313,6 +313,8 @@ set(
     optimizer/strategy/in_expression_rewrite_rule.hpp
     optimizer/strategy/index_scan_rule.cpp
     optimizer/strategy/index_scan_rule.hpp
+    optimizer/strategy/join_avoidance_rule.cpp
+    optimizer/strategy/join_avoidance_rule.hpp
     optimizer/strategy/join_ordering_rule.cpp
     optimizer/strategy/join_ordering_rule.hpp
     optimizer/strategy/join_predicate_ordering_rule.cpp

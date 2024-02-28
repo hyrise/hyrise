@@ -12,6 +12,7 @@
 #include "strategy/expression_reduction_rule.hpp"
 #include "strategy/in_expression_rewrite_rule.hpp"
 #include "strategy/index_scan_rule.hpp"
+#include "strategy/join_avoidance_rule.hpp"
 #include "strategy/join_ordering_rule.hpp"
 #include "strategy/join_predicate_ordering_rule.hpp"
 #include "strategy/join_to_predicate_rewrite_rule.hpp"
@@ -206,6 +207,11 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   optimizer->add_rule(std::make_unique<SubqueryToJoinRule>());
 
   optimizer->add_rule(std::make_unique<ColumnPruningRule>());
+
+  const auto allow_join_avoidance = std::getenv("JOIN_AVOIDANCE");
+  if (allow_join_avoidance && !std::strcmp(allow_join_avoidance, "1")) {
+    optimizer->add_rule(std::make_unique<JoinAvoidanceRule>());
+  }
 
   // Run the JoinToSemiJoinRule and the JoinToPredicateRewriteRule before the PredicatePlacementRule, as they might turn
   // joins into semi joins (which are treated as predicates) or predicates that can be pushed further down. For the same

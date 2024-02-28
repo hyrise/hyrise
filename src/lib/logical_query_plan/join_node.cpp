@@ -283,7 +283,7 @@ InclusionDependencies JoinNode::_output_inclusion_dependencies(
          "Could not resolve all join predicates.");
 
   // Add INDs from left input if left join keys are contained in right join keys.
-  if (right_input()->has_matching_ind(right_input_join_predicates, *left_input())) {
+  if (right_input()->has_matching_ind(left_input_join_predicates, right_input_join_predicates, *left_input())) {
     inclusion_dependencies.insert(left_inclusion_dependencies.cbegin(), left_inclusion_dependencies.cend());
   }
 
@@ -292,7 +292,7 @@ InclusionDependencies JoinNode::_output_inclusion_dependencies(
   }
 
   // Add INDs from right input if right join keys are contained in left join keys.
-  if (left_input()->has_matching_ind(left_input_join_predicates, *right_input())) {
+  if (left_input()->has_matching_ind(right_input_join_predicates, left_input_join_predicates, *right_input())) {
     inclusion_dependencies.insert(right_inclusion_dependencies.cbegin(), right_inclusion_dependencies.cend());
   }
 

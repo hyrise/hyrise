@@ -60,6 +60,12 @@ DependencyDiscoveryPlugin::DependencyDiscoveryPlugin() {
     _add_candidate_rule(std::make_unique<JoinToPredicateCandidateRule>());
   }
 
+  const auto allow_join_avoidance = std::getenv("JOIN_AVOIDANCE");
+  if (allow_join_avoidance && !std::strcmp(allow_join_avoidance, "1")) {
+    std::cout << "- Enable Join Avoidance" << std::endl;
+    Fail("JoinAvoidanceCandidateRule is not implemented.");
+  }
+
   _add_validation_rule(std::make_unique<UccValidationRule>());
   _add_validation_rule(std::make_unique<OdValidationRule>());
   _add_validation_rule(std::make_unique<IndValidationRule>());

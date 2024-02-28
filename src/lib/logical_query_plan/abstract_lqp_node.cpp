@@ -325,11 +325,13 @@ bool AbstractLQPNode::has_matching_ucc(const ExpressionUnorderedSet& expressions
   return contains_matching_unique_column_combination(unique_column_combinations, expressions);
 }
 
-bool AbstractLQPNode::has_matching_ind(const ExpressionUnorderedSet& expressions,
+bool AbstractLQPNode::has_matching_ind(const ExpressionUnorderedSet& foreign_key_expressions, const ExpressionUnorderedSet& key_expressions,
                                        const AbstractLQPNode& included_node) const {
-  Assert(!expressions.empty(), "Invalid input. Set of expressions should not be empty.");
-  DebugAssert(has_output_expressions(expressions),
+  Assert(!key_expressions.empty(), "Invalid input. Set of expressions should not be empty.");
+  DebugAssert(key_expressions.size() == foreign_key_expressions.size(), "Invlid IND requested.");
+  DebugAssert(has_output_expressions(key_expressions),
               "The given expressions are not a subset of the LQP's output expressions.");
+  DebugAssert(included_node.has_output_expressions(foreign_key_expressions), "The given expressions are not a subset of the LQP's output expressions.");
 
   // Check if there is an IND matching the expressions.
   const auto& inclusion_dependencies = this->inclusion_dependencies();
@@ -337,34 +339,39 @@ bool AbstractLQPNode::has_matching_ind(const ExpressionUnorderedSet& expressions
     return false;
   }
 
-  const auto& inds = find_matching_inclusion_dependencies(inclusion_dependencies, expressions);
+  const auto& inds = find_matching_inclusion_dependencies(inclusion_dependencies, key_expressions);
   if (inds.empty()) {
     return false;
   }
 
-  // Check that all referenced columns are still present in the other LQPNode.
-  const auto& output_expressions = included_node.output_expressions();
-  auto preserved_column_ids =
-      std::unordered_map<std::shared_ptr<Table>, std::unordered_set<ColumnID>>{output_expressions.size()};
-  for (const auto& expression : output_expressions) {
-    if (const auto& lqp_column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(expression)) {
-      const auto original_node = lqp_column_expression->original_node.lock();
-      Assert(original_node, "Could not resolve original node. LQP is invalid.");
-      if (original_node->type != LQPNodeType::StoredTable) {
-        continue;
-      }
-
-      const auto& stored_table_node = static_cast<const StoredTableNode&>(*original_node);
-      const auto& table = Hyrise::get().storage_manager.get_table(stored_table_node.table_name);
-      preserved_column_ids[table].emplace(lqp_column_expression->original_column_id);
+  // Check that the referenced columns match the requested columns.
+  auto required_column_ids_per_table =
+      std::unordered_map<std::shared_ptr<Table>, std::vector<ColumnID>>{};
+  for (const auto& expression : foreign_key_expressions) {
+    DebugAssert(expression->type == ExpressionType::LQPColumn, "Expected column expression.");
+    const auto& lqp_column_expression = static_cast<const LQPColumnExpression&>(*expression);
+    const auto original_node = lqp_column_expression.original_node.lock();
+    Assert(original_node, "Could not resolve original node. LQP is invalid.");
+    if (original_node->type != LQPNodeType::StoredTable) {
+      return false;
     }
+
+    const auto& stored_table_node = static_cast<const StoredTableNode&>(*original_node);
+    const auto& table = Hyrise::get().storage_manager.get_table(stored_table_node.table_name);
+    required_column_ids_per_table[table].emplace_back(lqp_column_expression.original_column_id);
   }
+  Assert(required_column_ids_per_table.size() == 1, "Invalid IND requested.");
+  const auto& [required_table, required_column_ids] = *required_column_ids_per_table.begin();
 
   for (const auto& ind : inds) {
-    const auto& ind_column_ids = ind.included_column_ids;
     const auto& original_table = ind.included_table;
-    if (std::all_of(ind_column_ids.cbegin(), ind_column_ids.cend(),
-                    [&](const auto column_id) { return preserved_column_ids[original_table].contains(column_id); })) {
+
+    if (original_table != required_table) {
+      continue;
+    }
+    const auto& ind_column_ids = ind.included_column_ids;
+    if (std::all_of(required_column_ids.cbegin(), required_column_ids.cend(),
+                    [&](const auto column_id) { return std::find(ind_column_ids.cbegin(), ind_column_ids.cend(), column_id) != ind_column_ids.cend(); })) {
       return true;
     }
   }
