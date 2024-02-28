@@ -1,6 +1,17 @@
 #include "read_buffer.hpp"
 
+#include <algorithm>
+#include <array>
+#include <cstddef>
+#include <iterator>
+#include <string>
+
+#include <boost/system/detail/error_code.hpp>
+
 #include "client_disconnect_exception.hpp"
+#include "server/ring_buffer_iterator.hpp"
+#include "server/server_types.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 

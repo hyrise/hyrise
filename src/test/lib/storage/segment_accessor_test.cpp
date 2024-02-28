@@ -1,7 +1,6 @@
 #include <memory>
 
 #include "base_test.hpp"
-
 #include "storage/abstract_segment.hpp"
 #include "storage/dictionary_segment.hpp"
 #include "storage/reference_segment.hpp"

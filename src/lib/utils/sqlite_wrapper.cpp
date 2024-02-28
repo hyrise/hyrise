@@ -1,19 +1,21 @@
 #include "sqlite_wrapper.hpp"
 
-#include <fstream>
-#include <iomanip>
+#include <cstdint>
 #include <memory>
+#include <sstream>
 #include <string>
 #include <vector>
 
-#include <boost/algorithm/string/split.hpp>
-#include <boost/algorithm/string/trim.hpp>
+#include <boost/variant/get.hpp>
 
+#include "all_type_variant.hpp"
 #include "sql/sql_pipeline.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "storage/table.hpp"
+#include "storage/table_column_definition.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 #include "utils/load_table.hpp"
-#include "utils/string_utils.hpp"
 
 namespace {
 
@@ -23,9 +25,9 @@ using namespace hyrise;  // NOLINT
  * Creates columns in given Hyrise table according to an sqlite intermediate statement (one result row).
  */
 std::shared_ptr<Table> create_hyrise_table_from_result(sqlite3_stmt* sqlite_statement, int column_count) {
-  std::vector<bool> column_nullable(column_count, false);
-  std::vector<std::string> column_types(column_count, "");
-  std::vector<std::string> column_names(column_count, "");
+  auto column_nullable = std::vector<bool>(column_count, false);
+  auto column_types = std::vector<std::string>(column_count, "");
+  auto column_names = std::vector<std::string>(column_count, "");
 
   auto no_result = true;
   auto return_code = int{};
@@ -205,7 +207,7 @@ std::shared_ptr<Table> SQLiteWrapper::Connection::execute_query(const std::strin
 
   auto result_table = create_hyrise_table_from_result(sqlite_statement, sqlite3_column_count(sqlite_statement));
 
-  if (!sqlite3_stmt_readonly(sqlite_statement)) {
+  if (sqlite3_stmt_readonly(sqlite_statement) == 0) {
     // We need to make sure that we do not call sqlite3_reset below on a modifying statement - otherwise, we would
     // re-execute the modification
     Assert(!result_table, "Modifying statement was expected to return empty table.");

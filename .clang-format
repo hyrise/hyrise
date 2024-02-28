@@ -11,6 +11,7 @@ AllowAllParametersOfDeclarationOnNextLine: true
 AllowShortBlocksOnASingleLine: Empty
 AllowShortCaseLabelsOnASingleLine: false
 AllowShortFunctionsOnASingleLine: Empty
+AllowShortLambdasOnASingleLine: Empty
 AllowShortIfStatementsOnASingleLine: Never
 AllowShortLoopsOnASingleLine: false
 AlwaysBreakAfterDefinitionReturnType: None
@@ -46,13 +47,38 @@ DisableFormat:   false
 EmptyLineBeforeAccessModifier: LogicalBlock
 ExperimentalAutoDetectBinPacking: false
 ForEachMacros:   [ foreach, Q_FOREACH, BOOST_FOREACH ]
+IncludeBlocks:  Regroup
 IncludeCategories:
+    # We follow the include order of Google's style guide (https://google.github.io/styleguide/cppguide.html#Names_and_Order_of_Includes)
+    # with the addition of grouping third-party headers into (1) system headers (e.g., TBB or boost) or (2) submodule
+    # headers located in ./third_party/.
+    #
+    # clang-format places includes into the first group (ordered by priority) where they match. Thus, it might mix TBB
+    # or readline headers (both using .h) with system headers (e.g., pthread.h). Thus, before defining priority one, we
+    # put TBB and readline headers into category 3 (i.e., third-party system headers).
+    # headers.
+  - Regex:           '^<(oneapi\/tbb\/.*|readline\/.*)>$'
+    Priority:        3
+
+  # C system headers as the first category (e.g., <stdlib.h>). Note: the parent/main header is implicitely priority 0.
   - Regex:           '^<.*\.h>'
     Priority:        1
+
+    # See comment for TBB. Boost headers are not mixed with C headers but STL headers. As we cannot exclude <boost/...>
+    # with clang-format's Posix extended regrexes, we first check for boost headers before turning to STL headers.
+  - Regex:           '^<(boost\/.*|pqxx\/.*)>$'
+    Priority:        3
+
+  # STL headers as the second category (e.g., <vector>).
   - Regex:           '^<.*'
     Priority:        2
+
+    # This list needs to be kept up to date to order non-system third party libraries properly. If third party files are
+    # missed, it is not a real issue. They are simply grouped with Hyrise headers.
+  - Regex:           '^"(magic_enum|nlohmann|lz4\.h|cxxopts\.hpp|compact_vector\.hpp|concurrentqueue\.h|lightweightsemaphore\.h|uninitialized_vector\.hpp|tsl\/sparse\_.+\.h|lz4hc\.h|zdict\.h|SQLParser\.h|benchmark\/benchmark\.h|SQLParserResult\.h|sql\/.+\.h\").*$'
+    Priority:        4
   - Regex:           '.*'
-    Priority:        3
+    Priority:        5
 IndentCaseLabels: true
 IndentWidth:     2
 IndentWrappedFunctionNames: false
@@ -74,7 +100,7 @@ PenaltyReturnTypeOnItsOwnLine: 200
 PointerAlignment: Left
 ReflowComments:  false
 SeparateDefinitionBlocks: Always
-SortIncludes:    true
+SortIncludes:    CaseInsensitive
 SpaceAfterCStyleCast: false
 SpaceBeforeAssignmentOperators: true
 SpaceBeforeParens: ControlStatements

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <memory>
+#include <utility>
 #include <vector>
 
 #include "operators/operator_join_predicate.hpp"

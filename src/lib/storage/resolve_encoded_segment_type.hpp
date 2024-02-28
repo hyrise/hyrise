@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <utility>
 
 #include <boost/hana/fold.hpp>
 #include <boost/hana/map.hpp>
@@ -9,13 +10,11 @@
 
 // Include your encoded segment file here!
 #include "storage/dictionary_segment.hpp"
+#include "storage/encoding_type.hpp"
 #include "storage/fixed_string_dictionary_segment.hpp"
 #include "storage/frame_of_reference_segment.hpp"
 #include "storage/lz4_segment.hpp"
 #include "storage/run_length_segment.hpp"
-
-#include "storage/encoding_type.hpp"
-
 #include "utils/enum_constant.hpp"
 #include "utils/template_type.hpp"
 

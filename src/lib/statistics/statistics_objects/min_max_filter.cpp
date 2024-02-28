@@ -2,20 +2,19 @@
 
 #include <memory>
 #include <optional>
-#include <utility>
 
 #include "abstract_statistics_object.hpp"
 #include "all_type_variant.hpp"
 #include "expression/evaluation/like_matcher.hpp"
-#include "lossless_cast.hpp"
 #include "resolve_type.hpp"
 #include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 
 template <typename T>
 MinMaxFilter<T>::MinMaxFilter(T init_min, T init_max)
-    : AbstractStatisticsObject(data_type_from_type<T>()), min(init_min), max(init_max) {}
+    : AbstractStatisticsObject{data_type_from_type<T>()}, min{init_min}, max{init_max} {}
 
 template <typename T>
 Cardinality MinMaxFilter<T>::estimate_cardinality(const PredicateCondition /*predicate_condition*/,

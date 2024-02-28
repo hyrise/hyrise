@@ -2,6 +2,7 @@
 
 #include <mutex>
 #include <shared_mutex>
+#include <unordered_map>
 
 #include <boost/heap/fibonacci_heap.hpp>
 

@@ -1,15 +1,17 @@
 #include "chunk_encoder.hpp"
 
+#include <cstddef>
+#include <map>
 #include <memory>
-#include <thread>
+#include <utility>
 #include <vector>
 
-#include "base_value_segment.hpp"
+#include "all_type_variant.hpp"
 #include "chunk.hpp"
 #include "resolve_type.hpp"
 #include "statistics/generate_pruning_statistics.hpp"
-#include "storage/abstract_encoded_segment.hpp"
 #include "storage/base_segment_encoder.hpp"
+#include "storage/encoding_type.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/segment_encoding_utils.hpp"
 #include "storage/segment_iterables/any_segment_iterable.hpp"

@@ -3,6 +3,8 @@
 #include <memory>
 #include <set>
 #include <string>
+#include <unordered_map>
+#include <vector>
 
 #include "abstract_rule.hpp"
 #include "operators/operator_scan_predicate.hpp"

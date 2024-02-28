@@ -1,18 +1,32 @@
 #include "expression_reduction_rule.hpp"
 
 #include <algorithm>
+#include <cstddef>
 #include <functional>
-#include <unordered_set>
+#include <memory>
+#include <string>
+#include <vector>
 
+#include <boost/variant/get.hpp>
+
+#include "all_type_variant.hpp"
+#include "expression/abstract_expression.hpp"
 #include "expression/evaluation/expression_evaluator.hpp"
 #include "expression/evaluation/like_matcher.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
-#include "expression/in_expression.hpp"
+#include "expression/logical_expression.hpp"
+#include "expression/value_expression.hpp"
+#include "expression/window_function_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/alias_node.hpp"
+#include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
+#include "null_value.hpp"
+#include "resolve_type.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 
@@ -166,8 +180,9 @@ void ExpressionReductionRule::reduce_constant_expression(std::shared_ptr<Abstrac
   }
 
   const auto all_arguments_are_values =
-      std::all_of(input_expression->arguments.begin(), input_expression->arguments.end(),
-                  [&](const auto& argument) { return argument->type == ExpressionType::Value; });
+      std::all_of(input_expression->arguments.begin(), input_expression->arguments.end(), [&](const auto& argument) {
+        return argument->type == ExpressionType::Value;
+      });
 
   if (!all_arguments_are_values) {
     return;
@@ -322,10 +337,11 @@ void ExpressionReductionRule::remove_duplicate_aggregate(
   {
     // Remove the AVG() expression from the AggregateNode
     auto& expressions = aggregate_node->node_expressions;
-    expressions.erase(
-        std::remove_if(expressions.begin(), expressions.end(),
-                       [&](const auto& expression) { return replacements.find(expression) != replacements.end(); }),
-        expressions.end());
+    expressions.erase(std::remove_if(expressions.begin(), expressions.end(),
+                                     [&](const auto& expression) {
+                                       return replacements.find(expression) != replacements.end();
+                                     }),
+                      expressions.end());
   }
 
   // Add a ProjectionNode that calculates AVG(a) as SUM(a)/COUNT(a).

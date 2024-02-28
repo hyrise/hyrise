@@ -1,6 +1,12 @@
 #pragma once
 
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
+
 #include "abstract_expression.hpp"
+#include "all_type_variant.hpp"
 #include "arithmetic_expression.hpp"
 #include "between_expression.hpp"
 #include "binary_predicate_expression.hpp"
@@ -20,6 +26,7 @@
 #include "placeholder_expression.hpp"
 #include "pqp_column_expression.hpp"
 #include "pqp_subquery_expression.hpp"
+#include "types.hpp"
 #include "unary_minus_expression.hpp"
 #include "value_expression.hpp"
 #include "window_expression.hpp"
@@ -86,8 +93,8 @@ namespace detail {
 template <auto t, typename E>
 struct unary final {
   template <typename A>
-  std::shared_ptr<E> operator()(const A& a) const {
-    return std::make_shared<E>(t, to_expression(a));
+  std::shared_ptr<E> operator()(const A& value) const {
+    return std::make_shared<E>(t, to_expression(value));
   }
 };
 
@@ -96,8 +103,8 @@ struct unary final {
 template <auto t, typename E>
 struct pseudo_unary final {
   template <typename A>
-  std::shared_ptr<E> operator()(const A& a) const {
-    return std::make_shared<E>(t, nullptr, to_expression(a));
+  std::shared_ptr<E> operator()(const A& expression) const {
+    return std::make_shared<E>(t, nullptr, to_expression(expression));
   }
 };
 
@@ -106,8 +113,8 @@ struct pseudo_unary final {
 template <auto t, typename E>
 struct binary_defaulted final {
   template <typename A>
-  std::shared_ptr<E> operator()(const A& a, const std::shared_ptr<AbstractExpression>& b = nullptr) const {
-    return std::make_shared<E>(t, to_expression(a), b);
+  std::shared_ptr<E> operator()(const A& lhs, const std::shared_ptr<AbstractExpression>& rhs = nullptr) const {
+    return std::make_shared<E>(t, to_expression(lhs), rhs);
   }
 };
 
@@ -116,8 +123,8 @@ struct binary_defaulted final {
 template <auto t, typename E>
 struct binary final {
   template <typename A, typename B>
-  std::shared_ptr<E> operator()(const A& a, const B& b) const {
-    return std::make_shared<E>(t, to_expression(a), to_expression(b));
+  std::shared_ptr<E> operator()(const A& lhs, const B& rhs) const {
+    return std::make_shared<E>(t, to_expression(lhs), to_expression(rhs));
   }
 };
 
@@ -126,8 +133,8 @@ struct binary final {
 template <auto t, typename E>
 struct ternary final {
   template <typename A, typename B, typename C>
-  std::shared_ptr<E> operator()(const A& a, const B& b, const C& c) const {
-    return std::make_shared<E>(t, to_expression(a), to_expression(b), to_expression(c));
+  std::shared_ptr<E> operator()(const A& left, const B& middle, const C& right) const {
+    return std::make_shared<E>(t, to_expression(left), to_expression(middle), to_expression(right));
   }
 };
 
@@ -135,45 +142,45 @@ struct ternary final {
 
 }  // namespace detail
 
-inline detail::unary<PredicateCondition::IsNull, IsNullExpression> is_null_;
-inline detail::unary<PredicateCondition::IsNotNull, IsNullExpression> is_not_null_;
+inline const detail::unary<PredicateCondition::IsNull, IsNullExpression> is_null_;
+inline const detail::unary<PredicateCondition::IsNotNull, IsNullExpression> is_not_null_;
 
-inline detail::pseudo_unary<WindowFunction::CumeDist, WindowFunctionExpression> cume_dist_;
-inline detail::pseudo_unary<WindowFunction::DenseRank, WindowFunctionExpression> dense_rank_;
-inline detail::pseudo_unary<WindowFunction::PercentRank, WindowFunctionExpression> percent_rank_;
-inline detail::pseudo_unary<WindowFunction::Rank, WindowFunctionExpression> rank_;
-inline detail::pseudo_unary<WindowFunction::RowNumber, WindowFunctionExpression> row_number_;
+inline const detail::pseudo_unary<WindowFunction::CumeDist, WindowFunctionExpression> cume_dist_;
+inline const detail::pseudo_unary<WindowFunction::DenseRank, WindowFunctionExpression> dense_rank_;
+inline const detail::pseudo_unary<WindowFunction::PercentRank, WindowFunctionExpression> percent_rank_;
+inline const detail::pseudo_unary<WindowFunction::Rank, WindowFunctionExpression> rank_;
+inline const detail::pseudo_unary<WindowFunction::RowNumber, WindowFunctionExpression> row_number_;
 
-inline detail::binary_defaulted<WindowFunction::Sum, WindowFunctionExpression> sum_;
-inline detail::binary_defaulted<WindowFunction::Max, WindowFunctionExpression> max_;
-inline detail::binary_defaulted<WindowFunction::Min, WindowFunctionExpression> min_;
-inline detail::binary_defaulted<WindowFunction::Avg, WindowFunctionExpression> avg_;
-inline detail::binary_defaulted<WindowFunction::Count, WindowFunctionExpression> count_;
-inline detail::binary_defaulted<WindowFunction::CountDistinct, WindowFunctionExpression> count_distinct_;
-inline detail::binary_defaulted<WindowFunction::StandardDeviationSample, WindowFunctionExpression>
+inline const detail::binary_defaulted<WindowFunction::Sum, WindowFunctionExpression> sum_;
+inline const detail::binary_defaulted<WindowFunction::Max, WindowFunctionExpression> max_;
+inline const detail::binary_defaulted<WindowFunction::Min, WindowFunctionExpression> min_;
+inline const detail::binary_defaulted<WindowFunction::Avg, WindowFunctionExpression> avg_;
+inline const detail::binary_defaulted<WindowFunction::Count, WindowFunctionExpression> count_;
+inline const detail::binary_defaulted<WindowFunction::CountDistinct, WindowFunctionExpression> count_distinct_;
+inline const detail::binary_defaulted<WindowFunction::StandardDeviationSample, WindowFunctionExpression>
     standard_deviation_sample_;
-inline detail::binary_defaulted<WindowFunction::Any, WindowFunctionExpression> any_;
+inline const detail::binary_defaulted<WindowFunction::Any, WindowFunctionExpression> any_;
 
-inline detail::binary<ArithmeticOperator::Division, ArithmeticExpression> div_;
-inline detail::binary<ArithmeticOperator::Multiplication, ArithmeticExpression> mul_;
-inline detail::binary<ArithmeticOperator::Addition, ArithmeticExpression> add_;
-inline detail::binary<ArithmeticOperator::Subtraction, ArithmeticExpression> sub_;
-inline detail::binary<ArithmeticOperator::Modulo, ArithmeticExpression> mod_;
-inline detail::binary<PredicateCondition::Like, BinaryPredicateExpression> like_;
-inline detail::binary<PredicateCondition::NotLike, BinaryPredicateExpression> not_like_;
-inline detail::binary<PredicateCondition::Equals, BinaryPredicateExpression> equals_;
-inline detail::binary<PredicateCondition::NotEquals, BinaryPredicateExpression> not_equals_;
-inline detail::binary<PredicateCondition::LessThan, BinaryPredicateExpression> less_than_;
-inline detail::binary<PredicateCondition::LessThanEquals, BinaryPredicateExpression> less_than_equals_;
-inline detail::binary<PredicateCondition::GreaterThanEquals, BinaryPredicateExpression> greater_than_equals_;
-inline detail::binary<PredicateCondition::GreaterThan, BinaryPredicateExpression> greater_than_;
-inline detail::binary<LogicalOperator::And, LogicalExpression> and_;
-inline detail::binary<LogicalOperator::Or, LogicalExpression> or_;
+inline const detail::binary<ArithmeticOperator::Division, ArithmeticExpression> div_;
+inline const detail::binary<ArithmeticOperator::Multiplication, ArithmeticExpression> mul_;
+inline const detail::binary<ArithmeticOperator::Addition, ArithmeticExpression> add_;
+inline const detail::binary<ArithmeticOperator::Subtraction, ArithmeticExpression> sub_;
+inline const detail::binary<ArithmeticOperator::Modulo, ArithmeticExpression> mod_;
+inline const detail::binary<PredicateCondition::Like, BinaryPredicateExpression> like_;
+inline const detail::binary<PredicateCondition::NotLike, BinaryPredicateExpression> not_like_;
+inline const detail::binary<PredicateCondition::Equals, BinaryPredicateExpression> equals_;
+inline const detail::binary<PredicateCondition::NotEquals, BinaryPredicateExpression> not_equals_;
+inline const detail::binary<PredicateCondition::LessThan, BinaryPredicateExpression> less_than_;
+inline const detail::binary<PredicateCondition::LessThanEquals, BinaryPredicateExpression> less_than_equals_;
+inline const detail::binary<PredicateCondition::GreaterThanEquals, BinaryPredicateExpression> greater_than_equals_;
+inline const detail::binary<PredicateCondition::GreaterThan, BinaryPredicateExpression> greater_than_;
+inline const detail::binary<LogicalOperator::And, LogicalExpression> and_;
+inline const detail::binary<LogicalOperator::Or, LogicalExpression> or_;
 
-inline detail::ternary<PredicateCondition::BetweenInclusive, BetweenExpression> between_inclusive_;
-inline detail::ternary<PredicateCondition::BetweenLowerExclusive, BetweenExpression> between_lower_exclusive_;
-inline detail::ternary<PredicateCondition::BetweenUpperExclusive, BetweenExpression> between_upper_exclusive_;
-inline detail::ternary<PredicateCondition::BetweenExclusive, BetweenExpression> between_exclusive_;
+inline const detail::ternary<PredicateCondition::BetweenInclusive, BetweenExpression> between_inclusive_;
+inline const detail::ternary<PredicateCondition::BetweenLowerExclusive, BetweenExpression> between_lower_exclusive_;
+inline const detail::ternary<PredicateCondition::BetweenUpperExclusive, BetweenExpression> between_upper_exclusive_;
+inline const detail::ternary<PredicateCondition::BetweenExclusive, BetweenExpression> between_exclusive_;
 
 template <typename... Args>
 std::shared_ptr<LQPSubqueryExpression> lqp_subquery_(const std::shared_ptr<AbstractLQPNode>& lqp,
@@ -181,8 +188,9 @@ std::shared_ptr<LQPSubqueryExpression> lqp_subquery_(const std::shared_ptr<Abstr
   if constexpr (sizeof...(Args) > 0) {
     // Correlated subquery
     return std::make_shared<LQPSubqueryExpression>(
-        lqp, std::vector<ParameterID>{{parameter_id_expression_pairs.first...}},
-        std::vector<std::shared_ptr<AbstractExpression>>{{to_expression(parameter_id_expression_pairs.second)...}});
+        lqp, std::vector<ParameterID>{{std::forward<ParameterID>(parameter_id_expression_pairs.first)...}},
+        std::vector<std::shared_ptr<AbstractExpression>>{{to_expression(
+            std::forward<std::shared_ptr<AbstractExpression>>(parameter_id_expression_pairs.second))...}});
   } else {
     // Not correlated
     return std::make_shared<LQPSubqueryExpression>(lqp, std::vector<ParameterID>{},
@@ -278,7 +286,7 @@ std::shared_ptr<IntervalExpression> interval_(const int64_t duration, const Date
 
 std::shared_ptr<WindowExpression> window_(std::vector<std::shared_ptr<AbstractExpression>>&& partition_by_expressions,
                                           std::vector<std::shared_ptr<AbstractExpression>>&& order_by_expressions,
-                                          std::vector<SortMode>&& sort_modes, FrameDescription&& frame_description);
+                                          std::vector<SortMode>&& sort_modes, FrameDescription frame_description);
 
 }  // namespace expression_functional
 

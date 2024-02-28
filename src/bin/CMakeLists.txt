@@ -28,7 +28,6 @@ add_executable(
     hyriseClient
 
     client.cpp
-    client.hpp
 )
 
 target_link_libraries(

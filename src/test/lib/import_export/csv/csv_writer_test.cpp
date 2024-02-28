@@ -5,7 +5,6 @@
 #include <utility>
 
 #include "base_test.hpp"
-
 #include "import_export/csv/csv_meta.hpp"
 #include "import_export/csv/csv_writer.hpp"
 #include "operators/table_scan.hpp"
@@ -43,12 +42,9 @@ class CsvWriterTest : public BaseTest {
 
     int equality = content.compare(expected_content);
     if (equality != 0) {
-      std::cout << equality << std::endl;
-      std::cout << "Comparison of file to expected content failed. " << std::endl;
-      std::cout << "Expected:" << std::endl;
-      std::cout << expected_content << std::endl;
-      std::cout << "Actual:" << std::endl;
-      std::cout << content << std::endl;
+      std::cout << equality << "\nComparison of file to expected content failed.";
+      std::cout << "\nExpected:\n" << expected_content;
+      std::cout << "\nActual:\n" << content << '\n';
     }
     return equality == 0;
   }

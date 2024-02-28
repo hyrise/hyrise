@@ -1,5 +1,6 @@
-#include <fstream>
+#include "meta_system_information_table.hpp"
 
+// clang-format off
 #ifdef __linux__
 #include <sys/sysinfo.h>
 #endif
@@ -8,9 +9,21 @@
 #include <mach/mach.h>
 #include <sys/sysctl.h>
 #endif
+// clang-format on
 
-#include "hyrise.hpp"
-#include "meta_system_information_table.hpp"
+#include <cstddef>
+#include <cstdint>
+#include <fstream>
+#include <ios>
+#include <memory>
+#include <string>
+
+#include "all_type_variant.hpp"
+#include "storage/table.hpp"
+#include "storage/table_column_definition.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
+#include "utils/meta_tables/abstract_meta_table.hpp"
 
 namespace hyrise {
 
@@ -39,11 +52,11 @@ std::shared_ptr<Table> MetaSystemInformationTable::_on_generate() const {
 // Returns the number of logical processors
 size_t MetaSystemInformationTable::_cpu_count() {
 #ifdef __linux__
-  std::ifstream cpu_info_file;
-  size_t processors = 0;
+  auto cpu_info_file = std::ifstream{};
+  auto processors = size_t{0};
   try {
     cpu_info_file.open("/proc/cpuinfo", std::ifstream::in);
-    std::string cpu_info_line;
+    auto cpu_info_line = std::string{};
     while (std::getline(cpu_info_file, cpu_info_line)) {
       if (cpu_info_line.starts_with("processor")) {
         ++processors;
@@ -73,7 +86,7 @@ size_t MetaSystemInformationTable::_cpu_count() {
 // Returns the physical memory size
 size_t MetaSystemInformationTable::_ram_size() {
 #ifdef __linux__
-  struct sysinfo memory_info {};
+  struct sysinfo memory_info {};  // NOLINT(misc-include-cleaner): sysinfo of sys/sysinfo.h is not recognized.
 
   const auto ret = sysinfo(&memory_info);
   Assert(ret == 0, "Failed to get sysinfo");
@@ -96,11 +109,11 @@ size_t MetaSystemInformationTable::_ram_size() {
 // Returns the CPU model string
 std::string MetaSystemInformationTable::_cpu_model() {
 #ifdef __linux__
-  std::ifstream cpuinfo_file;
+  auto cpuinfo_file = std::ifstream{};
   try {
     cpuinfo_file.open("/proc/cpuinfo", std::ifstream::in);
 
-    std::string cpuinfo_line;
+    auto cpuinfo_line = std::string{};
     while (std::getline(cpuinfo_file, cpuinfo_line)) {
       if (cpuinfo_line.starts_with("model name")) {
         cpuinfo_line.erase(0, cpuinfo_line.find(": ") + 2);

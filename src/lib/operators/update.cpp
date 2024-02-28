@@ -2,15 +2,16 @@
 
 #include <memory>
 #include <string>
-#include <utility>
-#include <vector>
+#include <unordered_map>
 
+#include "all_type_variant.hpp"
 #include "concurrency/transaction_context.hpp"
 #include "delete.hpp"
 #include "hyrise.hpp"
 #include "insert.hpp"
-#include "storage/reference_segment.hpp"
-#include "table_wrapper.hpp"
+#include "operators/abstract_operator.hpp"
+#include "storage/table.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {

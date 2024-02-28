@@ -1,12 +1,19 @@
 #include "attribute_statistics.hpp"
 
+#include <cstddef>
 #include <memory>
+#include <optional>
 
+#include "all_type_variant.hpp"
 #include "resolve_type.hpp"
+#include "statistics/base_attribute_statistics.hpp"
 #include "statistics/statistics_objects/abstract_histogram.hpp"
-#include "statistics/statistics_objects/generic_histogram.hpp"
+#include "statistics/statistics_objects/distinct_value_count.hpp"
 #include "statistics/statistics_objects/min_max_filter.hpp"
+#include "statistics/statistics_objects/null_value_ratio_statistics.hpp"
 #include "statistics/statistics_objects/range_filter.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 

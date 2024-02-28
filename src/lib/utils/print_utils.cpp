@@ -1,14 +1,23 @@
 #include "print_utils.hpp"
 
+#include <cstddef>
+#include <iterator>
+#include <memory>
+#include <ostream>
+#include <set>
+#include <string>
 #include <unordered_map>
+#include <vector>
 
 #include <boost/algorithm/string/join.hpp>
-#include <boost/range/adaptors.hpp>
+#include <boost/range/adaptor/transformed.hpp>
+
 #include "magic_enum.hpp"
 
-#include "logical_query_plan/abstract_lqp_node.hpp"
+#include "storage/constraints/table_key_constraint.hpp"
 #include "storage/encoding_type.hpp"
 #include "storage/table.hpp"
+#include "utils/assert.hpp"
 
 namespace {
 
@@ -48,7 +57,7 @@ void print_directed_acyclic_graph_impl(const std::shared_ptr<Node>& node,
   // Check whether the node has been printed before.
   const auto iter = id_by_node.find(node);
   if (iter != id_by_node.end()) {
-    stream << "Recurring Node --> [" << iter->second << "]" << std::endl;
+    stream << "Recurring Node --> [" << iter->second << "]\n";
     return;
   }
 
@@ -59,7 +68,7 @@ void print_directed_acyclic_graph_impl(const std::shared_ptr<Node>& node,
   // Print node info.
   stream << "[" << this_node_id << "] ";
   node_print_fn(node, stream);
-  stream << std::endl;
+  stream << '\n';
 
   const auto children = get_children_fn(node);
   indentation.emplace_back(true);
@@ -127,9 +136,11 @@ template void print_directed_acyclic_graph<const AbstractOperator>(
     const NodePrintFn<const AbstractOperator>& print_node_fn, std::ostream& stream);
 
 std::string all_encoding_options() {
-  return boost::algorithm::join(magic_enum::enum_names<EncodingType>() |
-                                    boost::adaptors::transformed([](const auto it) { return std::string{it}; }),
-                                ", ");
+  return boost::algorithm::join(
+      magic_enum::enum_names<EncodingType>() | boost::adaptors::transformed([](const auto it) {
+        return std::string{it};
+      }),
+      ", ");
 }
 
 }  // namespace hyrise

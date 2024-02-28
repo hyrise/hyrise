@@ -1,7 +1,6 @@
 #include <unordered_map>
 
 #include "base_test.hpp"
-
 #include "cost_estimation/abstract_cost_estimator.hpp"
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/mock_node.hpp"

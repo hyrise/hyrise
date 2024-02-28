@@ -1,8 +1,16 @@
 #include "join_graph.hpp"
 
-#include "utils/assert.hpp"
+#include <cstddef>
+#include <memory>
+#include <optional>
+#include <ostream>
+#include <unordered_set>
+#include <vector>
 
+#include "expression/abstract_expression.hpp"
 #include "join_graph_builder.hpp"
+#include "optimizer/join_ordering/join_graph_edge.hpp"
+#include "utils/assert.hpp"
 
 namespace {
 
@@ -36,7 +44,7 @@ void build_all_in_lqp_impl(const std::shared_ptr<AbstractLQPNode>& lqp, std::vec
 namespace hyrise {
 
 std::optional<JoinGraph> JoinGraph::build_from_lqp(const std::shared_ptr<AbstractLQPNode>& lqp) {
-  return JoinGraphBuilder{}(lqp);  // NOLINT - doesn't like {} followed by ()
+  return JoinGraphBuilder{}(lqp);
 }
 
 std::vector<JoinGraph> JoinGraph::build_all_in_lqp(const std::shared_ptr<AbstractLQPNode>& lqp) {
@@ -93,17 +101,17 @@ std::vector<std::shared_ptr<AbstractExpression>> JoinGraph::find_join_predicates
 }
 
 std::ostream& operator<<(std::ostream& stream, const JoinGraph& join_graph) {
-  stream << "==== Vertices ====" << std::endl;
+  stream << "==== Vertices ====\n";
   if (join_graph.vertices.empty()) {
-    stream << "<none>" << std::endl;
+    stream << "<none>\n";
   } else {
     for (const auto& vertex : join_graph.vertices) {
-      stream << vertex->description() << std::endl;
+      stream << vertex->description() << '\n';
     }
   }
-  stream << "===== Edges ======" << std::endl;
+  stream << "===== Edges ======\n";
   if (join_graph.edges.empty()) {
-    stream << "<none>" << std::endl;
+    stream << "<none>\n";
   } else {
     for (const auto& edge : join_graph.edges) {
       stream << edge;

@@ -1,22 +1,21 @@
 #include "generate_pruning_statistics.hpp"
 
-#include <atomic>
-#include <iostream>
-#include <thread>
+#include <algorithm>
+#include <memory>
+#include <type_traits>
 #include <unordered_set>
 
-#include "operators/table_wrapper.hpp"
 #include "resolve_type.hpp"
 #include "statistics/attribute_statistics.hpp"
 #include "statistics/statistics_objects/distinct_value_count.hpp"
 #include "statistics/statistics_objects/equal_distinct_count_histogram.hpp"
-#include "statistics/statistics_objects/generic_histogram_builder.hpp"
 #include "statistics/statistics_objects/min_max_filter.hpp"
-#include "statistics/statistics_objects/null_value_ratio_statistics.hpp"
 #include "statistics/statistics_objects/range_filter.hpp"
 #include "statistics/table_statistics.hpp"
+#include "storage/chunk.hpp"
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/table.hpp"
+#include "types.hpp"
 
 namespace {
 

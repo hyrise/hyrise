@@ -1,11 +1,17 @@
 #pragma once
 
+#include <array>
 #include <functional>
+#include <optional>
+#include <ostream>
 #include <regex>
+#include <string>
 #include <utility>
 #include <variant>
+#include <vector>
 
 #include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 
@@ -86,7 +92,7 @@ class LikeMatcher {
    * The functor will be called with a concrete matcher.
    * Usage example:
    *    LikeMatcher{"%hello%"}.resolve(false, [](const auto& matcher) {
-   *        std::cout << matcher("He said hello!") << std::endl;
+   *        std::cout << matcher("He said hello!") << '\n';
    *    }
    */
   template <typename Functor>
@@ -120,7 +126,7 @@ class LikeMatcher {
 
     } else if (std::holds_alternative<MultipleContainsPattern>(_pattern_variant)) {
       const auto& contains_strs = std::get<MultipleContainsPattern>(_pattern_variant).strings;
-      std::vector<Searcher> searchers;
+      auto searchers = std::vector<Searcher>{};
       searchers.reserve(contains_strs.size());
       for (const auto& contains_str : contains_strs) {
         searchers.emplace_back(Searcher(contains_str.begin(), contains_str.end()));

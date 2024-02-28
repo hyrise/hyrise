@@ -1,19 +1,21 @@
 #include "file_based_table_generator.hpp"
 
+#include <filesystem>
+#include <functional>
+#include <iostream>
+#include <memory>
+#include <string>
+#include <unordered_map>
 #include <unordered_set>
 
-#include <boost/algorithm/string.hpp>
-
+#include "abstract_table_generator.hpp"
 #include "benchmark_config.hpp"
-#include "benchmark_table_encoder.hpp"
 #include "import_export/binary/binary_parser.hpp"
 #include "import_export/csv/csv_parser.hpp"
-#include "utils/format_duration.hpp"
+#include "utils/assert.hpp"
 #include "utils/list_directory.hpp"
 #include "utils/load_table.hpp"
 #include "utils/timer.hpp"
-
-using namespace std::string_literals;  // NOLINT
 
 namespace hyrise {
 
@@ -52,10 +54,12 @@ std::unordered_map<std::string, BenchmarkTableInfo> FileBasedTableGenerator::gen
     auto& table_info = table_info_by_name_iter->second;
 
     if (extension == ".bin") {
-      Assert(!table_info.binary_file_path, "Multiple binary files found for table '"s + table_name.string() + "'");
+      Assert(!table_info.binary_file_path,
+             std::string{"Multiple binary files found for table '"} + table_name.string() + "'");
       table_info.binary_file_path = directory_entry;
     } else {
-      Assert(!table_info.text_file_path, "Multiple text files found for table '"s + table_name.string() + "'");
+      Assert(!table_info.text_file_path,
+             std::string{"Multiple text files found for table '"} + table_name.string() + "'");
       table_info.text_file_path = directory_entry;
     }
   }
@@ -71,7 +75,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> FileBasedTableGenerator::gen
 
       if (last_binary_write < last_text_write) {
         std::cout << "-  Binary file '" << (*table_info.binary_file_path)
-                  << "' is out of date and needs to be re-exported" << std::endl;
+                  << "' is out of date and needs to be re-exported\n";
         table_info.binary_file_out_of_date = true;
       }
     }
@@ -102,7 +106,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> FileBasedTableGenerator::gen
       }
     }
 
-    std::cout << " (" << table_info.table->row_count() << " rows; " << timer.lap_formatted() << ")" << std::endl;
+    std::cout << " (" << table_info.table->row_count() << " rows; " << timer.lap_formatted() << ")\n";
   }
 
   return table_info_by_name;

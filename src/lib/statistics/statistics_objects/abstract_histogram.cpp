@@ -2,25 +2,26 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstddef>
 #include <limits>
-#include <map>
 #include <memory>
+#include <optional>
+#include <sstream>
 #include <string>
 #include <unordered_set>
 #include <utility>
 #include <vector>
 
 #include <boost/container_hash/hash.hpp>
-#include <boost/lexical_cast.hpp>
 
-#include "expression/evaluation/like_matcher.hpp"
-#include "generic_histogram.hpp"
+#include "all_type_variant.hpp"
 #include "generic_histogram_builder.hpp"
 #include "lossy_cast.hpp"
 #include "resolve_type.hpp"
 #include "statistics/statistics_objects/abstract_statistics_object.hpp"
-#include "storage/create_iterable_from_segment.hpp"
-#include "storage/segment_iterate.hpp"
+#include "statistics/statistics_objects/histogram_domain.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 
@@ -42,15 +43,15 @@ std::string AbstractHistogram<T>::description() const {
   stream << " distinct count: " << total_distinct_count() << ";";
   stream << " bin count: " << bin_count() << ";";
 
-  stream << "  Bins" << std::endl;
-  for (BinID bin_id = 0u; bin_id < bin_count(); ++bin_id) {
+  stream << "  Bins\n";
+  for (auto bin_id = BinID{0}; bin_id < bin_count(); ++bin_id) {
     if constexpr (std::is_same_v<T, pmr_string>) {
       stream << "  ['" << bin_minimum(bin_id) << "' (" << _domain.string_to_number(bin_minimum(bin_id)) << ") -> '";
       stream << bin_maximum(bin_id) << "' (" << _domain.string_to_number(bin_maximum(bin_id)) << ")]: ";
     } else {
       stream << "  [" << bin_minimum(bin_id) << " -> " << bin_maximum(bin_id) << "]: ";
     }
-    stream << "Height: " << bin_height(bin_id) << "; DistinctCount: " << bin_distinct_count(bin_id) << std::endl;
+    stream << "Height: " << bin_height(bin_id) << "; DistinctCount: " << bin_distinct_count(bin_id) << '\n';
   }
 
   return stream.str();

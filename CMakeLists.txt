@@ -56,18 +56,18 @@ else()
 endif()
 
 # Enable address and undefined behavior sanitization if requested
-option(ENABLE_ADDR_UB_SANITIZATION "Set to ON to build Hyrise with ASAN and UBSAN enabled. Default: OFF" OFF)
-if (${ENABLE_ADDR_UB_SANITIZATION})
+option(ENABLE_ADDR_UB_LEAK_SANITIZATION "Set to ON to build Hyrise with ASAN and UBSAN enabled. Default: OFF" OFF)
+if (${ENABLE_ADDR_UB_LEAK_SANITIZATION})
     # add_compile_options() wants list, CMAKE_EXE_LINKER_FLAGS a string. There are probably cleverer ways than
     # duplicating the flags, but this is probably the simplest solution.
     # -fno-sanitize-recover=all is used to make UBsan fail (i.e., return a non-zero exit code) when an error is found.
     # -mllvm -asan-use-private-alias=1 fixes false positive ODR violation alerts for shared libraries, see https://github.com/google/sanitizers/issues/1017 and https://reviews.llvm.org/D137227
-    add_compile_options(-fsanitize=address,undefined -fno-sanitize-recover=all -fsanitize-blacklist=${CMAKE_CURRENT_SOURCE_DIR}/resources/.ubsan-blacklist.txt -fno-omit-frame-pointer -mllvm -asan-use-private-alias=1)
-    add_link_options(-fsanitize=address,undefined)
-    set(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=address,undefined -fno-sanitize-recover=all -fsanitize-blacklist=${CMAKE_CURRENT_SOURCE_DIR}/resources/.ubsan-blacklist.txt -fno-omit-frame-pointer")
-    add_definitions(-DHYRISE_WITH_UBSAN=1)
+    add_compile_options(-fsanitize=address,undefined,leak -fno-sanitize-recover=all -fsanitize-blacklist=${CMAKE_CURRENT_SOURCE_DIR}/resources/.ubsan-blacklist.txt -fno-omit-frame-pointer -mllvm -asan-use-private-alias=1 -fsanitize-address-use-after-scope)
+    add_link_options(-fsanitize=address,undefined,leak)
+    set(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=address,undefined,leak -fno-sanitize-recover=all -fsanitize-blacklist=${CMAKE_CURRENT_SOURCE_DIR}/resources/.ubsan-blacklist.txt -fno-omit-frame-pointer")
+    add_definitions(-DHYRISE_WITH_ADDR_UB_LEAK_SAN=1)
 else()
-    add_definitions(-DHYRISE_WITH_UBSAN=0)
+    add_definitions(-DHYRISE_WITH_ADDR_UB_LEAK_SAN=0)
 endif()
 
 # Enable thread sanitization if requested

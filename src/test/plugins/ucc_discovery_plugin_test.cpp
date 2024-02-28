@@ -3,14 +3,13 @@
 #include <string>
 #include <vector>
 
-#include "base_test.hpp"
-#include "lib/storage/encoding_test.hpp"
-#include "lib/utils/plugin_test_utils.hpp"
-
 #include "../../plugins/ucc_discovery_plugin.hpp"
+#include "base_test.hpp"
 #include "concurrency/transaction_manager.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/pqp_column_expression.hpp"
+#include "lib/storage/encoding_test.hpp"
+#include "lib/utils/plugin_test_utils.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/join_node.hpp"
