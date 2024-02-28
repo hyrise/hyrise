@@ -156,7 +156,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     }
   };
 
-  using RowHashSet = std::unordered_set<RowID, RowHasher>;
+  using RowHashSet = boost::unordered_flat_set<RowID, RowHasher>;
 
   // These are used for outer joins with multiple predicates where the primary predicate is not equals.
   RowHashSet _left_row_ids_emitted{};
@@ -221,12 +221,14 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     // We try to have a partition size of roughly 256 KB to avoid out-of-L2 cache sorts. This value has been determined
     // by an array of benchmarks. Ideally, it would incorporate hardware knowledge such as the L2 cache size.
     const auto max_sort_items_count = 256'000 / sizeof(T);
-    const size_t cluster_count_left = _sort_merge_join.left_input_table()->row_count() / max_sort_items_count;
-    const size_t cluster_count_right = _sort_merge_join.right_input_table()->row_count() / max_sort_items_count;
+    const auto cluster_count_left = _sort_merge_join.left_input_table()->row_count() / max_sort_items_count;
+    const auto cluster_count_right = _sort_merge_join.right_input_table()->row_count() / max_sort_items_count;
 
-    // Return the next larger power of two for the larger of the two cluster counts.
-    return static_cast<size_t>(
-        std::pow(2, std::floor(std::log2(std::max({size_t{1}, cluster_count_left, cluster_count_right})))));
+    // Return the next larger power of two for the larger of the two cluster counts. Do not use more than 2^8 clusters
+    // as TLB misses during clustering become too expensive (see "An Experimental Comparison of Thirteen Relational
+    // Equi-Joins in Main Memory" by Schuh et al.).
+    return static_cast<size_t>(std::pow(
+        2, std::max(size_t{8}, std::ceil(std::log2(std::max({size_t{1}, cluster_count_left, cluster_count_right}))))));
   }
 
   // Gets the table position corresponding to the end of the table, i.e. the last entry of the last cluster.
