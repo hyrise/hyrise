@@ -821,7 +821,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       const auto merge_row_count = _sorted_left_table[cluster_id].size() + _sorted_right_table[cluster_id].size();
       const auto join_cluster_task = [this, cluster_id] {
         // Accessors are not thread-safe, so we create one evaluator per job
-        std::optional<MultiPredicateJoinEvaluator> multi_predicate_join_evaluator;
+        auto multi_predicate_join_evaluator = std::optional<MultiPredicateJoinEvaluator>{};
         if (!_secondary_join_predicates.empty()) {
           multi_predicate_join_evaluator.emplace(*_sort_merge_join._left_input->get_output(),
                                                  *_sort_merge_join.right_input()->get_output(), _mode,
@@ -876,7 +876,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     _end_of_left_table = _end_of_table(_sorted_left_table);
     _end_of_right_table = _end_of_table(_sorted_right_table);
 
-    Timer timer;
+    auto timer = Timer{};
 
     _perform_join();
 
@@ -884,20 +884,14 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       auto null_output_left = RowIDPosList();
       auto null_output_right = RowIDPosList();
 
-      // Add the outer join rows which had a null value in their join column
+      // Add the outer join rows which had a null value in their join column.
       if (include_null_left) {
-        null_output_left.reserve(_null_rows_left.size());
+        null_output_left.insert(null_output_left.end(), _null_rows_left.begin(), _null_rows_left.end());
         null_output_right.insert(null_output_right.end(), _null_rows_left.size(), NULL_ROW_ID);
-        for (const auto& row_id_left : _null_rows_left) {
-          null_output_left.push_back(row_id_left);
-        }
       }
       if (include_null_right) {
         null_output_left.insert(null_output_left.end(), _null_rows_right.size(), NULL_ROW_ID);
-        null_output_right.reserve(_null_rows_right.size());
-        for (const auto& row_id_right : _null_rows_right) {
-          null_output_right.push_back(row_id_right);
-        }
+        null_output_right.insert(null_output_right.end(), _null_rows_right.begin(), _null_rows_right.end());
       }
 
       DebugAssert(null_output_left.size() == null_output_right.size(),

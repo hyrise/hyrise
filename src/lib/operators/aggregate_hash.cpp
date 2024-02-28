@@ -58,7 +58,7 @@ void split_results_chunk_wise(const bool write_nulls, const AggregateResults<Col
   auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
   jobs.reserve(output_chunk_count);
   for (auto output_chunk_id = ChunkID{0}; output_chunk_id < output_chunk_count; ++output_chunk_id) {
-    jobs.emplace_back(std::make_shared<JobTask>([&, output_chunk_id, consumer_function]() {
+    const auto write_split_data = [&, output_chunk_id, consumer_function]() {
       auto begin = results_begin + output_chunk_id * Chunk::DEFAULT_SIZE;
       auto end = results_begin + std::min(result_count, (output_chunk_id + 1) * Chunk::DEFAULT_SIZE);
 
@@ -76,10 +76,17 @@ void split_results_chunk_wise(const bool write_nulls, const AggregateResults<Col
       }
 
       consumer_function(begin, end, output_chunk_id);
-    }));
+    };
+
+    if (output_chunk_count > 1) {
+      // No reason to spawn a job and wait when there is only a single job.
+      jobs.emplace_back(std::make_shared<JobTask>(write_split_data));
+    } else {
+      write_split_data();
+    }
   }
 
-  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);  // No-op for `output_chunk_count` < 2.
 }
 
 void prepare_output(std::vector<Segments>& output, const size_t chunk_count, const size_t column_count) {
