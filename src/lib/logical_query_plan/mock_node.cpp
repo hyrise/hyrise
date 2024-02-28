@@ -52,11 +52,7 @@ std::shared_ptr<LQPColumnExpression> MockNode::get_column(const std::string& col
     }
   }
 
-<<<<<<< HEAD
   Fail("Could not find column named '" + column_name + "' in MockNode.");
-=======
-  Fail("Couldn't find column named '" + column_name + "' in MockNode.");
->>>>>>> master
 }
 
 const MockNode::ColumnDefinitions& MockNode::column_definitions() const {
@@ -134,13 +130,7 @@ UniqueColumnCombinations MockNode::unique_column_combinations() const {
   for (const auto& table_key_constraint : _table_key_constraints) {
     // Discard key constraints that involve pruned column id(s).
     const auto& key_constraint_column_ids = table_key_constraint.columns();
-<<<<<<< HEAD
     if (contains_any_column(_pruned_column_ids, key_constraint_column_ids)) {
-=======
-    if (std::any_of(key_constraint_column_ids.cbegin(), key_constraint_column_ids.cend(), [&](const auto column_id) {
-          return contains(_pruned_column_ids, column_id);
-        })) {
->>>>>>> master
       continue;
     }
 
