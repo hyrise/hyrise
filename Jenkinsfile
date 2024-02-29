@@ -5,6 +5,8 @@ full_ci = env.BRANCH_NAME == 'master' || pullRequest.labels.contains('FullCI')
 // Due to their long runtime, we skip several tests in sanitizer builds.
 tests_excluded_in_sanitizer_builds = 'SQLiteTestRunnerEncodings/*:TPCDSTableGeneratorTest.GenerateAndStoreRowCounts:TPCHTableGeneratorTest.RowCountsMediumScaleFactor:SSBTableGeneratorTest.GenerateAndStoreRowCounts'
 
+tests_excluded_in_mac_builds = '--gtest_filter=\"-TPCCTest*:TPCDSTableGeneratorTest.*:TPCHTableGeneratorTest.RowCountsMediumScaleFactor:SSBTableGeneratorTest.GenerateAndStoreRowCounts:.CompareToSQLite/Line1*WithLZ4\"'
+
 // We run the strict ("more aggressive") checks for the address sanitizer
 // (see https://github.com/google/sanitizers/wiki/AddressSanitizer#faq). Moreover, we activate the leak sanitizer.
 asan_options = 'strict_string_checks=1:detect_stack_use_after_return=1:check_initialization_order=1:use_odr_indicator=1:strict_init_order=1:detect_leaks=1'
@@ -431,7 +433,7 @@ try {
             sh "mkdir clang-release && cd clang-release && PATH=/usr/local/bin/:$PATH /usr/local/bin/cmake ${release} ${ninja} -DCMAKE_C_COMPILER=/usr/local/opt/llvm@17/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm@17/bin/clang++ .."
             sh "cd clang-release && PATH=/usr/local/bin/:$PATH ninja"
             sh "./clang-release/hyriseTest"
-            sh "./clang-release/hyriseSystemTest --gtest_filter=\"-TPCCTest*:TPCDSTableGeneratorTest.*:TPCHTableGeneratorTest.RowCountsMediumScaleFactor:SSBTableGeneratorTest.*:*.CompareToSQLite/Line1*WithLZ4\""
+            sh "./clang-release/hyriseSystemTest ${tests_excluded_in_mac_builds}"
             sh "PATH=/usr/local/bin/:$PATH ./scripts/test/hyriseConsole_test.py clang-release"
             sh "PATH=/usr/local/bin/:$PATH ./scripts/test/hyriseServer_test.py clang-release"
             sh "PATH=/usr/local/bin/:$PATH ./scripts/test/hyriseBenchmarkFileBased_test.py clang-release"
@@ -470,7 +472,7 @@ try {
             sh "file ./clang-debug/hyriseTest | grep arm64"
 
             sh "./clang-debug/hyriseTest"
-            sh "./clang-debug/hyriseSystemTest --gtest_filter=\"-TPCCTest*:TPCDSTableGeneratorTest.*:TPCHTableGeneratorTest.RowCountsMediumScaleFactor:*SSBTableGeneratorTest.*:.CompareToSQLite/Line1*WithLZ4\""
+            sh "./clang-debug/hyriseSystemTest ${tests_excluded_in_mac_builds}"
             sh "PATH=/usr/local/bin/:$PATH ./scripts/test/hyriseConsole_test.py clang-debug"
             sh "PATH=/usr/local/bin/:$PATH ./scripts/test/hyriseServer_test.py clang-debug"
             sh "PATH=/usr/local/bin/:$PATH ./scripts/test/hyriseBenchmarkFileBased_test.py clang-debug"
