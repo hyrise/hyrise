@@ -88,17 +88,9 @@ if (ENABLE_CLANG_TIDY)
         message(ERROR "clang-tidy is only available for Clang builds.")
     endif()
 
-    message(STATUS "clang-tidy enabled")
-
     # Get the full clang-tidy path (helps with MacOS builds).
     set(CMAKE_CXX_CLANG_TIDY "${CMAKE_C_COMPILER}-tidy")
-
-    # Use the single-header version of nlohmann::json to avoid include errors. By default, nlohmann::json uses an
-    # umbrella header that includes the actual header files. We disable the umbrella header.
-    # When clang-tidy allows accepting/ignoring certain umbrella headers, this setting should be revisited as well as
-    # the clang-tidy configuration (see `misc-include-cleaner.IgnoreHeaders`).
-    set(JSON_MultipleHeaders OFF)
-    message(STATUS "Using single header of nlohmann::json for clang-tidy")
+    message(STATUS "clang-tidy enabled")
 endif()
 
 add_subdirectory(benchmarklib)

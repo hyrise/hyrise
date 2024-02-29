@@ -8,6 +8,15 @@ endif()
 # unity builds for this folder, even if the user manually activated it.
 set(CMAKE_UNITY_BUILD "OFF")
 
+# For clang-tidy builds, we use the single-header version of nlohmann::json to avoid include issues. By default,
+# nlohmann::json uses an umbrella header that includes the actual header files, which is not handled properly by the 
+# include cleaner of clang-tidy. When clang-tidy allows accepting/ignoring certain umbrella headers, this setting should
+# be revisited as well as the clang-tidy configuration (see `misc-include-cleaner.IgnoreHeaders`).
+if(ENABLE_CLANG_TIDY)
+  set(JSON_MultipleHeaders OFF)
+  message(STATUS "Using single header of nlohmann::json for clang-tidy")
+endif()
+
 # Some third-party libraries already define proper CMake library targets. We can simply add those targets with
 # `add_subdirectory(<lib-directory>)`. For libraries without such definitions, we manually build the library targets.
 set(BENCHMARK_ENABLE_GTEST_TESTS OFF CACHE BOOL "Disable download and building internal test suite of google benchmark." FORCE)
