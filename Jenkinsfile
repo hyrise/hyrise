@@ -2,7 +2,7 @@ import org.jenkinsci.plugins.pipeline.modeldefinition.Utils
 
 full_ci = env.BRANCH_NAME == 'master' || pullRequest.labels.contains('FullCI')
 
-// Due to their long runtime, we skip several tests in sanitizer builds.
+// Due to their long runtime, we skip several tests in sanitizer and MacOS builds.
 tests_excluded_in_sanitizer_builds = 'SQLiteTestRunnerEncodings/*:TPCDSTableGeneratorTest.GenerateAndStoreRowCounts:TPCHTableGeneratorTest.RowCountsMediumScaleFactor:SSBTableGeneratorTest.GenerateAndStoreRowCounts'
 
 tests_excluded_in_mac_builds = '--gtest_filter=\"-TPCCTest*:TPCDSTableGeneratorTest.*:TPCHTableGeneratorTest.RowCountsMediumScaleFactor:SSBTableGeneratorTest.GenerateAndStoreRowCounts:.CompareToSQLite/Line1*WithLZ4\"'
