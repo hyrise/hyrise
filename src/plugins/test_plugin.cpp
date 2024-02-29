@@ -8,6 +8,7 @@
 #include <utility>
 #include <vector>
 
+// NOLINTNEXTLINE(misc-include-cleaner): We access methods of AbstractBenchmarkItemRunner in `pre_benchmark_hook()`.
 #include "../benchmarklib/abstract_benchmark_item_runner.hpp"
 #include "all_type_variant.hpp"
 #include "hyrise.hpp"

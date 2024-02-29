@@ -98,7 +98,7 @@ if (ENABLE_CLANG_TIDY)
     # When clang-tidy allows accepting/ignoring certain umbrella headers, this setting should be revisited as well as
     # the clang-tidy configuration (see `misc-include-cleaner.IgnoreHeaders`).
     set(JSON_MultipleHeaders OFF)
-    message(STATUS "using single header of nlohmann::json for clang-tidy")
+    message(STATUS "Using single header of nlohmann::json for clang-tidy")
 endif()
 
 add_subdirectory(benchmarklib)
