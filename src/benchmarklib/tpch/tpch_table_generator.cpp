@@ -325,7 +325,8 @@ AbstractTableGenerator::SortOrderByTable TPCHTableGenerator::_sort_order_by_tabl
 
 void TPCHTableGenerator::_add_constraints(
     std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) const {
-  // Set all primary (PK) and foreign keys (FK) as defined in the specification (1.4.2. Constraints, p. 18).
+  // Set all primary (PK) and foreign keys (FK) as defined in the specification (Reision 3.0.1, 1.4.2. Constraints, p.
+  // 18).
 
   // Get all tables.
   const auto& part_table = table_info_by_name.at("part").table;

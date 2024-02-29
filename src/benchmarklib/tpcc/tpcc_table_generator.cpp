@@ -586,7 +586,8 @@ AbstractTableGenerator::IndexesByTable TPCCTableGenerator::_indexes_by_table() c
 
 void TPCCTableGenerator::_add_constraints(
     std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) const {
-  // Set all primary (PK) and foreign keys (FK) as defined in the specification (1.3 Table Layouts, p. 12-17).
+  // Set all primary (PK) and foreign keys (FK) as defined in the specification (Revision 5.11, 1.3 Table Layouts,
+  // p. 12-17).
 
   // Get all tables.
   const auto& warehouse_table = table_info_by_name.at("WAREHOUSE").table;

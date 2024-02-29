@@ -18,6 +18,11 @@ class TableOrderConstraintTest : public BaseTest {
   std::shared_ptr<Table> _table;
 };
 
+TEST_F(TableOrderConstraintTest, ConstraintType) {
+  const auto order_constraint = TableOrderConstraint({{ColumnID{0}}, {{ColumnID{1}}}});
+  EXPECT_EQ(order_constraint.type(), TableConstraintType::Order);
+}
+
 TEST_F(TableOrderConstraintTest, OrderedColumnIDs) {
   // Implementation should not mess up the order of the column IDs.
   const auto order_constraint = TableOrderConstraint({{ColumnID{2}, ColumnID{1}}, {{ColumnID{3}, ColumnID{4}}}});

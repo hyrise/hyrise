@@ -1218,7 +1218,8 @@ AbstractTableGenerator::IndexesByTable TPCDSTableGenerator::_indexes_by_table() 
 
 void TPCDSTableGenerator::_add_constraints(
     std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) const {
-  // Set all primary (PK) and foreign keys (FK) as defined in the specification (2 Logical Database Design, p. 23-35).
+  // Set all primary (PK) and foreign keys (FK) as defined in the specification (Version 3.2.0, 2 Logical Database
+  // Design, p. 23-35).
 
   // Get all tables.
   // Fact Tables (7).

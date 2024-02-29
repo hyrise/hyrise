@@ -486,7 +486,7 @@ void Table::_add_soft_foreign_key_constraint(const ForeignKeyConstraint& foreign
 
   const auto append_lock = acquire_append_mutex();
   const auto [_, inserted] = _foreign_key_constraints.insert(foreign_key_constraint);
-  Assert(inserted, "ForeignKeyConstraint for required columns has already been set.");
+  Assert(inserted, "ForeignKeyConstraint has already been set.");
   const auto referenced_table_append_lock = referenced_table->acquire_append_mutex();
   referenced_table->_referenced_foreign_key_constraints.insert(foreign_key_constraint);
 }
@@ -514,7 +514,7 @@ void Table::_add_soft_order_constraint(const TableOrderConstraint& table_order_c
         columns_intersect(existing_constraint.ordered_columns(), table_order_constraint.ordered_columns()) &&
         existing_constraint.ordering_columns() == table_order_constraint.ordering_columns();
     Assert(!ordering_columns_invalid && !ordered_columns_invalid,
-           "TableOrderConstraint for required columns has already been set.");
+           "TableOrderConstraint for affected columns has already been set.");
   }
   _table_order_constraints.insert(table_order_constraint);
 }

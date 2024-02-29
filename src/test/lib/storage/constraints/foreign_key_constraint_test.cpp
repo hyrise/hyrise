@@ -23,6 +23,11 @@ class ForeignKeyConstraintTest : public BaseTest {
   std::shared_ptr<Table> _table_c;
 };
 
+TEST_F(ForeignKeyConstraintTest, ConstraintType) {
+  const auto foreign_key_constraint = ForeignKeyConstraint{{ColumnID{0}}, _table_b, {ColumnID{0}}, _table_a};
+  EXPECT_EQ(foreign_key_constraint.type(), TableConstraintType::ForeignKey);
+}
+
 TEST_F(ForeignKeyConstraintTest, OrderedColumnIDs) {
   // To handle equivalent foreign key constraints / INDs with swapped columns, we sort the foreign key columns and apply
   // the permutation to the primary key columns.

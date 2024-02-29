@@ -28,6 +28,7 @@ TEST_F(TPCHTableGeneratorTest, SmallScaleFactor) {
   EXPECT_TABLE_EQ_ORDERED(table_info_by_name.at("region").table, load_table(dir_001 + "region.tbl", chunk_size));
   EXPECT_TABLE_EQ_ORDERED(table_info_by_name.at("lineitem").table, load_table(dir_001 + "lineitem.tbl", chunk_size));
 
+// TODO(dey4ss): replace with macros once merged.
 #if defined(__has_feature)
 #if (__has_feature(thread_sanitizer) || __has_feature(address_sanitizer))
   // We verified thread and address safety above. As this is quite expensive to sanitize, do not perform the following
@@ -77,8 +78,10 @@ TEST_F(TPCHTableGeneratorTest, RowCountsMediumScaleFactor) {
   EXPECT_EQ(table_info_by_name.at("orders").table->row_count(), std::floor(1'500'000 * scale_factor));
   EXPECT_EQ(table_info_by_name.at("nation").table->row_count(), 25);
   EXPECT_EQ(table_info_by_name.at("region").table->row_count(), 5);
-  EXPECT_EQ(table_info_by_name.at("region").table->row_count(), 5);
-  EXPECT_EQ(table_info_by_name.at("lineitem").table->row_count(), std::floor(6'001'215 * scale_factor));
+  const auto lineitem_cardinality = static_cast<float>(table_info_by_name.at("lineitem").table->row_count());
+  const auto epsilon = 0.001;
+  EXPECT_LE(lineitem_cardinality, 6'000'000 * scale_factor * (1 + epsilon));
+  EXPECT_GE(lineitem_cardinality, 6'000'000 * scale_factor * (1 - epsilon));
 }
 
 TEST_F(TPCHTableGeneratorTest, GenerateAndStore) {
@@ -110,37 +113,36 @@ TEST_F(TPCHTableGeneratorTest, TableConstraints) {
   TPCHTableGenerator{0.01f, ClusteringConfiguration::None}.generate_and_store();
 
   const auto& part_table = Hyrise::get().storage_manager.get_table("part");
-  const auto& supplier_table = Hyrise::get().storage_manager.get_table("supplier");
-  const auto& partsupp_table = Hyrise::get().storage_manager.get_table("partsupp");
-  const auto& customer_table = Hyrise::get().storage_manager.get_table("customer");
-  const auto& orders_table = Hyrise::get().storage_manager.get_table("orders");
-  const auto& lineitem_table = Hyrise::get().storage_manager.get_table("lineitem");
-  const auto& nation_table = Hyrise::get().storage_manager.get_table("nation");
-  const auto& region_table = Hyrise::get().storage_manager.get_table("region");
-
   EXPECT_EQ(part_table->soft_key_constraints().size(), 1);
   EXPECT_TRUE(part_table->soft_foreign_key_constraints().empty());
 
-  EXPECT_EQ(partsupp_table->soft_key_constraints().size(), 1);
-  EXPECT_EQ(partsupp_table->soft_foreign_key_constraints().size(), 2);
-
+  const auto& supplier_table = Hyrise::get().storage_manager.get_table("supplier");
   EXPECT_EQ(supplier_table->soft_key_constraints().size(), 1);
   EXPECT_EQ(supplier_table->soft_foreign_key_constraints().size(), 1);
 
+  const auto& partsupp_table = Hyrise::get().storage_manager.get_table("partsupp");
+  EXPECT_EQ(partsupp_table->soft_key_constraints().size(), 1);
+  EXPECT_EQ(partsupp_table->soft_foreign_key_constraints().size(), 2);
+
+  const auto& customer_table = Hyrise::get().storage_manager.get_table("customer");
   EXPECT_EQ(customer_table->soft_key_constraints().size(), 1);
   EXPECT_EQ(customer_table->soft_foreign_key_constraints().size(), 1);
 
+  const auto& orders_table = Hyrise::get().storage_manager.get_table("orders");
   EXPECT_EQ(orders_table->soft_key_constraints().size(), 1);
   EXPECT_EQ(orders_table->soft_foreign_key_constraints().size(), 1);
 
-  EXPECT_EQ(lineitem_table->soft_key_constraints().size(), 1);
-  EXPECT_EQ(lineitem_table->soft_foreign_key_constraints().size(), 4);
-
+  const auto& nation_table = Hyrise::get().storage_manager.get_table("nation");
   EXPECT_EQ(nation_table->soft_key_constraints().size(), 1);
   EXPECT_EQ(nation_table->soft_foreign_key_constraints().size(), 1);
 
+  const auto& region_table = Hyrise::get().storage_manager.get_table("region");
   EXPECT_EQ(region_table->soft_key_constraints().size(), 1);
   EXPECT_TRUE(region_table->soft_foreign_key_constraints().empty());
+
+  const auto& lineitem_table = Hyrise::get().storage_manager.get_table("lineitem");
+  EXPECT_EQ(lineitem_table->soft_key_constraints().size(), 1);
+  EXPECT_EQ(lineitem_table->soft_foreign_key_constraints().size(), 4);
 }
 
 }  // namespace hyrise

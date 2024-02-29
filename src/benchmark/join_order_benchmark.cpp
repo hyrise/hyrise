@@ -17,16 +17,13 @@
  * database from ~2013 that gets downloaded if necessary as part of running this benchmark. Its 113 queries are obtained
  * from the "third_party/join-order-benchmark" submodule. For an overview of the schema, see:
  * https://doi.org/10.1007/s00778-017-0480-7 (Leis et al. "Query optimization through the looking glass, and what we
- *                                                         found running the Join Order Benchmark")
+ * found running the Join Order Benchmark" - 2.1 The IMDB data set, Fig. 2, p. 645.)
  */
 
 using namespace hyrise;                // NOLINT(build/namespaces)
 using namespace std::string_literals;  // NOLINT(build/namespaces)
 
 void add_key_constraints(std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) {
-  // Set all primary (PK) and foreign keys (FK) as defined in "Query optimization through the looking glass, and what we
-  // found running the Join Order Benchmark" (2.1 The IMDB data set, Fig. 2, p. 645).
-
   // Get all tables.
   const auto& aka_name_table = table_info_by_name.at("aka_name").table;
   const auto& aka_title_table = table_info_by_name.at("aka_title").table;
@@ -77,8 +74,8 @@ void add_key_constraints(std::unordered_map<std::string, BenchmarkTableInfo>& ta
                                                             title_table});
   cast_info_table->add_soft_constraint(ForeignKeyConstraint{{cast_info_table->column_id_by_name("person_id")},
                                                             cast_info_table,
-                                                            {aka_name_table->column_id_by_name("id")},
-                                                            aka_name_table});
+                                                            {name_table->column_id_by_name("id")},
+                                                            name_table});
   cast_info_table->add_soft_constraint(ForeignKeyConstraint{{cast_info_table->column_id_by_name("person_role_id")},
                                                             cast_info_table,
                                                             {char_name_table->column_id_by_name("id")},

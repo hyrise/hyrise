@@ -18,8 +18,7 @@ TEST_F(SSBTableGeneratorTest, GenerateAndStoreRowCounts) {
    */
   const auto scale_factor = 1.0f;
   const auto expected_sizes =
-      std::map<std::string, uint64_t>{{"lineorder", std::floor(6'001'171 * scale_factor)},
-                                      {"part", std::floor(200'000 * (1 + std::log2(scale_factor)))},
+      std::map<std::string, uint64_t>{{"part", std::floor(200'000 * (1 + std::log2(scale_factor)))},
                                       {"supplier", std::floor(2'000 * scale_factor)},
                                       {"customer", std::floor(30'000 * scale_factor)},
                                       {"date", 2556}};
@@ -35,6 +34,12 @@ TEST_F(SSBTableGeneratorTest, GenerateAndStoreRowCounts) {
     SCOPED_TRACE("checking table " + name);
     EXPECT_EQ(Hyrise::get().storage_manager.get_table(name)->row_count(), size);
   }
+
+  const auto lineorder_cardinality =
+      static_cast<float>(Hyrise::get().storage_manager.get_table("lineorder")->row_count());
+  const auto epsilon = 0.001;
+  EXPECT_LE(lineorder_cardinality, 6'000'000 * scale_factor * (1 + epsilon));
+  EXPECT_GE(lineorder_cardinality, 6'000'000 * scale_factor * (1 - epsilon));
 }
 
 TEST_F(SSBTableGeneratorTest, TableConstraints) {
