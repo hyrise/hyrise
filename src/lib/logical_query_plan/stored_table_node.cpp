@@ -159,7 +159,8 @@ OrderDependencies StoredTableNode::order_dependencies() const {
   const auto& table_order_constraints = table->soft_order_constraints();
 
   for (const auto& table_order_constraint : table_order_constraints) {
-    // Discard order constraints that involve pruned column id(s).
+    // Discard order constraints that involve pruned column id(s). [a] |-> [b, c] could be transformed to [a] |-> [b] if
+    // c is pruned. We ignore this for now.
     if (contains_any_column_id(table_order_constraint.ordering_columns(), _pruned_column_ids) ||
         contains_any_column_id(table_order_constraint.ordered_columns(), _pruned_column_ids)) {
       continue;

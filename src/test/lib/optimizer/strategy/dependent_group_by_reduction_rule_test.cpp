@@ -181,7 +181,7 @@ TEST_F(DependentGroupByReductionRuleTest, FullInconsecutiveKeyGroupBy) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-// Test whether we remove the correct columns after joining (one column of a and b's join key can be remmoved). No
+// Test whether we remove the correct columns after joining (one column of a and b's join key can be removed). No
 // projection added, as root already is a projection.
 TEST_F(DependentGroupByReductionRuleTest, JoinSingleKeyPrimaryKey) {
   // clang-format off

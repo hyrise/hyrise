@@ -19,6 +19,7 @@
 #include "logical_query_plan/data_dependencies/unique_column_combination.hpp"
 #include "lqp_utils.hpp"
 #include "storage/constraints/table_key_constraint.hpp"
+#include "storage/constraints/table_order_constraint.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
@@ -156,6 +157,7 @@ OrderDependencies MockNode::order_dependencies() const {
   for (const auto& order_constraint : _order_constraints) {
     const auto& ordering_columns = order_constraint.ordering_columns();
     const auto& ordered_columns = order_constraint.ordered_columns();
+    // [a] |-> [b, c] could be transformed to [a] |-> [b] if c is pruned. We ignore this for now.
     if (contains_any_column(_pruned_column_ids, ordering_columns) ||
         contains_any_column(_pruned_column_ids, ordered_columns)) {
       continue;

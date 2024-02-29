@@ -7,18 +7,32 @@
 #include <ostream>
 #include <vector>
 
-#include "expression/expression_functional.hpp"
+#include <boost/container_hash/hash.hpp>
+
+#include "expression/abstract_expression.hpp"
 #include "expression/expression_utils.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {
 
-using namespace expression_functional;  // NOLINT(build/namespaces)
-
 OrderDependency::OrderDependency(const std::vector<std::shared_ptr<AbstractExpression>>& init_ordering_expressions,
                                  const std::vector<std::shared_ptr<AbstractExpression>>& init_ordered_expessions)
     : ordering_expressions{init_ordering_expressions}, ordered_expressions{init_ordered_expessions} {
   Assert(!ordering_expressions.empty() && !ordered_expressions.empty(), "OrderDependency cannot be empty.");
+  if constexpr (HYRISE_DEBUG) {
+    // Do not allow trivial, reflexive ODs.
+    auto lhs_expressions = ordering_expressions;
+    const auto expression_count = std::min(ordering_expressions.size(), ordered_expressions.size());
+
+    if (lhs_expressions.size() > expression_count) {
+      lhs_expressions.erase(
+          lhs_expressions.begin() +
+              static_cast<std::vector<std::shared_ptr<AbstractExpression>>::difference_type>(expression_count),
+          lhs_expressions.end());
+    }
+
+    Assert(!first_expressions_match(lhs_expressions, ordered_expressions), "Trivial reflexive ODs are not permitted.");
+  }
 }
 
 bool OrderDependency::operator==(const OrderDependency& rhs) const {
@@ -93,13 +107,21 @@ void build_transitive_od_closure(OrderDependencies& order_dependencies) {
           continue;
         }
 
+        // Skip if OD would contain an expression both in LHS and RHS or OD is already known.
+        auto expression_on_both_sides = false;
+        for (const auto& expression : od.ordering_expressions) {
+          if (find_expression_idx(*expression, candidate_od.ordered_expressions)) {
+            expression_on_both_sides = true;
+            break;
+          }
+        }
+
+        if (expression_on_both_sides) {
+          continue;
+        }
+
         const auto& transitive_od = OrderDependency(od.ordering_expressions, candidate_od.ordered_expressions);
-        // Skip if OD is already known or OD would contain an expression both in LHS and RHS.
-        if (order_dependencies.contains(transitive_od) ||
-            std::any_of(transitive_od.ordering_expressions.cbegin(), transitive_od.ordering_expressions.cend(),
-                        [&](const auto& expression) {
-                          return find_expression_idx(*expression, candidate_od.ordered_expressions);
-                        })) {
+        if (order_dependencies.contains(transitive_od)) {
           continue;
         }
 

@@ -42,8 +42,8 @@ UniqueColumnCombinations ProjectionNode::unique_column_combinations() const {
   unique_column_combinations.reserve(node_expressions.size());
 
   // Forward unique column combinations, if applicable.
-  const auto& input_unique_column_combinations = left_input()->unique_column_combinations();
-  const auto& output_expressions = this->output_expressions();
+  const auto input_unique_column_combinations = left_input()->unique_column_combinations();
+  const auto output_expressions = this->output_expressions();
 
   for (const auto& input_ucc : input_unique_column_combinations) {
     if (!contains_all_expressions(input_ucc.expressions, output_expressions)) {
@@ -67,8 +67,8 @@ OrderDependencies ProjectionNode::order_dependencies() const {
   order_dependencies.reserve(node_expressions.size());
 
   // Forward order dependencies, if applicable.
-  const auto& input_order_dependencies = left_input()->order_dependencies();
-  const auto& output_expressions = this->output_expressions();
+  const auto input_order_dependencies = left_input()->order_dependencies();
+  const auto output_expressions = this->output_expressions();
 
   for (const auto& input_order_dependency : input_order_dependencies) {
     // As is the case for UCCs, we have opportunities for creating ODs from different projections in the future.

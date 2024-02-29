@@ -1,11 +1,14 @@
+#include <optional>
+#include <vector>
+
 #include "base_test.hpp"
-#include "expression/expression_functional.hpp"
-#include "expression/expression_utils.hpp"
+#include "logical_query_plan/data_dependencies/functional_dependency.hpp"
+#include "logical_query_plan/data_dependencies/order_dependency.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
-#include "logical_query_plan/stored_table_node.hpp"
+#include "types.hpp"
 #include "utils/data_dependency_test_utils.hpp"
 
 namespace hyrise {
@@ -757,8 +760,17 @@ TEST_F(JoinNodeTest, OrderDependenciesInnerJoin) {
 
   // Inner joins forward ODs from left and right input. If the join predicates are equals predicates and the join
   // columns are both on the left-hand and the right-hand side of an OD, the node should create these new ODs, as well.
+  //
+  // Example: Two tables with ODs [a] |-> [b] and [c] |-> [d], joined on b = c.
+  //
+  //            a | b       c | d       Resulting ODs:
+  //           ---+---     ---+---        1. The input ODs [a] |-> [b], [c] |-> [d] stay valid.
+  //            1 | 2       2 | 1         2. As the join keys are equal, they form two new ODs [b] |-> [c], [c] |-> [b].
+  //            2 | 4       4 | 1         3. Transitively, also [a] |-> [c], [a] |-> [d] are valid.
+  //            3 | 6       6 | 2
+  //
   // Case (i): Equi join and there are ODs, but join colummns are not on both sides of input ODs. However, the join
-  // columns form ODs.
+  //           columns form ODs.
   {
     const auto inner_join_node = JoinNode::make(JoinMode::Inner, equals_(_t_a_b, _t_c_w), _mock_node_a, _mock_node_c);
     const auto& order_dependencies = inner_join_node->order_dependencies();
@@ -769,7 +781,7 @@ TEST_F(JoinNodeTest, OrderDependenciesInnerJoin) {
     EXPECT_TRUE(order_dependencies.contains(OrderDependency{{_t_c_w}, {_t_a_b}}));
   }
 
-  // Case (ii): No equi join.
+  // Case (ii): No equi join. Only forward input ODs.
   {
     // clang-format off
     const auto inner_join_node =
@@ -783,7 +795,10 @@ TEST_F(JoinNodeTest, OrderDependenciesInnerJoin) {
     EXPECT_TRUE(order_dependencies.contains(od_v_to_u));
   }
 
-  // Case (iii): Multiple join predicates.
+  // Case (iii): Multiple join predicates. Though the predicates form additional ODs, we only forward the input ODs.
+  //             Otherwise, we would have to compute too many ODs that we currently do not make use of. E.g., for the
+  //             join below, [a] |-> [u], [b] |-> [v], [a, b] |-> [u, v], and [b, a] |-> [v, u] originate only from the
+  //             join keys.
   {
     // clang-format off
     const auto inner_join_node =
@@ -837,8 +852,9 @@ TEST_F(JoinNodeTest, OrderDependenciesInnerJoin) {
     EXPECT_TRUE(order_dependencies.contains(OrderDependency{{_t_b_y}, {_t_a_b}}));
   }
 
-  // Case (vi): Self join. No new ODs should be built. Inner equi join on a = c and ODs [a] |-> [b] and [a] |-> [c]
-  // would lead to [c] |-> [a] and [c] |-> [b] normally.
+  // Case (vi): Self join. No new ODs should be built. The inner equi join on a = c with input ODs [a] |-> [b] and
+  //            [a] |-> [c] would lead to [c] |-> [a] and [c] |-> [b], normally. However, we cannot distinguish WHICH
+  //            version of c orders b in the output (only the one that equals a).
   {
     const auto od_a_to_b = OrderDependency{{_t_a_a}, {_t_a_b}};
     const auto order_constraint_a_to_b = TableOrderConstraint{{ColumnID{0}}, {ColumnID{1}}};

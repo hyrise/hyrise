@@ -11,6 +11,7 @@
 #include "abstract_lqp_node.hpp"
 #include "storage/constraints/table_key_constraint.hpp"
 #include "storage/constraints/table_order_constraint.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 

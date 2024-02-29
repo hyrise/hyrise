@@ -301,6 +301,16 @@ TEST_F(AggregateNodeTest, ForwardOrderDependencies) {
     EXPECT_TRUE(order_dependencies.contains(od_a_b_to_c));
   }
   {
+    // All expressions are either grouped or have an ANY aggregate. All ODs should remain valid.
+    const auto& aggregate_node =
+        AggregateNode::make(expression_vector(_a, _c), expression_vector(any_(_b)), _mock_node);
+    const auto& order_dependencies = aggregate_node->order_dependencies();
+    EXPECT_EQ(order_dependencies.size(), 3);
+    EXPECT_TRUE(order_dependencies.contains(od_a_to_b));
+    EXPECT_TRUE(order_dependencies.contains(od_a_to_b_c));
+    EXPECT_TRUE(order_dependencies.contains(od_a_b_to_c));
+  }
+  {
     // All columns are aggregated, no ODs remain valid.
     const auto& aggregate_node =
         AggregateNode::make(expression_vector(), expression_vector(sum_(_a), max_(_b), min_(_c)), _mock_node);

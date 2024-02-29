@@ -62,7 +62,7 @@ std::vector<std::shared_ptr<AbstractExpression>> StaticTableNode::output_express
 }
 
 UniqueColumnCombinations StaticTableNode::unique_column_combinations() const {
-  // Generate from table key constraints
+  // Generate from table key constraints.
   auto unique_column_combinations = UniqueColumnCombinations{};
   const auto table_key_constraints = table->soft_key_constraints();
 

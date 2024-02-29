@@ -33,12 +33,12 @@ std::vector<std::shared_ptr<AbstractExpression>> UnionNode::output_expressions()
    * have performance implications now, they may arise in the future. In this case, consider relaxing the check by using
    * `DebugAssert`.
    */
-  Assert(expressions_equal(left_expressions, right_input()->output_expressions()), "Input Expressions must match");
+  Assert(expressions_equal(left_expressions, right_input()->output_expressions()), "Input Expressions must match.");
   return left_expressions;
 }
 
 bool UnionNode::is_column_nullable(const ColumnID column_id) const {
-  Assert(left_input() && right_input(), "Need both inputs to determine nullability");
+  Assert(left_input() && right_input(), "Need both inputs to determine nullability.");
 
   return left_input()->is_column_nullable(column_id) || right_input()->is_column_nullable(column_id);
 }
@@ -68,9 +68,9 @@ UniqueColumnCombinations UnionNode::unique_column_combinations() const {
       return UniqueColumnCombinations{};
     }
     case SetOperationMode::Unique:
-      Fail("ToDo, see discussion https://github.com/hyrise/hyrise/pull/2156#discussion_r452803825");
+      Fail("ToDo, see discussion: https://github.com/hyrise/hyrise/pull/2156#discussion_r452803825");
   }
-  Fail("Unhandled UnionMode");
+  Fail("Unhandled UnionMode.");
 }
 
 OrderDependencies UnionNode::order_dependencies() const {
@@ -86,9 +86,9 @@ OrderDependencies UnionNode::order_dependencies() const {
       return left_order_dependencies;
     }
     case SetOperationMode::Unique:
-      Fail("ToDo, see discussion https://github.com/hyrise/hyrise/pull/2156#discussion_r452803825");
+      Fail("ToDo, see discussion: https://github.com/hyrise/hyrise/pull/2156#discussion_r452803825");
   }
-  Fail("Unhandled UnionMode");
+  Fail("Unhandled UnionMode.");
 }
 
 FunctionalDependencies UnionNode::non_trivial_functional_dependencies() const {
@@ -118,7 +118,7 @@ FunctionalDependencies UnionNode::non_trivial_functional_dependencies() const {
       return non_trivial_fds;
     }
     default: {
-      Fail("Unhandled UnionMode");
+      Fail("Unhandled UnionMode.");
     }
   }
 }

@@ -479,13 +479,13 @@ TEST_F(StoredTableNodeTest, OrderDependenciesPrunedColumns) {
   EXPECT_EQ(_table_a->soft_order_constraints().size(), 2);
 
   _stored_table_node->set_pruned_column_ids({ColumnID{0}, ColumnID{2}});
-  const auto& order_dependencies = _stored_table_node->order_dependencies();
-  EXPECT_TRUE(order_dependencies.empty());
+  EXPECT_TRUE(_stored_table_node->order_dependencies().empty());
 }
 
 TEST_F(StoredTableNodeTest, OrderDependenciesTransitive) {
-  // Construct transitive ODs, but do not run into cycles. Furthermore, do not add ODs where LHS and RHS include the
-  // same column.
+  // Construct transitive ODs and check that no cycles are added. Ensure that there are no ODs where a column is on the
+  // left and right side. The example adds [a] |-> [b], [b] |-> [c], and [c] |-> [a]. Make sure the transitive OD
+  // creation does not loop over this cycle over and over again.
   _table_a->add_soft_order_constraint({{ColumnID{0}}, {ColumnID{1}}});
   _table_a->add_soft_order_constraint({{ColumnID{1}}, {ColumnID{2}}});
   _table_a->add_soft_order_constraint({{ColumnID{2}}, {ColumnID{0}}});

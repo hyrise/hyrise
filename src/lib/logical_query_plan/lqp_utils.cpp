@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <iterator>
 #include <memory>
 #include <optional>
 #include <set>
@@ -446,21 +447,22 @@ std::vector<std::shared_ptr<AbstractLQPNode>> lqp_find_leaves(const std::shared_
 ExpressionUnorderedSet find_column_expressions(const AbstractLQPNode& lqp_node, const std::set<ColumnID>& column_ids) {
   DebugAssert(lqp_node.type == LQPNodeType::StoredTable || lqp_node.type == LQPNodeType::StaticTable ||
                   lqp_node.type == LQPNodeType::Mock,
-              "Did not expect other node types than StoredTableNode, StaticTableNode and MockNode.");
+              "Did not expect other node types than StoredTableNode, StaticTableNode, and MockNode.");
   DebugAssert(!lqp_node.left_input(), "Only valid for data source nodes.");
 
   const auto& output_expressions = lqp_node.output_expressions();
   auto column_expressions = ExpressionUnorderedSet{column_ids.size()};
 
   for (const auto& output_expression : output_expressions) {
-    const auto column_expression = dynamic_pointer_cast<LQPColumnExpression>(output_expression);
-    if (!column_expression) {
-      continue;
-    }
+    DebugAssert(output_expression->type == ExpressionType::LQPColumn,
+                "Expected LQPColumnExpressions from original nodes.");
+    const auto& column_expression = static_cast<const LQPColumnExpression&>(*output_expression);
 
-    const auto original_column_id = column_expression->original_column_id;
-    if (column_ids.contains(original_column_id) && *column_expression->original_node.lock() == lqp_node) {
-      [[maybe_unused]] const auto [_, success] = column_expressions.emplace(column_expression);
+    const auto original_column_id = column_expression.original_column_id;
+    DebugAssert(*column_expression.original_node.lock() == lqp_node,
+                "LQPColumnExpressions should reference the original node.");
+    if (column_ids.contains(original_column_id)) {
+      [[maybe_unused]] const auto [_, success] = column_expressions.emplace(output_expression);
       DebugAssert(success, "Did not expect multiple column expressions for the same ColumnID.");
     }
   }
@@ -479,17 +481,18 @@ std::vector<std::shared_ptr<AbstractExpression>> find_column_expressions(const A
   auto column_expressions = std::vector<std::shared_ptr<AbstractExpression>>(column_ids.size());
 
   for (const auto& output_expression : output_expressions) {
-    const auto column_expression = dynamic_pointer_cast<LQPColumnExpression>(output_expression);
-    if (!column_expression) {
-      continue;
-    }
+    DebugAssert(output_expression->type == ExpressionType::LQPColumn,
+                "Expected LQPColumnExpressions from original nodes.");
+    const auto& column_expression = static_cast<const LQPColumnExpression&>(*output_expression);
 
-    const auto original_column_id = column_expression->original_column_id;
+    const auto original_column_id = column_expression.original_column_id;
     const auto it = std::find(column_ids.cbegin(), column_ids.cend(), original_column_id);
-    if (it != column_ids.end() && *column_expression->original_node.lock() == lqp_node) {
-      const auto offset = it - column_ids.cbegin();
+    if (it != column_ids.end()) {
+      DebugAssert(*column_expression.original_node.lock() == lqp_node,
+                  "LQPColumnExpressions should reference the original node.");
+      const auto offset = std::distance(column_ids.cbegin(), it);
       DebugAssert(!column_expressions[offset], "Did not expect multiple column expressions for the same column id.");
-      column_expressions[offset] = column_expression;
+      column_expressions[offset] = output_expression;
     }
   }
 
@@ -690,40 +693,6 @@ std::shared_ptr<AbstractLQPNode> find_diamond_origin_node(const std::shared_ptr<
     return *diamond_origin_node;
   }
   return nullptr;
-}
-
-bool contains_matching_order_dependency(const OrderDependencies& order_dependencies,
-                                        const std::vector<std::shared_ptr<AbstractExpression>>& ordering_expressions,
-                                        const std::vector<std::shared_ptr<AbstractExpression>>& ordered_expressions) {
-  DebugAssert(!order_dependencies.empty(), "Invalid input: Set of INDs should not be empty.");
-  DebugAssert(!ordering_expressions.empty(), "Invalid input: List of ordering expressions should not be empty.");
-  DebugAssert(!ordered_expressions.empty(), "Invalid input: List of ordered expressions should not be empty.");
-
-  for (const auto& od : order_dependencies) {
-    // Continue if OD requires more ordering expressions to guarantee sortedness than provided.
-    if (od.ordering_expressions.size() > ordering_expressions.size()) {
-      continue;
-    }
-
-    // Continue if the OD's ordering expression are not the first of the provided expressions. It is totally fine if
-    // the OD requires fewer ordering expressions than given.
-    if (!first_expressions_match(od.ordering_expressions, ordering_expressions)) {
-      continue;
-    }
-
-    // Continue if more ordered expressions are requested than OD guarantees.
-    if (ordered_expressions.size() > od.ordered_expressions.size()) {
-      continue;
-    }
-
-    // Found matching OD if the requested ordered expressions are the first of the OD's ordered expressions. Totally
-    // fine if the OD orders more expressions that requested.
-    if (first_expressions_match(ordered_expressions, od.ordered_expressions)) {
-      return true;
-    }
-  }
-
-  return false;
 }
 
 }  // namespace hyrise

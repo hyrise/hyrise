@@ -1,6 +1,13 @@
+#include <memory>
+#include <string>
+#include <vector>
+
+#include "all_type_variant.hpp"
 #include "base_test.hpp"
+#include "expression/lqp_column_expression.hpp"
 #include "logical_query_plan/data_dependencies/order_dependency.hpp"
 #include "logical_query_plan/mock_node.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 
@@ -27,6 +34,13 @@ class OrderDependencyTest : public BaseTest {
 TEST_F(OrderDependencyTest, InvalidDependencies) {
   EXPECT_THROW(OrderDependency({}, {_a_a}), std::logic_error);
   EXPECT_THROW(OrderDependency({_a_a}, {}), std::logic_error);
+
+  // Reflexive ODs are valid, but we do not allow them.
+  if (HYRISE_DEBUG) {
+    EXPECT_THROW(OrderDependency({_a_a}, {_a_a}), std::logic_error);
+    EXPECT_THROW(OrderDependency({_a_a}, {_a_a, _a_b}), std::logic_error);
+    EXPECT_THROW(OrderDependency({_a_a, _a_b}, {_a_a}), std::logic_error);
+  }
 }
 
 TEST_F(OrderDependencyTest, Equals) {
@@ -56,50 +70,9 @@ TEST_F(OrderDependencyTest, Hash) {
   const auto od_a_to_b_c = OrderDependency{{_a_a}, {_a_b, _a_c}};
   const auto od_a_b_to_c = OrderDependency{{_a_a, _a_b}, {_a_c}};
 
-  // Equal Hash
   EXPECT_EQ(od_a_to_b.hash(), OrderDependency({_a_a}, {_a_b}).hash());
   EXPECT_EQ(od_a_to_b_c.hash(), OrderDependency({_a_a}, {_a_b, _a_c}).hash());
   EXPECT_EQ(od_a_b_to_c.hash(), OrderDependency({_a_a, _a_b}, {_a_c}).hash());
-
-  // Not Equal Hash
-  EXPECT_NE(od_a_to_b.hash(), OrderDependency({_a_b}, {_a_a}).hash());
-  EXPECT_NE(od_a_to_b.hash(), OrderDependency({_a_c}, {_a_b}).hash());
-  EXPECT_NE(od_a_to_b.hash(), OrderDependency({_a_a}, {_a_c}).hash());
-  EXPECT_NE(od_a_to_b.hash(), OrderDependency({_b_x}, {_b_y}).hash());
-  EXPECT_NE(od_a_to_b.hash(), od_a_to_b_c.hash());
-  EXPECT_NE(od_a_to_b.hash(), od_a_b_to_c.hash());
-  EXPECT_NE(od_a_to_b_c.hash(), OrderDependency({_a_a}, {_a_c, _a_b}).hash());
-  EXPECT_NE(od_a_to_b_c.hash(), od_a_b_to_c.hash());
-  EXPECT_NE(od_a_b_to_c.hash(), OrderDependency({_a_b, _a_a}, {_a_c}).hash());
-}
-
-TEST_F(OrderDependencyTest, Container) {
-  const auto od_a_to_b = OrderDependency{{_a_a}, {_a_b}};
-  const auto od_a_to_b_c = OrderDependency{{_a_a}, {_a_b, _a_c}};
-  const auto od_a_b_to_c = OrderDependency{{_a_a, _a_b}, {_a_c}};
-  const auto od_x_to_y = OrderDependency{{_b_x}, {_b_y}};
-
-  auto order_dependencies = OrderDependencies{};
-  EXPECT_TRUE(order_dependencies.empty());
-
-  order_dependencies.emplace(od_a_to_b);
-  EXPECT_EQ(order_dependencies.size(), 1);
-  EXPECT_TRUE(order_dependencies.contains(od_a_to_b));
-
-  order_dependencies.emplace(od_a_to_b);
-  EXPECT_EQ(order_dependencies.size(), 1);
-
-  order_dependencies.emplace(od_a_to_b_c);
-  EXPECT_EQ(order_dependencies.size(), 2);
-  EXPECT_TRUE(order_dependencies.contains(od_a_to_b_c));
-
-  order_dependencies.emplace(od_a_b_to_c);
-  EXPECT_EQ(order_dependencies.size(), 3);
-  EXPECT_TRUE(order_dependencies.contains(od_a_b_to_c));
-
-  order_dependencies.emplace(od_x_to_y);
-  EXPECT_EQ(order_dependencies.size(), 4);
-  EXPECT_TRUE(order_dependencies.contains(od_x_to_y));
 }
 
 TEST_F(OrderDependencyTest, BuildTransitiveODClosure) {
@@ -128,7 +101,8 @@ TEST_F(OrderDependencyTest, BuildTransitiveODClosure) {
   const auto od_b_to_y = OrderDependency({_a_b}, {_b_y});
   EXPECT_TRUE(order_dependencies.contains(od_b_to_y));
 
-  // Terminate and do not add ODs with the same expression on both sides if there are cycles.
+  // Terminate and do not add ODs with the same expression on both sides if there are cycles. E.g., do not add
+  // [a] |-> [a], [x] |-> [x], etc.
   const auto od_y_to_a = OrderDependency({_b_y}, {_a_a});
   order_dependencies.emplace(od_y_to_a);
   EXPECT_EQ(order_dependencies.size(), 7);

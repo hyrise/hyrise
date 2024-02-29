@@ -258,7 +258,7 @@ FunctionalDependencies fds_from_unique_column_combinations(const std::shared_ptr
                                                            const UniqueColumnCombinations& unique_column_combinations);
 
 /**
- * @return A set of FDs, derived from the given @param unique_column_combinations and based on the output expressions of
+ * @return A set of FDs, derived from the given @param order_dependencies and based on the output expressions of
  *         the given @param lqp node.
  */
 FunctionalDependencies fds_from_order_dependencies(const std::shared_ptr<const AbstractLQPNode>& lqp,
@@ -275,17 +275,5 @@ void remove_invalid_fds(const std::shared_ptr<const AbstractLQPNode>& lqp, Funct
  * @returns a shared pointer to the diamond's origin node. If it was not found, a null pointer is returned.
  */
 std::shared_ptr<AbstractLQPNode> find_diamond_origin_node(const std::shared_ptr<AbstractLQPNode>& union_root_node);
-
-/**
- * @return True if there is an OD in the given set of @param order_dependencies matching the given lists of @param
- *         ordering_expressions and @param ordered_expressions. An order dependency matches if it covers at most all of
- *         @param ordering_expressions and at least @param ordered_expressions.
- *         Example: - @param ordering_expressions: [a, b]
- *                  - @param ordered_expressions: [c, d]
- *                  - possible matching ODs: [a] |-> [c, d], [a, b] |-> [c, d], [a, b] |-> [c, d, e]
- */
-bool contains_matching_order_dependency(const OrderDependencies& order_dependencies,
-                                        const std::vector<std::shared_ptr<AbstractExpression>>& ordering_expressions,
-                                        const std::vector<std::shared_ptr<AbstractExpression>>& ordered_expressions);
 
 }  // namespace hyrise

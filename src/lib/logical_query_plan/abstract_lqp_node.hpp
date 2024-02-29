@@ -2,6 +2,8 @@
 
 #include <array>
 #include <memory>
+#include <optional>
+#include <ostream>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -221,9 +223,11 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
 
   /**
    * @return True if there is an order dependency (OD) matching the given lists of output expressions (i.e., sorting
-   *         the table by @param `ordering_expressions` also sorts @param `ordered_expressions`). This is preferred
-   *         over calling contains_matching_order_dependency(order_dependencies(), ...) as it performs additional
-   *         sanity checks.
+   *         the table by @param `ordering_expressions` also sorts @param `ordered_expressions`).
+   *
+   * Example: - @param ordering_expressions: [a, b]
+   *          - @param ordered_expressions: [c, d]
+   *          - possible matching ODs: [a] |-> [c, d], [a, b] |-> [c, d], [a, b] |-> [c, d, e]
    */
   bool has_matching_od(const std::vector<std::shared_ptr<AbstractExpression>>& ordering_expressions,
                        const std::vector<std::shared_ptr<AbstractExpression>>& ordered_expressions) const;
@@ -274,6 +278,10 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    */
   UniqueColumnCombinations _forward_left_unique_column_combinations() const;
 
+  /**
+   * This is a helper method for node types that do not have an effect on the ODs from input nodes.
+   * @return All order dependencies from the left input node.
+   */
   OrderDependencies _forward_left_order_dependencies() const;
 
   /*

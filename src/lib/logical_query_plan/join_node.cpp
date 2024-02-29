@@ -91,8 +91,8 @@ UniqueColumnCombinations JoinNode::unique_column_combinations() const {
     return _forward_left_unique_column_combinations();
   }
 
-  const auto& left_unique_column_combinations = left_input()->unique_column_combinations();
-  const auto& right_unique_column_combinations = right_input()->unique_column_combinations();
+  const auto left_unique_column_combinations = left_input()->unique_column_combinations();
+  const auto right_unique_column_combinations = right_input()->unique_column_combinations();
 
   return _output_unique_column_combinations(left_unique_column_combinations, right_unique_column_combinations);
 }
@@ -158,8 +158,8 @@ OrderDependencies JoinNode::order_dependencies() const {
 
   // ODs are not affected from removing or duplicating tuples, so we simply have to foward left and right ODs without
   // duplicate ODs. We achieve deduplication by using sets for ODs.
-  const auto& left_order_dependencies = left_input()->order_dependencies();
-  const auto& right_order_dependencies = right_input()->order_dependencies();
+  const auto left_order_dependencies = left_input()->order_dependencies();
+  const auto right_order_dependencies = right_input()->order_dependencies();
   auto order_dependencies = OrderDependencies{left_order_dependencies.cbegin(), left_order_dependencies.cend()};
   order_dependencies.insert(right_order_dependencies.cbegin(), right_order_dependencies.cend());
 
@@ -167,7 +167,7 @@ OrderDependencies JoinNode::order_dependencies() const {
   // nodes have the ODs A.a |-> A.b, and B.x |-> B.y. In this case, the two additional ODs A.a |-> B.x and A.a |-> B.y
   // occur. For now, we limit the transitive closure of ODs to joins with a single equals predicate. Otherwise, we would
   // have to add all permutations of the predicates as ODs.
-  const auto& predicates = join_predicates();
+  const auto predicates = join_predicates();
   if (join_mode != JoinMode::Inner || predicates.size() != 1) {
     return order_dependencies;
   }
@@ -221,9 +221,9 @@ FunctionalDependencies JoinNode::non_trivial_functional_dependencies() const {
   auto fds_left = FunctionalDependencies{};
   auto fds_right = FunctionalDependencies{};
 
-  const auto& left_unique_column_combinations = left_input()->unique_column_combinations();
-  const auto& right_unique_column_combinations = right_input()->unique_column_combinations();
-  const auto& output_unique_column_combinations =
+  const auto left_unique_column_combinations = left_input()->unique_column_combinations();
+  const auto right_unique_column_combinations = right_input()->unique_column_combinations();
+  const auto output_unique_column_combinations =
       _output_unique_column_combinations(left_unique_column_combinations, right_unique_column_combinations);
 
   if (output_unique_column_combinations.empty() && !left_unique_column_combinations.empty() &&

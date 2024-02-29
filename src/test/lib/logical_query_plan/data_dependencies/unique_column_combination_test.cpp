@@ -1,6 +1,10 @@
+#include <memory>
+#include <vector>
+
 #include "base_test.hpp"
 #include "logical_query_plan/data_dependencies/unique_column_combination.hpp"
 #include "logical_query_plan/mock_node.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 

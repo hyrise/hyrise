@@ -315,7 +315,31 @@ bool AbstractLQPNode::has_matching_od(
     return false;
   }
 
-  return contains_matching_order_dependency(order_dependencies, ordering_expressions, ordered_expressions);
+  for (const auto& od : order_dependencies) {
+    // Continue if OD requires more ordering expressions to guarantee sortedness than provided.
+    if (od.ordering_expressions.size() > ordering_expressions.size()) {
+      continue;
+    }
+
+    // Continue if the OD's ordering expression are not the first of the provided expressions. It is totally fine if
+    // the OD requires fewer ordering expressions than given.
+    if (!first_expressions_match(od.ordering_expressions, ordering_expressions)) {
+      continue;
+    }
+
+    // Continue if more ordered expressions are requested than OD guarantees.
+    if (ordered_expressions.size() > od.ordered_expressions.size()) {
+      continue;
+    }
+
+    // Found matching OD if the requested ordered expressions are the first of the OD's ordered expressions. Totally
+    // fine if the OD orders more expressions that requested.
+    if (first_expressions_match(ordered_expressions, od.ordered_expressions)) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 FunctionalDependencies AbstractLQPNode::functional_dependencies() const {
