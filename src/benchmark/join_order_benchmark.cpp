@@ -76,8 +76,8 @@ void add_key_constraints(std::unordered_map<std::string, BenchmarkTableInfo>& ta
                                                     title_table});
   cast_info_table->add_soft_foreign_key_constraint({{cast_info_table->column_id_by_name("person_id")},
                                                     cast_info_table,
-                                                    {aka_name_table->column_id_by_name("id")},
-                                                    aka_name_table});
+                                                    {name_table->column_id_by_name("id")},
+                                                    name_table});
   cast_info_table->add_soft_foreign_key_constraint({{cast_info_table->column_id_by_name("person_role_id")},
                                                     cast_info_table,
                                                     {char_name_table->column_id_by_name("id")},
