@@ -124,9 +124,10 @@ CheckOptions:
   - { key: readability-identifier-naming.ValueTemplateParameterCase, value: lower_case }
   - { key: readability-identifier-naming.VariableCase, value: lower_case }
 
-  # Iff(!) the context is clear, 'it' for iterator, 'op' for operator, or 'fd' for functional dependency are fine.
-  - { key: readability-identifier-length.IgnoredParameterNames, value: '^(it|fd|op)$' }
-  - { key: readability-identifier-length.IgnoredVariableNames, value: '^(it|fd|op)$' }
+  # Iff(!) the context is clear, very short parameter/variable names are acceptable. Current exceptions are 'it' for
+  # iterator, 'op' for operator, 'od' for order dependency, or 'fd' for functional dependency.
+  - { key: readability-identifier-length.IgnoredParameterNames, value: '^(it|op|od|fd)$' }
+  - { key: readability-identifier-length.IgnoredVariableNames, value: '^(it|op|od|fd)$' }
 
   # Boost and SQLParser make wide use of umbrella headers which clang-tidy's include cleaner does not (yet) handle well.
   - { key: misc-include-cleaner.IgnoreHeaders, value: 'boost/.*;sql/.*\.h' }
