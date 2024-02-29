@@ -405,9 +405,38 @@ void Table::create_chunk_index(const std::vector<ColumnID>& column_ids, const st
   _chunk_indexes_statistics.emplace_back(ChunkIndexStatistics{column_ids, name, chunk_index_type});
 }
 
-void Table::add_soft_key_constraint(const TableKeyConstraint& table_key_constraint) {
-  Assert(_type == TableType::Data, "TableKeyConstraints are not tracked for reference tables across the PQP.");
+void Table::add_soft_constraint(const AbstractTableConstraint& table_constraint) {
+  Assert(_type == TableType::Data, "Constraints are not tracked for reference tables across the PQP.");
+  switch (table_constraint.type()) {
+    case TableConstraintType::Key:
+      _add_soft_key_constraint(static_cast<const TableKeyConstraint&>(table_constraint));
+      return;
+    case TableConstraintType::ForeignKey:
+      _add_soft_foreign_key_constraint(static_cast<const ForeignKeyConstraint&>(table_constraint));
+      return;
+    case TableConstraintType::Order:
+      _add_soft_order_constraint(static_cast<const TableOrderConstraint&>(table_constraint));
+      return;
+  }
+}
 
+const TableKeyConstraints& Table::soft_key_constraints() const {
+  return _table_key_constraints;
+}
+
+const ForeignKeyConstraints& Table::soft_foreign_key_constraints() const {
+  return _foreign_key_constraints;
+}
+
+const ForeignKeyConstraints& Table::referenced_foreign_key_constraints() const {
+  return _referenced_foreign_key_constraints;
+}
+
+const TableOrderConstraints& Table::soft_order_constraints() const {
+  return _table_order_constraints;
+}
+
+void Table::_add_soft_key_constraint(const TableKeyConstraint& table_key_constraint) {
   // Check validity of specified columns.
   const auto column_count = this->column_count();
   for (const auto& column_id : table_key_constraint.columns()) {
@@ -436,13 +465,7 @@ void Table::add_soft_key_constraint(const TableKeyConstraint& table_key_constrai
   _table_key_constraints.insert(table_key_constraint);
 }
 
-const TableKeyConstraints& Table::soft_key_constraints() const {
-  return _table_key_constraints;
-}
-
-void Table::add_soft_foreign_key_constraint(const ForeignKeyConstraint& foreign_key_constraint) {
-  Assert(_type == TableType::Data, "ForeignKeyConstraints are not tracked for reference tables across the PQP.");
-
+void Table::_add_soft_foreign_key_constraint(const ForeignKeyConstraint& foreign_key_constraint) {
   Assert(foreign_key_constraint.foreign_key_table().get() == this, "ForeignKeyConstraint is added to the wrong table.");
 
   // Check validity of specified columns.
@@ -468,17 +491,7 @@ void Table::add_soft_foreign_key_constraint(const ForeignKeyConstraint& foreign_
   referenced_table->_referenced_foreign_key_constraints.insert(foreign_key_constraint);
 }
 
-const ForeignKeyConstraints& Table::soft_foreign_key_constraints() const {
-  return _foreign_key_constraints;
-}
-
-const ForeignKeyConstraints& Table::referenced_foreign_key_constraints() const {
-  return _referenced_foreign_key_constraints;
-}
-
-void Table::add_soft_order_constraint(const TableOrderConstraint& table_order_constraint) {
-  Assert(_type == TableType::Data, "TableOrderConstraints are not tracked for reference tables across the PQP.");
-
+void Table::_add_soft_order_constraint(const TableOrderConstraint& table_order_constraint) {
   // Check validity of columns.
   const auto column_count = this->column_count();
   for (const auto& column_id : table_order_constraint.ordering_columns()) {
@@ -504,10 +517,6 @@ void Table::add_soft_order_constraint(const TableOrderConstraint& table_order_co
            "TableOrderConstraint for required columns has already been set.");
   }
   _table_order_constraints.insert(table_order_constraint);
-}
-
-const TableOrderConstraints& Table::soft_order_constraints() const {
-  return _table_order_constraints;
 }
 
 const std::vector<ColumnID>& Table::value_clustered_by() const {

@@ -11,6 +11,7 @@
 #include "abstract_segment.hpp"
 #include "chunk.hpp"
 #include "memory/zero_allocator.hpp"
+#include "storage/constraints/abstract_table_constraint.hpp"
 #include "storage/constraints/foreign_key_constraint.hpp"
 #include "storage/constraints/table_key_constraint.hpp"
 #include "storage/constraints/table_order_constraint.hpp"
@@ -205,16 +206,13 @@ class Table : private Noncopyable {
    * NOTE: constraints are currently NOT ENFORCED and are only used to develop optimization rules.
    * We call them "soft" constraints to draw attention to that.
    */
-  void add_soft_key_constraint(const TableKeyConstraint& table_key_constraint);
+  void add_soft_constraint(const AbstractTableConstraint& table_constraint);
+
   const TableKeyConstraints& soft_key_constraints() const;
 
-  // Adds foreign key constraint so it can be retrieved by soft_foreign_key_constraints() of this table and by
-  // referenced_foreign_key_constraints() of the table that has the primary key columns.
-  void add_soft_foreign_key_constraint(const ForeignKeyConstraint& foreign_key_constraint);
   const ForeignKeyConstraints& soft_foreign_key_constraints() const;
   const ForeignKeyConstraints& referenced_foreign_key_constraints() const;
 
-  void add_soft_order_constraint(const TableOrderConstraint& table_order_constraint);
   const TableOrderConstraints& soft_order_constraints() const;
 
   /**
@@ -246,6 +244,14 @@ class Table : private Noncopyable {
   void set_value_clustered_by(const std::vector<ColumnID>& value_clustered_by);
 
  protected:
+  void _add_soft_key_constraint(const TableKeyConstraint& table_key_constraint);
+
+  // Adds foreign key constraint so it can be retrieved by soft_foreign_key_constraints() of this table and by
+  // referenced_foreign_key_constraints() of the table that has the primary key columns.
+  void _add_soft_foreign_key_constraint(const ForeignKeyConstraint& foreign_key_constraint);
+
+  void _add_soft_order_constraint(const TableOrderConstraint& table_order_constraint);
+
   const TableColumnDefinitions _column_definitions;
   const TableType _type;
   const UseMvcc _use_mvcc;

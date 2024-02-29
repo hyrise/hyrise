@@ -22,10 +22,8 @@ class StressTest : public BaseTest {
   }
 
   const uint32_t CORES_PER_NODE = std::thread::hardware_concurrency();
-  const std::vector<std::vector<uint32_t>> FAKE_SINGLE_NODE_NUMA_TOPOLOGIES = {{CORES_PER_NODE},
-                                                                               {CORES_PER_NODE, 0, 0},
-                                                                               {0, CORES_PER_NODE, 0},
-                                                                               {0, 0, CORES_PER_NODE}};
+  const std::vector<std::vector<uint32_t>> FAKE_SINGLE_NODE_NUMA_TOPOLOGIES = {
+      {CORES_PER_NODE}, {CORES_PER_NODE, 0, 0}, {0, CORES_PER_NODE, 0}, {0, 0, CORES_PER_NODE}};
 
   const std::vector<std::vector<uint32_t>> FAKE_MULTI_NODE_NUMA_TOPOLOGIES = {{CORES_PER_NODE, CORES_PER_NODE, 0, 0},
                                                                               {0, CORES_PER_NODE, CORES_PER_NODE, 0},
@@ -294,7 +292,6 @@ TEST_F(StressTest, NodeQueueSchedulerCreationAndReset) {
     EXPECT_EQ(node_queue_scheduler->active_worker_count().load(), 0);
   }
 }
-
 
 // Check that spawned jobs increment the semaphore correctly.
 // First, create jobs but not schedule them to check if semaphore is zero. Second, we spwan blocked jobs and check the

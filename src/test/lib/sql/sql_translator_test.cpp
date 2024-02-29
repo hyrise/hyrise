@@ -1700,9 +1700,8 @@ TEST_F(SQLTranslatorTest, LimitExpression) {
 }
 
 TEST_F(SQLTranslatorTest, Extract) {
-  const auto components =
-      std::vector{DatetimeComponent::Year, DatetimeComponent::Month,  DatetimeComponent::Day,
-                  DatetimeComponent::Hour, DatetimeComponent::Minute, DatetimeComponent::Second};
+  const auto components = std::vector{DatetimeComponent::Year, DatetimeComponent::Month,  DatetimeComponent::Day,
+                                      DatetimeComponent::Hour, DatetimeComponent::Minute, DatetimeComponent::Second};
 
   auto actual_lqp = std::shared_ptr<AbstractLQPNode>{};
   auto expected_lqp = std::shared_ptr<AbstractLQPNode>{};
@@ -2446,8 +2445,9 @@ TEST_F(SQLTranslatorTest, CreateTable) {
                              {"a_datetime", DataType::String, true}};
 
   const auto static_table_node = StaticTableNode::make(Table::create_dummy_table(column_definitions));
-  static_table_node->table->add_soft_key_constraint({{ColumnID{3}}, KeyConstraintType::UNIQUE});
-  static_table_node->table->add_soft_key_constraint({{ColumnID{1}, ColumnID{2}}, KeyConstraintType::PRIMARY_KEY});
+  static_table_node->table->add_soft_constraint(TableKeyConstraint{{ColumnID{3}}, KeyConstraintType::UNIQUE});
+  static_table_node->table->add_soft_constraint(
+      TableKeyConstraint{{ColumnID{1}, ColumnID{2}}, KeyConstraintType::PRIMARY_KEY});
   const auto expected_lqp = CreateTableNode::make("a_table", false, static_table_node);
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);

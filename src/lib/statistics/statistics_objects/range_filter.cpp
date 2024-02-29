@@ -271,7 +271,6 @@ bool RangeFilter<T>::does_not_contain(const PredicateCondition predicate_conditi
         return true;
       }
 
-
       // For the following code, consider the running example of a RangeFilter with two ranges: [2, 4] [7, 10].
       // The predicate is `a BETWEEN x AND y`.
       // Case (i): y is less than the segment's minimum. If y < 2 (or <= 2 for upper exclusive predicate), the predicate

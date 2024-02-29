@@ -223,8 +223,9 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::evaluate_expressi
       Fail("Cannot evaluate an LQP expression, those need to be translated by the LQPTranslator first.");
 
     case ExpressionType::Placeholder:
-      Fail("Cannot evaluate an expression still containing placeholders. Are you trying to execute a prepared plan "
-           "without instantiating it first?");
+      Fail(
+          "Cannot evaluate an expression still containing placeholders. Are you trying to execute a prepared plan "
+          "without instantiating it first?");
 
     case ExpressionType::Interval:
       Fail("IntervalExpression should have been resolved by SQLTranslator.");

@@ -130,7 +130,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_node_recursively(
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_by_node_type(
     LQPNodeType type, const std::shared_ptr<AbstractLQPNode>& node) const {
   switch (type) {
-    // clang-format off
+      // clang-format off
     case LQPNodeType::Aggregate:          return _translate_aggregate_node(node);
     case LQPNodeType::Alias:              return _translate_alias_node(node);
     case LQPNodeType::ChangeMetaTable:    return _translate_change_meta_table_node(node);
@@ -159,7 +159,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_by_node_type(
     case LQPNodeType::Import:             return _translate_import_node(node);
     case LQPNodeType::Export:             return _translate_export_node(node);
     case LQPNodeType::CreatePreparedPlan: return _translate_create_prepared_plan_node(node);
-    // clang-format on
+      // clang-format on
 
     default:
       Fail("Unknown node type encountered.");

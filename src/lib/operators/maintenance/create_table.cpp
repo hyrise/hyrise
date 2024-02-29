@@ -71,7 +71,7 @@ std::shared_ptr<const Table> CreateTable::_on_execute(std::shared_ptr<Transactio
     Hyrise::get().storage_manager.add_table(table_name, table);
 
     for (const auto& table_key_constraint : _left_input->get_output()->soft_key_constraints()) {
-      table->add_soft_key_constraint(table_key_constraint);
+      table->add_soft_constraint(table_key_constraint);
     }
 
     // Insert table data (if no data is present, insertion makes no difference)

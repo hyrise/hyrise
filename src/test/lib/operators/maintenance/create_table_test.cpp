@@ -53,8 +53,10 @@ TEST_F(CreateTableTest, NameAndDescription) {
 
 TEST_F(CreateTableTest, NameAndDescriptionWithConstraints) {
   const auto& input_table = std::const_pointer_cast<Table>(dummy_table_wrapper->table);
-  input_table->add_soft_key_constraint({{input_table->column_id_by_name("a")}, KeyConstraintType::PRIMARY_KEY});
-  input_table->add_soft_key_constraint({{input_table->column_id_by_name("b")}, KeyConstraintType::UNIQUE});
+  input_table->add_soft_constraint(
+      TableKeyConstraint{{input_table->column_id_by_name("a")}, KeyConstraintType::PRIMARY_KEY});
+  input_table->add_soft_constraint(
+      TableKeyConstraint{{input_table->column_id_by_name("b")}, KeyConstraintType::UNIQUE});
 
   EXPECT_EQ(create_table->name(), "CreateTable");
   // Case (i): CreateTable operator can retrieve the columns' information from the input operator's output table.
@@ -93,7 +95,7 @@ TEST_F(CreateTableTest, Execute) {
 TEST_F(CreateTableTest, SoftKeyConstraints) {
   const auto input_table = const_pointer_cast<Table>(dummy_table_wrapper->table);
   const auto unique_constraint = TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE};
-  input_table->add_soft_key_constraint(unique_constraint);
+  input_table->add_soft_constraint(unique_constraint);
 
   const auto context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
   create_table->set_transaction_context(context);

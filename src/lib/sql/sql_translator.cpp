@@ -1667,7 +1667,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hs
     // Set table key constraints
     const auto table = Table::create_dummy_table(column_definitions);
     for (const auto& table_key_constraint : table_key_constraints) {
-      table->add_soft_key_constraint(table_key_constraint);
+      table->add_soft_constraint(table_key_constraint);
     }
     input_node = StaticTableNode::make(table);
   }

@@ -65,8 +65,8 @@ TEST_F(PrintUtilsTest, print_table_key_constraints) {
   EXPECT_EQ(stream.str(), "");
 
   stream.str("");
-  table->add_soft_key_constraint({{ColumnID{1}, ColumnID{0}}, KeyConstraintType::UNIQUE});
-  table->add_soft_key_constraint({{ColumnID{2}}, KeyConstraintType::PRIMARY_KEY});
+  table->add_soft_constraint(TableKeyConstraint{{ColumnID{1}, ColumnID{0}}, KeyConstraintType::UNIQUE});
+  table->add_soft_constraint(TableKeyConstraint{{ColumnID{2}}, KeyConstraintType::PRIMARY_KEY});
 
   print_table_key_constraints(table, stream);
   // Primary keys are printed before unique constraints.

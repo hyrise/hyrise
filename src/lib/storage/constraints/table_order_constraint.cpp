@@ -6,7 +6,9 @@ namespace hyrise {
 
 TableOrderConstraint::TableOrderConstraint(const std::vector<ColumnID>& ordering_columns,
                                            const std::vector<ColumnID>& ordered_columns)
-    : _ordering_columns(ordering_columns), _ordered_columns(ordered_columns) {
+    : AbstractTableConstraint(TableConstraintType::Order),
+      _ordering_columns(ordering_columns),
+      _ordered_columns(ordered_columns) {
   if constexpr (HYRISE_DEBUG) {
     for (const auto column : ordering_columns) {
       Assert(std::find(ordered_columns.begin(), ordered_columns.end(), column) == ordered_columns.end(),

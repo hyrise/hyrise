@@ -70,7 +70,7 @@ TEST_F(PredicateNodeTest, ForwardUniqueColumnCombinations) {
   EXPECT_TRUE(_table_node->unique_column_combinations().empty());
   EXPECT_TRUE(_predicate_node->unique_column_combinations().empty());
 
-  _table_a->add_soft_key_constraint({{ColumnID{0}}, KeyConstraintType::UNIQUE});
+  _table_a->add_soft_constraint(TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE});
   const auto ucc = UniqueColumnCombination{{_i}};
   EXPECT_EQ(_table_node->unique_column_combinations().size(), 1);
   EXPECT_TRUE(_table_node->unique_column_combinations().contains(ucc));
