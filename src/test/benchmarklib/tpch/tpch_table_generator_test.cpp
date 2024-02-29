@@ -27,20 +27,14 @@ TEST_F(TPCHTableGeneratorTest, SmallScaleFactor) {
   EXPECT_TABLE_EQ_ORDERED(table_info_by_name.at("region").table, load_table(dir_001 + "region.tbl", chunk_size));
   EXPECT_TABLE_EQ_ORDERED(table_info_by_name.at("lineitem").table, load_table(dir_001 + "lineitem.tbl", chunk_size));
 
-// TODO(dey4ss): replace with macros once merged.
-#if defined(__has_feature)
-#if (__has_feature(thread_sanitizer) || __has_feature(address_sanitizer))
   // We verified thread and address safety above. As this is quite expensive to sanitize, do not perform the following
-  // check - double parantheses mark the code as explicitly dead.
-  if ((true)) {
-    return;
+  // check in sanitzer builds.
+  if constexpr (HYRISE_WITH_TSAN || HYRISE_WITH_ADDR_UB_LEAK_SAN) {
+    GTEST_SKIP();
   }
-#endif
-#endif
 
   // Run generation a second time to make sure no global state (of which tpch_dbgen has plenty :( ) from the first
-  // generation process carried over into the second
-
+  // generation process carried over into the second.
   const auto dir_002 = std::string{"resources/test_data/tbl/tpch/sf-0.02/"};
 
   table_info_by_name = TPCHTableGenerator(0.02f, ClusteringConfiguration::None, chunk_size).generate();
