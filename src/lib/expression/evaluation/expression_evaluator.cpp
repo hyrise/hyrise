@@ -40,7 +40,6 @@
 #include "expression/pqp_subquery_expression.hpp"
 #include "expression/value_expression.hpp"
 #include "expression_functors.hpp"
-#include "hyrise.hpp"
 #include "like_matcher.hpp"
 #include "lossy_cast.hpp"
 #include "null_value.hpp"
