@@ -2,7 +2,6 @@
 #include <utility>
 
 #include "base_test.hpp"
-
 #include "hyrise.hpp"
 #include "operators/get_table.hpp"
 #include "operators/join_nested_loop.hpp"

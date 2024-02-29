@@ -1,16 +1,36 @@
 #include "expression_utils.hpp"
 
 #include <algorithm>
-#include <queue>
+#include <cstddef>
+#include <memory>
+#include <optional>
 #include <sstream>
+#include <string>
+#include <unordered_map>
+#include <vector>
 
+#include <boost/lexical_cast/bad_lexical_cast.hpp>
+
+#include "magic_enum.hpp"
+
+#include "all_type_variant.hpp"
+#include "expression/abstract_expression.hpp"
+#include "expression/cast_expression.hpp"
+#include "expression/correlated_parameter_expression.hpp"
+#include "expression/placeholder_expression.hpp"
+#include "expression/window_function_expression.hpp"
 #include "expression_functional.hpp"
 #include "logical_expression.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
+#include "logical_query_plan/lqp_utils.hpp"
 #include "lossy_cast.hpp"
 #include "lqp_column_expression.hpp"
 #include "lqp_subquery_expression.hpp"
 #include "operators/abstract_operator.hpp"
 #include "pqp_subquery_expression.hpp"
+#include "resolve_type.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 #include "value_expression.hpp"
 
 namespace hyrise {
@@ -20,7 +40,9 @@ using namespace expression_functional;  // NOLINT(build/namespaces)
 bool expressions_equal(const std::vector<std::shared_ptr<AbstractExpression>>& expressions_a,
                        const std::vector<std::shared_ptr<AbstractExpression>>& expressions_b) {
   return std::equal(expressions_a.begin(), expressions_a.end(), expressions_b.begin(), expressions_b.end(),
-                    [&](const auto& expression_a, const auto& expression_b) { return *expression_a == *expression_b; });
+                    [&](const auto& expression_a, const auto& expression_b) {
+                      return *expression_a == *expression_b;
+                    });
 }
 
 bool expressions_equal_to_expressions_in_different_lqp(
@@ -58,14 +80,14 @@ bool expression_equal_to_expression_in_different_lqp(const AbstractExpression& e
 
 std::vector<std::shared_ptr<AbstractExpression>> expressions_deep_copy(
     const std::vector<std::shared_ptr<AbstractExpression>>& expressions) {
-  std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>> copied_ops;
+  auto copied_ops = std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>{};
   return expressions_deep_copy(expressions, copied_ops);
 }
 
 std::vector<std::shared_ptr<AbstractExpression>> expressions_deep_copy(
     const std::vector<std::shared_ptr<AbstractExpression>>& expressions,
     std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) {
-  std::vector<std::shared_ptr<AbstractExpression>> copied_expressions;
+  auto copied_expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
   copied_expressions.reserve(expressions.size());
   for (const auto& expression : expressions) {
     copied_expressions.emplace_back(expression->deep_copy(copied_ops));
@@ -88,7 +110,7 @@ void expression_deep_replace(std::shared_ptr<AbstractExpression>& expression,
 
 std::vector<std::shared_ptr<AbstractExpression>> expressions_copy_and_adapt_to_different_lqp(
     const std::vector<std::shared_ptr<AbstractExpression>>& expressions, const LQPNodeMapping& node_mapping) {
-  std::vector<std::shared_ptr<AbstractExpression>> copied_expressions;
+  auto copied_expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
   copied_expressions.reserve(expressions.size());
 
   for (const auto& expression : expressions) {
@@ -412,8 +434,9 @@ bool contains_all_expressions(const ExpressionContainer& search_expressions,
   }
 
   for (const auto& expression : search_expressions) {
-    if (!std::any_of(expression_vector.cbegin(), expression_vector.cend(),
-                     [&](const auto& output_expression) { return *output_expression == *expression; })) {
+    if (!std::any_of(expression_vector.cbegin(), expression_vector.cend(), [&](const auto& output_expression) {
+          return *output_expression == *expression;
+        })) {
       return false;
     }
   }

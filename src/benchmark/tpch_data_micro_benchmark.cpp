@@ -1,5 +1,3 @@
-#include "micro_benchmark_basic_fixture.hpp"
-
 #include "benchmark_config.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/window_function_expression.hpp"
@@ -9,6 +7,7 @@
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
+#include "micro_benchmark_basic_fixture.hpp"
 #include "operators/aggregate_sort.hpp"
 #include "operators/join_hash.hpp"
 #include "operators/sort.hpp"
@@ -42,7 +41,7 @@ class TPCHDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
 
     if (!sm.has_table("lineitem")) {
       std::cout << "Generating TPC-H data set with scale factor " << scale_factor << " and " << default_encoding
-                << " encoding:" << std::endl;
+                << " encoding:\n";
       TPCHTableGenerator(scale_factor, ClusteringConfiguration::None,
                          std::make_shared<BenchmarkConfig>(benchmark_config))
           .generate_and_store();

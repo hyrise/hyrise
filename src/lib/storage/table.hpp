@@ -1,14 +1,18 @@
 #pragma once
 
+#include <atomic>
+#include <cstddef>
+#include <cstdint>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <string>
-#include <utility>
 #include <vector>
 
-#include <boost/variant.hpp>
+#include <boost/variant/get.hpp>
 
 #include "abstract_segment.hpp"
+#include "all_type_variant.hpp"
 #include "chunk.hpp"
 #include "memory/zero_allocator.hpp"
 #include "storage/constraints/abstract_table_constraint.hpp"
@@ -16,7 +20,9 @@
 #include "storage/constraints/table_key_constraint.hpp"
 #include "storage/constraints/table_order_constraint.hpp"
 #include "storage/index/chunk_index_statistics.hpp"
+#include "storage/index/partial_hash/partial_hash_index.hpp"
 #include "storage/index/table_index_statistics.hpp"
+#include "storage/mvcc_data.hpp"
 #include "storage/table_column_definition.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
@@ -43,7 +49,7 @@ class Table : private Noncopyable {
         pmr_vector<std::shared_ptr<PartialHashIndex>> const& table_indexes = {});
 
   Table(const TableColumnDefinitions& column_definitions, const TableType type,
-        std::vector<std::shared_ptr<Chunk>>&& chunks, const UseMvcc use_mvcc = UseMvcc::No,
+        const std::vector<std::shared_ptr<Chunk>>& chunks, const UseMvcc use_mvcc = UseMvcc::No,
         pmr_vector<std::shared_ptr<PartialHashIndex>> const& table_indexes = {});
 
   /**
@@ -157,9 +163,8 @@ class Table : private Noncopyable {
             column_id))[ChunkOffset{static_cast<ChunkOffset::base_type>(row_number + current_size - row_counter)}];
         if (variant_is_null(variant)) {
           return std::nullopt;
-        } else {
-          return boost::get<T>(variant);
         }
+        return boost::get<T>(variant);
       }
     }
     Fail("Row does not exist.");

@@ -1,15 +1,25 @@
 #include "mock_node.hpp"
 
+#include <algorithm>
+#include <cstddef>
 #include <memory>
+#include <optional>
+#include <ostream>
+#include <sstream>
 #include <string>
 #include <vector>
 
+#include <boost/container_hash/hash.hpp>
+
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_column_expression.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
+#include "logical_query_plan/data_dependencies/functional_dependency.hpp"
+#include "logical_query_plan/data_dependencies/unique_column_combination.hpp"
 #include "lqp_utils.hpp"
+#include "storage/constraints/table_key_constraint.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
-
-using namespace std::string_literals;  // NOLINT
 
 namespace hyrise {
 
@@ -25,7 +35,7 @@ std::shared_ptr<LQPColumnExpression> MockNode::get_column(const std::string& col
     }
   }
 
-  Fail("Couldn't find column named '"s + column_name + "' in MockNode");
+  Fail("Couldn't find column named '" + column_name + "' in MockNode.");
 }
 
 const MockNode::ColumnDefinitions& MockNode::column_definitions() const {
@@ -58,15 +68,15 @@ std::vector<std::shared_ptr<AbstractExpression>> MockNode::output_expressions() 
 }
 
 bool MockNode::is_column_nullable(const ColumnID column_id) const {
-  Assert(column_id < _column_definitions.size(), "ColumnID out of range");
+  Assert(column_id < _column_definitions.size(), "ColumnID out of range.");
   return false;
 }
 
 void MockNode::set_pruned_column_ids(const std::vector<ColumnID>& pruned_column_ids) {
   DebugAssert(std::is_sorted(pruned_column_ids.begin(), pruned_column_ids.end()),
-              "Expected sorted vector of ColumnIDs");
+              "Expected sorted vector of ColumnIDs.");
   DebugAssert(std::adjacent_find(pruned_column_ids.begin(), pruned_column_ids.end()) == pruned_column_ids.end(),
-              "Expected vector of unique ColumnIDs");
+              "Expected vector of unique ColumnIDs.");
 
   _pruned_column_ids = pruned_column_ids;
 
@@ -79,8 +89,8 @@ const std::vector<ColumnID>& MockNode::pruned_column_ids() const {
 }
 
 std::string MockNode::description(const DescriptionMode /*mode*/) const {
-  std::ostringstream stream;
-  stream << "[MockNode '"s << name.value_or("Unnamed") << "'] Columns:";
+  auto stream = std::ostringstream{};
+  stream << "[MockNode '" << name.value_or("Unnamed") << "'] Columns:";
 
   auto column_id = ColumnID{0};
   for (const auto& column : _column_definitions) {
@@ -106,8 +116,9 @@ UniqueColumnCombinations MockNode::unique_column_combinations() const {
   for (const auto& table_key_constraint : _table_key_constraints) {
     // Discard key constraints that involve pruned column id(s).
     const auto& key_constraint_column_ids = table_key_constraint.columns();
-    if (std::any_of(key_constraint_column_ids.cbegin(), key_constraint_column_ids.cend(),
-                    [&](const auto column_id) { return contains(_pruned_column_ids, column_id); })) {
+    if (std::any_of(key_constraint_column_ids.cbegin(), key_constraint_column_ids.cend(), [&](const auto column_id) {
+          return contains(_pruned_column_ids, column_id);
+        })) {
       continue;
     }
 
@@ -148,9 +159,10 @@ FunctionalDependencies MockNode::non_trivial_functional_dependencies() const {
 }
 
 size_t MockNode::_on_shallow_hash() const {
-  auto hash = boost::hash_value(_table_statistics);
+  auto hash = size_t{0};
+  boost::hash_combine(hash, _table_statistics);
   for (const auto& pruned_column_id : _pruned_column_ids) {
-    boost::hash_combine(hash, static_cast<size_t>(pruned_column_id));
+    boost::hash_combine(hash, pruned_column_id);
   }
   for (const auto& [type, column_name] : _column_definitions) {
     boost::hash_combine(hash, type);

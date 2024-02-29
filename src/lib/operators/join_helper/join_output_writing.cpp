@@ -1,12 +1,27 @@
 #include "join_output_writing.hpp"
 
+#include <algorithm>
+#include <cstddef>
+#include <functional>
+#include <iterator>
+#include <memory>
+#include <optional>
 #include <unordered_map>
+#include <utility>
+#include <vector>
 
-#include <boost/functional/hash_fwd.hpp>
+#include <boost/container_hash/hash.hpp>
 
 #include "hyrise.hpp"
+#include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
-#include "storage/segment_iterate.hpp"
+#include "storage/chunk.hpp"
+#include "storage/pos_lists/abstract_pos_list.hpp"
+#include "storage/pos_lists/row_id_pos_list.hpp"
+#include "storage/reference_segment.hpp"
+#include "storage/table.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace {
 

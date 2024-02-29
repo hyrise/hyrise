@@ -3,6 +3,8 @@
 #include <cmath>
 #include <memory>
 #include <optional>
+#include <string>
+#include <vector>
 
 #include "storage/chunk.hpp"
 #include "storage/encoding_type.hpp"

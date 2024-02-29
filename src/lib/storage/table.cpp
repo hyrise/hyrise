@@ -1,25 +1,40 @@
 #include "table.hpp"
 
 #include <algorithm>
-#include <limits>
+#include <atomic>
+#include <cstddef>
+#include <cstdint>
+#include <iterator>
 #include <memory>
-#include <numeric>
+#include <mutex>
+#include <optional>
+#include <set>
 #include <string>
+#include <type_traits>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
-#include "concurrency/transaction_manager.hpp"
-#include "hyrise.hpp"
+#include "all_type_variant.hpp"
 #include "resolve_type.hpp"
-#include "statistics/attribute_statistics.hpp"
 #include "statistics/table_statistics.hpp"
-#include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
-#include "storage/index/group_key/composite_group_key_index.hpp"
-#include "storage/index/group_key/group_key_index.hpp"
-#include "storage/index/partial_hash/partial_hash_index.hpp"
+#include "storage/chunk.hpp"
+#include "storage/constraints/foreign_key_constraint.hpp"
+#include "storage/constraints/table_key_constraint.hpp"
+#include "storage/constraints/table_order_constraint.hpp"
+#include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"  // IWYU pragma: keep
+#include "storage/index/chunk_index_statistics.hpp"
+#include "storage/index/group_key/composite_group_key_index.hpp"  // IWYU pragma: keep
+#include "storage/index/group_key/group_key_index.hpp"            // IWYU pragma: keep
+#include "storage/index/partial_hash/partial_hash_index.hpp"      // IWYU pragma: keep
+#include "storage/index/table_index_statistics.hpp"
+#include "storage/mvcc_data.hpp"
+#include "storage/reference_segment.hpp"
 #include "storage/segment_iterate.hpp"
+#include "storage/table_column_definition.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
+#include "utils/performance_warning.hpp"
 #include "value_segment.hpp"
 
 namespace {
@@ -70,7 +85,7 @@ Table::Table(const TableColumnDefinitions& column_definitions, const TableType t
 }
 
 Table::Table(const TableColumnDefinitions& column_definitions, const TableType type,
-             std::vector<std::shared_ptr<Chunk>>&& chunks, const UseMvcc use_mvcc,
+             const std::vector<std::shared_ptr<Chunk>>& chunks, const UseMvcc use_mvcc,
              pmr_vector<std::shared_ptr<PartialHashIndex>> const& table_indexes)
     : Table(column_definitions, type, type == TableType::Data ? std::optional{Chunk::DEFAULT_SIZE} : std::nullopt,
             use_mvcc, table_indexes) {
@@ -155,8 +170,10 @@ std::vector<bool> Table::columns_are_nullable() const {
 }
 
 ColumnID Table::column_id_by_name(const std::string& column_name) const {
-  const auto iter = std::find_if(_column_definitions.begin(), _column_definitions.end(),
-                                 [&](const auto& column_definition) { return column_definition.name == column_name; });
+  const auto iter =
+      std::find_if(_column_definitions.begin(), _column_definitions.end(), [&](const auto& column_definition) {
+        return column_definition.name == column_name;
+      });
   Assert(iter != _column_definitions.end(), "Couldn't find column '" + column_name + "'.");
   return ColumnID{static_cast<ColumnID::base_type>(std::distance(_column_definitions.begin(), iter))};
 }
@@ -164,9 +181,9 @@ ColumnID Table::column_id_by_name(const std::string& column_name) const {
 void Table::append(const std::vector<AllTypeVariant>& values) {
   auto last_chunk = !_chunks.empty() ? get_chunk(ChunkID{chunk_count() - 1}) : nullptr;
   if (!last_chunk || last_chunk->size() >= _target_chunk_size || !last_chunk->is_mutable()) {
-    // One chunk reached its capacity and was not finalized before.
+    // One chunk reached its capacity and was not marked as immutable before.
     if (last_chunk && last_chunk->is_mutable()) {
-      last_chunk->finalize();
+      last_chunk->set_immutable();
     }
 
     append_mutable_chunk();
@@ -524,7 +541,7 @@ const std::vector<ColumnID>& Table::value_clustered_by() const {
 }
 
 void Table::set_value_clustered_by(const std::vector<ColumnID>& value_clustered_by) {
-  // Ensure that all chunks are finalized because the table should not be altered afterwards.
+  // Ensure that all chunks are marked as immutable because the table should not be altered afterwards.
   const auto chunk_count = _chunks.size();
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk = get_chunk(chunk_id);
@@ -570,8 +587,9 @@ pmr_vector<std::shared_ptr<PartialHashIndex>> Table::get_table_indexes() const {
 
 std::vector<std::shared_ptr<PartialHashIndex>> Table::get_table_indexes(const ColumnID column_id) const {
   auto result = std::vector<std::shared_ptr<PartialHashIndex>>();
-  std::copy_if(_table_indexes.cbegin(), _table_indexes.cend(), std::back_inserter(result),
-               [&](const auto& index) { return index->is_index_for(column_id); });
+  std::copy_if(_table_indexes.cbegin(), _table_indexes.cend(), std::back_inserter(result), [&](const auto& index) {
+    return index->is_index_for(column_id);
+  });
   return result;
 }
 

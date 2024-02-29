@@ -1,5 +1,8 @@
 #pragma once
 
+#include <memory>
+#include <string>
+
 #include "storage/table.hpp"
 
 namespace hyrise {

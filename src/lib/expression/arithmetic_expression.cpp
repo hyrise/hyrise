@@ -1,10 +1,16 @@
 #include "arithmetic_expression.hpp"
 
+#include <cstddef>
+#include <functional>
+#include <memory>
+#include <ostream>
 #include <sstream>
+#include <string>
+#include <unordered_map>
 
-#include <boost/container_hash/hash.hpp>
-
+#include "all_type_variant.hpp"
 #include "expression/abstract_expression.hpp"
+#include "expression/expression_precedence.hpp"
 #include "expression_utils.hpp"
 #include "operators/abstract_operator.hpp"
 #include "utils/assert.hpp"
@@ -72,7 +78,7 @@ bool ArithmeticExpression::_shallow_equals(const AbstractExpression& expression)
 }
 
 size_t ArithmeticExpression::_shallow_hash() const {
-  return boost::hash_value(static_cast<size_t>(arithmetic_operator));
+  return std::hash<ArithmeticOperator>{}(arithmetic_operator);
 }
 
 bool ArithmeticExpression::_on_is_nullable_on_lqp(const AbstractLQPNode& lqp) const {

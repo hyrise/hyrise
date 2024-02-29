@@ -1,5 +1,3 @@
-#include "strategy_base_test.hpp"
-
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/change_meta_table_node.hpp"
@@ -16,6 +14,7 @@
 #include "logical_query_plan/update_node.hpp"
 #include "logical_query_plan/window_node.hpp"
 #include "optimizer/strategy/column_pruning_rule.hpp"
+#include "strategy_base_test.hpp"
 
 namespace hyrise {
 

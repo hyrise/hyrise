@@ -1,16 +1,12 @@
 #include "abstract_dereferenced_column_table_scan_impl.hpp"
 
 #include <memory>
-#include <unordered_map>
-#include <utility>
 
-#include "resolve_type.hpp"
-#include "storage/chunk.hpp"
-#include "storage/dictionary_segment.hpp"
+#include "storage/pos_lists/row_id_pos_list.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/split_pos_list_by_chunk_id.hpp"
 #include "storage/table.hpp"
-#include "storage/value_segment.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 

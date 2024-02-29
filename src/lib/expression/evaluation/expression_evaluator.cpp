@@ -1,18 +1,33 @@
 #include "expression_evaluator.hpp"
 
+#include <algorithm>
+#include <cstddef>
+#include <cstdint>
 #include <iterator>
+#include <limits>
+#include <memory>
+#include <sstream>
+#include <string>
 #include <type_traits>
+#include <unordered_map>
+#include <utility>
+#include <vector>
 
-#include <boost/lexical_cast.hpp>
-#include <boost/variant/apply_visitor.hpp>
+#include <boost/lexical_cast/bad_lexical_cast.hpp>
+#include <boost/variant/get.hpp>
 
-#include "all_parameter_variant.hpp"
+#include "magic_enum.hpp"
+
+#include "all_type_variant.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/abstract_predicate_expression.hpp"
 #include "expression/arithmetic_expression.hpp"
+#include "expression/between_expression.hpp"
 #include "expression/binary_predicate_expression.hpp"
 #include "expression/case_expression.hpp"
 #include "expression/cast_expression.hpp"
+#include "expression/correlated_parameter_expression.hpp"
+#include "expression/evaluation/expression_result.hpp"
 #include "expression/exists_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
@@ -28,18 +43,21 @@
 #include "hyrise.hpp"
 #include "like_matcher.hpp"
 #include "lossy_cast.hpp"
+#include "null_value.hpp"
 #include "operators/abstract_operator.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/operator_task.hpp"
+#include "storage/base_value_segment.hpp"
+#include "storage/pos_lists/row_id_pos_list.hpp"
 #include "storage/segment_iterate.hpp"
 #include "storage/value_segment.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/date_time_utils.hpp"
 #include "utils/performance_warning.hpp"
 
 namespace {
 
-using namespace std::string_literals;           // NOLINT(build/namespaces)
 using namespace hyrise;                         // NOLINT(build/namespaces)
 using namespace hyrise::expression_functional;  // NOLINT(build/namespaces)
 
@@ -337,8 +355,9 @@ ExpressionEvaluator::_evaluate_like_expression<ExpressionEvaluator::Bool>(const 
   } else {
     // E.g., `'hello' LIKE b` -- A new matcher for each row but the value to check is constant
     for (auto row_idx = ChunkOffset{0}; row_idx < result_size; ++row_idx) {
-      LikeMatcher{right_results->values[row_idx]}.resolve(
-          invert_results, [&](const auto& matcher) { result_values[row_idx] = matcher(left_results->values.front()); });
+      LikeMatcher{right_results->values[row_idx]}.resolve(invert_results, [&](const auto& matcher) {
+        result_values[row_idx] = matcher(left_results->values.front());
+      });
     }
   }
 
@@ -398,7 +417,7 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
     if (list_expression.elements().empty()) {
       // `x IN ()` is false/`x NOT IN ()` is true, even if this is not supported by SQL
       return std::make_shared<ExpressionResult<ExpressionEvaluator::Bool>>(
-          pmr_vector<ExpressionEvaluator::Bool>{in_expression.is_negated()});
+          pmr_vector<ExpressionEvaluator::Bool>{static_cast<ExpressionEvaluator::Bool>(in_expression.is_negated())});
     }
 
     if (left_expression.data_type() == DataType::Null) {
@@ -437,7 +456,7 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
     if (type_compatible_elements.empty()) {
       // `x IN ()` is false/`x NOT IN ()` is true, even if this is not supported by SQL
       return std::make_shared<ExpressionResult<ExpressionEvaluator::Bool>>(
-          pmr_vector<ExpressionEvaluator::Bool>{in_expression.is_negated()});
+          pmr_vector<ExpressionEvaluator::Bool>{static_cast<ExpressionEvaluator::Bool>(in_expression.is_negated())});
     }
 
     // If all elements of the list are simple values (e.g., `IN (1, 2, 3)`), iterate over the column and directly
@@ -731,13 +750,15 @@ ExpressionEvaluator::_evaluate_exists_expression<ExpressionEvaluator::Bool>(cons
   switch (exists_expression.exists_expression_type) {
     case ExistsExpressionType::Exists:
       for (auto chunk_offset = ChunkOffset{0}; chunk_offset < subquery_result_table_count; ++chunk_offset) {
-        result_values[chunk_offset] = subquery_result_tables[chunk_offset]->row_count() > 0;
+        result_values[chunk_offset] =
+            static_cast<ExpressionEvaluator::Bool>(subquery_result_tables[chunk_offset]->row_count() > 0);
       }
       break;
 
     case ExistsExpressionType::NotExists:
       for (auto chunk_offset = ChunkOffset{0}; chunk_offset < subquery_result_table_count; ++chunk_offset) {
-        result_values[chunk_offset] = subquery_result_tables[chunk_offset]->row_count() == 0;
+        result_values[chunk_offset] =
+            static_cast<ExpressionEvaluator::Bool>(subquery_result_tables[chunk_offset]->row_count() == 0);
       }
       break;
   }
@@ -807,20 +828,25 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_extract
   if constexpr (std::is_same_v<Result, int32_t>) {
     switch (datetime_component) {
       case DatetimeComponent::Year:
-        return _evaluate_extract_component<int32_t>(from_result,
-                                                    [](const auto& timestamp) { return timestamp.date().year(); });
+        return _evaluate_extract_component<int32_t>(from_result, [](const auto& timestamp) {
+          return timestamp.date().year();
+        });
       case DatetimeComponent::Month:
-        return _evaluate_extract_component<int32_t>(from_result,
-                                                    [](const auto& timestamp) { return timestamp.date().month(); });
+        return _evaluate_extract_component<int32_t>(from_result, [](const auto& timestamp) {
+          return timestamp.date().month();
+        });
       case DatetimeComponent::Day:
-        return _evaluate_extract_component<int32_t>(from_result,
-                                                    [](const auto& timestamp) { return timestamp.date().day(); });
+        return _evaluate_extract_component<int32_t>(from_result, [](const auto& timestamp) {
+          return timestamp.date().day();
+        });
       case DatetimeComponent::Hour:
-        return _evaluate_extract_component<int32_t>(
-            from_result, [](const auto& timestamp) { return timestamp.time_of_day().hours(); });
+        return _evaluate_extract_component<int32_t>(from_result, [](const auto& timestamp) {
+          return timestamp.time_of_day().hours();
+        });
       case DatetimeComponent::Minute:
-        return _evaluate_extract_component<int32_t>(
-            from_result, [](const auto& timestamp) { return timestamp.time_of_day().minutes(); });
+        return _evaluate_extract_component<int32_t>(from_result, [](const auto& timestamp) {
+          return timestamp.time_of_day().minutes();
+        });
       case DatetimeComponent::Second:
         Fail("SECOND must be extracted as Double.");
     }
@@ -917,8 +943,10 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_subquer
   }
 
   // Optionally materialize nulls if any row returned a nullable result.
-  const auto nullable = std::any_of(subquery_results.begin(), subquery_results.end(),
-                                    [&](const auto& expression_result) { return expression_result->is_nullable(); });
+  const auto nullable =
+      std::any_of(subquery_results.begin(), subquery_results.end(), [&](const auto& expression_result) {
+        return expression_result->is_nullable();
+      });
 
   if (nullable) {
     result_nulls.resize(subquery_result_count);
@@ -1299,20 +1327,25 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_binary_
 template <typename Functor>
 void ExpressionEvaluator::_resolve_to_expression_result_view(const AbstractExpression& expression,
                                                              const Functor& functor) {
-  _resolve_to_expression_result(expression,
-                                [&](const auto& result) { result.as_view([&](const auto& view) { functor(view); }); });
+  _resolve_to_expression_result(expression, [&](const auto& result) {
+    result.as_view([&](const auto& view) {
+      functor(view);
+    });
+  });
 }
 
 template <typename Functor>
 void ExpressionEvaluator::_resolve_to_expression_result_views(const AbstractExpression& left_expression,
                                                               const AbstractExpression& right_expression,
                                                               const Functor& functor) {
-  _resolve_to_expression_results(
-      left_expression, right_expression, [&](const auto& left_result, const auto& right_result) {
-        left_result.as_view([&](const auto& left_view) {
-          right_result.as_view([&](const auto& right_view) { functor(left_view, right_view); });
-        });
-      });
+  _resolve_to_expression_results(left_expression, right_expression,
+                                 [&](const auto& left_result, const auto& right_result) {
+                                   left_result.as_view([&](const auto& left_view) {
+                                     right_result.as_view([&](const auto& right_view) {
+                                       functor(left_view, right_view);
+                                     });
+                                   });
+                                 });
 }
 
 template <typename Functor>
@@ -1320,8 +1353,9 @@ void ExpressionEvaluator::_resolve_to_expression_results(const AbstractExpressio
                                                          const AbstractExpression& right_expression,
                                                          const Functor& functor) {
   _resolve_to_expression_result(left_expression, [&](const auto& left_result) {
-    _resolve_to_expression_result(right_expression,
-                                  [&](const auto& right_result) { functor(left_result, right_result); });
+    _resolve_to_expression_result(right_expression, [&](const auto& right_result) {
+      functor(left_result, right_result);
+    });
   });
 }
 
@@ -1368,8 +1402,9 @@ pmr_vector<bool> ExpressionEvaluator::_evaluate_default_null_logic(const pmr_vec
                                                                    const pmr_vector<bool>& right) {
   if (left.size() == right.size()) {
     auto nulls = pmr_vector<bool>(left.size());
-    std::transform(left.begin(), left.end(), right.begin(), nulls.begin(),
-                   [](const auto lhs, const auto rhs) { return lhs || rhs; });
+    std::transform(left.begin(), left.end(), right.begin(), nulls.begin(), [](const auto lhs, const auto rhs) {
+      return lhs || rhs;
+    });
     return nulls;
   }
 

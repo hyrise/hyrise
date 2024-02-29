@@ -1,8 +1,6 @@
 #include <memory>
 
 #include "base_test.hpp"
-#include "utils/assert.hpp"
-
 #include "concurrency/transaction_context.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/pqp_column_expression.hpp"
@@ -13,6 +11,7 @@
 #include "operators/table_wrapper.hpp"
 #include "operators/validate.hpp"
 #include "storage/table.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 

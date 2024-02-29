@@ -1,21 +1,22 @@
 #include "column_like_table_scan_impl.hpp"
 
-#include <algorithm>
-#include <array>
-#include <map>
+#include <cstddef>
 #include <memory>
-#include <regex>
-#include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
 
+#include "abstract_dereferenced_column_table_scan_impl.hpp"
+#include "storage/abstract_segment.hpp"
+#include "storage/base_dictionary_segment.hpp"
 #include "storage/create_iterable_from_segment.hpp"
-#include "storage/resolve_encoded_segment_type.hpp"
+#include "storage/encoding_type.hpp"
+#include "storage/pos_lists/abstract_pos_list.hpp"
+#include "storage/pos_lists/row_id_pos_list.hpp"
 #include "storage/segment_iterables/create_iterable_from_attribute_vector.hpp"
 #include "storage/segment_iterate.hpp"
-#include "storage/value_segment.hpp"
-#include "storage/value_segment/value_segment_iterable.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 
@@ -55,7 +56,9 @@ void ColumnLikeTableScanImpl::_scan_generic_segment(
 
       if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
         _matcher.resolve(_invert_results, [&](const auto& resolved_matcher) {
-          const auto functor = [&](const auto& position) { return resolved_matcher(position.value()); };
+          const auto functor = [&](const auto& position) {
+            return resolved_matcher(position.value());
+          };
           _scan_with_iterators<true>(functor, iter, end, chunk_id, matches);
         });
       } else {
@@ -91,7 +94,9 @@ void ColumnLikeTableScanImpl::_scan_dictionary_segment(const BaseDictionarySegme
   // LIKE matches all rows, but we still need to check for NULL
   if (match_count == dictionary_matches.size()) {
     attribute_vector_iterable.with_iterators(position_filter, [&](auto iter, auto end) {
-      static const auto always_true = [](const auto&) { return true; };
+      static const auto always_true = [](const auto&) {
+        return true;
+      };
       _scan_with_iterators<true>(always_true, iter, end, chunk_id, matches);
     });
 

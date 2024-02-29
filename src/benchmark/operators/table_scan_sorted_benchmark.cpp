@@ -2,9 +2,10 @@
 #include <numeric>
 #include <random>
 
-#include "../micro_benchmark_basic_fixture.hpp"
 #include "benchmark/benchmark.h"
+
 #include "expression/expression_functional.hpp"
+#include "micro_benchmark_basic_fixture.hpp"
 #include "micro_benchmark_utils.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
@@ -89,11 +90,11 @@ std::shared_ptr<TableWrapper> create_table(const DataType data_type, const int t
 
     const auto value_segment = std::make_shared<ValueSegment<Type>>(std::move(value_vector), std::move(null_values));
     table->append_chunk({value_segment});
-    table->last_chunk()->finalize();
+    table->last_chunk()->set_immutable();
   }
 
   if (encoding_type != EncodingType::Unencoded) {
-    // chunks are already finalized
+    // Chunks are already marked as immutable.
     ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec(encoding_type));
   }
 

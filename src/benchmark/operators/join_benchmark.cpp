@@ -1,6 +1,7 @@
 #include <memory>
 
 #include "benchmark/benchmark.h"
+
 #include "hyrise.hpp"
 #include "operators/join_hash.hpp"
 #include "operators/join_index.hpp"

@@ -120,7 +120,7 @@ class AnySegmentIterator : public AbstractSegmentIterator<AnySegmentIterator<T>,
 
   template <typename Iterator>
   explicit AnySegmentIterator(const Iterator& iterator)
-      : _wrapper{std::make_unique<detail::AnySegmentIteratorWrapper<T, Iterator>>(iterator)} {}
+      : _wrapper{std::make_unique<hyrise::detail::AnySegmentIteratorWrapper<T, Iterator>>(iterator)} {}
 
   /**@}*/
 
@@ -163,7 +163,7 @@ class AnySegmentIterator : public AbstractSegmentIterator<AnySegmentIterator<T>,
   }
 
  private:
-  std::unique_ptr<detail::AnySegmentIteratorWrapperBase<T>> _wrapper;
+  std::unique_ptr<hyrise::detail::AnySegmentIteratorWrapperBase<T>> _wrapper;
 };
 
 }  // namespace hyrise

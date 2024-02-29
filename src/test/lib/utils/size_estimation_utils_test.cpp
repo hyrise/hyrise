@@ -1,5 +1,4 @@
 #include "base_test.hpp"
-
 #include "types.hpp"
 #include "utils/size_estimation_utils.hpp"
 

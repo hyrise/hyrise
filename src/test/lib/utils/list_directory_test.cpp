@@ -4,7 +4,6 @@
 #include <unordered_set>
 
 #include "base_test.hpp"
-
 #include "utils/list_directory.hpp"
 
 namespace hyrise {

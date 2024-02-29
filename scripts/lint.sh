@@ -2,8 +2,15 @@
 
 exitcode=0
 
-# Run cpplint
-find src \( -iname "*.cpp" -o -iname "*.hpp" \) -print0 | parallel --null --no-notice -j 100% --nice 17 /usr/bin/env python3 ./third_party/cpplint/cpplint.py --verbose=0 --extensions=hpp,cpp --counting=detailed --filter=-legal/copyright,-whitespace/newline,-runtime/references,-build/c++11,-build/include_what_you_use,-readability/nolint,-whitespace/braces,-build/include_subdir,-readability/fn_size --linelength=120 {} 2\>\&1 \| grep -v \'\^Done processing\' \| grep -v \'\^Total errors found: 0\' \; test \${PIPESTATUS[0]} -eq 0
+# Run cpplint. Excluded checks:
+#  - legal/copyright: We do not include copyright information in our source files.
+#  - runtime/references: We prefer references to pointers in most cases.
+#  - build/c++11: cpplint complains about headers that are "unapproved" by Google devs (see https://github.com/google/styleguide/issues/194).
+#  - readability/nolint: cpplint complains about excluded clang-tidy categories, which we widely use.
+#  - whitespace/braces: Does not work with {} initialization (see https://github.com/cpplint/cpplint/issues/204#issuecomment-1146769949).
+#  - build/include_subdir: Does not work well with our structure of using lib, test, and third_party directories.
+#  - readability/fn_size: We prefer longer methods if the data flow is continuous.
+find src \( -iname "*.cpp" -o -iname "*.hpp" \) -print0 | parallel --null --no-notice -j 100% --nice 17 /usr/bin/env python3 ./third_party/cpplint/cpplint.py --verbose=0 --extensions=hpp,cpp --counting=detailed --filter=-legal/copyright,-runtime/references,-build/c++11,-readability/nolint,-whitespace/braces,-build/include_subdir,-readability/fn_size --linelength=120 {} 2\>\&1 \| grep -v \'\^Done processing\' \| grep -v \'\^Total errors found: 0\' \; test \${PIPESTATUS[0]} -eq 0
 let "exitcode |= $?"
 #                             /------------------ runs in parallel -------------------\
 # Conceptual: find | parallel python cpplint \| grep -v \| test \${PIPESTATUS[0]} -eq 0

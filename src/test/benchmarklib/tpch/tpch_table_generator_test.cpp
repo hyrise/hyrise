@@ -1,5 +1,4 @@
 #include "base_test.hpp"
-
 #include "hyrise.hpp"
 #include "tpch/tpch_constants.hpp"
 #include "tpch/tpch_table_generator.hpp"

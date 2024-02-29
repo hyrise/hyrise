@@ -1,12 +1,21 @@
 #pragma once
 
+#include <algorithm>
+#include <cstddef>
+#include <limits>
+#include <memory>
+#include <mutex>
+#include <utility>
+#include <vector>
+
 #include <boost/container/pmr/monotonic_buffer_resource.hpp>
 #include <boost/container/pmr/unsynchronized_pool_resource.hpp>
 #include <boost/container/small_vector.hpp>
 #include <boost/dynamic_bitset.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/unordered/unordered_flat_map.hpp>
-#include <uninitialized_vector.hpp>
+
+#include "uninitialized_vector.hpp"
 
 #include "hyrise.hpp"
 #include "operators/join_hash.hpp"
@@ -17,6 +26,7 @@
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/segment_iterate.hpp"
 #include "type_comparison.hpp"
+#include "types.hpp"
 
 /*
   This file includes the functions that cover the main steps of our hash join implementation
@@ -77,7 +87,7 @@ using RadixContainer = std::vector<Partition<T>>;
 // hashmap (think map<HashedType, PosList>), we store an offset - thus OffsetHashTable. This keeps the hashmap small and
 // makes it easier to cache. The PosHashTable has a separate build and probe phase. In the build phase, the
 // OffsetHashTable and the corresponding SmallPosLists (see below) are filled. If the SmallPosLists allocated heap
-// storage, it is scattered across the heap and likely to be over-allocated. By calling finalize(), we compress them
+// storage, it is scattered across the heap and likely to be over-allocated. By calling `finalize()`, we compress them
 // into a single, contiguous RowIDPosList. This significantly reduces the memory footprint and thus improves the cache
 // behavior of the following probe phase. In the probe phase, the find() method returns a pair of pointers to the range
 // in the compressed RowIDPosList. This is comparable to the interface of std::equal_range.
@@ -164,8 +174,9 @@ class PosHashTable {
   // For a value seen on the probe side, return an iterator pair into the matching positions on the build side
   template <typename InputType>
   const std::pair<RowIDPosList::const_iterator, RowIDPosList::const_iterator> find(const InputType& value) const {
-    DebugAssert(_mode == JoinHashBuildMode::AllPositions, "find is invalid for ExistenceOnly mode, use contains");
-    DebugAssert(_unified_pos_list, "_unified_pos_list not set - was finalize called?");
+    DebugAssert(_mode == JoinHashBuildMode::AllPositions,
+                "`find()` is invalid for ExistenceOnly mode, use `contains()`.");
+    DebugAssert(_unified_pos_list, "_unified_pos_list not set - was `finalize()` called?");
 
     const auto casted_value = static_cast<HashedType>(value);
     const auto hash_table_iter = _offset_hash_table.find(casted_value);
@@ -279,7 +290,7 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
 
   Assert(output_bloom_filter.empty(), "output_bloom_filter should be empty");
   output_bloom_filter.resize(BLOOM_FILTER_SIZE);
-  std::mutex output_bloom_filter_mutex;
+  auto output_bloom_filter_mutex = std::mutex{};
 
   Assert(input_bloom_filter.size() == BLOOM_FILTER_SIZE, "Invalid input_bloom_filter");
 
@@ -498,7 +509,7 @@ std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<
   }
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
 
-  // If radix partitioning is used, finalize is called above.
+  // If radix partitioning is used, `finalize()` is called above.
   if (radix_bits == 0) {
     hash_tables[0]->finalize();
   }
@@ -828,14 +839,14 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_containe
               // Could be either skipped or NULL
               continue;
             }
-          } else if constexpr (mode == JoinMode::AntiNullAsFalse) {  // NOLINT - doesn't like `else if`
+          } else if constexpr (mode == JoinMode::AntiNullAsFalse) {
             // NULL values on the probe side always lead to the tuple being emitted for AntiNullAsFalse, irrespective
             // of secondary predicates (`NULL("as false") AND <anything>` is always false)
             if (null_values[partition_offset]) {
               pos_list_local.emplace_back(probe_column_element.row_id);
               continue;
             }
-          } else if constexpr (mode == JoinMode::AntiNullAsTrue) {  // NOLINT - doesn't like `else if`
+          } else if constexpr (mode == JoinMode::AntiNullAsTrue) {
             if (null_values[partition_offset]) {
               // Primary predicate is TRUE, as long as we do not support secondary predicates with AntiNullAsTrue.
               // This means that the probe value never gets emitted
@@ -867,7 +878,7 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_containe
             pos_list_local.emplace_back(probe_column_element.row_id);
           }
         }
-      } else if constexpr (mode == JoinMode::AntiNullAsFalse) {  // NOLINT - doesn't like `else if`
+      } else if constexpr (mode == JoinMode::AntiNullAsFalse) {
         // no hash table on other side, but we are in AntiNullAsFalse mode which means all tuples from the probing side
         // get emitted.
         pos_list_local.reserve(elements.size());
@@ -875,7 +886,7 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_containe
           auto& probe_column_element = elements[partition_offset];
           pos_list_local.emplace_back(probe_column_element.row_id);
         }
-      } else if constexpr (mode == JoinMode::AntiNullAsTrue) {  // NOLINT - doesn't like `else if`
+      } else if constexpr (mode == JoinMode::AntiNullAsTrue) {
         // no hash table on other side, but we are in AntiNullAsTrue mode which means all tuples from the probing side
         // get emitted. That is, except NULL values, which only get emitted if the build table is empty.
         const auto build_table_is_empty = build_table.row_count() == 0;

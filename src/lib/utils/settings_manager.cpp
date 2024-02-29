@@ -1,5 +1,14 @@
 #include "settings_manager.hpp"
 
+#include <algorithm>
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
+
+#include "utils/assert.hpp"
+#include "utils/settings/abstract_setting.hpp"
+
 namespace hyrise {
 
 bool SettingsManager::has_setting(const std::string& name) const {

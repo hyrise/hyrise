@@ -2,9 +2,8 @@
 #include <string>
 #include <utility>
 
-#include "base_test.hpp"
-
 #include "all_type_variant.hpp"
+#include "base_test.hpp"
 #include "storage/chunk.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/lz4_segment.hpp"
@@ -17,7 +16,7 @@ namespace hyrise {
 
 class StorageLZ4SegmentTest : public BaseTest {
  protected:
-  static constexpr auto row_count = LZ4Encoder::_block_size + size_t{1000u};
+  static constexpr auto row_count = LZ4Encoder::_block_size + size_t{1000};
   std::shared_ptr<ValueSegment<pmr_string>> vs_str = std::make_shared<ValueSegment<pmr_string>>(true);
   std::shared_ptr<ValueSegment<int>> vs_int = std::make_shared<ValueSegment<int>>(true);
 };
@@ -46,7 +45,7 @@ TEST_F(StorageLZ4SegmentTest, HandleOptionalOffsetsAndNullValues) {
 }
 
 TEST_F(StorageLZ4SegmentTest, CompressEmptyStringNotNullNullableSegment) {
-  for (auto index = size_t{0u}; index < row_count; ++index) {
+  for (auto index = size_t{0}; index < row_count; ++index) {
     vs_str->append("");
   }
   auto lz4_segment = compress(vs_str, DataType::String);
@@ -91,7 +90,7 @@ TEST_F(StorageLZ4SegmentTest, CompressNullableStringSegment) {
   EXPECT_EQ(offset_decompressor->size(), 6u);
 
   auto expected_offsets = std::vector<size_t>{0, 4, 9, 13, 17, 17};
-  for (auto index = size_t{0u}; index < lz4_segment->size(); ++index) {
+  for (auto index = size_t{0}; index < lz4_segment->size(); ++index) {
     // Test null values
     EXPECT_TRUE((*null_values)[index] == expected_null_values[index]);
 
@@ -123,7 +122,7 @@ TEST_F(StorageLZ4SegmentTest, CompressNullableAndEmptyStringSegment) {
   EXPECT_EQ(offset_decompressor->size(), 6u);
 
   auto expected_offsets = std::vector<size_t>{0, 4, 9, 13, 13, 13};
-  for (auto index = size_t{0u}; index < lz4_segment->size(); ++index) {
+  for (auto index = size_t{0}; index < lz4_segment->size(); ++index) {
     // Test null values
     EXPECT_TRUE((*null_values)[index] == expected_null_values[index]);
 
@@ -133,7 +132,7 @@ TEST_F(StorageLZ4SegmentTest, CompressNullableAndEmptyStringSegment) {
 }
 
 TEST_F(StorageLZ4SegmentTest, CompressSingleCharStringSegment) {
-  for (auto index = size_t{0u}; index < row_count; ++index) {
+  for (auto index = size_t{0}; index < row_count; ++index) {
     vs_str->append("");
   }
   vs_str->append("a");
@@ -149,7 +148,7 @@ TEST_F(StorageLZ4SegmentTest, CompressSingleCharStringSegment) {
   EXPECT_TRUE(offset_decompressor);
   EXPECT_EQ(offset_decompressor->size(), row_count + 1);
 
-  for (auto index = size_t{0u}; index < lz4_segment->size() - 1; ++index) {
+  for (auto index = size_t{0}; index < lz4_segment->size() - 1; ++index) {
     // Test compressed values
     EXPECT_EQ(decompressed_data[index], "");
 
@@ -164,7 +163,7 @@ TEST_F(StorageLZ4SegmentTest, CompressSingleCharStringSegment) {
 }
 
 TEST_F(StorageLZ4SegmentTest, CompressZeroOneStringSegment) {
-  for (auto index = size_t{0u}; index < row_count; ++index) {
+  for (auto index = size_t{0}; index < row_count; ++index) {
     vs_str->append(index % 2 ? "0" : "1");
   }
   auto lz4_segment = compress(vs_str, DataType::String);
@@ -177,14 +176,14 @@ TEST_F(StorageLZ4SegmentTest, CompressZeroOneStringSegment) {
   EXPECT_EQ(decompressed_data.size(), row_count);
 
   // Test element values
-  for (auto index = size_t{0u}; index < lz4_segment->size(); ++index) {
+  for (auto index = size_t{0}; index < lz4_segment->size(); ++index) {
     EXPECT_EQ(decompressed_data[index], index % 2 ? "0" : "1");
   }
 }
 
 TEST_F(StorageLZ4SegmentTest, CompressMultiBlockStringSegment) {
   const auto block_size = LZ4Encoder::_block_size;
-  const auto size_diff = size_t{1000u};
+  const auto size_diff = size_t{1000};
   static_assert(block_size > size_diff, "LZ4 block size is too small.");
 
   // Nearly fills the first block.
@@ -204,16 +203,16 @@ TEST_F(StorageLZ4SegmentTest, CompressMultiBlockStringSegment) {
   EXPECT_EQ(lz4_segment->size(), 3u);
 
   // Test element wise decompression without caching.
-  EXPECT_EQ(lz4_segment->decompress(ChunkOffset{1u}), string2);
-  EXPECT_EQ(lz4_segment->decompress(ChunkOffset{2u}), string3);
-  EXPECT_EQ(lz4_segment->decompress(ChunkOffset{0u}), string1);
+  EXPECT_EQ(lz4_segment->decompress(ChunkOffset{1}), string2);
+  EXPECT_EQ(lz4_segment->decompress(ChunkOffset{2}), string3);
+  EXPECT_EQ(lz4_segment->decompress(ChunkOffset{0}), string1);
 
   // Test element wise decompression with cache.
   auto cache = std::vector<char>{};
   std::pair<pmr_string, size_t> result;
 
   // First access the third block (cache miss).
-  result = lz4_segment->decompress(ChunkOffset{2u}, std::nullopt, cache);
+  result = lz4_segment->decompress(ChunkOffset{2}, std::nullopt, cache);
   EXPECT_EQ(cache.size(), third_block_size);
   EXPECT_EQ(result.first, string3);
   EXPECT_EQ(result.second, 2u);
@@ -222,19 +221,19 @@ TEST_F(StorageLZ4SegmentTest, CompressMultiBlockStringSegment) {
    * Access the first, second and third block. The cache should be used for the third block. As a result the buffer
    * used for decompression will contain the second block since it needed to be decompressed.
    */
-  result = lz4_segment->decompress(ChunkOffset{1u}, result.second, cache);
+  result = lz4_segment->decompress(ChunkOffset{1}, result.second, cache);
   EXPECT_EQ(cache.size(), block_size);
   EXPECT_EQ(result.first, string2);
   EXPECT_EQ(result.second, 1u);
 
   // Access the same blocks again. Now, the cache should be used for the second block and then contain the third block.
-  result = lz4_segment->decompress(ChunkOffset{1u}, result.second, cache);
+  result = lz4_segment->decompress(ChunkOffset{1}, result.second, cache);
   EXPECT_EQ(cache.size(), third_block_size);
   EXPECT_EQ(result.first, string2);
   EXPECT_EQ(result.second, 2u);
 
   // Access the first block (cache miss).
-  result = lz4_segment->decompress(ChunkOffset{0u}, result.second, cache);
+  result = lz4_segment->decompress(ChunkOffset{0}, result.second, cache);
   EXPECT_EQ(cache.size(), block_size);
   EXPECT_EQ(result.first, string1);
   EXPECT_EQ(result.second, 0u);
@@ -243,7 +242,7 @@ TEST_F(StorageLZ4SegmentTest, CompressMultiBlockStringSegment) {
    * Access the first, second and third block again. The cache should now be used for the first block and afterwards be
    * overwritten with the third block.
    */
-  result = lz4_segment->decompress(ChunkOffset{1u}, result.second, cache);
+  result = lz4_segment->decompress(ChunkOffset{1}, result.second, cache);
   EXPECT_EQ(cache.size(), third_block_size);
   EXPECT_EQ(result.first, string2);
   EXPECT_EQ(result.second, 2u);
@@ -251,9 +250,9 @@ TEST_F(StorageLZ4SegmentTest, CompressMultiBlockStringSegment) {
 
 TEST_F(StorageLZ4SegmentTest, CompressDictionaryStringSegment) {
   const auto block_size = LZ4Encoder::_block_size;
-  const auto num_rows = 100'000 / 20;
+  constexpr auto num_rows = 100'000 / 20;
 
-  for (auto index = size_t{0u}; index < num_rows; ++index) {
+  for (auto index = size_t{0}; index < num_rows; ++index) {
     vs_str->append(AllTypeVariant{pmr_string{"this is element " + std::to_string(index)}});
   }
 
@@ -265,29 +264,29 @@ TEST_F(StorageLZ4SegmentTest, CompressDictionaryStringSegment) {
   // A dictionary should exist.
   EXPECT_FALSE(lz4_segment->dictionary().empty());
 
-  // Access elements without cache
-  EXPECT_EQ(lz4_segment->decompress(ChunkOffset{2u}), "this is element 2");
-  EXPECT_EQ(lz4_segment->decompress(ChunkOffset{4013u}), "this is element 4013");
-  EXPECT_EQ(lz4_segment->decompress(ChunkOffset{200u}), "this is element 200");
+  // Access elements without cache.
+  EXPECT_EQ(lz4_segment->decompress(ChunkOffset{2}), "this is element 2");
+  EXPECT_EQ(lz4_segment->decompress(ChunkOffset{4013}), "this is element 4013");
+  EXPECT_EQ(lz4_segment->decompress(ChunkOffset{200}), "this is element 200");
 
-  // Access elements with cache
+  // Access elements with cache.
   auto cache = std::vector<char>{};
-  std::pair<pmr_string, size_t> result;
+  auto result = std::pair<pmr_string, size_t>{};
 
-  result = lz4_segment->decompress(ChunkOffset{4102u}, std::nullopt, cache);
+  result = lz4_segment->decompress(ChunkOffset{4102}, std::nullopt, cache);
   EXPECT_EQ(cache.size(), block_size);
   EXPECT_EQ(result.first, "this is element 4102");
 
-  result = lz4_segment->decompress(ChunkOffset{4104u}, result.second, cache);
+  result = lz4_segment->decompress(ChunkOffset{4104}, result.second, cache);
   EXPECT_EQ(cache.size(), block_size);
   EXPECT_EQ(result.first, "this is element 4104");
 
-  result = lz4_segment->decompress(ChunkOffset{3003u}, result.second, cache);
+  result = lz4_segment->decompress(ChunkOffset{3003}, result.second, cache);
   EXPECT_EQ(cache.size(), block_size);
   EXPECT_EQ(result.first, "this is element 3003");
 
   result = lz4_segment->decompress(ChunkOffset{num_rows - 1}, result.second, cache);
-  EXPECT_EQ(result.first, pmr_string{"this is element " + std::to_string(num_rows - 1)});
+  EXPECT_EQ(result.first, pmr_string{std::string{"this is element "} + std::to_string(num_rows - 1)});
 
   // Finally, decompress the whole segment.
   auto decompressed_data = lz4_segment->decompress();
@@ -300,7 +299,7 @@ TEST_F(StorageLZ4SegmentTest, CompressDictionaryIntSegment) {
   const auto block_size = LZ4Encoder::_block_size;
   const auto num_rows = 100'000 / 4;
 
-  for (auto index = size_t{0u}; index < num_rows; ++index) {
+  for (auto index = size_t{0}; index < num_rows; ++index) {
     vs_int->append(static_cast<int>(index * 2));
   }
 
@@ -313,23 +312,23 @@ TEST_F(StorageLZ4SegmentTest, CompressDictionaryIntSegment) {
   EXPECT_FALSE(lz4_segment->dictionary().empty());
 
   // Access elements without cache
-  EXPECT_EQ(lz4_segment->decompress(ChunkOffset{1u}), 2);
-  EXPECT_EQ(lz4_segment->decompress(ChunkOffset{10123u}), 20246);
-  EXPECT_EQ(lz4_segment->decompress(ChunkOffset{200u}), 400);
+  EXPECT_EQ(lz4_segment->decompress(ChunkOffset{1}), 2);
+  EXPECT_EQ(lz4_segment->decompress(ChunkOffset{10123}), 20246);
+  EXPECT_EQ(lz4_segment->decompress(ChunkOffset{200}), 400);
 
   // Access elements with cache
   auto cache = std::vector<char>{};
   std::pair<int, size_t> result;
 
-  result = lz4_segment->decompress(ChunkOffset{20123u}, std::nullopt, cache);
+  result = lz4_segment->decompress(ChunkOffset{20123}, std::nullopt, cache);
   EXPECT_EQ(cache.size(), block_size);
   EXPECT_EQ(result.first, 40246);
 
-  result = lz4_segment->decompress(ChunkOffset{20124u}, result.second, cache);
+  result = lz4_segment->decompress(ChunkOffset{20124}, result.second, cache);
   EXPECT_EQ(cache.size(), block_size);
   EXPECT_EQ(result.first, 40248);
 
-  result = lz4_segment->decompress(ChunkOffset{3003u}, result.second, cache);
+  result = lz4_segment->decompress(ChunkOffset{3003}, result.second, cache);
   EXPECT_EQ(cache.size(), block_size);
   EXPECT_EQ(result.first, 6006);
 

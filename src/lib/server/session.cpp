@@ -1,9 +1,21 @@
 #include "session.hpp"
 
+#include <cstdint>
+#include <exception>
+#include <iostream>
+#include <memory>
+#include <string>
+#include <tuple>
+
 #include "client_disconnect_exception.hpp"
+#include "hyrise.hpp"
 #include "postgres_message_type.hpp"
+#include "postgres_protocol_handler.hpp"
 #include "query_handler.hpp"
 #include "result_serializer.hpp"
+#include "server_types.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 
@@ -28,8 +40,8 @@ void Session::run() {
     } catch (const ClientDisconnectException& /* exception */) {
       return;
     } catch (const std::exception& e) {
-      std::cerr << "Exception in session with client port " << _socket->remote_endpoint().port() << ":" << std::endl
-                << e.what() << std::endl;
+      std::cerr << "Exception in session with client port " << _socket->remote_endpoint().port() << ":\n"
+                << e.what() << '\n';
       const auto error_messages = ErrorMessages{{PostgresMessageType::HumanReadableError, e.what()}};
       _postgres_protocol_handler->send_error_message(error_messages);
       _postgres_protocol_handler->send_ready_for_query();

@@ -1,8 +1,17 @@
 #include "meta_plugins_table.hpp"
 
-#include <boost/algorithm/string.hpp>
+#include <memory>
+#include <string>
+#include <vector>
 
+#include <boost/variant/get.hpp>
+
+#include "all_type_variant.hpp"
 #include "hyrise.hpp"
+#include "storage/table.hpp"
+#include "storage/table_column_definition.hpp"
+#include "types.hpp"
+#include "utils/meta_tables/abstract_meta_table.hpp"
 
 namespace hyrise {
 
@@ -22,7 +31,7 @@ bool MetaPluginsTable::can_delete() const {
 }
 
 std::shared_ptr<Table> MetaPluginsTable::_on_generate() const {
-  auto output_table = std::make_shared<Table>(_column_definitions, TableType::Data, std::nullopt, UseMvcc::Yes);
+  auto output_table = std::make_shared<Table>(_column_definitions, TableType::Data);
 
   for (const auto& plugin : Hyrise::get().plugin_manager.loaded_plugins()) {
     output_table->append({pmr_string{plugin}});

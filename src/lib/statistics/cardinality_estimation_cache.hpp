@@ -1,5 +1,8 @@
 #pragma once
 
+#include <memory>
+#include <unordered_map>
+
 #include "join_graph_statistics_cache.hpp"
 
 namespace hyrise {

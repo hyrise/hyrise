@@ -1,8 +1,17 @@
 #include "foreign_key_constraint.hpp"
 
+#include <algorithm>
+#include <cstddef>
+#include <functional>
+#include <memory>
 #include <numeric>
+#include <vector>
 
 #include <boost/container_hash/hash.hpp>
+
+#include "storage/constraints/abstract_table_constraint.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace {
 
@@ -15,16 +24,18 @@ std::vector<size_t> sort_indexes(const std::vector<ColumnID>& column_ids) {
   auto permutation = std::vector<size_t>(column_ids.size());
   // Fill permutation with [0, 1, ..., n - 1] and order the permutation by sorting column_ids.
   std::iota(permutation.begin(), permutation.end(), 0);
-  std::sort(permutation.begin(), permutation.end(),
-            [&](auto lhs, auto rhs) { return column_ids[lhs] < column_ids[rhs]; });
+  std::sort(permutation.begin(), permutation.end(), [&](auto lhs, auto rhs) {
+    return column_ids[lhs] < column_ids[rhs];
+  });
   return permutation;
 }
 
 std::vector<ColumnID> apply_permutation(std::vector<ColumnID>& column_ids, const std::vector<size_t>& permutation) {
   auto sorted_column_ids = std::vector<ColumnID>(column_ids.size());
 
-  std::transform(permutation.begin(), permutation.end(), sorted_column_ids.begin(),
-                 [&](const auto position) { return column_ids[position]; });
+  std::transform(permutation.begin(), permutation.end(), sorted_column_ids.begin(), [&](const auto position) {
+    return column_ids[position];
+  });
   return sorted_column_ids;
 }
 
@@ -95,7 +106,8 @@ std::shared_ptr<Table> ForeignKeyConstraint::primary_key_table() const {
 }
 
 size_t ForeignKeyConstraint::hash() const {
-  auto hash = boost::hash_value(foreign_key_table());
+  auto hash = size_t{0};
+  boost::hash_combine(hash, foreign_key_table());
   boost::hash_combine(hash, primary_key_table());
   boost::hash_combine(hash, _foreign_key_columns.size());
   boost::hash_combine(hash, _foreign_key_columns);

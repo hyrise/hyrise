@@ -3,11 +3,10 @@
 #include <memory>
 #include <string>
 
-#include "types.hpp"
-
 #include "sql/sql_plan_cache.hpp"
 #include "sql_pipeline.hpp"
 #include "sql_pipeline_statement.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 

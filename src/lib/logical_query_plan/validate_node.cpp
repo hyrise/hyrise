@@ -1,6 +1,10 @@
 #include "validate_node.hpp"
 
+#include <memory>
 #include <string>
+
+#include "logical_query_plan/abstract_lqp_node.hpp"
+#include "logical_query_plan/data_dependencies/unique_column_combination.hpp"
 
 namespace hyrise {
 

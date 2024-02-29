@@ -1,44 +1,66 @@
 #include "tpcds_table_generator.hpp"
 
-extern "C" {
-#include <tpcds-kit/tools/dbgen_version.h>
-#include <tpcds-kit/tools/decimal.h>
-#include <tpcds-kit/tools/genrand.h>
-#include <tpcds-kit/tools/nulls.h>
-#include <tpcds-kit/tools/parallel.h>
-#include <tpcds-kit/tools/r_params.h>
-#include <tpcds-kit/tools/tables.h>
-#include <tpcds-kit/tools/tdefs.h>
+#include <algorithm>
+#include <climits>
+#include <cstddef>
+#include <cstdint>
+#include <cstdio>
+#include <filesystem>
+#include <limits>
+#include <memory>
+#include <optional>
+#include <string>
+#include <unordered_map>
+#include <utility>
+#include <vector>
 
-#include <tpcds-kit/tools/w_call_center.h>
-#include <tpcds-kit/tools/w_catalog_page.h>
-#include <tpcds-kit/tools/w_catalog_returns.h>
-#include <tpcds-kit/tools/w_catalog_sales.h>
-#include <tpcds-kit/tools/w_customer.h>
-#include <tpcds-kit/tools/w_customer_address.h>
-#include <tpcds-kit/tools/w_customer_demographics.h>
-#include <tpcds-kit/tools/w_datetbl.h>
-#include <tpcds-kit/tools/w_household_demographics.h>
-#include <tpcds-kit/tools/w_income_band.h>
-#include <tpcds-kit/tools/w_inventory.h>
-#include <tpcds-kit/tools/w_item.h>
-#include <tpcds-kit/tools/w_promotion.h>
-#include <tpcds-kit/tools/w_reason.h>
-#include <tpcds-kit/tools/w_ship_mode.h>
-#include <tpcds-kit/tools/w_store.h>
-#include <tpcds-kit/tools/w_store_returns.h>
-#include <tpcds-kit/tools/w_store_sales.h>
-#include <tpcds-kit/tools/w_timetbl.h>
-#include <tpcds-kit/tools/w_warehouse.h>
-#include <tpcds-kit/tools/w_web_page.h>
-#include <tpcds-kit/tools/w_web_returns.h>
-#include <tpcds-kit/tools/w_web_sales.h>
-#include <tpcds-kit/tools/w_web_site.h>
+#include "abstract_table_generator.hpp"
+
+extern "C" {
+#include "tpcds-kit/tools/address.h"
+#include "tpcds-kit/tools/columns.h"
+#include "tpcds-kit/tools/date.h"
+#include "tpcds-kit/tools/decimal.h"
+#include "tpcds-kit/tools/dist.h"
+#include "tpcds-kit/tools/genrand.h"
+#include "tpcds-kit/tools/nulls.h"
+#include "tpcds-kit/tools/parallel.h"
+#include "tpcds-kit/tools/porting.h"
+#include "tpcds-kit/tools/r_params.h"
+#include "tpcds-kit/tools/tables.h"
+#include "tpcds-kit/tools/tdefs.h"
+#include "tpcds-kit/tools/w_call_center.h"
+#include "tpcds-kit/tools/w_catalog_page.h"
+#include "tpcds-kit/tools/w_catalog_returns.h"
+#include "tpcds-kit/tools/w_catalog_sales.h"
+#include "tpcds-kit/tools/w_customer.h"
+#include "tpcds-kit/tools/w_customer_address.h"
+#include "tpcds-kit/tools/w_customer_demographics.h"
+#include "tpcds-kit/tools/w_datetbl.h"
+#include "tpcds-kit/tools/w_household_demographics.h"
+#include "tpcds-kit/tools/w_income_band.h"
+#include "tpcds-kit/tools/w_inventory.h"
+#include "tpcds-kit/tools/w_item.h"
+#include "tpcds-kit/tools/w_promotion.h"
+#include "tpcds-kit/tools/w_reason.h"
+#include "tpcds-kit/tools/w_ship_mode.h"
+#include "tpcds-kit/tools/w_store.h"
+#include "tpcds-kit/tools/w_store_returns.h"
+#include "tpcds-kit/tools/w_store_sales.h"
+#include "tpcds-kit/tools/w_timetbl.h"
+#include "tpcds-kit/tools/w_warehouse.h"
+#include "tpcds-kit/tools/w_web_page.h"
+#include "tpcds-kit/tools/w_web_returns.h"
+#include "tpcds-kit/tools/w_web_sales.h"
+#include "tpcds-kit/tools/w_web_site.h"
 }
 
 #include "benchmark_config.hpp"
+#include "storage/constraints/table_key_constraint.hpp"
+#include "storage/table.hpp"
 #include "table_builder.hpp"
-#include "utils/timer.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace {
 using namespace hyrise;  // NOLINT
@@ -131,7 +153,7 @@ pmr_string zip_to_string(int32_t zip) {
 
 // dsdgen deliberately creates NULL values if nullCheck(column_id) is true, resolve functions mimic that
 std::optional<pmr_string> resolve_date_id(int column_id, ds_key_t date_id) {
-  if (nullCheck(column_id) || date_id <= 0) {
+  if (nullCheck(column_id) != 0 || date_id <= 0) {
     return std::nullopt;
   }
 
@@ -149,30 +171,30 @@ std::optional<pmr_string> resolve_date_id(int column_id, ds_key_t date_id) {
 }
 
 std::optional<tpcds_key_t> resolve_key(int column_id, ds_key_t key) {
-  return nullCheck(column_id) || key == -1 ? std::nullopt : std::optional{static_cast<tpcds_key_t>(key)};
+  return nullCheck(column_id) != 0 || key == -1 ? std::nullopt : std::optional{static_cast<tpcds_key_t>(key)};
 }
 
 std::optional<pmr_string> resolve_string(int column_id, pmr_string string) {
-  return nullCheck(column_id) || string.empty() ? std::nullopt : std::optional{std::move(string)};
+  return nullCheck(column_id) != 0 || string.empty() ? std::nullopt : std::optional{std::move(string)};
 }
 
 std::optional<int32_t> resolve_integer(int column_id, int value) {
-  return nullCheck(column_id) ? std::nullopt : std::optional{int32_t{value}};
+  return nullCheck(column_id) != 0 ? std::nullopt : std::optional{int32_t{value}};
 }
 
 std::optional<float> resolve_decimal(int column_id, decimal_t decimal) {
   auto result = 0.0;
   dectof(&result, &decimal);
   // we have to divide by 10 after dectof to get the expected result
-  return nullCheck(column_id) ? std::nullopt : std::optional{static_cast<float>(result / 10)};
+  return nullCheck(column_id) != 0 ? std::nullopt : std::optional{static_cast<float>(result / 10)};
 }
 
 std::optional<float> resolve_gmt_offset(int column_id, int32_t gmt_offset) {
-  return nullCheck(column_id) ? std::nullopt : std::optional{static_cast<float>(gmt_offset)};
+  return nullCheck(column_id) != 0 ? std::nullopt : std::optional{static_cast<float>(gmt_offset)};
 }
 
 std::optional<pmr_string> resolve_street_name(int column_id, const ds_addr_t& address) {
-  return nullCheck(column_id) ? std::nullopt
+  return nullCheck(column_id) != 0 ? std::nullopt
          : address.street_name2 == nullptr
              ? std::optional{pmr_string{address.street_name1}}
              : std::optional{pmr_string{address.street_name1} + " " + address.street_name2};
@@ -613,7 +635,7 @@ std::shared_ptr<Table> TPCDSTableGenerator::generate_customer(ds_key_t max_rows)
         resolve_integer(C_FIRST_SALES_DATE_ID, customer.c_first_sales_date_id),
         resolve_string(C_SALUTATION, customer.c_salutation), resolve_string(C_FIRST_NAME, customer.c_first_name),
         resolve_string(C_LAST_NAME, customer.c_last_name),
-        resolve_string(C_PREFERRED_CUST_FLAG, boolean_to_string(customer.c_preferred_cust_flag)),
+        resolve_string(C_PREFERRED_CUST_FLAG, boolean_to_string(customer.c_preferred_cust_flag != 0)),
         resolve_integer(C_BIRTH_DAY, customer.c_birth_day), resolve_integer(C_BIRTH_MONTH, customer.c_birth_month),
         resolve_integer(C_BIRTH_YEAR, customer.c_birth_year), resolve_string(C_BIRTH_COUNTRY, customer.c_birth_country),
         resolve_string(C_LOGIN, customer.c_login), resolve_string(C_EMAIL_ADDRESS, customer.c_email_address),
@@ -673,16 +695,16 @@ std::shared_ptr<Table> TPCDSTableGenerator::generate_date_dim(ds_key_t max_rows)
         resolve_integer(D_FY_YEAR, date.d_fy_year), resolve_integer(D_FY_QUARTER_SEQ, date.d_fy_quarter_seq),
         resolve_integer(D_FY_WEEK_SEQ, date.d_fy_week_seq), resolve_string(D_DAY_NAME, date.d_day_name),
         resolve_string(D_QUARTER_NAME, std::move(quarter_name)),
-        resolve_string(D_HOLIDAY, boolean_to_string(date.d_holiday)),
-        resolve_string(D_WEEKEND, boolean_to_string(date.d_weekend)),
-        resolve_string(D_FOLLOWING_HOLIDAY, boolean_to_string(date.d_following_holiday)),
+        resolve_string(D_HOLIDAY, boolean_to_string(date.d_holiday != 0)),
+        resolve_string(D_WEEKEND, boolean_to_string(date.d_weekend != 0)),
+        resolve_string(D_FOLLOWING_HOLIDAY, boolean_to_string(date.d_following_holiday != 0)),
         resolve_integer(D_FIRST_DOM, date.d_first_dom), resolve_integer(D_LAST_DOM, date.d_last_dom),
         resolve_integer(D_SAME_DAY_LY, date.d_same_day_ly), resolve_integer(D_SAME_DAY_LQ, date.d_same_day_lq),
-        resolve_string(D_CURRENT_DAY, boolean_to_string(date.d_current_day)),
-        resolve_string(D_CURRENT_WEEK, boolean_to_string(date.d_current_week)),
-        resolve_string(D_CURRENT_MONTH, boolean_to_string(date.d_current_month)),
-        resolve_string(D_CURRENT_QUARTER, boolean_to_string(date.d_current_quarter)),
-        resolve_string(D_CURRENT_YEAR, boolean_to_string(date.d_current_year)));
+        resolve_string(D_CURRENT_DAY, boolean_to_string(date.d_current_day != 0)),
+        resolve_string(D_CURRENT_WEEK, boolean_to_string(date.d_current_week != 0)),
+        resolve_string(D_CURRENT_MONTH, boolean_to_string(date.d_current_month != 0)),
+        resolve_string(D_CURRENT_QUARTER, boolean_to_string(date.d_current_quarter != 0)),
+        resolve_string(D_CURRENT_YEAR, boolean_to_string(date.d_current_year != 0)));
   }
 
   return date_builder.finish_table();
@@ -794,16 +816,16 @@ std::shared_ptr<Table> TPCDSTableGenerator::generate_promotion(ds_key_t max_rows
         resolve_key(P_END_DATE_ID, promotion.p_end_date_id), resolve_key(P_ITEM_SK, promotion.p_item_sk),
         resolve_decimal(P_COST, promotion.p_cost), resolve_integer(P_RESPONSE_TARGET, promotion.p_response_target),
         resolve_string(P_PROMO_NAME, promotion.p_promo_name),
-        resolve_string(P_CHANNEL_DMAIL, boolean_to_string(promotion.p_channel_dmail)),
-        resolve_string(P_CHANNEL_EMAIL, boolean_to_string(promotion.p_channel_email)),
-        resolve_string(P_CHANNEL_CATALOG, boolean_to_string(promotion.p_channel_catalog)),
-        resolve_string(P_CHANNEL_TV, boolean_to_string(promotion.p_channel_tv)),
-        resolve_string(P_CHANNEL_RADIO, boolean_to_string(promotion.p_channel_radio)),
-        resolve_string(P_CHANNEL_PRESS, boolean_to_string(promotion.p_channel_press)),
-        resolve_string(P_CHANNEL_EVENT, boolean_to_string(promotion.p_channel_event)),
-        resolve_string(P_CHANNEL_DEMO, boolean_to_string(promotion.p_channel_demo)),
+        resolve_string(P_CHANNEL_DMAIL, boolean_to_string(promotion.p_channel_dmail != 0)),
+        resolve_string(P_CHANNEL_EMAIL, boolean_to_string(promotion.p_channel_email != 0)),
+        resolve_string(P_CHANNEL_CATALOG, boolean_to_string(promotion.p_channel_catalog != 0)),
+        resolve_string(P_CHANNEL_TV, boolean_to_string(promotion.p_channel_tv != 0)),
+        resolve_string(P_CHANNEL_RADIO, boolean_to_string(promotion.p_channel_radio != 0)),
+        resolve_string(P_CHANNEL_PRESS, boolean_to_string(promotion.p_channel_press != 0)),
+        resolve_string(P_CHANNEL_EVENT, boolean_to_string(promotion.p_channel_event != 0)),
+        resolve_string(P_CHANNEL_DEMO, boolean_to_string(promotion.p_channel_demo != 0)),
         resolve_string(P_CHANNEL_DETAILS, promotion.p_channel_details), resolve_string(P_PURPOSE, promotion.p_purpose),
-        resolve_string(P_DISCOUNT_ACTIVE, boolean_to_string(promotion.p_discount_active)));
+        resolve_string(P_DISCOUNT_ACTIVE, boolean_to_string(promotion.p_discount_active != 0)));
   }
 
   return promotion_builder.finish_table();
@@ -1035,7 +1057,7 @@ std::shared_ptr<Table> TPCDSTableGenerator::generate_web_page(ds_key_t max_rows)
         resolve_date_id(WP_REC_END_DATE_ID, web_page.wp_rec_end_date_id),
         resolve_key(WP_CREATION_DATE_SK, web_page.wp_creation_date_sk),
         resolve_key(WP_ACCESS_DATE_SK, web_page.wp_access_date_sk),
-        resolve_string(WP_AUTOGEN_FLAG, boolean_to_string(web_page.wp_autogen_flag)),
+        resolve_string(WP_AUTOGEN_FLAG, boolean_to_string(web_page.wp_autogen_flag != 0)),
         resolve_key(WP_CUSTOMER_SK, web_page.wp_customer_sk), resolve_string(WP_URL, web_page.wp_url),
         resolve_string(WP_TYPE, web_page.wp_type), resolve_integer(WP_CHAR_COUNT, web_page.wp_char_count),
         resolve_integer(WP_LINK_COUNT, web_page.wp_link_count),

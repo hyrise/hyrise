@@ -1,5 +1,4 @@
 #include "base_test.hpp"
-
 #include "storage/constraints/table_order_constraint.hpp"
 #include "storage/table.hpp"
 
