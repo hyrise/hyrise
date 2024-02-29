@@ -5,10 +5,8 @@
 #include <vector>
 
 #include "abstract_operator.hpp"
-
 #include "concurrency/transaction_context.hpp"
 #include "storage/table.hpp"
-
 #include "utils/assert.hpp"
 
 namespace hyrise {

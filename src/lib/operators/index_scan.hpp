@@ -1,9 +1,11 @@
 #pragma once
 
 #include <memory>
+#include <string>
+#include <unordered_map>
+#include <vector>
 
 #include "abstract_read_only_operator.hpp"
-
 #include "all_type_variant.hpp"
 #include "storage/pos_lists/row_id_pos_list.hpp"
 #include "types.hpp"
@@ -20,7 +22,7 @@ class AbstractTask;
 class IndexScan : public AbstractReadOnlyOperator {
  public:
   IndexScan(const std::shared_ptr<const AbstractOperator>& input_operator, const ColumnID indexed_column_id,
-            const PredicateCondition predicate_condition, const AllTypeVariant scan_value);
+            const PredicateCondition predicate_condition, const AllTypeVariant& scan_value);
 
   const std::string& name() const final;
 

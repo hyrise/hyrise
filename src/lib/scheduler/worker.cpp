@@ -2,11 +2,15 @@
 
 #include <pthread.h>
 #include <sched.h>
-#include <unistd.h>
 
 #include <algorithm>
+#include <cstdint>
+#include <memory>
+#include <numeric>
 #include <random>
+#include <string>
 #include <thread>
+#include <utility>
 #include <vector>
 
 #include "abstract_scheduler.hpp"
@@ -25,7 +29,8 @@ using namespace hyrise;  // NOLINT(build/namespaces)
  * On worker threads, this references the worker running on this thread, on all other threads, this is empty.
  * Uses a weak_ptr, because otherwise the ref-count of it would not reach zero within the main() scope of the program.
  */
-thread_local std::weak_ptr<Worker> this_thread_worker;  // NOLINT (clang-tidy wants this const)
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables): clang-tidy wants `this_thread_worker` const.
+thread_local std::weak_ptr<Worker> this_thread_worker;
 
 }  // namespace
 
@@ -227,15 +232,11 @@ void Worker::_wait_for_tasks(const std::vector<std::shared_ptr<AbstractTask>>& t
 
 void Worker::_set_affinity() {
 #if HYRISE_NUMA_SUPPORT
-  cpu_set_t cpuset;
+  auto cpuset = cpu_set_t{};  // NOLINT(misc-include-cleaner): cpu_set_t is defined by another include of sched.h.
   CPU_ZERO(&cpuset);
   CPU_SET(_cpu_id, &cpuset);
-  const auto return_code = pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuset);
-  if (return_code != 0) {
-    // This is not an Assert(), though maybe it should be. Not being able to pin the threads doesn't make the database
-    // unfunctional, but probably slower.
-    std::cerr << "Error calling pthread_setaffinity_np (return code: " << return_code << ")." << std::endl;
-  }
+  const auto return_code = pthread_setaffinity_np(pthread_self(), sizeof(cpuset), &cpuset);
+  Assert(return_code == 0, "Error calling pthread_setaffinity_np (return code: " + std::to_string(return_code) + ").");
 #endif
 }
 

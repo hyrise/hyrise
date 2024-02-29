@@ -1,21 +1,36 @@
 #include "join_hash.hpp"
 
+#include <algorithm>
 #include <cmath>
+#include <cstddef>
+#include <cstdint>
+#include <limits>
 #include <memory>
-#include <numeric>
+#include <optional>
+#include <ostream>
 #include <string>
 #include <type_traits>
 #include <unordered_map>
 #include <utility>
 #include <vector>
 
+#include "all_type_variant.hpp"
 #include "hyrise.hpp"
 #include "join_hash/join_hash_steps.hpp"
 #include "join_hash/join_hash_traits.hpp"
 #include "join_helper/join_output_writing.hpp"
+#include "operators/abstract_join_operator.hpp"
+#include "operators/abstract_operator.hpp"
+#include "operators/operator_join_predicate.hpp"
+#include "operators/operator_performance_data.hpp"
+#include "resolve_type.hpp"
+#include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
-#include "type_comparison.hpp"
-#include "utils/format_duration.hpp"
+#include "storage/pos_lists/row_id_pos_list.hpp"
+#include "storage/table.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
+#include "utils/performance_warning.hpp"
 #include "utils/timer.hpp"
 
 namespace hyrise {
@@ -222,31 +237,32 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
                const OutputColumnOrder output_column_order, const size_t radix_bits,
                JoinHash::PerformanceData& performance_data, std::vector<OperatorJoinPredicate>& secondary_predicates)
       : _join_hash(join_hash),
+        _secondary_predicates(secondary_predicates),
+        _performance_data(performance_data),
         _build_input_table(build_input_table),
         _probe_input_table(probe_input_table),
         _mode(mode),
         _column_ids(column_ids),
         _predicate_condition(predicate_condition),
-        _performance_data(performance_data),
         _output_column_order(output_column_order),
-        _secondary_predicates(secondary_predicates),
         _radix_bits(radix_bits) {}
 
  protected:
+  // NOLINTBEGIN(cppcoreguidelines-avoid-const-or-ref-data-members): const members and references are problematic with
+  // copying/moving, but this class will not be copied or moved
+  // (see https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#Rc-constref).
   const JoinHash& _join_hash;
-  const std::shared_ptr<const Table> _build_input_table, _probe_input_table;
-  const JoinMode _mode;
-  const ColumnIDPair _column_ids;
-  const PredicateCondition _predicate_condition;
+  std::vector<OperatorJoinPredicate>& _secondary_predicates;
   JoinHash::PerformanceData& _performance_data;
+  // NOLINTEND(cppcoreguidelines-avoid-const-or-ref-data-members)
 
+  std::shared_ptr<const Table> _build_input_table, _probe_input_table;
+  JoinMode _mode;
+  ColumnIDPair _column_ids;
+  PredicateCondition _predicate_condition;
   OutputColumnOrder _output_column_order;
-
-  const std::vector<OperatorJoinPredicate>& _secondary_predicates;
-
   std::shared_ptr<Table> _output_table;
-
-  const size_t _radix_bits;
+  size_t _radix_bits;
 
   // Determine correct type for hashing
   using HashedType = typename JoinHashTraits<BuildColumnType, ProbeColumnType>::HashType;

@@ -1,5 +1,7 @@
 #include "storage/index/table_index_statistics.hpp"
 
+#include <tuple>
+
 namespace hyrise {
 
 bool operator==(const TableIndexStatistics& left, const TableIndexStatistics& right) {

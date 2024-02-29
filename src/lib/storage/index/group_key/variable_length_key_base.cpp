@@ -6,12 +6,13 @@
 #include <cstdint>
 #include <cstring>
 #include <iomanip>
+#include <ios>
 #include <ostream>
 #include <type_traits>
 #include <utility>
 
 namespace {
-template <typename uintX_t>  // NOLINT (We like uintX_t)
+template <typename uintX_t>  // NOLINT(readability-identifier-naming): UintXT looks awkward.
 std::pair<uintX_t, uintX_t> shift_left_with_borrow(uintX_t value, hyrise::CompositeKeyLength bits) {
   const auto bits_for_type = sizeof(uintX_t) * CHAR_BIT;
   assert(bits <= bits_for_type);

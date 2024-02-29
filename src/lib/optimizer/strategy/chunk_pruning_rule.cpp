@@ -1,9 +1,18 @@
 #include "chunk_pruning_rule.hpp"
 
 #include <algorithm>
-#include <iostream>
+#include <cstddef>
+#include <cstdint>
+#include <iterator>
+#include <memory>
+#include <set>
+#include <string>
+#include <unordered_map>
+#include <unordered_set>
+#include <utility>
+#include <vector>
 
-#include "all_parameter_variant.hpp"
+#include "expression/abstract_expression.hpp"
 #include "expression/abstract_predicate_expression.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_subquery_expression.hpp"
@@ -12,7 +21,9 @@
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
+#include "utils/pruning_utils.hpp"
 
 namespace {
 

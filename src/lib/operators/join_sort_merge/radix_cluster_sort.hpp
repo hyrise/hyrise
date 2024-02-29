@@ -231,7 +231,9 @@ class RadixClusterSort {
   // Performs least significant bit radix clustering which is used in the equi join case.
   MaterializedSegmentList<T> _radix_cluster(const MaterializedSegmentList<T>& input_chunks) {
     auto radix_bitmask = _cluster_count - 1;
-    return _cluster(input_chunks, [radix_bitmask](const T& value) { return get_radix<T>(value, radix_bitmask); });
+    return _cluster(input_chunks, [radix_bitmask](const T& value) {
+      return get_radix<T>(value, radix_bitmask);
+    });
   }
 
   // Picks split values from the given sample values. Each split value denotes the inclusive upper bound of its
@@ -300,8 +302,9 @@ class RadixClusterSort {
       const auto cluster_size = clusters[cluster_id].size();
       auto sort_job = [&, cluster_id] {
         auto& cluster = clusters[cluster_id];
-        boost::sort::pdqsort(cluster.begin(), cluster.end(),
-                             [](const auto& left, const auto& right) { return left.value < right.value; });
+        boost::sort::pdqsort(cluster.begin(), cluster.end(), [](const auto& left, const auto& right) {
+          return left.value < right.value;
+        });
       };
 
       if (cluster_size > JoinSortMerge::JOB_SPAWN_THRESHOLD) {

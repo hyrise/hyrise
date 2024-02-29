@@ -1,23 +1,38 @@
 #include "console.hpp"
 
-#include <readline/history.h>
-#include <readline/readline.h>
+#include <setjmp.h>  // NOLINT(hicpp-deprecated-headers,modernize-deprecated-headers)
 
-#include <chrono>
-#include <csetjmp>
+#include <algorithm>
 #include <csignal>
+#include <cstdint>
+#include <cstdio>
 #include <cstdlib>
 #include <ctime>
+#include <exception>
 #include <filesystem>
+#include <fstream>
+#include <functional>
 #include <iomanip>
+#include <iostream>
+#include <memory>
 #include <regex>
+#include <sstream>
+#include <string>
+#include <vector>
 
+#include <boost/algorithm/string/classification.hpp>
 #include <boost/algorithm/string/join.hpp>
+#include <boost/algorithm/string/split.hpp>
+#include <boost/algorithm/string/trim.hpp>
+#include <boost/lexical_cast.hpp>
+#include <readline/history.h>   // NOLINT(build/include_order): cpplint considers readline headers as C system headers.
+#include <readline/readline.h>  // NOLINT(build/include_order)
 
+#include "magic_enum.hpp"
 #include "SQLParser.h"
-#include "concurrency/transaction_context.hpp"
+#include "SQLParserResult.h"
+
 #include "hyrise.hpp"
-#include "import_export/file_type.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "operators/export.hpp"
 #include "operators/get_table.hpp"
@@ -29,16 +44,20 @@
 #include "pagination.hpp"
 #include "scheduler/immediate_execution_scheduler.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
+#include "sql/sql_pipeline.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "sql/sql_pipeline_statement.hpp"
 #include "sql/sql_plan_cache.hpp"
 #include "sql/sql_translator.hpp"
 #include "ssb/ssb_table_generator.hpp"
 #include "storage/chunk_encoder.hpp"
+#include "storage/encoding_type.hpp"
 #include "tpcc/tpcc_table_generator.hpp"
 #include "tpcds/tpcds_table_generator.hpp"
 #include "tpch/tpch_constants.hpp"
 #include "tpch/tpch_table_generator.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 #include "utils/invalid_input_exception.hpp"
 #include "utils/load_table.hpp"
 #include "utils/meta_table_manager.hpp"
@@ -70,10 +89,10 @@ namespace {
  */
 sigjmp_buf jmp_env;  // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
 
-// Returns a string containing a timestamp of the current date and time
+// Returns a string containing a timestamp of the current date and time.
 std::string current_timestamp() {
   auto time = std::time(nullptr);
-  const auto local_time = *std::localtime(&time);  // NOLINT(concurrency-mt-unsafe) - not called concurrently
+  const auto local_time = *std::localtime(&time);  // NOLINT(concurrency-mt-unsafe): not called concurrently.
 
   auto oss = std::ostringstream{};
   oss << std::put_time(&local_time, "%Y-%m-%d %H:%M:%S");
@@ -83,7 +102,7 @@ std::string current_timestamp() {
 // Removes the coloring commands (e.g. '\x1B[31m') from input, to have a clean logfile.
 // If remove_rl_codes_only is true, then it only removes the Readline specific escape sequences '\001' and '\002'
 std::string remove_coloring(const std::string& input, bool remove_rl_codes_only = false) {
-  // matches any characters that need to be escaped in RegEx except for '|'
+  // Matches any characters that need to be escaped in RegEx except for '|'.
   const auto special_chars = std::regex{R"([-[\]{}()*+?.,\^$#\s])"};
   auto sequences = std::string{"\x1B[31m|\x1B[32m|\x1B[0m|\001|\002"};
   if (remove_rl_codes_only) {
@@ -91,7 +110,7 @@ std::string remove_coloring(const std::string& input, bool remove_rl_codes_only 
   }
   const auto sanitized_sequences = std::regex_replace(sequences, special_chars, R"(\$&)");
 
-  // Remove coloring commands and escape sequences before writing to logfile
+  // Remove coloring commands and escape sequences before writing to logfile.
   const auto expression = std::regex{"(" + sanitized_sequences + ")"};
   return std::regex_replace(input, expression, "");
 }
@@ -99,8 +118,10 @@ std::string remove_coloring(const std::string& input, bool remove_rl_codes_only 
 std::vector<std::string> tokenize(std::string input) {
   boost::algorithm::trim<std::string>(input);
 
-  // Remove whitespace duplicates to not get empty tokens after boost::algorithm::split
-  const auto both_are_spaces = [](char left, char right) { return (left == right) && (left == ' '); };
+  // Remove whitespace duplicates to not get empty tokens after boost::algorithm::split.
+  const auto both_are_spaces = [](char left, char right) {
+    return (left == right) && (left == ' ');
+  };
   input.erase(std::unique(input.begin(), input.end(), both_are_spaces), input.end());
 
   auto tokens = std::vector<std::string>{};
@@ -113,8 +134,6 @@ std::vector<std::string> tokenize(std::string input) {
 
 namespace hyrise {
 
-// Console implementation
-
 Console::Console()
     : _prompt("> "),
       _out(std::cout.rdbuf()),
@@ -123,16 +142,16 @@ Console::Console()
       _pagination_active(false),
       _pqp_cache(std::make_shared<SQLPhysicalPlanCache>()),
       _lqp_cache(std::make_shared<SQLLogicalPlanCache>()) {
-  // Init readline basics, tells readline to use our custom command completion function
+  // Init readline basics, tells readline to use our custom command completion function.
   rl_attempted_completion_function = &Console::_command_completion;
   // NOLINTNEXTLINE(cppcoreguidelines-pro-type-const-cast)
   rl_completer_word_break_characters = const_cast<char*>(" \t\n\"\\'`@$><=;|&{(");
 
-  // Set Hyrise caches
+  // Set Hyrise caches.
   Hyrise::get().default_pqp_cache = _pqp_cache;
   Hyrise::get().default_lqp_cache = _lqp_cache;
 
-  // Register default commands to Console
+  // Register default commands.
   register_command("exit", std::bind(&Console::_exit, this, std::placeholders::_1));
   register_command("quit", std::bind(&Console::_exit, this, std::placeholders::_1));
 
@@ -159,14 +178,14 @@ Console::~Console() {
 
   out("Bye.\n");
 
-  // Timestamp dump only to logfile
+  // Timestamp dump only to logfile.
   out("--- Session end --- " + current_timestamp() + "\n", false);
 }
 
 int Console::read() {
   char* buffer = nullptr;
 
-  // Prompt user for input
+  // Prompt user for input.
   buffer = readline(_prompt.c_str());
   if (!buffer) {
     return ReturnCode::Quit;
@@ -175,10 +194,10 @@ int Console::read() {
   auto input = std::string{buffer};
   boost::algorithm::trim<std::string>(input);
 
-  // Only save non-empty commands to history
+  // Only save non-empty commands to history.
   if (!input.empty()) {
     add_history(buffer);
-    // Save command to history file
+    // Save command to history file.
     if (!_history_file.empty()) {
       if (append_history(1, _history_file.c_str()) != 0) {
         out("Error appending to history file: " + _history_file + "\n");
@@ -186,8 +205,8 @@ int Console::read() {
     }
   }
 
-  // Free buffer, since readline() allocates new string every time
-  free(buffer);  // NOLINT (legacy API)
+  // Free buffer, since readline() allocates new string every time.
+  std::free(buffer);  // NOLINT(cppcoreguidelines-no-malloc,hicpp-no-malloc,cppcoreguidelines-owning-memory)
 
   return _eval(input);
 }
@@ -245,15 +264,17 @@ int Console::_eval_command(const CommandFunction& func, const std::string& comma
   const auto first = cmd.find(' ');
   const auto last = cmd.find('\n');
 
-  // If no whitespace is found, zero arguments are provided
+  // If no whitespace is found, zero arguments are provided.
   if (std::string::npos == first) {
     return static_cast<int>(func(""));
   }
 
   auto args = cmd.substr(first + 1, last - (first + 1));
 
-  // Remove whitespace duplicates in args
-  const auto both_are_spaces = [](char left, char right) { return (left == right) && (left == ' '); };
+  // Remove whitespace duplicates in args.
+  const auto both_are_spaces = [](char left, char right) {
+    return (left == right) && (left == ' ');
+  };
   args.erase(std::unique(args.begin(), args.end(), both_are_spaces), args.end());
 
   return static_cast<int>(func(args));
@@ -298,12 +319,12 @@ int Console::_eval_sql(const std::string& sql) {
   _explicitly_created_transaction_context = _sql_pipeline->transaction_context();
 
   const auto [pipeline_status, table] = _sql_pipeline->get_result_table();
-  // Failed (i.e., conflicted) pipelines should be impossible in the single-user console
+  // Failed (i.e., conflicted) pipelines should be impossible in the single-user console.
   Assert(pipeline_status == SQLPipelineStatus::Success, "Unexpected pipeline status.");
 
   const auto row_count = table ? table->row_count() : 0;
 
-  // Print result (to Console and logfile)
+  // Print result to console and logfile.
   if (table) {
     out(table);
   }
@@ -346,7 +367,7 @@ void Console::set_console_path(const std::string& path) {
 void Console::load_history(const std::string& history_file) {
   _history_file = history_file;
 
-  // Check if history file exist, create empty history file if not
+  // Check if history file exist, create empty history file if not.
   const auto file = std::ifstream{_history_file};
   if (!file.good()) {
     out("Creating history file: " + _history_file + "\n");
@@ -365,7 +386,7 @@ void Console::out(const std::string& output, bool console_print) {
   if (console_print) {
     _out << output;
   }
-  // Remove coloring commands like '\x1B[32m' when writing to logfile
+  // Remove coloring commands like '\x1B[32m' when writing to logfile.
   _log << remove_coloring(output);
   _log.flush();
 }
@@ -398,7 +419,7 @@ void Console::out(const std::shared_ptr<const Table>& table, const PrintFlags fl
     pagination_disabled = true;
   }
 
-  // Paginate only if table has more rows or printed columns that fit in the terminal
+  // Paginate only if table has more rows or printed columns that fit in the terminal.
   if (fits_on_one_page || pagination_disabled) {
     _out << stream.rdbuf();
   } else {
@@ -410,7 +431,7 @@ void Console::out(const std::shared_ptr<const Table>& table, const PrintFlags fl
 
 // Command functions
 
-// NOLINTNEXTLINE - while this particular method could be made static, others cannot.
+// NOLINTNEXTLINE: while this particular method could be made static, others cannot.
 int Console::_exit(const std::string& /*args*/) {
   return ReturnCode::Quit;
 }
@@ -424,7 +445,7 @@ int Console::_help(const std::string& /*args*/) {
   const auto line_wrap = std::regex{"(.{1,120})(?: +|$)"};
   encoding_options =
       regex_replace(encoding_options, line_wrap, "$1\n                                                    ");
-  // Remove the 49 spaces and the new line added at the end
+  // Remove the 49 spaces and the new line added at the end.
   encoding_options.resize(encoding_options.size() - 50);
 
   // clang-format off
@@ -614,7 +635,7 @@ int Console::_load_table(const std::string& args) {
     return ReturnCode::Error;
   }
 
-  // Check if the specified encoding can be used
+  // Check if the specified encoding can be used.
   const auto& table = Hyrise::get().storage_manager.get_table(tablename);
   auto supported = true;
   for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
@@ -713,7 +734,7 @@ int Console::_visualize(const std::string& input) {
    * "visualize" supports three dimensions of options:
    *    - "noexec"; or implicit "exec", the execution of the specified query
    *    - "lqp", "unoptlqp", "joins"; or implicit "pqp"
-   *    - a sql query can either be specified or not. If it isn't, the last previously executed query is visualized
+   *    - A sql query can either be specified or not. If it is not, the previously executed query is visualized.
    */
 
   auto input_words = std::vector<std::string>{};
@@ -726,14 +747,14 @@ int Console::_visualize(const std::string& input) {
   constexpr auto UNOPTLQP = "unoptlqp";
   constexpr auto JOINS = "joins";
 
-  // Determine whether the specified query is to be executed before visualization
+  // Determine whether the specified query is to be executed before visualization.
   auto no_execute = false;  // Default
   if (input_words.front() == NOEXEC || input_words.front() == EXEC) {
     no_execute = input_words.front() == NOEXEC;
     input_words.erase(input_words.begin());
   }
 
-  // Determine the plan type to visualize
+  // Determine the plan type to visualize.
   enum class PlanType { LQP, UnoptLQP, PQP, Joins };
   auto plan_type = PlanType::PQP;
   auto plan_type_str = std::string{"pqp"};
@@ -759,8 +780,8 @@ int Console::_visualize(const std::string& input) {
     return ReturnCode::Error;
   }
 
-  // If there is no pipeline (i.e., neither was SQL passed in with the visualize command,
-  // nor was there a previous execution), return an error
+  // If there is no pipeline (i.e., neither was SQL passed in with the visualize command, nor was there a previous
+  // execution), return an error.
   if (!_sql_pipeline) {
     out("Error: Nothing to visualize.\n");
     return ReturnCode::Error;
@@ -829,14 +850,14 @@ int Console::_visualize(const std::string& input) {
     }
   } catch (const InvalidInputException& exception) {
     out(std::string(exception.what()) + '\n');
-    return false;
+    return 0;
   }
 
-  // NOLINTBEGIN(concurrency-mt-unsafe) - system() is not thread-safe, but it's not used concurrently here.
+  // NOLINTBEGIN(concurrency-mt-unsafe): system() is not thread-safe, but it is not used concurrently here.
   auto scripts_dir = std::string{"./scripts/"};
   auto ret = system((scripts_dir + "planviz/is_iterm2.sh 2>/dev/null").c_str());
   if (ret != 0) {
-    // Try in parent directory
+    // Try in parent directory.
     scripts_dir = std::string{"."} + scripts_dir;
     ret = system((scripts_dir + "planviz/is_iterm2.sh").c_str());
   }
@@ -912,7 +933,7 @@ int Console::_exec_script(const std::string& script_file) {
 void Console::handle_signal(int sig) {
   if (sig == SIGINT) {
     auto& console = Console::get();
-    // When in pagination mode, just quit pagination. Otherwise, reset Console.
+    // When in pagination mode, just quit pagination. Otherwise, reset console.
     if (console._pagination_active) {
       Pagination::push_ctrl_c();
     } else {
@@ -921,8 +942,7 @@ void Console::handle_signal(int sig) {
       console._multiline_input = "";
       console.set_prompt("!> ");
       console._verbose = false;
-      // Restore program state stored in jmp_env set with sigsetjmp(2).
-      // See comment on jmp_env for details
+      // Restore program state stored in jmp_env set with sigsetjmp(2). See comment on jmp_env for details.
       siglongjmp(jmp_env, 1);
     }
   }
@@ -1022,11 +1042,11 @@ char** Console::_command_completion(const char* text, const int start, const int
   // Choose completion function depending on the input.
   const auto& first_word = tokens[0];
   if (first_word == "visualize") {
-    // Completion only for three words, "visualize", and at most two options
+    // Completion only for three words, "visualize", and at most two options.
     if (tokens.size() <= 3) {
       completion_matches = rl_completion_matches(text, &Console::_command_generator_visualize);
     }
-    // Turn off filepath completion
+    // Turn off filepath completion.
     rl_attempted_completion_over = 1;
   } else if (first_word == "setting") {
     if (tokens.size() <= 2) {
@@ -1034,15 +1054,15 @@ char** Console::_command_completion(const char* text, const int start, const int
     } else if (tokens.size() <= 3 && tokens[1] == "scheduler") {
       completion_matches = rl_completion_matches(text, &Console::_command_generator_setting_scheduler);
     }
-    // Turn off filepath completion
+    // Turn off filepath completion.
     rl_attempted_completion_over = 1;
 
     // NOLINTNEXTLINE(bugprone-branch-clone)
   } else if (first_word == "quit" || first_word == "exit" || first_word == "help") {
-    // Turn off filepath completion
+    // Turn off filepath completion.
     rl_attempted_completion_over = 1;
   } else if ((first_word == "load" || first_word == "script") && tokens.size() > 2) {
-    // Turn off filepath completion after first argument for "load" and "script"
+    // Turn off filepath completion after first argument for "load" and "script".
     rl_attempted_completion_over = 1;
   } else if (start == 0) {
     completion_matches = rl_completion_matches(text, &Console::_command_generator_default);
@@ -1060,9 +1080,9 @@ char* Console::_command_generator(const char* text, int state, const std::vector
   for (; it != commands.end(); ++it) {
     const auto& command = *it;
     if (command.find(text) != std::string::npos) {
-      auto completion = new char[command.size()];  // NOLINT (legacy API)
+      auto* completion = new char[command.size()];  // NOLINT(cppcoreguidelines-owning-memory)
       // NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg,hicpp-vararg)
-      static_cast<void>(snprintf(completion, command.size() + 1, "%s", command.c_str()));
+      static_cast<void>(std::snprintf(completion, command.size() + 1, "%s", command.c_str()));
       return completion;
     }
   }
@@ -1093,13 +1113,13 @@ char* Console::_command_generator_setting_scheduler(const char* text, int state)
 
 int main(int argc, char** argv) {
   // Make sure the TransactionManager is initialized before the console so that we don't run into destruction order
-  // problems (#1635)
+  // problems (#1635).
   hyrise::Hyrise::get();
 
   using Return = hyrise::Console::ReturnCode;
   auto& console = hyrise::Console::get();
 
-  // Bind CTRL-C to behaviour specified in Console::handle_signal
+  // Bind CTRL-C to behaviour specified in Console::handle_signal.
   static_cast<void>(std::signal(SIGINT, &hyrise::Console::handle_signal));
 
   console.set_prompt("> ");
@@ -1115,7 +1135,7 @@ int main(int argc, char** argv) {
   // TODO(anyone): Use std::to_underlying(ReturnCode::Ok) once we use C++23.
   auto return_code = magic_enum::enum_underlying(Return::Ok);
 
-  // Display Usage if too many arguments are provided
+  // Display usage if too many arguments are provided.
   if (argc > 2) {
     return_code = Return::Quit;
     console.out("Usage:\n");
@@ -1123,7 +1143,7 @@ int main(int argc, char** argv) {
     console.out("                                 Execute script if specified by SCRIPTFILE.\n");
   }
 
-  // Execute .sql script if specified
+  // Execute .sql script if specified.
   if (argc == 2) {
     return_code = console.execute_script(std::string(argv[1]));
     // Terminate Console if an error occured during script execution
@@ -1132,7 +1152,7 @@ int main(int argc, char** argv) {
     }
   }
 
-  // Display welcome message if Console started normally
+  // Display welcome message if console started normally.
   if (argc == 1) {
     console.out("HYRISE SQL Interface\n");
     console.out("Type 'help' for more information.\n\n");
@@ -1146,11 +1166,10 @@ int main(int argc, char** argv) {
     console.out(" build.\n\n");
   }
 
-  // Set jmp_env to current program state in preparation for siglongjmp(2)
-  // See comment on jmp_env for details
+  // Set jmp_env to current program state in preparation for siglongjmp(2). See comment on jmp_env for details.
   while (sigsetjmp(jmp_env, 1) != 0) {}
 
-  // Main REPL loop
+  // Main REPL loop.
   while (return_code != Return::Quit) {
     return_code = console.read();
     if (return_code == Return::Ok) {

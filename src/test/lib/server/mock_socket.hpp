@@ -2,6 +2,8 @@
 
 #include <filesystem>
 #include <fstream>
+#include <memory>
+#include <string>
 
 #include <boost/asio.hpp>
 

@@ -4,12 +4,11 @@
 #include <thread>
 
 #include "base_test.hpp"
-
 #include "benchmark_config.hpp"
 #include "hyrise.hpp"
 #include "operators/insert.hpp"
-#include "operators/projection.hpp"
 #include "operators/table_wrapper.hpp"
+#include "scheduler/immediate_execution_scheduler.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/task_queue.hpp"
 #include "sql/sql_pipeline_builder.hpp"
@@ -205,7 +204,8 @@ TEST_F(StressTest, NodeSchedulerStressTest) {
   }
 
   // Create a large number of nodes in a fake topology (many workers will share the same thread).
-  const auto node_count = std::thread::hardware_concurrency() * (HYRISE_WITH_TSAN ? 1 : DEFAULT_LOAD_FACTOR);
+  const auto node_count =
+      std::thread::hardware_concurrency() * (HYRISE_WITH_ADDR_UB_LEAK_SAN ? 1 : DEFAULT_LOAD_FACTOR);
 
   Hyrise::get().topology.use_fake_numa_topology(node_count, 1);
   const auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
@@ -236,8 +236,9 @@ TEST_F(StressTest, NodeSchedulerStressTest) {
   // `start_jobs` is set, leading to a high queue load that cannot be processed. New tasks that are scheduled should
   // thus be assigned to different TaskQueues to distribute the load.
   auto second_worker = std::next(node_queue_scheduler->workers().cbegin());
-  EXPECT_TRUE(std::any_of(second_worker, node_queue_scheduler->workers().cend(),
-                          [](const auto& worker) { return worker->queue()->estimate_load() > 0; }));
+  EXPECT_TRUE(std::any_of(second_worker, node_queue_scheduler->workers().cend(), [](const auto& worker) {
+    return worker->queue()->estimate_load() > 0;
+  }));
 
   // Set flag to allow tasks to continue.
   start_jobs = true;
@@ -276,7 +277,7 @@ TEST_F(StressTest, NodeQueueSchedulerCreationAndReset) {
 //
 // We run this test for various fake NUMA topologies as it triggered a bug that was introduced with #2610.
 TEST_F(StressTest, NodeQueueSchedulerSemaphoreIncrements) {
-  constexpr auto SLEEP_TIME = std::chrono::milliseconds{10};
+  constexpr auto SLEEP_TIME = std::chrono::milliseconds{1};
   const auto job_count = CPU_COUNT * 4 * (HYRISE_WITH_TSAN ? 1 : DEFAULT_LOAD_FACTOR);
 
   for (const auto& fake_numa_topology : FAKE_SINGLE_NODE_NUMA_TOPOLOGIES) {
@@ -286,15 +287,15 @@ TEST_F(StressTest, NodeQueueSchedulerSemaphoreIncrements) {
     Hyrise::get().set_scheduler(node_queue_scheduler);
 
     auto counter = std::atomic<uint32_t>{0};
-    auto wait_flag = std::atomic<bool>{true};
+    auto active_task_count = std::atomic<uint32_t>{0};
+    auto wait_flag = std::atomic_flag{};
 
     auto waiting_jobs = std::vector<std::shared_ptr<AbstractTask>>{};
     waiting_jobs.reserve(job_count);
     for (auto job_id = size_t{0}; job_id < job_count; ++job_id) {
       waiting_jobs.emplace_back(std::make_shared<JobTask>([&] {
-        while (wait_flag) {
-          std::this_thread::sleep_for(SLEEP_TIME);
-        }
+        ++active_task_count;
+        wait_flag.wait(false);
         ++counter;
       }));
     }
@@ -305,10 +306,13 @@ TEST_F(StressTest, NodeQueueSchedulerSemaphoreIncrements) {
       }
       EXPECT_EQ(queue->semaphore.availableApprox(), 0);
     }
+    EXPECT_EQ(counter, 0);
 
     Hyrise::get().scheduler()->schedule_tasks(waiting_jobs);
     // Wait a bit for workers to pull jobs and decrement semaphore.
-    std::this_thread::sleep_for(CPU_COUNT * SLEEP_TIME);
+    while (active_task_count < CPU_COUNT) {
+      std::this_thread::sleep_for(SLEEP_TIME);
+    }
 
     for (const auto& queue : node_queue_scheduler->queues()) {
       if (!queue) {
@@ -317,8 +321,9 @@ TEST_F(StressTest, NodeQueueSchedulerSemaphoreIncrements) {
       EXPECT_EQ(queue->semaphore.availableApprox(), job_count - CPU_COUNT);
     }
 
-    wait_flag = false;
-    std::this_thread::sleep_for(SLEEP_TIME);
+    const auto previous_value = wait_flag.test_and_set();
+    EXPECT_EQ(previous_value, false);
+    wait_flag.notify_all();
     Hyrise::get().scheduler()->wait_for_tasks(waiting_jobs);
 
     for (const auto& queue : node_queue_scheduler->queues()) {
@@ -347,12 +352,14 @@ TEST_F(StressTest, NodeQueueSchedulerSemaphoreIncrementsDependentTasks) {
     Hyrise::get().set_scheduler(node_queue_scheduler);
 
     auto counter = std::atomic<uint32_t>{0};
+    auto active_task_count = std::atomic<uint32_t>{0};
     auto wait_flag = std::atomic<bool>{true};
 
     auto waiting_jobs = std::vector<std::shared_ptr<AbstractTask>>{};
     waiting_jobs.reserve(job_count);
     for (auto job_id = uint32_t{0}; job_id < job_count; ++job_id) {
       waiting_jobs.emplace_back(std::make_shared<JobTask>([&] {
+        ++active_task_count;
         while (wait_flag) {
           std::this_thread::sleep_for(SLEEP_TIME);
         }
@@ -373,7 +380,9 @@ TEST_F(StressTest, NodeQueueSchedulerSemaphoreIncrementsDependentTasks) {
 
     Hyrise::get().scheduler()->schedule_tasks(waiting_jobs);
     // Wait a bit for workers to pull jobs and decrement semaphore.
-    std::this_thread::sleep_for(5 * CPU_COUNT * SLEEP_TIME);
+    while (active_task_count < CPU_COUNT) {
+      std::this_thread::sleep_for(SLEEP_TIME);
+    }
 
     // The number of scheduled jobs depends on DEPENDENT_JOB_TASKS_LENGTH (see job definition above; due to the jobs
     // dependencies, jobs are only scheduled when they have no predecessors).
@@ -469,7 +478,7 @@ TEST_F(StressTest, ConcurrentInsertsSetChunksImmutable) {
 
   // We observed long runtimes in Debug builds, especially with UBSan enabled. Thus, we reduce the load a bit in this
   // case.
-  const auto insert_count = 30 * (HYRISE_DEBUG && HYRISE_WITH_UBSAN ? 1 : DEFAULT_LOAD_FACTOR) + 1;
+  const auto insert_count = 30 * (HYRISE_DEBUG && HYRISE_WITH_ADDR_UB_LEAK_SAN ? 1 : DEFAULT_LOAD_FACTOR) + 1;
   const auto thread_count = uint32_t{100};
   auto threads = std::vector<std::thread>{};
   threads.reserve(thread_count);

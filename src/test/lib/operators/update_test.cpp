@@ -3,7 +3,6 @@
 #include <vector>
 
 #include "base_test.hpp"
-
 #include "expression/expression_functional.hpp"
 #include "expression/pqp_column_expression.hpp"
 #include "hyrise.hpp"

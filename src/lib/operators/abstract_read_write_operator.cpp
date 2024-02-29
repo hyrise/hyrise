@@ -1,7 +1,12 @@
 #include "abstract_read_write_operator.hpp"
 
 #include <memory>
-#include <vector>
+#include <ostream>
+
+#include "concurrency/transaction_context.hpp"
+#include "operators/abstract_operator.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 

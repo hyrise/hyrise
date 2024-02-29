@@ -1,7 +1,6 @@
-#include "lib/optimizer/strategy/strategy_base_test.hpp"
-
 #include "logical_query_plan/join_node.hpp"
 #include "optimizer/strategy/semi_join_reduction_rule.hpp"
+#include "strategy_base_test.hpp"
 
 namespace hyrise {
 

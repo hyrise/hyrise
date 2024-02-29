@@ -1,5 +1,13 @@
 #include "abstract_statistics_object.hpp"
 
+#include <cstddef>
+#include <memory>
+#include <optional>
+
+#include "all_type_variant.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
+
 namespace hyrise {
 
 AbstractStatisticsObject::AbstractStatisticsObject(const DataType init_data_type) : data_type(init_data_type) {}

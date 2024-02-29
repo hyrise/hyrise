@@ -4,7 +4,6 @@ Checks: '
          -*braces-around-statements,
          -google-build-using-namespace,
          -clang-analyzer-security.insecureAPI.rand,
-         -readability-implicit-bool-conversion,
          -cppcoreguidelines-pro-type-reinterpret-cast,
          -modernize-pass-by-value,
          -cppcoreguidelines-pro-bounds-constant-array-index,
@@ -35,11 +34,11 @@ Checks: '
          -llvmlibc-*,
          -altera-*,
          -abseil-*,
+         -readability-avoid-const-params-in-decls,
+         -readability-function-cognitive-complexity,
          -readability-use-anyofallof,
-         -readability-identifier-naming,
          -misc-no-recursion,
          -bugprone-easily-swappable-parameters,
-         -readability-function-cognitive-complexity,
          -bugprone-suspicious-include,
          -bugprone-unchecked-optional-access
          '
@@ -47,10 +46,9 @@ Checks: '
 WarningsAsErrors: '*'
 
 # Explanation of disabled checks:
-#   - *-default-arguments*                                      We do use default arguments (and like them)
-#   - google-build-using-namespace                              We use `using namespace` a lot (see anonymous namespaces and expression_functional)
-#   - clang-analyzer-security.insecureAPI.rand                  We don't care about cryptographically unsafe rand() calls
-#   - readability-implicit-bool-conversion                      Doesn't like if(map.count(foo))
+#   - *-default-arguments*                                      We do use default arguments (and like them).
+#   - google-build-using-namespace                              We use `using namespace` a lot (see anonymous namespaces and expression_functional).
+#   - clang-analyzer-security.insecureAPI.rand                  We don't care about cryptographically unsafe rand() calls.
 #   - cppcoreguidelines-pro-type-reinterpret-cast               We use reinterpret_cast
 #   - modernize-pass-by-value                                   We don't trust people to properly use std::move
 #   - cppcoreguidelines-pro-bounds-constant-array-index         "Do not use array subscript when the index is not an integer constant expression"?!
@@ -70,7 +68,7 @@ WarningsAsErrors: '*'
 #   - cert-msc32-c, -cert-msc51-cpp                             Ok, so our generated tables are not cryptographically safe
 #   - fuchsia-statically-constructed-objects                    We have too many static objects
 #   - bugprone-exception-escape                                 We throw exceptions in many places (even destructors) and are completely fine with std::terminate
-#   - *-uppercase-literal-suffix                                Don't really care if it's 1.0f or 1.0F
+#   - *-uppercase-literal-suffix                                We do not really care if it is 1.0f or 1.0F.
 #   - cert-dcl16-c                                               (same)
 #   - *-magic-numbers                                           Too many false positives
 #   - *-non-private-member-variables-in-classes                 We like making things public
@@ -80,13 +78,12 @@ WarningsAsErrors: '*'
 #   - llvmlibc-*                                                LLVM-internal development guidelines.
 #   - altera-*                                                  Checks related to OpenCL programming for FPGAs.
 #   - abseil-*                                                  Checks related to Google's abseil library (not used in Hyrise).
-#   - readability-use-anyofallof                                We prefer `for (auto item : items)` over `std::ranges::all_of()` with a lambda.
-#   - readability-identifier-naming                             Error spamming on non-Hyrise code. LLVM Bug. TODO(anyone): test renabling with newer LLVM versions which fixes
-#                                                                https://github.com/llvm/llvm-project/issues/46097
-#   - misc-no-recursion                                         Ignore general recommendation to avoid recursion, which we commonly use when working with query plans.
-#   - bugprone-easily-swappable-parameters                      Ignore issues with swappable parameters as we found them to be of no help.
+#   - readability-avoid-const-params-in-decls                   Even though they might not have an effect, we prefer declarations to mirror implementations.
 #   - readability-function-cognitive-complexity                 When appropriate, long functions with a sequential data flow (which is sometimes easier to read) are fine. In many
 #                                                                places, the rule catches functions where the code could be improved, but will likely not be due to a lack of time.
+#   - readability-use-anyofallof                                We prefer `for (auto item : items)` over `std::ranges::all_of()` with a lambda.
+#   - misc-no-recursion                                         Ignore general recommendation to avoid recursion, which we commonly use when working with query plans.
+#   - bugprone-easily-swappable-parameters                      Ignore issues with swappable parameters as we found them to be of no help.
 #   - bugprone-suspicious-include                               Unity builds use `#include`s for cpp files. However, unity builds significantly improve the runtime of clang-tidy,
 #                                                                which is otherwise the slowest step of the CI pipeline by a factor of two. Furthermore, the linter checks for 
 #                                                                these includes as well.
@@ -128,6 +125,11 @@ CheckOptions:
   - { key: readability-identifier-naming.VariableCase, value: lower_case }
 
   # Iff(!) the context is clear, 'it' for iterator, 'op' for operator, or 'fd' for functional dependency are fine.
-  - { key: readability-identifier-length.IgnoredParameterNames, value: "^(it|fd|op)$" }
-  - { key: readability-identifier-length.IgnoredVariableNames, value: "^(it|fd|op)$" }
+  - { key: readability-identifier-length.IgnoredParameterNames, value: '^(it|fd|op)$' }
+  - { key: readability-identifier-length.IgnoredVariableNames, value: '^(it|fd|op)$' }
 
+  # Boost and SQLParser make wide use of umbrella headers which clang-tidy's include cleaner does not (yet) handle well.
+  - { key: misc-include-cleaner.IgnoreHeaders, value: 'boost/.*;sql/.*\.h' }
+
+  # We allow checking `if (var)` without a bool conversion in case var is of type pointer or std::optional.
+  - { key: readability-implicit-bool-conversion.AllowPointerConditions, value: true }
