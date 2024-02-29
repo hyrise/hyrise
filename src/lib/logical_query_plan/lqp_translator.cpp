@@ -8,6 +8,7 @@
 
 #include <boost/hana/tuple.hpp>
 
+#include "abstract_lqp_node.hpp"
 #include "aggregate_node.hpp"
 #include "alias_node.hpp"
 #include "all_type_variant.hpp"

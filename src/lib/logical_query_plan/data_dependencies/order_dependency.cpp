@@ -1,12 +1,15 @@
 #include "order_dependency.hpp"
 
+#include <algorithm>
+#include <cstddef>
+#include <functional>
 #include <memory>
+#include <ostream>
 #include <vector>
 
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
-#include "expression/lqp_column_expression.hpp"
-#include "logical_query_plan/abstract_lqp_node.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 
@@ -46,7 +49,8 @@ bool OrderDependency::operator!=(const OrderDependency& rhs) const {
 }
 
 size_t OrderDependency::hash() const {
-  auto hash = boost::hash_value(ordering_expressions.size());
+  auto hash = size_t{0};
+  boost::hash_combine(hash, ordering_expressions.size());
   for (const auto& expression : ordering_expressions) {
     boost::hash_combine(hash, expression->hash());
   }
