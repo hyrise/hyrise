@@ -92,7 +92,7 @@ void recursively_remove_joins(const std::shared_ptr<AbstractLQPNode>& node,
 
   lqp_remove_node(join_node);
   if (used_join_column_expression->is_nullable_on_lqp(*used_subtree)) {
-    /*auto value = AllTypeVariant();
+    auto value = AllTypeVariant();
 
     resolve_data_type(used_join_column_expression->data_type(), [&](auto type) {
       using ColumnDataType = typename decltype(type)::type;
@@ -102,12 +102,12 @@ void recursively_remove_joins(const std::shared_ptr<AbstractLQPNode>& node,
       } else {
         value = std::numeric_limits<ColumnDataType>::min();
       }
-    });*/
-    // const auto predicate_node = PredicateNode::make(greater_than_equals_(used_join_column_expression, value));
-    const auto predicate_node = PredicateNode::make(is_not_null_(used_join_column_expression));
+    });
+    const auto predicate_node = PredicateNode::make(greater_than_equals_(used_join_column_expression, value));
+    // const auto predicate_node = PredicateNode::make(is_not_null_(used_join_column_expression));
     lqp_insert_node_above(used_subtree, predicate_node);
     // std::cout << "O-4: rewrite " << join_node->description() << " to " << predicate_node->description() << std::endl;
-  } /*else {
+  } /*{
     std::cout << "O-4: remove " << join_node->description() << std::endl;
   }*/
   recursively_remove_joins(used_subtree, visited_nodes);
