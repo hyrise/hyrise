@@ -10,7 +10,7 @@
 #include <vector>
 
 #include "cxxopts.hpp"
-#include "nlohmann/json.hpp"
+#include "nlohmann/json_fwd.hpp"
 
 #include "abstract_benchmark_item_runner.hpp"
 #include "abstract_table_generator.hpp"

@@ -129,9 +129,9 @@ CheckOptions:
   - { key: readability-identifier-length.IgnoredParameterNames, value: '^(it|op|od|fd)$' }
   - { key: readability-identifier-length.IgnoredVariableNames, value: '^(it|op|od|fd)$' }
 
-  # Boost and SQLParser make wide use of umbrella headers which clang-tidy's include cleaner does not (yet) handle well.
-  # For nlohmann::json, we use the single header version over the default umbrella header (see src/CMakeLists.txt).
-  - { key: misc-include-cleaner.IgnoreHeaders, value: 'boost/.*;sql/.*\.h' }
+  # Boost, nlohmann::json, and SQLParser use umbrella headers which clang-tidy's include cleaner does not (yet) handle
+  # well. For now, we ignore all include cleaner issues for these three libraries.
+  - { key: misc-include-cleaner.IgnoreHeaders, value: 'boost/.*;sql/.*\.h;nlohmann/.*' }
 
   # We allow checking `if (var)` without a bool conversion in case var is of type pointer or std::optional.
   - { key: readability-implicit-bool-conversion.AllowPointerConditions, value: true }
