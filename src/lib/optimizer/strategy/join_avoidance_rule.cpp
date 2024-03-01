@@ -92,9 +92,9 @@ void recursively_remove_joins(const std::shared_ptr<AbstractLQPNode>& node,
 
   lqp_remove_node(join_node);
   if (used_join_column_expression->is_nullable_on_lqp(*used_subtree)) {
-    auto value = AllTypeVariant();
+    /*auto value = AllTypeVariant();
 
-    /*resolve_data_type(used_join_column_expression->data_type(), [&](auto type) {
+    resolve_data_type(used_join_column_expression->data_type(), [&](auto type) {
       using ColumnDataType = typename decltype(type)::type;
 
       if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
