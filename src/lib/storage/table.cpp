@@ -19,6 +19,7 @@
 #include "resolve_type.hpp"
 #include "statistics/table_statistics.hpp"
 #include "storage/chunk.hpp"
+#include "storage/constraints/abstract_table_constraint.hpp"
 #include "storage/constraints/foreign_key_constraint.hpp"
 #include "storage/constraints/table_key_constraint.hpp"
 #include "storage/constraints/table_order_constraint.hpp"

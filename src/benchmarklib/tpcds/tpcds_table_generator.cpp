@@ -56,6 +56,7 @@ extern "C" {
 }
 
 #include "benchmark_config.hpp"
+#include "storage/constraints/foreign_key_constraint.hpp"
 #include "storage/constraints/table_key_constraint.hpp"
 #include "storage/table.hpp"
 #include "table_builder.hpp"
@@ -1238,6 +1239,7 @@ AbstractTableGenerator::IndexesByTable TPCDSTableGenerator::_indexes_by_table() 
           {"time_dim", {{"t_time_sk"}}}};
 }
 
+// NOLINTBEGIN(readability/fn_size)
 void TPCDSTableGenerator::_add_constraints(
     std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) const {
   // Set all primary (PK) and foreign keys (FK) as defined in the specification (Version 3.2.0, 2 Logical Database
@@ -1883,5 +1885,7 @@ void TPCDSTableGenerator::_add_constraints(
   time_dim_table->add_soft_constraint(
       TableKeyConstraint{{time_dim_table->column_id_by_name("t_time_sk")}, KeyConstraintType::PRIMARY_KEY});
 }
+
+// NOLINTEND(readability/fn_size)
 
 }  // namespace hyrise

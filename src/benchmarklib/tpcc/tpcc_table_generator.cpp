@@ -18,6 +18,7 @@
 #include "benchmark_config.hpp"
 #include "constants.hpp"
 #include "storage/chunk.hpp"
+#include "storage/constraints/foreign_key_constraint.hpp"
 #include "storage/constraints/table_key_constraint.hpp"
 #include "storage/mvcc_data.hpp"
 #include "storage/table.hpp"

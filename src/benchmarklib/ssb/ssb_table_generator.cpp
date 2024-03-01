@@ -9,6 +9,7 @@
 #include "benchmark_config.hpp"
 #include "external_dbgen_utils.hpp"
 #include "file_based_table_generator.hpp"
+#include "storage/constraints/foreign_key_constraint.hpp"
 #include "storage/constraints/table_key_constraint.hpp"
 #include "storage/table.hpp"  // IWYU pragma: keep
 #include "types.hpp"

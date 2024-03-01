@@ -1,5 +1,4 @@
 #include "base_test.hpp"
-
 #include "hyrise.hpp"
 #include "ssb/ssb_table_generator.hpp"
 
