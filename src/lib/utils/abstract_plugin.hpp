@@ -6,7 +6,7 @@
 #include <utility>
 #include <vector>
 
-#include "nlohmann/json_fwd.hpp"
+#include "nlohmann/json.hpp"
 
 #include "types.hpp"
 #include "utils/singleton.hpp"
