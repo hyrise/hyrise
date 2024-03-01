@@ -2,12 +2,15 @@
 
 #include <algorithm>
 #include <array>
+#include <atomic>
 #include <chrono>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <functional>
 #include <limits>
 #include <memory>
+#include <numeric>
 #include <string>
 #include <type_traits>
 #include <unordered_map>
@@ -29,8 +32,11 @@
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
 #include "storage/abstract_segment.hpp"
-#include "storage/base_segment_accessor.hpp"
+#include "storage/chunk.hpp"
+#include "storage/pos_lists/abstract_pos_list.hpp"
+#include "storage/pos_lists/entire_chunk_pos_list.hpp"
 #include "storage/pos_lists/row_id_pos_list.hpp"
+#include "storage/reference_segment.hpp"
 #include "storage/segment_iterate.hpp"
 #include "storage/table.hpp"
 #include "storage/table_column_definition.hpp"
@@ -297,6 +303,14 @@ void write_groupby_output(const std::shared_ptr<const Table>& input_table,
                                  }
                                });
     } else {
+      if (input_table->chunk_count() > 0) {
+        // Unless we are processing an empty input, obtain the referenced table and column from the first chunk.
+        const auto& first_reference_segment =
+            static_cast<const ReferenceSegment&>(*input_table->get_chunk(ChunkID{0})->get_segment(input_column_id));
+        referenced_table = first_reference_segment.referenced_table();
+        referenced_column_id = first_reference_segment.referenced_column_id();
+      }
+
       split_results_chunk_wise(
           false, results, pos_lists, unused_nulls, [&](auto begin, const auto end, const ChunkID chunk_id) {
             // Map to cache references to PosLists (avoids frequent dynamic casts to obtain position list of reference
@@ -317,11 +331,6 @@ void write_groupby_output(const std::shared_ptr<const Table>& input_table,
 
                 pos_list_mapping.emplace(row_id.chunk_id,
                                          static_cast<const AbstractPosList*>(&*reference_segment.pos_list()));
-
-                if (!referenced_table) {
-                  referenced_table = reference_segment.referenced_table();
-                  referenced_column_id = reference_segment.referenced_column_id();
-                }
               }
 
               pos_list.push_back((*pos_list_mapping[row_id.chunk_id])[row_id.chunk_offset]);
@@ -1394,8 +1403,7 @@ void AggregateHash::_write_aggregate_output(ColumnID aggregate_index) {
   auto value_vectors = std::vector<pmr_vector<aggregate_type>>{};
   auto null_vectors = std::vector<pmr_vector<bool>>{};
   auto aggregate_result_contains_nulls =
-      write_aggregate_values<ColumnDataType, aggregate_type, aggregate_function>(results, value_vectors,
-                                                                                           null_vectors);
+      write_aggregate_values<ColumnDataType, aggregate_type, aggregate_function>(results, value_vectors, null_vectors);
 
   if (_groupby_column_ids.empty() && value_vectors.empty()) {
     // If we did not GROUP BY anything and we have no results, we need to add NULL for most aggregates and 0 for count.
@@ -1425,7 +1433,7 @@ void AggregateHash::_write_aggregate_output(ColumnID aggregate_index) {
       DebugAssert(value_vectors[segment_id].size() == null_vectors[segment_id].size(),
                   "Sizes of value and NULL vectors differ.");
       output_segment = std::make_shared<ValueSegment<aggregate_type>>(std::move(value_vectors[segment_id]),
-                                                                                std::move(null_vectors[segment_id]));
+                                                                      std::move(null_vectors[segment_id]));
     }
     _intermediate_result[segment_id][output_column_id] = output_segment;
   }

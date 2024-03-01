@@ -79,8 +79,8 @@ Table::Table(const TableColumnDefinitions& column_definitions, const TableType t
       _target_chunk_size(type == TableType::Data ? target_chunk_size.value_or(Chunk::DEFAULT_SIZE) : Chunk::MAX_SIZE),
       _append_mutex(std::make_unique<std::mutex>()),
       _table_indexes(table_indexes) {
-  DebugAssert(target_chunk_size <= Chunk::MAX_SIZE, "Chunk size exceeds maximum");
-  DebugAssert(type == TableType::Data || !target_chunk_size, "Must not set target_chunk_size for reference tables");
+  DebugAssert(target_chunk_size <= Chunk::MAX_SIZE, "Chunk size exceeds maximum.");
+  DebugAssert(type == TableType::Data || !target_chunk_size, "Must not set target_chunk_size for reference tables.");
   DebugAssert(!target_chunk_size || *target_chunk_size > 0, "Table must have a chunk size greater than 0.");
 }
 
@@ -94,6 +94,10 @@ Table::Table(const TableColumnDefinitions& column_definitions, const TableType t
   if constexpr (HYRISE_DEBUG) {
     const auto chunk_count = _chunks.size();
     const auto num_columns = column_count();
+
+    // Used to check for referenced tables of segments of each column.
+    auto common_referenced_tables = std::vector<std::shared_ptr<const Table>>(num_columns);
+
     for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
       const auto chunk = get_chunk(chunk_id);
       if (!chunk) {
@@ -101,12 +105,28 @@ Table::Table(const TableColumnDefinitions& column_definitions, const TableType t
       }
 
       Assert(chunk->size() > 0 || (type == TableType::Data && chunk_id == chunk_count - 1 && chunk->is_mutable()),
-             "Empty chunk other than mutable chunk at the end was found");
-      Assert(chunk->has_mvcc_data() == (_use_mvcc == UseMvcc::Yes), "Supply MvccData for Chunks iff Table uses MVCC");
-      Assert(chunk->column_count() == num_columns, "Invalid Chunk column count");
+             "Empty chunk other than mutable chunk at the end was found.");
+      Assert(chunk->has_mvcc_data() == (_use_mvcc == UseMvcc::Yes), "Supply MvccData for Chunks iff Table uses MVCC.");
+      Assert(chunk->column_count() == num_columns, "Invalid Chunk column count.");
 
       for (auto column_id = ColumnID{0}; column_id < num_columns; ++column_id) {
-        Assert(chunk->get_segment(column_id)->data_type() == column_data_type(column_id), "Invalid Segment DataType");
+        const auto& segment = chunk->get_segment(column_id);
+        Assert(segment->data_type() == column_data_type(column_id), "Invalid Segment DataType.");
+
+        // Currently, tables in Hyrise are either entirely of type TableType::Data or TableTable::References. Within a
+        // different segments can reference different tables (e.g., when two tables have been joined). However,
+        // reference segments of the same column must reference the same table.
+        const auto reference_segment = std::dynamic_pointer_cast<const ReferenceSegment>(segment);
+        if (type == TableType::References) {
+          Assert(reference_segment, "Expected reference segment for table of type TableType::References.");
+          if (!common_referenced_tables[column_id]) {
+            common_referenced_tables[column_id] = reference_segment->referenced_table();
+          }
+          Assert(common_referenced_tables[column_id] == reference_segment->referenced_table(),
+                 "Reference segment of same column reference different tables.");
+        } else {
+          Assert(!reference_segment, "Expected data segment for table of type TableType::Data.");
+        }
       }
     }
   }
@@ -174,7 +194,7 @@ ColumnID Table::column_id_by_name(const std::string& column_name) const {
       std::find_if(_column_definitions.begin(), _column_definitions.end(), [&](const auto& column_definition) {
         return column_definition.name == column_name;
       });
-  Assert(iter != _column_definitions.end(), "Couldn't find column '" + column_name + "'.");
+  Assert(iter != _column_definitions.end(), "Could not find column '" + column_name + "'.");
   return ColumnID{static_cast<ColumnID::base_type>(std::distance(_column_definitions.begin(), iter))};
 }
 
@@ -227,7 +247,7 @@ uint64_t Table::row_count() const {
 
   if (_type == TableType::References) {
     // After being created, reference tables should never be changed again.
-    DebugAssert(!_cached_row_count || row_count == *_cached_row_count, "Size of reference table has changed");
+    DebugAssert(!_cached_row_count || row_count == *_cached_row_count, "Size of reference table has changed.");
 
     // row_count() is called by AbstractOperator after the operator has finished to fill the performance data. As such,
     // no synchronization is necessary.
@@ -246,12 +266,12 @@ ChunkID Table::chunk_count() const {
 }
 
 ChunkOffset Table::target_chunk_size() const {
-  DebugAssert(_type == TableType::Data, "target_chunk_size is only valid for data tables");
+  DebugAssert(_type == TableType::Data, "target_chunk_size is only valid for data tables.");
   return _target_chunk_size;
 }
 
 std::shared_ptr<Chunk> Table::get_chunk(ChunkID chunk_id) {
-  DebugAssert(chunk_id < _chunks.size(), "ChunkID " + std::to_string(chunk_id) + " out of range");
+  DebugAssert(chunk_id < _chunks.size(), "ChunkID " + std::to_string(chunk_id) + " out of range.");
   if (_type == TableType::References) {
     // Not written concurrently, since reference tables are not modified anymore once they are written.
     return _chunks[chunk_id];
@@ -261,7 +281,7 @@ std::shared_ptr<Chunk> Table::get_chunk(ChunkID chunk_id) {
 }
 
 std::shared_ptr<const Chunk> Table::get_chunk(ChunkID chunk_id) const {
-  DebugAssert(chunk_id < _chunks.size(), "ChunkID " + std::to_string(chunk_id) + " out of range");
+  DebugAssert(chunk_id < _chunks.size(), "ChunkID " + std::to_string(chunk_id) + " out of range.");
   if (_type == TableType::References) {
     // see comment in non-const function
     return _chunks[chunk_id];
@@ -271,7 +291,7 @@ std::shared_ptr<const Chunk> Table::get_chunk(ChunkID chunk_id) const {
 }
 
 std::shared_ptr<Chunk> Table::last_chunk() const {
-  DebugAssert(!_chunks.empty(), "last_chunk() called on Table without chunks");
+  DebugAssert(!_chunks.empty(), "last_chunk() called on Table without chunks.");
   if (_type == TableType::References) {
     // Not written concurrently, since reference tables are not modified anymore once they are written.
     return _chunks.back();
@@ -281,7 +301,7 @@ std::shared_ptr<Chunk> Table::last_chunk() const {
 }
 
 void Table::remove_chunk(ChunkID chunk_id) {
-  DebugAssert(chunk_id < _chunks.size(), "ChunkID " + std::to_string(chunk_id) + " out of range");
+  DebugAssert(chunk_id < _chunks.size(), "ChunkID " + std::to_string(chunk_id) + " out of range.");
   DebugAssert(([this, chunk_id]() {  // NOLINT
                 const auto chunk = get_chunk(chunk_id);
                 return (chunk->invalid_row_count() == chunk->size());
@@ -301,7 +321,7 @@ void Table::append_chunk(const Segments& segments, std::shared_ptr<MvccData> mvc
   if constexpr (HYRISE_DEBUG) {
     for (const auto& segment : segments) {
       const auto is_reference_segment = std::dynamic_pointer_cast<ReferenceSegment>(segment) != nullptr;
-      Assert(is_reference_segment == (_type == TableType::References), "Invalid Segment type");
+      Assert(is_reference_segment == (_type == TableType::References), "Invalid Segment type.");
     }
 
     // Check that existing chunks are not empty
@@ -313,7 +333,7 @@ void Table::append_chunk(const Segments& segments, std::shared_ptr<MvccData> mvc
       }
 
       // An empty, mutable chunk at the end is fine, but in that case, append_chunk shouldn't have to be called.
-      DebugAssert(chunk->size() > 0, "append_chunk called on a table that has an empty chunk");
+      DebugAssert(chunk->size() > 0, "append_chunk called on a table that has an empty chunk.");
     }
   }
 
@@ -349,11 +369,11 @@ std::vector<AllTypeVariant> Table::get_row(size_t row_idx) const {
     row_idx -= chunk->size();
   }
 
-  Fail("row_idx out of bounds");
+  Fail("row_idx out of bounds.");
 }
 
 std::vector<std::vector<AllTypeVariant>> Table::get_rows() const {
-  PerformanceWarning("get_rows() used");
+  PerformanceWarning("get_rows() used.");
 
   // Allocate all rows
   auto rows = std::vector<std::vector<AllTypeVariant>>{row_count()};
@@ -545,7 +565,7 @@ void Table::set_value_clustered_by(const std::vector<ColumnID>& value_clustered_
       continue;
     }
 
-    Assert(!get_chunk(chunk_id)->is_mutable(), "Cannot set value_clustering on table with mutable chunks");
+    Assert(!get_chunk(chunk_id)->is_mutable(), "Cannot set value_clustering on table with mutable chunks.");
   }
 
   if constexpr (HYRISE_DEBUG) {
@@ -564,8 +584,7 @@ void Table::set_value_clustered_by(const std::vector<ColumnID>& value_clustered_
               const auto& [iter, inserted] = value_to_chunk_map.try_emplace(position.value(), chunk_id);
               if (!inserted) {
                 Assert(iter->second == chunk_id,
-                       "Table cannot be set to value-clustered as same value "
-                       "is found in more than one chunk");
+                       "Table cannot be set to value-clustered as same value is found in more than one chunk.");
               }
             });
           }
