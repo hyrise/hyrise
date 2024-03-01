@@ -137,12 +137,12 @@ UniqueColumnCombinations MockNode::unique_column_combinations() const {
     }
 
     // Search for output expressions that represent the TableKeyConstraint's ColumnIDs.
-    const auto& column_expressions = find_column_expressions(*this, key_constraint_column_ids);
+    auto column_expressions = find_column_expressions(*this, key_constraint_column_ids);
     DebugAssert(column_expressions.size() == table_key_constraint.columns().size(),
                 "Unexpected count of column expressions.");
 
     // Create UniqueColumnCombination.
-    unique_column_combinations.emplace(column_expressions);
+    unique_column_combinations.emplace(std::move(column_expressions));
   }
 
   return unique_column_combinations;

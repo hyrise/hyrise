@@ -15,9 +15,10 @@
 
 namespace hyrise {
 
-OrderDependency::OrderDependency(const std::vector<std::shared_ptr<AbstractExpression>>& init_ordering_expressions,
-                                 const std::vector<std::shared_ptr<AbstractExpression>>& init_ordered_expessions)
-    : ordering_expressions{init_ordering_expressions}, ordered_expressions{init_ordered_expessions} {
+OrderDependency::OrderDependency(std::vector<std::shared_ptr<AbstractExpression>>&& init_ordering_expressions,
+                                 std::vector<std::shared_ptr<AbstractExpression>>&& init_ordered_expessions)
+    : ordering_expressions{std::move(init_ordering_expressions)},
+      ordered_expressions{std::move(init_ordered_expessions)} {
   Assert(!ordering_expressions.empty() && !ordered_expressions.empty(), "OrderDependency cannot be empty.");
   if constexpr (HYRISE_DEBUG) {
     // Do not allow trivial, reflexive ODs.
@@ -120,7 +121,10 @@ void build_transitive_od_closure(OrderDependencies& order_dependencies) {
           continue;
         }
 
-        const auto& transitive_od = OrderDependency(od.ordering_expressions, candidate_od.ordered_expressions);
+        auto ordering_expressions = od.ordering_expressions;
+        auto ordered_expressions = candidate_od.ordered_expressions;
+
+        const auto& transitive_od = OrderDependency(std::move(ordering_expressions), std::move(ordered_expressions));
         if (order_dependencies.contains(transitive_od)) {
           continue;
         }

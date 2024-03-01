@@ -152,7 +152,7 @@ UniqueColumnCombinations AggregateNode::unique_column_combinations() const {
     // Make sure that we do not add an already existing or a superset UCC.
     if (unique_column_combinations.empty() ||
         !contains_matching_unique_column_combination(unique_column_combinations, group_by_columns)) {
-      unique_column_combinations.emplace(group_by_columns);
+      unique_column_combinations.emplace(std::move(group_by_columns));
     }
   }
 

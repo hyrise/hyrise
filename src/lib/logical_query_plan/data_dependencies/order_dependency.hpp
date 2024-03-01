@@ -19,8 +19,8 @@ namespace hyrise {
  *       been a ValidateNode before or where MVCC is disabled).
  */
 struct OrderDependency final {
-  explicit OrderDependency(const std::vector<std::shared_ptr<AbstractExpression>>& init_ordering_expressions,
-                           const std::vector<std::shared_ptr<AbstractExpression>>& init_ordered_expessions);
+  explicit OrderDependency(std::vector<std::shared_ptr<AbstractExpression>>&& init_ordering_expressions,
+                           std::vector<std::shared_ptr<AbstractExpression>>&& init_ordered_expessions);
 
   bool operator==(const OrderDependency& rhs) const;
   bool operator!=(const OrderDependency& rhs) const;

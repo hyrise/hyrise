@@ -140,12 +140,12 @@ UniqueColumnCombinations StoredTableNode::unique_column_combinations() const {
     }
 
     // Search for expressions representing the key constraint's ColumnIDs.
-    const auto& column_expressions = find_column_expressions(*this, table_key_constraint.columns());
+    auto column_expressions = find_column_expressions(*this, table_key_constraint.columns());
     DebugAssert(column_expressions.size() == table_key_constraint.columns().size(),
                 "Unexpected count of column expressions.");
 
-    // Create UniqueColumnCombination
-    unique_column_combinations.emplace(column_expressions);
+    // Create UniqueColumnCombination.
+    unique_column_combinations.emplace(std::move(column_expressions));
   }
 
   return unique_column_combinations;
@@ -167,11 +167,11 @@ OrderDependencies StoredTableNode::order_dependencies() const {
     }
 
     // Search for expressions representing the order constraint's ColumnIDs.
-    const auto& column_expressions = find_column_expressions(*this, table_order_constraint.ordering_columns());
-    const auto& ordered_column_expressions = find_column_expressions(*this, table_order_constraint.ordered_columns());
+    auto column_expressions = find_column_expressions(*this, table_order_constraint.ordering_columns());
+    auto ordered_column_expressions = find_column_expressions(*this, table_order_constraint.ordered_columns());
 
     // Create OrderDependency.
-    order_dependencies.emplace(column_expressions, ordered_column_expressions);
+    order_dependencies.emplace(std::move(column_expressions), std::move(ordered_column_expressions));
   }
 
   // Construct transitive ODs. For instance, create [a] |-> [c] from [a] |-> [b] and [b] |-> [c].
