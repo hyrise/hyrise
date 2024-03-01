@@ -1,7 +1,9 @@
 #include "print_utils.hpp"
 
+#include <algorithm>
 #include <cstddef>
 #include <iterator>
+#include <limits>
 #include <memory>
 #include <ostream>
 #include <set>
@@ -14,6 +16,9 @@
 
 #include "magic_enum.hpp"
 
+#include "expression/abstract_expression.hpp"
+#include "expression/expression_utils.hpp"
+#include "expression/lqp_column_expression.hpp"
 #include "storage/constraints/table_key_constraint.hpp"
 #include "storage/encoding_type.hpp"
 #include "storage/table.hpp"
@@ -21,7 +26,7 @@
 
 namespace {
 
-using namespace hyrise;  // NOLINT
+using namespace hyrise;  // NOLINT(build/namespaces)
 
 /**
  *
@@ -99,6 +104,15 @@ void print_directed_acyclic_graph(const std::shared_ptr<Node>& node, const NodeG
   print_directed_acyclic_graph_impl<Node>(node, get_children_fn, print_node_fn, stream, levels, id_by_node, id_counter);
 }
 
+// We explicitly instantiate these template functions because clang-12(+) does not instantiate them for us.
+template void print_directed_acyclic_graph<const AbstractLQPNode>(
+    const std::shared_ptr<const AbstractLQPNode>& node, const NodeGetChildrenFn<const AbstractLQPNode>& get_children_fn,
+    const NodePrintFn<const AbstractLQPNode>& print_node_fn, std::ostream& stream);
+template void print_directed_acyclic_graph<const AbstractOperator>(
+    const std::shared_ptr<const AbstractOperator>& node,
+    const NodeGetChildrenFn<const AbstractOperator>& get_children_fn,
+    const NodePrintFn<const AbstractOperator>& print_node_fn, std::ostream& stream);
+
 void print_table_key_constraints(const std::shared_ptr<const Table>& table, std::ostream& stream,
                                  const std::string& separator) {
   const auto& table_key_constraints =
@@ -126,14 +140,46 @@ void print_table_key_constraints(const std::shared_ptr<const Table>& table, std:
   }
 }
 
-// We explicitly instantiate these template functions because clang-12(+) does not instantiate them for us.
-template void print_directed_acyclic_graph<const AbstractLQPNode>(
-    const std::shared_ptr<const AbstractLQPNode>& node, const NodeGetChildrenFn<const AbstractLQPNode>& get_children_fn,
-    const NodePrintFn<const AbstractLQPNode>& print_node_fn, std::ostream& stream);
-template void print_directed_acyclic_graph<const AbstractOperator>(
-    const std::shared_ptr<const AbstractOperator>& node,
-    const NodeGetChildrenFn<const AbstractOperator>& get_children_fn,
-    const NodePrintFn<const AbstractOperator>& print_node_fn, std::ostream& stream);
+void print_expressions(const ExpressionUnorderedSet& expressions, std::ostream& stream, const std::string& separator) {
+  auto expressions_vector = std::vector<std::shared_ptr<AbstractExpression>>{expressions.begin(), expressions.end()};
+
+  // Obtain first ColumnID found in expression.
+  const auto original_column_id = [](const auto& expression) {
+    // Initialize with maximum value. Thus, we print exoressions where we cannot get the original ColumnID last.
+    auto column_id = std::numeric_limits<ColumnID::base_type>::max();
+
+    visit_expression(expression, [&](const auto& current_expression) {
+      if (column_id != std::numeric_limits<ColumnID::base_type>::max()) {
+        return ExpressionVisitation::DoNotVisitArguments;
+      }
+
+      if (current_expression->type != ExpressionType::LQPColumn) {
+        return ExpressionVisitation::VisitArguments;
+      }
+
+      column_id = static_cast<const LQPColumnExpression&>(*current_expression).original_column_id;
+      return ExpressionVisitation::DoNotVisitArguments;
+    });
+    return column_id;
+  };
+
+  // Sort by ColumnID.
+  std::sort(expressions_vector.begin(), expressions_vector.end(), [&](const auto& lhs, const auto& rhs) {
+    return original_column_id(lhs) < original_column_id(rhs);
+  });
+
+  print_expressions(expressions_vector, stream, separator);
+}
+
+void print_expressions(const std::vector<std::shared_ptr<AbstractExpression>>& expressions, std::ostream& stream,
+                       const std::string& separator) {
+  DebugAssert(!expressions.empty(), "Did not expect empty expression vector.");
+  stream << expressions[0]->as_column_name();
+  const auto expression_count = expressions.size();
+  for (auto expression_idx = size_t{1}; expression_idx < expression_count; ++expression_idx) {
+    stream << separator << expressions[expression_idx]->as_column_name();
+  }
+}
 
 std::string all_encoding_options() {
   return boost::algorithm::join(

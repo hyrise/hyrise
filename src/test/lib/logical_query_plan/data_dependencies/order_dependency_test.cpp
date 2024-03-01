@@ -1,4 +1,5 @@
 #include <memory>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -48,12 +49,12 @@ TEST_F(OrderDependencyTest, Equals) {
   const auto od_a_to_b_c = OrderDependency({_a_a}, {_a_b, _a_c});
   const auto od_a_b_to_c = OrderDependency({_a_a, _a_b}, {_a_c});
 
-  // Equal
+  // Equal.
   EXPECT_EQ(od_a_to_b, OrderDependency({_a_a}, {_a_b}));
   EXPECT_EQ(od_a_to_b_c, OrderDependency({_a_a}, {_a_b, _a_c}));
   EXPECT_EQ(od_a_b_to_c, OrderDependency({_a_a, _a_b}, {_a_c}));
 
-  // Not Equal
+  // Not Equal.
   EXPECT_NE(od_a_to_b, OrderDependency({_a_b}, {_a_a}));
   EXPECT_NE(od_a_to_b, OrderDependency({_a_c}, {_a_b}));
   EXPECT_NE(od_a_to_b, OrderDependency({_a_a}, {_a_c}));
@@ -73,6 +74,21 @@ TEST_F(OrderDependencyTest, Hash) {
   EXPECT_EQ(od_a_to_b.hash(), OrderDependency({_a_a}, {_a_b}).hash());
   EXPECT_EQ(od_a_to_b_c.hash(), OrderDependency({_a_a}, {_a_b, _a_c}).hash());
   EXPECT_EQ(od_a_b_to_c.hash(), OrderDependency({_a_a, _a_b}, {_a_c}).hash());
+}
+
+TEST_F(OrderDependencyTest, ToStream) {
+  auto stream = std::stringstream{};
+
+  stream << OrderDependency{{_a_a}, {_a_b}};
+  EXPECT_EQ(stream.str(), "[a] |-> [b]");
+  stream.str("");
+
+  stream << OrderDependency{{_a_a}, {_a_b, _a_c}};
+  EXPECT_EQ(stream.str(), "[a] |-> [b, c]");
+  stream.str("");
+
+  stream << OrderDependency{{_a_a, _a_b}, {_a_c}};
+  EXPECT_EQ(stream.str(), "[a, b] |-> [c]");
 }
 
 TEST_F(OrderDependencyTest, BuildTransitiveODClosure) {

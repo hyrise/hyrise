@@ -7,6 +7,8 @@
 #include <string>
 #include <vector>
 
+#include "expression/abstract_expression.hpp"
+
 namespace hyrise {
 
 class Table;
@@ -58,6 +60,15 @@ void print_directed_acyclic_graph(const std::shared_ptr<Node>& node, const NodeG
  */
 void print_table_key_constraints(const std::shared_ptr<const Table>& table, std::ostream& stream,
                                  const std::string& separator = ", ");
+
+/**
+ * Utility for formatted and deterministic printing of expressions. If a set is given, expressions are ordered by the
+ * ColumnID of underlying LQPColumnExpressions, if applicable.
+ */
+void print_expressions(const ExpressionUnorderedSet& expressions, std::ostream& stream,
+                       const std::string& separator = ", ");
+void print_expressions(const std::vector<std::shared_ptr<AbstractExpression>>& expressions, std::ostream& stream,
+                       const std::string& separator = ", ");
 
 std::string all_encoding_options();
 

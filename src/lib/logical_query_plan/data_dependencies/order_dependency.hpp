@@ -1,7 +1,7 @@
 #pragma once
 
 #include <memory>
-#include <sstream>
+#include <ostream>
 #include <unordered_set>
 #include <vector>
 

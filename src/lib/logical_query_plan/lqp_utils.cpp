@@ -561,7 +561,7 @@ FunctionalDependencies fds_from_unique_column_combinations(const std::shared_ptr
                                return (fd.determinants == determinants) && (fd.dependents == dependents);
                              }) == fds.cend(),
                 "Creating duplicate functional dependencies is unexpected.");
-    fds.emplace(determinants, dependents);
+    fds.emplace(std::move(determinants), std::move(dependents));
   }
   return fds;
 }
@@ -592,7 +592,8 @@ FunctionalDependencies fds_from_order_dependencies(const std::shared_ptr<const A
     }
 
     // (2) Add FD with ordered expressions as dependents.
-    fds.emplace(determinants, ExpressionUnorderedSet{od.ordered_expressions.cbegin(), od.ordered_expressions.cend()});
+    fds.emplace(std::move(determinants),
+                ExpressionUnorderedSet{od.ordered_expressions.cbegin(), od.ordered_expressions.cend()});
   }
   return fds;
 }
