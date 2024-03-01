@@ -122,7 +122,7 @@ void prepare_output(std::vector<Segments>& output, const size_t chunk_count, con
   }
 
   while (output.size() < chunk_count) {
-    output.emplace_back(Segments(column_count));
+    output.emplace_back(column_count);
   }
 }
 
