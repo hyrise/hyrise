@@ -444,7 +444,8 @@ std::vector<std::shared_ptr<AbstractLQPNode>> lqp_find_leaves(const std::shared_
   return nodes;
 }
 
-ExpressionUnorderedSet find_column_expressions(const AbstractLQPNode& lqp_node, const std::set<ColumnID>& column_ids) {
+ExpressionUnorderedSet get_expressions_for_column_ids(const AbstractLQPNode& lqp_node,
+                                                      const std::set<ColumnID>& column_ids) {
   DebugAssert(lqp_node.type == LQPNodeType::StoredTable || lqp_node.type == LQPNodeType::StaticTable ||
                   lqp_node.type == LQPNodeType::Mock,
               "Did not expect other node types than StoredTableNode, StaticTableNode, and MockNode.");
@@ -467,11 +468,13 @@ ExpressionUnorderedSet find_column_expressions(const AbstractLQPNode& lqp_node, 
     }
   }
 
+  DebugAssert(column_ids.size() == column_expressions.size(), "Could not map all ColumnIDs.");
+
   return column_expressions;
 }
 
-std::vector<std::shared_ptr<AbstractExpression>> find_column_expressions(const AbstractLQPNode& lqp_node,
-                                                                         const std::vector<ColumnID>& column_ids) {
+std::vector<std::shared_ptr<AbstractExpression>> get_expressions_for_column_ids(
+    const AbstractLQPNode& lqp_node, const std::vector<ColumnID>& column_ids) {
   DebugAssert(lqp_node.type == LQPNodeType::StoredTable || lqp_node.type == LQPNodeType::StaticTable ||
                   lqp_node.type == LQPNodeType::Mock,
               "Did not expect other node types than StoredTableNode, StaticTableNode and MockNode.");
@@ -493,6 +496,12 @@ std::vector<std::shared_ptr<AbstractExpression>> find_column_expressions(const A
       const auto offset = std::distance(column_ids.cbegin(), it);
       DebugAssert(!column_expressions[offset], "Did not expect multiple column expressions for the same column id.");
       column_expressions[offset] = output_expression;
+    }
+  }
+
+  if constexpr (HYRISE_DEBUG) {
+    for (const auto& expression : column_expressions) {
+      Assert(expression, "Could not map all ColumnIDs.");
     }
   }
 

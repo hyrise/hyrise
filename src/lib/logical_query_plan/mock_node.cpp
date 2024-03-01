@@ -138,7 +138,7 @@ UniqueColumnCombinations MockNode::unique_column_combinations() const {
     }
 
     // Search for output expressions that represent the TableKeyConstraint's ColumnIDs.
-    auto column_expressions = find_column_expressions(*this, key_constraint_column_ids);
+    auto column_expressions = get_expressions_for_column_ids(*this, key_constraint_column_ids);
     DebugAssert(column_expressions.size() == table_key_constraint.columns().size(),
                 "Unexpected count of column expressions.");
 
@@ -164,8 +164,8 @@ OrderDependencies MockNode::order_dependencies() const {
       continue;
     }
 
-    order_dependencies.emplace(find_column_expressions(*this, ordering_columns),
-                               find_column_expressions(*this, ordered_columns));
+    order_dependencies.emplace(get_expressions_for_column_ids(*this, ordering_columns),
+                               get_expressions_for_column_ids(*this, ordered_columns));
   }
   return order_dependencies;
 }

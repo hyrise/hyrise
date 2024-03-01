@@ -68,7 +68,7 @@ UniqueColumnCombinations StaticTableNode::unique_column_combinations() const {
   const auto table_key_constraints = table->soft_key_constraints();
 
   for (const auto& table_key_constraint : table_key_constraints) {
-    auto column_expressions = find_column_expressions(*this, table_key_constraint.columns());
+    auto column_expressions = get_expressions_for_column_ids(*this, table_key_constraint.columns());
     DebugAssert(column_expressions.size() == table_key_constraint.columns().size(),
                 "Unexpected count of column expressions.");
     unique_column_combinations.emplace(std::move(column_expressions));

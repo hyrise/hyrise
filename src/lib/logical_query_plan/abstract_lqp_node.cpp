@@ -323,7 +323,7 @@ bool AbstractLQPNode::has_matching_od(
 
     // Continue if the OD's ordering expression are not the first of the provided expressions. It is totally fine if
     // the OD requires fewer ordering expressions than given.
-    if (!first_expressions_match(od.ordering_expressions, ordering_expressions)) {
+    if (!expression_list_is_prefix(od.ordering_expressions, ordering_expressions)) {
       continue;
     }
 
@@ -334,7 +334,7 @@ bool AbstractLQPNode::has_matching_od(
 
     // Found matching OD if the requested ordered expressions are the first of the OD's ordered expressions. Totally
     // fine if the OD orders more expressions that requested.
-    if (first_expressions_match(ordered_expressions, od.ordered_expressions)) {
+    if (expression_list_is_prefix(ordered_expressions, od.ordered_expressions)) {
       return true;
     }
   }

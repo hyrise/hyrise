@@ -34,7 +34,8 @@ OrderDependency::OrderDependency(std::vector<std::shared_ptr<AbstractExpression>
           lhs_expressions.end());
     }
 
-    Assert(!first_expressions_match(lhs_expressions, ordered_expressions), "Trivial reflexive ODs are not permitted.");
+    Assert(!expression_list_is_prefix(lhs_expressions, ordered_expressions),
+           "Trivial reflexive ODs are not permitted.");
   }
 }
 
@@ -100,7 +101,7 @@ void build_transitive_od_closure(OrderDependencies& order_dependencies) {
         // Given od [a] |-> [b, c], check if candidate_od looks like [b] |-> [d].
         const auto& candidate_expressions = candidate_od.ordering_expressions;
         if (ordered_expressions.size() < candidate_expressions.size() ||
-            !first_expressions_match(candidate_expressions, ordered_expressions)) {
+            !expression_list_is_prefix(candidate_expressions, ordered_expressions)) {
           continue;
         }
 

@@ -141,7 +141,7 @@ UniqueColumnCombinations StoredTableNode::unique_column_combinations() const {
     }
 
     // Search for expressions representing the key constraint's ColumnIDs.
-    auto column_expressions = find_column_expressions(*this, table_key_constraint.columns());
+    auto column_expressions = get_expressions_for_column_ids(*this, table_key_constraint.columns());
     DebugAssert(column_expressions.size() == table_key_constraint.columns().size(),
                 "Unexpected count of column expressions.");
 
@@ -168,8 +168,8 @@ OrderDependencies StoredTableNode::order_dependencies() const {
     }
 
     // Search for expressions representing the order constraint's ColumnIDs.
-    auto column_expressions = find_column_expressions(*this, table_order_constraint.ordering_columns());
-    auto ordered_column_expressions = find_column_expressions(*this, table_order_constraint.ordered_columns());
+    auto column_expressions = get_expressions_for_column_ids(*this, table_order_constraint.ordering_columns());
+    auto ordered_column_expressions = get_expressions_for_column_ids(*this, table_order_constraint.ordered_columns());
 
     // Create OrderDependency.
     order_dependencies.emplace(std::move(column_expressions), std::move(ordered_column_expressions));

@@ -452,8 +452,8 @@ template bool contains_all_expressions<std::vector<std::shared_ptr<AbstractExpre
     const std::vector<std::shared_ptr<AbstractExpression>>& search_expressions,
     const std::vector<std::shared_ptr<AbstractExpression>>& expression_vector);
 
-bool first_expressions_match(const std::vector<std::shared_ptr<AbstractExpression>>& lhs_expressions,
-                             const std::vector<std::shared_ptr<AbstractExpression>>& rhs_expressions) {
+bool expression_list_is_prefix(const std::vector<std::shared_ptr<AbstractExpression>>& lhs_expressions,
+                               const std::vector<std::shared_ptr<AbstractExpression>>& rhs_expressions) {
   const auto expression_count = lhs_expressions.size();
   Assert(expression_count <= rhs_expressions.size(), "Did not expect left-hand side to be larger.");
 
