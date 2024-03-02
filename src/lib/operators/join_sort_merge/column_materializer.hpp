@@ -26,6 +26,8 @@ struct MaterializedValue {
 
   MaterializedValue(RowID row, T v) : row_id{row}, value{v} {}
 
+  MaterializedValue(ChunkID chunk_id, ChunkOffset chunk_offset, T v) : row_id{chunk_id, chunk_offset}, value{v} {}
+
   RowID row_id;
   T value;
 };
@@ -146,13 +148,12 @@ class ColumnMaterializer {
     output.reserve(segment->size());
 
     segment_iterate<T>(*segment, [&](const auto& position) {
-      const auto row_id = RowID{chunk_id, position.chunk_offset()};
       if (position.is_null()) {
         if (_materialize_null) {
-          null_rows_output.emplace_back(row_id);
+          null_rows_output.emplace_back(chunk_id, position.chunk_offset());
         }
       } else {
-        output.emplace_back(row_id, position.value());
+        output.emplace_back(chunk_id, position.chunk_offset(), position.value());
       }
     });
 

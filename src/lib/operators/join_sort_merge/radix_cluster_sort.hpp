@@ -60,10 +60,10 @@ class RadixClusterSort {
         _cluster_count{cluster_count},
         _materialize_null_left{materialize_null_left},
         _materialize_null_right{materialize_null_right} {
-    DebugAssert(cluster_count > 0, "cluster_count must be > 0");
-    DebugAssert((cluster_count & (cluster_count - 1)) == 0, "cluster_count must be a power of two");
-    DebugAssert(left, "left input operator is null");
-    DebugAssert(right, "right input operator is null");
+    DebugAssert(cluster_count > 0, "cluster_count must be > 0.");
+    DebugAssert((cluster_count & (cluster_count - 1)) == 0, "cluster_count must be a power of two.");
+    DebugAssert(left, "left input operator is null.");
+    DebugAssert(right, "right input operator is null.");
   }
 
   virtual ~RadixClusterSort() = default;

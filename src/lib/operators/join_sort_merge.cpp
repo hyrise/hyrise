@@ -222,17 +222,18 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
 
   // Determines the number of clusters to be used for the join. The number of clusters must be a power of two.
   size_t _determine_number_of_clusters() {
-    // We try to have a partition size of roughly 256 KB to avoid out-of-L2 cache sorts. This value has been determined
-    // by an array of benchmarks. Ideally, it would incorporate hardware knowledge such as the L2 cache size.
+    // We try to have a partition size of roughly 256 KB to limit out-of-cache sorting and increase parallelism. This
+    // value has been determined by an array of benchmarks and should be revisited for larger changes to the operator.
+    // Ideally, it would incorporate hardware knowledge such as the actual L2 cache size of the current system.
     const auto max_sort_items_count = 256'000 / sizeof(T);
     const size_t cluster_count_left = _sort_merge_join.left_input_table()->row_count() / max_sort_items_count;
     const size_t cluster_count_right = _sort_merge_join.right_input_table()->row_count() / max_sort_items_count;
 
-    // Return the next larger power of two for the larger of the two cluster counts. Do not use more than 2^8 clusters
+    // Return the next smaller power of two for the larger of the two cluster counts. Do not use more than 2^8 clusters
     // as TLB misses during clustering become too expensive (see "An Experimental Comparison of Thirteen Relational
     // Equi-Joins in Main Memory" by Schuh et al.).
     return static_cast<size_t>(std::pow(
-        2, std::max(8.0, std::ceil(std::log2(std::max({size_t{1}, cluster_count_left, cluster_count_right}))))));
+        2, std::min(8.0, std::floor(std::log2(std::max({size_t{1}, cluster_count_left, cluster_count_right}))))));
   }
 
   // Gets the table position corresponding to the end of the table, i.e. the last entry of the last cluster.
@@ -567,22 +568,22 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       const auto right_run = TableRange(cluster_id, right_run_start, right_run_end);
       _join_runs(left_run, right_run, compare_result, multi_predicate_join_evaluator, cluster_id);
 
-      // Advance to the next run on the smaller side or both if equal
+      // Advance to the next run on the smaller side or both if equal.
       switch (compare_result) {
         case CompareResult::Equal:
-          // Advance both runs
+          // Advance both runs.
           left_run_start = left_run_end;
           right_run_start = right_run_end;
           left_run_end = left_run_start + _run_length(left_run_start, left_cluster);
           right_run_end = right_run_start + _run_length(right_run_start, right_cluster);
           break;
         case CompareResult::Less:
-          // Advance the left run
+          // Advance the left run.
           left_run_start = left_run_end;
           left_run_end = left_run_start + _run_length(left_run_start, left_cluster);
           break;
         case CompareResult::Greater:
-          // Advance the right run
+          // Advance the right run.
           right_run_start = right_run_end;
           right_run_end = right_run_start + _run_length(right_run_start, right_cluster);
           break;
@@ -591,7 +592,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       }
     }
 
-    // Join the rest of the unfinished side, which is relevant for outer joins and non-equi joins
+    // Join the rest of the unfinished side, which is relevant for outer joins and non-equi joins.
     const auto right_rest = TableRange(cluster_id, right_run_start, right_size);
     const auto left_rest = TableRange(cluster_id, left_run_start, left_size);
     if (left_run_start < left_size) {
