@@ -8,6 +8,7 @@
 #include "magic_enum.hpp"
 
 #include "types.hpp"
+#include "utils/assert.hpp"
 #include "utils/format_duration.hpp"
 
 namespace hyrise {

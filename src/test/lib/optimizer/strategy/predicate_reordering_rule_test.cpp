@@ -1,5 +1,3 @@
-#include "strategy_base_test.hpp"
-
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/join_node.hpp"
@@ -12,6 +10,7 @@
 #include "logical_query_plan/validate_node.hpp"
 #include "optimizer/strategy/predicate_reordering_rule.hpp"
 #include "statistics/table_statistics.hpp"
+#include "strategy_base_test.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {
@@ -256,6 +255,59 @@ TEST_F(PredicateReorderingTest, SimpleValidateReorderingTest) {
   ValidateNode::make(
     PredicateNode::make(greater_than_(a, 60),
       node));
+  // clang-format on
+
+  _apply_rule(_rule, _lqp);
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
+}
+
+TEST_F(PredicateReorderingTest, DoNotReorderMultiPredicateSemiAndAntiJoins) {
+  // The semi-/anti-joins filter `node` (selectivity < 1), the PredicateNode does not (selectivity = 1). However, do not
+  // reorder the nodes as we cannot execute multi-predicate joins efficiently.
+  const auto node_b = static_pointer_cast<MockNode>(node->deep_copy());
+  const auto b_a = node_b->get_column("a");
+  const auto b_b = node_b->get_column("b");
+  const auto b_c = node_b->get_column("c");
+
+  for (const auto join_mode : {JoinMode::Semi, JoinMode::AntiNullAsTrue, JoinMode::AntiNullAsFalse}) {
+    // clang-format off
+    _lqp =
+    JoinNode::make(join_mode, expression_vector(equals_(a, b_a), not_equals_(c, b_c)),
+      PredicateNode::make(greater_than_(b, 0),
+        node),
+      PredicateNode::make(greater_than_(b_a, 50),
+        node_b));
+    // clang-format on
+
+    const auto expected_lqp = _lqp->deep_copy();
+
+    _apply_rule(_rule, _lqp);
+    EXPECT_LQP_EQ(_lqp, expected_lqp);
+  }
+}
+
+TEST_F(PredicateReorderingTest, PreferPredicatesOverJoins) {
+  // The PredicateNode has a worse selectivity than the JoinNode. However, we place it earlier in the plan since a scan
+  // is cheaper than a semi-join.
+  const auto node_b = static_pointer_cast<MockNode>(node->deep_copy());
+  const auto b_a = node_b->get_column("a");
+  const auto b_b = node_b->get_column("b");
+  const auto b_c = node_b->get_column("c");
+
+  // clang-format off
+  _lqp =
+  PredicateNode::make(greater_than_(b, 53),
+    JoinNode::make(JoinMode::Semi, equals_(a, b_a),
+      node,
+      PredicateNode::make(greater_than_(b_a, 60),
+        node_b)));
+
+  const auto expected_lqp =
+  JoinNode::make(JoinMode::Semi, equals_(a, b_a),
+    PredicateNode::make(greater_than_(b, 53),
+      node),
+    PredicateNode::make(greater_than_(b_a, 60),
+      node_b));
   // clang-format on
 
   _apply_rule(_rule, _lqp);

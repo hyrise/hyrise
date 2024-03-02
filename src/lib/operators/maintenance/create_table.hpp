@@ -1,5 +1,9 @@
 #pragma once
 
+#include <memory>
+#include <string>
+#include <unordered_map>
+
 #include "operators/abstract_read_write_operator.hpp"
 #include "operators/insert.hpp"
 #include "storage/table_column_definition.hpp"

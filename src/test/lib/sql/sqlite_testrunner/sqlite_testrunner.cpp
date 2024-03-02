@@ -200,7 +200,7 @@ TEST_P(SQLiteTestRunner, CompareToSQLite) {
                         FloatComparisonMode::RelativeDifference, IgnoreNullable::Yes);
 
   if (table_comparison_msg) {
-    FAIL() << "Query failed: " << *table_comparison_msg << std::endl;
+    FAIL() << "Query failed: " << *table_comparison_msg << '\n';
   }
 
   // Mark Tables modified by the query as dirty

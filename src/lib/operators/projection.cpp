@@ -2,23 +2,31 @@
 
 #include <algorithm>
 #include <atomic>
-#include <functional>
+#include <chrono>
 #include <memory>
-#include <numeric>
+#include <optional>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
+#include "all_type_variant.hpp"
+#include "expression/abstract_expression.hpp"
 #include "expression/evaluation/expression_evaluator.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/pqp_column_expression.hpp"
-#include "expression/value_expression.hpp"
 #include "hyrise.hpp"
+#include "operators/abstract_operator.hpp"
+#include "operators/abstract_read_only_operator.hpp"
+#include "operators/operator_performance_data.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
-#include "storage/resolve_encoded_segment_type.hpp"
-#include "storage/segment_iterate.hpp"
-#include "storage/vector_compression/vector_compression.hpp"
+#include "storage/chunk.hpp"
+#include "storage/pos_lists/entire_chunk_pos_list.hpp"
+#include "storage/reference_segment.hpp"
+#include "storage/table.hpp"
+#include "storage/table_column_definition.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/timer.hpp"
 
@@ -250,14 +258,14 @@ std::shared_ptr<const Table> Projection::_on_execute() {
     if (output_table_type == TableType::Data) {
       chunk = std::make_shared<Chunk>(std::move(output_segments_by_chunk[chunk_id]), input_chunk->mvcc_data());
       chunk->increase_invalid_row_count(input_chunk->invalid_row_count());
-      chunk->finalize();
+      chunk->set_immutable();
 
       DebugAssert(projection_result_segments.empty(),
                   "For TableType::Data, projection_result_segments should be unused");
     } else {
       chunk = std::make_shared<Chunk>(std::move(output_segments_by_chunk[chunk_id]));
       // No need to increase_invalid_row_count here, as it is ignored for reference chunks anyway
-      chunk->finalize();
+      chunk->set_immutable();
 
       if (projection_result_table) {
         projection_result_table->append_chunk(projection_result_segments, input_chunk->mvcc_data());
@@ -274,9 +282,10 @@ std::shared_ptr<const Table> Projection::_on_execute() {
       // We need to iterate both sorted information and the output/input mapping as multiple output columns might
       // originate from the same sorted input column.
       for (const auto& [output_column_id, input_column_id] : output_column_to_input_column) {
-        const auto iter = std::find_if(
-            sorted_by.begin(), sorted_by.end(),
-            [input_column_id = input_column_id](const auto sort) { return input_column_id == sort.column; });
+        const auto iter =
+            std::find_if(sorted_by.begin(), sorted_by.end(), [input_column_id = input_column_id](const auto sort) {
+              return input_column_id == sort.column;
+            });
         if (iter != sorted_by.end()) {
           transformed.emplace_back(output_column_id, iter->sort_mode);
         }

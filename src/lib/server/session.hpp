@@ -1,5 +1,9 @@
 #pragma once
 
+#include <memory>
+#include <string>
+#include <unordered_map>
+
 #include "concurrency/transaction_context.hpp"
 #include "operators/abstract_operator.hpp"
 #include "postgres_protocol_handler.hpp"

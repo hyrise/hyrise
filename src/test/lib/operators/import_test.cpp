@@ -1,5 +1,4 @@
 #include "base_test.hpp"
-
 #include "hyrise.hpp"
 #include "import_export/file_type.hpp"
 #include "operators/import.hpp"

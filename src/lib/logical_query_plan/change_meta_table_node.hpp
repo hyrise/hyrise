@@ -10,12 +10,12 @@ namespace hyrise {
 
 class AbstractExpression;
 
-/*
- * Node type to represent modifications of a meta table.
- * The parameters are the name of the modified meta table and the type of the modification (insert, delete, update).
- * This node needs two input nodes: one with the selected values (for update or delete)
- * and one with updated or inserted values.
- * Further documentation for the resulting operator's inputs can be found at operators/change_meta_table.hpp
+/**
+ * Node to represent modifications of a meta table. The parameters are the name of the modified meta table and the type
+ * of the modification (insert, delete, update).
+ *
+ * Depending of the change type, this node needs one or two input nodes: one for inserts and deletes, two for updates.
+ * Further documentation of the resulting operator's inputs can be found at `operators/change_meta_table.hpp`.
  */
 class ChangeMetaTableNode : public EnableMakeForLQPNode<ChangeMetaTableNode>, public AbstractNonQueryNode {
  public:

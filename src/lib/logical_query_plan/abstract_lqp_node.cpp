@@ -1,20 +1,24 @@
 #include "abstract_lqp_node.hpp"
 
 #include <algorithm>
-#include <unordered_map>
+#include <cstddef>
+#include <memory>
+#include <optional>
+#include <ostream>
 #include <unordered_set>
 #include <utility>
+#include <vector>
 
 #include <boost/container_hash/hash.hpp>
 
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_utils.hpp"
-#include "expression/lqp_column_expression.hpp"
 #include "expression/lqp_subquery_expression.hpp"
-#include "join_node.hpp"
-#include "logical_query_plan/stored_table_node.hpp"
+#include "logical_query_plan/data_dependencies/functional_dependency.hpp"
+#include "logical_query_plan/data_dependencies/unique_column_combination.hpp"
 #include "lqp_utils.hpp"
 #include "predicate_node.hpp"
+#include "types.hpp"
 #include "update_node.hpp"
 #include "utils/assert.hpp"
 #include "utils/map_prunable_subquery_predicates.hpp"
@@ -126,10 +130,10 @@ void AbstractLQPNode::set_left_input(const std::shared_ptr<AbstractLQPNode>& lef
 }
 
 void AbstractLQPNode::set_right_input(const std::shared_ptr<AbstractLQPNode>& right) {
-  DebugAssert(right == nullptr || type == LQPNodeType::Join || type == LQPNodeType::Union ||
-                  type == LQPNodeType::Update || type == LQPNodeType::Intersect || type == LQPNodeType::Except ||
+  DebugAssert(!right || type == LQPNodeType::Join || type == LQPNodeType::Union || type == LQPNodeType::Update ||
+                  type == LQPNodeType::Intersect || type == LQPNodeType::Except ||
                   type == LQPNodeType::ChangeMetaTable || type == LQPNodeType::Mock,
-              "This node type does not accept a right input");
+              "This node type does not accept a right input.");
   set_input(LQPInputSide::Right, right);
 }
 
@@ -481,12 +485,12 @@ std::ostream& operator<<(std::ostream& stream, const AbstractLQPNode& node) {
     return stream;
   }
 
-  stream << "-------- Subqueries ---------" << std::endl;
+  stream << "-------- Subqueries ---------\n";
 
   for (const auto& lqp : lqps) {
-    stream << lqp.get() << ": " << std::endl;
+    stream << lqp.get() << ": \n";
     output_lqp_to_stream(*lqp);
-    stream << std::endl;
+    stream << '\n';
   }
 
   return stream;

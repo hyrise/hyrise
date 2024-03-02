@@ -1,5 +1,4 @@
 #include "base_test.hpp"
-
 #include "operators/join_hash/join_hash_steps.hpp"
 
 namespace hyrise {

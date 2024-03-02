@@ -1,5 +1,4 @@
 #include "base_test.hpp"
-
 #include "scheduler/task_utils.hpp"
 
 namespace hyrise {

@@ -3,9 +3,8 @@
 #include <memory>
 #include <vector>
 
-#include "base_test.hpp"
-
 #include "all_type_variant.hpp"
+#include "base_test.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/abstract_encoded_segment.hpp"
@@ -141,7 +140,7 @@ TEST_F(ChunkEncoderTest, EncodeWholeTable) {
       {SegmentEncodingSpec{EncodingType::Dictionary}, SegmentEncodingSpec{EncodingType::RunLength},
        SegmentEncodingSpec{EncodingType::Dictionary}}};
 
-  _table->last_chunk()->finalize();
+  _table->last_chunk()->set_immutable();
   ChunkEncoder::encode_all_chunks(_table, chunk_encoding_specs);
 
   for (auto chunk_id = ChunkID{0}; chunk_id < _table->chunk_count(); ++chunk_id) {
@@ -155,7 +154,7 @@ TEST_F(ChunkEncoderTest, EncodeWholeTableUsingSameEncoding) {
   const auto segment_encoding_spec = SegmentEncodingSpec{EncodingType::Dictionary};
   const auto chunk_encoding_spec = ChunkEncodingSpec{3u, segment_encoding_spec};
 
-  _table->last_chunk()->finalize();
+  _table->last_chunk()->set_immutable();
   ChunkEncoder::encode_all_chunks(_table, segment_encoding_spec);
 
   for (auto chunk_id = ChunkID{0u}; chunk_id < _table->chunk_count(); ++chunk_id) {
@@ -175,7 +174,7 @@ TEST_F(ChunkEncoderTest, EncodeMultipleChunks) {
        {SegmentEncodingSpec{EncodingType::Dictionary}, SegmentEncodingSpec{EncodingType::Dictionary},
         SegmentEncodingSpec{EncodingType::RunLength}}}};
 
-  _table->get_chunk(static_cast<ChunkID>(ChunkID{2}))->finalize();
+  _table->get_chunk(static_cast<ChunkID>(ChunkID{2}))->set_immutable();
   ChunkEncoder::encode_chunks(_table, chunk_ids, chunk_encoding_specs);
 
   for (auto chunk_id : chunk_ids) {
@@ -197,7 +196,7 @@ TEST_F(ChunkEncoderTest, EncodeMultipleChunksUsingSameEncoding) {
   const auto segment_encoding_spec = SegmentEncodingSpec{EncodingType::Dictionary};
   const auto chunk_encoding_spec = ChunkEncodingSpec{3u, segment_encoding_spec};
 
-  _table->get_chunk(static_cast<ChunkID>(ChunkID{2}))->finalize();
+  _table->get_chunk(static_cast<ChunkID>(ChunkID{2}))->set_immutable();
   ChunkEncoder::encode_chunks(_table, chunk_ids, segment_encoding_spec);
 
   for (auto chunk_id : chunk_ids) {
@@ -224,7 +223,7 @@ TEST_F(ChunkEncoderTest, ReencodingTable) {
        SegmentEncodingSpec{EncodingType::Unencoded}}};
   const auto column_data_types = _table->column_data_types();
 
-  _table->last_chunk()->finalize();
+  _table->last_chunk()->set_immutable();
 
   for (auto const& chunk_encoding_spec : chunk_encoding_specs) {
     ChunkEncoder::encode_all_chunks(_table, chunk_encoding_spec);

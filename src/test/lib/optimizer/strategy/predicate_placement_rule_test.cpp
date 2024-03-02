@@ -1,4 +1,4 @@
-#include "strategy_base_test.hpp"
+#include <memory>
 
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
@@ -12,6 +12,7 @@
 #include "logical_query_plan/update_node.hpp"
 #include "logical_query_plan/validate_node.hpp"
 #include "optimizer/strategy/predicate_placement_rule.hpp"
+#include "strategy_base_test.hpp"
 #include "types.hpp"
 
 namespace hyrise {
@@ -627,6 +628,47 @@ TEST_F(PredicatePlacementRuleTest, HandleBarrierPredicatePushdown) {
   EXPECT_EQ(temporary_node->left_input(), inner_join);
 }
 
+TEST_F(PredicatePlacementRuleTest, HandleMultiPredicateBarrierPredicatePushdown) {
+  // In this test, the PredicatePlacementRule cannot push down the top two predicates because of a predicate having
+  // multiple outputs (the barrier node). In constrast to HandleBarrierPredicatePushdown, the barrier now is a
+  // multi-predicate semi-join (which should not be pushed down).
+
+  // clang-format off
+  const auto barrier_predicate_node =
+  JoinNode::make(JoinMode::Semi, expression_vector(equals_(_a_a, _b_a), not_equals_(_a_b, _b_b)),  // <-- 1st Predicate
+    PredicateNode::make(greater_than_(_b_b, 123),                                                  // <-- 2nd Predicate
+      JoinNode::make(JoinMode::Inner, equals_(_b_a, _c_a),
+        _stored_table_b,
+        _stored_table_c)),
+    _stored_table_a);
+
+  _lqp =
+  PredicateNode::make(greater_than_(_c_a, 150),
+    PredicateNode::make(greater_than_(_c_a, 100),
+      barrier_predicate_node));
+
+  // Increase the predicate's output count so that it becomes an actual barrier in the _push_down_traversal subroutine.
+  const auto temporary_node = LogicalPlanRootNode::make(barrier_predicate_node);
+  ASSERT_EQ(barrier_predicate_node->output_count(), 2);
+
+  const auto expected_lqp =
+  PredicateNode::make(greater_than_(_c_a, 150),
+    PredicateNode::make(greater_than_(_c_a, 100),
+      JoinNode::make(JoinMode::Semi, expression_vector(equals_(_a_a, _b_a), not_equals_(_a_b, _b_b)),  // <-- 1st Predicate could not be pushed down // NOLINT(whitespace/line_length)
+        JoinNode::make(JoinMode::Inner, equals_(_b_a, _c_a),
+          PredicateNode::make(greater_than_(_b_b, 123),       // <-- 2nd Predicate after pushdown
+            _stored_table_b),
+          _stored_table_c),
+        _stored_table_a)));
+  // clang-format on
+
+  _apply_rule(_rule, _lqp);
+
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
+  EXPECT_EQ(barrier_predicate_node->output_count(), 2);
+  EXPECT_EQ(temporary_node->left_input(), barrier_predicate_node);
+}
+
 TEST_F(PredicatePlacementRuleTest, PushDownPredicateThroughAggregate) {
   // clang-format off
   _lqp =
@@ -926,6 +968,27 @@ TEST_F(PredicatePlacementRuleTest, DoNotCreatePreJoinPredicateIfUnrelated) {
   _apply_rule(_rule, _lqp);
 
   EXPECT_LQP_EQ(_lqp, expected_lqp);
+}
+
+TEST_F(PredicatePlacementRuleTest, DoNotMoveMultiPredicateSemiAndAntiJoins) {
+  // Multi-predicate semi- and anti-joins cannot be executed efficiently, so we do not treat them as predicates.
+  for (const auto join_mode : {JoinMode::Semi, JoinMode::AntiNullAsTrue, JoinMode::AntiNullAsFalse}) {
+    // clang-format off
+    _lqp =
+    JoinNode::make(join_mode, expression_vector(equals_(_a_a, _b_a), not_equals_(_a_b, _b_b)),
+      JoinNode::make(JoinMode::Inner, equals_(_b_a, _c_a),
+        _stored_table_b,
+        _stored_table_c),
+      PredicateNode::make(less_than_(_a_a, 1000),
+        _stored_table_a));
+    // clang-format on
+
+    const auto expected_lqp = _lqp->deep_copy();
+
+    _apply_rule(_rule, _lqp);
+
+    EXPECT_LQP_EQ(_lqp, expected_lqp);
+  }
 }
 
 }  // namespace hyrise

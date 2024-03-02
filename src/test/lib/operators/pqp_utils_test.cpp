@@ -1,5 +1,4 @@
 #include "base_test.hpp"
-
 #include "expression/expression_functional.hpp"
 #include "operators/get_table.hpp"
 #include "operators/join_hash.hpp"

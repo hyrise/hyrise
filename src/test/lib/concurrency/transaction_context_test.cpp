@@ -6,7 +6,6 @@
 #include <vector>
 
 #include "base_test.hpp"
-
 #include "concurrency/transaction_context.hpp"
 #include "hyrise.hpp"
 #include "operators/abstract_read_write_operator.hpp"
@@ -143,10 +142,14 @@ TEST_F(TransactionContextTest, CallbackFiresWhenCommitted) {
   auto context_2 = manager().new_transaction_context(AutoCommit::No);
 
   auto context_1_committed = false;
-  auto callback_1 = [&context_1_committed](TransactionID) { context_1_committed = true; };
+  auto callback_1 = [&context_1_committed](TransactionID) {
+    context_1_committed = true;
+  };
 
   auto context_2_committed = false;
-  auto callback_2 = [&context_2_committed](TransactionID) { context_2_committed = true; };
+  auto callback_2 = [&context_2_committed](TransactionID) {
+    context_2_committed = true;
+  };
 
   context_2->commit_async(callback_2);
   context_1->commit_async(callback_1);

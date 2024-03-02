@@ -2,8 +2,11 @@
 
 #include <memory>
 #include <string>
+#include <utility>
+#include <vector>
 
 #include "SQLParserResult.h"
+
 #include "cache/gdfs_cache.hpp"
 #include "concurrency/transaction_context.hpp"
 #include "logical_query_plan/lqp_translator.hpp"

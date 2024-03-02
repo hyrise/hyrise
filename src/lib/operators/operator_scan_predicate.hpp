@@ -1,6 +1,8 @@
 #pragma once
 
+#include <memory>
 #include <optional>
+#include <vector>
 
 #include "all_parameter_variant.hpp"
 #include "all_type_variant.hpp"

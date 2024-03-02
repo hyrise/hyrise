@@ -112,18 +112,20 @@ bool contained_in_query_plan(const std::shared_ptr<const AbstractOperator>& node
            "Comparing an LQP with itself is always true. Did you mean to take a deep copy?");                \
     const auto mismatch = lqp_find_subplan_mismatch(lhs, rhs);                                               \
     if (mismatch) {                                                                                          \
-      std::cout << "Differing subtrees\n";                                                                   \
-      std::cout << "-------------- Actual LQP --------------\n";                                             \
-      if (mismatch->first)                                                                                   \
-        std::cout << *mismatch->first;                                                                       \
-      else                                                                                                   \
-        std::cout << "NULL\n";                                                                               \
-      std::cout << "\n------------- Expected LQP -------------\n";                                           \
-      if (mismatch->second)                                                                                  \
-        std::cout << *mismatch->second;                                                                      \
-      else                                                                                                   \
-        std::cout << "NULL\n";                                                                               \
-      std::cout << "-------------..............-------------" << std::endl;                                  \
+      std::cerr << "Differing subtrees\n";                                                                   \
+      std::cerr << "-------------- Actual LQP --------------\n";                                             \
+      if (mismatch->first) {                                                                                 \
+        std::cerr << *mismatch->first;                                                                       \
+      } else {                                                                                               \
+        std::cerr << "NULL\n";                                                                               \
+      }                                                                                                      \
+      std::cerr << "\n------------- Expected LQP -------------\n";                                           \
+      if (mismatch->second) {                                                                                \
+        std::cerr << *mismatch->second;                                                                      \
+      } else {                                                                                               \
+        std::cerr << "NULL\n";                                                                               \
+      }                                                                                                      \
+      std::cout << "-------------..............-------------\n";                                             \
       GTEST_FAIL();                                                                                          \
     }                                                                                                        \
   }                                                                                                          \

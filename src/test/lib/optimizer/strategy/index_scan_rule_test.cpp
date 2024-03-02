@@ -1,4 +1,8 @@
-#include "strategy_base_test.hpp"
+#include <memory>
+#include <optional>
+#include <string>
+#include <utility>
+#include <vector>
 
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_functional.hpp"
@@ -14,6 +18,8 @@
 #include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
 #include "storage/index/group_key/composite_group_key_index.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
+#include "strategy_base_test.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 

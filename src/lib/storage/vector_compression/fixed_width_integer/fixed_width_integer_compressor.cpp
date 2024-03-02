@@ -1,5 +1,18 @@
 #include "fixed_width_integer_compressor.hpp"
 
+#include <algorithm>
+#include <cstddef>
+#include <cstdint>
+#include <limits>
+#include <memory>
+#include <utility>
+
+#include "storage/vector_compression/base_compressed_vector.hpp"
+#include "storage/vector_compression/base_vector_compressor.hpp"
+#include "storage/vector_compression/fixed_width_integer/fixed_width_integer_vector.hpp"
+#include "storage/vector_compression/vector_compression.hpp"
+#include "types.hpp"
+
 namespace hyrise {
 
 std::unique_ptr<const BaseCompressedVector> FixedWidthIntegerCompressor::compress(

@@ -1,4 +1,6 @@
-#include "strategy_base_test.hpp"
+#include <memory>
+#include <string>
+#include <vector>
 
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
@@ -9,6 +11,7 @@
 #include "logical_query_plan/validate_node.hpp"
 #include "optimizer/strategy/between_composition_rule.hpp"
 #include "statistics/table_statistics.hpp"
+#include "strategy_base_test.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {

@@ -1,8 +1,15 @@
 #include "binary_predicate_expression.hpp"
 
 #include <algorithm>
+#include <memory>
 #include <sstream>
+#include <string>
+#include <unordered_map>
 
+#include "expression/abstract_expression.hpp"
+#include "expression/abstract_predicate_expression.hpp"
+#include "expression/expression_precedence.hpp"
+#include "operators/abstract_operator.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 

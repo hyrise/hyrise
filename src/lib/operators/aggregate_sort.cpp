@@ -1,17 +1,35 @@
 #include "aggregate_sort.hpp"
 
 #include <algorithm>
+#include <cstddef>
+#include <cstdint>
 #include <memory>
+#include <optional>
+#include <set>
+#include <string>
+#include <unordered_map>
+#include <unordered_set>
+#include <utility>
 #include <vector>
 
 #include "aggregate/window_function_traits.hpp"
 #include "all_type_variant.hpp"
+#include "expression/abstract_expression.hpp"
 #include "expression/pqp_column_expression.hpp"
+#include "expression/window_function_expression.hpp"
+#include "operators/abstract_aggregate_operator.hpp"
+#include "operators/abstract_operator.hpp"
 #include "operators/sort.hpp"
+#include "resolve_type.hpp"
+#include "storage/chunk.hpp"
 #include "storage/pos_lists/entire_chunk_pos_list.hpp"
+#include "storage/reference_segment.hpp"
 #include "storage/segment_iterate.hpp"
+#include "storage/table.hpp"
+#include "storage/value_segment.hpp"
 #include "table_wrapper.hpp"
 #include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace {
 
@@ -570,7 +588,7 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
       auto null_values = pmr_vector<bool>(column_is_nullable ? group_boundaries.size() + 1 : 0);
 
       const auto value_count = values.size();
-      for (size_t value_index = 0; value_index < value_count; ++value_index) {
+      for (auto value_index = size_t{0}; value_index < value_count; ++value_index) {
         RowID group_start;
         if (value_index == 0) {
           // First group starts in the first row, but there is no corresponding entry in the set. See above for reasons.
@@ -785,15 +803,15 @@ void AggregateSort::_create_aggregate_column_definitions(boost::hana::basic_type
 template <typename ColumnType, WindowFunction aggregate_function>
 void AggregateSort::create_aggregate_column_definitions(ColumnID column_index) {
   // retrieve type information from the aggregation traits
-  auto RESULT_TYPE = WindowFunctionTraits<ColumnType, aggregate_function>::RESULT_TYPE;
+  auto result_type = WindowFunctionTraits<ColumnType, aggregate_function>::RESULT_TYPE;
 
   const auto& aggregate = _aggregates[column_index];
   const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->argument());
   const auto input_column_id = pqp_column.column_id;
 
-  if (RESULT_TYPE == DataType::Null) {
+  if (result_type == DataType::Null) {
     // if not specified, it’s the input column’s type
-    RESULT_TYPE = left_input_table()->column_data_type(input_column_id);
+    result_type = left_input_table()->column_data_type(input_column_id);
   }
 
   const auto nullable =
@@ -802,6 +820,6 @@ void AggregateSort::create_aggregate_column_definitions(ColumnID column_index) {
       (aggregate_function == WindowFunction::Any && left_input_table()->column_is_nullable(input_column_id));
   const auto column_name =
       aggregate->window_function == WindowFunction::Any ? pqp_column.as_column_name() : aggregate->as_column_name();
-  _output_column_definitions.emplace_back(column_name, RESULT_TYPE, nullable);
+  _output_column_definitions.emplace_back(column_name, result_type, nullable);
 }
 }  // namespace hyrise

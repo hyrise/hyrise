@@ -4,7 +4,6 @@
 
 #include "base_test.hpp"
 #include "lib/storage/encoding_test.hpp"
-
 #include "operators/get_table.hpp"
 #include "operators/print.hpp"
 #include "operators/table_scan.hpp"
@@ -15,7 +14,6 @@
 #include "storage/segment_access_counter.hpp"
 #include "storage/segment_encoding_utils.hpp"
 #include "storage/value_segment.hpp"
-
 #include "types.hpp"
 
 namespace hyrise {

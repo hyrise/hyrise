@@ -1,7 +1,12 @@
 #include "lqp_view.hpp"
 
+#include <memory>
+#include <string>
+#include <unordered_map>
+#include <utility>
+
 #include "logical_query_plan/abstract_lqp_node.hpp"
-#include "logical_query_plan/lqp_utils.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 

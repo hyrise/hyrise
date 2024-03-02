@@ -3,6 +3,7 @@
 #include <iostream>
 #include <memory>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "abstract_read_only_operator.hpp"

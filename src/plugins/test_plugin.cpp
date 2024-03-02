@@ -1,7 +1,20 @@
 #include "test_plugin.hpp"
 
+#include <cstdint>
+#include <iostream>
+#include <memory>
+#include <optional>
+#include <string>
+#include <utility>
+#include <vector>
+
 #include "../benchmarklib/abstract_benchmark_item_runner.hpp"
+#include "all_type_variant.hpp"
+#include "hyrise.hpp"
 #include "storage/table.hpp"
+#include "storage/table_column_definition.hpp"
+#include "types.hpp"
+#include "utils/abstract_plugin.hpp"
 
 namespace hyrise {
 
@@ -21,8 +34,13 @@ void TestPlugin::stop() {
 }
 
 std::vector<std::pair<PluginFunctionName, PluginFunctionPointer>> TestPlugin::provided_user_executable_functions() {
-  return {{"OurFreelyChoosableFunctionName", [&]() { this->a_user_executable_function(); }},
-          {"SpecialFunction17", [&]() { hyrise::TestPlugin::a_static_user_executable_function(); }}};
+  return {{"OurFreelyChoosableFunctionName",
+           [&]() {
+             this->a_user_executable_function();
+           }},
+          {"SpecialFunction17", [&]() {
+             hyrise::TestPlugin::a_static_user_executable_function();
+           }}};
 }
 
 void TestPlugin::a_user_executable_function() {
@@ -34,7 +52,7 @@ void TestPlugin::a_user_executable_function() {
 }
 
 void TestPlugin::a_static_user_executable_function() {
-  std::cout << "This is never being called!" << std::endl;
+  std::cout << "This is never being called!\n";
 }
 
 std::optional<PreBenchmarkHook> TestPlugin::pre_benchmark_hook() {
