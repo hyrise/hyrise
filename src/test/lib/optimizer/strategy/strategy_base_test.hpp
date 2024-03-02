@@ -1,5 +1,7 @@
 #pragma once
 
+#include <memory>
+
 #include "base_test.hpp"
 
 namespace hyrise {
