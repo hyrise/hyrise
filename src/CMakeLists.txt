@@ -86,6 +86,16 @@ set(ENABLE_CLANG_TIDY OFF CACHE BOOL "Run clang-tidy")
 if (ENABLE_CLANG_TIDY)
     message(STATUS "clang-tidy enabled")
     set(CMAKE_CXX_CLANG_TIDY "${CMAKE_SOURCE_DIR}/scripts/clang_tidy_wrapper.sh;${CMAKE_SOURCE_DIR}")
+
+    # Use the single-header version of nlohmann::json to avoid include errors. By default, nlohmann::json uses an
+    # umbrella header that includes the actual header files. We disable the umbrella header.
+    # When clang-tidy allows accepting certain umbrella headers, revisit this setting.
+    set(JSON_MultipleHeaders OFF)
+
+    if(nlohmann_json_VERSION VERSION_LESS "5.0")
+      message("aaaaaa")
+      message(nlohmann_json_VERSION)
+    endif()
 endif()
 
 add_subdirectory(benchmarklib)

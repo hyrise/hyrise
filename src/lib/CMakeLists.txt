@@ -249,9 +249,9 @@ set(
     operators/print.hpp
     operators/product.cpp
     operators/product.hpp
-    operators/progressive/proxy_table_scan.cpp
-    operators/progressive/proxy_table_scan.hpp
     operators/progressive/chunk_sink.hpp
+    operators/progressive/progressive_map.cpp
+    operators/progressive/progressive_map.hpp
     operators/projection.cpp
     operators/projection.hpp
     operators/sort.cpp
@@ -655,6 +655,7 @@ set(
     utils/plugin_manager.hpp
     utils/print_utils.cpp
     utils/print_utils.hpp
+    utils/progressive_utils.hpp
     utils/pruning_utils.cpp
     utils/pruning_utils.hpp
     utils/settings/abstract_setting.cpp
