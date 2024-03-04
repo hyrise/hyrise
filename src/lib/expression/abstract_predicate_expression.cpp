@@ -29,7 +29,7 @@ bool AbstractPredicateExpression::_shallow_equals(const AbstractExpression& expr
 }
 
 size_t AbstractPredicateExpression::_shallow_hash() const {
-  return std::hash<size_t>{}(static_cast<size_t>(predicate_condition));
+  return std::hash<PredicateCondition>{}(predicate_condition);
 }
 
 }  // namespace hyrise

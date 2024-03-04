@@ -174,7 +174,7 @@ bool WindowFunctionExpression::_shallow_equals(const AbstractExpression& express
 }
 
 size_t WindowFunctionExpression::_shallow_hash() const {
-  return std::hash<size_t>{}(static_cast<size_t>(window_function));
+  return std::hash<WindowFunction>{}(window_function);
 }
 
 bool WindowFunctionExpression::_on_is_nullable_on_lqp(const AbstractLQPNode& /*lqp*/) const {

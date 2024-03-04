@@ -26,10 +26,10 @@ using namespace hyrise;  // NOLINT
 // enable hash-based containers containing std::shared_ptr<StoredTableNode>.
 struct StoredTableNodeSharedPtrHash final {
   size_t operator()(const std::shared_ptr<StoredTableNode>& node) const {
-    size_t hash{0};
+    auto hash = size_t{0};
     boost::hash_combine(hash, node->table_name);
     for (const auto& pruned_chunk_id : node->pruned_chunk_ids()) {
-      boost::hash_combine(hash, static_cast<size_t>(pruned_chunk_id));
+      boost::hash_combine(hash, pruned_chunk_id);
     }
     return hash;
   }

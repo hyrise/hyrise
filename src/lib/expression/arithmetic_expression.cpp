@@ -78,7 +78,7 @@ bool ArithmeticExpression::_shallow_equals(const AbstractExpression& expression)
 }
 
 size_t ArithmeticExpression::_shallow_hash() const {
-  return std::hash<size_t>{}(static_cast<size_t>(arithmetic_operator));
+  return std::hash<ArithmeticOperator>{}(arithmetic_operator);
 }
 
 bool ArithmeticExpression::_on_is_nullable_on_lqp(const AbstractLQPNode& lqp) const {

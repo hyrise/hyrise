@@ -33,7 +33,7 @@ std::shared_ptr<AbstractExpression> PredicateNode::predicate() const {
 }
 
 size_t PredicateNode::_on_shallow_hash() const {
-  return std::hash<size_t>{}(static_cast<size_t>(scan_type));
+  return std::hash<ScanType>{}(scan_type);
 }
 
 std::shared_ptr<AbstractLQPNode> PredicateNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {

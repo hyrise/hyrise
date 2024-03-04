@@ -374,7 +374,7 @@ void BenchmarkRunner::_schedule_item_run(const BenchmarkItemID item_id) {
 
   auto task = std::make_shared<JobTask>(
       [&, item_id]() {
-        DebugAssert(_currently_running_clients.load() <= _config.clients);
+        DebugAssert(_currently_running_clients.load() <= _config.clients, "More queries than clients running.");
 
         const auto run_start = std::chrono::steady_clock::now();
         auto [success, metrics, any_run_verification_failed] = _benchmark_item_runner->execute_item(item_id);

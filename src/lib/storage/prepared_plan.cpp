@@ -78,9 +78,10 @@ std::shared_ptr<PreparedPlan> PreparedPlan::deep_copy() const {
 }
 
 size_t PreparedPlan::hash() const {
-  auto hash = lqp->hash();
+  auto hash = size_t{0};
+  boost::hash_combine(hash, lqp->hash());
   for (const auto& parameter_id : parameter_ids) {
-    boost::hash_combine(hash, static_cast<size_t>(parameter_id));
+    boost::hash_combine(hash, parameter_id);
   }
   return hash;
 }

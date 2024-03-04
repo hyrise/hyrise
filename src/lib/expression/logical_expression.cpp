@@ -66,7 +66,7 @@ bool LogicalExpression::_shallow_equals(const AbstractExpression& expression) co
 }
 
 size_t LogicalExpression::_shallow_hash() const {
-  return std::hash<size_t>{}(static_cast<size_t>(logical_operator));
+  return std::hash<LogicalOperator>{}(logical_operator);
 }
 
 ExpressionPrecedence LogicalExpression::_precedence() const {
