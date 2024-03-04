@@ -3,6 +3,7 @@
 #include <atomic>
 #include <chrono>
 #include <iostream>
+#include <limits>
 #include <memory>
 #include <optional>
 #include <string>
@@ -107,7 +108,7 @@ class BenchmarkRunner : public Noncopyable {
   // We want to only schedule as many items simultaneously as we have simulated clients. We use a counting semaphore for
   // this purpose. We initialize it to a maximum value of 2^16, which should be sufficient for (reasonable) clients
   // counts.
-  std::counting_semaphore<65'536> _running_clients_semaphore{0};
+  std::counting_semaphore<std::numeric_limits<int32_t>::max()> _running_clients_semaphore{0};
 
   // For BenchmarkMode::Shuffled, we count the number of runs executed across all items. This also includes items that
   // were unsuccessful (e.g., because of transaction aborts).
