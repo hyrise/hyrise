@@ -105,8 +105,8 @@ class BenchmarkRunner : public Noncopyable {
   // let a simulated client schedule the next item, as well as the total number of finished items so far.
   std::atomic_uint32_t _currently_running_clients{0};
 
-  // We want to only schedule as many items simultaneously as we have simulated clients. We use a counting semaphore for
-  // this purpose. We initialize it to a maximum value of 2^16, which should be sufficient for (reasonable) clients
+  // We schedule as many items simultaneously as we have simulated clients. We use a counting semaphore for this
+  // purpose. We initialize it to a maximum value of int32_t::max(), which should be sufficient for reasonable clients
   // counts.
   std::counting_semaphore<std::numeric_limits<int32_t>::max()> _running_clients_semaphore{0};
 
