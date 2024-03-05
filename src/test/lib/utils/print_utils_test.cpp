@@ -6,6 +6,7 @@
 
 #include "base_test.hpp"
 #include "expression/binary_predicate_expression.hpp"
+#include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_column_expression.hpp"
 #include "expression/value_expression.hpp"
@@ -100,19 +101,22 @@ TEST_F(PrintUtilsTest, print_expressions) {
   const auto d = mock_node->get_column("d");
 
   auto stream = std::stringstream{};
-  auto expression_vec = expression_vector(avg_(b), equals_(c, a), d, 1);
-  print_expressions(expression_vec, stream, " - ");
-  EXPECT_EQ(stream.str(), "AVG(b) - c = a - d - 1");
+  auto expression_vec = expression_vector(equals_(c, a), avg_(b), d, 1);
 
-  const auto expected_string = "AVG(b), c = a, d, 1";
-  stream.str("");
+  const auto expected_string = "c = a, AVG(b), d, 1";
   print_expressions(expression_vec, stream);
   EXPECT_EQ(stream.str(), expected_string);
+
+  stream.str("");
+  print_expressions(expression_vec, stream, " - ");
+  // Separator is used.
+  EXPECT_EQ(stream.str(), "c = a - AVG(b) - d - 1");
 
   for (const auto& expression_set : {ExpressionUnorderedSet{avg_(b), equals_(c, a), d, value_(1)},
                                      ExpressionUnorderedSet{equals_(c, a), avg_(b), d, value_(1)}}) {
     stream.str("");
     print_expressions(expression_set, stream);
+    // Expressions are ordered by minimal found original ColumnID.
     EXPECT_EQ(stream.str(), expected_string);
   }
 }

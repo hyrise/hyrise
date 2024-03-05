@@ -63,7 +63,7 @@ void print_table_key_constraints(const std::shared_ptr<const Table>& table, std:
 
 /**
  * Utility for formatted and deterministic printing of expressions. If a set is given, expressions are ordered by the
- * ColumnID of underlying LQPColumnExpressions, if applicable.
+ * minimal ColumnID of underlying LQPColumnExpressions, if applicable.
  */
 void print_expressions(const ExpressionUnorderedSet& expressions, std::ostream& stream,
                        const std::string& separator = ", ");
