@@ -11,6 +11,7 @@
 #include "storage/constraints/table_order_constraint.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace {
 
@@ -33,7 +34,7 @@ std::set<ColumnID> column_ids_by_name(const std::shared_ptr<Table>& table, const
   auto column_ids = std::set<ColumnID>{};
 
   for (const auto& column : columns) {
-    const auto success = column_ids.emplace(table->column_id_by_name(column)).second;
+    [[maybe_unused]] const auto success = column_ids.emplace(table->column_id_by_name(column)).second;
     DebugAssert(success, "Column '" + column + "' is already part of the constraint.");
   }
 
