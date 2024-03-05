@@ -1,4 +1,4 @@
-#include "constraint_functional.hpp"
+#include "constraint_utils.hpp"
 
 #include <memory>
 #include <set>
@@ -50,18 +50,18 @@ void key_constraint(const std::shared_ptr<Table>& table, const std::set<std::str
 
 namespace hyrise {
 
-namespace constraint_functional {
-
-void primary_key(const std::shared_ptr<Table>& table, const std::set<std::string>& columns) {
+void primary_key_constraint(const std::shared_ptr<Table>& table, const std::set<std::string>& columns) {
   key_constraint(table, columns, KeyConstraintType::PRIMARY_KEY);
 }
 
-void unique(const std::shared_ptr<Table>& table, const std::set<std::string>& columns) {
+void unique_constraint(const std::shared_ptr<Table>& table, const std::set<std::string>& columns) {
   key_constraint(table, columns, KeyConstraintType::UNIQUE);
 }
 
-void foreign_key(const std::shared_ptr<Table>& foreign_key_table, const std::vector<std::string>& foreign_key_columns,
-                 const std::shared_ptr<Table>& primary_key_table, const std::vector<std::string>& primary_key_columns) {
+void foreign_key_constraint(const std::shared_ptr<Table>& foreign_key_table,
+                            const std::vector<std::string>& foreign_key_columns,
+                            const std::shared_ptr<Table>& primary_key_table,
+                            const std::vector<std::string>& primary_key_columns) {
   auto foreign_key_column_ids = column_ids_by_name(foreign_key_table, foreign_key_columns);
   auto primary_key_column_ids = column_ids_by_name(primary_key_table, primary_key_columns);
 
@@ -69,14 +69,12 @@ void foreign_key(const std::shared_ptr<Table>& foreign_key_table, const std::vec
                                                               std::move(primary_key_column_ids), primary_key_table});
 }
 
-void order(const std::shared_ptr<Table>& table, const std::vector<std::string>& ordering_columns,
-           const std::vector<std::string>& ordered_columns) {
+void order_constraint(const std::shared_ptr<Table>& table, const std::vector<std::string>& ordering_columns,
+                      const std::vector<std::string>& ordered_columns) {
   auto ordering_column_ids = column_ids_by_name(table, ordering_columns);
   auto ordered_column_ids = column_ids_by_name(table, ordered_columns);
 
   table->add_soft_constraint(TableOrderConstraint{std::move(ordering_column_ids), std::move(ordered_column_ids)});
 }
-
-}  // namespace constraint_functional
 
 }  // namespace hyrise

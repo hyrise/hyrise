@@ -21,20 +21,19 @@ class Table;
  *                                                            {nation_table->column_id_by_name("n_nationkey")},
  *                                                            nation_table});
  * we write:
- *   primary_key(customer_table, {"c_custkey"});
- *   foreign_key(customer_table, {"c_nationkey"}, nation_table, {"n_nationkey"});
+ *   primary_key_constraint(customer_table, {"c_custkey"});
+ *   foreign_key_constraint(customer_table, {"c_nationkey"}, nation_table, {"n_nationkey"});
  */
-namespace constraint_functional {
 
-void primary_key(const std::shared_ptr<Table>& table, const std::set<std::string>& columns);
-void unique(const std::shared_ptr<Table>& table, const std::set<std::string>& columns);
+void primary_key_constraint(const std::shared_ptr<Table>& table, const std::set<std::string>& columns);
+void unique_constraint(const std::shared_ptr<Table>& table, const std::set<std::string>& columns);
 
-void foreign_key(const std::shared_ptr<Table>& foreign_key_table, const std::vector<std::string>& foreign_key_columns,
-                 const std::shared_ptr<Table>& primary_key_table, const std::vector<std::string>& primary_key_columns);
+void foreign_key_constraint(const std::shared_ptr<Table>& foreign_key_table,
+                            const std::vector<std::string>& foreign_key_columns,
+                            const std::shared_ptr<Table>& primary_key_table,
+                            const std::vector<std::string>& primary_key_columns);
 
-void order(const std::shared_ptr<Table>& table, const std::vector<std::string>& ordering_columns,
-           const std::vector<std::string>& ordered_columns);
-
-}  // namespace constraint_functional
+void order_constraint(const std::shared_ptr<Table>& table, const std::vector<std::string>& ordering_columns,
+                      const std::vector<std::string>& ordered_columns);
 
 }  // namespace hyrise

@@ -9,13 +9,11 @@
 #include "benchmark_config.hpp"
 #include "external_dbgen_utils.hpp"
 #include "file_based_table_generator.hpp"
-#include "storage/constraints/constraint_functional.hpp"
+#include "storage/constraints/constraint_utils.hpp"
 #include "storage/table.hpp"  // IWYU pragma: keep
 #include "types.hpp"
 
 namespace hyrise {
-
-using namespace hyrise::constraint_functional;  // NOLINT(build/namespaces)
 
 const auto ssb_table_names = std::vector<std::string>{"part", "customer", "supplier", "date", "lineorder"};
 
@@ -59,24 +57,24 @@ void SSBTableGenerator::_add_constraints(
   // Set constraints.
 
   // lineorder - 1 composite PK, 5 FKs.
-  primary_key(lineorder_table, {"lo_orderkey", "lo_linenumber"});
-  foreign_key(lineorder_table, {"lo_custkey"}, customer_table, {"c_custkey"});
-  foreign_key(lineorder_table, {"lo_partkey"}, part_table, {"p_partkey"});
-  foreign_key(lineorder_table, {"lo_suppkey"}, supplier_table, {"s_suppkey"});
-  foreign_key(lineorder_table, {"lo_orderdate"}, date_table, {"d_datekey"});
-  foreign_key(lineorder_table, {"lo_commitdate"}, date_table, {"d_datekey"});
+  primary_key_constraint(lineorder_table, {"lo_orderkey", "lo_linenumber"});
+  foreign_key_constraint(lineorder_table, {"lo_custkey"}, customer_table, {"c_custkey"});
+  foreign_key_constraint(lineorder_table, {"lo_partkey"}, part_table, {"p_partkey"});
+  foreign_key_constraint(lineorder_table, {"lo_suppkey"}, supplier_table, {"s_suppkey"});
+  foreign_key_constraint(lineorder_table, {"lo_orderdate"}, date_table, {"d_datekey"});
+  foreign_key_constraint(lineorder_table, {"lo_commitdate"}, date_table, {"d_datekey"});
 
   // part - 1 PK.
-  primary_key(part_table, {"p_partkey"});
+  primary_key_constraint(part_table, {"p_partkey"});
 
   // supplier - 1 PK.
-  primary_key(supplier_table, {"s_suppkey"});
+  primary_key_constraint(supplier_table, {"s_suppkey"});
 
   // customer - 1 PK.
-  primary_key(customer_table, {"c_custkey"});
+  primary_key_constraint(customer_table, {"c_custkey"});
 
   // date - 1 PK.
-  primary_key(date_table, {"d_datekey"});
+  primary_key_constraint(date_table, {"d_datekey"});
 }
 
 }  // namespace hyrise

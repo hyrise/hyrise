@@ -21,7 +21,7 @@ extern "C" {
 
 #include "abstract_table_generator.hpp"
 #include "benchmark_config.hpp"
-#include "storage/constraints/constraint_functional.hpp"
+#include "storage/constraints/constraint_utils.hpp"
 #include "table_builder.hpp"
 #include "tpch/tpch_constants.hpp"
 #include "tpch_constants.hpp"
@@ -120,8 +120,6 @@ void dbgen_cleanup() {
 }  // namespace
 
 namespace hyrise {
-
-using namespace hyrise::constraint_functional;  // NOLINT(build/namespaces)
 
 const std::unordered_map<TPCHTable, std::string> tpch_table_names = {
     {TPCHTable::Part, "part"},         {TPCHTable::PartSupp, "partsupp"}, {TPCHTable::Supplier, "supplier"},
@@ -358,41 +356,41 @@ void TPCHTableGenerator::_add_constraints(
   // Set constraints.
 
   // part - 1 PK.
-  primary_key(part_table, {"p_partkey"});
+  primary_key_constraint(part_table, {"p_partkey"});
 
   // supplier - 1 PK, 1 FK.
-  primary_key(supplier_table, {"s_suppkey"});
+  primary_key_constraint(supplier_table, {"s_suppkey"});
   // The FK to n_nationkey is not listed in the list of FKs in 1.4.2, but in the part table layout in 1.4.1, p. 15.
-  foreign_key(supplier_table, {"s_nationkey"}, nation_table, {"n_nationkey"});
+  foreign_key_constraint(supplier_table, {"s_nationkey"}, nation_table, {"n_nationkey"});
 
   // partsupp - 1 composite PK, 2 FKs.
-  primary_key(partsupp_table, {"ps_partkey", "ps_suppkey"});
-  foreign_key(partsupp_table, {"ps_partkey"}, part_table, {"p_partkey"});
-  foreign_key(partsupp_table, {"ps_suppkey"}, supplier_table, {"s_suppkey"});
+  primary_key_constraint(partsupp_table, {"ps_partkey", "ps_suppkey"});
+  foreign_key_constraint(partsupp_table, {"ps_partkey"}, part_table, {"p_partkey"});
+  foreign_key_constraint(partsupp_table, {"ps_suppkey"}, supplier_table, {"s_suppkey"});
 
   // customer - 1 PK, 1 FK.
-  primary_key(customer_table, {"c_custkey"});
-  foreign_key(customer_table, {"c_nationkey"}, nation_table, {"n_nationkey"});
+  primary_key_constraint(customer_table, {"c_custkey"});
+  foreign_key_constraint(customer_table, {"c_nationkey"}, nation_table, {"n_nationkey"});
 
   // orders - 1 PK, 1 FK.
-  primary_key(orders_table, {"o_orderkey"});
-  foreign_key(orders_table, {"o_custkey"}, customer_table, {"c_custkey"});
+  primary_key_constraint(orders_table, {"o_orderkey"});
+  foreign_key_constraint(orders_table, {"o_custkey"}, customer_table, {"c_custkey"});
 
   // lineitem - 1 composite PK, 4 FKs.
-  primary_key(lineitem_table, {"l_orderkey", "l_linenumber"});
-  foreign_key(lineitem_table, {"l_orderkey"}, orders_table, {"o_orderkey"});
+  primary_key_constraint(lineitem_table, {"l_orderkey", "l_linenumber"});
+  foreign_key_constraint(lineitem_table, {"l_orderkey"}, orders_table, {"o_orderkey"});
   // The specification explicitly allows to set the FKs of l_partkey and s_suppkey as a compound FK to partsupp and
   // directly to part/supplier.
-  foreign_key(lineitem_table, {"l_partkey", "l_suppkey"}, partsupp_table, {"ps_partkey", "ps_suppkey"});
-  foreign_key(lineitem_table, {"l_partkey"}, part_table, {"p_partkey"});
-  foreign_key(lineitem_table, {"l_suppkey"}, supplier_table, {"s_suppkey"});
+  foreign_key_constraint(lineitem_table, {"l_partkey", "l_suppkey"}, partsupp_table, {"ps_partkey", "ps_suppkey"});
+  foreign_key_constraint(lineitem_table, {"l_partkey"}, part_table, {"p_partkey"});
+  foreign_key_constraint(lineitem_table, {"l_suppkey"}, supplier_table, {"s_suppkey"});
 
   // nation - 1 PK, 1 FK.
-  primary_key(nation_table, {"n_nationkey"});
-  foreign_key(nation_table, {"n_regionkey"}, region_table, {"r_regionkey"});
+  primary_key_constraint(nation_table, {"n_nationkey"});
+  foreign_key_constraint(nation_table, {"n_regionkey"}, region_table, {"r_regionkey"});
 
   // region - 1 PK.
-  primary_key(region_table, {"r_regionkey"});
+  primary_key_constraint(region_table, {"r_regionkey"});
 }
 
 }  // namespace hyrise

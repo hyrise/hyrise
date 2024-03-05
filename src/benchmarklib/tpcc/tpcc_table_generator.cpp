@@ -18,15 +18,13 @@
 #include "benchmark_config.hpp"
 #include "constants.hpp"
 #include "storage/chunk.hpp"
-#include "storage/constraints/constraint_functional.hpp"
+#include "storage/constraints/constraint_utils.hpp"
 #include "storage/mvcc_data.hpp"
 #include "storage/table.hpp"
 #include "storage/table_column_definition.hpp"
 #include "types.hpp"
 
 namespace hyrise {
-
-using namespace hyrise::constraint_functional;  // NOLINT(build/namespaces)
 
 TPCCTableGenerator::TPCCTableGenerator(size_t num_warehouses, const std::shared_ptr<BenchmarkConfig>& benchmark_config)
     : AbstractTableGenerator(benchmark_config), _num_warehouses(num_warehouses) {}
@@ -728,40 +726,41 @@ void TPCCTableGenerator::_add_constraints(
   // Set constraints.
 
   // WAREHOUSE - 1 PK.
-  primary_key(warehouse_table, {"W_ID"});
+  primary_key_constraint(warehouse_table, {"W_ID"});
 
   // DISTRICT - 1 composite PK, 1 FK.
-  primary_key(district_table, {"D_W_ID", "D_ID"});
-  foreign_key(district_table, {"D_W_ID"}, warehouse_table, {"W_ID"});
+  primary_key_constraint(district_table, {"D_W_ID", "D_ID"});
+  foreign_key_constraint(district_table, {"D_W_ID"}, warehouse_table, {"W_ID"});
 
   // CUSTOMER - 1 composite PK, 1 composite FK.
-  primary_key(customer_table, {"C_W_ID", "C_D_ID"});
-  foreign_key(customer_table, {"C_W_ID", "C_D_ID"}, district_table, {"D_W_ID", "D_ID"});
+  primary_key_constraint(customer_table, {"C_W_ID", "C_D_ID"});
+  foreign_key_constraint(customer_table, {"C_W_ID", "C_D_ID"}, district_table, {"D_W_ID", "D_ID"});
 
   // HISTORY - 2 composite FKs.
-  foreign_key(history_table, {"H_C_W_ID", "H_C_D_ID"}, customer_table, {"C_W_ID", "C_D_ID"});
-  foreign_key(history_table, {"H_W_ID", "H_D_ID"}, district_table, {"D_W_ID", "D_ID"});
+  foreign_key_constraint(history_table, {"H_C_W_ID", "H_C_D_ID"}, customer_table, {"C_W_ID", "C_D_ID"});
+  foreign_key_constraint(history_table, {"H_W_ID", "H_D_ID"}, district_table, {"D_W_ID", "D_ID"});
 
   // NEW_ORDER - 1 composite PK, 1 composite FK.
-  primary_key(new_order_table, {"NO_W_ID", "NO_D_ID", "NO_O_ID"});
-  foreign_key(new_order_table, {"NO_W_ID", "NO_D_ID", "NO_O_ID"}, order_table, {"O_W_ID", "O_D_ID", "O_ID"});
+  primary_key_constraint(new_order_table, {"NO_W_ID", "NO_D_ID", "NO_O_ID"});
+  foreign_key_constraint(new_order_table, {"NO_W_ID", "NO_D_ID", "NO_O_ID"}, order_table, {"O_W_ID", "O_D_ID", "O_ID"});
 
   // ORDER - 1 composite PK, 1 composite FK.
-  primary_key(order_table, {"O_W_ID", "O_D_ID", "O_ID"});
-  foreign_key(order_table, {"O_W_ID", "O_D_ID", "O_C_ID"}, customer_table, {"C_W_ID", "C_D_ID", "C_ID"});
+  primary_key_constraint(order_table, {"O_W_ID", "O_D_ID", "O_ID"});
+  foreign_key_constraint(order_table, {"O_W_ID", "O_D_ID", "O_C_ID"}, customer_table, {"C_W_ID", "C_D_ID", "C_ID"});
 
   // ORDER_LINE - 1 composite PK, 2 composite FKs.
-  primary_key(order_line_table, {"OL_W_ID", "OL_D_ID", "OL_O_ID", "OL_NUMBER"});
-  foreign_key(order_line_table, {"OL_W_ID", "OL_D_ID", "OL_O_ID"}, order_table, {"O_W_ID", "O_D_ID", "O_ID"});
-  foreign_key(order_line_table, {"OL_SUPPLY_W_ID", "OL_I_ID"}, stock_table, {"S_W_ID", "S_I_ID"});
+  primary_key_constraint(order_line_table, {"OL_W_ID", "OL_D_ID", "OL_O_ID", "OL_NUMBER"});
+  foreign_key_constraint(order_line_table, {"OL_W_ID", "OL_D_ID", "OL_O_ID"}, order_table,
+                         {"O_W_ID", "O_D_ID", "O_ID"});
+  foreign_key_constraint(order_line_table, {"OL_SUPPLY_W_ID", "OL_I_ID"}, stock_table, {"S_W_ID", "S_I_ID"});
 
   // ITEM - 1 PK.
-  primary_key(item_table, {"I_ID"});
+  primary_key_constraint(item_table, {"I_ID"});
 
   // STOCK - 1 composite PK, 2 FKs.
-  primary_key(stock_table, {"S_W_ID", "S_I_ID"});
-  foreign_key(stock_table, {"S_W_ID"}, warehouse_table, {"W_ID"});
-  foreign_key(stock_table, {"S_I_ID"}, item_table, {"I_ID"});
+  primary_key_constraint(stock_table, {"S_W_ID", "S_I_ID"});
+  foreign_key_constraint(stock_table, {"S_W_ID"}, warehouse_table, {"W_ID"});
+  foreign_key_constraint(stock_table, {"S_I_ID"}, item_table, {"I_ID"});
 }
 
 thread_local TPCCRandomGenerator TPCCTableGenerator::_random_gen;  // NOLINT

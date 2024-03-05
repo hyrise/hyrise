@@ -13,7 +13,7 @@
 #include "file_based_benchmark_item_runner.hpp"
 #include "file_based_table_generator.hpp"
 #include "hyrise.hpp"
-#include "storage/constraints/constraint_functional.hpp"
+#include "storage/constraints/constraint_utils.hpp"
 #include "types.hpp"
 #include "utils/performance_warning.hpp"
 #include "utils/sqlite_add_indices.hpp"
@@ -26,8 +26,7 @@
  * found running the Join Order Benchmark" - 2.1 The IMDB data set, Fig. 2, p. 645.)
  */
 
-using namespace hyrise;                         // NOLINT(build/namespaces)
-using namespace hyrise::constraint_functional;  // NOLINT(build/namespaces)
+using namespace hyrise;  // NOLINT(build/namespaces)
 
 void add_key_constraints(std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) {
   // Get all tables.
@@ -56,91 +55,91 @@ void add_key_constraints(std::unordered_map<std::string, BenchmarkTableInfo>& ta
   // Set constraints.
 
   // aka_name - 1 PK, 1 FK.
-  primary_key(aka_name_table, {"id"});
-  foreign_key(aka_name_table, {"person_id"}, name_table, {"id"});
+  primary_key_constraint(aka_name_table, {"id"});
+  foreign_key_constraint(aka_name_table, {"person_id"}, name_table, {"id"});
 
   // aka_title - 1 PK, 1 FK.
-  primary_key(aka_title_table, {"id"});
-  foreign_key(aka_title_table, {"movie_id"}, title_table, {"id"});
+  primary_key_constraint(aka_title_table, {"id"});
+  foreign_key_constraint(aka_title_table, {"movie_id"}, title_table, {"id"});
 
   // cast_info - 1 PK, 4 FKs.
-  primary_key(cast_info_table, {"id"});
-  foreign_key(cast_info_table, {"movie_id"}, title_table, {"id"});
-  foreign_key(cast_info_table, {"person_id"}, name_table, {"id"});
-  foreign_key(cast_info_table, {"person_role_id"}, char_name_table, {"id"});
-  foreign_key(cast_info_table, {"role_id"}, role_type_table, {"id"});
+  primary_key_constraint(cast_info_table, {"id"});
+  foreign_key_constraint(cast_info_table, {"movie_id"}, title_table, {"id"});
+  foreign_key_constraint(cast_info_table, {"person_id"}, name_table, {"id"});
+  foreign_key_constraint(cast_info_table, {"person_role_id"}, char_name_table, {"id"});
+  foreign_key_constraint(cast_info_table, {"role_id"}, role_type_table, {"id"});
 
   // char_name - 1 PK.
-  primary_key(char_name_table, {"id"});
+  primary_key_constraint(char_name_table, {"id"});
 
   // comp_cast_type - 1 PK.
-  primary_key(comp_cast_type_table, {"id"});
+  primary_key_constraint(comp_cast_type_table, {"id"});
 
   // company_name - 1 PK.
-  primary_key(company_name_table, {"id"});
+  primary_key_constraint(company_name_table, {"id"});
 
   // company_type - 1 PK.
-  primary_key(company_type_table, {"id"});
+  primary_key_constraint(company_type_table, {"id"});
 
   // complete_cast - 1 PK, 3 FKs.
-  primary_key(complete_cast_table, {"id"});
-  foreign_key(complete_cast_table, {"subject_id"}, comp_cast_type_table, {"id"});
-  foreign_key(complete_cast_table, {"status_id"}, comp_cast_type_table, {"id"});
-  foreign_key(complete_cast_table, {"movie_id"}, title_table, {"id"});
+  primary_key_constraint(complete_cast_table, {"id"});
+  foreign_key_constraint(complete_cast_table, {"subject_id"}, comp_cast_type_table, {"id"});
+  foreign_key_constraint(complete_cast_table, {"status_id"}, comp_cast_type_table, {"id"});
+  foreign_key_constraint(complete_cast_table, {"movie_id"}, title_table, {"id"});
 
   // info_type - 1 PK.
-  primary_key(info_type_table, {"id"});
+  primary_key_constraint(info_type_table, {"id"});
 
   // keyword - 1 PK.
-  primary_key(keyword_table, {"id"});
+  primary_key_constraint(keyword_table, {"id"});
 
   // kind_type - 1 PK.
-  primary_key(kind_type_table, {"id"});
+  primary_key_constraint(kind_type_table, {"id"});
 
   // link_type - 1 PK.
-  primary_key(link_type_table, {"id"});
+  primary_key_constraint(link_type_table, {"id"});
 
   // movie_companies - 1 PK, 3 FKs.
-  primary_key(movie_companies_table, {"id"});
-  foreign_key(movie_companies_table, {"company_id"}, company_name_table, {"id"});
-  foreign_key(movie_companies_table, {"movie_id"}, title_table, {"id"});
-  foreign_key(movie_companies_table, {"company_type_id"}, company_type_table, {"id"});
+  primary_key_constraint(movie_companies_table, {"id"});
+  foreign_key_constraint(movie_companies_table, {"company_id"}, company_name_table, {"id"});
+  foreign_key_constraint(movie_companies_table, {"movie_id"}, title_table, {"id"});
+  foreign_key_constraint(movie_companies_table, {"company_type_id"}, company_type_table, {"id"});
 
   // movie_info - 1 PK, 2 FKs.
-  primary_key(movie_info_table, {"id"});
-  foreign_key(movie_info_table, {"movie_id"}, title_table, {"id"});
-  foreign_key(movie_info_table, {"info_type_id"}, info_type_table, {"id"});
+  primary_key_constraint(movie_info_table, {"id"});
+  foreign_key_constraint(movie_info_table, {"movie_id"}, title_table, {"id"});
+  foreign_key_constraint(movie_info_table, {"info_type_id"}, info_type_table, {"id"});
 
   // movie_info_idx - 1 PK, 2 FKs.
-  primary_key(movie_info_idx_table, {"id"});
-  foreign_key(movie_info_idx_table, {"movie_id"}, title_table, {"id"});
-  foreign_key(movie_info_idx_table, {"info_type_id"}, info_type_table, {"id"});
+  primary_key_constraint(movie_info_idx_table, {"id"});
+  foreign_key_constraint(movie_info_idx_table, {"movie_id"}, title_table, {"id"});
+  foreign_key_constraint(movie_info_idx_table, {"info_type_id"}, info_type_table, {"id"});
 
   // movie_keyword - 1 PK, 2 FKs.
-  primary_key(movie_keyword_table, {"id"});
-  foreign_key(movie_keyword_table, {"movie_id"}, title_table, {"id"});
-  foreign_key(movie_keyword_table, {"keyword_id"}, keyword_table, {"id"});
+  primary_key_constraint(movie_keyword_table, {"id"});
+  foreign_key_constraint(movie_keyword_table, {"movie_id"}, title_table, {"id"});
+  foreign_key_constraint(movie_keyword_table, {"keyword_id"}, keyword_table, {"id"});
 
   // movie_link - 1 PK, 3 FKs.
-  primary_key(movie_link_table, {"id"});
-  foreign_key(movie_link_table, {"movie_id"}, title_table, {"id"});
-  foreign_key(movie_link_table, {"linked_movie_id"}, title_table, {"id"});
-  foreign_key(movie_link_table, {"link_type_id"}, link_type_table, {"id"});
+  primary_key_constraint(movie_link_table, {"id"});
+  foreign_key_constraint(movie_link_table, {"movie_id"}, title_table, {"id"});
+  foreign_key_constraint(movie_link_table, {"linked_movie_id"}, title_table, {"id"});
+  foreign_key_constraint(movie_link_table, {"link_type_id"}, link_type_table, {"id"});
 
   // name - 1 PK.
-  primary_key(name_table, {"id"});
+  primary_key_constraint(name_table, {"id"});
 
   // person_info - 1 PK, 2 FKs.
-  primary_key(person_info_table, {"id"});
-  foreign_key(person_info_table, {"person_id"}, name_table, {"id"});
-  foreign_key(person_info_table, {"info_type_id"}, info_type_table, {"id"});
+  primary_key_constraint(person_info_table, {"id"});
+  foreign_key_constraint(person_info_table, {"person_id"}, name_table, {"id"});
+  foreign_key_constraint(person_info_table, {"info_type_id"}, info_type_table, {"id"});
 
   // role_type - 1 PK.
-  primary_key(role_type_table, {"id"});
+  primary_key_constraint(role_type_table, {"id"});
 
   // title - 1 PK, 1 FK.
-  primary_key(title_table, {"id"});
-  foreign_key(title_table, {"kind_id"}, kind_type_table, {"id"});
+  primary_key_constraint(title_table, {"id"});
+  foreign_key_constraint(title_table, {"kind_id"}, kind_type_table, {"id"});
 }
 
 int main(int argc, char* argv[]) {
