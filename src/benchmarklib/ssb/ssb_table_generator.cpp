@@ -9,12 +9,13 @@
 #include "benchmark_config.hpp"
 #include "external_dbgen_utils.hpp"
 #include "file_based_table_generator.hpp"
-#include "storage/constraints/foreign_key_constraint.hpp"
-#include "storage/constraints/table_key_constraint.hpp"
+#include "storage/constraints/constraint_functional.hpp"
 #include "storage/table.hpp"  // IWYU pragma: keep
 #include "types.hpp"
 
 namespace hyrise {
+
+using namespace hyrise::constraint_functional;  // NOLINT(build/namespaces)
 
 const auto ssb_table_names = std::vector<std::string>{"part", "customer", "supplier", "date", "lineorder"};
 
@@ -58,45 +59,24 @@ void SSBTableGenerator::_add_constraints(
   // Set constraints.
 
   // lineorder - 1 composite PK, 5 FKs.
-  lineorder_table->add_soft_constraint(TableKeyConstraint{
-      {lineorder_table->column_id_by_name("lo_orderkey"), lineorder_table->column_id_by_name("lo_linenumber")},
-      KeyConstraintType::PRIMARY_KEY});
-  lineorder_table->add_soft_constraint(ForeignKeyConstraint{{lineorder_table->column_id_by_name("lo_custkey")},
-                                                            lineorder_table,
-                                                            {customer_table->column_id_by_name("c_custkey")},
-                                                            customer_table});
-  lineorder_table->add_soft_constraint(ForeignKeyConstraint{{lineorder_table->column_id_by_name("lo_partkey")},
-                                                            lineorder_table,
-                                                            {part_table->column_id_by_name("p_partkey")},
-                                                            part_table});
-  lineorder_table->add_soft_constraint(ForeignKeyConstraint{{lineorder_table->column_id_by_name("lo_suppkey")},
-                                                            lineorder_table,
-                                                            {supplier_table->column_id_by_name("s_suppkey")},
-                                                            supplier_table});
-  lineorder_table->add_soft_constraint(ForeignKeyConstraint{{lineorder_table->column_id_by_name("lo_orderdate")},
-                                                            lineorder_table,
-                                                            {date_table->column_id_by_name("d_datekey")},
-                                                            date_table});
-  lineorder_table->add_soft_constraint(ForeignKeyConstraint{{lineorder_table->column_id_by_name("lo_commitdate")},
-                                                            lineorder_table,
-                                                            {date_table->column_id_by_name("d_datekey")},
-                                                            date_table});
+  primary_key(lineorder_table, {"lo_orderkey", "lo_linenumber"});
+  foreign_key(lineorder_table, {"lo_custkey"}, customer_table, {"c_custkey"});
+  foreign_key(lineorder_table, {"lo_partkey"}, part_table, {"p_partkey"});
+  foreign_key(lineorder_table, {"lo_suppkey"}, supplier_table, {"s_suppkey"});
+  foreign_key(lineorder_table, {"lo_orderdate"}, date_table, {"d_datekey"});
+  foreign_key(lineorder_table, {"lo_commitdate"}, date_table, {"d_datekey"});
 
   // part - 1 PK.
-  part_table->add_soft_constraint(
-      TableKeyConstraint{{part_table->column_id_by_name("p_partkey")}, KeyConstraintType::PRIMARY_KEY});
+  primary_key(part_table, {"p_partkey"});
 
   // supplier - 1 PK.
-  supplier_table->add_soft_constraint(
-      TableKeyConstraint{{supplier_table->column_id_by_name("s_suppkey")}, KeyConstraintType::PRIMARY_KEY});
+  primary_key(supplier_table, {"s_suppkey"});
 
   // customer - 1 PK.
-  customer_table->add_soft_constraint(
-      TableKeyConstraint{{customer_table->column_id_by_name("c_custkey")}, KeyConstraintType::PRIMARY_KEY});
+  primary_key(customer_table, {"c_custkey"});
 
   // date - 1 PK.
-  date_table->add_soft_constraint(
-      TableKeyConstraint{{date_table->column_id_by_name("d_datekey")}, KeyConstraintType::PRIMARY_KEY});
+  primary_key(date_table, {"d_datekey"});
 }
 
 }  // namespace hyrise

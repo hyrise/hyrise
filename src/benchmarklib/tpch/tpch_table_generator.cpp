@@ -13,20 +13,18 @@
 #include <utility>
 #include <vector>
 
-#include "abstract_table_generator.hpp"
-#include "tpch/tpch_constants.hpp"
-#include "tpch_constants.hpp"
-
 extern "C" {
 #include "dss.h"
 #include "dsstypes.h"
 #include "tpch_dbgen.h"
 }
 
+#include "abstract_table_generator.hpp"
 #include "benchmark_config.hpp"
-#include "storage/constraints/foreign_key_constraint.hpp"
-#include "storage/constraints/table_key_constraint.hpp"
+#include "storage/constraints/constraint_functional.hpp"
 #include "table_builder.hpp"
+#include "tpch/tpch_constants.hpp"
+#include "tpch_constants.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
@@ -35,7 +33,7 @@ extern seed_t seed[];          // NOLINT
 
 namespace {
 
-using namespace hyrise;  // NOLINT
+using namespace hyrise;  // NOLINT(build/namespaces)
 
 // clang-format off
 const auto customer_column_types = boost::hana::tuple      <int32_t,    pmr_string,  pmr_string,  int32_t,       pmr_string,  float,       pmr_string,     pmr_string>();  // NOLINT
@@ -122,6 +120,8 @@ void dbgen_cleanup() {
 }  // namespace
 
 namespace hyrise {
+
+using namespace hyrise::constraint_functional;  // NOLINT(build/namespaces)
 
 const std::unordered_map<TPCHTable, std::string> tpch_table_names = {
     {TPCHTable::Part, "part"},         {TPCHTable::PartSupp, "partsupp"}, {TPCHTable::Supplier, "supplier"},
@@ -358,81 +358,41 @@ void TPCHTableGenerator::_add_constraints(
   // Set constraints.
 
   // part - 1 PK.
-  part_table->add_soft_constraint(
-      TableKeyConstraint{{part_table->column_id_by_name("p_partkey")}, KeyConstraintType::PRIMARY_KEY});
+  primary_key(part_table, {"p_partkey"});
 
   // supplier - 1 PK, 1 FK.
-  supplier_table->add_soft_constraint(
-      TableKeyConstraint{{supplier_table->column_id_by_name("s_suppkey")}, KeyConstraintType::PRIMARY_KEY});
+  primary_key(supplier_table, {"s_suppkey"});
   // The FK to n_nationkey is not listed in the list of FKs in 1.4.2, but in the part table layout in 1.4.1, p. 15.
-  supplier_table->add_soft_constraint(ForeignKeyConstraint{{supplier_table->column_id_by_name("s_nationkey")},
-                                                           supplier_table,
-                                                           {nation_table->column_id_by_name("n_nationkey")},
-                                                           nation_table});
+  foreign_key(supplier_table, {"s_nationkey"}, nation_table, {"n_nationkey"});
 
   // partsupp - 1 composite PK, 2 FKs.
-  partsupp_table->add_soft_constraint(TableKeyConstraint{
-      {partsupp_table->column_id_by_name("ps_partkey"), partsupp_table->column_id_by_name("ps_suppkey")},
-      KeyConstraintType::PRIMARY_KEY});
-  partsupp_table->add_soft_constraint(ForeignKeyConstraint{{partsupp_table->column_id_by_name("ps_partkey")},
-                                                           partsupp_table,
-                                                           {part_table->column_id_by_name("p_partkey")},
-                                                           part_table});
-  partsupp_table->add_soft_constraint(ForeignKeyConstraint{{partsupp_table->column_id_by_name("ps_suppkey")},
-                                                           partsupp_table,
-                                                           {supplier_table->column_id_by_name("s_suppkey")},
-                                                           supplier_table});
+  primary_key(partsupp_table, {"ps_partkey", "ps_suppkey"});
+  foreign_key(partsupp_table, {"ps_partkey"}, part_table, {"p_partkey"});
+  foreign_key(partsupp_table, {"ps_suppkey"}, supplier_table, {"s_suppkey"});
 
   // customer - 1 PK, 1 FK.
-  customer_table->add_soft_constraint(
-      TableKeyConstraint{{customer_table->column_id_by_name("c_custkey")}, KeyConstraintType::PRIMARY_KEY});
-  customer_table->add_soft_constraint(ForeignKeyConstraint{{customer_table->column_id_by_name("c_nationkey")},
-                                                           customer_table,
-                                                           {nation_table->column_id_by_name("n_nationkey")},
-                                                           nation_table});
+  primary_key(customer_table, {"c_custkey"});
+  foreign_key(customer_table, {"c_nationkey"}, nation_table, {"n_nationkey"});
 
   // orders - 1 PK, 1 FK.
-  orders_table->add_soft_constraint(
-      TableKeyConstraint{{orders_table->column_id_by_name("o_orderkey")}, KeyConstraintType::PRIMARY_KEY});
-  orders_table->add_soft_constraint(ForeignKeyConstraint{{orders_table->column_id_by_name("o_custkey")},
-                                                         orders_table,
-                                                         {customer_table->column_id_by_name("c_custkey")},
-                                                         customer_table});
+  primary_key(orders_table, {"o_orderkey"});
+  foreign_key(orders_table, {"o_custkey"}, customer_table, {"c_custkey"});
 
   // lineitem - 1 composite PK, 4 FKs.
-  lineitem_table->add_soft_constraint(TableKeyConstraint{
-      {lineitem_table->column_id_by_name("l_orderkey"), lineitem_table->column_id_by_name("l_linenumber")},
-      KeyConstraintType::PRIMARY_KEY});
-  lineitem_table->add_soft_constraint(ForeignKeyConstraint{{lineitem_table->column_id_by_name("l_orderkey")},
-                                                           lineitem_table,
-                                                           {orders_table->column_id_by_name("o_orderkey")},
-                                                           orders_table});
+  primary_key(lineitem_table, {"l_orderkey", "l_linenumber"});
+  foreign_key(lineitem_table, {"l_orderkey"}, orders_table, {"o_orderkey"});
   // The specification explicitly allows to set the FKs of l_partkey and s_suppkey as a compound FK to partsupp and
   // directly to part/supplier.
-  lineitem_table->add_soft_constraint(ForeignKeyConstraint{
-      {lineitem_table->column_id_by_name("l_partkey"), lineitem_table->column_id_by_name("l_suppkey")},
-      lineitem_table,
-      {partsupp_table->column_id_by_name("ps_partkey"), partsupp_table->column_id_by_name("ps_suppkey")},
-      partsupp_table});
-  lineitem_table->add_soft_constraint(ForeignKeyConstraint{{lineitem_table->column_id_by_name("l_partkey")},
-                                                           lineitem_table,
-                                                           {part_table->column_id_by_name("p_partkey")},
-                                                           part_table});
-  lineitem_table->add_soft_constraint(ForeignKeyConstraint{{lineitem_table->column_id_by_name("l_suppkey")},
-                                                           lineitem_table,
-                                                           {supplier_table->column_id_by_name("s_suppkey")},
-                                                           supplier_table});
+  foreign_key(lineitem_table, {"l_partkey", "l_suppkey"}, partsupp_table, {"ps_partkey", "ps_suppkey"});
+  foreign_key(lineitem_table, {"l_partkey"}, part_table, {"p_partkey"});
+  foreign_key(lineitem_table, {"l_suppkey"}, supplier_table, {"s_suppkey"});
 
   // nation - 1 PK, 1 FK.
-  nation_table->add_soft_constraint(
-      TableKeyConstraint{{nation_table->column_id_by_name("n_nationkey")}, KeyConstraintType::PRIMARY_KEY});
-  nation_table->add_soft_constraint(ForeignKeyConstraint{{nation_table->column_id_by_name("n_regionkey")},
-                                                         nation_table,
-                                                         {region_table->column_id_by_name("r_regionkey")},
-                                                         region_table});
+  primary_key(nation_table, {"n_nationkey"});
+  foreign_key(nation_table, {"n_regionkey"}, region_table, {"r_regionkey"});
+
   // region - 1 PK.
-  region_table->add_soft_constraint(
-      TableKeyConstraint{{region_table->column_id_by_name("r_regionkey")}, KeyConstraintType::PRIMARY_KEY});
+  primary_key(region_table, {"r_regionkey"});
 }
 
 }  // namespace hyrise

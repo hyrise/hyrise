@@ -1,4 +1,6 @@
 #include <filesystem>
+#include <string>
+#include <unordered_map>
 
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/algorithm/string/split.hpp>
@@ -11,6 +13,7 @@
 #include "file_based_benchmark_item_runner.hpp"
 #include "file_based_table_generator.hpp"
 #include "hyrise.hpp"
+#include "storage/constraints/constraint_functional.hpp"
 #include "types.hpp"
 #include "utils/performance_warning.hpp"
 #include "utils/sqlite_add_indices.hpp"
@@ -23,7 +26,8 @@
  * found running the Join Order Benchmark" - 2.1 The IMDB data set, Fig. 2, p. 645.)
  */
 
-using namespace hyrise;  // NOLINT(build/namespaces)
+using namespace hyrise;                         // NOLINT(build/namespaces)
+using namespace hyrise::constraint_functional;  // NOLINT(build/namespaces)
 
 void add_key_constraints(std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) {
   // Get all tables.
@@ -52,189 +56,91 @@ void add_key_constraints(std::unordered_map<std::string, BenchmarkTableInfo>& ta
   // Set constraints.
 
   // aka_name - 1 PK, 1 FK.
-  aka_name_table->add_soft_constraint(
-      TableKeyConstraint{{aka_name_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
-  aka_name_table->add_soft_constraint(ForeignKeyConstraint{{aka_name_table->column_id_by_name("person_id")},
-                                                           aka_name_table,
-                                                           {name_table->column_id_by_name("id")},
-                                                           name_table});
+  primary_key(aka_name_table, {"id"});
+  foreign_key(aka_name_table, {"person_id"}, name_table, {"id"});
 
   // aka_title - 1 PK, 1 FK.
-  aka_title_table->add_soft_constraint(
-      TableKeyConstraint{{aka_title_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
-  aka_title_table->add_soft_constraint(ForeignKeyConstraint{{aka_title_table->column_id_by_name("movie_id")},
-                                                            aka_title_table,
-                                                            {title_table->column_id_by_name("id")},
-                                                            title_table});
+  primary_key(aka_title_table, {"id"});
+  foreign_key(aka_title_table, {"movie_id"}, title_table, {"id"});
 
   // cast_info - 1 PK, 4 FKs.
-  cast_info_table->add_soft_constraint(
-      TableKeyConstraint{{cast_info_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
-  cast_info_table->add_soft_constraint(ForeignKeyConstraint{{cast_info_table->column_id_by_name("movie_id")},
-                                                            cast_info_table,
-                                                            {title_table->column_id_by_name("id")},
-                                                            title_table});
-  cast_info_table->add_soft_constraint(ForeignKeyConstraint{{cast_info_table->column_id_by_name("person_id")},
-                                                            cast_info_table,
-                                                            {name_table->column_id_by_name("id")},
-                                                            name_table});
-  cast_info_table->add_soft_constraint(ForeignKeyConstraint{{cast_info_table->column_id_by_name("person_role_id")},
-                                                            cast_info_table,
-                                                            {char_name_table->column_id_by_name("id")},
-                                                            char_name_table});
-  cast_info_table->add_soft_constraint(ForeignKeyConstraint{{cast_info_table->column_id_by_name("role_id")},
-                                                            cast_info_table,
-                                                            {role_type_table->column_id_by_name("id")},
-                                                            role_type_table});
+  primary_key(cast_info_table, {"id"});
+  foreign_key(cast_info_table, {"movie_id"}, title_table, {"id"});
+  foreign_key(cast_info_table, {"person_id"}, name_table, {"id"});
+  foreign_key(cast_info_table, {"person_role_id"}, char_name_table, {"id"});
+  foreign_key(cast_info_table, {"role_id"}, role_type_table, {"id"});
 
   // char_name - 1 PK.
-  char_name_table->add_soft_constraint(
-      TableKeyConstraint{{char_name_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
+  primary_key(char_name_table, {"id"});
 
   // comp_cast_type - 1 PK.
-  comp_cast_type_table->add_soft_constraint(
-      TableKeyConstraint{{comp_cast_type_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
+  primary_key(comp_cast_type_table, {"id"});
 
   // company_name - 1 PK.
-  company_name_table->add_soft_constraint(
-      TableKeyConstraint{{company_name_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
+  primary_key(company_name_table, {"id"});
 
   // company_type - 1 PK.
-  company_type_table->add_soft_constraint(
-      TableKeyConstraint{{company_type_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
+  primary_key(company_type_table, {"id"});
 
   // complete_cast - 1 PK, 3 FKs.
-  complete_cast_table->add_soft_constraint(
-      TableKeyConstraint{{complete_cast_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
-  complete_cast_table->add_soft_constraint(ForeignKeyConstraint{{complete_cast_table->column_id_by_name("subject_id")},
-                                                                complete_cast_table,
-                                                                {comp_cast_type_table->column_id_by_name("id")},
-                                                                comp_cast_type_table});
-  complete_cast_table->add_soft_constraint(ForeignKeyConstraint{{complete_cast_table->column_id_by_name("status_id")},
-                                                                complete_cast_table,
-                                                                {comp_cast_type_table->column_id_by_name("id")},
-                                                                comp_cast_type_table});
-  complete_cast_table->add_soft_constraint(ForeignKeyConstraint{{complete_cast_table->column_id_by_name("movie_id")},
-                                                                complete_cast_table,
-                                                                {title_table->column_id_by_name("id")},
-                                                                title_table});
+  primary_key(complete_cast_table, {"id"});
+  foreign_key(complete_cast_table, {"subject_id"}, comp_cast_type_table, {"id"});
+  foreign_key(complete_cast_table, {"status_id"}, comp_cast_type_table, {"id"});
+  foreign_key(complete_cast_table, {"movie_id"}, title_table, {"id"});
 
   // info_type - 1 PK.
-  info_type_table->add_soft_constraint(
-      TableKeyConstraint{{info_type_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
+  primary_key(info_type_table, {"id"});
 
-  // keywort - 1 PK.
-  keyword_table->add_soft_constraint(
-      TableKeyConstraint{{keyword_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
+  // keyword - 1 PK.
+  primary_key(keyword_table, {"id"});
 
   // kind_type - 1 PK.
-  kind_type_table->add_soft_constraint(
-      TableKeyConstraint{{kind_type_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
+  primary_key(kind_type_table, {"id"});
 
   // link_type - 1 PK.
-  link_type_table->add_soft_constraint(
-      TableKeyConstraint{{link_type_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
+  primary_key(link_type_table, {"id"});
 
   // movie_companies - 1 PK, 3 FKs.
-  movie_companies_table->add_soft_constraint(
-      TableKeyConstraint{{movie_companies_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
-  movie_companies_table->add_soft_constraint(
-      ForeignKeyConstraint{{movie_companies_table->column_id_by_name("company_id")},
-                           movie_companies_table,
-                           {company_name_table->column_id_by_name("id")},
-                           company_name_table});
-  movie_companies_table->add_soft_constraint(
-      ForeignKeyConstraint{{movie_companies_table->column_id_by_name("movie_id")},
-                           movie_companies_table,
-                           {title_table->column_id_by_name("id")},
-                           title_table});
-  movie_companies_table->add_soft_constraint(
-      ForeignKeyConstraint{{movie_companies_table->column_id_by_name("company_type_id")},
-                           movie_companies_table,
-                           {company_type_table->column_id_by_name("id")},
-                           company_type_table});
+  primary_key(movie_companies_table, {"id"});
+  foreign_key(movie_companies_table, {"company_id"}, company_name_table, {"id"});
+  foreign_key(movie_companies_table, {"movie_id"}, title_table, {"id"});
+  foreign_key(movie_companies_table, {"company_type_id"}, company_type_table, {"id"});
 
   // movie_info - 1 PK, 2 FKs.
-  movie_info_table->add_soft_constraint(
-      TableKeyConstraint{{movie_info_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
-  movie_info_table->add_soft_constraint(ForeignKeyConstraint{{movie_info_table->column_id_by_name("movie_id")},
-                                                             movie_info_table,
-                                                             {title_table->column_id_by_name("id")},
-                                                             title_table});
-  movie_info_table->add_soft_constraint(ForeignKeyConstraint{{movie_info_table->column_id_by_name("info_type_id")},
-                                                             movie_info_table,
-                                                             {info_type_table->column_id_by_name("id")},
-                                                             info_type_table});
+  primary_key(movie_info_table, {"id"});
+  foreign_key(movie_info_table, {"movie_id"}, title_table, {"id"});
+  foreign_key(movie_info_table, {"info_type_id"}, info_type_table, {"id"});
 
   // movie_info_idx - 1 PK, 2 FKs.
-  movie_info_idx_table->add_soft_constraint(
-      TableKeyConstraint{{movie_info_idx_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
-  movie_info_idx_table->add_soft_constraint(ForeignKeyConstraint{{movie_info_idx_table->column_id_by_name("movie_id")},
-                                                                 movie_info_idx_table,
-                                                                 {title_table->column_id_by_name("id")},
-                                                                 title_table});
-  movie_info_idx_table->add_soft_constraint(
-      ForeignKeyConstraint{{movie_info_idx_table->column_id_by_name("info_type_id")},
-                           movie_info_idx_table,
-                           {info_type_table->column_id_by_name("id")},
-                           info_type_table});
+  primary_key(movie_info_idx_table, {"id"});
+  foreign_key(movie_info_idx_table, {"movie_id"}, title_table, {"id"});
+  foreign_key(movie_info_idx_table, {"info_type_id"}, info_type_table, {"id"});
 
   // movie_keyword - 1 PK, 2 FKs.
-  movie_keyword_table->add_soft_constraint(
-      TableKeyConstraint{{movie_keyword_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
-  movie_keyword_table->add_soft_constraint(ForeignKeyConstraint{{movie_keyword_table->column_id_by_name("movie_id")},
-                                                                movie_keyword_table,
-                                                                {title_table->column_id_by_name("id")},
-                                                                title_table});
-  movie_keyword_table->add_soft_constraint(ForeignKeyConstraint{{movie_keyword_table->column_id_by_name("keyword_id")},
-                                                                movie_keyword_table,
-                                                                {keyword_table->column_id_by_name("id")},
-                                                                keyword_table});
+  primary_key(movie_keyword_table, {"id"});
+  foreign_key(movie_keyword_table, {"movie_id"}, title_table, {"id"});
+  foreign_key(movie_keyword_table, {"keyword_id"}, keyword_table, {"id"});
 
   // movie_link - 1 PK, 3 FKs.
-  movie_link_table->add_soft_constraint(
-      TableKeyConstraint{{movie_link_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
-  movie_link_table->add_soft_constraint(ForeignKeyConstraint{{movie_link_table->column_id_by_name("movie_id")},
-                                                             movie_link_table,
-                                                             {title_table->column_id_by_name("id")},
-                                                             title_table});
-  movie_link_table->add_soft_constraint(ForeignKeyConstraint{{movie_link_table->column_id_by_name("linked_movie_id")},
-                                                             movie_link_table,
-                                                             {title_table->column_id_by_name("id")},
-                                                             title_table});
-  movie_link_table->add_soft_constraint(ForeignKeyConstraint{{movie_link_table->column_id_by_name("link_type_id")},
-                                                             movie_link_table,
-                                                             {link_type_table->column_id_by_name("id")},
-                                                             link_type_table});
+  primary_key(movie_link_table, {"id"});
+  foreign_key(movie_link_table, {"movie_id"}, title_table, {"id"});
+  foreign_key(movie_link_table, {"linked_movie_id"}, title_table, {"id"});
+  foreign_key(movie_link_table, {"link_type_id"}, link_type_table, {"id"});
 
   // name - 1 PK.
-  name_table->add_soft_constraint(
-      TableKeyConstraint{{name_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
+  primary_key(name_table, {"id"});
 
   // person_info - 1 PK, 2 FKs.
-  person_info_table->add_soft_constraint(
-      TableKeyConstraint{{person_info_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
-
-  person_info_table->add_soft_constraint(ForeignKeyConstraint{{person_info_table->column_id_by_name("person_id")},
-                                                              person_info_table,
-                                                              {name_table->column_id_by_name("id")},
-                                                              name_table});
-  person_info_table->add_soft_constraint(ForeignKeyConstraint{{person_info_table->column_id_by_name("info_type_id")},
-                                                              person_info_table,
-                                                              {info_type_table->column_id_by_name("id")},
-                                                              info_type_table});
+  primary_key(person_info_table, {"id"});
+  foreign_key(person_info_table, {"person_id"}, name_table, {"id"});
+  foreign_key(person_info_table, {"info_type_id"}, info_type_table, {"id"});
 
   // role_type - 1 PK.
-  role_type_table->add_soft_constraint(
-      TableKeyConstraint{{role_type_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
+  primary_key(role_type_table, {"id"});
 
   // title - 1 PK, 1 FK.
-  title_table->add_soft_constraint(
-      TableKeyConstraint{{title_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
-  title_table->add_soft_constraint(ForeignKeyConstraint{{title_table->column_id_by_name("kind_id")},
-                                                        title_table,
-                                                        {kind_type_table->column_id_by_name("id")},
-                                                        kind_type_table});
+  primary_key(title_table, {"id"});
+  foreign_key(title_table, {"kind_id"}, kind_type_table, {"id"});
 }
 
 int main(int argc, char* argv[]) {

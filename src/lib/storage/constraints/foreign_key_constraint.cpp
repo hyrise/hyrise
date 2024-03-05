@@ -5,6 +5,7 @@
 #include <functional>
 #include <memory>
 #include <numeric>
+#include <utility>
 #include <vector>
 
 #include <boost/container_hash/hash.hpp>
@@ -43,16 +44,16 @@ std::vector<ColumnID> apply_permutation(std::vector<ColumnID>& column_ids, const
 
 namespace hyrise {
 
-ForeignKeyConstraint::ForeignKeyConstraint(const std::vector<ColumnID>& foreign_key_columns,
+ForeignKeyConstraint::ForeignKeyConstraint(std::vector<ColumnID>&& foreign_key_columns,
                                            const std::shared_ptr<Table>& foreign_key_table,
-                                           const std::vector<ColumnID>& primary_key_columns,
+                                           std::vector<ColumnID>&& primary_key_columns,
                                            const std::shared_ptr<Table>& primary_key_table)
     : AbstractTableConstraint(TableConstraintType::ForeignKey),
-      _foreign_key_columns{foreign_key_columns},
+      _foreign_key_columns{std::move(foreign_key_columns)},
       _foreign_key_table{foreign_key_table},
-      _primary_key_columns{primary_key_columns},
+      _primary_key_columns{std::move(primary_key_columns)},
       _primary_key_table{primary_key_table} {
-  Assert(_foreign_key_columns.size() == _primary_key_columns.size(),
+  Assert(_foreign_key_columns.size() == _primary_key_columns.size() && !_foreign_key_columns.empty(),
          "Invalid number of columns for ForeignKeyConstraint.");
   // In general, ForeignKeyConstraints should reference the foreign key table and the primary key table. They are
   // attached to the foreign key table and also hold a pointer to the primary key table.

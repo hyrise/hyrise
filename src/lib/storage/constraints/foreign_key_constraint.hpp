@@ -29,10 +29,8 @@ class Table;
  */
 class ForeignKeyConstraint final : public AbstractTableConstraint {
  public:
-  ForeignKeyConstraint(const std::vector<ColumnID>& foreign_key_columns,
-                       const std::shared_ptr<Table>& foreign_key_table,
-                       const std::vector<ColumnID>& primary_key_columns,
-                       const std::shared_ptr<Table>& primary_key_table);
+  ForeignKeyConstraint(std::vector<ColumnID>&& foreign_key_columns, const std::shared_ptr<Table>& foreign_key_table,
+                       std::vector<ColumnID>&& primary_key_columns, const std::shared_ptr<Table>& primary_key_table);
   ForeignKeyConstraint() = delete;
 
   const std::vector<ColumnID>& foreign_key_columns() const;

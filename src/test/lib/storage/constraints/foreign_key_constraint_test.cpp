@@ -1,8 +1,12 @@
+#include <memory>
 #include <numeric>
+#include <utility>
+#include <vector>
 
 #include "base_test.hpp"
 #include "storage/constraints/foreign_key_constraint.hpp"
 #include "storage/table.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 
@@ -49,11 +53,12 @@ TEST_F(ForeignKeyConstraintTest, OrderedColumnIDs) {
   const auto ordered_column_ids =
       std::vector<ColumnID>{ColumnID{0}, ColumnID{1}, ColumnID{2}, ColumnID{3}, ColumnID{4}, ColumnID{5},
                             ColumnID{6}, ColumnID{7}, ColumnID{8}, ColumnID{9}, ColumnID{10}};
-  const auto random_column_ids =
+  auto random_column_ids =
       std::vector<ColumnID>{ColumnID{4}, ColumnID{9},  ColumnID{5}, ColumnID{7}, ColumnID{2}, ColumnID{8},
                             ColumnID{1}, ColumnID{10}, ColumnID{0}, ColumnID{3}, ColumnID{6}};
+  auto random_column_ids_copy = random_column_ids;
   const auto large_foreign_key_constraint =
-      ForeignKeyConstraint{random_column_ids, _table_a, random_column_ids, _table_b};
+      ForeignKeyConstraint{std::move(random_column_ids), _table_a, std::move(random_column_ids_copy), _table_b};
   EXPECT_EQ(large_foreign_key_constraint.foreign_key_columns(), ordered_column_ids);
   EXPECT_EQ(large_foreign_key_constraint.primary_key_columns(), ordered_column_ids);
 }

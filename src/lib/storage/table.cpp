@@ -175,7 +175,7 @@ ColumnID Table::column_id_by_name(const std::string& column_name) const {
       std::find_if(_column_definitions.begin(), _column_definitions.end(), [&](const auto& column_definition) {
         return column_definition.name == column_name;
       });
-  Assert(iter != _column_definitions.end(), "Couldn't find column '" + column_name + "'.");
+  Assert(iter != _column_definitions.end(), "Could not find column '" + column_name + "'.");
   return ColumnID{static_cast<ColumnID::base_type>(std::distance(_column_definitions.begin(), iter))};
 }
 
