@@ -144,7 +144,7 @@ void print_expressions(const ExpressionUnorderedSet& expressions, std::ostream& 
   auto expressions_vector = std::vector<std::shared_ptr<AbstractExpression>>{expressions.begin(), expressions.end()};
 
   // Obtain minimal ColumnID found in expression.
-  const auto original_column_id = [](const auto& expression) {
+  const auto minimal_column_id = [](const auto& expression) {
     // Initialize with maximum value to print expressions where we cannot get the original ColumnID last.
     auto column_id = INVALID_COLUMN_ID;
 
@@ -161,7 +161,7 @@ void print_expressions(const ExpressionUnorderedSet& expressions, std::ostream& 
 
   // Sort by ColumnID.
   std::sort(expressions_vector.begin(), expressions_vector.end(), [&](const auto& lhs, const auto& rhs) {
-    return original_column_id(lhs) < original_column_id(rhs);
+    return minimal_column_id(lhs) < minimal_column_id(rhs);
   });
 
   print_expressions(expressions_vector, stream, separator);
