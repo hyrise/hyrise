@@ -143,7 +143,7 @@ void print_table_key_constraints(const std::shared_ptr<const Table>& table, std:
 void print_expressions(const ExpressionUnorderedSet& expressions, std::ostream& stream, const std::string& separator) {
   auto expressions_vector = std::vector<std::shared_ptr<AbstractExpression>>{expressions.begin(), expressions.end()};
 
-  // Obtain first ColumnID found in expression.
+  // Obtain minimal ColumnID found in expression.
   const auto original_column_id = [](const auto& expression) {
     // Initialize with maximum value to print expressions where we cannot get the original ColumnID last.
     auto column_id = INVALID_COLUMN_ID;
@@ -179,7 +179,7 @@ void print_expressions(const std::vector<std::shared_ptr<AbstractExpression>>& e
 
 std::string all_encoding_options() {
   return boost::algorithm::join(
-      magic_enum::enum_names<EncodingType>() | boost::adaptors::transformed([](const auto it) {
+      magic_enum::enum_names<EncodingType>() | boost::adaptors::transformed([](const auto& it) {
         return std::string{it};
       }),
       ", ");
