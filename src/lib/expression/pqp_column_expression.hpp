@@ -1,7 +1,10 @@
 #pragma once
 
-#include "abstract_expression.hpp"
+#include <memory>
+#include <string>
+#include <unordered_map>
 
+#include "abstract_expression.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
 

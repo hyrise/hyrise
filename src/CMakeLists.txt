@@ -82,8 +82,13 @@ include_directories(
 
 set(ENABLE_CLANG_TIDY OFF CACHE BOOL "Run clang-tidy")
 if (ENABLE_CLANG_TIDY)
+    if (NOT "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+        message(ERROR "clang-tidy is only available for Clang builds.")
+    endif()
+
+    # Get the full clang-tidy path (helps with MacOS builds).
+    set(CMAKE_CXX_CLANG_TIDY "${CMAKE_C_COMPILER}-tidy")
     message(STATUS "clang-tidy enabled")
-    set(CMAKE_CXX_CLANG_TIDY "${CMAKE_SOURCE_DIR}/scripts/clang_tidy_wrapper.sh;${CMAKE_SOURCE_DIR}")
 endif()
 
 add_subdirectory(benchmarklib)

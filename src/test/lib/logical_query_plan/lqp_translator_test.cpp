@@ -1,5 +1,4 @@
 #include "base_test.hpp"
-
 #include "expression/arithmetic_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
@@ -1161,7 +1160,6 @@ TEST_F(LQPTranslatorTest, ChangeMetaTable) {
   // clang-format off
   const auto lqp =
   ChangeMetaTableNode::make("meta_table", MetaTableChangeType::Insert,
-    DummyTableNode::make(),
     DummyTableNode::make());
   // clang-format on
 
@@ -1170,7 +1168,7 @@ TEST_F(LQPTranslatorTest, ChangeMetaTable) {
 
   EXPECT_EQ(change_meta_table->type(), OperatorType::ChangeMetaTable);
   EXPECT_EQ(change_meta_table->left_input()->type(), OperatorType::TableWrapper);
-  EXPECT_EQ(change_meta_table->right_input()->type(), OperatorType::TableWrapper);
+  EXPECT_FALSE(change_meta_table->right_input());
 }
 
 TEST_F(LQPTranslatorTest, TranslatePrunableSubqueries) {

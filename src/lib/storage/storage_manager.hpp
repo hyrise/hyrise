@@ -1,13 +1,14 @@
 #pragma once
 
-#include <tbb/concurrent_unordered_map.h>
-
 #include <iostream>
 #include <map>
 #include <memory>
 #include <shared_mutex>
 #include <string>
+#include <unordered_map>
 #include <vector>
+
+#include <oneapi/tbb/concurrent_unordered_map.h>  // NOLINT(build/include_order): Identified as C system headers.
 
 #include "lqp_view.hpp"
 #include "prepared_plan.hpp"
@@ -18,12 +19,11 @@ namespace hyrise {
 class Table;
 class AbstractLQPNode;
 
-// The StorageManager is a class that maintains all tables
-// by mapping table names to table instances.
+// The StorageManager is a class that maintains all tables by mapping table names to table instances.
 class StorageManager : public Noncopyable {
  public:
   /**
-   * @defgroup Manage Tables, this is only thread-safe for operations on tables with different names
+   * @defgroup Manage tables, this is only thread-safe for operations on tables with different names.
    * @{
    */
   void add_table(const std::string& name, std::shared_ptr<Table> table);
@@ -35,7 +35,7 @@ class StorageManager : public Noncopyable {
   /** @} */
 
   /**
-   * @defgroup Manage SQL VIEWs, this is only thread-safe for operations on views with different names
+   * @defgroup Manage SQL views, this is only thread-safe for operations on views with different names.
    * @{
    */
   void add_view(const std::string& name, const std::shared_ptr<LQPView>& view);
@@ -47,7 +47,8 @@ class StorageManager : public Noncopyable {
   /** @} */
 
   /**
-   * @defgroup Manage prepared plans - comparable to SQL PREPAREd statements, this is only thread-safe for operations on prepared plans with different names
+   * @defgroup Manage prepared plans - comparable to SQL PREPAREd statements, this is only thread-safe for operations on
+   *           prepared plans with different names.
    * @{
    */
   void add_prepared_plan(const std::string& name, const std::shared_ptr<PreparedPlan>& prepared_plan);
@@ -57,7 +58,7 @@ class StorageManager : public Noncopyable {
   std::unordered_map<std::string, std::shared_ptr<PreparedPlan>> prepared_plans() const;
   /** @} */
 
-  // For debugging purposes mostly, dump all tables as csv
+  // For debugging purposes mostly, dump all tables as csv.
   void export_all_tables_as_csv(const std::string& path);
 
  protected:

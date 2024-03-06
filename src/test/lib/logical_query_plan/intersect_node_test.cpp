@@ -1,7 +1,4 @@
-#include <memory>
-
 #include "base_test.hpp"
-
 #include "logical_query_plan/intersect_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/mock_node.hpp"
@@ -83,6 +80,28 @@ TEST_F(IntersectNodeTest, ForwardUniqueColumnCombinations) {
   if constexpr (HYRISE_DEBUG) {
     _intersect_node->set_right_input(_mock_node2);
     EXPECT_THROW(_intersect_node->unique_column_combinations(), std::logic_error);
+  }
+}
+
+TEST_F(IntersectNodeTest, ForwardOrderDependencies) {
+  EXPECT_TRUE(_mock_node1->order_dependencies().empty());
+  EXPECT_TRUE(_intersect_node->order_dependencies().empty());
+
+  const auto od_a_to_b = OrderDependency{{_a}, {_b}};
+  const auto od_a_to_c = OrderDependency{{_a}, {_c}};
+  const auto order_constraint_a_to_b = TableOrderConstraint{{ColumnID{0}}, {ColumnID{1}}};
+  const auto order_constraint_a_to_c = TableOrderConstraint{{ColumnID{0}}, {ColumnID{2}}};
+  _mock_node1->set_order_constraints({order_constraint_a_to_b, order_constraint_a_to_c});
+  EXPECT_EQ(_mock_node1->order_dependencies().size(), 2);
+
+  const auto& order_dependencies = _intersect_node->order_dependencies();
+  EXPECT_EQ(order_dependencies.size(), 2);
+  EXPECT_TRUE(order_dependencies.contains(od_a_to_b));
+  EXPECT_TRUE(order_dependencies.contains(od_a_to_c));
+
+  if constexpr (HYRISE_DEBUG) {
+    _intersect_node->set_right_input(_mock_node2);
+    EXPECT_THROW(_intersect_node->order_dependencies(), std::logic_error);
   }
 }
 

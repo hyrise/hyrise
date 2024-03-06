@@ -1,5 +1,4 @@
 #include "base_test.hpp"
-
 #include "statistics/statistics_objects/histogram_domain.hpp"
 
 namespace hyrise {

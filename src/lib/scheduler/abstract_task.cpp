@@ -1,15 +1,17 @@
 #include "abstract_task.hpp"
 
+#include <algorithm>
+#include <atomic>
+#include <functional>
 #include <memory>
+#include <mutex>
 #include <string>
-#include <utility>
 #include <vector>
 
-#include "abstract_scheduler.hpp"
 #include "hyrise.hpp"
-#include "worker.hpp"
-
+#include "types.hpp"
 #include "utils/assert.hpp"
+#include "worker.hpp"
 
 namespace hyrise {
 
@@ -119,7 +121,9 @@ void AbstractTask::_join() {
   }
 
   DebugAssert(is_scheduled(), "Task must be scheduled before it can be waited for.");
-  _done_condition_variable.wait(lock, [&]() { return is_done(); });
+  _done_condition_variable.wait(lock, [&]() {
+    return is_done();
+  });
 }
 
 void AbstractTask::execute() {

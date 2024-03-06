@@ -1,13 +1,14 @@
 #include "chunk_compression_task.hpp"
 
+#include <cstdint>
+#include <memory>
 #include <string>
 #include <vector>
 
 #include "hyrise.hpp"
 #include "storage/chunk.hpp"
 #include "storage/chunk_encoder.hpp"
-#include "storage/table.hpp"
-
+#include "storage/mvcc_data.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 

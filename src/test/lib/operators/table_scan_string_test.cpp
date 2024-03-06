@@ -6,7 +6,6 @@
 #include <utility>
 
 #include "base_test.hpp"
-
 #include "expression/evaluation/like_matcher.hpp"
 #include "operators/abstract_read_only_operator.hpp"
 #include "operators/get_table.hpp"
@@ -16,8 +15,6 @@
 #include "storage/chunk_encoder.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
-
-using namespace std::string_literals;  // NOLINT
 
 namespace hyrise {
 

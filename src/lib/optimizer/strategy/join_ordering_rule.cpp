@@ -1,14 +1,16 @@
 #include "join_ordering_rule.hpp"
 
+#include <memory>
+#include <string>
+
 #include "cost_estimation/abstract_cost_estimator.hpp"
 #include "expression/expression_utils.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
 #include "optimizer/join_ordering/dp_ccp.hpp"
 #include "optimizer/join_ordering/greedy_operator_ordering.hpp"
 #include "optimizer/join_ordering/join_graph.hpp"
 #include "statistics/abstract_cardinality_estimator.hpp"
-#include "statistics/cardinality_estimation_cache.hpp"
-#include "statistics/table_statistics.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {
@@ -79,9 +81,9 @@ std::shared_ptr<AbstractLQPNode> JoinOrderingRule::_perform_join_ordering_recurs
     // a join graph with only one vertex is no actual join and needs no ordering
     result_lqp = lqp;
   } else if (join_graph->vertices.size() < 9) {
-    result_lqp = DpCcp{}(*join_graph, caching_cost_estimator);  // NOLINT - doesn't like `{}()`
+    result_lqp = DpCcp{}(*join_graph, caching_cost_estimator);
   } else {
-    result_lqp = GreedyOperatorOrdering{}(*join_graph, caching_cost_estimator);  // NOLINT - doesn't like `{}()`
+    result_lqp = GreedyOperatorOrdering{}(*join_graph, caching_cost_estimator);
   }
 
   for (const auto& vertex : join_graph->vertices) {

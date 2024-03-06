@@ -1,6 +1,15 @@
 #include "table_order_constraint.hpp"
 
+#include <algorithm>
+#include <cstddef>
+#include <functional>
+#include <vector>
+
 #include <boost/container_hash/hash.hpp>
+
+#include "storage/constraints/abstract_table_constraint.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 
@@ -24,7 +33,8 @@ const std::vector<ColumnID>& TableOrderConstraint::ordered_columns() const {
 }
 
 size_t TableOrderConstraint::hash() const {
-  auto hash = boost::hash_value(_ordering_columns);
+  auto hash = size_t{0};
+  boost::hash_combine(hash, _ordering_columns);
   boost::hash_combine(hash, _ordered_columns);
   return hash;
 }

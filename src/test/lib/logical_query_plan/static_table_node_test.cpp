@@ -1,5 +1,4 @@
 #include "base_test.hpp"
-
 #include "logical_query_plan/static_table_node.hpp"
 #include "storage/table.hpp"
 #include "storage/table_column_definition.hpp"
@@ -98,6 +97,10 @@ TEST_F(StaticTableNodeTest, UniqueColumnCombinations) {
   // In-depth check.
   EXPECT_TRUE(find_ucc_by_key_constraint(key_constraint_a, unique_column_combinations));
   EXPECT_TRUE(find_ucc_by_key_constraint(key_constraint_b, unique_column_combinations));
+}
+
+TEST_F(StaticTableNodeTest, NoOrderDependencies) {
+  EXPECT_TRUE(static_table_node->order_dependencies().empty());
 }
 
 }  // namespace hyrise

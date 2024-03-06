@@ -1,5 +1,9 @@
 #pragma once
 
+#include <memory>
+#include <string>
+#include <vector>
+
 #include "abstract_lqp_node.hpp"
 
 namespace hyrise {
@@ -18,6 +22,8 @@ class WindowNode : public EnableMakeForLQPNode<WindowNode>, public AbstractLQPNo
 
   // Forwards left input node's unique column combinations.
   UniqueColumnCombinations unique_column_combinations() const override;
+
+  OrderDependencies order_dependencies() const override;
 
  protected:
   size_t _on_shallow_hash() const override;

@@ -1,11 +1,20 @@
 #include "functional_dependency.hpp"
 
-#include <boost/container_hash/hash.hpp>
+#include <algorithm>
+#include <cstddef>
+#include <functional>
+#include <ostream>
+#include <utility>
+#include <vector>
+
+#include "expression/abstract_expression.hpp"
+#include "utils/assert.hpp"
+#include "utils/print_utils.hpp"
 
 namespace hyrise {
 
-FunctionalDependency::FunctionalDependency(ExpressionUnorderedSet init_determinants,
-                                           ExpressionUnorderedSet init_dependents)
+FunctionalDependency::FunctionalDependency(ExpressionUnorderedSet&& init_determinants,
+                                           ExpressionUnorderedSet&& init_dependents)
     : determinants(std::move(init_determinants)), dependents(std::move(init_dependents)) {
   DebugAssert(!determinants.empty() && !dependents.empty(), "FunctionalDependency cannot be empty");
 }
@@ -47,25 +56,14 @@ size_t FunctionalDependency::hash() const {
     hash = hash ^ expression->hash();
   }
 
-  return boost::hash_value(hash - determinants.size());
+  return std::hash<size_t>{}(hash - determinants.size());
 }
 
-std::ostream& operator<<(std::ostream& stream, const FunctionalDependency& expression) {
+std::ostream& operator<<(std::ostream& stream, const FunctionalDependency& fd) {
   stream << "{";
-  auto determinants_vector =
-      std::vector<std::shared_ptr<AbstractExpression>>{expression.determinants.begin(), expression.determinants.end()};
-  stream << determinants_vector.at(0)->as_column_name();
-  for (auto determinant_idx = size_t{1}; determinant_idx < determinants_vector.size(); ++determinant_idx) {
-    stream << ", " << determinants_vector[determinant_idx]->as_column_name();
-  }
-
+  print_expressions(fd.determinants, stream);
   stream << "} => {";
-  auto dependents_vector =
-      std::vector<std::shared_ptr<AbstractExpression>>{expression.dependents.begin(), expression.dependents.end()};
-  stream << dependents_vector.at(0)->as_column_name();
-  for (auto dependent_idx = size_t{1}; dependent_idx < dependents_vector.size(); ++dependent_idx) {
-    stream << ", " << dependents_vector[dependent_idx]->as_column_name();
-  }
+  print_expressions(fd.dependents, stream);
   stream << "}";
 
   return stream;
@@ -83,7 +81,8 @@ FunctionalDependencies inflate_fds(const FunctionalDependencies& fds) {
       inflated_fds.insert(fd);
     } else {
       for (const auto& dependent : fd.dependents) {
-        inflated_fds.emplace(fd.determinants, ExpressionUnorderedSet{dependent});
+        auto determinants = fd.determinants;
+        inflated_fds.emplace(std::move(determinants), ExpressionUnorderedSet{dependent});
       }
     }
   }
@@ -128,8 +127,8 @@ FunctionalDependencies deflate_fds(const FunctionalDependencies& fds) {
   }
 
   auto deflated_fds = FunctionalDependencies(fds.size());
-  for (const auto& [determinants, dependents] : existing_fds) {
-    deflated_fds.emplace(determinants, dependents);
+  for (auto [determinants, dependents] : existing_fds) {
+    deflated_fds.emplace(std::move(determinants), std::move(dependents));
   }
 
   return deflated_fds;

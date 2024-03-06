@@ -4,7 +4,6 @@
 
 #include "base_test.hpp"
 #include "lib/storage/encoding_test.hpp"
-
 #include "storage/chunk_encoder.hpp"
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/segment_encoding_utils.hpp"
@@ -51,7 +50,9 @@ TEST_P(AnySegmentIterableTest, Int) {
   auto any_segment_iterable_int = create_any_segment_iterable<int32_t>(*int_segment);
 
   auto values = pmr_vector<int32_t>{};
-  any_segment_iterable_int.for_each([&](const auto& position) { values.emplace_back(position.value()); });
+  any_segment_iterable_int.for_each([&](const auto& position) {
+    values.emplace_back(position.value());
+  });
 
   EXPECT_EQ(values, int_values);
 }

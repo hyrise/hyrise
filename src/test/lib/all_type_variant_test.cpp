@@ -4,7 +4,6 @@
 #include <boost/variant.hpp>
 
 #include "base_test.hpp"
-
 #include "types.hpp"
 
 namespace hyrise {

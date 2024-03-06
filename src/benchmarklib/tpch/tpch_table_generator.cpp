@@ -1,25 +1,36 @@
 #include "tpch_table_generator.hpp"
 
+#include <algorithm>
+#include <cmath>
+#include <cstddef>
+#include <cstdint>
+#include <cstdlib>
+#include <filesystem>
+#include <memory>
+#include <string>
+#include <type_traits>
+#include <unordered_map>
+#include <utility>
+#include <vector>
+
+#include "abstract_table_generator.hpp"
+#include "tpch/tpch_constants.hpp"
+#include "tpch_constants.hpp"
+
 extern "C" {
-#include <dss.h>
-#include <dsstypes.h>
-#include <rnd.h>
+#include "dss.h"
+#include "dsstypes.h"
+#include "tpch_dbgen.h"
 }
 
-#include <filesystem>
-#include <utility>
-
 #include "benchmark_config.hpp"
-#include "storage/chunk.hpp"
 #include "storage/constraints/table_key_constraint.hpp"
 #include "table_builder.hpp"
-#include "utils/timer.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 extern const char** asc_date;  // NOLINT
 extern seed_t seed[];          // NOLINT
-
-#pragma clang diagnostic ignored "-Wshorten-64-to-32"
-#pragma clang diagnostic ignored "-Wfloat-conversion"
 
 namespace {
 
@@ -80,7 +91,7 @@ float convert_money(DSS_HUGE cents) {
 }
 
 /**
- * Call this after using dbgen to avoid memory leaks
+ * Call this after using dbgen to avoid memory leaks.
  */
 void dbgen_cleanup() {
   for (auto* distribution : {&nations,     &regions,        &o_priority_set, &l_instruct_set,
@@ -89,15 +100,20 @@ void dbgen_cleanup() {
                              &nouns,       &adjectives,     &adverbs,        &prepositions,
                              &verbs,       &terminators,    &auxillaries,    &np,
                              &vp,          &grammar}) {
-    free(distribution->permute);  // NOLINT
+    // NOLINTNEXTLINE(cppcoreguidelines-no-malloc,hicpp-no-malloc,cppcoreguidelines-owning-memory)
+    std::free(distribution->permute);
     distribution->permute = nullptr;
   }
 
   if (asc_date) {
     for (auto idx = size_t{0}; idx < TOTDATE; ++idx) {
-      free((void*)asc_date[idx]);  // NOLINT
+      // NOLINTBEGIN(cppcoreguidelines-no-malloc,hicpp-no-malloc)
+      // NOLINTBEGIN(cppcoreguidelines-owning-memory,cppcoreguidelines-pro-type-const-cast)
+      std::free(const_cast<char*>(asc_date[idx]));
+      // NOLINTEND(cppcoreguidelines-owning-memory,cppcoreguidelines-pro-type-const-cast)
+      // NOLINTEND(cppcoreguidelines-no-malloc,hicpp-no-malloc)
     }
-    free(asc_date);  // NOLINT
+    std::free(asc_date);  // NOLINT(cppcoreguidelines-no-malloc,hicpp-no-malloc,cppcoreguidelines-owning-memory)
   }
   asc_date = nullptr;
 }

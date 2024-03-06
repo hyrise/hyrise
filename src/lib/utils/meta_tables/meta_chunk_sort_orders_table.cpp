@@ -1,6 +1,16 @@
 #include "meta_chunk_sort_orders_table.hpp"
 
+#include <cstdint>
+#include <memory>
+#include <sstream>
+#include <string>
+
+#include "all_type_variant.hpp"
 #include "hyrise.hpp"
+#include "storage/table.hpp"
+#include "storage/table_column_definition.hpp"
+#include "types.hpp"
+#include "utils/meta_tables/abstract_meta_table.hpp"
 
 namespace hyrise {
 
@@ -20,7 +30,7 @@ const std::string& MetaChunkSortOrdersTable::name() const {
  * accidentally). We do not track secondary sort orders, meaning that for `ORDER BY a, b`, only a is reported.
  */
 std::shared_ptr<Table> MetaChunkSortOrdersTable::_on_generate() const {
-  auto output_table = std::make_shared<Table>(_column_definitions, TableType::Data, std::nullopt, UseMvcc::Yes);
+  auto output_table = std::make_shared<Table>(_column_definitions, TableType::Data);
 
   for (const auto& [table_name, table] : Hyrise::get().storage_manager.tables()) {
     for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {

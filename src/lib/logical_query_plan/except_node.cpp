@@ -1,11 +1,20 @@
 #include "except_node.hpp"
 
+#include <cstddef>
+#include <functional>
 #include <memory>
-#include <numeric>
 #include <string>
 #include <vector>
 
+#include "magic_enum.hpp"
+
+#include "expression/abstract_expression.hpp"
 #include "expression/expression_utils.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
+#include "logical_query_plan/data_dependencies/functional_dependency.hpp"
+#include "logical_query_plan/data_dependencies/order_dependency.hpp"
+#include "logical_query_plan/data_dependencies/unique_column_combination.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {
@@ -33,13 +42,17 @@ UniqueColumnCombinations ExceptNode::unique_column_combinations() const {
   return _forward_left_unique_column_combinations();
 }
 
+OrderDependencies ExceptNode::order_dependencies() const {
+  return _forward_left_order_dependencies();
+}
+
 FunctionalDependencies ExceptNode::non_trivial_functional_dependencies() const {
   // The right input node is used for filtering only. It does not contribute any FDs.
   return left_input()->non_trivial_functional_dependencies();
 }
 
 size_t ExceptNode::_on_shallow_hash() const {
-  return boost::hash_value(set_operation_mode);
+  return std::hash<SetOperationMode>{}(set_operation_mode);
 }
 
 std::shared_ptr<AbstractLQPNode> ExceptNode::_on_shallow_copy(LQPNodeMapping& /*node_mapping*/) const {
