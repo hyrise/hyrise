@@ -208,7 +208,7 @@ TEST_F(DependentGroupByReductionRuleTest, JoinSingleKeyPrimaryKey) {
 // key.
 TEST_F(DependentGroupByReductionRuleTest, JoinSingleKeyPrimaryKeyNoEquiPredicate) {
   // clang-format off
-  const auto lqp =
+  _lqp =
   ProjectionNode::make(expression_vector(add_(column_a_0, 5), add_(column_a_1, 5), sum_(column_b_2)),
     AggregateNode::make(expression_vector(column_a_0, column_b_0, column_a_1, column_b_2), expression_vector(sum_(column_a_0), sum_(column_a_1), sum_(column_b_2)),  // NOLINT(whitespace/line_length)
       JoinNode::make(JoinMode::Inner, greater_than_(column_a_0, column_b_0),
@@ -223,9 +223,9 @@ TEST_F(DependentGroupByReductionRuleTest, JoinSingleKeyPrimaryKeyNoEquiPredicate
         stored_table_node_b)));
   // clang-format on
 
-  const auto actual_lqp = _apply_rule(rule, lqp);
+  _apply_rule(rule, _lqp);
 
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 // Test that the plan stays the same (no alias, no projection) for a table with a primary key but no removable columns.
