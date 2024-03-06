@@ -55,6 +55,16 @@
 #include "utils/timer.hpp"
 #include "version.hpp"
 
+
+namespace {
+
+// Depletes the passed semaphore without doing any work.
+void deplete_semaphore(auto& semaphore) {
+  while (semaphore.try_acquire()) {}
+}
+
+}  // namespace
+
 namespace hyrise {
 
 BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config,
@@ -334,7 +344,9 @@ void BenchmarkRunner::_benchmark_ordered() {
       std::cout << "  -> Waiting for clients that are still running\n" << std::flush;
     }
     Hyrise::get().scheduler()->wait_for_all_tasks();
+    
     Assert(_currently_running_clients == 0, "All runs must be finished at this point.");
+    deplete_semaphore(_running_clients_semaphore);
 
     result.duration = _state.benchmark_duration;
     // chrono::seconds uses an integer precision duration type, but we need a floating-point value.
@@ -380,8 +392,8 @@ void BenchmarkRunner::_schedule_item_run(const BenchmarkItemID item_id) {
         auto [success, metrics, any_run_verification_failed] = _benchmark_item_runner->execute_item(item_id);
         const auto run_end = std::chrono::steady_clock::now();
 
-        _running_clients_semaphore.release();
         --_currently_running_clients;
+        _running_clients_semaphore.release();
         ++_total_finished_runs;
 
         // If result.verification_passed was previously unset, set it; otherwise only invalidate it if the run failed.
@@ -433,7 +445,9 @@ void BenchmarkRunner::_warmup(const BenchmarkItemID item_id) {
 
   // Wait for the rest of the tasks that didn't make it in time.
   Hyrise::get().scheduler()->wait_for_all_tasks();
+
   Assert(_currently_running_clients == 0, "All runs must be finished at this point.");
+  deplete_semaphore(_running_clients_semaphore);
 }
 
 nlohmann::json BenchmarkRunner::_create_report() const {
