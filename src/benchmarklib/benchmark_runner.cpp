@@ -55,7 +55,6 @@
 #include "utils/timer.hpp"
 #include "version.hpp"
 
-
 namespace {
 
 // Depletes the passed semaphore without doing any work.
@@ -289,8 +288,8 @@ void BenchmarkRunner::_benchmark_shuffled() {
   Assert(_currently_running_clients == 0, "Did not expect any clients to run at this time.");
 
   _state = BenchmarkState{_config.max_duration};
- 
   _running_clients_semaphore.release(_config.clients);
+
   while (_state.keep_running() && (_config.max_runs < 0 || _total_finished_runs.load(std::memory_order_relaxed) <
                                                                static_cast<size_t>(_config.max_runs))) {
     if (item_id_counter == benchmark_item_count) {
@@ -344,7 +343,7 @@ void BenchmarkRunner::_benchmark_ordered() {
       std::cout << "  -> Waiting for clients that are still running\n" << std::flush;
     }
     Hyrise::get().scheduler()->wait_for_all_tasks();
-    
+
     Assert(_currently_running_clients == 0, "All runs must be finished at this point.");
     deplete_semaphore(_running_clients_semaphore);
 
