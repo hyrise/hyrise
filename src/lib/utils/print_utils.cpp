@@ -145,7 +145,7 @@ void print_expressions(const ExpressionUnorderedSet& expressions, std::ostream& 
 
   // Obtain first ColumnID found in expression.
   const auto original_column_id = [](const auto& expression) {
-    // Initialize with maximum value. Thus, we print expressions where we cannot get the original ColumnID last.
+    // Initialize with maximum value to print expressions where we cannot get the original ColumnID last.
     auto column_id = INVALID_COLUMN_ID;
 
     visit_expression(expression, [&](const auto& current_expression) {

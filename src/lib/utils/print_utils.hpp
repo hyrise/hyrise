@@ -62,11 +62,13 @@ void print_table_key_constraints(const std::shared_ptr<const Table>& table, std:
                                  const std::string& separator = ", ");
 
 /**
- * Utility for formatted and deterministic printing of expressions. If a set is given, expressions are ordered by the
- * minimal ColumnID of underlying LQPColumnExpressions, if applicable.
+ * Utility for formatted and deterministic printing of expressions.
  */
+ // Though expressions in a hash set have no defined order, we sort them by the minimal ColumnID of underlying
+ // LQPColumnExpressions (if applicable) for deterministic output.
 void print_expressions(const ExpressionUnorderedSet& expressions, std::ostream& stream,
                        const std::string& separator = ", ");
+// Not sorting as vector interface implies that the list-order is relevant.
 void print_expressions(const std::vector<std::shared_ptr<AbstractExpression>>& expressions, std::ostream& stream,
                        const std::string& separator = ", ");
 
