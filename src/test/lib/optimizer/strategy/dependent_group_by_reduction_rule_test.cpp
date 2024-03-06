@@ -223,7 +223,7 @@ TEST_F(DependentGroupByReductionRuleTest, JoinSingleKeyPrimaryKeyNoEquiPredicate
         stored_table_node_b)));
   // clang-format on
 
-  const auto actual_lqp = apply_rule(rule, lqp);
+  const auto actual_lqp = _apply_rule(rule, lqp);
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
