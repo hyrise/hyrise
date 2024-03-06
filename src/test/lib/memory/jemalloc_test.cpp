@@ -11,11 +11,10 @@ class JemallocTest : public BaseTest {};
 
 /**
  * We test for the exact version of jemalloc. We found that performance can vary significantly between jemalloc 
- * versions (see https://github.com/hyrise/hyrise/discussions/2628). This test is supposed to ensure that jemalloc is
- * not blindly updated. When updating jemalloc, please evaluate multiple CPU architectures using benchmark_all.sh.
- * For jemalloc v5.3, we use the option `oversize_threshold:0`. This might be no longer necessary with upcoming 
- * releases (see https://github.com/jemalloc/jemalloc/issues/2495).
- allow us to recognize, when options remomved that we relied on ...
+ * versions (see https://github.com/hyrise/hyrise/discussions/2628). This test is supposed to motivate re-evaluating
+ * the configuration of jemalloc. When updating jemalloc, please evaluate multiple CPU architectures using
+ * benchmark_all.sh. For jemalloc v5.3, we use the option `oversize_threshold:0`. This might be no longer necessary
+ * with upcoming releases (see https://github.com/jemalloc/jemalloc/issues/2495).
  */
 TEST_F(JemallocTest, VersionAndConfig) {
 #ifndef HYRISE_WITH_JEMALLOC
