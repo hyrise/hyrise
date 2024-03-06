@@ -1,5 +1,13 @@
 #include "generic_histogram_builder.hpp"
 
+#include <cstddef>
+#include <memory>
+#include <utility>
+
+#include "all_type_variant.hpp"
+#include "statistics/statistics_objects/abstract_histogram.hpp"
+#include "statistics/statistics_objects/generic_histogram.hpp"
+#include "statistics/statistics_objects/histogram_domain.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {

@@ -1,18 +1,29 @@
 #include "abstract_operator.hpp"
 
+#include <cstddef>
+#include <memory>
+#include <mutex>
+#include <ostream>
+#include <string>
+#include <type_traits>
+#include <unordered_map>
+#include <utility>
+#include <vector>
+
+#include "all_type_variant.hpp"
 #include "concurrency/transaction_context.hpp"
+#include "expression/abstract_expression.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/pqp_subquery_expression.hpp"
-#include "logical_query_plan/abstract_non_query_node.hpp"
 #include "logical_query_plan/dummy_table_node.hpp"
-#include "operators/get_table.hpp"
+#include "operators/operator_performance_data.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/operator_task.hpp"
 #include "storage/table.hpp"
 #include "storage/value_segment.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/format_bytes.hpp"
-#include "utils/format_duration.hpp"
 #include "utils/map_prunable_subquery_predicates.hpp"
 #include "utils/print_utils.hpp"
 #include "utils/timer.hpp"

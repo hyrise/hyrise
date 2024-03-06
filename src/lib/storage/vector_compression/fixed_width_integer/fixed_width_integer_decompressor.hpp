@@ -1,7 +1,6 @@
 #pragma once
 
 #include "storage/vector_compression/base_vector_decompressor.hpp"
-
 #include "types.hpp"
 
 namespace hyrise {

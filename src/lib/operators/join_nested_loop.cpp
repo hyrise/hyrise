@@ -1,15 +1,27 @@
 #include "join_nested_loop.hpp"
 
+#include <functional>
 #include <memory>
 #include <string>
+#include <type_traits>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
+#include "all_type_variant.hpp"
+#include "operators/abstract_join_operator.hpp"
+#include "operators/abstract_operator.hpp"
+#include "operators/multi_predicate_join/multi_predicate_join_evaluator.hpp"
+#include "operators/operator_join_predicate.hpp"
 #include "resolve_type.hpp"
+#include "storage/chunk.hpp"
 #include "storage/create_iterable_from_segment.hpp"
+#include "storage/pos_lists/row_id_pos_list.hpp"
 #include "storage/segment_iterables/any_segment_iterable.hpp"
 #include "storage/segment_iterate.hpp"
+#include "storage/table.hpp"
 #include "type_comparison.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
 

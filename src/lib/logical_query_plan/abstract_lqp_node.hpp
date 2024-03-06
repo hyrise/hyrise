@@ -1,13 +1,17 @@
 #pragma once
 
 #include <array>
+#include <memory>
+#include <optional>
+#include <ostream>
+#include <string>
 #include <unordered_map>
+#include <vector>
 
 #include "enable_make_for_lqp_node.hpp"
-#include "expression/abstract_expression.hpp"
 #include "logical_query_plan/data_dependencies/functional_dependency.hpp"
+#include "logical_query_plan/data_dependencies/order_dependency.hpp"
 #include "logical_query_plan/data_dependencies/unique_column_combination.hpp"
-#include "types.hpp"
 
 namespace hyrise {
 
@@ -215,6 +219,19 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    */
   virtual FunctionalDependencies non_trivial_functional_dependencies() const;
 
+  virtual OrderDependencies order_dependencies() const = 0;
+
+  /**
+   * @return True if there is an order dependency (OD) matching the given lists of output expressions (i.e., sorting
+   *         the table by @param `ordering_expressions` also sorts @param `ordered_expressions`).
+   *
+   * Example: - @param ordering_expressions: [a, b]
+   *          - @param ordered_expressions: [c, d]
+   *          - possible matching ODs: [a] |-> [c, d], [a, b] |-> [c, d], [a, b] |-> [c, d, e]
+   */
+  bool has_matching_od(const std::vector<std::shared_ptr<AbstractExpression>>& ordering_expressions,
+                       const std::vector<std::shared_ptr<AbstractExpression>>& ordered_expressions) const;
+
   /**
    * Perform a deep equality check
    */
@@ -260,6 +277,12 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    * @return All unique column combinations from the left input node.
    */
   UniqueColumnCombinations _forward_left_unique_column_combinations() const;
+
+  /**
+   * This is a helper method for node types that do not have an effect on the ODs from input nodes.
+   * @return All order dependencies from the left input node.
+   */
+  OrderDependencies _forward_left_order_dependencies() const;
 
   /*
    * Converts an AbstractLQPNode::DescriptionMode to an AbstractExpression::DescriptionMode

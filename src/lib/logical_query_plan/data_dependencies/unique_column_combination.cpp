@@ -1,9 +1,19 @@
 #include "unique_column_combination.hpp"
 
+#include <algorithm>
+#include <cstddef>
+#include <functional>
+#include <ostream>
+#include <utility>
+
+#include "expression/abstract_expression.hpp"
+#include "utils/assert.hpp"
+#include "utils/print_utils.hpp"
+
 namespace hyrise {
 
-UniqueColumnCombination::UniqueColumnCombination(ExpressionUnorderedSet init_expressions)
-    : expressions(std::move(init_expressions)) {
+UniqueColumnCombination::UniqueColumnCombination(ExpressionUnorderedSet&& init_expressions)
+    : expressions{std::move(init_expressions)} {
   Assert(!expressions.empty(), "UniqueColumnCombination cannot be empty.");
 }
 
@@ -11,8 +21,9 @@ bool UniqueColumnCombination::operator==(const UniqueColumnCombination& rhs) con
   if (expressions.size() != rhs.expressions.size()) {
     return false;
   }
-  return std::all_of(expressions.cbegin(), expressions.cend(),
-                     [&rhs](const auto column_expression) { return rhs.expressions.contains(column_expression); });
+  return std::all_of(expressions.cbegin(), expressions.cend(), [&rhs](const auto column_expression) {
+    return rhs.expressions.contains(column_expression);
+  });
 }
 
 bool UniqueColumnCombination::operator!=(const UniqueColumnCombination& rhs) const {
@@ -26,17 +37,12 @@ size_t UniqueColumnCombination::hash() const {
     hash = hash ^ expression->hash();
   }
 
-  return boost::hash_value(hash - expressions.size());
+  return std::hash<size_t>{}(hash - expressions.size());
 }
 
 std::ostream& operator<<(std::ostream& stream, const UniqueColumnCombination& ucc) {
   stream << "{";
-  auto expressions_vector =
-      std::vector<std::shared_ptr<AbstractExpression>>{ucc.expressions.begin(), ucc.expressions.end()};
-  stream << expressions_vector.at(0)->as_column_name();
-  for (auto expression_idx = size_t{1}; expression_idx < expressions_vector.size(); ++expression_idx) {
-    stream << ", " << expressions_vector[expression_idx]->as_column_name();
-  }
+  print_expressions(ucc.expressions, stream);
   stream << "}";
 
   return stream;

@@ -1,10 +1,20 @@
 #include "import.hpp"
 
-#include <boost/algorithm/string.hpp>
+#include <fstream>
+#include <memory>
+#include <optional>
+#include <string>
+#include <unordered_map>
 
+#include "all_type_variant.hpp"
 #include "hyrise.hpp"
 #include "import_export/binary/binary_parser.hpp"
+#include "import_export/csv/csv_meta.hpp"
 #include "import_export/csv/csv_parser.hpp"
+#include "import_export/file_type.hpp"
+#include "operators/abstract_operator.hpp"
+#include "operators/abstract_read_only_operator.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/load_table.hpp"
 
@@ -30,11 +40,11 @@ const std::string& Import::name() const {
 
 std::shared_ptr<const Table> Import::_on_execute() {
   // Check if file exists before giving it to the parser
-  std::ifstream file(filename);
+  auto file = std::ifstream{filename};
   Assert(file.is_open(), "Import: Could not find file " + filename);
   file.close();
 
-  std::shared_ptr<Table> table;
+  auto table = std::shared_ptr<Table>{};
 
   switch (_file_type) {
     case FileType::Csv:

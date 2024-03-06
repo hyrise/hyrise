@@ -1,7 +1,6 @@
-#include "lib/optimizer/strategy/strategy_base_test.hpp"
-
 #include "logical_query_plan/join_node.hpp"
 #include "optimizer/strategy/semi_join_reduction_rule.hpp"
+#include "strategy_base_test.hpp"
 
 namespace hyrise {
 
@@ -137,7 +136,7 @@ TEST_F(SemiJoinReductionRuleTest, ReductionOnlyForEquals) {
   // Similar to CreateSimpleReduction, but with one equals and one non-equals expression. Only the equals expression
   // should lead to a reduction being created.
 
-  auto predicates = std::vector<std::shared_ptr<AbstractExpression>>{less_than_(_a_a, _b_a), equals_(_b_a, _a_a)};
+  auto predicates = expression_vector(less_than_(_a_a, _b_a), equals_(_b_a, _a_a));
 
   // clang-format off
   const auto input_lqp =

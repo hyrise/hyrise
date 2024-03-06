@@ -5,7 +5,6 @@
 #include <vector>
 
 #include "base_test.hpp"
-
 #include "expression/expression_functional.hpp"
 #include "hyrise.hpp"
 #include "operators/abstract_join_operator.hpp"

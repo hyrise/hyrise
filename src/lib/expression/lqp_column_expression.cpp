@@ -1,12 +1,22 @@
 #include "lqp_column_expression.hpp"
 
+#include <cstddef>
+#include <memory>
+#include <sstream>
+#include <string>
+#include <unordered_map>
+
 #include <boost/container_hash/hash.hpp>
 
+#include "all_type_variant.hpp"
+#include "expression/abstract_expression.hpp"
 #include "hyrise.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/static_table_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
-#include "storage/table.hpp"
+#include "operators/abstract_operator.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {
@@ -115,8 +125,9 @@ size_t LQPColumnExpression::_shallow_hash() const {
   // It is important not to combine the address of the original_node with the hash code as it was done before #1795.
   // If this address is combined with the return hash code, equal LQP nodes that are not identical and that have
   // LQPColumnExpressions or child nodes with LQPColumnExpressions would have different hash codes.
-  auto hash = boost::hash_value(original_node.lock()->hash());
-  boost::hash_combine(hash, static_cast<size_t>(original_column_id));
+  auto hash = size_t{0};
+  boost::hash_combine(hash, original_node.lock()->hash());
+  boost::hash_combine(hash, original_column_id);
   return hash;
 }
 

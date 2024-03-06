@@ -1,17 +1,42 @@
-#include <chrono>
-#include <fstream>
+#include "meta_system_utilization_table.hpp"
 
+#include <stdlib.h>  // NOLINT(hicpp-deprecated-headers,modernize-deprecated-headers): For _SC_CLK_TCK and others.
+#include <time.h>    // NOLINT(hicpp-deprecated-headers,modernize-deprecated-headers): For localtime_r.
+
+// clang-format off
 #ifdef __APPLE__
 #include <mach/mach.h>
 #include <sys/sysctl.h>
+#else
+#include <unistd.h>
 #endif
 
 #ifdef HYRISE_WITH_JEMALLOC
 #include <jemalloc/jemalloc.h>
 #endif
+// clang-format on
 
+#include <array>
+#include <chrono>
+#include <cstddef>
+#include <cstdint>
+#include <ctime>
+#include <fstream>
+#include <ios>
+#include <memory>
+#include <optional>
+#include <ratio>
+#include <sstream>
+#include <string>
+#include <vector>
+
+#include "all_type_variant.hpp"
 #include "hyrise.hpp"
-#include "meta_system_utilization_table.hpp"
+#include "storage/table.hpp"
+#include "storage/table_column_definition.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
+#include "utils/meta_tables/abstract_meta_table.hpp"
 
 namespace hyrise {
 
@@ -35,7 +60,7 @@ const std::string& MetaSystemUtilizationTable::name() const {
 }
 
 std::shared_ptr<Table> MetaSystemUtilizationTable::_on_generate() const {
-  auto output_table = std::make_shared<Table>(_column_definitions, TableType::Data, std::nullopt, UseMvcc::Yes);
+  auto output_table = std::make_shared<Table>(_column_definitions, TableType::Data);
 
   const auto system_cpu_ticks = _get_system_cpu_time();
   const auto process_cpu_ticks = _get_process_cpu_time();
@@ -102,8 +127,9 @@ uint64_t MetaSystemUtilizationTable::_get_system_cpu_time() {
 
   const auto active_ticks = user_ticks + user_nice_ticks + kernel_ticks;
 
-  // The amount of time in /proc/stat is measured in units of clock ticks.
-  // sysconf(_SC_CLK_TCK) can be used to convert it to ns.
+  // The amount of time in /proc/stat is measured in units of clock ticks. sysconf(_SC_CLK_TCK) can be used to convert
+  // it to ns.
+  // NOLINTNEXTLINE(misc-include-cleaner): <stdlib.h> only indirectly defines _SC_CLK_TCK via bits/confname.h.
   const auto active_ns = (active_ticks * std::nano::den) / sysconf(_SC_CLK_TCK);
 
   return active_ns;
@@ -138,7 +164,7 @@ uint64_t MetaSystemUtilizationTable::_get_process_cpu_time() {
 #ifdef __linux__
   struct timespec time_spec {};
 
-  const auto ret = clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &time_spec);
+  const auto ret = clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &time_spec);  // NOLINT(misc-include-cleaner)
   Assert(ret == 0, "Failed in clock_gettime.");
 
   const auto active_ns = (time_spec.tv_sec * std::nano::den + time_spec.tv_nsec);
@@ -147,7 +173,7 @@ uint64_t MetaSystemUtilizationTable::_get_process_cpu_time() {
 #endif
 
 #ifdef __APPLE__
-  const auto active_ns = clock_gettime_nsec_np(CLOCK_PROCESS_CPUTIME_ID);
+  const auto active_ns = clock_gettime_nsec_np(CLOCK_PROCESS_CPUTIME_ID);  // NOLINT(misc-include-cleaner)
   Assert(active_ns != 0, "Failed in clock_gettime_nsec_np.");
 
   return active_ns;

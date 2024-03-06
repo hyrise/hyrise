@@ -1,10 +1,20 @@
 #include "alias_node.hpp"
 
+#include <cstddef>
+#include <memory>
 #include <sstream>
+#include <string>
+#include <vector>
 
-#include <boost/algorithm/string/join.hpp>
+#include <boost/container_hash/hash.hpp>
 
+#include "expression/abstract_expression.hpp"
 #include "expression/expression_utils.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
+#include "logical_query_plan/data_dependencies/order_dependency.hpp"
+#include "logical_query_plan/data_dependencies/unique_column_combination.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 
@@ -25,7 +35,7 @@ std::string AliasNode::description(const DescriptionMode mode) const {
       stream << node_expressions[column_id]->description(expression_mode) << " AS " << aliases[column_id];
     }
 
-    if (column_id + 1u < node_expressions.size()) {
+    if (column_id + size_t{1} < node_expressions.size()) {
       stream << ", ";
     }
   }
@@ -40,8 +50,12 @@ UniqueColumnCombinations AliasNode::unique_column_combinations() const {
   return _forward_left_unique_column_combinations();
 }
 
+OrderDependencies AliasNode::order_dependencies() const {
+  return _forward_left_order_dependencies();
+}
+
 size_t AliasNode::_on_shallow_hash() const {
-  size_t hash{0};
+  auto hash = size_t{0};
   for (const auto& alias : aliases) {
     boost::hash_combine(hash, alias);
   }

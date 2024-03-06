@@ -1,9 +1,17 @@
 #include "join_graph_visualizer.hpp"
 
+#include <cstddef>
+#include <memory>
 #include <sstream>
+#include <string>
+#include <vector>
 
+#include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
+#include "optimizer/join_ordering/join_graph.hpp"
+#include "optimizer/join_ordering/join_graph_edge.hpp"
+#include "visualization/abstract_visualizer.hpp"
 #include "viz_record_layout.hpp"
 
 namespace hyrise {

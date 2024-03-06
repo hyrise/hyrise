@@ -1,7 +1,6 @@
 #include <memory>
 
 #include "base_test.hpp"
-
 #include "hyrise.hpp"
 #include "logical_query_plan/create_prepared_plan_node.hpp"
 #include "logical_query_plan/dummy_table_node.hpp"

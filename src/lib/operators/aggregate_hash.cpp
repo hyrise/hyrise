@@ -1,9 +1,15 @@
 #include "aggregate_hash.hpp"
 
-#include <cmath>
+#include <algorithm>
+#include <array>
+#include <chrono>
+#include <cstddef>
+#include <cstdint>
+#include <functional>
+#include <limits>
 #include <memory>
-#include <optional>
 #include <string>
+#include <type_traits>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -11,12 +17,25 @@
 #include <boost/container/pmr/monotonic_buffer_resource.hpp>
 
 #include "aggregate/window_function_traits.hpp"
+#include "all_type_variant.hpp"
+#include "expression/abstract_expression.hpp"
 #include "expression/pqp_column_expression.hpp"
+#include "expression/window_function_expression.hpp"
 #include "hyrise.hpp"
+#include "operators/abstract_aggregate_operator.hpp"
+#include "operators/abstract_operator.hpp"
+#include "operators/operator_performance_data.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
+#include "storage/abstract_segment.hpp"
+#include "storage/base_segment_accessor.hpp"
+#include "storage/pos_lists/row_id_pos_list.hpp"
 #include "storage/segment_iterate.hpp"
+#include "storage/table.hpp"
+#include "storage/table_column_definition.hpp"
+#include "storage/value_segment.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/timer.hpp"
 
@@ -194,7 +213,7 @@ struct AggregateContext : public AggregateResultContext<ColumnDataType, aggregat
 
     // Unused if AggregateKey == EmptyAggregateKey, but we initialize it anyway to reduce the number of diverging code
     // paths.
-    // NOLINTNEXTLINE(clang-analyzer-core.CallAndMessage) - false warning: called C++ object (result_ids) is null
+    // NOLINTNEXTLINE(clang-analyzer-core.CallAndMessage): false warning: called C++ object (result_ids) is null.
     result_ids = std::make_unique<AggregateResultIdMap<AggregateKey>>(allocator);
   }
 
@@ -244,11 +263,13 @@ __attribute__((hot)) void AggregateHash::_aggregate_segment(ChunkID chunk_id, Co
   // Furthermore, if we use the immediate key shortcut (which uses the same code path as caching), we need to pass
   // true_type so that the aggregate keys are checked for immediate access values.
   if (_contexts_per_column.size() > 1 || _use_immediate_key_shortcut) {
-    segment_iterate<ColumnDataType>(abstract_segment,
-                                    [&](const auto& position) { process_position(std::true_type{}, position); });
+    segment_iterate<ColumnDataType>(abstract_segment, [&](const auto& position) {
+      process_position(std::true_type{}, position);
+    });
   } else {
-    segment_iterate<ColumnDataType>(abstract_segment,
-                                    [&](const auto& position) { process_position(std::false_type{}, position); });
+    segment_iterate<ColumnDataType>(abstract_segment, [&](const auto& position) {
+      process_position(std::false_type{}, position);
+    });
   }
 }
 
@@ -1119,18 +1140,18 @@ void AggregateHash::_write_aggregate_output(ColumnID aggregate_index) {
   auto excluded_time = std::chrono::nanoseconds{};
   auto timer = Timer{};
 
-  // retrieve type information from the aggregation traits
-  typename WindowFunctionTraits<ColumnDataType, aggregate_function>::ReturnType aggregate_type;
-  auto RESULT_TYPE = WindowFunctionTraits<ColumnDataType, aggregate_function>::RESULT_TYPE;
+  // Retrieve type information from the aggregation traits.
+  using aggregate_type = typename WindowFunctionTraits<ColumnDataType, aggregate_function>::ReturnType;
+  auto result_type = WindowFunctionTraits<ColumnDataType, aggregate_function>::RESULT_TYPE;
 
   const auto& aggregate = _aggregates[aggregate_index];
 
   const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->argument());
   const auto input_column_id = pqp_column.column_id;
 
-  if (RESULT_TYPE == DataType::Null) {
+  if (result_type == DataType::Null) {
     // if not specified, it’s the input column’s type
-    RESULT_TYPE = left_input_table()->column_data_type(input_column_id);
+    result_type = left_input_table()->column_data_type(input_column_id);
   }
 
   auto context = std::static_pointer_cast<AggregateResultContext<ColumnDataType, aggregate_function>>(
@@ -1158,17 +1179,17 @@ void AggregateHash::_write_aggregate_output(ColumnID aggregate_index) {
   // Write aggregated values into the segment. While write_aggregate_values could track if an actual NULL value was
   // written or not, we rather make the output types consistent independent of the input types. Not sure what the
   // standard says about this.
-  auto values = pmr_vector<decltype(aggregate_type)>{};
+  auto values = pmr_vector<aggregate_type>{};
   auto null_values = pmr_vector<bool>{};
 
   constexpr auto NEEDS_NULL =
       (aggregate_function != WindowFunction::Count && aggregate_function != WindowFunction::CountDistinct);
 
-  write_aggregate_values<ColumnDataType, decltype(aggregate_type), aggregate_function>(values, null_values, results);
+  write_aggregate_values<ColumnDataType, aggregate_type, aggregate_function>(values, null_values, results);
 
   if (_groupby_column_ids.empty() && values.empty()) {
     // If we did not GROUP BY anything and we have no results, we need to add NULL for most aggregates and 0 for count
-    values.push_back(decltype(aggregate_type){});
+    values.push_back(aggregate_type{});
     if (NEEDS_NULL) {
       null_values.push_back(true);
     }
@@ -1177,14 +1198,13 @@ void AggregateHash::_write_aggregate_output(ColumnID aggregate_index) {
   DebugAssert(NEEDS_NULL || null_values.empty(), "write_aggregate_values unexpectedly wrote NULL values.");
   const auto output_column_id = _groupby_column_ids.size() + aggregate_index;
   _output_column_definitions[output_column_id] =
-      TableColumnDefinition{aggregate->as_column_name(), RESULT_TYPE, NEEDS_NULL};
+      TableColumnDefinition{aggregate->as_column_name(), result_type, NEEDS_NULL};
 
-  auto output_segment = std::shared_ptr<ValueSegment<decltype(aggregate_type)>>{};
+  auto output_segment = std::shared_ptr<ValueSegment<aggregate_type>>{};
   if (!NEEDS_NULL) {
-    output_segment = std::make_shared<ValueSegment<decltype(aggregate_type)>>(std::move(values));
+    output_segment = std::make_shared<ValueSegment<aggregate_type>>(std::move(values));
   } else {
-    output_segment =
-        std::make_shared<ValueSegment<decltype(aggregate_type)>>(std::move(values), std::move(null_values));
+    output_segment = std::make_shared<ValueSegment<aggregate_type>>(std::move(values), std::move(null_values));
   }
   _output_segments[output_column_id] = output_segment;
 

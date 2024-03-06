@@ -1,5 +1,12 @@
 #pragma once
 
+#include <memory>
+#include <mutex>
+#include <string>
+#include <unordered_set>
+#include <utility>
+#include <vector>
+
 #include "expression/abstract_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "storage/table.hpp"

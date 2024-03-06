@@ -8,7 +8,6 @@
 #include <vector>
 
 #include "base_test.hpp"
-
 #include "storage/index/group_key/variable_length_key_base.hpp"
 #include "types.hpp"
 

@@ -1,22 +1,43 @@
 #include "ucc_discovery_plugin.hpp"
 
+#include <algorithm>
+#include <cstddef>
+#include <cstdint>
+#include <functional>
+#include <memory>
+#include <optional>
+#include <sstream>
+#include <string>
+#include <unordered_set>
+#include <utility>
+#include <vector>
+
 #include <boost/container_hash/hash.hpp>
 
+// NOLINTNEXTLINE(misc-include-cleaner): We access methods of AbstractBenchmarkItemRunner in `pre_benchmark_hook()`.
 #include "../benchmarklib/abstract_benchmark_item_runner.hpp"
 #include "expression/binary_predicate_expression.hpp"
 #include "expression/expression_utils.hpp"
+#include "expression/lqp_column_expression.hpp"
 #include "expression/value_expression.hpp"
 #include "hyrise.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
-#include "magic_enum.hpp"
 #include "resolve_type.hpp"
+#include "storage/constraints/table_key_constraint.hpp"
+#include "storage/dictionary_segment.hpp"
 #include "storage/fixed_string_dictionary_segment.hpp"
 #include "storage/segment_iterate.hpp"
-#include "utils/format_duration.hpp"
+#include "storage/table.hpp"
+#include "storage/value_segment.hpp"
+#include "types.hpp"
+#include "utils/abstract_plugin.hpp"
+#include "utils/assert.hpp"
+#include "utils/log_manager.hpp"
 #include "utils/timer.hpp"
 
 namespace hyrise {
@@ -33,7 +54,8 @@ bool UccCandidate::operator!=(const UccCandidate& other) const {
 }
 
 size_t UccCandidate::hash() const {
-  auto hash = boost::hash_value(table_name);
+  auto hash = size_t{0};
+  boost::hash_combine(hash, table_name);
   boost::hash_combine(hash, column_id);
   return hash;
 }
@@ -48,7 +70,9 @@ void UccDiscoveryPlugin::stop() {}
 
 std::vector<std::pair<PluginFunctionName, PluginFunctionPointer>>
 UccDiscoveryPlugin::provided_user_executable_functions() {
-  return {{"DiscoverUCCs", [&]() { _validate_ucc_candidates(_identify_ucc_candidates()); }}};
+  return {{"DiscoverUCCs", [&]() {
+             _validate_ucc_candidates(_identify_ucc_candidates());
+           }}};
 }
 
 std::optional<PreBenchmarkHook> UccDiscoveryPlugin::pre_benchmark_hook() {

@@ -1,15 +1,26 @@
 #include "limit.hpp"
 
 #include <algorithm>
+#include <cstddef>
 #include <memory>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
+#include "all_type_variant.hpp"
+#include "expression/abstract_expression.hpp"
 #include "expression/evaluation/expression_evaluator.hpp"
 #include "expression/expression_utils.hpp"
+#include "operators/abstract_operator.hpp"
+#include "operators/abstract_read_only_operator.hpp"
+#include "resolve_type.hpp"
+#include "storage/chunk.hpp"
+#include "storage/pos_lists/row_id_pos_list.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/table.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 
@@ -102,7 +113,7 @@ std::shared_ptr<const Table> Limit::_on_execute() {
 
     index += output_chunk_row_count;
     auto output_chunk = std::make_shared<Chunk>(std::move(output_segments));
-    output_chunk->finalize();
+    output_chunk->set_immutable();
     // The limit operator does not affect sorted_by property. If a chunk was sorted before, it still is after the limit
     // operator.
     const auto& sorted_by = input_chunk->individually_sorted_by();

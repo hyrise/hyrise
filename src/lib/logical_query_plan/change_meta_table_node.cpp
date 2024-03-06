@@ -1,5 +1,17 @@
 #include "change_meta_table_node.hpp"
 
+#include <cstddef>
+#include <memory>
+#include <ostream>
+#include <sstream>
+#include <string>
+
+#include <boost/container_hash/hash.hpp>
+
+#include "logical_query_plan/abstract_lqp_node.hpp"
+#include "logical_query_plan/abstract_non_query_node.hpp"
+#include "types.hpp"
+
 namespace hyrise {
 
 ChangeMetaTableNode::ChangeMetaTableNode(const std::string& init_table_name,
@@ -19,7 +31,8 @@ std::shared_ptr<AbstractLQPNode> ChangeMetaTableNode::_on_shallow_copy(LQPNodeMa
 }
 
 size_t ChangeMetaTableNode::_on_shallow_hash() const {
-  auto hash = boost::hash_value(table_name);
+  auto hash = size_t{0};
+  boost::hash_combine(hash, table_name);
   boost::hash_combine(hash, change_type);
   return hash;
 }

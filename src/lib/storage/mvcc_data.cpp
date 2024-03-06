@@ -1,6 +1,13 @@
 #include "mvcc_data.hpp"
 
+#include <atomic>
+#include <cstddef>
+#include <cstdint>
+#include <ostream>
+
+#include "types.hpp"
 #include "utils/assert.hpp"
+#include "utils/copyable_atomic.hpp"
 
 namespace hyrise {
 
@@ -18,19 +25,19 @@ std::ostream& operator<<(std::ostream& stream, const MvccData& mvcc_data) {
   for (const auto& tid : mvcc_data._tids) {
     stream << tid.load() << ", ";
   }
-  stream << std::endl;
+  stream << '\n';
 
   stream << "BeginCIDs: ";
   for (const auto& begin_cid : mvcc_data._begin_cids) {
     stream << begin_cid << ", ";
   }
-  stream << std::endl;
+  stream << '\n';
 
   stream << "EndCIDs: ";
   for (const auto& end_cid : mvcc_data._end_cids) {
     stream << end_cid << ", ";
   }
-  stream << std::endl;
+  stream << '\n';
 
   return stream;
 }
@@ -75,12 +82,24 @@ bool MvccData::compare_exchange_tid(const ChunkOffset offset, TransactionID expe
 }
 
 size_t MvccData::memory_usage() const {
-  auto bytes = size_t{0};
-  bytes += sizeof(_tids) + sizeof(_begin_cids) + sizeof(_end_cids);  // NOLINT
-  bytes += _tids.size() * sizeof(decltype(_tids)::value_type);
-  bytes += _begin_cids.size() * sizeof(decltype(_begin_cids)::value_type);
-  bytes += _end_cids.size() * sizeof(decltype(_end_cids)::value_type);
+  auto bytes = sizeof(*this);
+  bytes += _tids.capacity() * sizeof(decltype(_tids)::value_type);
+  bytes += _begin_cids.capacity() * sizeof(decltype(_begin_cids)::value_type);
+  bytes += _end_cids.capacity() * sizeof(decltype(_end_cids)::value_type);
   return bytes;
+}
+
+void MvccData::register_insert() {
+  ++_pending_inserts;
+}
+
+void MvccData::deregister_insert() {
+  const auto remaining_inserts = _pending_inserts--;
+  Assert(remaining_inserts > 0, "Cannot decrement active insert count when no active inserts are left.");
+}
+
+uint32_t MvccData::pending_inserts() const {
+  return _pending_inserts.load();
 }
 
 }  // namespace hyrise

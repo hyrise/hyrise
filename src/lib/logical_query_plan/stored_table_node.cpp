@@ -1,14 +1,28 @@
 #include "stored_table_node.hpp"
 
-#include "expression/expression_functional.hpp"
+#include <algorithm>
+#include <cstddef>
+#include <memory>
+#include <ostream>
+#include <set>
+#include <sstream>
+#include <string>
+#include <utility>
+#include <vector>
+
+#include <boost/container_hash/hash.hpp>
+
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_column_expression.hpp"
 #include "hyrise.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
+#include "logical_query_plan/data_dependencies/order_dependency.hpp"
+#include "logical_query_plan/data_dependencies/unique_column_combination.hpp"
 #include "lqp_utils.hpp"
-#include "statistics/table_statistics.hpp"
 #include "storage/index/chunk_index_statistics.hpp"
+#include "storage/index/table_index_statistics.hpp"
 #include "storage/storage_manager.hpp"
-#include "storage/table.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/pruning_utils.hpp"
 
@@ -16,16 +30,16 @@ namespace {
 
 using namespace hyrise;  // NOLINT(build/namespaces)
 
-bool contains_any_column_id(const std::set<ColumnID>& search_columns, const std::vector<ColumnID>& columns) {
-  return std::any_of(columns.cbegin(), columns.cend(),
-                     [&](const auto& column_id) { return search_columns.contains(column_id); });
+template <typename ColumnIDs>
+bool contains_any_column_id(const ColumnIDs& search_columns, const std::vector<ColumnID>& columns) {
+  return std::any_of(columns.cbegin(), columns.cend(), [&](const auto& column_id) {
+    return std::find(search_columns.cbegin(), search_columns.cend(), column_id) != search_columns.cend();
+  });
 }
 
 }  // namespace
 
 namespace hyrise {
-
-using namespace expression_functional;  // NOLINT(build/namespaces)
 
 StoredTableNode::StoredTableNode(const std::string& init_table_name)
     : AbstractLQPNode(LQPNodeType::StoredTable), table_name(init_table_name) {}
@@ -71,7 +85,9 @@ const std::vector<ColumnID>& StoredTableNode::pruned_column_ids() const {
 void StoredTableNode::set_prunable_subquery_predicates(
     const std::vector<std::weak_ptr<AbstractLQPNode>>& predicate_nodes) {
   DebugAssert(std::all_of(predicate_nodes.cbegin(), predicate_nodes.cend(),
-                          [](const auto& node) { return node.lock() && node.lock()->type == LQPNodeType::Predicate; }),
+                          [](const auto& node) {
+                            return node.lock() && node.lock()->type == LQPNodeType::Predicate;
+                          }),
               "No PredicateNode set as prunable predicate.");
   _prunable_subquery_predicates = predicate_nodes;
 }
@@ -125,15 +141,44 @@ UniqueColumnCombinations StoredTableNode::unique_column_combinations() const {
     }
 
     // Search for expressions representing the key constraint's ColumnIDs.
-    const auto& column_expressions = find_column_expressions(*this, table_key_constraint.columns());
+    auto column_expressions = get_expressions_for_column_ids(*this, table_key_constraint.columns());
     DebugAssert(column_expressions.size() == table_key_constraint.columns().size(),
                 "Unexpected count of column expressions.");
 
-    // Create UniqueColumnCombination
-    unique_column_combinations.emplace(column_expressions);
+    // Create UniqueColumnCombination.
+    unique_column_combinations.emplace(std::move(column_expressions));
   }
 
   return unique_column_combinations;
+}
+
+OrderDependencies StoredTableNode::order_dependencies() const {
+  auto order_dependencies = OrderDependencies{};
+
+  // We create order dependencies from table order constraints.
+  const auto& table = Hyrise::get().storage_manager.get_table(table_name);
+  const auto& table_order_constraints = table->soft_order_constraints();
+
+  for (const auto& table_order_constraint : table_order_constraints) {
+    // Discard order constraints that involve pruned column id(s). [a] |-> [b, c] could be transformed to [a] |-> [b] if
+    // c is pruned. We ignore this for now.
+    if (contains_any_column_id(table_order_constraint.ordering_columns(), _pruned_column_ids) ||
+        contains_any_column_id(table_order_constraint.ordered_columns(), _pruned_column_ids)) {
+      continue;
+    }
+
+    // Search for expressions representing the order constraint's ColumnIDs.
+    auto column_expressions = get_expressions_for_column_ids(*this, table_order_constraint.ordering_columns());
+    auto ordered_column_expressions = get_expressions_for_column_ids(*this, table_order_constraint.ordered_columns());
+
+    // Create OrderDependency.
+    order_dependencies.emplace(std::move(column_expressions), std::move(ordered_column_expressions));
+  }
+
+  // Construct transitive ODs. For instance, create [a] |-> [c] from [a] |-> [b] and [b] |-> [c].
+  build_transitive_od_closure(order_dependencies);
+
+  return order_dependencies;
 }
 
 std::vector<ChunkIndexStatistics> StoredTableNode::chunk_indexes_statistics() const {
@@ -207,10 +252,10 @@ size_t StoredTableNode::_on_shallow_hash() const {
   auto hash = size_t{0};
   boost::hash_combine(hash, table_name);
   for (const auto& pruned_chunk_id : _pruned_chunk_ids) {
-    boost::hash_combine(hash, static_cast<size_t>(pruned_chunk_id));
+    boost::hash_combine(hash, pruned_chunk_id);
   }
   for (const auto& pruned_column_id : _pruned_column_ids) {
-    boost::hash_combine(hash, static_cast<size_t>(pruned_column_id));
+    boost::hash_combine(hash, pruned_column_id);
   }
   // We intentionally force a hash collision for StoredTableNodes with the same number of prunable subquery predicates
   // even though these predicates are different. Since we assume that (i) these predicates are not often set and (ii) we

@@ -2,7 +2,6 @@
 #include <string_view>
 
 #include "base_test.hpp"
-
 #include "storage/fixed_string_dictionary_segment/fixed_string.hpp"
 
 namespace hyrise {

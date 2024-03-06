@@ -1,8 +1,4 @@
-#include <memory>
-#include <vector>
-
 #include "base_test.hpp"
-
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/mock_node.hpp"
@@ -69,6 +65,10 @@ TEST_F(UpdateNodeTest, ColumnExpressions) {
 
 TEST_F(UpdateNodeTest, NoUniqueColumnCombinations) {
   EXPECT_THROW(_update_node->unique_column_combinations(), std::logic_error);
+}
+
+TEST_F(UpdateNodeTest, NoOrderDependencies) {
+  EXPECT_THROW(_update_node->order_dependencies(), std::logic_error);
 }
 
 }  // namespace hyrise

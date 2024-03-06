@@ -1,5 +1,6 @@
-#include "base_test.hpp"
+#include "nlohmann/json.hpp"
 
+#include "base_test.hpp"
 #include "import_export/csv/csv_meta.hpp"
 
 namespace hyrise {
@@ -40,7 +41,7 @@ TEST_F(CsvMetaTest, ParseConfigOnlySingleCharacters) {
     }
   )");
 
-  CsvMeta meta;
+  auto meta = CsvMeta{};
   EXPECT_THROW(from_json(json_meta, meta), std::logic_error);
 }
 
@@ -51,7 +52,7 @@ TEST_F(CsvMetaTest, ColumnsMustBeArray) {
     }
   )");
 
-  CsvMeta meta;
+  auto meta = CsvMeta{};
   EXPECT_THROW(from_json(json_meta, meta), std::logic_error);
 }
 
