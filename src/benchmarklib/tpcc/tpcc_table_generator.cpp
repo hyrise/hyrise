@@ -733,11 +733,12 @@ void TPCCTableGenerator::_add_constraints(
   foreign_key_constraint(district_table, {"D_W_ID"}, warehouse_table, {"W_ID"});
 
   // CUSTOMER - 1 composite PK, 1 composite FK.
-  primary_key_constraint(customer_table, {"C_W_ID", "C_D_ID"});
+  primary_key_constraint(customer_table, {"C_W_ID", "C_D_ID", "C_ID"});
   foreign_key_constraint(customer_table, {"C_W_ID", "C_D_ID"}, district_table, {"D_W_ID", "D_ID"});
 
   // HISTORY - 2 composite FKs.
-  foreign_key_constraint(history_table, {"H_C_W_ID", "H_C_D_ID"}, customer_table, {"C_W_ID", "C_D_ID"});
+  foreign_key_constraint(history_table, {"H_C_W_ID", "H_C_D_ID", "H_C_ID"}, customer_table,
+                         {"C_W_ID", "C_D_ID", "C_ID"});
   foreign_key_constraint(history_table, {"H_W_ID", "H_D_ID"}, district_table, {"D_W_ID", "D_ID"});
 
   // NEW_ORDER - 1 composite PK, 1 composite FK.

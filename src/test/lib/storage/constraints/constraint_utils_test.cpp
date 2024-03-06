@@ -45,7 +45,7 @@ TEST_F(ConstraintUtilsTest, TableKeyConstraint) {
   // There is already a primary key set.
   EXPECT_THROW(primary_key_constraint(_table_a, {"e"}), std::logic_error);
 
-  // Table ist not set.
+  // Table is not set.
   EXPECT_THROW(unique_constraint(nullptr, {"a"}), std::logic_error);
 
   // Columns are empty.
@@ -81,7 +81,7 @@ TEST_F(ConstraintUtilsTest, ForeignKeyConstraint) {
   EXPECT_THROW(foreign_key_constraint(_table_a, {"c", "d"}, _table_b, {"y"}), std::logic_error);
   EXPECT_THROW(foreign_key_constraint(_table_a, {"c"}, _table_b, {"x", "y"}), std::logic_error);
 
-  // Table ist not set.
+  // Table is not set.
   EXPECT_THROW(foreign_key_constraint(nullptr, {"c"}, _table_b, {"y"}), std::logic_error);
   EXPECT_THROW(foreign_key_constraint(_table_a, {"c"}, nullptr, {"y"}), std::logic_error);
 
@@ -109,7 +109,7 @@ TEST_F(ConstraintUtilsTest, TableOrderConstraint) {
   EXPECT_TRUE(_table_a->soft_order_constraints().contains(
       TableOrderConstraint({ColumnID{0}, ColumnID{1}}, {ColumnID{2}, ColumnID{3}})));
 
-  // Table ist not set.
+  // Table is not set.
   EXPECT_THROW(order_constraint(nullptr, {"e"}, {"f"}), std::logic_error);
 
   // Columns are empty.
