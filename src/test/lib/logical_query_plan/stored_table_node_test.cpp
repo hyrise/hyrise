@@ -462,8 +462,8 @@ TEST_F(StoredTableNodeTest, OrderDependenciesSimple) {
   EXPECT_TRUE(_stored_table_node->order_dependencies().empty());
 
   // Create ODs from order constraints.
-  _table_a->add_soft_order_constraint({{ColumnID{0}}, {ColumnID{1}}});
-  _table_a->add_soft_order_constraint({{ColumnID{0}}, {ColumnID{2}}});
+  _table_a->add_soft_constraint(TableOrderConstraint{{ColumnID{0}}, {ColumnID{1}}});
+  _table_a->add_soft_constraint(TableOrderConstraint{{ColumnID{0}}, {ColumnID{2}}});
   EXPECT_EQ(_table_a->soft_order_constraints().size(), 2);
 
   const auto& order_dependencies = _stored_table_node->order_dependencies();
@@ -474,8 +474,8 @@ TEST_F(StoredTableNodeTest, OrderDependenciesSimple) {
 
 TEST_F(StoredTableNodeTest, OrderDependenciesPrunedColumns) {
   // Discard ODs that involve pruned columns.
-  _table_a->add_soft_order_constraint({{ColumnID{0}}, {ColumnID{1}}});
-  _table_a->add_soft_order_constraint({{ColumnID{0}}, {ColumnID{2}}});
+  _table_a->add_soft_constraint(TableOrderConstraint{{ColumnID{0}}, {ColumnID{1}}});
+  _table_a->add_soft_constraint(TableOrderConstraint{{ColumnID{0}}, {ColumnID{2}}});
   EXPECT_EQ(_table_a->soft_order_constraints().size(), 2);
 
   _stored_table_node->set_pruned_column_ids({ColumnID{0}, ColumnID{2}});
@@ -486,9 +486,9 @@ TEST_F(StoredTableNodeTest, OrderDependenciesTransitive) {
   // Construct transitive ODs and check that no cycles are added. Ensure that there are no ODs where a column is on the
   // left and right side. The example adds [a] |-> [b], [b] |-> [c], and [c] |-> [a]. Make sure the transitive OD
   // creation does not loop over this cycle over and over again.
-  _table_a->add_soft_order_constraint({{ColumnID{0}}, {ColumnID{1}}});
-  _table_a->add_soft_order_constraint({{ColumnID{1}}, {ColumnID{2}}});
-  _table_a->add_soft_order_constraint({{ColumnID{2}}, {ColumnID{0}}});
+  _table_a->add_soft_constraint(TableOrderConstraint{{ColumnID{0}}, {ColumnID{1}}});
+  _table_a->add_soft_constraint(TableOrderConstraint{{ColumnID{1}}, {ColumnID{2}}});
+  _table_a->add_soft_constraint(TableOrderConstraint{{ColumnID{2}}, {ColumnID{0}}});
   EXPECT_EQ(_table_a->soft_order_constraints().size(), 3);
 
   const auto& order_dependencies = _stored_table_node->order_dependencies();
@@ -519,7 +519,7 @@ TEST_F(StoredTableNodeTest, HasMatchingOrderDependency) {
   const auto e = stored_table_node->get_column("e");
 
   const auto order_constraint = TableOrderConstraint{{ColumnID{0}, ColumnID{1}}, {ColumnID{2}, ColumnID{3}}};
-  table_c->add_soft_order_constraint(order_constraint);
+  table_c->add_soft_constraint(order_constraint);
   EXPECT_EQ(stored_table_node->order_dependencies().size(), 1);
 
   // Negative tests.
