@@ -100,4 +100,18 @@ TEST_F(AliasNodeTest, UniqueColumnCombinationsForwarding) {
   EXPECT_TRUE(find_ucc_by_key_constraint(key_constraint_b, unique_column_combinations));
 }
 
+TEST_F(AliasNodeTest, ForwardOrderDependencies) {
+  EXPECT_TRUE(mock_node->order_dependencies().empty());
+  EXPECT_TRUE(alias_node->order_dependencies().empty());
+
+  const auto od = OrderDependency{{a}, {b}};
+  const auto order_constraint = TableOrderConstraint{{ColumnID{0}}, {ColumnID{1}}};
+  mock_node->set_order_constraints({order_constraint});
+  EXPECT_EQ(mock_node->order_dependencies().size(), 1);
+
+  const auto& order_dependencies = alias_node->order_dependencies();
+  EXPECT_EQ(order_dependencies.size(), 1);
+  EXPECT_TRUE(order_dependencies.contains(od));
+}
+
 }  // namespace hyrise

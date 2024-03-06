@@ -23,6 +23,8 @@ class WindowNode : public EnableMakeForLQPNode<WindowNode>, public AbstractLQPNo
   // Forwards left input node's unique column combinations.
   UniqueColumnCombinations unique_column_combinations() const override;
 
+  OrderDependencies order_dependencies() const override;
+
  protected:
   size_t _on_shallow_hash() const override;
   std::shared_ptr<AbstractLQPNode> _on_shallow_copy(LQPNodeMapping& node_mapping) const override;

@@ -10,7 +10,7 @@ enum class TableConstraintType { Key, ForeignKey, Order };
  * Abstract container class for the definition of table constraints. Subclasses should leverage the OOP structure to add
  * additional fields. Besides columns of a stored table, these fields may include check definitions and referenced keys,
  * e.g., for CHECK and FOREIGN KEY constraint implementations.
- * 
+ *
  * We use table constraints to persist data dependencies. They are not enforced on the table data but describe specific
  * properties of and relationships within data. The main purpose of tracking table constraints is to translate them into
  * data dependencies on the LQP level. Using these data dependencies, we perform dedicated dependency-based query

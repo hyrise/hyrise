@@ -6,6 +6,7 @@
 
 #include "expression/abstract_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
+#include "logical_query_plan/data_dependencies/order_dependency.hpp"
 #include "logical_query_plan/data_dependencies/unique_column_combination.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
@@ -28,6 +29,10 @@ bool DummyTableNode::is_column_nullable(const ColumnID /*column_id*/) const {
 
 UniqueColumnCombinations DummyTableNode::unique_column_combinations() const {
   return UniqueColumnCombinations{};
+}
+
+OrderDependencies DummyTableNode::order_dependencies() const {
+  return OrderDependencies{};
 }
 
 std::shared_ptr<AbstractLQPNode> DummyTableNode::_on_shallow_copy(LQPNodeMapping& /*node_mapping*/) const {

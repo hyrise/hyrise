@@ -12,6 +12,7 @@
 #include "expression/expression_utils.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/data_dependencies/functional_dependency.hpp"
+#include "logical_query_plan/data_dependencies/order_dependency.hpp"
 #include "logical_query_plan/data_dependencies/unique_column_combination.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
@@ -32,12 +33,12 @@ std::vector<std::shared_ptr<AbstractExpression>> UnionNode::output_expressions()
    * have performance implications now, they may arise in the future. In this case, consider relaxing the check by using
    * `DebugAssert`.
    */
-  Assert(expressions_equal(left_expressions, right_input()->output_expressions()), "Input Expressions must match");
+  Assert(expressions_equal(left_expressions, right_input()->output_expressions()), "Input Expressions must match.");
   return left_expressions;
 }
 
 bool UnionNode::is_column_nullable(const ColumnID column_id) const {
-  Assert(left_input() && right_input(), "Need both inputs to determine nullability");
+  Assert(left_input() && right_input(), "Need both inputs to determine nullability.");
 
   return left_input()->is_column_nullable(column_id) || right_input()->is_column_nullable(column_id);
 }
@@ -67,9 +68,27 @@ UniqueColumnCombinations UnionNode::unique_column_combinations() const {
       return UniqueColumnCombinations{};
     }
     case SetOperationMode::Unique:
-      Fail("ToDo, see discussion https://github.com/hyrise/hyrise/pull/2156#discussion_r452803825");
+      Fail("ToDo, see discussion: https://github.com/hyrise/hyrise/pull/2156#discussion_r452803825");
   }
-  Fail("Unhandled UnionMode");
+  Fail("Unhandled UnionMode.");
+}
+
+OrderDependencies UnionNode::order_dependencies() const {
+  switch (set_operation_mode) {
+    case SetOperationMode::Positions:
+    case SetOperationMode::All: {
+      // We can only forward ODs if the two input nodes come from the same table, i.e., they have the same output
+      // expressions. This is the case when, e.g., the results of two predicates combined with logical or are merged.
+      // Currently, Hyrise does not allow unions of different tables.
+      const auto& left_order_dependencies = _forward_left_order_dependencies();
+      Assert(left_order_dependencies == right_input()->order_dependencies(),
+             "Input tables should have the same order depedencies.");
+      return left_order_dependencies;
+    }
+    case SetOperationMode::Unique:
+      Fail("ToDo, see discussion: https://github.com/hyrise/hyrise/pull/2156#discussion_r452803825");
+  }
+  Fail("Unhandled UnionMode.");
 }
 
 FunctionalDependencies UnionNode::non_trivial_functional_dependencies() const {
@@ -99,7 +118,7 @@ FunctionalDependencies UnionNode::non_trivial_functional_dependencies() const {
       return non_trivial_fds;
     }
     default: {
-      Fail("Unhandled UnionMode");
+      Fail("Unhandled UnionMode.");
     }
   }
 }

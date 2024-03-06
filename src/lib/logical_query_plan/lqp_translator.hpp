@@ -5,7 +5,6 @@
 #include <vector>
 
 #include "abstract_lqp_node.hpp"
-#include "all_type_variant.hpp"
 #include "operators/abstract_operator.hpp"
 
 namespace hyrise {

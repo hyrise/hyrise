@@ -181,8 +181,8 @@ TEST_F(DependentGroupByReductionRuleTest, FullInconsecutiveKeyGroupBy) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-// Test whether we remove the correct columns after joining (one column of a can be moved, none of b). No projection
-// added, as root already is a projection.
+// Test whether we remove the correct columns after joining (one column of a and b's join key can be removed). No
+// projection added, as root already is a projection.
 TEST_F(DependentGroupByReductionRuleTest, JoinSingleKeyPrimaryKey) {
   // clang-format off
   const auto lqp =
@@ -194,8 +194,32 @@ TEST_F(DependentGroupByReductionRuleTest, JoinSingleKeyPrimaryKey) {
 
   const auto expected_lqp =
   ProjectionNode::make(expression_vector(add_(column_a_0, 5), add_(column_a_1, 5), sum_(column_b_2)),
-    AggregateNode::make(expression_vector(column_a_0, column_b_0, column_b_2), expression_vector(sum_(column_a_0), sum_(column_a_1), sum_(column_b_2), any_(column_a_1)),  // NOLINT(whitespace/line_length)
+    AggregateNode::make(expression_vector(column_a_0, column_b_2), expression_vector(sum_(column_a_0), sum_(column_a_1), sum_(column_b_2), any_(column_a_1), any_(column_b_0)),  // NOLINT(whitespace/line_length)
       JoinNode::make(JoinMode::Inner, equals_(column_a_0, column_b_0),
+        stored_table_node_a,
+        stored_table_node_b)));
+  // clang-format on
+
+  const auto actual_lqp = apply_rule(rule, lqp);
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+// Similar to JoinSingleKeyPrimaryKey, but we cannot get a new FD from the join keys. Thus, we cannot remove b's join
+// key.
+TEST_F(DependentGroupByReductionRuleTest, JoinSingleKeyPrimaryKeyNoEquiPredicate) {
+  // clang-format off
+  const auto lqp =
+  ProjectionNode::make(expression_vector(add_(column_a_0, 5), add_(column_a_1, 5), sum_(column_b_2)),
+    AggregateNode::make(expression_vector(column_a_0, column_b_0, column_a_1, column_b_2), expression_vector(sum_(column_a_0), sum_(column_a_1), sum_(column_b_2)),  // NOLINT(whitespace/line_length)
+      JoinNode::make(JoinMode::Inner, greater_than_(column_a_0, column_b_0),
+        stored_table_node_a,
+        stored_table_node_b)));
+
+  const auto expected_lqp =
+  ProjectionNode::make(expression_vector(add_(column_a_0, 5), add_(column_a_1, 5), sum_(column_b_2)),
+    AggregateNode::make(expression_vector(column_a_0, column_b_0, column_b_2), expression_vector(sum_(column_a_0), sum_(column_a_1), sum_(column_b_2), any_(column_a_1)),  // NOLINT(whitespace/line_length)
+      JoinNode::make(JoinMode::Inner, greater_than_(column_a_0, column_b_0),
         stored_table_node_a,
         stored_table_node_b)));
   // clang-format on
