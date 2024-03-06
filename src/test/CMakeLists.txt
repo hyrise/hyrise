@@ -44,6 +44,7 @@ set(
     lib/logical_query_plan/create_table_node_test.cpp
     lib/logical_query_plan/create_view_node_test.cpp
     lib/logical_query_plan/data_dependencies/functional_dependency_test.cpp
+    lib/logical_query_plan/data_dependencies/order_dependency_test.cpp
     lib/logical_query_plan/data_dependencies/unique_column_combination_test.cpp
     lib/logical_query_plan/delete_node_test.cpp
     lib/logical_query_plan/drop_table_node_test.cpp

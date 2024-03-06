@@ -174,7 +174,7 @@ ColumnID Table::column_id_by_name(const std::string& column_name) const {
       std::find_if(_column_definitions.begin(), _column_definitions.end(), [&](const auto& column_definition) {
         return column_definition.name == column_name;
       });
-  Assert(iter != _column_definitions.end(), "Couldn't find column '" + column_name + "'.");
+  Assert(iter != _column_definitions.end(), "Could not find column '" + column_name + "'.");
   return ColumnID{static_cast<ColumnID::base_type>(std::distance(_column_definitions.begin(), iter))};
 }
 
@@ -514,8 +514,8 @@ void Table::add_soft_order_constraint(const TableOrderConstraint& table_order_co
 
   const auto append_lock = acquire_append_mutex();
   for (const auto& existing_constraint : _table_order_constraints) {
-    // Do not allow intersecting key constraints. Though they can be valid, we are pessimistic for now and notice if we
-    // run into intricate cases.
+    // Do not allow intersecting order constraints. Though they can be valid, we are pessimistic for now and notice if
+    // we run into intricate cases.
     const auto ordering_columns_invalid =
         columns_intersect(existing_constraint.ordering_columns(), table_order_constraint.ordering_columns()) &&
         existing_constraint.ordered_columns() == table_order_constraint.ordered_columns();

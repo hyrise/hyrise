@@ -1,6 +1,3 @@
-#include <memory>
-#include <vector>
-
 #include "base_test.hpp"
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
@@ -88,6 +85,20 @@ TEST_F(SortNodeTest, ForwardUniqueColumnCombinations) {
   const auto& unique_column_combinations = _sort_node->unique_column_combinations();
   EXPECT_EQ(unique_column_combinations.size(), 1);
   EXPECT_TRUE(unique_column_combinations.contains(ucc));
+}
+
+TEST_F(SortNodeTest, ForwardOrderDependencies) {
+  EXPECT_TRUE(_table_node->order_dependencies().empty());
+  EXPECT_TRUE(_sort_node->order_dependencies().empty());
+
+  _table_a->add_soft_order_constraint({{ColumnID{0}}, {ColumnID{1}}});
+  const auto od = OrderDependency{{_a_i}, {_a_f}};
+  EXPECT_EQ(_table_node->order_dependencies().size(), 1);
+  EXPECT_TRUE(_table_node->order_dependencies().contains(od));
+
+  const auto& order_dependencies = _sort_node->order_dependencies();
+  EXPECT_EQ(order_dependencies.size(), 1);
+  EXPECT_TRUE(order_dependencies.contains(od));
 }
 
 }  // namespace hyrise

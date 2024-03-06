@@ -36,4 +36,8 @@ TEST_F(DropTableNodeTest, NoUniqueColumnCombinations) {
   EXPECT_THROW(drop_table_node->unique_column_combinations(), std::logic_error);
 }
 
+TEST_F(DropTableNodeTest, NoOrderDependencies) {
+  EXPECT_THROW(drop_table_node->order_dependencies(), std::logic_error);
+}
+
 }  // namespace hyrise

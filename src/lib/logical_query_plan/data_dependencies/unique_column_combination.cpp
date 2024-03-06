@@ -3,18 +3,17 @@
 #include <algorithm>
 #include <cstddef>
 #include <functional>
-#include <memory>
 #include <ostream>
 #include <utility>
-#include <vector>
 
 #include "expression/abstract_expression.hpp"
 #include "utils/assert.hpp"
+#include "utils/print_utils.hpp"
 
 namespace hyrise {
 
-UniqueColumnCombination::UniqueColumnCombination(ExpressionUnorderedSet init_expressions)
-    : expressions(std::move(init_expressions)) {
+UniqueColumnCombination::UniqueColumnCombination(ExpressionUnorderedSet&& init_expressions)
+    : expressions{std::move(init_expressions)} {
   Assert(!expressions.empty(), "UniqueColumnCombination cannot be empty.");
 }
 
@@ -43,12 +42,7 @@ size_t UniqueColumnCombination::hash() const {
 
 std::ostream& operator<<(std::ostream& stream, const UniqueColumnCombination& ucc) {
   stream << "{";
-  auto expressions_vector =
-      std::vector<std::shared_ptr<AbstractExpression>>{ucc.expressions.begin(), ucc.expressions.end()};
-  stream << expressions_vector.at(0)->as_column_name();
-  for (auto expression_idx = size_t{1}; expression_idx < expressions_vector.size(); ++expression_idx) {
-    stream << ", " << expressions_vector[expression_idx]->as_column_name();
-  }
+  print_expressions(ucc.expressions, stream);
   stream << "}";
 
   return stream;

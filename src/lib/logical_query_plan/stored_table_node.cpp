@@ -7,6 +7,7 @@
 #include <set>
 #include <sstream>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <boost/container_hash/hash.hpp>
@@ -15,6 +16,7 @@
 #include "expression/lqp_column_expression.hpp"
 #include "hyrise.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
+#include "logical_query_plan/data_dependencies/order_dependency.hpp"
 #include "logical_query_plan/data_dependencies/unique_column_combination.hpp"
 #include "lqp_utils.hpp"
 #include "storage/index/chunk_index_statistics.hpp"
@@ -28,9 +30,10 @@ namespace {
 
 using namespace hyrise;  // NOLINT(build/namespaces)
 
-bool contains_any_column_id(const std::set<ColumnID>& search_columns, const std::vector<ColumnID>& columns) {
+template <typename ColumnIDs>
+bool contains_any_column_id(const ColumnIDs& search_columns, const std::vector<ColumnID>& columns) {
   return std::any_of(columns.cbegin(), columns.cend(), [&](const auto& column_id) {
-    return search_columns.contains(column_id);
+    return std::find(search_columns.cbegin(), search_columns.cend(), column_id) != search_columns.cend();
   });
 }
 
@@ -138,15 +141,44 @@ UniqueColumnCombinations StoredTableNode::unique_column_combinations() const {
     }
 
     // Search for expressions representing the key constraint's ColumnIDs.
-    const auto& column_expressions = find_column_expressions(*this, table_key_constraint.columns());
+    auto column_expressions = get_expressions_for_column_ids(*this, table_key_constraint.columns());
     DebugAssert(column_expressions.size() == table_key_constraint.columns().size(),
                 "Unexpected count of column expressions.");
 
-    // Create UniqueColumnCombination
-    unique_column_combinations.emplace(column_expressions);
+    // Create UniqueColumnCombination.
+    unique_column_combinations.emplace(std::move(column_expressions));
   }
 
   return unique_column_combinations;
+}
+
+OrderDependencies StoredTableNode::order_dependencies() const {
+  auto order_dependencies = OrderDependencies{};
+
+  // We create order dependencies from table order constraints.
+  const auto& table = Hyrise::get().storage_manager.get_table(table_name);
+  const auto& table_order_constraints = table->soft_order_constraints();
+
+  for (const auto& table_order_constraint : table_order_constraints) {
+    // Discard order constraints that involve pruned column id(s). [a] |-> [b, c] could be transformed to [a] |-> [b] if
+    // c is pruned. We ignore this for now.
+    if (contains_any_column_id(table_order_constraint.ordering_columns(), _pruned_column_ids) ||
+        contains_any_column_id(table_order_constraint.ordered_columns(), _pruned_column_ids)) {
+      continue;
+    }
+
+    // Search for expressions representing the order constraint's ColumnIDs.
+    auto column_expressions = get_expressions_for_column_ids(*this, table_order_constraint.ordering_columns());
+    auto ordered_column_expressions = get_expressions_for_column_ids(*this, table_order_constraint.ordered_columns());
+
+    // Create OrderDependency.
+    order_dependencies.emplace(std::move(column_expressions), std::move(ordered_column_expressions));
+  }
+
+  // Construct transitive ODs. For instance, create [a] |-> [c] from [a] |-> [b] and [b] |-> [c].
+  build_transitive_od_closure(order_dependencies);
+
+  return order_dependencies;
 }
 
 std::vector<ChunkIndexStatistics> StoredTableNode::chunk_indexes_statistics() const {

@@ -12,9 +12,9 @@
 namespace hyrise {
 
 CsvMeta process_csv_meta_file(const std::string& filename) {
-  std::ifstream metafile{filename};
+  auto metafile = std::ifstream{filename};
   Assert(metafile.good(), "Meta file does not exist: " + filename);
-  nlohmann::json meta_json;
+  auto meta_json = nlohmann::json{};
   metafile >> meta_json;
   return static_cast<CsvMeta>(meta_json);
 }
@@ -63,7 +63,7 @@ void to_json(nlohmann::json& json_string, NullHandling null_handling) {
 
 void from_json(const nlohmann::json& json, CsvMeta& meta) {
   // Apply only parts of the ParseConfig that are provided, use default values otherwise
-  ParseConfig config{};
+  auto config = ParseConfig{};
   if (json.find("config") != json.end()) {
     Assert(json.at("config").is_object(), "CSV meta file,\"Config\" field has to be a json object.");
     nlohmann::json config_json = json.at("config");
@@ -83,7 +83,7 @@ void from_json(const nlohmann::json& json, CsvMeta& meta) {
   if (json.find("columns") != json.end()) {
     Assert(json.at("columns").is_array(), "CSV meta file,\"Columns\" field has to be a json array.");
     for (const auto& column : json.at("columns")) {
-      ColumnMeta column_meta;
+      auto column_meta = ColumnMeta{};
       column_meta.name = column.at("name");
       column_meta.type = column.at("type");
       assign_if_exists(column_meta.nullable, column, "nullable");

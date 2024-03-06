@@ -5,7 +5,6 @@
 #include <vector>
 
 #include "abstract_lqp_node.hpp"
-#include "types.hpp"
 
 namespace hyrise {
 
@@ -22,6 +21,8 @@ class ExceptNode : public EnableMakeForLQPNode<ExceptNode>, public AbstractLQPNo
 
   // Forwards unique column combinations from the left input node.
   UniqueColumnCombinations unique_column_combinations() const override;
+
+  OrderDependencies order_dependencies() const override;
 
   // Passes FDs from the left input node.
   FunctionalDependencies non_trivial_functional_dependencies() const override;
