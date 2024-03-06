@@ -138,7 +138,7 @@ TEST_F(SemiJoinReductionRuleTest, ReductionOnlyForEquals) {
   // Similar to CreateSimpleReduction, but with one equals and one non-equals expression. Only the equals expression
   // should lead to a reduction being created.
 
-  const auto predicates = std::vector<std::shared_ptr<AbstractExpression>>{less_than_(_a_a, _b_a), equals_(_b_a, _a_a)};
+  const auto predicates = expression_vector{less_than_(_a_a, _b_a), equals_(_b_a, _a_a)};
 
   // clang-format off
   _lqp =

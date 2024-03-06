@@ -15,6 +15,7 @@
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_subquery_expression.hpp"
 #include "logical_query_plan/data_dependencies/functional_dependency.hpp"
+#include "logical_query_plan/data_dependencies/order_dependency.hpp"
 #include "logical_query_plan/data_dependencies/unique_column_combination.hpp"
 #include "lqp_utils.hpp"
 #include "predicate_node.hpp"
@@ -287,7 +288,7 @@ bool AbstractLQPNode::is_column_nullable(const ColumnID column_id) const {
 }
 
 bool AbstractLQPNode::has_matching_ucc(const ExpressionUnorderedSet& expressions) const {
-  DebugAssert(!expressions.empty(), "Invalid input. Set of expressions should not be empty.");
+  Assert(!expressions.empty(), "Invalid input. Set of expressions should not be empty.");
   DebugAssert(has_output_expressions(expressions),
               "The given expressions are not a subset of the LQP's output expressions.");
 
@@ -297,6 +298,48 @@ bool AbstractLQPNode::has_matching_ucc(const ExpressionUnorderedSet& expressions
   }
 
   return contains_matching_unique_column_combination(unique_column_combinations, expressions);
+}
+
+bool AbstractLQPNode::has_matching_od(
+    const std::vector<std::shared_ptr<AbstractExpression>>& ordering_expressions,
+    const std::vector<std::shared_ptr<AbstractExpression>>& ordered_expressions) const {
+  Assert(!ordering_expressions.empty(), "Invalid input. List of ordering expressions should not be empty.");
+  DebugAssert(has_output_expressions({ordering_expressions.cbegin(), ordering_expressions.cend()}),
+              "The given ordering expressions are not a subset of the LQP's output expressions.");
+  Assert(!ordered_expressions.empty(), "Invalid input. List of ordered expressions should not be empty.");
+  DebugAssert(has_output_expressions({ordered_expressions.cbegin(), ordered_expressions.cend()}),
+              "The given ordered expressions are not a subset of the LQP's output expressions.");
+
+  const auto& order_dependencies = this->order_dependencies();
+  if (order_dependencies.empty()) {
+    return false;
+  }
+
+  for (const auto& od : order_dependencies) {
+    // Continue if OD requires more ordering expressions to guarantee sortedness than provided.
+    if (od.ordering_expressions.size() > ordering_expressions.size()) {
+      continue;
+    }
+
+    // Continue if the OD's ordering expression are not the first of the provided expressions. It is totally fine if
+    // the OD requires fewer ordering expressions than given.
+    if (!expression_list_is_prefix(od.ordering_expressions, ordering_expressions)) {
+      continue;
+    }
+
+    // Continue if more ordered expressions are requested than OD guarantees.
+    if (ordered_expressions.size() > od.ordered_expressions.size()) {
+      continue;
+    }
+
+    // Found matching OD if the requested ordered expressions are the first of the OD's ordered expressions. Totally
+    // fine if the OD orders more expressions that requested.
+    if (expression_list_is_prefix(ordered_expressions, od.ordered_expressions)) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 FunctionalDependencies AbstractLQPNode::functional_dependencies() const {
@@ -325,14 +368,22 @@ FunctionalDependencies AbstractLQPNode::functional_dependencies() const {
     }
   }
 
-  // (2) Derive trivial FDs from the node's unique column combinations.
+  // (2) Derive trivial FDs from the node's unique column combinations and order dependencies.
   const auto& unique_column_combinations = this->unique_column_combinations();
-  // Early exit if there are no UCCs.
-  if (unique_column_combinations.empty()) {
+  const auto& order_dependencies = this->order_dependencies();
+  // Early exit if there are no UCCs and ODs.
+  if (unique_column_combinations.empty() && order_dependencies.empty()) {
     return non_trivial_fds;
   }
 
-  const auto& trivial_fds = fds_from_unique_column_combinations(shared_from_this(), unique_column_combinations);
+  auto trivial_fds = FunctionalDependencies{};
+  if (!unique_column_combinations.empty()) {
+    trivial_fds = fds_from_unique_column_combinations(shared_from_this(), unique_column_combinations);
+  }
+
+  if (!order_dependencies.empty()) {
+    trivial_fds = union_fds(trivial_fds, fds_from_order_dependencies(shared_from_this(), order_dependencies));
+  }
 
   // (3) Merge and return FDs.
   return union_fds(non_trivial_fds, trivial_fds);
@@ -429,13 +480,29 @@ UniqueColumnCombinations AbstractLQPNode::_forward_left_unique_column_combinatio
   const auto& input_unique_column_combinations = left_input()->unique_column_combinations();
 
   if constexpr (HYRISE_DEBUG) {
-    // Check whether output expressions are missing
+    // Check whether output expressions are missing.
     for (const auto& ucc : input_unique_column_combinations) {
       Assert(has_output_expressions(ucc.expressions),
              "Forwarding of UCC is illegal because node misses output expressions.");
     }
   }
   return input_unique_column_combinations;
+}
+
+OrderDependencies AbstractLQPNode::_forward_left_order_dependencies() const {
+  Assert(left_input(), "Cannot forward order dependencies without an input node.");
+  const auto& input_order_dependencies = left_input()->order_dependencies();
+
+  if constexpr (HYRISE_DEBUG) {
+    // Check whether output expressions are missing.
+    const auto& output_expressions = this->output_expressions();
+    for (const auto& od : input_order_dependencies) {
+      Assert(contains_all_expressions(od.ordering_expressions, output_expressions) &&
+                 contains_all_expressions(od.ordered_expressions, output_expressions),
+             "Forwarding of OD is illegal because node misses output expressions.");
+    }
+  }
+  return input_order_dependencies;
 }
 
 AbstractExpression::DescriptionMode AbstractLQPNode::_expression_description_mode(const DescriptionMode mode) {

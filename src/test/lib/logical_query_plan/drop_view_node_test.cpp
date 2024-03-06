@@ -43,4 +43,8 @@ TEST_F(DropViewNodeTest, NoUniqueColumnCombinations) {
   EXPECT_THROW(_drop_view_node->unique_column_combinations(), std::logic_error);
 }
 
+TEST_F(DropViewNodeTest, NoOrderDependencies) {
+  EXPECT_THROW(_drop_view_node->order_dependencies(), std::logic_error);
+}
+
 }  // namespace hyrise

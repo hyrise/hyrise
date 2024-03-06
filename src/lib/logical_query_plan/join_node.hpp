@@ -37,6 +37,8 @@ class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
    */
   UniqueColumnCombinations unique_column_combinations() const override;
 
+  OrderDependencies order_dependencies() const override;
+
   /**
    * (a) Semi- & Anti-Joins:
    *      - Forwards left input node's non-trivial FDs

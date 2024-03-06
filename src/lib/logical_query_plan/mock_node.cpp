@@ -7,6 +7,7 @@
 #include <ostream>
 #include <sstream>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <boost/container_hash/hash.hpp>
@@ -15,11 +16,30 @@
 #include "expression/lqp_column_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/data_dependencies/functional_dependency.hpp"
+#include "logical_query_plan/data_dependencies/order_dependency.hpp"
 #include "logical_query_plan/data_dependencies/unique_column_combination.hpp"
 #include "lqp_utils.hpp"
 #include "storage/constraints/table_key_constraint.hpp"
+#include "storage/constraints/table_order_constraint.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
+
+namespace {
+
+using namespace hyrise;  // NOLINT(build/namespaces)
+
+bool contains_column(const std::vector<ColumnID>& column_ids, const ColumnID search_column_id) {
+  return std::find(column_ids.cbegin(), column_ids.cend(), search_column_id) != column_ids.cend();
+}
+
+template <typename ColumnIDs>
+bool contains_any_column(const std::vector<ColumnID>& column_ids, const ColumnIDs& search_column_ids) {
+  return std::any_of(search_column_ids.cbegin(), search_column_ids.cend(), [&](const auto column_id) {
+    return contains_column(column_ids, column_id);
+  });
+}
+
+}  // namespace
 
 namespace hyrise {
 
@@ -35,7 +55,7 @@ std::shared_ptr<LQPColumnExpression> MockNode::get_column(const std::string& col
     }
   }
 
-  Fail("Couldn't find column named '" + column_name + "' in MockNode.");
+  Fail("Could not find column named '" + column_name + "' in MockNode.");
 }
 
 const MockNode::ColumnDefinitions& MockNode::column_definitions() const {
@@ -94,7 +114,7 @@ std::string MockNode::description(const DescriptionMode /*mode*/) const {
 
   auto column_id = ColumnID{0};
   for (const auto& column : _column_definitions) {
-    if (std::find(_pruned_column_ids.begin(), _pruned_column_ids.end(), column_id) != _pruned_column_ids.end()) {
+    if (contains_column(_pruned_column_ids, column_id)) {
       ++column_id;
       continue;
     }
@@ -109,29 +129,45 @@ std::string MockNode::description(const DescriptionMode /*mode*/) const {
 
 UniqueColumnCombinations MockNode::unique_column_combinations() const {
   auto unique_column_combinations = UniqueColumnCombinations{};
-  const auto contains = [](const auto& column_ids, const auto search_column_id) {
-    return std::find(column_ids.cbegin(), column_ids.cend(), search_column_id) != column_ids.cend();
-  };
 
   for (const auto& table_key_constraint : _table_key_constraints) {
     // Discard key constraints that involve pruned column id(s).
     const auto& key_constraint_column_ids = table_key_constraint.columns();
-    if (std::any_of(key_constraint_column_ids.cbegin(), key_constraint_column_ids.cend(), [&](const auto column_id) {
-          return contains(_pruned_column_ids, column_id);
-        })) {
+    if (contains_any_column(_pruned_column_ids, key_constraint_column_ids)) {
       continue;
     }
 
     // Search for output expressions that represent the TableKeyConstraint's ColumnIDs.
-    const auto& column_expressions = find_column_expressions(*this, key_constraint_column_ids);
+    auto column_expressions = get_expressions_for_column_ids(*this, key_constraint_column_ids);
     DebugAssert(column_expressions.size() == table_key_constraint.columns().size(),
                 "Unexpected count of column expressions.");
 
     // Create UniqueColumnCombination.
-    unique_column_combinations.emplace(column_expressions);
+    unique_column_combinations.emplace(std::move(column_expressions));
   }
 
   return unique_column_combinations;
+}
+
+void MockNode::set_order_constraints(const TableOrderConstraints& order_constraints) {
+  _order_constraints = order_constraints;
+}
+
+OrderDependencies MockNode::order_dependencies() const {
+  auto order_dependencies = OrderDependencies{};
+  for (const auto& order_constraint : _order_constraints) {
+    const auto& ordering_columns = order_constraint.ordering_columns();
+    const auto& ordered_columns = order_constraint.ordered_columns();
+    // [a] |-> [b, c] could be transformed to [a] |-> [b] if c is pruned. We ignore this for now.
+    if (contains_any_column(_pruned_column_ids, ordering_columns) ||
+        contains_any_column(_pruned_column_ids, ordered_columns)) {
+      continue;
+    }
+
+    order_dependencies.emplace(get_expressions_for_column_ids(*this, ordering_columns),
+                               get_expressions_for_column_ids(*this, ordered_columns));
+  }
+  return order_dependencies;
 }
 
 const std::shared_ptr<TableStatistics>& MockNode::table_statistics() const {
@@ -175,6 +211,7 @@ std::shared_ptr<AbstractLQPNode> MockNode::_on_shallow_copy(LQPNodeMapping& /*no
   const auto mock_node = MockNode::make(_column_definitions, name);
   mock_node->set_table_statistics(_table_statistics);
   mock_node->set_key_constraints(_table_key_constraints);
+  mock_node->set_order_constraints(_order_constraints);
   mock_node->set_non_trivial_functional_dependencies(_functional_dependencies);
   mock_node->set_pruned_column_ids(_pruned_column_ids);
   return mock_node;

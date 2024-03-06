@@ -5,7 +5,6 @@
 #include <vector>
 
 #include "abstract_lqp_node.hpp"
-#include "types.hpp"
 
 namespace hyrise {
 
@@ -21,6 +20,8 @@ class SortNode : public EnableMakeForLQPNode<SortNode>, public AbstractLQPNode {
 
   // Forwards unique column combinations from the left input node.
   UniqueColumnCombinations unique_column_combinations() const override;
+
+  OrderDependencies order_dependencies() const override;
 
   const std::vector<SortMode> sort_modes;
 
