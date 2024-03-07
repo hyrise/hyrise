@@ -92,7 +92,7 @@ class LikeMatcher {
    * The functor will be called with a concrete matcher.
    * Usage example:
    *    LikeMatcher{"%hello%"}.resolve(false, [](const auto& matcher) {
-   *        std::cout << matcher("He said hello!") << '\n';
+   *        std::cout << matcher("He said hello!");
    *    }
    */
   template <typename Functor>
