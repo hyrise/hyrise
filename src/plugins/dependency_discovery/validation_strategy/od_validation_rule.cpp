@@ -174,7 +174,7 @@ ValidationStatus check_two_column_sortedness(const AbstractSegment& lhs_segment,
   auto rhs_last_value = RhsType{};
 
   segment_with_iterators<LhsType>(lhs_segment, [&](auto lhs_it, const auto& lhs_end) {
-    segment_with_iterators<RhsType>(rhs_segment, [&](auto rhs_it, const auto& rhs_end) {
+    segment_with_iterators<RhsType, EraseTypes::Always>(rhs_segment, [&](auto rhs_it, const auto& rhs_end) {
       while (lhs_it != lhs_end) {
         if (lhs_it->is_null() || rhs_it->is_null()) {
           status = ValidationStatus::Invalid;
