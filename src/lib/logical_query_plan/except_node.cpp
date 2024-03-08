@@ -12,6 +12,7 @@
 #include "expression/expression_utils.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/data_dependencies/functional_dependency.hpp"
+#include "logical_query_plan/data_dependencies/order_dependency.hpp"
 #include "logical_query_plan/data_dependencies/unique_column_combination.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
@@ -39,6 +40,10 @@ UniqueColumnCombinations ExceptNode::unique_column_combinations() const {
   // Because EXCEPT acts as a pure filter for the left input table, all unique column combinations from the left input
   // node remain valid.
   return _forward_left_unique_column_combinations();
+}
+
+OrderDependencies ExceptNode::order_dependencies() const {
+  return _forward_left_order_dependencies();
 }
 
 FunctionalDependencies ExceptNode::non_trivial_functional_dependencies() const {

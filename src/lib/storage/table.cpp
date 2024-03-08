@@ -523,8 +523,8 @@ void Table::_add_soft_order_constraint(const TableOrderConstraint& table_order_c
 
   const auto append_lock = acquire_append_mutex();
   for (const auto& existing_constraint : _table_order_constraints) {
-    // Do not allow intersecting key constraints. Though they can be valid, we are pessimistic for now and notice if we
-    // run into intricate cases.
+    // Do not allow intersecting order constraints. Though they can be valid, we are pessimistic for now and notice if
+    // we run into intricate cases.
     const auto ordering_columns_invalid =
         columns_intersect(existing_constraint.ordering_columns(), table_order_constraint.ordering_columns()) &&
         existing_constraint.ordered_columns() == table_order_constraint.ordered_columns();

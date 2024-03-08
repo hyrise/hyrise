@@ -16,7 +16,7 @@ namespace hyrise {
  *       there has been a ValidateNode before or where MVCC is disabled).
  */
 struct UniqueColumnCombination final {
-  explicit UniqueColumnCombination(ExpressionUnorderedSet init_expressions);
+  explicit UniqueColumnCombination(ExpressionUnorderedSet&& init_expressions);
 
   bool operator==(const UniqueColumnCombination& rhs) const;
   bool operator!=(const UniqueColumnCombination& rhs) const;
