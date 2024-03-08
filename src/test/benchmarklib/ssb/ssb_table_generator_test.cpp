@@ -37,8 +37,7 @@ TEST_F(SSBTableGeneratorTest, GenerateAndStoreRowCounts) {
   const auto lineorder_cardinality =
       static_cast<float>(Hyrise::get().storage_manager.get_table("lineorder")->row_count());
   const auto epsilon = 0.001;
-  EXPECT_LE(lineorder_cardinality, 6'000'000 * scale_factor * (1 + epsilon));
-  EXPECT_GE(lineorder_cardinality, 6'000'000 * scale_factor * (1 - epsilon));
+  EXPECT_NEAR(lineorder_cardinality, 6'000'000 * scale_factor * epsilon);
 }
 
 TEST_F(SSBTableGeneratorTest, TableConstraints) {

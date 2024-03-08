@@ -1242,6 +1242,10 @@ void TPCDSTableGenerator::_add_constraints(
     std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) const {
   // Set all primary (PK) and foreign keys (FK) as defined in the specification (Version 3.2.0, 2 Logical Database
   // Design, p. 23-35).
+  // The standard specifies composite PKs for [store|catalog|web]_returns, were both PK columns are also foreign keys to
+  // the respective (composite) PK column in [store|catalog|web]_sales. These FKs are not set in the TPC-DS tools.
+  // However, we stick to the specification and interpret it in a sensible way by setting a composite FK (rather than
+  // none or individual ones).
 
   // Get all tables.
   // Fact Tables (7).
@@ -1287,7 +1291,7 @@ void TPCDSTableGenerator::_add_constraints(
   primary_key_constraint(store_returns_table, {"sr_item_sk", "sr_ticket_number"});
   foreign_key_constraint(store_returns_table, {"sr_returned_date_sk"}, date_dim_table, {"d_date_sk"});
   foreign_key_constraint(store_returns_table, {"sr_return_time_sk"}, time_dim_table, {"t_time_sk"});
-  // The specification explicitly mentions the FK of sr_item_sk, sr_ticket_number as compound key to store_sales and as
+  // The specification explicitly mentions the FK of sr_item_sk, sr_ticket_number as composite key to store_sales and as
   // an FK to i_item_sk directly.
   foreign_key_constraint(store_returns_table, {"sr_item_sk", "sr_ticket_number"}, store_sales_table,
                          {"ss_item_sk", "ss_ticket_number"});
@@ -1323,8 +1327,8 @@ void TPCDSTableGenerator::_add_constraints(
   primary_key_constraint(catalog_returns_table, {"cr_item_sk", "cr_order_number"});
   foreign_key_constraint(catalog_returns_table, {"cr_returned_date_sk"}, date_dim_table, {"d_date_sk"});
   foreign_key_constraint(catalog_returns_table, {"cr_returned_time_sk"}, time_dim_table, {"t_time_sk"});
-  // The specification explicitly mentions the FK of cr_item_sk, cr_order_number as compound key to catalog_sales and as
-  // an FK to i_item_sk directly.
+  // The specification explicitly mentions the FK of cr_item_sk, cr_order_number as composite key to catalog_sales and
+  // as an FK to i_item_sk directly.
   foreign_key_constraint(catalog_returns_table, {"cr_item_sk", "cr_order_number"}, catalog_sales_table,
                          {"cs_item_sk", "cs_order_number"});
   foreign_key_constraint(catalog_returns_table, {"cr_item_sk"}, item_table, {"i_item_sk"});
@@ -1367,7 +1371,7 @@ void TPCDSTableGenerator::_add_constraints(
   primary_key_constraint(web_returns_table, {"wr_item_sk", "wr_order_number"});
   foreign_key_constraint(web_returns_table, {"wr_returned_date_sk"}, date_dim_table, {"d_date_sk"});
   foreign_key_constraint(web_returns_table, {"wr_returned_time_sk"}, time_dim_table, {"t_time_sk"});
-  // The specification explicitly mentions the FK of wr_item_sk, wr_order_number as compound key to web_sales and as an
+  // The specification explicitly mentions the FK of wr_item_sk, wr_order_number as composite key to web_sales and as an
   // FK to i_item_sk directly.
   foreign_key_constraint(web_returns_table, {"wr_item_sk", "wr_order_number"}, web_sales_table,
                          {"ws_item_sk", "ws_order_number"});
