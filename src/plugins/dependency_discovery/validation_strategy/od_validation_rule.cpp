@@ -166,6 +166,49 @@ bool check_column_sortedness(const std::shared_ptr<const Table> table, const Col
   return ordered;
 }
 
+template <typename LhsType, typename RhsType>
+ValidationStatus check_two_column_sortedness(const AbstractSegment& lhs_segment, const AbstractSegment& rhs_segment) {
+  auto status = ValidationStatus::Valid;
+  auto is_initialized = false;
+  auto lhs_last_value = LhsType{};
+  auto rhs_last_value = RhsType{};
+
+  segment_with_iterators<LhsType>(lhs_segment, [&](auto lhs_it, const auto& lhs_end) {
+    segment_with_iterators<RhsType>(rhs_segment, [&](auto rhs_it, const auto& rhs_end) {
+      while (lhs_it != lhs_end) {
+        if (lhs_it->is_null() || rhs_it->is_null()) {
+          status = ValidationStatus::Invalid;
+          return;
+        }
+
+        // We have to sort if the LHS is not sorted ascending.
+        auto lhs_value = lhs_it->value();
+        if (is_initialized && lhs_value < lhs_last_value) {
+          status = ValidationStatus::Uncertain;
+          return;
+        }
+
+        // If LHS is ascending, but RHS is not, the OD is invalid.
+        auto rhs_value = rhs_it->value();
+        if (is_initialized && rhs_value < rhs_last_value) {
+          status = ValidationStatus::Invalid;
+          return;
+        }
+
+        is_initialized = true;
+        ++lhs_it;
+        ++rhs_it;
+        lhs_last_value = std::move(lhs_value);
+        rhs_last_value = std::move(rhs_value);
+      }
+      // We did not return and LHS segment is traversed. Ensure RHS segment is also traversed.
+      Assert(rhs_it == rhs_end, "Segment sizes differ.");
+    });
+  });
+
+  return status;
+}
+
 template <typename T>
 bool add_to_index(const ChunkID chunk_id, const std::shared_ptr<const Chunk>& chunk, const ColumnID column_id,
                   std::map<T, SegmentDomainInfo>& index,
@@ -251,10 +294,26 @@ ValidationResult OdValidationRule::_on_validate(const AbstractDependencyCandidat
       status = ValidationStatus::Valid;
       const auto chunk_count = table->chunk_count();
 
-      // For tables with more chunks, check if we can order chunnks individually for result:
-      //   - For each column, domains of segments do not overlap.
-      //   - Order of segments is the same for both columns.
-      if (chunk_count > 1) {
+      if (chunk_count == 1) {
+        const auto& chunk = table->get_chunk(ChunkID{0});
+        Assert(chunk, "Did not expect empty table.");
+        const auto& ordering_segment = chunk->get_segment(ordering_column_id);
+        const auto& ordered_segment = chunk->get_segment(ordered_column_id);
+
+        // We do not need to sort if the LHS segment is already sorted.
+        const auto chunk_status = check_two_column_sortedness<OrderingColumnDataType, OrderedColumnDataType>(
+            *ordering_segment, *ordered_segment);
+        if (chunk_status == ValidationStatus::Invalid) {
+          status = ValidationStatus::Invalid;
+          return;
+        } else if (chunk_status == ValidationStatus::Valid) {
+          status = ValidationStatus::Valid;
+          return;
+        }
+      } else {
+        // For tables with more chunks, check if we can sort and check chunks individually for result:
+        //   - For each column, domains of segments do not overlap.
+        //   - Order of segments is the same for both columns.
         auto sort_column_min_max_ordered = std::map<OrderingColumnDataType, SegmentDomainInfo>{};
         auto check_column_min_max_ordered = std::map<OrderedColumnDataType, SegmentDomainInfo>{};
 
@@ -334,8 +393,20 @@ ValidationResult OdValidationRule::_on_validate(const AbstractDependencyCandidat
                 continue;
               }
 
-              auto segments_to_sort =
-                  Segments{chunk->get_segment(ordering_column_id), chunk->get_segment(ordered_column_id)};
+              const auto& ordering_segment = chunk->get_segment(ordering_column_id);
+              const auto& ordered_segment = chunk->get_segment(ordered_column_id);
+
+              // We do not need to sort if the LHS segment is already sorted.
+              const auto chunk_status = check_two_column_sortedness<OrderingColumnDataType, OrderedColumnDataType>(
+                  *ordering_segment, *ordered_segment);
+              if (chunk_status == ValidationStatus::Invalid) {
+                status = ValidationStatus::Invalid;
+                return;
+              } else if (chunk_status == ValidationStatus::Valid) {
+                continue;
+              }
+
+              auto segments_to_sort = Segments{ordering_segment, ordered_segment};
               auto chunk_to_sort = std::make_shared<Chunk>(std::move(segments_to_sort));
               auto chunks_to_sort = std::vector<std::shared_ptr<Chunk>>{std::move(chunk_to_sort)};
 
