@@ -72,8 +72,9 @@ TEST_F(TPCHTableGeneratorTest, RowCountsMediumScaleFactor) {
   EXPECT_EQ(table_info_by_name.at("nation").table->row_count(), 25);
   EXPECT_EQ(table_info_by_name.at("region").table->row_count(), 5);
   const auto lineitem_cardinality = static_cast<float>(table_info_by_name.at("lineitem").table->row_count());
+  const auto expected_cardinality = 6'000'000 * scale_factor;
   const auto epsilon = 0.001;
-  EXPECT_NEAR(lineitem_cardinality, 6'000'000 * scale_factor * epsilon);
+  EXPECT_NEAR(lineitem_cardinality, expected_cardinality, expected_cardinality * epsilon);
 }
 
 TEST_F(TPCHTableGeneratorTest, GenerateAndStore) {
