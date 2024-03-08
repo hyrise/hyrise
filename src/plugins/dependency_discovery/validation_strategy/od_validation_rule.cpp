@@ -89,12 +89,12 @@ bool sample_ordered(const std::shared_ptr<const Table>& table, const ColumnID or
   ordered_sample_values.reserve(sample_size);
 
   // Just take first SAMPLE_SIZE rows if table is small (and drawing random sample is likely slower).
-  if (row_count < OdValidationRule::MIN_SIZE_FOR_RANDOM_SAMPLE) {
+  // if (row_count < OdValidationRule::MIN_SIZE_FOR_RANDOM_SAMPLE) {
     if (!fill_sample_consecutive(table, ordering_column_id, sample_size, ordering_sample_values) ||
         !fill_sample_consecutive(table, ordered_column_id, sample_size, ordered_sample_values)) {
       return false;
     }
-  } else {
+  /*} else {
     auto random_rows = std::unordered_set<size_t>{sample_size};
     auto generator = std::mt19937{1337};
     auto distribution = std::uniform_int_distribution<size_t>{0, row_count - 1};
@@ -104,6 +104,7 @@ bool sample_ordered(const std::shared_ptr<const Table>& table, const ColumnID or
 
     auto performance_warning_disabler = PerformanceWarningDisabler{};
     for (const auto random_row : random_rows) {
+    // for (auto random_row = uint64_t{0}; random_row < OdValidationRule::MIN_SIZE_FOR_RANDOM_SAMPLE; ++random_row) {
       const auto& random_ordering_value = table->get_value<OrderingType>(ordering_column_id, random_row);
       const auto& random_ordered_value = table->get_value<OrderedType>(ordered_column_id, random_row);
       if (!random_ordering_value || !random_ordered_value) {
@@ -112,7 +113,7 @@ bool sample_ordered(const std::shared_ptr<const Table>& table, const ColumnID or
       ordering_sample_values.emplace_back(*random_ordering_value);
       ordered_sample_values.emplace_back(*random_ordered_value);
     }
-  }
+  }*/
 
   const auto& permutation = sort_permutation<OrderingType>(ordering_sample_values);
   const auto& ordered_values = apply_permutation<OrderedType>(ordered_sample_values, permutation);
