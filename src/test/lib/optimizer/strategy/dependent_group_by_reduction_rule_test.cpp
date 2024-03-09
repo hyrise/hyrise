@@ -24,7 +24,7 @@ class DependentGroupByReductionRuleTest : public StrategyBaseTest {
                                               {"column3", DataType::Int, false}};
 
     table_a = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2}, UseMvcc::Yes);
-    table_a->add_soft_key_constraint({{ColumnID{0}}, KeyConstraintType::PRIMARY_KEY});
+    table_a->add_soft_constraint(TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::PRIMARY_KEY});
     storage_manager.add_table("table_a", table_a);
     stored_table_node_a = StoredTableNode::make("table_a");
     column_a_0 = stored_table_node_a->get_column("column0");
@@ -32,7 +32,7 @@ class DependentGroupByReductionRuleTest : public StrategyBaseTest {
     column_a_2 = stored_table_node_a->get_column("column2");
 
     table_b = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2}, UseMvcc::Yes);
-    table_b->add_soft_key_constraint({{ColumnID{0}, ColumnID{1}}, KeyConstraintType::UNIQUE});
+    table_b->add_soft_constraint(TableKeyConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::UNIQUE});
     storage_manager.add_table("table_b", table_b);
     stored_table_node_b = StoredTableNode::make("table_b");
     column_b_0 = stored_table_node_b->get_column("column0");
@@ -40,7 +40,7 @@ class DependentGroupByReductionRuleTest : public StrategyBaseTest {
     column_b_2 = stored_table_node_b->get_column("column2");
 
     table_c = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2}, UseMvcc::Yes);
-    table_c->add_soft_key_constraint({{ColumnID{0}, ColumnID{2}}, KeyConstraintType::PRIMARY_KEY});
+    table_c->add_soft_constraint(TableKeyConstraint{{ColumnID{0}, ColumnID{2}}, KeyConstraintType::PRIMARY_KEY});
     storage_manager.add_table("table_c", table_c);
     stored_table_node_c = StoredTableNode::make("table_c");
     column_c_0 = stored_table_node_c->get_column("column0");
@@ -54,8 +54,8 @@ class DependentGroupByReductionRuleTest : public StrategyBaseTest {
     column_d_0 = stored_table_node_d->get_column("column0");
 
     table_e = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2}, UseMvcc::Yes);
-    table_e->add_soft_key_constraint({{ColumnID{0}, ColumnID{1}}, KeyConstraintType::PRIMARY_KEY});
-    table_e->add_soft_key_constraint({{ColumnID{2}}, KeyConstraintType::UNIQUE});
+    table_e->add_soft_constraint(TableKeyConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::PRIMARY_KEY});
+    table_e->add_soft_constraint(TableKeyConstraint{{ColumnID{2}}, KeyConstraintType::UNIQUE});
     storage_manager.add_table("table_e", table_e);
     stored_table_node_e = StoredTableNode::make("table_e");
     column_e_0 = stored_table_node_e->get_column("column0");
