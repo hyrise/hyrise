@@ -252,15 +252,15 @@ TEST_F(StoredTableNodeTest, FunctionalDependenciesNone) {
 
   // Constraint across all columns => No more columns available to create a functional dependency from
   const auto table = Hyrise::get().storage_manager.get_table("t_a");
-  table->add_soft_key_constraint(
-      {{_a->original_column_id, _b->original_column_id, _c->original_column_id}, KeyConstraintType::UNIQUE});
+  table->add_soft_constraint(TableKeyConstraint{
+      {_a->original_column_id, _b->original_column_id, _c->original_column_id}, KeyConstraintType::UNIQUE});
 
   EXPECT_TRUE(_stored_table_node->functional_dependencies().empty());
 }
 
 TEST_F(StoredTableNodeTest, FunctionalDependenciesSingle) {
   const auto table = Hyrise::get().storage_manager.get_table("t_a");
-  table->add_soft_key_constraint({{_a->original_column_id}, KeyConstraintType::UNIQUE});
+  table->add_soft_constraint(TableKeyConstraint{{_a->original_column_id}, KeyConstraintType::UNIQUE});
 
   const auto& fds = _stored_table_node->functional_dependencies();
   const auto fd_expected = FunctionalDependency{{_a}, {_b, _c}};
@@ -271,7 +271,7 @@ TEST_F(StoredTableNodeTest, FunctionalDependenciesSingle) {
 
 TEST_F(StoredTableNodeTest, FunctionalDependenciesPrunedLeftColumnSet) {
   const auto table = Hyrise::get().storage_manager.get_table("t_a");
-  table->add_soft_key_constraint({{_a->original_column_id}, KeyConstraintType::UNIQUE});
+  table->add_soft_constraint(TableKeyConstraint{{_a->original_column_id}, KeyConstraintType::UNIQUE});
 
   // Prune unique column "a", which would be part of the left column set in the resulting FD: {a} => {b, c}
   _stored_table_node->set_pruned_column_ids({ColumnID{0}});
@@ -281,7 +281,7 @@ TEST_F(StoredTableNodeTest, FunctionalDependenciesPrunedLeftColumnSet) {
 
 TEST_F(StoredTableNodeTest, FunctionalDependenciesPrunedLeftColumnSet2) {
   const auto table = Hyrise::get().storage_manager.get_table("t_a");
-  table->add_soft_key_constraint({{_b->original_column_id}, KeyConstraintType::UNIQUE});
+  table->add_soft_constraint(TableKeyConstraint{{_b->original_column_id}, KeyConstraintType::UNIQUE});
 
   // Prune unique column "a", which would be part of the left column set in the resulting FD: {a} => {b, c}
   _stored_table_node->set_pruned_column_ids({ColumnID{0}});
@@ -293,7 +293,7 @@ TEST_F(StoredTableNodeTest, FunctionalDependenciesPrunedLeftColumnSet2) {
 
 TEST_F(StoredTableNodeTest, FunctionalDependenciesPrunedRightColumnSet) {
   const auto table = Hyrise::get().storage_manager.get_table("t_a");
-  table->add_soft_key_constraint({{_a->original_column_id}, KeyConstraintType::UNIQUE});
+  table->add_soft_constraint(TableKeyConstraint{{_a->original_column_id}, KeyConstraintType::UNIQUE});
 
   // Prune column "b", which would be part of the right column set in the resulting FD: {a} => {b, c}
   _stored_table_node->set_pruned_column_ids({ColumnID{1}});
@@ -305,8 +305,8 @@ TEST_F(StoredTableNodeTest, FunctionalDependenciesPrunedRightColumnSet) {
 
 TEST_F(StoredTableNodeTest, FunctionalDependenciesMultiple) {
   const auto table = Hyrise::get().storage_manager.get_table("t_a");  // int_int_float.tbl
-  table->add_soft_key_constraint({{_a->original_column_id}, KeyConstraintType::UNIQUE});
-  table->add_soft_key_constraint({{_b->original_column_id}, KeyConstraintType::UNIQUE});
+  table->add_soft_constraint(TableKeyConstraint{{_a->original_column_id}, KeyConstraintType::UNIQUE});
+  table->add_soft_constraint(TableKeyConstraint{{_b->original_column_id}, KeyConstraintType::UNIQUE});
 
   const auto& fds = _stored_table_node->functional_dependencies();
 
@@ -326,7 +326,7 @@ TEST_F(StoredTableNodeTest, FunctionalDependenciesExcludeNullableColumns) {
   // Test {a} => {b, c}
   {
     const auto table = std::make_shared<Table>(column_definitions, TableType::Data);
-    table->add_soft_key_constraint({{ColumnID{0}}, KeyConstraintType::UNIQUE});
+    table->add_soft_constraint(TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE});
 
     Hyrise::get().storage_manager.add_table("table_a", table);
     const auto stored_table_node = StoredTableNode::make("table_a");
@@ -343,7 +343,7 @@ TEST_F(StoredTableNodeTest, FunctionalDependenciesExcludeNullableColumns) {
   // Test {a, b} => {c}
   {
     const auto table = std::make_shared<Table>(column_definitions, TableType::Data);
-    table->add_soft_key_constraint({{ColumnID{0}, ColumnID{1}}, KeyConstraintType::UNIQUE});
+    table->add_soft_constraint(TableKeyConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::UNIQUE});
 
     Hyrise::get().storage_manager.add_table("table_b", table);
     const auto& stored_table_node = StoredTableNode::make("table_b");
@@ -354,7 +354,7 @@ TEST_F(StoredTableNodeTest, FunctionalDependenciesExcludeNullableColumns) {
   // Test {a, c} => {b}
   {
     const auto table = std::make_shared<Table>(column_definitions, TableType::Data);
-    table->add_soft_key_constraint({{ColumnID{0}, ColumnID{2}}, KeyConstraintType::UNIQUE});
+    table->add_soft_constraint(TableKeyConstraint{{ColumnID{0}, ColumnID{2}}, KeyConstraintType::UNIQUE});
 
     Hyrise::get().storage_manager.add_table("table_c", table);
     const auto& stored_table_node = StoredTableNode::make("table_c");
@@ -371,7 +371,7 @@ TEST_F(StoredTableNodeTest, FunctionalDependenciesExcludeNullableColumns) {
   // Test {b} => {a, c}
   {
     const auto table = std::make_shared<Table>(column_definitions, TableType::Data);
-    table->add_soft_key_constraint({{ColumnID{1}}, KeyConstraintType::UNIQUE});
+    table->add_soft_constraint(TableKeyConstraint{{ColumnID{1}}, KeyConstraintType::UNIQUE});
 
     Hyrise::get().storage_manager.add_table("table_d", table);
     const auto& stored_table_node = StoredTableNode::make("table_d");
@@ -383,8 +383,8 @@ TEST_F(StoredTableNodeTest, FunctionalDependenciesExcludeNullableColumns) {
 TEST_F(StoredTableNodeTest, UniqueColumnCombinations) {
   const auto key_constraint_a_b = TableKeyConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::PRIMARY_KEY};
   const auto key_constraint_c = TableKeyConstraint{{ColumnID{2}}, KeyConstraintType::UNIQUE};
-  _table_a->add_soft_key_constraint(key_constraint_a_b);
-  _table_a->add_soft_key_constraint(key_constraint_c);
+  _table_a->add_soft_constraint(key_constraint_a_b);
+  _table_a->add_soft_constraint(key_constraint_c);
 
   const auto& unique_column_combinations = _stored_table_node->unique_column_combinations();
 
@@ -408,8 +408,8 @@ TEST_F(StoredTableNodeTest, UniqueColumnCombinationsPrunedColumns) {
   // Prepare UCCs.
   const auto key_constraint_a_b = TableKeyConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::UNIQUE};
   const auto key_constraint_c = TableKeyConstraint{{ColumnID{2}}, KeyConstraintType::UNIQUE};
-  _table_a->add_soft_key_constraint(key_constraint_a_b);
-  _table_a->add_soft_key_constraint(key_constraint_c);
+  _table_a->add_soft_constraint(key_constraint_a_b);
+  _table_a->add_soft_constraint(key_constraint_c);
   const auto& table_key_constraints = _table_a->soft_key_constraints();
   EXPECT_EQ(table_key_constraints.size(), 2);
   EXPECT_EQ(_stored_table_node->unique_column_combinations().size(), 2);
@@ -431,7 +431,7 @@ TEST_F(StoredTableNodeTest, UniqueColumnCombinationsEmpty) {
 
 TEST_F(StoredTableNodeTest, HasMatchingUniqueColumnCombination) {
   const auto key_constraint_a = TableKeyConstraint{{_a->original_column_id}, KeyConstraintType::UNIQUE};
-  _table_a->add_soft_key_constraint(key_constraint_a);
+  _table_a->add_soft_constraint(key_constraint_a);
   EXPECT_EQ(_stored_table_node->unique_column_combinations().size(), 1);
 
   // Negative test.
@@ -462,8 +462,8 @@ TEST_F(StoredTableNodeTest, OrderDependenciesSimple) {
   EXPECT_TRUE(_stored_table_node->order_dependencies().empty());
 
   // Create ODs from order constraints.
-  _table_a->add_soft_order_constraint({{ColumnID{0}}, {ColumnID{1}}});
-  _table_a->add_soft_order_constraint({{ColumnID{0}}, {ColumnID{2}}});
+  _table_a->add_soft_constraint(TableOrderConstraint{{ColumnID{0}}, {ColumnID{1}}});
+  _table_a->add_soft_constraint(TableOrderConstraint{{ColumnID{0}}, {ColumnID{2}}});
   EXPECT_EQ(_table_a->soft_order_constraints().size(), 2);
 
   const auto& order_dependencies = _stored_table_node->order_dependencies();
@@ -474,8 +474,8 @@ TEST_F(StoredTableNodeTest, OrderDependenciesSimple) {
 
 TEST_F(StoredTableNodeTest, OrderDependenciesPrunedColumns) {
   // Discard ODs that involve pruned columns.
-  _table_a->add_soft_order_constraint({{ColumnID{0}}, {ColumnID{1}}});
-  _table_a->add_soft_order_constraint({{ColumnID{0}}, {ColumnID{2}}});
+  _table_a->add_soft_constraint(TableOrderConstraint{{ColumnID{0}}, {ColumnID{1}}});
+  _table_a->add_soft_constraint(TableOrderConstraint{{ColumnID{0}}, {ColumnID{2}}});
   EXPECT_EQ(_table_a->soft_order_constraints().size(), 2);
 
   _stored_table_node->set_pruned_column_ids({ColumnID{0}, ColumnID{2}});
@@ -486,9 +486,9 @@ TEST_F(StoredTableNodeTest, OrderDependenciesTransitive) {
   // Construct transitive ODs and check that no cycles are added. Ensure that there are no ODs where a column is on the
   // left and right side. The example adds [a] |-> [b], [b] |-> [c], and [c] |-> [a]. Make sure the transitive OD
   // creation does not loop over this cycle over and over again.
-  _table_a->add_soft_order_constraint({{ColumnID{0}}, {ColumnID{1}}});
-  _table_a->add_soft_order_constraint({{ColumnID{1}}, {ColumnID{2}}});
-  _table_a->add_soft_order_constraint({{ColumnID{2}}, {ColumnID{0}}});
+  _table_a->add_soft_constraint(TableOrderConstraint{{ColumnID{0}}, {ColumnID{1}}});
+  _table_a->add_soft_constraint(TableOrderConstraint{{ColumnID{1}}, {ColumnID{2}}});
+  _table_a->add_soft_constraint(TableOrderConstraint{{ColumnID{2}}, {ColumnID{0}}});
   EXPECT_EQ(_table_a->soft_order_constraints().size(), 3);
 
   const auto& order_dependencies = _stored_table_node->order_dependencies();
@@ -519,7 +519,7 @@ TEST_F(StoredTableNodeTest, HasMatchingOrderDependency) {
   const auto e = stored_table_node->get_column("e");
 
   const auto order_constraint = TableOrderConstraint{{ColumnID{0}, ColumnID{1}}, {ColumnID{2}, ColumnID{3}}};
-  table_c->add_soft_order_constraint(order_constraint);
+  table_c->add_soft_constraint(order_constraint);
   EXPECT_EQ(stored_table_node->order_dependencies().size(), 1);
 
   // Negative tests.
