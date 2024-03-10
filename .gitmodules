@@ -47,6 +47,7 @@
 [submodule "third_party/ssb-dbgen"]
 	path = third_party/ssb-dbgen
 	url = https://github.com/hyrise/ssb-dbgen.git
+	branch = dey4ss/c2x
 [submodule "third_party/tpcds-kit"]
 	path = third_party/tpcds-kit
 	url = https://github.com/hyrise-mp/tpcds-kit.git
