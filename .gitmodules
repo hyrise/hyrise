@@ -19,7 +19,6 @@
 [submodule "third_party/jcch-dbgen"]
 	path = third_party/jcch-dbgen
 	url = https://github.com/hyrise/jcch-dbgen.git
-	branch = dey4ss/c2x
 [submodule "third_party/jemalloc"]
 	path = third_party/jemalloc
 	url = https://github.com/jemalloc/jemalloc.git
@@ -48,7 +47,6 @@
 [submodule "third_party/ssb-dbgen"]
 	path = third_party/ssb-dbgen
 	url = https://github.com/hyrise/ssb-dbgen.git
-	branch = dey4ss/c2x
 [submodule "third_party/tpcds-kit"]
 	path = third_party/tpcds-kit
 	url = https://github.com/hyrise-mp/tpcds-kit.git
