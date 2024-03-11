@@ -24,7 +24,7 @@ class DependentGroupByReductionRuleTest : public StrategyBaseTest {
                                               {"column3", DataType::Int, false}};
 
     table_a = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2}, UseMvcc::Yes);
-    table_a->add_soft_key_constraint({{ColumnID{0}}, KeyConstraintType::PRIMARY_KEY});
+    table_a->add_soft_constraint(TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::PRIMARY_KEY});
     storage_manager.add_table("table_a", table_a);
     stored_table_node_a = StoredTableNode::make("table_a");
     column_a_0 = stored_table_node_a->get_column("column0");
@@ -32,7 +32,7 @@ class DependentGroupByReductionRuleTest : public StrategyBaseTest {
     column_a_2 = stored_table_node_a->get_column("column2");
 
     table_b = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2}, UseMvcc::Yes);
-    table_b->add_soft_key_constraint({{ColumnID{0}, ColumnID{1}}, KeyConstraintType::UNIQUE});
+    table_b->add_soft_constraint(TableKeyConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::UNIQUE});
     storage_manager.add_table("table_b", table_b);
     stored_table_node_b = StoredTableNode::make("table_b");
     column_b_0 = stored_table_node_b->get_column("column0");
@@ -40,7 +40,7 @@ class DependentGroupByReductionRuleTest : public StrategyBaseTest {
     column_b_2 = stored_table_node_b->get_column("column2");
 
     table_c = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2}, UseMvcc::Yes);
-    table_c->add_soft_key_constraint({{ColumnID{0}, ColumnID{2}}, KeyConstraintType::PRIMARY_KEY});
+    table_c->add_soft_constraint(TableKeyConstraint{{ColumnID{0}, ColumnID{2}}, KeyConstraintType::PRIMARY_KEY});
     storage_manager.add_table("table_c", table_c);
     stored_table_node_c = StoredTableNode::make("table_c");
     column_c_0 = stored_table_node_c->get_column("column0");
@@ -54,8 +54,8 @@ class DependentGroupByReductionRuleTest : public StrategyBaseTest {
     column_d_0 = stored_table_node_d->get_column("column0");
 
     table_e = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2}, UseMvcc::Yes);
-    table_e->add_soft_key_constraint({{ColumnID{0}, ColumnID{1}}, KeyConstraintType::PRIMARY_KEY});
-    table_e->add_soft_key_constraint({{ColumnID{2}}, KeyConstraintType::UNIQUE});
+    table_e->add_soft_constraint(TableKeyConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::PRIMARY_KEY});
+    table_e->add_soft_constraint(TableKeyConstraint{{ColumnID{2}}, KeyConstraintType::UNIQUE});
     storage_manager.add_table("table_e", table_e);
     stored_table_node_e = StoredTableNode::make("table_e");
     column_e_0 = stored_table_node_e->get_column("column0");
@@ -181,8 +181,8 @@ TEST_F(DependentGroupByReductionRuleTest, FullInconsecutiveKeyGroupBy) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-// Test whether we remove the correct columns after joining (one column of a can be moved, none of b). No projection
-// added, as root already is a projection.
+// Test whether we remove the correct columns after joining (one column of a and b's join key can be removed). No
+// projection added, as root already is a projection.
 TEST_F(DependentGroupByReductionRuleTest, JoinSingleKeyPrimaryKey) {
   // clang-format off
   const auto lqp =
@@ -194,8 +194,32 @@ TEST_F(DependentGroupByReductionRuleTest, JoinSingleKeyPrimaryKey) {
 
   const auto expected_lqp =
   ProjectionNode::make(expression_vector(add_(column_a_0, 5), add_(column_a_1, 5), sum_(column_b_2)),
-    AggregateNode::make(expression_vector(column_a_0, column_b_0, column_b_2), expression_vector(sum_(column_a_0), sum_(column_a_1), sum_(column_b_2), any_(column_a_1)),  // NOLINT(whitespace/line_length)
+    AggregateNode::make(expression_vector(column_a_0, column_b_2), expression_vector(sum_(column_a_0), sum_(column_a_1), sum_(column_b_2), any_(column_a_1), any_(column_b_0)),  // NOLINT(whitespace/line_length)
       JoinNode::make(JoinMode::Inner, equals_(column_a_0, column_b_0),
+        stored_table_node_a,
+        stored_table_node_b)));
+  // clang-format on
+
+  const auto actual_lqp = apply_rule(rule, lqp);
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+// Similar to JoinSingleKeyPrimaryKey, but we cannot get a new FD from the join keys. Thus, we cannot remove b's join
+// key.
+TEST_F(DependentGroupByReductionRuleTest, JoinSingleKeyPrimaryKeyNoEquiPredicate) {
+  // clang-format off
+  const auto lqp =
+  ProjectionNode::make(expression_vector(add_(column_a_0, 5), add_(column_a_1, 5), sum_(column_b_2)),
+    AggregateNode::make(expression_vector(column_a_0, column_b_0, column_a_1, column_b_2), expression_vector(sum_(column_a_0), sum_(column_a_1), sum_(column_b_2)),  // NOLINT(whitespace/line_length)
+      JoinNode::make(JoinMode::Inner, greater_than_(column_a_0, column_b_0),
+        stored_table_node_a,
+        stored_table_node_b)));
+
+  const auto expected_lqp =
+  ProjectionNode::make(expression_vector(add_(column_a_0, 5), add_(column_a_1, 5), sum_(column_b_2)),
+    AggregateNode::make(expression_vector(column_a_0, column_b_0, column_b_2), expression_vector(sum_(column_a_0), sum_(column_a_1), sum_(column_b_2), any_(column_a_1)),  // NOLINT(whitespace/line_length)
+      JoinNode::make(JoinMode::Inner, greater_than_(column_a_0, column_b_0),
         stored_table_node_a,
         stored_table_node_b)));
   // clang-format on

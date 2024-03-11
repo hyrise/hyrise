@@ -1,13 +1,14 @@
-#include <memory>
+#include <optional>
+#include <vector>
 
 #include "base_test.hpp"
-#include "expression/expression_functional.hpp"
-#include "expression/expression_utils.hpp"
+#include "logical_query_plan/data_dependencies/functional_dependency.hpp"
+#include "logical_query_plan/data_dependencies/order_dependency.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
-#include "logical_query_plan/stored_table_node.hpp"
+#include "types.hpp"
 #include "utils/data_dependency_test_utils.hpp"
 
 namespace hyrise {
@@ -20,12 +21,17 @@ class JoinNodeTest : public BaseTest {
     _mock_node_a = MockNode::make(
         MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, "t_a");
     _mock_node_b = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "x"}, {DataType::Float, "y"}}, "t_b");
+    _mock_node_c = MockNode::make(
+        MockNode::ColumnDefinitions{{DataType::Int, "u"}, {DataType::Int, "v"}, {DataType::Int, "w"}}, "t_c");
 
     _t_a_a = _mock_node_a->get_column("a");
     _t_a_b = _mock_node_a->get_column("b");
     _t_a_c = _mock_node_a->get_column("c");
     _t_b_x = _mock_node_b->get_column("x");
     _t_b_y = _mock_node_b->get_column("y");
+    _t_c_u = _mock_node_c->get_column("u");
+    _t_c_v = _mock_node_c->get_column("v");
+    _t_c_w = _mock_node_c->get_column("w");
 
     _cross_join_node = JoinNode::make(JoinMode::Cross, _mock_node_a, _mock_node_b);
     _inner_join_node = JoinNode::make(JoinMode::Inner, equals_(_t_a_a, _t_b_y), _mock_node_a, _mock_node_b);
@@ -45,7 +51,7 @@ class JoinNodeTest : public BaseTest {
   std::shared_ptr<MockNode> _mock_node_a, _mock_node_b, _mock_node_c;
   std::shared_ptr<JoinNode> _inner_join_node, _semi_join_node, _semi_join_reduction_node, _anti_join_node,
       _cross_join_node;
-  std::shared_ptr<LQPColumnExpression> _t_a_a, _t_a_b, _t_a_c, _t_b_x, _t_b_y, _t_b_z;
+  std::shared_ptr<LQPColumnExpression> _t_a_a, _t_a_b, _t_a_c, _t_b_x, _t_b_y, _t_b_z, _t_c_u, _t_c_v, _t_c_w;
   std::optional<TableKeyConstraint> _key_constraint_a, _key_constraint_b_c, _key_constraint_x, _key_constraint_y;
 };
 
@@ -405,7 +411,8 @@ TEST_F(JoinNodeTest, FunctionalDependenciesDeriveLeftOnly) {
   /**
    * We set a UCC for the left, but not for the right join column of the Inner Join. Consequently, UCCs of the left
    * input node are discarded, whereas the UCCs of the right input node survive. Therefore, we have to check whether
-   * left input node's trivial FDs are forwarded as non-trivial ones.
+   * left input node's trivial FDs are forwarded as non-trivial ones. Furthermore, we check if FDs from the join keys of
+   * equi joins are added.
    */
   _mock_node_a->set_key_constraints({*_key_constraint_a});
   _mock_node_b->set_key_constraints({*_key_constraint_x});
@@ -416,15 +423,21 @@ TEST_F(JoinNodeTest, FunctionalDependenciesDeriveLeftOnly) {
     _mock_node_b);
   // clang-format on
 
-  // Tests
-  const auto generated_fd_a = FunctionalDependency{{_t_a_a}, {_t_a_b, _t_a_c}};
-  EXPECT_EQ(join_node->non_trivial_functional_dependencies().size(), 1);
-  EXPECT_TRUE(join_node->non_trivial_functional_dependencies().contains(generated_fd_a));
+  auto generated_fd_a = FunctionalDependency{{_t_a_a}, {_t_a_b, _t_a_c}};
+  const auto& non_trivial_fds = join_node->non_trivial_functional_dependencies();
+  EXPECT_EQ(non_trivial_fds.size(), 1);
+  EXPECT_TRUE(non_trivial_fds.contains(generated_fd_a));
 
   const auto generated_fd_x = FunctionalDependency{{_t_b_x}, {_t_a_a, _t_a_b, _t_a_c, _t_b_y}};
-  EXPECT_EQ(join_node->functional_dependencies().size(), 2);
-  EXPECT_TRUE(join_node->functional_dependencies().contains(generated_fd_a));
-  EXPECT_TRUE(join_node->functional_dependencies().contains(generated_fd_x));
+  // The join keys are mutually dependent on each other since they are equal.
+  generated_fd_a = FunctionalDependency{{_t_a_a}, {_t_a_b, _t_a_c, _t_b_y}};
+  const auto generated_fd_y = FunctionalDependency{{_t_b_y}, {_t_a_a}};
+
+  const auto& fds = join_node->functional_dependencies();
+  EXPECT_EQ(fds.size(), 3);
+  EXPECT_TRUE(fds.contains(generated_fd_a));
+  EXPECT_TRUE(fds.contains(generated_fd_x));
+  EXPECT_TRUE(fds.contains(generated_fd_y));
 }
 
 TEST_F(JoinNodeTest, FunctionalDependenciesUnify) {
@@ -674,6 +687,190 @@ TEST_P(JoinNodeMultiJoinModeTest, UniqueColumnCombinationsMultiPredicateJoin) {
     EXPECT_EQ(join_node->unique_column_combinations(), _mock_node_a->unique_column_combinations());
   } else {
     EXPECT_TRUE(join_node->unique_column_combinations().empty());
+  }
+}
+
+TEST_F(JoinNodeTest, OrderDependenciesSemiAndAntiJoin) {
+  const auto od_a_to_c = OrderDependency{{_t_a_a}, {_t_a_c}};
+  const auto od_y_to_x = OrderDependency{{_t_b_y}, {_t_b_x}};
+  const auto order_constraint_a_to_c = TableOrderConstraint{{ColumnID{0}}, {ColumnID{2}}};
+  const auto order_constraint_y_to_x = TableOrderConstraint{{ColumnID{1}}, {ColumnID{0}}};
+  _mock_node_a->set_order_constraints({order_constraint_a_to_c});
+  _mock_node_b->set_order_constraints({order_constraint_y_to_x});
+  EXPECT_EQ(_mock_node_a->order_dependencies().size(), 1);
+  EXPECT_EQ(_mock_node_b->order_dependencies().size(), 1);
+
+  // Semi and anti joins should forward ODs from left input.
+  for (const auto join_mode : {JoinMode::Semi, JoinMode::AntiNullAsTrue, JoinMode::AntiNullAsFalse}) {
+    const auto join_node = JoinNode::make(join_mode, equals_(_t_a_a, _t_b_y), _mock_node_a, _mock_node_b);
+    const auto& order_dependencies = join_node->order_dependencies();
+    SCOPED_TRACE("with join mode " + std::string{magic_enum::enum_name(join_mode)});
+    EXPECT_EQ(order_dependencies.size(), 1);
+    EXPECT_TRUE(order_dependencies.contains(od_a_to_c));
+  }
+}
+
+TEST_F(JoinNodeTest, OrderDependenciesOuterJoin) {
+  const auto od_a_to_c = OrderDependency{{_t_a_a}, {_t_a_c}};
+  const auto od_y_to_x = OrderDependency{{_t_b_y}, {_t_b_x}};
+  const auto order_constraint_a_to_c = TableOrderConstraint{{ColumnID{0}}, {ColumnID{2}}};
+  const auto order_constraint_y_to_x = TableOrderConstraint{{ColumnID{1}}, {ColumnID{0}}};
+  _mock_node_a->set_order_constraints({order_constraint_a_to_c});
+  _mock_node_b->set_order_constraints({order_constraint_y_to_x});
+  EXPECT_EQ(_mock_node_a->order_dependencies().size(), 1);
+  EXPECT_EQ(_mock_node_b->order_dependencies().size(), 1);
+
+  // Outer joins should forward ODs from left and right input.
+  for (const auto join_mode : {JoinMode::Left, JoinMode::Right, JoinMode::FullOuter}) {
+    const auto join_node = JoinNode::make(join_mode, equals_(_t_a_a, _t_b_y), _mock_node_a, _mock_node_b);
+    const auto& order_dependencies = join_node->order_dependencies();
+    SCOPED_TRACE("with join mode " + std::string{magic_enum::enum_name(join_mode)});
+    EXPECT_EQ(order_dependencies.size(), 2);
+    EXPECT_TRUE(order_dependencies.contains(od_a_to_c));
+    EXPECT_TRUE(order_dependencies.contains(od_y_to_x));
+  }
+}
+
+TEST_F(JoinNodeTest, OrderDependenciesCrossJoin) {
+  const auto od_a_to_c = OrderDependency{{_t_a_a}, {_t_a_c}};
+  const auto od_y_to_x = OrderDependency{{_t_b_y}, {_t_b_x}};
+  const auto order_constraint_a_to_c = TableOrderConstraint{{ColumnID{0}}, {ColumnID{2}}};
+  const auto order_constraint_y_to_x = TableOrderConstraint{{ColumnID{1}}, {ColumnID{0}}};
+  _mock_node_a->set_order_constraints({order_constraint_a_to_c});
+  _mock_node_b->set_order_constraints({order_constraint_y_to_x});
+  EXPECT_EQ(_mock_node_a->order_dependencies().size(), 1);
+  EXPECT_EQ(_mock_node_b->order_dependencies().size(), 1);
+
+  // Cross joins should also forward ODs from left and right input.
+  const auto& order_dependencies = _cross_join_node->order_dependencies();
+  EXPECT_EQ(order_dependencies.size(), 2);
+  EXPECT_TRUE(order_dependencies.contains(od_a_to_c));
+  EXPECT_TRUE(order_dependencies.contains(od_y_to_x));
+}
+
+TEST_F(JoinNodeTest, OrderDependenciesInnerJoin) {
+  const auto od_a_to_c = OrderDependency{{_t_a_a}, {_t_a_c}};
+  const auto od_v_to_u = OrderDependency{{_t_c_v}, {_t_c_u}};
+  const auto order_constraint_a_to_c = TableOrderConstraint{{ColumnID{0}}, {ColumnID{2}}};
+  const auto order_constraint_v_to_u = TableOrderConstraint{{ColumnID{1}}, {ColumnID{0}}};
+  _mock_node_a->set_order_constraints({order_constraint_a_to_c});
+  _mock_node_c->set_order_constraints({order_constraint_v_to_u});
+  EXPECT_EQ(_mock_node_a->order_dependencies().size(), 1);
+  EXPECT_EQ(_mock_node_c->order_dependencies().size(), 1);
+
+  // Inner joins forward ODs from left and right input. If the join predicates are equals predicates and the join
+  // columns are both on the left-hand and the right-hand side of an OD, the node should create these new ODs, as well.
+  //
+  // Example: Two tables with ODs [a] |-> [b] and [c] |-> [d], joined on b = c.
+  //
+  //            a | b       c | d       Resulting ODs:
+  //           ---+---     ---+---        1. The input ODs [a] |-> [b], [c] |-> [d] stay valid.
+  //            1 | 2       2 | 1         2. As the join keys are equal, they form two new ODs [b] |-> [c], [c] |-> [b].
+  //            2 | 4       4 | 1         3. Transitively, also [a] |-> [c], [a] |-> [d] are valid.
+  //            3 | 6       6 | 2
+  //
+  // Case (i): Equi join and there are ODs, but join colummns are not on both sides of input ODs. However, the join
+  //           columns form ODs.
+  {
+    const auto inner_join_node = JoinNode::make(JoinMode::Inner, equals_(_t_a_b, _t_c_w), _mock_node_a, _mock_node_c);
+    const auto& order_dependencies = inner_join_node->order_dependencies();
+    EXPECT_EQ(order_dependencies.size(), 4);
+    EXPECT_TRUE(order_dependencies.contains(od_a_to_c));
+    EXPECT_TRUE(order_dependencies.contains(od_v_to_u));
+    EXPECT_TRUE(order_dependencies.contains(OrderDependency{{_t_a_b}, {_t_c_w}}));
+    EXPECT_TRUE(order_dependencies.contains(OrderDependency{{_t_c_w}, {_t_a_b}}));
+  }
+
+  // Case (ii): No equi join. Only forward input ODs.
+  {
+    // clang-format off
+    const auto inner_join_node =
+    JoinNode::make(JoinMode::Inner, less_than_(_t_a_a, _t_c_u),
+      _mock_node_a,
+      _mock_node_c);
+    // clang-format on
+    const auto& order_dependencies = inner_join_node->order_dependencies();
+    EXPECT_EQ(order_dependencies.size(), 2);
+    EXPECT_TRUE(order_dependencies.contains(od_a_to_c));
+    EXPECT_TRUE(order_dependencies.contains(od_v_to_u));
+  }
+
+  // Case (iii): Multiple join predicates. Though the predicates form additional ODs, we only forward the input ODs.
+  //             Otherwise, we would have to compute too many ODs that we currently do not make use of. E.g., for the
+  //             join below, [a] |-> [u], [b] |-> [v], [a, b] |-> [u, v], and [b, a] |-> [v, u] originate only from the
+  //             join keys.
+  {
+    // clang-format off
+    const auto inner_join_node =
+    JoinNode::make(JoinMode::Inner, expression_vector(equals_(_t_a_a, _t_c_u), equals_(_t_a_b, _t_c_v)),
+      _mock_node_a,
+      _mock_node_c);
+    // clang-format on
+    const auto& order_dependencies = inner_join_node->order_dependencies();
+    EXPECT_EQ(order_dependencies.size(), 2);
+    EXPECT_TRUE(order_dependencies.contains(od_a_to_c));
+    EXPECT_TRUE(order_dependencies.contains(od_v_to_u));
+  }
+
+  // Case (iv): OD from left input leads to new ODs with columns from the right input.
+  {
+    const auto od_b_to_a = OrderDependency{{_t_a_b}, {_t_a_a}};
+    const auto od_y_to_x = OrderDependency{{_t_b_y}, {_t_b_x}};
+    const auto order_constraint = TableOrderConstraint{{ColumnID{1}}, {ColumnID{0}}};
+    _mock_node_a->set_order_constraints({order_constraint});
+    _mock_node_b->set_order_constraints({order_constraint});
+
+    const auto& order_dependencies = _inner_join_node->order_dependencies();
+    EXPECT_EQ(order_dependencies.size(), 7);
+    EXPECT_TRUE(order_dependencies.contains(od_b_to_a));
+    EXPECT_TRUE(order_dependencies.contains(od_y_to_x));
+    EXPECT_TRUE(order_dependencies.contains(OrderDependency{{_t_a_a}, {_t_b_y}}));
+    EXPECT_TRUE(order_dependencies.contains(OrderDependency{{_t_b_y}, {_t_a_a}}));
+
+    EXPECT_TRUE(order_dependencies.contains(OrderDependency{{_t_a_b}, {_t_b_y}}));
+    EXPECT_TRUE(order_dependencies.contains(OrderDependency{{_t_a_b}, {_t_b_x}}));
+    EXPECT_TRUE(order_dependencies.contains(OrderDependency{{_t_a_a}, {_t_b_x}}));
+  }
+
+  // Case (v): OD from right input leads to new ODs with columns from the left input.
+  {
+    const auto od_a_to_b = OrderDependency{{_t_a_a}, {_t_a_b}};
+    const auto od_x_to_y = OrderDependency{{_t_b_x}, {_t_b_y}};
+    const auto order_constraint = TableOrderConstraint{{ColumnID{0}}, {ColumnID{1}}};
+    _mock_node_a->set_order_constraints({order_constraint});
+    _mock_node_b->set_order_constraints({order_constraint});
+
+    const auto& order_dependencies = _inner_join_node->order_dependencies();
+    EXPECT_EQ(order_dependencies.size(), 7);
+    EXPECT_TRUE(order_dependencies.contains(od_a_to_b));
+    EXPECT_TRUE(order_dependencies.contains(od_x_to_y));
+    EXPECT_TRUE(order_dependencies.contains(OrderDependency{{_t_a_a}, {_t_b_y}}));
+    EXPECT_TRUE(order_dependencies.contains(OrderDependency{{_t_b_y}, {_t_a_a}}));
+
+    EXPECT_TRUE(order_dependencies.contains(OrderDependency{{_t_b_x}, {_t_a_a}}));
+    EXPECT_TRUE(order_dependencies.contains(OrderDependency{{_t_b_x}, {_t_a_b}}));
+    EXPECT_TRUE(order_dependencies.contains(OrderDependency{{_t_b_y}, {_t_a_b}}));
+  }
+
+  // Case (vi): Self join. No new ODs should be built. The inner equi join on a = c with input ODs [a] |-> [b] and
+  //            [a] |-> [c] would lead to [c] |-> [a] and [c] |-> [b], normally. However, we cannot distinguish WHICH
+  //            version of c orders b in the output (only the one that equals a).
+  {
+    const auto od_a_to_b = OrderDependency{{_t_a_a}, {_t_a_b}};
+    const auto order_constraint_a_to_b = TableOrderConstraint{{ColumnID{0}}, {ColumnID{1}}};
+    _mock_node_a->set_order_constraints({order_constraint_a_to_b, order_constraint_a_to_c});
+
+    // clang-format off
+    const auto inner_join_node =
+    JoinNode::make(JoinMode::Inner, expression_vector(equals_(_t_a_a, _t_a_c)),
+      _mock_node_a,
+      _mock_node_a);
+    // clang-format on
+
+    const auto& order_dependencies = inner_join_node->order_dependencies();
+    EXPECT_EQ(order_dependencies.size(), 2);
+    EXPECT_TRUE(order_dependencies.contains(od_a_to_b));
+    EXPECT_TRUE(order_dependencies.contains(od_a_to_c));
   }
 }
 

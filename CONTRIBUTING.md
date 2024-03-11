@@ -27,6 +27,8 @@
     files.
   * Anonymous namespaces are a good way to define local helper methods.
   * Use forward declarations instead of full header includes wherever possible.
+  * Stick to the [include-what-you-use (IWYU)](https://www.fluentcpp.com/2021/01/01/include-what-you-use/) convention
+    and include all headers providing classes you access in the code.
 
 * Loops
   * Use range-based `for` loops when possible: `for (const auto& item : items) {...}`.

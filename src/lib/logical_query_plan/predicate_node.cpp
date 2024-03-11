@@ -8,6 +8,7 @@
 
 #include "expression/expression_utils.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
+#include "logical_query_plan/data_dependencies/order_dependency.hpp"
 #include "logical_query_plan/data_dependencies/unique_column_combination.hpp"
 #include "operators/operator_scan_predicate.hpp"
 
@@ -26,6 +27,10 @@ std::string PredicateNode::description(const DescriptionMode mode) const {
 
 UniqueColumnCombinations PredicateNode::unique_column_combinations() const {
   return _forward_left_unique_column_combinations();
+}
+
+OrderDependencies PredicateNode::order_dependencies() const {
+  return _forward_left_order_dependencies();
 }
 
 std::shared_ptr<AbstractExpression> PredicateNode::predicate() const {

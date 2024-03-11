@@ -10,6 +10,7 @@
 #include "expression/expression_utils.hpp"
 #include "expression/window_function_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
+#include "logical_query_plan/data_dependencies/order_dependency.hpp"
 #include "logical_query_plan/data_dependencies/unique_column_combination.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
@@ -63,6 +64,10 @@ UniqueColumnCombinations WindowNode::unique_column_combinations() const {
   //   (2) The window is not partitioned, there is a UCC on the ordered columns, the frame starts at partition begin,
   //       and the function is rank() or dense_rank().
   return _forward_left_unique_column_combinations();
+}
+
+OrderDependencies WindowNode::order_dependencies() const {
+  return _forward_left_order_dependencies();
 }
 
 size_t WindowNode::_on_shallow_hash() const {

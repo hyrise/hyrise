@@ -5,6 +5,7 @@
 #include <functional>
 #include <memory>
 #include <numeric>
+#include <utility>
 #include <vector>
 
 #include <boost/container_hash/hash.hpp>
@@ -43,15 +44,16 @@ std::vector<ColumnID> apply_permutation(std::vector<ColumnID>& column_ids, const
 
 namespace hyrise {
 
-ForeignKeyConstraint::ForeignKeyConstraint(const std::vector<ColumnID>& foreign_key_columns,
+ForeignKeyConstraint::ForeignKeyConstraint(std::vector<ColumnID>&& foreign_key_columns,
                                            const std::shared_ptr<Table>& foreign_key_table,
-                                           const std::vector<ColumnID>& primary_key_columns,
+                                           std::vector<ColumnID>&& primary_key_columns,
                                            const std::shared_ptr<Table>& primary_key_table)
-    : _foreign_key_columns{foreign_key_columns},
+    : AbstractTableConstraint(TableConstraintType::ForeignKey),
+      _foreign_key_columns{std::move(foreign_key_columns)},
       _foreign_key_table{foreign_key_table},
-      _primary_key_columns{primary_key_columns},
+      _primary_key_columns{std::move(primary_key_columns)},
       _primary_key_table{primary_key_table} {
-  Assert(_foreign_key_columns.size() == _primary_key_columns.size(),
+  Assert(_foreign_key_columns.size() == _primary_key_columns.size() && !_foreign_key_columns.empty(),
          "Invalid number of columns for ForeignKeyConstraint.");
   // In general, ForeignKeyConstraints should reference the foreign key table and the primary key table. They are
   // attached to the foreign key table and also hold a pointer to the primary key table.
@@ -59,9 +61,8 @@ ForeignKeyConstraint::ForeignKeyConstraint(const std::vector<ColumnID>& foreign_
   // StoredTableNode of the primary key table and its subsequent LQP nodes. For test cases that test IND handling, we
   // enforce specific INDs by adding a ForeignKeyConstraint to a MockNode. Since this MockNode does not relate to an
   // actual table object, we do not enforce a TableKeyConstraint to reference a primary key table. In contrast, this
-  // check is subject to the (stored) foreign key table when we add a constraint in
-  // `Table::add_soft_foreign_key_constraint(...)` and only assert that the foreign key table is set, which we need to
-  // verify if an IND exists in the LQP.
+  // check is subject to the (stored) foreign key table when we add a constraint in `Table::add_soft_constraint(...)`
+  // and only assert that the foreign key table is set, which we need to verify if an IND exists in the LQP.
   Assert(foreign_key_table, "ForeignKeyConstraint must reference a table.");
 
   // For foreign key constraints with the same columns, the order of the columns is relevant since it determines which
