@@ -55,15 +55,6 @@
 #include "utils/timer.hpp"
 #include "version.hpp"
 
-namespace {
-
-// Depletes the passed semaphore without doing any work.
-void deplete_semaphore(auto& semaphore) {
-  while (semaphore.try_acquire()) {}
-}
-
-}  // namespace
-
 namespace hyrise {
 
 BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config,
@@ -297,7 +288,6 @@ void BenchmarkRunner::_benchmark_shuffled() {
       item_id_counter = 0;
     }
 
-    _running_clients_semaphore.acquire();
     const auto item_id = item_ids[item_id_counter];
     _schedule_item_run(item_id);
     ++item_id_counter;
@@ -317,6 +307,8 @@ void BenchmarkRunner::_benchmark_shuffled() {
 }
 
 void BenchmarkRunner::_benchmark_ordered() {
+  _running_clients_semaphore.release(_config.clients);
+
   for (const auto& item_id : _benchmark_item_runner->items()) {
     _warmup(item_id);
 
@@ -327,13 +319,18 @@ void BenchmarkRunner::_benchmark_ordered() {
 
     Assert(_currently_running_clients == 0, "Did not expect any clients to run at this time.");
 
-    _state = BenchmarkState{_config.max_duration};
+    if constexpr (HYRISE_DEBUG) {
+      for (auto client = size_t{0}; client < _config.clients; ++client) {
+        Assert(_running_clients_semaphore.try_acquire(), "Client was not able to acquire.");
+      }
+      Assert(!_running_clients_semaphore.try_acquire(), "Aquiring semaphore should not be possible.");
+      _running_clients_semaphore.release(_config.clients);
+    }
 
-    _running_clients_semaphore.release(_config.clients);
+    _state = BenchmarkState{_config.max_duration};
     while (_state.keep_running() &&
            (_config.max_runs < 0 || (result.successful_runs.size() + result.unsuccessful_runs.size()) <
                                         static_cast<size_t>(_config.max_runs))) {
-      _running_clients_semaphore.acquire();
       _schedule_item_run(item_id);
     }
     _state.set_done();
@@ -345,7 +342,6 @@ void BenchmarkRunner::_benchmark_ordered() {
     Hyrise::get().scheduler()->wait_for_all_tasks();
 
     Assert(_currently_running_clients == 0, "All runs must be finished at this point.");
-    deplete_semaphore(_running_clients_semaphore);
 
     result.duration = _state.benchmark_duration;
     // chrono::seconds uses an integer precision duration type, but we need a floating-point value.
@@ -380,6 +376,8 @@ void BenchmarkRunner::_benchmark_ordered() {
 }
 
 void BenchmarkRunner::_schedule_item_run(const BenchmarkItemID item_id) {
+  _running_clients_semaphore.acquire();
+
   ++_currently_running_clients;
   auto& result = _results[item_id];
 
@@ -431,7 +429,6 @@ void BenchmarkRunner::_warmup(const BenchmarkItemID item_id) {
 
   _running_clients_semaphore.release(_config.clients);
   while (_state.keep_running()) {
-    _running_clients_semaphore.acquire();
     _schedule_item_run(item_id);
   }
 
@@ -446,7 +443,9 @@ void BenchmarkRunner::_warmup(const BenchmarkItemID item_id) {
   Hyrise::get().scheduler()->wait_for_all_tasks();
 
   Assert(_currently_running_clients == 0, "All runs must be finished at this point.");
-  deplete_semaphore(_running_clients_semaphore);
+  
+  // Deplete semaphore without doing any work for following benchmark runs.
+  while (_running_clients_semaphore.try_acquire()) {}
 }
 
 nlohmann::json BenchmarkRunner::_create_report() const {
