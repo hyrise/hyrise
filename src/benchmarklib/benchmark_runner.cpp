@@ -443,7 +443,6 @@ void BenchmarkRunner::_warmup(const BenchmarkItemID item_id) {
   Hyrise::get().scheduler()->wait_for_all_tasks();
 
   Assert(_currently_running_clients == 0, "All runs must be finished at this point.");
-  
   // Deplete semaphore without doing any work for following benchmark runs.
   while (_running_clients_semaphore.try_acquire()) {}
 }
