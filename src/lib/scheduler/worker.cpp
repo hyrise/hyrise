@@ -104,7 +104,9 @@ void Worker::_work(const AllowSleep allow_sleep) {
 
   // If there is no ready task neither in our queue nor in any other and we are allowed to sleep, wait on the semaphore.
   if (!task && allow_sleep == AllowSleep::Yes) {
+    // std::cerr << std::format("Worker {} is going to wait().\n", static_cast<size_t>(_id));
     _queue->semaphore.wait();
+    // std::cerr << std::format("Worker {} woke up.\n", static_cast<size_t>(_id));
     task = _queue->pull();
   }
 

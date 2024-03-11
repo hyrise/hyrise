@@ -106,32 +106,25 @@ std::shared_ptr<const Table> ProgressiveMap::_on_execute() {
 
     // std::cerr << std::format("{}\n", std::string{magic_enum::enum_name(_operator_type)});
 
-    jobs.emplace_back(std::make_shared<JobTask>([&, job_id, chunk]() {
-      std::cerr << std::format("ProgressiveMap for operator {} {} (id {}) spawned.\n",
-                               std::string{magic_enum::enum_name(_operator_type)}, sstream.str(), job_id);
+    jobs.emplace_back(std::make_shared<JobTask>([&, /*job_id,*/ chunk]() {
+      // std::cerr << std::format("ProgressiveMap for operator {} {} (id {}) spawned.\n",
+      //                          std::string{magic_enum::enum_name(_operator_type)}, sstream.str(), job_id);
       auto single_chunk_vector = std::vector<std::shared_ptr<Chunk>>{};
       single_chunk_vector.emplace_back(progressive::recreate_non_const_chunk(chunk));
       Assert(single_chunk_vector.size() == 1 && single_chunk_vector[0], "Unexpected removed chunk?");
 
-      // auto print = false;
+      // TODO: place in `if constexpr (HYRISEDBUG)`.
       const auto first_is_reference_segment = std::dynamic_pointer_cast<ReferenceSegment>(single_chunk_vector[0]->get_segment(ColumnID{0})) != nullptr;
       for (auto column_id = ColumnID{0}; column_id < single_chunk_vector[0]->column_count(); ++column_id) {
         const auto is_reference_segment = std::dynamic_pointer_cast<ReferenceSegment>(single_chunk_vector[0]->get_segment(column_id)) != nullptr;
-        // auto sstream = std::stringstream{};
-        // sstream << "columnID" << column_id << " >> " << is_reference_segment << '\n';
-        // std::cerr << sstream.str();
         Assert(first_is_reference_segment == is_reference_segment, "Unexpected mismatch.");
-        // print = true;
       }
-
-      // auto sstream = std::stringstream{};
-      // sstream << "table lef input: " << input_table->type() << " with size of " << single_chunk_vector[0]->size() << '\n';
-      // std::cerr << sstream.str();
 
       auto single_chunk_table = std::make_shared<Table>(input_table->column_definitions(),
                                                         first_is_reference_segment ? TableType::References : TableType::Data,
-                                                        std::move(single_chunk_vector), UseMvcc::Yes);
+                                                        std::move(single_chunk_vector), first_is_reference_segment ? UseMvcc::No : UseMvcc::Yes);
       auto lineitem_wrapper = std::make_shared<TableWrapper>(single_chunk_table);
+      lineitem_wrapper->never_clear_output();
       lineitem_wrapper->execute();
 
       ++debug_chunks_processed;
@@ -140,11 +133,12 @@ std::shared_ptr<const Table> ProgressiveMap::_on_execute() {
         auto table_scan = std::make_shared<TableScan>(lineitem_wrapper, _table_scan_predicate);
         table_scan->set_output_sink(_output_chunk_sink);  // Not used yet. The idea is to later emit tuples very early
                                                           // even within single-chunk scans.
-        std::cerr << std::format("ProgressiveMap for operator {} {} (id {}) executes scan.\n",
-                               std::string{magic_enum::enum_name(_operator_type)}, sstream.str(), job_id);
+        table_scan->never_clear_output();
+        // std::cerr << std::format("ProgressiveMap for operator {} {} (id {}) executes scan.\n",
+        //                        std::string{magic_enum::enum_name(_operator_type)}, sstream.str(), job_id);
         table_scan->execute();
-        std::cerr << std::format("ProgressiveMap for operator {} {} (id {}) executed scan.\n",
-                               std::string{magic_enum::enum_name(_operator_type)}, sstream.str(), job_id);
+        // std::cerr << std::format("ProgressiveMap for operator {} {} (id {}) executed scan.\n",
+        //                        std::string{magic_enum::enum_name(_operator_type)}, sstream.str(), job_id);
 
         // auto ss = std::stringstream{};
         // ss << *_table_scan_predicate;
@@ -157,20 +151,21 @@ std::shared_ptr<const Table> ProgressiveMap::_on_execute() {
         const auto col_l_extendedprice = PQPColumnExpression::from_table(*lineitem_wrapper->get_output(), "l_extendedprice");
         const auto col_l_discount =  PQPColumnExpression::from_table(*lineitem_wrapper->get_output(), "l_discount");
         auto projection = std::make_shared<Projection>(lineitem_wrapper, expression_vector(mul_(col_l_extendedprice, col_l_discount)));
+        projection->never_clear_output();
         projection->execute();
         op_output = projection->get_output();
       } else {
         Fail("Unsupported operator.");
       }
 
-      std::cerr << std::format("ProgressiveMap for operator {} {} (id {}) adds result.\n",
-                               std::string{magic_enum::enum_name(_operator_type)}, sstream.str(), job_id);
+      // std::cerr << std::format("ProgressiveMap for operator {} {} (id {}) adds result.\n",
+      //                          std::string{magic_enum::enum_name(_operator_type)}, sstream.str(), job_id);
       _output_chunk_sink->add_chunk(op_output);
-      std::cerr << std::format("ProgressiveMap for operator {} {} (id {}) added result.\n",
-                               std::string{magic_enum::enum_name(_operator_type)}, sstream.str(), job_id);
+      // std::cerr << std::format("ProgressiveMap for operator {} {} (id {}) added result.\n",
+      //                          std::string{magic_enum::enum_name(_operator_type)}, sstream.str(), job_id);
 
-      std::cerr << std::format("ProgressiveMap for operator {} {} (id {}) is done.\n",
-                               std::string{magic_enum::enum_name(_operator_type)}, sstream.str(), job_id);
+      // std::cerr << std::format("ProgressiveMap for operator {} {} (id {}) is done.\n",
+      //                          std::string{magic_enum::enum_name(_operator_type)}, sstream.str(), job_id);
 
       // auto lock_guard = std::lock_guard<std::mutex>{statistics_mutex};
       // chunk_output_durations.emplace_back(timer.lap(), op_output->get_chunk(ChunkID{0})->size());
@@ -179,22 +174,39 @@ std::shared_ptr<const Table> ProgressiveMap::_on_execute() {
     // the first operators does not thrash the task queue.
     // TODO: align this "fixed number" with partitioning scheme later on. High for first partition, then default, high
     // again if coordinator states so.
-    (job_id < num_high_priority_tasks || job_id % 10 == 0) ? SchedulePriority::High : SchedulePriority::Default));
-    // SchedulePriority::Default));
+    // (job_id < num_high_priority_tasks || job_id % 10 == 0) ? SchedulePriority::High : SchedulePriority::Default));
+    SchedulePriority::Default));
     jobs.back()->schedule();
+    Assert(jobs.back()->state() >= TaskState::Enqueued, "Unexpected task state of " + std::string{magic_enum::enum_name(jobs.back()->state())});
     ++job_id;
   }
-  std::cerr << std::format("ProgressiveMap for operator {} {} is waiting on all jobs.\n",
-                           std::string{magic_enum::enum_name(_operator_type)}, sstream.str());
+  // std::cerr << std::format("ProgressiveMap for operator {} {} is waiting on all jobs.\n",
+  //                          std::string{magic_enum::enum_name(_operator_type)}, sstream.str());
+  std::this_thread::sleep_for(std::chrono::milliseconds{500});
+  job_id = 0;
+  auto stop = false;
+  for (const auto& job : jobs) {
+    if (job->state() != TaskState::Done) {
+     std::cerr << std::format("#1 ProgressiveMap for operator {} {}: Job #{} not done, but {}.", std::string{magic_enum::enum_name(_operator_type)}, sstream.str(), job_id, std::string{magic_enum::enum_name(job->state())});
+     while (job->state() != TaskState::Done) {
+       std::this_thread::sleep_for(std::chrono::milliseconds{1'000});  
+       std::cerr << std::format("#2 ProgressiveMap for operator {} {}: Waiting for Job #{}, current status {}.", std::string{magic_enum::enum_name(_operator_type)}, sstream.str(), job_id, std::string{magic_enum::enum_name(job->state())});
+     }
+     // stop = true;
+    }
+    ++job_id;
+  }
+  if (stop) Fail("HMPF");
+
   Hyrise::get().scheduler()->wait_for_tasks(jobs);
   Assert(_input_chunk_sink->_chunks_added == _input_chunk_sink->_chunks_pulled, "error #1");
   Assert(_input_chunk_sink->_chunks_pulled == _output_chunk_sink->_chunks_added, "error #2");
 
-  Assert(!_input_chunk_sink->pull_chunk(), "Able to pull a job even though sink is finished.");
+  Assert(!_input_chunk_sink->pull_chunk(), "error #3: Able to pull a job even though sink is finished.");
 
   _output_chunk_sink->set_all_chunks_added();
-  std::cerr << std::format("ProgressiveMap for operator {} {} set `all_chunks_added`. Added {} chunks.\n",
-                                   std::string{magic_enum::enum_name(_operator_type)}, sstream.str(), _output_chunk_sink->chunk_count());
+  // std::cerr << std::format("ProgressiveMap for operator {} {} set `all_chunks_added`. Added {} chunks.\n",
+                                   // std::string{magic_enum::enum_name(_operator_type)}, sstream.str(), _output_chunk_sink->chunk_count());
 
   // auto statistics_stream = std::stringstream{};
   // statistics_stream << std::format("ProgressiveMap for operator {} is done {}.\n",

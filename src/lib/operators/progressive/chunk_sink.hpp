@@ -53,7 +53,7 @@ class ChunkSink : public AbstractReadOnlyOperator {
       _chunks.emplace_back(std::chrono::system_clock::now(), chunk);
       processable_chunks_semaphore.release();
     // }
-    std::cerr << std::format("Sink '{}' added a chunk (#{}) and signaled semaphore.\n", _name, _chunks.size());
+    // std::cerr << std::format("Sink '{}' added a chunk (#{}) and signaled semaphore.\n", _name, _chunks.size());
 
     if (!_table_type) {
       // const auto metadata_lock_guard = std::lock_guard<std::mutex>{_metadata_mutex};
@@ -64,7 +64,9 @@ class ChunkSink : public AbstractReadOnlyOperator {
     ++_chunks_added;
   }
 
+  // This function is expected to be called sequentially!
   std::shared_ptr<Chunk> pull_chunk(/* const ChunkID chunk_id*/ ) {
+    const auto lock_guard = std::lock_guard<std::mutex>{_chunk_append_mutex};
     Assert(!_last_chunk_has_been_pulled, "One too often pulled.");
     Assert(_sink_type != SinkType::PipelineEnd,
            "Sinks at the end of a pipeline return a table just as normal operators.");
@@ -79,7 +81,7 @@ class ChunkSink : public AbstractReadOnlyOperator {
     const auto chunk_id = _next_chunk_id_to_pull++;
 
     Assert(!_chunks.empty(), "No chunks to pull.");
-    Assert(_next_chunk_id_to_pull.load() > chunk_id, "Increment of atomic chunkID counter failed.");
+    Assert(_next_chunk_id_to_pull.load() == chunk_id + 1, "Increment of atomic chunkID counter failed. Really not accessed concurrently?");
     Assert(chunk_id >= 0, "Unexpected chunkID.");
 
     // Pretty aggressive Assert but should work as we don't pull before semaphore has been signaled.
@@ -96,9 +98,10 @@ class ChunkSink : public AbstractReadOnlyOperator {
     Assert(_chunks_added == _chunks.size(), "Unexpected.");
   }
 
-  bool finished() const {
+  bool finished() /*const*/ {
+    const auto lock_guard = std::lock_guard<std::mutex>{_chunk_append_mutex};
     const auto return_value = _all_chunks_have_been_added && _chunks_pulled == _chunks.size();
-    std::cerr << std::format("{} finished()? {} >> all_chunks: {} ... chunks.size(): {} == pulled: {} (added: {}).\n", _name, return_value, _all_chunks_have_been_added.load(), _chunks.size(), _chunks_pulled.load(), _chunks_added.load());
+    // std::cerr << std::format("{} finished()? {} >> all_chunks: {} ... chunks.size(): {} == pulled: {} (added: {}).\n", _name, return_value, _all_chunks_have_been_added.load(), _chunks.size(), _chunks_pulled.load(), _chunks_added.load());
     return return_value;
   }
 
@@ -114,13 +117,14 @@ class ChunkSink : public AbstractReadOnlyOperator {
       const auto& output = left_input()->get_output();
       const auto chunk_count = output->chunk_count();
       for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+        Assert(output->get_chunk(chunk_id)->mvcc_data(), "Unexpected: no mvcc data.");
         auto single_chunk_vector = std::vector<std::shared_ptr<Chunk>>{progressive::recreate_non_const_chunk(output->get_chunk(chunk_id))};
-        add_chunk(std::make_shared<Table>(output->column_definitions(), output->type(), std::move(single_chunk_vector)));
+        add_chunk(std::make_shared<Table>(output->column_definitions(), output->type(), std::move(single_chunk_vector), UseMvcc::Yes));
       }
 
       set_all_chunks_added();
       Assert(_all_chunks_have_been_added, "Something is totally off here.");
-      std::cerr << std::format("Start sink added all {} chunks.\n", static_cast<size_t>(chunk_count));
+      std::cerr << std::format("Start sink added all {} chunks: set `all_chunks_added`.\n", static_cast<size_t>(chunk_count));
 
       return output;  // `output` not used, just to conform to the standard operator interface.
     } else if  (_sink_type == SinkType::PipelineEnd) {
