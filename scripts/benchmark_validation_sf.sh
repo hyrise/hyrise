@@ -95,7 +95,7 @@ done
 
 benchmark="hyriseBenchmarkJoinOrder"
     echo "Running $benchmark for $commit... (single-threaded, w/ plugin NO SCHEMA CONSTRAINTS, PLUGIN, ALL ON"
-    ( SCHEMA_CONSTRAINTS=0 DEPENDENT_GROUPBY=1 JOIN_TO_SEMI=1 JOIN_TO_PREDICATE=1 VALIDATION_LOOPS=1000 "${build_folder}"/"$benchmark" -r ${runs} -t ${runtime} -w ${warmup_seconds} -p "${build_folder}/lib/libhyriseDependencyDiscoveryPlugin.${lib_suffix}" 2>&1 ) | tee "${build_folder}/benchmark_plugin_results/${benchmark}_${commit}_st_plugin.log"
+    ( SCHEMA_CONSTRAINTS=0 DEPENDENT_GROUPBY=1 JOIN_TO_SEMI=1 JOIN_TO_PREDICATE=1 VALIDATION_LOOPS=1000 "${build_folder}"/"$benchmark" -r ${runs} -w ${warmup_seconds} -p "${build_folder}/lib/libhyriseDependencyDiscoveryPlugin.${lib_suffix}" 2>&1 ) | tee "${build_folder}/benchmark_plugin_results/${benchmark}_${commit}_st_plugin.log"
 
 cd "${build_folder}"
 
