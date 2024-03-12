@@ -265,6 +265,8 @@ void BenchmarkRunner::_benchmark_shuffled() {
     item_ids = item_ids_weighted;
   }
 
+  _running_clients_semaphore.release(_config.clients);
+
   for (const auto& item_id : item_ids) {
     _warmup(item_id);
   }
@@ -279,8 +281,6 @@ void BenchmarkRunner::_benchmark_shuffled() {
   Assert(_currently_running_clients == 0, "Did not expect any clients to run at this time.");
 
   _state = BenchmarkState{_config.max_duration};
-  _running_clients_semaphore.release(_config.clients);
-
   while (_state.keep_running() && (_config.max_runs < 0 || _total_finished_runs.load(std::memory_order_relaxed) <
                                                                static_cast<size_t>(_config.max_runs))) {
     if (item_id_counter == benchmark_item_count) {
@@ -427,7 +427,6 @@ void BenchmarkRunner::_warmup(const BenchmarkItemID item_id) {
 
   _state = BenchmarkState{_config.warmup_duration};
 
-  _running_clients_semaphore.release(_config.clients);
   while (_state.keep_running()) {
     _schedule_item_run(item_id);
   }
@@ -443,8 +442,6 @@ void BenchmarkRunner::_warmup(const BenchmarkItemID item_id) {
   Hyrise::get().scheduler()->wait_for_all_tasks();
 
   Assert(_currently_running_clients == 0, "All runs must be finished at this point.");
-  // Deplete semaphore without doing any work for following benchmark runs.
-  while (_running_clients_semaphore.try_acquire()) {}
 }
 
 nlohmann::json BenchmarkRunner::_create_report() const {
