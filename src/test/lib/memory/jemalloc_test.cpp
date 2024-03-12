@@ -1,5 +1,6 @@
 #include <limits>
 #include <string>
+#include <thread>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -30,7 +31,7 @@ TEST_F(JemallocTest, ConfigurationSettings) {
   auto expected_settings = std::vector<std::pair<std::string, std::variant<bool, size_t, unsigned, std::string>>>{{"opt.oversize_threshold", size_t{0}},
                                                                                                   {"opt.dirty_decay_ms", size_t{20'000}},
                                                                                                   {"opt.dirty_decay_ms", size_t{20'000}},
-                                                                                                  {"opt.narenas", unsigned{12}},
+                                                                                                  {"opt.narenas", unsigned{std::thread::hardware_concurrency()}},
                                                                                                   {"opt.background_thread", true},
                                                                                                   {"version", std::string{"5.3.0-0-g54eaed1d8b56b1aa528be3bdd1877e59c56fa90c"}},
 {"opt.percpu_arena", std::string{"percpu"}},

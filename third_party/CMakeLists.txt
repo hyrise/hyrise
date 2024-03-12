@@ -134,15 +134,15 @@ if(NOT APPLE)
     message(FATAL_ERROR "jemalloc cannot be built with whitespaces in the directory path. Please make sure Hyrise is being compiled with a path not containing any whitespaces.")
   endif()
 
-  execute_process(
-    COMMAND bash "-c" "getconf _NPROCESSORS_ONLN" 
-    OUTPUT_VARIABLE FOO
-)
-
-  message("FOO is '${FOO}'")
-  math(EXPR MY_VERSION "${FOO} * 4")
-  message("my version: ${MY_VERSION}")
-  set(JEMALLOC_CONFIG "--with-malloc-conf=\"oversize_threshold:10,background_thread:true,percpu_arena:percpu,metadata_thp:auto,muzzy_decay_ms:20000,dirty_decay_ms:20000\"")
+  # The following configuration for jemalloc is used since we switched from jemalloc 4 to 5.3. As found by others as
+  # well (see https://github.com/jemalloc/jemalloc/issues/1621), setting oversize_threshold to 0 helps to alleviate the
+  # performance regression. Moreover, we use the recommended performance tuning settings (see
+  # https://github.com/jemalloc/jemalloc/blob/dev/TUNING.md) for high resource consumption applications. However, there
+  # is an issue with jemalloc's percpu_arena setting that does not work well with cpu affinities (e.g., when using
+  # numactl). The workaround is to set `narenas` to the number of cores (which is also the default). See
+  # https://github.com/jemalloc/jemalloc/issues/2054.
+  execute_process(COMMAND bash "-c" "getconf _NPROCESSORS_ONLN" OUTPUT_VARIABLE ARENA_COUNT OUTPUT_STRIP_TRAILING_WHITESPACE)
+  set(JEMALLOC_CONFIG "--with-malloc-conf=\"oversize_threshold:0,background_thread:true,narenas:${ARENA_COUNT},percpu_arena:percpu,metadata_thp:auto,muzzy_decay_ms:20000,dirty_decay_ms:20000\"")
 
   include(ExternalProject)
   set(JEMALLOC_COMPILER_ENVIRONMENT "CC=\"${CMAKE_C_COMPILER_LAUNCHER} ${CMAKE_C_COMPILER}\" CXX=\"${CMAKE_CXX_COMPILER_LAUNCHER} ${CMAKE_CXX_COMPILER}\"")
