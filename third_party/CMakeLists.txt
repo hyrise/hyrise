@@ -134,6 +134,16 @@ if(NOT APPLE)
     message(FATAL_ERROR "jemalloc cannot be built with whitespaces in the directory path. Please make sure Hyrise is being compiled with a path not containing any whitespaces.")
   endif()
 
+  execute_process(
+    COMMAND bash "-c" "getconf _NPROCESSORS_ONLN" 
+    OUTPUT_VARIABLE FOO
+)
+
+  message("FOO is '${FOO}'")
+  math(EXPR MY_VERSION "${FOO} * 4")
+  message("my version: ${MY_VERSION}")
+  set(JEMALLOC_CONFIG "--with-malloc-conf=\"oversize_threshold:10,background_thread:true,percpu_arena:percpu,metadata_thp:auto,muzzy_decay_ms:20000,dirty_decay_ms:20000\"")
+
   include(ExternalProject)
   set(JEMALLOC_COMPILER_ENVIRONMENT "CC=\"${CMAKE_C_COMPILER_LAUNCHER} ${CMAKE_C_COMPILER}\" CXX=\"${CMAKE_CXX_COMPILER_LAUNCHER} ${CMAKE_CXX_COMPILER}\"")
   externalproject_add(
@@ -141,8 +151,9 @@ if(NOT APPLE)
 
       SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/jemalloc
       BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/jemalloc
+
       # Executing configure script with suppressed output, only printing it in case of non-zero return.
-      CONFIGURE_COMMAND bash -c "cd <BINARY_DIR> && output=$(${JEMALLOC_COMPILER_ENVIRONMENT} <SOURCE_DIR>/configure --prefix=<BINARY_DIR> --with-malloc-conf=\"oversize_threshold:0,background_thread:true,percpu_arena:percpu,metadata_thp:auto,muzzy_decay_ms:20000,dirty_decay_ms:20000\" 2>&1) || \
+      CONFIGURE_COMMAND bash -c "cd <BINARY_DIR> && output=$(${JEMALLOC_COMPILER_ENVIRONMENT} <SOURCE_DIR>/configure --prefix=<BINARY_DIR> ${JEMALLOC_CONFIG} 2>&1) || \
                                  (printf \"$output\\n\" && false)"
       BUILD_COMMAND bash -c "output=$(${MAC_INCLUDES} make 2>&1) || (printf \"$output\\n\" && false)"
       INSTALL_COMMAND false  # install should never be called, this is a safe guard that fails if it is
