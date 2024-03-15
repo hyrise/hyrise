@@ -195,7 +195,7 @@ try {
             // Build hyriseTest (Debug) with macOS's default compiler (Apple clang) and run it.
             sh "printenv"
             sh "echo ${env.SDKROOT}"
-            sh "mkdir clang-apple-debug && cd clang-apple-debug && PATH=/usr/local/bin/:$PATH cmake ${debug} ${unity} ${ninja} -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ .."
+            sh "mkdir clang-apple-debug && cd clang-apple-debug && PATH=/usr/local/bin/:$PATH cmake ${debug} ${unity} ${ninja} .."
             sh "cd clang-apple-debug && PATH=/usr/local/bin/:$PATH ninja"
             sh "./clang-apple-debug/hyriseTest"
 
@@ -230,7 +230,7 @@ try {
             // Build hyriseTest (Release) with macOS's default compiler (Apple clang) and run it.
             sh "printenv"
             sh "echo ${env.SDKROOT}"
-            sh "mkdir clang-apple-release && cd clang-apple-release && cmake ${release} ${ninja} -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ .."
+            sh "mkdir clang-apple-release && cd clang-apple-release && cmake ${release} ${ninja} .."
             sh "cd clang-apple-release && ninja"
             sh "./clang-apple-release/hyriseTest"
 
