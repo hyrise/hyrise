@@ -75,6 +75,7 @@ class ChunkSink : public AbstractReadOnlyOperator {
     // the pulling.
     const auto acquired = processable_chunks_semaphore.try_acquire();
     if (!acquired) {
+      // std::cerr << std::format("Sink {} returns nullptr >> all_chunks: {} ... chunks.size(): {} == pulled: {} (added: {}).\n", _name, _all_chunks_have_been_added.load(), _chunks.size(), _chunks_pulled.load(), _chunks_added.load());
       return nullptr;
     }
 
@@ -124,7 +125,7 @@ class ChunkSink : public AbstractReadOnlyOperator {
 
       set_all_chunks_added();
       Assert(_all_chunks_have_been_added, "Something is totally off here.");
-      std::cerr << std::format("Start sink added all {} chunks: set `all_chunks_added`.\n", static_cast<size_t>(chunk_count));
+      // std::cerr << std::format("Start sink added all {} chunks: set `all_chunks_added`.\n", static_cast<size_t>(chunk_count));
 
       return output;  // `output` not used, just to conform to the standard operator interface.
     } else if  (_sink_type == SinkType::PipelineEnd) {

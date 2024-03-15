@@ -15,6 +15,7 @@
 #include "tpch/tpch_constants.hpp"
 #include "tpch/tpch_table_generator.hpp"
 #include "utils/atomic_max.hpp"
+#include "utils/progressive_utils.hpp"
 
 namespace hyrise {
 
@@ -528,5 +529,64 @@ TEST_F(StressTest, ConcurrentInsertsSetChunksImmutable) {
   EXPECT_EQ(table->last_chunk()->size(), 2);
   EXPECT_TRUE(table->last_chunk()->is_mutable());
 }
+
+
+TEST_F(StressTest, ProgressiveQueries) {
+  const auto ROW_COUNT = static_cast<int32_t>(Chunk::DEFAULT_SIZE * 2);
+
+  auto table = std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Int, false}}, TableType::Data,
+                                       Chunk::DEFAULT_SIZE, UseMvcc::Yes);
+  for (auto row_id = int32_t{0}; row_id < ROW_COUNT; ++row_id) {
+    table->append(std::vector<AllTypeVariant>{AllTypeVariant{row_id}});
+  }
+
+  table->append(std::vector<AllTypeVariant>{AllTypeVariant{2}});
+  table->append(std::vector<AllTypeVariant>{AllTypeVariant{3}});
+
+  // Hyrise::get().storage_manager.add_table("table_a", table);
+
+  const auto node_queue_scheduler = std::dynamic_pointer_cast<NodeQueueScheduler>(Hyrise::get().scheduler());
+  Assert(node_queue_scheduler, "NodeQueueScheduler not set?");
+  Assert(node_queue_scheduler->queues().size() == 1, "Unexpected NUMA topology.");
+
+  constexpr auto OUTER_JOB_COUNT = size_t{32};
+  constexpr auto INNER_JOB_COUNT = size_t{4'096};
+
+  auto accu_rows = std::atomic_uint32_t{0};
+
+  auto outer_jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+  outer_jobs.reserve(OUTER_JOB_COUNT);
+
+  for (auto outer_job_id = size_t{0}; outer_job_id < OUTER_JOB_COUNT; ++outer_job_id) {
+    outer_jobs.emplace_back(std::make_shared<JobTask>([&]() {
+      auto inner_jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+      inner_jobs.reserve(INNER_JOB_COUNT);
+
+      for (auto inner_job_id = size_t{0}; inner_job_id < INNER_JOB_COUNT; ++inner_job_id) {
+        inner_jobs.emplace_back(std::make_shared<JobTask>([&]() {
+          auto single_chunk_vector = std::vector<std::shared_ptr<Chunk>>{};
+          single_chunk_vector.emplace_back(progressive::recreate_non_const_chunk(table->get_chunk(ChunkID{0})));
+
+          auto single_chunk_table = std::make_shared<Table>(table->column_definitions(), TableType::Data,
+                                                            std::move(single_chunk_vector), UseMvcc::Yes);
+          auto lineitem_wrapper = std::make_shared<TableWrapper>(single_chunk_table);
+          lineitem_wrapper->never_clear_output();
+          lineitem_wrapper->execute();
+
+          auto table_scan = std::make_shared<TableScan>(lineitem_wrapper, less_than_(pqp_column_(ColumnID{0}, DataType::Int, false, ""), 2.0));
+          table_scan->execute();
+          accu_rows += table_scan->get_output()->row_count();
+        }, SchedulePriority::Default));
+        inner_jobs.back()->schedule();
+      }
+      Hyrise::get().scheduler()->wait_for_tasks(inner_jobs);
+    }));
+    outer_jobs.back()->schedule();
+  }
+  Hyrise::get().scheduler()->wait_for_tasks(outer_jobs);
+
+  EXPECT_EQ(accu_rows.load(), OUTER_JOB_COUNT * INNER_JOB_COUNT * 2);
+}
+
 
 }  // namespace hyrise

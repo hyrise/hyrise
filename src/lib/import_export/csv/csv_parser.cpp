@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <exception>
+#include <filesystem>
 #include <fstream>
 #include <ios>
 #include <list>
@@ -40,6 +41,8 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const Chunk
   } else {
     meta = process_csv_meta_file(filename + CsvMeta::META_FILE_EXTENSION);
   }
+
+  Assert(std::filesystem::exists(filename), "What?");
 
   auto escaped_linebreak = std::string(1, meta.config.delimiter_escape) + std::string(1, meta.config.delimiter);
 

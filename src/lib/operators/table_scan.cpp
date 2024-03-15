@@ -226,7 +226,7 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
     // Spawn job when chunk sufficiently large. The upper bound of the chunk size, still needs to be re-evaluated over
     // time to find the value which gives the best performance.
     constexpr auto JOB_SPAWN_THRESHOLD = ChunkOffset{500};
-    if (chunk_in->size() >= JOB_SPAWN_THRESHOLD) {
+    if (chunk_count > 1 && chunk_in->size() >= JOB_SPAWN_THRESHOLD) {
       auto job_task = std::make_shared<JobTask>(perform_table_scan);
       jobs.push_back(job_task);
     } else {

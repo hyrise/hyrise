@@ -1,19 +1,25 @@
 #include "progressive_map.hpp"
 
-#include "hyrise.hpp"
+#include <deque>
+#include <memory>
+#include <thread>
+#include <vector>
+
 #include "expression/expression_functional.hpp"
 #include "expression/pqp_column_expression.hpp"
+#include "hyrise.hpp"
+#include "operators/abstract_operator.hpp"
 #include "operators/projection.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "operators/print.hpp"
 #include "operators/progressive/chunk_sink.hpp"
-#include "storage/segment_iterate.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/job_task.hpp"
 #include "scheduler/task_queue.hpp"
 #include "storage/table.hpp"
+#include "storage/segment_iterate.hpp"
 #include "utils/assert.hpp"
 #include "utils/progressive_utils.hpp"
 #include "utils/timer.hpp"
@@ -63,7 +69,9 @@ std::shared_ptr<const Table> ProgressiveMap::_on_execute() {
   auto timer = Timer{};
   [[maybe_unused]] auto chunk_output_durations = std::deque<std::pair<std::chrono::nanoseconds, size_t>>{};
   const auto& input_table = left_input_table();
-  [[maybe_unused]] const auto num_high_priority_tasks = std::thread::hardware_concurrency() * 1;
+
+  const auto thread_count = std::thread::hardware_concurrency();
+  [[maybe_unused]] const auto num_high_priority_tasks = thread_count * 1;
 
   auto statistics_mutex = std::mutex{};
 
@@ -71,8 +79,8 @@ std::shared_ptr<const Table> ProgressiveMap::_on_execute() {
   if (_operator_type == OperatorType::TableScan) {
     sstream << "(predicate: " << *_table_scan_predicate << ")";
   }
-  std::cerr << std::format("ProgressiveMap for operator {} started {}.\n",
-                           std::string{magic_enum::enum_name(_operator_type)}, sstream.str());
+  // std::cerr << std::format("ProgressiveMap for operator {} started {}.\n",
+  //                          std::string{magic_enum::enum_name(_operator_type)}, sstream.str());
 
   auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
   [[maybe_unused]] auto job_id = uint32_t{0};
@@ -90,7 +98,12 @@ std::shared_ptr<const Table> ProgressiveMap::_on_execute() {
         // const auto sleep_ms = std::chrono::milliseconds{std::min(uint32_t{3'000}, unsuccessful_pulls / 1000)};
         const auto sleep_ms = std::chrono::milliseconds{unsuccessful_pulls / 1000};
         std::this_thread::sleep_for(sleep_ms);
-        if (unsuccessful_pulls > 128) {
+        if (unsuccessful_pulls > 1'000'000) {
+          std::cerr << "Error: Returning dummy empty due to timing out.\n";
+          _output_chunk_sink->set_all_chunks_added();
+          return Table::create_dummy_table(input_table->column_definitions());
+        }
+        if (unsuccessful_pulls > 100'000) {
           std::cerr << std::format("ProgressiveMap for operator {} {} sleeps for {} ms. Input sink has {} chunks and status of finished is: {} (queue length is {}).\n",
                                    std::string{magic_enum::enum_name(_operator_type)}, sstream.str(),
                                    sleep_ms, _input_chunk_sink->chunk_count(),
@@ -177,26 +190,28 @@ std::shared_ptr<const Table> ProgressiveMap::_on_execute() {
     // (job_id < num_high_priority_tasks || job_id % 10 == 0) ? SchedulePriority::High : SchedulePriority::Default));
     SchedulePriority::Default));
     jobs.back()->schedule();
+    // std::cerr << std::format("ProgressiveMap for operator {} {} scheduled job #{}.\n",
+    //                          std::string{magic_enum::enum_name(_operator_type)}, sstream.str(), job_id);
     Assert(jobs.back()->state() >= TaskState::Enqueued, "Unexpected task state of " + std::string{magic_enum::enum_name(jobs.back()->state())});
     ++job_id;
   }
   // std::cerr << std::format("ProgressiveMap for operator {} {} is waiting on all jobs.\n",
   //                          std::string{magic_enum::enum_name(_operator_type)}, sstream.str());
-  std::this_thread::sleep_for(std::chrono::milliseconds{500});
-  job_id = 0;
-  auto stop = false;
-  for (const auto& job : jobs) {
-    if (job->state() != TaskState::Done) {
-     std::cerr << std::format("#1 ProgressiveMap for operator {} {}: Job #{} not done, but {}.", std::string{magic_enum::enum_name(_operator_type)}, sstream.str(), job_id, std::string{magic_enum::enum_name(job->state())});
-     while (job->state() != TaskState::Done) {
-       std::this_thread::sleep_for(std::chrono::milliseconds{1'000});  
-       std::cerr << std::format("#2 ProgressiveMap for operator {} {}: Waiting for Job #{}, current status {}.", std::string{magic_enum::enum_name(_operator_type)}, sstream.str(), job_id, std::string{magic_enum::enum_name(job->state())});
-     }
-     // stop = true;
-    }
-    ++job_id;
-  }
-  if (stop) Fail("HMPF");
+  // std::this_thread::sleep_for(std::chrono::milliseconds{500});
+  // job_id = 0;
+  // auto stop = false;
+  // for (const auto& job : jobs) {
+  //   if (job->state() != TaskState::Done) {
+  //    std::cerr << std::format("#1 ProgressiveMap for operator {} {}: Job #{} not done, but {}.", std::string{magic_enum::enum_name(_operator_type)}, sstream.str(), job_id, std::string{magic_enum::enum_name(job->state())});
+  //    while (job->state() != TaskState::Done) {
+  //      std::this_thread::sleep_for(std::chrono::milliseconds{1'000});  
+  //      std::cerr << std::format("#2 ProgressiveMap for operator {} {}: Waiting for Job #{}, current status {}.", std::string{magic_enum::enum_name(_operator_type)}, sstream.str(), job_id, std::string{magic_enum::enum_name(job->state())});
+  //    }
+  //    // stop = true;
+  //   }
+  //   ++job_id;
+  // }
+  // if (stop) Fail("HMPF");
 
   Hyrise::get().scheduler()->wait_for_tasks(jobs);
   Assert(_input_chunk_sink->_chunks_added == _input_chunk_sink->_chunks_pulled, "error #1");
