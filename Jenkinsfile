@@ -163,6 +163,237 @@ try {
               sh "scripts/lint.sh"
             }
           }
+
+          // We distribute the cores to processes in a way to even the running times. With an even distributions,
+          // clang-tidy builds take up to 3h (galileo server). In addition to compile time, the distribution also
+          // considers the long test runtimes of clangRelWithDebInfoThreadSanitizer (~50 minutes).
+          parallel clangRelease: {
+            stage("clang-release") {
+              if (env.BRANCH_NAME == 'master' || full_ci) {
+                sh "cd clang-release && ninja all -j \$(( \$(nproc) / 10))"
+                sh "./clang-release/hyriseTest clang-release"
+                sh "./clang-release/hyriseSystemTest clang-release"
+                sh "./scripts/test/hyriseConsole_test.py clang-release"
+                sh "./scripts/test/hyriseServer_test.py clang-release"
+                sh "./scripts/test/hyriseBenchmarkJoinOrder_test.py clang-release"
+                sh "./scripts/test/hyriseBenchmarkFileBased_test.py clang-release"
+                sh "cd clang-release && ../scripts/test/hyriseBenchmarkTPCC_test.py ." // Own folder to isolate binary export tests
+                sh "cd clang-release && ../scripts/test/hyriseBenchmarkTPCH_test.py ." // Own folder to isolate visualization
+
+              } else {
+                Utils.markStageSkippedForConditional("clangRelease")
+              }
+            }
+          }, debugSystemTests: {
+            stage("system-tests") {
+              if (env.BRANCH_NAME == 'master' || full_ci) {
+                sh "mkdir clang-debug-system &&  ./clang-debug/hyriseSystemTest clang-debug-system"
+                sh "mkdir gcc-debug-system &&  ./gcc-debug/hyriseSystemTest gcc-debug-system"
+                sh "./scripts/test/hyriseConsole_test.py clang-debug"
+                sh "./scripts/test/hyriseServer_test.py clang-debug"
+                sh "./scripts/test/hyriseBenchmarkJoinOrder_test.py clang-debug"
+                sh "./scripts/test/hyriseBenchmarkFileBased_test.py clang-debug"
+                sh "cd clang-debug && ../scripts/test/hyriseBenchmarkTPCH_test.py ." // Own folder to isolate visualization
+                sh "cd clang-debug && ../scripts/test/hyriseBenchmarkJCCH_test.py ." // Own folder to isolate cached data
+                sh "cd clang-debug && ../scripts/test/hyriseBenchmarkStarSchema_test.py ." // Own folder to isolate cached data
+                sh "./scripts/test/hyriseConsole_test.py gcc-debug"
+                sh "./scripts/test/hyriseServer_test.py gcc-debug"
+                sh "./scripts/test/hyriseBenchmarkJoinOrder_test.py gcc-debug"
+                sh "./scripts/test/hyriseBenchmarkFileBased_test.py gcc-debug"
+                sh "cd gcc-debug && ../scripts/test/hyriseBenchmarkTPCH_test.py ." // Own folder to isolate visualization
+                sh "cd gcc-debug && ../scripts/test/hyriseBenchmarkJCCH_test.py ." // Own folder to isolate cached data
+                sh "cd gcc-debug && ../scripts/test/hyriseBenchmarkStarSchema_test.py ." // Own folder to isolate cached data
+
+              } else {
+                Utils.markStageSkippedForConditional("debugSystemTests")
+              }
+            }
+          }, clangDebugRunShuffled: {
+            stage("clang-debug:test-shuffle") {
+              if (env.BRANCH_NAME == 'master' || full_ci) {
+                sh "mkdir ./clang-debug/run-shuffled"
+                sh "./clang-debug/hyriseTest clang-debug/run-shuffled --gtest_repeat=5 --gtest_shuffle"
+                // We do not want to trigger SSB data generation concurrently since it is not concurrency-safe.
+                sh "./clang-debug/hyriseSystemTest clang-debug/run-shuffled --gtest_repeat=2 --gtest_shuffle --gtest_filter=\"-SSBTableGeneratorTest.*\""
+              } else {
+                Utils.markStageSkippedForConditional("clangDebugRunShuffled")
+              }
+            }
+          }, clangDebugUnityODR: {
+            stage("clang-debug-unity-odr") {
+              if (env.BRANCH_NAME == 'master' || full_ci) {
+                // Check if unity builds work even if everything is batched into a single compilation unit. This helps prevent ODR (one definition rule) issues.
+                sh "cd clang-debug-unity-odr && ninja all -j \$(( \$(nproc) / 20))"
+              } else {
+                Utils.markStageSkippedForConditional("clangDebugUnityODR")
+              }
+            }
+          }, clangDebugTidy: {
+            stage("clang-debug:tidy") {
+              if (env.BRANCH_NAME == 'master' || full_ci) {
+                // We do not run tidy checks on the src/test folder, so there is no point in running the expensive clang-tidy for those files
+                sh "cd clang-debug-tidy && ninja hyrise_impl hyriseBenchmarkFileBased hyriseBenchmarkTPCH hyriseBenchmarkTPCDS hyriseBenchmarkJoinOrder hyriseConsole hyriseServer hyriseMvccDeletePlugin hyriseUccDiscoveryPlugin -k 0 -j \$(( \$(nproc) / 5))"
+              } else {
+                Utils.markStageSkippedForConditional("clangDebugTidy")
+              }
+            }
+          }, clangDebugDisablePrecompileHeaders: {
+            stage("clang-debug:disable-precompile-headers") {
+              if (env.BRANCH_NAME == 'master' || full_ci) {
+                // Check if builds work even when precompile headers is turned off. Executing the binaries is unnecessary as the observed errors are missing includes.
+                sh "cd clang-debug-disable-precompile-headers && ninja hyriseTest hyriseBenchmarkFileBased hyriseBenchmarkTPCH hyriseBenchmarkTPCDS hyriseBenchmarkJoinOrder hyriseConsole hyriseServer -k 0 -j \$(( \$(nproc) / 20))"
+              } else {
+                Utils.markStageSkippedForConditional("clangDebugDisablePrecompileHeaders")
+              }
+            }
+          }, clangDebugAddrUBLeakSanitizers: {
+            stage("clang-debug:addr-ub-sanitizers") {
+              if (env.BRANCH_NAME == 'master' || full_ci) {
+                sh "cd clang-debug-addr-ub-leak-sanitizers && ninja hyriseTest hyriseSystemTest hyriseBenchmarkTPCH hyriseBenchmarkTPCC -j \$(( \$(nproc) / 20))"
+                sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=\${asan_options} ./clang-debug-addr-ub-leak-sanitizers/hyriseTest clang-debug-addr-ub-leak-sanitizers"
+                sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=\${asan_options} ./clang-debug-addr-ub-leak-sanitizers/hyriseSystemTest --gtest_filter=-${tests_excluded_in_sanitizer_builds} clang-debug-addr-ub-leak-sanitizers"
+                sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=\${asan_options} ./clang-debug-addr-ub-leak-sanitizers/hyriseBenchmarkTPCH -s .01 --verify -r 1"
+              } else {
+                Utils.markStageSkippedForConditional("clangDebugAddrUBLeakSanitizers")
+              }
+            }
+          }, gccRelease: {
+            if (env.BRANCH_NAME == 'master' || full_ci) {
+              stage("gcc-release") {
+                sh "cd gcc-release && ninja all -j \$(( \$(nproc) / 10))"
+                sh "./gcc-release/hyriseTest gcc-release"
+                sh "./gcc-release/hyriseSystemTest gcc-release"
+                sh "./scripts/test/hyriseConsole_test.py gcc-release"
+                sh "./scripts/test/hyriseServer_test.py gcc-release"
+                sh "./scripts/test/hyriseBenchmarkJoinOrder_test.py gcc-release"
+                sh "./scripts/test/hyriseBenchmarkFileBased_test.py gcc-release"
+                sh "cd gcc-release && ../scripts/test/hyriseBenchmarkTPCC_test.py ." // Own folder to isolate binary export tests
+                sh "cd gcc-release && ../scripts/test/hyriseBenchmarkTPCH_test.py ." // Own folder to isolate visualization
+              }
+            } else {
+                Utils.markStageSkippedForConditional("gccRelease")
+            }
+          }, clangReleaseAddrUBLeakSanitizers: {
+            stage("clang-release:addr-ub-sanitizers") {
+              if (env.BRANCH_NAME == 'master' || full_ci) {
+                sh "cd clang-release-addr-ub-leak-sanitizers && ninja hyriseTest hyriseSystemTest hyriseBenchmarkTPCH hyriseBenchmarkTPCC -j \$(( \$(nproc) / 5))"
+                sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=\${asan_options} ./clang-release-addr-ub-leak-sanitizers/hyriseTest clang-release-addr-ub-leak-sanitizers"
+                sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=\${asan_options} ./clang-release-addr-ub-leak-sanitizers/hyriseSystemTest --gtest_filter=-${tests_excluded_in_sanitizer_builds} clang-release-addr-ub-leak-sanitizers"
+                sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=\${asan_options} ./clang-release-addr-ub-leak-sanitizers/hyriseBenchmarkTPCH -s .01 --verify -r 100 --scheduler --clients 10 --cores \$(( \$(nproc) / 10))"
+                sh "cd clang-release-addr-ub-leak-sanitizers && LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=\${asan_options} ../scripts/test/hyriseBenchmarkTPCC_test.py ." // Own folder to isolate binary export tests
+              } else {
+                Utils.markStageSkippedForConditional("clangReleaseAddrUBLeakSanitizers")
+              }
+            }
+          }, clangRelWithDebInfoThreadSanitizer: {
+            stage("clang-relwithdebinfo:thread-sanitizer") {
+              if (env.BRANCH_NAME == 'master' || full_ci) {
+                sh "cd clang-relwithdebinfo-thread-sanitizer && ninja hyriseTest hyriseSystemTest hyriseBenchmarkTPCH hyriseBenchmarkTPCDS -j \$(( \$(nproc) / 5))"
+                sh "TSAN_OPTIONS=\"history_size=7 suppressions=resources/.tsan-ignore.txt\" ./clang-relwithdebinfo-thread-sanitizer/hyriseTest clang-relwithdebinfo-thread-sanitizer"
+                sh "TSAN_OPTIONS=\"history_size=7 suppressions=resources/.tsan-ignore.txt\" ./clang-relwithdebinfo-thread-sanitizer/hyriseSystemTest --gtest_filter=-${tests_excluded_in_sanitizer_builds} clang-relwithdebinfo-thread-sanitizer"
+                sh "TSAN_OPTIONS=\"history_size=7 suppressions=resources/.tsan-ignore.txt\" ./clang-relwithdebinfo-thread-sanitizer/hyriseBenchmarkTPCH -s .01 -r 100 --scheduler --clients 10 --cores \$(( \$(nproc) / 10))"
+                sh "TSAN_OPTIONS=\"history_size=7 suppressions=resources/.tsan-ignore.txt\" ./clang-relwithdebinfo-thread-sanitizer/hyriseBenchmarkTPCDS -s 1 -r 5 --scheduler --clients 5 --cores \$(( \$(nproc) / 10))"
+              } else {
+                Utils.markStageSkippedForConditional("clangRelWithDebInfoThreadSanitizer")
+              }
+            }
+          }, clangDebugCoverage: {
+            stage("clang-debug-coverage") {
+              if (env.BRANCH_NAME == 'master' || full_ci) {
+                sh "./scripts/coverage.sh --generate_badge=true"
+                sh "find coverage -type d -exec chmod +rx {} \\;"
+                archive 'coverage_badge.svg'
+                archive 'coverage_percent.txt'
+                publishHTML (target: [
+                  allowMissing: false,
+                  alwaysLinkToLastBuild: false,
+                  keepAll: true,
+                  reportDir: 'coverage',
+                  reportFiles: 'index.html',
+                  reportName: "Llvm-cov_Report"
+                ])
+                script {
+                  coverageChange = sh script: "./scripts/compare_coverage.sh", returnStdout: true
+                  githubNotify context: 'Coverage', description: "$coverageChange", status: 'SUCCESS', targetUrl: "${env.BUILD_URL}/RCov_20Report/index.html"
+                }
+              } else {
+                Utils.markStageSkippedForConditional("clangDebugCoverage")
+              }
+            }
+          }
+
+          parallel memcheckReleaseTest: {
+            stage("memcheckReleaseTest") {
+              // Runs after the other sanitizers as it depends on clang-release to be built.
+              if (env.BRANCH_NAME == 'master' || full_ci) {
+                sh "mkdir ./clang-release-memcheck-test"
+                // If this shows a leak, try --leak-check=full, which is slower but more precise. Valgrind serializes
+                // concurrent threads into a single one. Thus, we limit the cores and data preparation cores for the
+                // benchmark runs to reduce this serialization overhead. According to the Valgrind documentation,
+                // --fair-sched=yes "improves overall responsiveness if you are running an interactive multithreaded
+                // program" and "produces better reproducibility of thread scheduling for different executions of a
+                // multithreaded application" (i.e., there are no runs that are randomly faster or slower).
+                sh "valgrind --tool=memcheck --error-exitcode=1 --gen-suppressions=all --num-callers=25 --fair-sched=yes --suppressions=resources/.valgrind-ignore.txt ./clang-release/hyriseTest clang-release-memcheck-test --gtest_filter=-NUMAMemoryResourceTest.BasicAllocate"
+                sh "valgrind --tool=memcheck --error-exitcode=1 --gen-suppressions=all --num-callers=25 --fair-sched=yes --suppressions=resources/.valgrind-ignore.txt ./clang-release/hyriseBenchmarkTPCH -s .01 -r 1 --scheduler --cores 4 --data_preparation_cores 4"
+                sh "valgrind --tool=memcheck --error-exitcode=1 --gen-suppressions=all --num-callers=25 --fair-sched=yes --suppressions=resources/.valgrind-ignore.txt ./clang-release/hyriseBenchmarkTPCDS -s 1 -r 1 --scheduler --cores 4 --data_preparation_cores 4"
+                sh "valgrind --tool=memcheck --error-exitcode=1 --gen-suppressions=all --num-callers=25 --fair-sched=yes --suppressions=resources/.valgrind-ignore.txt ./clang-release/hyriseBenchmarkTPCC -s 1 --scheduler --cores 4 --data_preparation_cores 4"
+              } else {
+                Utils.markStageSkippedForConditional("memcheckReleaseTest")
+              }
+            }
+          }, tpchVerification: {
+            stage("tpchVerification") {
+              if (env.BRANCH_NAME == 'master' || full_ci) {
+                // Verify both single- and multithreaded results.
+                sh "./clang-release/hyriseBenchmarkTPCH --dont_cache_binary_tables -r 1 -s 1 --verify"
+                sh "./clang-release/hyriseBenchmarkTPCH --dont_cache_binary_tables -r 1 -s 1 --verify --scheduler --clients 1 --cores 10"
+              } else {
+                Utils.markStageSkippedForConditional("tpchVerification")
+              }
+            }
+          }, tpchQueryPlans: {
+            stage("tpchQueryPlans") {
+              if (env.BRANCH_NAME == 'master' || full_ci) {
+                sh "mkdir -p query_plans/tpch; cd query_plans/tpch && ../../clang-release/hyriseBenchmarkTPCH --dont_cache_binary_tables -r 2 -s 10 --visualize && ../../scripts/plot_operator_breakdown.py ../../clang-release/"
+                archiveArtifacts artifacts: 'query_plans/tpch/*.svg'
+                archiveArtifacts artifacts: 'query_plans/tpch/operator_breakdown.pdf'
+              } else {
+                Utils.markStageSkippedForConditional("tpchQueryPlans")
+              }
+            }
+          }, tpcdsQueryPlansAndVerification: {
+            stage("tpcdsQueryPlansAndVerification") {
+              if (env.BRANCH_NAME == 'master' || full_ci) {
+                sh "mkdir -p query_plans/tpcds; cd query_plans/tpcds && ln -s ../../resources; ../../clang-release/hyriseBenchmarkTPCDS --dont_cache_binary_tables -r 1 -s 1 --visualize --verify && ../../scripts/plot_operator_breakdown.py ../../clang-release/"
+                archiveArtifacts artifacts: 'query_plans/tpcds/*.svg'
+                archiveArtifacts artifacts: 'query_plans/tpcds/operator_breakdown.pdf'
+              } else {
+                Utils.markStageSkippedForConditional("tpcdsQueryPlansAndVerification")
+              }
+            }
+          }, jobQueryPlans: {
+            stage("jobQueryPlans") {
+              if (env.BRANCH_NAME == 'master' || full_ci) {
+                // In contrast to TPC-H and TPC-DS above, we execute the JoinOrderBenchmark from the project's root directoy because its setup script requires us to do so.
+                sh "mkdir -p query_plans/job && ./clang-release/hyriseBenchmarkJoinOrder --dont_cache_binary_tables -r 1 --visualize && ./scripts/plot_operator_breakdown.py ./clang-release/ && mv operator_breakdown.pdf query_plans/job && mv *QP.svg query_plans/job"
+                archiveArtifacts artifacts: 'query_plans/job/*.svg'
+                archiveArtifacts artifacts: 'query_plans/job/operator_breakdown.pdf'
+              } else {
+                Utils.markStageSkippedForConditional("jobQueryPlans")
+              }
+            }
+          }, ssbQueryPlans: {
+            stage("ssbQueryPlans") {
+              if (env.BRANCH_NAME == 'master' || full_ci) {
+                sh "mkdir -p query_plans/ssb; cd query_plans/ssb && ../../clang-release/hyriseBenchmarkStarSchema --dont_cache_binary_tables -r 1 -s 1 --visualize && ../../scripts/plot_operator_breakdown.py ../../clang-release/"
+                archiveArtifacts artifacts: 'query_plans/ssb/*.svg'
+                archiveArtifacts artifacts: 'query_plans/ssb/operator_breakdown.pdf'
+              } else {
+                Utils.markStageSkippedForConditional("ssbQueryPlans")
+              }
+            }
+          }
+
         } finally {
           sh "ls -A1 | xargs rm -rf"
           deleteDir()
@@ -192,7 +423,9 @@ try {
               }
             }
 
-            // Build hyriseTest (Debug) with macOS's default compiler (Apple clang) and run it.
+            // Build hyriseTest (Debug) with macOS's default compiler (Apple clang) and run it. Passing clang
+            // explicitly seems to make the compiler find C system headers (required for SSB and JCC-H data generators)
+            // that are not found otherwise.
             sh "mkdir clang-apple-debug && cd clang-apple-debug && PATH=/usr/local/bin/:$PATH cmake ${debug} ${unity} ${ninja} -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ .."
             sh "cd clang-apple-debug && PATH=/usr/local/bin/:$PATH ninja"
             sh "./clang-apple-debug/hyriseTest"
@@ -225,7 +458,9 @@ try {
             // We do not use install_dependencies.sh here as there is no way to run OS X in a Docker container
             sh "git submodule update --init --recursive --jobs 4 --depth=1"
 
-            // Build hyriseTest (Release) with macOS's default compiler (Apple clang) and run it.
+            // Build hyriseTest (Release) with macOS's default compiler (Apple clang) and run it. Passing clang
+            // explicitly seems to make the compiler find C system headers (required for SSB and JCC-H data generators)
+            // that are not found otherwise.
             sh "mkdir clang-apple-release && cd clang-apple-release && cmake ${release} ${ninja} -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ .."
             sh "cd clang-apple-release && ninja"
             sh "./clang-apple-release/hyriseTest"
