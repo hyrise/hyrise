@@ -9,6 +9,7 @@
 
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_utils.hpp"
+#include "expression/lqp_column_expression.hpp"
 #include "expression/window_expression.hpp"
 #include "expression/window_function_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"

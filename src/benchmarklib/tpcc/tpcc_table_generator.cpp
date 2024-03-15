@@ -19,6 +19,7 @@
 #include "constants.hpp"
 #include "storage/chunk.hpp"
 #include "storage/constraints/table_key_constraint.hpp"
+#include "storage/constraints/constraint_utils.hpp"
 #include "storage/mvcc_data.hpp"
 #include "storage/table.hpp"
 #include "storage/table_column_definition.hpp"
@@ -709,46 +710,59 @@ AbstractTableGenerator::IndexesByTable TPCCTableGenerator::_indexes_by_table() c
 
 void TPCCTableGenerator::_add_constraints(
     std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) const {
+  // Set all primary (PK) and foreign keys (FK) as defined in the specification (Revision 5.11, 1.3 Table Layouts,
+  // p. 12-17).
+
+  // Get all tables.
   const auto& warehouse_table = table_info_by_name.at("WAREHOUSE").table;
-  warehouse_table->add_soft_key_constraint(
-      {{warehouse_table->column_id_by_name("W_ID")}, KeyConstraintType::PRIMARY_KEY});
-
   const auto& district_table = table_info_by_name.at("DISTRICT").table;
-  district_table->add_soft_key_constraint(
-      {{district_table->column_id_by_name("D_W_ID"), district_table->column_id_by_name("D_ID")},
-       KeyConstraintType::PRIMARY_KEY});
-
   const auto& customer_table = table_info_by_name.at("CUSTOMER").table;
-  customer_table->add_soft_key_constraint(
-      {{customer_table->column_id_by_name("C_W_ID"), customer_table->column_id_by_name("C_D_ID"),
-        customer_table->column_id_by_name("C_ID")},
-       KeyConstraintType::PRIMARY_KEY});
-
+  const auto& history_table = table_info_by_name.at("HISTORY").table;
   const auto& new_order_table = table_info_by_name.at("NEW_ORDER").table;
-  new_order_table->add_soft_key_constraint(
-      {{new_order_table->column_id_by_name("NO_W_ID"), new_order_table->column_id_by_name("NO_D_ID"),
-        new_order_table->column_id_by_name("NO_O_ID")},
-       KeyConstraintType::PRIMARY_KEY});
-
   const auto& order_table = table_info_by_name.at("ORDER").table;
-  order_table->add_soft_key_constraint(
-      {{order_table->column_id_by_name("O_W_ID"), order_table->column_id_by_name("O_D_ID"),
-        order_table->column_id_by_name("O_ID")},
-       KeyConstraintType::PRIMARY_KEY});
-
   const auto& order_line_table = table_info_by_name.at("ORDER_LINE").table;
-  order_line_table->add_soft_key_constraint(
-      {{order_line_table->column_id_by_name("OL_W_ID"), order_line_table->column_id_by_name("OL_D_ID"),
-        order_line_table->column_id_by_name("OL_O_ID"), order_line_table->column_id_by_name("OL_NUMBER")},
-       KeyConstraintType::PRIMARY_KEY});
-
   const auto& item_table = table_info_by_name.at("ITEM").table;
-  item_table->add_soft_key_constraint({{item_table->column_id_by_name("I_ID")}, KeyConstraintType::PRIMARY_KEY});
-
   const auto& stock_table = table_info_by_name.at("STOCK").table;
-  stock_table->add_soft_key_constraint(
-      {{stock_table->column_id_by_name("S_W_ID"), stock_table->column_id_by_name("S_I_ID")},
-       KeyConstraintType::PRIMARY_KEY});
+
+  // Set constraints.
+
+  // WAREHOUSE - 1 PK.
+  primary_key_constraint(warehouse_table, {"W_ID"});
+
+  // DISTRICT - 1 composite PK, 1 FK.
+  primary_key_constraint(district_table, {"D_W_ID", "D_ID"});
+  foreign_key_constraint(district_table, {"D_W_ID"}, warehouse_table, {"W_ID"});
+
+  // CUSTOMER - 1 composite PK, 1 composite FK.
+  primary_key_constraint(customer_table, {"C_W_ID", "C_D_ID", "C_ID"});
+  foreign_key_constraint(customer_table, {"C_W_ID", "C_D_ID"}, district_table, {"D_W_ID", "D_ID"});
+
+  // HISTORY - 2 composite FKs.
+  foreign_key_constraint(history_table, {"H_C_W_ID", "H_C_D_ID", "H_C_ID"}, customer_table,
+                         {"C_W_ID", "C_D_ID", "C_ID"});
+  foreign_key_constraint(history_table, {"H_W_ID", "H_D_ID"}, district_table, {"D_W_ID", "D_ID"});
+
+  // NEW_ORDER - 1 composite PK, 1 composite FK.
+  primary_key_constraint(new_order_table, {"NO_W_ID", "NO_D_ID", "NO_O_ID"});
+  foreign_key_constraint(new_order_table, {"NO_W_ID", "NO_D_ID", "NO_O_ID"}, order_table, {"O_W_ID", "O_D_ID", "O_ID"});
+
+  // ORDER - 1 composite PK, 1 composite FK.
+  primary_key_constraint(order_table, {"O_W_ID", "O_D_ID", "O_ID"});
+  foreign_key_constraint(order_table, {"O_W_ID", "O_D_ID", "O_C_ID"}, customer_table, {"C_W_ID", "C_D_ID", "C_ID"});
+
+  // ORDER_LINE - 1 composite PK, 2 composite FKs.
+  primary_key_constraint(order_line_table, {"OL_W_ID", "OL_D_ID", "OL_O_ID", "OL_NUMBER"});
+  foreign_key_constraint(order_line_table, {"OL_W_ID", "OL_D_ID", "OL_O_ID"}, order_table,
+                         {"O_W_ID", "O_D_ID", "O_ID"});
+  foreign_key_constraint(order_line_table, {"OL_SUPPLY_W_ID", "OL_I_ID"}, stock_table, {"S_W_ID", "S_I_ID"});
+
+  // ITEM - 1 PK.
+  primary_key_constraint(item_table, {"I_ID"});
+
+  // STOCK - 1 composite PK, 2 FKs.
+  primary_key_constraint(stock_table, {"S_W_ID", "S_I_ID"});
+  foreign_key_constraint(stock_table, {"S_W_ID"}, warehouse_table, {"W_ID"});
+  foreign_key_constraint(stock_table, {"S_I_ID"}, item_table, {"I_ID"});
 }
 
 thread_local TPCCRandomGenerator TPCCTableGenerator::_random_gen;  // NOLINT

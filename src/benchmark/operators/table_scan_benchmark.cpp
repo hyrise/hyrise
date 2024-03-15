@@ -2,6 +2,7 @@
 
 #include "benchmark/benchmark.h"
 
+<<<<<<< HEAD
 #include "all_type_variant.hpp"
 #include "expression/expression_functional.hpp"
 #include "micro_benchmark_basic_fixture.hpp"
@@ -9,6 +10,10 @@
 #include "import_export/csv/csv_parser.hpp"
 #include "hyrise.hpp"
 #include "operators/print.hpp"
+=======
+#include "expression/expression_functional.hpp"
+#include "micro_benchmark_basic_fixture.hpp"
+>>>>>>> master
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "scheduler/abstract_task.hpp"

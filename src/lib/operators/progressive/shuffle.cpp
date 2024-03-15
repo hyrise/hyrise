@@ -53,6 +53,8 @@ std::shared_ptr<const Table> Shuffle::_on_execute() {
   auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
   auto unsuccessful_pulls = uint32_t{1};
 
+  // Per chunk, we collect a vector of deques (size is number of partitions)
+
   const auto node_queue_scheduler = std::dynamic_pointer_cast<NodeQueueScheduler>(Hyrise::get().scheduler());
   Assert(node_queue_scheduler, "NodeQueueScheduler not set?");
   Assert(node_queue_scheduler->queues().size() == 1, "Unexpected NUMA topology.");

@@ -17,7 +17,11 @@
  *
  * {
  *   const auto performance_warning_disabler = PerformanceWarningDisabler{};
+<<<<<<< HEAD
  *   std::cout << abstract_segment[5] << '\n';  // This does not cause a warning.
+=======
+ *   std::cout << abstract_segment[5];  // This does not cause a warning.
+>>>>>>> master
  * }
  * // warnings are enabled again
  *

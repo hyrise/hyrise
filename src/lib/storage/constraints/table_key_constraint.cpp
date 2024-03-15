@@ -4,6 +4,10 @@
 #include <cstddef>
 #include <functional>
 #include <set>
+<<<<<<< HEAD
+=======
+#include <utility>
+>>>>>>> master
 
 #include <boost/container_hash/hash.hpp>
 
@@ -13,8 +17,10 @@
 
 namespace hyrise {
 
-TableKeyConstraint::TableKeyConstraint(const std::set<ColumnID>& columns, const KeyConstraintType key_type)
-    : _key_type{key_type}, _columns{columns} {}
+TableKeyConstraint::TableKeyConstraint(std::set<ColumnID>&& columns, const KeyConstraintType key_type)
+    : AbstractTableConstraint(TableConstraintType::Key), _key_type{key_type}, _columns{std::move(columns)} {
+  Assert(!_columns.empty(), "Did not expect useless constraint.");
+}
 
 KeyConstraintType TableKeyConstraint::key_type() const {
   return _key_type;

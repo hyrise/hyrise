@@ -10,10 +10,13 @@
 
 #include <boost/container_hash/hash.hpp>
 
+#include "expression/abstract_expression.hpp"
 #include "expression/binary_predicate_expression.hpp"
 #include "expression/expression_utils.hpp"
+#include "expression/lqp_column_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/data_dependencies/functional_dependency.hpp"
+#include "logical_query_plan/data_dependencies/order_dependency.hpp"
 #include "logical_query_plan/data_dependencies/unique_column_combination.hpp"
 #include "lqp_utils.hpp"
 #include "operators/operator_join_predicate.hpp"
@@ -85,8 +88,8 @@ UniqueColumnCombinations JoinNode::unique_column_combinations() const {
     return _forward_left_unique_column_combinations();
   }
 
-  const auto& left_unique_column_combinations = left_input()->unique_column_combinations();
-  const auto& right_unique_column_combinations = right_input()->unique_column_combinations();
+  const auto left_unique_column_combinations = left_input()->unique_column_combinations();
+  const auto right_unique_column_combinations = right_input()->unique_column_combinations();
 
   return _output_unique_column_combinations(left_unique_column_combinations, right_unique_column_combinations);
 }
@@ -145,6 +148,59 @@ UniqueColumnCombinations JoinNode::_output_unique_column_combinations(
   return UniqueColumnCombinations{};
 }
 
+OrderDependencies JoinNode::order_dependencies() const {
+  if (is_semi_or_anti_join(join_mode)) {
+    return _forward_left_order_dependencies();
+  }
+
+  // ODs are not affected from removing or duplicating tuples, so we simply have to foward left and right ODs without
+  // duplicate ODs. We achieve deduplication by using sets for ODs.
+  const auto left_order_dependencies = left_input()->order_dependencies();
+  const auto right_order_dependencies = right_input()->order_dependencies();
+  auto order_dependencies = OrderDependencies{left_order_dependencies.cbegin(), left_order_dependencies.cend()};
+  order_dependencies.insert(right_order_dependencies.cbegin(), right_order_dependencies.cend());
+
+  // For inner equi joins, new ODs can occur due to the transitive nature: Imagine a join on A.b = B.x where the input
+  // nodes have the ODs A.a |-> A.b, and B.x |-> B.y. In this case, the two additional ODs A.a |-> B.x and A.a |-> B.y
+  // occur. For now, we limit the transitive closure of ODs to joins with a single equals predicate. Otherwise, we would
+  // have to add all permutations of the predicates as ODs.
+  const auto predicates = join_predicates();
+  if (join_mode != JoinMode::Inner || predicates.size() != 1) {
+    return order_dependencies;
+  }
+
+  const auto& binary_predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(predicates.front());
+  if (!binary_predicate || binary_predicate->predicate_condition != PredicateCondition::Equals) {
+    return order_dependencies;
+  }
+
+  const auto& join_key_1 = binary_predicate->left_operand();
+  const auto& join_key_2 = binary_predicate->right_operand();
+
+  // Return if this is a self join and we already have ODs. This makes things tricky when we build the transitive
+  // closure: If the join columns are different, we do not know to which of the output columns new ODs apply.
+  const auto get_original_node = [](const auto& expression) {
+    // Skip complex join keys.
+    if (expression->type != ExpressionType::LQPColumn) {
+      return std::shared_ptr<const AbstractLQPNode>{};
+    }
+
+    return static_cast<LQPColumnExpression&>(*expression).original_node.lock();
+  };
+
+  const auto& original_node_1 = get_original_node(join_key_1);
+  if (!original_node_1 || *original_node_1 == *get_original_node(join_key_2)) {
+    return order_dependencies;
+  }
+
+  // Join keys are equal, so the OD is bidirectional.
+  order_dependencies.emplace(expression_vector(join_key_1), expression_vector(join_key_2));
+  order_dependencies.emplace(expression_vector(join_key_2), expression_vector(join_key_1));
+
+  build_transitive_od_closure(order_dependencies);
+  return order_dependencies;
+}
+
 FunctionalDependencies JoinNode::non_trivial_functional_dependencies() const {
   /**
    * In the case of Semi- & Anti-Joins, this node acts as a filter for the left input node. The number of output
@@ -162,9 +218,9 @@ FunctionalDependencies JoinNode::non_trivial_functional_dependencies() const {
   auto fds_left = FunctionalDependencies{};
   auto fds_right = FunctionalDependencies{};
 
-  const auto& left_unique_column_combinations = left_input()->unique_column_combinations();
-  const auto& right_unique_column_combinations = right_input()->unique_column_combinations();
-  const auto& output_unique_column_combinations =
+  const auto left_unique_column_combinations = left_input()->unique_column_combinations();
+  const auto right_unique_column_combinations = right_input()->unique_column_combinations();
+  const auto output_unique_column_combinations =
       _output_unique_column_combinations(left_unique_column_combinations, right_unique_column_combinations);
 
   if (output_unique_column_combinations.empty() && !left_unique_column_combinations.empty() &&
