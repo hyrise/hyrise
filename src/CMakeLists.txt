@@ -91,10 +91,6 @@ if (ENABLE_CLANG_TIDY)
     # Get the full clang-tidy path (helps with MacOS builds).
     set(CMAKE_CXX_CLANG_TIDY "${CMAKE_C_COMPILER}-tidy")
     message(STATUS "clang-tidy enabled")
-<<<<<<< HEAD
-    set(CMAKE_CXX_CLANG_TIDY "clang-tidy")
-=======
->>>>>>> master
 endif()
 
 add_subdirectory(benchmarklib)

@@ -3,22 +3,12 @@
 #include <algorithm>
 #include <cstddef>
 #include <functional>
-<<<<<<< HEAD
-#include <memory>
-#include <ostream>
-#include <utility>
-#include <vector>
-
-#include "expression/abstract_expression.hpp"
-#include "utils/assert.hpp"
-=======
 #include <ostream>
 #include <utility>
 
 #include "expression/abstract_expression.hpp"
 #include "utils/assert.hpp"
 #include "utils/print_utils.hpp"
->>>>>>> master
 
 namespace hyrise {
 

@@ -53,6 +53,19 @@ target_link_libraries(
     ncurses
 )
 
+# Configure Console
+add_executable(
+    hyriseUCIHPI
+
+    uci_hpi_query_processing.cpp
+)
+
+target_link_libraries(
+    hyriseUCIHPI
+    hyrise
+    hyriseBenchmarkLib
+)
+
 # Link readline as a system library to ignore '-Wreserved-identifier' warnings (compile errors due to -Werror)
 target_link_libraries_system(
     hyriseConsole

@@ -4,10 +4,7 @@
 #include <cstddef>
 #include <functional>
 #include <set>
-<<<<<<< HEAD
-=======
 #include <utility>
->>>>>>> master
 
 #include <boost/container_hash/hash.hpp>
 

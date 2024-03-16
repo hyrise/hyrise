@@ -3,20 +3,14 @@
 #include <algorithm>
 #include <cstddef>
 #include <functional>
-<<<<<<< HEAD
 #include <memory>
-=======
->>>>>>> master
 #include <ostream>
 #include <utility>
 #include <vector>
 
 #include "expression/abstract_expression.hpp"
 #include "utils/assert.hpp"
-<<<<<<< HEAD
-=======
 #include "utils/print_utils.hpp"
->>>>>>> master
 
 namespace hyrise {
 

@@ -12,6 +12,7 @@
 
 #include "expression/abstract_expression.hpp"
 #include "expression/binary_predicate_expression.hpp"
+#include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_column_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
@@ -24,6 +25,8 @@
 #include "utils/assert.hpp"
 
 namespace hyrise {
+
+using namespace expression_functional;  // NOLINT(build/namespaces)
 
 JoinNode::JoinNode(const JoinMode init_join_mode) : AbstractLQPNode(LQPNodeType::Join), join_mode(init_join_mode) {
   Assert(join_mode == JoinMode::Cross, "Only Cross Joins can be constructed without predicate");
