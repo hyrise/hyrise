@@ -217,31 +217,31 @@ void benchmark_traditional_and_progressive_scan(auto& result_counts_and_timings,
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
 }
 
-void benchmark_pratyoy_scan(auto& result_counts_and_timings, const auto& table, const auto& predicate) {
-  const auto chunk_count = table->chunk_count();
+// void benchmark_pratyoy_scan(auto& result_counts_and_timings, const auto& table, const auto& predicate) {
+//   const auto chunk_count = table->chunk_count();
 
-  auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
-  jobs.reserve(chunk_count);
-  const auto start = std::chrono::system_clock::now();
+//   auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+//   jobs.reserve(chunk_count);
+//   // const auto start = std::chrono::system_clock::now();
 
-  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-    // Probably this for loop is wrong. You don't want to go linearly over the chunks.
-  }
-  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
-}
+//   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+//     // Probably this for loop is wrong. You don't want to go linearly over the chunks.
+//   }
+//   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
+// }
 
-void benchmark_martin_scan(auto& result_counts_and_timings, const auto& table, const auto& predicate) {
-  const auto chunk_count = table->chunk_count();
+// void benchmark_martin_scan(auto& result_counts_and_timings, const auto& table, const auto& predicate) {
+//   const auto chunk_count = table->chunk_count();
 
-  auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
-  jobs.reserve(chunk_count);
-  const auto start = std::chrono::system_clock::now();
+//   auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+//   jobs.reserve(chunk_count);
+//   // const auto start = std::chrono::system_clock::now();
 
-  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-    // Let's see ...
-  }
-  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
-}
+//   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+//     // Let's see ...
+//   }
+//   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
+// }
 
 }  // namespace
 
@@ -286,7 +286,9 @@ int main(int argc, char* argv[]) {
 
   const auto core_count =
       parsed_options.count("cores") == 0 ? std::thread::hardware_concurrency() : parsed_options.count("cores");
-  auto csv_output_file = std::ofstream(std::string{"progressive_scan__"} + std::to_string(core_count) + "_cores.csv");
+  auto csv_file_name = std::string{"progressive_scan__"} + std::to_string(core_count) + "_cores__";
+  csv_file_name += benchmark_data_str + "__" + std::to_string(MEASUREMENT_COUNT) + "_runs.csv";
+  auto csv_output_file = std::ofstream(csv_file_name);
   csv_output_file << "SCAN_TYPE,SCAN_ID,ROW_EMITTED,RUNTIME_NS\n";
 
   for (auto measurement_id = size_t{0}; measurement_id < MEASUREMENT_COUNT; ++measurement_id) {
@@ -297,7 +299,7 @@ int main(int argc, char* argv[]) {
     benchmark_traditional_and_progressive_scan(result_counts_and_timings, table, predicate);
 
     // This is more or less for fun, right now. Above, we do the "traditional" table scan in Hyrise, but manually and
-    // pretend that we would immediately push "ready" chunks to the next pipeline operator. The "traditional" costs below
+    // retend that we would immediately push "ready" chunks to the next pipeline operator. The "traditional" costs below
     // assume that we yield all tuples at the end at once.
     // The cost model is `for each tuple: costs += runtime_to_yield_tuple`.
     auto max_runtime = result_counts_and_timings[0].second;
