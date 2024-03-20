@@ -13,8 +13,8 @@
 #include "scheduler/job_task.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/task_queue.hpp"
-#include "storage/table.hpp"
 #include "storage/segment_iterate.hpp"
+#include "storage/table.hpp"
 #include "utils/assert.hpp"
 #include "utils/progressive_utils.hpp"
 #include "utils/timer.hpp"
@@ -25,10 +25,12 @@ Shuffle::Shuffle(const std::shared_ptr<const AbstractOperator>& input_operator,
                  std::shared_ptr<ChunkSink>& input_chunk_sink, std::shared_ptr<ChunkSink>& output_chunk_sink,
                  const std::vector<ColumnID>& columns, const std::vector<size_t>& partition_counts)
     : AbstractReadOnlyOperator(OperatorType::TableScan, input_operator, nullptr),
-          _input_chunk_sink{input_chunk_sink}, _output_chunk_sink{output_chunk_sink}, _columns{columns},
-          _partition_counts{partition_counts} {
-        Assert(_input_chunk_sink && _output_chunk_sink, "Shuffle requires sinks at both ends.");
-      }
+      _input_chunk_sink{input_chunk_sink},
+      _output_chunk_sink{output_chunk_sink},
+      _columns{columns},
+      _partition_counts{partition_counts} {
+  Assert(_input_chunk_sink && _output_chunk_sink, "Shuffle requires sinks at both ends.");
+}
 
 const std::string& Shuffle::name() const {
   static const auto name = std::string{"Shuffle"};
@@ -39,8 +41,8 @@ std::shared_ptr<AbstractOperator> Shuffle::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_left_input,
     const std::shared_ptr<AbstractOperator>& /*copied_right_input*/,
     std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& /*copied_ops*/) const {
-  auto copy = std::make_shared<Shuffle>(copied_left_input, _input_chunk_sink, _output_chunk_sink, _columns,
-                                        _partition_counts);
+  auto copy =
+      std::make_shared<Shuffle>(copied_left_input, _input_chunk_sink, _output_chunk_sink, _columns, _partition_counts);
   return copy;
 }
 
@@ -72,9 +74,11 @@ std::shared_ptr<const Table> Shuffle::_on_execute() {
           return Table::create_dummy_table(input_table->column_definitions());
         }
         if (unsuccessful_pulls > 100'000) {
-          std::cerr << std::format("Shuffle sleeps for {} ms. Input sink has {} chunks and status of finished is: {} (queue length is {}).\n",
-                                   sleep_ms, _input_chunk_sink->chunk_count(),
-                                   _input_chunk_sink->finished(), node_queue_scheduler->queues()[0]->estimate_load());
+          std::cerr << std::format(
+              "Shuffle sleeps for {} ms. Input sink has {} chunks and status of finished is: {} (queue length is "
+              "{}).\n",
+              sleep_ms, _input_chunk_sink->chunk_count(), _input_chunk_sink->finished(),
+              node_queue_scheduler->queues()[0]->estimate_load());
         }
         continue;
       }
@@ -84,9 +88,11 @@ std::shared_ptr<const Table> Shuffle::_on_execute() {
     }
     unsuccessful_pulls = 1;
 
-    jobs.emplace_back(std::make_shared<JobTask>([&, chunk]() {
-      
-    }, SchedulePriority::Default));
+    jobs.emplace_back(std::make_shared<JobTask>(
+        [&, chunk]() {
+
+        },
+        SchedulePriority::Default));
     jobs.back()->schedule();
   }
 

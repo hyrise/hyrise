@@ -55,8 +55,8 @@ extern "C" {
 
 #include "abstract_table_generator.hpp"
 #include "benchmark_config.hpp"
-#include "storage/constraints/table_key_constraint.hpp"
 #include "storage/constraints/constraint_utils.hpp"
+#include "storage/constraints/table_key_constraint.hpp"
 #include "storage/table.hpp"
 #include "table_builder.hpp"
 #include "types.hpp"

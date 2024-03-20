@@ -530,7 +530,6 @@ TEST_F(StressTest, ConcurrentInsertsSetChunksImmutable) {
   EXPECT_TRUE(table->last_chunk()->is_mutable());
 }
 
-
 TEST_F(StressTest, ProgressiveQueries) {
   const auto ROW_COUNT = static_cast<int32_t>(Chunk::DEFAULT_SIZE * 2);
 
@@ -563,20 +562,23 @@ TEST_F(StressTest, ProgressiveQueries) {
       inner_jobs.reserve(INNER_JOB_COUNT);
 
       for (auto inner_job_id = size_t{0}; inner_job_id < INNER_JOB_COUNT; ++inner_job_id) {
-        inner_jobs.emplace_back(std::make_shared<JobTask>([&]() {
-          auto single_chunk_vector = std::vector<std::shared_ptr<Chunk>>{};
-          single_chunk_vector.emplace_back(progressive::recreate_non_const_chunk(table->get_chunk(ChunkID{0})));
+        inner_jobs.emplace_back(std::make_shared<JobTask>(
+            [&]() {
+              auto single_chunk_vector = std::vector<std::shared_ptr<Chunk>>{};
+              single_chunk_vector.emplace_back(progressive::recreate_non_const_chunk(table->get_chunk(ChunkID{0})));
 
-          auto single_chunk_table = std::make_shared<Table>(table->column_definitions(), TableType::Data,
-                                                            std::move(single_chunk_vector), UseMvcc::Yes);
-          auto lineitem_wrapper = std::make_shared<TableWrapper>(single_chunk_table);
-          lineitem_wrapper->never_clear_output();
-          lineitem_wrapper->execute();
+              auto single_chunk_table = std::make_shared<Table>(table->column_definitions(), TableType::Data,
+                                                                std::move(single_chunk_vector), UseMvcc::Yes);
+              auto lineitem_wrapper = std::make_shared<TableWrapper>(single_chunk_table);
+              lineitem_wrapper->never_clear_output();
+              lineitem_wrapper->execute();
 
-          auto table_scan = std::make_shared<TableScan>(lineitem_wrapper, less_than_(pqp_column_(ColumnID{0}, DataType::Int, false, ""), 2.0));
-          table_scan->execute();
-          accu_rows += table_scan->get_output()->row_count();
-        }, SchedulePriority::Default));
+              auto table_scan = std::make_shared<TableScan>(
+                  lineitem_wrapper, less_than_(pqp_column_(ColumnID{0}, DataType::Int, false, ""), 2.0));
+              table_scan->execute();
+              accu_rows += table_scan->get_output()->row_count();
+            },
+            SchedulePriority::Default));
         inner_jobs.back()->schedule();
       }
       Hyrise::get().scheduler()->wait_for_tasks(inner_jobs);
@@ -587,6 +589,5 @@ TEST_F(StressTest, ProgressiveQueries) {
 
   EXPECT_EQ(accu_rows.load(), OUTER_JOB_COUNT * INNER_JOB_COUNT * 2);
 }
-
 
 }  // namespace hyrise

@@ -18,11 +18,7 @@ class Table;
 class TransactionContext;
 class PQPSubqueryExpression;
 
-enum class SinkType {
-  PipelineStart,
-  Forwarding,
-  PipelineEnd
-};
+enum class SinkType { PipelineStart, Forwarding, PipelineEnd };
 
 enum class OperatorType {
   Aggregate,

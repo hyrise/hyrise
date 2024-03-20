@@ -19,8 +19,9 @@ namespace hyrise {
 
 class ProgressiveMap : public AbstractReadOnlyOperator {
  public:
-  ProgressiveMap(const std::shared_ptr<const AbstractOperator>& input_operator, std::shared_ptr<ChunkSink>& input_chunk_sink,
-                 std::shared_ptr<ChunkSink>& output_chunk_sink, const OperatorType operator_type);
+  ProgressiveMap(const std::shared_ptr<const AbstractOperator>& input_operator,
+                 std::shared_ptr<ChunkSink>& input_chunk_sink, std::shared_ptr<ChunkSink>& output_chunk_sink,
+                 const OperatorType operator_type);
   const std::string& name() const override;
   void set_table_scan_predicate(std::shared_ptr<AbstractExpression> predicate);
   void set_projection_expressions(/* const std::vector<std::shared_ptr<AbstractExpression>>& expressions */);

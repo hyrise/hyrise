@@ -15,9 +15,6 @@
 
 #include "magic_enum.hpp"
 
-#include "storage/constraints/table_key_constraint.hpp"
-#include "storage/encoding_type.hpp"
-#include "storage/table.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_column_expression.hpp"

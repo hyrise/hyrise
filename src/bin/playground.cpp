@@ -18,13 +18,9 @@
 #include "types.hpp"
 #include "utils/timer.hpp"
 
-namespace hyrise {
+namespace hyrise {}  // namespace hyrise
 
-
-
-}  // namespace
-
-using namespace hyrise;  // NOLINT(build/namespaces)
+using namespace hyrise;                         // NOLINT(build/namespaces)
 using namespace hyrise::expression_functional;  // NOLINT(build/namespaces)
 
 int main() {
@@ -34,8 +30,7 @@ int main() {
   constexpr auto SCALE_FACTOR = 10.0f;
   // constexpr auto SCALE_FACTOR = 5.0f;
   auto benchmark_config = BenchmarkConfig::get_default_config();
-  TPCHTableGenerator(SCALE_FACTOR, ClusteringConfiguration::None,
-                     std::make_shared<BenchmarkConfig>(benchmark_config))
+  TPCHTableGenerator(SCALE_FACTOR, ClusteringConfiguration::None, std::make_shared<BenchmarkConfig>(benchmark_config))
       .generate_and_store();
 
   auto runs = size_t{0};
@@ -52,7 +47,10 @@ int main() {
     auto initial_chunk_exchange = std::make_shared<ChunkSink>(lineitem_wrapper, SinkType::PipelineStart);
     initial_chunk_exchange->set_name("Initial_Sink");
     initial_chunk_exchange->never_clear_output();
-    auto scan1_scan2_exchange = std::make_shared<ChunkSink>(lineitem_wrapper, SinkType::Forwarding);  // input op is actually only needed for initial sink, but currently interface needs "some random" operator.
+    auto scan1_scan2_exchange = std::make_shared<ChunkSink>(
+        lineitem_wrapper,
+        SinkType::
+            Forwarding);  // input op is actually only needed for initial sink, but currently interface needs "some random" operator.
     scan1_scan2_exchange->set_name("Scan1_Scan2_Sink");
     scan1_scan2_exchange->never_clear_output();
     auto scan2_scan3_exchange = std::make_shared<ChunkSink>(lineitem_wrapper, SinkType::Forwarding);
@@ -87,20 +85,25 @@ int main() {
     // Table Scan #1
     //
     pipeline_jobs.emplace_back(std::make_shared<JobTask>([&]() {
-      auto map_op = std::make_shared<ProgressiveMap>(lineitem_wrapper, initial_chunk_exchange, scan1_scan2_exchange, OperatorType::TableScan);
-      map_op->set_table_scan_predicate(between_upper_exclusive_(pqp_column_(ColumnID{10}, DataType::String, false, ""), "1993-01-01", "1994-01-01"));
+      auto map_op = std::make_shared<ProgressiveMap>(lineitem_wrapper, initial_chunk_exchange, scan1_scan2_exchange,
+                                                     OperatorType::TableScan);
+      map_op->set_table_scan_predicate(
+          between_upper_exclusive_(pqp_column_(ColumnID{10}, DataType::String, false, ""), "1993-01-01", "1994-01-01"));
       map_op->never_clear_output();
       map_op->execute();
     }));
-    pipeline_jobs.back()->schedule();  // As of now, we need to start this job immediately, otherwise we cannot "register"
-                                       // the scan as a consumer of the initial_chunk_exchange as it is already executed.
+    pipeline_jobs.back()
+        ->schedule();  // As of now, we need to start this job immediately, otherwise we cannot "register"
+                       // the scan as a consumer of the initial_chunk_exchange as it is already executed.
 
     //
     // Table Scan #2
     //
     pipeline_jobs.emplace_back(std::make_shared<JobTask>([&]() {
-      auto map_op = std::make_shared<ProgressiveMap>(lineitem_wrapper, scan1_scan2_exchange, scan2_scan3_exchange, OperatorType::TableScan);
-      map_op->set_table_scan_predicate(between_inclusive_(pqp_column_(ColumnID{6}, DataType::Float, false, ""), 0.03, 0.05001));
+      auto map_op = std::make_shared<ProgressiveMap>(lineitem_wrapper, scan1_scan2_exchange, scan2_scan3_exchange,
+                                                     OperatorType::TableScan);
+      map_op->set_table_scan_predicate(
+          between_inclusive_(pqp_column_(ColumnID{6}, DataType::Float, false, ""), 0.03, 0.05001));
       map_op->never_clear_output();
       map_op->execute();
     }));
@@ -110,7 +113,8 @@ int main() {
     // Table Scan #3
     //
     pipeline_jobs.emplace_back(std::make_shared<JobTask>([&]() {
-      auto map_op = std::make_shared<ProgressiveMap>(lineitem_wrapper, scan2_scan3_exchange, scan3_projection_exchange, OperatorType::TableScan);
+      auto map_op = std::make_shared<ProgressiveMap>(lineitem_wrapper, scan2_scan3_exchange, scan3_projection_exchange,
+                                                     OperatorType::TableScan);
       map_op->set_table_scan_predicate(less_than_(pqp_column_(ColumnID{4}, DataType::Float, false, ""), 24.0));
       map_op->never_clear_output();
       map_op->execute();
@@ -121,7 +125,8 @@ int main() {
     // Projection #4
     //
     pipeline_jobs.emplace_back(std::make_shared<JobTask>([&]() {
-      auto map_op = std::make_shared<ProgressiveMap>(lineitem_wrapper, scan3_projection_exchange, final_exchange, OperatorType::Projection);
+      auto map_op = std::make_shared<ProgressiveMap>(lineitem_wrapper, scan3_projection_exchange, final_exchange,
+                                                     OperatorType::Projection);
       map_op->set_projection_expressions();
       map_op->never_clear_output();
       map_op->execute();
