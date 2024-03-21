@@ -1,3 +1,5 @@
+#include "nlohmann/json.hpp"
+
 #include "base_test.hpp"
 #include "hyrise.hpp"
 #include "plugin_test_utils.hpp"

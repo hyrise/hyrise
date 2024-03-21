@@ -29,7 +29,7 @@ void CsvWriter::_generate_meta_info_file(const Table& table, const std::string& 
   // Column Types
   const auto column_count = table.column_count();
   for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
-    ColumnMeta column_meta;
+    auto column_meta = ColumnMeta{};
     column_meta.name = table.column_name(column_id);
     column_meta.type = data_type_to_string.left.at(table.column_data_type(column_id));
     column_meta.nullable = table.column_is_nullable(column_id);
@@ -54,7 +54,7 @@ void CsvWriter::_generate_content_file(const Table& table, const std::string& fi
    */
 
   // Open file for writing
-  std::ofstream ofstream;
+  auto ofstream = std::ofstream{};
   ofstream.exceptions(std::ifstream::failbit | std::ifstream::badbit);
   ofstream.open(filename);
 
@@ -125,8 +125,8 @@ void CsvWriter::_write_string_value(const pmr_string& value, std::ofstream& ofst
  * Escapes each quote character with an escape symbol.
  */
 pmr_string CsvWriter::_escape(const pmr_string& string, const ParseConfig& config) {
-  pmr_string result(string);
-  size_t next_pos = 0;
+  auto result = pmr_string{string};
+  auto next_pos = size_t{0};
   while (std::string::npos != (next_pos = result.find(config.quote, next_pos))) {
     result.insert(next_pos, 1, config.escape);
     // Has to jump 2 positions ahead because a new character had been inserted.

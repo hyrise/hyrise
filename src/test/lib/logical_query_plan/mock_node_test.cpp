@@ -1,6 +1,3 @@
-#include <memory>
-#include <string>
-
 #include "base_test.hpp"
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
@@ -131,6 +128,29 @@ TEST_F(MockNodeTest, UniqueColumnCombinationsPrunedColumns) {
     EXPECT_FALSE(find_ucc_by_key_constraint(key_constraint_a, unique_column_combinations));
     EXPECT_FALSE(find_ucc_by_key_constraint(key_constraint_a_b, unique_column_combinations));
     EXPECT_TRUE(find_ucc_by_key_constraint(key_constraint_c, unique_column_combinations));
+  }
+}
+
+TEST_F(MockNodeTest, OrderDependencies) {
+  const auto od_a_to_b = OrderDependency{{_mock_node_a->get_column("a")}, {_mock_node_a->get_column("b")}};
+  const auto od_a_to_c = OrderDependency{{_mock_node_a->get_column("a")}, {_mock_node_a->get_column("c")}};
+  const auto order_constraint_a_to_b = TableOrderConstraint{{ColumnID{0}}, {ColumnID{1}}};
+  const auto order_constraint_a_to_c = TableOrderConstraint{{ColumnID{0}}, {ColumnID{2}}};
+  _mock_node_a->set_order_constraints({order_constraint_a_to_b, order_constraint_a_to_c});
+
+  // Forward ODs.
+  {
+    const auto& order_dependencies = _mock_node_a->order_dependencies();
+    EXPECT_EQ(order_dependencies.size(), 2);
+    EXPECT_TRUE(order_dependencies.contains(od_a_to_b));
+    EXPECT_TRUE(order_dependencies.contains(od_a_to_c));
+  }
+
+  // Discard ODs that involve pruned columns.
+  {
+    _mock_node_a->set_pruned_column_ids({ColumnID{0}, ColumnID{2}});
+    const auto& order_dependencies = _mock_node_a->order_dependencies();
+    EXPECT_TRUE(order_dependencies.empty());
   }
 }
 

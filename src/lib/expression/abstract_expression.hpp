@@ -10,7 +10,6 @@
 
 #include "all_type_variant.hpp"
 #include "expression_precedence.hpp"
-#include "types.hpp"
 
 namespace hyrise {
 

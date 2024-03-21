@@ -1,5 +1,3 @@
-#include <memory>
-
 #include "base_test.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_functional.hpp"
@@ -164,6 +162,41 @@ TEST_F(ProjectionNodeTest, FunctionalDependenciesForwarding) {
   EXPECT_EQ(projection_node_4->functional_dependencies().size(), 1);
   const auto expected_fd = FunctionalDependency{{_b}, {_a}};
   EXPECT_TRUE(projection_node_4->functional_dependencies().contains(expected_fd));
+}
+
+TEST_F(ProjectionNodeTest, ForwardOrderDependencies) {
+  EXPECT_TRUE(_mock_node->order_dependencies().empty());
+  EXPECT_TRUE(_projection_node->order_dependencies().empty());
+
+  const auto od_a_to_b = OrderDependency{{_a}, {_b}};
+  const auto od_a_to_c = OrderDependency{{_a}, {_c}};
+  const auto order_constraint_a_to_b = TableOrderConstraint{{ColumnID{0}}, {ColumnID{1}}};
+  const auto order_constraint_a_to_c = TableOrderConstraint{{ColumnID{0}}, {ColumnID{2}}};
+  _mock_node->set_order_constraints({order_constraint_a_to_b, order_constraint_a_to_c});
+  EXPECT_EQ(_mock_node->order_dependencies().size(), 2);
+
+  // Case (i): ODs are on "forwarded" projections. Forward ODs.
+  {
+    const auto& order_dependencies = _projection_node->order_dependencies();
+    EXPECT_EQ(order_dependencies.size(), 2);
+    EXPECT_TRUE(order_dependencies.contains(od_a_to_b));
+    EXPECT_TRUE(order_dependencies.contains(od_a_to_c));
+  }
+
+  // Case (ii): A column of one OD is not in the projection. Do not forward this OD.
+  {
+    const auto projection_node = ProjectionNode::make(expression_vector(_a, _b), _mock_node);
+    const auto& order_dependencies = projection_node->order_dependencies();
+    EXPECT_EQ(order_dependencies.size(), 1);
+    EXPECT_TRUE(order_dependencies.contains(od_a_to_b));
+  }
+
+  // Case (iii): Projections modify the values. Do not forward affected ODs.
+  {
+    const auto projection_node = ProjectionNode::make(expression_vector(_a, add_(_b, _a), sub_(_c, _b)), _mock_node);
+    const auto& order_dependencies = projection_node->order_dependencies();
+    EXPECT_TRUE(order_dependencies.empty());
+  }
 }
 
 }  // namespace hyrise

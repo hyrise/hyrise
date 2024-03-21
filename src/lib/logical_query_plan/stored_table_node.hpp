@@ -5,8 +5,6 @@
 #include <vector>
 
 #include "abstract_lqp_node.hpp"
-#include "expression/abstract_expression.hpp"
-#include "expression/lqp_column_expression.hpp"
 #include "storage/index/chunk_index_statistics.hpp"
 #include "storage/index/table_index_statistics.hpp"
 
@@ -55,6 +53,8 @@ class StoredTableNode : public EnableMakeForLQPNode<StoredTableNode>, public Abs
 
   // Generates unique column combinations from a table's key constraints. Drops UCCs that include pruned columns.
   UniqueColumnCombinations unique_column_combinations() const override;
+
+  OrderDependencies order_dependencies() const override;
 
   const std::string table_name;
 

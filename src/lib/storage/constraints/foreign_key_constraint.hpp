@@ -15,10 +15,10 @@ class Table;
  * called nation (roughly taken from TPC-H):
  *
  *     CREATE TABLE nation (n_nationkey int NOT NULL,
-                            n_name int NOT NULL,
-                            n_regionkey NOT NULL,
-                            PRIMARY KEY (n_nationkey),
-                            FOREIGN KEY (n_regionkey) REFERENCES region(r_regionkey));
+ *                          n_name int NOT NULL,
+ *                          n_regionkey NOT NULL,
+ *                          PRIMARY KEY (n_nationkey),
+ *                          FOREIGN KEY (n_regionkey) REFERENCES region(r_regionkey));
  *
  * Given this example, @param foreign_key_columns and @param foreign_key_table reference the table with the foreign key
  * (e.g., nation.n_regionkey) whereas @param primary_key_columns and @param primary_key_table reference the table with
@@ -29,10 +29,8 @@ class Table;
  */
 class ForeignKeyConstraint final : public AbstractTableConstraint {
  public:
-  ForeignKeyConstraint(const std::vector<ColumnID>& foreign_key_columns,
-                       const std::shared_ptr<Table>& foreign_key_table,
-                       const std::vector<ColumnID>& primary_key_columns,
-                       const std::shared_ptr<Table>& primary_key_table);
+  ForeignKeyConstraint(std::vector<ColumnID>&& foreign_key_columns, const std::shared_ptr<Table>& foreign_key_table,
+                       std::vector<ColumnID>&& primary_key_columns, const std::shared_ptr<Table>& primary_key_table);
   ForeignKeyConstraint() = delete;
 
   const std::vector<ColumnID>& foreign_key_columns() const;

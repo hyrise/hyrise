@@ -5,12 +5,14 @@
 #include <memory>
 #include <sstream>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <boost/container_hash/hash.hpp>
 
 #include "expression/lqp_column_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
+#include "logical_query_plan/data_dependencies/order_dependency.hpp"
 #include "logical_query_plan/data_dependencies/unique_column_combination.hpp"
 #include "lqp_utils.hpp"
 #include "types.hpp"
@@ -61,18 +63,22 @@ std::vector<std::shared_ptr<AbstractExpression>> StaticTableNode::output_express
 }
 
 UniqueColumnCombinations StaticTableNode::unique_column_combinations() const {
-  // Generate from table key constraints
+  // Generate from table key constraints.
   auto unique_column_combinations = UniqueColumnCombinations{};
   const auto table_key_constraints = table->soft_key_constraints();
 
   for (const auto& table_key_constraint : table_key_constraints) {
-    const auto& column_expressions = find_column_expressions(*this, table_key_constraint.columns());
+    auto column_expressions = get_expressions_for_column_ids(*this, table_key_constraint.columns());
     DebugAssert(column_expressions.size() == table_key_constraint.columns().size(),
                 "Unexpected count of column expressions.");
-    unique_column_combinations.emplace(column_expressions);
+    unique_column_combinations.emplace(std::move(column_expressions));
   }
 
   return unique_column_combinations;
+}
+
+OrderDependencies StaticTableNode::order_dependencies() const {
+  return OrderDependencies{};
 }
 
 bool StaticTableNode::is_column_nullable(const ColumnID column_id) const {
