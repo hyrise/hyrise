@@ -440,7 +440,6 @@ void BenchmarkRunner::_warmup(const BenchmarkItemID item_id) {
 
   // Wait for the rest of the tasks that didn't make it in time.
   Hyrise::get().scheduler()->wait_for_all_tasks();
-
   Assert(_currently_running_clients == 0, "All runs must be finished at this point.");
 }
 
