@@ -12,30 +12,38 @@ then
 fi
 
 benchmarks='hyriseBenchmarkTPCH hyriseBenchmarkTPCDS hyriseBenchmarkTPCC hyriseBenchmarkJoinOrder hyriseBenchmarkStarSchema'
-# Set to 1 because even a single warmup run of a query makes the observed runtimes much more stable. See discussion in #2405 for some preliminary reasoning.
+# Set to 1 because even a single warmup run of a query makes the observed runtimes much more stable. See discussion in
+# #2405 for some preliminary reasoning.
 warmup_seconds=1
 mt_shuffled_runtime=1200
-runs=100
+runs=50
 
-# Setting the number of clients used for the multi-threaded scenario to the machine's physical core count. This only works for macOS and Linux.
+# Setting the number of clients used for the multi-threaded scenario to the machine's physical core count. This only
+# works for macOS and Linux. We do not use hyper-threads because the benchmark results are less stable on them. We
+# assume that the physical cores have lower IDs than the hyper-threads. Furthermore, we restrict the benchmarks to run
+# on one NUMA node, even if the script is not orchestrated via numactl, as Hyrise is not optimized for multiple nodes.
+# To obtain the number of cores per node, we just count the physical cores for the node with ID 0.
+#
+# Note: there is no limitation of running Hyrise on all CPU threads and multiple NUMA nodes. However, we are not
+# actively testing and optimizing for these scenarios. Hence, we do not test them in this script.
 output="$(uname -s)"
 case "${output}" in
-    Linux*)     num_phy_cores="$(lscpu -p | egrep -v '^#' | grep '^[0-9]*,[0-9]*,0,0' | sort -u -t, -k 2,4 | wc -l)";;
-    Darwin*)    num_phy_cores="$(sysctl -n hw.physicalcpu)";;
-    *)          echo 'Unsupported operating system. Aborting.' && exit 1;;
+  Linux*)   num_phy_cores="$(lscpu -p | egrep -v '^#' | grep '^[0-9]*,[0-9]*,0,0' | sort -u -t, -k 2,4 | wc -l)";;
+  Darwin*)  num_phy_cores="$(sysctl -n hw.physicalcpu)";;
+  *)        echo 'Unsupported operating system. Aborting.' && exit 1;;
 esac
 
-# Retrieve SHA-1 hashes from arguments (e.g., translate "master" into an actual hash)
+# Retrieve SHA-1 hashes from arguments (e.g., translate "master" into an actual hash).
 start_commit_reference=$1
 end_commit_reference=$2
 
 start_commit=$(git rev-parse "$start_commit_reference" | head -n 1)
 end_commit=$(git rev-parse "$end_commit_reference" | head -n 1)
 
-# Check status of repository
+# Check status of repository.
 if [[ $(git status --untracked-files=no --porcelain) ]]
 then
-  echo 'Cowardly refusing to execute on a dirty workspace'
+  echo 'Cowardly refusing to execute on a dirty workspace.'
   exit 1
 fi
 
@@ -43,11 +51,11 @@ fi
 output=$(grep 'CMAKE_BUILD_TYPE:STRING=Release' CMakeCache.txt || true)
 if [ -z "$output" ]
 then
-  echo 'Current folder is not configured as a release build'
+  echo 'Current folder is not configured as a release build.'
   exit 1
 fi
 
-# Check whether to use ninja or make
+# Check whether to use ninja or make.
 output=$(grep 'CMAKE_MAKE_PROGRAM' CMakeCache.txt | grep ninja || true)
 if [ -n "$output" ]
 then
@@ -56,32 +64,32 @@ else
   build_system='make'
 fi
 
-# Create the result folder if necessary
+# Create the result folder if necessary.
 mkdir benchmark_all_results 2>/dev/null || true
 
 build_folder=$(pwd)
 
-# Here comes the actual work
+# Here comes the actual work.
 for commit in $start_commit $end_commit
 do
-  # Skip commits where we already have all results
+  # Skip commits where we already have all results.
   if [ -f "benchmark_all_results/complete_${commit}" ]
   then
     echo "Benchmarks have already been executed for ${commit}. Skipping."
     echo "Run rm benchmark_all_results/*${commit}* to re-execute."
-    sleep 1  # Easiest way to make sure the above is read
+    sleep 1  # Easiest way to make sure the above is read.
     continue
   fi
 
-  # Checkout and build from scratch, tracking the compile time
+  # Checkout and build from scratch, tracking the compile time.
   git checkout "$commit"
   git submodule update --init --recursive
   echo "Building $commit..."
   $build_system clean
   /usr/bin/time -p sh -c "( $build_system -j $(nproc) ${benchmarks} 2>&1 ) | tee benchmark_all_results/build_${commit}.log" 2>"benchmark_all_results/build_time_${commit}.txt"
 
-  # Run the benchmarks
-  cd ..  # hyriseBenchmarkJoinOrder needs to run from project root
+  # Run the benchmarks.
+  cd ..  # hyriseBenchmarkJoinOrder needs to run from project root.
   for benchmark in $benchmarks
   do
     if [ "$benchmark" = "hyriseBenchmarkTPCC" ]; then
@@ -96,9 +104,11 @@ do
     if [ "$benchmark" = "hyriseBenchmarkTPCH" ]; then
       echo "Running $benchmark for $commit... (single-threaded, SF 0.01)"
       ( "${build_folder}"/"$benchmark" -s .01 -r ${runs} -w ${warmup_seconds} -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st_s01.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st_s01.log"
+    fi
 
+    if [ "$benchmark" != "hyriseBenchmarkTPCC" ]; then
       echo "Running $benchmark for $commit... (multi-threaded, ordered, 1 client)"
-      ( "${build_folder}"/"$benchmark" --scheduler --clients 1 --cores ${num_phy_cores} -m Ordered -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt_ordered.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt_ordered.log"
+      ( "${build_folder}"/"$benchmark" --scheduler --clients 1 --cores ${num_phy_cores} -m Ordered -r ${runs} -w ${warmup_seconds} -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt_ordered.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt_ordered.log"
     fi
 
     echo "Running $benchmark for $commit... (multi-threaded, shuffled, $num_phy_cores clients)"
@@ -106,17 +116,17 @@ do
   done
   cd "${build_folder}"
 
-  # After all benchmarks are done, leave a marker so that this commit can be skipped next time
+  # After all benchmarks are done, leave a marker so that this commit can be skipped next time.
   touch "benchmark_all_results/complete_${commit}"
 done
 
-# Print the results
+# Print the results.
 
 echo ""
 echo "==========="
 echo ""
 
-# Print information about the system
+# Print information about the system.
 echo "**System**"
 echo "<details>"
 echo "<summary>$(hostname) - click to expand</summary>"
@@ -143,7 +153,7 @@ else
 fi
 echo "</details>"
 
-# Print information about the time spent building the commits
+# Print information about the time spent building the commits.
 echo ""
 echo "**Commit Info and Build Time**"
 echo "| commit | date | message | build time |"
@@ -153,13 +163,14 @@ xargs < "${build_folder}/benchmark_all_results/build_time_${start_commit}.txt" |
 echo -n "| $(git show -s --date=format:'%d.%m.%Y %H:%M' --format='%h | %cd | %s' "${end_commit}") | "
 xargs < "${build_folder}/benchmark_all_results/build_time_${end_commit}.txt" | awk '{printf $0 "|\n"}'
 
-# Print information for each benchmark
+# Print information for each benchmark.
 for benchmark in $benchmarks
 do
-  configs="st mt"
-  if [ "$benchmark" = "hyriseBenchmarkTPCH" ]; then
-    configs="st st_s01 mt_ordered mt"
-  fi
+  case "${benchmark}" in
+    "hyriseBenchmarkTPCC")  configs="st mt";;
+    "hyriseBenchmarkTPCH")  configs="st st_s01 mt_ordered mt";;
+    *)                      configs="st mt_ordered mt";;
+  esac
 
   for config in $configs
   do
@@ -169,15 +180,16 @@ do
     echo -n "**${benchmark} - "
     if [ "$benchmark" = "hyriseBenchmarkTPCH" ]; then
       case "${config}" in
-        "st") echo -n "single-threaded, SF 10.0" ;;
-        "st_s01") echo -n "single-threaded, SF 0.01" ;;
-        "mt_ordered") echo -n "multi-threaded, ordered, 1 client, ${num_phy_cores} cores, SF 10.0" ;;
-        "mt") echo -n "multi-threaded, shuffled, ${num_phy_cores} clients, ${num_phy_cores} cores, SF 10.0" ;;
+        "st")          echo -n "single-threaded, SF 10.0" ;;
+        "st_s01")      echo -n "single-threaded, SF 0.01" ;;
+        "mt")          echo -n "multi-threaded, shuffled, ${num_phy_cores} clients, ${num_phy_cores} cores, SF 10.0" ;;
+        "mt_ordered")  echo -n "multi-threaded, ordered, 1 client, ${num_phy_cores} cores, SF 10.0" ;;
       esac
     else
       case "${config}" in
-        "st") echo -n "single-threaded" ;;
-        "mt") echo -n "multi-threaded, shuffled, ${num_phy_cores} clients, ${num_phy_cores} cores" ;;
+        "st")          echo -n "single-threaded" ;;
+        "mt")          echo -n "multi-threaded, shuffled, ${num_phy_cores} clients, ${num_phy_cores} cores" ;;
+        "mt_ordered")  echo -n "multi-threaded, ordered, 1 client, ${num_phy_cores} cores" ;;
       esac
     fi
 
