@@ -6,7 +6,7 @@
 #include <boost/preprocessor/stringize.hpp>
 
 #include "invalid_input_exception.hpp"
-#include "utils/string_utils.hpp"
+#include "utils/string_utils.hpp"  // NOLINT(misc-include-cleaner): used in macro.
 
 /**
  * This file provides better assertions than the std cassert/assert.h - DebugAssert(condition, msg) and Fail(msg) can be
@@ -48,11 +48,11 @@ namespace detail {
 }
 }  // namespace detail
 
-#define Fail(msg)                                                                                             \
-  hyrise::detail::fail(hyrise::trim_source_file_path(__FILE__) + ":" BOOST_PP_STRINGIZE(__LINE__) " " + msg); \
+#define Fail(msg)                                                                                               \
+  hyrise::detail::fail(hyrise::trim_source_file_path(__FILE__) + ":" BOOST_PP_STRINGIZE(__LINE__) " " + (msg)); \
   static_assert(true, "End call of macro with a semicolon.")
 
-[[noreturn]] inline void FailInput(const std::string& msg) {
+[[noreturn]] inline void FailInput(const std::string& msg) {  // NOLINT(readability-identifier-naming)
   throw InvalidInputException(std::string("Invalid input error: ") + msg);
 }
 
@@ -64,10 +64,10 @@ namespace detail {
   }                               \
   static_assert(true, "End call of macro with a semicolon.")
 
-#define AssertInput(expr, msg)                                               \
-  if (!static_cast<bool>(expr)) {                                            \
-    throw InvalidInputException(std::string("Invalid input error: ") + msg); \
-  }                                                                          \
+#define AssertInput(expr, msg)                                                 \
+  if (!static_cast<bool>(expr)) {                                              \
+    throw InvalidInputException(std::string("Invalid input error: ") + (msg)); \
+  }                                                                            \
   static_assert(true, "End call of macro with a semicolon.")
 
 #if HYRISE_DEBUG
