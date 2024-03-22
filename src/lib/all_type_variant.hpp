@@ -55,15 +55,14 @@ static constexpr auto data_type_enum_values =
     hana::make_tuple(BOOST_PP_SEQ_ENUM(BOOST_PP_SEQ_TRANSFORM(APPEND_ENUM_NAMESPACE, _, DATA_TYPE_ENUM_VALUES)));
 static constexpr auto data_type_strings = hana::make_tuple(BOOST_PP_SEQ_ENUM(DATA_TYPE_STRINGS));
 
-// NOLINTBEGIN(build/include_what_you_use): cpplint considers hana::transform/make_pair to be their std counterparts.
 constexpr auto to_pair = [](auto tuple) {
-  return hana::make_pair(hana::at_c<0>(tuple), hana::at_c<1>(tuple));
+  return hana::make_pair(hana::at_c<0>(tuple), hana::at_c<1>(tuple));  // NOLINT(build/include_what_you_use)
 };
 
 static constexpr auto data_type_enum_pairs = hana::transform(hana::zip(data_type_enum_values, data_types), to_pair);
 static constexpr auto data_type_enum_string_pairs =
+    // NOLINTNEXTLINE(build/include_what_you_use): similar to above `make_pair`, cpplint sees it as `std::transform`.
     hana::transform(hana::zip(data_type_enum_values, data_type_strings), to_pair);
-// NOLINTEND(build/include_what_you_use)
 
 // Prepends NullValue to tuple of types
 static constexpr auto data_types_including_null = hana::prepend(data_types, hana::type_c<NullValue>);
