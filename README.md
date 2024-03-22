@@ -79,6 +79,15 @@ The install script was tested under macOS Monterey (12.4) and Ubuntu 22.04.
 See [dependencies](DEPENDENCIES.md) for a detailed list of dependencies to use with `brew install` or `apt-get install`, depending on your platform. As compilers, we generally use the most recent version of clang and gcc (Linux only). Please make sure that the system compiler points to the most recent version or use cmake (see below) accordingly.
 Older versions may work, but are neither tested nor supported.
 
+## Nix Setup
+You can build Hyrise using Nix. To do so, first [install Nix](https://nixos.wiki/wiki/Nix_Installation_Guide) on your current operating system. Afterwards, run the following build command in the root of the repository:
+
+```bash
+nix-build
+```
+
+Nix will build the Hyrise repository and save the results to `result/hyrise`.
+
 ## Setup using Docker
 If you want to create a Docker-based development environment using CLion, head over to our [dedicated tutorial](https://github.com/hyrise/hyrise/wiki/Use-Docker-with-CLion). 
 

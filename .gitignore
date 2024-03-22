@@ -15,6 +15,7 @@ benchmark.json
 *.pyc
 console.log
 .repl_history
+result
 
 # Visualization results
 *.dot
