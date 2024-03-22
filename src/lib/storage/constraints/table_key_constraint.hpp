@@ -20,7 +20,7 @@ class TableKeyConstraint final : public AbstractTableConstraint {
    * the vector (and equal constraints have equal columns). Thus, we can safely hash and compare key constraints without
    * voilating the set semantics of the constraint.
    */
-  TableKeyConstraint(const std::set<ColumnID>& columns, const KeyConstraintType key_type);
+  TableKeyConstraint(std::set<ColumnID>&& columns, const KeyConstraintType key_type);
   TableKeyConstraint() = delete;
 
   KeyConstraintType key_type() const;

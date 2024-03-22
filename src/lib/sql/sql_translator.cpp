@@ -1687,14 +1687,14 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hs
       AssertInput(
           column_ids.size() == table_constraint->columnNames->size(),
           "Could not resolve columns of " + std::string{magic_enum::enum_name(constraint_type)} + " table constraint.");
-      table_key_constraints.emplace(column_ids, constraint_type);
+      table_key_constraints.emplace(std::move(column_ids), constraint_type);
       std::cout << "WARNING: " << magic_enum::enum_name(constraint_type) << " table constraint will not be enforced.\n";
     }
 
     // Set table key constraints
     const auto table = Table::create_dummy_table(column_definitions);
     for (const auto& table_key_constraint : table_key_constraints) {
-      table->add_soft_key_constraint(table_key_constraint);
+      table->add_soft_constraint(table_key_constraint);
     }
     input_node = StaticTableNode::make(table);
   }

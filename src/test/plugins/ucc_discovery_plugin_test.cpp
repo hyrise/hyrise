@@ -3,6 +3,8 @@
 #include <string>
 #include <vector>
 
+#include "nlohmann/json.hpp"
+
 #include "../../plugins/ucc_discovery_plugin.hpp"
 #include "base_test.hpp"
 #include "concurrency/transaction_manager.hpp"

@@ -11,6 +11,7 @@
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_utils.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
+#include "logical_query_plan/data_dependencies/order_dependency.hpp"
 #include "logical_query_plan/data_dependencies/unique_column_combination.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
@@ -47,6 +48,10 @@ std::vector<std::shared_ptr<AbstractExpression>> AliasNode::output_expressions()
 
 UniqueColumnCombinations AliasNode::unique_column_combinations() const {
   return _forward_left_unique_column_combinations();
+}
+
+OrderDependencies AliasNode::order_dependencies() const {
+  return _forward_left_order_dependencies();
 }
 
 size_t AliasNode::_on_shallow_hash() const {

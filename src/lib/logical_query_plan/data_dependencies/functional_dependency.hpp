@@ -30,7 +30,7 @@ namespace hyrise {
  * and FDs is not trivial. For more reference, see https://arxiv.org/abs/1404.4963.
  */
 struct FunctionalDependency {
-  FunctionalDependency(ExpressionUnorderedSet init_determinants, ExpressionUnorderedSet init_dependents);
+  FunctionalDependency(ExpressionUnorderedSet&& init_determinants, ExpressionUnorderedSet&& init_dependents);
 
   bool operator==(const FunctionalDependency& other) const;
   bool operator!=(const FunctionalDependency& other) const;
@@ -40,7 +40,7 @@ struct FunctionalDependency {
   ExpressionUnorderedSet dependents;
 };
 
-std::ostream& operator<<(std::ostream& stream, const FunctionalDependency& expression);
+std::ostream& operator<<(std::ostream& stream, const FunctionalDependency& fd);
 
 using FunctionalDependencies = std::unordered_set<FunctionalDependency>;
 
