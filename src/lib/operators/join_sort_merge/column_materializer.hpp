@@ -104,7 +104,7 @@ class ColumnMaterializer {
       null_rows.insert(null_rows.end(), chunk_null_rows.begin(), chunk_null_rows.end());
     }
 
-    auto gathered_samples = std::vector<T>();
+    auto gathered_samples = std::vector<T>{};
     if (_sort) {
       // We sort to cluster the table by ranges (e.g., for non-equi joins). When sorting is not requested, we do not
       // need to gather samples.

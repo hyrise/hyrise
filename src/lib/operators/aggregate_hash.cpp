@@ -102,11 +102,11 @@ void split_results_chunk_wise(const bool write_nulls, const AggregateResults<Col
       consumer_function(begin, end, output_chunk_id);
     };
 
-    if (output_chunk_count > 1) {
+    if (output_chunk_count < 2) {
       // No reason to spawn a job and wait when there is only a single job.
-      jobs.emplace_back(std::make_shared<JobTask>(write_split_data));
-    } else {
       write_split_data();
+    } else {
+      jobs.emplace_back(std::make_shared<JobTask>(write_split_data));
     }
   }
 
@@ -304,7 +304,9 @@ void write_groupby_output(const std::shared_ptr<const Table>& input_table,
                                });
     } else {
       if (input_table->chunk_count() > 0) {
-        // Unless we are processing an empty input, obtain the referenced table and column from the first chunk.
+        // Unless we are processing an empty input, obtain the referenced table and column from the first chunk. We
+        // assume that segments of the same column do not reference different tables (checked in the Table constructor).
+        // When this assumption changes (e.g., due to a better support of Unions), this code needs to be revisited.
         const auto& first_reference_segment =
             static_cast<const ReferenceSegment&>(*input_table->get_chunk(ChunkID{0})->get_segment(input_column_id));
         referenced_table = first_reference_segment.referenced_table();

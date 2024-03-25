@@ -323,13 +323,13 @@ class RadixClusterSort {
 
     // Sort the chunks of the input tables iff join is non-equi and when clustering.
     const auto sort_materialized_chunks = !_equi_case && _cluster_count > 1;
-    ColumnMaterializer<T> left_column_materializer(sort_materialized_chunks, _materialize_null_left);
+    auto left_column_materializer = ColumnMaterializer<T>(sort_materialized_chunks, _materialize_null_left);
     auto [materialized_left_segments, null_rows_left, samples_left] =
         left_column_materializer.materialize(_left_input_table, _left_column_id);
     output.null_rows_left = std::move(null_rows_left);
     _performance.set_step_runtime(JoinSortMerge::OperatorSteps::LeftSideMaterializing, timer.lap());
 
-    ColumnMaterializer<T> right_column_materializer(sort_materialized_chunks, _materialize_null_right);
+    auto right_column_materializer = ColumnMaterializer<T>(sort_materialized_chunks, _materialize_null_right);
     auto [materialized_right_segments, null_rows_right, samples_right] =
         right_column_materializer.materialize(_right_input_table, _right_column_id);
     output.null_rows_right = std::move(null_rows_right);

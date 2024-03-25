@@ -115,7 +115,7 @@ Table::Table(const TableColumnDefinitions& column_definitions, const TableType t
         Assert(segment->data_type() == column_data_type(column_id), "Invalid Segment DataType.");
 
         // Currently, tables in Hyrise are either entirely of type TableType::Data or TableTable::References. Within a
-        // different segments can reference different tables (e.g., when two tables have been joined). However,
+        // table, different segments can reference different tables (e.g., when two tables have been joined). However,
         // reference segments of the same column must reference the same table.
         const auto reference_segment = std::dynamic_pointer_cast<const ReferenceSegment>(segment);
         if (type == TableType::References) {
