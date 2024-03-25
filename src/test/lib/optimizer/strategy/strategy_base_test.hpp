@@ -16,7 +16,7 @@ class StrategyBaseTest : public BaseTest {
    *
    * When sharing nodes between expected and actual LQP, e.g., `_lqp = PredicateNode::make(..., node_a,);` and `const
    * auto expected_lqp = PredicateNode::make(..., node_a,);`, consider to assign a deep copy of the plan to _lqp
-   * (_lqp = PredicateNode::make(...)->deep_copy()). Otherwise, the expected LQP also points to rewritten parts.
+   * (`_lqp = PredicateNode::make(...)->deep_copy()`). Otherwise, the expected LQP also points to rewritten parts.
    *
    * When a rule should not rewrite the LQP, assign the expected LQP to a deep copy of the input LQP BEFORE applying
    * the rule. If you do it afterwards, the expected LQP will just be a copy of the optimized LQP (which is of course
