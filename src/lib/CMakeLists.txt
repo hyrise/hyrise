@@ -449,6 +449,8 @@ set(
     storage/chunk_encoder.hpp
     storage/constraints/abstract_table_constraint.cpp
     storage/constraints/abstract_table_constraint.hpp
+    storage/constraints/constraint_utils.cpp
+    storage/constraints/constraint_utils.hpp
     storage/constraints/foreign_key_constraint.cpp
     storage/constraints/foreign_key_constraint.hpp
     storage/constraints/table_key_constraint.cpp

@@ -183,6 +183,7 @@ set(
     lib/storage/chunk_encoder_test.cpp
     lib/storage/chunk_test.cpp
     lib/storage/compressed_vector_test.cpp
+    lib/storage/constraints/constraint_utils_test.cpp
     lib/storage/constraints/foreign_key_constraint_test.cpp
     lib/storage/constraints/table_key_constraint_test.cpp
     lib/storage/constraints/table_order_constraint_test.cpp
@@ -258,10 +259,11 @@ set(
 set (
     SYSTEM_TEST_SOURCES
     ${SHARED_SOURCES}
+    benchmarklib/ssb/ssb_table_generator_test.cpp
     benchmarklib/synthetic_table_generator_test.cpp
     benchmarklib/tpcc/tpcc_test.cpp
-    benchmarklib/tpcds/tpcds_db_generator_test.cpp
-    benchmarklib/tpch/tpch_db_generator_test.cpp
+    benchmarklib/tpcds/tpcds_table_generator_test.cpp
+    benchmarklib/tpch/tpch_table_generator_test.cpp
     gtest_main.cpp
     lib/concurrency/stress_test.cpp
     lib/server/server_test_runner.cpp

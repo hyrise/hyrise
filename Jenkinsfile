@@ -2,8 +2,10 @@ import org.jenkinsci.plugins.pipeline.modeldefinition.Utils
 
 full_ci = env.BRANCH_NAME == 'master' || pullRequest.labels.contains('FullCI')
 
-// Due to their long runtime, we skip several tests in sanitizer builds.
-tests_excluded_in_sanitizer_builds = 'SQLiteTestRunnerEncodings/*:TPCDSTableGeneratorTest.GenerateAndStoreRowCounts:TPCHTableGeneratorTest.RowCountsMediumScaleFactor'
+// Due to their long runtime, we skip several tests in sanitizer and MacOS builds.
+tests_excluded_in_sanitizer_builds = 'SQLiteTestRunnerEncodings/*:TPCDSTableGeneratorTest.GenerateAndStoreRowCounts:TPCHTableGeneratorTest.RowCountsMediumScaleFactor:SSBTableGeneratorTest.GenerateAndStoreRowCounts'
+
+tests_excluded_in_mac_builds = 'TPCCTest*:TPCDSTableGeneratorTest.*:TPCHTableGeneratorTest.RowCountsMediumScaleFactor:SSBTableGeneratorTest.GenerateAndStoreRowCounts'
 
 // We run the strict ("more aggressive") checks for the address sanitizer
 // (see https://github.com/google/sanitizers/wiki/AddressSanitizer#faq). Moreover, we activate the leak sanitizer.
@@ -211,7 +213,8 @@ try {
               if (env.BRANCH_NAME == 'master' || full_ci) {
                 sh "mkdir ./clang-debug/run-shuffled"
                 sh "./clang-debug/hyriseTest clang-debug/run-shuffled --gtest_repeat=5 --gtest_shuffle"
-                sh "./clang-debug/hyriseSystemTest clang-debug/run-shuffled --gtest_repeat=2 --gtest_shuffle"
+                // We do not want to trigger SSB data generation concurrently since it is not concurrency-safe.
+                sh "./clang-debug/hyriseSystemTest clang-debug/run-shuffled --gtest_repeat=2 --gtest_shuffle --gtest_filter=\"-SSBTableGeneratorTest.*\""
               } else {
                 Utils.markStageSkippedForConditional("clangDebugRunShuffled")
               }
@@ -420,8 +423,10 @@ try {
               }
             }
 
-            // Build hyriseTest (Debug) with macOS's default compiler (Apple clang) and run it.
-            sh "mkdir clang-apple-debug && cd clang-apple-debug && PATH=/usr/local/bin/:$PATH cmake ${debug} ${unity} ${ninja} .."
+            // Build hyriseTest (Debug) with macOS's default compiler (Apple clang) and run it. Passing clang
+            // explicitly seems to make the compiler find C system headers (required for SSB and JCC-H data generators)
+            // that are not found otherwise.
+            sh "mkdir clang-apple-debug && cd clang-apple-debug && PATH=/usr/local/bin/:$PATH cmake ${debug} ${unity} ${ninja} -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ .."
             sh "cd clang-apple-debug && PATH=/usr/local/bin/:$PATH ninja"
             sh "./clang-apple-debug/hyriseTest"
 
@@ -430,7 +435,7 @@ try {
             sh "mkdir clang-release && cd clang-release && PATH=/usr/local/bin/:$PATH /usr/local/bin/cmake ${release} ${ninja} -DCMAKE_C_COMPILER=/usr/local/opt/llvm@17/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm@17/bin/clang++ .."
             sh "cd clang-release && PATH=/usr/local/bin/:$PATH ninja"
             sh "./clang-release/hyriseTest"
-            sh "./clang-release/hyriseSystemTest --gtest_filter=\"-TPCCTest*:TPCDSTableGeneratorTest.*:TPCHTableGeneratorTest.RowCountsMediumScaleFactor:*.CompareToSQLite/Line1*WithLZ4\""
+            sh "./clang-release/hyriseSystemTest --gtest_filter=-${tests_excluded_in_mac_builds}"
             sh "PATH=/usr/local/bin/:$PATH ./scripts/test/hyriseConsole_test.py clang-release"
             sh "PATH=/usr/local/bin/:$PATH ./scripts/test/hyriseServer_test.py clang-release"
             sh "PATH=/usr/local/bin/:$PATH ./scripts/test/hyriseBenchmarkFileBased_test.py clang-release"
@@ -453,8 +458,10 @@ try {
             // We do not use install_dependencies.sh here as there is no way to run OS X in a Docker container
             sh "git submodule update --init --recursive --jobs 4 --depth=1"
 
-            // Build hyriseTest (Release) with macOS's default compiler (Apple clang) and run it.
-            sh "mkdir clang-apple-release && cd clang-apple-release && cmake ${release} ${ninja} .."
+            // Build hyriseTest (Release) with macOS's default compiler (Apple clang) and run it. Passing clang
+            // explicitly seems to make the compiler find C system headers (required for SSB and JCC-H data generators)
+            // that are not found otherwise.
+            sh "mkdir clang-apple-release && cd clang-apple-release && cmake ${release} ${ninja} -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ .."
             sh "cd clang-apple-release && ninja"
             sh "./clang-apple-release/hyriseTest"
 
@@ -469,7 +476,7 @@ try {
             sh "file ./clang-debug/hyriseTest | grep arm64"
 
             sh "./clang-debug/hyriseTest"
-            sh "./clang-debug/hyriseSystemTest --gtest_filter=\"-TPCCTest*:TPCDSTableGeneratorTest.*:TPCHTableGeneratorTest.RowCountsMediumScaleFactor:*.CompareToSQLite/Line1*WithLZ4\""
+            sh "./clang-debug/hyriseSystemTest --gtest_filter=-${tests_excluded_in_mac_builds}"
             sh "PATH=/usr/local/bin/:$PATH ./scripts/test/hyriseConsole_test.py clang-debug"
             sh "PATH=/usr/local/bin/:$PATH ./scripts/test/hyriseServer_test.py clang-debug"
             sh "PATH=/usr/local/bin/:$PATH ./scripts/test/hyriseBenchmarkFileBased_test.py clang-debug"

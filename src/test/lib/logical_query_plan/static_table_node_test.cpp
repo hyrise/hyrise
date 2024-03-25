@@ -24,8 +24,8 @@ class StaticTableNodeTest : public BaseTest {
 TEST_F(StaticTableNodeTest, Description) {
   EXPECT_EQ(static_table_node->description(), "[StaticTable]: (a int not nullable, b float nullable)");
 
-  dummy_table->add_soft_key_constraint({{ColumnID{0}}, KeyConstraintType::PRIMARY_KEY});
-  dummy_table->add_soft_key_constraint({{ColumnID{1}}, KeyConstraintType::UNIQUE});
+  dummy_table->add_soft_constraint(TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::PRIMARY_KEY});
+  dummy_table->add_soft_constraint(TableKeyConstraint{{ColumnID{1}}, KeyConstraintType::UNIQUE});
 
   EXPECT_EQ(static_table_node->description(),
             "[StaticTable]: (a int not nullable, b float nullable, PRIMARY_KEY(a), UNIQUE(b))");
@@ -48,8 +48,8 @@ TEST_F(StaticTableNodeTest, HashingAndEqualityCheck) {
 
   const auto different_static_table_node_by_constraints =
       StaticTableNode::make(Table::create_dummy_table(column_definitions));
-  different_static_table_node_by_constraints->table->add_soft_key_constraint(
-      {{ColumnID{0}}, KeyConstraintType::PRIMARY_KEY});
+  different_static_table_node_by_constraints->table->add_soft_constraint(
+      TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::PRIMARY_KEY});
 
   EXPECT_EQ(*same_static_table_node, *static_table_node);
   EXPECT_NE(*different_static_table_node_by_definitions, *static_table_node);
@@ -65,11 +65,11 @@ TEST_F(StaticTableNodeTest, HashingAndEqualityConstraintOrder) {
   const auto key_constraint_2 = TableKeyConstraint{{ColumnID{1}}, KeyConstraintType::UNIQUE};
   const auto same_static_table_node = StaticTableNode::make(Table::create_dummy_table(column_definitions));
 
-  static_table_node->table->add_soft_key_constraint(key_constraint_1);
-  static_table_node->table->add_soft_key_constraint(key_constraint_2);
+  static_table_node->table->add_soft_constraint(key_constraint_1);
+  static_table_node->table->add_soft_constraint(key_constraint_2);
 
-  same_static_table_node->table->add_soft_key_constraint(key_constraint_2);
-  same_static_table_node->table->add_soft_key_constraint(key_constraint_1);
+  same_static_table_node->table->add_soft_constraint(key_constraint_2);
+  same_static_table_node->table->add_soft_constraint(key_constraint_1);
 
   EXPECT_EQ(*same_static_table_node, *static_table_node);
   EXPECT_EQ(same_static_table_node->hash(), static_table_node->hash());
@@ -88,8 +88,8 @@ TEST_F(StaticTableNodeTest, UniqueColumnCombinations) {
   // Prepare two unique constraints.
   const auto key_constraint_a = TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE};
   const auto key_constraint_b = TableKeyConstraint{{ColumnID{1}}, KeyConstraintType::UNIQUE};
-  dummy_table->add_soft_key_constraint(key_constraint_a);
-  dummy_table->add_soft_key_constraint(key_constraint_b);
+  dummy_table->add_soft_constraint(key_constraint_a);
+  dummy_table->add_soft_constraint(key_constraint_b);
 
   // Basic check.
   const auto& unique_column_combinations = static_table_node->unique_column_combinations();
