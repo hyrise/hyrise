@@ -3,12 +3,16 @@
 #
 # First install Nix (see https://nixos.org/manual/nix/stable/installation/).
 # Then run 
-#     nix-build
-# to build Hyrise entirely.
+#     nix-shell
+# and proceed to build Hyrise, e.g., do the following:
+#
+#   mkdir cmake-build-debug && cd cmake-build-debug
+#   cmake -GNinja -DCMAKE_BUILD_TYPE=Debug ..
+#   ninja
+#
 # Even though the setup might work with other systems, the 
 # following are recommended:
 # - x86_64 Linux
-# - x86_64 MacOS
 # - ARM MacOS
 #
 
@@ -26,6 +30,9 @@ pkgs.stdenv.mkDerivation (finalAttrs: {
 
   src = ./.;
 
+  # In simple Linux2Linux same-arcj applications, buildInputs and nativeBuildInputs
+  # do not make any significant difference. Therefore, Hyrise the differentiation
+  # is not severly important.
   # Read more on the difference of buildInputs and nativeBuildInputs here: 
   # https://discourse.nixos.org/t/use-buildinputs-or-nativebuildinputs-for-nix-shell/8464
   
@@ -33,21 +40,22 @@ pkgs.stdenv.mkDerivation (finalAttrs: {
   # Usually only used for building.
   nativeBuildInputs = with pkgs; [
     gcc11
+    autoconf
     cmake
     python3
     sqlite
     lld
+    ninja
+    parallel
+    coreutils
+    dos2unix
+    gcovr
+    python311Packages.pexpect
   ];
   
   # Usually things that we link on.
   buildInputs = with pkgs; [
-    autoconf
     boost
-    coreutils
-    dos2unix
-    gcovr
-    parallel
-    python311Packages.pexpect
     postgresql_16
     readline
     tbb
@@ -58,15 +66,4 @@ pkgs.stdenv.mkDerivation (finalAttrs: {
     "fortify"
     "fortify3"
   ];
-  
-  cmakeFlags = [
-    "DCMAKE_BUILD_TYPE=Debug"
-    "DCMAKE_C_COMPILER=gcc"
-    "DCMAKE_CXX_COMPILER=g++"
-    "DCMAKE_UNITY_BUILD=Off"
-  ];
-
-  prePatch = ''
-    mkdir -p "$out/bin"
-  '';
 })
