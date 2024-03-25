@@ -988,7 +988,7 @@ std::vector<std::shared_ptr<const Table>> ExpressionEvaluator::_evaluate_subquer
   // Ensure we are the only ones to execute the input PQP for correlated subqueries and set their parameters.
   visit_pqp(expression.pqp, [](const auto& op) {
     Assert(op->state() == OperatorState::Created,
-           "Only the ExpressionEvaluator should manage manages and excute operators of correlated subqueries.");
+           "Only the ExpressionEvaluator should manage and excute operators of correlated subqueries.");
     // Check this for all PQP nodes in debug builds, but only for the root node in release.
     if constexpr (HYRISE_DEBUG) {
       return PQPVisitation::VisitInputs;
