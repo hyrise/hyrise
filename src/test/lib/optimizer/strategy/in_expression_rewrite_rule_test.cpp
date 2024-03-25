@@ -51,38 +51,51 @@ class InExpressionRewriteRuleTest : public StrategyBaseTest {
   }
 
  public:
-  // Can't use EXPECT_LQP_EQ for disjunction rewrites for multiple elements, because ExpressionUnorderedSet produces
-  // a non-deterministic order of predicates
-  bool check_disjunction(std::shared_ptr<AbstractLQPNode> lqp, std::shared_ptr<AbstractExpression> expected_column,
-                         std::vector<int> expected_values) {
-    auto values_found_in_predicates = std::vector<int>{};
+  // We cannot use EXPECT_LQP_EQ for disjunction rewrites for multiple elements because ExpressionUnorderedSet produces
+  // a non-deterministic order of predicates.
+  bool check_disjunction(const std::shared_ptr<AbstractLQPNode>& lqp,
+                         const std::shared_ptr<AbstractExpression>& expected_column,
+                         const std::vector<AllTypeVariant>& expected_values) {
+    auto values_found_in_predicates = std::vector<AllTypeVariant>{};
 
-    // Checks that a given node is a predicate of the form `col_a = x` where x is an int and will be added to
-    // values_found_in_predicates
+    // Checks that a given node is a predicate of the form `col_a = x` where x is a value and will be added to
+    // values_found_in_predicates.
     const auto verify_predicate_node = [&](const auto& node) {
+      // We cannot use ASSERT_* or FAIL here as these macros stop execution of the function without returning a bool.
       EXPECT_EQ(node->type, LQPNodeType::Predicate);
-      auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(node);
-      EXPECT_TRUE(predicate_node);
-      auto predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(predicate_node->predicate());
+      if (node->type != LQPNodeType::Predicate) {
+        return;
+      }
+      const auto& predicate_node = static_cast<const PredicateNode&>(*node);
+      const auto& predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(predicate_node.predicate());
       EXPECT_TRUE(predicate);
+      if (!predicate) {
+        return;
+      }
       EXPECT_EQ(predicate->left_operand(), expected_column);
       EXPECT_EQ(predicate->right_operand()->type, ExpressionType::Value);
-      values_found_in_predicates.emplace_back(
-          boost::get<int>(dynamic_cast<ValueExpression&>(*predicate->right_operand()).value));
+      if (predicate->right_operand()->type != ExpressionType::Value) {
+        return;
+      }
+      values_found_in_predicates.emplace_back(static_cast<const ValueExpression&>(*predicate->right_operand()).value);
     };
 
-    for (auto union_node_idx = size_t{0}; union_node_idx < expected_values.size() - 1; ++union_node_idx) {
-      EXPECT_EQ(lqp->type, LQPNodeType::Union);
-      auto union_node = std::dynamic_pointer_cast<UnionNode>(lqp);
-      EXPECT_TRUE(union_node);
-      EXPECT_EQ(union_node->set_operation_mode, SetOperationMode::All);
+    const auto expected_union_nodes = expected_values.size() - 1;
+    auto current_node = lqp;
+    for (auto union_node_idx = size_t{0}; union_node_idx < expected_union_nodes; ++union_node_idx) {
+      EXPECT_EQ(current_node->type, LQPNodeType::Union);
+      if (current_node->type != LQPNodeType::Union) {
+        return false;
+      }
+      const auto& union_node = static_cast<const UnionNode&>(*current_node);
+      EXPECT_EQ(union_node.set_operation_mode, SetOperationMode::All);
 
-      verify_predicate_node(union_node->right_input());
+      verify_predicate_node(union_node.right_input());
 
-      lqp = union_node->left_input();
+      current_node = union_node.left_input();
     }
-    // After checking expected_values.size() - 1 union nodes, the last node has predicates on both sides
-    verify_predicate_node(lqp);
+    // After checking expected_values.size() - 1 UnionNodes, the last node has predicates on both sides.
+    verify_predicate_node(current_node);
 
     std::sort(values_found_in_predicates.begin(), values_found_in_predicates.end());
 

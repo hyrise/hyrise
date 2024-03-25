@@ -10,8 +10,8 @@
 #include "strategy_base_test.hpp"
 
 /**
- * We cannott actually test much about the JoinOrderingRule, since it is highly dependent on the underlying algorithms
- * which are separately tested.
+ * We cannot actually test much about the JoinOrderingRule because it is highly dependent on the underlying algorithms,
+ * which are tested separately.
  */
 namespace hyrise {
 
@@ -44,8 +44,8 @@ class JoinOrderingRuleTest : public StrategyBaseTest {
 };
 
 TEST_F(JoinOrderingRuleTest, MultipleJoinGraphs) {
-  // Test that the JoinOrderingRule works when there are multiple parts in the plan that need isolated optimization
-  // e.g., when there is a barrier in the form of an outer join
+  // Test that the JoinOrderingRule works when there are multiple parts in the plan that need isolated optimization,
+  // e.g., when there is a barrier in the form of an outer join.
 
   // clang-format off
   _lqp =
