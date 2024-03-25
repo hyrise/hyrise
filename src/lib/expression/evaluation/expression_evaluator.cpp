@@ -44,6 +44,7 @@
 #include "lossy_cast.hpp"
 #include "null_value.hpp"
 #include "operators/abstract_operator.hpp"
+#include "operators/pqp_utils.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/operator_task.hpp"
 #include "storage/base_value_segment.hpp"
@@ -154,7 +155,8 @@ std::shared_ptr<AbstractExpression> rewrite_in_list_expression(const InExpressio
 }
 
 // Traverse the PQP of a correlated subquery and execute each operator. `AbstractOperator::execute()` ensures that no
-// operator is executed multiple times, even for diamonds.
+// operator is executed multiple times, even for diamonds. However, we can visit operators multiple times for complex
+// subqueries. We currently do not consider this a bottleneck.
 void execute_correlated_subquery_recursively(const std::shared_ptr<AbstractOperator>& op) {
   if (!op) {
     return;
@@ -984,8 +986,16 @@ std::vector<std::shared_ptr<const Table>> ExpressionEvaluator::_evaluate_subquer
   }
 
   // Ensure we are the only ones to execute the input PQP for correlated subqueries and set their parameters.
-  Assert(expression.pqp->state() == OperatorState::Created,
-         "ExpressionEvaluator manages operators of correlated subqueries.");
+  visit_pqp(expression.pqp, [](const auto& op) {
+    Assert(op->state() == OperatorState::Created,
+           "Only the ExpressionEvaluator should manage manages and excute operators of correlated subqueries.");
+    // Check this for all PQP nodes in debug builds, but only for the root node in release.
+    if constexpr (HYRISE_DEBUG) {
+      return PQPVisitation::VisitInputs;
+    } else {
+      return PQPVisitation::DoNotVisitInputs;
+    }
+  });
   auto results = std::vector<std::shared_ptr<const Table>>{_output_row_count};
   for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(_output_row_count); ++chunk_offset) {
     results[chunk_offset] = _evaluate_subquery_expression_for_row(expression, chunk_offset);

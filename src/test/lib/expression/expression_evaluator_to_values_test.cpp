@@ -652,7 +652,12 @@ TEST_F(ExpressionEvaluatorToValuesTest, CorrelatedSubqueryPrecalculated) {
 
   // Operators for correlated subqueries must not be reused, and the ExpressionEvaluator creates a copy for each row.
   // Thus, the input PQP must not be executed before.
-  execute_all({table_wrapper, projection});
+  table_wrapper->execute();
+  if constexpr (HYRISE_DEBUG) {
+    EXPECT_THROW(test_expression<int32_t>(table_a, *in_(4, subquery), {1, 1, 1, 1}), std::logic_error);
+  }
+
+  projection->execute();
   EXPECT_THROW(test_expression<int32_t>(table_a, *in_(4, subquery), {1, 1, 1, 1}), std::logic_error);
 }
 
