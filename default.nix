@@ -32,10 +32,9 @@ pkgs.stdenv.mkDerivation (finalAttrs: {
   # TODO(everyone): Figure out which packages should go to buildInputs and nativeBuildInputs
   # Usually only used for building.
   nativeBuildInputs = with pkgs; [
-    gcc
+    gcc11
     cmake
     python3
-    ninja
     sqlite
     lld
   ];
@@ -65,7 +64,6 @@ pkgs.stdenv.mkDerivation (finalAttrs: {
     "DCMAKE_C_COMPILER=gcc"
     "DCMAKE_CXX_COMPILER=g++"
     "DCMAKE_UNITY_BUILD=Off"
-    "DENABLE_ADDR_UB_LEAK_SANITIZATION=ON"
   ];
 
   prePatch = ''
