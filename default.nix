@@ -40,6 +40,7 @@ pkgs.stdenv.mkDerivation (finalAttrs: {
   # Usually only used for building.
   nativeBuildInputs = with pkgs; [
     gcc11
+    clang
     autoconf
     cmake
     python3
