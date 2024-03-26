@@ -422,7 +422,7 @@ std::shared_ptr<AbstractLQPNode> AbstractLQPNode::_deep_copy_impl(LQPNodeMapping
     copied_right_input = right_input()->_deep_copy_impl(node_mapping);
   }
 
-  const auto copy = _shallow_copy(node_mapping);
+  auto copy = _shallow_copy(node_mapping);
   copy->set_left_input(copied_left_input);
   copy->set_right_input(copied_right_input);
 
@@ -437,7 +437,7 @@ std::shared_ptr<AbstractLQPNode> AbstractLQPNode::_shallow_copy(LQPNodeMapping& 
     return node_mapping_iter->second;
   }
 
-  const auto shallow_copy = _on_shallow_copy(node_mapping);
+  auto shallow_copy = _on_shallow_copy(node_mapping);
   shallow_copy->comment = comment;
   node_mapping.emplace(shared_from_this(), shallow_copy);
 

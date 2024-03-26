@@ -211,7 +211,7 @@ std::string AbstractOperator::description(DescriptionMode /*description_mode*/) 
 
 std::shared_ptr<AbstractOperator> AbstractOperator::deep_copy() const {
   auto copied_ops = std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>{};
-  const auto copy = deep_copy(copied_ops);
+  auto copy = deep_copy(copied_ops);
 
   // GetTable operators can store references to TableScans as prunable subquery predicates (see get_table.hpp for
   // details). We must assign the copies of these TableScans after copying the entire PQP (see
