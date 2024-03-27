@@ -1,11 +1,10 @@
 #pragma once
 
-#include <algorithm>
+#include <cstddef>
 #include <cstdint>
 #include <functional>
 #include <ostream>
 #include <string>
-#include <utility>
 
 #include <boost/bimap.hpp>
 #include <boost/hana/core/to.hpp>
@@ -57,11 +56,12 @@ static constexpr auto data_type_enum_values =
 static constexpr auto data_type_strings = hana::make_tuple(BOOST_PP_SEQ_ENUM(DATA_TYPE_STRINGS));
 
 constexpr auto to_pair = [](auto tuple) {
-  return hana::make_pair(hana::at_c<0>(tuple), hana::at_c<1>(tuple));
+  return hana::make_pair(hana::at_c<0>(tuple), hana::at_c<1>(tuple));  // NOLINT(build/include_what_you_use)
 };
 
 static constexpr auto data_type_enum_pairs = hana::transform(hana::zip(data_type_enum_values, data_types), to_pair);
 static constexpr auto data_type_enum_string_pairs =
+    // NOLINTNEXTLINE(build/include_what_you_use): similar to above `make_pair`, cpplint sees it as `std::transform`.
     hana::transform(hana::zip(data_type_enum_values, data_type_strings), to_pair);
 
 // Prepends NullValue to tuple of types

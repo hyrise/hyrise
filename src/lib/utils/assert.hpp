@@ -6,7 +6,7 @@
 #include <boost/preprocessor/stringize.hpp>
 
 #include "invalid_input_exception.hpp"
-#include "utils/string_utils.hpp"
+#include "utils/string_utils.hpp"  // NOLINT(misc-include-cleaner): used in macro.
 
 /**
  * This file provides better assertions than the std cassert/assert.h - DebugAssert(condition, msg) and Fail(msg) can be
@@ -52,7 +52,7 @@ namespace detail {
   hyrise::detail::fail(hyrise::trim_source_file_path(__FILE__) + ":" BOOST_PP_STRINGIZE(__LINE__) " " + msg); \
   static_assert(true, "End call of macro with a semicolon.")
 
-[[noreturn]] inline void FailInput(const std::string& msg) {
+[[noreturn]] inline void FailInput(const std::string& msg) {  // NOLINT(readability-identifier-naming)
   throw InvalidInputException(std::string("Invalid input error: ") + msg);
 }
 

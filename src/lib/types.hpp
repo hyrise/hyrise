@@ -4,8 +4,10 @@
 #include <cstdint>
 #include <functional>
 #include <limits>
+#include <ostream>
 #include <string>
 #include <string_view>
+#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -148,10 +150,6 @@ constexpr RowID NULL_ROW_ID = RowID{INVALID_CHUNK_ID, INVALID_CHUNK_OFFSET};
 
 constexpr ValueID INVALID_VALUE_ID{std::numeric_limits<ValueID::base_type>::max()};
 
-// Get the default pre-allocated capacity of SSO strings. Note that the empty string has an unspecified capacity, so we
-// use a really short one here.
-const size_t SSO_STRING_CAPACITY = pmr_string{"."}.capacity();
-
 // The Scheduler currently supports just these two priorities.
 enum class SchedulePriority {
   Default = 1,  // Schedule task of normal priority.
@@ -288,7 +286,7 @@ template <>
 struct hash<std::basic_string<char, std::char_traits<char>, hyrise::PolymorphicAllocator<char>>> {
   size_t operator()(
       const std::basic_string<char, std::char_traits<char>, hyrise::PolymorphicAllocator<char>>& string) const {
-    return std::hash<std::string_view>{}(string.c_str());
+    return std::hash<std::string_view>{}(string);
   }
 };
 }  // namespace std

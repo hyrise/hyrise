@@ -15,6 +15,8 @@
 #include <utility>
 #include <vector>
 
+#include <oneapi/tbb/concurrent_vector.h>  // NOLINT(build/include_order): cpplint identifies TBB as C system headers.
+
 #include "all_type_variant.hpp"
 #include "resolve_type.hpp"
 #include "statistics/table_statistics.hpp"
