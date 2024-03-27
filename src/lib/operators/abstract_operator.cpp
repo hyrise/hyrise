@@ -268,18 +268,9 @@ void AbstractOperator::register_consumer() {
 }
 
 void AbstractOperator::deregister_consumer() {
-  DebugAssert(_consumer_count > 0, "Number of tracked consumer operators seems to be invalid.");
-  // The following section is locked to prevent clear_output() from being called twice. Otherwise, a race condition
-  // as follows might occur:
-  //  1) T1 decreases _consumer_count, making it equal to one. After this operation, T1 gets suspended.
-  //  2) T2 decreases _consumer_count as well, making it equal to zero. It enters the if statement and calls
-  //     clear_output() for the first time.
-  //  3) T1 wakes up and continues with the if statement. Since _consumer_count equals zero, it also calls
-  //     clear_output(), which leads to an illegal state transition ExecutedAndCleared -> ExecutedAndCleared.
-  const auto lock = std::lock_guard<std::mutex>{_deregister_consumer_mutex};
-
-  --_consumer_count;
-  if (_consumer_count == 0) {
+  const auto previous_consumers = _consumer_count--;
+  Assert(previous_consumers > 0, "Cannot decrement number of consumers when no consumers are left.");
+  if (previous_consumers == 1) {
     clear_output();
   }
 }
