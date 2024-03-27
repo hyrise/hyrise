@@ -266,7 +266,7 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& input_table,
     } else {
       referenced_table = input_table;
 
-      DebugAssert(chunk_in->has_mvcc_data(), "Trying to use Validate on a table that has no MVCC data");
+      DebugAssert(chunk_in->has_mvcc_data(), "Trying to use Validate on a table that has no MVCC data.");
 
       if (_is_entire_chunk_visible(chunk_in, snapshot_commit_id)) {
         // Not using the entirely_visible_chunks cache here as for data tables, we only look at chunks once anyway.

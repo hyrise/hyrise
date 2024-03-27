@@ -6,15 +6,14 @@
 #include <cstdint>
 #include <memory>
 #include <optional>
-#include <set>
 #include <stdexcept>
 #include <string>
 #include <unordered_map>
-#include <unordered_set>
 #include <utility>
 #include <vector>
 
 #include <boost/container_hash/hash.hpp>
+#include <boost/unordered/unordered_flat_set.hpp>
 
 #include "all_type_variant.hpp"
 #include "hyrise.hpp"
@@ -169,7 +168,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     }
   };
 
-  using RowHashSet = std::unordered_set<RowID, RowHasher>;
+  using RowHashSet = boost::unordered_flat_set<RowID, RowHasher>;
 
   // These are used for outer joins with multiple predicates where the primary predicate is not equals.
   RowHashSet _left_row_ids_emitted{};
@@ -223,15 +222,18 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
 
   // Determines the number of clusters to be used for the join. The number of clusters must be a power of two.
   size_t _determine_number_of_clusters() {
-    // We try to have a partition size of roughly 256 KB to avoid out-of-L2 cache sorts. This value has been determined
-    // by an array of benchmarks. Ideally, it would incorporate hardware knowledge such as the L2 cache size.
+    // We try to have a partition size of roughly 256 KB to limit out-of-cache sorting and increase parallelism. This
+    // value has been determined by an array of benchmarks and should be revisited for larger changes to the operator.
+    // Ideally, it would incorporate hardware knowledge such as the actual L2 cache size of the current system.
     const auto max_sort_items_count = 256'000 / sizeof(T);
     const size_t cluster_count_left = _sort_merge_join.left_input_table()->row_count() / max_sort_items_count;
     const size_t cluster_count_right = _sort_merge_join.right_input_table()->row_count() / max_sort_items_count;
 
-    // Return the next larger power of two for the larger of the two cluster counts.
-    return static_cast<size_t>(
-        std::pow(2, std::floor(std::log2(std::max({size_t{1}, cluster_count_left, cluster_count_right})))));
+    // Return the next smaller power of two for the larger of the two cluster counts. Do not use more than 2^8 clusters
+    // as TLB misses during clustering become too expensive (see "An Experimental Comparison of Thirteen Relational
+    // Equi-Joins in Main Memory" by Schuh et al.).
+    return static_cast<size_t>(std::pow(
+        2, std::min(8.0, std::floor(std::log2(std::max({size_t{1}, cluster_count_left, cluster_count_right}))))));
   }
 
   // Gets the table position corresponding to the end of the table, i.e. the last entry of the last cluster.
@@ -368,7 +370,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
                                                       MultiPredicateJoinEvaluator& multi_predicate_join_evaluator) {
     if (_primary_predicate_condition == PredicateCondition::Equals) {
       left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
-        bool left_row_id_matched = false;
+        auto left_row_id_matched = false;
         right_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
           if (multi_predicate_join_evaluator.satisfies_all_predicates(left_row_id, right_row_id)) {
             _emit_combination(output_cluster, left_row_id, right_row_id);
@@ -401,7 +403,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
                                                        MultiPredicateJoinEvaluator& multi_predicate_join_evaluator) {
     if (_primary_predicate_condition == PredicateCondition::Equals) {
       right_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
-        bool right_row_id_matched = false;
+        auto right_row_id_matched = false;
         left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
           if (multi_predicate_join_evaluator.satisfies_all_predicates(left_row_id, right_row_id)) {
             _emit_combination(output_cluster, left_row_id, right_row_id);
@@ -434,7 +436,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
                                                       TableRange right_range,
                                                       MultiPredicateJoinEvaluator& multi_predicate_join_evaluator) {
     if (_primary_predicate_condition == PredicateCondition::Equals) {
-      std::set<RowID> matched_right_row_ids;
+      auto matched_right_row_ids = RowHashSet{};
 
       left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
         bool left_row_id_matched = false;
@@ -449,9 +451,9 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
           _emit_combination(output_cluster, left_row_id, NULL_ROW_ID);
         }
       });
-      // add null value combinations for right row ids that have no match.
+      // Add null value combinations for right row ids that have no match.
       right_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
-        // right_row_ids_with_match has no key `right_row_id`
+        // Right_row_ids_with_match has no key `right_row_id`.
         if (!matched_right_row_ids.contains(right_row_id)) {
           _emit_combination(output_cluster, NULL_ROW_ID, right_row_id);
         }
@@ -566,22 +568,22 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       const auto right_run = TableRange(cluster_id, right_run_start, right_run_end);
       _join_runs(left_run, right_run, compare_result, multi_predicate_join_evaluator, cluster_id);
 
-      // Advance to the next run on the smaller side or both if equal
+      // Advance to the next run on the smaller side or both if equal.
       switch (compare_result) {
         case CompareResult::Equal:
-          // Advance both runs
+          // Advance both runs.
           left_run_start = left_run_end;
           right_run_start = right_run_end;
           left_run_end = left_run_start + _run_length(left_run_start, left_cluster);
           right_run_end = right_run_start + _run_length(right_run_start, right_cluster);
           break;
         case CompareResult::Less:
-          // Advance the left run
+          // Advance the left run.
           left_run_start = left_run_end;
           left_run_end = left_run_start + _run_length(left_run_start, left_cluster);
           break;
         case CompareResult::Greater:
-          // Advance the right run
+          // Advance the right run.
           right_run_start = right_run_end;
           right_run_end = right_run_start + _run_length(right_run_start, right_cluster);
           break;
@@ -590,7 +592,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       }
     }
 
-    // Join the rest of the unfinished side, which is relevant for outer joins and non-equi joins
+    // Join the rest of the unfinished side, which is relevant for outer joins and non-equi joins.
     const auto right_rest = TableRange(cluster_id, right_run_start, right_size);
     const auto left_rest = TableRange(cluster_id, left_run_start, left_size);
     if (left_run_start < left_size) {
@@ -839,7 +841,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       const auto merge_row_count = _sorted_left_table[cluster_id].size() + _sorted_right_table[cluster_id].size();
       const auto join_cluster_task = [this, cluster_id] {
         // Accessors are not thread-safe, so we create one evaluator per job
-        std::optional<MultiPredicateJoinEvaluator> multi_predicate_join_evaluator;
+        auto multi_predicate_join_evaluator = std::optional<MultiPredicateJoinEvaluator>{};
         if (!_secondary_join_predicates.empty()) {
           multi_predicate_join_evaluator.emplace(*_sort_merge_join._left_input->get_output(),
                                                  *_sort_merge_join.right_input()->get_output(), _mode,
@@ -894,7 +896,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     _end_of_left_table = _end_of_table(_sorted_left_table);
     _end_of_right_table = _end_of_table(_sorted_right_table);
 
-    Timer timer;
+    auto timer = Timer{};
 
     _perform_join();
 
@@ -902,20 +904,14 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       auto null_output_left = RowIDPosList();
       auto null_output_right = RowIDPosList();
 
-      // Add the outer join rows which had a null value in their join column
+      // Add the outer join rows which had a null value in their join column.
       if (include_null_left) {
-        null_output_left.reserve(_null_rows_left.size());
+        null_output_left.insert(null_output_left.end(), _null_rows_left.begin(), _null_rows_left.end());
         null_output_right.insert(null_output_right.end(), _null_rows_left.size(), NULL_ROW_ID);
-        for (const auto& row_id_left : _null_rows_left) {
-          null_output_left.push_back(row_id_left);
-        }
       }
       if (include_null_right) {
         null_output_left.insert(null_output_left.end(), _null_rows_right.size(), NULL_ROW_ID);
-        null_output_right.reserve(_null_rows_right.size());
-        for (const auto& row_id_right : _null_rows_right) {
-          null_output_right.push_back(row_id_right);
-        }
+        null_output_right.insert(null_output_right.end(), _null_rows_right.begin(), _null_rows_right.end());
       }
 
       DebugAssert(null_output_left.size() == null_output_right.size(),

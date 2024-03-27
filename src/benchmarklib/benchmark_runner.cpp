@@ -100,7 +100,7 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config,
   // items exist for which no dedicated result could be loaded.
   if (_config.verify && _benchmark_item_runner->has_item_without_dedicated_result()) {
     std::cout << "- Loading tables into SQLite for verification.\n";
-    Timer timer;
+    auto timer = Timer{};
 
     // Load the data into SQLite.
     sqlite_wrapper = std::make_shared<SQLiteWrapper>();
@@ -271,8 +271,8 @@ void BenchmarkRunner::_benchmark_shuffled() {
   }
 
   // For shuffling the item order.
-  std::random_device random_device;
-  std::mt19937 random_generator(random_device());
+  auto random_device = std::random_device{};
+  auto random_generator = std::mt19937(random_device());
 
   Assert(_currently_running_clients == 0, "Did not expect any clients to run at this time.");
 

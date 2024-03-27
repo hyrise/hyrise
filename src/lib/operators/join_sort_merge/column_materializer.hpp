@@ -26,6 +26,8 @@ struct MaterializedValue {
 
   MaterializedValue(RowID row, T v) : row_id{row}, value{v} {}
 
+  MaterializedValue(ChunkID chunk_id, ChunkOffset chunk_offset, T v) : row_id{chunk_id, chunk_offset}, value{v} {}
+
   RowID row_id;
   T value;
 };
@@ -90,9 +92,6 @@ class ColumnMaterializer {
 
     Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
 
-    auto gathered_samples = std::vector<T>();
-    gathered_samples.reserve(SAMPLES_PER_CHUNK * chunk_count);
-
     auto null_row_count = size_t{0};
     for (const auto& null_rows : null_rows_per_chunk) {
       null_row_count += null_rows.size();
@@ -101,13 +100,22 @@ class ColumnMaterializer {
     null_rows.reserve(null_row_count);
 
     for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-      const auto& subsample = subsamples[chunk_id];
-      gathered_samples.insert(gathered_samples.end(), subsample.samples.begin(), subsample.samples.end());
-
       const auto& chunk_null_rows = null_rows_per_chunk[chunk_id];
       null_rows.insert(null_rows.end(), chunk_null_rows.begin(), chunk_null_rows.end());
     }
-    gathered_samples.shrink_to_fit();
+
+    auto gathered_samples = std::vector<T>{};
+    if (_sort) {
+      // We sort to cluster the table by ranges (e.g., for non-equi joins). When sorting is not requested, we do not
+      // need to gather samples.
+      gathered_samples.reserve(SAMPLES_PER_CHUNK * chunk_count);
+
+      for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+        const auto& subsample = subsamples[chunk_id];
+        gathered_samples.insert(gathered_samples.end(), subsample.samples.begin(), subsample.samples.end());
+      }
+      gathered_samples.shrink_to_fit();
+    }
 
     return {std::move(output), std::move(null_rows), std::move(gathered_samples)};
   }
@@ -140,13 +148,12 @@ class ColumnMaterializer {
     output.reserve(segment->size());
 
     segment_iterate<T>(*segment, [&](const auto& position) {
-      const auto row_id = RowID{chunk_id, position.chunk_offset()};
       if (position.is_null()) {
         if (_materialize_null) {
-          null_rows_output.emplace_back(row_id);
+          null_rows_output.emplace_back(chunk_id, position.chunk_offset());
         }
       } else {
-        output.emplace_back(row_id, position.value());
+        output.emplace_back(chunk_id, position.chunk_offset(), position.value());
       }
     });
 
@@ -155,8 +162,6 @@ class ColumnMaterializer {
         return left.value < right.value;
       });
     }
-
-    _gather_samples_from_segment(output, subsample);
 
     return output;
   }

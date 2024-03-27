@@ -85,7 +85,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> FileBasedTableGenerator::gen
    * 3. Actually load the tables. Load from binary file if a up-to-date binary file exists for a Table.
    */
   for (auto& [table_name, table_info] : table_info_by_name) {
-    Timer timer;
+    auto timer = Timer{};
 
     std::cout << "-  Loading table '" << table_name << "' ";
 
