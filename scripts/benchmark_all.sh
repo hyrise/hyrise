@@ -207,8 +207,8 @@ do
     elif [ "$benchmark" = "hyriseBenchmarkTPCC" ]; then
       case "${config}" in
         "st")          echo -n "single-threaded" ;;
-        "mt_highcont") echo -n "multi-threaded, shuffled, high contention, $clients_tpcc_high_contention clients, $tpcc_warehouse_count_high_contention warehouses, ${num_phy_cores} cores" ;;
-        "mt_lowcont")  echo -n "multi-threaded, shuffled, low contention, $clients_tpcc_low_contention clients, $tpcc_warehouse_count warehouses, ${num_phy_cores} cores" ;;
+        "mt_highcont") echo -n "multi-threaded, shuffled, $clients_tpcc_high_contention clients, $tpcc_warehouse_count_high_contention warehouses, ${num_phy_cores} cores (high contention)" ;;
+        "mt_lowcont")  echo -n "multi-threaded, shuffled, $clients_tpcc_low_contention clients, $tpcc_warehouse_count warehouses, ${num_phy_cores} cores (low contention)" ;;
       esac
     else
       case "${config}" in
