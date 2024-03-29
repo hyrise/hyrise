@@ -124,9 +124,9 @@ do
 
     if [ "$benchmark" = "hyriseBenchmarkTPCC" ]; then
       # We test two scenarios: high and normal contention (see above, each for 10 minutes).
-      echo "Running $benchmark for $commit... (multi-threaded, shuffled, high contention, $clients_tpcc_high_contention clients, $tpcc_warehouse_count_high_contention warehouses)"
+      echo "Running $benchmark for $commit... (multi-threaded, shuffled, high contention: $clients_tpcc_high_contention clients and $tpcc_warehouse_count_high_contention warehouses)"
       ( "${build_folder}"/"$benchmark" --scheduler --clients ${clients_tpcc_high_contention} --cores ${num_phy_cores} -s $tpcc_warehouse_count_high_contention -m Shuffled -t ${tpcc_shuffled_runtime} -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt_highcont.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt_highcont.log"
-      echo "Running $benchmark for $commit... (multi-threaded, shuffled, low contention, $clients_tpcc_low_contention clients, $tpcc_warehouse_count warehouses)"
+      echo "Running $benchmark for $commit... (multi-threaded, shuffled, low contention: $clients_tpcc_low_contention clients and $tpcc_warehouse_count warehouses)"
       ( "${build_folder}"/"$benchmark" --scheduler --clients ${clients_tpcc_low_contention} --cores ${num_phy_cores} -s ${tpcc_warehouse_count} -m Shuffled -t ${tpcc_shuffled_runtime} -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt_lowcont.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt_lowcont.log"
     else
       echo "Running $benchmark for $commit... (multi-threaded, shuffled, $num_phy_cores clients)"
