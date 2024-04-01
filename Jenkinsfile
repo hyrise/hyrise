@@ -396,8 +396,9 @@ try {
             sh "ls -A1 | xargs rm -rf"
             deleteDir()
           }
-        }
-      };
+        };
+      }
+    }
   }
 
   parallel clangDebugMacX64: {
