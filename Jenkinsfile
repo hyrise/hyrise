@@ -398,7 +398,6 @@ try {
           }
         }
       };
-    }
   }
 
   parallel clangDebugMacX64: {
