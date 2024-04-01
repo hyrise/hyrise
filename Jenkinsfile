@@ -56,7 +56,7 @@ try {
 
     // The empty '' results in using the default registry: https://index.docker.io/v1/
     docker.withRegistry('', 'docker') {
-      parallel nix: {
+      stage("Nix") { 
         def nixOSImage = docker.image('nixos/nix:latest');
         nixOSImage.pull()
 
@@ -95,7 +95,9 @@ try {
             }
           }
         };
-      }, hyrise: {
+      }
+
+      stage("Hyrise") {
         def hyriseCI = docker.image('hyrise/hyrise-ci:22.04');
         hyriseCI.pull()
 
