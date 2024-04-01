@@ -69,6 +69,7 @@ try {
             stage("gccNixDebug") {
               gcc = "-DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++"
               sh '''
+                export HOME=$(pwd)
                 nix-shell --command "mkdir -p cmake-build-debug && cd cmake-build-debug && cmake -GNinja -DCMAKE_BUILD_TYPE=Debug ${gcc} .. && ninja"
               '''
             }
@@ -76,6 +77,7 @@ try {
             stage("gccNixRelease") {
               gcc = "-DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++"
               sh '''
+                export HOME=$(pwd)
                 nix-shell --command "mkdir -p cmake-build-debug && cd cmake-build-debug && cmake -GNinja -DCMAKE_BUILD_TYPE=Release ${gcc} .. && ninja"
               '''
             }
