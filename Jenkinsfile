@@ -57,44 +57,46 @@ try {
     // The empty '' results in using the default registry: https://index.docker.io/v1/
     docker.withRegistry('', 'docker') {
       parallel nix: {
-        def nixOSImage = docker.image('nixos/nix:latest');
-        nixOSImage.pull()
+        stage("Nix") { 
+          def nixOSImage = docker.image('nixos/nix:latest');
+          nixOSImage.pull()
 
-        nixOSImage.inside() {
-          stage("Setup") {
-            checkout scm
-          }
+          nixOSImage.inside() {
+            stage("Setup") {
+              checkout scm
+            }
 
-          parallel clangNixDebug: {
-            stage("clangNixDebug") {
-              clang = "-DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++"
-              sh '''
-                nix-shell --command "mkdir cmake-build-debug && cd "$_" && cmake -GNinja -DCMAKE_BUILD_TYPE=Debug ${clang} .. && ninja"
-              '''
+            parallel clangNixDebug: {
+              stage("clangNixDebug") {
+                clang = "-DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++"
+                sh '''
+                  nix-shell --command "mkdir cmake-build-debug && cd "$_" && cmake -GNinja -DCMAKE_BUILD_TYPE=Debug ${clang} .. && ninja"
+                '''
+              }
+            }, clangNixRelease: {
+              stage("clangNixRelease") {
+                clang = "-DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++"
+                sh '''
+                  nix-shell --command "mkdir cmake-build-debug && cd "$_" && cmake -GNinja -DCMAKE_BUILD_TYPE=Release ${clang} .. && ninja"
+                '''
+              }
+            }, gccNixDebug: {
+              stage("gccNixDebug") {
+                gcc = "-DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++"
+                sh '''
+                  nix-shell --command "mkdir cmake-build-debug && cd "$_" && cmake -GNinja -DCMAKE_BUILD_TYPE=Debug ${gcc} .. && ninja"
+                '''
+              }
+            }, gccNixRelease: {
+              stage("gccNixRelease") {
+                gcc = "-DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++"
+                sh '''
+                  nix-shell --command "mkdir cmake-build-debug && cd "$_" && cmake -GNinja -DCMAKE_BUILD_TYPE=Release ${gcc} .. && ninja"
+                '''
+              }
             }
-          }, clangNixRelease: {
-            stage("clangNixRelease") {
-              clang = "-DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++"
-              sh '''
-                nix-shell --command "mkdir cmake-build-debug && cd "$_" && cmake -GNinja -DCMAKE_BUILD_TYPE=Release ${clang} .. && ninja"
-              '''
-            }
-          }, gccNixDebug: {
-            stage("gccNixDebug") {
-              gcc = "-DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++"
-              sh '''
-                nix-shell --command "mkdir cmake-build-debug && cd "$_" && cmake -GNinja -DCMAKE_BUILD_TYPE=Debug ${gcc} .. && ninja"
-              '''
-            }
-          }, gccNixRelease: {
-            stage("gccNixRelease") {
-              gcc = "-DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++"
-              sh '''
-                nix-shell --command "mkdir cmake-build-debug && cd "$_" && cmake -GNinja -DCMAKE_BUILD_TYPE=Release ${gcc} .. && ninja"
-              '''
-            }
-          }
-        };
+          };
+        }
       }, hyrise: {
         stage("Hyrise") {
           def hyriseCI = docker.image('hyrise/hyrise-ci:22.04');
