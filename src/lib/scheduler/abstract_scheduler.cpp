@@ -9,15 +9,11 @@
 namespace hyrise {
 
 void AbstractScheduler::wait_for_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) {
-  DebugAssert(([&]() {
-                for (const auto& task : tasks) {
-                  if (!task->is_scheduled()) {
-                    return false;
-                  }
-                }
-                return true;
-              }()),
-              "In order to wait for a task’s completion, it needs to have been scheduled first.");
+  if constexpr (HYRISE_DEBUG) {
+    for (const auto& task : tasks) {
+      Assert(task->is_scheduled(), "In order to wait for a task’s completion, it must have been scheduled first.");
+    }
+  }
 
   // In case wait_for_tasks() is called from a task being executed in a worker, let the worker handle the join()-ing,
   // otherwise join right here.
@@ -32,7 +28,7 @@ void AbstractScheduler::wait_for_tasks(const std::vector<std::shared_ptr<Abstrac
 }
 
 void AbstractScheduler::_group_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const {
-  // Do nothing - grouping tasks is implementation-defined
+  // Do nothing - grouping tasks is implementation-defined.
 }
 
 void AbstractScheduler::schedule_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) {
