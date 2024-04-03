@@ -15,18 +15,22 @@ namespace hyrise {
  */
 template <typename T>
 #ifdef __clang__
-__attribute__((optnone))  // Fixes issues with memcheck. As we are only accessing constant values, shouldn't cost much
+__attribute__((optnone))  // Fixes issues with memcheck. As we are only accessing constant values, should not cost much.
 #endif
 size_t
 string_heap_size(const T& string) {
-  if (string.capacity() > SSO_STRING_CAPACITY) {
+  // Get the default pre-allocated capacity of SSO strings. Note that the empty string has an unspecified capacity, so
+  // we use a really short one here.
+  static const size_t sso_string_capacity = pmr_string{"."}.capacity();
+
+  if (string.capacity() > sso_string_capacity) {
     // For heap-allocated strings, \0 is appended to denote the end of the string. capacity() is used over length()
     // since some libraries (e.g. llvm's libc++) also over-allocate the heap strings
     // (cf. https://shaharmike.com/cpp/std-string/).
     return string.capacity() + 1;
   }
 
-  DebugAssert(string.capacity() == SSO_STRING_CAPACITY, "SSO does not meet expectations.");
+  DebugAssert(string.capacity() == sso_string_capacity, "SSO does not meet expectations.");
   return 0;
 }
 
