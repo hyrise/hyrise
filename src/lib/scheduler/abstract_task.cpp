@@ -166,10 +166,10 @@ TaskState AbstractTask::state() const {
 }
 
 void AbstractTask::_on_predecessor_done() {
-  Assert(_pending_predecessors > 0, "The count of pending predecessors equals zero and cannot be decremented.");
-  auto new_predecessor_count = --_pending_predecessors;  // atomically decrement
-  if (new_predecessor_count == 0) {
-    auto current_worker = Worker::get_this_thread_worker();
+  const auto previous_predecessor_count = _pending_predecessors--;
+  Assert(previous_predecessor_count > 0, "Cannot decrement pending predecessors when no predecessors are left.");
+  if (previous_predecessor_count == 1) {
+    const auto current_worker = Worker::get_this_thread_worker();
 
     if (current_worker) {
       // If the first task was executed faster than the other tasks were scheduled, we might end up in a situation where

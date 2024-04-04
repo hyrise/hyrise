@@ -1,5 +1,3 @@
-#include <vector>
-
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/union_node.hpp"
@@ -29,12 +27,13 @@ class StoredTableColumnAlignmentRuleTest : public StrategyBaseTest {
   }
 
   std::shared_ptr<StoredTableColumnAlignmentRule> _rule;
-  std::shared_ptr<UnionNode> _union_node;
-  std::shared_ptr<StoredTableNode> _stored_table_node_left, _stored_table_node_right;
+  std::shared_ptr<AbstractLQPNode> _union_node;
+  std::shared_ptr<StoredTableNode> _stored_table_node_left;
+  std::shared_ptr<StoredTableNode> _stored_table_node_right;
 };
 
 TEST_F(StoredTableColumnAlignmentRuleTest, EqualTableEqualChunksEqualColumns) {
-  apply_rule(_rule, _union_node);
+  _apply_rule(_rule, _union_node);
 
   EXPECT_EQ(_stored_table_node_left->pruned_column_ids(), (std::vector{ColumnID{0}}));
   EXPECT_EQ(_stored_table_node_right->pruned_column_ids(), (std::vector{ColumnID{0}}));
@@ -46,7 +45,7 @@ TEST_F(StoredTableColumnAlignmentRuleTest, EqualTableEqualChunksDifferentColumns
   _stored_table_node_right->set_pruned_column_ids({ColumnID{0}, ColumnID{1}});
   _union_node->set_right_input(_stored_table_node_right);
 
-  apply_rule(_rule, _union_node);
+  _apply_rule(_rule, _union_node);
 
   EXPECT_EQ(_stored_table_node_left->pruned_column_ids(), (std::vector{ColumnID{0}}));
   EXPECT_EQ(_stored_table_node_right->pruned_column_ids(), (std::vector{ColumnID{0}}));
@@ -59,7 +58,7 @@ TEST_F(StoredTableColumnAlignmentRuleTest, EqualTableDifferentChunksDifferentCol
   _stored_table_node_right->set_pruned_column_ids({ColumnID{0}, ColumnID{1}});
   _union_node->set_right_input(_stored_table_node_right);
 
-  apply_rule(_rule, _union_node);
+  _apply_rule(_rule, _union_node);
 
   EXPECT_EQ(_stored_table_node_left->pruned_column_ids(), (std::vector{ColumnID{0}}));
   EXPECT_EQ(_stored_table_node_right->pruned_column_ids(), (std::vector{ColumnID{0}, ColumnID{1}}));
@@ -73,7 +72,7 @@ TEST_F(StoredTableColumnAlignmentRuleTest, DifferentTableEqualChunksDifferentCol
   _stored_table_node_right->set_pruned_column_ids({ColumnID{0}, ColumnID{1}});
   _union_node->set_right_input(_stored_table_node_right);
 
-  apply_rule(_rule, _union_node);
+  _apply_rule(_rule, _union_node);
 
   EXPECT_EQ(_stored_table_node_left->pruned_column_ids(), (std::vector{ColumnID{0}}));
   EXPECT_EQ(_stored_table_node_right->pruned_column_ids(), (std::vector{ColumnID{0}, ColumnID{1}}));
@@ -82,27 +81,27 @@ TEST_F(StoredTableColumnAlignmentRuleTest, DifferentTableEqualChunksDifferentCol
 }
 
 TEST_F(StoredTableColumnAlignmentRuleTest, CoverSubqueries) {
-  // Prepare root & subquery LQP
-  auto stn_subquery = std::static_pointer_cast<StoredTableNode>(_stored_table_node_left->deep_copy());
-  auto column_c = lqp_column_(stn_subquery, ColumnID{2});
-  auto projection_subquery = ProjectionNode::make(expression_vector(column_c), stn_subquery);
-  auto subquery = lqp_subquery_(projection_subquery);
+  // Prepare root & subquery LQP.
+  const auto stn_subquery = std::static_pointer_cast<StoredTableNode>(_stored_table_node_left->deep_copy());
+  const auto column_c = lqp_column_(stn_subquery, ColumnID{2});
+  const auto projection_subquery = ProjectionNode::make(expression_vector(column_c), stn_subquery);
+  const auto subquery = lqp_subquery_(projection_subquery);
 
-  auto projection_root = ProjectionNode::make(expression_vector(subquery), _union_node);
+  _lqp = ProjectionNode::make(expression_vector(subquery), _union_node);
 
-  // Set pruned column ids
-  auto pruned_column_set_a = std::vector{ColumnID{0}};
+  // Set pruned ColumnIDs.
+  const auto pruned_column_set_a = std::vector{ColumnID{0}};
   _stored_table_node_left->set_pruned_column_ids(pruned_column_set_a);
   _stored_table_node_right->set_pruned_column_ids(pruned_column_set_a);
-  auto pruned_column_set_a_b = std::vector{ColumnID{0}, ColumnID{1}};
+  const auto pruned_column_set_a_b = std::vector{ColumnID{0}, ColumnID{1}};
   stn_subquery->set_pruned_column_ids(pruned_column_set_a_b);
 
-  // Prerequisites
+  // Prerequisites.
   ASSERT_EQ(_stored_table_node_left->pruned_column_ids(), pruned_column_set_a);
   ASSERT_EQ(_stored_table_node_right->pruned_column_ids(), pruned_column_set_a);
   ASSERT_EQ(stn_subquery->pruned_column_ids(), pruned_column_set_a_b);  // differs
 
-  apply_rule(_rule, projection_root);
+  _apply_rule(_rule, _lqp);
 
   EXPECT_EQ(_stored_table_node_left->pruned_column_ids(), pruned_column_set_a);
   EXPECT_EQ(_stored_table_node_right->pruned_column_ids(), pruned_column_set_a);
