@@ -50,8 +50,8 @@ using namespace hyrise;  // NOLINT(build/namespaces)
 
 /**
  * Helper to split results into chunks and prepare output vectors. Callers pass a function to consume the split results.
- * This function receives iterators to the result split. Consumer functions are executed via the scheduler.
- * Function is used either to process RowIDs (for GROUP BY columns) or actual values (for aggregation results).
+ * This consumer function receives iterators to the result split and is executed via the scheduler (potentially
+ * concurrently). Helper is used either to process RowIDs (for GROUP BY columns) or values (for aggregation results).
  */
 template <typename ColumnDataType, WindowFunction aggregate_func, typename ResultConsumer, typename ValueVectorType>
 void split_results_chunk_wise(const bool write_nulls, const AggregateResults<ColumnDataType, aggregate_func>& results,
@@ -88,8 +88,7 @@ void split_results_chunk_wise(const bool write_nulls, const AggregateResults<Col
 
       const auto element_count = std::distance(begin, end);
       if constexpr (std::is_same_v<ValueVectorType, std::shared_ptr<RowIDPosList>>) {
-        using ValueType = typename ValueVectorType::element_type;
-        value_vectors[output_chunk_id] = std::make_shared<ValueType>();
+        value_vectors[output_chunk_id] = std::make_shared<RowIDPosList>();
         value_vectors[output_chunk_id]->reserve(element_count);
       } else {
         value_vectors[output_chunk_id].reserve(element_count);
@@ -317,7 +316,7 @@ void write_groupby_output(const std::shared_ptr<const Table>& input_table,
           false, results, pos_lists, unused_nulls, [&](auto begin, const auto end, const ChunkID chunk_id) {
             // Map to cache references to PosLists (avoids frequent dynamic casts to obtain position list of reference
             // segments).
-            auto pos_list_mapping = std::unordered_map<ChunkID, const AbstractPosList*>{};
+            auto pos_list_mapping = boost::unordered_flat_map<ChunkID, const AbstractPosList*>{};
             auto& pos_list = *pos_lists[chunk_id];
 
             for (; begin != end; ++begin) {
@@ -325,6 +324,8 @@ void write_groupby_output(const std::shared_ptr<const Table>& input_table,
               if (row_id.is_null()) {
                 continue;
               }
+
+              // TODO: don't use contains and below `pos_list_mapping[row_id.chunk_id]` but rather a single func?
 
               if (!pos_list_mapping.contains(row_id.chunk_id)) {
                 const auto& segment = input_table->get_chunk(row_id.chunk_id)->get_segment(input_column_id);
@@ -1030,7 +1031,9 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
     auto groupby_columns_writing_timer = Timer{};
     write_groupby_output(left_input_table(), _aggregates, _groupby_column_ids, context->results,
                          _output_column_definitions, _intermediate_result);
-    groupby_columns_writing_duration += groupby_columns_writing_timer.lap();
+    DebugAssert(groupby_columns_writing_duration == std::chrono::nanoseconds{0},
+                "groupby_columns_writing_duration() was apparrently called more than once.");
+    groupby_columns_writing_duration = groupby_columns_writing_timer.lap();
   }
 
   /*
@@ -1394,7 +1397,9 @@ void AggregateHash::_write_aggregate_output(ColumnID aggregate_index) {
     write_groupby_output(left_input_table(), _aggregates, _groupby_column_ids, results, _output_column_definitions,
                          _intermediate_result);
     const auto groupby_columns_writing_runtime = groupby_columns_writing_timer.lap();
-    groupby_columns_writing_duration += groupby_columns_writing_runtime;
+    DebugAssert(groupby_columns_writing_duration == std::chrono::nanoseconds{0},
+                "groupby_columns_writing_duration() was apparrently called more than once.");
+    groupby_columns_writing_duration = groupby_columns_writing_runtime;
     excluded_time = groupby_columns_writing_runtime;
   }
 
