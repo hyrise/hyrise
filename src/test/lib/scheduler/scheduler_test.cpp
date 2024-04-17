@@ -162,7 +162,6 @@ TEST_F(SchedulerTest, Grouping) {
   // NodeQueueScheduler::_group_tasks. Also tests that successor tasks are called immediately after their dependencies
   // finish. Not really a multi-threading test, though.
   Hyrise::get().topology.use_fake_numa_topology(1, 1);
-  std::cout << Hyrise::get().topology << std::endl;
   const auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
   Hyrise::get().set_scheduler(node_queue_scheduler);
 

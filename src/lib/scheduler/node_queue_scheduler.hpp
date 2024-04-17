@@ -122,9 +122,6 @@ class NodeQueueScheduler : public AbstractScheduler {
   size_t _worker_count{8};
   size_t _regrouping_upper_limit{32};
 
-  // size_t _queue_count{1};
-  // size_t _workers_per_node{2};
-
   std::atomic_bool _active{false};
   std::atomic_int64_t _active_worker_count{0};
 

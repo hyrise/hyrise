@@ -115,8 +115,6 @@ print("- Validating integrity...")
 
 hash_dl = hash_md5.hexdigest()
 
-print(hash_dl)
-
 if hash_dl != "d7528c654d2ca1f6182d0031a22994c7":
     print("  Aborting. MD5 checksum mismatch. Cleaning up.")
     clean_up()
