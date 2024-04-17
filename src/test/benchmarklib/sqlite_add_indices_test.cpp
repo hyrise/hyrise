@@ -1,7 +1,6 @@
 #include <memory>
 
 #include "base_test.hpp"
-
 #include "hyrise.hpp"
 #include "operators/print.hpp"
 #include "storage/table.hpp"

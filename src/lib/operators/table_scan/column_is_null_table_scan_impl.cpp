@@ -1,15 +1,15 @@
 #include "column_is_null_table_scan_impl.hpp"
 
+#include <cstddef>
 #include <memory>
+#include <string>
 
+#include "storage/abstract_segment.hpp"
 #include "storage/base_value_segment.hpp"
-#include "storage/create_iterable_from_segment.hpp"
-#include "storage/resolve_encoded_segment_type.hpp"
-#include "storage/segment_iterables/create_iterable_from_attribute_vector.hpp"
+#include "storage/pos_lists/row_id_pos_list.hpp"
 #include "storage/segment_iterate.hpp"
 #include "storage/value_segment/null_value_vector_iterable.hpp"
-
-#include "resolve_type.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {
@@ -56,7 +56,9 @@ void ColumnIsNullTableScanImpl::_scan_generic_segment(const AbstractSegment& seg
   segment_with_iterators(segment, [&](auto iter, [[maybe_unused]] const auto end) {
     // This may also be called for a ValueSegment if `segment` is a ReferenceSegment pointing to a single ValueSegment.
     const auto invert = _predicate_condition == PredicateCondition::IsNotNull;
-    const auto functor = [&](const auto& value) { return invert ^ value.is_null(); };
+    const auto functor = [&](const auto& value) {
+      return invert ^ value.is_null();
+    };
 
     _scan_with_iterators<false>(functor, iter, end, chunk_id, matches);
   });
@@ -68,9 +70,10 @@ void ColumnIsNullTableScanImpl::_scan_generic_sorted_segment(const AbstractSegme
   const bool predicate_is_null = _predicate_condition == PredicateCondition::IsNull;
   segment_with_iterators(segment, [&](auto begin, auto end) {
     if (is_nulls_first) {
-      const auto first_not_null = std::lower_bound(
-          begin, end, bool{},
-          [](const auto& segment_position, const auto& /*end*/) { return segment_position.is_null(); });
+      const auto first_not_null =
+          std::lower_bound(begin, end, bool{}, [](const auto& segment_position, const auto& /*end*/) {
+            return segment_position.is_null();
+          });
       if (predicate_is_null) {
         end = first_not_null;
       } else {
@@ -78,9 +81,10 @@ void ColumnIsNullTableScanImpl::_scan_generic_sorted_segment(const AbstractSegme
       }
     } else {
       // NULLs last.
-      const auto first_null = std::lower_bound(
-          begin, end, bool{},
-          [](const auto& segment_position, const auto& /*end*/) { return !segment_position.is_null(); });
+      const auto first_null =
+          std::lower_bound(begin, end, bool{}, [](const auto& segment_position, const auto& /*end*/) {
+            return !segment_position.is_null();
+          });
       if (predicate_is_null) {
         begin = first_null;
       } else {
@@ -113,9 +117,12 @@ void ColumnIsNullTableScanImpl::_scan_value_segment(const BaseValueSegment& segm
   auto iterable = NullValueVectorIterable{segment.null_values()};
 
   const auto invert = _predicate_condition == PredicateCondition::IsNotNull;
-  const auto functor = [&](const auto& value) { return invert ^ value.is_null(); };
-  iterable.with_iterators(
-      [&](auto iter, auto end) { _scan_with_iterators<false>(functor, iter, end, chunk_id, matches); });
+  const auto functor = [&](const auto& value) {
+    return invert ^ value.is_null();
+  };
+  iterable.with_iterators([&](auto iter, auto end) {
+    _scan_with_iterators<false>(functor, iter, end, chunk_id, matches);
+  });
 }
 
 bool ColumnIsNullTableScanImpl::_matches_all(const BaseValueSegment& segment) const {

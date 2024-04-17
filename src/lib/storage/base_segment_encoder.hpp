@@ -68,7 +68,9 @@ class SegmentEncoder : public BaseSegmentEncoder {
    */
   bool supports(DataType data_type) const final {
     bool result{};
-    resolve_data_type(data_type, [&](auto data_type_c) { result = this->supports(data_type_c); });
+    resolve_data_type(data_type, [&](auto data_type_c) {
+      result = this->supports(data_type_c);
+    });
     return result;
   }
 

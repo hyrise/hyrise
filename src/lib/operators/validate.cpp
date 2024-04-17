@@ -1,16 +1,29 @@
 #include "validate.hpp"
 
+#include <cstdint>
 #include <memory>
+#include <mutex>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
+#include "all_type_variant.hpp"
 #include "concurrency/transaction_context.hpp"
 #include "hyrise.hpp"
-#include "operators/delete.hpp"
+#include "operators/abstract_operator.hpp"
+#include "operators/abstract_read_only_operator.hpp"
+#include "operators/abstract_read_write_operator.hpp"  // IWYU pragma: keep
+#include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
+#include "storage/chunk.hpp"
+#include "storage/mvcc_data.hpp"
+#include "storage/pos_lists/abstract_pos_list.hpp"
 #include "storage/pos_lists/entire_chunk_pos_list.hpp"
+#include "storage/pos_lists/row_id_pos_list.hpp"
 #include "storage/reference_segment.hpp"
+#include "storage/table.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {
@@ -122,7 +135,7 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
         _validate_chunks(input_table, job_start_chunk_id, job_end_chunk_id, our_tid, snapshot_commit_id, output_chunks,
                          output_mutex);
       } else {
-        jobs.push_back(std::make_shared<JobTask>([=, this, &output_chunks, &output_mutex] {
+        jobs.push_back(std::make_shared<JobTask>([&, input_table, job_start_chunk_id, job_end_chunk_id] {
           _validate_chunks(input_table, job_start_chunk_id, job_end_chunk_id, our_tid, snapshot_commit_id,
                            output_chunks, output_mutex);
         }));
@@ -285,7 +298,7 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& input_table,
       // The validate operator does not affect the sorted_by property. If a chunk has been sorted before, it still is
       // after the validate operator.
       const auto chunk = std::make_shared<Chunk>(output_segments);
-      chunk->finalize();
+      chunk->set_immutable();
 
       const auto& sorted_by = chunk_in->individually_sorted_by();
       if (!sorted_by.empty()) {

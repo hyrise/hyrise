@@ -4,7 +4,6 @@
 #include <utility>
 
 #include "base_test.hpp"
-
 #include "import_export/csv/csv_meta.hpp"
 #include "operators/export.hpp"
 #include "operators/table_scan.hpp"

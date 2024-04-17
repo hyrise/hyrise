@@ -1,8 +1,11 @@
 #include "enumerate_ccp.hpp"
 
+#include <cstddef>
 #include <set>
-#include <sstream>
+#include <utility>
+#include <vector>
 
+#include "optimizer/join_ordering/join_graph_edge.hpp"
 #include "utils/assert.hpp"
 
 /**

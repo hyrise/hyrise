@@ -1,7 +1,11 @@
 #pragma once
 
 #include <filesystem>
+#include <memory>
+#include <string>
 #include <unordered_map>
+#include <utility>
+#include <vector>
 
 #include "types.hpp"
 #include "utils/abstract_plugin.hpp"
@@ -9,26 +13,19 @@
 
 namespace hyrise {
 
-struct plugin_name_function_name_hash;
-
 using PluginHandle = void*;
 using PluginName = std::string;
-using UserExecutableFunctionMap = std::unordered_map<std::pair<PluginName, PluginFunctionName>, PluginFunctionPointer,
-                                                     plugin_name_function_name_hash>;
+
+struct PluginNameFunctionNameHash {
+  size_t operator()(const std::pair<PluginName, PluginFunctionName>& exec_function_identifier) const;
+};
+
+using UserExecutableFunctionMap =
+    std::unordered_map<std::pair<PluginName, PluginFunctionName>, PluginFunctionPointer, PluginNameFunctionNameHash>;
 
 struct PluginHandleWrapper {
   PluginHandle handle;
   std::unique_ptr<AbstractPlugin> plugin;
-};
-
-struct plugin_name_function_name_hash {
-  size_t operator()(const std::pair<PluginName, PluginFunctionName>& p) const {
-    auto hash = size_t{0};
-    boost::hash_combine(hash, p.first);
-    boost::hash_combine(hash, p.second);
-
-    return hash;
-  }
 };
 
 class PluginManager : public Noncopyable {
@@ -64,7 +61,7 @@ class PluginManager : public Noncopyable {
   std::unordered_map<PluginName, PreBenchmarkHook> _pre_benchmark_hooks;
   std::unordered_map<PluginName, PostBenchmarkHook> _post_benchmark_hooks;
 
-  // This method is called during destruction and stops and unloads all currently loaded plugions.
+  // This method is called during destruction and stops and unloads all currently loaded plugins.
   void _clean_up();
   bool _is_duplicate(const std::unique_ptr<AbstractPlugin>& plugin) const;
   std::unordered_map<PluginName, PluginHandleWrapper>::iterator _unload_and_erase_plugin(

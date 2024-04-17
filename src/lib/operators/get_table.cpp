@@ -1,16 +1,33 @@
 #include "get_table.hpp"
 
 #include <algorithm>
+#include <cstddef>
+#include <cstdint>
+#include <iterator>
+#include <memory>
+#include <optional>
+#include <set>
 #include <sstream>
-#include <unordered_set>
+#include <string>
+#include <unordered_map>
+#include <utility>
+#include <vector>
 
+#include "abstract_read_only_operator.hpp"
+#include "all_type_variant.hpp"
+#include "concurrency/transaction_context.hpp"
+#include "expression/abstract_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "hyrise.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
+#include "operators/abstract_operator.hpp"
 #include "operators/pqp_utils.hpp"
 #include "operators/table_scan.hpp"
-#include "storage/index/partial_hash/partial_hash_index.hpp"
+#include "storage/chunk.hpp"
+#include "storage/table_column_definition.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 #include "utils/pruning_utils.hpp"
 
 namespace hyrise {
@@ -84,7 +101,9 @@ const std::vector<ColumnID>& GetTable::pruned_column_ids() const {
 void GetTable::set_prunable_subquery_predicates(
     const std::vector<std::weak_ptr<const AbstractOperator>>& subquery_scans) const {
   DebugAssert(std::all_of(subquery_scans.cbegin(), subquery_scans.cend(),
-                          [](const auto& op) { return op.lock() && op.lock()->type() == OperatorType::TableScan; }),
+                          [](const auto& op) {
+                            return op.lock() && op.lock()->type() == OperatorType::TableScan;
+                          }),
               "No TableScan set as prunable predicate.");
 
   _prunable_subquery_scans = subquery_scans;
@@ -176,7 +195,9 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
   Assert(_pruned_column_ids.size() < static_cast<size_t>(stored_table->column_count()),
          "Cannot prune all columns from Table");
   DebugAssert(std::all_of(_pruned_column_ids.begin(), _pruned_column_ids.end(),
-                          [&](const auto column_id) { return column_id < stored_table->column_count(); }),
+                          [&](const auto column_id) {
+                            return column_id < stored_table->column_count();
+                          }),
               "ColumnID out of range");
 
   /**
@@ -264,9 +285,9 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
                                                     stored_chunk->get_allocator(), std::move(output_indexes));
 
       if (!stored_chunk->is_mutable()) {
-        // Finalizing is cheap here: the MvccData's max_begin_cid is already set, so finalize() only sets the flag and
-        // does not trigger anything else.
-        (*output_chunks_iter)->finalize();
+        // Marking the chunk as immutable is cheap here: the MvccData's `max_begin_cid` is already set, so
+        // `set_immutable()` only sets the flag and does not trigger anything else.
+        (*output_chunks_iter)->set_immutable();
       }
 
       if (chunk_sort_definition) {

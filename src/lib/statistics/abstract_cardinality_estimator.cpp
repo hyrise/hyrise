@@ -1,5 +1,8 @@
 #include "abstract_cardinality_estimator.hpp"
 
+#include "optimizer/join_ordering/join_graph.hpp"
+#include "statistics/join_graph_statistics_cache.hpp"
+
 namespace hyrise {
 
 void AbstractCardinalityEstimator::guarantee_join_graph(const JoinGraph& join_graph) {

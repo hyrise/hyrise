@@ -1,8 +1,21 @@
 #include "interval_expression.hpp"
 
+#include <cstddef>
+#include <cstdint>
+#include <memory>
 #include <sstream>
+#include <string>
+#include <unordered_map>
+
+#include <boost/container_hash/hash.hpp>
 
 #include "magic_enum.hpp"
+
+#include "all_type_variant.hpp"
+#include "expression/abstract_expression.hpp"
+#include "operators/abstract_operator.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 
@@ -32,7 +45,8 @@ bool IntervalExpression::_shallow_equals(const AbstractExpression& expression) c
 }
 
 size_t IntervalExpression::_shallow_hash() const {
-  auto hash = boost::hash_value(static_cast<size_t>(unit));
+  auto hash = size_t{0};
+  boost::hash_combine(hash, unit);
   boost::hash_combine(hash, duration);
   return hash;
 }

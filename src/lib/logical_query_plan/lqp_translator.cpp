@@ -1,11 +1,17 @@
 #include "lqp_translator.hpp"
 
-#include <boost/hana/for_each.hpp>
+#include <algorithm>
+#include <cstddef>
+#include <memory>
+#include <utility>
+#include <vector>
+
 #include <boost/hana/tuple.hpp>
 
 #include "abstract_lqp_node.hpp"
 #include "aggregate_node.hpp"
 #include "alias_node.hpp"
+#include "all_type_variant.hpp"
 #include "change_meta_table_node.hpp"
 #include "create_prepared_plan_node.hpp"
 #include "create_table_node.hpp"
@@ -13,22 +19,21 @@
 #include "delete_node.hpp"
 #include "drop_table_node.hpp"
 #include "drop_view_node.hpp"
-#include "except_node.hpp"
 #include "export_node.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/abstract_predicate_expression.hpp"
 #include "expression/expression_utils.hpp"
-#include "expression/lqp_column_expression.hpp"
 #include "expression/lqp_subquery_expression.hpp"
 #include "expression/pqp_column_expression.hpp"
 #include "expression/pqp_subquery_expression.hpp"
 #include "expression/value_expression.hpp"
+#include "expression/window_function_expression.hpp"
 #include "hyrise.hpp"
 #include "import_node.hpp"
 #include "insert_node.hpp"
-#include "intersect_node.hpp"
 #include "join_node.hpp"
 #include "limit_node.hpp"
+#include "null_value.hpp"
 #include "operators/aggregate_hash.hpp"
 #include "operators/alias_operator.hpp"
 #include "operators/change_meta_table.hpp"
@@ -49,7 +54,6 @@
 #include "operators/maintenance/drop_view.hpp"
 #include "operators/operator_join_predicate.hpp"
 #include "operators/operator_scan_predicate.hpp"
-#include "operators/pqp_utils.hpp"
 #include "operators/product.hpp"
 #include "operators/projection.hpp"
 #include "operators/sort.hpp"
@@ -63,11 +67,14 @@
 #include "projection_node.hpp"
 #include "sort_node.hpp"
 #include "static_table_node.hpp"
-#include "storage/index/partial_hash/partial_hash_index.hpp"
+#include "storage/chunk.hpp"
 #include "stored_table_node.hpp"
+#include "types.hpp"
 #include "union_node.hpp"
 #include "update_node.hpp"
+#include "utils/assert.hpp"
 #include "utils/map_prunable_subquery_predicates.hpp"
+#include "utils/performance_warning.hpp"
 #include "utils/pruning_utils.hpp"
 
 namespace hyrise {
@@ -130,7 +137,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_node_recursively(
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_by_node_type(
     LQPNodeType type, const std::shared_ptr<AbstractLQPNode>& node) const {
   switch (type) {
-    // clang-format off
+      // clang-format off
     case LQPNodeType::Aggregate:          return _translate_aggregate_node(node);
     case LQPNodeType::Alias:              return _translate_alias_node(node);
     case LQPNodeType::ChangeMetaTable:    return _translate_change_meta_table_node(node);
@@ -159,14 +166,14 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_by_node_type(
     case LQPNodeType::Import:             return _translate_import_node(node);
     case LQPNodeType::Export:             return _translate_export_node(node);
     case LQPNodeType::CreatePreparedPlan: return _translate_create_prepared_plan_node(node);
-    // clang-format on
+      // clang-format on
 
     default:
       Fail("Unknown node type encountered.");
   }
 }
 
-// NOLINTNEXTLINE - while this particular method could be made static, others cannot.
+// NOLINTNEXTLINE(readability-convert-member-functions-to-static): Align methods, even though some can be static.
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_stored_table_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto stored_table_node = std::dynamic_pointer_cast<StoredTableNode>(node);
@@ -493,13 +500,13 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_union_node(
   Fail("Invalid enum value.");
 }
 
-// NOLINTNEXTLINE - while this particular method could be made static, others cannot.
+// NOLINTNEXTLINE(readability-convert-member-functions-to-static): Align methods, even though some can be static.
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_intersect_node(
     const std::shared_ptr<AbstractLQPNode>& /*node*/) const {
   FailInput("Hyrise does not yet support set operations.");
 }
 
-// NOLINTNEXTLINE - while this particular method could be made static, others cannot.
+// NOLINTNEXTLINE(readability-convert-member-functions-to-static): Align methods, even though some can be static.
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_except_node(
     const std::shared_ptr<AbstractLQPNode>& /*node*/) const {
   FailInput("Hyrise does not yet support set operations.");
@@ -511,22 +518,26 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_validate_node(
   return std::make_shared<Validate>(input_operator);
 }
 
-// NOLINTNEXTLINE - while this particular method could be made static, others cannot.
+// NOLINTNEXTLINE(readability-convert-member-functions-to-static): Align methods, even though some can be static.
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_window_node(
-    const std::shared_ptr<AbstractLQPNode>& node) const {
+    const std::shared_ptr<AbstractLQPNode>& /* node */) const {
   FailInput("Hyrise does not yet support window functions.");
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_change_meta_table_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
-  const auto input_operator_left = _translate_node_recursively(node->left_input());
-  const auto input_operator_right = _translate_node_recursively(node->right_input());
-  const auto change_meta_table_node = std::dynamic_pointer_cast<ChangeMetaTableNode>(node);
-  return std::make_shared<ChangeMetaTable>(change_meta_table_node->table_name, change_meta_table_node->change_type,
-                                           input_operator_left, input_operator_right);
+  const auto left_input_operator = _translate_node_recursively(node->left_input());
+  auto right_input_operator = std::shared_ptr<AbstractOperator>{};
+  const auto& right_input_node = node->right_input();
+  if (right_input_node) {
+    right_input_operator = _translate_node_recursively(node->right_input());
+  }
+  const auto& change_meta_table_node = static_cast<const ChangeMetaTableNode&>(*node);
+  return std::make_shared<ChangeMetaTable>(change_meta_table_node.table_name, change_meta_table_node.change_type,
+                                           left_input_operator, right_input_operator);
 }
 
-// NOLINTNEXTLINE - while this particular method could be made static, others cannot.
+// NOLINTNEXTLINE(readability-convert-member-functions-to-static): Align methods, even though some can be static.
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_create_view_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto create_view_node = std::dynamic_pointer_cast<CreateViewNode>(node);
@@ -534,14 +545,14 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_create_view_node(
                                       create_view_node->if_not_exists);
 }
 
-// NOLINTNEXTLINE - while this particular method could be made static, others cannot.
+// NOLINTNEXTLINE(readability-convert-member-functions-to-static): Align methods, even though some can be static.
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_drop_view_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto drop_view_node = std::dynamic_pointer_cast<DropViewNode>(node);
   return std::make_shared<DropView>(drop_view_node->view_name, drop_view_node->if_exists);
 }
 
-// NOLINTNEXTLINE - while this particular method could be made static, others cannot.
+// NOLINTNEXTLINE(readability-convert-member-functions-to-static): Align methods, even though some can be static.
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_create_table_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto create_table_node = std::dynamic_pointer_cast<CreateTableNode>(node);
@@ -550,21 +561,21 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_create_table_node(
                                        _translate_node_recursively(input_node));
 }
 
-// NOLINTNEXTLINE - while this particular method could be made static, others cannot.
+// NOLINTNEXTLINE(readability-convert-member-functions-to-static): Align methods, even though some can be static.
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_static_table_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto static_table_node = std::dynamic_pointer_cast<StaticTableNode>(node);
   return std::make_shared<TableWrapper>(static_table_node->table);
 }
 
-// NOLINTNEXTLINE - while this particular method could be made static, others cannot.
+// NOLINTNEXTLINE(readability-convert-member-functions-to-static): Align methods, even though some can be static.
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_drop_table_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto drop_table_node = std::dynamic_pointer_cast<DropTableNode>(node);
   return std::make_shared<DropTable>(drop_table_node->table_name, drop_table_node->if_exists);
 }
 
-// NOLINTNEXTLINE - while this particular method could be made static, others cannot.
+// NOLINTNEXTLINE(readability-convert-member-functions-to-static): Align methods, even though some can be static.
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_import_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto import_node = std::dynamic_pointer_cast<ImportNode>(node);
@@ -572,7 +583,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_import_node(
                                   import_node->file_type);
 }
 
-// NOLINTNEXTLINE - while this particular method could be made static, others cannot.
+// NOLINTNEXTLINE(readability-convert-member-functions-to-static): Align methods, even though some can be static.
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_export_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto input_operator = _translate_node_recursively(node->left_input());
@@ -580,7 +591,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_export_node(
   return std::make_shared<Export>(input_operator, export_node->file_name, export_node->file_type);
 }
 
-// NOLINTNEXTLINE - while this particular method could be made static, others cannot.
+// NOLINTNEXTLINE(readability-convert-member-functions-to-static): Align methods, even though some can be static.
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_create_prepared_plan_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto create_prepared_plan_node = std::dynamic_pointer_cast<CreatePreparedPlanNode>(node);
@@ -588,7 +599,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_create_prepared_plan
                                               create_prepared_plan_node->prepared_plan);
 }
 
-// NOLINTNEXTLINE - while this particular method could be made static, others cannot.
+// NOLINTNEXTLINE(readability-convert-member-functions-to-static): Align methods, even though some can be static.
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_dummy_table_node(
     const std::shared_ptr<AbstractLQPNode>& /*node*/) const {
   return std::make_shared<TableWrapper>(Projection::dummy_table());

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <utility>
+
 #include <boost/iterator/iterator_facade.hpp>
 
 #include "storage/pos_lists/row_id_pos_list.hpp"

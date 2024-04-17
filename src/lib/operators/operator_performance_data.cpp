@@ -1,8 +1,8 @@
 #include "operator_performance_data.hpp"
 
-#include <string>
+#include <ostream>
 
-#include "utils/format_duration.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 

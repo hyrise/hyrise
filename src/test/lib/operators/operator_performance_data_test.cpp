@@ -67,7 +67,7 @@ TEST_F(OperatorPerformanceDataTest, TableScanPerformanceData) {
   table->append({3});
   table->append({3});
 
-  table->last_chunk()->finalize();
+  table->last_chunk()->set_immutable();
   ChunkEncoder::encode_all_chunks(table);
   auto table_wrapper = std::make_shared<TableWrapper>(table);
   table_wrapper->never_clear_output();
@@ -132,7 +132,7 @@ TEST_F(OperatorPerformanceDataTest, TableScanPerformanceData) {
   table->append({2});
   table->append({2});
   table->append({3});
-  table->last_chunk()->finalize();
+  table->last_chunk()->set_immutable();
   ChunkEncoder::encode_all_chunks(table);
 
   table_wrapper = std::make_shared<TableWrapper>(table);

@@ -1,25 +1,43 @@
 #include "table.hpp"
 
 #include <algorithm>
-#include <limits>
+#include <atomic>
+#include <cstddef>
+#include <cstdint>
+#include <iterator>
 #include <memory>
-#include <numeric>
+#include <mutex>
+#include <optional>
+#include <set>
 #include <string>
+#include <type_traits>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
-#include "concurrency/transaction_manager.hpp"
-#include "hyrise.hpp"
+#include <oneapi/tbb/concurrent_vector.h>  // NOLINT(build/include_order): cpplint identifies TBB as C system headers.
+
+#include "all_type_variant.hpp"
 #include "resolve_type.hpp"
-#include "statistics/attribute_statistics.hpp"
 #include "statistics/table_statistics.hpp"
-#include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
-#include "storage/index/group_key/composite_group_key_index.hpp"
-#include "storage/index/group_key/group_key_index.hpp"
-#include "storage/index/partial_hash/partial_hash_index.hpp"
+#include "storage/chunk.hpp"
+#include "storage/constraints/abstract_table_constraint.hpp"
+#include "storage/constraints/foreign_key_constraint.hpp"
+#include "storage/constraints/table_key_constraint.hpp"
+#include "storage/constraints/table_order_constraint.hpp"
+#include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"  // IWYU pragma: keep
+#include "storage/index/chunk_index_statistics.hpp"
+#include "storage/index/group_key/composite_group_key_index.hpp"  // IWYU pragma: keep
+#include "storage/index/group_key/group_key_index.hpp"            // IWYU pragma: keep
+#include "storage/index/partial_hash/partial_hash_index.hpp"      // IWYU pragma: keep
+#include "storage/index/table_index_statistics.hpp"
+#include "storage/mvcc_data.hpp"
+#include "storage/reference_segment.hpp"
 #include "storage/segment_iterate.hpp"
+#include "storage/table_column_definition.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
+#include "utils/performance_warning.hpp"
 #include "value_segment.hpp"
 
 namespace {
@@ -70,7 +88,7 @@ Table::Table(const TableColumnDefinitions& column_definitions, const TableType t
 }
 
 Table::Table(const TableColumnDefinitions& column_definitions, const TableType type,
-             std::vector<std::shared_ptr<Chunk>>&& chunks, const UseMvcc use_mvcc,
+             const std::vector<std::shared_ptr<Chunk>>& chunks, const UseMvcc use_mvcc,
              pmr_vector<std::shared_ptr<PartialHashIndex>> const& table_indexes)
     : Table(column_definitions, type, type == TableType::Data ? std::optional{Chunk::DEFAULT_SIZE} : std::nullopt,
             use_mvcc, table_indexes) {
@@ -155,18 +173,20 @@ std::vector<bool> Table::columns_are_nullable() const {
 }
 
 ColumnID Table::column_id_by_name(const std::string& column_name) const {
-  const auto iter = std::find_if(_column_definitions.begin(), _column_definitions.end(),
-                                 [&](const auto& column_definition) { return column_definition.name == column_name; });
-  Assert(iter != _column_definitions.end(), "Couldn't find column '" + column_name + "'.");
+  const auto iter =
+      std::find_if(_column_definitions.begin(), _column_definitions.end(), [&](const auto& column_definition) {
+        return column_definition.name == column_name;
+      });
+  Assert(iter != _column_definitions.end(), "Could not find column '" + column_name + "'.");
   return ColumnID{static_cast<ColumnID::base_type>(std::distance(_column_definitions.begin(), iter))};
 }
 
 void Table::append(const std::vector<AllTypeVariant>& values) {
   auto last_chunk = !_chunks.empty() ? get_chunk(ChunkID{chunk_count() - 1}) : nullptr;
   if (!last_chunk || last_chunk->size() >= _target_chunk_size || !last_chunk->is_mutable()) {
-    // One chunk reached its capacity and was not finalized before.
+    // One chunk reached its capacity and was not marked as immutable before.
     if (last_chunk && last_chunk->is_mutable()) {
-      last_chunk->finalize();
+      last_chunk->set_immutable();
     }
 
     append_mutable_chunk();
@@ -405,9 +425,38 @@ void Table::create_chunk_index(const std::vector<ColumnID>& column_ids, const st
   _chunk_indexes_statistics.emplace_back(ChunkIndexStatistics{column_ids, name, chunk_index_type});
 }
 
-void Table::add_soft_key_constraint(const TableKeyConstraint& table_key_constraint) {
-  Assert(_type == TableType::Data, "TableKeyConstraints are not tracked for reference tables across the PQP.");
+void Table::add_soft_constraint(const AbstractTableConstraint& table_constraint) {
+  Assert(_type == TableType::Data, "Constraints are not tracked for reference tables across the PQP.");
+  switch (table_constraint.type()) {
+    case TableConstraintType::Key:
+      _add_soft_key_constraint(static_cast<const TableKeyConstraint&>(table_constraint));
+      return;
+    case TableConstraintType::ForeignKey:
+      _add_soft_foreign_key_constraint(static_cast<const ForeignKeyConstraint&>(table_constraint));
+      return;
+    case TableConstraintType::Order:
+      _add_soft_order_constraint(static_cast<const TableOrderConstraint&>(table_constraint));
+      return;
+  }
+}
 
+const TableKeyConstraints& Table::soft_key_constraints() const {
+  return _table_key_constraints;
+}
+
+const ForeignKeyConstraints& Table::soft_foreign_key_constraints() const {
+  return _foreign_key_constraints;
+}
+
+const ForeignKeyConstraints& Table::referenced_foreign_key_constraints() const {
+  return _referenced_foreign_key_constraints;
+}
+
+const TableOrderConstraints& Table::soft_order_constraints() const {
+  return _table_order_constraints;
+}
+
+void Table::_add_soft_key_constraint(const TableKeyConstraint& table_key_constraint) {
   // Check validity of specified columns.
   const auto column_count = this->column_count();
   for (const auto& column_id : table_key_constraint.columns()) {
@@ -436,14 +485,8 @@ void Table::add_soft_key_constraint(const TableKeyConstraint& table_key_constrai
   _table_key_constraints.insert(table_key_constraint);
 }
 
-const TableKeyConstraints& Table::soft_key_constraints() const {
-  return _table_key_constraints;
-}
-
-void Table::add_soft_foreign_key_constraint(const ForeignKeyConstraint& foreign_key_constraint) {
-  Assert(_type == TableType::Data, "ForeignKeyConstraints are not tracked for reference tables across the PQP.");
-
-  Assert(&*foreign_key_constraint.foreign_key_table() == this, "ForeignKeyConstraint is added to the wrong table.");
+void Table::_add_soft_foreign_key_constraint(const ForeignKeyConstraint& foreign_key_constraint) {
+  Assert(foreign_key_constraint.foreign_key_table().get() == this, "ForeignKeyConstraint is added to the wrong table.");
 
   // Check validity of specified columns.
   const auto column_count = this->column_count();
@@ -452,7 +495,8 @@ void Table::add_soft_foreign_key_constraint(const ForeignKeyConstraint& foreign_
   }
 
   const auto referenced_table = foreign_key_constraint.primary_key_table();
-  Assert(referenced_table && &*referenced_table != this, "ForeignKeyConstraint must reference another existing table.");
+  Assert(referenced_table && referenced_table.get() != this,
+         "ForeignKeyConstraint must reference another existing table.");
 
   // Check validity of key columns from other table.
   const auto referenced_table_column_count = referenced_table->column_count();
@@ -461,29 +505,13 @@ void Table::add_soft_foreign_key_constraint(const ForeignKeyConstraint& foreign_
   }
 
   const auto append_lock = acquire_append_mutex();
-  for (const auto& existing_constraint : _foreign_key_constraints) {
-    // Do not allow intersecting foreign key constraints. Though a table may have unlimited inclusion dependencies for
-    // the same columns (and especially the existence of [a] in [x] and [b] in [y] does not mean [a, b] in [x, y]
-    // holds), it is reasonable to assume disjoint (soft) foreign keys for now.
-    Assert(!columns_intersect(existing_constraint.foreign_key_columns(), foreign_key_constraint.foreign_key_columns()),
-           "ForeignKeyConstraint for required columns has already been set.");
-  }
-  _foreign_key_constraints.insert(foreign_key_constraint);
+  const auto [_, inserted] = _foreign_key_constraints.insert(foreign_key_constraint);
+  Assert(inserted, "ForeignKeyConstraint has already been set.");
   const auto referenced_table_append_lock = referenced_table->acquire_append_mutex();
   referenced_table->_referenced_foreign_key_constraints.insert(foreign_key_constraint);
 }
 
-const ForeignKeyConstraints& Table::soft_foreign_key_constraints() const {
-  return _foreign_key_constraints;
-}
-
-const ForeignKeyConstraints& Table::referenced_foreign_key_constraints() const {
-  return _referenced_foreign_key_constraints;
-}
-
-void Table::add_soft_order_constraint(const TableOrderConstraint& table_order_constraint) {
-  Assert(_type == TableType::Data, "TableOrderConstraints are not tracked for reference tables across the PQP.");
-
+void Table::_add_soft_order_constraint(const TableOrderConstraint& table_order_constraint) {
   // Check validity of columns.
   const auto column_count = this->column_count();
   for (const auto& column_id : table_order_constraint.ordering_columns()) {
@@ -497,8 +525,8 @@ void Table::add_soft_order_constraint(const TableOrderConstraint& table_order_co
 
   const auto append_lock = acquire_append_mutex();
   for (const auto& existing_constraint : _table_order_constraints) {
-    // Do not allow intersecting key constraints. Though they can be valid, we are pessimistic for now and notice if we
-    // run into intricate cases.
+    // Do not allow intersecting order constraints. Though they can be valid, we are pessimistic for now and notice if
+    // we run into intricate cases.
     const auto ordering_columns_invalid =
         columns_intersect(existing_constraint.ordering_columns(), table_order_constraint.ordering_columns()) &&
         existing_constraint.ordered_columns() == table_order_constraint.ordered_columns();
@@ -506,13 +534,9 @@ void Table::add_soft_order_constraint(const TableOrderConstraint& table_order_co
         columns_intersect(existing_constraint.ordered_columns(), table_order_constraint.ordered_columns()) &&
         existing_constraint.ordering_columns() == table_order_constraint.ordering_columns();
     Assert(!ordering_columns_invalid && !ordered_columns_invalid,
-           "TableOrderConstraint for required columns has already been set.");
+           "TableOrderConstraint for affected columns has already been set.");
   }
   _table_order_constraints.insert(table_order_constraint);
-}
-
-const TableOrderConstraints& Table::soft_order_constraints() const {
-  return _table_order_constraints;
 }
 
 const std::vector<ColumnID>& Table::value_clustered_by() const {
@@ -520,7 +544,7 @@ const std::vector<ColumnID>& Table::value_clustered_by() const {
 }
 
 void Table::set_value_clustered_by(const std::vector<ColumnID>& value_clustered_by) {
-  // Ensure that all chunks are finalized because the table should not be altered afterwards.
+  // Ensure that all chunks are marked as immutable because the table should not be altered afterwards.
   const auto chunk_count = _chunks.size();
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk = get_chunk(chunk_id);
@@ -566,8 +590,9 @@ pmr_vector<std::shared_ptr<PartialHashIndex>> Table::get_table_indexes() const {
 
 std::vector<std::shared_ptr<PartialHashIndex>> Table::get_table_indexes(const ColumnID column_id) const {
   auto result = std::vector<std::shared_ptr<PartialHashIndex>>();
-  std::copy_if(_table_indexes.cbegin(), _table_indexes.cend(), std::back_inserter(result),
-               [&](const auto& index) { return index->is_index_for(column_id); });
+  std::copy_if(_table_indexes.cbegin(), _table_indexes.cend(), std::back_inserter(result), [&](const auto& index) {
+    return index->is_index_for(column_id);
+  });
   return result;
 }
 

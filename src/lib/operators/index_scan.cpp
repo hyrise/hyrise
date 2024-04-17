@@ -1,26 +1,28 @@
 #include "index_scan.hpp"
 
 #include <algorithm>
+#include <cstddef>
+#include <cstdint>
+#include <memory>
+#include <string>
+#include <unordered_map>
+#include <vector>
 
-#include "expression/between_expression.hpp"
-
-#include "hyrise.hpp"
-
+#include "all_type_variant.hpp"
+#include "operators/abstract_operator.hpp"
+#include "operators/abstract_read_only_operator.hpp"
 #include "operators/get_table.hpp"
-
-#include "scheduler/abstract_task.hpp"
-#include "scheduler/job_task.hpp"
-
-#include "storage/index/partial_hash/partial_hash_index.hpp"
+#include "storage/chunk.hpp"
+#include "storage/pos_lists/row_id_pos_list.hpp"
 #include "storage/reference_segment.hpp"
-
+#include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/pruning_utils.hpp"
 
 namespace hyrise {
 
 IndexScan::IndexScan(const std::shared_ptr<const AbstractOperator>& input_operator, const ColumnID indexed_column_id,
-                     const PredicateCondition predicate_condition, const AllTypeVariant scan_value)
+                     const PredicateCondition predicate_condition, const AllTypeVariant& scan_value)
     : AbstractReadOnlyOperator{OperatorType::IndexScan, input_operator},
       included_chunk_ids{std::make_shared<std::vector<ChunkID>>()},
       _indexed_column_id{indexed_column_id},

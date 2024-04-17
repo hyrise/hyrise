@@ -1,25 +1,39 @@
 #include "join_sort_merge.hpp"
 
 #include <algorithm>
+#include <cmath>
+#include <cstddef>
+#include <cstdint>
 #include <memory>
 #include <optional>
+#include <set>
+#include <stdexcept>
 #include <string>
-#include <type_traits>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
 #include <vector>
 
-#include <boost/functional/hash_fwd.hpp>
+#include <boost/container_hash/hash.hpp>
 
+#include "all_type_variant.hpp"
 #include "hyrise.hpp"
 #include "join_helper/join_output_writing.hpp"
 #include "join_sort_merge/radix_cluster_sort.hpp"
+#include "operators/abstract_join_operator.hpp"
+#include "operators/abstract_operator.hpp"
+#include "operators/join_sort_merge/column_materializer.hpp"
 #include "operators/multi_predicate_join/multi_predicate_join_evaluator.hpp"
+#include "operators/operator_join_predicate.hpp"
+#include "operators/operator_performance_data.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
-#include "storage/reference_segment.hpp"
+#include "storage/pos_lists/row_id_pos_list.hpp"
+#include "storage/table.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
+#include "utils/timer.hpp"
 
 namespace hyrise {
 
@@ -172,8 +186,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
 
     TablePosition(size_t init_cluster, size_t init_index) : cluster{init_cluster}, index{init_index} {}
 
-    size_t cluster;
-    size_t index;
+    size_t cluster{0};
+    size_t index{0};
 
     TableRange to(TablePosition position) {
       return TableRange(*this, position);
@@ -197,11 +211,6 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     // Executes the given action for every row id of the table in this range.
     template <typename F>
     void for_every_row_id(const MaterializedSegmentList<T>& table, const F& action) {
-// False positive with gcc and tsan (https://gcc.gnu.org/bugzilla/show_bug.cgi?id=92194)
-#ifndef __clang__
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
-#endif
       for (auto cluster = start.cluster; cluster <= end.cluster; ++cluster) {
         const auto start_index = (cluster == start.cluster) ? start.index : 0;
         const auto end_index = (cluster == end.cluster) ? end.index : table[cluster].size();
@@ -209,9 +218,6 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
           action(table[cluster][index].row_id);
         }
       }
-#ifndef __clang__
-#pragma GCC diagnostic pop
-#endif
     }
   };
 
@@ -466,15 +472,17 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
   // Emits all combinations of row ids from the left table range and a NULL value on the right side
   // (regarding the primary predicate) to the join output.
   void _emit_right_primary_null_combinations(size_t output_cluster, TableRange left_range) {
-    left_range.for_every_row_id(
-        _sorted_left_table, [&](RowID left_row_id) { _emit_combination(output_cluster, left_row_id, NULL_ROW_ID); });
+    left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
+      _emit_combination(output_cluster, left_row_id, NULL_ROW_ID);
+    });
   }
 
   // Emits all combinations of row ids from the right table range and a NULL value on the left side
   // (regarding the primary predicate) to the join output.
   void _emit_left_primary_null_combinations(size_t output_cluster, TableRange right_range) {
-    right_range.for_every_row_id(
-        _sorted_right_table, [&](RowID right_row_id) { _emit_combination(output_cluster, NULL_ROW_ID, right_row_id); });
+    right_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
+      _emit_combination(output_cluster, NULL_ROW_ID, right_row_id);
+    });
   }
 
   // Determines the length of the run starting at start_index in the values vector. A run is a series of the same
@@ -498,8 +506,9 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       end = values.end();
     }
 
-    const auto linear_search_result =
-        std::find_if(begin, end, [&](const auto& mat_value) { return mat_value.value > run_value; });
+    const auto linear_search_result = std::find_if(begin, end, [&](const auto& mat_value) {
+      return mat_value.value > run_value;
+    });
     if (linear_search_result != end) {
       // Match found within the linearly scanned part.
       return std::distance(begin, linear_search_result);
@@ -512,8 +521,9 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     }
 
     // Binary search in case the run did not end within the linearly scanned part.
-    const auto binary_search_result = std::upper_bound(
-        end, values.end(), *end, [](const auto& lhs, const auto& rhs) { return lhs.value < rhs.value; });
+    const auto binary_search_result = std::upper_bound(end, values.end(), *end, [](const auto& lhs, const auto& rhs) {
+      return lhs.value < rhs.value;
+    });
     return std::distance(begin, binary_search_result);
   }
 
@@ -680,29 +690,33 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
 
     if (_primary_predicate_condition == PredicateCondition::LessThan) {
       // Look for the first right value that is bigger than the smallest left value.
-      auto result =
-          _first_value_that_satisfies(_sorted_right_table, [&](const T& value) { return value > left_min_value; });
+      auto result = _first_value_that_satisfies(_sorted_right_table, [&](const T& value) {
+        return value > left_min_value;
+      });
       if (result) {
         unmatched_range = TablePosition(0, 0).to(*result);
       }
     } else if (_primary_predicate_condition == PredicateCondition::LessThanEquals) {
       // Look for the first right value that is bigger or equal to the smallest left value.
-      auto result =
-          _first_value_that_satisfies(_sorted_right_table, [&](const T& value) { return value >= left_min_value; });
+      auto result = _first_value_that_satisfies(_sorted_right_table, [&](const T& value) {
+        return value >= left_min_value;
+      });
       if (result) {
         unmatched_range = TablePosition(0, 0).to(*result);
       }
     } else if (_primary_predicate_condition == PredicateCondition::GreaterThan) {
       // Look for the first right value that is smaller than the biggest left value.
-      auto result = _first_value_that_satisfies_reverse(_sorted_right_table,
-                                                        [&](const T& value) { return value < left_max_value; });
+      auto result = _first_value_that_satisfies_reverse(_sorted_right_table, [&](const T& value) {
+        return value < left_max_value;
+      });
       if (result) {
         unmatched_range = (*result).to(end_of_right_table);
       }
     } else if (_primary_predicate_condition == PredicateCondition::GreaterThanEquals) {
       // Look for the first right value that is smaller or equal to the biggest left value.
-      auto result = _first_value_that_satisfies_reverse(_sorted_right_table,
-                                                        [&](const T& value) { return value <= left_max_value; });
+      auto result = _first_value_that_satisfies_reverse(_sorted_right_table, [&](const T& value) {
+        return value <= left_max_value;
+      });
       if (result) {
         unmatched_range = (*result).to(end_of_right_table);
       }
@@ -747,29 +761,33 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
 
     if (_primary_predicate_condition == PredicateCondition::LessThan) {
       // Look for the last left value that is smaller than the biggest right value.
-      auto result = _first_value_that_satisfies_reverse(_sorted_left_table,
-                                                        [&](const T& value) { return value < right_max_value; });
+      auto result = _first_value_that_satisfies_reverse(_sorted_left_table, [&](const T& value) {
+        return value < right_max_value;
+      });
       if (result) {
         unmatched_range = (*result).to(end_of_left_table);
       }
     } else if (_primary_predicate_condition == PredicateCondition::LessThanEquals) {
       // Look for the last left value that is smaller or equal than the biggest right value.
-      auto result = _first_value_that_satisfies_reverse(_sorted_left_table,
-                                                        [&](const T& value) { return value <= right_max_value; });
+      auto result = _first_value_that_satisfies_reverse(_sorted_left_table, [&](const T& value) {
+        return value <= right_max_value;
+      });
       if (result) {
         unmatched_range = (*result).to(end_of_left_table);
       }
     } else if (_primary_predicate_condition == PredicateCondition::GreaterThan) {
       // Look for the first left value that is bigger than the smallest right value.
-      auto result =
-          _first_value_that_satisfies(_sorted_left_table, [&](const T& value) { return value > right_min_value; });
+      auto result = _first_value_that_satisfies(_sorted_left_table, [&](const T& value) {
+        return value > right_min_value;
+      });
       if (result) {
         unmatched_range = TablePosition(0, 0).to(*result);
       }
     } else if (_primary_predicate_condition == PredicateCondition::GreaterThanEquals) {
       // Look for the first left value that is bigger or equal to the smallest right value.
-      auto result =
-          _first_value_that_satisfies(_sorted_left_table, [&](const T& value) { return value >= right_min_value; });
+      auto result = _first_value_that_satisfies(_sorted_left_table, [&](const T& value) {
+        return value >= right_min_value;
+      });
       if (result) {
         unmatched_range = TablePosition(0, 0).to(*result);
       }
@@ -928,7 +946,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     for (auto& chunk : output_chunks) {
       if (_sort_merge_join._primary_predicate.predicate_condition == PredicateCondition::Equals &&
           _mode == JoinMode::Inner) {
-        chunk->finalize();
+        chunk->set_immutable();
         // The join columns are sorted in ascending order (ensured by radix_cluster_sort)
         chunk->set_individually_sorted_by({SortColumnDefinition(left_join_column, SortMode::Ascending),
                                            SortColumnDefinition(right_join_column, SortMode::Ascending)});

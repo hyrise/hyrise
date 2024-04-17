@@ -1,7 +1,8 @@
 #include "task_queue.hpp"
 
+#include <cstddef>
+#include <cstdint>
 #include <memory>
-#include <utility>
 
 #include "abstract_task.hpp"
 #include "types.hpp"
@@ -82,7 +83,7 @@ size_t TaskQueue::estimate_load() const {
   return estimated_load;
 }
 
-void TaskQueue::signal(const size_t count) {
+void TaskQueue::signal(const int32_t count) {
   semaphore.signal(count);
 }
 

@@ -17,6 +17,7 @@ race:^std::atomic
 race:^std::__1::atomic
 race:^std::__1::__atomic_base
 race:^std::mutex::lock
+race:^std::__1::basic_ostream
 
 # Boost is not built with tsan support, either
 race:boost::detail::thread_data_base
@@ -34,3 +35,11 @@ race:^hyrise::ValueSegment*::resize
 
 # This is likely false positive seen only on Mac, as even the strictest locking does not "fix" the warning
 race:^hyrise::TableStatistics::from_table
+
+# We access a tbb::concurrent_vector in this method, which "remains valid and accessible even if a subsequent growth
+# operations fails."
+# See: https://spec.oneapi.io/versions/latest/elements/oneTBB/source/containers/concurrent_vector_cls.html
+race:^hyrise::Table::get_chunk
+
+# We get weird errors for the Lexer here (at least on Mac). Probably a false positive.
+race:^hsql::SQLParser::parse

@@ -1,10 +1,18 @@
 #include "function_expression.hpp"
 
+#include <cstddef>
+#include <functional>
+#include <memory>
+#include <ostream>
 #include <sstream>
+#include <string>
+#include <unordered_map>
+#include <vector>
 
-#include <boost/container_hash/hash.hpp>
-
+#include "all_type_variant.hpp"
+#include "expression/abstract_expression.hpp"
 #include "expression_utils.hpp"
+#include "operators/abstract_operator.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {
@@ -64,7 +72,7 @@ bool FunctionExpression::_shallow_equals(const AbstractExpression& expression) c
 }
 
 size_t FunctionExpression::_shallow_hash() const {
-  return boost::hash_value(static_cast<size_t>(function_type));
+  return std::hash<FunctionType>{}(function_type);
 }
 
 std::ostream& operator<<(std::ostream& stream, const FunctionType function_type) {

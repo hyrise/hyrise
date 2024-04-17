@@ -1,8 +1,17 @@
 #include "pqp_column_expression.hpp"
 
-#include <boost/container_hash/hash.hpp>
+#include <cstddef>
+#include <functional>
+#include <memory>
+#include <string>
+#include <unordered_map>
 
+#include "all_type_variant.hpp"
+#include "expression/abstract_expression.hpp"
+#include "operators/abstract_operator.hpp"
 #include "storage/table.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 
@@ -51,7 +60,7 @@ bool PQPColumnExpression::_shallow_equals(const AbstractExpression& expression) 
 }
 
 size_t PQPColumnExpression::_shallow_hash() const {
-  return boost::hash_value(static_cast<size_t>(column_id));
+  return std::hash<ColumnID::base_type>{}(column_id);
 }
 
 bool PQPColumnExpression::_on_is_nullable_on_lqp(const AbstractLQPNode& /*lqp*/) const {

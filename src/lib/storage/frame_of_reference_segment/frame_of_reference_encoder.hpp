@@ -4,9 +4,9 @@
 #include <array>
 #include <limits>
 #include <memory>
+#include <utility>
 
 #include "storage/base_segment_encoder.hpp"
-
 #include "storage/frame_of_reference_segment.hpp"
 #include "storage/value_segment.hpp"
 #include "storage/value_segment/value_segment_iterable.hpp"
@@ -27,7 +27,9 @@ class FrameOfReferenceEncoder : public SegmentEncoder<FrameOfReferenceEncoder> {
     static constexpr auto block_size = FrameOfReferenceSegment<T>::block_size;
 
     // Ceiling of integer division
-    const auto div_ceil = [](auto x, auto y) { return (x + y - 1u) / y; };
+    const auto div_ceil = [](auto x, auto y) {
+      return (x + y - 1u) / y;
+    };
 
     // holds the minimum of each block
     auto block_minima = pmr_vector<T>{allocator};

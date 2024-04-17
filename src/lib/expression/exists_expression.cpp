@@ -1,9 +1,16 @@
 #include "exists_expression.hpp"
 
+#include <cstddef>
+#include <memory>
 #include <sstream>
+#include <string>
+#include <unordered_map>
 
+#include "all_type_variant.hpp"
+#include "expression/abstract_expression.hpp"
 #include "expression/evaluation/expression_evaluator.hpp"
 #include "lqp_subquery_expression.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 
@@ -44,7 +51,7 @@ bool ExistsExpression::_shallow_equals(const AbstractExpression& expression) con
 }
 
 size_t ExistsExpression::_shallow_hash() const {
-  return exists_expression_type == ExistsExpressionType::Exists;
+  return static_cast<size_t>(exists_expression_type == ExistsExpressionType::Exists);
 }
 
 bool ExistsExpression::_on_is_nullable_on_lqp(const AbstractLQPNode& /*lqp*/) const {

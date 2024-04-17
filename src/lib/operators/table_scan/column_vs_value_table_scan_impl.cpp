@@ -1,18 +1,26 @@
 #include "column_vs_value_table_scan_impl.hpp"
 
+#include <cstddef>
 #include <memory>
-#include <utility>
+#include <string>
+#include <type_traits>
 #include <vector>
 
+#include "abstract_dereferenced_column_table_scan_impl.hpp"
+#include "all_type_variant.hpp"
+#include "resolve_type.hpp"
 #include "sorted_segment_search.hpp"
+#include "storage/abstract_segment.hpp"
 #include "storage/base_dictionary_segment.hpp"
 #include "storage/create_iterable_from_segment.hpp"
-#include "storage/resolve_encoded_segment_type.hpp"
+#include "storage/pos_lists/abstract_pos_list.hpp"
+#include "storage/pos_lists/row_id_pos_list.hpp"
 #include "storage/segment_iterables/create_iterable_from_attribute_vector.hpp"
 #include "storage/segment_iterate.hpp"
-
-#include "resolve_type.hpp"
+#include "storage/table.hpp"
 #include "type_comparison.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 
@@ -117,7 +125,9 @@ void ColumnVsValueTableScanImpl::_scan_dictionary_segment(
     if (_column_is_nullable) {
       // We still have to check for NULLs
       iterable.with_iterators(position_filter, [&](auto it, auto end) {
-        static const auto always_true = [](const auto&) { return true; };
+        static const auto always_true = [](const auto&) {
+          return true;
+        };
         _scan_with_iterators<true>(always_true, it, end, chunk_id, matches);
       });
     } else {

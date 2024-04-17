@@ -1,5 +1,9 @@
 #pragma once
 
+#include <string>
+#include <utility>
+#include <vector>
+
 #include "hyrise.hpp"
 #include "utils/abstract_plugin.hpp"
 
