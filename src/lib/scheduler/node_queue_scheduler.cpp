@@ -1,10 +1,12 @@
 #include "node_queue_scheduler.hpp"
 
+#include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <cstdint>
 #include <cstdlib>
 #include <iostream>
+#include <limit>
 #include <memory>
 #include <mutex>
 #include <optional>
