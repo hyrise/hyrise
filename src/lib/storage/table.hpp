@@ -248,6 +248,10 @@ class Table : private Noncopyable {
   const std::vector<ColumnID>& value_clustered_by() const;
   void set_value_clustered_by(const std::vector<ColumnID>& value_clustered_by);
 
+  const std::vector<ColumnID>& partitioned_by_columns() const {
+    return _partitioned_by_columns;
+  }
+
  protected:
   void _add_soft_key_constraint(const TableKeyConstraint& table_key_constraint);
 
@@ -290,6 +294,8 @@ class Table : private Noncopyable {
   std::vector<ChunkIndexStatistics> _chunk_indexes_statistics;
   std::vector<TableIndexStatistics> _table_indexes_statistics;
   pmr_vector<std::shared_ptr<PartialHashIndex>> _table_indexes;
+
+  std::vector<ColumnID> _partitioned_by_columns{};
 
   // For tables with _type==Reference, the row count will not vary. As such, there is no need to iterate over all
   // chunks more than once.

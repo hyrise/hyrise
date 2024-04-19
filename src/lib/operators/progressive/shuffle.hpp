@@ -17,11 +17,25 @@
 
 namespace hyrise {
 
+/**
+ * The shuffle operator is quite some beast:
+ *   - it is pipelined (some inputs might come in earlier)
+ *   - it might be non-blocking (not sure about that yet). Aspects:
+ *     - non-blocking: downstream operators can start earlier, but we lack coordination to yield eventually early
+ *                     results when group-by-agg happens
+ *     - blocking: as this operation is somewhat nice to parallelize, it should be fast and we can ensure proper result
+ *                 coordination for early results
+ *   - 
+ * 
+ * It should run non-blocking even though the purpose of shuffling is somewhat blocking (that means we never have full
+ * groups until the operator finished (we don't assume that data is somehow physically pre-partitioned)).
+ */
+
 class Shuffle : public AbstractReadOnlyOperator {
  public:
   Shuffle(const std::shared_ptr<const AbstractOperator>& input_operator, std::shared_ptr<ChunkSink>& input_chunk_sink,
-          std::shared_ptr<ChunkSink>& output_chunk_sink, const std::vector<ColumnID>& columns,
-          const std::vector<size_t>& partition_counts);
+          std::shared_ptr<ChunkSink>& output_chunk_sink, std::vector<ColumnID>&& columns,
+          std::vector<size_t>&& partition_counts);
   const std::string& name() const override;
 
  protected:

@@ -45,6 +45,7 @@ enum class OperatorType {
   Print,
   Product,
   Projection,
+  Shuffle,
   Sink,
   Sort,
   TableScan,

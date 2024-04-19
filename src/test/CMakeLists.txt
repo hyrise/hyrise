@@ -111,6 +111,7 @@ set(
     lib/operators/pqp_utils_test.cpp
     lib/operators/print_test.cpp
     lib/operators/product_test.cpp
+    lib/operators/progressive_test.cpp
     lib/operators/projection_test.cpp
     lib/operators/sort_test.cpp
     lib/operators/table_scan_between_test.cpp
