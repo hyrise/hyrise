@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <iostream>
+#include <iterator>
 #include <limits>
 #include <memory>
 #include <mutex>
@@ -365,7 +366,7 @@ void NodeQueueScheduler::_group_tasks(const std::vector<std::shared_ptr<Abstract
     if (previous_task_offset_in_group > -1) {
       task->set_as_predecessor_of(tasks[previous_task_offset_in_group]);
     }
-    grouped_task_offsets[group_id] = static_cast<uint32_t>(task_count - std::distance(tasks.rbegin(), iter) - 1);
+    grouped_task_offsets[group_id] = static_cast<int32_t>(task_count - std::distance(tasks.rbegin(), iter) - 1);
 
     ++round_robin_counter;
   }
