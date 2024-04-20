@@ -1,5 +1,10 @@
 #include "parameter_id_allocator.hpp"
 
+#include <unordered_map>
+
+#include "types.hpp"
+#include "utils/assert.hpp"
+
 namespace hyrise {
 
 ParameterID ParameterIDAllocator::allocate() {

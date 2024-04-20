@@ -1,5 +1,11 @@
 #pragma once
 
+#include <memory>
+#include <string>
+#include <unordered_map>
+#include <utility>
+#include <vector>
+
 #include "abstract_expression.hpp"
 #include "all_type_variant.hpp"
 
@@ -11,17 +17,17 @@ class AbstractOperator;
  * A PQPSubqueryExpression represents a subquery (think `a > (SELECT MIN(a) FROM ...`) used as part of an expression in
  * a PQP.
  *
- * The Parameters to a PQPSubqueryExpression are equivalent to the correlated parameters of a nested SELECT in SQL.
+ * The parameters of a PQPSubqueryExpression are equivalent to the correlated parameters of a nested SELECT in SQL.
  */
 class PQPSubqueryExpression : public AbstractExpression {
  public:
   using Parameters = std::vector<std::pair<ParameterID, ColumnID>>;
 
-  // Constructor for single-column PQPSubqueryExpressions as used in `a IN (SELECT ...)` or `SELECT (SELECT ...)`
+  // Constructor for single-column PQPSubqueryExpressions as used in `a IN (SELECT ...)` or `SELECT (SELECT ...)`.
   PQPSubqueryExpression(const std::shared_ptr<AbstractOperator>& init_pqp, const DataType data_type,
                         const bool nullable, const Parameters& init_parameters = {});
 
-  // Constructor for (potentially) multi-column PQPSubqueryExpressions as used in `EXISTS(SELECT ...)`
+  // Constructor for (potentially) multi-column PQPSubqueryExpressions as used in `EXISTS(SELECT ...)`.
   explicit PQPSubqueryExpression(const std::shared_ptr<AbstractOperator>& init_pqp,
                                  const Parameters& init_parameters = {});
 
@@ -31,7 +37,7 @@ class PQPSubqueryExpression : public AbstractExpression {
   std::string description(const DescriptionMode /*mode*/) const override;
   DataType data_type() const override;
 
-  // Returns whether this query is correlated, i.e., uses external parameters
+  // Returns whether this query is correlated, i.e., uses external parameters.
   bool is_correlated() const;
 
   const std::shared_ptr<AbstractOperator> pqp;

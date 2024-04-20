@@ -1,7 +1,11 @@
 #include "csv_converter.hpp"
 
+#include <algorithm>
+#include <iterator>
 #include <string>
 #include <utility>
+
+#include "import_export/csv/csv_meta.hpp"
 
 namespace hyrise {
 

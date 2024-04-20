@@ -122,7 +122,7 @@ bool contained_in_query_plan(const std::shared_ptr<const AbstractOperator>& node
         std::cout << *mismatch->second;                                                                   \
       else                                                                                                \
         std::cout << "NULL\n";                                                                            \
-      std::cout << "-------------..............-------------" << std::endl;                               \
+      std::cout << "-------------..............-------------\n";                                          \
       GTEST_FAIL();                                                                                       \
     }                                                                                                     \
   }                                                                                                       \

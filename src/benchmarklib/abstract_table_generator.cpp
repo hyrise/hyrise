@@ -1,5 +1,17 @@
 #include "abstract_table_generator.hpp"
 
+#include <filesystem>
+#include <iostream>
+#include <memory>
+#include <numeric>
+#include <optional>
+#include <sstream>
+#include <string>
+#include <unordered_map>
+#include <vector>
+
+#include "nlohmann/json.hpp"
+
 #include "benchmark_config.hpp"
 #include "benchmark_table_encoder.hpp"
 #include "hyrise.hpp"
@@ -7,12 +19,17 @@
 #include "import_export/binary/binary_writer.hpp"
 #include "operators/sort.hpp"
 #include "operators/table_wrapper.hpp"
+#include "resolve_type.hpp"
+#include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
+#include "storage/chunk.hpp"
 #include "storage/index/group_key/composite_group_key_index.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
-#include "storage/index/partial_hash/partial_hash_index.hpp"
+#include "storage/mvcc_data.hpp"
 #include "storage/segment_iterate.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 #include "utils/format_duration.hpp"
 #include "utils/list_directory.hpp"
 #include "utils/timer.hpp"
@@ -35,7 +52,7 @@ AbstractTableGenerator::AbstractTableGenerator(const std::shared_ptr<BenchmarkCo
     : _benchmark_config(benchmark_config) {}
 
 void AbstractTableGenerator::generate_and_store() {
-  Timer timer;
+  auto timer = Timer{};
 
   // Encoding table data and generating table statistics are time consuming processes. To reduce the required execution
   // time, we execute these data preparation steps in a multi-threaded way. We store the current scheduler here in case
@@ -44,21 +61,22 @@ void AbstractTableGenerator::generate_and_store() {
   Hyrise::get().topology.use_default_topology(_benchmark_config->data_preparation_cores);
   Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
 
-  std::cout << "- Loading/Generating tables " << std::endl;
+  std::cout << "- Loading/Generating tables\n" << std::flush;
   auto table_info_by_name = generate();
   metrics.generation_duration = timer.lap();
-  std::cout << "- Loading/Generating tables done (" << format_duration(metrics.generation_duration) << ")" << std::endl;
+  std::cout << "- Loading/Generating tables done (" << format_duration(metrics.generation_duration) << ")\n"
+            << std::flush;
 
   /**
-   * Finalizing all chunks of all tables that are still mutable.
+   * Mark all chunks of the table as immutable.
    */
-  // TODO(any): Finalization might trigger encoding in the future.
   for (auto& [table_name, table_info] : table_info_by_name) {
     auto& table = table_info_by_name[table_name].table;
-    for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
+    const auto chunk_count = table->chunk_count();
+    for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
       const auto chunk = table->get_chunk(chunk_id);
       if (chunk->is_mutable()) {
-        chunk->finalize();
+        chunk->set_immutable();
       }
     }
   }
@@ -74,16 +92,16 @@ void AbstractTableGenerator::generate_and_store() {
       // supposed to be unclustered.
       for (auto& [table_name, table_info] : table_info_by_name) {
         auto& table = table_info_by_name[table_name].table;
-        for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
-          const auto chunk = table->get_chunk(chunk_id);
+        const auto chunk_count = table->chunk_count();
+        for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+          const auto& chunk = table->get_chunk(chunk_id);
           Assert(chunk->individually_sorted_by().empty(),
-                 "Tables are sorted, but no clustering has been requested. "
-                 "This might be case when clustered data is loaded from "
-                 "mismatching binary exports.");
+                 "Tables are sorted, but no clustering has been requested. This might be case when clustered data is "
+                 "loaded from mismatching binary exports.");
         }
       }
     } else {
-      std::cout << "- Sorting tables" << std::endl;
+      std::cout << "- Sorting tables\n";
 
       auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
       jobs.reserve(sort_order_by_table.size());
@@ -145,7 +163,7 @@ void AbstractTableGenerator::generate_and_store() {
 
             for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
               const auto& chunk = table->get_chunk(chunk_id);
-              Assert(chunk->individually_sorted_by().empty(), "Chunk SortColumnDefinitions need to be empty");
+              Assert(chunk->individually_sorted_by().empty(), "Chunk SortColumnDefinitions need to be empty.");
               chunk->set_individually_sorted_by(sort_column);
             }
 
@@ -156,7 +174,7 @@ void AbstractTableGenerator::generate_and_store() {
           // For this, we use the sort operator. Because it returns a `const Table`, we need to recreate the table and
           // migrate the sorted chunks to that table.
 
-          Timer per_table_timer;
+          auto per_table_timer = Timer{};
 
           auto table_wrapper = std::make_shared<TableWrapper>(table);
           table_wrapper->execute();
@@ -166,20 +184,20 @@ void AbstractTableGenerator::generate_and_store() {
           sort->execute();
           const auto immutable_sorted_table = sort->get_output();
 
-          Assert(immutable_sorted_table->chunk_count() == table->chunk_count(), "Mismatching chunk_count");
+          Assert(immutable_sorted_table->chunk_count() == table->chunk_count(), "Mismatching chunk_count.");
 
           table = std::make_shared<Table>(immutable_sorted_table->column_definitions(), TableType::Data,
                                           table->target_chunk_size(), UseMvcc::Yes);
           const auto column_count = immutable_sorted_table->column_count();
           for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-            const auto chunk = immutable_sorted_table->get_chunk(chunk_id);
+            const auto& chunk = immutable_sorted_table->get_chunk(chunk_id);
             auto mvcc_data = std::make_shared<MvccData>(chunk->size(), CommitID{0});
-            Segments segments{};
+            auto segments = Segments{};
             for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
               segments.emplace_back(chunk->get_segment(column_id));
             }
             table->append_chunk(segments, mvcc_data);
-            table->get_chunk(chunk_id)->finalize();
+            table->get_chunk(chunk_id)->set_immutable();
             table->get_chunk(chunk_id)->set_individually_sorted_by(SortColumnDefinition(sort_column_id, sort_mode));
           }
 
@@ -193,7 +211,7 @@ void AbstractTableGenerator::generate_and_store() {
       Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
 
       metrics.sort_duration = timer.lap();
-      std::cout << "- Sorting tables done (" << format_duration(metrics.sort_duration) << ")" << std::endl;
+      std::cout << "- Sorting tables done (" << format_duration(metrics.sort_duration) << ")\n" << std::flush;
     }
   }
 
@@ -206,7 +224,7 @@ void AbstractTableGenerator::generate_and_store() {
    * Encode the tables
    */
   {
-    std::cout << "- Encoding tables (if necessary) and generating pruning statistics" << std::endl;
+    std::cout << "- Encoding tables (if necessary) and generating pruning statistics\n" << std::flush;
 
     auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
     jobs.reserve(table_info_by_name.size());
@@ -215,13 +233,14 @@ void AbstractTableGenerator::generate_and_store() {
       auto& table_info = table_info_by_name_pair.second;
 
       const auto encode_table = [&]() {
-        Timer per_table_timer;
+        auto per_table_timer = Timer{};
         table_info.re_encoded =
             BenchmarkTableEncoder::encode(table_name, table_info.table, _benchmark_config->encoding_config);
         auto output = std::stringstream{};
         output << "-  Processing '" + table_name << "' - "
                << (table_info.re_encoded ? "encoding applied" : "no encoding necessary") << " ("
-               << per_table_timer.lap_formatted() << ")\n";
+               << per_table_timer.lap_formatted() << ")\n"
+               << std::flush;
         std::cout << output.str() << std::flush;
       };
       jobs.emplace_back(std::make_shared<JobTask>(encode_table));
@@ -230,7 +249,8 @@ void AbstractTableGenerator::generate_and_store() {
 
     metrics.encoding_duration = timer.lap();
     std::cout << "- Encoding tables and generating pruning statistic done ("
-              << format_duration(metrics.encoding_duration) << ")" << std::endl;
+              << format_duration(metrics.encoding_duration) << ")\n"
+              << std::flush;
   }
 
   /**
@@ -246,7 +266,7 @@ void AbstractTableGenerator::generate_and_store() {
       }
     }
 
-    std::cout << "- Writing tables into binary files if necessary" << std::endl;
+    std::cout << "- Writing tables into binary files if necessary\n";
 
     for (auto& [table_name, table_info] : table_info_by_name) {
       if (table_info.loaded_from_binary && !table_info.re_encoded && !table_info.binary_file_out_of_date) {
@@ -262,20 +282,21 @@ void AbstractTableGenerator::generate_and_store() {
       }
 
       std::cout << "-  Writing '" << table_name << "' into binary file " << binary_file_path << " " << std::flush;
-      Timer per_table_timer;
+      auto per_table_timer = Timer{};
       BinaryWriter::write(*table_info.table, binary_file_path);
-      std::cout << "(" << per_table_timer.lap_formatted() << ")" << std::endl;
+      std::cout << "(" << per_table_timer.lap_formatted() << ")\n" << std::flush;
     }
     metrics.binary_caching_duration = timer.lap();
-    std::cout << "- Writing tables into binary files done (" << format_duration(metrics.binary_caching_duration) << ")"
-              << std::endl;
+    std::cout << "- Writing tables into binary files done (" << format_duration(metrics.binary_caching_duration)
+              << ")\n"
+              << std::flush;
   }
 
   /**
    * Add the Tables to the StorageManager
    */
   {
-    std::cout << "- Adding tables to StorageManager and generating table statistics" << std::endl;
+    std::cout << "- Adding tables to StorageManager and generating table statistics.\n" << std::flush;
     auto& storage_manager = Hyrise::get().storage_manager;
     auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
     jobs.reserve(table_info_by_name.size());
@@ -284,7 +305,7 @@ void AbstractTableGenerator::generate_and_store() {
       auto& table_info = table_info_by_name_pair.second;
 
       const auto add_table = [&]() {
-        Timer per_table_timer;
+        auto per_table_timer = Timer{};
         if (storage_manager.has_table(table_name)) {
           storage_manager.drop_table(table_name);
         }
@@ -300,7 +321,8 @@ void AbstractTableGenerator::generate_and_store() {
     metrics.store_duration = timer.lap();
 
     std::cout << "- Adding tables to StorageManager and generating table statistics done ("
-              << format_duration(metrics.store_duration) << ")" << std::endl;
+              << format_duration(metrics.store_duration) << ")\n"
+              << std::flush;
   }
 
   /**
@@ -309,7 +331,7 @@ void AbstractTableGenerator::generate_and_store() {
   if (_benchmark_config->chunk_indexes) {
     _create_chunk_indexes(table_info_by_name);
   } else {
-    std::cout << "- No chunk indexes created as --chunk_indexes was not specified or set to false" << std::endl;
+    std::cout << "- No chunk indexes created as --chunk_indexes was not specified or set to false.\n";
   }
 
   /**
@@ -318,7 +340,7 @@ void AbstractTableGenerator::generate_and_store() {
   if (_benchmark_config->table_indexes) {
     _create_table_indexes(table_info_by_name);
   } else {
-    std::cout << "- No table indexes created as --table_indexes was not specified or set to false" << std::endl;
+    std::cout << "- No table indexes created as --table_indexes was not specified or set to false.\n";
   }
 
   // Set scheduler back to previously used scheduler.
@@ -335,13 +357,15 @@ std::shared_ptr<BenchmarkConfig> AbstractTableGenerator::create_benchmark_config
 
 void AbstractTableGenerator::_create_chunk_indexes(
     std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) {
-  Timer timer;
-  std::cout << "- Creating chunk indexes" << std::endl;
+  auto timer = Timer{};
+  std::cout << "- Creating chunk indexes\n";
+
   const auto& indexes_by_table = _indexes_by_table();
   if (indexes_by_table.empty()) {
-    std::cout << "-  No indexes defined by benchmark" << std::endl;
+    std::cout << "-  No indexes defined by benchmark\n";
     return;
   }
+
   for (const auto& [table_name, indexes] : indexes_by_table) {
     const auto& table = table_info_by_name[table_name].table;
 
@@ -354,7 +378,7 @@ void AbstractTableGenerator::_create_chunk_indexes(
         column_ids.emplace_back(table->column_id_by_name(column_name));
       }
       std::cout << "] " << std::flush;
-      Timer per_index_timer;
+      auto per_index_timer = Timer{};
 
       if (column_ids.size() == 1) {
         table->create_chunk_index<GroupKeyIndex>(column_ids);
@@ -362,22 +386,24 @@ void AbstractTableGenerator::_create_chunk_indexes(
         table->create_chunk_index<CompositeGroupKeyIndex>(column_ids);
       }
 
-      std::cout << "(" << per_index_timer.lap_formatted() << ")" << std::endl;
+      std::cout << "(" << per_index_timer.lap_formatted() << ")\n";
     }
   }
   metrics.chunk_index_duration = timer.lap();
-  std::cout << "- Creating chunk indexes done (" << format_duration(metrics.chunk_index_duration) << ")" << std::endl;
+  std::cout << "- Creating chunk indexes done (" << format_duration(metrics.chunk_index_duration) << ")\n";
 }
 
 void AbstractTableGenerator::_create_table_indexes(
     std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) {
-  Timer timer;
-  std::cout << "- Creating table indexes" << std::endl;
+  auto timer = Timer{};
+  std::cout << "- Creating table indexes\n";
+
   const auto& indexes_by_table = _indexes_by_table();
   if (indexes_by_table.empty()) {
-    std::cout << "-  No indexes defined by benchmark" << std::endl;
+    std::cout << "-  No indexes defined by benchmark\n";
     return;
   }
+
   for (const auto& [table_name, indexes] : indexes_by_table) {
     const auto& table = table_info_by_name[table_name].table;
 
@@ -387,18 +413,17 @@ void AbstractTableGenerator::_create_table_indexes(
       Assert(index_column_names.size() == 1, "Multi-column indexes are currently not supported.");
 
       for (const auto& column_name : index_column_names) {
-        std::cout << "-  Creating an index on table " << table_name << " (" << column_name << ") covering "
-                  << chunk_ids.size() << " (all finalized) chunks]" << std::flush;
+        std::cout << "-  Creating index on '" << table_name << "." << column_name << "'" << std::flush;
 
-        Timer per_table_index_timer;
+        auto per_table_index_timer = Timer{};
         table->create_partial_hash_index(table->column_id_by_name(column_name), chunk_ids);
 
-        std::cout << "(" << per_table_index_timer.lap_formatted() << ")" << std::endl;
+        std::cout << " (" << per_table_index_timer.lap_formatted() << ")\n";
       }
     }
   }
   metrics.table_index_duration = timer.lap();
-  std::cout << "- Creating table indexes done (" << format_duration(metrics.table_index_duration) << ")" << std::endl;
+  std::cout << "- Creating table indexes done (" << format_duration(metrics.table_index_duration) << ")\n";
 }
 
 AbstractTableGenerator::IndexesByTable AbstractTableGenerator::_indexes_by_table() const {
@@ -415,15 +440,16 @@ void AbstractTableGenerator::_add_constraints(
 
 bool AbstractTableGenerator::_all_chunks_sorted_by(const std::shared_ptr<Table>& table,
                                                    const SortColumnDefinition& sort_column) {
-  for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); ++chunk_id) {
+  const auto chunk_count = table->chunk_count();
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto& sorted_columns = table->get_chunk(chunk_id)->individually_sorted_by();
     if (sorted_columns.empty()) {
       return false;
     }
-    bool chunk_sorted = false;
+    auto chunk_sorted = false;
     for (const auto& sorted_column : sorted_columns) {
       if (sorted_column.column == sort_column.column) {
-        Assert(sorted_column.sort_mode == sort_column.sort_mode, "Column is already sorted by another SortMode");
+        Assert(sorted_column.sort_mode == sort_column.sort_mode, "Column is already sorted by another SortMode.");
         chunk_sorted = true;
       }
     }
@@ -436,20 +462,20 @@ bool AbstractTableGenerator::_all_chunks_sorted_by(const std::shared_ptr<Table>&
 
 std::unordered_map<std::string, BenchmarkTableInfo> AbstractTableGenerator::_load_binary_tables_from_path(
     const std::string& cache_directory) {
-  std::unordered_map<std::string, BenchmarkTableInfo> table_info_by_name;
+  auto table_info_by_name = std::unordered_map<std::string, BenchmarkTableInfo>{};
 
   for (const auto& table_file : list_directory(cache_directory)) {
     const auto table_name = table_file.stem();
     std::cout << "-  Loading table '" << table_name.string() << "' from cached binary " << table_file.relative_path();
 
-    Timer timer;
-    BenchmarkTableInfo table_info;
+    auto timer = Timer{};
+    auto table_info = BenchmarkTableInfo{};
     table_info.table = BinaryParser::parse(table_file);
     table_info.loaded_from_binary = true;
     table_info.binary_file_path = table_file;
     table_info_by_name[table_name] = table_info;
 
-    std::cout << " (" << timer.lap_formatted() << ")" << std::endl;
+    std::cout << " (" << timer.lap_formatted() << ")\n";
   }
 
   return table_info_by_name;

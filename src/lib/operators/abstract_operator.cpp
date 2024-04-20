@@ -1,22 +1,30 @@
 #include "abstract_operator.hpp"
 
-#include <chrono>
+#include <cstddef>
 #include <memory>
+#include <mutex>
+#include <ostream>
 #include <string>
+#include <type_traits>
+#include <unordered_map>
+#include <utility>
 #include <vector>
 
+#include "all_type_variant.hpp"
 #include "concurrency/transaction_context.hpp"
+#include "expression/abstract_expression.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/pqp_subquery_expression.hpp"
-#include "logical_query_plan/abstract_non_query_node.hpp"
 #include "logical_query_plan/dummy_table_node.hpp"
+#include "operators/operator_performance_data.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/operator_task.hpp"
 #include "storage/table.hpp"
 #include "storage/value_segment.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/format_bytes.hpp"
-#include "utils/format_duration.hpp"
+#include "utils/map_prunable_subquery_predicates.hpp"
 #include "utils/print_utils.hpp"
 #include "utils/timer.hpp"
 
@@ -202,8 +210,15 @@ std::string AbstractOperator::description(DescriptionMode /*description_mode*/) 
 }
 
 std::shared_ptr<AbstractOperator> AbstractOperator::deep_copy() const {
-  std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>> copied_ops;
-  return deep_copy(copied_ops);
+  auto copied_ops = std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>{};
+  const auto copy = deep_copy(copied_ops);
+
+  // GetTable operators can store references to TableScans as prunable subquery predicates (see get_table.hpp for
+  // details). We must assign the copies of these TableScans after copying the entire PQP (see
+  // map_prunable_subquery_predicates.hpp).
+  map_prunable_subquery_predicates(copied_ops);
+
+  return copy;
 }
 
 std::shared_ptr<AbstractOperator> AbstractOperator::deep_copy(
@@ -218,7 +233,8 @@ std::shared_ptr<AbstractOperator> AbstractOperator::deep_copy(
   const auto copied_right_input =
       right_input() ? right_input()->deep_copy(copied_ops) : std::shared_ptr<AbstractOperator>{};
 
-  auto copied_op = _on_deep_copy(copied_left_input, copied_right_input, copied_ops);
+  const auto copied_op = _on_deep_copy(copied_left_input, copied_right_input, copied_ops);
+  copied_op->lqp_node = lqp_node;
 
   /**
    * Set the transaction context so that we can execute the copied plan in the current transaction

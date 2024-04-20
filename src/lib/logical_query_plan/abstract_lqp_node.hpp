@@ -1,14 +1,17 @@
 #pragma once
 
 #include <array>
+#include <memory>
+#include <optional>
+#include <ostream>
+#include <string>
 #include <unordered_map>
 #include <vector>
 
 #include "enable_make_for_lqp_node.hpp"
-#include "expression/abstract_expression.hpp"
 #include "logical_query_plan/data_dependencies/functional_dependency.hpp"
+#include "logical_query_plan/data_dependencies/order_dependency.hpp"
 #include "logical_query_plan/data_dependencies/unique_column_combination.hpp"
-#include "types.hpp"
 
 namespace hyrise {
 
@@ -39,6 +42,7 @@ enum class LQPNodeType {
   Update,
   Union,
   Validate,
+  Window,
   Mock
 };
 
@@ -90,7 +94,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   LQPInputSide get_input_side(const std::shared_ptr<AbstractLQPNode>& output) const;
 
   /**
-   * @returns {get_output_side(outputs()[0], ..., get_output_side(outputs()[n-1])}
+   * @return {get_output_side(outputs()[0], ..., get_output_side(outputs()[n-1])}
    */
   std::vector<LQPInputSide> get_input_sides() const;
 
@@ -205,8 +209,8 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    * This is a helper method that returns non-trivial FDs valid for the current node. We consider FDs as non-trivial if
    *  we cannot derive them from the current node's unique column combinations.
    *
-   * @return The default implementation returns non-trivial FDs from the left input node, if available. Otherwise
-   * an empty vector.
+   * @return The default implementation returns non-trivial FDs from the left input node, if available. Otherwise an
+   *         empty vector.
    *
    * Nodes should override this function
    *  - to add additional non-trivial FDs. For example, {a} -> {a + 1} (which is not yet implemented).
@@ -214,6 +218,19 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    *  - to specify forwarding of non-trivial FDs in case of two input nodes.
    */
   virtual FunctionalDependencies non_trivial_functional_dependencies() const;
+
+  virtual OrderDependencies order_dependencies() const = 0;
+
+  /**
+   * @return True if there is an order dependency (OD) matching the given lists of output expressions (i.e., sorting
+   *         the table by @param `ordering_expressions` also sorts @param `ordered_expressions`).
+   *
+   * Example: - @param ordering_expressions: [a, b]
+   *          - @param ordered_expressions: [c, d]
+   *          - possible matching ODs: [a] |-> [c, d], [a, b] |-> [c, d], [a, b] |-> [c, d, e]
+   */
+  bool has_matching_od(const std::vector<std::shared_ptr<AbstractExpression>>& ordering_expressions,
+                       const std::vector<std::shared_ptr<AbstractExpression>>& ordered_expressions) const;
 
   /**
    * Perform a deep equality check
@@ -233,8 +250,8 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    * E.g., for the PredicateNode, this will be a single predicate expression; for a ProjectionNode it holds one
    * expression for each column.
    *
-   * WARNING: When changing the length of this vector, **absolutely make sure** any data associated with the
-   * expressions (e.g. column names in the AliasNode, SortModes in the SortNode) gets adjusted accordingly.
+   * WARNING: When changing the length of this vector, **absolutely make sure** any data associated with the expressions
+   *          (e.g. column names in the AliasNode, SortModes in the SortNode) gets adjusted accordingly.
    */
   std::vector<std::shared_ptr<AbstractExpression>> node_expressions;
 
@@ -243,7 +260,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    * the optimizer explaining that a node was added as a semi-join reduction node (see SubqueryToJoinRule). It is not
    * automatically added to the description.
    */
-  std::string comment;
+  std::string comment{};
 
  protected:
   /**
@@ -260,6 +277,12 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    * @return All unique column combinations from the left input node.
    */
   UniqueColumnCombinations _forward_left_unique_column_combinations() const;
+
+  /**
+   * This is a helper method for node types that do not have an effect on the ODs from input nodes.
+   * @return All order dependencies from the left input node.
+   */
+  OrderDependencies _forward_left_order_dependencies() const;
 
   /*
    * Converts an AbstractLQPNode::DescriptionMode to an AbstractExpression::DescriptionMode

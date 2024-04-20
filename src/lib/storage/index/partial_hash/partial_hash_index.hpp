@@ -1,5 +1,11 @@
 #pragma once
 
+#include <memory>
+#include <utility>
+#include <vector>
+
+#include "tsl/sparse_set.h"
+
 #include "flat_map_iterator.hpp"
 #include "partial_hash_index_impl.hpp"
 

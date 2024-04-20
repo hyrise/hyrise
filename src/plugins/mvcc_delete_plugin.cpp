@@ -1,12 +1,27 @@
 #include "mvcc_delete_plugin.hpp"
 
+#include <cstddef>
+#include <iomanip>
+#include <memory>
+#include <mutex>
+#include <numeric>
+#include <ostream>
+#include <sstream>
+#include <string>
+#include <vector>
+
+#include "concurrency/transaction_context.hpp"
+#include "hyrise.hpp"
 #include "operators/get_table.hpp"
-#include "operators/table_wrapper.hpp"
 #include "operators/update.hpp"
 #include "operators/validate.hpp"
-#include "storage/pos_lists/row_id_pos_list.hpp"
-#include "storage/reference_segment.hpp"
+#include "storage/mvcc_data.hpp"
 #include "storage/table.hpp"
+#include "types.hpp"
+#include "utils/abstract_plugin.hpp"
+#include "utils/assert.hpp"
+#include "utils/log_manager.hpp"
+#include "utils/pausable_loop_thread.hpp"
 
 namespace hyrise {
 
@@ -15,11 +30,14 @@ std::string MvccDeletePlugin::description() const {
 }
 
 void MvccDeletePlugin::start() {
-  _loop_thread_logical_delete = std::make_unique<PausableLoopThread>(
-      IDLE_DELAY_LOGICAL_DELETE, [&](size_t /*unused*/) { _logical_delete_loop(); });
+  _loop_thread_logical_delete = std::make_unique<PausableLoopThread>(IDLE_DELAY_LOGICAL_DELETE, [&](size_t /*unused*/) {
+    _logical_delete_loop();
+  });
 
-  _loop_thread_physical_delete = std::make_unique<PausableLoopThread>(
-      IDLE_DELAY_PHYSICAL_DELETE, [&](size_t /*unused*/) { _physical_delete_loop(); });
+  _loop_thread_physical_delete =
+      std::make_unique<PausableLoopThread>(IDLE_DELAY_PHYSICAL_DELETE, [&](size_t /*unused*/) {
+        _physical_delete_loop();
+      });
 }
 
 void MvccDeletePlugin::stop() {
@@ -92,7 +110,7 @@ void MvccDeletePlugin::_logical_delete_loop() {
     }
     if (saved_memory > 0) {
       auto message = std::ostringstream{};
-      auto saved_mb = static_cast<float>(saved_memory) / (1000.0f * 1000.0f);
+      const auto saved_mb = static_cast<float>(saved_memory) / (1000.0f * 1000.0f);
       message << "Consolidated " << num_chunks << " chunk(s) of " << table_name << ", saved approx. "
               << std::setprecision(2) << saved_mb << " MB";
       Hyrise::get().log_manager.add_message("MvccDeletePlugin", message.str(), LogLevel::Info);
@@ -107,23 +125,22 @@ void MvccDeletePlugin::_physical_delete_loop() {
   const auto lock = std::lock_guard<std::mutex>{_physical_delete_queue_mutex};
 
   if (!_physical_delete_queue.empty()) {
-    TableAndChunkID table_and_chunk_id = _physical_delete_queue.front();
-    const auto& table = table_and_chunk_id.first;
-    const auto& chunk = table->get_chunk(table_and_chunk_id.second);
+    const auto& [table, chunk_id] = _physical_delete_queue.front();
+    const auto& chunk = table->get_chunk(chunk_id);
 
-    DebugAssert(chunk != nullptr, "Chunk does not exist. Physical Delete can not be applied.");
+    DebugAssert(chunk, "Chunk does not exist. Physical Delete can not be applied.");
 
     if (chunk->get_cleanup_commit_id()) {
-      // Check whether there are still active transactions that might use the chunk
+      // Check whether there are still active transactions that might use the chunk.
       auto transactions_conflict = false;
-      auto lowest_snapshot_commit_id = Hyrise::get().transaction_manager.get_lowest_active_snapshot_commit_id();
+      const auto lowest_snapshot_commit_id = Hyrise::get().transaction_manager.get_lowest_active_snapshot_commit_id();
 
       if (lowest_snapshot_commit_id) {
-        transactions_conflict = *chunk->get_cleanup_commit_id() > lowest_snapshot_commit_id.value();
+        transactions_conflict = *chunk->get_cleanup_commit_id() > *lowest_snapshot_commit_id;
       }
 
       if (!transactions_conflict) {
-        _delete_chunk_physically(table, table_and_chunk_id.second);
+        _delete_chunk_physically(table, chunk_id);
         _physical_delete_queue.pop();
       }
     }
@@ -135,7 +152,7 @@ bool MvccDeletePlugin::_try_logical_delete(const std::string& table_name, const 
   const auto& table = Hyrise::get().storage_manager.get_table(table_name);
   const auto& chunk = table->get_chunk(chunk_id);
 
-  Assert(chunk != nullptr, "Chunk does not exist. Logical Delete can not be applied.");
+  Assert(chunk, "Chunk does not exist. Logical Delete can not be applied.");
   Assert(chunk_id < (table->chunk_count() - 1),
          "MVCC Logical Delete should not be applied on the last/current mutable chunk.");
 
@@ -145,18 +162,18 @@ bool MvccDeletePlugin::_try_logical_delete(const std::string& table_name, const 
   std::iota(excluded_chunk_ids.begin(), excluded_chunk_ids.begin() + chunk_id, 0);
   std::iota(excluded_chunk_ids.begin() + chunk_id, excluded_chunk_ids.end(), chunk_id + 1);
 
-  auto get_table = std::make_shared<GetTable>(table_name, excluded_chunk_ids, std::vector<ColumnID>());
+  const auto get_table = std::make_shared<GetTable>(table_name, excluded_chunk_ids, std::vector<ColumnID>());
   get_table->set_transaction_context(transaction_context);
   get_table->execute();
 
   // Validate temporary table
-  auto validate = std::make_shared<Validate>(get_table);
+  const auto validate = std::make_shared<Validate>(get_table);
   validate->set_transaction_context(transaction_context);
   validate->execute();
 
   // Use Update operator to delete and re-insert valid records in chunk
   // Pass validate into Update operator twice since data will not be changed.
-  auto update = std::make_shared<Update>(table_name, validate, validate);
+  const auto update = std::make_shared<Update>(table_name, validate, validate);
   update->set_transaction_context(transaction_context);
   update->execute();
 

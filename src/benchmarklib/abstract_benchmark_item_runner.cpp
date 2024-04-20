@@ -1,11 +1,25 @@
 #include "abstract_benchmark_item_runner.hpp"
 
-#include <boost/algorithm/string.hpp>
+#include <algorithm>
+#include <filesystem>
+#include <iostream>
+#include <memory>
+#include <optional>
+#include <string>
+#include <tuple>
+#include <utility>
+#include <vector>
 
+#include <boost/algorithm/string/predicate.hpp>
+#include <boost/algorithm/string/replace.hpp>
+
+#include "benchmark_config.hpp"
 #include "benchmark_sql_executor.hpp"
-#include "sql/sql_pipeline_builder.hpp"
+#include "sql/sql_pipeline.hpp"
+#include "utils/assert.hpp"
 #include "utils/list_directory.hpp"
 #include "utils/load_table.hpp"
+#include "utils/sqlite_wrapper.hpp"
 
 namespace hyrise {
 
@@ -17,7 +31,9 @@ void AbstractBenchmarkItemRunner::load_dedicated_expected_results(
   Assert(std::filesystem::is_directory(expected_results_directory_path),
          "Expected results path (" + expected_results_directory_path.string() + ") has to be a directory.");
 
-  const auto is_tbl_file = [](const std::string& filename) { return boost::algorithm::ends_with(filename, ".tbl"); };
+  const auto is_tbl_file = [](const std::string& filename) {
+    return boost::algorithm::ends_with(filename, ".tbl");
+  };
 
   _dedicated_expected_results.resize(items().size());
 
@@ -57,14 +73,14 @@ void AbstractBenchmarkItemRunner::on_tables_loaded() {}
 
 std::tuple<bool, std::vector<SQLPipelineMetrics>, bool> AbstractBenchmarkItemRunner::execute_item(
     const BenchmarkItemID item_id) {
-  std::optional<std::string> visualize_prefix;
+  auto visualize_prefix = std::optional<std::string>{};
   if (_config->enable_visualization) {
     auto name = item_name(item_id);
     boost::replace_all(name, " ", "_");
     visualize_prefix = std::move(name);
   }
 
-  BenchmarkSQLExecutor sql_executor(_sqlite_wrapper, visualize_prefix);
+  auto sql_executor = BenchmarkSQLExecutor(_sqlite_wrapper, visualize_prefix);
   auto success = _on_execute_item(item_id, sql_executor);
   return {success, std::move(sql_executor.metrics), sql_executor.any_verification_failed};
 }
@@ -74,7 +90,7 @@ void AbstractBenchmarkItemRunner::set_sqlite_wrapper(const std::shared_ptr<SQLit
 }
 
 const std::vector<int>& AbstractBenchmarkItemRunner::weights() const {
-  static const std::vector<int> empty_vector;
+  static const auto empty_vector = std::vector<int>{};
   return empty_vector;
 }
 

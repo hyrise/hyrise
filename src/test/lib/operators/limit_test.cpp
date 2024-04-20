@@ -5,7 +5,6 @@
 #include <vector>
 
 #include "base_test.hpp"
-
 #include "expression/expression_functional.hpp"
 #include "operators/limit.hpp"
 #include "operators/sort.hpp"
@@ -145,6 +144,19 @@ TEST_F(OperatorsLimitTest, ForwardSortedByFlag) {
     const auto& sorted_by = result_table_sorted->get_chunk(chunk_id)->individually_sorted_by();
     EXPECT_EQ(sorted_by, sort_definition);
   }
+}
+
+TEST_F(OperatorsLimitTest, OnlyIntegralTypes) {
+  const auto limit_string = std::make_shared<Limit>(_table_wrapper, value_("test_string"));
+  EXPECT_THROW(limit_string->execute(), std::logic_error);
+
+  const auto limit_float = std::make_shared<Limit>(_table_wrapper, value_(2.0f));
+  EXPECT_THROW(limit_float->execute(), std::logic_error);
+}
+
+TEST_F(OperatorsLimitTest, Name) {
+  const auto limit = std::make_shared<Limit>(_table_wrapper, value_(2));
+  EXPECT_EQ(limit->name(), std::string{"Limit"});
 }
 
 }  // namespace hyrise

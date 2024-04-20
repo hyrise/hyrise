@@ -1,5 +1,7 @@
 #pragma once
 
+#include <algorithm>
+#include <memory>
 #include <optional>
 #include <type_traits>
 #include <utility>
@@ -7,6 +9,7 @@
 
 #include <boost/hana/assert.hpp>
 #include <boost/hana/for_each.hpp>
+#include <boost/hana/size.hpp>
 #include <boost/hana/tuple.hpp>
 #include <boost/hana/zip_with.hpp>
 
@@ -46,7 +49,7 @@ class OptionalConstexpr<T, _has_value, std::enable_if_t<!_has_value>> {
   static constexpr bool has_value = false;
 
   T& value() {
-    Assert(false, "empty optional has no value");
+    Fail("Empty optional has no value.");
     return {};
   }
 };
@@ -128,7 +131,9 @@ class TableBuilder {
     _table = std::make_shared<Table>(column_definitions, TableType::Data, chunk_size, UseMvcc::Yes);
 
     // Reserve some space in the vectors
-    boost::hana::for_each(_value_vectors, [&](auto& values) { values.reserve(_estimated_rows_per_chunk); });
+    boost::hana::for_each(_value_vectors, [&](auto& values) {
+      values.reserve(_estimated_rows_per_chunk);
+    });
     boost::hana::for_each(_null_value_vectors, [&](auto& null_values) {
       if constexpr (std::decay_t<decltype(null_values)>::has_value) {
         null_values.value().reserve(_estimated_rows_per_chunk);
@@ -168,7 +173,7 @@ class TableBuilder {
       constexpr auto column_is_nullable = std::decay_t<decltype(null_values)>::has_value;
       auto value_is_null = table_builder::is_null(optional_or_value);
 
-      DebugAssert(column_is_nullable || !value_is_null, "cannot insert null value into not-null-column");
+      DebugAssert(column_is_nullable || !value_is_null, "Cannot insert null value into not-NULL column.");
 
       if (value_is_null) {
         values.emplace_back();

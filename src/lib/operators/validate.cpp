@@ -1,16 +1,29 @@
 #include "validate.hpp"
 
+#include <cstdint>
 #include <memory>
+#include <mutex>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
+#include "all_type_variant.hpp"
 #include "concurrency/transaction_context.hpp"
 #include "hyrise.hpp"
-#include "operators/delete.hpp"
+#include "operators/abstract_operator.hpp"
+#include "operators/abstract_read_only_operator.hpp"
+#include "operators/abstract_read_write_operator.hpp"  // IWYU pragma: keep
+#include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
+#include "storage/chunk.hpp"
+#include "storage/mvcc_data.hpp"
+#include "storage/pos_lists/abstract_pos_list.hpp"
 #include "storage/pos_lists/entire_chunk_pos_list.hpp"
+#include "storage/pos_lists/row_id_pos_list.hpp"
 #include "storage/reference_segment.hpp"
+#include "storage/table.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {
@@ -40,19 +53,16 @@ bool Validate::is_row_visible(TransactionID our_tid, CommitID snapshot_commit_id
 
 bool Validate::_is_entire_chunk_visible(const std::shared_ptr<const Chunk>& chunk,
                                         const CommitID snapshot_commit_id) const {
-  Assert(
-      _can_use_chunk_shortcut,
-      "This call to _is_entire_chunk_visible is not allowed. Are there any DeleteOperators in the same transaction?");
+  if (!_can_use_chunk_shortcut) {
+    return false;
+  }
   DebugAssert(!std::dynamic_pointer_cast<const ReferenceSegment>(chunk->get_segment(ColumnID{0})),
               "_is_entire_chunk_visible cannot be called on reference chunks.");
 
   const auto& mvcc_data = chunk->mvcc_data();
-  const auto max_begin_cid = mvcc_data->max_begin_cid;
-  if (!max_begin_cid) {
-    return false;
-  }
+  const auto max_begin_cid = mvcc_data->max_begin_cid.load();
 
-  return snapshot_commit_id >= max_begin_cid && chunk->invalid_row_count() == 0;
+  return !chunk->is_mutable() && snapshot_commit_id >= max_begin_cid && chunk->invalid_row_count() == 0;
 }
 
 Validate::Validate(const std::shared_ptr<AbstractOperator>& input_operator)
@@ -73,7 +83,7 @@ std::shared_ptr<AbstractOperator> Validate::_on_deep_copy(
 void Validate::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 std::shared_ptr<const Table> Validate::_on_execute() {
-  Fail("Validate can't be called without a transaction context.");
+  Fail("Validate cannot be called without a transaction context.");
 }
 
 std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionContext> transaction_context) {
@@ -125,7 +135,7 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
         _validate_chunks(input_table, job_start_chunk_id, job_end_chunk_id, our_tid, snapshot_commit_id, output_chunks,
                          output_mutex);
       } else {
-        jobs.push_back(std::make_shared<JobTask>([=, this, &output_chunks, &output_mutex] {
+        jobs.push_back(std::make_shared<JobTask>([&, input_table, job_start_chunk_id, job_end_chunk_id] {
           _validate_chunks(input_table, job_start_chunk_id, job_end_chunk_id, our_tid, snapshot_commit_id,
                            output_chunks, output_mutex);
         }));
@@ -178,12 +188,12 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& input_table,
 
       // Check all rows in the old poslist and put them in pos_list_out if they are visible.
       referenced_table = ref_segment_in->referenced_table();
-      DebugAssert(referenced_table->uses_mvcc(), "Trying to use Validate on a table that has no MVCC data");
+      DebugAssert(referenced_table->uses_mvcc(), "Trying to use Validate on a table that has no MVCC data.");
 
       if (!entirely_visible_chunks_table) {
         entirely_visible_chunks_table = referenced_table;
       } else {
-        Assert(entirely_visible_chunks_table == referenced_table, "Input table references more than once table");
+        Assert(entirely_visible_chunks_table == referenced_table, "Input table references more than one table.");
       }
 
       const auto& pos_list_in = ref_segment_in->pos_list();
@@ -192,14 +202,14 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& input_table,
         const auto referenced_chunk = referenced_table->get_chunk(pos_list_in->common_chunk_id());
         auto mvcc_data = referenced_chunk->mvcc_data();
 
-        if (_can_use_chunk_shortcut && _is_entire_chunk_visible(referenced_chunk, snapshot_commit_id)) {
+        if (_is_entire_chunk_visible(referenced_chunk, snapshot_commit_id)) {
           // We can reuse the old PosList since it is entirely visible. Not using the entirely_visible_chunks cache for
           // this shortcut to keep the code short.
           pos_list_out = pos_list_in;
         } else {
           auto temp_pos_list = RowIDPosList{};
           temp_pos_list.guarantee_single_chunk();
-          for (auto row_id : *pos_list_in) {
+          for (const auto row_id : *pos_list_in) {
             if (hyrise::is_row_visible(our_tid, snapshot_commit_id, row_id.chunk_offset, *mvcc_data)) {
               temp_pos_list.emplace_back(row_id);
             }
@@ -258,7 +268,7 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& input_table,
 
       DebugAssert(chunk_in->has_mvcc_data(), "Trying to use Validate on a table that has no MVCC data");
 
-      if (_can_use_chunk_shortcut && _is_entire_chunk_visible(chunk_in, snapshot_commit_id)) {
+      if (_is_entire_chunk_visible(chunk_in, snapshot_commit_id)) {
         // Not using the entirely_visible_chunks cache here as for data tables, we only look at chunks once anyway.
         pos_list_out = std::make_shared<EntireChunkPosList>(chunk_id, chunk_in->size());
       } else {
@@ -288,7 +298,7 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& input_table,
       // The validate operator does not affect the sorted_by property. If a chunk has been sorted before, it still is
       // after the validate operator.
       const auto chunk = std::make_shared<Chunk>(output_segments);
-      chunk->finalize();
+      chunk->set_immutable();
 
       const auto& sorted_by = chunk_in->individually_sorted_by();
       if (!sorted_by.empty()) {

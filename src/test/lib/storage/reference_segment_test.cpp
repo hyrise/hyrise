@@ -7,7 +7,6 @@
 #include <vector>
 
 #include "base_test.hpp"
-
 #include "hyrise.hpp"
 #include "operators/abstract_operator.hpp"
 #include "operators/get_table.hpp"
@@ -113,8 +112,8 @@ TEST_F(ReferenceSegmentTest, MemoryUsageEstimation) {
    */
 
   const auto pos_list_a = std::make_shared<RowIDPosList>();
-  pos_list_a->emplace_back(RowID{ChunkID{0}, ChunkOffset{0}});
-  pos_list_a->emplace_back(RowID{ChunkID{0}, ChunkOffset{1}});
+  pos_list_a->emplace_back(ChunkID{0}, ChunkOffset{0});
+  pos_list_a->emplace_back(ChunkID{0}, ChunkOffset{1});
   const auto pos_list_b = std::make_shared<RowIDPosList>();
 
   ReferenceSegment reference_segment_a(_test_table, ColumnID{0}, pos_list_a);

@@ -1,17 +1,22 @@
 #include "aggregate_node.hpp"
 
 #include <algorithm>
+#include <cstddef>
+#include <iterator>
 #include <memory>
-#include <optional>
 #include <sstream>
 #include <string>
+#include <utility>
 #include <vector>
 
-#include "expression/aggregate_expression.hpp"
+#include "expression/abstract_expression.hpp"
 #include "expression/expression_utils.hpp"
-#include "expression/lqp_column_expression.hpp"
+#include "expression/window_function_expression.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
+#include "logical_query_plan/data_dependencies/functional_dependency.hpp"
+#include "logical_query_plan/data_dependencies/order_dependency.hpp"
+#include "logical_query_plan/data_dependencies/unique_column_combination.hpp"
 #include "lqp_utils.hpp"
-#include "resolve_type.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
@@ -28,8 +33,13 @@ AggregateNode::AggregateNode(const std::vector<std::shared_ptr<AbstractExpressio
       aggregate_expressions_begin_idx{group_by_expressions.size()} {
   if constexpr (HYRISE_DEBUG) {
     for (const auto& aggregate_expression : aggregate_expressions) {
-      Assert(aggregate_expression->type == ExpressionType::Aggregate,
-             "Expression used as aggregate expression must be of type AggregateExpression.");
+      Assert(aggregate_expression->type == ExpressionType::WindowFunction,
+             "Expression used as aggregate expression must be of type WindowFunctionExpression.");
+      const auto& window_function = static_cast<const WindowFunctionExpression&>(*aggregate_expression);
+      Assert(!window_function.window(), "Aggregates must not define a window.");
+      Assert(
+          aggregate_functions.contains(window_function.window_function),
+          window_function_to_string.left.at(window_function.window_function) + " is not a valid aggregate function.");
     }
   }
 
@@ -41,7 +51,7 @@ AggregateNode::AggregateNode(const std::vector<std::shared_ptr<AbstractExpressio
 
 std::string AggregateNode::description(const DescriptionMode mode) const {
   const auto expression_mode = _expression_description_mode(mode);
-  std::stringstream stream;
+  auto stream = std::stringstream{};
 
   stream << "[Aggregate] ";
 
@@ -77,10 +87,8 @@ std::vector<std::shared_ptr<AbstractExpression>> AggregateNode::output_expressio
   for (auto expression_idx = aggregate_expressions_begin_idx; expression_idx < output_expression_count;
        ++expression_idx) {
     auto& output_expression = output_expressions[expression_idx];
-    DebugAssert(output_expression->type == ExpressionType::Aggregate,
-                "Unexpected non-aggregate in list of aggregates.");
-    const auto& aggregate_expression = static_cast<AggregateExpression&>(*output_expression);
-    if (aggregate_expression.aggregate_function == AggregateFunction::Any) {
+    const auto& aggregate_expression = static_cast<WindowFunctionExpression&>(*output_expression);
+    if (aggregate_expression.window_function == WindowFunction::Any) {
       output_expression = output_expression->arguments[0];
     }
   }
@@ -122,9 +130,10 @@ UniqueColumnCombinations AggregateNode::unique_column_combinations() const {
    *     unique. We are not yet sure if this should be modeled as a UCCs.
    */
 
-  // Check each UCC for applicability.
-  const auto& output_expressions = this->output_expressions();
-  const auto& input_unique_column_combinations = left_input()->unique_column_combinations();
+  // Check each UCC for applicability.  Aggregated expressions have the form `avg_(a)` and, thus, are not equal to the
+  // expression `a` in the input UCC. `output_expressions()` translates pseudo-aggregates `avg_(a)` back to `a`.
+  const auto output_expressions = this->output_expressions();
+  const auto input_unique_column_combinations = left_input()->unique_column_combinations();
   for (const auto& input_unique_constraint : input_unique_column_combinations) {
     if (!contains_all_expressions(input_unique_constraint.expressions, output_expressions)) {
       continue;
@@ -144,7 +153,7 @@ UniqueColumnCombinations AggregateNode::unique_column_combinations() const {
     // Make sure that we do not add an already existing or a superset UCC.
     if (unique_column_combinations.empty() ||
         !contains_matching_unique_column_combination(unique_column_combinations, group_by_columns)) {
-      unique_column_combinations.emplace(group_by_columns);
+      unique_column_combinations.emplace(std::move(group_by_columns));
     }
   }
 
@@ -161,10 +170,29 @@ UniqueColumnCombinations AggregateNode::unique_column_combinations() const {
   return unique_column_combinations;
 }
 
+OrderDependencies AggregateNode::order_dependencies() const {
+  auto order_dependencies = OrderDependencies{};
+
+  // Similarly to UCCs, forward ODs if all expressions are part of the GROUP-BY expressions. Aggregated expressions have
+  // the form `avg_(a)` and, thus, are not equal to the expression `a` in the input OD. `output_expressions()`
+  // translates pseudo-aggregates `avg_(a)` back to `a`.
+  const auto input_order_dependencies = left_input()->order_dependencies();
+  const auto output_expressions = this->output_expressions();
+  for (const auto& input_order_dependency : input_order_dependencies) {
+    if (!(contains_all_expressions(input_order_dependency.ordering_expressions, output_expressions) &&
+          contains_all_expressions(input_order_dependency.ordered_expressions, output_expressions))) {
+      continue;
+    }
+    order_dependencies.emplace(input_order_dependency);
+  }
+
+  return order_dependencies;
+}
+
 FunctionalDependencies AggregateNode::non_trivial_functional_dependencies() const {
   auto non_trivial_fds = left_input()->non_trivial_functional_dependencies();
 
-  // In AggregateNode, some expressions get wrapped inside of AggregateExpressions. Therefore, we have to discard
+  // In AggregateNode, some expressions get wrapped inside of WindowFunctionExpressions. Therefore, we have to discard
   // all FDs whose expressions are no longer part of the node's output expressions.
   remove_invalid_fds(shared_from_this(), non_trivial_fds);
 

@@ -1,5 +1,4 @@
 #include "base_test.hpp"
-
 #include "operators/alias_operator.hpp"
 #include "operators/projection.hpp"
 #include "operators/sort.hpp"

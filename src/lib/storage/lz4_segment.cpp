@@ -1,15 +1,26 @@
 #include "lz4_segment.hpp"
 
-#include <lz4.h>
-
 #include <climits>
+#include <cstddef>
+#include <iterator>
+#include <memory>
+#include <optional>
 #include <sstream>
 #include <string>
+#include <type_traits>
+#include <utility>
+#include <vector>
 
+#include "lz4.h"
+
+#include "all_type_variant.hpp"
 #include "resolve_type.hpp"
+#include "storage/abstract_encoded_segment.hpp"
+#include "storage/abstract_segment.hpp"
+#include "storage/encoding_type.hpp"
 #include "storage/vector_compression/base_compressed_vector.hpp"
 #include "storage/vector_compression/base_vector_decompressor.hpp"
-#include "storage/vector_compression/resolve_compressed_vector_type.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
 
@@ -428,7 +439,8 @@ template <typename T>
 std::shared_ptr<AbstractSegment> LZ4Segment<T>::copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const {
   auto new_lz4_blocks = pmr_vector<pmr_vector<char>>{alloc};
   for (const auto& block : _lz4_blocks) {
-    new_lz4_blocks.emplace_back(pmr_vector<char>{block, alloc});
+    auto block_copy = pmr_vector<char>{block, alloc};
+    new_lz4_blocks.emplace_back(std::move(block_copy));
   }
 
   auto new_null_values =

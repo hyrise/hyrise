@@ -1,13 +1,15 @@
 #pragma once
 
-#include <functional>
+#include <cstddef>
 #include <memory>
+#include <ostream>
+#include <string>
 #include <unordered_map>
 #include <unordered_set>
+#include <vector>
 
 #include "all_type_variant.hpp"
 #include "expression_precedence.hpp"
-#include "types.hpp"
 
 namespace hyrise {
 
@@ -15,7 +17,6 @@ class AbstractLQPNode;
 class AbstractOperator;
 
 enum class ExpressionType {
-  Aggregate,
   Arithmetic,
   Cast,
   Case,
@@ -33,7 +34,9 @@ enum class ExpressionType {
   PQPSubquery,
   LQPSubquery,
   UnaryMinus,
-  Value
+  Value,
+  Window,
+  WindowFunction
 };
 
 /**

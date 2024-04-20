@@ -256,6 +256,8 @@ SELECT DISTINCT a, b FROM mixed;
 SELECT DISTINCT * FROM mixed;
 SELECT DISTINCT a, MIN(b) FROM mixed GROUP BY a;
 SELECT DISTINCT MIN(b) FROM mixed GROUP BY a;
+SELECT DISTINCT id + b FROM mixed ORDER BY id + b DESC LIMIT 10;
+SELECT DISTINCT id + b, id + c FROM mixed ORDER BY id + b;
 
 -- Join, GROUP BY, Having, ...
 SELECT c_custkey, c_name, COUNT(a) FROM tpch_customer JOIN id_int_int_int_100 ON c_custkey = a GROUP BY c_custkey, c_name HAVING COUNT(a) >= 2;

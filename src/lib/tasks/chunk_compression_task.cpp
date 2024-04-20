@@ -1,13 +1,14 @@
 #include "chunk_compression_task.hpp"
 
+#include <cstdint>
+#include <memory>
 #include <string>
 #include <vector>
 
 #include "hyrise.hpp"
 #include "storage/chunk.hpp"
 #include "storage/chunk_encoder.hpp"
-#include "storage/table.hpp"
-
+#include "storage/mvcc_data.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
@@ -20,11 +21,11 @@ ChunkCompressionTask::ChunkCompressionTask(const std::string& table_name, const 
     : _table_name{table_name}, _chunk_ids{chunk_ids} {}
 
 void ChunkCompressionTask::_on_execute() {
-  auto table = Hyrise::get().storage_manager.get_table(_table_name);
+  const auto& table = Hyrise::get().storage_manager.get_table(_table_name);
 
   Assert(table, "Table does not exist.");
 
-  for (auto chunk_id : _chunk_ids) {
+  for (const auto chunk_id : _chunk_ids) {
     Assert(chunk_id < table->chunk_count(), "Chunk with given ID does not exist.");
     const auto chunk = table->get_chunk(chunk_id);
     Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");

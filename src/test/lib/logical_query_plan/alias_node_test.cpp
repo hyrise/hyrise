@@ -1,5 +1,4 @@
 #include "base_test.hpp"
-
 #include "expression/lqp_column_expression.hpp"
 #include "logical_query_plan/alias_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
@@ -17,20 +16,31 @@ class AliasNodeTest : public BaseTest {
     b = mock_node->get_column("b");
 
     aliases = {"x", "y"};
+    partial_aliases = {"b", "z"};
     expressions = {b, a};
     alias_node = AliasNode::make(expressions, aliases, mock_node);
+    partial_alias_node = AliasNode::make(expressions, partial_aliases, mock_node);
   }
 
   std::vector<std::string> aliases;
+  std::vector<std::string> partial_aliases;
   std::vector<std::shared_ptr<AbstractExpression>> expressions;
   std::shared_ptr<MockNode> mock_node;
 
-  std::shared_ptr<AbstractExpression> a, b;
+  std::shared_ptr<AbstractExpression> a;
+  std::shared_ptr<AbstractExpression> b;
+  std::shared_ptr<AbstractExpression> c;
   std::shared_ptr<AliasNode> alias_node;
+  std::shared_ptr<AliasNode> partial_alias_node;
 };
 
+TEST_F(AliasNodeTest, NodeDescription) {
+  EXPECT_EQ(alias_node->description(), "[Alias] b AS x, a AS y");
+  EXPECT_EQ(partial_alias_node->description(), "[Alias] b, a AS z");
+}
+
 TEST_F(AliasNodeTest, NodeExpressions) {
-  ASSERT_EQ(alias_node->node_expressions.size(), 2u);
+  ASSERT_EQ(alias_node->node_expressions.size(), 2);
   EXPECT_EQ(alias_node->node_expressions.at(0), b);
   EXPECT_EQ(alias_node->node_expressions.at(1), a);
 }
@@ -88,6 +98,20 @@ TEST_F(AliasNodeTest, UniqueColumnCombinationsForwarding) {
   // In-depth check.
   EXPECT_TRUE(find_ucc_by_key_constraint(key_constraint_a_b, unique_column_combinations));
   EXPECT_TRUE(find_ucc_by_key_constraint(key_constraint_b, unique_column_combinations));
+}
+
+TEST_F(AliasNodeTest, ForwardOrderDependencies) {
+  EXPECT_TRUE(mock_node->order_dependencies().empty());
+  EXPECT_TRUE(alias_node->order_dependencies().empty());
+
+  const auto od = OrderDependency{{a}, {b}};
+  const auto order_constraint = TableOrderConstraint{{ColumnID{0}}, {ColumnID{1}}};
+  mock_node->set_order_constraints({order_constraint});
+  EXPECT_EQ(mock_node->order_dependencies().size(), 1);
+
+  const auto& order_dependencies = alias_node->order_dependencies();
+  EXPECT_EQ(order_dependencies.size(), 1);
+  EXPECT_TRUE(order_dependencies.contains(od));
 }
 
 }  // namespace hyrise

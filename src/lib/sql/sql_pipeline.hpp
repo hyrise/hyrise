@@ -1,8 +1,12 @@
 #pragma once
 
 #include <memory>
+#include <string>
+#include <utility>
+#include <vector>
 
 #include "SQLParserResult.h"
+
 #include "concurrency/transaction_context.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "optimizer/optimizer.hpp"

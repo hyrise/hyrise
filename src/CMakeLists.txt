@@ -44,6 +44,8 @@ set(CMAKE_CXX_STANDARD 20)
 
 # Hotfix for boost bug (https://github.com/boostorg/asio/issues/312):
 add_compile_options(-DBOOST_ASIO_DISABLE_CONCEPTS)
+SET(BOOST_MIN_VERSION "1.81.0")
+FIND_PACKAGE(Boost ${BOOST_MIN_VERSION} REQUIRED)
 
 add_compile_options(-pthread -Wno-unknown-warning-option)
 
@@ -55,6 +57,10 @@ if (NOT "${HYRISE_RELAXED_BUILD}")
 
     if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
         add_compile_options(-Weverything -Wshadow-all -Wno-c++98-compat -Wno-c++98-compat-pedantic -Wno-documentation -Wno-padded -Wno-global-constructors -Wno-sign-conversion -Wno-exit-time-destructors -Wno-switch-enum -Wno-weak-vtables -Wno-double-promotion -Wno-covered-switch-default -Wno-unused-macros -Wno-newline-eof -Wno-missing-variable-declarations -Wno-weak-template-vtables -Wno-missing-prototypes -Wno-float-equal -Wno-return-std-move-in-c++11 -Wno-unreachable-code-break -Wno-undefined-func-template -Wno-unknown-warning-option -Wno-pass-failed -Wno-ctad-maybe-unsupported -Wno-header-hygiene -Wno-poison-system-directories -Wno-zero-as-null-pointer-constant)
+
+        # We access buffers via pointers / pointer arithmetic in some cases when we know what we do (e.g., uninitialized
+        # vector works like this).
+        add_compile_options(-Wno-unsafe-buffer-usage)
     endif()
 
 else()
@@ -78,8 +84,13 @@ include_directories(
 
 set(ENABLE_CLANG_TIDY OFF CACHE BOOL "Run clang-tidy")
 if (ENABLE_CLANG_TIDY)
+    if (NOT "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+        message(ERROR "clang-tidy is only available for Clang builds.")
+    endif()
+
+    # Get the full clang-tidy path (helps with MacOS builds).
+    set(CMAKE_CXX_CLANG_TIDY "${CMAKE_C_COMPILER}-tidy")
     message(STATUS "clang-tidy enabled")
-    set(CMAKE_CXX_CLANG_TIDY "${CMAKE_SOURCE_DIR}/scripts/clang_tidy_wrapper.sh;${CMAKE_SOURCE_DIR}")
 endif()
 
 add_subdirectory(benchmarklib)

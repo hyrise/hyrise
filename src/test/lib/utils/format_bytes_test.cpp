@@ -1,5 +1,4 @@
 #include "base_test.hpp"
-
 #include "utils/format_bytes.hpp"
 
 namespace hyrise {

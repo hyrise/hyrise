@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <string>
 
 #include "abstract_rule.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"

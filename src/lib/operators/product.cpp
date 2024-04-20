@@ -1,12 +1,23 @@
 #include "product.hpp"
 
+#include <cstddef>
 #include <map>
 #include <memory>
 #include <string>
-#include <utility>
+#include <unordered_map>
 #include <vector>
 
+#include "all_type_variant.hpp"
+#include "operators/abstract_operator.hpp"
+#include "operators/abstract_read_only_operator.hpp"
+#include "storage/chunk.hpp"
+#include "storage/pos_lists/abstract_pos_list.hpp"
+#include "storage/pos_lists/row_id_pos_list.hpp"
 #include "storage/reference_segment.hpp"
+#include "storage/table.hpp"
+#include "storage/table_column_definition.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 Product::Product(const std::shared_ptr<const AbstractOperator>& left,
@@ -112,7 +123,7 @@ void Product::_add_product_of_two_chunks(const std::shared_ptr<Table>& output, C
           if (pos_list_in) {
             pos_list_out->emplace_back((*pos_list_in)[offset]);
           } else {
-            pos_list_out->emplace_back(RowID{is_left_side ? chunk_id_left : chunk_id_right, offset});
+            pos_list_out->emplace_back(is_left_side ? chunk_id_left : chunk_id_right, offset);
           }
         }
       }

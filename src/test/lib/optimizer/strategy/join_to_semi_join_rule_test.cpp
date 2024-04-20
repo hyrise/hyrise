@@ -1,5 +1,3 @@
-#include "strategy_base_test.hpp"
-
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/change_meta_table_node.hpp"
@@ -16,6 +14,7 @@
 #include "logical_query_plan/update_node.hpp"
 #include "optimizer/strategy/column_pruning_rule.hpp"
 #include "optimizer/strategy/join_to_semi_join_rule.hpp"
+#include "strategy_base_test.hpp"
 
 namespace hyrise {
 
@@ -53,7 +52,7 @@ TEST_F(JoinToSemiJoinRuleTest, InnerJoinToSemiJoin) {
     auto& sm = Hyrise::get().storage_manager;
     sm.add_table("table", table);
 
-    table->add_soft_key_constraint({{ColumnID{0}}, KeyConstraintType::UNIQUE});
+    table->add_soft_constraint(TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE});
   }
 
   const auto stored_table_node = StoredTableNode::make("table");
@@ -93,7 +92,7 @@ TEST_F(JoinToSemiJoinRuleTest, MultiPredicateInnerJoinToSemiJoinWithSingleEqui) 
     auto& sm = Hyrise::get().storage_manager;
     sm.add_table("table", table);
 
-    table->add_soft_key_constraint({{ColumnID{0}}, KeyConstraintType::UNIQUE});
+    table->add_soft_constraint(TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE});
   }
 
   const auto stored_table_node = StoredTableNode::make("table");
@@ -137,7 +136,7 @@ TEST_F(JoinToSemiJoinRuleTest, MultiPredicateInnerJoinToSemiJoinWithMultiEqui) {
     auto& sm = Hyrise::get().storage_manager;
     sm.add_table("table", table);
 
-    table->add_soft_key_constraint({{ColumnID{0}, ColumnID{1}}, KeyConstraintType::UNIQUE});
+    table->add_soft_constraint(TableKeyConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::UNIQUE});
   }
 
   const auto stored_table_node = StoredTableNode::make("table");
@@ -175,7 +174,7 @@ TEST_F(JoinToSemiJoinRuleTest, DoNotTouchInnerJoinWithNonEqui) {
     auto& sm = Hyrise::get().storage_manager;
     sm.add_table("table", table);
 
-    table->add_soft_key_constraint({{ColumnID{0}}, KeyConstraintType::UNIQUE});
+    table->add_soft_constraint(TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE});
   }
 
   const auto stored_table_node = StoredTableNode::make("table");
@@ -245,7 +244,7 @@ TEST_F(JoinToSemiJoinRuleTest, DoNotTouchInnerJoinWithoutMatchingUcc) {
     auto& sm = Hyrise::get().storage_manager;
     sm.add_table("table", table);
 
-    table->add_soft_key_constraint({{ColumnID{0}, ColumnID{1}}, KeyConstraintType::UNIQUE});
+    table->add_soft_constraint(TableKeyConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::UNIQUE});
   }
 
   const auto stored_table_node = StoredTableNode::make("table");
@@ -277,7 +276,7 @@ TEST_F(JoinToSemiJoinRuleTest, DoNotTouchNonInnerJoin) {
     auto& sm = Hyrise::get().storage_manager;
     sm.add_table("table", table);
 
-    table->add_soft_key_constraint({{ColumnID{0}}, KeyConstraintType::PRIMARY_KEY});
+    table->add_soft_constraint(TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::PRIMARY_KEY});
   }
 
   const auto stored_table_node = StoredTableNode::make("table");

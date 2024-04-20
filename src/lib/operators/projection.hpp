@@ -1,12 +1,12 @@
 #pragma once
 
-#include <cstdint>
-
 #include <algorithm>
+#include <cstdint>
 #include <functional>
 #include <memory>
 #include <string>
 #include <tuple>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -18,7 +18,7 @@ namespace hyrise {
 class PQPSubqueryExpression;
 
 /**
- * Operator to evaluate Expressions (except for AggregateExpressions)
+ * Operator to evaluate Expressions (except for WindowFunctionExpressions)
  */
 class Projection : public AbstractReadOnlyOperator {
  public:

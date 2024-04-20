@@ -62,12 +62,12 @@ class TPCCRandomGenerator : public RandomGenerator {
   }
 
   std::string generate_string(size_t lower_length, size_t upper_length, char base_character, int num_characters) {
-    size_t length = random_number(lower_length, upper_length);
-    std::string s;
+    const auto length = random_number(lower_length, upper_length);
+    auto result = std::string{};
     for (size_t i = 0; i < length; i++) {
-      s.append(1, static_cast<char>(base_character + random_number(0, num_characters - 1)));
+      result.append(1, static_cast<char>(base_character + random_number(0, num_characters - 1)));
     }
-    return s;
+    return result;
   }
 
   // Function and parameters as defined by TPCC

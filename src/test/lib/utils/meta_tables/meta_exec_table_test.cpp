@@ -1,9 +1,7 @@
+#include "../plugin_test_utils.hpp"
 #include "base_test.hpp"
-
 #include "operators/table_wrapper.hpp"
 #include "utils/meta_tables/meta_exec_table.hpp"
-
-#include "../plugin_test_utils.hpp"
 
 namespace hyrise {
 

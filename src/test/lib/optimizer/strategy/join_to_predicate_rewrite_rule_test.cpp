@@ -1,5 +1,3 @@
-#include "strategy_base_test.hpp"
-
 #include "magic_enum.hpp"
 
 #include "expression/expression_functional.hpp"
@@ -18,6 +16,7 @@
 #include "logical_query_plan/update_node.hpp"
 #include "optimizer/strategy/column_pruning_rule.hpp"
 #include "optimizer/strategy/join_to_predicate_rewrite_rule.hpp"
+#include "strategy_base_test.hpp"
 
 namespace hyrise {
 

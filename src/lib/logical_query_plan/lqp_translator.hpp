@@ -2,9 +2,9 @@
 
 #include <memory>
 #include <unordered_map>
+#include <vector>
 
 #include "abstract_lqp_node.hpp"
-#include "all_type_variant.hpp"
 #include "operators/abstract_operator.hpp"
 
 namespace hyrise {
@@ -23,11 +23,13 @@ struct OperatorJoinPredicate;
  */
 class LQPTranslator {
  public:
-  virtual ~LQPTranslator() = default;
+  ~LQPTranslator() = default;
 
-  virtual std::shared_ptr<AbstractOperator> translate_node(const std::shared_ptr<AbstractLQPNode>& node) const;
+  std::shared_ptr<AbstractOperator> translate_node(const std::shared_ptr<AbstractLQPNode>& node) const;
 
  private:
+  std::shared_ptr<AbstractOperator> _translate_node_recursively(const std::shared_ptr<AbstractLQPNode>& node) const;
+
   std::shared_ptr<AbstractOperator> _translate_by_node_type(LQPNodeType type,
                                                             const std::shared_ptr<AbstractLQPNode>& node) const;
 
@@ -54,6 +56,7 @@ class LQPTranslator {
   std::shared_ptr<AbstractOperator> _translate_change_meta_table_node(
       const std::shared_ptr<AbstractLQPNode>& node) const;
   std::shared_ptr<AbstractOperator> _translate_validate_node(const std::shared_ptr<AbstractLQPNode>& node) const;
+  std::shared_ptr<AbstractOperator> _translate_window_node(const std::shared_ptr<AbstractLQPNode>& node) const;
 
   // Maintenance operators
   std::shared_ptr<AbstractOperator> _translate_show_tables_node(const std::shared_ptr<AbstractLQPNode>& node) const;

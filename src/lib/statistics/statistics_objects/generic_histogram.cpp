@@ -6,6 +6,11 @@
 #include <utility>
 #include <vector>
 
+#include "all_type_variant.hpp"
+#include "statistics/statistics_objects/abstract_histogram.hpp"
+#include "statistics/statistics_objects/histogram_domain.hpp"
+#include "utils/assert.hpp"
+
 namespace hyrise {
 
 template <typename T>

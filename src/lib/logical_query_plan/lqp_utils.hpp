@@ -1,9 +1,10 @@
 #pragma once
 
 #include <memory>
-#include <optional>
 #include <queue>
 #include <set>
+#include <string>
+#include <unordered_map>
 #include <unordered_set>
 #include <utility>
 #include <vector>
@@ -13,7 +14,6 @@
 namespace hyrise {
 
 class AbstractExpression;
-class AbstractLQPNode;
 class LQPSubqueryExpression;
 
 enum class LQPInputSide;
@@ -149,25 +149,23 @@ std::shared_ptr<AbstractExpression> lqp_subplan_to_boolean_expression(
 enum class LQPVisitation { VisitInputs, DoNotVisitInputs };
 
 /**
- * Calls the passed @param visitor on @param lqp and recursively on its INPUTS. This will NOT visit subqueries.
- * The visitor returns `LQPVisitation`, indicating whether the current nodes's input should be visited
- * as well. The algorithm is breadth-first search.
- * Each node is visited exactly once.
+ * Calls the passed @param visitor on @param lqp and recursively on its INPUTS. This will NOT visit subqueries. The
+ * visitor returns `LQPVisitation`, indicating whether the current nodes's input should be visited as well. The
+ * algorithm is breadth-first search. Each node is visited exactly once.
  *
- * @tparam Visitor      Functor called with every node as a param.
- *                      Returns `LQPVisitation`
+ * @tparam Visitor      Functor called with every node as a param. Returns `LQPVisitation`.
  */
 template <typename Node, typename Visitor>
 void visit_lqp(const std::shared_ptr<Node>& lqp, Visitor visitor) {
   using AbstractNodeType = std::conditional_t<std::is_const_v<Node>, const AbstractLQPNode, AbstractLQPNode>;
 
-  std::queue<std::shared_ptr<AbstractNodeType>> node_queue;
+  auto node_queue = std::queue<std::shared_ptr<AbstractNodeType>>{};
   node_queue.push(lqp);
 
-  std::unordered_set<std::shared_ptr<AbstractNodeType>> visited_nodes;
+  auto visited_nodes = std::unordered_set<std::shared_ptr<AbstractNodeType>>{};
 
   while (!node_queue.empty()) {
-    auto node = node_queue.front();
+    const auto node = node_queue.front();
     node_queue.pop();
 
     if (!visited_nodes.emplace(node).second) {
@@ -189,24 +187,22 @@ enum class LQPUpwardVisitation { VisitOutputs, DoNotVisitOutputs };
 
 /**
  * Calls the passed @param visitor on @param lqp and recursively on each node that uses it as an OUTPUT. If the LQP is
- * used as a subquery, the users of the subquery are not visited.
- * The visitor returns `LQPUpwardVisitation`, indicating whether the current nodes's input should be visited
- * as well.
- * Each node is visited exactly once.
+ * used as a subquery, the users of the subquery are not visited. The visitor returns `LQPUpwardVisitation`, indicating
+ * whether the current nodes's input should be visited as well. Each node is visited exactly once.
  *
- * @tparam Visitor      Functor called with every node as a param.
- *                      Returns `LQPUpwardVisitation`
+ * @tparam Visitor      Functor called with every node as a param. Returns `LQPUpwardVisitation`.
  */
 template <typename Node, typename Visitor>
 void visit_lqp_upwards(const std::shared_ptr<Node>& lqp, Visitor visitor) {
   using AbstractNodeType = std::conditional_t<std::is_const_v<Node>, const AbstractLQPNode, AbstractLQPNode>;
-  std::queue<std::shared_ptr<AbstractNodeType>> node_queue;
+
+  auto node_queue = std::queue<std::shared_ptr<AbstractNodeType>>{};
   node_queue.push(lqp);
 
-  std::unordered_set<std::shared_ptr<AbstractNodeType>> visited_nodes;
+  auto visited_nodes = std::unordered_set<std::shared_ptr<AbstractNodeType>>{};
 
   while (!node_queue.empty()) {
-    auto node = node_queue.front();
+    const auto node = node_queue.front();
     node_queue.pop();
 
     if (!visited_nodes.emplace(node).second) {
@@ -238,15 +234,18 @@ std::vector<std::shared_ptr<AbstractLQPNode>> lqp_find_nodes_by_type(const std::
 std::vector<std::shared_ptr<AbstractLQPNode>> lqp_find_leaves(const std::shared_ptr<AbstractLQPNode>& lqp);
 
 /**
- * @return A set of column expressions created by the given @param lqp_node, matching the given @param column_ids.
- *         This is a helper method that maps column ids from tables to the matching output expressions. Conceptually,
- *         it only works on data source nodes. Currently, these are StoredTableNodes, StaticTableNodes and MockNodes.
+ * @return A vector or set of column expressions created by the given @param lqp_node, matching the given @param
+ *         column_ids. These are helper methods that map column ids from tables to the matching output expressions.
+ *         Conceptually, it only works on data source nodes. Currently, these are StoredTableNodes, StaticTableNodes,
+ *         and MockNodes.
  */
-template <typename ColumnIDs>
-ExpressionUnorderedSet find_column_expressions(const AbstractLQPNode& lqp_node, const ColumnIDs& column_ids);
+ExpressionUnorderedSet get_expressions_for_column_ids(const AbstractLQPNode& lqp_node,
+                                                      const std::set<ColumnID>& column_ids);
+std::vector<std::shared_ptr<AbstractExpression>> get_expressions_for_column_ids(
+    const AbstractLQPNode& lqp_node, const std::vector<ColumnID>& column_ids);
 
 /**
- * @return True if there is a UCC in the given set of @param unique_column_combinations matching the given set of
+ * @return True if there is a UCC in the given set of @param unique_column_combinations matching the given set of @param
  *         expressions. A unique column combination matches if it covers a subset of @param expressions.
  */
 bool contains_matching_unique_column_combination(const UniqueColumnCombinations& unique_column_combinations,
@@ -258,6 +257,13 @@ bool contains_matching_unique_column_combination(const UniqueColumnCombinations&
  */
 FunctionalDependencies fds_from_unique_column_combinations(const std::shared_ptr<const AbstractLQPNode>& lqp,
                                                            const UniqueColumnCombinations& unique_column_combinations);
+
+/**
+ * @return A set of FDs, derived from the given @param order_dependencies and based on the output expressions of
+ *         the given @param lqp node.
+ */
+FunctionalDependencies fds_from_order_dependencies(const std::shared_ptr<const AbstractLQPNode>& lqp,
+                                                   const OrderDependencies& order_dependencies);
 
 /**
  * This is a helper method that removes invalid or unnecessary FDs from the given input set @param fds by looking at

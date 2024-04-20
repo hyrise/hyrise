@@ -11,7 +11,7 @@ namespace hyrise {
 
 class BitPackingIterator : public BaseCompressedVectorIterator<BitPackingIterator> {
  public:
-  explicit BitPackingIterator(const pmr_compact_vector& data, const size_t absolute_index = 0u)
+  explicit BitPackingIterator(const pmr_compact_vector& data, const size_t absolute_index = 0)
       : _data{data}, _absolute_index{absolute_index} {}
 
   BitPackingIterator(const BitPackingIterator& other) = default;
@@ -22,7 +22,7 @@ class BitPackingIterator : public BaseCompressedVectorIterator<BitPackingIterato
       return *this;
     }
 
-    DebugAssert(&_data == &other._data, "Cannot reassign BitPackingIterator");
+    DebugAssert(&_data == &other._data, "Cannot reassign BitPackingIterator.");
     _absolute_index = other._absolute_index;
     return *this;
   }
@@ -32,7 +32,7 @@ class BitPackingIterator : public BaseCompressedVectorIterator<BitPackingIterato
       return *this;
     }
 
-    DebugAssert(&_data == &other._data, "Cannot reassign BitPackingIterator");
+    DebugAssert(&_data == &other._data, "Cannot reassign BitPackingIterator.");
     _absolute_index = other._absolute_index;
     return *this;
   }
@@ -68,7 +68,7 @@ class BitPackingIterator : public BaseCompressedVectorIterator<BitPackingIterato
 
  private:
   const pmr_compact_vector& _data;
-  size_t _absolute_index = 0u;
+  size_t _absolute_index = 0;
 };
 
 }  // namespace hyrise

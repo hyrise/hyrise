@@ -3,6 +3,7 @@
 #include <functional>
 #include <memory>
 #include <queue>
+#include <string>
 #include <unordered_map>
 #include <vector>
 
@@ -95,22 +96,20 @@ std::string expression_descriptions(const std::vector<std::shared_ptr<AbstractEx
 enum class ExpressionVisitation { VisitArguments, DoNotVisitArguments };
 
 /**
- * Calls the passed @param visitor on each sub-expression of the @param expression.
- * The visitor returns `ExpressionVisitation`, indicating whether the current expression's arguments should be visited
- * as well.
+ * Calls the passed @param visitor on each sub-expression of the @param expression. The visitor returns
+ * `ExpressionVisitation`, indicating whether the current expression's arguments should be visited as well.
  *
- * @tparam Expression   Either `std::shared_ptr<AbstractExpression>` or `const std::shared_ptr<AbstractExpression>`
- * @tparam Visitor      Functor called with every sub expression as a param.
- *                      Return `ExpressionVisitation`
+ * @tparam Expression   Either `std::shared_ptr<AbstractExpression>` or `const std::shared_ptr<AbstractExpression>`.
+ * @tparam Visitor      Functor called with every sub expression as a param. Returns `ExpressionVisitation`.
  */
 template <typename Expression, typename Visitor>
 void visit_expression(Expression& expression, Visitor visitor) {
-  // The reference wrapper bit is important so we can manipulate the Expression even by replacing sub expression
-  std::queue<std::reference_wrapper<Expression>> expression_queue;
+  // The reference wrapper bit is important so we can manipulate the Expression even by replacing sub-expression.
+  auto expression_queue = std::queue<std::reference_wrapper<Expression>>{};
   expression_queue.push(expression);
 
   while (!expression_queue.empty()) {
-    auto expression_reference = expression_queue.front();
+    const auto expression_reference = expression_queue.front();
     expression_queue.pop();
 
     if (visitor(expression_reference.get()) == ExpressionVisitation::VisitArguments) {
@@ -188,5 +187,12 @@ std::optional<ColumnID> find_expression_idx(const AbstractExpression& search_exp
 template <typename ExpressionContainer>
 bool contains_all_expressions(const ExpressionContainer& search_expressions,
                               const std::vector<std::shared_ptr<AbstractExpression>>& expression_vector);
+
+/**
+ * Checks that @param lhs_expressions is the head of @param rhs_expressions, i.e., all expressions of the left-hand
+ * side are the first expressions of the right-hand side in the same order.
+ */
+bool expression_list_is_prefix(const std::vector<std::shared_ptr<AbstractExpression>>& lhs_expressions,
+                               const std::vector<std::shared_ptr<AbstractExpression>>& rhs_expressions);
 
 }  // namespace hyrise

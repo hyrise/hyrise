@@ -42,9 +42,9 @@ int main(int argc, char* argv[]) {
 
   auto query_subset = std::optional<std::unordered_set<std::string>>{};
   if (queries_str == "all") {
-    std::cout << "- Running all queries" << std::endl;
+    std::cout << "- Running all queries\n";
   } else {
-    std::cout << "- Running subset of queries: " << queries_str << std::endl;
+    std::cout << "- Running subset of queries: " << queries_str << '\n';
 
     // "a, b, c, d" -> ["a", " b", " c", " d"]
     auto query_subset_untrimmed = std::vector<std::string>{};
@@ -59,8 +59,17 @@ int main(int argc, char* argv[]) {
 
   auto context = BenchmarkRunner::create_context(*config);
 
-  std::cout << "- SSB scale factor is " << scale_factor << std::endl;
+  std::cout << "- SSB scale factor is " << scale_factor << '\n';
   context.emplace("scale_factor", scale_factor);
+  // We cannot verify the results for larger scale factors (SFs) since SQLite overflows integers for aggregation
+  // results. We could use dedicated result sets in these cases similar to TPC-DS. However, we need to generate these
+  // result sets using a trustworthy DBMS, such as Postgres. We decided against this approach for two reasons. First,
+  // we do not consider this worth the effort for now. Second, it does not solve the issue of requiring specific SFs:
+  // The result set would only be valid for the SF it was generated on. Thus, we simply limit verification to rather
+  // small SFs.
+  // We empirically figured out that errors do not occur for SF <= 0.1 (0.11 to account for float comparison).
+  Assert(!config->verify || scale_factor < 0.11,
+         "SSB result verification is only supported fo scale factors <= 0.1 (--scale 0.1).");
 
   // Different from the TPC-H benchmark, where the table and query generators are immediately embedded in Hyrise, the
   // SSB implementation calls those generators externally. This is because we would get linking conflicts if we were
@@ -81,8 +90,8 @@ int main(int argc, char* argv[]) {
   // Success of create_directories is guaranteed by the call to fs::canonical, which fails on invalid paths.
   const auto ssb_data_path = std::filesystem::canonical(ssb_data_path_str.str());
 
-  std::cout << "- Using SSB dbgen from " << ssb_dbgen_path << std::endl;
-  std::cout << "- Storing SSB tables in " << ssb_data_path << std::endl;
+  std::cout << "- Using SSB dbgen from " << ssb_dbgen_path << '\n';
+  std::cout << "- Storing SSB tables in " << ssb_data_path << '\n';
 
   // Create the table generator and item runner.
   auto table_generator =

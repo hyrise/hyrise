@@ -1,9 +1,20 @@
 #include "pqp_subquery_expression.hpp"
 
+#include <cstddef>
+#include <memory>
 #include <sstream>
+#include <string>
+#include <unordered_map>
+#include <utility>
+#include <vector>
 
+#include <boost/container_hash/hash.hpp>
+
+#include "all_type_variant.hpp"
+#include "expression/abstract_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "operators/abstract_operator.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {
@@ -32,7 +43,7 @@ std::shared_ptr<AbstractExpression> PQPSubqueryExpression::_on_deep_copy(
 
 DataType PQPSubqueryExpression::data_type() const {
   Assert(_data_type_info,
-         "Can't determine the DataType of this SubqueryExpression, probably because it returns multiple columns");
+         "Cannot determine the DataType of this SubqueryExpression, probably because it returns multiple columns");
   return _data_type_info->data_type;
 }
 
@@ -41,8 +52,8 @@ bool PQPSubqueryExpression::is_correlated() const {
 }
 
 std::string PQPSubqueryExpression::description(const DescriptionMode /*mode*/) const {
-  std::stringstream stream;
-  stream << "SUBQUERY (PQP, " << pqp.get() << ")";
+  auto stream = std::stringstream{};
+  stream << "SUBQUERY (PQP, " << pqp << ")";
   return stream.str();
 }
 

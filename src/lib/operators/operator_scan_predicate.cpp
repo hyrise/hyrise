@@ -1,9 +1,24 @@
 #include "operator_scan_predicate.hpp"
 
+#include <memory>
+#include <optional>
+#include <ostream>
+#include <string>
+#include <utility>
+#include <vector>
+
+#include <boost/variant/get.hpp>
+
+#include "all_parameter_variant.hpp"
+#include "all_type_variant.hpp"
 #include "expression/abstract_predicate_expression.hpp"
+#include "expression/correlated_parameter_expression.hpp"
 #include "expression/expression_functional.hpp"
+#include "expression/placeholder_expression.hpp"
 #include "expression/value_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
+#include "storage/table.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
 
@@ -41,7 +56,7 @@ std::ostream& OperatorScanPredicate::output_to_stream(std::ostream& stream,
     column_name_left = table->column_name(column_id);
   }
 
-  stream << column_name_left << " " << predicate_condition;
+  stream << column_name_left << " " << predicate_condition << " ";
 
   if (table && is_column_id(value)) {
     stream << table->column_name(boost::get<ColumnID>(value));

@@ -16,7 +16,6 @@ add_subdirectory(googletest)
 add_subdirectory(libpqxx)
 add_subdirectory(magic_enum)
 add_subdirectory(nlohmann_json)
-add_subdirectory(robin-map)
 add_subdirectory(sparse-map)
 add_subdirectory(tpch-dbgen)
 add_subdirectory(zstd/build/cmake)
@@ -70,10 +69,9 @@ endif()
 add_library(cpp-btree INTERFACE)
 target_include_directories(cpp-btree INTERFACE cpp-btree/include/btree)
 
-
-# Build flat-hash-map
-add_library(flat-hash-map INTERFACE)
-target_include_directories(flat-hash-map INTERFACE flat_hash_map)
+# Build concurrentqueue
+add_library(concurrentqueue INTERFACE)
+target_include_directories(concurrentqueue INTERFACE concurrentqueue)
 
 
 # Build cxxopts library
@@ -300,7 +298,7 @@ externalproject_add(
     SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/jcch-dbgen
     BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/jcch-dbgen
     CONFIGURE_COMMAND bash -c "cp -r ${CMAKE_CURRENT_SOURCE_DIR}/jcch-dbgen/* ."
-    BUILD_COMMAND bash -c "output=$(make 2>&1) || (printf \"$output\\n\" && false)"
+    BUILD_COMMAND bash -c "output=$(CC=${CMAKE_C_COMPILER} make 2>&1) || (printf \"$output\\n\" && false)"
     INSTALL_COMMAND false  # install should never be called, this is a safe guard that fails if it is
     STEP_TARGETS build
 )
@@ -321,7 +319,7 @@ externalproject_add(
     SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/ssb-dbgen
     BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/ssb-dbgen
     CONFIGURE_COMMAND bash -c "cp -r ${CMAKE_CURRENT_SOURCE_DIR}/ssb-dbgen/* ."
-    BUILD_COMMAND bash -c "output=$(make 2>&1) || (printf \"$output\\n\" && false)"
+    BUILD_COMMAND bash -c "output=$(CC=${CMAKE_C_COMPILER} make 2>&1) || (printf \"$output\\n\" && false)"
     INSTALL_COMMAND false  # install should never be called, this is a safe guard that fails if it is
     STEP_TARGETS build
 )

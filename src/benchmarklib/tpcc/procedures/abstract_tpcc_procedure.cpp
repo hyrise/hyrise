@@ -1,14 +1,18 @@
 #include "abstract_tpcc_procedure.hpp"
 
+#include "benchmark_sql_executor.hpp"
+#include "concurrency/transaction_context.hpp"
 #include "hyrise.hpp"
-#include "sql/sql_pipeline_builder.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
+#include "utils/performance_warning.hpp"
 
 namespace hyrise {
 
 AbstractTPCCProcedure::AbstractTPCCProcedure(BenchmarkSQLExecutor& sql_executor) : _sql_executor(sql_executor) {
   PerformanceWarning(
-      "The TPC-C support is in a very early stage. Indexes are not used and even the most obvious optimizations are "
-      "not done yet.");
+      "The TPC-C support is in a very early stage. Constraints are not enforced, indexes are often not used, and even "
+      "the most obvious optimizations are not done yet.");
 }
 
 bool AbstractTPCCProcedure::execute() {
@@ -29,10 +33,10 @@ bool AbstractTPCCProcedure::execute() {
   return success;
 }
 
-// NOLINTNEXTLINE - we know that this is not a proper assignment
+// NOLINTNEXTLINE(cert-oop54-cpp): We know that this is not a proper assignment.
 AbstractTPCCProcedure& AbstractTPCCProcedure::operator=(const AbstractTPCCProcedure& other) {
   DebugAssert(&_sql_executor == &other._sql_executor,
-              "Can only assign AbstractTPCCProcedure if the sql_executors are the same");
+              "Can only assign AbstractTPCCProcedure if the sql_executors are the same.");
   // Doesn't assign anything as the only member _sql_executor is already the same.
   return *this;
 }

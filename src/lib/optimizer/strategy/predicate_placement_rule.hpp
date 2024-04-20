@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "abstract_rule.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
@@ -12,8 +13,10 @@ class PredicateNode;
 
 /**
  * Heuristic rule pushing non-expensive predicates down as far as possible (to reduce the result set early on) and
- * pulling expensive predicates up as far as possible. For the purpose of this rule, semi- and anti-joins are treated
- * as predicates as well.
+ * pulling expensive predicates up as far as possible. For the purpose of this rule, single-predicate semi- and
+ * anti-joins are treated as predicates, as well. We do not treat multi-predicate semi- and anti-joins as predicates.
+ * Though they also filter the left input, we cannot use shortcuts in the join implementation, which makes them
+ * equivalent to regular joins.
  *
  * PredicatePlacementRule::_is_expensive_predicate() determines what constitutes "expensive". Right now, we consider
  * predicates involving a correlated subquery as "expensive" and all other predicates as non-expensive.
@@ -48,7 +51,7 @@ class PredicatePlacementRule : public AbstractRule {
   static bool _is_expensive_predicate(const std::shared_ptr<AbstractExpression>& predicate);
 
   // Checks whether a given node would continue to be evaluable on top of a given LQP. This goes beyond
-  // expression_evaluable_on_lqp in that it also checks for AggregateExpressions that a predicate cannot be pushed
+  // expression_evaluable_on_lqp in that it also checks for WindowFunctionExpressions that a predicate cannot be pushed
   // beyond. However, it is tailored to this rule, which is why it is not globally available.
   static bool _is_evaluable_on_lqp(const std::shared_ptr<AbstractLQPNode>& node,
                                    const std::shared_ptr<AbstractLQPNode>& lqp);
