@@ -1,6 +1,9 @@
 #pragma once
 
 #include <iostream>
+#include <memory>
+#include <string>
+#include <unordered_map>
 
 #include "abstract_expression.hpp"
 

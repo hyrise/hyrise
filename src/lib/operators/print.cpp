@@ -1,20 +1,34 @@
 #include "print.hpp"
 
 #include <algorithm>
+#include <cstdint>
 #include <iomanip>
 #include <iostream>
 #include <memory>
+#include <ostream>
+#include <sstream>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include <boost/lexical_cast.hpp>
 
+#include "all_type_variant.hpp"
+#include "operators/abstract_operator.hpp"
+#include "operators/abstract_read_only_operator.hpp"
 #include "operators/table_wrapper.hpp"
 #include "sql/sql_pipeline_builder.hpp"
+#include "sql/sql_pipeline_statement.hpp"
 #include "storage/abstract_encoded_segment.hpp"
 #include "storage/abstract_segment.hpp"
 #include "storage/base_value_segment.hpp"
+#include "storage/encoding_type.hpp"
+#include "storage/mvcc_data.hpp"
 #include "storage/reference_segment.hpp"
+#include "storage/table.hpp"
+#include "storage/vector_compression/compressed_vector_type.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
 
 namespace {
@@ -22,11 +36,11 @@ namespace {
 using namespace hyrise;  // NOLINT
 
 bool has_print_mvcc_flag(const PrintFlags flags) {
-  return static_cast<uint32_t>(PrintFlags::Mvcc) & static_cast<uint32_t>(flags);
+  return (static_cast<uint32_t>(PrintFlags::Mvcc) & static_cast<uint32_t>(flags)) != 0;
 }
 
 bool has_print_ignore_chunk_boundaries_flag(const PrintFlags flags) {
-  return static_cast<uint32_t>(PrintFlags::IgnoreChunkBoundaries) & static_cast<uint32_t>(flags);
+  return (static_cast<uint32_t>(PrintFlags::IgnoreChunkBoundaries) & static_cast<uint32_t>(flags)) != 0;
 }
 
 }  // namespace
@@ -80,21 +94,21 @@ std::shared_ptr<const Table> Print::_on_execute() {
   const auto column_count = left_input_table()->column_count();
 
   // print column headers
-  _out << "=== Columns" << std::endl;
+  _out << "=== Columns\n";
   for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
     _out << "|" << std::setw(widths[column_id]) << left_input_table()->column_name(column_id) << std::setw(0);
   }
   if (has_print_mvcc_flag(_flags)) {
     _out << "||        MVCC        ";
   }
-  _out << "|" << std::endl;
+  _out << "|\n";
   for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
     _out << "|" << std::setw(widths[column_id]) << left_input_table()->column_data_type(column_id) << std::setw(0);
   }
   if (has_print_mvcc_flag(_flags)) {
     _out << "||_BEGIN|_END  |_TID  ";
   }
-  _out << "|" << std::endl;
+  _out << "|\n";
   for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
     const auto nullable = left_input_table()->column_is_nullable(column_id);
     _out << "|" << std::setw(widths[column_id]) << (nullable ? "null" : "not null") << std::setw(0);
@@ -102,7 +116,7 @@ std::shared_ptr<const Table> Print::_on_execute() {
   if (has_print_mvcc_flag(_flags)) {
     _out << "||      |      |      ";
   }
-  _out << "|" << std::endl;
+  _out << "|\n";
 
   // print each chunk
   const auto chunk_count = left_input_table()->chunk_count();
@@ -113,10 +127,10 @@ std::shared_ptr<const Table> Print::_on_execute() {
     }
 
     if (!has_print_ignore_chunk_boundaries_flag(_flags)) {
-      _out << "=== Chunk " << chunk_id << " ===" << std::endl;
+      _out << "=== Chunk " << chunk_id << " ===\n";
 
       if (chunk->size() == 0) {
-        _out << "Empty chunk." << std::endl;
+        _out << "Empty chunk.\n";
         continue;
       }
 
@@ -129,7 +143,7 @@ std::shared_ptr<const Table> Print::_on_execute() {
       if (has_print_mvcc_flag(_flags)) {
         _out << "|";
       }
-      _out << "|" << std::endl;
+      _out << "|\n";
     }
 
     // print the rows in the chunk
@@ -160,7 +174,7 @@ std::shared_ptr<const Table> Print::_on_execute() {
         _out << "|" << std::setw(6) << tid_string << std::setw(0);
         _out << "|";
       }
-      _out << std::endl;
+      _out << '\n';
     }
   }
 

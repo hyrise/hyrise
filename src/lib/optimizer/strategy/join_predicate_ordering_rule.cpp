@@ -1,12 +1,17 @@
 #include "join_predicate_ordering_rule.hpp"
 
 #include <algorithm>
+#include <memory>
+#include <string>
+#include <unordered_map>
 
 #include "cost_estimation/abstract_cost_estimator.hpp"
 #include "expression/abstract_predicate_expression.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "statistics/cardinality_estimator.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {

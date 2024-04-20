@@ -1,18 +1,23 @@
 #include "benchmark_table_encoder.hpp"
 
 #include <atomic>
+#include <iostream>
+#include <memory>
+#include <sstream>
+#include <string>
+#include <vector>
 
 #include "encoding_config.hpp"
 #include "hyrise.hpp"
-#include "resolve_type.hpp"
+#include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
 #include "statistics/generate_pruning_statistics.hpp"
-#include "storage/abstract_encoded_segment.hpp"
-#include "storage/base_value_segment.hpp"
 #include "storage/chunk_encoder.hpp"
+#include "storage/encoding_type.hpp"
 #include "storage/segment_encoding_utils.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace {
 
@@ -102,7 +107,7 @@ bool BenchmarkTableEncoder::encode(const std::string& table_name, const std::sha
       output << " - Column '" << table_name << "." << table->column_name(column_id) << "' of type ";
       output << column_data_type << " cannot be encoded as ";
       output << encoding_config.default_encoding_spec.encoding_type << " and is ";
-      output << "left Unencoded." << std::endl;
+      output << "left Unencoded.\n";
       std::cout << output.str();
       chunk_encoding_spec.emplace_back(EncodingType::Unencoded);
     }
@@ -113,11 +118,12 @@ bool BenchmarkTableEncoder::encode(const std::string& table_name, const std::sha
    */
   auto encoding_performed = std::atomic_bool{false};
   const auto column_data_types = table->column_data_types();
+  const auto chunk_count = table->chunk_count();
 
   auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
-  jobs.reserve(table->chunk_count());
+  jobs.reserve(chunk_count);
 
-  for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto encode = [&, chunk_id]() {
       const auto chunk = table->get_chunk(ChunkID{chunk_id});
       Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");

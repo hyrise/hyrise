@@ -1,5 +1,3 @@
-#include <memory>
-
 #include "base_test.hpp"
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
@@ -70,7 +68,7 @@ TEST_F(PredicateNodeTest, ForwardUniqueColumnCombinations) {
   EXPECT_TRUE(_table_node->unique_column_combinations().empty());
   EXPECT_TRUE(_predicate_node->unique_column_combinations().empty());
 
-  _table_a->add_soft_key_constraint({{ColumnID{0}}, KeyConstraintType::UNIQUE});
+  _table_a->add_soft_constraint(TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE});
   const auto ucc = UniqueColumnCombination{{_i}};
   EXPECT_EQ(_table_node->unique_column_combinations().size(), 1);
   EXPECT_TRUE(_table_node->unique_column_combinations().contains(ucc));
@@ -78,6 +76,20 @@ TEST_F(PredicateNodeTest, ForwardUniqueColumnCombinations) {
   const auto& unique_column_combinations = _predicate_node->unique_column_combinations();
   EXPECT_EQ(unique_column_combinations.size(), 1);
   EXPECT_TRUE(unique_column_combinations.contains(ucc));
+}
+
+TEST_F(PredicateNodeTest, ForwardOrderDependencies) {
+  EXPECT_TRUE(_table_node->order_dependencies().empty());
+  EXPECT_TRUE(_predicate_node->order_dependencies().empty());
+
+  _table_a->add_soft_constraint(TableOrderConstraint{{ColumnID{0}}, {ColumnID{1}}});
+  const auto od = OrderDependency{{_i}, {_f}};
+  EXPECT_EQ(_table_node->order_dependencies().size(), 1);
+  EXPECT_TRUE(_table_node->order_dependencies().contains(od));
+
+  const auto& order_dependencies = _predicate_node->order_dependencies();
+  EXPECT_EQ(order_dependencies.size(), 1);
+  EXPECT_TRUE(order_dependencies.contains(od));
 }
 
 }  // namespace hyrise

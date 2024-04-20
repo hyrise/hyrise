@@ -8,7 +8,6 @@
 #include <vector>
 
 #include "base_test.hpp"
-
 #include "expression/expression_functional.hpp"
 #include "operators/abstract_read_only_operator.hpp"
 #include "operators/limit.hpp"
@@ -154,7 +153,7 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
       table->append({i});
     }
 
-    table->get_chunk(static_cast<ChunkID>(ChunkID{0}))->finalize();
+    table->get_chunk(static_cast<ChunkID>(ChunkID{0}))->set_immutable();
 
     ChunkEncoder::encode_chunks(table, {ChunkID{0}}, SegmentEncodingSpec{_encoding_type});
 
@@ -880,7 +879,7 @@ TEST_P(OperatorsTableScanTest, ScanWithExcludedFirstChunk) {
   auto scan = std::make_shared<TableScan>(
       _int_int_partly_compressed,
       greater_than_equals_(get_column_expression(_int_int_partly_compressed, ColumnID{0}), 0));
-  scan->excluded_chunk_ids = {ChunkID{0}};
+  scan->excluded_chunk_ids = std::make_shared<std::vector<ChunkID>>(std::initializer_list<ChunkID>{ChunkID{0}});
   scan->execute();
 
   ASSERT_COLUMN_EQ(scan->get_output(), ColumnID{1}, expected);
@@ -1197,8 +1196,8 @@ TEST_P(OperatorsTableScanTest, SortedFlagReferenceSegments) {
   const auto segment_2 = std::make_shared<ReferenceSegment>(table, ColumnID{0}, pos_list_2);
   ref_table->append_chunk({segment_2});
 
-  ref_table->get_chunk(ChunkID{0})->finalize();
-  ref_table->get_chunk(ChunkID{1})->finalize();
+  ref_table->get_chunk(ChunkID{0})->set_immutable();
+  ref_table->get_chunk(ChunkID{1})->set_immutable();
   ref_table->get_chunk(ChunkID{0})->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Ascending));
   ref_table->get_chunk(ChunkID{1})->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Ascending));
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(ref_table));
@@ -1241,8 +1240,8 @@ TEST_P(OperatorsTableScanTest, SortedFlagSingleChunkNotGuaranteed) {
   const auto segment_2 = std::make_shared<ReferenceSegment>(table, ColumnID{0}, pos_list_2);
   ref_table->append_chunk({segment_2});
 
-  ref_table->get_chunk(ChunkID{0})->finalize();
-  ref_table->get_chunk(ChunkID{1})->finalize();
+  ref_table->get_chunk(ChunkID{0})->set_immutable();
+  ref_table->get_chunk(ChunkID{1})->set_immutable();
   ref_table->get_chunk(ChunkID{0})->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Ascending));
   ref_table->get_chunk(ChunkID{1})->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Ascending));
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(ref_table));
@@ -1288,7 +1287,7 @@ TEST_P(OperatorsTableScanTest, SortedFlagMultipleChunksReferenced) {
   const auto segment = std::make_shared<ReferenceSegment>(table, ColumnID{0}, pos_list_1);
   ref_table->append_chunk({segment});
 
-  ref_table->get_chunk(ChunkID{0})->finalize();
+  ref_table->get_chunk(ChunkID{0})->set_immutable();
   ref_table->get_chunk(ChunkID{0})->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Ascending));
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(ref_table));
   table_wrapper->execute();
@@ -1300,6 +1299,16 @@ TEST_P(OperatorsTableScanTest, SortedFlagMultipleChunksReferenced) {
   const auto& result_chunk_sorted = scan_sorted->get_output()->get_chunk(ChunkID{0});
   const auto& chunk_sorted_by = result_chunk_sorted->individually_sorted_by();
   ASSERT_TRUE(chunk_sorted_by.empty());
+}
+
+TEST_P(OperatorsTableScanTest, DeepCopyRetainsExcludedChunks) {
+  const auto table_scan =
+      create_table_scan(get_int_float_op(), ColumnID{0}, PredicateCondition::GreaterThanEquals, 1234);
+  table_scan->excluded_chunk_ids = std::make_shared<std::vector<ChunkID>>(std::initializer_list<ChunkID>{ChunkID{0}});
+  const auto new_table_scan = std::dynamic_pointer_cast<TableScan>(table_scan->deep_copy());
+  EXPECT_EQ(*table_scan->excluded_chunk_ids, *new_table_scan->excluded_chunk_ids);
+  EXPECT_EQ(table_scan->excluded_chunk_ids->data(),
+            new_table_scan->excluded_chunk_ids->data());  // Should be the same object.
 }
 
 }  // namespace hyrise

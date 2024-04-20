@@ -31,6 +31,12 @@ elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
         compiler_not_supported("Your clang version ${CMAKE_CXX_COMPILER_VERSION} is too old.")
     endif()
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
+    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 14.0)
+        compiler_not_supported("Hyrise does not support Apple clang compilers older than version 14.")
+    endif()
+    # In release mode, we found issues on ARM with loop unrolling (macOS Ventura, Apple Clang 14.0).
+    # As we do not benchmark on macOS, we can safely ignore this issue for now.
+    add_compile_options(-Wno-pass-failed)
     execute_process(
         COMMAND brew --prefix
         RESULT_VARIABLE BREW
@@ -44,21 +50,24 @@ elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
     if (NOT EXISTS "${BREW_PREFIX}/opt/llvm/bin/clang")
         set(CMAKE_OSX_INSTALL_TEXT "install ${CMAKE_OSX_BREW_TEXT}the official llvm/clang package using `install_dependencies.sh` or `brew install llvm --with-toolchain` and then ")
     endif()
-    compiler_not_supported("Apple's clang compiler is not supported because it is lacking support for recent C++ features. Please ${CMAKE_OSX_INSTALL_TEXT}run cmake with `-DCMAKE_C_COMPILER=${BREW_PREFIX}/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=${BREW_PREFIX}/opt/llvm/bin/clang++`.")
+    message(WARNING "On macOS, we recommend a recent clang compiler instead of Apple's clang compiler. Please ${CMAKE_OSX_INSTALL_TEXT}run cmake with `-DCMAKE_C_COMPILER=${BREW_PREFIX}/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=${BREW_PREFIX}/opt/llvm/bin/clang++`.")
 else()
     compiler_not_supported("You are using an unsupported compiler (${CMAKE_CXX_COMPILER_ID})! Compilation has only been tested with Clang (Linux + OS X) and GCC (Linux).")
 endif()
 
 # Enable address and undefined behavior sanitization if requested
-option(ENABLE_ADDR_UB_SANITIZATION "Set to ON to build Hyrise with ASAN and UBSAN enabled. Default: OFF" OFF)
-if (${ENABLE_ADDR_UB_SANITIZATION})
+option(ENABLE_ADDR_UB_LEAK_SANITIZATION "Set to ON to build Hyrise with ASAN and UBSAN enabled. Default: OFF" OFF)
+if (${ENABLE_ADDR_UB_LEAK_SANITIZATION})
     # add_compile_options() wants list, CMAKE_EXE_LINKER_FLAGS a string. There are probably cleverer ways than
     # duplicating the flags, but this is probably the simplest solution.
     # -fno-sanitize-recover=all is used to make UBsan fail (i.e., return a non-zero exit code) when an error is found.
     # -mllvm -asan-use-private-alias=1 fixes false positive ODR violation alerts for shared libraries, see https://github.com/google/sanitizers/issues/1017 and https://reviews.llvm.org/D137227
-    add_compile_options(-fsanitize=address,undefined -fno-sanitize-recover=all -fsanitize-blacklist=${CMAKE_CURRENT_SOURCE_DIR}/resources/.ubsan-blacklist.txt -fno-omit-frame-pointer -mllvm -asan-use-private-alias=1)
-    add_link_options(-fsanitize=address,undefined)
-    set(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=address,undefined -fno-sanitize-recover=all -fsanitize-blacklist=${CMAKE_CURRENT_SOURCE_DIR}/resources/.ubsan-blacklist.txt -fno-omit-frame-pointer")
+    add_compile_options(-fsanitize=address,undefined,leak -fno-sanitize-recover=all -fsanitize-blacklist=${CMAKE_CURRENT_SOURCE_DIR}/resources/.ubsan-blacklist.txt -fno-omit-frame-pointer -mllvm -asan-use-private-alias=1 -fsanitize-address-use-after-scope)
+    add_link_options(-fsanitize=address,undefined,leak)
+    set(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=address,undefined,leak -fno-sanitize-recover=all -fsanitize-blacklist=${CMAKE_CURRENT_SOURCE_DIR}/resources/.ubsan-blacklist.txt -fno-omit-frame-pointer")
+    add_definitions(-DHYRISE_WITH_ADDR_UB_LEAK_SAN=1)
+else()
+    add_definitions(-DHYRISE_WITH_ADDR_UB_LEAK_SAN=0)
 endif()
 
 # Enable thread sanitization if requested
@@ -69,6 +78,9 @@ if (${ENABLE_THREAD_SANITIZATION})
     add_compile_options(-fsanitize=thread -O1)
     add_link_options(-fsanitize=thread)
     set(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=thread")
+    add_definitions(-DHYRISE_WITH_TSAN=1)
+else()
+    add_definitions(-DHYRISE_WITH_TSAN=0)
 endif()
 
 # Set default build type if none was passed on the command line

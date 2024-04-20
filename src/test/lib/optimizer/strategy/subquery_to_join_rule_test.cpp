@@ -1,5 +1,3 @@
-#include "strategy_base_test.hpp"
-
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_column_expression.hpp"
@@ -14,6 +12,7 @@
 #include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/validate_node.hpp"
 #include "optimizer/strategy/subquery_to_join_rule.hpp"
+#include "strategy_base_test.hpp"
 
 namespace hyrise {
 

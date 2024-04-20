@@ -1,10 +1,18 @@
 #include "function_expression.hpp"
 
+#include <cstddef>
+#include <functional>
+#include <memory>
+#include <ostream>
 #include <sstream>
+#include <string>
+#include <unordered_map>
+#include <vector>
 
-#include <boost/container_hash/hash.hpp>
-
+#include "all_type_variant.hpp"
+#include "expression/abstract_expression.hpp"
 #include "expression_utils.hpp"
+#include "operators/abstract_operator.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {
@@ -41,7 +49,7 @@ std::shared_ptr<AbstractExpression> FunctionExpression::_on_deep_copy(
 }
 
 std::string FunctionExpression::description(const DescriptionMode mode) const {
-  std::stringstream stream;
+  auto stream = std::stringstream{};
 
   stream << function_type << "(";
   for (auto argument_idx = size_t{0}; argument_idx < arguments.size(); ++argument_idx) {
@@ -62,12 +70,12 @@ DataType FunctionExpression::data_type() const {
     case FunctionType::Absolute:
       return arguments.front()->data_type();
   }
-  Fail("Invalid enum value");
+  Fail("Invalid enum value.");
 }
 
 bool FunctionExpression::_shallow_equals(const AbstractExpression& expression) const {
   DebugAssert(dynamic_cast<const FunctionExpression*>(&expression),
-              "Different expression type should have been caught by AbstractExpression::operator==");
+              "Different expression type should have been caught by AbstractExpression::operator==.");
 
   const auto& function_expression = static_cast<const FunctionExpression&>(expression);
   return function_type == function_expression.function_type &&
@@ -75,7 +83,7 @@ bool FunctionExpression::_shallow_equals(const AbstractExpression& expression) c
 }
 
 size_t FunctionExpression::_shallow_hash() const {
-  return boost::hash_value(static_cast<size_t>(function_type));
+  return std::hash<FunctionType>{}(function_type);
 }
 
 std::ostream& operator<<(std::ostream& stream, const FunctionType function_type) {

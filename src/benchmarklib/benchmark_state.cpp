@@ -2,13 +2,16 @@
 
 #include <chrono>
 
+#include "benchmark_config.hpp"
+#include "utils/assert.hpp"
+
 namespace hyrise {
 
 BenchmarkState::BenchmarkState(const Duration init_max_duration) : max_duration(init_max_duration) {}
 
 // NOLINTNEXTLINE(bugprone-unhandled-self-assignment,cert-oop54-cpp)
 BenchmarkState& BenchmarkState::operator=(const BenchmarkState& other) {
-  Assert(state != State::Running && other.state != State::Running, "Cannot assign to or from a running benchmark");
+  Assert(state != State::Running && other.state != State::Running, "Cannot assign to or from a running benchmark.");
   state = other.state.load();
   benchmark_begin = other.benchmark_begin;
   benchmark_duration = other.benchmark_duration;

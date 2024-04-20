@@ -1,5 +1,3 @@
-#include "strategy_base_test.hpp"
-
 #include "cost_estimation/cost_estimator_logical.hpp"
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
@@ -9,6 +7,7 @@
 #include "optimizer/strategy/join_ordering_rule.hpp"
 #include "statistics/attribute_statistics.hpp"
 #include "statistics/table_statistics.hpp"
+#include "strategy_base_test.hpp"
 
 /**
  * We can't actually test much about the JoinOrderingRule, since it is highly dependent on the underlying algorithms

@@ -1,17 +1,32 @@
 #include "lqp_utils.hpp"
 
+#include <algorithm>
+#include <cstddef>
+#include <iterator>
+#include <memory>
+#include <optional>
+#include <set>
+#include <string>
+#include <unordered_set>
+#include <utility>
+#include <vector>
+
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_subquery_expression.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/change_meta_table_node.hpp"
+#include "logical_query_plan/data_dependencies/functional_dependency.hpp"
+#include "logical_query_plan/data_dependencies/order_dependency.hpp"
+#include "logical_query_plan/data_dependencies/unique_column_combination.hpp"
 #include "logical_query_plan/insert_node.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
-#include "logical_query_plan/static_table_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/union_node.hpp"
 #include "logical_query_plan/update_node.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace {
@@ -25,8 +40,8 @@ void lqp_create_node_mapping_impl(LQPNodeMapping& mapping, const std::shared_ptr
     return;
   }
 
-  Assert(lhs && rhs, "LQPs aren't equally structured, can't create mapping");
-  Assert(lhs->type == rhs->type, "LQPs aren't equally structured, can't create mapping");
+  Assert(lhs && rhs, "LQPs aren't equally structured, cannot create mapping.");
+  Assert(lhs->type == rhs->type, "LQPs aren't equally structured, cannot create mapping.");
 
   // To avoid traversing subgraphs of ORs twice, check whether we've been here already
   const auto mapping_iter = mapping.find(lhs);
@@ -179,9 +194,9 @@ std::optional<LQPMismatch> lqp_find_subplan_mismatch(const std::shared_ptr<const
 
 void lqp_replace_node(const std::shared_ptr<AbstractLQPNode>& original_node,
                       const std::shared_ptr<AbstractLQPNode>& replacement_node) {
-  DebugAssert(replacement_node->outputs().empty(), "Node can't have outputs");
+  DebugAssert(replacement_node->outputs().empty(), "Node cannot have outputs.");
   DebugAssert(!replacement_node->left_input() && !replacement_node->right_input(),
-              "Replacement node can't have inputs");
+              "Replacement node cannot have inputs.");
 
   const auto outputs = original_node->outputs();
   const auto input_sides = original_node->get_input_sides();
@@ -326,6 +341,7 @@ std::set<std::string> lqp_find_modified_tables(const std::shared_ptr<AbstractLQP
       case LQPNodeType::Intersect:
       case LQPNodeType::Except:
       case LQPNodeType::Mock:
+      case LQPNodeType::Window:
         return LQPVisitation::VisitInputs;
     }
     return LQPVisitation::VisitInputs;
@@ -403,7 +419,7 @@ std::vector<std::shared_ptr<AbstractLQPNode>> lqp_find_subplan_roots(const std::
 
 std::vector<std::shared_ptr<AbstractLQPNode>> lqp_find_nodes_by_type(const std::shared_ptr<AbstractLQPNode>& lqp,
                                                                      const LQPNodeType type) {
-  std::vector<std::shared_ptr<AbstractLQPNode>> nodes;
+  auto nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
   visit_lqp(lqp, [&](const auto& node) {
     if (node->type == type) {
       nodes.emplace_back(node);
@@ -415,7 +431,7 @@ std::vector<std::shared_ptr<AbstractLQPNode>> lqp_find_nodes_by_type(const std::
 }
 
 std::vector<std::shared_ptr<AbstractLQPNode>> lqp_find_leaves(const std::shared_ptr<AbstractLQPNode>& lqp) {
-  std::vector<std::shared_ptr<AbstractLQPNode>> nodes;
+  auto nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
   visit_lqp(lqp, [&](const auto& node) {
     if (node->input_count() > 0) {
       return LQPVisitation::VisitInputs;
@@ -428,38 +444,69 @@ std::vector<std::shared_ptr<AbstractLQPNode>> lqp_find_leaves(const std::shared_
   return nodes;
 }
 
-template <typename ColumnIDs>
-ExpressionUnorderedSet find_column_expressions(const AbstractLQPNode& lqp_node, const ColumnIDs& column_ids) {
+ExpressionUnorderedSet get_expressions_for_column_ids(const AbstractLQPNode& lqp_node,
+                                                      const std::set<ColumnID>& column_ids) {
+  DebugAssert(lqp_node.type == LQPNodeType::StoredTable || lqp_node.type == LQPNodeType::StaticTable ||
+                  lqp_node.type == LQPNodeType::Mock,
+              "Did not expect other node types than StoredTableNode, StaticTableNode, and MockNode.");
+  DebugAssert(!lqp_node.left_input(), "Only valid for data source nodes.");
+
+  const auto& output_expressions = lqp_node.output_expressions();
+  auto column_expressions = ExpressionUnorderedSet{column_ids.size()};
+
+  for (const auto& output_expression : output_expressions) {
+    DebugAssert(output_expression->type == ExpressionType::LQPColumn,
+                "Expected LQPColumnExpressions from original nodes.");
+    const auto& column_expression = static_cast<const LQPColumnExpression&>(*output_expression);
+
+    const auto original_column_id = column_expression.original_column_id;
+    DebugAssert(*column_expression.original_node.lock() == lqp_node,
+                "LQPColumnExpressions should reference the original node.");
+    if (column_ids.contains(original_column_id)) {
+      [[maybe_unused]] const auto [_, success] = column_expressions.emplace(output_expression);
+      DebugAssert(success, "Did not expect multiple column expressions for the same ColumnID.");
+    }
+  }
+
+  DebugAssert(column_ids.size() == column_expressions.size(), "Could not map all ColumnIDs.");
+
+  return column_expressions;
+}
+
+std::vector<std::shared_ptr<AbstractExpression>> get_expressions_for_column_ids(
+    const AbstractLQPNode& lqp_node, const std::vector<ColumnID>& column_ids) {
   DebugAssert(lqp_node.type == LQPNodeType::StoredTable || lqp_node.type == LQPNodeType::StaticTable ||
                   lqp_node.type == LQPNodeType::Mock,
               "Did not expect other node types than StoredTableNode, StaticTableNode and MockNode.");
   DebugAssert(!lqp_node.left_input(), "Only valid for data source nodes");
 
   const auto& output_expressions = lqp_node.output_expressions();
-  auto column_expressions = ExpressionUnorderedSet{};
-  column_expressions.reserve(column_ids.size());
+  auto column_expressions = std::vector<std::shared_ptr<AbstractExpression>>(column_ids.size());
 
   for (const auto& output_expression : output_expressions) {
-    const auto column_expression = dynamic_pointer_cast<LQPColumnExpression>(output_expression);
-    if (!column_expression) {
-      continue;
-    }
+    DebugAssert(output_expression->type == ExpressionType::LQPColumn,
+                "Expected LQPColumnExpressions from original nodes.");
+    const auto& column_expression = static_cast<const LQPColumnExpression&>(*output_expression);
 
-    const auto original_column_id = column_expression->original_column_id;
-    if (std::find(column_ids.cbegin(), column_ids.cend(), original_column_id) != column_ids.cend() &&
-        *column_expression->original_node.lock() == lqp_node) {
-      [[maybe_unused]] const auto [_, success] = column_expressions.emplace(column_expression);
-      DebugAssert(success, "Did not expect multiple column expressions for the same column id.");
+    const auto original_column_id = column_expression.original_column_id;
+    const auto it = std::find(column_ids.cbegin(), column_ids.cend(), original_column_id);
+    if (it != column_ids.end()) {
+      DebugAssert(*column_expression.original_node.lock() == lqp_node,
+                  "LQPColumnExpressions should reference the original node.");
+      const auto offset = std::distance(column_ids.cbegin(), it);
+      DebugAssert(!column_expressions[offset], "Did not expect multiple column expressions for the same column id.");
+      column_expressions[offset] = output_expression;
+    }
+  }
+
+  if constexpr (HYRISE_DEBUG) {
+    for (const auto& expression : column_expressions) {
+      Assert(expression, "Could not map all ColumnIDs.");
     }
   }
 
   return column_expressions;
 }
-
-template ExpressionUnorderedSet find_column_expressions(const AbstractLQPNode& lqp_node,
-                                                        const std::set<ColumnID>& column_ids);
-template ExpressionUnorderedSet find_column_expressions(const AbstractLQPNode& lqp_node,
-                                                        const std::vector<ColumnID>& column_ids);
 
 bool contains_matching_unique_column_combination(const UniqueColumnCombinations& unique_column_combinations,
                                                  const ExpressionUnorderedSet& expressions) {
@@ -469,8 +516,9 @@ bool contains_matching_unique_column_combination(const UniqueColumnCombinations&
   // Look for a unique column combination that is based on a subset of the given expressions.
   for (const auto& ucc : unique_column_combinations) {
     if (ucc.expressions.size() <= expressions.size() &&
-        std::all_of(ucc.expressions.cbegin(), ucc.expressions.cend(),
-                    [&](const auto& ucc_expression) { return expressions.contains(ucc_expression); })) {
+        std::all_of(ucc.expressions.cbegin(), ucc.expressions.cend(), [&](const auto& ucc_expression) {
+          return expressions.contains(ucc_expression);
+        })) {
       // Found a matching UCC.
       return true;
     }
@@ -522,7 +570,39 @@ FunctionalDependencies fds_from_unique_column_combinations(const std::shared_ptr
                                return (fd.determinants == determinants) && (fd.dependents == dependents);
                              }) == fds.cend(),
                 "Creating duplicate functional dependencies is unexpected.");
-    fds.emplace(determinants, dependents);
+    fds.emplace(std::move(determinants), std::move(dependents));
+  }
+  return fds;
+}
+
+FunctionalDependencies fds_from_order_dependencies(const std::shared_ptr<const AbstractLQPNode>& lqp,
+                                                   const OrderDependencies& order_dependencies) {
+  Assert(!order_dependencies.empty(), "Did not expect empty set of ODs.");
+
+  auto fds = FunctionalDependencies{};
+
+  // Collect non-nullable output expressions.
+  const auto& output_expressions = lqp->output_expressions();
+  auto output_expressions_non_nullable = ExpressionUnorderedSet{};
+  for (auto column_id = ColumnID{0}; column_id < output_expressions.size(); ++column_id) {
+    if (!lqp->is_column_nullable(column_id)) {
+      output_expressions_non_nullable.insert(output_expressions.at(column_id));
+    }
+  }
+
+  for (const auto& od : order_dependencies) {
+    auto determinants = ExpressionUnorderedSet{od.ordering_expressions.cbegin(), od.ordering_expressions.cend()};
+
+    // (1) Verify whether we can create an FD from the given OD (non-nullable expressions).
+    if (!std::all_of(determinants.cbegin(), determinants.cend(), [&](const auto& determinant_expression) {
+          return output_expressions_non_nullable.contains(determinant_expression);
+        })) {
+      continue;
+    }
+
+    // (2) Add FD with ordered expressions as dependents.
+    fds.emplace(std::move(determinants),
+                ExpressionUnorderedSet{od.ordered_expressions.cbegin(), od.ordered_expressions.cend()});
   }
   return fds;
 }
@@ -590,7 +670,7 @@ std::shared_ptr<AbstractLQPNode> find_diamond_origin_node(const std::shared_ptr<
   Assert(union_root_node->type == LQPNodeType::Union, "Expecting UnionNode as the diamond's root node.");
   DebugAssert(union_root_node->input_count() > 1, "Diamond root node does not have two inputs.");
   bool is_diamond = true;
-  std::optional<std::shared_ptr<AbstractLQPNode>> diamond_origin_node;
+  auto diamond_origin_node = std::optional<std::shared_ptr<AbstractLQPNode>>{};
   visit_lqp(union_root_node, [&](const auto& diamond_node) {
     if (diamond_node == union_root_node) {
       return LQPVisitation::VisitInputs;

@@ -1,6 +1,9 @@
 #pragma once
 
 #include <optional>
+#include <string>
+#include <tuple>
+#include <vector>
 
 #include <boost/hana/for_each.hpp>
 

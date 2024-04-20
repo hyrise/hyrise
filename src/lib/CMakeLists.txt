@@ -25,8 +25,6 @@ set(
     expression/abstract_expression.hpp
     expression/abstract_predicate_expression.cpp
     expression/abstract_predicate_expression.hpp
-    expression/aggregate_expression.cpp
-    expression/aggregate_expression.hpp
     expression/arithmetic_expression.cpp
     expression/arithmetic_expression.hpp
     expression/between_expression.cpp
@@ -81,6 +79,10 @@ set(
     expression/unary_minus_expression.hpp
     expression/value_expression.cpp
     expression/value_expression.hpp
+    expression/window_expression.cpp
+    expression/window_expression.hpp
+    expression/window_function_expression.cpp
+    expression/window_function_expression.hpp
     hyrise.cpp
     hyrise.hpp
     import_export/binary/binary_parser.cpp
@@ -115,6 +117,8 @@ set(
     logical_query_plan/create_view_node.hpp
     logical_query_plan/data_dependencies/functional_dependency.cpp
     logical_query_plan/data_dependencies/functional_dependency.hpp
+    logical_query_plan/data_dependencies/order_dependency.cpp
+    logical_query_plan/data_dependencies/order_dependency.hpp
     logical_query_plan/data_dependencies/unique_column_combination.cpp
     logical_query_plan/data_dependencies/unique_column_combination.hpp
     logical_query_plan/delete_node.cpp
@@ -164,6 +168,8 @@ set(
     logical_query_plan/update_node.hpp
     logical_query_plan/validate_node.cpp
     logical_query_plan/validate_node.hpp
+    logical_query_plan/window_node.cpp
+    logical_query_plan/window_node.hpp
     lossless_cast.cpp
     lossless_cast.hpp
     lossy_cast.hpp
@@ -180,7 +186,7 @@ set(
     operators/abstract_read_only_operator.hpp
     operators/abstract_read_write_operator.cpp
     operators/abstract_read_write_operator.hpp
-    operators/aggregate/aggregate_traits.hpp
+    operators/aggregate/window_function_traits.hpp
     operators/aggregate_hash.cpp
     operators/aggregate_hash.hpp
     operators/aggregate_sort.cpp
@@ -346,6 +352,8 @@ set(
     scheduler/node_queue_scheduler.hpp
     scheduler/operator_task.cpp
     scheduler/operator_task.hpp
+    scheduler/shutdown_task.cpp
+    scheduler/shutdown_task.hpp
     scheduler/task_queue.cpp
     scheduler/task_queue.hpp
     scheduler/task_utils.hpp
@@ -425,7 +433,6 @@ set(
     statistics/statistics_objects/range_filter.hpp
     statistics/table_statistics.cpp
     statistics/table_statistics.hpp
-    storage/abstract_encoded_segment.cpp
     storage/abstract_encoded_segment.hpp
     storage/abstract_segment.cpp
     storage/abstract_segment.hpp
@@ -433,12 +440,17 @@ set(
     storage/base_segment_accessor.hpp
     storage/base_segment_encoder.hpp
     storage/base_value_segment.hpp
+    storage/buffer/frame.cpp
+    storage/buffer/frame.hpp
+    storage/buffer/page_id.hpp
     storage/chunk.cpp
     storage/chunk.hpp
     storage/chunk_encoder.cpp
     storage/chunk_encoder.hpp
     storage/constraints/abstract_table_constraint.cpp
     storage/constraints/abstract_table_constraint.hpp
+    storage/constraints/constraint_utils.cpp
+    storage/constraints/constraint_utils.hpp
     storage/constraints/foreign_key_constraint.cpp
     storage/constraints/foreign_key_constraint.hpp
     storage/constraints/table_key_constraint.cpp
@@ -472,10 +484,6 @@ set(
     storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp
     storage/index/adaptive_radix_tree/adaptive_radix_tree_nodes.cpp
     storage/index/adaptive_radix_tree/adaptive_radix_tree_nodes.hpp
-    storage/index/b_tree/b_tree_index.cpp
-    storage/index/b_tree/b_tree_index.hpp
-    storage/index/b_tree/b_tree_index_impl.cpp
-    storage/index/b_tree/b_tree_index_impl.hpp
     storage/index/group_key/composite_group_key_index.cpp
     storage/index/group_key/composite_group_key_index.hpp
     storage/index/group_key/group_key_index.cpp
@@ -583,12 +591,9 @@ set(
     utils/abstract_plugin.hpp
     utils/aligned_size.hpp
     utils/assert.hpp
+    utils/atomic_max.hpp
     utils/check_table_equal.cpp
     utils/check_table_equal.hpp
-    utils/chunk_pruning_utils.cpp
-    utils/chunk_pruning_utils.hpp
-    utils/column_pruning_utils.cpp
-    utils/column_pruning_utils.hpp
     utils/copyable_atomic.hpp
     utils/date_time_utils.cpp
     utils/date_time_utils.hpp
@@ -607,6 +612,7 @@ set(
     utils/lossless_predicate_cast.cpp
     utils/lossless_predicate_cast.hpp
     utils/make_bimap.hpp
+    utils/map_prunable_subquery_predicates.hpp
     utils/meta_table_manager.cpp
     utils/meta_table_manager.hpp
     utils/meta_tables/abstract_meta_table.cpp
@@ -645,6 +651,8 @@ set(
     utils/plugin_manager.hpp
     utils/print_utils.cpp
     utils/print_utils.hpp
+    utils/pruning_utils.cpp
+    utils/pruning_utils.hpp
     utils/settings/abstract_setting.cpp
     utils/settings/abstract_setting.hpp
     utils/settings_manager.cpp
@@ -703,11 +711,11 @@ if (NOT "${ERASE_SEGMENT_TYPES_UPPER}" STREQUAL "")
 endif()
 
 # hyrise_impl should not be directly used, as linking to it regularly excludes unused symbols. See hyrise below.
-if(NOT ENABLE_COVERAGE AND NOT (APPLE AND (ENABLE_ADDR_UB_SANITIZATION OR ENABLE_THREAD_SANITIZATION)))
+if(NOT ENABLE_COVERAGE AND NOT (APPLE AND (ENABLE_ADDR_UB_LEAK_SANITIZATION OR ENABLE_THREAD_SANITIZATION)))
     add_library(hyrise_impl SHARED ${SOURCES})
 else()
-    # Use a static build for coverage information - otherwise .cpp files are missing from the report
-    # Also, the sanitizer builds on Mac require static linkage
+    # Use a static build for coverage information - otherwise .cpp files are missing from the report.
+    # Also, the sanitizer builds on Mac require static linkage.
     add_library(hyrise_impl STATIC ${SOURCES})
 endif()
 
@@ -737,11 +745,9 @@ target_link_libraries_system(
     hyrise_impl
 
     ${BOOST_LIBS}
-    cpp-btree
+    concurrentqueue
     cxxopts
-    flat-hash-map
     nlohmann_json::nlohmann_json
-    robin_map
     sparse_map
     SQLite::SQLite3
     tbb

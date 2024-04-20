@@ -8,10 +8,9 @@
 #include <vector>
 
 #include "base_test.hpp"
-#include "types.hpp"
-
 #include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
 #include "storage/index/adaptive_radix_tree/adaptive_radix_tree_nodes.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 
@@ -220,7 +219,8 @@ TEST_F(AdaptiveRadixTreeIndexTest, VectorOfInts) {
 }
 
 TEST_F(AdaptiveRadixTreeIndexTest, SimpleTest) {
-  std::vector<std::optional<int32_t>> values = {0, 0, 0, 0, 0, 17, 17, 17, 99, std::numeric_limits<int32_t>::max()};
+  const auto values =
+      std::vector<std::optional<int32_t>>{0, 0, 0, 0, 0, 17, 17, 17, 99, std::numeric_limits<int32_t>::max()};
 
   auto segment = create_dict_segment_by_type<int32_t>(DataType::Int, values);
   auto index = std::make_shared<AdaptiveRadixTreeIndex>(std::vector<std::shared_ptr<const AbstractSegment>>({segment}));
@@ -264,7 +264,7 @@ TEST_F(AdaptiveRadixTreeIndexTest, DenseVectorOfInts) {
     overall_value_counter += counter;
   }
 
-  std::vector<std::optional<int32_t>> values{};
+  auto values = std::vector<std::optional<int32_t>>{};
   values.reserve(overall_value_counter);
 
   auto values_to_write = overall_value_counter;

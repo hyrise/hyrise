@@ -1,5 +1,4 @@
 #include "base_test.hpp"
-
 #include "statistics/attribute_statistics.hpp"
 #include "statistics/generate_pruning_statistics.hpp"
 #include "statistics/statistics_objects/abstract_histogram.hpp"

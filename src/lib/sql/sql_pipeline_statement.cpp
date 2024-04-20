@@ -1,18 +1,24 @@
 #include "sql_pipeline_statement.hpp"
 
+#include <chrono>
 #include <fstream>
-#include <iomanip>
 #include <memory>
+#include <string>
+#include <tuple>
 #include <utility>
+#include <vector>
 
 #include <boost/algorithm/string.hpp>
 
 #include "SQLParser.h"
+#include "SQLParserResult.h"
+
+#include "concurrency/transaction_context.hpp"
 #include "create_sql_parser_error_message.hpp"
-#include "expression/value_expression.hpp"
 #include "hyrise.hpp"
+#include "logical_query_plan/lqp_translator.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
-#include "operators/export.hpp"
+#include "operators/abstract_operator.hpp"
 #include "operators/import.hpp"
 #include "operators/maintenance/create_prepared_plan.hpp"
 #include "operators/maintenance/create_table.hpp"
@@ -20,10 +26,12 @@
 #include "operators/maintenance/drop_table.hpp"
 #include "operators/maintenance/drop_view.hpp"
 #include "optimizer/optimizer.hpp"
+#include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "sql/sql_plan_cache.hpp"
 #include "sql/sql_translator.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {
@@ -41,7 +49,8 @@ SQLPipelineStatement::SQLPipelineStatement(const std::string& sql, std::shared_p
       _metrics(std::make_shared<SQLPipelineStatementMetrics>()) {
   Assert(!_parsed_sql_statement || _parsed_sql_statement->size() == 1,
          "SQLPipelineStatement must hold exactly one SQL statement");
-  DebugAssert(!_sql_string.empty(), "An SQLPipelineStatement should always contain a SQL statement string for caching");
+  DebugAssert(!_sql_string.empty(),
+              "An SQLPipelineStatement should always contain a SQL statement string for caching.");
 }
 
 void SQLPipelineStatement::set_transaction_context(const std::shared_ptr<TransactionContext>& transaction_context) {
@@ -89,7 +98,7 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_unoptimized_lo
   SQLTranslator sql_translator{_use_mvcc};
 
   auto translation_result = sql_translator.translate_parser_result(*parsed_sql);
-  std::vector<std::shared_ptr<AbstractLQPNode>> lqp_roots = translation_result.lqp_nodes;
+  const auto lqp_roots = translation_result.lqp_nodes;
   _translation_info = translation_result.translation_info;
 
   DebugAssert(lqp_roots.size() == 1, "LQP translation returned no or more than one LQP root for a single statement.");
@@ -223,8 +232,8 @@ const std::vector<std::shared_ptr<AbstractTask>>& SQLPipelineStatement::get_task
 
 std::vector<std::shared_ptr<AbstractTask>> SQLPipelineStatement::_get_transaction_tasks() {
   const auto& sql_statement = get_parsed_sql_statement();
-  const std::vector<hsql::SQLStatement*>& statements = sql_statement->getStatements();
-  const auto& transaction_statement = static_cast<const hsql::TransactionStatement&>(*statements.front());
+  const auto& transaction_statement =
+      static_cast<const hsql::TransactionStatement&>(*sql_statement->getStatements().front());
 
   switch (transaction_statement.command) {
     case hsql::kBeginTransaction:
@@ -236,11 +245,15 @@ std::vector<std::shared_ptr<AbstractTask>> SQLPipelineStatement::_get_transactio
     case hsql::kCommitTransaction:
       AssertInput(_transaction_context && !_transaction_context->is_auto_commit(),
                   "Cannot commit since there is no active transaction.");
-      return {std::make_shared<JobTask>([this] { _transaction_context->commit(); })};
+      return {std::make_shared<JobTask>([this] {
+        _transaction_context->commit();
+      })};
     case hsql::kRollbackTransaction:
       AssertInput(_transaction_context && !_transaction_context->is_auto_commit(),
                   "Cannot rollback since there is no active transaction.");
-      return {std::make_shared<JobTask>([this] { _transaction_context->rollback(RollbackReason::User); })};
+      return {std::make_shared<JobTask>([this] {
+        _transaction_context->rollback(RollbackReason::User);
+      })};
     default:
       Fail("Unexpected transaction command!");
   }

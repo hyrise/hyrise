@@ -37,7 +37,7 @@ class AbstractPosList : private Noncopyable {
     }
 
     bool equal(const PosListIterator& other) const {
-      DebugAssert(_pos_list == other._pos_list, "PosListIterator compared to iterator on different PosList instance");
+      DebugAssert(_pos_list == other._pos_list, "PosListIterator compared to iterator on different PosList instance.");
       return other._chunk_offset == _chunk_offset;
     }
 
@@ -46,7 +46,7 @@ class AbstractPosList : private Noncopyable {
     }
 
     DereferenceReturnType dereference() const {
-      DebugAssert(_chunk_offset < _pos_list->size(), "past-the-end PosListIterator dereferenced");
+      DebugAssert(_chunk_offset < _pos_list->size(), "Past-the-end PosListIterator dereferenced.");
       return (*_pos_list)[_chunk_offset];
     }
 

@@ -1,9 +1,14 @@
 #include "reference_segment.hpp"
 
+#include <cstddef>
 #include <memory>
-#include <string>
-#include <utility>
 
+#include "all_type_variant.hpp"
+#include "storage/abstract_segment.hpp"
+#include "storage/chunk.hpp"
+#include "storage/pos_lists/abstract_pos_list.hpp"
+#include "storage/table.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
 

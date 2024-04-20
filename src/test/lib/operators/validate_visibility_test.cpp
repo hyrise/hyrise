@@ -3,7 +3,6 @@
 #include <vector>
 
 #include "base_test.hpp"
-
 #include "concurrency/transaction_context.hpp"
 #include "hyrise.hpp"
 #include "operators/get_table.hpp"
@@ -53,7 +52,7 @@ TEST_F(OperatorsValidateVisibilityTest, Impossible) {
   validate->set_transaction_context(context);
   validate->execute();
 
-  EXPECT_EQ(validate->get_output()->row_count(), 0u);
+  EXPECT_EQ(validate->get_output()->row_count(), 0);
 }
 
 // no, yes, yes
@@ -67,7 +66,7 @@ TEST_F(OperatorsValidateVisibilityTest, PastDelete) {
   validate->set_transaction_context(context);
   validate->execute();
 
-  EXPECT_EQ(validate->get_output()->row_count(), 0u);
+  EXPECT_EQ(validate->get_output()->row_count(), 0);
 }
 
 // yes, no, yes
@@ -81,7 +80,7 @@ TEST_F(OperatorsValidateVisibilityTest, Impossible2) {
   validate->set_transaction_context(context);
   validate->execute();
 
-  EXPECT_EQ(validate->get_output()->row_count(), 0u);
+  EXPECT_EQ(validate->get_output()->row_count(), 0);
 }
 
 // yes, yes, no
@@ -95,7 +94,7 @@ TEST_F(OperatorsValidateVisibilityTest, OwnDeleteUncommitted) {
   validate->set_transaction_context(context);
   validate->execute();
 
-  EXPECT_EQ(validate->get_output()->row_count(), 0u);
+  EXPECT_EQ(validate->get_output()->row_count(), 0);
 }
 
 // no, no, yes
@@ -109,7 +108,7 @@ TEST_F(OperatorsValidateVisibilityTest, Impossible3) {
   validate->set_transaction_context(context);
   validate->execute();
 
-  EXPECT_EQ(validate->get_output()->row_count(), 0u);
+  EXPECT_EQ(validate->get_output()->row_count(), 0);
 }
 
 // yes, no, no
@@ -123,7 +122,7 @@ TEST_F(OperatorsValidateVisibilityTest, OwnInsert) {
   validate->set_transaction_context(context);
   validate->execute();
 
-  EXPECT_EQ(validate->get_output()->row_count(), 1u);
+  EXPECT_EQ(validate->get_output()->row_count(), 1);
 }
 
 // no, yes, no
@@ -137,7 +136,7 @@ TEST_F(OperatorsValidateVisibilityTest, PastInsertOrFutureDelete) {
   validate->set_transaction_context(context);
   validate->execute();
 
-  EXPECT_EQ(validate->get_output()->row_count(), 1u);
+  EXPECT_EQ(validate->get_output()->row_count(), 1);
 }
 
 // no, no, no
@@ -151,7 +150,7 @@ TEST_F(OperatorsValidateVisibilityTest, UncommittedInsertOrFutureInsert) {
   validate->set_transaction_context(context);
   validate->execute();
 
-  EXPECT_EQ(validate->get_output()->row_count(), 0u);
+  EXPECT_EQ(validate->get_output()->row_count(), 0);
 }
 
 }  // namespace hyrise

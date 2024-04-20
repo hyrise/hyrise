@@ -1,5 +1,3 @@
-#include "strategy_base_test.hpp"
-
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/mock_node.hpp"
@@ -7,6 +5,7 @@
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/union_node.hpp"
 #include "optimizer/strategy/predicate_merge_rule.hpp"
+#include "strategy_base_test.hpp"
 
 namespace hyrise {
 
@@ -25,7 +24,7 @@ class PredicateMergeRuleTest : public StrategyBaseTest {
 
     rule = std::make_shared<PredicateMergeRule>();
 
-    // Reducing the minimum_union_count so that plans are merged earlier, making the test cases shorter
+    // Reducing the minimum_union_count so that plans are merged earlier, making the test cases shorter.
     rule->minimum_union_count = 1;
   }
 

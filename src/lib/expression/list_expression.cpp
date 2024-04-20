@@ -1,8 +1,14 @@
 #include "list_expression.hpp"
 
-#include <sstream>
+#include <memory>
+#include <string>
+#include <unordered_map>
+#include <vector>
 
+#include "all_type_variant.hpp"
+#include "expression/abstract_expression.hpp"
 #include "expression_utils.hpp"
+#include "operators/abstract_operator.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {
@@ -24,7 +30,7 @@ std::shared_ptr<AbstractExpression> ListExpression::_on_deep_copy(
 }
 
 std::string ListExpression::description(const DescriptionMode mode) const {
-  return std::string("(") + expression_descriptions(arguments, mode) + ")";
+  return std::string{"("} + expression_descriptions(arguments, mode) + ")";
 }
 
 bool ListExpression::_shallow_equals(const AbstractExpression& expression) const {

@@ -1,11 +1,15 @@
 #include "abstract_cost_estimator.hpp"
 
+#include <memory>
+#include <optional>
 #include <queue>
 #include <unordered_set>
+#include <vector>
 
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "statistics/abstract_cardinality_estimator.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 

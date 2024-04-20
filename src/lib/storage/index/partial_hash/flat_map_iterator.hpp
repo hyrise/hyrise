@@ -1,5 +1,10 @@
 #pragma once
 
+#include <memory>
+#include <vector>
+
+#include "tsl/sparse_map.h"
+
 #include "flat_map_iterator_impl.hpp"
 #include "types.hpp"
 
@@ -62,6 +67,7 @@ class FlatMapIterator {
   using pointer = const RowID*;
   using reference = const RowID&;
 
+  FlatMapIterator() = default;
   explicit FlatMapIterator(std::unique_ptr<BaseFlatMapIteratorImpl>&& index_iterator);
   FlatMapIterator(const FlatMapIterator& other);
   FlatMapIterator& operator=(const FlatMapIterator& other);

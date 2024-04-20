@@ -1,7 +1,4 @@
-#include <memory>
-
 #include "base_test.hpp"
-
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/mock_node.hpp"
@@ -192,7 +189,6 @@ TEST_F(UnionNodeTest, FunctionalDependenciesUnionPositionsInvalidInput) {
   if constexpr (!HYRISE_DEBUG) {
     GTEST_SKIP();
   }
-
   const auto trivial_fd_a = FunctionalDependency({_a}, {_b, _c});
   const auto non_trivial_fd_b = FunctionalDependency({_b}, {_a});
 
@@ -257,6 +253,81 @@ TEST_F(UnionNodeTest, UniqueColumnCombinationsUnionAll) {
 
   // Check that no UCCs are forwarded.
   EXPECT_TRUE(union_node->unique_column_combinations().empty());
+}
+
+TEST_F(UnionNodeTest, OrderDependenciesUnionPositions) {
+  const auto od_a_to_b = OrderDependency{{_a}, {_b}};
+  const auto order_constraint = TableOrderConstraint{{ColumnID{0}}, {ColumnID{1}}};
+  _mock_node1->set_order_constraints({order_constraint});
+  EXPECT_EQ(_mock_node1->order_dependencies().size(), 1);
+
+  // Forward OD.
+  const auto& order_dependencies = _union_node->order_dependencies();
+  EXPECT_EQ(order_dependencies.size(), 1);
+  EXPECT_TRUE(order_dependencies.contains(od_a_to_b));
+}
+
+TEST_F(UnionNodeTest, OrderDependenciesUnionPositionsInvalidInput) {
+  const auto od_a_to_b = OrderDependency{{_a}, {_b}};
+  const auto order_constraint = TableOrderConstraint{{ColumnID{0}}, {ColumnID{1}}};
+  _mock_node1->set_order_constraints({order_constraint});
+  EXPECT_EQ(_mock_node1->order_dependencies().size(), 1);
+
+  // Fail if inputs have different output expressions.
+  _union_node->set_right_input(_mock_node2);
+  EXPECT_THROW(_union_node->order_dependencies(), std::logic_error);
+
+  // Fail if inputs have same output expressions, but different ODs.
+  // clang-format off
+  const auto join_node_1 =
+    JoinNode::make(JoinMode::Cross,
+      _mock_node1,
+      _mock_node2);
+  const auto join_node_2 =
+    JoinNode::make(JoinMode::Inner, equals_(_a, _u),
+      _mock_node1,
+      _mock_node2);
+  // clang-format on
+
+  _union_node->set_left_input(join_node_1);
+  _union_node->set_right_input(join_node_2);
+  EXPECT_THROW(_union_node->order_dependencies(), std::logic_error);
+}
+
+TEST_F(UnionNodeTest, OrderDependenciesUnionAll) {
+  const auto od_a_to_b = OrderDependency{{_a}, {_b}};
+  const auto order_constraint = TableOrderConstraint{{ColumnID{0}}, {ColumnID{1}}};
+  _mock_node1->set_order_constraints({order_constraint});
+  EXPECT_EQ(_mock_node1->order_dependencies().size(), 1);
+
+  {
+    // Keep OD if inputs have same output expressions.
+    const auto union_node = UnionNode::make(SetOperationMode::All, _mock_node1, _mock_node1);
+    const auto& order_dependencies = union_node->order_dependencies();
+    EXPECT_EQ(order_dependencies.size(), 1);
+    EXPECT_TRUE(order_dependencies.contains(od_a_to_b));
+  }
+  {
+    // Fail if inputs have different output expressions.
+    const auto union_node = UnionNode::make(SetOperationMode::All, _mock_node1, _mock_node2);
+    EXPECT_THROW(union_node->order_dependencies(), std::logic_error);
+  }
+  {
+    // Fail if inputs have same output expressions, but different ODs.
+    // clang-format off
+    const auto join_node_1 =
+      JoinNode::make(JoinMode::Cross,
+        _mock_node1,
+        _mock_node2);
+    const auto join_node_2 =
+      JoinNode::make(JoinMode::Inner, equals_(_a, _u),
+        _mock_node1,
+        _mock_node2);
+    // clang-format on
+
+    const auto union_node = UnionNode::make(SetOperationMode::All, join_node_1, join_node_2);
+    EXPECT_THROW(union_node->order_dependencies(), std::logic_error);
+  }
 }
 
 }  // namespace hyrise

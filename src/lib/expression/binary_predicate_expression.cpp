@@ -1,7 +1,15 @@
 #include "binary_predicate_expression.hpp"
 
+#include <algorithm>
+#include <memory>
 #include <sstream>
+#include <string>
+#include <unordered_map>
 
+#include "expression/abstract_expression.hpp"
+#include "expression/abstract_predicate_expression.hpp"
+#include "expression/expression_precedence.hpp"
+#include "operators/abstract_operator.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
@@ -38,7 +46,7 @@ std::shared_ptr<AbstractExpression> BinaryPredicateExpression::_on_deep_copy(
 }
 
 std::string BinaryPredicateExpression::description(const DescriptionMode mode) const {
-  std::stringstream stream;
+  auto stream = std::stringstream{};
 
   stream << _enclose_argument(*left_operand(), mode) << " ";
   stream << predicate_condition << " ";

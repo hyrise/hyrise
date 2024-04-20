@@ -1,22 +1,22 @@
 #pragma once
 
-#include <functional>
 #include <memory>
-#include <string>
-#include <utility>
+#include <type_traits>
 
 #include <boost/hana/contains.hpp>
 #include <boost/hana/equal.hpp>
+#include <boost/hana/fold_left.hpp>
 #include <boost/hana/for_each.hpp>
-#include <boost/hana/size.hpp>
 
 #include "all_type_variant.hpp"
+#include "storage/abstract_encoded_segment.hpp"
+#include "storage/abstract_segment.hpp"
+#include "storage/pos_lists/entire_chunk_pos_list.hpp"
+#include "storage/pos_lists/row_id_pos_list.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/resolve_encoded_segment_type.hpp"
 #include "storage/value_segment.hpp"
 #include "utils/assert.hpp"
-
-#include "storage/pos_lists/entire_chunk_pos_list.hpp"
 
 namespace hyrise {
 
@@ -75,10 +75,10 @@ template <typename Functor>
 void resolve_data_type(DataType data_type, const Functor& functor) {
   DebugAssert(data_type != DataType::Null, "data_type cannot be null.");
 
-  hana::for_each(data_type_pairs, [&](auto x) {
-    if (hana::first(x) == data_type) {
+  hana::for_each(data_type_pairs, [&](auto data_type_pair) {
+    if (hana::first(data_type_pair) == data_type) {
       // The + before hana::second - which returns a reference - converts its return value into a value
-      functor(+hana::second(x));
+      functor(+hana::second(data_type_pair));
       return;
     }
   });
@@ -182,7 +182,9 @@ std::enable_if_t<std::is_same_v<AbstractSegment, std::remove_const_t<AbstractSeg
   resolve_data_type(segment.data_type(), [&](auto type) {
     using ColumnDataType = typename decltype(type)::type;
 
-    resolve_segment_type<ColumnDataType>(segment, [&](auto& typed_segment) { functor(type, typed_segment); });
+    resolve_segment_type<ColumnDataType>(segment, [&](auto& typed_segment) {
+      functor(type, typed_segment);
+    });
   });
 }
 

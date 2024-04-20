@@ -1,5 +1,10 @@
 #pragma once
 
+#include <memory>
+#include <string>
+#include <unordered_map>
+#include <vector>
+
 #include "abstract_expression.hpp"
 #include "utils/make_bimap.hpp"
 

@@ -1,14 +1,16 @@
 #pragma once
 
-extern "C" {
-#include <tpcds-kit/tools/config.h>
-#include <tpcds-kit/tools/porting.h>
-}
-
+#include <limits>
 #include <memory>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
+
+extern "C" {
+#include "tpcds-kit/tools/config.h"
+#include "tpcds-kit/tools/porting.h"
+}
 
 #include "abstract_table_generator.hpp"
 #include "resolve_type.hpp"
@@ -65,6 +67,7 @@ class TPCDSTableGenerator final : public AbstractTableGenerator {
   std::shared_ptr<Table> generate_web_site(ds_key_t max_rows = _ds_key_max) const;
 
  protected:
+  IndexesByTable _indexes_by_table() const override;
   void _add_constraints(std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) const override;
 
  private:
