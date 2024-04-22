@@ -104,7 +104,7 @@ uint64_t MetaSystemUtilizationTable::_get_total_time() {
 
 /**
  * Returns the time in ns that ALL processes have spent on the CPU since an arbitrary point in the past. This might be
- *  used to differentiate between CPU time consumed by this process and by other processes on the same machine.
+ * used to differentiate between CPU time consumed by this process and by other processes on the same machine.
  */
 uint64_t MetaSystemUtilizationTable::_get_system_cpu_time() {
 #ifdef __linux__
@@ -130,7 +130,7 @@ uint64_t MetaSystemUtilizationTable::_get_system_cpu_time() {
   // The amount of time in /proc/stat is measured in units of clock ticks. sysconf(_SC_CLK_TCK) can be used to convert
   // it to ns.
   // NOLINTNEXTLINE(misc-include-cleaner): <stdlib.h> only indirectly defines _SC_CLK_TCK via bits/confname.h.
-  const auto active_ns = (active_ticks * std::nano::den) / sysconf(_SC_CLK_TCK);
+  const auto active_ns = (active_ticks / sysconf(_SC_CLK_TCK)) * std::nano::den;
 
   return active_ns;
 #endif

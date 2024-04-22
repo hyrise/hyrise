@@ -366,6 +366,7 @@ void NodeQueueScheduler::_group_tasks(const std::vector<std::shared_ptr<Abstract
     if (previous_task_offset_in_group > -1) {
       task->set_as_predecessor_of(tasks[previous_task_offset_in_group]);
     }
+    Assert(std::distance(tasks.rbegin(), iter) == round_robin_counter, "Hmm ... think again.");
     grouped_task_offsets[group_id] = static_cast<int32_t>(task_count - round_robin_counter - 1);
 
     ++round_robin_counter;
