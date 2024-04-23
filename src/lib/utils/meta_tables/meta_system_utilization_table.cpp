@@ -130,7 +130,7 @@ uint64_t MetaSystemUtilizationTable::_get_system_cpu_time() {
   // The amount of time in /proc/stat is measured in units of clock ticks. sysconf(_SC_CLK_TCK) can be used to convert
   // it to ns.
   // NOLINTNEXTLINE(misc-include-cleaner): <stdlib.h> only indirectly defines _SC_CLK_TCK via bits/confname.h.
-  const auto active_ns = (active_ticks / sysconf(_SC_CLK_TCK)) * std::nano::den;
+  const auto active_ns = (active_ticks * std::nano::den) / sysconf(_SC_CLK_TCK);
 
   return active_ns;
 #endif
