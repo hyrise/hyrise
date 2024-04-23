@@ -325,18 +325,21 @@ void write_groupby_output(const std::shared_ptr<const Table>& input_table,
                 continue;
               }
 
-              // TODO: don't use contains and below `pos_list_mapping[row_id.chunk_id]` but rather a single func?
-
-              if (!pos_list_mapping.contains(row_id.chunk_id)) {
+              const auto cached_poslist = pos_list_mapping.find(row_id.chunk_id);
+              if (cached_poslist == pos_list_mapping.end()) {
                 const auto& segment = input_table->get_chunk(row_id.chunk_id)->get_segment(input_column_id);
                 DebugAssert(std::dynamic_pointer_cast<const ReferenceSegment>(segment), "Expected a ReferenceSegment.");
                 const auto& reference_segment = static_cast<const ReferenceSegment&>(*segment);
+                const auto& ref_segment_pos_list = *reference_segment.pos_list();
 
+                pos_list.push_back(ref_segment_pos_list[row_id.chunk_offset]);
                 pos_list_mapping.emplace(row_id.chunk_id,
-                                         static_cast<const AbstractPosList*>(&*reference_segment.pos_list()));
+                                         static_cast<const AbstractPosList*>(&ref_segment_pos_list));
+              } else {
+                pos_list.push_back((*cached_poslist->second)[row_id.chunk_offset]);
               }
 
-              pos_list.push_back((*pos_list_mapping[row_id.chunk_id])[row_id.chunk_offset]);
+              
             }
           });
     }
