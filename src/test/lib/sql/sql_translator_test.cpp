@@ -282,6 +282,12 @@ TEST_F(SQLTranslatorTest, Coalesce) {
 
   // COALESCE list must not be empty.
   EXPECT_THROW(sql_to_lqp_helper("SELECT COALESCE();"), InvalidInputException);
+
+  // All arguments must have the compatible data types: either all strings, all integral, or all floating-point.
+  EXPECT_THROW(sql_to_lqp_helper("SELECT COALESCE(a, 0.0) FROM int_float;"), InvalidInputException);
+  EXPECT_THROW(sql_to_lqp_helper("SELECT COALESCE(b, 0) FROM int_float;"), InvalidInputException);
+  EXPECT_THROW(sql_to_lqp_helper("SELECT COALESCE(a, '0') FROM int_float;"), InvalidInputException);
+  EXPECT_THROW(sql_to_lqp_helper("SELECT COALESCE(b, '0') FROM int_float;"), InvalidInputException);
 }
 
 TEST_F(SQLTranslatorTest, SelectListAlias) {
