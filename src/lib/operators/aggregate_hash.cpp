@@ -338,8 +338,6 @@ void write_groupby_output(const std::shared_ptr<const Table>& input_table,
               } else {
                 pos_list.push_back((*cached_poslist->second)[row_id.chunk_offset]);
               }
-
-              
             }
           });
     }
