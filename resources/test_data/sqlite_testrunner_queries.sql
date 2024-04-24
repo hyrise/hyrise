@@ -117,7 +117,6 @@ SELECT a, b, b+b AS e, b+b+NULL AS f FROM mixed_null;
 SELECT 1 + 5.6 > 7 OR 2 > 1 AS i FROM mixed;
 SELECT 2 / 0, b / 0, 50 / id FROM mixed;
 SELECT 2 % 0, b % 0, 50 % id FROM mixed;
-SELECT ABS(id - b) FROM mixed;
 
 -- Aliases
 SELECT R.a, S.a FROM mixed AS R, mixed AS S;
@@ -444,6 +443,14 @@ SELECT SUBSTR('migz', -18, 19) AS s;
 SELECT SUBSTR('HELLO', 5000, 20) AS s;
 SELECT SUBSTR(d, id - 10, b) AS s FROM mixed ORDER BY id;
 SELECT SUBSTR(d, b / 10, b / 20) AS s FROM mixed_null;
+
+-- ABS
+SELECT ABS(id - b) FROM mixed;
+SELECT ABS(b - c) FROM mixed_null;
+SELECT ABS(CASE b WHEN id % 2 = 0 THEN b ELSE b * -1 END) = b AS abs_equal from mixed;
+SELECT ABS(CASE c WHEN id % 2 = 0 THEN c ELSE c * -1.0 END) = c AS abs_equal from mixed;
+SELECT ABS(CASE b WHEN a = 'a' THEN b ELSE b * -1 END) = b AS abs_b from mixed_null;
+SELECT ABS(CASE c WHEN a = 'a' THEN c ELSE c * -1.0 END) = c AS abs_c from mixed_null;
 
 -- LIKE
 SELECT * FROM mixed WHERE d LIKE '%a%b%';

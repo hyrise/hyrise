@@ -25,8 +25,9 @@ FunctionExpression::FunctionExpression(const FunctionType init_function_type,
       Assert(arguments.size() == 3, "Substring expects 3 arguments.");
       Assert(arguments[0]->data_type() == DataType::String || arguments[0]->data_type() == DataType::Null,
              "Substring expects an expression with data type String or Null as first argument.");
-      for (const auto& argument : {arguments[1], arguments[2]}) {
-        Assert(argument->data_type() == DataType::Int || argument->data_type() == DataType::Null,
+      for (auto argument_idx = size_t{1}; argument_idx <= size_t{2}; ++argument_idx) {
+        Assert(arguments[argument_idx]->data_type() == DataType::Int ||
+                   arguments[argument_idx]->data_type() == DataType::Null,
                "Substring expects expressions with data type Integer or Null as second and third argument.");
       }
       break;

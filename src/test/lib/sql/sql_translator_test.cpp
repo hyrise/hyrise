@@ -1875,7 +1875,7 @@ TEST_F(SQLTranslatorTest, ParameterIDAllocation) {
 TEST_F(SQLTranslatorTest, UseMvcc) {
   const auto query = "SELECT * FROM int_float, int_float2 WHERE int_float.a = int_float2.b";
 
-  hsql::SQLParserResult parser_result;
+  auto parser_result = hsql::SQLParserResult{};
   hsql::SQLParser::parseSQLString(query, &parser_result);
   Assert(parser_result.isValid(), create_sql_parser_error_message(query, parser_result));
 
@@ -1900,6 +1900,27 @@ TEST_F(SQLTranslatorTest, Substr) {
   EXPECT_LQP_EQ(actual_lqp_a, expected_lqp);
   EXPECT_LQP_EQ(actual_lqp_b, expected_lqp);
   EXPECT_LQP_EQ(actual_lqp_c, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, Abs) {
+  const auto actual_lqp_a = sql_to_lqp_helper("SELECT ABS(-1.2)").first;
+  const auto actual_lqp_b = sql_to_lqp_helper("SELECT ABS(a - b) FROM int_float").first;
+
+  // clang-format off
+  const auto expected_lqp_a =
+  ProjectionNode::make(expression_vector(abs_(unary_minus_(1.2))),
+    DummyTableNode::make());
+
+  const auto expected_lqp_b =
+  ProjectionNode::make(expression_vector(abs_(sub_(int_float_a, int_float_b))),
+    stored_table_node_int_float);
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp_a, expected_lqp_a);
+  EXPECT_LQP_EQ(actual_lqp_b, expected_lqp_b);
+
+  // The absolute value of strings is undefined.
+  EXPECT_THROW(sql_to_lqp_helper("SELECT ABS(b) FROM int_string"), std::logic_error);
 }
 
 TEST_F(SQLTranslatorTest, Exists) {

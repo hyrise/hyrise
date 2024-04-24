@@ -805,21 +805,21 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_functio
     const FunctionExpression& expression) {
   switch (expression.function_type) {
     case FunctionType::Concatenate:
-    case FunctionType::Substring:
       if constexpr (std::is_same_v<Result, pmr_string>) {
-        if (expression.function_type == FunctionType::Substring) {
-          return _evaluate_substring(expression.arguments);
-        }
         return _evaluate_concatenate(expression.arguments);
       }
-
-      Fail("Function can only be evaluated to a string.");
+      Fail("CONCAT() can only be evaluated to a string.");
+    case FunctionType::Substring:
+      if constexpr (std::is_same_v<Result, pmr_string>) {
+        return _evaluate_substring(expression.arguments);
+      }
+      Fail("SUBSTR() can only be evaluated to a string.");
     case FunctionType::Absolute:
       if constexpr (!std::is_same_v<Result, pmr_string>) {
         Assert(expression.arguments.size() == 1, "ABS expects exactly one argument.");
         return _evaluate_absolute<Result>(expression.arguments.front());
       }
-      Fail("ABS cannot be evaluated to a string.");
+      Fail("ABS() cannot be evaluated to a string.");
   }
   Fail("Invalid enum value.");
 }
