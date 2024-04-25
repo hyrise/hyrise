@@ -69,7 +69,7 @@ void NodeQueueScheduler::begin() {
   // Assuming NUM_GROUPS_MIN_FACTOR=0.1 and 128 workers, we would not group tasks with less than 25 tasks
   // (2 * 128 * 0.1).
   _min_task_count_for_regrouping =
-      static_cast<size_t>(2.0f * static_cast<float>(_worker_count) * NUM_GROUPS_MIN_FACTOR);
+      std::max(size_t{8}, static_cast<size_t>(2.0f * static_cast<float>(_worker_count) * NUM_GROUPS_MIN_FACTOR));
 
   // Everything above this limit yields the max value for grouping.
   _regrouping_upper_limit = _worker_count * UPPER_LIMIT_QUEUE_SIZE_FACTOR;
@@ -303,7 +303,7 @@ std::optional<size_t> NodeQueueScheduler::determine_group_count(
   // revisited (see check for common NodeID in _group_tasks()).
   const auto first_task_node_id = tasks[0]->node_id();
 
-  // Ensure short cut taken below to test for node_id are valid.
+  // Ensure short cuts taken below to test for node_id are valid.
   DebugAssert(INVALID_NODE_ID == std::numeric_limits<NodeID::base_type>::max(), "Unexpected value for INVALID_NODE_ID");
   DebugAssert(CURRENT_NODE_ID == INVALID_NODE_ID - 1, "Unexpected value for CURRENT_NODE_ID");
   const auto node_id_for_queue_check =
