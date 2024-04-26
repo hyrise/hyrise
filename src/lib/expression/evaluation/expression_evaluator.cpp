@@ -1510,8 +1510,16 @@ std::shared_ptr<ExpressionResult<pmr_string>> ExpressionEvaluator::_evaluate_sub
   DebugAssert(arguments.size() == 3, "SUBSTR expects three arguments.");
 
   const auto strings = evaluate_expression_to_result<pmr_string>(*arguments[0]);
-  const auto starts = evaluate_expression_to_result<int32_t>(*arguments[1]);
-  const auto lengths = evaluate_expression_to_result<int32_t>(*arguments[2]);
+  auto starts_expression = arguments[1];
+  if (starts_expression->data_type() == DataType::Long) {
+    starts_expression = cast_(starts_expression, DataType::Int);
+  }
+  auto lengths_expression = arguments[2];
+  if (lengths_expression->data_type() == DataType::Long) {
+    lengths_expression = cast_(lengths_expression, DataType::Int);
+  }
+  const auto starts = evaluate_expression_to_result<int32_t>(*starts_expression);
+  const auto lengths = evaluate_expression_to_result<int32_t>(*lengths_expression);
 
   const auto row_count = _result_size(strings->size(), starts->size(), lengths->size());
 

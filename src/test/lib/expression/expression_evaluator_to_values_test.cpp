@@ -458,8 +458,8 @@ TEST_F(ExpressionEvaluatorToValuesTest, SubstrLiterals) {
   EXPECT_TRUE(test_expression<pmr_string>(*substr_("Hello World", -5, -2), {""}));
   EXPECT_TRUE(test_expression<pmr_string>(*substr_("Hello World", 4, 40), {"lo World"}));
   EXPECT_TRUE(test_expression<pmr_string>(*substr_("Hello World", 20, 1), {""}));
-  // TODO(anyone) enable once casting expressions are in, so SUBSTR can cast this 4ul -> 4i
-  //  EXPECT_TRUE(test_expression<pmr_string>(*substr("Hello World", int64_t{4}, 4), {"lo W"}));
+  EXPECT_TRUE(test_expression<pmr_string>(*substr_("Hello World", int64_t{4}, 4), {"lo W"}));
+  EXPECT_TRUE(test_expression<pmr_string>(*substr_("Hello World", 4, int64_t{4}), {"lo W"}));
   EXPECT_TRUE(test_expression<pmr_string>(*substr_(null_(), 1, 2), {std::nullopt}));
   EXPECT_TRUE(test_expression<pmr_string>(*substr_("Hello World", null_(), 2), {std::nullopt}));
   EXPECT_TRUE(test_expression<pmr_string>(*substr_("Hello World", 2, null_()), {std::nullopt}));

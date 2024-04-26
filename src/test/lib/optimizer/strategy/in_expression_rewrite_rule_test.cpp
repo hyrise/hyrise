@@ -32,7 +32,7 @@ class InExpressionRewriteRuleTest : public StrategyBaseTest {
     col_large = many_row_node->get_column("col_large");
 
     single_element_in_expression = in_(col_a, list_(1));
-    two_element_functional_in_expression = in_(substr_(col_large, 1, 5), list_("85669", "86197"));
+    two_element_functional_in_expression = in_(abs_(col_large), list_(85669, 86197));
     five_element_in_expression = in_(col_a, list_(1, 2, 3, 4, 5));
     five_element_not_in_expression = not_in_(col_a, list_(1, 2, 3, 4, 5));
     duplicate_element_in_expression = in_(col_a, list_(1, 2, 1));
