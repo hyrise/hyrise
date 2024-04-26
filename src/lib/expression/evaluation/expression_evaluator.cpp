@@ -40,11 +40,11 @@
 #include "expression/pqp_subquery_expression.hpp"
 #include "expression/value_expression.hpp"
 #include "expression_functors.hpp"
-#include "hyrise.hpp"
 #include "like_matcher.hpp"
 #include "lossy_cast.hpp"
 #include "null_value.hpp"
 #include "operators/abstract_operator.hpp"
+#include "operators/pqp_utils.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/operator_task.hpp"
 #include "storage/base_value_segment.hpp"
@@ -152,6 +152,19 @@ std::shared_ptr<AbstractExpression> rewrite_in_list_expression(const InExpressio
   }
 
   return rewritten_expression;
+}
+
+// Traverse the PQP of a correlated subquery and execute each operator. `AbstractOperator::execute()` ensures that no
+// operator is executed multiple times, even for diamonds. However, we can visit operators multiple times for complex
+// subqueries. We currently do not consider this a bottleneck.
+void execute_correlated_subquery_recursively(const std::shared_ptr<AbstractOperator>& op) {
+  if (!op) {
+    return;
+  }
+
+  execute_correlated_subquery_recursively(op->mutable_left_input());
+  execute_correlated_subquery_recursively(op->mutable_right_input());
+  op->execute();
 }
 
 }  // namespace
@@ -972,8 +985,18 @@ std::vector<std::shared_ptr<const Table>> ExpressionEvaluator::_evaluate_subquer
     _materialize_segment_if_not_yet_materialized(parameter.second);
   }
 
+  // Ensure we are the only ones to execute the input PQP for correlated subqueries and set their parameters.
+  visit_pqp(expression.pqp, [](const auto& op) {
+    Assert(op->state() == OperatorState::Created,
+           "Only the ExpressionEvaluator should manage and excute operators of correlated subqueries.");
+    // Check this for all PQP nodes in debug builds, but only for the root node in release.
+    if constexpr (HYRISE_DEBUG) {
+      return PQPVisitation::VisitInputs;
+    } else {
+      return PQPVisitation::DoNotVisitInputs;
+    }
+  });
   auto results = std::vector<std::shared_ptr<const Table>>{_output_row_count};
-
   for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(_output_row_count); ++chunk_offset) {
     results[chunk_offset] = _evaluate_subquery_expression_for_row(expression, chunk_offset);
   }
@@ -983,8 +1006,9 @@ std::vector<std::shared_ptr<const Table>> ExpressionEvaluator::_evaluate_subquer
 
 std::shared_ptr<const Table> ExpressionEvaluator::_evaluate_subquery_expression_for_row(
     const PQPSubqueryExpression& expression, const ChunkOffset chunk_offset) {
+  DebugAssert(expression.is_correlated(), "Uncorrelated subqueries should not reach this point.");
   Assert(expression.parameters.empty() || _chunk,
-         "Sub-SELECT references external Columns but Expression does not operate on a table/chunk.");
+         "Sub-SELECT references external columns but expression does not operate on a table/chunk.");
 
   const auto expression_parameter_count = expression.parameters.size();
   auto parameters = std::unordered_map<ParameterID, AllTypeVariant>{};
@@ -1000,20 +1024,13 @@ std::shared_ptr<const Table> ExpressionEvaluator::_evaluate_subquery_expression_
     parameters.emplace(parameter_id, value);
   }
 
-  auto row_pqp = expression.pqp;
-  if (expression.is_correlated()) {
-    // Operators cache results which we cannot reuse in correlated subqueries due to changing parameters.
-    // Therefore, PQPs are deep-copied to ensure that we start without cached results.
-    row_pqp = expression.pqp->deep_copy();
-    row_pqp->set_parameters(parameters);
-    const auto& [tasks, _] = OperatorTask::make_tasks_from_operator(row_pqp);
-    Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
-  } else {
-    // Uncorrelated subqueries should have been scheduled and executed just like regular input operators.
-    Assert(row_pqp->state() == OperatorState::ExecutedAndAvailable,
-           "Uncorrelated subquery was not executed or has already been cleared.");
-  }
-
+  // Operators cache results which we cannot reuse in correlated subqueries due to changing parameters. Thus, PQPs are
+  // deep-copied to ensure that we start without cached results. We do NOT create tasks and schedule them accordingly.
+  // As we execute the subquery for each row, this would easily trigger thousands of schedulings with high overhead.
+  // Operators that must (and can) parallelize should spawn own tasks anyways.
+  const auto row_pqp = expression.pqp->deep_copy();
+  row_pqp->set_parameters(parameters);
+  execute_correlated_subquery_recursively(row_pqp);
   return row_pqp->get_output();
 }
 
