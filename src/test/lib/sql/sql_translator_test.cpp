@@ -266,7 +266,7 @@ TEST_F(SQLTranslatorTest, CaseExpressionSearched) {
 
 TEST_F(SQLTranslatorTest, Coalesce) {
   // Coalesce is just syntactic sugar for a nested CASE WHEN expression IS NOT NULL THEN expression ...
-  const auto [actual_lqp, translation_info] = sql_to_lqp_helper("SELECT COALESCE(a, a + 1, 1) FROM int_float;");
+  const auto [actual_lqp, _] = sql_to_lqp_helper("SELECT COALESCE(a, a + 1, 1) FROM int_float;");
 
   // clang-format off
   const auto expression = case_(is_not_null_(int_float_a),

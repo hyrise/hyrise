@@ -428,6 +428,7 @@ SELECT COALESCE(b, CAST(c AS INT), 0) b_not_null FROM mixed_null;
 SELECT COALESCE(b, 0) + COALESCE(c, 0.0) sum_not_null FROM mixed_null;
 -- COALESCE returns the first argument when it is not NULL, else the provided alternative.
 SELECT COALESCE(c, 0.0) = (CASE WHEN c is NULL THEN 0.0 ELSE c END) coalesce_eq FROM mixed_null;
+SELECT COALESCE(NULL, b, NULL) b FROM mixed_null; -- This is just b.
 
 -- IN
 SELECT * FROM id_int_int_int_100 WHERE a IN (24, 55, 78)

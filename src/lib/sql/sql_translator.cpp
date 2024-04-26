@@ -2108,12 +2108,17 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
         return std::make_shared<FunctionExpression>(function_iter->second, arguments);
       }
 
-      // COALESCE(a, b, c) is just syntactic sugar for the following CASE expression:
-      // CASE
-      //    WHEN (a IS NOT NULL) THEN a
-      //    WHEN (b IS NOT NULL) THEN b
-      //    ELSE c
-      // END
+      // According to the SQL standard (SQL:2023, Part 2: Foundation, p. 251: <case expression>),
+      // `COALESCE(a, b, ..., x, y)` is syntactic sugar for:
+      //
+      //     CASE
+      //       WHEN a IS NOT NULL THEN a
+      //       WHEN b IS NOT NULL THEN b
+      //       ...
+      //       WHEN x IS NOT NULL THEN x
+      //       ELSE y
+      //     END
+      //
       // TODO(anyone): Though we have not seen this in benchmarks, there is no reason to add COALESCE list arguments if
       // the preceding argument is not nullable.
       if (name == "COALESCE") {
