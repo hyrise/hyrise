@@ -808,20 +808,20 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_functio
       if constexpr (std::is_same_v<Result, pmr_string>) {
         return _evaluate_concatenate(expression.arguments);
       }
-      Fail("CONCAT() can only be evaluated to a string.");
+      Fail("CONCAT() can only be evaluated on strings.");
     case FunctionType::Substring:
       if constexpr (std::is_same_v<Result, pmr_string>) {
         return _evaluate_substring(expression.arguments);
       }
-      Fail("SUBSTR() can only be evaluated to a string.");
+      Fail("SUBSTR() can only be evaluated on strings.");
     case FunctionType::Absolute:
       if constexpr (!std::is_same_v<Result, pmr_string>) {
-        Assert(expression.arguments.size() == 1, "ABS expects exactly one argument.");
+        Assert(expression.arguments.size() == 1, "ABS() expects exactly one argument.");
         return _evaluate_absolute<Result>(expression.arguments.front());
       }
-      Fail("ABS() cannot be evaluated to a string.");
+      Fail("ABS() cannot be evaluated on strings.");
   }
-  Fail("Invalid enum value.");
+  Fail("GCC thinks this is reachable and expects a return or an exception.");
 }
 
 template <typename Result>

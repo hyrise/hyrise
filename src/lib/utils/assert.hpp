@@ -15,7 +15,7 @@
  * --> Use DebugAssert() whenever a certain invariant must hold, as in:
  *
  * int divide(int numerator, int denominator) {
- *   DebugAssert(denominator == 0, "Divisions by zero are not allowed");
+ *   DebugAssert(denominator != 0, "Divisions by zero are not allowed.");
  *   return numerator / denominator;
  * }
  *
@@ -27,7 +27,7 @@
  *     case 0: //...
  *     case 3: //...
  *     case 17: //...
- *     default: Fail("Illegal parameter");
+ *     default: Fail("Illegal parameter.");
  * }
  *
  * --> Use Assert() whenever an invariant should be checked even in release builds, either because testing it is very
@@ -40,12 +40,14 @@
 namespace hyrise {
 
 namespace detail {
-// We need this indirection so that we can throw exceptions from destructors without the compiler complaining. That is
-// generally forbidden and might lead to std::terminate, but since we don't want to handle most errors anyway,
-// that's fine.
+
+// We need this indirection so that we can throw exceptions from destructors without the compiler complaining. This is
+// generally forbidden and might lead to std::terminate, but as we do not want to handle most errors anyway, this is
+// fine.
 [[noreturn]] inline void fail(const std::string& msg) {
   throw std::logic_error(msg);
 }
+
 }  // namespace detail
 
 #define Fail(msg)                                                                                             \
