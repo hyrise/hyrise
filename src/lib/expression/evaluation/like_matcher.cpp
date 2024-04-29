@@ -167,6 +167,8 @@ std::ostream& operator<<(std::ostream& stream, const LikeMatcher::Wildcard& wild
     case LikeMatcher::Wildcard::AnyChars:
       stream << "%";
       break;
+    default:
+      Fail("Invalid LIKE wildcard.");
   }
 
   return stream;

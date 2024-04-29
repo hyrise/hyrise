@@ -253,6 +253,8 @@ std::ostream& operator<<(std::ostream& stream, const TransactionPhase& phase) {
     case TransactionPhase::Committed:
       stream << "Committed";
       break;
+    default:
+      Fail("Unexpected transaction phase.");
   }
   return stream;
 }

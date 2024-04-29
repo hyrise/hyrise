@@ -31,6 +31,8 @@ FunctionExpression::FunctionExpression(const FunctionType init_function_type,
                "Concatenate takes only Strings and Nulls as arguments.");
       }
       break;
+    default:
+      Fail("Invalid function expression type.");
   }
 }
 
@@ -58,8 +60,9 @@ DataType FunctionExpression::data_type() const {
     case FunctionType::Substring:
     case FunctionType::Concatenate:
       return DataType::String;
+    default:
+      Fail("Invalid function expression type.");
   }
-  Fail("Invalid enum value.");
 }
 
 bool FunctionExpression::_shallow_equals(const AbstractExpression& expression) const {
