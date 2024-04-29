@@ -45,7 +45,7 @@ using namespace hyrise;  // NOLINT
 // `get_or_add_result` is called once per row when iterating over a column that is to be aggregated. The row's `key` has
 // been calculated as part of `_partition_by_groupby_keys`. We also pass in the `row_id` of that row. This row id is
 // stored in `Results` so that we can later use it to reconstruct the values in the group-by columns. If the operator
-// calculates multiple aggregate functions, we only need to perform this lookup as part of the first aggrete function.
+// calculates multiple aggregate functions, we only need to perform this lookup as part of the first aggregate function.
 // By setting CacheResultIds to true_type, we can store the result of the lookup in the AggregateKey. Following
 // aggregate functions can then retrieve the index from the AggregateKey.
 constexpr auto CACHE_MASK = AggregateKeyEntry{1} << 63u;  // See explanation below
