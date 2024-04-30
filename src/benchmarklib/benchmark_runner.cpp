@@ -70,9 +70,9 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config,
   if (!_config.pipeline_metrics) {
     Hyrise::get().default_pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
     Hyrise::get().default_lqp_cache = std::make_shared<SQLLogicalPlanCache>();
-    std::cout << "- SQL plan caching switched on.\n";
+    std::cout << "- SQL plan caching switched on\n";
   } else {
-    std::cout << "- SQL plan caching switched off since SQL pipeline metrics tracking is requested.\n";
+    std::cout << "- SQL plan caching switched off since SQL pipeline metrics tracking is requested\n";
   }
 
   // Initialise the scheduler if the benchmark was requested to run multi-threaded.
@@ -96,10 +96,10 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config,
 
   _benchmark_item_runner->on_tables_loaded();
 
-  // SQLite data is only loaded if the dedicated result set is not complete, i.e,
-  // items exist for which no dedicated result could be loaded.
+  // SQLite data is only loaded if the dedicated result set is not complete, i.e, items exist for which no dedicated
+  // result could be loaded.
   if (_config.verify && _benchmark_item_runner->has_item_without_dedicated_result()) {
-    std::cout << "- Loading tables into SQLite for verification.\n";
+    std::cout << "- Loading tables into SQLite for verification\n";
     auto timer = Timer{};
 
     // Load the data into SQLite.
@@ -211,7 +211,7 @@ void BenchmarkRunner::run() {
     _write_report_to_file(*_config.output_file_path, report);
   } else if (_config.output_file_path) {
     std::cout << "- Not writing JSON result as either verification or visualization are activated.\n";
-    std::cout << "  These options make the results meaningless.\n";
+    std::cout << "  These options make the results meaningless\n";
   }
 
   // For the Ordered mode, results have already been printed to the console.

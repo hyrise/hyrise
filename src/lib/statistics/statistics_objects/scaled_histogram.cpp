@@ -1,11 +1,12 @@
 #include "scaled_histogram.hpp"
 
 #include <memory>
-#include <numeric>
 #include <string>
-#include <utility>
-#include <vector>
 
+#include "all_type_variant.hpp"
+#include "statistics/statistics_objects/abstract_histogram.hpp"
+#include "statistics/statistics_objects/histogram_domain.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {
