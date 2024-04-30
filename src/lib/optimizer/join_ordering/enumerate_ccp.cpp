@@ -92,8 +92,8 @@ std::vector<std::pair<JoinGraphVertexSet, JoinGraphVertexSet>> EnumerateCcp::ope
 void EnumerateCcp::_enumerate_csg_recursive(std::vector<JoinGraphVertexSet>& csgs, const JoinGraphVertexSet& vertex_set,
                                             const JoinGraphVertexSet& exclusion_set) {
   /**
-   * Extend `csgs` with subsets of its neighborhood, thereby forming new connected subgraphs. For each newly found \
-   * connected subgraph, calls itself recursively.
+   * Extend `csgs` with subsets of its neighborhood, thereby forming new connected subgraphs. Calls itself recursively
+   * for each newly found connected subgraph.
    */
 
   const auto neighborhood = _neighborhood(vertex_set, exclusion_set);
@@ -136,9 +136,12 @@ void EnumerateCcp::_enumerate_cmp(const JoinGraphVertexSet& primary_vertex_set) 
 
     _csg_cmp_pairs.emplace_back(primary_vertex_set, cmp_vertex_set);
 
+    // In the original paper, the extended exclusion set is the union of the exclusion set and the neighborhood.
+    // However, we use the corrected version fron the errata: union of the exclusion set and the exclusion set of the
+    // neighborhood.
     const auto extended_exclusion_set = exclusion_set | (_exclusion_set(*iter) & neighborhood);
 
-    std::vector<JoinGraphVertexSet> csgs;
+    auto csgs = std::vector<JoinGraphVertexSet>{};
     _enumerate_csg_recursive(csgs, cmp_vertex_set, extended_exclusion_set);
 
     for (const auto& csg : csgs) {
@@ -183,7 +186,7 @@ JoinGraphVertexSet EnumerateCcp::_single_vertex_neighborhood(const size_t vertex
    * Return the neighborhood of a single vertex.
    */
 
-  JoinGraphVertexSet neighbourhood(_num_vertices);
+  auto neighbourhood = JoinGraphVertexSet(_num_vertices);
   for (const auto& edge : _edges) {
     if (vertex_idx == edge.first && vertex_idx != edge.second) {
       neighbourhood.set(edge.second);
@@ -212,7 +215,7 @@ std::vector<JoinGraphVertexSet> EnumerateCcp::_non_empty_subsets(const JoinGraph
   auto subsets = std::vector<JoinGraphVertexSet>{};
   const auto set_ulong = vertex_set.to_ulong();
 
-  // subset_ulong is the current subset subset [sic]. `set_ulong & -set_ulong` initializes it to the least significant
+  // `subset_ulong` is the current subset subset [sic]. `set_ulong & -set_ulong` initializes it to the least significant
   // bit in `set_ulong`. E.g., if set_ulong is 011000, this initializes subset_ulong to 001000.
   auto subset_ulong = set_ulong & -set_ulong;
 

@@ -50,6 +50,7 @@
 #include "table_statistics.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
+#include "utils/timer.hpp"
 
 namespace {
 
@@ -91,8 +92,10 @@ std::shared_ptr<AbstractCardinalityEstimator> CardinalityEstimator::new_instance
 
 Cardinality CardinalityEstimator::estimate_cardinality(const std::shared_ptr<const AbstractLQPNode>& lqp,
                                                        const bool cacheable) const {
+  auto timer = Timer{};
   auto statistics_cache = StatisticsByLQP{};
   const auto estimated_statistics = estimate_statistics(lqp, cacheable, statistics_cache);
+  cardinality_time += timer.lap();
   return estimated_statistics->row_count;
 }
 
@@ -116,6 +119,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
    *
    * Finally, try a lookup in the temporary cache used for the estimation of a single LQP.
    */
+  auto lookup_timer = Timer{};
   auto join_graph_bitmask = std::optional<JoinGraphStatisticsCache::Bitmask>{};
   if (cardinality_estimation_cache.join_graph_statistics_cache) {
     join_graph_bitmask = cardinality_estimation_cache.join_graph_statistics_cache->bitmask(lqp);
@@ -123,34 +127,43 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
       auto cached_statistics =
           cardinality_estimation_cache.join_graph_statistics_cache->get(*join_graph_bitmask, lqp->output_expressions());
       if (cached_statistics) {
+        ++bitmask_cache_hits;
         return cached_statistics;
       }
     } else {
       // The LQP is not (a subgraph of) a JoinGraph and therefore we cannot use the JoinGraphStatisticsCache.
     }
   }
+  bitmask_cache_time += lookup_timer.lap();
 
   if (cardinality_estimation_cache.statistics_by_lqp) {
     const auto plan_statistics_iter = cardinality_estimation_cache.statistics_by_lqp->find(lqp);
     if (plan_statistics_iter != cardinality_estimation_cache.statistics_by_lqp->end()) {
+      ++global_cache_hits;
       return plan_statistics_iter->second;
     }
   }
+  global_cache_time += lookup_timer.lap();
 
   const auto cached_statistics = statistics_cache.find(lqp);
   if (cached_statistics != statistics_cache.end()) {
+    ++local_cache_hits;
     return cached_statistics->second;
   }
+  local_cache_time += lookup_timer.lap();
+
+  ++cache_misses;
 
   /**
    * 2. Cache lookup failed - perform an actual cardinality estimation.
    */
   auto output_table_statistics = std::shared_ptr<TableStatistics>{};
   const auto left_input_table_statistics =
-      lqp->left_input() ? estimate_statistics(lqp->left_input(), cacheable) : nullptr;
+      lqp->left_input() ? estimate_statistics(lqp->left_input(), cacheable, statistics_cache) : nullptr;
   const auto right_input_table_statistics =
-      lqp->right_input() ? estimate_statistics(lqp->right_input(), cacheable) : nullptr;
+      lqp->right_input() ? estimate_statistics(lqp->right_input(), cacheable, statistics_cache) : nullptr;
 
+  auto timer = Timer{};
   switch (lqp->type) {
     case LQPNodeType::Aggregate: {
       const auto aggregate_node = std::dynamic_pointer_cast<const AggregateNode>(lqp);
@@ -281,6 +294,10 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
       Fail("Cardinality of a node of this type should never be requested.");
   }
 
+  const auto local_estimation_time = timer.lap();
+  time_by_node[lqp->type] += local_estimation_time;
+  estimation_time += local_estimation_time;
+
   /**
    * 3. Store output_table_statistics in cache.
    */
@@ -295,6 +312,8 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
 
   // We can always cache statistics during the estimation of a single LQP, which is useful for diamonds in the plan.
   statistics_cache.emplace(lqp, output_table_statistics);
+
+  caching_time += timer.lap();
 
   return output_table_statistics;
 }
@@ -683,7 +702,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_predicate_node(
 
 std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_join_node(
     const JoinNode& join_node, const std::shared_ptr<TableStatistics>& left_input_table_statistics,
-    const std::shared_ptr<TableStatistics>& right_input_table_statistics) {
+    const std::shared_ptr<TableStatistics>& right_input_table_statistics) const {
   // For inner-equi JoinNodes, a principle-of-inclusion algorithm is used.
   // The same algorithm is used for outer-equi JoinNodes, lacking a better alternative at the moment.
   // All other join modes and predicate conditions are treated as cross joins for now.
@@ -1034,7 +1053,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_operator_scan_pr
 
 std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_inner_equi_join(
     const ColumnID left_column_id, const ColumnID right_column_id, const TableStatistics& left_input_table_statistics,
-    const TableStatistics& right_input_table_statistics) {
+    const TableStatistics& right_input_table_statistics) const {
   const auto left_data_type = left_input_table_statistics.column_data_type(left_column_id);
   const auto right_data_type = right_input_table_statistics.column_data_type(right_column_id);
 
@@ -1117,7 +1136,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_inner_equi_join(
 
 std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_semi_join(
     const ColumnID left_column_id, const ColumnID right_column_id, const TableStatistics& left_input_table_statistics,
-    const TableStatistics& right_input_table_statistics) {
+    const TableStatistics& right_input_table_statistics) const {
   // This is based on estimate_inner_equi_join. We take the histogram from the right, set the bin heights to the
   // distinct counts and run an inner/equi estimation on it. As there are no more duplicates on the right side, we
   // should get the correct estimation for the left side.

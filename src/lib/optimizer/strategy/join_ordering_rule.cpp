@@ -12,6 +12,7 @@
 #include "optimizer/join_ordering/join_graph.hpp"
 #include "statistics/abstract_cardinality_estimator.hpp"
 #include "utils/assert.hpp"
+#include "utils/timer.hpp"
 
 namespace {
 
@@ -98,6 +99,8 @@ void JoinOrderingRule::_apply_to_plan_without_subqueries(const std::shared_ptr<A
 
   Assert(lqp_root->type == LQPNodeType::Root, "JoinOrderingRule needs root to hold onto.");
 
+  auto timer = Timer{};
+
   const auto expected_column_order = lqp_root->output_expressions();
 
   auto result_lqp = perform_join_ordering_recursively(lqp_root->left_input(), cost_estimator);
@@ -108,6 +111,8 @@ void JoinOrderingRule::_apply_to_plan_without_subqueries(const std::shared_ptr<A
   }
 
   lqp_root->set_left_input(result_lqp);
+
+  std::cout << "    " << name() << ": " << timer.lap_formatted() << "\n";
 }
 
 }  // namespace hyrise

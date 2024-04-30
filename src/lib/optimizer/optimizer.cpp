@@ -296,6 +296,8 @@ std::shared_ptr<AbstractLQPNode> Optimizer::optimize(
     validate_lqp(root_node);
   }
 
+  auto timer = Timer{};
+
   for (const auto& rule : _rules) {
     auto rule_timer = Timer{};
     rule->apply_to_plan(root_node);
@@ -308,6 +310,8 @@ std::shared_ptr<AbstractLQPNode> Optimizer::optimize(
       validate_lqp(root_node);
     }
   }
+
+  std::cout << "    Optimizer: " << timer.lap_formatted() << "\n";
 
   // Remove LogicalPlanRootNode.
   auto optimized_node = root_node->left_input();

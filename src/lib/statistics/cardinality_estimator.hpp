@@ -4,6 +4,8 @@
 #include <memory>
 #include <utility>
 #include <vector>
+#include <chrono>
+#include <unordered_map>
 
 #include <boost/dynamic_bitset.hpp>
 
@@ -11,6 +13,7 @@
 #include "operators/operator_scan_predicate.hpp"
 #include "statistics/statistics_objects/abstract_histogram.hpp"
 #include "statistics/statistics_objects/generic_histogram_builder.hpp"
+#include "utils/timer.hpp"
 
 namespace hyrise {
 
@@ -29,6 +32,8 @@ class ProjectionNode;
 class UnionNode;
 class ValidateNode;
 class WindowNode;
+
+enum class LQPNodeType;
 
 /**
  * Hyrise's default, statistics-based cardinality estimator.
@@ -71,9 +76,9 @@ class CardinalityEstimator : public AbstractCardinalityEstimator {
       const PredicateNode& predicate_node, const std::shared_ptr<TableStatistics>& input_table_statistics,
       const bool cacheable, StatisticsByLQP& statistics_cache) const;
 
-  static std::shared_ptr<TableStatistics> estimate_join_node(
+  std::shared_ptr<TableStatistics> estimate_join_node(
       const JoinNode& join_node, const std::shared_ptr<TableStatistics>& left_input_table_statistics,
-      const std::shared_ptr<TableStatistics>& right_input_table_statistics);
+      const std::shared_ptr<TableStatistics>& right_input_table_statistics) const;
 
   static std::shared_ptr<TableStatistics> estimate_union_node(
       const UnionNode& /*union_node*/, const std::shared_ptr<TableStatistics>& left_input_table_statistics,
@@ -103,11 +108,10 @@ class CardinalityEstimator : public AbstractCardinalityEstimator {
   static std::shared_ptr<GenericHistogram<T>> estimate_column_vs_column_equi_scan_with_histograms(
       const AbstractHistogram<T>& left_histogram, const AbstractHistogram<T>& right_histogram) {
     /**
-   * Column-to-column scan estimation is notoriously hard, selectivities from 0 to 1 are possible for the same histogram
-   * pairs. Thus, we do the most conservative estimation and compute the upper bound of value- and distinct counts for
-   * each bin pair.
-   */
-
+     * Column-to-column scan estimation is notoriously hard, selectivities from 0 to 1 are possible for the same histogram
+     * pairs. Thus, we do the most conservative estimation and compute the upper bound of value- and distinct counts for
+     * each bin pair.
+     */
     auto left_idx = BinID{0};
     auto right_idx = BinID{0};
     auto left_bin_count = left_histogram.bin_count();
@@ -157,22 +161,22 @@ class CardinalityEstimator : public AbstractCardinalityEstimator {
    * Join estimations
    * @{
    */
-  static std::shared_ptr<TableStatistics> estimate_inner_equi_join(const ColumnID left_column_id,
+  std::shared_ptr<TableStatistics> estimate_inner_equi_join(const ColumnID left_column_id,
                                                                    const ColumnID right_column_id,
                                                                    const TableStatistics& left_input_table_statistics,
-                                                                   const TableStatistics& right_input_table_statistics);
+                                                                   const TableStatistics& right_input_table_statistics) const;
 
-  static std::shared_ptr<TableStatistics> estimate_semi_join(const ColumnID left_column_id,
+  std::shared_ptr<TableStatistics> estimate_semi_join(const ColumnID left_column_id,
                                                              const ColumnID right_column_id,
                                                              const TableStatistics& left_input_table_statistics,
-                                                             const TableStatistics& right_input_table_statistics);
+                                                             const TableStatistics& right_input_table_statistics) const;
 
   static std::shared_ptr<TableStatistics> estimate_cross_join(const TableStatistics& left_input_table_statistics,
                                                               const TableStatistics& right_input_table_statistics);
 
   template <typename T>
-  static std::shared_ptr<GenericHistogram<T>> estimate_inner_equi_join_with_histograms(
-      const AbstractHistogram<T>& left_histogram, const AbstractHistogram<T>& right_histogram) {
+  std::shared_ptr<GenericHistogram<T>> estimate_inner_equi_join_with_histograms(
+      const AbstractHistogram<T>& left_histogram, const AbstractHistogram<T>& right_histogram) const {
     /**
      * left_histogram and right_histogram are turned into "unified" histograms by `split_at_bin_bounds`, meaning that
      * their bins are split so that their bin boundaries match.
@@ -181,6 +185,7 @@ class CardinalityEstimator : public AbstractCardinalityEstimator {
      * unified_right_histogram == {[5, 10], [11, 20]}
      * The estimation is performed on overlapping bins only, e.g., only the two bins [5, 10] will produce matches.
      */
+    auto timer = Timer{};
     auto unified_left_histogram = left_histogram.split_at_bin_bounds(right_histogram.bin_bounds());
     auto unified_right_histogram = right_histogram.split_at_bin_bounds(left_histogram.bin_bounds());
 
@@ -222,6 +227,8 @@ class CardinalityEstimator : public AbstractCardinalityEstimator {
       ++right_idx;
     }
 
+    auto hist = builder.build();
+    join_histogram_time += timer.lap();
     return builder.build();
   }
 
@@ -244,5 +251,20 @@ class CardinalityEstimator : public AbstractCardinalityEstimator {
       const std::shared_ptr<TableStatistics>& table_statistics, const std::vector<ColumnID>& pruned_column_ids);
 
   /** @} */
+
+  mutable size_t bitmask_cache_hits{0};
+  mutable size_t global_cache_hits{0};
+  mutable size_t local_cache_hits{0};
+  mutable size_t cache_misses{0};
+  mutable std::chrono::nanoseconds cardinality_time{0};
+  mutable std::chrono::nanoseconds join_histogram_time{0};
+  mutable std::chrono::nanoseconds column_column_histogram_time{0};
+  mutable std::chrono::nanoseconds bitmask_cache_time{0};
+  mutable std::chrono::nanoseconds global_cache_time{0};
+  mutable std::chrono::nanoseconds local_cache_time{0};
+  mutable std::chrono::nanoseconds estimation_time{0};
+  mutable std::chrono::nanoseconds caching_time{0};
+
+  mutable std::unordered_map<LQPNodeType, std::chrono::nanoseconds> time_by_node;
 };
 }  // namespace hyrise
