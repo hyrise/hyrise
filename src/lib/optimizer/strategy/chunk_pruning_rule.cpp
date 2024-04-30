@@ -135,7 +135,8 @@ std::string ChunkPruningRule::name() const {
   return name;
 }
 
-void ChunkPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
+IsCacheable ChunkPruningRule::_apply_to_plan_without_subqueries(
+    const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
   auto predicate_pruning_chains_by_stored_table_node =
       std::unordered_map<std::shared_ptr<StoredTableNode>, std::vector<PredicatePruningChain>>{};
 
@@ -173,6 +174,8 @@ void ChunkPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<A
     // Wanted side effect of using sets: pruned_chunk_ids vector is already sorted.
     stored_table_node->set_pruned_chunk_ids(std::vector<ChunkID>(pruned_chunk_ids.begin(), pruned_chunk_ids.end()));
   }
+
+  return IsCacheable::Yes;
 }
 
 /**

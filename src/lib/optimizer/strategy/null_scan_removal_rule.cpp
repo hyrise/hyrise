@@ -27,7 +27,7 @@ std::string NullScanRemovalRule::name() const {
   return name;
 }
 
-void NullScanRemovalRule::apply_to_plan(const std::shared_ptr<LogicalPlanRootNode>& root) const {
+IsCacheable NullScanRemovalRule::apply_to_plan(const std::shared_ptr<LogicalPlanRootNode>& root) const {
   Assert(root->type == LQPNodeType::Root, "NullScanRemovalRule needs root to hold onto");
 
   std::vector<std::shared_ptr<AbstractLQPNode>> nodes_to_remove;
@@ -86,6 +86,8 @@ void NullScanRemovalRule::apply_to_plan(const std::shared_ptr<LogicalPlanRootNod
   visit_lqp(root, visitor);
 
   _remove_nodes(nodes_to_remove);
+
+  return IsCacheable::Yes;
 }
 
 void NullScanRemovalRule::_remove_nodes(const std::vector<std::shared_ptr<AbstractLQPNode>>& nodes) {
@@ -94,7 +96,7 @@ void NullScanRemovalRule::_remove_nodes(const std::vector<std::shared_ptr<Abstra
   }
 }
 
-void NullScanRemovalRule::_apply_to_plan_without_subqueries(
+IsCacheable NullScanRemovalRule::_apply_to_plan_without_subqueries(
     const std::shared_ptr<AbstractLQPNode>& /*lqp_root*/) const {
   Fail("Did not expect this function to be called.");
 }

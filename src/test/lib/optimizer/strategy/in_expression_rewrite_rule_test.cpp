@@ -373,4 +373,13 @@ TEST_F(InExpressionRewriteRuleTest, AutoStrategy) {
   }
 }
 
+TEST_F(InExpressionRewriteRuleTest, CheckCacheability) {
+  auto rule = std::make_shared<InExpressionRewriteRule>();
+  rule->strategy = InExpressionRewriteRule::Strategy::ExpressionEvaluator;
+  const auto input_lqp = PredicateNode::make(single_element_in_expression, node);
+  const auto lqp_result = StrategyBaseTest::apply_rule_with_cacheability_check(rule, input_lqp);
+  const auto cacheable = lqp_result.cacheable;
+  EXPECT_EQ(cacheable, true);
+}
+
 }  // namespace hyrise

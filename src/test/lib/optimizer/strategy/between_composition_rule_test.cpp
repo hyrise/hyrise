@@ -446,4 +446,11 @@ TEST_F(BetweenCompositionTest, HandleMultipleEqualExpressions) {
   EXPECT_LQP_EQ(result_lqp, expected_lqp);
 }
 
+TEST_F(BetweenCompositionTest, CheckCacheability) {
+  const auto input_lqp = PredicateNode::make(equals_(_a_a, 100), PredicateNode::make(equals_(_a_b, 100), _node_a));
+  const auto lqp_result = StrategyBaseTest::apply_rule_with_cacheability_check(_rule, input_lqp);
+  const auto cacheable = lqp_result.cacheable;
+  EXPECT_EQ(cacheable, true);
+}
+
 }  // namespace hyrise

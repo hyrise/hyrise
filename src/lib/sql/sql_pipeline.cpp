@@ -171,7 +171,7 @@ const std::vector<std::shared_ptr<AbstractLQPNode>>& SQLPipeline::get_optimized_
 
   _optimized_logical_plans.reserve(statement_count());
   for (auto& pipeline_statement : _sql_pipeline_statements) {
-    _optimized_logical_plans.emplace_back(pipeline_statement->get_optimized_logical_plan());
+    _optimized_logical_plans.emplace_back(pipeline_statement->get_optimized_logical_plan().logical_query_plan);
   }
 
   return _optimized_logical_plans;

@@ -52,7 +52,7 @@ std::string PredicateReorderingRule::name() const {
   return name;
 }
 
-void PredicateReorderingRule::_apply_to_plan_without_subqueries(
+IsCacheable PredicateReorderingRule::_apply_to_plan_without_subqueries(
     const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
   DebugAssert(cost_estimator, "PredicateReorderingRule requires cost estimator to be set");
   Assert(lqp_root->type == LQPNodeType::Root, "PredicateReorderingRule needs root to hold onto");
@@ -88,6 +88,8 @@ void PredicateReorderingRule::_apply_to_plan_without_subqueries(
 
     return LQPVisitation::VisitInputs;
   });
+
+  return IsCacheable::Yes;
 }
 
 void PredicateReorderingRule::_reorder_predicates(

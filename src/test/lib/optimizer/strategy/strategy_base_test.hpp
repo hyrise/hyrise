@@ -15,6 +15,8 @@ class StrategyBaseTest : public BaseTest {
    * Helper method for applying a single rule to an LQP. Creates the temporary LogicalPlanRootNode and returns its input
    * after applying the rule
    */
+  OptimizedLogicalQueryPlan apply_rule_with_cacheability_check(const std::shared_ptr<AbstractRule>& rule,
+                                                               const std::shared_ptr<AbstractLQPNode>& input);
   std::shared_ptr<AbstractLQPNode> apply_rule(const std::shared_ptr<AbstractRule>& rule,
                                               const std::shared_ptr<AbstractLQPNode>& input);
 };

@@ -160,7 +160,7 @@ TEST_F(IndexScanRuleTest, IndexScanOnlyOnOutputOfStoredTableNode) {
 }
 
 // Same test as before, but placing the predicate with a high selectivity first, which does not trigger an index
-// scan. The seoond predicate has a very low selectivity, but does not follow a stored table node.
+// scan. The second predicate has a very low selectivity, but does not follow a stored table node.
 TEST_F(IndexScanRuleTest, NoIndexScanForSecondPredicate) {
   auto chunk_ids = std::vector<ChunkID>(table->chunk_count());
   std::iota(chunk_ids.begin(), chunk_ids.end(), 0);
@@ -177,6 +177,16 @@ TEST_F(IndexScanRuleTest, NoIndexScanForSecondPredicate) {
   StrategyBaseTest::apply_rule(rule, predicate_node_1);
   EXPECT_EQ(predicate_node_0->scan_type, ScanType::TableScan);
   EXPECT_EQ(predicate_node_1->scan_type, ScanType::TableScan);
+}
+
+TEST_F(IndexScanRuleTest, CheckCacheability) {
+  auto predicate_node_0 = PredicateNode::make(greater_than_(a, 10));
+  predicate_node_0->set_left_input(stored_table_node);
+
+  EXPECT_EQ(predicate_node_0->scan_type, ScanType::TableScan);
+  const auto lqp_result = StrategyBaseTest::apply_rule_with_cacheability_check(rule, predicate_node_0);
+  const auto cacheable = lqp_result.cacheable;
+  EXPECT_EQ(cacheable, true);
 }
 
 }  // namespace hyrise

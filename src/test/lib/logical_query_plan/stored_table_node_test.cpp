@@ -10,6 +10,8 @@
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
+#include "operators/get_table.hpp"
+#include "operators/insert.hpp"
 #include "statistics/table_statistics.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/constraints/table_key_constraint.hpp"
@@ -332,27 +334,54 @@ TEST_F(StoredTableNodeTest, UniqueColumnCombinationsPrunedColumns) {
   EXPECT_TRUE(find_ucc_by_key_constraint(key_constraint_c, unique_column_combinations));
 }
 
+TEST_F(StoredTableNodeTest, UniqueColumnCombinationsValidityNotGuaranteed) {
+  // Prepare UCCs.
+  const auto key_constraint_a_b = TableKeyConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::UNIQUE};
+  const auto key_constraint_c = TableKeyConstraint{{ColumnID{2}}, KeyConstraintType::UNIQUE, CommitID{0}};
+  _table_a->add_soft_key_constraint(key_constraint_a_b);
+  _table_a->add_soft_key_constraint(key_constraint_c);
+  const auto& table_key_constraints = _table_a->soft_key_constraints();
+  EXPECT_EQ(table_key_constraints.size(), 2);
+  EXPECT_EQ(_stored_table_node->unique_column_combinations().size(), 2);
+
+  // Modify the table so that the UCC is no longer guaranteed to be valid
+  // (in fact, it is actually no longer valid because we duplicated all rows).
+  const auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
+  const auto get_table = std::make_shared<GetTable>("t_a");
+  get_table->execute();
+  const auto insert_op = std::make_shared<Insert>("t_a", get_table);
+  insert_op->set_transaction_context(transaction_context);
+  insert_op->execute();
+  transaction_context->commit();
+
+  // Basic check.
+  const auto& unique_column_combinations = _stored_table_node->unique_column_combinations();
+  EXPECT_EQ(unique_column_combinations.size(), 1);
+  // In-depth check.
+  EXPECT_TRUE(find_ucc_by_key_constraint(key_constraint_a_b, unique_column_combinations));
+}
+
 TEST_F(StoredTableNodeTest, UniqueColumnCombinationsEmpty) {
   EXPECT_TRUE(_table_a->soft_key_constraints().empty());
   EXPECT_TRUE(_stored_table_node->unique_column_combinations().empty());
 }
 
-TEST_F(StoredTableNodeTest, HasMatchingUniqueColumnCombination) {
+TEST_F(StoredTableNodeTest, GetMatchingUniqueColumnCombination) {
   const auto key_constraint_a = TableKeyConstraint{{_a->original_column_id}, KeyConstraintType::UNIQUE};
   _table_a->add_soft_key_constraint(key_constraint_a);
   EXPECT_EQ(_stored_table_node->unique_column_combinations().size(), 1);
 
   // Negative test.
-  EXPECT_FALSE(_stored_table_node->has_matching_ucc({_b}));
-  EXPECT_FALSE(_stored_table_node->has_matching_ucc({_c}));
-  EXPECT_FALSE(_stored_table_node->has_matching_ucc({_b, _c}));
+  EXPECT_FALSE(_stored_table_node->get_matching_ucc({_b}).has_value());
+  EXPECT_FALSE(_stored_table_node->get_matching_ucc({_c}).has_value());
+  EXPECT_FALSE(_stored_table_node->get_matching_ucc({_b, _c}).has_value());
 
   // Test exact match.
-  EXPECT_TRUE(_stored_table_node->has_matching_ucc({_a}));
+  EXPECT_TRUE(_stored_table_node->get_matching_ucc({_a}).has_value());
 
   // Test superset of column ids.
-  EXPECT_TRUE(_stored_table_node->has_matching_ucc({_a, _b}));
-  EXPECT_TRUE(_stored_table_node->has_matching_ucc({_a, _c}));
+  EXPECT_TRUE(_stored_table_node->get_matching_ucc({_a, _b}).has_value());
+  EXPECT_TRUE(_stored_table_node->get_matching_ucc({_a, _c}).has_value());
 }
 
 }  // namespace hyrise
