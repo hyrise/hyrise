@@ -274,18 +274,21 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_arithme
   const auto& left = *expression.left_operand();
   const auto& right = *expression.right_operand();
 
-  // clang-format off
   switch (expression.arithmetic_operator) {
-    case ArithmeticOperator::Addition:       return _evaluate_binary_with_default_null_logic<Result, AdditionEvaluator>(left, right);  // NOLINT
-    case ArithmeticOperator::Subtraction:    return _evaluate_binary_with_default_null_logic<Result, SubtractionEvaluator>(left, right);  // NOLINT
-    case ArithmeticOperator::Multiplication: return _evaluate_binary_with_default_null_logic<Result, MultiplicationEvaluator>(left, right);  // NOLINT
+    case ArithmeticOperator::Addition:
+      return _evaluate_binary_with_default_null_logic<Result, AdditionEvaluator>(left, right);
+    case ArithmeticOperator::Subtraction:
+      return _evaluate_binary_with_default_null_logic<Result, SubtractionEvaluator>(left, right);
+    case ArithmeticOperator::Multiplication:
+      return _evaluate_binary_with_default_null_logic<Result, MultiplicationEvaluator>(left, right);
 
     // Division and Modulo need to catch division by zero
-    case ArithmeticOperator::Division:       return _evaluate_binary_with_functor_based_null_logic<Result, DivisionEvaluator>(left, right);  // NOLINT
-    case ArithmeticOperator::Modulo:         return _evaluate_binary_with_functor_based_null_logic<Result, ModuloEvaluator>(left, right);  // NOLINT
+    case ArithmeticOperator::Division:
+      return _evaluate_binary_with_functor_based_null_logic<Result, DivisionEvaluator>(left, right);
+    case ArithmeticOperator::Modulo:
+      return _evaluate_binary_with_functor_based_null_logic<Result, ModuloEvaluator>(left, right);
   }
-  // clang-format on
-  Fail("Invalid enum value.");
+  Fail("Invalid arithmetic operator.");
 }
 
 template <>

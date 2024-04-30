@@ -333,8 +333,7 @@ void write_groupby_output(const std::shared_ptr<const Table>& input_table,
                 const auto& ref_segment_pos_list = *reference_segment.pos_list();
 
                 pos_list.push_back(ref_segment_pos_list[row_id.chunk_offset]);
-                pos_list_mapping.emplace(row_id.chunk_id,
-                                         static_cast<const AbstractPosList*>(&ref_segment_pos_list));
+                pos_list_mapping.emplace(row_id.chunk_id, static_cast<const AbstractPosList*>(&ref_segment_pos_list));
               } else {
                 pos_list.push_back((*cached_poslist->second)[row_id.chunk_offset]);
               }

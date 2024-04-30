@@ -72,6 +72,14 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
         message(WARNING "Disabling 'reserved-identifier' warning for clang 13/14 (version is ${CMAKE_CXX_COMPILER_VERSION}).")
         add_compile_options(-Wno-reserved-identifier)
     endif()
+
+    if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 18 AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS_EQUAL 18.99)
+        message(WARNING "Disabling 'default-switch' warning for clang 18 (version is ${CMAKE_CXX_COMPILER_VERSION}).")
+        # For now, we disable the warning and wait to see what clang 19+ will do. We widely use enums in Hyrise and rely
+        # on -Wswitch to tell us when we have not handled an enum case. We consider adding default cases to such switch
+        # statements to be wrong.
+        add_compile_options(-Wno-switch-default)
+    endif()
 endif()
 
 include(${PROJECT_SOURCE_DIR}/cmake/TargetLinkLibrariesSystem.cmake)
