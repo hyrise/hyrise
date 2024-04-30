@@ -66,7 +66,7 @@ BenchmarkConfig CLIConfigParser::parse_cli_options(const cxxopts::ParseResult& p
 
   if (enable_scheduler && clients == 1) {
     std::cout << "\n\n- WARNING: You are running in multi-threaded (MT) mode but have set --clients=1.\n";
-    std::cout << "           You will achieve better MT performance by executing multiple queries in parallel.\n\n";
+    std::cout << "           You will achieve better MT performance by executing multiple queries in parallel\n\n";
   }
 
   // Determine benchmark and display it
@@ -84,7 +84,7 @@ BenchmarkConfig CLIConfigParser::parse_cli_options(const cxxopts::ParseResult& p
   const auto enable_visualization = parse_result["visualize"].as<bool>();
   if (enable_visualization) {
     Assert(clients == 1, "Cannot visualize plans with multiple clients as files may be overwritten.");
-    std::cout << "- Visualizing the plans into SVG files. This will make the performance numbers invalid.\n";
+    std::cout << "- Visualizing the plans into SVG files. This will make the performance numbers invalid\n";
   }
 
   // Get the specified encoding type
