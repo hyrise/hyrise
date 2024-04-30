@@ -1,14 +1,16 @@
 #include "join_ordering_rule.hpp"
 
+#include <memory>
+#include <string>
+
 #include "cost_estimation/abstract_cost_estimator.hpp"
 #include "expression/expression_utils.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
 #include "optimizer/join_ordering/dp_ccp.hpp"
 #include "optimizer/join_ordering/greedy_operator_ordering.hpp"
 #include "optimizer/join_ordering/join_graph.hpp"
 #include "statistics/abstract_cardinality_estimator.hpp"
-#include "statistics/cardinality_estimation_cache.hpp"
-#include "statistics/table_statistics.hpp"
 #include "utils/assert.hpp"
 
 namespace {

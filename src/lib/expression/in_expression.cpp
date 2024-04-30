@@ -1,17 +1,25 @@
 #include "in_expression.hpp"
 
+#include <memory>
 #include <sstream>
+#include <string>
+#include <unordered_map>
 
+#include "expression/abstract_predicate_expression.hpp"
+#include "operators/abstract_operator.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {
+
+class AbstractExpression;
 
 InExpression::InExpression(const PredicateCondition init_predicate_condition,
                            const std::shared_ptr<AbstractExpression>& operand,
                            const std::shared_ptr<AbstractExpression>& set)
     : AbstractPredicateExpression(init_predicate_condition, {operand, set}) {
   DebugAssert(predicate_condition == PredicateCondition::In || predicate_condition == PredicateCondition::NotIn,
-              "Expected either IN or NOT IN as PredicateCondition");
+              "Expected either IN or NOT IN as PredicateCondition.");
 }
 
 bool InExpression::is_negated() const {

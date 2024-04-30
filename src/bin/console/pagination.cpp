@@ -1,5 +1,9 @@
 #include "pagination.hpp"
 
+#include <algorithm>
+#include <cstddef>
+#include <cstdint>
+#include <sstream>
 #include <string>
 #include <vector>
 

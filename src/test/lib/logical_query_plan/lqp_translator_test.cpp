@@ -1,5 +1,4 @@
 #include "base_test.hpp"
-
 #include "expression/arithmetic_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"

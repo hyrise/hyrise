@@ -1,5 +1,7 @@
 #pragma once
 
+#include <memory>
+
 #include "abstract_statistics_object.hpp"
 
 namespace hyrise {

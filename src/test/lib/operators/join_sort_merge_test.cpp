@@ -1,5 +1,4 @@
 #include "base_test.hpp"
-
 #include "operators/join_sort_merge.hpp"
 #include "operators/projection.hpp"
 #include "operators/table_wrapper.hpp"

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <atomic>
+#include <limits>
 #include <shared_mutex>
 
 #include "types.hpp"

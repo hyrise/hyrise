@@ -1,7 +1,14 @@
 #include "create_prepared_plan_node.hpp"
 
+#include <cstddef>
+#include <memory>
 #include <sstream>
+#include <string>
 
+#include <boost/container_hash/hash.hpp>
+
+#include "logical_query_plan/abstract_lqp_node.hpp"
+#include "logical_query_plan/abstract_non_query_node.hpp"
 #include "storage/prepared_plan.hpp"
 
 namespace hyrise {
@@ -20,7 +27,8 @@ std::string CreatePreparedPlanNode::description(const DescriptionMode /*mode*/) 
 }
 
 size_t CreatePreparedPlanNode::_on_shallow_hash() const {
-  auto hash = prepared_plan->hash();
+  auto hash = size_t{0};
+  boost::hash_combine(hash, prepared_plan->hash());
   boost::hash_combine(hash, name);
   return hash;
 }

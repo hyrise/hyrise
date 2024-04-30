@@ -4,7 +4,6 @@
 #include <vector>
 
 #include "base_test.hpp"
-
 #include "expression/binary_predicate_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "hyrise.hpp"
@@ -16,7 +15,6 @@
 #include "scheduler/operator_task.hpp"
 #include "scheduler/shutdown_task.hpp"
 #include "scheduler/task_queue.hpp"
-
 
 namespace hyrise {
 
@@ -50,8 +48,12 @@ class SchedulerTest : public BaseTest {
   }
 
   void stress_multiple_dependencies(std::atomic_uint32_t& counter) {
-    const auto task1 = std::make_shared<JobTask>([&]() { counter += 1u; });
-    const auto task2 = std::make_shared<JobTask>([&]() { counter += 2u; });
+    const auto task1 = std::make_shared<JobTask>([&]() {
+      counter += 1u;
+    });
+    const auto task2 = std::make_shared<JobTask>([&]() {
+      counter += 2u;
+    });
     const auto task3 = std::make_shared<JobTask>([&]() {
       auto current_value = 3u;
       auto successful = counter.compare_exchange_strong(current_value, 4u);
@@ -72,8 +74,12 @@ class SchedulerTest : public BaseTest {
       auto successful = counter.compare_exchange_strong(current_value, 1u);
       ASSERT_TRUE(successful);
     });
-    const auto task2 = std::make_shared<JobTask>([&]() { counter += 2u; });
-    const auto task3 = std::make_shared<JobTask>([&]() { counter += 3u; });
+    const auto task2 = std::make_shared<JobTask>([&]() {
+      counter += 2u;
+    });
+    const auto task3 = std::make_shared<JobTask>([&]() {
+      counter += 3u;
+    });
     const auto task4 = std::make_shared<JobTask>([&]() {
       auto current_value = 6u;
       auto successful = counter.compare_exchange_strong(current_value, 7u);
@@ -97,7 +103,9 @@ class SchedulerTest : public BaseTest {
       auto task = std::make_shared<JobTask>([&]() {
         auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
         for (auto inner_counter = size_t{0}; inner_counter < 3; ++inner_counter) {
-          auto job = std::make_shared<JobTask>([&]() { ++counter; });
+          auto job = std::make_shared<JobTask>([&]() {
+            ++counter;
+          });
 
           job->schedule();
           jobs.emplace_back(job);
@@ -161,7 +169,9 @@ TEST_F(SchedulerTest, Grouping) {
   constexpr auto TASK_COUNT = 50;
 
   for (auto task_id = 0; task_id < TASK_COUNT; ++task_id) {
-    tasks.emplace_back(std::make_shared<JobTask>([&output, task_id] { output.emplace_back(task_id); }));
+    tasks.emplace_back(std::make_shared<JobTask>([&output, task_id] {
+      output.emplace_back(task_id);
+    }));
   }
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
   Hyrise::get().scheduler()->finish();
@@ -307,7 +317,9 @@ TEST_F(SchedulerTest, SingleWorkerGuaranteeProgress) {
 
   auto task_done = false;
   auto task = std::make_shared<JobTask>([&task_done]() {
-    const auto subtask = std::make_shared<JobTask>([&task_done]() { task_done = true; });
+    const auto subtask = std::make_shared<JobTask>([&task_done]() {
+      task_done = true;
+    });
 
     subtask->schedule();
     Hyrise::get().scheduler()->wait_for_tasks(std::vector<std::shared_ptr<AbstractTask>>{subtask});
@@ -345,8 +357,12 @@ void merge_sort(Iterator first, Iterator last) {
 
   auto middle = first + (std::distance(first, last) / 2);
   auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
-  tasks.emplace_back(std::make_shared<JobTask>([&]() { merge_sort(first, middle); }));
-  tasks.emplace_back(std::make_shared<JobTask>([&]() { merge_sort(middle, last); }));
+  tasks.emplace_back(std::make_shared<JobTask>([&]() {
+    merge_sort(first, middle);
+  }));
+  tasks.emplace_back(std::make_shared<JobTask>([&]() {
+    merge_sort(middle, last);
+  }));
 
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
 

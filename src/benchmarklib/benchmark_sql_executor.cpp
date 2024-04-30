@@ -1,8 +1,23 @@
 #include "benchmark_sql_executor.hpp"
 
+#include <filesystem>
+#include <iostream>
+#include <memory>
+#include <optional>
+#include <string>
+#include <utility>
+
+#include "concurrency/transaction_context.hpp"
+#include "sql/sql_pipeline.hpp"
 #include "sql/sql_pipeline_builder.hpp"
+#include "sql/sql_pipeline_statement.hpp"
+#include "storage/table.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 #include "utils/check_table_equal.hpp"
+#include "utils/sqlite_wrapper.hpp"
 #include "utils/timer.hpp"
+#include "visualization/abstract_visualizer.hpp"
 #include "visualization/lqp_visualizer.hpp"
 #include "visualization/pqp_visualizer.hpp"
 

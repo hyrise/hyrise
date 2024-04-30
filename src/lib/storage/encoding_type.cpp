@@ -1,7 +1,12 @@
 #include "encoding_type.hpp"
 
+#include <ostream>
+
 #include <boost/hana/for_each.hpp>
+
 #include "magic_enum.hpp"
+
+#include "all_type_variant.hpp"
 
 namespace hyrise {
 

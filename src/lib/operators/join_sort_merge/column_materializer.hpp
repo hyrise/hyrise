@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <memory>
 #include <string>
+#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -150,8 +151,9 @@ class ColumnMaterializer {
     });
 
     if (_sort) {
-      boost::sort::pdqsort(output.begin(), output.end(),
-                           [](const auto& left, const auto& right) { return left.value < right.value; });
+      boost::sort::pdqsort(output.begin(), output.end(), [](const auto& left, const auto& right) {
+        return left.value < right.value;
+      });
     }
 
     _gather_samples_from_segment(output, subsample);

@@ -5,7 +5,6 @@
 #include <vector>
 
 #include "base_test.hpp"
-
 #include "memory/zero_allocator.hpp"
 #include "resolve_type.hpp"
 #include "storage/index/partial_hash/partial_hash_index.hpp"

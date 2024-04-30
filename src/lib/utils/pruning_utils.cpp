@@ -1,20 +1,35 @@
 #include "pruning_utils.hpp"
 
+#include <algorithm>
 #include <cstdlib>
+#include <memory>
 #include <optional>
+#include <set>
+#include <type_traits>
+#include <unordered_map>
+#include <utility>
 #include <vector>
 
+#include <boost/container_hash/hash.hpp>
+#include <boost/variant/get.hpp>
+
+#include "all_parameter_variant.hpp"
+#include "all_type_variant.hpp"
+#include "expression/abstract_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
 #include "hyrise.hpp"
-#include "logical_query_plan/predicate_node.hpp"
+#include "logical_query_plan/predicate_node.hpp"  // IWYU pragma: keep
 #include "logical_query_plan/stored_table_node.hpp"
 #include "lossless_cast.hpp"
 #include "operators/operator_scan_predicate.hpp"
+#include "resolve_type.hpp"
 #include "statistics/attribute_statistics.hpp"
-#include "statistics/statistics_objects/min_max_filter.hpp"
-#include "statistics/statistics_objects/range_filter.hpp"
+#include "statistics/statistics_objects/min_max_filter.hpp"  // IWYU pragma: keep
+#include "statistics/statistics_objects/range_filter.hpp"    // IWYU pragma: keep
 #include "statistics/table_statistics.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace {
 
@@ -54,15 +69,15 @@ bool can_prune(const BaseAttributeStatistics& base_segment_statistics, const Pre
 
 template <typename T>
 std::vector<T> pruned_items_mapping(const size_t initial_item_count, const std::vector<T>& pruned_item_ids) {
-  // This function assume to be used solely for column and chunk pruning.
+  // This function assumes to be used solely for column and chunk pruning.
   static_assert(std::disjunction<std::is_same<T, ColumnID>, std::is_same<T, ChunkID>>(),
                 "Unexpected template type passed.");
 
-  auto INVALID_ID = T{0};
+  auto invalid_id = T{0};
   if constexpr (std::is_same_v<T, ColumnID>) {
-    INVALID_ID = INVALID_COLUMN_ID;
+    invalid_id = INVALID_COLUMN_ID;
   } else {
-    INVALID_ID = INVALID_CHUNK_ID;
+    invalid_id = INVALID_CHUNK_ID;
   }
 
   DebugAssert(std::is_sorted(pruned_item_ids.begin(), pruned_item_ids.end()),
@@ -72,7 +87,7 @@ std::vector<T> pruned_items_mapping(const size_t initial_item_count, const std::
   DebugAssert(pruned_item_ids.size() <= initial_item_count,
               "List of pruned chunks longer than chunks in actual table.");
 
-  auto id_mapping = std::vector<T>(initial_item_count, INVALID_ID);
+  auto id_mapping = std::vector<T>(initial_item_count, invalid_id);
   auto pruned_item_ids_iter = pruned_item_ids.begin();
   auto next_updated_id = T{0};
   for (auto item_index = T{0}; item_index < initial_item_count; ++item_index) {

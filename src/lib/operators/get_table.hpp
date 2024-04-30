@@ -1,7 +1,15 @@
 #pragma once
 
+#include <memory>
+#include <optional>
+#include <set>
+#include <string>
+#include <unordered_map>
+#include <vector>
+
 #include "abstract_read_only_operator.hpp"
 #include "concurrency/transaction_context.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 

@@ -1,12 +1,21 @@
 #pragma once
 
+#include <algorithm>
+#include <memory>
 #include <string>
 #include <unordered_map>
 #include <utility>
+#include <vector>
 
 #include <boost/algorithm/string.hpp>
+
+// False positive with GCC, finding accesses to unitialized memory in adjacency_list.hpp
+// (https://gcc.gnu.org/bugzilla/show_bug.cgi?id=92194).
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/graph/graphviz.hpp>
+#pragma GCC diagnostic pop
 
 #include "operators/print.hpp"
 
@@ -140,9 +149,9 @@ class AbstractVisualizer {
       const auto max_normalized_width = 8.0;
       const auto log_base = std::log(1.5);
       double max_unnormalized_width = 0.0;
-// False positive with gcc and tsan (https://gcc.gnu.org/bugzilla/show_bug.cgi?id=92194)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+      // // False positive with gcc and tsan (https://gcc.gnu.org/bugzilla/show_bug.cgi?id=92194)
+      // #pragma GCC diagnostic push
+      // #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
       for (auto iter = iter_pair.first; iter != iter_pair.second; ++iter) {
         max_unnormalized_width = std::max(max_unnormalized_width, std::log(_graph[*iter].pen_width) / log_base);
       }
@@ -159,7 +168,7 @@ class AbstractVisualizer {
           pen_width = 1.0 + std::max(0.0, std::log(pen_width) / log_base - offset);
         }
       }
-#pragma GCC diagnostic pop
+      // #pragma GCC diagnostic pop
     };
     normalize_penwidths(boost::vertices(_graph));
     normalize_penwidths(boost::edges(_graph));

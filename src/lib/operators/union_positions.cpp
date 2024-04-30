@@ -1,19 +1,26 @@
 #include "union_positions.hpp"
 
 #include <algorithm>
-#include <chrono>
+#include <cstddef>
+#include <iterator>
 #include <memory>
 #include <numeric>
 #include <string>
-#include <utility>
+#include <unordered_map>
 #include <vector>
 
 #include <boost/sort/sort.hpp>
 
+#include "all_type_variant.hpp"
+#include "operators/abstract_operator.hpp"
+#include "operators/abstract_read_only_operator.hpp"
 #include "storage/chunk.hpp"
+#include "storage/pos_lists/abstract_pos_list.hpp"
+#include "storage/pos_lists/row_id_pos_list.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
+#include "utils/assert.hpp"
 
 /**
  * ### UnionPositions implementation
@@ -127,7 +134,9 @@ std::shared_ptr<const Table> UnionPositions::_on_execute() {
   auto out_table = std::make_shared<Table>(left_in_table.column_definitions(), TableType::References);
 
   std::vector<std::shared_ptr<RowIDPosList>> pos_lists(reference_matrix_left.size());
-  std::generate(pos_lists.begin(), pos_lists.end(), [&] { return std::make_shared<RowIDPosList>(); });
+  std::generate(pos_lists.begin(), pos_lists.end(), [&] {
+    return std::make_shared<RowIDPosList>();
+  });
 
   // Adds the row `row_idx` from `reference_matrix` to the pos_lists we're currently building
   const auto emit_row = [&](const ReferenceMatrix& reference_matrix, size_t row_idx) {
@@ -199,7 +208,9 @@ std::shared_ptr<const Table> UnionPositions::_on_execute() {
       emit_chunk();
 
       chunk_row_idx = 0;
-      std::generate(pos_lists.begin(), pos_lists.end(), [&] { return std::make_shared<RowIDPosList>(); });
+      std::generate(pos_lists.begin(), pos_lists.end(), [&] {
+        return std::make_shared<RowIDPosList>();
+      });
     }
   }
 

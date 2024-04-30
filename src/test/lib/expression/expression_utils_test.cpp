@@ -1,5 +1,4 @@
 #include "base_test.hpp"
-
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/pqp_subquery_expression.hpp"

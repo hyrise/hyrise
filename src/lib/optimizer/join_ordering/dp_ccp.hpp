@@ -1,5 +1,7 @@
 #pragma once
 
+#include <memory>
+
 #include "abstract_join_ordering_algorithm.hpp"
 
 namespace hyrise {

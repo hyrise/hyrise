@@ -7,7 +7,6 @@
 #include <vector>
 
 #include "base_test.hpp"
-
 #include "statistics/statistics_objects/min_max_filter.hpp"
 #include "statistics/statistics_objects/range_filter.hpp"
 #include "types.hpp"

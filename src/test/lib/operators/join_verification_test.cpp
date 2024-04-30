@@ -1,5 +1,4 @@
 #include "base_test.hpp"
-
 #include "operators/join_verification.hpp"
 #include "operators/projection.hpp"
 #include "operators/table_wrapper.hpp"

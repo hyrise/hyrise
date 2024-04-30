@@ -1,6 +1,6 @@
 #include "equal_distinct_count_histogram.hpp"
 
-#include <cmath>
+#include <cstddef>
 #include <memory>
 #include <numeric>
 #include <string>
@@ -10,9 +10,13 @@
 #include <boost/sort/sort.hpp>
 #include <boost/unordered/unordered_flat_map.hpp>
 
-#include "generic_histogram.hpp"
-#include "resolve_type.hpp"
+#include "all_type_variant.hpp"
+#include "statistics/statistics_objects/abstract_histogram.hpp"
+#include "statistics/statistics_objects/histogram_domain.hpp"
+#include "storage/abstract_segment.hpp"
 #include "storage/segment_iterate.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace {
 
@@ -64,8 +68,9 @@ std::vector<std::pair<T, HistogramCountType>> value_distribution_from_column(con
   auto value_distribution =
       std::vector<std::pair<T, HistogramCountType>>{value_distribution_map.begin(), value_distribution_map.end()};
   value_distribution_map.clear();  // Maps can be large and sorting slow. Free space early.
-  boost::sort::pdqsort(value_distribution.begin(), value_distribution.end(),
-                       [&](const auto& lhs, const auto& rhs) { return lhs.first < rhs.first; });
+  boost::sort::pdqsort(value_distribution.begin(), value_distribution.end(), [&](const auto& lhs, const auto& rhs) {
+    return lhs.first < rhs.first;
+  });
 
   return value_distribution;
 }

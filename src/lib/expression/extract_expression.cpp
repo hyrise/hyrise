@@ -1,6 +1,18 @@
 #include "extract_expression.hpp"
 
+#include <cstddef>
+#include <functional>
+#include <memory>
+#include <ostream>
 #include <sstream>
+#include <string>
+#include <type_traits>
+#include <unordered_map>
+
+#include "all_type_variant.hpp"
+#include "expression/abstract_expression.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 

@@ -2,7 +2,7 @@
 
 #include "benchmark/benchmark.h"
 
-#include "../micro_benchmark_basic_fixture.hpp"
+#include "micro_benchmark_basic_fixture.hpp"
 #include "operators/difference.hpp"
 #include "operators/table_wrapper.hpp"
 

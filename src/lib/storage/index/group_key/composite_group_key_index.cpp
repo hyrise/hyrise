@@ -2,18 +2,24 @@
 
 #include <algorithm>
 #include <climits>
+#include <cstddef>
 #include <cstdint>
 #include <iterator>
 #include <memory>
 #include <numeric>
-#include <string>
 #include <utility>
 #include <vector>
 
+#include "all_type_variant.hpp"
+#include "storage/abstract_segment.hpp"
 #include "storage/base_dictionary_segment.hpp"
-#include "storage/vector_compression/base_compressed_vector.hpp"
+#include "storage/index/abstract_chunk_index.hpp"
+#include "storage/index/chunk_index_type.hpp"
+#include "storage/index/group_key/variable_length_key_base.hpp"
+#include "storage/index/group_key/variable_length_key_store.hpp"
 #include "storage/vector_compression/base_vector_decompressor.hpp"
 #include "storage/vector_compression/fixed_width_integer/fixed_width_integer_utils.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 #include "variable_length_key_proxy.hpp"
 
@@ -33,8 +39,9 @@ CompositeGroupKeyIndex::CompositeGroupKeyIndex(
   if constexpr (HYRISE_DEBUG) {
     auto first_size = segments_to_index.front()->size();
     auto all_segments_have_same_size =
-        std::all_of(segments_to_index.cbegin(), segments_to_index.cend(),
-                    [first_size](const auto& segment) { return segment->size() == first_size; });
+        std::all_of(segments_to_index.cbegin(), segments_to_index.cend(), [first_size](const auto& segment) {
+          return segment->size() == first_size;
+        });
 
     Assert(all_segments_have_same_size,
            "CompositeGroupKey requires same length of all segments that should be indexed.");
@@ -89,8 +96,9 @@ CompositeGroupKeyIndex::CompositeGroupKeyIndex(
   }
 
   // sort keys and their positions
-  std::sort(_position_list.begin(), _position_list.end(),
-            [&keys](auto left, auto right) { return keys[left] < keys[right]; });
+  std::sort(_position_list.begin(), _position_list.end(), [&keys](auto left, auto right) {
+    return keys[left] < keys[right];
+  });
 
   _keys = VariableLengthKeyStore(static_cast<ChunkOffset>(segment_size), bytes_per_key);
   for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(segment_size); ++chunk_offset) {

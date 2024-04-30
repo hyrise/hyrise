@@ -1,8 +1,13 @@
 #include "types.hpp"
 
+#include <ostream>
+#include <string>
 #include <unordered_map>
+#include <utility>
 
 #include "magic_enum.hpp"
+
+#include "utils/assert.hpp"
 
 namespace hyrise {
 

@@ -1,5 +1,4 @@
 #include "base_test.hpp"
-
 #include "utils/atomic_max.hpp"
 
 namespace hyrise {

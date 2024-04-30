@@ -45,31 +45,31 @@ class AttributeStatistics : public BaseAttributeStatistics,
 
 template <typename T>
 std::ostream& operator<<(std::ostream& stream, const AttributeStatistics<T>& attribute_statistics) {
-  stream << "{" << std::endl;
+  stream << "{\n";
 
   if (attribute_statistics.histogram) {
-    stream << attribute_statistics.histogram->description() << std::endl;
+    stream << attribute_statistics.histogram->description() << '\n';
   }
 
   if (attribute_statistics.min_max_filter) {
-    stream << "MinMaxFilter: " << *attribute_statistics.min_max_filter << std::endl;
+    stream << "MinMaxFilter: " << *attribute_statistics.min_max_filter << '\n';
   }
 
   if constexpr (std::is_arithmetic_v<T>) {
     if (attribute_statistics.range_filter) {
-      stream << "RangeFilter: " << *attribute_statistics.range_filter << std::endl;
+      stream << "RangeFilter: " << *attribute_statistics.range_filter << '\n';
     }
   }
 
   if (attribute_statistics.null_value_ratio) {
-    stream << "NullValueRatio: " << attribute_statistics.null_value_ratio->ratio << std::endl;
+    stream << "NullValueRatio: " << attribute_statistics.null_value_ratio->ratio << '\n';
   }
 
   if (attribute_statistics.distinct_value_count) {
-    stream << "DistinctValueCount: " << attribute_statistics.distinct_value_count->count << std::endl;
+    stream << "DistinctValueCount: " << attribute_statistics.distinct_value_count->count << '\n';
   }
 
-  stream << "}" << std::endl;
+  stream << "}\n";
 
   return stream;
 }

@@ -1,8 +1,10 @@
 #pragma once
 
-#include "bitpacking_vector_type.hpp"
 #include "compact_vector.hpp"
+
+#include "bitpacking_vector_type.hpp"
 #include "storage/vector_compression/base_vector_decompressor.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 

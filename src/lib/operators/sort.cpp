@@ -1,6 +1,32 @@
 #include "sort.hpp"
 
+#include <algorithm>
+#include <chrono>
+#include <cstddef>
+#include <cstdint>
+#include <functional>
+#include <memory>
+#include <optional>
+#include <string>
+#include <unordered_map>
+#include <utility>
+#include <vector>
+
+#include "all_type_variant.hpp"
+#include "operators/abstract_operator.hpp"
+#include "operators/abstract_read_only_operator.hpp"
+#include "operators/operator_performance_data.hpp"
+#include "resolve_type.hpp"
+#include "storage/abstract_segment.hpp"
+#include "storage/base_segment_accessor.hpp"
+#include "storage/chunk.hpp"
+#include "storage/pos_lists/row_id_pos_list.hpp"
+#include "storage/reference_segment.hpp"
 #include "storage/segment_iterate.hpp"
+#include "storage/table.hpp"
+#include "storage/value_segment.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 #include "utils/timer.hpp"
 
 namespace {
@@ -384,16 +410,17 @@ class Sort::SortImpl {
   // Returns a PosList, which can either be used as an input to the next call of sort or for materializing the
   // output table.
   RowIDPosList sort(const std::optional<RowIDPosList>& previously_sorted_pos_list) {
-    Timer timer;
+    auto timer = Timer{};
     // 1. Prepare Sort: Creating RowID-value-Structure
     _materialize_sort_column(previously_sorted_pos_list);
     materialization_time = timer.lap();
 
     // 2. After we got our ValueRowID Map we sort the map by the value of the pair
     const auto sort_with_comparator = [&](auto comparator) {
-      std::stable_sort(
-          _row_id_value_vector.begin(), _row_id_value_vector.end(),
-          [comparator](RowIDValuePair lhs, RowIDValuePair rhs) { return comparator(lhs.second, rhs.second); });
+      std::stable_sort(_row_id_value_vector.begin(), _row_id_value_vector.end(),
+                       [comparator](RowIDValuePair lhs, RowIDValuePair rhs) {
+                         return comparator(lhs.second, rhs.second);
+                       });
     };
     if (_sort_mode == SortMode::Ascending) {
       sort_with_comparator(std::less<>{});
@@ -412,7 +439,7 @@ class Sort::SortImpl {
       _row_id_value_vector.insert(_row_id_value_vector.begin(), _null_value_rows.begin(), _null_value_rows.end());
     }
 
-    RowIDPosList pos_list{};
+    auto pos_list = RowIDPosList{};
     pos_list.reserve(_row_id_value_vector.size());
     for (const auto& [row_id, _] : _row_id_value_vector) {
       pos_list.emplace_back(row_id);

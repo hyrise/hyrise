@@ -1,6 +1,7 @@
 #pragma once
 
 #include <unordered_set>
+#include <vector>
 
 #include "abstract_table_constraint.hpp"
 
@@ -15,7 +16,7 @@ namespace hyrise {
  */
 class TableOrderConstraint final : public AbstractTableConstraint {
  public:
-  TableOrderConstraint(const std::vector<ColumnID>& ordering_columns, const std::vector<ColumnID>& ordered_columns);
+  TableOrderConstraint(std::vector<ColumnID>&& ordering_columns, std::vector<ColumnID>&& ordered_columns);
   TableOrderConstraint() = delete;
 
   const std::vector<ColumnID>& ordering_columns() const;

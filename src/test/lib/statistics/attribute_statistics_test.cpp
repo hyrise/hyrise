@@ -1,5 +1,4 @@
 #include "base_test.hpp"
-
 #include "statistics/attribute_statistics.hpp"
 #include "statistics/statistics_objects/distinct_value_count.hpp"
 #include "statistics/statistics_objects/min_max_filter.hpp"

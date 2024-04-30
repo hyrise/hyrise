@@ -1,6 +1,13 @@
 #include "mvcc_data.hpp"
 
+#include <atomic>
+#include <cstddef>
+#include <cstdint>
+#include <ostream>
+
+#include "types.hpp"
 #include "utils/assert.hpp"
+#include "utils/copyable_atomic.hpp"
 
 namespace hyrise {
 
@@ -18,19 +25,19 @@ std::ostream& operator<<(std::ostream& stream, const MvccData& mvcc_data) {
   for (const auto& tid : mvcc_data._tids) {
     stream << tid.load() << ", ";
   }
-  stream << std::endl;
+  stream << '\n';
 
   stream << "BeginCIDs: ";
   for (const auto& begin_cid : mvcc_data._begin_cids) {
     stream << begin_cid << ", ";
   }
-  stream << std::endl;
+  stream << '\n';
 
   stream << "EndCIDs: ";
   for (const auto& end_cid : mvcc_data._end_cids) {
     stream << end_cid << ", ";
   }
-  stream << std::endl;
+  stream << '\n';
 
   return stream;
 }
