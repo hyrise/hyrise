@@ -54,7 +54,7 @@ using CsgCmpPair = std::pair<JoinGraphVertexSet, JoinGraphVertexSet>;
  */
 class EnumerateCcp final {
  public:
-  EnumerateCcp(const size_t num_vertices, std::vector<std::pair<size_t, size_t>> edges);
+  EnumerateCcp(const size_t num_vertices, const std::vector<std::pair<size_t, size_t>>& edges);
 
   // Corresponds to EnumerateCsg in the paper
   std::vector<CsgCmpPair> operator()();
@@ -79,7 +79,7 @@ class EnumerateCcp final {
   std::vector<JoinGraphVertexSet> _non_empty_subsets(const JoinGraphVertexSet& vertex_set) const;
 
   const size_t _num_vertices;
-  const std::vector<std::pair<size_t, size_t>> _edges;
+  const std::vector<std::pair<size_t, size_t>>& _edges;
 
   std::vector<std::pair<JoinGraphVertexSet, JoinGraphVertexSet>> _csg_cmp_pairs;
 

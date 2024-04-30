@@ -43,7 +43,7 @@ std::shared_ptr<AbstractLQPNode> perform_join_ordering_recursively(
   }
 
   /**
-   * Setup cardinality and cost sstimation caches.
+   * Setup cardinality and cost estimation caches.
    *
    * As join ordering algorithms issue many cost/cardinality estimation requests, caching is crucial to optimization
    * performance. We can enable the corresponding cache policies because join ordering algorithms build plans bottom-up
