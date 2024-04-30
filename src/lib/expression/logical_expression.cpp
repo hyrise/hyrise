@@ -24,8 +24,6 @@ std::ostream& operator<<(std::ostream& stream, const LogicalOperator logical_ope
     case LogicalOperator::Or:
       stream << "OR";
       break;
-    default:
-      Fail("Invalid logical operator.");
   }
   return stream;
 }

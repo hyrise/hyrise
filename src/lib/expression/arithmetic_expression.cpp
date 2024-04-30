@@ -34,8 +34,6 @@ std::ostream& operator<<(std::ostream& stream, const ArithmeticOperator arithmet
     case ArithmeticOperator::Modulo:
       stream << "%";
       break;
-    default:
-      Fail("Invalid arithmic operator.");
   }
   return stream;
 }
@@ -98,9 +96,8 @@ ExpressionPrecedence ArithmeticExpression::_precedence() const {
     case ArithmeticOperator::Division:
     case ArithmeticOperator::Modulo:
       return ExpressionPrecedence::MultiplicationDivision;
-    default:
-      Fail("Invalid arithmetic operator.");
   }
+  Fail("Invalid enum value.");
 }
 
 }  // namespace hyrise

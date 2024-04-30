@@ -36,8 +36,6 @@ std::ostream& operator<<(std::ostream& stream, const DatetimeComponent datetime_
     case DatetimeComponent::Second:
       stream << "SECOND";
       break;
-    default:
-      Fail("Invalid datetime component.");
   }
   return stream;
 }
