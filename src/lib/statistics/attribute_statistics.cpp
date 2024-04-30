@@ -1,5 +1,6 @@
 #include "attribute_statistics.hpp"
 
+#include <cmath>
 #include <cstddef>
 #include <limits>
 #include <memory>

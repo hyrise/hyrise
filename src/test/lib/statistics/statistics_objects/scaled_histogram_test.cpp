@@ -1,9 +1,8 @@
 #include <memory>
 #include <string>
 
-#include "base_test.hpp"
-
 #include "all_type_variant.hpp"
+#include "base_test.hpp"
 #include "statistics/statistics_objects/abstract_histogram.hpp"
 #include "statistics/statistics_objects/abstract_statistics_object.hpp"
 #include "statistics/statistics_objects/equal_distinct_count_histogram.hpp"
