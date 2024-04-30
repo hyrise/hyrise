@@ -30,10 +30,8 @@ class UnionNode;
 class ValidateNode;
 class WindowNode;
 
-enum class LQPNodeType;
-
 /**
- * Hyrise's default, statistics-based cardinality estimator
+ * Hyrise's default, statistics-based cardinality estimator.
  */
 class CardinalityEstimator : public AbstractCardinalityEstimator {
  public:

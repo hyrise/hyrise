@@ -55,7 +55,7 @@ std::shared_ptr<TableStatistics> TableStatistics::from_table(const Table& table)
           output_column_statistics->set_statistics_object(histogram);
 
           // Use the insight that the histogram will only contain non-null values to generate the NullValueRatio
-          // property
+          // property.
           const auto null_value_ratio =
               table.row_count() == 0
                   ? 0.0f
@@ -92,11 +92,7 @@ std::ostream& operator<<(std::ostream& stream, const TableStatistics& table_stat
   for (const auto& column_statistics : table_statistics.column_statistics) {
     resolve_data_type(column_statistics->data_type, [&](const auto data_type_t) {
       using ColumnDataType = typename decltype(data_type_t)::type;
-<<<<<<< HEAD
-      stream << *std::dynamic_pointer_cast<const AttributeStatistics<ColumnDataType>>(column_statistics) << std::endl;
-=======
-      stream << *std::dynamic_pointer_cast<AttributeStatistics<ColumnDataType>>(column_statistics) << '\n';
->>>>>>> master
+      stream << *std::dynamic_pointer_cast<const AttributeStatistics<ColumnDataType>>(column_statistics) << '\n';
     });
   }
 

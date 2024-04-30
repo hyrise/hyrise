@@ -77,7 +77,7 @@ benchmark_df = pd.DataFrame(
     benchmarks, columns=["Benchmark", "Parser", "SQLTranslator", "Optimizer", "LQPTranslator", "Execution"]
 )
 
-# summing up the runtimes from all stages for each query
+# Summing up the runtimes from all stages for each query.
 total_time = benchmark_df.iloc[:, 1:].apply(lambda x: x.sum(), axis=1)
 
 # Normalize data from nanoseconds to percentage of total cost
@@ -100,7 +100,7 @@ handles, labels = ax.get_legend_handles_labels()
 legend_columns = 5 if apply_wide_layout else 2
 ax.legend(reversed(handles), reversed(labels), bbox_to_anchor=(0.5, 1.05), loc="lower center", ncols=legend_columns)
 
-# Add total runtime to labels
+# Add total runtime to labels.
 xlabels = ax.get_xticklabels()
 for label_id, label in enumerate(xlabels):
     label.set_text(label.get_text() + "\n" + r"$\emptyset$ " + f"{total_time[label_id]/10**6:.2f} ms")
@@ -119,12 +119,12 @@ rule_benchmark_df = rule_benchmark_df.reindex(
     columns=[rule_benchmark_df.columns[0]] + sorted(rule_benchmark_df.columns[1:], key=str.casefold, reverse=True)
 )
 
-# summing up the runtimes from all rules for each query
+# Summing up the runtimes from all rules for each query.
 optimizer_total_time = rule_benchmark_df.iloc[:, 1:].apply(lambda x: x.sum(), axis=1)
 # Normalize data from nanoseconds to percentage of total cost
 rule_benchmark_df.iloc[:, 1:] = rule_benchmark_df.iloc[:, 1:].apply(lambda x: x / x.sum(), axis=1)
 
-# aggregate all rule durations below the threshold
+# Aggregate all rule durations below the threshold.
 rule_benchmark_df.insert(0, "Other Rules", 0)
 threshold = 0.05
 for index, benchmark in rule_benchmark_df[sum_optimizer_rule_durations.keys()].iterrows():
@@ -141,11 +141,11 @@ ax.set_ylabel("Share of Optimizer Runtime")
 ax.yaxis.set_major_locator(mplticker.FixedLocator(y_ticks))
 ax.set_yticklabels(y_tick_labels)
 
-# Reverse legend so that it matches the stacked bars
+# Reverse legend so that it matches the stacked bars.
 handles, labels = ax.get_legend_handles_labels()
 ax.legend(reversed(handles), reversed(labels), bbox_to_anchor=(0.5, 1.05), loc="lower center", ncols=legend_columns)
 
-# Add total runtime to labels
+# Add total runtime to labels.
 xlabels = ax.get_xticklabels()
 for label_id, label in enumerate(xlabels):
     label.set_text(label.get_text() + "\n" + r"$\emptyset$ " + f"{optimizer_total_time[label_id]/10**6:.2f} ms")

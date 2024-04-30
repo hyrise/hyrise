@@ -30,11 +30,10 @@ std::shared_ptr<AbstractLQPNode> perform_join_ordering_recursively(
   };
 
   /**
-   * Try to build a JoinGraph for the current subplan
-   *    -> if that fails, continue to try it with the node's inputs
-   *    -> if that works
-   *        -> invoke a JoinOrderingAlgorithm on that JoinGraph
-   *        -> look for more JoinGraphs below the JoinGraph's vertices
+   * Try to build a JoinGraph for the current subplan.
+   *     Case  I: That fails. Continue to try it with the node's inputs.
+   *     Case II: That works. Invoke a JoinOrderingAlgorithm on that JoinGraph. Then, look for more JoinGraphs below the
+   *              JoinGraph's vertices.
    */
 
   const auto join_graph = JoinGraph::build_from_lqp(lqp);
@@ -44,7 +43,7 @@ std::shared_ptr<AbstractLQPNode> perform_join_ordering_recursively(
   }
 
   /**
-   * Setup Cardinality and Cost Estimation caches.
+   * Setup cardinality and cost sstimation caches.
    *
    * As join ordering algorithms issue many cost/cardinality estimation requests, caching is crucial to optimization
    * performance. We can enable the corresponding cache policies because join ordering algorithms build plans bottom-up
@@ -55,10 +54,13 @@ std::shared_ptr<AbstractLQPNode> perform_join_ordering_recursively(
   caching_cost_estimator->cardinality_estimator->guarantee_join_graph(*join_graph);
 
   /**
-   * Select and call the actual ioin ordering algorithm. Simple heuristic: Use DpCcp for any query with less than X
+   * Select and call the actual join ordering algorithm. Simple heuristic: Use DpCcp for any query with less than X
    * tables and GOO for everything more complex.
    */
-  // TODO(anybody) Increase X once our cost/cardinality estimation is faster/uses internal caching.
+  // TODO(anybody): Increase X once our cost/cardinality estimation is faster. As investigated in #2626 and #XXXX,
+  // we see two main bottlenecks in cardinality estimation:
+  //     (i) Scaling histograms because we do it very often (thousands of times for some TPC-DS and JOB queries).
+  //    (ii) Creating new histograms for joined tables.
   auto result_lqp = std::shared_ptr<AbstractLQPNode>{};
   DebugAssert(!join_graph->vertices.empty(), "There should be nodes in the join graph.");
   if (join_graph->vertices.size() == 1) {

@@ -20,7 +20,9 @@ namespace hyrise {
  *
  * Currently, we only use this wrapper for scaled histograms, but we could also use it for sliced and pruned histograms
  * where (ranges of) bins are simply sliced/pruned away.
- * TODO(anyone): Add support for sliced and pruned histograms when we consider copying them a problem.
+ * TODO(anyone): Add support for sliced and pruned histograms when we consider copying their bins a bottleneck. Another
+ *               opportunity for improvement could be to hold only a pointer to the domain if we often encounter copying
+ *               string domains.
  */
 template <typename T>
 class ScaledHistogram : public AbstractHistogram<T> {

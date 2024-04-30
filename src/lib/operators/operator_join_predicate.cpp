@@ -31,7 +31,7 @@ std::optional<OperatorJoinPredicate> OperatorJoinPredicate::from_expression(cons
       return std::nullopt;
   }
 
-  Assert(abstract_predicate_expression->arguments.size() == 2, "Expected two arguments");
+  Assert(abstract_predicate_expression->arguments.size() == 2, "Expected two arguments.");
 
   // It is possible that a join with left input A and right input B has a join predicate in the form of B.x = A.x. To
   // avoid having the join implementations handle such situations, we check if the predicate sides match. If not, the

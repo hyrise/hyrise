@@ -85,7 +85,7 @@ typename AbstractHistogram<T>::HistogramWidthType AbstractHistogram<T>::bin_widt
   if constexpr (std::is_same_v<T, pmr_string>) {
     const auto repr_min = _domain.string_to_number(bin_minimum(index));
     const auto repr_max = _domain.string_to_number(bin_maximum(index));
-    return repr_max - repr_min + 1u;
+    return repr_max - repr_min + 1;
   } else if constexpr (std::is_floating_point_v<T>) {
     return bin_maximum(index) - bin_minimum(index);
   } else {
@@ -139,8 +139,8 @@ float AbstractHistogram<T>::bin_ratio_less_than(const BinID bin_id, const T& val
     const auto bin_min = bin_minimum(bin_id);
     const auto bin_max = bin_maximum(bin_id);
 
-    // Determine the common_prefix_lengths of bin_min and bin_max. E.g. bin_max=abcde and bin_max=abcz have a
-    // common_prefix_length=3
+    // Determine the common_prefix_lengths of bin_min and bin_max. E.g., bin_max=abcde and bin_max=abcz have a
+    // common_prefix_length=3.
     auto common_prefix_length = size_t{0};
     const auto max_common_prefix_length =
         std::min(bin_min.length() - _domain.prefix_length, bin_max.length() - _domain.prefix_length);
@@ -199,7 +199,7 @@ float AbstractHistogram<T>::bin_ratio_less_than_equals(const BinID bin_id, const
 template <typename T>
 float AbstractHistogram<T>::bin_ratio_between(const BinID bin_id, const T& value, const T& value2) const {
   // All values that are less than or equal to the upper boundary minus all values that are smaller than the lower
-  // boundary
+  // boundary.
   return bin_ratio_less_than_equals(bin_id, value2) - bin_ratio_less_than(bin_id, value);
 }
 
@@ -220,7 +220,7 @@ bool AbstractHistogram<T>::does_not_contain(const PredicateCondition predicate_c
     case PredicateCondition::Equals: {
       const auto bin_id = bin_for_value(*value);
       // It is possible for EqualWidthHistograms to have empty bins.
-      return bin_id == INVALID_BIN_ID || bin_height(bin_id) == 0ul;
+      return bin_id == INVALID_BIN_ID || bin_height(bin_id) == 0;
     }
     case PredicateCondition::NotEquals:
       return bin_minimum(BinID{0}) == value && bin_maximum(bin_count() - 1) == value;
@@ -257,7 +257,7 @@ bool AbstractHistogram<T>::does_not_contain(const PredicateCondition predicate_c
 
       // In an EqualDistinctCountHistogram, if both values fall into the same gap, we can prune the predicate.
       // We need to have at least two bins to rule out pruning if value < min and value2 > max.
-      if (value_bin == INVALID_BIN_ID && value2_bin == INVALID_BIN_ID && bin_count() > 1ul &&
+      if (value_bin == INVALID_BIN_ID && value2_bin == INVALID_BIN_ID && bin_count() > 1 &&
           next_bin_for_value(*value) == next_bin_for_value(*value2)) {
         return true;
       }
@@ -267,7 +267,7 @@ bool AbstractHistogram<T>::does_not_contain(const PredicateCondition predicate_c
       if (value_bin != INVALID_BIN_ID && value2_bin != INVALID_BIN_ID && bin_height(value_bin) == 0 &&
           bin_height(value2_bin) == 0) {
         for (auto current_bin = value_bin + 1; current_bin < value2_bin; ++current_bin) {
-          if (bin_height(current_bin) > 0ul) {
+          if (bin_height(current_bin) > 0) {
             return false;
           }
         }
@@ -303,7 +303,6 @@ std::pair<Cardinality, DistinctCount> AbstractHistogram<T>::estimate_cardinality
     return {static_cast<Cardinality>(total_count()), static_cast<float>(total_distinct_count())};
   }
 
-  // NOLINTNEXTLINE clang-tidy is crazy and sees a "potentially unintended semicolon" here...
   if constexpr (std::is_same_v<T, pmr_string>) {
     value = _domain.string_to_domain(*value);
   }
@@ -344,7 +343,7 @@ std::pair<Cardinality, DistinctCount> AbstractHistogram<T>::estimate_cardinality
         // The value is within the range of the histogram, but does not belong to a bin.
         // Therefore, we need to sum up the counts of all bins with a max < value.
         bin_id = next_bin_for_value(*value);
-      } else if (value == bin_minimum(bin_id) || bin_height(bin_id) == 0u) {
+      } else if (value == bin_minimum(bin_id) || bin_height(bin_id) == 0) {
         // If the value is exactly the lower bin edge or the bin is empty,
         // we do not have to add anything of that bin and know the cardinality exactly.
       } else {
@@ -356,7 +355,7 @@ std::pair<Cardinality, DistinctCount> AbstractHistogram<T>::estimate_cardinality
       DebugAssert(bin_id != INVALID_BIN_ID, "Should have been caught by does_not_contain().");
 
       // Sum up all bins before the bin (or gap) containing the value.
-      for (BinID bin = 0u; bin < bin_id; ++bin) {
+      for (auto bin = BinID{0}; bin < bin_id; ++bin) {
         cardinality += bin_height(bin);
         distinct_count += bin_distinct_count(bin);
       }
@@ -400,7 +399,7 @@ std::pair<Cardinality, DistinctCount> AbstractHistogram<T>::estimate_cardinality
         return {Cardinality{0}, 0.0f};
       }
 
-      // Adjust value (lower_bound) and value2 (lower_bin_id) so that both values are contained within a bin
+      // Adjust value (lower_bound) and value2 (lower_bin_id) so that both values are contained within a bin.
       auto lower_bound = *value;
       auto lower_bin_id = bin_for_value(*value);
       if (lower_bin_id == INVALID_BIN_ID) {
@@ -420,7 +419,7 @@ std::pair<Cardinality, DistinctCount> AbstractHistogram<T>::estimate_cardinality
         upper_bound = bin_maximum(upper_bin_id);
       }
 
-      // Accumulate the cardinality/distinct count of all bins from the lower bound to the upper bound
+      // Accumulate the cardinality/distinct count of all bins from the lower bound to the upper bound.
       auto cardinality = HistogramCountType{0};
       auto distinct_count = HistogramCountType{0};
       for (auto bin_id = lower_bin_id; bin_id <= upper_bin_id; ++bin_id) {
@@ -505,18 +504,17 @@ std::shared_ptr<const AbstractStatisticsObject> AbstractHistogram<T>::sliced(
       auto maximum = bin_maximum(value_bin_id);
       const auto distinct_count = bin_distinct_count(value_bin_id);
 
-      // Do not create empty bin if `value` is the only value in the bin
+      // Do not create empty bin if `value` is the only value in the bin.
       const auto new_bin_count = minimum == maximum ? bin_count() - 1 : bin_count();
 
       auto builder = GenericHistogramBuilder<T>{new_bin_count, _domain};
 
       builder.add_copied_bins(*this, BinID{0}, value_bin_id);
 
-      // Do not create empty bin if `value` is the only value in the bin
+      // Do not create empty bin if `value` is the only value in the bin.
       if (minimum != maximum) {
         // A bin [50, 60] sliced with `!= 60` becomes [50, 59]
-        // TODO(anybody) Implement bin bounds trimming for strings
-        // NOLINTNEXTLINE clang-tidy is crazy and sees a "potentially unintended semicolon" here...
+        // TODO(anybody): Implement bin bounds trimming for strings.
         if constexpr (!std::is_same_v<pmr_string, T>) {
           if (minimum == *value) {
             minimum = _domain.next_value_clamped(*value);
@@ -559,8 +557,7 @@ std::shared_ptr<const AbstractStatisticsObject> AbstractHistogram<T>::sliced(
 
       auto last_bin_maximum = T{};
       // previous_value_clamped(value) is not available for strings, but we do not expect it to make a big difference.
-      // TODO(anybody) Correctly implement bin bounds trimming for strings
-      // NOLINTNEXTLINE clang-tidy is crazy and sees a "potentially unintended semicolon" here...
+      // TODO(anybody): Correctly implement bin bounds trimming for strings.
       if constexpr (!std::is_same_v<T, pmr_string>) {
         last_bin_maximum = std::min(bin_maximum(last_included_bin_id), _domain.previous_value_clamped(*value));
       } else {
@@ -605,7 +602,7 @@ std::shared_ptr<const AbstractStatisticsObject> AbstractHistogram<T>::sliced(
 
     case PredicateCondition::Like:
     case PredicateCondition::NotLike:
-      // TODO(anybody) Slicing for (NOT) LIKE not supported, yet.
+      // TODO(anybody): Slicing for (NOT) LIKE not supported, yet.
       return this->shared_from_this();
 
     case PredicateCondition::In:
@@ -665,7 +662,7 @@ std::shared_ptr<const AbstractStatisticsObject> AbstractHistogram<T>::pruned(
     } break;
 
     case PredicateCondition::LessThan: {
-      // Analogous to LessThanEquals
+      // Analogous to LessThanEquals.
       for (auto bin_id = BinID{0}; bin_id < bin_count(); ++bin_id) {
         bin_prunable_height[bin_id] = bin_height(bin_id) * (1.0f - bin_ratio_less_than(bin_id, *value));
       }
@@ -701,7 +698,7 @@ std::shared_ptr<const AbstractStatisticsObject> AbstractHistogram<T>::pruned(
 
     case PredicateCondition::Like:
     case PredicateCondition::NotLike:
-      // TODO(anybody) Pruning for (NOT) LIKE not supported, yet
+      // TODO(anybody): Pruning for (NOT) LIKE not supported, yet.
       return this->shared_from_this();
 
     case PredicateCondition::In:
@@ -792,7 +789,7 @@ std::shared_ptr<AbstractHistogram<T>> AbstractHistogram<T>::split_at_bin_bounds(
   /**
    * Sequentialize `candidate_split_set` and sort it.
    *
-   * E.g. {[-1, 0], [10, 11], [14, 15], [20, 21], [-5, -4], [5, 6], [15, 16], [18, 19]} becomes
+   * E.g., {[-1, 0], [10, 11], [14, 15], [20, 21], [-5, -4], [5, 6], [15, 16], [18, 19]} becomes
    * [-5, -4, -1, 0, 5, 6, 10, 11, 14, 15, 15, 16, 18, 19, 20, 21]
    */
   auto candidate_edges = std::vector<T>(candidate_split_set.size() * 2);
@@ -822,7 +819,7 @@ std::shared_ptr<AbstractHistogram<T>> AbstractHistogram<T>::split_at_bin_bounds(
    * Create new bins.
    * Bin edges are defined by two consecutive values in candidate_edges in pairs of two.
    *
-   * E.g. [-4, -1, 0, 5, 6, 10, 11, 14, 15, 15, 16, 18, 19, 20] becomes
+   * E.g., [-4, -1, 0, 5, 6, 10, 11, 14, 15, 15, 16, 18, 19, 20] becomes
    * {[-4, -1], [0, 5], [6, 10], [11, 14], [15, 15], [16, 18], [19, 20]} but since some of these bins contain not data
    * in the original histogram, the resulting histogram is {[0, 5], [6, 10], [15, 15], [16, 18], [19, 20]}
    */
@@ -860,7 +857,7 @@ std::vector<std::pair<T, T>> AbstractHistogram<T>::bin_bounds() const {
 
 template <typename T>
 void AbstractHistogram<T>::_assert_bin_validity() {
-  for (BinID bin_id{0}; bin_id < bin_count(); ++bin_id) {
+  for (auto bin_id = BinID{0}; bin_id < bin_count(); ++bin_id) {
     Assert(bin_minimum(bin_id) <= bin_maximum(bin_id), "Bin minimum must be <= bin maximum.");
 
     if (bin_id < bin_count() - 1) {
