@@ -142,7 +142,7 @@ BenchmarkConfig CLIConfigParser::parse_cli_options(const cxxopts::ParseResult& p
 
   const auto verify = parse_result["verify"].as<bool>();
   if (verify) {
-    std::cout << "- Automatically verifying results with SQLite. This will make the performance numbers invalid.\n";
+    std::cout << "- Automatically verifying results with SQLite. This will make the performance numbers invalid\n";
   }
 
   const auto cache_binary_tables = !parse_result["dont_cache_binary_tables"].as<bool>();
@@ -155,17 +155,17 @@ BenchmarkConfig CLIConfigParser::parse_cli_options(const cxxopts::ParseResult& p
   const auto system_metrics = parse_result["system_metrics"].as<bool>();
   if (system_metrics) {
     Assert(!output_file_string.empty(), "--system_metrics only makes sense when an output file is set.");
-    std::cout << "- Tracking system metrics.\n";
+    std::cout << "- Tracking system metrics\n";
   } else {
-    std::cout << "- Not tracking system metrics.\n";
+    std::cout << "- Not tracking system metrics\n";
   }
 
   const auto pipeline_metrics = parse_result["pipeline_metrics"].as<bool>();
   if (pipeline_metrics) {
     Assert(!output_file_string.empty(), "--pipeline_metrics only makes sense when an output file is set.");
-    std::cout << "- Tracking SQL pipeline metrics.\n";
+    std::cout << "- Tracking SQL pipeline metrics\n";
   } else {
-    std::cout << "- Not tracking SQL pipeline metrics.\n";
+    std::cout << "- Not tracking SQL pipeline metrics\n";
   }
 
   auto plugins = std::vector<std::string>{};
