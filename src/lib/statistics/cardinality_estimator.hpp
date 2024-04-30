@@ -257,6 +257,7 @@ class CardinalityEstimator : public AbstractCardinalityEstimator {
   mutable size_t local_cache_hits{0};
   mutable size_t cache_misses{0};
   mutable std::chrono::nanoseconds cardinality_time{0};
+  mutable std::chrono::nanoseconds cardinality_time2{0};
   mutable std::chrono::nanoseconds join_histogram_time{0};
   mutable std::chrono::nanoseconds column_column_histogram_time{0};
   mutable std::chrono::nanoseconds bitmask_cache_time{0};

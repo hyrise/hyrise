@@ -119,6 +119,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
    *
    * Finally, try a lookup in the temporary cache used for the estimation of a single LQP.
    */
+  auto overall_timer = Timer{};
   auto lookup_timer = Timer{};
   auto join_graph_bitmask = std::optional<JoinGraphStatisticsCache::Bitmask>{};
   if (cardinality_estimation_cache.join_graph_statistics_cache) {
@@ -154,6 +155,8 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
 
   ++cache_misses;
 
+  const auto cache_time = overall_timer.lap();
+
   /**
    * 2. Cache lookup failed - perform an actual cardinality estimation.
    */
@@ -162,45 +165,46 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
       lqp->left_input() ? estimate_statistics(lqp->left_input(), cacheable, statistics_cache) : nullptr;
   const auto right_input_table_statistics =
       lqp->right_input() ? estimate_statistics(lqp->right_input(), cacheable, statistics_cache) : nullptr;
+  overall_timer.lap();
 
   auto timer = Timer{};
   switch (lqp->type) {
     case LQPNodeType::Aggregate: {
-      const auto aggregate_node = std::dynamic_pointer_cast<const AggregateNode>(lqp);
-      output_table_statistics = estimate_aggregate_node(*aggregate_node, left_input_table_statistics);
+      const auto& aggregate_node = static_cast<const AggregateNode&>(*lqp);
+      output_table_statistics = estimate_aggregate_node(aggregate_node, left_input_table_statistics);
     } break;
 
     case LQPNodeType::Alias: {
-      const auto alias_node = std::dynamic_pointer_cast<const AliasNode>(lqp);
-      output_table_statistics = estimate_alias_node(*alias_node, left_input_table_statistics);
+      const auto& alias_node = static_cast<const AliasNode&>(*lqp);
+      output_table_statistics = estimate_alias_node(alias_node, left_input_table_statistics);
     } break;
 
     case LQPNodeType::Join: {
-      const auto join_node = std::dynamic_pointer_cast<const JoinNode>(lqp);
+      const auto& join_node = static_cast<const JoinNode&>(*lqp);
       output_table_statistics =
-          estimate_join_node(*join_node, left_input_table_statistics, right_input_table_statistics);
+          estimate_join_node(join_node, left_input_table_statistics, right_input_table_statistics);
     } break;
 
     case LQPNodeType::Limit: {
-      const auto limit_node = std::dynamic_pointer_cast<const LimitNode>(lqp);
-      output_table_statistics = estimate_limit_node(*limit_node, left_input_table_statistics);
+      const auto& limit_node = static_cast<const LimitNode&>(*lqp);
+      output_table_statistics = estimate_limit_node(limit_node, left_input_table_statistics);
     } break;
 
     case LQPNodeType::Mock: {
-      const auto mock_node = std::dynamic_pointer_cast<const MockNode>(lqp);
-      Assert(mock_node->table_statistics(), "Cannot return statistics of MockNode that was not assigned statistics");
-      output_table_statistics = prune_column_statistics(mock_node->table_statistics(), mock_node->pruned_column_ids());
+      const auto& mock_node = static_cast<const MockNode&>(*lqp);
+      Assert(mock_node.table_statistics(), "Cannot return statistics of MockNode that was not assigned statistics");
+      output_table_statistics = prune_column_statistics(mock_node.table_statistics(), mock_node.pruned_column_ids());
     } break;
 
     case LQPNodeType::Predicate: {
-      const auto predicate_node = std::dynamic_pointer_cast<const PredicateNode>(lqp);
+      const auto& predicate_node = static_cast<const PredicateNode&>(*lqp);
       output_table_statistics =
-          estimate_predicate_node(*predicate_node, left_input_table_statistics, cacheable, statistics_cache);
+          estimate_predicate_node(predicate_node, left_input_table_statistics, cacheable, statistics_cache);
     } break;
 
     case LQPNodeType::Projection: {
-      const auto projection_node = std::dynamic_pointer_cast<const ProjectionNode>(lqp);
-      output_table_statistics = estimate_projection_node(*projection_node, left_input_table_statistics);
+      const auto& projection_node = static_cast<const ProjectionNode&>(*lqp);
+      output_table_statistics = estimate_projection_node(projection_node, left_input_table_statistics);
     } break;
 
     case LQPNodeType::Sort: {
@@ -231,39 +235,39 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
     } break;
 
     case LQPNodeType::StoredTable: {
-      const auto stored_table_node = std::dynamic_pointer_cast<const StoredTableNode>(lqp);
+      const auto& stored_table_node = static_cast<const StoredTableNode&>(*lqp);
 
-      const auto stored_table = Hyrise::get().storage_manager.get_table(stored_table_node->table_name);
+      const auto& stored_table = Hyrise::get().storage_manager.get_table(stored_table_node.table_name);
       Assert(stored_table->table_statistics(), "Stored Table should have cardinality estimation statistics");
 
-      if (stored_table_node->table_statistics) {
+      if (stored_table_node.table_statistics) {
         // TableStatistics have changed from the original table's statistics
-        Assert(stored_table_node->table_statistics->column_statistics.size() ==
+        Assert(stored_table_node.table_statistics->column_statistics.size() ==
                    static_cast<size_t>(stored_table->column_count()),
                "Statistics in StoredTableNode should have same number of columns as original table");
-        Assert(stored_table_node->table_statistics->row_count >= 0, "Tables can't have negative row counts");
+        Assert(stored_table_node.table_statistics->row_count >= 0, "Tables can't have negative row counts");
         output_table_statistics =
-            prune_column_statistics(stored_table_node->table_statistics, stored_table_node->pruned_column_ids());
+            prune_column_statistics(stored_table_node.table_statistics, stored_table_node.pruned_column_ids());
       } else {
         output_table_statistics =
-            prune_column_statistics(stored_table->table_statistics(), stored_table_node->pruned_column_ids());
+            prune_column_statistics(stored_table->table_statistics(), stored_table_node.pruned_column_ids());
       }
     } break;
 
     case LQPNodeType::Validate: {
-      const auto validate_node = std::dynamic_pointer_cast<const ValidateNode>(lqp);
-      output_table_statistics = estimate_validate_node(*validate_node, left_input_table_statistics);
+      const auto& validate_node = static_cast<const ValidateNode&>(*lqp);
+      output_table_statistics = estimate_validate_node(validate_node, left_input_table_statistics);
     } break;
 
     case LQPNodeType::Union: {
-      const auto union_node = std::dynamic_pointer_cast<const UnionNode>(lqp);
+      const auto& union_node = static_cast<const UnionNode&>(*lqp);
       output_table_statistics =
-          estimate_union_node(*union_node, left_input_table_statistics, right_input_table_statistics);
+          estimate_union_node(union_node, left_input_table_statistics, right_input_table_statistics);
     } break;
 
     case LQPNodeType::Window: {
-      const auto window_node = std::dynamic_pointer_cast<const WindowNode>(lqp);
-      output_table_statistics = estimate_window_node(*window_node, left_input_table_statistics);
+      const auto& window_node = static_cast<const WindowNode&>(*lqp);
+      output_table_statistics = estimate_window_node(window_node, left_input_table_statistics);
     } break;
 
     // Currently, there is no actual estimation being done and we always apply the worst case.
@@ -286,7 +290,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
     case LQPNodeType::DropTable:
     case LQPNodeType::ChangeMetaTable:
     case LQPNodeType::DummyTable: {
-      auto empty_column_statistics = std::vector<std::shared_ptr<const BaseAttributeStatistics>>();
+      auto empty_column_statistics = std::vector<std::shared_ptr<const BaseAttributeStatistics>>{};
       output_table_statistics = std::make_shared<TableStatistics>(std::move(empty_column_statistics), Cardinality{0});
     } break;
 
@@ -314,6 +318,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
   statistics_cache.emplace(lqp, output_table_statistics);
 
   caching_time += timer.lap();
+  cardinality_time2 += overall_timer.lap() + cache_time;
 
   return output_table_statistics;
 }

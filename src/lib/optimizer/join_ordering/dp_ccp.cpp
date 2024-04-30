@@ -210,7 +210,7 @@ std::shared_ptr<AbstractLQPNode> DpCcp::operator()(const JoinGraph& join_graph,
             << "    " << format_duration(ce.bitmask_cache_time) <<  " / " << format_duration(ce.global_cache_time)
             << " / " << format_duration(ce.local_cache_time) << " / " << format_duration(ce.estimation_time)
             << " / " << format_duration(ce.caching_time)
-            << "    " << format_duration(ce.cardinality_time) << " / " << format_duration(ce.join_histogram_time) << "\n";
+            << "    " << format_duration(ce.cardinality_time) << " (" << format_duration(ce.cardinality_time2) << ") " << " / " << format_duration(ce.join_histogram_time) << "\n";
 
   for (const auto [type, time]: ce.time_by_node) {
     std::cout << "        " << magic_enum::enum_name(type) << " " << format_duration(time) << "\n";
