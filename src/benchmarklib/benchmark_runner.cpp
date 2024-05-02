@@ -265,7 +265,7 @@ void BenchmarkRunner::_benchmark_shuffled() {
     item_ids = item_ids_weighted;
   }
 
-  _running_clients_semaphore.release(_config.clients);
+  _running_clients_semaphore.signal(_config.clients);
 
   for (const auto& item_id : item_ids) {
     _warmup(item_id);
@@ -307,7 +307,7 @@ void BenchmarkRunner::_benchmark_shuffled() {
 }
 
 void BenchmarkRunner::_benchmark_ordered() {
-  _running_clients_semaphore.release(_config.clients);
+  _running_clients_semaphore.signal(_config.clients);
 
   for (const auto& item_id : _benchmark_item_runner->items()) {
     _warmup(item_id);
@@ -321,10 +321,10 @@ void BenchmarkRunner::_benchmark_ordered() {
 
     if constexpr (HYRISE_DEBUG) {
       for (auto client = size_t{0}; client < _config.clients; ++client) {
-        Assert(_running_clients_semaphore.try_acquire(), "Client was not able to acquire.");
+        Assert(_running_clients_semaphore.tryWait(), "Client was not able to acquire semaphore.");
       }
-      Assert(!_running_clients_semaphore.try_acquire(), "Aquiring semaphore should not be possible.");
-      _running_clients_semaphore.release(_config.clients);
+      Assert(!_running_clients_semaphore.tryWait(), "Aquiring semaphore should not be possible.");
+      _running_clients_semaphore.signal(_config.clients);
     }
 
     _state = BenchmarkState{_config.max_duration};
@@ -376,7 +376,7 @@ void BenchmarkRunner::_benchmark_ordered() {
 }
 
 void BenchmarkRunner::_schedule_item_run(const BenchmarkItemID item_id) {
-  _running_clients_semaphore.acquire();
+  _running_clients_semaphore.wait();
 
   ++_currently_running_clients;
   auto& result = _results[item_id];
@@ -390,7 +390,7 @@ void BenchmarkRunner::_schedule_item_run(const BenchmarkItemID item_id) {
         const auto run_end = std::chrono::steady_clock::now();
 
         --_currently_running_clients;
-        _running_clients_semaphore.release();
+        _running_clients_semaphore.signal();
         ++_total_finished_runs;
 
         // If result.verification_passed was previously unset, set it; otherwise only invalidate it if the run failed.
