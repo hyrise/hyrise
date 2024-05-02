@@ -61,8 +61,6 @@ class TaskQueue {
 
   /**
    * Semaphore to signal waiting workers for new tasks.
-   * When macOS ships a more recent libc++ STL, this third-pary semaphore can be replaced by std::counting_semaphore
-   * (see comment in benchmark_runner.hpp).
    */
   moodycamel::LightweightSemaphore semaphore;
 

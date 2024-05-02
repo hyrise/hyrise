@@ -6,13 +6,12 @@
 #include <limits>
 #include <memory>
 #include <optional>
+#include <semaphore>
 #include <string>
 #include <unordered_map>
 #include <vector>
 
-#include "concurrentqueue.h"  // The lightweight semaphore uses definitions of concurrentqueue.h.
 #include "cxxopts.hpp"
-#include "lightweightsemaphore.h"
 #include "nlohmann/json.hpp"
 
 #include "abstract_benchmark_item_runner.hpp"
@@ -109,9 +108,7 @@ class BenchmarkRunner : public Noncopyable {
   // We schedule as many items simultaneously as we have simulated clients. We use a counting semaphore for this
   // purpose. We initialize it to a maximum value of int32_t::max(), which should be sufficient for reasonable clients
   // counts.
-  // We are not using a `std::counting_semaphore<std::numeric_limits<int32_t>::max()>` here as the libc++ STL shipped
-  // with macOS has wake up issues.
-  moodycamel::LightweightSemaphore _running_clients_semaphore{0};
+  std::counting_semaphore<std::numeric_limits<int32_t>::max()> _running_clients_semaphore{0};
 
   // For BenchmarkMode::Shuffled, we count the number of runs executed across all items. This also includes items that
   // were unsuccessful (e.g., because of transaction aborts).
