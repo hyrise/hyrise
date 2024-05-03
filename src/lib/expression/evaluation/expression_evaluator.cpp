@@ -818,18 +818,23 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_functio
     const FunctionExpression& expression) {
   switch (expression.function_type) {
     case FunctionType::Concatenate:
+      if constexpr (std::is_same_v<Result, pmr_string>) {
+        return _evaluate_concatenate(expression.arguments);
+      }
+      Fail("CONCAT() can only be evaluated on strings.");
     case FunctionType::Substring:
       if constexpr (std::is_same_v<Result, pmr_string>) {
-        switch (expression.function_type) {
-          case FunctionType::Substring:
-            return _evaluate_substring(expression.arguments);
-          case FunctionType::Concatenate:
-            return _evaluate_concatenate(expression.arguments);
-        }
+        return _evaluate_substring(expression.arguments);
       }
-      Fail("Function can only be evaluated to a string.");
+      Fail("SUBSTR() can only be evaluated on strings.");
+    case FunctionType::Absolute:
+      if constexpr (!std::is_same_v<Result, pmr_string>) {
+        Assert(expression.arguments.size() == 1, "ABS() expects exactly one argument.");
+        return _evaluate_absolute<Result>(expression.arguments.front());
+      }
+      Fail("ABS() cannot be evaluated on strings.");
   }
-  Fail("Invalid enum value.");
+  Fail("GCC thinks this is reachable and expects a return or an exception.");
 }
 
 template <typename Result>
@@ -1505,8 +1510,16 @@ std::shared_ptr<ExpressionResult<pmr_string>> ExpressionEvaluator::_evaluate_sub
   DebugAssert(arguments.size() == 3, "SUBSTR expects three arguments.");
 
   const auto strings = evaluate_expression_to_result<pmr_string>(*arguments[0]);
-  const auto starts = evaluate_expression_to_result<int32_t>(*arguments[1]);
-  const auto lengths = evaluate_expression_to_result<int32_t>(*arguments[2]);
+  auto starts_expression = arguments[1];
+  if (starts_expression->data_type() == DataType::Long) {
+    starts_expression = cast_(starts_expression, DataType::Int);
+  }
+  auto lengths_expression = arguments[2];
+  if (lengths_expression->data_type() == DataType::Long) {
+    lengths_expression = cast_(lengths_expression, DataType::Int);
+  }
+  const auto starts = evaluate_expression_to_result<int32_t>(*starts_expression);
+  const auto lengths = evaluate_expression_to_result<int32_t>(*lengths_expression);
 
   const auto row_count = _result_size(strings->size(), starts->size(), lengths->size());
 
@@ -1636,6 +1649,31 @@ std::shared_ptr<ExpressionResult<pmr_string>> ExpressionEvaluator::_evaluate_con
 }
 
 template <typename Result>
+std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_absolute(
+    const std::shared_ptr<AbstractExpression>& argument) {
+  const auto argument_result = evaluate_expression_to_result<Result>(*argument);
+  const auto result_size = argument_result->size();
+
+  auto result = pmr_vector<Result>(result_size);
+  auto null_values = pmr_vector<bool>{};
+  if (argument_result->is_nullable()) {
+    null_values.resize(result_size, false);
+  }
+
+  argument_result->as_view([&](const auto& argument_view) {
+    for (auto chunk_offset = ChunkOffset{0}; chunk_offset < result_size; ++chunk_offset) {
+      if (argument_view.is_null(chunk_offset)) {
+        null_values[chunk_offset] = true;
+        continue;
+      }
+      result[chunk_offset] = std::abs(argument_view.value(chunk_offset));
+    }
+  });
+
+  return std::make_shared<ExpressionResult<Result>>(std::move(result), std::move(null_values));
+}
+
+template <typename Result>
 std::vector<std::shared_ptr<ExpressionResult<Result>>> ExpressionEvaluator::_prune_tables_to_expression_results(
     const std::vector<std::shared_ptr<const Table>>& tables) {
   /**
@@ -1700,11 +1738,13 @@ std::vector<std::shared_ptr<ExpressionResult<Result>>> ExpressionEvaluator::_pru
 // We explicitly instantiate these template functions because clang-12(+) does not instantiate them for us.
 template std::shared_ptr<ExpressionResult<int32_t>> ExpressionEvaluator::evaluate_expression_to_result<int32_t>(
     const AbstractExpression& expression);
+template std::shared_ptr<ExpressionResult<int64_t>> ExpressionEvaluator::evaluate_expression_to_result<int64_t>(
+    const AbstractExpression& expression);
 template std::shared_ptr<ExpressionResult<float>> ExpressionEvaluator::evaluate_expression_to_result<float>(
     const AbstractExpression& expression);
-template std::shared_ptr<ExpressionResult<pmr_string>> ExpressionEvaluator::evaluate_expression_to_result<pmr_string>(
-    const AbstractExpression& expression);
 template std::shared_ptr<ExpressionResult<double>> ExpressionEvaluator::evaluate_expression_to_result<double>(
+    const AbstractExpression& expression);
+template std::shared_ptr<ExpressionResult<pmr_string>> ExpressionEvaluator::evaluate_expression_to_result<pmr_string>(
     const AbstractExpression& expression);
 
 }  // namespace hyrise
