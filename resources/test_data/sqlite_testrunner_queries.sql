@@ -419,6 +419,17 @@ SELECT CASE WHEN id + 3.4 < 50 THEN 'Hello' WHEN id < 70 THEN 'World' ELSE 'Ciao
 SELECT CASE id + 10 WHEN 15 THEN a WHEN 26 THEN 'World' ELSE d END AS case_column FROM mixed;
 SELECT a, CASE WHEN a IS NULL THEN 1 ELSE 2 END FROM mixed_null GROUP BY a
 
+-- COALESCE
+SELECT COALESCE(d, '') d_not_null FROM mixed_null;
+SELECT COALESCE(b, -1) AS b_not_null, COALESCE(c, 0.0) c_not_null FROM mixed_null;
+SELECT COALESCE(b, 1-1) b_not_null, COALESCE(c, 3.0/-4.0) c_not_null FROM mixed_null;
+SELECT COALESCE(c, CAST(COALESCE(b, 0) AS FLOAT)) c_not_null FROM mixed_null;
+SELECT COALESCE(b, CAST(c AS INT), 0) b_not_null FROM mixed_null;
+SELECT COALESCE(b, 0) + COALESCE(c, 0.0) sum_not_null FROM mixed_null;
+-- COALESCE returns the first argument when it is not NULL, else the provided alternative.
+SELECT COALESCE(c, 0.0) = (CASE WHEN c is NULL THEN 0.0 ELSE c END) coalesce_eq FROM mixed_null;
+SELECT COALESCE(NULL, b, NULL) b FROM mixed_null; -- This is just b.
+
 -- IN
 SELECT * FROM id_int_int_int_100 WHERE a IN (24, 55, 78)
 SELECT * FROM id_int_int_int_100 WHERE a IN (b - 48, b + 1)
