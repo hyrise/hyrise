@@ -2108,6 +2108,48 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
         return std::make_shared<FunctionExpression>(function_iter->second, arguments);
       }
 
+      // According to the SQL standard (SQL:2023, Part 2: Foundation, p. 251: <case expression>),
+      // `COALESCE(a, b, ..., x, y)` is syntactic sugar for:
+      //
+      //     CASE
+      //       WHEN a IS NOT NULL THEN a
+      //       WHEN b IS NOT NULL THEN b
+      //       ...
+      //       WHEN x IS NOT NULL THEN x
+      //       ELSE y
+      //     END
+      //
+      // TODO(anyone): Though we have not seen this in benchmarks, there is no reason to add COALESCE list arguments if
+      // the preceding argument is not nullable.
+      if (name == "COALESCE") {
+        AssertInput(expr.exprList && !expr.exprList->empty(), "COALESCE list must not be empty.");
+        auto case_expression = std::shared_ptr<AbstractExpression>{};
+        auto data_type = DataType::Null;
+
+        // Build CASE expression bottom-up, i.e., in reverse fashion.
+        for (auto argument_it = expr.exprList->crbegin(); argument_it != expr.exprList->crend(); ++argument_it) {
+          const auto expression = _translate_hsql_expr(**argument_it, sql_identifier_resolver);
+          // The end of the list is the ELSE branch, which is the base case.
+          if (argument_it == expr.exprList->crbegin()) {
+            case_expression = expression;
+            data_type = expression->data_type();
+            continue;
+          }
+
+          // If this is not the end, add a CASE on top.
+          case_expression = case_(is_not_null_(expression), expression, case_expression);
+
+          // Make sure the data types match. Allow COALESCE for columns of DataType::Int or DataType::Float without
+          // casting the default value.
+          const auto expression_data_type = expression->data_type();
+          AssertInput((data_type == DataType::String) == (expression_data_type == DataType::String) &&
+                          is_floating_point_data_type(data_type) == is_floating_point_data_type(expression_data_type),
+                      "COALESCE is not supported for different data types.");
+        }
+
+        return case_expression;
+      }
+
       FailInput("Could not resolve function '" + name + "'.");
     }
 
@@ -2298,7 +2340,7 @@ std::shared_ptr<LQPSubqueryExpression> SQLTranslator::_translate_hsql_subquery(
 std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_case(
     const hsql::Expr& expr, const std::shared_ptr<SQLIdentifierResolver>& sql_identifier_resolver) {
   /**
-   * There is a "simple" and a "searched" CASE syntax, see http://www.oratable.com/simple-case-searched-case/
+   * There is a "simple" and a "searched" CASE syntax, see https://www.oratable.com/simple-case-searched-case/
    * Hyrise supports both.
    */
 

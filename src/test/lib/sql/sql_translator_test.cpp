@@ -264,6 +264,32 @@ TEST_F(SQLTranslatorTest, CaseExpressionSearched) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
+TEST_F(SQLTranslatorTest, Coalesce) {
+  // Coalesce is just syntactic sugar for a nested CASE WHEN expression IS NOT NULL THEN expression ...
+  const auto [actual_lqp, _] = sql_to_lqp_helper("SELECT COALESCE(a, a + 1, 1) FROM int_float;");
+
+  // clang-format off
+  const auto expression = case_(is_not_null_(int_float_a),
+                                int_float_a,
+                                case_(is_not_null_(add_(int_float_a, 1)),
+                                      add_(int_float_a, 1),
+                                      1));
+  // clang-format on
+
+  const auto expected_lqp = ProjectionNode::make(expression_vector(expression), stored_table_node_int_float);
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+
+  // COALESCE list must not be empty.
+  EXPECT_THROW(sql_to_lqp_helper("SELECT COALESCE();"), InvalidInputException);
+
+  // All arguments must have the compatible data types: either all strings, all integral, or all floating-point.
+  EXPECT_THROW(sql_to_lqp_helper("SELECT COALESCE(a, 0.0) FROM int_float;"), InvalidInputException);
+  EXPECT_THROW(sql_to_lqp_helper("SELECT COALESCE(b, 0) FROM int_float;"), InvalidInputException);
+  EXPECT_THROW(sql_to_lqp_helper("SELECT COALESCE(a, '0') FROM int_float;"), InvalidInputException);
+  EXPECT_THROW(sql_to_lqp_helper("SELECT COALESCE(b, '0') FROM int_float;"), InvalidInputException);
+}
+
 TEST_F(SQLTranslatorTest, SelectListAlias) {
   const auto [actual_lqp, translation_info] =
       sql_to_lqp_helper("SELECT a AS column_a, b, b + a AS sum_column FROM int_float;");
