@@ -35,7 +35,8 @@ VariableStringDictionarySegment<T>::VariableStringDictionarySegment(
   // ValueID::base_type (2^32 - 1), is needed to represent "value not found" in calls to lower_bound/upper_bound.
   // For a VariableStringDictionarySegment of the max size Chunk::MAX_SIZE, those two values overlap.
 
-  Assert(_offset_vector->size() < std::numeric_limits<ValueID::base_type>::max(), "Input segment too large to store as VariableStringDictionarySegment.");
+  Assert(_offset_vector->size() < std::numeric_limits<ValueID::base_type>::max(),
+         "Input segment too large to store as VariableStringDictionarySegment.");
 }
 
 template <typename T>
