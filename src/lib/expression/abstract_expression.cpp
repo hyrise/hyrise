@@ -1,12 +1,18 @@
 #include "abstract_expression.hpp"
 
-#include <queue>
+#include <algorithm>
+#include <cstddef>
+#include <memory>
 #include <string>
+#include <type_traits>
+#include <unordered_map>
+#include <vector>
 
 #include <boost/container_hash/hash.hpp>
 
+#include "expression/expression_precedence.hpp"
 #include "expression_utils.hpp"
-#include "utils/assert.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 
@@ -64,7 +70,8 @@ bool AbstractExpression::operator!=(const AbstractExpression& other) const {
 }
 
 size_t AbstractExpression::hash() const {
-  auto hash = boost::hash_value(type);
+  auto hash = size_t{0};
+  boost::hash_combine(hash, type);
   for (const auto& argument : arguments) {
     // Include the hash value of the inputs, but do not recurse any deeper. We will have to perform a deep comparison
     // anyway.
@@ -84,8 +91,9 @@ size_t AbstractExpression::_shallow_hash() const {
 }
 
 bool AbstractExpression::_on_is_nullable_on_lqp(const AbstractLQPNode& lqp) const {
-  return std::any_of(arguments.begin(), arguments.end(),
-                     [&](const auto& expression) { return expression->is_nullable_on_lqp(lqp); });
+  return std::any_of(arguments.begin(), arguments.end(), [&](const auto& expression) {
+    return expression->is_nullable_on_lqp(lqp);
+  });
 }
 
 ExpressionPrecedence AbstractExpression::_precedence() const {
@@ -99,7 +107,7 @@ std::string AbstractExpression::_enclose_argument(const AbstractExpression& argu
 
   if (static_cast<std::underlying_type_t<ExpressionPrecedence>>(argument._precedence()) >=
       static_cast<std::underlying_type_t<ExpressionPrecedence>>(_precedence())) {
-    return "("s + argument.description(mode) + ")";
+    return "(" + argument.description(mode) + ")";
   }
 
   return argument.description(mode);

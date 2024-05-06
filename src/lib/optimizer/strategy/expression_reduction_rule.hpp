@@ -1,6 +1,9 @@
 #pragma once
 
+#include <memory>
+#include <string>
 #include <unordered_map>
+#include <vector>
 
 #include "abstract_rule.hpp"
 #include "expression/abstract_expression.hpp"

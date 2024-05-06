@@ -1,5 +1,7 @@
 #include "mock_setting.hpp"
 
+#include <string>
+
 namespace hyrise {
 
 MockSetting::MockSetting(const std::string& init_name)

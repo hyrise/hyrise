@@ -1,5 +1,4 @@
 #include "base_test.hpp"
-
 #include "expression/expression_functional.hpp"
 #include "expression/lqp_column_expression.hpp"
 #include "hyrise.hpp"
@@ -345,7 +344,7 @@ TEST_F(LogicalQueryPlanTest, PrintWithoutSubquery) {
     node_int_int_int));
   // clang-format on
 
-  std::stringstream stream;
+  auto stream = std::stringstream{};
   stream << *lqp;
 
   auto cleaned_str = replace_addresses(stream.str());
@@ -375,7 +374,7 @@ TEST_F(LogicalQueryPlanTest, PrintWithSubqueries) {
   PredicateNode::make(greater_than_(a1, subquery_a), node_int_int);
   // clang-format on
 
-  std::stringstream stream;
+  auto stream = std::stringstream{};
   stream << *lqp;
 
   EXPECT_EQ(replace_addresses(stream.str()),

@@ -1,6 +1,11 @@
 #pragma once
 
+#include <filesystem>
+#include <memory>
+#include <optional>
+#include <string>
 #include <unordered_set>
+#include <vector>
 
 #include "abstract_benchmark_item_runner.hpp"
 #include "benchmark_config.hpp"

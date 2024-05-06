@@ -1,11 +1,9 @@
 #include <memory>
 
 #include "base_test.hpp"
-
 #include "hyrise.hpp"
 #include "operators/maintenance/drop_table.hpp"
 #include "storage/table.hpp"
-
 #include "utils/assert.hpp"
 
 namespace hyrise {

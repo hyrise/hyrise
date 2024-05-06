@@ -6,7 +6,6 @@
 #include <vector>
 
 #include "base_test.hpp"
-
 #include "import_export/binary/binary_writer.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/chunk_encoder.hpp"
@@ -58,7 +57,7 @@ TEST_F(BinaryWriterTest, FixedStringDictionarySingleChunk) {
   table->append({"a"});
   table->append({"test"});
 
-  table->last_chunk()->finalize();
+  table->last_chunk()->set_immutable();
   ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{EncodingType::FixedStringDictionary});
   BinaryWriter::write(*table, filename);
 
@@ -79,7 +78,7 @@ TEST_F(BinaryWriterTest, FixedStringDictionaryNullValue) {
   table->append({"test"});
   table->append({NULL_VALUE});
 
-  table->last_chunk()->finalize();
+  table->last_chunk()->set_immutable();
   ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{EncodingType::FixedStringDictionary});
   BinaryWriter::write(*table, filename);
 
@@ -98,7 +97,7 @@ TEST_F(BinaryWriterTest, FixedStringDictionaryMultipleChunks) {
   table->append({"a"});
   table->append({"test"});
 
-  table->last_chunk()->finalize();
+  table->last_chunk()->set_immutable();
   ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{EncodingType::FixedStringDictionary});
   BinaryWriter::write(*table, filename);
 
@@ -117,7 +116,7 @@ TEST_F(BinaryWriterTest, VariableStringDictionarySingleChunk) {
   table->append({"a"});
   table->append({"test"});
 
-  table->last_chunk()->finalize();
+  table->last_chunk()->set_immutable();
   ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{EncodingType::VariableStringDictionary});
   BinaryWriter::write(*table, filename);
 
@@ -138,7 +137,7 @@ TEST_F(BinaryWriterTest, VariableStringDictionaryNullValue) {
   table->append({"test"});
   table->append({NULL_VALUE});
 
-  table->last_chunk()->finalize();
+  table->last_chunk()->set_immutable();
   ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{EncodingType::VariableStringDictionary});
   BinaryWriter::write(*table, filename);
 
@@ -157,7 +156,7 @@ TEST_F(BinaryWriterTest, VariableStringDictionaryMultipleChunks) {
   table->append({"a"});
   table->append({"test"});
 
-  table->last_chunk()->finalize();
+  table->last_chunk()->set_immutable();
   ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{EncodingType::VariableStringDictionary});
   BinaryWriter::write(*table, filename);
 
@@ -177,7 +176,7 @@ TEST_F(BinaryWriterTest, NullValuesFrameOfReferenceSegment) {
   table->append({NULL_VALUE});
   table->append({5});
 
-  table->last_chunk()->finalize();
+  table->last_chunk()->set_immutable();
   ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{EncodingType::FrameOfReference});
   BinaryWriter::write(*table, filename);
 
@@ -241,7 +240,7 @@ TEST_F(BinaryWriterTest, SingleChunkFrameOfReferenceSegment) {
   table->append({4});
   table->append({5});
 
-  table->last_chunk()->finalize();
+  table->last_chunk()->set_immutable();
   ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{EncodingType::FrameOfReference});
   BinaryWriter::write(*table, filename);
 
@@ -262,7 +261,7 @@ TEST_F(BinaryWriterTest, MultipleChunksFrameOfReferenceSegment) {
   table->append({4});
   table->append({5});
 
-  table->last_chunk()->finalize();
+  table->last_chunk()->set_immutable();
   ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{EncodingType::FrameOfReference});
   BinaryWriter::write(*table, filename);
 
@@ -283,7 +282,7 @@ TEST_F(BinaryWriterTest, AllNullFrameOfReferenceSegment) {
   table->append({NULL_VALUE});
   table->append({NULL_VALUE});
 
-  table->last_chunk()->finalize();
+  table->last_chunk()->set_immutable();
   ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{EncodingType::FrameOfReference});
   BinaryWriter::write(*table, filename);
 
@@ -311,7 +310,7 @@ TEST_F(BinaryWriterTest, LZ4MultipleBlocks) {
     table->append({"DDDDDDDDDDDDDDDDDDDD", 4, int64_t{400}, 4.4f, 44.4});
   }
 
-  table->last_chunk()->finalize();
+  table->last_chunk()->set_immutable();
   ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{EncodingType::LZ4});
   BinaryWriter::write(*table, filename);
 
@@ -340,7 +339,7 @@ TEST_F(BinaryWriterTest, SortColumnDefinitions) {
   table->append({2, 2});
   table->append({1, 1});
 
-  table->last_chunk()->finalize();
+  table->last_chunk()->set_immutable();
 
   // Set sorted by information
   const auto chunk_0_sorted_columns = std::vector<SortColumnDefinition>{
@@ -372,7 +371,7 @@ TEST_P(BinaryWriterMultiEncodingTest, RepeatedInt) {
   table->append({2});
   table->append({1});
 
-  table->last_chunk()->finalize();
+  table->last_chunk()->set_immutable();
   ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{GetParam()});
   BinaryWriter::write(*table, filename);
 
@@ -390,7 +389,7 @@ TEST_P(BinaryWriterMultiEncodingTest, SingleChunkSingleFloatColumn) {
   table->append({13.0f});
   table->append({16.2f});
 
-  table->last_chunk()->finalize();
+  table->last_chunk()->set_immutable();
   ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{GetParam()});
   BinaryWriter::write(*table, filename);
 
@@ -427,7 +426,7 @@ TEST_P(BinaryWriterMultiEncodingTest, StringSegment) {
   table->append({"a"});
   table->append({"test"});
 
-  table->last_chunk()->finalize();
+  table->last_chunk()->set_immutable();
   ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{GetParam()});
   BinaryWriter::write(*table, filename);
 
@@ -452,7 +451,7 @@ TEST_P(BinaryWriterMultiEncodingTest, AllTypesSegmentSorted) {
   table->append({"CCCCCCCCCCCCCCC", 3, int64_t{300}, 3.3f, 33.3});
   table->append({"DDDDDDDDDDDDDDDDDDDD", 4, int64_t{400}, 4.4f, 44.4});
 
-  table->last_chunk()->finalize();
+  table->last_chunk()->set_immutable();
   ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{GetParam()});
   BinaryWriter::write(*table, filename);
 
@@ -477,7 +476,7 @@ TEST_P(BinaryWriterMultiEncodingTest, AllTypesSegmentUnsorted) {
   table->append({"CCCCCCCCCCCCCCC", 3, int64_t{300}, 3.3f, 33.3});
   table->append({"BBBBBBBBBB", 2, int64_t{200}, 2.2f, 22.2});
 
-  table->last_chunk()->finalize();
+  table->last_chunk()->set_immutable();
   ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{GetParam()});
   BinaryWriter::write(*table, filename);
 
@@ -522,7 +521,7 @@ TEST_P(BinaryWriterMultiEncodingTest, EmptyStringsSegment) {
   table->append({""});
   table->append({""});
 
-  table->last_chunk()->finalize();
+  table->last_chunk()->set_immutable();
   ChunkEncoder::encode_chunks(table, {ChunkID{0}}, SegmentEncodingSpec{GetParam()});
   BinaryWriter::write(*table, filename);
 
@@ -548,7 +547,7 @@ TEST_P(BinaryWriterMultiEncodingTest, AllTypesNullValues) {
   table->append({4, 4.4f, int64_t{400}, NULL_VALUE, 4.44});
   table->append({5, 5.5f, int64_t{500}, "five", NULL_VALUE});
 
-  table->last_chunk()->finalize();
+  table->last_chunk()->set_immutable();
   ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{GetParam()});
   BinaryWriter::write(*table, filename);
 
@@ -575,7 +574,7 @@ TEST_P(BinaryWriterMultiEncodingTest, AllTypesAllNullValues) {
   table->append(null_values);
   table->append(null_values);
 
-  table->last_chunk()->finalize();
+  table->last_chunk()->set_immutable();
   ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{GetParam()});
   BinaryWriter::write(*table, filename);
 
@@ -596,7 +595,7 @@ TEST_P(BinaryWriterMultiEncodingTest, RunNullValues) {
   auto value_segment = std::make_shared<ValueSegment<int32_t>>(std::move(values), std::move(null_values));
   table->append_chunk(Segments{value_segment});
 
-  table->last_chunk()->finalize();
+  table->last_chunk()->set_immutable();
   ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{GetParam()});
   BinaryWriter::write(*table, filename);
 

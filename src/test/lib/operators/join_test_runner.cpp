@@ -9,7 +9,6 @@
 #include "operators/join_verification.hpp"
 #include "operators/print.hpp"
 #include "operators/table_wrapper.hpp"
-#include "storage/index/b_tree/b_tree_index.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
 #include "utils/load_table.hpp"
 
@@ -19,11 +18,11 @@
  * number of configurations (i.e. JoinModes, predicates, data types, ...)
  */
 
-using namespace std::string_literals;  // NOLINT
+using namespace std::string_literals;  // NOLINT(build/namespaces)
 
 namespace {
 
-using namespace hyrise;  // NOLINT
+using namespace hyrise;  // NOLINT(build/namespaces)
 
 using ChunkRange = std::pair<ChunkID, ChunkID>;
 
@@ -219,6 +218,13 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
         // Currently the Index Join cannot deal with configurations where the join column
         // data types are different, see Issue #2077
         if (configuration.data_type_left != configuration.data_type_right) {
+          return std::vector<JoinTestConfiguration>{};
+        }
+
+        // Since not all indexes support all encodings, we keep it simple and run tests only for dictionary encoded
+        // data.
+        if (configuration.left_input.encoding_type != EncodingType::Dictionary ||
+            configuration.right_input.encoding_type != EncodingType::Dictionary) {
           return std::vector<JoinTestConfiguration>{};
         }
 
@@ -594,17 +600,13 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
 
       /**
        * To sufficiently test IndexJoins, indexes have to be created. Therefore, if index_side is set in the configuration,
-       * indexes for the data table are created. The index type is either GroupKeyIndex for dictionary segments or BTreeIndex
-       * for non-dictionary segments.
+       * indexes for the data table are created.
        */
 
       for (auto chunk_id = indexed_chunk_range.first; chunk_id < indexed_chunk_range.second; ++chunk_id) {
         for (auto column_id = ColumnID{0}; column_id < data_table->column_count(); ++column_id) {
-          if (encoding_type == EncodingType::Dictionary) {
-            data_table->get_chunk(chunk_id)->create_index<GroupKeyIndex>(std::vector<ColumnID>{column_id});
-          } else {
-            data_table->get_chunk(chunk_id)->create_index<BTreeIndex>(std::vector<ColumnID>{column_id});
-          }
+          Assert(encoding_type == EncodingType::Dictionary, "Only dictionary encoding is supported.");
+          data_table->get_chunk(chunk_id)->create_index<GroupKeyIndex>(std::vector<ColumnID>{column_id});
         }
       }
 
@@ -674,47 +676,44 @@ TEST_P(JoinTestRunner, TestJoin) {
   auto table_difference_message = std::optional<std::string>{};
 
   const auto print_configuration_info = [&]() {
-    std::cout << "====================== JoinOperator ========================" << std::endl;
-    std::cout << join_op->description(DescriptionMode::MultiLine) << std::endl;
-    std::cout << "===================== Left Input Table =====================" << std::endl;
+    std::cout << "====================== JoinOperator ========================\n";
+    std::cout << join_op->description(DescriptionMode::MultiLine);
+    std::cout << "\n===================== Left Input Table =====================\n";
     Print::print(left_input_table, PrintFlags::IgnoreChunkBoundaries);
-    std::cout << "Chunk size: " << configuration.left_input.chunk_size << std::endl;
-    std::cout << "Table type: " << input_table_type_to_string.at(configuration.left_input.table_type) << std::endl;
-    std::cout << "Indexed chunk range: [" << configuration.left_input.indexed_chunk_range.first << ", "
-              << configuration.left_input.indexed_chunk_range.second << ")" << std::endl;
-    std::cout << "Chunk range with single chunk ref. guarantee: ["
+    std::cout << "Chunk size: " << configuration.left_input.chunk_size;
+    std::cout << "\nTable type: " << input_table_type_to_string.at(configuration.left_input.table_type);
+    std::cout << "\nIndexed chunk range: [" << configuration.left_input.indexed_chunk_range.first << ", "
+              << configuration.left_input.indexed_chunk_range.second;
+    std::cout << "\nChunk range with single chunk ref. guarantee: ["
               << configuration.left_input.single_chunk_reference_range.first << ", "
-              << configuration.left_input.single_chunk_reference_range.second << ")" << std::endl;
-    std::cout << get_table_path(configuration.left_input) << std::endl;
-    std::cout << std::endl;
-    std::cout << "===================== Right Input Table ====================" << std::endl;
+              << configuration.left_input.single_chunk_reference_range.second << ")\n";
+    std::cout << get_table_path(configuration.left_input);
+    std::cout << "\n\n===================== Right Input Table ====================\n";
     Print::print(right_input_table, PrintFlags::IgnoreChunkBoundaries);
-    std::cout << "Chunk size: " << configuration.right_input.chunk_size << std::endl;
-    std::cout << "Table size: " << input_table_type_to_string.at(configuration.right_input.table_type) << std::endl;
-    std::cout << "Indexed chunk range: [" << configuration.right_input.indexed_chunk_range.first << ", "
-              << configuration.right_input.indexed_chunk_range.second << ")" << std::endl;
-    std::cout << "Chunk range with single chunk ref. guarantee: ["
+    std::cout << "Chunk size: " << configuration.right_input.chunk_size;
+    std::cout << "\nTable size: " << input_table_type_to_string.at(configuration.right_input.table_type);
+    std::cout << "\nIndexed chunk range: [" << configuration.right_input.indexed_chunk_range.first << ", "
+              << configuration.right_input.indexed_chunk_range.second;
+    std::cout << "\nChunk range with single chunk ref. guarantee: ["
               << configuration.right_input.single_chunk_reference_range.first << ", "
-              << configuration.right_input.single_chunk_reference_range.second << ")" << std::endl;
-    std::cout << get_table_path(configuration.right_input) << std::endl;
-    std::cout << std::endl;
-    std::cout << "==================== Actual Output Table ===================" << std::endl;
+              << configuration.right_input.single_chunk_reference_range.second << ")\n";
+    std::cout << get_table_path(configuration.right_input);
+    std::cout << "\n\n==================== Actual Output Table ===================\n";
     if (actual_table) {
       Print::print(actual_table, PrintFlags::IgnoreChunkBoundaries);
-      std::cout << std::endl;
     } else {
-      std::cout << "No Table produced by the join operator under test" << std::endl;
+      std::cout << "No Table produced by the join operator under test";
     }
-    std::cout << "=================== Expected Output Table ==================" << std::endl;
+    std::cout << "\n=================== Expected Output Table ==================\n";
     if (expected_table) {
       Print::print(expected_table, PrintFlags::IgnoreChunkBoundaries);
-      std::cout << std::endl;
+      std::cout << '\n';
     } else {
-      std::cout << "No Table produced by the reference join operator" << std::endl;
+      std::cout << "No Table produced by the reference join operator\n";
     }
-    std::cout << "======================== Difference ========================" << std::endl;
-    std::cout << *table_difference_message << std::endl;
-    std::cout << "============================================================" << std::endl;
+    std::cout << "======================== Difference ========================\n";
+    std::cout << *table_difference_message;
+    std::cout << "\n============================================================\n";
   };
 
   try {

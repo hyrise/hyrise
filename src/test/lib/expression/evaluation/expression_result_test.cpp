@@ -1,5 +1,4 @@
 #include "base_test.hpp"
-
 #include "expression/evaluation/expression_result.hpp"
 #include "expression/evaluation/expression_result_views.hpp"
 

@@ -75,7 +75,7 @@ class GenericHistogram : public AbstractHistogram<T> {
 // For gtest
 template <typename T>
 std::ostream& operator<<(std::ostream& stream, const GenericHistogram<T>& histogram) {
-  stream << histogram.description() << std::endl;
+  stream << histogram.description() << '\n';
   return stream;
 }
 

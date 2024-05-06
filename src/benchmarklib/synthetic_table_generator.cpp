@@ -1,11 +1,11 @@
 #include "synthetic_table_generator.hpp"
 
-#include <algorithm>
+#include <cmath>
+#include <cstddef>
 #include <functional>
 #include <memory>
 #include <random>
 #include <string>
-#include <thread>
 #include <utility>
 #include <vector>
 
@@ -13,26 +13,30 @@
 #include <boost/math/distributions/skew_normal.hpp>
 #include <boost/math/distributions/uniform.hpp>
 
+#include "all_type_variant.hpp"
 #include "hyrise.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
-#include "scheduler/topology.hpp"
 #include "statistics/generate_pruning_statistics.hpp"
 #include "storage/chunk.hpp"
 #include "storage/chunk_encoder.hpp"
+#include "storage/encoding_type.hpp"
+#include "storage/mvcc_data.hpp"
 #include "storage/table.hpp"
+#include "storage/table_column_definition.hpp"
 #include "storage/value_segment.hpp"
 #include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace {
 
-using namespace hyrise;  // NOLINT
+using namespace hyrise;  // NOLINT(build/namespaces)
 
 template <typename T>
 pmr_vector<T> create_typed_segment_values(const std::vector<int>& values) {
-  pmr_vector<T> result(values.size());
+  auto result = pmr_vector<T>(values.size());
 
   auto insert_position = size_t{0};
   for (const auto& value : values) {
@@ -58,7 +62,7 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(const size_t num_
 std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
     const std::vector<ColumnSpecification>& column_specifications, const size_t num_rows, const ChunkOffset chunk_size,
     const UseMvcc use_mvcc) {
-  Assert(chunk_size != 0ul, "Cannot generate table with chunk size 0.");
+  Assert(chunk_size != 0, "Cannot generate table with chunk size 0.");
 
   // To speed up the table generation, the node scheduler is used. To not interfere with any settings for the actual
   // Hyrise process (e.g., the test runner or the calibration), the current scheduler is stored, replaced, and
@@ -71,7 +75,7 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
   const auto num_chunks =
       static_cast<size_t>(std::ceil(static_cast<double>(num_rows) / static_cast<double>(chunk_size)));
 
-  // add column definitions and initialize each value vector
+  // Add column definitions and initialize each value vector.
   auto column_definitions = TableColumnDefinitions{};
   for (auto column_id = size_t{0}; column_id < num_columns; ++column_id) {
     const auto column_name = column_specifications[column_id].name ? *column_specifications[column_id].name
@@ -103,7 +107,7 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
           auto probability_dist = std::uniform_real_distribution{0.0, 1.0};
           auto generate_value_by_distribution_type = std::function<int(void)>{};
 
-          // generate distribution from column configuration
+          // Generate distribution from column configuration.
           switch (column_data_distribution.distribution_type) {
             case DataDistributionType::Uniform: {
               const auto uniform_dist = boost::math::uniform_distribution<double>{column_data_distribution.min_value,
@@ -196,14 +200,15 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
       table->append_chunk(segments);
     }
 
-    // get added chunk, mark it as immutable and add statistics
+    // Get added chunk, mark it as immutable and add statistics.
     const auto& added_chunk = table->last_chunk();
-    added_chunk->finalize();
+    added_chunk->set_immutable();
     generate_chunk_pruning_statistics(added_chunk);
   }
 
   Hyrise::get().scheduler()->wait_for_all_tasks();
-  Hyrise::get().set_scheduler(previous_scheduler);  // set scheduler back to previous one.
+  // Set scheduler back to previous one.
+  Hyrise::get().set_scheduler(previous_scheduler);
 
   return table;
 }

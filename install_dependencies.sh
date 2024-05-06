@@ -49,15 +49,23 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
         if [ -f /etc/lsb-release ] && cat /etc/lsb-release | grep DISTRIB_ID | grep Ubuntu >/dev/null; then
             echo "Installing dependencies (this may take a while)..."
             if sudo apt-get update >/dev/null; then
+                sudo apt-get install --no-install-recommends -y software-properties-common lsb-release
+                if [[ "$(lsb_release -sr)" < "23.10" ]]; then
+                    # The boost versions shipped with Ubuntu before 23.10 do not provide
+                    # boost::unordered_flat_map. Thus, we manually retrieve it.
+                    sudo add-apt-repository -y ppa:mhier/libboost-latest
+                    sudo apt-get update
+                fi
+
                 # Packages added here should also be added to the Dockerfile
-                sudo apt-get install --no-install-recommends -y autoconf bash-completion bc clang-11 clang-14 clang-format-14 clang-tidy-14 cmake curl dos2unix g++-10 gcc-10 g++-11 gcc-11 gcovr git graphviz libboost-all-dev libhwloc-dev libncurses5-dev libnuma-dev libnuma1 libpq-dev libreadline-dev libsqlite3-dev libtbb-dev lld man parallel postgresql-server-dev-all python3 python3-pip valgrind &
+                sudo apt-get install --no-install-recommends -y autoconf bash-completion bc clang-15 clang-17 clang-format-17 clang-tidy-17 cmake curl dos2unix g++-11 gcc-11 gcovr git graphviz libboost1.81-all-dev libhwloc-dev libncurses5-dev libnuma-dev libnuma1 libpq-dev libreadline-dev libsqlite3-dev libtbb-dev lld man parallel postgresql-server-dev-all python3 python3-pip valgrind &
 
                 if ! git submodule update --jobs 5 --init --recursive; then
                     echo "Error during git fetching submodules."
                     exit 1
                 fi
 
-                if ! pip3 install -r requirements.txt; then
+                if ! pip3 install --break-system-packages -r requirements.txt; then
                     echo "Error during installation of python requirements."
                     exit 1
                 fi
@@ -69,9 +77,8 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
                     exit 1
                 fi
 
-                sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 90 --slave /usr/bin/g++ g++ /usr/bin/g++-11
-                # we use llvm-profdata-11 and llvm-cov-11 due to an unresolved issue with coverage under clang14 (https://github.com/llvm/llvm-project/issues/54907)
-                sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-14 90 --slave /usr/bin/clang++ clang++ /usr/bin/clang++-14 --slave /usr/bin/clang-tidy clang-tidy /usr/bin/clang-tidy-14 --slave /usr/bin/llvm-profdata llvm-profdata /usr/bin/llvm-profdata-11 --slave /usr/bin/llvm-cov llvm-cov /usr/bin/llvm-cov-11 --slave /usr/bin/clang-format clang-format /usr/bin/clang-format-14
+                sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-13 90 --slave /usr/bin/g++ g++ /usr/bin/g++-13
+                sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-17 90 --slave /usr/bin/clang++ clang++ /usr/bin/clang++-17 --slave /usr/bin/clang-tidy clang-tidy /usr/bin/clang-tidy-17 --slave /usr/bin/llvm-profdata llvm-profdata /usr/bin/llvm-profdata-17 --slave /usr/bin/llvm-cov llvm-cov /usr/bin/llvm-cov-17 --slave /usr/bin/clang-format clang-format /usr/bin/clang-format-17
             else
                 echo "Error during installation."
                 exit 1

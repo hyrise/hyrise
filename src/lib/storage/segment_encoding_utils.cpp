@@ -2,15 +2,19 @@
 
 #include <map>
 #include <memory>
+#include <optional>
 
+#include "storage/abstract_segment.hpp"
 #include "storage/dictionary_segment/dictionary_encoder.hpp"
+#include "storage/encoding_type.hpp"
 #include "storage/frame_of_reference_segment/frame_of_reference_encoder.hpp"
 #include "storage/lz4_segment/lz4_encoder.hpp"
+#include "storage/reference_segment.hpp"
 #include "storage/run_length_segment/run_length_encoder.hpp"
 #include "storage/variable_string_dictionary/variable_string_dictionary_encoder.hpp"
-
+#include "storage/vector_compression/compressed_vector_type.hpp"
+#include "storage/vector_compression/vector_compression.hpp"
 #include "utils/assert.hpp"
-#include "utils/enum_constant.hpp"
 
 namespace hyrise {
 
@@ -32,7 +36,7 @@ const auto encoder_for_type = std::map<EncodingType, std::shared_ptr<BaseSegment
 }  // namespace
 
 std::unique_ptr<BaseSegmentEncoder> create_encoder(EncodingType encoding_type) {
-  Assert(encoding_type != EncodingType::Unencoded, "Encoding type must not be Unencoded`.");
+  Assert(encoding_type != EncodingType::Unencoded, "Encoding type must not be Unencoded.");
 
   auto iter = encoder_for_type.find(encoding_type);
   Assert(iter != encoder_for_type.cend(), "All encoding types must be in encoder_for_type.");
@@ -56,7 +60,7 @@ SegmentEncodingSpec get_segment_encoding_spec(const std::shared_ptr<const Abstra
     return SegmentEncodingSpec{encoded_segment->encoding_type(), vector_compression};
   }
 
-  Fail("Unexpected segment encoding found.");
+  Fail("Unexpected segment encoding.");
 }
 
 VectorCompressionType parent_vector_compression_type(const CompressedVectorType compressed_vector_type) {
@@ -69,7 +73,7 @@ VectorCompressionType parent_vector_compression_type(const CompressedVectorType 
     case CompressedVectorType::BitPacking:
       return VectorCompressionType::BitPacking;
   }
-  Fail("Invalid enum value");
+  Fail("Invalid compressed vector type.");
 }
 
 }  // namespace hyrise

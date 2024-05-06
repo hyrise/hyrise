@@ -4,7 +4,6 @@
 #include <vector>
 
 #include "base_test.hpp"
-
 #include "hyrise.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "storage/table.hpp"

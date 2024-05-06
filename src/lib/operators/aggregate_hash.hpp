@@ -10,14 +10,13 @@
 #include <utility>
 #include <vector>
 
-#include <boost/container/pmr/monotonic_buffer_resource.hpp>
 #include <boost/container/pmr/polymorphic_allocator.hpp>
 #include <boost/container/scoped_allocator.hpp>
 #include <boost/container/small_vector.hpp>
 #include <boost/container_hash/hash.hpp>
+#include <boost/unordered/unordered_flat_map.hpp>
+#include <boost/unordered/unordered_flat_set.hpp>
 
-#include "bytell_hash_map.hpp"
-#include "tsl/robin_set.h"
 #include "uninitialized_vector.hpp"
 
 #include "abstract_aggregate_operator.hpp"
@@ -66,8 +65,8 @@ template <typename ColumnDataType, WindowFunction aggregate_function>
 struct AggregateResult {
   using AggregateType = typename WindowFunctionTraits<ColumnDataType, aggregate_function>::ReturnType;
 
-  using DistinctValues = tsl::robin_set<ColumnDataType, std::hash<ColumnDataType>, std::equal_to<ColumnDataType>,
-                                        PolymorphicAllocator<ColumnDataType>>;
+  using DistinctValues = boost::unordered_flat_set<ColumnDataType, std::hash<ColumnDataType>,
+                                                   std::equal_to<ColumnDataType>, PolymorphicAllocator<ColumnDataType>>;
 
   // Find the correct accumulator type using nested conditionals.
   using AccumulatorType = std::conditional_t<
@@ -101,8 +100,8 @@ using AggregateResultIdMapAllocator = PolymorphicAllocator<std::pair<const Aggre
 
 template <typename AggregateKey>
 using AggregateResultIdMap =
-    ska::bytell_hash_map<AggregateKey, AggregateResultId, std::hash<AggregateKey>, std::equal_to<AggregateKey>,
-                         AggregateResultIdMapAllocator<AggregateKey>>;
+    boost::unordered_flat_map<AggregateKey, AggregateResultId, std::hash<AggregateKey>, std::equal_to<AggregateKey>,
+                              AggregateResultIdMapAllocator<AggregateKey>>;
 
 // The key type that is used for the aggregation map.
 using AggregateKeyEntry = uint64_t;

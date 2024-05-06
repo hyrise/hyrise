@@ -3,9 +3,9 @@
 #include <algorithm>
 #include <functional>
 #include <memory>
+#include <string>
 
 #include "abstract_dereferenced_column_table_scan_impl.hpp"
-
 #include "types.hpp"
 #include "utils/assert.hpp"
 

@@ -10,7 +10,7 @@
 #include "storage/chunk.hpp"
 #include "storage/table.hpp"
 #include "storage/value_segment.hpp"
-#include "tpch_constants.hpp"
+#include "tpch/tpch_constants.hpp"
 #include "types.hpp"
 
 namespace hyrise {

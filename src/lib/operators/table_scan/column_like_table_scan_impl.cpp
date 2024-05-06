@@ -1,23 +1,24 @@
 #include "column_like_table_scan_impl.hpp"
 
-#include <algorithm>
-#include <array>
-#include <map>
+#include <cstddef>
 #include <memory>
-#include <regex>
-#include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
 
+#include "abstract_dereferenced_column_table_scan_impl.hpp"
+#include "storage/abstract_segment.hpp"
+#include "storage/base_dictionary_segment.hpp"
 #include "storage/create_iterable_from_segment.hpp"
-#include "storage/resolve_encoded_segment_type.hpp"
+#include "storage/encoding_type.hpp"
+#include "storage/pos_lists/abstract_pos_list.hpp"
+#include "storage/pos_lists/row_id_pos_list.hpp"
 #include "storage/segment_iterables/create_iterable_from_attribute_vector.hpp"
 #include "storage/segment_iterate.hpp"
-#include "storage/value_segment.hpp"
-#include "storage/value_segment/value_segment_iterable.hpp"
 #include "storage/variable_string_dictionary/variable_string_vector.hpp"
 #include "storage/variable_string_dictionary/variable_string_vector_iterator.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 
@@ -50,21 +51,23 @@ void ColumnLikeTableScanImpl::_scan_generic_segment(
     const AbstractSegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
     const std::shared_ptr<const AbstractPosList>& position_filter) const {
   segment_with_iterators_filtered(segment, position_filter, [&](auto iter, [[maybe_unused]] const auto end) {
-    // Don't instantiate this for ReferenceSegments to save compile time as ReferenceSegments are handled
-    // via position_filter
+    // Do not instantiate this for ReferenceSegments to save compile time as ReferenceSegments are handled via
+    // position_filter.
     if constexpr (!is_reference_segment_iterable_v<typename decltype(iter)::IterableType>) {
       using ColumnDataType = typename decltype(iter)::ValueType;
 
       if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
         _matcher.resolve(_invert_results, [&](const auto& resolved_matcher) {
-          const auto functor = [&](const auto& position) { return resolved_matcher(position.value()); };
+          const auto functor = [&](const auto& position) {
+            return resolved_matcher(position.value());
+          };
           _scan_with_iterators<true>(functor, iter, end, chunk_id, matches);
         });
       } else {
-        Fail("Can only handle strings");
+        Fail("Can only handle strings.");
       }
     } else {
-      Fail("ReferenceSegments have their own code paths and should be handled there");
+      Fail("ReferenceSegments have their own code paths and should be handled there.");
     }
   });
 }
@@ -106,7 +109,9 @@ void ColumnLikeTableScanImpl::_scan_dictionary_segment(const BaseDictionarySegme
   // LIKE matches all rows, but we still need to check for NULL
   if (match_count == dictionary_matches.size()) {
     attribute_vector_iterable.with_iterators(position_filter, [&](auto iter, auto end) {
-      static const auto always_true = [](const auto&) { return true; };
+      static const auto always_true = [](const auto&) {
+        return true;
+      };
       _scan_with_iterators<true>(always_true, iter, end, chunk_id, matches);
     });
 
@@ -135,14 +140,14 @@ std::pair<size_t, std::vector<bool>> ColumnLikeTableScanImpl::_find_matches_in_d
   auto& count = result.first;
   auto& dictionary_matches = result.second;
 
-  count = 0u;
+  count = 0;
   dictionary_matches.reserve(dictionary.size());
 
   _matcher.resolve(_invert_results, [&](const auto& matcher) {
 #ifdef __clang__
-// For the loop through the dictionary, we want to use const auto& for DictionarySegments. However,
-// FixedStringVector iterators return an std::string_view value. Thus, we disable clang's -Wrange-loop-analysis
-// error about a potential copy for the loop value.
+// For the loop through the dictionary, we want to use const auto& for DictionarySegments. However, FixedStringVector
+// iterators return an std::string_view value. Thus, we disable clang's -Wrange-loop-analysis error about a potential
+// copy for the loop value.
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wrange-loop-analysis"
 #endif

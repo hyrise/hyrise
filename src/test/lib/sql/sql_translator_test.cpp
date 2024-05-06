@@ -1,5 +1,4 @@
 #include "base_test.hpp"
-
 #include "expression/abstract_expression.hpp"
 #include "expression/binary_predicate_expression.hpp"
 #include "expression/expression_functional.hpp"
@@ -88,7 +87,7 @@ class SQLTranslatorTest : public BaseTest {
     const auto translation_result = SQLTranslator{use_mvcc}.translate_parser_result(parser_result);
     const auto lqps = translation_result.lqp_nodes;
 
-    Assert(lqps.size() == 1, "Expected just one LQP");
+    Assert(lqps.size() == 1, "Expected just one LQP.");
     return {lqps.at(0), translation_result.translation_info};
   }
 
@@ -263,6 +262,32 @@ TEST_F(SQLTranslatorTest, CaseExpressionSearched) {
   const auto expected_lqp = ProjectionNode::make(expression_vector(expression), stored_table_node_int_float);
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, Coalesce) {
+  // Coalesce is just syntactic sugar for a nested CASE WHEN expression IS NOT NULL THEN expression ...
+  const auto [actual_lqp, _] = sql_to_lqp_helper("SELECT COALESCE(a, a + 1, 1) FROM int_float;");
+
+  // clang-format off
+  const auto expression = case_(is_not_null_(int_float_a),
+                                int_float_a,
+                                case_(is_not_null_(add_(int_float_a, 1)),
+                                      add_(int_float_a, 1),
+                                      1));
+  // clang-format on
+
+  const auto expected_lqp = ProjectionNode::make(expression_vector(expression), stored_table_node_int_float);
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+
+  // COALESCE list must not be empty.
+  EXPECT_THROW(sql_to_lqp_helper("SELECT COALESCE();"), InvalidInputException);
+
+  // All arguments must have the compatible data types: either all strings, all integral, or all floating-point.
+  EXPECT_THROW(sql_to_lqp_helper("SELECT COALESCE(a, 0.0) FROM int_float;"), InvalidInputException);
+  EXPECT_THROW(sql_to_lqp_helper("SELECT COALESCE(b, 0) FROM int_float;"), InvalidInputException);
+  EXPECT_THROW(sql_to_lqp_helper("SELECT COALESCE(a, '0') FROM int_float;"), InvalidInputException);
+  EXPECT_THROW(sql_to_lqp_helper("SELECT COALESCE(b, '0') FROM int_float;"), InvalidInputException);
 }
 
 TEST_F(SQLTranslatorTest, SelectListAlias) {
@@ -1700,15 +1725,14 @@ TEST_F(SQLTranslatorTest, LimitExpression) {
 }
 
 TEST_F(SQLTranslatorTest, Extract) {
-  std::vector<DatetimeComponent> components{DatetimeComponent::Year,   DatetimeComponent::Month,
-                                            DatetimeComponent::Day,    DatetimeComponent::Hour,
-                                            DatetimeComponent::Minute, DatetimeComponent::Second};
+  const auto components = std::vector{DatetimeComponent::Year, DatetimeComponent::Month,  DatetimeComponent::Day,
+                                      DatetimeComponent::Hour, DatetimeComponent::Minute, DatetimeComponent::Second};
 
-  std::shared_ptr<AbstractLQPNode> actual_lqp;
-  std::shared_ptr<AbstractLQPNode> expected_lqp;
+  auto actual_lqp = std::shared_ptr<AbstractLQPNode>{};
+  auto expected_lqp = std::shared_ptr<AbstractLQPNode>{};
 
   for (const auto& component : components) {
-    std::stringstream query_str;
+    auto query_str = std::stringstream{};
     query_str << "SELECT EXTRACT(" << component << " FROM '1993-08-01');";
 
     const auto [actual_lqp, translation_info] = sql_to_lqp_helper(query_str.str());
@@ -1877,7 +1901,7 @@ TEST_F(SQLTranslatorTest, ParameterIDAllocation) {
 TEST_F(SQLTranslatorTest, UseMvcc) {
   const auto query = "SELECT * FROM int_float, int_float2 WHERE int_float.a = int_float2.b";
 
-  hsql::SQLParserResult parser_result;
+  auto parser_result = hsql::SQLParserResult{};
   hsql::SQLParser::parseSQLString(query, &parser_result);
   Assert(parser_result.isValid(), create_sql_parser_error_message(query, parser_result));
 
@@ -1902,6 +1926,27 @@ TEST_F(SQLTranslatorTest, Substr) {
   EXPECT_LQP_EQ(actual_lqp_a, expected_lqp);
   EXPECT_LQP_EQ(actual_lqp_b, expected_lqp);
   EXPECT_LQP_EQ(actual_lqp_c, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, Abs) {
+  const auto actual_lqp_a = sql_to_lqp_helper("SELECT ABS(-1.2)").first;
+  const auto actual_lqp_b = sql_to_lqp_helper("SELECT ABS(a - b) FROM int_float").first;
+
+  // clang-format off
+  const auto expected_lqp_a =
+  ProjectionNode::make(expression_vector(abs_(unary_minus_(1.2))),
+    DummyTableNode::make());
+
+  const auto expected_lqp_b =
+  ProjectionNode::make(expression_vector(abs_(sub_(int_float_a, int_float_b))),
+    stored_table_node_int_float);
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp_a, expected_lqp_a);
+  EXPECT_LQP_EQ(actual_lqp_b, expected_lqp_b);
+
+  // The absolute value of strings is undefined.
+  EXPECT_THROW(sql_to_lqp_helper("SELECT ABS(b) FROM int_string"), std::logic_error);
 }
 
 TEST_F(SQLTranslatorTest, Exists) {
@@ -2181,7 +2226,6 @@ TEST_F(SQLTranslatorTest, InsertValuesToMetaTable) {
   // clang-format off
   const auto expected_lqp =
   ChangeMetaTableNode::make("meta_plugins", MetaTableChangeType::Insert,
-    DummyTableNode::make(),
     ProjectionNode::make(expression_vector("foo"),
       DummyTableNode::make()));
   // clang-format on
@@ -2232,8 +2276,7 @@ TEST_F(SQLTranslatorTest, DeleteFromMetaTable) {
   const auto expected_lqp =
    ChangeMetaTableNode::make("meta_plugins", MetaTableChangeType::Delete,
     PredicateNode::make(equals_(lqp_column_(select_node, meta_table->column_id_by_name("name")), "foo"),
-                        select_node),
-    DummyTableNode::make());
+                        select_node));
   // clang-format on
 
   EXPECT_FALSE(translation_info.cacheable);
@@ -2446,8 +2489,9 @@ TEST_F(SQLTranslatorTest, CreateTable) {
                              {"a_datetime", DataType::String, true}};
 
   const auto static_table_node = StaticTableNode::make(Table::create_dummy_table(column_definitions));
-  static_table_node->table->add_soft_key_constraint({{ColumnID{3}}, KeyConstraintType::UNIQUE});
-  static_table_node->table->add_soft_key_constraint({{ColumnID{1}, ColumnID{2}}, KeyConstraintType::PRIMARY_KEY});
+  static_table_node->table->add_soft_constraint(TableKeyConstraint{{ColumnID{3}}, KeyConstraintType::UNIQUE});
+  static_table_node->table->add_soft_constraint(
+      TableKeyConstraint{{ColumnID{1}, ColumnID{2}}, KeyConstraintType::PRIMARY_KEY});
   const auto expected_lqp = CreateTableNode::make("a_table", false, static_table_node);
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);

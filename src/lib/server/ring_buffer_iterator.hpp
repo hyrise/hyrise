@@ -21,7 +21,7 @@ class RingBufferIterator : public boost::iterator_facade<RingBufferIterator, cha
   RingBufferIterator(const RingBufferIterator&) = default;
 
   RingBufferIterator& operator=(const RingBufferIterator& other) {
-    DebugAssert(&_data == &other._data, "Cannot convert iterators from different arrays");
+    DebugAssert(&_data == &other._data, "Cannot convert iterators from different arrays.");
     _position = other._position;
     return *this;
   }

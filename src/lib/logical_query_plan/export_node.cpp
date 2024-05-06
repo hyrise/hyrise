@@ -1,9 +1,17 @@
 #include "export_node.hpp"
 
-#include <sstream>
+#include <cstddef>
+#include <memory>
+#include <string>
 
 #include <boost/algorithm/string.hpp>
+#include <boost/container_hash/hash.hpp>
+
 #include "magic_enum.hpp"
+
+#include "import_export/file_type.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
+#include "logical_query_plan/abstract_non_query_node.hpp"
 
 namespace hyrise {
 
@@ -17,7 +25,8 @@ std::string ExportNode::description(const DescriptionMode /*mode*/) const {
 }
 
 size_t ExportNode::_on_shallow_hash() const {
-  auto hash = boost::hash_value(file_name);
+  auto hash = size_t{0};
+  boost::hash_combine(hash, file_name);
   boost::hash_combine(hash, file_type);
   return hash;
 }

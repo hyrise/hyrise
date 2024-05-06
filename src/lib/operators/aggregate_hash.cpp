@@ -1,22 +1,41 @@
 #include "aggregate_hash.hpp"
 
-#include <cmath>
+#include <algorithm>
+#include <array>
+#include <chrono>
+#include <cstddef>
+#include <cstdint>
+#include <functional>
+#include <limits>
 #include <memory>
-#include <optional>
 #include <string>
+#include <type_traits>
 #include <unordered_map>
 #include <utility>
 #include <vector>
 
-#include "tsl/robin_map.h"
+#include <boost/container/pmr/monotonic_buffer_resource.hpp>
 
 #include "aggregate/window_function_traits.hpp"
+#include "all_type_variant.hpp"
+#include "expression/abstract_expression.hpp"
 #include "expression/pqp_column_expression.hpp"
+#include "expression/window_function_expression.hpp"
 #include "hyrise.hpp"
+#include "operators/abstract_aggregate_operator.hpp"
+#include "operators/abstract_operator.hpp"
+#include "operators/operator_performance_data.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
+#include "storage/abstract_segment.hpp"
+#include "storage/base_segment_accessor.hpp"
+#include "storage/pos_lists/row_id_pos_list.hpp"
 #include "storage/segment_iterate.hpp"
+#include "storage/table.hpp"
+#include "storage/table_column_definition.hpp"
+#include "storage/value_segment.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/timer.hpp"
 
@@ -65,7 +84,7 @@ typename Results::reference get_or_add_result(CacheResultIds /*cache_result_ids*
     // the utilization of the CPU cache. Same for a discriminating union, where the data structure alignment would also
     // result in another 8 bytes being used.
     static_assert(std::is_same_v<AggregateKeyEntry, uint64_t>,
-                  "Expected AggregateKeyEntry to be unsigned 64-bit value");
+                  "Expected AggregateKeyEntry to be unsigned 64-bit value.");
 
     // Check if the AggregateKey already contains a stored index.
     if constexpr (std::is_same_v<CacheResultIds, std::true_type>) {
@@ -87,7 +106,7 @@ typename Results::reference get_or_add_result(CacheResultIds /*cache_result_ids*
       }
     } else {
       Assert(!(*first_key_entry & CACHE_MASK),
-             "CacheResultIds is set to false, but a cached or immediate key shortcut entry was found");
+             "CacheResultIds is set to false, but a cached or immediate key shortcut entry was found.");
     }
 
     // Lookup the key in the result_ids map
@@ -194,7 +213,7 @@ struct AggregateContext : public AggregateResultContext<ColumnDataType, aggregat
 
     // Unused if AggregateKey == EmptyAggregateKey, but we initialize it anyway to reduce the number of diverging code
     // paths.
-    // NOLINTNEXTLINE(clang-analyzer-core.CallAndMessage) - false warning: called C++ object (result_ids) is null
+    // NOLINTNEXTLINE(clang-analyzer-core.CallAndMessage): false warning: called C++ object (result_ids) is null.
     result_ids = std::make_unique<AggregateResultIdMap<AggregateKey>>(allocator);
   }
 
@@ -244,11 +263,13 @@ __attribute__((hot)) void AggregateHash::_aggregate_segment(ChunkID chunk_id, Co
   // Furthermore, if we use the immediate key shortcut (which uses the same code path as caching), we need to pass
   // true_type so that the aggregate keys are checked for immediate access values.
   if (_contexts_per_column.size() > 1 || _use_immediate_key_shortcut) {
-    segment_iterate<ColumnDataType>(abstract_segment,
-                                    [&](const auto& position) { process_position(std::true_type{}, position); });
+    segment_iterate<ColumnDataType>(abstract_segment, [&](const auto& position) {
+      process_position(std::true_type{}, position);
+    });
   } else {
-    segment_iterate<ColumnDataType>(abstract_segment,
-                                    [&](const auto& position) { process_position(std::false_type{}, position); });
+    segment_iterate<ColumnDataType>(abstract_segment, [&](const auto& position) {
+      process_position(std::false_type{}, position);
+    });
   }
 }
 
@@ -413,8 +434,8 @@ KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() {
             auto temp_buffer = boost::container::pmr::monotonic_buffer_resource(1'000'000);
             auto allocator = PolymorphicAllocator<std::pair<const ColumnDataType, AggregateKeyEntry>>{&temp_buffer};
 
-            auto id_map = tsl::robin_map<ColumnDataType, AggregateKeyEntry, std::hash<ColumnDataType>, std::equal_to<>,
-                                         decltype(allocator)>(allocator);
+            auto id_map = boost::unordered_flat_map<ColumnDataType, AggregateKeyEntry, std::hash<ColumnDataType>,
+                                                    std::equal_to<>, decltype(allocator)>(allocator);
             auto id_counter = AggregateKeyEntry{1};
 
             if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
@@ -551,7 +572,7 @@ void AggregateHash::_aggregate() {
 
   if constexpr (HYRISE_DEBUG) {
     for (const auto& groupby_column_id : _groupby_column_ids) {
-      Assert(groupby_column_id < input_table->column_count(), "GroupBy column index out of bounds");
+      Assert(groupby_column_id < input_table->column_count(), "GroupBy column index out of bounds.");
     }
   }
 
@@ -598,7 +619,7 @@ void AggregateHash::_aggregate() {
     const auto input_column_id = pqp_column.column_id;
 
     if (input_column_id == INVALID_COLUMN_ID) {
-      Assert(aggregate->window_function == WindowFunction::Count, "Only COUNT may have an invalid ColumnID");
+      Assert(aggregate->window_function == WindowFunction::Count, "Only COUNT may have an invalid ColumnID.");
       // SELECT COUNT(*) - we know the template arguments, so we don't need a visitor
       auto context = std::make_shared<AggregateContext<CountColumnType, WindowFunction::Count, AggregateKey>>(
           _expected_result_size);
@@ -675,7 +696,7 @@ void AggregateHash::_aggregate() {
         const auto input_column_id = pqp_column.column_id;
 
         if (input_column_id == INVALID_COLUMN_ID) {
-          Assert(aggregate->window_function == WindowFunction::Count, "Only COUNT may have an invalid ColumnID");
+          Assert(aggregate->window_function == WindowFunction::Count, "Only COUNT may have an invalid ColumnID.");
           auto context =
               std::static_pointer_cast<AggregateContext<CountColumnType, WindowFunction::Count, AggregateKey>>(
                   _contexts_per_column[aggregate_idx]);
@@ -767,7 +788,8 @@ void AggregateHash::_aggregate() {
             case WindowFunction::PercentRank:
             case WindowFunction::Rank:
             case WindowFunction::RowNumber:
-              Fail("Unsupported aggregate function " + window_function_to_string.left.at(aggregate->window_function));
+              Fail("Unsupported aggregate function " + window_function_to_string.left.at(aggregate->window_function) +
+                   ".");
           }
         });
 
@@ -869,7 +891,7 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
         case WindowFunction::PercentRank:
         case WindowFunction::Rank:
         case WindowFunction::RowNumber:
-          Fail("Unsupported aggregate function " + window_function_to_string.left.at(aggregate->window_function));
+          Fail("Unsupported aggregate function " + window_function_to_string.left.at(aggregate->window_function) + ".");
       }
     });
 
@@ -991,7 +1013,7 @@ template <typename ColumnDataType, typename AggregateType, WindowFunction aggreg
 std::enable_if_t<aggregate_func == WindowFunction::Avg && !std::is_arithmetic_v<AggregateType>, void>
 write_aggregate_values(pmr_vector<AggregateType>& /*values*/, pmr_vector<bool>& /*null_values*/,
                        const AggregateResults<ColumnDataType, aggregate_func>& /*results*/) {
-  Fail("Invalid aggregate");
+  Fail("Invalid aggregate.");
 }
 
 // STDDEV_SAMP writes the calculated standard deviation from current aggregate and the aggregate counter
@@ -1026,7 +1048,7 @@ std::enable_if_t<aggregate_func == WindowFunction::StandardDeviationSample && !s
                  void>
 write_aggregate_values(pmr_vector<AggregateType>& /*values*/, pmr_vector<bool>& /*null_values*/,
                        const AggregateResults<ColumnDataType, aggregate_func>& /*results*/) {
-  Fail("Invalid aggregate");
+  Fail("Invalid aggregate.");
 }
 
 void AggregateHash::_write_groupby_output(RowIDPosList& pos_list) {
@@ -1077,7 +1099,7 @@ void AggregateHash::_write_groupby_output(RowIDPosList& pos_list) {
       for (const auto& row_id : pos_list) {
         // pos_list was generated by grouping the input data. While it might point to rows that contain NULL
         // values, no new NULL values should have been added.
-        DebugAssert(!row_id.is_null(), "Did not expect NULL value here");
+        DebugAssert(!row_id.is_null(), "Did not expect NULL value here.");
 
         auto& accessor = accessors[row_id.chunk_id];
         if (!accessor) {
@@ -1086,7 +1108,7 @@ void AggregateHash::_write_groupby_output(RowIDPosList& pos_list) {
         }
 
         const auto& optional_value = accessor->access(row_id.chunk_offset);
-        DebugAssert(optional_value || column_is_nullable, "Only nullable columns should contain optional values");
+        DebugAssert(optional_value || column_is_nullable, "Only nullable columns should contain optional values.");
         if (!optional_value) {
           values.emplace_back();
           null_values.emplace_back(true);
@@ -1118,18 +1140,18 @@ void AggregateHash::_write_aggregate_output(ColumnID aggregate_index) {
   auto excluded_time = std::chrono::nanoseconds{};
   auto timer = Timer{};
 
-  // retrieve type information from the aggregation traits
-  typename WindowFunctionTraits<ColumnDataType, aggregate_function>::ReturnType aggregate_type;
-  auto RESULT_TYPE = WindowFunctionTraits<ColumnDataType, aggregate_function>::RESULT_TYPE;
+  // Retrieve type information from the aggregation traits.
+  using aggregate_type = typename WindowFunctionTraits<ColumnDataType, aggregate_function>::ReturnType;
+  auto result_type = WindowFunctionTraits<ColumnDataType, aggregate_function>::RESULT_TYPE;
 
   const auto& aggregate = _aggregates[aggregate_index];
 
   const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->argument());
   const auto input_column_id = pqp_column.column_id;
 
-  if (RESULT_TYPE == DataType::Null) {
+  if (result_type == DataType::Null) {
     // if not specified, it’s the input column’s type
-    RESULT_TYPE = left_input_table()->column_data_type(input_column_id);
+    result_type = left_input_table()->column_data_type(input_column_id);
   }
 
   auto context = std::static_pointer_cast<AggregateResultContext<ColumnDataType, aggregate_function>>(
@@ -1157,33 +1179,32 @@ void AggregateHash::_write_aggregate_output(ColumnID aggregate_index) {
   // Write aggregated values into the segment. While write_aggregate_values could track if an actual NULL value was
   // written or not, we rather make the output types consistent independent of the input types. Not sure what the
   // standard says about this.
-  auto values = pmr_vector<decltype(aggregate_type)>{};
+  auto values = pmr_vector<aggregate_type>{};
   auto null_values = pmr_vector<bool>{};
 
-  constexpr bool NEEDS_NULL =
+  constexpr auto NEEDS_NULL =
       (aggregate_function != WindowFunction::Count && aggregate_function != WindowFunction::CountDistinct);
 
-  write_aggregate_values<ColumnDataType, decltype(aggregate_type), aggregate_function>(values, null_values, results);
+  write_aggregate_values<ColumnDataType, aggregate_type, aggregate_function>(values, null_values, results);
 
   if (_groupby_column_ids.empty() && values.empty()) {
     // If we did not GROUP BY anything and we have no results, we need to add NULL for most aggregates and 0 for count
-    values.push_back(decltype(aggregate_type){});
+    values.push_back(aggregate_type{});
     if (NEEDS_NULL) {
       null_values.push_back(true);
     }
   }
 
-  DebugAssert(NEEDS_NULL || null_values.empty(), "write_aggregate_values unexpectedly wrote NULL values");
+  DebugAssert(NEEDS_NULL || null_values.empty(), "write_aggregate_values unexpectedly wrote NULL values.");
   const auto output_column_id = _groupby_column_ids.size() + aggregate_index;
   _output_column_definitions[output_column_id] =
-      TableColumnDefinition{aggregate->as_column_name(), RESULT_TYPE, NEEDS_NULL};
+      TableColumnDefinition{aggregate->as_column_name(), result_type, NEEDS_NULL};
 
-  auto output_segment = std::shared_ptr<ValueSegment<decltype(aggregate_type)>>{};
+  auto output_segment = std::shared_ptr<ValueSegment<aggregate_type>>{};
   if (!NEEDS_NULL) {
-    output_segment = std::make_shared<ValueSegment<decltype(aggregate_type)>>(std::move(values));
+    output_segment = std::make_shared<ValueSegment<aggregate_type>>(std::move(values));
   } else {
-    output_segment =
-        std::make_shared<ValueSegment<decltype(aggregate_type)>>(std::move(values), std::move(null_values));
+    output_segment = std::make_shared<ValueSegment<aggregate_type>>(std::move(values), std::move(null_values));
   }
   _output_segments[output_column_id] = output_segment;
 
@@ -1229,7 +1250,7 @@ std::shared_ptr<SegmentVisitorContext> AggregateHash::_create_aggregate_context(
       case WindowFunction::PercentRank:
       case WindowFunction::Rank:
       case WindowFunction::RowNumber:
-        Fail("Unsupported aggregate function " + window_function_to_string.left.at(aggregate_function));
+        Fail("Unsupported aggregate function " + window_function_to_string.left.at(aggregate_function) + ".");
     }
   });
 

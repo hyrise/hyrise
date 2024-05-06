@@ -2,6 +2,8 @@
 
 #include <array>
 #include <cstdint>
+#include <utility>
+#include <vector>
 
 #include <boost/hana/at_key.hpp>
 #include <boost/hana/contains.hpp>
@@ -11,8 +13,9 @@
 #include <boost/hana/tuple.hpp>
 #include <boost/hana/type.hpp>
 
-#include "all_type_variant.hpp"
 #include "magic_enum.hpp"
+
+#include "all_type_variant.hpp"
 #include "storage/vector_compression/vector_compression.hpp"
 #include "utils/enum_constant.hpp"
 

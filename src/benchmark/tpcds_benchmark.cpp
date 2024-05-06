@@ -24,7 +24,7 @@ const std::unordered_set<std::string> filename_blacklist() {
   if (!blacklist_file) {
     std::cerr << "Cannot open the blacklist file: " << blacklist_file_path << "\n";
   } else {
-    std::string filename;
+    auto filename = std::string{};
     while (std::getline(blacklist_file, filename)) {
       if (filename.size() > 0 && filename.at(0) != '#') {
         filename_blacklist.emplace(filename);
@@ -58,7 +58,7 @@ int main(int argc, char* argv[]) {
 
   config = std::make_shared<BenchmarkConfig>(CLIConfigParser::parse_cli_options(cli_parse_result));
 
-  std::cout << "- TPC-DS scale factor is " << scale_factor << std::endl;
+  std::cout << "- TPC-DS scale factor is " << scale_factor << '\n';
 
   const auto query_path = std::string{"resources/benchmark/tpcds/tpcds-result-reproduction/query_qualification"};
 
@@ -79,7 +79,7 @@ int main(int argc, char* argv[]) {
     add_indices_to_sqlite("resources/benchmark/tpcds/schema.sql", "resources/benchmark/tpcds/create_indices.sql",
                           benchmark_runner.sqlite_wrapper);
   }
-  std::cout << "done." << std::endl;
+  std::cout << "done.\n";
 
   benchmark_runner.run();
 }
