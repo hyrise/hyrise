@@ -23,6 +23,7 @@
 #include "storage/segment_iterate.hpp"
 #include "storage/table.hpp"
 #include "storage/value_segment.hpp"
+#include "storage/variable_string_dictionary_segment.hpp"
 #include "storage/vector_compression/bitpacking/bitpacking_vector.hpp"
 #include "storage/vector_compression/bitpacking/bitpacking_vector_type.hpp"
 #include "storage/vector_compression/compressed_vector_type.hpp"

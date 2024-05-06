@@ -1,11 +1,21 @@
 #include "variable_string_dictionary_segment.hpp"
 
+#include <cstddef>
+#include <cstdint>
 #include <limits>
-#include <numeric>
+#include <memory>
+#include <optional>
+#include <type_traits>
 #include <utility>
 
+#include "all_type_variant.hpp"
 #include "resolve_type.hpp"
+#include "storage/base_dictionary_segment.hpp"
+#include "storage/segment_access_counter.hpp"
 #include "storage/variable_string_dictionary/variable_string_vector.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
+#include "utils/performance_warning.hpp"
 
 namespace hyrise {
 
@@ -25,7 +35,7 @@ VariableStringDictionarySegment<T>::VariableStringDictionarySegment(
   // ValueID::base_type (2^32 - 1), is needed to represent "value not found" in calls to lower_bound/upper_bound.
   // For a VariableStringDictionarySegment of the max size Chunk::MAX_SIZE, those two values overlap.
 
-  Assert(_offset_vector->size() < std::numeric_limits<ValueID::base_type>::max(), "Input segment too big");
+  Assert(_offset_vector->size() < std::numeric_limits<ValueID::base_type>::max(), "Input segment too large to store as VariableStringDictionarySegment.");
 }
 
 template <typename T>
@@ -44,7 +54,7 @@ template <typename T>
 
   requires(std::is_same_v<T, pmr_string>)
 AllTypeVariant VariableStringDictionarySegment<T>::operator[](const ChunkOffset chunk_offset) const {
-  PerformanceWarning("operator[] used");
+  PerformanceWarning("operator[] used.");
   DebugAssert(chunk_offset != INVALID_CHUNK_OFFSET, "Passed chunk offset must be valid.");
 
   const auto value = get_typed_value(chunk_offset);
@@ -73,7 +83,7 @@ std::shared_ptr<AbstractSegment> VariableStringDictionarySegment<T>::copy_using_
 template <typename T>
   requires(std::is_same_v<T, pmr_string>)
 size_t VariableStringDictionarySegment<T>::memory_usage(const MemoryUsageCalculationMode /*mode*/) const {
-  using OffsetVectorType = typename std::decay<decltype(*_offset_vector->begin())>::type;
+  using OffsetVectorType = std::decay_t<decltype(*_offset_vector->begin())>;
   return _attribute_vector->data_size() + _dictionary->capacity() +
          _offset_vector->capacity() * sizeof(OffsetVectorType);
 }
@@ -93,7 +103,7 @@ EncodingType VariableStringDictionarySegment<T>::encoding_type() const {
 template <typename T>
   requires(std::is_same_v<T, pmr_string>)
 ValueID VariableStringDictionarySegment<T>::lower_bound(const AllTypeVariant& value) const {
-  DebugAssert(!variant_is_null(value), "Null value passed.");
+  DebugAssert(!variant_is_null(value), "NULL value passed.");
   access_counter[SegmentAccessCounter::AccessType::Dictionary] +=
       static_cast<uint64_t>(std::ceil(std::log2(_offset_vector->size())));
 
@@ -113,7 +123,7 @@ ValueID VariableStringDictionarySegment<T>::lower_bound(const AllTypeVariant& va
 template <typename T>
   requires(std::is_same_v<T, pmr_string>)
 ValueID VariableStringDictionarySegment<T>::upper_bound(const AllTypeVariant& value) const {
-  DebugAssert(!variant_is_null(value), "Null value passed.");
+  DebugAssert(!variant_is_null(value), "NULL value passed.");
   access_counter[SegmentAccessCounter::AccessType::Dictionary] +=
       static_cast<uint64_t>(std::ceil(std::log2(_offset_vector->size())));
 
@@ -140,7 +150,7 @@ AllTypeVariant VariableStringDictionarySegment<T>::value_of_value_id(const Value
 template <typename T>
   requires(std::is_same_v<T, pmr_string>)
 pmr_string VariableStringDictionarySegment<T>::typed_value_of_value_id(const ValueID value_id) const {
-  DebugAssert(value_id < _offset_vector->size(), "ValueID out of bounds");
+  DebugAssert(value_id < _offset_vector->size(), "ValueID out of bounds.");
   access_counter[SegmentAccessCounter::AccessType::Dictionary] += 1;
 
   return pmr_string{get_string(*_offset_vector, *_dictionary, value_id)};

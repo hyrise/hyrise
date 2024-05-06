@@ -11,6 +11,7 @@
 #include "storage/reference_segment.hpp"
 #include "storage/run_length_segment.hpp"
 #include "storage/value_segment.hpp"
+#include "storage/variable_string_dictionary_segment.hpp"
 
 namespace hyrise {
 

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstddef>
+#include <cstdint>
 #include <memory>
 #include <string>
 
@@ -77,7 +79,7 @@ class VariableStringDictionarySegment : public BaseDictionarySegment {
   // Thus, returning INVALID_VALUE_ID makes comparisons much easier. However, the caller has to make sure that
   // NULL values stored in the attribute vector (stored with a offset ID of unique_values_count()) are excluded.
   // See #1471 for a deeper discussion.
-  ValueID lower_bound(const AllTypeVariant& offset) const final;
+  ValueID lower_bound(const AllTypeVariant& value) const final;
 
   // Returns the first value ID that refers to a value > the search value and INVALID_VALUE_ID if all values are
   // smaller than or equal to the search value (see also lower_bound).
