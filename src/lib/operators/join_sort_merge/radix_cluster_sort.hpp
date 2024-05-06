@@ -60,10 +60,10 @@ class RadixClusterSort {
         _cluster_count{cluster_count},
         _materialize_null_left{materialize_null_left},
         _materialize_null_right{materialize_null_right} {
-    DebugAssert(cluster_count > 0, "cluster_count must be > 0");
-    DebugAssert((cluster_count & (cluster_count - 1)) == 0, "cluster_count must be a power of two");
-    DebugAssert(left, "left input operator is null");
-    DebugAssert(right, "right input operator is null");
+    DebugAssert(cluster_count > 0, "cluster_count must be > 0.");
+    DebugAssert((cluster_count & (cluster_count - 1)) == 0, "cluster_count must be a power of two.");
+    DebugAssert(left, "left input operator is null.");
+    DebugAssert(right, "right input operator is null.");
   }
 
   virtual ~RadixClusterSort() = default;
@@ -318,25 +318,22 @@ class RadixClusterSort {
 
  public:
   RadixClusterOutput<T> execute() {
-    RadixClusterOutput<T> output;
+    auto output = RadixClusterOutput<T>{};
+    auto timer = Timer{};
 
-    Timer timer;
-    // Sort the chunks of the input tables in the non-equi cases
-    ColumnMaterializer<T> left_column_materializer(!_equi_case, _materialize_null_left);
+    // Sort the chunks of the input tables iff join is non-equi and when clustering.
+    const auto sort_materialized_chunks = !_equi_case && _cluster_count > 1;
+    auto left_column_materializer = ColumnMaterializer<T>(sort_materialized_chunks, _materialize_null_left);
     auto [materialized_left_segments, null_rows_left, samples_left] =
         left_column_materializer.materialize(_left_input_table, _left_column_id);
     output.null_rows_left = std::move(null_rows_left);
     _performance.set_step_runtime(JoinSortMerge::OperatorSteps::LeftSideMaterializing, timer.lap());
 
-    ColumnMaterializer<T> right_column_materializer(!_equi_case, _materialize_null_right);
+    auto right_column_materializer = ColumnMaterializer<T>(sort_materialized_chunks, _materialize_null_right);
     auto [materialized_right_segments, null_rows_right, samples_right] =
         right_column_materializer.materialize(_right_input_table, _right_column_id);
     output.null_rows_right = std::move(null_rows_right);
     _performance.set_step_runtime(JoinSortMerge::OperatorSteps::RightSideMaterializing, timer.lap());
-
-    // Append right samples to left samples and sort (reserve not necessary when insert can
-    // determine the new capacity from the iterator: https://stackoverflow.com/a/35359472/1147726)
-    samples_left.insert(samples_left.end(), samples_right.begin(), samples_right.end());
 
     if (_cluster_count == 1) {
       output.clusters_left = _concatenate_chunks(materialized_left_segments);
@@ -345,6 +342,10 @@ class RadixClusterSort {
       output.clusters_left = _radix_cluster(materialized_left_segments);
       output.clusters_right = _radix_cluster(materialized_right_segments);
     } else {
+      // Append right samples to left samples and sort (reserve not necessary when insert can
+      // determine the new capacity from the iterator: https://stackoverflow.com/a/35359472/1147726)
+      samples_left.insert(samples_left.end(), samples_right.begin(), samples_right.end());
+
       auto result = _range_cluster(materialized_left_segments, materialized_right_segments, std::move(samples_left));
       output.clusters_left = std::move(result.first);
       output.clusters_right = std::move(result.second);
