@@ -1,6 +1,8 @@
 #pragma once
 
+#include <memory>
 #include <type_traits>
+#include <utility>
 
 #include "storage/abstract_segment.hpp"
 #include "storage/fixed_string_dictionary_segment.hpp"

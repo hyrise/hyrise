@@ -19,7 +19,8 @@ class VariableStringVector;
  */
 template <typename T>
 
-requires(std::is_same_v<T, pmr_string>) class VariableStringDictionarySegment : public BaseDictionarySegment {
+  requires(std::is_same_v<T, pmr_string>)
+class VariableStringDictionarySegment : public BaseDictionarySegment {
  public:
   VariableStringDictionarySegment(const std::shared_ptr<const pmr_vector<char>>& dictionary,
                                   const std::shared_ptr<const BaseCompressedVector>& attribute_vector,

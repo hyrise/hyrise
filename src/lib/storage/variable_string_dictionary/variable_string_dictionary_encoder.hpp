@@ -4,6 +4,10 @@
 #include <limits>
 #include <memory>
 #include <numeric>
+#include <string>
+#include <vector>
+
+#include <boost/unordered/unordered_flat_map.hpp>
 
 #include "storage/base_segment_encoder.hpp"
 #include "storage/dictionary_segment.hpp"
@@ -36,7 +40,7 @@ class VariableStringDictionaryEncoder : public SegmentEncoder<VariableStringDict
     auto dense_values = std::vector<pmr_string>();  // Contains the actual values (no NULLs).
     auto null_values = std::vector<bool>();         // bitmap to mark NULL values
     // Maps string to ChunkOffsets for faster write of vector that maps ChunkOffsets to ValueID.
-    auto string_to_chunk_offsets = std::unordered_map<pmr_string, std::vector<ChunkOffset>>();
+    auto string_to_chunk_offsets = boost::unordered_flat_map<pmr_string, std::vector<ChunkOffset>>{};
     auto segment_size = uint32_t{0};
 
     // Iterate over segment, save all values and save to values the chunk_offset.
@@ -65,8 +69,10 @@ class VariableStringDictionaryEncoder : public SegmentEncoder<VariableStringDict
     dense_values.shrink_to_fit();
 
     // Compute total compressed data size.
-    const auto total_size = std::accumulate(dense_values.begin(), dense_values.end(), size_t{0},
-                                            [](size_t acc, pmr_string& value) { return acc + value.size() + 1; });
+    const auto total_size =
+        std::accumulate(dense_values.begin(), dense_values.end(), size_t{0}, [](size_t acc, pmr_string& value) {
+          return acc + value.size() + 1;
+        });
 
     // Check for oversize dictionary.
     Assert(total_size < std::numeric_limits<uint32_t>::max(), "Dictionary is too large!");
@@ -75,9 +81,9 @@ class VariableStringDictionaryEncoder : public SegmentEncoder<VariableStringDict
     auto clob = std::make_shared<pmr_vector<char>>(pmr_vector<char>(total_size));
     // We assume segment size up to 4 GByte.
     // Maps string to offset in clob.
-    auto string_offsets = std::unordered_map<pmr_string, uint32_t>();
+    auto string_offsets = boost::unordered_flat_map<pmr_string, uint32_t>{};
     // Maps string to ValueID for attribute vector.
-    auto string_value_ids = std::unordered_map<pmr_string, ValueID>();
+    auto string_value_ids = boost::unordered_flat_map<pmr_string, ValueID>{};
     auto last_offset = uint32_t{0};
     auto last_value_id = ValueID{0};
 

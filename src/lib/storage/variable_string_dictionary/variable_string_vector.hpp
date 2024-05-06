@@ -1,6 +1,9 @@
 #pragma once
 
+#include <memory>
+
 #include "storage/variable_string_dictionary_segment.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 

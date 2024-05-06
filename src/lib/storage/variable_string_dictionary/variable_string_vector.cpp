@@ -1,6 +1,9 @@
 #include "variable_string_vector.hpp"
 
+#include <memory>
+
 #include "storage/variable_string_dictionary/variable_string_vector_iterator.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 

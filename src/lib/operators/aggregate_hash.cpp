@@ -15,6 +15,7 @@
 #include <vector>
 
 #include <boost/container/pmr/monotonic_buffer_resource.hpp>
+#include <boost/unordered/unordered_flat_map.hpp>
 
 #include "aggregate/window_function_traits.hpp"
 #include "all_type_variant.hpp"
