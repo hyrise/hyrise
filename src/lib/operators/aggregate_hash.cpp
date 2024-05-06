@@ -1032,7 +1032,7 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
     write_groupby_output(left_input_table(), _aggregates, _groupby_column_ids, context->results,
                          _output_column_definitions, _intermediate_result);
     DebugAssert(groupby_columns_writing_duration == std::chrono::nanoseconds{0},
-                "groupby_columns_writing_duration() was apparrently called more than once.");
+                "groupby_columns_writing_duration() was apparently called more than once.");
     groupby_columns_writing_duration = groupby_columns_writing_timer.lap();
   }
 
@@ -1398,7 +1398,7 @@ void AggregateHash::_write_aggregate_output(ColumnID aggregate_index) {
                          _intermediate_result);
     const auto groupby_columns_writing_runtime = groupby_columns_writing_timer.lap();
     DebugAssert(groupby_columns_writing_duration == std::chrono::nanoseconds{0},
-                "groupby_columns_writing_duration() was apparrently called more than once.");
+                "groupby_columns_writing_duration() was apparently called more than once.");
     groupby_columns_writing_duration = groupby_columns_writing_runtime;
     excluded_time = groupby_columns_writing_runtime;
   }
