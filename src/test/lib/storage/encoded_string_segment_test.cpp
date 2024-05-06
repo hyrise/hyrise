@@ -305,6 +305,9 @@ TEST_F(EncodedStringSegmentTest, SegmentReencoding) {
       value_segment, DataType::String,
       SegmentEncodingSpec{EncodingType::FixedStringDictionary, VectorCompressionType::BitPacking});
   EXPECT_SEGMENT_EQ_ORDERED(value_segment, encoded_segment);
+  encoded_segment = this->_encode_segment(value_segment, DataType::String,
+                                          SegmentEncodingSpec{EncodingType::VariableStringDictionary});
+  EXPECT_SEGMENT_EQ_ORDERED(value_segment, encoded_segment);
 
   encoded_segment = this->_encode_segment(value_segment, DataType::String, SegmentEncodingSpec{EncodingType::LZ4});
   EXPECT_SEGMENT_EQ_ORDERED(value_segment, encoded_segment);

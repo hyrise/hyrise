@@ -1,18 +1,23 @@
 #include "variable_string_dictionary_segment.hpp"
 
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <limits>
 #include <memory>
 #include <optional>
+#include <string_view>
 #include <type_traits>
 #include <utility>
 
 #include "all_type_variant.hpp"
 #include "resolve_type.hpp"
+#include "storage/abstract_segment.hpp"
 #include "storage/base_dictionary_segment.hpp"
+#include "storage/encoding_type.hpp"
 #include "storage/segment_access_counter.hpp"
 #include "storage/variable_string_dictionary/variable_string_vector.hpp"
+#include "storage/vector_compression/compressed_vector_type.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"

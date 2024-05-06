@@ -118,8 +118,8 @@ void ColumnLikeTableScanImpl::_scan_dictionary_segment(const BaseDictionarySegme
     return;
   }
 
-  // LIKE matches no rows
-  if (match_count == 0u) {
+  // LIKE matches no rows.
+  if (match_count == 0) {
     ++num_chunks_with_early_out;
     return;
   }
@@ -141,7 +141,7 @@ std::pair<size_t, std::vector<bool>> ColumnLikeTableScanImpl::_find_matches_in_d
   auto& dictionary_matches = result.second;
 
   count = 0;
-  dictionary_matches.reserve(dictionary.size());
+  dictionary_matches.resize(dictionary.size());
 
   _matcher.resolve(_invert_results, [&](const auto& matcher) {
 #ifdef __clang__
@@ -151,10 +151,12 @@ std::pair<size_t, std::vector<bool>> ColumnLikeTableScanImpl::_find_matches_in_d
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wrange-loop-analysis"
 #endif
+    auto index = size_t{0};
     for (const auto& value : dictionary) {
-      const auto matches = matcher(value);
-      count += static_cast<size_t>(matches);
-      dictionary_matches.push_back(matches);
+      const auto match_result = matcher(value);
+      count += static_cast<size_t>(match_result);
+      dictionary_matches[index] = match_result;
+      ++index;
     }
 
 #ifdef __clang__
