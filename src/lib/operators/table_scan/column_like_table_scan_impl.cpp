@@ -15,8 +15,6 @@
 #include "storage/pos_lists/row_id_pos_list.hpp"
 #include "storage/segment_iterables/create_iterable_from_attribute_vector.hpp"
 #include "storage/segment_iterate.hpp"
-#include "storage/variable_string_dictionary/variable_string_vector.hpp"
-#include "storage/variable_string_dictionary/variable_string_vector_iterator.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
