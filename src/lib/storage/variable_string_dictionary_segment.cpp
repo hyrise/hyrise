@@ -25,7 +25,6 @@
 namespace hyrise {
 
 template <typename T>
-
   requires(std::is_same_v<T, pmr_string>)
 VariableStringDictionarySegment<T>::VariableStringDictionarySegment(
     const std::shared_ptr<const pmr_vector<char>>& dictionary,
@@ -52,12 +51,11 @@ std::shared_ptr<const pmr_vector<char>> VariableStringDictionarySegment<T>::dict
 
 template <typename T>
   requires(std::is_same_v<T, pmr_string>)
-std::shared_ptr<VariableStringVector> VariableStringDictionarySegment<T>::variable_string_dictionary() const {
+std::shared_ptr<const VariableStringVector> VariableStringDictionarySegment<T>::variable_string_dictionary() const {
   return std::make_shared<VariableStringVector>(dictionary(), _offset_vector);
 }
 
 template <typename T>
-
   requires(std::is_same_v<T, pmr_string>)
 AllTypeVariant VariableStringDictionarySegment<T>::operator[](const ChunkOffset chunk_offset) const {
   PerformanceWarning("operator[] used.");

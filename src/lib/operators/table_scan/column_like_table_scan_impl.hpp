@@ -7,8 +7,6 @@
 #include <utility>
 #include <vector>
 
-#include <boost/variant.hpp>
-
 #include "abstract_dereferenced_column_table_scan_impl.hpp"
 #include "expression/evaluation/like_matcher.hpp"
 #include "types.hpp"

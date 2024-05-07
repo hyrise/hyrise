@@ -31,7 +31,7 @@ class VariableStringDictionarySegment : public BaseDictionarySegment {
   // returns an underlying dictionary
   std::shared_ptr<const pmr_vector<char>> dictionary() const;
 
-  std::shared_ptr<VariableStringVector> variable_string_dictionary() const;
+  std::shared_ptr<const VariableStringVector> variable_string_dictionary() const;
 
   /**
    * @defgroup AbstractSegment interface
