@@ -14,7 +14,7 @@ class SSBTableGenerator : virtual public FileBasedTableGenerator {
   // Convenience constructor for creating a SSBTableGenerator without a benchmarking context.
   explicit SSBTableGenerator(const std::string& dbgen_path, const std::string& csv_meta_path,
                              const std::string& data_path, float scale_factor,
-                             ChunkOffset chunk_size = Chunk::DEFAULT_SIZE);
+                             ChunkOffset chunk_size = Chunk::DEFAULT_SIZE, bool binary_caching = false);
 
   // Constructor for creating a SSBTableGenerator in a benchmark.
   explicit SSBTableGenerator(const std::string& dbgen_path, const std::string& csv_meta_path,
