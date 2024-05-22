@@ -5,7 +5,7 @@
 # While it would be desirable to use Python's virtual environments, they are not straightforward to use in Jenkins'
 # scripted pipelines. With Python >= 3.11, we need to use --break-system-packages.
 
-FROM ubuntu:23.10
+FROM ubuntu:24.04
 ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get update \
     && apt-get install -y \
@@ -13,10 +13,10 @@ RUN apt-get update \
         bash-completion \
         bc \
         clang-15 \
-        clang-17 \
-        clang-format-17 \
-        clang-tidy-17 \
-        clang-tools-17 \
+        clang \
+        clang-format \
+        clang-tidy \
+        clang-tools \
         cmake \
         curl \
         dos2unix \
@@ -25,7 +25,7 @@ RUN apt-get update \
         gcovr \
         git \
         graphviz \
-        libboost1.81-all-dev \
+        libboost1.83-all-dev \
         libhwloc-dev \
         libncurses5-dev \
         libnuma-dev \
@@ -50,6 +50,6 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* \
     && ln -sf /usr/bin/llvm-symbolizer-14 /usr/bin/llvm-symbolizer \
     && pip3 install --break-system-packages scipy pandas matplotlib  # preload large Python packages (installs numpy and
-                                                                       others).
+                                                                     # others).
 
 ENV HYRISE_HEADLESS_SETUP=true
