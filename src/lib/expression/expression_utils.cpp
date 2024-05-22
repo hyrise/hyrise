@@ -356,7 +356,7 @@ bool expression_contains_correlated_parameter(const std::shared_ptr<AbstractExpr
 std::optional<AllTypeVariant> expression_get_value_or_parameter(const AbstractExpression& expression) {
   if (const auto* correlated_parameter_expression = dynamic_cast<const CorrelatedParameterExpression*>(&expression)) {
     DebugAssert(correlated_parameter_expression->value(), "CorrelatedParameterExpression does not have a value set.");
-    return *correlated_parameter_expression->value();
+    return correlated_parameter_expression->value();
   }
 
   if (expression.type == ExpressionType::Value) {

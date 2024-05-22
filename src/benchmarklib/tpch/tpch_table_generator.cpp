@@ -112,7 +112,7 @@ void dbgen_cleanup() {
       // NOLINTEND(cppcoreguidelines-owning-memory,cppcoreguidelines-pro-type-const-cast)
       // NOLINTEND(cppcoreguidelines-no-malloc,hicpp-no-malloc)
     }
-    std::free(asc_date);  // NOLINT(cppcoreguidelines-no-malloc,hicpp-no-malloc,cppcoreguidelines-owning-memory)
+    std::free(asc_date);  // NOLINT(cppcoreguidelines-no-malloc,hicpp-no-malloc,cppcoreguidelines-owning-memory,bugprone-multi-level-implicit-pointer-conversion)
   }
   asc_date = nullptr;
 }

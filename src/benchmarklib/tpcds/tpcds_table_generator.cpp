@@ -99,7 +99,7 @@ void init_tpcds_tools(uint32_t scale_factor, int rng_seed) {
   auto distributions_value = std::string{"resources/benchmark/tpcds/tpcds.idx"};
   set_str(distributions_string.data(), distributions_value.data());
 
-  for (auto table_id = int{0}; table_id <= MAX_TABLE; ++table_id) {
+  for (auto table_id = int32_t{0}; table_id <= MAX_TABLE; ++table_id) {
     resetSeeds(table_id);
     RNGReset(table_id);
   }
@@ -501,10 +501,10 @@ std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TPCDSTableGenerator::g
     //                                     &catalog_returns, &was_returned);
     {
       mk_w_catalog_sales_master(&catalog_sales, catalog_sales_first + catalog_sale_index, 0);
-      auto n_lineitems = int{0};
+      auto n_lineitems = int32_t{0};
       genrand_integer(&n_lineitems, DIST_UNIFORM, 4, 14, 0, CS_ORDER_NUMBER);
-      for (auto lineitem_index = int{0}; lineitem_index < n_lineitems; ++lineitem_index) {
-        auto was_returned = int{0};
+      for (auto lineitem_index = int32_t{0}; lineitem_index < n_lineitems; ++lineitem_index) {
+        auto was_returned = int32_t{0};
         mk_w_catalog_sales_detail(&catalog_sales, 0, &catalog_returns, &was_returned);
 
         if (catalog_sales_builder.row_count() < static_cast<size_t>(max_rows)) {
@@ -926,10 +926,10 @@ std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TPCDSTableGenerator::g
     {
       mk_w_store_sales_master(&store_sales, store_sales_first + store_sale, 0);
 
-      auto n_lineitems = int{0};
+      auto n_lineitems = int32_t{0};
       genrand_integer(&n_lineitems, DIST_UNIFORM, 8, 16, 0, SS_TICKET_NUMBER);
-      for (auto lineitem_index = int{0}; lineitem_index < n_lineitems; ++lineitem_index) {
-        auto was_returned = int{0};
+      for (auto lineitem_index = int32_t{0}; lineitem_index < n_lineitems; ++lineitem_index) {
+        auto was_returned = int32_t{0};
         mk_w_store_sales_detail(&store_sales, 0, &store_returns, &was_returned);
 
         if (store_sales_builder.row_count() < static_cast<size_t>(max_rows)) {
@@ -1085,9 +1085,9 @@ std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TPCDSTableGenerator::g
     {
       mk_w_web_sales_master(&web_sales, web_sales_first + web_sales_index, 0);
 
-      auto n_lineitems = int{0};
+      auto n_lineitems = int32_t{0};
       genrand_integer(&n_lineitems, DIST_UNIFORM, 8, 16, 9, WS_ORDER_NUMBER);
-      for (auto lineitem_index = int{0}; lineitem_index < n_lineitems; ++lineitem_index) {
+      for (auto lineitem_index = int32_t{0}; lineitem_index < n_lineitems; ++lineitem_index) {
         auto was_returned = 0;
         mk_w_web_sales_detail(&web_sales, 0, &web_returns, &was_returned, 0);
 

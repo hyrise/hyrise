@@ -35,7 +35,7 @@ SegmentEncodingSpec EncodingConfig::encoding_spec_from_strings(const std::string
   const auto encoding = EncodingConfig::encoding_string_to_type(encoding_str);
   const auto compression = EncodingConfig::compression_string_to_type(compression_str);
 
-  return compression ? SegmentEncodingSpec{encoding, *compression} : SegmentEncodingSpec{encoding};
+  return compression ? SegmentEncodingSpec{encoding, compression} : SegmentEncodingSpec{encoding};
 }
 
 EncodingType EncodingConfig::encoding_string_to_type(const std::string& encoding_str) {
