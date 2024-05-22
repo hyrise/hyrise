@@ -194,20 +194,25 @@ std::optional<float> resolve_gmt_offset(int column_id, int32_t gmt_offset) {
 }
 
 std::optional<pmr_string> resolve_street_name(int column_id, const ds_addr_t& address) {
-  return nullCheck(column_id) != 0 ? std::nullopt
-         : address.street_name2 == nullptr
-             ? std::optional{pmr_string{address.street_name1}}
-             : std::optional{pmr_string{address.street_name1} + " " + address.street_name2};
+  if (nullCheck(column_id) != 0) {
+    return std::nullopt;
+  }
+
+  if (address.street_name2 == nullptr) {
+    return std::optional{pmr_string{address.street_name1}};
+  }
+
+  return std::optional{pmr_string{address.street_name1} + " " + address.street_name2};
 }
 
-// mapping types used by tpcds-dbgen as follows (according to create table statements in tpcds.sql):
-// ds_key_t -> tpcds_key_t
-// int -> int32_t
-// char*, char[], bool, date (ds_key_t as date_id), time (ds_key_t as time_id) -> pmr_string
-// decimal, float -> float
-// ds_addr_t -> corresponding types for types in struct ds_addr_t, see address.h
+// Mapping types used by tpcds-dbgen as follows (according to create table statements in tpcds.sql):
+//   ds_key_t -> tpcds_key_t
+//   int -> int32_t
+//   char*, char[], bool, date (ds_key_t as date_id), time (ds_key_t as time_id) -> pmr_string
+//   decimal, float -> float
+//   ds_addr_t -> corresponding types for types in struct ds_addr_t, see address.h
 
-// in tpcds most columns are nullable, so we pass std::optional<?> as type
+// In tpcds, most columns are nullable, so we pass std::optional<?> as type.
 
 // clang-format off
 const auto call_center_column_types = boost::hana::tuple<     tpcds_key_t         , pmr_string          , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<int32_t> , std::optional<int32_t> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<int32_t> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<int32_t> , std::optional<pmr_string> , std::optional<int32_t> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<float> , std::optional<float>>(); // NOLINT

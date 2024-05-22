@@ -392,8 +392,8 @@ void Console::out(const std::string& output, bool console_print) {
 }
 
 void Console::out(const std::shared_ptr<const Table>& table, const PrintFlags flags) {
-  auto size_y = int{0};
-  auto size_x = int{0};
+  auto size_y = int32_t{0};
+  auto size_x = int32_t{0};
   rl_get_screen_size(&size_y, &size_x);
 
   auto stream = std::stringstream{};
@@ -756,7 +756,7 @@ int Console::_visualize(const std::string& input) {
   }
 
   // Determine the plan type to visualize.
-  enum class PlanType { LQP, UnoptLQP, PQP, Joins };
+  enum class PlanType : uint8_t { LQP, UnoptLQP, PQP, Joins };
   auto plan_type = PlanType::PQP;
   auto plan_type_str = std::string{"pqp"};
   if (input_words.front() == LQP || input_words.front() == UNOPTLQP || input_words.front() == PQP ||
