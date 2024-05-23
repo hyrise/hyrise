@@ -70,20 +70,18 @@ class TPCCRandomGenerator : public RandomGenerator {
     return result;
   }
 
-  // Function and parameters as defined by TPCC
-  // Generates alphanumeric string of random length
+  // Function and parameters as defined by TPCC. Generates alphanumeric string of random length.
   std::string astring(size_t lower_length, size_t upper_length) {
     return generate_string(lower_length, upper_length, 'a', 26);
   }
 
-  // Function and parameters as defined by TPCC
-  // Generates numeric string of random length
+  // Function and parameters as defined by TPCC. Generates numeric string of random length.
   std::string nstring(size_t lower_length, size_t upper_length) {
     return generate_string(lower_length, upper_length, '0', 10);
   }
 
   std::vector<size_t> permutation(size_t lower, size_t upper) {
-    std::vector<size_t> v(upper - lower);
+    auto v = std::vector<size_t>(upper - lower);
     std::iota(v.begin(), v.end(), lower);
     std::shuffle(v.begin(), v.end(), engine);
     return v;

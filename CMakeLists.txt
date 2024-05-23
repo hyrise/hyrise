@@ -166,11 +166,13 @@ if(CI_BUILD)
     endif()
 endif()
 
-# Link Time Optimization (LTO)
+# We use Link Time Optimization (LTO) for all builds except debug builds or when -DDISABLE_LTO is passed.
 cmake_policy(SET CMP0069 NEW)
 set(CMAKE_POLICY_DEFAULT_CMP0069 NEW)
-option(ENABLE_LTO "Set to ON to build Hyrise with enabled Link Time Optimization (LTO). Default: OFF" OFF)
-if (${ENABLE_LTO})
+option(DISABLE_LTO "Set to TRUE to build Hyrise without Link Time Optimization (LTO). Default: FALSE" FALSE)
+if (${DISABLE_LTO} OR ${CMAKE_BUILD_TYPE} MATCHES "Debug")
+    message(STATUS "Building without Link-Time Optimization")
+else ()
     include(CheckIPOSupported)
     check_ipo_supported(RESULT ipo_supported OUTPUT ipo_output)
     if(ipo_supported)
@@ -185,7 +187,7 @@ endif()
 # Include sub-CMakeLists.txt
 add_subdirectory(third_party/ EXCLUDE_FROM_ALL)
 
-# Some third-party libs don't support LTO (if enabled above):
+# Some third-party libs do not support LTO (if enabled above):
 foreach(no_lto_target gtest gtest_main gmock gmock_main)
     if(TARGET no_lto_target)
         set_property(TARGET ${no_lto_target} PROPERTY INTERPROCEDURAL_OPTIMIZATION FALSE)
