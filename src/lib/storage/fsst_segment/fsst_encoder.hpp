@@ -95,9 +95,10 @@ class FSSTEncoder : public SegmentEncoder<FSSTEncoder> {
       // 7 + 2 * total_length -> See fsst_compress interface in fsst.h description.
       compressed_values.resize(7 + 2 * total_length);
 
-      fsst_encoder_t* encoder = fsst_create(values.size(), row_lengths.data(), row_pointers.data(), 0);
+      auto const_row_pointer = const_cast<const unsigned char **>(row_pointers.data());
+      fsst_encoder_t* encoder = fsst_create(values.size(), row_lengths.data(), const_row_pointer, 0);
       [[maybe_unused]] size_t number_compressed_strings =
-          fsst_compress(encoder, values.size(), row_lengths.data(), row_pointers.data(), compressed_values.size(),
+          fsst_compress(encoder, values.size(), row_lengths.data(), const_row_pointer, compressed_values.size(),
                         compressed_values.data(), compressed_value_lengths.data(), compressed_value_pointers.data());
 
       DebugAssert(number_compressed_strings == values.size(), "Compressed values buffer size was not large enough");
