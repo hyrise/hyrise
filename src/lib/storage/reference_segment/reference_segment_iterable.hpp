@@ -209,7 +209,7 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
 
     void _create_accessor(const ChunkID chunk_id) const {
       auto segment = _referenced_table->get_chunk(chunk_id)->get_segment(_referenced_column_id);
-      auto accessor = std::move(create_segment_accessor<T>(segment));
+      auto accessor = create_segment_accessor<T>(segment);
       (*_accessors)[chunk_id] = std::move(accessor);
     }
 
