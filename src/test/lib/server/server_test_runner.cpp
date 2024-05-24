@@ -1,11 +1,16 @@
-#include <pqxx/pqxx>
-
 #include <fstream>
 #include <future>
 #include <thread>
 
-#include "base_test.hpp"
+// GCC in release mode finds potentially uninitialized memory in pqxx. Looking at param.hxx, this appears to be a false
+// positive.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#include <pqxx/connection>      // NOLINT(build/include_order): cpplint considers pqxx as C system headers.
+#include <pqxx/nontransaction>  // NOLINT(build/include_order)
+#pragma GCC diagnostic pop
 
+#include "base_test.hpp"
 #include "hyrise.hpp"
 #include "operators/get_table.hpp"
 #include "operators/validate.hpp"
@@ -23,7 +28,9 @@ class ServerTestRunner : public BaseTest {
     _table_a = load_table("resources/test_data/tbl/int_float.tbl", ChunkOffset{2});
     Hyrise::get().storage_manager.add_table("table_a", _table_a);
 
-    auto server_runner = [](Server& server) { server.run(); };
+    auto server_runner = [](Server& server) {
+      server.run();
+    };
 
     _server_thread = std::make_unique<std::thread>(server_runner, std::ref(*_server));
 
@@ -67,11 +74,11 @@ TEST_F(ServerTestRunner, TestCacheAndSchedulerInitialization) {
 }
 
 TEST_F(ServerTestRunner, TestSimpleSelect) {
-  pqxx::connection connection{_connection_string};
+  auto connection = pqxx::connection{_connection_string};
 
   // We use nontransactions because the regular transactions use "begin" and "commit" keywords that we do not support.
   // Nontransactions auto commit.
-  pqxx::nontransaction transaction{connection};
+  auto transaction = pqxx::nontransaction{connection};
 
   const auto result = transaction.exec("SELECT * FROM table_a;");
   EXPECT_EQ(result.size(), _table_a->row_count());
@@ -81,18 +88,18 @@ TEST_F(ServerTestRunner, ValidateCorrectTransfer) {
   const auto all_types_table = load_table("resources/test_data/tbl/all_data_types_sorted.tbl", ChunkOffset{2});
   Hyrise::get().storage_manager.add_table("all_types_table", all_types_table);
 
-  pqxx::connection connection{_connection_string};
+  auto connection = pqxx::connection{_connection_string};
 
   // We use nontransactions because the regular transactions use SQL that we do not support. Nontransactions auto
   // commit.
-  pqxx::nontransaction transaction{connection};
+  auto transaction = pqxx::nontransaction{connection};
 
   const auto result = transaction.exec("SELECT * FROM all_types_table;");
 
   EXPECT_EQ(result.size(), all_types_table->row_count());
   EXPECT_EQ(result[0].size(), static_cast<size_t>(all_types_table->column_count()));
 
-  for (uint64_t row_id = 0; row_id < all_types_table->row_count(); row_id++) {
+  for (auto row_id = uint64_t{0}; row_id < all_types_table->row_count(); row_id++) {
     const auto current_row = all_types_table->get_row(row_id);
     for (ColumnID column_count{0}; column_count < all_types_table->column_count(); column_count++) {
       // Representation of NULL values in pqxx::field differ from result of lexical_cast
@@ -106,9 +113,9 @@ TEST_F(ServerTestRunner, ValidateCorrectTransfer) {
 }
 
 TEST_F(ServerTestRunner, TestCopyImport) {
-  pqxx::connection connection{_connection_string};
+  auto connection = pqxx::connection{_connection_string};
 
-  pqxx::nontransaction transaction{connection};
+  auto transaction = pqxx::nontransaction{connection};
 
   transaction.exec("COPY another_table FROM 'resources/test_data/tbl/int_float.tbl';");
 
@@ -117,9 +124,9 @@ TEST_F(ServerTestRunner, TestCopyImport) {
 }
 
 TEST_F(ServerTestRunner, TestInvalidCopyImport) {
-  pqxx::connection connection{_connection_string};
+  auto connection = pqxx::connection{_connection_string};
 
-  pqxx::nontransaction transaction{connection};
+  auto transaction = pqxx::nontransaction{connection};
 
   // Ill-formed
   EXPECT_THROW(transaction.exec("COPY another_table FROM;"), pqxx::broken_connection);
@@ -136,9 +143,9 @@ TEST_F(ServerTestRunner, TestInvalidCopyImport) {
 }
 
 TEST_F(ServerTestRunner, TestCopyExport) {
-  pqxx::connection connection{_connection_string};
+  auto connection = pqxx::connection{_connection_string};
 
-  pqxx::nontransaction transaction{connection};
+  auto transaction = pqxx::nontransaction{connection};
 
   transaction.exec("COPY table_a TO '" + _export_filename + ".bin';");
 
@@ -147,9 +154,9 @@ TEST_F(ServerTestRunner, TestCopyExport) {
 }
 
 TEST_F(ServerTestRunner, TestInvalidCopyExport) {
-  pqxx::connection connection{_connection_string};
+  auto connection = pqxx::connection{_connection_string};
 
-  pqxx::nontransaction transaction{connection};
+  auto transaction = pqxx::nontransaction{connection};
 
   // Ill-formed
   EXPECT_THROW(transaction.exec("COPY table_a TO;"), pqxx::broken_connection);
@@ -166,9 +173,9 @@ TEST_F(ServerTestRunner, TestInvalidCopyExport) {
 }
 
 TEST_F(ServerTestRunner, TestCopyIntegration) {
-  pqxx::connection connection{_connection_string};
+  auto connection = pqxx::connection{_connection_string};
 
-  pqxx::nontransaction transaction{connection};
+  auto transaction = pqxx::nontransaction{connection};
 
   // We delete a tuple of a table and export it.
   transaction.exec("DELETE FROM table_a WHERE a = 123;");
@@ -200,9 +207,9 @@ TEST_F(ServerTestRunner, TestCopyIntegration) {
 }
 
 TEST_F(ServerTestRunner, TestInvalidStatement) {
-  pqxx::connection connection{_connection_string};
+  auto connection = pqxx::connection{_connection_string};
 
-  pqxx::nontransaction transaction{connection};
+  auto transaction = pqxx::nontransaction{connection};
 
   // Ill-formed SQL statement
   EXPECT_THROW(transaction.exec("SELECT * FROM;"), pqxx::broken_connection);
@@ -216,7 +223,7 @@ TEST_F(ServerTestRunner, TestInvalidStatement) {
 }
 
 TEST_F(ServerTestRunner, TestTransactionCommit) {
-  pqxx::connection connection{_connection_string};
+  auto connection = pqxx::connection{_connection_string};
   pqxx::connection verification_connection{_connection_string};
 
   pqxx::transaction transaction{connection};
@@ -226,7 +233,7 @@ TEST_F(ServerTestRunner, TestTransactionCommit) {
   EXPECT_EQ(result.size(), 4);
 
   {
-    pqxx::transaction verification_transaction{verification_connection};
+    auto verification_transaction = pqxx::transaction{verification_connection};
     const auto verification_result = verification_transaction.exec("SELECT * FROM table_a;");
     EXPECT_EQ(verification_result.size(), 3);
   }
@@ -234,14 +241,14 @@ TEST_F(ServerTestRunner, TestTransactionCommit) {
   transaction.commit();
 
   {
-    pqxx::transaction verification_transaction{verification_connection};
+    auto verification_transaction = pqxx::transaction{verification_connection};
     const auto verification_result = verification_transaction.exec("SELECT * FROM table_a;");
     EXPECT_EQ(verification_result.size(), 4);
   }
 }
 
 TEST_F(ServerTestRunner, TestTransactionRollback) {
-  pqxx::connection connection{_connection_string};
+  auto connection = pqxx::connection{_connection_string};
 
   pqxx::transaction transaction{connection};
   transaction.exec("INSERT INTO table_a (a, b) VALUES (1, 2);");
@@ -251,13 +258,13 @@ TEST_F(ServerTestRunner, TestTransactionRollback) {
 
   transaction.abort();
 
-  pqxx::transaction verification_transaction{connection};
+  auto verification_transaction = pqxx::transaction{connection};
   const auto verification_result = verification_transaction.exec("SELECT * FROM table_a;");
   EXPECT_EQ(verification_result.size(), 3);
 }
 
 TEST_F(ServerTestRunner, TestInvalidTransactionFlow) {
-  pqxx::connection connection{_connection_string};
+  auto connection = pqxx::connection{_connection_string};
 
   pqxx::transaction transaction{connection};
   EXPECT_THROW(transaction.exec("BEGIN;"), pqxx::broken_connection);
@@ -286,8 +293,8 @@ TEST_F(ServerTestRunner, TestMultipleConnections) {
 }
 
 TEST_F(ServerTestRunner, TestSimpleInsertSelect) {
-  pqxx::connection connection{_connection_string};
-  pqxx::nontransaction transaction{connection};
+  auto connection = pqxx::connection{_connection_string};
+  auto transaction = pqxx::nontransaction{connection};
 
   const auto expected_num_rows = _table_a->row_count() + 1;
   transaction.exec("INSERT INTO table_a VALUES (1, 1.0);");
@@ -309,14 +316,14 @@ TEST_F(ServerTestRunner, TestShutdownDuringExecution) {
 
   // These should run for a while, one should finish earlier
   std::thread([&] {
-    pqxx::connection connection{_connection_string};
-    pqxx::nontransaction transaction{connection};
+    auto connection = pqxx::connection{_connection_string};
+    auto transaction = pqxx::nontransaction{connection};
     transaction.exec("SELECT * FROM table_a t1, table_a t2");
   }).detach();
 
   std::thread([&] {
-    pqxx::connection connection{_connection_string};
-    pqxx::nontransaction transaction{connection};
+    auto connection = pqxx::connection{_connection_string};
+    auto transaction = pqxx::nontransaction{connection};
     transaction.exec("SELECT * FROM table_a t1, table_a t2 WHERE t1.a = 123");
   }).detach();
 
@@ -327,10 +334,10 @@ TEST_F(ServerTestRunner, TestShutdownDuringExecution) {
 }
 
 TEST_F(ServerTestRunner, TestPreparedStatement) {
-  pqxx::connection connection{_connection_string};
-  pqxx::nontransaction transaction{connection};
+  auto connection = pqxx::connection{_connection_string};
+  auto transaction = pqxx::nontransaction{connection};
 
-  const std::string prepared_name = "statement1";
+  const auto prepared_name = std::string{"statement1"};
   connection.prepare(prepared_name, "SELECT * FROM table_a WHERE a > ?");
 
   const auto param = 1234u;
@@ -345,8 +352,8 @@ TEST_F(ServerTestRunner, TestPreparedStatement) {
 }
 
 TEST_F(ServerTestRunner, TestUnnamedPreparedStatement) {
-  pqxx::connection connection{_connection_string};
-  pqxx::nontransaction transaction{connection};
+  auto connection = pqxx::connection{_connection_string};
+  auto transaction = pqxx::nontransaction{connection};
 
   const std::string prepared_name = "";
   connection.prepare(prepared_name, "SELECT * FROM table_a WHERE a > ?");
@@ -362,8 +369,8 @@ TEST_F(ServerTestRunner, TestUnnamedPreparedStatement) {
 }
 
 TEST_F(ServerTestRunner, TestInvalidPreparedStatement) {
-  pqxx::connection connection{_connection_string};
-  pqxx::nontransaction transaction{connection};
+  auto connection = pqxx::connection{_connection_string};
+  auto transaction = pqxx::nontransaction{connection};
 
   const std::string prepared_name = "";
   const auto param = 1234u;
@@ -394,35 +401,22 @@ TEST_F(ServerTestRunner, TestParallelConnections) {
 
   // Define the work package
   const auto connection_run = [&]() {
-    pqxx::connection connection{_connection_string};
-    pqxx::nontransaction transaction{connection};
+    auto connection = pqxx::connection{_connection_string};
+    auto transaction = pqxx::nontransaction{connection};
     const auto result = transaction.exec(sql);
     EXPECT_EQ(result.size(), expected_num_rows);
   };
 
-  // Create the async objects and spawn them asynchronously (i.e., as their own threads)
-  // Note that async has a bunch of issues:
-  //  - https://stackoverflow.com/questions/12508653/what-is-the-issue-with-stdasync
-  //  - Mastering the C++17 STL, pages 205f
-  // TODO(anyone): Change this to proper threads+futures, or at least do not reuse this code.
   const auto num_threads = size_t{100};
-  auto thread_futures = std::vector<std::future<void>>{};
-  thread_futures.reserve(num_threads);
+  auto threads = std::vector<std::thread>{};
+  threads.reserve(num_threads);
 
-  for (auto thread_num = 0u; thread_num < num_threads; ++thread_num) {
-    // We want a future to the thread running, so we can kill it after a future.wait(timeout) or the test would freeze
-    thread_futures.emplace_back(std::async(std::launch::async, connection_run));
+  for (auto thread_num = size_t{0}; thread_num < num_threads; ++thread_num) {
+    threads.emplace_back(connection_run);
   }
 
-  // Wait for completion or timeout (should not occur)
-  for (auto& thread_future : thread_futures) {
-    // We give this a lot of time, not because we need that long for 100 threads to finish, but because sanitizers and
-    // other tools like valgrind sometimes bring a high overhead that exceeds 10 seconds.
-    if (thread_future.wait_for(std::chrono::seconds(150)) == std::future_status::timeout) {
-      ASSERT_TRUE(false) << "At least one thread got stuck and did not commit.";
-      // Retrieve the future so that exceptions stored in its state are thrown
-      thread_future.get();
-    }
+  for (auto& thread : threads) {
+    thread.join();
   }
 }
 
@@ -456,36 +450,27 @@ TEST_F(ServerTestRunner, TestTransactionConflicts) {
     }
   };
 
-  // Create the async objects and spawn them asynchronously (i.e., as their own threads)
-  const auto num_threads = size_t{100};
-  auto thread_futures = std::vector<std::future<void>>{};
-  thread_futures.reserve(num_threads);
+  constexpr auto num_threads = size_t{100};
+  auto threads = std::vector<std::thread>{};
+  threads.reserve(num_threads);
 
-  for (auto thread_num = 0u; thread_num < num_threads; ++thread_num) {
-    // We want a future to the thread running, so we can kill it after a future.wait(timeout) or the test would freeze
-    thread_futures.emplace_back(std::async(std::launch::async, connection_run));
+  for (auto thread_num = size_t{0}; thread_num < num_threads; ++thread_num) {
+    threads.emplace_back(connection_run);
   }
 
-  // Wait for completion or timeout (should not occur)
-  for (auto& thread_future : thread_futures) {
-    // We give this a lot of time, not because we need that long for 100 threads to finish, but because sanitizers and
-    // other tools like valgrind sometimes bring a high overhead that exceeds 10 seconds.
-    if (thread_future.wait_for(std::chrono::seconds(180)) == std::future_status::timeout) {
-      ASSERT_TRUE(false) << "At least one thread got stuck and did not commit.";
-      // Retrieve the future so that exceptions stored in its state are thrown
-      thread_future.get();
-    }
+  for (auto& thread : threads) {
+    thread.join();
   }
 
-  // Verify results
-  auto final_sum = int64_t{};
+  // Verify results.
+  auto final_sum = int64_t{0};
   {
     auto pipeline = SQLPipelineBuilder{std::string{"SELECT SUM(a) FROM table_a"}}.create_pipeline();
     const auto [_, table] = pipeline.get_result_table();
     final_sum = *table->get_value<int64_t>(ColumnID{0}, 0);
   }
 
-  // Really pessimistic, but at least 2 statements should have made it
+  // Really pessimistic, but at least 2 statements should have made it.
   EXPECT_GT(successful_increments, 2);
 
   // We also want to see at least one conflict so that we can be sure that conflict handling in the server works.

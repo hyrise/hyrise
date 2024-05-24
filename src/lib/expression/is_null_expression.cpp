@@ -1,7 +1,15 @@
 #include "is_null_expression.hpp"
 
+#include <memory>
 #include <sstream>
+#include <string>
+#include <unordered_map>
 
+#include "expression/abstract_expression.hpp"
+#include "expression/abstract_predicate_expression.hpp"
+#include "expression/expression_precedence.hpp"
+#include "operators/abstract_operator.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {
@@ -23,7 +31,7 @@ std::shared_ptr<AbstractExpression> IsNullExpression::_on_deep_copy(
 }
 
 std::string IsNullExpression::description(const DescriptionMode mode) const {
-  std::stringstream stream;
+  auto stream = std::stringstream{};
 
   if (predicate_condition == PredicateCondition::IsNull) {
     stream << _enclose_argument(*operand(), mode) << " IS NULL";

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <memory>
+
 #include "pos_lists/row_id_pos_list.hpp"
 #include "resolve_type.hpp"
 #include "storage/abstract_segment.hpp"

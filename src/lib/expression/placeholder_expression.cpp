@@ -1,12 +1,17 @@
 #include "placeholder_expression.hpp"
 
+#include <cstddef>
+#include <functional>
+#include <memory>
 #include <sstream>
 #include <string>
-#include <type_traits>
+#include <unordered_map>
 
-#include <boost/container_hash/hash.hpp>
-
-#include "resolve_type.hpp"
+#include "all_type_variant.hpp"
+#include "expression/abstract_expression.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 
@@ -19,7 +24,7 @@ std::shared_ptr<AbstractExpression> PlaceholderExpression::_on_deep_copy(
 }
 
 std::string PlaceholderExpression::description(const DescriptionMode /*mode*/) const {
-  std::stringstream stream;
+  auto stream = std::stringstream{};
   stream << "Placeholder[ParameterID=" << std::to_string(parameter_id) << "]";
   return stream.str();
 }
@@ -40,7 +45,7 @@ bool PlaceholderExpression::_shallow_equals(const AbstractExpression& expression
 }
 
 size_t PlaceholderExpression::_shallow_hash() const {
-  return boost::hash_value(static_cast<ParameterID::base_type>(parameter_id));
+  return std::hash<ParameterID::base_type>{}(static_cast<ParameterID::base_type>(parameter_id));
 }
 
 bool PlaceholderExpression::_on_is_nullable_on_lqp(const AbstractLQPNode& /*lqp*/) const {

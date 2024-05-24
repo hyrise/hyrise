@@ -1,8 +1,13 @@
 #include "operator_join_predicate.hpp"
 
+#include <optional>
+#include <tuple>
+#include <utility>
+
 #include "expression/abstract_predicate_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
-#include "logical_query_plan/join_node.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 
@@ -32,8 +37,8 @@ std::optional<OperatorJoinPredicate> OperatorJoinPredicate::from_expression(cons
   // avoid having the join implementations handle such situations we check if the predicate sides match. If not, the
   // column IDs and the predicates are flipped.
   const auto find_predicate_in_input = [&](const auto& input) {
-    std::optional<ColumnID> left_column_id{};
-    std::optional<ColumnID> right_column_id{};
+    auto left_column_id = std::optional<ColumnID>{};
+    auto right_column_id = std::optional<ColumnID>{};
 
     input.iterate_output_expressions([&](const auto column_id, const auto& expression) {
       if (*expression == *abstract_predicate_expression->arguments[0]) {

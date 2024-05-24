@@ -1,6 +1,9 @@
 #pragma once
 
+#include <algorithm>
 #include <memory>
+#include <utility>
+#include <vector>
 
 #include <boost/dynamic_bitset.hpp>
 
@@ -34,8 +37,10 @@ class CardinalityEstimator : public AbstractCardinalityEstimator {
  public:
   std::shared_ptr<AbstractCardinalityEstimator> new_instance() const override;
 
-  Cardinality estimate_cardinality(const std::shared_ptr<const AbstractLQPNode>& lqp) const override;
-  std::shared_ptr<TableStatistics> estimate_statistics(const std::shared_ptr<const AbstractLQPNode>& lqp) const;
+  Cardinality estimate_cardinality(const std::shared_ptr<const AbstractLQPNode>& lqp,
+                                   const bool cacheable = true) const override;
+  std::shared_ptr<TableStatistics> estimate_statistics(const std::shared_ptr<const AbstractLQPNode>& lqp,
+                                                       const bool cacheable = true) const;
 
   /**
    * Per-node-type estimation functions
@@ -47,8 +52,8 @@ class CardinalityEstimator : public AbstractCardinalityEstimator {
   static std::shared_ptr<TableStatistics> estimate_projection_node(
       const ProjectionNode& projection_node, const std::shared_ptr<TableStatistics>& input_table_statistics);
 
-  std::shared_ptr<TableStatistics> estimate_window_node(
-      const WindowNode& window_node, const std::shared_ptr<TableStatistics>& input_table_statistics) const;
+  static std::shared_ptr<TableStatistics> estimate_window_node(
+      const WindowNode& window_node, const std::shared_ptr<TableStatistics>& input_table_statistics);
 
   static std::shared_ptr<TableStatistics> estimate_aggregate_node(
       const AggregateNode& aggregate_node, const std::shared_ptr<TableStatistics>& input_table_statistics);
@@ -57,7 +62,8 @@ class CardinalityEstimator : public AbstractCardinalityEstimator {
       const ValidateNode& /*validate_node*/, const std::shared_ptr<TableStatistics>& input_table_statistics);
 
   std::shared_ptr<TableStatistics> estimate_predicate_node(
-      const PredicateNode& predicate_node, const std::shared_ptr<TableStatistics>& input_table_statistics) const;
+      const PredicateNode& predicate_node, const std::shared_ptr<TableStatistics>& input_table_statistics,
+      const bool cacheable) const;
 
   static std::shared_ptr<TableStatistics> estimate_join_node(
       const JoinNode& join_node, const std::shared_ptr<TableStatistics>& left_input_table_statistics,

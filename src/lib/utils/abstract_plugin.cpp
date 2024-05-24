@@ -1,5 +1,9 @@
 #include "abstract_plugin.hpp"
 
+#include <optional>
+#include <utility>
+#include <vector>
+
 namespace hyrise {
 
 // We have to instantiate this function here because clang-12(+) does not instantiate it and llvm-cov throws a warning

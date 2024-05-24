@@ -1,11 +1,24 @@
 #include "fixed_string_dictionary_segment.hpp"
 
 #include <algorithm>
+#include <cstddef>
+#include <iterator>
 #include <memory>
+#include <optional>
 #include <string>
+#include <utility>
 
+#include <boost/variant/get.hpp>
+
+#include "all_type_variant.hpp"
 #include "resolve_type.hpp"
+#include "storage/abstract_segment.hpp"
+#include "storage/base_dictionary_segment.hpp"
+#include "storage/encoding_type.hpp"
+#include "storage/fixed_string_dictionary_segment/fixed_string_vector.hpp"
 #include "storage/vector_compression/base_compressed_vector.hpp"
+#include "storage/vector_compression/compressed_vector_type.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
 

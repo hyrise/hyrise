@@ -6,7 +6,6 @@
 #include <vector>
 
 #include "encoding_test.hpp"
-
 #include "storage/chunk_encoder.hpp"
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/dictionary_segment.hpp"
@@ -133,7 +132,11 @@ auto formatter_iterables = [](const ::testing::TestParamInfo<std::tuple<SegmentE
          << (std::get<2>(info.param) ? "WithFilter" : "");
 
   auto string = stream.str();
-  string.erase(std::remove_if(string.begin(), string.end(), [](char c) { return !std::isalnum(c); }), string.end());
+  string.erase(std::remove_if(string.begin(), string.end(),
+                              [](char c) {
+                                return !std::isalnum(c);
+                              }),
+               string.end());
 
   return string;
 };
@@ -242,7 +245,11 @@ auto formatter_iterables_string = [](const ::testing::TestParamInfo<std::tuple<S
   stream << std::get<0>(info.param) << "String" << (std::get<1>(info.param) ? "WithFilter" : "");
 
   auto string = stream.str();
-  string.erase(std::remove_if(string.begin(), string.end(), [](char c) { return !std::isalnum(c); }), string.end());
+  string.erase(std::remove_if(string.begin(), string.end(),
+                              [](char c) {
+                                return !std::isalnum(c);
+                              }),
+               string.end());
 
   return string;
 };
@@ -311,7 +318,11 @@ auto formatter_chunk_offset = [](const ::testing::TestParamInfo<SegmentEncodingS
   stream << info.param;
 
   auto string = stream.str();
-  string.erase(std::remove_if(string.begin(), string.end(), [](char c) { return !std::isalnum(c); }), string.end());
+  string.erase(std::remove_if(string.begin(), string.end(),
+                              [](char c) {
+                                return !std::isalnum(c);
+                              }),
+               string.end());
 
   return string;
 };

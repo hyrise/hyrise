@@ -2,8 +2,10 @@
 
 #include <fstream>
 #include <iostream>
+#include <map>
 #include <memory>
 #include <string>
+#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -11,10 +13,9 @@
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/trim.hpp>
 
-#include "base_test.hpp"
-
 #include "SQLParser.h"
 
+#include "base_test.hpp"
 #include "concurrency/transaction_context.hpp"
 #include "hyrise.hpp"
 #include "logical_query_plan/create_view_node.hpp"

@@ -1,12 +1,22 @@
 #include "lqp_column_expression.hpp"
 
+#include <cstddef>
+#include <memory>
+#include <sstream>
+#include <string>
+#include <unordered_map>
+
 #include <boost/container_hash/hash.hpp>
 
+#include "all_type_variant.hpp"
+#include "expression/abstract_expression.hpp"
 #include "hyrise.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/static_table_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
-#include "storage/table.hpp"
+#include "operators/abstract_operator.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {
@@ -29,7 +39,7 @@ std::string LQPColumnExpression::description(const DescriptionMode mode) const {
     return "<Expired Column>";
   }
 
-  std::stringstream output;
+  auto output = std::stringstream{};
   if (mode == AbstractExpression::DescriptionMode::Detailed) {
     output << original_node_locked << ".";
   }
@@ -49,7 +59,7 @@ std::string LQPColumnExpression::description(const DescriptionMode mode) const {
 
     case LQPNodeType::Mock: {
       const auto mock_node = std::static_pointer_cast<const MockNode>(original_node_locked);
-      Assert(original_column_id < mock_node->column_definitions().size(), "ColumnID out of range");
+      Assert(original_column_id < mock_node->column_definitions().size(), "ColumnID out of range.");
       output << mock_node->column_definitions()[original_column_id].second;
       return output.str();
     }
@@ -61,14 +71,14 @@ std::string LQPColumnExpression::description(const DescriptionMode mode) const {
     }
 
     default: {
-      Fail("Node type can not be referenced in LQPColumnExpressions");
+      Fail("Node type can not be referenced in LQPColumnExpressions.");
     }
   }
 }
 
 DataType LQPColumnExpression::data_type() const {
   const auto original_node_locked = original_node.lock();
-  Assert(original_node_locked, "Trying to retrieve data_type of expired LQPColumnExpression, LQP is invalid");
+  Assert(original_node_locked, "Trying to retrieve data_type of expired LQPColumnExpression, LQP is invalid.");
 
   if (original_column_id == INVALID_COLUMN_ID) {
     // Handle COUNT(*). Note: This is the input data type.
@@ -84,7 +94,7 @@ DataType LQPColumnExpression::data_type() const {
 
     case LQPNodeType::Mock: {
       const auto mock_node = std::static_pointer_cast<const MockNode>(original_node_locked);
-      Assert(original_column_id < mock_node->column_definitions().size(), "ColumnID out of range");
+      Assert(original_column_id < mock_node->column_definitions().size(), "ColumnID out of range.");
       return mock_node->column_definitions()[original_column_id].first;
     }
 
@@ -94,7 +104,7 @@ DataType LQPColumnExpression::data_type() const {
     }
 
     default: {
-      Fail("Node type can not be referenced in LQPColumnExpressions");
+      Fail("Node type can not be referenced in LQPColumnExpressions.");
     }
   }
 }
@@ -105,7 +115,7 @@ bool LQPColumnExpression::requires_computation() const {
 
 bool LQPColumnExpression::_shallow_equals(const AbstractExpression& expression) const {
   DebugAssert(dynamic_cast<const LQPColumnExpression*>(&expression),
-              "Different expression type should have been caught by AbstractExpression::operator==");
+              "Different expression type should have been caught by AbstractExpression::operator==.");
   const auto& lqp_column_expression = static_cast<const LQPColumnExpression&>(expression);
   return original_column_id == lqp_column_expression.original_column_id &&
          original_node.lock() == lqp_column_expression.original_node.lock();
@@ -115,15 +125,16 @@ size_t LQPColumnExpression::_shallow_hash() const {
   // It is important not to combine the address of the original_node with the hash code as it was done before #1795.
   // If this address is combined with the return hash code, equal LQP nodes that are not identical and that have
   // LQPColumnExpressions or child nodes with LQPColumnExpressions would have different hash codes.
-  auto hash = boost::hash_value(original_node.lock()->hash());
-  boost::hash_combine(hash, static_cast<size_t>(original_column_id));
+  auto hash = size_t{0};
+  boost::hash_combine(hash, original_node.lock()->hash());
+  boost::hash_combine(hash, original_column_id);
   return hash;
 }
 
 bool LQPColumnExpression::_on_is_nullable_on_lqp(const AbstractLQPNode& /*lqp*/) const {
   Fail(
       "Should not be called. This should have been forwarded to StoredTableNode/StaticTableNode/MockNode by "
-      "AbstractExpression::is_nullable_on_lqp()");
+      "AbstractExpression::is_nullable_on_lqp().");
 }
 
 }  // namespace hyrise

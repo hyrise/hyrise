@@ -2,7 +2,6 @@
 
 #include "base_test.hpp"
 #include "mock_socket.hpp"
-
 #include "server/write_buffer.hpp"
 
 namespace hyrise {

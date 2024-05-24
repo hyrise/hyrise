@@ -1,6 +1,7 @@
 #include <memory>
 
 #include "benchmark/benchmark.h"
+
 #include "micro_benchmark_basic_fixture.hpp"
 
 namespace hyrise {
