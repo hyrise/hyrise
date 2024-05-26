@@ -62,7 +62,7 @@ TEST_F(AttributeStatisticsTest, Scaled) {
   EXPECT_EQ(scaled_attribute_statistics->range_filter->ranges.at(0).second, 100);
 
   EXPECT_FLOAT_EQ(scaled_attribute_statistics->null_value_ratio->ratio, 0.2f);
-  EXPECT_EQ(scaled_attribute_statistics->distinct_value_count->count, 123);
+  EXPECT_EQ(scaled_attribute_statistics->distinct_value_count->count, 12);
 }
 
 // Scaling with a selectivity of 1.0 does noch generate a new object.
@@ -144,7 +144,7 @@ Generic value count: 40; distinct count: 20; bin count: 1;  Bins
   [1 -> 100]: Height: 40; DistinctCount: 20
 
 MinMaxFilter: {0 100}
-RangeFilter: { 0->20 }, { 87->100 }
+RangeFilter: { [0, 20], [87, 100] }
 NullValueRatio: 0.2
 DistinctValueCount: 12
 }

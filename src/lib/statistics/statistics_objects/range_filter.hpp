@@ -60,11 +60,14 @@ template <typename T>
 std::ostream& operator<<(std::ostream& stream, const RangeFilter<T>& filter) {
   stream << "{ ";
 
-  for (const auto& range : filter.ranges) {
-    stream << range.first << "->" << range.second << " ";
+  for (auto range_it = filter.ranges.cbegin(); range_it != filter.ranges.cend(); ++range_it) {
+    if (range_it != filter.ranges.cbegin()) {
+      stream << ", ";
+    }
+    stream << "[" << range_it->first << ", " << range_it->second << "]";
   }
 
-  stream << "}";
+  stream << " }";
   return stream;
 }
 
