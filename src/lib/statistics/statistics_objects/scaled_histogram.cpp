@@ -18,15 +18,16 @@ ScaledHistogram<T>::ScaledHistogram(const std::shared_ptr<const AbstractHistogra
 
 template <typename T>
 std::shared_ptr<ScaledHistogram<T>> ScaledHistogram<T>::from_referenced_histogram(
-    const std::shared_ptr<const AbstractHistogram<T>>& referenced_histogram, const Selectivity selectivity) {
+    const AbstractHistogram<T>* referenced_histogram, const Selectivity selectivity) {
   // Reference the original histogram and adapt the selectivity if the input itself is a ScaledHistogram.
-  if (const auto& scaled_histogram = std::dynamic_pointer_cast<const ScaledHistogram>(referenced_histogram)) {
+  if (const auto& scaled_histogram = dynamic_cast<const ScaledHistogram*>(referenced_histogram)) {
     return std::make_shared<ScaledHistogram<T>>(scaled_histogram->_referenced_histogram,
                                                 scaled_histogram->_selectivity * selectivity,
                                                 referenced_histogram->domain());
   }
 
-  return std::make_shared<ScaledHistogram<T>>(referenced_histogram, selectivity, referenced_histogram->domain());
+  return std::make_shared<ScaledHistogram<T>>(referenced_histogram->shared_from_this(), selectivity,
+                                              referenced_histogram->domain());
 }
 
 template <typename T>

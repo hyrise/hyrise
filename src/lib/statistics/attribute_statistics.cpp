@@ -55,7 +55,8 @@ void AttributeStatistics<T>::set_statistics_object(
 
 template <typename T>
 std::shared_ptr<const BaseAttributeStatistics> AttributeStatistics<T>::scaled(const Selectivity selectivity) const {
-  if (std::fabs(selectivity - 1.f) <= std::numeric_limits<Selectivity>::epsilon()) {
+  // We do not create adapted versions of the underlying statistics objects if the selectivity is 1 (+/- uncertainty).
+  if (std::fabs(1.0f - selectivity) <= std::numeric_limits<Selectivity>::epsilon()) {
     return this->shared_from_this();
   }
 
@@ -110,7 +111,7 @@ std::shared_ptr<const BaseAttributeStatistics> AttributeStatistics<T>::sliced(
     }
   }
 
-  // We do not slice the distinct value count, since we do not know how it changes.
+  // We do not slice the distinct value count because we do not know how it changes.
   return statistics;
 }
 

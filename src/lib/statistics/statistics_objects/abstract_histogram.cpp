@@ -736,11 +736,10 @@ std::shared_ptr<const AbstractStatisticsObject> AbstractHistogram<T>::pruned(
 
 template <typename T>
 std::shared_ptr<const AbstractStatisticsObject> AbstractHistogram<T>::scaled(const Selectivity selectivity) const {
-  Assert(!std::isnan(selectivity), "pUnexpected selectivity.");
-
+  Assert(!std::isnan(selectivity), "Unexpected selectivity.");
   // Return a ScaledHistogram to wrap the source histogram rather than copying all buckets over. This significantly
   // benefits the runtime of short-running queries.
-  return ScaledHistogram<T>::from_referenced_histogram(this->shared_from_this(), selectivity);
+  return ScaledHistogram<T>::from_referenced_histogram(this, selectivity);
 }
 
 template <typename T>

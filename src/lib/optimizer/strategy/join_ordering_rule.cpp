@@ -43,7 +43,7 @@ std::shared_ptr<AbstractLQPNode> perform_join_ordering_recursively(
   }
 
   /**
-   * Setup cardinality and cost sstimation caches.
+   * Setup cardinality and cost estimation caches.
    *
    * As join ordering algorithms issue many cost/cardinality estimation requests, caching is crucial to optimization
    * performance. We can enable the corresponding cache policies because join ordering algorithms build plans bottom-up
@@ -57,16 +57,12 @@ std::shared_ptr<AbstractLQPNode> perform_join_ordering_recursively(
    * Select and call the actual join ordering algorithm. Simple heuristic: Use DpCcp for any query with less than X
    * tables and GOO for everything more complex.
    */
-  // TODO(anybody): Increase X once our cost/cardinality estimation is faster. As investigated in #2626 and #XXXX,
-  // we see two main bottlenecks in cardinality estimation:
-  //     (i) Scaling histograms because we do it very often (thousands of times for some TPC-DS and JOB queries).
-  //    (ii) Creating new histograms for joined tables.
   auto result_lqp = std::shared_ptr<AbstractLQPNode>{};
   DebugAssert(!join_graph->vertices.empty(), "There should be nodes in the join graph.");
   if (join_graph->vertices.size() == 1) {
     // A JoinGraph with only one vertex is no actual join and needs no ordering.
     result_lqp = lqp;
-  } else if (join_graph->vertices.size() < 9) {
+  } else if (join_graph->vertices.size() < JoinOrderingRule::MIN_VERTICES_FOR_HEURISTIC) {
     result_lqp = DpCcp{}(*join_graph, caching_cost_estimator);
   } else {
     result_lqp = GreedyOperatorOrdering{}(*join_graph, caching_cost_estimator);
@@ -89,10 +85,10 @@ std::string JoinOrderingRule::name() const {
 }
 
 void JoinOrderingRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
-  DebugAssert(cost_estimator, "JoinOrderingRule requires cost estimator to be set");
+  DebugAssert(cost_estimator, "JoinOrderingRule requires cost estimator to be set.");
 
   /**
-   * Dispatch _perform_join_ordering_recursively() and fix the column order afterwards, since changing join order might
+   * Dispatch perform_join_ordering_recursively() and fix the column order afterwards, since changing join order might
    * have changed it.
    */
 

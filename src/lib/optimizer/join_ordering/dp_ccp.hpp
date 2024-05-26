@@ -13,7 +13,7 @@ class JoinGraph;
  * Optimal join ordering algorithm described in Moerkotte and Neumann: "Analysis of two existing and one new dynamic
  * programming algorithm for the generation of optimal bushy join trees without cross products" (see
  * https://www.vldb.org/conf/2006/p930-moerkotte.pdf).
- * TODO(dey4ss): Check if EnumerateCcp implements the originsl or the errata version  of EnumerateCmp
+ * TODO(dey4ss): Check if EnumerateCcp implements the original or the errata version  of EnumerateCmp
  *               (http://www.vldb.org/pvldb/vol11/p1069-meister.pdf).
  *
  * DpCcp is an optimal join ordering algorithm based on dynamic programming. It handles only inner joins and cross

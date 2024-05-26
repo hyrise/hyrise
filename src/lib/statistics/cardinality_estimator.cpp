@@ -293,7 +293,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
     cardinality_estimation_cache.statistics_by_lqp->emplace(lqp, output_table_statistics);
   }
 
-  // We can always cache statistics during the estimation of a single LQP, which is useful for diamonds in the plan.
+  // We can always cache statistics during a single invocation, which is useful for diamonds in the plan.
   statistics_cache.emplace(lqp, output_table_statistics);
 
   return output_table_statistics;
@@ -322,7 +322,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_projection_node(
     const ProjectionNode& projection_node, const std::shared_ptr<TableStatistics>& input_table_statistics) {
   // For ProjectionNodes, reorder/remove AttributeStatistics from the input. They also perform calculations creating new
   // colums.
-  // TODO(anybody) For columns newly created by a Projection no meaningful statistics can be generated yet, hence an
+  // TODO(anybody): For columns newly created by a Projection no meaningful statistics can be generated yet, hence an
   //               empty AttributeStatistics object is created.
 
   const auto& output_expressions = projection_node.output_expressions();
@@ -499,7 +499,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_predicate_node(
 
   const auto operator_scan_predicates = OperatorScanPredicate::from_expression(*predicate, predicate_node);
 
-  // TODO(anybody) Complex predicates are not processed right now and statistics objects are forwarded.
+  // TODO(anybody): Complex predicates are not processed right now and statistics objects are forwarded.
   //               That implies estimating a selectivity of 1 for such predicates.
   if (!operator_scan_predicates) {
     // We can obtain predicates with subquery results from the JoinToPredicateRewriteRule, which turns (semi-)joins
@@ -692,14 +692,14 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_join_node(
     return estimate_cross_join(*left_input_table_statistics, *right_input_table_statistics);
   }
 
-  // TODO(anybody) Join cardinality estimation is consciously only performed for the primary join predicate. #1560
+  // TODO(anybody): Join cardinality estimation is consciously only performed for the primary join predicate, see #1560.
   const auto primary_operator_join_predicate = OperatorJoinPredicate::from_expression(
       *join_node.join_predicates()[0], *join_node.left_input(), *join_node.right_input());
 
   if (primary_operator_join_predicate) {
     switch (join_node.join_mode) {
-      // For now, handle outer joins just as inner joins
-      // TODO(anybody) Handle them more accurately, i.e., estimate how many tuples don't find matches. #1830
+      // For now, handle outer joins just as inner joins.
+      // TODO(anybody): Handle them more accurately, i.e., estimate how many tuples do not find matches, see #1830.
       case JoinMode::Left:
       case JoinMode::Right:
       case JoinMode::FullOuter:
@@ -710,7 +710,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_join_node(
                                             primary_operator_join_predicate->column_ids.second,
                                             *left_input_table_statistics, *right_input_table_statistics);
 
-          // TODO(anybody) Implement estimation for non-equi joins. #1830
+          // TODO(anybody): Implement estimation for non-equi joins, see #1830.
           case PredicateCondition::NotEquals:
           case PredicateCondition::LessThan:
           case PredicateCondition::LessThanEquals:
@@ -747,7 +747,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_join_node(
     }
   }
 
-  // TODO(anybody) For now, estimate a selectivity of one. #1830
+  // TODO(anybody): For now, estimate a selectivity of one, see #1830.
   return estimate_cross_join(*left_input_table_statistics, *right_input_table_statistics);
 
   Fail("Invalid enum value.");
@@ -868,15 +868,15 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_operator_scan_pr
         const auto right_data_type = input_table_statistics->column_data_type(*right_column_id);
 
         if (left_data_type != right_data_type || left_data_type == DataType::String) {
-          // TODO(anybody) Cannot estimate column-vs-column scan for differing data types, yet
-          // Also, as split_at_bin_bounds is not yet supported for strings, we cannot properly estimate string
-          // comparisons, either.
+          // TODO(anyone): Cannot estimate column-vs-column scan for differing data types, yet. Furthermore,
+          //               `split_at_bin_bounds() is not yet supported for strings and we cannot properly estimate
+          //               string comparisons, either.
           selectivity = PLACEHOLDER_SELECTIVITY_ALL;
           return;
         }
 
         if (predicate.predicate_condition != PredicateCondition::Equals) {
-          // TODO(anyone) CardinalityEstimator cannot handle non-equi column-to-column scans right now
+          // TODO(anyone): CardinalityEstimator cannot handle non-equi column-to-column scans right now.
           selectivity = PLACEHOLDER_SELECTIVITY_ALL;
           return;
         }
@@ -887,8 +887,8 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_operator_scan_pr
         const auto left_histogram = left_input_column_statistics->histogram;
         const auto right_histogram = right_input_column_statistics->histogram;
         if (!left_histogram || !right_histogram) {
-          // Can only use histograms to estimate column-to-column scans right now
-          // TODO(anyone) extend to other statistics objects
+          // Can only use histograms to estimate column-to-column scans right now.
+          // TODO(anyone): extend to other statistics objects.
           selectivity = PLACEHOLDER_SELECTIVITY_ALL;
           return;
         }
@@ -1000,7 +1000,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_operator_scan_pr
           return;
         }
 
-        // TODO(anybody) Simplify this block if AbstractStatisticsObject ever supports `total_count()`.
+        // TODO(anyone): Simplify this block if AbstractStatisticsObject ever supports `total_count()`.
         const auto sliced_histogram =
             std::dynamic_pointer_cast<const AbstractHistogram<ColumnDataType>>(sliced_statistics_object);
         DebugAssert(sliced_histogram, "Expected slicing of a Histogram to return either nullptr or a Histogram");
@@ -1041,8 +1041,8 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_inner_equi_join(
   // We expect both columns to be of the same type. This allows us to resolve the type only once, reducing the
   // compile time. For differing column types and/or string columns (which we cannot handle right now), we assume that
   // all tuples qualify. This is probably a gross overestimation, but we need to return something...
-  // TODO(anybody) - Implement join estimation for differing column data types
-  //               - Implement join estimation for String columns
+  // TODO(anyone): - Implement join estimation for differing column data types.
+  //               - Implement join estimation for String columns.
   if (left_data_type != right_data_type || left_data_type == DataType::String) {
     return estimate_cross_join(left_input_table_statistics, right_input_table_statistics);
   }
@@ -1068,8 +1068,8 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_inner_equi_join(
       join_column_histogram = estimate_inner_equi_join_with_histograms(*left_histogram, *right_histogram);
       cardinality = join_column_histogram->total_count();
     } else {
-      // TODO(anybody) If there aren't histograms on both sides, use some other algorithm/statistics to estimate the
-      //               Join
+      // TODO(anyone): If we do hot have histograms on both sides, use some other algorithm/statistics to estimate the
+      //               join.
       cardinality = left_input_table_statistics.row_count * right_input_table_statistics.row_count;
     }
 
@@ -1127,8 +1127,8 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_semi_join(
   // We expect both columns to be of the same type. This allows us to resolve the type only once, reducing the
   // compile time. For differing column types and/or string columns (which we cannot handle right now), we assume that
   // all tuples qualify. This is probably a gross overestimation, but we need to return something...
-  // TODO(anybody) - Implement join estimation for differing column data types
-  //               - Implement join estimation for String columns
+  // TODO(anyone): - Implement join estimation for differing column data types.
+  //               - Implement join estimation for string columns.
   if (left_data_type != right_data_type || left_data_type == DataType::String) {
     return std::make_shared<TableStatistics>(left_input_table_statistics);
   }
@@ -1166,8 +1166,8 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_semi_join(
       join_column_histogram = estimate_inner_equi_join_with_histograms(*left_histogram, *distinct_right_histogram);
       cardinality = join_column_histogram->total_count();
     } else {
-      // TODO(anybody) If there aren't histograms on both sides, use some other algorithm/statistics to estimate the
-      //               Join
+      // TODO(anyone): If we do not have histograms on both sides, use some other algorithm/statistics to estimate the
+      //               join.
       cardinality = left_input_table_statistics.row_count;
     }
 

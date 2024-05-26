@@ -113,8 +113,7 @@ std::shared_ptr<TableStatistics> JoinGraphStatisticsCache::get(
 
   const auto cached_table_statistics = cache_entry.table_statistics;
 
-  // Compute the mapping from result column ids to cached column ids and the column data types.
-  // of the result
+  // Compute the mapping from result column ids to cached column ids and the column data types of the result.
   auto cached_column_ids = std::vector<ColumnID>{requested_column_order.size()};
   auto result_column_data_types = std::vector<DataType>{requested_column_order.size()};
   const auto requested_column_order_size = requested_column_order.size();
