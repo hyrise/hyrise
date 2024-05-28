@@ -212,7 +212,7 @@ std::optional<pmr_string> resolve_street_name(int column_id, const ds_addr_t& ad
 //   decimal, float -> float
 //   ds_addr_t -> corresponding types for types in struct ds_addr_t, see address.h
 
-// In tpcds, most columns are nullable, so we pass std::optional<?> as type.
+// In TPC-DS, most columns are nullable, so we pass std::optional<?> as type.
 
 // clang-format off
 const auto call_center_column_types = boost::hana::tuple<     tpcds_key_t         , pmr_string          , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<int32_t> , std::optional<int32_t> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<int32_t> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<int32_t> , std::optional<pmr_string> , std::optional<int32_t> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<float> , std::optional<float>>(); // NOLINT
