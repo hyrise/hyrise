@@ -112,6 +112,9 @@ try {
             release = '-DCMAKE_BUILD_TYPE=Release'
             relwithdebinfo = '-DCMAKE_BUILD_TYPE=RelWithDebInfo'
 
+            // LTO is automatically disabled for debug builds, but we still need to disable it for sanatizier builds. MAYBE?!?!?!?!?!?!
+            disable_lto = '-DDISABLE_LTO=TRUE'
+
             // jemalloc's autoconf operates outside of the build folder (#1413). If we start two cmake instances at the
             // same time, we run into conflicts. Thus, run this one (any one, really) first, so that the autoconf step
             // can finish in peace.
@@ -125,8 +128,8 @@ try {
             mkdir clang-debug-disable-precompile-headers && cd clang-debug-disable-precompile-headers && ${cmake} ${debug}          ${clang}   ${unity}  ${ninja} -DCMAKE_DISABLE_PRECOMPILE_HEADERS=On .. &\
             mkdir clang-debug-addr-ub-leak-sanitizers && cd clang-debug-addr-ub-leak-sanitizers &&       ${cmake} ${debug}          ${clang}   ${unity}  ${ninja} -DENABLE_ADDR_UB_LEAK_SANITIZATION=ON .. &\
             mkdir clang-release-addr-ub-leak-sanitizers && cd clang-release-addr-ub-leak-sanitizers &&   ${cmake} ${release}        ${clang}   ${unity}  ${ninja} -DENABLE_ADDR_UB_LEAK_SANITIZATION=ON .. &\
-            mkdir clang-relwithdebinfo-thread-sanitizer && cd clang-relwithdebinfo-thread-sanitizer &&   ${cmake} ${relwithdebinfo} ${clang}   ${unity}  ${ninja} -DENABLE_THREAD_SANITIZATION=ON .. &\
-            mkdir clang-release && cd clang-release &&                                                   ${cmake} ${release}        ${clang}   ${unity}  ${ninja} .. &\
+            mkdir clang-relwithdebinfo-thread-sanitizer && cd clang-relwithdebinfo-thread-sanitizer &&   ${cmake} ${relwithdebinfo} ${clang}   ${unity} ${disable_lto} ${ninja} -DENABLE_THREAD_SANITIZATION=ON .. &\
+            mkdir clang-release && cd clang-release &&                                                   ${cmake} ${release}        ${clang}   ${unity} ${disable_lto} ${ninja} .. &\
             mkdir gcc-debug && cd gcc-debug &&                                                           ${cmake} ${debug}          ${gcc}     ${unity}           .. &\
             mkdir gcc-release && cd gcc-release &&                                                       ${cmake} ${release}        ${gcc}     ${unity}  ${ninja} .. &\
             mkdir clang-15-debug && cd clang-15-debug &&                                                 ${cmake} ${debug}          ${clang15} ${unity}  ${ninja} .. &\
