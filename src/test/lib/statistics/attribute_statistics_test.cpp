@@ -65,7 +65,7 @@ TEST_F(AttributeStatisticsTest, Scaled) {
   EXPECT_EQ(scaled_attribute_statistics->distinct_value_count->count, 12);
 }
 
-// Scaling with a selectivity of 1.0 does noch generate a new object.
+// Scaling with a selectivity of 1.0 does not generate a new object.
 TEST_F(AttributeStatisticsTest, ScaledWithIdentity) {
   const auto attribute_statistics = std::make_shared<AttributeStatistics<int32_t>>();
   const auto histogram = GenericHistogram<int32_t>::with_single_bin(0, 100, 40, 20);
