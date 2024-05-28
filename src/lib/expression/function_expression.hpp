@@ -12,14 +12,15 @@ namespace hyrise {
 
 // For a possible list of functions, see https://www.w3schools.com/sql/sql_ref_sqlserver.asp
 enum class FunctionType {
-  Substring,   // SUBSTR()
-  Concatenate  // CONCAT()
+  Substring,    // SUBSTR()
+  Concatenate,  // CONCAT()
+  Absolute      // ABS()
 };
 
 std::ostream& operator<<(std::ostream& stream, const FunctionType function_type);
 
-const auto function_type_to_string =
-    make_bimap<FunctionType, std::string>({{FunctionType::Substring, "SUBSTR"}, {FunctionType::Concatenate, "CONCAT"}});
+const auto function_type_to_string = make_bimap<FunctionType, std::string>(
+    {{FunctionType::Substring, "SUBSTR"}, {FunctionType::Concatenate, "CONCAT"}, {FunctionType::Absolute, "ABS"}});
 
 class FunctionExpression : public AbstractExpression {
  public:
