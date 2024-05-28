@@ -147,7 +147,7 @@ class Table : private Noncopyable {
   std::optional<T> get_value(const ColumnID column_id, const size_t row_number) const {
     PerformanceWarning("get_value() used.");
 
-    Assert(column_id < column_count(), "column_id is too.");
+    Assert(column_id < column_count(), "column_id is invalid.");
 
     auto row_counter = size_t{0};
     const auto chunk_count = _chunks.size();
