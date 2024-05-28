@@ -33,7 +33,7 @@ class ScaledHistogram : public AbstractHistogram<T> {
                   const Selectivity selectivity, const HistogramDomain<T>& domain = {});
 
   // Convenience builder for a ScaledHistogram from the referenced histogram. Ensures exactly one indirection.
-  static std::shared_ptr<ScaledHistogram<T>> from_referenced_histogram(const AbstractHistogram<T>* referenced_histogram,
+  static std::shared_ptr<ScaledHistogram<T>> from_referenced_histogram(const AbstractHistogram<T>& referenced_histogram,
                                                                        const Selectivity selectivity);
 
   std::string name() const override;
