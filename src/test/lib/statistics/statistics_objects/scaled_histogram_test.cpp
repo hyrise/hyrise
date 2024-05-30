@@ -44,7 +44,7 @@ INSTANTIATE_TEST_SUITE_P(ScaledHistogramTestDataType, ScaledHistogramTest,
                          enum_formatter<DataType>);
 
 TEST_F(ScaledHistogramTest, Name) {
-  const auto histogram = ScaledHistogram<int32_t>{_referenced_histogram, 0.5f};
+  const auto histogram = ScaledHistogram<int32_t>{*_referenced_histogram, 0.5f};
   EXPECT_EQ(histogram.name(), "Scaled");
 }
 
@@ -112,7 +112,7 @@ TEST_P(ScaledHistogramTest, ReferencesGenericHistogram) {
     const auto max = HistogramDataType{80};
     const auto generic_histogram = GenericHistogram<HistogramDataType>::with_single_bin(min, max, 10, 5);
 
-    const auto scaled_histogram = ScaledHistogram<HistogramDataType>{generic_histogram, 0.5f};
+    const auto scaled_histogram = ScaledHistogram<HistogramDataType>{*generic_histogram, 0.5f};
     EXPECT_EQ(referenced_histogram(scaled_histogram), generic_histogram);
     EXPECT_EQ(selectivity(scaled_histogram), 0.5f);
   });
@@ -128,7 +128,7 @@ TEST_P(ScaledHistogramTest, ReferencesEqualDistinctCountHistogram) {
     const auto equal_distinct_count_histogram = std::make_shared<EqualDistinctCountHistogram<HistogramDataType>>(
         std::move(bin_minima), std::move(bin_maxima), std::move(bin_heights), 5, BinID{0});
 
-    const auto scaled_histogram = ScaledHistogram<HistogramDataType>{equal_distinct_count_histogram, 0.5f};
+    const auto scaled_histogram = ScaledHistogram<HistogramDataType>{*equal_distinct_count_histogram, 0.5f};
     EXPECT_EQ(referenced_histogram(scaled_histogram), equal_distinct_count_histogram);
     EXPECT_EQ(selectivity(scaled_histogram), 0.5f);
   });
