@@ -34,7 +34,7 @@ class TPCDSTableGenerator final : public AbstractTableGenerator {
  public:
   // rng seed 19620718 is the same dsdgen uses as default.
   explicit TPCDSTableGenerator(uint32_t scale_factor, ChunkOffset chunk_size = Chunk::DEFAULT_SIZE,
-                               bool binary_caching = false, int rng_seed = 19620718);
+                               int rng_seed = 19620718);
   TPCDSTableGenerator(uint32_t scale_factor, const std::shared_ptr<BenchmarkConfig>& benchmark_config,
                       int rng_seed = 19620718);
 

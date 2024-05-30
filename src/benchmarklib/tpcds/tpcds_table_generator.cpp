@@ -286,10 +286,8 @@ const auto web_site_column_names = boost::hana::make_tuple("web_site_sk" , "web_
 
 namespace hyrise {
 
-TPCDSTableGenerator::TPCDSTableGenerator(uint32_t scale_factor, ChunkOffset chunk_size, bool binary_caching,
-                                         int rng_seed)
-    : AbstractTableGenerator(create_benchmark_config_with_chunk_size(chunk_size, binary_caching)),
-      _scale_factor{scale_factor} {
+TPCDSTableGenerator::TPCDSTableGenerator(uint32_t scale_factor, ChunkOffset chunk_size, int rng_seed)
+    : AbstractTableGenerator(create_benchmark_config_with_chunk_size(chunk_size)), _scale_factor{scale_factor} {
   init_tpcds_tools(scale_factor, rng_seed);
 }
 

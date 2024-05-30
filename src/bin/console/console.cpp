@@ -32,6 +32,7 @@
 #include "SQLParser.h"
 #include "SQLParserResult.h"
 
+#include "abstract_table_generator.hpp"
 #include "hyrise.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "operators/export.hpp"
@@ -513,7 +514,9 @@ int Console::_generate_tpcc(const std::string& args) {
   }
 
   out("Generating all TPCC tables (this might take a while) ...\n");
-  TPCCTableGenerator{num_warehouses, chunk_size, _binary_caching}.generate_and_store();
+  const auto config = AbstractTableGenerator::create_benchmark_config_with_chunk_size(chunk_size);
+  config->cache_binary_tables = true;
+  TPCCTableGenerator{num_warehouses, config}.generate_and_store();
 
   return ReturnCode::Ok;
 }
@@ -538,7 +541,9 @@ int Console::_generate_tpch(const std::string& args) {
   }
 
   out("Generating all TPCH tables (this might take a while) ...\n");
-  TPCHTableGenerator{scale_factor, ClusteringConfiguration::None, chunk_size, _binary_caching}.generate_and_store();
+  const auto config = AbstractTableGenerator::create_benchmark_config_with_chunk_size(chunk_size);
+  config->cache_binary_tables = true;
+  TPCHTableGenerator{scale_factor, ClusteringConfiguration::None, config}.generate_and_store();
 
   return ReturnCode::Ok;
 }
@@ -562,7 +567,9 @@ int Console::_generate_tpcds(const std::string& args) {
   }
 
   out("Generating all TPC-DS tables (this might take a while) ...\n");
-  TPCDSTableGenerator{scale_factor, chunk_size, _binary_caching}.generate_and_store();
+  const auto config = AbstractTableGenerator::create_benchmark_config_with_chunk_size(chunk_size);
+  config->cache_binary_tables = true;
+  TPCDSTableGenerator{scale_factor, config}.generate_and_store();
 
   return ReturnCode::Ok;
 }
@@ -601,8 +608,9 @@ int Console::_generate_ssb(const std::string& args) {
   std::filesystem::create_directories(ssb_data_path.str());
 
   out("Generating all SSB tables (this might take a while) ...\n");
-  SSBTableGenerator{ssb_dbgen_path, csv_meta_path, ssb_data_path.str(), scale_factor, chunk_size, _binary_caching}
-      .generate_and_store();
+  const auto config = AbstractTableGenerator::create_benchmark_config_with_chunk_size(chunk_size);
+  config->cache_binary_tables = true;
+  SSBTableGenerator{ssb_dbgen_path, csv_meta_path, ssb_data_path.str(), scale_factor, config}.generate_and_store();
 
   return ReturnCode::Ok;
 }
@@ -890,10 +898,10 @@ int Console::_change_runtime_setting(const std::string& input) {
   if (property == "scheduler") {
     if (value == "on") {
       Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
-      out("Scheduler turned on\n");
+      out("Scheduler turned on.\n");
     } else if (value == "off") {
       Hyrise::get().set_scheduler(std::make_shared<ImmediateExecutionScheduler>());
-      out("Scheduler turned off\n");
+      out("Scheduler turned off.\n");
     } else {
       out("Usage: scheduler (on|off)\n");
       return 1;
@@ -904,10 +912,10 @@ int Console::_change_runtime_setting(const std::string& input) {
   if (property == "binary_caching") {
     if (value == "on") {
       _binary_caching = true;
-      out("Binary caching turned on\n");
+      out("Binary caching turned on.\n");
     } else if (value == "off") {
       _binary_caching = false;
-      out("Binary caching off\n");
+      out("Binary caching turned off.\n");
     } else {
       out("Usage: binary_caching (on|off)\n");
       return 1;

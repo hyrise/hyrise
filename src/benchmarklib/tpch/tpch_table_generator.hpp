@@ -32,7 +32,7 @@ class TPCHTableGenerator : virtual public AbstractTableGenerator {
  public:
   // Convenience constructor for creating a TPCHTableGenerator without a benchmarking context
   explicit TPCHTableGenerator(float scale_factor, ClusteringConfiguration clustering_configuration,
-                              ChunkOffset chunk_size = Chunk::DEFAULT_SIZE, bool binary_caching = false);
+                              ChunkOffset chunk_size = Chunk::DEFAULT_SIZE);
 
   // Constructor for creating a TPCHTableGenerator in a benchmark
   explicit TPCHTableGenerator(float scale_factor, ClusteringConfiguration clustering_configuration,

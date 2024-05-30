@@ -127,9 +127,8 @@ const std::unordered_map<TPCHTable, std::string> tpch_table_names = {
     {TPCHTable::Nation, "nation"},     {TPCHTable::Region, "region"}};
 
 TPCHTableGenerator::TPCHTableGenerator(float scale_factor, ClusteringConfiguration clustering_configuration,
-                                       ChunkOffset chunk_size, bool binary_caching)
-    : TPCHTableGenerator(scale_factor, clustering_configuration,
-                         create_benchmark_config_with_chunk_size(chunk_size, binary_caching)) {}
+                                       ChunkOffset chunk_size)
+    : TPCHTableGenerator(scale_factor, clustering_configuration, create_benchmark_config_with_chunk_size(chunk_size)) {}
 
 TPCHTableGenerator::TPCHTableGenerator(float scale_factor, ClusteringConfiguration clustering_configuration,
                                        const std::shared_ptr<BenchmarkConfig>& benchmark_config)
