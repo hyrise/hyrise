@@ -435,8 +435,8 @@ try {
             sh "./clang-apple-debug/hyriseTest"
 
             // Build Hyrise (Release) with a recent clang compiler version (as recommended for Hyrise on macOS) and run
-            // various tests. As the release build on Intel already takes quite a while, we disable it and only run it
-            // on the ARM machine.
+            // various tests. As the release build already takes quite a while on the Intel machine, we disable LTO and
+            // only build release with LTO on the ARM machine.
             sh "mkdir clang-release && cd clang-release && PATH=/usr/local/bin/:$PATH /usr/local/bin/cmake ${release} ${ninja} ${disable_lto} -DCMAKE_C_COMPILER=/usr/local/opt/llvm@17/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm@17/bin/clang++ .."
             sh "cd clang-release && PATH=/usr/local/bin/:$PATH ninja"
             sh "./clang-release/hyriseTest"
