@@ -2,26 +2,30 @@
 # Nix Setup for Hyrise
 #
 # First install Nix (see https://nixos.org/manual/nix/stable/installation/).
-# Then run 
-#     nix-shell
-# and proceed to build Hyrise, e.g., do the following:
 #
-#   mkdir cmake-build-debug && cd cmake-build-debug
-#   cmake -GNinja -DCMAKE_BUILD_TYPE=Debug ..
-#   ninja
-#
-# Even though the setup might work with other systems, the 
-# following are recommended:
-# - x86_64 Linux
-# - ARM MacOS
-#
+# Then choose one of the following options:
+# - Run `nix-shell`. You will be dropped into a fully working shell and can
+#   proceed with your build commands as you did before.
+#   Do this, if you develop the application and expect to compile frequently.
+# - Run `nix-build` and wait for the whole project to be built. The results
+#   will be located in /res. This does not require you to know any build 
+#   commands, but it will rebuild everything from scratch every time you run 
+#   it. Use it for measurement runs.
 
 let
-  nixPkgsUrl = fetchTarball "https://github.com/NixOS/nixpkgs/tarball/nixos-23.11";
-  pkgs = import nixPkgsUrl { config = {}; overlays = []; };
-in 
+  pkgs = import ./nixpkgs {};
+in
 
-# Often you will find mkDerivation without a function argument, but that does not 
+#
+# Why does this work?
+#
+# Scrolling down the file, you will not find any commands like 'cmake ..' or 'make'.
+# Don't worry, we do not miss them and they are not written down anywhere else.
+# Instead, Nix takes core of the build process for us. We only need to include
+# 'cmake' in the nativeBuildInputs, adjust the cmakeFlags and we are good to go.
+#
+
+# Often you will find mkDerivation without a function argument, but that does not
 # allow recursively calling the attributes of the derivation.
 # One can either use rec { .. } or (finalAttrs: { .. }). The latter is recommended.
 pkgs.stdenv.mkDerivation (finalAttrs: {
@@ -30,14 +34,12 @@ pkgs.stdenv.mkDerivation (finalAttrs: {
 
   src = ./.;
 
-  # In simple Linux2Linux same-arcj applications, buildInputs and nativeBuildInputs
+  # In simple Linux2Linux same-arch applications, buildInputs and nativeBuildInputs
   # do not make any significant difference. Therefore, Hyrise the differentiation
   # is not severly important.
   # Read more on the difference of buildInputs and nativeBuildInputs here: 
   # https://discourse.nixos.org/t/use-buildinputs-or-nativebuildinputs-for-nix-shell/8464
-  
-  # TODO(everyone): Figure out which packages should go to buildInputs and nativeBuildInputs
-  # Usually only used for building.
+
   nativeBuildInputs = with pkgs; [
     gcc11
     clang
@@ -52,19 +54,31 @@ pkgs.stdenv.mkDerivation (finalAttrs: {
     dos2unix
     gcovr
     python311Packages.pexpect
+    tbb
+    readline
   ];
-  
+
   # Usually things that we link on.
   buildInputs = with pkgs; [
     boost
     postgresql_16
-    readline
-    tbb
   ];
 
-  hardeningDisable = [ 
+  # Changes these as desired.
+  cmakeFlags = [
+    "-DCMAKE_BUILD_TYPE=Debug"
+    "-DCMAKE_CXX_COMPILER=clang++"
+    "-DCMAKE_C_COMPILER=clang"
+  ];
+
+  hardeningDisable = [
     "format"
     "fortify"
     "fortify3"
   ];
+
+  fixupPhase = ''
+    mkdir -p $out/bin
+    cp -r $src/* $out/bin
+  '';
 })
