@@ -200,6 +200,8 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   // JoinOrderingRule cannot handle UnionNodes (#1829), do not split disjunctions just yet.
   optimizer->add_rule(std::make_unique<PredicateSplitUpRule>(false));
 
+  optimizer->add_rule(std::make_unique<ColumnPruningRule>());
+
   // The JoinOrderingRule cannot proceed past semi-/anti-joins. These may be part of the initial query plan (in which
   // case we are out of luck and the join ordering will be sub-optimal) but many of them are also introduced by the
   // SubqueryToJoinRule. As such, we run the JoinOrderingRule before the SubqueryToJoinRule.
@@ -220,7 +222,7 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
 
   optimizer->add_rule(std::make_unique<SubqueryToJoinRule>());
 
-  optimizer->add_rule(std::make_unique<ColumnPruningRule>());
+  //optimizer->add_rule(std::make_unique<ColumnPruningRule>());
 
   // Run the JoinToSemiJoinRule and the JoinToPredicateRewriteRule before the PredicatePlacementRule, as they might turn
   // joins into semi-joins (which are treated as predicates) or predicates that can be pushed further down. For the same
