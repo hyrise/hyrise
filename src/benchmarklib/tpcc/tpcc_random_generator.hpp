@@ -8,6 +8,8 @@
 #include <unordered_map>
 #include <vector>
 
+#include <oneapi/tbb/concurrent_unordered_map.h>  // NOLINT(build/include_order): Identified as C system headers.
+
 #include "random_generator.hpp"
 #include "utils/assert.hpp"
 
@@ -103,6 +105,6 @@ class TPCCRandomGenerator : public RandomGenerator {
 
  protected:
   // Holds the constant C (see 2.1.6) for a given A
-  std::unordered_map<size_t, size_t> _nurand_constants_c;
+  tbb::concurrent_unordered_map<size_t, size_t> _nurand_constants_c;
 };
 }  // namespace hyrise
