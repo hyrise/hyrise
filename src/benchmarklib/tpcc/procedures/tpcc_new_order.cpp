@@ -2,14 +2,11 @@
 
 #include <cstdint>
 #include <ctime>
-#include <fstream>
 #include <limits>
 #include <random>
 #include <string>
 
 #include "benchmark_sql_executor.hpp"
-#include "hyrise.hpp"
-#include "operators/print.hpp"
 #include "sql/sql_pipeline_statement.hpp"
 #include "tpcc/procedures/abstract_tpcc_procedure.hpp"
 #include "tpcc/tpcc_random_generator.hpp"
@@ -64,33 +61,6 @@ bool TPCCNewOrder::_on_execute() {
   const auto warehouse_select_pair =
       _sql_executor.execute(std::string{"SELECT W_TAX FROM WAREHOUSE WHERE W_ID = "} + std::to_string(w_id));
   const auto& warehouse_table = warehouse_select_pair.second;
-  Assert(warehouse_table, "WTF?!?! No warehouse table.");
-  if (warehouse_table->row_count() != 1) {
-    const auto& c = _sql_executor.transaction_context;
-    auto ss = std::stringstream{};
-    ss << "context >> transaction_id(): " << c->transaction_id() << " \t\t snapshot_commit_id(): " << c->snapshot_commit_id();
-    //ss << " \t\t commit_id(): " << c->commit_id();
-    ss  << "\nmanager >> last_commit_id(): " << Hyrise::get().transaction_manager.last_commit_id();
-    if (Hyrise::get().transaction_manager.get_lowest_active_snapshot_commit_id()) {
-      ss << " \t\t get_lowest_active_snapshot_commit(): " << *Hyrise::get().transaction_manager.get_lowest_active_snapshot_commit_id();
-    }
-    ss << "\n";
-    std::cerr << ss.str();
-    auto file_1 = std::ofstream{"new_order__warehouse1.csv"};
-    std::cerr << "Searching for w_id " << w_id << "\n";
-    std::cerr << "warehouse row count is " << warehouse_table->row_count() << " ... let's check again.\n";
-    Print::print(Hyrise::get().storage_manager.get_table("WAREHOUSE"), PrintFlags::Mvcc, file_1);
-    file_1.close();
-    const auto warehouse_select_pair2 = _sql_executor.execute(
-    std::string{"SELECT W_NAME, W_STREET_1, W_STREET_2, W_CITY, W_STATE, W_ZIP, W_YTD FROM WAREHOUSE WHERE W_ID = "} +
-                std::to_string(w_id));
-    const auto& warehouse_table2 = warehouse_select_pair.second;
-    std::cerr << "second try: warehouse row count is " << warehouse_table2->row_count() << " ... let's check again.\n";
-    
-    auto file_2 = std::ofstream{"new_order__warehouse1.csv"};
-    Print::print(Hyrise::get().storage_manager.get_table("WAREHOUSE"), PrintFlags::Mvcc, file_2);
-    file_2.close();
-  }
   Assert(warehouse_table && warehouse_table->row_count() == 1, "Did not find warehouse (or found more than one)");
 
   const auto w_tax = *warehouse_table->get_value<float>(ColumnID{0}, 0);

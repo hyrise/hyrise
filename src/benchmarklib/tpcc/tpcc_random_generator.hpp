@@ -83,10 +83,10 @@ class TPCCRandomGenerator : public RandomGenerator {
   }
 
   std::vector<size_t> permutation(size_t lower, size_t upper) {
-    auto v = std::vector<size_t>(upper - lower);
-    std::iota(v.begin(), v.end(), lower);
-    std::shuffle(v.begin(), v.end(), engine);
-    return v;
+    auto values = std::vector<size_t>(upper - lower);
+    std::iota(values.begin(), values.end(), lower);
+    std::shuffle(values.begin(), values.end(), engine);
+    return values;
   }
 
   // Reset nurand's C according to 2.1.6.1
@@ -104,7 +104,7 @@ class TPCCRandomGenerator : public RandomGenerator {
   }
 
  protected:
-  // Holds the constant C (see 2.1.6) for a given A
+  // Holds the constant C (see 2.1.6) for a given A. Is concurrently accessed.
   tbb::concurrent_unordered_map<size_t, size_t> _nurand_constants_c;
 };
 }  // namespace hyrise

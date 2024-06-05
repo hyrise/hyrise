@@ -113,7 +113,7 @@ try {
             relwithdebinfo = '-DCMAKE_BUILD_TYPE=RelWithDebInfo'
 
             // LTO is automatically disabled for debug and sanitizer builds. As LTO linking with GCC and gold (lld is
-            // not) takes over an hour, we skip LTO for the GCC release build.
+            // not supported when using GCC and LTO) takes over an hour, we skip LTO for the GCC release build.
             disable_lto = '-DDISABLE_LTO=TRUE'
 
             // jemalloc's autoconf operates outside of the build folder (#1413). If we start two cmake instances at the
