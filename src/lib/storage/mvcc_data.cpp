@@ -14,10 +14,9 @@ namespace hyrise {
 MvccData::MvccData(const size_t size, CommitID begin_commit_id) {
   DebugAssert(size > 0, "No point in having empty MVCC data, as it cannot grow");
 
-  _begin_cids.resize(size, begin_commit_id);
-  _end_cids.resize(size, MAX_COMMIT_ID);
+  _begin_cids.resize(size, copyable_atomic<CommitID>{begin_commit_id});
+  _end_cids.resize(size, copyable_atomic<CommitID>{MAX_COMMIT_ID});
   _tids.resize(size, copyable_atomic<TransactionID>{INVALID_TRANSACTION_ID});
-  std::atomic_thread_fence(std::memory_order_seq_cst);
 }
 
 std::ostream& operator<<(std::ostream& stream, const MvccData& mvcc_data) {
