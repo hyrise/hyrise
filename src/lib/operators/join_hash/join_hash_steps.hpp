@@ -24,6 +24,8 @@
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
 #include "storage/create_iterable_from_segment.hpp"
+#include "storage/encoding_type.hpp"
+#include "storage/segment_encoding_utils.hpp"
 #include "storage/segment_iterate.hpp"
 #include "type_comparison.hpp"
 #include "types.hpp"
@@ -348,7 +350,16 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
           const auto inserted_rows = (end - iter) - num_rows;
           end -= inserted_rows;
         } else {
-          Assert(end - iter == num_rows, "Non-ValueSegment changed size while being accessed");
+          if (end - iter != num_rows) {
+            auto ss = std::stringstream{};
+            ss << get_segment_encoding_spec(segment);
+            std::cerr << std::format(
+                "Non-ValueSegment changed size while being accessed. end-iter: {}, num_rows: {}, chunk_id: {}, current "
+                "chunksize: {}, segment type: {}.\n",
+                static_cast<size_t>(end - iter), static_cast<size_t>(num_rows), static_cast<size_t>(chunk_id),
+                static_cast<size_t>(chunk_in->size()), ss.str());
+          }
+          Assert(end - iter == num_rows, "Non-ValueSegment changed size while being accessed.");
         }
 
         while (iter != end) {
