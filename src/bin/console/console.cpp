@@ -898,10 +898,10 @@ int Console::_change_runtime_setting(const std::string& input) {
   if (property == "scheduler") {
     if (value == "on") {
       Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
-      out("Scheduler turned on.\n");
+      out("Scheduler turned on\n");
     } else if (value == "off") {
       Hyrise::get().set_scheduler(std::make_shared<ImmediateExecutionScheduler>());
-      out("Scheduler turned off.\n");
+      out("Scheduler turned off\n");
     } else {
       out("Usage: scheduler (on|off)\n");
       return 1;
@@ -912,10 +912,10 @@ int Console::_change_runtime_setting(const std::string& input) {
   if (property == "binary_caching") {
     if (value == "on") {
       _binary_caching = true;
-      out("Binary caching turned on.\n");
+      out("Binary caching turned on\n");
     } else if (value == "off") {
       _binary_caching = false;
-      out("Binary caching turned off.\n");
+      out("Binary caching turned off\n");
     } else {
       out("Usage: binary_caching (on|off)\n");
       return 1;
