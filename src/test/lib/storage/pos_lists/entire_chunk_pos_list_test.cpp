@@ -104,9 +104,8 @@ TEST_F(EntireChunkPosListTest, InsertDoesNotAffectIterators) {
     ++iter;
     EXPECT_EQ(iter->value(), 3);
     ++iter;
-    EXPECT_EQ(iter->value(), 4);  // This should not work.
-    ++iter;
     EXPECT_EQ(iter, end);
+    EXPECT_THROW(iter->value(), std::logic_error);
   });
 }
 
