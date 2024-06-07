@@ -5,6 +5,7 @@
 #include <limits>
 #include <memory>
 #include <mutex>
+#include <sstream>
 #include <utility>
 #include <vector>
 
@@ -351,11 +352,12 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
           end -= inserted_rows;
         } else {
           if (end - iter != num_rows) {
-            std::cerr << std::format(
-                "Non-ValueSegment changed size while being accessed. end-iter: {}, num_rows: {}, chunk_id: {}, current "
-                "chunksize: {}.\n",
-                static_cast<size_t>(end - iter), static_cast<size_t>(num_rows), static_cast<size_t>(chunk_id),
-                static_cast<size_t>(chunk_in->size()));
+            auto sstream = std::stringstream{};
+            sstream << "Non-ValueSegment changed size while being accessed. end-iter: "
+                    << static_cast<size_t>(end - iter) << " , num_rows: " << static_cast<size_t>(num_rows)
+                    << ", chunk_id: " << static_cast<size_t>(chunk_id)
+                    << ", current chunksize: " << static_cast<size_t>(chunk_in->size()) << ".\n";
+            std::cerr << sstream.str();
             if (const auto reference_segment = std::dynamic_pointer_cast<const ReferenceSegment>(segment)) {
               std::cerr << "Reference segment has a pos list size of " << reference_segment->pos_list()->size() << "\n";
               if (const auto entire_chunk_pos_list =
