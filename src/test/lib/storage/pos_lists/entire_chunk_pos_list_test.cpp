@@ -108,7 +108,7 @@ TEST_F(EntireChunkPosListTest, InsertDoesNotAffectIterators) {
     ++iter;
     EXPECT_EQ(iter, end);
     if constexpr (HYRISE_DEBUG) {
-      EXPECT_THROW(iter->rrvalue(), std::logic_error);
+      EXPECT_THROW(iter->value(), std::logic_error);
     }
   });
 }
