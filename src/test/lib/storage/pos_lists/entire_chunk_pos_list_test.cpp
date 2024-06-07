@@ -94,7 +94,9 @@ TEST_F(EntireChunkPosListTest, InsertDoesNotAffectIterators) {
   auto ref_segment = ReferenceSegment(table, ColumnID{0}, entire_chunk_pos_list);
   EXPECT_EQ(ref_segment.size(), ChunkOffset{3});
   EXPECT_EQ(ref_segment[ChunkOffset{0}], AllTypeVariant{1});
-  EXPECT_THROW(ref_segment[ChunkOffset{3}], std::logic_error);
+  if constexpr (HYRISE_DEBUG) {
+    EXPECT_THROW(ref_segment[ChunkOffset{3}], std::logic_error);
+  }
 
   segment_with_iterators<int32_t>(ref_segment, [&](auto iter, auto end) {
     EXPECT_EQ(std::distance(iter, end), ref_segment.size());
@@ -106,7 +108,7 @@ TEST_F(EntireChunkPosListTest, InsertDoesNotAffectIterators) {
     ++iter;
     EXPECT_EQ(iter, end);
     if constexpr (HYRISE_DEBUG) {
-      EXPECT_THROW(iter->value(), std::logic_error);
+      EXPECT_THROW(iter->rrvalue(), std::logic_error);
     }
   });
 }
