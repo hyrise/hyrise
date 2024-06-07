@@ -5,7 +5,6 @@
 #include <limits>
 #include <memory>
 #include <mutex>
-#include <sstream>
 #include <utility>
 #include <vector>
 
@@ -25,8 +24,6 @@
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
 #include "storage/create_iterable_from_segment.hpp"
-#include "storage/encoding_type.hpp"
-#include "storage/segment_encoding_utils.hpp"
 #include "storage/segment_iterate.hpp"
 #include "type_comparison.hpp"
 #include "types.hpp"
@@ -291,11 +288,11 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
   const auto pass = size_t{0};
   const auto radix_mask = static_cast<size_t>(std::pow(2, radix_bits * (pass + 1)) - 1);
 
-  Assert(output_bloom_filter.empty(), "output_bloom_filter should be empty");
+  Assert(output_bloom_filter.empty(), "Unexpected non-empty output_bloom_filter.");
   output_bloom_filter.resize(BLOOM_FILTER_SIZE);
   auto output_bloom_filter_mutex = std::mutex{};
 
-  Assert(input_bloom_filter.size() == BLOOM_FILTER_SIZE, "Invalid input_bloom_filter");
+  Assert(input_bloom_filter.size() == BLOOM_FILTER_SIZE, "Invalid input_bloom_filter.");
 
   // Create histograms per chunk
   histograms.resize(chunk_count);
@@ -351,25 +348,6 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
           const auto inserted_rows = (end - iter) - num_rows;
           end -= inserted_rows;
         } else {
-          if (end - iter != num_rows) {
-            auto sstream = std::stringstream{};
-            sstream << "Non-ValueSegment changed size while being accessed. end-iter: "
-                    << static_cast<size_t>(end - iter) << " , num_rows: " << static_cast<size_t>(num_rows)
-                    << ", chunk_id: " << static_cast<size_t>(chunk_id)
-                    << ", current chunksize: " << static_cast<size_t>(chunk_in->size()) << ".\n";
-            std::cerr << sstream.str();
-            if (const auto reference_segment = std::dynamic_pointer_cast<const ReferenceSegment>(segment)) {
-              std::cerr << "Reference segment has a pos list size of " << reference_segment->pos_list()->size() << "\n";
-              if (const auto entire_chunk_pos_list =
-                      std::dynamic_pointer_cast<const EntireChunkPosList>(reference_segment->pos_list())) {
-                std::cerr << "It is a EntireChunkPosLIst\n";
-              }
-            } else {
-              auto ss = std::stringstream{};
-              ss << get_segment_encoding_spec(segment);
-              std::cerr << "Segment has encoding " << ss.str() << "\n";
-            }
-          }
           Assert(end - iter == num_rows, "Non-ValueSegment changed size while being accessed.");
         }
 

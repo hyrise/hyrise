@@ -163,6 +163,9 @@ class PointAccessibleSegmentIterable : public SegmentIterable<Derived> {
   template <ErasePosListType erase_pos_list_type = ErasePosListType::OnlyInDebugBuild, typename Functor>
   void with_iterators(const std::shared_ptr<const AbstractPosList>& position_filter, const Functor& functor) const {
     if (!position_filter) {
+      // We cannot use this short cut for EntireChunkPosLists as we lack information whether this segment's chunks is
+      // immutable. For mutable chunks, EntireChunkPosList's `_common_chunk_size` member is used to limit the position
+      // list in case of concurrently growing ValueSegments.
       _self()._on_with_iterators(functor);
     } else {
       DebugAssert(position_filter->references_single_chunk(), "Expected PosList to reference single chunk");
