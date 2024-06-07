@@ -351,7 +351,6 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
           end -= inserted_rows;
         } else {
           if (end - iter != num_rows) {
-
             std::cerr << std::format(
                 "Non-ValueSegment changed size while being accessed. end-iter: {}, num_rows: {}, chunk_id: {}, current "
                 "chunksize: {}.\n",
@@ -359,6 +358,10 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
                 static_cast<size_t>(chunk_in->size()));
             if (const auto reference_segment = std::dynamic_pointer_cast<const ReferenceSegment>(segment)) {
               std::cerr << "Reference segment has a pos list size of " << reference_segment->pos_list()->size() << "\n";
+              if (const auto entire_chunk_pos_list =
+                      std::dynamic_pointer_cast<const EntireChunkPosList>(reference_segment->pos_list())) {
+                std::cerr << "It is a EntireChunkPosLIst\n";
+              }
             } else {
               auto ss = std::stringstream{};
               ss << get_segment_encoding_spec(segment);
