@@ -26,10 +26,3 @@ race:thread_data
 # A DebugAssert makes sure that predecessors are not added to scheduled tasks, but it is missing in release builds
 race:^hyrise::AbstractTask::set_as_predecessor_of
 
-# We access a tbb::concurrent_vector in this method, which "remains valid and accessible even if a subsequent growth
-# operations fails."
-# See: https://spec.oneapi.io/versions/latest/elements/oneTBB/source/containers/concurrent_vector_cls.html
-race:^hyrise::Table::get_chunk
-
-# We get weird errors for the Lexer here (at least on Mac). Probably a false positive.
-race:^hsql::SQLParser::parse
