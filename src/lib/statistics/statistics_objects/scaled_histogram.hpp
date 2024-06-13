@@ -62,8 +62,7 @@ class ScaledHistogram : public AbstractHistogram<T> {
 // For gtest.
 template <typename T>
 std::ostream& operator<<(std::ostream& stream, const ScaledHistogram<T>& histogram) {
-  stream << histogram.description() << std::endl;
-  return stream;
+  return stream << histogram.description() << '\n';
 }
 
 EXPLICITLY_DECLARE_DATA_TYPES(ScaledHistogram);
