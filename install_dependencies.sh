@@ -58,7 +58,7 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
                 fi
 
                 # Packages added here should also be added to the Dockerfile
-                sudo apt-get install --no-install-recommends -y autoconf bash-completion bc clang-15 clang clang-format clang-tidy cmake curl dos2unix g++-11 gcc-11 gcovr git graphviz libboost1.83-all-dev libhwloc-dev libncurses5-dev libnuma-dev libnuma1 libpq-dev libreadline-dev libsqlite3-dev libtbb-dev lld man parallel postgresql-server-dev-all python3 python3-pip valgrind &
+                sudo apt-get install --no-install-recommends -y autoconf bash-completion bc clang-15 clang-18 clang-format-18 clang-tidy-18 cmake curl dos2unix g++-11 gcc-11 gcovr git graphviz libboost1.83-all-dev libhwloc-dev libncurses5-dev libnuma-dev libnuma1 libpq-dev libreadline-dev libsqlite3-dev libtbb-dev lld man parallel postgresql-server-dev-all python3 python3-pip valgrind &
 
                 if ! git submodule update --jobs 5 --init --recursive; then
                     echo "Error during git fetching submodules."
