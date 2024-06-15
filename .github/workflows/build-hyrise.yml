@@ -15,12 +15,6 @@ jobs:
     container:
       image: nixos/nix:latest
     steps:
-      - name: Install Node
-        run: |
-          nix-channel --update
-          nix-env -A nixpkgs.nodejs
-          node --version
-          npm --version
       - name: Checkout Repository
         run: |
           nix-shell -p git "\
