@@ -19,6 +19,9 @@ jobs:
         run: |
           nix-channel --update
           nix-env -iA nixpkgs.nodejs
+          /root/.nix-profile/bin/node --version
+          node --version
+          npm --version
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
