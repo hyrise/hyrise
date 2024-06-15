@@ -17,7 +17,7 @@ jobs:
     steps:
       - name: Checkout Repository
         run: |
-          nix-shell -p git "\
+          nix-shell -p git --run "\
             git clone --depth 1 --recursive ${{ github.server_url }}/${{ github.repository }}.git hyrise &&\
             cd hyrise &&\
             git switch $GITHUB_REF"
