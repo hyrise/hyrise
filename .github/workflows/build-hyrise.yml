@@ -13,8 +13,12 @@ jobs:
   nix-clang-debug:
     runs-on: ubuntu-latest
     container:
-      image: richterrobert/hyrise-nix-node:latest
+      image: nixos/nix:latest
     steps:
+      - name: Install Node
+        run: |
+          nix-channel --update
+          nix-env -iA nixpkgs.nodejs
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
@@ -30,8 +34,12 @@ jobs:
   nix-clang-release:
     runs-on: ubuntu-latest
     container:
-      image: richterrobert/hyrise-nix-node:latest
+      image: nixos/nix:latest
     steps:
+      - name: Install Node
+        run: |
+          nix-channel --update
+          nix-env -iA nixpkgs.nodejs
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
