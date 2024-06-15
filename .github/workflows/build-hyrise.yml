@@ -26,6 +26,7 @@ jobs:
       - name: Nix - Hyrise Debug Clang Build
         run: |
           nix-shell --pure --run "\
+            ls
             mkdir nix-cmake-build && cd nix-cmake-build && \
             cmake -GNinja -DCMAKE_BUILD_TYPE=Debug .. && \
             ninja
