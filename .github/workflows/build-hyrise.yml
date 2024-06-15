@@ -20,7 +20,7 @@ jobs:
           nix-shell -p git "\
             git clone --depth 1 --recursive ${{ github.server_url }}/${{ github.repository }}.git hyrise &&\
             cd hyrise &&\
-            git switch ${{ $GITHUB_REF }}"
+            git switch $GITHUB_REF"
       - name: Nix - Hyrise Debug Clang Build
         run: |
           nix-shell --pure --run "\
@@ -42,7 +42,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: recursive
-      - name: Nix - Hyrise Debug Clang Build
+      - name: Nix - Hyrise RelClang Build
         run: |
           nix-shell --pure --run "\
             mkdir cmake-nix-build && cd cmake-nix-build && \
