@@ -1,0 +1,33 @@
+name: Nix-Build of Hyrise
+on:
+  push:
+    branches: [ main ]
+jobs:
+  nix-clang-debug:
+    runs-on: ubuntu-latest
+    container:
+      image: nixos/nix:latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      - name: Nix - Hyrise Debug Clang Build
+        run: |
+          nix-shell --pure --run "\
+            mkdir nix-gcc-build && cd nix-gcc-build && \
+            cmake -GNinja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_COMPILER=clang .. && \
+            ninja
+          "
+  nix-clang-release:
+    runs-on: ubuntu-latest
+    container:
+      image: nixos/nix:latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      - name: Nix - Hyrise Debug Clang Build
+        run: |
+          nix-shell --pure --run "\
+            mkdir cmake-nix-build && cd cmake-nix-build && \
+            cmake -GNinja -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_COMPILER=clang .. && \
+            ninja
+          "
