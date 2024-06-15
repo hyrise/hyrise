@@ -38,8 +38,8 @@ pkgs.mkShell {
   # https://discourse.nixos.org/t/use-buildinputs-or-nativebuildinputs-for-nix-shell/8464
 
   buildInputs = with pkgs; [
-    gcc
-    clang
+    gcc11
+    clang15
     autoconf
     cmake
     python3
