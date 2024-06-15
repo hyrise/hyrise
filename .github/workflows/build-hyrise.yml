@@ -1,31 +1,53 @@
+# How to test this?
+#
+# In the root of the repository, run:
+#   nix-shell -p act --run "act"
+# Act is a software that allows you to simulate GitHub Actions CIs locally.
+# It works best in container environments that are not self-hosted.
+# Docker is required to run this as docker-credential-desktop is required,
+# which Nix does not deliver.
+
 name: Nix-Build of Hyrise
 on: push
 jobs:
+  checkout:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
   nix-clang-debug:
     runs-on: ubuntu-latest
+    needs: checkout
     container:
       image: nixos/nix:latest
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
       - name: Nix - Hyrise Debug Clang Build
         run: |
           nix-shell --pure --run "\
-            mkdir nix-gcc-build && cd nix-gcc-build && \
-            cmake -GNinja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_COMPILER=clang .. && \
+            mkdir nix-cmake-build && cd nix-cmake-build && \
+            cmake -GNinja -DCMAKE_BUILD_TYPE=Debug .. && \
             ninja
           "
   nix-clang-release:
     runs-on: ubuntu-latest
+    needs: checkout
     container:
       image: nixos/nix:latest
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
       - name: Nix - Hyrise Debug Clang Build
         run: |
           nix-shell --pure --run "\
             mkdir cmake-nix-build && cd cmake-nix-build && \
-            cmake -GNinja -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_COMPILER=clang .. && \
+            cmake -GNinja -DCMAKE_BUILD_TYPE=Release .. && \
             ninja
           "
