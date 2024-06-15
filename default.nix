@@ -39,7 +39,7 @@ pkgs.mkShell {
 
   buildInputs = with pkgs; [
     gcc11
-    clang15
+    clang_15
     autoconf
     cmake
     python3
