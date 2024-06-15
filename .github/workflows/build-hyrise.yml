@@ -10,19 +10,15 @@
 name: Nix-Build of Hyrise
 on: push
 jobs:
-  checkout:
+  nix-clang-debug:
     runs-on: ubuntu-latest
+    container:
+      image: nixos/nix:latest
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
           submodules: recursive
-  nix-clang-debug:
-    runs-on: ubuntu-latest
-    needs: checkout
-    container:
-      image: nixos/nix:latest
-    steps:
       - name: Nix - Hyrise Debug Clang Build
         run: |
           nix-shell --pure --run "\
@@ -33,10 +29,13 @@ jobs:
           "
   nix-clang-release:
     runs-on: ubuntu-latest
-    needs: checkout
     container:
       image: nixos/nix:latest
     steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
       - name: Nix - Hyrise Debug Clang Build
         run: |
           nix-shell --pure --run "\
