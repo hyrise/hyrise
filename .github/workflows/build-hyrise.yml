@@ -17,10 +17,12 @@ jobs:
     steps:
       - name: Checkout Repository
         run: |
+          mkdir /app/hyrise && cd /app
           nix-shell -p git --run "\
-            git clone --depth 1 -b $GITHUB_REF_NAME --single-branch --recursive ${{ github.server_url }}/${{ github.repository }}.git hyrise"
+            git clone --depth 1 -b $GITHUB_REF_NAME --single-branch --recursive ${{ github.server_url }}/${{ github.repository }}.git /app/hyrise"
       - name: Nix - Hyrise Debug Clang Build
         run: |
+          cd /app/hyrise
           nix-shell --pure --run "\
             ls
             mkdir nix-cmake-build && cd nix-cmake-build && \
