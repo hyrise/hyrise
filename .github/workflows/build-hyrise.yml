@@ -13,7 +13,7 @@ jobs:
   nix-clang-debug:
     runs-on: ubuntu-latest
     container:
-      image: nixos/nix:latest
+      image: richterrobert:hyrise-nix-node:latest
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -30,7 +30,7 @@ jobs:
   nix-clang-release:
     runs-on: ubuntu-latest
     container:
-      image: nixos/nix:latest
+      image: richterrobert:hyrise-nix-node:latest
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
