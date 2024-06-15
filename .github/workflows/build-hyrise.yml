@@ -14,7 +14,7 @@ env:
   CLONE_COMMAND: git clone --depth 1 -b $GITHUB_REF_NAME --single-branch --recursive ${{ github.server_url }}/${{ github.repository }}.git /app/hyrise
 
 jobs:
-  nix-clang-debug:
+  nix-gcc-debug:
     runs-on: ubuntu-latest
     container:
       image: nixos/nix:latest
@@ -23,16 +23,22 @@ jobs:
         run: |
           mkdir /app/hyrise && cd /app
           nix-shell -p git --run "$CLONE_COMMAND"
+      - name: System Stats
+        run: |
+          cd /app/hyrise
+          nix-shell --pure --run "\
+            gcc --version && \
+            g++ --version
+          "
       - name: Nix - Hyrise Debug Clang Build
         run: |
           cd /app/hyrise
           nix-shell --pure --run "\
-            ls
             mkdir nix-cmake-build && cd nix-cmake-build && \
             cmake -GNinja -DCMAKE_BUILD_TYPE=Debug .. && \
             ninja
           "
-  nix-clang-release:
+  nix-gcc-release:
     runs-on: ubuntu-latest
     container:
       image: nixos/nix:latest
