@@ -22,9 +22,11 @@ jobs:
           node --version
           npm --version
       - name: Checkout Repository
-        uses: actions/checkout@v4
-        with:
-          submodules: recursive
+        run: |
+          nix-shell -p git "\
+            git clone --depth 1 --recursive ${{ github.server_url }}/${{ github.repository }}.git hyrise &&\
+            cd hyrise &&\
+            git switch ${{ $GITHUB_REF }}"
       - name: Nix - Hyrise Debug Clang Build
         run: |
           nix-shell --pure --run "\
