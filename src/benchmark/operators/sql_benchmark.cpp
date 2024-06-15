@@ -1,11 +1,12 @@
 #include <memory>
 #include <string>
 
-#include "../micro_benchmark_basic_fixture.hpp"
-#include "SQLParser.h"
 #include "benchmark/benchmark.h"
+#include "SQLParser.h"
+
 #include "hyrise.hpp"
 #include "logical_query_plan/lqp_translator.hpp"
+#include "micro_benchmark_basic_fixture.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "sql/sql_pipeline_statement.hpp"
 #include "sql/sql_plan_cache.hpp"

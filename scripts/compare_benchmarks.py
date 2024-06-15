@@ -3,11 +3,17 @@
 import json
 import math
 import numpy as np
+import os
 import re
 import sys
 from terminaltables import AsciiTable
 from termcolor import colored
 from scipy.stats import ttest_ind
+
+# We enforce colored output. When calling this script from another script (e.g., from `benchmark_all.sh`), termcolor
+# recognizes that colors are not supported. However, our post-processing for github markdown output uses the color
+# information. We thus always enforce colored output.
+os.environ["FORCE_COLOR"] = "1"
 
 p_value_significance_threshold = 0.001
 min_iterations = 10

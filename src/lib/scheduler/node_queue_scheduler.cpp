@@ -2,18 +2,18 @@
 
 #include <atomic>
 #include <chrono>
+#include <cstdint>
 #include <cstdlib>
 #include <iostream>
 #include <memory>
 #include <mutex>
 #include <optional>
+#include <sstream>
 #include <thread>
-#include <utility>
 #include <vector>
 
 #include "abstract_task.hpp"
 #include "hyrise.hpp"
-#include "job_task.hpp"
 #include "shutdown_task.hpp"
 #include "task_queue.hpp"
 #include "types.hpp"
@@ -30,7 +30,7 @@ NodeQueueScheduler::NodeQueueScheduler() {
 NodeQueueScheduler::~NodeQueueScheduler() {
   if (HYRISE_DEBUG && _active) {
     // We cannot throw an exception because destructors are noexcept by default.
-    std::cerr << "NodeQueueScheduler::finish() wasn't called prior to destroying it." << std::endl;
+    std::cerr << "NodeQueueScheduler::finish() wasn't called prior to destroying it.\n";
     std::exit(EXIT_FAILURE);  // NOLINT(concurrency-mt-unsafe)
   }
 }

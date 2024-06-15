@@ -51,31 +51,31 @@ class AttributeStatistics : public BaseAttributeStatistics {
 
 template <typename T>
 std::ostream& operator<<(std::ostream& stream, const AttributeStatistics<T>& attribute_statistics) {
-  stream << "{" << std::endl;
+  stream << "{\n";
 
   if (attribute_statistics.histogram) {
-    stream << attribute_statistics.histogram->description() << std::endl;
+    stream << attribute_statistics.histogram->description() << '\n';
   }
 
   if (attribute_statistics.min_max_filter) {
     // TODO(anybody) implement printing of MinMaxFilter if ever required
-    stream << "Has MinMaxFilter" << std::endl;
+    stream << "Has MinMaxFilter\n";
   }
 
   if (attribute_statistics.range_filter) {
     // TODO(anybody) implement printing of RangeFilter if ever required
-    stream << "Has RangeFilter" << std::endl;
+    stream << "Has RangeFilter\n";
   }
 
   if (attribute_statistics.null_value_ratio) {
-    stream << "NullValueRatio: " << attribute_statistics.null_value_ratio->ratio << std::endl;
+    stream << "NullValueRatio: " << attribute_statistics.null_value_ratio->ratio << '\n';
   }
 
   if (attribute_statistics.distinct_value_count) {
-    stream << "DistinctValueCount: " << attribute_statistics.distinct_value_count->count << std::endl;
+    stream << "DistinctValueCount: " << attribute_statistics.distinct_value_count->count << '\n';
   }
 
-  stream << "}" << std::endl;
+  stream << "}\n";
 
   return stream;
 }

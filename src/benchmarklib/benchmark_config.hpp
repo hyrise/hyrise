@@ -1,6 +1,8 @@
 #pragma once
 
 #include <chrono>
+#include <string>
+#include <vector>
 
 #include "encoding_config.hpp"
 #include "storage/chunk.hpp"

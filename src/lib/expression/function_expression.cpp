@@ -1,10 +1,18 @@
 #include "function_expression.hpp"
 
+#include <cstddef>
+#include <functional>
+#include <memory>
+#include <ostream>
 #include <sstream>
+#include <string>
+#include <unordered_map>
+#include <vector>
 
-#include <boost/container_hash/hash.hpp>
-
+#include "all_type_variant.hpp"
+#include "expression/abstract_expression.hpp"
 #include "expression_utils.hpp"
+#include "operators/abstract_operator.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {
@@ -14,15 +22,25 @@ FunctionExpression::FunctionExpression(const FunctionType init_function_type,
     : AbstractExpression(ExpressionType::Function, init_arguments), function_type(init_function_type) {
   switch (function_type) {
     case FunctionType::Substring:
-      Assert(arguments.size() == 3, "Substring expects 3 parameters.");
+      Assert(arguments.size() == 3, "Substring expects three arguments.");
+      Assert(arguments[0]->data_type() == DataType::String || arguments[0]->data_type() == DataType::Null,
+             "Substring expects an expression with data type String or Null as first argument.");
+      for (auto argument_idx = size_t{1}; argument_idx <= size_t{2}; ++argument_idx) {
+        const auto data_type = arguments[argument_idx]->data_type();
+        Assert(data_type != DataType::String && !is_floating_point_data_type(data_type),
+               "Substring expects expressions with data type Integer, Long, or Null as second and third argument.");
+      }
       break;
     case FunctionType::Concatenate:
-      Assert(arguments.size() >= 2, "Concatenate expects at least 2 parameters.");
+      Assert(arguments.size() >= 2, "Concatenate expects at least two arguments.");
       for (const auto& argument : arguments) {
         Assert(argument->data_type() == DataType::String || argument->data_type() == DataType::Null,
                "Concatenate takes only Strings and Nulls as arguments.");
       }
       break;
+    case FunctionType::Absolute:
+      Assert(arguments.size() == 1, "Absolute expects exactly one argument.");
+      Assert(arguments[0]->data_type() != DataType::String, "Absolute is not defined on Strings.");
   }
 }
 
@@ -50,6 +68,8 @@ DataType FunctionExpression::data_type() const {
     case FunctionType::Substring:
     case FunctionType::Concatenate:
       return DataType::String;
+    case FunctionType::Absolute:
+      return arguments.front()->data_type();
   }
   Fail("Invalid enum value.");
 }
@@ -64,7 +84,7 @@ bool FunctionExpression::_shallow_equals(const AbstractExpression& expression) c
 }
 
 size_t FunctionExpression::_shallow_hash() const {
-  return boost::hash_value(static_cast<size_t>(function_type));
+  return std::hash<FunctionType>{}(function_type);
 }
 
 std::ostream& operator<<(std::ostream& stream, const FunctionType function_type) {

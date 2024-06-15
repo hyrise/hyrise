@@ -4,12 +4,13 @@
 
 #include <boost/algorithm/string.hpp>
 #include <boost/lexical_cast.hpp>
-#include "magic_enum.hpp"
 
+#include "cxxopts.hpp"
+#include "magic_enum.hpp"
 #include "SQLParserResult.h"
+
 #include "benchmark_runner.hpp"
 #include "cli_config_parser.hpp"
-#include "cxxopts.hpp"
 #include "hyrise.hpp"
 #include "jcch/jcch_benchmark_item_runner.hpp"
 #include "jcch/jcch_table_generator.hpp"
@@ -97,16 +98,16 @@ int main(int argc, char* argv[]) {
       Fail("Invalid clustering config: '" + clustering_configuration_parameter + "'.");
     }
 
-    std::cout << "- Clustering with '" << magic_enum::enum_name(clustering_configuration) << "' configuration"
-              << std::endl;
+    std::cout << "- Clustering with '" << magic_enum::enum_name(clustering_configuration) << "' configuration\n";
   }
 
   std::vector<BenchmarkItemID> item_ids;
 
   // Build list of query ids to be benchmarked and display it
   if (comma_separated_queries.empty()) {
-    std::transform(tpch_queries.begin(), tpch_queries.end(), std::back_inserter(item_ids),
-                   [](auto& pair) { return BenchmarkItemID{pair.first - 1}; });
+    std::transform(tpch_queries.begin(), tpch_queries.end(), std::back_inserter(item_ids), [](auto& pair) {
+      return BenchmarkItemID{pair.first - 1};
+    });
   } else {
     // Split the input into query ids, ignoring leading, trailing, or duplicate commas
     auto item_ids_str = std::vector<std::string>();
@@ -122,9 +123,10 @@ int main(int argc, char* argv[]) {
 
   std::cout << "- Benchmarking Queries: [ ";
   auto printable_item_ids = std::vector<std::string>();
-  std::for_each(item_ids.begin(), item_ids.end(),
-                [&printable_item_ids](auto& id) { printable_item_ids.push_back(std::to_string(id + 1)); });
-  std::cout << boost::algorithm::join(printable_item_ids, ", ") << " ]" << std::endl;
+  std::for_each(item_ids.begin(), item_ids.end(), [&printable_item_ids](auto& id) {
+    printable_item_ids.push_back(std::to_string(id + 1));
+  });
+  std::cout << boost::algorithm::join(printable_item_ids, ", ") << " ]\n";
 
   auto context = BenchmarkRunner::create_context(*config);
 
@@ -137,13 +139,13 @@ int main(int argc, char* argv[]) {
       // The problem is that the last part of the query, "DROP VIEW", does not return a table. Since we also have
       // the TPC-H test against a known-to-be-good table, we do not want the additional complexity for handling this
       // in the BenchmarkRunner.
-      std::cout << "- Skipping Query 15 because it cannot easily be verified" << std::endl;
+      std::cout << "- Skipping Query 15 because it cannot easily be verified\n";
       item_ids.erase(it, item_ids.end());
     }
   }
 
-  std::cout << "- " << (jcch ? "JCC-H" : "TPC-H") << " scale factor is " << scale_factor << std::endl;
-  std::cout << "- Using prepared statements: " << (use_prepared_statements ? "yes" : "no") << std::endl;
+  std::cout << "- " << (jcch ? "JCC-H" : "TPC-H") << " scale factor is " << scale_factor << '\n';
+  std::cout << "- Using prepared statements: " << (use_prepared_statements ? "yes" : "no") << '\n';
 
   // Add TPCH-specific information
   context.emplace("scale_factor", scale_factor);
@@ -178,9 +180,9 @@ int main(int argc, char* argv[]) {
     const auto jcch_data_path = std::filesystem::canonical(jcch_data_path_str.str());
     const auto jcch_tables_path = jcch_data_path.string() + "/tables";
 
-    std::cout << "- Using JCC-H dbgen from " << jcch_dbgen_path << std::endl;
-    std::cout << "- Storing JCC-H tables and query parameters in " << jcch_data_path << std::endl;
-    std::cout << "- JCC-H query parameters are " << (jcch_skewed ? "skewed" : "not skewed") << std::endl;
+    std::cout << "- Using JCC-H dbgen from " << jcch_dbgen_path << '\n';
+    std::cout << "- Storing JCC-H tables and query parameters in " << jcch_data_path << '\n';
+    std::cout << "- JCC-H query parameters are " << (jcch_skewed ? "skewed" : "not skewed") << '\n';
 
     // Create the table generator and item runner
     table_generator = std::make_unique<JCCHTableGenerator>(jcch_dbgen_path, jcch_tables_path, scale_factor,

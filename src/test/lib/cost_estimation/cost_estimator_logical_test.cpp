@@ -1,5 +1,4 @@
 #include "base_test.hpp"
-
 #include "cost_estimation/cost_estimator_logical.hpp"
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/join_node.hpp"

@@ -1,6 +1,9 @@
 #pragma once
 
 #include <atomic>
+#include <memory>
+#include <string>
+#include <vector>
 
 #include "tpch/tpch_benchmark_item_runner.hpp"
 

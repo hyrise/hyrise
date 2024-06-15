@@ -1,15 +1,35 @@
 #include "sql_translator.hpp"
 
+#include <algorithm>
+#include <cstddef>
+#include <cstdint>
+#include <iostream>
+#include <limits>
+#include <memory>
+#include <optional>
+#include <set>
+#include <string>
+#include <unordered_map>
+#include <utility>
+#include <vector>
+
+#include <boost/variant/get.hpp>
+
+#include "magic_enum.hpp"
+#include "SQLParser.h"
+#include "SQLParserResult.h"
+
+#include "all_type_variant.hpp"
 #include "create_sql_parser_error_message.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/abstract_predicate_expression.hpp"
 #include "expression/arithmetic_expression.hpp"
 #include "expression/between_expression.hpp"
 #include "expression/binary_predicate_expression.hpp"
-#include "expression/case_expression.hpp"
 #include "expression/exists_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
+#include "expression/function_expression.hpp"
 #include "expression/in_expression.hpp"
 #include "expression/interval_expression.hpp"
 #include "expression/is_null_expression.hpp"
@@ -17,7 +37,6 @@
 #include "expression/logical_expression.hpp"
 #include "expression/lqp_column_expression.hpp"
 #include "expression/lqp_subquery_expression.hpp"
-#include "expression/unary_minus_expression.hpp"
 #include "expression/value_expression.hpp"
 #include "expression/window_expression.hpp"
 #include "expression/window_function_expression.hpp"
@@ -51,16 +70,22 @@
 #include "logical_query_plan/update_node.hpp"
 #include "logical_query_plan/validate_node.hpp"
 #include "logical_query_plan/window_node.hpp"
+#include "sql/parameter_id_allocator.hpp"
+#include "sql/sql_identifier.hpp"
+#include "sql/sql_identifier_resolver.hpp"
+#include "sql/sql_identifier_resolver_proxy.hpp"
+#include "storage/constraints/table_key_constraint.hpp"
 #include "storage/lqp_view.hpp"
 #include "storage/table.hpp"
+#include "storage/table_column_definition.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 #include "utils/date_time_utils.hpp"
 #include "utils/meta_table_manager.hpp"
-
-#include "SQLParser.h"
+#include "utils/performance_warning.hpp"
 
 namespace {
 
-using namespace std::string_literals;           // NOLINT(build/namespaces)
 using namespace hyrise;                         // NOLINT(build/namespaces)
 using namespace hyrise::expression_functional;  // NOLINT(build/namespaces)
 
@@ -941,7 +966,7 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_predicated_join(const 
 
   // left_state becomes the result state
   auto result_state = std::move(left_state);
-  result_state.append(std::move(right_state));
+  result_state.append(right_state);
 
   /**
    * Hyrise doesn't have support for complex join predicates in OUTER JOINs
@@ -1106,7 +1131,7 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_cross_product(const st
     auto table_source_state = _translate_table_ref(*tables[table_idx]);
     result_table_source_state.lqp =
         JoinNode::make(JoinMode::Cross, result_table_source_state.lqp, table_source_state.lqp);
-    result_table_source_state.append(std::move(table_source_state));
+    result_table_source_state.append(table_source_state);
   }
 
   return result_table_source_state;
@@ -1231,8 +1256,9 @@ void SQLTranslator::_translate_select_groupby_having(const hsql::SelectStatement
     if (!pre_aggregate_expressions.empty()) {
       const auto& output_expressions = _current_lqp->output_expressions();
       const auto any_expression_not_yet_available = std::any_of(
-          pre_aggregate_expressions.cbegin(), pre_aggregate_expressions.cend(),
-          [&](const auto& expression) { return !find_expression_idx(*expression, output_expressions).has_value(); });
+          pre_aggregate_expressions.cbegin(), pre_aggregate_expressions.cend(), [&](const auto& expression) {
+            return !find_expression_idx(*expression, output_expressions).has_value();
+          });
 
       if (any_expression_not_yet_available) {
         _current_lqp = ProjectionNode::make(pre_aggregate_expressions, _current_lqp);
@@ -1309,8 +1335,9 @@ void SQLTranslator::_translate_select_groupby_having(const hsql::SelectStatement
           if (hsql_expr->table) {
             // Dealing with SELECT t.* here
             auto identifiers = _sql_identifier_resolver->get_expression_identifiers(pre_aggregate_expression);
-            if (std::any_of(identifiers.begin(), identifiers.end(),
-                            [&](const auto& identifier) { return identifier.table_name != hsql_expr->table; })) {
+            if (std::any_of(identifiers.begin(), identifiers.end(), [&](const auto& identifier) {
+                  return identifier.table_name != hsql_expr->table;
+                })) {
               // The pre_aggregate_expression may or may not be part of the GROUP BY clause, but since it comes from a
               // different table, it is not included in the `SELECT t.*`.
               continue;
@@ -1416,7 +1443,7 @@ void SQLTranslator::_translate_set_operation(const hsql::SetOperation& set_opera
 void SQLTranslator::_translate_distinct_order_by(const std::vector<hsql::OrderDescription*>* order_list,
                                                  const std::vector<std::shared_ptr<AbstractExpression>>& select_list,
                                                  const bool distinct) {
-  const auto perform_sort = order_list && !order_list->empty();
+  const auto perform_sort = order_list != nullptr && !order_list->empty();
   auto expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
   auto sort_modes = std::vector<SortMode>{};
 
@@ -1447,7 +1474,9 @@ void SQLTranslator::_translate_distinct_order_by(const std::vector<hsql::OrderDe
       // (DISTINCT will be applied before ORDER BY).
       const auto& select_expressions_set = ExpressionUnorderedSet{select_list.begin(), select_list.end()};
       AssertInput(std::all_of(expressions.cbegin(), expressions.cend(),
-                              [&](const auto& expression) { return select_expressions_set.contains(expression); }),
+                              [&](const auto& expression) {
+                                return select_expressions_set.contains(expression);
+                              }),
                   "For SELECT DISTINCT, ORDER BY expressions must appear in the SELECT list.");
     }
 
@@ -1470,7 +1499,6 @@ void SQLTranslator::_translate_limit(const hsql::LimitDescription& limit) {
   _current_lqp = LimitNode::make(num_rows_expression, _current_lqp);
 }
 
-// NOLINTNEXTLINE - while this particular method could be made static, others cannot.
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_show(const hsql::ShowStatement& show_statement) {
   _cacheable = false;
 
@@ -1659,14 +1687,14 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hs
       AssertInput(
           column_ids.size() == table_constraint->columnNames->size(),
           "Could not resolve columns of " + std::string{magic_enum::enum_name(constraint_type)} + " table constraint.");
-      table_key_constraints.emplace(column_ids, constraint_type);
+      table_key_constraints.emplace(std::move(column_ids), constraint_type);
       std::cout << "WARNING: " << magic_enum::enum_name(constraint_type) << " table constraint will not be enforced.\n";
     }
 
     // Set table key constraints
     const auto table = Table::create_dummy_table(column_definitions);
     for (const auto& table_key_constraint : table_key_constraints) {
-      table->add_soft_key_constraint(table_key_constraint);
+      table->add_soft_constraint(table_key_constraint);
     }
     input_node = StaticTableNode::make(table);
   }
@@ -1674,7 +1702,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hs
   return CreateTableNode::make(create_statement.tableName, create_statement.ifNotExists, input_node);
 }
 
-// NOLINTNEXTLINE - while this particular method could be made static, others cannot.
+// NOLINTNEXTLINE: while this particular method could be made static, others cannot.
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_drop(const hsql::DropStatement& drop_statement) {
   switch (drop_statement.type) {
     case hsql::DropType::kDropView:
@@ -1726,7 +1754,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_execute(const hsql::E
   return prepared_plan->instantiate(parameters);
 }
 
-// NOLINTNEXTLINE - while this particular method could be made static, others cannot.
+// NOLINTNEXTLINE: while this particular method could be made static, others cannot.
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_import(const hsql::ImportStatement& import_statement) {
   // Querying tables that are freshly loaded is not easy as we need meta information, such as column names and data
   // types, to resolve queries and build the query plans. For instance, we need an origin node for column expressions
@@ -1738,7 +1766,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_import(const hsql::Im
                           import_type_to_file_type(import_statement.type));
 }
 
-// NOLINTNEXTLINE - while this particular method could be made static, others cannot.
+// NOLINTNEXTLINE: while this particular method could be made static, others cannot.
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_export(const hsql::ExportStatement& export_statement) {
   auto sql_identifier_resolver = std::make_shared<SQLIdentifierResolver>();
   auto lqp = std::shared_ptr<AbstractLQPNode>{};
@@ -1885,7 +1913,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
         auto partition_by_expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
         if (hsql_window_description.partitionList) {
           partition_by_expressions.reserve(hsql_window_description.partitionList->size());
-          for (const auto expression : *hsql_window_description.partitionList) {
+          for (const auto* expression : *hsql_window_description.partitionList) {
             partition_by_expressions.emplace_back(_translate_hsql_expr(*expression, sql_identifier_resolver));
           }
         }
@@ -1896,7 +1924,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
           const auto expression_count = order_list.size();
           order_by_expressions.reserve(expression_count);
           sort_modes.reserve(expression_count);
-          for (const auto order_description : order_list) {
+          for (const auto* order_description : order_list) {
             order_by_expressions.emplace_back(_translate_hsql_expr(*order_description->expr, sql_identifier_resolver));
             sort_modes.emplace_back(order_type_to_sort_mode.at(order_description->type));
           }
@@ -1946,14 +1974,14 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
                         (end.type != FrameBoundType::Preceding || !end.unbounded) && end_offset >= start_offset,
                     "Frame starting from " + start.description() + " cannot end at " + end.description() + ".");
 
-        auto frame_description = FrameDescription{frame_type, start, end};
         window_description = window_(std::move(partition_by_expressions), std::move(order_by_expressions),
-                                     std::move(sort_modes), std::move(frame_description));
+                                     std::move(sort_modes), FrameDescription{frame_type, start, end});
       }
 
       // Convert to upper-case to find mapping.
-      std::transform(name.cbegin(), name.cend(), name.begin(),
-                     [](const auto character) { return std::toupper(character); });
+      std::transform(name.cbegin(), name.cend(), name.begin(), [](const auto character) {
+        return std::toupper(character);
+      });
 
       // Some SQL functions have aliases, which we map to one unique identifier here.
       static const auto function_aliases = std::unordered_map<std::string, std::string>{{{"SUBSTRING"}, {"SUBSTR"}}};
@@ -2078,6 +2106,48 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
         }
 
         return std::make_shared<FunctionExpression>(function_iter->second, arguments);
+      }
+
+      // According to the SQL standard (SQL:2023, Part 2: Foundation, p. 251: <case expression>),
+      // `COALESCE(a, b, ..., x, y)` is syntactic sugar for:
+      //
+      //     CASE
+      //       WHEN a IS NOT NULL THEN a
+      //       WHEN b IS NOT NULL THEN b
+      //       ...
+      //       WHEN x IS NOT NULL THEN x
+      //       ELSE y
+      //     END
+      //
+      // TODO(anyone): Though we have not seen this in benchmarks, there is no reason to add COALESCE list arguments if
+      // the preceding argument is not nullable.
+      if (name == "COALESCE") {
+        AssertInput(expr.exprList && !expr.exprList->empty(), "COALESCE list must not be empty.");
+        auto case_expression = std::shared_ptr<AbstractExpression>{};
+        auto data_type = DataType::Null;
+
+        // Build CASE expression bottom-up, i.e., in reverse fashion.
+        for (auto argument_it = expr.exprList->crbegin(); argument_it != expr.exprList->crend(); ++argument_it) {
+          const auto expression = _translate_hsql_expr(**argument_it, sql_identifier_resolver);
+          // The end of the list is the ELSE branch, which is the base case.
+          if (argument_it == expr.exprList->crbegin()) {
+            case_expression = expression;
+            data_type = expression->data_type();
+            continue;
+          }
+
+          // If this is not the end, add a CASE on top.
+          case_expression = case_(is_not_null_(expression), expression, case_expression);
+
+          // Make sure the data types match. Allow COALESCE for columns of DataType::Int or DataType::Float without
+          // casting the default value.
+          const auto expression_data_type = expression->data_type();
+          AssertInput((data_type == DataType::String) == (expression_data_type == DataType::String) &&
+                          is_floating_point_data_type(data_type) == is_floating_point_data_type(expression_data_type),
+                      "COALESCE is not supported for different data types.");
+        }
+
+        return case_expression;
       }
 
       FailInput("Could not resolve function '" + name + "'.");
@@ -2270,7 +2340,7 @@ std::shared_ptr<LQPSubqueryExpression> SQLTranslator::_translate_hsql_subquery(
 std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_case(
     const hsql::Expr& expr, const std::shared_ptr<SQLIdentifierResolver>& sql_identifier_resolver) {
   /**
-   * There is a "simple" and a "searched" CASE syntax, see http://www.oratable.com/simple-case-searched-case/
+   * There is a "simple" and a "searched" CASE syntax, see https://www.oratable.com/simple-case-searched-case/
    * Hyrise supports both.
    */
 
@@ -2326,7 +2396,7 @@ SQLTranslator::TableSourceState::TableSourceState(
       elements_in_order(init_elements_in_order),
       sql_identifier_resolver(init_sql_identifier_resolver) {}
 
-void SQLTranslator::TableSourceState::append(TableSourceState&& rhs) {
+void SQLTranslator::TableSourceState::append(TableSourceState& rhs) {
   for (auto& table_name_and_elements : rhs.elements_by_table_name) {
     const auto unique = !elements_by_table_name.contains(table_name_and_elements.first);
     AssertInput(unique, "Table name '" + table_name_and_elements.first + "' in FROM clause is not unique.");
@@ -2334,7 +2404,7 @@ void SQLTranslator::TableSourceState::append(TableSourceState&& rhs) {
 
   elements_by_table_name.merge(std::move(rhs.elements_by_table_name));
   elements_in_order.insert(elements_in_order.end(), rhs.elements_in_order.begin(), rhs.elements_in_order.end());
-  sql_identifier_resolver->append(std::move(*rhs.sql_identifier_resolver));
+  sql_identifier_resolver->append(*rhs.sql_identifier_resolver);
 }
 
 }  // namespace hyrise

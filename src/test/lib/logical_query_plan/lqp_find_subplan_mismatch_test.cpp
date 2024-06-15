@@ -1,5 +1,4 @@
 #include "base_test.hpp"
-
 #include "expression/expression_functional.hpp"
 #include "hyrise.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"

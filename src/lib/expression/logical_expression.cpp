@@ -1,9 +1,18 @@
 #include "logical_expression.hpp"
 
+#include <cstddef>
+#include <functional>
+#include <memory>
+#include <ostream>
 #include <sstream>
+#include <string>
+#include <unordered_map>
 
-#include <boost/container_hash/hash.hpp>
+#include "all_type_variant.hpp"
+#include "expression/abstract_expression.hpp"
 #include "expression/evaluation/expression_evaluator.hpp"
+#include "expression/expression_precedence.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 
@@ -57,7 +66,7 @@ bool LogicalExpression::_shallow_equals(const AbstractExpression& expression) co
 }
 
 size_t LogicalExpression::_shallow_hash() const {
-  return boost::hash_value(static_cast<size_t>(logical_operator));
+  return std::hash<LogicalOperator>{}(logical_operator);
 }
 
 ExpressionPrecedence LogicalExpression::_precedence() const {

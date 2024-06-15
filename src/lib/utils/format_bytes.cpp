@@ -1,7 +1,9 @@
 #include "format_bytes.hpp"
 
+#include <cstddef>
 #include <iomanip>
 #include <sstream>
+#include <string>
 
 namespace hyrise {
 

@@ -1,9 +1,22 @@
 #include "static_table_node.hpp"
 
+#include <cstddef>
+#include <functional>
+#include <memory>
 #include <sstream>
+#include <string>
+#include <utility>
+#include <vector>
+
+#include <boost/container_hash/hash.hpp>
 
 #include "expression/lqp_column_expression.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
+#include "logical_query_plan/data_dependencies/order_dependency.hpp"
+#include "logical_query_plan/data_dependencies/unique_column_combination.hpp"
 #include "lqp_utils.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 #include "utils/print_utils.hpp"
 
 namespace hyrise {
@@ -20,7 +33,7 @@ std::string StaticTableNode::description(const DescriptionMode /*mode*/) const {
     const auto& column_definition = table->column_definitions()[column_id];
     stream << column_definition;
 
-    if (column_id + 1u < table->column_definitions().size()) {
+    if (column_id + size_t{1} < table->column_definitions().size()) {
       stream << ", ";
     }
   }
@@ -50,18 +63,22 @@ std::vector<std::shared_ptr<AbstractExpression>> StaticTableNode::output_express
 }
 
 UniqueColumnCombinations StaticTableNode::unique_column_combinations() const {
-  // Generate from table key constraints
+  // Generate from table key constraints.
   auto unique_column_combinations = UniqueColumnCombinations{};
   const auto table_key_constraints = table->soft_key_constraints();
 
   for (const auto& table_key_constraint : table_key_constraints) {
-    const auto& column_expressions = find_column_expressions(*this, table_key_constraint.columns());
+    auto column_expressions = get_expressions_for_column_ids(*this, table_key_constraint.columns());
     DebugAssert(column_expressions.size() == table_key_constraint.columns().size(),
                 "Unexpected count of column expressions.");
-    unique_column_combinations.emplace(column_expressions);
+    unique_column_combinations.emplace(std::move(column_expressions));
   }
 
   return unique_column_combinations;
+}
+
+OrderDependencies StaticTableNode::order_dependencies() const {
+  return OrderDependencies{};
 }
 
 bool StaticTableNode::is_column_nullable(const ColumnID column_id) const {
@@ -79,7 +96,7 @@ size_t StaticTableNode::_on_shallow_hash() const {
     hash = hash ^ table_key_constraint.hash();
   }
 
-  return boost::hash_value(hash - soft_key_constraints.size());
+  return std::hash<size_t>{}(hash - soft_key_constraints.size());
 }
 
 std::shared_ptr<AbstractLQPNode> StaticTableNode::_on_shallow_copy(LQPNodeMapping& /*node_mapping*/) const {

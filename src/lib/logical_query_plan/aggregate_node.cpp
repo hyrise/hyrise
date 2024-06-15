@@ -1,10 +1,22 @@
 #include "aggregate_node.hpp"
 
+#include <algorithm>
+#include <cstddef>
+#include <iterator>
+#include <memory>
+#include <sstream>
+#include <string>
+#include <utility>
+#include <vector>
+
+#include "expression/abstract_expression.hpp"
 #include "expression/expression_utils.hpp"
-#include "expression/lqp_column_expression.hpp"
 #include "expression/window_function_expression.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
+#include "logical_query_plan/data_dependencies/functional_dependency.hpp"
+#include "logical_query_plan/data_dependencies/order_dependency.hpp"
+#include "logical_query_plan/data_dependencies/unique_column_combination.hpp"
 #include "lqp_utils.hpp"
-#include "resolve_type.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
@@ -118,9 +130,10 @@ UniqueColumnCombinations AggregateNode::unique_column_combinations() const {
    *     unique. We are not yet sure if this should be modeled as a UCCs.
    */
 
-  // Check each UCC for applicability.
-  const auto& output_expressions = this->output_expressions();
-  const auto& input_unique_column_combinations = left_input()->unique_column_combinations();
+  // Check each UCC for applicability.  Aggregated expressions have the form `avg_(a)` and, thus, are not equal to the
+  // expression `a` in the input UCC. `output_expressions()` translates pseudo-aggregates `avg_(a)` back to `a`.
+  const auto output_expressions = this->output_expressions();
+  const auto input_unique_column_combinations = left_input()->unique_column_combinations();
   for (const auto& input_unique_constraint : input_unique_column_combinations) {
     if (!contains_all_expressions(input_unique_constraint.expressions, output_expressions)) {
       continue;
@@ -140,7 +153,7 @@ UniqueColumnCombinations AggregateNode::unique_column_combinations() const {
     // Make sure that we do not add an already existing or a superset UCC.
     if (unique_column_combinations.empty() ||
         !contains_matching_unique_column_combination(unique_column_combinations, group_by_columns)) {
-      unique_column_combinations.emplace(group_by_columns);
+      unique_column_combinations.emplace(std::move(group_by_columns));
     }
   }
 
@@ -155,6 +168,25 @@ UniqueColumnCombinations AggregateNode::unique_column_combinations() const {
    */
 
   return unique_column_combinations;
+}
+
+OrderDependencies AggregateNode::order_dependencies() const {
+  auto order_dependencies = OrderDependencies{};
+
+  // Similarly to UCCs, forward ODs if all expressions are part of the GROUP-BY expressions. Aggregated expressions have
+  // the form `avg_(a)` and, thus, are not equal to the expression `a` in the input OD. `output_expressions()`
+  // translates pseudo-aggregates `avg_(a)` back to `a`.
+  const auto input_order_dependencies = left_input()->order_dependencies();
+  const auto output_expressions = this->output_expressions();
+  for (const auto& input_order_dependency : input_order_dependencies) {
+    if (!(contains_all_expressions(input_order_dependency.ordering_expressions, output_expressions) &&
+          contains_all_expressions(input_order_dependency.ordered_expressions, output_expressions))) {
+      continue;
+    }
+    order_dependencies.emplace(input_order_dependency);
+  }
+
+  return order_dependencies;
 }
 
 FunctionalDependencies AggregateNode::non_trivial_functional_dependencies() const {

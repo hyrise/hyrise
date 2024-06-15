@@ -7,7 +7,7 @@
 #include <condition_variable>
 #include <memory>
 
-#include <tbb/concurrent_queue.h>  // NOLINT(build/include_order): wronlgy identified as a C header.
+#include <oneapi/tbb/concurrent_queue.h>  // NOLINT(build/include_order): cpplint identifies TBB as C system headers.
 
 #include "concurrentqueue.h"  // The lightweight semaphore uses definitions of concurrentqueue.h.
 #include "lightweightsemaphore.h"
@@ -57,10 +57,12 @@ class TaskQueue {
    */
   size_t estimate_load() const;
 
-  void signal(const size_t count);
+  void signal(const int32_t count);
 
   /**
    * Semaphore to signal waiting workers for new tasks.
+   * When macOS ships a more recent libc++, this third-party semaphore can be replaced by std::counting_semaphore (see
+   * comment in benchmark_runner.hpp).
    */
   moodycamel::LightweightSemaphore semaphore;
 

@@ -58,7 +58,7 @@ int main(int argc, char* argv[]) {
 
   config = std::make_shared<BenchmarkConfig>(CLIConfigParser::parse_cli_options(cli_parse_result));
 
-  std::cout << "- TPC-DS scale factor is " << scale_factor << std::endl;
+  std::cout << "- TPC-DS scale factor is " << scale_factor << '\n';
 
   const auto query_path = std::string{"resources/benchmark/tpcds/tpcds-result-reproduction/query_qualification"};
 
@@ -79,7 +79,7 @@ int main(int argc, char* argv[]) {
     add_indices_to_sqlite("resources/benchmark/tpcds/schema.sql", "resources/benchmark/tpcds/create_indices.sql",
                           benchmark_runner.sqlite_wrapper);
   }
-  std::cout << "done." << std::endl;
+  std::cout << "done.\n";
 
   benchmark_runner.run();
 }

@@ -1,9 +1,17 @@
 #include "abstract_join_ordering_algorithm.hpp"
 
+#include <algorithm>
+#include <cstddef>
+#include <memory>
+#include <utility>
+#include <vector>
+
 #include "cost_estimation/abstract_cost_estimator.hpp"
-#include "join_graph.hpp"
+#include "logical_query_plan/join_node.hpp"
+#include "logical_query_plan/predicate_node.hpp"
 #include "operators/operator_join_predicate.hpp"
 #include "statistics/cardinality_estimator.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 
@@ -31,8 +39,9 @@ std::shared_ptr<AbstractLQPNode> AbstractJoinOrderingAlgorithm::_add_predicates_
     predicate_nodes_and_cost.emplace_back(predicate_node, cost_estimator->estimate_node_cost(predicate_node));
   }
 
-  std::sort(predicate_nodes_and_cost.begin(), predicate_nodes_and_cost.end(),
-            [&](const auto& lhs, const auto& rhs) { return lhs.second < rhs.second; });
+  std::sort(predicate_nodes_and_cost.begin(), predicate_nodes_and_cost.end(), [&](const auto& lhs, const auto& rhs) {
+    return lhs.second < rhs.second;
+  });
 
   predicate_nodes_and_cost.front().first->set_left_input(lqp);
 
@@ -71,8 +80,9 @@ std::shared_ptr<AbstractLQPNode> AbstractJoinOrderingAlgorithm::_add_join_to_pla
     join_predicates_and_cost.emplace_back(join_predicate, cost);
   }
 
-  std::sort(join_predicates_and_cost.begin(), join_predicates_and_cost.end(),
-            [&](const auto& lhs, const auto& rhs) { return lhs.second < rhs.second; });
+  std::sort(join_predicates_and_cost.begin(), join_predicates_and_cost.end(), [&](const auto& lhs, const auto& rhs) {
+    return lhs.second < rhs.second;
+  });
 
   // Categorize join predicates into those that MUST be processed as part of a join operator (because they are required
   // to see if an outer join emits a value or a NULL) and those that can also be processed as regular predicates after

@@ -1,9 +1,7 @@
+#include "../plugin_test_utils.hpp"
 #include "base_test.hpp"
-
 #include "operators/table_wrapper.hpp"
 #include "utils/meta_tables/meta_plugins_table.hpp"
-
-#include "../plugin_test_utils.hpp"
 
 namespace hyrise {
 
@@ -43,7 +41,9 @@ TEST_F(MetaPluginsTest, IsMutable) {
 }
 
 TEST_F(MetaPluginsTest, TableGeneration) {
+  std::cerr << "Loading plugin\n";
   Hyrise::get().plugin_manager.load_plugin(build_dylib_path("libhyriseTestPlugin"));
+  std::cerr << "Loaded plugin\n";
   const auto expected_table = std::make_shared<Table>(TableColumnDefinitions{{"name", DataType::String, false}},
                                                       TableType::Data, ChunkOffset{5});
   expected_table->append({pmr_string{"hyriseTestPlugin"}});

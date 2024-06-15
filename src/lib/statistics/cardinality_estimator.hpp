@@ -1,6 +1,9 @@
 #pragma once
 
+#include <algorithm>
 #include <memory>
+#include <utility>
+#include <vector>
 
 #include <boost/dynamic_bitset.hpp>
 
@@ -49,8 +52,8 @@ class CardinalityEstimator : public AbstractCardinalityEstimator {
   static std::shared_ptr<TableStatistics> estimate_projection_node(
       const ProjectionNode& projection_node, const std::shared_ptr<TableStatistics>& input_table_statistics);
 
-  std::shared_ptr<TableStatistics> estimate_window_node(
-      const WindowNode& window_node, const std::shared_ptr<TableStatistics>& input_table_statistics) const;
+  static std::shared_ptr<TableStatistics> estimate_window_node(
+      const WindowNode& window_node, const std::shared_ptr<TableStatistics>& input_table_statistics);
 
   static std::shared_ptr<TableStatistics> estimate_aggregate_node(
       const AggregateNode& aggregate_node, const std::shared_ptr<TableStatistics>& input_table_statistics);

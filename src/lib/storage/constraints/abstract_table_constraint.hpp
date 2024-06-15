@@ -4,11 +4,13 @@
 
 namespace hyrise {
 
+enum class TableConstraintType { Key, ForeignKey, Order };
+
 /**
  * Abstract container class for the definition of table constraints. Subclasses should leverage the OOP structure to add
  * additional fields. Besides columns of a stored table, these fields may include check definitions and referenced keys,
  * e.g., for CHECK and FOREIGN KEY constraint implementations.
- * 
+ *
  * We use table constraints to persist data dependencies. They are not enforced on the table data but describe specific
  * properties of and relationships within data. The main purpose of tracking table constraints is to translate them into
  * data dependencies on the LQP level. Using these data dependencies, we perform dedicated dependency-based query
@@ -16,7 +18,7 @@ namespace hyrise {
  */
 class AbstractTableConstraint {
  public:
-  AbstractTableConstraint() = default;
+  explicit AbstractTableConstraint(const TableConstraintType type);
   AbstractTableConstraint(const AbstractTableConstraint&) = default;
   AbstractTableConstraint(AbstractTableConstraint&&) = default;
 
@@ -30,11 +32,15 @@ class AbstractTableConstraint {
 
   virtual size_t hash() const = 0;
 
+  TableConstraintType type() const;
+
  protected:
   /**
    * Compare two table constraints of the same type.
    */
   virtual bool _on_equals(const AbstractTableConstraint& table_constraint) const = 0;
+
+  TableConstraintType _type;
 };
 
 }  // namespace hyrise
