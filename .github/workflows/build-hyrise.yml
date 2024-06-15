@@ -16,7 +16,11 @@ jobs:
       image: nixos/nix:latest
     steps:
       - name: Install Node
-        uses: actions/setup-node@v4
+        run: |
+          nix-channel --update
+          nix-env -A nixpkgs.nodejs
+          node --version
+          npm --version
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
