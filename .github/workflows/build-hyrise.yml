@@ -23,10 +23,6 @@ jobs:
     container:
       image: nixos/nix:latest
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-        with:
-          submodules: recursive
       - name: Nix - Hyrise Debug Clang Build
         run: |
           nix-shell --pure --run "\
@@ -40,10 +36,6 @@ jobs:
     container:
       image: nixos/nix:latest
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-        with:
-          submodules: recursive
       - name: Nix - Hyrise Debug Clang Build
         run: |
           nix-shell --pure --run "\
