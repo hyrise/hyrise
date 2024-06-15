@@ -8,7 +8,8 @@
 #
 # The `--pure` flag ensures that the shell does not take over environment
 # variables from the host. Therefore, all software installed comes purely
-# from Nix package manager.
+# from Nix package manager. 
+# For MacOS user: This also means the default Apple clang is not used ;)
 
 let
   pkgs = import ./nixpkgs {};

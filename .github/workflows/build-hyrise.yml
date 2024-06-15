@@ -20,7 +20,7 @@ jobs:
           nix-shell -p git --run "\
             git clone --depth 1 --recursive ${{ github.server_url }}/${{ github.repository }}.git hyrise &&\
             cd hyrise &&\
-            git switch ${{ GITHUB_REF_NAME }}"
+            git switch $GITHUB_REF_NAME"
       - name: Nix - Hyrise Debug Clang Build
         run: |
           nix-shell --pure --run "\
