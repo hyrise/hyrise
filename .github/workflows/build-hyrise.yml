@@ -1,7 +1,5 @@
 name: Nix-Build of Hyrise
-on:
-  push:
-    branches: [ main ]
+on: push
 jobs:
   nix-clang-debug:
     runs-on: ubuntu-latest
