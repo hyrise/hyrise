@@ -18,9 +18,7 @@ jobs:
       - name: Checkout Repository
         run: |
           nix-shell -p git --run "\
-            git clone --depth 1 --recursive ${{ github.server_url }}/${{ github.repository }}.git hyrise &&\
-            cd hyrise &&\
-            git branch --all"
+            git clone --depth 1 -b $GITHUB_REF_NAME --single-branch --recursive ${{ github.server_url }}/${{ github.repository }}.git hyrise"
       - name: Nix - Hyrise Debug Clang Build
         run: |
           nix-shell --pure --run "\
