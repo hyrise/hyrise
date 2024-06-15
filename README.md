@@ -80,13 +80,13 @@ See [dependencies](DEPENDENCIES.md) for a detailed list of dependencies to use w
 Older versions may work, but are neither tested nor supported.
 
 ## Nix Setup
-You can build Hyrise using Nix. To do so, first [install Nix](https://nixos.wiki/wiki/Nix_Installation_Guide) on your current operating system. Afterwards, run the following build command in the root of the repository:
+You can build Hyrise using Nix. To do so, first [install Nix](https://nixos.wiki/wiki/Nix_Installation_Guide) on your current operating system. Afterwards, run the following build in the root of the repository:
 
 ```bash
-nix-build
+nix-shell --pure
 ```
 
-Nix will build the Hyrise repository and save the results to `result/hyrise`.
+This will drop you into a shell with all dependencies installed. You can now build Hyrise as usual. Please note that using the `--pure` flag is highly important is it avoids using dependencies from the local system.
 
 ## Setup using Docker
 If you want to create a Docker-based development environment using CLion, head over to our [dedicated tutorial](https://github.com/hyrise/hyrise/wiki/Use-Docker-with-CLion). 
