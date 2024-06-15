@@ -9,6 +9,10 @@
 
 name: Nix-Build of Hyrise
 on: push
+
+env:
+  CLONE_COMMAND: git clone --depth 1 -b $GITHUB_REF_NAME --single-branch --recursive ${{ github.server_url }}/${{ github.repository }}.git /app/hyrise
+
 jobs:
   nix-clang-debug:
     runs-on: ubuntu-latest
@@ -18,8 +22,7 @@ jobs:
       - name: Checkout Repository
         run: |
           mkdir /app/hyrise && cd /app
-          nix-shell -p git --run "\
-            git clone --depth 1 -b $GITHUB_REF_NAME --single-branch --recursive ${{ github.server_url }}/${{ github.repository }}.git /app/hyrise"
+          nix-shell -p git --run "$CLONE_COMMAND"
       - name: Nix - Hyrise Debug Clang Build
         run: |
           cd /app/hyrise
@@ -34,16 +37,13 @@ jobs:
     container:
       image: nixos/nix:latest
     steps:
-      - name: Install Node
-        run: |
-          nix-channel --update
-          nix-env -iA nixpkgs.nodejs
       - name: Checkout Repository
-        uses: actions/checkout@v4
-        with:
-          submodules: recursive
+        run: |
+          mkdir /app/hyrise && cd /app
+          nix-shell -p git --run "$CLONE_COMMAND"
       - name: Nix - Hyrise RelClang Build
         run: |
+          cd /app/hyrise
           nix-shell --pure --run "\
             mkdir cmake-nix-build && cd cmake-nix-build && \
             cmake -GNinja -DCMAKE_BUILD_TYPE=Release .. && \

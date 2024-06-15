@@ -38,7 +38,7 @@ pkgs.mkShell {
   # https://discourse.nixos.org/t/use-buildinputs-or-nativebuildinputs-for-nix-shell/8464
 
   buildInputs = with pkgs; [
-    gcc11
+    gcc
     clang
     autoconf
     cmake
