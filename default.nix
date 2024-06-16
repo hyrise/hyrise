@@ -51,7 +51,7 @@ pkgs.stdenv.mkDerivation {
     dos2unix
     gcovr
     python311Packages.pexpect
-    tbb_2021_11
+    tbb
     readline
     boost
     postgresql_16
