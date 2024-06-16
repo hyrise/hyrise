@@ -27,7 +27,7 @@ in
 # Often you will find mkDerivation without a function argument, but that does not
 # allow recursively calling the attributes of the derivation.
 # One can either use rec { .. } or (finalAttrs: { .. }). The latter is recommended.
-pkgs.mkShell {
+pkgs.stdenv.mkDerivation {
   name = "hyrise";
   version = "0.0.1";
 
@@ -37,9 +37,9 @@ pkgs.mkShell {
   # Read more on the difference of buildInputs and nativeBuildInputs here: 
   # https://discourse.nixos.org/t/use-buildinputs-or-nativebuildinputs-for-nix-shell/8464
 
-  buildInputs = with pkgs; [
+  nativeBuildInputs = with pkgs; [
     gcc11
-    llvmPackages_15.libcxxClang
+    clang_15
     autoconf
     cmake
     python3
