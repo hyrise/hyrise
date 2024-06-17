@@ -29,7 +29,7 @@ class TPCCRandomGenerator : public RandomGenerator {
   }
 
   /**
-   * Generates a non-uniform random number based on a formula defined by TPCC
+   * Generates a non-uniform random number based on a formula defined by TPCC.
    */
   size_t nurand(size_t a, size_t x, size_t y) {
     auto c_iter = _nurand_constants_c.find(a);
@@ -41,10 +41,10 @@ class TPCCRandomGenerator : public RandomGenerator {
   }
 
   /**
-   * Generates a random last name based on a set of syllables
-   * @param i   a number, if less than 1000, each digit represents a syllable
-   *            for i's greater than 1000 we calculate a non-uniform random number below 1000
-   * @return    a String representing the last name
+   * Generates a random last name based on a set of syllables.
+   * @param i   a number, if less than 1000, each digit represents a syllable for i's greater than 1000 we calculate a
+   *            non-uniform random number below 1000
+   * @return    a string representing the last name
    */
   std::string last_name(size_t i) {
     const std::string syllables[] = {

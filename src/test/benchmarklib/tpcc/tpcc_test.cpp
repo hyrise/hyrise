@@ -15,12 +15,17 @@ namespace hyrise {
 
 class TPCCTest : public BaseTest {
  public:
+  static void SetUpClass() {
+    // Some test cases require multiple warehouses.
+    static_assert(NUM_WAREHOUSES > 1);
+  }
+
   static void SetUpTestCase() {
     Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
     auto benchmark_config = std::make_shared<BenchmarkConfig>(BenchmarkConfig::get_default_config());
     auto table_generator = TPCCTableGenerator{NUM_WAREHOUSES, benchmark_config};
 
-    tables = table_generator.generate();
+    tables = table_generator.generate();    
   }
 
   void SetUp() override {
@@ -81,7 +86,7 @@ class TPCCTest : public BaseTest {
                                                               {"ORDER", NUM_WAREHOUSES * 30'000}};
 
   static std::unordered_map<std::string, BenchmarkTableInfo> tables;
-  static constexpr auto NUM_WAREHOUSES = 1;
+  static constexpr auto NUM_WAREHOUSES = 2;
 };
 
 std::unordered_map<std::string, BenchmarkTableInfo> TPCCTest::tables;
