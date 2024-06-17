@@ -10,6 +10,8 @@
 
 namespace hyrise {
 
+BenchmarkConfig::BenchmarkConfig(const ChunkOffset init_chunk_size) : chunk_size{init_chunk_size} {}
+
 BenchmarkConfig::BenchmarkConfig(const BenchmarkMode init_benchmark_mode, const ChunkOffset init_chunk_size,
                                  const EncodingConfig& init_encoding_config, const bool init_chunk_indexes,
                                  const bool init_table_indexes, const int64_t init_max_runs,
@@ -39,9 +41,5 @@ BenchmarkConfig::BenchmarkConfig(const BenchmarkMode init_benchmark_mode, const 
       system_metrics(init_system_metrics),
       pipeline_metrics(init_pipeline_metrics),
       plugins(init_plugins) {}
-
-BenchmarkConfig BenchmarkConfig::get_default_config() {
-  return BenchmarkConfig{};
-}
 
 }  // namespace hyrise

@@ -48,7 +48,7 @@ void generate_benchmark_data(std::string argument_string) {
   Assert(benchmark_name == "tpch" || benchmark_name == "tpcds" || benchmark_name == "tpcc",
          "Benchmark data generation is only supported for TPC-C, TPC-DS, and TPC-H.");
 
-  auto config = std::make_shared<hyrise::BenchmarkConfig>(hyrise::BenchmarkConfig::get_default_config());
+  auto config = std::make_shared<hyrise::BenchmarkConfig>();
   config->cache_binary_tables = true;
   if (benchmark_name == "tpcc") {
     hyrise::TPCCTableGenerator{static_cast<uint32_t>(sizing_factor), config}.generate_and_store();

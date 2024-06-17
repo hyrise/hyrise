@@ -35,16 +35,14 @@ class TPCHDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
     const auto scale_factor = 10.0f;
     const auto default_encoding = EncodingType::Dictionary;
 
-    auto benchmark_config = BenchmarkConfig::get_default_config();
+    const auto benchmark_config = std::make_shared<BenchmarkConfig>();
     // TODO(anyone): setup benchmark_config with the given default_encoding
     // benchmark_config.encoding_config = EncodingConfig{SegmentEncodingSpec{default_encoding}};
 
     if (!sm.has_table("lineitem")) {
       std::cout << "Generating TPC-H data set with scale factor " << scale_factor << " and " << default_encoding
                 << " encoding:\n";
-      TPCHTableGenerator(scale_factor, ClusteringConfiguration::None,
-                         std::make_shared<BenchmarkConfig>(benchmark_config))
-          .generate_and_store();
+      TPCHTableGenerator(scale_factor, ClusteringConfiguration::None, benchmark_config).generate_and_store();
     }
 
     _table_wrapper_map = create_table_wrappers(sm);

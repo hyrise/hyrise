@@ -348,13 +348,6 @@ void AbstractTableGenerator::generate_and_store() {
   Hyrise::get().set_scheduler(initial_scheduler);
 }
 
-std::shared_ptr<BenchmarkConfig> AbstractTableGenerator::create_benchmark_config_with_chunk_size(
-    ChunkOffset chunk_size) {
-  auto config = BenchmarkConfig::get_default_config();
-  config.chunk_size = chunk_size;
-  return std::make_shared<BenchmarkConfig>(config);
-}
-
 void AbstractTableGenerator::_create_chunk_indexes(
     std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) {
   auto timer = Timer{};
