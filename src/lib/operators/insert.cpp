@@ -150,6 +150,9 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
         }
       }
 
+      // Make sure the MVCC data is written before the first segment (and, thus, the chunk) is resized.
+      std::atomic_thread_fence(std::memory_order_seq_cst);
+
       // Grow data Segments.
       // Do so in REVERSE column order so that the resize of `Chunk::_segments.front()` happens last. It is this last
       // resize that makes the new row count visible to the outside world.
@@ -171,6 +174,9 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
           Assert(value_segment->values().capacity() >= new_size, "ValueSegment too small.");
           value_segment->resize(new_size);
         });
+
+        // Make sure the first column's resize actually happens last and does not get reordered.
+        std::atomic_thread_fence(std::memory_order_seq_cst);
       }
 
       if (new_size == target_size) {
@@ -274,7 +280,7 @@ void Insert::_on_rollback_records() {
     for (auto chunk_offset = target_chunk_range.begin_chunk_offset; chunk_offset < target_chunk_range.end_chunk_offset;
          ++chunk_offset) {
       mvcc_data->set_end_cid(chunk_offset, CommitID{0}, std::memory_order_seq_cst);
-      mvcc_data->set_begin_cid(chunk_offset, CommitID{0}, std::memory_order_relaxed);
+      mvcc_data->set_begin_cid(chunk_offset, CommitID{0}, std::memory_order_seq_cst);
       mvcc_data->set_tid(chunk_offset, TransactionID{0}, std::memory_order_relaxed);
       // Update chunk statistics.
       target_chunk->increase_invalid_row_count(ChunkOffset{1});
