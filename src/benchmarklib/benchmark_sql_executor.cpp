@@ -82,7 +82,7 @@ BenchmarkSQLExecutor::~BenchmarkSQLExecutor() {
 
 void BenchmarkSQLExecutor::commit() {
   Assert(transaction_context && !transaction_context->is_auto_commit(),
-         "Can only explicitly commit transaction if auto-commit is disabled");
+         "Can only explicitly commit transaction if auto-commit is disabled.");
   Assert(transaction_context->phase() == TransactionPhase::Active, "Expected transaction to be active.");
   transaction_context->commit();
   if (_sqlite_connection) {
@@ -93,7 +93,7 @@ void BenchmarkSQLExecutor::commit() {
 
 void BenchmarkSQLExecutor::rollback() {
   Assert(transaction_context && !transaction_context->is_auto_commit(),
-         "Can only explicitly roll back transaction if auto-commit is disabled");
+         "Can only explicitly roll back transaction if auto-commit is disabled.");
   Assert(transaction_context->phase() == TransactionPhase::Active, "Expected transaction to be active.");
   transaction_context->rollback(RollbackReason::User);
   if (_sqlite_connection) {
