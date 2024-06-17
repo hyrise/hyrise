@@ -345,6 +345,7 @@ void Table::append_chunk(const Segments& segments, std::shared_ptr<MvccData> mvc
   // To avoid someone reading an incomplete shared_ptr<Chunk>, we (1) use the ZeroAllocator for the concurrent_vector,
   // making sure that an uninitialized entry compares equal to nullptr and (2) insert the desired chunk atomically.
 
+  const auto lock_guard = std::lock_guard<std::mutex>{_append_mutex};
   auto new_chunk_iter = _chunks.push_back(nullptr);
   std::atomic_store(&*new_chunk_iter, std::make_shared<Chunk>(segments, mvcc_data, alloc));
 }
