@@ -354,38 +354,6 @@ TEST_F(TPCCTest, NewOrderUnusedItemId) {
   }
 }
 
-TEST_F(TPCCTest, Payment2) {
-  auto successful_runs = std::atomic_uint32_t{0};
-  auto failed_runs = std::atomic_uint32_t{0};
-
-  constexpr auto thread_count = uint32_t{24};
-  constexpr auto iterations_per_thread = uint32_t{50'000};
-
-  auto threads = std::vector<std::thread>{};
-  threads.reserve(thread_count);
-
-  for (auto thread_id = uint32_t{0}; thread_id < thread_count; ++thread_id) {
-    // for (auto thread_id = uint32_t{0}; thread_id < 1; ++thread_id) {
-    threads.emplace_back([&]() {
-      for (auto iteration = uint32_t{0}; iteration < iterations_per_thread; ++iteration) {
-        auto sql_executor = BenchmarkSQLExecutor{nullptr, std::nullopt};
-        auto payment = TPCCPayment{NUM_WAREHOUSES, sql_executor};
-        const auto return_value = payment.execute();
-        // ASSERT_TRUE(payment.execute());
-
-        successful_runs += return_value;
-        failed_runs += !return_value;
-      }
-    });
-  }
-
-  for (auto& thread : threads) {
-    thread.join();
-  }
-
-  std::cout << successful_runs.load() << " & " << failed_runs.load() << std::endl;
-}
-
 TEST_F(TPCCTest, PaymentCustomerByName) {
   // We will cover customer selection by ID in OrderStatusCustomerById
   const auto old_time = time(nullptr);
