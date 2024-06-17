@@ -80,7 +80,6 @@ Table::Table(const TableColumnDefinitions& column_definitions, const TableType t
       _type(type),
       _use_mvcc(use_mvcc),
       _target_chunk_size(type == TableType::Data ? target_chunk_size.value_or(Chunk::DEFAULT_SIZE) : Chunk::MAX_SIZE),
-      _append_mutex(std::make_unique<std::mutex>()),
       _table_indexes(table_indexes) {
   DebugAssert(target_chunk_size <= Chunk::MAX_SIZE, "Chunk size exceeds maximum.");
   DebugAssert(type == TableType::Data || !target_chunk_size, "Must not set target_chunk_size for reference tables.");
@@ -345,7 +344,6 @@ void Table::append_chunk(const Segments& segments, std::shared_ptr<MvccData> mvc
   // To avoid someone reading an incomplete shared_ptr<Chunk>, we (1) use the ZeroAllocator for the concurrent_vector,
   // making sure that an uninitialized entry compares equal to nullptr and (2) insert the desired chunk atomically.
 
-  const auto lock_guard = std::lock_guard<std::mutex>{_append_mutex};
   auto new_chunk_iter = _chunks.push_back(nullptr);
   std::atomic_store(&*new_chunk_iter, std::make_shared<Chunk>(segments, mvcc_data, alloc));
 }
@@ -410,7 +408,7 @@ std::vector<std::vector<AllTypeVariant>> Table::get_rows() const {
 }
 
 std::unique_lock<std::mutex> Table::acquire_append_mutex() {
-  return std::unique_lock<std::mutex>(*_append_mutex);
+  return std::unique_lock<std::mutex>(_append_mutex);
 }
 
 std::shared_ptr<TableStatistics> Table::table_statistics() const {
