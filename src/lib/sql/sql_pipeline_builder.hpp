@@ -29,7 +29,7 @@ class Optimizer;
  *  - The default Optimizer (Optimizer::create_default_optimizer()) is used.
  *
  * Favour this interface over calling the SQLPipeline[Statement] constructors with their long parameter list.
- * See SQLPipeline[Statement] doc for these classes, in short SQLPipeline ist for queries with multiple statement,
+ * See SQLPipeline[Statement] doc for these classes, in short SQLPipeline is for queries with multiple statement,
  * SQLPipelineStatement for single statement queries.
  */
 class SQLPipelineBuilder final {
