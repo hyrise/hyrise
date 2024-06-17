@@ -50,8 +50,8 @@ void generate_benchmark_data(std::string argument_string) {
   Assert(benchmark_name == "tpch" || benchmark_name == "tpcds" || benchmark_name == "tpcc",
          "Benchmark data generation is only supported for TPC-C, TPC-DS, and TPC-H.");
 
-  constexpr auto cache_binary_tables = true;
-  const auto config = std::make_shared<BenchmarkConfig>(Chunk::DEFAULT_SIZE, cache_binary_tables);
+  constexpr auto CACHE_BINARY_TABLES = true;
+  const auto config = std::make_shared<BenchmarkConfig>(Chunk::DEFAULT_SIZE, CACHE_BINARY_TABLES);
   if (benchmark_name == "tpcc") {
     TPCCTableGenerator{static_cast<uint32_t>(scale_factor), config}.generate_and_store();
   } else if (benchmark_name == "tpcds") {
