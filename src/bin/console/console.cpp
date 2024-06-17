@@ -515,7 +515,7 @@ int Console::_generate_tpcc(const std::string& args) {
 
   out("Generating all TPCC tables (this might take a while) ...\n");
   const auto config = std::make_shared<BenchmarkConfig>(chunk_size);
-  config->cache_binary_tables = true;
+  config->cache_binary_tables = _binary_caching;
   TPCCTableGenerator{num_warehouses, config}.generate_and_store();
 
   return ReturnCode::Ok;
@@ -542,7 +542,7 @@ int Console::_generate_tpch(const std::string& args) {
 
   out("Generating all TPCH tables (this might take a while) ...\n");
   const auto config = std::make_shared<BenchmarkConfig>(chunk_size);
-  config->cache_binary_tables = true;
+  config->cache_binary_tables = _binary_caching;
   TPCHTableGenerator{scale_factor, ClusteringConfiguration::None, config}.generate_and_store();
 
   return ReturnCode::Ok;
@@ -568,7 +568,7 @@ int Console::_generate_tpcds(const std::string& args) {
 
   out("Generating all TPC-DS tables (this might take a while) ...\n");
   const auto config = std::make_shared<BenchmarkConfig>(chunk_size);
-  config->cache_binary_tables = true;
+  config->cache_binary_tables = _binary_caching;
   TPCDSTableGenerator{scale_factor, config}.generate_and_store();
 
   return ReturnCode::Ok;
@@ -609,7 +609,7 @@ int Console::_generate_ssb(const std::string& args) {
 
   out("Generating all SSB tables (this might take a while) ...\n");
   const auto config = std::make_shared<BenchmarkConfig>(chunk_size);
-  config->cache_binary_tables = true;
+  config->cache_binary_tables = _binary_caching;
   SSBTableGenerator{ssb_dbgen_path, csv_meta_path, ssb_data_path.str(), scale_factor, config}.generate_and_store();
 
   return ReturnCode::Ok;
