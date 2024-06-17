@@ -32,7 +32,7 @@
 #include "SQLParser.h"
 #include "SQLParserResult.h"
 
-#include "abstract_table_generator.hpp"
+#include "benchmark_config.hpp"
 #include "hyrise.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "operators/export.hpp"
