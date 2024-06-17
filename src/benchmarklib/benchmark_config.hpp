@@ -16,7 +16,7 @@ namespace hyrise {
 enum class BenchmarkMode { Ordered, Shuffled };
 
 using Duration = std::chrono::nanoseconds;
-// `steady_clock guarantees that the clock is not adjusted while benchmarking.
+// `steady_clock` guarantees that the clock is not adjusted while benchmarking.
 using TimePoint = std::chrono::steady_clock::time_point;
 
 class BenchmarkConfig {
@@ -52,7 +52,7 @@ class BenchmarkConfig {
   uint32_t clients{1};
   bool enable_visualization{false};
   bool verify{false};
-  // Defaults to false for internal use, but benchmark, console, and server binaries set caching of benchmark data as
+  // Defaults to false for internal use. Benchmark, console, and server binaries set caching of benchmark data using
   // binary files to true by default.
   bool cache_binary_tables{false};
   bool system_metrics{false};
