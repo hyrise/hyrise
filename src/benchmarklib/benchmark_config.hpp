@@ -10,13 +10,13 @@
 namespace hyrise {
 
 /**
- * "Ordered" runs each item a number of times and then the next one
- * "Shuffled" runs the items in a random order
+ * "Ordered" runs each item a number of times and then the next one.
+ * "Shuffled" runs the items in a random order.
  */
 enum class BenchmarkMode { Ordered, Shuffled };
 
 using Duration = std::chrono::nanoseconds;
-// steady_clock guarantees that the clock is not adjusted while benchmarking
+// `steady_clock guarantees that the clock is not adjusted while benchmarking.
 using TimePoint = std::chrono::steady_clock::time_point;
 
 class BenchmarkConfig {
@@ -24,6 +24,8 @@ class BenchmarkConfig {
   BenchmarkConfig() = default;
 
   explicit BenchmarkConfig(const ChunkOffset init_chunk_size);
+
+  BenchmarkConfig(const ChunkOffset init_chunk_size, const bool init_cache_binary_tables);
 
   BenchmarkConfig(const BenchmarkMode init_benchmark_mode, const ChunkOffset init_chunk_size,
                   const EncodingConfig& init_encoding_config, const bool init_chunk_indexes,
@@ -50,8 +52,9 @@ class BenchmarkConfig {
   uint32_t clients{1};
   bool enable_visualization{false};
   bool verify{false};
-  bool cache_binary_tables{
-      false};  // Defaults to false for internal use, but CLI and console set it to true by default.
+  // Defaults to false for internal use, but benchmark, console, and server binaries set caching of benchmark data as
+  // binary files to true by default.
+  bool cache_binary_tables{false};
   bool system_metrics{false};
   bool pipeline_metrics{false};
   std::vector<std::string> plugins{};
