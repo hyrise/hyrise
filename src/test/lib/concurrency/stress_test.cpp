@@ -3,14 +3,20 @@
 #include <cmath>
 #include <future>
 #include <numeric>
+#include <random>  // NOLINT
 #include <thread>
 
 #include "base_test.hpp"
 #include "benchmark_config.hpp"
 #include "hyrise.hpp"
+#include "operators/get_table.hpp"
 #include "operators/insert.hpp"
+#include "operators/print.hpp"
+#include "operators/projection.hpp"
 #include "operators/table_wrapper.hpp"
 #include "operators/union_all.hpp"
+#include "operators/update.hpp"
+#include "operators/validate.hpp"
 #include "scheduler/immediate_execution_scheduler.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/task_queue.hpp"
@@ -42,7 +48,7 @@ class StressTest : public BaseTest {
 
 TEST_F(StressTest, TestTransactionConflicts) {
   // Update a table with two entries and a chunk size of 2. This will lead to a high number of transaction conflicts
-  // and many chunks being created
+  // and many chunks being created.
   const auto table_a = load_table("resources/test_data/tbl/int_float.tbl", ChunkOffset{2});
   Hyrise::get().storage_manager.add_table("table_a", table_a);
   auto initial_sum = int64_t{0};
@@ -57,7 +63,7 @@ TEST_F(StressTest, TestTransactionConflicts) {
   auto conflicted_increments = std::atomic_uint32_t{0};
   const auto iterations_per_thread = uint32_t{20};
 
-  // Define the work package
+  // Define the work package.
   const auto run = [&]() {
     auto my_successful_increments = uint32_t{0};
     auto my_conflicted_increments = uint32_t{0};
@@ -96,7 +102,7 @@ TEST_F(StressTest, TestTransactionConflicts) {
     final_sum = *verification_table->get_value<int64_t>(ColumnID{0}, 0);
   }
 
-  // Really pessimistic, but at least 2 statements should have made it
+  // Really pessimistic, but at least 2 statements should have made it.
   EXPECT_GT(successful_increments, 2);
 
   EXPECT_EQ(successful_increments + conflicted_increments, num_threads * iterations_per_thread);
@@ -532,6 +538,90 @@ TEST_F(StressTest, ConcurrentInsertsSetChunksImmutable) {
 
   EXPECT_EQ(table->last_chunk()->size(), 2);
   EXPECT_TRUE(table->last_chunk()->is_mutable());
+}
+
+// #2649 fixed an MVCC issue where an update of a single rows sometimes yielded two rows when querying for this row.
+// This test triggers this issue.
+TEST_F(StressTest, ConcurrentUpdateVisibilityCheck) {
+  const auto definitions = TableColumnDefinitions{{"a", DataType::Int, false}, {"b", DataType::Int, false}};
+  const auto table = std::make_shared<Table>(definitions, TableType::Data, ChunkOffset{3}, UseMvcc::Yes);
+  table->append({int32_t{1}, int32_t{0}});
+  Hyrise::get().storage_manager.add_table("table_a", table);
+
+  const auto column_a = pqp_column_(ColumnID{0}, DataType::Int, false, "a");
+  const auto column_b = pqp_column_(ColumnID{1}, DataType::Int, false, "b");
+  const auto filter_predicate = equals_(column_a, 1);
+  const auto update_expressions = expression_vector(column_a, add_(column_b, 1));
+
+  const auto updated = std::make_shared<Table>(definitions, TableType::Data);
+
+  // Load reduction: see comment in `ConcurrentInsertsSetChunksImmutable`.
+  const auto update_count = 30 * (HYRISE_DEBUG && HYRISE_WITH_ADDR_UB_LEAK_SAN ? 1 : DEFAULT_LOAD_FACTOR);
+  const auto thread_count = uint32_t{100};
+  auto threads = std::vector<std::thread>{};
+  threads.reserve(thread_count);
+
+  auto successful_updates = std::atomic<uint64_t>{0};
+  auto failed_updates = std::atomic<uint64_t>{0};
+
+  const auto select_sql = std::string{"SELECT a, b FROM table_a WHERE a = 1;"};
+  const auto update_sql = std::string{"UPDATE table_a SET b = b + 1 WHERE a = 1;"};
+
+  const auto combined_sql = select_sql + " " + update_sql;
+
+  // We roughly mimic accesses to the warehouse table in TPC-C, which caused the most problems when using LTO
+  // (see #2649).
+  for (auto thread_id = uint32_t{0}; thread_id < thread_count; ++thread_id) {
+    // for (auto thread_id = uint32_t{0}; thread_id < 1; ++thread_id) {
+    threads.emplace_back([&]() {
+      auto random_device = std::random_device{};  // NOLINT
+      std::uniform_int_distribution<int8_t> select_distribution(0, 9);  // NOLINT
+
+      for (auto iteration = uint32_t{0}; iteration < update_count; ++iteration) {
+        const auto random_value = select_distribution(random_device);
+        const auto select_only = random_value < 5;
+
+        if (select_only) {
+          auto select_pipeline = SQLPipelineBuilder{select_sql}.create_pipeline();
+          const auto [status, result_table] = select_pipeline.get_result_table();
+          EXPECT_EQ(status, SQLPipelineStatus::Success);
+          EXPECT_EQ(result_table->row_count(), 1);
+        } else {
+          auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
+
+          auto select_pipeline =
+              SQLPipelineBuilder{combined_sql}.with_transaction_context(transaction_context).create_pipeline();
+          const auto [status, result_tables] = select_pipeline.get_result_tables();
+
+          if (status == SQLPipelineStatus::Success) {
+            if (random_value == 7) {
+              std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            }
+            transaction_context->commit();
+            EXPECT_EQ(result_tables.size(), 2);
+            EXPECT_EQ(result_tables[0]->row_count(), 1);
+
+            ++successful_updates;
+          } else {
+            ++failed_updates;
+          }
+        }
+      }
+    });
+  }
+
+  for (auto& thread : threads) {
+    thread.join();
+  }
+
+  EXPECT_GT(successful_updates.load(), 2);
+  std::cout << successful_updates.load() << " & " << failed_updates.load() << std::endl;
+
+  auto select_pipeline = SQLPipelineBuilder{"SELECT a, b FROM table_a WHERE a = 1;"}.create_pipeline();
+  const auto [status, result_table] = select_pipeline.get_result_table();
+  EXPECT_EQ(status, SQLPipelineStatus::Success);
+  EXPECT_EQ(result_table->row_count(), 1);
+  EXPECT_EQ(*result_table->get_value<int32_t>(ColumnID{1}, 0), successful_updates.load());
 }
 
 // Consuming operators register at their inputs and deregister when they are executed. Thus, operators can clear

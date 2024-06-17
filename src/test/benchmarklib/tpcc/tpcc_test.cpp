@@ -3,6 +3,7 @@
 #include "operators/insert.hpp"
 #include "operators/table_wrapper.hpp"
 #include "operators/validate.hpp"
+#include "scheduler/node_queue_scheduler.hpp"
 #include "tpcc/constants.hpp"
 #include "tpcc/procedures/tpcc_delivery.hpp"
 #include "tpcc/procedures/tpcc_new_order.hpp"
@@ -15,6 +16,7 @@ namespace hyrise {
 class TPCCTest : public BaseTest {
  public:
   static void SetUpTestCase() {
+    Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
     auto benchmark_config = std::make_shared<BenchmarkConfig>(BenchmarkConfig::get_default_config());
     auto table_generator = TPCCTableGenerator{NUM_WAREHOUSES, benchmark_config};
 
@@ -23,7 +25,7 @@ class TPCCTest : public BaseTest {
 
   void SetUp() override {
     for (const auto& [table_name, table_info] : tables) {
-      // Copy the data into a new table in order to isolate tests
+      // Copy the data into a new table in order to isolate tests.
       const auto generated_table = table_info.table;
       auto isolated_table =
           std::make_shared<Table>(generated_table->column_definitions(), TableType::Data, std::nullopt, UseMvcc::Yes);
@@ -79,7 +81,7 @@ class TPCCTest : public BaseTest {
                                                               {"ORDER", NUM_WAREHOUSES * 30'000}};
 
   static std::unordered_map<std::string, BenchmarkTableInfo> tables;
-  static constexpr auto NUM_WAREHOUSES = 2;
+  static constexpr auto NUM_WAREHOUSES = 1;
 };
 
 std::unordered_map<std::string, BenchmarkTableInfo> TPCCTest::tables;
@@ -352,13 +354,45 @@ TEST_F(TPCCTest, NewOrderUnusedItemId) {
   }
 }
 
+TEST_F(TPCCTest, Payment2) {
+  auto successful_runs = std::atomic_uint32_t{0};
+  auto failed_runs = std::atomic_uint32_t{0};
+
+  constexpr auto thread_count = uint32_t{24};
+  constexpr auto iterations_per_thread = uint32_t{50'000};
+
+  auto threads = std::vector<std::thread>{};
+  threads.reserve(thread_count);
+
+  for (auto thread_id = uint32_t{0}; thread_id < thread_count; ++thread_id) {
+    // for (auto thread_id = uint32_t{0}; thread_id < 1; ++thread_id) {
+    threads.emplace_back([&]() {
+      for (auto iteration = uint32_t{0}; iteration < iterations_per_thread; ++iteration) {
+        auto sql_executor = BenchmarkSQLExecutor{nullptr, std::nullopt};
+        auto payment = TPCCPayment{NUM_WAREHOUSES, sql_executor};
+        const auto return_value = payment.execute();
+        // ASSERT_TRUE(payment.execute());
+
+        successful_runs += return_value;
+        failed_runs += !return_value;
+      }
+    });
+  }
+
+  for (auto& thread : threads) {
+    thread.join();
+  }
+
+  std::cout << successful_runs.load() << " & " << failed_runs.load() << std::endl;
+}
+
 TEST_F(TPCCTest, PaymentCustomerByName) {
   // We will cover customer selection by ID in OrderStatusCustomerById
   const auto old_time = time(nullptr);
 
-  BenchmarkSQLExecutor sql_executor{nullptr, std::nullopt};
+  auto sql_executor = BenchmarkSQLExecutor{nullptr, std::nullopt};
   auto payment = TPCCPayment{NUM_WAREHOUSES, sql_executor};
-  // Generate random payments until we have one that identified the customer by name
+  // Generate random payments until we have one that identified the customer by name.
   while (!payment.select_customer_by_name) {
     payment = TPCCPayment{NUM_WAREHOUSES, sql_executor};
   }
