@@ -143,7 +143,7 @@ TEST_F(AttributeStatisticsTest, OutputToStream) {
 Generic value count: 40; distinct count: 20; bin count: 1;  Bins
   [1 -> 100]: Height: 40; DistinctCount: 20
 
-MinMaxFilter: {0 100}
+MinMaxFilter: {0, 100}
 RangeFilter: { [0, 20], [87, 100] }
 NullValueRatio: 0.2
 DistinctValueCount: 12

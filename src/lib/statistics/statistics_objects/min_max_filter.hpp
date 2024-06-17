@@ -48,8 +48,7 @@ class MinMaxFilter : public AbstractStatisticsObject, public std::enable_shared_
 
 template <typename T>
 std::ostream& operator<<(std::ostream& stream, const MinMaxFilter<T>& filter) {
-  stream << "{" << filter.min << " " << filter.max << "}";
-  return stream;
+  return stream << "{" << filter.min << ", " << filter.max << "}";
 }
 
 EXPLICITLY_DECLARE_DATA_TYPES(MinMaxFilter);

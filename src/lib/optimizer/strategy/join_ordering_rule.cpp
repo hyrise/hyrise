@@ -54,8 +54,8 @@ std::shared_ptr<AbstractLQPNode> perform_join_ordering_recursively(
   caching_cost_estimator->cardinality_estimator->guarantee_join_graph(*join_graph);
 
   /**
-   * Select and call the actual join ordering algorithm. Simple heuristic: Use DpCcp for any query with less than X
-   * tables and GOO for everything more complex.
+   * Select and call the actual join ordering algorithm. Simple heuristic: Use DpCcp for any query with less than
+   * MIN_VERTICES_FOR_HEURISTIC tables and GreedyOperatorOrdering for everything more complex.
    */
   auto result_lqp = std::shared_ptr<AbstractLQPNode>{};
   DebugAssert(!join_graph->vertices.empty(), "There should be nodes in the join graph.");
