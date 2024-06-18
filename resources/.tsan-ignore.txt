@@ -2,3 +2,10 @@
 # However, be aware of concurrent_vector entries being potentially uninitialized:
 #   https://software.intel.com/en-us/blogs/2009/04/09/delusion-of-tbbconcurrent_vectors-size-or-3-ways-to-traverse-in-parallel-correctly
 race:tbb::*
+
+# TSAN is not aware of how the MVCC concept works. It complains about a data race when reading
+# value_segment._values.size() while resizing it, which is acceptable in this case. The vector is
+# pre-allocated so that resize() never reallocates. If the size is read while the values are not
+# yet fully written (see actual usage in Insert operator), MVCC validation makes sure that those
+# rows are ignored.
+race:^hyrise::ValueSegment*::resize
