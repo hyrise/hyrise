@@ -296,7 +296,7 @@ void AbstractTableGenerator::generate_and_store() {
    * Add the Tables to the StorageManager
    */
   {
-    std::cout << "- Adding tables to StorageManager and generating table statistics.\n" << std::flush;
+    std::cout << "- Adding tables to StorageManager and generating table statistics\n" << std::flush;
     auto& storage_manager = Hyrise::get().storage_manager;
     auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
     jobs.reserve(table_info_by_name.size());
@@ -331,7 +331,7 @@ void AbstractTableGenerator::generate_and_store() {
   if (_benchmark_config->chunk_indexes) {
     _create_chunk_indexes(table_info_by_name);
   } else {
-    std::cout << "- No chunk indexes created as --chunk_indexes was not specified or set to false.\n";
+    std::cout << "- No chunk indexes created as --chunk_indexes was not specified or set to false\n";
   }
 
   /**
@@ -340,7 +340,7 @@ void AbstractTableGenerator::generate_and_store() {
   if (_benchmark_config->table_indexes) {
     _create_table_indexes(table_info_by_name);
   } else {
-    std::cout << "- No table indexes created as --table_indexes was not specified or set to false.\n";
+    std::cout << "- No table indexes created as --table_indexes was not specified or set to false\n";
   }
 
   // Set scheduler back to previously used scheduler.

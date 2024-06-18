@@ -24,19 +24,16 @@ Cardinality MinMaxFilter<T>::estimate_cardinality(const PredicateCondition /*pre
   // is estimated assuming equi-distribution). For that, we would also need the cardinality of the underlying data.
   // Currently, as MinMaxFilters are on a per-segment basis and estimate_cardinality is called for an entire column,
   // there is no use for this.
-  Fail("Currently, MinMaxFilters cannot be used to estimate cardinalities");
+  Fail("Currently, MinMaxFilters cannot be used to estimate cardinalities.");
 }
 
 template <typename T>
-std::shared_ptr<AbstractStatisticsObject> MinMaxFilter<T>::sliced(
+std::shared_ptr<const AbstractStatisticsObject> MinMaxFilter<T>::sliced(
     const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
     const std::optional<AllTypeVariant>& variant_value2) const {
   if (does_not_contain(predicate_condition, variant_value, variant_value2)) {
     return nullptr;
   }
-
-  T sliced_min;
-  T sliced_max;
   const auto value = boost::get<T>(variant_value);
 
   // If value is either sliced_min or max, we do not take the opportunity to slightly improve the new object.
@@ -44,21 +41,15 @@ std::shared_ptr<AbstractStatisticsObject> MinMaxFilter<T>::sliced(
   // The impact should be small.
   switch (predicate_condition) {
     case PredicateCondition::Equals:
-      sliced_min = value;
-      sliced_max = value;
-      break;
+      return std::make_shared<MinMaxFilter<T>>(value, value);
 
     case PredicateCondition::LessThan:
     case PredicateCondition::LessThanEquals:
-      sliced_min = min;
-      sliced_max = value;
-      break;
+      return std::make_shared<MinMaxFilter<T>>(min, value);
 
     case PredicateCondition::GreaterThan:
     case PredicateCondition::GreaterThanEquals:
-      sliced_min = value;
-      sliced_max = max;
-      break;
+      return std::make_shared<MinMaxFilter<T>>(value, max);
 
     case PredicateCondition::BetweenInclusive: {
       Assert(variant_value2, "Between operator needs two values.");
@@ -85,17 +76,13 @@ std::shared_ptr<AbstractStatisticsObject> MinMaxFilter<T>::sliced(
     }
 
     default:
-      sliced_min = min;
-      sliced_max = max;
+      return std::make_shared<MinMaxFilter<T>>(min, max);
   }
-
-  const auto filter = std::make_shared<MinMaxFilter<T>>(sliced_min, sliced_max);
-  return filter;
 }
 
 template <typename T>
-std::shared_ptr<AbstractStatisticsObject> MinMaxFilter<T>::scaled(const Selectivity /*selectivity*/) const {
-  return std::make_shared<MinMaxFilter<T>>(min, max);
+std::shared_ptr<const AbstractStatisticsObject> MinMaxFilter<T>::scaled(const Selectivity /*selectivity*/) const {
+  return this->shared_from_this();
 }
 
 template <typename T>
@@ -161,8 +148,8 @@ bool MinMaxFilter<T>::does_not_contain(const PredicateCondition predicate_condit
     // NOLINTBEGIN(bugprone-branch-clone)
     // clang-tidy considers the following two cases to be identical. They are only identical for non-strings.
     case PredicateCondition::Like: {
-      // We use the ascii collation for min/max filters. This means that lower case letters are considered larger than
-      // upper case letters. This can lead to a situation, where the USA% (e.g., Join Order Benchamrk query 15c) is not
+      // We use the ASCII collation for MinMaxFilters. This means that lower case letters are considered larger than
+      // upper case letters. This can lead to a situation where USA% (e.g., Join Order Benchmark query 15c) is not
       // pruned whenever just a single value starts with a lower case letter.
       // Examples for the handling of Like predicate:
       //                        | test%         | %test   | test\x7F% | test           | '' (empty string)

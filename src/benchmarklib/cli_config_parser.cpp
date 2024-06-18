@@ -66,7 +66,7 @@ std::shared_ptr<BenchmarkConfig> CLIConfigParser::parse_cli_options(const cxxopt
 
   if (enable_scheduler && clients == 1) {
     std::cout << "\n\n- WARNING: You are running in multi-threaded (MT) mode but have set --clients=1.\n";
-    std::cout << "           You will achieve better MT performance by executing multiple queries in parallel.\n\n";
+    std::cout << "           You will achieve better MT performance by executing multiple queries in parallel\n\n";
   }
 
   // Determine benchmark and display it
@@ -84,7 +84,7 @@ std::shared_ptr<BenchmarkConfig> CLIConfigParser::parse_cli_options(const cxxopt
   const auto enable_visualization = parse_result["visualize"].as<bool>();
   if (enable_visualization) {
     Assert(clients == 1, "Cannot visualize plans with multiple clients as files may be overwritten.");
-    std::cout << "- Visualizing the plans into SVG files. This will make the performance numbers invalid.\n";
+    std::cout << "- Visualizing the plans into SVG files. This will make the performance numbers invalid\n";
   }
 
   // Get the specified encoding type.
@@ -142,7 +142,7 @@ std::shared_ptr<BenchmarkConfig> CLIConfigParser::parse_cli_options(const cxxopt
 
   const auto verify = parse_result["verify"].as<bool>();
   if (verify) {
-    std::cout << "- Automatically verifying results with SQLite. This will make the performance numbers invalid.\n";
+    std::cout << "- Automatically verifying results with SQLite. This will make the performance numbers invalid\n";
   }
 
   const auto cache_binary_tables = !parse_result["dont_cache_binary_tables"].as<bool>();
@@ -155,17 +155,17 @@ std::shared_ptr<BenchmarkConfig> CLIConfigParser::parse_cli_options(const cxxopt
   const auto system_metrics = parse_result["system_metrics"].as<bool>();
   if (system_metrics) {
     Assert(!output_file_string.empty(), "--system_metrics only makes sense when an output file is set.");
-    std::cout << "- Tracking system metrics.\n";
+    std::cout << "- Tracking system metrics\n";
   } else {
-    std::cout << "- Not tracking system metrics.\n";
+    std::cout << "- Not tracking system metrics\n";
   }
 
   const auto pipeline_metrics = parse_result["pipeline_metrics"].as<bool>();
   if (pipeline_metrics) {
     Assert(!output_file_string.empty(), "--pipeline_metrics only makes sense when an output file is set.");
-    std::cout << "- Tracking SQL pipeline metrics.\n";
+    std::cout << "- Tracking SQL pipeline metrics\n";
   } else {
-    std::cout << "- Not tracking SQL pipeline metrics.\n";
+    std::cout << "- Not tracking SQL pipeline metrics\n";
   }
 
   auto plugins = std::vector<std::string>{};

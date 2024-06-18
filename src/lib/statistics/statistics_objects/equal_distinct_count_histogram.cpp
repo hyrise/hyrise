@@ -181,7 +181,7 @@ BinID EqualDistinctCountHistogram<T>::bin_count() const {
 }
 
 template <typename T>
-BinID EqualDistinctCountHistogram<T>::_bin_for_value(const T& value) const {
+BinID EqualDistinctCountHistogram<T>::bin_for_value(const T& value) const {
   const auto iter = std::lower_bound(_bin_maxima.cbegin(), _bin_maxima.cend(), value);
   const auto index = static_cast<BinID>(std::distance(_bin_maxima.cbegin(), iter));
 
@@ -193,7 +193,7 @@ BinID EqualDistinctCountHistogram<T>::_bin_for_value(const T& value) const {
 }
 
 template <typename T>
-BinID EqualDistinctCountHistogram<T>::_next_bin_for_value(const T& value) const {
+BinID EqualDistinctCountHistogram<T>::next_bin_for_value(const T& value) const {
   const auto it = std::upper_bound(_bin_maxima.cbegin(), _bin_maxima.cend(), value);
 
   if (it == _bin_maxima.cend()) {
