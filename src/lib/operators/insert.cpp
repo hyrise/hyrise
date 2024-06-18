@@ -250,6 +250,9 @@ void Insert::_on_commit_records(const CommitID cid) {
 
     set_atomic_max(mvcc_data->max_begin_cid, cid);
 
+    // This fence ensures that the changes to TID (which are not sequentially consistent) are visible to other threads.
+    std::atomic_thread_fence(std::memory_order_release);
+
     // Deregister the pending Insert and try to mark the chunk as immutable. We might be the last committing Insert
     // operator inserting into a chunk that reached its target size. In this case, the Insert operator that added a new
     // chunk to the table allowed the chunk to be marked, i.e., it set the `reached_target_size` flag. Then,
