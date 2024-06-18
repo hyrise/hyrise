@@ -38,7 +38,7 @@ int main(int argc, char* argv[]) {
 
   const auto queries_str = cli_parse_result["queries"].as<std::string>();
   const auto scale_factor = cli_parse_result["scale"].as<float>();
-  const auto config = std::make_shared<BenchmarkConfig>(CLIConfigParser::parse_cli_options(cli_parse_result));
+  const auto config = CLIConfigParser::parse_cli_options(cli_parse_result);
 
   auto query_subset = std::optional<std::unordered_set<std::string>>{};
   if (queries_str == "all") {

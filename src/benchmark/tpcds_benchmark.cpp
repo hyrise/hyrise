@@ -56,7 +56,7 @@ int main(int argc, char* argv[]) {
   }
   scale_factor = cli_parse_result["scale"].as<int32_t>();
 
-  config = std::make_shared<BenchmarkConfig>(CLIConfigParser::parse_cli_options(cli_parse_result));
+  config = CLIConfigParser::parse_cli_options(cli_parse_result);
 
   std::cout << "- TPC-DS scale factor is " << scale_factor << '\n';
 

@@ -52,6 +52,11 @@ def main():
     console.sendline("print test")
     console.expect("Table does not exist in StorageManager")
 
+    # Test changing a setting. Also, turn binary caching off to avoid problems with cached binaries (e.g.,
+    # `hyriseServer_test.py` requires a different chunk size for TPC-H).
+    console.sendline("setting binary_caching off")
+    console.expect("Binary caching turned off")
+
     # Test load command.
     console.sendline("load resources/test_data/tbl/10_ints.tbl test")
     console.expect('Loading .*tbl/10_ints.tbl into table "test"')
