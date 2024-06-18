@@ -24,7 +24,7 @@ void payments() {
   constexpr auto ITERATIONS_PER_THREAD = uint32_t{50'000};
 
   Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
-  auto benchmark_config = std::make_shared<BenchmarkConfig>(BenchmarkConfig::get_default_config());
+  auto benchmark_config = std::make_shared<BenchmarkConfig>();
   auto table_generator = TPCCTableGenerator{NUM_WAREHOUSES, benchmark_config};
   tables = table_generator.generate();
 
