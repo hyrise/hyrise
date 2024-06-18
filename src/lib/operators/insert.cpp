@@ -153,7 +153,9 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
       // Make sure the MVCC data is written before the first segment (and, thus, the chunk) is resized.
       std::atomic_thread_fence(std::memory_order_seq_cst);
 
-      // Grow data Segments.
+      // "Grow" data segments: Segments are pre-allocated during construction, we resize() to make default-constructed
+      // cells visible so that they can be written in the next Insert step (note, even though those cells are now
+      // visible before being written to, they are still invisible from an MVCC point of view).
       // Do so in REVERSE column order so that the resize of `Chunk::_segments.front()` happens last. It is this last
       // resize that makes the new row count visible to the outside world.
       const auto old_size = target_chunk->size();
@@ -169,9 +171,9 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
               std::dynamic_pointer_cast<ValueSegment<ColumnDataType>>(target_chunk->get_segment(column_id));
           Assert(value_segment, "Cannot insert into non-ValueSegments.");
 
-          // Cannot guarantee resize without reallocation. The ValueSegment should have been allocated with the target
-          // table's target chunk size reserved.
-          Assert(value_segment->values().capacity() >= new_size, "ValueSegment too small.");
+          // Cannot guarantee resize without reallocation when growing. We thus check that the ValueSegment has been
+          // allocated with the target table's target chunk size reserved.
+          Assert(value_segment->values().capacity() >= new_size, "ValueSegment insufficiently pre-allocated.");
           value_segment->resize(new_size);
         });
 

@@ -119,17 +119,7 @@ void ValueSegment<T>::set_null_value(const ChunkOffset chunk_offset) {
   (*_null_values)[chunk_offset] = true;
 }
 
-/**
- * Disabling thread sanitizer here as reads of _values's size concurrent to resize() are fine. The vector is
- * pre-allocated so that resize() never reallocates. If the size is read while the values are not yet fully written (see
- * actual usage in Insert operator), MVCC validation makes sure that those rows are ignored anyways.
- */
 template <typename T>
-#if defined(__has_feature)
-#  if __has_feature(thread_sanitizer)
-__attribute__((no_sanitize("thread")))
-#  endif
-#endif
 ChunkOffset ValueSegment<T>::size() const {
   return static_cast<ChunkOffset>(_values.size());
 }
