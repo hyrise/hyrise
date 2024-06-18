@@ -127,7 +127,7 @@ def main():
     benchmark.expect_exact("Max duration per item is 10 seconds")
     benchmark.expect_exact("Warmup duration per item is 2 seconds")
     benchmark.expect_exact(
-        "Automatically verifying results with SQLite. This will make the performance numbers invalid."
+        "Automatically verifying results with SQLite. This will make the performance numbers invalid"
     )
     benchmark.expect_exact("Benchmarking queries from third_party/join-order-benchmark")
     benchmark.expect_exact("Running on tables from resources/test_data/imdb_sample/")
