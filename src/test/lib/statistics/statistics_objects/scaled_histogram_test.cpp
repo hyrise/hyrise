@@ -66,6 +66,7 @@ TEST_F(ScaledHistogramTest, FromReferencedHistogram) {
     const auto expected_bin_distinct_count = std::min(_referenced_histogram->bin_distinct_count(bin_id), bin_height);
     expected_distinct_count += expected_bin_distinct_count;
     EXPECT_FLOAT_EQ(scaled_histogram->bin_distinct_count(bin_id), expected_bin_distinct_count);
+    EXPECT_LE(scaled_histogram->bin_distinct_count(bin_id), bin_height);
   }
 
   for (const auto value : std::vector<int32_t>{0, 10, 15, 20, 25, 30, 40, 55, 65, 105}) {
