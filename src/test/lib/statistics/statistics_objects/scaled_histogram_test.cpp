@@ -104,6 +104,26 @@ TEST_F(ScaledHistogramTest, CopiesDomain) {
   EXPECT_EQ(actual_domain, expected_domain);
 }
 
+TEST_F(ScaledHistogramTest, BinHeightAndDistinctCount) {
+  // The distinct count of a bin can usually not be adjusted by scaling and remains the same. However, it must not be
+  // higher than the bin height, i.e., the total number of elements in the bin.
+  const auto scaled_histogram = ScaledHistogram<int32_t>::from_referenced_histogram(*_referenced_histogram, 0.1f);
+
+  //   BinID                |  0   |  1   |  2
+  //  ----------------------+------+------+------
+  //   original height      | 13   | 12   | 65
+  //   original dist. count |  3   |  4   |  5
+  //   scaled height        |  1.3 |  1.2 |  6.5
+  //   scaled dist. count   |  1.3 |  1.2 |  5
+
+  EXPECT_FLOAT_EQ(scaled_histogram->bin_height(BinID{0}), 1.3f);
+  EXPECT_FLOAT_EQ(scaled_histogram->bin_distinct_count(BinID{0}), 1.3f);
+  EXPECT_FLOAT_EQ(scaled_histogram->bin_height(BinID{1}), 1.2f);
+  EXPECT_FLOAT_EQ(scaled_histogram->bin_distinct_count(BinID{1}), 1.2f);
+  EXPECT_FLOAT_EQ(scaled_histogram->bin_height(BinID{2}), 6.5f);
+  EXPECT_FLOAT_EQ(scaled_histogram->bin_distinct_count(BinID{2}), 5.0f);
+}
+
 TEST_P(ScaledHistogramTest, ReferencesGenericHistogram) {
   resolve_data_type(GetParam(), [&](auto type) {
     using HistogramDataType = typename decltype(type)::type;
