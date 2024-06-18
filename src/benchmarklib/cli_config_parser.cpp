@@ -28,11 +28,11 @@
 
 namespace hyrise {
 
-BenchmarkConfig CLIConfigParser::parse_cli_options(const cxxopts::ParseResult& parse_result) {
-  const auto default_config = BenchmarkConfig::get_default_config();
+std::shared_ptr<BenchmarkConfig> CLIConfigParser::parse_cli_options(const cxxopts::ParseResult& parse_result) {
+  const auto default_config = BenchmarkConfig{};
 
-  // Display info about output destination
-  std::optional<std::string> output_file_path;
+  // Display info about output destination.
+  auto output_file_path = std::optional<std::string>{};
   const auto output_file_string = parse_result["output"].as<std::string>();
   if (!output_file_string.empty()) {
     output_file_path = output_file_string;
@@ -71,7 +71,7 @@ BenchmarkConfig CLIConfigParser::parse_cli_options(const cxxopts::ParseResult& p
 
   // Determine benchmark and display it
   const auto benchmark_mode_str = parse_result["mode"].as<std::string>();
-  auto benchmark_mode = BenchmarkMode::Ordered;  // Just to init it deterministically
+  auto benchmark_mode = BenchmarkMode::Ordered;  // Just to init it deterministically.
   if (benchmark_mode_str == "Ordered") {
     benchmark_mode = BenchmarkMode::Ordered;
   } else if (benchmark_mode_str == "Shuffled") {
@@ -87,12 +87,12 @@ BenchmarkConfig CLIConfigParser::parse_cli_options(const cxxopts::ParseResult& p
     std::cout << "- Visualizing the plans into SVG files. This will make the performance numbers invalid.\n";
   }
 
-  // Get the specified encoding type
-  std::unique_ptr<EncodingConfig> encoding_config{};
+  // Get the specified encoding type.
+  auto encoding_config = std::unique_ptr<EncodingConfig>{};
   const auto encoding_type_str = parse_result["encoding"].as<std::string>();
   const auto compression_type_str = parse_result["compression"].as<std::string>();
   if (boost::algorithm::ends_with(encoding_type_str, ".json")) {
-    // Use encoding file instead of default type
+    // Use encoding file instead of default type.
     encoding_config = std::make_unique<EncodingConfig>(parse_encoding_config(encoding_type_str));
     std::cout << "- Encoding is custom from " << encoding_type_str << "\n";
 
@@ -117,7 +117,7 @@ BenchmarkConfig CLIConfigParser::parse_cli_options(const cxxopts::ParseResult& p
     std::cout << "WARNING: Creating chunk and table indexes simultaneously.\n";
   }
 
-  // Get all other variables
+  // Get all other variables.
   const auto chunk_size = parse_result["chunk_size"].as<ChunkOffset>();
   std::cout << "- Chunk size is " << chunk_size << '\n';
 
@@ -175,32 +175,17 @@ BenchmarkConfig CLIConfigParser::parse_cli_options(const cxxopts::ParseResult& p
     boost::split(plugins, comma_separated_plugins, boost::is_any_of(","), boost::token_compress_on);
   }
 
-  return BenchmarkConfig{benchmark_mode,
-                         chunk_size,
-                         *encoding_config,
-                         chunk_indexes,
-                         table_indexes,
-                         max_runs,
-                         timeout_duration,
-                         warmup_duration,
-                         output_file_path,
-                         enable_scheduler,
-                         cores,
-                         data_preparation_cores,
-                         clients,
-                         enable_visualization,
-                         verify,
-                         cache_binary_tables,
-                         system_metrics,
-                         pipeline_metrics,
-                         plugins};
+  return std::make_shared<BenchmarkConfig>(
+      benchmark_mode, chunk_size, *encoding_config, chunk_indexes, table_indexes, max_runs, timeout_duration,
+      warmup_duration, output_file_path, enable_scheduler, cores, data_preparation_cores, clients, enable_visualization,
+      verify, cache_binary_tables, system_metrics, pipeline_metrics, plugins);
 }
 
 EncodingConfig CLIConfigParser::parse_encoding_config(const std::string& encoding_file_str) {
   Assert(std::filesystem::is_regular_file(encoding_file_str), "No such file: " + encoding_file_str);
 
-  nlohmann::json encoding_config_json;
-  std::ifstream json_file{encoding_file_str};
+  auto encoding_config_json = nlohmann::json{};
+  auto json_file = std::ifstream{encoding_file_str};
   json_file >> encoding_config_json;
 
   const auto encoding_spec_from_json = [](const nlohmann::json& json_spec) {
@@ -213,7 +198,7 @@ EncodingConfig CLIConfigParser::parse_encoding_config(const std::string& encodin
   Assert(encoding_config_json.count("default"), "Config must contain default encoding.");
   const auto default_spec = encoding_spec_from_json(encoding_config_json["default"]);
 
-  DataTypeEncodingMapping type_encoding_mapping;
+  auto type_encoding_mapping = DataTypeEncodingMapping{};
   const auto has_type_encoding = encoding_config_json.find("type") != encoding_config_json.end();
   if (has_type_encoding) {
     const auto type_encoding = encoding_config_json["type"];
@@ -232,7 +217,7 @@ EncodingConfig CLIConfigParser::parse_encoding_config(const std::string& encodin
     }
   }
 
-  TableSegmentEncodingMapping custom_encoding_mapping;
+  auto custom_encoding_mapping = TableSegmentEncodingMapping{};
   const auto has_custom_encoding = encoding_config_json.find("custom") != encoding_config_json.end();
 
   if (has_custom_encoding) {
