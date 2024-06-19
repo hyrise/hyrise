@@ -44,7 +44,7 @@ pkgs.stdenv.mkDerivation {
     cmake
     python3
     sqlite
-    lld
+    lld_18
     ninja
     parallel
     coreutils
