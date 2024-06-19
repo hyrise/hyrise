@@ -10,9 +10,6 @@
 name: Nix-Build of Hyrise
 on: push
 
-env:
-  CLONE_COMMAND: git clone --depth 1 -b $GITHUB_REF_NAME --single-branch --recursive ${{ github.server_url }}/${{ github.repository }}.git /app/hyrise
-
 jobs:
   nix-gcc-debug:
     runs-on: ubuntu-latest
@@ -20,13 +17,11 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
-          path: /app/hyrise
           submodules: 'recursive'
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@main
       - name: Nix - Hyrise Debug Clang Build
         run: |
-          cd /app/hyrise
           nix-shell --pure --run "\
             mkdir nix-cmake-build && cd nix-cmake-build && \
             cmake -GNinja -DCMAKE_BUILD_TYPE=Debug .. && \
@@ -39,13 +34,11 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
-          path: /app/hyrise
           submodules: 'recursive'
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@main
       - name: Nix - Hyrise RelClang Build
         run: |
-          cd /app/hyrise
           nix-shell --pure --run "\
             mkdir cmake-nix-build && cd cmake-nix-build && \
             cmake -GNinja -DCMAKE_BUILD_TYPE=Release .. && \
@@ -58,13 +51,11 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
-          path: /app/hyrise
           submodules: 'recursive'
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@main
       - name: Nix - Hyrise Debug Clang Build
         run: |
-          cd /app/hyrise
           nix-shell --pure --run "\
             mkdir nix-cmake-build && cd nix-cmake-build && \
             cmake -GNinja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ .. && \
@@ -77,13 +68,11 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
-          path: /app/hyrise
           submodules: 'recursive'
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@main
       - name: Nix - Hyrise Release Clang Build
         run: |
-          cd /app/hyrise
           nix-shell --pure --run "\
             mkdir nix-cmake-build && cd nix-cmake-build && \
             cmake -GNinja -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ .. && \
