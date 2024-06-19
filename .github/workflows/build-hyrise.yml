@@ -24,8 +24,8 @@ jobs:
         run: |
           nix-shell --pure --run "\
             mkdir nix-cmake-build && cd nix-cmake-build && \
-            cmake -GNinja -DCMAKE_BUILD_TYPE=Debug .. && \
-            ninja
+            cmake -DCMAKE_BUILD_TYPE=Debug .. && \
+            make -W hyriseServer
           "
 
   nix-gcc-release:
@@ -41,8 +41,8 @@ jobs:
         run: |
           nix-shell --pure --run "\
             mkdir cmake-nix-build && cd cmake-nix-build && \
-            cmake -GNinja -DCMAKE_BUILD_TYPE=Release .. && \
-            ninja
+            cmake -DCMAKE_BUILD_TYPE=Release .. && \
+            make -W hyriseServer
           "
 
   nix-clang-debug:
@@ -58,8 +58,8 @@ jobs:
         run: |
           nix-shell --pure --run "\
             mkdir nix-cmake-build && cd nix-cmake-build && \
-            cmake -GNinja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ .. && \
-            ninja
+            cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ .. && \
+            make -W hyriseServer
           "
 
   nix-clang-release:
@@ -75,6 +75,6 @@ jobs:
         run: |
           nix-shell --pure --run "\
             mkdir nix-cmake-build && cd nix-cmake-build && \
-            cmake -GNinja -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ .. && \
-            ninja
+            cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ .. && \
+            make -W hyriseServer
           "
