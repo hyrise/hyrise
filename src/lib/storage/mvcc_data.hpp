@@ -58,8 +58,8 @@ struct MvccData {
 
  private:
   // These vectors are pre-allocated. Do not resize them as someone might be reading them concurrently.
-  pmr_vector<CommitID> _begin_cids;                  // < CommitID when record was added
-  pmr_vector<CommitID> _end_cids;                    // < CommitID when record was deleted
+  pmr_vector<copyable_atomic<CommitID>> _begin_cids;                  // < CommitID when record was added
+  pmr_vector<copyable_atomic<CommitID>> _end_cids;                    // < CommitID when record was deleted
   pmr_vector<copyable_atomic<TransactionID>> _tids;  // < 0 unless locked by a transaction
 
   std::atomic_uint32_t _pending_inserts{0};

@@ -26,8 +26,8 @@ bool AbstractTPCCProcedure::execute() {
   auto success = _on_execute();
 
   DebugAssert(transaction_context->phase() == TransactionPhase::Committed ||
-                  transaction_context->phase() == TransactionPhase::RolledBackByUser ||
-                  transaction_context->phase() == TransactionPhase::RolledBackAfterConflict,
+              transaction_context->phase() == TransactionPhase::RolledBackByUser ||
+              transaction_context->phase() == TransactionPhase::RolledBackAfterConflict,
               "Expected TPC-C transaction to either commit or roll back the MVCC transaction");
 
   return success;
