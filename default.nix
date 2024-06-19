@@ -38,7 +38,7 @@ pkgs.stdenv.mkDerivation {
   # https://discourse.nixos.org/t/use-buildinputs-or-nativebuildinputs-for-nix-shell/8464
 
   nativeBuildInputs = with pkgs; [
-    gcc13
+    gcc11
     clang_15
     autoconf
     cmake
