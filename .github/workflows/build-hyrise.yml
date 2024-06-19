@@ -16,20 +16,14 @@ env:
 jobs:
   nix-gcc-debug:
     runs-on: ubuntu-latest
-    container:
-      image: nixos/nix:latest
     steps:
       - name: Checkout Repository
-        run: |
-          mkdir /app/hyrise && cd /app
-          nix-shell -p git --run "$CLONE_COMMAND"
-      - name: System Stats
-        run: |
-          cd /app/hyrise
-          nix-shell --pure --run "\
-            gcc --version && \
-            g++ --version
-          "
+        uses: actions/checkout@v4
+        with:
+          path: /app/hyrise
+          submodules: 'recursive'
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@main
       - name: Nix - Hyrise Debug Clang Build
         run: |
           cd /app/hyrise
@@ -38,15 +32,17 @@ jobs:
             cmake -GNinja -DCMAKE_BUILD_TYPE=Debug .. && \
             ninja
           "
+
   nix-gcc-release:
     runs-on: ubuntu-latest
-    container:
-      image: nixos/nix:latest
     steps:
       - name: Checkout Repository
-        run: |
-          mkdir /app/hyrise && cd /app
-          nix-shell -p git --run "$CLONE_COMMAND"
+        uses: actions/checkout@v4
+        with:
+          path: /app/hyrise
+          submodules: 'recursive'
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@main
       - name: Nix - Hyrise RelClang Build
         run: |
           cd /app/hyrise
@@ -55,22 +51,17 @@ jobs:
             cmake -GNinja -DCMAKE_BUILD_TYPE=Release .. && \
             ninja
           "
+
   nix-clang-debug:
     runs-on: ubuntu-latest
-    container:
-      image: nixos/nix:latest
     steps:
       - name: Checkout Repository
-        run: |
-          mkdir /app/hyrise && cd /app
-          nix-shell -p git --run "$CLONE_COMMAND"
-      - name: System Stats
-        run: |
-          cd /app/hyrise
-          nix-shell --pure --run "\
-            clang --version && \
-            clang++ --version
-          "
+        uses: actions/checkout@v4
+        with:
+          path: /app/hyrise
+          submodules: 'recursive'
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@main
       - name: Nix - Hyrise Debug Clang Build
         run: |
           cd /app/hyrise
@@ -79,22 +70,17 @@ jobs:
             cmake -GNinja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ .. && \
             ninja
           "
+
   nix-clang-release:
     runs-on: ubuntu-latest
-    container:
-      image: nixos/nix:latest
     steps:
       - name: Checkout Repository
-        run: |
-          mkdir /app/hyrise && cd /app
-          nix-shell -p git --run "$CLONE_COMMAND"
-      - name: System Stats
-        run: |
-          cd /app/hyrise
-          nix-shell --pure --run "\
-            clang --version && \
-            clang++ --version
-          "
+        uses: actions/checkout@v4
+        with:
+          path: /app/hyrise
+          submodules: 'recursive'
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@main
       - name: Nix - Hyrise Release Clang Build
         run: |
           cd /app/hyrise
