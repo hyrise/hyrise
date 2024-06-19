@@ -80,7 +80,7 @@ class JoinHash : public AbstractJoinOperator {
   void _on_cleanup() override;
 
   std::unique_ptr<AbstractReadOnlyOperatorImpl> _impl;
-  std::atomic<std::optional<size_t>> _radix_bits;  // Atomic as it might copy the operator while setting _radix_bits.
+  std::atomic<std::optional<size_t>> _radix_bits;  // Atomic as operator might be deep-copied while setting _radix_bits.
 
   template <typename LeftType, typename RightType>
   class JoinHashImpl;

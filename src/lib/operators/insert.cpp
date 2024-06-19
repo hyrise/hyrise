@@ -288,7 +288,7 @@ void Insert::_on_rollback_records() {
       mvcc_data->set_begin_cid(chunk_offset, CommitID{0}, std::memory_order_seq_cst);
       mvcc_data->set_tid(chunk_offset, TransactionID{0}, std::memory_order_relaxed);
       // Update chunk statistics.
-      target_chunk->increase_invalid_row_count(ChunkOffset{1});
+      target_chunk->increase_invalid_row_count(ChunkOffset{1}, std::memory_order_relaxed);
     }
 
     // Deregister the pending Insert and try to mark the chunk as immutable. We might be the last rolling back Insert
