@@ -1,6 +1,7 @@
 #include "get_table.hpp"
 
 #include <algorithm>
+#include <atomic>
 #include <cstddef>
 #include <cstdint>
 #include <iterator>
