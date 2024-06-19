@@ -16,7 +16,7 @@ namespace hyrise {
 class AbstractStatisticsObject;
 
 /**
- * For docs, see BaseAttributeStatistics.
+ * For documentation, see BaseAttributeStatistics.
  */
 template <typename T>
 class AttributeStatistics : public BaseAttributeStatistics,

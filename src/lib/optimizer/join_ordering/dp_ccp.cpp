@@ -127,6 +127,7 @@ std::shared_ptr<AbstractLQPNode> DpCcp::operator()(const JoinGraph& join_graph,
    *                            is cheaper than the cheapest currently known plan for a particular subset of vertices.
    */
   const auto csg_cmp_pairs = EnumerateCcp{vertex_count, enumerate_ccp_edges}();
+
   const auto duration51 = timer.lap();
   auto duration52 = std::chrono::nanoseconds{};
   auto duration53 = std::chrono::nanoseconds{};
@@ -137,12 +138,14 @@ std::shared_ptr<AbstractLQPNode> DpCcp::operator()(const JoinGraph& join_graph,
   auto duration571 = std::chrono::nanoseconds{};
   auto duration572 = std::chrono::nanoseconds{};
   auto duration58 = std::chrono::nanoseconds{};
+
   for (const auto& csg_cmp_pair : csg_cmp_pairs) {
     auto pair_timer = Timer{};
     const auto best_plan_left_iter = best_plan.find(csg_cmp_pair.first);
     const auto best_plan_right_iter = best_plan.find(csg_cmp_pair.second);
     DebugAssert(best_plan_left_iter != best_plan.end() && best_plan_right_iter != best_plan.end(),
                 "Subplan missing: either the JoinGraph is invalid or EnumerateCcp is buggy.");
+
     duration52 += pair_timer.lap();
 
     const auto join_predicates = join_graph.find_join_predicates(csg_cmp_pair.first, csg_cmp_pair.second);
@@ -158,6 +161,7 @@ std::shared_ptr<AbstractLQPNode> DpCcp::operator()(const JoinGraph& join_graph,
     duration55 += pair_timer.lap();
 
     const auto best_plan_iter = best_plan.find(joined_vertex_set);
+
     const auto not_init = best_plan_iter == best_plan.end();
     duration56 += pair_timer.lap();
     // The following two calls to the cost estimator cause the second bottleneck.
@@ -169,6 +173,9 @@ std::shared_ptr<AbstractLQPNode> DpCcp::operator()(const JoinGraph& join_graph,
     const auto is_cheaper = best_plan_iter == best_plan.end() ? true : (candidate_cost < best_cost);
     duration57 += pair_timer.lap();
     if (not_init || is_cheaper) {
+    // The following two calls to the cost estimator cause the second bottleneck.
+    //if (best_plan_iter == best_plan.end() || cost_estimator->estimate_plan_cost(candidate_plan) <
+    //                                             cost_estimator->estimate_plan_cost(best_plan_iter->second)) {
       best_plan.insert_or_assign(joined_vertex_set, candidate_plan);
     }
     duration58 += pair_timer.lap();

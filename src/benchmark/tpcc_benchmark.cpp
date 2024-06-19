@@ -57,7 +57,7 @@ int main(int argc, char* argv[]) {
   num_warehouses = cli_parse_result["scale"].as<size_t>();
   consistency_checks = cli_parse_result["consistency_checks"].as<bool>();
 
-  config = std::make_shared<BenchmarkConfig>(CLIConfigParser::parse_cli_options(cli_parse_result));
+  config = CLIConfigParser::parse_cli_options(cli_parse_result);
 
   // As TPC-C procedures may run into conflicts on both the Hyrise and the SQLite side, we cannot guarantee that the
   // two databases stay in sync.

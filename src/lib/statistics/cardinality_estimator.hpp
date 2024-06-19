@@ -108,9 +108,9 @@ class CardinalityEstimator : public AbstractCardinalityEstimator {
   static std::shared_ptr<GenericHistogram<T>> estimate_column_vs_column_equi_scan_with_histograms(
       const AbstractHistogram<T>& left_histogram, const AbstractHistogram<T>& right_histogram) {
     /**
-     * Column-to-column scan estimation is notoriously hard, selectivities from 0 to 1 are possible for the same histogram
-     * pairs. Thus, we do the most conservative estimation and compute the upper bound of value- and distinct counts for
-     * each bin pair.
+     * Column-to-column scan estimation is notoriously hard; selectivities from 0 to 1 are possible for the same
+     * histogram pairs. Thus, we do the most conservative estimation and compute the upper bound of value- and distinct
+     * counts for each bin pair.
      */
     auto left_idx = BinID{0};
     auto right_idx = BinID{0};
@@ -186,6 +186,7 @@ class CardinalityEstimator : public AbstractCardinalityEstimator {
      * The estimation is performed on overlapping bins only, e.g., only the two bins [5, 10] will produce matches.
      */
     auto timer = Timer{};
+
     auto unified_left_histogram = left_histogram.split_at_bin_bounds(right_histogram.bin_bounds());
     auto unified_right_histogram = right_histogram.split_at_bin_bounds(left_histogram.bin_bounds());
 
@@ -268,4 +269,5 @@ class CardinalityEstimator : public AbstractCardinalityEstimator {
 
   mutable std::unordered_map<LQPNodeType, std::chrono::nanoseconds> time_by_node;
 };
+
 }  // namespace hyrise

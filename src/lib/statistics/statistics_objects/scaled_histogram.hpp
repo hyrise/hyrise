@@ -29,12 +29,12 @@ class ScaledHistogram : public AbstractHistogram<T> {
  public:
   using AbstractHistogram<T>::AbstractHistogram;
 
-  ScaledHistogram(const std::shared_ptr<const AbstractHistogram<T>>& referenced_histogram,
-                  const Selectivity selectivity, const HistogramDomain<T>& domain = {});
+  ScaledHistogram(const AbstractHistogram<T>& referenced_histogram, const Selectivity selectivity,
+                  const HistogramDomain<T>& domain = {});
 
   // Convenience builder for a ScaledHistogram from the referenced histogram. Ensures exactly one indirection.
-  static std::shared_ptr<ScaledHistogram<T>> from_referenced_histogram(
-      const std::shared_ptr<const AbstractHistogram<T>>& referenced_histogram, const Selectivity selectivity);
+  static std::shared_ptr<ScaledHistogram<T>> from_referenced_histogram(const AbstractHistogram<T>& referenced_histogram,
+                                                                       const Selectivity selectivity);
 
   std::string name() const override;
   std::shared_ptr<AbstractHistogram<T>> clone() const override;
@@ -62,8 +62,7 @@ class ScaledHistogram : public AbstractHistogram<T> {
 // For gtest.
 template <typename T>
 std::ostream& operator<<(std::ostream& stream, const ScaledHistogram<T>& histogram) {
-  stream << histogram.description() << std::endl;
-  return stream;
+  return stream << histogram.description() << '\n';
 }
 
 EXPLICITLY_DECLARE_DATA_TYPES(ScaledHistogram);
