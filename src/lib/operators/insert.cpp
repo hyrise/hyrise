@@ -154,8 +154,8 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
       std::atomic_thread_fence(std::memory_order_seq_cst);
 
       // "Grow" data segments: Segments are pre-allocated during construction. We resize() to make default-constructed
-      // cells visible so that they can be written in the next Insert step. Note that those cells are still invisible 
-      // from an MVCC point of view until they are actually being written and committed. 
+      // cells visible so that they can be written in the next Insert step. Note that those cells are still invisible
+      // from an MVCC point of view until they are actually being written and committed.
       // Do so in REVERSE column order so that the resize of `Chunk::_segments.front()` happens last. It is this last
       // resize that makes the new row count visible to the outside world.
       const auto old_size = target_chunk->size();
