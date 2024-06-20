@@ -230,7 +230,8 @@ class CardinalityEstimator : public AbstractCardinalityEstimator {
 
     auto hist = builder.build();
     join_histogram_time += timer.lap();
-    return builder.build();
+    // return builder.build();
+    return hist;
   }
 
   /**
