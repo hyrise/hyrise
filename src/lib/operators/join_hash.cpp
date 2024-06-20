@@ -62,7 +62,7 @@ std::shared_ptr<AbstractOperator> JoinHash::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_right_input,
     std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& /*copied_ops*/) const {
   return std::make_shared<JoinHash>(copied_left_input, copied_right_input, _mode, _primary_predicate,
-                                    _secondary_predicates, _radix_bits);
+                                    _secondary_predicates);
 }
 
 void JoinHash::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
@@ -194,23 +194,22 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
           !std::is_same_v<pmr_string, BuildColumnDataType> && !std::is_same_v<pmr_string, ProbeColumnDataType>;
 
       if constexpr (BOTH_ARE_STRING || NEITHER_IS_STRING) {
-        if (!_radix_bits.load()) {
+        if (!_radix_bits) {
           _radix_bits = calculate_radix_bits(build_input_table->row_count(), probe_input_table->row_count());
         }
-        const auto radix_bits = *_radix_bits.load();
 
         // It needs to be ensured that the build partitions do not get too large, because the used offsets in the
         // hash maps might otherwise overflow. Since radix partitioning aims to avoid large build partitions, this
         // should never happen. Nonetheless, we better assert since the effects of overflows will probably be hard to
         // debug.
         const auto max_partition_size = std::numeric_limits<uint32_t>::max() * 0.5;
-        Assert(static_cast<uint32_t>(static_cast<double>(build_input_table->row_count()) / std::pow(2, radix_bits)) <
+        Assert(static_cast<uint32_t>(static_cast<double>(build_input_table->row_count()) / std::pow(2, *_radix_bits)) <
                    max_partition_size,
                "Partition count too small (potential overflows in hash map offsetting).");
 
         _impl = std::make_unique<JoinHashImpl<BuildColumnDataType, ProbeColumnDataType>>(
             *this, build_input_table, probe_input_table, _mode, adjusted_column_ids,
-            _primary_predicate.predicate_condition, output_column_order, radix_bits, join_hash_performance_data,
+            _primary_predicate.predicate_condition, output_column_order, *_radix_bits, join_hash_performance_data,
             adjusted_secondary_predicates);
       } else {
         Fail("Cannot join String with non-String column");
@@ -218,8 +217,8 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
     });
   });
 
-  Assert(_radix_bits.load(), "Radix bits are not set.");
-  join_hash_performance_data.radix_bits = *_radix_bits.load();
+  Assert(_radix_bits, "Radix bits are not set.");
+  join_hash_performance_data.radix_bits = *_radix_bits;
   join_hash_performance_data.left_input_is_build_side = !build_hash_table_for_right_input;
 
   return _impl->_on_execute();
