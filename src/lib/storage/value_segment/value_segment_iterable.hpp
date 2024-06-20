@@ -33,21 +33,24 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
 
   template <typename Functor, typename PosListType>
   void _on_with_iterators(const std::shared_ptr<PosListType>& position_filter, const Functor& functor) const {
-    _segment.access_counter[SegmentAccessCounter::access_type(*position_filter)] += position_filter->size();
+    const auto position_filter_size = position_filter->size();
+    _segment.access_counter[SegmentAccessCounter::access_type(*position_filter)] += position_filter_size;
 
     using PosListIteratorType = std::decay_t<decltype(position_filter->cbegin())>;
 
     if (_segment.is_nullable()) {
       auto begin = PointAccessIterator<PosListIteratorType>{_segment.values().cbegin(), _segment.null_values().cbegin(),
-                                                            position_filter->cbegin(), position_filter->cbegin()};
+                                                            position_filter->cbegin(), position_filter->cbegin(),
+                                                            position_filter_size};
       auto end = PointAccessIterator<PosListIteratorType>{_segment.values().cbegin(), _segment.null_values().cbegin(),
-                                                          position_filter->cbegin(), position_filter->cend()};
+                                                          position_filter->cbegin(), position_filter->cend(),
+                                                          position_filter_size};
       functor(begin, end);
     } else {
       auto begin = NonNullPointAccessIterator<PosListIteratorType>{
-          _segment.values().cbegin(), position_filter->cbegin(), position_filter->cbegin()};
+          _segment.values().cbegin(), position_filter->cbegin(), position_filter->cbegin(), position_filter_size};
       auto end = NonNullPointAccessIterator<PosListIteratorType>{_segment.values().cbegin(), position_filter->cbegin(),
-                                                                 position_filter->cend()};
+                                                                 position_filter->cend(), position_filter_size};
       functor(begin, end);
     }
   }
@@ -169,23 +172,33 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
 
    public:
     explicit NonNullPointAccessIterator(ValueVectorIterator values_begin_it, PosListIteratorType position_filter_begin,
-                                        PosListIteratorType position_filter_it)
+                                        PosListIteratorType position_filter_it, size_t position_filter_size)
         : AbstractPointAccessSegmentIterator<NonNullPointAccessIterator, SegmentPosition<T>,
                                              PosListIteratorType>{std::move(position_filter_begin),
                                                                   std::move(position_filter_it)},
-          _values_begin_it{std::move(values_begin_it)} {}
+          _values_begin_it{std::move(values_begin_it)},
+          _position_filter_size{position_filter_size} {}
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
     SegmentPosition<T> dereference() const {
       const auto& chunk_offsets = this->chunk_offsets();
+
+      this->prefetch(chunk_offsets.offset_in_poslist, _position_filter_size, [this](const ChunkOffset offset) {
+        // std::cerr << "Prefetching " << &*(_values_begin_it + offset) << "\n";
+        __builtin_prefetch(&*(_values_begin_it + offset), /* read */ 0, /* locality hint */ 0);
+      });
+
+      // std::cerr << "Returning " << *(_values_begin_it + chunk_offsets.offset_in_referenced_chunk) << " @ " << &*(_values_begin_it + chunk_offsets.offset_in_referenced_chunk) << "\n";
+
       return SegmentPosition<T>{*(_values_begin_it + chunk_offsets.offset_in_referenced_chunk), false,
                                 chunk_offsets.offset_in_poslist};
     }
 
    private:
     ValueVectorIterator _values_begin_it;
+    size_t _position_filter_size;
   };
 
   template <typename PosListIteratorType>
@@ -199,18 +212,29 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
 
    public:
     explicit PointAccessIterator(ValueVectorIterator values_begin_it, NullValueVectorIterator null_values_begin_it,
-                                 PosListIteratorType position_filter_begin, PosListIteratorType position_filter_it)
+                                 PosListIteratorType position_filter_begin, PosListIteratorType position_filter_it,
+                                 size_t position_filter_size)
         : AbstractPointAccessSegmentIterator<PointAccessIterator, SegmentPosition<T>,
                                              PosListIteratorType>{std::move(position_filter_begin),
                                                                   std::move(position_filter_it)},
           _values_begin_it{std::move(values_begin_it)},
-          _null_values_begin_it{std::move(null_values_begin_it)} {}
+          _null_values_begin_it{std::move(null_values_begin_it)},
+          _position_filter_size{position_filter_size} {}
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
     SegmentPosition<T> dereference() const {
       const auto& chunk_offsets = this->chunk_offsets();
+
+      this->prefetch(chunk_offsets.offset_in_poslist, _position_filter_size, [this](const ChunkOffset offset) {
+        // std::cerr << "Prefetching " << &*(_values_begin_it + offset) << "\n";
+        __builtin_prefetch(&*(_values_begin_it + offset), /* read */ 0, /* locality hint */ 0);
+      });
+
+
+      // std::cerr << "Returning " << *(_values_begin_it + chunk_offsets.offset_in_referenced_chunk) << " @ " << &*(_values_begin_it + chunk_offsets.offset_in_referenced_chunk) << "\n";
+
       return SegmentPosition<T>{*(_values_begin_it + chunk_offsets.offset_in_referenced_chunk),
                                 *(_null_values_begin_it + chunk_offsets.offset_in_referenced_chunk),
                                 chunk_offsets.offset_in_poslist};
@@ -219,6 +243,7 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
    private:
     ValueVectorIterator _values_begin_it;
     NullValueVectorIterator _null_values_begin_it;
+    size_t _position_filter_size;
   };
 };
 

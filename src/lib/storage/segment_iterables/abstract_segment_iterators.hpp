@@ -72,8 +72,22 @@ class AbstractPointAccessSegmentIterator : public AbstractSegmentIterator<Derive
  protected:
   const ChunkOffsetMapping chunk_offsets() const {
     DebugAssert(_position_filter_it->chunk_offset != INVALID_CHUNK_OFFSET,
-                "Invalid ChunkOffset, calling code should handle null values");
+                "Invalid ChunkOffset, calling code should handle null values.");
     return {static_cast<ChunkOffset>(_position_filter_it - _position_filter_begin), _position_filter_it->chunk_offset};
+  }
+
+  template <typename F>
+  void prefetch(const ChunkOffset offset, const size_t position_filter_size, F functor) const {
+    if (offset % 8 == 0) {
+      auto position_filter_it = _position_filter_it;  // Get copy of iterator and keep _position_filter_it untouched.
+      const auto prefetched_elements_count = std::min(size_t{8}, position_filter_size - offset);
+      // std::cerr << "start prefetch() from " << offset << " to " << offset + prefetched_elements_count << " (pos list size is " << position_filter_size << ")\n";
+
+      for (auto offset_increase = size_t{0}; offset_increase < prefetched_elements_count; ++offset_increase) {
+        functor(position_filter_it->chunk_offset);
+        ++position_filter_it;
+      }
+    }
   }
 
  private:
@@ -98,6 +112,7 @@ class AbstractPointAccessSegmentIterator : public AbstractSegmentIterator<Derive
   std::ptrdiff_t distance_to(const AbstractPointAccessSegmentIterator& other) const {
     return other._position_filter_it - _position_filter_it;
   }
+
 
  private:
   PosListIteratorType _position_filter_begin;
