@@ -297,6 +297,7 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
 
       // The output chunk contains all rows that are in the stored chunk, including invalid rows. We forward this
       // information so that following operators (currently, the Validate operator) can use it for optimizations.
+      // Incrementing atomic invalid row count in relaxed memory order as chunk is not yet visible.
       (*output_chunks_iter)->increase_invalid_row_count(stored_chunk->invalid_row_count(), std::memory_order_relaxed);
     }
 
