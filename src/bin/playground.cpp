@@ -201,6 +201,7 @@ void force_crash() {
     insert_threads.emplace_back([&]() {
       auto my_loop = uint32_t{0};
       while (my_loop < loop_count) {
+        if (my_loop % 1000 == 0) { std::cerr << "i"; }
         ++my_loop;
         const auto table_wrapper = std::make_shared<TableWrapper>(values_to_insert);
         const auto insert = std::make_shared<Insert>("table_a", table_wrapper);
@@ -227,6 +228,7 @@ void force_crash() {
     watch_threads.emplace_back([&]() {
       auto my_loop = uint32_t{0};
       while (my_loop < loop_count) {
+        if (my_loop % 1000 == 0) { std::cerr << "w"; }
         ++my_loop;
         {
           const auto [status, result_table] =
@@ -252,6 +254,7 @@ void force_crash() {
   for (auto& thread : insert_threads) {
     thread.join();
   }
+  std::cerr << "All done\n";
 
   for (auto& thread : watch_threads) {
     thread.join();
