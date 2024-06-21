@@ -51,7 +51,7 @@ class CardinalityEstimator : public AbstractCardinalityEstimator {
                                                        const bool cacheable = true) const;
 
   std::shared_ptr<TableStatistics> estimate_statistics(const std::shared_ptr<const AbstractLQPNode>& lqp,
-                                                       const bool cacheable, StatisticsByLQP& statistics_cache) const;
+                                                       const bool cacheable, StatisticsByLQP& statistics_cache, ExpressionUnorderedSet& required_expressions) const;
 
   /**
    * Per-node-type estimation functions
@@ -74,7 +74,7 @@ class CardinalityEstimator : public AbstractCardinalityEstimator {
 
   std::shared_ptr<TableStatistics> estimate_predicate_node(
       const PredicateNode& predicate_node, const std::shared_ptr<TableStatistics>& input_table_statistics,
-      const bool cacheable, StatisticsByLQP& statistics_cache) const;
+      const bool cacheable, StatisticsByLQP& statistics_cache, ExpressionUnorderedSet& required_expressions) const;
 
   std::shared_ptr<TableStatistics> estimate_join_node(
       const JoinNode& join_node, const std::shared_ptr<TableStatistics>& left_input_table_statistics,
@@ -185,7 +185,7 @@ class CardinalityEstimator : public AbstractCardinalityEstimator {
      * unified_right_histogram == {[5, 10], [11, 20]}
      * The estimation is performed on overlapping bins only, e.g., only the two bins [5, 10] will produce matches.
      */
-    auto timer = Timer{};
+    // auto timer = Timer{};
 
     auto unified_left_histogram = left_histogram.split_at_bin_bounds(right_histogram.bin_bounds());
     auto unified_right_histogram = right_histogram.split_at_bin_bounds(left_histogram.bin_bounds());
@@ -229,7 +229,7 @@ class CardinalityEstimator : public AbstractCardinalityEstimator {
     }
 
     auto hist = builder.build();
-    join_histogram_time += timer.lap();
+    // join_histogram_time += timer.lap();
     // return builder.build();
     return hist;
   }

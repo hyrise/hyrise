@@ -109,7 +109,8 @@ void JoinOrderingRule::_apply_to_plan_without_subqueries(const std::shared_ptr<A
 
   lqp_root->set_left_input(result_lqp);
 
-  std::cout << "    " << name() << ": " << timer.lap_formatted() << "\n";
+  // std::cout << "    " << name() << ": " << timer.lap_formatted() << "\n";
+  // std::cout << *lqp_root << "\n";
 }
 
 }  // namespace hyrise
