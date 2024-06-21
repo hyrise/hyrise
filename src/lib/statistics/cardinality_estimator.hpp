@@ -243,16 +243,6 @@ class CardinalityEstimator : public AbstractCardinalityEstimator {
       const float left_height, const float left_distinct_count, const float right_height,
       const float right_distinct_count);
 
-  /** @} */
-
-  /**
-   * Helper
-   * @{
-   */
-  static std::shared_ptr<TableStatistics> prune_column_statistics(
-      const std::shared_ptr<TableStatistics>& table_statistics, const std::vector<ColumnID>& pruned_column_ids);
-
-  /** @} */
 
   mutable size_t bitmask_cache_hits{0};
   mutable size_t global_cache_hits{0};

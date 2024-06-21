@@ -80,6 +80,48 @@ std::optional<float> estimate_null_value_ratio_of_column(const TableStatistics& 
   return std::nullopt;
 }
 
+template <typename BaseNodeType>
+std::shared_ptr<TableStatistics> prune_column_statistics(
+    const std::shared_ptr<TableStatistics>& table_statistics, const BaseNodeType& node, ExpressionUnorderedSet& required_columns) {
+  const auto pruned_column_ids = node.pruned_column_ids();
+  const auto output_expressions = node.output_expressions();
+  if (pruned_column_ids.empty()) {
+    return table_statistics;
+  }
+
+  /**
+   * Prune `pruned_column_ids` and all statistics for unused columns from the statistics.
+   */
+
+  auto output_column_statistics = std::vector<std::shared_ptr<const BaseAttributeStatistics>>(
+      table_statistics->column_statistics.size() - pruned_column_ids.size());
+
+  auto pruned_column_ids_iter = pruned_column_ids.begin();
+
+  for (auto input_column_id = ColumnID{0}, output_column_id = ColumnID{0};
+       input_column_id < table_statistics->column_statistics.size(); ++input_column_id) {
+    // Skip `stored_column_id` if it is in the sorted vector `_pruned_column_ids`.
+    if (pruned_column_ids_iter != pruned_column_ids.end() && input_column_id == *pruned_column_ids_iter) {
+      ++pruned_column_ids_iter;
+      continue;
+    }
+
+    // Create a dummy statistics object if the column is not actually used for estimations.
+    const auto& expression = output_expressions[output_column_id];
+    if (required_columns.contains(expression)) {
+      output_column_statistics[output_column_id] = table_statistics->column_statistics[input_column_id];
+    } else {
+      resolve_data_type(expression->data_type(), [&](const auto data_type_t) {
+        using ColumnDataType = typename decltype(data_type_t)::type;
+        output_column_statistics[output_column_id] = std::make_shared<AttributeStatistics<ColumnDataType>>();
+      });
+    }
+    ++output_column_id;
+  }
+
+  return std::make_shared<TableStatistics>(std::move(output_column_statistics), table_statistics->row_count);
+}
+
 }  // namespace
 
 namespace hyrise {
@@ -224,7 +266,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
     case LQPNodeType::Mock: {
       const auto& mock_node = static_cast<const MockNode&>(*lqp);
       Assert(mock_node.table_statistics(), "Cannot return statistics of MockNode that was not assigned statistics");
-      output_table_statistics = prune_column_statistics(mock_node.table_statistics(), mock_node.pruned_column_ids());
+      output_table_statistics = prune_column_statistics(mock_node.table_statistics(), mock_node, required_expressions);
     } break;
 
     case LQPNodeType::Predicate: {
@@ -278,21 +320,11 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
                "Statistics in StoredTableNode should have same number of columns as original table");
         Assert(stored_table_node.table_statistics->row_count >= 0, "Tables can't have negative row counts");
         output_table_statistics =
-            prune_column_statistics(stored_table_node.table_statistics, stored_table_node.pruned_column_ids());
+            prune_column_statistics(stored_table_node.table_statistics, stored_table_node, required_expressions);
       } else {
         output_table_statistics =
-            prune_column_statistics(stored_table->table_statistics(), stored_table_node.pruned_column_ids());
+            prune_column_statistics(stored_table->table_statistics(), stored_table_node, required_expressions);
       }
-
-      stored_table_node.iterate_output_expressions([&](const auto column_id, const auto& expression){
-        if (!required_expressions.contains(expression)) {
-          resolve_data_type(expression->data_type(), [&](const auto data_type_t) {
-            using ColumnDataType = typename decltype(data_type_t)::type;
-             (*const_cast<std::vector<std::shared_ptr<const BaseAttributeStatistics>>*>(&(output_table_statistics->column_statistics)))[column_id] = std::make_shared<AttributeStatistics<ColumnDataType>>();
-          });
-        }
-        return AbstractLQPNode::ExpressionIteration::Continue;
-      });
     } break;
 
     case LQPNodeType::Validate: {
@@ -1328,36 +1360,6 @@ std::pair<HistogramCountType, HistogramCountType> CardinalityEstimator::estimate
   const auto match_count = HistogramCountType{left_height * left_match_ratio * right_density};
 
   return {match_count, HistogramCountType{right_distinct_count}};
-}
-
-std::shared_ptr<TableStatistics> CardinalityEstimator::prune_column_statistics(
-    const std::shared_ptr<TableStatistics>& table_statistics, const std::vector<ColumnID>& pruned_column_ids) {
-  if (pruned_column_ids.empty()) {
-    return table_statistics;
-  }
-
-  /**
-   * Prune `pruned_column_ids` from the statistics
-   */
-
-  auto output_column_statistics = std::vector<std::shared_ptr<const BaseAttributeStatistics>>(
-      table_statistics->column_statistics.size() - pruned_column_ids.size());
-
-  auto pruned_column_ids_iter = pruned_column_ids.begin();
-
-  for (auto input_column_id = ColumnID{0}, output_column_id = ColumnID{0};
-       input_column_id < table_statistics->column_statistics.size(); ++input_column_id) {
-    // Skip `stored_column_id` if it is in the sorted vector `_pruned_column_ids`
-    if (pruned_column_ids_iter != pruned_column_ids.end() && input_column_id == *pruned_column_ids_iter) {
-      ++pruned_column_ids_iter;
-      continue;
-    }
-
-    output_column_statistics[output_column_id] = table_statistics->column_statistics[input_column_id];
-    ++output_column_id;
-  }
-
-  return std::make_shared<TableStatistics>(std::move(output_column_statistics), table_statistics->row_count);
 }
 
 }  // namespace hyrise
