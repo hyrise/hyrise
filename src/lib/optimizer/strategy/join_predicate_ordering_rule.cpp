@@ -34,6 +34,7 @@ void JoinPredicateOrderingRule::_apply_to_plan_without_subqueries(
 
     DebugAssert(cost_estimator, "JoinOrderingRule requires cost estimator to be set");
     const auto caching_cardinality_estimator = cost_estimator->cardinality_estimator->new_instance();
+    caching_cardinality_estimator->guarantee_bottom_up_construction();
 
     // Estimate join selectivity of a predicate by creating a new join node joining only on that one predicate and
     //  estimating that join node's cardinality.

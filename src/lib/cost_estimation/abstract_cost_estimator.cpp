@@ -21,12 +21,12 @@ Cost AbstractCostEstimator::estimate_plan_cost(const std::shared_ptr<AbstractLQP
   // Sum up the costs of all operators in the plan, while making sure to cost each operator exactly once, even in the
   // presence of diamond shapes.
 
-  if (cost_estimation_by_lqp_cache) {
-    const auto it = cost_estimation_by_lqp_cache->find(lqp);
-    if (it != cost_estimation_by_lqp_cache->end()) {
-      return it->second;
-    }
-  }
+  // if (cost_estimation_by_lqp_cache) {
+  //   const auto it = cost_estimation_by_lqp_cache->find(lqp);
+  //   if (it != cost_estimation_by_lqp_cache->end()) {
+  //     return it->second;
+  //   }
+  // }
 
   // Breadth-first iteration of plan
   auto bfs_queue = std::queue<std::shared_ptr<AbstractLQPNode>>{};

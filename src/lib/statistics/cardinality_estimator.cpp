@@ -94,16 +94,26 @@ Cardinality CardinalityEstimator::estimate_cardinality(const std::shared_ptr<con
                                                        const bool cacheable) const {
   // auto timer = Timer{};
   auto statistics_cache = StatisticsByLQP{};
+  if (cardinality_estimation_cache.required_column_expressions) {
+    const auto estimated_statistics = estimate_statistics(lqp, cacheable, statistics_cache, *cardinality_estimation_cache.required_column_expressions);
+    return estimated_statistics->row_count;
+
+  }
   auto required_expressions = ExpressionUnorderedSet{};
   const auto estimated_statistics = estimate_statistics(lqp, cacheable, statistics_cache, required_expressions);
-  // cardinality_time += timer.lap();
-
   return estimated_statistics->row_count;
+  // cardinality_time += timer.lap();
 }
 
 std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
     const std::shared_ptr<const AbstractLQPNode>& lqp, const bool cacheable) const {
   auto statistics_cache = StatisticsByLQP{};
+  if (cardinality_estimation_cache.required_column_expressions) {
+    const auto estimated_statistics = estimate_statistics(lqp, cacheable, statistics_cache, *cardinality_estimation_cache.required_column_expressions);
+    return estimated_statistics;
+
+  }
+
   auto required_expressions = ExpressionUnorderedSet{};
   const auto statistics = estimate_statistics(lqp, cacheable, statistics_cache, required_expressions);
   return statistics;

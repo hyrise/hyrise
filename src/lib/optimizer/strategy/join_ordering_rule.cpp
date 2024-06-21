@@ -53,6 +53,7 @@ std::shared_ptr<AbstractLQPNode> perform_join_ordering_recursively(
   const auto caching_cost_estimator = cost_estimator->new_instance();
   caching_cost_estimator->guarantee_bottom_up_construction();
   caching_cost_estimator->cardinality_estimator->guarantee_join_graph(*join_graph);
+  caching_cost_estimator->cardinality_estimator->populate_required_column_expressions(lqp);
 
   /**
    * Select and call the actual join ordering algorithm. Simple heuristic: Use DpCcp for any query with less than
