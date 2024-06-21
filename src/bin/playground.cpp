@@ -1,4 +1,5 @@
 #include <atomic>
+#include <chrono>
 #include <iostream>
 #include <thread>
 #include <vector>
@@ -174,49 +175,55 @@ void single_updates(const int32_t warehouse_count = 1) {
   Hyrise::get().scheduler()->finish();
 }
 
+/**
+ * Test to verify that rollbacking Insert operations does not lead to multiple (outdated) rows being visible. This issue
+ * has occurred when using link-time optimization or when inlining MVCC functions (see #2649).
+ * We execute and immediately rollback insert operations in multiple threads. In parallel, threads are checking that no
+ * new rows are visible.
+ */
 void force_crash() {
+  const auto table_name = std::string{"table_a"};
   const auto table = std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Int, false}}, TableType::Data,
                                              Chunk::DEFAULT_SIZE, UseMvcc::Yes);
-  Hyrise::get().storage_manager.add_table("table_a", table);
+  Hyrise::get().storage_manager.add_table(table_name, table);
+
+  constexpr auto MAX_VALUE_AND_ROW_COUNT = uint32_t{17};
+  constexpr auto MAX_LOOP_COUNT = uint32_t{100'000};
 
   const auto values_to_insert =
       std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Int, false}}, TableType::Data);
   values_to_insert->append({int32_t{123}});
   values_to_insert->append({int32_t{456}});
 
-  for (auto init_insert_id = uint8_t{0}; init_insert_id < 17; ++init_insert_id) {
+  for (auto init_insert_id = uint32_t{1}; init_insert_id <= MAX_VALUE_AND_ROW_COUNT; ++init_insert_id) {
     SQLPipelineBuilder{"INSERT INTO table_a VALUES( " + std::to_string(init_insert_id) + ");"}
         .create_pipeline()
         .get_result_table();
   }
 
-  const auto insert_thread_count = uint32_t{20};
-  const auto watch_thread_count = uint32_t{50};
+  const auto insert_thread_count = std::thread::hardware_concurrency() / 2;
+  const auto watch_thread_count = std::thread::hardware_concurrency() / 2;
+
   auto insert_threads = std::vector<std::thread>{};
   insert_threads.reserve(insert_thread_count);
 
-  const auto loop_count = uint32_t{100'000};
+  const auto start = std::chrono::system_clock::now();
+  auto stop_flag = std::atomic_flag{};
 
   for (auto thread_id = uint32_t{0}; thread_id < insert_thread_count; ++thread_id) {
     insert_threads.emplace_back([&]() {
-      auto my_loop = uint32_t{0};
-      while (my_loop < loop_count) {
-        if (my_loop % 1000 == 0) { std::cerr << "i"; }
-        ++my_loop;
+      for (auto loop_count = uint32_t{0};
+           loop_count < MAX_LOOP_COUNT && std::chrono::system_clock::now() < start + std::chrono::seconds(30);
+           ++loop_count) {
         const auto table_wrapper = std::make_shared<TableWrapper>(values_to_insert);
-        const auto insert = std::make_shared<Insert>("table_a", table_wrapper);
+        const auto insert = std::make_shared<Insert>(table_name, table_wrapper);
 
-        const auto do_commit = false;
         const auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
         insert->set_transaction_context(transaction_context);
         table_wrapper->execute();
         insert->execute();
-        Assert(!insert->execute_failed(), "Should succeed.");
-        if (do_commit) {
-          transaction_context->commit();
-        } else {
-          transaction_context->rollback(RollbackReason::User);
-        }
+        Assert(!insert->execute_failed(), "Insert should have succeeded.");
+        transaction_context->rollback(RollbackReason::User);
       }
     });
   }
@@ -226,26 +233,25 @@ void force_crash() {
 
   for (auto thread_id = uint32_t{0}; thread_id < watch_thread_count; ++thread_id) {
     watch_threads.emplace_back([&]() {
-      auto my_loop = uint32_t{0};
-      while (my_loop < loop_count) {
-        if (my_loop % 1000 == 0) { std::cerr << "w"; }
-        ++my_loop;
+      while (!stop_flag.test()) {
         {
           const auto [status, result_table] =
-              SQLPipelineBuilder{"SELECT count(*) from table_a;"}.create_pipeline().get_result_table();
-          Assert(status == SQLPipelineStatus::Success, "Expected success.");
+              SQLPipelineBuilder{"SELECT count(*) from " + table_name + ";"}.create_pipeline().get_result_table();
+          Assert(status == SQLPipelineStatus::Success, "Expected success of SELECT COUNT() query.");
           const auto visible_row_count = result_table->get_value<int64_t>(ColumnID{0}, 0);
           Assert(visible_row_count, "Must not be nullable.");
-          Assert(*visible_row_count == 17, "Invisible rows are visible: " + std::to_string(*visible_row_count));
+          Assert(*visible_row_count == MAX_VALUE_AND_ROW_COUNT,
+                 "Rollbacked rows are visible: " + std::to_string(*visible_row_count) + " rows.");
         }
 
         {
           const auto [status, result_table] =
-              SQLPipelineBuilder{"SELECT max(a) from table_a;"}.create_pipeline().get_result_table();
-          Assert(status == SQLPipelineStatus::Success, "Expected success.");
+              SQLPipelineBuilder{"SELECT max(a) from " + table_name + ";"}.create_pipeline().get_result_table();
+          Assert(status == SQLPipelineStatus::Success, "Expected success of SELECT MAX() query.");
           const auto max_value = result_table->get_value<int32_t>(ColumnID{0}, 0);
           Assert(max_value, "Must not be nullable.");
-          Assert(*max_value == 16, "Invisible rows are visible: " + std::to_string(*max_value));
+          Assert(*max_value == MAX_VALUE_AND_ROW_COUNT,
+                 "Rollbacked rows are visible: " + std::to_string(*max_value) + " rows.");
         }
       }
     });
@@ -254,7 +260,9 @@ void force_crash() {
   for (auto& thread : insert_threads) {
     thread.join();
   }
-  std::cerr << "All done\n";
+
+  // Notifying watch threads that insert rollbacks are done.
+  stop_flag.test_and_set();
 
   for (auto& thread : watch_threads) {
     thread.join();

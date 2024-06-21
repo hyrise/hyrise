@@ -75,7 +75,7 @@ std::optional<CommitID> TransactionManager::get_lowest_active_snapshot_commit_id
 /**
  * Logic of the lock-free algorithm
  *
- * Let’s say n threads call this method simultaneously. They all enter the main while-loop. Eventually they reach the
+ * Assume n threads call this method simultaneously. They all enter the main while-loop. Eventually, they reach the
  * point where they try to set the successor of _last_commit_context (pointed to by current_context). Only one of them
  * will succeed and will be able to pass the following if statement. The rest continues with the loop and will now try
  * to get the latest context, which does not have a successor. As long as the thread that succeeded setting the next
