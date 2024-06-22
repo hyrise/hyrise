@@ -40,6 +40,15 @@ class StressTest : public BaseTest {
       {CPU_COUNT, CPU_COUNT, 0, 0}, {0, CPU_COUNT, CPU_COUNT, 0}, {0, 0, CPU_COUNT, CPU_COUNT}};
 };
 
+class StressTestMultiple : public StressTest, public ::testing::WithParamInterface<std::tuple<int, int>> {};
+
+INSTANTIATE_TEST_SUITE_P(StressTest, StressTestMultiple,
+                         testing::Combine(testing::Values(1, 10, 100, 1'000, 10'000, 100'000), testing::Range(0, 100)),
+                         [](const testing::TestParamInfo<StressTestMultiple::ParamType>& info) {
+                           return std::to_string(std::get<0>(info.param)) + "loops_" +
+                                  std::to_string(std::get<1>(info.param));
+                         });
+
 TEST_F(StressTest, TestTransactionConflicts) {
   // Update a table with two entries and a chunk size of 2. This will lead to a high number of transaction conflicts
   // and many chunks being created
@@ -593,14 +602,17 @@ TEST_F(StressTest, OperatorRegistration) {
  * We execute and immediately rollback insert operations in multiple threads. In parallel, threads are checking that no
  * new rows are visible.
  */
-TEST_F(StressTest, VisibilityOfRollbackedInserts) {
+TEST_P(StressTestMultiple, VisibilityOfRollbackedInserts) {
+  const auto param = GetParam();
+  const auto loop_count = static_cast<uint32_t>(std::get<0>(param));
+
   const auto table_name = std::string{"table_a"};
   const auto table = std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Int, false}}, TableType::Data,
                                              Chunk::DEFAULT_SIZE, UseMvcc::Yes);
   Hyrise::get().storage_manager.add_table(table_name, table);
 
   constexpr auto MAX_VALUE_AND_ROW_COUNT = uint32_t{17};
-  constexpr auto MAX_LOOP_COUNT = uint32_t{100'000};
+  // constexpr auto MAX_LOOP_COUNT = uint32_t{100'000};
 
   const auto values_to_insert =
       std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Int, false}}, TableType::Data);
@@ -624,9 +636,8 @@ TEST_F(StressTest, VisibilityOfRollbackedInserts) {
 
   for (auto thread_id = uint32_t{0}; thread_id < insert_thread_count; ++thread_id) {
     insert_threads.emplace_back([&]() {
-      for (auto loop_count = uint32_t{0};
-           loop_count < MAX_LOOP_COUNT && std::chrono::system_clock::now() < start + std::chrono::seconds(30);
-           ++loop_count) {
+      for (auto loop_id = uint32_t{0};
+           loop_id < loop_count && std::chrono::system_clock::now() < start + std::chrono::seconds(30); ++loop_id) {
         const auto table_wrapper = std::make_shared<TableWrapper>(values_to_insert);
         const auto insert = std::make_shared<Insert>(table_name, table_wrapper);
 
