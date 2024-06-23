@@ -113,7 +113,6 @@ plt.tight_layout()
 basename = sys.argv[1].replace(".json", "")
 plt.savefig(basename + "_breakdown.pdf")
 
-
 rule_benchmark_df = pd.DataFrame(rule_benchmarks, columns=["Benchmark"] + list(sum_optimizer_rule_durations.keys()))
 # sort optimizer rules
 rule_benchmark_df = rule_benchmark_df.reindex(
