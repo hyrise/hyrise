@@ -645,7 +645,7 @@ TEST_P(StressTestMultiple, VisibilityOfRollbackedInserts) {
         insert->set_transaction_context(transaction_context);
         table_wrapper->execute();
         insert->execute();
-        Assert(!insert->execute_failed(), "Insert should have succeeded.");
+        EXPECT_FALSE(insert->execute_failed());
         transaction_context->rollback(RollbackReason::User);
       }
     });
@@ -660,21 +660,19 @@ TEST_P(StressTestMultiple, VisibilityOfRollbackedInserts) {
         {
           const auto [status, result_table] =
               SQLPipelineBuilder{"SELECT count(*) from " + table_name + ";"}.create_pipeline().get_result_table();
-          Assert(status == SQLPipelineStatus::Success, "Expected success of SELECT COUNT() query.");
+          EXPECT_EQ(status, SQLPipelineStatus::Success);
           const auto visible_row_count = result_table->get_value<int64_t>(ColumnID{0}, 0);
-          Assert(visible_row_count, "Must not be nullable.");
-          Assert(*visible_row_count == MAX_VALUE_AND_ROW_COUNT,
-                 "Rollbacked rows are visible: " + std::to_string(*visible_row_count) + " rows.");
+          EXPECT_TRUE(visible_row_count);
+          EXPECT_EQ(*visible_row_count, MAX_VALUE_AND_ROW_COUNT);
         }
 
         {
           const auto [status, result_table] =
               SQLPipelineBuilder{"SELECT max(a) from " + table_name + ";"}.create_pipeline().get_result_table();
-          Assert(status == SQLPipelineStatus::Success, "Expected success of SELECT MAX() query.");
+          EXPECT_EQ(status, SQLPipelineStatus::Success);
           const auto max_value = result_table->get_value<int32_t>(ColumnID{0}, 0);
-          Assert(max_value, "Must not be nullable.");
-          Assert(*max_value == MAX_VALUE_AND_ROW_COUNT,
-                 "Rollbacked rows are visible: " + std::to_string(*max_value) + " rows.");
+          EXPECT_TRUE(max_value);
+          EXPECT_EQ(*max_value, MAX_VALUE_AND_ROW_COUNT);
         }
       }
     });
