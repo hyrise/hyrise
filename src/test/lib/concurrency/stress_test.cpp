@@ -625,8 +625,8 @@ TEST_P(StressTestMultiple, VisibilityOfRollbackedInserts) {
         .get_result_table();
   }
 
-  const auto insert_thread_count = std::thread::hardware_concurrency() / 2;
-  const auto watch_thread_count = std::thread::hardware_concurrency() / 2;
+  const auto insert_thread_count = std::max(10, std::thread::hardware_concurrency() / 2);
+  const auto watch_thread_count = std::max(std::thread::hardware_concurrency() / 2);
 
   auto insert_threads = std::vector<std::thread>{};
   insert_threads.reserve(insert_thread_count);
@@ -645,7 +645,7 @@ TEST_P(StressTestMultiple, VisibilityOfRollbackedInserts) {
         insert->set_transaction_context(transaction_context);
         table_wrapper->execute();
         insert->execute();
-        EXPECT_FALSE(insert->execute_failed());
+        ASSERT_FALSE(insert->execute_failed());
         transaction_context->rollback(RollbackReason::User);
       }
     });
@@ -660,19 +660,19 @@ TEST_P(StressTestMultiple, VisibilityOfRollbackedInserts) {
         {
           const auto [status, result_table] =
               SQLPipelineBuilder{"SELECT count(*) from " + table_name + ";"}.create_pipeline().get_result_table();
-          EXPECT_EQ(status, SQLPipelineStatus::Success);
+          ASSERT_EQ(status, SQLPipelineStatus::Success);
           const auto visible_row_count = result_table->get_value<int64_t>(ColumnID{0}, 0);
-          EXPECT_TRUE(visible_row_count);
-          EXPECT_EQ(*visible_row_count, MAX_VALUE_AND_ROW_COUNT);
+          ASSERT_TRUE(visible_row_count);
+          ASSERT_EQ(*visible_row_count, MAX_VALUE_AND_ROW_COUNT);
         }
 
         {
           const auto [status, result_table] =
               SQLPipelineBuilder{"SELECT max(a) from " + table_name + ";"}.create_pipeline().get_result_table();
-          EXPECT_EQ(status, SQLPipelineStatus::Success);
+          ASSERT_EQ(status, SQLPipelineStatus::Success);
           const auto max_value = result_table->get_value<int32_t>(ColumnID{0}, 0);
-          EXPECT_TRUE(max_value);
-          EXPECT_EQ(*max_value, MAX_VALUE_AND_ROW_COUNT);
+          ASSERT_TRUE(max_value);
+          ASSERT_EQ(*max_value, MAX_VALUE_AND_ROW_COUNT);
         }
       }
     });
