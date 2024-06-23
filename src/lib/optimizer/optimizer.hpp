@@ -50,7 +50,7 @@ class Optimizer final {
 
  private:
   std::vector<std::unique_ptr<AbstractRule>> _rules;
-  mutable std::shared_ptr<AbstractCostEstimator> _cost_estimator;
+  std::shared_ptr<AbstractCostEstimator> _cost_estimator;
 };
 
 }  // namespace hyrise

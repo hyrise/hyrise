@@ -19,7 +19,7 @@ class JoinOrderingRule : public AbstractRule {
 
   // Below an empirically determined threshold, we use DpCcp. Else, we use GreedyOperatorOrdering (GOO).
   //
-  // This threshold was most recently evaluated and adapted in #XXXX, backed by former investigations in #2626 and
+  // This threshold was most recently evaluated and adapted in #2652, backed by former investigations in #2626 and
   // #2642. There, experiments showed that join ordering was a huge performance issue for JOB and TPC-DS queries (many
   // queries spent several hundreds of milliseconds here). One issue whas the shere number of candidates, but we also
   // identified two main bottlenecks in cardinality estimation:

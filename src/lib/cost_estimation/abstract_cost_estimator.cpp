@@ -74,9 +74,9 @@ Cost AbstractCostEstimator::estimate_plan_cost(const std::shared_ptr<AbstractLQP
   return cost;
 }
 
-void AbstractCostEstimator::guarantee_bottom_up_construction() {
+void AbstractCostEstimator::guarantee_bottom_up_construction(const std::shared_ptr<const AbstractLQPNode>& lqp) {
   cost_estimation_by_lqp_cache.emplace();
-  cardinality_estimator->guarantee_bottom_up_construction();
+  cardinality_estimator->guarantee_bottom_up_construction(lqp);
 }
 
 std::optional<Cost> AbstractCostEstimator::_get_subplan_cost_from_cache(

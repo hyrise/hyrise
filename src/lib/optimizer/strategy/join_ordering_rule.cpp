@@ -12,7 +12,6 @@
 #include "optimizer/join_ordering/join_graph.hpp"
 #include "statistics/abstract_cardinality_estimator.hpp"
 #include "utils/assert.hpp"
-#include "utils/timer.hpp"
 
 namespace {
 
@@ -51,9 +50,8 @@ std::shared_ptr<AbstractLQPNode> perform_join_ordering_recursively(
    * and are constrained to the predicates and vertices in the JoinGraph.
    */
   const auto caching_cost_estimator = cost_estimator->new_instance();
-  caching_cost_estimator->guarantee_bottom_up_construction();
+  caching_cost_estimator->guarantee_bottom_up_construction(lqp);
   caching_cost_estimator->cardinality_estimator->guarantee_join_graph(*join_graph);
-  caching_cost_estimator->cardinality_estimator->populate_required_column_expressions(lqp);
 
   /**
    * Select and call the actual join ordering algorithm. Simple heuristic: Use DpCcp for any query with less than
@@ -96,8 +94,6 @@ void JoinOrderingRule::_apply_to_plan_without_subqueries(const std::shared_ptr<A
    */
 
   Assert(lqp_root->type == LQPNodeType::Root, "JoinOrderingRule needs root to hold onto.");
-
-  auto timer = Timer{};
 
   const auto expected_column_order = lqp_root->output_expressions();
 

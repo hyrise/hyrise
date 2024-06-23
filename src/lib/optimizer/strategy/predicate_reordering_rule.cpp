@@ -180,8 +180,7 @@ void PredicateReorderingRule::_apply_to_plan_without_subqueries(
     const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
   // We reorder recursively from leaves to root. Thus, the CardinalityEstimator may cache already estimated statistics.
   const auto caching_cost_estimator = cost_estimator->new_instance();
-  caching_cost_estimator->cardinality_estimator->guarantee_bottom_up_construction();
-  caching_cost_estimator->cardinality_estimator->populate_required_column_expressions(lqp_root);
+  caching_cost_estimator->cardinality_estimator->guarantee_bottom_up_construction(lqp_root);
 
   // We keep track of visited nodes, so that this rule touches nodes once only.
   auto visited_nodes = std::unordered_set<std::shared_ptr<AbstractLQPNode>>{};

@@ -42,13 +42,16 @@ class AbstractCardinalityEstimator {
    * Promises to this CardinalityEstimator that it will only be used to estimate bottom-up constructed plans. That is,
    * the Cost/Cardinality of a node, once constructed, never changes. This enables the usage of a <lqp-ptr> -> <cost>
    * cache.
+   *
+   * Also populates required columns.
    */
-  void guarantee_bottom_up_construction() const;
+  void guarantee_bottom_up_construction(const std::shared_ptr<const AbstractLQPNode>& lqp) const;
 
   /**
    * For increased cardinality estimation performance:
    * Extract columns that are required during cardinality estimations, e.g., columns used in join or selection
    * predicates. During estimations, only statistics for these columns are propagated.
+   *
    */
   void populate_required_column_expressions(const std::shared_ptr<const AbstractLQPNode>& lqp) const;
 

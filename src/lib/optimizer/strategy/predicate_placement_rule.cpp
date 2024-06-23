@@ -33,8 +33,7 @@ void PredicatePlacementRule::_apply_to_plan_without_subqueries(const std::shared
   const auto root_node = lqp_root->type == LQPNodeType::Root ? lqp_root : LogicalPlanRootNode::make(lqp_root);
 
   const auto estimator = cost_estimator->cardinality_estimator->new_instance();
-  estimator->guarantee_bottom_up_construction();
-  estimator->populate_required_column_expressions(lqp_root);
+  estimator->guarantee_bottom_up_construction(lqp_root);
 
   std::vector<std::shared_ptr<AbstractLQPNode>> push_down_nodes;
   _push_down_traversal(root_node, LQPInputSide::Left, push_down_nodes, *estimator);

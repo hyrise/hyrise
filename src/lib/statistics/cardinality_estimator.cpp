@@ -80,9 +80,13 @@ std::optional<float> estimate_null_value_ratio_of_column(const TableStatistics& 
 }
 
 std::shared_ptr<TableStatistics> prune_column_statistics(
-    const std::shared_ptr<const TableStatistics>& table_statistics, const std::vector<ColumnID>& pruned_column_ids,
+    const std::shared_ptr<TableStatistics>& table_statistics, const std::vector<ColumnID>& pruned_column_ids,
     const std::vector<std::shared_ptr<AbstractExpression>>& output_expressions,
-    ExpressionUnorderedSet& required_columns) {
+    ExpressionUnorderedSet& required_columns, const bool enable_pruning) {
+  if (!enable_pruning && pruned_column_ids.empty()) {
+    return table_statistics;
+  }
+
   // Prune `pruned_column_ids` and all statistics for unused columns from the statistics.
   auto output_column_statistics = std::vector<std::shared_ptr<const BaseAttributeStatistics>>(
       table_statistics->column_statistics.size() - pruned_column_ids.size());
@@ -99,7 +103,7 @@ std::shared_ptr<TableStatistics> prune_column_statistics(
 
     // Create a dummy statistics object if the column is not actually used for estimations.
     const auto& expression = output_expressions[output_column_id];
-    if (required_columns.contains(expression)) {
+    if (!enable_pruning || required_columns.contains(expression)) {
       output_column_statistics[output_column_id] = table_statistics->column_statistics[input_column_id];
     } else {
       resolve_data_type(expression->data_type(), [&](const auto data_type_t) {
@@ -193,16 +197,15 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
     return cached_statistics->second;
   }
 
-  // Add columns that are used for estimations to so we will forward their statistics. Otherwise, they are pruned.
-  // Currently, this applies to predicates of JoinNodes and PredicateNodes. Have a look at
-  // `AbstractCardinalityEstimator::_add_required_columns(...)` if more columns are required.
-  if (lqp->type == LQPNodeType::Join || lqp->type == LQPNodeType::Predicate) {
-    _add_required_columns(lqp, required_columns);
-  }
-
   /**
    * 2. Cache lookup failed - perform an actual cardinality estimation.
    */
+
+  // Add columns that are used for estimations so we will forward their statistics. Otherwise, they are pruned.
+  // Currently, this applies to predicates of JoinNodes and PredicateNodes. Have a look at
+  // `AbstractCardinalityEstimator::_add_required_columns(...)` if more columns are required.
+  _add_required_columns(lqp, required_columns);
+
   auto output_table_statistics = std::shared_ptr<TableStatistics>{};
   const auto left_input_table_statistics =
       lqp->left_input() ? estimate_statistics(lqp->left_input(), cacheable, statistics_cache, required_columns)
@@ -236,8 +239,9 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
     case LQPNodeType::Mock: {
       const auto& mock_node = static_cast<const MockNode&>(*lqp);
       Assert(mock_node.table_statistics(), "Cannot return statistics of MockNode that was not assigned statistics");
-      output_table_statistics = prune_column_statistics(mock_node.table_statistics(), mock_node.pruned_column_ids(),
-                                                        mock_node.output_expressions(), required_columns);
+      output_table_statistics =
+          prune_column_statistics(mock_node.table_statistics(), mock_node.pruned_column_ids(),
+                                  mock_node.output_expressions(), required_columns, _enable_pruning);
     } break;
 
     case LQPNodeType::Predicate: {
@@ -260,8 +264,9 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
       const auto& table_statistics = static_table_node.table->table_statistics();
       // StaticTableNodes may or may not provide statistics. If there are statistics, prune and forward the.
       if (table_statistics) {
-        output_table_statistics = prune_column_statistics(table_statistics, std::vector<ColumnID>{},
-                                                          static_table_node.output_expressions(), required_columns);
+        output_table_statistics =
+            prune_column_statistics(table_statistics, std::vector<ColumnID>{}, static_table_node.output_expressions(),
+                                    required_columns, _enable_pruning);
         break;
       }
 
@@ -297,8 +302,9 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
       } else {
         table_statistics = stored_table->table_statistics();
       }
-      output_table_statistics = prune_column_statistics(table_statistics, stored_table_node.pruned_column_ids(),
-                                                        stored_table_node.output_expressions(), required_columns);
+      output_table_statistics =
+          prune_column_statistics(table_statistics, stored_table_node.pruned_column_ids(),
+                                  stored_table_node.output_expressions(), required_columns, _enable_pruning);
     } break;
 
     case LQPNodeType::Validate: {

@@ -8,7 +8,8 @@ using namespace hyrise;  // NOLINT(build/namespaces)
 
 template <typename T>
 bool equals(const std::pair<boost::dynamic_bitset<>, boost::dynamic_bitset<>>& lhs, const std::pair<T, T>& rhs) {
-  Assert(lhs.first.size() == lhs.second.size() && lhs.first.size() <= sizeof(unsigned long) * 8,
+  Assert(lhs.first.size() == lhs.second.size() &&
+             lhs.first.size() <= sizeof(unsigned long) * 8,  // NOLINT(runtime/int,whitespace/line_length)
          "Bitset has too many bits for comparison.");
   return lhs.first.to_ulong() == static_cast<size_t>(rhs.first) &&
          lhs.second.to_ulong() == static_cast<size_t>(rhs.second);

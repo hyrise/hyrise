@@ -17,8 +17,6 @@
 #include "statistics/abstract_cardinality_estimator.hpp"
 #include "statistics/cardinality_estimator.hpp"
 #include "utils/assert.hpp"
-#include "utils/format_duration.hpp"
-#include "utils/timer.hpp"
 
 namespace hyrise {
 
@@ -118,7 +116,6 @@ std::shared_ptr<AbstractLQPNode> DpCcp::operator()(const JoinGraph& join_graph,
   const auto csg_cmp_pairs = EnumerateCcp{vertex_count, enumerate_ccp_edges}();
 
   for (const auto& csg_cmp_pair : csg_cmp_pairs) {
-    // auto pair_timer = Timer{};
     const auto best_plan_left_iter = best_plan.find(csg_cmp_pair.first);
     const auto best_plan_right_iter = best_plan.find(csg_cmp_pair.second);
     DebugAssert(best_plan_left_iter != best_plan.end() && best_plan_right_iter != best_plan.end(),

@@ -25,8 +25,7 @@ void JoinPredicateOrderingRule::_apply_to_plan_without_subqueries(
     const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
   DebugAssert(cost_estimator, "JoinOrderingRule requires cost estimator to be set");
   const auto caching_cardinality_estimator = cost_estimator->cardinality_estimator->new_instance();
-  caching_cardinality_estimator->guarantee_bottom_up_construction();
-  caching_cardinality_estimator->populate_required_column_expressions(lqp_root);
+  caching_cardinality_estimator->guarantee_bottom_up_construction(lqp_root);
 
   visit_lqp(lqp_root, [&](const auto& node) {
     // Check if this is a multi predicate join.

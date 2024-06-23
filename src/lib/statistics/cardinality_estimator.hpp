@@ -1,9 +1,7 @@
 #pragma once
 
 #include <algorithm>
-#include <chrono>
 #include <memory>
-#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -238,6 +236,11 @@ class CardinalityEstimator : public AbstractCardinalityEstimator {
   static std::pair<HistogramCountType, HistogramCountType> estimate_inner_equi_join_of_bins(
       const float left_height, const float left_distinct_count, const float right_height,
       const float right_distinct_count);
+
+ private:
+  // Turn off statistics pruning in tests.
+  friend class CardinalityEstimatorTest;
+  bool _enable_pruning{true};
 };
 
 }  // namespace hyrise

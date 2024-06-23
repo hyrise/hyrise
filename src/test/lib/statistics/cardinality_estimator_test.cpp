@@ -38,6 +38,9 @@ using namespace expression_functional;  // NOLINT(build/namespaces)
 class CardinalityEstimatorTest : public BaseTest {
  public:
   void SetUp() override {
+    // Turn statistics pruning off to see if everything works as expected.
+    estimator._enable_pruning = false;
+
     /**
      * node_a
      */
@@ -125,7 +128,7 @@ class CardinalityEstimatorTest : public BaseTest {
     g_a = node_g->get_column("a");
   }
 
-  CardinalityEstimator estimator;
+  CardinalityEstimator estimator{};
   std::shared_ptr<LQPColumnExpression> a_a, a_b, b_a, b_b, c_x, c_y, d_a, d_b, d_c, e_a, e_b, f_a, f_b, g_a;
   std::shared_ptr<MockNode> node_a, node_b, node_c, node_d, node_e, node_f, node_g;
 };
@@ -1094,21 +1097,22 @@ TEST_F(CardinalityEstimatorTest, WindowNode) {
 }
 
 TEST_F(CardinalityEstimatorTest, StatisticsCaching) {
+  const auto predicate_node_1 = PredicateNode::make(greater_than_(a_a, 50), node_a);
+
   // Enable statistics caching.
-  estimator.guarantee_bottom_up_construction();
+  estimator.guarantee_bottom_up_construction(predicate_node_1);
   const auto& statistics_cache = estimator.cardinality_estimation_cache.statistics_by_lqp;
   ASSERT_TRUE(statistics_cache);
   EXPECT_TRUE(statistics_cache->empty());
 
-  // Estimate the cardinality of a node with statistics caching enabled.
-  const auto predicate_node_1 = PredicateNode::make(greater_than_(a_a, 50), node_a);
+  // Estimate the cardinality of a node with statistics caching.
   estimator.estimate_cardinality(predicate_node_1);
   EXPECT_EQ(statistics_cache->size(), 2);
   EXPECT_TRUE(statistics_cache->contains(node_a));
   EXPECT_TRUE(statistics_cache->contains(predicate_node_1));
 
-  // Estimate the cardinality of a node with statistics caching disabled.
-  const auto predicate_node_2 = PredicateNode::make(less_than_(a_b, 55), node_a);
+  // Estimate the cardinality of a node without statistics caching.
+  const auto predicate_node_2 = PredicateNode::make(less_than_(a_a, 55), node_a);
   estimator.estimate_cardinality(predicate_node_2, false);
   EXPECT_EQ(statistics_cache->size(), 2);
   EXPECT_FALSE(statistics_cache->contains(predicate_node_2));

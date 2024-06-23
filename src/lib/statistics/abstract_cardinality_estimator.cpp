@@ -16,8 +16,10 @@ void AbstractCardinalityEstimator::guarantee_join_graph(const JoinGraph& join_gr
       JoinGraphStatisticsCache::from_join_graph(join_graph));
 }
 
-void AbstractCardinalityEstimator::guarantee_bottom_up_construction() const {
+void AbstractCardinalityEstimator::guarantee_bottom_up_construction(
+    const std::shared_ptr<const AbstractLQPNode>& lqp) const {
   cardinality_estimation_cache.statistics_by_lqp.emplace();
+  populate_required_column_expressions(lqp);
 }
 
 void AbstractCardinalityEstimator::populate_required_column_expressions(
