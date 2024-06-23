@@ -625,8 +625,8 @@ TEST_P(StressTestMultiple, VisibilityOfRollbackedInserts) {
         .get_result_table();
   }
 
-  const auto insert_thread_count = std::max(10, std::thread::hardware_concurrency() / 2);
-  const auto watch_thread_count = std::max(std::thread::hardware_concurrency() / 2);
+  const auto insert_thread_count = std::max(uint32_t{10}, std::thread::hardware_concurrency() / 2);
+  const auto watch_thread_count = std::max(uint32_t{10}, std::thread::hardware_concurrency() / 2);
 
   auto insert_threads = std::vector<std::thread>{};
   insert_threads.reserve(insert_thread_count);
