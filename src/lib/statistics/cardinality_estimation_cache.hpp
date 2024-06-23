@@ -3,8 +3,8 @@
 #include <memory>
 #include <unordered_map>
 
-#include "join_graph_statistics_cache.hpp"
 #include "expression/abstract_expression.hpp"
+#include "join_graph_statistics_cache.hpp"
 
 namespace hyrise {
 

@@ -327,7 +327,7 @@ TEST_F(CardinalityEstimatorTest, JoinInnerEquiHistograms) {
                                 std::vector<HistogramCountType>{10, 5, 10}, std::vector<HistogramCountType>{7, 2, 10});
 
   const auto join_histogram =
-      CardinalityEstimator{}.estimate_inner_equi_join_with_histograms<int32_t>(left_histogram, right_histogram);
+      CardinalityEstimator::estimate_inner_equi_join_with_histograms<int32_t>(left_histogram, right_histogram);
 
   ASSERT_EQ(join_histogram->bin_count(), 3);
 
@@ -387,7 +387,7 @@ TEST_F(CardinalityEstimatorTest, JoinSemiHistograms) {
   const auto right_table_statistics = TableStatistics{{right_statistics}, 33};
 
   const auto join_estimation =
-      CardinalityEstimator{}.estimate_semi_join(ColumnID{0}, ColumnID{0}, left_table_statistics, right_table_statistics);
+      CardinalityEstimator::estimate_semi_join(ColumnID{0}, ColumnID{0}, left_table_statistics, right_table_statistics);
 
   // Left Join Column Histogram:  |  Right Join Column Histogram:  |  Resulting Histogram
   //                              |                                |

@@ -296,12 +296,6 @@ std::shared_ptr<AbstractLQPNode> Optimizer::optimize(
     validate_lqp(root_node);
   }
 
-  // auto timer = Timer{};
-
-  // std::cout << "BASE" << "\n" << *root_node << "\n";
-
-  // _cost_estimator = _cost_estimator->new_instance();
-
   for (const auto& rule : _rules) {
     auto rule_timer = Timer{};
     rule->apply_to_plan(root_node);
@@ -310,21 +304,10 @@ std::shared_ptr<AbstractLQPNode> Optimizer::optimize(
       rule_durations->emplace_back(rule->name(), rule_timer.lap());
     }
 
-    // std::cout << rule->name() << "\n" << *root_node << "\n";
-
     if constexpr (HYRISE_DEBUG) {
       validate_lqp(root_node);
     }
-
-
-    Assert (!_cost_estimator->cost_estimation_by_lqp_cache, rule->name());
-
-    Assert (!_cost_estimator->cardinality_estimator->cardinality_estimation_cache.required_column_expressions, rule->name());
-    Assert (!_cost_estimator->cardinality_estimator->cardinality_estimation_cache.join_graph_statistics_cache, rule->name());
-    Assert (!_cost_estimator->cardinality_estimator->cardinality_estimation_cache.statistics_by_lqp, rule->name());
   }
-
-  // std::cout << "    Optimizer: " << timer.lap_formatted() << "\n";
 
   // Remove LogicalPlanRootNode.
   auto optimized_node = root_node->left_input();

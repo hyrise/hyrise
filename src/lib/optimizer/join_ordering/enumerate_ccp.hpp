@@ -21,7 +21,8 @@ using CsgCmpPair = std::pair<JoinGraphVertexSet, JoinGraphVertexSet>;
 /**
  * CsgCmpPair ("CCP") enumeration algorithm described in Moerkotte and Neumann "Analysis of two existing and one new
  * dynamic programming algorithm for the generation of optimal bushy join trees without cross products"
- * (https://www.vldb.org/conf/2006/p930-moerkotte.pdf).
+ * (https://www.vldb.org/conf/2006/p930-moerkotte.pdf) incorporating the correction of the errata
+ * (http://www.vldb.org/pvldb/vol11/p1069-meister.pdf).
  *
  * Input: A JoinGraph in the form of a number of vertices and edges as a set of index pairs
  *

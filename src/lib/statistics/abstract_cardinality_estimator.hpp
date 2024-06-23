@@ -53,6 +53,10 @@ class AbstractCardinalityEstimator {
   void populate_required_column_expressions(const std::shared_ptr<const AbstractLQPNode>& lqp) const;
 
   mutable CardinalityEstimationCache cardinality_estimation_cache;
+
+ protected:
+  static void _add_required_columns(const std::shared_ptr<const AbstractLQPNode>& node,
+                                    ExpressionUnorderedSet& required_columns);
 };
 
 }  // namespace hyrise
