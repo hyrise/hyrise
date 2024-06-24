@@ -41,8 +41,8 @@ class StressTest : public BaseTest {
 };
 
 TEST_F(StressTest, TestTransactionConflicts) {
-  // Update a table with two entries and a chunk size of 2. This will lead to a high number of transaction conflicts
-  // and many chunks being created
+  // Update a table with two entries and a chunk size of two. This will lead to a high number of transaction conflicts
+  // and many chunks being created.
   const auto table_a = load_table("resources/test_data/tbl/int_float.tbl", ChunkOffset{2});
   Hyrise::get().storage_manager.add_table("table_a", table_a);
   auto initial_sum = int64_t{0};
@@ -57,7 +57,7 @@ TEST_F(StressTest, TestTransactionConflicts) {
   auto conflicted_increments = std::atomic_uint32_t{0};
   const auto iterations_per_thread = uint32_t{20};
 
-  // Define the work package
+  // Define the work package.
   const auto run = [&]() {
     auto my_successful_increments = uint32_t{0};
     auto my_conflicted_increments = uint32_t{0};
@@ -96,7 +96,7 @@ TEST_F(StressTest, TestTransactionConflicts) {
     final_sum = *verification_table->get_value<int64_t>(ColumnID{0}, 0);
   }
 
-  // Really pessimistic, but at least 2 statements should have made it
+  // Really pessimistic, but at least 2 statements should have made it.
   EXPECT_GT(successful_increments, 2);
 
   EXPECT_EQ(successful_increments + conflicted_increments, num_threads * iterations_per_thread);
@@ -105,9 +105,9 @@ TEST_F(StressTest, TestTransactionConflicts) {
 
 TEST_F(StressTest, TestTransactionInsertsSmallChunks) {
   // An update-heavy load on a table with a ridiculously low target chunk size, creating many new chunks. This is
-  // different from TestTransactionConflicts, in that each thread has its own logical row and no transaction
-  // conflicts occur. In the other test, a failed "mark for deletion" (i.e., swap of the row's tid) would lead to
-  // no row being appended.
+  // different from TestTransactionConflicts, in that each thread has its own logical row and no transaction conflicts
+  // occur. In the other test, a failed "mark for deletion" (i.e., swap of the row's tid) would lead to no row begin
+  // appended.
   auto column_definitions = TableColumnDefinitions{};
   column_definitions.emplace_back("a", DataType::Int, false);
   column_definitions.emplace_back("b", DataType::Int, false);
@@ -116,7 +116,7 @@ TEST_F(StressTest, TestTransactionInsertsSmallChunks) {
 
   const auto iterations_per_thread = uint32_t{20};
 
-  // Define the work package - the job id is used so that each thread has its own logical row to work on
+  // Define the work package - the job id is used so that each thread has its own logical row to work on.
   auto job_id = std::atomic_uint32_t{0};
   const auto run = [&]() {
     const auto my_job_id = job_id++;
@@ -152,8 +152,8 @@ TEST_F(StressTest, TestTransactionInsertsSmallChunks) {
 }
 
 TEST_F(StressTest, TestTransactionInsertsPackedNullValues) {
-  // As ValueSegments store their null flags in a vector<bool>, which is not safe to be modified concurrently,
-  // conflicts may (and have) occurred when that vector was written without any type of protection.
+  // As ValueSegments store their null flags in a vector<bool>, which is not safe to be modified concurrently, conflicts
+  // may (and have) occurred when that vector was written without any type of protection.
 
   auto column_definitions = TableColumnDefinitions{};
   column_definitions.emplace_back("a", DataType::Int, false);
