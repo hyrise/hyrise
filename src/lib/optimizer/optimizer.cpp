@@ -243,7 +243,7 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   // Run the PredicatePlacementRule a third time to place semi-joins created by the SemiJoinReductionRule.
   optimizer->add_rule(std::make_unique<PredicatePlacementRule>());
 
-  optimizer->add_rule(std::make_unique<JoinPredicateOrderingRule>());
+  // optimizer->add_rule(std::make_unique<JoinPredicateOrderingRule>());
 
   // Prune chunks after the BetweenCompositionRule ran, as `a >= 5 AND a <= 7` may not be prunable predicates while
   // `a BETWEEN 5 and 7` is. Also, run it after the PredicatePlacementRule, so that predicates are as close to the
