@@ -40,15 +40,6 @@ class StressTest : public BaseTest {
       {CPU_COUNT, CPU_COUNT, 0, 0}, {0, CPU_COUNT, CPU_COUNT, 0}, {0, 0, CPU_COUNT, CPU_COUNT}};
 };
 
-class StressTestMultiple : public StressTest, public ::testing::WithParamInterface<std::tuple<int, int>> {};
-
-INSTANTIATE_TEST_SUITE_P(StressTest, StressTestMultiple,
-                         testing::Combine(testing::Values(1, 10, 100, 1'000, 10'000, 100'000), testing::Range(0, 100)),
-                         [](const testing::TestParamInfo<StressTestMultiple::ParamType>& info) {
-                           return std::to_string(std::get<0>(info.param)) + "loops_" +
-                                  std::to_string(std::get<1>(info.param));
-                         });
-
 TEST_F(StressTest, TestTransactionConflicts) {
   // Update a table with two entries and a chunk size of 2. This will lead to a high number of transaction conflicts
   // and many chunks being created
@@ -596,23 +587,32 @@ TEST_F(StressTest, OperatorRegistration) {
   }
 }
 
+
+// For cases where issues usually arise early, we run the test multiple times.
+class StressTestMultipleRuns : public StressTest, public ::testing::WithParamInterface<int> {};
+
+INSTANTIATE_TEST_SUITE_P(StressTest, StressTestMultipleRuns,
+                         testing::Range(0, 10),
+                         [](const testing::TestParamInfo<StressTestMultipleRuns::ParamType>& info) {
+                           return "loop" + std::to_string(info.param);
+                         });
+
 /**
  * Test to verify that rollbacking Insert operations does not lead to multiple (outdated) rows being visible. This issue
  * has occurred when using link-time optimization or when inlining MVCC functions (see #2649).
  * We execute and immediately rollback insert operations in multiple threads. In parallel, threads are checking that no
  * new rows are visible.
  */
-TEST_P(StressTestMultiple, VisibilityOfRollbackedInserts) {
-  const auto param = GetParam();
-  const auto loop_count = static_cast<uint32_t>(std::get<0>(param));
+TEST_P(StressTestMultipleRuns, VisibilityOfRollbackedInserts) {
+  // StressTestMultipleRuns runs 10x. Limit max runtime for *SAN builds.
+  constexpr auto RUNTIME = std::chrono::seconds(5);
+  constexpr auto MAX_VALUE_AND_ROW_COUNT = uint32_t{17};
+  constexpr auto MAX_LOOP_COUNT = uint32_t{10'000};  // Experimentally determined, see #2651.
 
   const auto table_name = std::string{"table_a"};
   const auto table = std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Int, false}}, TableType::Data,
                                              Chunk::DEFAULT_SIZE, UseMvcc::Yes);
   Hyrise::get().storage_manager.add_table(table_name, table);
-
-  constexpr auto MAX_VALUE_AND_ROW_COUNT = uint32_t{17};
-  // constexpr auto MAX_LOOP_COUNT = uint32_t{100'000};
 
   const auto values_to_insert =
       std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Int, false}}, TableType::Data);
@@ -637,7 +637,7 @@ TEST_P(StressTestMultiple, VisibilityOfRollbackedInserts) {
   for (auto thread_id = uint32_t{0}; thread_id < insert_thread_count; ++thread_id) {
     insert_threads.emplace_back([&]() {
       for (auto loop_id = uint32_t{0};
-           loop_id < loop_count && std::chrono::system_clock::now() < start + std::chrono::seconds(30); ++loop_id) {
+           loop_id < MAX_LOOP_COUNT && std::chrono::system_clock::now() < start + RUNTIME; ++loop_id) {
         const auto table_wrapper = std::make_shared<TableWrapper>(values_to_insert);
         const auto insert = std::make_shared<Insert>(table_name, table_wrapper);
 
@@ -682,7 +682,7 @@ TEST_P(StressTestMultiple, VisibilityOfRollbackedInserts) {
     thread.join();
   }
 
-  // Notifying watch threads that insert rollbacks are done.
+  // Notifying watch threads that insert rollbacks are done so we can stop watching.
   stop_flag.test_and_set();
 
   for (auto& thread : watch_threads) {
