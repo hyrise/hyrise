@@ -1,8 +1,10 @@
 #pragma once
 
-#include "bitpacking_vector_type.hpp"
 #include "compact_vector.hpp"
+
+#include "bitpacking_vector_type.hpp"
 #include "storage/vector_compression/base_vector_decompressor.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 
@@ -16,12 +18,12 @@ class BitPackingDecompressor : public BaseVectorDecompressor {
   BitPackingDecompressor(BitPackingDecompressor&& other) = default;
 
   BitPackingDecompressor& operator=(const BitPackingDecompressor& other) {
-    DebugAssert(&_data == &other._data, "Cannot reassign BitPackingDecompressor");
+    DebugAssert(&_data == &other._data, "Cannot reassign BitPackingDecompressor.");
     return *this;
   }
 
   BitPackingDecompressor& operator=(BitPackingDecompressor&& other) {
-    DebugAssert(&_data == &other._data, "Cannot reassign BitPackingDecompressor");
+    DebugAssert(&_data == &other._data, "Cannot reassign BitPackingDecompressor.");
     return *this;
   }
 

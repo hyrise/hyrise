@@ -8,10 +8,9 @@
 #include <vector>
 
 #include "base_test.hpp"
-#include "types.hpp"
-
 #include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
 #include "storage/index/adaptive_radix_tree/adaptive_radix_tree_nodes.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 

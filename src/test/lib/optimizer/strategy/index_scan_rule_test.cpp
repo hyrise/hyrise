@@ -4,10 +4,6 @@
 #include <utility>
 #include <vector>
 
-#include "base_test.hpp"
-#include "lib/optimizer/strategy/strategy_base_test.hpp"
-#include "utils/assert.hpp"
-
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "hyrise.hpp"
@@ -16,12 +12,15 @@
 #include "logical_query_plan/stored_table_node.hpp"
 #include "optimizer/strategy/index_scan_rule.hpp"
 #include "statistics/attribute_statistics.hpp"
+#include "statistics/base_attribute_statistics.hpp"
 #include "statistics/table_statistics.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/dictionary_segment.hpp"
 #include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
 #include "storage/index/group_key/composite_group_key_index.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
+#include "strategy_base_test.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 
@@ -42,30 +41,34 @@ class IndexScanRuleTest : public StrategyBaseTest {
   }
 
   void generate_mock_statistics(float row_count = 10.0f) {
-    const auto table_statistics = table->table_statistics();
-    table_statistics->row_count = row_count;
+    auto column_statistics = std::vector<std::shared_ptr<const BaseAttributeStatistics>>(2);
+    const auto statistics_a = std::make_shared<AttributeStatistics<int32_t>>();
+    statistics_a->set_statistics_object(GenericHistogram<int32_t>::with_single_bin(0, 20, row_count, 10));
+    column_statistics[0] = statistics_a;
+    const auto statistics_b = std::make_shared<AttributeStatistics<float>>();
+    statistics_b->set_statistics_object(GenericHistogram<float>::with_single_bin(0, 20, row_count, 10));
+    column_statistics[1] = statistics_b;
 
-    table_statistics->column_statistics.at(0)->set_statistics_object(
-        GenericHistogram<int32_t>::with_single_bin(0, 20, row_count, 10));
-    table_statistics->column_statistics.at(1)->set_statistics_object(
-        GenericHistogram<float>::with_single_bin(0, 20, row_count, 10));
+    const auto table_statistics = std::make_shared<TableStatistics>(std::move(column_statistics), row_count);
+    table->set_table_statistics(table_statistics);
   }
 
   std::shared_ptr<IndexScanRule> rule;
   std::shared_ptr<StoredTableNode> stored_table_node;
   std::shared_ptr<Table> table;
-  std::shared_ptr<LQPColumnExpression> a, b;
+  std::shared_ptr<LQPColumnExpression> a;
+  std::shared_ptr<LQPColumnExpression> b;
 };
 
 TEST_F(IndexScanRuleTest, NoIndexScanWithoutIndex) {
   generate_mock_statistics();
 
-  auto predicate_node_0 = PredicateNode::make(equals_(a, 10));
-  predicate_node_0->set_left_input(stored_table_node);
+  _lqp = PredicateNode::make(equals_(a, 10));
+  _lqp->set_left_input(stored_table_node);
 
-  EXPECT_EQ(predicate_node_0->scan_type, ScanType::TableScan);
-  StrategyBaseTest::apply_rule(rule, predicate_node_0);
-  EXPECT_EQ(predicate_node_0->scan_type, ScanType::TableScan);
+  EXPECT_EQ(static_cast<PredicateNode&>(*_lqp).scan_type, ScanType::TableScan);
+  _apply_rule(rule, _lqp);
+  EXPECT_EQ(static_cast<PredicateNode&>(*_lqp).scan_type, ScanType::TableScan);
 }
 
 TEST_F(IndexScanRuleTest, NoIndexScanWithIndexOnOtherColumn) {
@@ -75,23 +78,23 @@ TEST_F(IndexScanRuleTest, NoIndexScanWithIndexOnOtherColumn) {
 
   generate_mock_statistics();
 
-  auto predicate_node_0 = PredicateNode::make(equals_(a, 10));
-  predicate_node_0->set_left_input(stored_table_node);
+  _lqp = PredicateNode::make(equals_(a, 10));
+  _lqp->set_left_input(stored_table_node);
 
-  EXPECT_EQ(predicate_node_0->scan_type, ScanType::TableScan);
-  StrategyBaseTest::apply_rule(rule, predicate_node_0);
-  EXPECT_EQ(predicate_node_0->scan_type, ScanType::TableScan);
+  EXPECT_EQ(static_cast<PredicateNode&>(*_lqp).scan_type, ScanType::TableScan);
+  _apply_rule(rule, _lqp);
+  EXPECT_EQ(static_cast<PredicateNode&>(*_lqp).scan_type, ScanType::TableScan);
 }
 
 TEST_F(IndexScanRuleTest, NoIndexScanWithTwoColumnPredicate) {
   generate_mock_statistics();
 
-  auto predicate_node_0 = PredicateNode::make(equals_(b, b));
-  predicate_node_0->set_left_input(stored_table_node);
+  _lqp = PredicateNode::make(equals_(b, b));
+  _lqp->set_left_input(stored_table_node);
 
-  EXPECT_EQ(predicate_node_0->scan_type, ScanType::TableScan);
-  StrategyBaseTest::apply_rule(rule, predicate_node_0);
-  EXPECT_EQ(predicate_node_0->scan_type, ScanType::TableScan);
+  EXPECT_EQ(static_cast<PredicateNode&>(*_lqp).scan_type, ScanType::TableScan);
+  _apply_rule(rule, _lqp);
+  EXPECT_EQ(static_cast<PredicateNode&>(*_lqp).scan_type, ScanType::TableScan);
 }
 
 TEST_F(IndexScanRuleTest, NoIndexScanWithHighSelectivity) {
@@ -101,12 +104,12 @@ TEST_F(IndexScanRuleTest, NoIndexScanWithHighSelectivity) {
 
   generate_mock_statistics(80'000);
 
-  auto predicate_node_0 = PredicateNode::make(not_equals_(b, 10));
-  predicate_node_0->set_left_input(stored_table_node);
+  _lqp = PredicateNode::make(not_equals_(b, 10));
+  _lqp->set_left_input(stored_table_node);
 
-  EXPECT_EQ(predicate_node_0->scan_type, ScanType::TableScan);
-  StrategyBaseTest::apply_rule(rule, predicate_node_0);
-  EXPECT_EQ(predicate_node_0->scan_type, ScanType::TableScan);
+  EXPECT_EQ(static_cast<PredicateNode&>(*_lqp).scan_type, ScanType::TableScan);
+  _apply_rule(rule, _lqp);
+  EXPECT_EQ(static_cast<PredicateNode&>(*_lqp).scan_type, ScanType::TableScan);
 }
 
 TEST_F(IndexScanRuleTest, IndexScanWithIndex) {
@@ -116,12 +119,12 @@ TEST_F(IndexScanRuleTest, IndexScanWithIndex) {
 
   generate_mock_statistics(1'000'000);
 
-  auto predicate_node_0 = PredicateNode::make(equals_(b, 19'900));
-  predicate_node_0->set_left_input(stored_table_node);
+  _lqp = PredicateNode::make(equals_(b, 19'900));
+  _lqp->set_left_input(stored_table_node);
 
-  EXPECT_EQ(predicate_node_0->scan_type, ScanType::TableScan);
-  StrategyBaseTest::apply_rule(rule, predicate_node_0);
-  EXPECT_EQ(predicate_node_0->scan_type, ScanType::IndexScan);
+  EXPECT_EQ(static_cast<PredicateNode&>(*_lqp).scan_type, ScanType::TableScan);
+  _apply_rule(rule, _lqp);
+  EXPECT_EQ(static_cast<PredicateNode&>(*_lqp).scan_type, ScanType::IndexScan);
 }
 
 TEST_F(IndexScanRuleTest, IndexScanWithIndexPrunedColumn) {
@@ -133,12 +136,12 @@ TEST_F(IndexScanRuleTest, IndexScanWithIndexPrunedColumn) {
 
   generate_mock_statistics(1'000'000);
 
-  auto predicate_node_0 = PredicateNode::make(equals_(b, 19'900));
-  predicate_node_0->set_left_input(stored_table_node);
+  _lqp = PredicateNode::make(equals_(b, 19'900));
+  _lqp->set_left_input(stored_table_node);
 
-  EXPECT_EQ(predicate_node_0->scan_type, ScanType::TableScan);
-  StrategyBaseTest::apply_rule(rule, predicate_node_0);
-  EXPECT_EQ(predicate_node_0->scan_type, ScanType::IndexScan);
+  EXPECT_EQ(static_cast<PredicateNode&>(*_lqp).scan_type, ScanType::TableScan);
+  _apply_rule(rule, _lqp);
+  EXPECT_EQ(static_cast<PredicateNode&>(*_lqp).scan_type, ScanType::IndexScan);
 }
 
 TEST_F(IndexScanRuleTest, IndexScanOnlyOnOutputOfStoredTableNode) {
@@ -148,19 +151,22 @@ TEST_F(IndexScanRuleTest, IndexScanOnlyOnOutputOfStoredTableNode) {
 
   generate_mock_statistics(1'000'000);
 
-  auto predicate_node_0 = PredicateNode::make(equals_(b, 19'900));
-  predicate_node_0->set_left_input(stored_table_node);
+  _lqp = PredicateNode::make(less_than_(b, 15));
+  const auto predicate_node = PredicateNode::make(equals_(b, 19'900));
+  _lqp->set_left_input(predicate_node);
+  predicate_node->set_left_input(stored_table_node);
 
-  auto predicate_node_1 = PredicateNode::make(less_than_(b, 15));
-  predicate_node_1->set_left_input(predicate_node_0);
+  EXPECT_EQ(static_cast<PredicateNode&>(*_lqp).scan_type, ScanType::TableScan);
+  EXPECT_EQ(predicate_node->scan_type, ScanType::TableScan);
 
-  StrategyBaseTest::apply_rule(rule, predicate_node_1);
-  EXPECT_EQ(predicate_node_0->scan_type, ScanType::IndexScan);
-  EXPECT_EQ(predicate_node_1->scan_type, ScanType::TableScan);
+  _apply_rule(rule, _lqp);
+
+  EXPECT_EQ(static_cast<PredicateNode&>(*_lqp).scan_type, ScanType::TableScan);
+  EXPECT_EQ(predicate_node->scan_type, ScanType::IndexScan);
 }
 
 // Same test as before, but placing the predicate with a high selectivity first, which does not trigger an index
-// scan. The seoond predicate has a very low selectivity, but does not follow a stored table node.
+// scan. The second predicate has a very low selectivity, but does not follow a stored table node.
 TEST_F(IndexScanRuleTest, NoIndexScanForSecondPredicate) {
   auto chunk_ids = std::vector<ChunkID>(table->chunk_count());
   std::iota(chunk_ids.begin(), chunk_ids.end(), 0);
@@ -168,15 +174,18 @@ TEST_F(IndexScanRuleTest, NoIndexScanForSecondPredicate) {
 
   generate_mock_statistics(1'000'000);
 
-  auto predicate_node_0 = PredicateNode::make(less_than_(b, 15));
-  predicate_node_0->set_left_input(stored_table_node);
+  _lqp = PredicateNode::make(equals_(b, 19'900));
+  const auto predicate_node = PredicateNode::make(less_than_(b, 15));
+  _lqp->set_left_input(predicate_node);
+  predicate_node->set_left_input(stored_table_node);
 
-  auto predicate_node_1 = PredicateNode::make(equals_(b, 19'900));
-  predicate_node_1->set_left_input(predicate_node_0);
+  EXPECT_EQ(static_cast<PredicateNode&>(*_lqp).scan_type, ScanType::TableScan);
+  EXPECT_EQ(predicate_node->scan_type, ScanType::TableScan);
 
-  StrategyBaseTest::apply_rule(rule, predicate_node_1);
-  EXPECT_EQ(predicate_node_0->scan_type, ScanType::TableScan);
-  EXPECT_EQ(predicate_node_1->scan_type, ScanType::TableScan);
+  _apply_rule(rule, _lqp);
+
+  EXPECT_EQ(static_cast<PredicateNode&>(*_lqp).scan_type, ScanType::TableScan);
+  EXPECT_EQ(predicate_node->scan_type, ScanType::TableScan);
 }
 
 }  // namespace hyrise

@@ -1,12 +1,27 @@
 #include "mvcc_delete_plugin.hpp"
 
+#include <cstddef>
+#include <iomanip>
+#include <memory>
+#include <mutex>
+#include <numeric>
+#include <ostream>
+#include <sstream>
+#include <string>
+#include <vector>
+
+#include "concurrency/transaction_context.hpp"
+#include "hyrise.hpp"
 #include "operators/get_table.hpp"
-#include "operators/table_wrapper.hpp"
 #include "operators/update.hpp"
 #include "operators/validate.hpp"
-#include "storage/pos_lists/row_id_pos_list.hpp"
-#include "storage/reference_segment.hpp"
+#include "storage/mvcc_data.hpp"
 #include "storage/table.hpp"
+#include "types.hpp"
+#include "utils/abstract_plugin.hpp"
+#include "utils/assert.hpp"
+#include "utils/log_manager.hpp"
+#include "utils/pausable_loop_thread.hpp"
 
 namespace hyrise {
 
@@ -15,11 +30,14 @@ std::string MvccDeletePlugin::description() const {
 }
 
 void MvccDeletePlugin::start() {
-  _loop_thread_logical_delete = std::make_unique<PausableLoopThread>(
-      IDLE_DELAY_LOGICAL_DELETE, [&](size_t /*unused*/) { _logical_delete_loop(); });
+  _loop_thread_logical_delete = std::make_unique<PausableLoopThread>(IDLE_DELAY_LOGICAL_DELETE, [&](size_t /*unused*/) {
+    _logical_delete_loop();
+  });
 
-  _loop_thread_physical_delete = std::make_unique<PausableLoopThread>(
-      IDLE_DELAY_PHYSICAL_DELETE, [&](size_t /*unused*/) { _physical_delete_loop(); });
+  _loop_thread_physical_delete =
+      std::make_unique<PausableLoopThread>(IDLE_DELAY_PHYSICAL_DELETE, [&](size_t /*unused*/) {
+        _physical_delete_loop();
+      });
 }
 
 void MvccDeletePlugin::stop() {

@@ -1,9 +1,17 @@
 #include "join_graph_visualizer.hpp"
 
+#include <cstddef>
+#include <memory>
 #include <sstream>
+#include <string>
+#include <vector>
 
+#include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
+#include "optimizer/join_ordering/join_graph.hpp"
+#include "optimizer/join_ordering/join_graph_edge.hpp"
+#include "visualization/abstract_visualizer.hpp"
 #include "viz_record_layout.hpp"
 
 namespace hyrise {
@@ -51,7 +59,7 @@ void JoinGraphVisualizer::_build_graph(const std::vector<JoinGraph>& graphs) {
         const auto first_vertex = graph.vertices[first_vertex_idx];
         const auto second_vertex = graph.vertices[second_vertex_idx];
 
-        std::stringstream edge_label_stream;
+        auto edge_label_stream = std::stringstream{};
         for (const auto& predicate : edge.predicates) {
           edge_label_stream << predicate->as_column_name();
           edge_label_stream << "\n";
@@ -68,7 +76,7 @@ void JoinGraphVisualizer::_build_graph(const std::vector<JoinGraph>& graphs) {
         // More than two vertices, i.e. we have a hyperedge (think `SELECT * FROM x, y, z WHERE x.a + y.b + z.c = x.d`.)
         // Render a diamond vertex that contains all the Predicates and connect all hyperedge vertices to that vertex.
 
-        std::stringstream vertex_label_stream;
+        auto vertex_label_stream = std::stringstream{};
         const auto edge_predicate_count = edge.predicates.size();
         for (size_t predicate_idx{0}; predicate_idx < edge_predicate_count; ++predicate_idx) {
           const auto& predicate = edge.predicates[predicate_idx];

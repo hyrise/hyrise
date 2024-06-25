@@ -1,18 +1,32 @@
 #include "expression_reduction_rule.hpp"
 
 #include <algorithm>
+#include <cstddef>
 #include <functional>
-#include <unordered_set>
+#include <memory>
+#include <string>
+#include <vector>
 
+#include <boost/variant/get.hpp>
+
+#include "all_type_variant.hpp"
+#include "expression/abstract_expression.hpp"
 #include "expression/evaluation/expression_evaluator.hpp"
 #include "expression/evaluation/like_matcher.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
-#include "expression/in_expression.hpp"
+#include "expression/logical_expression.hpp"
+#include "expression/value_expression.hpp"
+#include "expression/window_function_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/alias_node.hpp"
+#include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
+#include "null_value.hpp"
+#include "resolve_type.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 
@@ -25,7 +39,7 @@ std::string ExpressionReductionRule::name() const {
 
 void ExpressionReductionRule::_apply_to_plan_without_subqueries(
     const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
-  Assert(lqp_root->type == LQPNodeType::Root, "ExpressionReductionRule needs root to hold onto");
+  Assert(lqp_root->type == LQPNodeType::Root, "ExpressionReductionRule needs root to hold onto.");
 
   visit_lqp(lqp_root, [&](const auto& sub_node) {
     if (sub_node->type == LQPNodeType::Aggregate) {
@@ -143,7 +157,7 @@ const std::shared_ptr<AbstractExpression>& ExpressionReductionRule::reduce_distr
       input_expression = common_conjunction_expression;
     } else {
       Assert(inflated_disjunction_remainder,
-             "Bug detected. inflated_disjunction_remainder should contain an expression");
+             "Bug detected. inflated_disjunction_remainder should contain an expression.");
       input_expression = inflated_disjunction_remainder;
     }
   }
@@ -167,8 +181,9 @@ void ExpressionReductionRule::reduce_constant_expression(std::shared_ptr<Abstrac
   }
 
   const auto all_arguments_are_values =
-      std::all_of(input_expression->arguments.begin(), input_expression->arguments.end(),
-                  [&](const auto& argument) { return argument->type == ExpressionType::Value; });
+      std::all_of(input_expression->arguments.begin(), input_expression->arguments.end(), [&](const auto& argument) {
+        return argument->type == ExpressionType::Value;
+      });
 
   if (!all_arguments_are_values) {
     return;
@@ -177,7 +192,7 @@ void ExpressionReductionRule::reduce_constant_expression(std::shared_ptr<Abstrac
   resolve_data_type(input_expression->data_type(), [&](const auto data_type_t) {
     using ExpressionDataType = typename decltype(data_type_t)::type;
     const auto result = ExpressionEvaluator{}.evaluate_expression_to_result<ExpressionDataType>(*input_expression);
-    Assert(result->is_literal(), "Expected Literal");
+    Assert(result->is_literal(), "Expected literal.");
 
     if (result->is_null(0)) {
       input_expression = std::make_shared<ValueExpression>(NullValue{});
@@ -331,10 +346,11 @@ void ExpressionReductionRule::remove_duplicate_aggregate(
   {
     // Remove the AVG() expression from the AggregateNode
     auto& expressions = aggregate_node->node_expressions;
-    expressions.erase(
-        std::remove_if(expressions.begin(), expressions.end(),
-                       [&](const auto& expression) { return replacements.find(expression) != replacements.end(); }),
-        expressions.end());
+    expressions.erase(std::remove_if(expressions.begin(), expressions.end(),
+                                     [&](const auto& expression) {
+                                       return replacements.find(expression) != replacements.end();
+                                     }),
+                      expressions.end());
   }
 
   // Add a ProjectionNode that calculates AVG(a) as SUM(a)/COUNT(a).
@@ -343,7 +359,7 @@ void ExpressionReductionRule::remove_duplicate_aggregate(
   lqp_insert_node(projection_node, LQPInputSide::Left, aggregate_node);
 
   // Now update the AVG expression in all nodes that might refer to it, starting with the ProjectionNode
-  bool updated_an_alias = false;
+  auto updated_an_alias = false;
   visit_lqp_upwards(projection_node, [&](const auto& node) {
     for (auto& expression : node->node_expressions) {
       expression_deep_replace(expression, replacements);

@@ -1,11 +1,14 @@
 #include "format_duration.hpp"
 
+#include <chrono>
+#include <cstddef>
+#include <cstdint>
 #include <sstream>
+#include <string>
+#include <vector>
 
 #include <boost/hana/for_each.hpp>
 #include <boost/hana/tuple.hpp>
-
-#include "utils/assert.hpp"
 
 namespace hyrise {
 

@@ -1,6 +1,20 @@
 #include "partial_hash_index.hpp"
 
-#include "storage/segment_iterate.hpp"
+#include <cstddef>
+#include <memory>
+#include <mutex>
+#include <shared_mutex>
+#include <utility>
+#include <vector>
+
+#include "tsl/sparse_set.h"
+
+#include "all_type_variant.hpp"
+#include "resolve_type.hpp"
+#include "storage/chunk.hpp"
+#include "storage/index/partial_hash/partial_hash_index_impl.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 

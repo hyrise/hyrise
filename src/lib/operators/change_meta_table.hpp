@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "abstract_read_write_operator.hpp"
@@ -11,16 +12,13 @@ namespace hyrise {
 class TransactionContext;
 
 /**
- * Operator that modifies meta tables, e.g. calls insert on the plugins meta table to load a plugin.
- * It expects the table name of the table to modify as a string.
+ * Operator that modifies meta tables, e.g. calls insert on the plugins meta table to load a plugin. It expects the
+ * table name of the table to modify as a string.
  *
- * The input tables are like the inputs of the Update operator.
- * If used, they must have the exact same column layout as the meta table (otherwise, it can be dummy tables).
- * The first input table specifies which rows and columns of the meta table
- * should be updated or deleted.
- * For inserts, the second input table contains the rows to insert.
- * For updates, it must have the same number of rows as the first table and contains the
- * data that is used to update the rows specified by the first table.
+ * If set, the output of input operators must have the exact same column layout as the meta table. For inserts and
+ * deletes, the left input table contains the rows to insert/delete. For updates, the left input table specifies which
+ * rows and columns of the meta table should be updated. The second input table contains the data that is used to update
+ * the rows specified by the first table and it must have the same number of rows as the first table.
  *
  * Modifying meta tables is not MVCC safe, so we do nothing on commit or rollback.
  * This is why the operator throws an exception if not used in auto-commit queries.

@@ -1,6 +1,5 @@
 #include "null_scan_removal_rule.hpp"
 
-#include <algorithm>
 #include <memory>
 #include <string>
 #include <vector>
@@ -14,10 +13,8 @@
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
-#include "optimizer/join_ordering/join_graph.hpp"
-#include "statistics/cardinality_estimation_cache.hpp"
 #include "statistics/cardinality_estimator.hpp"
-#include "statistics/table_statistics.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {
@@ -28,7 +25,7 @@ std::string NullScanRemovalRule::name() const {
 }
 
 void NullScanRemovalRule::apply_to_plan(const std::shared_ptr<LogicalPlanRootNode>& root) const {
-  Assert(root->type == LQPNodeType::Root, "NullScanRemovalRule needs root to hold onto");
+  Assert(root->type == LQPNodeType::Root, "NullScanRemovalRule needs root to hold onto.");
 
   std::vector<std::shared_ptr<AbstractLQPNode>> nodes_to_remove;
 

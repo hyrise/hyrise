@@ -1,12 +1,12 @@
 #pragma once
 
 #include <memory>
+#include <string>
 
 #include <boost/algorithm/string/classification.hpp>
 #include <boost/range/algorithm_ext/erase.hpp>
 
 #include "base_test.hpp"
-
 #include "storage/chunk_encoder.hpp"
 #include "storage/encoding_type.hpp"
 #include "storage/table.hpp"

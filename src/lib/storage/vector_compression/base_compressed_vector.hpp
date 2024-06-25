@@ -6,7 +6,6 @@
 
 #include "base_vector_decompressor.hpp"
 #include "compressed_vector_type.hpp"
-
 #include "types.hpp"
 
 namespace hyrise {
