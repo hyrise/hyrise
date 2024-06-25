@@ -38,6 +38,7 @@
 #include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/timer.hpp"
+#include "visualization/lqp_visualizer.hpp"
 
 namespace {
 
@@ -296,6 +297,28 @@ std::shared_ptr<AbstractLQPNode> Optimizer::optimize(
     validate_lqp(root_node);
   }
 
+  std::cout << __FILE__ << ":" << __LINE__ << std::endl;
+
+  auto rule_id = size_t{0};
+  const auto visualize = [&](const auto& name) {
+    auto graphviz_config = GraphvizConfig{};
+    graphviz_config.format = "svg";
+
+    auto nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
+    visit_lqp(root_node, [&](const auto& node) {
+      nodes.emplace_back(node);
+      return LQPVisitation::VisitInputs;
+    });
+
+    auto file_name = std::stringstream{};
+    file_name << std::setw(2) << "LQP-" << rule_id << "-" << name << ".svg";
+    LQPVisualizer{graphviz_config, {}, {}, {}}.visualize(nodes, file_name.str());
+  };
+
+
+  visualize("base");
+  std::cout << __FILE__ << ":" << __LINE__ << std::endl;
+
   for (const auto& rule : _rules) {
     auto rule_timer = Timer{};
     rule->apply_to_plan(root_node);
@@ -307,6 +330,9 @@ std::shared_ptr<AbstractLQPNode> Optimizer::optimize(
     if constexpr (HYRISE_DEBUG) {
       validate_lqp(root_node);
     }
+
+    ++rule_id;
+    visualize(rule->name());
   }
 
   // Remove LogicalPlanRootNode.
