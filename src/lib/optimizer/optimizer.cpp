@@ -255,6 +255,8 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   // could become deduplicated. For this, the ColumnPruningRule needs to have been executed.
   optimizer->add_rule(std::make_unique<StoredTableColumnAlignmentRule>());
 
+  optimizer->add_rule(std::make_unique<JoinPredicateOrderingRule>());
+
   // Bring predicates into the desired order once the PredicatePlacementRule has positioned them as desired
   optimizer->add_rule(std::make_unique<PredicateReorderingRule>());
 
