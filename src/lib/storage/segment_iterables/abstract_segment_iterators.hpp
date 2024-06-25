@@ -78,15 +78,27 @@ class AbstractPointAccessSegmentIterator : public AbstractSegmentIterator<Derive
 
   template <typename F>
   void prefetch(const ChunkOffset offset, const size_t position_filter_size, F functor) const {
-    if (offset % 8 == 0) {
-      auto position_filter_it = _position_filter_it;  // Get copy of iterator and keep _position_filter_it untouched.
-      const auto prefetched_elements_count = std::min(size_t{8}, position_filter_size - offset);
-      // std::cerr << "start prefetch() from " << offset << " to " << offset + prefetched_elements_count << " (pos list size is " << position_filter_size << ")\n";
+    constexpr auto PREFETCH_LENGTH = uint16_t{32};
+    if (position_filter_size < PREFETCH_LENGTH) {
+      return;
+    }
 
-      for (auto offset_increase = size_t{0}; offset_increase < prefetched_elements_count; ++offset_increase) {
+    const auto start_position = std::distance(_position_filter_begin, _position_filter_it);
+    if (offset == 0) {
+      auto position_filter_it = _position_filter_it + PREFETCH_LENGTH / 2;
+      const auto items_to_prefetch = std::min(size_t{PREFETCH_LENGTH / 2}, position_filter_size - start_position);
+
+      for (auto offset_increase = size_t{0}; offset_increase < items_to_prefetch && (start_position + offset_increase) < position_filter_size; ++offset_increase) {
         functor(position_filter_it->chunk_offset);
         ++position_filter_it;
       }
+    }
+
+    if (static_cast<size_t>(start_position + PREFETCH_LENGTH) < position_filter_size) {
+      const auto position_filter_it = _position_filter_it + PREFETCH_LENGTH;
+      DebugAssert(static_cast<size_t>(std::distance(_position_filter_begin, position_filter_it)) < position_filter_size,
+                  "Prefetching offset too large.");
+      functor(position_filter_it->chunk_offset);
     }
   }
 
