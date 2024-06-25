@@ -5,9 +5,9 @@
 #include <unordered_map>
 #include <vector>
 
-#include "abstract_read_write_operator.hpp"
-#include "storage/pos_lists/row_id_pos_list.hpp"
-#include "utils/assert.hpp"
+#include "operators/abstract_operator.hpp"
+#include "operators/abstract_read_write_operator.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 
@@ -37,6 +37,10 @@ class Insert : public AbstractReadWriteOperator {
   void _on_rollback_records() override;
 
  private:
+  static void _copy_value_range(const std::shared_ptr<const AbstractSegment>& source_abstract_segment,
+                                ChunkOffset source_begin_offset, const std::shared_ptr<AbstractSegment>& target_abstract_segment,
+                                ChunkOffset target_begin_offset, ChunkOffset length);
+
   const std::string _target_table_name;
 
   // Ranges of rows to which the inserted values are written.
