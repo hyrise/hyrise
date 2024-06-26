@@ -17,8 +17,8 @@ namespace hyrise {
  * Furthermore, the hash join only supports equals predicates, so the most selective equals predicate is moved to the
  * front.
  *
- * For inner joins, this is already done in AbstractJoinOrderingAlgorithm::_add_join_to_plan. See the comment over there
- * for why we have that duplication.
+ * For inner joins, this is already done in AbstractJoinOrderingAlgorithm::_add_join_to_plan. However, the selectivities
+ * can be different after we transformed the plan, e.g., by different predicate placement or due to pruned chunks.
  */
 class JoinPredicateOrderingRule : public AbstractRule {
  public:

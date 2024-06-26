@@ -38,7 +38,7 @@ using namespace expression_functional;  // NOLINT(build/namespaces)
 class CardinalityEstimatorTest : public BaseTest {
  public:
   void SetUp() override {
-    // Turn statistics pruning off to see if everything works as expected.
+    // Turn off statistics pruning to see if everything works as expected.
     estimator._enable_pruning = false;
 
     /**
@@ -126,6 +126,10 @@ class CardinalityEstimatorTest : public BaseTest {
                                               {GenericHistogram<pmr_string>::with_single_bin("a", "z", 100, 40)});
 
     g_a = node_g->get_column("a");
+  }
+
+  void enable_pruning() {
+    estimator._enable_pruning = true;
   }
 
   CardinalityEstimator estimator{};
@@ -1116,6 +1120,53 @@ TEST_F(CardinalityEstimatorTest, StatisticsCaching) {
   estimator.estimate_cardinality(predicate_node_2, false);
   EXPECT_EQ(statistics_cache->size(), 2);
   EXPECT_FALSE(statistics_cache->contains(predicate_node_2));
+}
+
+TEST_F(CardinalityEstimatorTest, StatisticsPruning) {
+  enable_pruning();
+
+  // clang-format off
+  const auto lqp =
+  PredicateNode::make(greater_than_(add_(a_a, 1), 50),
+    ProjectionNode::make(expression_vector(add_(a_a, 1), a_a, a_b, b_a, b_b),
+      JoinNode::make(JoinMode::Inner, equals_(a_b, b_a),
+        node_a,
+        node_b)));
+  // clang-format on
+
+  EXPECT_FALSE(estimator.cardinality_estimation_cache.statistics_by_lqp);
+  EXPECT_FALSE(estimator.cardinality_estimation_cache.required_column_expressions);
+
+  // Estimate without caching. Statistics should only contain colums that are relevant for estimating. Statistics for
+  // column b_b should be dummy statistics without statistics objects.
+  auto statics = estimator.estimate_statistics(lqp);
+  ASSERT_EQ(statics->column_statistics.size(), 5);
+  EXPECT_FALSE(static_cast<const AttributeStatistics<uint32_t>&>(*statics->column_statistics[0]).histogram);
+  EXPECT_TRUE(static_cast<const AttributeStatistics<uint32_t>&>(*statics->column_statistics[1]).histogram);
+  EXPECT_TRUE(static_cast<const AttributeStatistics<uint32_t>&>(*statics->column_statistics[2]).histogram);
+  EXPECT_TRUE(static_cast<const AttributeStatistics<uint32_t>&>(*statics->column_statistics[3]).histogram);
+  EXPECT_FALSE(static_cast<const AttributeStatistics<uint32_t>&>(*statics->column_statistics[4]).histogram);
+  // Caches and required columns should still be unset.
+  EXPECT_FALSE(estimator.cardinality_estimation_cache.statistics_by_lqp);
+  EXPECT_FALSE(estimator.cardinality_estimation_cache.required_column_expressions);
+
+  // Guaranteeing bottom-up construction (i.e., allowing caching) should populate the set of required columns.
+  estimator.guarantee_bottom_up_construction(lqp);
+  ASSERT_TRUE(estimator.cardinality_estimation_cache.required_column_expressions);
+  EXPECT_EQ(estimator.cardinality_estimation_cache.required_column_expressions->size(), 3);
+  EXPECT_TRUE(estimator.cardinality_estimation_cache.required_column_expressions->contains(a_a));
+  EXPECT_TRUE(estimator.cardinality_estimation_cache.required_column_expressions->contains(a_b));
+  EXPECT_TRUE(estimator.cardinality_estimation_cache.required_column_expressions->contains(b_a));
+  EXPECT_FALSE(estimator.cardinality_estimation_cache.required_column_expressions->contains(b_b));
+
+  // Estimate with caching.
+  statics = estimator.estimate_statistics(lqp);
+  ASSERT_EQ(statics->column_statistics.size(), 5);
+  EXPECT_FALSE(static_cast<const AttributeStatistics<uint32_t>&>(*statics->column_statistics[0]).histogram);
+  EXPECT_TRUE(static_cast<const AttributeStatistics<uint32_t>&>(*statics->column_statistics[1]).histogram);
+  EXPECT_TRUE(static_cast<const AttributeStatistics<uint32_t>&>(*statics->column_statistics[2]).histogram);
+  EXPECT_TRUE(static_cast<const AttributeStatistics<uint32_t>&>(*statics->column_statistics[3]).histogram);
+  EXPECT_FALSE(static_cast<const AttributeStatistics<uint32_t>&>(*statics->column_statistics[4]).histogram);
 }
 
 }  // namespace hyrise
