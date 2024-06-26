@@ -587,12 +587,10 @@ TEST_F(StressTest, OperatorRegistration) {
   }
 }
 
-
 // For cases where issues usually arise early, we run the test multiple times.
 class StressTestMultipleRuns : public StressTest, public ::testing::WithParamInterface<int> {};
 
-INSTANTIATE_TEST_SUITE_P(StressTest, StressTestMultipleRuns,
-                         testing::Range(0, 10),
+INSTANTIATE_TEST_SUITE_P(StressTest, StressTestMultipleRuns, testing::Range(0, 10),
                          [](const testing::TestParamInfo<StressTestMultipleRuns::ParamType>& info) {
                            return "loop" + std::to_string(info.param);
                          });
@@ -636,8 +634,8 @@ TEST_P(StressTestMultipleRuns, VisibilityOfRollbackedInserts) {
 
   for (auto thread_id = uint32_t{0}; thread_id < insert_thread_count; ++thread_id) {
     insert_threads.emplace_back([&]() {
-      for (auto loop_id = uint32_t{0};
-           loop_id < MAX_LOOP_COUNT && std::chrono::system_clock::now() < start + RUNTIME; ++loop_id) {
+      for (auto loop_id = uint32_t{0}; loop_id < MAX_LOOP_COUNT && std::chrono::system_clock::now() < start + RUNTIME;
+           ++loop_id) {
         const auto table_wrapper = std::make_shared<TableWrapper>(values_to_insert);
         const auto insert = std::make_shared<Insert>(table_name, table_wrapper);
 
