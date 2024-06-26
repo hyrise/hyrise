@@ -20,21 +20,14 @@
 #include "utils/assert.hpp"
 #include "utils/atomic_max.hpp"
 
-namespace hyrise {
+namespace {
 
-Insert::Insert(const std::string& target_table_name, const std::shared_ptr<const AbstractOperator>& values_to_insert)
-    : AbstractReadWriteOperator(OperatorType::Insert, values_to_insert), _target_table_name(target_table_name) {}
-
-const std::string& Insert::name() const {
-  static const auto name = std::string{"Insert"};
-  return name;
-}
+using namespace hyrise;  // NOLINT(build/namespaces)
 
 template <typename T>
-void Insert::_copy_value_range(const std::shared_ptr<const AbstractSegment>& source_abstract_segment,
-                               ChunkOffset source_begin_offset,
-                               const std::shared_ptr<AbstractSegment>& target_abstract_segment,
-                               ChunkOffset target_begin_offset, ChunkOffset length) {
+void copy_value_range(const std::shared_ptr<const AbstractSegment>& source_abstract_segment,
+                      ChunkOffset source_begin_offset, const std::shared_ptr<AbstractSegment>& target_abstract_segment,
+                      ChunkOffset target_begin_offset, ChunkOffset length) {
   DebugAssert(source_abstract_segment->size() >= source_begin_offset + length, "Source Segment out-of-bounds.");
   DebugAssert(target_abstract_segment->size() >= target_begin_offset + length, "Target Segment out-of-bounds.");
 
@@ -82,6 +75,18 @@ void Insert::_copy_value_range(const std::shared_ptr<const AbstractSegment>& sou
       }
     });
   }
+}
+
+}  // namespace
+
+namespace hyrise {
+
+Insert::Insert(const std::string& target_table_name, const std::shared_ptr<const AbstractOperator>& values_to_insert)
+    : AbstractReadWriteOperator(OperatorType::Insert, values_to_insert), _target_table_name(target_table_name) {}
+
+const std::string& Insert::name() const {
+  static const auto name = std::string{"Insert"};
+  return name;
 }
 
 std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionContext> context) {
@@ -213,8 +218,8 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
 
         resolve_data_type(_target_table->column_data_type(column_id), [&](const auto data_type_t) {
           using ColumnDataType = typename decltype(data_type_t)::type;
-          _copy_value_range<ColumnDataType>(source_segment, source_row_id.chunk_offset, target_segment,
-                                            target_chunk_offset, num_rows_current_iteration);
+          copy_value_range<ColumnDataType>(source_segment, source_row_id.chunk_offset, target_segment,
+                                           target_chunk_offset, num_rows_current_iteration);
         });
       }
 
