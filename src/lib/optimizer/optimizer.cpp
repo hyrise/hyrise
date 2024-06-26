@@ -19,6 +19,7 @@
 #include "strategy/between_composition_rule.hpp"
 #include "strategy/chunk_pruning_rule.hpp"
 #include "strategy/column_pruning_rule.hpp"
+#include "strategy/column_vs_column_scan_removal_rule.hpp"
 #include "strategy/dependent_group_by_reduction_rule.hpp"
 #include "strategy/expression_reduction_rule.hpp"
 #include "strategy/in_expression_rewrite_rule.hpp"
@@ -206,6 +207,8 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   // SubqueryToJoinRule. As such, we run the JoinOrderingRule before the SubqueryToJoinRule.
   optimizer->add_rule(std::make_unique<JoinOrderingRule>());
 
+  // optimizer->add_rule(std::make_unique<ColumnVsColumnScanRemovalRule>());
+
   // Run Group-By Reduction after the JoinOrderingRule ran. The actual join order is not important, but the matching
   // of cross joins with predicates that is done by that rule is needed to create some of the functional dependencies
   // (FDs) used by the DependentGroupByReductionRule.
@@ -297,7 +300,7 @@ std::shared_ptr<AbstractLQPNode> Optimizer::optimize(
     validate_lqp(root_node);
   }
 
-  std::cout << __FILE__ << ":" << __LINE__ << std::endl;
+  /*std::cout << __FILE__ << ":" << __LINE__ << std::endl;
 
   auto rule_id = size_t{0};
   const auto visualize = [&](const auto& name) {
@@ -317,7 +320,9 @@ std::shared_ptr<AbstractLQPNode> Optimizer::optimize(
 
 
   visualize("base");
-  std::cout << __FILE__ << ":" << __LINE__ << std::endl;
+  std::cout << __FILE__ << ":" << __LINE__ << std::endl;*/
+
+  auto timer = Timer{};
 
   for (const auto& rule : _rules) {
     auto rule_timer = Timer{};
@@ -331,13 +336,15 @@ std::shared_ptr<AbstractLQPNode> Optimizer::optimize(
       validate_lqp(root_node);
     }
 
-    ++rule_id;
-    visualize(rule->name());
+    // ++rule_id;
+    // visualize(rule->name());
   }
 
   // Remove LogicalPlanRootNode.
   auto optimized_node = root_node->left_input();
   root_node->set_left_input(nullptr);
+
+  std::cout << "  Optimizer: " << timer.lap_formatted() << std::endl;
 
   return optimized_node;
 }
