@@ -1141,11 +1141,11 @@ TEST_F(CardinalityEstimatorTest, StatisticsPruning) {
   // column b_b should be dummy statistics without statistics objects.
   auto statics = estimator.estimate_statistics(lqp);
   ASSERT_EQ(statics->column_statistics.size(), 5);
-  EXPECT_FALSE(static_cast<const AttributeStatistics<uint32_t>&>(*statics->column_statistics[0]).histogram);
-  EXPECT_TRUE(static_cast<const AttributeStatistics<uint32_t>&>(*statics->column_statistics[1]).histogram);
-  EXPECT_TRUE(static_cast<const AttributeStatistics<uint32_t>&>(*statics->column_statistics[2]).histogram);
-  EXPECT_TRUE(static_cast<const AttributeStatistics<uint32_t>&>(*statics->column_statistics[3]).histogram);
-  EXPECT_FALSE(static_cast<const AttributeStatistics<uint32_t>&>(*statics->column_statistics[4]).histogram);
+  EXPECT_FALSE(static_cast<const AttributeStatistics<int32_t>&>(*statics->column_statistics[0]).histogram);
+  EXPECT_TRUE(static_cast<const AttributeStatistics<int32_t>&>(*statics->column_statistics[1]).histogram);
+  EXPECT_TRUE(static_cast<const AttributeStatistics<int32_t>&>(*statics->column_statistics[2]).histogram);
+  EXPECT_TRUE(static_cast<const AttributeStatistics<int32_t>&>(*statics->column_statistics[3]).histogram);
+  EXPECT_FALSE(static_cast<const AttributeStatistics<int32_t>&>(*statics->column_statistics[4]).histogram);
   // Caches and required columns should still be unset.
   EXPECT_FALSE(estimator.cardinality_estimation_cache.statistics_by_lqp);
   EXPECT_FALSE(estimator.cardinality_estimation_cache.required_column_expressions);
@@ -1162,11 +1162,11 @@ TEST_F(CardinalityEstimatorTest, StatisticsPruning) {
   // Estimate with caching.
   statics = estimator.estimate_statistics(lqp);
   ASSERT_EQ(statics->column_statistics.size(), 5);
-  EXPECT_FALSE(static_cast<const AttributeStatistics<uint32_t>&>(*statics->column_statistics[0]).histogram);
-  EXPECT_TRUE(static_cast<const AttributeStatistics<uint32_t>&>(*statics->column_statistics[1]).histogram);
-  EXPECT_TRUE(static_cast<const AttributeStatistics<uint32_t>&>(*statics->column_statistics[2]).histogram);
-  EXPECT_TRUE(static_cast<const AttributeStatistics<uint32_t>&>(*statics->column_statistics[3]).histogram);
-  EXPECT_FALSE(static_cast<const AttributeStatistics<uint32_t>&>(*statics->column_statistics[4]).histogram);
+  EXPECT_FALSE(static_cast<const AttributeStatistics<int32_t>&>(*statics->column_statistics[0]).histogram);
+  EXPECT_TRUE(static_cast<const AttributeStatistics<int32_t>&>(*statics->column_statistics[1]).histogram);
+  EXPECT_TRUE(static_cast<const AttributeStatistics<int32_t>&>(*statics->column_statistics[2]).histogram);
+  EXPECT_TRUE(static_cast<const AttributeStatistics<int32_t>&>(*statics->column_statistics[3]).histogram);
+  EXPECT_FALSE(static_cast<const AttributeStatistics<int32_t>&>(*statics->column_statistics[4]).histogram);
 }
 
 }  // namespace hyrise

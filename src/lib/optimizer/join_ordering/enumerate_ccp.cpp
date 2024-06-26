@@ -130,6 +130,7 @@ void EnumerateCcp::_enumerate_cmp(const JoinGraphVertexSet& primary_vertex_set) 
     reverse_vertex_indices.emplace_back(current_vertex_idx);
   } while ((current_vertex_idx = neighborhood.find_next(current_vertex_idx)) != JoinGraphVertexSet::npos);
 
+  // NOLINTNEXTLINE(modernize-loop-convert)
   for (auto iter = reverse_vertex_indices.rbegin(); iter != reverse_vertex_indices.rend(); ++iter) {
     auto cmp_vertex_set = JoinGraphVertexSet(_num_vertices);
     cmp_vertex_set.set(*iter);

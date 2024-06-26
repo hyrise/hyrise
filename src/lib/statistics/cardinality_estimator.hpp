@@ -49,7 +49,7 @@ class CardinalityEstimator : public AbstractCardinalityEstimator {
 
   std::shared_ptr<TableStatistics> estimate_statistics(const std::shared_ptr<const AbstractLQPNode>& lqp,
                                                        const bool cacheable, StatisticsByLQP& statistics_cache,
-                                                       ExpressionUnorderedSet& required_expressions) const;
+                                                       ExpressionUnorderedSet& required_columns) const;
 
   /**
    * Per-node-type estimation functions
@@ -72,7 +72,7 @@ class CardinalityEstimator : public AbstractCardinalityEstimator {
 
   std::shared_ptr<TableStatistics> estimate_predicate_node(
       const PredicateNode& predicate_node, const std::shared_ptr<TableStatistics>& input_table_statistics,
-      const bool cacheable, StatisticsByLQP& statistics_cache, ExpressionUnorderedSet& required_expressions) const;
+      const bool cacheable, StatisticsByLQP& statistics_cache, ExpressionUnorderedSet& required_columns) const;
 
   static std::shared_ptr<TableStatistics> estimate_join_node(
       const JoinNode& join_node, const std::shared_ptr<TableStatistics>& left_input_table_statistics,
