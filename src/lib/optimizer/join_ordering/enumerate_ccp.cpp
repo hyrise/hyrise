@@ -212,10 +212,10 @@ std::vector<JoinGraphVertexSet> EnumerateCcp::_non_empty_subsets(const JoinGraph
 
   auto subsets = std::vector<JoinGraphVertexSet>{};
 
+  Assert(vertex_set.size() < 65, "Subsets cannot be larger than 64.");
   // Disable clang-tidy check which leads to a 64 bit left bit shift of a 64 bit value in boost's dynamic_bitset. We
   // assume this is on intention and ignore the issue for now.
-  // NOLINTNEXTLINE(clang-analyzer-core.BitwiseShift)
-  const auto set_ulong = vertex_set.to_ulong();
+  const auto set_ulong = vertex_set.to_ulong();  // NOLINT(clang-analyzer-core.BitwiseShift)
 
   // subset_ulong is the current subset subset [sic]. `set_ulong & -set_ulong` initializes it to the least significant
   // bit in `set_ulong`. E.g., if set_ulong is 011000, this initializes subset_ulong to 001000.
