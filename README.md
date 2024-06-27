@@ -217,9 +217,9 @@ Contact: firstname.lastname@hpi.de
 -   Leander   Neiß
 -   Vincent   Rahn
 -   Hendrik   Rätz
+-   Robert    Richter
 -   Niklas    Riekenbrauck
 -   Alexander Riese
--   Robert    Richter
 -   Marc      Rosenau
 -   Johannes  Schneider
 -   David     Schumann
