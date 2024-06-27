@@ -78,28 +78,28 @@ class AbstractPointAccessSegmentIterator : public AbstractSegmentIterator<Derive
 
   template <typename F>
   void prefetch(const ChunkOffset offset, const size_t position_filter_size, F functor) const {
-    constexpr auto PREFETCH_LENGTH = uint16_t{32};
+    constexpr auto WARMUP = true;
+    constexpr auto PREFETCH_LENGTH = size_t{32};
+    constexpr auto MAX_WARMUP_ITEMS = size_t{8};
     if (position_filter_size < PREFETCH_LENGTH) {
       return;
     }
 
     const auto start_position = std::distance(_position_filter_begin, _position_filter_it);
-    if (offset == 0) {
-      auto position_filter_it = _position_filter_it + PREFETCH_LENGTH / 2;
-      const auto items_to_prefetch = std::min(size_t{PREFETCH_LENGTH / 2}, position_filter_size - start_position);
+    if (WARMUP && offset == 0) {
+      auto position_filter_it = _position_filter_it + PREFETCH_LENGTH - MAX_WARMUP_ITEMS;
+      const auto items_to_prefetch = std::min(MAX_WARMUP_ITEMS, position_filter_size - start_position);
 
-      for (auto offset_increase = size_t{0}; offset_increase < items_to_prefetch && (start_position + offset_increase) < position_filter_size; ++offset_increase) {
+      for (auto offset_increase = size_t{0}; offset_increase < items_to_prefetch; ++offset_increase) {
         functor(position_filter_it->chunk_offset);
         ++position_filter_it;
       }
     }
 
-    if (static_cast<size_t>(start_position + PREFETCH_LENGTH) < position_filter_size) {
-      const auto position_filter_it = _position_filter_it + PREFETCH_LENGTH;
-      DebugAssert(static_cast<size_t>(std::distance(_position_filter_begin, position_filter_it)) < position_filter_size,
-                  "Prefetching offset too large.");
-      functor(position_filter_it->chunk_offset);
-    }
+    const auto position_filter_it = _position_filter_it + std::min(position_filter_size - start_position - 1, PREFETCH_LENGTH);
+    DebugAssert(static_cast<size_t>(std::distance(_position_filter_begin, position_filter_it)) < position_filter_size,
+                "Prefetching offset too large.");
+    functor(position_filter_it->chunk_offset);
   }
 
  private:

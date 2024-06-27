@@ -151,20 +151,20 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
       const auto& chunk_offsets = this->chunk_offsets();
 
       // TODO(Martin): Find a nice way to check for FixedWidth ...
-      if constexpr (std::is_same_v<Decompressor, FixedWidthIntegerDecompressor<uint8_t>> ||
-                    std::is_same_v<Decompressor, FixedWidthIntegerDecompressor<uint16_t>> ||
-                    std::is_same_v<Decompressor, FixedWidthIntegerDecompressor<uint32_t>>) {
-        // For now, we only support prefetching for FixedWidthInteger compression. For bit-packed vectors, getting the
-        // actual address is a bit more tricky.
-        this->prefetch(chunk_offsets.offset_in_poslist, _position_filter_size, [&, this](const ChunkOffset offset) {
-          // std::cerr << "Prefetching address " << _attribute_decompressor.address_of(offset) << "\n";
-          __builtin_prefetch(static_cast<const void*>(_attribute_decompressor.address_of(offset)), /* read */ 0, /* locality hint */ 0);
-          DebugAssert(static_cast<uint32_t>(*_attribute_decompressor.address_of(offset)) == _attribute_decompressor.get(offset), "Mismatch");
-          // std::cerr << "Values: " << static_cast<uint32_t>(*_attribute_decompressor.address_of(offset)) << " & " << _attribute_decompressor.get(offset) << std::endl;
-        });
+      // if constexpr (std::is_same_v<Decompressor, FixedWidthIntegerDecompressor<uint8_t>> ||
+      //               std::is_same_v<Decompressor, FixedWidthIntegerDecompressor<uint16_t>> ||
+      //               std::is_same_v<Decompressor, FixedWidthIntegerDecompressor<uint32_t>>) {
+      //   // For now, we only support prefetching for FixedWidthInteger compression. For bit-packed vectors, getting the
+      //   // actual address is a bit more tricky.
+      //   this->prefetch(chunk_offsets.offset_in_poslist, _position_filter_size, [&, this](const ChunkOffset offset) {
+      //     // std::cerr << "Prefetching address " << _attribute_decompressor.address_of(offset) << "\n";
+      //     __builtin_prefetch(static_cast<const void*>(_attribute_decompressor.address_of(offset)), /* read */ 0, /* locality hint */ 0);
+      //     DebugAssert(static_cast<uint32_t>(*_attribute_decompressor.address_of(offset)) == _attribute_decompressor.get(offset), "Mismatch");
+      //     // std::cerr << "Values: " << static_cast<uint32_t>(*_attribute_decompressor.address_of(offset)) << " & " << _attribute_decompressor.get(offset) << std::endl;
+      //   });
 
-        // std::cerr << "Accessing address " << _attribute_decompressor.address_of(chunk_offsets.offset_in_referenced_chunk) << "\n";
-      }
+      //   // std::cerr << "Accessing address " << _attribute_decompressor.address_of(chunk_offsets.offset_in_referenced_chunk) << "\n";
+      // }
 
       const auto value_id = _attribute_decompressor.get(chunk_offsets.offset_in_referenced_chunk);
       const auto is_null = (value_id == _null_value_id);

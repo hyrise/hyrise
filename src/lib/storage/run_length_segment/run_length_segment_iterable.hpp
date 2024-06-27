@@ -200,18 +200,16 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
   };
 
   /**
-   * Due to the nature of the encoding, point-access is not in O(1).
-   * However, because we store the last position of runs (i.e. a sorted list)
-   * instead of the run length, it is possible to find the value of a position
-   * in O(log(n)) by doing a binary search. Because of the prefetching
-   * capabilities of the hardware, this might not always be faster than a simple
-   * linear search in O(n). More often than not, the chunk offsets will be ordered,
-   * so we don’t even have to scan the entire vector. Instead we can continue searching
-   * from the previously requested position. This is what this iterator does:
-   * - if it’s the first access, it performs a binary search
-   * - for all subsequent accesses it performs
-   *   - a linear search in the range [previous_end_position, n] if new_pos >= previous_pos
-   *   - a binary search in the range [0, previous_end_position] else
+   * Due to the nature of the encoding, point-access is not in O(1). However, because we store the last position of runs
+   * (i.e., a sorted list) instead of the run length, it is possible to find the value of a position in O(log(n)) by
+   * doing a binary search. Because of the prefetching capabilities of the hardware, this might not always be faster
+   * than a simple linear search in O(n). More often than not, the chunk offsets will be ordered, so we don’t even have
+   * to scan the entire vector. Instead we can continue searching from the previously requested position. This is what
+   * this iterator does:
+   *  - if it’s the first access, it performs a binary search
+   *  - for all subsequent accesses it performs
+   *    - a linear search in the range [previous_end_position, n] if new_pos >= previous_pos
+   *    - a binary search in the range [0, previous_end_position] else
    */
   template <typename PosListIteratorType>
   class PointAccessIterator : public AbstractPointAccessSegmentIterator<PointAccessIterator<PosListIteratorType>,

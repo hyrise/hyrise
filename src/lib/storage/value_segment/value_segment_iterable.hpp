@@ -185,9 +185,9 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
     SegmentPosition<T> dereference() const {
       const auto& chunk_offsets = this->chunk_offsets();
 
-      this->prefetch(chunk_offsets.offset_in_poslist, _position_filter_size, [this](const ChunkOffset offset) {
+      this->prefetch(chunk_offsets.offset_in_poslist, _position_filter_size, [this](const ChunkOffset segment_offset) {
         // std::cerr << "Prefetching " << &*(_values_begin_it + offset) << "\n";
-        __builtin_prefetch(&*(_values_begin_it + offset), /* read */ 0, /* locality hint */ 0);
+        __builtin_prefetch(&*(_values_begin_it + segment_offset), /* read */ 0, /* locality hint */ 0);
       });
 
       // std::cerr << "Returning " << *(_values_begin_it + chunk_offsets.offset_in_referenced_chunk) << " @ " << &*(_values_begin_it + chunk_offsets.offset_in_referenced_chunk) << "\n";
@@ -227,13 +227,19 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
     SegmentPosition<T> dereference() const {
       const auto& chunk_offsets = this->chunk_offsets();
 
-      this->prefetch(chunk_offsets.offset_in_poslist, _position_filter_size, [this](const ChunkOffset offset) {
+      this->prefetch(chunk_offsets.offset_in_poslist, _position_filter_size, [&, this](const ChunkOffset segment_offset) {
         // std::cerr << "Prefetching " << &*(_values_begin_it + offset) << "\n";
-        __builtin_prefetch(&*(_values_begin_it + offset), /* read */ 0, /* locality hint */ 0);
+        __builtin_prefetch(&*(_values_begin_it + segment_offset), /* read */ 0, /* locality hint */ 0);
+        // Cannot use prefetching for bit-vector as std::vector<bool> hides too much.s
+
+        // if (chunk_offsets.offset_in_poslist > 64) {
+          // std::cerr << "Prefetching item >>" << segment_offset << "<< " << &*(_values_begin_it + segment_offset) << " with value: " <<
+          // *(_values_begin_it + segment_offset) << "\n";
+        // }
       });
 
 
-      // std::cerr << "Returning " << *(_values_begin_it + chunk_offsets.offset_in_referenced_chunk) << " @ " << &*(_values_begin_it + chunk_offsets.offset_in_referenced_chunk) << "\n";
+      // std::cerr << "Returning item >>" << chunk_offsets.offset_in_poslist << "<< " << &*(_values_begin_it + chunk_offsets.offset_in_referenced_chunk) << " with value " << *(_values_begin_it + chunk_offsets.offset_in_referenced_chunk) << "\n";
 
       return SegmentPosition<T>{*(_values_begin_it + chunk_offsets.offset_in_referenced_chunk),
                                 *(_null_values_begin_it + chunk_offsets.offset_in_referenced_chunk),
