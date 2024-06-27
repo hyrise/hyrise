@@ -219,6 +219,7 @@ Contact: firstname.lastname@hpi.de
 -   Hendrik   Rätz
 -   Niklas    Riekenbrauck
 -   Alexander Riese
+-   Robert    Richter
 -   Marc      Rosenau
 -   Johannes  Schneider
 -   David     Schumann
@@ -236,4 +237,3 @@ Contact: firstname.lastname@hpi.de
 -   Lukas     Wenzel
 -   Fabian    Wiebe
 -   Tim       Zimmermann
--   Robert    Richter

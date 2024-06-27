@@ -1,50 +1,13 @@
-# How to test this?
-#
-# In the root of the repository, run:
-#   nix-shell -p act --run "act"
-# Act is a software that allows you to simulate GitHub Actions CIs locally.
-# It works best in container environments that are not self-hosted.
-# Docker is required to run this as docker-credential-desktop is required,
-# which Nix does not deliver.
+# How to test this:
+#   In the root of the repository, run:
+#     nix-shell -p act --run "act"
+#   Act is a software that allows you to simulate GitHub Actions CIs locally. It works best in container environments that are not self-hosted.
+#   Docker is required to run this as docker-credential-desktop is required, which Nix does not deliver.
 
 name: Nix-Build of Hyrise
 on: push
 
 jobs:
-  nix-gcc-debug:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-        with:
-          submodules: 'recursive'
-      - name: Install Nix
-        uses: DeterminateSystems/nix-installer-action@main
-      - name: Nix - Hyrise Debug Clang Build
-        run: |
-          nix-shell --pure --run "\
-            mkdir nix-cmake-build && cd nix-cmake-build && \
-            cmake -DCMAKE_BUILD_TYPE=Debug .. && \
-            make -W hyriseServer
-          "
-
-  nix-gcc-release:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-        with:
-          submodules: 'recursive'
-      - name: Install Nix
-        uses: DeterminateSystems/nix-installer-action@main
-      - name: Nix - Hyrise RelClang Build
-        run: |
-          nix-shell --pure --run "\
-            mkdir cmake-nix-build && cd cmake-nix-build && \
-            cmake -DCMAKE_BUILD_TYPE=Release .. && \
-            make -W hyriseServer
-          "
-
   nix-clang-debug:
     runs-on: ubuntu-latest
     steps:
@@ -57,9 +20,9 @@ jobs:
       - name: Nix - Hyrise Debug Clang Build
         run: |
           nix-shell --pure --run "\
-            mkdir nix-cmake-build && cd nix-cmake-build && \
-            cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ .. && \
-            make -W hyriseServer
+            mkdir nix-cmake-build-debug && cd nix-cmake-build-debug && \
+            cmake -GNinja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ .. && \
+            ninja
           "
 
   nix-clang-release:
@@ -74,7 +37,7 @@ jobs:
       - name: Nix - Hyrise Release Clang Build
         run: |
           nix-shell --pure --run "\
-            mkdir nix-cmake-build && cd nix-cmake-build && \
-            cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ .. && \
-            make -W hyriseServer
+            mkdir nix-cmake-build-release && cd nix-cmake-build-release && \
+            cmake -GNinja -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ .. && \
+            ninja
           "

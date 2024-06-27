@@ -15,36 +15,21 @@ let
   pkgs = import ./nixpkgs {};
 in
 
-#
-# Why does this work?
-#
-# Scrolling down the file, you will not find any commands like 'cmake ..' or 'make'.
-# Don't worry, we do not miss them and they are not written down anywhere else.
-# Instead, Nix takes core of the build process for us. We only need to include
-# 'cmake' in the nativeBuildInputs, adjust the cmakeFlags and we are good to go.
-#
-
-# Often you will find mkDerivation without a function argument, but that does not
-# allow recursively calling the attributes of the derivation.
-# One can either use rec { .. } or (finalAttrs: { .. }). The latter is recommended.
 pkgs.stdenv.mkDerivation {
   name = "hyrise";
   version = "0.0.1";
 
-  # In simple Linux2Linux same-arch applications, buildInputs and nativeBuildInputs
-  # do not make any significant difference. Therefore, Hyrise the differentiation
-  # is not severly important.
-  # Read more on the difference of buildInputs and nativeBuildInputs here: 
-  # https://discourse.nixos.org/t/use-buildinputs-or-nativebuildinputs-for-nix-shell/8464
-
+  # nativeBuildInput vs. buildInputs
+  #     nativeBuildInputs are packages that are needed to be available during the runtime of the process
+  #     buildInputs are that are needed during the build process, but not anymore during the runtime. 
+  # As this is intended for usage with nix-shell, only nativeBuildInputs are needed.
   nativeBuildInputs = with pkgs; [
-    gcc11
-    clang_15
+    clang
     autoconf
     cmake
     python3
     sqlite
-    lld_18
+    lld
     ninja
     parallel
     coreutils
