@@ -19,6 +19,7 @@ class AbstractPredicateExpression;
 class ArithmeticExpression;
 class AbstractSegment;
 class BinaryPredicateExpression;
+class BetweenExpression;
 class CaseExpression;
 class CastExpression;
 class Chunk;
@@ -128,6 +129,9 @@ class ExpressionEvaluator final {
 
   template <typename Result>
   std::shared_ptr<ExpressionResult<Result>> _evaluate_exists_expression(const ExistsExpression& /*exists_expression*/);
+
+  template <typename Result>
+  std::shared_ptr<ExpressionResult<Result>> _evaluate_between_expression(const BetweenExpression& expression);
 
   // See docs for `_evaluate_default_null_logic()`
   template <typename Result, typename Functor>

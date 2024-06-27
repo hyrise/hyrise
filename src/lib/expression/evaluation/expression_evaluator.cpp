@@ -41,6 +41,7 @@
 #include "expression/value_expression.hpp"
 #include "expression_functors.hpp"
 #include "like_matcher.hpp"
+#include "lossless_cast.hpp"
 #include "lossy_cast.hpp"
 #include "null_value.hpp"
 #include "operators/abstract_operator.hpp"
@@ -51,6 +52,7 @@
 #include "storage/pos_lists/row_id_pos_list.hpp"
 #include "storage/segment_iterate.hpp"
 #include "storage/value_segment.hpp"
+#include "type_comparison.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/date_time_utils.hpp"
@@ -617,6 +619,52 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_in_expr
 
 template <>
 std::shared_ptr<ExpressionResult<ExpressionEvaluator::Bool>>
+ExpressionEvaluator::_evaluate_between_expression<ExpressionEvaluator::Bool>(const BetweenExpression& expression) {
+  // To handle more general cases, e.g., `column_a BETWEEN column_b AND column_c`, rewrite to a conjunction of less and
+  // greater predicate. See `rewrite_between_expression`.
+  Assert(expression.lower_bound()->type == ExpressionType::Value &&
+             expression.upper_bound()->type == ExpressionType::Value,
+         "Between bounds must be ValueExpressions.");
+  auto result_values = pmr_vector<Bool>{};
+
+  _resolve_to_expression_result_view(*expression.operand(), [&](const auto& view) {
+    using DataType = typename std::decay_t<decltype(view)>::Type;
+
+    const auto lower_bound =
+        lossless_variant_cast<DataType>(static_cast<const ValueExpression&>(*expression.lower_bound()).value);
+    Assert(lower_bound, "Incomaptible data types for BETWEEN: operand is " +
+                            std::string{magic_enum::enum_name(expression.operand()->data_type())} +
+                            ", lower bound is " +
+                            std::string{magic_enum::enum_name(expression.lower_bound()->data_type())} + ".");
+    const auto upper_bound =
+        lossless_variant_cast<DataType>(static_cast<const ValueExpression&>(*expression.upper_bound()).value);
+    Assert(upper_bound, "Incomaptible data types for BETWEEN: operand is " +
+                            std::string{magic_enum::enum_name(expression.operand()->data_type())} +
+                            ", upper bound is " +
+                            std::string{magic_enum::enum_name(expression.upper_bound()->data_type())} + ".");
+
+    const auto view_size = static_cast<ChunkOffset>(view.size());
+    result_values.resize(view_size);
+
+    with_between_comparator(expression.predicate_condition, [&](const auto& comparator) {
+      for (auto chunk_offset = ChunkOffset{0}; chunk_offset < view_size; ++chunk_offset) {
+        result_values[chunk_offset] = static_cast<ExpressionEvaluator::Bool>(
+            !view.is_null(chunk_offset) && comparator(view.value(chunk_offset), lower_bound, upper_bound));
+      }
+    });
+  });
+
+  return std::make_shared<ExpressionResult<Bool>>(std::move(result_values));
+}
+
+template <typename Result>
+std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_between_expression(
+    const BetweenExpression& /*expression*/) {
+  Fail("Can only evaluate predicates to bool.");
+}
+
+template <>
+std::shared_ptr<ExpressionResult<ExpressionEvaluator::Bool>>
 ExpressionEvaluator::_evaluate_predicate_expression<ExpressionEvaluator::Bool>(
     const AbstractPredicateExpression& predicate_expression) {
   /**
@@ -637,9 +685,17 @@ ExpressionEvaluator::_evaluate_predicate_expression<ExpressionEvaluator::Bool>(
     case PredicateCondition::BetweenInclusive:
     case PredicateCondition::BetweenLowerExclusive:
     case PredicateCondition::BetweenUpperExclusive:
-    case PredicateCondition::BetweenExclusive:
+    case PredicateCondition::BetweenExclusive: {
+      // Simple BETWEEN expressions with literals as bounds are handled in a specialized way. More complex structures
+      // are handled as conjunction of a less and a greater predicate.
+      const auto& between_expression = static_cast<const BetweenExpression&>(predicate_expression);
+      if (between_expression.lower_bound()->type == ExpressionType::Value &&
+          between_expression.upper_bound()->type == ExpressionType::Value) {
+        return _evaluate_between_expression<ExpressionEvaluator::Bool>(between_expression);
+      }
       return evaluate_expression_to_result<ExpressionEvaluator::Bool>(
           *rewrite_between_expression(predicate_expression));
+    }
 
     case PredicateCondition::In:
     case PredicateCondition::NotIn:
@@ -1092,6 +1148,7 @@ RowIDPosList ExpressionEvaluator::evaluate_expression_to_pos_list(const Abstract
    */
 
   auto result_pos_list = RowIDPosList{};
+  const auto row_count = static_cast<ChunkOffset>(_output_row_count);
 
   switch (expression.type) {
     case ExpressionType::Predicate: {
@@ -1124,8 +1181,7 @@ RowIDPosList ExpressionEvaluator::evaluate_expression_to_pos_list(const Abstract
 
               if constexpr (ExpressionFunctorType::template supports<ExpressionEvaluator::Bool, LeftDataType,
                                                                      RightDataType>::value) {
-                for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(_output_row_count);
-                     ++chunk_offset) {
+                for (auto chunk_offset = ChunkOffset{0}; chunk_offset < row_count; ++chunk_offset) {
                   if (left_result.is_null(chunk_offset) || right_result.is_null(chunk_offset)) {
                     continue;
                   }
@@ -1146,8 +1202,40 @@ RowIDPosList ExpressionEvaluator::evaluate_expression_to_pos_list(const Abstract
         case PredicateCondition::BetweenInclusive:
         case PredicateCondition::BetweenLowerExclusive:
         case PredicateCondition::BetweenUpperExclusive:
-        case PredicateCondition::BetweenExclusive:
-          return evaluate_expression_to_pos_list(*rewrite_between_expression(expression));
+        case PredicateCondition::BetweenExclusive: {
+          const auto& between_expression = static_cast<const BetweenExpression&>(predicate_expression);
+          const auto& lower_expression = between_expression.lower_bound();
+          const auto& upper_expression = between_expression.upper_bound();
+          if (lower_expression->type != ExpressionType::Value || upper_expression->type != ExpressionType::Value) {
+            return evaluate_expression_to_pos_list(*rewrite_between_expression(expression));
+          }
+
+          // Simple BETWEEN predicates with literals as bounds can be handled easily.
+          _resolve_to_expression_result_view(*between_expression.operand(), [&](const auto& view) {
+            using DataType = typename std::decay_t<decltype(view)>::Type;
+
+            const auto lower_bound =
+                lossless_variant_cast<DataType>(static_cast<const ValueExpression&>(*lower_expression).value);
+            Assert(lower_bound, "Incomaptible data types for BETWEEN: operand is " +
+                                    std::string{magic_enum::enum_name(between_expression.operand()->data_type())} +
+                                    ", lower bound is " +
+                                    std::string{magic_enum::enum_name(lower_expression->data_type())} + ".");
+            const auto upper_bound =
+                lossless_variant_cast<DataType>(static_cast<const ValueExpression&>(*upper_expression).value);
+            Assert(upper_bound, "Incomaptible data types for BETWEEN: operand is " +
+                                    std::string{magic_enum::enum_name(between_expression.operand()->data_type())} +
+                                    ", upper bound is " +
+                                    std::string{magic_enum::enum_name(upper_expression->data_type())} + ".");
+
+            with_between_comparator(between_expression.predicate_condition, [&](const auto& comparator) {
+              for (auto chunk_offset = ChunkOffset{0}; chunk_offset < row_count; ++chunk_offset) {
+                if (!view.is_null(chunk_offset) && comparator(view.value(chunk_offset), lower_bound, upper_bound)) {
+                  result_pos_list.emplace_back(_chunk_id, chunk_offset);
+                }
+              }
+            });
+          });
+        } break;
 
         case PredicateCondition::IsNull:
         case PredicateCondition::IsNotNull: {
@@ -1155,15 +1243,13 @@ RowIDPosList ExpressionEvaluator::evaluate_expression_to_pos_list(const Abstract
 
           _resolve_to_expression_result_view(*is_null_expression.operand(), [&](const auto& result) {
             if (is_null_expression.predicate_condition == PredicateCondition::IsNull) {
-              for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(_output_row_count);
-                   ++chunk_offset) {
+              for (auto chunk_offset = ChunkOffset{0}; chunk_offset < row_count; ++chunk_offset) {
                 if (result.is_null(chunk_offset)) {
                   result_pos_list.emplace_back(_chunk_id, chunk_offset);
                 }
               }
             } else {  // PredicateCondition::IsNotNull
-              for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(_output_row_count);
-                   ++chunk_offset) {
+              for (auto chunk_offset = ChunkOffset{0}; chunk_offset < row_count; ++chunk_offset) {
                 if (!result.is_null(chunk_offset)) {
                   result_pos_list.emplace_back(_chunk_id, chunk_offset);
                 }
@@ -1184,8 +1270,7 @@ RowIDPosList ExpressionEvaluator::evaluate_expression_to_pos_list(const Abstract
           // b) Like/In are on the slower end anyway
           const auto result = evaluate_expression_to_result<ExpressionEvaluator::Bool>(expression);
           result->as_view([&](const auto& result_view) {
-            for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(_output_row_count);
-                 ++chunk_offset) {
+            for (auto chunk_offset = ChunkOffset{0}; chunk_offset < row_count; ++chunk_offset) {
               if (result_view.value(chunk_offset) != 0 && !result_view.is_null(chunk_offset)) {
                 result_pos_list.emplace_back(_chunk_id, chunk_offset);
               }
