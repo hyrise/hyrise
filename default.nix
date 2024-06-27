@@ -2,7 +2,7 @@
 # Nix Setup for Hyrise
 #
 # First install Nix (see https://nixos.org/manual/nix/stable/installation/).
-# Then in the root of this repository, run
+# Then in the Hyrise repository, run
 #
 #   nix-shell --pure
 #
