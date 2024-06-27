@@ -2,14 +2,16 @@
 # Nix Setup for Hyrise
 #
 # First install Nix (see https://nixos.org/manual/nix/stable/installation/).
-# Then in the root of this repository, run 
+# Then in the root of this repository, run
 #
-#   nix-shell --pure`
+#   nix-shell --pure
+#
+# You will now have an environment that allows building Hyrise with the standard
+# build commands.
 #
 # The `--pure` flag ensures that the shell does not take over environment
 # variables from the host. Therefore, all software installed comes purely
-# from Nix package manager. 
-# For MacOS user: This also means the default Apple clang is not used ;)
+# from Nix package manager and local installations do not influence the build.
 
 let
   pkgs = import ./nixpkgs {};
