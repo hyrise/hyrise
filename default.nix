@@ -19,10 +19,10 @@ pkgs.stdenv.mkDerivation {
   name = "hyrise";
   version = "0.0.1";
 
-  # nativeBuildInput vs. buildInputs
-  #     nativeBuildInputs are packages that are needed to be available during the runtime of the process
-  #     buildInputs are that are needed during the build process, but not anymore during the runtime. 
-  # As this is intended for usage with nix-shell, only nativeBuildInputs are needed.
+  # nativeBuildInputs vs. buildInputs
+  # - nativeBuildInputs are packages required during the runtime of the shell process.
+  # - buildInputs are packages required during the build of the shell process, but not anymore during the shell's runtime.
+  # As this is intended for usage with nix-shell (i.e., there are no build steps in this Nix derivation and users will execute processes only after the shell is already available), only nativeBuildInputs are needed.
   nativeBuildInputs = with pkgs; [
     clang
     autoconf
