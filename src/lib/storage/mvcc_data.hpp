@@ -5,6 +5,7 @@
 #include <shared_mutex>
 
 #include "types.hpp"
+#include "utils/assert.hpp"
 #include "utils/copyable_atomic.hpp"
 
 namespace hyrise {
@@ -30,21 +31,48 @@ struct MvccData {
   explicit MvccData(const size_t size, CommitID begin_commit_id);
 
   /**
-   * The following functions are inlined for performance.
+   * Often-called MVCC functions are inlined for performance.
    */
-  CommitID get_begin_cid(const ChunkOffset offset) const;
+  CommitID get_begin_cid(const ChunkOffset offset) const {
+    DebugAssert(offset < _begin_cids.size(), "offset out of bounds. MvccData insufficently preallocated?");
+    return _begin_cids[offset];
+  }
+
   void set_begin_cid(const ChunkOffset offset, const CommitID commit_id,
-                     const std::memory_order memory_order = std::memory_order_seq_cst);
+                     const std::memory_order memory_order = std::memory_order_seq_cst) {
+    DebugAssert(offset < _begin_cids.size(), "offset out of bounds. MvccData insufficently preallocated?");
+    _begin_cids[offset] = commit_id;
+    _begin_cids[offset].store(commit_id, memory_order);
+  }
 
-  CommitID get_end_cid(const ChunkOffset offset) const;
+  CommitID get_end_cid(const ChunkOffset offset) const {
+    DebugAssert(offset < _end_cids.size(), "offset out of bounds. MvccData insufficently preallocated?");
+    return _end_cids[offset];
+  }
+
   void set_end_cid(const ChunkOffset offset, const CommitID commit_id,
-                   const std::memory_order memory_order = std::memory_order_seq_cst);
+                   const std::memory_order memory_order = std::memory_order_seq_cst) {
+    DebugAssert(offset < _end_cids.size(), "offset out of bounds. MvccData insufficently preallocated?");
+    _end_cids[offset].store(commit_id, memory_order);
+  }
 
-  TransactionID get_tid(const ChunkOffset offset) const;
+  TransactionID get_tid(const ChunkOffset offset) const {
+    DebugAssert(offset < _tids.size(), "offset out of bounds. MvccData insufficently preallocated?");
+    return _tids[offset];
+  }
+
   void set_tid(const ChunkOffset offset, const TransactionID transaction_id,
-               const std::memory_order memory_order = std::memory_order_seq_cst);
+               const std::memory_order memory_order = std::memory_order_seq_cst) {
+    DebugAssert(offset < _tids.size(), "offset out of bounds. MvccData insufficently preallocated?");
+    _tids[offset].store(transaction_id, memory_order);
+  }
+
   bool compare_exchange_tid(const ChunkOffset offset, TransactionID expected_transaction_id,
-                            TransactionID new_transaction_id);
+                            TransactionID transaction_id) {
+    DebugAssert(offset < _tids.size(), "offset out of bounds. MvccData insufficently preallocated?");
+
+    return _tids[offset].compare_exchange_strong(expected_transaction_id, transaction_id);
+  }
 
   size_t memory_usage() const;
 

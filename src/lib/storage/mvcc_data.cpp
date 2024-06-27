@@ -41,45 +41,6 @@ std::ostream& operator<<(std::ostream& stream, const MvccData& mvcc_data) {
   return stream;
 }
 
-CommitID MvccData::get_begin_cid(const ChunkOffset offset) const {
-  DebugAssert(offset < _begin_cids.size(), "offset out of bounds; MvccData insufficently preallocated?");
-  return _begin_cids[offset];
-}
-
-void MvccData::set_begin_cid(const ChunkOffset offset, const CommitID commit_id, const std::memory_order memory_order) {
-  DebugAssert(offset < _begin_cids.size(), "offset out of bounds; MvccData insufficently preallocated?");
-  _begin_cids[offset] = commit_id;
-  _begin_cids[offset].store(commit_id, memory_order);
-}
-
-CommitID MvccData::get_end_cid(const ChunkOffset offset) const {
-  DebugAssert(offset < _end_cids.size(), "offset out of bounds; MvccData insufficently preallocated?");
-  return _end_cids[offset];
-}
-
-void MvccData::set_end_cid(const ChunkOffset offset, const CommitID commit_id, const std::memory_order memory_order) {
-  DebugAssert(offset < _end_cids.size(), "offset out of bounds; MvccData insufficently preallocated?");
-  _end_cids[offset].store(commit_id, memory_order);
-}
-
-TransactionID MvccData::get_tid(const ChunkOffset offset) const {
-  DebugAssert(offset < _tids.size(), "offset out of bounds; MvccData insufficently preallocated?");
-  return _tids[offset];
-}
-
-void MvccData::set_tid(const ChunkOffset offset, const TransactionID transaction_id,
-                       const std::memory_order memory_order) {
-  DebugAssert(offset < _tids.size(), "offset out of bounds; MvccData insufficently preallocated?");
-  _tids[offset].store(transaction_id, memory_order);
-}
-
-bool MvccData::compare_exchange_tid(const ChunkOffset offset, TransactionID expected_transaction_id,
-                                    TransactionID transaction_id) {
-  DebugAssert(offset < _tids.size(), "offset out of bounds; MvccData insufficently preallocated?");
-
-  return _tids[offset].compare_exchange_strong(expected_transaction_id, transaction_id);
-}
-
 size_t MvccData::memory_usage() const {
   auto bytes = sizeof(*this);
   bytes += _tids.capacity() * sizeof(decltype(_tids)::value_type);

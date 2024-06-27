@@ -134,7 +134,8 @@ void BenchmarkSQLExecutor::_compare_tables(const std::shared_ptr<const Table>& a
         std::cout << "- " + *description << "\n";
       }
       std::cout << "- Verification failed: Hyrise's actual result is not empty, but the expected result is ("
-                << timer.lap_formatted() << ")" << "\n";
+                << timer.lap_formatted() << ")"
+                << "\n";
     } else if (const auto table_difference_message = check_table_equal(
                    actual_result_table, expected_result_table, OrderSensitivity::No, TypeCmpMode::Lenient,
                    FloatComparisonMode::RelativeDifference, IgnoreNullable::Yes)) {
@@ -142,7 +143,8 @@ void BenchmarkSQLExecutor::_compare_tables(const std::shared_ptr<const Table>& a
       if (description) {
         std::cout << *description << "\n";
       }
-      std::cout << "- Verification failed (" << timer.lap_formatted() << ")" << "\n"
+      std::cout << "- Verification failed (" << timer.lap_formatted() << ")"
+                << "\n"
                 << *table_difference_message << "\n";
     }
   } else {
@@ -152,7 +154,8 @@ void BenchmarkSQLExecutor::_compare_tables(const std::shared_ptr<const Table>& a
         std::cout << *description << "\n";
       }
       std::cout << "- Verification failed: Expected result table is not empty, but Hyrise's actual result is ("
-                << timer.lap_formatted() << ")" << "\n";
+                << timer.lap_formatted() << ")"
+                << "\n";
     }
   }
 }
