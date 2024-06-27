@@ -1,7 +1,7 @@
-# How to test this:
-#   In the root of the repository, run:
+# How to test this locally:
+#   In the root of the Hyrise repository, run:
 #     nix-shell -p act --run "act"
-#   Act is a software that allows you to simulate GitHub Actions CIs locally. It works best in container environments that are not self-hosted.
+#   Act is a software that allows you to simulate GitHub Actions CIs locally. It works best in containerized environments.
 #   Docker is required to run this as docker-credential-desktop is required, which Nix does not deliver.
 
 name: Nix-Build of Hyrise
