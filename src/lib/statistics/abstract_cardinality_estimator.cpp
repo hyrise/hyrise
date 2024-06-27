@@ -5,9 +5,7 @@
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_utils.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
-#include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
-#include "logical_query_plan/predicate_node.hpp"
 #include "optimizer/join_ordering/join_graph.hpp"
 #include "statistics/join_graph_statistics_cache.hpp"
 
