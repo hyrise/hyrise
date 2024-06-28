@@ -299,6 +299,9 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_arithme
   Fail("Invalid arithmetic operator.");
 }
 
+// No idea why clang-tidy thinks this could be static (and only picked this method). In the end, we call
+// `evaluate_expression_to_result` here twice, which uses the internal cache.
+// NOLINTNEXTLINE(readability-convert-member-functions-to-static)
 std::shared_ptr<ExpressionResult<ExpressionEvaluator::Bool>> ExpressionEvaluator::_evaluate_binary_predicate_expression(
     const BinaryPredicateExpression& expression) {
   auto result = std::shared_ptr<ExpressionResult<ExpressionEvaluator::Bool>>{};
