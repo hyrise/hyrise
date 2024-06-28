@@ -3,6 +3,7 @@
 #include <memory>
 #include <unordered_map>
 
+#include "expression/abstract_expression.hpp"
 #include "join_graph_statistics_cache.hpp"
 
 namespace hyrise {
@@ -14,6 +15,8 @@ class CardinalityEstimationCache {
 
   using StatisticsByLQP = std::unordered_map<std::shared_ptr<const AbstractLQPNode>, std::shared_ptr<TableStatistics>>;
   std::optional<StatisticsByLQP> statistics_by_lqp;
+
+  std::optional<ExpressionUnorderedSet> required_column_expressions;
 };
 
 }  // namespace hyrise
