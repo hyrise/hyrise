@@ -1204,7 +1204,6 @@ RowIDPosList ExpressionEvaluator::evaluate_expression_to_pos_list(const Abstract
               });
             });
           });
-
         } break;
 
         case PredicateCondition::IsNull:
