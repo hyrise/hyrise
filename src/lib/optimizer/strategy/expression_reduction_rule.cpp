@@ -15,6 +15,7 @@
 #include "expression/evaluation/like_matcher.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
+#include "expression/list_expression.hpp"
 #include "expression/logical_expression.hpp"
 #include "expression/value_expression.hpp"
 #include "expression/window_function_expression.hpp"
