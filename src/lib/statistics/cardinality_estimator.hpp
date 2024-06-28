@@ -240,7 +240,7 @@ class CardinalityEstimator : public AbstractCardinalityEstimator {
  private:
   // Turn off statistics pruning in tests.
   friend class CardinalityEstimatorTest;
-  bool _enable_pruning{false};
+  bool _enable_pruning{true};
 };
 
 }  // namespace hyrise
