@@ -77,18 +77,14 @@ class ExpressionEvaluator final {
   std::shared_ptr<ExpressionResult<Result>> _evaluate_predicate_expression(
       const AbstractPredicateExpression& /*predicate_expression*/);
 
-  template <typename Result>
-  std::shared_ptr<ExpressionResult<Result>> _evaluate_binary_predicate_expression(
-      const BinaryPredicateExpression& /*expression*/);
+  std::shared_ptr<ExpressionResult<Bool>> _evaluate_binary_predicate_expression(
+      const BinaryPredicateExpression& expression);
 
-  template <typename Result>
-  std::shared_ptr<ExpressionResult<Result>> _evaluate_like_expression(const BinaryPredicateExpression& /*expression*/);
+  std::shared_ptr<ExpressionResult<Bool>> _evaluate_like_expression(const BinaryPredicateExpression& expression);
 
-  template <typename Result>
-  std::shared_ptr<ExpressionResult<Result>> _evaluate_is_null_expression(const IsNullExpression& /*expression*/);
+  std::shared_ptr<ExpressionResult<Bool>> _evaluate_is_null_expression(const IsNullExpression& expression);
 
-  template <typename Result>
-  std::shared_ptr<ExpressionResult<Result>> _evaluate_in_expression(const InExpression& /*in_expression*/);
+  std::shared_ptr<ExpressionResult<Bool>> _evaluate_in_expression(const InExpression& in_expression);
 
   template <typename Result>
   std::shared_ptr<ExpressionResult<Result>> _evaluate_subquery_expression(
@@ -130,8 +126,9 @@ class ExpressionEvaluator final {
   template <typename Result>
   std::shared_ptr<ExpressionResult<Result>> _evaluate_exists_expression(const ExistsExpression& /*exists_expression*/);
 
-  template <typename Result>
-  std::shared_ptr<ExpressionResult<Result>> _evaluate_between_expression(const BetweenExpression& expression);
+  template <typename T>
+  std::shared_ptr<ExpressionResult<Bool>> _evaluate_between_expression(const BetweenExpression& expression,
+                                                                       const T& lower_bound, const T& upper_bound);
 
   // See docs for `_evaluate_default_null_logic()`
   template <typename Result, typename Functor>
