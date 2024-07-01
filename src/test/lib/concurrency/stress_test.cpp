@@ -608,8 +608,9 @@ TEST_F(StressTest, VisibilityOfInsertsBeingRolledBack) {
       Hyrise::get().storage_manager.drop_table(table_name);
     }
 
-    Hyrise::get().storage_manager.add_table(table_name, std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Int, false}}, TableType::Data,
-                                    Chunk::DEFAULT_SIZE, UseMvcc::Yes));
+    Hyrise::get().storage_manager.add_table(
+        table_name, std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Int, false}}, TableType::Data,
+                                            Chunk::DEFAULT_SIZE, UseMvcc::Yes));
 
     const auto values_to_insert =
         std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Int, false}}, TableType::Data);
