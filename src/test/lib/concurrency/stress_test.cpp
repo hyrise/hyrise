@@ -420,10 +420,9 @@ TEST_F(StressTest, NodeQueueSchedulerSemaphoreIncrementsDependentTasks) {
 // NUMA-bound benchmarks on a server. To catch such issues, this test executes a comparatively complex TPC-H query for
 // different fake NUMA topologies.
 TEST_F(StressTest, NodeQueueSchedulerMultiNumaNodeTPCHQ13) {
-  const auto benchmark_config = BenchmarkConfig::get_default_config();
+  const auto benchmark_config = std::make_shared<BenchmarkConfig>();
 
-  TPCHTableGenerator(0.1f, ClusteringConfiguration::None, std::make_shared<BenchmarkConfig>(benchmark_config))
-      .generate_and_store();
+  TPCHTableGenerator(0.1f, ClusteringConfiguration::None, benchmark_config).generate_and_store();
 
   auto topologies = FAKE_SINGLE_NODE_NUMA_TOPOLOGIES;
   topologies.insert(topologies.end(), FAKE_SINGLE_NODE_NUMA_TOPOLOGIES.begin(), FAKE_SINGLE_NODE_NUMA_TOPOLOGIES.end());

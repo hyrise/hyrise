@@ -66,8 +66,6 @@ class AbstractTableGenerator {
 
   TableGenerationMetrics metrics;
 
-  static std::shared_ptr<BenchmarkConfig> create_benchmark_config_with_chunk_size(ChunkOffset chunk_size);
-
  protected:
   // Creates chunk indexes. Expects the table to have been added to the StorageManager and, if requested, encoded.
   void _create_chunk_indexes(std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name);

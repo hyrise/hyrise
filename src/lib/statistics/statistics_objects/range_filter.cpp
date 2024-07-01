@@ -37,7 +37,7 @@ Cardinality RangeFilter<T>::estimate_cardinality(const PredicateCondition /*pred
 }
 
 template <typename T>
-std::shared_ptr<AbstractStatisticsObject> RangeFilter<T>::sliced(
+std::shared_ptr<const AbstractStatisticsObject> RangeFilter<T>::sliced(
     const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
     const std::optional<AllTypeVariant>& variant_value2) const {
   if (does_not_contain(predicate_condition, variant_value, variant_value2)) {
@@ -115,8 +115,8 @@ std::shared_ptr<AbstractStatisticsObject> RangeFilter<T>::sliced(
 }
 
 template <typename T>
-std::shared_ptr<AbstractStatisticsObject> RangeFilter<T>::scaled(const Selectivity /*selectivity*/) const {
-  return std::make_shared<RangeFilter<T>>(ranges);
+std::shared_ptr<const AbstractStatisticsObject> RangeFilter<T>::scaled(const Selectivity /*selectivity*/) const {
+  return this->shared_from_this();
 }
 
 template <typename T>

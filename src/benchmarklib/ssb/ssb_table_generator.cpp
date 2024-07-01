@@ -21,7 +21,7 @@ const auto ssb_table_names = std::vector<std::string>{"part", "customer", "suppl
 SSBTableGenerator::SSBTableGenerator(const std::string& dbgen_path, const std::string& csv_meta_path,
                                      const std::string& data_path, float scale_factor, ChunkOffset chunk_size)
     : SSBTableGenerator(dbgen_path, csv_meta_path, data_path, scale_factor,
-                        create_benchmark_config_with_chunk_size(chunk_size)) {}
+                        std::make_shared<BenchmarkConfig>(chunk_size)) {}
 
 SSBTableGenerator::SSBTableGenerator(const std::string& dbgen_path, const std::string& csv_meta_path,
                                      const std::string& data_path, float scale_factor,
