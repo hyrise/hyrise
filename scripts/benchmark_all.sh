@@ -33,6 +33,17 @@ case "${output}" in
   *)        echo 'Unsupported operating system. Aborting.' && exit 1;;
 esac
 
+# We run two TPC-C scenarios. Once with high contention with as least twice as many clients as warehouses to test the
+# performance of Hyrise's concurrency control. And once a more realistic scenario with no more clients than warehouses.
+# For a server with 64 cores, the high contention scenario runs 64 clients on 10 warehouses (low contention: 10 clients,
+# 10 warehouses). For an 8 core system, the high contention scenario runs 8 clients on 4 warehouses (low contention: 8
+# clients, 10 warehouses).
+tpcc_shuffled_runtime=600
+tpcc_warehouse_count=10
+tpcc_warehouse_count_high_contention=$((num_phy_cores/2<tpcc_warehouse_count ? num_phy_cores/2 : tpcc_warehouse_count))
+clients_tpcc_high_contention=$num_phy_cores
+clients_tpcc_low_contention=$((num_phy_cores<tpcc_warehouse_count ? num_phy_cores : tpcc_warehouse_count))
+
 # Retrieve SHA-1 hashes from arguments (e.g., translate "master" into an actual hash).
 start_commit_reference=$1
 end_commit_reference=$2
@@ -111,8 +122,16 @@ do
       ( "${build_folder}"/"$benchmark" --scheduler --clients 1 --cores ${num_phy_cores} -m Ordered -r ${runs} -w ${warmup_seconds} -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt_ordered.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt_ordered.log"
     fi
 
-    echo "Running $benchmark for $commit... (multi-threaded, shuffled, $num_phy_cores clients)"
-    ( "${build_folder}"/"$benchmark" --scheduler --clients ${num_phy_cores} --cores ${num_phy_cores} -m Shuffled -t ${mt_shuffled_runtime} -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt.log"
+    if [ "$benchmark" = "hyriseBenchmarkTPCC" ]; then
+      # We test two scenarios: high and normal contention (see above, each for 10 minutes).
+      echo "Running $benchmark for $commit... (multi-threaded, shuffled, high contention: $clients_tpcc_high_contention clients and $tpcc_warehouse_count_high_contention warehouses)"
+      ( "${build_folder}"/"$benchmark" --scheduler --clients ${clients_tpcc_high_contention} --cores ${num_phy_cores} -s $tpcc_warehouse_count_high_contention -m Shuffled -t ${tpcc_shuffled_runtime} -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt_highcont.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt_highcont.log"
+      echo "Running $benchmark for $commit... (multi-threaded, shuffled, low contention: $clients_tpcc_low_contention clients and $tpcc_warehouse_count warehouses)"
+      ( "${build_folder}"/"$benchmark" --scheduler --clients ${clients_tpcc_low_contention} --cores ${num_phy_cores} -s ${tpcc_warehouse_count} -m Shuffled -t ${tpcc_shuffled_runtime} -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt_lowcont.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt_lowcont.log"
+    else
+      echo "Running $benchmark for $commit... (multi-threaded, shuffled, $num_phy_cores clients)"
+      ( "${build_folder}"/"$benchmark" --scheduler --clients ${num_phy_cores} --cores ${num_phy_cores} -m Shuffled -t ${mt_shuffled_runtime} -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt.log"
+    fi
   done
   cd "${build_folder}"
 
@@ -167,7 +186,7 @@ xargs < "${build_folder}/benchmark_all_results/build_time_${end_commit}.txt" | a
 for benchmark in $benchmarks
 do
   case "${benchmark}" in
-    "hyriseBenchmarkTPCC")  configs="st mt";;
+    "hyriseBenchmarkTPCC")  configs="st mt_highcont mt_lowcont";;
     "hyriseBenchmarkTPCH")  configs="st st_s01 mt_ordered mt";;
     *)                      configs="st mt_ordered mt";;
   esac
@@ -184,6 +203,12 @@ do
         "st_s01")      echo -n "single-threaded, SF 0.01" ;;
         "mt")          echo -n "multi-threaded, shuffled, ${num_phy_cores} clients, ${num_phy_cores} cores, SF 10.0" ;;
         "mt_ordered")  echo -n "multi-threaded, ordered, 1 client, ${num_phy_cores} cores, SF 10.0" ;;
+      esac
+    elif [ "$benchmark" = "hyriseBenchmarkTPCC" ]; then
+      case "${config}" in
+        "st")          echo -n "single-threaded" ;;
+        "mt_highcont") echo -n "multi-threaded, shuffled, $clients_tpcc_high_contention clients, $tpcc_warehouse_count_high_contention warehouses, ${num_phy_cores} cores (high contention)" ;;
+        "mt_lowcont")  echo -n "multi-threaded, shuffled, $clients_tpcc_low_contention clients, $tpcc_warehouse_count warehouses, ${num_phy_cores} cores (low contention)" ;;
       esac
     else
       case "${config}" in

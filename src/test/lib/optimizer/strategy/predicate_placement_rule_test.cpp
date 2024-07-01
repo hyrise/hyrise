@@ -1,6 +1,5 @@
 #include <memory>
 
-#include "base_test.hpp"
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/join_node.hpp"
@@ -58,10 +57,10 @@ class PredicatePlacementRuleTest : public StrategyBaseTest {
     _rule = std::make_shared<PredicatePlacementRule>();
 
     {
-      // Initialization of projection pushdown LQP
-      auto parameter_c = correlated_parameter_(ParameterID{0}, _a_a);
+      // Initialization of projection pushdown LQP.
+      const auto parameter_c = correlated_parameter_(ParameterID{0}, _a_a);
       // clang-format off
-      auto lqp_c =
+      const auto lqp_c =
         AggregateNode::make(expression_vector(), expression_vector(max_(add_(_a_a, parameter_c))),
           ProjectionNode::make(expression_vector(add_(_a_a, parameter_c)), _stored_table_a));
       // clang-format on
@@ -77,12 +76,13 @@ class PredicatePlacementRuleTest : public StrategyBaseTest {
   std::shared_ptr<PredicatePlacementRule> _rule;
   std::shared_ptr<StoredTableNode> _stored_table_a, _stored_table_b, _stored_table_c, _stored_table_d, _stored_table_e;
   std::shared_ptr<LQPColumnExpression> _a_a, _a_b, _b_a, _b_b, _c_a, _c_b, _d_a, _d_b, _e_a;
-  std::shared_ptr<hyrise::LQPSubqueryExpression> _subquery_c, _subquery;
+  std::shared_ptr<LQPSubqueryExpression> _subquery;
+  std::shared_ptr<LQPSubqueryExpression> _subquery_c;
 };
 
 TEST_F(PredicatePlacementRuleTest, SimpleLiteralJoinPushdownTest) {
   // clang-format off
-  const auto input_lqp =
+  _lqp =
   PredicateNode::make(greater_than_(_a_a, 10),
     JoinNode::make(JoinMode::Inner, equals_(_a_a, _b_a),
       _stored_table_a,
@@ -95,14 +95,14 @@ TEST_F(PredicatePlacementRuleTest, SimpleLiteralJoinPushdownTest) {
     _stored_table_b);
   // clang-format on
 
-  auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+  _apply_rule(_rule, _lqp);
 
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(PredicatePlacementRuleTest, SimpleOneSideJoinPushdownTest) {
   // clang-format off
-  const auto input_lqp =
+  _lqp =
   PredicateNode::make(greater_than_(_a_a, _a_b),
     JoinNode::make(JoinMode::Inner, equals_(_a_a, _b_a),
       _stored_table_a,
@@ -115,29 +115,29 @@ TEST_F(PredicatePlacementRuleTest, SimpleOneSideJoinPushdownTest) {
     _stored_table_b);
   // clang-format on
 
-  auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+  _apply_rule(_rule, _lqp);
 
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(PredicatePlacementRuleTest, SimpleBothSideJoinPushdownTest) {
   // clang-format off
-  const auto input_lqp =
+  _lqp =
   PredicateNode::make(greater_than_(_a_a, _b_b),
     JoinNode::make(JoinMode::Inner, equals_(_a_b, _b_a),
       _stored_table_a,
       _stored_table_b));
   // clang-format on
-  const auto expected_lqp = input_lqp->deep_copy();
+  const auto expected_lqp = _lqp->deep_copy();
 
-  auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+  _apply_rule(_rule, _lqp);
 
-  EXPECT_LQP_EQ(input_lqp, expected_lqp);
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(PredicatePlacementRuleTest, SimpleSortPushdownTest) {
   // clang-format off
-  const auto input_lqp =
+  _lqp =
   PredicateNode::make(greater_than_(_a_a, _a_b),
     SortNode::make(expression_vector(_a_a), std::vector<SortMode>{SortMode::Ascending},
       _stored_table_a));
@@ -148,9 +148,9 @@ TEST_F(PredicatePlacementRuleTest, SimpleSortPushdownTest) {
       _stored_table_a));
   // clang-format on
 
-  auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+  _apply_rule(_rule, _lqp);
 
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(PredicatePlacementRuleTest, SimpleDiamondPushdownTest) {
@@ -160,7 +160,7 @@ TEST_F(PredicatePlacementRuleTest, SimpleDiamondPushdownTest) {
   ProjectionNode::make(expression_vector(_a_a, _a_b, cast_(11, DataType::Float)),
     _stored_table_a);
 
-  const auto input_lqp =
+  _lqp =
   PredicateNode::make(equals_(_a_b, 10),    // <-- Predicate before pushdown
     UnionNode::make(SetOperationMode::Positions,
       PredicateNode::make(like_(_a_a, "%man%"),
@@ -181,9 +181,9 @@ TEST_F(PredicatePlacementRuleTest, SimpleDiamondPushdownTest) {
       expected_common_node));
   // clang-format on
 
-  auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+  _apply_rule(_rule, _lqp);
 
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(PredicatePlacementRuleTest, BlockSimpleDiamondPushdownTest) {
@@ -195,8 +195,8 @@ TEST_F(PredicatePlacementRuleTest, BlockSimpleDiamondPushdownTest) {
   ProjectionNode::make(expression_vector(_a_a, _a_b, cast_(11, DataType::Float)),
     _stored_table_a);
 
-  const auto input_lqp =
-  PredicateNode::make(equals_(_a_b, 10),  // <-- Predicate, which should NOT get pushed through the diamond
+  _lqp =
+  PredicateNode::make(equals_(_a_b, 10),  // <-- Predicate, which should NOT get pushed through the diamond.
     UnionNode::make(SetOperationMode::Positions,
       PredicateNode::make(like_(_a_a, "%man%"),  // <-- Predicate before pushdown
         ProjectionNode::make(expression_vector(_a_a, _a_b, cast_(11, DataType::Float)),
@@ -205,7 +205,7 @@ TEST_F(PredicatePlacementRuleTest, BlockSimpleDiamondPushdownTest) {
         ProjectionNode::make(expression_vector(_a_a, _a_b, cast_(11, DataType::Float)),
           input_common_node))));
 
-  // Increase the output count of input_common_node
+  // Increase the output count of input_common_node.
   ASSERT_EQ(input_common_node->outputs().size(), 2);
   const auto non_diamond_lqp_node = ProjectionNode::make(expression_vector(_a_a), input_common_node);
   ASSERT_EQ(input_common_node->outputs().size(), 3);
@@ -220,16 +220,16 @@ TEST_F(PredicatePlacementRuleTest, BlockSimpleDiamondPushdownTest) {
   PredicateNode::make(equals_(_a_b, 10),
     UnionNode::make(SetOperationMode::Positions,
       ProjectionNode::make(expression_vector(_a_a, _a_b, cast_(11, DataType::Float)),
-        PredicateNode::make(like_(_a_a, "%man%"),  // <-- Predicate after pushdown
+        PredicateNode::make(like_(_a_a, "%man%"),  // <-- Predicate after pushdown.
           expected_common_node)),
       ProjectionNode::make(expression_vector(_a_a, _a_b, cast_(11, DataType::Float)),
-        PredicateNode::make(like_(_a_a, "%Man%"),  // <-- Predicate after pushdown
+        PredicateNode::make(like_(_a_a, "%Man%"),  // <-- Predicate after pushdown.
           expected_common_node))));
   // clang-format on
 
-  auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+  _apply_rule(_rule, _lqp);
 
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(PredicatePlacementRuleTest, PartialDiamondPushdownTest) {
@@ -240,9 +240,9 @@ TEST_F(PredicatePlacementRuleTest, PartialDiamondPushdownTest) {
   AggregateNode::make(expression_vector(_a_a), expression_vector(min_(_a_b)),
     _stored_table_a);
 
-  const auto input_lqp =
-  PredicateNode::make(equals_(_a_a, 10),                 // <-- 1st Predicate before pushdown
-    PredicateNode::make(greater_than_(min_(_a_b), 100),  // <-- 2nd Predicate before pushdown
+  _lqp =
+  PredicateNode::make(equals_(_a_a, 10),                 // <-- 1st Predicate before pushdown.
+    PredicateNode::make(greater_than_(min_(_a_b), 100),  // <-- 2nd Predicate before pushdown.
       UnionNode::make(SetOperationMode::Positions,
         PredicateNode::make(like_(_a_a, "%man%"),
           input_common_node),
@@ -250,9 +250,9 @@ TEST_F(PredicatePlacementRuleTest, PartialDiamondPushdownTest) {
           input_common_node))));
 
   const auto expected_common_node =
-  PredicateNode::make(greater_than_(min_(_a_b), 100),   // <-- 2nd Predicate after pushdown
+  PredicateNode::make(greater_than_(min_(_a_b), 100),   // <-- 2nd Predicate after pushdown.
     AggregateNode::make(expression_vector(_a_a), expression_vector(min_(_a_b)),
-      PredicateNode::make(equals_(_a_a, 10),            // <-- 1st Predicate after pushdown
+      PredicateNode::make(equals_(_a_a, 10),            // <-- 1st Predicate after pushdown.
         _stored_table_a)));
 
   const auto expected_lqp =
@@ -263,9 +263,9 @@ TEST_F(PredicatePlacementRuleTest, PartialDiamondPushdownTest) {
       expected_common_node));
   // clang-format on
 
-  auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+  _apply_rule(_rule, _lqp);
 
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(PredicatePlacementRuleTest, ConsecutiveDiamondPushdownTest) {
@@ -281,9 +281,9 @@ TEST_F(PredicatePlacementRuleTest, ConsecutiveDiamondPushdownTest) {
       AggregateNode::make(expression_vector(_c_a), expression_vector(sum_(_c_b)),
         _stored_table_c)));
 
-  const auto input_lqp =
-  PredicateNode::make(equals_(_c_a, 10),                                  // <-- 1st Predicate before pushdown
-    PredicateNode::make(greater_than_(sum_(_c_b), 1000),                  // <-- 2nd Predicate before pushdown
+  _lqp =
+  PredicateNode::make(equals_(_c_a, 10),                                  // <-- 1st Predicate before pushdown.
+    PredicateNode::make(greater_than_(sum_(_c_b), 1000),                  // <-- 2nd Predicate before pushdown.
       UnionNode::make(SetOperationMode::Positions,
         PredicateNode::make(like_(_c_a, "%man%"),
           input_common_node),
@@ -292,14 +292,14 @@ TEST_F(PredicatePlacementRuleTest, ConsecutiveDiamondPushdownTest) {
 
   // We apply the rule before defining the expected LQP. Otherwise, we would modify the outputs of _stored_table_c, and
   // thus affect the rule's outcome.
-  auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+  _apply_rule(_rule, _lqp);
 
   const auto expected_common_node2 =
-  PredicateNode::make(equals_(_c_a, 10),                                // <-- 1st Predicate after pushdown
+  PredicateNode::make(equals_(_c_a, 10),                                // <-- 1st Predicate after pushdown.
     _stored_table_c);
 
   const auto expected_common_node1 =
-  PredicateNode::make(greater_than_(sum_(_c_b), 1000),                  // <-- 2nd Predicate after pushdown
+  PredicateNode::make(greater_than_(sum_(_c_b), 1000),                  // <-- 2nd Predicate after pushdown.
     UnionNode::make(SetOperationMode::All,
       AggregateNode::make(expression_vector(_c_a), expression_vector(sum_(_c_b)),
         PredicateNode::make(like_(_c_a, "%woman%"),
@@ -316,7 +316,7 @@ TEST_F(PredicatePlacementRuleTest, ConsecutiveDiamondPushdownTest) {
       expected_common_node1));
   // clang-format on
 
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(PredicatePlacementRuleTest, BigDiamondPushdown) {
@@ -326,8 +326,8 @@ TEST_F(PredicatePlacementRuleTest, BigDiamondPushdown) {
   ProjectionNode::make(expression_vector(_a_a, _a_b, cast_(11, DataType::Float)),
     _stored_table_a);
 
-  const auto input_lqp =
-  PredicateNode::make(equals_(_a_b, 10),  // <-- Predicate before pushdown
+  _lqp =
+  PredicateNode::make(equals_(_a_b, 10),  // <-- Predicate before pushdown.
     UnionNode::make(SetOperationMode::Positions,
       UnionNode::make(SetOperationMode::Positions,
         PredicateNode::make(like_(_a_a, "%man"),
@@ -339,7 +339,7 @@ TEST_F(PredicatePlacementRuleTest, BigDiamondPushdown) {
 
   const auto expected_common_node =
   ProjectionNode::make(expression_vector(_a_a, _a_b, cast_(11, DataType::Float)),
-    PredicateNode::make(equals_(_a_b, 10),  // <-- Predicate after pushdown
+    PredicateNode::make(equals_(_a_b, 10),  // <-- Predicate after pushdown.
       _stored_table_a));
 
   const auto expected_lqp =
@@ -353,9 +353,9 @@ TEST_F(PredicatePlacementRuleTest, BigDiamondPushdown) {
         expected_common_node));
   // clang-format on
 
-  auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+  _apply_rule(_rule, _lqp);
 
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(PredicatePlacementRuleTest, DiamondPushdownInputRecoveryTest) {
@@ -367,7 +367,7 @@ TEST_F(PredicatePlacementRuleTest, DiamondPushdownInputRecoveryTest) {
     ValidateNode::make(
       _stored_table_a));
 
-  const auto input_lqp =
+  _lqp =
   UpdateNode::make("int_float",
     input_sub_lqp,
     ProjectionNode::make(expression_vector(_a_a, cast_(3.2, DataType::Float)),
@@ -385,15 +385,15 @@ TEST_F(PredicatePlacementRuleTest, DiamondPushdownInputRecoveryTest) {
       expected_sub_lqp));
   // clang-format on
 
-  auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+  _apply_rule(_rule, _lqp);
 
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(PredicatePlacementRuleTest, StopPushdownAtUnion) {
-  // Stop pushdown at UnionNodes, if they do not form diamonds.
+  // Stop pushdown at UnionNodes if they do not form diamonds.
   // clang-format off
-  const auto input_lqp =
+  _lqp =
   PredicateNode::make(equals_(_a_b, 10),
     UnionNode::make(SetOperationMode::All,
       PredicateNode::make(less_than_(_a_a, 0),
@@ -402,11 +402,11 @@ TEST_F(PredicatePlacementRuleTest, StopPushdownAtUnion) {
         _stored_table_b)));
   // clang-format on
 
-  const auto expected_lqp = input_lqp->deep_copy();
+  const auto expected_lqp = _lqp->deep_copy();
 
-  auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+  _apply_rule(_rule, _lqp);
 
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(PredicatePlacementRuleTest, StopPushdownAtDiamondOriginNode) {
@@ -417,7 +417,7 @@ TEST_F(PredicatePlacementRuleTest, StopPushdownAtDiamondOriginNode) {
       PredicateNode::make(greater_than_(_a_a, 1),
       _stored_table_a));
 
-  const auto input_lqp =
+  _lqp =
   UnionNode::make(SetOperationMode::All,
     PredicateNode::make(greater_than_(_a_a, 2),
       PredicateNode::make(less_than_(_a_b, 5),
@@ -447,14 +447,14 @@ TEST_F(PredicatePlacementRuleTest, StopPushdownAtDiamondOriginNode) {
           expected_common_node))));
   // clang-format on
 
-  auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+  _apply_rule(_rule, _lqp);
 
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(PredicatePlacementRuleTest, ComplexBlockingPredicatesPushdownTest) {
   // clang-format off
-  const auto input_lqp =
+  _lqp =
   PredicateNode::make(greater_than_(_c_a, 150),
     PredicateNode::make(greater_than_(_c_a, 100),
       PredicateNode::make(greater_than_(_a_b, 123),
@@ -477,15 +477,15 @@ TEST_F(PredicatePlacementRuleTest, ComplexBlockingPredicatesPushdownTest) {
         _stored_table_a)));
   // clang-format on
 
-  auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+  _apply_rule(_rule, _lqp);
 
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(PredicatePlacementRuleTest, AllowedValuePredicatePushdownThroughProjectionTest) {
-  // We can push `a > 4` under the projection because it does not depend on the sub-query.
+  // We can push `a > 4` under the projection because it does not depend on the subquery.
   // clang-format off
-  const auto input_lqp =
+  _lqp =
   PredicateNode::make(greater_than_(_a_a, value_(4)),
     ProjectionNode::make(expression_vector(_a_a, _a_b, _subquery_c),
       _stored_table_a));
@@ -496,15 +496,15 @@ TEST_F(PredicatePlacementRuleTest, AllowedValuePredicatePushdownThroughProjectio
        _stored_table_a));
   // clang-format on
 
-  auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+  _apply_rule(_rule, _lqp);
 
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(PredicatePlacementRuleTest, AllowedColumnPredicatePushdownThroughProjectionTest) {
-  // We can push `a > b` under the projection because it does not depend on the sub-query.
+  // We can push `a > b` under the projection because it does not depend on the subquery.
   // clang-format off
-  const auto input_lqp =
+  _lqp =
   PredicateNode::make(greater_than_(_a_a, _a_b),
     ProjectionNode::make(expression_vector(_a_a, _a_b, _subquery_c),
       _stored_table_a));
@@ -515,30 +515,30 @@ TEST_F(PredicatePlacementRuleTest, AllowedColumnPredicatePushdownThroughProjecti
        _stored_table_a));
   // clang-format on
 
-  auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+  _apply_rule(_rule, _lqp);
 
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(PredicatePlacementRuleTest, ForbiddenPredicatePushdownThroughProjectionTest) {
-  // We can't push `(SELECT ...) > a.b` under the projection because the projection is responsible for the SELECT.
+  // We can't push `(SELECT ...) > a.b` below the projection because the projection is responsible for the SELECT.
   // clang-format off
-  const auto input_lqp =
+  _lqp =
   PredicateNode::make(greater_than_(_subquery_c, _a_b),
     ProjectionNode::make(expression_vector(_a_a, _a_b, _subquery_c),
       _stored_table_a));
   // clang-format on
-  const auto expected_lqp = input_lqp->deep_copy();
+  const auto expected_lqp = _lqp->deep_copy();
 
-  auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+  _apply_rule(_rule, _lqp);
 
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(PredicatePlacementRuleTest, PredicatePushdownThroughOtherPredicateTest) {
-  // Even if one predicate cannot be pushed down, others might be better off
+  // Even if one predicate cannot be pushed down, others might be better off.
   // clang-format off
-  const auto input_lqp =
+  _lqp =
   PredicateNode::make(greater_than_(_a_a, _a_b),
     PredicateNode::make(greater_than_(_subquery_c, _a_b),
       ProjectionNode::make(expression_vector(_a_a, _a_b, _subquery_c),
@@ -551,14 +551,14 @@ TEST_F(PredicatePlacementRuleTest, PredicatePushdownThroughOtherPredicateTest) {
           _stored_table_a)));
   // clang-format on
 
-  auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+  _apply_rule(_rule, _lqp);
 
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(PredicatePlacementRuleTest, SemiPushDown) {
   // clang-format off
-  const auto input_lqp =
+  _lqp =
   PredicateNode::make(greater_than_(_c_a, 150),
     PredicateNode::make(greater_than_(_c_a, 100),
       PredicateNode::make(greater_than_(_b_b, 123),
@@ -579,9 +579,9 @@ TEST_F(PredicatePlacementRuleTest, SemiPushDown) {
         _stored_table_c)));
   // clang-format on
 
-  auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+  _apply_rule(_rule, _lqp);
 
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(PredicatePlacementRuleTest, HandleBarrierPredicatePushdown) {
@@ -591,14 +591,14 @@ TEST_F(PredicatePlacementRuleTest, HandleBarrierPredicatePushdown) {
 
   // clang-format off
   const auto barrier_predicate_node =
-  PredicateNode::make(greater_than_(_b_b, 123),                 // <-- 1st Predicate before pushdown (pushdown barrier due to output_count() == 2) // NOLINT
-    JoinNode::make(JoinMode::Semi, equals_(_a_a, _b_a),         // <-- 2nd Predicate before pushdown
+  PredicateNode::make(greater_than_(_b_b, 123),                 // <-- 1st Predicate before pushdown (pushdown barrier due to output_count() == 2). // NOLINT(whitespace/line_length)
+    JoinNode::make(JoinMode::Semi, equals_(_a_a, _b_a),         // <-- 2nd Predicate before pushdown.
       JoinNode::make(JoinMode::Inner, equals_(_b_a, _c_a),
         _stored_table_b,
         _stored_table_c),
       _stored_table_a));
 
-  auto input_lqp =
+  _lqp =
   PredicateNode::make(greater_than_(_c_a, 150),
     PredicateNode::make(greater_than_(_c_a, 100),
       barrier_predicate_node));
@@ -611,19 +611,19 @@ TEST_F(PredicatePlacementRuleTest, HandleBarrierPredicatePushdown) {
   PredicateNode::make(greater_than_(_c_a, 150),
     PredicateNode::make(greater_than_(_c_a, 100),
       JoinNode::make(JoinMode::Inner, equals_(_b_a, _c_a),
-        PredicateNode::make(greater_than_(_b_b, 123),           // <-- 1st Predicate after pushdown
-          JoinNode::make(JoinMode::Semi, equals_(_a_a, _b_a),   // <-- 2nd Predicate after pushdown
+        PredicateNode::make(greater_than_(_b_b, 123),           // <-- 1st Predicate after pushdown.
+          JoinNode::make(JoinMode::Semi, equals_(_a_a, _b_a),   // <-- 2nd Predicate after pushdown.
             _stored_table_b,
             _stored_table_a)),
         _stored_table_c)));
   // clang-format on
 
-  auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+  _apply_rule(_rule, _lqp);
 
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
   EXPECT_EQ(barrier_predicate_node->output_count(), 1);
   // After the pushdown, the inner join should have the two outputs that barrier_predicate_node previously had.
-  const auto& inner_join = std::dynamic_pointer_cast<JoinNode>(actual_lqp->left_input()->left_input());
+  const auto& inner_join = std::dynamic_pointer_cast<JoinNode>(_lqp->left_input()->left_input());
   EXPECT_EQ(inner_join->output_count(), 2);
   EXPECT_EQ(temporary_node->left_input(), inner_join);
 }
@@ -642,7 +642,7 @@ TEST_F(PredicatePlacementRuleTest, HandleMultiPredicateBarrierPredicatePushdown)
         _stored_table_c)),
     _stored_table_a);
 
-  const auto lqp =
+  _lqp =
   PredicateNode::make(greater_than_(_c_a, 150),
     PredicateNode::make(greater_than_(_c_a, 100),
       barrier_predicate_node));
@@ -662,16 +662,16 @@ TEST_F(PredicatePlacementRuleTest, HandleMultiPredicateBarrierPredicatePushdown)
         _stored_table_a)));
   // clang-format on
 
-  apply_rule(_rule, lqp);
+  _apply_rule(_rule, _lqp);
 
-  EXPECT_LQP_EQ(lqp, expected_lqp);
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
   EXPECT_EQ(barrier_predicate_node->output_count(), 2);
   EXPECT_EQ(temporary_node->left_input(), barrier_predicate_node);
 }
 
 TEST_F(PredicatePlacementRuleTest, PushDownPredicateThroughAggregate) {
   // clang-format off
-  const auto input_lqp =
+  _lqp =
   PredicateNode::make(greater_than_(sum_(_c_b), 150),
     PredicateNode::make(greater_than_(_c_a, 100),
       AggregateNode::make(expression_vector(_c_a), expression_vector(sum_(_c_b)),
@@ -684,14 +684,14 @@ TEST_F(PredicatePlacementRuleTest, PushDownPredicateThroughAggregate) {
         _stored_table_c)));
   // clang-format on
 
-  auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+  _apply_rule(_rule, _lqp);
 
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(PredicatePlacementRuleTest, PushDownAntiThroughAggregate) {
   // clang-format off
-  const auto input_lqp =
+  _lqp =
   JoinNode::make(JoinMode::AntiNullAsTrue, equals_(_c_a, _b_a),
     PredicateNode::make(greater_than_(sum_(_c_b), 150),
       PredicateNode::make(greater_than_(_c_a, 100),
@@ -708,18 +708,18 @@ TEST_F(PredicatePlacementRuleTest, PushDownAntiThroughAggregate) {
         _stored_table_b)));
   // clang-format on
 
-  auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+  _apply_rule(_rule, _lqp);
 
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(PredicatePlacementRuleTest, PullUpPastProjection) {
   /**
-   * Test that if all columns required for the evaluation of a PredicateNode are still available above a ProjectionNode,
-   * then the PredicateNode can be pulled up
+   * Test that if all columns required for the evaluation of a PredicateNode are still available above a
+   * ProjectionNode, then the PredicateNode can be pulled up.
    */
   // clang-format off
-  const auto input_lqp =
+  _lqp =
   ProjectionNode::make(expression_vector(_a_a),
     PredicateNode::make(exists_(_subquery),
       _stored_table_a));
@@ -730,18 +730,18 @@ TEST_F(PredicatePlacementRuleTest, PullUpPastProjection) {
       _stored_table_a));
   // clang-format on
 
-  auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+  _apply_rule(_rule, _lqp);
 
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(PredicatePlacementRuleTest, NoPullUpPastProjectionThatPrunes) {
   /**
    * Test that if a ProjectionNode prunes columns necessary for the evaluation of a PredicateNode, PredicateNodes can
-   * not be pulled above it
+   * not be pulled above it.
    */
   // clang-format off
-  const auto input_lqp =
+  _lqp =
   ProjectionNode::make(expression_vector(_a_b),
     PredicateNode::make(exists_(_subquery),
       _stored_table_a));
@@ -752,17 +752,17 @@ TEST_F(PredicatePlacementRuleTest, NoPullUpPastProjectionThatPrunes) {
       _stored_table_a));
   // clang-format on
 
-  auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+  _apply_rule(_rule, _lqp);
 
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(PredicatePlacementRuleTest, NoPullUpPastSort) {
   /**
-   * Test that SortNodes are treated as barriers and nothing is pulled up above them
+   * Test that SortNodes are treated as barriers and nothing is pulled up above them.
    */
   // clang-format off
-  const auto input_lqp =
+  _lqp =
   SortNode::make(expression_vector(_a_b), std::vector<SortMode>{SortMode::Ascending},
     PredicateNode::make(exists_(_subquery),
       _stored_table_a));
@@ -773,18 +773,18 @@ TEST_F(PredicatePlacementRuleTest, NoPullUpPastSort) {
       _stored_table_a));
   // clang-format on
 
-  auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+  _apply_rule(_rule, _lqp);
 
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(PredicatePlacementRuleTest, NoPullUpPastNodeWithMultipleOutputsNoPullUpPastUnion) {
   /**
-   * Test that Nodes with multiple outputs are treated as barriers, and so are UnionNodes
+   * Test that Nodes with multiple outputs are treated as barriers, and so are UnionNodes.
    */
   // clang-format off
   const auto input_predicate_node_with_multiple_outputs = PredicateNode::make(exists_(_subquery), _stored_table_a);
-  const auto input_lqp =
+  _lqp =
   UnionNode::make(SetOperationMode::Positions,
     PredicateNode::make(exists_(_subquery),
       input_predicate_node_with_multiple_outputs),
@@ -798,9 +798,9 @@ TEST_F(PredicatePlacementRuleTest, NoPullUpPastNodeWithMultipleOutputsNoPullUpPa
     expected_predicate_node_with_multiple_outputs);
   // clang-format on
 
-  auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+  _apply_rule(_rule, _lqp);
 
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(PredicatePlacementRuleTest, PushDownAndPullUp) {
@@ -812,7 +812,7 @@ TEST_F(PredicatePlacementRuleTest, PushDownAndPullUp) {
       _stored_table_b));
   const auto subquery = lqp_subquery_(subquery_lqp, std::make_pair(ParameterID{0}, _a_a));
 
-  const auto input_lqp =
+  _lqp =
   JoinNode::make(JoinMode::Inner, equals_(_a_a, _b_a),
     PredicateNode::make(greater_than_(_a_a, _a_b),
       PredicateNode::make(less_than_(subquery, _a_b),
@@ -831,16 +831,16 @@ TEST_F(PredicatePlacementRuleTest, PushDownAndPullUp) {
      _stored_table_b));
   // clang-format on
 
-  auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+  _apply_rule(_rule, _lqp);
 
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(PredicatePlacementRuleTest, DoNotMoveUncorrelatedPredicates) {
-  // For now, the PredicatePlacementRule doesn't touch uncorrelated (think 6 > (SELECT...)) predicates
+  // For now, the PredicatePlacementRule doesn't touch uncorrelated (think 6 > (SELECT...)) predicates.
 
   // clang-format off
-  const auto input_lqp =
+  _lqp =
   PredicateNode::make(greater_than_(5, 3),
     PredicateNode::make(equals_(_a_a, 3),
       JoinNode::make(JoinMode::Cross,
@@ -855,9 +855,9 @@ TEST_F(PredicatePlacementRuleTest, DoNotMoveUncorrelatedPredicates) {
       _stored_table_b));
   // clang-format on
 
-  auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+  _apply_rule(_rule, _lqp);
 
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(PredicatePlacementRuleTest, CreatePreJoinPredicateOnLeftSide) {
@@ -866,21 +866,23 @@ TEST_F(PredicatePlacementRuleTest, CreatePreJoinPredicateOnLeftSide) {
   // all tuples qualify for the second part of the disjunction.
 
   // clang-format off
-  const auto input_lqp = PredicateNode::make(or_(and_(equals_(_d_b, 1), equals_(_e_a, 10)), equals_(_d_b, 2)),
+  _lqp =
+  PredicateNode::make(or_(and_(equals_(_d_b, 1), equals_(_e_a, 10)), equals_(_d_b, 2)),
     JoinNode::make(JoinMode::Inner, equals_(_d_a, _e_a),
       _stored_table_d,
       _stored_table_e));
 
-  const auto expected_lqp = PredicateNode::make(or_(and_(equals_(_d_b, 1), equals_(_e_a, 10)), equals_(_d_b, 2)),
+  const auto expected_lqp =
+  PredicateNode::make(or_(and_(equals_(_d_b, 1), equals_(_e_a, 10)), equals_(_d_b, 2)),
     JoinNode::make(JoinMode::Inner, equals_(_d_a, _e_a),
       PredicateNode::make(or_(equals_(_d_b, 1), equals_(_d_b, 2)),
         _stored_table_d),
       _stored_table_e));
   // clang-format on
 
-  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+  _apply_rule(_rule, _lqp);
 
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(PredicatePlacementRuleTest, CreatePreJoinPredicateOnBothSides) {
@@ -888,12 +890,14 @@ TEST_F(PredicatePlacementRuleTest, CreatePreJoinPredicateOnBothSides) {
   // (b = 1 OR b = 2) being created on the left and (a = 10 OR a = 3) on the right side of the join
 
   // clang-format off
-  const auto input_lqp = PredicateNode::make(or_(and_(equals_(_d_b, 1), equals_(_e_a, 10)), and_(equals_(_d_b, 2), equals_(_e_a, 1))),  // NOLINT
+  _lqp =
+  PredicateNode::make(or_(and_(equals_(_d_b, 1), equals_(_e_a, 10)), and_(equals_(_d_b, 2), equals_(_e_a, 1))),  // NOLINT(whitespace/line_length)
     JoinNode::make(JoinMode::Inner, equals_(_d_a, _e_a),
       _stored_table_d,
       _stored_table_e));
 
-  const auto expected_lqp = PredicateNode::make(or_(and_(equals_(_d_b, 1), equals_(_e_a, 10)), and_(equals_(_d_b, 2), equals_(_e_a, 1))),  // NOLINT
+  const auto expected_lqp =
+  PredicateNode::make(or_(and_(equals_(_d_b, 1), equals_(_e_a, 10)), and_(equals_(_d_b, 2), equals_(_e_a, 1))),  // NOLINT(whitespace/line_length)
     JoinNode::make(JoinMode::Inner, equals_(_d_a, _e_a),
       PredicateNode::make(or_(equals_(_d_b, 1), equals_(_d_b, 2)),
         _stored_table_d),
@@ -901,9 +905,9 @@ TEST_F(PredicatePlacementRuleTest, CreatePreJoinPredicateOnBothSides) {
         _stored_table_e)));
   // clang-format on
 
-  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+  _apply_rule(_rule, _lqp);
 
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(PredicatePlacementRuleTest, CreatePreJoinPredicateOnlyWhereBeneficial) {
@@ -912,37 +916,40 @@ TEST_F(PredicatePlacementRuleTest, CreatePreJoinPredicateOnlyWhereBeneficial) {
   // removes 2 out of 11 values and thus is not selective enough
 
   // clang-format off
-  const auto input_lqp = PredicateNode::make(or_(and_(equals_(_d_b, 1), less_than_(_e_a, 10)), and_(equals_(_d_b, 2), equals_(_e_a, 1))),  // NOLINT
+  _lqp =
+  PredicateNode::make(or_(and_(equals_(_d_b, 1), less_than_(_e_a, 10)), and_(equals_(_d_b, 2), equals_(_e_a, 1))),  // NOLINT(whitespace/line_length)
     JoinNode::make(JoinMode::Inner, equals_(_d_a, _e_a),
       _stored_table_d,
       _stored_table_e));
 
-  const auto expected_lqp = PredicateNode::make(or_(and_(equals_(_d_b, 1), less_than_(_e_a, 10)), and_(equals_(_d_b, 2), equals_(_e_a, 1))),  // NOLINT
+  const auto expected_lqp =
+  PredicateNode::make(or_(and_(equals_(_d_b, 1), less_than_(_e_a, 10)), and_(equals_(_d_b, 2), equals_(_e_a, 1))),  // NOLINT(whitespace/line_length)
     JoinNode::make(JoinMode::Inner, equals_(_d_a, _e_a),
       PredicateNode::make(or_(equals_(_d_b, 1), equals_(_d_b, 2)),
         _stored_table_d),
       _stored_table_e));
   // clang-format on
 
-  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+  _apply_rule(_rule, _lqp);
 
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(PredicatePlacementRuleTest, DoNotCreatePreJoinPredicateIfNonInner) {
   // Similar to the previous test, but we do not do anything (yet) because it uses a non-inner join
 
   // clang-format off
-  const auto input_lqp = PredicateNode::make(or_(and_(equals_(_d_b, 1), equals_(_e_a, 10)), and_(equals_(_d_b, 2), equals_(_e_a, 1))),  // NOLINT
+  _lqp =
+  PredicateNode::make(or_(and_(equals_(_d_b, 1), equals_(_e_a, 10)), and_(equals_(_d_b, 2), equals_(_e_a, 1))),
     JoinNode::make(JoinMode::Left, equals_(_d_a, _e_a),
       _stored_table_d,
       _stored_table_e));
   // clang-format on
-  const auto expected_lqp = input_lqp->deep_copy();
+  const auto expected_lqp = _lqp->deep_copy();
 
-  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+  _apply_rule(_rule, _lqp);
 
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(PredicatePlacementRuleTest, DoNotCreatePreJoinPredicateIfUnrelated) {
@@ -950,23 +957,24 @@ TEST_F(PredicatePlacementRuleTest, DoNotCreatePreJoinPredicateIfUnrelated) {
   // being created, as we cannot make any assumptions about the two predicates that do not belong to any table
 
   // clang-format off
-  const auto input_lqp = PredicateNode::make(or_(and_(equals_(_d_b, 1), equals_(placeholder_(ParameterID{0}), 2)), and_(equals_(_e_a, 10), equals_(placeholder_(ParameterID{1}), 1))),  // NOLINT
+  _lqp =
+  PredicateNode::make(or_(and_(equals_(_d_b, 1), equals_(placeholder_(ParameterID{0}), 2)), and_(equals_(_e_a, 10), equals_(placeholder_(ParameterID{1}), 1))),  // NOLINT(whitespace/line_length)
     JoinNode::make(JoinMode::Inner, equals_(_d_a, _e_a),
       _stored_table_d,
       _stored_table_e));
   // clang-format on
-  const auto expected_lqp = input_lqp->deep_copy();
+  const auto expected_lqp = _lqp->deep_copy();
 
-  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+  _apply_rule(_rule, _lqp);
 
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  EXPECT_LQP_EQ(_lqp, expected_lqp);
 }
 
 TEST_F(PredicatePlacementRuleTest, DoNotMoveMultiPredicateSemiAndAntiJoins) {
   // Multi-predicate semi- and anti-joins cannot be executed efficiently, so we do not treat them as predicates.
   for (const auto join_mode : {JoinMode::Semi, JoinMode::AntiNullAsTrue, JoinMode::AntiNullAsFalse}) {
     // clang-format off
-    const auto lqp =
+    _lqp =
     JoinNode::make(join_mode, expression_vector(equals_(_a_a, _b_a), not_equals_(_a_b, _b_b)),
       JoinNode::make(JoinMode::Inner, equals_(_b_a, _c_a),
         _stored_table_b,
@@ -975,11 +983,11 @@ TEST_F(PredicatePlacementRuleTest, DoNotMoveMultiPredicateSemiAndAntiJoins) {
         _stored_table_a));
     // clang-format on
 
-    const auto expected_lqp = lqp->deep_copy();
+    const auto expected_lqp = _lqp->deep_copy();
 
-    apply_rule(_rule, lqp);
+    _apply_rule(_rule, _lqp);
 
-    EXPECT_LQP_EQ(lqp, expected_lqp);
+    EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
 }
 

@@ -129,7 +129,7 @@ void Worker::_work(const AllowSleep allow_sleep) {
 
   // This is part of the Scheduler shutdown system. Count the number of tasks a worker executed to allow the
   // Scheduler to determine whether all tasks finished.
-  _num_finished_tasks++;
+  ++_num_finished_tasks;
 }
 
 void Worker::execute_next(const std::shared_ptr<AbstractTask>& task) {
