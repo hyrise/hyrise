@@ -42,7 +42,6 @@ void ExpressionReductionRule::_apply_to_plan_without_subqueries(
   Assert(lqp_root->type == LQPNodeType::Root, "ExpressionReductionRule needs root to hold onto.");
 
   visit_lqp(lqp_root, [&](const auto& sub_node) {
-    std::cout << __FILE__ << ":" << __LINE__  << "  " << sub_node->description() << "\n";
     if (sub_node->type == LQPNodeType::Aggregate) {
       remove_duplicate_aggregate(sub_node->node_expressions, sub_node, lqp_root);
     }

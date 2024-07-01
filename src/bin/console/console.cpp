@@ -488,7 +488,7 @@ int Console::_help(const std::string& /*args*/) {
   out("  setting [property] [value]                - Change a runtime setting\n");
   out("           scheduler (on|off)               - Turn the scheduler on (default) or off\n");
   out("           binary_caching (on|off)          - Use cached binary tables for benchmarks (default) or not\n");
-  out("  reset                                     - Clear all stored tables and cached query plans\n\n");
+  out("  reset                                     - Clear all stored tables and cached query plans and restore the default settings\n\n");  // NOLINT(whitespace/line_length)
   // clang-format on
 
   return ReturnCode::Ok;
@@ -1043,6 +1043,9 @@ int Console::_reset() {
   Hyrise::reset();
   Hyrise::get().default_pqp_cache = _pqp_cache;
   Hyrise::get().default_lqp_cache = _lqp_cache;
+
+  _binary_caching = true;
+  Hyrise::get().set_scheduler(std::make_shared<ImmediateExecutionScheduler>());
 
   return ReturnCode::Ok;
 }
