@@ -3,43 +3,14 @@
 #   https://software.intel.com/en-us/blogs/2009/04/09/delusion-of-tbbconcurrent_vectors-size-or-3-ways-to-traverse-in-parallel-correctly
 race:tbb::*
 
-# "libstdc++ is not instrumented, so tsan misses atomic operations related to shared_ptr"
-# https://groups.google.com/forum/#!topic/thread-sanitizer/vz_s-t226Vg
-race:^std::__shared_ptr
-race:^std::__1::shared_ptr
-race:^std::__weak_ptr
-race:^std::__1::weak_ptr
-race:^std::__unique_ptr
-race:^std::__1::unique_ptr
-race:^std::__1::__unique_if
-race:shared_count
-race:^std::atomic
-race:^std::__1::atomic
-race:^std::__1::__atomic_base
-race:^std::mutex::lock
-race:^std::__1::basic_ostream
-
-# Boost is not built with tsan support, either
-race:boost::detail::thread_data_base
-race:thread_data
-
-# A DebugAssert makes sure that predecessors are not added to scheduled tasks, but it is missing in release builds
-race:^hyrise::AbstractTask::set_as_predecessor_of
-
-# tsan does not understand parts of our MVCC concept - see mvcc_data.hpp for documentation
-race:^hyrise::MvccData::get_begin_cid
-race:^hyrise::MvccData::set_begin_cid
-race:^hyrise::MvccData::get_end_cid
-race:^hyrise::MvccData::set_end_cid
+# TSAN is not aware of how the MVCC concept works. It complains about a data race when reading
+# value_segment._values.size() while resizing it, which is acceptable in this case. The vector is pre-allocated so that
+# resize() never reallocates. If the size is read while the values are not yet fully written (see actual usage in Insert 
+# operator), MVCC validation makes sure that those rows are ignored.
 race:^hyrise::ValueSegment*::resize
 
-# This is likely false positive seen only on Mac, as even the strictest locking does not "fix" the warning
-race:^hyrise::TableStatistics::from_table
-
-# We access a tbb::concurrent_vector in this method, which "remains valid and accessible even if a subsequent growth
-# operations fails."
-# See: https://spec.oneapi.io/versions/latest/elements/oneTBB/source/containers/concurrent_vector_cls.html
-race:^hyrise::Table::get_chunk
-
-# We get weird errors for the Lexer here (at least on Mac). Probably a false positive.
-race:^hsql::SQLParser::parse
+# Similar to the suppression above, ValueSegment iterables might read values after resize() which are not yet written
+# entirely (by copy_value_range). Since values are default-initialized, the values should be readable and are later
+# thrown out by Validate anyways. We assume that nothing bad can happen when concurrently overwriting values, which
+# might not be true in all cases for more sophisticated data types (e.g., pmr_string).
+race:^hyrise::ValueSegmentIterable<*

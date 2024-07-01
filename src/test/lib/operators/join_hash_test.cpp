@@ -24,11 +24,14 @@ class OperatorsJoinHashTest : public BaseTest {
         std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_int4_with_null.tbl", ChunkOffset{10}));
     _table_with_nulls->execute();
 
-    // filters retain all rows
+    // Filters retain all rows.
     _table_tpch_orders_scanned = create_table_scan(_table_tpch_orders, ColumnID{0}, PredicateCondition::GreaterThan, 0);
+    _table_tpch_orders_scanned->never_clear_output();
     _table_tpch_orders_scanned->execute();
+
     _table_tpch_lineitems_scanned =
         create_table_scan(_table_tpch_lineitems, ColumnID{0}, PredicateCondition::GreaterThan, 0);
+    _table_tpch_lineitems_scanned->never_clear_output();
     _table_tpch_lineitems_scanned->execute();
   }
 
@@ -52,16 +55,16 @@ TEST_F(OperatorsJoinHashTest, OperatorName) {
   EXPECT_EQ(join->name(), "JoinHash");
 }
 
-// Once we bring in the PosList optimization flag REFERS_TO_SINGLE_CHUNK_ONLY, this test will ensure
-// that the join does not unnecessarily add chunks (e.g., discussed in #698).
-TEST_F(OperatorsJoinHashTest, DISABLED_ChunkCount /* #698 */) {
+// This test ensures that the join does not unnecessarily add chunks (e.g., discussed in #698).
+TEST_F(OperatorsJoinHashTest, ChunkCount) {
   auto join = std::make_shared<JoinHash>(_table_tpch_orders_scanned, _table_tpch_lineitems_scanned, JoinMode::Inner,
                                          OperatorJoinPredicate{{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals},
                                          std::vector<OperatorJoinPredicate>{}, 10);
+  join->never_clear_output();
   join->execute();
 
-  // While radix clustering is well-suited for very large tables, it also yields many output tables.
-  // This test checks whether we create more chunks that existing in the input (which should not be the case).
+  // While radix clustering is well-suited for very large tables, it also yields many output chunks (one per radix
+  // partition). This test checks whether we create more chunks that existing in the input.
   EXPECT_TRUE(join->get_output()->chunk_count() <=
               std::max(_table_tpch_orders_scanned->get_output()->chunk_count(),
                        _table_tpch_lineitems_scanned->get_output()->chunk_count()));

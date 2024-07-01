@@ -29,17 +29,13 @@ struct MvccData {
   // here are ignored. This is to avoid resizing the vectors, which would cause reallocations and require locking.
   explicit MvccData(const size_t size, CommitID begin_commit_id);
 
-  /**
-   * The thread sanitizer (tsan) complains about concurrent writes and reads to begin/end_cids. That is because it is
-   * unaware of their thread-safety being guaranteed by the update of the global last_cid. Furthermore, we exploit that
-   * writes up to eight bytes are atomic on x64, which C++ and tsan do not know about. These helper methods were added
-   * to .tsan-ignore.txt and can be used (carefully) to avoid those false positives.
-   */
   CommitID get_begin_cid(const ChunkOffset offset) const;
-  void set_begin_cid(const ChunkOffset offset, const CommitID commit_id);
+  void set_begin_cid(const ChunkOffset offset, const CommitID commit_id,
+                     const std::memory_order memory_order = std::memory_order_seq_cst);
 
   CommitID get_end_cid(const ChunkOffset offset) const;
-  void set_end_cid(const ChunkOffset offset, const CommitID commit_id);
+  void set_end_cid(const ChunkOffset offset, const CommitID commit_id,
+                   const std::memory_order memory_order = std::memory_order_seq_cst);
 
   TransactionID get_tid(const ChunkOffset offset) const;
   void set_tid(const ChunkOffset offset, const TransactionID transaction_id,
@@ -58,9 +54,9 @@ struct MvccData {
 
  private:
   // These vectors are pre-allocated. Do not resize them as someone might be reading them concurrently.
-  pmr_vector<CommitID> _begin_cids;                  // < CommitID when record was added
-  pmr_vector<CommitID> _end_cids;                    // < CommitID when record was deleted
-  pmr_vector<copyable_atomic<TransactionID>> _tids;  // < 0 unless locked by a transaction
+  pmr_vector<copyable_atomic<CommitID>> _begin_cids;  // < CommitID when record was added
+  pmr_vector<copyable_atomic<CommitID>> _end_cids;    // < CommitID when record was deleted
+  pmr_vector<copyable_atomic<TransactionID>> _tids;   // < 0 unless locked by a transaction
 
   std::atomic_uint32_t _pending_inserts{0};
 };

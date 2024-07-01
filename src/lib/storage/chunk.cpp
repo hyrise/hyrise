@@ -255,8 +255,8 @@ void Chunk::set_pruning_statistics(const std::optional<ChunkPruningStatistics>& 
   _pruning_statistics = pruning_statistics;
 }
 
-void Chunk::increase_invalid_row_count(const ChunkOffset count) const {
-  _invalid_row_count += count;
+void Chunk::increase_invalid_row_count(const ChunkOffset count, const std::memory_order memory_order) const {
+  _invalid_row_count.fetch_add(count, memory_order);
 }
 
 const std::vector<SortColumnDefinition>& Chunk::individually_sorted_by() const {

@@ -41,7 +41,7 @@ TPCCPayment::TPCCPayment(const int num_warehouses, BenchmarkSQLExecutor& sql_exe
     c_d_id = district_dist(_random_engine);
   }
 
-  // Select 6 out of 10 customers by last name
+  // Select 6 out of 10 customers by last name.
   auto customer_selection_method_dist = std::uniform_int_distribution<>{1, 10};
   select_customer_by_name = customer_selection_method_dist(_random_engine) <= 6;
   if (select_customer_by_name) {
@@ -59,7 +59,7 @@ TPCCPayment::TPCCPayment(const int num_warehouses, BenchmarkSQLExecutor& sql_exe
 bool TPCCPayment::_on_execute() {
   auto pipeline_status = SQLPipelineStatus::NotExecuted;
 
-  // Retrieve information about the warehouse
+  // Retrieve information about the warehouse.
   const auto warehouse_select_pair = _sql_executor.execute(
       std::string{"SELECT W_NAME, W_STREET_1, W_STREET_2, W_CITY, W_STATE, W_ZIP, W_YTD FROM WAREHOUSE WHERE W_ID = "} +
       std::to_string(w_id));
@@ -76,7 +76,7 @@ bool TPCCPayment::_on_execute() {
     return false;
   }
 
-  // Retrieve information about the district
+  // Retrieve information about the district.
   const auto district_select_pair = _sql_executor.execute(
       std::string{
           "SELECT D_NAME, D_STREET_1, D_STREET_2, D_CITY, D_STATE, D_ZIP, D_YTD FROM DISTRICT WHERE D_W_ID = "} +
@@ -98,7 +98,7 @@ bool TPCCPayment::_on_execute() {
   auto customer_offset = size_t{};
 
   if (!select_customer_by_name) {
-    // Case 1 - Select customer by ID
+    // Case 1 - Select customer by ID.
     std::tie(std::ignore, customer_table) = _sql_executor.execute(
         std::string{"SELECT C_ID, C_FIRST, C_MIDDLE, C_LAST, C_STREET_1, C_STREET_2, C_CITY, C_STATE, C_ZIP, C_PHONE, "
                     "C_SINCE, C_CREDIT, C_CREDIT_LIM, C_DISCOUNT, C_BALANCE, C_DATA FROM CUSTOMER WHERE C_W_ID = "} +
@@ -109,7 +109,7 @@ bool TPCCPayment::_on_execute() {
     customer_offset = size_t{0};
     c_id = std::get<int32_t>(customer);
   } else {
-    // Case 2 - Select customer by name
+    // Case 2 - Select customer by name.
     std::tie(std::ignore, customer_table) = _sql_executor.execute(
         std::string{"SELECT C_ID, C_FIRST, C_MIDDLE, C_LAST, C_STREET_1, C_STREET_2, C_CITY, C_STATE, C_ZIP, C_PHONE, "
                     "C_SINCE, C_CREDIT, C_CREDIT_LIM, C_DISCOUNT, C_BALANCE, C_DATA FROM CUSTOMER WHERE C_W_ID = "} +
@@ -117,7 +117,7 @@ bool TPCCPayment::_on_execute() {
         std::string{std::get<pmr_string>(customer)} + "' ORDER BY C_FIRST");
     Assert(customer_table && customer_table->row_count() >= 1, "Did not find customer by name.");
 
-    // Calculate ceil(n/2)
+    // Calculate ceil(n/2).
     customer_offset =
         static_cast<size_t>(std::max(0.0, std::min(std::ceil(static_cast<double>(customer_table->row_count()) / 2.0),
                                                    static_cast<double>(customer_table->row_count() - 1))));
@@ -136,7 +136,7 @@ bool TPCCPayment::_on_execute() {
     return false;
   }
 
-  // Retrieve C_CREDIT and check for "bad credit"
+  // Retrieve C_CREDIT and check for "bad credit".
   if (*customer_table->get_value<pmr_string>(ColumnID{11}, customer_offset) == "BC") {
     auto new_c_data_stream = std::stringstream{};
     new_c_data_stream << *customer_table->get_value<int32_t>(ColumnID{0}, customer_offset);  // C_ID
@@ -156,7 +156,7 @@ bool TPCCPayment::_on_execute() {
     }
   }
 
-  // Insert into history table
+  // Insert into history table.
   const auto history_insert_pair = _sql_executor.execute(std::string{
       "INSERT INTO HISTORY (H_C_ID, H_C_D_ID, H_C_W_ID, H_D_ID, H_W_ID, H_DATA, H_DATE, H_AMOUNT) VALUES (" +
       std::to_string(c_id) + ", " + std::to_string(c_d_id) + ", " + std::to_string(c_w_id) + ", " +

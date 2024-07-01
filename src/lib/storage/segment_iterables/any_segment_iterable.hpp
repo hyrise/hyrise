@@ -86,7 +86,7 @@ class AnySegmentIterableWrapper : public BaseAnySegmentIterableWrapper<ValueType
           functor_wrapper(any_segment_iterator_begin, any_segment_iterator_end);
         });
       } else {
-        Fail("Point access into non-PointAccessIterable not possible");
+        Fail("Point access into non-PointAccessIterable not possible.");
       }
     } else {
       with_iterators(functor_wrapper);

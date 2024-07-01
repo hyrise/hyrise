@@ -67,7 +67,7 @@ TEST_F(MetaExecTest, CallNotCallableUserExecutableFunctions) {
   auto& pm = Hyrise::get().plugin_manager;
 
   // We have to manually rollback the transaction contexts below because otherwise their destruction would cause an
-  // exeception to be thrown. This is due to an assert in the TransactionContext's destructor checking for failed
+  // exception to be thrown. This is due to an assert in the TransactionContext's destructor checking for failed
   // operators. See ~TransactionContext for details.
 
   // Call non-existing plugin (with non-existing function)

@@ -80,7 +80,6 @@ Table::Table(const TableColumnDefinitions& column_definitions, const TableType t
       _type(type),
       _use_mvcc(use_mvcc),
       _target_chunk_size(type == TableType::Data ? target_chunk_size.value_or(Chunk::DEFAULT_SIZE) : Chunk::MAX_SIZE),
-      _append_mutex(std::make_unique<std::mutex>()),
       _table_indexes(table_indexes) {
   DebugAssert(target_chunk_size <= Chunk::MAX_SIZE, "Chunk size exceeds maximum.");
   DebugAssert(type == TableType::Data || !target_chunk_size, "Must not set target_chunk_size for reference tables.");
@@ -409,7 +408,7 @@ std::vector<std::vector<AllTypeVariant>> Table::get_rows() const {
 }
 
 std::unique_lock<std::mutex> Table::acquire_append_mutex() {
-  return std::unique_lock<std::mutex>(*_append_mutex);
+  return std::unique_lock<std::mutex>(_append_mutex);
 }
 
 std::shared_ptr<TableStatistics> Table::table_statistics() const {

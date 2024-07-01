@@ -19,8 +19,9 @@ class EntireChunkPosList : public AbstractPosList {
   bool references_single_chunk() const final;
   ChunkID common_chunk_id() const final;
 
-  // Implemented in hpp for performance reasons (to allow inlining)
+  // Implemented in hpp for performance reasons (to allow inlining).
   RowID operator[](const size_t index) const final {
+    DebugAssert(index < _common_chunk_size, "Invalid position accessed.");
     return RowID{_common_chunk_id, ChunkOffset{static_cast<ChunkOffset::base_type>(index)}};
   }
 

@@ -28,8 +28,8 @@ class Optimizer;
  *  - MVCC is enabled
  *  - The default Optimizer (Optimizer::create_default_optimizer()) is used.
  *
- * Favour this interface over calling the SQLPipeline[Statement] constructors with their long parameter list.
- * See SQLPipeline[Statement] doc for these classes, in short SQLPipeline ist for queries with multiple statement,
+ * Favour this interface over calling the SQLPipeline[Statement] constructors with their long parameter list. See
+ * SQLPipeline[Statement] doc for these classes. In short, SQLPipeline is for queries with multiple statements,
  * SQLPipelineStatement for single statement queries.
  */
 class SQLPipelineBuilder final {
