@@ -97,7 +97,7 @@ class SegmentIterable {
   /**
    * Materialize all values in this iterable as std::optional<ValueType>. std::nullopt if value is NULL.
    * @param container   Container with value_type std::pair<bool, T>, where bool indicates whether the value is NULL or
-   *                    not T is the same as the type of the values in the segment pair in favour over optional to avoid
+   *                    not. T is the same as the type of the values in the segment pair in favour over optional to avoid
    *                    branches for initialization.
    */
   template <typename Container>
