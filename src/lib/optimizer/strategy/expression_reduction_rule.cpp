@@ -42,6 +42,7 @@ void ExpressionReductionRule::_apply_to_plan_without_subqueries(
   Assert(lqp_root->type == LQPNodeType::Root, "ExpressionReductionRule needs root to hold onto.");
 
   visit_lqp(lqp_root, [&](const auto& sub_node) {
+    std::cout << __FILE__ << ":" << __LINE__  << "  " << sub_node->description() << "\n";
     if (sub_node->type == LQPNodeType::Aggregate) {
       remove_duplicate_aggregate(sub_node->node_expressions, sub_node, lqp_root);
     }
@@ -53,12 +54,7 @@ void ExpressionReductionRule::_apply_to_plan_without_subqueries(
       // We can't prune Aggregate arguments, because the operator doesn't support, e.g., `MIN(1)`, whereas it supports
       // `MIN(2-1)`, since `2-1` becomes a column.
       if (sub_node->type != LQPNodeType::Aggregate) {
-        // TODO(anybody) We can't prune top level expressions right now, because that breaks `SELECT MIN(1+2)...`
-        //               because if we rewrite that to `SELECT MIN(3)...` the input to the aggregate is not a column
-        //               anymore and the Aggregate operator cannot handle that
-        for (auto& argument : expression->arguments) {
-          reduce_constant_expression(argument);
-        }
+        reduce_constant_expression(expression);
       }
     }
 

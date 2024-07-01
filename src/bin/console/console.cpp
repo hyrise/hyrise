@@ -1204,4 +1204,6 @@ int main(int argc, char** argv) {
       console.set_prompt("!> ");
     }
   }
+
+  hyrise::Hyrise::get().scheduler()->finish();
 }

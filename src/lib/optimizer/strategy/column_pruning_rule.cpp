@@ -76,7 +76,6 @@ ExpressionUnorderedSet gather_locally_required_expressions(
     case LQPNodeType::DropTable:
     case LQPNodeType::DummyTable:
     case LQPNodeType::Import:
-    case LQPNodeType::Limit:
     case LQPNodeType::Root:
     case LQPNodeType::Sort:
     case LQPNodeType::StaticTable:
@@ -88,12 +87,20 @@ ExpressionUnorderedSet gather_locally_required_expressions(
       }
     } break;
 
+    // Limit node currently should not rely on any columns/expressions that are not resolvable directly.
+    case LQPNodeType::Limit: {
+      const auto& expressions = node->node_expressions;
+      Assert(expressions.size() == 1, "LimitNode should only have one expression.");
+      Assert(expressions[0]->type == ExpressionType::Value, "LimitNode must ...");
+    } break;
+
     // For aggregate nodes, we need the group by columns and the arguments to the aggregate functions
     case LQPNodeType::Aggregate: {
       const auto& aggregate_node = static_cast<AggregateNode&>(*node);
       const auto& node_expressions = node->node_expressions;
 
-      for (auto expression_idx = ColumnID{0}; expression_idx < node_expressions.size(); ++expression_idx) {
+      const auto expression_count = node_expressions.size();
+      for (auto expression_idx = ColumnID{0}; expression_idx < expression_count; ++expression_idx) {
         const auto& expression = node_expressions[expression_idx];
         // The AggregateNode's node_expressions contain both the group_by- and the aggregate_expressions in that order,
         // separated by aggregate_expressions_begin_idx.
@@ -132,7 +139,7 @@ ExpressionUnorderedSet gather_locally_required_expressions(
     // be already computed; if they use the ExpressionEvaluator the columns should at least be computable.
     case LQPNodeType::Predicate:
     case LQPNodeType::Projection: {
-      const auto& input_expressions = node->left_input()->output_expressions();
+      const auto input_expressions = node->left_input()->output_expressions();
       for (const auto& expression : node->node_expressions) {
         if (node->type == LQPNodeType::Projection && !expressions_required_by_consumers.contains(expression)) {
           // An expression produced by a ProjectionNode that is not required by anyone upstream is useless. We should
@@ -208,11 +215,11 @@ ExpressionUnorderedSet gather_locally_required_expressions(
     case LQPNodeType::Export:
     case LQPNodeType::Update:
     case LQPNodeType::ChangeMetaTable: {
-      const auto& left_input_expressions = node->left_input()->output_expressions();
+      const auto left_input_expressions = node->left_input()->output_expressions();
       locally_required_expressions.insert(left_input_expressions.begin(), left_input_expressions.end());
 
       if (node->right_input()) {
-        const auto& right_input_expressions = node->right_input()->output_expressions();
+        const auto right_input_expressions = node->right_input()->output_expressions();
         locally_required_expressions.insert(right_input_expressions.begin(), right_input_expressions.end());
       }
     } break;
@@ -248,7 +255,7 @@ void recursively_gather_required_expressions(
     // Make sure the entry in required_expressions_by_node exists, then insert all expressions that the current node
     // needs
     auto& required_expressions_for_input = required_expressions_by_node[input];
-    const auto& expressions_of_input = input->output_expressions();
+    const auto expressions_of_input = input->output_expressions();
 
     for (const auto& required_expression : required_expressions) {
       // Add the columns needed here (and above) if they come from the input node. Reasons why this might NOT be the
@@ -353,7 +360,7 @@ void ColumnPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<
       case LQPNodeType::StoredTable: {
         // Prune all unused columns from a StoredTableNode
         auto pruned_column_ids = std::vector<ColumnID>{};
-        const auto& node_output_expressions = node->output_expressions();
+        const auto node_output_expressions = node->output_expressions();
         for (const auto& expression : node_output_expressions) {
           if (required_expressions.find(expression) != required_expressions.end()) {
             continue;
