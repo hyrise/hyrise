@@ -79,8 +79,8 @@ class AbstractPointAccessSegmentIterator : public AbstractSegmentIterator<Derive
   template <typename F>
   void prefetch(const ChunkOffset offset, const size_t position_filter_size, F functor) const {
     constexpr auto WARMUP = true;
-    constexpr auto PREFETCH_LENGTH = size_t{32};
-    constexpr auto MAX_WARMUP_ITEMS = size_t{8};
+    constexpr auto PREFETCH_LENGTH = size_t{16};
+    constexpr auto MAX_WARMUP_ITEMS = size_t{4};
     if (position_filter_size < PREFETCH_LENGTH) {
       return;
     }
