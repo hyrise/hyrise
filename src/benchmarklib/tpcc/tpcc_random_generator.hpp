@@ -104,7 +104,7 @@ class TPCCRandomGenerator : public RandomGenerator {
   }
 
  protected:
-  // Holds the constant C (see 2.1.6) for a given A. Is concurrently accessed.
+  // Holds the constant C (see 2.1.6) for a given A. Is accessed concurrently.
   tbb::concurrent_unordered_map<size_t, size_t> _nurand_constants_c;
 };
 }  // namespace hyrise

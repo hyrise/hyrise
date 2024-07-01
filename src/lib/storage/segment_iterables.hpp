@@ -39,14 +39,18 @@ namespace hyrise {
  * auto iterable = ValueSegmentIterable<int32_t>{value_segment};
  * iterable.with_iterators([&](auto iter, const auto end) {
  *   for (; iter != end; ++iter) {
- *     if (iter.is_null()) { ... }
+ *     if (iter.is_null()) {
+ *       ...
+ *     }
  *
  *     consume(iter.value());
  *   }
  * });
  *
  * iterable.for_each([&](const auto& value) {
- *   if (value.is_null()) { ... }
+ *   if (value.is_null()) {
+ *     ...
+ *   }
  *
  *   consume(value.value());
  * });

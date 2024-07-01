@@ -587,104 +587,110 @@ TEST_F(StressTest, OperatorRegistration) {
   }
 }
 
-// For cases where issues usually arise early, we run the test multiple times.
-class StressTestMultipleRuns : public StressTest, public ::testing::WithParamInterface<int> {};
-
-INSTANTIATE_TEST_SUITE_P(StressTest, StressTestMultipleRuns, testing::Range(0, 10),
-                         [](const testing::TestParamInfo<StressTestMultipleRuns::ParamType>& info) {
-                           return "loop" + std::to_string(info.param);
-                         });
-
 /**
- * Test to verify that rollbacking Insert operations does not lead to multiple (outdated) rows being visible. This issue
- * has occurred when using link-time optimization or when inlining MVCC functions (see #2649).
- * We execute and immediately rollback insert operations in multiple threads. In parallel, threads are checking that no
+ * Test to verify that rolling back Insert operations does not lead to multiple (outdated) rows being visible. This
+ * issue has occurred when using link-time optimization or when inlining MVCC functions (see #2649).
+ * We execute and immediately roll back insert operations in multiple threads. In parallel, threads are checking that no
  * new rows are visible.
  */
-TEST_P(StressTestMultipleRuns, VisibilityOfRollbackedInserts) {
+TEST_F(StressTest, VisibilityOfInsertsBeingRolledBack) {
   // StressTestMultipleRuns runs 10x. Limit max runtime for *SAN builds.
   constexpr auto RUNTIME = std::chrono::seconds(5);
   constexpr auto MAX_VALUE_AND_ROW_COUNT = uint32_t{17};
   constexpr auto MAX_LOOP_COUNT = uint32_t{10'000};  // Experimentally determined, see #2651.
 
   const auto table_name = std::string{"table_a"};
-  const auto table = std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Int, false}}, TableType::Data,
-                                             Chunk::DEFAULT_SIZE, UseMvcc::Yes);
-  Hyrise::get().storage_manager.add_table(table_name, table);
 
-  const auto values_to_insert =
-      std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Int, false}}, TableType::Data);
-  values_to_insert->append({int32_t{123}});
-  values_to_insert->append({int32_t{456}});
+  // The issues triggered in this test usually arise early (later, the scan is getting slower and slower on increasing
+  // table sizes). For that, we execute multiple short runs.
+  for (auto test_run = size_t{0}; test_run < 10; ++test_run) {
+    if (Hyrise::get().storage_manager.has_table(table_name)) {
+      Hyrise::get().storage_manager.drop_table(table_name);
+    }
 
-  for (auto init_insert_id = uint32_t{1}; init_insert_id <= MAX_VALUE_AND_ROW_COUNT; ++init_insert_id) {
-    SQLPipelineBuilder{"INSERT INTO " + table_name + " VALUES( " + std::to_string(init_insert_id) + ");"}
-        .create_pipeline()
-        .get_result_table();
-  }
+    Hyrise::get().storage_manager.add_table(table_name, std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Int, false}}, TableType::Data,
+                                    Chunk::DEFAULT_SIZE, UseMvcc::Yes));
 
-  const auto insert_thread_count = std::max(uint32_t{10}, std::thread::hardware_concurrency() / 2);
-  const auto watch_thread_count = std::max(uint32_t{10}, std::thread::hardware_concurrency() / 2);
+    const auto values_to_insert =
+        std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Int, false}}, TableType::Data);
+    values_to_insert->append({int32_t{123}});
+    values_to_insert->append({int32_t{456}});
 
-  auto insert_threads = std::vector<std::thread>{};
-  insert_threads.reserve(insert_thread_count);
+    for (auto init_insert_id = uint32_t{1}; init_insert_id <= MAX_VALUE_AND_ROW_COUNT; ++init_insert_id) {
+      SQLPipelineBuilder{"INSERT INTO " + table_name + " VALUES( " + std::to_string(init_insert_id) + ");"}
+          .create_pipeline()
+          .get_result_table();
+    }
 
-  const auto start = std::chrono::system_clock::now();
-  auto stop_flag = std::atomic_flag{};
+    const auto insert_thread_count = std::max(uint32_t{10}, std::thread::hardware_concurrency() / 2);
+    const auto watch_thread_count = std::max(uint32_t{10}, std::thread::hardware_concurrency() / 2);
 
-  for (auto thread_id = uint32_t{0}; thread_id < insert_thread_count; ++thread_id) {
-    insert_threads.emplace_back([&]() {
-      for (auto loop_id = uint32_t{0}; loop_id < MAX_LOOP_COUNT && std::chrono::system_clock::now() < start + RUNTIME;
-           ++loop_id) {
-        const auto table_wrapper = std::make_shared<TableWrapper>(values_to_insert);
-        const auto insert = std::make_shared<Insert>(table_name, table_wrapper);
+    auto insert_threads = std::vector<std::thread>{};
+    insert_threads.reserve(insert_thread_count);
 
-        const auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
-        insert->set_transaction_context(transaction_context);
-        table_wrapper->execute();
-        insert->execute();
-        ASSERT_FALSE(insert->execute_failed());
-        transaction_context->rollback(RollbackReason::User);
-      }
-    });
-  }
+    const auto start = std::chrono::system_clock::now();
+    auto start_flag = std::atomic_flag{};
+    auto stop_flag = std::atomic_flag{};
 
-  auto watch_threads = std::vector<std::thread>{};
-  watch_threads.reserve(watch_thread_count);
+    for (auto thread_id = uint32_t{0}; thread_id < insert_thread_count; ++thread_id) {
+      insert_threads.emplace_back([&]() {
+        start_flag.wait(false);
+        for (auto loop_id = uint32_t{0}; loop_id < MAX_LOOP_COUNT && std::chrono::system_clock::now() < start + RUNTIME;
+             ++loop_id) {
+          const auto table_wrapper = std::make_shared<TableWrapper>(values_to_insert);
+          const auto insert = std::make_shared<Insert>(table_name, table_wrapper);
 
-  for (auto thread_id = uint32_t{0}; thread_id < watch_thread_count; ++thread_id) {
-    watch_threads.emplace_back([&]() {
-      while (!stop_flag.test()) {
-        {
-          const auto [status, result_table] =
-              SQLPipelineBuilder{"SELECT count(*) from " + table_name + ";"}.create_pipeline().get_result_table();
-          ASSERT_EQ(status, SQLPipelineStatus::Success);
-          const auto visible_row_count = result_table->get_value<int64_t>(ColumnID{0}, 0);
-          ASSERT_TRUE(visible_row_count);
-          ASSERT_EQ(*visible_row_count, MAX_VALUE_AND_ROW_COUNT);
+          const auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
+          insert->set_transaction_context(transaction_context);
+          table_wrapper->execute();
+          insert->execute();
+          ASSERT_FALSE(insert->execute_failed());
+          transaction_context->rollback(RollbackReason::User);
         }
+      });
+    }
 
-        {
-          const auto [status, result_table] =
-              SQLPipelineBuilder{"SELECT max(a) from " + table_name + ";"}.create_pipeline().get_result_table();
-          ASSERT_EQ(status, SQLPipelineStatus::Success);
-          const auto max_value = result_table->get_value<int32_t>(ColumnID{0}, 0);
-          ASSERT_TRUE(max_value);
-          ASSERT_EQ(*max_value, MAX_VALUE_AND_ROW_COUNT);
+    auto watch_threads = std::vector<std::thread>{};
+    watch_threads.reserve(watch_thread_count);
+
+    for (auto thread_id = uint32_t{0}; thread_id < watch_thread_count; ++thread_id) {
+      watch_threads.emplace_back([&]() {
+        while (!stop_flag.test()) {
+          {
+            const auto [status, result_table] =
+                SQLPipelineBuilder{"SELECT count(*) from " + table_name + ";"}.create_pipeline().get_result_table();
+            ASSERT_EQ(status, SQLPipelineStatus::Success);
+            const auto visible_row_count = result_table->get_value<int64_t>(ColumnID{0}, 0);
+            ASSERT_TRUE(visible_row_count);
+            ASSERT_EQ(*visible_row_count, MAX_VALUE_AND_ROW_COUNT);
+          }
+
+          {
+            const auto [status, result_table] =
+                SQLPipelineBuilder{"SELECT max(a) from " + table_name + ";"}.create_pipeline().get_result_table();
+            ASSERT_EQ(status, SQLPipelineStatus::Success);
+            const auto max_value = result_table->get_value<int32_t>(ColumnID{0}, 0);
+            ASSERT_TRUE(max_value);
+            ASSERT_EQ(*max_value, MAX_VALUE_AND_ROW_COUNT);
+          }
         }
-      }
-    });
-  }
+      });
+    }
 
-  for (auto& thread : insert_threads) {
-    thread.join();
-  }
+    // Start inserting threads.
+    start_flag.test_and_set();
+    start_flag.notify_all();
 
-  // Notifying watch threads that insert rollbacks are done so we can stop watching.
-  stop_flag.test_and_set();
+    for (auto& thread : insert_threads) {
+      thread.join();
+    }
 
-  for (auto& thread : watch_threads) {
-    thread.join();
+    // Notifying watch threads that insert rollbacks are done so we can stop watching.
+    stop_flag.test_and_set();
+
+    for (auto& thread : watch_threads) {
+      thread.join();
+    }
   }
 }
 

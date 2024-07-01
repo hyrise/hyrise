@@ -29,9 +29,6 @@ struct MvccData {
   // here are ignored. This is to avoid resizing the vectors, which would cause reallocations and require locking.
   explicit MvccData(const size_t size, CommitID begin_commit_id);
 
-  /**
-   * The following functions are inlined for performance.
-   */
   CommitID get_begin_cid(const ChunkOffset offset) const;
   void set_begin_cid(const ChunkOffset offset, const CommitID commit_id,
                      const std::memory_order memory_order = std::memory_order_seq_cst);
