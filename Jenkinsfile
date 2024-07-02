@@ -146,9 +146,9 @@ try {
           }, nix: {
             stage("nix-setup") {
               sh "curl -L https://nixos.org/nix/install > nix-install.sh && chmod +x nix-install.sh && ./nix-install.sh --daemon --yes"
-              //sh "nix-shell --pure --run "\
-              //    mkdir nix-debug && cd nix-debug && cmake -GNinja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ .. "\
-              //    ninja\""
+              sh "nix-shell --pure --run "\
+                  mkdir nix-debug && cd nix-debug && cmake -GNinja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ .. "\
+                  ninja\""
             }
           }
 
