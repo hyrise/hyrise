@@ -144,12 +144,13 @@ try {
               sh "scripts/lint.sh"
             }
           }, nix: {
-            sh <(curl -L https://nixos.org/nix/install) --no-daemon --yes
-            nix-shell --pure --run "\
-              mkdir nix-debug && cd nix-debug && \
-              cmake -GNinja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ .. && \
-              ninja
-            "
+            stage("nix-setup") {
+              sh "sh <(curl -L https://nixos.org/nix/install) --no-daemon --yes"
+              sh "nix-shell --pure --run "\
+                  mkdir nix-debug && cd nix-debug && \
+                  cmake -GNinja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ .. && \
+                  ninja\""
+            }
           }
 
           // We distribute the cores to processes in a way to even the running times. With an even distributions,
