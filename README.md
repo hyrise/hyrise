@@ -86,7 +86,7 @@ You can build Hyrise using Nix. To do so, first [install Nix](https://nixos.wiki
 nix-shell --pure
 ```
 
-This will drop you into a shell with all dependencies installed. You can now build Hyrise as usual. Please note that using the `--pure` flag is highly important as it avoids using dependencies from the local system.
+This will drop you into a shell with all dependencies installed. You can now build Hyrise as usual. Please note that using the `--pure` flag is recommended as it avoids using dependencies from the local system.
 
 ## Setup using Docker
 If you want to create a Docker-based development environment using CLion, head over to our [dedicated tutorial](https://github.com/hyrise/hyrise/wiki/Use-Docker-with-CLion). 
