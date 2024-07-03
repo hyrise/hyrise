@@ -119,7 +119,7 @@ try {
             // jemalloc's autoconf operates outside of the build folder (#1413). If we start two cmake instances at the
             // same time, we run into conflicts. Thus, run this one (any one, really) first, so that the autoconf step
             // can finish in peace.
-            sh "mkdir clang-debug && cd clang-debug &&                                                   ${cmake} ${debug}          ${clang}  ${unity}  ${ninja} .. && ninja libjemalloc-build"
+            sh "mkdir clang-debug && cd clang-debug &&                                                   ${cmake} ${debug}          ${clang}  ${unity} .. && ninja libjemalloc-build"
 
             // Configure the rest in parallel. We use unity builds to decrease build times, except for two
             // configurations: (1) clang tidy as it might otherwise miss issues with unity builds (e.g., missing
@@ -131,7 +131,7 @@ try {
             mkdir clang-release-addr-ub-leak-sanitizers && cd clang-release-addr-ub-leak-sanitizers &&   ${cmake} ${release}        ${clang}   ${unity}                ${ninja} -DENABLE_ADDR_UB_LEAK_SANITIZATION=ON .. &\
             mkdir clang-relwithdebinfo-thread-sanitizer && cd clang-relwithdebinfo-thread-sanitizer &&   ${cmake} ${relwithdebinfo} ${clang}   ${unity}                ${ninja} -DENABLE_THREAD_SANITIZATION=ON .. &\
             mkdir clang-release && cd clang-release &&                                                   ${cmake} ${release}        ${clang}   ${unity}                ${ninja} .. &\
-            mkdir gcc-debug && cd gcc-debug &&                                                           ${cmake} ${debug}          ${gcc}     ${unity}                         .. &\
+            mkdir gcc-debug && cd gcc-debug &&                                                           ${cmake} ${debug}          ${gcc}     ${unity}                ${ninja} .. &\
             mkdir gcc-release && cd gcc-release &&                                                       ${cmake} ${release}        ${gcc}     ${unity} ${disable_lto} ${ninja} .. &\
             mkdir clang-15-debug && cd clang-15-debug &&                                                 ${cmake} ${debug}          ${clang15} ${unity}                ${ninja} .. &\
             mkdir gcc-11-debug && cd gcc-11-debug &&                                                     ${cmake} ${debug}          ${gcc11}                           ${ninja} .. &\
@@ -140,7 +140,8 @@ try {
 
           parallel clangDebug: {
             stage("clang-debug") {
-              sh "cd clang-debug && ninja all -j \$(( \$(nproc) / 5))"
+              // We build clang-debug using make to test make once (and clang-debug is the fastest build).
+              sh "cd clang-debug && make all -j \$(( \$(nproc) / 5))"
               sh "./clang-debug/hyriseTest clang-debug"
             }
           }, clang15Debug: {
@@ -150,8 +151,7 @@ try {
             }
           }, gccDebug: {
             stage("gcc-debug") {
-              // We build gcc-debug using make.
-              sh "cd gcc-debug && make all -j \$(( \$(nproc) / 5))"
+              sh "cd gcc-debug && ninja all -j \$(( \$(nproc) / 5))"
               sh "cd gcc-debug && ./hyriseTest"
             }
           }, gcc11Debug: {
