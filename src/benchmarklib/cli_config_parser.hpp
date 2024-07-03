@@ -1,6 +1,6 @@
 #pragma once
 
-#include <filesystem>
+#include <memory>
 #include <string>
 
 #include "cxxopts.hpp"
@@ -12,7 +12,7 @@ namespace hyrise {
 
 class CLIConfigParser {
  public:
-  static BenchmarkConfig parse_cli_options(const cxxopts::ParseResult& parse_result);
+  static std::shared_ptr<BenchmarkConfig> parse_cli_options(const cxxopts::ParseResult& parse_result);
 
   static EncodingConfig parse_encoding_config(const std::string& encoding_file_str);
 

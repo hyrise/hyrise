@@ -8,6 +8,8 @@
 #include <unordered_map>
 #include <vector>
 
+#include <oneapi/tbb/concurrent_unordered_map.h>  // NOLINT(build/include_order): Identified as C system headers.
+
 #include "random_generator.hpp"
 #include "utils/assert.hpp"
 
@@ -27,7 +29,7 @@ class TPCCRandomGenerator : public RandomGenerator {
   }
 
   /**
-   * Generates a non-uniform random number based on a formula defined by TPCC
+   * Generates a non-uniform random number based on a formula defined by TPCC.
    */
   size_t nurand(size_t a, size_t x, size_t y) {
     auto c_iter = _nurand_constants_c.find(a);
@@ -39,10 +41,10 @@ class TPCCRandomGenerator : public RandomGenerator {
   }
 
   /**
-   * Generates a random last name based on a set of syllables
-   * @param i   a number, if less than 1000, each digit represents a syllable
-   *            for i's greater than 1000 we calculate a non-uniform random number below 1000
-   * @return    a String representing the last name
+   * Generates a random last name based on a set of syllables.
+   * @param i   given input i, a string is created in which each digit of i represents a syllable; if input i is larger
+   *            than 999, use first create non-uniform random number between 255 and 1000
+   * @return    a string representing the last name
    */
   std::string last_name(size_t i) {
     const std::string syllables[] = {
@@ -70,23 +72,21 @@ class TPCCRandomGenerator : public RandomGenerator {
     return result;
   }
 
-  // Function and parameters as defined by TPCC
-  // Generates alphanumeric string of random length
+  // Function and parameters as defined by TPCC. Generates alphanumeric string of random length.
   std::string astring(size_t lower_length, size_t upper_length) {
     return generate_string(lower_length, upper_length, 'a', 26);
   }
 
-  // Function and parameters as defined by TPCC
-  // Generates numeric string of random length
+  // Function and parameters as defined by TPCC. Generates numeric string of random length.
   std::string nstring(size_t lower_length, size_t upper_length) {
     return generate_string(lower_length, upper_length, '0', 10);
   }
 
   std::vector<size_t> permutation(size_t lower, size_t upper) {
-    std::vector<size_t> v(upper - lower);
-    std::iota(v.begin(), v.end(), lower);
-    std::shuffle(v.begin(), v.end(), engine);
-    return v;
+    auto values = std::vector<size_t>(upper - lower);
+    std::iota(values.begin(), values.end(), lower);
+    std::shuffle(values.begin(), values.end(), engine);
+    return values;
   }
 
   // Reset nurand's C according to 2.1.6.1
@@ -104,7 +104,7 @@ class TPCCRandomGenerator : public RandomGenerator {
   }
 
  protected:
-  // Holds the constant C (see 2.1.6) for a given A
-  std::unordered_map<size_t, size_t> _nurand_constants_c;
+  // Holds the constant C (see 2.1.6) for a given A. Is accessed concurrently.
+  tbb::concurrent_unordered_map<size_t, size_t> _nurand_constants_c;
 };
 }  // namespace hyrise

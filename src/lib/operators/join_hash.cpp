@@ -62,7 +62,7 @@ std::shared_ptr<AbstractOperator> JoinHash::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_right_input,
     std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& /*copied_ops*/) const {
   return std::make_shared<JoinHash>(copied_left_input, copied_right_input, _mode, _primary_predicate,
-                                    _secondary_predicates, _radix_bits);
+                                    _secondary_predicates);
 }
 
 void JoinHash::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
@@ -512,7 +512,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
       probe_side_pos_lists[partition_index].reserve(result_rows_per_partition);
     }
 
-    Timer timer_probing;
+    auto timer_probing = Timer{};
     switch (_mode) {
       case JoinMode::Inner:
         probe<ProbeColumnType, HashedType, false>(radix_probe_column, hash_tables, build_side_pos_lists,
@@ -563,7 +563,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
      * probe_side_pos_lists[p][r].
      */
 
-    Timer timer_output_writing;
+    auto timer_output_writing = Timer{};
 
     const auto create_left_side_pos_lists_by_segment =
         (_build_input_table->type() == TableType::References && _output_column_order != OutputColumnOrder::RightOnly);
