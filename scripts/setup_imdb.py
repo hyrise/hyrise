@@ -37,7 +37,7 @@ table_dir = sys.argv[1]
 
 # This file contains the IMDB dataset and is based on the specifications of the
 # original JOB repository: https://github.com/gregrahn/join-order-benchmark
-LOCATION = "https://github.com/hyrise/hyrise/releases/download/imdb_data_set_v1.01/imdb_data.zip"
+LOCATION = "https://github.com/hyrise/hyrise/archive/refs/tags/imdb_data_set_v1.01.zip"
 FILE_NAME = "imdb_data.zip"
 TABLE_NAMES = [
     "aka_name",
