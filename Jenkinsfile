@@ -119,7 +119,7 @@ try {
             // jemalloc's autoconf operates outside of the build folder (#1413). If we start two cmake instances at the
             // same time, we run into conflicts. Thus, run this one (any one, really) first, so that the autoconf step
             // can finish in peace.
-            sh "mkdir clang-debug && cd clang-debug &&                                                   ${cmake} ${debug}          ${clang}  ${unity} .. && ninja libjemalloc-build"
+            sh "mkdir clang-debug && cd clang-debug &&                                                   ${cmake} ${debug}          ${clang}  ${unity} .. && make -j \$(nproc) libjemalloc-build"
 
             // Configure the rest in parallel. We use unity builds to decrease build times, except for two
             // configurations: (1) clang tidy as it might otherwise miss issues with unity builds (e.g., missing
