@@ -75,7 +75,7 @@ std::ostream& operator<<(std::ostream& stream, const HistogramBin<T>& bin) {
  * (see StringHistogramDomain).
  */
 template <typename T>
-class AbstractHistogram : public AbstractStatisticsObject {
+class AbstractHistogram : public AbstractStatisticsObject, public std::enable_shared_from_this<AbstractHistogram<T>> {
  public:
   /**
    * Strings are internally transformed to a number, such that a bin can have a numerical width.
@@ -113,15 +113,15 @@ class AbstractHistogram : public AbstractStatisticsObject {
       const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
       const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const;
 
-  std::shared_ptr<AbstractStatisticsObject> sliced(
+  std::shared_ptr<const AbstractStatisticsObject> sliced(
       const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
       const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const override;
 
-  std::shared_ptr<AbstractStatisticsObject> pruned(
+  std::shared_ptr<const AbstractStatisticsObject> pruned(
       const size_t num_values_pruned, const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
       const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const override;
 
-  std::shared_ptr<AbstractStatisticsObject> scaled(const Selectivity selectivity) const override;
+  std::shared_ptr<const AbstractStatisticsObject> scaled(const Selectivity selectivity) const override;
 
   /**
    * Returns whether a given predicate type and its parameter(s) can belong to a bin or not.
@@ -225,6 +225,20 @@ class AbstractHistogram : public AbstractStatisticsObject {
    */
   float bin_ratio_between(const BinID bin_id, const T& value, const T& value2) const;
 
+  /**
+   * Returns the id of the bin that holds the given `value`.
+   * Returns INVALID_BIN_ID if `value` does not belong to any bin.
+   */
+  virtual BinID bin_for_value(const T& value) const = 0;
+
+  /**
+   * Returns the id of the bin after the one that holds the given `value`.
+   * If `value` does not belong to any bin but is smaller than max(), it is in a gap.
+   * In that case return the bin right after the gap.
+   * If the bin that holds the value is the last bin or it is greater than max, return INVALID_BIN_ID.
+   */
+  virtual BinID next_bin_for_value(const T& value) const = 0;
+
  protected:
   // Call after constructor of the derived histogram has finished to check whether the bins are valid
   // (e.g. do not overlap).
@@ -248,20 +262,6 @@ class AbstractHistogram : public AbstractStatisticsObject {
    * @return total_[distinct_]count() - estimate
    */
   std::pair<Cardinality, DistinctCount> _invert_estimate(const std::pair<Cardinality, DistinctCount>& estimate) const;
-
-  /**
-   * Returns the id of the bin that holds the given `value`.
-   * Returns INVALID_BIN_ID if `value` does not belong to any bin.
-   */
-  virtual BinID _bin_for_value(const T& value) const = 0;
-
-  /**
-   * Returns the id of the bin after the one that holds the given `value`.
-   * If `value` does not belong to any bin but is smaller than max(), it is in a gap.
-   * In that case return the bin right after the gap.
-   * If the bin that holds the value is the last bin or it is greater than max, return INVALID_BIN_ID.
-   */
-  virtual BinID _next_bin_for_value(const T& value) const = 0;
 
   HistogramDomain<T> _domain;
 };

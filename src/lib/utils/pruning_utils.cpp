@@ -264,7 +264,7 @@ std::shared_ptr<TableStatistics> prune_table_statistics(const TableStatistics& o
   Assert(old_statistics.row_count >= 0, "Did not expect a negative row count.");
   const auto column_count = old_statistics.column_statistics.size();
 
-  auto column_statistics = std::vector<std::shared_ptr<BaseAttributeStatistics>>(column_count);
+  auto column_statistics = std::vector<std::shared_ptr<const BaseAttributeStatistics>>(column_count);
 
   auto scale = 1.0f;
   if (old_statistics.row_count > 0) {
