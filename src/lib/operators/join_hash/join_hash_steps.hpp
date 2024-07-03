@@ -288,11 +288,11 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
   const auto pass = size_t{0};
   const auto radix_mask = static_cast<size_t>(std::pow(2, radix_bits * (pass + 1)) - 1);
 
-  Assert(output_bloom_filter.empty(), "output_bloom_filter should be empty");
+  Assert(output_bloom_filter.empty(), "Unexpected non-empty output_bloom_filter.");
   output_bloom_filter.resize(BLOOM_FILTER_SIZE);
   auto output_bloom_filter_mutex = std::mutex{};
 
-  Assert(input_bloom_filter.size() == BLOOM_FILTER_SIZE, "Invalid input_bloom_filter");
+  Assert(input_bloom_filter.size() == BLOOM_FILTER_SIZE, "Invalid input_bloom_filter.");
 
   // Create histograms per chunk
   histograms.resize(chunk_count);
@@ -316,7 +316,7 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
         used_output_bloom_filter = local_output_bloom_filter;
       }
 
-      // Skip chunks that were physically deleted
+      // Skip chunks that were physically deleted.
       if (!chunk_in) {
         return;
       }
@@ -348,7 +348,7 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
           const auto inserted_rows = (end - iter) - num_rows;
           end -= inserted_rows;
         } else {
-          Assert(end - iter == num_rows, "Non-ValueSegment changed size while being accessed");
+          Assert(end - iter == num_rows, "Non-ValueSegment changed size while being accessed.");
         }
 
         while (iter != end) {
