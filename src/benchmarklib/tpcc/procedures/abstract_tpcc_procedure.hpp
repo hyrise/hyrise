@@ -26,8 +26,8 @@ class AbstractTPCCProcedure {
 
   // As random values are generated during creation of the procedure, this is mostly done in a single thread, not in the
   // database worker's. As such, having a fixed seed for all thread-local random engines should not be an issue.
-  inline static std::minstd_rand _random_engine{42};
-  inline static TPCCRandomGenerator _tpcc_random_generator{42};
+  inline static thread_local std::minstd_rand _random_engine{42};
+  inline static thread_local TPCCRandomGenerator _tpcc_random_generator{42};
 
   BenchmarkSQLExecutor& _sql_executor;
 };
