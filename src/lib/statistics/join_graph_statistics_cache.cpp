@@ -45,7 +45,7 @@ std::optional<JoinGraphStatisticsCache::Bitmask> JoinGraphStatisticsCache::bitma
   auto bitmask = std::optional<Bitmask>{_vertex_indices.size() + _predicate_indices.size()};
 
   visit_lqp(lqp, [&](const auto& node) {
-    // Early out if `bitmask.reset()` was called during the search below
+    // Early out if `bitmask.reset()` was called during the search below.
     if (!bitmask) {
       return LQPVisitation::DoNotVisitInputs;
     }
@@ -72,7 +72,7 @@ std::optional<JoinGraphStatisticsCache::Bitmask> JoinGraphStatisticsCache::bitma
       } else if (join_node->join_mode == JoinMode::Cross) {
         return LQPVisitation::VisitInputs;
       } else {
-        // Non-Inner/Cross join detected, cannot construct a bitmask from those
+        // Non-Inner/Cross join detected, cannot construct a bitmask from those.
         bitmask.reset();
         return LQPVisitation::DoNotVisitInputs;
       }
@@ -87,7 +87,7 @@ std::optional<JoinGraphStatisticsCache::Bitmask> JoinGraphStatisticsCache::bitma
       Assert(predicate_index_iter->second + _vertex_indices.size() < bitmask->size(), "Predicate index out of range");
       bitmask->set(predicate_index_iter->second + _vertex_indices.size());
     } else if (node->type == LQPNodeType::Sort) {
-      // ignore node type as it doesn't change the cardinality
+      // ignore node type as it does not change the cardinality.
     } else {
       bitmask.reset();
       return LQPVisitation::DoNotVisitInputs;
@@ -107,15 +107,13 @@ std::shared_ptr<TableStatistics> JoinGraphStatisticsCache::get(
   }
 
   /**
-   * We found a matching cache_entry. Now, let's adjust its column order
+   * We found a matching cache_entry. Now, let us adjust its column order.
    */
-
   const auto& cache_entry = cache_iter->second;
 
   const auto cached_table_statistics = cache_entry.table_statistics;
 
-  // Compute the mapping from result column ids to cached column ids and the column data types
-  // of the result
+  // Compute the mapping from result column ids to cached column ids and the column data types of the result.
   auto cached_column_ids = std::vector<ColumnID>{requested_column_order.size()};
   auto result_column_data_types = std::vector<DataType>{requested_column_order.size()};
   const auto requested_column_order_size = requested_column_order.size();
@@ -127,10 +125,11 @@ std::shared_ptr<TableStatistics> JoinGraphStatisticsCache::get(
     cached_column_ids[column_id] = cached_column_id;
   }
 
-  // Allocate the TableStatistics to be returned
-  auto output_column_statistics = std::vector<std::shared_ptr<BaseAttributeStatistics>>{requested_column_order_size};
+  // Allocate the TableStatistics to be returned.
+  auto output_column_statistics =
+      std::vector<std::shared_ptr<const BaseAttributeStatistics>>{requested_column_order_size};
 
-  // Bring AttributeStatistics into the requested order for each statistics slice
+  // Bring AttributeStatistics into the requested order for each statistics slice.
   for (auto column_id = ColumnID{0}; column_id < requested_column_order_size; ++column_id) {
     const auto cached_column_id = cached_column_ids[column_id];
     const auto& cached_column_statistics = cached_table_statistics->column_statistics[cached_column_id];

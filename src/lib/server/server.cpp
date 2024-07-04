@@ -24,7 +24,7 @@ Server::Server(const boost::asio::ip::address& address, const uint16_t port,
                const SendExecutionInfo send_execution_info)
     : _acceptor(_io_service, boost::asio::ip::tcp::endpoint(address, port)), _send_execution_info(send_execution_info) {
   std::cout << "Server started at " << server_address() << " and port " << server_port() << ".\nRun 'psql -h localhost "
-            << server_address() << "' to connect to the server\n.";
+            << server_address() << "' to connect to the server\n." << std::flush;
 }
 
 void Server::run() {

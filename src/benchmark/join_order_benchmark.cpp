@@ -172,7 +172,7 @@ int main(int argc, char* argv[]) {
   table_path = cli_parse_result["table_path"].as<std::string>();
   queries_str = cli_parse_result["queries"].as<std::string>();
 
-  benchmark_config = std::make_shared<BenchmarkConfig>(CLIConfigParser::parse_cli_options(cli_parse_result));
+  benchmark_config = CLIConfigParser::parse_cli_options(cli_parse_result);
 
   // Check that the options "query_path" and "table_path" were specified
   if (query_path.empty() || table_path.empty()) {
