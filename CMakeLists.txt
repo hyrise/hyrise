@@ -117,25 +117,30 @@ set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${FLAGS_ALL} ${FLAGS_REL
 set(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO} ${FLAGS_ALL} ${FLAGS_RELEASE}")
 set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} ${FLAGS_ALL} ${FLAGS_RELEASE}")
 
-# We use Link Time Optimization (LTO) for all builds except debug builds or when -DDISABLE_LTO is passed.
+# We use Link Time Optimization (LTO) for all builds except debug builds or when -DNO_LTO is passed.
 cmake_policy(SET CMP0069 NEW)
 set(CMAKE_POLICY_DEFAULT_CMP0069 NEW)
-option(DISABLE_LTO "Set to TRUE to build Hyrise without Link Time Optimization (LTO). Default: FALSE" FALSE)
-if (${DISABLE_LTO} OR ${CMAKE_BUILD_TYPE} MATCHES "Debug" OR ENABLE_ADDR_UB_LEAK_SANITIZATION OR ENABLE_THREAD_SANITIZATION)
-    message(STATUS "Building without Link Time Optimization (LTO)")
+option(NO_LTO "Set to TRUE to build Hyrise without Link Time Optimization (LTO). Default: FALSE" FALSE)
+if (${NO_LTO} OR ${CMAKE_BUILD_TYPE} MATCHES "Debug" OR ENABLE_ADDR_UB_LEAK_SANITIZATION OR ENABLE_THREAD_SANITIZATION)
+    message(STATUS "Building without Link Time Optimization (LTO).")
 else ()
     include(CheckIPOSupported)
     check_ipo_supported(RESULT ipo_supported OUTPUT ipo_output)
-    if(ipo_supported)
+
+    if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
+        # We assume a default macOS developer setup when using AppleClang. This setup does not include lld which we
+        # require for link time optimization.
+        message(WARNING "Link time optimization (LTO) not supported when compiling with AppleClang.")
+    elseif(NOT ipo_supported)
+        message(WARNING "Link time optimization (LTO) not supported: ${ipo_output}.")
+    else()
         set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
-        message(STATUS "Building with Link Time Optimization (LTO)")
+        message(STATUS "Building with Link Time Optimization (LTO).")
 
         if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
             message(WARNING "Using gold linker for LTO build with GCC. Please note that LTO build times can be very long using GCC.")
             set(HYRISE_LINKER "gold")
         endif()
-    else()
-        message(WARNING "LTO not supported: ${ipo_output}")
     endif()
 endif()
 
