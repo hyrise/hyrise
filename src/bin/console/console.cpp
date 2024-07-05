@@ -140,17 +140,15 @@ Console::Console()
       _out(std::cout.rdbuf()),
       _log("console.log", std::ios_base::app | std::ios_base::out),
       _verbose(false),
-      _pagination_active(false),
-      _pqp_cache(std::make_shared<SQLPhysicalPlanCache>()),
-      _lqp_cache(std::make_shared<SQLLogicalPlanCache>()) {
+      _pagination_active(false) {
   // Init readline basics, tells readline to use our custom command completion function.
   rl_attempted_completion_function = &Console::_command_completion;
   // NOLINTNEXTLINE(cppcoreguidelines-pro-type-const-cast)
   rl_completer_word_break_characters = const_cast<char*>(" \t\n\"\\'`@$><=;|&{(");
 
   // Set Hyrise caches.
-  Hyrise::get().default_pqp_cache = _pqp_cache;
-  Hyrise::get().default_lqp_cache = _lqp_cache;
+  Hyrise::get().default_pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
+  Hyrise::get().default_lqp_cache = std::make_shared<SQLLogicalPlanCache>();
 
   // Use scheduler.
   Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
@@ -1027,8 +1025,8 @@ int Console::_unload_plugin(const std::string& input) {
   // The presence of some plugins might cause certain query plans to be generated which will not work if the plugin
   // is stopped. Therefore, we clear the cache. For example, a plugin might create indexes which lead to query plans
   // using IndexScans, these query plans might become unusable after the plugin is unloaded.
-  _lqp_cache->clear();
-  _pqp_cache->clear();
+  Hyrise::get().default_pqp_cache->clear();
+  Hyrise::get().default_lqp_cache->clear();
 
   out("Plugin (" + plugin_name + ") stopped.\n");
 
@@ -1037,15 +1035,13 @@ int Console::_unload_plugin(const std::string& input) {
 
 int Console::_reset() {
   _rollback();
-  _lqp_cache->clear();
-  _pqp_cache->clear();
 
   Hyrise::reset();
-  Hyrise::get().default_pqp_cache = _pqp_cache;
-  Hyrise::get().default_lqp_cache = _lqp_cache;
+  Hyrise::get().default_pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
+  Hyrise::get().default_lqp_cache = std::make_shared<SQLLogicalPlanCache>();
 
   _binary_caching = true;
-  Hyrise::get().set_scheduler(std::make_shared<ImmediateExecutionScheduler>());
+  Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
 
   return ReturnCode::Ok;
 }
