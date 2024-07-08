@@ -19,32 +19,32 @@ void AbstractCardinalityEstimator::guarantee_join_graph(const JoinGraph& join_gr
 void AbstractCardinalityEstimator::guarantee_bottom_up_construction(
     const std::shared_ptr<const AbstractLQPNode>& lqp) const {
   cardinality_estimation_cache.statistics_by_lqp.emplace();
-  // populate_required_column_expressions(lqp);
+  populate_required_column_expressions(lqp);
 }
 
 void AbstractCardinalityEstimator::populate_required_column_expressions(
     const std::shared_ptr<const AbstractLQPNode>& lqp) const {
-  // cardinality_estimation_cache.required_column_expressions.emplace();
+  cardinality_estimation_cache.required_column_expressions.emplace();
 
-  // visit_lqp(lqp, [&](const auto& node) {
-  //   _add_required_columns(node, *cardinality_estimation_cache.required_column_expressions);
-  //   return LQPVisitation::VisitInputs;
-  // });
+  visit_lqp(lqp, [&](const auto& node) {
+    _add_required_columns(node, *cardinality_estimation_cache.required_column_expressions);
+    return LQPVisitation::VisitInputs;
+  });
 }
 
 void AbstractCardinalityEstimator::_add_required_columns(const std::shared_ptr<const AbstractLQPNode>& node,
                                                          ExpressionUnorderedSet& required_columns) {
-  // if (node->type == LQPNodeType::Join || node->type == LQPNodeType::Predicate) {
-  //   for (const auto& root_expression : node->node_expressions) {
-  //     visit_expression(root_expression, [&](const auto& expression) {
-  //       if (expression->type == ExpressionType::LQPColumn) {
-  //         required_columns.emplace(expression);
-  //       }
+  if (node->type == LQPNodeType::Join || node->type == LQPNodeType::Predicate) {
+    for (const auto& root_expression : node->node_expressions) {
+      visit_expression(root_expression, [&](const auto& expression) {
+        if (expression->type == ExpressionType::LQPColumn) {
+          required_columns.emplace(expression);
+        }
 
-  //       return ExpressionVisitation::VisitArguments;
-  //     });
-  //   }
-  // }
+        return ExpressionVisitation::VisitArguments;
+      });
+    }
+  }
 }
 
 }  // namespace hyrise
