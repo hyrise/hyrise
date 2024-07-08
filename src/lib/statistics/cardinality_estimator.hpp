@@ -272,7 +272,7 @@ class CardinalityEstimator : public AbstractCardinalityEstimator {
       const float right_distinct_count);
 
  private:
-  bool _enable_pruning{false};
+  bool _enable_pruning{true};
 };
 
 std::ostream& operator<<(std::ostream& stream, const CardinalityEstimator::DummyStatistics& /*dummy_statistics*/);
