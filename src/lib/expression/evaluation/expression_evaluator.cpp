@@ -1055,7 +1055,9 @@ std::shared_ptr<BaseValueSegment> ExpressionEvaluator::evaluate_expression_to_se
     using ColumnDataType = typename std::decay_t<decltype(view)>::Type;
 
     if constexpr (std::is_same_v<ColumnDataType, NullValue>) {
-      Fail("Cannot create a Segment from a NULL.");
+      auto values = pmr_vector<NullValue>(_output_row_count);
+      auto nulls = pmr_vector<bool>(_output_row_count, true);
+      segment = std::make_shared<ValueSegment<ColumnDataType>>(std::move(values), std::move(nulls));
     } else {
       auto values = pmr_vector<ColumnDataType>(_output_row_count);
 

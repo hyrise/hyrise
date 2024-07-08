@@ -29,16 +29,33 @@ namespace {
 
 using namespace hyrise;  // NOLINT(build/namespaces)
 
+bool is_trivially_computable_expression(const std::shared_ptr<AbstractExpression>& expression) {
+  auto is_trivial = true;
+  visit_expression(expression, [&](const auto& sub_expression) {
+    if (!is_trivial) {
+      return ExpressionVisitation::DoNotVisitArguments;
+    }
+    if (sub_expression->type == ExpressionType::LQPColumn || sub_expression->type == ExpressionType::WindowFunction) {
+      is_trivial = false;
+      return ExpressionVisitation::DoNotVisitArguments;
+    }
+
+    return ExpressionVisitation::VisitArguments;
+  });
+
+  return is_trivial;
+}
+
 void gather_expressions_not_computed_by_expression_evaluator(
     const std::shared_ptr<AbstractExpression>& expression,
     const std::vector<std::shared_ptr<AbstractExpression>>& input_expressions,
     ExpressionUnorderedSet& required_expressions, const bool top_level = true) {
   // Top-level expressions are those that are (part of) the ExpressionEvaluator's final result. For example, for an
-  // ExpressionEvaluator producing (a + b) + c, the entire expression is a top-level expression. It is the consumer's
-  // job to mark it as required. (a + b) however, is required by the ExpressionEvaluator and will be added to
-  // required_expressions, as it is not a top-level expression.
+  // ExpressionEvaluator producing `(a + b)` + c, the entire expression is a top-level expression. It is the consumer's
+  // job to mark it as required. `(a + b)`, however, is required by the ExpressionEvaluator and will be added to
+  // `required_expressions` as it is not a top-level expression.
 
-  // If an expression that is not a top-level expression is already an input, we require it
+  // If an expression that is not a top-level expression is part of the input, we require it.
   if (std::find_if(input_expressions.begin(), input_expressions.end(), [&expression](const auto& other) {
         return *expression == *other;
       }) != input_expressions.end()) {
@@ -48,8 +65,13 @@ void gather_expressions_not_computed_by_expression_evaluator(
     return;
   }
 
+  if (is_trivially_computable_expression(expression)) {
+    std::cout << *expression << std::endl;
+    return;
+  }
+
   if (expression->type == ExpressionType::WindowFunction || expression->type == ExpressionType::LQPColumn) {
-    // Aggregates and LQPColumns are not calculated by the ExpressionEvaluator and are thus required to be part of the
+    // Aggregates and LQPColumns are not calculated by the ExpressionEvaluator and, thus, are required to be part of the
     // input.
     required_expressions.emplace(expression);
     return;
@@ -91,7 +113,7 @@ ExpressionUnorderedSet gather_locally_required_expressions(
     case LQPNodeType::Limit: {
       const auto& expressions = node->node_expressions;
       Assert(expressions.size() == 1, "LimitNode should only have one expression.");
-      Assert(expressions[0]->type == ExpressionType::Value, "LimitNode must ...");
+      Assert(is_trivially_computable_expression(expressions[0]), "Number for LimitNode's rows must not rely on input.");
     } break;
 
     // For aggregate nodes, we need the group by columns and the arguments to the aggregate functions
@@ -146,6 +168,8 @@ ExpressionUnorderedSet gather_locally_required_expressions(
           // not collect the expressions required for calculating that useless expression.
           continue;
         }
+
+        std::cout << *expression << std::endl;
 
         gather_expressions_not_computed_by_expression_evaluator(expression, input_expressions,
                                                                 locally_required_expressions);
