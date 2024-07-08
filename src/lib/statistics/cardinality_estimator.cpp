@@ -843,6 +843,25 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_operator_scan_pr
         // All that remains of the column we scanned on are exclusively NULL values or exclusively non-NULL values
         const auto column_statistics = std::make_shared<AttributeStatistics<ColumnDataType>>();
         column_statistics->null_value_ratio = std::make_shared<NullValueRatioStatistics>(is_not_null ? 0.0f : 1.0f);
+
+        if (left_input_column_statistics->histogram) {
+          column_statistics->set_statistics_object(left_input_column_statistics->histogram->scaled(selectivity));
+        }
+
+        if (left_input_column_statistics->min_max_filter) {
+          column_statistics->set_statistics_object(left_input_column_statistics->min_max_filter->scaled(selectivity));
+        }
+
+        if constexpr (std::is_arithmetic_v<ColumnDataType>) {
+          if (left_input_column_statistics->range_filter) {
+            column_statistics->set_statistics_object(left_input_column_statistics->range_filter->scaled(selectivity));
+          }
+        }
+
+        if (left_input_column_statistics->distinct_value_count) {
+          column_statistics->set_statistics_object(left_input_column_statistics->distinct_value_count->scaled(selectivity));
+        }
+
         output_column_statistics[left_column_id] = column_statistics;
       } else {
         // If there is no null-value ratio available, assume a selectivity of 1, for both IS NULL and IS NOT NULL, as no
