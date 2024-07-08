@@ -9,6 +9,7 @@
 
 #include "abstract_cardinality_estimator.hpp"
 #include "operators/operator_scan_predicate.hpp"
+#include "statistics/base_attribute_statistics.hpp"
 #include "statistics/statistics_objects/abstract_histogram.hpp"
 #include "statistics/statistics_objects/generic_histogram_builder.hpp"
 
@@ -50,6 +51,39 @@ class CardinalityEstimator : public AbstractCardinalityEstimator {
   std::shared_ptr<TableStatistics> estimate_statistics(const std::shared_ptr<const AbstractLQPNode>& lqp,
                                                        const bool cacheable, StatisticsByLQP& statistics_cache,
                                                        ExpressionUnorderedSet& required_columns) const;
+
+  /**
+   * Statistics pruning
+   *
+   * By default, the CardinalityEstimator prunes statistics that are not relevant for cardinality estimation. Thus, we
+   * avoid forwarding and scaling histograms. Without caching, the required columns are collected during estimation.
+   * When caching is allowed, `AbstractCardinalityEstimator::guarantee_bottom_up_construction()` takes care that all
+   * predicates of the final LQP are present in the cache.
+   *
+   * @{
+   */
+  void prune_unused_statistics();
+  void do_not_prune_unused_statistics();
+
+  /**
+   * We use dummy objects for pruned statistics and cases where we do not estimate statistics (e.g., for aggregations).
+   * Doing so has two advantages. First, it is semantically clear and easy to test. Second, we can easily prevent
+   * creations of empty statistics objects when scaling dummy statistics.
+   */
+  class DummyStatistics : public BaseAttributeStatistics, public std::enable_shared_from_this<DummyStatistics> {
+   public:
+    explicit DummyStatistics(const DataType init_data_type);
+
+    void set_statistics_object(const std::shared_ptr<const AbstractStatisticsObject>& statistics_object) override;
+
+    std::shared_ptr<const BaseAttributeStatistics> scaled(const Selectivity selectivity) const override;
+
+    std::shared_ptr<const BaseAttributeStatistics> sliced(
+        const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
+        const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const override;
+  };
+
+  /** @} */
 
   /**
    * Per-node-type estimation functions
@@ -238,9 +272,9 @@ class CardinalityEstimator : public AbstractCardinalityEstimator {
       const float right_distinct_count);
 
  private:
-  // Turn off statistics pruning in tests.
-  friend class CardinalityEstimatorTest;
   bool _enable_pruning{true};
 };
+
+std::ostream& operator<<(std::ostream& stream, const CardinalityEstimator::DummyStatistics& /*dummy_statistics*/);
 
 }  // namespace hyrise

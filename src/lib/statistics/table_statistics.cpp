@@ -13,6 +13,7 @@
 #include "resolve_type.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
+#include "statistics/cardinality_estimator.hpp"
 #include "statistics/statistics_objects/equal_distinct_count_histogram.hpp"
 #include "statistics/statistics_objects/null_value_ratio_statistics.hpp"
 #include "storage/table.hpp"
@@ -89,9 +90,14 @@ std::ostream& operator<<(std::ostream& stream, const TableStatistics& table_stat
   stream << "TableStatistics {\n  RowCount: " << table_statistics.row_count << ";\n";
 
   for (const auto& column_statistics : table_statistics.column_statistics) {
+    if (const auto& dummy_statistics =
+            std::dynamic_pointer_cast<const CardinalityEstimator::DummyStatistics>(column_statistics)) {
+      stream << *dummy_statistics << '\n';
+      continue;
+    }
     resolve_data_type(column_statistics->data_type, [&](const auto data_type_t) {
       using ColumnDataType = typename decltype(data_type_t)::type;
-      stream << *std::dynamic_pointer_cast<const AttributeStatistics<ColumnDataType>>(column_statistics) << '\n';
+      stream << *std::dynamic_pointer_cast<const AttributeStatistics<ColumnDataType>>(column_statistics);
     });
   }
 

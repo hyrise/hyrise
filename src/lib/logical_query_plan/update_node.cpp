@@ -31,7 +31,7 @@ std::shared_ptr<AbstractLQPNode> UpdateNode::_on_shallow_copy(LQPNodeMapping& /*
 }
 
 bool UpdateNode::is_column_nullable(const ColumnID /*column_id*/) const {
-  Fail("Update does not output any colums");
+  Fail("Update does not output any columns");
 }
 
 std::vector<std::shared_ptr<AbstractExpression>> UpdateNode::output_expressions() const {
