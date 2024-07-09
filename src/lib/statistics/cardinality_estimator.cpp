@@ -4,11 +4,13 @@
 #include <cstddef>
 #include <memory>
 #include <optional>
+#include <ostream>
 #include <utility>
 #include <vector>
 
 #include <boost/variant/get.hpp>
 
+#include "all_parameter_variant.hpp"
 #include "all_type_variant.hpp"
 #include "attribute_statistics.hpp"
 #include "expression/abstract_expression.hpp"
@@ -115,17 +117,6 @@ std::shared_ptr<TableStatistics> prune_column_statistics(
   return std::make_shared<TableStatistics>(std::move(output_column_statistics), table_statistics->row_count);
 }
 
-// Ensure that the statistics required to estimate a node are provided, unless they are aggregates etc., which we
-// currently do not estimate.
-void check_required_statistics(const ColumnID column_id, const std::shared_ptr<AbstractLQPNode>& input_node,
-                               const std::shared_ptr<const TableStatistics> input_statistics) {
-  const auto input_is_column = input_node->output_expressions()[column_id]->type == ExpressionType::LQPColumn;
-  const auto& column_statistics = input_statistics->column_statistics[column_id];
-  const auto is_dummy_object = dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*column_statistics);
-  Assert(!is_dummy_object || !input_is_column,
-         "Missing AttributeStatistics for required column. Have  they been pruned?");
-}
-
 }  // namespace
 
 namespace hyrise {
@@ -161,6 +152,58 @@ void CardinalityEstimator::prune_unused_statistics() {
 
 void CardinalityEstimator::do_not_prune_unused_statistics() {
   _enable_pruning = false;
+}
+
+// Ensure that the avaibale statistics required to estimate a node are provided, unless they are aggregates etc., which
+// we currently do not estimate.
+void CardinalityEstimator::check_required_statistics(const ColumnID column_id,
+                                                     const std::shared_ptr<AbstractLQPNode>& input_node,
+                                                     const std::shared_ptr<const TableStatistics>& input_statistics) {
+  // (i) If input statistics are available, everything is fine.
+  const auto& column_statistics = input_statistics->column_statistics[column_id];
+  Assert(column_statistics, "Expected input statistics.");
+  const auto* const is_dummy_object = dynamic_cast<const DummyStatistics*>(&*column_statistics);
+
+  // (ii) If the required expression is not an LQPColumnExpression, there might not be statistics available.
+  const auto input_expression = input_node->output_expressions()[column_id];
+  const auto input_is_column = input_expression->type == ExpressionType::LQPColumn;
+
+  // (iii) Even for columns, original statistics might not be set (e.g., for StaticTableNode or in tests).
+  auto base_statistics_for_column = true;
+  if (input_is_column) {
+    auto base_statistics = std::shared_ptr<TableStatistics>{};
+    const auto& column_expression = static_cast<const LQPColumnExpression&>(*input_expression);
+    const auto original_node = column_expression.original_node.lock();
+    Assert(original_node, "LQPColumnExpression's original node expired. LQP is invalid.");
+    switch (original_node->type) {
+      case LQPNodeType::Mock:
+        base_statistics = static_cast<const MockNode&>(*original_node).table_statistics();
+        break;
+      case LQPNodeType::StaticTable:
+        base_statistics = static_cast<const StaticTableNode&>(*original_node).table->table_statistics();
+        break;
+      case LQPNodeType::StoredTable: {
+        const auto& stored_table_node = static_cast<const StoredTableNode&>(*original_node);
+        if (stored_table_node.table_statistics) {
+          base_statistics = stored_table_node.table_statistics;
+          break;
+        }
+
+        const auto table = Hyrise::get().storage_manager.get_table(stored_table_node.table_name);
+        base_statistics = table->table_statistics();
+      } break;
+      default:
+        Fail("Unexpected orignal node for LQPColumnExpression.");
+    }
+
+    Assert(!base_statistics || base_statistics->column_statistics.size() > column_expression.original_column_id,
+           "TableStatistics miss columns.");
+    base_statistics_for_column =
+        base_statistics && base_statistics->column_statistics[column_expression.original_column_id];
+  }
+
+  Assert(!is_dummy_object || !input_is_column || !base_statistics_for_column,
+         "Missing AttributeStatistics for required column. Have they been pruned?");
 }
 
 std::shared_ptr<AbstractCardinalityEstimator> CardinalityEstimator::new_instance() const {
@@ -1132,8 +1175,8 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_operator_scan_pr
     }
   });
 
-  // Entire chunk matches; simply return the input
-  if (selectivity == 1) {
+  // Entire chunk matches: simply return the input.
+  if (selectivity == Selectivity{1}) {
     return input_table_statistics;
   }
 

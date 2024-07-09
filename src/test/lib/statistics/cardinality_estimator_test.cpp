@@ -1,3 +1,9 @@
+#include <memory>
+#include <sstream>
+#include <stdexcept>
+#include <utility>
+#include <vector>
+
 #include "base_test.hpp"
 #include "expression/expression_functional.hpp"
 #include "hyrise.hpp"
@@ -28,7 +34,9 @@
 #include "statistics/statistics_objects/equal_distinct_count_histogram.hpp"
 #include "statistics/statistics_objects/generic_histogram.hpp"
 #include "statistics/table_statistics.hpp"
+#include "storage/storage_manager.hpp"
 #include "storage/table_column_definition.hpp"
+#include "types.hpp"
 #include "utils/load_table.hpp"
 
 namespace hyrise {
@@ -1133,7 +1141,7 @@ TEST_F(CardinalityEstimatorTest, StatisticsPruning) {
   EXPECT_TRUE(dynamic_cast<const AttributeStatistics<int32_t>*>(&*statics->column_statistics[2]));
   EXPECT_TRUE(dynamic_cast<const AttributeStatistics<int32_t>*>(&*statics->column_statistics[3]));
   EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*statics->column_statistics[4]));
-  // Caches and required columns should still be unset.
+  // Cached and required columns should still be unset.
   EXPECT_FALSE(estimator.cardinality_estimation_cache.statistics_by_lqp);
   EXPECT_FALSE(estimator.cardinality_estimation_cache.required_column_expressions);
 
@@ -1168,6 +1176,159 @@ TEST_F(CardinalityEstimatorTest, StatisticsPruning) {
   EXPECT_TRUE(dynamic_cast<const AttributeStatistics<int32_t>*>(&*statics->column_statistics[2]));
   EXPECT_TRUE(dynamic_cast<const AttributeStatistics<int32_t>*>(&*statics->column_statistics[3]));
   EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*statics->column_statistics[4]));
+}
+
+TEST_F(CardinalityEstimatorTest, StatisticsPruningWithPrunedColumns) {
+  const auto table_u = load_table("resources/test_data/tbl/all_data_types_sorted.tbl");
+  const auto node_u = StaticTableNode::make(table_u);
+
+  // clang-format off
+  const auto lqp_u =
+  PredicateNode::make(greater_than_(lqp_column_(node_u, ColumnID{2}), 0),
+    PredicateNode::make(greater_than_(lqp_column_(node_u, ColumnID{6}), 0.0),
+      PredicateNode::make(greater_than_(lqp_column_(node_u, ColumnID{8}), "0"),
+        node_u)));
+  // clang-format on
+
+  // Round one: node_u does not have base statistics. All statistics are dummy statistics.
+  estimator.prune_unused_statistics();
+  for (const auto& column_statistics : estimator.estimate_statistics(lqp_u)->column_statistics) {
+    EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*column_statistics));
+  }
+
+  // Adding the table to the StorageManager creates statistics.
+  Hyrise::get().storage_manager.add_table("table_u", table_u);
+  EXPECT_TRUE(table_u->table_statistics());
+
+  // Round two: The node has input statistics. There should not be statistics for pruned and unused columns. We only
+  // used predicates that select all tuples, thus, the input statistics should be forwared for used columns.
+  // For node_u, no columns are pruned. However, only columns 2, 6, and 8 are used.
+  const auto lqp_u_statistics = estimator.estimate_statistics(lqp_u);
+  ASSERT_EQ(lqp_u_statistics->column_statistics.size(), 10);
+  const auto& table_u_statistics = table_u->table_statistics()->column_statistics;
+  EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*lqp_u_statistics->column_statistics[0]));
+  EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*lqp_u_statistics->column_statistics[1]));
+  EXPECT_EQ(lqp_u_statistics->column_statistics[2], table_u_statistics[2]);
+  EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*lqp_u_statistics->column_statistics[3]));
+  EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*lqp_u_statistics->column_statistics[4]));
+  EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*lqp_u_statistics->column_statistics[5]));
+  EXPECT_EQ(lqp_u_statistics->column_statistics[6], table_u_statistics[6]);
+  EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*lqp_u_statistics->column_statistics[7]));
+  EXPECT_EQ(lqp_u_statistics->column_statistics[8], table_u_statistics[8]);
+  EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*lqp_u_statistics->column_statistics[9]));
+
+  // Create the same query as for the StaticTableNode, but with pruned columns.
+  const auto node_v = StoredTableNode::make("table_u");
+  const auto pruned_column_ids = std::vector{{ColumnID{1}, ColumnID{3}, ColumnID{4}, ColumnID{7}, ColumnID{9}}};
+  node_v->set_pruned_column_ids(pruned_column_ids);
+
+  // clang-format off
+  const auto lqp_v =
+  PredicateNode::make(greater_than_(lqp_column_(node_v, ColumnID{2}), 0),
+    PredicateNode::make(greater_than_(lqp_column_(node_v, ColumnID{6}), 0.0),
+      PredicateNode::make(greater_than_(lqp_column_(node_v, ColumnID{8}), "0"),
+        node_v)));
+  // clang-format on
+
+  // For node_v, columns 1, 3, 4, 7, and 9 have been pruned. Thus, columns 0, 2, 5, 6 and 8 remain, of which 2, 6, and
+  // 8 are used.
+  const auto lqp_v_statistics = estimator.estimate_statistics(lqp_v);
+  ASSERT_EQ(lqp_v_statistics->column_statistics.size(), 5);
+  EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*lqp_v_statistics->column_statistics[0]));
+  EXPECT_EQ(lqp_v_statistics->column_statistics[1], table_u_statistics[2]);
+  EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*lqp_v_statistics->column_statistics[2]));
+  EXPECT_EQ(lqp_v_statistics->column_statistics[3], table_u_statistics[6]);
+  EXPECT_EQ(lqp_v_statistics->column_statistics[4], table_u_statistics[8]);
+
+  // clang-format off
+  const auto lqp_d =
+  PredicateNode::make(greater_than_(d_c, 0),
+    node_d);
+  // clang-format on
+
+  // For node_d, column 0 is pruned and column 2 is used.
+  node_d->set_pruned_column_ids({ColumnID{0}});
+  const auto lqp_d_statistics = estimator.estimate_statistics(lqp_d);
+  const auto node_d_statistics = node_d->table_statistics();
+  ASSERT_EQ(lqp_d_statistics->column_statistics.size(), 2);
+  EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*lqp_d_statistics->column_statistics[0]));
+  EXPECT_EQ(lqp_d_statistics->column_statistics[1], node_d_statistics->column_statistics[2]);
+}
+
+TEST_F(CardinalityEstimatorTest, CheckRequiredStatistics) {
+  // Fail if required statistics are not present. Exceptions are if the statistics are not for a column (but, e.g.,
+  // for an aggregation) or no statistics are provided at all (e.g., for a StaticTableNode).
+
+  const auto table_u = load_table("resources/test_data/tbl/int_float_double_string.tbl");
+  Hyrise::get().storage_manager.add_table("table_u", table_u);
+  // After adding to the StorageManager, the table should have statistics.
+  const auto table_u_statistics = table_u->table_statistics();
+  ASSERT_TRUE(table_u_statistics);
+  const auto node_u = StoredTableNode::make("table_u");
+  const auto u_a = node_u->get_column("i");
+  const auto u_b = node_u->get_column("f");
+  const auto u_d = node_u->get_column("s");
+
+  const auto table_v = load_table("resources/test_data/tbl/int_float.tbl");
+  const auto node_v = StaticTableNode::make(table_v);
+  const auto v_a = lqp_column_(node_v, ColumnID{0});
+
+  // The LQP's output expressions look like this: e_a, e_b, u_a, u_b, min_(u_d), v_a, b_b.
+  // clang-format off
+  const auto lqp =
+  JoinNode::make(JoinMode::Inner, equals_(e_a, u_a),
+    node_e,
+    JoinNode::make(JoinMode::Inner, equals_(u_b, v_a),
+      AggregateNode::make(expression_vector(u_a, u_b), expression_vector(min_(u_d)),
+        node_u),
+      node_v));
+  // clang-format off
+
+  // Create input table statistics.
+  auto column_statistics = std::vector<std::shared_ptr<const BaseAttributeStatistics>>(7);
+  column_statistics[1] = node_e->table_statistics()->column_statistics[1];
+  column_statistics[2] = table_u_statistics->column_statistics[0];
+  column_statistics[3] = std::make_shared<CardinalityEstimator::DummyStatistics>(DataType::Float);
+  column_statistics[4] = std::make_shared<CardinalityEstimator::DummyStatistics>(DataType::String);
+  column_statistics[5] = std::make_shared<CardinalityEstimator::DummyStatistics>(DataType::Int);
+  column_statistics[6] = std::make_shared<CardinalityEstimator::DummyStatistics>(DataType::Float);
+  const auto statistics = std::make_shared<TableStatistics>(std::move(column_statistics), 123);
+
+  // First statistics object is nullptr.
+  EXPECT_THROW(estimator.check_required_statistics(ColumnID{0}, lqp, statistics), std::logic_error);
+  // Second statistics object is present.
+  estimator.check_required_statistics(ColumnID{1}, lqp, statistics);
+  // Third statistics object is present.
+  estimator.check_required_statistics(ColumnID{2}, lqp, statistics);
+  // Fourth statistics object is dummy, but there is a base statistics object.
+  EXPECT_THROW(estimator.check_required_statistics(ColumnID{3}, lqp, statistics), std::logic_error);
+  // Fifth statistics object is dummy, but it is not an LQPColumnExpression.
+  estimator.check_required_statistics(ColumnID{4}, lqp, statistics);
+  // Sixth statistics object is dummy, but there are no base statistics for this input.
+  estimator.check_required_statistics(ColumnID{5}, lqp, statistics);
+  // Seventh statistics object is dummy, but there are no base statistics for this input.
+  estimator.check_required_statistics(ColumnID{6}, lqp, statistics);
+
+  // Estimation should work anyway.
+  estimator.prune_unused_statistics();
+  estimator.estimate_cardinality(lqp);
+}
+
+TEST_F(CardinalityEstimatorTest, DummyStatistics) {
+  const auto dummy_statistics = std::make_shared<CardinalityEstimator::DummyStatistics>(DataType::Int);
+
+  EXPECT_EQ(dummy_statistics->data_type, DataType::Int);
+
+  // Dummy statistics forward themselves when scaled.
+  EXPECT_EQ(dummy_statistics->scaled(0.2f), dummy_statistics);
+
+  // They cannot be used for actual estimations.
+  EXPECT_THROW(dummy_statistics->sliced(PredicateCondition::Equals, 1), std::logic_error);
+  EXPECT_THROW(dummy_statistics->pruned(123, PredicateCondition::Equals, 1), std::logic_error);
+
+  auto stream = std::stringstream{};
+  stream << *dummy_statistics;
+  EXPECT_EQ(stream.str(), "DummyStatistics");
 }
 
 }  // namespace hyrise

@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <memory>
+#include <ostream>
 #include <utility>
 #include <vector>
 
@@ -74,15 +75,19 @@ class CardinalityEstimator : public AbstractCardinalityEstimator {
    public:
     explicit DummyStatistics(const DataType init_data_type);
 
-    void set_statistics_object(const std::shared_ptr<const AbstractStatisticsObject>& statistics_object) override;
+    void set_statistics_object(const std::shared_ptr<const AbstractStatisticsObject>& /*statistics_object*/) override;
 
-    std::shared_ptr<const BaseAttributeStatistics> scaled(const Selectivity selectivity) const override;
+    std::shared_ptr<const BaseAttributeStatistics> scaled(const Selectivity /*selectivity*/) const override;
 
     std::shared_ptr<const BaseAttributeStatistics> sliced(
-        const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
-        const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const override;
+        const PredicateCondition /*predicate_condition*/, const AllTypeVariant& /*variant_value*/,
+        const std::optional<AllTypeVariant>& /*variant_value2*/ = std::nullopt) const override;
   };
 
+  // Helper to ensure no statistics for required LQPColumnExpressions were pruned. Should be adapted if we estimate
+  // aggregations, window functions, or computed projections.
+  static void check_required_statistics(const ColumnID column_id, const std::shared_ptr<AbstractLQPNode>& input_node,
+                                        const std::shared_ptr<const TableStatistics>& input_statistics);
   /** @} */
 
   /**
