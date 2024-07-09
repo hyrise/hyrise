@@ -19,8 +19,7 @@ namespace hyrise {
 // ReferenceSegment is a specific segment type that stores all its values as position list of a referenced segment
 class ReferenceSegment : public AbstractSegment {
  public:
-  // creates a reference segment
-  // the parameters specify the positions and the referenced column
+  // Creates a reference segment. The parameters specify the positions and the referenced column.
   ReferenceSegment(const std::shared_ptr<const Table>& referenced_table, const ColumnID referenced_column_id,
                    const std::shared_ptr<const AbstractPosList>& pos);
 
@@ -39,12 +38,12 @@ class ReferenceSegment : public AbstractSegment {
 
  protected:
   // After an operator finishes, its shared_ptr reference to the table gets deleted. Thus, the ReferenceSegments need
-  // their own shared_ptrs
+  // their own shared_ptrs.
   const std::shared_ptr<const Table> _referenced_table;
 
   const ColumnID _referenced_column_id;
 
-  // The position list can be shared amongst multiple segments
+  // The position list can be shared amongst multiple segments.
   const std::shared_ptr<const AbstractPosList> _pos_list;
 };
 
