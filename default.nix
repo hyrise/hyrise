@@ -29,22 +29,22 @@ pkgs.mkShell {
   # processes only after the shell is already available), only nativeBuildInputs are
   # needed.
   nativeBuildInputs = with pkgs; [
-    clang
     autoconf
+    boost
+    clang
     cmake
-    python3
-    sqlite
-    lld
-    ninja
-    parallel
     coreutils
     dos2unix
     gcovr
-    python311Packages.pexpect
-    tbb_2021_11
-    readline
-    boost
+    lld
+    ninja
+    parallel
     postgresql_16
+    python3
+    python311Packages.pexpect
+    readline
+    sqlite
+    tbb_2021_11
   ];
 
   hardeningDisable = [
@@ -59,12 +59,12 @@ pkgs.mkShell {
   # View the results by running `nix-shell --pure --run "echo $LD_LIBRARY_PATH"`.
   shellHook = ''
 	export LD_LIBRARY_PATH="${pkgs.lib.makeLibraryPath [
-		pkgs.lld
-		pkgs.sqlite
-		pkgs.tbb_2021_11
 		pkgs.boost
 		pkgs.libgccjit
+		pkgs.lld
+		pkgs.sqlite
 		pkgs.stdenv.cc.cc.lib
+		pkgs.tbb_2021_11
 	]}:$LD_LIBRARY_PATH"
   '';
 }
