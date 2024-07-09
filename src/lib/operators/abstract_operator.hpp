@@ -24,6 +24,7 @@ enum class OperatorType {
   Aggregate,
   Alias,
   ChangeMetaTable,
+  ChunkSelect,
   CreateTable,
   CreatePreparedPlan,
   CreateView,

@@ -256,6 +256,8 @@ set(
     operators/progressive/progressive_map.hpp
     operators/progressive/shuffle.cpp
     operators/progressive/shuffle.hpp
+    operators/progressive/chunk_select.cpp
+    operators/progressive/chunk_select.hpp
     operators/projection.cpp
     operators/projection.hpp
     operators/sort.cpp

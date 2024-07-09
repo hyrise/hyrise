@@ -28,6 +28,23 @@ int main() {
   Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
   std::cerr << Hyrise::get().topology << std::endl;
 
+  // constexpr auto SCALE_FACTOR = 10.0f;
+  // // constexpr auto SCALE_FACTOR = 5.0f;
+  // auto benchmark_config = BenchmarkConfig::get_default_config();
+  // TPCHTableGenerator(SCALE_FACTOR, ClusteringConfiguration::None, std::make_shared<BenchmarkConfig>(benchmark_config))
+  //     .generate_and_store();
+
+  // std::cerr << "Finish scheduler.\n";
+  // Hyrise::get().scheduler()->finish();
+  // std::cerr << "Scheduler finished.\n";
+
+  return 0;
+}
+
+/*int old_main() {
+  Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
+  std::cerr << Hyrise::get().topology << std::endl;
+
   constexpr auto SCALE_FACTOR = 10.0f;
   // constexpr auto SCALE_FACTOR = 5.0f;
   auto benchmark_config = BenchmarkConfig::get_default_config();
@@ -166,3 +183,4 @@ int main() {
 
   return 0;
 }
+*/

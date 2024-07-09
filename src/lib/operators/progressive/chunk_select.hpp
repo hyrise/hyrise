@@ -17,10 +17,10 @@
 
 namespace hyrise {
 
-class Shuffle : public AbstractReadOnlyOperator {
+class ChunkSelect : public AbstractReadOnlyOperator {
  public:
-  Shuffle(const std::shared_ptr<const AbstractOperator>& input_operator, std::vector<ColumnID>&& column_ids,
-          std::vector<uint8_t>&& partition_counts);
+  ChunkSelect(const std::shared_ptr<const AbstractOperator>& input_operator, std::vector<ColumnID>&& column_ids,
+              std::vector<uint8_t>&& partition_counts, std::vector<uint16_t>&& hash_values);
   const std::string& name() const override;
 
  protected:
@@ -34,6 +34,7 @@ class Shuffle : public AbstractReadOnlyOperator {
  private:
   std::vector<ColumnID> _column_ids{};
   std::vector<uint8_t> _partition_counts{};
+  std::vector<uint16_t> _hash_values{};
 };
 
 }  // namespace hyrise
