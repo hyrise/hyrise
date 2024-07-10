@@ -22,7 +22,6 @@ RUN apt-get update \
         dos2unix \
         g++-11 \
         gcc-11 \
-        gcovr \
         git \
         graphviz \
         libboost1.81-all-dev \
