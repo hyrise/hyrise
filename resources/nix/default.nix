@@ -2,9 +2,9 @@
 # Nix Setup for Hyrise
 #
 # First install Nix (see https://nixos.org/manual/nix/stable/installation/).
-# Then in the Hyrise repository, run
+# Then in the root of the Hyrise repository, run
 #
-#   nix-shell --pure
+#   nix-shell resources/nix --pure
 #
 # You will now have an environment that allows building Hyrise with the standard
 # build commands.
