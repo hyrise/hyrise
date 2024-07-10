@@ -1315,6 +1315,33 @@ TEST_F(CardinalityEstimatorTest, CheckRequiredStatistics) {
   estimator.estimate_cardinality(lqp);
 }
 
+TEST_F(CardinalityEstimatorTest, EstimationsOnDummyStatistics) {
+  // In some cases, there are no statistics available when we want to perform estimations, e.g., because they happen
+  // to be on the result of an aggregation. Ensure that everything works out then. We do not care about the estimation
+  // results here.
+
+  // clang-format off
+  const auto lqp =
+  PredicateNode::make(between_inclusive_(count_(c_y), 37, 72),
+    PredicateNode::make(less_than_(min_(d_b), 24),
+      PredicateNode::make(equals_(min_(d_b), avg_(d_c)),
+        PredicateNode::make(greater_than_(min_(d_b), a_b),
+          PredicateNode::make(less_than_(a_a, avg_(d_c)),
+            JoinNode::make(JoinMode::Inner, equals_(sum_(a_b), b_a),
+              JoinNode::make(JoinMode::Inner, equals_(c_x, sum_(a_b)),
+                JoinNode::make(JoinMode::Inner, equals_(sum_(a_b), min_(d_b)),
+                  AggregateNode::make(expression_vector(a_a), expression_vector(sum_(a_b)),
+                    node_a),
+                  AggregateNode::make(expression_vector(d_a), expression_vector(min_(d_b), avg_(d_c)),
+                    node_d)),
+                AggregateNode::make(expression_vector(c_x), expression_vector(count_(c_y)),
+                  node_c)),
+              node_b))))));
+  // clang-format on
+
+  estimator.estimate_cardinality(lqp);
+}
+
 TEST_F(CardinalityEstimatorTest, DummyStatistics) {
   const auto dummy_statistics = std::make_shared<CardinalityEstimator::DummyStatistics>(DataType::Int);
 
