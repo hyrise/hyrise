@@ -88,6 +88,8 @@ nix-shell resources/nix --pure
 
 This will drop you into a shell with all dependencies installed. You can now build Hyrise as usual. Please note that using the `--pure` flag is recommended as it avoids using dependencies from the local system.
 
+For more information on Nix, see [Nix Packages](./resources/nix/README.md).
+
 ## Setup using Docker
 If you want to create a Docker-based development environment using CLion, head over to our [dedicated tutorial](https://github.com/hyrise/hyrise/wiki/Use-Docker-with-CLion). 
 
