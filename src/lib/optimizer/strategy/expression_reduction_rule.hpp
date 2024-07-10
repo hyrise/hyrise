@@ -36,7 +36,7 @@ class AbstractLQPNode;
  *   E.g., `a NOT LIKE 'abc%'` becomes `a < 'abc' OR a >= 'abcd'`.
  *
  * (NOT) LIKE to Equals
- *   `<expression> (NOT) LIKE <pattern>` can be rewritten to (Not)Equals if `<pattern>` is has no wildcard.
+ *   `<expression> (NOT) LIKE <pattern>` can be rewritten to (Not)Equals if `<pattern>` has no wildcard.
  *   E.g., `a (NOT) LIKE 'abc'` becomes `a (Not)Equals 'abc'`.
  *
  * Duplicate Aggregate Removal
@@ -44,9 +44,9 @@ class AbstractLQPNode;
  *   E.g.,  `SELECT SUM(a), COUNT(a), AVG(a)` becomes `SELECT SUM(a), COUNT(a), SUM(a) / COUNT(a) AS AVG(a)`.
  *
  * IN to BinaryPredicate
- *   An InExpression with only a single element can be rewritten as BinaryPredicateExpression if the IN list has only
- *   one element. Though InExpressionRewriteRule generalizes this for multiple elements, we execute it late, whereas
- *   other optimization rules can benefit from the simpler predicate (e.g., JoinToPredicateRewriteRule).
+ *   An InExpression with can be rewritten as BinaryPredicateExpression if the IN list has only one element. Though
+ *   InExpressionRewriteRule generalizes this for multiple elements, we execute it late, whereas other optimization
+ *   rules can benefit from the simpler predicate (looking at you, JoinToPredicateRewriteRule).
  *   E.g., `a (NOT) IN ('abc')` becomes `a (Not)Equals 'abc'`.
  */
 class ExpressionReductionRule : public AbstractRule {

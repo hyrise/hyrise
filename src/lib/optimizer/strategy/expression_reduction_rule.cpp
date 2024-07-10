@@ -231,7 +231,7 @@ void ExpressionReductionRule::rewrite_like_prefix_wildcard(std::shared_ptr<Abstr
 
   const auto predicate_condition = binary_predicate->predicate_condition;
   const auto multi_char_wildcard_pos = pattern.find_first_of('%');
-  // If the patterm does not contain a wildcard at all, we simply replace it with a binary predicate.
+  // If the pattern does not contain a wildcard at all, we simply replace it with a binary predicate.
   if (multi_char_wildcard_pos == std::string::npos) {
     const auto rewritten_predicate_condition =
         predicate_condition == PredicateCondition::Like ? PredicateCondition::Equals : PredicateCondition::NotEquals;

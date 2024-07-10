@@ -331,13 +331,16 @@ TEST_F(ExpressionReductionRuleTest, UnnestUnaryInList) {
   EXPECT_EQ(*expression_d, *or_(a2, equals_(s, "abc")));
 
   // Test expressions that should not be rewritten.
+  // No InExpression.
   ExpressionReductionRule::unnest_unary_in_expression(a);
   EXPECT_EQ(*a, *a2);
 
+  // Multiple elements in IN list.
   auto expression_e = std::shared_ptr<AbstractExpression>(in_(s, list_("abc", "def")));
   ExpressionReductionRule::unnest_unary_in_expression(expression_e);
   EXPECT_EQ(*expression_e, *in_(s, list_("abc", "def")));
 
+  // IN subquery.
   auto expression_f = std::shared_ptr<AbstractExpression>(in_(s, lqp_subquery_(mock_node_for_join)));
   ExpressionReductionRule::unnest_unary_in_expression(expression_f);
   EXPECT_EQ(*expression_f, *in_(s, lqp_subquery_(mock_node_for_join)));

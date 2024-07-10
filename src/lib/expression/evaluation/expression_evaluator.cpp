@@ -638,7 +638,7 @@ ExpressionEvaluator::_evaluate_predicate_expression<ExpressionEvaluator::Bool>(
       const auto& operand = between_expression.operand();
       const auto& lower_expression = between_expression.lower_bound();
       const auto& upper_expression = between_expression.upper_bound();
-      auto result = std::shared_ptr<ExpressionResult<ExpressionEvaluator::Bool>>{};
+      auto result = std::shared_ptr<ExpressionResult<Bool>>{};
 
       // Simple BETWEEN expressions with literals as bounds are handled in a specialized way. More complex structures
       // are handled as conjunction of a less and a greater predicate.
@@ -655,16 +655,11 @@ ExpressionEvaluator::_evaluate_predicate_expression<ExpressionEvaluator::Bool>(
           // Do not handle tricky cases with lossy conversions here (e.g., `1 BETWEEN 1.1 and 2.0`).
           if (lower_bound && upper_bound) {
             result = _evaluate_between_expression(between_expression, *lower_bound, *upper_bound);
-          } else {
-            result = evaluate_expression_to_result<ExpressionEvaluator::Bool>(
-                *rewrite_between_expression(predicate_expression));
           }
         });
-      } else {
-        result =
-            evaluate_expression_to_result<ExpressionEvaluator::Bool>(*rewrite_between_expression(predicate_expression));
       }
-      return result;
+
+      return result ? result : evaluate_expression_to_result<Bool>(*rewrite_between_expression(predicate_expression));
     }
 
     case PredicateCondition::In:
