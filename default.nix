@@ -35,7 +35,6 @@ pkgs.mkShell {
     cmake
     coreutils
     dos2unix
-    gcovr
     lld
     ninja
     parallel
@@ -45,18 +44,6 @@ pkgs.mkShell {
     readline
     sqlite
     tbb_2021_11
-
-    # Tooling developers like to use.
-    fzf
-    git
-    htop
-    which
-
-    # Editors you might want to use.
-    #neovim
-    #nano
-    #vscode
-    #zed-editor
   ];
 
   hardeningDisable = [
