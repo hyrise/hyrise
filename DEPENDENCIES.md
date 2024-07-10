@@ -26,4 +26,4 @@
 | tbb/libtbb-dev (oneTBB)   | any              |    All   |                                    No |
 | valgrind                  | >= 3.20          |    All   |           Yes (memory checking in CI) |
 
-For dependencies that are integrated in our build process via git submodules, please check .gitmodules.
+For dependencies that are integrated in our build process via git submodules, please check `.gitmodules`.
