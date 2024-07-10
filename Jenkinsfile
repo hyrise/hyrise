@@ -141,17 +141,17 @@ try {
           parallel clangDebug: {
             stage("clang-debug") {
               // We build clang-debug using make to test make once (and clang-debug is the fastest build).
-              sh "cd clang-debug && make all -j \$(( \$(nproc) / 5))"
+              sh "cd clang-debug && make all -j \$(( \$(nproc) / 6))"
               sh "./clang-debug/hyriseTest clang-debug"
             }
           }, clang15Debug: {
             stage("clang-15-debug") {
-              sh "cd clang-15-debug && ninja all -j \$(( \$(nproc) / 5))"
+              sh "cd clang-15-debug && ninja all -j \$(( \$(nproc) / 6))"
               sh "./clang-15-debug/hyriseTest clang-15-debug"
             }
           }, gccDebug: {
             stage("gcc-debug") {
-              sh "cd gcc-debug && ninja all -j \$(( \$(nproc) / 5))"
+              sh "cd gcc-debug && ninja all -j \$(( \$(nproc) / 6))"
               sh "cd gcc-debug && ./hyriseTest"
             }
           }, gcc11Debug: {
@@ -159,7 +159,7 @@ try {
                // We give more cores (ncores / 2.5) to GCC 11 as it is the only configuration that has issues with unity
                // builds (GoogleTest cannot be compiled). When switching to a more recent GCC version, this should be
                // evaluated again.
-              sh "cd gcc-11-debug && ninja all -j \$(( \$(nproc) * 2 / 5))"
+              sh "cd gcc-11-debug && ninja all -j \$(( \$(nproc) * 2 / 6))"
               sh "cd gcc-11-debug && ./hyriseTest"
             }
           }, lint: {
@@ -169,8 +169,8 @@ try {
           }, nix: {
             stage("nix-setup") {
               sh "curl -L https://nixos.org/nix/install > nix-install.sh && chmod +x nix-install.sh && ./nix-install.sh --daemon --yes"
-              sh "/nix/var/nix/profiles/default/bin/nix-shell resources/nixpkgs --pure --run \"mkdir nix-debug && cd nix-debug && cmake -GNinja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -NOLTO=TRUE .. && ninja all -j \$(( \$(nproc) / 5))&& ./hyriseTest\""
-              sh "/nix/var/nix/profiles/default/bin/nix-shell resources/nixpkgs --pure --run \"mkdir nix-release && cd nix-release && cmake -GNinja -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -NOLTO=TRUE .. && ninja all -j \$(( \$(nproc) / 5)) && ./hyriseTest\""
+              sh "/nix/var/nix/profiles/default/bin/nix-shell resources/nixpkgs --pure --run \"mkdir nix-debug && cd nix-debug && cmake -GNinja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -NOLTO=TRUE .. && ninja all -j \$(( \$(nproc) / 6))&& ./hyriseTest\""
+              sh "/nix/var/nix/profiles/default/bin/nix-shell resources/nixpkgs --pure --run \"mkdir nix-release && cd nix-release && cmake -GNinja -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -NOLTO=TRUE .. && ninja all -j \$(( \$(nproc) / 6)) && ./hyriseTest\""
             }
           }
 
