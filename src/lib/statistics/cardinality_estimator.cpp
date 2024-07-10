@@ -162,7 +162,7 @@ void CardinalityEstimator::check_required_statistics(const ColumnID column_id,
   // (i) If input statistics are available, everything is fine.
   const auto& column_statistics = input_statistics->column_statistics[column_id];
   Assert(column_statistics, "Expected input statistics.");
-  const auto& is_dummy_object = std::dynamic_pointer_cast<const DummyStatistics>(column_statistics);
+  const auto* const is_dummy_object = dynamic_cast<const DummyStatistics*>(&*column_statistics);
 
   // (ii) If the required expression is not an LQPColumnExpression, there might not be statistics available.
   const auto input_expression = input_node->output_expressions()[column_id];
@@ -345,7 +345,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
     case LQPNodeType::StaticTable: {
       const auto& static_table_node = static_cast<const StaticTableNode&>(*lqp);
       const auto& table_statistics = static_table_node.table->table_statistics();
-      // StaticTableNodes may or may not provide statistics. If there are statistics, prune and forward the.
+      // StaticTableNodes may or may not provide statistics. If there are statistics, prune and forward them.
       if (table_statistics) {
         output_table_statistics =
             prune_column_statistics(table_statistics, std::vector<ColumnID>{}, static_table_node.output_expressions(),

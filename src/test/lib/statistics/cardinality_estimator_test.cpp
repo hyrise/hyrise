@@ -154,10 +154,10 @@ TEST_F(CardinalityEstimatorTest, Aggregate) {
   EXPECT_EQ(result_table_statistics->row_count, 100);
   ASSERT_EQ(result_table_statistics->column_statistics.size(), 3);
   EXPECT_EQ(result_table_statistics->column_statistics.at(0), input_table_statistics->column_statistics.at(1));
-  EXPECT_TRUE(std::dynamic_pointer_cast<const CardinalityEstimator::DummyStatistics>(
-      result_table_statistics->column_statistics.at(2)));
-  EXPECT_TRUE(std::dynamic_pointer_cast<const CardinalityEstimator::DummyStatistics>(
-      result_table_statistics->column_statistics.at(1)));
+  EXPECT_TRUE(
+      dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*result_table_statistics->column_statistics.at(2)));
+  EXPECT_TRUE(
+      dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*result_table_statistics->column_statistics.at(1)));
 }
 
 TEST_F(CardinalityEstimatorTest, Alias) {
@@ -456,10 +456,8 @@ TEST_F(CardinalityEstimatorTest, LimitWithValueExpression) {
   ASSERT_EQ(limit_statistics->column_statistics.size(), 2);
 
   // Limit does not write out StatisticsObjects.
-  EXPECT_TRUE(std::dynamic_pointer_cast<const CardinalityEstimator::DummyStatistics>(
-      limit_statistics->column_statistics.at(0)));
-  EXPECT_TRUE(std::dynamic_pointer_cast<const CardinalityEstimator::DummyStatistics>(
-      limit_statistics->column_statistics.at(1)));
+  EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*limit_statistics->column_statistics.at(0)));
+  EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*limit_statistics->column_statistics.at(1)));
 }
 
 TEST_F(CardinalityEstimatorTest, LimitWithValueExpressionExeedingInputRowCount) {
@@ -818,8 +816,8 @@ TEST_F(CardinalityEstimatorTest, Projection) {
   EXPECT_EQ(result_table_statistics->row_count, 100);
   ASSERT_EQ(result_table_statistics->column_statistics.size(), 3);
   EXPECT_EQ(result_table_statistics->column_statistics.at(0), input_table_statistics->column_statistics.at(1));
-  EXPECT_TRUE(std::dynamic_pointer_cast<const CardinalityEstimator::DummyStatistics>(
-      result_table_statistics->column_statistics.at(1)));
+  EXPECT_TRUE(
+      dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*result_table_statistics->column_statistics.at(1)));
   EXPECT_EQ(result_table_statistics->column_statistics.at(2), input_table_statistics->column_statistics.at(0));
 }
 
@@ -848,8 +846,7 @@ TEST_F(CardinalityEstimatorTest, StaticTable) {
   EXPECT_FLOAT_EQ(dummy_statistics->row_count, 3.0f);
   ASSERT_EQ(dummy_statistics->column_statistics.size(), 1);
   ASSERT_EQ(dummy_statistics->column_statistics[0]->data_type, DataType::Int);
-  EXPECT_TRUE(
-      std::dynamic_pointer_cast<const CardinalityEstimator::DummyStatistics>(dummy_statistics->column_statistics[0]));
+  EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*dummy_statistics->column_statistics[0]));
 
   // Case (ii): Statistics available, simply forward them.
   table->set_table_statistics(TableStatistics::from_table(*table));
@@ -1093,8 +1090,8 @@ TEST_F(CardinalityEstimatorTest, WindowNode) {
   ASSERT_EQ(result_table_statistics->column_statistics.size(), 3);
   EXPECT_EQ(result_table_statistics->column_statistics.at(0), input_table_statistics->column_statistics.at(0));
   EXPECT_EQ(result_table_statistics->column_statistics.at(1), input_table_statistics->column_statistics.at(1));
-  EXPECT_TRUE(std::dynamic_pointer_cast<const CardinalityEstimator::DummyStatistics>(
-      result_table_statistics->column_statistics.at(2)));
+  EXPECT_TRUE(
+      dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*result_table_statistics->column_statistics.at(2)));
 }
 
 TEST_F(CardinalityEstimatorTest, StatisticsCaching) {
@@ -1139,11 +1136,11 @@ TEST_F(CardinalityEstimatorTest, StatisticsPruning) {
   auto statics = estimator.estimate_statistics(lqp);
   ASSERT_EQ(statics->column_statistics.size(), 5);
 
-  EXPECT_TRUE(std::dynamic_pointer_cast<const CardinalityEstimator::DummyStatistics>(statics->column_statistics[0]));
+  EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*statics->column_statistics[0]));
   EXPECT_TRUE(dynamic_cast<const AttributeStatistics<int32_t>*>(&*statics->column_statistics[1]));
   EXPECT_TRUE(dynamic_cast<const AttributeStatistics<int32_t>*>(&*statics->column_statistics[2]));
   EXPECT_TRUE(dynamic_cast<const AttributeStatistics<int32_t>*>(&*statics->column_statistics[3]));
-  EXPECT_TRUE(std::dynamic_pointer_cast<const CardinalityEstimator::DummyStatistics>(statics->column_statistics[4]));
+  EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*statics->column_statistics[4]));
   // Cached and required columns should still be unset.
   EXPECT_FALSE(estimator.cardinality_estimation_cache.statistics_by_lqp);
   EXPECT_FALSE(estimator.cardinality_estimation_cache.required_column_expressions);
@@ -1174,11 +1171,11 @@ TEST_F(CardinalityEstimatorTest, StatisticsPruning) {
   // Estimate with caching.
   statics = estimator.estimate_statistics(lqp);
   ASSERT_EQ(statics->column_statistics.size(), 5);
-  EXPECT_TRUE(std::dynamic_pointer_cast<const CardinalityEstimator::DummyStatistics>(statics->column_statistics[0]));
+  EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*statics->column_statistics[0]));
   EXPECT_TRUE(dynamic_cast<const AttributeStatistics<int32_t>*>(&*statics->column_statistics[1]));
   EXPECT_TRUE(dynamic_cast<const AttributeStatistics<int32_t>*>(&*statics->column_statistics[2]));
   EXPECT_TRUE(dynamic_cast<const AttributeStatistics<int32_t>*>(&*statics->column_statistics[3]));
-  EXPECT_TRUE(std::dynamic_pointer_cast<const CardinalityEstimator::DummyStatistics>(statics->column_statistics[4]));
+  EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*statics->column_statistics[4]));
 }
 
 TEST_F(CardinalityEstimatorTest, StatisticsPruningWithPrunedColumns) {
@@ -1195,8 +1192,9 @@ TEST_F(CardinalityEstimatorTest, StatisticsPruningWithPrunedColumns) {
 
   // Round one: node_u does not have base statistics. All statistics are dummy statistics.
   estimator.prune_unused_statistics();
-  for (const auto& column_statistics : estimator.estimate_statistics(lqp_u)->column_statistics) {
-    EXPECT_TRUE(std::dynamic_pointer_cast<const CardinalityEstimator::DummyStatistics>(column_statistics));
+  const auto lqp_u_dummy_statistics = estimator.estimate_statistics(lqp_u);
+  for (const auto& statistics : lqp_u_dummy_statistics->column_statistics) {
+    EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*statistics));
   }
 
   // Adding the table to the StorageManager creates statistics.
@@ -1209,23 +1207,16 @@ TEST_F(CardinalityEstimatorTest, StatisticsPruningWithPrunedColumns) {
   const auto lqp_u_statistics = estimator.estimate_statistics(lqp_u);
   ASSERT_EQ(lqp_u_statistics->column_statistics.size(), 10);
   const auto& table_u_statistics = table_u->table_statistics()->column_statistics;
-  EXPECT_TRUE(
-      std::dynamic_pointer_cast<const CardinalityEstimator::DummyStatistics>(lqp_u_statistics->column_statistics[0]));
-  EXPECT_TRUE(
-      std::dynamic_pointer_cast<const CardinalityEstimator::DummyStatistics>(lqp_u_statistics->column_statistics[1]));
+  EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*lqp_u_statistics->column_statistics[0]));
+  EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*lqp_u_statistics->column_statistics[1]));
   EXPECT_EQ(lqp_u_statistics->column_statistics[2], table_u_statistics[2]);
-  EXPECT_TRUE(
-      std::dynamic_pointer_cast<const CardinalityEstimator::DummyStatistics>(lqp_u_statistics->column_statistics[3]));
-  EXPECT_TRUE(
-      std::dynamic_pointer_cast<const CardinalityEstimator::DummyStatistics>(lqp_u_statistics->column_statistics[4]));
-  EXPECT_TRUE(
-      std::dynamic_pointer_cast<const CardinalityEstimator::DummyStatistics>(lqp_u_statistics->column_statistics[5]));
+  EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*lqp_u_statistics->column_statistics[3]));
+  EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*lqp_u_statistics->column_statistics[4]));
+  EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*lqp_u_statistics->column_statistics[5]));
   EXPECT_EQ(lqp_u_statistics->column_statistics[6], table_u_statistics[6]);
-  EXPECT_TRUE(
-      std::dynamic_pointer_cast<const CardinalityEstimator::DummyStatistics>(lqp_u_statistics->column_statistics[7]));
+  EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*lqp_u_statistics->column_statistics[7]));
   EXPECT_EQ(lqp_u_statistics->column_statistics[8], table_u_statistics[8]);
-  EXPECT_TRUE(
-      std::dynamic_pointer_cast<const CardinalityEstimator::DummyStatistics>(lqp_u_statistics->column_statistics[9]));
+  EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*lqp_u_statistics->column_statistics[9]));
 
   // Create the same query as for the StaticTableNode, but with pruned columns.
   const auto node_v = StoredTableNode::make("table_u");
@@ -1244,11 +1235,9 @@ TEST_F(CardinalityEstimatorTest, StatisticsPruningWithPrunedColumns) {
   // 8 are used.
   const auto lqp_v_statistics = estimator.estimate_statistics(lqp_v);
   ASSERT_EQ(lqp_v_statistics->column_statistics.size(), 5);
-  EXPECT_TRUE(
-      std::dynamic_pointer_cast<const CardinalityEstimator::DummyStatistics>(lqp_v_statistics->column_statistics[0]));
+  EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*lqp_v_statistics->column_statistics[0]));
   EXPECT_EQ(lqp_v_statistics->column_statistics[1], table_u_statistics[2]);
-  EXPECT_TRUE(
-      std::dynamic_pointer_cast<const CardinalityEstimator::DummyStatistics>(lqp_v_statistics->column_statistics[2]));
+  EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*lqp_v_statistics->column_statistics[2]));
   EXPECT_EQ(lqp_v_statistics->column_statistics[3], table_u_statistics[6]);
   EXPECT_EQ(lqp_v_statistics->column_statistics[4], table_u_statistics[8]);
 
@@ -1263,8 +1252,7 @@ TEST_F(CardinalityEstimatorTest, StatisticsPruningWithPrunedColumns) {
   const auto lqp_d_statistics = estimator.estimate_statistics(lqp_d);
   const auto node_d_statistics = node_d->table_statistics();
   ASSERT_EQ(lqp_d_statistics->column_statistics.size(), 2);
-  EXPECT_TRUE(
-      std::dynamic_pointer_cast<const CardinalityEstimator::DummyStatistics>(lqp_d_statistics->column_statistics[0]));
+  EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*lqp_d_statistics->column_statistics[0]));
   EXPECT_EQ(lqp_d_statistics->column_statistics[1], node_d_statistics->column_statistics[2]);
 }
 
