@@ -14,7 +14,7 @@
 # from Nix package manager and local installations do not influence the build.
 
 let
-  pkgs = import ./nixpkgs {};
+  pkgs = import ./nixpkgs.nix {};
 in
 
 pkgs.mkShell {
