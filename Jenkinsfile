@@ -397,6 +397,12 @@ try {
                 Utils.markStageSkippedForConditional("ssbQueryPlans")
               }
             }
+          }, nixSetup: {
+	    stage('nixSetup') {
+              sh "curl -L https://nixos.org/nix/install > nix-install.sh && chmod +x nix-install.sh && ./nix-install.sh --daemon --yes"
+              sh "/nix/var/nix/profiles/default/bin/nix-shell resources/nixpkgs --pure --run \"mkdir nix-release && cd nix-release && cmake -GNinja -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DNOLTO=TRUE .. && ninja all -j \$(( \$(nproc) / 7)) && ./hyriseTest && ./hyriseSystemTest\""
+              sh "/nix/var/nix/profiles/default/bin/nix-shell resources/nixpkgs --pure --run \"mkdir nix-release && cd nix-release && cmake -GNinja -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DNOLTO=TRUE .. && ninja all -j \$(( \$(nproc) / 3)) && ./hyriseTest && ./hyriseSystemTest\""
+	    }
           }
         } finally {
           sh "ls -A1 | xargs rm -rf"
@@ -491,58 +497,6 @@ try {
         } else {
           Utils.markStageSkippedForConditional("clangMacArm")
         }
-      }
-    }
-  }
-
-  parallel nixSetupMac: {
-    node('mac') {
-      stage('nixSetupMac') {
-        sh "curl -L https://nixos.org/nix/install > nix-install.sh && chmod +x nix-install.sh && ./nix-install.sh --daemon --yes"
-      }
-    }
-  }, nixSetupMacArm: {
-    node('mac-arm') {
-      stage('nixSetupMacArm') {
-	sh "curl -L https://nixos.org/nix/install > nix-install.sh && chmod +x nix-install.sh && ./nix-install.sh --daemon --yes"
-      }
-    }
-  }, nixSetupLinux: {
-    node('linux') {
-      stage('nixSetupLinux') {
-	sh "curl -L https://nixos.org/nix/install > nix-install.sh && chmod +x nix-install.sh && ./nix-install.sh --daemon --yes"
-      }
-    }
-  }
-
-  parallel nixMacOSDebug: {
-    node('mac') {
-      stage('nixMacDebug') {
-	sh "/nix/var/nix/profiles/default/bin/nix-shell resources/nixpkgs --pure --run \"mkdir nix-debug && cd nix-debug && cmake -GNinja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -NOLTO=TRUE .. && ninja all -j \$(( \$(nproc) / 6)) && ./hyriseTest && ./hyriseSystemTest \""
-      }
-    }
-  }, nixMacOSRelease: {
-    node('mac') {
-      stage('nixMacRelease') {
-        sh "/nix/var/nix/profiles/default/bin/nix-shell resources/nixpkgs --pure --run \"mkdir nix-release && cd nix-release && cmake -GNinja -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -NOLTO=TRUE .. && ninja all -j \$(( \$(nproc) / 6)) && ./hyriseTest && ./hyriseSystemTest \""
-      }
-    }
-  }, nixMacOSArmDebug: {
-    node('mac-arm') {
-      stage('nixMacOSArmDebug') {
-	sh "/nix/var/nix/profiles/default/bin/nix-shell resources/nixpkgs --pure --run \"mkdir nix-release && cd nix-release && cmake -GNinja -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -NOLTO=TRUE .. && ninja all -j \$(( \$(nproc) / 6)) && ./hyriseTest && ./hyriseSystemTest\""
-      }
-    }
-  }, nixLinuxDebug: {
-    node('linux') {
-      stage('nixLinuxDebug') {
-	sh "/nix/var/nix/profiles/default/bin/nix-shell resources/nixpkgs --pure --run \"mkdir nix-release && cd nix-release && cmake -GNinja -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -NOLTO=TRUE .. && ninja all -j \$(( \$(nproc) / 6)) && ./hyriseTest && ./hyriseSystemTest\""
-      }
-    }
-  }, nixLinuxRelease: {
-    node('linux') {
-      stage('nixLinuxRelease') {
-	sh "/nix/var/nix/profiles/default/bin/nix-shell resources/nixpkgs --pure --run \"mkdir nix-release && cd nix-release && cmake -GNinja -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -NOLTO=TRUE .. && ninja all -j \$(( \$(nproc) / 6)) && ./hyriseTest && ./hyriseSystemTest\""
       }
     }
   }
