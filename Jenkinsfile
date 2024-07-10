@@ -502,7 +502,7 @@ try {
       }
     }
   }, nixSetupMacArm: {
-    node('macArm') {
+    node('mac-arm') {
       stage('nixSetupMacArm') {
 	sh "curl -L https://nixos.org/nix/install > nix-install.sh && chmod +x nix-install.sh && ./nix-install.sh --daemon --yes"
       }
@@ -528,7 +528,7 @@ try {
       }
     }
   }, nixMacOSArmDebug: {
-    node('macArm') {
+    node('mac-arm') {
       stage('nixMacOSArmDebug') {
 	sh "/nix/var/nix/profiles/default/bin/nix-shell resources/nixpkgs --pure --run \"mkdir nix-release && cd nix-release && cmake -GNinja -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -NOLTO=TRUE .. && ninja all -j \$(( \$(nproc) / 6)) && ./hyriseTest && ./hyriseSystemTest\""
       }
