@@ -143,6 +143,8 @@ try {
               // We build clang-debug using make to test make once (and clang-debug is the fastest build).
               sh "cd clang-debug && make all -j \$(( \$(nproc) / 5))"
               sh "./clang-debug/hyriseTest clang-debug"
+              sh "cd .. && ./clang-debug/hyriseBenchmarkTPCH -s 0.1 -r 1 --dont_cache_binary_tables"
+              sh "cd .. && ./clang-debug/hyriseBenchmarkStarSchema -s 0.1 -r 1 --dont_cache_binary_tables"
             }
           }, clang15Debug: {
             stage("clang-15-debug") {
