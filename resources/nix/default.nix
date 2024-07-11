@@ -53,7 +53,7 @@ pkgs.mkShell {
   ];
 
   # Running Hyrise executables requires the LD_LIBRARY_PATH variable set. This does not
-  # happen by other hooks, therefore it happens manually here. Each of the derivations
+  # happen by other hooks, therefore it happens manually here. Each of the packages
   # listed here provides a dynamically linked library.
   # View the results by running `nix-shell --pure --run "echo $LD_LIBRARY_PATH"`.
   shellHook = ''
