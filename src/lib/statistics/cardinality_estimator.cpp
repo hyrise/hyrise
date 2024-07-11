@@ -994,13 +994,13 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_operator_scan_pr
         if (predicate.predicate_condition == PredicateCondition::Like) {
           // Lacking better options, assume a "magic" selectivity for LIKE. Any number would be equally
           // right and wrong here. In some examples, this seemed like a good guess ¯\_(ツ)_/¯
-          selectivity = PLACEHOLDER_SELECTIVITY_LOW;
+          selectivity = PLACEHOLDER_SELECTIVITY_MEDIUM;
           return;
         }
         if (predicate.predicate_condition == PredicateCondition::NotLike) {
           // Lacking better options, assume a "magic" selectivity for NOT LIKE. Any number would be equally
           // right and wrong here. In some examples, this seemed like a good guess ¯\_(ツ)_/¯
-          selectivity = PLACEHOLDER_SELECTIVITY_HIGH;
+          selectivity = PLACEHOLDER_SELECTIVITY_MEDIUM;
           return;
         }
 
