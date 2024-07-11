@@ -400,7 +400,7 @@ try {
           }, nixSetup: {
 	    stage('nixSetup') {
               sh "curl -L https://nixos.org/nix/install > nix-install.sh && chmod +x nix-install.sh && ./nix-install.sh --daemon --yes"
-              sh "/nix/var/nix/profiles/default/bin/nix-shell resources/nix --pure --run \"mkdir nix-release && cd nix-release && cmake -GNinja -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DNOLTO=TRUE .. && ninja all -j \$(( \$(nproc) / 7)) && ./hyriseTest && ./hyriseSystemTest\""
+              sh "/nix/var/nix/profiles/default/bin/nix-shell resources/nix --pure --run \"mkdir nix-debug && cd nix-debug && cmake -GNinja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DNOLTO=TRUE .. && ninja all -j \$(( \$(nproc) / 7)) && ./hyriseTest && ./hyriseSystemTest\""
               sh "/nix/var/nix/profiles/default/bin/nix-shell resources/nix --pure --run \"mkdir nix-release && cd nix-release && cmake -GNinja -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DNOLTO=TRUE .. && ninja all -j \$(( \$(nproc) / 3)) && ./hyriseTest && ./hyriseSystemTest\""
 	    }
           }
