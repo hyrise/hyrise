@@ -57,7 +57,7 @@ using namespace hyrise;  // NOLINT(build/namespaces)
 
 // Magic constants used in places where a better estimation would be implementable (either with
 // statistics objects not yet implemented or new algorithms) - but doing so just wasn't warranted yet.
-constexpr auto PLACEHOLDER_SELECTIVITY_LOW = 0.1f;
+// constexpr auto PLACEHOLDER_SELECTIVITY_LOW = 0.1f;
 constexpr auto PLACEHOLDER_SELECTIVITY_MEDIUM = 0.5f;
 constexpr auto PLACEHOLDER_SELECTIVITY_HIGH = 0.9f;
 constexpr auto PLACEHOLDER_SELECTIVITY_ALL = 1.0f;
