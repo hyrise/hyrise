@@ -6,8 +6,6 @@
 
 Nix itself does not hold any executables. Instead, it offers a script that tells Nix how to acquire the executable by, for example, downloading a release version from GitHub. This script is called a derivation. Derivations are written in the [Nix functional language].
 
-The [Nix package manager] holds a collection of many derivations for popular software. This collection can be extended by providing so-called [Overlays]. Overlays are derivations that extend the collection of derivations provided by the package manager. Overlays are usually used when the users cannot publish their derivations in the package manager's collection.
-
 ## Pinning the Nix Package Manager
 
 The Nix package manager should be pinned to a specific version. This is useful when the user wants to ensure that the package manager does not change its behavior over time.
