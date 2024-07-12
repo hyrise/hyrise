@@ -269,7 +269,7 @@ std::pair<SQLPipelineStatus, const std::vector<std::shared_ptr<const Table>>&> S
       return {_pipeline_status, _result_tables};
     }
 
-    Assert(statement_status == SQLPipelineStatus::Success, "Unexpected pipeline status");
+    Assert(statement_status == SQLPipelineStatus::Success, "Unexpected pipeline status.");
 
     _result_tables.emplace_back(table);
 
@@ -277,10 +277,10 @@ std::pair<SQLPipelineStatus, const std::vector<std::shared_ptr<const Table>>&> S
 
     if (!new_transaction_context) {
       // No MVCC was used
-      Assert(!_transaction_context, "MVCC and Non-MVCC modes were mixed");
+      Assert(!_transaction_context, "MVCC and Non-MVCC modes were mixed.");
     } else if (new_transaction_context->is_auto_commit()) {
       Assert(new_transaction_context->phase() == TransactionPhase::Committed,
-             "Auto-commit statements should always be committed at this point");
+             "Auto-commit statements should always be committed at this point.");
       // Auto-commit transaction context should not be available anymore
       _transaction_context = nullptr;
     } else if (new_transaction_context->phase() == TransactionPhase::Active) {
@@ -292,7 +292,7 @@ std::pair<SQLPipelineStatus, const std::vector<std::shared_ptr<const Table>>&> S
       // Clear it so that the next statement can either start a new transaction or run in auto-commit mode
       Assert(new_transaction_context->phase() == TransactionPhase::Committed ||
                  new_transaction_context->phase() == TransactionPhase::RolledBackByUser,
-             "Invalid state for non-auto-commit transaction after succesful statement");
+             "Invalid state for non-auto-commit transaction after succesful statement.");
       _transaction_context = nullptr;
     }
   }

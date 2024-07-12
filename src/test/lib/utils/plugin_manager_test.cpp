@@ -177,8 +177,7 @@ TEST_F(PluginManagerTest, CallBenchmarkHooks) {
   auto& sm = Hyrise::get().storage_manager;
   auto& lm = Hyrise::get().log_manager;
   const std::unique_ptr<AbstractBenchmarkItemRunner> benchmark_item_runner = std::make_unique<TPCHBenchmarkItemRunner>(
-      std::make_shared<BenchmarkConfig>(BenchmarkConfig::get_default_config()), false, 1,
-      ClusteringConfiguration::None);
+      std::make_shared<BenchmarkConfig>(), false, 1, ClusteringConfiguration::None);
 
   pm.load_plugin(build_dylib_path("libhyriseTestPlugin"));
 
@@ -216,8 +215,7 @@ TEST_F(PluginManagerTest, CallBenchmarkHooks) {
 TEST_F(PluginManagerTest, CallNotExistingBenchmarkHooks) {
   auto& pm = Hyrise::get().plugin_manager;
   const std::unique_ptr<AbstractBenchmarkItemRunner> benchmark_item_runner = std::make_unique<TPCHBenchmarkItemRunner>(
-      std::make_shared<BenchmarkConfig>(BenchmarkConfig::get_default_config()), false, 1,
-      ClusteringConfiguration::None);
+      std::make_shared<BenchmarkConfig>(), false, 1, ClusteringConfiguration::None);
   auto report = nlohmann::json{};
 
   // Call non-existing plugin (with non-existing hooks).

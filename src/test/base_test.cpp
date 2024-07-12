@@ -79,7 +79,8 @@ std::shared_ptr<TableScan> create_table_scan(const std::shared_ptr<AbstractOpera
 void set_statistics_for_mock_node(const std::shared_ptr<MockNode>& mock_node, const size_t row_count,
                                   const std::vector<std::shared_ptr<AbstractStatisticsObject>>& statistics_objects) {
   const auto& column_definitions = mock_node->column_definitions();
-  auto output_column_statistics = std::vector<std::shared_ptr<BaseAttributeStatistics>>(column_definitions.size());
+  auto output_column_statistics =
+      std::vector<std::shared_ptr<const BaseAttributeStatistics>>(column_definitions.size());
 
   for (auto column_id = ColumnID{0}; column_id < column_definitions.size(); ++column_id) {
     resolve_data_type(column_definitions[column_id].first, [&](const auto data_type_t) {

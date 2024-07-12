@@ -199,31 +199,31 @@ TYPED_TEST(MinMaxFilterTest, CanPruneOnBounds) {
 }
 
 TYPED_TEST(MinMaxFilterTest, Sliced) {
-  auto new_filter = std::shared_ptr<MinMaxFilter<TypeParam>>{};
+  auto new_filter = std::shared_ptr<const MinMaxFilter<TypeParam>>{};
 
   const auto filter = std::make_unique<MinMaxFilter<TypeParam>>(this->_values.front(), this->_values.back());
 
-  new_filter =
-      std::static_pointer_cast<MinMaxFilter<TypeParam>>(filter->sliced(PredicateCondition::Equals, this->_in_between));
+  new_filter = std::static_pointer_cast<const MinMaxFilter<TypeParam>>(
+      filter->sliced(PredicateCondition::Equals, this->_in_between));
   EXPECT_EQ(new_filter->min, this->_in_between);
   EXPECT_EQ(new_filter->max, this->_in_between);
 
-  new_filter = std::static_pointer_cast<MinMaxFilter<TypeParam>>(
+  new_filter = std::static_pointer_cast<const MinMaxFilter<TypeParam>>(
       filter->sliced(PredicateCondition::NotEquals, this->_in_between));
   EXPECT_EQ(new_filter->min, this->_min_value);
   EXPECT_EQ(new_filter->max, this->_max_value);
 
-  new_filter = std::static_pointer_cast<MinMaxFilter<TypeParam>>(
+  new_filter = std::static_pointer_cast<const MinMaxFilter<TypeParam>>(
       filter->sliced(PredicateCondition::LessThanEquals, this->_in_between));
   EXPECT_EQ(new_filter->min, this->_min_value);
   EXPECT_EQ(new_filter->max, this->_in_between);
 
-  new_filter = std::static_pointer_cast<MinMaxFilter<TypeParam>>(
+  new_filter = std::static_pointer_cast<const MinMaxFilter<TypeParam>>(
       filter->sliced(PredicateCondition::GreaterThanEquals, this->_in_between));
   EXPECT_EQ(new_filter->min, this->_in_between);
   EXPECT_EQ(new_filter->max, this->_max_value);
 
-  new_filter = std::static_pointer_cast<MinMaxFilter<TypeParam>>(
+  new_filter = std::static_pointer_cast<const MinMaxFilter<TypeParam>>(
       filter->sliced(PredicateCondition::BetweenInclusive, this->_in_between, this->_in_between2));
   EXPECT_EQ(new_filter->min, this->_in_between);
   EXPECT_EQ(new_filter->max, this->_in_between2);

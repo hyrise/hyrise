@@ -89,3 +89,11 @@
    ...
    fun:_ZN7testing8internal20PrintBytesInObjectToEPKhmPSo
 }
+
+# When building with link-time optimization, Valgrind sees a read of a potentially uninitialized value, which should be
+# a false positive.
+{
+   <False_positive_std_optional_access_with_LTO_builds>
+   Memcheck:Cond
+   fun:_ZN6hyrise21OperatorJoinPredicate15from_expressionERKNS_18AbstractExpressionERKNS_15AbstractLQPNodeES6_
+}
