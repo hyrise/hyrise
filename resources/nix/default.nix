@@ -25,6 +25,7 @@ pkgs.mkShell {
   #    users will execute processes only after the shell is already available), only nativeBuildInputs are needed.
   nativeBuildInputs = with pkgs; [
     autoconf
+    bintools
     boost
     clang
     cmake
