@@ -397,8 +397,14 @@ try {
                 Utils.markStageSkippedForConditional("ssbQueryPlans")
               }
             }
+          }, nixSetup: {
+	    stage('nixSetup') {
+              sh "curl -L https://nixos.org/nix/install > nix-install.sh && chmod +x nix-install.sh && ./nix-install.sh --daemon --yes"
+              sh "/nix/var/nix/profiles/default/bin/nix-shell resources/nix --pure --run \"mkdir nix-debug && cd nix-debug && cmake ${debug} ${clang} ${unity} ${ninja} .. && ninja all -j \$(( \$(nproc) / 7)) && ./hyriseTest\""
+              // We allocate a third of all cores for the release build as several parallel stages should have already finished at this point.
+              sh "/nix/var/nix/profiles/default/bin/nix-shell resources/nix --pure --run \"mkdir nix-release && cd nix-release && cmake ${release} ${clang} ${unity} ${ninja} .. && ninja all -j \$(( \$(nproc) / 3)) && ./hyriseTest\""
+	    }
           }
-
         } finally {
           sh "ls -A1 | xargs rm -rf"
           deleteDir()
