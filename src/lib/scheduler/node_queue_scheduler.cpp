@@ -26,14 +26,18 @@
 
 namespace {
 /**
-   * For the grouping of tasks (see _num_groups()), we scale the number of groups according to the current load of the
-   * system. In cases of a single user, we can use a high group count (i.e., allowing parallelism) as the task queue is
-   * usually not congested. In case of multiple clients, we lower the number of groups to limit concurrently processed
-   * tasks (see discussion in #2243).
-   *
-   * We scale number of groups linearly between (NUM_GROUPS_MIN_FACTOR * _workers_per_node) and (NUM_GROUPS_MAX_FACTOR *
-   * _workers_per_node).
-   */
+ * Hyrise groups tasks to lower the pressure on the scheduler and the tasks queues. Grouping happens by dividing a large
+ * set of tasks into groups and only scheduling one task of this group. All other tasks are chained as dependencies.
+ * When a worker pulls the first task and executes it, it will then process the entire chain without any further
+ * communication with the scheduler.
+ * The number of groups to use is hard to determine and depends on the current load. In case of a single user, we can
+ * use a high group count (to allow parallelism and balance load evenly even when some tasks straggle) as the task queue
+ * is usually not congested. In case of multiple clients, we lower the number of groups to take pressure of the
+ * scheduler and the tasks queues (see discussion in #2243).
+ * 
+ * We scale number of groups linearly between (NUM_GROUPS_MIN_FACTOR * _workers_per_node) and (NUM_GROUPS_MAX_FACTOR *
+ * _workers_per_node).
+ */
 constexpr auto NUM_GROUPS_MIN_FACTOR = 0.1f;
 constexpr auto NUM_GROUPS_MAX_FACTOR = 3.0f;
 constexpr auto NUM_GROUPS_RANGE = NUM_GROUPS_MAX_FACTOR - NUM_GROUPS_MIN_FACTOR;
