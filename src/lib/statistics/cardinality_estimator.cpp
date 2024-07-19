@@ -4,11 +4,13 @@
 #include <cstddef>
 #include <memory>
 #include <optional>
+#include <ostream>
 #include <utility>
 #include <vector>
 
 #include <boost/variant/get.hpp>
 
+#include "all_parameter_variant.hpp"
 #include "all_type_variant.hpp"
 #include "attribute_statistics.hpp"
 #include "expression/abstract_expression.hpp"
@@ -79,11 +81,130 @@ std::optional<float> estimate_null_value_ratio_of_column(const TableStatistics& 
   return std::nullopt;
 }
 
+std::shared_ptr<TableStatistics> prune_column_statistics(
+    const std::shared_ptr<TableStatistics>& table_statistics, const std::vector<ColumnID>& pruned_column_ids,
+    const std::vector<std::shared_ptr<AbstractExpression>>& output_expressions,
+    ExpressionUnorderedSet& required_columns, const bool enable_pruning) {
+  if (!enable_pruning && pruned_column_ids.empty()) {
+    return table_statistics;
+  }
+
+  // Prune `pruned_column_ids` and all statistics for unused columns from the statistics.
+  auto output_column_statistics = std::vector<std::shared_ptr<const BaseAttributeStatistics>>(
+      table_statistics->column_statistics.size() - pruned_column_ids.size());
+
+  auto pruned_column_ids_iter = pruned_column_ids.begin();
+
+  for (auto input_column_id = ColumnID{0}, output_column_id = ColumnID{0};
+       input_column_id < table_statistics->column_statistics.size(); ++input_column_id) {
+    // Skip `stored_column_id` if it is in the sorted vector `pruned_column_ids`.
+    if (pruned_column_ids_iter != pruned_column_ids.end() && input_column_id == *pruned_column_ids_iter) {
+      ++pruned_column_ids_iter;
+      continue;
+    }
+
+    // Create a dummy statistics object if the column is not actually used for estimations.
+    const auto& expression = output_expressions[output_column_id];
+    if (!enable_pruning || required_columns.contains(expression)) {
+      output_column_statistics[output_column_id] = table_statistics->column_statistics[input_column_id];
+    } else {
+      output_column_statistics[output_column_id] =
+          std::make_shared<CardinalityEstimator::DummyStatistics>(expression->data_type());
+    }
+    ++output_column_id;
+  }
+
+  return std::make_shared<TableStatistics>(std::move(output_column_statistics), table_statistics->row_count);
+}
+
 }  // namespace
 
 namespace hyrise {
 
 using namespace expression_functional;  // NOLINT(build/namespaces)
+
+CardinalityEstimator::DummyStatistics::DummyStatistics(const DataType init_data_type)
+    : BaseAttributeStatistics(init_data_type) {}
+
+void CardinalityEstimator::DummyStatistics::set_statistics_object(
+    const std::shared_ptr<const AbstractStatisticsObject>& /*statistics_object*/) {
+  Fail("DummyStatistics do not manage statistics objects.");
+}
+
+std::shared_ptr<const BaseAttributeStatistics> CardinalityEstimator::DummyStatistics::scaled(
+    const Selectivity /*selectivity*/) const {
+  return shared_from_this();
+}
+
+std::shared_ptr<const BaseAttributeStatistics> CardinalityEstimator::DummyStatistics::sliced(
+    const PredicateCondition /*predicate_condition*/, const AllTypeVariant& /*variant_value*/,
+    const std::optional<AllTypeVariant>& /*variant_value2*/) const {
+  Fail("DummyStatistics should not be used for actual estimations. Was the required column pruned?");
+}
+
+std::ostream& operator<<(std::ostream& stream, const CardinalityEstimator::DummyStatistics& /*dummy_statistics*/) {
+  return stream << "DummyStatistics";
+}
+
+void CardinalityEstimator::prune_unused_statistics() {
+  _enable_pruning = true;
+}
+
+void CardinalityEstimator::do_not_prune_unused_statistics() {
+  _enable_pruning = false;
+}
+
+// Ensure that the avaibale statistics required to estimate a node are provided, unless they are aggregates etc., which
+// we currently do not estimate.
+void CardinalityEstimator::check_required_statistics(const ColumnID column_id,
+                                                     const std::shared_ptr<AbstractLQPNode>& input_node,
+                                                     const std::shared_ptr<const TableStatistics>& input_statistics) {
+  // (i) If input statistics are available, everything is fine.
+  const auto& column_statistics = input_statistics->column_statistics[column_id];
+  Assert(column_statistics, "Expected input statistics.");
+  const auto* const is_dummy_object = dynamic_cast<const DummyStatistics*>(&*column_statistics);
+
+  // (ii) If the required expression is not an LQPColumnExpression, there might not be statistics available.
+  const auto input_expression = input_node->output_expressions()[column_id];
+  const auto input_is_column = input_expression->type == ExpressionType::LQPColumn;
+
+  // (iii) Even for columns, original statistics might not be set (e.g., for StaticTableNode or in tests).
+  auto base_statistics_for_column = true;
+  if (input_is_column) {
+    auto base_statistics = std::shared_ptr<TableStatistics>{};
+    const auto& column_expression = static_cast<const LQPColumnExpression&>(*input_expression);
+    const auto original_node = column_expression.original_node.lock();
+    Assert(original_node, "LQPColumnExpression's original node expired. LQP is invalid.");
+    switch (original_node->type) {
+      case LQPNodeType::Mock:
+        base_statistics = static_cast<const MockNode&>(*original_node).table_statistics();
+        break;
+      case LQPNodeType::StaticTable:
+        base_statistics = static_cast<const StaticTableNode&>(*original_node).table->table_statistics();
+        break;
+      case LQPNodeType::StoredTable: {
+        const auto& stored_table_node = static_cast<const StoredTableNode&>(*original_node);
+        if (stored_table_node.table_statistics) {
+          base_statistics = stored_table_node.table_statistics;
+          break;
+        }
+
+        const auto table = Hyrise::get().storage_manager.get_table(stored_table_node.table_name);
+        base_statistics = table->table_statistics();
+      } break;
+      default:
+        Fail("Unexpected orignal node for LQPColumnExpression.");
+    }
+
+    Assert(!base_statistics || base_statistics->column_statistics.size() > column_expression.original_column_id,
+           "TableStatistics miss columns.");
+    base_statistics_for_column =
+        base_statistics && base_statistics->column_statistics[column_expression.original_column_id];
+  }
+
+  Assert(!is_dummy_object || !input_is_column || !base_statistics_for_column,
+         "Missing AttributeStatistics for required column. Have they been pruned?");
+}
 
 std::shared_ptr<AbstractCardinalityEstimator> CardinalityEstimator::new_instance() const {
   return std::make_shared<CardinalityEstimator>();
@@ -92,19 +213,36 @@ std::shared_ptr<AbstractCardinalityEstimator> CardinalityEstimator::new_instance
 Cardinality CardinalityEstimator::estimate_cardinality(const std::shared_ptr<const AbstractLQPNode>& lqp,
                                                        const bool cacheable) const {
   auto statistics_cache = StatisticsByLQP{};
-  const auto estimated_statistics = estimate_statistics(lqp, cacheable, statistics_cache);
+  auto estimated_statistics = std::shared_ptr<TableStatistics>{};
+  if (cardinality_estimation_cache.required_column_expressions) {
+    estimated_statistics = estimate_statistics(lqp, cacheable, statistics_cache,
+                                               *cardinality_estimation_cache.required_column_expressions);
+  } else {
+    auto required_columns = ExpressionUnorderedSet{};
+    estimated_statistics = estimate_statistics(lqp, cacheable, statistics_cache, required_columns);
+  }
+
   return estimated_statistics->row_count;
 }
 
 std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
     const std::shared_ptr<const AbstractLQPNode>& lqp, const bool cacheable) const {
   auto statistics_cache = StatisticsByLQP{};
-  const auto statistics = estimate_statistics(lqp, cacheable, statistics_cache);
+  auto statistics = std::shared_ptr<TableStatistics>{};
+  if (cardinality_estimation_cache.required_column_expressions) {
+    statistics = estimate_statistics(lqp, cacheable, statistics_cache,
+                                     *cardinality_estimation_cache.required_column_expressions);
+  } else {
+    auto required_columns = ExpressionUnorderedSet{};
+    statistics = estimate_statistics(lqp, cacheable, statistics_cache, required_columns);
+  }
+
   return statistics;
 }
 
 std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
-    const std::shared_ptr<const AbstractLQPNode>& lqp, const bool cacheable, StatisticsByLQP& statistics_cache) const {
+    const std::shared_ptr<const AbstractLQPNode>& lqp, const bool cacheable, StatisticsByLQP& statistics_cache,
+    ExpressionUnorderedSet& required_columns) const {
   /**
    * 1. Try a cache lookup for requested LQP.
    *
@@ -145,49 +283,59 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
   /**
    * 2. Cache lookup failed - perform an actual cardinality estimation.
    */
+
+  // Add columns that are used for estimations so we will forward their statistics. Otherwise, they are pruned.
+  // Currently, this applies to predicates of JoinNodes and PredicateNodes. Have a look at
+  // `AbstractCardinalityEstimator::_add_required_columns(...)` if more columns are required.
+  _add_required_columns(lqp, required_columns);
+
   auto output_table_statistics = std::shared_ptr<TableStatistics>{};
   const auto left_input_table_statistics =
-      lqp->left_input() ? estimate_statistics(lqp->left_input(), cacheable, statistics_cache) : nullptr;
+      lqp->left_input() ? estimate_statistics(lqp->left_input(), cacheable, statistics_cache, required_columns)
+                        : nullptr;
   const auto right_input_table_statistics =
-      lqp->right_input() ? estimate_statistics(lqp->right_input(), cacheable, statistics_cache) : nullptr;
+      lqp->right_input() ? estimate_statistics(lqp->right_input(), cacheable, statistics_cache, required_columns)
+                         : nullptr;
 
   switch (lqp->type) {
     case LQPNodeType::Aggregate: {
-      const auto aggregate_node = std::dynamic_pointer_cast<const AggregateNode>(lqp);
-      output_table_statistics = estimate_aggregate_node(*aggregate_node, left_input_table_statistics);
+      const auto& aggregate_node = static_cast<const AggregateNode&>(*lqp);
+      output_table_statistics = estimate_aggregate_node(aggregate_node, left_input_table_statistics);
     } break;
 
     case LQPNodeType::Alias: {
-      const auto alias_node = std::dynamic_pointer_cast<const AliasNode>(lqp);
-      output_table_statistics = estimate_alias_node(*alias_node, left_input_table_statistics);
+      const auto& alias_node = static_cast<const AliasNode&>(*lqp);
+      output_table_statistics = estimate_alias_node(alias_node, left_input_table_statistics);
     } break;
 
     case LQPNodeType::Join: {
-      const auto join_node = std::dynamic_pointer_cast<const JoinNode>(lqp);
+      const auto& join_node = static_cast<const JoinNode&>(*lqp);
       output_table_statistics =
-          estimate_join_node(*join_node, left_input_table_statistics, right_input_table_statistics);
+          estimate_join_node(join_node, left_input_table_statistics, right_input_table_statistics);
     } break;
 
     case LQPNodeType::Limit: {
-      const auto limit_node = std::dynamic_pointer_cast<const LimitNode>(lqp);
-      output_table_statistics = estimate_limit_node(*limit_node, left_input_table_statistics);
+      const auto& limit_node = static_cast<const LimitNode&>(*lqp);
+      output_table_statistics = estimate_limit_node(limit_node, left_input_table_statistics);
     } break;
 
     case LQPNodeType::Mock: {
-      const auto mock_node = std::dynamic_pointer_cast<const MockNode>(lqp);
-      Assert(mock_node->table_statistics(), "Cannot return statistics of MockNode that was not assigned statistics");
-      output_table_statistics = prune_column_statistics(mock_node->table_statistics(), mock_node->pruned_column_ids());
+      const auto& mock_node = static_cast<const MockNode&>(*lqp);
+      Assert(mock_node.table_statistics(), "Cannot return statistics of MockNode that was not assigned statistics");
+      output_table_statistics =
+          prune_column_statistics(mock_node.table_statistics(), mock_node.pruned_column_ids(),
+                                  mock_node.output_expressions(), required_columns, _enable_pruning);
     } break;
 
     case LQPNodeType::Predicate: {
-      const auto predicate_node = std::dynamic_pointer_cast<const PredicateNode>(lqp);
-      output_table_statistics =
-          estimate_predicate_node(*predicate_node, left_input_table_statistics, cacheable, statistics_cache);
+      const auto& predicate_node = static_cast<const PredicateNode&>(*lqp);
+      output_table_statistics = estimate_predicate_node(predicate_node, left_input_table_statistics, cacheable,
+                                                        statistics_cache, required_columns);
     } break;
 
     case LQPNodeType::Projection: {
-      const auto projection_node = std::dynamic_pointer_cast<const ProjectionNode>(lqp);
-      output_table_statistics = estimate_projection_node(*projection_node, left_input_table_statistics);
+      const auto& projection_node = static_cast<const ProjectionNode&>(*lqp);
+      output_table_statistics = estimate_projection_node(projection_node, left_input_table_statistics);
     } break;
 
     case LQPNodeType::Sort: {
@@ -196,61 +344,63 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
 
     case LQPNodeType::StaticTable: {
       const auto& static_table_node = static_cast<const StaticTableNode&>(*lqp);
-      output_table_statistics = static_table_node.table->table_statistics();
-
-      // StaticTableNodes may or may not provide statistics. If there are no statistics, provide dummy statistics.
-      if (!output_table_statistics) {
-        const auto cardinality = static_cast<Cardinality>(static_table_node.table->row_count());
-
-        const auto& column_definitions = static_table_node.table->column_definitions();
-        auto column_statistics = std::vector<std::shared_ptr<const BaseAttributeStatistics>>{};
-        column_statistics.reserve(column_definitions.size());
-
-        for (const auto& column_definition : column_definitions) {
-          resolve_data_type(column_definition.data_type, [&](const auto data_type_t) {
-            using ColumnDataType = typename decltype(data_type_t)::type;
-            column_statistics.emplace_back(std::make_shared<AttributeStatistics<ColumnDataType>>());
-          });
-        }
-
-        output_table_statistics = std::make_shared<TableStatistics>(std::move(column_statistics), cardinality);
+      const auto& table_statistics = static_table_node.table->table_statistics();
+      // StaticTableNodes may or may not provide statistics. If there are statistics, prune and forward them.
+      if (table_statistics) {
+        output_table_statistics =
+            prune_column_statistics(table_statistics, std::vector<ColumnID>{}, static_table_node.output_expressions(),
+                                    required_columns, _enable_pruning);
+        break;
       }
+
+      // If there are no statistics, provide dummy statistics.
+      const auto cardinality = static_cast<Cardinality>(static_table_node.table->row_count());
+      const auto& column_definitions = static_table_node.table->column_definitions();
+      auto column_statistics = std::vector<std::shared_ptr<const BaseAttributeStatistics>>{};
+      column_statistics.reserve(column_definitions.size());
+      for (const auto& column_definition : column_definitions) {
+        column_statistics.emplace_back(std::make_shared<DummyStatistics>(column_definition.data_type));
+      }
+
+      output_table_statistics = std::make_shared<TableStatistics>(std::move(column_statistics), cardinality);
     } break;
 
     case LQPNodeType::StoredTable: {
-      const auto stored_table_node = std::dynamic_pointer_cast<const StoredTableNode>(lqp);
+      const auto& stored_table_node = static_cast<const StoredTableNode&>(*lqp);
 
-      const auto stored_table = Hyrise::get().storage_manager.get_table(stored_table_node->table_name);
+      const auto& stored_table = Hyrise::get().storage_manager.get_table(stored_table_node.table_name);
       Assert(stored_table->table_statistics(), "Stored Table should have cardinality estimation statistics");
 
-      if (stored_table_node->table_statistics) {
+      auto table_statistics = std::shared_ptr<TableStatistics>{};
+      if (stored_table_node.table_statistics) {
         // TableStatistics have changed from the original table's statistics
-        Assert(stored_table_node->table_statistics->column_statistics.size() ==
+        Assert(stored_table_node.table_statistics->column_statistics.size() ==
                    static_cast<size_t>(stored_table->column_count()),
                "Statistics in StoredTableNode should have same number of columns as original table");
-        Assert(stored_table_node->table_statistics->row_count >= 0, "Tables can't have negative row counts");
-        output_table_statistics =
-            prune_column_statistics(stored_table_node->table_statistics, stored_table_node->pruned_column_ids());
+        Assert(stored_table_node.table_statistics->row_count >= 0, "Tables can't have negative row counts");
+        table_statistics = stored_table_node.table_statistics;
       } else {
-        output_table_statistics =
-            prune_column_statistics(stored_table->table_statistics(), stored_table_node->pruned_column_ids());
+        table_statistics = stored_table->table_statistics();
       }
+      output_table_statistics =
+          prune_column_statistics(table_statistics, stored_table_node.pruned_column_ids(),
+                                  stored_table_node.output_expressions(), required_columns, _enable_pruning);
     } break;
 
     case LQPNodeType::Validate: {
-      const auto validate_node = std::dynamic_pointer_cast<const ValidateNode>(lqp);
-      output_table_statistics = estimate_validate_node(*validate_node, left_input_table_statistics);
+      const auto& validate_node = static_cast<const ValidateNode&>(*lqp);
+      output_table_statistics = estimate_validate_node(validate_node, left_input_table_statistics);
     } break;
 
     case LQPNodeType::Union: {
-      const auto union_node = std::dynamic_pointer_cast<const UnionNode>(lqp);
+      const auto& union_node = static_cast<const UnionNode&>(*lqp);
       output_table_statistics =
-          estimate_union_node(*union_node, left_input_table_statistics, right_input_table_statistics);
+          estimate_union_node(union_node, left_input_table_statistics, right_input_table_statistics);
     } break;
 
     case LQPNodeType::Window: {
-      const auto window_node = std::dynamic_pointer_cast<const WindowNode>(lqp);
-      output_table_statistics = estimate_window_node(*window_node, left_input_table_statistics);
+      const auto& window_node = static_cast<const WindowNode&>(*lqp);
+      output_table_statistics = estimate_window_node(window_node, left_input_table_statistics);
     } break;
 
     // Currently, there is no actual estimation being done and we always apply the worst case.
@@ -273,7 +423,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
     case LQPNodeType::DropTable:
     case LQPNodeType::ChangeMetaTable:
     case LQPNodeType::DummyTable: {
-      auto empty_column_statistics = std::vector<std::shared_ptr<const BaseAttributeStatistics>>();
+      auto empty_column_statistics = std::vector<std::shared_ptr<const BaseAttributeStatistics>>{};
       output_table_statistics = std::make_shared<TableStatistics>(std::move(empty_column_statistics), Cardinality{0});
     } break;
 
@@ -336,10 +486,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_projection_node(
     if (input_column_id) {
       column_statistics[expression_idx] = input_table_statistics->column_statistics[*input_column_id];
     } else {
-      resolve_data_type(expression.data_type(), [&](const auto data_type_t) {
-        using ColumnDataType = typename decltype(data_type_t)::type;
-        column_statistics[expression_idx] = std::make_shared<AttributeStatistics<ColumnDataType>>();
-      });
+      column_statistics[expression_idx] = std::make_shared<DummyStatistics>(expression.data_type());
     }
   }
 
@@ -359,10 +506,8 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_window_node(
   }
 
   // For the result of the window function, dummy statistics are created for now.
-  resolve_data_type(output_expressions.back()->data_type(), [&](const auto data_type_t) {
-    using ColumnDataType = typename decltype(data_type_t)::type;
-    column_statistics[forwarded_expression_count] = std::make_shared<AttributeStatistics<ColumnDataType>>();
-  });
+  column_statistics[forwarded_expression_count] =
+      std::make_shared<DummyStatistics>(output_expressions.back()->data_type());
 
   return std::make_shared<TableStatistics>(std::move(column_statistics), input_table_statistics->row_count);
 }
@@ -383,10 +528,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_aggregate_node(
     if (input_column_id) {
       column_statistics[expression_idx] = input_table_statistics->column_statistics[*input_column_id];
     } else {
-      resolve_data_type(expression.data_type(), [&](const auto data_type_t) {
-        using ColumnDataType = typename decltype(data_type_t)::type;
-        column_statistics[expression_idx] = std::make_shared<AttributeStatistics<ColumnDataType>>();
-      });
+      column_statistics[expression_idx] = std::make_shared<DummyStatistics>(expression.data_type());
     }
   }
 
@@ -401,7 +543,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_validate_node(
 
 std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_predicate_node(
     const PredicateNode& predicate_node, const std::shared_ptr<TableStatistics>& input_table_statistics,
-    const bool cacheable, StatisticsByLQP& statistics_cache) const {
+    const bool cacheable, StatisticsByLQP& statistics_cache, ExpressionUnorderedSet& required_columns) const {
   // For PredicateNodes, the statistics of the columns scanned on are sliced and all other columns' statistics are
   // scaled with the estimated selectivity of the predicate.
 
@@ -413,13 +555,13 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_predicate_node(
 
       const auto left_predicate_node =
           PredicateNode::make(logical_expression->left_operand(), predicate_node.left_input());
-      const auto left_statistics =
-          estimate_predicate_node(*left_predicate_node, input_table_statistics, cacheable, statistics_cache);
+      const auto left_statistics = estimate_predicate_node(*left_predicate_node, input_table_statistics, cacheable,
+                                                           statistics_cache, required_columns);
 
       const auto right_predicate_node =
           PredicateNode::make(logical_expression->right_operand(), predicate_node.left_input());
-      const auto right_statistics =
-          estimate_predicate_node(*right_predicate_node, input_table_statistics, cacheable, statistics_cache);
+      const auto right_statistics = estimate_predicate_node(*right_predicate_node, input_table_statistics, cacheable,
+                                                            statistics_cache, required_columns);
 
       const auto row_count = Cardinality{
           std::min(left_statistics->row_count + right_statistics->row_count, input_table_statistics->row_count)};
@@ -446,12 +588,12 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_predicate_node(
 
       const auto first_predicate_node =
           PredicateNode::make(logical_expression->left_operand(), predicate_node.left_input());
-      const auto first_predicate_statistics =
-          estimate_predicate_node(*first_predicate_node, input_table_statistics, cacheable, statistics_cache);
+      const auto first_predicate_statistics = estimate_predicate_node(*first_predicate_node, input_table_statistics,
+                                                                      cacheable, statistics_cache, required_columns);
 
       const auto second_predicate_node = PredicateNode::make(logical_expression->right_operand(), first_predicate_node);
-      auto second_predicate_statistics =
-          estimate_predicate_node(*second_predicate_node, first_predicate_statistics, cacheable, statistics_cache);
+      auto second_predicate_statistics = estimate_predicate_node(*second_predicate_node, first_predicate_statistics,
+                                                                 cacheable, statistics_cache, required_columns);
 
       return second_predicate_statistics;
     }
@@ -494,7 +636,8 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_predicate_node(
 
     const auto disjunction = inflate_logical_expressions(expressions, LogicalOperator::Or);
     const auto new_predicate_node = PredicateNode::make(disjunction, predicate_node.left_input());
-    return estimate_predicate_node(*new_predicate_node, input_table_statistics, cacheable, statistics_cache);
+    return estimate_predicate_node(*new_predicate_node, input_table_statistics, cacheable, statistics_cache,
+                                   required_columns);
   }
 
   const auto operator_scan_predicates = OperatorScanPredicate::from_expression(*predicate, predicate_node);
@@ -580,7 +723,8 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_predicate_node(
         return input_table_statistics;
       }
 
-      subquery_statistics = estimate_statistics(subquery_expression->lqp, cacheable, statistics_cache);
+      subquery_statistics =
+          estimate_statistics(subquery_expression->lqp, cacheable, statistics_cache, required_columns);
     }
 
     // Case (ii): Between predicate with column BETWEEN min(<subquery) AND max(<subquery>). Equivalent to a semi-join
@@ -658,7 +802,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_predicate_node(
         subquery_origin_node = subquery_origin_node->left_input();
       }
 
-      subquery_statistics = estimate_statistics(subquery_origin_node, cacheable, statistics_cache);
+      subquery_statistics = estimate_statistics(subquery_origin_node, cacheable, statistics_cache, required_columns);
       subquery_column_id = subquery_origin_node->get_column_id(*lower_bound_aggregate_expression->argument());
     }
 
@@ -675,6 +819,13 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_predicate_node(
   // Scale the input statistics consequently for each predicate, assuming there are no correlations between them.
   auto output_table_statistics = input_table_statistics;
   for (const auto& operator_scan_predicate : *operator_scan_predicates) {
+    if constexpr (HYRISE_DEBUG) {
+      check_required_statistics(operator_scan_predicate.column_id, predicate_node.left_input(), input_table_statistics);
+      if (is_column_id(operator_scan_predicate.value)) {
+        const auto column_id = boost::get<ColumnID>(operator_scan_predicate.value);
+        check_required_statistics(column_id, predicate_node.left_input(), input_table_statistics);
+      }
+    }
     output_table_statistics = estimate_operator_scan_predicate(output_table_statistics, operator_scan_predicate);
   }
 
@@ -697,6 +848,13 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_join_node(
       *join_node.join_predicates()[0], *join_node.left_input(), *join_node.right_input());
 
   if (primary_operator_join_predicate) {
+    if constexpr (HYRISE_DEBUG) {
+      check_required_statistics(primary_operator_join_predicate->column_ids.first, join_node.left_input(),
+                                left_input_table_statistics);
+      check_required_statistics(primary_operator_join_predicate->column_ids.second, join_node.right_input(),
+                                right_input_table_statistics);
+    }
+
     switch (join_node.join_mode) {
       // For now, handle outer joins just as inner joins.
       // TODO(anybody): Handle them more accurately, i.e., estimate how many tuples do not find matches, see #1830.
@@ -749,8 +907,6 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_join_node(
 
   // TODO(anybody): For now, estimate a selectivity of one, see #1830.
   return estimate_cross_join(*left_input_table_statistics, *right_input_table_statistics);
-
-  Fail("Invalid enum value.");
 }
 
 std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_union_node(
@@ -792,10 +948,8 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_limit_node(
         std::vector<std::shared_ptr<const BaseAttributeStatistics>>{limit_node.output_expressions().size()};
 
     for (auto column_id = ColumnID{0}; column_id < input_table_statistics->column_statistics.size(); ++column_id) {
-      resolve_data_type(input_table_statistics->column_data_type(column_id), [&](const auto data_type_t) {
-        using ColumnDataType = typename decltype(data_type_t)::type;
-        column_statistics[column_id] = std::make_shared<AttributeStatistics<ColumnDataType>>();
-      });
+      column_statistics[column_id] =
+          std::make_shared<DummyStatistics>(input_table_statistics->column_data_type(column_id));
     }
 
     return std::make_shared<TableStatistics>(std::move(column_statistics), clamped_row_count);
@@ -825,7 +979,11 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_operator_scan_pr
     using ColumnDataType = typename decltype(data_type_t)::type;
 
     const auto left_input_column_statistics =
-        std::static_pointer_cast<const AttributeStatistics<ColumnDataType>>(left_input_base_column_statistics);
+        std::dynamic_pointer_cast<const AttributeStatistics<ColumnDataType>>(left_input_base_column_statistics);
+    if (!left_input_column_statistics) {
+      selectivity = PLACEHOLDER_SELECTIVITY_ALL;
+      return;
+    }
 
     /**
      * Estimate IS (NOT) NULL
@@ -840,7 +998,8 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_operator_scan_pr
       if (null_value_ratio) {
         selectivity = is_not_null ? 1 - *null_value_ratio : *null_value_ratio;
 
-        // All that remains of the column we scanned on are exclusively NULL values or exclusively non-NULL values
+        // All that remains of the column we scanned on are exclusively NULL values or exclusively non-NULL values.
+        // TODO(anyone): Scale and forward remaining statistics objects.
         const auto column_statistics = std::make_shared<AttributeStatistics<ColumnDataType>>();
         column_statistics->null_value_ratio = std::make_shared<NullValueRatioStatistics>(is_not_null ? 0.0f : 1.0f);
         output_column_statistics[left_column_id] = column_statistics;
@@ -1016,8 +1175,8 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_operator_scan_pr
     }
   });
 
-  // Entire chunk matches; simply return the input
-  if (selectivity == 1) {
+  // Entire chunk matches: simply return the input.
+  if (selectivity == Selectivity{1}) {
     return input_table_statistics;
   }
 
@@ -1146,8 +1305,8 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_semi_join(
     auto cardinality = Cardinality{0};
     auto join_column_histogram = std::shared_ptr<AbstractHistogram<ColumnDataType>>{};
 
-    auto left_histogram = left_input_column_statistics->histogram;
-    auto right_histogram = right_input_column_statistics->histogram;
+    auto left_histogram = left_input_column_statistics ? left_input_column_statistics->histogram : nullptr;
+    auto right_histogram = right_input_column_statistics ? right_input_column_statistics->histogram : nullptr;
 
     if (left_histogram && right_histogram) {
       // Adapt the right histogram so that it only covers distinct values (i.e., replacing the bins' height with their
@@ -1263,36 +1422,6 @@ std::pair<HistogramCountType, HistogramCountType> CardinalityEstimator::estimate
   const auto match_count = HistogramCountType{left_height * left_match_ratio * right_density};
 
   return {match_count, HistogramCountType{right_distinct_count}};
-}
-
-std::shared_ptr<TableStatistics> CardinalityEstimator::prune_column_statistics(
-    const std::shared_ptr<TableStatistics>& table_statistics, const std::vector<ColumnID>& pruned_column_ids) {
-  if (pruned_column_ids.empty()) {
-    return table_statistics;
-  }
-
-  /**
-   * Prune `pruned_column_ids` from the statistics
-   */
-
-  auto output_column_statistics = std::vector<std::shared_ptr<const BaseAttributeStatistics>>(
-      table_statistics->column_statistics.size() - pruned_column_ids.size());
-
-  auto pruned_column_ids_iter = pruned_column_ids.begin();
-
-  for (auto input_column_id = ColumnID{0}, output_column_id = ColumnID{0};
-       input_column_id < table_statistics->column_statistics.size(); ++input_column_id) {
-    // Skip `stored_column_id` if it is in the sorted vector `_pruned_column_ids`
-    if (pruned_column_ids_iter != pruned_column_ids.end() && input_column_id == *pruned_column_ids_iter) {
-      ++pruned_column_ids_iter;
-      continue;
-    }
-
-    output_column_statistics[output_column_id] = table_statistics->column_statistics[input_column_id];
-    ++output_column_id;
-  }
-
-  return std::make_shared<TableStatistics>(std::move(output_column_statistics), table_statistics->row_count);
 }
 
 }  // namespace hyrise

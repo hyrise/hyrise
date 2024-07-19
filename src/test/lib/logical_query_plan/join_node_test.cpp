@@ -769,7 +769,7 @@ TEST_F(JoinNodeTest, OrderDependenciesInnerJoin) {
   //            2 | 4       4 | 1         3. Transitively, also [a] |-> [c], [a] |-> [d] are valid.
   //            3 | 6       6 | 2
   //
-  // Case (i): Equi join and there are ODs, but join colummns are not on both sides of input ODs. However, the join
+  // Case (i): Equi join and there are ODs, but join columns are not on both sides of input ODs. However, the join
   //           columns form ODs.
   {
     const auto inner_join_node = JoinNode::make(JoinMode::Inner, equals_(_t_a_b, _t_c_w), _mock_node_a, _mock_node_c);

@@ -35,17 +35,31 @@ class AbstractCardinalityEstimator {
    * of the Vertices and Predicates in @param JoinGraph. This enables using the JoinGraphStatisticsCache during
    * Cardinality estimation.
    */
-  void guarantee_join_graph(const JoinGraph& join_graph);
+  void guarantee_join_graph(const JoinGraph& join_graph) const;
 
   /**
    * For increased cardinality estimation performance:
-   * Promises to this CardinalityEstimator that it will only be used to estimate bottom-up
-   * constructed plans. That is, the Cost/Cardinality of a node, once constructed, never changes.
-   * This enables the usage of a <lqp-ptr> -> <cost> cache.
+   * Promises to this CardinalityEstimator that it will only be used to estimate bottom-up constructed plans. That is,
+   * the Cost/Cardinality of a node, once constructed, never changes. This enables the usage of a <lqp-ptr> -> <cost>
+   * cache.
+   *
+   * Also populates required columns.
    */
-  void guarantee_bottom_up_construction();
+  void guarantee_bottom_up_construction(const std::shared_ptr<const AbstractLQPNode>& lqp) const;
+
+  /**
+   * For increased cardinality estimation performance:
+   * Extract columns that are required during cardinality estimations, e.g., columns used in join or selection
+   * predicates. During estimations, only statistics for these columns are propagated.
+   *
+   */
+  void populate_required_column_expressions(const std::shared_ptr<const AbstractLQPNode>& lqp) const;
 
   mutable CardinalityEstimationCache cardinality_estimation_cache;
+
+ protected:
+  static void _add_required_columns(const std::shared_ptr<const AbstractLQPNode>& node,
+                                    ExpressionUnorderedSet& required_columns);
 };
 
 }  // namespace hyrise

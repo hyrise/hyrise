@@ -169,7 +169,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    */
   template <typename Visitor>
   void iterate_output_expressions(Visitor visitor) const {
-    const auto& output_expressions = this->output_expressions();
+    const auto output_expressions = this->output_expressions();
     const auto output_expression_count = output_expressions.size();
     for (auto column_id = ColumnID{0}; column_id < output_expression_count; ++column_id) {
       if (visitor(column_id, output_expressions[column_id]) == ExpressionIteration::Break) {

@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <memory>
+#include <ostream>
 #include <utility>
 #include <vector>
 
@@ -9,6 +10,7 @@
 
 #include "abstract_cardinality_estimator.hpp"
 #include "operators/operator_scan_predicate.hpp"
+#include "statistics/base_attribute_statistics.hpp"
 #include "statistics/statistics_objects/abstract_histogram.hpp"
 #include "statistics/statistics_objects/generic_histogram_builder.hpp"
 
@@ -30,6 +32,8 @@ class UnionNode;
 class ValidateNode;
 class WindowNode;
 
+enum class LQPNodeType;
+
 /**
  * Hyrise's default, statistics-based cardinality estimator.
  */
@@ -46,7 +50,45 @@ class CardinalityEstimator : public AbstractCardinalityEstimator {
                                                        const bool cacheable = true) const;
 
   std::shared_ptr<TableStatistics> estimate_statistics(const std::shared_ptr<const AbstractLQPNode>& lqp,
-                                                       const bool cacheable, StatisticsByLQP& statistics_cache) const;
+                                                       const bool cacheable, StatisticsByLQP& statistics_cache,
+                                                       ExpressionUnorderedSet& required_columns) const;
+
+  /**
+   * Statistics pruning
+   *
+   * By default, the CardinalityEstimator prunes statistics that are not relevant for cardinality estimation. Thus, we
+   * avoid forwarding and scaling histograms. Without caching, the required columns are collected during estimation.
+   * When caching is allowed, `AbstractCardinalityEstimator::guarantee_bottom_up_construction()` takes care that all
+   * predicates of the final LQP are present in the cache.
+   *
+   * @{
+   */
+  void prune_unused_statistics();
+  void do_not_prune_unused_statistics();
+
+  /**
+   * We use dummy objects for pruned statistics and cases where we do not estimate statistics (e.g., for aggregations).
+   * Doing so has two advantages. First, it is semantically clear and easy to test. Second, we can easily prevent
+   * creations of empty statistics objects when scaling dummy statistics.
+   */
+  class DummyStatistics : public BaseAttributeStatistics, public std::enable_shared_from_this<DummyStatistics> {
+   public:
+    explicit DummyStatistics(const DataType init_data_type);
+
+    void set_statistics_object(const std::shared_ptr<const AbstractStatisticsObject>& /*statistics_object*/) override;
+
+    std::shared_ptr<const BaseAttributeStatistics> scaled(const Selectivity /*selectivity*/) const override;
+
+    std::shared_ptr<const BaseAttributeStatistics> sliced(
+        const PredicateCondition /*predicate_condition*/, const AllTypeVariant& /*variant_value*/,
+        const std::optional<AllTypeVariant>& /*variant_value2*/ = std::nullopt) const override;
+  };
+
+  // Helper to ensure no statistics for required LQPColumnExpressions were pruned. Should be adapted if we estimate
+  // aggregations, window functions, or computed projections.
+  static void check_required_statistics(const ColumnID column_id, const std::shared_ptr<AbstractLQPNode>& input_node,
+                                        const std::shared_ptr<const TableStatistics>& input_statistics);
+  /** @} */
 
   /**
    * Per-node-type estimation functions
@@ -69,7 +111,7 @@ class CardinalityEstimator : public AbstractCardinalityEstimator {
 
   std::shared_ptr<TableStatistics> estimate_predicate_node(
       const PredicateNode& predicate_node, const std::shared_ptr<TableStatistics>& input_table_statistics,
-      const bool cacheable, StatisticsByLQP& statistics_cache) const;
+      const bool cacheable, StatisticsByLQP& statistics_cache, ExpressionUnorderedSet& required_columns) const;
 
   static std::shared_ptr<TableStatistics> estimate_join_node(
       const JoinNode& join_node, const std::shared_ptr<TableStatistics>& left_input_table_statistics,
@@ -107,7 +149,6 @@ class CardinalityEstimator : public AbstractCardinalityEstimator {
      * histogram pairs. Thus, we do the most conservative estimation and compute the upper bound of value- and distinct
      * counts for each bin pair.
      */
-
     auto left_idx = BinID{0};
     auto right_idx = BinID{0};
     auto left_bin_count = left_histogram.bin_count();
@@ -181,6 +222,7 @@ class CardinalityEstimator : public AbstractCardinalityEstimator {
      * unified_right_histogram == {[5, 10], [11, 20]}
      * The estimation is performed on overlapping bins only, e.g., only the two bins [5, 10] will produce matches.
      */
+
     auto unified_left_histogram = left_histogram.split_at_bin_bounds(right_histogram.bin_bounds());
     auto unified_right_histogram = right_histogram.split_at_bin_bounds(left_histogram.bin_bounds());
 
@@ -234,16 +276,10 @@ class CardinalityEstimator : public AbstractCardinalityEstimator {
       const float left_height, const float left_distinct_count, const float right_height,
       const float right_distinct_count);
 
-  /** @} */
-
-  /**
-   * Helper
-   * @{
-   */
-  static std::shared_ptr<TableStatistics> prune_column_statistics(
-      const std::shared_ptr<TableStatistics>& table_statistics, const std::vector<ColumnID>& pruned_column_ids);
-
-  /** @} */
+ private:
+  bool _enable_pruning{true};
 };
+
+std::ostream& operator<<(std::ostream& stream, const CardinalityEstimator::DummyStatistics& /*dummy_statistics*/);
 
 }  // namespace hyrise
