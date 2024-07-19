@@ -83,14 +83,32 @@ class NodeQueueScheduler : public AbstractScheduler {
    */
   NodeID determine_queue_id(const NodeID preferred_node_id) const;
 
+  /**
+   * @brief determines the group count which is used by _group_tasks(). Considers the current load on the system.
+   *
+   * @param tasks: task list for which the function determines a group count
+   * @return return value is either std::nullopt signaling that grouping is not advantageous (e.g., very short list of
+   * tasks) or the determined number of groups.
+   */
+  std::optional<size_t> determine_group_count(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const;
+
   void wait_for_all_tasks() override;
 
   const std::atomic_int64_t& active_worker_count() const;
 
-  // Number of groups for _group_tasks
-  static constexpr auto NUM_GROUPS = 10;
-
  protected:
+  /**
+   * @brief Adds predecessor/successor relationships between tasks so that only N tasks (determined by
+   *        determine_group_count()) can be executed in parallel (tasks with predecessors/successors are not scheduled).
+   *        Grouping thus reduces load on the task queues and allows workers to process multiple tasks without
+   *        coordinating with task queues. On the other hand, it can reduce potential parallelism if too few groups are
+   *        formed. We use a round robin assignment due to the assumption that chunk characteristics change for older
+   *        data (e.g., old and infrequently accessed data might be tiered or heavily compressed). A simpler grouping
+   *        (e.g., forming the first chain with the first N tasks) could cause chain processing to be inbalanced (chains
+   *        processing frequently accessed data might be less expensive than ones processing tiered data).
+   *
+   * @param tasks: list of tasks to group
+   */
   void _group_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const override;
 
  private:
@@ -99,6 +117,10 @@ class NodeQueueScheduler : public AbstractScheduler {
   std::vector<std::shared_ptr<TaskQueue>> _queues;
   std::vector<std::shared_ptr<Worker>> _workers;
   std::vector<NodeID> _active_nodes;
+
+  size_t _min_task_count_for_regrouping{8};
+  size_t _worker_count{8};
+  size_t _regrouping_upper_limit{32};
 
   std::atomic_bool _active{false};
   std::atomic_int64_t _active_worker_count{0};

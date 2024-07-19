@@ -1,5 +1,6 @@
 #include <chrono>
 #include <memory>
+#include <thread>
 #include <utility>
 #include <vector>
 
@@ -25,17 +26,17 @@ class SchedulerTest : public BaseTest {
   void stress_linear_dependencies(std::atomic_uint32_t& counter) {
     const auto task1 = std::make_shared<JobTask>([&]() {
       auto current_value = 0u;
-      auto successful = counter.compare_exchange_strong(current_value, 1u);
+      auto successful = counter.compare_exchange_strong(current_value, 1);
       ASSERT_TRUE(successful);
     });
     const auto task2 = std::make_shared<JobTask>([&]() {
       auto current_value = 1u;
-      auto successful = counter.compare_exchange_strong(current_value, 2u);
+      auto successful = counter.compare_exchange_strong(current_value, 2);
       ASSERT_TRUE(successful);
     });
     const auto task3 = std::make_shared<JobTask>([&]() {
       auto current_value = 2u;
-      auto successful = counter.compare_exchange_strong(current_value, 3u);
+      auto successful = counter.compare_exchange_strong(current_value, 3);
       ASSERT_TRUE(successful);
     });
 
@@ -56,7 +57,7 @@ class SchedulerTest : public BaseTest {
     });
     const auto task3 = std::make_shared<JobTask>([&]() {
       auto current_value = 3u;
-      auto successful = counter.compare_exchange_strong(current_value, 4u);
+      auto successful = counter.compare_exchange_strong(current_value, 4);
       ASSERT_TRUE(successful);
     });
 
@@ -71,7 +72,7 @@ class SchedulerTest : public BaseTest {
   void stress_diamond_dependencies(std::atomic_uint32_t& counter) {
     const auto task1 = std::make_shared<JobTask>([&]() {
       auto current_value = 0u;
-      auto successful = counter.compare_exchange_strong(current_value, 1u);
+      auto successful = counter.compare_exchange_strong(current_value, 1);
       ASSERT_TRUE(successful);
     });
     const auto task2 = std::make_shared<JobTask>([&]() {
@@ -82,7 +83,7 @@ class SchedulerTest : public BaseTest {
     });
     const auto task4 = std::make_shared<JobTask>([&]() {
       auto current_value = 6u;
-      auto successful = counter.compare_exchange_strong(current_value, 7u);
+      auto successful = counter.compare_exchange_strong(current_value, 7);
       ASSERT_TRUE(successful);
     });
 
@@ -132,7 +133,7 @@ TEST_F(SchedulerTest, BasicTest) {
 
   Hyrise::get().scheduler()->finish();
 
-  ASSERT_EQ(counter, 30u);
+  ASSERT_EQ(counter, 30);
 
   Hyrise::get().set_scheduler(std::make_shared<ImmediateExecutionScheduler>());
 }
@@ -140,20 +141,20 @@ TEST_F(SchedulerTest, BasicTest) {
 TEST_F(SchedulerTest, BasicTestWithoutScheduler) {
   std::atomic_uint32_t counter{0};
   increment_counter_in_subtasks(counter);
-  ASSERT_EQ(counter, 30u);
+  ASSERT_EQ(counter, 30);
 }
 
 TEST_F(SchedulerTest, LinearDependenciesWithScheduler) {
   Hyrise::get().topology.use_fake_numa_topology(8, 4);
   Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
 
-  std::atomic_uint32_t counter{0u};
+  std::atomic_uint32_t counter{0};
 
   stress_linear_dependencies(counter);
 
   Hyrise::get().scheduler()->finish();
 
-  ASSERT_EQ(counter, 3u);
+  ASSERT_EQ(counter, 3);
 }
 
 TEST_F(SchedulerTest, Grouping) {
@@ -161,7 +162,8 @@ TEST_F(SchedulerTest, Grouping) {
   // NodeQueueScheduler::_group_tasks. Also tests that successor tasks are called immediately after their dependencies
   // finish. Not really a multi-threading test, though.
   Hyrise::get().topology.use_fake_numa_topology(1, 1);
-  Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
+  const auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
+  Hyrise::get().set_scheduler(node_queue_scheduler);
 
   auto output = std::vector<size_t>{};
   auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
@@ -174,17 +176,17 @@ TEST_F(SchedulerTest, Grouping) {
     }));
   }
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
-  Hyrise::get().scheduler()->finish();
 
-  // We expect NUM_GROUPS chains of tasks to be created. As tasks are added to the chains by calling
-  // AbstractTask::set_predecessor_of, the first task in the input vector ends up being the last task being called. This
-  // results in [40 30 20 10 0 41 31 21 11 1 ...]
-  const auto num_groups = NodeQueueScheduler::NUM_GROUPS;
-  EXPECT_EQ(TASK_COUNT % num_groups, 0);
+  const auto num_groups = node_queue_scheduler->determine_group_count(tasks);
+  EXPECT_TRUE(num_groups);
   auto expected_output = std::vector<size_t>{};
-  for (auto group = 0; group < num_groups; ++group) {
-    for (auto task_id = 0; task_id < TASK_COUNT / num_groups; ++task_id) {
-      expected_output.emplace_back(tasks.size() - (task_id + 1) * num_groups + group);
+  for (auto group_id = size_t{0}; group_id < *num_groups; ++group_id) {
+    auto task_id = group_id;
+    while (task_id < TASK_COUNT) {
+      if (task_id % *num_groups == group_id) {
+        expected_output.emplace_back(task_id);
+      }
+      task_id += *num_groups;
     }
   }
 
@@ -195,13 +197,13 @@ TEST_F(SchedulerTest, MultipleDependenciesWithScheduler) {
   Hyrise::get().topology.use_fake_numa_topology(8, 4);
   Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
 
-  std::atomic_uint32_t counter{0u};
+  std::atomic_uint32_t counter{0};
 
   stress_multiple_dependencies(counter);
 
   Hyrise::get().scheduler()->finish();
 
-  ASSERT_EQ(counter, 4u);
+  ASSERT_EQ(counter, 4);
 }
 
 TEST_F(SchedulerTest, DiamondDependenciesWithScheduler) {
@@ -214,25 +216,25 @@ TEST_F(SchedulerTest, DiamondDependenciesWithScheduler) {
 
   Hyrise::get().scheduler()->finish();
 
-  ASSERT_EQ(counter, 7u);
+  ASSERT_EQ(counter, 7);
 }
 
 TEST_F(SchedulerTest, LinearDependenciesWithoutScheduler) {
-  std::atomic_uint32_t counter{0u};
+  std::atomic_uint32_t counter{0};
   stress_linear_dependencies(counter);
-  ASSERT_EQ(counter, 3u);
+  ASSERT_EQ(counter, 3);
 }
 
 TEST_F(SchedulerTest, MultipleDependenciesWithoutScheduler) {
-  std::atomic_uint32_t counter{0u};
+  std::atomic_uint32_t counter{0};
   stress_multiple_dependencies(counter);
-  ASSERT_EQ(counter, 4u);
+  ASSERT_EQ(counter, 4);
 }
 
 TEST_F(SchedulerTest, DiamondDependenciesWithoutScheduler) {
   std::atomic_uint32_t counter{0};
   stress_diamond_dependencies(counter);
-  ASSERT_EQ(counter, 7u);
+  ASSERT_EQ(counter, 7);
 }
 
 TEST_F(SchedulerTest, MultipleOperators) {
@@ -253,7 +255,7 @@ TEST_F(SchedulerTest, MultipleOperators) {
   gt_task->schedule();
   ts_task->schedule();
 
-  Hyrise::get().scheduler()->finish();
+  Hyrise::get().scheduler()->wait_for_all_tasks();
 
   const auto expected_result = load_table("resources/test_data/tbl/int_float_filtered2.tbl", ChunkOffset{1});
   EXPECT_TABLE_EQ_UNORDERED(ts->get_output(), expected_result);
@@ -333,10 +335,6 @@ TEST_F(SchedulerTest, SingleWorkerGuaranteeProgress) {
 }
 
 TEST_F(SchedulerTest, DetermineQueueIDForTask) {
-  if (std::thread::hardware_concurrency() < 2) {
-    GTEST_SKIP();
-  }
-
   Hyrise::get().topology.use_fake_numa_topology(2, 1);
   const auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
   Hyrise::get().set_scheduler(node_queue_scheduler);
@@ -347,6 +345,75 @@ TEST_F(SchedulerTest, DetermineQueueIDForTask) {
   EXPECT_EQ(node_queue_scheduler->determine_queue_id(CURRENT_NODE_ID), NodeID{0});
 
   // The distribution of tasks under high load is tested in the concurrency stress tests.
+}
+
+TEST_F(SchedulerTest, NumGroupDetermination) {
+  // Test early out for very small number of tasks.
+  {
+    constexpr auto WORKER_COUNT = size_t{2};
+
+    Hyrise::get().topology.use_fake_numa_topology(WORKER_COUNT, WORKER_COUNT);
+    const auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
+    Hyrise::get().set_scheduler(node_queue_scheduler);
+
+    const auto tasks = std::vector<std::shared_ptr<AbstractTask>>{std::make_shared<JobTask>([&]() {})};
+    EXPECT_FALSE(node_queue_scheduler->determine_group_count(tasks));
+  }
+
+  // Test that minimally sized topology yields valid group counts.
+  {
+    Hyrise::get().topology.use_fake_numa_topology(1, 1);
+    const auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
+    Hyrise::get().set_scheduler(node_queue_scheduler);
+
+    // Create a large number of tasks to avoid early out.
+    const auto task_count = std::thread::hardware_concurrency() * 10;
+    auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
+    tasks.reserve(task_count);
+    for (auto task_id = TaskID{0}; task_id < task_count; ++task_id) {
+      tasks.push_back(std::make_shared<JobTask>([&]() {}));
+    }
+    EXPECT_LT(1, node_queue_scheduler->determine_group_count(tasks));
+  }
+}
+
+TEST_F(SchedulerTest, NumGroupDeterminationDifferentLoads) {
+  Hyrise::get().topology.use_fake_numa_topology(4, 4);
+  const auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
+  Hyrise::get().set_scheduler(node_queue_scheduler);
+
+  // Create a large number of tasks to avoid early out.
+  const auto task_count = std::thread::hardware_concurrency() * 10;
+  auto tasks_1 = std::vector<std::shared_ptr<AbstractTask>>{};
+  tasks_1.reserve(task_count);
+  for (auto task_id = TaskID{0}; task_id < task_count; ++task_id) {
+    tasks_1.push_back(std::make_shared<JobTask>([&]() {}));
+  }
+
+  const auto num_groups_without_load = node_queue_scheduler->determine_group_count(tasks_1);
+  EXPECT_TRUE(num_groups_without_load);
+
+  // Create load on queue.
+  volatile auto block_jobs = std::atomic_bool{true};
+  auto tasks_2 = std::vector<std::shared_ptr<AbstractTask>>{};
+  for (auto task_id = TaskID{0}; task_id < task_count; ++task_id) {
+    tasks_2.push_back(std::make_shared<JobTask>([&]() {
+      while (block_jobs) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+      }
+    }));
+    tasks_2.back()->schedule();
+  }
+
+  const auto num_groups_with_load = node_queue_scheduler->determine_group_count(tasks_2);
+  EXPECT_TRUE(num_groups_with_load);
+
+  // We should receive a larger group count when the queue load is low.
+  EXPECT_GT(*num_groups_without_load, *num_groups_with_load);
+
+  // Shutdown. Finish scheduled jobs.
+  block_jobs = false;
+  node_queue_scheduler->wait_for_tasks(tasks_2);
 }
 
 template <typename Iterator>

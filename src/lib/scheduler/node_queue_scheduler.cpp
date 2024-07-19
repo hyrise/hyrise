@@ -1,10 +1,13 @@
 #include "node_queue_scheduler.hpp"
 
+#include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <cstdint>
 #include <cstdlib>
 #include <iostream>
+#include <iterator>
+#include <limits>
 #include <memory>
 #include <mutex>
 #include <optional>
@@ -21,6 +24,28 @@
 #include "utils/assert.hpp"
 #include "worker.hpp"
 
+namespace {
+/**
+ * Hyrise groups tasks to lower the pressure on the scheduler and the tasks queues. Grouping happens by dividing a large
+ * set of tasks into groups and only scheduling one task of this group. All other tasks are chained as dependencies.
+ * When a worker pulls the first task and executes it, it will then process the entire chain without any further
+ * communication with the scheduler.
+ * The number of groups to use is hard to determine and depends on the current load. In case of a single user, we can
+ * use a high group count (to allow parallelism and balance load evenly even when some tasks straggle) as the task queue
+ * is usually not congested. In case of multiple clients, we lower the number of groups to take pressure of the
+ * scheduler and the tasks queues (see discussion in #2243).
+ * 
+ * We scale number of groups linearly between (NUM_GROUPS_MIN_FACTOR * _workers_per_node) and (NUM_GROUPS_MAX_FACTOR *
+ * _workers_per_node).
+ */
+constexpr auto NUM_GROUPS_MIN_FACTOR = 0.1f;
+constexpr auto NUM_GROUPS_MAX_FACTOR = 3.0f;
+constexpr auto NUM_GROUPS_RANGE = NUM_GROUPS_MAX_FACTOR - NUM_GROUPS_MIN_FACTOR;
+
+// This factor is used to determine at which queue load we use the maximum number of groups.
+constexpr auto UPPER_LIMIT_QUEUE_SIZE_FACTOR = size_t{10};
+}  // namespace
+
 namespace hyrise {
 
 NodeQueueScheduler::NodeQueueScheduler() {
@@ -30,7 +55,7 @@ NodeQueueScheduler::NodeQueueScheduler() {
 NodeQueueScheduler::~NodeQueueScheduler() {
   if (HYRISE_DEBUG && _active) {
     // We cannot throw an exception because destructors are noexcept by default.
-    std::cerr << "NodeQueueScheduler::finish() wasn't called prior to destroying it.\n";
+    std::cerr << "NodeQueueScheduler::finish() was not called prior to destroying it.\n";
     std::exit(EXIT_FAILURE);  // NOLINT(concurrency-mt-unsafe)
   }
 }
@@ -38,10 +63,20 @@ NodeQueueScheduler::~NodeQueueScheduler() {
 void NodeQueueScheduler::begin() {
   DebugAssert(!_active, "Scheduler is already active.");
 
-  _workers.reserve(Hyrise::get().topology.num_cpus());
+  _worker_count = Hyrise::get().topology.num_cpus();
+  _workers.reserve(_worker_count);
   _node_count = Hyrise::get().topology.nodes().size();
   _queues.resize(_node_count);
   _workers_per_node.reserve(_node_count);
+
+  // For task lists with less tasks, we do not determine the number of groups to avoid grouping overheads.
+  // Assuming NUM_GROUPS_MIN_FACTOR=0.1 and 128 workers, we would not group tasks with less than 25 tasks
+  // (2 * 128 * 0.1).
+  _min_task_count_for_regrouping =
+      std::max(size_t{8}, static_cast<size_t>(2.0f * static_cast<float>(_worker_count) * NUM_GROUPS_MIN_FACTOR));
+
+  // Everything above this limit yields the max value for grouping.
+  _regrouping_upper_limit = _worker_count * UPPER_LIMIT_QUEUE_SIZE_FACTOR;
 
   for (auto node_id = NodeID{0}; node_id < _node_count; ++node_id) {
     const auto& topology_node = Hyrise::get().topology.nodes()[node_id];
@@ -214,14 +249,16 @@ void NodeQueueScheduler::schedule(std::shared_ptr<AbstractTask> task, NodeID pre
   const auto node_id_for_queue = determine_queue_id(preferred_node_id);
   DebugAssert((static_cast<size_t>(node_id_for_queue) < _queues.size()),
               "Node ID is not within range of available nodes.");
+  DebugAssert(_queues[node_id_for_queue], "Selected queue of queueless node (node not active).");
   _queues[node_id_for_queue]->push(task, priority);
 }
 
 NodeID NodeQueueScheduler::determine_queue_id(const NodeID preferred_node_id) const {
   const auto active_node_count = _active_nodes.size();
 
-  // Early out: no need to check for preferred node or other queues, if there is only a single node queue.
-  if (active_node_count == 1) {
+  // Early out: no need to check for preferred node or other queues, if there is only a single node queue or in invalid
+  // NodeID (the initial value for tasks without an explicit placement) is passed.
+  if (active_node_count == 1 || preferred_node_id == INVALID_NODE_ID) {
     return _active_nodes[0];
   }
 
@@ -257,40 +294,85 @@ NodeID NodeQueueScheduler::determine_queue_id(const NodeID preferred_node_id) co
   return min_load_node_id;
 }
 
-void NodeQueueScheduler::_group_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const {
-  // Adds predecessor/successor relationships between tasks so that only NUM_GROUPS tasks can be executed in parallel.
-  // The optimal value of NUM_GROUPS depends on the number of cores and the number of queries being executed
-  // concurrently. The current value has been found with a divining rod.
-  //
-  // Approach: Skip all tasks that already have predecessors or successors, as adding relationships to these could
-  // introduce cyclic dependencies. Again, this is far from perfect, but better than not grouping the tasks.
+std::optional<size_t> NodeQueueScheduler::determine_group_count(
+    const std::vector<std::shared_ptr<AbstractTask>>& tasks) const {
+  const auto task_count = tasks.size();
+  if (task_count < _min_task_count_for_regrouping) {
+    // For small task lists, we use a group count equal to the number of workers.
+    return std::nullopt;
+  }
 
-  auto round_robin_counter = 0;
+  // We check the first task for a node assignment. We assume that the passed tasks are not assigned to different
+  // nodes. If this assumption becomes invalid (e.g., due to work on NUMA optimizations), the current code should be
+  // revisited (see check for common NodeID in _group_tasks()).
+  const auto first_task_node_id = tasks[0]->node_id();
+
+  // Ensure short cuts taken below to test for node_id are valid.
+  DebugAssert(INVALID_NODE_ID == std::numeric_limits<NodeID::base_type>::max(), "Unexpected value for INVALID_NODE_ID");
+  DebugAssert(CURRENT_NODE_ID == INVALID_NODE_ID - 1, "Unexpected value for CURRENT_NODE_ID");
+  const auto node_id_for_queue_check =
+      (first_task_node_id >= CURRENT_NODE_ID) ? determine_queue_id(first_task_node_id) : first_task_node_id;
+  const auto queue_load = _queues[node_id_for_queue_check]->estimate_load();
+
+  // Scale between 1.0 (max group count) to 0.0 (minimal group count).
+  const auto fill_level = 1.0f - (static_cast<float>(std::min(queue_load, _regrouping_upper_limit)) /
+                                  static_cast<float>(_regrouping_upper_limit));
+  const auto group_count_factor = NUM_GROUPS_MIN_FACTOR + (NUM_GROUPS_RANGE * fill_level);
+
+  // Using max() for small machines where NUM_GROUPS_MIN_FACTOR*cores can yield group_counts smaller one.
+  const auto group_count =
+      std::max(size_t{2}, static_cast<size_t>(static_cast<float>(_worker_count) * group_count_factor));
+  if ((task_count / group_count) < 2) {
+    return std::nullopt;
+  }
+
+  return group_count;
+}
+
+void NodeQueueScheduler::_group_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const {
+  const auto task_count = tasks.size();
+
+  auto round_robin_counter = uint32_t{0};
   auto common_node_id = std::optional<NodeID>{};
 
-  auto grouped_tasks = std::vector<std::shared_ptr<AbstractTask>>(NUM_GROUPS);
-  for (const auto& task : tasks) {
+  const auto group_count = determine_group_count(tasks);
+  if (!group_count) {  // Skip grouping when not beneficial.
+    return;
+  }
+
+  // Stores offset to previously processed task of group, which will be the sucessor of the current task. Initialize
+  // with -1 to denote an invalid offset.
+  auto grouped_task_offsets = std::vector<int32_t>(*group_count, -1);
+
+  // Tasks are iterated in reverse order as we set tasks as predecessors. We skip all tasks that already have
+  // predecessors or successors, as adding relationships to these could introduce cyclic dependencies.
+  for (auto iter = tasks.rbegin(); iter != tasks.rend(); ++iter) {
+    const auto& task = *iter;
     if (!task->predecessors().empty() || !task->successors().empty() || dynamic_cast<ShutdownTask*>(&*task)) {
       // Do not group tasks that either have precessors/successors or are ShutdownTasks.
       return;
     }
 
-    if (common_node_id) {
-      // This is not really a hard assertion. As the chain will likely be executed on the same worker (see
-      // Worker::execute_next), we would ignore all but the first node_id. At the time of writing, we did not do any
-      // smart node assignment. This assertion is only here so that this behavior is understood if we ever assign NUMA
-      // node ids.
-      DebugAssert(task->node_id() == *common_node_id, "Expected all grouped tasks to have the same node_id.");
-    } else {
-      common_node_id = task->node_id();
+    if (HYRISE_DEBUG) {
+      if (common_node_id) {
+        // This is not really a hard assertion. As the chain will likely be executed on the same worker (see
+        // Worker::execute_next), we would ignore all but the first node_id. At the time of writing, we did not do any
+        // smart node assignment. This assertion is only here so that this behavior is understood if we ever assign NUMA
+        // node ids.
+        Assert(task->node_id() == *common_node_id, "Expected all grouped tasks to have the same node_id.");
+      } else {
+        common_node_id = task->node_id();
+      }
     }
 
-    const auto group_id = round_robin_counter % NUM_GROUPS;
-    const auto& first_task_in_group = grouped_tasks[group_id];
-    if (first_task_in_group) {
-      task->set_as_predecessor_of(first_task_in_group);
+    const auto group_id = round_robin_counter % *group_count;
+    const auto previous_task_offset_in_group = grouped_task_offsets[group_id];
+    if (previous_task_offset_in_group > -1) {
+      task->set_as_predecessor_of(tasks[previous_task_offset_in_group]);
     }
-    grouped_tasks[group_id] = task;
+    Assert(std::distance(tasks.rbegin(), iter) == round_robin_counter, "Hmm ... think again.");
+    grouped_task_offsets[group_id] = static_cast<int32_t>(task_count - round_robin_counter - 1);
+
     ++round_robin_counter;
   }
 }
