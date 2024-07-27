@@ -22,7 +22,6 @@ RUN apt-get update \
         dos2unix \
         g++-11 \
         gcc-11 \
-        gcovr \
         git \
         graphviz \
         libboost1.81-all-dev \
@@ -34,7 +33,7 @@ RUN apt-get update \
         libreadline-dev \
         libsqlite3-dev \
         libtbb-dev \
-        lld \
+        lld-17 \
         lsb-release \
         man \
         ninja-build \
