@@ -118,6 +118,10 @@ class SchedulerTest : public BaseTest {
       tasks.emplace_back(task);
     }
   }
+
+  static void group_tasks(std::shared_ptr<NodeQueueScheduler>& node_queue_scheduler, const std::vector<std::shared_ptr<AbstractTask>>& tasks, const size_t group_count) {
+    node_queue_scheduler->_group_tasks(tasks, group_count);
+  }
 };
 
 /**
@@ -157,40 +161,78 @@ TEST_F(SchedulerTest, LinearDependenciesWithScheduler) {
   ASSERT_EQ(counter, 3);
 }
 
-TEST_F(SchedulerTest, Grouping) {
+TEST_F(SchedulerTest, GroupingSingleWorker) {
   // Tests the grouping described in AbstractScheduler::schedule_and_wait_for_tasks and
   // NodeQueueScheduler::_group_tasks. Also tests that successor tasks are called immediately after their dependencies
   // finish. Not really a multi-threading test, though.
   Hyrise::get().topology.use_fake_numa_topology(1, 1);
-  const auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
+  auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
   Hyrise::get().set_scheduler(node_queue_scheduler);
 
-  auto output = std::vector<size_t>{};
-  auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
+  for (const auto task_count : std::vector<size_t>{17, 50, 51, 52, 53, 54, 55, 56, 97, 111, 2'000}) {
+    for (const auto group_count : std::vector<size_t>{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 15}) {
+      auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
+      auto start_offset = size_t{0};
+      auto expected_task_id = size_t{0};
 
-  constexpr auto TASK_COUNT = 50;
+      for (auto task_id = size_t{0}; task_id < task_count; ++task_id) {
+        tasks.emplace_back(std::make_shared<JobTask>([&, task_id] {
+          if (expected_task_id >= task_count) {
+            ++start_offset;
+            expected_task_id = start_offset;
+          }
 
-  for (auto task_id = 0; task_id < TASK_COUNT; ++task_id) {
-    tasks.emplace_back(std::make_shared<JobTask>([&output, task_id] {
-      output.emplace_back(task_id);
-    }));
-  }
-  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
+          // EXPECT_EQ(expected_task_id, task_id);
 
-  const auto num_groups = node_queue_scheduler->determine_group_count(tasks);
-  EXPECT_TRUE(num_groups);
-  auto expected_output = std::vector<size_t>{};
-  for (auto group_id = size_t{0}; group_id < *num_groups; ++group_id) {
-    auto task_id = group_id;
-    while (task_id < TASK_COUNT) {
-      if (task_id % *num_groups == group_id) {
-        expected_output.emplace_back(task_id);
+          if (expected_task_id != task_id)
+            // std::cerr << "       Comparing expected: " << expected_task_id << " and actual: " << task_id << "\n";
+          // else
+            std::cerr << "ERROR: Comparing expected: " << expected_task_id << " and actual: " << task_id << "\n";
+          expected_task_id += group_count;
+        }));
       }
-      task_id += *num_groups;
+
+      group_tasks(node_queue_scheduler, tasks, group_count);
+      node_queue_scheduler->schedule_tasks(tasks);
+      node_queue_scheduler->wait_for_tasks(tasks);
     }
   }
+}
 
-  EXPECT_EQ(output, expected_output);
+TEST_F(SchedulerTest, GroupingMultipleWorkers) {
+  auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
+  Hyrise::get().set_scheduler(node_queue_scheduler);
+
+  const auto worker_count = node_queue_scheduler->workers().size();
+  std::cerr << "worker count " << worker_count << "\n";
+  if (worker_count < 2) {
+    GTEST_SKIP();
+  }
+
+  const auto multiplier = 1'000;
+  const auto task_count = multiplier * worker_count;
+
+  for (const auto group_count : std::vector<size_t>{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 15}) {
+    auto output_counter = std::atomic<size_t>{0};
+    auto concurrently_processed_groups = std::atomic<int64_t>{0};
+
+    auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
+
+    for (auto task_id = size_t{0}; task_id < task_count; ++task_id) {
+      tasks.emplace_back(std::make_shared<JobTask>([&] {
+        ++output_counter;
+        const auto active_groups = ++concurrently_processed_groups;
+        ASSERT_LE(active_groups, group_count);
+        --concurrently_processed_groups;
+      }));
+    }
+
+    group_tasks(node_queue_scheduler, tasks, group_count);
+    node_queue_scheduler->schedule_tasks(tasks);
+    node_queue_scheduler->wait_for_tasks(tasks);
+
+    EXPECT_EQ(output_counter, task_count);
+  }
 }
 
 TEST_F(SchedulerTest, MultipleDependenciesWithScheduler) {

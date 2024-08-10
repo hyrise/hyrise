@@ -49,6 +49,8 @@ class UidAllocator;
  * Schedules Tasks
  */
 class NodeQueueScheduler : public AbstractScheduler {
+  friend class SchedulerTest;
+
  public:
   NodeQueueScheduler();
   ~NodeQueueScheduler() override;
@@ -110,6 +112,8 @@ class NodeQueueScheduler : public AbstractScheduler {
    * @param tasks: list of tasks to group
    */
   void _group_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const override;
+
+  void _group_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks, const size_t group_count) const;
 
  private:
   std::atomic<TaskID::base_type> _task_counter{0};

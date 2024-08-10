@@ -17,6 +17,7 @@
 
 #include "abstract_task.hpp"
 #include "hyrise.hpp"
+#include "job_task.hpp"
 #include "shutdown_task.hpp"
 #include "task_queue.hpp"
 #include "types.hpp"
@@ -246,6 +247,8 @@ void NodeQueueScheduler::schedule(std::shared_ptr<AbstractTask> task, NodeID pre
     return;
   }
 
+  // std::cerr << std::format("TASK ({}) SCHEDULED\n", (void*)&(*task));
+
   const auto node_id_for_queue = determine_queue_id(preferred_node_id);
   DebugAssert((static_cast<size_t>(node_id_for_queue) < _queues.size()),
               "Node ID is not within range of available nodes.");
@@ -330,28 +333,39 @@ std::optional<size_t> NodeQueueScheduler::determine_group_count(
 }
 
 void NodeQueueScheduler::_group_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const {
-  const auto task_count = tasks.size();
-
-  auto round_robin_counter = uint32_t{0};
-  auto common_node_id = std::optional<NodeID>{};
-
   const auto group_count = determine_group_count(tasks);
   if (!group_count) {  // Skip grouping when not beneficial.
     return;
   }
 
-  // Stores offset to previously processed task of group, which will be the sucessor of the current task. Initialize
+  std::cerr << "using " << *group_count << "\n";
+
+  _group_tasks(tasks, *group_count);
+}
+
+void NodeQueueScheduler::_group_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks, const size_t group_count) const {
+  const auto task_count = tasks.size();
+  DebugAssert(group_count < task_count, "Group count to large, no grouping will happen.");
+
+  std::cout << "Group count of " << group_count << " and tasks: " << tasks.size() << std::endl;
+
+  auto groups = std::vector<int32_t>(tasks.size(), -1);
+
+  // Stores offset to previously  task of group, which will be the sucessor of the current task. Initialize
   // with -1 to denote an invalid offset.
-  auto grouped_task_offsets = std::vector<int32_t>(*group_count, -1);
+  auto grouped_task_offsets = std::vector<int32_t>(group_count, -1);
+  
+  auto common_node_id = std::optional<NodeID>{};
 
   // Tasks are iterated in reverse order as we set tasks as predecessors. We skip all tasks that already have
   // predecessors or successors, as adding relationships to these could introduce cyclic dependencies.
-  for (auto iter = tasks.rbegin(); iter != tasks.rend(); ++iter) {
-    const auto& task = *iter;
+  for (auto task_offset = static_cast<int32_t>(task_count - 1); task_offset >= 0; --task_offset) {
+    auto& task = tasks[task_offset];
     if (!task->predecessors().empty() || !task->successors().empty() || dynamic_cast<ShutdownTask*>(&*task)) {
       // Do not group tasks that either have precessors/successors or are ShutdownTasks.
       return;
     }
+    std::cerr << "%";
 
     if (HYRISE_DEBUG) {
       if (common_node_id) {
@@ -365,15 +379,38 @@ void NodeQueueScheduler::_group_tasks(const std::vector<std::shared_ptr<Abstract
       }
     }
 
-    const auto group_id = round_robin_counter % *group_count;
+    const auto group_id = task_offset % group_count;
+    // std::cout << "(group id: " << group_id << ") ";
     const auto previous_task_offset_in_group = grouped_task_offsets[group_id];
     if (previous_task_offset_in_group > -1) {
+      Assert(previous_task_offset_in_group > -1 && previous_task_offset_in_group < static_cast<int32_t>(tasks.size()),
+                  "Unexpected offset into task groups.");
       task->set_as_predecessor_of(tasks[previous_task_offset_in_group]);
+      // std::cout << "setting #" << task_offset << " as predecessor of " << previous_task_offset_in_group << std::endl;
+      groups[task_offset] = previous_task_offset_in_group;
     }
-    Assert(std::distance(tasks.rbegin(), iter) == round_robin_counter, "Hmm ... think again.");
-    grouped_task_offsets[group_id] = static_cast<int32_t>(task_count - round_robin_counter - 1);
+    grouped_task_offsets[group_id] = static_cast<int32_t>(task_offset);
+    Assert(grouped_task_offsets[group_id] >= 0 && grouped_task_offsets[group_id] < static_cast<int32_t>(tasks.size()), "NARF");
+  }
 
-    ++round_robin_counter;
+  // std::cout << "Groups: ";
+  // for (const auto g : groups) {
+  //   std::cout << g << " | ";
+  // } 
+  // std::cout << std::endl;
+  auto map = std::unordered_map<AbstractTask*, size_t>{};
+  auto counter = size_t{0};
+  for (auto task : tasks) {
+    const auto result = map.emplace(&*task, counter);
+    Assert(result.second, "Unexpected duplicate element found.");
+    // std::cerr << std::format("{:03}\t\t{}\t{} preds", counter, (void*)&*task, task->predecessors().size());
+    if (!task->predecessors().empty()) {
+      Assert(task->predecessors().size() == 1, "More than one task?");
+      auto pred = task->predecessors()[0].lock();
+      // std::cerr << " >> pred is " << &*pred << " at position " << map[&*pred];
+    }
+    // std::cerr << "\n";
+    ++counter;
   }
 }
 
