@@ -265,33 +265,45 @@ void NodeQueueScheduler::_group_tasks(const std::vector<std::shared_ptr<Abstract
   // Approach: Skip all tasks that already have predecessors or successors, as adding relationships to these could
   // introduce cyclic dependencies. Again, this is far from perfect, but better than not grouping the tasks.
 
-  auto round_robin_counter = 0;
+  const auto task_count = tasks.size();
+  auto groups = std::vector<int32_t>(tasks.size(), -1);
+
+  // Stores offset to previously  task of group, which will be the sucessor of the current task. Initialize
+  // with -1 to denote an invalid offset.
+  auto grouped_task_offsets = std::vector<int32_t>(NUM_GROUPS, -1);
+  
   auto common_node_id = std::optional<NodeID>{};
 
-  auto grouped_tasks = std::vector<std::shared_ptr<AbstractTask>>(NUM_GROUPS);
-  for (const auto& task : tasks) {
+  // Tasks are iterated in reverse order as we set tasks as predecessors. We skip all tasks that already have
+  // predecessors or successors, as adding relationships to these could introduce cyclic dependencies.
+  for (auto task_offset = static_cast<int32_t>(task_count - 1); task_offset >= 0; --task_offset) {
+    auto& task = tasks[task_offset];
     if (!task->predecessors().empty() || !task->successors().empty() || dynamic_cast<ShutdownTask*>(&*task)) {
       // Do not group tasks that either have precessors/successors or are ShutdownTasks.
       return;
     }
 
-    if (common_node_id) {
-      // This is not really a hard assertion. As the chain will likely be executed on the same worker (see
-      // Worker::execute_next), we would ignore all but the first node_id. At the time of writing, we did not do any
-      // smart node assignment. This assertion is only here so that this behavior is understood if we ever assign NUMA
-      // node ids.
-      DebugAssert(task->node_id() == *common_node_id, "Expected all grouped tasks to have the same node_id.");
-    } else {
-      common_node_id = task->node_id();
+    if (HYRISE_DEBUG) {
+      if (common_node_id) {
+        // This is not really a hard assertion. As the chain will likely be executed on the same worker (see
+        // Worker::execute_next), we would ignore all but the first node_id. At the time of writing, we did not do any
+        // smart node assignment. This assertion is only here so that this behavior is understood if we ever assign NUMA
+        // node ids.
+        Assert(task->node_id() == *common_node_id, "Expected all grouped tasks to have the same node_id.");
+      } else {
+        common_node_id = task->node_id();
+      }
     }
 
-    const auto group_id = round_robin_counter % NUM_GROUPS;
-    const auto& first_task_in_group = grouped_tasks[group_id];
-    if (first_task_in_group) {
-      task->set_as_predecessor_of(first_task_in_group);
+    const auto group_id = task_offset % NUM_GROUPS;
+    const auto previous_task_offset_in_group = grouped_task_offsets[group_id];
+    if (previous_task_offset_in_group > -1) {
+      DebugAssert(previous_task_offset_in_group > -1 && previous_task_offset_in_group < static_cast<int32_t>(tasks.size()),
+                  "Unexpected offset into task groups.");
+      task->set_as_predecessor_of(tasks[previous_task_offset_in_group]);
+      groups[task_offset] = previous_task_offset_in_group;
     }
-    grouped_tasks[group_id] = task;
-    ++round_robin_counter;
+    grouped_task_offsets[group_id] = static_cast<int32_t>(task_offset);
   }
 }
 
