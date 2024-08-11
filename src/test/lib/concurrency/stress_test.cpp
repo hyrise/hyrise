@@ -443,6 +443,49 @@ TEST_F(StressTest, NodeQueueSchedulerMultiNumaNodeTPCHQ13) {
   }
 }
 
+TEST_F(StressTest, NodeQueueSchedulerTaskGrouping) {
+  auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
+  Hyrise::get().set_scheduler(node_queue_scheduler);
+
+  const auto worker_count = node_queue_scheduler->workers().size();
+  if (worker_count < NodeQueueScheduler::NUM_GROUPS) {
+    GTEST_SKIP();
+  }
+
+  const auto multiplier = 1'000;
+  const auto task_count = multiplier * worker_count;
+
+  for (auto run = size_t{0}; run < 10; ++run) {
+    auto previous_task_id_per_group = std::vector<size_t>(NodeQueueScheduler::NUM_GROUPS, 0);
+    auto output_counter = std::atomic<size_t>{0};
+    auto concurrently_processed_groups = std::atomic<int64_t>{0};
+
+    auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
+
+    for (auto task_id = size_t{0}; task_id < task_count; ++task_id) {
+      tasks.emplace_back(std::make_shared<JobTask>([&, task_id] {
+        ++output_counter;
+        const auto active_groups = ++concurrently_processed_groups;
+        ASSERT_LE(active_groups, NodeQueueScheduler::NUM_GROUPS);
+
+        const auto group_id = task_id % NodeQueueScheduler::NUM_GROUPS;
+        const auto prev_task_id = previous_task_id_per_group[group_id];
+        if (prev_task_id > 0) {
+          EXPECT_EQ(prev_task_id + NodeQueueScheduler::NUM_GROUPS, task_id);
+        }
+        previous_task_id_per_group[group_id] = task_id;
+
+        --concurrently_processed_groups;
+      }));
+    }
+
+    Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
+    EXPECT_EQ(output_counter, task_count);
+  }
+
+  Hyrise::get().scheduler()->finish();
+}
+
 TEST_F(StressTest, AtomicMaxConcurrentUpdate) {
   auto counter = std::atomic_uint32_t{0};
   const auto thread_count = 100;

@@ -261,15 +261,11 @@ void NodeQueueScheduler::_group_tasks(const std::vector<std::shared_ptr<Abstract
   // Adds predecessor/successor relationships between tasks so that only NUM_GROUPS tasks can be executed in parallel.
   // The optimal value of NUM_GROUPS depends on the number of cores and the number of queries being executed
   // concurrently. The current value has been found with a divining rod.
-  //
-  // Approach: Skip all tasks that already have predecessors or successors, as adding relationships to these could
-  // introduce cyclic dependencies. Again, this is far from perfect, but better than not grouping the tasks.
 
   const auto task_count = tasks.size();
-  auto groups = std::vector<int32_t>(tasks.size(), -1);
 
-  // Stores offset to previously  task of group, which will be the sucessor of the current task. Initialize
-  // with -1 to denote an invalid offset.
+  // Stores offsets to tasks most recently assigned to their group, which will be the sucessor of the current task.
+  // Initialize with -1 to denote an invalid offset.
   auto grouped_task_offsets = std::vector<int32_t>(NUM_GROUPS, -1);
 
   auto common_node_id = std::optional<NodeID>{};
@@ -298,13 +294,9 @@ void NodeQueueScheduler::_group_tasks(const std::vector<std::shared_ptr<Abstract
     const auto group_id = task_offset % NUM_GROUPS;
     const auto previous_task_offset_in_group = grouped_task_offsets[group_id];
     if (previous_task_offset_in_group > -1) {
-      DebugAssert(
-          previous_task_offset_in_group > -1 && previous_task_offset_in_group < static_cast<int32_t>(tasks.size()),
-          "Unexpected offset into task groups.");
       task->set_as_predecessor_of(tasks[previous_task_offset_in_group]);
-      groups[task_offset] = previous_task_offset_in_group;
     }
-    grouped_task_offsets[group_id] = static_cast<int32_t>(task_offset);
+    grouped_task_offsets[group_id] = task_offset;
   }
 }
 
