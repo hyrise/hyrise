@@ -271,7 +271,7 @@ void NodeQueueScheduler::_group_tasks(const std::vector<std::shared_ptr<Abstract
   // Stores offset to previously  task of group, which will be the sucessor of the current task. Initialize
   // with -1 to denote an invalid offset.
   auto grouped_task_offsets = std::vector<int32_t>(NUM_GROUPS, -1);
-  
+
   auto common_node_id = std::optional<NodeID>{};
 
   // Tasks are iterated in reverse order as we set tasks as predecessors. We skip all tasks that already have
@@ -298,8 +298,9 @@ void NodeQueueScheduler::_group_tasks(const std::vector<std::shared_ptr<Abstract
     const auto group_id = task_offset % NUM_GROUPS;
     const auto previous_task_offset_in_group = grouped_task_offsets[group_id];
     if (previous_task_offset_in_group > -1) {
-      DebugAssert(previous_task_offset_in_group > -1 && previous_task_offset_in_group < static_cast<int32_t>(tasks.size()),
-                  "Unexpected offset into task groups.");
+      DebugAssert(
+          previous_task_offset_in_group > -1 && previous_task_offset_in_group < static_cast<int32_t>(tasks.size()),
+          "Unexpected offset into task groups.");
       task->set_as_predecessor_of(tasks[previous_task_offset_in_group]);
       groups[task_offset] = previous_task_offset_in_group;
     }
