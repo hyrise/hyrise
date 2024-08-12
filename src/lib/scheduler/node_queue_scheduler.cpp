@@ -273,7 +273,7 @@ void NodeQueueScheduler::_group_tasks(const std::vector<std::shared_ptr<Abstract
   // Tasks are iterated in reverse order as we set tasks as predecessors. We skip all tasks that already have
   // predecessors or successors, as adding relationships to these could introduce cyclic dependencies.
   for (auto task_offset = static_cast<int32_t>(task_count - 1); task_offset >= 0; --task_offset) {
-    auto& task = tasks[task_offset];
+    const auto& task = tasks[task_offset];
     if (!task->predecessors().empty() || !task->successors().empty() || dynamic_cast<ShutdownTask*>(&*task)) {
       // Do not group tasks that either have precessors/successors or are ShutdownTasks.
       return;
