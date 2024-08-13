@@ -28,10 +28,12 @@ NodeQueueScheduler::NodeQueueScheduler() {
 }
 
 NodeQueueScheduler::~NodeQueueScheduler() {
-  if (HYRISE_DEBUG && _active) {
-    // We cannot throw an exception because destructors are noexcept by default.
-    std::cerr << "NodeQueueScheduler::finish() wasn't called prior to destroying it.\n";
-    std::exit(EXIT_FAILURE);  // NOLINT(concurrency-mt-unsafe)
+  if constexpr (HYRISE_DEBUG) {
+    if (_active) {
+      // We cannot throw an exception because destructors are noexcept by default.
+      std::cerr << "NodeQueueScheduler::finish() wasn't called prior to destroying it.\n";
+      std::exit(EXIT_FAILURE);  // NOLINT(concurrency-mt-unsafe)
+    }
   }
 }
 
@@ -279,7 +281,7 @@ void NodeQueueScheduler::_group_tasks(const std::vector<std::shared_ptr<Abstract
       return;
     }
 
-    if (HYRISE_DEBUG) {
+    if constexpr (HYRISE_DEBUG) {
       if (common_node_id) {
         // This is not really a hard assertion. As the chain will likely be executed on the same worker (see
         // Worker::execute_next), we would ignore all but the first node_id. At the time of writing, we did not do any

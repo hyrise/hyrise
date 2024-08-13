@@ -73,11 +73,12 @@ bool BenchmarkTableEncoder::encode(const std::string& table_name, const std::sha
   const auto& column_mapping_it = custom_mapping.find(table_name);
   const auto table_has_custom_encoding = column_mapping_it != custom_mapping.end();
 
-  ChunkEncodingSpec chunk_encoding_spec;
+  auto chunk_encoding_spec = ChunkEncodingSpec{};
 
   for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
     // Check if a column specific encoding was specified
     if (table_has_custom_encoding) {
+      std::cerr << "Hit1\n";
       const auto& column_name = table->column_name(column_id);
       const auto& encoding_by_column_name = column_mapping_it->second;
       const auto& segment_encoding = encoding_by_column_name.find(column_name);
@@ -93,6 +94,7 @@ bool BenchmarkTableEncoder::encode(const std::string& table_name, const std::sha
     const auto& encoding_by_data_type = type_mapping.find(column_data_type);
     if (encoding_by_data_type != type_mapping.end()) {
       // The column type has a specific encoding
+      std::cerr << "Hit2\n";
       chunk_encoding_spec.push_back(encoding_by_data_type->second);
       continue;
     }
@@ -125,18 +127,19 @@ bool BenchmarkTableEncoder::encode(const std::string& table_name, const std::sha
 
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto encode = [&, chunk_id]() {
+      // std::cerr << std::format("encoding chunk {} of {} of {}\n", static_cast<size_t>(chunk_id), static_cast<size_t>(chunk_count), table_name);
       const auto chunk = table->get_chunk(ChunkID{chunk_id});
       Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
       if (!is_chunk_encoding_spec_satisfied(chunk_encoding_spec, get_chunk_encoding_spec(*chunk))) {
         ChunkEncoder::encode_chunk(chunk, column_data_types, chunk_encoding_spec);
         encoding_performed = true;
       }
+      // std::cerr << std::format("/encoding chunk {} of {} of {}\n", static_cast<size_t>(chunk_id), static_cast<size_t>(chunk_count), table_name);
     };
-    jobs.emplace_back(std::make_shared<JobTask>(encode));
+    // jobs.emplace_back(std::make_shared<JobTask>(encode));
+    encode();
   }
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
-
-  generate_chunk_pruning_statistics(table);
 
   return encoding_performed;
 }

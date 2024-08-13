@@ -228,19 +228,21 @@ void AbstractTableGenerator::generate_and_store() {
 
     auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
     jobs.reserve(table_info_by_name.size());
-    for (auto& table_info_by_name_pair : table_info_by_name) {
-      const auto& table_name = table_info_by_name_pair.first;
-      auto& table_info = table_info_by_name_pair.second;
-
-      const auto encode_table = [&]() {
+    for (const auto& [table_name, _] : table_info_by_name) {
+      const auto encode_table = [&, table_name=table_name]() {
+        std::cerr << std::format("#1{}\n", table_name);
+        auto& table_info = table_info_by_name[table_name];
+        std::cerr << std::format("#2{}\n", table_name);
         auto per_table_timer = Timer{};
         table_info.re_encoded =
             BenchmarkTableEncoder::encode(table_name, table_info.table, _benchmark_config->encoding_config);
+        std::cerr << std::format("#3{}\n", table_name);
         auto output = std::stringstream{};
         output << "-  Processing '" + table_name << "' - "
                << (table_info.re_encoded ? "encoding applied" : "no encoding necessary") << " ("
                << per_table_timer.lap_formatted() << ")\n"
                << std::flush;
+        std::cerr << std::format("#4{}\n", table_name);
         std::cout << output.str() << std::flush;
       };
       jobs.emplace_back(std::make_shared<JobTask>(encode_table));

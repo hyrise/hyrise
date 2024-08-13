@@ -144,14 +144,16 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
   const auto chunk_count = stored_table->chunk_count();
 
   /**
-   * Build a sorted vector (`excluded_chunk_ids`) of physically/logically deleted and pruned ChunkIDs
+   * Build a sorted vector (`excluded_chunk_ids`) of physically/logically deleted and pruned ChunkIDs.
    */
   DebugAssert(!transaction_context_is_set() || transaction_context()->phase() == TransactionPhase::Active,
               "Transaction is not active anymore.");
-  if (HYRISE_DEBUG && !transaction_context_is_set()) {
-    for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
-      DebugAssert(stored_table->get_chunk(chunk_id) && !stored_table->get_chunk(chunk_id)->get_cleanup_commit_id(),
-                  "For TableType::Data tables with deleted chunks, the transaction context must be set.");
+  if constexpr (HYRISE_DEBUG) {
+    if (!transaction_context_is_set()) {
+      for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
+        DebugAssert(stored_table->get_chunk(chunk_id) && !stored_table->get_chunk(chunk_id)->get_cleanup_commit_id(),
+                    "For TableType::Data tables with deleted chunks, the transaction context must be set.");
+      }
     }
   }
 
@@ -178,13 +180,13 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
       continue;
     }
 
-    // Skip chunks that were just inserted by a different transaction and that do not have any content yet
+    // Skip chunks that were just inserted by a different transaction and that do not have any content yet.
     if (chunk->size() == 0) {
       excluded_chunk_ids.emplace_back(stored_chunk_id);
       continue;
     }
 
-    // Check whether the Chunk is logically deleted
+    // Check whether the Chunk is logically deleted.
     if (transaction_context_is_set() && chunk->get_cleanup_commit_id() &&
         *chunk->get_cleanup_commit_id() <= transaction_context()->snapshot_commit_id()) {
       excluded_chunk_ids.emplace_back(stored_chunk_id);
@@ -192,17 +194,18 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
     }
   }
 
-  // We cannot create a Table without columns - since Chunks rely on their first column to determine their row count
-  Assert(_pruned_column_ids.size() < static_cast<size_t>(stored_table->column_count()),
+  // We cannot create a Table without columns since Chunks rely on their first column to determine their row count.
+  const auto column_count = stored_table->column_count();
+  Assert(_pruned_column_ids.size() < static_cast<size_t>(column_count),
          "Cannot prune all columns from Table");
   DebugAssert(std::all_of(_pruned_column_ids.begin(), _pruned_column_ids.end(),
                           [&](const auto column_id) {
-                            return column_id < stored_table->column_count();
+                            return column_id < column_count;
                           }),
               "ColumnID out of range");
 
   /**
-   * Build pruned TableColumnDefinitions of the output Table
+   * Build pruned TableColumnDefinitions of the output Table.
    */
   auto pruned_column_definitions = TableColumnDefinitions{};
   if (_pruned_column_ids.empty()) {
@@ -213,7 +216,7 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
 
     auto pruned_column_ids_iter = _pruned_column_ids.begin();
     for (auto stored_column_id = ColumnID{0}, output_column_id = ColumnID{0};
-         stored_column_id < stored_table->column_count(); ++stored_column_id) {
+         stored_column_id < column_count; ++stored_column_id) {
       if (pruned_column_ids_iter != _pruned_column_ids.end() && stored_column_id == *pruned_column_ids_iter) {
         ++pruned_column_ids_iter;
         continue;
@@ -239,7 +242,7 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
       continue;
     }
 
-    // The Chunk is to be included in the output Table, now we progress to excluding Columns
+    // The Chunk is to be included in the output Table, now we progress to excluding columns.
     const auto stored_chunk = stored_table->get_chunk(stored_chunk_id);
 
     // Make a copy of the order-by information of the current chunk. This information is adapted when columns are
@@ -250,14 +253,13 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
     if (_pruned_column_ids.empty()) {
       *output_chunks_iter = stored_chunk;
     } else {
-      const auto column_count = stored_table->column_count();
       auto output_segments = Segments{column_count - _pruned_column_ids.size()};
       auto output_segments_iter = output_segments.begin();
       auto output_indexes = Indexes{};
 
       auto pruned_column_ids_iter = _pruned_column_ids.begin();
       for (auto stored_column_id = ColumnID{0}; stored_column_id < column_count; ++stored_column_id) {
-        // Skip `stored_column_id` if it is in the sorted vector `_pruned_column_ids`
+        // Skip `stored_column_id` if it is in the sorted vector `_pruned_column_ids`.
         if (pruned_column_ids_iter != _pruned_column_ids.end() && stored_column_id == *pruned_column_ids_iter) {
           ++pruned_column_ids_iter;
           continue;
