@@ -210,6 +210,7 @@ std::vector<JoinGraphVertexSet> EnumerateCcp::_non_empty_subsets(const JoinGraph
     return {};
   }
 
+  // NOLINTBEGIN(clang-analyzer-core.BitwiseShift)
   auto subsets = std::vector<JoinGraphVertexSet>{};
 
   Assert(vertex_set.size() < 64, "Subsets cannot be larger than 64.");
@@ -229,6 +230,7 @@ std::vector<JoinGraphVertexSet> EnumerateCcp::_non_empty_subsets(const JoinGraph
     subset_ulong = set_ulong & (subset_ulong - set_ulong);
   }
   subsets.emplace_back(vertex_set);
+  // NOLINTEND(clang-analyzer-core.BitwiseShift)
 
   return subsets;
 }
