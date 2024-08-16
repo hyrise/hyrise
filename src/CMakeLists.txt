@@ -89,7 +89,7 @@ if (ENABLE_CLANG_TIDY)
     endif()
 
     # Get the full clang-tidy path (helps with MacOS builds).
-    set(CMAKE_CXX_CLANG_TIDY "${CMAKE_C_COMPILER}-tidy")
+    set(CMAKE_CXX_CLANG_TIDY "${CMAKE_C_COMPILER}-tidy -line-filter=[{\"name\":\"coco.cpp\",\"lines\":[[9999999,9999999]]},{\"name\":\".cpp\"}]")
     message(STATUS "clang-tidy enabled")
 endif()
 
