@@ -136,5 +136,3 @@ CheckOptions:
 
   # We allow checking `if (var)` without a bool conversion in case var is of type pointer or std::optional.
   - { key: readability-implicit-bool-conversion.AllowPointerConditions, value: true }
-
-HeaderFilterRegex: 'src/.*\.(cpp|hpp)$'
