@@ -40,7 +40,8 @@ Checks: '
          -misc-no-recursion,
          -bugprone-easily-swappable-parameters,
          -bugprone-suspicious-include,
-         -bugprone-unchecked-optional-access
+         -bugprone-unchecked-optional-access,
+-llvm-header-guard
          '
 
 WarningsAsErrors: '*'
