@@ -71,7 +71,7 @@ void AbstractTableGenerator::generate_and_store() {
    * Mark all chunks of the table as immutable.
    */
   for (auto& [table_name, table_info] : table_info_by_name) {
-    auto& table = table_info_by_name[table_name].table;
+    auto& table = table_info.table;
     const auto chunk_count = table->chunk_count();
     for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
       const auto chunk = table->get_chunk(chunk_id);
@@ -91,7 +91,7 @@ void AbstractTableGenerator::generate_and_store() {
       // necessary to avoid loading sorted binary data (created with a clustering configuration) in a run that is
       // supposed to be unclustered.
       for (auto& [table_name, table_info] : table_info_by_name) {
-        auto& table = table_info_by_name[table_name].table;
+        auto& table = table_info.table;
         const auto chunk_count = table->chunk_count();
         for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
           const auto& chunk = table->get_chunk(chunk_id);
@@ -228,15 +228,13 @@ void AbstractTableGenerator::generate_and_store() {
 
     auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
     jobs.reserve(table_info_by_name.size());
-    for (const auto& [table_name, _] : table_info_by_name) {
-      const auto encode_table = [&, table_name=table_name]() {
-        std::cerr << std::format("#1{}\n", table_name);
-        auto& table_info = table_info_by_name[table_name];
-        std::cerr << std::format("#2{}\n", table_name);
+    for (auto table_info_by_name_pair : table_info_by_name) {
+      const auto encode_table = [&, table_info_by_name_pair=table_info_by_name_pair]() mutable {
+        const auto& table_name = table_info_by_name_pair.first;
+        auto& table_info = table_info_by_name_pair.second;
         auto per_table_timer = Timer{};
         table_info.re_encoded =
             BenchmarkTableEncoder::encode(table_name, table_info.table, _benchmark_config->encoding_config);
-        std::cerr << std::format("#3{}\n", table_name);
         auto output = std::stringstream{};
         output << "-  Processing '" + table_name << "' - "
                << (table_info.re_encoded ? "encoding applied" : "no encoding necessary") << " ("
@@ -302,11 +300,11 @@ void AbstractTableGenerator::generate_and_store() {
     auto& storage_manager = Hyrise::get().storage_manager;
     auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
     jobs.reserve(table_info_by_name.size());
-    for (auto& table_info_by_name_pair : table_info_by_name) {
-      const auto& table_name = table_info_by_name_pair.first;
-      auto& table_info = table_info_by_name_pair.second;
+    for (auto table_info_by_name_pair : table_info_by_name) {
+      const auto add_table = [&, table_info_by_name_pair=table_info_by_name_pair]() {
+        const auto& table_name = table_info_by_name_pair.first;
+        auto& table_info = table_info_by_name_pair.second;
 
-      const auto add_table = [&]() {
         auto per_table_timer = Timer{};
         if (storage_manager.has_table(table_name)) {
           storage_manager.drop_table(table_name);
