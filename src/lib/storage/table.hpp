@@ -145,9 +145,9 @@ class Table : private Noncopyable {
   // on a non-validated table, you may end up with a row you should not be able to see or an entirely different row.
   template <typename T>
   std::optional<T> get_value(const ColumnID column_id, const size_t row_number) const {
-    PerformanceWarning("get_value() used");
+    PerformanceWarning("get_value() used.");
 
-    Assert(column_id < column_count(), "column_id invalid");
+    Assert(column_id < column_count(), "column_id is invalid.");
 
     auto row_counter = size_t{0};
     const auto chunk_count = _chunks.size();
@@ -157,7 +157,7 @@ class Table : private Noncopyable {
         continue;
       }
 
-      auto current_size = chunk->size();
+      const auto current_size = chunk->size();
       row_counter += current_size;
       if (row_counter > row_number) {
         const auto variant = (*chunk->get_segment(

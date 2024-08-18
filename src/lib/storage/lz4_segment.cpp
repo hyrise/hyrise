@@ -2,6 +2,7 @@
 
 #include <climits>
 #include <cstddef>
+#include <cstdint>
 #include <iterator>
 #include <memory>
 #include <optional>
@@ -194,7 +195,7 @@ void LZ4Segment<T>::_decompress_block(const size_t block_index, std::vector<T>& 
   const auto& compressed_block = _lz4_blocks[block_index];
   const auto compressed_block_size = compressed_block.size();
 
-  auto decompressed_result = int{0};
+  auto decompressed_result = int32_t{0};
   if (_dictionary.empty()) {
     /**
      * If the dictionary is empty, we either have only a single block or had not enough data for a dictionary.
@@ -252,7 +253,7 @@ void LZ4Segment<T>::_decompress_block_to_bytes(const size_t block_index, std::ve
   const auto& compressed_block = _lz4_blocks.at(block_index);
   const auto compressed_block_size = compressed_block.size();
 
-  auto decompressed_result = int{0};
+  auto decompressed_result = int32_t{0};
   if (_dictionary.empty()) {
     /**
      * If the dictionary is empty, we either have only a single block or had not enough data for a dictionary.

@@ -50,7 +50,7 @@ TEST_F(AllParameterVariantTest, GetCurrentType) {
 TEST_F(AllParameterVariantTest, GetCurrentValue) {
   {
     AllParameterVariant parameter(ColumnID{0});
-    EXPECT_EQ(static_cast<std::uint16_t>(boost::get<ColumnID>(parameter)), static_cast<std::uint16_t>(0u));
+    EXPECT_EQ(static_cast<uint16_t>(boost::get<ColumnID>(parameter)), static_cast<uint16_t>(0u));
   }
   {
     AllParameterVariant parameter("string");

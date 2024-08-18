@@ -105,14 +105,14 @@ void dbgen_cleanup() {
   }
 
   if (asc_date) {
+    // NOLINTBEGIN(cppcoreguidelines-no-malloc,hicpp-no-malloc,cppcoreguidelines-owning-memory)
     for (auto idx = size_t{0}; idx < TOTDATE; ++idx) {
-      // NOLINTBEGIN(cppcoreguidelines-no-malloc,hicpp-no-malloc)
-      // NOLINTBEGIN(cppcoreguidelines-owning-memory,cppcoreguidelines-pro-type-const-cast)
+      // NOLINTBEGIN(cppcoreguidelines-pro-type-const-cast)
       std::free(const_cast<char*>(asc_date[idx]));
-      // NOLINTEND(cppcoreguidelines-owning-memory,cppcoreguidelines-pro-type-const-cast)
-      // NOLINTEND(cppcoreguidelines-no-malloc,hicpp-no-malloc)
+      // NOLINTEND(cppcoreguidelines-pro-type-const-cast)
     }
-    std::free(asc_date);  // NOLINT(cppcoreguidelines-no-malloc,hicpp-no-malloc,cppcoreguidelines-owning-memory)
+    std::free(asc_date);  // NOLINT(bugprone-multi-level-implicit-pointer-conversion)
+    // NOLINTEND(cppcoreguidelines-no-malloc,hicpp-no-malloc,cppcoreguidelines-owning-memory)
   }
   asc_date = nullptr;
 }

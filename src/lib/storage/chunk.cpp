@@ -94,7 +94,7 @@ ChunkOffset Chunk::size() const {
     return ChunkOffset{0};
   }
   const auto first_segment = get_segment(ColumnID{0});
-  return static_cast<ChunkOffset>(first_segment->size());
+  return first_segment->size();
 }
 
 bool Chunk::has_mvcc_data() const {
