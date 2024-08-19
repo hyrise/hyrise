@@ -44,15 +44,14 @@ GetTable::GetTable(const std::string& name, const std::vector<ChunkID>& pruned_c
       _pruned_chunk_ids{pruned_chunk_ids},
       _pruned_column_ids{pruned_column_ids} {
   // Check pruned_chunk_ids
-  DebugAssert(std::is_sorted(_pruned_chunk_ids.begin(), _pruned_chunk_ids.end()), "Expected sorted vector of ChunkIDs");
-  DebugAssert(std::adjacent_find(_pruned_chunk_ids.begin(), _pruned_chunk_ids.end()) == _pruned_chunk_ids.end(),
-              "Expected vector of unique ChunkIDs");
+  DebugAssert(std::ranges::is_sorted(_pruned_chunk_ids), "Expected sorted vector of ChunkIDs.");
+  DebugAssert(std::ranges::adjacent_find(_pruned_chunk_ids) == _pruned_chunk_ids.end(),
+              "Expected vector of unique ChunkIDs.");
 
   // Check pruned_column_ids
-  DebugAssert(std::is_sorted(_pruned_column_ids.begin(), _pruned_column_ids.end()),
-              "Expected sorted vector of ColumnIDs");
-  DebugAssert(std::adjacent_find(_pruned_column_ids.begin(), _pruned_column_ids.end()) == _pruned_column_ids.end(),
-              "Expected vector of unique ColumnIDs");
+  DebugAssert(std::ranges::is_sorted(_pruned_column_ids), "Expected sorted vector of ColumnIDs.");
+  DebugAssert(std::ranges::adjacent_find(_pruned_column_ids) == _pruned_column_ids.end(),
+              "Expected vector of unique ColumnIDs.");
 }
 
 const std::string& GetTable::name() const {
@@ -101,10 +100,10 @@ const std::vector<ColumnID>& GetTable::pruned_column_ids() const {
 
 void GetTable::set_prunable_subquery_predicates(
     const std::vector<std::weak_ptr<const AbstractOperator>>& subquery_scans) const {
-  DebugAssert(std::all_of(subquery_scans.cbegin(), subquery_scans.cend(),
-                          [](const auto& op) {
-                            return op.lock() && op.lock()->type() == OperatorType::TableScan;
-                          }),
+  DebugAssert(std::ranges::all_of(subquery_scans,
+                                  [](const auto& op) {
+                                    return op.lock() && op.lock()->type() == OperatorType::TableScan;
+                                  }),
               "No TableScan set as prunable predicate.");
 
   _prunable_subquery_scans = subquery_scans;
@@ -150,7 +149,7 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
               "Transaction is not active anymore.");
   if constexpr (HYRISE_DEBUG) {
     if (!transaction_context_is_set()) {
-      for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
+      for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
         DebugAssert(stored_table->get_chunk(chunk_id) && !stored_table->get_chunk(chunk_id)->get_cleanup_commit_id(),
                     "For TableType::Data tables with deleted chunks, the transaction context must be set.");
       }
@@ -159,7 +158,7 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
 
   // Currently, value_clustered_by is only used for temporary tables. If tables in the StorageManager start using that
   // flag, too, it needs to be forwarded here; otherwise it would be completely invisible in the PQP.
-  DebugAssert(stored_table->value_clustered_by().empty(), "GetTable does not forward value_clustered_by");
+  DebugAssert(stored_table->value_clustered_by().empty(), "GetTable does not forward value_clustered_by.");
   auto overall_pruned_chunk_ids = _prune_chunks_dynamically();
   overall_pruned_chunk_ids.insert(_pruned_chunk_ids.cbegin(), _pruned_chunk_ids.cend());
   auto pruned_chunk_ids_iter = overall_pruned_chunk_ids.begin();
@@ -196,12 +195,12 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
 
   // We cannot create a Table without columns since Chunks rely on their first column to determine their row count.
   const auto column_count = stored_table->column_count();
-  Assert(_pruned_column_ids.size() < static_cast<size_t>(column_count), "Cannot prune all columns from Table");
-  DebugAssert(std::all_of(_pruned_column_ids.begin(), _pruned_column_ids.end(),
-                          [&](const auto column_id) {
-                            return column_id < column_count;
-                          }),
-              "ColumnID out of range");
+  Assert(_pruned_column_ids.size() < static_cast<size_t>(column_count), "Cannot prune all columns from Table.");
+  DebugAssert(std::ranges::all_of(_pruned_column_ids,
+                                  [&](const auto column_id) {
+                                    return column_id < column_count;
+                                  }),
+              "ColumnID out of range.");
 
   /**
    * Build pruned TableColumnDefinitions of the output Table.
@@ -310,8 +309,7 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
   const auto all_indexed_segments_pruned = [&](const auto& table_index) {
     // Check if indexed ColumnID has been pruned.
     const auto indexed_column_id = table_index->get_indexed_column_id();
-    if (std::find(_pruned_column_ids.cbegin(), _pruned_column_ids.cend(), indexed_column_id) !=
-        _pruned_column_ids.cend()) {
+    if (std::ranges::find(_pruned_column_ids, indexed_column_id) != _pruned_column_ids.cend()) {
       return true;
     }
 
@@ -323,10 +321,9 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
     }
 
     // Check if the indexed chunks have been pruned.
-    DebugAssert(std::is_sorted(_pruned_chunk_ids.begin(), _pruned_chunk_ids.end()),
-                "Expected _pruned_chunk_ids vector to be sorted.");
-    return std::all_of(indexed_chunk_ids.cbegin(), indexed_chunk_ids.cend(), [&](const auto chunk_id) {
-      return std::binary_search(_pruned_chunk_ids.cbegin(), _pruned_chunk_ids.cend(), chunk_id);
+    DebugAssert(std::ranges::is_sorted(_pruned_chunk_ids), "Expected _pruned_chunk_ids vector to be sorted.");
+    return std::ranges::all_of(indexed_chunk_ids, [&](const auto chunk_id) {
+      return std::ranges::binary_search(_pruned_chunk_ids, chunk_id);
     });
   };
 

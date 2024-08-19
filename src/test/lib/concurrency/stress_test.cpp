@@ -456,17 +456,17 @@ TEST_F(StressTest, NodeQueueSchedulerTaskGrouping) {
   const auto multiplier = 1'000;
   const auto task_count = multiplier * worker_count;
 
-  for (auto run = size_t{0}; run < 10; ++run) {
+  for (auto run = uint8_t{0}; run < 10; ++run) {
     auto previous_task_id_per_group = std::vector<size_t>(NodeQueueScheduler::NUM_GROUPS, 0);
     auto output_counter = std::atomic<size_t>{0};
-    auto concurrently_processed_groups = std::atomic<int64_t>{0};
+    auto concurrently_processed_tasks = std::atomic<int64_t>{0};
 
     auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
 
     for (auto task_id = size_t{0}; task_id < task_count; ++task_id) {
       tasks.emplace_back(std::make_shared<JobTask>([&, task_id] {
         ++output_counter;
-        const auto active_groups = ++concurrently_processed_groups;
+        const auto active_groups = ++concurrently_processed_tasks;
         ASSERT_LE(active_groups, NodeQueueScheduler::NUM_GROUPS);
 
         const auto group_id = task_id % NodeQueueScheduler::NUM_GROUPS;
@@ -476,7 +476,7 @@ TEST_F(StressTest, NodeQueueSchedulerTaskGrouping) {
         }
         previous_task_id_per_group[group_id] = task_id;
 
-        --concurrently_processed_groups;
+        --concurrently_processed_tasks;
       }));
     }
 

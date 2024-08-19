@@ -158,8 +158,8 @@ TEST_F(SchedulerTest, LinearDependenciesWithScheduler) {
 
 TEST_F(SchedulerTest, Grouping) {
   // Tests the grouping described in AbstractScheduler::schedule_and_wait_for_tasks and
-  // NodeQueueScheduler::_group_tasks. We check that tasks of each group are executed in order. Note, execution of
-  // groups might happen interleaved as workers use randomness (see worker.cpp). Not really a multi-threading test.
+  // NodeQueueScheduler::_group_tasks. We check that tasks of each group are executed in order. Note that the execution
+  // of groups might happen interleaved as workers use randomness (see worker.cpp).
   Hyrise::get().topology.use_fake_numa_topology(1, 1);
   Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
 
