@@ -41,7 +41,8 @@ Checks: '
          -bugprone-easily-swappable-parameters,
          -bugprone-suspicious-include,
          -bugprone-unchecked-optional-access,
--llvm-header-guard
+         -llvm-header-guard,
+         -boost-use-ranges
          '
 
 WarningsAsErrors: '*'
@@ -89,6 +90,8 @@ WarningsAsErrors: '*'
 #                                                                which is otherwise the slowest step of the CI pipeline by a factor of two. Furthermore, the linter checks for 
 #                                                                these includes as well.
 #   - bugprone-unchecked-optional-access                        Too many false positives (with clang-tidy 14/15). TODO(anyone): Re-evaluate for future clang versions.
+#   - llvm-header-guard # we are happy with pragma once
+#   - boost-use-ranges # std::ranges are fine
 
 
 CheckOptions:

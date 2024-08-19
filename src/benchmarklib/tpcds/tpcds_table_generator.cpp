@@ -83,7 +83,7 @@ void init_tpcds_tools(uint32_t scale_factor, int rng_seed) {
     const auto n_seed = get_int(rng_seed_string.data());
     const auto skip = INT_MAX / MAX_COLUMN;
     for (auto index = 0; index < MAX_COLUMN; ++index) {
-      const auto seed = n_seed + skip * index;
+      const auto seed = n_seed + (skip * index);
       Streams[index].nInitialSeed = seed;
       Streams[index].nSeed = seed;
       Streams[index].nUsed = 0;

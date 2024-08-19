@@ -163,7 +163,7 @@ size_t ValueSegment<T>::memory_usage(const MemoryUsageCalculationMode mode) cons
     return common_elements_size + string_vector_memory_usage(_values, mode);
   }
 
-  return common_elements_size + _values.capacity() * sizeof(T);
+  return common_elements_size + (_values.capacity() * sizeof(T));
 }
 
 EXPLICITLY_INSTANTIATE_DATA_TYPES(ValueSegment);

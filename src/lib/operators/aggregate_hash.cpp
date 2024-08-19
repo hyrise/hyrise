@@ -83,7 +83,7 @@ void split_results_chunk_wise(const bool write_nulls, const AggregateResults<Col
   jobs.reserve(output_chunk_count);
   for (auto output_chunk_id = ChunkID{0}; output_chunk_id < output_chunk_count; ++output_chunk_id) {
     const auto write_split_data = [&, output_chunk_id, consumer_function]() {
-      auto begin = results_begin + output_chunk_id * Chunk::DEFAULT_SIZE;
+      auto begin = results_begin + (output_chunk_id * Chunk::DEFAULT_SIZE);
       auto end = results_begin + std::min(result_count, (output_chunk_id + 1) * Chunk::DEFAULT_SIZE);
 
       const auto element_count = std::distance(begin, end);
@@ -366,7 +366,7 @@ AggregateHash::AggregateHash(const std::shared_ptr<AbstractOperator>& input_oper
                                 std::make_unique<OperatorPerformanceData<OperatorSteps>>()) {
   // NOLINTNEXTLINE - clang-tidy wants _has_aggregate_functions in the member initializer list.
   _has_aggregate_functions =
-      !_aggregates.empty() && !std::all_of(_aggregates.begin(), _aggregates.end(), [](const auto aggregate_expression) {
+      !_aggregates.empty() && !std::ranges::all_of(_aggregates, [](const auto& aggregate_expression) {
         return aggregate_expression->window_function == WindowFunction::Any;
       });
 }
@@ -1104,7 +1104,7 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
   auto entireposlist_indexes = std::vector<ColumnID>{};
   entireposlist_indexes.reserve(_aggregates.size());
 
-  std::iota(reference_segment_indexes.begin(), reference_segment_indexes.end(), ColumnID{0});
+  std::ranges::iota(reference_segment_indexes, ColumnID{0});
   auto output_column_id = ColumnID{static_cast<ColumnID::base_type>(_groupby_column_ids.size())};
   for (const auto& aggregate : _aggregates) {
     if (aggregate->window_function == WindowFunction::Any) {
@@ -1280,9 +1280,9 @@ bool write_aggregate_values(const AggregateResults<ColumnDataType, aggregate_fun
 // AVG writes the calculated average from current aggregate and the aggregate counter.
 template <typename ColumnDataType, typename AggregateType, WindowFunction aggregate_func>
   requires(aggregate_func == WindowFunction::Avg && std::is_arithmetic_v<AggregateType>)
-bool write_aggregate_values(const AggregateResults<ColumnDataType, aggregate_func>& results,
-                            std::vector<pmr_vector<AggregateType>>& value_vectors,
-                            std::vector<pmr_vector<bool>>& null_vectors) {
+static bool write_aggregate_values(const AggregateResults<ColumnDataType, aggregate_func>& results,
+                                   std::vector<pmr_vector<AggregateType>>& value_vectors,
+                                   std::vector<pmr_vector<bool>>& null_vectors) {
   auto null_written = std::atomic<bool>{};
   split_results_chunk_wise(
       true, results, value_vectors, null_vectors, [&](auto begin, const auto end, const ChunkID chunk_id) {
@@ -1315,8 +1315,8 @@ bool write_aggregate_values(const AggregateResults<ColumnDataType, aggregate_fun
 template <typename ColumnDataType, typename AggregateType, WindowFunction aggregate_func>
   requires(aggregate_func == WindowFunction::Avg && !std::is_arithmetic_v<AggregateType>)
 bool write_aggregate_values(const AggregateResults<ColumnDataType, aggregate_func>& /*results*/,
-                       std::vector<pmr_vector<AggregateType>>& /* values */,
-                       std::vector<pmr_vector<bool>>& /* null_vectors */) {
+                            std::vector<pmr_vector<AggregateType>>& /* values */,
+                            std::vector<pmr_vector<bool>>& /* null_vectors */) {
   Fail("Invalid aggregate.");
 }
 
@@ -1324,8 +1324,8 @@ bool write_aggregate_values(const AggregateResults<ColumnDataType, aggregate_fun
 template <typename ColumnDataType, typename AggregateType, WindowFunction aggregate_func>
   requires(aggregate_func == WindowFunction::StandardDeviationSample && std::is_arithmetic_v<AggregateType>)
 bool write_aggregate_values(const AggregateResults<ColumnDataType, aggregate_func>& results,
-                       std::vector<pmr_vector<AggregateType>>& value_vectors,
-                       std::vector<pmr_vector<bool>>& null_vectors) {
+                            std::vector<pmr_vector<AggregateType>>& value_vectors,
+                            std::vector<pmr_vector<bool>>& null_vectors) {
   auto null_written = std::atomic<bool>{};
   split_results_chunk_wise(
       true, results, value_vectors, null_vectors, [&](auto begin, const auto end, const ChunkID chunk_id) {
@@ -1359,8 +1359,8 @@ bool write_aggregate_values(const AggregateResults<ColumnDataType, aggregate_fun
 template <typename ColumnDataType, typename AggregateType, WindowFunction aggregate_func>
   requires(aggregate_func == WindowFunction::StandardDeviationSample && !std::is_arithmetic_v<AggregateType>)
 bool write_aggregate_values(const AggregateResults<ColumnDataType, aggregate_func>& /*results*/,
-                       std::vector<pmr_vector<AggregateType>>& /* values */,
-                       std::vector<pmr_vector<bool>>& /* null_vectors */) {
+                            std::vector<pmr_vector<AggregateType>>& /* values */,
+                            std::vector<pmr_vector<bool>>& /* null_vectors */) {
   Fail("Invalid aggregate.");
 }
 

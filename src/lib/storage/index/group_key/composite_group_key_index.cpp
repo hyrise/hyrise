@@ -27,7 +27,7 @@ namespace hyrise {
 
 size_t CompositeGroupKeyIndex::estimate_memory_consumption(ChunkOffset row_count, ChunkOffset distinct_count,
                                                            uint32_t value_bytes) {
-  return (static_cast<size_t>(row_count) + distinct_count) * sizeof(ChunkOffset) +
+  return ((static_cast<size_t>(row_count) + distinct_count) * sizeof(ChunkOffset)) +
          static_cast<size_t>(distinct_count * value_bytes);
 }
 
@@ -38,10 +38,9 @@ CompositeGroupKeyIndex::CompositeGroupKeyIndex(
 
   if constexpr (HYRISE_DEBUG) {
     auto first_size = segments_to_index.front()->size();
-    auto all_segments_have_same_size =
-        std::all_of(segments_to_index.cbegin(), segments_to_index.cend(), [first_size](const auto& segment) {
-          return segment->size() == first_size;
-        });
+    auto all_segments_have_same_size = std::ranges::all_of(segments_to_index, [first_size](const auto& segment) {
+      return segment->size() == first_size;
+    });
 
     Assert(all_segments_have_same_size,
            "CompositeGroupKey requires same length of all segments that should be indexed.");
@@ -76,12 +75,11 @@ CompositeGroupKeyIndex::CompositeGroupKeyIndex(
     auto decompressors =
         std::vector<std::pair<size_t, std::unique_ptr<BaseVectorDecompressor>>>(_indexed_segments.size());
 
-    std::transform(
-        _indexed_segments.cbegin(), _indexed_segments.cend(), decompressors.begin(), [](const auto& segment) {
-          const auto byte_width = byte_width_for_fixed_width_integer_type(*segment->compressed_vector_type());
-          auto decompressor = segment->attribute_vector()->create_base_decompressor();
-          return std::make_pair(byte_width, std::move(decompressor));
-        });
+    std::ranges::transform(_indexed_segments, decompressors.begin(), [](const auto& segment) {
+      const auto byte_width = byte_width_for_fixed_width_integer_type(*segment->compressed_vector_type());
+      auto decompressor = segment->attribute_vector()->create_base_decompressor();
+      return std::make_pair(byte_width, std::move(decompressor));
+    });
 
     return decompressors;
   }();
@@ -96,7 +94,7 @@ CompositeGroupKeyIndex::CompositeGroupKeyIndex(
   }
 
   // sort keys and their positions
-  std::sort(_position_list.begin(), _position_list.end(), [&keys](auto left, auto right) {
+  std::ranges::sort(_position_list, [&keys](auto left, auto right) {
     return keys[left] < keys[right];
   });
 
@@ -116,7 +114,7 @@ CompositeGroupKeyIndex::CompositeGroupKeyIndex(
   _key_offsets.shrink_to_fit();
 
   // remove duplicated keys
-  auto unique_keys_end = std::unique(_keys.begin(), _keys.end());
+  auto unique_keys_end = std::ranges::unique(_keys);
   _keys.erase(unique_keys_end, _keys.end());
   _keys.shrink_to_fit();
 }
@@ -165,7 +163,7 @@ VariableLengthKey CompositeGroupKeyIndex::_create_composite_key(const std::vecto
   auto empty_bits = std::accumulate(
       _indexed_segments.cbegin() + static_cast<int64_t>(values.size()), _indexed_segments.cend(), uint8_t{0},
       [](const auto& value, const auto& segment) {
-        return value + byte_width_for_fixed_width_integer_type(*segment->compressed_vector_type()) * CHAR_BIT;
+        return value + (byte_width_for_fixed_width_integer_type(*segment->compressed_vector_type()) * CHAR_BIT);
       });
   result <<= empty_bits;
 
@@ -176,7 +174,7 @@ AbstractChunkIndex::Iterator CompositeGroupKeyIndex::_get_position_iterator_for_
     const VariableLengthKey& key) const {
   // get an iterator pointing to the search-key in the keystore
   // (use always lower_bound() since the search method is already handled within creation of composite key)
-  auto key_it = std::lower_bound(_keys.cbegin(), _keys.cend(), key);
+  auto key_it = std::ranges::lower_bound(_keys, key);
   if (key_it == _keys.cend()) {
     return _position_list.cend();
   }

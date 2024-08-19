@@ -101,7 +101,7 @@ FunctionalDependencies deflate_fds(const FunctionalDependencies& fds) {
 
   for (const auto& fd_to_add : fds) {
     // Check if we have seen an FD with the same determinants.
-    auto existing_fd = std::find_if(existing_fds.begin(), existing_fds.end(), [&](const auto& fd) {
+    auto existing_fd = std::ranges::find_if(existing_fds, [&](const auto& fd) {
       // Quick check for cardinality.
       const auto& determinants = fd.first;
       if (determinants.size() != fd_to_add.determinants.size()) {

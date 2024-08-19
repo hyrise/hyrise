@@ -48,7 +48,7 @@ void PostgresProtocolHandler<SocketType>::read_startup_packet_body(const uint32_
 
 template <typename SocketType>
 void PostgresProtocolHandler<SocketType>::send_authentication_response() {
-  _write_buffer.template put_value(PostgresMessageType::AuthenticationRequest);
+  _write_buffer.template put_value<PostgresMessageType>(PostgresMessageType::AuthenticationRequest);
   // Since we do not have any authentication mechanism, authentication is always successful
   constexpr uint32_t AUTHENTICATION_ERROR_CODE = 0;
   _write_buffer.template put_value<uint32_t>(LENGTH_FIELD_SIZE + sizeof(AUTHENTICATION_ERROR_CODE));
@@ -59,7 +59,7 @@ template <typename SocketType>
 void PostgresProtocolHandler<SocketType>::send_parameter(const std::string& key, const std::string& value) {
   // 2 null terminators, one for each string
   const auto packet_size = LENGTH_FIELD_SIZE + key.size() + value.size() + 2u /* null terminators */;
-  _write_buffer.template put_value(PostgresMessageType::ParameterStatus);
+  _write_buffer.template put_value<PostgresMessageType>(PostgresMessageType::ParameterStatus);
   _write_buffer.template put_value<uint32_t>(static_cast<uint32_t>(packet_size));
   _write_buffer.put_string(key);
   _write_buffer.put_string(value);
@@ -67,9 +67,9 @@ void PostgresProtocolHandler<SocketType>::send_parameter(const std::string& key,
 
 template <typename SocketType>
 void PostgresProtocolHandler<SocketType>::send_ready_for_query() {
-  _write_buffer.template put_value(PostgresMessageType::ReadyForQuery);
+  _write_buffer.template put_value<PostgresMessageType>(PostgresMessageType::ReadyForQuery);
   _write_buffer.template put_value<uint32_t>(LENGTH_FIELD_SIZE + sizeof(TransactionStatusIndicator::Idle));
-  _write_buffer.template put_value(TransactionStatusIndicator::Idle);
+  _write_buffer.template put_value<TransactionStatusIndicator>(TransactionStatusIndicator::Idle);
   _write_buffer.flush();
 }
 
@@ -89,7 +89,7 @@ void PostgresProtocolHandler<SocketType>::send_row_description_header(const uint
                                                                       const uint16_t column_count) {
   // The documentation of the fields in this message can be found at:
   // https://www.postgresql.org/docs/12/static/protocol-message-formats.html
-  _write_buffer.template put_value(PostgresMessageType::RowDescription);
+  _write_buffer.template put_value<PostgresMessageType>(PostgresMessageType::RowDescription);
 
   // Total message length can be calculated this way:
   // length field + column count + values for each column
@@ -122,7 +122,7 @@ void PostgresProtocolHandler<SocketType>::send_data_row(
   // The documentation of the fields in this message can be found at:
   // https://www.postgresql.org/docs/12/static/protocol-message-formats.html
 
-  _write_buffer.template put_value(PostgresMessageType::DataRow);
+  _write_buffer.template put_value<PostgresMessageType>(PostgresMessageType::DataRow);
 
   const auto packet_size =
       LENGTH_FIELD_SIZE + sizeof(uint16_t) + values_as_strings.size() * LENGTH_FIELD_SIZE + string_length_sum;
@@ -149,7 +149,7 @@ void PostgresProtocolHandler<SocketType>::send_data_row(
 template <typename SocketType>
 void PostgresProtocolHandler<SocketType>::send_command_complete(const std::string& command_complete_message) {
   const auto packet_size = LENGTH_FIELD_SIZE + command_complete_message.size() + 1u /* null terminator */;
-  _write_buffer.template put_value(PostgresMessageType::CommandComplete);
+  _write_buffer.template put_value<PostgresMessageType>(PostgresMessageType::CommandComplete);
   _write_buffer.template put_value<uint32_t>(static_cast<uint32_t>(packet_size));
   _write_buffer.put_string(command_complete_message);
 }
@@ -181,7 +181,7 @@ void PostgresProtocolHandler<SocketType>::read_sync_packet() {
 
 template <typename SocketType>
 void PostgresProtocolHandler<SocketType>::send_status_message(const PostgresMessageType message_type) {
-  _write_buffer.template put_value(message_type);
+  _write_buffer.template put_value<PostgresMessageType>(message_type);
   _write_buffer.template put_value<uint32_t>(LENGTH_FIELD_SIZE);
 }
 
@@ -243,7 +243,7 @@ std::string PostgresProtocolHandler<SocketType>::read_execute_packet() {
 
 template <typename SocketType>
 void PostgresProtocolHandler<SocketType>::send_error_message(const ErrorMessages& error_messages) {
-  _write_buffer.template put_value(PostgresMessageType::ErrorResponse);
+  _write_buffer.template put_value<PostgresMessageType>(PostgresMessageType::ErrorResponse);
 
   // Calculate size of error message strings
   auto string_length_sum = size_t{0};
@@ -256,33 +256,33 @@ void PostgresProtocolHandler<SocketType>::send_error_message(const ErrorMessages
   _write_buffer.template put_value<uint32_t>(static_cast<uint32_t>(packet_size));
 
   for (const auto& [message_type, content] : error_messages) {
-    _write_buffer.template put_value(message_type);
+    _write_buffer.template put_value<PostgresMessageType>(message_type);
     _write_buffer.put_string(content);
   }
 
   // We need an additional null terminator to terminate whole message
-  _write_buffer.template put_value('\0');
+  _write_buffer.template put_value<char>('\0');
   _write_buffer.flush();
 }
 
 template <typename SocketType>
 void PostgresProtocolHandler<SocketType>::send_execution_info(const std::string& execution_information) {
-  _write_buffer.template put_value(PostgresMessageType::Notice);
+  _write_buffer.template put_value<PostgresMessageType>(PostgresMessageType::Notice);
   // Message has 2 null terminators: one terminates the error string, the other one terminates the message
   const auto packet_size =
       LENGTH_FIELD_SIZE + sizeof(PostgresMessageType) + execution_information.size() + 2u /* null terminators */;
   _write_buffer.template put_value<uint32_t>(static_cast<uint32_t>(packet_size));
   // Send the error message with type 'M' that indicates that the following body is a plain message to be displayed
-  _write_buffer.template put_value(PostgresMessageType::HumanReadableError);
+  _write_buffer.template put_value<PostgresMessageType>(PostgresMessageType::HumanReadableError);
   _write_buffer.put_string(execution_information);
   // We need an additional null terminator for this message
-  _write_buffer.template put_value('\0');
+  _write_buffer.template put_value<char>('\0');
 }
 
 template <typename SocketType>
 void PostgresProtocolHandler<SocketType>::_ssl_deny() {
   // The SSL deny packet has a special format. It does not have a field indicating the packet size.
-  _write_buffer.template put_value(PostgresMessageType::SslNo);
+  _write_buffer.template put_value<PostgresMessageType>(PostgresMessageType::SslNo);
   _write_buffer.flush();
 }
 

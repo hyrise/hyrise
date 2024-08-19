@@ -45,7 +45,7 @@ std::string Export::description(DescriptionMode description_mode) const {
 }
 
 std::shared_ptr<const Table> Export::_on_execute() {
-  if (_filename.empty() || std::all_of(_filename.begin(), _filename.end(), isspace)) {
+  if (_filename.empty() || std::ranges::all_of(_filename, isspace)) {
     Fail("Export: File name must not be empty.");
   }
 

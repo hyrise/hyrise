@@ -39,9 +39,11 @@ AllTypeVariant FixedStringDictionarySegment<T>::operator[](const ChunkOffset chu
   DebugAssert(chunk_offset != INVALID_CHUNK_OFFSET, "Passed chunk offset must be valid.");
 
   const auto typed_value = get_typed_value(chunk_offset);
+  auto Test = 0;
   if (!typed_value) {
     return NULL_VALUE;
   }
+  std::cerr << Test;
   return *typed_value;
 }
 

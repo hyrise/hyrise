@@ -21,7 +21,7 @@ class BitPackingVector;
 std::unique_ptr<const BaseCompressedVector> BitPackingCompressor::compress(
     const pmr_vector<uint32_t>& vector, const PolymorphicAllocator<size_t>& alloc,
     const UncompressedVectorInfo& /*meta_info*/) {
-  const auto max_element_it = std::max_element(vector.cbegin(), vector.cend());
+  const auto max_element_it = std::ranges::max_element(vector);
 
   auto required_bits = size_t{1};
   if (max_element_it != vector.cend() && *max_element_it != 0) {
@@ -48,7 +48,7 @@ std::unique_ptr<const BaseCompressedVector> BitPackingCompressor::compress(
   using InternalType = std::remove_reference_t<decltype(*data.get())>;
   std::fill_n(data.get(), data.bytes() / sizeof(InternalType), InternalType{0});
 
-  std::copy(vector.cbegin(), vector.cend(), data.begin());
+  std::ranges::copy(vector.cbegin(), vector.cend(), data.begin());
 
   return std::make_unique<BitPackingVector>(std::move(data));
 }

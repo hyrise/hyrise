@@ -24,8 +24,7 @@ BinaryPredicateExpression::BinaryPredicateExpression(const PredicateCondition in
                                              PredicateCondition::GreaterThan, PredicateCondition::GreaterThanEquals,
                                              PredicateCondition::LessThan,    PredicateCondition::LessThanEquals,
                                              PredicateCondition::Like,        PredicateCondition::NotLike};
-    const auto* const it =
-        std::find(valid_predicate_conditions.begin(), valid_predicate_conditions.end(), predicate_condition);
+    const auto* const it = std::ranges::find(valid_predicate_conditions, predicate_condition);
     Assert(it != valid_predicate_conditions.end(),
            "Specified PredicateCondition is not valid for a BinaryPredicateExpression");
   }

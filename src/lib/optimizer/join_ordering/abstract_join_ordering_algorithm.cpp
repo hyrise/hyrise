@@ -80,7 +80,7 @@ std::shared_ptr<AbstractLQPNode> AbstractJoinOrderingAlgorithm::_add_join_to_pla
     join_predicates_and_cost.emplace_back(join_predicate, cost);
   }
 
-  std::sort(join_predicates_and_cost.begin(), join_predicates_and_cost.end(), [&](const auto& lhs, const auto& rhs) {
+  std::ranges::sort(join_predicates_and_cost, [&](const auto& lhs, const auto& rhs) {
     return lhs.second < rhs.second;
   });
 

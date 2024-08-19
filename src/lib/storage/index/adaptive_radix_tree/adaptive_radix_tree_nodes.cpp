@@ -29,11 +29,10 @@ constexpr uint8_t INVALID_INDEX = 255u;
  */
 
 ARTNode4::ARTNode4(std::vector<std::pair<uint8_t, std::shared_ptr<ARTNode>>>& children) {
-  std::sort(children.begin(), children.end(),
-            [](const std::pair<uint8_t, std::shared_ptr<ARTNode>>& left,
-               const std::pair<uint8_t, std::shared_ptr<ARTNode>>& right) {
-              return left.first < right.first;
-            });
+  std::ranges::sort(children, [](const std::pair<uint8_t, std::shared_ptr<ARTNode>>& left,
+                                 const std::pair<uint8_t, std::shared_ptr<ARTNode>>& right) {
+    return left.first < right.first;
+  });
   _partial_keys.fill(INVALID_INDEX);
   const auto child_count = children.size();
   for (auto index = size_t{0}; index < child_count; ++index) {
@@ -126,11 +125,10 @@ AbstractChunkIndex::Iterator ARTNode4::end() const {
  */
 
 ARTNode16::ARTNode16(std::vector<std::pair<uint8_t, std::shared_ptr<ARTNode>>>& children) {
-  std::sort(children.begin(), children.end(),
-            [](const std::pair<uint8_t, std::shared_ptr<ARTNode>>& left,
-               const std::pair<uint8_t, std::shared_ptr<ARTNode>>& right) {
-              return left.first < right.first;
-            });
+  std::ranges::sort(children, [](const std::pair<uint8_t, std::shared_ptr<ARTNode>>& left,
+                                 const std::pair<uint8_t, std::shared_ptr<ARTNode>>& right) {
+    return left.first < right.first;
+  });
   _partial_keys.fill(INVALID_INDEX);
   const auto child_count = children.size();
   for (auto index = uint32_t{0}; index < child_count; ++index) {

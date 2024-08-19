@@ -56,7 +56,7 @@ else()
 endif()
 
 if("${CMAKE_CXX_COMPILER_ID}" MATCHES ".*Clang")
-    if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 18.0 AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 19.0)
+    if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 18.0 AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 20.0)
         # Clang 18 warns when switch statements do not have a default case even when the entire enum is covered (see
         # https://github.com/llvm/llvm-project/blob/7d9634e527fe52bf20a9036be6e5771f8fc4de17/clang/test/Sema/switch-default.cpp#L19).
         # As clang also correctly complains when not all enum cases are handled, we disable this warning.
