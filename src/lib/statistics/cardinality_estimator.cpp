@@ -765,7 +765,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_union_node(
 
   auto column_statistics = left_input_table_statistics->column_statistics;
 
-  const auto row_count = left_input_table_statistics->row_count + right_input_table_statistics->row_count;
+  const auto row_count = Cardinality{left_input_table_statistics->row_count + right_input_table_statistics->row_count};
 
   auto output_table_statistics = std::make_shared<TableStatistics>(std::move(column_statistics), row_count);
 

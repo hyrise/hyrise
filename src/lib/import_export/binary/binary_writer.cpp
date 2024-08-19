@@ -150,7 +150,7 @@ void BinaryWriter::_write_header(const Table& table, std::ofstream& ofstream) {
 void BinaryWriter::_write_chunk(const Table& table, std::ofstream& ofstream, const ChunkID& chunk_id) {
   const auto chunk = table.get_chunk(chunk_id);
   Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
-  export_value(ofstream, chunk->size());
+  export_value(ofstream, static_cast<ChunkOffset>(chunk->size()));
 
   // Export sort column definitions
   const auto& sorted_columns = chunk->individually_sorted_by();

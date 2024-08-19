@@ -73,7 +73,7 @@ class Worker : public std::enable_shared_from_this<Worker>, private Noncopyable 
 
   bool _active{true};
 
-  std::vector<uint32_t> _random{};
+  std::vector<uint> _random{};
   size_t _next_random{0};
 };
 

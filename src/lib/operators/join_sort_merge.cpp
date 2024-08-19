@@ -244,7 +244,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
   }
 
   // Represents the result of a value comparison.
-  enum class CompareResult : uint8_t { Less, Greater, Equal };
+  enum class CompareResult { Less, Greater, Equal };
 
   // Performs the join for two runs of a specified cluster.
   // A run is a series of rows in a cluster with the same value.

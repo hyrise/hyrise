@@ -1194,11 +1194,12 @@ They are separate and templated to avoid compiler errors for invalid type/functi
 */
 // MIN, MAX, SUM, ANY write the current aggregated value.
 template <typename ColumnDataType, typename AggregateType, WindowFunction aggregate_func>
-  requires(aggregate_func == WindowFunction::Min || aggregate_func == WindowFunction::Max ||
-           aggregate_func == WindowFunction::Sum || aggregate_func == WindowFunction::Any)
-bool write_aggregate_values(const AggregateResults<ColumnDataType, aggregate_func>& results,
-                            std::vector<pmr_vector<AggregateType>>& value_vectors,
-                            std::vector<pmr_vector<bool>>& null_vectors) {
+std::enable_if_t<aggregate_func == WindowFunction::Min || aggregate_func == WindowFunction::Max ||
+                     aggregate_func == WindowFunction::Sum || aggregate_func == WindowFunction::Any,
+                 bool>
+write_aggregate_values(const AggregateResults<ColumnDataType, aggregate_func>& results,
+                       std::vector<pmr_vector<AggregateType>>& value_vectors,
+                       std::vector<pmr_vector<bool>>& null_vectors) {
   auto null_written = std::atomic<bool>{};
   split_results_chunk_wise(
       true, results, value_vectors, null_vectors, [&](auto begin, const auto end, const ChunkID chunk_id) {
@@ -1229,10 +1230,9 @@ bool write_aggregate_values(const AggregateResults<ColumnDataType, aggregate_fun
 
 // COUNT writes the aggregate counter.
 template <typename ColumnDataType, typename AggregateType, WindowFunction aggregate_func>
-  requires(aggregate_func == WindowFunction::Count)
-bool write_aggregate_values(const AggregateResults<ColumnDataType, aggregate_func>& results,
-                            std::vector<pmr_vector<AggregateType>>& value_vectors,
-                            std::vector<pmr_vector<bool>>& null_vectors) {
+std::enable_if_t<aggregate_func == WindowFunction::Count, bool> write_aggregate_values(
+    const AggregateResults<ColumnDataType, aggregate_func>& results,
+    std::vector<pmr_vector<AggregateType>>& value_vectors, std::vector<pmr_vector<bool>>& null_vectors) {
   split_results_chunk_wise(
       false, results, value_vectors, null_vectors, [&](auto begin, const auto end, const ChunkID chunk_id) {
         auto& values = value_vectors[chunk_id];
@@ -1254,10 +1254,9 @@ bool write_aggregate_values(const AggregateResults<ColumnDataType, aggregate_fun
 
 // COUNT(DISTINCT) writes the number of distinct values.
 template <typename ColumnDataType, typename AggregateType, WindowFunction aggregate_func>
-  requires(aggregate_func == WindowFunction::CountDistinct)
-bool write_aggregate_values(const AggregateResults<ColumnDataType, aggregate_func>& results,
-                            std::vector<pmr_vector<AggregateType>>& value_vectors,
-                            std::vector<pmr_vector<bool>>& null_vectors) {
+std::enable_if_t<aggregate_func == WindowFunction::CountDistinct, bool> write_aggregate_values(
+    const AggregateResults<ColumnDataType, aggregate_func>& results,
+    std::vector<pmr_vector<AggregateType>>& value_vectors, std::vector<pmr_vector<bool>>& null_vectors) {
   split_results_chunk_wise(
       false, results, value_vectors, null_vectors, [&](auto begin, const auto end, const ChunkID chunk_id) {
         auto& values = value_vectors[chunk_id];
@@ -1279,10 +1278,10 @@ bool write_aggregate_values(const AggregateResults<ColumnDataType, aggregate_fun
 
 // AVG writes the calculated average from current aggregate and the aggregate counter.
 template <typename ColumnDataType, typename AggregateType, WindowFunction aggregate_func>
-  requires(aggregate_func == WindowFunction::Avg && std::is_arithmetic_v<AggregateType>)
-bool write_aggregate_values(const AggregateResults<ColumnDataType, aggregate_func>& results,
-                            std::vector<pmr_vector<AggregateType>>& value_vectors,
-                            std::vector<pmr_vector<bool>>& null_vectors) {
+std::enable_if_t<aggregate_func == WindowFunction::Avg && std::is_arithmetic_v<AggregateType>, bool>
+write_aggregate_values(const AggregateResults<ColumnDataType, aggregate_func>& results,
+                       std::vector<pmr_vector<AggregateType>>& value_vectors,
+                       std::vector<pmr_vector<bool>>& null_vectors) {
   auto null_written = std::atomic<bool>{};
   split_results_chunk_wise(
       true, results, value_vectors, null_vectors, [&](auto begin, const auto end, const ChunkID chunk_id) {
@@ -1313,19 +1312,19 @@ bool write_aggregate_values(const AggregateResults<ColumnDataType, aggregate_fun
 
 // AVG is not defined for non-arithmetic types. Avoiding compiler errors.
 template <typename ColumnDataType, typename AggregateType, WindowFunction aggregate_func>
-  requires(aggregate_func == WindowFunction::Avg && !std::is_arithmetic_v<AggregateType>)
-bool write_aggregate_values(const AggregateResults<ColumnDataType, aggregate_func>& /*results*/,
-                            std::vector<pmr_vector<AggregateType>>& /* values */,
-                            std::vector<pmr_vector<bool>>& /* null_vectors */) {
+std::enable_if_t<aggregate_func == WindowFunction::Avg && !std::is_arithmetic_v<AggregateType>, bool>
+write_aggregate_values(const AggregateResults<ColumnDataType, aggregate_func>& /*results*/,
+                       std::vector<pmr_vector<AggregateType>>& /* values */,
+                       std::vector<pmr_vector<bool>>& /* null_vectors */) {
   Fail("Invalid aggregate.");
 }
 
 // STDDEV_SAMP writes the calculated standard deviation from current aggregate and the aggregate counter.
 template <typename ColumnDataType, typename AggregateType, WindowFunction aggregate_func>
-  requires(aggregate_func == WindowFunction::StandardDeviationSample && std::is_arithmetic_v<AggregateType>)
-bool write_aggregate_values(const AggregateResults<ColumnDataType, aggregate_func>& results,
-                            std::vector<pmr_vector<AggregateType>>& value_vectors,
-                            std::vector<pmr_vector<bool>>& null_vectors) {
+std::enable_if_t<aggregate_func == WindowFunction::StandardDeviationSample && std::is_arithmetic_v<AggregateType>, bool>
+write_aggregate_values(const AggregateResults<ColumnDataType, aggregate_func>& results,
+                       std::vector<pmr_vector<AggregateType>>& value_vectors,
+                       std::vector<pmr_vector<bool>>& null_vectors) {
   auto null_written = std::atomic<bool>{};
   split_results_chunk_wise(
       true, results, value_vectors, null_vectors, [&](auto begin, const auto end, const ChunkID chunk_id) {
@@ -1357,10 +1356,11 @@ bool write_aggregate_values(const AggregateResults<ColumnDataType, aggregate_fun
 
 // STDDEV_SAMP is not defined for non-arithmetic types. Avoiding compiler errors.
 template <typename ColumnDataType, typename AggregateType, WindowFunction aggregate_func>
-  requires(aggregate_func == WindowFunction::StandardDeviationSample && !std::is_arithmetic_v<AggregateType>)
-bool write_aggregate_values(const AggregateResults<ColumnDataType, aggregate_func>& /*results*/,
-                            std::vector<pmr_vector<AggregateType>>& /* values */,
-                            std::vector<pmr_vector<bool>>& /* null_vectors */) {
+std::enable_if_t<aggregate_func == WindowFunction::StandardDeviationSample && !std::is_arithmetic_v<AggregateType>,
+                 bool>
+write_aggregate_values(const AggregateResults<ColumnDataType, aggregate_func>& /*results*/,
+                       std::vector<pmr_vector<AggregateType>>& /* values */,
+                       std::vector<pmr_vector<bool>>& /* null_vectors */) {
   Fail("Invalid aggregate.");
 }
 

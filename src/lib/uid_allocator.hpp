@@ -10,7 +10,7 @@ namespace hyrise {
  */
 class UidAllocator {
  public:
-  uint32_t allocate() {
+  std::uint32_t allocate() {
     return _incrementor++;
   }
 

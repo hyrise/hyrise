@@ -121,7 +121,7 @@ std::optional<std::vector<OperatorScanPredicate>> OperatorScanPredicate::from_ex
         !variant_is_null(boost::get<AllTypeVariant>(*argument_c))) {
       // This is the BETWEEN case that we can handle
       return std::vector<OperatorScanPredicate>{
-          OperatorScanPredicate{boost::get<ColumnID>(*argument_a), predicate_condition, *argument_b, argument_c}};
+          OperatorScanPredicate{boost::get<ColumnID>(*argument_a), predicate_condition, *argument_b, *argument_c}};
     }
 
     PerformanceWarning("BETWEEN handled as two table scans because no BETWEEN specialization was available");

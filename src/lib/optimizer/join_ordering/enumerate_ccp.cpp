@@ -139,7 +139,7 @@ void EnumerateCcp::_enumerate_cmp(const JoinGraphVertexSet& primary_vertex_set) 
 
     const auto extended_exclusion_set = exclusion_set | (_exclusion_set(*iter) & neighborhood);
 
-    auto csgs = std::vector<JoinGraphVertexSet>{};
+    std::vector<JoinGraphVertexSet> csgs;
     _enumerate_csg_recursive(csgs, cmp_vertex_set, extended_exclusion_set);
 
     for (const auto& csg : csgs) {
@@ -154,7 +154,7 @@ JoinGraphVertexSet EnumerateCcp::_exclusion_set(const size_t vertex_idx) const {
    */
 
   auto exclusion_set = JoinGraphVertexSet(_num_vertices);
-  for (auto exclusion_vertex_idx = size_t{0}; exclusion_vertex_idx < vertex_idx; ++exclusion_vertex_idx) {
+  for (size_t exclusion_vertex_idx = 0; exclusion_vertex_idx < vertex_idx; ++exclusion_vertex_idx) {
     exclusion_set.set(exclusion_vertex_idx);
   }
   return exclusion_set;
@@ -166,7 +166,7 @@ JoinGraphVertexSet EnumerateCcp::_neighborhood(const JoinGraphVertexSet& vertex_
    * Use the lookup table `_vertex_neighborhoods[]` to find the neighborhood of a connected subgraph `vertex_set`
    */
 
-  auto neighborhood = JoinGraphVertexSet(_num_vertices);
+  JoinGraphVertexSet neighborhood(_num_vertices);
 
   for (auto current_vertex_idx = size_t{0}; current_vertex_idx < _num_vertices; ++current_vertex_idx) {
     if (!vertex_set[current_vertex_idx]) {
@@ -210,12 +210,9 @@ std::vector<JoinGraphVertexSet> EnumerateCcp::_non_empty_subsets(const JoinGraph
     return {};
   }
 
-  auto subsets = std::vector<JoinGraphVertexSet>{};
+  std::vector<JoinGraphVertexSet> subsets;
 
-  Assert(vertex_set.size() < 65, "Subsets cannot be larger than 64.");
-  // Disable clang-tidy check which leads to a 64 bit left bit shift of a 64 bit value in boost's dynamic_bitset. We
-  // assume this is on intention and ignore the issue for now.
-  const auto set_ulong = vertex_set.to_ulong();  // NOLINT(clang-analyzer-core.BitwiseShift)
+  const auto set_ulong = vertex_set.to_ulong();
 
   // subset_ulong is the current subset subset [sic]. `set_ulong & -set_ulong` initializes it to the least significant
   // bit in `set_ulong`. E.g., if set_ulong is 011000, this initializes subset_ulong to 001000.
