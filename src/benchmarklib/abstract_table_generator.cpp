@@ -228,10 +228,11 @@ void AbstractTableGenerator::generate_and_store() {
 
     auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
     jobs.reserve(table_info_by_name.size());
-    for (const auto& table_info_by_name_pair : table_info_by_name) {
-      const auto encode_table = [&, table_info_by_name_pair = table_info_by_name_pair]() mutable {
-        const auto& table_name = table_info_by_name_pair.first;
-        auto& table_info = table_info_by_name_pair.second;
+    for (auto& table_info_by_name_pair : table_info_by_name) {
+      const auto& table_name = table_info_by_name_pair.first;
+      auto& table_info = table_info_by_name_pair.second;
+
+      const auto encode_table = [&]() {
         auto per_table_timer = Timer{};
         table_info.re_encoded =
             BenchmarkTableEncoder::encode(table_name, table_info.table, _benchmark_config->encoding_config);
@@ -299,11 +300,11 @@ void AbstractTableGenerator::generate_and_store() {
     auto& storage_manager = Hyrise::get().storage_manager;
     auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
     jobs.reserve(table_info_by_name.size());
-    for (const auto& table_info_by_name_pair : table_info_by_name) {
-      const auto add_table = [&, table_info_by_name_pair = table_info_by_name_pair]() {
-        const auto& table_name = table_info_by_name_pair.first;
-        auto& table_info = table_info_by_name_pair.second;
+    for (auto& table_info_by_name_pair : table_info_by_name) {
+      const auto& table_name = table_info_by_name_pair.first;
+      auto& table_info = table_info_by_name_pair.second;
 
+      const auto add_table = [&]() {
         auto per_table_timer = Timer{};
         if (storage_manager.has_table(table_name)) {
           storage_manager.drop_table(table_name);
