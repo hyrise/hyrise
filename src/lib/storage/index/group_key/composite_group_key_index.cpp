@@ -114,7 +114,7 @@ CompositeGroupKeyIndex::CompositeGroupKeyIndex(
   _key_offsets.shrink_to_fit();
 
   // remove duplicated keys
-  auto unique_keys_end = std::ranges::unique(_keys);
+  auto unique_keys_end = std::unique(_keys.begin(), _keys.end());
   _keys.erase(unique_keys_end, _keys.end());
   _keys.shrink_to_fit();
 }
@@ -174,7 +174,7 @@ AbstractChunkIndex::Iterator CompositeGroupKeyIndex::_get_position_iterator_for_
     const VariableLengthKey& key) const {
   // get an iterator pointing to the search-key in the keystore
   // (use always lower_bound() since the search method is already handled within creation of composite key)
-  auto key_it = std::ranges::lower_bound(_keys, key);
+  auto key_it = std::lower_bound(_keys.begin(), _keys.end(), key);
   if (key_it == _keys.cend()) {
     return _position_list.cend();
   }

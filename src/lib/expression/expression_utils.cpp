@@ -39,7 +39,7 @@ using namespace expression_functional;  // NOLINT(build/namespaces)
 
 bool expressions_equal(const std::vector<std::shared_ptr<AbstractExpression>>& expressions_a,
                        const std::vector<std::shared_ptr<AbstractExpression>>& expressions_b) {
-  return std::ragnes::equal(expressions_a, expressions_b.begin(),
+  return std::ranges::equal(expressions_a, expressions_b,
                             [&](const auto& expression_a, const auto& expression_b) {
                               return *expression_a == *expression_b;
                             });

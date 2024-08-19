@@ -60,7 +60,7 @@ FileBasedBenchmarkItemRunner::FileBasedBenchmarkItemRunner(
   std::iota(_items.begin(), _items.end(), BenchmarkItemID{0});
 
   // Sort queries by name
-  std::sort(_queries.begin(), _queries.end(), [](const Query& lhs, const Query& rhs) {
+  std::ranges::sort(_queries, [](const Query& lhs, const Query& rhs) {
     return lhs.name < rhs.name;
   });
 }
@@ -109,7 +109,7 @@ void FileBasedBenchmarkItemRunner::_parse_query_file(
     const auto statement_string_length = parse_result.getStatement(statement_idx)->stringLength;
     const auto statement_string = boost::trim_copy(content.substr(sql_string_offset, statement_string_length));
     sql_string_offset += statement_string_length;
-    queries_in_file[statement_idx] = {item_name, statement_string};
+    queries_in_file[statement_idx] = {.name = item_name, .sql = statement_string};
   }
 
   // Remove ".0" from the end of the query name if there is only one file

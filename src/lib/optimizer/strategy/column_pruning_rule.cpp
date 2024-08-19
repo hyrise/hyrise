@@ -39,7 +39,7 @@ void gather_expressions_not_computed_by_expression_evaluator(
   // required_expressions, as it is not a top-level expression.
 
   // If an expression that is not a top-level expression is already an input, we require it
-  if (std::find_if(input_expressions.begin(), input_expressions.end(), [&expression](const auto& other) {
+  if (std::ranges::find_if(input_expressions, [&expression](const auto& other) {
         return *expression == *other;
       }) != input_expressions.end()) {
     if (!top_level) {
@@ -306,7 +306,7 @@ void prune_projection_node(
   for (const auto& expression : projection_node->node_expressions) {
     for (const auto& output : node->outputs()) {
       const auto& required_expressions = required_expressions_by_node.at(output);
-      if (std::find_if(required_expressions.begin(), required_expressions.end(), [&expression](const auto& other) {
+      if (std::ranges::find_if(required_expressions, [&expression](const auto& other) {
             return *expression == *other;
           }) != required_expressions.end()) {
         new_node_expressions.emplace_back(expression);

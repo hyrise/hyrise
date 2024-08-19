@@ -53,7 +53,7 @@ std::shared_ptr<RowIDPosList> ColumnIsNullTableScanImpl::scan_chunk(const ChunkI
 
 void ColumnIsNullTableScanImpl::_scan_generic_segment(const AbstractSegment& segment, const ChunkID chunk_id,
                                                       RowIDPosList& matches) const {
-  segment_with_iterators(segment, [&](auto iter, [[maybe_unused]] const auto end) {
+  segment_with_iterators(segment, [&](const auto& iter, [[maybe_unused]] const auto& end) {
     // This may also be called for a ValueSegment if `segment` is a ReferenceSegment pointing to a single ValueSegment.
     const auto invert = _predicate_condition == PredicateCondition::IsNotNull;
     const auto functor = [&](const auto& value) {

@@ -91,7 +91,9 @@ MetaSystemUtilizationTable::LoadAvg MetaSystemUtilizationTable::_get_load_avg() 
   auto load_avg = std::array<double, 3>{};
   const int nelem = getloadavg(load_avg.data(), 3);
   Assert(nelem == 3, "Failed to read load averages");
-  return {static_cast<float>(load_avg[0]), static_cast<float>(load_avg[1]), static_cast<float>(load_avg[2])};
+  return {.load_1_min = static_cast<float>(load_avg[0]),
+          .load_5_min = static_cast<float>(load_avg[1]),
+          .load_15_min = static_cast<float>(load_avg[2])};
 }
 
 /**
@@ -167,7 +169,7 @@ uint64_t MetaSystemUtilizationTable::_get_process_cpu_time() {
   const auto ret = clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &time_spec);  // NOLINT(misc-include-cleaner)
   Assert(ret == 0, "Failed in clock_gettime.");
 
-  const auto active_ns = (time_spec.tv_sec * std::nano::den + time_spec.tv_nsec);
+  const auto active_ns = (time_spec.tv_sec * std::nano::den) + time_spec.tv_nsec;
 
   return active_ns;
 #endif

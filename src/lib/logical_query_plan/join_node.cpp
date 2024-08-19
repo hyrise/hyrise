@@ -308,7 +308,7 @@ void JoinNode::mark_as_semi_reduction(const std::shared_ptr<JoinNode>& reduced_j
   DebugAssert(join_predicates().size() == 1,
               "Currently, semi join reductions are expected to have a single join predicate.");
   DebugAssert(std::any_of(reduced_join_node->join_predicates().cbegin(), reduced_join_node->join_predicates().cend(),
-                          [&](const auto predicate) {
+                          [&](const auto& predicate) {
                             return *predicate == *join_predicates()[0];
                           }),
               "Both semi join reduction node and the reduced join should have a common join predicate.");

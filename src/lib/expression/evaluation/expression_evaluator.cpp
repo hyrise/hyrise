@@ -1203,11 +1203,13 @@ RowIDPosList ExpressionEvaluator::evaluate_expression_to_pos_list(const Abstract
 
       switch (logical_expression.logical_operator) {
         case LogicalOperator::And:
-          std::ranges::set_intersection(left_pos_list, right_pos_list, std::back_inserter(result_pos_list));
+          std::set_intersection(left_pos_list.begin(), left_pos_list.end(), right_pos_list.begin(),
+                                right_pos_list.end(), std::back_inserter(result_pos_list));
           break;
 
         case LogicalOperator::Or:
-          std::ranges::set_union(left_pos_list, right_pos_list, std::back_inserter(result_pos_list));
+          std::set_union(left_pos_list.begin(), left_pos_list.end(), right_pos_list.begin(),
+                         right_pos_list.end(), std::back_inserter(result_pos_list));
           break;
       }
     } break;

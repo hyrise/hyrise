@@ -24,7 +24,7 @@ using namespace hyrise;  // NOLINT(build/namespaces)
 std::vector<size_t> sort_indexes(const std::vector<ColumnID>& column_ids) {
   auto permutation = std::vector<size_t>(column_ids.size());
   // Fill permutation with [0, 1, ..., n - 1] and order the permutation by sorting column_ids.
-  std::ranges::iota(permutation, 0);
+  std::iota(permutation.begin(), permutation.end(), 0);
   std::ranges::sort(permutation, [&](auto lhs, auto rhs) {
     return column_ids[lhs] < column_ids[rhs];
   });

@@ -62,7 +62,7 @@ MetaTableManager::MetaTableManager() {
     _meta_tables[table->name()] = table;
     _table_names.emplace_back(table->name());
   }
-  std::sort(_table_names);
+  std::ranges::sort(_table_names);
 }
 
 bool MetaTableManager::is_meta_table_name(const std::string& name) {
@@ -77,7 +77,7 @@ const std::vector<std::string>& MetaTableManager::table_names() const {
 void MetaTableManager::add_table(const std::shared_ptr<AbstractMetaTable>& table) {
   _meta_tables[table->name()] = table;
   _table_names.push_back(table->name());
-  std::sort(_table_names);
+  std::ranges::sort(_table_names);
 }
 
 bool MetaTableManager::has_table(const std::string& table_name) const {
