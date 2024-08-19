@@ -300,48 +300,6 @@ void NodeQueueScheduler::_group_tasks(const std::vector<std::shared_ptr<Abstract
     }
     grouped_task_offsets[group_id] = task_offset;
   }
-
-  // auto ss = std::stringstream{};
-  // ss << "Task count is " << tasks.size() << "\n\n";
-  // auto map = std::unordered_map<AbstractTask*, size_t>{};
-  // auto counter = size_t{0};
-  // for (auto task : tasks) {
-  //   const auto result = map.emplace(&*task, counter);
-  //   Assert(result.second, "Unexpected duplicate element found.");
-  //   ss << std::format("{:03}\t\t{}\t{} preds", counter, (void*)&*task, task->predecessors().size());
-  //   if (!task->predecessors().empty()) {
-  //     Assert(task->predecessors().size() == 1, "More than one task?");
-  //     auto pred = task->predecessors()[0].lock();
-  //     auto pred_succ = pred->successors()[0];
-  //     ss << " >> pred is " << &*pred << " (" << map[&*task] << " -> " << map[&*pred] << " -> " << map[&*pred_succ] << ")";
-  //     Assert(map[&*task] == map[&*pred_succ], "Narf");
-  //   }
-  //   ss << "\n";
-  //   ++counter;
-  // }
-  // std::cerr << ss.str();
-
-  // for (auto task : tasks) {
-  //   if (task->predecessors().empty() && task->successors().empty()) {
-  //     continue;
-  //   }
-
-  //   if (!task->predecessors().empty()) {
-  //     auto pred = task->predecessors()[0].lock();
-  //     Assert(&*pred != &*task, "X");
-  //     Assert(task->predecessors().size() == 1, "a");
-  //     auto succ = pred->successors()[0];
-  //     Assert(&*succ == &*task, "b");
-  //   }
-
-  //   if (!task->successors().empty()) {
-  //     auto pred = task->successors()[0];
-  //     Assert(&*pred != &*task, "X");
-  //     Assert(task->successors().size() == 1, "c");
-  //     auto succ = pred->predecessors()[0].lock();
-  //     Assert(&*succ == &*task, "d");
-  //   }
-  // }
 }
 
 const std::atomic_int64_t& NodeQueueScheduler::active_worker_count() const {
