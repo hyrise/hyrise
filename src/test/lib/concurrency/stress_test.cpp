@@ -449,7 +449,7 @@ TEST_F(StressTest, NodeQueueSchedulerTaskGrouping) {
 
   const auto worker_count = node_queue_scheduler->workers().size();
   if (worker_count < NodeQueueScheduler::NUM_GROUPS) {
-    // We would not see any impact of task grouping with too few workers. 
+    // We would not see any impact of task grouping with too few workers.
     GTEST_SKIP();
   }
 
