@@ -1315,8 +1315,8 @@ bool write_aggregate_values(const AggregateResults<ColumnDataType, aggregate_fun
 template <typename ColumnDataType, typename AggregateType, WindowFunction aggregate_func>
   requires(aggregate_func == WindowFunction::Avg && !std::is_arithmetic_v<AggregateType>)
 bool write_aggregate_values(const AggregateResults<ColumnDataType, aggregate_func>& /*results*/,
-                       std::vector<pmr_vector<AggregateType>>& /* values */,
-                       std::vector<pmr_vector<bool>>& /* null_vectors */) {
+                            std::vector<pmr_vector<AggregateType>>& /* values */,
+                            std::vector<pmr_vector<bool>>& /* null_vectors */) {
   Fail("Invalid aggregate.");
 }
 
@@ -1324,8 +1324,8 @@ bool write_aggregate_values(const AggregateResults<ColumnDataType, aggregate_fun
 template <typename ColumnDataType, typename AggregateType, WindowFunction aggregate_func>
   requires(aggregate_func == WindowFunction::StandardDeviationSample && std::is_arithmetic_v<AggregateType>)
 bool write_aggregate_values(const AggregateResults<ColumnDataType, aggregate_func>& results,
-                       std::vector<pmr_vector<AggregateType>>& value_vectors,
-                       std::vector<pmr_vector<bool>>& null_vectors) {
+                            std::vector<pmr_vector<AggregateType>>& value_vectors,
+                            std::vector<pmr_vector<bool>>& null_vectors) {
   auto null_written = std::atomic<bool>{};
   split_results_chunk_wise(
       true, results, value_vectors, null_vectors, [&](auto begin, const auto end, const ChunkID chunk_id) {
@@ -1359,8 +1359,8 @@ bool write_aggregate_values(const AggregateResults<ColumnDataType, aggregate_fun
 template <typename ColumnDataType, typename AggregateType, WindowFunction aggregate_func>
   requires(aggregate_func == WindowFunction::StandardDeviationSample && !std::is_arithmetic_v<AggregateType>)
 bool write_aggregate_values(const AggregateResults<ColumnDataType, aggregate_func>& /*results*/,
-                       std::vector<pmr_vector<AggregateType>>& /* values */,
-                       std::vector<pmr_vector<bool>>& /* null_vectors */) {
+                            std::vector<pmr_vector<AggregateType>>& /* values */,
+                            std::vector<pmr_vector<bool>>& /* null_vectors */) {
   Fail("Invalid aggregate.");
 }
 

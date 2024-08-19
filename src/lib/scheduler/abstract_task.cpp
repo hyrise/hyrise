@@ -17,6 +17,15 @@ namespace hyrise {
 
 AbstractTask::AbstractTask(SchedulePriority priority, bool stealable) : _priority{priority}, _stealable{stealable} {}
 
+AbstractTask::~AbstractTask() {
+  // The scheduler takes task lists where each task might store shared_pointers to other tasks of the list (in form of
+  // the task's successors). To ease destroying all tasks of the list, we first reset all shared_pointers of the
+  // successors.
+  for (auto& successor : _successors) {
+    successor.reset();
+  }
+}
+
 TaskID AbstractTask::id() const {
   return _id;
 }
@@ -53,7 +62,7 @@ void AbstractTask::set_as_predecessor_of(const std::shared_ptr<AbstractTask>& su
   // Since OperatorTasks can be reused by, e.g., uncorrelated subqueries, this function may already have been called
   // with the given successor (compare discussion https://github.com/hyrise/hyrise/pull/2340#discussion_r602174096).
   // The following guard prevents adding duplicate successors/predecessors:
-  if (std::find(_successors.cbegin(), _successors.cend(), successor) != _successors.cend()) {
+  if (std::ranges::find(_successors, successor) != _successors.cend()) {
     return;
   }
 
