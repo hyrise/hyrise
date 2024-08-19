@@ -228,7 +228,7 @@ void AbstractTableGenerator::generate_and_store() {
 
     auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
     jobs.reserve(table_info_by_name.size());
-    for (auto table_info_by_name_pair : table_info_by_name) {
+    for (const auto& table_info_by_name_pair : table_info_by_name) {
       const auto encode_table = [&, table_info_by_name_pair = table_info_by_name_pair]() mutable {
         const auto& table_name = table_info_by_name_pair.first;
         auto& table_info = table_info_by_name_pair.second;
@@ -299,7 +299,7 @@ void AbstractTableGenerator::generate_and_store() {
     auto& storage_manager = Hyrise::get().storage_manager;
     auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
     jobs.reserve(table_info_by_name.size());
-    for (auto table_info_by_name_pair : table_info_by_name) {
+    for (const auto& table_info_by_name_pair : table_info_by_name) {
       const auto add_table = [&, table_info_by_name_pair = table_info_by_name_pair]() {
         const auto& table_name = table_info_by_name_pair.first;
         auto& table_info = table_info_by_name_pair.second;
