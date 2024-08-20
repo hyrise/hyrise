@@ -75,7 +75,7 @@ std::shared_ptr<const Table> Difference::_on_execute() {
     }
 
     // Remove duplicate rows by adding all rows to a unordered set.
-    std::transform(string_row_vector.cbegin(), string_row_vector.cend(),
+    std::ranges::transform(string_row_vector,
                    std::inserter(right_input_row_set, right_input_row_set.end()), [](auto& item) {
                      return item.str();
                    });

@@ -86,7 +86,7 @@ DSSType call_dbgen_mk(size_t idx, MKRetType (*mk_fn)(DSS_HUGE, DSSType* val, Arg
 float convert_money(DSS_HUGE cents) {
   const auto dollars = cents / 100;
   cents %= 100;
-  return static_cast<float>(dollars) + (static_cast<float>(cents)) / 100.0f;
+  return static_cast<float>(dollars) + (static_cast<float>(cents) / 100.0f);
 }
 
 /**
@@ -229,7 +229,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate
           last_partkey = partsupp.partkey;
           suppkeys.clear();
         }
-        Assert(std::find(suppkeys.begin(), suppkeys.end(), partsupp.suppkey) == suppkeys.end(),
+        Assert(std::ranges::find(suppkeys, partsupp.suppkey) == suppkeys.end(),
                "Scale factor unsupported by tpch-dbgen. Consider choosing a \"round\" number.");
         suppkeys.emplace_back(partsupp.suppkey);
       }

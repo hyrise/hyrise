@@ -134,7 +134,7 @@ std::shared_ptr<const Table> UnionPositions::_on_execute() {
   auto out_table = std::make_shared<Table>(left_in_table.column_definitions(), TableType::References);
 
   std::vector<std::shared_ptr<RowIDPosList>> pos_lists(reference_matrix_left.size());
-  std::generate(pos_lists.begin(), pos_lists.end(), [&] {
+  std::ranges::generate(pos_lists, [&] {
     return std::make_shared<RowIDPosList>();
   });
 
@@ -208,7 +208,7 @@ std::shared_ptr<const Table> UnionPositions::_on_execute() {
       emit_chunk();
 
       chunk_row_idx = 0;
-      std::generate(pos_lists.begin(), pos_lists.end(), [&] {
+      std::ranges::generate(pos_lists, [&] {
         return std::make_shared<RowIDPosList>();
       });
     }
@@ -267,7 +267,7 @@ std::shared_ptr<const Table> UnionPositions::_prepare_operator() {
   add(right_input_table());
 
   boost::sort::pdqsort(_column_cluster_offsets.begin(), _column_cluster_offsets.end());
-  const auto unique_end_iter = std::unique(_column_cluster_offsets.begin(), _column_cluster_offsets.end());
+  const auto unique_end_iter = std::ranges::unique(_column_cluster_offsets);
   _column_cluster_offsets.resize(std::distance(_column_cluster_offsets.begin(), unique_end_iter));
 
   /**
