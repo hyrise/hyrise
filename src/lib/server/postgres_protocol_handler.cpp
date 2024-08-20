@@ -94,7 +94,7 @@ void PostgresProtocolHandler<SocketType>::send_row_description_header(const uint
   // Total message length can be calculated this way:
   // length field + column count + values for each column
   const auto packet_size = sizeof(uint32_t) + sizeof(uint16_t) +
-                           column_count * (sizeof('\0') + 3 * sizeof(uint32_t) + 3 * sizeof(uint16_t)) +
+                           (column_count * (sizeof('\0') + 3 * sizeof(uint32_t) + 3 * sizeof(uint16_t))) +
                            total_column_name_length;
   _write_buffer.template put_value<uint32_t>(static_cast<uint32_t>(packet_size));
   // Specifies the number of fields in a row
@@ -125,7 +125,7 @@ void PostgresProtocolHandler<SocketType>::send_data_row(
   _write_buffer.template put_value<PostgresMessageType>(PostgresMessageType::DataRow);
 
   const auto packet_size =
-      LENGTH_FIELD_SIZE + sizeof(uint16_t) + values_as_strings.size() * LENGTH_FIELD_SIZE + string_length_sum;
+      LENGTH_FIELD_SIZE + sizeof(uint16_t) + (values_as_strings.size() * LENGTH_FIELD_SIZE) + string_length_sum;
 
   _write_buffer.template put_value<uint32_t>(static_cast<uint32_t>(packet_size));
 
@@ -251,8 +251,8 @@ void PostgresProtocolHandler<SocketType>::send_error_message(const ErrorMessages
     string_length_sum += error_message.second.size() + 1ul /* null terminator */;
   }
 
-  const auto packet_size = LENGTH_FIELD_SIZE + error_messages.size() * sizeof(PostgresMessageType) + string_length_sum +
-                           1u /* null terminator */;
+  const auto packet_size = LENGTH_FIELD_SIZE + (error_messages.size() * sizeof(PostgresMessageType)) +
+                           string_length_sum + 1u /* null terminator */;
   _write_buffer.template put_value<uint32_t>(static_cast<uint32_t>(packet_size));
 
   for (const auto& [message_type, content] : error_messages) {

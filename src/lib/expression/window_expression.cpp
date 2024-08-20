@@ -31,7 +31,7 @@ std::ostream& operator<<(std::ostream& stream, const FrameBoundType frame_bound_
   }
 
   auto type_str = std::string{magic_enum::enum_name(frame_bound_type)};
-  std::transform(type_str.cbegin(), type_str.cend(), type_str.begin(), [](const auto character) {
+  std::ranges::transform(type_str, type_str.begin(), [](const auto character) {
     return std::toupper(character);
   });
   stream << type_str;
@@ -76,7 +76,7 @@ std::ostream& operator<<(std::ostream& stream, const FrameBound& frame_bound) {
 
 std::ostream& operator<<(std::ostream& stream, const FrameType frame_type) {
   auto type_str = std::string{magic_enum::enum_name(frame_type)};
-  std::transform(type_str.cbegin(), type_str.cend(), type_str.begin(), [](const auto character) {
+  std::ranges::transform(type_str, type_str.begin(), [](const auto character) {
     return std::toupper(character);
   });
   stream << type_str;

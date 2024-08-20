@@ -146,7 +146,7 @@ std::vector<pmr_string> LZ4Segment<pmr_string>::decompress() const {
     return std::vector<pmr_string>(size());
   }
 
-  const auto decompressed_size = (_lz4_blocks.size() - 1) * _block_size + _last_block_size;
+  const auto decompressed_size = ((_lz4_blocks.size() - 1) * _block_size) + _last_block_size;
   auto decompressed_data = std::vector<char>(decompressed_size);
   using DecompressedDataDifferenceType =
       typename std::iterator_traits<decltype(decompressed_data)::iterator>::difference_type;

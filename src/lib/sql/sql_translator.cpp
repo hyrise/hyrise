@@ -1473,10 +1473,10 @@ void SQLTranslator::_translate_distinct_order_by(const std::vector<hsql::OrderDe
       // If we later sort the table by the ORDER BY expression, we must ensure they are also part of the SELECT list
       // (DISTINCT will be applied before ORDER BY).
       const auto& select_expressions_set = ExpressionUnorderedSet{select_list.begin(), select_list.end()};
-      AssertInput(std::all_of(expressions.cbegin(), expressions.cend(),
-                              [&](const auto& expression) {
-                                return select_expressions_set.contains(expression);
-                              }),
+      AssertInput(std::ranges::all_of(expressions,
+                                      [&](const auto& expression) {
+                                        return select_expressions_set.contains(expression);
+                                      }),
                   "For SELECT DISTINCT, ORDER BY expressions must appear in the SELECT list.");
     }
 
@@ -1979,7 +1979,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
       }
 
       // Convert to upper-case to find mapping.
-      std::transform(name.cbegin(), name.cend(), name.begin(), [](const auto character) {
+      std::ranges::transform(name, name.begin(), [](const auto character) {
         return std::toupper(character);
       });
 
@@ -2082,10 +2082,10 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
           table_expressions.emplace_back(select_list_element.expression);
         }
 
-        AssertInput(std::none_of(table_expressions.cbegin(), table_expressions.cend(),
-                                 [&aggregate_expression](const auto input_expression) {
-                                   return *input_expression == *aggregate_expression;
-                                 }),
+        AssertInput(std::ranges::none_of(table_expressions,
+                                         [&aggregate_expression](const auto input_expression) {
+                                           return *input_expression == *aggregate_expression;
+                                         }),
                     "Hyrise cannot handle repeated aggregate expressions, see #1902 for details.");
 
         return aggregate_expression;

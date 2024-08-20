@@ -48,7 +48,7 @@ void ColumnLikeTableScanImpl::_scan_non_reference_segment(
 void ColumnLikeTableScanImpl::_scan_generic_segment(
     const AbstractSegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
     const std::shared_ptr<const AbstractPosList>& position_filter) const {
-  segment_with_iterators_filtered(segment, position_filter, [&](auto iter, [[maybe_unused]] const auto end) {
+  segment_with_iterators_filtered(segment, position_filter, [&](auto iter, [[maybe_unused]] const auto& end) {
     // Don't instantiate this for ReferenceSegments to save compile time as ReferenceSegments are handled
     // via position_filter
     if constexpr (!is_reference_segment_iterable_v<typename decltype(iter)::IterableType>) {
@@ -93,7 +93,7 @@ void ColumnLikeTableScanImpl::_scan_dictionary_segment(const BaseDictionarySegme
 
   // LIKE matches all rows, but we still need to check for NULL
   if (match_count == dictionary_matches.size()) {
-    attribute_vector_iterable.with_iterators(position_filter, [&](auto iter, auto end) {
+    attribute_vector_iterable.with_iterators(position_filter, [&](const auto& iter, const auto& end) {
       static const auto always_true = [](const auto&) {
         return true;
       };
@@ -113,7 +113,7 @@ void ColumnLikeTableScanImpl::_scan_dictionary_segment(const BaseDictionarySegme
     return dictionary_matches[position.value()];
   };
 
-  attribute_vector_iterable.with_iterators(position_filter, [&](auto iter, auto end) {
+  attribute_vector_iterable.with_iterators(position_filter, [&](const auto& iter, const auto& end) {
     _scan_with_iterators<true>(dictionary_lookup, iter, end, chunk_id, matches);
   });
 }

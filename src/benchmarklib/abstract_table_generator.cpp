@@ -125,7 +125,7 @@ void AbstractTableGenerator::generate_and_store() {
             auto last_value = std::optional<ColumnDataType>{};
             for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
               const auto& segment = table->get_chunk(chunk_id)->get_segment(sort_column_id);
-              segment_with_iterators<ColumnDataType>(*segment, [&](auto it, const auto end) {
+              segment_with_iterators<ColumnDataType>(*segment, [&](auto it, const auto& end) {
                 while (it != end) {
                   if (it->is_null()) {
                     if (last_value) {

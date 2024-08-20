@@ -57,10 +57,10 @@ TPCHBenchmarkItemRunner::TPCHBenchmarkItemRunner(const std::shared_ptr<Benchmark
       _scale_factor(scale_factor),
       _clustering_configuration(clustering_configuration),
       _items(items) {
-  Assert(std::all_of(_items.begin(), _items.end(),
-                     [&](const auto benchmark_item_id) {
-                       return benchmark_item_id >= BenchmarkItemID{0} && benchmark_item_id < 22;  // NOLINT
-                     }),
+  Assert(std::ranges::all_of(_items,
+                             [&](const auto benchmark_item_id) {
+                               return benchmark_item_id >= BenchmarkItemID{0} && benchmark_item_id < 22;  // NOLINT
+                             }),
          "Invalid TPC-H item ID.");
 }
 
@@ -193,7 +193,7 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
     }
 
     case 4 - 1: {
-      auto date_diff_dist = std::uniform_int_distribution<>{0, 4 * 12 + 9};
+      auto date_diff_dist = std::uniform_int_distribution<>{0, (4 * 12) + 9};
       const auto diff = date_diff_dist(random_engine);
       const auto begin_date = date_interval(boost::gregorian::date{1993, 01, 01}, diff, DatetimeComponent::Month);
       const auto end_date = date_interval(begin_date, 3, DatetimeComponent::Month);
@@ -351,7 +351,7 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
     case 15 - 1: {
       auto query_15 = std::string{tpch_queries.at(15)};
 
-      auto date_diff_dist = std::uniform_int_distribution<>{0, 4 * 12 + 9};
+      auto date_diff_dist = std::uniform_int_distribution<>{0, (4 * 12) + 9};
       const auto diff = date_diff_dist(random_engine);
       const auto begin_date = date_interval(boost::gregorian::date{1993, 01, 01}, diff, DatetimeComponent::Month);
       const auto end_date = date_interval(begin_date, 3, DatetimeComponent::Month);
@@ -375,7 +375,7 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
     }
 
     case 16 - 1: {
-      const auto brand = brand_char_dist(random_engine) * 10 + brand_char_dist(random_engine);
+      const auto brand = (brand_char_dist(random_engine) * 10) + brand_char_dist(random_engine);
 
       const auto full_type = std::string{p_types_set.list[type_dist(random_engine)].text};
       const auto partial_type = std::string(full_type, 0, full_type.find_last_of(' '));
@@ -392,7 +392,7 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
     }
 
     case 17 - 1: {
-      const auto brand = brand_char_dist(random_engine) * 10 + brand_char_dist(random_engine);
+      const auto brand = (brand_char_dist(random_engine) * 10) + brand_char_dist(random_engine);
       const auto* const container = p_cntr_set.list[container_dist(random_engine)].text;
 
       parameters.emplace_back("'Brand#" + std::to_string(brand) + "'");
@@ -415,9 +415,9 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
       const auto quantity1 = quantity1_dist(random_engine);
       const auto quantity2 = quantity2_dist(random_engine);
       const auto quantity3 = quantity3_dist(random_engine);
-      const auto brand1 = brand_char_dist(random_engine) * 10 + brand_char_dist(random_engine);
-      const auto brand2 = brand_char_dist(random_engine) * 10 + brand_char_dist(random_engine);
-      const auto brand3 = brand_char_dist(random_engine) * 10 + brand_char_dist(random_engine);
+      const auto brand1 = (brand_char_dist(random_engine) * 10) + brand_char_dist(random_engine);
+      const auto brand2 = (brand_char_dist(random_engine) * 10) + brand_char_dist(random_engine);
+      const auto brand3 = (brand_char_dist(random_engine) * 10) + brand_char_dist(random_engine);
 
       parameters.emplace_back("'Brand#" + std::to_string(brand1) + "'");
       parameters.emplace_back(std::to_string(quantity1));

@@ -9,9 +9,15 @@
 
 #include "utils/assert.hpp"
 
-namespace {
+namespace hyrise {
 
-using namespace hyrise;  // NOLINT(build/namespaces)
+CsvMeta process_csv_meta_file(const std::string& filename) {
+  auto metafile = std::ifstream{filename};
+  Assert(metafile.good(), "Meta file does not exist: " + filename);
+  auto meta_json = nlohmann::json{};
+  metafile >> meta_json;
+  return static_cast<CsvMeta>(meta_json);
+}
 
 void assign_if_exists(char& value, const nlohmann::json& json_object, const std::string& key) {
   if (json_object.find(key) != json_object.end()) {
@@ -27,20 +33,36 @@ void assign_if_exists(bool& value, const nlohmann::json& json_object, const std:
   }
 }
 
-}  // namespace
+void from_json(const nlohmann::json& json_string, NullHandling& null_handling) {
+  if (json_string == "reject_null_strings") {
+    null_handling = NullHandling::RejectNullStrings;
+  } else if (json_string == "null_string_as_null") {
+    null_handling = NullHandling::NullStringAsNull;
+  } else if (json_string == "null_string_as_value") {
+    null_handling = NullHandling::NullStringAsValue;
+  } else {
+    Fail("Illegal value for null_handling: " + json_string.get<std::string>());
+  }
+}
 
-namespace hyrise {
-
-CsvMeta process_csv_meta_file(const std::string& filename) {
-  auto metafile = std::ifstream{filename};
-  Assert(metafile.good(), "Meta file does not exist: " + filename);
-  auto meta_json = nlohmann::json{};
-  metafile >> meta_json;
-  return static_cast<CsvMeta>(meta_json);
+void to_json(nlohmann::json& json_string, NullHandling null_handling) {
+  switch (null_handling) {
+    case NullHandling::RejectNullStrings:
+      json_string = "reject_null_strings";
+      break;
+    case NullHandling::NullStringAsNull:
+      json_string = "null_string_as_null";
+      break;
+    case NullHandling::NullStringAsValue:
+      json_string = "null_string_as_value";
+      break;
+    default:
+      Fail("Unexpected NullHandling.");
+  }
 }
 
 void from_json(const nlohmann::json& json, CsvMeta& meta) {
-  // Apply only parts of the ParseConfig that are provided, use default values otherwise.
+  // Apply only parts of the ParseConfig that are provided, use default values otherwise
   auto config = ParseConfig{};
   if (json.find("config") != json.end()) {
     Assert(json.at("config").is_object(), "CSV meta file,\"Config\" field has to be a json object.");
@@ -90,7 +112,6 @@ void to_json(nlohmann::json& json, const CsvMeta& meta) {
 
   json = nlohmann::json{{"config", config}, {"columns", columns}};
 }
-
 
 bool operator==(const ColumnMeta& left, const ColumnMeta& right) {
   return std::tie(left.name, left.type, left.nullable) == std::tie(right.name, right.type, right.nullable);

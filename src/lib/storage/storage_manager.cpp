@@ -83,7 +83,7 @@ std::vector<std::string> StorageManager::table_names() const {
     table_names.emplace_back(table_item.first);
   }
 
-  std::sort(table_names.begin(), table_names.end());
+  std::ranges::sort(table_names);
   return table_names;
 }
 

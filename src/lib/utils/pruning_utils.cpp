@@ -216,8 +216,7 @@ std::set<ChunkID> compute_chunk_exclude_list(
         const auto segment_statistics = (*pruning_statistics)[operator_predicate.column_id];
         if (can_prune(*segment_statistics, condition, *value, value2)) {
           const auto& already_pruned_chunk_ids = stored_table_node->pruned_chunk_ids();
-          if (std::find(already_pruned_chunk_ids.begin(), already_pruned_chunk_ids.end(), chunk_id) ==
-              already_pruned_chunk_ids.end()) {
+          if (std::ranges::find(already_pruned_chunk_ids, chunk_id) == already_pruned_chunk_ids.end()) {
             // Chunk was not yet marked as pruned - update statistics.
             num_rows_pruned += chunk->size();
           } else {
@@ -296,8 +295,7 @@ std::vector<ChunkID> pruned_chunk_id_mapping(const size_t original_table_chunk_c
 }
 
 ColumnID column_id_before_pruning(const ColumnID column_id, const std::vector<ColumnID>& pruned_column_ids) {
-  DebugAssert(std::is_sorted(pruned_column_ids.begin(), pruned_column_ids.end()),
-              "Expected sorted vector of ColumnIDs");
+  DebugAssert(std::ranges::is_sorted(pruned_column_ids), "Expected sorted vector of ColumnIDs.");
 
   auto original_column_id = column_id;
   for (const auto& pruned_column_id : pruned_column_ids) {

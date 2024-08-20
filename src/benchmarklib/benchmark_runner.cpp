@@ -168,7 +168,7 @@ void BenchmarkRunner::run() {
   // Retrieve the items to be executed and prepare the result vector.
   const auto& items = _benchmark_item_runner->items();
   if (!items.empty()) {
-    _results = std::vector<BenchmarkItemResult>{*std::max_element(items.begin(), items.end()) + 1u};
+    _results = std::vector<BenchmarkItemResult>(*std::ranges::max_element(items) + 1);
   }
 
   // Execute pre-benchmark hooks of plugins required by the user.
@@ -452,7 +452,7 @@ nlohmann::json BenchmarkRunner::_create_report() const {
     const auto& name = _benchmark_item_runner->item_name(item_id);
     const auto& result = _results.at(item_id);
 
-    const auto runs_to_json = [](auto runs) {
+    const auto runs_to_json = [](const auto& runs) {
       auto runs_json = nlohmann::json::array();
       for (const auto& run_result : runs) {
         // Convert the SQLPipelineMetrics for each run of the BenchmarkItem into JSON.
@@ -552,7 +552,7 @@ cxxopts::Options BenchmarkRunner::get_basic_cli_options(const std::string& bench
   auto cli_options = cxxopts::Options{benchmark_name};
 
   // Create a comma separated strings with the encoding and compression options.
-  const auto get_first = boost::adaptors::transformed([](const auto it) {
+  const auto get_first = boost::adaptors::transformed([](const auto& it) {
     return it.first;
   });
   const auto compression_strings_option =
@@ -650,7 +650,7 @@ nlohmann::json BenchmarkRunner::_sql_to_json(const std::string& sql) {
     for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
       boost::apply_visitor(
           // table=table needed because of https://stackoverflow.com/questions/46114214/
-          [&, table = table](const auto value) {
+          [&, table = table](const auto& value) {
             if constexpr (!std::is_same_v<std::decay_t<decltype(value)>, NullValue>) {
               entry[table->column_name(column_id)] = value;
             } else {

@@ -32,10 +32,9 @@ bool remove_dependent_group_by_columns(const FunctionalDependency& fd, Aggregate
   auto group_by_list_changed = false;
 
   // To benefit from this rule, the FD's columns have to be part of the group-by list.
-  if (!std::ranges::all_of(fd.determinants,
-                   [&group_by_columns](const std::shared_ptr<AbstractExpression>& expression) {
-                     return group_by_columns.contains(expression);
-                   })) {
+  if (!std::ranges::all_of(fd.determinants, [&group_by_columns](const std::shared_ptr<AbstractExpression>& expression) {
+        return group_by_columns.contains(expression);
+      })) {
     return false;
   }
 
