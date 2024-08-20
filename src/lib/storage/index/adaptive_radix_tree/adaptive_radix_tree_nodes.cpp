@@ -236,7 +236,7 @@ AbstractChunkIndex::Iterator ARTNode16::end() const {
 ARTNode48::ARTNode48(const std::vector<std::pair<uint8_t, std::shared_ptr<ARTNode>>>& children) {
   _index_to_child.fill(INVALID_INDEX);
   const auto child_count = children.size();
-  for (auto index = size_t{0}; index < child_count; ++index) {
+  for (auto index = uint8_t{0}; index < static_cast<uint8_t>(child_count); ++index) {
     _index_to_child[children[index].first] = index;
     _children[index] = children[index].second;
   }

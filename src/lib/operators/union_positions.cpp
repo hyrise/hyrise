@@ -267,7 +267,7 @@ std::shared_ptr<const Table> UnionPositions::_prepare_operator() {
   add(right_input_table());
 
   boost::sort::pdqsort(_column_cluster_offsets.begin(), _column_cluster_offsets.end());
-  const auto unique_end_iter = std::ranges::unique(_column_cluster_offsets);
+  const auto unique_end_iter = std::unique(_column_cluster_offsets.begin(), _column_cluster_offsets.end());
   _column_cluster_offsets.resize(std::distance(_column_cluster_offsets.begin(), unique_end_iter));
 
   /**
