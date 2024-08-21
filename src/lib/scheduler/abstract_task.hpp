@@ -138,7 +138,7 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
   /**
    * @return the successors of this task.
    */
-  const std::vector<std::shared_ptr<AbstractTask>>& successors() const;
+  const std::vector<std::reference_wrapper<const std::shared_ptr<AbstractTask>>>& successors() const;
 
   /**
    * Node IDs are changed when moving the task between nodes (e.g. during work stealing).
@@ -209,7 +209,7 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
   // For dependencies.
   std::atomic_uint32_t _pending_predecessors{0};
   std::vector<std::weak_ptr<AbstractTask>> _predecessors;
-  std::vector<std::shared_ptr<AbstractTask>> _successors;
+  std::vector<std::reference_wrapper<const std::shared_ptr<AbstractTask>>> _successors;
 
   // State management.
   std::atomic<TaskState> _state{TaskState::Created};

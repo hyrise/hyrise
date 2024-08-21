@@ -21,9 +21,9 @@ AbstractTask::~AbstractTask() {
   // The scheduler takes task lists where each task might store shared_pointers to other tasks of the list (in form of
   // the task's successors). To ease destroying all tasks of the list, we first reset all shared_pointers of the
   // successors.
-  for (auto& successor : _successors) {
-    successor.reset();
-  }
+  // for (auto& successor : _successors) {
+    // successor.reset();
+  // }
 }
 
 TaskID AbstractTask::id() const {
@@ -62,12 +62,18 @@ void AbstractTask::set_as_predecessor_of(const std::shared_ptr<AbstractTask>& su
   // Since OperatorTasks can be reused by, e.g., uncorrelated subqueries, this function may already have been called
   // with the given successor (compare discussion https://github.com/hyrise/hyrise/pull/2340#discussion_r602174096).
   // The following guard prevents adding duplicate successors/predecessors:
-  if (std::ranges::find(_successors, successor) != _successors.cend()) {
-    return;
+  // if (std::ranges::find(_successors, [&] (const auto& element) { return element.get() == successor; }) != _successors.cend()) {
+  //   return;
+  // }
+
+  for (const auto& present_successor : _successors) {
+    if (present_successor.get() == successor) {
+      return;
+    }
   }
 
-  _successors.emplace_back(successor);
-  successor->_predecessors.emplace_back(shared_from_this());
+  _successors.emplace_back(std::ref(successor));
+  successor.get()->_predecessors.emplace_back(shared_from_this());
 
   // A task that is already done will not call _on_predecessor_done at the successor. Consequently, the successor's
   // _pending_predecessors count will not decrement. To avoid starvation at the successor, we do not increment its
@@ -76,7 +82,7 @@ void AbstractTask::set_as_predecessor_of(const std::shared_ptr<AbstractTask>& su
   // is called before _pending_predecessors++ has executed.
   auto lock = std::lock_guard<std::mutex>{_done_condition_variable_mutex};
   if (!is_done()) {
-    successor->_pending_predecessors++;
+    successor.get()->_pending_predecessors++;
   }
 }
 
@@ -84,7 +90,7 @@ const std::vector<std::weak_ptr<AbstractTask>>& AbstractTask::predecessors() con
   return _predecessors;
 }
 
-const std::vector<std::shared_ptr<AbstractTask>>& AbstractTask::successors() const {
+const std::vector<std::reference_wrapper<const std::shared_ptr<AbstractTask>>>& AbstractTask::successors() const {
   return _successors;
 }
 
@@ -157,7 +163,7 @@ void AbstractTask::execute() {
   }
 
   for (auto& successor : _successors) {
-    successor->_on_predecessor_done();
+    successor.get()->_on_predecessor_done();
   }
 
   if (_done_callback) {
