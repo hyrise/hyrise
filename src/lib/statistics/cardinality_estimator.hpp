@@ -7,10 +7,11 @@
 
 #include <boost/dynamic_bitset.hpp>
 
-#include "abstract_cardinality_estimator.hpp"
+#include "cardinality_estimation_cache.hpp"
 #include "operators/operator_scan_predicate.hpp"
 #include "statistics/statistics_objects/abstract_histogram.hpp"
 #include "statistics/statistics_objects/generic_histogram_builder.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 
@@ -31,22 +32,49 @@ class ValidateNode;
 class WindowNode;
 
 /**
- * Hyrise's default, statistics-based cardinality estimator.
+ * Hyrise's statistics-based cardinality estimator.
  */
-class CardinalityEstimator : public AbstractCardinalityEstimator {
+class CardinalityEstimator {
  public:
   using StatisticsByLQP = CardinalityEstimationCache::StatisticsByLQP;
 
-  std::shared_ptr<AbstractCardinalityEstimator> new_instance() const override;
+  /**
+   * @return A new instance of this estimator with empty caches. Used so that caching guarantees can be enabled on the
+   *         returned estimator.
+   */
+  std::shared_ptr<CardinalityEstimator> new_instance() const;
 
+  /**
+   * @return The estimated output row count of @param lqp.
+   */
   Cardinality estimate_cardinality(const std::shared_ptr<const AbstractLQPNode>& lqp,
-                                   const bool cacheable = true) const override;
+                                   const bool cacheable = true) const;
 
   std::shared_ptr<TableStatistics> estimate_statistics(const std::shared_ptr<const AbstractLQPNode>& lqp,
                                                        const bool cacheable = true) const;
 
   std::shared_ptr<TableStatistics> estimate_statistics(const std::shared_ptr<const AbstractLQPNode>& lqp,
                                                        const bool cacheable, StatisticsByLQP& statistics_cache) const;
+
+  /**
+   * Statistics caching
+   * @{
+   *
+   * For increased cardinality estimation performance:
+   * Promises to this CardinalityEstimator that it will only be used to estimate Cardinalities of plans that consist
+   * of the Vertices and Predicates in @param JoinGraph. This enables using the JoinGraphStatisticsCache during
+   * Cardinality estimation.
+   */
+  void guarantee_join_graph(const JoinGraph& join_graph);
+
+  /**
+   * For increased cardinality estimation performance:
+   * Promises to this CardinalityEstimator that it will only be used to estimate bottom-up
+   * constructed plans. That is, the Cost/Cardinality of a node, once constructed, never changes.
+   * This enables the usage of a <lqp-ptr> -> <cost> cache.
+   */
+  void guarantee_bottom_up_construction();
+  /** @} */
 
   /**
    * Per-node-type estimation functions
@@ -244,6 +272,8 @@ class CardinalityEstimator : public AbstractCardinalityEstimator {
       const std::shared_ptr<TableStatistics>& table_statistics, const std::vector<ColumnID>& pruned_column_ids);
 
   /** @} */
+
+  mutable CardinalityEstimationCache cardinality_estimation_cache;
 };
 
 }  // namespace hyrise

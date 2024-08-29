@@ -11,14 +11,14 @@ namespace hyrise {
 
 class AbstractLQPNode;
 class TableStatistics;
-class AbstractCardinalityEstimator;
+class CardinalityEstimator;
 
 /**
  * Base class of an algorithm that predicts Cost for operators and plans.
  */
 class AbstractCostEstimator {
  public:
-  explicit AbstractCostEstimator(const std::shared_ptr<AbstractCardinalityEstimator>& init_cardinality_estimator);
+  explicit AbstractCostEstimator(const std::shared_ptr<CardinalityEstimator>& init_cardinality_estimator);
   virtual ~AbstractCostEstimator() = default;
 
   /**
@@ -48,7 +48,7 @@ class AbstractCostEstimator {
    */
   void guarantee_bottom_up_construction();
 
-  const std::shared_ptr<AbstractCardinalityEstimator> cardinality_estimator;
+  const std::shared_ptr<CardinalityEstimator> cardinality_estimator;
 
   mutable std::optional<std::unordered_map<std::shared_ptr<AbstractLQPNode>, Cost>> cost_estimation_by_lqp_cache;
 

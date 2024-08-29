@@ -38,8 +38,8 @@
 #include "lossy_cast.hpp"
 #include "operators/operator_join_predicate.hpp"
 #include "operators/operator_scan_predicate.hpp"
+#include "optimizer/join_ordering/join_graph.hpp"
 #include "resolve_type.hpp"
-#include "statistics/abstract_cardinality_estimator.hpp"
 #include "statistics/attribute_statistics.hpp"
 #include "statistics/cardinality_estimation_cache.hpp"
 #include "statistics/join_graph_statistics_cache.hpp"
@@ -85,7 +85,7 @@ namespace hyrise {
 
 using namespace expression_functional;  // NOLINT(build/namespaces)
 
-std::shared_ptr<AbstractCardinalityEstimator> CardinalityEstimator::new_instance() const {
+std::shared_ptr<CardinalityEstimator> CardinalityEstimator::new_instance() const {
   return std::make_shared<CardinalityEstimator>();
 }
 
@@ -101,6 +101,15 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
   auto statistics_cache = StatisticsByLQP{};
   const auto statistics = estimate_statistics(lqp, cacheable, statistics_cache);
   return statistics;
+}
+
+void CardinalityEstimator::guarantee_join_graph(const JoinGraph& join_graph) {
+  cardinality_estimation_cache.join_graph_statistics_cache.emplace(
+      JoinGraphStatisticsCache::from_join_graph(join_graph));
+}
+
+void CardinalityEstimator::guarantee_bottom_up_construction() {
+  cardinality_estimation_cache.statistics_by_lqp.emplace();
 }
 
 std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
