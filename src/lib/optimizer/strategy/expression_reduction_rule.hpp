@@ -33,7 +33,7 @@ class AbstractLQPNode;
  * NOT LIKE to LessThan-Or-GreaterThanEquals
  *   `<expression> NOT LIKE <pattern>` can be rewritten to a LessThan-Or-GreaterThanEquals scan if `<pattern>` is a
  *   prefix wildcard literal.
- *   E.g., `a NOT LIKE 'abc%'` becomes `a < 'abc' OR a >= 'abcd'`.
+ *   E.g., `a NOT LIKE 'abc%'` becomes `a < 'abc' OR a >= 'abd'`.
  *
  * (NOT) LIKE to Equals
  *   `<expression> (NOT) LIKE <pattern>` can be rewritten to (Not)Equals if `<pattern>` has no wildcard.
@@ -66,7 +66,7 @@ class ExpressionReductionRule : public AbstractRule {
 
   /**
    * Rewrite `a LIKE 'abc%'` to `a BetweenUpperExclusive 'abc' AND 'abd'`.
-   * Rewrite `a NOT LIKE 'abc%'` to `a < 'abc' OR a >= 'abcd'`.
+   * Rewrite `a NOT LIKE 'abc%'` to `a < 'abc' OR a >= 'abd'`.
    * Rewrite `a (NOT) LIKE 'abc'` to `a (Not)Equals 'abc'`.
    */
   static void rewrite_like_prefix_wildcard(std::shared_ptr<AbstractExpression>& input_expression);
