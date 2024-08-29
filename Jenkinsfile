@@ -112,31 +112,36 @@ try {
             release = '-DCMAKE_BUILD_TYPE=Release'
             relwithdebinfo = '-DCMAKE_BUILD_TYPE=RelWithDebInfo'
 
+            // LTO is automatically disabled for debug and sanitizer builds. As LTO linking with GCC and gold (lld is
+            // not supported when using GCC and LTO) takes over an hour, we skip LTO for the GCC release build.
+            no_lto = '-DNO_LTO=TRUE'
+
             // jemalloc's autoconf operates outside of the build folder (#1413). If we start two cmake instances at the
             // same time, we run into conflicts. Thus, run this one (any one, really) first, so that the autoconf step
             // can finish in peace.
-            sh "mkdir clang-debug && cd clang-debug &&                                                   ${cmake} ${debug}          ${clang}  ${unity}  ${ninja} .. && ninja libjemalloc-build"
+            sh "mkdir clang-debug && cd clang-debug &&                                                   ${cmake} ${debug}          ${clang}  ${unity} .. && make -j \$(nproc) libjemalloc-build"
 
             // Configure the rest in parallel. We use unity builds to decrease build times, except for two
             // configurations: (1) clang tidy as it might otherwise miss issues with unity builds (e.g., missing
             // includes) and (2) GCC 11 debug builds of GTest (see https://github.com/google/googletest/issues/3552).
-            sh "mkdir clang-debug-tidy && cd clang-debug-tidy &&                                         ${cmake} ${debug}          ${clang}             ${ninja} -DENABLE_CLANG_TIDY=ON .. &\
-            mkdir clang-debug-unity-odr && cd clang-debug-unity-odr &&                                   ${cmake} ${debug}          ${clang}   ${unity}  ${ninja} -DCMAKE_UNITY_BUILD_BATCH_SIZE=0 .. &\
-            mkdir clang-debug-disable-precompile-headers && cd clang-debug-disable-precompile-headers && ${cmake} ${debug}          ${clang}   ${unity}  ${ninja} -DCMAKE_DISABLE_PRECOMPILE_HEADERS=On .. &\
-            mkdir clang-debug-addr-ub-leak-sanitizers && cd clang-debug-addr-ub-leak-sanitizers &&       ${cmake} ${debug}          ${clang}   ${unity}  ${ninja} -DENABLE_ADDR_UB_LEAK_SANITIZATION=ON .. &\
-            mkdir clang-release-addr-ub-leak-sanitizers && cd clang-release-addr-ub-leak-sanitizers &&   ${cmake} ${release}        ${clang}   ${unity}  ${ninja} -DENABLE_ADDR_UB_LEAK_SANITIZATION=ON .. &\
-            mkdir clang-relwithdebinfo-thread-sanitizer && cd clang-relwithdebinfo-thread-sanitizer &&   ${cmake} ${relwithdebinfo} ${clang}   ${unity}  ${ninja} -DENABLE_THREAD_SANITIZATION=ON .. &\
-            mkdir clang-release && cd clang-release &&                                                   ${cmake} ${release}        ${clang}   ${unity}  ${ninja} .. &\
-            mkdir gcc-debug && cd gcc-debug &&                                                           ${cmake} ${debug}          ${gcc}     ${unity}           .. &\
-            mkdir gcc-release && cd gcc-release &&                                                       ${cmake} ${release}        ${gcc}     ${unity}  ${ninja} .. &\
-            mkdir clang-15-debug && cd clang-15-debug &&                                                 ${cmake} ${debug}          ${clang15} ${unity}  ${ninja} .. &\
-            mkdir gcc-11-debug && cd gcc-11-debug &&                                                     ${cmake} ${debug}          ${gcc11}             ${ninja} .. &\
+            sh "mkdir clang-debug-tidy && cd clang-debug-tidy &&                                         ${cmake} ${debug}          ${clang}                      ${ninja} -DENABLE_CLANG_TIDY=ON .. &\
+            mkdir clang-debug-unity-odr && cd clang-debug-unity-odr &&                                   ${cmake} ${debug}          ${clang}   ${unity}           ${ninja} -DCMAKE_UNITY_BUILD_BATCH_SIZE=0 .. &\
+            mkdir clang-debug-disable-precompile-headers && cd clang-debug-disable-precompile-headers && ${cmake} ${debug}          ${clang}   ${unity}           ${ninja} -DCMAKE_DISABLE_PRECOMPILE_HEADERS=On .. &\
+            mkdir clang-debug-addr-ub-leak-sanitizers && cd clang-debug-addr-ub-leak-sanitizers &&       ${cmake} ${debug}          ${clang}   ${unity}           ${ninja} -DENABLE_ADDR_UB_LEAK_SANITIZATION=ON .. &\
+            mkdir clang-release-addr-ub-leak-sanitizers && cd clang-release-addr-ub-leak-sanitizers &&   ${cmake} ${release}        ${clang}   ${unity}           ${ninja} -DENABLE_ADDR_UB_LEAK_SANITIZATION=ON .. &\
+            mkdir clang-relwithdebinfo-thread-sanitizer && cd clang-relwithdebinfo-thread-sanitizer &&   ${cmake} ${relwithdebinfo} ${clang}   ${unity}           ${ninja} -DENABLE_THREAD_SANITIZATION=ON .. &\
+            mkdir clang-release && cd clang-release &&                                                   ${cmake} ${release}        ${clang}   ${unity}           ${ninja} .. &\
+            mkdir gcc-debug && cd gcc-debug &&                                                           ${cmake} ${debug}          ${gcc}     ${unity}           ${ninja} .. &\
+            mkdir gcc-release && cd gcc-release &&                                                       ${cmake} ${release}        ${gcc}     ${unity} ${no_lto} ${ninja} .. &\
+            mkdir clang-15-debug && cd clang-15-debug &&                                                 ${cmake} ${debug}          ${clang15} ${unity}           ${ninja} .. &\
+            mkdir gcc-11-debug && cd gcc-11-debug &&                                                     ${cmake} ${debug}          ${gcc11}                      ${ninja} .. &\
             wait"
           }
 
           parallel clangDebug: {
             stage("clang-debug") {
-              sh "cd clang-debug && ninja all -j \$(( \$(nproc) / 5))"
+              // We build clang-debug using make to test make once (and clang-debug is the fastest build).
+              sh "cd clang-debug && make all -j \$(( \$(nproc) / 5))"
               sh "./clang-debug/hyriseTest clang-debug"
             }
           }, clang15Debug: {
@@ -146,8 +151,7 @@ try {
             }
           }, gccDebug: {
             stage("gcc-debug") {
-              // We build gcc-debug using make.
-              sh "cd gcc-debug && make all -j \$(( \$(nproc) / 5))"
+              sh "cd gcc-debug && ninja all -j \$(( \$(nproc) / 5))"
               sh "cd gcc-debug && ./hyriseTest"
             }
           }, gcc11Debug: {
@@ -288,10 +292,11 @@ try {
           }, clangRelWithDebInfoThreadSanitizer: {
             stage("clang-relwithdebinfo:thread-sanitizer") {
               if (env.BRANCH_NAME == 'master' || full_ci) {
-                sh "cd clang-relwithdebinfo-thread-sanitizer && ninja hyriseTest hyriseSystemTest hyriseBenchmarkTPCH hyriseBenchmarkTPCDS -j \$(( \$(nproc) / 5))"
+                sh "cd clang-relwithdebinfo-thread-sanitizer && ninja hyriseTest hyriseSystemTest hyriseBenchmarkTPCH hyriseBenchmarkTPCC hyriseBenchmarkTPCDS -j \$(( \$(nproc) / 5))"
                 sh "TSAN_OPTIONS=\"history_size=7 suppressions=resources/.tsan-ignore.txt\" ./clang-relwithdebinfo-thread-sanitizer/hyriseTest clang-relwithdebinfo-thread-sanitizer"
                 sh "TSAN_OPTIONS=\"history_size=7 suppressions=resources/.tsan-ignore.txt\" ./clang-relwithdebinfo-thread-sanitizer/hyriseSystemTest --gtest_filter=-${tests_excluded_in_sanitizer_builds} clang-relwithdebinfo-thread-sanitizer"
                 sh "TSAN_OPTIONS=\"history_size=7 suppressions=resources/.tsan-ignore.txt\" ./clang-relwithdebinfo-thread-sanitizer/hyriseBenchmarkTPCH -s .01 -r 100 --scheduler --clients 10 --cores \$(( \$(nproc) / 10))"
+                sh "TSAN_OPTIONS=\"history_size=7 suppressions=resources/.tsan-ignore.txt\" ./clang-relwithdebinfo-thread-sanitizer/hyriseBenchmarkTPCC -s 1 --time 120 --scheduler --clients 10 --cores \$(( \$(nproc) / 10))"
                 sh "TSAN_OPTIONS=\"history_size=7 suppressions=resources/.tsan-ignore.txt\" ./clang-relwithdebinfo-thread-sanitizer/hyriseBenchmarkTPCDS -s 1 -r 5 --scheduler --clients 5 --cores \$(( \$(nproc) / 10))"
               } else {
                 Utils.markStageSkippedForConditional("clangRelWithDebInfoThreadSanitizer")
@@ -392,8 +397,18 @@ try {
                 Utils.markStageSkippedForConditional("ssbQueryPlans")
               }
             }
+          }, nixSetup: {
+	    stage('nixSetup') {
+              if (env.BRANCH_NAME == 'master' || full_ci) {
+                sh "curl -L https://nixos.org/nix/install > nix-install.sh && chmod +x nix-install.sh && ./nix-install.sh --daemon --yes"
+                sh "/nix/var/nix/profiles/default/bin/nix-shell resources/nix --pure --run \"mkdir nix-debug && cd nix-debug && cmake ${debug} ${clang} ${unity} ${ninja} .. && ninja all -j \$(( \$(nproc) / 7)) && ./hyriseTest\""
+                // We allocate a third of all cores for the release build as several parallel stages should have already finished at this point.
+                sh "/nix/var/nix/profiles/default/bin/nix-shell resources/nix --pure --run \"mkdir nix-release && cd nix-release && cmake ${release} ${clang} ${unity} ${ninja} .. && ninja all -j \$(( \$(nproc) / 3)) && ./hyriseTest\""
+              } else {
+                Utils.markStageSkippedForConditional("nixSetup")
+              }
+	    }
           }
-
         } finally {
           sh "ls -A1 | xargs rm -rf"
           deleteDir()
@@ -431,8 +446,9 @@ try {
             sh "./clang-apple-debug/hyriseTest"
 
             // Build Hyrise (Release) with a recent clang compiler version (as recommended for Hyrise on macOS) and run
-            // various tests.
-            sh "mkdir clang-release && cd clang-release && PATH=/usr/local/bin/:$PATH /usr/local/bin/cmake ${release} ${ninja} -DCMAKE_C_COMPILER=/usr/local/opt/llvm@17/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm@17/bin/clang++ .."
+            // various tests. As the release build already takes quite a while on the Intel machine, we disable LTO and
+            // only build release with LTO on the ARM machine.
+            sh "mkdir clang-release && cd clang-release && PATH=/usr/local/bin/:$PATH /usr/local/bin/cmake ${release} ${ninja} ${no_lto} -DCMAKE_C_COMPILER=/usr/local/opt/llvm@17/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm@17/bin/clang++ .."
             sh "cd clang-release && PATH=/usr/local/bin/:$PATH ninja"
             sh "./clang-release/hyriseTest"
             sh "./clang-release/hyriseSystemTest --gtest_filter=-${tests_excluded_in_mac_builds}"
