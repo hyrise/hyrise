@@ -42,7 +42,7 @@ class CardinalityEstimator {
    * @return A new instance of this estimator with empty caches. Used so that caching guarantees can be enabled on the
    *         returned estimator.
    */
-  std::shared_ptr<CardinalityEstimator> new_instance() const;
+  static std::shared_ptr<CardinalityEstimator> new_instance();
 
   /**
    * @return The estimated output row count of @param lqp.

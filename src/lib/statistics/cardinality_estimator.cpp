@@ -85,7 +85,7 @@ namespace hyrise {
 
 using namespace expression_functional;  // NOLINT(build/namespaces)
 
-std::shared_ptr<CardinalityEstimator> CardinalityEstimator::new_instance() const {
+std::shared_ptr<CardinalityEstimator> CardinalityEstimator::new_instance() {
   return std::make_shared<CardinalityEstimator>();
 }
 
