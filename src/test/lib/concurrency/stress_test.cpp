@@ -217,7 +217,7 @@ TEST_F(StressTest, NodeSchedulerStressTest) {
   Hyrise::get().set_scheduler(node_queue_scheduler);
 
   // Just a sufficiently large number to trigger a non-empty queue.
-  const auto job_counts = std::vector<size_t>{node_count << 3u, node_count << 4u, node_count << 3u};
+  const auto job_counts = std::vector<size_t>{node_count << 3, node_count << 4, node_count << 3};
 
   auto num_finished_jobs = std::atomic_uint32_t{0};
   volatile auto start_jobs = std::atomic_bool{false};

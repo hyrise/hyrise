@@ -63,16 +63,16 @@ void generate_chunk_pruning_statistics(const std::shared_ptr<Chunk>& chunk) {
         const auto& dictionary = *typed_segment.dictionary();
         create_pruning_statistics_for_segment(*segment_statistics, dictionary);
       } else {
-        // if we have a generic segment we create the dictionary ourselves
+        // If we have a generic segment we create the dictionary ourselves.
         auto iterable = create_iterable_from_segment<ColumnDataType>(typed_segment);
-        std::unordered_set<ColumnDataType> values;
+        auto values = std::unordered_set<ColumnDataType>{};
         iterable.for_each([&](const auto& value) {
-          // we are only interested in non-null values
+          // We are only interested in non-null values.
           if (!value.is_null()) {
             values.insert(value.value());
           }
         });
-        pmr_vector<ColumnDataType> dictionary{values.cbegin(), values.cend()};
+        auto dictionary = pmr_vector<ColumnDataType>{values.cbegin(), values.cend()};
         std::sort(dictionary.begin(), dictionary.end());
         create_pruning_statistics_for_segment(*segment_statistics, dictionary);
       }

@@ -323,7 +323,7 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
     // Check if the indexed chunks have been pruned.
     DebugAssert(std::ranges::is_sorted(_pruned_chunk_ids), "Expected _pruned_chunk_ids vector to be sorted.");
     return std::ranges::all_of(indexed_chunk_ids, [&](const auto chunk_id) {
-      // NOLINTNEXTLINE(misc-include-cleaner): TODO(Martin) add LLVM issue.
+      // NOLINTNEXTLINE(misc-include-cleaner): see issue (https://github.com/llvm/llvm-project/issues/94459)
       return std::ranges::binary_search(_pruned_chunk_ids, chunk_id);
     });
   };
