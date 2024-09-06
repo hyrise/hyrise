@@ -37,11 +37,13 @@ struct Task : public std::enable_shared_from_this<Task>{
   }
 
   void add_successor(const std::shared_ptr<Task>& successor) {
+    // successors.emplace_back(std::ref(successor));
     successors.emplace_back(successor);
     successor->predecessors.emplace_back(shared_from_this());
   }
 
   int id{};
+  // std::vector<std::reference_wrapper<const std::shared_ptr<Task>>> successors;
   std::vector<std::shared_ptr<Task>> successors;
   std::vector<std::weak_ptr<Task>> predecessors;
 };
@@ -75,18 +77,18 @@ int main() {
     //   std::cout << tasks[i].use_count() << "\n";
     // }
 
-    std::cerr << "\n\nDone\n\n";
-    start = std::chrono::steady_clock::now();
-    for (auto& task : tasks) {
-      // task.reset();
+    // std::cerr << "\n\nDone\n\n";
+    // start = std::chrono::steady_clock::now();
+    // for (auto& task : tasks) {
+    //   // task.reset();
 
-      for (auto& successor : task->successors) {
-        if (successor) {
-          successor.reset();
-        }
-      }
-    }
-    tasks.clear();
+    //   for (auto& successor : task->successors) {
+    //     if (successor) {
+    //       successor.reset();
+    //     }
+    //   }
+    // }
+    // tasks.clear();
   }
   const auto end = std::chrono::steady_clock::now();
   
