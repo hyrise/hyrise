@@ -1,6 +1,7 @@
 #include "abstract_scheduler.hpp"
 
 #include <memory>
+#include <unordered_set>
 #include <vector>
 
 #include "scheduler/abstract_task.hpp"
@@ -32,6 +33,22 @@ void AbstractScheduler::_group_tasks(const std::vector<std::shared_ptr<AbstractT
 }
 
 void AbstractScheduler::schedule_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) {
+  if constexpr (HYRISE_DEBUG) {
+    auto task_set = std::unordered_set<std::shared_ptr<AbstractTask>>{};
+    for (const auto& task : tasks) {
+      task_set.emplace(task);
+    }
+
+    for (const auto& task : tasks) {
+      const auto& succesors = task->successors();
+      if (!succesors.empty()) {
+        for (const auto& successor : succesors) {
+          Assert(task_set.contains(successor), "Dependencies of passed tasks need to be passed to the scheduler too.");
+        }
+      }
+    }
+  }
+
   for (const auto& task : tasks) {
     task->schedule();
   }
