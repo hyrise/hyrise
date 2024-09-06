@@ -43,9 +43,9 @@ int main(int argc, char** argv) {
   } else {
     hyrise::test_data_path = "./.hyrise_test_data/";
   }
-  // hyrise::test_executable_path = std::filesystem::canonical("./" + std::string{argv[0]}).remove_filename();
-  // remove_test_data_directory();
-  // create_test_data_directory(prefix);
+  hyrise::test_executable_path = std::filesystem::canonical("./" + std::string{argv[0]}).remove_filename();
+  remove_test_data_directory();
+  create_test_data_directory(prefix);
 
   int ret = RUN_ALL_TESTS();
 

@@ -45,6 +45,8 @@ class SchedulerTest : public BaseTest {
     task3->schedule();
     task1->schedule();
     task2->schedule();
+
+    Hyrise::get().scheduler()->finish();
   }
 
   void stress_multiple_dependencies(std::atomic_uint32_t& counter) {
@@ -66,6 +68,8 @@ class SchedulerTest : public BaseTest {
     task3->schedule();
     task1->schedule();
     task2->schedule();
+
+    Hyrise::get().scheduler()->finish();
   }
 
   void stress_diamond_dependencies(std::atomic_uint32_t& counter) {
@@ -95,6 +99,8 @@ class SchedulerTest : public BaseTest {
     task3->schedule();
     task1->schedule();
     task2->schedule();
+
+    Hyrise::get().scheduler()->finish();
   }
 
   void increment_counter_in_subtasks(std::atomic_uint32_t& counter) {
@@ -147,13 +153,11 @@ TEST_F(SchedulerTest, LinearDependenciesWithScheduler) {
   Hyrise::get().topology.use_fake_numa_topology(8, 4);
   Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
 
-  std::atomic_uint32_t counter{0u};
+  auto counter = std::atomic_uint32_t{0};
 
   stress_linear_dependencies(counter);
 
-  Hyrise::get().scheduler()->finish();
-
-  ASSERT_EQ(counter, 3u);
+  ASSERT_EQ(counter, 3);
 }
 
 TEST_F(SchedulerTest, Grouping) {
@@ -191,8 +195,6 @@ TEST_F(SchedulerTest, MultipleDependenciesWithScheduler) {
 
   stress_multiple_dependencies(counter);
 
-  Hyrise::get().scheduler()->finish();
-
   ASSERT_EQ(counter, 4u);
 }
 
@@ -203,8 +205,6 @@ TEST_F(SchedulerTest, DiamondDependenciesWithScheduler) {
   std::atomic_uint32_t counter{0};
 
   stress_diamond_dependencies(counter);
-
-  Hyrise::get().scheduler()->finish();
 
   ASSERT_EQ(counter, 7u);
 }

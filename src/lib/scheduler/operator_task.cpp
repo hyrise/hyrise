@@ -30,7 +30,6 @@ std::shared_ptr<OperatorTask> add_operator_tasks_recursively(const std::shared_p
   Assert(task, "Operator did not return a task.");
   // By using an unordered set, we can avoid adding duplicate tasks.
   const auto& [_, inserted] = tasks.insert(task);
-  std::cout << "Added task with addr " << &*task << std::endl;
   if (!inserted) {
     return task;
   }
@@ -38,13 +37,11 @@ std::shared_ptr<OperatorTask> add_operator_tasks_recursively(const std::shared_p
   if (auto left = op->mutable_left_input()) {
     const auto& left_subtree_root = add_operator_tasks_recursively(left, tasks);
     left_subtree_root->set_as_predecessor_of(task);
-    std::cout << "Left: Task with addr " << &*task << " is now successor of " << &*left_subtree_root << std::endl;
   }
 
   if (auto right = op->mutable_right_input()) {
     const auto& right_subtree_root = add_operator_tasks_recursively(right, tasks);
     right_subtree_root->set_as_predecessor_of(task);
-    std::cout << "Right: Task with addr " << &*task << " is now successor of " << &*right_subtree_root << std::endl;
   }
 
   for (const auto& subquery : op->uncorrelated_subqueries()) {
@@ -52,9 +49,7 @@ std::shared_ptr<OperatorTask> add_operator_tasks_recursively(const std::shared_p
     // subquery providing the value for a TableScan operator). By recursing into these uncorrelated subqueries as well,
     // we ensure that uncorrelated subqueries are correctly scheduled in the same way as regular input operators.
     const auto& subquery_root = add_operator_tasks_recursively(subquery, tasks);
-    tasks.emplace(subquery_root);
     subquery_root->set_as_predecessor_of(task);
-    std::cout << "sub: Task with addr " << &*task << " is now successor of " << &*subquery_root << std::endl;
   }
 
   return task;
@@ -106,16 +101,6 @@ OperatorTask::make_tasks_from_operator(const std::shared_ptr<AbstractOperator>& 
   auto operator_tasks_set = std::unordered_set<std::shared_ptr<OperatorTask>>{};
   const auto& root_operator_task = add_operator_tasks_recursively(op, operator_tasks_set);
 
-  auto c = std::vector<std::shared_ptr<AbstractTask>>(operator_tasks_set.begin(), operator_tasks_set.end());
-  for (auto cc : c) {
-    std::cout << "task " << &*cc << " has successors: " << cc->successors().size() << std::endl;
-    if (!cc->successors().empty()) {
-      for (auto ccc : cc->successors()) {
-        std::cout << "succ shrd_ptr" << &(ccc.get()) << " -> " << &*(ccc.get()) << std::endl;
-      }
-    }
-  }
-
   // GetTable operators can store references to TableScans as prunable subquery predicates (see get_table.hpp for
   // details).
   // We set the tasks associated with the uncorrelated subqueries as predecessors of the GetTable tasks so the GetTable
@@ -131,17 +116,7 @@ OperatorTask::make_tasks_from_operator(const std::shared_ptr<AbstractOperator>& 
   if constexpr (HYRISE_DEBUG) {
     visit_tasks(root_operator_task, [&](const auto& task) {
       for (const auto& direct_successor : task->successors()) {
-        Assert(direct_successor.get(), "successor not valid");
-        auto succ = direct_successor.get();
-        std::cerr << "successor: ";
-        std::cerr << succ->description();
-        std::cerr << "\n";
-        std::cerr << "\n";
-        visit_tasks_upwards(succ, [&](const auto& successor) {
-          Assert(successor, "not set");
-          const auto succeeding_operator_task = std::dynamic_pointer_cast<OperatorTask>(successor);
-          Assert(succeeding_operator_task, "Hmpf");
-          Assert(operator_tasks_set.contains(succeeding_operator_task), "Tasks oooops.");
+        visit_tasks_upwards(direct_successor.lock(), [&](const auto& successor) {
           Assert(task != successor, "Task graph contains a cycle.");
           return TaskUpwardVisitation::VisitSuccessors;
         });

@@ -280,8 +280,8 @@ TEST_F(OperatorTaskTest, LinkPrunableSubqueries) {
   EXPECT_EQ(root_operator_task, table_scan->get_or_create_operator_task());
   const auto& projection_task = projection->get_or_create_operator_task();
   ASSERT_EQ(projection_task->successors().size(), 2);
-  EXPECT_EQ(projection_task->successors().front().get(), table_scan->get_or_create_operator_task());
-  EXPECT_EQ(projection_task->successors().back().get(), get_table_a->get_or_create_operator_task());
+  EXPECT_EQ(projection_task->successors().front().lock(), table_scan->get_or_create_operator_task());
+  EXPECT_EQ(projection_task->successors().back().lock(), get_table_a->get_or_create_operator_task());
 }
 
 TEST_F(OperatorTaskTest, PrunableSubqueriesWithCycles) {

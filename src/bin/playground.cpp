@@ -43,8 +43,9 @@ struct Task : public std::enable_shared_from_this<Task>{
   }
 
   int id{};
+  std::vector<std::weak_ptr<Task>> successors;
   // std::vector<std::reference_wrapper<const std::shared_ptr<Task>>> successors;
-  std::vector<std::shared_ptr<Task>> successors;
+  // std::vector<std::shared_ptr<Task>> successors;
   std::vector<std::weak_ptr<Task>> predecessors;
 };
 
@@ -64,14 +65,14 @@ int main() {
     // }
 
     // My Hyrise PR
-    // for (auto i = 0; i < element_count - 10; ++i) {
-    //   tasks[i]->add_successor(tasks[i+10]);
-    // }
+    for (auto i = 0; i < element_count - 10; ++i) {
+      tasks[i]->add_successor(tasks[i+10]);
+    }
 
     // Hyrise Master
-    for (auto i = element_count - 1; i >= 10; --i) {
-      tasks[i]->add_successor(tasks[i-10]);
-    }
+    // for (auto i = element_count - 1; i >= 10; --i) {
+    //   tasks[i]->add_successor(tasks[i-10]);
+    // }
 
     // for (auto i = 0; i < element_count; ++i) {
     //   std::cout << tasks[i].use_count() << "\n";

@@ -72,7 +72,7 @@ void visit_tasks_upwards(const std::shared_ptr<Task>& task, Visitor visitor) {
 
     if (visitor(current_task) == TaskUpwardVisitation::VisitSuccessors) {
       for (const auto& successor : current_task->successors()) {
-        task_queue.push(successor.get());
+        task_queue.push(successor.lock());
       }
     }
   }

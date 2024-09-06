@@ -40,10 +40,11 @@ void AbstractScheduler::schedule_tasks(const std::vector<std::shared_ptr<Abstrac
     }
 
     for (const auto& task : tasks) {
-      const auto& succesors = task->successors();
-      if (!succesors.empty()) {
-        for (const auto& successor : succesors) {
-          Assert(task_set.contains(successor), "Dependencies of passed tasks need to be passed to the scheduler too.");
+      const auto& successors = task->successors();
+      if (!successors.empty()) {
+        for (const auto& successor : successors) {
+          Assert(task_set.contains(successor.lock()),
+                 "Dependencies of passed tasks need to be passed to the scheduler too.");
         }
       }
     }

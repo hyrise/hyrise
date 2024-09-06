@@ -67,13 +67,13 @@ void AbstractTask::set_as_predecessor_of(const std::shared_ptr<AbstractTask>& su
   // }
 
   for (const auto& present_successor : _successors) {
-    if (present_successor.get() == successor) {
+    if (present_successor.lock() == successor) {
       return;
     }
   }
 
-  _successors.emplace_back(std::ref(successor));
-  successor.get()->_predecessors.emplace_back(shared_from_this());
+  _successors.emplace_back(successor);
+  successor->_predecessors.emplace_back(shared_from_this());
 
   // A task that is already done will not call _on_predecessor_done at the successor. Consequently, the successor's
   // _pending_predecessors count will not decrement. To avoid starvation at the successor, we do not increment its
@@ -82,7 +82,7 @@ void AbstractTask::set_as_predecessor_of(const std::shared_ptr<AbstractTask>& su
   // is called before _pending_predecessors++ has executed.
   auto lock = std::lock_guard<std::mutex>{_done_condition_variable_mutex};
   if (!is_done()) {
-    successor.get()->_pending_predecessors++;
+    successor->_pending_predecessors++;
   }
 }
 
@@ -90,7 +90,7 @@ const std::vector<std::weak_ptr<AbstractTask>>& AbstractTask::predecessors() con
   return _predecessors;
 }
 
-const std::vector<std::reference_wrapper<const std::shared_ptr<AbstractTask>>>& AbstractTask::successors() const {
+const std::vector<std::weak_ptr<AbstractTask>>& AbstractTask::successors() const {
   return _successors;
 }
 
@@ -163,7 +163,7 @@ void AbstractTask::execute() {
   }
 
   for (auto& successor : _successors) {
-    successor.get()->_on_predecessor_done();
+     successor.lock()->_on_predecessor_done();
   }
 
   if (_done_callback) {
