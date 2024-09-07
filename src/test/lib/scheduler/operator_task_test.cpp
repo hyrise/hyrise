@@ -24,7 +24,7 @@ using namespace expression_functional;  // NOLINT(build/namespaces)
 
 class OperatorTaskTest : public BaseTest {
  protected:
-  using SuccessorTasksVector = std::vector<std::reference_wrapper<std::shared_ptr<AbstractTask>>>;
+  using SuccessorTasksVector = std::vector<std::weak_ptr<AbstractTask>>;
 
   void SetUp() override {
     _test_table_a = load_table("resources/test_data/tbl/int_float.tbl", ChunkOffset{2});
@@ -106,9 +106,9 @@ TEST_F(OperatorTaskTest, MakeDiamondShape) {
   EXPECT_TRUE(tasks_set.contains(scan_c->get_or_create_operator_task()));
   EXPECT_TRUE(tasks_set.contains(union_positions->get_or_create_operator_task()));
 
-  // auto scan_a_operator_task = scan_a->get_or_create_operator_task();
-  // [[maybe_unused]] auto test2 = SuccessorTasksVector{std::ref(scan_a_operator_task)};
-  // EXPECT_EQ(gt_a->get_or_create_operator_task()->successors(), SuccessorTasksVector{std::cref(scan_a->get_or_create_operator_task())});
+  auto scan_a_operator_task = scan_a->get_or_create_operator_task();
+  // [[maybe_unused]] auto test2 = SuccessorTasksVector{std::weak_ptr(scan_a_operator_task)};
+  EXPECT_EQ(gt_a->get_or_create_operator_task()->successors(), SuccessorTasksVector{scan_a->get_or_create_operator_task()});
   // const auto scan_a_successors =
   //     SuccessorTasksVector{scan_b->get_or_create_operator_task(), scan_c->get_or_create_operator_task()};
   // EXPECT_EQ(scan_a->get_or_create_operator_task()->successors(), scan_a_successors);

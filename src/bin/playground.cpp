@@ -50,24 +50,24 @@ struct Task : public std::enable_shared_from_this<Task>{
 };
 
 int main() {
-  auto start = std::chrono::steady_clock::now();
-  {
-    auto element_count = 100'000;
-    // auto element_count = 40;
-    auto tasks = std::vector<std::shared_ptr<Task>>{};
+  // auto start = std::chrono::steady_clock::now();
+  // {
+  //   auto element_count = 100'000;
+  //   // auto element_count = 40;
+  //   auto tasks = std::vector<std::shared_ptr<Task>>{};
 
-    for (auto i = 0; i < element_count; ++i) {
-      tasks.emplace_back(std::make_shared<Task>(i));
-    }
+  //   for (auto i = 0; i < element_count; ++i) {
+  //     tasks.emplace_back(std::make_shared<Task>(i));
+  //   }
 
     // for (auto i = 0; i < element_count / 4; ++i) {
     //   tasks[i]->add_successor(tasks[element_count-i-1]);
     // }
 
     // My Hyrise PR
-    for (auto i = 0; i < element_count - 10; ++i) {
-      tasks[i]->add_successor(tasks[i+10]);
-    }
+    // for (auto i = 0; i < element_count - 10; ++i) {
+    //   tasks[i]->add_successor(tasks[i+10]);
+    // }
 
     // Hyrise Master
     // for (auto i = element_count - 1; i >= 10; --i) {
@@ -90,10 +90,10 @@ int main() {
     //   }
     // }
     // tasks.clear();
-  }
-  const auto end = std::chrono::steady_clock::now();
+  // }
+  // const auto end = std::chrono::steady_clock::now();
   
-  std::cerr << "\n\nRuntime " << std::chrono::duration<double>(end - start)*1'000 << " ms\n\n";
+  // std::cerr << "\n\nRuntime " << std::chrono::duration<double>(end - start)*1'000 << " ms\n\n";
 
   return 0;
 }

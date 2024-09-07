@@ -62,10 +62,6 @@ void AbstractTask::set_as_predecessor_of(const std::shared_ptr<AbstractTask>& su
   // Since OperatorTasks can be reused by, e.g., uncorrelated subqueries, this function may already have been called
   // with the given successor (compare discussion https://github.com/hyrise/hyrise/pull/2340#discussion_r602174096).
   // The following guard prevents adding duplicate successors/predecessors:
-  // if (std::ranges::find(_successors, [&] (const auto& element) { return element.get() == successor; }) != _successors.cend()) {
-  //   return;
-  // }
-
   for (const auto& present_successor : _successors) {
     if (present_successor.lock() == successor) {
       return;
