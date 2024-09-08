@@ -1,6 +1,5 @@
 #include "abstract_task.hpp"
 
-#include <algorithm>
 #include <atomic>
 #include <functional>
 #include <memory>
@@ -16,15 +15,6 @@
 namespace hyrise {
 
 AbstractTask::AbstractTask(SchedulePriority priority, bool stealable) : _priority{priority}, _stealable{stealable} {}
-
-AbstractTask::~AbstractTask() {
-  // The scheduler takes task lists where each task might store shared_pointers to other tasks of the list (in form of
-  // the task's successors). To ease destroying all tasks of the list, we first reset all shared_pointers of the
-  // successors.
-  // for (auto& successor : _successors) {
-  // successor.reset();
-  // }
-}
 
 TaskID AbstractTask::id() const {
   return _id;
