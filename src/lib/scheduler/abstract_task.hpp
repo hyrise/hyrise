@@ -90,7 +90,7 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
 
  public:
   explicit AbstractTask(SchedulePriority priority = SchedulePriority::Default, bool stealable = true);
-  virtual ~AbstractTask();
+  virtual ~AbstractTask() = default;
 
   /**
    * Unique ID of a task. Currently not in use, but really helpful for debugging.
