@@ -227,8 +227,8 @@ TEST_F(OperatorDeepCopyTest, Subquery) {
   Hyrise::get().storage_manager.add_table("table_3int", table);
 
   const auto subquery_query = std::string{"SELECT * FROM table_3int WHERE a = (SELECT MAX(b) FROM table_3int)"};
-  const auto column_definitions = TableColumnDefinitions{
-      {"a", DataType::Int, false}, {"b", DataType::Int, false}, {"c", DataType::Int, false}};
+  const auto column_definitions =
+      TableColumnDefinitions{{"a", DataType::Int, false}, {"b", DataType::Int, false}, {"c", DataType::Int, false}};
 
   auto sql_pipeline = SQLPipelineBuilder{subquery_query}.disable_mvcc().create_pipeline();
   const auto [pipeline_status, first_result] = sql_pipeline.get_result_table();

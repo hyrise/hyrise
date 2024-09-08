@@ -22,7 +22,7 @@ AbstractTask::~AbstractTask() {
   // the task's successors). To ease destroying all tasks of the list, we first reset all shared_pointers of the
   // successors.
   // for (auto& successor : _successors) {
-    // successor.reset();
+  // successor.reset();
   // }
 }
 
@@ -159,7 +159,7 @@ void AbstractTask::execute() {
   }
 
   for (auto& successor : _successors) {
-     successor.lock()->_on_predecessor_done();
+    successor.lock()->_on_predecessor_done();
   }
 
   if (_done_callback) {

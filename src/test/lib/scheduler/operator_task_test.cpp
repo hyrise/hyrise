@@ -18,6 +18,21 @@
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/operator_task.hpp"
 
+namespace {
+
+using namespace hyrise;  // NOLINT(build/namespaces)
+
+void successor_task_vectors_equal(const std::vector<std::weak_ptr<AbstractTask>>& lhs,
+                                  const std::vector<std::weak_ptr<AbstractTask>>& rhs) {
+  EXPECT_EQ(lhs.size(), rhs.size());
+
+  for (auto index = size_t{0}; index < lhs.size(); ++index) {
+    EXPECT_EQ(lhs[index].lock(), rhs[index].lock());
+  }
+}
+
+}  // namespace
+
 namespace hyrise {
 
 using namespace expression_functional;  // NOLINT(build/namespaces)
@@ -106,17 +121,16 @@ TEST_F(OperatorTaskTest, MakeDiamondShape) {
   EXPECT_TRUE(tasks_set.contains(scan_c->get_or_create_operator_task()));
   EXPECT_TRUE(tasks_set.contains(union_positions->get_or_create_operator_task()));
 
-  auto scan_a_operator_task = scan_a->get_or_create_operator_task();
-  // [[maybe_unused]] auto test2 = SuccessorTasksVector{std::weak_ptr(scan_a_operator_task)};
-  EXPECT_EQ(gt_a->get_or_create_operator_task()->successors(), SuccessorTasksVector{scan_a->get_or_create_operator_task()});
-  // const auto scan_a_successors =
-  //     SuccessorTasksVector{scan_b->get_or_create_operator_task(), scan_c->get_or_create_operator_task()};
-  // EXPECT_EQ(scan_a->get_or_create_operator_task()->successors(), scan_a_successors);
-  // EXPECT_EQ(scan_b->get_or_create_operator_task()->successors(),
-  //           SuccessorTasksVector{union_positions->get_or_create_operator_task()});
-  // EXPECT_EQ(scan_c->get_or_create_operator_task()->successors(),
-  //           SuccessorTasksVector{union_positions->get_or_create_operator_task()});
-  // EXPECT_EQ(union_positions->get_or_create_operator_task()->successors(), SuccessorTasksVector{});
+  successor_task_vectors_equal(gt_a->get_or_create_operator_task()->successors(),
+                               SuccessorTasksVector{scan_a->get_or_create_operator_task()});
+  const auto scan_a_successors =
+      SuccessorTasksVector{scan_b->get_or_create_operator_task(), scan_c->get_or_create_operator_task()};
+  successor_task_vectors_equal(scan_a->get_or_create_operator_task()->successors(), scan_a_successors);
+  successor_task_vectors_equal(scan_b->get_or_create_operator_task()->successors(),
+                               SuccessorTasksVector{union_positions->get_or_create_operator_task()});
+  successor_task_vectors_equal(scan_c->get_or_create_operator_task()->successors(),
+                               SuccessorTasksVector{union_positions->get_or_create_operator_task()});
+  successor_task_vectors_equal(union_positions->get_or_create_operator_task()->successors(), SuccessorTasksVector{});
 
   for (const auto& task : tasks) {
     EXPECT_NO_THROW(task->schedule());
@@ -162,20 +176,24 @@ TEST_F(OperatorTaskTest, UncorrelatedSubqueries) {
   EXPECT_TRUE(tasks_set.contains(table_wrapper->get_or_create_operator_task()));
   EXPECT_TRUE(tasks_set.contains(projection->get_or_create_operator_task()));
 
-  // EXPECT_EQ(gt_b->get_or_create_operator_task()->successors(), SuccessorTasksVector{aggregate_a->get_or_create_operator_task()});
+  successor_task_vectors_equal(gt_b->get_or_create_operator_task()->successors(),
+                               SuccessorTasksVector{aggregate_a->get_or_create_operator_task()});
 
-  // EXPECT_EQ(gt_a->get_or_create_operator_task()->successors(), SuccessorTasksVector{scan->get_or_create_operator_task()});
-  // EXPECT_EQ(aggregate_a->get_or_create_operator_task()->successors(), SuccessorTasksVector{scan->get_or_create_operator_task()});
+  successor_task_vectors_equal(gt_a->get_or_create_operator_task()->successors(),
+                               SuccessorTasksVector{scan->get_or_create_operator_task()});
+  successor_task_vectors_equal(aggregate_a->get_or_create_operator_task()->successors(),
+                               SuccessorTasksVector{scan->get_or_create_operator_task()});
 
-  // EXPECT_EQ(scan->get_or_create_operator_task()->successors(), SuccessorTasksVector{aggregate_b->get_or_create_operator_task()});
+  successor_task_vectors_equal(scan->get_or_create_operator_task()->successors(),
+                               SuccessorTasksVector{aggregate_b->get_or_create_operator_task()});
 
-  // EXPECT_EQ(aggregate_b->get_or_create_operator_task()->successors(),
-  //           SuccessorTasksVector{projection->get_or_create_operator_task()});
-  // EXPECT_EQ(table_wrapper->get_or_create_operator_task()->successors(),
-  //           SuccessorTasksVector{projection->get_or_create_operator_task()});
+  successor_task_vectors_equal(aggregate_b->get_or_create_operator_task()->successors(),
+                               SuccessorTasksVector{projection->get_or_create_operator_task()});
+  successor_task_vectors_equal(table_wrapper->get_or_create_operator_task()->successors(),
+                               SuccessorTasksVector{projection->get_or_create_operator_task()});
 
-  // EXPECT_EQ(root_operator_task, projection->get_or_create_operator_task());
-  // EXPECT_TRUE(projection->get_or_create_operator_task()->successors().empty());
+  EXPECT_EQ(root_operator_task, projection->get_or_create_operator_task());
+  EXPECT_TRUE(projection->get_or_create_operator_task()->successors().empty());
 
   for (const auto& task : tasks) {
     EXPECT_NO_THROW(task->schedule());
