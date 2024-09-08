@@ -111,8 +111,7 @@ OperatorTask::make_tasks_from_operator(const std::shared_ptr<AbstractOperator>& 
   link_tasks_for_subquery_pruning(operator_tasks_set);
 
   // Ensure the task graph is acyclic, i.e., no task is any (n-th) successor of itself. Tasks in cycles would end up in
-  // a deadlock during execution, mutually waiting for the other tasks' execution. Even if the tasks are never executed,
-  // cycles create memory leaks since tasks hold shared pointers to their successors.
+  // a deadlock during execution, mutually waiting for the other tasks' execution.
   if constexpr (HYRISE_DEBUG) {
     visit_tasks(root_operator_task, [&](const auto& task) {
       for (const auto& direct_successor : task->successors()) {

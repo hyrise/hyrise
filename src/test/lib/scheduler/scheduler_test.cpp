@@ -24,18 +24,18 @@ class SchedulerTest : public BaseTest {
  protected:
   void stress_linear_dependencies(std::atomic_uint32_t& counter) {
     const auto task1 = std::make_shared<JobTask>([&]() {
-      auto current_value = 0u;
-      auto successful = counter.compare_exchange_strong(current_value, 1u);
+      auto current_value = uint32_t{0};
+      auto successful = counter.compare_exchange_strong(current_value, 1);
       ASSERT_TRUE(successful);
     });
     const auto task2 = std::make_shared<JobTask>([&]() {
-      auto current_value = 1u;
-      auto successful = counter.compare_exchange_strong(current_value, 2u);
+      auto current_value = uint32_t{1};
+      auto successful = counter.compare_exchange_strong(current_value, 2);
       ASSERT_TRUE(successful);
     });
     const auto task3 = std::make_shared<JobTask>([&]() {
-      auto current_value = 2u;
-      auto successful = counter.compare_exchange_strong(current_value, 3u);
+      auto current_value = uint32_t{2};
+      auto successful = counter.compare_exchange_strong(current_value, 3);
       ASSERT_TRUE(successful);
     });
 
@@ -51,14 +51,14 @@ class SchedulerTest : public BaseTest {
 
   void stress_multiple_dependencies(std::atomic_uint32_t& counter) {
     const auto task1 = std::make_shared<JobTask>([&]() {
-      counter += 1u;
+      counter += 1;
     });
     const auto task2 = std::make_shared<JobTask>([&]() {
-      counter += 2u;
+      counter += 2;
     });
     const auto task3 = std::make_shared<JobTask>([&]() {
-      auto current_value = 3u;
-      auto successful = counter.compare_exchange_strong(current_value, 4u);
+      auto current_value = uint32_t{3};
+      auto successful = counter.compare_exchange_strong(current_value, 4);
       ASSERT_TRUE(successful);
     });
 
@@ -74,19 +74,19 @@ class SchedulerTest : public BaseTest {
 
   void stress_diamond_dependencies(std::atomic_uint32_t& counter) {
     const auto task1 = std::make_shared<JobTask>([&]() {
-      auto current_value = 0u;
-      auto successful = counter.compare_exchange_strong(current_value, 1u);
+      auto current_value = uint32_t{0};
+      auto successful = counter.compare_exchange_strong(current_value, 1);
       ASSERT_TRUE(successful);
     });
     const auto task2 = std::make_shared<JobTask>([&]() {
-      counter += 2u;
+      counter += 2;
     });
     const auto task3 = std::make_shared<JobTask>([&]() {
-      counter += 3u;
+      counter += 3;
     });
     const auto task4 = std::make_shared<JobTask>([&]() {
-      auto current_value = 6u;
-      auto successful = counter.compare_exchange_strong(current_value, 7u);
+      auto current_value = uint32_t{6};
+      auto successful = counter.compare_exchange_strong(current_value, 7);
       ASSERT_TRUE(successful);
     });
 
@@ -132,21 +132,21 @@ TEST_F(SchedulerTest, BasicTest) {
   Hyrise::get().topology.use_fake_numa_topology(8, 4);
   Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
 
-  std::atomic_uint32_t counter{0};
+  auto counter = std::atomic_uint32_t{0};
 
   increment_counter_in_subtasks(counter);
 
   Hyrise::get().scheduler()->finish();
 
-  ASSERT_EQ(counter, 30u);
+  ASSERT_EQ(counter, 30);
 
   Hyrise::get().set_scheduler(std::make_shared<ImmediateExecutionScheduler>());
 }
 
 TEST_F(SchedulerTest, BasicTestWithoutScheduler) {
-  std::atomic_uint32_t counter{0};
+  auto counter = std::atomic_uint32_t{0};
   increment_counter_in_subtasks(counter);
-  ASSERT_EQ(counter, 30u);
+  ASSERT_EQ(counter, 30);
 }
 
 TEST_F(SchedulerTest, LinearDependenciesWithScheduler) {
@@ -191,40 +191,52 @@ TEST_F(SchedulerTest, MultipleDependenciesWithScheduler) {
   Hyrise::get().topology.use_fake_numa_topology(8, 4);
   Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
 
-  std::atomic_uint32_t counter{0u};
+  auto counter = std::atomic_uint32_t{0};
 
   stress_multiple_dependencies(counter);
 
-  ASSERT_EQ(counter, 4u);
+  ASSERT_EQ(counter, 4);
 }
 
 TEST_F(SchedulerTest, DiamondDependenciesWithScheduler) {
   Hyrise::get().topology.use_fake_numa_topology(8, 4);
   Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
 
-  std::atomic_uint32_t counter{0};
+  auto counter = std::atomic_uint32_t{0};
 
   stress_diamond_dependencies(counter);
 
-  ASSERT_EQ(counter, 7u);
+  ASSERT_EQ(counter, 7);
 }
 
 TEST_F(SchedulerTest, LinearDependenciesWithoutScheduler) {
-  std::atomic_uint32_t counter{0u};
+  auto counter = std::atomic_uint32_t{0};
   stress_linear_dependencies(counter);
-  ASSERT_EQ(counter, 3u);
+  ASSERT_EQ(counter, 3);
 }
 
 TEST_F(SchedulerTest, MultipleDependenciesWithoutScheduler) {
-  std::atomic_uint32_t counter{0u};
+  auto counter = std::atomic_uint32_t{0};
   stress_multiple_dependencies(counter);
-  ASSERT_EQ(counter, 4u);
+  ASSERT_EQ(counter, 4);
 }
 
 TEST_F(SchedulerTest, DiamondDependenciesWithoutScheduler) {
-  std::atomic_uint32_t counter{0};
+  auto counter = std::atomic_uint32_t{0};
   stress_diamond_dependencies(counter);
-  ASSERT_EQ(counter, 7u);
+  ASSERT_EQ(counter, 7);
+}
+
+TEST_F(SchedulerTest, PassAllDependencies) {
+  const auto task1 = std::make_shared<JobTask>([&]() {});
+  const auto task2 = std::make_shared<JobTask>([&]() {});
+  const auto task3 = std::make_shared<JobTask>([&]() {});
+
+  task1->set_as_predecessor_of(task2);
+  task2->set_as_predecessor_of(task3);
+
+  const auto tasks = std::vector<std::shared_ptr<AbstractTask>>{task1, task2};
+  ASSERT_THROW(Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks), std::logic_error);
 }
 
 TEST_F(SchedulerTest, MultipleOperators) {
