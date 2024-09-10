@@ -40,14 +40,22 @@ class ChunkPruningRuleTest : public StrategyBaseTest {
     ChunkEncoder::encode_all_chunks(run_length_compressed_table, SegmentEncodingSpec{EncodingType::RunLength});
     storage_manager.add_table("run_length_compressed", run_length_compressed_table);
 
+    auto lz4_compressed_table = load_table("resources/test_data/tbl/10_ints.tbl", ChunkOffset{5});
+    ChunkEncoder::encode_all_chunks(lz4_compressed_table, SegmentEncodingSpec{EncodingType::LZ4});
+    storage_manager.add_table("lz4_compressed", lz4_compressed_table);
+
     auto string_compressed_table = load_table("resources/test_data/tbl/string.tbl", ChunkOffset{3});
     ChunkEncoder::encode_all_chunks(string_compressed_table, SegmentEncodingSpec{EncodingType::Dictionary});
     storage_manager.add_table("string_compressed", string_compressed_table);
-
+ 
     auto fixed_string_compressed_table = load_table("resources/test_data/tbl/string.tbl", ChunkOffset{3});
     ChunkEncoder::encode_all_chunks(fixed_string_compressed_table,
                                     SegmentEncodingSpec{EncodingType::FixedStringDictionary});
     storage_manager.add_table("fixed_string_compressed", fixed_string_compressed_table);
+
+    auto lz4_string_compressed_table = load_table("resources/test_data/tbl/string.tbl", ChunkOffset{5});
+    ChunkEncoder::encode_all_chunks(lz4_string_compressed_table, SegmentEncodingSpec{EncodingType::LZ4});
+    storage_manager.add_table("lz4_string_compressed", lz4_string_compressed_table);
 
     auto int_float4 = load_table("resources/test_data/tbl/int_float4.tbl", ChunkOffset{2});
     ChunkEncoder::encode_all_chunks(int_float4, SegmentEncodingSpec{EncodingType::Dictionary});
@@ -308,27 +316,21 @@ TEST_F(ChunkPruningRuleTest, GetTablePruningTest) {
 }
 
 TEST_F(ChunkPruningRuleTest, StringPruningTest) {
-  const auto stored_table_node = StoredTableNode::make("string_compressed");
 
-  _lqp = PredicateNode::make(equals_(lqp_column_(stored_table_node, ColumnID{0}), "zzz"));
-  _lqp->set_left_input(stored_table_node);
+  for (const auto& table_name : {"string_compressed", "fixed_string_compressed", "lz4_string_compressed"}) {
+    SCOPED_TRACE(std::string{"Processing table "} + table_name);
 
-  _apply_rule(_rule, _lqp);
+    const auto stored_table_node = StoredTableNode::make(table_name);
 
-  const auto expected_chunk_ids = std::vector<ChunkID>{ChunkID{0}};
-  EXPECT_EQ(stored_table_node->pruned_chunk_ids(), expected_chunk_ids);
-}
+    _lqp = PredicateNode::make(equals_(lqp_column_(stored_table_node, ColumnID{0}), "zzz"));
+    _lqp->set_left_input(stored_table_node);
 
-TEST_F(ChunkPruningRuleTest, FixedStringPruningTest) {
-  const auto stored_table_node = StoredTableNode::make("fixed_string_compressed");
+    _apply_rule(_rule, _lqp);
 
-  _lqp = PredicateNode::make(equals_(lqp_column_(stored_table_node, ColumnID{0}), "zzz"));
-  _lqp->set_left_input(stored_table_node);
-
-  _apply_rule(_rule, _lqp);
-
-  const auto expected_chunk_ids = std::vector<ChunkID>{ChunkID{0}};
-  EXPECT_EQ(stored_table_node->pruned_chunk_ids(), expected_chunk_ids);
+    const auto expected_chunk_ids = std::vector<ChunkID>{ChunkID{17}};
+    EXPECT_EQ(stored_table_node->pruned_chunk_ids(), expected_chunk_ids);
+  }
+  
 }
 
 TEST_F(ChunkPruningRuleTest, PrunePastNonFilteringNodes) {

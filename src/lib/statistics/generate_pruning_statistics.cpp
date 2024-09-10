@@ -2,8 +2,12 @@
 
 #include <algorithm>
 #include <memory>
+#include <ranges>
 #include <type_traits>
 #include <unordered_set>
+
+#include <boost/sort/sort.hpp>
+#include <boost/unordered/unordered_flat_set.hpp>
 
 #include "resolve_type.hpp"
 #include "statistics/attribute_statistics.hpp"
@@ -59,22 +63,51 @@ void generate_chunk_pruning_statistics(const std::shared_ptr<Chunk>& chunk) {
       const auto segment_statistics = std::make_shared<AttributeStatistics<ColumnDataType>>();
 
       if constexpr (std::is_same_v<SegmentType, DictionarySegment<ColumnDataType>>) {
-        // we can use the fact that dictionary segments have an accessor for the dictionary
+        // We can use the fact that dictionary segments have an accessor for the dictionary.
         const auto& dictionary = *typed_segment.dictionary();
         create_pruning_statistics_for_segment(*segment_statistics, dictionary);
       } else {
-        // if we have a generic segment we create the dictionary ourselves
-        auto iterable = create_iterable_from_segment<ColumnDataType>(typed_segment);
-        std::unordered_set<ColumnDataType> values;
-        iterable.for_each([&](const auto& value) {
-          // we are only interested in non-null values
-          if (!value.is_null()) {
-            values.insert(value.value());
+        if constexpr (std::is_arithmetic_v<ColumnDataType>) {
+          // If we have a generic non-string segment, we create the dictionary ourselves.
+          auto iterable = create_iterable_from_segment<ColumnDataType>(typed_segment);
+          auto values = boost::unordered_flat_set<ColumnDataType>{};
+          values.reserve(typed_segment.size());
+          iterable.for_each([&](const auto& value) {
+            // We are only interested in non-null values.
+            if (!value.is_null()) {
+              values.emplace(value.value());
+            }
+          });
+          auto dictionary = pmr_vector<ColumnDataType>(values.cbegin(), values.cend());
+          boost::sort::pdqsort(dictionary.begin(), dictionary.end());
+          create_pruning_statistics_for_segment(*segment_statistics, dictionary);
+        }
+         else {
+          auto min_value = std::optional<ColumnDataType>{};
+          auto max_value = std::optional<ColumnDataType>{};
+
+          auto iterable = create_iterable_from_segment<ColumnDataType>(typed_segment);
+          iterable.for_each([&](const auto& value) {
+            if (value.is_null()) {
+              return;
+            }
+
+            if (!min_value) {
+              // Initialize both with first observed value.
+              min_value = value.value();
+              max_value = value.value();
+            }
+
+            min_value = std::min(*min_value, value.value());
+            max_value = std::max(*max_value, value.value());
+          });
+
+          auto dictionary = pmr_vector<ColumnDataType>{};
+          if (min_value) {
+            dictionary = {*min_value, *max_value};
           }
-        });
-        pmr_vector<ColumnDataType> dictionary{values.cbegin(), values.cend()};
-        std::sort(dictionary.begin(), dictionary.end());
-        create_pruning_statistics_for_segment(*segment_statistics, dictionary);
+          create_pruning_statistics_for_segment(*segment_statistics, dictionary);
+        }
       }
 
       chunk_statistics[column_id] = segment_statistics;
