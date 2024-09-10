@@ -1,6 +1,5 @@
 #include "abstract_task.hpp"
 
-#include <algorithm>
 #include <atomic>
 #include <functional>
 #include <memory>
@@ -53,8 +52,10 @@ void AbstractTask::set_as_predecessor_of(const std::shared_ptr<AbstractTask>& su
   // Since OperatorTasks can be reused by, e.g., uncorrelated subqueries, this function may already have been called
   // with the given successor (compare discussion https://github.com/hyrise/hyrise/pull/2340#discussion_r602174096).
   // The following guard prevents adding duplicate successors/predecessors:
-  if (std::find(_successors.cbegin(), _successors.cend(), successor) != _successors.cend()) {
-    return;
+  for (const auto& present_successor : _successors) {
+    if (present_successor.lock() == successor) {
+      return;
+    }
   }
 
   _successors.emplace_back(successor);
@@ -75,7 +76,7 @@ const std::vector<std::weak_ptr<AbstractTask>>& AbstractTask::predecessors() con
   return _predecessors;
 }
 
-const std::vector<std::shared_ptr<AbstractTask>>& AbstractTask::successors() const {
+const std::vector<std::weak_ptr<AbstractTask>>& AbstractTask::successors() const {
   return _successors;
 }
 
@@ -148,7 +149,7 @@ void AbstractTask::execute() {
   }
 
   for (auto& successor : _successors) {
-    successor->_on_predecessor_done();
+    successor.lock()->_on_predecessor_done();
   }
 
   if (_done_callback) {
