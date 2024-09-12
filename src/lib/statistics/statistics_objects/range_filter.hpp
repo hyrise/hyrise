@@ -10,8 +10,6 @@
 
 namespace hyrise {
 
-static constexpr uint32_t DEFAULT_MAX_RANGES_COUNT = 10;
-
 /**
  * Filters are data structures that are primarily used for probabilistic membership queries. In Hyrise, they are
  * typically created on a single segment. They can then be used to check whether a certain value exists in the segment.
@@ -33,6 +31,8 @@ static constexpr uint32_t DEFAULT_MAX_RANGES_COUNT = 10;
 template <typename T>
 class RangeFilter : public AbstractStatisticsObject, public std::enable_shared_from_this<RangeFilter<T>> {
  public:
+  static constexpr uint32_t DEFAULT_MAX_RANGES_COUNT = 64 / sizeof(T) / 2;
+
   static_assert(std::is_arithmetic_v<T>, "RangeFilter should not be instantiated for strings.");  // #1536
 
   explicit RangeFilter(std::vector<std::pair<T, T>> init_ranges);

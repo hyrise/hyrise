@@ -193,7 +193,7 @@ std::unique_ptr<RangeFilter<T>> RangeFilter<T>::build_filter(const pmr_vector<T>
     return pair1.first > pair2.first;
   });
 
-  // 3. Shorten the vector to containt the `max_ranges_count - 1` biggest gaps
+  // 3. Shorten the vector to containt the `max_ranges_count - 1` biggest gaps.
   if ((max_ranges_count - 1) < distances.size()) {
     distances.resize(max_ranges_count - 1);
   }
