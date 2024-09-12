@@ -299,6 +299,10 @@ TEST_F(SchedulerTest, DiamondDependenciesWithoutScheduler) {
 }
 
 TEST_F(SchedulerTest, PassAllDependencies) {
+  if constexpr (!HYRISE_DEBUG) {
+    GTEST_SKIP();
+  }
+
   const auto task1 = std::make_shared<JobTask>([&]() {});
   const auto task2 = std::make_shared<JobTask>([&]() {});
   const auto task3 = std::make_shared<JobTask>([&]() {});
