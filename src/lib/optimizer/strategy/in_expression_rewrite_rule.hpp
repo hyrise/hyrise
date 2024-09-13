@@ -43,10 +43,6 @@ class InExpressionRewriteRule : public AbstractRule {
 
  protected:
   void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override;
-
-  std::shared_ptr<CardinalityEstimator> _cardinality_estimator() const;
-
-  mutable std::shared_ptr<CardinalityEstimator> _cardinality_estimator_internal;
 };
 
 }  // namespace hyrise
