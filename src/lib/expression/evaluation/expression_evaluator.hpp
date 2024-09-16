@@ -126,9 +126,8 @@ class ExpressionEvaluator final {
   template <typename Result>
   std::shared_ptr<ExpressionResult<Result>> _evaluate_exists_expression(const ExistsExpression& /*exists_expression*/);
 
-  template <typename T>
-  std::shared_ptr<ExpressionResult<Bool>> _evaluate_between_expression(const BetweenExpression& expression,
-                                                                       const T& lower_bound, const T& upper_bound);
+  template <typename Result, typename T>
+  Result _evaluate_between_expression(const BetweenExpression& expression, const T& lower_bound, const T& upper_bound);
 
   // See docs for `_evaluate_default_null_logic()`
   template <typename Result, typename Functor>
