@@ -149,6 +149,9 @@ void AbstractTask::execute() {
   }
 
   for (auto& successor : _successors) {
+    // The task creator is responsible to ensure that successor tasks are available whenever an executed tasks tries to
+    // execute/accesss its successors.
+    DebugAssert(!successor.expired(), "Successor task cannot be obtained.");
     successor.lock()->_on_predecessor_done();
   }
 
