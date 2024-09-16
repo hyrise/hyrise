@@ -41,8 +41,8 @@ class WindowNode;
  * join ordering, predicate reordering, etc.).
  * Even if we cannot cache statistics across multiple estimation invocations, we maintain a cache for a single call.
  * This helps if we have diamonds in the query plan (e.g., after predicate splitup or with semi-join reductions).
- * When allowing the CardinalityEstimator to use caching, it is best practice to get a fresh instance. Thus, the filled
- * caches do not interfere with later estimations by, e.g., following optimizer rules.
+ * When allowing the CardinalityEstimator to use caching, you have to get a fresh instance (`new_instance()`). Thus, the
+ * filled caches do not interfere with later estimations by, e.g., following optimizer rules.
  */
 class CardinalityEstimator {
  public:
@@ -102,11 +102,14 @@ class CardinalityEstimator {
    *       StoredTableNode R
    *
    * First, we go top-down. As we already estimated nodes further up in the LQP, the statistics/cardinalities of the
-   * PredicateNodes have been cached. PredicateNode B yields a smaller cardinality even though it has a worse
-   * selectivity, and we would falsely move it below PredicateNode A.
+   * PredicateNodes have been cached and will stay unchanged whenever we try to re-estimate them. When placed directly
+   * above the StoredTableNode R, PredicateNode B yields a smaller cardinality than PredicateNode A even though it has a
+   * worse selectivity, and we would falsely move it below PredicateNode A.
    *
-   * Second, we go bottom-up. No statistics have been cached yet, and we correctly preserve the predicate order before
-   * continuing to the nodes further up.
+   * Second, we go bottom-up. No statistics have been cached yet, we correctly estimate the cardinality based on the
+   * selectivity, and we preserve the predicate order before continuing to the nodes further up. Note that during
+   * predicate reordering, we do not cache the statistics of the PredicateNodes when deciding on their placement, but
+   * only when we estimate nodes above.
    */
   void guarantee_bottom_up_construction();
   /** @} */
