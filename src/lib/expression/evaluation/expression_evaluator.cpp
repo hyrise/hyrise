@@ -591,36 +591,60 @@ std::shared_ptr<ExpressionResult<ExpressionEvaluator::Bool>> ExpressionEvaluator
                                                                        std::move(result_nulls));
 }
 
-template <typename Result, typename T>
-Result ExpressionEvaluator::_evaluate_between_expression(const BetweenExpression& expression, const T& lower_bound,
-                                                         const T& upper_bound) {
-  auto result_values = Result{};
+template <typename Result>
+bool ExpressionEvaluator::_evaluate_between_expression(const BetweenExpression& expression, Result& result_values) {
+  const auto& operand = expression.operand();
+  const auto& lower_expression = expression.lower_bound();
+  const auto& upper_expression = expression.upper_bound();
 
-  const auto expression_result = evaluate_expression_to_result<T>(*expression.operand());
-  expression_result->as_view([&](const auto& view) {
-    const auto result_size = _chunk ? _chunk->size() : static_cast<ChunkOffset>(view.size());
+  // Make sure the operand is not a single NULL value and both upper and lower bounds are non-NULL ValueExpressions.
+  if (operand->data_type() == DataType::Null || lower_expression->type != ExpressionType::Value ||
+      lower_expression->data_type() == DataType::Null || upper_expression->type != ExpressionType::Value ||
+      upper_expression->data_type() == DataType::Null) {
+    return false;
+  }
 
-    if constexpr (std::is_same_v<Result, pmr_vector<Bool>>) {
-      result_values.resize(result_size);
+  auto success = false;
+  resolve_data_type(operand->data_type(), [&](const auto data_type) {
+    using DataType = typename decltype(data_type)::type;
+    const auto lower_bound =
+        lossless_variant_cast<DataType>(static_cast<const ValueExpression&>(*lower_expression).value);
+    const auto upper_bound =
+        lossless_variant_cast<DataType>(static_cast<const ValueExpression&>(*upper_expression).value);
+
+    // Do not handle tricky cases with lossy conversions here (e.g., `1 BETWEEN 1.1 and 2.0`).
+    if (!lower_bound || !upper_bound) {
+      return;
     }
 
-    with_between_comparator(expression.predicate_condition, [&](const auto& comparator) {
-      for (auto chunk_offset = ChunkOffset{0}; chunk_offset < result_size; ++chunk_offset) {
-        const auto value_matches =
-            !view.is_null(chunk_offset) && comparator(view.value(chunk_offset), lower_bound, upper_bound);
+    const auto expression_result = evaluate_expression_to_result<DataType>(*operand);
+    expression_result->as_view([&](const auto& view) {
+      const auto result_size = _chunk ? _chunk->size() : static_cast<ChunkOffset>(view.size());
 
-        if constexpr (std::is_same_v<Result, pmr_vector<Bool>>) {
-          result_values[chunk_offset] = static_cast<Bool>(value_matches);
-        } else {
-          if (value_matches) {
-            result_values.emplace_back(_chunk_id, chunk_offset);
+      if constexpr (std::is_same_v<Result, pmr_vector<Bool>>) {
+        result_values.resize(result_size);
+      }
+
+      with_between_comparator(expression.predicate_condition, [&](const auto& comparator) {
+        for (auto chunk_offset = ChunkOffset{0}; chunk_offset < result_size; ++chunk_offset) {
+          const auto value_matches =
+              !view.is_null(chunk_offset) && comparator(view.value(chunk_offset), lower_bound, upper_bound);
+
+          if constexpr (std::is_same_v<Result, pmr_vector<Bool>>) {
+            result_values[chunk_offset] = static_cast<Bool>(value_matches);
+          } else {
+            if (value_matches) {
+              result_values.emplace_back(_chunk_id, chunk_offset);
+            }
           }
         }
-      }
+      });
     });
+
+    success = true;
   });
 
-  return result_values;
+  return success;
 }
 
 template <>
@@ -646,34 +670,13 @@ ExpressionEvaluator::_evaluate_predicate_expression<ExpressionEvaluator::Bool>(
     case PredicateCondition::BetweenUpperExclusive:
     case PredicateCondition::BetweenExclusive: {
       const auto& between_expression = static_cast<const BetweenExpression&>(predicate_expression);
-      const auto& operand = between_expression.operand();
-      const auto& lower_expression = between_expression.lower_bound();
-      const auto& upper_expression = between_expression.upper_bound();
-      auto result = std::shared_ptr<ExpressionResult<Bool>>{};
-
-      // Simple BETWEEN expressions with literals as bounds are handled in a specialized way. More complex structures
-      // are handled as conjunction of a less and a greater predicate.
-      if (operand->data_type() != DataType::Null && lower_expression->type == ExpressionType::Value &&
-          lower_expression->data_type() != DataType::Null && upper_expression->type == ExpressionType::Value &&
-          upper_expression->data_type() != DataType::Null) {
-        resolve_data_type(operand->data_type(), [&](const auto data_type) {
-          using DataType = typename decltype(data_type)::type;
-
-          const auto lower_bound =
-              lossless_variant_cast<DataType>(static_cast<const ValueExpression&>(*lower_expression).value);
-          const auto upper_bound =
-              lossless_variant_cast<DataType>(static_cast<const ValueExpression&>(*upper_expression).value);
-
-          // Do not handle tricky cases with lossy conversions here (e.g., `1 BETWEEN 1.1 and 2.0`).
-          if (lower_bound && upper_bound) {
-            auto result_values =
-                _evaluate_between_expression<pmr_vector<Bool>>(between_expression, *lower_bound, *upper_bound);
-            result = std::make_shared<ExpressionResult<Bool>>(std::move(result_values));
-          }
-        });
+      auto result_values = pmr_vector<Bool>{};
+      // Simple BETWEEN predicates with a literal as lower and upper bound can be evaluated easily. More complex
+      // structures are handled as two individual less and greater predicates.
+      if (_evaluate_between_expression(between_expression, result_values)) {
+        return std::make_shared<ExpressionResult<Bool>>(std::move(result_values));
       }
-
-      return result ? result : evaluate_expression_to_result<Bool>(*rewrite_between_expression(predicate_expression));
+      return evaluate_expression_to_result<Bool>(*rewrite_between_expression(predicate_expression));
     }
 
     case PredicateCondition::In:
@@ -1181,34 +1184,11 @@ RowIDPosList ExpressionEvaluator::evaluate_expression_to_pos_list(const Abstract
         case PredicateCondition::BetweenUpperExclusive:
         case PredicateCondition::BetweenExclusive: {
           const auto& between_expression = static_cast<const BetweenExpression&>(predicate_expression);
-          const auto& operand = between_expression.operand();
-          const auto& lower_expression = between_expression.lower_bound();
-          const auto& upper_expression = between_expression.upper_bound();
-
           // Simple BETWEEN predicates with a literal as lower and upper bound can be evaluated easily. More complex
           // structures are handled as two individual less and greater predicates.
-          if (operand->data_type() == DataType::Null || lower_expression->type != ExpressionType::Value ||
-              lower_expression->data_type() == DataType::Null || upper_expression->type != ExpressionType::Value ||
-              upper_expression->data_type() == DataType::Null) {
-            return evaluate_expression_to_pos_list(*rewrite_between_expression(expression));
+          if (!_evaluate_between_expression(between_expression, result_pos_list)) {
+            result_pos_list = evaluate_expression_to_pos_list(*rewrite_between_expression(expression));
           }
-
-          resolve_data_type(operand->data_type(), [&](const auto data_type) {
-            using DataType = typename decltype(data_type)::type;
-            const auto lower_bound =
-                lossless_variant_cast<DataType>(static_cast<const ValueExpression&>(*lower_expression).value);
-            const auto upper_bound =
-                lossless_variant_cast<DataType>(static_cast<const ValueExpression&>(*upper_expression).value);
-
-            // Do not handle tricky cases with lossy conversions here (e.g., `1 BETWEEN 1.1 and 2.0`).
-            if (!lower_bound || !upper_bound) {
-              result_pos_list = evaluate_expression_to_pos_list(*rewrite_between_expression(expression));
-              return;
-            }
-
-            result_pos_list =
-                _evaluate_between_expression<RowIDPosList>(between_expression, *lower_bound, *upper_bound);
-          });
         } break;
 
         case PredicateCondition::IsNull:
