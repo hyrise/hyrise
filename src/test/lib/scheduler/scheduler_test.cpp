@@ -265,6 +265,17 @@ TEST_F(SchedulerTest, PassAllDependencies) {
   ASSERT_THROW(Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks), std::logic_error);
 }
 
+TEST_F(SchedulerTest, SameSuccessorMultipleTimes) {
+  const auto task1 = std::make_shared<JobTask>([&]() {});
+  const auto task2 = std::make_shared<JobTask>([&]() {});
+
+  task1->set_as_predecessor_of(task2);
+  task1->set_as_predecessor_of(task2);
+  const auto task2_2 = task2;
+  task1->set_as_predecessor_of(task2_2);
+  ASSERT_EQ(task1->successors().size(), 1);
+}
+
 TEST_F(SchedulerTest, MultipleOperators) {
   Hyrise::get().topology.use_fake_numa_topology(8, 4);
   Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());

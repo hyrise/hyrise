@@ -53,7 +53,9 @@ void AbstractTask::set_as_predecessor_of(const std::shared_ptr<AbstractTask>& su
   // with the given successor (compare discussion https://github.com/hyrise/hyrise/pull/2340#discussion_r602174096).
   // The following guard prevents adding duplicate successors/predecessors:
   for (const auto& present_successor : _successors) {
-    if (present_successor.lock() == successor) {
+    // Comparing smart points by looking at the control block (see https://stackoverflow.com/q/12301916/1147726) to
+    // avoid using lock().
+    if (!present_successor.owner_before(successor) && !successor.owner_before(present_successor)) {
       return;
     }
   }
@@ -151,8 +153,9 @@ void AbstractTask::execute() {
   for (auto& successor : _successors) {
     // The task creator is responsible to ensure that successor tasks are available whenever an executed tasks tries to
     // execute/accesss its successors.
-    DebugAssert(!successor.expired(), "Successor task cannot be obtained.");
-    successor.lock()->_on_predecessor_done();
+    const auto shared_successor = successor.lock();
+    Assert(shared_successor, "Successor task cannot be obtained.");
+    shared_successor->_on_predecessor_done();
   }
 
   if (_done_callback) {
