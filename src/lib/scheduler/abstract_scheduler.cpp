@@ -36,12 +36,14 @@ void AbstractScheduler::_schedule_tasks(const std::vector<std::shared_ptr<Abstra
   if constexpr (HYRISE_DEBUG) {
     const auto task_set = std::unordered_set<std::shared_ptr<AbstractTask>>(tasks.begin(), tasks.end());
     for (const auto& task : tasks) {
-      const auto& successors = task->successors();
-      if (!successors.empty()) {
-        for (const auto& successor : successors) {
-          Assert(task_set.contains(successor.lock()),
-                 "Dependencies of passed tasks need to be part of the passed tasks.");
-        }
+      for (const auto& successor : task->successors()) {
+        Assert(task_set.contains(successor.lock()),
+               "Successors of scheduled tasks must also be part of the passed tasks.");
+      }
+
+      for (const auto& predecessor : task->predecessors()) {
+        Assert(task_set.contains(predecessor.lock()),
+               "Predecessors of scheduled tasks must also be part of the passed tasks.");
       }
     }
   }

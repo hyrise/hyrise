@@ -151,7 +151,7 @@ void AbstractTask::execute() {
   }
 
   for (auto& successor : _successors) {
-    // The task creator is responsible to ensure that successor tasks are available whenever an executed tasks tries to
+    // The task creator is responsible to ensure that successor tasks are available whenever an executed task tries to
     // execute/accesss its successors.
     const auto shared_successor = successor.lock();
     Assert(shared_successor, "Successor task cannot be obtained.");
