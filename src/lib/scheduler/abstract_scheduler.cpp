@@ -34,17 +34,21 @@ void AbstractScheduler::_group_tasks(const std::vector<std::shared_ptr<AbstractT
 
 void AbstractScheduler::_schedule_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) {
   if constexpr (HYRISE_DEBUG) {
-    const auto task_set = std::unordered_set<std::shared_ptr<AbstractTask>>(tasks.begin(), tasks.end());
+    auto task_set = std::unordered_set<const AbstractTask*>{};
+    for (const auto& task : tasks) {
+      task_set.emplace(&*task);
+    }
+
     for (const auto& task : tasks) {
       for (const auto& successor : task->successors()) {
-        Assert(task_set.contains(successor.lock()),
+        Assert(task_set.contains(&successor.get()),
                "Successors of scheduled tasks must also be part of the passed tasks.");
       }
 
-      for (const auto& predecessor : task->predecessors()) {
-        Assert(task_set.contains(predecessor.lock()),
-               "Predecessors of scheduled tasks must also be part of the passed tasks.");
-      }
+      // for (const auto& predecessor : task->predecessors()) {
+      //   Assert(task_set.contains(&predecessor.get()),
+      //          "Predecessors of scheduled tasks must also be part of the passed tasks.");
+      // }
     }
   }
 

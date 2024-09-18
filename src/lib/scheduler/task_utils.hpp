@@ -18,13 +18,15 @@ enum class TaskVisitation { VisitPredecessors, DoNotVisitPredecessors };
  * @tparam Visitor      Functor called with every task as a param. Returns `TaskVisitation`.
  */
 template <typename Task, typename Visitor>
-void visit_tasks(const std::shared_ptr<Task>& task, Visitor visitor) {
-  using AbstractTaskType = std::conditional_t<std::is_const_v<Task>, const AbstractTask, AbstractTask>;
+void visit_tasks(const Task& task, Visitor visitor) {
+  // using AbstractTaskType = std::conditional_t<std::is_const_v<Task>, const AbstractTask, AbstractTask>;
 
-  auto task_queue = std::queue<std::shared_ptr<AbstractTaskType>>{};
+  // auto task_queue = std::queue<std::shared_ptr<AbstractTaskType>>{};
+  auto task_queue = std::queue<const AbstractTask*>{};
   task_queue.push(task);
 
-  auto visited_tasks = std::unordered_set<std::shared_ptr<AbstractTaskType>>{};
+  // auto visited_tasks = std::unordered_set<std::shared_ptr<AbstractTaskType>>{};
+  auto visited_tasks = std::unordered_set<const AbstractTask*>{};
 
   while (!task_queue.empty()) {
     const auto current_task = task_queue.front();
@@ -38,7 +40,7 @@ void visit_tasks(const std::shared_ptr<Task>& task, Visitor visitor) {
       for (const auto& predecessor_ref : current_task->predecessors()) {
         const auto predecessor = predecessor_ref.lock();
         Assert(predecessor, "Predecessor expired.");
-        task_queue.push(predecessor);
+        task_queue.push(&*predecessor);
       }
     }
   }
@@ -54,13 +56,13 @@ enum class TaskUpwardVisitation { VisitSuccessors, DoNotVisitSuccessors };
  * @tparam Visitor      Functor called with every task as a param. Returns `TaskUpwardVisitation`.
  */
 template <typename Task, typename Visitor>
-void visit_tasks_upwards(const std::shared_ptr<Task>& task, Visitor visitor) {
-  using AbstractTaskType = std::conditional_t<std::is_const_v<Task>, const AbstractTask, AbstractTask>;
+void visit_tasks_upwards(const Task& task, Visitor visitor) {
+  // using AbstractTaskType = std::conditional_t<std::is_const_v<Task>, const AbstractTask, AbstractTask>;
 
-  auto task_queue = std::queue<std::shared_ptr<AbstractTaskType>>{};
-  task_queue.push(task);
+  auto task_queue = std::queue<const AbstractTask*>{};
+  task_queue.push(&task);
 
-  auto visited_tasks = std::unordered_set<std::shared_ptr<AbstractTaskType>>{};
+  auto visited_tasks = std::unordered_set<const AbstractTask*>{};
 
   while (!task_queue.empty()) {
     const auto current_task = task_queue.front();
@@ -72,7 +74,7 @@ void visit_tasks_upwards(const std::shared_ptr<Task>& task, Visitor visitor) {
 
     if (visitor(current_task) == TaskUpwardVisitation::VisitSuccessors) {
       for (const auto& successor : current_task->successors()) {
-        task_queue.push(successor.lock());
+        task_queue.push(&successor.get());
       }
     }
   }
