@@ -6,7 +6,7 @@
 namespace hyrise {
 
 class AbstractExpression;
-class AbstractCardinalityEstimator;
+class CardinalityEstimator;
 class AbstractCostEstimator;
 class AbstractLQPNode;
 class JoinGraph;
