@@ -91,28 +91,30 @@ class CardinalityEstimator {
    *              |
    *              | 15'000 (30'000 * 0.5)
    *              |
-   *        PredicateNode B
+   *      [ PredicateNode B ]
    *              |
    *              | 30'000 (100'000 * 0.3)
    *              |
-   *        PredicateNode A
+   *      [ PredicateNode A ]
    *              |
    *              | 100'000
    *              |
-   *       StoredTableNode R
+   *     [ StoredTableNode R ]
    *
    * Let's say we performed predicate reordering top-down with caching enabled and now arrived at the predicate chain
    * shown in the example. As we already estimated nodes further up in the LQP, the statistics/cardinalities of the
-   * PredicateNodes have been cached and will stay unchanged whenever we try to re-estimate them. For predicate
-   * reordering, we place each PredicateNode directly above the StoredTableNode R, estimate the cardinality, and place
-   * the nodes such that the node with the lowest cost/cardinality is executed first. Due to caching, PredicateNode B
-   * yields a smaller cardinality than PredicateNode A even though it has a worse selectivity, and we would falsely move
-   * it below PredicateNode A.
+   * PredicateNodes have been cached due to recursive input estimations. Cached statistics will stay unchanged whenever
+   * we try to re-estimate them.
+   * For predicate reordering, we place each PredicateNode directly above the StoredTableNode R, estimate the
+   * cardinality, and order the nodes such that the node with the lowest cost/cardinality is executed first. Due to
+   * caching, PredicateNode B yields a smaller cardinality than PredicateNode A even though it has a worse selectivity,
+   * and we would erroneously move it below PredicateNode A.
    *
-   * Thus, we go bottom-up and allow caching. When estimating the PredicateNodes, no statistics have been cached yet for
-   * them, we correctly estimate the cardinality based on the selectivity, and we preserve the predicate order before
-   * continuing to the nodes further up. Note that during predicate reordering, we do not cache the statistics of the
-   * PredicateNodes when deciding on their placement, but only when we estimate nodes above.
+   * Thus, we go bottom-up to allow caching in the actual rule. When estimating the PredicateNodes, no statistics have
+   * been cached yet for them. We correctly estimate the cardinalities based on the selectivities and we preserve the
+   * predicate order before continuing to the nodes further up. Note that during predicate reordering, we do not cache
+   * the statistics of the PredicateNodes while deciding on their placement, but only when we estimate nodes above,
+   * where already visited subplans will not change anymore.
    *
    * tl;dr: When you need multiple estimations for the same LQP, you can only safely go top-dpwn AND use caching when
    *        the cardinalities of nodes below do not change. To keep optimization costs low, it is best practice to
