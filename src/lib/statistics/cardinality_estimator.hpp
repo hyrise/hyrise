@@ -83,7 +83,7 @@ class CardinalityEstimator {
    * cardinalities/statistics of nodes, once constructed, never change. This enables the usage of an
    * <lqp-ptr> -> <statistics> cache.
    *
-   * Image the following simple example of predicate reordering. Let's say we have a table R with 100'000 tuples, a
+   * Image the following simple example of predicate reordering. Assume we have a table R with 100'000 tuples, a
    * PredicateNode A with a selectivity of 0.3, and a PredicateNode B with a selectivity of 0.5. There are also more
    * nodes on top of the subplan. The inital structure (ordered by appearence in the SQL query) looks like that:
    *
@@ -101,7 +101,7 @@ class CardinalityEstimator {
    *              |
    *     [ StoredTableNode R ]
    *
-   * Let's say we performed predicate reordering top-down with caching enabled and now arrived at the predicate chain
+   * Assume we performed predicate reordering top-down with caching enabled and now arrived at the predicate chain
    * shown in the example. As we already estimated nodes further up in the LQP, the statistics/cardinalities of the
    * PredicateNodes have been cached due to recursive input estimations. Cached statistics will stay unchanged whenever
    * we try to re-estimate them.
@@ -116,7 +116,7 @@ class CardinalityEstimator {
    * the statistics of the PredicateNodes while deciding on their placement, but only when we estimate nodes above,
    * where already visited subplans will not change anymore.
    *
-   * tl;dr: When you need multiple estimations for the same LQP, you can only safely go top-dpwn AND use caching when
+   * tl;dr: When you need multiple estimations for the same LQP, you can only safely go top-down AND use caching when
    *        the cardinalities of nodes below do not change. To keep optimization costs low, it is best practice to
    *        recursively go bottom-up if you change the query plan in a way that influences intermediate cardinalities.
    */
