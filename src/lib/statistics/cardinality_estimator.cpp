@@ -52,7 +52,6 @@
 #include "table_statistics.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
-#include "utils/pruning_utils.hpp"
 
 namespace hyrise {
 
