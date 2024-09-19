@@ -68,21 +68,7 @@ class CardinalityEstimator {
                                                        const bool cacheable = true) const;
 
   std::shared_ptr<TableStatistics> estimate_statistics(const std::shared_ptr<const AbstractLQPNode>& lqp,
-                                                       const bool cacheable, StatisticsByLQP& statistics_cache,
-                                                       ExpressionUnorderedSet& required_columns) const;
-
-  /**
-   * Statistics pruning
-   *
-   * By default, the CardinalityEstimator prunes statistics that are not relevant for cardinality estimation. Thus, we
-   * avoid forwarding and scaling histograms. Without caching, the required columns are collected during estimation.
-   * When caching is allowed, `AbstractCardinalityEstimator::guarantee_bottom_up_construction()` takes care that all
-   * predicates of the final LQP are present in the cache.
-   *
-   * @{
-   */
-  void prune_unused_statistics() const;
-  void do_not_prune_unused_statistics() const;
+                                                       const bool cacheable, StatisticsByLQP& statistics_cache) const;
 
   /**
    * We use dummy objects for pruned statistics and cases where we do not estimate statistics (e.g., for aggregations).
@@ -123,7 +109,8 @@ class CardinalityEstimator {
    * For increased cardinality estimation performance:
    * Promises to this CardinalityEstimator that it will only be used to estimate bottom-up constructed plans. Thus, the
    * cardinalities/statistics of nodes, once constructed, never change. This enables the usage of an
-   * <lqp-ptr> -> <statistics> cache.
+   * <lqp-ptr> -> <statistics> cache. Furthermore, this call also enables statistics pruning and populates the required
+   * columns.
    *
    * Image the following simple example of predicate reordering. Assume we have a table R with 100'000 tuples, a
    * PredicateNode A with a selectivity of 0.3, and a PredicateNode B with a selectivity of 0.5. There are also more
@@ -164,12 +151,19 @@ class CardinalityEstimator {
    */
   void guarantee_bottom_up_construction(const std::shared_ptr<const AbstractLQPNode>& lqp) const;
 
+  /**
+   * Prune statistics that are not relevant for cardinality estimation. Thus, we avoid forwarding and scaling
+   * histograms. When caching is allowed, `AbstractCardinalityEstimator::guarantee_bottom_up_construction()` takes care
+   * that all predicates of the final LQP are present in the cache.
+   * Without caching, we cannot easily collect the required columns during estimation because we could recurse into
+   * diamonds that require different expressions and miss columns when we try to prune them the first time.
+   */
+  void prune_unused_statistics() const;
+  void do_not_prune_unused_statistics() const;
 
   /**
-   * For increased cardinality estimation performance:
    * Extract columns that are required during cardinality estimations, e.g., columns used in join or selection
    * predicates. During estimations, only statistics for these columns are propagated.
-   *
    */
   void populate_required_column_expressions(const std::shared_ptr<const AbstractLQPNode>& lqp) const;
   /** @} */
@@ -195,7 +189,7 @@ class CardinalityEstimator {
 
   std::shared_ptr<TableStatistics> estimate_predicate_node(
       const PredicateNode& predicate_node, const std::shared_ptr<TableStatistics>& input_table_statistics,
-      const bool cacheable, StatisticsByLQP& statistics_cache, ExpressionUnorderedSet& required_columns) const;
+      const bool cacheable, StatisticsByLQP& statistics_cache) const;
 
   static std::shared_ptr<TableStatistics> estimate_join_node(
       const JoinNode& join_node, const std::shared_ptr<TableStatistics>& left_input_table_statistics,

@@ -1117,8 +1117,6 @@ TEST_F(CardinalityEstimatorTest, StatisticsCaching) {
 }
 
 TEST_F(CardinalityEstimatorTest, StatisticsPruning) {
-  estimator.prune_unused_statistics();
-
   // clang-format off
   const auto lqp =
   PredicateNode::make(greater_than_(a_a, 50),
@@ -1128,20 +1126,8 @@ TEST_F(CardinalityEstimatorTest, StatisticsPruning) {
         node_b)));
   // clang-format on
 
-  EXPECT_FALSE(estimator.cardinality_estimation_cache.statistics_by_lqp);
-  EXPECT_FALSE(estimator.cardinality_estimation_cache.required_column_expressions);
-
-  // Estimate without caching. Statistics should only contain columns that are relevant for estimating. Statistics for
-  // column b_b should be dummy statistics without statistics objects.
-  auto statics = estimator.estimate_statistics(lqp);
-  ASSERT_EQ(statics->column_statistics.size(), 5);
-
-  EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*statics->column_statistics[0]));
-  EXPECT_TRUE(dynamic_cast<const AttributeStatistics<int32_t>*>(&*statics->column_statistics[1]));
-  EXPECT_TRUE(dynamic_cast<const AttributeStatistics<int32_t>*>(&*statics->column_statistics[2]));
-  EXPECT_TRUE(dynamic_cast<const AttributeStatistics<int32_t>*>(&*statics->column_statistics[3]));
-  EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*statics->column_statistics[4]));
-  // Cached and required columns should still be unset.
+  // Pruning without caching is not permitted.
+  EXPECT_THROW(estimator.prune_unused_statistics(), std::logic_error);
   EXPECT_FALSE(estimator.cardinality_estimation_cache.statistics_by_lqp);
   EXPECT_FALSE(estimator.cardinality_estimation_cache.required_column_expressions);
 
@@ -1157,11 +1143,15 @@ TEST_F(CardinalityEstimatorTest, StatisticsPruning) {
     lqp->set_left_input(node_a);
     EXPECT_THROW(estimator.estimate_statistics(lqp), std::logic_error);
     lqp->set_left_input(projection);
+    estimator.cardinality_estimation_cache.statistics_by_lqp.reset();
+    estimator.cardinality_estimation_cache.required_column_expressions.reset();
   }
 
   // Guaranteeing bottom-up construction (i.e., allowing caching) should populate the set of required columns.
   estimator.guarantee_bottom_up_construction(lqp);
+  EXPECT_TRUE(estimator.cardinality_estimation_cache.statistics_by_lqp);
   ASSERT_TRUE(estimator.cardinality_estimation_cache.required_column_expressions);
+
   EXPECT_EQ(estimator.cardinality_estimation_cache.required_column_expressions->size(), 3);
   EXPECT_TRUE(estimator.cardinality_estimation_cache.required_column_expressions->contains(a_a));
   EXPECT_TRUE(estimator.cardinality_estimation_cache.required_column_expressions->contains(a_b));
@@ -1169,13 +1159,13 @@ TEST_F(CardinalityEstimatorTest, StatisticsPruning) {
   EXPECT_FALSE(estimator.cardinality_estimation_cache.required_column_expressions->contains(b_b));
 
   // Estimate with caching.
-  statics = estimator.estimate_statistics(lqp);
-  ASSERT_EQ(statics->column_statistics.size(), 5);
-  EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*statics->column_statistics[0]));
-  EXPECT_TRUE(dynamic_cast<const AttributeStatistics<int32_t>*>(&*statics->column_statistics[1]));
-  EXPECT_TRUE(dynamic_cast<const AttributeStatistics<int32_t>*>(&*statics->column_statistics[2]));
-  EXPECT_TRUE(dynamic_cast<const AttributeStatistics<int32_t>*>(&*statics->column_statistics[3]));
-  EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*statics->column_statistics[4]));
+  auto statistics = estimator.estimate_statistics(lqp);
+  ASSERT_EQ(statistics->column_statistics.size(), 5);
+  EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*statistics->column_statistics[0]));
+  EXPECT_TRUE(dynamic_cast<const AttributeStatistics<int32_t>*>(&*statistics->column_statistics[1]));
+  EXPECT_TRUE(dynamic_cast<const AttributeStatistics<int32_t>*>(&*statistics->column_statistics[2]));
+  EXPECT_TRUE(dynamic_cast<const AttributeStatistics<int32_t>*>(&*statistics->column_statistics[3]));
+  EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*statistics->column_statistics[4]));
 }
 
 TEST_F(CardinalityEstimatorTest, StatisticsPruningWithPrunedColumns) {
@@ -1191,7 +1181,6 @@ TEST_F(CardinalityEstimatorTest, StatisticsPruningWithPrunedColumns) {
   // clang-format on
 
   // Round one: node_u does not have base statistics. All statistics are dummy statistics.
-  estimator.prune_unused_statistics();
   const auto lqp_u_dummy_statistics = estimator.estimate_statistics(lqp_u);
   for (const auto& statistics : lqp_u_dummy_statistics->column_statistics) {
     EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*statistics));
@@ -1204,6 +1193,7 @@ TEST_F(CardinalityEstimatorTest, StatisticsPruningWithPrunedColumns) {
   // Round two: The node has input statistics. There should not be statistics for pruned and unused columns. We only
   // used predicates that select all tuples, thus, the input statistics should be forwared for used columns.
   // For node_u, no columns are pruned. However, only columns 2, 6, and 8 are used.
+  estimator.guarantee_bottom_up_construction(lqp_u);
   const auto lqp_u_statistics = estimator.estimate_statistics(lqp_u);
   ASSERT_EQ(lqp_u_statistics->column_statistics.size(), 10);
   const auto& table_u_statistics = table_u->table_statistics()->column_statistics;
@@ -1233,6 +1223,7 @@ TEST_F(CardinalityEstimatorTest, StatisticsPruningWithPrunedColumns) {
 
   // For node_v, columns 1, 3, 4, 7, and 9 have been pruned. Thus, columns 0, 2, 5, 6 and 8 remain, of which 2, 6, and
   // 8 are used.
+  estimator.guarantee_bottom_up_construction(lqp_v);
   const auto lqp_v_statistics = estimator.estimate_statistics(lqp_v);
   ASSERT_EQ(lqp_v_statistics->column_statistics.size(), 5);
   EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*lqp_v_statistics->column_statistics[0]));
@@ -1249,6 +1240,7 @@ TEST_F(CardinalityEstimatorTest, StatisticsPruningWithPrunedColumns) {
 
   // For node_d, column 0 is pruned and column 2 is used.
   node_d->set_pruned_column_ids({ColumnID{0}});
+  estimator.guarantee_bottom_up_construction(lqp_d);
   const auto lqp_d_statistics = estimator.estimate_statistics(lqp_d);
   const auto node_d_statistics = node_d->table_statistics();
   ASSERT_EQ(lqp_d_statistics->column_statistics.size(), 2);
@@ -1311,7 +1303,7 @@ TEST_F(CardinalityEstimatorTest, CheckRequiredStatistics) {
   estimator.check_required_statistics(ColumnID{6}, lqp, statistics);
 
   // Estimation should work anyway.
-  estimator.prune_unused_statistics();
+  estimator.guarantee_bottom_up_construction(lqp);
   estimator.estimate_cardinality(lqp);
 }
 

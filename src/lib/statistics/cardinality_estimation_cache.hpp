@@ -17,8 +17,6 @@ class CardinalityEstimationCache {
   std::optional<StatisticsByLQP> statistics_by_lqp;
 
   std::optional<ExpressionUnorderedSet> required_column_expressions;
-
-  bool enable_pruning{false};
 };
 
 }  // namespace hyrise

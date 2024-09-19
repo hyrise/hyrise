@@ -21,10 +21,10 @@ class JoinOrderingRule : public AbstractRule {
   //
   // This threshold was most recently evaluated and adapted in #2652, backed by former investigations in #2626 and
   // #2642. There, experiments showed that join ordering was a huge performance issue for JOB and TPC-DS queries (many
-  // queries spent several hundreds of milliseconds here). One issue whas the shere number of candidates, but we also
+  // queries spent several hundreds of milliseconds here). One issue was the shere number of candidates, but we also
   // identified two main bottlenecks in cardinality estimation:
   //     (i) Scaling histograms because we do it very often (thousands of times for some TPC-DS and JOB queries).
-  //    (ii) Creating new histograms for joined tables.
+  //    (ii) Creating new histograms for joined tables and column vs. column predicates.
   // Before that, we used a threshold of 9. Using GOO for eight vertices also improved execution for some TPC-DS queries
   // and many JOB qweries, where our cardinality estimations are notoriously bad (skew, many dimension table joins).
   // Further decreasing this value did not have noticeable positive effects (but some negative ones).
