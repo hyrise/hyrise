@@ -283,10 +283,23 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
    * be created at the end of this function.
    *
    * Lookup in `join_graph_statistics_cache` is expected to have a higher hit rate (since every bitmask represents
-   * multiple LQPs) than `statistics_by_lqp`. Thus, the lookup in `join_graph_statistics_cache` is performed first.
+   * multiple LQPs) than `statistics_by_lqp`, but the lookup is also more expensive. Thus, the lookup in
+   * `join_graph_statistics_cache` is performed last.
    *
-   * Finally, try a lookup in the temporary cache used for the estimation of a single LQP.
+   * Also try a lookup in the temporary cache used for the estimation of a single LQP.
    */
+  if (cardinality_estimation_cache.statistics_by_lqp) {
+    const auto plan_statistics_iter = cardinality_estimation_cache.statistics_by_lqp->find(lqp);
+    if (plan_statistics_iter != cardinality_estimation_cache.statistics_by_lqp->end()) {
+      return plan_statistics_iter->second;
+    }
+  }
+
+  const auto cached_statistics = statistics_cache.find(lqp);
+  if (cached_statistics != statistics_cache.end()) {
+    return cached_statistics->second;
+  }
+
   auto join_graph_bitmask = std::optional<JoinGraphStatisticsCache::Bitmask>{};
   if (cardinality_estimation_cache.join_graph_statistics_cache) {
     join_graph_bitmask = cardinality_estimation_cache.join_graph_statistics_cache->bitmask(lqp);
@@ -299,18 +312,6 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
     } else {
       // The LQP is not (a subgraph of) a JoinGraph and therefore we cannot use the JoinGraphStatisticsCache.
     }
-  }
-
-  if (cardinality_estimation_cache.statistics_by_lqp) {
-    const auto plan_statistics_iter = cardinality_estimation_cache.statistics_by_lqp->find(lqp);
-    if (plan_statistics_iter != cardinality_estimation_cache.statistics_by_lqp->end()) {
-      return plan_statistics_iter->second;
-    }
-  }
-
-  const auto cached_statistics = statistics_cache.find(lqp);
-  if (cached_statistics != statistics_cache.end()) {
-    return cached_statistics->second;
   }
 
   /**
