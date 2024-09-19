@@ -11,7 +11,7 @@
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
-#include "statistics/abstract_cardinality_estimator.hpp"
+#include "statistics/cardinality_estimator.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
@@ -20,7 +20,7 @@ namespace {
 using namespace hyrise;  // NOLINT(build/namespaces)
 
 void reorder_join_predicates_recursively(const std::shared_ptr<AbstractLQPNode>& node,
-                                         const std::shared_ptr<AbstractCardinalityEstimator>& cardinality_estimator,
+                                         const std::shared_ptr<CardinalityEstimator>& cardinality_estimator,
                                          std::unordered_set<std::shared_ptr<AbstractLQPNode>>& visited_nodes) {
   if (!node || !visited_nodes.emplace(node).second) {
     return;

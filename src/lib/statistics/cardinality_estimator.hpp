@@ -81,8 +81,8 @@ class CardinalityEstimator {
    *
    * @{
    */
-  void prune_unused_statistics();
-  void do_not_prune_unused_statistics();
+  void prune_unused_statistics() const;
+  void do_not_prune_unused_statistics() const;
 
   /**
    * We use dummy objects for pruned statistics and cases where we do not estimate statistics (e.g., for aggregations).
@@ -117,7 +117,7 @@ class CardinalityEstimator {
    * of the vertices and predicates in @param JoinGraph. This enables using the JoinGraphStatisticsCache during
    * cardinality estimation.
    */
-  void guarantee_join_graph(const JoinGraph& join_graph);
+  void guarantee_join_graph(const JoinGraph& join_graph) const;
 
   /**
    * For increased cardinality estimation performance:
@@ -162,7 +162,16 @@ class CardinalityEstimator {
    *        the cardinalities of nodes below do not change. To keep optimization costs low, it is best practice to
    *        recursively go bottom-up if you change the query plan in a way that influences intermediate cardinalities.
    */
-  void guarantee_bottom_up_construction();
+  void guarantee_bottom_up_construction(const std::shared_ptr<const AbstractLQPNode>& lqp) const;
+
+
+  /**
+   * For increased cardinality estimation performance:
+   * Extract columns that are required during cardinality estimations, e.g., columns used in join or selection
+   * predicates. During estimations, only statistics for these columns are propagated.
+   *
+   */
+  void populate_required_column_expressions(const std::shared_ptr<const AbstractLQPNode>& lqp) const;
   /** @} */
 
   /**
@@ -246,7 +255,7 @@ class CardinalityEstimator {
       }
 
       DebugAssert(left_histogram.bin_maximum(left_idx) == right_histogram.bin_maximum(right_idx),
-                  "Histogram bin boundaries do not match");
+                  "Histogram bin boundaries do not match.");
 
       const auto height = std::min(left_histogram.bin_height(left_idx), right_histogram.bin_height(right_idx));
       const auto distinct_count =
@@ -324,7 +333,7 @@ class CardinalityEstimator {
       }
 
       DebugAssert(unified_left_histogram->bin_maximum(left_idx) == unified_right_histogram->bin_maximum(right_idx),
-                  "Histogram bin boundaries do not match");
+                  "Histogram bin boundaries do not match.");
 
       // Overlapping bins found, estimate the join for these bins' range.
       const auto [height, distinct_count] = estimate_inner_equi_join_of_bins(
@@ -352,10 +361,6 @@ class CardinalityEstimator {
       const float right_distinct_count);
 
   mutable CardinalityEstimationCache cardinality_estimation_cache;
-
- private:
-  bool _enable_pruning{true};
-
 };
 
 std::ostream& operator<<(std::ostream& stream, const CardinalityEstimator::DummyStatistics& /*dummy_statistics*/);

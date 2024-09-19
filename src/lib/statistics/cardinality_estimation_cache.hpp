@@ -8,7 +8,7 @@
 
 namespace hyrise {
 
-// See `CardinalityEstimator::guarantee_join_graph()/guarantee_bottom_up_construction()`
+// See `CardinalityEstimator::guarantee_join_graph()/guarantee_bottom_up_construction()`.
 class CardinalityEstimationCache {
  public:
   std::optional<JoinGraphStatisticsCache> join_graph_statistics_cache;
@@ -17,6 +17,8 @@ class CardinalityEstimationCache {
   std::optional<StatisticsByLQP> statistics_by_lqp;
 
   std::optional<ExpressionUnorderedSet> required_column_expressions;
+
+  bool enable_pruning{false};
 };
 
 }  // namespace hyrise
