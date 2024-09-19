@@ -5,6 +5,8 @@
 #include <memory>
 #include <optional>
 #include <ostream>
+#include <queue>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -29,6 +31,7 @@
 #include "logical_query_plan/alias_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/limit_node.hpp"
+#include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
@@ -236,21 +239,39 @@ void CardinalityEstimator::guarantee_bottom_up_construction(const std::shared_pt
 void CardinalityEstimator::populate_required_column_expressions(
     const std::shared_ptr<const AbstractLQPNode>& lqp) const {
   cardinality_estimation_cache.required_column_expressions.emplace();
+  auto node_queue = std::queue<std::shared_ptr<const AbstractLQPNode>>{};
+  node_queue.push(lqp);
+  auto visited_nodes = std::unordered_set<std::shared_ptr<const AbstractLQPNode>>{};
 
-  visit_lqp(lqp, [&](const auto& node) {
+  while (!node_queue.empty()) {
+    const auto& node = node_queue.front();
+    node_queue.pop();
+
+    if (!visited_nodes.emplace(node).second) {
+      continue;
+    }
+
     if (node->type == LQPNodeType::Join || node->type == LQPNodeType::Predicate) {
       for (const auto& root_expression : node->node_expressions) {
         visit_expression(root_expression, [&](const auto& expression) {
           if (expression->type == ExpressionType::LQPColumn) {
             cardinality_estimation_cache.required_column_expressions->emplace(expression);
+          } else if (expression->type == ExpressionType::LQPSubquery) {
+            node_queue.push(static_cast<const LQPSubqueryExpression&>(*expression).lqp);
           }
 
           return ExpressionVisitation::VisitArguments;
         });
       }
     }
-    return LQPVisitation::VisitInputs;
-  });
+
+    if (node->left_input()) {
+      node_queue.push(node->left_input());
+    }
+    if (node->right_input()) {
+      node_queue.push(node->right_input());
+    }
+  }
 }
 
 std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
