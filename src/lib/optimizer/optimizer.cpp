@@ -308,6 +308,11 @@ std::shared_ptr<AbstractLQPNode> Optimizer::optimize(
 
     if constexpr (HYRISE_DEBUG) {
       validate_lqp(root_node);
+
+      // Ensure that the rule did not pollute the caches of the shared CardinalityEstimator instance.
+      const auto& estimation_cache = _cost_estimator->cardinality_estimator->cardinality_estimation_cache;
+      Assert(!estimation_cache.join_graph_statistics_cache && !estimation_cache.statistics_by_lqp,
+             "CardinalityEstimator caches should be empty. Did you call `new_instance()`?");
     }
   }
 

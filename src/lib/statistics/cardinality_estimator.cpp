@@ -40,8 +40,8 @@
 #include "lossy_cast.hpp"
 #include "operators/operator_join_predicate.hpp"
 #include "operators/operator_scan_predicate.hpp"
+#include "optimizer/join_ordering/join_graph.hpp"
 #include "resolve_type.hpp"
-#include "statistics/abstract_cardinality_estimator.hpp"
 #include "statistics/attribute_statistics.hpp"
 #include "statistics/cardinality_estimation_cache.hpp"
 #include "statistics/join_graph_statistics_cache.hpp"
@@ -123,6 +123,7 @@ namespace hyrise {
 
 using namespace expression_functional;  // NOLINT(build/namespaces)
 
+<<<<<<< HEAD
 CardinalityEstimator::DummyStatistics::DummyStatistics(const DataType init_data_type)
     : BaseAttributeStatistics(init_data_type) {}
 
@@ -206,7 +207,7 @@ void CardinalityEstimator::check_required_statistics(const ColumnID column_id,
          "Missing AttributeStatistics for required column. Have they been pruned?");
 }
 
-std::shared_ptr<AbstractCardinalityEstimator> CardinalityEstimator::new_instance() const {
+std::shared_ptr<CardinalityEstimator> CardinalityEstimator::new_instance() {
   return std::make_shared<CardinalityEstimator>();
 }
 
@@ -238,6 +239,15 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
   }
 
   return statistics;
+}
+
+void CardinalityEstimator::guarantee_join_graph(const JoinGraph& join_graph) {
+  cardinality_estimation_cache.join_graph_statistics_cache.emplace(
+      JoinGraphStatisticsCache::from_join_graph(join_graph));
+}
+
+void CardinalityEstimator::guarantee_bottom_up_construction() {
+  cardinality_estimation_cache.statistics_by_lqp.emplace();
 }
 
 std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(

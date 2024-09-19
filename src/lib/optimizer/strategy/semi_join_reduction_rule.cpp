@@ -11,7 +11,7 @@
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
-#include "statistics/abstract_cardinality_estimator.hpp"
+#include "statistics/cardinality_estimator.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 

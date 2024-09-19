@@ -10,7 +10,7 @@
 #include "optimizer/join_ordering/dp_ccp.hpp"
 #include "optimizer/join_ordering/greedy_operator_ordering.hpp"
 #include "optimizer/join_ordering/join_graph.hpp"
-#include "statistics/abstract_cardinality_estimator.hpp"
+#include "statistics/cardinality_estimator.hpp"
 #include "utils/assert.hpp"
 
 namespace {
