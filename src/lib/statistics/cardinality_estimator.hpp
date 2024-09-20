@@ -86,10 +86,6 @@ class CardinalityEstimator {
         const std::optional<AllTypeVariant>& /*variant_value2*/ = std::nullopt) const override;
   };
 
-  // Helper to ensure no statistics for required LQPColumnExpressions were pruned. Should be adapted if we estimate
-  // aggregations, window functions, or computed projections.
-  static void check_required_statistics(const ColumnID column_id, const std::shared_ptr<AbstractLQPNode>& input_node,
-                                        const std::shared_ptr<const TableStatistics>& input_statistics);
   /** @} */
 
   /**
@@ -108,10 +104,6 @@ class CardinalityEstimator {
    * Promises to this CardinalityEstimator that it will only be used to estimate bottom-up constructed plans. Thus, the
    * cardinalities/statistics of nodes, once constructed, never change. This enables the usage of an
    * <lqp-ptr> -> <statistics> cache.
-   * Furthermore, this call also enables statistics pruning and population of columns that must not be pruned. Thus, it
-   * sets @param lqp in the cache to lazily use it for populating the columns. If you do not wish to use statistics
-   * pruning (e.g., because you untie nodes from the plan while performing estimations), call
-   * `do_not_prune_unused_statistics()` afterwards.
    *
    * Image the following simple example of predicate reordering. Assume we have a table R with 100'000 tuples, a
    * PredicateNode A with a selectivity of 0.3, and a PredicateNode B with a selectivity of 0.5. There are also more
@@ -150,18 +142,7 @@ class CardinalityEstimator {
    *        the cardinalities of nodes below do not change. To keep optimization costs low, it is best practice to
    *        recursively go bottom-up if you change the query plan in a way that influences intermediate cardinalities.
    */
-  void guarantee_bottom_up_construction(const std::shared_ptr<const AbstractLQPNode>& lqp) const;
-
-  /**
-   * Prune statistics that are not relevant for cardinality estimation. Thus, we avoid forwarding and scaling
-   * histograms. When caching is allowed, `AbstractCardinalityEstimator::guarantee_bottom_up_construction()` takes care
-   * that all predicates of the final LQP are present in the cache.
-   * Without caching, we cannot easily collect the required columns during estimation because we could recurse into
-   * diamonds that require different expressions and miss columns when we try to prune them the first time.
-   * Turn off pruning if you untie nodes while you perform estimations (e.g., in PredicatePlacementRule).
-   */
-  void prune_unused_statistics() const;
-  void do_not_prune_unused_statistics() const;
+  void guarantee_bottom_up_construction() const;
   /** @} */
 
   /**
@@ -349,6 +330,16 @@ class CardinalityEstimator {
   static std::pair<HistogramCountType, HistogramCountType> estimate_inner_equi_join_of_bins(
       const float left_height, const float left_distinct_count, const float right_height,
       const float right_distinct_count);
+  /** @} */
+
+  /**
+   * Helper
+   * @{
+   */
+  static std::shared_ptr<TableStatistics> prune_column_statistics(
+      const std::shared_ptr<TableStatistics>& table_statistics, const std::vector<ColumnID>& pruned_column_ids);
+
+  /** @} */
 
   mutable CardinalityEstimationCache cardinality_estimation_cache;
 };

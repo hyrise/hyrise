@@ -33,12 +33,9 @@ void PredicatePlacementRule::_apply_to_plan_without_subqueries(const std::shared
   const auto root_node = lqp_root->type == LQPNodeType::Root ? lqp_root : LogicalPlanRootNode::make(lqp_root);
 
   const auto estimator = cost_estimator->cardinality_estimator->new_instance();
-  estimator->guarantee_bottom_up_construction(lqp_root);
-  // Turn off statistics pruning because we untie nodes while estimating cardinalities. Thus, not all required predicate
-  // expessions are part of the LQP when the required statistics are populated during the first estimation call.
-  estimator->do_not_prune_unused_statistics();
+  estimator->guarantee_bottom_up_construction();
 
-  auto push_down_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
+  std::vector<std::shared_ptr<AbstractLQPNode>> push_down_nodes;
   _push_down_traversal(root_node, LQPInputSide::Left, push_down_nodes, *estimator);
 
   _pull_up_traversal(root_node, LQPInputSide::Left);
@@ -49,7 +46,7 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
                                                   std::vector<std::shared_ptr<AbstractLQPNode>>& push_down_nodes,
                                                   CardinalityEstimator& estimator) {
   const auto input_node = current_node->input(input_side);
-  // Allow calling without checks.
+  // Allow calling without checks
   if (!input_node) {
     Assert(push_down_nodes.empty(), "Expected pushdown nodes to be already inserted.");
     return;

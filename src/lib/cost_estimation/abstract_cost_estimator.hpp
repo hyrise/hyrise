@@ -46,7 +46,7 @@ class AbstractCostEstimator {
    * constructed plans. That is, the Cost/Cardinality of a node, once constructed, never changes.
    * This enables the usage of a <lqp-ptr> -> <cost> cache (`cost_estimation_by_lqp_cache`).
    */
-  void guarantee_bottom_up_construction(const std::shared_ptr<const AbstractLQPNode>& lqp);
+  void guarantee_bottom_up_construction();
 
   const std::shared_ptr<CardinalityEstimator> cardinality_estimator;
 
