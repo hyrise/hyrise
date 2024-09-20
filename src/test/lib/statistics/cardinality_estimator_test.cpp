@@ -1172,7 +1172,6 @@ TEST_F(CardinalityEstimatorTest, StatisticsPruning) {
   EXPECT_TRUE(estimator.cardinality_estimation_cache.required_column_expressions->contains(b_a));
   EXPECT_FALSE(estimator.cardinality_estimation_cache.required_column_expressions->contains(b_b));
   EXPECT_FALSE(estimator.cardinality_estimation_cache.lqp);
-
 }
 
 TEST_F(CardinalityEstimatorTest, StatisticsPruningWithPrunedColumns) {
