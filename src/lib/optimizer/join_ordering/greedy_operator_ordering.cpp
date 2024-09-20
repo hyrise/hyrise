@@ -11,7 +11,7 @@
 #include "join_graph.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "optimizer/join_ordering/join_graph_edge.hpp"
-#include "statistics/abstract_cardinality_estimator.hpp"
+#include "statistics/cardinality_estimator.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 

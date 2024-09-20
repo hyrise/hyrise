@@ -7,10 +7,11 @@
 
 #include <boost/dynamic_bitset.hpp>
 
-#include "abstract_cardinality_estimator.hpp"
+#include "cardinality_estimation_cache.hpp"
 #include "operators/operator_scan_predicate.hpp"
 #include "statistics/statistics_objects/abstract_histogram.hpp"
 #include "statistics/statistics_objects/generic_histogram_builder.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 
@@ -31,22 +32,96 @@ class ValidateNode;
 class WindowNode;
 
 /**
- * Hyrise's default, statistics-based cardinality estimator.
+ * Hyrise's statistics-based cardinality estimator. It mostly relies on histograms that are taken from the base tables
+ * and adapted (sliced, scaled) according to join and scan predicates along the query plan. The estimation process
+ * happens recursively.
+ *
+ * To increase estimation performance, we cache already estimated statistics for (sub-)plans that are guaranteed not to
+ * change anymore. This is beneficial if we call the CardinalityEstimator multiple times for the same LQP (e.g., during
+ * join ordering, predicate reordering, etc.).
+ * Even if we cannot cache statistics across multiple estimation invocations, we maintain a cache for a single call.
+ * This helps if we have diamonds in the query plan (e.g., after predicate splitup or with semi-join reductions).
+ * When allowing the CardinalityEstimator to use caching, you have to get a fresh instance (`new_instance()`). Thus, the
+ * filled caches do not interfere with later estimations by, e.g., following optimizer rules.
  */
-class CardinalityEstimator : public AbstractCardinalityEstimator {
+class CardinalityEstimator {
  public:
   using StatisticsByLQP = CardinalityEstimationCache::StatisticsByLQP;
 
-  std::shared_ptr<AbstractCardinalityEstimator> new_instance() const override;
+  /**
+   * @return A new instance of this estimator with empty caches. Used so that caching guarantees can be enabled on the
+   *         returned estimator.
+   */
+  static std::shared_ptr<CardinalityEstimator> new_instance();
 
+  /**
+   * @return The estimated output row count of @param lqp.
+   */
   Cardinality estimate_cardinality(const std::shared_ptr<const AbstractLQPNode>& lqp,
-                                   const bool cacheable = true) const override;
+                                   const bool cacheable = true) const;
 
   std::shared_ptr<TableStatistics> estimate_statistics(const std::shared_ptr<const AbstractLQPNode>& lqp,
                                                        const bool cacheable = true) const;
 
   std::shared_ptr<TableStatistics> estimate_statistics(const std::shared_ptr<const AbstractLQPNode>& lqp,
                                                        const bool cacheable, StatisticsByLQP& statistics_cache) const;
+
+  /**
+   * Statistics caching
+   * @{
+   *
+   * For increased cardinality estimation performance:
+   * Promises to this CardinalityEstimator that it will only be used to estimate cardinalities of plans that consist
+   * of the vertices and predicates in @param JoinGraph. This enables using the JoinGraphStatisticsCache during
+   * cardinality estimation.
+   */
+  void guarantee_join_graph(const JoinGraph& join_graph);
+
+  /**
+   * For increased cardinality estimation performance:
+   * Promises to this CardinalityEstimator that it will only be used to estimate bottom-up constructed plans. Thus, the
+   * cardinalities/statistics of nodes, once constructed, never change. This enables the usage of an
+   * <lqp-ptr> -> <statistics> cache.
+   *
+   * Image the following simple example of predicate reordering. Assume we have a table R with 100'000 tuples, a
+   * PredicateNode A with a selectivity of 0.3, and a PredicateNode B with a selectivity of 0.5. There are also more
+   * nodes on top of the subplan. The inital structure (ordered by appearence in the SQL query) looks like that:
+   *
+   *             ...
+   *              |
+   *              | 15'000 (30'000 * 0.5)
+   *              |
+   *      [ PredicateNode B ]
+   *              |
+   *              | 30'000 (100'000 * 0.3)
+   *              |
+   *      [ PredicateNode A ]
+   *              |
+   *              | 100'000
+   *              |
+   *     [ StoredTableNode R ]
+   *
+   * Assume we performed predicate reordering top-down with caching enabled and now arrived at the predicate chain
+   * shown in the example. As we already estimated nodes further up in the LQP, the statistics/cardinalities of the
+   * PredicateNodes have been cached due to recursive input estimations. Cached statistics will stay unchanged whenever
+   * we try to re-estimate them.
+   * For predicate reordering, we place each PredicateNode directly above the StoredTableNode R, estimate the
+   * cardinality, and order the nodes such that the node with the lowest cost/cardinality is executed first. Due to
+   * caching, PredicateNode B yields a smaller cardinality than PredicateNode A even though it has a worse selectivity,
+   * and we would erroneously move it below PredicateNode A.
+   *
+   * Thus, we go bottom-up to allow caching in the actual rule. When estimating the PredicateNodes, no statistics have
+   * been cached yet for them. We correctly estimate the cardinalities based on the selectivities and we preserve the
+   * predicate order before continuing to the nodes further up. Note that during predicate reordering, we do not cache
+   * the statistics of the PredicateNodes while deciding on their placement, but only when we estimate nodes above,
+   * where already visited subplans will not change anymore.
+   *
+   * tl;dr: When you need multiple estimations for the same LQP, you can only safely go top-down AND use caching when
+   *        the cardinalities of nodes below do not change. To keep optimization costs low, it is best practice to
+   *        recursively go bottom-up if you change the query plan in a way that influences intermediate cardinalities.
+   */
+  void guarantee_bottom_up_construction();
+  /** @} */
 
   /**
    * Per-node-type estimation functions
@@ -244,6 +319,8 @@ class CardinalityEstimator : public AbstractCardinalityEstimator {
       const std::shared_ptr<TableStatistics>& table_statistics, const std::vector<ColumnID>& pruned_column_ids);
 
   /** @} */
+
+  mutable CardinalityEstimationCache cardinality_estimation_cache;
 };
 
 }  // namespace hyrise
