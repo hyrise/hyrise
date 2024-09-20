@@ -1147,16 +1147,14 @@ TEST_F(CardinalityEstimatorTest, StatisticsPruning) {
     estimator.cardinality_estimation_cache.required_column_expressions.reset();
   }
 
-  // Guaranteeing bottom-up construction (i.e., allowing caching) should populate the set of required columns.
+  // Guaranteeing bottom-up construction (i.e., allowing caching) should enable staistics pruning and set the LQP in the
+  // cache. The required columns are not populated, yet.
+  // populate the set of required columns.
   estimator.guarantee_bottom_up_construction(lqp);
   EXPECT_TRUE(estimator.cardinality_estimation_cache.statistics_by_lqp);
+  EXPECT_EQ(estimator.cardinality_estimation_cache.lqp, lqp);
   ASSERT_TRUE(estimator.cardinality_estimation_cache.required_column_expressions);
-
-  EXPECT_EQ(estimator.cardinality_estimation_cache.required_column_expressions->size(), 3);
-  EXPECT_TRUE(estimator.cardinality_estimation_cache.required_column_expressions->contains(a_a));
-  EXPECT_TRUE(estimator.cardinality_estimation_cache.required_column_expressions->contains(a_b));
-  EXPECT_TRUE(estimator.cardinality_estimation_cache.required_column_expressions->contains(b_a));
-  EXPECT_FALSE(estimator.cardinality_estimation_cache.required_column_expressions->contains(b_b));
+  ASSERT_TRUE(estimator.cardinality_estimation_cache.required_column_expressions->empty());
 
   // Estimate with caching.
   auto statistics = estimator.estimate_statistics(lqp);
@@ -1166,6 +1164,15 @@ TEST_F(CardinalityEstimatorTest, StatisticsPruning) {
   EXPECT_TRUE(dynamic_cast<const AttributeStatistics<int32_t>*>(&*statistics->column_statistics[2]));
   EXPECT_TRUE(dynamic_cast<const AttributeStatistics<int32_t>*>(&*statistics->column_statistics[3]));
   EXPECT_TRUE(dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*statistics->column_statistics[4]));
+
+  // After invocation, the required columns should be populated, and the LQP should be unset in the cache again.
+  EXPECT_EQ(estimator.cardinality_estimation_cache.required_column_expressions->size(), 3);
+  EXPECT_TRUE(estimator.cardinality_estimation_cache.required_column_expressions->contains(a_a));
+  EXPECT_TRUE(estimator.cardinality_estimation_cache.required_column_expressions->contains(a_b));
+  EXPECT_TRUE(estimator.cardinality_estimation_cache.required_column_expressions->contains(b_a));
+  EXPECT_FALSE(estimator.cardinality_estimation_cache.required_column_expressions->contains(b_b));
+  EXPECT_FALSE(estimator.cardinality_estimation_cache.lqp);
+
 }
 
 TEST_F(CardinalityEstimatorTest, StatisticsPruningWithPrunedColumns) {

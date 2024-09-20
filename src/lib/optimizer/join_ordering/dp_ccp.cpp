@@ -113,7 +113,6 @@ std::shared_ptr<AbstractLQPNode> DpCcp::operator()(const JoinGraph& join_graph,
    *                            is cheaper than the cheapest currently known plan for a particular subset of vertices.
    */
   const auto csg_cmp_pairs = EnumerateCcp{vertex_count, enumerate_ccp_edges}();
-
   for (const auto& csg_cmp_pair : csg_cmp_pairs) {
     const auto best_plan_left_iter = best_plan.find(csg_cmp_pair.first);
     const auto best_plan_right_iter = best_plan.find(csg_cmp_pair.second);

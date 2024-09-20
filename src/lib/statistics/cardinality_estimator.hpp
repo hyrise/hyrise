@@ -33,8 +33,6 @@ class UnionNode;
 class ValidateNode;
 class WindowNode;
 
-enum class LQPNodeType;
-
 /**
  * Hyrise's statistics-based cardinality estimator. It mostly relies on histograms that are taken from the base tables
  * and adapted (sliced, scaled) according to join and scan predicates along the query plan. The estimation process
