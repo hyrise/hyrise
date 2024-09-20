@@ -864,7 +864,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_operator_scan_pr
         const auto column_statistics = std::make_shared<AttributeStatistics<ColumnDataType>>();
         column_statistics->null_value_ratio = std::make_shared<NullValueRatioStatistics>(is_not_null ? 0.0f : 1.0f);
         if (is_not_null) {
-          // Forward other statistics if NULLs are rmeoved.
+          // Forward other statistics if NULLs are removed.
           const auto& input_statistics = *left_input_column_statistics;
           column_statistics->histogram = input_statistics.histogram;
           column_statistics->min_max_filter = input_statistics.min_max_filter;
