@@ -244,7 +244,7 @@ void CardinalityEstimator::populate_required_column_expressions(
   auto visited_nodes = std::unordered_set<std::shared_ptr<const AbstractLQPNode>>{};
 
   while (!node_queue.empty()) {
-    const auto& node = node_queue.front();
+    const auto node = node_queue.front();
     node_queue.pop();
 
     if (!visited_nodes.emplace(node).second) {

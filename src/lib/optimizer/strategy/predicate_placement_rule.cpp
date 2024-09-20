@@ -35,7 +35,7 @@ void PredicatePlacementRule::_apply_to_plan_without_subqueries(const std::shared
   const auto estimator = cost_estimator->cardinality_estimator->new_instance();
   estimator->guarantee_bottom_up_construction(lqp_root);
 
-  std::vector<std::shared_ptr<AbstractLQPNode>> push_down_nodes;
+  auto push_down_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
   _push_down_traversal(root_node, LQPInputSide::Left, push_down_nodes, *estimator);
 
   _pull_up_traversal(root_node, LQPInputSide::Left);
@@ -46,7 +46,7 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
                                                   std::vector<std::shared_ptr<AbstractLQPNode>>& push_down_nodes,
                                                   CardinalityEstimator& estimator) {
   const auto input_node = current_node->input(input_side);
-  // Allow calling without checks
+  // Allow calling without checks.
   if (!input_node) {
     Assert(push_down_nodes.empty(), "Expected pushdown nodes to be already inserted.");
     return;
