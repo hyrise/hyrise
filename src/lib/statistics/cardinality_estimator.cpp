@@ -10,7 +10,6 @@
 
 #include <boost/variant/get.hpp>
 
-#include "all_parameter_variant.hpp"
 #include "all_type_variant.hpp"
 #include "attribute_statistics.hpp"
 #include "expression/abstract_expression.hpp"
