@@ -8,6 +8,9 @@
 
 namespace hyrise {
 
+class AbstractLQPNode;
+class TableStatistics;
+
 // See `CardinalityEstimator::guarantee_join_graph()/guarantee_bottom_up_construction()`.
 class CardinalityEstimationCache {
  public:
@@ -17,6 +20,8 @@ class CardinalityEstimationCache {
   std::optional<StatisticsByLQP> statistics_by_lqp;
 
   std::optional<ExpressionUnorderedSet> required_column_expressions;
+
+  std::shared_ptr<const AbstractLQPNode> lqp;
 };
 
 }  // namespace hyrise

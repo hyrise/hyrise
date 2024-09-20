@@ -34,6 +34,9 @@ void PredicatePlacementRule::_apply_to_plan_without_subqueries(const std::shared
 
   const auto estimator = cost_estimator->cardinality_estimator->new_instance();
   estimator->guarantee_bottom_up_construction(lqp_root);
+  // Turn off statistics pruning because we untie nodes while estimating cardinalities. Thus, not all required predicate
+  // expessions are part of the LQP when the required statistics are populated during the first estimation call.
+  estimator->do_not_prune_unused_statistics();
 
   auto push_down_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
   _push_down_traversal(root_node, LQPInputSide::Left, push_down_nodes, *estimator);

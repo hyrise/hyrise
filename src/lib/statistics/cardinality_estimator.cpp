@@ -122,6 +122,50 @@ std::shared_ptr<TableStatistics> prune_column_statistics(
   return std::make_shared<TableStatistics>(std::move(output_column_statistics), table_statistics->row_count);
 }
 
+void populate_required_column_expressions(CardinalityEstimationCache& cache) {
+  // Do nothing if there is no plan referenced in the cache or statistics pruning is not turned on.
+  if (!cache.lqp || !cache.required_column_expressions) {
+    return;
+  }
+
+  auto node_queue = std::queue<std::shared_ptr<const AbstractLQPNode>>{};
+  node_queue.push(cache.lqp);
+  auto visited_nodes = std::unordered_set<std::shared_ptr<const AbstractLQPNode>>{};
+
+  while (!node_queue.empty()) {
+    const auto node = node_queue.front();
+    node_queue.pop();
+
+    if (!visited_nodes.emplace(node).second) {
+      continue;
+    }
+
+    if (node->type == LQPNodeType::Join || node->type == LQPNodeType::Predicate) {
+      for (const auto& root_expression : node->node_expressions) {
+        visit_expression(root_expression, [&](const auto& expression) {
+          if (expression->type == ExpressionType::LQPColumn) {
+            cache.required_column_expressions->emplace(expression);
+          } else if (expression->type == ExpressionType::LQPSubquery) {
+            node_queue.push(static_cast<const LQPSubqueryExpression&>(*expression).lqp);
+          }
+
+          return ExpressionVisitation::VisitArguments;
+        });
+      }
+    }
+
+    if (node->left_input()) {
+      node_queue.push(node->left_input());
+    }
+    if (node->right_input()) {
+      node_queue.push(node->right_input());
+    }
+  }
+
+  // Unset the plan so we do not populate the columns again if there are multiple base tables.
+  cache.lqp = nullptr;
+}
+
 }  // namespace
 
 CardinalityEstimator::DummyStatistics::DummyStatistics(const DataType init_data_type)
@@ -148,7 +192,7 @@ std::ostream& operator<<(std::ostream& stream, const CardinalityEstimator::Dummy
 }
 
 void CardinalityEstimator::prune_unused_statistics() const {
-  Assert(cardinality_estimation_cache.statistics_by_lqp.has_value(), "Statistics pruning requires caching.");
+  Assert(cardinality_estimation_cache.statistics_by_lqp, "Statistics pruning requires caching.");
   cardinality_estimation_cache.required_column_expressions.emplace();
 }
 
@@ -232,46 +276,11 @@ void CardinalityEstimator::guarantee_join_graph(const JoinGraph& join_graph) con
 
 void CardinalityEstimator::guarantee_bottom_up_construction(const std::shared_ptr<const AbstractLQPNode>& lqp) const {
   cardinality_estimation_cache.statistics_by_lqp.emplace();
+  // Turn on statistics pruning, but do not populate the required columns yet. We do that lazily when we perform the
+  // first estimations. This helps to avoid overhead for optimizer rules that do not perform the anticipated rewrites
+  // because they handle cases that are not present in the LQP (e.g., in TPC-C).
   prune_unused_statistics();
-  populate_required_column_expressions(lqp);
-}
-
-void CardinalityEstimator::populate_required_column_expressions(
-    const std::shared_ptr<const AbstractLQPNode>& lqp) const {
-  cardinality_estimation_cache.required_column_expressions.emplace();
-  auto node_queue = std::queue<std::shared_ptr<const AbstractLQPNode>>{};
-  node_queue.push(lqp);
-  auto visited_nodes = std::unordered_set<std::shared_ptr<const AbstractLQPNode>>{};
-
-  while (!node_queue.empty()) {
-    const auto node = node_queue.front();
-    node_queue.pop();
-
-    if (!visited_nodes.emplace(node).second) {
-      continue;
-    }
-
-    if (node->type == LQPNodeType::Join || node->type == LQPNodeType::Predicate) {
-      for (const auto& root_expression : node->node_expressions) {
-        visit_expression(root_expression, [&](const auto& expression) {
-          if (expression->type == ExpressionType::LQPColumn) {
-            cardinality_estimation_cache.required_column_expressions->emplace(expression);
-          } else if (expression->type == ExpressionType::LQPSubquery) {
-            node_queue.push(static_cast<const LQPSubqueryExpression&>(*expression).lqp);
-          }
-
-          return ExpressionVisitation::VisitArguments;
-        });
-      }
-    }
-
-    if (node->left_input()) {
-      node_queue.push(node->left_input());
-    }
-    if (node->right_input()) {
-      node_queue.push(node->right_input());
-    }
-  }
+  cardinality_estimation_cache.lqp = lqp;
 }
 
 std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
@@ -349,6 +358,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
     case LQPNodeType::Mock: {
       const auto& mock_node = static_cast<const MockNode&>(*lqp);
       Assert(mock_node.table_statistics(), "Cannot return statistics of MockNode that was not assigned statistics");
+      populate_required_column_expressions(cardinality_estimation_cache);
       output_table_statistics = prune_column_statistics(mock_node.table_statistics(), mock_node.pruned_column_ids(),
                                                         mock_node.output_expressions(), required_columns);
     } break;
@@ -373,6 +383,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
       const auto& table_statistics = static_table_node.table->table_statistics();
       // StaticTableNodes may or may not provide statistics. If there are statistics, prune and forward them.
       if (table_statistics) {
+        populate_required_column_expressions(cardinality_estimation_cache);
         output_table_statistics = prune_column_statistics(table_statistics, std::vector<ColumnID>{},
                                                           static_table_node.output_expressions(), required_columns);
         break;
@@ -407,6 +418,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
       } else {
         table_statistics = stored_table->table_statistics();
       }
+      populate_required_column_expressions(cardinality_estimation_cache);
       output_table_statistics = prune_column_statistics(table_statistics, stored_table_node.pruned_column_ids(),
                                                         stored_table_node.output_expressions(), required_columns);
     } break;
