@@ -28,7 +28,7 @@ class ExpressionReductionRuleTest : public StrategyBaseTest {
                                                            {DataType::String, "s"}});
 
     // Create two objects for each expression to make sure the algorithm tests for expression equality, not for pointer
-    // equality
+    // equality.
     a = equals_(mock_node->get_column("a"), 0);
     a2 = equals_(mock_node->get_column("a"), 0);
     b = equals_(mock_node->get_column("b"), 0);
@@ -78,7 +78,7 @@ TEST_F(ExpressionReductionRuleTest, ReduceDistributivity) {
   // (a AND b AND c) OR (a AND b) OR (a AND d AND b AND a) OR (b AND a AND e) --> a AND b AND (c OR d OR e)
   EXPECT_EQ(*ExpressionReductionRule::reduce_distributivity(expression_d), *and_(and_(a2, b), or_(or_(c, d), e)));
 
-  // Expressions that aren't modified.
+  // Expressions that are not modified.
   EXPECT_EQ(*ExpressionReductionRule::reduce_distributivity(expression_e), *or_(or_(and_(a2, b), and_(c, d)), c));
   EXPECT_EQ(*ExpressionReductionRule::reduce_distributivity(expression_f), *and_(and_(or_(a, b), a), b));
   EXPECT_EQ(*ExpressionReductionRule::reduce_distributivity(expression_g), *a);
@@ -109,39 +109,57 @@ TEST_F(ExpressionReductionRuleTest, RewriteLikePrefixWildcard) {
   ExpressionReductionRule::rewrite_like_prefix_wildcard(expression_a);
   EXPECT_EQ(*expression_a, *between_upper_exclusive_(s, "RED", "REE"));
 
-  auto expression_i = std::shared_ptr<AbstractExpression>(not_like_(s, "RED%"));
-  ExpressionReductionRule::rewrite_like_prefix_wildcard(expression_i);
-  EXPECT_EQ(*expression_i, *or_(less_than_(s, "RED"), greater_than_equals_(s, "REE")));
-
-  auto expression_b = std::shared_ptr<AbstractExpression>(like_(concat_(s, s), "RED%"));
+  auto expression_b = std::shared_ptr<AbstractExpression>(not_like_(s, "RED%"));
   ExpressionReductionRule::rewrite_like_prefix_wildcard(expression_b);
-  EXPECT_EQ(*expression_b, *between_upper_exclusive_(concat_(s, s), "RED", "REE"));
+  EXPECT_EQ(*expression_b, *or_(less_than_(s, "RED"), greater_than_equals_(s, "REE")));
+
+  auto expression_c = std::shared_ptr<AbstractExpression>(like_(concat_(s, s), "RED%"));
+  ExpressionReductionRule::rewrite_like_prefix_wildcard(expression_c);
+  EXPECT_EQ(*expression_c, *between_upper_exclusive_(concat_(s, s), "RED", "REE"));
 
   // Test LIKE patterns where a rewrite to BETWEEN UPPER EXCLUSIVE is NOT possible.
-  auto expression_c = std::shared_ptr<AbstractExpression>(like_(s, "RED%E%"));
-  ExpressionReductionRule::rewrite_like_prefix_wildcard(expression_c);
-  EXPECT_EQ(*expression_c, *like_(s, "RED%E%"));
-
-  auto expression_d = std::shared_ptr<AbstractExpression>(like_(s, "%"));
+  auto expression_d = std::shared_ptr<AbstractExpression>(like_(s, "RED%E%"));
   ExpressionReductionRule::rewrite_like_prefix_wildcard(expression_d);
-  EXPECT_EQ(*expression_d, *like_(s, "%"));
+  EXPECT_EQ(*expression_d, *like_(s, "RED%E%"));
 
-  auto expression_e = std::shared_ptr<AbstractExpression>(like_(s, "%RED"));
+  auto expression_e = std::shared_ptr<AbstractExpression>(like_(s, "%"));
   ExpressionReductionRule::rewrite_like_prefix_wildcard(expression_e);
-  EXPECT_EQ(*expression_e, *like_(s, "%RED"));
+  EXPECT_EQ(*expression_e, *like_(s, "%"));
 
-  auto expression_f = std::shared_ptr<AbstractExpression>(like_(s, "R_D%"));
+  auto expression_f = std::shared_ptr<AbstractExpression>(like_(s, "%RED"));
   ExpressionReductionRule::rewrite_like_prefix_wildcard(expression_f);
-  EXPECT_EQ(*expression_f, *like_(s, "R_D%"));
+  EXPECT_EQ(*expression_f, *like_(s, "%RED"));
 
-  auto expression_g = std::shared_ptr<AbstractExpression>(like_(s, "RE\x7F%"));
+  auto expression_g = std::shared_ptr<AbstractExpression>(like_(s, "R_D%"));
   ExpressionReductionRule::rewrite_like_prefix_wildcard(expression_g);
-  EXPECT_EQ(*expression_g, *like_(s, "RE\x7F%"));
+  EXPECT_EQ(*expression_g, *like_(s, "R_D%"));
+
+  auto expression_h = std::shared_ptr<AbstractExpression>(like_(s, "RE\x7F%"));
+  ExpressionReductionRule::rewrite_like_prefix_wildcard(expression_h);
+  EXPECT_EQ(*expression_h, *like_(s, "RE\x7F%"));
 
   // Test that non-LIKE expressions remain unaltered.
-  auto expression_h = std::shared_ptr<AbstractExpression>(greater_than_(s, "RED%"));
-  ExpressionReductionRule::rewrite_like_prefix_wildcard(expression_h);
-  EXPECT_EQ(*expression_h, *greater_than_(s, "RED%"));
+  auto expression_i = std::shared_ptr<AbstractExpression>(greater_than_(s, "RED%"));
+  ExpressionReductionRule::rewrite_like_prefix_wildcard(expression_i);
+  EXPECT_EQ(*expression_i, *greater_than_(s, "RED%"));
+
+  // Test patterns without wildcard.
+  auto expression_j = std::shared_ptr<AbstractExpression>(like_(s, "RED"));
+  ExpressionReductionRule::rewrite_like_prefix_wildcard(expression_j);
+  EXPECT_EQ(*expression_j, *equals_(s, "RED"));
+
+  auto expression_k = std::shared_ptr<AbstractExpression>(not_like_(s, "RED"));
+  ExpressionReductionRule::rewrite_like_prefix_wildcard(expression_k);
+  EXPECT_EQ(*expression_k, *not_equals_(s, "RED"));
+
+  // Test recursive behavior: Nested expressions should also be rewritten.
+  auto expression_l = std::shared_ptr<AbstractExpression>(or_(a, like_(s, "RED%")));
+  ExpressionReductionRule::rewrite_like_prefix_wildcard(expression_l);
+  EXPECT_EQ(*expression_l, *or_(a2, between_upper_exclusive_(s, "RED", "REE")));
+
+  auto expression_m = std::shared_ptr<AbstractExpression>(or_(a, like_(s, "RED")));
+  ExpressionReductionRule::rewrite_like_prefix_wildcard(expression_m);
+  EXPECT_EQ(*expression_m, *or_(a2, equals_(s, "RED")));
 }
 
 TEST_F(ExpressionReductionRuleTest, RemoveDuplicateAggregate) {
@@ -157,7 +175,7 @@ TEST_F(ExpressionReductionRuleTest, RemoveDuplicateAggregate) {
     // SELECT SUM(a), COUNT(a), AVG(a) -> SUM(a), COUNT(a), SUM(a) / COUNT(a) AS AVG(a)
     // clang-format off
     _lqp =
-    AggregateNode::make(expression_vector(), expression_vector(sum_(col_a), count_(col_a), avg_(col_a)),  // NOLINT(whitespace/line_length)
+    AggregateNode::make(expression_vector(), expression_vector(sum_(col_a), count_(col_a), avg_(col_a)),
       stored_table_node);
 
     const auto expected_aliases = std::vector<std::string>{"SUM(a)", "COUNT(a)", "AVG(a)"};
@@ -295,6 +313,37 @@ TEST_F(ExpressionReductionRuleTest, RemoveDuplicateAggregate) {
     _apply_rule(rule, _lqp);
     EXPECT_LQP_EQ(_lqp, expected_lqp);
   }
+}
+
+TEST_F(ExpressionReductionRuleTest, UnnestUnaryInList) {
+  // Test single-element IN expressions which should be rewritten.
+  auto expression_b = std::shared_ptr<AbstractExpression>(in_(s, list_("abc")));
+  ExpressionReductionRule::unnest_unary_in_expression(expression_b);
+  EXPECT_EQ(*expression_b, *equals_(s, "abc"));
+
+  auto expression_c = std::shared_ptr<AbstractExpression>(not_in_(s, list_("abc")));
+  ExpressionReductionRule::unnest_unary_in_expression(expression_c);
+  EXPECT_EQ(*expression_c, *not_equals_(s, "abc"));
+
+  // Test recursive rewrite.
+  auto expression_d = std::shared_ptr<AbstractExpression>(or_(a, in_(s, list_("abc"))));
+  ExpressionReductionRule::unnest_unary_in_expression(expression_d);
+  EXPECT_EQ(*expression_d, *or_(a2, equals_(s, "abc")));
+
+  // Test expressions that should not be rewritten.
+  // No InExpression.
+  ExpressionReductionRule::unnest_unary_in_expression(a);
+  EXPECT_EQ(*a, *a2);
+
+  // Multiple elements in IN list.
+  auto expression_e = std::shared_ptr<AbstractExpression>(in_(s, list_("abc", "def")));
+  ExpressionReductionRule::unnest_unary_in_expression(expression_e);
+  EXPECT_EQ(*expression_e, *in_(s, list_("abc", "def")));
+
+  // IN subquery.
+  auto expression_f = std::shared_ptr<AbstractExpression>(in_(s, lqp_subquery_(mock_node_for_join)));
+  ExpressionReductionRule::unnest_unary_in_expression(expression_f);
+  EXPECT_EQ(*expression_f, *in_(s, lqp_subquery_(mock_node_for_join)));
 }
 
 TEST_F(ExpressionReductionRuleTest, ApplyToLQP) {
