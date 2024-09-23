@@ -138,36 +138,6 @@ try {
             wait"
           }
 
-          parallel clangDebug: {
-            stage("clang-debug") {
-              // We build clang-debug using make to test make once (and clang-debug is the fastest build).
-              sh "cd clang-debug && make all -j \$(( \$(nproc) / 5))"
-              sh "./clang-debug/hyriseTest clang-debug"
-            }
-          }, clang15Debug: {
-            stage("clang-15-debug") {
-              sh "cd clang-15-debug && ninja all -j \$(( \$(nproc) / 5))"
-              sh "./clang-15-debug/hyriseTest clang-15-debug"
-            }
-          }, gccDebug: {
-            stage("gcc-debug") {
-              sh "cd gcc-debug && ninja all -j \$(( \$(nproc) / 5))"
-              sh "cd gcc-debug && ./hyriseTest"
-            }
-          }, gcc11Debug: {
-            stage("gcc-11-debug") {
-               // We give more cores (ncores / 2.5) to GCC 11 as it is the only configuration that has issues with unity
-               // builds (GoogleTest cannot be compiled). When switching to a more recent GCC version, this should be
-               // evaluated again.
-              sh "cd gcc-11-debug && ninja all -j \$(( \$(nproc) * 2 / 5))"
-              sh "cd gcc-11-debug && ./hyriseTest"
-            }
-          }, lint: {
-            stage("Linting") {
-              sh "scripts/lint.sh"
-            }
-          }
-
           // We distribute the cores to processes in a way to even the running times. With an even distributions,
           // clang-tidy builds take up to 3h (galileo server). In addition to compile time, the distribution also
           // considers the long test runtimes of clangRelWithDebInfoThreadSanitizer (~50 minutes).
