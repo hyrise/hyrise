@@ -70,7 +70,7 @@ void AbstractTask::set_as_predecessor_of(const std::shared_ptr<AbstractTask>& su
   }
 
   _successors.emplace_back(std::ref(*successor));
-  successor->_predecessors.emplace_back(weak_from_this());
+  successor->_predecessors.emplace_back(std::ref(*this));
 
   // A task that is already done will not call _on_predecessor_done at the successor. Consequently, the successor's
   // _pending_predecessors count will not decrement. To avoid starvation at the successor, we do not increment its
@@ -83,7 +83,7 @@ void AbstractTask::set_as_predecessor_of(const std::shared_ptr<AbstractTask>& su
   }
 }
 
-const std::vector<std::weak_ptr<AbstractTask>>& AbstractTask::predecessors() const {
+const std::vector<std::reference_wrapper<AbstractTask>>& AbstractTask::predecessors() const {
   return _predecessors;
 }
 
@@ -187,7 +187,7 @@ void AbstractTask::_on_predecessor_done() {
   const auto previous_predecessor_count = _pending_predecessors--;
   Assert(previous_predecessor_count > 0, "Cannot decrement pending predecessors when no predecessors are left.");
   if (previous_predecessor_count == 1) {
-    const auto current_worker = Worker::get_this_thread_worker();
+    const auto current_worker = Worker::get_this_thread_worker();  // Only set for NodeQueueScheduler.
 
     if (current_worker) {
       // If the first task was executed faster than the other tasks were scheduled, we might end up in a situation where
@@ -201,17 +201,7 @@ void AbstractTask::_on_predecessor_done() {
       // predecessor. This should improve cache locality and reduce the scheduling costs.
       // try {
       current_worker->execute_next(shared_from_this());
-      // } catch (...) {
-      //   if (auto op_task = std::dynamic_cast<OperatorTask>(this)) {
-      //     std::cerr << "FUCK: " << op_task->description() << "\n";
-      //   }
-      //   std::cerr << "FUCK: " << &*this << " successors: ";
-      //   std::cerr << _successors.size() << " preds: " << _predecessors.size() << "\n";
-      //   std::cerr << "FUCK: " << description() << "\n";
-      //   std::cerr << "FUCK: " << boost::stacktrace::stacktrace() << "\n\n";
-      // }
     } else {
-      // If we cannot obtain the current worker, we are using the ImmediateExecutionScheduler.
       if (is_scheduled()) {
         execute();
       }

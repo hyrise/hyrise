@@ -133,7 +133,7 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
   /**
    * @return the predecessors of this task.
    */
-  const std::vector<std::weak_ptr<AbstractTask>>& predecessors() const;
+  const std::vector<std::reference_wrapper<AbstractTask>>& predecessors() const;
 
   /**
    * @return the successors of this task.
@@ -209,8 +209,7 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
   // For dependencies.
   std::atomic_uint32_t _pending_predecessors{0};
 
-  // TODO(Martin): USE REFERENCE_WRAPPERS
-  std::vector<std::weak_ptr<AbstractTask>> _predecessors;
+  std::vector<std::reference_wrapper<AbstractTask>> _predecessors;
   std::vector<std::reference_wrapper<AbstractTask>> _successors;
 
   // State management.

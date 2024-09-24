@@ -232,7 +232,7 @@ NodeID NodeQueueScheduler::determine_queue_id(const NodeID preferred_node_id) co
   }
 
   // If the current node is requested, try to obtain node from current worker.
-  const auto& worker = Worker::get_this_thread_worker();
+  const auto& worker = Worker::get_this_thread_worker();  // Only set for NodeQueueScheduler.
   if (worker) {
     return worker->queue()->node_id();
   }
