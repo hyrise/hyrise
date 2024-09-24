@@ -266,14 +266,22 @@ void NodeQueueScheduler::_group_tasks(const std::vector<std::shared_ptr<Abstract
 
   const auto task_count = tasks.size();
 
-  // Stores offsets to tasks most recently assigned to their group, which will be the sucessor of the current task.
-  // Initialize with -1 to denote an invalid offset.
+  // Per group, this vector stores the offset into the task list for the task that will be the successor of the current
+  // task. Initialize with -1 to denote an invalid offset.
   auto grouped_task_offsets = std::vector<int32_t>(NUM_GROUPS, -1);
 
   auto common_node_id = std::optional<NodeID>{};
 
-  // Tasks are iterated in reverse order as we set tasks as predecessors. We skip all tasks that already have
-  // predecessors or successors, as adding relationships to these could introduce cyclic dependencies.
+  /**
+   * Tasks are iterated in reverse order as we set tasks as predecessors of already grouped tasks.
+   * Example: assume we have a task list of 6 tasks and NUM_GROUPS is 2.
+   * We first process task #5 and check the offset.
+   * As 5 cannot be a predecessor to any task (the stored offset is -1), we just store the offset 5 for the group #1
+   * (5 % 2 = 1). Item #4 is processed similarly. For item #3, we find the group offset 5 and task #3 as the
+   * predecessor of task #5.
+   * We thus form two groups (or chains of tasks): 0 -> 2 -> 4 and 1 -> 3 -> 5. We skip all tasks that already have
+   * predecessors or successors, as adding relationships to these could introduce cyclic dependencies.
+   */
   for (auto task_offset = static_cast<int32_t>(task_count - 1); task_offset >= 0; --task_offset) {
     const auto& task = tasks[task_offset];
     if (!task->predecessors().empty() || !task->successors().empty() || dynamic_cast<ShutdownTask*>(&*task)) {

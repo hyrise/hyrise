@@ -245,11 +245,10 @@ TEST_F(SchedulerTest, SuccessorExpired) {
   // When task2 finishes, it will not be able to obtain its successor task3 as it went out of scope.
   ASSERT_THROW(task2->schedule(), std::logic_error);
 
-  std::this_thread::sleep_for(std::chrono::milliseconds(40));
   Hyrise::get().scheduler()->finish();
 }
 
-TEST_F(SchedulerTest, PassAllDependencies) {
+TEST_F(SchedulerTest, NotAllDependenciesPassedToScheduler) {
   if constexpr (!HYRISE_DEBUG) {
     GTEST_SKIP();
   }
@@ -262,6 +261,8 @@ TEST_F(SchedulerTest, PassAllDependencies) {
   task2->set_as_predecessor_of(task3);
 
   const auto tasks = std::vector<std::shared_ptr<AbstractTask>>{task1, task2};
+
+  // The scheduler should complain that not all dependencies (task3 is a successor of task2) are passed.
   ASSERT_THROW(Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks), std::logic_error);
 }
 
