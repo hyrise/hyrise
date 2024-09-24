@@ -181,10 +181,10 @@ find_package(Tbb REQUIRED)
 find_package(Readline REQUIRED)
 find_package(Curses REQUIRED)
 find_package(SQLite3 REQUIRED)
-find_package(Boost REQUIRED COMPONENTS container date_time)
+find_package(Boost REQUIRED COMPONENTS container date_time stacktrace_addr2line stacktrace_basic stacktrace_noop)
 
 add_definitions(-DBOOST_THREAD_VERSION=5)
-set(BOOST_LIBS Boost::container Boost::date_time)
+set(BOOST_LIBS Boost::container Boost::date_time Boost::stacktrace_addr2line Boost::stacktrace_basic Boost::stacktrace_noop)
 
 # If we are building Hyrise for the CI server, we want to make sure that all optional features are available and can be tested
 if(CI_BUILD)

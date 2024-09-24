@@ -1,11 +1,14 @@
 #include "abstract_task.hpp"
 
+#define BOOST_STACKTRACE_LINK
 #include <atomic>
 #include <functional>
 #include <memory>
 #include <mutex>
 #include <string>
 #include <vector>
+
+#include <boost/stacktrace.hpp>
 
 #include "hyrise.hpp"
 #include "types.hpp"
@@ -14,7 +17,15 @@
 
 namespace hyrise {
 
-AbstractTask::AbstractTask(SchedulePriority priority, bool stealable) : _priority{priority}, _stealable{stealable} {}
+AbstractTask::AbstractTask(SchedulePriority priority, bool stealable) : _priority{priority}, _stealable{stealable} {
+  // auto ss = std::stringstream{};
+  // ss << boost::stacktrace::stacktrace() << "\n\n";
+  // if (ss.view().find("make_tasks_from_operator") == std::string::npos &&
+  //     ss.view().find("hyrise::TableScan::_on_execute()") == std::string::npos) {
+  //   std::cout << ss.view();
+  // }
+  // _herkunft = ss.str();
+}
 
 TaskID AbstractTask::id() const {
   return _id;
@@ -59,15 +70,15 @@ void AbstractTask::set_as_predecessor_of(const std::shared_ptr<AbstractTask>& su
   }
 
   _successors.emplace_back(std::ref(*successor));
-  successor->_predecessors.emplace_back(shared_from_this());
+  successor->_predecessors.emplace_back(weak_from_this());
 
   // A task that is already done will not call _on_predecessor_done at the successor. Consequently, the successor's
   // _pending_predecessors count will not decrement. To avoid starvation at the successor, we do not increment its
   // _pending_predecessors count in the first place when this task is already done.
   // Note that _done_condition_variable_mutex must be locked to prevent a race condition where _on_predecessor_done
   // is called before _pending_predecessors++ has executed.
-  auto lock = std::lock_guard<std::mutex>{_done_condition_variable_mutex};
   if (!is_done()) {
+    const auto lock = std::lock_guard<std::mutex>{_done_condition_variable_mutex};
     successor->_pending_predecessors++;
   }
 }
@@ -143,15 +154,19 @@ void AbstractTask::execute() {
 
   _on_execute();
 
-  {
-    const auto success_done = _try_transition_to(TaskState::Done);
-    Assert(success_done, "Expected successful transition to TaskState::Done.");
-  }
-
   for (auto& successor : _successors) {
     // The task creator is responsible to ensure that successor tasks are available whenever an executed task tries to
     // execute/accesss its successors.
     successor.get()._on_predecessor_done();
+  }
+
+  {
+    // We set the task's state to done after informing all successors. It can happen that a successor (that
+    // can not be executed until its predessors are done) is both scheduled and pulled by a worker and at the same time
+    // executed here by the current worker.
+    // Note, informing successors does not block the current task (unless we use the ImmediateExecutionScheduler).
+    const auto success_done = _try_transition_to(TaskState::Done);
+    Assert(success_done, "Expected successful transition to TaskState::Done.");
   }
 
   if (_done_callback) {
@@ -184,8 +199,19 @@ void AbstractTask::_on_predecessor_done() {
 
       // Instead of adding the current task to the queue, try to execute it immediately on the same worker as the last
       // predecessor. This should improve cache locality and reduce the scheduling costs.
+      // try {
       current_worker->execute_next(shared_from_this());
+      // } catch (...) {
+      //   if (auto op_task = std::dynamic_cast<OperatorTask>(this)) {
+      //     std::cerr << "FUCK: " << op_task->description() << "\n";
+      //   }
+      //   std::cerr << "FUCK: " << &*this << " successors: ";
+      //   std::cerr << _successors.size() << " preds: " << _predecessors.size() << "\n";
+      //   std::cerr << "FUCK: " << description() << "\n";
+      //   std::cerr << "FUCK: " << boost::stacktrace::stacktrace() << "\n\n";
+      // }
     } else {
+      // If we cannot obtain the current worker, we are using the ImmediateExecutionScheduler.
       if (is_scheduled()) {
         execute();
       }

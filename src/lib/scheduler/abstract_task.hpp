@@ -208,6 +208,8 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
 
   // For dependencies.
   std::atomic_uint32_t _pending_predecessors{0};
+
+  // TODO(Martin): USE REFERENCE_WRAPPERS
   std::vector<std::weak_ptr<AbstractTask>> _predecessors;
   std::vector<std::reference_wrapper<AbstractTask>> _successors;
 
@@ -221,6 +223,8 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
 
   // Purely for debugging purposes, in order to be able to identify tasks after they have been scheduled.
   std::string _description;
+
+  std::string _herkunft;
 };
 
 }  // namespace hyrise

@@ -31,8 +31,8 @@ TEST_F(TaskUtilsTest, VisitTasksStreamlineTasks) {
   auto expected_tasks = std::vector<const AbstractTask*>{&*_task_d, &*_task_c, &*_task_b, &*_task_a};
   auto actual_tasks = std::vector<const AbstractTask*>{};
 
-  visit_tasks(&*_task_d, [&](const auto& task) {
-    actual_tasks.emplace_back(task);
+  visit_tasks(*_task_d, [&](const auto& task) {
+    actual_tasks.emplace_back(&task);
     return TaskVisitation::VisitPredecessors;
   });
 
@@ -42,7 +42,7 @@ TEST_F(TaskUtilsTest, VisitTasksStreamlineTasks) {
   std::reverse(expected_tasks.begin(), expected_tasks.end());
 
   visit_tasks_upwards(*_task_a, [&](const auto& task) {
-    actual_tasks.emplace_back(task);
+    actual_tasks.emplace_back(&task);
     return TaskUpwardVisitation::VisitSuccessors;
   });
 
@@ -58,8 +58,8 @@ TEST_F(TaskUtilsTest, VisitTasksDiamondStructure) {
   auto expected_tasks = std::vector<const AbstractTask*>{&*_task_d, &*_task_b, &*_task_c, &*_task_a};
   auto actual_tasks = std::vector<const AbstractTask*>{};
 
-  visit_tasks(&*_task_d, [&](const auto& task) {
-    actual_tasks.emplace_back(task);
+  visit_tasks(*_task_d, [&](const auto& task) {
+    actual_tasks.emplace_back(&task);
     return TaskVisitation::VisitPredecessors;
   });
 
@@ -69,7 +69,7 @@ TEST_F(TaskUtilsTest, VisitTasksDiamondStructure) {
   expected_tasks = {&*_task_a, &*_task_b, &*_task_c, &*_task_d};
 
   visit_tasks_upwards(*_task_a, [&](const auto& task) {
-    actual_tasks.emplace_back(task);
+    actual_tasks.emplace_back(&task);
     return TaskUpwardVisitation::VisitSuccessors;
   });
 
@@ -82,8 +82,8 @@ TEST_F(TaskUtilsTest, VisitTasksNonConstTasks) {
   auto expected_tasks = std::vector<const AbstractTask*>{&*_task_b, &*_task_a};
   auto actual_tasks = std::vector<const AbstractTask*>{};
 
-  visit_tasks(&*_task_b, [&](const auto& task) {
-    actual_tasks.emplace_back(task);
+  visit_tasks(*_task_b, [&](const auto& task) {
+    actual_tasks.emplace_back(&task);
     return TaskVisitation::VisitPredecessors;
   });
 
@@ -93,7 +93,7 @@ TEST_F(TaskUtilsTest, VisitTasksNonConstTasks) {
   std::reverse(expected_tasks.begin(), expected_tasks.end());
 
   visit_tasks_upwards(*_task_a, [&](const auto& task) {
-    actual_tasks.emplace_back(task);
+    actual_tasks.emplace_back(&task);
     return TaskUpwardVisitation::VisitSuccessors;
   });
 
@@ -108,8 +108,8 @@ TEST_F(TaskUtilsTest, VisitTasksConstTasks) {
   auto expected_tasks = std::vector<const AbstractTask*>{&*task_b, &*task_a};
   auto actual_tasks = std::vector<const AbstractTask*>{};
 
-  visit_tasks(&*task_b, [&](const auto& task) {
-    actual_tasks.emplace_back(task);
+  visit_tasks(*task_b, [&](const auto& task) {
+    actual_tasks.emplace_back(&task);
     return TaskVisitation::VisitPredecessors;
   });
 
@@ -119,7 +119,7 @@ TEST_F(TaskUtilsTest, VisitTasksConstTasks) {
   std::reverse(expected_tasks.begin(), expected_tasks.end());
 
   visit_tasks_upwards(*task_a, [&](const auto& task) {
-    actual_tasks.emplace_back(task);
+    actual_tasks.emplace_back(&task);
     return TaskUpwardVisitation::VisitSuccessors;
   });
 
