@@ -398,8 +398,6 @@ set(
     sql/sql_plan_cache.hpp
     sql/sql_translator.cpp
     sql/sql_translator.hpp
-    statistics/abstract_cardinality_estimator.cpp
-    statistics/abstract_cardinality_estimator.hpp
     statistics/attribute_statistics.cpp
     statistics/attribute_statistics.hpp
     statistics/base_attribute_statistics.cpp

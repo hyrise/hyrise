@@ -239,7 +239,7 @@ try {
               }
             }
           }, nixSetup: {
-	    stage('nixSetup') {
+            stage('nixSetup') {
               if (env.BRANCH_NAME == 'master' || full_ci) {
                 sh "curl -L https://nixos.org/nix/install > nix-install.sh && chmod +x nix-install.sh && ./nix-install.sh --daemon --yes"
                 sh "/nix/var/nix/profiles/default/bin/nix-shell resources/nix --pure --run \"mkdir nix-debug && cd nix-debug && cmake ${debug} ${clang} ${unity} ${ninja} .. && ninja all -j \$(( \$(nproc) / 7)) && ./hyriseTest\""
@@ -248,7 +248,7 @@ try {
               } else {
                 Utils.markStageSkippedForConditional("nixSetup")
               }
-	    }
+            }
           }
         } finally {
           sh "ls -A1 | xargs rm -rf"
