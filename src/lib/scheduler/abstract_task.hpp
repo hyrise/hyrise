@@ -222,8 +222,6 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
 
   // Purely for debugging purposes, in order to be able to identify tasks after they have been scheduled.
   std::string _description;
-
-  std::string _herkunft;
 };
 
 }  // namespace hyrise

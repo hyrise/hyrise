@@ -203,7 +203,7 @@ TEST_F(StressTest, TestTransactionInsertsPackedNullValues) {
   }
 }
 
-TEST_F(StressTest, NodeSchedulerStressTest) {
+TEST_F(StressTest, NodeQueueSchedulerStressTest) {
   if (std::thread::hardware_concurrency() < 2) {
     GTEST_SKIP();
   }

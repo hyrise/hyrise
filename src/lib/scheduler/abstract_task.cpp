@@ -1,14 +1,11 @@
 #include "abstract_task.hpp"
 
-#define BOOST_STACKTRACE_LINK
 #include <atomic>
 #include <functional>
 #include <memory>
 #include <mutex>
 #include <string>
 #include <vector>
-
-#include <boost/stacktrace.hpp>
 
 #include "hyrise.hpp"
 #include "types.hpp"
@@ -17,15 +14,7 @@
 
 namespace hyrise {
 
-AbstractTask::AbstractTask(SchedulePriority priority, bool stealable) : _priority{priority}, _stealable{stealable} {
-  // auto ss = std::stringstream{};
-  // ss << boost::stacktrace::stacktrace() << "\n\n";
-  // if (ss.view().find("make_tasks_from_operator") == std::string::npos &&
-  //     ss.view().find("hyrise::TableScan::_on_execute()") == std::string::npos) {
-  //   std::cout << ss.view();
-  // }
-  // _herkunft = ss.str();
-}
+AbstractTask::AbstractTask(SchedulePriority priority, bool stealable) : _priority{priority}, _stealable{stealable} {}
 
 TaskID AbstractTask::id() const {
   return _id;
@@ -199,7 +188,6 @@ void AbstractTask::_on_predecessor_done() {
 
       // Instead of adding the current task to the queue, try to execute it immediately on the same worker as the last
       // predecessor. This should improve cache locality and reduce the scheduling costs.
-      // try {
       current_worker->execute_next(shared_from_this());
     } else {
       if (is_scheduled()) {

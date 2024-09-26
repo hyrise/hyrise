@@ -18,7 +18,7 @@ void AbstractScheduler::wait_for_tasks(const std::vector<std::shared_ptr<Abstrac
 
   // In case wait_for_tasks() is called from a task being executed in a worker, let the worker handle the join()-ing,
   // otherwise join right here.
-  const auto worker = Worker::get_this_thread_worker();  // Only set for NodeQueueScheduler.
+  const auto worker = Worker::get_this_thread_worker();
   if (worker) {
     worker->_wait_for_tasks(tasks);
   } else {
