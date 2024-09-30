@@ -66,10 +66,8 @@ void AbstractTask::set_as_predecessor_of(const std::shared_ptr<AbstractTask>& su
   // _pending_predecessors count in the first place when this task is already done.
   // Note that _done_condition_variable_mutex must be locked to prevent a race condition where _on_predecessor_done
   // is called before _pending_predecessors++ has executed.
-  const auto lock = std::lock_guard<std::mutex>{_done_condition_variable_mutex};
-  if (!is_done()) {  
-    successor->_pending_predecessors++;
-  }
+  Assert(!is_done(), "Dependencies of already executed task modified.");
+  ++successor->_pending_predecessors;
 }
 
 const std::vector<std::reference_wrapper<AbstractTask>>& AbstractTask::predecessors() const {
@@ -116,15 +114,13 @@ void AbstractTask::schedule(NodeID preferred_node_id) {
 }
 
 void AbstractTask::_join() {
-  auto lock = std::unique_lock<std::mutex>{_done_condition_variable_mutex};
   if (is_done()) {
     return;
   }
 
   DebugAssert(is_scheduled(), "Task must be scheduled before it can be waited for.");
-  _done_condition_variable.wait(lock, [&]() {
-    return is_done();
-  });
+  _task_done.wait(false);
+  Assert(is_done(), "Unexpected state of Done.");
 }
 
 void AbstractTask::execute() {
@@ -154,7 +150,6 @@ void AbstractTask::execute() {
     // can not be executed until its predessors are done) is both scheduled and pulled by a worker and at the same time
     // executed here by the current worker.
     // Note, informing successors does not block the current task (unless we use the ImmediateExecutionScheduler).
-    const auto lock = std::lock_guard<std::mutex>{_done_condition_variable_mutex};
     const auto success_done = _try_transition_to(TaskState::Done);
     Assert(success_done, "Expected successful transition to TaskState::Done.");
   }
@@ -163,7 +158,8 @@ void AbstractTask::execute() {
     _done_callback();
   }
 
-  _done_condition_variable.notify_all();
+  _task_done.store(true);
+  _task_done.notify_all();
 }
 
 TaskState AbstractTask::state() const {

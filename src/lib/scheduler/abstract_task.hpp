@@ -217,8 +217,7 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
   std::mutex _transition_to_mutex;
 
   // For making Tasks join()-able.
-  std::condition_variable _done_condition_variable;
-  std::mutex _done_condition_variable_mutex;
+  std::atomic_bool _task_done{false};
 
   // Purely for debugging purposes, in order to be able to identify tasks after they have been scheduled.
   std::string _description;
