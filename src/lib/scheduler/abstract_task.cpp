@@ -66,7 +66,7 @@ void AbstractTask::set_as_predecessor_of(const std::shared_ptr<AbstractTask>& su
   // _pending_predecessors count in the first place when this task is already done.
   // Note that _done_condition_variable_mutex must be locked to prevent a race condition where _on_predecessor_done
   // is called before _pending_predecessors++ has executed.
-  Assert(!is_done(), "Dependencies of already executed task modified.");
+  Assert(!is_scheduled(), "Dependencies of already scheduled task modified.");
   ++successor->_pending_predecessors;
 }
 
