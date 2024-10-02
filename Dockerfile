@@ -33,7 +33,7 @@ RUN apt-get update \
         libreadline-dev \
         libsqlite3-dev \
         libtbb-dev \
-        lld-17 \
+        lld \
         lsb-release \
         man \
         ninja-build \
