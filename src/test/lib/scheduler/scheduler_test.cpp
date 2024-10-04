@@ -9,7 +9,6 @@
 #include "hyrise.hpp"
 #include "operators/get_table.hpp"
 #include "operators/table_scan.hpp"
-#include "scheduler/immediate_execution_scheduler.hpp"
 #include "scheduler/job_task.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/operator_task.hpp"
@@ -139,8 +138,6 @@ TEST_F(SchedulerTest, BasicTest) {
   Hyrise::get().scheduler()->finish();
 
   ASSERT_EQ(counter, 30);
-
-  Hyrise::get().set_scheduler(std::make_shared<ImmediateExecutionScheduler>());
 }
 
 TEST_F(SchedulerTest, BasicTestWithoutScheduler) {
