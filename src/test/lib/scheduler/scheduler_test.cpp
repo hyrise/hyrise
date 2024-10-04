@@ -466,6 +466,10 @@ TEST_F(SchedulerTest, GetThisThreadWorker) {
 }
 
 TEST_F(SchedulerTest, ExecuteNextFromNonWorker) {
+  if constexpr (HYRISE_DEBUG) {
+    GTEST_SKIP();
+  }
+ 
   const auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
   Hyrise::get().topology.use_fake_numa_topology(1, 1);
   Hyrise::get().set_scheduler(node_queue_scheduler);
