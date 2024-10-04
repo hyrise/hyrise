@@ -45,7 +45,7 @@ class SchedulerTest : public BaseTest {
     task1->schedule();
     task2->schedule();
 
-    Hyrise::get().scheduler()->finish();
+    Hyrise::get().scheduler()->wait_for_tasks({task1, task2, task3});
   }
 
   void stress_multiple_dependencies(std::atomic_uint32_t& counter) {
@@ -68,7 +68,7 @@ class SchedulerTest : public BaseTest {
     task1->schedule();
     task2->schedule();
 
-    Hyrise::get().scheduler()->finish();
+    Hyrise::get().scheduler()->wait_for_tasks({task1, task2, task3});
   }
 
   void stress_diamond_dependencies(std::atomic_uint32_t& counter) {
