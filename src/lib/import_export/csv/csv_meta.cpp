@@ -19,7 +19,7 @@ CsvMeta process_csv_meta_file(const std::string& filename) {
   return static_cast<CsvMeta>(meta_json);
 }
 
-void assign_if_exists(char& value, const nlohmann::json& json_object, const std::string& key) {
+static void assign_if_exists(char& value, const nlohmann::json& json_object, const std::string& key) {
   if (json_object.find(key) != json_object.end()) {
     std::string character = json_object.at(key);
     Assert(character.size() == 1, "CSV meta file config: Character specifications can only be a single character.");
@@ -27,13 +27,13 @@ void assign_if_exists(char& value, const nlohmann::json& json_object, const std:
   }
 }
 
-void assign_if_exists(bool& value, const nlohmann::json& json_object, const std::string& key) {
+static void assign_if_exists(bool& value, const nlohmann::json& json_object, const std::string& key) {
   if (json_object.find(key) != json_object.end()) {
     value = json_object.at(key);
   }
 }
 
-void from_json(const nlohmann::json& json_string, NullHandling& null_handling) {
+static void from_json(const nlohmann::json& json_string, NullHandling& null_handling) {
   if (json_string == "reject_null_strings") {
     null_handling = NullHandling::RejectNullStrings;
   } else if (json_string == "null_string_as_null") {
@@ -45,7 +45,7 @@ void from_json(const nlohmann::json& json_string, NullHandling& null_handling) {
   }
 }
 
-void to_json(nlohmann::json& json_string, NullHandling null_handling) {
+static void to_json(nlohmann::json& json_string, NullHandling null_handling) {
   switch (null_handling) {
     case NullHandling::RejectNullStrings:
       json_string = "reject_null_strings";
@@ -113,11 +113,11 @@ void to_json(nlohmann::json& json, const CsvMeta& meta) {
   json = nlohmann::json{{"config", config}, {"columns", columns}};
 }
 
-bool operator==(const ColumnMeta& left, const ColumnMeta& right) {
+static bool operator==(const ColumnMeta& left, const ColumnMeta& right) {
   return std::tie(left.name, left.type, left.nullable) == std::tie(right.name, right.type, right.nullable);
 }
 
-bool operator==(const ParseConfig& left, const ParseConfig& right) {
+static bool operator==(const ParseConfig& left, const ParseConfig& right) {
   return std::tie(left.delimiter, left.separator, left.quote, left.escape, left.delimiter_escape,
                   left.reject_quoted_nonstrings, left.null_handling, left.rfc_mode) ==
          std::tie(right.delimiter, right.separator, right.quote, right.escape, right.delimiter_escape,

@@ -337,11 +337,11 @@ void ExpressionReductionRule::remove_duplicate_aggregate(
   {
     // Remove the AVG() expression from the AggregateNode
     auto& expressions = aggregate_node->node_expressions;
-    expressions.erase(std::remove_if(expressions.begin(), expressions.end(),
+    const auto [erase_begin, erase_end] = std::ranges::remove_if(expressions,
                                              [&](const auto& expression) {
                                                return replacements.find(expression) != replacements.end();
-                                             }),
-                      expressions.end());
+                                             });
+    expressions.erase(erase_begin, erase_end);
   }
 
   // Add a ProjectionNode that calculates AVG(a) as SUM(a)/COUNT(a).

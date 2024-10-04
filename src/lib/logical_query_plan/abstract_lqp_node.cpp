@@ -230,7 +230,7 @@ std::vector<LQPOutputRelation> AbstractLQPNode::output_relations() const {
 
   const auto output_relation_count = output_relations.size();
   for (auto output_idx = size_t{0}; output_idx < output_relation_count; ++output_idx) {
-    output_relations[output_idx] = LQPOutputRelation{outputs[output_idx], input_sides[output_idx]};
+    output_relations[output_idx] = LQPOutputRelation{.output=             outputs[output_idx], .input_side=input_sides[output_idx]};
   }
 
   return output_relations;
@@ -360,7 +360,7 @@ FunctionalDependencies AbstractLQPNode::functional_dependencies() const {
         Assert(!is_column_nullable(get_column_id(*fd_determinant_expression)),
                "Expected FD's determinant expressions to be non-nullable.");
       }
-      Assert(std::all_of(fd.dependents.cbegin(), fd.dependents.cend(),
+      Assert(std::ranges::all_of(fd.dependents,
                          [&output_expressions_set](const auto& fd_dependent_expression) {
                            return output_expressions_set.contains(fd_dependent_expression);
                          }),

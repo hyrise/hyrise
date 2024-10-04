@@ -126,7 +126,7 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
 
   if (track_probe_matches) {
     const auto chunk_count = _probe_input_table->chunk_count();
-    for (ChunkID probe_chunk_id{0}; probe_chunk_id < chunk_count; ++probe_chunk_id) {
+    for (auto probe_chunk_id = ChunkID{0}; probe_chunk_id < chunk_count; ++probe_chunk_id) {
       const auto chunk = _probe_input_table->get_chunk(probe_chunk_id);
       Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
@@ -136,7 +136,7 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
 
   if (track_index_matches) {
     const auto chunk_count = _index_input_table->chunk_count();
-    for (ChunkID index_chunk_id{0}; index_chunk_id < chunk_count; ++index_chunk_id) {
+    for (auto index_chunk_id = ChunkID{0}; index_chunk_id < chunk_count; ++index_chunk_id) {
       const auto chunk = _index_input_table->get_chunk(index_chunk_id);
       Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
@@ -165,7 +165,7 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
       _secondary_predicates.empty()) {  // INNER REFERENCE JOIN
     // Scan all chunks for index input
     const auto chunk_count_index_input_table = _index_input_table->chunk_count();
-    for (ChunkID index_chunk_id{0}; index_chunk_id < chunk_count_index_input_table; ++index_chunk_id) {
+    for (auto index_chunk_id = ChunkID{0}; index_chunk_id < chunk_count_index_input_table; ++index_chunk_id) {
       const auto index_chunk = _index_input_table->get_chunk(index_chunk_id);
       Assert(index_chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
@@ -189,7 +189,7 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
 
           // Scan all chunks from the probe side input
           const auto chunk_count_probe_input_table = _probe_input_table->chunk_count();
-          for (ChunkID probe_chunk_id{0}; probe_chunk_id < chunk_count_probe_input_table; ++probe_chunk_id) {
+          for (auto probe_chunk_id = ChunkID{0}; probe_chunk_id < chunk_count_probe_input_table; ++probe_chunk_id) {
             const auto chunk = _probe_input_table->get_chunk(probe_chunk_id);
             Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
@@ -215,7 +215,7 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
   } else {  // DATA JOIN since only inner joins are supported for a reference table on the index side
     // Scan all chunks for index input
     const auto chunk_count_index_input_table = _index_input_table->chunk_count();
-    for (ChunkID index_chunk_id{0}; index_chunk_id < chunk_count_index_input_table; ++index_chunk_id) {
+    for (auto index_chunk_id = ChunkID{0}; index_chunk_id < chunk_count_index_input_table; ++index_chunk_id) {
       const auto index_chunk = _index_input_table->get_chunk(index_chunk_id);
       Assert(index_chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
@@ -229,7 +229,7 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
 
         // Scan all chunks from the probe side input
         const auto chunk_count_probe_input_table = _probe_input_table->chunk_count();
-        for (ChunkID probe_chunk_id{0}; probe_chunk_id < chunk_count_probe_input_table; ++probe_chunk_id) {
+        for (auto probe_chunk_id = ChunkID{0}; probe_chunk_id < chunk_count_probe_input_table; ++probe_chunk_id) {
           const auto chunk = _probe_input_table->get_chunk(probe_chunk_id);
           Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
@@ -299,21 +299,21 @@ void JoinIndex::_fallback_nested_loop(const ChunkID index_chunk_id, const bool t
   const auto& index_pos_list_size_pre_fallback = _index_pos_list->size();
 
   const auto chunk_count = _probe_input_table->chunk_count();
-  for (ChunkID probe_chunk_id{0}; probe_chunk_id < chunk_count; ++probe_chunk_id) {
+  for (auto probe_chunk_id = ChunkID{0}; probe_chunk_id < chunk_count; ++probe_chunk_id) {
     const auto chunk = _probe_input_table->get_chunk(probe_chunk_id);
     Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
     const auto& probe_segment = chunk->get_segment(_adjusted_primary_predicate.column_ids.first);
-    JoinNestedLoop::JoinParams params{*_probe_pos_list,
-                                      *_index_pos_list,
-                                      _probe_matches[probe_chunk_id],
-                                      _index_matches[index_chunk_id],
-                                      track_probe_matches,
-                                      track_index_matches,
-                                      _mode,
-                                      _adjusted_primary_predicate.predicate_condition,
-                                      secondary_predicate_evaluator,
-                                      !is_semi_or_anti_join};
+    JoinNestedLoop::JoinParams params{.pos_list_left=*_probe_pos_list,
+                                      .pos_list_right=*_index_pos_list,
+                                      .left_matches=_probe_matches[probe_chunk_id],
+                                      .right_matches=_index_matches[index_chunk_id],
+                                      .track_left_matches=track_probe_matches,
+                                      .track_right_matches=track_index_matches,
+                                      .mode=_mode,
+                                      .predicate_condition=_adjusted_primary_predicate.predicate_condition,
+                                      .secondary_predicate_evaluator=secondary_predicate_evaluator,
+                                      .write_pos_lists=!is_semi_or_anti_join};
     JoinNestedLoop::_join_two_untyped_segments(*probe_segment, *index_segment, probe_chunk_id, index_chunk_id, params);
   }
   const auto& index_pos_list_size_post_fallback = _index_pos_list->size();
@@ -353,12 +353,12 @@ void JoinIndex::_reference_join_two_segments_using_index(
                      });
     }
 
-    RowIDPosList mutable_ref_seg_pos_list(reference_segment_pos_list->size());
+    auto mutable_ref_seg_pos_list = RowIDPosList(reference_segment_pos_list->size());
     std::copy(reference_segment_pos_list->begin(), reference_segment_pos_list->end(), mutable_ref_seg_pos_list.begin());
     std::sort(mutable_ref_seg_pos_list.begin(), mutable_ref_seg_pos_list.end());
     std::sort(index_scan_pos_list.begin(), index_scan_pos_list.end());
 
-    RowIDPosList index_table_matches{};
+    auto index_table_matches = RowIDPosList{};
     std::set_intersection(mutable_ref_seg_pos_list.begin(), mutable_ref_seg_pos_list.end(), index_scan_pos_list.begin(),
                           index_scan_pos_list.end(), std::back_inserter(index_table_matches));
     _append_matches_dereferenced(probe_chunk_id, probe_side_position.chunk_offset(), index_table_matches);
@@ -368,7 +368,7 @@ void JoinIndex::_reference_join_two_segments_using_index(
 template <typename SegmentPosition>
 std::vector<IndexRange> JoinIndex::_index_ranges_for_value(const SegmentPosition probe_side_position,
                                                            const std::shared_ptr<AbstractChunkIndex>& index) const {
-  std::vector<IndexRange> index_ranges{};
+  auto index_ranges = std::vector<IndexRange>{};
   index_ranges.reserve(2);
 
   // AntiNullAsTrue is the only join mode in which comparisons with null-values are evaluated as "true".
@@ -483,8 +483,8 @@ void JoinIndex::_append_matches_non_inner(const bool is_semi_or_anti_join) {
   if ((_mode == JoinMode::Left && _index_side == IndexSide::Right) ||
       (_mode == JoinMode::Right && _index_side == IndexSide::Left) || _mode == JoinMode::FullOuter) {
     const auto chunk_count = _probe_input_table->chunk_count();
-    for (ChunkID probe_chunk_id{0}; probe_chunk_id < chunk_count; ++probe_chunk_id) {
-      for (ChunkOffset chunk_offset{0}; chunk_offset < static_cast<ChunkOffset>(_probe_matches[probe_chunk_id].size());
+    for (auto probe_chunk_id = ChunkID{0}; probe_chunk_id < chunk_count; ++probe_chunk_id) {
+      for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(_probe_matches[probe_chunk_id].size());
            ++chunk_offset) {
         if (!_probe_matches[probe_chunk_id][chunk_offset]) {
           _probe_pos_list->emplace_back(probe_chunk_id, chunk_offset);
@@ -498,8 +498,8 @@ void JoinIndex::_append_matches_non_inner(const bool is_semi_or_anti_join) {
   if ((_mode == JoinMode::Left && _index_side == IndexSide::Left) ||
       (_mode == JoinMode::Right && _index_side == IndexSide::Right) || _mode == JoinMode::FullOuter) {
     const auto chunk_count = _index_matches.size();
-    for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
-      for (ChunkOffset chunk_offset{0}; chunk_offset < static_cast<ChunkOffset>(_index_matches[chunk_id].size());
+    for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+      for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(_index_matches[chunk_id].size());
            ++chunk_offset) {
         if (!_index_matches[chunk_id][chunk_offset]) {
           _index_pos_list->emplace_back(chunk_id, chunk_offset);
@@ -518,12 +518,12 @@ void JoinIndex::_append_matches_non_inner(const bool is_semi_or_anti_join) {
     const auto invert = _mode == JoinMode::AntiNullAsFalse || _mode == JoinMode::AntiNullAsTrue;
     if (_index_side == IndexSide::Right) {
       const auto chunk_count = _probe_input_table->chunk_count();
-      for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
+      for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
         const auto chunk = _probe_input_table->get_chunk(chunk_id);
         Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
         const auto chunk_size = chunk->size();
-        for (ChunkOffset chunk_offset{0}; chunk_offset < chunk_size; ++chunk_offset) {
+        for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
           if (_probe_matches[chunk_id][chunk_offset] ^ invert) {
             _probe_pos_list->emplace_back(chunk_id, chunk_offset);
           }
@@ -531,12 +531,12 @@ void JoinIndex::_append_matches_non_inner(const bool is_semi_or_anti_join) {
       }
     } else {  // INDEX SIDE LEFT
       const auto chunk_count = _index_input_table->chunk_count();
-      for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
+      for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
         const auto chunk = _index_input_table->get_chunk(chunk_id);
         Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
         const auto chunk_size = chunk->size();
-        for (ChunkOffset chunk_offset{0}; chunk_offset < chunk_size; ++chunk_offset) {
+        for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
           if (_index_matches[chunk_id][chunk_offset] ^ invert) {
             _index_pos_list->emplace_back(chunk_id, chunk_offset);
           }
@@ -548,25 +548,25 @@ void JoinIndex::_append_matches_non_inner(const bool is_semi_or_anti_join) {
 
 void JoinIndex::_write_output_segments(Segments& output_segments, const std::shared_ptr<const Table>& input_table,
                                        const std::shared_ptr<RowIDPosList>& pos_list) {
-  // Add segments from table to output chunk
+  // Add segments from table to output chunk.
   const auto column_count = input_table->column_count();
   for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
-    std::shared_ptr<AbstractSegment> segment;
+    auto segment = std::shared_ptr<AbstractSegment>{};
 
     if (input_table->type() == TableType::References) {
       if (input_table->chunk_count() > 0) {
         auto new_pos_list = std::make_shared<RowIDPosList>();
 
-        ChunkID current_chunk_id{0};
+        auto current_chunk_id = ChunkID{0};
 
         const auto first_chunk_input_table = input_table->get_chunk(ChunkID{0});
         Assert(first_chunk_input_table, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
         auto reference_segment =
             std::static_pointer_cast<const ReferenceSegment>(first_chunk_input_table->get_segment(column_id));
 
-        // de-reference to the correct RowID so the output can be used in a Multi Join
-        for (ChunkOffset pos_list_offset{0}; pos_list_offset < static_cast<ChunkOffset>(pos_list->size());
-             ++pos_list_offset) {
+        // De-reference to the correct RowID so the output can be used in a Multi Join.
+        const auto pos_list_size = static_cast<ChunkOffset>(pos_list->size());
+        for (auto pos_list_offset = ChunkOffset{0}; pos_list_offset < pos_list_size; ++pos_list_offset) {
           const auto& row = (*pos_list)[pos_list_offset];
           if (row.is_null()) {
             new_pos_list->push_back(NULL_ROW_ID);

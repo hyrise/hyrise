@@ -113,8 +113,9 @@ CompositeGroupKeyIndex::CompositeGroupKeyIndex(
   }
   _key_offsets.shrink_to_fit();
 
-  // remove duplicated keys
-  auto unique_keys_end = std::unique(_keys.begin(), _keys.end());
+  // Remove duplicated keys.
+  // NOLINTNEXTLINE(modernize-use-ranges): ranges requires additional comparators. Keep it simple here.
+  const auto unique_keys_end = std::unique(_keys.begin(), _keys.end());  
   _keys.erase(unique_keys_end, _keys.end());
   _keys.shrink_to_fit();
 }
@@ -172,19 +173,19 @@ VariableLengthKey CompositeGroupKeyIndex::_create_composite_key(const std::vecto
 
 AbstractChunkIndex::Iterator CompositeGroupKeyIndex::_get_position_iterator_for_key(
     const VariableLengthKey& key) const {
-  // get an iterator pointing to the search-key in the keystore
-  // (use always lower_bound() since the search method is already handled within creation of composite key)
-  auto key_it = std::lower_bound(_keys.begin(), _keys.end(), key);
+  // Get an iterator pointing to the search-key in the keystore
+  // (use always lower_bound() since the search method is already handled within creation of composite key).
+  const auto key_it = std::lower_bound(_keys.begin(), _keys.end(), key);  // NOLINT(modernize-use-ranges)
   if (key_it == _keys.cend()) {
     return _position_list.cend();
   }
 
-  // get the start position in the position-vector, ie the offset, by getting the offset_iterator for the key
-  // (which is at the same position as the iterator for the key in the keystore)
+  // Get the start position in the position-vector, ie the offset, by getting the offset_iterator for the key
+  // (which is at the same position as the iterator for the key in the keystore).
   auto offset_it = _key_offsets.cbegin();
   std::advance(offset_it, std::distance(_keys.cbegin(), key_it));
 
-  // get an iterator pointing to that start position
+  // Get an iterator pointing to that start position.
   auto position_it = _position_list.cbegin();
   std::advance(position_it, *offset_it);
 

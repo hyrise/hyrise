@@ -414,7 +414,7 @@ BetweenCompositionRule::ColumnBoundary BetweenCompositionRule::_get_boundary(
       default:
         break;
     }
-    return {left_column_expression, right_column_expression, type, true, expression_id};
+    return {.column_expression=left_column_expression,      .border_expression=right_column_expression,       .type=type, .boundary_is_column_expression=true, .id=expression_id};
   }
 
   return {.column_expression = nullptr,

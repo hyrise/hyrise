@@ -328,8 +328,8 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
   };
 
   auto table_indexes = stored_table->get_table_indexes();
-  table_indexes.erase(std::remove_if(table_indexes.begin(), table_indexes.end(), all_indexed_segments_pruned),
-                      table_indexes.cend());
+  const auto [erase_begin, erase_end] = std::ranges::remove_if(table_indexes, all_indexed_segments_pruned);
+  table_indexes.erase(erase_begin, erase_end);
 
   return std::make_shared<Table>(pruned_column_definitions, TableType::Data, std::move(output_chunks),
                                  stored_table->uses_mvcc(), table_indexes);

@@ -51,7 +51,7 @@ std::shared_ptr<LQPColumnExpression> StoredTableNode::get_column(const std::stri
 }
 
 void StoredTableNode::set_pruned_chunk_ids(const std::vector<ChunkID>& pruned_chunk_ids) {
-  DebugAssert(std::is_sorted(pruned_chunk_ids.begin(), pruned_chunk_ids.end()), "Expected sorted vector of ChunkIDs");
+  DebugAssert(std::ranges::is_sorted(pruned_chunk_ids), "Expected sorted vector of ChunkIDs");
   DebugAssert(std::adjacent_find(pruned_chunk_ids.begin(), pruned_chunk_ids.end()) == pruned_chunk_ids.end(),
               "Expected vector of unique ChunkIDs");
 
@@ -65,7 +65,7 @@ const std::vector<ChunkID>& StoredTableNode::pruned_chunk_ids() const {
 void StoredTableNode::set_pruned_column_ids(const std::vector<ColumnID>& pruned_column_ids) {
   DebugAssert(std::is_sorted(pruned_column_ids.begin(), pruned_column_ids.end()),
               "Expected sorted vector of ColumnIDs");
-  DebugAssert(std::adjacent_find(pruned_column_ids.begin(), pruned_column_ids.end()) == pruned_column_ids.end(),
+  DebugAssert(std::ranges::adjacent_find(pruned_column_ids) == pruned_column_ids.end(),
               "Expected vector of unique ColumnIDs");
 
   // It is valid for an LQP to not use any of the table's columns (e.g., SELECT 5 FROM t). We still need to include at

@@ -93,8 +93,7 @@ bool MockNode::is_column_nullable(const ColumnID column_id) const {
 }
 
 void MockNode::set_pruned_column_ids(const std::vector<ColumnID>& pruned_column_ids) {
-  DebugAssert(std::is_sorted(pruned_column_ids.begin(), pruned_column_ids.end()),
-              "Expected sorted vector of ColumnIDs.");
+  DebugAssert(std::ranges::is_sorted(pruned_column_ids), "Expected sorted vector of ColumnIDs.");
   DebugAssert(std::ranges::adjacent_find(pruned_column_ids) == pruned_column_ids.end(),
               "Expected vector of unique ColumnIDs.");
 

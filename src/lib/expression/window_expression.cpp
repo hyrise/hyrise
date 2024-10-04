@@ -121,9 +121,8 @@ WindowExpression::WindowExpression(const std::vector<std::shared_ptr<AbstractExp
   Assert(order_by_expression_count == sort_modes.size(), "Passed sort modes do not match ORDER BY expressions.");
 
   arguments.resize(order_by_expressions_begin_idx + order_by_expression_count);
-  std::copy(partition_by_expressions.begin(), partition_by_expressions.end(), arguments.begin());
-  std::copy(order_by_expressions.begin(), order_by_expressions.end(),
-            arguments.begin() + static_cast<int64_t>(order_by_expressions_begin_idx));
+  std::ranges::copy(partition_by_expressions, arguments.begin());
+  std::ranges::copy(order_by_expressions, arguments.begin() + static_cast<int64_t>(order_by_expressions_begin_idx));
 }
 
 std::shared_ptr<AbstractExpression> WindowExpression::_on_deep_copy(

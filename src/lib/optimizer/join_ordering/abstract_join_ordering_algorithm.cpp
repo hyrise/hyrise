@@ -39,7 +39,7 @@ std::shared_ptr<AbstractLQPNode> AbstractJoinOrderingAlgorithm::_add_predicates_
     predicate_nodes_and_cost.emplace_back(predicate_node, cost_estimator->estimate_node_cost(predicate_node));
   }
 
-  std::sort(predicate_nodes_and_cost.begin(), predicate_nodes_and_cost.end(), [&](const auto& lhs, const auto& rhs) {
+  std::ranges::sort(predicate_nodes_and_cost, [&](const auto& lhs, const auto& rhs) {
     return lhs.second < rhs.second;
   });
 
