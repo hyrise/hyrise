@@ -243,7 +243,7 @@ TEST_F(SchedulerTest, SuccessorExpired) {
 
   task1->schedule();
   // When task2 finishes, it will not be able to obtain its successor task3 as it went out of scope.
-  ASSERT_THROW(task2->schedule(), std::logic_error);
+  ASSERT_THROW(task2->schedule(), std::bad_weak_ptr);
 
   Hyrise::get().scheduler()->finish();
 }
@@ -449,6 +449,32 @@ TEST_F(SchedulerTest, ShutdownTaskDecrement) {
   EXPECT_TRUE(shutdown_task_2.try_mark_as_assigned_to_worker());
   EXPECT_EQ(counter_2.load(), 0);
   EXPECT_THROW(shutdown_task_2.execute(), std::logic_error);
+}
+
+TEST_F(SchedulerTest, GetThisThreadWorker) {
+  const auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
+  Hyrise::get().topology.use_fake_numa_topology(1, 1);
+  Hyrise::get().set_scheduler(node_queue_scheduler);
+
+  // Even though we use the NodeQueueScheduler, calling `get_this_thread_worker()` not from a worker (here, called from
+  // the main thread) returns a nullptr.
+  EXPECT_EQ(Worker::get_this_thread_worker(), nullptr);
+
+  auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
+  tasks.emplace_back(std::make_shared<JobTask>([&]() {
+    EXPECT_NO_THROW(Worker::get_this_thread_worker());
+  }));
+
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
+}
+
+TEST_F(SchedulerTest, ExecuteNextFromNonWorker) {
+  const auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
+  Hyrise::get().topology.use_fake_numa_topology(1, 1);
+  Hyrise::get().set_scheduler(node_queue_scheduler);
+
+  auto empty_task = std::make_shared<JobTask>([&]() {});
+  EXPECT_THROW(node_queue_scheduler->workers()[0]->execute_next(empty_task), std::logic_error);
 }
 
 }  // namespace hyrise

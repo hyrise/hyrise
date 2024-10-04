@@ -14,6 +14,7 @@
 #include "scheduler/immediate_execution_scheduler.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/task_queue.hpp"
+#include "scheduler/worker.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "storage/table.hpp"
 #include "storage/table_column_definition.hpp"

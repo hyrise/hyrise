@@ -142,6 +142,12 @@ void AbstractTask::execute() {
   for (auto& successor : _successors) {
     // The task creator is responsible to ensure that successor tasks are available whenever an executed task tries to
     // execute/accesss its successors.
+    if constexpr (HYRISE_DEBUG) {
+      // macOS silently ignores non-reachable successors (see `SuccessorExpired` test). Thus, we obtain a shared pointer
+      // here which also causes macOS to recognize that the successor is not accessible (note, the following line fails
+      // with an std::bad_weak_ptr exception before testing the assertion).
+      Assert(successor.get().shared_from_this(), "Cannot obtain successor");
+    }
     successor.get()._on_predecessor_done();
   }
 
@@ -170,7 +176,7 @@ void AbstractTask::_on_predecessor_done() {
   const auto previous_predecessor_count = _pending_predecessors--;
   Assert(previous_predecessor_count > 0, "Cannot decrement pending predecessors when no predecessors are left.");
   if (previous_predecessor_count == 1) {
-    const auto current_worker = Worker::get_this_thread_worker();  // Only set for NodeQueueScheduler.
+    const auto current_worker = Worker::get_this_thread_worker();
 
     if (current_worker) {
       // If the first task was executed faster than the other tasks were scheduled, we might end up in a situation where
