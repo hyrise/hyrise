@@ -10,7 +10,6 @@
 #include "hyrise.hpp"
 #include "operators/get_table.hpp"
 #include "operators/table_scan.hpp"
-#include "scheduler/immediate_execution_scheduler.hpp"
 #include "scheduler/job_task.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/operator_task.hpp"
@@ -47,7 +46,7 @@ class SchedulerTest : public BaseTest {
     task1->schedule();
     task2->schedule();
 
-    Hyrise::get().scheduler()->finish();
+    Hyrise::get().scheduler()->wait_for_tasks({task1, task2, task3});
   }
 
   void stress_multiple_dependencies(std::atomic_uint32_t& counter) {
@@ -70,7 +69,7 @@ class SchedulerTest : public BaseTest {
     task1->schedule();
     task2->schedule();
 
-    Hyrise::get().scheduler()->finish();
+    Hyrise::get().scheduler()->wait_for_tasks({task1, task2, task3});
   }
 
   void stress_diamond_dependencies(std::atomic_uint32_t& counter) {
@@ -144,8 +143,6 @@ TEST_F(SchedulerTest, BasicTest) {
   Hyrise::get().scheduler()->finish();
 
   ASSERT_EQ(counter, 30);
-
-  Hyrise::get().set_scheduler(std::make_shared<ImmediateExecutionScheduler>());
 }
 
 TEST_F(SchedulerTest, BasicTestWithoutScheduler) {
@@ -298,7 +295,28 @@ TEST_F(SchedulerTest, DiamondDependenciesWithoutScheduler) {
   ASSERT_EQ(counter, 7);
 }
 
-TEST_F(SchedulerTest, PassAllDependencies) {
+TEST_F(SchedulerTest, SuccessorExpired) {
+  if constexpr (!HYRISE_DEBUG) {
+    GTEST_SKIP();
+  }
+
+  const auto task1 = std::make_shared<JobTask>([&]() {});
+  const auto task2 = std::make_shared<JobTask>([&]() {});
+  task1->set_as_predecessor_of(task2);
+
+  {
+    const auto task3 = std::make_shared<JobTask>([&]() {});
+    task2->set_as_predecessor_of(task3);
+  }
+
+  task1->schedule();
+  // When task2 finishes, it will not be able to obtain its successor task3 as it went out of scope.
+  ASSERT_THROW(task2->schedule(), std::bad_weak_ptr);
+
+  Hyrise::get().scheduler()->finish();
+}
+
+TEST_F(SchedulerTest, NotAllDependenciesPassedToScheduler) {
   if constexpr (!HYRISE_DEBUG) {
     GTEST_SKIP();
   }
@@ -311,7 +329,20 @@ TEST_F(SchedulerTest, PassAllDependencies) {
   task2->set_as_predecessor_of(task3);
 
   const auto tasks = std::vector<std::shared_ptr<AbstractTask>>{task1, task2};
+
+  // The scheduler should complain that not all dependencies (task3 is a successor of task2) are passed.
   ASSERT_THROW(Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks), std::logic_error);
+}
+
+TEST_F(SchedulerTest, SameSuccessorMultipleTimes) {
+  const auto task1 = std::make_shared<JobTask>([&]() {});
+  const auto task2 = std::make_shared<JobTask>([&]() {});
+
+  task1->set_as_predecessor_of(task2);
+  task1->set_as_predecessor_of(task2);
+  const auto task2_2 = task2;
+  task1->set_as_predecessor_of(task2_2);
+  ASSERT_EQ(task1->successors().size(), 1);
 }
 
 TEST_F(SchedulerTest, MultipleOperators) {
@@ -551,6 +582,32 @@ TEST_F(SchedulerTest, ShutdownTaskDecrement) {
   EXPECT_TRUE(shutdown_task_2.try_mark_as_assigned_to_worker());
   EXPECT_EQ(counter_2.load(), 0);
   EXPECT_THROW(shutdown_task_2.execute(), std::logic_error);
+}
+
+TEST_F(SchedulerTest, GetThisThreadWorker) {
+  const auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
+  Hyrise::get().topology.use_fake_numa_topology(1, 1);
+  Hyrise::get().set_scheduler(node_queue_scheduler);
+
+  // Even though we use the NodeQueueScheduler, calling `get_this_thread_worker()` not from a worker (here, called from
+  // the main thread) returns a nullptr.
+  EXPECT_EQ(Worker::get_this_thread_worker(), nullptr);
+
+  auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
+  tasks.emplace_back(std::make_shared<JobTask>([&]() {
+    EXPECT_NO_THROW(Worker::get_this_thread_worker());
+  }));
+
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
+}
+
+TEST_F(SchedulerTest, ExecuteNextFromNonWorker) {
+  const auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
+  Hyrise::get().topology.use_fake_numa_topology(1, 1);
+  Hyrise::get().set_scheduler(node_queue_scheduler);
+
+  auto empty_task = std::make_shared<JobTask>([&]() {});
+  EXPECT_THROW(node_queue_scheduler->workers()[0]->execute_next(empty_task), std::logic_error);
 }
 
 }  // namespace hyrise

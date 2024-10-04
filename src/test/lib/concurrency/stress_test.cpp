@@ -14,6 +14,7 @@
 #include "scheduler/immediate_execution_scheduler.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/task_queue.hpp"
+#include "scheduler/worker.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "storage/table.hpp"
 #include "storage/table_column_definition.hpp"
@@ -203,7 +204,7 @@ TEST_F(StressTest, TestTransactionInsertsPackedNullValues) {
   }
 }
 
-TEST_F(StressTest, NodeSchedulerStressTest) {
+TEST_F(StressTest, NodeQueueSchedulerStressTest) {
   if (std::thread::hardware_concurrency() < 2) {
     GTEST_SKIP();
   }
@@ -313,7 +314,10 @@ TEST_F(StressTest, NodeQueueSchedulerSemaphoreIncrements) {
     }
     EXPECT_EQ(counter, 0);
 
-    Hyrise::get().scheduler()->schedule_tasks(waiting_jobs);
+    for (const auto& waiting_job : waiting_jobs) {
+      waiting_job->schedule();
+    }
+
     // Wait a bit for workers to pull jobs and decrement semaphore.
     while (active_task_count < CPU_COUNT) {
       std::this_thread::sleep_for(SLEEP_TIME);
@@ -383,7 +387,10 @@ TEST_F(StressTest, NodeQueueSchedulerSemaphoreIncrementsDependentTasks) {
       EXPECT_EQ(queue->semaphore.availableApprox(), 0);
     }
 
-    Hyrise::get().scheduler()->schedule_tasks(waiting_jobs);
+    for (const auto& waiting_job : waiting_jobs) {
+      waiting_job->schedule();
+    }
+
     // Wait a bit for workers to pull jobs and decrement semaphore.
     while (active_task_count < CPU_COUNT) {
       std::this_thread::sleep_for(SLEEP_TIME);

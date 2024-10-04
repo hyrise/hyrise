@@ -19,13 +19,15 @@
 namespace hyrise {
 
 JoinGraphStatisticsCache JoinGraphStatisticsCache::from_join_graph(const JoinGraph& join_graph) {
-  auto vertex_indices = VertexIndexMap{};
   const auto vertex_count = join_graph.vertices.size();
+  auto vertex_indices = VertexIndexMap{};
+  vertex_indices.reserve(vertex_count);
   for (auto vertex_idx = size_t{0}; vertex_idx < vertex_count; ++vertex_idx) {
     vertex_indices.emplace(join_graph.vertices[vertex_idx], vertex_idx);
   }
 
   auto predicate_indices = PredicateIndexMap{};
+  predicate_indices.reserve(join_graph.edges.size());
   auto predicate_idx = size_t{0};
   for (const auto& edge : join_graph.edges) {
     for (const auto& predicate : edge.predicates) {

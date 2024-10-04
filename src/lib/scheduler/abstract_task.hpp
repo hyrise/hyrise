@@ -133,12 +133,12 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
   /**
    * @return the predecessors of this task.
    */
-  const std::vector<std::weak_ptr<AbstractTask>>& predecessors() const;
+  const std::vector<std::reference_wrapper<AbstractTask>>& predecessors() const;
 
   /**
    * @return the successors of this task.
    */
-  const std::vector<std::weak_ptr<AbstractTask>>& successors() const;
+  const std::vector<std::reference_wrapper<AbstractTask>>& successors() const;
 
   /**
    * Node IDs are changed when moving the task between nodes (e.g. during work stealing).
@@ -208,16 +208,16 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
 
   // For dependencies.
   std::atomic_uint32_t _pending_predecessors{0};
-  std::vector<std::weak_ptr<AbstractTask>> _predecessors;
-  std::vector<std::weak_ptr<AbstractTask>> _successors;
+
+  std::vector<std::reference_wrapper<AbstractTask>> _predecessors;
+  std::vector<std::reference_wrapper<AbstractTask>> _successors;
 
   // State management.
   std::atomic<TaskState> _state{TaskState::Created};
   std::mutex _transition_to_mutex;
 
   // For making Tasks join()-able.
-  std::condition_variable _done_condition_variable;
-  std::mutex _done_condition_variable_mutex;
+  std::atomic_bool _task_done{false};
 
   // Purely for debugging purposes, in order to be able to identify tasks after they have been scheduled.
   std::string _description;
