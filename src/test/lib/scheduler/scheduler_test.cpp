@@ -466,7 +466,7 @@ TEST_F(SchedulerTest, GetThisThreadWorker) {
 }
 
 TEST_F(SchedulerTest, ExecuteNextFromNonWorker) {
-  if constexpr (HYRISE_DEBUG) {
+  if constexpr (!HYRISE_DEBUG) {
     GTEST_SKIP();
   }
 
