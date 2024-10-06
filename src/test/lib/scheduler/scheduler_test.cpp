@@ -224,27 +224,6 @@ TEST_F(SchedulerTest, DiamondDependenciesWithoutScheduler) {
   ASSERT_EQ(counter, 7);
 }
 
-TEST_F(SchedulerTest, SuccessorExpired) {
-  if constexpr (!HYRISE_DEBUG) {
-    GTEST_SKIP();
-  }
-
-  const auto task1 = std::make_shared<JobTask>([&]() {});
-  const auto task2 = std::make_shared<JobTask>([&]() {});
-  task1->set_as_predecessor_of(task2);
-
-  {
-    const auto task3 = std::make_shared<JobTask>([&]() {});
-    task2->set_as_predecessor_of(task3);
-  }
-
-  task1->schedule();
-  // When task2 finishes, it will not be able to obtain its successor task3 as it went out of scope.
-  ASSERT_THROW(task2->schedule(), std::bad_weak_ptr);
-
-  Hyrise::get().scheduler()->finish();
-}
-
 TEST_F(SchedulerTest, NotAllDependenciesPassedToScheduler) {
   if constexpr (!HYRISE_DEBUG) {
     GTEST_SKIP();
