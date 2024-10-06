@@ -103,6 +103,8 @@ set(
     import_export/data_generation/shared_memory_reader.hpp
     import_export/file_type.cpp
     import_export/file_type.hpp
+    import_export/data_generation/pdgf_process.cpp
+    import_export/data_generation/pdgf_process.hpp
     logical_query_plan/abstract_lqp_node.cpp
     logical_query_plan/abstract_lqp_node.hpp
     logical_query_plan/abstract_non_query_node.cpp
