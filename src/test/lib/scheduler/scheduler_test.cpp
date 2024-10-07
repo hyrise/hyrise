@@ -456,8 +456,10 @@ TEST_F(SchedulerTest, ExecuteNextFromNonWorker) {
   EXPECT_EQ(node_queue_scheduler->workers().size(), 1);
   std::cerr << "a\n";
   const auto& worker = node_queue_scheduler->workers()[0];
+  EXPECT_EQ(node_queue_scheduler->active_worker_count(), 1);
   std::cerr << "b\n";
   auto empty_task = std::make_shared<JobTask>([&]() {});
+  std::cerr << "c: " << worker->id() << "\n";
   EXPECT_THROW(worker->execute_next(empty_task), std::logic_error);
 }
 
