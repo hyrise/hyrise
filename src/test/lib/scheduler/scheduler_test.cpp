@@ -453,8 +453,12 @@ TEST_F(SchedulerTest, ExecuteNextFromNonWorker) {
   Hyrise::get().topology.use_fake_numa_topology(1, 1);
   Hyrise::get().set_scheduler(node_queue_scheduler);
 
+  EXPECT_EQ(node_queue_scheduler->workers().size(), 1);
+  std::cerr << "a\n";
+  const auto& worker = node_queue_scheduler->workers()[0];
+  std::cerr << "b\n";
   auto empty_task = std::make_shared<JobTask>([&]() {});
-  EXPECT_THROW(node_queue_scheduler->workers()[0]->execute_next(empty_task), std::logic_error);
+  EXPECT_THROW(worker->execute_next(empty_task), std::logic_error);
 }
 
 }  // namespace hyrise
