@@ -455,7 +455,8 @@ TEST_F(StressTest, NodeQueueSchedulerTaskGrouping) {
   Hyrise::get().set_scheduler(node_queue_scheduler);
 
   const auto worker_count = node_queue_scheduler->workers().size();
-  if (worker_count < NodeQueueScheduler::NUM_GROUPS) {
+  // if (worker_count < NodeQueueScheduler::NUM_GROUPS) {
+  if (worker_count < 10) {
     // We would not see any impact of task grouping with too few workers.
     GTEST_SKIP();
   }

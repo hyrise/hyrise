@@ -10,35 +10,27 @@ TEST_F(TaskQueueTest, StealableJobs) {
   auto task_queue = TaskQueue{NodeID{0}};
 
   task_queue.push(std::make_shared<JobTask>(
-                      []() {
-                        return;
-                      },
+                      []() {},
                       SchedulePriority::High, true),
                   SchedulePriority::High);
-  EXPECT_TRUE(task_queue.steal());
+  EXPECT_NE(task_queue.steal(), nullptr);
 
   task_queue.push(std::make_shared<JobTask>(
-                      []() {
-                        return;
-                      },
+                      []() {},
                       SchedulePriority::High, false),
                   SchedulePriority::High);
-  EXPECT_FALSE(task_queue.steal());
+  EXPECT_EQ(task_queue.steal(), nullptr);
 }
 
 TEST_F(TaskQueueTest, EstimateLoad) {
   auto task_queue = TaskQueue{NodeID{0}};
 
   task_queue.push(std::make_shared<JobTask>(
-                      []() {
-                        return;
-                      },
+                      []() {},
                       SchedulePriority::High),
                   SchedulePriority::High);
   task_queue.push(std::make_shared<JobTask>(
-                      []() {
-                        return;
-                      },
+                      []() {},
                       SchedulePriority::Default),
                   SchedulePriority::Default);
 

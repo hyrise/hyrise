@@ -124,7 +124,9 @@ class SchedulerTest : public BaseTest {
     }
   }
 
-  static void group_tasks(std::shared_ptr<NodeQueueScheduler>& node_queue_scheduler, const std::vector<std::shared_ptr<AbstractTask>>& tasks, const size_t group_count) {
+  // Used to access protected friend members of schedulers.
+  static void group_and_schedule_tasks(std::shared_ptr<NodeQueueScheduler>& node_queue_scheduler, const std::vector<std::shared_ptr<AbstractTask>>& tasks, const size_t group_count) {
+    node_queue_scheduler->_schedule_tasks(tasks);
     node_queue_scheduler->_group_tasks(tasks, group_count);
   }
 };
@@ -191,8 +193,7 @@ TEST_F(SchedulerTest, GroupingSingleWorker) {
         }));
       }
 
-      group_tasks(node_queue_scheduler, tasks, group_count);
-      node_queue_scheduler->schedule_tasks(tasks);
+      group_and_schedule_tasks(node_queue_scheduler, tasks, group_count);
       node_queue_scheduler->wait_for_tasks(tasks);
     }
   }
@@ -203,7 +204,6 @@ TEST_F(SchedulerTest, GroupingMultipleWorkers) {
   Hyrise::get().set_scheduler(node_queue_scheduler);
 
   const auto worker_count = node_queue_scheduler->workers().size();
-  std::cerr << "worker count " << worker_count << "\n";
   if (worker_count < 2) {
     GTEST_SKIP();
   }
@@ -226,8 +226,7 @@ TEST_F(SchedulerTest, GroupingMultipleWorkers) {
       }));
     }
 
-    group_tasks(node_queue_scheduler, tasks, group_count);
-    node_queue_scheduler->schedule_tasks(tasks);
+    group_and_schedule_tasks(node_queue_scheduler, tasks, group_count);
     node_queue_scheduler->wait_for_tasks(tasks);
 
     EXPECT_EQ(output_counter, task_count);
@@ -254,8 +253,7 @@ TEST_F(SchedulerTest, GroupingMultipleWorkers2) {
     }));
   }
 
-  group_tasks(node_queue_scheduler, tasks, 16);
-  node_queue_scheduler->schedule_tasks(tasks);
+  group_and_schedule_tasks(node_queue_scheduler, tasks, 16);
   node_queue_scheduler->wait_for_tasks(tasks);
 }
 
