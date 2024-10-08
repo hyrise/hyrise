@@ -226,10 +226,10 @@ TEST_F(OperatorTaskTest, DetectCycles) {
   };
 
   // Create some operators that are an input of the next one.
-  auto mock_operator_a = std::make_shared<MockOperator>(nullptr);
-  auto mock_operator_b = std::make_shared<MockOperator>(mock_operator_a);
-  auto mock_operator_c = std::make_shared<MockOperator>(mock_operator_b);
-  auto mock_operator_d = std::make_shared<MockOperator>(mock_operator_c);
+  const auto mock_operator_a = std::make_shared<MockOperator>(nullptr);
+  const auto mock_operator_b = std::make_shared<MockOperator>(mock_operator_a);
+  const auto mock_operator_c = std::make_shared<MockOperator>(mock_operator_b);
+  const auto mock_operator_d = std::make_shared<MockOperator>(mock_operator_c);
 
   // Set the last operator as input of the first one. Now, we have a cycle.
   mock_operator_a->set_input(mock_operator_d);
