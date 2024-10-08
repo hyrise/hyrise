@@ -234,15 +234,20 @@ TEST_F(OperatorTaskTest, DetectCycles) {
   };
 
   // Create some operators that are an input of the next one.
-  const auto& mock_operator_a = std::make_shared<MockOperator>(nullptr);
-  const auto& mock_operator_b = std::make_shared<MockOperator>(mock_operator_a);
-  const auto& mock_operator_c = std::make_shared<MockOperator>(mock_operator_b);
-  const auto& mock_operator_d = std::make_shared<MockOperator>(mock_operator_c);
+  const auto mock_operator_a = std::make_shared<MockOperator>(nullptr);
+  const auto mock_operator_b = std::make_shared<MockOperator>(mock_operator_a);
+  const auto mock_operator_c = std::make_shared<MockOperator>(mock_operator_b);
+  const auto mock_operator_d = std::make_shared<MockOperator>(mock_operator_c);
 
   // Set the last operator as input of the first one. Now, we have a cycle.
   mock_operator_a->set_input(mock_operator_d);
 
   EXPECT_THROW(OperatorTask::make_tasks_from_operator(mock_operator_a), std::logic_error);
+
+  // Clear the operator inputs. Since operators store a pointer to their input, the cyclic graph leaks memory.
+  for (const auto& op : {mock_operator_a, mock_operator_b, mock_operator_c, mock_operator_d}) {
+    op->set_input(nullptr);
+  }
 }
 
 TEST_F(OperatorTaskTest, LinkPrunableSubqueries) {
