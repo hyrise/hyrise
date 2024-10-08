@@ -37,6 +37,8 @@ set(
     tpch/tpch_benchmark_item_runner.hpp
     tpch/tpch_table_generator.cpp
     tpch/tpch_table_generator.hpp
+    tpch/tpch_pdgf_table_generator.cpp
+    tpch/tpch_pdgf_table_generator.hpp
 
     jcch/jcch_benchmark_item_runner.cpp
     jcch/jcch_benchmark_item_runner.hpp

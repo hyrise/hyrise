@@ -5,28 +5,13 @@
 #include <semaphore.h>
 #include <mutex>
 
+#include "shared_memory_dto.hpp"
+#include "types.hpp"
+
 namespace hyrise {
-#define SHARED_MEMORY_FIELD_SIZE (3 * 64)
-
-enum RingBufferCellType { Noop = 42u, TableInfo = 1u, Data = 2u, TableCompleted = 3u };
-
-struct RingBufferCell {
-  RingBufferCellType cell_type;  // TODO: using uints might break
-  uint32_t data_buffer_offset;
-  uint32_t table_id;
-  uint32_t pad;
-  int64_t sorting_id;
-  int64_t table_num_rows;
-  uint32_t padding[8];
-};
 
 template <uint32_t buffer_size>
-struct RingBuffer {
-  RingBufferCell cells[buffer_size];
-};
-
-template <uint32_t buffer_size>
-class MultiProcessRingBuffer {
+class MultiProcessRingBuffer : Noncopyable {
  public:
   explicit MultiProcessRingBuffer(int shared_memory_fd, uint32_t workunit_size, uint32_t num_columns,
                                   const char* data_available_sem_path, const char* data_written_sem_path);

@@ -3,13 +3,14 @@
 #include <sys/mman.h>
 #include <csignal>
 #include <fcntl.h>
-#include "import_export/data_generation/shared_memory_reader.hpp"
+
+#include "shared_memory_reader.hpp"
 
 namespace hyrise {
 template <uint32_t work_unit_size, uint32_t num_columns>
 SharedMemoryReader<work_unit_size, num_columns>::SharedMemoryReader(
-    const char* shared_memory_name, const char* data_ready_sem, const char* buffer_free_sem)
-    : _shared_memory_file_name(shared_memory_name) {
+    ChunkOffset hyrise_table_chunk_size, const char* shared_memory_name, const char* data_ready_sem, const char* buffer_free_sem)
+    : _hyrise_table_chunk_size(hyrise_table_chunk_size), _shared_memory_file_name(shared_memory_name) {
   // Maximum size: HEADER + 2 ** 30.5
   // BUFFER_SIZE (2 ** x) * WORK_UNIT_SIZE (2 ** 7) * TABLE_FIELDS (2 ** 4) * SHARED_MEMORY_FIELD_SIZE (3 * 64 ~ 2 ** 8.5)
 
@@ -46,48 +47,67 @@ SharedMemoryReader<work_unit_size, num_columns>::SharedMemoryReader(
 template <uint32_t work_unit_size, uint32_t num_columns>
 SharedMemoryReader<work_unit_size, num_columns>::~SharedMemoryReader() {
   if (_data_buffer != MAP_FAILED) {
-    std::cerr << "Unmapping data buffer" << std::endl;
+    std::cerr << "Unmapping data buffer\n";
     munmap(_data_buffer, sizeof(DataBuffer<buffer_size, work_unit_size, num_columns>));
   }
   if (_shm_fd != -1) {
-    std::cerr << "Closing shared memory file" << std::endl;
+    std::cerr << "Closing shared memory file\n";
     close(_shm_fd);
     shm_unlink(_shared_memory_file_name);
   }
 }
 
 template <uint32_t work_unit_size, uint32_t num_columns>
-void SharedMemoryReader<work_unit_size, num_columns>::read_data() {
-  // TODO: how to know we are finished
-
-  while (_read_next_cell()) {}
+bool SharedMemoryReader<work_unit_size, num_columns>::has_next_table() {
+  return _num_read_tables < _num_tables_to_read;
 }
 
 template <uint32_t work_unit_size, uint32_t num_columns>
-bool SharedMemoryReader<work_unit_size, num_columns>::_read_next_cell() {
-  auto buffer_cell = _ring_buffer->prepare_retrieval();
-  auto buffer_offset = buffer_cell->data_buffer_offset;
-  switch (buffer_cell->cell_type) {
-    case RingBufferCellType::TableInfo:
-      _read_table_info_cell(buffer_cell);
-      break;
-    case RingBufferCellType::Data:
-      _read_data_cell(buffer_cell);
-      break;
-    case RingBufferCellType::TableCompleted:
-      _read_table_complete_cell(buffer_cell);
-      break;
-    default:
-      throw std::runtime_error("Unknown cell type encountered!");
+PDGFTableBuilder<work_unit_size, num_columns> SharedMemoryReader<work_unit_size, num_columns>::read_next_table() {
+  // Table schema
+  auto ring_cell = _ring_buffer->prepare_retrieval();
+  Assert(ring_cell->cell_type == RingBufferCellType::TableSchema, "First information received by PDGF should be table schema, was " + std::to_string(ring_cell->cell_type));
+  auto table_builder = PDGFTableBuilder<work_unit_size, num_columns>(ring_cell->table_id, _hyrise_table_chunk_size, ring_cell->table_num_rows);
+
+  auto data_slot = ring_cell->data_buffer_offset;
+  auto addressed_data = _data_buffer->get_addressed_by(ring_cell);
+  _num_tables_to_read = *((uint32_t*)addressed_data->data[0][0]);
+  _ring_buffer->retrieval_finished();
+
+  table_builder.read_schema(addressed_data);
+  _return_data_slot(data_slot);
+
+  if (table_builder.expects_more_data()) {
+    // Generation info
+    ring_cell = _ring_buffer->prepare_retrieval();
+    Assert(ring_cell->cell_type == RingBufferCellType::TableGenerationInfo, "Did not receive table generation info, was " + std::to_string(ring_cell->cell_type));
+    data_slot = ring_cell->data_buffer_offset;
+    addressed_data = _data_buffer->get_addressed_by(ring_cell);
+    _ring_buffer->retrieval_finished();
+    table_builder.read_generation_info(addressed_data);
+    _return_data_slot(data_slot);
+
+    while (table_builder.expects_more_data()) {
+      ring_cell = _ring_buffer->prepare_retrieval();
+      Assert(ring_cell->cell_type == RingBufferCellType::Data, "Did not receive data, was " + std::to_string(ring_cell->cell_type));
+      data_slot = ring_cell->data_buffer_offset;
+      auto table_id = ring_cell->table_id;
+      auto sorting_id = ring_cell->sorting_id;
+      addressed_data = _data_buffer->get_addressed_by(ring_cell);
+      _ring_buffer->retrieval_finished();
+      table_builder.read_data(table_id, sorting_id, addressed_data);
+      _return_data_slot(data_slot);
+    }
+
   }
 
-  _return_data_slot(buffer_offset);
+  ring_cell = _ring_buffer->prepare_retrieval();
+  Assert(ring_cell->cell_type == RingBufferCellType::TableCompleted, "Did not receive table completed indicator, was " + std::to_string(ring_cell->cell_type));
+  _num_read_tables++;
+  _ring_buffer->retrieval_finished();
+  _return_data_slot(ring_cell->data_buffer_offset);
 
-  if (_num_read_tables == _num_tables_to_read) {
-    return false;
-  }
-
-  return true;
+  return std::move(table_builder);
 }
 
 template <uint32_t work_unit_size, uint32_t num_columns>
@@ -96,44 +116,5 @@ void SharedMemoryReader<work_unit_size, num_columns>::_return_data_slot(uint32_t
   buffer_cell->cell_type = RingBufferCellType::Noop;
   buffer_cell->data_buffer_offset = buffer_offset;
   _ring_buffer->writing_finished();
-}
-
-template <uint32_t work_unit_size, uint32_t num_columns>
-void SharedMemoryReader<work_unit_size, num_columns>::_read_table_info_cell(RingBufferCell * cell) {
-  std::cerr << "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@" << std::endl;
-  std::cerr << "TABLE ID " << cell->table_id << std::endl;
-  std::cerr << "NUM ROWS " << cell->table_num_rows << std::endl;
-
-  auto addressed_data = _addressed_data_by_cell(cell);
-  _ring_buffer->retrieval_finished();
-
-  _num_tables_to_read = *((uint32_t*)addressed_data->data[0][0]);
-
-  std::cerr << "TABLE NAME " << std::string(addressed_data->data[1][0]) << std::endl;
-  std::cerr << "FIELDS OVERVIEW" << std::endl;
-  auto table_num_columns = *((uint32_t*)addressed_data->data[1][1]);
-  for (uint32_t i = 0; i < table_num_columns; ++i) {
-    std::cerr << i << " " << std::string(addressed_data->data[2][i]) << " "
-              << *((uint32_t*)addressed_data->data[3][i]) << std::endl;
-  }
-}
-
-template <uint32_t work_unit_size, uint32_t num_columns>
-void SharedMemoryReader<work_unit_size, num_columns>::_read_data_cell(RingBufferCell * cell) {
-  // std::cout << "Sort #" << cell->sorting_id << std::endl;
-  _ring_buffer->retrieval_finished();
-}
-
-template <uint32_t work_unit_size, uint32_t num_columns>
-void SharedMemoryReader<work_unit_size, num_columns>::_read_table_complete_cell(RingBufferCell * cell) {
-  std::cerr << "==> TABLE FINISHED" << std::endl;
-  _num_read_tables++;
-  _ring_buffer->retrieval_finished();
-}
-
-template <uint32_t work_unit_size, uint32_t num_columns>
-DataCell<work_unit_size, num_columns>* SharedMemoryReader<work_unit_size, num_columns>::_addressed_data_by_cell(
-    RingBufferCell * cell) {
-  return &_data_buffer->data[cell->data_buffer_offset / work_unit_size / num_columns / SHARED_MEMORY_FIELD_SIZE];
 }
 } // namespace hyrise

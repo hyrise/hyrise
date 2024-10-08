@@ -1,6 +1,5 @@
 #include <iostream>
 
-#include "types.hpp"
 #include "import_export/data_generation/shared_memory_reader.hpp"
 #include "import_export/data_generation/pdgf_process.hpp"
 
@@ -11,11 +10,13 @@
 using namespace hyrise;  // NOLINT(build/namespaces)
 
 int main() {
-  auto reader = SharedMemoryReader<128, 16>(SHARED_MEMORY_NAME, DATA_READY_SEM, BUFFER_FREE_SEM);
+  auto reader = SharedMemoryReader<128, 16>(ChunkOffset{4096}, SHARED_MEMORY_NAME, DATA_READY_SEM, BUFFER_FREE_SEM);
   auto pdgf = PdgfProcess(PDGF_DIRECTORY_ROOT);
   pdgf.run();
 
-  reader.read_data();
+  while (reader.has_next_table()) {
+    reader.read_next_table();
+  }
   pdgf.wait();
 
   std::cerr << "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n";

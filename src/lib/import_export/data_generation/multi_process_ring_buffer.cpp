@@ -3,7 +3,8 @@
 #include <stdexcept>
 #include <sys/mman.h>
 #include <iostream>
-#include "import_export/data_generation/multi_process_ring_buffer.hpp"
+
+#include "multi_process_ring_buffer.hpp"
 
 namespace hyrise {
 template <uint32_t buffer_size>

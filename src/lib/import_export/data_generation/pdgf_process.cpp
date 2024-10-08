@@ -22,6 +22,12 @@ void PdgfProcess::run() {
   }
   std::cout << "\n";
 
+//  bp::ipstream output;
+//  std::thread reader([&output] {
+//    std::string line;
+//    while (std::getline(output, line))
+//      std::cout << "Received: '" << line << "'" << std::endl;
+//  });
   _child = boost::process::child(
       "/usr/bin/numactl",
       boost::process::args(_arguments),
@@ -60,9 +66,9 @@ void PdgfProcess::_configure_pdgf_arguments() {
                                           "-load", "pdgf-core_config_tpc-h-schema.xml",
                                           "-load", "default-shm-reflective-generation.xml",
                                           "-noShell", "-closeWhenDone",
-                                          "-sf", "1",
+                                          "-sf", "0.1",
                                           "-workers", "1",
-                                          "-start"
+                                          "-start", "LINEITEM"
                                       });
 }
 }  // namespace hyrise

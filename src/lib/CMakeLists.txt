@@ -99,6 +99,9 @@ set(
     import_export/csv/csv_writer.hpp
     import_export/data_generation/multi_process_ring_buffer.cpp
     import_export/data_generation/multi_process_ring_buffer.hpp
+    import_export/data_generation/pdgf_table_builder.cpp
+    import_export/data_generation/pdgf_table_builder.hpp
+    import_export/data_generation/shared_memory_dto.hpp
     import_export/data_generation/shared_memory_reader.cpp
     import_export/data_generation/shared_memory_reader.hpp
     import_export/file_type.cpp
