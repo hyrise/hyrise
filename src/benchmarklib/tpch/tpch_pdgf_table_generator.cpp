@@ -60,10 +60,10 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHPDGFTableGenerator::gene
   /**
    * Generate tables
    */
+  auto table_builders = std::vector<std::unique_ptr<PDGFTableBuilder<128, 16>>>{};
   while (reader.has_next_table()) {
-    reader.read_next_table();
+    table_builders.emplace_back(reader.read_next_table());
   }
-
 
   /**
    * Await PDGF teardown
@@ -74,14 +74,9 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHPDGFTableGenerator::gene
    * Return
    */
   std::unordered_map<std::string, BenchmarkTableInfo> table_info_by_name;
-//  table_info_by_name["customer"].table = customer_table;
-//  table_info_by_name["orders"].table = orders_table;
-//  table_info_by_name["lineitem"].table = lineitem_table;
-//  table_info_by_name["part"].table = part_table;
-//  table_info_by_name["partsupp"].table = partsupp_table;
-//  table_info_by_name["supplier"].table = supplier_table;
-//  table_info_by_name["nation"].table = nation_table;
-//  table_info_by_name["region"].table = region_table;
+  for (auto& table_builder: table_builders) {
+    table_info_by_name[table_builder->table_name()].table = table_builder->build_table();
+  }
 
   if (_benchmark_config->cache_binary_tables) {
     std::filesystem::create_directories(cache_directory);

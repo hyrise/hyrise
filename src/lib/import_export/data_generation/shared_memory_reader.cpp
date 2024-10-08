@@ -63,31 +63,31 @@ bool SharedMemoryReader<work_unit_size, num_columns>::has_next_table() {
 }
 
 template <uint32_t work_unit_size, uint32_t num_columns>
-PDGFTableBuilder<work_unit_size, num_columns> SharedMemoryReader<work_unit_size, num_columns>::read_next_table() {
+std::unique_ptr<PDGFTableBuilder<work_unit_size, num_columns>> SharedMemoryReader<work_unit_size, num_columns>::read_next_table() {
   // Table schema
   auto ring_cell = _ring_buffer->prepare_retrieval();
   Assert(ring_cell->cell_type == RingBufferCellType::TableSchema, "First information received by PDGF should be table schema, was " + std::to_string(ring_cell->cell_type));
-  auto table_builder = PDGFTableBuilder<work_unit_size, num_columns>(ring_cell->table_id, _hyrise_table_chunk_size, ring_cell->table_num_rows);
+  auto table_builder = std::make_unique<PDGFTableBuilder<work_unit_size, num_columns>>(ring_cell->table_id, _hyrise_table_chunk_size, ring_cell->table_num_rows);
 
   auto data_slot = ring_cell->data_buffer_offset;
   auto addressed_data = _data_buffer->get_addressed_by(ring_cell);
   _num_tables_to_read = *((uint32_t*)addressed_data->data[0][0]);
   _ring_buffer->retrieval_finished();
 
-  table_builder.read_schema(addressed_data);
+  table_builder->read_schema(addressed_data);
   _return_data_slot(data_slot);
 
-  if (table_builder.expects_more_data()) {
+  if (table_builder->expects_more_data()) {
     // Generation info
     ring_cell = _ring_buffer->prepare_retrieval();
     Assert(ring_cell->cell_type == RingBufferCellType::TableGenerationInfo, "Did not receive table generation info, was " + std::to_string(ring_cell->cell_type));
     data_slot = ring_cell->data_buffer_offset;
     addressed_data = _data_buffer->get_addressed_by(ring_cell);
     _ring_buffer->retrieval_finished();
-    table_builder.read_generation_info(addressed_data);
+    table_builder->read_generation_info(addressed_data);
     _return_data_slot(data_slot);
 
-    while (table_builder.expects_more_data()) {
+    while (table_builder->expects_more_data()) {
       ring_cell = _ring_buffer->prepare_retrieval();
       Assert(ring_cell->cell_type == RingBufferCellType::Data, "Did not receive data, was " + std::to_string(ring_cell->cell_type));
       data_slot = ring_cell->data_buffer_offset;
@@ -95,7 +95,7 @@ PDGFTableBuilder<work_unit_size, num_columns> SharedMemoryReader<work_unit_size,
       auto sorting_id = ring_cell->sorting_id;
       addressed_data = _data_buffer->get_addressed_by(ring_cell);
       _ring_buffer->retrieval_finished();
-      table_builder.read_data(table_id, sorting_id, addressed_data);
+      table_builder->read_data(table_id, sorting_id, addressed_data);
       _return_data_slot(data_slot);
     }
 
@@ -107,7 +107,7 @@ PDGFTableBuilder<work_unit_size, num_columns> SharedMemoryReader<work_unit_size,
   _ring_buffer->retrieval_finished();
   _return_data_slot(ring_cell->data_buffer_offset);
 
-  return std::move(table_builder);
+  return table_builder;
 }
 
 template <uint32_t work_unit_size, uint32_t num_columns>
