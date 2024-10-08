@@ -444,6 +444,7 @@ TEST_F(SchedulerTest, GetThisThreadWorker) {
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
 }
 
+// `execute_next()` should only be called from within an active worker.
 TEST_F(SchedulerTest, ExecuteNextFromNonWorker) {
   if constexpr (!HYRISE_DEBUG) {
     GTEST_SKIP();
@@ -454,12 +455,9 @@ TEST_F(SchedulerTest, ExecuteNextFromNonWorker) {
   Hyrise::get().set_scheduler(node_queue_scheduler);
 
   EXPECT_EQ(node_queue_scheduler->workers().size(), 1);
-  std::cerr << "a\n";
   const auto& worker = node_queue_scheduler->workers()[0];
   EXPECT_EQ(node_queue_scheduler->active_worker_count(), 1);
-  std::cerr << "b\n";
   auto empty_task = std::make_shared<JobTask>([&]() {});
-  std::cerr << "c: " << worker->id() << "\n";
   EXPECT_THROW(worker->execute_next(empty_task), std::logic_error);
 }
 
