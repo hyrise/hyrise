@@ -293,27 +293,6 @@ TEST_F(SchedulerTest, DiamondDependenciesWithoutScheduler) {
   ASSERT_EQ(counter, 7);
 }
 
-TEST_F(SchedulerTest, SuccessorExpired) {
-  if constexpr (!HYRISE_DEBUG) {
-    GTEST_SKIP();
-  }
-
-  const auto task1 = std::make_shared<JobTask>([&]() {});
-  const auto task2 = std::make_shared<JobTask>([&]() {});
-  task1->set_as_predecessor_of(task2);
-
-  {
-    const auto task3 = std::make_shared<JobTask>([&]() {});
-    task2->set_as_predecessor_of(task3);
-  }
-
-  task1->schedule();
-  // When task2 finishes, it will not be able to obtain its successor task3 as it went out of scope.
-  ASSERT_THROW(task2->schedule(), std::bad_weak_ptr);
-
-  Hyrise::get().scheduler()->finish();
-}
-
 TEST_F(SchedulerTest, NotAllDependenciesPassedToScheduler) {
   if constexpr (!HYRISE_DEBUG) {
     GTEST_SKIP();
@@ -599,13 +578,21 @@ TEST_F(SchedulerTest, GetThisThreadWorker) {
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
 }
 
+// `execute_next()` should only be called from within an active worker.
 TEST_F(SchedulerTest, ExecuteNextFromNonWorker) {
+  if constexpr (!HYRISE_DEBUG) {
+    GTEST_SKIP();
+  }
+
   const auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
   Hyrise::get().topology.use_fake_numa_topology(1, 1);
   Hyrise::get().set_scheduler(node_queue_scheduler);
 
+  EXPECT_EQ(node_queue_scheduler->workers().size(), 1);
+  const auto& worker = node_queue_scheduler->workers()[0];
+  EXPECT_EQ(node_queue_scheduler->active_worker_count(), 1);
   auto empty_task = std::make_shared<JobTask>([&]() {});
-  EXPECT_THROW(node_queue_scheduler->workers()[0]->execute_next(empty_task), std::logic_error);
+  EXPECT_THROW(worker->execute_next(empty_task), std::logic_error);
 }
 
 }  // namespace hyrise

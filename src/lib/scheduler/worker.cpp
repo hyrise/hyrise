@@ -138,7 +138,7 @@ void Worker::_work(const AllowSleep allow_sleep) {
 }
 
 void Worker::execute_next(const std::shared_ptr<AbstractTask>& task) {
-  DebugAssert(&*get_this_thread_worker() == this,
+  DebugAssert(get_this_thread_worker() && &*get_this_thread_worker() == this,
               "execute_next must be called from the same thread that the worker works in.");
   if (!_next_task) {
     const auto successfully_enqueued = task->try_mark_as_enqueued();
