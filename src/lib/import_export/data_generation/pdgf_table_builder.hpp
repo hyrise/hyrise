@@ -1,6 +1,10 @@
 #pragma once
 
 #include <cstdint>
+#include <string>
+#include <memory>
+#include <vector>
+#include <array>
 
 #include "shared_memory_dto.hpp"
 #include "pdgf_column.hpp"
@@ -14,8 +18,8 @@ class PDGFTableBuilder : Noncopyable {
  public:
   explicit PDGFTableBuilder(uint32_t table_id, ChunkOffset hyrise_table_chunk_size);
 
-  bool expects_more_data();
-  std::string table_name();
+  bool expects_more_data() const;
+  std::string table_name() const;
   std::shared_ptr<Table> build_table();
 
   void read_schema(SharedMemoryDataCell<work_unit_size, num_columns>* schema_cell);

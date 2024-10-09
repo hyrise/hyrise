@@ -10,7 +10,7 @@ namespace hyrise {
 enum RingBufferCellType { Noop = 42u, TableSchema = 1u, TableGenerationInfo = 2u, Data = 3u, TableCompleted = 4u };
 
 struct RingBufferCell {
-  RingBufferCellType cell_type;  // TODO: using uints might break
+  RingBufferCellType cell_type;  // TODO(JEH): using uints might break
   uint32_t data_buffer_offset;
   uint32_t table_id;
   uint32_t pad;

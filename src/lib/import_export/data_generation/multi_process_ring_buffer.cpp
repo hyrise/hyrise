@@ -3,8 +3,10 @@
 #include <stdexcept>
 #include <sys/mman.h>
 #include <iostream>
+#include <cstdint>
 
 #include "multi_process_ring_buffer.hpp"
+#include "shared_memory_dto.hpp"
 
 namespace hyrise {
 template <uint32_t buffer_size>
@@ -41,18 +43,18 @@ MultiProcessRingBuffer<buffer_size>::MultiProcessRingBuffer(int shm_fd, uint32_t
 template <uint32_t buffer_size>
 MultiProcessRingBuffer<buffer_size>::~MultiProcessRingBuffer() {
   if (_ring_buffer != MAP_FAILED) {
-    std::cerr << "Unmapping ring buffer" << std::endl;
+    std::cerr << "Unmapping ring buffer\n";
     munmap(_ring_buffer, sizeof(RingBuffer<buffer_size>));
   }
 
   if (_data_available_semaphore != SEM_FAILED) {
-    std::cerr << "Unlinking semaphore" << std::endl;
+    std::cerr << "Unlinking semaphore\n";
     sem_close(_data_available_semaphore);
     sem_unlink(_data_available_sem_path);
   }
 
   if (_data_written_semaphore != SEM_FAILED) {
-    std::cerr << "Unlinking semaphore" << std::endl;
+    std::cerr << "Unlinking semaphore\n";
     sem_close(_data_written_semaphore);
     sem_unlink(_data_written_sem_path);
   }

@@ -1,9 +1,8 @@
 #pragma once
 
-#include <cstdint>
-#include <memory>
 #include <semaphore.h>
 #include <mutex>
+#include <cstdint>
 
 #include "shared_memory_dto.hpp"
 #include "types.hpp"

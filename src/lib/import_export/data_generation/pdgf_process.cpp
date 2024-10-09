@@ -1,6 +1,8 @@
+#include <utility>
+#include <string>
+
 #include "pdgf_process.hpp"
 
-#include <utility>
 
 namespace hyrise {
 
@@ -68,7 +70,7 @@ void PdgfProcess::_configure_pdgf_arguments() {
                                           "-noShell", "-closeWhenDone",
                                           "-sf", "0.1",
                                           "-workers", "1",
-                                          "-start", "LINEITEM"
+                                          "-start", "NATION"
                                       });
 }
 }  // namespace hyrise

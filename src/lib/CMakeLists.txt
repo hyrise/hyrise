@@ -99,6 +99,10 @@ set(
     import_export/csv/csv_writer.hpp
     import_export/data_generation/multi_process_ring_buffer.cpp
     import_export/data_generation/multi_process_ring_buffer.hpp
+    import_export/data_generation/abstract_pdgf_column.cpp
+    import_export/data_generation/abstract_pdgf_column.hpp
+    import_export/data_generation/non_generated_pdgf_column.cpp
+    import_export/data_generation/non_generated_pdgf_column.hpp
     import_export/data_generation/pdgf_column.cpp
     import_export/data_generation/pdgf_column.hpp
     import_export/data_generation/pdgf_table_builder.cpp

@@ -58,7 +58,7 @@ SharedMemoryReader<work_unit_size, num_columns>::~SharedMemoryReader() {
 }
 
 template <uint32_t work_unit_size, uint32_t num_columns>
-bool SharedMemoryReader<work_unit_size, num_columns>::has_next_table() {
+bool SharedMemoryReader<work_unit_size, num_columns>::has_next_table() const {
   return _num_read_tables < _num_tables_to_read;
 }
 

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+#include <vector>
 #include <boost/process.hpp>
 
 namespace hyrise {

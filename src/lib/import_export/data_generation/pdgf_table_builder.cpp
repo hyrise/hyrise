@@ -1,6 +1,21 @@
+#include <algorithm>
+#include <cstdint>
+#include <cstddef>
+#include <iostream>
+#include <string>
+
 #include "boost/algorithm/string.hpp"
 
+#include "abstract_pdgf_column.hpp"
+#include "non_generated_pdgf_column.hpp"
 #include "pdgf_table_builder.hpp"
+#include "pdgf_column.hpp"
+#include "shared_memory_dto.hpp"
+#include "storage/mvcc_data.hpp"
+#include "storage/table.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
+
 
 namespace hyrise {
 
@@ -9,20 +24,18 @@ PDGFTableBuilder<work_unit_size, num_columns>::PDGFTableBuilder(uint32_t table_i
     : _hyrise_table_chunk_size(hyrise_table_chunk_size), _table_id(table_id) {}
 
 template <uint32_t work_unit_size, uint32_t num_columns>
-bool PDGFTableBuilder<work_unit_size, num_columns>::expects_more_data() {
+bool PDGFTableBuilder<work_unit_size, num_columns>::expects_more_data() const {
     return _table_will_be_generated && _received_rows < _table_num_rows;
 }
 
 template <uint32_t work_unit_size, uint32_t num_columns>
-std::string PDGFTableBuilder<work_unit_size, num_columns>::table_name() {
+std::string PDGFTableBuilder<work_unit_size, num_columns>::table_name() const {
   return _table_name;
 }
 
 template <uint32_t work_unit_size, uint32_t num_columns>
 std::shared_ptr<Table> PDGFTableBuilder<work_unit_size, num_columns>::build_table() {
-  // TODO: empty tables? do I need to at least generate dummy segments for all columns there?
-
-  Assert(_table_columns.size() > 0, "Table schema should have at least one column!");
+  Assert(!_table_columns.empty(), "Table schema should have at least one column!");
 
   // Assemble table metadata
   auto table_column_definitions = TableColumnDefinitions{};
@@ -58,7 +71,7 @@ void PDGFTableBuilder<work_unit_size, num_columns>::read_schema(SharedMemoryData
   _table_num_rows = * reinterpret_cast<int64_t*>(schema_cell->data[2][0]);
   _table_will_be_generated = * reinterpret_cast<bool*>(schema_cell->data[3][0]);
   std::cerr << "--- FIELDS OVERVIEW\n";
-  // TODO: mention possible endianess problems in thesis
+  // TODO(JEH): mention possible endianess problems in thesis
   auto table_num_columns = * reinterpret_cast<uint32_t*>(schema_cell->data[4][0]);
   for (uint32_t i = 0; i < table_num_columns; ++i) {
     auto column_name = std::string(schema_cell->data[5 + (2 * i)][0]);
@@ -104,7 +117,7 @@ void PDGFTableBuilder<work_unit_size, num_columns>::read_data(uint32_t table_id,
   auto cell_rows = static_cast<size_t>(std::min(_table_num_rows - _received_rows, static_cast<int64_t>(work_unit_size)));
   for (auto row = size_t{0}; row < cell_rows; ++row) {
     for (auto col = uint8_t{0}; col < _num_generated_columns; ++col) {
-      _generated_columns[col]->add(sorting_id * work_unit_size + row, data_cell->data[row][col]);
+      _generated_columns[col]->add((sorting_id * work_unit_size) + row, data_cell->data[row][col]);
     }
   }
   _received_rows += cell_rows;
