@@ -27,12 +27,14 @@ class AbstractPDGFColumn: private Noncopyable {
 
 class NonGeneratedPDGFColumn : public AbstractPDGFColumn {
  public:
-  explicit NonGeneratedPDGFColumn(int64_t num_rows, ChunkOffset chunk_size);
+  explicit NonGeneratedPDGFColumn(DataType data_type, int64_t num_rows, ChunkOffset chunk_size);
   void add(int64_t row, char* data);
   bool has_another_segment();
   std::shared_ptr<AbstractSegment> build_next_segment();
 
  protected:
+  DataType _data_type;
+
   uint8_t _num_built_segments = 0;
   uint8_t _total_segments;
 };

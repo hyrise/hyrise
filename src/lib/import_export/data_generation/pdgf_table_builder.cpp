@@ -66,7 +66,7 @@ void PDGFTableBuilder<work_unit_size, num_columns>::read_schema(SharedMemoryData
 
     _table_column_names.push_back(std::move(column_name));
     _table_column_types.push_back(column_type);
-    _table_columns.emplace_back(std::make_shared<NonGeneratedPDGFColumn>(_table_num_rows, _hyrise_table_chunk_size));
+    _table_columns.emplace_back(std::make_shared<NonGeneratedPDGFColumn>(hyrise_type_for_column_type(column_type), _table_num_rows, _hyrise_table_chunk_size));
   }
 }
 

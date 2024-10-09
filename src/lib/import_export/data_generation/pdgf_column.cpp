@@ -18,7 +18,7 @@ DataType hyrise_type_for_column_type(ColumnType column_type) {
 
 AbstractPDGFColumn::AbstractPDGFColumn(int64_t num_rows, ChunkOffset chunk_size) : _num_rows(num_rows), _chunk_size(chunk_size) {}
 
-NonGeneratedPDGFColumn::NonGeneratedPDGFColumn(int64_t num_rows, ChunkOffset chunk_size) : AbstractPDGFColumn(num_rows, chunk_size), _total_segments((num_rows / chunk_size) + 1) {}
+NonGeneratedPDGFColumn::NonGeneratedPDGFColumn(DataType data_type, int64_t num_rows, ChunkOffset chunk_size) : AbstractPDGFColumn(num_rows, chunk_size), _data_type(data_type), _total_segments((num_rows / chunk_size) + 1) {}
 
 void NonGeneratedPDGFColumn::add(int64_t row, char* data) {
   throw std::logic_error("Cannot add data to non-generated column!");
@@ -29,7 +29,10 @@ bool NonGeneratedPDGFColumn::has_another_segment() {
 }
 
 std::shared_ptr<AbstractSegment> NonGeneratedPDGFColumn::build_next_segment() {
-  return {}; // TODO std::make_shared<DummySegment>();
+  auto chunk_size = std::min(_chunk_size, static_cast<ChunkOffset>(_num_rows - _total_segments * _num_built_segments));
+  auto segment = std::make_shared<DummySegment>(_data_type, chunk_size);
+  _num_built_segments++;
+  return segment;
 }
 
 template <typename T>
