@@ -52,8 +52,10 @@ std::vector<std::pair<JoinGraphVertexSet, JoinGraphVertexSet>> EnumerateCcp::ope
    * each vertex (`_enumerate_csg_recursive()`). For each subgraph, a search for complement subgraphs is started
    * (`_enumerate_cmp()`).
    */
+  auto start_vertex_set = JoinGraphVertexSet(_num_vertices);
   for (auto vertex_idx = static_cast<int32_t>(_num_vertices) - 1; vertex_idx >= 0; --vertex_idx) {
-    auto start_vertex_set = JoinGraphVertexSet(_num_vertices);
+    // Using `reset()` rather than a local object avoids allocations. This was slightly faster in a micro-benchmark.
+    start_vertex_set.reset();
     start_vertex_set.set(vertex_idx);
     _enumerate_cmp(start_vertex_set);
 
