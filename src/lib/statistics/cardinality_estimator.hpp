@@ -86,8 +86,6 @@ class CardinalityEstimator {
         const std::optional<AllTypeVariant>& /*variant_value2*/ = std::nullopt) const override;
   };
 
-  /** @} */
-
   /**
    * Statistics caching
    * @{

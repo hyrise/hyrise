@@ -101,7 +101,7 @@ std::shared_ptr<const BaseAttributeStatistics> CardinalityEstimator::DummyStatis
 std::shared_ptr<const BaseAttributeStatistics> CardinalityEstimator::DummyStatistics::sliced(
     const PredicateCondition /*predicate_condition*/, const AllTypeVariant& /*variant_value*/,
     const std::optional<AllTypeVariant>& /*variant_value2*/) const {
-  Fail("DummyStatistics should not be used for actual estimations. Was the required column pruned?");
+  Fail("DummyStatistics should not be used for actual estimations. Was the required column accidentally pruned?");
 }
 
 std::ostream& operator<<(std::ostream& stream, const CardinalityEstimator::DummyStatistics& /*dummy_statistics*/) {
@@ -205,7 +205,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
 
     case LQPNodeType::Mock: {
       const auto& mock_node = static_cast<const MockNode&>(*lqp);
-      Assert(mock_node.table_statistics(), "Cannot return statistics of MockNode that was not assigned statistics");
+      Assert(mock_node.table_statistics(), "Cannot return statistics of MockNode that has no assigned statistics.");
       output_table_statistics = prune_column_statistics(mock_node.table_statistics(), mock_node.pruned_column_ids());
     } break;
 
@@ -229,7 +229,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
       const auto& table_statistics = static_table_node.table->table_statistics();
       // StaticTableNodes may or may not provide statistics. If there are statistics, prune and forward them.
       if (table_statistics) {
-        output_table_statistics = prune_column_statistics(table_statistics, std::vector<ColumnID>{});
+        output_table_statistics = table_statistics;
         break;
       }
 

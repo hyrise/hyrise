@@ -152,9 +152,9 @@ TEST_F(CardinalityEstimatorTest, Aggregate) {
   ASSERT_EQ(result_table_statistics->column_statistics.size(), 3);
   EXPECT_EQ(result_table_statistics->column_statistics.at(0), input_table_statistics->column_statistics.at(1));
   EXPECT_TRUE(
-      dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*result_table_statistics->column_statistics.at(2)));
-  EXPECT_TRUE(
       dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*result_table_statistics->column_statistics.at(1)));
+  EXPECT_TRUE(
+      dynamic_cast<const CardinalityEstimator::DummyStatistics*>(&*result_table_statistics->column_statistics.at(2)));
 }
 
 TEST_F(CardinalityEstimatorTest, Alias) {

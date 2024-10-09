@@ -52,13 +52,13 @@ std::vector<std::pair<JoinGraphVertexSet, JoinGraphVertexSet>> EnumerateCcp::ope
    * each vertex (`_enumerate_csg_recursive()`). For each subgraph, a search for complement subgraphs is started
    * (`_enumerate_cmp()`).
    */
-  for (auto vertex_idx = _num_vertices; vertex_idx > 0; --vertex_idx) {
+  for (auto vertex_idx = static_cast<int32_t>(_num_vertices) - 1; vertex_idx >= 0; --vertex_idx) {
     auto start_vertex_set = JoinGraphVertexSet(_num_vertices);
-    start_vertex_set.set(vertex_idx - 1);
+    start_vertex_set.set(vertex_idx);
     _enumerate_cmp(start_vertex_set);
 
     auto csgs = std::vector<JoinGraphVertexSet>{};
-    _enumerate_csg_recursive(csgs, start_vertex_set, _exclusion_set(vertex_idx - 1));
+    _enumerate_csg_recursive(csgs, start_vertex_set, _exclusion_set(vertex_idx));
     for (const auto& csg : csgs) {
       _enumerate_cmp(csg);
     }
@@ -138,7 +138,7 @@ void EnumerateCcp::_enumerate_cmp(const JoinGraphVertexSet& primary_vertex_set) 
     _csg_cmp_pairs.emplace_back(primary_vertex_set, cmp_vertex_set);
 
     // In the original paper, the extended exclusion set is the union of the exclusion set and the neighborhood.
-    // However, we use the corrected version fron the errata: union of the exclusion set and the exclusion set of the
+    // However, we use the corrected version from the errata: union of the exclusion set and the exclusion set of the
     // neighborhood.
     const auto extended_exclusion_set = exclusion_set | (_exclusion_set(*iter) & neighborhood);
 
