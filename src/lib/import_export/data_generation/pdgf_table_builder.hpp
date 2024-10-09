@@ -9,8 +9,6 @@
 
 namespace hyrise {
 
-enum ColumnType: uint32_t { STRING = 0, INTEGER = 1, LONG = 2, FLOAT = 3, BOOL = 4 };
-
 template <uint32_t work_unit_size, uint32_t num_columns>
 class PDGFTableBuilder : Noncopyable {
  public:
@@ -36,10 +34,9 @@ class PDGFTableBuilder : Noncopyable {
 
   std::vector<std::string> _table_column_names;
   std::vector<ColumnType> _table_column_types;
+  std::vector<std::shared_ptr<AbstractPDGFColumn>> _table_columns;
 
   uint8_t _num_generated_columns;
-  std::array<ColumnType, num_columns> _generated_column_types;
-  std::array<size_t, num_columns> _generated_column_full_table_mappings;
   std::array<std::shared_ptr<AbstractPDGFColumn>, num_columns> _generated_columns;
 };
 

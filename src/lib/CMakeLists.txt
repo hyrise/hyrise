@@ -476,6 +476,8 @@ set(
     storage/dictionary_segment/attribute_vector_iterable.hpp
     storage/dictionary_segment/dictionary_encoder.hpp
     storage/dictionary_segment/dictionary_segment_iterable.hpp
+    storage/dummy_segment.cpp
+    storage/dummy_segment.hpp
     storage/encoding_type.cpp
     storage/encoding_type.hpp
     storage/fixed_string_dictionary_segment.cpp

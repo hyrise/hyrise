@@ -20,6 +20,8 @@ std::string PDGFTableBuilder<work_unit_size, num_columns>::table_name() {
 
 template <uint32_t work_unit_size, uint32_t num_columns>
 std::shared_ptr<Table> PDGFTableBuilder<work_unit_size, num_columns>::build_table() {
+  // TODO: empty tables? do I need to at least generate dummy segments for all columns there?
+
   return {};
 }
 
@@ -40,8 +42,10 @@ void PDGFTableBuilder<work_unit_size, num_columns>::read_schema(SharedMemoryData
     boost::algorithm::to_lower(_table_name);
     auto column_type = * reinterpret_cast<ColumnType*>(schema_cell->data[4 + (2 * i)][0]);
     std::cerr << i << " " << column_name << " " << column_type << "\n";
+
     _table_column_names.push_back(std::move(column_name));
     _table_column_types.push_back(column_type);
+    _table_columns.emplace_back(std::make_shared<NonGeneratedPDGFColumn>(_table_num_rows, _hyrise_table_chunk_size));
   }
 }
 
@@ -60,10 +64,12 @@ void PDGFTableBuilder<work_unit_size, num_columns>::read_generation_info(SharedM
     auto find = std::find(_table_column_names.begin(), _table_column_names.end(), column_name);
     Assert(find != _table_column_names.end(), "Trying to generate column " + column_name + " that does not belong to the table!");
     auto mapping_index = std::distance(_table_column_names.begin(), find);
-    _generated_column_full_table_mappings[i] = mapping_index;
     auto generated_column_type = _table_column_types[mapping_index];
     std::cerr << i << " " << column_name << " corresponds to index " << mapping_index << " (type " << generated_column_type << ")\n";
     _generated_columns[i] = _new_column_with_data_type(generated_column_type);
+
+    // replace this column in the table columns
+    _table_columns[mapping_index] = _generated_columns[i];
   }
 }
 
@@ -85,14 +91,14 @@ template <uint32_t work_unit_size, uint32_t num_columns>
 std::shared_ptr<AbstractPDGFColumn> PDGFTableBuilder<work_unit_size, num_columns>::_new_column_with_data_type(ColumnType type) {
   switch (type) {
     case ColumnType::STRING:
-      return std::make_shared<PDGFColumn<pmr_string>>(_hyrise_table_chunk_size, _table_num_rows);
+      return std::make_shared<PDGFColumn<pmr_string>>(_table_num_rows, _hyrise_table_chunk_size);
     case BOOL:
     case INTEGER:
-      return std::make_shared<PDGFColumn<int32_t>>(_hyrise_table_chunk_size, _table_num_rows);
+      return std::make_shared<PDGFColumn<int32_t>>(_table_num_rows, _hyrise_table_chunk_size);
     case LONG:
-      return std::make_shared<PDGFColumn<int64_t>>(_hyrise_table_chunk_size, _table_num_rows);
+      return std::make_shared<PDGFColumn<int64_t>>(_table_num_rows, _hyrise_table_chunk_size);
     case FLOAT:
-      return std::make_shared<PDGFColumn<double>>(_hyrise_table_chunk_size, _table_num_rows);
+      return std::make_shared<PDGFColumn<double>>(_table_num_rows, _hyrise_table_chunk_size);
     default:
       throw std::runtime_error("Unknown column type encountered!");
   }

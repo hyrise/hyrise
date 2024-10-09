@@ -1,12 +1,29 @@
 #include <vector>
 
 #include "pdgf_column.hpp"
+#include "storage/dummy_segment.hpp"
 
 namespace hyrise {
+AbstractPDGFColumn::AbstractPDGFColumn(int64_t num_rows, ChunkOffset chunk_size) : _num_rows(num_rows), _chunk_size(chunk_size) {}
+
+NonGeneratedPDGFColumn::NonGeneratedPDGFColumn(int64_t num_rows, ChunkOffset chunk_size) : AbstractPDGFColumn(num_rows, chunk_size), _total_segments((num_rows / chunk_size) + 1) {}
+
+void NonGeneratedPDGFColumn::add(int64_t row, char* data) {
+  throw std::logic_error("Cannot add data to non-generated column!");
+}
+
+bool NonGeneratedPDGFColumn::has_another_segment() {
+  return _num_built_segments < _total_segments;
+}
+
+std::shared_ptr<AbstractSegment> NonGeneratedPDGFColumn::build_next_segment() {
+  return {}; // TODO std::make_shared<DummySegment>();
+}
+
 template <typename T>
-PDGFColumn<T>::PDGFColumn(ChunkOffset chunk_size, int64_t num_rows) : _chunk_size(chunk_size), _num_rows(num_rows) {
+PDGFColumn<T>::PDGFColumn(int64_t num_rows, ChunkOffset chunk_size) : AbstractPDGFColumn( num_rows, chunk_size) {
   for (auto row = int64_t{0}; row < _num_rows; row += _chunk_size) {
-    auto chunk_vector = std::vector<T>{};
+    auto chunk_vector = pmr_vector<T>{};
     chunk_vector.resize(std::min(static_cast<ChunkOffset>(_num_rows - row), chunk_size));
     _data_segments.emplace_back(std::move(chunk_vector));
   }
@@ -16,17 +33,29 @@ template <typename T>
 void PDGFColumn<T>::add(int64_t row, char* data) {
   auto segment_index = row / _chunk_size;
   auto segment_position = row % _chunk_size;
-
-  auto value = * reinterpret_cast<T*>(data);
-  _data_segments[segment_index][segment_position] = std::move(value);
+  _data_segments[segment_index][segment_position] = * reinterpret_cast<T*>(data);
 }
+
+template <typename T>
+bool PDGFColumn<T>::has_another_segment() {
+  return _num_built_segments < _data_segments.size();
+}
+
+template <typename T>
+std::shared_ptr<AbstractSegment> PDGFColumn<T>::build_next_segment() {
+  Assert(_num_built_segments < _data_segments.size(), "There are no segments left to build!");
+  auto next_build_index = _num_built_segments;
+  auto segment = std::make_shared<ValueSegment<T>>(std::move(_data_segments[next_build_index]));
+  _num_built_segments++;
+  return segment;
+}
+
 
 template<>
 void PDGFColumn<pmr_string>::add(int64_t row, char* data) {
   auto segment_index = row / _chunk_size;
   auto segment_position = row % _chunk_size;
 
-  auto value = pmr_string(data);
-  _data_segments[segment_index][segment_position] = std::move(value);
+  _data_segments[segment_index][segment_position] = pmr_string(data);
 }
 } // namespace hyrise
