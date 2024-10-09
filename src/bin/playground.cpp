@@ -10,7 +10,7 @@
 using namespace hyrise;  // NOLINT(build/namespaces)
 
 int main() {
-  auto reader = SharedMemoryReader<128, 16>(ChunkOffset{4096}, SHARED_MEMORY_NAME, DATA_READY_SEM, BUFFER_FREE_SEM);
+  auto reader = SharedMemoryReader<128, 16>(Chunk::DEFAULT_SIZE, SHARED_MEMORY_NAME, DATA_READY_SEM, BUFFER_FREE_SEM);
   auto pdgf = PdgfProcess(PDGF_DIRECTORY_ROOT);
   pdgf.run();
 
