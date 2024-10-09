@@ -22,7 +22,28 @@ template <uint32_t work_unit_size, uint32_t num_columns>
 std::shared_ptr<Table> PDGFTableBuilder<work_unit_size, num_columns>::build_table() {
   // TODO: empty tables? do I need to at least generate dummy segments for all columns there?
 
-  return {};
+  Assert(_table_columns.size() > 0, "Table schema should have at least one column!");
+
+  // Assemble table metadata
+  auto table_column_definitions = TableColumnDefinitions{};
+  for (auto i = size_t{0}; i < _table_column_names.size(); ++i) {
+    table_column_definitions.emplace_back(_table_column_names[i], hyrise_type_for_column_type(_table_column_types[i]), false);
+  }
+  auto table = std::make_shared<Table>(table_column_definitions, TableType::Data, _hyrise_table_chunk_size, UseMvcc::Yes);
+
+  // Assemble table data
+  while (_table_columns[0]->has_another_segment()) {
+    auto segments = Segments{};
+    for (auto& column : _table_columns) {
+      Assert(column->has_another_segment(), "All table columns should have the same number of segments!");
+      segments.emplace_back(column->build_next_segment());
+    }
+    auto mvcc_data = std::make_shared<MvccData>(segments.front()->size(), CommitID{0});
+
+    table->append_chunk(segments, mvcc_data);
+  }
+
+  return table;
 }
 
 template <uint32_t work_unit_size, uint32_t num_columns>
@@ -97,7 +118,7 @@ std::shared_ptr<AbstractPDGFColumn> PDGFTableBuilder<work_unit_size, num_columns
       return std::make_shared<PDGFColumn<int32_t>>(_table_num_rows, _hyrise_table_chunk_size);
     case LONG:
       return std::make_shared<PDGFColumn<int64_t>>(_table_num_rows, _hyrise_table_chunk_size);
-    case FLOAT:
+    case DOUBLE:
       return std::make_shared<PDGFColumn<double>>(_table_num_rows, _hyrise_table_chunk_size);
     default:
       throw std::runtime_error("Unknown column type encountered!");

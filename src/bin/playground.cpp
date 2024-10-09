@@ -14,8 +14,10 @@ int main() {
   auto pdgf = PdgfProcess(PDGF_DIRECTORY_ROOT);
   pdgf.run();
 
+  auto tables = std::map<std::string, std::shared_ptr<Table>>{};
   while (reader.has_next_table()) {
-    reader.read_next_table();
+    auto builder = reader.read_next_table();
+    tables[builder->table_name()] = builder->build_table();
   }
   pdgf.wait();
 
