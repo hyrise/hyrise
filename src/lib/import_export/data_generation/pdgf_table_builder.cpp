@@ -60,7 +60,7 @@ void PDGFTableBuilder<work_unit_size, num_columns>::read_schema(SharedMemoryData
   auto table_num_columns = * reinterpret_cast<uint32_t*>(schema_cell->data[2][0]);
   for (uint32_t i = 0; i < table_num_columns; ++i) {
     auto column_name = std::string(schema_cell->data[3 + (2 * i)][0]);
-    boost::algorithm::to_lower(_table_name);
+    boost::algorithm::to_lower(column_name);
     auto column_type = * reinterpret_cast<ColumnType*>(schema_cell->data[4 + (2 * i)][0]);
     std::cerr << i << " " << column_name << " " << column_type << "\n";
 
@@ -80,7 +80,7 @@ void PDGFTableBuilder<work_unit_size, num_columns>::read_generation_info(SharedM
   _num_generated_columns = static_cast<uint8_t>(num_generated_columns);
   for (auto i = uint8_t{0}; i < _num_generated_columns; ++i) {
     auto column_name = std::string(info_cell->data[2 + i][0]);
-    boost::algorithm::to_lower(_table_name);
+    boost::algorithm::to_lower(column_name);
 
     auto find = std::find(_table_column_names.begin(), _table_column_names.end(), column_name);
     Assert(find != _table_column_names.end(), "Trying to generate column " + column_name + " that does not belong to the table!");
