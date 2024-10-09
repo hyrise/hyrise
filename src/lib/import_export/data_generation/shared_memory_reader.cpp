@@ -67,7 +67,7 @@ std::unique_ptr<PDGFTableBuilder<work_unit_size, num_columns>> SharedMemoryReade
   // Table schema
   auto ring_cell = _ring_buffer->prepare_retrieval();
   Assert(ring_cell->cell_type == RingBufferCellType::TableSchema, "First information received by PDGF should be table schema, was " + std::to_string(ring_cell->cell_type));
-  auto table_builder = std::make_unique<PDGFTableBuilder<work_unit_size, num_columns>>(ring_cell->table_id, _hyrise_table_chunk_size, ring_cell->table_num_rows);
+  auto table_builder = std::make_unique<PDGFTableBuilder<work_unit_size, num_columns>>(ring_cell->table_id, _hyrise_table_chunk_size);
 
   auto data_slot = ring_cell->data_buffer_offset;
   auto addressed_data = _data_buffer->get_addressed_by(ring_cell);

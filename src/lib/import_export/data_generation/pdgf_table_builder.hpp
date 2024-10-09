@@ -12,7 +12,7 @@ namespace hyrise {
 template <uint32_t work_unit_size, uint32_t num_columns>
 class PDGFTableBuilder : Noncopyable {
  public:
-  explicit PDGFTableBuilder(uint32_t table_id, ChunkOffset hyrise_table_chunk_size, int64_t table_num_rows);
+  explicit PDGFTableBuilder(uint32_t table_id, ChunkOffset hyrise_table_chunk_size);
 
   bool expects_more_data();
   std::string table_name();
@@ -29,6 +29,7 @@ class PDGFTableBuilder : Noncopyable {
 
   uint32_t _table_id;
   std::string _table_name;
+  bool _table_will_be_generated;
   int64_t _table_num_rows;
   int64_t _received_rows = 0;
 

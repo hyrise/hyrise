@@ -15,8 +15,7 @@ struct RingBufferCell {
   uint32_t table_id;
   uint32_t pad;
   int64_t sorting_id;
-  int64_t table_num_rows;
-  uint32_t padding[8];
+  uint32_t padding[10];
 };
 
 template <uint32_t buffer_size>

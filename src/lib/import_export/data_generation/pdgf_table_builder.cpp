@@ -5,12 +5,12 @@
 namespace hyrise {
 
 template <uint32_t work_unit_size, uint32_t num_columns>
-PDGFTableBuilder<work_unit_size, num_columns>::PDGFTableBuilder(uint32_t table_id, ChunkOffset hyrise_table_chunk_size, int64_t table_num_rows)
-    : _hyrise_table_chunk_size(hyrise_table_chunk_size), _table_id(table_id), _table_num_rows(table_num_rows) {}
+PDGFTableBuilder<work_unit_size, num_columns>::PDGFTableBuilder(uint32_t table_id, ChunkOffset hyrise_table_chunk_size)
+    : _hyrise_table_chunk_size(hyrise_table_chunk_size), _table_id(table_id) {}
 
 template <uint32_t work_unit_size, uint32_t num_columns>
 bool PDGFTableBuilder<work_unit_size, num_columns>::expects_more_data() {
-    return _received_rows < _table_num_rows;
+    return _table_will_be_generated && _received_rows < _table_num_rows;
 }
 
 template <uint32_t work_unit_size, uint32_t num_columns>
@@ -55,13 +55,15 @@ void PDGFTableBuilder<work_unit_size, num_columns>::read_schema(SharedMemoryData
   _table_name = std::string(schema_cell->data[1][0]);
   boost::algorithm::to_lower(_table_name);
   std::cerr << "TABLE NAME " << _table_name << "\n";
+  _table_num_rows = * reinterpret_cast<int64_t*>(schema_cell->data[2][0]);
+  _table_will_be_generated = * reinterpret_cast<bool*>(schema_cell->data[3][0]);
   std::cerr << "--- FIELDS OVERVIEW\n";
   // TODO: mention possible endianess problems in thesis
-  auto table_num_columns = * reinterpret_cast<uint32_t*>(schema_cell->data[2][0]);
+  auto table_num_columns = * reinterpret_cast<uint32_t*>(schema_cell->data[4][0]);
   for (uint32_t i = 0; i < table_num_columns; ++i) {
-    auto column_name = std::string(schema_cell->data[3 + (2 * i)][0]);
+    auto column_name = std::string(schema_cell->data[5 + (2 * i)][0]);
     boost::algorithm::to_lower(column_name);
-    auto column_type = * reinterpret_cast<ColumnType*>(schema_cell->data[4 + (2 * i)][0]);
+    auto column_type = * reinterpret_cast<ColumnType*>(schema_cell->data[6 + (2 * i)][0]);
     std::cerr << i << " " << column_name << " " << column_type << "\n";
 
     _table_column_names.push_back(std::move(column_name));
