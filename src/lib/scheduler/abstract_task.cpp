@@ -152,7 +152,7 @@ void AbstractTask::execute() {
 
   {
     // We set the task's state to done after informing all successors. It can happen that a successor (that
-    // can not be executed until its predessors are done) is both scheduled and pulled by a worker and at the same time
+    // cannot be executed until its predessors are done) is both scheduled and pulled by a worker and at the same time
     // executed here by the current worker.
     // Note, informing successors does not block the current task (unless we use the ImmediateExecutionScheduler).
     const auto success_done = _try_transition_to(TaskState::Done);
