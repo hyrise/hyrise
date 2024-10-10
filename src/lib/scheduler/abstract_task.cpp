@@ -143,7 +143,7 @@ void AbstractTask::execute() {
     // macOS silently ignores non-reachable successors (see `SuccessorExpired` test). Thus, we obtain a shared pointer
     // here which also causes macOS to recognize that the successor is not accessible (note, the following line fails
     // with an std::bad_weak_ptr exception before testing the assertion).
-    DebugAssert(successor.get().shared_from_this(), "Cannot obtain successor");
+    DebugAssert(successor.get().shared_from_this(), "Cannot obtain successor.");
 
     // The task creator is responsible to ensure that successor tasks are available whenever an executed task tries to
     // execute/accesss its successors.
