@@ -18,13 +18,27 @@
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/operator_task.hpp"
 
+namespace {
+
+using namespace hyrise;  // NOLINT(build/namespaces)
+
+void successors_equal(auto& lhs, const std::vector<std::shared_ptr<AbstractTask>>& rhs) {
+  ASSERT_EQ(lhs.size(), rhs.size());
+
+  for (auto index = size_t{0}; index < lhs.size(); ++index) {
+    EXPECT_EQ(lhs[index].get().shared_from_this(), rhs[index]);
+  }
+}
+
+}  // namespace
+
 namespace hyrise {
 
 using namespace expression_functional;  // NOLINT(build/namespaces)
 
 class OperatorTaskTest : public BaseTest {
  protected:
-  using TaskVector = std::vector<std::shared_ptr<AbstractTask>>;
+  using SuccessorTasksVector = std::vector<std::reference_wrapper<AbstractTask>>;
 
   void SetUp() override {
     _test_table_a = load_table("resources/test_data/tbl/int_float.tbl", ChunkOffset{2});
@@ -32,14 +46,6 @@ class OperatorTaskTest : public BaseTest {
 
     _test_table_b = load_table("resources/test_data/tbl/int_float2.tbl", ChunkOffset{2});
     Hyrise::get().storage_manager.add_table("table_b", _test_table_b);
-  }
-
-  void clear_successors(const std::shared_ptr<AbstractTask>& task) {
-    task->_successors.clear();
-  }
-
-  std::shared_ptr<AbstractTask> get_task(const std::shared_ptr<AbstractOperator>& op) {
-    return op->_operator_task.lock();
   }
 
   std::shared_ptr<Table> _test_table_a, _test_table_b;
@@ -98,7 +104,7 @@ TEST_F(OperatorTaskTest, MakeDiamondShape) {
 
   const auto& [tasks, root_operator_task] = OperatorTask::make_tasks_from_operator(union_positions);
 
-  ASSERT_EQ(tasks.size(), 5u);
+  ASSERT_EQ(tasks.size(), 5);
   const auto tasks_set = std::unordered_set<std::shared_ptr<AbstractTask>>(tasks.begin(), tasks.end());
   EXPECT_TRUE(tasks_set.contains(gt_a->get_or_create_operator_task()));
   EXPECT_TRUE(tasks_set.contains(scan_a->get_or_create_operator_task()));
@@ -106,15 +112,14 @@ TEST_F(OperatorTaskTest, MakeDiamondShape) {
   EXPECT_TRUE(tasks_set.contains(scan_c->get_or_create_operator_task()));
   EXPECT_TRUE(tasks_set.contains(union_positions->get_or_create_operator_task()));
 
-  EXPECT_EQ(gt_a->get_or_create_operator_task()->successors(), TaskVector{scan_a->get_or_create_operator_task()});
-  const auto scan_a_successors =
-      TaskVector{scan_b->get_or_create_operator_task(), scan_c->get_or_create_operator_task()};
-  EXPECT_EQ(scan_a->get_or_create_operator_task()->successors(), scan_a_successors);
-  EXPECT_EQ(scan_b->get_or_create_operator_task()->successors(),
-            TaskVector{union_positions->get_or_create_operator_task()});
-  EXPECT_EQ(scan_c->get_or_create_operator_task()->successors(),
-            TaskVector{union_positions->get_or_create_operator_task()});
-  EXPECT_EQ(union_positions->get_or_create_operator_task()->successors(), TaskVector{});
+  successors_equal(gt_a->get_or_create_operator_task()->successors(), {scan_a->get_or_create_operator_task()});
+  successors_equal(scan_a->get_or_create_operator_task()->successors(),
+                   {scan_b->get_or_create_operator_task(), scan_c->get_or_create_operator_task()});
+  successors_equal(scan_b->get_or_create_operator_task()->successors(),
+                   {union_positions->get_or_create_operator_task()});
+  successors_equal(scan_c->get_or_create_operator_task()->successors(),
+                   {union_positions->get_or_create_operator_task()});
+  successors_equal(union_positions->get_or_create_operator_task()->successors(), {});
 
   for (const auto& task : tasks) {
     EXPECT_NO_THROW(task->schedule());
@@ -160,17 +165,17 @@ TEST_F(OperatorTaskTest, UncorrelatedSubqueries) {
   EXPECT_TRUE(tasks_set.contains(table_wrapper->get_or_create_operator_task()));
   EXPECT_TRUE(tasks_set.contains(projection->get_or_create_operator_task()));
 
-  EXPECT_EQ(gt_b->get_or_create_operator_task()->successors(), TaskVector{aggregate_a->get_or_create_operator_task()});
+  successors_equal(gt_b->get_or_create_operator_task()->successors(), {aggregate_a->get_or_create_operator_task()});
 
-  EXPECT_EQ(gt_a->get_or_create_operator_task()->successors(), TaskVector{scan->get_or_create_operator_task()});
-  EXPECT_EQ(aggregate_a->get_or_create_operator_task()->successors(), TaskVector{scan->get_or_create_operator_task()});
+  successors_equal(gt_a->get_or_create_operator_task()->successors(), {scan->get_or_create_operator_task()});
+  successors_equal(aggregate_a->get_or_create_operator_task()->successors(), {scan->get_or_create_operator_task()});
 
-  EXPECT_EQ(scan->get_or_create_operator_task()->successors(), TaskVector{aggregate_b->get_or_create_operator_task()});
+  successors_equal(scan->get_or_create_operator_task()->successors(), {aggregate_b->get_or_create_operator_task()});
 
-  EXPECT_EQ(aggregate_b->get_or_create_operator_task()->successors(),
-            TaskVector{projection->get_or_create_operator_task()});
-  EXPECT_EQ(table_wrapper->get_or_create_operator_task()->successors(),
-            TaskVector{projection->get_or_create_operator_task()});
+  successors_equal(aggregate_b->get_or_create_operator_task()->successors(),
+                   {projection->get_or_create_operator_task()});
+  successors_equal(table_wrapper->get_or_create_operator_task()->successors(),
+                   {projection->get_or_create_operator_task()});
 
   EXPECT_EQ(root_operator_task, projection->get_or_create_operator_task());
   EXPECT_TRUE(projection->get_or_create_operator_task()->successors().empty());
@@ -205,10 +210,6 @@ TEST_F(OperatorTaskTest, DetectCycles) {
       _left_input = input_operator;
     }
 
-    std::shared_ptr<AbstractTask> get_task() {
-      return _operator_task.lock();
-    }
-
    protected:
     std::shared_ptr<const Table> _on_execute() override {
       return nullptr;
@@ -225,24 +226,19 @@ TEST_F(OperatorTaskTest, DetectCycles) {
   };
 
   // Create some operators that are an input of the next one.
-  const auto& mock_operator_a = std::make_shared<MockOperator>(nullptr);
-  const auto& mock_operator_b = std::make_shared<MockOperator>(mock_operator_a);
-  const auto& mock_operator_c = std::make_shared<MockOperator>(mock_operator_b);
-  const auto& mock_operator_d = std::make_shared<MockOperator>(mock_operator_c);
+  const auto mock_operator_a = std::make_shared<MockOperator>(nullptr);
+  const auto mock_operator_b = std::make_shared<MockOperator>(mock_operator_a);
+  const auto mock_operator_c = std::make_shared<MockOperator>(mock_operator_b);
+  const auto mock_operator_d = std::make_shared<MockOperator>(mock_operator_c);
 
   // Set the last operator as input of the first one. Now, we have a cycle.
   mock_operator_a->set_input(mock_operator_d);
 
   EXPECT_THROW(OperatorTask::make_tasks_from_operator(mock_operator_a), std::logic_error);
 
-  // Clear the successors of the created tasks and the operator inputs. Since the tasks hold shared pointers to their
-  // successors and the operators a pointer to their input, the cyclic graph leaks memory.
+  // Clear the operator inputs. Since operators store a pointer to their input, the cyclic graph leaks memory.
   for (const auto& op : {mock_operator_a, mock_operator_b, mock_operator_c, mock_operator_d}) {
     op->set_input(nullptr);
-    const auto& task = op->get_task();
-    if (task) {
-      clear_successors(task);
-    }
   }
 }
 
@@ -278,8 +274,8 @@ TEST_F(OperatorTaskTest, LinkPrunableSubqueries) {
   EXPECT_EQ(root_operator_task, table_scan->get_or_create_operator_task());
   const auto& projection_task = projection->get_or_create_operator_task();
   ASSERT_EQ(projection_task->successors().size(), 2);
-  EXPECT_EQ(projection_task->successors().front(), table_scan->get_or_create_operator_task());
-  EXPECT_EQ(projection_task->successors().back(), get_table_a->get_or_create_operator_task());
+  EXPECT_EQ(&projection_task->successors().front().get(), &*table_scan->get_or_create_operator_task());
+  EXPECT_EQ(&projection_task->successors().back().get(), &*get_table_a->get_or_create_operator_task());
 }
 
 TEST_F(OperatorTaskTest, PrunableSubqueriesWithCycles) {
@@ -306,15 +302,6 @@ TEST_F(OperatorTaskTest, PrunableSubqueriesWithCycles) {
   get_table->set_prunable_subquery_predicates({table_scan});
 
   EXPECT_THROW(OperatorTask::make_tasks_from_operator(table_scan), std::logic_error);
-
-  // Clear the successors of the created tasks. Since the tasks hold shared pointers to their successors, the cyclic
-  // graph leaks memory.
-  for (const auto& op : std::vector<std::shared_ptr<AbstractOperator>>{get_table, aggregate, table_scan}) {
-    const auto& task = get_task(op);
-    if (task) {
-      clear_successors(task);
-    }
-  }
 }
 
 TEST_F(OperatorTaskTest, SkipOperatorTask) {

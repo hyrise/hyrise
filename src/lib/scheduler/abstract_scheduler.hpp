@@ -74,10 +74,6 @@ class AbstractScheduler : public Noncopyable {
   virtual void schedule(std::shared_ptr<AbstractTask> task, NodeID preferred_node_id = CURRENT_NODE_ID,
                         SchedulePriority priority = SchedulePriority::Default) = 0;
 
-  // Schedules the given tasks for execution and returns immediately.
-  // If no asynchronicity is needed, prefer schedule_and_wait_for_tasks.
-  static void schedule_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks);
-
   // Blocks until all specified tasks are completed.
   // If no asynchronicity is needed, prefer schedule_and_wait_for_tasks.
   static void wait_for_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks);
@@ -88,6 +84,9 @@ class AbstractScheduler : public Noncopyable {
   void schedule_and_wait_for_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks);
 
  protected:
+  // Schedules the given tasks for execution and returns immediately.
+  static void _schedule_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks);
+
   // Internal helper method that adds predecessor/successor relationships between tasks to limit the degree of
   // parallelism and reduce scheduling overhead.
   virtual void _group_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const;
