@@ -1,6 +1,7 @@
 #include "enumerate_ccp.hpp"
 
 #include <cstddef>
+#include <cstdint>
 #include <set>
 #include <utility>
 #include <vector>
