@@ -90,7 +90,6 @@ class CardinalityEstimator {
   // aggregations, window functions, or computed projections.
   static void check_required_statistics(const ColumnID column_id, const std::shared_ptr<AbstractLQPNode>& input_node,
                                         const std::shared_ptr<const TableStatistics>& input_statistics);
-  /** @} */
 
   /**
    * Statistics caching
@@ -349,6 +348,7 @@ class CardinalityEstimator {
   static std::pair<HistogramCountType, HistogramCountType> estimate_inner_equi_join_of_bins(
       const float left_height, const float left_distinct_count, const float right_height,
       const float right_distinct_count);
+  /** @} */
 
   mutable CardinalityEstimationCache cardinality_estimation_cache;
 };

@@ -184,7 +184,7 @@ std::shared_ptr<const BaseAttributeStatistics> CardinalityEstimator::DummyStatis
 std::shared_ptr<const BaseAttributeStatistics> CardinalityEstimator::DummyStatistics::sliced(
     const PredicateCondition /*predicate_condition*/, const AllTypeVariant& /*variant_value*/,
     const std::optional<AllTypeVariant>& /*variant_value2*/) const {
-  Fail("DummyStatistics should not be used for actual estimations. Was the required column pruned?");
+  Fail("DummyStatistics should not be used for actual estimations. Was the required column accidentally pruned?");
 }
 
 std::ostream& operator<<(std::ostream& stream, const CardinalityEstimator::DummyStatistics& /*dummy_statistics*/) {
@@ -1033,9 +1033,16 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_operator_scan_pr
         selectivity = is_not_null ? 1 - *null_value_ratio : *null_value_ratio;
 
         // All that remains of the column we scanned on are exclusively NULL values or exclusively non-NULL values.
-        // TODO(anyone): Scale and forward remaining statistics objects.
         const auto column_statistics = std::make_shared<AttributeStatistics<ColumnDataType>>();
         column_statistics->null_value_ratio = std::make_shared<NullValueRatioStatistics>(is_not_null ? 0.0f : 1.0f);
+        if (is_not_null) {
+          // Forward other statistics if NULLs are removed.
+          const auto& input_statistics = *left_input_column_statistics;
+          column_statistics->histogram = input_statistics.histogram;
+          column_statistics->min_max_filter = input_statistics.min_max_filter;
+          column_statistics->range_filter = input_statistics.range_filter;
+          column_statistics->distinct_value_count = input_statistics.distinct_value_count;
+        }
         output_column_statistics[left_column_id] = column_statistics;
       } else {
         // If there is no null-value ratio available, assume a selectivity of 1, for both IS NULL and IS NOT NULL, as no
