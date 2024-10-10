@@ -22,9 +22,8 @@ namespace hyrise {
 std::shared_ptr<AbstractLQPNode> DpCcp::operator()(const JoinGraph& join_graph,
                                                    const std::shared_ptr<AbstractCostEstimator>& cost_estimator) {
   Assert(!join_graph.vertices.empty(), "Code below relies on the JoinGraph having vertices");
-
-  // No std::unordered_map, since hashing of JoinGraphVertexSet is not (efficiently) possible because
-  // boost::dynamic_bitset hides the data necessary for doing so efficiently.
+  // No std::unordered_map because hashing of JoinGraphVertexSet is not (efficiently) possible: boost::dynamic_bitset
+  // hides the data necessary for efficiently doing so.
   auto best_plan = std::map<JoinGraphVertexSet, std::shared_ptr<AbstractLQPNode>>{};
 
   /**
