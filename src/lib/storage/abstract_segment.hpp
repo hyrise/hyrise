@@ -28,6 +28,9 @@ class AbstractSegment : private Noncopyable {
   // Whether this segment supports re-encoding into a different encoding type
   virtual bool supports_reencoding() const;
 
+  // Whether this segments contains actual data
+  virtual bool has_actual_data() const;
+
   // Copies a segment using a new allocator. This is useful for placing the segment on a new NUMA node.
   virtual std::shared_ptr<AbstractSegment> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const = 0;
 

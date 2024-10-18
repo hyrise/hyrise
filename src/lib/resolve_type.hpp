@@ -11,6 +11,7 @@
 #include "all_type_variant.hpp"
 #include "storage/abstract_encoded_segment.hpp"
 #include "storage/abstract_segment.hpp"
+#include "storage/dummy_segment.hpp"
 #include "storage/pos_lists/entire_chunk_pos_list.hpp"
 #include "storage/pos_lists/row_id_pos_list.hpp"
 #include "storage/reference_segment.hpp"
@@ -115,11 +116,14 @@ std::enable_if_t<std::is_same_v<AbstractSegment, std::remove_const_t<AbstractSeg
   using ValueSegmentPtr = ConstOutIfConstIn<AbstractSegmentType, ValueSegment<ColumnDataType>>*;
   using ReferenceSegmentPtr = ConstOutIfConstIn<AbstractSegmentType, ReferenceSegment>*;
   using EncodedSegmentPtr = ConstOutIfConstIn<AbstractSegmentType, AbstractEncodedSegment>*;
+  using DummySegmentPtr = ConstOutIfConstIn<AbstractSegmentType, DummySegment<ColumnDataType>>*;
 
   if (const auto value_segment = dynamic_cast<ValueSegmentPtr>(&segment)) {
     functor(*value_segment);
   } else if (const auto reference_segment = dynamic_cast<ReferenceSegmentPtr>(&segment)) {
     functor(*reference_segment);
+  } else if (const auto dummy_segment = dynamic_cast<DummySegmentPtr>(&segment)) {
+    functor(*dummy_segment);
   } else if (const auto encoded_segment = dynamic_cast<EncodedSegmentPtr>(&segment)) {
     resolve_encoded_segment_type<ColumnDataType>(*encoded_segment, functor);
   } else {

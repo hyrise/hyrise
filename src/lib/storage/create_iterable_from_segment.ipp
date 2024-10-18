@@ -19,6 +19,11 @@ auto create_iterable_from_segment(const ValueSegment<T>& segment) {
 }
 
 template <typename T, bool EraseSegmentType>
+AnySegmentIterable<T> create_iterable_from_segment(const DummySegment<T>& segment) {
+  Fail("Cannot create iterable for dummy segment!");
+}
+
+template <typename T, bool EraseSegmentType>
 auto create_iterable_from_segment(const DictionarySegment<T>& segment) {
 #ifdef HYRISE_ERASE_DICTIONARY
   PerformanceWarning("DictionarySegmentIterable erased by compile-time setting");

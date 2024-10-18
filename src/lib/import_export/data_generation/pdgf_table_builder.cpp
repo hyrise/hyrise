@@ -82,7 +82,7 @@ void PDGFTableBuilder<work_unit_size, num_columns>::read_schema(SharedMemoryData
 
     _table_column_names.push_back(std::move(column_name));
     _table_column_types.push_back(column_type);
-    _table_columns.emplace_back(std::make_shared<NonGeneratedPDGFColumn>(hyrise_type_for_column_type(column_type), _table_num_rows, _hyrise_table_chunk_size));
+    _table_columns.emplace_back(_new_non_generated_column_with_data_type(column_type));
   }
 }
 
@@ -136,6 +136,23 @@ std::shared_ptr<AbstractPDGFColumn> PDGFTableBuilder<work_unit_size, num_columns
       return std::make_shared<PDGFColumn<int64_t>>(_table_num_rows, _hyrise_table_chunk_size);
     case DOUBLE:
       return std::make_shared<PDGFColumn<double>>(_table_num_rows, _hyrise_table_chunk_size);
+    default:
+      throw std::runtime_error("Unknown column type encountered!");
+  }
+}
+
+template <uint32_t work_unit_size, uint32_t num_columns>
+std::shared_ptr<AbstractPDGFColumn> PDGFTableBuilder<work_unit_size, num_columns>::_new_non_generated_column_with_data_type(ColumnType type) {
+  switch (type) {
+    case ColumnType::STRING:
+      return std::make_shared<NonGeneratedPDGFColumn<pmr_string>>(_table_num_rows, _hyrise_table_chunk_size);
+    case BOOL:
+    case INTEGER:
+      return std::make_shared<NonGeneratedPDGFColumn<int32_t>>(_table_num_rows, _hyrise_table_chunk_size);
+    case LONG:
+      return std::make_shared<NonGeneratedPDGFColumn<int64_t>>(_table_num_rows, _hyrise_table_chunk_size);
+    case DOUBLE:
+      return std::make_shared<NonGeneratedPDGFColumn<double>>(_table_num_rows, _hyrise_table_chunk_size);
     default:
       throw std::runtime_error("Unknown column type encountered!");
   }

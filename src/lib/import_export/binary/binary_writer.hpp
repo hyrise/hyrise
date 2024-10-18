@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "storage/dictionary_segment.hpp"
+#include "storage/dummy_segment.hpp"
 #include "storage/fixed_string_dictionary_segment.hpp"
 #include "storage/frame_of_reference_segment.hpp"
 #include "storage/lz4_segment.hpp"
@@ -74,6 +75,12 @@ class BinaryWriter {
    */
   template <typename T>
   static void _write_segment(const ValueSegment<T>& value_segment, bool column_is_nullable, std::ofstream& ofstream);
+
+  /**
+   * TODO
+   */
+  template <typename T>
+  static void _write_segment(const DummySegment<T>& value_segment, bool column_is_nullable, std::ofstream& ofstream);
 
   /**
    * ReferenceSegments are dumped with the following layout, which is similar to value segments:

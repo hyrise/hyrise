@@ -11,7 +11,11 @@ DataType AbstractSegment::data_type() const {
 }
 
 bool AbstractSegment::supports_reencoding() const {
-  return false;
+  return true;
+}
+
+bool AbstractSegment::has_actual_data() const {
+  return true;
 }
 
 }  // namespace hyrise

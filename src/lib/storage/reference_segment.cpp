@@ -32,6 +32,10 @@ ReferenceSegment::ReferenceSegment(const std::shared_ptr<const Table>& reference
   Assert(pos->size() <= Chunk::MAX_SIZE, "AbstractPosList exceeds Chunk::MAX_SIZE.");
 }
 
+bool ReferenceSegment::supports_reencoding() const {
+  return false;
+}
+
 AllTypeVariant ReferenceSegment::operator[](const ChunkOffset chunk_offset) const {
   PerformanceWarning("operator[] used");
 

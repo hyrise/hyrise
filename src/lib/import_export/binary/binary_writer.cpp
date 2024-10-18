@@ -6,6 +6,7 @@
 #include <fstream>
 #include <ios>
 #include <string>
+#include <stdexcept>
 #include <vector>
 
 #include "all_type_variant.hpp"
@@ -13,6 +14,7 @@
 #include "storage/abstract_encoded_segment.hpp"
 #include "storage/chunk.hpp"
 #include "storage/dictionary_segment.hpp"
+#include "storage/dummy_segment.hpp"
 #include "storage/encoding_type.hpp"
 #include "storage/fixed_string_dictionary_segment.hpp"
 #include "storage/fixed_string_dictionary_segment/fixed_string_vector.hpp"
@@ -184,6 +186,11 @@ void BinaryWriter::_write_segment(const ValueSegment<T>& value_segment, bool col
   }
 
   export_values(ofstream, value_segment.values());
+}
+
+template <typename T>
+void BinaryWriter::_write_segment(const DummySegment<T>& dummy_segment, bool column_is_nullable, std::ofstream& ofstream) {
+  throw std::runtime_error("Currently, we cannot write dummy segments."); // TODO(JEH)
 }
 
 void BinaryWriter::_write_segment(const ReferenceSegment& reference_segment, bool column_is_nullable,

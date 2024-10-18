@@ -23,6 +23,8 @@ class ReferenceSegment : public AbstractSegment {
   ReferenceSegment(const std::shared_ptr<const Table>& referenced_table, const ColumnID referenced_column_id,
                    const std::shared_ptr<const AbstractPosList>& pos);
 
+  bool supports_reencoding() const override;
+
   AllTypeVariant operator[](const ChunkOffset chunk_offset) const override;
 
   ChunkOffset size() const final;

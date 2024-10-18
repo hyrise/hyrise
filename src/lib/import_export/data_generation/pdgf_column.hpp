@@ -4,8 +4,9 @@
 #include <vector>
 #include <memory>
 
-#include "types.hpp"
 #include "abstract_pdgf_column.hpp"
+#include "all_type_variant.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 template <typename T>

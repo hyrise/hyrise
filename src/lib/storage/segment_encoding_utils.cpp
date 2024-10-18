@@ -13,6 +13,7 @@
 #include "storage/run_length_segment/run_length_encoder.hpp"
 #include "storage/vector_compression/compressed_vector_type.hpp"
 #include "storage/vector_compression/vector_compression.hpp"
+#include "storage/dummy_segment.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {
@@ -45,6 +46,9 @@ std::unique_ptr<BaseSegmentEncoder> create_encoder(EncodingType encoding_type) {
 
 SegmentEncodingSpec get_segment_encoding_spec(const std::shared_ptr<const AbstractSegment>& segment) {
   Assert(!std::dynamic_pointer_cast<const ReferenceSegment>(segment), "Reference segments cannot be encoded.");
+  if (!segment->supports_reencoding()) {
+      return SegmentEncodingSpec{EncodingType::Unencoded};
+  }
 
   if (std::dynamic_pointer_cast<const BaseValueSegment>(segment)) {
     return SegmentEncodingSpec{EncodingType::Unencoded};

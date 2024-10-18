@@ -18,6 +18,7 @@
 #include "statistics/table_statistics.hpp"
 #include "storage/chunk.hpp"
 #include "storage/create_iterable_from_segment.hpp"
+#include "storage/dummy_segment.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
@@ -66,24 +67,29 @@ void generate_chunk_pruning_statistics(const std::shared_ptr<Chunk>& chunk) {
 
       const auto segment_statistics = std::make_shared<AttributeStatistics<ColumnDataType>>();
 
-      // TODO(anyone): use dictionary-optimized path for FixedStringDictionarySegments as well.
-      if constexpr (std::is_same_v<SegmentType, DictionarySegment<ColumnDataType>>) {
-        // We can use the fact that dictionary segments have an accessor for the dictionary.
-        const auto& dictionary = *typed_segment.dictionary();
-        create_pruning_statistics_for_segment(*segment_statistics, dictionary);
-      } else {
-        // If we have a generic segment, we create the dictionary ourselves.
-        auto iterable = create_iterable_from_segment<ColumnDataType>(typed_segment);
-        auto values = std::unordered_set<ColumnDataType>{};
-        iterable.for_each([&](const auto& value) {
-          // We are only interested in non-null values.
-          if (!value.is_null()) {
-            values.insert(value.value());
-          }
-        });
-        auto dictionary = pmr_vector<ColumnDataType>{values.cbegin(), values.cend()};
-        boost::sort::pdqsort(dictionary.begin(), dictionary.end());
-        create_pruning_statistics_for_segment(*segment_statistics, dictionary);
+      // We can only generate sensible statistics for segments with data.
+      // As segments without data MAY NOT be accessed by any query (the data population procedure needs to ensure this
+      // invariant always holds), not having statistics for them should be fine.
+      if constexpr (!std::is_same_v<SegmentType, DummySegment<ColumnDataType>>) {
+        // TODO(anyone): use dictionary-optimized path for FixedStringDictionarySegments as well.
+        if constexpr (std::is_same_v<SegmentType, DictionarySegment<ColumnDataType>>) {
+         // We can use the fact that dictionary segments have an accessor for the dictionary.
+         const auto& dictionary = *typed_segment.dictionary();
+         create_pruning_statistics_for_segment(*segment_statistics, dictionary);
+        } else {
+         // If we have a generic segment, we create the dictionary ourselves.
+         auto iterable = create_iterable_from_segment<ColumnDataType>(typed_segment);
+         auto values = std::unordered_set<ColumnDataType>{};
+         iterable.for_each([&](const auto& value) {
+           // We are only interested in non-null values.
+           if (!value.is_null()) {
+             values.insert(value.value());
+           }
+         });
+         auto dictionary = pmr_vector<ColumnDataType>{values.cbegin(), values.cend()};
+         boost::sort::pdqsort(dictionary.begin(), dictionary.end());
+         create_pruning_statistics_for_segment(*segment_statistics, dictionary);
+        }
       }
 
       chunk_statistics[column_id] = segment_statistics;

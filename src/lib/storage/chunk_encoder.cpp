@@ -32,18 +32,17 @@ std::shared_ptr<AbstractSegment> ChunkEncoder::encode_segment(const std::shared_
                                                               const SegmentEncodingSpec& encoding_spec) {
   Assert(!std::dynamic_pointer_cast<const ReferenceSegment>(segment), "Reference segments cannot be encoded.");
 
+  // If a segment does not support reencoding (like, for example, the DummySegment, which does not hold any actual data),
+  // we will just leave it as is.
+  // Emitting a warning here does not really make sense because this might apply to all segments of a column, leading to a
+  // flood of warnings.
+  if (!segment->supports_reencoding()) {
+    return segment;
+  }
+
   std::shared_ptr<AbstractSegment> result;
   resolve_data_type(data_type, [&](const auto type) {
     using ColumnDataType = typename decltype(type)::type;
-
-    // If a segment does not support reencoding (like, for example, the DummySegment, which does not hold any actual data),
-    // we will just leave it as is.
-    // Emitting a warning here does not really make sense because this might apply to all segments of a column, leading to a
-    // flood of warnings.
-    if (!segment->supports_reencoding()) {
-      result = segment;
-      return;
-    }
 
     // TODO(anyone): After #1489, build segment statistics in encode_segment() instead of encode_chunk()
     // and store them within the segment instead of a chunk-owned list of statistics.

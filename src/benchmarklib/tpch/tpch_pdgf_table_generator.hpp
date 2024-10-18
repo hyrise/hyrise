@@ -3,13 +3,9 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
-#include <vector>
 
 #include "abstract_table_generator.hpp"
-#include "resolve_type.hpp"
 #include "storage/chunk.hpp"
-#include "storage/table.hpp"
-#include "storage/value_segment.hpp"
 #include "tpch/tpch_constants.hpp"
 #include "types.hpp"
 
@@ -17,10 +13,6 @@ namespace hyrise {
 
 class Chunk;
 class Table;
-
-enum class TPCHTable { Part, PartSupp, Supplier, Customer, Orders, LineItem, Nation, Region };
-
-extern const std::unordered_map<TPCHTable, std::string> tpch_table_names;
 
 /**
  * Generating table by invoking the external PDGF data generator and pulling the results into Hyrise via shared memory.
