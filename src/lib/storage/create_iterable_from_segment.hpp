@@ -54,7 +54,7 @@ template <typename T, bool EraseSegmentType = HYRISE_DEBUG>
 auto create_iterable_from_segment(const ValueSegment<T>& segment);
 
 template <typename T, bool EraseSegmentType = HYRISE_DEBUG>
-AnySegmentIterable<T> create_iterable_from_segment(const DummySegment<T>& segment);
+auto create_iterable_from_segment(const DummySegment<T>& segment);
 
 template <typename T, bool EraseSegmentType = HYRISE_DEBUG>
 auto create_iterable_from_segment(const DictionarySegment<T>& segment);

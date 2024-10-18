@@ -5,6 +5,7 @@
 
 #include "all_type_variant.hpp"
 #include "abstract_segment.hpp"
+#include "storage/value_segment.hpp"
 #include "types.hpp"
 
 namespace hyrise {
@@ -21,6 +22,8 @@ class DummySegment : public AbstractSegment {
   ChunkOffset size() const override;
   std::shared_ptr<AbstractSegment> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const override;
   size_t memory_usage(const MemoryUsageCalculationMode mode) const override;
+
+  ValueSegment<T> empty_value_segment;
 
  protected:
   ChunkOffset _alleged_size;

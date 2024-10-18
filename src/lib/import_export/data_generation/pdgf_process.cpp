@@ -70,7 +70,7 @@ void PdgfProcess::_configure_pdgf_arguments() {
                                           "-noShell", "-closeWhenDone",
                                           "-sf", "0.1",
                                           "-workers", "1",
-                                          "-start", "CUSTOMER", "ORDERS"
+                                          "-start", "CUSTOMER", "ORDERS", "LINEITEM"
                                       });
 }
 }  // namespace hyrise

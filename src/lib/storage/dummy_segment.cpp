@@ -10,7 +10,8 @@
 
 namespace hyrise {
 template <typename T>
-DummySegment<T>::DummySegment(ChunkOffset alleged_size) : AbstractSegment(data_type_from_type<T>()), _alleged_size(alleged_size) {}
+DummySegment<T>::DummySegment(ChunkOffset alleged_size)
+    : AbstractSegment(data_type_from_type<T>()), empty_value_segment(ValueSegment<T>{false, ChunkOffset{0}}), _alleged_size(alleged_size) {}
 
 template <typename T>
 bool DummySegment<T>::supports_reencoding() const {

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "storage/dictionary_segment/dictionary_segment_iterable.hpp"
+#include "storage/dummy_segment/dummy_segment_iterable.hpp"
 #include "storage/frame_of_reference_segment/frame_of_reference_segment_iterable.hpp"
 #include "storage/lz4_segment/lz4_segment_iterable.hpp"
 #include "storage/run_length_segment/run_length_segment_iterable.hpp"
@@ -19,8 +20,8 @@ auto create_iterable_from_segment(const ValueSegment<T>& segment) {
 }
 
 template <typename T, bool EraseSegmentType>
-AnySegmentIterable<T> create_iterable_from_segment(const DummySegment<T>& segment) {
-  Fail("Cannot create iterable for dummy segment!");
+auto create_iterable_from_segment(const DummySegment<T>& segment) {
+  return create_iterable_from_segment(segment.empty_value_segment);
 }
 
 template <typename T, bool EraseSegmentType>
