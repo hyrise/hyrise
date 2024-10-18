@@ -17,6 +17,7 @@
 #include "tpch/tpch_benchmark_item_runner.hpp"
 #include "tpch/tpch_queries.hpp"
 #include "tpch/tpch_table_generator.hpp"
+#include "tpch/tpch_pdgf_table_generator.hpp"
 #include "utils/assert.hpp"
 #include "utils/sqlite_add_indices.hpp"
 
@@ -51,7 +52,9 @@ int main(int argc, char* argv[]) {
     ("clustering", "Clustering of TPC-H data. The default of --clustering=None means the data is stored as generated "
                    "by the TPC-H data generator. With --clustering=\"Pruning\", the two largest tables 'lineitem' "
                    "and 'orders' are sorted by 'l_shipdate' and 'o_orderdate' for improved chunk pruning. Both are "
-                   "legal TPC-H input data.", cxxopts::value<std::string>()->default_value("None")); // NOLINT
+                   "legal TPC-H input data.", cxxopts::value<std::string>()->default_value("None")) // NOLINT
+    ("pdgf_data_gen", "Instead of using the bundled db-gen to generate the data, rely on the Parallel Data Generation Framework.", cxxopts::value<bool>()->default_value("false"))
+    ("only_generate_used_columns", "Determine and only generate columns used by the specified queries.", cxxopts::value<bool>()->default_value("false")); // NOLINT
   // clang-format on
 
   auto config = std::shared_ptr<BenchmarkConfig>{};
@@ -60,6 +63,8 @@ int main(int argc, char* argv[]) {
   auto use_prepared_statements = false;
   auto jcch = false;
   auto jcch_skewed = false;
+  auto pdgf_data_gen = false;
+  auto only_generate_used_columns = false;
 
   // Parse command line args
   const auto cli_parse_result = cli_options.parse(argc, argv);
@@ -88,6 +93,11 @@ int main(int argc, char* argv[]) {
       Fail("Invalid JCC-H mode, use skewed or normal.");
     }
   }
+
+  pdgf_data_gen = cli_parse_result["pdgf_data_gen"].as<bool>();
+  Assert(!jcch || !pdgf_data_gen, "At the moment, cannot generate jcch data using PDGF.");
+  only_generate_used_columns = cli_parse_result["only_generate_used_columns"].as<bool>();
+  Assert(!only_generate_used_columns || pdgf_data_gen, "Only generating a column subset is only supported when using PDGF.");
 
   auto clustering_configuration = ClusteringConfiguration::None;
   if (cli_parse_result.count("clustering")) {
@@ -155,7 +165,14 @@ int main(int argc, char* argv[]) {
   auto table_generator = std::unique_ptr<AbstractTableGenerator>{};
   auto item_runner = std::unique_ptr<AbstractBenchmarkItemRunner>{};
 
-  if (jcch) {
+  if (pdgf_data_gen) {
+    std::cout << "- data generation using PDGF is active\n";
+    std::cout << "- partial column generation is " << (only_generate_used_columns ? "active" : "not active") << "\n";
+    Assert(!only_generate_used_columns, "TODO(JEH): Generating partial data not yet implemented");
+    table_generator = std::make_unique<TPCHPDGFTableGenerator>(scale_factor, clustering_configuration, config);
+    item_runner = std::make_unique<TPCHBenchmarkItemRunner>(config, use_prepared_statements, scale_factor,
+                                                            clustering_configuration, item_ids);
+  } else if (jcch) {
     // Different from the TPC-H benchmark, where the table and query generators are immediately embedded in Hyrise, the
     // JCC-H implementation calls those generators externally. This is because we would get linking conflicts if we were
     // to include both generators. Unfortunately, this approach is somewhat slower (30s to start SF1 with TPC-H, 1m18s

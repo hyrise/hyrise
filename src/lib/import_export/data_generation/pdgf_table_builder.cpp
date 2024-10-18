@@ -3,6 +3,7 @@
 #include <cstddef>
 #include <iostream>
 #include <string>
+#include <memory>
 
 #include "boost/algorithm/string.hpp"
 

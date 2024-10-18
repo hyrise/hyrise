@@ -1,16 +1,9 @@
 #include "tpch_pdgf_table_generator.hpp"
 
-#include <algorithm>
 #include <cmath>
-#include <cstddef>
-#include <cstdint>
-#include <cstdlib>
 #include <filesystem>
-#include <memory>
 #include <string>
-#include <type_traits>
 #include <unordered_map>
-#include <utility>
 #include <vector>
 
 #include "abstract_table_generator.hpp"
@@ -18,9 +11,7 @@
 #include "import_export/data_generation/pdgf_process.hpp"
 #include "import_export/data_generation/shared_memory_reader.hpp"
 #include "storage/constraints/constraint_utils.hpp"
-#include "table_builder.hpp"
 #include "tpch/tpch_constants.hpp"
-#include "tpch_constants.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
@@ -41,18 +32,14 @@ TPCHPDGFTableGenerator::TPCHPDGFTableGenerator(float scale_factor, ClusteringCon
 #define BUFFER_FREE_SEM "/PDGF_BUFFER_FREE_SEM"
 
 std::unordered_map<std::string, BenchmarkTableInfo> TPCHPDGFTableGenerator::generate() {
-  Assert(_scale_factor < 1.0f || std::round(_scale_factor) == _scale_factor,
-         "Due to tpch_dbgen limitations, only scale factors less than one can have a fractional part.");
-
-  const auto cache_directory = std::string{"tpch_cached_tables/sf-"} + std::to_string(_scale_factor);  // NOLINT
-  if (_benchmark_config->cache_binary_tables && std::filesystem::is_directory(cache_directory)) {
-    return _load_binary_tables_from_path(cache_directory);
-  }
+  Assert(!_benchmark_config->cache_binary_tables, "Caching of half-empty tables containing dummy segments is currently not supported");
+  Assert(_clustering_configuration == ClusteringConfiguration::None, "We do not support any special clustering configurations, as those require sorting, and sorting on PDGF-generated partial data is not supported.");
 
   /**
    * Launch PDGF. Note that the SharedMemoryReader MUST be created first as it will create the shared resources PDGF will
    * bind to.
    */
+  std::cout << "Setting up shared memory and launching PDGF.\n";
   auto reader = SharedMemoryReader<128, 16>(_benchmark_config->chunk_size, SHARED_MEMORY_NAME, DATA_READY_SEM, BUFFER_FREE_SEM);
   auto pdgf = PdgfProcess(PDGF_DIRECTORY_ROOT);
   pdgf.run();
@@ -60,6 +47,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHPDGFTableGenerator::gene
   /**
    * Generate tables
    */
+  std::cout << "Generating another table with PDGF\n";
   auto table_builders = std::vector<std::unique_ptr<PDGFTableBuilder<128, 16>>>{};
   while (reader.has_next_table()) {
     table_builders.emplace_back(reader.read_next_table());
@@ -68,22 +56,19 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHPDGFTableGenerator::gene
   /**
    * Await PDGF teardown
    */
+  std::cout << "Awaiting PDGF teardown\n";
   pdgf.wait();
 
   /**
    * Return
    */
+  std::cout << "Finalizing generated tables\n";
   std::unordered_map<std::string, BenchmarkTableInfo> table_info_by_name;
   for (auto& table_builder: table_builders) {
     table_info_by_name[table_builder->table_name()].table = table_builder->build_table();
   }
 
-  if (_benchmark_config->cache_binary_tables) {
-    std::filesystem::create_directories(cache_directory);
-    for (auto& [table_name, table_info] : table_info_by_name) {
-      table_info.binary_file_path = cache_directory + "/" + table_name + ".bin";  // NOLINT
-    }
-  }
+  // TODO(JEH): what about encoding on-the-fly when chunks are done?
 
   return table_info_by_name;
 }
@@ -100,12 +85,7 @@ AbstractTableGenerator::IndexesByTable TPCHPDGFTableGenerator::_indexes_by_table
 }
 
 AbstractTableGenerator::SortOrderByTable TPCHPDGFTableGenerator::_sort_order_by_table() const {
-  if (_clustering_configuration == ClusteringConfiguration::Pruning) {
-    // This clustering improves the pruning of chunks for the two largest tables in TPC-H, lineitem and orders. Both
-    // tables are frequently filtered by the sorted columns, which improves the pruning rate significantly.
-    // Allowed as per TPC-H Specification, paragraph 1.5.2.
-    return {{"lineitem", "l_shipdate"}, {"orders", "o_orderdate"}};
-  }
+  // We DO NOT SUPPORT ANY EXPLICIT SORTING FOR PDGF-GENERATED TABLES AT THE MOMENT.
 
   // Even though the generated TPC-H data is implicitly sorted by the primary keys, we do neither set the corresponding
   // flags in the table nor in the chunks. This is done on purpose, as the non-clustered mode is designed to pass as

@@ -71,7 +71,7 @@ std::unique_ptr<PDGFTableBuilder<work_unit_size, num_columns>> SharedMemoryReade
 
   auto data_slot = ring_cell->data_buffer_offset;
   auto addressed_data = _data_buffer->get_addressed_by(ring_cell);
-  _num_tables_to_read = *((uint32_t*)addressed_data->data[0][0]);
+  _num_tables_to_read = * reinterpret_cast<uint32_t*>(addressed_data->data[0][0]);
   _ring_buffer->retrieval_finished();
 
   table_builder->read_schema(addressed_data);
@@ -87,6 +87,7 @@ std::unique_ptr<PDGFTableBuilder<work_unit_size, num_columns>> SharedMemoryReade
     table_builder->read_generation_info(addressed_data);
     _return_data_slot(data_slot);
 
+    // TODO(JEH): parallelize. adaptively use different number of workers here (only use a large number if table actually has a lot of chunks)
     while (table_builder->expects_more_data()) {
       ring_cell = _ring_buffer->prepare_retrieval();
       Assert(ring_cell->cell_type == RingBufferCellType::Data, "Did not receive data, was " + std::to_string(ring_cell->cell_type));
