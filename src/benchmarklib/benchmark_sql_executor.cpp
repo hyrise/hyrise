@@ -2,15 +2,16 @@
 
 #include <filesystem>
 #include <iostream>
-#include <memory>
 #include <optional>
 #include <string>
 #include <utility>
 
+#include "hyrise.hpp"
 #include "concurrency/transaction_context.hpp"
+#include "operators/get_table.hpp"
+#include "operators/pqp_utils.hpp"
 #include "sql/sql_pipeline.hpp"
 #include "sql/sql_pipeline_builder.hpp"
-#include "sql/sql_pipeline_statement.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
@@ -59,6 +60,7 @@ std::pair<SQLPipelineStatus, std::shared_ptr<const Table>> BenchmarkSQLExecutor:
 
   if (_visualize_prefix) {
     _visualize(pipeline);
+    _collect_columns(pipeline);
   }
 
   return {pipeline_status, result_table};
@@ -179,6 +181,37 @@ void BenchmarkSQLExecutor::_visualize(SQLPipeline& pipeline) {
   PQPVisualizer{graphviz_config, {}, {}, {}}.visualize(pqps, prefix + "-PQP.svg");
 
   ++_num_visualized_plans;
+}
+
+void BenchmarkSQLExecutor::_collect_columns(SQLPipeline& pipeline) {
+  const auto& pqps = pipeline.get_physical_plans();
+  for (auto pqp_root : pqps) {
+    auto determined_columns = std::vector<std::string>{};
+    visit_pqp(pqp_root, [&](const auto& node) {
+      if (node->type() != OperatorType::GetTable) {
+        return PQPVisitation::VisitInputs;
+      }
+
+      auto table_node = std::dynamic_pointer_cast<GetTable>(node);
+      auto stored_table = Hyrise::get().storage_manager.get_table(table_node->table_name());
+
+      auto pruned_column_ids_iter = table_node->pruned_column_ids().begin();
+      for (auto stored_column_id = ColumnID{0}, output_column_id = ColumnID{0};
+           stored_column_id < stored_table->column_count(); ++stored_column_id) {
+        if (pruned_column_ids_iter != table_node->pruned_column_ids().end() && stored_column_id == *pruned_column_ids_iter) {
+          ++pruned_column_ids_iter;
+          continue;
+        }
+
+        // non-pruned column
+        auto column_info = stored_table->column_definitions()[stored_column_id];
+        determined_columns.emplace_back(table_node->table_name() + ":" + column_info.name);
+        ++output_column_id;
+      }
+      return PQPVisitation::DoNotVisitInputs;
+    });
+    std::cout << *_visualize_prefix << ";" << boost::algorithm::join(determined_columns, ";") << std::endl;
+  }
 }
 
 }  // namespace hyrise

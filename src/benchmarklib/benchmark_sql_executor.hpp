@@ -4,9 +4,13 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <optional>
+#include <string>
 
 #include "sql/sql_pipeline.hpp"
 #include "utils/sqlite_wrapper.hpp"
+#include "sql/sql_pipeline_statement.hpp"
+#include "storage/table.hpp"
 
 namespace hyrise {
 
@@ -48,6 +52,7 @@ class BenchmarkSQLExecutor {
                        const std::optional<const std::string>& description = std::nullopt);
   void _verify_with_sqlite(SQLPipeline& pipeline);
   void _visualize(SQLPipeline& pipeline);
+  void _collect_columns(SQLPipeline& pipeline);
 
   std::optional<SQLiteWrapper::Connection> _sqlite_connection;
   bool _sqlite_transaction_open{false};
