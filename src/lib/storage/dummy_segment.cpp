@@ -10,6 +10,10 @@
 namespace hyrise {
 DummySegment::DummySegment(DataType data_type, ChunkOffset alleged_size) : AbstractSegment(data_type), _own_data_type(data_type), _alleged_size(alleged_size) {}
 
+bool DummySegment::supports_reencoding() const {
+  return false;
+}
+
 AllTypeVariant DummySegment::operator[](const ChunkOffset /* chunk_offset */) const {
     throw std::runtime_error("A dummy segment does not hold any data and can there not be accessed by operator[].");
 }

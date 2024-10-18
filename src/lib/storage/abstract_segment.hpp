@@ -25,6 +25,9 @@ class AbstractSegment : private Noncopyable {
   // Returns the number of values.
   virtual ChunkOffset size() const = 0;
 
+  // Whether this segment supports re-encoding into a different encoding type
+  virtual bool supports_reencoding() const;
+
   // Copies a segment using a new allocator. This is useful for placing the segment on a new NUMA node.
   virtual std::shared_ptr<AbstractSegment> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const = 0;
 

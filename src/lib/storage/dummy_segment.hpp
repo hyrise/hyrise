@@ -12,6 +12,8 @@ class DummySegment : public AbstractSegment {
  public:
   explicit DummySegment(DataType data_type, ChunkOffset alleged_size);
 
+  bool supports_reencoding() const override;
+
   AllTypeVariant operator[](const ChunkOffset chunk_offset) const override;
   ChunkOffset size() const override;
   std::shared_ptr<AbstractSegment> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const override;
