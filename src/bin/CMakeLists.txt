@@ -23,6 +23,19 @@ target_link_libraries(
     hyriseBenchmarkLib
 )
 
+# Configure pdgf_test
+add_executable(
+    hyrisePDGFTest
+
+    pdgf_test.cpp
+)
+
+target_link_libraries(
+    hyrisePDGFTest
+    hyrise
+    hyriseBenchmarkLib
+)
+
 # Configure client
 add_executable(
     hyriseClient

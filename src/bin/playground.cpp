@@ -1,26 +1,11 @@
 #include <iostream>
 
-#include "import_export/data_generation/shared_memory_reader.hpp"
-#include "import_export/data_generation/pdgf_process.hpp"
-
-#define SHARED_MEMORY_NAME "/PDGF_SHARED_MEMORY"
-#define DATA_READY_SEM "/PDGF_DATA_READY_SEM"
-#define BUFFER_FREE_SEM "/PDGF_BUFFER_FREE_SEM"
+#include "types.hpp"
 
 using namespace hyrise;  // NOLINT(build/namespaces)
 
 int main() {
-  auto reader = SharedMemoryReader<128, 16>(Chunk::DEFAULT_SIZE, SHARED_MEMORY_NAME, DATA_READY_SEM, BUFFER_FREE_SEM);
-  auto pdgf = PdgfProcess(PDGF_DIRECTORY_ROOT);
-  pdgf.run();
-
-  auto tables = std::map<std::string, std::shared_ptr<Table>>{};
-  while (reader.has_next_table()) {
-    auto builder = reader.read_next_table();
-    tables[builder->table_name()] = builder->build_table();
-  }
-  pdgf.wait();
-
-  std::cerr << "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n";
+  const auto world = pmr_string{"world"};
+  std::cout << "Hello " << world << "!\n";
   return 0;
 }
