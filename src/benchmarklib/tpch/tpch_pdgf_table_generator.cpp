@@ -44,6 +44,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHPDGFTableGenerator::gene
 
   std::cerr << "Setting up shared memory.\n";
   auto reader = SharedMemoryReader<128, 16>(_benchmark_config->chunk_size, SHARED_MEMORY_NAME, DATA_READY_SEM, BUFFER_FREE_SEM);
+  std::unordered_map<std::string, BenchmarkTableInfo> table_info_by_name;
 
   /**
    * Read schema. Note that the SharedMemoryReader MUST be created first as it will create the shared resources PDGF will
@@ -59,6 +60,8 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHPDGFTableGenerator::gene
     // be able to tell us which columns we need to generate for our _queries_to_run
     auto table = schema_builder->build_table();
     Hyrise::get().storage_manager.add_table(schema_builder->table_name(), table);
+    // Already insert the tables here because not all of them will be replaced when data is generated later
+    table_info_by_name[schema_builder->table_name()].table = table;
   }
   std::cerr << "Awaiting PDGF teardown\n";
   pdgf.wait();
@@ -94,10 +97,9 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHPDGFTableGenerator::gene
   pdgf.wait();
 
   /**
-   * Return
+   * Return completely generated tables
    */
   std::cerr << "Finalizing generated tables\n";
-  std::unordered_map<std::string, BenchmarkTableInfo> table_info_by_name;
   for (auto& table_builder: table_builders) {
     table_info_by_name[table_builder->table_name()].table = table_builder->build_table();
   }

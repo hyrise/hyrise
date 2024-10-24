@@ -38,21 +38,24 @@ std::string PDGFTableBuilder<work_unit_size, num_columns>::table_name() const {
 
 template <uint32_t work_unit_size, uint32_t num_columns>
 std::shared_ptr<Table> PDGFTableBuilder<work_unit_size, num_columns>::build_table() {
-  Assert(!_table_columns.empty(), "Table schema should have at least one column!");
+  Assert(!_generated_columns.empty(), "Table schema should have at least one column!");
 
   // Table schema has already been generated. Just add the data here.
   auto table = Hyrise::get().storage_manager.get_table(_table_name);
 
   // Assemble table data
-  while (_table_columns[0]->has_another_segment()) {
-    auto segments = Segments{};
-    for (auto& column : _table_columns) {
+  // Note that we have already generated empty chunks when loading the schema, so we just replace the segments now
+  // instead of creating new ones.
+  auto chunk_index = ChunkID{0};
+  while (_generated_columns[0]->has_another_segment()) {
+    auto chunk = table->get_chunk(chunk_index);
+    for (auto i = size_t{0}; i < _num_generated_columns; ++i) {
+      auto& column = _generated_columns[i];
+      auto table_column_index = _generated_column_mappings[i];
       Assert(column->has_another_segment(), "All table columns should have the same number of segments!");
-      segments.emplace_back(column->build_next_segment());
+      chunk->put_segment(table_column_index, column->build_next_segment());
     }
-    auto mvcc_data = std::make_shared<MvccData>(segments.front()->size(), CommitID{0});
-
-    table->append_chunk(segments, mvcc_data);
+    chunk_index++;
   }
 
   return table;
@@ -73,11 +76,6 @@ void PDGFTableBuilder<work_unit_size, num_columns>::read_generation_info(SharedM
   auto table = Hyrise::get().storage_manager.get_table(_table_name);
   const auto table_column_names = table->column_names();
 
-  _table_columns.reserve(table_column_names.size());
-  for (auto type : table->column_data_types()) {
-    _table_columns.emplace_back(_new_non_generated_column_with_data_type(type));
-  }
-
   // Setup generation
   auto num_generated_columns = * reinterpret_cast<uint32_t*>(info_cell->data[4][0]);
   _num_generated_columns = static_cast<uint8_t>(num_generated_columns);
@@ -91,9 +89,7 @@ void PDGFTableBuilder<work_unit_size, num_columns>::read_generation_info(SharedM
     auto generated_column_type = table->column_data_type(static_cast<ColumnID>(mapping_index));
     std::cerr << static_cast<uint32_t>(i) << " " << column_name << " corresponds to index " << mapping_index << " (type " << generated_column_type << ")\n";
     _generated_columns[i] = _new_column_with_data_type(generated_column_type);
-
-    // replace this column in the table columns
-    _table_columns[mapping_index] = _generated_columns[i];
+    _generated_column_mappings[i] = mapping_index;
   }
 }
 
@@ -117,16 +113,6 @@ std::shared_ptr<AbstractPDGFColumn> PDGFTableBuilder<work_unit_size, num_columns
   resolve_data_type(data_type, [&](auto type) {
     using ColumnDataType = typename decltype(type)::type;
     column = std::make_shared<PDGFColumn<ColumnDataType>>(_table_num_rows, _hyrise_table_chunk_size);
-  });
-  return column;
-}
-
-template <uint32_t work_unit_size, uint32_t num_columns>
-std::shared_ptr<AbstractPDGFColumn> PDGFTableBuilder<work_unit_size, num_columns>::_new_non_generated_column_with_data_type(DataType data_type) {
-  std::shared_ptr<AbstractPDGFColumn> column;
-  resolve_data_type(data_type, [&](auto type) {
-    using ColumnDataType = typename decltype(type)::type;
-    column = std::make_shared<NonGeneratedPDGFColumn<ColumnDataType>>(_table_num_rows, _hyrise_table_chunk_size);
   });
   return column;
 }

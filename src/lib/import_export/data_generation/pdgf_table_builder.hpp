@@ -28,7 +28,6 @@ class PDGFTableBuilder : Noncopyable {
 
  protected:
   std::shared_ptr<AbstractPDGFColumn> _new_column_with_data_type(DataType data_type);
-  std::shared_ptr<AbstractPDGFColumn> _new_non_generated_column_with_data_type(DataType data_type);
 
   ChunkOffset _hyrise_table_chunk_size;
 
@@ -37,10 +36,9 @@ class PDGFTableBuilder : Noncopyable {
   int64_t _table_num_rows;
   int64_t _received_rows = 0;
 
-  std::vector<std::shared_ptr<AbstractPDGFColumn>> _table_columns;
-
   uint8_t _num_generated_columns;
   std::array<std::shared_ptr<AbstractPDGFColumn>, num_columns> _generated_columns;
+  std::array<ColumnID, num_columns> _generated_column_mappings;
 };
 
 template class PDGFTableBuilder<128u, 16u>;
