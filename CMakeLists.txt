@@ -181,7 +181,9 @@ find_package(Tbb REQUIRED)
 find_package(Readline REQUIRED)
 find_package(Curses REQUIRED)
 find_package(SQLite3 REQUIRED)
-find_package(Boost REQUIRED COMPONENTS container date_time)
+# Old versions of CMake used the FindBoost module, which is deprecated because find_package can now find the upstream package directly.
+# Therefore, disable it explicitly.
+find_package(Boost REQUIRED COMPONENTS container date_time NO_MODULE)
 
 add_definitions(-DBOOST_THREAD_VERSION=5)
 set(BOOST_LIBS Boost::container Boost::date_time)
