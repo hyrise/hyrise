@@ -43,14 +43,13 @@ void PDGFTableSchemaBuilder<work_unit_size, num_columns>::read_schema(SharedMemo
   boost::algorithm::to_lower(_table_name);
   std::cerr << "TABLE NAME " << _table_name << "\n";
 //  _table_num_rows = * reinterpret_cast<int64_t*>(schema_cell->data[2][0]);
-//  _table_will_be_generated = * reinterpret_cast<bool*>(schema_cell->data[3][0]);
   std::cerr << "--- FIELDS OVERVIEW\n";
   // TODO(JEH): mention possible endianess problems in thesis
-  auto table_num_columns = * reinterpret_cast<uint32_t*>(schema_cell->data[4][0]);
+  auto table_num_columns = * reinterpret_cast<uint32_t*>(schema_cell->data[2][0]);
   for (uint32_t i = 0; i < table_num_columns; ++i) {
-    auto column_name = std::string(schema_cell->data[5 + (2 * i)][0]);
+    auto column_name = std::string(schema_cell->data[3 + (2 * i)][0]);
     boost::algorithm::to_lower(column_name);
-    auto column_type = * reinterpret_cast<ColumnType*>(schema_cell->data[6 + (2 * i)][0]);
+    auto column_type = * reinterpret_cast<PDGFColumnType*>(schema_cell->data[4 + (2 * i)][0]);
     std::cerr << i << " " << column_name << " " << column_type << "\n";
 
     _table_column_names.push_back(std::move(column_name));

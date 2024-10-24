@@ -10,13 +10,17 @@ const std::string PDGF_DIRECTORY_ROOT = "../../pdgf/original";
 
 class PdgfProcess {
  public:
-  explicit PdgfProcess(std::string pdgf_directory_root);
+  static PdgfProcess for_schema_generation(std::string pdgf_directory_root);
+  static PdgfProcess for_data_generation(std::string pdgf_directory_root);
 
   void run();
   void wait();
 
  protected:
+  explicit PdgfProcess(std::string pdgf_directory_root, std::string pdgf_command);
+
   std::string _pdgf_directory_root;
+  std::string _pdgf_command;
   boost::process::child _child;
   std::vector<std::string> _arguments;
 

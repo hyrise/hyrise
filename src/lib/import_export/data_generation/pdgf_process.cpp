@@ -6,7 +6,16 @@
 
 namespace hyrise {
 
-PdgfProcess::PdgfProcess(std::string pdgf_directory_root) : _pdgf_directory_root(std::move(pdgf_directory_root)) {
+PdgfProcess PdgfProcess::for_schema_generation(std::string pdgf_directory_root) {
+  return PdgfProcess(std::move(pdgf_directory_root), "-writeTableSchemas");
+}
+
+PdgfProcess PdgfProcess::for_data_generation(std::string pdgf_directory_root) {
+  return PdgfProcess(std::move(pdgf_directory_root), "-start");
+}
+
+PdgfProcess::PdgfProcess(std::string pdgf_directory_root, std::string pdgf_command)
+    : _pdgf_directory_root(std::move(pdgf_directory_root)), _pdgf_command(std::move(pdgf_command)) {
   _configure_numa();
   _arguments.emplace_back("/usr/lib/jvm/java-8-openjdk/bin/java");
   _configure_jvm();
@@ -70,7 +79,7 @@ void PdgfProcess::_configure_pdgf_arguments() {
                                           "-noShell", "-closeWhenDone",
                                           "-sf", "0.1",
                                           "-workers", "1",
-                                          "-writeTableSchemas"
+                                          _pdgf_command
                                       });
 }
 }  // namespace hyrise

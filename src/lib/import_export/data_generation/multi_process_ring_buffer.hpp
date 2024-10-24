@@ -16,6 +16,8 @@ class MultiProcessRingBuffer : Noncopyable {
                                   const char* data_available_sem_path, const char* data_written_sem_path);
   ~MultiProcessRingBuffer();
 
+  void reset();
+
   RingBufferCell* prepare_retrieval();
   void retrieval_finished();
 

@@ -41,18 +41,15 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHPDGFTableGenerator::gene
   Assert(!_benchmark_config->cache_binary_tables, "Caching of half-empty tables containing dummy segments is currently not supported");
   Assert(_clustering_configuration == ClusteringConfiguration::None, "We do not support any special clustering configurations, as those require sorting, and sorting on PDGF-generated partial data is not supported.");
 
-  /**
-   * Launch PDGF. Note that the SharedMemoryReader MUST be created first as it will create the shared resources PDGF will
-   * bind to.
-   */
-  std::cout << "Setting up shared memory and launching PDGF.\n";
+  std::cout << "Setting up shared memory.\n";
   auto reader = SharedMemoryReader<128, 16>(_benchmark_config->chunk_size, SHARED_MEMORY_NAME, DATA_READY_SEM, BUFFER_FREE_SEM);
 
   /**
-   * Read schema
+   * Read schema. Note that the SharedMemoryReader MUST be created first as it will create the shared resources PDGF will
+   * bind to.
    */
   std::cout << "Receiving table schemas from PDGF!\n";
-  auto pdgf = PdgfProcess(PDGF_DIRECTORY_ROOT);
+  auto pdgf = PdgfProcess::for_schema_generation(PDGF_DIRECTORY_ROOT);
   pdgf.run();
   while (reader.has_next_table()) {
     auto schema_builder = reader.read_next_schema();
@@ -66,26 +63,31 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHPDGFTableGenerator::gene
   pdgf.wait();
 
   /**
+   * Reset shared memory buffer. This is important because we will proceed to launch PDGF a second time.
+   */
+  reader.reset();
+
+  /**
    * Generate tables
    */
-//  std::cout << "Generating tables with PDGF\n";
-//  pdgf = PdgfProcess(PDGF_DIRECTORY_ROOT);
-//  pdgf.run();
-//  auto table_builders = std::vector<std::unique_ptr<PDGFTableBuilder<128, 16>>>{};
-//  while (reader.has_next_table()) {
-//    table_builders.emplace_back(reader.read_next_table());
-//  }
-//  std::cout << "Awaiting PDGF teardown\n";
-//  pdgf.wait();
-//
-//  /**
-//   * Return
-//   */
-//  std::cout << "Finalizing generated tables\n";
+  std::cout << "Generating tables with PDGF\n";
+  pdgf = PdgfProcess::for_data_generation(PDGF_DIRECTORY_ROOT);
+  pdgf.run();
+  auto table_builders = std::vector<std::unique_ptr<PDGFTableBuilder<128, 16>>>{};
+  while (reader.has_next_table()) {
+    table_builders.emplace_back(reader.read_next_table());
+  }
+  std::cout << "Awaiting PDGF teardown\n";
+  pdgf.wait();
+
+  /**
+   * Return
+   */
+  std::cout << "Finalizing generated tables\n";
   std::unordered_map<std::string, BenchmarkTableInfo> table_info_by_name;
-//  for (auto& table_builder: table_builders) {
-//    table_info_by_name[table_builder->table_name()].table = table_builder->build_table();
-//  }
+  for (auto& table_builder: table_builders) {
+    table_info_by_name[table_builder->table_name()].table = table_builder->build_table();
+  }
 
   // TODO(JEH): what about encoding on-the-fly when chunks are done?
 

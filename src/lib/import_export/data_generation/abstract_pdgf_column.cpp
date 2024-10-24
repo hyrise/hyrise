@@ -1,7 +1,7 @@
 #include "abstract_pdgf_column.hpp"
 
 namespace hyrise {
-DataType hyrise_type_for_column_type(ColumnType column_type) {
+DataType hyrise_type_for_column_type(PDGFColumnType column_type) {
   switch (column_type) {
     case STRING: return DataType::String;
     case BOOL:

@@ -8,9 +8,9 @@
 #include "storage/abstract_segment.hpp"
 
 namespace hyrise {
-enum ColumnType: uint32_t { STRING = 0, INTEGER = 1, LONG = 2, DOUBLE = 3, BOOL = 4 };
+enum PDGFColumnType : uint32_t { STRING = 0, INTEGER = 1, LONG = 2, DOUBLE = 3, BOOL = 4 };
 
-DataType hyrise_type_for_column_type(ColumnType column_type);
+DataType hyrise_type_for_column_type(PDGFColumnType column_type);
 
 class AbstractPDGFColumn: private Noncopyable {
  public:

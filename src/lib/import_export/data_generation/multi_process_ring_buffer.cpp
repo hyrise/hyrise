@@ -41,6 +41,13 @@ MultiProcessRingBuffer<buffer_size>::MultiProcessRingBuffer(int shm_fd, uint32_t
 }
 
 template <uint32_t buffer_size>
+void MultiProcessRingBuffer<buffer_size>::reset() {
+  // PDGF expects to start reading form index 0 in the buffer
+  _current_read_index = 0;
+  _current_write_index = 0;
+}
+
+template <uint32_t buffer_size>
 MultiProcessRingBuffer<buffer_size>::~MultiProcessRingBuffer() {
   if (_ring_buffer != MAP_FAILED) {
     std::cerr << "Unmapping ring buffer\n";

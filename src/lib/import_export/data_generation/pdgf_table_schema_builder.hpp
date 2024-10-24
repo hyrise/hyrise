@@ -30,7 +30,7 @@ class PDGFTableSchemaBuilder : Noncopyable {
   std::string _table_name;
 
   std::vector<std::string> _table_column_names;
-  std::vector<ColumnType> _table_column_types;
+  std::vector<PDGFColumnType> _table_column_types;
 };
 
 template class PDGFTableSchemaBuilder<128u, 16u>;

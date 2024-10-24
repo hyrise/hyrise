@@ -21,6 +21,8 @@ class SharedMemoryReader : Noncopyable {
   std::unique_ptr<PDGFTableSchemaBuilder<work_unit_size, num_columns>> read_next_schema();
   std::unique_ptr<PDGFTableBuilder<work_unit_size, num_columns>> read_next_table();
 
+  void reset();
+
  protected:
   void _return_data_slot(uint32_t buffer_offset);
 

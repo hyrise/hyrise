@@ -60,6 +60,13 @@ SharedMemoryReader<work_unit_size, num_columns>::~SharedMemoryReader() {
 }
 
 template <uint32_t work_unit_size, uint32_t num_columns>
+void SharedMemoryReader<work_unit_size, num_columns>::reset() {
+  _num_tables_to_read = INT32_MAX;
+  _num_read_tables = 0;
+  _ring_buffer->reset();
+}
+
+template <uint32_t work_unit_size, uint32_t num_columns>
 bool SharedMemoryReader<work_unit_size, num_columns>::has_next_table() const {
   return _num_read_tables < _num_tables_to_read;
 }
@@ -90,6 +97,7 @@ std::unique_ptr<PDGFTableBuilder<work_unit_size, num_columns>> SharedMemoryReade
   auto table_builder = std::make_unique<PDGFTableBuilder<work_unit_size, num_columns>>(ring_cell->table_id, _hyrise_table_chunk_size);
   auto data_slot = ring_cell->data_buffer_offset;
   auto addressed_data = _data_buffer->get_addressed_by(ring_cell);
+  _num_tables_to_read = * reinterpret_cast<uint32_t*>(addressed_data->data[0][0]);
   _ring_buffer->retrieval_finished();
   table_builder->read_generation_info(addressed_data);
   _return_data_slot(data_slot);
