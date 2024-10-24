@@ -42,8 +42,6 @@ endif()
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_STANDARD 20)
 
-# Hotfix for boost bug (https://github.com/boostorg/asio/issues/312):
-add_compile_options(-DBOOST_ASIO_DISABLE_CONCEPTS)
 SET(BOOST_MIN_VERSION "1.81.0")
 # Old versions of CMake used the FindBoost module, which is deprecated because find_package can now find the upstream package directly.
 # Therefore, disable it explicitly.
