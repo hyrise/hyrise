@@ -45,6 +45,8 @@ std::shared_ptr<Table> PDGFTableBuilder<work_unit_size, num_columns>::build_tabl
   }
   auto table = std::make_shared<Table>(table_column_definitions, TableType::Data, _hyrise_table_chunk_size, UseMvcc::Yes);
 
+  // todo(jeh) split in meta information and data generation
+
   // Assemble table data
   while (_table_columns[0]->has_another_segment()) {
     auto segments = Segments{};
@@ -114,7 +116,7 @@ template <uint32_t work_unit_size, uint32_t num_columns>
 void PDGFTableBuilder<work_unit_size, num_columns>::read_data(uint32_t table_id, int64_t sorting_id,
                                               SharedMemoryDataCell<work_unit_size, num_columns>* data_cell) {
   Assert(table_id == _table_id, "Trying to append data to a table it does not belong to!");
-  std::cout << "Reading #" << sorting_id << "\n";
+  // std::cout << "Reading #" << sorting_id << "\n";
   auto cell_rows = static_cast<size_t>(std::min(_table_num_rows - _received_rows, static_cast<int64_t>(work_unit_size)));
   for (auto row = size_t{0}; row < cell_rows; ++row) {
     for (auto col = uint8_t{0}; col < _num_generated_columns; ++col) {

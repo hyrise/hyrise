@@ -4,6 +4,7 @@
 
 #include "multi_process_ring_buffer.hpp"
 #include "pdgf_table_builder.hpp"
+#include "pdgf_table_schema_builder.hpp"
 #include "shared_memory_dto.hpp"
 #include "types.hpp"
 
@@ -17,6 +18,7 @@ class SharedMemoryReader : Noncopyable {
   ~SharedMemoryReader();
 
   bool has_next_table() const;
+  std::unique_ptr<PDGFTableSchemaBuilder<work_unit_size, num_columns>> read_next_schema();
   std::unique_ptr<PDGFTableBuilder<work_unit_size, num_columns>> read_next_table();
 
  protected:

@@ -1,6 +1,7 @@
 #include <chrono>
 #include <iostream>
 #include <string>
+#include <vector>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/lexical_cast.hpp>
@@ -168,10 +169,18 @@ int main(int argc, char* argv[]) {
   if (pdgf_data_gen) {
     std::cout << "- data generation using PDGF is active\n";
     std::cout << "- partial column generation is " << (only_generate_used_columns ? "active" : "not active") << "\n";
-    Assert(!only_generate_used_columns, "TODO(JEH): Generating partial data not yet implemented");
-    table_generator = std::make_unique<TPCHPDGFTableGenerator>(scale_factor, clustering_configuration, config);
-    item_runner = std::make_unique<TPCHBenchmarkItemRunner>(config, use_prepared_statements, scale_factor,
+    auto runner = std::make_unique<TPCHBenchmarkItemRunner>(config, use_prepared_statements, scale_factor,
                                                             clustering_configuration, item_ids);
+    auto queries = std::vector<std::string>{};
+    if (only_generate_used_columns) {
+      auto benchmark_items = runner->items();
+      queries.reserve(benchmark_items.size());
+      for (auto item : benchmark_items) {
+        queries.emplace_back(runner->build_query(item));
+      }
+    }
+    table_generator = std::make_unique<TPCHPDGFTableGenerator>(scale_factor, clustering_configuration, only_generate_used_columns, config, queries);
+    item_runner = std::move(runner);
   } else if (jcch) {
     // Different from the TPC-H benchmark, where the table and query generators are immediately embedded in Hyrise, the
     // JCC-H implementation calls those generators externally. This is because we would get linking conflicts if we were
@@ -208,9 +217,9 @@ int main(int argc, char* argv[]) {
                                                             use_prepared_statements, scale_factor,
                                                             clustering_configuration, item_ids);
   } else {
-    table_generator = std::make_unique<TPCHTableGenerator>(scale_factor, clustering_configuration, config);
     item_runner = std::make_unique<TPCHBenchmarkItemRunner>(config, use_prepared_statements, scale_factor,
                                                             clustering_configuration, item_ids);
+    table_generator = std::make_unique<TPCHTableGenerator>(scale_factor, clustering_configuration,  config);
   }
 
   auto benchmark_runner =

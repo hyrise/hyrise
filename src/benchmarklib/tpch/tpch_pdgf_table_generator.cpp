@@ -8,10 +8,14 @@
 
 #include "abstract_table_generator.hpp"
 #include "benchmark_config.hpp"
+#include "hyrise.hpp"
 #include "import_export/data_generation/pdgf_process.hpp"
 #include "import_export/data_generation/shared_memory_reader.hpp"
+#include "operators/pqp_utils.hpp"
 #include "storage/constraints/constraint_utils.hpp"
+#include "sql/sql_pipeline_builder.hpp"
 #include "tpch/tpch_constants.hpp"
+#include "tpch/tpch_benchmark_item_runner.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
@@ -19,12 +23,14 @@ namespace hyrise {
 
 TPCHPDGFTableGenerator::TPCHPDGFTableGenerator(float scale_factor, ClusteringConfiguration clustering_configuration,
                                        ChunkOffset chunk_size)
-    : TPCHPDGFTableGenerator(scale_factor, clustering_configuration, std::make_shared<BenchmarkConfig>(chunk_size)) {}
+    : TPCHPDGFTableGenerator(scale_factor, clustering_configuration, false, std::make_shared<BenchmarkConfig>(chunk_size), std::vector<std::string>{}) {}
 
-TPCHPDGFTableGenerator::TPCHPDGFTableGenerator(float scale_factor, ClusteringConfiguration clustering_configuration,
-                                       const std::shared_ptr<BenchmarkConfig>& benchmark_config)
+TPCHPDGFTableGenerator::TPCHPDGFTableGenerator(float scale_factor, ClusteringConfiguration clustering_configuration, bool only_generate_used_columns,
+                                               const std::shared_ptr<BenchmarkConfig>& benchmark_config, std::vector<std::string> queries_to_run)
     : AbstractTableGenerator(benchmark_config),
       _scale_factor(scale_factor),
+      _only_generate_used_columns(only_generate_used_columns),
+      _queries_to_run(std::move(queries_to_run)),
       _clustering_configuration(clustering_configuration) {}
 
 #define SHARED_MEMORY_NAME "/PDGF_SHARED_MEMORY"
@@ -41,36 +47,89 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHPDGFTableGenerator::gene
    */
   std::cout << "Setting up shared memory and launching PDGF.\n";
   auto reader = SharedMemoryReader<128, 16>(_benchmark_config->chunk_size, SHARED_MEMORY_NAME, DATA_READY_SEM, BUFFER_FREE_SEM);
+
+  /**
+   * Read schema
+   */
+  std::cout << "Receiving table schemas from PDGF!\n";
   auto pdgf = PdgfProcess(PDGF_DIRECTORY_ROOT);
   pdgf.run();
-
-  /**
-   * Generate tables
-   */
-  std::cout << "Generating another table with PDGF\n";
-  auto table_builders = std::vector<std::unique_ptr<PDGFTableBuilder<128, 16>>>{};
   while (reader.has_next_table()) {
-    table_builders.emplace_back(reader.read_next_table());
+    auto schema_builder = reader.read_next_schema();
+    // Directly add the (empty) table to the storage manager here.
+    // This table will be replaced later once we have received data, but we will need the tables to be present in order for the optimizer to
+    // be able to tell us which columns we need to generate for our _queries_to_run
+    auto table = schema_builder->build_table();
+    Hyrise::get().storage_manager.add_table(schema_builder->table_name(), table);
   }
-
-  /**
-   * Await PDGF teardown
-   */
   std::cout << "Awaiting PDGF teardown\n";
   pdgf.wait();
 
   /**
-   * Return
+   * Generate tables
    */
-  std::cout << "Finalizing generated tables\n";
+//  std::cout << "Generating tables with PDGF\n";
+//  pdgf = PdgfProcess(PDGF_DIRECTORY_ROOT);
+//  pdgf.run();
+//  auto table_builders = std::vector<std::unique_ptr<PDGFTableBuilder<128, 16>>>{};
+//  while (reader.has_next_table()) {
+//    table_builders.emplace_back(reader.read_next_table());
+//  }
+//  std::cout << "Awaiting PDGF teardown\n";
+//  pdgf.wait();
+//
+//  /**
+//   * Return
+//   */
+//  std::cout << "Finalizing generated tables\n";
   std::unordered_map<std::string, BenchmarkTableInfo> table_info_by_name;
-  for (auto& table_builder: table_builders) {
-    table_info_by_name[table_builder->table_name()].table = table_builder->build_table();
-  }
+//  for (auto& table_builder: table_builders) {
+//    table_info_by_name[table_builder->table_name()].table = table_builder->build_table();
+//  }
 
   // TODO(JEH): what about encoding on-the-fly when chunks are done?
 
   return table_info_by_name;
+}
+
+void TPCHPDGFTableGenerator::_collect_columns(const std::string& sql) {
+  // TODO(JEH): Invoke PDGF once for schema generation; invoke it again for data
+
+  auto pipeline_builder = SQLPipelineBuilder{sql};
+  auto pipeline = pipeline_builder.create_pipeline();
+  auto& pqps = pipeline.get_physical_plans();
+  (void) pqps;
+  //  for (auto pqp_root : pqps) {
+  //    auto determined_columns = std::vector<std::string>{};
+
+
+
+
+  //    visit_pqp(pqp_root, [&](const auto& node) {
+  //      if (node->type() != OperatorType::GetTable) {
+  //        return PQPVisitation::VisitInputs;
+  //      }
+  //
+  //      auto table_node = std::dynamic_pointer_cast<GetTable>(node);
+  //      auto stored_table = Hyrise::get().storage_manager.get_table(table_node->table_name());
+  //
+  //      auto pruned_column_ids_iter = table_node->pruned_column_ids().begin();
+  //      for (auto stored_column_id = ColumnID{0}, output_column_id = ColumnID{0};
+  //           stored_column_id < stored_table->column_count(); ++stored_column_id) {
+  //        if (pruned_column_ids_iter != table_node->pruned_column_ids().end() && stored_column_id == *pruned_column_ids_iter) {
+  //          ++pruned_column_ids_iter;
+  //          continue;
+  //        }
+  //
+  //        // non-pruned column
+  //        auto column_info = stored_table->column_definitions()[stored_column_id];
+  //        determined_columns.emplace_back(table_node->table_name() + ":" + column_info.name);
+  //        ++output_column_id;
+  //      }
+  //      return PQPVisitation::DoNotVisitInputs;
+  //    });
+  //    std::cout << *_visualize_prefix << ";" << boost::algorithm::join(determined_columns, ";") << std::endl;
+  //  }
 }
 
 AbstractTableGenerator::IndexesByTable TPCHPDGFTableGenerator::_indexes_by_table() const {

@@ -119,6 +119,10 @@ void TPCHBenchmarkItemRunner::on_tables_loaded() {
   }
 }
 
+std::string TPCHBenchmarkItemRunner::build_query(const BenchmarkItemID item_id) {
+  return _build_query(item_id);
+}
+
 std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id) {
   // Preferring a fast random engine over one with high-quality randomness. Engines are not thread-safe. Since we are
   // fine with them not being synced across threads and object cost is not an issue, we simply use one generator per

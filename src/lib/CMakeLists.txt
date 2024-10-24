@@ -105,15 +105,17 @@ set(
     import_export/data_generation/non_generated_pdgf_column.hpp
     import_export/data_generation/pdgf_column.cpp
     import_export/data_generation/pdgf_column.hpp
+    import_export/data_generation/pdgf_process.hpp
+    import_export/data_generation/pdgf_process.cpp
     import_export/data_generation/pdgf_table_builder.cpp
     import_export/data_generation/pdgf_table_builder.hpp
+    import_export/data_generation/pdgf_table_schema_builder.cpp
+    import_export/data_generation/pdgf_table_schema_builder.hpp
     import_export/data_generation/shared_memory_dto.hpp
     import_export/data_generation/shared_memory_reader.cpp
     import_export/data_generation/shared_memory_reader.hpp
     import_export/file_type.cpp
     import_export/file_type.hpp
-    import_export/data_generation/pdgf_process.cpp
-    import_export/data_generation/pdgf_process.hpp
     logical_query_plan/abstract_lqp_node.cpp
     logical_query_plan/abstract_lqp_node.hpp
     logical_query_plan/abstract_non_query_node.cpp

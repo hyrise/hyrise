@@ -3,10 +3,12 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 #include "abstract_table_generator.hpp"
 #include "storage/chunk.hpp"
 #include "tpch/tpch_constants.hpp"
+#include "tpch/tpch_benchmark_item_runner.hpp"
 #include "types.hpp"
 
 namespace hyrise {
@@ -24,17 +26,20 @@ class TPCHPDGFTableGenerator : virtual public AbstractTableGenerator {
                               ChunkOffset chunk_size = Chunk::DEFAULT_SIZE);
 
   // Constructor for creating a TPCHPDGFTableGenerator in a benchmark
-  explicit TPCHPDGFTableGenerator(float scale_factor, ClusteringConfiguration clustering_configuration,
-                              const std::shared_ptr<BenchmarkConfig>& benchmark_config);
+  explicit TPCHPDGFTableGenerator(float scale_factor, ClusteringConfiguration clustering_configuration, bool only_generate_used_columns,
+                                  const std::shared_ptr<BenchmarkConfig>& benchmark_config, std::vector<std::string> queries_to_run);
 
   std::unordered_map<std::string, BenchmarkTableInfo> generate() override;
 
  protected:
+  void _collect_columns(const std::string& sql);
   IndexesByTable _indexes_by_table() const override;
   SortOrderByTable _sort_order_by_table() const override;
   void _add_constraints(std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) const override;
 
-  const float _scale_factor;
-  const ClusteringConfiguration _clustering_configuration;
+  float _scale_factor;
+  bool _only_generate_used_columns;
+  std::vector<std::string> _queries_to_run;
+  ClusteringConfiguration _clustering_configuration;
 };
 }  // namespace hyrise
