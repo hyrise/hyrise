@@ -4,6 +4,7 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include <set>
 
 #include "abstract_table_generator.hpp"
 #include "storage/chunk.hpp"
@@ -40,6 +41,7 @@ class TPCHPDGFTableGenerator : virtual public AbstractTableGenerator {
   float _scale_factor;
   bool _only_generate_used_columns;
   std::vector<std::string> _queries_to_run;
+  std::shared_ptr<std::set<std::string>> _columns_to_generate;
   ClusteringConfiguration _clustering_configuration;
 };
 }  // namespace hyrise

@@ -89,7 +89,7 @@ void PDGFTableBuilder<work_unit_size, num_columns>::read_generation_info(SharedM
     Assert(find != table_column_names.end(), "Trying to generate column " + column_name + " that does not belong to the table!");
     auto mapping_index = std::distance(table_column_names.begin(), find);
     auto generated_column_type = table->column_data_type(static_cast<ColumnID>(mapping_index));
-    std::cerr << i << " " << column_name << " corresponds to index " << mapping_index << " (type " << generated_column_type << ")\n";
+    std::cerr << static_cast<uint32_t>(i) << " " << column_name << " corresponds to index " << mapping_index << " (type " << generated_column_type << ")\n";
     _generated_columns[i] = _new_column_with_data_type(generated_column_type);
 
     // replace this column in the table columns

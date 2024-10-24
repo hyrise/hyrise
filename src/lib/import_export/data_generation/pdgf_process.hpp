@@ -1,5 +1,7 @@
 #pragma once
 
+#include <memory>
+#include <set>
 #include <string>
 #include <vector>
 #include <boost/process.hpp>
@@ -16,13 +18,18 @@ class PdgfProcess {
   void run();
   void wait();
 
+  void set_column_filter(std::shared_ptr<std::set<std::string>>& columns_to_generate);
+
  protected:
   explicit PdgfProcess(std::string pdgf_directory_root, std::string pdgf_command);
 
+  bool _has_run = false;
+
   std::string _pdgf_directory_root;
   std::string _pdgf_command;
-  boost::process::child _child;
   std::vector<std::string> _arguments;
+  std::shared_ptr<std::set<std::string>> _columns_to_generate;
+  boost::process::child _child;
 
   void _configure_numa();
   void _configure_jvm();
