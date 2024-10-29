@@ -7,16 +7,16 @@
 
 namespace hyrise {
 
-PdgfProcess PdgfProcess::for_schema_generation(std::string pdgf_directory_root) {
-  return PdgfProcess(std::move(pdgf_directory_root), "-writeTableSchemas");
+PdgfProcess PdgfProcess::for_schema_generation(std::string pdgf_directory_root, float scale_factor) {
+  return PdgfProcess(std::move(pdgf_directory_root), "-writeTableSchemas", scale_factor);
 }
 
-PdgfProcess PdgfProcess::for_data_generation(std::string pdgf_directory_root) {
-  return PdgfProcess(std::move(pdgf_directory_root), "-start");
+PdgfProcess PdgfProcess::for_data_generation(std::string pdgf_directory_root, float scale_factor) {
+  return PdgfProcess(std::move(pdgf_directory_root), "-start", scale_factor);
 }
 
-PdgfProcess::PdgfProcess(std::string pdgf_directory_root, std::string pdgf_command)
-    : _pdgf_directory_root(std::move(pdgf_directory_root)), _pdgf_command(std::move(pdgf_command)) {}
+PdgfProcess::PdgfProcess(std::string pdgf_directory_root, std::string pdgf_command, float scale_factor)
+    : _pdgf_directory_root(std::move(pdgf_directory_root)), _pdgf_command(std::move(pdgf_command)), _scale_factor(scale_factor) {}
 
 PdgfProcess::~PdgfProcess() {
   std::cerr << "Destructuring PdgfProcess!\n";
@@ -26,7 +26,7 @@ PdgfProcess::~PdgfProcess() {
     }
   }
   // We don't want to wait until this thread wakes up again
-  _monitor_thread.detach();
+  // _monitor_thread.detach();
   if (_child.running()) {
     _child.terminate();
   }
@@ -93,7 +93,7 @@ void PdgfProcess::run() {
       }
       // We need to wait sufficiently long here, because PDGF will already terminate once it has managed to write
       // all the data, while Hyrise still has some work to do reading the remaining cells.
-      std::this_thread::sleep_for(std::chrono::seconds(10));
+      std::this_thread::sleep_for(std::chrono::seconds(60));
     }
   });
 }
@@ -120,7 +120,8 @@ void PdgfProcess::_configure_pdgf_properties() {
   auto properties = std::vector<std::string>{
       "java.library.path", "extlib/",
       "bankmark.pdgf.log.folder", "/scratch/jan-eric.hellenberg",
-      "CONCURRENT_SCHED_DEFAULT_WORKUNIT_SIZE", "128"
+      "CONCURRENT_SCHED_DEFAULT_WORKUNIT_SIZE", "128",
+      "MICRO_BENCHMARK_GENERATION", "SINGLE_WORKER"
   };
 
   for (size_t i = 0; i < properties.size(); i += 2) {
@@ -139,7 +140,7 @@ void PdgfProcess::_configure_pdgf_arguments() {
                                           "-load", "pdgf-core_config_tpc-h-schema.xml",
                                           "-load", "default-shm-reflective-generation.xml",
                                           "-noShell", "-closeWhenDone",
-                                          "-sf", "0.1",
+                                          "-sf", std::to_string(_scale_factor),
                                           "-workers", "1",
                                           _pdgf_command
                                       });

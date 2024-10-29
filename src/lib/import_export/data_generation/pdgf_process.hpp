@@ -15,8 +15,8 @@ const std::string PDGF_DIRECTORY_ROOT = "../../pdgf/original";
 
 class PdgfProcess : Noncopyable {
  public:
-  static PdgfProcess for_schema_generation(std::string pdgf_directory_root);
-  static PdgfProcess for_data_generation(std::string pdgf_directory_root);
+  static PdgfProcess for_schema_generation(std::string pdgf_directory_root, float scale_factor);
+  static PdgfProcess for_data_generation(std::string pdgf_directory_root, float scale_factor);
 
   ~PdgfProcess();
 
@@ -26,11 +26,14 @@ class PdgfProcess : Noncopyable {
   void set_column_filter(std::shared_ptr<std::set<std::string>>& columns_to_generate);
 
  protected:
+  explicit PdgfProcess(std::string pdgf_directory_root, std::string pdgf_command, float scale_factor);
+
   bool _has_run = false;
   bool _data_transmission_complete = false;
 
   std::string _pdgf_directory_root;
   std::string _pdgf_command;
+  float _scale_factor;
   std::vector<std::string> _arguments;
   std::shared_ptr<std::set<std::string>> _columns_to_generate;
 
@@ -40,7 +43,6 @@ class PdgfProcess : Noncopyable {
   std::vector<std::thread> _reader_threads;
   std::thread _monitor_thread;
 
-  explicit PdgfProcess(std::string pdgf_directory_root, std::string pdgf_command);
 
   void _configure_numa();
   void _configure_jvm();

@@ -51,7 +51,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHPDGFTableGenerator::gene
    * bind to.
    */
   std::cerr << "Receiving table schemas from PDGF!\n";
-  auto pdgf_schema = PdgfProcess::for_schema_generation(PDGF_DIRECTORY_ROOT);
+  auto pdgf_schema = PdgfProcess::for_schema_generation(PDGF_DIRECTORY_ROOT, _scale_factor);
   pdgf_schema.run();
   while (reader.has_next_table()) {
     auto schema_builder = reader.read_next_schema();
@@ -84,7 +84,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHPDGFTableGenerator::gene
    * Generate tables
    */
   std::cerr << "Generating tables with PDGF\n";
-  auto pdgf_data = PdgfProcess::for_data_generation(PDGF_DIRECTORY_ROOT);
+  auto pdgf_data = PdgfProcess::for_data_generation(PDGF_DIRECTORY_ROOT, _scale_factor);
   if (_only_generate_used_columns) {
     pdgf_data.set_column_filter(_columns_to_generate);
   }
