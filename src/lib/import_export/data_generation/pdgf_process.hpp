@@ -41,8 +41,8 @@ class PdgfProcess : Noncopyable {
   boost::process::ipstream _child_out;
   boost::process::ipstream _child_err;
   std::vector<std::thread> _reader_threads;
-  std::thread _monitor_thread;
 
+  void _monitor_liveliness();
 
   void _configure_numa();
   void _configure_jvm();

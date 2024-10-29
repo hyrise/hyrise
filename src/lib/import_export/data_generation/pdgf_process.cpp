@@ -25,8 +25,6 @@ PdgfProcess::~PdgfProcess() {
       thread.join();
     }
   }
-  // We don't want to wait until this thread wakes up again
-  // _monitor_thread.detach();
   if (_child.running()) {
     _child.terminate();
   }
@@ -81,21 +79,7 @@ void PdgfProcess::run() {
       boost::process::std_out > _child_out,
       boost::process::std_err > _child_err);
 
-  // This is just a fail-safe, so that we won't block forever in benchmarks waiting for data when PDGF has crashed.
-  _monitor_thread = std::thread([&] {
-    while (true) {
-      if (!_child.running()) {
-        if (!_data_transmission_complete) {
-          std::cerr << "Child finished before data transmission was complete!\n";
-          exit(EXIT_FAILURE);
-        }
-        break;
-      }
-      // We need to wait sufficiently long here, because PDGF will already terminate once it has managed to write
-      // all the data, while Hyrise still has some work to do reading the remaining cells.
-      std::this_thread::sleep_for(std::chrono::seconds(60));
-    }
-  });
+  _monitor_liveliness();
 }
 
 void PdgfProcess::await_teardown() {
@@ -106,6 +90,32 @@ void PdgfProcess::await_teardown() {
 
 void PdgfProcess::set_column_filter(std::shared_ptr<std::set<std::string>>& columns_to_generate) {
   _columns_to_generate = columns_to_generate;
+}
+
+void PdgfProcess::_monitor_liveliness() {
+  // This is just a fail-safe, so that we won't block forever in benchmarks waiting for data when PDGF has crashed.
+  _reader_threads.emplace_back([&] {
+    auto child_dead_since = int32_t{0};
+    while (true) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(50));
+
+      if (_data_transmission_complete) {
+        std::cerr << "Data transmission is complete, stopping liveliness monitoring of PDGF!\n";
+        break;
+      }
+
+      if (!_child.running()) {
+        child_dead_since += 100;
+        // We need to wait sufficiently long here, because PDGF will already terminate once it has managed to write
+        // all the data, while Hyrise still has some work to do reading the remaining cells.
+        if (child_dead_since >= 60'000) {
+          std::cerr << "PDGF is already dead for a while, but data transmission is still not marked complete!\n";
+          std::cerr << "We cannot properly handle this at the moment, so we will just force Hyrise to exit now...\n";
+          exit(EXIT_FAILURE);
+        }
+      }
+    }
+  });
 }
 
 void PdgfProcess::_configure_numa() {
