@@ -21,12 +21,13 @@ class PdgfProcess : Noncopyable {
   ~PdgfProcess();
 
   void run();
-  void wait();
+  void await_teardown();
 
   void set_column_filter(std::shared_ptr<std::set<std::string>>& columns_to_generate);
 
  protected:
   bool _has_run = false;
+  bool _data_transmission_complete = false;
 
   std::string _pdgf_directory_root;
   std::string _pdgf_command;
@@ -37,6 +38,7 @@ class PdgfProcess : Noncopyable {
   boost::process::ipstream _child_out;
   boost::process::ipstream _child_err;
   std::vector<std::thread> _reader_threads;
+  std::thread _monitor_thread;
 
   explicit PdgfProcess(std::string pdgf_directory_root, std::string pdgf_command);
 

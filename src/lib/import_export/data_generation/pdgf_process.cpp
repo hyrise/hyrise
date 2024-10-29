@@ -19,13 +19,22 @@ PdgfProcess::PdgfProcess(std::string pdgf_directory_root, std::string pdgf_comma
     : _pdgf_directory_root(std::move(pdgf_directory_root)), _pdgf_command(std::move(pdgf_command)) {}
 
 PdgfProcess::~PdgfProcess() {
+  std::cerr << "Destructuring PdgfProcess!\n";
   for (auto& thread: _reader_threads) {
     if (thread.joinable()) {
       thread.join();
     }
   }
+  // We don't want to wait until this thread wakes up again
+  _monitor_thread.detach();
   if (_child.running()) {
-    _child.wait();
+    _child.terminate();
+  }
+  if (_child_out.is_open()) {
+    _child_out.close();
+  }
+  if (_child_err.is_open()) {
+    _child_err.close();
   }
 }
 
@@ -71,9 +80,26 @@ void PdgfProcess::run() {
       boost::process::start_dir(_pdgf_directory_root),
       boost::process::std_out > _child_out,
       boost::process::std_err > _child_err);
+
+  // This is just a fail-safe, so that we won't block forever in benchmarks waiting for data when PDGF has crashed.
+  _monitor_thread = std::thread([&] {
+    while (true) {
+      if (!_child.running()) {
+        if (!_data_transmission_complete) {
+          std::cerr << "Child finished before data transmission was complete!\n";
+          exit(EXIT_FAILURE);
+        }
+        break;
+      }
+      // We need to wait sufficiently long here, because PDGF will already terminate once it has managed to write
+      // all the data, while Hyrise still has some work to do reading the remaining cells.
+      std::this_thread::sleep_for(std::chrono::seconds(10));
+    }
+  });
 }
 
-void PdgfProcess::wait() {
+void PdgfProcess::await_teardown() {
+  _data_transmission_complete = true;
   _child.wait();
   std::cout << _child.exit_code() << "\n";
 }

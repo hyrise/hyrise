@@ -64,7 +64,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHPDGFTableGenerator::gene
     table_info_by_name[schema_builder->table_name()].table = table;
   }
   std::cerr << "Awaiting PDGF teardown\n";
-  pdgf_schema.wait();
+  pdgf_schema.await_teardown();
 
   /**
    * Reset shared memory buffer. This is important because we will proceed to launch PDGF a second time.
@@ -94,7 +94,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHPDGFTableGenerator::gene
     table_builders.emplace_back(reader.read_next_table());
   }
   std::cerr << "Awaiting PDGF teardown\n";
-  pdgf_data.wait();
+  pdgf_data.await_teardown();
 
   /**
    * Return completely generated tables
