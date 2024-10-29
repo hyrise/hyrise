@@ -51,8 +51,8 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHPDGFTableGenerator::gene
    * bind to.
    */
   std::cerr << "Receiving table schemas from PDGF!\n";
-  auto pdgf = PdgfProcess::for_schema_generation(PDGF_DIRECTORY_ROOT);
-  pdgf.run();
+  auto pdgf_schema = PdgfProcess::for_schema_generation(PDGF_DIRECTORY_ROOT);
+  pdgf_schema.run();
   while (reader.has_next_table()) {
     auto schema_builder = reader.read_next_schema();
     // Directly add the (empty) table to the storage manager here.
@@ -64,7 +64,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHPDGFTableGenerator::gene
     table_info_by_name[schema_builder->table_name()].table = table;
   }
   std::cerr << "Awaiting PDGF teardown\n";
-  pdgf.wait();
+  pdgf_schema.wait();
 
   /**
    * Reset shared memory buffer. This is important because we will proceed to launch PDGF a second time.
@@ -84,17 +84,17 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHPDGFTableGenerator::gene
    * Generate tables
    */
   std::cerr << "Generating tables with PDGF\n";
-  pdgf = PdgfProcess::for_data_generation(PDGF_DIRECTORY_ROOT);
+  auto pdgf_data = PdgfProcess::for_data_generation(PDGF_DIRECTORY_ROOT);
   if (_only_generate_used_columns) {
-    pdgf.set_column_filter(_columns_to_generate);
+    pdgf_data.set_column_filter(_columns_to_generate);
   }
-  pdgf.run();
+  pdgf_data.run();
   auto table_builders = std::vector<std::unique_ptr<PDGFTableBuilder<128, 16>>>{};
   while (reader.has_next_table()) {
     table_builders.emplace_back(reader.read_next_table());
   }
   std::cerr << "Awaiting PDGF teardown\n";
-  pdgf.wait();
+  pdgf_data.wait();
 
   /**
    * Return completely generated tables

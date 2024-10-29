@@ -18,6 +18,17 @@ PdgfProcess PdgfProcess::for_data_generation(std::string pdgf_directory_root) {
 PdgfProcess::PdgfProcess(std::string pdgf_directory_root, std::string pdgf_command)
     : _pdgf_directory_root(std::move(pdgf_directory_root)), _pdgf_command(std::move(pdgf_command)) {}
 
+PdgfProcess::~PdgfProcess() {
+  for (auto& thread: _reader_threads) {
+    if (thread.joinable()) {
+      thread.join();
+    }
+  }
+  if (_child.running()) {
+    _child.wait();
+  }
+}
+
 void PdgfProcess::run() {
   Assert(!_has_run, "Each pdgf process instance should only be run once!");
   _has_run = true;
@@ -39,16 +50,27 @@ void PdgfProcess::run() {
   }
   std::cout << "\n";
 
-//  bp::ipstream output;
-//  std::thread reader([&output] {
-//    std::string line;
-//    while (std::getline(output, line))
-//      std::cout << "Received: '" << line << "'" << std::endl;
-//  });
+  // Input reading
+  _reader_threads.emplace_back([&] {
+    std::string line;
+    while (std::getline(_child_out, line)) {
+      std::cout << "[PDGF] " << line << "\n";
+    }
+  });
+  _reader_threads.emplace_back([&] {
+    std::string line;
+    while (std::getline(_child_err, line)) {
+      std::cout << "[PDGF ERR] " << line << "\n";
+    }
+  });
+
+  // Run
   _child = boost::process::child(
       "/usr/bin/numactl",
       boost::process::args(_arguments),
-      boost::process::start_dir(_pdgf_directory_root));
+      boost::process::start_dir(_pdgf_directory_root),
+      boost::process::std_out > _child_out,
+      boost::process::std_err > _child_err);
 }
 
 void PdgfProcess::wait() {
