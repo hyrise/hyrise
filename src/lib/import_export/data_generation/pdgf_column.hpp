@@ -18,7 +18,7 @@ class PDGFColumn : public AbstractPDGFColumn {
   std::shared_ptr<AbstractSegment> build_next_segment() override;
 
  protected:
-  uint8_t _num_built_segments = 0;
+  uint32_t _num_built_segments = 0;
   std::vector<pmr_vector<T>> _data_segments;
 };
 

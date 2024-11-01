@@ -18,8 +18,8 @@ class NonGeneratedPDGFColumn : public AbstractPDGFColumn {
   std::shared_ptr<AbstractSegment> build_next_segment() override;
 
  protected:
-  uint8_t _num_built_segments = 0;
-  uint8_t _total_segments;
+  uint32_t _num_built_segments = 0;
+  uint32_t _total_segments;
 };
 
 EXPLICITLY_INSTANTIATE_DATA_TYPES(NonGeneratedPDGFColumn);
