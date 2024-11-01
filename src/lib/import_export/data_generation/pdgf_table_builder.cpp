@@ -78,7 +78,7 @@ void PDGFTableBuilder<work_unit_size, num_columns>::read_generation_info(SharedM
   boost::algorithm::to_lower(_table_name);
   std::cerr << "TABLE NAME " << _table_name << "\n";
   _table_num_rows = * reinterpret_cast<int64_t*>(info_cell->data[3][0]);
-  _remaining_work_units_to_read.store((_table_num_rows / work_unit_size) + 1);
+  _remaining_work_units_to_read.store((_table_num_rows + work_unit_size - 1) / work_unit_size); // ceil(_table_num_rows // work_unit_size)
 
   // Retrieve information from already loaded schema table
   Assert(Hyrise::get().storage_manager.has_table(_table_name), "Expected table to be already registered with storage manager. Maybe the table schema was not loaded beforehand?");
