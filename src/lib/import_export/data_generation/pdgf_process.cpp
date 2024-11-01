@@ -7,16 +7,20 @@
 
 namespace hyrise {
 
-PdgfProcess PdgfProcess::for_schema_generation(std::string pdgf_directory_root, float scale_factor) {
-  return PdgfProcess(std::move(pdgf_directory_root), "-writeTableSchemas", scale_factor);
+PdgfProcess PdgfProcess::for_schema_generation(std::string pdgf_directory_root, uint32_t pdgf_num_cores, float scale_factor) {
+  return PdgfProcess(std::move(pdgf_directory_root), pdgf_num_cores, "-writeTableSchemas", scale_factor);
 }
 
-PdgfProcess PdgfProcess::for_data_generation(std::string pdgf_directory_root, float scale_factor) {
-  return PdgfProcess(std::move(pdgf_directory_root), "-start", scale_factor);
+PdgfProcess PdgfProcess::for_data_generation(std::string pdgf_directory_root, uint32_t pdgf_num_cores, float scale_factor) {
+  return PdgfProcess(std::move(pdgf_directory_root), pdgf_num_cores, "-start", scale_factor);
 }
 
-PdgfProcess::PdgfProcess(std::string pdgf_directory_root, std::string pdgf_command, float scale_factor)
-    : _pdgf_directory_root(std::move(pdgf_directory_root)), _pdgf_command(std::move(pdgf_command)), _scale_factor(scale_factor) {}
+PdgfProcess::PdgfProcess(std::string pdgf_directory_root, uint32_t pdgf_num_cores, std::string pdgf_command, float scale_factor)
+    : _pdgf_directory_root(std::move(pdgf_directory_root)), _pdgf_num_cores(pdgf_num_cores), _pdgf_command(std::move(pdgf_command)), _scale_factor(scale_factor) {
+  if (_pdgf_num_cores == 0) {
+    _pdgf_num_cores = 1;
+  }
+}
 
 PdgfProcess::~PdgfProcess() {
   std::cerr << "Destructuring PdgfProcess!\n";
@@ -151,7 +155,7 @@ void PdgfProcess::_configure_pdgf_arguments() {
                                           "-load", "default-shm-reflective-generation.xml",
                                           "-noShell", "-closeWhenDone",
                                           "-sf", std::to_string(_scale_factor),
-                                          "-workers", "1",
+                                          "-workers", std::to_string(_pdgf_num_cores),
                                           _pdgf_command
                                       });
 }
