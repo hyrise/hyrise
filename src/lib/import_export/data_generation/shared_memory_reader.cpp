@@ -3,7 +3,11 @@
 #include <sys/mman.h>
 #include <csignal>
 #include <fcntl.h>
+#include <vector>
 
+#include "hyrise.hpp"
+#include "scheduler/abstract_task.hpp"
+#include "scheduler/job_task.hpp"
 #include "shared_memory_reader.hpp"
 #include "pdgf_table_builder.hpp"
 #include "pdgf_table_schema_builder.hpp"
@@ -90,29 +94,33 @@ std::unique_ptr<PDGFTableSchemaBuilder<work_unit_size, num_columns>> SharedMemor
 }
 
 template <uint32_t work_unit_size, uint32_t num_columns>
-std::unique_ptr<PDGFTableBuilder<work_unit_size, num_columns>> SharedMemoryReader<work_unit_size, num_columns>::read_next_table() {
+std::shared_ptr<PDGFTableBuilder<work_unit_size, num_columns>> SharedMemoryReader<work_unit_size, num_columns>::read_next_table(uint32_t num_workers) {
   // Generation info
   auto ring_cell = _ring_buffer->prepare_retrieval();
   Assert(ring_cell->cell_type == RingBufferCellType::TableGenerationInfo, "Did not receive table generation info, was " + std::to_string(ring_cell->cell_type));
-  auto table_builder = std::make_unique<PDGFTableBuilder<work_unit_size, num_columns>>(ring_cell->table_id, _hyrise_table_chunk_size);
+  auto table_builder = std::make_shared<PDGFTableBuilder<work_unit_size, num_columns>>(ring_cell->table_id, _hyrise_table_chunk_size);
   auto data_slot = ring_cell->data_buffer_offset;
   auto addressed_data = _data_buffer->get_addressed_by(ring_cell);
-  _num_tables_to_read = * reinterpret_cast<uint32_t*>(addressed_data->data[0][0]);
   _ring_buffer->retrieval_finished();
+  _num_tables_to_read = * reinterpret_cast<uint32_t*>(addressed_data->data[0][0]);
   table_builder->read_generation_info(addressed_data);
   _return_data_slot(data_slot);
 
   // TODO(JEH): parallelize. adaptively use different number of workers here (only use a large number if table actually has a lot of chunks)
-  while (table_builder->expects_more_data()) {
-    ring_cell = _ring_buffer->prepare_retrieval();
-    Assert(ring_cell->cell_type == RingBufferCellType::Data, "Did not receive data, was " + std::to_string(ring_cell->cell_type));
-    data_slot = ring_cell->data_buffer_offset;
-    auto table_id = ring_cell->table_id;
-    auto sorting_id = ring_cell->sorting_id;
-    addressed_data = _data_buffer->get_addressed_by(ring_cell);
-    _ring_buffer->retrieval_finished();
-    table_builder->read_data(table_id, sorting_id, addressed_data);
-    _return_data_slot(data_slot);
+  if (table_builder->reading_should_be_parallelized()) {
+    auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
+    tasks.reserve(num_workers);
+    for (auto worker_index = uint32_t{0}; worker_index < num_workers; ++worker_index) {
+      tasks.emplace_back(std::make_shared<JobTask>([this, &table_builder, worker_index] {
+        _worker_read_data(worker_index, table_builder);
+      }));
+    }
+    auto scheduler = Hyrise::get().scheduler();
+    scheduler->schedule_tasks(tasks);
+    scheduler->wait_for_tasks(tasks);
+  } else {
+    std::cerr << "Not parallelizing reading for this table, as it is too small.\n";
+    _worker_read_data(0, table_builder);
   }
 
   ring_cell = _ring_buffer->prepare_retrieval();
@@ -121,6 +129,7 @@ std::unique_ptr<PDGFTableBuilder<work_unit_size, num_columns>> SharedMemoryReade
   _ring_buffer->retrieval_finished();
   _return_data_slot(ring_cell->data_buffer_offset);
 
+  std::cerr << "Finished reading table.\n";
   return table_builder;
 }
 
@@ -130,5 +139,20 @@ void SharedMemoryReader<work_unit_size, num_columns>::_return_data_slot(uint32_t
   buffer_cell->cell_type = RingBufferCellType::Noop;
   buffer_cell->data_buffer_offset = buffer_offset;
   _ring_buffer->writing_finished();
+}
+
+template <uint32_t work_unit_size, uint32_t num_columns>
+void SharedMemoryReader<work_unit_size, num_columns>::_worker_read_data(uint32_t reader_index, std::shared_ptr<PDGFTableBuilder<work_unit_size, num_columns>>& table_builder) {
+  while (table_builder->reader_should_handle_another_work_unit()) {
+    auto ring_cell = _ring_buffer->prepare_retrieval();
+    Assert(ring_cell->cell_type == RingBufferCellType::Data, "Did not receive data, was " + std::to_string(ring_cell->cell_type));
+    auto data_slot = ring_cell->data_buffer_offset;
+    auto table_id = ring_cell->table_id;
+    auto sorting_id = ring_cell->sorting_id;
+    auto addressed_data = _data_buffer->get_addressed_by(ring_cell);
+    _ring_buffer->retrieval_finished();
+    table_builder->read_data(table_id, sorting_id, addressed_data);
+    _return_data_slot(data_slot);
+  }
 }
 } // namespace hyrise

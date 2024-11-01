@@ -19,12 +19,13 @@ class SharedMemoryReader : Noncopyable {
 
   bool has_next_table() const;
   std::unique_ptr<PDGFTableSchemaBuilder<work_unit_size, num_columns>> read_next_schema();
-  std::unique_ptr<PDGFTableBuilder<work_unit_size, num_columns>> read_next_table();
+  std::shared_ptr<PDGFTableBuilder<work_unit_size, num_columns>> read_next_table(uint32_t num_workers);
 
   void reset();
 
  protected:
   void _return_data_slot(uint32_t buffer_offset);
+  void _worker_read_data(uint32_t reader_index, std::shared_ptr<PDGFTableBuilder<work_unit_size, num_columns>>& table_builder);
 
   ChunkOffset _hyrise_table_chunk_size;
   const char* _shared_memory_file_name;

@@ -27,8 +27,16 @@ PDGFTableBuilder<work_unit_size, num_columns>::PDGFTableBuilder(uint32_t table_i
     : _hyrise_table_chunk_size(hyrise_table_chunk_size), _table_id(table_id) {}
 
 template <uint32_t work_unit_size, uint32_t num_columns>
-bool PDGFTableBuilder<work_unit_size, num_columns>::expects_more_data() const {
-    return _received_rows < _table_num_rows;
+bool PDGFTableBuilder<work_unit_size, num_columns>::reader_should_handle_another_work_unit() {
+    auto res = _remaining_work_units_to_read--; // Value will be decremented after reading.
+    // All work units have been read (or are in progress of being read by still active reader threads,
+    // so the current reader is done now.
+    return res > 0;
+}
+
+template <uint32_t work_unit_size, uint32_t num_columns>
+bool PDGFTableBuilder<work_unit_size, num_columns>::reading_should_be_parallelized() const {
+  return (_table_num_rows / work_unit_size) > 128;
 }
 
 template <uint32_t work_unit_size, uint32_t num_columns>
@@ -70,6 +78,7 @@ void PDGFTableBuilder<work_unit_size, num_columns>::read_generation_info(SharedM
   boost::algorithm::to_lower(_table_name);
   std::cerr << "TABLE NAME " << _table_name << "\n";
   _table_num_rows = * reinterpret_cast<int64_t*>(info_cell->data[3][0]);
+  _remaining_work_units_to_read.store((_table_num_rows / work_unit_size) + 1);
 
   // Retrieve information from already loaded schema table
   Assert(Hyrise::get().storage_manager.has_table(_table_name), "Expected table to be already registered with storage manager. Maybe the table schema was not loaded beforehand?");
@@ -112,7 +121,6 @@ void PDGFTableBuilder<work_unit_size, num_columns>::read_data(uint32_t table_id,
       _generated_columns[col]->add((sorting_id * work_unit_size) + row, data_cell->data[row][col]);
     }
   }
-  _received_rows += cell_rows;
 }
 
 template <uint32_t work_unit_size, uint32_t num_columns>

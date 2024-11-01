@@ -5,6 +5,7 @@
 #include <memory>
 #include <vector>
 #include <array>
+#include <atomic>
 
 #include "all_type_variant.hpp"
 #include "shared_memory_dto.hpp"
@@ -19,7 +20,8 @@ class PDGFTableBuilder : Noncopyable {
  public:
   explicit PDGFTableBuilder(uint32_t table_id, ChunkOffset hyrise_table_chunk_size);
 
-  bool expects_more_data() const;
+  bool reader_should_handle_another_work_unit();
+  bool reading_should_be_parallelized() const;
   std::string table_name() const;
   std::shared_ptr<Table> build_table();
 
@@ -34,7 +36,7 @@ class PDGFTableBuilder : Noncopyable {
   uint32_t _table_id;
   std::string _table_name;
   int64_t _table_num_rows;
-  int64_t _received_rows = 0;
+  std::atomic_int64_t _remaining_work_units_to_read;
 
   uint8_t _num_generated_columns;
   std::array<std::shared_ptr<AbstractPDGFColumn>, num_columns> _generated_columns;

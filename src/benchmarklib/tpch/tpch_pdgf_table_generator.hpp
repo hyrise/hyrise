@@ -39,7 +39,7 @@ class TPCHPDGFTableGenerator : virtual public AbstractTableGenerator {
   void _add_constraints(std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) const override;
 
   float _scale_factor;
-  uint32_t _pdgf_num_cores;
+  uint32_t _num_cores;
   bool _only_generate_used_columns;
   std::vector<std::string> _queries_to_run;
   std::shared_ptr<std::set<std::string>> _columns_to_generate;

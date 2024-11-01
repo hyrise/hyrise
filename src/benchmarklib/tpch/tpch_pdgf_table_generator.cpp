@@ -29,7 +29,7 @@ TPCHPDGFTableGenerator::TPCHPDGFTableGenerator(float scale_factor, ClusteringCon
                                                const std::shared_ptr<BenchmarkConfig>& benchmark_config, std::vector<std::string> queries_to_run)
     : AbstractTableGenerator(benchmark_config),
       _scale_factor(scale_factor),
-      _pdgf_num_cores(benchmark_config->cores),
+      _num_cores(benchmark_config->cores),
       _only_generate_used_columns(only_generate_used_columns),
       _queries_to_run(std::move(queries_to_run)),
       _columns_to_generate(std::make_shared<std::set<std::string>>()),
@@ -53,7 +53,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHPDGFTableGenerator::gene
    * bind to.
    */
   std::cerr << "Receiving table schemas from PDGF!\n";
-  auto pdgf_schema = PdgfProcess::for_schema_generation(PDGF_DIRECTORY_ROOT, _pdgf_num_cores, _scale_factor);
+  auto pdgf_schema = PdgfProcess::for_schema_generation(PDGF_DIRECTORY_ROOT, _num_cores, _scale_factor);
   pdgf_schema.run();
   while (reader.has_next_table()) {
     auto schema_builder = reader.read_next_schema();
@@ -86,14 +86,14 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHPDGFTableGenerator::gene
    * Generate tables
    */
   std::cerr << "Generating tables with PDGF\n";
-  auto pdgf_data = PdgfProcess::for_data_generation(PDGF_DIRECTORY_ROOT, _pdgf_num_cores, _scale_factor);
+  auto pdgf_data = PdgfProcess::for_data_generation(PDGF_DIRECTORY_ROOT, _num_cores, _scale_factor);
   if (_only_generate_used_columns) {
     pdgf_data.set_column_filter(_columns_to_generate);
   }
   pdgf_data.run();
-  auto table_builders = std::vector<std::unique_ptr<PDGFTableBuilder<128, 16>>>{};
+  auto table_builders = std::vector<std::shared_ptr<PDGFTableBuilder<128, 16>>>{};
   while (reader.has_next_table()) {
-    table_builders.emplace_back(reader.read_next_table());
+    table_builders.emplace_back(reader.read_next_table(_num_cores));
   }
   std::cerr << "Awaiting PDGF teardown\n";
   pdgf_data.await_teardown();
