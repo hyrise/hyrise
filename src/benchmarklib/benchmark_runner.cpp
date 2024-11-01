@@ -126,130 +126,135 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config,
 }
 
 void BenchmarkRunner::run() {
-  std::cout << "- Starting Benchmark...\n";
+  if (!_config.only_load_data) {
+    std::cout << "- Starting Benchmark...\n";
 
-  _benchmark_start = std::chrono::steady_clock::now();
-  _benchmark_wall_clock_start = std::chrono::system_clock::now();
+    _benchmark_start = std::chrono::steady_clock::now();
+    _benchmark_wall_clock_start = std::chrono::system_clock::now();
 
-  auto track_system_utilization = std::atomic_bool{_config.system_metrics};
-  auto system_utilization_tracker = std::thread{[&] {
-    if (!track_system_utilization) {
-      return;
-    }
-
-    // Start tracking the system utilization.
-    SQLPipelineBuilder{
-        "CREATE TABLE benchmark_system_utilization_log AS SELECT CAST(0 as LONG) AS \"timestamp\", * FROM "
-        "meta_system_utilization"}
-        .create_pipeline()
-        .get_result_table();
-
-    while (track_system_utilization) {
-      const auto timestamp = std::chrono::nanoseconds{std::chrono::steady_clock::now() - _benchmark_start}.count();
-
-      auto sql_builder = std::stringstream{};
-      sql_builder << "INSERT INTO benchmark_system_utilization_log SELECT CAST(" << timestamp
-                  << "as LONG), * FROM meta_system_utilization";
-
-      SQLPipelineBuilder{sql_builder.str()}.create_pipeline().get_result_table();
-
-      std::this_thread::sleep_for(SYSTEM_UTILIZATION_TRACKING_INTERVAL);
-    }
-  }};
-
-  if (_config.system_metrics) {
-    // Create a table for the segment access counter log.
-    SQLPipelineBuilder{
-        "CREATE TABLE benchmark_segments_log AS SELECT 0 AS snapshot_id, 'init' AS moment, * FROM meta_segments"}
-        .create_pipeline()
-        .get_result_table();
-  }
-
-  // Retrieve the items to be executed and prepare the result vector.
-  const auto& items = _benchmark_item_runner->items();
-  if (!items.empty()) {
-    _results = std::vector<BenchmarkItemResult>(*std::ranges::max_element(items) + 1);
-  }
-
-  // Execute pre-benchmark hooks of plugins required by the user.
-  for (const auto& plugin : _loaded_plugins) {
-    if (!Hyrise::get().plugin_manager.has_pre_benchmark_hook(plugin)) {
-      continue;
-    }
-
-    std::cout << "- Run pre-benchmark hook of '" << plugin << "'\n";
-    Hyrise::get().plugin_manager.exec_pre_benchmark_hook(plugin, *_benchmark_item_runner);
-  }
-
-  switch (_config.benchmark_mode) {
-    case BenchmarkMode::Ordered: {
-      _benchmark_ordered();
-      break;
-    }
-    case BenchmarkMode::Shuffled: {
-      _benchmark_shuffled();
-      break;
-    }
-  }
-
-  // Create report.
-  const auto write_report = _config.output_file_path && (!_config.verify && !_config.enable_visualization);
-  auto report = write_report ? _create_report() : nlohmann::json{};
-
-  // Execute post-benchmark hooks of plugins required by the user.
-  for (const auto& plugin : _loaded_plugins) {
-    if (!Hyrise::get().plugin_manager.has_post_benchmark_hook(plugin)) {
-      continue;
-    }
-
-    std::cout << "- Run post-benchmark hook of '" << plugin << "'\n";
-    Hyrise::get().plugin_manager.exec_post_benchmark_hook(plugin, report);
-  }
-
-  // Write report to file.
-  if (write_report) {
-    _write_report_to_file(*_config.output_file_path, report);
-  } else if (_config.output_file_path) {
-    std::cout << "- Not writing JSON result as either verification or visualization are activated.\n";
-    std::cout << "  These options make the results meaningless\n";
-  }
-
-  // For the Ordered mode, results have already been printed to the console.
-  if (_config.benchmark_mode == BenchmarkMode::Shuffled && !_config.verify && !_config.enable_visualization) {
-    for (const auto& item_id : items) {
-      std::cout << "- Results for " << _benchmark_item_runner->item_name(item_id) << '\n';
-      std::cout << "  -> Executed " << _results[item_id].successful_runs.size() << " times\n";
-      if (!_results[item_id].unsuccessful_runs.empty()) {
-        std::cout << "  -> " << _results[item_id].unsuccessful_runs.size() << " additional runs failed\n";
+    auto track_system_utilization = std::atomic_bool{_config.system_metrics};
+    auto system_utilization_tracker = std::thread{[&] {
+      if (!track_system_utilization) {
+        return;
       }
+
+      // Start tracking the system utilization.
+      SQLPipelineBuilder{
+          "CREATE TABLE benchmark_system_utilization_log AS SELECT CAST(0 as LONG) AS \"timestamp\", * FROM "
+          "meta_system_utilization"}
+          .create_pipeline()
+          .get_result_table();
+
+      while (track_system_utilization) {
+        const auto timestamp = std::chrono::nanoseconds{std::chrono::steady_clock::now() - _benchmark_start}.count();
+
+        auto sql_builder = std::stringstream{};
+        sql_builder << "INSERT INTO benchmark_system_utilization_log SELECT CAST(" << timestamp
+                    << "as LONG), * FROM meta_system_utilization";
+
+        SQLPipelineBuilder{sql_builder.str()}.create_pipeline().get_result_table();
+
+        std::this_thread::sleep_for(SYSTEM_UTILIZATION_TRACKING_INTERVAL);
+      }
+    }};
+
+    if (_config.system_metrics) {
+      // Create a table for the segment access counter log.
+      SQLPipelineBuilder{
+          "CREATE TABLE benchmark_segments_log AS SELECT 0 AS snapshot_id, 'init' AS moment, * FROM meta_segments"}
+          .create_pipeline()
+          .get_result_table();
     }
-  }
 
-  // Fail if verification against SQLite was requested and failed.
-  if (_config.verify) {
-    auto any_verification_failed = false;
+    // Retrieve the items to be executed and prepare the result vector.
+    const auto& items = _benchmark_item_runner->items();
+    if (!items.empty()) {
+      _results = std::vector<BenchmarkItemResult>(*std::ranges::max_element(items) + 1);
+    }
 
-    for (const auto& item_id : items) {
-      const auto& result = _results[item_id];
-      if (result.successful_runs.empty()) {
+    // Execute pre-benchmark hooks of plugins required by the user.
+    for (const auto& plugin : _loaded_plugins) {
+      if (!Hyrise::get().plugin_manager.has_pre_benchmark_hook(plugin)) {
         continue;
       }
-      const auto verification_status = result.verification_passed.load();
-      Assert(verification_status, "Verification result should have been set.");
-      any_verification_failed |= !(*verification_status);
+
+      std::cout << "- Run pre-benchmark hook of '" << plugin << "'\n";
+      Hyrise::get().plugin_manager.exec_pre_benchmark_hook(plugin, *_benchmark_item_runner);
     }
 
-    Assert(!any_verification_failed, "Verification failed.");
+    switch (_config.benchmark_mode) {
+      case BenchmarkMode::Ordered: {
+        _benchmark_ordered();
+        break;
+      }
+      case BenchmarkMode::Shuffled: {
+        _benchmark_shuffled();
+        break;
+      }
+    }
+
+    // Create report.
+    const auto write_report = _config.output_file_path && (!_config.verify && !_config.enable_visualization);
+    auto report = write_report ? _create_report() : nlohmann::json{};
+
+    // Execute post-benchmark hooks of plugins required by the user.
+    for (const auto& plugin : _loaded_plugins) {
+      if (!Hyrise::get().plugin_manager.has_post_benchmark_hook(plugin)) {
+        continue;
+      }
+
+      std::cout << "- Run post-benchmark hook of '" << plugin << "'\n";
+      Hyrise::get().plugin_manager.exec_post_benchmark_hook(plugin, report);
+    }
+
+    // Write report to file.
+    if (write_report) {
+      _write_report_to_file(*_config.output_file_path, report);
+    } else if (_config.output_file_path) {
+      std::cout << "- Not writing JSON result as either verification or visualization are activated.\n";
+      std::cout << "  These options make the results meaningless\n";
+    }
+
+    // For the Ordered mode, results have already been printed to the console.
+    if (_config.benchmark_mode == BenchmarkMode::Shuffled && !_config.verify && !_config.enable_visualization) {
+      for (const auto& item_id : items) {
+        std::cout << "- Results for " << _benchmark_item_runner->item_name(item_id) << '\n';
+        std::cout << "  -> Executed " << _results[item_id].successful_runs.size() << " times\n";
+        if (!_results[item_id].unsuccessful_runs.empty()) {
+          std::cout << "  -> " << _results[item_id].unsuccessful_runs.size() << " additional runs failed\n";
+        }
+      }
+    }
+
+    // Fail if verification against SQLite was requested and failed.
+    if (_config.verify) {
+      auto any_verification_failed = false;
+
+      for (const auto& item_id : items) {
+        const auto& result = _results[item_id];
+        if (result.successful_runs.empty()) {
+          continue;
+        }
+        const auto verification_status = result.verification_passed.load();
+        Assert(verification_status, "Verification result should have been set.");
+        any_verification_failed |= !(*verification_status);
+      }
+
+      Assert(!any_verification_failed, "Verification failed.");
+    }
+
+    // Stop the thread that tracks the system utilization.
+    track_system_utilization = false;
+    system_utilization_tracker.join();
+  } else {
+    std::cout << "Skipped running queries because benchmark was configured to only load data!\n";
   }
 
+  // Regardless of whether we have run any queries, we need to teardown the scheduler.
   if (Hyrise::get().scheduler()) {
     Hyrise::get().scheduler()->finish();
     Hyrise::get().set_scheduler(std::make_shared<ImmediateExecutionScheduler>());
   }
-
-  // Stop the thread that tracks the system utilization.
-  track_system_utilization = false;
-  system_utilization_tracker.join();
 }
 
 void BenchmarkRunner::_benchmark_shuffled() {
@@ -593,7 +598,8 @@ cxxopts::Options BenchmarkRunner::get_basic_cli_options(const std::string& bench
     ("system_metrics", "Track system metrics (system utilization, segment accesses, etc.) and add them to the output JSON (see -o).", cxxopts::value<bool>()->default_value("false"))  // NOLINT(whitespace/line_length)
     ("pipeline_metrics", "Track SQL pipeline metrics (runtime of steps in SQL pipeline, optimizer rule durations) and add them to the output JSON (see -o). Tracking pipeline metrics switches off plan caching.", cxxopts::value<bool>()->default_value("false"))  // NOLINT(whitespace/line_length)
     // This option is only advised when the underlying system's memory capacity is overleaded by the preparation phase.
-    ("data_preparation_cores", "Specify the number of cores used by the scheduler for data preparation, i.e., sorting and encoding tables and generating table statistics. 0 means all available cores.", cxxopts::value<uint32_t>()->default_value("0"));  // NOLINT(whitespace/line_length)
+    ("data_preparation_cores", "Specify the number of cores used by the scheduler for data preparation, i.e., sorting and encoding tables and generating table statistics. 0 means all available cores.", cxxopts::value<uint32_t>()->default_value("0"))
+    ("only_load_data", "Only load the benchmark data (for the specified queries, if only generating used columns is active), do not benchmark the queries.", cxxopts::value<bool>()->default_value("false"));  // NOLINT(whitespace/line_length)
   // clang-format on
 
   return cli_options;

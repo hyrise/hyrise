@@ -87,6 +87,11 @@ std::shared_ptr<BenchmarkConfig> CLIConfigParser::parse_cli_options(const cxxopt
     std::cout << "- Visualizing the plans into SVG files. This will make the performance numbers invalid\n";
   }
 
+  const auto only_load_data = parse_result["only_load_data"].as<bool>();
+  if (only_load_data) {
+    std::cout << "- Only loading the data. We will NOT benchmark any queries!\n";
+  }
+
   // Get the specified encoding type.
   auto encoding_config = std::unique_ptr<EncodingConfig>{};
   const auto encoding_type_str = parse_result["encoding"].as<std::string>();
@@ -176,7 +181,7 @@ std::shared_ptr<BenchmarkConfig> CLIConfigParser::parse_cli_options(const cxxopt
   }
 
   return std::make_shared<BenchmarkConfig>(
-      benchmark_mode, chunk_size, *encoding_config, chunk_indexes, table_indexes, max_runs, timeout_duration,
+      benchmark_mode, chunk_size, *encoding_config, chunk_indexes, table_indexes, only_load_data, max_runs, timeout_duration,
       warmup_duration, output_file_path, enable_scheduler, cores, data_preparation_cores, clients, enable_visualization,
       verify, cache_binary_tables, system_metrics, pipeline_metrics, plugins);
 }
