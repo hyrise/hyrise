@@ -89,8 +89,8 @@ void PDGFTableBuilder<work_unit_size, num_columns>::read_generation_info(SharedM
   const auto table_column_names = table->column_names();
 
   // Setup generation
-  auto num_generated_columns = * reinterpret_cast<uint32_t*>(info_cell->data[4][0]);
-  _num_generated_columns = static_cast<uint8_t>(num_generated_columns);
+  // auto num_generated_columns = * reinterpret_cast<uint32_t*>(info_cell->data[4][0]);
+  _num_generated_columns = 0; // static_cast<uint8_t>(num_generated_columns);
   for (auto i = uint8_t{0}; i < _num_generated_columns; ++i) {
     auto column_name = std::string(info_cell->data[5 + i][0]);
     boost::algorithm::to_lower(column_name);
