@@ -84,7 +84,7 @@ set(
 )
 
 # Configure the regular hyrise library used for tests/server/playground...
-add_library(hyriseBenchmarkLib STATIC ${SOURCES})
+add_library(hyriseBenchmarkLib SHARED ${SOURCES})
 add_dependencies(hyriseBenchmarkLib jcchDbgen-build) # *-build is auto-generated
 add_dependencies(hyriseBenchmarkLib ssbDbgen-build) # *-build is auto-generated
 
