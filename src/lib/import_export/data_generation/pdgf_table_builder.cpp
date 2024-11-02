@@ -46,10 +46,13 @@ std::string PDGFTableBuilder<work_unit_size, num_columns>::table_name() const {
 
 template <uint32_t work_unit_size, uint32_t num_columns>
 std::shared_ptr<Table> PDGFTableBuilder<work_unit_size, num_columns>::build_table() {
-  Assert(!_generated_columns.empty(), "Table schema should have at least one column!");
-
   // Table schema has already been generated. Just add the data here.
   auto table = Hyrise::get().storage_manager.get_table(_table_name);
+
+  if (_num_generated_columns == 0) {
+    std::cerr << "Warning: Building table without a generated column!\n";
+    return table;
+  }
 
   // Assemble table data
   // Note that we have already generated empty chunks when loading the schema, so we just replace the segments now
