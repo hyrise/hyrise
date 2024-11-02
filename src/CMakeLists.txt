@@ -43,6 +43,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_STANDARD 20)
 
 add_compile_options(-pthread -Wno-unknown-warning-option)
+# hotfix problem with GCC release build
+add_compile_options(-Wno-maybe-uninitialized)
 
 # Use HYRISE_RELAXED_BUILD to disable strict warnings (e.g., when testing an unsupported compiler or an unsupported system)
 if (NOT "${HYRISE_RELAXED_BUILD}")
@@ -61,6 +63,7 @@ if (NOT "${HYRISE_RELAXED_BUILD}")
 else()
     message(WARNING "Hyrise will be built with most compiler warnings deactivated. This is fine if you want to test Hyrise but will become an issue when you want to contribute code.")
 endif()
+
 
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 13 AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS_EQUAL 14.99)
