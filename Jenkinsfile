@@ -165,6 +165,8 @@ try {
                 throw error
               }
             }
+            sh "whoami"
+            sh "pip install -r requirements.txt"
 
             // Build hyriseTest (Debug) with macOS's default compiler (Apple clang) and run it. Passing clang
             // explicitly seems to make the compiler find C system headers (required for SSB and JCC-H data generators)
