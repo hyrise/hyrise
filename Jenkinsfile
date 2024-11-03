@@ -183,7 +183,7 @@ try {
             sh "./clang-release/hyriseTest"
             sh "./clang-release/hyriseSystemTest --gtest_filter=-${tests_excluded_in_mac_builds}"
             sh "echo $PATH"
-            sh "PATH=/usr/local/bin/:$PATH ./scripts/test/hyriseConsole_test.py clang-release"
+            sh "./scripts/test/hyriseConsole_test.py clang-release"
             sh "PATH=/usr/local/bin/:$PATH ./scripts/test/hyriseServer_test.py clang-release"
             sh "PATH=/usr/local/bin/:$PATH ./scripts/test/hyriseBenchmarkFileBased_test.py clang-release"
           } finally {
@@ -225,7 +225,7 @@ try {
             sh "./clang-debug/hyriseTest"
             sh "./clang-debug/hyriseSystemTest --gtest_filter=-${tests_excluded_in_mac_builds}"
             sh "echo $PATH"
-            sh "PATH=/usr/local/bin/:$PATH ./scripts/test/hyriseConsole_test.py clang-debug"
+            sh "./scripts/test/hyriseConsole_test.py clang-debug"
             sh "PATH=/usr/local/bin/:$PATH ./scripts/test/hyriseServer_test.py clang-debug"
             sh "PATH=/usr/local/bin/:$PATH ./scripts/test/hyriseBenchmarkFileBased_test.py clang-debug"
           } finally {
