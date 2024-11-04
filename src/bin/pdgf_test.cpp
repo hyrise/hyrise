@@ -15,12 +15,13 @@
 using namespace hyrise;  // NOLINT(build/namespaces)
 
 int main(int argc, char* argv[]) {
-  Assert(argc >= 3, "Expected an scale factor argument");
+  Assert(argc >= 3, "Expected scale factor and num cores arguments");
   Assert(strcmp(argv[1], "--scale") == 0, "First argument should be --scale");
   auto scale_factor = static_cast<float>(atof(argv[2]));
+  auto num_cores = atoi(argv[3]);
 
   auto reader = SharedMemoryReader<128, 16>(Chunk::DEFAULT_SIZE, SHARED_MEMORY_NAME, DATA_READY_SEM, BUFFER_FREE_SEM);
-  auto pdgf_schema = PdgfProcess::for_schema_generation(PDGF_DIRECTORY_ROOT, 64, scale_factor);
+  auto pdgf_schema = PdgfProcess::for_schema_generation(PDGF_DIRECTORY_ROOT, num_cores, scale_factor);
   pdgf_schema.run();
   while (reader.has_next_table()) {
     auto table_builder = reader.read_next_schema();
@@ -31,11 +32,11 @@ int main(int argc, char* argv[]) {
   reader.reset();
 
   auto timer = Timer{};
-  auto pdgf_data = PdgfProcess::for_data_generation(PDGF_DIRECTORY_ROOT, 64, scale_factor);
+  auto pdgf_data = PdgfProcess::for_data_generation(PDGF_DIRECTORY_ROOT, num_cores, scale_factor);
   pdgf_data.run();
   auto tables = std::map<std::string, std::shared_ptr<Table>>{};
   while (reader.has_next_table()) {
-    auto builder = reader.read_next_table(64);
+    auto builder = reader.read_next_table(num_cores);
     tables[builder->table_name()] = builder->build_table();
   }
   auto time = timer.lap();

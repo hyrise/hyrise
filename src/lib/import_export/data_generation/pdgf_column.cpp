@@ -17,6 +17,14 @@ void PDGFColumn<T>::add(int64_t row, char* data) {
   _data_segments[segment_index][segment_position] = * reinterpret_cast<T*>(data);
 }
 
+template<>
+void PDGFColumn<pmr_string>::add(int64_t row, char* data) {
+  auto segment_index = row / _chunk_size;
+  auto segment_position = row % _chunk_size;
+
+  _data_segments[segment_index][segment_position] = pmr_string(data);
+}
+
 template <typename T>
 bool PDGFColumn<T>::has_another_segment() {
   return _num_built_segments < _data_segments.size();
@@ -29,14 +37,5 @@ std::shared_ptr<AbstractSegment> PDGFColumn<T>::build_next_segment() {
   auto segment = std::make_shared<ValueSegment<T>>(std::move(_data_segments[next_build_index]));
   _num_built_segments++;
   return segment;
-}
-
-
-template<>
-void PDGFColumn<pmr_string>::add(int64_t row, char* data) {
-  auto segment_index = row / _chunk_size;
-  auto segment_position = row % _chunk_size;
-
-  _data_segments[segment_index][segment_position] = pmr_string(data);
 }
 } // namespace hyrise

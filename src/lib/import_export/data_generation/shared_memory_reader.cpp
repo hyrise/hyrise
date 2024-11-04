@@ -116,8 +116,7 @@ std::shared_ptr<PDGFTableBuilder<work_unit_size, num_columns>> SharedMemoryReade
       }));
     }
     auto scheduler = Hyrise::get().scheduler();
-    scheduler->schedule_tasks(tasks);
-    scheduler->wait_for_tasks(tasks);
+    scheduler->schedule_and_wait_for_tasks(tasks);
   } else {
     std::cerr << "Not parallelizing reading for this table, as it is too small.\n";
     _worker_read_data(0, table_builder);
