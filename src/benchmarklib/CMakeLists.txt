@@ -84,6 +84,8 @@ set(
 )
 
 # Configure the regular hyrise library used for tests/server/playground...
+
+# HACK: TODO(Martin) ... unhack the changes.
 if (APPLE)
   add_library(hyriseBenchmarkLib SHARED ${SOURCES})
 else()
