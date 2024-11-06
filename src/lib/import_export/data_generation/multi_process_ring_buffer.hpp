@@ -26,6 +26,7 @@ class MultiProcessRingBuffer : Noncopyable {
 
  protected:
   void _initialize();
+  void _write_semaphore_access_timestamps();
 
   RingBuffer<buffer_size>* _ring_buffer;
 
@@ -34,11 +35,13 @@ class MultiProcessRingBuffer : Noncopyable {
 
   const char* _data_available_sem_path;
   sem_t* _data_available_semaphore;
+  std::vector<uint64_t> _data_available_semaphore_awaited_times;
   uint32_t _current_read_index;
   std::mutex _read_access_semaphore;
 
   const char* _data_written_sem_path;
   sem_t* _data_written_semaphore;
+  std::vector<uint64_t> _data_written_semaphore_post_times;
   uint32_t _current_write_index;
   std::mutex _write_access_semaphore;
 };

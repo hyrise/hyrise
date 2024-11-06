@@ -4,6 +4,9 @@
 #include <sys/mman.h>
 #include <iostream>
 #include <cstdint>
+#include <chrono>
+#include <iostream>
+#include <fstream>
 
 #include "multi_process_ring_buffer.hpp"
 #include "shared_memory_dto.hpp"
@@ -45,6 +48,9 @@ void MultiProcessRingBuffer<buffer_size>::reset() {
   // PDGF expects to start reading form index 0 in the buffer
   _current_read_index = 0;
   _current_write_index = 0;
+  // Clear that so that the schema-loading pass is not included
+  _data_available_semaphore_awaited_times.clear();
+  _data_written_semaphore_post_times.clear();
 }
 
 template <uint32_t buffer_size>
@@ -65,6 +71,24 @@ MultiProcessRingBuffer<buffer_size>::~MultiProcessRingBuffer() {
     sem_close(_data_written_semaphore);
     sem_unlink(_data_written_sem_path);
   }
+
+  _write_semaphore_access_timestamps();
+}
+
+template <uint32_t buffer_size>
+void MultiProcessRingBuffer<buffer_size>::_write_semaphore_access_timestamps() {
+  std::cerr << "Writing semaphore access timestamps\n";
+  auto read_sem_file = std::ofstream("/scratch/jan-eric.hellenberg/data_ready_semaphore_awaited_timestamps.txt");
+  for (auto timestamp : _data_available_semaphore_awaited_times) {
+    read_sem_file << timestamp << "\n";
+  }
+  read_sem_file.close();
+
+  auto write_sem_file = std::ofstream("/scratch/jan-eric.hellenberg/buffer_free_semaphore_post_timestamps.txt");
+  for (auto timestamp : _data_written_semaphore_post_times) {
+    write_sem_file << timestamp << "\n";
+  }
+  write_sem_file.close();
 }
 
 template <uint32_t buffer_size>
@@ -81,6 +105,7 @@ template <uint32_t buffer_size>
 RingBufferCell* MultiProcessRingBuffer<buffer_size>::prepare_retrieval() {
   sem_wait(_data_available_semaphore);
   _read_access_semaphore.lock();
+  _data_available_semaphore_awaited_times.emplace_back(std::chrono::steady_clock::now().time_since_epoch().count());
   return &_ring_buffer->cells[_current_read_index % buffer_size];
 }
 
@@ -107,6 +132,7 @@ RingBufferCell* MultiProcessRingBuffer<buffer_size>::prepare_writing() {
 template <uint32_t buffer_size>
 void MultiProcessRingBuffer<buffer_size>::writing_finished() {
   _current_write_index++;
+  _data_written_semaphore_post_times.emplace_back(std::chrono::steady_clock::now().time_since_epoch().count());
   _write_access_semaphore.unlock();
   sem_post(_data_written_semaphore);
 }
