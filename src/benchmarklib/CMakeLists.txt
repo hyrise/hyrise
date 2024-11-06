@@ -86,11 +86,11 @@ set(
 # Configure the regular hyrise library used for tests/server/playground...
 
 # HACK: TODO(Martin) ... unhack the changes.
-if (APPLE)
-  add_library(hyriseBenchmarkLib SHARED ${SOURCES})
-else()
+#if (APPLE)
+#  add_library(hyriseBenchmarkLib SHARED ${SOURCES})
+#else()
   add_library(hyriseBenchmarkLib STATIC ${SOURCES})
-endif()
+#endif()
 add_dependencies(hyriseBenchmarkLib jcchDbgen-build) # *-build is auto-generated
 add_dependencies(hyriseBenchmarkLib ssbDbgen-build) # *-build is auto-generated
 
