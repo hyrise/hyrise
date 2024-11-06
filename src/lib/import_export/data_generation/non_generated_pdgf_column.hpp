@@ -13,7 +13,6 @@ template <typename T>
 class NonGeneratedPDGFColumn : public AbstractPDGFColumn {
  public:
   explicit NonGeneratedPDGFColumn(int64_t num_rows, ChunkOffset chunk_size);
-  void add(int64_t row, char* data) override;
   bool has_another_segment() override;
   std::shared_ptr<AbstractSegment> build_next_segment() override;
 

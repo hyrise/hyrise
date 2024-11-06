@@ -4,6 +4,10 @@
 
 #include "micro_benchmark_basic_fixture.hpp"
 
+#include "import_export/data_generation/pdgf_column.hpp"
+#include "types.hpp"
+#include "storage/chunk.hpp"
+
 namespace hyrise {
 
 /**
@@ -30,7 +34,8 @@ namespace hyrise {
  * * More information on that: https://stackoverflow.com/questions/40122141/
  */
 
-using ValueT = int32_t;
+using ValueT = pmr_string;
+#define LINEITEM_SIZE 6000000
 
 class BenchmarkPlaygroundFixture : public MicroBenchmarkBasicFixture {
  public:
@@ -38,15 +43,6 @@ class BenchmarkPlaygroundFixture : public MicroBenchmarkBasicFixture {
     MicroBenchmarkBasicFixture::SetUp(state);
 
     _clear_cache();
-
-    // Fill the vector with 1M values in the pattern 0, 1, 2, 3, 0, 1, 2, 3, ...
-    // The "TableScan" will scan for one value (2), so it will select 25%.
-    _vec.resize(1'000'000);
-    std::generate(_vec.begin(), _vec.end(), []() {
-      static ValueT value = 0;
-      value = (value + 1) % 4;
-      return value;
-    });
   }
 
   void TearDown(::benchmark::State& state) override {
@@ -54,7 +50,8 @@ class BenchmarkPlaygroundFixture : public MicroBenchmarkBasicFixture {
   }
 
  protected:
-  std::vector<ValueT> _vec;
+  PDGFColumn<pmr_string> _column = PDGFColumn<pmr_string>(1, ChunkOffset{1});
+  std::shared_ptr<BasePDGFColumn> _column_ptr;
 };
 
 /**
@@ -64,14 +61,10 @@ BENCHMARK_F(BenchmarkPlaygroundFixture, BM_Playground_Reference)(benchmark::Stat
   // Add some benchmark-specific setup here
 
   for (auto _ : state) {
-    auto result = std::vector<size_t>{};
-    benchmark::DoNotOptimize(result.data());  // Do not optimize out the vector
-    const auto size = _vec.size();
-    for (auto index = size_t{0}; index < size; ++index) {
-      if (_vec[index] == 2) {
-        result.push_back(index);
-        benchmark::ClobberMemory();  // Force that record to be written to memory
-      }
+    _column_ptr = std::make_shared<PDGFColumn<ValueT>>(LINEITEM_SIZE, Chunk::DEFAULT_SIZE);
+    for (auto i = int64_t{0}; i < LINEITEM_SIZE; ++i) {
+      auto str = (char *) "abcdefgh";
+      _column_ptr->virtual_add(i, str);
     }
   }
 }
@@ -79,22 +72,30 @@ BENCHMARK_F(BenchmarkPlaygroundFixture, BM_Playground_Reference)(benchmark::Stat
 /**
  * Alternative implementation, pre-allocating the vector
  */
-BENCHMARK_F(BenchmarkPlaygroundFixture, BM_Playground_PreAllocate)(benchmark::State& state) {
+BENCHMARK_F(BenchmarkPlaygroundFixture, BM_Playground_Raw)(benchmark::State& state) {
   // Add some benchmark-specific setup here
-
   for (auto _ : state) {
-    std::vector<size_t> result;
-    benchmark::DoNotOptimize(result.data());  // Do not optimize out the vector
-    // pre-allocate result vector
-    result.reserve(250'000);
-    const auto size = _vec.size();
-    for (auto index = size_t{0}; index < size; ++index) {
-      if (_vec[index] == 2) {
-        result.push_back(index);
-        benchmark::ClobberMemory();  // Force that record to be written to memory
-      }
+    _column = PDGFColumn<ValueT>(LINEITEM_SIZE, Chunk::DEFAULT_SIZE);
+    for (auto i = int64_t{0}; i < LINEITEM_SIZE; ++i) {
+      auto str = (char *) "abcdefgh";
+      _column.add(i, str);
+      benchmark::ClobberMemory();
     }
   }
+
+//  for (auto _ : state) {
+//    std::vector<size_t> result;
+//    benchmark::DoNotOptimize(result.data());  // Do not optimize out the vector
+//    // pre-allocate result vector
+//    result.reserve(250'000);
+//    const auto size = _vec.size();
+//    for (auto index = size_t{0}; index < size; ++index) {
+//      if (_vec[index] == 2) {
+//        result.push_back(index);
+//        benchmark::ClobberMemory();  // Force that record to be written to memory
+//      }
+//    }
+//  }
 }
 
 }  // namespace hyrise

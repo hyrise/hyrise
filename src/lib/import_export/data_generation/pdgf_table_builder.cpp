@@ -4,6 +4,7 @@
 #include <iostream>
 #include <string>
 #include <memory>
+#include <functional>
 
 #include "boost/algorithm/string.hpp"
 
@@ -24,7 +25,13 @@ namespace hyrise {
 
 template <uint32_t work_unit_size, uint32_t num_columns>
 PDGFTableBuilder<work_unit_size, num_columns>::PDGFTableBuilder(uint32_t table_id, ChunkOffset hyrise_table_chunk_size)
-    : _hyrise_table_chunk_size(hyrise_table_chunk_size), _table_id(table_id) {}
+    : _hyrise_table_chunk_size(hyrise_table_chunk_size), _table_id(table_id) {
+  // TODO: remove
+  _num_rows_to_read_per_work_unit = work_unit_size;
+  if (const char* env_p = std::getenv("HYRISE_NUM_ROWS_TO_READ_PER_WORK_UNIT")) {
+    _num_rows_to_read_per_work_unit = atoi(env_p);
+  }
+}
 
 template <uint32_t work_unit_size, uint32_t num_columns>
 bool PDGFTableBuilder<work_unit_size, num_columns>::reader_should_handle_another_work_unit() {
@@ -89,8 +96,10 @@ void PDGFTableBuilder<work_unit_size, num_columns>::read_generation_info(SharedM
   const auto table_column_names = table->column_names();
 
   // Setup generation
-  // auto num_generated_columns = * reinterpret_cast<uint32_t*>(info_cell->data[4][0]);
-  _num_generated_columns = 0; // static_cast<uint8_t>(num_generated_columns);
+   auto num_generated_columns = * reinterpret_cast<uint32_t*>(info_cell->data[4][0]);
+  _num_generated_columns = static_cast<uint8_t>(num_generated_columns);
+//  _num_generated_columns = 1;
+  auto to_reduce = 0;
   for (auto i = uint8_t{0}; i < _num_generated_columns; ++i) {
     auto column_name = std::string(info_cell->data[5 + i][0]);
     boost::algorithm::to_lower(column_name);
@@ -99,10 +108,15 @@ void PDGFTableBuilder<work_unit_size, num_columns>::read_generation_info(SharedM
     Assert(find != table_column_names.end(), "Trying to generate column " + column_name + " that does not belong to the table!");
     auto mapping_index = std::distance(table_column_names.begin(), find);
     auto generated_column_type = table->column_data_type(static_cast<ColumnID>(mapping_index));
+//    if (generated_column_type == DataType::String) {
+//      to_reduce++;
+//      continue;
+//    }
     std::cerr << static_cast<uint32_t>(i) << " " << column_name << " corresponds to index " << mapping_index << " (type " << generated_column_type << ")\n";
-    _generated_columns[i] = _new_column_with_data_type(generated_column_type);
-    _generated_column_mappings[i] = mapping_index;
+    _new_column_with_data_type(i - to_reduce, generated_column_type);
+    _generated_column_mappings[i - to_reduce] = mapping_index;
   }
+  _num_generated_columns -= to_reduce;
 }
 
 template <uint32_t work_unit_size, uint32_t num_columns>
@@ -117,22 +131,22 @@ void PDGFTableBuilder<work_unit_size, num_columns>::read_data(uint32_t table_id,
       // still has work_unit_size rows if we receive it before a cell with a lower sorting_id.
       // Using the sorting_id allows us to reliably determine this.
       _table_num_rows - (sorting_id * work_unit_size),
-      static_cast<int64_t>(work_unit_size)
+      static_cast<int64_t>(_num_rows_to_read_per_work_unit)
       ));
   for (auto row = size_t{0}; row < cell_rows; ++row) {
     for (auto col = uint8_t{0}; col < _num_generated_columns; ++col) {
-      _generated_columns[col]->add((sorting_id * work_unit_size) + row, data_cell->data[row][col]);
+      _generated_columns[col]->virtual_add((sorting_id * work_unit_size) + row, data_cell->data[row][col]);
+      // _add_methods[col](_generated_columns[col], (sorting_id * work_unit_size) + row, data_cell->data[row][col]);
     }
   }
 }
 
 template <uint32_t work_unit_size, uint32_t num_columns>
-std::shared_ptr<AbstractPDGFColumn> PDGFTableBuilder<work_unit_size, num_columns>::_new_column_with_data_type(DataType data_type) {
-  std::shared_ptr<AbstractPDGFColumn> column;
+void PDGFTableBuilder<work_unit_size, num_columns>::_new_column_with_data_type(uint8_t target_index, DataType data_type) {
   resolve_data_type(data_type, [&](auto type) {
     using ColumnDataType = typename decltype(type)::type;
-    column = std::make_shared<PDGFColumn<ColumnDataType>>(_table_num_rows, _hyrise_table_chunk_size);
+    _add_methods[target_index] = &PDGFColumn<ColumnDataType>::call_add;
+    _generated_columns[target_index] = std::make_shared<PDGFColumn<ColumnDataType>>(_table_num_rows, _hyrise_table_chunk_size);
   });
-  return column;
 }
 } // namespace hyrise

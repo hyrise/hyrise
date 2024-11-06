@@ -16,7 +16,6 @@ class AbstractPDGFColumn: private Noncopyable {
  public:
   explicit AbstractPDGFColumn(int64_t num_rows, ChunkOffset chunk_size);
   virtual ~AbstractPDGFColumn() = default;
-  virtual void add(int64_t row, char* data) = 0;
   virtual bool has_another_segment() = 0;
   virtual std::shared_ptr<AbstractSegment> build_next_segment() = 0;
 

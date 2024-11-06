@@ -6,11 +6,6 @@ template <typename T>
 NonGeneratedPDGFColumn<T>::NonGeneratedPDGFColumn(int64_t num_rows, ChunkOffset chunk_size) : AbstractPDGFColumn(num_rows, chunk_size), _total_segments((num_rows + chunk_size - 1) / chunk_size) /* ceil(num_rows / chunk_size) */ {}
 
 template <typename T>
-void NonGeneratedPDGFColumn<T>::add(int64_t row, char* data) {
-  throw std::logic_error("Cannot add data to non-generated column!");
-}
-
-template <typename T>
 bool NonGeneratedPDGFColumn<T>::has_another_segment() {
   return _num_built_segments < _total_segments;
 }
