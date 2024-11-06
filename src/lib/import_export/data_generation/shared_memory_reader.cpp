@@ -11,6 +11,7 @@
 #include "shared_memory_reader.hpp"
 #include "pdgf_table_builder.hpp"
 #include "pdgf_table_schema_builder.hpp"
+#include "utils/timer.hpp"
 
 namespace hyrise {
 template <uint32_t work_unit_size, uint32_t num_columns>
@@ -142,16 +143,32 @@ void SharedMemoryReader<work_unit_size, num_columns>::_return_data_slot(uint32_t
 
 template <uint32_t work_unit_size, uint32_t num_columns>
 void SharedMemoryReader<work_unit_size, num_columns>::_worker_read_data(uint32_t reader_index, std::shared_ptr<PDGFTableBuilder<work_unit_size, num_columns>>& table_builder) {
+  auto timer = Timer{};
+  long num_processed = 0;
+  long waiting_time = 0;
+  long appending_time = 0;
   while (table_builder->reader_should_handle_another_work_unit()) {
+    num_processed++;
+    timer.lap();
     auto ring_cell = _ring_buffer->prepare_retrieval();
+    waiting_time += timer.lap().count();
     Assert(ring_cell->cell_type == RingBufferCellType::Data, "Did not receive data, was " + std::to_string(ring_cell->cell_type));
     auto data_slot = ring_cell->data_buffer_offset;
     auto table_id = ring_cell->table_id;
     auto sorting_id = ring_cell->sorting_id;
     auto addressed_data = _data_buffer->get_addressed_by(ring_cell);
     _ring_buffer->retrieval_finished();
+    timer.lap();
     table_builder->read_data(table_id, sorting_id, addressed_data);
+    appending_time += timer.lap().count();
     _return_data_slot(data_slot);
+  }
+  if (num_processed == 0) {
+    auto out = table_builder->table_name() + ": Worker " + std::to_string(reader_index) + " had no work units!\n";
+    std::cerr << out;
+  } else {
+    auto out = table_builder->table_name() + ": Worker " + std::to_string(reader_index) + " read " + std::to_string(num_processed) + " work units, waited " + std::to_string(waiting_time / num_processed) + " and read data " + std::to_string(appending_time / num_processed) + "\n";
+    std::cerr << out;
   }
 }
 } // namespace hyrise
