@@ -23,7 +23,10 @@
 
 namespace hyrise {
 
-NodeQueueScheduler::NodeQueueScheduler() {
+NodeQueueScheduler::NodeQueueScheduler() : NodeQueueScheduler(DEFAULT_NUM_GROUPS) {}
+
+NodeQueueScheduler::NodeQueueScheduler(uint8_t min_num_groups) {
+  _num_groups = std::max(min_num_groups, static_cast<uint8_t>(DEFAULT_NUM_GROUPS));
   _worker_id_allocator = std::make_shared<UidAllocator>();
 }
 
@@ -258,9 +261,9 @@ NodeID NodeQueueScheduler::determine_queue_id(const NodeID preferred_node_id) co
 }
 
 void NodeQueueScheduler::_group_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const {
-  // Adds predecessor/successor relationships between tasks so that only NUM_GROUPS tasks can be executed in parallel.
-  // The optimal value of NUM_GROUPS depends on the number of cores and the number of queries being executed
-  // concurrently. The current value has been found with a divining rod.
+  // Adds predecessor/successor relationships between tasks so that only _num_groups tasks can be executed in parallel.
+  // The optimal value of _num_groups depends on the number of cores and the number of queries being executed
+  // concurrently. The default value DEFAULT_NUM_GROUPS has been found with a divining rod.
   //
   // Approach: Skip all tasks that already have predecessors or successors, as adding relationships to these could
   // introduce cyclic dependencies. Again, this is far from perfect, but better than not grouping the tasks.
@@ -268,7 +271,7 @@ void NodeQueueScheduler::_group_tasks(const std::vector<std::shared_ptr<Abstract
   auto round_robin_counter = 0;
   auto common_node_id = std::optional<NodeID>{};
 
-  auto grouped_tasks = std::vector<std::shared_ptr<AbstractTask>>(NUM_GROUPS);
+  auto grouped_tasks = std::vector<std::shared_ptr<AbstractTask>>(_num_groups);
   for (const auto& task : tasks) {
     if (!task->predecessors().empty() || !task->successors().empty() || dynamic_cast<ShutdownTask*>(&*task)) {
       // Do not group tasks that either have precessors/successors or are ShutdownTasks.
@@ -285,7 +288,7 @@ void NodeQueueScheduler::_group_tasks(const std::vector<std::shared_ptr<Abstract
       common_node_id = task->node_id();
     }
 
-    const auto group_id = round_robin_counter % NUM_GROUPS;
+    const auto group_id = round_robin_counter % _num_groups;
     const auto& first_task_in_group = grouped_tasks[group_id];
     if (first_task_in_group) {
       task->set_as_predecessor_of(first_task_in_group);

@@ -51,6 +51,7 @@ class UidAllocator;
 class NodeQueueScheduler : public AbstractScheduler {
  public:
   NodeQueueScheduler();
+  NodeQueueScheduler(uint8_t min_num_groups);
   ~NodeQueueScheduler() override;
 
   /**
@@ -88,12 +89,14 @@ class NodeQueueScheduler : public AbstractScheduler {
   const std::atomic_int64_t& active_worker_count() const;
 
   // Number of groups for _group_tasks
-  static constexpr auto NUM_GROUPS = 10;
+  static constexpr auto DEFAULT_NUM_GROUPS = 10;
 
  protected:
   void _group_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const override;
 
  private:
+  uint8_t _num_groups;
+
   std::atomic<TaskID::base_type> _task_counter{0};
   std::shared_ptr<UidAllocator> _worker_id_allocator;
   std::vector<std::shared_ptr<TaskQueue>> _queues;

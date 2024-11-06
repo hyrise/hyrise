@@ -29,7 +29,7 @@ TPCHPDGFTableGenerator::TPCHPDGFTableGenerator(float scale_factor, ClusteringCon
                                                const std::shared_ptr<BenchmarkConfig>& benchmark_config, std::vector<std::string> queries_to_run)
     : AbstractTableGenerator(benchmark_config),
       _scale_factor(scale_factor),
-      _num_cores(benchmark_config->cores),
+      _num_cores(benchmark_config->data_preparation_cores),
       _only_generate_used_columns(only_generate_used_columns),
       _queries_to_run(std::move(queries_to_run)),
       _columns_to_generate(std::make_shared<std::set<std::string>>()),
