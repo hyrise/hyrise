@@ -84,7 +84,7 @@ set(
 )
 
 # Configure the regular hyrise library used for tests/server/playground.
-#if (APPLE)
+if (APPLE)
   # Starting with LLVM 18 on macOS, statically linked hyriseBenchmarkLib led to "symbol not found in flat namespace" issues.
   # Similar to elsewhere (see linking of core hyrise library), we use link shared on macOS.
   # Using `-force_load` would allow us to use static linking, but this is a very recent (and clunky) workaround with cmake (see https://gitlab.kitware.com/cmake/cmake/-/merge_requests/6769).
