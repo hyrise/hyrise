@@ -283,8 +283,6 @@ set(
     # Added plugin targets so that we can test member methods without going through dlsym
     hyriseMvccDeletePlugin
     hyriseUccDiscoveryPlugin
-    # Required for testing plugin benchmark hooks
-    hyriseBenchmarkLib
 )
 
 # This warning does not play well with SCOPED_TRACE
@@ -314,8 +312,8 @@ target_precompile_headers(hyriseTest PRIVATE
     [["types.hpp"]]
 )
 
-# Configure hyriseSystemTest. With LLVM18+ and macOS, we need to ensure that the entire hyriseBenchmarkLib is exported.
-# For some reason, some symbols are missing if we do not use whole archive.
+# Configure hyriseSystemTest. With LLVM18+ and macOS, we need to ensure that the entire hyriseBenchmarkLib (required for
+# testing plugin benchmark hooks) is exported. For some reason, some symbols are missing if we do not use whole archive.
 add_executable(hyriseSystemTest ${SYSTEM_TEST_SOURCES})
 target_link_libraries(hyriseSystemTest PUBLIC hyrise ${LIBRARIES})
 target_link_libraries(hyriseSystemTest PUBLIC "$<LINK_LIBRARY:WHOLE_ARCHIVE,hyriseBenchmarkLib>")
