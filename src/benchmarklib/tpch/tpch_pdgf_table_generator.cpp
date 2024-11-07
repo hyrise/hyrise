@@ -18,19 +18,22 @@
 #include "tpch/tpch_constants.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
+#include "utils/timer.hpp"
 
 namespace hyrise {
 
 TPCHPDGFTableGenerator::TPCHPDGFTableGenerator(float scale_factor, ClusteringConfiguration clustering_configuration,
                                        ChunkOffset chunk_size)
-    : TPCHPDGFTableGenerator(scale_factor, clustering_configuration, false, std::make_shared<BenchmarkConfig>(chunk_size), std::vector<std::string>{}) {}
+    : TPCHPDGFTableGenerator(scale_factor, clustering_configuration, false, false, std::make_shared<BenchmarkConfig>(chunk_size), std::vector<std::string>{}) {}
 
-TPCHPDGFTableGenerator::TPCHPDGFTableGenerator(float scale_factor, ClusteringConfiguration clustering_configuration, bool only_generate_used_columns,
+TPCHPDGFTableGenerator::TPCHPDGFTableGenerator(float scale_factor, ClusteringConfiguration clustering_configuration,
+                                               bool only_generate_partial_data, bool partial_data_generate_whole_tables,
                                                const std::shared_ptr<BenchmarkConfig>& benchmark_config, std::vector<std::string> queries_to_run)
     : AbstractTableGenerator(benchmark_config),
       _scale_factor(scale_factor),
       _num_cores(benchmark_config->data_preparation_cores),
-      _only_generate_used_columns(only_generate_used_columns),
+      _only_generate_partial_data(only_generate_partial_data),
+      _partial_data_generate_whole_tables(partial_data_generate_whole_tables),
       _queries_to_run(std::move(queries_to_run)),
       _columns_to_generate(std::make_shared<std::set<std::string>>()),
       _clustering_configuration(clustering_configuration) {
@@ -52,6 +55,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHPDGFTableGenerator::gene
    * Read schema. Note that the SharedMemoryReader MUST be created first as it will create the shared resources PDGF will
    * bind to.
    */
+  auto timer = Timer{};
   std::cerr << "Receiving table schemas from PDGF!\n";
   auto pdgf_schema = PdgfProcess::for_schema_generation(PDGF_DIRECTORY_ROOT, _num_cores, _scale_factor);
   pdgf_schema.run();
@@ -67,6 +71,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHPDGFTableGenerator::gene
   }
   std::cerr << "Awaiting PDGF teardown\n";
   pdgf_schema.await_teardown();
+  std::cout << "- Hyrise PDGF: Loading schema done (" << format_duration(timer.lap()) << ")\n" << std::flush;
 
   /**
    * Reset shared memory buffer. This is important because we will proceed to launch PDGF a second time.
@@ -76,9 +81,9 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHPDGFTableGenerator::gene
   /**
    * Collect columns to generate
    */
-  if (_only_generate_used_columns) {
+  if (_only_generate_partial_data) {
     for (const auto& query: _queries_to_run) {
-      _collect_columns(query);
+      _collect_columns(query, _partial_data_generate_whole_tables);
     }
   }
 
@@ -87,7 +92,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHPDGFTableGenerator::gene
    */
   std::cerr << "Generating tables with PDGF\n";
   auto pdgf_data = PdgfProcess::for_data_generation(PDGF_DIRECTORY_ROOT, _num_cores, _scale_factor);
-  if (_only_generate_used_columns) {
+  if (_only_generate_partial_data) {
     pdgf_data.set_column_filter(_columns_to_generate);
   }
   pdgf_data.run();
@@ -97,6 +102,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHPDGFTableGenerator::gene
   }
   std::cerr << "Awaiting PDGF teardown\n";
   pdgf_data.await_teardown();
+  std::cout << "- Hyrise PDGF: Generating tables done (" << format_duration(timer.lap()) << ")\n" << std::flush;
 
   /**
    * Return completely generated tables
@@ -111,7 +117,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHPDGFTableGenerator::gene
   return table_info_by_name;
 }
 
-void TPCHPDGFTableGenerator::_collect_columns(const std::string& sql) {
+void TPCHPDGFTableGenerator::_collect_columns(const std::string& sql, bool whole_table) {
   auto pipeline_builder = SQLPipelineBuilder{sql};
   auto pipeline = pipeline_builder.create_pipeline();
   auto& pqps = pipeline.get_physical_plans();
@@ -127,9 +133,12 @@ void TPCHPDGFTableGenerator::_collect_columns(const std::string& sql) {
         auto pruned_column_ids_iter = table_node->pruned_column_ids().begin();
         for (auto stored_column_id = ColumnID{0}, output_column_id = ColumnID{0};
              stored_column_id < stored_table->column_count(); ++stored_column_id) {
-          if (pruned_column_ids_iter != table_node->pruned_column_ids().end() && stored_column_id == *pruned_column_ids_iter) {
-            ++pruned_column_ids_iter;
-            continue;
+          if (!whole_table) {
+            // Only prune columns if we do not want to generate the whole table
+            if (pruned_column_ids_iter != table_node->pruned_column_ids().end() && stored_column_id == *pruned_column_ids_iter) {
+              ++pruned_column_ids_iter;
+              continue;
+            }
           }
 
           // non-pruned column
