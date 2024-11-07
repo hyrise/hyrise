@@ -179,7 +179,7 @@ try {
             sh "mkdir clang-release && cd clang-release && PATH=/usr/local/bin/:$PATH /usr/local/bin/cmake ${release} ${ninja} ${no_lto} -DCMAKE_C_COMPILER=/usr/local/opt/llvm@19/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm@19/bin/clang++ .."
             sh "cd clang-release && PATH=/usr/local/bin/:$PATH ninja"
             sh "./clang-release/hyriseTest"
-            #sh "./clang-release/hyriseSystemTest --gtest_filter=-${tests_excluded_in_mac_builds}"
+            // sh "./clang-release/hyriseSystemTest --gtest_filter=-${tests_excluded_in_mac_builds}"
             sh "./scripts/test/hyriseConsole_test.py clang-release"
             sh "./scripts/test/hyriseServer_test.py clang-release"
             sh "./scripts/test/hyriseBenchmarkFileBased_test.py clang-release"
@@ -220,7 +220,7 @@ try {
             sh "file ./clang-debug/hyriseTest | grep arm64"
 
             sh "./clang-debug/hyriseTest"
-            #sh "./clang-debug/hyriseSystemTest --gtest_filter=-${tests_excluded_in_mac_builds}"
+            // sh "./clang-debug/hyriseSystemTest --gtest_filter=-${tests_excluded_in_mac_builds}"
             sh "./scripts/test/hyriseConsole_test.py clang-debug"
             sh "./scripts/test/hyriseServer_test.py clang-debug"
             sh "./scripts/test/hyriseBenchmarkFileBased_test.py clang-debug"
