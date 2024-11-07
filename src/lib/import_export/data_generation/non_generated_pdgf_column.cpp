@@ -1,20 +1,25 @@
+#include "all_type_variant.hpp"
 #include "non_generated_pdgf_column.hpp"
 #include "storage/dummy_segment.hpp"
 
 namespace hyrise {
-template <typename T>
-NonGeneratedPDGFColumn<T>::NonGeneratedPDGFColumn(int64_t num_rows, ChunkOffset chunk_size) : AbstractPDGFColumn(num_rows, chunk_size), _total_segments((num_rows + chunk_size - 1) / chunk_size) /* ceil(num_rows / chunk_size) */ {}
+BaseNonGeneratedPDGFColumn::BaseNonGeneratedPDGFColumn() {}
 
 template <typename T>
-bool NonGeneratedPDGFColumn<T>::has_another_segment() {
-  return _num_built_segments < _total_segments;
+NonGeneratedPDGFColumn<T>::NonGeneratedPDGFColumn(std::string name, DataType type) : _name(name), _type(type) {}
+
+template <typename T>
+std::string NonGeneratedPDGFColumn<T>::name() {
+  return _name;
 }
 
 template <typename T>
-std::shared_ptr<AbstractSegment> NonGeneratedPDGFColumn<T>::build_next_segment() {
-  auto chunk_size = std::min(_chunk_size, static_cast<ChunkOffset>(_num_rows - _total_segments * _num_built_segments));
-  auto segment = std::make_shared<DummySegment<T>>(chunk_size);
-  _num_built_segments++;
-  return segment;
+DataType NonGeneratedPDGFColumn<T>::type() {
+  return _type;
+}
+
+template <typename T>
+std::shared_ptr<AbstractSegment> NonGeneratedPDGFColumn<T>::build_segment(ChunkOffset chunk_size) {
+  return std::make_shared<DummySegment<T>>(chunk_size);
 }
 } // namespace hyrise

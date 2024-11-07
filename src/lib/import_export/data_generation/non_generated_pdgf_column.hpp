@@ -2,23 +2,33 @@
 
 #include <cstdint>
 #include <memory>
+#include <string>
 
-#include "abstract_pdgf_column.hpp"
 #include "all_type_variant.hpp"
 #include "storage/abstract_segment.hpp"
 #include "types.hpp"
 
 namespace hyrise {
-template <typename T>
-class NonGeneratedPDGFColumn : public AbstractPDGFColumn {
+class BaseNonGeneratedPDGFColumn {
  public:
-  explicit NonGeneratedPDGFColumn(int64_t num_rows, ChunkOffset chunk_size);
-  bool has_another_segment() override;
-  std::shared_ptr<AbstractSegment> build_next_segment() override;
+  explicit BaseNonGeneratedPDGFColumn();
+  virtual ~BaseNonGeneratedPDGFColumn() = default;
+  virtual std::string name() = 0;
+  virtual DataType type() = 0;
+  virtual std::shared_ptr<AbstractSegment> build_segment(ChunkOffset chunk_size) = 0;
+};
+
+template <typename T>
+class NonGeneratedPDGFColumn : public BaseNonGeneratedPDGFColumn {
+ public:
+  explicit NonGeneratedPDGFColumn(std::string name, DataType type);
+  std::string name() override;
+  DataType type() override;
+  std::shared_ptr<AbstractSegment> build_segment(ChunkOffset chunk_size) override;
 
  protected:
-  uint32_t _num_built_segments = 0;
-  uint32_t _total_segments;
+  std::string _name;
+  DataType _type;
 };
 
 EXPLICITLY_INSTANTIATE_DATA_TYPES(NonGeneratedPDGFColumn);

@@ -1,15 +1,22 @@
 #include <algorithm>
+#include <atomic>
 #include <cstdint>
 #include <cstddef>
 #include <iostream>
+#include <memory>
+#include <mutex>
 #include <string>
 #include <vector>
 
 #include "boost/algorithm/string.hpp"
 
+#include "hyrise.hpp"
 #include "non_generated_pdgf_column.hpp"
 #include "pdgf_column.hpp"
 #include "pdgf_table_schema_builder.hpp"
+#include "scheduler/abstract_task.hpp"
+#include "scheduler/job_task.hpp"
+#include "storage/dummy_segment.hpp"
 #include "utils/assert.hpp"
 
 
@@ -22,39 +29,6 @@ PDGFTableSchemaBuilder<work_unit_size, num_columns>::PDGFTableSchemaBuilder(uint
 template <uint32_t work_unit_size, uint32_t num_columns>
 std::string PDGFTableSchemaBuilder<work_unit_size, num_columns>::table_name() const {
   return _table_name;
-}
-
-template <uint32_t work_unit_size, uint32_t num_columns>
-std::shared_ptr<Table> PDGFTableSchemaBuilder<work_unit_size, num_columns>::build_table() {
-  Assert(!_table_column_names.empty(), "Table schema should have at least one column!");
-
-  // Assemble table metadata
-  auto table_column_definitions = TableColumnDefinitions{};
-  for (auto i = size_t{0}; i < _table_column_names.size(); ++i) {
-    table_column_definitions.emplace_back(_table_column_names[i], _table_column_types[i], false);
-  }
-
-  auto table = std::make_shared<Table>(table_column_definitions, TableType::Data, _hyrise_table_chunk_size, UseMvcc::Yes);
-
-  // Insert dummy segments
-  auto all_columns_empty = std::vector<std::shared_ptr<AbstractPDGFColumn>>{};
-  all_columns_empty.reserve(_table_column_types.size());
-  for (auto type : _table_column_types) {
-    all_columns_empty.emplace_back(_new_non_generated_column_with_data_type(type));
-  }
-
-  while (all_columns_empty[0]->has_another_segment()) {
-    auto segments = Segments{};
-    for (auto& column : all_columns_empty) {
-      Assert(column->has_another_segment(), "All table columns should have the same number of segments!");
-      segments.emplace_back(column->build_next_segment());
-    }
-    auto mvcc_data = std::make_shared<MvccData>(segments.front()->size(), CommitID{0});
-
-    table->append_chunk(segments, mvcc_data);
-  }
-
-  return table;
 }
 
 template <uint32_t work_unit_size, uint32_t num_columns>
@@ -76,17 +50,69 @@ void PDGFTableSchemaBuilder<work_unit_size, num_columns>::read_schema(SharedMemo
     auto pdgf_column_type = * reinterpret_cast<PDGFColumnType*>(schema_cell->data[5 + (2 * i)][0]);
     std::cerr << i << " " << column_name << " " << pdgf_column_type << "\n";
 
-    _table_column_names.push_back(std::move(column_name));
-    _table_column_types.push_back(hyrise_type_for_column_type(pdgf_column_type));
+    _table_columns.emplace_back(_new_non_generated_column_with_data_type(std::move(column_name), hyrise_type_for_column_type(pdgf_column_type)));
   }
 }
 
 template <uint32_t work_unit_size, uint32_t num_columns>
-std::shared_ptr<AbstractPDGFColumn> PDGFTableSchemaBuilder<work_unit_size, num_columns>::_new_non_generated_column_with_data_type(DataType data_type) {
-  std::shared_ptr<AbstractPDGFColumn> column;
+std::shared_ptr<Table> PDGFTableSchemaBuilder<work_unit_size, num_columns>::build_table() {
+  Assert(!_table_columns.empty(), "Table schema should have at least one column!");
+  auto table = _assemble_table_metadata();
+  _construct_table_chunks(table);
+  return table;
+}
+
+template <uint32_t work_unit_size, uint32_t num_columns>
+std::shared_ptr<Table> PDGFTableSchemaBuilder<work_unit_size, num_columns>::_assemble_table_metadata() {
+  auto table_column_definitions = TableColumnDefinitions{};
+  for (auto& column : _table_columns) {
+    table_column_definitions.emplace_back(column->name(), column->type(), false);
+  }
+
+  return std::make_shared<Table>(table_column_definitions, TableType::Data, _hyrise_table_chunk_size, UseMvcc::Yes);
+}
+
+template <uint32_t work_unit_size, uint32_t num_columns>
+void PDGFTableSchemaBuilder<work_unit_size, num_columns>::_construct_table_chunks(std::shared_ptr<Table>& table) {
+  // Fill all chunks with dummy segments
+  auto req_chunks = std::div(_table_num_rows, _hyrise_table_chunk_size);
+  auto remaining_chunks_to_generate = std::atomic_int64_t{req_chunks.quot};
+  auto table_access_mutex = std::mutex{};
+
+  auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
+  for (auto worker_index = uint32_t{0}; worker_index < 64; worker_index++) {
+    tasks.emplace_back(std::make_shared<JobTask>([this, &table, &table_access_mutex, &remaining_chunks_to_generate] {
+      while (remaining_chunks_to_generate.fetch_sub(1) > 0) {
+        auto segments = Segments{};
+        for (auto& column : _table_columns) {
+          segments.emplace_back(column->build_segment(_hyrise_table_chunk_size));
+        }
+        auto mvcc_data = std::make_shared<MvccData>(_hyrise_table_chunk_size, CommitID{0});
+
+        table_access_mutex.lock();
+        table->append_chunk(segments, mvcc_data);
+        table_access_mutex.unlock();
+      }
+    }));
+  }
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
+  // Add remaining smaller chunk
+  if (req_chunks.rem > 0) {
+    auto segments = Segments{};
+    for (auto& column : _table_columns) {
+      segments.emplace_back(column->build_segment(static_cast<ChunkOffset>(req_chunks.rem)));
+    }
+    auto mvcc_data = std::make_shared<MvccData>(_hyrise_table_chunk_size, CommitID{0});
+    table->append_chunk(segments, mvcc_data);
+  }
+}
+
+template <uint32_t work_unit_size, uint32_t num_columns>
+std::shared_ptr<BaseNonGeneratedPDGFColumn> PDGFTableSchemaBuilder<work_unit_size, num_columns>::_new_non_generated_column_with_data_type(std::string name, DataType data_type) {
+  std::shared_ptr<BaseNonGeneratedPDGFColumn> column;
   resolve_data_type(data_type, [&](auto type) {
     using ColumnDataType = typename decltype(type)::type;
-    column = std::make_shared<NonGeneratedPDGFColumn<ColumnDataType>>(_table_num_rows, _hyrise_table_chunk_size);
+    column = std::make_shared<NonGeneratedPDGFColumn<ColumnDataType>>(name, data_type);
   });
   return column;
 }
