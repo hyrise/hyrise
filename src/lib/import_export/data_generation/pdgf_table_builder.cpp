@@ -43,7 +43,7 @@ bool PDGFTableBuilder<work_unit_size, num_columns>::reader_should_handle_another
 
 template <uint32_t work_unit_size, uint32_t num_columns>
 bool PDGFTableBuilder<work_unit_size, num_columns>::reading_should_be_parallelized() const {
-  return (_table_num_rows / work_unit_size) > 128;
+  return (_table_num_rows / work_unit_size) > 64;
 }
 
 template <uint32_t work_unit_size, uint32_t num_columns>
