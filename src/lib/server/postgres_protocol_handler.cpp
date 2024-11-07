@@ -291,4 +291,3 @@ template class PostgresProtocolHandler<Socket>;
 template class PostgresProtocolHandler<boost::asio::posix::stream_descriptor>;
 
 }  // namespace hyrise
-
