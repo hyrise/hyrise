@@ -300,6 +300,7 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 add_executable(hyriseTest ${HYRISE_UNIT_TEST_SOURCES})
 add_dependencies(hyriseTest hyriseSecondTestPlugin hyriseTestPlugin hyriseMvccDeletePlugin hyriseTestNonInstantiablePlugin hyriseUccDiscoveryPlugin)
 target_link_libraries(hyriseTest hyrise ${LIBRARIES})
+target_link_libraries(hyriseTest hyriseBenchmarkLib)  # See special handling below for hyriseSystemTest.
 
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 target_compile_options(hyriseTest PUBLIC -Xclang -fno-pch-timestamp)
