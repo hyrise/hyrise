@@ -441,15 +441,15 @@ try {
             // Build hyriseTest (Debug) with macOS's default compiler (Apple clang) and run it. Passing clang
             // explicitly seems to make the compiler find C system headers (required for SSB and JCC-H data generators)
             // that are not found otherwise.
-            sh "mkdir clang-apple-debug && cd clang-apple-debug && PATH=/usr/local/bin/:$PATH cmake ${debug} ${unity} ${ninja} -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ .."
-            sh "cd clang-apple-debug && PATH=/usr/local/bin/:$PATH ninja"
+            sh "mkdir clang-apple-debug && cd clang-apple-debug && cmake ${debug} ${unity} ${ninja} -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ .."
+            sh "cd clang-apple-debug && ninja"
             sh "./clang-apple-debug/hyriseTest"
 
             // Build Hyrise (Release) with a recent clang compiler version (as recommended for Hyrise on macOS) and run
             // various tests. As the release build already takes quite a while on the Intel machine, we disable LTO and
             // only build release with LTO on the ARM machine.
-            sh "mkdir clang-release && cd clang-release && PATH=/usr/local/bin/:$PATH /usr/local/bin/cmake ${release} ${ninja} ${no_lto} -DCMAKE_C_COMPILER=/usr/local/opt/llvm@19/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm@19/bin/clang++ .."
-            sh "cd clang-release && PATH=/usr/local/bin/:$PATH ninja"
+            sh "mkdir clang-release && cd clang-release && cmake ${release} ${ninja} ${no_lto} -DCMAKE_C_COMPILER=/usr/local/opt/llvm@19/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm@19/bin/clang++ .."
+            sh "cd clang-release && ninja"
             sh "./clang-release/hyriseTest"
             sh "./clang-release/hyriseSystemTest --gtest_filter=-${tests_excluded_in_mac_builds}"
             sh "./scripts/test/hyriseConsole_test.py clang-release"
