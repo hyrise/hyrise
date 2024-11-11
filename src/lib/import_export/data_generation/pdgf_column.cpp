@@ -98,4 +98,6 @@ std::shared_ptr<AbstractSegment> PDGFColumn<T>::build_next_segment() {
   _num_built_segments++;
   return segment;
 }
+
+EXPLICITLY_INSTANTIATE_DATA_TYPES(PDGFColumn);
 } // namespace hyrise

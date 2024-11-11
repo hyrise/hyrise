@@ -171,4 +171,6 @@ void SharedMemoryReader<work_unit_size, num_columns>::_worker_read_data(uint32_t
     std::cerr << out;
   }
 }
+
+template class SharedMemoryReader<128u, 16u>;
 } // namespace hyrise

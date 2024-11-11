@@ -22,4 +22,6 @@ template <typename T>
 std::shared_ptr<AbstractSegment> NonGeneratedPDGFColumn<T>::build_segment(ChunkOffset chunk_size) {
   return std::make_shared<DummySegment<T>>(chunk_size);
 }
+
+EXPLICITLY_INSTANTIATE_DATA_TYPES(NonGeneratedPDGFColumn);
 } // namespace hyrise

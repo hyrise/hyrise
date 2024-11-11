@@ -47,6 +47,4 @@ class PDGFTableBuilder : Noncopyable {
 
   uint8_t _num_rows_to_read_per_work_unit;
 };
-
-template class PDGFTableBuilder<128u, 16u>;
 } // namespace hyrise

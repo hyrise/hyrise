@@ -36,6 +36,4 @@ class PDGFTableSchemaBuilder : Noncopyable {
 
   std::vector<std::shared_ptr<BaseNonGeneratedPDGFColumn>> _table_columns;
 };
-
-template class PDGFTableSchemaBuilder<128u, 16u>;
 } // namespace hyrise

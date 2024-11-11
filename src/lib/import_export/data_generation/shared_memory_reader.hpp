@@ -36,6 +36,4 @@ class SharedMemoryReader : Noncopyable {
   int32_t _num_tables_to_read = INT32_MAX;
   int32_t _num_read_tables = 0;
 };
-
-template class SharedMemoryReader<128u, 16u>;
 } // namespace hyrise

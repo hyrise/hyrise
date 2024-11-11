@@ -36,6 +36,4 @@ class PDGFColumn : public BasePDGFColumn {
   uint32_t _num_built_segments = 0;
   std::vector<pmr_vector<T>> _data_segments;
 };
-
-EXPLICITLY_INSTANTIATE_DATA_TYPES(PDGFColumn);
 } // namespace hyrise

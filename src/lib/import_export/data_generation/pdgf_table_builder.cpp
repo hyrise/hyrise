@@ -149,4 +149,6 @@ void PDGFTableBuilder<work_unit_size, num_columns>::_new_column_with_data_type(u
     _generated_columns[target_index] = std::make_shared<PDGFColumn<ColumnDataType>>(_table_num_rows, _hyrise_table_chunk_size);
   });
 }
+
+template class PDGFTableBuilder<128u, 16u>;
 } // namespace hyrise

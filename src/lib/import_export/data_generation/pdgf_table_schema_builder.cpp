@@ -116,4 +116,6 @@ std::shared_ptr<BaseNonGeneratedPDGFColumn> PDGFTableSchemaBuilder<work_unit_siz
   });
   return column;
 }
+
+template class PDGFTableSchemaBuilder<128u, 16u>;
 } // namespace hyrise

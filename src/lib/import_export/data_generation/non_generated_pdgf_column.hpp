@@ -30,6 +30,4 @@ class NonGeneratedPDGFColumn : public BaseNonGeneratedPDGFColumn {
   std::string _name;
   DataType _type;
 };
-
-EXPLICITLY_INSTANTIATE_DATA_TYPES(NonGeneratedPDGFColumn);
 } // namespace hyrise
