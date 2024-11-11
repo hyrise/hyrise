@@ -196,7 +196,7 @@ find_package(SQLite3 REQUIRED)
 
 # Old versions of CMake used the FindBoost module, which is deprecated because find_package can now find
 # the upstream package directly. Therefore, disable it explicitly.
-SET(BOOST_MIN_VERSION "1.81.0")
+set(BOOST_MIN_VERSION "1.81.0")
 find_package(Boost ${BOOST_MIN_VERSION} REQUIRED COMPONENTS container date_time NO_MODULE)
 
 add_definitions(-DBOOST_THREAD_VERSION=5)
