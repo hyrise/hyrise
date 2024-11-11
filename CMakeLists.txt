@@ -52,7 +52,7 @@ elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
     endif()
     message(WARNING "On macOS, we recommend a recent clang compiler instead of Apple's clang compiler. Please ${CMAKE_OSX_INSTALL_TEXT}run cmake with `-DCMAKE_C_COMPILER=${BREW_PREFIX}/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=${BREW_PREFIX}/opt/llvm/bin/clang++`.")
 else()
-    compiler_not_supported("You are using an unsupported compiler (${CMAKE_CXX_COMPILER_ID})! Compilation has only been tested with Clang (Linux + OS X) and GCC (Linux).")
+    compiler_not_supported("You are using an unsupported compiler (${CMAKE_CXX_COMPILER_ID})! Compilation has only been tested with Clang (Linux + macOS) and GCC (Linux).")
 endif()
 
 if ("${CMAKE_CXX_COMPILER_ID}" MATCHES ".*Clang")
