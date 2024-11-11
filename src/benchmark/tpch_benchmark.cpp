@@ -54,6 +54,7 @@ int main(int argc, char* argv[]) {
                    "by the TPC-H data generator. With --clustering=\"Pruning\", the two largest tables 'lineitem' "
                    "and 'orders' are sorted by 'l_shipdate' and 'o_orderdate' for improved chunk pruning. Both are "
                    "legal TPC-H input data.", cxxopts::value<std::string>()->default_value("None")) // NOLINT
+    ("tpch_cache_directory", "Base directory to write cached tables to", cxxopts::value<std::string>()->default_value("tpch_cached_tables"))
     ("pdgf_data_gen", "Instead of using the bundled db-gen to generate the data, rely on the Parallel Data Generation Framework.", cxxopts::value<bool>()->default_value("false"))
     ("only_generate_used_columns", "Determine and only generate columns used by the specified queries.", cxxopts::value<bool>()->default_value("false"))
     ("only_generate_used_tables", "Determine and only generate complete tables used by the specified queries.", cxxopts::value<bool>()->default_value("false")); // NOLINT
@@ -65,6 +66,7 @@ int main(int argc, char* argv[]) {
   auto use_prepared_statements = false;
   auto jcch = false;
   auto jcch_skewed = false;
+  auto cache_directory = std::string{};
   auto pdgf_data_gen = false;
   auto only_generate_used_columns = false;
   auto only_generate_used_tables = false;
@@ -79,6 +81,9 @@ int main(int argc, char* argv[]) {
   if (cli_parse_result.count("queries")) {
     comma_separated_queries = cli_parse_result["queries"].as<std::string>();
   }
+
+  cache_directory = cli_parse_result["tpch_cache_directory"].as<std::string>();
+  std::cout << "- Cache directory is " << cache_directory << "\n";
 
   scale_factor = cli_parse_result["scale"].as<float>();
 
@@ -208,6 +213,7 @@ int main(int argc, char* argv[]) {
 
     // Create the jcch_data directory (if needed) and generate the jcch_data/sf-... path
     auto jcch_data_path_str = std::ostringstream{};
+    jcch_data_path_str << cache_directory << "/";
     jcch_data_path_str << "jcch_data/sf-" << std::noshowpoint << scale_factor;
     std::filesystem::create_directories(jcch_data_path_str.str());
     // Success of create_directories is guaranteed by the call to fs::canonical, which fails on invalid paths:
@@ -227,7 +233,7 @@ int main(int argc, char* argv[]) {
   } else {
     item_runner = std::make_unique<TPCHBenchmarkItemRunner>(config, use_prepared_statements, scale_factor,
                                                             clustering_configuration, item_ids);
-    table_generator = std::make_unique<TPCHTableGenerator>(scale_factor, clustering_configuration,  config);
+    table_generator = std::make_unique<TPCHTableGenerator>(scale_factor, cache_directory, clustering_configuration,  config);
   }
 
   auto benchmark_runner =

@@ -24,7 +24,7 @@ JCCHTableGenerator::JCCHTableGenerator(const std::string& dbgen_path, const std:
                                        ClusteringConfiguration clustering_configuration,
                                        const std::shared_ptr<BenchmarkConfig>& benchmark_config)
     : AbstractTableGenerator(benchmark_config),
-      TPCHTableGenerator(scale_factor, clustering_configuration, benchmark_config),
+      TPCHTableGenerator(scale_factor, data_path, clustering_configuration, benchmark_config),
       FileBasedTableGenerator(benchmark_config, data_path + "/"),
       _dbgen_path(dbgen_path) {}
 

@@ -35,7 +35,7 @@ class TPCHTableGenerator : virtual public AbstractTableGenerator {
                               ChunkOffset chunk_size = Chunk::DEFAULT_SIZE);
 
   // Constructor for creating a TPCHTableGenerator in a benchmark
-  explicit TPCHTableGenerator(float scale_factor, ClusteringConfiguration clustering_configuration,
+  explicit TPCHTableGenerator(float scale_factor, std::string cache_directory, ClusteringConfiguration clustering_configuration,
                               const std::shared_ptr<BenchmarkConfig>& benchmark_config);
 
   std::unordered_map<std::string, BenchmarkTableInfo> generate() override;
@@ -47,5 +47,6 @@ class TPCHTableGenerator : virtual public AbstractTableGenerator {
 
   const float _scale_factor;
   const ClusteringConfiguration _clustering_configuration;
+  const std::string _cache_directory;
 };
 }  // namespace hyrise
