@@ -192,6 +192,7 @@ Contact: firstname.lastname@hpi.de
 -   Johannes  Frohnhofen
 -   Pascal    Führlich
 -   Carl      Gödecken
+-   Jan-Eric  Hellenberg
 -   Adrian    Holfter
 -   Theresa   Hradilak
 -   Ben       Hurdelhey
