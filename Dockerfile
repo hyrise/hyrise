@@ -6,7 +6,7 @@
 # scripted pipelines. With Python >= 3.11, we need to use --break-system-packages.
 
 FROM ubuntu:23.10
-ENV DEBIAN_FRONTEND noninteractive
+ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update \
     && apt-get install -y \
         autoconf \
