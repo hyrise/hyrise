@@ -20,6 +20,8 @@ PdgfProcess::PdgfProcess(std::string pdgf_directory_root, uint32_t pdgf_num_core
   if (_pdgf_num_cores == 0) {
     _pdgf_num_cores = 1;
   }
+
+  _pdgf_num_cores = 64;
 }
 
 PdgfProcess::~PdgfProcess() {
