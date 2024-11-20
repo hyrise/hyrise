@@ -1,11 +1,20 @@
 #include "intersect_node.hpp"
 
+#include <cstddef>
+#include <functional>
 #include <memory>
-#include <numeric>
 #include <string>
 #include <vector>
 
+#include "magic_enum.hpp"
+
+#include "expression/abstract_expression.hpp"
 #include "expression/expression_utils.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
+#include "logical_query_plan/data_dependencies/functional_dependency.hpp"
+#include "logical_query_plan/data_dependencies/order_dependency.hpp"
+#include "logical_query_plan/data_dependencies/unique_column_combination.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {
@@ -34,8 +43,14 @@ UniqueColumnCombinations IntersectNode::unique_column_combinations() const {
    * Future Work: Merge unique column combinations from the left and right input node.
    */
   DebugAssert(left_input()->unique_column_combinations() == right_input()->unique_column_combinations(),
-              "Merging of unique column combinations should be implemented.");
+              "Unique column combinations differ. Merging is not implemented.");
   return _forward_left_unique_column_combinations();
+}
+
+OrderDependencies IntersectNode::order_dependencies() const {
+  DebugAssert(left_input()->order_dependencies() == right_input()->order_dependencies(),
+              "Order dependencies differ. Merging is not implemented.");
+  return _forward_left_order_dependencies();
 }
 
 FunctionalDependencies IntersectNode::non_trivial_functional_dependencies() const {
@@ -43,7 +58,7 @@ FunctionalDependencies IntersectNode::non_trivial_functional_dependencies() cons
 }
 
 size_t IntersectNode::_on_shallow_hash() const {
-  return boost::hash_value(set_operation_mode);
+  return std::hash<SetOperationMode>{}(set_operation_mode);
 }
 
 std::shared_ptr<AbstractLQPNode> IntersectNode::_on_shallow_copy(LQPNodeMapping& /*node_mapping*/) const {

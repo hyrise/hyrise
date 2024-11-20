@@ -1,11 +1,23 @@
 #include "table_key_constraint.hpp"
 
+#include <algorithm>
+#include <cstddef>
+#include <functional>
+#include <set>
+#include <utility>
+
 #include <boost/container_hash/hash.hpp>
+
+#include "storage/constraints/abstract_table_constraint.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 
-TableKeyConstraint::TableKeyConstraint(const std::set<ColumnID>& columns, const KeyConstraintType key_type)
-    : _key_type{key_type}, _columns{columns} {}
+TableKeyConstraint::TableKeyConstraint(std::set<ColumnID>&& columns, const KeyConstraintType key_type)
+    : AbstractTableConstraint(TableConstraintType::Key), _key_type{key_type}, _columns{std::move(columns)} {
+  Assert(!_columns.empty(), "Did not expect useless constraint.");
+}
 
 KeyConstraintType TableKeyConstraint::key_type() const {
   return _key_type;
@@ -16,7 +28,8 @@ const std::set<ColumnID>& TableKeyConstraint::columns() const {
 }
 
 size_t TableKeyConstraint::hash() const {
-  auto hash = boost::hash_value(_key_type);
+  auto hash = size_t{0};
+  boost::hash_combine(hash, _key_type);
   for (const auto& column : _columns) {
     boost::hash_combine(hash, column);
   }

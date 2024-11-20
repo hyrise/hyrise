@@ -1,5 +1,24 @@
 #include "expression_functional.hpp"
 
+#include <cstdint>
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
+
+#include "all_type_variant.hpp"
+#include "expression/abstract_expression.hpp"
+#include "expression/exists_expression.hpp"
+#include "expression/interval_expression.hpp"
+#include "expression/lqp_column_expression.hpp"
+#include "expression/placeholder_expression.hpp"
+#include "expression/pqp_column_expression.hpp"
+#include "expression/value_expression.hpp"
+#include "expression/window_expression.hpp"
+#include "expression/window_function_expression.hpp"
+#include "null_value.hpp"
+#include "types.hpp"
+
 namespace hyrise::expression_functional {
 
 std::shared_ptr<AbstractExpression> to_expression(const std::shared_ptr<AbstractExpression>& expression) {
@@ -51,9 +70,9 @@ std::shared_ptr<IntervalExpression> interval_(const int64_t duration, const Date
 
 std::shared_ptr<WindowExpression> window_(std::vector<std::shared_ptr<AbstractExpression>>&& partition_by_expressions,
                                           std::vector<std::shared_ptr<AbstractExpression>>&& order_by_expressions,
-                                          std::vector<SortMode>&& sort_modes, FrameDescription&& frame_description) {
+                                          std::vector<SortMode>&& sort_modes, FrameDescription frame_description) {
   return std::make_shared<WindowExpression>(std::move(partition_by_expressions), std::move(order_by_expressions),
-                                            std::move(sort_modes), std::move(frame_description));
+                                            std::move(sort_modes), frame_description);
 }
 
 }  // namespace hyrise::expression_functional

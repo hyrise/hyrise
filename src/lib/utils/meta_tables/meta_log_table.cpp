@@ -1,9 +1,23 @@
 #include "meta_log_table.hpp"
 
+#include <time.h>  // NOLINT(hicpp-deprecated-headers,modernize-deprecated-headers): For localtime_r.
+
+#include <chrono>
+#include <cstdint>
+#include <ctime>
+#include <iomanip>
+#include <memory>
+#include <sstream>
+#include <string>
+
 #include "magic_enum.hpp"
 
+#include "all_type_variant.hpp"
 #include "hyrise.hpp"
-#include "utils/assert.hpp"
+#include "storage/table.hpp"
+#include "storage/table_column_definition.hpp"
+#include "types.hpp"
+#include "utils/meta_tables/abstract_meta_table.hpp"
 
 namespace hyrise {
 
@@ -34,7 +48,7 @@ std::shared_ptr<Table> MetaLogTable::_on_generate() const {
 
     // "Structure holding a calendar date and time broken down into its components.", see
     // https://en.cppreference.com/w/c/chrono/tm
-    auto buffer = tm{};
+    auto buffer = std::tm{};
 
     timestamp_stream << std::put_time(localtime_r(&timestamp, &buffer), "%F %T");
     output_table->append({timestamp_ns, pmr_string{timestamp_stream.str()},

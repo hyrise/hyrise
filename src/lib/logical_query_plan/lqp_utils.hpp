@@ -1,8 +1,13 @@
 #pragma once
 
+#include <memory>
 #include <queue>
 #include <set>
+#include <string>
+#include <unordered_map>
 #include <unordered_set>
+#include <utility>
+#include <vector>
 
 #include "logical_query_plan/abstract_lqp_node.hpp"
 
@@ -229,15 +234,18 @@ std::vector<std::shared_ptr<AbstractLQPNode>> lqp_find_nodes_by_type(const std::
 std::vector<std::shared_ptr<AbstractLQPNode>> lqp_find_leaves(const std::shared_ptr<AbstractLQPNode>& lqp);
 
 /**
- * @return A set of column expressions created by the given @param lqp_node, matching the given @param column_ids.
- *         This is a helper method that maps column ids from tables to the matching output expressions. Conceptually,
- *         it only works on data source nodes. Currently, these are StoredTableNodes, StaticTableNodes and MockNodes.
+ * @return A vector or set of column expressions created by the given @param lqp_node, matching the given @param
+ *         column_ids. These are helper methods that map column ids from tables to the matching output expressions.
+ *         Conceptually, it only works on data source nodes. Currently, these are StoredTableNodes, StaticTableNodes,
+ *         and MockNodes.
  */
-template <typename ColumnIDs>
-ExpressionUnorderedSet find_column_expressions(const AbstractLQPNode& lqp_node, const ColumnIDs& column_ids);
+ExpressionUnorderedSet get_expressions_for_column_ids(const AbstractLQPNode& lqp_node,
+                                                      const std::set<ColumnID>& column_ids);
+std::vector<std::shared_ptr<AbstractExpression>> get_expressions_for_column_ids(
+    const AbstractLQPNode& lqp_node, const std::vector<ColumnID>& column_ids);
 
 /**
- * @return True if there is a UCC in the given set of @param unique_column_combinations matching the given set of
+ * @return True if there is a UCC in the given set of @param unique_column_combinations matching the given set of @param
  *         expressions. A unique column combination matches if it covers a subset of @param expressions.
  */
 bool contains_matching_unique_column_combination(const UniqueColumnCombinations& unique_column_combinations,
@@ -249,6 +257,13 @@ bool contains_matching_unique_column_combination(const UniqueColumnCombinations&
  */
 FunctionalDependencies fds_from_unique_column_combinations(const std::shared_ptr<const AbstractLQPNode>& lqp,
                                                            const UniqueColumnCombinations& unique_column_combinations);
+
+/**
+ * @return A set of FDs, derived from the given @param order_dependencies and based on the output expressions of
+ *         the given @param lqp node.
+ */
+FunctionalDependencies fds_from_order_dependencies(const std::shared_ptr<const AbstractLQPNode>& lqp,
+                                                   const OrderDependencies& order_dependencies);
 
 /**
  * This is a helper method that removes invalid or unnecessary FDs from the given input set @param fds by looking at

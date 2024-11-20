@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "abstract_rule.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
@@ -33,7 +34,7 @@ class PredicatePlacementRule : public AbstractRule {
   //                        position and will be re-inserted as low as possible
   static void _push_down_traversal(const std::shared_ptr<AbstractLQPNode>& current_node, const LQPInputSide input_side,
                                    std::vector<std::shared_ptr<AbstractLQPNode>>& push_down_nodes,
-                                   AbstractCardinalityEstimator& estimator);
+                                   CardinalityEstimator& estimator);
 
   // Traverse the LQP and pull up expensive predicates.
   // @returns expensive predicates from the LQP below @param current_node @param input_side.

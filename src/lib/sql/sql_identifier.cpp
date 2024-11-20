@@ -1,6 +1,8 @@
 #include "sql_identifier.hpp"
 
+#include <optional>
 #include <sstream>
+#include <string>
 
 namespace hyrise {
 

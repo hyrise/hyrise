@@ -1,18 +1,33 @@
 #include "expression_reduction_rule.hpp"
 
 #include <algorithm>
+#include <cstddef>
 #include <functional>
-#include <unordered_set>
+#include <memory>
+#include <string>
+#include <vector>
 
+#include <boost/variant/get.hpp>
+
+#include "all_type_variant.hpp"
+#include "expression/abstract_expression.hpp"
 #include "expression/evaluation/expression_evaluator.hpp"
 #include "expression/evaluation/like_matcher.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
-#include "expression/in_expression.hpp"
+#include "expression/list_expression.hpp"
+#include "expression/logical_expression.hpp"
+#include "expression/value_expression.hpp"
+#include "expression/window_function_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/alias_node.hpp"
+#include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
+#include "null_value.hpp"
+#include "resolve_type.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 
@@ -35,6 +50,7 @@ void ExpressionReductionRule::_apply_to_plan_without_subqueries(
     for (auto& expression : sub_node->node_expressions) {
       reduce_distributivity(expression);
       rewrite_like_prefix_wildcard(expression);
+      unnest_unary_in_expression(expression);
 
       // We can't prune Aggregate arguments, because the operator doesn't support, e.g., `MIN(1)`, whereas it supports
       // `MIN(2-1)`, since `2-1` becomes a column.
@@ -166,8 +182,9 @@ void ExpressionReductionRule::reduce_constant_expression(std::shared_ptr<Abstrac
   }
 
   const auto all_arguments_are_values =
-      std::all_of(input_expression->arguments.begin(), input_expression->arguments.end(),
-                  [&](const auto& argument) { return argument->type == ExpressionType::Value; });
+      std::all_of(input_expression->arguments.begin(), input_expression->arguments.end(), [&](const auto& argument) {
+        return argument->type == ExpressionType::Value;
+      });
 
   if (!all_arguments_are_values) {
     return;
@@ -187,17 +204,17 @@ void ExpressionReductionRule::reduce_constant_expression(std::shared_ptr<Abstrac
 }
 
 void ExpressionReductionRule::rewrite_like_prefix_wildcard(std::shared_ptr<AbstractExpression>& input_expression) {
-  // Continue only if the expression is a LIKE/NOT LIKE expression
+  // Continue only if the expression is a LIKE/NOT LIKE expression.
   const auto binary_predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(input_expression);
-  if (!binary_predicate) {
-    return;
-  }
-  if (binary_predicate->predicate_condition != PredicateCondition::Like &&
-      binary_predicate->predicate_condition != PredicateCondition::NotLike) {
+  if (!binary_predicate || (binary_predicate->predicate_condition != PredicateCondition::Like &&
+                            binary_predicate->predicate_condition != PredicateCondition::NotLike)) {
+    for (auto& argument : input_expression->arguments) {
+      rewrite_like_prefix_wildcard(argument);
+    }
     return;
   }
 
-  // Continue only if right operand is a literal/value (expr LIKE 'asdf%')
+  // Continue only if right operand is a literal/value (expr LIKE 'asdf%').
   const auto pattern_value_expression = std::dynamic_pointer_cast<ValueExpression>(binary_predicate->right_operand());
   if (!pattern_value_expression) {
     return;
@@ -205,20 +222,28 @@ void ExpressionReductionRule::rewrite_like_prefix_wildcard(std::shared_ptr<Abstr
 
   const auto pattern = boost::get<pmr_string>(pattern_value_expression->value);
 
-  // Continue only if the pattern ends with a "%"-wildcard, has a non-empty prefix and contains no other wildcards
+  // Continue only if the pattern ends with a "%"-wildcard, has a non-empty prefix and contains no other wildcards.
   const auto single_char_wildcard_pos = pattern.find_first_of('_');
 
   if (single_char_wildcard_pos != pmr_string::npos) {
     return;
   }
 
+  const auto predicate_condition = binary_predicate->predicate_condition;
   const auto multi_char_wildcard_pos = pattern.find_first_of('%');
+  // If the pattern does not contain a wildcard at all, we simply replace it with a binary predicate.
+  if (multi_char_wildcard_pos == std::string::npos) {
+    const auto rewritten_predicate_condition =
+        predicate_condition == PredicateCondition::Like ? PredicateCondition::Equals : PredicateCondition::NotEquals;
+    input_expression = std::make_shared<BinaryPredicateExpression>(
+        rewritten_predicate_condition, binary_predicate->left_operand(), pattern_value_expression);
+  }
+
   // TODO(anyone): we do not rewrite LIKEs with multiple wildcards here. Theoretically, we could rewrite "c LIKE RED%E%"
   // to "c >= RED and C < REE and c LIKE RED%E%" but that would require adding new PredicateNodes. For now, we assume
   // that the potential pruning of such LIKE predicates via the ChunkPruningRule is sufficient. However, if not many
   // chunks can be pruned, rewriting with additional predicates might show to be beneficial.
-  if (multi_char_wildcard_pos == std::string::npos || multi_char_wildcard_pos == 0 ||
-      multi_char_wildcard_pos + 1 != pattern.size()) {
+  if (multi_char_wildcard_pos == 0 || multi_char_wildcard_pos + 1 != pattern.size()) {
     return;
   }
   const auto bounds = LikeMatcher::bounds(pattern);
@@ -230,7 +255,7 @@ void ExpressionReductionRule::rewrite_like_prefix_wildcard(std::shared_ptr<Abstr
 
   const auto [lower_bound, upper_bound] = *bounds;
 
-  if (binary_predicate->predicate_condition == PredicateCondition::Like) {
+  if (predicate_condition == PredicateCondition::Like) {
     input_expression = between_upper_exclusive_(binary_predicate->left_operand(), lower_bound, upper_bound);
   } else {  // binary_predicate->predicate_condition == PredicateCondition::NotLike
     input_expression = or_(less_than_(binary_predicate->left_operand(), lower_bound),
@@ -249,7 +274,7 @@ void ExpressionReductionRule::remove_duplicate_aggregate(
     if (input_expression->type != ExpressionType::WindowFunction) {
       continue;
     }
-    auto& aggregate_expression = static_cast<WindowFunctionExpression&>(*input_expression);
+    const auto& aggregate_expression = static_cast<const WindowFunctionExpression&>(*input_expression);
     switch (aggregate_expression.window_function) {
       case WindowFunction::Sum: {
         sums.emplace_back(input_expression);
@@ -322,10 +347,11 @@ void ExpressionReductionRule::remove_duplicate_aggregate(
   {
     // Remove the AVG() expression from the AggregateNode
     auto& expressions = aggregate_node->node_expressions;
-    expressions.erase(
-        std::remove_if(expressions.begin(), expressions.end(),
-                       [&](const auto& expression) { return replacements.find(expression) != replacements.end(); }),
-        expressions.end());
+    expressions.erase(std::remove_if(expressions.begin(), expressions.end(),
+                                     [&](const auto& expression) {
+                                       return replacements.find(expression) != replacements.end();
+                                     }),
+                      expressions.end());
   }
 
   // Add a ProjectionNode that calculates AVG(a) as SUM(a)/COUNT(a).
@@ -358,6 +384,30 @@ void ExpressionReductionRule::remove_duplicate_aggregate(
     const auto alias_node = AliasNode::make(root_expressions_replaced, old_column_names);
     lqp_insert_node(root_node, LQPInputSide::Left, alias_node);
   }
+}
+
+void ExpressionReductionRule::unnest_unary_in_expression(std::shared_ptr<AbstractExpression>& input_expression) {
+  // Continue only if the expression is an IN/NOT IN expression.
+  const auto in_expression = std::dynamic_pointer_cast<InExpression>(input_expression);
+  if (!in_expression) {
+    for (auto& argument : input_expression->arguments) {
+      unnest_unary_in_expression(argument);
+    }
+    return;
+  }
+
+  // Rewrite only (NOT) IN expressions with a single-element expression list.
+  if (in_expression->set()->type != ExpressionType::List) {
+    return;
+  }
+  const auto& list_expressions = static_cast<ListExpression&>(*in_expression->set()).elements();
+  if (list_expressions.size() != 1) {
+    return;
+  }
+
+  const auto& operand = in_expression->operand();
+  const auto& value = list_expressions.front();
+  input_expression = in_expression->is_negated() ? not_equals_(operand, value) : equals_(operand, value);
 }
 
 }  // namespace hyrise

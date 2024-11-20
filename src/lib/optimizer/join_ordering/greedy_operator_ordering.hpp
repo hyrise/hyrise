@@ -2,6 +2,7 @@
 
 #include <map>
 #include <memory>
+#include <utility>
 
 #include "abstract_join_ordering_algorithm.hpp"
 #include "join_graph_edge.hpp"
@@ -13,7 +14,8 @@ class AbstractCostEstimator;
 class JoinGraph;
 
 /**
- * Heuristic join ordering algorithm derived from "A New Heuristic for Optimizing Large Queries"
+ * Heuristic join ordering algorithm derived from Fegaras: "A New Heuristic for Optimizing Large Queries" (see
+ * https://doi.org/10.1007/BFb0054528).
  *
  * "At each step of the algorithm, we select two nodes i and j that have a minimum value of cardinality(join(i, j))) and
  * create a new node k = join(i, j)."

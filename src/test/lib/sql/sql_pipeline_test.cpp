@@ -2,11 +2,10 @@
 #include <string>
 #include <utility>
 
-#include "base_test.hpp"
-
 #include "SQLParser.h"
 #include "SQLParserResult.h"
 
+#include "base_test.hpp"
 #include "hyrise.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "operators/abstract_join_operator.hpp"

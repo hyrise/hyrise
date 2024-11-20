@@ -1,14 +1,18 @@
 #include "value_segment.hpp"
 
 #include <climits>
-#include <limits>
+#include <cstddef>
 #include <memory>
-#include <sstream>
-#include <string>
+#include <mutex>
 #include <utility>
 #include <vector>
 
+#include "all_type_variant.hpp"
 #include "resolve_type.hpp"
+#include "storage/abstract_segment.hpp"
+#include "storage/base_value_segment.hpp"
+#include "storage/segment_access_counter.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
 #include "utils/size_estimation_utils.hpp"

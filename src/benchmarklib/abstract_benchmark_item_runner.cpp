@@ -1,11 +1,25 @@
 #include "abstract_benchmark_item_runner.hpp"
 
-#include <boost/algorithm/string.hpp>
+#include <algorithm>
+#include <filesystem>
+#include <iostream>
+#include <memory>
+#include <optional>
+#include <string>
+#include <tuple>
+#include <utility>
+#include <vector>
 
+#include <boost/algorithm/string/predicate.hpp>
+#include <boost/algorithm/string/replace.hpp>
+
+#include "benchmark_config.hpp"
 #include "benchmark_sql_executor.hpp"
-#include "sql/sql_pipeline_builder.hpp"
+#include "sql/sql_pipeline.hpp"
+#include "utils/assert.hpp"
 #include "utils/list_directory.hpp"
 #include "utils/load_table.hpp"
+#include "utils/sqlite_wrapper.hpp"
 
 namespace hyrise {
 
@@ -17,7 +31,9 @@ void AbstractBenchmarkItemRunner::load_dedicated_expected_results(
   Assert(std::filesystem::is_directory(expected_results_directory_path),
          "Expected results path (" + expected_results_directory_path.string() + ") has to be a directory.");
 
-  const auto is_tbl_file = [](const std::string& filename) { return boost::algorithm::ends_with(filename, ".tbl"); };
+  const auto is_tbl_file = [](const std::string& filename) {
+    return boost::algorithm::ends_with(filename, ".tbl");
+  };
 
   _dedicated_expected_results.resize(items().size());
 

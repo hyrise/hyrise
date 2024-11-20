@@ -1,10 +1,17 @@
 #include "projection_node.hpp"
 
+#include <memory>
 #include <sstream>
+#include <string>
+#include <vector>
 
 #include "expression/expression_utils.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
+#include "logical_query_plan/data_dependencies/functional_dependency.hpp"
+#include "logical_query_plan/data_dependencies/order_dependency.hpp"
+#include "logical_query_plan/data_dependencies/unique_column_combination.hpp"
 #include "lqp_utils.hpp"
-#include "resolve_type.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {
@@ -16,9 +23,7 @@ std::string ProjectionNode::description(const DescriptionMode mode) const {
   const auto expression_mode = _expression_description_mode(mode);
 
   auto stream = std::stringstream{};
-
   stream << "[Projection] " << expression_descriptions(node_expressions, expression_mode);
-
   return stream.str();
 }
 
@@ -36,9 +41,9 @@ UniqueColumnCombinations ProjectionNode::unique_column_combinations() const {
   auto unique_column_combinations = UniqueColumnCombinations{};
   unique_column_combinations.reserve(node_expressions.size());
 
-  // Forward unique column combinations, if applicable
-  const auto& input_unique_column_combinations = left_input()->unique_column_combinations();
-  const auto& output_expressions = this->output_expressions();
+  // Forward unique column combinations, if applicable.
+  const auto input_unique_column_combinations = left_input()->unique_column_combinations();
+  const auto output_expressions = this->output_expressions();
 
   for (const auto& input_ucc : input_unique_column_combinations) {
     if (!contains_all_expressions(input_ucc.expressions, output_expressions)) {
@@ -55,6 +60,26 @@ UniqueColumnCombinations ProjectionNode::unique_column_combinations() const {
   }
 
   return unique_column_combinations;
+}
+
+OrderDependencies ProjectionNode::order_dependencies() const {
+  auto order_dependencies = OrderDependencies{};
+  order_dependencies.reserve(node_expressions.size());
+
+  // Forward order dependencies, if applicable.
+  const auto input_order_dependencies = left_input()->order_dependencies();
+  const auto output_expressions = this->output_expressions();
+
+  for (const auto& input_order_dependency : input_order_dependencies) {
+    // As is the case for UCCs, we have opportunities for creating ODs from different projections in the future.
+    if (!(contains_all_expressions(input_order_dependency.ordering_expressions, output_expressions) &&
+          contains_all_expressions(input_order_dependency.ordered_expressions, output_expressions))) {
+      continue;
+    }
+    order_dependencies.emplace(input_order_dependency);
+  }
+
+  return order_dependencies;
 }
 
 FunctionalDependencies ProjectionNode::non_trivial_functional_dependencies() const {

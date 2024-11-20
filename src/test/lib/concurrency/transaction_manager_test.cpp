@@ -2,7 +2,6 @@
 #include <vector>
 
 #include "base_test.hpp"
-
 #include "concurrency/transaction_context.hpp"
 #include "hyrise.hpp"
 

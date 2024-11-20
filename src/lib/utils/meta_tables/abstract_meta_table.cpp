@@ -1,7 +1,11 @@
 #include "abstract_meta_table.hpp"
 
-#include "storage/chunk.hpp"
-#include "storage/table.hpp"
+#include <memory>
+#include <vector>
+
+#include "all_type_variant.hpp"
+#include "statistics/table_statistics.hpp"
+#include "storage/table_column_definition.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/meta_table_manager.hpp"
@@ -14,7 +18,7 @@ AbstractMetaTable::AbstractMetaTable(const TableColumnDefinitions& column_defini
 std::shared_ptr<Table> AbstractMetaTable::_generate() const {
   auto table = _on_generate();
 
-  if (table->chunk_count()) {
+  if (table->chunk_count() > 0) {
     // Previous chunks were marked as immutable by `Table::append()`.
     table->last_chunk()->set_immutable();
   }

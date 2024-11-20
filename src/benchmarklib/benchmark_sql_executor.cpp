@@ -1,8 +1,23 @@
 #include "benchmark_sql_executor.hpp"
 
+#include <filesystem>
+#include <iostream>
+#include <memory>
+#include <optional>
+#include <string>
+#include <utility>
+
+#include "concurrency/transaction_context.hpp"
+#include "sql/sql_pipeline.hpp"
 #include "sql/sql_pipeline_builder.hpp"
+#include "sql/sql_pipeline_statement.hpp"
+#include "storage/table.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 #include "utils/check_table_equal.hpp"
+#include "utils/sqlite_wrapper.hpp"
 #include "utils/timer.hpp"
+#include "visualization/abstract_visualizer.hpp"
 #include "visualization/lqp_visualizer.hpp"
 #include "visualization/pqp_visualizer.hpp"
 
@@ -67,7 +82,7 @@ BenchmarkSQLExecutor::~BenchmarkSQLExecutor() {
 
 void BenchmarkSQLExecutor::commit() {
   Assert(transaction_context && !transaction_context->is_auto_commit(),
-         "Can only explicitly commit transaction if auto-commit is disabled");
+         "Can only explicitly commit if transaction is not automatically committing (auto-commit).");
   Assert(transaction_context->phase() == TransactionPhase::Active, "Expected transaction to be active.");
   transaction_context->commit();
   if (_sqlite_connection) {
@@ -78,7 +93,7 @@ void BenchmarkSQLExecutor::commit() {
 
 void BenchmarkSQLExecutor::rollback() {
   Assert(transaction_context && !transaction_context->is_auto_commit(),
-         "Can only explicitly roll back transaction if auto-commit is disabled");
+         "Can only explicitly roll back if transaction is not automatically committing (auto-commit).");
   Assert(transaction_context->phase() == TransactionPhase::Active, "Expected transaction to be active.");
   transaction_context->rollback(RollbackReason::User);
   if (_sqlite_connection) {
@@ -119,8 +134,7 @@ void BenchmarkSQLExecutor::_compare_tables(const std::shared_ptr<const Table>& a
         std::cout << "- " + *description << "\n";
       }
       std::cout << "- Verification failed: Hyrise's actual result is not empty, but the expected result is ("
-                << timer.lap_formatted() << ")"
-                << "\n";
+                << timer.lap_formatted() << ")" << "\n";
     } else if (const auto table_difference_message = check_table_equal(
                    actual_result_table, expected_result_table, OrderSensitivity::No, TypeCmpMode::Lenient,
                    FloatComparisonMode::RelativeDifference, IgnoreNullable::Yes)) {
@@ -128,8 +142,7 @@ void BenchmarkSQLExecutor::_compare_tables(const std::shared_ptr<const Table>& a
       if (description) {
         std::cout << *description << "\n";
       }
-      std::cout << "- Verification failed (" << timer.lap_formatted() << ")"
-                << "\n"
+      std::cout << "- Verification failed (" << timer.lap_formatted() << ")" << "\n"
                 << *table_difference_message << "\n";
     }
   } else {
@@ -139,8 +152,7 @@ void BenchmarkSQLExecutor::_compare_tables(const std::shared_ptr<const Table>& a
         std::cout << *description << "\n";
       }
       std::cout << "- Verification failed: Expected result table is not empty, but Hyrise's actual result is ("
-                << timer.lap_formatted() << ")"
-                << "\n";
+                << timer.lap_formatted() << ")" << "\n";
     }
   }
 }

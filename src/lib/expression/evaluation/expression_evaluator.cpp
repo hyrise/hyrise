@@ -1,18 +1,33 @@
 #include "expression_evaluator.hpp"
 
+#include <algorithm>
+#include <cstddef>
+#include <cstdint>
 #include <iterator>
+#include <limits>
+#include <memory>
+#include <sstream>
+#include <string>
 #include <type_traits>
+#include <unordered_map>
+#include <utility>
+#include <vector>
 
-#include <boost/lexical_cast.hpp>
-#include <boost/variant/apply_visitor.hpp>
+#include <boost/lexical_cast/bad_lexical_cast.hpp>
+#include <boost/variant/get.hpp>
 
-#include "all_parameter_variant.hpp"
+#include "magic_enum.hpp"
+
+#include "all_type_variant.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/abstract_predicate_expression.hpp"
 #include "expression/arithmetic_expression.hpp"
+#include "expression/between_expression.hpp"
 #include "expression/binary_predicate_expression.hpp"
 #include "expression/case_expression.hpp"
 #include "expression/cast_expression.hpp"
+#include "expression/correlated_parameter_expression.hpp"
+#include "expression/evaluation/expression_result.hpp"
 #include "expression/exists_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
@@ -25,21 +40,26 @@
 #include "expression/pqp_subquery_expression.hpp"
 #include "expression/value_expression.hpp"
 #include "expression_functors.hpp"
-#include "hyrise.hpp"
 #include "like_matcher.hpp"
+#include "lossless_cast.hpp"
 #include "lossy_cast.hpp"
+#include "null_value.hpp"
 #include "operators/abstract_operator.hpp"
+#include "operators/pqp_utils.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/operator_task.hpp"
+#include "storage/base_value_segment.hpp"
+#include "storage/pos_lists/row_id_pos_list.hpp"
 #include "storage/segment_iterate.hpp"
 #include "storage/value_segment.hpp"
+#include "type_comparison.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/date_time_utils.hpp"
 #include "utils/performance_warning.hpp"
 
 namespace {
 
-using namespace std::string_literals;           // NOLINT(build/namespaces)
 using namespace hyrise;                         // NOLINT(build/namespaces)
 using namespace hyrise::expression_functional;  // NOLINT(build/namespaces)
 
@@ -49,12 +69,19 @@ void resolve_binary_predicate_evaluator(const PredicateCondition predicate_condi
    * Instantiate @param functor for each PredicateCondition
    */
 
-  // clang-format off
   switch (predicate_condition) {
-    case PredicateCondition::Equals:            functor(boost::hana::type<EqualsEvaluator>{});            break;
-    case PredicateCondition::NotEquals:         functor(boost::hana::type<NotEqualsEvaluator>{});         break;
-    case PredicateCondition::LessThan:          functor(boost::hana::type<LessThanEvaluator>{});          break;
-    case PredicateCondition::LessThanEquals:    functor(boost::hana::type<LessThanEqualsEvaluator>{});    break;
+    case PredicateCondition::Equals:
+      functor(boost::hana::type<EqualsEvaluator>{});
+      break;
+    case PredicateCondition::NotEquals:
+      functor(boost::hana::type<NotEqualsEvaluator>{});
+      break;
+    case PredicateCondition::LessThan:
+      functor(boost::hana::type<LessThanEvaluator>{});
+      break;
+    case PredicateCondition::LessThanEquals:
+      functor(boost::hana::type<LessThanEqualsEvaluator>{});
+      break;
     case PredicateCondition::GreaterThan:
     case PredicateCondition::GreaterThanEquals:
       Fail("PredicateCondition should have been flipped.");
@@ -63,14 +90,13 @@ void resolve_binary_predicate_evaluator(const PredicateCondition predicate_condi
     default:
       Fail("PredicateCondition should be handled in different function.");
   }
-  // clang-format on
 }
 
 std::shared_ptr<AbstractExpression> rewrite_between_expression(const AbstractExpression& expression) {
   // `a BETWEEN b AND c` --> `a >= b AND a <= c`
   //
-  // (This is desirable because three expression data types (from three arguments) generate many type
-  // combinations and thus lengthen compile time and increase binary size notably.)
+  // This is desirable because three expression data types (from three arguments) generate many type
+  // combinations and thus lengthen compile time and increase binary size notably.
 
   const auto* between_expression = dynamic_cast<const BetweenExpression*>(&expression);
   Assert(between_expression, "Expected BetweenExpression.");
@@ -95,7 +121,7 @@ std::shared_ptr<AbstractExpression> rewrite_in_list_expression(const InExpressio
    *
    * Out of array_expression.elements(), pick those expressions whose type can be compared with
    * in_expression.operand() so we're not getting "Cannot compare Int and String" when doing something crazy like
-   * "5 IN (6, 5, "Hello")
+   * "5 IN (6, 5, "Hello").
    */
 
   const auto list_expression = std::dynamic_pointer_cast<ListExpression>(in_expression.set());
@@ -110,7 +136,7 @@ std::shared_ptr<AbstractExpression> rewrite_in_list_expression(const InExpressio
   }
 
   if (type_compatible_elements.empty()) {
-    // `5 IN ()` is FALSE as is `NULL IN ()`
+    // `5 IN ()` is false as is `NULL IN ()`.
     return value_(0);
   }
 
@@ -136,6 +162,19 @@ std::shared_ptr<AbstractExpression> rewrite_in_list_expression(const InExpressio
   return rewritten_expression;
 }
 
+// Traverse the PQP of a correlated subquery and execute each operator. `AbstractOperator::execute()` ensures that no
+// operator is executed multiple times, even for diamonds. However, we can visit operators multiple times for complex
+// subqueries. We currently do not consider this a bottleneck.
+void execute_correlated_subquery_recursively(const std::shared_ptr<AbstractOperator>& op) {
+  if (!op) {
+    return;
+  }
+
+  execute_correlated_subquery_recursively(op->mutable_left_input());
+  execute_correlated_subquery_recursively(op->mutable_right_input());
+  op->execute();
+}
+
 }  // namespace
 
 namespace hyrise {
@@ -149,14 +188,14 @@ ExpressionEvaluator::ExpressionEvaluator(const std::shared_ptr<const Table>& tab
 template <typename Result>
 std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::evaluate_expression_to_result(
     const AbstractExpression& expression) {
-  // First, look in the cache
+  // First, look in the cache.
   const auto expression_ptr = expression.shared_from_this();
   const auto cached_result_iter = _cached_expression_results.find(expression_ptr);
   if (cached_result_iter != _cached_expression_results.end()) {
     return std::static_pointer_cast<ExpressionResult<Result>>(cached_result_iter->second);
   }
 
-  // Ok, we have to actually work...
+  // Ok, we have to actually work.
   auto result = std::shared_ptr<ExpressionResult<Result>>{};
 
   switch (expression.type) {
@@ -181,7 +220,7 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::evaluate_expressi
       break;
 
     // ValueExpression and CorrelatedParameterExpression both need to unpack an AllTypeVariant, so one functions handles
-    // both
+    // both.
     case ExpressionType::CorrelatedParameter:
     case ExpressionType::Value:
       result = _evaluate_value_or_correlated_parameter_expression<Result>(expression);
@@ -223,14 +262,15 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::evaluate_expressi
       Fail("Cannot evaluate an LQP expression, those need to be translated by the LQPTranslator first.");
 
     case ExpressionType::Placeholder:
-      Fail("Cannot evaluate an expression still containing placeholders. Are you trying to execute a prepared plan "
-           "without instantiating it first?");
+      Fail(
+          "Cannot evaluate an expression still containing placeholders. Are you trying to execute a prepared plan "
+          "without instantiating it first?");
 
     case ExpressionType::Interval:
       Fail("IntervalExpression should have been resolved by SQLTranslator.");
   }
 
-  // Store the result in the cache
+  // Store the result in the cache.
   _cached_expression_results.insert(cached_result_iter, {expression_ptr, result});
 
   return std::static_pointer_cast<ExpressionResult<Result>>(result);
@@ -242,27 +282,31 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_arithme
   const auto& left = *expression.left_operand();
   const auto& right = *expression.right_operand();
 
-  // clang-format off
   switch (expression.arithmetic_operator) {
-    case ArithmeticOperator::Addition:       return _evaluate_binary_with_default_null_logic<Result, AdditionEvaluator>(left, right);  // NOLINT
-    case ArithmeticOperator::Subtraction:    return _evaluate_binary_with_default_null_logic<Result, SubtractionEvaluator>(left, right);  // NOLINT
-    case ArithmeticOperator::Multiplication: return _evaluate_binary_with_default_null_logic<Result, MultiplicationEvaluator>(left, right);  // NOLINT
+    case ArithmeticOperator::Addition:
+      return _evaluate_binary_with_default_null_logic<Result, AdditionEvaluator>(left, right);
+    case ArithmeticOperator::Subtraction:
+      return _evaluate_binary_with_default_null_logic<Result, SubtractionEvaluator>(left, right);
+    case ArithmeticOperator::Multiplication:
+      return _evaluate_binary_with_default_null_logic<Result, MultiplicationEvaluator>(left, right);
 
-    // Division and Modulo need to catch division by zero
-    case ArithmeticOperator::Division:       return _evaluate_binary_with_functor_based_null_logic<Result, DivisionEvaluator>(left, right);  // NOLINT
-    case ArithmeticOperator::Modulo:         return _evaluate_binary_with_functor_based_null_logic<Result, ModuloEvaluator>(left, right);  // NOLINT
+    // Division and Modulo need to catch division by zero.
+    case ArithmeticOperator::Division:
+      return _evaluate_binary_with_functor_based_null_logic<Result, DivisionEvaluator>(left, right);
+    case ArithmeticOperator::Modulo:
+      return _evaluate_binary_with_functor_based_null_logic<Result, ModuloEvaluator>(left, right);
   }
-  // clang-format on
-  Fail("Invalid enum value.");
+  Fail("Invalid arithmetic operator.");
 }
 
-template <>
-std::shared_ptr<ExpressionResult<ExpressionEvaluator::Bool>>
-ExpressionEvaluator::_evaluate_binary_predicate_expression<ExpressionEvaluator::Bool>(
+// No idea why clang-tidy thinks this could be static (and only picked this method). In the end, we call
+// `evaluate_expression_to_result` here twice, which uses the internal cache.
+// NOLINTNEXTLINE(readability-convert-member-functions-to-static)
+std::shared_ptr<ExpressionResult<ExpressionEvaluator::Bool>> ExpressionEvaluator::_evaluate_binary_predicate_expression(
     const BinaryPredicateExpression& expression) {
   auto result = std::shared_ptr<ExpressionResult<ExpressionEvaluator::Bool>>{};
 
-  // To reduce the number of template instantiations, we flip > and >= to < and <=
+  // To reduce the number of template instantiations, we flip > and >= to < and <=.
   auto predicate_condition = expression.predicate_condition;
   const auto flip = predicate_condition == PredicateCondition::GreaterThan ||
                     predicate_condition == PredicateCondition::GreaterThanEquals;
@@ -272,28 +316,19 @@ ExpressionEvaluator::_evaluate_binary_predicate_expression<ExpressionEvaluator::
   const auto& left = flip ? *expression.right_operand() : *expression.left_operand();
   const auto& right = flip ? *expression.left_operand() : *expression.right_operand();
 
-  // clang-format off
   resolve_binary_predicate_evaluator(predicate_condition, [&](const auto evaluator_t) {
     using Evaluator = typename decltype(evaluator_t)::type;
-    result = _evaluate_binary_with_default_null_logic<ExpressionEvaluator::Bool, Evaluator>(left, right);  // NOLINT
+    result = _evaluate_binary_with_default_null_logic<ExpressionEvaluator::Bool, Evaluator>(left, right);
   });
 
   return result;
-  // clang-format on
 }
 
-template <typename Result>
-std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_binary_predicate_expression(
-    const BinaryPredicateExpression& /*expression*/) {
-  Fail("Can only evaluate predicates to bool.");
-}
-
-template <>
-std::shared_ptr<ExpressionResult<ExpressionEvaluator::Bool>>
-ExpressionEvaluator::_evaluate_like_expression<ExpressionEvaluator::Bool>(const BinaryPredicateExpression& expression) {
+std::shared_ptr<ExpressionResult<ExpressionEvaluator::Bool>> ExpressionEvaluator::_evaluate_like_expression(
+    const BinaryPredicateExpression& expression) {
   /**
    * NOTE: This code path is NOT taken for LIKEs in predicates. That is `SELECT * FROM t WHERE a LIKE '%Hello%'` is
-   *        handled in the TableScan. This code path is for `SELECT a LIKE 'bla' FROM ...` and alike
+   *       handled in the TableScan. This code path is for `SELECT a LIKE 'bla' FROM ...` and alike.
    */
 
   Assert(expression.predicate_condition == PredicateCondition::Like ||
@@ -310,7 +345,7 @@ ExpressionEvaluator::_evaluate_like_expression<ExpressionEvaluator::Bool>(const 
 
   /**
    * Three different kinds of LIKE are considered for performance reasons and avoid redundant creation of the
-   * LikeMatcher
+   * LikeMatcher:
    *    - `a LIKE b`
    *    - `a LIKE '%hello%'`
    *    - `'hello' LIKE b`
@@ -336,8 +371,9 @@ ExpressionEvaluator::_evaluate_like_expression<ExpressionEvaluator::Bool>(const 
   } else {
     // E.g., `'hello' LIKE b` -- A new matcher for each row but the value to check is constant
     for (auto row_idx = ChunkOffset{0}; row_idx < result_size; ++row_idx) {
-      LikeMatcher{right_results->values[row_idx]}.resolve(
-          invert_results, [&](const auto& matcher) { result_values[row_idx] = matcher(left_results->values.front()); });
+      LikeMatcher{right_results->values[row_idx]}.resolve(invert_results, [&](const auto& matcher) {
+        result_values[row_idx] = matcher(left_results->values.front());
+      });
     }
   }
 
@@ -347,15 +383,8 @@ ExpressionEvaluator::_evaluate_like_expression<ExpressionEvaluator::Bool>(const 
                                                                        std::move(result_nulls));
 }
 
-template <typename Result>
-std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_like_expression(
-    const BinaryPredicateExpression& /*expression*/) {
-  Fail("Can only evaluate predicates to bool.");
-}
-
-template <>
-std::shared_ptr<ExpressionResult<ExpressionEvaluator::Bool>>
-ExpressionEvaluator::_evaluate_is_null_expression<ExpressionEvaluator::Bool>(const IsNullExpression& expression) {
+std::shared_ptr<ExpressionResult<ExpressionEvaluator::Bool>> ExpressionEvaluator::_evaluate_is_null_expression(
+    const IsNullExpression& expression) {
   auto result_values = pmr_vector<ExpressionEvaluator::Bool>{};
 
   _resolve_to_expression_result_view(*expression.operand(), [&](const auto& view) {
@@ -376,15 +405,8 @@ ExpressionEvaluator::_evaluate_is_null_expression<ExpressionEvaluator::Bool>(con
   return std::make_shared<ExpressionResult<ExpressionEvaluator::Bool>>(std::move(result_values));
 }
 
-template <typename Result>
-std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_is_null_expression(
-    const IsNullExpression& /*expression*/) {
-  Fail("Can only evaluate predicates to bool.");
-}
-
-template <>
-std::shared_ptr<ExpressionResult<ExpressionEvaluator::Bool>>
-ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const InExpression& in_expression) {
+std::shared_ptr<ExpressionResult<ExpressionEvaluator::Bool>> ExpressionEvaluator::_evaluate_in_expression(
+    const InExpression& in_expression) {
   const auto& left_expression = *in_expression.operand();
   const auto& right_expression = *in_expression.set();
 
@@ -395,13 +417,13 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
     const auto& list_expression = static_cast<const ListExpression&>(right_expression);
 
     if (list_expression.elements().empty()) {
-      // `x IN ()` is false/`x NOT IN ()` is true, even if this is not supported by SQL
+      // `x IN ()` is false/`x NOT IN ()` is true, even if this is not supported by SQL.
       return std::make_shared<ExpressionResult<ExpressionEvaluator::Bool>>(
-          pmr_vector<ExpressionEvaluator::Bool>{in_expression.is_negated()});
+          pmr_vector<ExpressionEvaluator::Bool>{static_cast<ExpressionEvaluator::Bool>(in_expression.is_negated())});
     }
 
     if (left_expression.data_type() == DataType::Null) {
-      // `NULL [NOT] IN ...` is NULL
+      // `NULL [NOT] IN ...` is NULL.
       return std::make_shared<ExpressionResult<ExpressionEvaluator::Bool>>(pmr_vector<ExpressionEvaluator::Bool>{0},
                                                                            pmr_vector<bool>{true});
     }
@@ -409,7 +431,7 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
     /**
      * Out of array_expression.elements(), pick those expressions whose type can be compared with
      * in_expression.operand() so we're not getting "Cannot compare Int and String" when doing something crazy like
-     * "5 IN (6, 5, "Hello")
+     * "5 IN (6, 5, "Hello").
      */
     const auto left_is_string = left_expression.data_type() == DataType::String;
     auto type_compatible_elements = std::vector<std::shared_ptr<AbstractExpression>>{};
@@ -434,9 +456,9 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
     });
 
     if (type_compatible_elements.empty()) {
-      // `x IN ()` is false/`x NOT IN ()` is true, even if this is not supported by SQL
+      // `x IN ()` is false/`x NOT IN ()` is true, even if this is not supported by SQL.
       return std::make_shared<ExpressionResult<ExpressionEvaluator::Bool>>(
-          pmr_vector<ExpressionEvaluator::Bool>{in_expression.is_negated()});
+          pmr_vector<ExpressionEvaluator::Bool>{static_cast<ExpressionEvaluator::Bool>(in_expression.is_negated())});
     }
 
     // If all elements of the list are simple values (e.g., `IN (1, 2, 3)`), iterate over the column and directly
@@ -488,7 +510,7 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
     }
     PerformanceWarning("Using slow path for IN expression.");
 
-    // Nope, it is a list with diverse types - falling back to rewrite of expression:
+    // It is a list with diverse types - falling back to rewrite of expression.
     return evaluate_expression_to_result<ExpressionEvaluator::Bool>(*rewrite_in_list_expression(in_expression));
   }
 
@@ -548,7 +570,7 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
 
         } else {
           // Tried to do, e.g., `5 IN (<subquery_returning_string>)` - return bool instead of failing, because that's
-          // what we do for `5 IN ('Hello', 'World')
+          // what we do for `5 IN ('Hello', 'World').
           result_values.resize(1, in_expression.is_negated() ? 1 : 0);
         }
       });
@@ -561,7 +583,7 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
      * To accomplish this, we simply rewrite the expression to `<expression> IN LIST(<anything_but_list_or_subquery>)`.
      */
 
-    return _evaluate_in_expression<ExpressionEvaluator::Bool>(*std::make_shared<InExpression>(
+    return _evaluate_in_expression(*std::make_shared<InExpression>(
         in_expression.predicate_condition, in_expression.operand(), list_(in_expression.set())));
   }
 
@@ -570,9 +592,59 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
 }
 
 template <typename Result>
-std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_in_expression(
-    const InExpression& /*in_expression*/) {
-  Fail("InExpression supports only bool as result.");
+bool ExpressionEvaluator::_evaluate_between_expression(const BetweenExpression& expression, Result& result_values) {
+  const auto& operand = expression.operand();
+  const auto& lower_expression = expression.lower_bound();
+  const auto& upper_expression = expression.upper_bound();
+
+  // Make sure the operand is not a single NULL value and both upper and lower bounds are non-NULL ValueExpressions.
+  if (operand->data_type() == DataType::Null || lower_expression->type != ExpressionType::Value ||
+      lower_expression->data_type() == DataType::Null || upper_expression->type != ExpressionType::Value ||
+      upper_expression->data_type() == DataType::Null) {
+    return false;
+  }
+
+  auto success = false;
+  resolve_data_type(operand->data_type(), [&](const auto data_type) {
+    using DataType = typename decltype(data_type)::type;
+    const auto lower_bound =
+        lossless_variant_cast<DataType>(static_cast<const ValueExpression&>(*lower_expression).value);
+    const auto upper_bound =
+        lossless_variant_cast<DataType>(static_cast<const ValueExpression&>(*upper_expression).value);
+
+    // Do not handle tricky cases with lossy conversions here (e.g., `1 BETWEEN 1.1 and 2.0`).
+    if (!lower_bound || !upper_bound) {
+      return;
+    }
+
+    const auto expression_result = evaluate_expression_to_result<DataType>(*operand);
+    expression_result->as_view([&](const auto& view) {
+      const auto result_size = _chunk ? _chunk->size() : static_cast<ChunkOffset>(view.size());
+
+      if constexpr (std::is_same_v<Result, pmr_vector<Bool>>) {
+        result_values.resize(result_size);
+      }
+
+      with_between_comparator(expression.predicate_condition, [&](const auto& comparator) {
+        for (auto chunk_offset = ChunkOffset{0}; chunk_offset < result_size; ++chunk_offset) {
+          const auto value_matches =
+              !view.is_null(chunk_offset) && comparator(view.value(chunk_offset), lower_bound, upper_bound);
+
+          if constexpr (std::is_same_v<Result, pmr_vector<Bool>>) {
+            result_values[chunk_offset] = static_cast<Bool>(value_matches);
+          } else {
+            if (value_matches) {
+              result_values.emplace_back(_chunk_id, chunk_offset);
+            }
+          }
+        }
+      });
+    });
+
+    success = true;
+  });
+
+  return success;
 }
 
 template <>
@@ -581,7 +653,7 @@ ExpressionEvaluator::_evaluate_predicate_expression<ExpressionEvaluator::Bool>(
     const AbstractPredicateExpression& predicate_expression) {
   /**
    * NOTE: This evaluates predicates, but typical predicates in the WHERE clause of an SQL query will not take this
-   * path and go through a dedicates scan operator (e.g. TableScan)
+   *       path and go through a dedicates scan operator (e.g. TableScan).
    */
 
   switch (predicate_expression.predicate_condition) {
@@ -591,29 +663,33 @@ ExpressionEvaluator::_evaluate_predicate_expression<ExpressionEvaluator::Bool>(
     case PredicateCondition::GreaterThan:
     case PredicateCondition::NotEquals:
     case PredicateCondition::LessThan:
-      return _evaluate_binary_predicate_expression<ExpressionEvaluator::Bool>(
-          static_cast<const BinaryPredicateExpression&>(predicate_expression));
+      return _evaluate_binary_predicate_expression(static_cast<const BinaryPredicateExpression&>(predicate_expression));
 
     case PredicateCondition::BetweenInclusive:
     case PredicateCondition::BetweenLowerExclusive:
     case PredicateCondition::BetweenUpperExclusive:
-    case PredicateCondition::BetweenExclusive:
-      return evaluate_expression_to_result<ExpressionEvaluator::Bool>(
-          *rewrite_between_expression(predicate_expression));
+    case PredicateCondition::BetweenExclusive: {
+      const auto& between_expression = static_cast<const BetweenExpression&>(predicate_expression);
+      auto result_values = pmr_vector<Bool>{};
+      // Simple BETWEEN predicates with a literal as lower and upper bound can be evaluated easily. More complex
+      // structures are handled as two individual less and greater predicates.
+      if (_evaluate_between_expression(between_expression, result_values)) {
+        return std::make_shared<ExpressionResult<Bool>>(std::move(result_values));
+      }
+      return evaluate_expression_to_result<Bool>(*rewrite_between_expression(predicate_expression));
+    }
 
     case PredicateCondition::In:
     case PredicateCondition::NotIn:
-      return _evaluate_in_expression<ExpressionEvaluator::Bool>(static_cast<const InExpression&>(predicate_expression));
+      return _evaluate_in_expression(static_cast<const InExpression&>(predicate_expression));
 
     case PredicateCondition::Like:
     case PredicateCondition::NotLike:
-      return _evaluate_like_expression<ExpressionEvaluator::Bool>(
-          static_cast<const BinaryPredicateExpression&>(predicate_expression));
+      return _evaluate_like_expression(static_cast<const BinaryPredicateExpression&>(predicate_expression));
 
     case PredicateCondition::IsNull:
     case PredicateCondition::IsNotNull:
-      return _evaluate_is_null_expression<ExpressionEvaluator::Bool>(
-          static_cast<const IsNullExpression&>(predicate_expression));
+      return _evaluate_is_null_expression(static_cast<const IsNullExpression&>(predicate_expression));
   }
   Fail("Invalid enum value.");
 }
@@ -730,13 +806,15 @@ ExpressionEvaluator::_evaluate_exists_expression<ExpressionEvaluator::Bool>(cons
   switch (exists_expression.exists_expression_type) {
     case ExistsExpressionType::Exists:
       for (auto chunk_offset = ChunkOffset{0}; chunk_offset < subquery_result_table_count; ++chunk_offset) {
-        result_values[chunk_offset] = subquery_result_tables[chunk_offset]->row_count() > 0;
+        result_values[chunk_offset] =
+            static_cast<ExpressionEvaluator::Bool>(subquery_result_tables[chunk_offset]->row_count() > 0);
       }
       break;
 
     case ExistsExpressionType::NotExists:
       for (auto chunk_offset = ChunkOffset{0}; chunk_offset < subquery_result_table_count; ++chunk_offset) {
-        result_values[chunk_offset] = subquery_result_tables[chunk_offset]->row_count() == 0;
+        result_values[chunk_offset] =
+            static_cast<ExpressionEvaluator::Bool>(subquery_result_tables[chunk_offset]->row_count() == 0);
       }
       break;
   }
@@ -783,18 +861,23 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_functio
     const FunctionExpression& expression) {
   switch (expression.function_type) {
     case FunctionType::Concatenate:
+      if constexpr (std::is_same_v<Result, pmr_string>) {
+        return _evaluate_concatenate(expression.arguments);
+      }
+      Fail("CONCAT() can only be evaluated on strings.");
     case FunctionType::Substring:
       if constexpr (std::is_same_v<Result, pmr_string>) {
-        switch (expression.function_type) {
-          case FunctionType::Substring:
-            return _evaluate_substring(expression.arguments);
-          case FunctionType::Concatenate:
-            return _evaluate_concatenate(expression.arguments);
-        }
+        return _evaluate_substring(expression.arguments);
       }
-      Fail("Function can only be evaluated to a string.");
+      Fail("SUBSTR() can only be evaluated on strings.");
+    case FunctionType::Absolute:
+      if constexpr (!std::is_same_v<Result, pmr_string>) {
+        Assert(expression.arguments.size() == 1, "ABS() expects exactly one argument.");
+        return _evaluate_absolute<Result>(expression.arguments.front());
+      }
+      Fail("ABS() cannot be evaluated on strings.");
   }
-  Fail("Invalid enum value.");
+  Fail("GCC thinks this is reachable and expects a return or an exception.");
 }
 
 template <typename Result>
@@ -806,20 +889,25 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_extract
   if constexpr (std::is_same_v<Result, int32_t>) {
     switch (datetime_component) {
       case DatetimeComponent::Year:
-        return _evaluate_extract_component<int32_t>(from_result,
-                                                    [](const auto& timestamp) { return timestamp.date().year(); });
+        return _evaluate_extract_component<int32_t>(from_result, [](const auto& timestamp) {
+          return timestamp.date().year();
+        });
       case DatetimeComponent::Month:
-        return _evaluate_extract_component<int32_t>(from_result,
-                                                    [](const auto& timestamp) { return timestamp.date().month(); });
+        return _evaluate_extract_component<int32_t>(from_result, [](const auto& timestamp) {
+          return timestamp.date().month();
+        });
       case DatetimeComponent::Day:
-        return _evaluate_extract_component<int32_t>(from_result,
-                                                    [](const auto& timestamp) { return timestamp.date().day(); });
+        return _evaluate_extract_component<int32_t>(from_result, [](const auto& timestamp) {
+          return timestamp.date().day();
+        });
       case DatetimeComponent::Hour:
-        return _evaluate_extract_component<int32_t>(
-            from_result, [](const auto& timestamp) { return timestamp.time_of_day().hours(); });
+        return _evaluate_extract_component<int32_t>(from_result, [](const auto& timestamp) {
+          return timestamp.time_of_day().hours();
+        });
       case DatetimeComponent::Minute:
-        return _evaluate_extract_component<int32_t>(
-            from_result, [](const auto& timestamp) { return timestamp.time_of_day().minutes(); });
+        return _evaluate_extract_component<int32_t>(from_result, [](const auto& timestamp) {
+          return timestamp.time_of_day().minutes();
+        });
       case DatetimeComponent::Second:
         Fail("SECOND must be extracted as Double.");
     }
@@ -916,8 +1004,10 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_subquer
   }
 
   // Optionally materialize nulls if any row returned a nullable result.
-  const auto nullable = std::any_of(subquery_results.begin(), subquery_results.end(),
-                                    [&](const auto& expression_result) { return expression_result->is_nullable(); });
+  const auto nullable =
+      std::any_of(subquery_results.begin(), subquery_results.end(), [&](const auto& expression_result) {
+        return expression_result->is_nullable();
+      });
 
   if (nullable) {
     result_nulls.resize(subquery_result_count);
@@ -943,8 +1033,18 @@ std::vector<std::shared_ptr<const Table>> ExpressionEvaluator::_evaluate_subquer
     _materialize_segment_if_not_yet_materialized(parameter.second);
   }
 
+  // Ensure we are the only ones to execute the input PQP for correlated subqueries and set their parameters.
+  visit_pqp(expression.pqp, [](const auto& op) {
+    Assert(op->state() == OperatorState::Created,
+           "Only the ExpressionEvaluator should manage and excute operators of correlated subqueries.");
+    // Check this for all PQP nodes in debug builds, but only for the root node in release.
+    if constexpr (HYRISE_DEBUG) {
+      return PQPVisitation::VisitInputs;
+    } else {
+      return PQPVisitation::DoNotVisitInputs;
+    }
+  });
   auto results = std::vector<std::shared_ptr<const Table>>{_output_row_count};
-
   for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(_output_row_count); ++chunk_offset) {
     results[chunk_offset] = _evaluate_subquery_expression_for_row(expression, chunk_offset);
   }
@@ -954,8 +1054,9 @@ std::vector<std::shared_ptr<const Table>> ExpressionEvaluator::_evaluate_subquer
 
 std::shared_ptr<const Table> ExpressionEvaluator::_evaluate_subquery_expression_for_row(
     const PQPSubqueryExpression& expression, const ChunkOffset chunk_offset) {
+  DebugAssert(expression.is_correlated(), "Uncorrelated subqueries should not reach this point.");
   Assert(expression.parameters.empty() || _chunk,
-         "Sub-SELECT references external Columns but Expression does not operate on a table/chunk.");
+         "Sub-SELECT references external columns but expression does not operate on a table/chunk.");
 
   const auto expression_parameter_count = expression.parameters.size();
   auto parameters = std::unordered_map<ParameterID, AllTypeVariant>{};
@@ -971,20 +1072,13 @@ std::shared_ptr<const Table> ExpressionEvaluator::_evaluate_subquery_expression_
     parameters.emplace(parameter_id, value);
   }
 
-  auto row_pqp = expression.pqp;
-  if (expression.is_correlated()) {
-    // Operators cache results which we cannot reuse in correlated subqueries due to changing parameters.
-    // Therefore, PQPs are deep-copied to ensure that we start without cached results.
-    row_pqp = expression.pqp->deep_copy();
-    row_pqp->set_parameters(parameters);
-    const auto& [tasks, _] = OperatorTask::make_tasks_from_operator(row_pqp);
-    Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
-  } else {
-    // Uncorrelated subqueries should have been scheduled and executed just like regular input operators.
-    Assert(row_pqp->state() == OperatorState::ExecutedAndAvailable,
-           "Uncorrelated subquery was not executed or has already been cleared.");
-  }
-
+  // Operators cache results which we cannot reuse in correlated subqueries due to changing parameters. Thus, PQPs are
+  // deep-copied to ensure that we start without cached results. We do NOT create tasks and schedule them accordingly.
+  // As we execute the subquery for each row, this would easily trigger thousands of schedulings with high overhead.
+  // Operators that must (and can) parallelize should spawn own tasks anyways.
+  const auto row_pqp = expression.pqp->deep_copy();
+  row_pqp->set_parameters(parameters);
+  execute_correlated_subquery_recursively(row_pqp);
   return row_pqp->get_output();
 }
 
@@ -1034,6 +1128,7 @@ RowIDPosList ExpressionEvaluator::evaluate_expression_to_pos_list(const Abstract
    */
 
   auto result_pos_list = RowIDPosList{};
+  const auto row_count = static_cast<ChunkOffset>(_output_row_count);
 
   switch (expression.type) {
     case ExpressionType::Predicate: {
@@ -1066,15 +1161,13 @@ RowIDPosList ExpressionEvaluator::evaluate_expression_to_pos_list(const Abstract
 
               if constexpr (ExpressionFunctorType::template supports<ExpressionEvaluator::Bool, LeftDataType,
                                                                      RightDataType>::value) {
-                for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(_output_row_count);
-                     ++chunk_offset) {
+                for (auto chunk_offset = ChunkOffset{0}; chunk_offset < row_count; ++chunk_offset) {
                   if (left_result.is_null(chunk_offset) || right_result.is_null(chunk_offset)) {
                     continue;
                   }
 
                   auto matches = ExpressionEvaluator::Bool{0};
-                  ExpressionFunctorType{}(matches, left_result.value(chunk_offset),  // NOLINT
-                                          right_result.value(chunk_offset));
+                  ExpressionFunctorType{}(matches, left_result.value(chunk_offset), right_result.value(chunk_offset));
                   if (matches != 0) {
                     result_pos_list.emplace_back(_chunk_id, chunk_offset);
                   }
@@ -1089,8 +1182,14 @@ RowIDPosList ExpressionEvaluator::evaluate_expression_to_pos_list(const Abstract
         case PredicateCondition::BetweenInclusive:
         case PredicateCondition::BetweenLowerExclusive:
         case PredicateCondition::BetweenUpperExclusive:
-        case PredicateCondition::BetweenExclusive:
-          return evaluate_expression_to_pos_list(*rewrite_between_expression(expression));
+        case PredicateCondition::BetweenExclusive: {
+          const auto& between_expression = static_cast<const BetweenExpression&>(predicate_expression);
+          // Simple BETWEEN predicates with a literal as lower and upper bound can be evaluated easily. More complex
+          // structures are handled as two individual less and greater predicates.
+          if (!_evaluate_between_expression(between_expression, result_pos_list)) {
+            result_pos_list = evaluate_expression_to_pos_list(*rewrite_between_expression(expression));
+          }
+        } break;
 
         case PredicateCondition::IsNull:
         case PredicateCondition::IsNotNull: {
@@ -1098,15 +1197,13 @@ RowIDPosList ExpressionEvaluator::evaluate_expression_to_pos_list(const Abstract
 
           _resolve_to_expression_result_view(*is_null_expression.operand(), [&](const auto& result) {
             if (is_null_expression.predicate_condition == PredicateCondition::IsNull) {
-              for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(_output_row_count);
-                   ++chunk_offset) {
+              for (auto chunk_offset = ChunkOffset{0}; chunk_offset < row_count; ++chunk_offset) {
                 if (result.is_null(chunk_offset)) {
                   result_pos_list.emplace_back(_chunk_id, chunk_offset);
                 }
               }
             } else {  // PredicateCondition::IsNotNull
-              for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(_output_row_count);
-                   ++chunk_offset) {
+              for (auto chunk_offset = ChunkOffset{0}; chunk_offset < row_count; ++chunk_offset) {
                 if (!result.is_null(chunk_offset)) {
                   result_pos_list.emplace_back(_chunk_id, chunk_offset);
                 }
@@ -1127,8 +1224,7 @@ RowIDPosList ExpressionEvaluator::evaluate_expression_to_pos_list(const Abstract
           // b) Like/In are on the slower end anyway
           const auto result = evaluate_expression_to_result<ExpressionEvaluator::Bool>(expression);
           result->as_view([&](const auto& result_view) {
-            for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(_output_row_count);
-                 ++chunk_offset) {
+            for (auto chunk_offset = ChunkOffset{0}; chunk_offset < row_count; ++chunk_offset) {
               if (result_view.value(chunk_offset) != 0 && !result_view.is_null(chunk_offset)) {
                 result_pos_list.emplace_back(_chunk_id, chunk_offset);
               }
@@ -1210,12 +1306,13 @@ ExpressionEvaluator::_evaluate_logical_expression<ExpressionEvaluator::Bool>(con
   const auto& left = *expression.left_operand();
   const auto& right = *expression.right_operand();
 
-  // clang-format off
   switch (expression.logical_operator) {
-    case LogicalOperator::Or:  return _evaluate_binary_with_functor_based_null_logic<ExpressionEvaluator::Bool, TernaryOrEvaluator>(left, right);  // NOLINT
-    case LogicalOperator::And: return _evaluate_binary_with_functor_based_null_logic<ExpressionEvaluator::Bool, TernaryAndEvaluator>(left, right);  // NOLINT
+    case LogicalOperator::Or:
+      return _evaluate_binary_with_functor_based_null_logic<ExpressionEvaluator::Bool, TernaryOrEvaluator>(left, right);
+    case LogicalOperator::And:
+      return _evaluate_binary_with_functor_based_null_logic<ExpressionEvaluator::Bool, TernaryAndEvaluator>(left,
+                                                                                                            right);
   }
-  // clang-format on
 
   Fail("Invalid enum value.");
 }
@@ -1298,20 +1395,25 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_binary_
 template <typename Functor>
 void ExpressionEvaluator::_resolve_to_expression_result_view(const AbstractExpression& expression,
                                                              const Functor& functor) {
-  _resolve_to_expression_result(expression,
-                                [&](const auto& result) { result.as_view([&](const auto& view) { functor(view); }); });
+  _resolve_to_expression_result(expression, [&](const auto& result) {
+    result.as_view([&](const auto& view) {
+      functor(view);
+    });
+  });
 }
 
 template <typename Functor>
 void ExpressionEvaluator::_resolve_to_expression_result_views(const AbstractExpression& left_expression,
                                                               const AbstractExpression& right_expression,
                                                               const Functor& functor) {
-  _resolve_to_expression_results(
-      left_expression, right_expression, [&](const auto& left_result, const auto& right_result) {
-        left_result.as_view([&](const auto& left_view) {
-          right_result.as_view([&](const auto& right_view) { functor(left_view, right_view); });
-        });
-      });
+  _resolve_to_expression_results(left_expression, right_expression,
+                                 [&](const auto& left_result, const auto& right_result) {
+                                   left_result.as_view([&](const auto& left_view) {
+                                     right_result.as_view([&](const auto& right_view) {
+                                       functor(left_view, right_view);
+                                     });
+                                   });
+                                 });
 }
 
 template <typename Functor>
@@ -1319,8 +1421,9 @@ void ExpressionEvaluator::_resolve_to_expression_results(const AbstractExpressio
                                                          const AbstractExpression& right_expression,
                                                          const Functor& functor) {
   _resolve_to_expression_result(left_expression, [&](const auto& left_result) {
-    _resolve_to_expression_result(right_expression,
-                                  [&](const auto& right_result) { functor(left_result, right_result); });
+    _resolve_to_expression_result(right_expression, [&](const auto& right_result) {
+      functor(left_result, right_result);
+    });
   });
 }
 
@@ -1365,28 +1468,31 @@ ChunkOffset ExpressionEvaluator::_result_size(const RowCounts... row_counts) {
 
 pmr_vector<bool> ExpressionEvaluator::_evaluate_default_null_logic(const pmr_vector<bool>& left,
                                                                    const pmr_vector<bool>& right) {
-  if (left.size() == right.size()) {
-    auto nulls = pmr_vector<bool>(left.size());
-    std::transform(left.begin(), left.end(), right.begin(), nulls.begin(),
-                   [](const auto lhs, const auto rhs) { return lhs || rhs; });
+  const auto left_size = left.size();
+  const auto right_size = right.size();
+  if (left_size == right_size) {
+    auto nulls = pmr_vector<bool>(left_size);
+    std::transform(left.begin(), left.end(), right.begin(), nulls.begin(), [](const auto lhs, const auto rhs) {
+      return lhs || rhs;
+    });
     return nulls;
   }
 
-  if (left.size() > right.size()) {
-    DebugAssert(right.size() <= 1,
+  if (left_size > right_size) {
+    DebugAssert(right_size <= 1,
                 "Operand should have either the same row count as the other, 1 row (to represent a literal), or no "
                 "rows (to represent a non-nullable operand).");
-    if (!right.empty() && right.front()) {
+    if (right_size > 0 && right.front()) {
       return pmr_vector<bool>({true});
     }
 
     return left;
   }
 
-  DebugAssert(left.size() <= 1,
+  DebugAssert(left_size <= 1,
               "Operand should have either the same row count as the other, 1 row (to represent a literal), or no "
               "rows (to represent a non-nullable operand).");
-  if (!left.empty() && left.front()) {
+  if (left_size > 0 && left.front()) {
     return pmr_vector<bool>({true});
   }
 
@@ -1452,8 +1558,16 @@ std::shared_ptr<ExpressionResult<pmr_string>> ExpressionEvaluator::_evaluate_sub
   DebugAssert(arguments.size() == 3, "SUBSTR expects three arguments.");
 
   const auto strings = evaluate_expression_to_result<pmr_string>(*arguments[0]);
-  const auto starts = evaluate_expression_to_result<int32_t>(*arguments[1]);
-  const auto lengths = evaluate_expression_to_result<int32_t>(*arguments[2]);
+  auto starts_expression = arguments[1];
+  if (starts_expression->data_type() == DataType::Long) {
+    starts_expression = cast_(starts_expression, DataType::Int);
+  }
+  auto lengths_expression = arguments[2];
+  if (lengths_expression->data_type() == DataType::Long) {
+    lengths_expression = cast_(lengths_expression, DataType::Int);
+  }
+  const auto starts = evaluate_expression_to_result<int32_t>(*starts_expression);
+  const auto lengths = evaluate_expression_to_result<int32_t>(*lengths_expression);
 
   const auto row_count = _result_size(strings->size(), starts->size(), lengths->size());
 
@@ -1583,6 +1697,31 @@ std::shared_ptr<ExpressionResult<pmr_string>> ExpressionEvaluator::_evaluate_con
 }
 
 template <typename Result>
+std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_absolute(
+    const std::shared_ptr<AbstractExpression>& argument) {
+  const auto argument_result = evaluate_expression_to_result<Result>(*argument);
+  const auto result_size = argument_result->size();
+
+  auto result = pmr_vector<Result>(result_size);
+  auto null_values = pmr_vector<bool>{};
+  if (argument_result->is_nullable()) {
+    null_values.resize(result_size, false);
+  }
+
+  argument_result->as_view([&](const auto& argument_view) {
+    for (auto chunk_offset = ChunkOffset{0}; chunk_offset < result_size; ++chunk_offset) {
+      if (argument_view.is_null(chunk_offset)) {
+        null_values[chunk_offset] = true;
+        continue;
+      }
+      result[chunk_offset] = std::abs(argument_view.value(chunk_offset));
+    }
+  });
+
+  return std::make_shared<ExpressionResult<Result>>(std::move(result), std::move(null_values));
+}
+
+template <typename Result>
 std::vector<std::shared_ptr<ExpressionResult<Result>>> ExpressionEvaluator::_prune_tables_to_expression_results(
     const std::vector<std::shared_ptr<const Table>>& tables) {
   /**
@@ -1647,11 +1786,13 @@ std::vector<std::shared_ptr<ExpressionResult<Result>>> ExpressionEvaluator::_pru
 // We explicitly instantiate these template functions because clang-12(+) does not instantiate them for us.
 template std::shared_ptr<ExpressionResult<int32_t>> ExpressionEvaluator::evaluate_expression_to_result<int32_t>(
     const AbstractExpression& expression);
+template std::shared_ptr<ExpressionResult<int64_t>> ExpressionEvaluator::evaluate_expression_to_result<int64_t>(
+    const AbstractExpression& expression);
 template std::shared_ptr<ExpressionResult<float>> ExpressionEvaluator::evaluate_expression_to_result<float>(
     const AbstractExpression& expression);
-template std::shared_ptr<ExpressionResult<pmr_string>> ExpressionEvaluator::evaluate_expression_to_result<pmr_string>(
-    const AbstractExpression& expression);
 template std::shared_ptr<ExpressionResult<double>> ExpressionEvaluator::evaluate_expression_to_result<double>(
+    const AbstractExpression& expression);
+template std::shared_ptr<ExpressionResult<pmr_string>> ExpressionEvaluator::evaluate_expression_to_result<pmr_string>(
     const AbstractExpression& expression);
 
 }  // namespace hyrise

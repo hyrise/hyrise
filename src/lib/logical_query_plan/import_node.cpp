@@ -1,6 +1,15 @@
 #include "import_node.hpp"
 
+#include <cstddef>
+#include <memory>
 #include <sstream>
+#include <string>
+
+#include <boost/container_hash/hash.hpp>
+
+#include "import_export/file_type.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
+#include "logical_query_plan/abstract_non_query_node.hpp"
 
 namespace hyrise {
 
@@ -18,7 +27,8 @@ std::string ImportNode::description(const DescriptionMode /*mode*/) const {
 }
 
 size_t ImportNode::_on_shallow_hash() const {
-  auto hash = boost::hash_value(table_name);
+  auto hash = size_t{0};
+  boost::hash_combine(hash, table_name);
   boost::hash_combine(hash, file_name);
   boost::hash_combine(hash, file_type);
   return hash;

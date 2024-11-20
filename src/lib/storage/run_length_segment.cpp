@@ -1,9 +1,16 @@
 #include "run_length_segment.hpp"
 
-#include <algorithm>
+#include <climits>
+#include <cstddef>
+#include <memory>
+#include <optional>
 
+#include "all_type_variant.hpp"
 #include "resolve_type.hpp"
-#include "utils/assert.hpp"
+#include "storage/abstract_encoded_segment.hpp"
+#include "storage/abstract_segment.hpp"
+#include "storage/encoding_type.hpp"
+#include "types.hpp"
 #include "utils/performance_warning.hpp"
 #include "utils/size_estimation_utils.hpp"
 

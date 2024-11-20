@@ -1,16 +1,34 @@
-#include <memory>
-#include <string>
-#include <utility>
+#include "visualization/pqp_visualizer.hpp"
 
+#include <algorithm>
+#include <chrono>
+#include <cmath>
+#include <locale>
+#include <memory>
+#include <ratio>
+#include <sstream>
+#include <string>
+#include <unordered_set>
+#include <utility>
+#include <vector>
+
+// False positive with GCC, finding accesses to unitialized memory in adjacency_list.hpp
+// (https://gcc.gnu.org/bugzilla/show_bug.cgi?id=92194).
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#include <boost/graph/adjacency_list.hpp>
+#pragma GCC diagnostic pop
+
+#include "expression/abstract_expression.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/pqp_subquery_expression.hpp"
+#include "operators/abstract_operator.hpp"
 #include "operators/limit.hpp"
 #include "operators/projection.hpp"
 #include "operators/table_scan.hpp"
-#include "utils/format_bytes.hpp"
+#include "types.hpp"
 #include "utils/format_duration.hpp"
 #include "visualization/abstract_visualizer.hpp"
-#include "visualization/pqp_visualizer.hpp"
 
 namespace hyrise {
 
@@ -37,7 +55,9 @@ void PQPVisualizer::_build_graph(const std::vector<std::shared_ptr<AbstractOpera
     auto sorted_duration_by_operator_name = std::vector<std::pair<std::string, std::chrono::nanoseconds>>{
         _duration_by_operator_name.begin(), _duration_by_operator_name.end()};
     std::sort(sorted_duration_by_operator_name.begin(), sorted_duration_by_operator_name.end(),
-              [](const auto& lhs, const auto& rhs) { return lhs.second > rhs.second; });
+              [](const auto& lhs, const auto& rhs) {
+                return lhs.second > rhs.second;
+              });
 
     // Print first column (operator name)
     for (const auto& [operator_name, _] : sorted_duration_by_operator_name) {
@@ -57,8 +77,8 @@ void PQPVisualizer::_build_graph(const std::vector<std::shared_ptr<AbstractOpera
     // Print third column (relative operator duration)
     operator_breakdown_stream << "|";
     for (const auto& [_, nanoseconds] : sorted_duration_by_operator_name) {
-      operator_breakdown_stream << round(std::chrono::duration<double, std::nano>{nanoseconds} /
-                                         std::chrono::duration<double, std::nano>{total_nanoseconds} * 100)
+      operator_breakdown_stream << std::round(std::chrono::duration<double, std::nano>{nanoseconds} /
+                                              std::chrono::duration<double, std::nano>{total_nanoseconds} * 100)
                                 << " %\\l";
     }
     operator_breakdown_stream << " \\l";

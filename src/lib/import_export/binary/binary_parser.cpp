@@ -1,21 +1,38 @@
 #include "binary_parser.hpp"
 
+#include <cstddef>
 #include <cstdint>
 #include <fstream>
+#include <ios>
 #include <memory>
 #include <numeric>
 #include <optional>
 #include <string>
+#include <type_traits>
 #include <utility>
+#include <vector>
 
-#include "hyrise.hpp"
+#include "all_type_variant.hpp"
 #include "resolve_type.hpp"
 #include "storage/chunk.hpp"
+#include "storage/dictionary_segment.hpp"
 #include "storage/encoding_type.hpp"
+#include "storage/fixed_string_dictionary_segment.hpp"
+#include "storage/fixed_string_dictionary_segment/fixed_string_vector.hpp"
+#include "storage/frame_of_reference_segment.hpp"
+#include "storage/lz4_segment.hpp"
+#include "storage/mvcc_data.hpp"
+#include "storage/run_length_segment.hpp"
+#include "storage/table.hpp"
+#include "storage/table_column_definition.hpp"
+#include "storage/value_segment.hpp"
 #include "storage/vector_compression/bitpacking/bitpacking_vector.hpp"
+#include "storage/vector_compression/bitpacking/bitpacking_vector_type.hpp"
+#include "storage/vector_compression/compressed_vector_type.hpp"
 #include "storage/vector_compression/fixed_width_integer/fixed_width_integer_vector.hpp"
-
+#include "types.hpp"
 #include "utils/assert.hpp"
+#include "utils/enum_constant.hpp"
 
 namespace hyrise {
 
@@ -277,7 +294,7 @@ std::shared_ptr<LZ4Segment<T>> BinaryParser::_import_lz4_segment(std::ifstream& 
                                            num_elements);
   }
 
-  if (std::is_same<T, pmr_string>::value) {
+  if constexpr (std::is_same_v<T, pmr_string>) {
     return std::make_shared<LZ4Segment<T>>(std::move(lz4_blocks), std::move(null_values), std::move(dictionary),
                                            nullptr, block_size, last_block_size, compressed_size, num_elements);
   }

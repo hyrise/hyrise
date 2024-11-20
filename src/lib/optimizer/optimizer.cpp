@@ -1,9 +1,18 @@
 #include "optimizer.hpp"
 
-#include "cost_estimation/cost_estimator_logical.hpp"
+#include <chrono>
+#include <cstddef>
+#include <memory>
+#include <string>
+#include <unordered_map>
+#include <unordered_set>
+#include <utility>
+#include <vector>
+
+#include "expression/abstract_expression.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_subquery_expression.hpp"
-#include "logical_query_plan/aggregate_node.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/change_meta_table_node.hpp"
 #include "logical_query_plan/logical_plan_root_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
@@ -26,6 +35,8 @@
 #include "strategy/semi_join_reduction_rule.hpp"
 #include "strategy/stored_table_column_alignment_rule.hpp"
 #include "strategy/subquery_to_join_rule.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 #include "utils/timer.hpp"
 
 namespace {
@@ -295,6 +306,11 @@ std::shared_ptr<AbstractLQPNode> Optimizer::optimize(
 
     if constexpr (HYRISE_DEBUG) {
       validate_lqp(root_node);
+
+      // Ensure that the rule did not pollute the caches of the shared CardinalityEstimator instance.
+      const auto& estimation_cache = _cost_estimator->cardinality_estimator->cardinality_estimation_cache;
+      Assert(!estimation_cache.join_graph_statistics_cache && !estimation_cache.statistics_by_lqp,
+             "CardinalityEstimator caches should be empty. Did you call `new_instance()`?");
     }
   }
 

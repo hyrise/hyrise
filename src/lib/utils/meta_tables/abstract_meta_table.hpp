@@ -1,5 +1,9 @@
 #pragma once
 
+#include <memory>
+#include <string>
+#include <vector>
+
 #include "all_type_variant.hpp"
 #include "storage/table.hpp"
 #include "storage/table_column_definition.hpp"

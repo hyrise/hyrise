@@ -1,10 +1,12 @@
 #include "predicate_placement_rule.hpp"
 
+#include <cstddef>
 #include <memory>
 #include <string>
+#include <vector>
 
-#include "all_parameter_variant.hpp"
 #include "cost_estimation/abstract_cost_estimator.hpp"
+#include "expression/abstract_expression.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/logical_expression.hpp"
 #include "expression/lqp_subquery_expression.hpp"
@@ -13,11 +15,11 @@
 #include "logical_query_plan/logical_plan_root_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/predicate_node.hpp"
-#include "logical_query_plan/projection_node.hpp"
-#include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/union_node.hpp"
 #include "operators/operator_scan_predicate.hpp"
 #include "statistics/cardinality_estimator.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 
@@ -42,7 +44,7 @@ void PredicatePlacementRule::_apply_to_plan_without_subqueries(const std::shared
 void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<AbstractLQPNode>& current_node,
                                                   const LQPInputSide input_side,
                                                   std::vector<std::shared_ptr<AbstractLQPNode>>& push_down_nodes,
-                                                  AbstractCardinalityEstimator& estimator) {
+                                                  CardinalityEstimator& estimator) {
   const auto input_node = current_node->input(input_side);
   // Allow calling without checks
   if (!input_node) {

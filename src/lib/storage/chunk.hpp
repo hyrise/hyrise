@@ -1,9 +1,8 @@
 #pragma once
 
-#include <tbb/concurrent_vector.h>
-
 #include <algorithm>
 #include <atomic>
+#include <limits>
 #include <memory>
 #include <optional>
 #include <shared_mutex>
@@ -11,12 +10,14 @@
 #include <vector>
 
 #include <boost/container/pmr/memory_resource.hpp>
+#include <oneapi/tbb/concurrent_vector.h>  // NOLINT(build/include_order): cpplint identifies TBB as C system headers.
 
 #include "all_type_variant.hpp"
 #include "index/chunk_index_type.hpp"
 #include "mvcc_data.hpp"
 #include "table_column_definition.hpp"
 #include "types.hpp"
+#include "utils/assert.hpp"
 #include "utils/copyable_atomic.hpp"
 
 namespace hyrise {
@@ -163,7 +164,8 @@ class Chunk : private Noncopyable {
    * Atomically increases the counter of deleted/invalidated rows within this chunk. The function is marked as const,
    * as otherwise it could not be called by the Delete operator.
    */
-  void increase_invalid_row_count(ChunkOffset count) const;
+  void increase_invalid_row_count(const ChunkOffset count,
+                                  const std::memory_order memory_order = std::memory_order_seq_cst) const;
 
   /**
    * Chunks with few visible entries can be cleaned up periodically by the MvccDeletePlugin in a two-step process.

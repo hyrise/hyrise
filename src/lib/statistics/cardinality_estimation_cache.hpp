@@ -1,10 +1,13 @@
 #pragma once
 
+#include <memory>
+#include <unordered_map>
+
 #include "join_graph_statistics_cache.hpp"
 
 namespace hyrise {
 
-// See `AbstractCardinalityEstimator::guarantee_join_graph()/guarantee_bottom_up_construction()`
+// See `CardinalityEstimator::guarantee_join_graph()/guarantee_bottom_up_construction()`
 class CardinalityEstimationCache {
  public:
   std::optional<JoinGraphStatisticsCache> join_graph_statistics_cache;

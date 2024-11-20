@@ -1,5 +1,15 @@
 #include "meta_table_manager.hpp"
 
+#include <algorithm>
+#include <cstddef>
+#include <memory>
+#include <string>
+#include <string_view>
+#include <vector>
+
+#include "all_type_variant.hpp"
+#include "utils/assert.hpp"
+#include "utils/meta_tables/abstract_meta_table.hpp"
 #include "utils/meta_tables/meta_chunk_sort_orders_table.hpp"
 #include "utils/meta_tables/meta_chunks_table.hpp"
 #include "utils/meta_tables/meta_columns_table.hpp"
@@ -12,6 +22,7 @@
 #include "utils/meta_tables/meta_system_information_table.hpp"
 #include "utils/meta_tables/meta_system_utilization_table.hpp"
 #include "utils/meta_tables/meta_tables_table.hpp"
+#include "utils/performance_warning.hpp"
 
 namespace {
 

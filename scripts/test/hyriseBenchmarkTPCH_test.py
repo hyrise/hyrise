@@ -161,7 +161,7 @@ def main():
 
     benchmark = run_benchmark(build_dir, arguments, "hyriseBenchmarkTPCH", True)
 
-    benchmark.expect_exact("Visualizing the plans into SVG files. This will make the performance numbers invalid.")
+    benchmark.expect_exact("Visualizing the plans into SVG files. This will make the performance numbers invalid")
     benchmark.expect_exact("Chunk size is 10000")
     benchmark.expect_exact("Benchmarking Queries: [ 6 ]")
     benchmark.expect_exact("Loading table 'orders' from cached binary \"tpch_cached_tables/sf-0.010000/orders.bin\"")

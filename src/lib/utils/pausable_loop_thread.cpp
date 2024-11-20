@@ -2,6 +2,7 @@
 
 #include <chrono>
 #include <condition_variable>
+#include <cstddef>
 #include <functional>
 #include <mutex>
 #include <thread>
@@ -16,7 +17,9 @@ PausableLoopThread::PausableLoopThread(std::chrono::milliseconds loop_sleep_time
     while (!_shutdown_flag) {
       auto lock = std::unique_lock<std::mutex>{_mutex};
       if (_loop_sleep_time > std::chrono::milliseconds(0)) {
-        _cv.wait_for(lock, _loop_sleep_time, [&] { return static_cast<bool>(_shutdown_flag); });
+        _cv.wait_for(lock, _loop_sleep_time, [&] {
+          return static_cast<bool>(_shutdown_flag);
+        });
       }
 
       if (_shutdown_flag) {
@@ -25,7 +28,9 @@ PausableLoopThread::PausableLoopThread(std::chrono::milliseconds loop_sleep_time
 
       while (_pause_requested) {
         _is_paused = true;
-        _cv.wait(lock, [&] { return !_pause_requested || _shutdown_flag; });
+        _cv.wait(lock, [&] {
+          return !_pause_requested || _shutdown_flag;
+        });
         if (_shutdown_flag) {
           return;
         }

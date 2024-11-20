@@ -1,6 +1,5 @@
 #include "base_test.hpp"
 #include "lib/utils/meta_tables/meta_mock_table.hpp"
-
 #include "operators/table_wrapper.hpp"
 #include "statistics/attribute_statistics.hpp"
 #include "storage/chunk_encoder.hpp"
@@ -94,7 +93,11 @@ auto meta_table_test_formatter = [](const ::testing::TestParamInfo<MetaTable> in
   stream << info.param->name();
 
   auto string = stream.str();
-  string.erase(std::remove_if(string.begin(), string.end(), [](char c) { return !std::isalnum(c); }), string.end());
+  string.erase(std::remove_if(string.begin(), string.end(),
+                              [](char c) {
+                                return !std::isalnum(c);
+                              }),
+               string.end());
 
   return string;
 };
