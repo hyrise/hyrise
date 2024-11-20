@@ -199,6 +199,11 @@ const std::vector<std::shared_ptr<Worker>>& NodeQueueScheduler::workers() const 
   return _workers;
 }
 
+uint8_t NodeQueueScheduler::num_workers() const {
+  return _workers.size();
+}
+
+
 void NodeQueueScheduler::schedule(std::shared_ptr<AbstractTask> task, NodeID preferred_node_id,
                                   SchedulePriority priority) {
   /**

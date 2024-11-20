@@ -80,7 +80,8 @@ void PDGFTableSchemaBuilder<work_unit_size, num_columns>::_construct_table_chunk
   auto table_access_mutex = std::mutex{};
 
   auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
-  for (auto worker_index = uint32_t{0}; worker_index < 64; worker_index++) {
+  auto num_tasks = Hyrise::get().scheduler()->num_workers(); // this is a bit of a abstraction breaker, but it should do for now
+  for (auto worker_index = uint32_t{0}; worker_index < num_tasks; worker_index++) {
     tasks.emplace_back(std::make_shared<JobTask>([this, &table, &table_access_mutex, &remaining_chunks_to_generate] {
       while (remaining_chunks_to_generate.fetch_sub(1) > 0) {
         auto segments = Segments{};
