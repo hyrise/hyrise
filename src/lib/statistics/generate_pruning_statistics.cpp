@@ -4,7 +4,9 @@
 #include <memory>
 #include <type_traits>
 #include <unordered_set>
+#include <vector>
 
+#include "hyrise.hpp"
 #include "resolve_type.hpp"
 #include "statistics/attribute_statistics.hpp"
 #include "statistics/statistics_objects/distinct_value_count.hpp"
@@ -12,6 +14,8 @@
 #include "statistics/statistics_objects/min_max_filter.hpp"
 #include "statistics/statistics_objects/range_filter.hpp"
 #include "statistics/table_statistics.hpp"
+#include "scheduler/abstract_task.hpp"
+#include "scheduler/job_task.hpp"
 #include "storage/chunk.hpp"
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/table.hpp"
@@ -65,14 +69,14 @@ void generate_chunk_pruning_statistics(const std::shared_ptr<Chunk>& chunk) {
       } else {
         // if we have a generic segment we create the dictionary ourselves
         auto iterable = create_iterable_from_segment<ColumnDataType>(typed_segment);
-        std::unordered_set<ColumnDataType> values;
+        auto values = std::unordered_set<ColumnDataType>{};
         iterable.for_each([&](const auto& value) {
           // we are only interested in non-null values
           if (!value.is_null()) {
             values.insert(value.value());
           }
         });
-        pmr_vector<ColumnDataType> dictionary{values.cbegin(), values.cend()};
+        auto dictionary = pmr_vector<ColumnDataType>{values.cbegin(), values.cend()};
         std::sort(dictionary.begin(), dictionary.end());
         create_pruning_statistics_for_segment(*segment_statistics, dictionary);
       }
@@ -86,15 +90,22 @@ void generate_chunk_pruning_statistics(const std::shared_ptr<Chunk>& chunk) {
 
 void generate_chunk_pruning_statistics(const std::shared_ptr<Table>& table) {
   const auto chunk_count = table->chunk_count();
+  auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+  jobs.reserve(chunk_count);
+
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-    const auto chunk = table->get_chunk(chunk_id);
+    const auto generate_statistics = [&, chunk_id]() {
+      const auto chunk = table->get_chunk(ChunkID{chunk_id});
 
-    if (!chunk || chunk->is_mutable()) {
-      continue;
-    }
+      if (!chunk || chunk->is_mutable()) {
+        return;
+      }
 
-    generate_chunk_pruning_statistics(chunk);
+      generate_chunk_pruning_statistics(chunk);
+    };
+    jobs.emplace_back(std::make_shared<JobTask>(generate_statistics));
   }
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
 }
 
 }  // namespace hyrise
