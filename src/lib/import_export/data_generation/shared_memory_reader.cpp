@@ -1,8 +1,9 @@
+#include <csignal>
 #include <cstdint>
+#include <fcntl.h>
+#include <memory>
 #include <stdexcept>
 #include <sys/mman.h>
-#include <csignal>
-#include <fcntl.h>
 #include <vector>
 
 #include "hyrise.hpp"
@@ -14,6 +15,25 @@
 #include "utils/timer.hpp"
 
 namespace hyrise {
+std::shared_ptr<BaseSharedMemoryReader> create_shared_memory_reader(
+  uint32_t work_unit_size, ChunkOffset hyrise_table_chunk_size,
+  const char* shared_memory_name, const char* data_ready_sem, const char* buffer_free_sem) {
+  switch (work_unit_size) {
+    case    8u: return std::make_shared<SharedMemoryReader<   8u, 16u>>(hyrise_table_chunk_size, shared_memory_name, data_ready_sem, buffer_free_sem);
+    case   16u: return std::make_shared<SharedMemoryReader<  16u, 16u>>(hyrise_table_chunk_size, shared_memory_name, data_ready_sem, buffer_free_sem);
+    case   32u: return std::make_shared<SharedMemoryReader<  32u, 16u>>(hyrise_table_chunk_size, shared_memory_name, data_ready_sem, buffer_free_sem);
+    case   64u: return std::make_shared<SharedMemoryReader<  64u, 16u>>(hyrise_table_chunk_size, shared_memory_name, data_ready_sem, buffer_free_sem);
+    case  128u: return std::make_shared<SharedMemoryReader< 128u, 16u>>(hyrise_table_chunk_size, shared_memory_name, data_ready_sem, buffer_free_sem);
+    case  256u: return std::make_shared<SharedMemoryReader< 256u, 16u>>(hyrise_table_chunk_size, shared_memory_name, data_ready_sem, buffer_free_sem);
+    case  512u: return std::make_shared<SharedMemoryReader< 512u, 16u>>(hyrise_table_chunk_size, shared_memory_name, data_ready_sem, buffer_free_sem);
+    case 1024u: return std::make_shared<SharedMemoryReader<1024u, 16u>>(hyrise_table_chunk_size, shared_memory_name, data_ready_sem, buffer_free_sem);
+    case 2048u: return std::make_shared<SharedMemoryReader<2048u, 16u>>(hyrise_table_chunk_size, shared_memory_name, data_ready_sem, buffer_free_sem);
+    case 4096u: return std::make_shared<SharedMemoryReader<4096u, 16u>>(hyrise_table_chunk_size, shared_memory_name, data_ready_sem, buffer_free_sem);
+    case 8192u: return std::make_shared<SharedMemoryReader<8192u, 16u>>(hyrise_table_chunk_size, shared_memory_name, data_ready_sem, buffer_free_sem);
+    default: throw std::runtime_error("Unknown work unit size for shared memory reader!");
+  }
+}
+
 template <uint32_t work_unit_size, uint32_t num_columns>
 SharedMemoryReader<work_unit_size, num_columns>::SharedMemoryReader(
     ChunkOffset hyrise_table_chunk_size, const char* shared_memory_name, const char* data_ready_sem, const char* buffer_free_sem)
@@ -77,7 +97,7 @@ bool SharedMemoryReader<work_unit_size, num_columns>::has_next_table() const {
 }
 
 template <uint32_t work_unit_size, uint32_t num_columns>
-std::unique_ptr<PDGFTableSchemaBuilder<work_unit_size, num_columns>> SharedMemoryReader<work_unit_size, num_columns>::read_next_schema() {
+std::unique_ptr<BasePDGFTableSchemaBuilder> SharedMemoryReader<work_unit_size, num_columns>::read_next_schema() {
   // Table schema
   auto ring_cell = _ring_buffer->prepare_retrieval();
   Assert(ring_cell->cell_type == RingBufferCellType::TableSchema, "First information received by PDGF should be table schema, was " + std::to_string(ring_cell->cell_type));
@@ -95,7 +115,7 @@ std::unique_ptr<PDGFTableSchemaBuilder<work_unit_size, num_columns>> SharedMemor
 }
 
 template <uint32_t work_unit_size, uint32_t num_columns>
-std::shared_ptr<PDGFTableBuilder<work_unit_size, num_columns>> SharedMemoryReader<work_unit_size, num_columns>::read_next_table(uint32_t num_workers) {
+std::shared_ptr<BasePDGFTableBuilder> SharedMemoryReader<work_unit_size, num_columns>::read_next_table(uint32_t num_workers) {
   // Generation info
   auto ring_cell = _ring_buffer->prepare_retrieval();
   Assert(ring_cell->cell_type == RingBufferCellType::TableGenerationInfo, "Did not receive table generation info, was " + std::to_string(ring_cell->cell_type));
@@ -172,5 +192,15 @@ void SharedMemoryReader<work_unit_size, num_columns>::_worker_read_data(uint32_t
   }
 }
 
-template class SharedMemoryReader<128u, 16u>;
+template class SharedMemoryReader<   8u, 16u>; // 65536
+template class SharedMemoryReader<  16u, 16u>; // 32768
+template class SharedMemoryReader<  32u, 16u>; // 16384
+template class SharedMemoryReader<  64u, 16u>; //  8192
+template class SharedMemoryReader< 128u, 16u>; //  4096 buffer size
+template class SharedMemoryReader< 256u, 16u>; //  2048
+template class SharedMemoryReader< 512u, 16u>; //  1024
+template class SharedMemoryReader<1024u, 16u>; //   512
+template class SharedMemoryReader<2048u, 16u>; //   256
+template class SharedMemoryReader<4096u, 16u>; //   128
+template class SharedMemoryReader<8192u, 16u>; //    64
 } // namespace hyrise

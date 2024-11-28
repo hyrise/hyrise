@@ -15,16 +15,25 @@
 #include "types.hpp"
 
 namespace hyrise {
+class BasePDGFTableBuilder : Noncopyable {
+ public:
+  explicit BasePDGFTableBuilder() = default;
+  virtual ~BasePDGFTableBuilder() = default;
+
+  virtual std::string table_name() const = 0;
+  virtual std::shared_ptr<Table> build_table() = 0;
+};
 
 template <uint32_t work_unit_size, uint32_t num_columns>
-class PDGFTableBuilder : Noncopyable {
+class PDGFTableBuilder : public BasePDGFTableBuilder {
  public:
   explicit PDGFTableBuilder(uint32_t table_id, ChunkOffset hyrise_table_chunk_size);
 
   bool reader_should_handle_another_work_unit();
   bool reading_should_be_parallelized() const;
-  std::string table_name() const;
-  std::shared_ptr<Table> build_table();
+
+  std::string table_name() const override;
+  std::shared_ptr<Table> build_table() override;
 
   void read_generation_info(SharedMemoryDataCell<work_unit_size, num_columns>* info_cell);
   void read_data(uint32_t table_id, int64_t sorting_id, SharedMemoryDataCell<work_unit_size, num_columns>* data_cell);
@@ -45,6 +54,6 @@ class PDGFTableBuilder : Noncopyable {
   // void (*_add_methods[num_columns]) (int64_t, char*);
   std::array<ColumnID, num_columns> _generated_column_mappings;
 
-  uint8_t _num_rows_to_read_per_work_unit;
+  uint64_t _num_rows_to_read_per_work_unit;
 };
 } // namespace hyrise

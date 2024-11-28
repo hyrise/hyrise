@@ -14,8 +14,6 @@ BasePDGFColumn::BasePDGFColumn(int64_t num_rows, hyrise::ChunkOffset chunk_size)
 
 BasePDGFColumn::BasePDGFColumn() : BasePDGFColumn(1, ChunkOffset{1}) {}
 
-BasePDGFColumn::~BasePDGFColumn() {}
-
 template <typename T>
 PDGFColumn<T>::PDGFColumn(int64_t num_rows, ChunkOffset chunk_size) : BasePDGFColumn( num_rows, chunk_size) {
   auto req_chunks = std::div(_num_rows, _chunk_size);

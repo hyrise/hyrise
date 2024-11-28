@@ -22,15 +22,11 @@
 
 
 namespace hyrise {
-
 template <uint32_t work_unit_size, uint32_t num_columns>
 PDGFTableBuilder<work_unit_size, num_columns>::PDGFTableBuilder(uint32_t table_id, ChunkOffset hyrise_table_chunk_size)
     : _hyrise_table_chunk_size(hyrise_table_chunk_size), _table_id(table_id) {
   // TODO: remove
   _num_rows_to_read_per_work_unit = work_unit_size;
-  if (const char* env_p = std::getenv("HYRISE_NUM_ROWS_TO_READ_PER_WORK_UNIT")) {
-    _num_rows_to_read_per_work_unit = atoi(env_p);
-  }
 }
 
 template <uint32_t work_unit_size, uint32_t num_columns>
@@ -150,5 +146,15 @@ void PDGFTableBuilder<work_unit_size, num_columns>::_new_column_with_data_type(u
   });
 }
 
-template class PDGFTableBuilder<128u, 16u>;
+template class PDGFTableBuilder<   8u, 16u>; // 65536
+template class PDGFTableBuilder<  16u, 16u>; // 32768
+template class PDGFTableBuilder<  32u, 16u>; // 16384
+template class PDGFTableBuilder<  64u, 16u>; //  8192
+template class PDGFTableBuilder< 128u, 16u>; //  4096 buffer size
+template class PDGFTableBuilder< 256u, 16u>; //  2048
+template class PDGFTableBuilder< 512u, 16u>; //  1024
+template class PDGFTableBuilder<1024u, 16u>; //   512
+template class PDGFTableBuilder<2048u, 16u>; //   256
+template class PDGFTableBuilder<4096u, 16u>; //   128
+template class PDGFTableBuilder<8192u, 16u>; //    64
 } // namespace hyrise

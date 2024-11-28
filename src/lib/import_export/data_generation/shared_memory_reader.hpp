@@ -9,19 +9,32 @@
 #include "types.hpp"
 
 namespace hyrise {
+class BaseSharedMemoryReader : Noncopyable {
+ public:
+  virtual ~BaseSharedMemoryReader() = default;
+
+  virtual bool has_next_table() const = 0;
+  virtual std::unique_ptr<BasePDGFTableSchemaBuilder> read_next_schema() = 0;
+  virtual std::shared_ptr<BasePDGFTableBuilder> read_next_table(uint32_t num_workers) = 0;
+  virtual void reset() = 0;
+};
+
+std::shared_ptr<BaseSharedMemoryReader> create_shared_memory_reader(
+ uint32_t work_unit_size, ChunkOffset hyrise_table_chunk_size,
+ const char* shared_memory_name, const char* data_ready_sem, const char* buffer_free_sem);
+
 template <uint32_t work_unit_size, uint32_t num_columns>
-class SharedMemoryReader : Noncopyable {
+class SharedMemoryReader : public BaseSharedMemoryReader {
  public:
   static const uint32_t buffer_size = SHARED_MEMORY_DATA_SLOTS / work_unit_size / num_columns;
 
   explicit SharedMemoryReader(ChunkOffset hyrise_table_chunk_size, const char* shared_memory_name, const char* data_ready_sem, const char* buffer_free_sem);
-  ~SharedMemoryReader();
+  ~SharedMemoryReader() override;
 
-  bool has_next_table() const;
-  std::unique_ptr<PDGFTableSchemaBuilder<work_unit_size, num_columns>> read_next_schema();
-  std::shared_ptr<PDGFTableBuilder<work_unit_size, num_columns>> read_next_table(uint32_t num_workers);
-
-  void reset();
+  bool has_next_table() const override;
+  std::unique_ptr<BasePDGFTableSchemaBuilder> read_next_schema() override;
+  std::shared_ptr<BasePDGFTableBuilder> read_next_table(uint32_t num_workers) override;
+  void reset() override;
 
  protected:
   void _return_data_slot(uint32_t buffer_offset);

@@ -7,16 +7,16 @@
 
 namespace hyrise {
 
-PdgfProcess PdgfProcess::for_schema_generation(std::string pdgf_directory_root, uint32_t pdgf_num_cores, float scale_factor) {
-  return PdgfProcess(std::move(pdgf_directory_root), pdgf_num_cores, "-writeTableSchemas", scale_factor);
+PdgfProcess PdgfProcess::for_schema_generation(std::string pdgf_directory_root, uint32_t work_unit_size, uint32_t pdgf_num_cores, float scale_factor) {
+  return PdgfProcess(std::move(pdgf_directory_root), work_unit_size, pdgf_num_cores, "-writeTableSchemas", scale_factor);
 }
 
-PdgfProcess PdgfProcess::for_data_generation(std::string pdgf_directory_root, uint32_t pdgf_num_cores, float scale_factor) {
-  return PdgfProcess(std::move(pdgf_directory_root), pdgf_num_cores, "-start", scale_factor);
+PdgfProcess PdgfProcess::for_data_generation(std::string pdgf_directory_root, uint32_t work_unit_size, uint32_t pdgf_num_cores, float scale_factor) {
+  return PdgfProcess(std::move(pdgf_directory_root), work_unit_size, pdgf_num_cores, "-start", scale_factor);
 }
 
-PdgfProcess::PdgfProcess(std::string pdgf_directory_root, uint32_t pdgf_num_cores, std::string pdgf_command, float scale_factor)
-    : _pdgf_directory_root(std::move(pdgf_directory_root)), _pdgf_num_cores(pdgf_num_cores), _pdgf_command(std::move(pdgf_command)), _scale_factor(scale_factor) {
+PdgfProcess::PdgfProcess(std::string pdgf_directory_root, uint32_t work_unit_size, uint32_t pdgf_num_cores, std::string pdgf_command, float scale_factor)
+    : _pdgf_directory_root(std::move(pdgf_directory_root)), _pdgf_work_unit_size(work_unit_size), _pdgf_num_cores(pdgf_num_cores), _pdgf_command(std::move(pdgf_command)), _scale_factor(scale_factor) {
   if (_pdgf_num_cores == 0) {
     _pdgf_num_cores = 1;
   }
@@ -134,10 +134,11 @@ void PdgfProcess::_configure_jvm() {
 
 void PdgfProcess::_configure_pdgf_properties() {
   auto properties = std::vector<std::string>{
-      "java.library.path", "extlib/",
-      "bankmark.pdgf.log.folder", "/scratch/jan-eric.hellenberg",
-      "CONCURRENT_SCHED_DEFAULT_WORKUNIT_SIZE", "128",
-      "MICRO_BENCHMARK_GENERATION", "SINGLE_WORKER"
+    "java.library.path", "extlib/",
+    "bankmark.pdgf.log.folder", "/scratch/jan-eric.hellenberg",
+    "CONCURRENT_SCHED_DEFAULT_WORKUNIT_SIZE", std::to_string(_pdgf_work_unit_size),
+    "SHM_BUFFER_CONTAINED_WORK_UNITS", std::to_string(524288 / _pdgf_work_unit_size),
+    "MICRO_BENCHMARK_GENERATION", "SINGLE_WORKER"
   };
 
   for (size_t i = 0; i < properties.size(); i += 2) {

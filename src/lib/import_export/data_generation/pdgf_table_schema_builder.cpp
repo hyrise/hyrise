@@ -21,7 +21,6 @@
 
 
 namespace hyrise {
-
 template <uint32_t work_unit_size, uint32_t num_columns>
 PDGFTableSchemaBuilder<work_unit_size, num_columns>::PDGFTableSchemaBuilder(uint32_t table_id, ChunkOffset hyrise_table_chunk_size)
     : _hyrise_table_chunk_size(hyrise_table_chunk_size), _table_id(table_id) {}
@@ -118,5 +117,15 @@ std::shared_ptr<BaseNonGeneratedPDGFColumn> PDGFTableSchemaBuilder<work_unit_siz
   return column;
 }
 
-template class PDGFTableSchemaBuilder<128u, 16u>;
+template class PDGFTableSchemaBuilder<   8u, 16u>; // 65536
+template class PDGFTableSchemaBuilder<  16u, 16u>; // 32768
+template class PDGFTableSchemaBuilder<  32u, 16u>; // 16384
+template class PDGFTableSchemaBuilder<  64u, 16u>; //  8192
+template class PDGFTableSchemaBuilder< 128u, 16u>; //  4096 buffer size
+template class PDGFTableSchemaBuilder< 256u, 16u>; //  2048
+template class PDGFTableSchemaBuilder< 512u, 16u>; //  1024
+template class PDGFTableSchemaBuilder<1024u, 16u>; //   512
+template class PDGFTableSchemaBuilder<2048u, 16u>; //   256
+template class PDGFTableSchemaBuilder<4096u, 16u>; //   128
+template class PDGFTableSchemaBuilder<8192u, 16u>; //    64
 } // namespace hyrise

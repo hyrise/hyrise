@@ -56,6 +56,7 @@ int main(int argc, char* argv[]) {
                    "legal TPC-H input data.", cxxopts::value<std::string>()->default_value("None")) // NOLINT
     ("tpch_cache_directory", "Base directory to write cached tables to", cxxopts::value<std::string>()->default_value("tpch_cached_tables"))
     ("pdgf_data_gen", "Instead of using the bundled db-gen to generate the data, rely on the Parallel Data Generation Framework.", cxxopts::value<bool>()->default_value("false"))
+    ("pdgf_work_unit_size", "Number of rows to generate in one workunit with PDGF", cxxopts::value<int>()->default_value("128"))
     ("only_generate_used_columns", "Determine and only generate columns used by the specified queries.", cxxopts::value<bool>()->default_value("false"))
     ("only_generate_used_tables", "Determine and only generate complete tables used by the specified queries.", cxxopts::value<bool>()->default_value("false")); // NOLINT
   // clang-format on
@@ -68,6 +69,7 @@ int main(int argc, char* argv[]) {
   auto jcch_skewed = false;
   auto cache_directory = std::string{};
   auto pdgf_data_gen = false;
+  auto pdgf_work_unit_size = int{};
   auto only_generate_used_columns = false;
   auto only_generate_used_tables = false;
 
@@ -104,6 +106,7 @@ int main(int argc, char* argv[]) {
 
   pdgf_data_gen = cli_parse_result["pdgf_data_gen"].as<bool>();
   Assert(!jcch || !pdgf_data_gen, "At the moment, cannot generate jcch data using PDGF.");
+  pdgf_work_unit_size = cli_parse_result["pdgf_work_unit_size"].as<int>();
   only_generate_used_columns = cli_parse_result["only_generate_used_columns"].as<bool>();
   only_generate_used_tables = cli_parse_result["only_generate_used_tables"].as<bool>();
   Assert(pdgf_data_gen || (!only_generate_used_columns && !only_generate_used_tables), "Only generating a column subset is only supported when using PDGF.");
@@ -177,6 +180,7 @@ int main(int argc, char* argv[]) {
 
   if (pdgf_data_gen) {
     std::cout << "- data generation using PDGF is active\n";
+    std::cout << "- rows per work unit: " << pdgf_work_unit_size << "\n";
     std::cout << "- partial table generation is " << (only_generate_used_tables ?  "active": "not active") << ", ";
     std::cout << "- partial column generation is " << (only_generate_used_columns ? "active" : "not active") << "\n";
     auto runner = std::make_unique<TPCHBenchmarkItemRunner>(config, use_prepared_statements, scale_factor,
@@ -190,7 +194,7 @@ int main(int argc, char* argv[]) {
       }
     }
     table_generator = std::make_unique<TPCHPDGFTableGenerator>(
-        scale_factor, clustering_configuration,
+        scale_factor, clustering_configuration, pdgf_work_unit_size,
         only_generate_used_columns || only_generate_used_tables, only_generate_used_tables,
         config, queries);
     item_runner = std::move(runner);

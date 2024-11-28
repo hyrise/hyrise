@@ -24,13 +24,14 @@ namespace hyrise {
 
 TPCHPDGFTableGenerator::TPCHPDGFTableGenerator(float scale_factor, ClusteringConfiguration clustering_configuration,
                                        ChunkOffset chunk_size)
-    : TPCHPDGFTableGenerator(scale_factor, clustering_configuration, false, false, std::make_shared<BenchmarkConfig>(chunk_size), std::vector<std::string>{}) {}
+    : TPCHPDGFTableGenerator(scale_factor, clustering_configuration, 128ul, false, false, std::make_shared<BenchmarkConfig>(chunk_size), std::vector<std::string>{}) {}
 
-TPCHPDGFTableGenerator::TPCHPDGFTableGenerator(float scale_factor, ClusteringConfiguration clustering_configuration,
+TPCHPDGFTableGenerator::TPCHPDGFTableGenerator(float scale_factor, ClusteringConfiguration clustering_configuration, uint32_t pdgf_work_unit_size,
                                                bool only_generate_partial_data, bool partial_data_generate_whole_tables,
                                                const std::shared_ptr<BenchmarkConfig>& benchmark_config, std::vector<std::string> queries_to_run)
     : AbstractTableGenerator(benchmark_config),
       _scale_factor(scale_factor),
+      _pdgf_work_unit_size(pdgf_work_unit_size),
       _num_cores(benchmark_config->data_preparation_cores),
       _only_generate_partial_data(only_generate_partial_data),
       _partial_data_generate_whole_tables(partial_data_generate_whole_tables),
@@ -48,7 +49,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHPDGFTableGenerator::gene
   Assert(_clustering_configuration == ClusteringConfiguration::None, "We do not support any special clustering configurations, as those require sorting, and sorting on PDGF-generated partial data is not supported.");
 
   std::cerr << "Setting up shared memory.\n";
-  auto reader = SharedMemoryReader<128, 16>(_benchmark_config->chunk_size, SHARED_MEMORY_NAME, DATA_READY_SEM, BUFFER_FREE_SEM);
+  auto reader = create_shared_memory_reader(_pdgf_work_unit_size, _benchmark_config->chunk_size, SHARED_MEMORY_NAME, DATA_READY_SEM, BUFFER_FREE_SEM);
   std::unordered_map<std::string, BenchmarkTableInfo> table_info_by_name;
 
   /**
@@ -57,10 +58,10 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHPDGFTableGenerator::gene
    */
   auto timer = Timer{};
   std::cerr << "Receiving table schemas from PDGF!\n";
-  auto pdgf_schema = PdgfProcess::for_schema_generation(PDGF_DIRECTORY_ROOT, _num_cores, _scale_factor);
+  auto pdgf_schema = PdgfProcess::for_schema_generation(PDGF_DIRECTORY_ROOT, _pdgf_work_unit_size, _num_cores, _scale_factor);
   pdgf_schema.run();
-  while (reader.has_next_table()) {
-    auto schema_builder = reader.read_next_schema();
+  while (reader->has_next_table()) {
+    auto schema_builder = reader->read_next_schema();
     // Directly add the (empty) table to the storage manager here.
     // This table will be replaced later once we have received data, but we will need the tables to be present in order for the optimizer to
     // be able to tell us which columns we need to generate for our _queries_to_run
@@ -76,7 +77,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHPDGFTableGenerator::gene
   /**
    * Reset shared memory buffer. This is important because we will proceed to launch PDGF a second time.
    */
-  reader.reset();
+  reader->reset();
 
   /**
    * Collect columns to generate
@@ -91,14 +92,14 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHPDGFTableGenerator::gene
    * Generate tables
    */
   std::cerr << "Generating tables with PDGF\n";
-  auto pdgf_data = PdgfProcess::for_data_generation(PDGF_DIRECTORY_ROOT, _num_cores, _scale_factor);
+  auto pdgf_data = PdgfProcess::for_data_generation(PDGF_DIRECTORY_ROOT, _pdgf_work_unit_size, _num_cores, _scale_factor);
   if (_only_generate_partial_data) {
     pdgf_data.set_column_filter(_columns_to_generate);
   }
   pdgf_data.run();
-  auto table_builders = std::vector<std::shared_ptr<PDGFTableBuilder<128, 16>>>{};
-  while (reader.has_next_table()) {
-    table_builders.emplace_back(reader.read_next_table(_num_cores));
+  auto table_builders = std::vector<std::shared_ptr<BasePDGFTableBuilder>>{};
+  while (reader->has_next_table()) {
+    table_builders.emplace_back(reader->read_next_table(_num_cores));
   }
   std::cerr << "Awaiting PDGF teardown\n";
   pdgf_data.await_teardown();

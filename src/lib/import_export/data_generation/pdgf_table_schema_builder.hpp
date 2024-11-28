@@ -13,15 +13,22 @@
 #include "types.hpp"
 
 namespace hyrise {
+class BasePDGFTableSchemaBuilder : Noncopyable {
+ public:
+  virtual ~BasePDGFTableSchemaBuilder() = default;
+
+  virtual std::string table_name() const = 0;
+  virtual std::shared_ptr<Table> build_table() = 0;
+};
 
 template <uint32_t work_unit_size, uint32_t num_columns>
-class PDGFTableSchemaBuilder : Noncopyable {
+class PDGFTableSchemaBuilder : public BasePDGFTableSchemaBuilder {
  public:
   explicit PDGFTableSchemaBuilder(uint32_t table_id, ChunkOffset hyrise_table_chunk_size);
 
-  std::string table_name() const;
+  std::string table_name() const override;
   void read_schema(SharedMemoryDataCell<work_unit_size, num_columns>* schema_cell);
-  std::shared_ptr<Table> build_table();
+  std::shared_ptr<Table> build_table() override;
 
  protected:
   std::shared_ptr<Table> _assemble_table_metadata();

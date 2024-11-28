@@ -13,7 +13,7 @@ class BasePDGFColumn {
  public:
   explicit BasePDGFColumn(int64_t num_rows, ChunkOffset chunk_size);
   explicit BasePDGFColumn();
-  virtual ~BasePDGFColumn();
+  virtual ~BasePDGFColumn() = default;
   virtual void virtual_add(int64_t row, char* data) = 0;
   virtual bool has_another_segment() = 0;
   virtual std::shared_ptr<AbstractSegment> build_next_segment() = 0;

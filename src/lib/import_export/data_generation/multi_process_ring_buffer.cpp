@@ -137,5 +137,15 @@ void MultiProcessRingBuffer<buffer_size>::writing_finished() {
   sem_post(_data_written_semaphore);
 }
 
-template class MultiProcessRingBuffer<4096u>;
+template class MultiProcessRingBuffer<65536u>;
+template class MultiProcessRingBuffer<32768u>;
+template class MultiProcessRingBuffer<16384u>;
+template class MultiProcessRingBuffer< 8192u>;
+template class MultiProcessRingBuffer< 4096u>;
+template class MultiProcessRingBuffer< 2048u>;
+template class MultiProcessRingBuffer< 1024u>;
+template class MultiProcessRingBuffer<  512u>;
+template class MultiProcessRingBuffer<  256u>;
+template class MultiProcessRingBuffer<  128u>;
+template class MultiProcessRingBuffer<   64u>;
 } // namespace hyrise
