@@ -6,6 +6,8 @@
 #include <unordered_set>
 #include <vector>
 
+#include "boost/sort/sort.hpp"
+
 #include "hyrise.hpp"
 #include "resolve_type.hpp"
 #include "statistics/attribute_statistics.hpp"
@@ -77,7 +79,7 @@ void generate_chunk_pruning_statistics(const std::shared_ptr<Chunk>& chunk) {
           }
         });
         auto dictionary = pmr_vector<ColumnDataType>{values.cbegin(), values.cend()};
-        std::sort(dictionary.begin(), dictionary.end());
+        boost::sort::pdqsort(dictionary.begin(), dictionary.end());
         create_pruning_statistics_for_segment(*segment_statistics, dictionary);
       }
 
@@ -94,16 +96,15 @@ void generate_chunk_pruning_statistics(const std::shared_ptr<Table>& table) {
   jobs.reserve(chunk_count);
 
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-    const auto generate_statistics = [&, chunk_id]() {
-      const auto chunk = table->get_chunk(ChunkID{chunk_id});
+    const auto chunk = table->get_chunk(chunk_id);
 
-      if (!chunk || chunk->is_mutable()) {
-        return;
-      }
+    if (!chunk || chunk->is_mutable()) {
+      continue;
+    }
 
+    jobs.emplace_back(std::make_shared<JobTask>([&, chunk]() {
       generate_chunk_pruning_statistics(chunk);
-    };
-    jobs.emplace_back(std::make_shared<JobTask>(generate_statistics));
+    }));
   }
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
 }

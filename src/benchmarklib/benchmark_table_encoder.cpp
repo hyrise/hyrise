@@ -136,6 +136,10 @@ bool BenchmarkTableEncoder::encode(const std::string& table_name, const std::sha
   }
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
 
+  // Note: Pruning statistics might have already been generated during chunk encoding, in which case this call
+  // is (almost) a NoOp.
+  // However, this does not apply when loading benchmark data that we have cached, because that data is encoded already.
+  // We still need to generate the statistics in that case, though, because we don't cache them.
   generate_chunk_pruning_statistics(table);
 
   return encoding_performed;
