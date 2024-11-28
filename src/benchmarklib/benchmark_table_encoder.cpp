@@ -136,10 +136,12 @@ bool BenchmarkTableEncoder::encode(const std::string& table_name, const std::sha
   }
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
 
-  // Note: Pruning statistics might have already been generated during chunk encoding, in which case this call
+  // Note: Pruning statistics might have already been generated during chunk encoding above, in which case this call
   // is (almost) a NoOp.
-  // However, this does not apply when loading benchmark data that we have cached, because that data is encoded already.
-  // We still need to generate the statistics in that case, though, because we don't cache them.
+  // However, encoding might not happen when loading benchmark data that we have stored in binary, because that data is
+  // encoded already. Re-encoding will only be necessary in case the benchmark encoding config has changed, and might
+  // only affect certain chunks then.
+  // If encoding did not happen for loaded data, we still need to generate the statistics, because we do not cache those.
   generate_chunk_pruning_statistics(table);
 
   return encoding_performed;
