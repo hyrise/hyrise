@@ -227,8 +227,8 @@ void BinaryWriter::_write_segment(const DictionarySegment<T>& dictionary_segment
   export_value(ofstream, compressed_vector_type_id);
 
   // Write the dictionary size and dictionary
-  export_value(ofstream, static_cast<ValueID::base_type>(dictionary_segment.dictionary()->size()));
-  export_values(ofstream, *dictionary_segment.dictionary());
+  export_value(ofstream, static_cast<ValueID::base_type>(dictionary_segment.dictionary().size()));
+  export_values(ofstream, dictionary_segment.dictionary());
 
   // Write attribute vector
   _export_compressed_vector(ofstream, *dictionary_segment.compressed_vector_type(),
@@ -245,11 +245,11 @@ void BinaryWriter::_write_segment(const FixedStringDictionarySegment<T>& fixed_s
   export_value(ofstream, compressed_vector_type_id);
 
   // Write the dictionary size, string length and dictionary
-  const auto dictionary_size = fixed_string_dictionary_segment.fixed_string_dictionary()->size();
-  const auto string_length = fixed_string_dictionary_segment.fixed_string_dictionary()->string_length();
+  const auto dictionary_size = fixed_string_dictionary_segment.fixed_string_dictionary().size();
+  const auto string_length = fixed_string_dictionary_segment.fixed_string_dictionary().string_length();
   export_value(ofstream, static_cast<ValueID::base_type>(dictionary_size));
   export_value(ofstream, static_cast<uint32_t>(string_length));
-  export_values(ofstream, *fixed_string_dictionary_segment.fixed_string_dictionary());
+  export_values(ofstream, fixed_string_dictionary_segment.fixed_string_dictionary());
 
   // Write attribute vector
   _export_compressed_vector(ofstream, *fixed_string_dictionary_segment.compressed_vector_type(),
@@ -363,12 +363,12 @@ void BinaryWriter::_write_segment(const VariableStringDictionarySegment<T>& dict
                             *dictionary_segment.attribute_vector());
 
   // Write offset vector.
-  export_value(ofstream, static_cast<uint32_t>(dictionary_segment.offset_vector()->size()));
-  export_values(ofstream, *dictionary_segment.offset_vector());
+  export_value(ofstream, static_cast<uint32_t>(dictionary_segment.offset_vector().size()));
+  export_values(ofstream, dictionary_segment.offset_vector());
 
   // Write the dictionary size and dictionary
-  export_value(ofstream, static_cast<uint32_t>(dictionary_segment.dictionary()->size()));
-  export_values(ofstream, *dictionary_segment.dictionary());
+  export_value(ofstream, static_cast<uint32_t>(dictionary_segment.dictionary().size()));
+  export_values(ofstream, dictionary_segment.dictionary());
 }
 
 template <typename T>

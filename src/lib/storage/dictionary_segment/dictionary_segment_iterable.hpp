@@ -32,14 +32,18 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
     _segment.access_counter[SegmentAccessCounter::AccessType::Sequential] += _segment.size();
     _segment.access_counter[SegmentAccessCounter::AccessType::Dictionary] += _segment.size();
 
+    const auto& dictionary = _dictionary.get();
+
     resolve_compressed_vector_type(*_segment.attribute_vector(), [&](const auto& vector) {
       using CompressedVectorIterator = decltype(vector.cbegin());
-      using DictionaryIteratorType = decltype(_dictionary->cbegin());
+      using DictionaryIteratorType = decltype(dictionary.cbegin());
+
+      // for (auto b = dictionary.cbegin(); b != dictionary.cend(); ++b) { std::cout << " '" << *b << "' "; }
 
       auto begin = Iterator<CompressedVectorIterator, DictionaryIteratorType>{
-          _dictionary->cbegin(), _segment.null_value_id(), vector.cbegin(), ChunkOffset{0u}};
+          dictionary.cbegin(), _segment.null_value_id(), vector.cbegin(), ChunkOffset{0u}};
       auto end = Iterator<CompressedVectorIterator, DictionaryIteratorType>{
-          _dictionary->cbegin(), _segment.null_value_id(), vector.cend(), static_cast<ChunkOffset>(_segment.size())};
+          dictionary.cbegin(), _segment.null_value_id(), vector.cend(), static_cast<ChunkOffset>(_segment.size())};
 
       functor(begin, end);
     });
@@ -50,16 +54,18 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
     _segment.access_counter[SegmentAccessCounter::access_type(*position_filter)] += position_filter->size();
     _segment.access_counter[SegmentAccessCounter::AccessType::Dictionary] += position_filter->size();
 
+    const auto& dictionary = _dictionary.get();
+
     resolve_compressed_vector_type(*_segment.attribute_vector(), [&](const auto& vector) {
       using Decompressor = std::decay_t<decltype(vector.create_decompressor())>;
-      using DictionaryIteratorType = decltype(_dictionary->cbegin());
+      using DictionaryIteratorType = decltype(dictionary.cbegin());
 
       using PosListIteratorType = decltype(position_filter->cbegin());
       auto begin = PointAccessIterator<Decompressor, DictionaryIteratorType, PosListIteratorType>{
-          _dictionary->cbegin(), _segment.null_value_id(), vector.create_decompressor(), position_filter->cbegin(),
+          dictionary.cbegin(), _segment.null_value_id(), vector.create_decompressor(), position_filter->cbegin(),
           position_filter->cbegin()};
       auto end = PointAccessIterator<Decompressor, DictionaryIteratorType, PosListIteratorType>{
-          _dictionary->cbegin(), _segment.null_value_id(), vector.create_decompressor(), position_filter->cbegin(),
+          dictionary.cbegin(), _segment.null_value_id(), vector.create_decompressor(), position_filter->cbegin(),
           position_filter->cend()};
       functor(begin, end);
     });
@@ -170,7 +176,7 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
 
  private:
   const BaseDictionarySegment& _segment;
-  std::shared_ptr<const Dictionary> _dictionary;
+  std::reference_wrapper<const Dictionary> _dictionary;
 };
 
 template <typename T>

@@ -54,8 +54,8 @@ std::shared_ptr<AbstractSegment> ChunkEncoder::encode_segment(const std::shared_
     // the data vectors for a ValueSegment. If another encoding is requested, the segment
     // encoding utitilies are used (which create and call the according encoder).
     if (encoding_spec.encoding_type == EncodingType::Unencoded) {
-      pmr_vector<ColumnDataType> values;
-      pmr_vector<bool> null_values;
+      auto values = pmr_vector<ColumnDataType>{};
+      auto null_values = pmr_vector<bool>{};
       auto contains_nulls = false;
 
       auto iterable = create_any_segment_iterable<ColumnDataType>(*segment);

@@ -11,8 +11,7 @@ using DereferenceValue = std::string_view;
 class VariableStringVectorIterator : public boost::iterator_facade<VariableStringVectorIterator, DereferenceValue,
                                                                    std::random_access_iterator_tag, DereferenceValue> {
  public:
-  explicit VariableStringVectorIterator(const std::shared_ptr<const pmr_vector<char>>& dictionary,
-                                        const std::shared_ptr<const pmr_vector<uint32_t>>& offset_vector,
+  explicit VariableStringVectorIterator(const pmr_vector<char>& dictionary, const pmr_vector<uint32_t>& offset_vector,
                                         ValueID current_value_id)
       : _dictionary{dictionary}, _offset_vector{offset_vector}, _current_value_id{current_value_id} {}
 
@@ -42,11 +41,11 @@ class VariableStringVectorIterator : public boost::iterator_facade<VariableStrin
   }
 
   const std::string_view dereference() const {  // NOLINT
-    return VariableStringDictionarySegment<pmr_string>::get_string(*_offset_vector, *_dictionary, _current_value_id);
+    return VariableStringDictionarySegment<pmr_string>::get_string(_offset_vector, _dictionary, _current_value_id);
   }
 
-  std::shared_ptr<const pmr_vector<char>> _dictionary;
-  std::shared_ptr<const pmr_vector<uint32_t>> _offset_vector;
+  const pmr_vector<char>& _dictionary;
+  const pmr_vector<uint32_t>& _offset_vector;
   ValueID _current_value_id;
 };
 

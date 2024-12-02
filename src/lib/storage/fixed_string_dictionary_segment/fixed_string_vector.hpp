@@ -32,13 +32,12 @@ class FixedStringVector {
     // If string_length equals 0 we would not have any elements in the vector. Hence, we would have to deal with null
     // pointers. In order to avoid this, we insert a null terminator to the vector by using resize.
     if (_string_length == 0) {
-      _chars.resize(1u);
+      _chars.resize(1);
       _size = value_count;
     } else {
       _chars.reserve(_string_length * value_count);
-      while (first != last) {
+      for (; first != last; ++first) {
         push_back(*first);
-        ++first;
       }
     }
   }

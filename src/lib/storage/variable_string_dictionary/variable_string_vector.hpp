@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
 #include <memory>
 
@@ -12,8 +13,7 @@ class VariableStringVectorIterator;
 
 class VariableStringVector {
  public:
-  explicit VariableStringVector(const std::shared_ptr<const pmr_vector<char>>& dictionary,
-                                const std::shared_ptr<const pmr_vector<uint32_t>>& offset_vector);
+  explicit VariableStringVector(const pmr_vector<char>& dictionary, const pmr_vector<uint32_t>& offset_vector);
 
   VariableStringVectorIterator begin() const noexcept;
   VariableStringVectorIterator end() const noexcept;
@@ -24,8 +24,8 @@ class VariableStringVector {
   size_t size() const;
 
  protected:
-  std::shared_ptr<const pmr_vector<char>> _dictionary;
-  std::shared_ptr<const pmr_vector<uint32_t>> _offset_vector;
+  const pmr_vector<char>& _dictionary;
+  const pmr_vector<uint32_t>& _offset_vector;
 };
 
 }  // namespace hyrise

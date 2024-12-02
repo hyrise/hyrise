@@ -9,8 +9,8 @@
 
 namespace hyrise {
 
-hyrise::VariableStringVector::VariableStringVector(const std::shared_ptr<const pmr_vector<char>>& dictionary,
-                                                   const std::shared_ptr<const pmr_vector<uint32_t>>& offset_vector)
+hyrise::VariableStringVector::VariableStringVector(const pmr_vector<char>& dictionary,
+                                                   const pmr_vector<uint32_t>& offset_vector)
     : _dictionary{dictionary}, _offset_vector{offset_vector} {}
 
 VariableStringVectorIterator VariableStringVector::begin() const noexcept {
@@ -18,7 +18,7 @@ VariableStringVectorIterator VariableStringVector::begin() const noexcept {
 }
 
 VariableStringVectorIterator VariableStringVector::end() const noexcept {
-  return VariableStringVectorIterator(_dictionary, _offset_vector, ValueID(size()));
+  return VariableStringVectorIterator(_dictionary, _offset_vector, ValueID{size()});
 }
 
 VariableStringVectorIterator VariableStringVector::cbegin() const noexcept {
@@ -30,6 +30,6 @@ VariableStringVectorIterator VariableStringVector::cend() const noexcept {
 }
 
 size_t VariableStringVector::size() const {
-  return _offset_vector->size();
+  return _offset_vector.size();
 }
 }  // namespace hyrise

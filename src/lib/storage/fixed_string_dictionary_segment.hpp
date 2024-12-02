@@ -21,11 +21,11 @@ class BaseCompressedVector;
 template <typename T>
 class FixedStringDictionarySegment : public BaseDictionarySegment {
  public:
-  explicit FixedStringDictionarySegment(const std::shared_ptr<const FixedStringVector>& dictionary,
-                                        const std::shared_ptr<const BaseCompressedVector>& attribute_vector);
+  explicit FixedStringDictionarySegment(FixedStringVector&& dictionary,
+                                        std::unique_ptr<const BaseCompressedVector>&& attribute_vector);
 
-  // returns an underlying dictionary
-  std::shared_ptr<const FixedStringVector> fixed_string_dictionary() const;
+  // Returns an underlying dictionary.
+  const FixedStringVector& fixed_string_dictionary() const;
 
   /**
    * @defgroup AbstractSegment interface
@@ -63,15 +63,15 @@ class FixedStringDictionarySegment : public BaseDictionarySegment {
 
   ValueID::base_type unique_values_count() const final;
 
-  std::shared_ptr<const BaseCompressedVector> attribute_vector() const final;
+  const std::unique_ptr<const BaseCompressedVector>& attribute_vector() const final;
 
   ValueID null_value_id() const final;
 
   /**@}*/
 
  protected:
-  const std::shared_ptr<const FixedStringVector> _dictionary;
-  const std::shared_ptr<const BaseCompressedVector> _attribute_vector;
+  const FixedStringVector& _dictionary;
+  const std::unique_ptr<const BaseCompressedVector> _attribute_vector;
   const std::unique_ptr<BaseVectorDecompressor> _decompressor;
 };
 

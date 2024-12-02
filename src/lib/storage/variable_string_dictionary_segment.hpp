@@ -20,18 +20,17 @@ class VariableStringVector;
  * Uses vector compression schemes for its attribute vector.
  */
 template <typename T>
-
   requires(std::is_same_v<T, pmr_string>)
 class VariableStringDictionarySegment : public BaseDictionarySegment {
  public:
-  VariableStringDictionarySegment(const std::shared_ptr<const pmr_vector<char>>& dictionary,
-                                  const std::shared_ptr<const BaseCompressedVector>& attribute_vector,
-                                  const std::shared_ptr<const pmr_vector<uint32_t>>& offset_vector);
+  VariableStringDictionarySegment(pmr_vector<char>&& dictionary,
+                                  std::unique_ptr<const BaseCompressedVector>&& attribute_vector,
+                                  pmr_vector<uint32_t>&& offset_vector);
 
-  // returns an underlying dictionary
-  std::shared_ptr<const pmr_vector<char>> dictionary() const;
+  // Returns an underlying dictionary.
+  const pmr_vector<char>& dictionary() const;
 
-  std::shared_ptr<const VariableStringVector> variable_string_dictionary() const;
+  VariableStringVector variable_string_dictionary() const;
 
   /**
    * @defgroup AbstractSegment interface
@@ -41,14 +40,13 @@ class VariableStringDictionarySegment : public BaseDictionarySegment {
   AllTypeVariant operator[](const ChunkOffset chunk_offset) const final;
 
   std::optional<pmr_string> get_typed_value(const ChunkOffset chunk_offset) const {
-    // performance critical - not in cpp to help with inlining
+    // Performance critical - not in cpp to help with inlining.
     const auto value_id = _decompressor->get(chunk_offset);
     if (value_id == null_value_id()) {
       // We do not increase SegmentAccessCounter here because we do not access the dictionary.
       return std::nullopt;
     }
 
-    // TODO(student): Does this impact performance?
     return typed_value_of_value_id(ValueID{value_id});
   }
 
@@ -72,13 +70,14 @@ class VariableStringDictionarySegment : public BaseDictionarySegment {
    */
   EncodingType encoding_type() const final;
 
-  // Returns the first offset ID that refers to a offset >= the search offset and INVALID_VALUE_ID if all values are
-  // smaller than the search offset. Here, INVALID_VALUE_ID does not represent NULL (which isn't stored in the
+  // Returns the first offset ID that refers to an offset >= the search offset or INVALID_VALUE_ID if all values are
+  // smaller than the search offset. Here, INVALID_VALUE_ID does not represent NULL (which is not stored in the
   // dictionary anyway). Imagine a segment with values from 1 to 10. A scan for `WHERE a < 12` would retrieve
   // `lower_bound(12) == INVALID_VALUE_ID` and compare all values in the attribute vector to `< INVALID_VALUE_ID`.
   // Thus, returning INVALID_VALUE_ID makes comparisons much easier. However, the caller has to make sure that
-  // NULL values stored in the attribute vector (stored with a offset ID of unique_values_count()) are excluded.
+  // NULL values stored in the attribute vector (stored with an offset ID of `unique_values_count()`) are excluded.
   // See #1471 for a deeper discussion.
+  // TODO: kommentar ist noch seltsam ...
   ValueID lower_bound(const AllTypeVariant& value) const final;
 
   // Returns the first value ID that refers to a value > the search value and INVALID_VALUE_ID if all values are
@@ -91,16 +90,17 @@ class VariableStringDictionarySegment : public BaseDictionarySegment {
 
   ValueID::base_type unique_values_count() const final;
 
-  std::shared_ptr<const BaseCompressedVector> attribute_vector() const final;
+  const std::unique_ptr<const BaseCompressedVector>& attribute_vector() const final;
 
   ValueID null_value_id() const final;
 
-  const std::shared_ptr<const pmr_vector<uint32_t>>& offset_vector() const;
+  const pmr_vector<uint32_t>& offset_vector() const;
 
-  static inline std::string_view get_string(const pmr_vector<uint32_t>& offset_vector,
-                                            const pmr_vector<char>& dictionary, ValueID value_id) {
+  static std::string_view get_string(const pmr_vector<uint32_t>& offset_vector, const pmr_vector<char>& dictionary,
+                                     ValueID value_id) {
+    DebugAssert(value_id < offset_vector.size(), "Invalid value_id.");
     const auto offset = offset_vector[value_id];
-    auto next_offset = 0;
+    auto next_offset = size_t{0};
 
     if (value_id >= offset_vector.size() - 1) {
       next_offset = dictionary.size();
@@ -113,12 +113,12 @@ class VariableStringDictionarySegment : public BaseDictionarySegment {
   }
 
  protected:
-  const std::shared_ptr<const pmr_vector<char>> _dictionary;
+  const pmr_vector<char> _dictionary;
   // Maps chunk offsets to value ids.
-  const std::shared_ptr<const BaseCompressedVector> _attribute_vector;
+  const std::unique_ptr<const BaseCompressedVector> _attribute_vector;
   std::unique_ptr<BaseVectorDecompressor> _decompressor;
   // Maps value ids to dictionary offsets.
-  const std::shared_ptr<const pmr_vector<uint32_t>> _offset_vector;
+  const pmr_vector<uint32_t> _offset_vector;
 };
 
 extern template class VariableStringDictionarySegment<pmr_string>;

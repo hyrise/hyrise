@@ -37,10 +37,10 @@ TEST_F(StorageFixedStringDictionarySegmentTest, CompressSegmentString) {
 
   // Test sorting
   auto dict = dict_segment->fixed_string_dictionary();
-  EXPECT_EQ(*(dict->begin()), "Alexander");
-  EXPECT_EQ(*(dict->begin() + 1), "Bill");
-  EXPECT_EQ(*(dict->begin() + 2), "Hasso");
-  EXPECT_EQ(*(dict->begin() + 3), "Steve");
+  EXPECT_EQ(*(dict.begin()), "Alexander");
+  EXPECT_EQ(*(dict.begin() + 1), "Bill");
+  EXPECT_EQ(*(dict.begin() + 2), "Hasso");
+  EXPECT_EQ(*(dict.begin() + 3), "Steve");
 }
 
 TEST_F(StorageFixedStringDictionarySegmentTest, Decode) {
@@ -72,9 +72,9 @@ TEST_F(StorageFixedStringDictionarySegmentTest, LongStrings) {
 
   // Test sorting
   auto dict = dict_segment->fixed_string_dictionary();
-  EXPECT_EQ(*(dict->begin()), "QuiteShort");
-  EXPECT_EQ(*(dict->begin() + 1), "Short");
-  EXPECT_EQ(*(dict->begin() + 2), "ThisIsAVeryLongStringThisIsAVeryLongStringThisIsAVeryLongString");
+  EXPECT_EQ(*(dict.begin()), "QuiteShort");
+  EXPECT_EQ(*(dict.begin() + 1), "Short");
+  EXPECT_EQ(*(dict.begin() + 2), "ThisIsAVeryLongStringThisIsAVeryLongStringThisIsAVeryLongString");
 }
 
 TEST_F(StorageFixedStringDictionarySegmentTest, LowerUpperBound) {

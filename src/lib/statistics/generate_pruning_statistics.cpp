@@ -5,6 +5,9 @@
 #include <type_traits>
 #include <unordered_set>
 
+#include <boost/sort/sort.hpp>
+#include <boost/unordered/unordered_flat_set.hpp>
+
 #include "resolve_type.hpp"
 #include "statistics/attribute_statistics.hpp"
 #include "statistics/statistics_objects/distinct_value_count.hpp"
@@ -60,20 +63,20 @@ void generate_chunk_pruning_statistics(const std::shared_ptr<Chunk>& chunk) {
 
       if constexpr (std::is_same_v<SegmentType, DictionarySegment<ColumnDataType>>) {
         // we can use the fact that dictionary segments have an accessor for the dictionary
-        const auto& dictionary = *typed_segment.dictionary();
+        const auto& dictionary = typed_segment.dictionary();
         create_pruning_statistics_for_segment(*segment_statistics, dictionary);
       } else {
         // if we have a generic segment we create the dictionary ourselves
         auto iterable = create_iterable_from_segment<ColumnDataType>(typed_segment);
-        std::unordered_set<ColumnDataType> values;
+        auto values = boost::unordered_flat_set<ColumnDataType>{};
         iterable.for_each([&](const auto& value) {
           // we are only interested in non-null values
           if (!value.is_null()) {
             values.insert(value.value());
           }
         });
-        pmr_vector<ColumnDataType> dictionary{values.cbegin(), values.cend()};
-        std::sort(dictionary.begin(), dictionary.end());
+        auto dictionary = pmr_vector<ColumnDataType>(values.cbegin(), values.cend());
+        boost::sort::pdqsort(dictionary.begin(), dictionary.end());
         create_pruning_statistics_for_segment(*segment_statistics, dictionary);
       }
 

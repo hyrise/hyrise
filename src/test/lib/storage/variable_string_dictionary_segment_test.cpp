@@ -130,7 +130,7 @@ TEST_F(StorageVariableStringDictionarySegmentTest, TestOffsetVector) {
                                                     SegmentEncodingSpec{EncodingType::VariableStringDictionary});
   const auto dict_segment = std::dynamic_pointer_cast<VariableStringDictionarySegment<pmr_string>>(segment);
   const auto offset_vector = dict_segment->offset_vector();
-  EXPECT_EQ(offset_vector->size(), 3);
+  EXPECT_EQ(offset_vector.size(), 3);
 }
 
 TEST_F(StorageVariableStringDictionarySegmentTest, TestLookup) {
@@ -138,18 +138,15 @@ TEST_F(StorageVariableStringDictionarySegmentTest, TestLookup) {
   // Create string data for clob.
   // Contains zero-length string at the end, just to be annoying.
   const auto data = std::array<char, 30>{"Hello\0World\0Alexander\0String\0"};
-  const auto clob = std::make_shared<pmr_vector<char>>();
   const auto clob_size = data.size();
-  clob->resize(clob_size);
-  std::memcpy(clob->data(), data.data(), clob_size);
-  const pmr_vector<uint32_t> offsets{0, 6, 12, 22, 29};
-  const pmr_vector<uint32_t> attribute_vector{0, 0, 1, 3, 2, 4, 2};
+  auto clob = pmr_vector<char>(clob_size);
+  std::memcpy(clob.data(), data.data(), clob_size);
+  auto offsets = pmr_vector<uint32_t>{0, 6, 12, 22, 29};
+  const auto attribute_vector = pmr_vector<uint32_t>{0, 0, 1, 3, 2, 4, 2};
 
   const auto segment = VariableStringDictionarySegment<pmr_string>{
-      clob,
-      std::shared_ptr<const BaseCompressedVector>(
-          compress_vector(attribute_vector, VectorCompressionType::FixedWidthInteger, allocator, {4})),
-      std::make_shared<pmr_vector<uint32_t>>(offsets)};
+      std::move(clob), compress_vector(attribute_vector, VectorCompressionType::FixedWidthInteger, allocator, {4}),
+      std::move(offsets)};
 
   const auto accessors =
       std::vector<std::function<AllTypeVariant(const VariableStringDictionarySegment<pmr_string>&, const ChunkOffset)>>{
@@ -210,13 +207,13 @@ TEST_F(StorageVariableStringDictionarySegmentTest, TestVectorIterator) {
                                                     SegmentEncodingSpec{EncodingType::VariableStringDictionary});
   const auto dict_segment = std::dynamic_pointer_cast<VariableStringDictionarySegment<pmr_string>>(segment);
   const auto variable_string_vector = dict_segment->variable_string_dictionary();
-  auto it = variable_string_vector->begin();
+  auto it = variable_string_vector.begin();
 
   EXPECT_EQ("", *it++);
   EXPECT_EQ("Bill", *it++);
   EXPECT_EQ("Steve", *it++);
 
-  const auto first = variable_string_vector->begin();
+  const auto first = variable_string_vector.begin();
   const auto second = first + 1;
   auto third = first + 2;
 

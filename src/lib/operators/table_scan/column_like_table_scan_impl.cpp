@@ -15,7 +15,7 @@
 #include "storage/pos_lists/row_id_pos_list.hpp"
 #include "storage/segment_iterables/create_iterable_from_attribute_vector.hpp"
 #include "storage/segment_iterate.hpp"
-// NOLINTBEGIN(misc-include-cleaner): VariableStringDictionary is accessed in _find_matches_in_dictionary.
+// NOLINTBEGIN(misc-include-cleaner): VariableStringDictionary is accessed in `_find_matches_in_dictionary`.
 #include "storage/variable_string_dictionary/variable_string_vector.hpp"
 #include "storage/variable_string_dictionary/variable_string_vector_iterator.hpp"
 // NOLINTEND(misc-include-cleaner)
@@ -85,17 +85,17 @@ void ColumnLikeTableScanImpl::_scan_dictionary_segment(const BaseDictionarySegme
   switch (segment.encoding_type()) {
     case EncodingType::Dictionary: {
       const auto& typed_segment = static_cast<const DictionarySegment<pmr_string>&>(segment);
-      result = _find_matches_in_dictionary(*typed_segment.dictionary());
+      result = _find_matches_in_dictionary(typed_segment.dictionary());
       break;
     }
     case EncodingType::FixedStringDictionary: {
       const auto& typed_segment = static_cast<const FixedStringDictionarySegment<pmr_string>&>(segment);
-      result = _find_matches_in_dictionary(*typed_segment.fixed_string_dictionary());
+      result = _find_matches_in_dictionary(typed_segment.fixed_string_dictionary());
       break;
     }
     case EncodingType::VariableStringDictionary: {
       const auto& typed_segment = static_cast<const VariableStringDictionarySegment<pmr_string>&>(segment);
-      result = _find_matches_in_dictionary(*typed_segment.variable_string_dictionary());
+      result = _find_matches_in_dictionary(typed_segment.variable_string_dictionary());
       break;
     }
     default: {
