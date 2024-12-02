@@ -52,9 +52,10 @@ elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
     endif()
     message(WARNING "On macOS, we recommend a recent clang compiler instead of Apple's clang compiler. Please ${CMAKE_OSX_INSTALL_TEXT}run cmake with `-DCMAKE_C_COMPILER=${BREW_PREFIX}/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=${BREW_PREFIX}/opt/llvm/bin/clang++`.")
 else()
-    compiler_not_supported("You are using an unsupported compiler (${CMAKE_CXX_COMPILER_ID})! Compilation has only been tested with Clang (Linux + OS X) and GCC (Linux).")
+    compiler_not_supported("You are using an unsupported compiler (${CMAKE_CXX_COMPILER_ID}). Compilation has only been tested with Clang (Linux + macOS) and GCC (Linux).")
 endif()
 
+<<<<<<< HEAD
 if("${CMAKE_CXX_COMPILER_ID}" MATCHES ".*Clang")
     if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 18.0 AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 20.0)
         # Clang 18/19 warn when switch statements do not have a default case even when the entire enum is covered (see
@@ -66,6 +67,19 @@ if("${CMAKE_CXX_COMPILER_ID}" MATCHES ".*Clang")
         add_compile_options(-Wno-switch-default)
     endif()
 endif()
+=======
+if ("${CMAKE_CXX_COMPILER_ID}" MATCHES ".*Clang")
+     if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 18.0 AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 20.0)
+         # Clang 18/19 warn when switch statements do not have a default case even when the entire enum is covered (see
+         # https://github.com/llvm/llvm-project/blob/7d9634e527fe52bf20a9036be6e5771f8fc4de17/clang/test/Sema/switch-default.cpp#L19).
+         # As clang also (correctly) complains when not all enum cases are handled, we disable the 'switch-default'
+         # warning. We disable it only for Clang 18/19 at the moment to ensure that this change is re-evaluated with the
+         # next major clang version as we would like to have as few exceptions as possible from using -Weverything.
+         message(WARNING "Disable warning 'switch-default' for Clang version ${CMAKE_CXX_COMPILER_VERSION}.")
+         add_compile_options(-Wno-switch-default)
+     endif()
+ endif()
+>>>>>>> master
 
 # Enable address and undefined behavior sanitization if requested
 option(ENABLE_ADDR_UB_LEAK_SANITIZATION "Set to ON to build Hyrise with ASAN and UBSAN enabled. Default: OFF" OFF)
@@ -193,7 +207,11 @@ find_package(Tbb REQUIRED)
 find_package(Readline REQUIRED)
 find_package(Curses REQUIRED)
 find_package(SQLite3 REQUIRED)
-find_package(Boost REQUIRED COMPONENTS container date_time)
+
+# Old versions of CMake used the FindBoost module, which is deprecated because find_package can now find
+# the upstream package directly. Therefore, disable it explicitly.
+set(BOOST_MIN_VERSION "1.81.0")
+find_package(Boost ${BOOST_MIN_VERSION} REQUIRED COMPONENTS container date_time NO_MODULE)
 
 add_definitions(-DBOOST_THREAD_VERSION=5)
 set(BOOST_LIBS Boost::container Boost::date_time)

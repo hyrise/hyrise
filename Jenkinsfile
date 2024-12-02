@@ -398,7 +398,7 @@ try {
               }
             }
           }, nixSetup: {
-	    stage('nixSetup') {
+            stage('nixSetup') {
               if (env.BRANCH_NAME == 'master' || full_ci) {
                 sh "curl -L https://nixos.org/nix/install > nix-install.sh && chmod +x nix-install.sh && ./nix-install.sh --daemon --yes"
                 sh "/nix/var/nix/profiles/default/bin/nix-shell resources/nix --pure --run \"mkdir nix-debug && cd nix-debug && cmake ${debug} ${clang} ${unity} ${ninja} .. && ninja all -j \$(( \$(nproc) / 7)) && ./hyriseTest\""
@@ -407,7 +407,7 @@ try {
               } else {
                 Utils.markStageSkippedForConditional("nixSetup")
               }
-	    }
+            }
           }
         } finally {
           sh "ls -A1 | xargs rm -rf"
@@ -441,20 +441,20 @@ try {
             // Build hyriseTest (Debug) with macOS's default compiler (Apple clang) and run it. Passing clang
             // explicitly seems to make the compiler find C system headers (required for SSB and JCC-H data generators)
             // that are not found otherwise.
-            sh "mkdir clang-apple-debug && cd clang-apple-debug && PATH=/usr/local/bin/:$PATH cmake ${debug} ${unity} ${ninja} -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ .."
-            sh "cd clang-apple-debug && PATH=/usr/local/bin/:$PATH ninja"
+            sh "mkdir clang-apple-debug && cd clang-apple-debug && cmake ${debug} ${unity} ${ninja} -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ .."
+            sh "cd clang-apple-debug && ninja"
             sh "./clang-apple-debug/hyriseTest"
 
             // Build Hyrise (Release) with a recent clang compiler version (as recommended for Hyrise on macOS) and run
             // various tests. As the release build already takes quite a while on the Intel machine, we disable LTO and
             // only build release with LTO on the ARM machine.
-            sh "mkdir clang-release && cd clang-release && PATH=/usr/local/bin/:$PATH /usr/local/bin/cmake ${release} ${ninja} ${no_lto} -DCMAKE_C_COMPILER=/usr/local/opt/llvm@17/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm@17/bin/clang++ .."
-            sh "cd clang-release && PATH=/usr/local/bin/:$PATH ninja"
+            sh "mkdir clang-release && cd clang-release && cmake ${release} ${ninja} ${no_lto} -DCMAKE_C_COMPILER=/usr/local/opt/llvm@19/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm@19/bin/clang++ .."
+            sh "cd clang-release && ninja"
             sh "./clang-release/hyriseTest"
             sh "./clang-release/hyriseSystemTest --gtest_filter=-${tests_excluded_in_mac_builds}"
-            sh "PATH=/usr/local/bin/:$PATH ./scripts/test/hyriseConsole_test.py clang-release"
-            sh "PATH=/usr/local/bin/:$PATH ./scripts/test/hyriseServer_test.py clang-release"
-            sh "PATH=/usr/local/bin/:$PATH ./scripts/test/hyriseBenchmarkFileBased_test.py clang-release"
+            sh "./scripts/test/hyriseConsole_test.py clang-release"
+            sh "./scripts/test/hyriseServer_test.py clang-release"
+            sh "./scripts/test/hyriseBenchmarkFileBased_test.py clang-release"
           } finally {
             sh "ls -A1 | xargs rm -rf"
           }
@@ -484,7 +484,7 @@ try {
             // Build Hyrise (Debug) with a recent clang compiler version (as recommended for Hyrise on macOS) and run
             // various tests.
             // NOTE: These paths differ from x64 - brew on ARM uses /opt (https://docs.brew.sh/Installation)
-            sh "mkdir clang-debug && cd clang-debug && cmake ${debug} ${unity} ${ninja} -DCMAKE_C_COMPILER=/opt/homebrew/opt/llvm@17/bin/clang -DCMAKE_CXX_COMPILER=/opt/homebrew/opt/llvm@17/bin/clang++ .."
+            sh "mkdir clang-debug && cd clang-debug && cmake ${debug} ${unity} ${ninja} -DCMAKE_C_COMPILER=/opt/homebrew/opt/llvm@19/bin/clang -DCMAKE_CXX_COMPILER=/opt/homebrew/opt/llvm@19/bin/clang++ .."
             sh "cd clang-debug && ninja"
 
             // Check whether arm64 binaries are built to ensure that we are not accidentally running rosetta that
@@ -493,9 +493,9 @@ try {
 
             sh "./clang-debug/hyriseTest"
             sh "./clang-debug/hyriseSystemTest --gtest_filter=-${tests_excluded_in_mac_builds}"
-            sh "PATH=/usr/local/bin/:$PATH ./scripts/test/hyriseConsole_test.py clang-debug"
-            sh "PATH=/usr/local/bin/:$PATH ./scripts/test/hyriseServer_test.py clang-debug"
-            sh "PATH=/usr/local/bin/:$PATH ./scripts/test/hyriseBenchmarkFileBased_test.py clang-debug"
+            sh "./scripts/test/hyriseConsole_test.py clang-debug"
+            sh "./scripts/test/hyriseServer_test.py clang-debug"
+            sh "./scripts/test/hyriseBenchmarkFileBased_test.py clang-debug"
           } finally {
             sh "ls -A1 | xargs rm -rf"
           }
