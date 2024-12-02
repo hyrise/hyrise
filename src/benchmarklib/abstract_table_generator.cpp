@@ -456,31 +456,33 @@ bool AbstractTableGenerator::_all_chunks_sorted_by(const std::shared_ptr<Table>&
 std::unordered_map<std::string, BenchmarkTableInfo> AbstractTableGenerator::_load_binary_tables_from_path(
     const std::string& cache_directory) {
   auto table_info_by_name = std::unordered_map<std::string, BenchmarkTableInfo>{};
-  const auto table_files = list_directory(cache_directory);
-  auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
-  jobs.reserve(table_files.size());
 
-  for (const auto& table_file : table_files) {
+  for (const auto& table_file : list_directory(cache_directory)) {
     const auto table_name = table_file.stem();
-    table_info_by_name[table_name] = BenchmarkTableInfo{};
+    auto table_info = BenchmarkTableInfo{};
+    table_info.loaded_from_binary = true;
+    table_info.binary_file_path = table_file;
+    table_info_by_name[table_name] = std::move(table_info);
+  }
 
-    jobs.emplace_back(std::make_shared<JobTask>([table_name, table_file, &table_info_by_name]() {
+  auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+  jobs.reserve(table_info_by_name.size());
+
+  for (auto& table_name_info_pair : table_info_by_name) {
+    jobs.emplace_back(std::make_shared<JobTask>([&]() {
+      auto& table_info = table_name_info_pair.second;
       auto message = std::stringstream{};
-      message << "-  Loaded table '" << table_name.string() << "' from cached binary " << table_file.relative_path();
+      message << "-  Loaded table '" << table_name_info_pair.first << "' from cached binary "
+              << *table_info.binary_file_path;
 
       auto timer = Timer{};
-      auto& table_info = table_info_by_name[table_name];
-      table_info.table = BinaryParser::parse(table_file);
-      table_info.loaded_from_binary = true;
-      table_info.binary_file_path = table_file;
-
+      table_info.table = BinaryParser::parse(*table_info.binary_file_path);
       message << " (" << timer.lap_formatted() << ")\n";
-      std::cout << message.str();
+      std::cout << message.str() << std::flush;
     }));
   }
 
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
-
   return table_info_by_name;
 }
 

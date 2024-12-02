@@ -116,7 +116,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> FileBasedTableGenerator::gen
       }
 
       message << " (" << table_info.table->row_count() << " rows; " << timer.lap_formatted() << ")\n";
-      std::cout << message.str();
+      std::cout << message.str() << std::flush;
     }));
   }
 
