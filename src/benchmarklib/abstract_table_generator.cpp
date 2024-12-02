@@ -302,7 +302,7 @@ void AbstractTableGenerator::generate_and_store() {
     jobs.reserve(table_info_by_name.size());
     for (const auto& table_info_by_name_pair : table_info_by_name) {
       const auto& table_name = table_info_by_name_pair.first;
-      auto& table_info = table_info_by_name_pair.second;
+      const auto& table_info = table_info_by_name_pair.second;
 
       const auto add_table = [&]() {
         auto per_table_timer = Timer{};
