@@ -6,17 +6,16 @@
 #include <vector>
 
 #include "boost/sort/sort.hpp"
-
 #include "hyrise.hpp"
 #include "resolve_type.hpp"
+#include "scheduler/abstract_task.hpp"
+#include "scheduler/job_task.hpp"
 #include "statistics/attribute_statistics.hpp"
 #include "statistics/statistics_objects/distinct_value_count.hpp"
 #include "statistics/statistics_objects/equal_distinct_count_histogram.hpp"
 #include "statistics/statistics_objects/min_max_filter.hpp"
 #include "statistics/statistics_objects/range_filter.hpp"
 #include "statistics/table_statistics.hpp"
-#include "scheduler/abstract_task.hpp"
-#include "scheduler/job_task.hpp"
 #include "storage/chunk.hpp"
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/table.hpp"
@@ -44,13 +43,16 @@ void create_pruning_statistics_for_segment(AttributeStatistics<T>& segment_stati
 }  // namespace
 
 namespace hyrise {
+bool pruning_statistics_should_be_generated_for_chunk(const std::shared_ptr<Chunk>& chunk) {
+  // We do not generate statistics for chunks as long as they are mutable.
+  // Also, pruning statistics should be stable no matter what encoding or sort order is used.
+  // Hence, when they are present they are up to date, and we can skip the recreation.
+  return chunk && !chunk->is_mutable() && !chunk->pruning_statistics();
+}
 
 void generate_chunk_pruning_statistics(const std::shared_ptr<Chunk>& chunk) {
-  if (chunk->pruning_statistics()) {
-    // Pruning statistics should be stable no matter what encoding or sort order is used. Hence, when they are present
-    // they are up to date and we can skip the recreation.
-    return;
-  }
+  DebugAssert(pruning_statistics_should_be_generated_for_chunk(chunk),
+              "Method should only be called for chunks that need it.");
 
   auto chunk_statistics = ChunkPruningStatistics{chunk->column_count()};
 
@@ -97,7 +99,7 @@ void generate_chunk_pruning_statistics(const std::shared_ptr<Table>& table) {
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk = table->get_chunk(chunk_id);
 
-    if (!chunk || chunk->is_mutable() || chunk->pruning_statistics()) {
+    if (!pruning_statistics_should_be_generated_for_chunk(chunk)) {
       continue;
     }
 
