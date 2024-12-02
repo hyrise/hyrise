@@ -398,8 +398,6 @@ set(
     sql/sql_plan_cache.hpp
     sql/sql_translator.cpp
     sql/sql_translator.hpp
-    statistics/abstract_cardinality_estimator.cpp
-    statistics/abstract_cardinality_estimator.hpp
     statistics/attribute_statistics.cpp
     statistics/attribute_statistics.hpp
     statistics/base_attribute_statistics.cpp
@@ -431,6 +429,8 @@ set(
     statistics/statistics_objects/null_value_ratio_statistics.hpp
     statistics/statistics_objects/range_filter.cpp
     statistics/statistics_objects/range_filter.hpp
+    statistics/statistics_objects/scaled_histogram.cpp
+    statistics/statistics_objects/scaled_histogram.hpp
     statistics/table_statistics.cpp
     statistics/table_statistics.hpp
     storage/abstract_encoded_segment.hpp

@@ -14,14 +14,14 @@ int main() {
 
     const auto start_1 = std::chrono::system_clock::now();
     for (auto i = size_t{0}; i < 100'000; ++i) {
-      unreserved.emplace(std::to_string(i), ChunkOffset{i});
+      unreserved.emplace(std::to_string(i), ChunkOffset{static_cast<ChunkOffset::base_type>(i)});
     }
     const auto end_1 = std::chrono::system_clock::now();
     std::cerr << "UNRES\t" << std::chrono::duration<double, std::micro>(end_1 - start_1).count() << " us.\n";
 
     const auto start_2 = std::chrono::system_clock::now();
     for (auto i = size_t{0}; i < 100'000; ++i) {
-      reserved.emplace(std::to_string(i), ChunkOffset{i});
+      reserved.emplace(std::to_string(i), ChunkOffset{static_cast<ChunkOffset::base_type>(i)});
     }
     const auto end_2 = std::chrono::system_clock::now();
     std::cerr << "RES  \t" << std::chrono::duration<double, std::micro>(end_2 - start_2).count() << " us.\n";

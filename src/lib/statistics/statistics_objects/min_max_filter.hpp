@@ -25,7 +25,7 @@ namespace hyrise {
  * instead of only looking at the distinct values (which is significantly cheaper for dictionary encoding).
  */
 template <typename T>
-class MinMaxFilter : public AbstractStatisticsObject {
+class MinMaxFilter : public AbstractStatisticsObject, public std::enable_shared_from_this<MinMaxFilter<T>> {
  public:
   explicit MinMaxFilter(T init_min, T init_max);
 
@@ -33,11 +33,11 @@ class MinMaxFilter : public AbstractStatisticsObject {
                                    const AllTypeVariant& /*variant_value*/,
                                    const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const;
 
-  std::shared_ptr<AbstractStatisticsObject> sliced(
+  std::shared_ptr<const AbstractStatisticsObject> sliced(
       const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
       const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const override;
 
-  std::shared_ptr<AbstractStatisticsObject> scaled(const Selectivity selectivity) const override;
+  std::shared_ptr<const AbstractStatisticsObject> scaled(const Selectivity selectivity) const override;
 
   bool does_not_contain(const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
                         const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const;
@@ -48,8 +48,7 @@ class MinMaxFilter : public AbstractStatisticsObject {
 
 template <typename T>
 std::ostream& operator<<(std::ostream& stream, const MinMaxFilter<T>& filter) {
-  stream << "{" << filter.min << " " << filter.max << "}";
-  return stream;
+  return stream << "{" << filter.min << ", " << filter.max << "}";
 }
 
 EXPLICITLY_DECLARE_DATA_TYPES(MinMaxFilter);

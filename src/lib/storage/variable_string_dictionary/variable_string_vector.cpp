@@ -18,7 +18,7 @@ VariableStringVectorIterator VariableStringVector::begin() const noexcept {
 }
 
 VariableStringVectorIterator VariableStringVector::end() const noexcept {
-  return VariableStringVectorIterator(_dictionary, _offset_vector, ValueID{size()});
+  return VariableStringVectorIterator(_dictionary, _offset_vector, ValueID{static_cast<ValueID::base_type>(size())});
 }
 
 VariableStringVectorIterator VariableStringVector::cbegin() const noexcept {

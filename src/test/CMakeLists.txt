@@ -175,6 +175,7 @@ set(
     lib/statistics/statistics_objects/generic_histogram_test.cpp
     lib/statistics/statistics_objects/min_max_filter_test.cpp
     lib/statistics/statistics_objects/range_filter_test.cpp
+    lib/statistics/statistics_objects/scaled_histogram_test.cpp
     lib/statistics/statistics_objects/string_histogram_domain_test.cpp
     lib/statistics/table_statistics_test.cpp
     lib/storage/any_segment_iterable_test.cpp
@@ -283,8 +284,6 @@ set(
     # Added plugin targets so that we can test member methods without going through dlsym
     hyriseMvccDeletePlugin
     hyriseUccDiscoveryPlugin
-    # Required for testing plugin benchmark hooks
-    hyriseBenchmarkLib
 )
 
 # This warning does not play well with SCOPED_TRACE
@@ -302,6 +301,7 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 add_executable(hyriseTest ${HYRISE_UNIT_TEST_SOURCES})
 add_dependencies(hyriseTest hyriseSecondTestPlugin hyriseTestPlugin hyriseMvccDeletePlugin hyriseTestNonInstantiablePlugin hyriseUccDiscoveryPlugin)
 target_link_libraries(hyriseTest hyrise ${LIBRARIES})
+target_link_libraries(hyriseTest hyriseBenchmarkLib)  # See special handling below for hyriseSystemTest.
 
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 target_compile_options(hyriseTest PUBLIC -Xclang -fno-pch-timestamp)
@@ -314,8 +314,10 @@ target_precompile_headers(hyriseTest PRIVATE
     [["types.hpp"]]
 )
 
-# Configure hyriseSystemTest
+# Configure hyriseSystemTest. With LLVM18+ and macOS, we need to ensure that the entire hyriseBenchmarkLib (required for
+# testing plugin benchmark hooks) is exported. For some reason, some symbols are missing if we do not use whole archive.
 add_executable(hyriseSystemTest ${SYSTEM_TEST_SOURCES})
 target_link_libraries(hyriseSystemTest PUBLIC hyrise ${LIBRARIES})
+target_link_libraries(hyriseSystemTest PUBLIC "$<LINK_LIBRARY:WHOLE_ARCHIVE,hyriseBenchmarkLib>")
 target_link_libraries_system(hyriseSystemTest pqxx)
 target_compile_options(hyriseSystemTest PRIVATE -DPQXX_HIDE_EXP_OPTIONAL)

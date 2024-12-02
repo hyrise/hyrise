@@ -2,15 +2,18 @@
 
 #include <algorithm>
 #include <memory>
+#include <ostream>
 #include <utility>
 #include <vector>
 
 #include <boost/dynamic_bitset.hpp>
 
-#include "abstract_cardinality_estimator.hpp"
+#include "cardinality_estimation_cache.hpp"
 #include "operators/operator_scan_predicate.hpp"
+#include "statistics/base_attribute_statistics.hpp"
 #include "statistics/statistics_objects/abstract_histogram.hpp"
 #include "statistics/statistics_objects/generic_histogram_builder.hpp"
+#include "types.hpp"
 
 namespace hyrise {
 
@@ -31,16 +34,114 @@ class ValidateNode;
 class WindowNode;
 
 /**
- * Hyrise's default, statistics-based cardinality estimator
+ * Hyrise's statistics-based cardinality estimator. It mostly relies on histograms that are taken from the base tables
+ * and adapted (sliced, scaled) according to join and scan predicates along the query plan. The estimation process
+ * happens recursively.
+ *
+ * To increase estimation performance, we cache already estimated statistics for (sub-)plans that are guaranteed not to
+ * change anymore. This is beneficial if we call the CardinalityEstimator multiple times for the same LQP (e.g., during
+ * join ordering, predicate reordering, etc.).
+ * Even if we cannot cache statistics across multiple estimation invocations, we maintain a cache for a single call.
+ * This helps if we have diamonds in the query plan (e.g., after predicate splitup or with semi-join reductions).
+ * When allowing the CardinalityEstimator to use caching, you have to get a fresh instance (`new_instance()`). Thus, the
+ * filled caches do not interfere with later estimations by, e.g., following optimizer rules.
  */
-class CardinalityEstimator : public AbstractCardinalityEstimator {
+class CardinalityEstimator {
  public:
-  std::shared_ptr<AbstractCardinalityEstimator> new_instance() const override;
+  using StatisticsByLQP = CardinalityEstimationCache::StatisticsByLQP;
 
+  /**
+   * @return A new instance of this estimator with empty caches. Used so that caching guarantees can be enabled on the
+   *         returned estimator.
+   */
+  static std::shared_ptr<CardinalityEstimator> new_instance();
+
+  /**
+   * @return The estimated output row count of @param lqp.
+   */
   Cardinality estimate_cardinality(const std::shared_ptr<const AbstractLQPNode>& lqp,
-                                   const bool cacheable = true) const override;
+                                   const bool cacheable = true) const;
+
   std::shared_ptr<TableStatistics> estimate_statistics(const std::shared_ptr<const AbstractLQPNode>& lqp,
                                                        const bool cacheable = true) const;
+
+  std::shared_ptr<TableStatistics> estimate_statistics(const std::shared_ptr<const AbstractLQPNode>& lqp,
+                                                       const bool cacheable, StatisticsByLQP& statistics_cache) const;
+
+  /**
+   * We use dummy objects for pruned statistics and cases where we do not estimate statistics (e.g., for aggregations).
+   * Doing so has two advantages. First, it is semantically clear and easy to test. Second, we can easily prevent
+   * creations of empty statistics objects when scaling dummy statistics.
+   */
+  class DummyStatistics : public BaseAttributeStatistics, public std::enable_shared_from_this<DummyStatistics> {
+   public:
+    explicit DummyStatistics(const DataType init_data_type);
+
+    void set_statistics_object(const std::shared_ptr<const AbstractStatisticsObject>& /*statistics_object*/) override;
+
+    std::shared_ptr<const BaseAttributeStatistics> scaled(const Selectivity /*selectivity*/) const override;
+
+    std::shared_ptr<const BaseAttributeStatistics> sliced(
+        const PredicateCondition /*predicate_condition*/, const AllTypeVariant& /*variant_value*/,
+        const std::optional<AllTypeVariant>& /*variant_value2*/ = std::nullopt) const override;
+  };
+
+  /**
+   * Statistics caching
+   * @{
+   *
+   * For increased cardinality estimation performance:
+   * Promises to this CardinalityEstimator that it will only be used to estimate cardinalities of plans that consist
+   * of the vertices and predicates in @param JoinGraph. This enables using the JoinGraphStatisticsCache during
+   * cardinality estimation.
+   */
+  void guarantee_join_graph(const JoinGraph& join_graph) const;
+
+  /**
+   * For increased cardinality estimation performance:
+   * Promises to this CardinalityEstimator that it will only be used to estimate bottom-up constructed plans. Thus, the
+   * cardinalities/statistics of nodes, once constructed, never change. This enables the usage of an
+   * <lqp-ptr> -> <statistics> cache.
+   *
+   * Image the following simple example of predicate reordering. Assume we have a table R with 100'000 tuples, a
+   * PredicateNode A with a selectivity of 0.3, and a PredicateNode B with a selectivity of 0.5. There are also more
+   * nodes on top of the subplan. The inital structure (ordered by appearence in the SQL query) looks like that:
+   *
+   *             ...
+   *              |
+   *              | 15'000 (30'000 * 0.5)
+   *              |
+   *      [ PredicateNode B ]
+   *              |
+   *              | 30'000 (100'000 * 0.3)
+   *              |
+   *      [ PredicateNode A ]
+   *              |
+   *              | 100'000
+   *              |
+   *     [ StoredTableNode R ]
+   *
+   * Assume we performed predicate reordering top-down with caching enabled and now arrived at the predicate chain
+   * shown in the example. As we already estimated nodes further up in the LQP, the statistics/cardinalities of the
+   * PredicateNodes have been cached due to recursive input estimations. Cached statistics will stay unchanged whenever
+   * we try to re-estimate them.
+   * For predicate reordering, we place each PredicateNode directly above the StoredTableNode R, estimate the
+   * cardinality, and order the nodes such that the node with the lowest cost/cardinality is executed first. Due to
+   * caching, PredicateNode B yields a smaller cardinality than PredicateNode A even though it has a worse selectivity,
+   * and we would erroneously move it below PredicateNode A.
+   *
+   * Thus, we go bottom-up to allow caching in the actual rule. When estimating the PredicateNodes, no statistics have
+   * been cached yet for them. We correctly estimate the cardinalities based on the selectivities and we preserve the
+   * predicate order before continuing to the nodes further up. Note that during predicate reordering, we do not cache
+   * the statistics of the PredicateNodes while deciding on their placement, but only when we estimate nodes above,
+   * where already visited subplans will not change anymore.
+   *
+   * tl;dr: When you need multiple estimations for the same LQP, you can only safely go top-down AND use caching when
+   *        the cardinalities of nodes below do not change. To keep optimization costs low, it is best practice to
+   *        recursively go bottom-up if you change the query plan in a way that influences intermediate cardinalities.
+   */
+  void guarantee_bottom_up_construction() const;
+  /** @} */
 
   /**
    * Per-node-type estimation functions
@@ -63,7 +164,7 @@ class CardinalityEstimator : public AbstractCardinalityEstimator {
 
   std::shared_ptr<TableStatistics> estimate_predicate_node(
       const PredicateNode& predicate_node, const std::shared_ptr<TableStatistics>& input_table_statistics,
-      const bool cacheable) const;
+      const bool cacheable, StatisticsByLQP& statistics_cache) const;
 
   static std::shared_ptr<TableStatistics> estimate_join_node(
       const JoinNode& join_node, const std::shared_ptr<TableStatistics>& left_input_table_statistics,
@@ -97,20 +198,18 @@ class CardinalityEstimator : public AbstractCardinalityEstimator {
   static std::shared_ptr<GenericHistogram<T>> estimate_column_vs_column_equi_scan_with_histograms(
       const AbstractHistogram<T>& left_histogram, const AbstractHistogram<T>& right_histogram) {
     /**
-     * Column-to-column scan estimation is notoriously hard, selectivities from 0 to 1 are possible for the same histogram
-     * pairs.
-     * Thus, we do the most conservative estimation and compute the upper bound of value- and distinct counts for each
-     * bin pair.
+     * Column-to-column scan estimation is notoriously hard; selectivities from 0 to 1 are possible for the same
+     * histogram pairs. Thus, we do the most conservative estimation and compute the upper bound of value- and distinct
+     * counts for each bin pair.
      */
-
     auto left_idx = BinID{0};
     auto right_idx = BinID{0};
     auto left_bin_count = left_histogram.bin_count();
     auto right_bin_count = right_histogram.bin_count();
 
-    GenericHistogramBuilder<T> builder;
+    auto builder = GenericHistogramBuilder<T>{};
 
-    for (; left_idx < left_bin_count && right_idx < right_bin_count;) {
+    while (left_idx < left_bin_count && right_idx < right_bin_count) {
       const auto& left_min = left_histogram.bin_minimum(left_idx);
       const auto& right_min = right_histogram.bin_minimum(right_idx);
 
@@ -125,7 +224,7 @@ class CardinalityEstimator : public AbstractCardinalityEstimator {
       }
 
       DebugAssert(left_histogram.bin_maximum(left_idx) == right_histogram.bin_maximum(right_idx),
-                  "Histogram bin boundaries do not match");
+                  "Histogram bin boundaries do not match.");
 
       const auto height = std::min(left_histogram.bin_height(left_idx), right_histogram.bin_height(right_idx));
       const auto distinct_count =
@@ -185,10 +284,10 @@ class CardinalityEstimator : public AbstractCardinalityEstimator {
     auto left_bin_count = unified_left_histogram->bin_count();
     auto right_bin_count = unified_right_histogram->bin_count();
 
-    GenericHistogramBuilder<T> builder;
+    auto builder = GenericHistogramBuilder<T>{};
 
-    // Iterate over both unified histograms and find overlapping bins
-    for (; left_idx < left_bin_count && right_idx < right_bin_count;) {
+    // Iterate over both unified histograms and find overlapping bins.
+    while (left_idx < left_bin_count && right_idx < right_bin_count) {
       const auto& left_min = unified_left_histogram->bin_minimum(left_idx);
       const auto& right_min = unified_right_histogram->bin_minimum(right_idx);
 
@@ -203,10 +302,10 @@ class CardinalityEstimator : public AbstractCardinalityEstimator {
       }
 
       DebugAssert(unified_left_histogram->bin_maximum(left_idx) == unified_right_histogram->bin_maximum(right_idx),
-                  "Histogram bin boundaries do not match");
+                  "Histogram bin boundaries do not match.");
 
-      // Overlapping bins found, estimate the join for these bins' range
-      const auto [height, distinct_count] = estimate_inner_equi_join_of_bins(  // NOLINT
+      // Overlapping bins found, estimate the join for these bins' range.
+      const auto [height, distinct_count] = estimate_inner_equi_join_of_bins(
           unified_left_histogram->bin_height(left_idx), unified_left_histogram->bin_distinct_count(left_idx),
           unified_right_histogram->bin_height(right_idx), unified_right_histogram->bin_distinct_count(right_idx));
 
@@ -229,7 +328,6 @@ class CardinalityEstimator : public AbstractCardinalityEstimator {
   static std::pair<HistogramCountType, HistogramCountType> estimate_inner_equi_join_of_bins(
       const float left_height, const float left_distinct_count, const float right_height,
       const float right_distinct_count);
-
   /** @} */
 
   /**
@@ -240,5 +338,10 @@ class CardinalityEstimator : public AbstractCardinalityEstimator {
       const std::shared_ptr<TableStatistics>& table_statistics, const std::vector<ColumnID>& pruned_column_ids);
 
   /** @} */
+
+  mutable CardinalityEstimationCache cardinality_estimation_cache;
 };
+
+std::ostream& operator<<(std::ostream& stream, const CardinalityEstimator::DummyStatistics& /*dummy_statistics*/);
+
 }  // namespace hyrise

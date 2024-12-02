@@ -164,7 +164,8 @@ class Chunk : private Noncopyable {
    * Atomically increases the counter of deleted/invalidated rows within this chunk. The function is marked as const,
    * as otherwise it could not be called by the Delete operator.
    */
-  void increase_invalid_row_count(ChunkOffset count) const;
+  void increase_invalid_row_count(const ChunkOffset count,
+                                  const std::memory_order memory_order = std::memory_order_seq_cst) const;
 
   /**
    * Chunks with few visible entries can be cleaned up periodically by the MvccDeletePlugin in a two-step process.

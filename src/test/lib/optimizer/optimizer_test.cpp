@@ -11,6 +11,9 @@
 #include "logical_query_plan/sort_node.hpp"
 #include "optimizer/optimizer.hpp"
 #include "optimizer/strategy/abstract_rule.hpp"
+#include "statistics/cardinality_estimation_cache.hpp"
+#include "statistics/cardinality_estimator.hpp"
+#include "statistics/join_graph_statistics_cache.hpp"
 
 namespace hyrise {
 
@@ -270,10 +273,9 @@ TEST_F(OptimizerTest, OptimizesSubqueriesExactlyOnce) {
    * 2. Optimize the LQP with a telemetric Rule
    */
 
-  // A "rule" that counts how often it was `apply_to()`ed. We use this
-  // to check whether SubqueryExpressions pointing to the same LQP before optimization still point to the same (though
-  // deep_copy()ed) LQP afterwards
-  size_t counter{0};
+  // A "rule" that counts how often it was `apply_to()`ed. We use this to check whether SubqueryExpressions pointing to
+  // the same LQP before optimization still point to the same (though `deep_copy()`ed) LQP afterwards.
+  auto counter = size_t{0};
 
   class MockRule : public AbstractRule {
    public:
@@ -293,20 +295,20 @@ TEST_F(OptimizerTest, OptimizesSubqueriesExactlyOnce) {
 
   auto rule = std::make_unique<MockRule>(counter);
 
-  Optimizer optimizer{};
+  auto optimizer = Optimizer{};
   optimizer.add_rule(std::move(rule));
 
   const auto optimized_lqp = optimizer.optimize(std::move(lqp));
   lqp = nullptr;
 
   /**
-   * 3. Check that the rule was invoked 3 times. Once for the main LQP, once for subquery_a and once for subquery_b
+   * 3. Check that the rule was invoked 3 times. Once for the main LQP, once for subquery_a and once for subquery_b.
    */
-  EXPECT_EQ(counter, 3u);
+  EXPECT_EQ(counter, 3);
 
   /**
    * 4. Check that now - after optimizing - both SubqueryExpressions using subquery_lqp_a point to the same LQP object
-   * again
+   *    again.
    */
   {
     auto predicate_node_a = std::dynamic_pointer_cast<PredicateNode>(optimized_lqp);
@@ -327,6 +329,58 @@ TEST_F(OptimizerTest, OptimizesSubqueriesExactlyOnce) {
 
     EXPECT_EQ(subquery_a_a->lqp, subquery_a_b->lqp);
     EXPECT_LQP_EQ(subquery_b_a->lqp, subquery_lqp_b);
+  }
+}
+
+TEST_F(OptimizerTest, PollutedCardinalityEstimationCache) {
+  if constexpr (!HYRISE_DEBUG) {
+    GTEST_SKIP();
+  }
+
+  // If the caches of the CardinalityEstimator are filled after applying a rule, later estimations might be incorrect.
+  const auto cardinality_estimator = std::make_shared<CardinalityEstimator>();
+  auto optimizer = Optimizer{std::make_shared<CostEstimatorLogical>(cardinality_estimator)};
+
+  class MockRule : public AbstractRule {
+   public:
+    std::string name() const override {
+      return "MockRule";
+    }
+
+   protected:
+    void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override {}
+  };
+
+  optimizer.add_rule(std::make_unique<MockRule>());
+
+  // All caches are empty, nothing happens.
+  {
+    auto lqp = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}});
+    optimizer.optimize(std::move(lqp));
+  }
+
+  // Unempty `join_graph_statistics_cache`.
+  auto& estimation_cache = cardinality_estimator->cardinality_estimation_cache;
+  auto vertex_indices = JoinGraphStatisticsCache::VertexIndexMap{};
+  auto predicate_indices = JoinGraphStatisticsCache::PredicateIndexMap{};
+  estimation_cache.join_graph_statistics_cache.emplace(std::move(vertex_indices), std::move(predicate_indices));
+  {
+    auto lqp = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}});
+    EXPECT_THROW(optimizer.optimize(std::move(lqp)), std::logic_error);
+  }
+
+  // All caches are empty again, nothing happens.
+  estimation_cache.join_graph_statistics_cache.reset();
+  {
+    auto lqp = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}});
+    optimizer.optimize(std::move(lqp));
+  }
+
+  // Unempty `statistics_by_lqp`.
+  estimation_cache.statistics_by_lqp.emplace();
+  {
+    auto lqp = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}});
+    EXPECT_THROW(optimizer.optimize(std::move(lqp)), std::logic_error);
   }
 }
 

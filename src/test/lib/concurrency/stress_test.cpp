@@ -41,8 +41,8 @@ class StressTest : public BaseTest {
 };
 
 TEST_F(StressTest, TestTransactionConflicts) {
-  // Update a table with two entries and a chunk size of 2. This will lead to a high number of transaction conflicts
-  // and many chunks being created
+  // Update a table with two entries and a chunk size of two. This will lead to a high number of transaction conflicts
+  // and many chunks being created.
   const auto table_a = load_table("resources/test_data/tbl/int_float.tbl", ChunkOffset{2});
   Hyrise::get().storage_manager.add_table("table_a", table_a);
   auto initial_sum = int64_t{0};
@@ -57,7 +57,7 @@ TEST_F(StressTest, TestTransactionConflicts) {
   auto conflicted_increments = std::atomic_uint32_t{0};
   const auto iterations_per_thread = uint32_t{20};
 
-  // Define the work package
+  // Define the work package.
   const auto run = [&]() {
     auto my_successful_increments = uint32_t{0};
     auto my_conflicted_increments = uint32_t{0};
@@ -96,7 +96,7 @@ TEST_F(StressTest, TestTransactionConflicts) {
     final_sum = *verification_table->get_value<int64_t>(ColumnID{0}, 0);
   }
 
-  // Really pessimistic, but at least 2 statements should have made it
+  // Really pessimistic, but at least 2 statements should have made it.
   EXPECT_GT(successful_increments, 2);
 
   EXPECT_EQ(successful_increments + conflicted_increments, num_threads * iterations_per_thread);
@@ -105,9 +105,9 @@ TEST_F(StressTest, TestTransactionConflicts) {
 
 TEST_F(StressTest, TestTransactionInsertsSmallChunks) {
   // An update-heavy load on a table with a ridiculously low target chunk size, creating many new chunks. This is
-  // different from TestTransactionConflicts, in that each thread has its own logical row and no transaction
-  // conflicts occur. In the other test, a failed "mark for deletion" (i.e., swap of the row's tid) would lead to
-  // no row being appended.
+  // different from TestTransactionConflicts, in that each thread has its own logical row and no transaction conflicts
+  // occur. In the other test, a failed "mark for deletion" (i.e., swap of the row's tid) would lead to no row begin
+  // appended.
   auto column_definitions = TableColumnDefinitions{};
   column_definitions.emplace_back("a", DataType::Int, false);
   column_definitions.emplace_back("b", DataType::Int, false);
@@ -116,7 +116,7 @@ TEST_F(StressTest, TestTransactionInsertsSmallChunks) {
 
   const auto iterations_per_thread = uint32_t{20};
 
-  // Define the work package - the job id is used so that each thread has its own logical row to work on
+  // Define the work package - the job id is used so that each thread has its own logical row to work on.
   auto job_id = std::atomic_uint32_t{0};
   const auto run = [&]() {
     const auto my_job_id = job_id++;
@@ -152,8 +152,8 @@ TEST_F(StressTest, TestTransactionInsertsSmallChunks) {
 }
 
 TEST_F(StressTest, TestTransactionInsertsPackedNullValues) {
-  // As ValueSegments store their null flags in a vector<bool>, which is not safe to be modified concurrently,
-  // conflicts may (and have) occurred when that vector was written without any type of protection.
+  // As ValueSegments store their null flags in a vector<bool>, which is not safe to be modified concurrently, conflicts
+  // may (and have) occurred when that vector was written without any type of protection.
 
   auto column_definitions = TableColumnDefinitions{};
   column_definitions.emplace_back("a", DataType::Int, false);
@@ -419,10 +419,9 @@ TEST_F(StressTest, NodeQueueSchedulerSemaphoreIncrementsDependentTasks) {
 // NUMA-bound benchmarks on a server. To catch such issues, this test executes a comparatively complex TPC-H query for
 // different fake NUMA topologies.
 TEST_F(StressTest, NodeQueueSchedulerMultiNumaNodeTPCHQ13) {
-  const auto benchmark_config = BenchmarkConfig::get_default_config();
+  const auto benchmark_config = std::make_shared<BenchmarkConfig>();
 
-  TPCHTableGenerator(0.1f, ClusteringConfiguration::None, std::make_shared<BenchmarkConfig>(benchmark_config))
-      .generate_and_store();
+  TPCHTableGenerator(0.1f, ClusteringConfiguration::None, benchmark_config).generate_and_store();
 
   auto topologies = FAKE_SINGLE_NODE_NUMA_TOPOLOGIES;
   topologies.insert(topologies.end(), FAKE_SINGLE_NODE_NUMA_TOPOLOGIES.begin(), FAKE_SINGLE_NODE_NUMA_TOPOLOGIES.end());
@@ -585,6 +584,114 @@ TEST_F(StressTest, OperatorRegistration) {
 
     // One additional deregistration (without prior registration) is not allowed.
     EXPECT_THROW(table_wrapper->deregister_consumer(), std::logic_error);
+  }
+}
+
+/**
+ * Test to verify that rolling back Insert operations does not lead to multiple (outdated) rows being visible. This
+ * issue has occurred when using link-time optimization or when inlining MVCC functions (see #2649).
+ * We execute and immediately roll back insert operations in multiple threads. In parallel, threads are checking that no
+ * new rows are visible.
+ */
+TEST_F(StressTest, VisibilityOfInsertsBeingRolledBack) {
+  // StressTestMultipleRuns runs 10x. Limit max runtime for *SAN builds.
+  constexpr auto RUNTIME = std::chrono::seconds(5);
+  constexpr auto MAX_VALUE_AND_ROW_COUNT = uint32_t{17};
+  constexpr auto MAX_LOOP_COUNT = uint32_t{10'000};  // Experimentally determined, see #2651.
+
+  const auto table_name = std::string{"table_a"};
+
+  // The issues triggered in this test usually arise early (later, the scan is getting slower and slower on increasing
+  // table sizes). For that, we execute multiple short runs.
+  for (auto test_run = size_t{0}; test_run < 10; ++test_run) {
+    if (Hyrise::get().storage_manager.has_table(table_name)) {
+      Hyrise::get().storage_manager.drop_table(table_name);
+    }
+
+    Hyrise::get().storage_manager.add_table(
+        table_name, std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Int, false}}, TableType::Data,
+                                            Chunk::DEFAULT_SIZE, UseMvcc::Yes));
+
+    const auto values_to_insert =
+        std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Int, false}}, TableType::Data);
+    values_to_insert->append({int32_t{123}});
+    values_to_insert->append({int32_t{456}});
+
+    for (auto init_insert_id = uint32_t{1}; init_insert_id <= MAX_VALUE_AND_ROW_COUNT; ++init_insert_id) {
+      SQLPipelineBuilder{"INSERT INTO " + table_name + " VALUES( " + std::to_string(init_insert_id) + ");"}
+          .create_pipeline()
+          .get_result_table();
+    }
+
+    const auto insert_thread_count = std::max(uint32_t{10}, std::thread::hardware_concurrency() / 2);
+    const auto watch_thread_count = std::max(uint32_t{10}, std::thread::hardware_concurrency() / 2);
+
+    auto insert_threads = std::vector<std::thread>{};
+    insert_threads.reserve(insert_thread_count);
+
+    const auto start = std::chrono::system_clock::now();
+    auto start_flag = std::atomic_flag{};
+    auto stop_flag = std::atomic_flag{};
+
+    for (auto thread_id = uint32_t{0}; thread_id < insert_thread_count; ++thread_id) {
+      insert_threads.emplace_back([&]() {
+        start_flag.wait(false);
+        for (auto loop_id = uint32_t{0}; loop_id < MAX_LOOP_COUNT && std::chrono::system_clock::now() < start + RUNTIME;
+             ++loop_id) {
+          const auto table_wrapper = std::make_shared<TableWrapper>(values_to_insert);
+          const auto insert = std::make_shared<Insert>(table_name, table_wrapper);
+
+          const auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
+          insert->set_transaction_context(transaction_context);
+          table_wrapper->execute();
+          insert->execute();
+          ASSERT_FALSE(insert->execute_failed());
+          transaction_context->rollback(RollbackReason::User);
+        }
+      });
+    }
+
+    auto watch_threads = std::vector<std::thread>{};
+    watch_threads.reserve(watch_thread_count);
+
+    for (auto thread_id = uint32_t{0}; thread_id < watch_thread_count; ++thread_id) {
+      watch_threads.emplace_back([&]() {
+        while (!stop_flag.test()) {
+          {
+            const auto [status, result_table] =
+                SQLPipelineBuilder{"SELECT count(*) from " + table_name + ";"}.create_pipeline().get_result_table();
+            ASSERT_EQ(status, SQLPipelineStatus::Success);
+            const auto visible_row_count = result_table->get_value<int64_t>(ColumnID{0}, 0);
+            ASSERT_TRUE(visible_row_count);
+            ASSERT_EQ(*visible_row_count, MAX_VALUE_AND_ROW_COUNT);
+          }
+
+          {
+            const auto [status, result_table] =
+                SQLPipelineBuilder{"SELECT max(a) from " + table_name + ";"}.create_pipeline().get_result_table();
+            ASSERT_EQ(status, SQLPipelineStatus::Success);
+            const auto max_value = result_table->get_value<int32_t>(ColumnID{0}, 0);
+            ASSERT_TRUE(max_value);
+            ASSERT_EQ(*max_value, MAX_VALUE_AND_ROW_COUNT);
+          }
+        }
+      });
+    }
+
+    // Start inserting threads.
+    start_flag.test_and_set();
+    start_flag.notify_all();
+
+    for (auto& thread : insert_threads) {
+      thread.join();
+    }
+
+    // Notifying watch threads that insert rollbacks are done so we can stop watching.
+    stop_flag.test_and_set();
+
+    for (auto& thread : watch_threads) {
+      thread.join();
+    }
   }
 }
 
