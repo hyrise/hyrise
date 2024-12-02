@@ -470,14 +470,13 @@ std::unordered_map<std::string, BenchmarkTableInfo> AbstractTableGenerator::_loa
 
   for (auto& table_name_info_pair : table_info_by_name) {
     jobs.emplace_back(std::make_shared<JobTask>([&]() {
+      auto timer = Timer{};
       auto& table_info = table_name_info_pair.second;
+      table_info.table = BinaryParser::parse(*table_info.binary_file_path);
+
       auto message = std::stringstream{};
       message << "-  Loaded table '" << table_name_info_pair.first << "' from cached binary "
-              << *table_info.binary_file_path;
-
-      auto timer = Timer{};
-      table_info.table = BinaryParser::parse(*table_info.binary_file_path);
-      message << " (" << timer.lap_formatted() << ")\n";
+              << *table_info.binary_file_path << " (" << timer.lap_formatted() << ")\n";
       std::cout << message.str() << std::flush;
     }));
   }
