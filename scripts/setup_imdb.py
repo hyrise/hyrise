@@ -37,7 +37,7 @@ table_dir = sys.argv[1]
 
 # This file contains the IMDB dataset and is based on the specifications of the
 # original JOB repository: https://github.com/gregrahn/join-order-benchmark
-LOCATION = "https://bit.ly/hyriseimdbdataset"
+LOCATION = "https://my.hidrive.com/api/sharelink/download?id=XjvdJFZAN"
 FILE_NAME = "imdb_data.zip"
 TABLE_NAMES = [
     "aka_name",
@@ -76,9 +76,7 @@ url = urllib.request.urlopen(LOCATION)
 
 meta = url.info()
 
-if "X-Dropbox-Content-Length" in meta:
-    file_size = int(meta["X-Dropbox-Content-Length"])
-elif "Content-Length" in meta:
+if "Content-Length" in meta:
     file_size = int(meta["Content-Length"])
 else:
     print("- Aborting. Could not retrieve the imdb dataset's file size.")
@@ -115,7 +113,7 @@ print("- Validating integrity...")
 
 hash_dl = hash_md5.hexdigest()
 
-if hash_dl != "24bb992f97dad7b83fd4009e312ddd40":
+if hash_dl != "7c2e84c64126897267d1cf745d47bc9b":
     print("  Aborting. MD5 checksum mismatch. Cleaning up.")
     clean_up()
     sys.exit(2)
@@ -125,7 +123,7 @@ print("- Unzipping the file...")
 
 try:
     zip = zipfile.ZipFile(FILE_NAME, "r")
-    zip.extractall()
+    zip.extractall(table_dir)
     zip.close()
 except Exception:
     print("- Aborting. Something went wrong during unzipping. Cleaning up.")
