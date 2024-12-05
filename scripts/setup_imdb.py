@@ -6,6 +6,7 @@
 
 import hashlib
 import os
+import shutil
 import sys
 import urllib.request
 import zipfile
@@ -16,9 +17,14 @@ def clean_up(including_table_dir=False):
         os.remove(FILE_NAME)
 
     if including_table_dir and os.path.exists(table_dir):
-        for file in os.listdir(table_dir):
-            os.remove("./%s/%s" % (table_dir, file))
-        os.rmdir(table_dir)
+        try:
+            shutil.rmtree(table_dir)
+        except PermissionError as e:
+            print(f"PermissionError: Unable to remove {table_dir}. Please check file permissions.")
+            raise
+        except Exception as e:
+            print(f"An error occurred while cleaning up {table_dir}: {e}")
+            raise
 
 
 def is_setup():
@@ -114,7 +120,7 @@ print("- Validating integrity...")
 hash_dl = hash_md5.hexdigest()
 
 if hash_dl != "7c2e84c64126897267d1cf745d47bc9b":
-    print("  Aborting. MD5 checksum mismatch. Cleaning up.")
+    print("- Aborting. MD5 checksum mismatch. Cleaning up.")
     clean_up()
     sys.exit(2)
 
@@ -127,6 +133,11 @@ try:
     zip.close()
 except Exception:
     print("- Aborting. Something went wrong during unzipping. Cleaning up.")
+    clean_up(including_table_dir=True)
+    sys.exit(3)
+
+if not is_setup():
+    print("  Aborting. Unzipping did not result in a correct imdb_files-setup. Cleaning up.")
     clean_up(including_table_dir=True)
     sys.exit(3)
 
