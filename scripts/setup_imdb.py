@@ -17,14 +17,7 @@ def clean_up(including_table_dir=False):
         os.remove(FILE_NAME)
 
     if including_table_dir and os.path.exists(table_dir):
-        try:
-            shutil.rmtree(table_dir)
-        except PermissionError as e:
-            print(f"PermissionError: Unable to remove {table_dir}. Please check file permissions.")
-            raise
-        except Exception as e:
-            print(f"An error occurred while cleaning up {table_dir}: {e}")
-            raise
+        shutil.rmtree(table_dir)
 
 
 def is_setup():
@@ -139,7 +132,7 @@ except Exception:
 if not is_setup():
     print("  Aborting. Unzipping did not result in a correct imdb_files-setup. Cleaning up.")
     clean_up(including_table_dir=True)
-    sys.exit(3)
+    sys.exit(4)
 
 print("- Deleting the archive file.")
 clean_up()
