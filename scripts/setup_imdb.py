@@ -125,7 +125,7 @@ print("- Unzipping the file...")
 
 try:
     zip = zipfile.ZipFile(FILE_NAME, "r")
-    zip.extractall(table_dir)
+    zip.extractall()
     zip.close()
 except Exception:
     print("- Aborting. Something went wrong during unzipping. Cleaning up.")
