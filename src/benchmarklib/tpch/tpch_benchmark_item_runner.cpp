@@ -363,16 +363,16 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
       // Hack: We cannot use prepared statements in TPC-H 15. Thus, we need to build the SQL string by hand.
       // By manually replacing the `?` from tpch_queries.cpp, we can keep all queries in a readable form there.
       // This is ugly, but at least we can assert that nobody tampered with the string over there.
-      static constexpr auto BEGIN_DATE_OFFSET = 156;
-      static constexpr auto END_DATE_OFFSET = 192;
+      static constexpr auto BEGIN_DATE_OFFSET = 152 + 3;
+      static constexpr auto END_DATE_OFFSET = 188 + 3;
       DebugAssert((std::string_view{&query_15[BEGIN_DATE_OFFSET], 10} == "1996-01-01" &&
                    std::string_view{&query_15[END_DATE_OFFSET], 10} == "1996-04-01"),
                   "TPC-H 15 string has been modified");
       query_15.replace(BEGIN_DATE_OFFSET, 10, date_to_string(begin_date));
       query_15.replace(END_DATE_OFFSET, 10, date_to_string(end_date));
 
-      const auto view_id = std::atomic_fetch_add(&_q15_view_id, size_t{1});
-      boost::replace_all(query_15, std::string("revenue_view"), std::string("revenue") + std::to_string(view_id));
+      // const auto view_id = std::atomic_fetch_add(&_q15_view_id, size_t{1});
+      // boost::replace_all(query_15, std::string("revenue_view"), std::string("revenue") + std::to_string(view_id));
 
       // Not using _substitute_placeholders here
       return query_15;

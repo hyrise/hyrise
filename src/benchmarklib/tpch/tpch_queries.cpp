@@ -554,44 +554,41 @@ const char* const tpch_query_14 =
 /**
  * TPC-H 15
  *
- * Original:
+ * Original (Variant A):
  *
- * create view revenue[STREAM_ID] (supplier_no, total_revenue) as
+ * WITH revenue (supplier_no, total_revenue) as (
  *    SELECT l_suppkey, sum(l_extendedprice * (1 - l_discount))
  *    FROM lineitem
  *    WHERE
  *        l_shipdate >= date '[DATE]'
  *        AND l_shipdate < date '[DATE]' + interval '3' month
- *    GROUP BY l_suppkey;
- *
+ *    GROUP BY l_suppkey
+ * )
  * SELECT s_suppkey, s_name, s_address, s_phone, total_revenue
- * FROM supplier, revenue[STREAM_ID]
+ * FROM supplier, revenue
  * WHERE
  *    s_suppkey = supplier_no
  *    AND total_revenue = (
  *        SELECT max(total_revenue)
- *        FROM revenue[STREAM_ID]
+ *        FROM revenue
  *    )
  * ORDER BY s_suppkey;
  *
- * drop view revenue[STREAM_ID];
- *
  * Changes:
- *  1. "revenue[STREAM_ID]" renamed to "revenue_view"
+ *  1. WITH statement syntax modified to move sub_query parameter renaming into SELECT statement
  *  2. SQLite does not support dates and intervals
  *    a. use strings as data type for now
  *    b. pre-calculate date operation
  */
 const char* const tpch_query_15 =
-    R"(create view revenue_view (supplier_no, total_revenue) as SELECT l_suppkey,
-      SUM(l_extendedprice * (1 - l_discount)) FROM lineitem WHERE l_shipdate >= '1996-01-01'
-      AND l_shipdate < '1996-04-01' GROUP BY l_suppkey;
-
-      SELECT s_suppkey, s_name, s_address, s_phone, total_revenue FROM supplier, revenue_view
+    R"(WITH revenue AS (
+      SELECT l_suppkey AS supplier_no, SUM(l_extendedprice * (1 - l_discount)) AS total_revenue
+      FROM lineitem WHERE l_shipdate >= '1996-01-01'
+      AND l_shipdate < '1996-04-01'
+      GROUP BY l_suppkey)
+      SELECT s_suppkey, s_name, s_address, s_phone, total_revenue FROM supplier, revenue
       WHERE s_suppkey = supplier_no AND total_revenue = (SELECT max(total_revenue)
-      FROM revenue_view) ORDER BY s_suppkey;
-
-      DROP VIEW revenue_view;)";
+      FROM revenue) ORDER BY s_suppkey;)";
 
 /**
  * TPC-H 16
