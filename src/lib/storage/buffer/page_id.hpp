@@ -96,7 +96,7 @@ struct PageID {
 
 static_assert(sizeof(PageID) == 8, "PageID must be 64 bit");
 
-std::ostream& operator<<(std::ostream& os, const PageID& page_id) {
+inline std::ostream& operator<<(std::ostream& os, const PageID& page_id) {
   os << "PageID(valid = " << page_id.valid() << ", size_type = " << magic_enum::enum_name(page_id.size_type())
      << ", index = " << page_id.index() << ")";
   return os;
