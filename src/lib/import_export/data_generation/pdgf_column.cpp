@@ -48,13 +48,6 @@ PDGFColumn<T>::PDGFColumn(int64_t num_rows, ChunkOffset chunk_size) : BasePDGFCo
 }
 
 template <typename T>
-void PDGFColumn<T>::call_add(std::shared_ptr<BasePDGFColumn>& self, int64_t row, char* data) {
-  std::shared_ptr<PDGFColumn<T>> x;
-  x = std::static_pointer_cast<PDGFColumn<T>>(self);
-  x->add(row, data);
-}
-
-template <typename T>
 void PDGFColumn<T>::virtual_add(int64_t row, char* data) {
   auto segment_index = row / _chunk_size;
   auto segment_position = row % _chunk_size;
@@ -63,21 +56,6 @@ void PDGFColumn<T>::virtual_add(int64_t row, char* data) {
 
 template<>
 void PDGFColumn<pmr_string>::virtual_add(int64_t row, char* data) {
-  auto segment_index = row / _chunk_size;
-  auto segment_position = row % _chunk_size;
-
-  _data_segments[segment_index][segment_position] = pmr_string(data);
-}
-
-template <typename T>
-void PDGFColumn<T>::add(int64_t row, char* data) {
-  auto segment_index = row / _chunk_size;
-  auto segment_position = row % _chunk_size;
-  _data_segments[segment_index][segment_position] = * reinterpret_cast<T*>(data);
-}
-
-template<>
-void PDGFColumn<pmr_string>::add(int64_t row, char* data) {
   auto segment_index = row / _chunk_size;
   auto segment_position = row % _chunk_size;
 

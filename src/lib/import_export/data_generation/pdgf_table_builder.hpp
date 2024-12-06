@@ -50,10 +50,6 @@ class PDGFTableBuilder : public BasePDGFTableBuilder {
 
   uint8_t _num_generated_columns;
   std::array<std::shared_ptr<BasePDGFColumn>, num_columns> _generated_columns;
-  std::array<std::function<void(std::shared_ptr<BasePDGFColumn>&, int64_t, char*)>, num_columns> _add_methods;
-  // void (*_add_methods[num_columns]) (int64_t, char*);
   std::array<ColumnID, num_columns> _generated_column_mappings;
-
-  uint64_t _num_rows_to_read_per_work_unit;
 };
 } // namespace hyrise

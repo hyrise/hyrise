@@ -26,9 +26,7 @@ template <typename T>
 class PDGFColumn : public BasePDGFColumn {
  public:
   explicit PDGFColumn(int64_t num_rows, ChunkOffset chunk_size);
-  static void call_add(std::shared_ptr<BasePDGFColumn>& self, int64_t row, char* data);
   void virtual_add(int64_t row, char* data) override;
-  void add(int64_t row, char* data);
   bool has_another_segment() override;
   std::shared_ptr<AbstractSegment> build_next_segment() override;
 
