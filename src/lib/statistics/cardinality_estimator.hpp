@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <memory>
+#include <ostream>
 #include <utility>
 #include <vector>
 
@@ -9,6 +10,7 @@
 
 #include "cardinality_estimation_cache.hpp"
 #include "operators/operator_scan_predicate.hpp"
+#include "statistics/base_attribute_statistics.hpp"
 #include "statistics/statistics_objects/abstract_histogram.hpp"
 #include "statistics/statistics_objects/generic_histogram_builder.hpp"
 #include "types.hpp"
@@ -67,6 +69,24 @@ class CardinalityEstimator {
                                                        const bool cacheable, StatisticsByLQP& statistics_cache) const;
 
   /**
+   * We use dummy objects for pruned statistics and cases where we do not estimate statistics (e.g., for aggregations).
+   * Doing so has two advantages. First, it is semantically clear and easy to test. Second, we can easily prevent
+   * creations of empty statistics objects when scaling dummy statistics.
+   */
+  class DummyStatistics : public BaseAttributeStatistics, public std::enable_shared_from_this<DummyStatistics> {
+   public:
+    explicit DummyStatistics(const DataType init_data_type);
+
+    void set_statistics_object(const std::shared_ptr<const AbstractStatisticsObject>& /*statistics_object*/) override;
+
+    std::shared_ptr<const BaseAttributeStatistics> scaled(const Selectivity /*selectivity*/) const override;
+
+    std::shared_ptr<const BaseAttributeStatistics> sliced(
+        const PredicateCondition /*predicate_condition*/, const AllTypeVariant& /*variant_value*/,
+        const std::optional<AllTypeVariant>& /*variant_value2*/ = std::nullopt) const override;
+  };
+
+  /**
    * Statistics caching
    * @{
    *
@@ -75,7 +95,7 @@ class CardinalityEstimator {
    * of the vertices and predicates in @param JoinGraph. This enables using the JoinGraphStatisticsCache during
    * cardinality estimation.
    */
-  void guarantee_join_graph(const JoinGraph& join_graph);
+  void guarantee_join_graph(const JoinGraph& join_graph) const;
 
   /**
    * For increased cardinality estimation performance:
@@ -120,7 +140,7 @@ class CardinalityEstimator {
    *        the cardinalities of nodes below do not change. To keep optimization costs low, it is best practice to
    *        recursively go bottom-up if you change the query plan in a way that influences intermediate cardinalities.
    */
-  void guarantee_bottom_up_construction();
+  void guarantee_bottom_up_construction() const;
   /** @} */
 
   /**
@@ -182,7 +202,6 @@ class CardinalityEstimator {
      * histogram pairs. Thus, we do the most conservative estimation and compute the upper bound of value- and distinct
      * counts for each bin pair.
      */
-
     auto left_idx = BinID{0};
     auto right_idx = BinID{0};
     auto left_bin_count = left_histogram.bin_count();
@@ -205,7 +224,7 @@ class CardinalityEstimator {
       }
 
       DebugAssert(left_histogram.bin_maximum(left_idx) == right_histogram.bin_maximum(right_idx),
-                  "Histogram bin boundaries do not match");
+                  "Histogram bin boundaries do not match.");
 
       const auto height = std::min(left_histogram.bin_height(left_idx), right_histogram.bin_height(right_idx));
       const auto distinct_count =
@@ -256,6 +275,7 @@ class CardinalityEstimator {
      * unified_right_histogram == {[5, 10], [11, 20]}
      * The estimation is performed on overlapping bins only, e.g., only the two bins [5, 10] will produce matches.
      */
+
     auto unified_left_histogram = left_histogram.split_at_bin_bounds(right_histogram.bin_bounds());
     auto unified_right_histogram = right_histogram.split_at_bin_bounds(left_histogram.bin_bounds());
 
@@ -282,7 +302,7 @@ class CardinalityEstimator {
       }
 
       DebugAssert(unified_left_histogram->bin_maximum(left_idx) == unified_right_histogram->bin_maximum(right_idx),
-                  "Histogram bin boundaries do not match");
+                  "Histogram bin boundaries do not match.");
 
       // Overlapping bins found, estimate the join for these bins' range.
       const auto [height, distinct_count] = estimate_inner_equi_join_of_bins(
@@ -308,7 +328,6 @@ class CardinalityEstimator {
   static std::pair<HistogramCountType, HistogramCountType> estimate_inner_equi_join_of_bins(
       const float left_height, const float left_distinct_count, const float right_height,
       const float right_distinct_count);
-
   /** @} */
 
   /**
@@ -322,5 +341,7 @@ class CardinalityEstimator {
 
   mutable CardinalityEstimationCache cardinality_estimation_cache;
 };
+
+std::ostream& operator<<(std::ostream& stream, const CardinalityEstimator::DummyStatistics& /*dummy_statistics*/);
 
 }  // namespace hyrise
