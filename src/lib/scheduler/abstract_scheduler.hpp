@@ -89,7 +89,7 @@ class AbstractScheduler : public Noncopyable {
 
   // Internal helper method that adds predecessor/successor relationships between tasks to limit the degree of
   // parallelism and reduce scheduling overhead.
-  virtual void _group_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const;
+  virtual void _group_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const = 0;
 };
 
 }  // namespace hyrise
