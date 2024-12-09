@@ -91,7 +91,7 @@ class NodeQueueScheduler : public AbstractScheduler {
   static constexpr auto NUM_GROUPS = 10;
 
  protected:
-  void _group_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const override final;
+  void _group_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const final;
 
  private:
   std::atomic<TaskID::base_type> _task_counter{0};
