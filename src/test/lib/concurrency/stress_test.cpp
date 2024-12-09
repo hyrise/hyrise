@@ -479,6 +479,9 @@ TEST_F(StressTest, NodeQueueSchedulerTaskGrouping) {
         const auto group_id = task_id % NodeQueueScheduler::NUM_GROUPS;
         const auto prev_task_id = previous_task_id_per_group[group_id];
         if (prev_task_id > 0) {
+          // Once the first task of each group has been executed, we check the previous TaskID of the group to verify
+          // that grouping execution happens in the expected round-robin order (see
+          // `void NodeQueueScheduler::_group_tasks()`).
           EXPECT_EQ(prev_task_id + NodeQueueScheduler::NUM_GROUPS, task_id);
         }
         previous_task_id_per_group[group_id] = task_id;

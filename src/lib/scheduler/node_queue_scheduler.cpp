@@ -266,8 +266,8 @@ void NodeQueueScheduler::_group_tasks(const std::vector<std::shared_ptr<Abstract
 
   const auto task_count = tasks.size();
 
-  // Per group, this vector stores the offset into the task list for the task that will be the successor of the current
-  // task. Initialize with -1 to denote an invalid offset.
+  // For each group, this list stores the task that will be successor of the current task. Tasks are identified by their
+  // offset in the task list. Initialize with -1 to denote an invalid offset.
   auto grouped_task_offsets = std::vector<int32_t>(NUM_GROUPS, -1);
 
   auto common_node_id = std::optional<NodeID>{};

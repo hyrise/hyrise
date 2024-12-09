@@ -71,24 +71,40 @@ class AbstractScheduler : public Noncopyable {
 
   virtual const std::vector<std::shared_ptr<TaskQueue>>& queues() const = 0;
 
+  /**
+   * If task is executed immediately or only registered for execution depends on the scheduler used.
+   */
   virtual void schedule(std::shared_ptr<AbstractTask> task, NodeID preferred_node_id = CURRENT_NODE_ID,
                         SchedulePriority priority = SchedulePriority::Default) = 0;
 
-  // Blocks until all specified tasks are completed.
-  // If no asynchronicity is needed, prefer schedule_and_wait_for_tasks.
+  /**
+   * Blocks until all specified tasks are completed. If no asynchronicity is needed, prefer
+   * `schedule_and_wait_for_tasks()`. Use this method when task creation is expensive. In this case, created tasks can
+   * be scheduled right away (using `schedule()`) and `wait_for_tasks()` blocks for their execution.
+   * The caller is responsible to ensure the tasks' lifetimes until method returns.
+   */ 
   static void wait_for_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks);
 
-  // Schedules the given tasks for execution and waits for them to complete before returning. Tasks may be reorganized
-  // internally, e.g., to reduce the number of tasks being executed in parallel. See the implementation of
-  // NodeQueueScheduler::_group_tasks for an example.
+  /**
+   * Schedules the given tasks for execution and waits for them to complete before returning. Preferable when task
+   * creation is cheap (i.e., first creating all jobs does not block first task from running too long) and a grouped
+   * scheduling might improve the execution of tasks. This could be the case when grouping tasks. Here, tasks may be
+   * reorganized internally, e.g., to reduce the number of tasks being executed in parallel. See the implementation of
+   * NodeQueueScheduler::_group_tasks for an example.
+   * The caller is responsible to ensure the tasks' lifetimes until method returns.
+   */
   void schedule_and_wait_for_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks);
 
  protected:
-  // Schedules the given tasks for execution and returns immediately.
+  /**
+   * Schedules the given tasks for execution and returns immediately.
+   */
   static void _schedule_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks);
 
-  // Internal helper method that adds predecessor/successor relationships between tasks to limit the degree of
-  // parallelism and reduce scheduling overhead.
+  /**
+   * Internal helper method that adds predecessor/successor relationships between tasks to limit the degree of
+   * parallelism and reduce scheduling overhead.
+   */
   virtual void _group_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const = 0;
 };
 

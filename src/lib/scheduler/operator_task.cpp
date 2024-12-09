@@ -113,7 +113,7 @@ OperatorTask::make_tasks_from_operator(const std::shared_ptr<AbstractOperator>& 
   // Ensure the task graph is acyclic, i.e., no task is any (n-th) successor of itself. Tasks in cycles would end up in
   // a deadlock during execution, mutually waiting for the other tasks' execution.
   if constexpr (HYRISE_DEBUG) {
-    visit_tasks(root_operator_task, [&](const auto& task) {
+    visit_tasks(root_operator_task, [](const auto& task) {
       for (const auto& direct_successor : task->successors()) {
         visit_tasks_upwards(direct_successor.get().shared_from_this(), [&](const auto& successor) {
           Assert(task != successor, "Task graph contains a cycle.");
