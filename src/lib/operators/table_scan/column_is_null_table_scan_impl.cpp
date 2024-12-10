@@ -129,7 +129,7 @@ void ColumnIsNullTableScanImpl::_scan_value_segment(const BaseValueSegment& segm
 }
 
 void ColumnIsNullTableScanImpl::_scan_dictionary_segment(const BaseDictionarySegment& segment, const ChunkID chunk_id,
-                                                    RowIDPosList& matches) {
+                                                         RowIDPosList& matches) {
   if (_matches_all(segment)) {
     _add_all(chunk_id, matches, segment.size());
     return;
