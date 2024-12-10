@@ -7,6 +7,7 @@
 #include "storage/abstract_segment.hpp"
 #include "storage/base_value_segment.hpp"
 #include "storage/pos_lists/row_id_pos_list.hpp"
+#include "storage/segment_iterables/create_iterable_from_attribute_vector.hpp"
 #include "storage/segment_iterate.hpp"
 #include "storage/value_segment/null_value_vector_iterable.hpp"
 #include "types.hpp"
@@ -34,6 +35,8 @@ std::shared_ptr<RowIDPosList> ColumnIsNullTableScanImpl::scan_chunk(const ChunkI
 
   if (const auto value_segment = std::dynamic_pointer_cast<BaseValueSegment>(segment)) {
     _scan_value_segment(*value_segment, chunk_id, *matches);
+  } else if (const auto dictionary_segment = std::dynamic_pointer_cast<BaseDictionarySegment>(segment)) {
+    _scan_dictionary_segment(*dictionary_segment, chunk_id, *matches);
   } else {
     const auto& chunk_sorted_by = chunk->individually_sorted_by();
     if (!chunk_sorted_by.empty()) {
@@ -137,7 +140,15 @@ void ColumnIsNullTableScanImpl::_scan_dictionary_segment(const BaseDictionarySeg
     return;
   }
 
-  return;
+  auto iterable = create_iterable_from_attribute_vector(segment);
+
+  const auto invert = _predicate_condition == PredicateCondition::IsNotNull;
+  const auto functor = [&](const auto& value) {
+    return invert ^ value.is_null();
+  };
+  iterable.with_iterators([&](auto iter, auto end) {
+    _scan_with_iterators<false>(functor, iter, end, chunk_id, matches);
+  });
 }
 
 bool ColumnIsNullTableScanImpl::_matches_all(const BaseValueSegment& segment) const {
