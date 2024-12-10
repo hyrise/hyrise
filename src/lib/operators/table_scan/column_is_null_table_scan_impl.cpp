@@ -125,6 +125,21 @@ void ColumnIsNullTableScanImpl::_scan_value_segment(const BaseValueSegment& segm
   });
 }
 
+void ColumnIsNullTableScanImpl::_scan_dictionary_segment(const BaseDictionarySegment& segment, const ChunkID chunk_id,
+                                                    RowIDPosList& matches) {
+  if (_matches_all(segment)) {
+    _add_all(chunk_id, matches, segment.size());
+    return;
+  }
+
+  if (_matches_none(segment)) {
+    ++num_chunks_with_early_out;
+    return;
+  }
+
+  return;
+}
+
 bool ColumnIsNullTableScanImpl::_matches_all(const BaseValueSegment& segment) const {
   switch (_predicate_condition) {
     case PredicateCondition::IsNull:
@@ -145,6 +160,32 @@ bool ColumnIsNullTableScanImpl::_matches_none(const BaseValueSegment& segment) c
 
     case PredicateCondition::IsNotNull:
       return false;
+
+    default:
+      Fail("Unsupported comparison type encountered");
+  }
+}
+
+bool ColumnIsNullTableScanImpl::_matches_all(const BaseDictionarySegment& segment) const {
+  switch (_predicate_condition) {
+    case PredicateCondition::IsNull:
+      return segment.unique_values_count() == 0;
+
+    case PredicateCondition::IsNotNull:
+      return segment.unique_values_count() == segment.size();
+
+    default:
+      Fail("Unsupported comparison type encountered");
+  }
+}
+
+bool ColumnIsNullTableScanImpl::_matches_none(const BaseDictionarySegment& segment) const {
+  switch (_predicate_condition) {
+    case PredicateCondition::IsNull:
+      return segment.unique_values_count() == segment.size();
+
+    case PredicateCondition::IsNotNull:
+      return segment.unique_values_count() == 0;
 
     default:
       Fail("Unsupported comparison type encountered");
