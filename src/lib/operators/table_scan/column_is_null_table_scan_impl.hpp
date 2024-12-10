@@ -34,6 +34,9 @@ class ColumnIsNullTableScanImpl : public AbstractTableScanImpl {
   // Optimized scan on ValueSegments
   void _scan_value_segment(const BaseValueSegment& segment, const ChunkID chunk_id, RowIDPosList& matches);
 
+  // Optimized scan on DictionarySegments
+  void _scan_dictionary_segment(const BaseDictionarySegment& segment, const ChunkID chunk_id, RowIDPosList& matches);
+
   /**
    * @defgroup Methods used for handling value segments
    * @{
@@ -42,6 +45,10 @@ class ColumnIsNullTableScanImpl : public AbstractTableScanImpl {
   bool _matches_all(const BaseValueSegment& segment) const;
 
   bool _matches_none(const BaseValueSegment& segment) const;
+
+  bool _matches_all(const BaseDictionarySegment& segment) const;
+
+  bool _matches_none(const BaseDictionarySegment& segment) const;
 
   static void _add_all(const ChunkID chunk_id, RowIDPosList& matches, const size_t segment_size);
 
