@@ -193,28 +193,6 @@ void BenchmarkRunner::run() {
       }
     }
 
-    // Create report.
-    const auto write_report = _config.output_file_path && (!_config.verify && !_config.enable_visualization);
-    auto report = write_report ? _create_report() : nlohmann::json{};
-
-    // Execute post-benchmark hooks of plugins required by the user.
-    for (const auto& plugin : _loaded_plugins) {
-      if (!Hyrise::get().plugin_manager.has_post_benchmark_hook(plugin)) {
-        continue;
-      }
-
-      std::cout << "- Run post-benchmark hook of '" << plugin << "'\n";
-      Hyrise::get().plugin_manager.exec_post_benchmark_hook(plugin, report);
-    }
-
-    // Write report to file.
-    if (write_report) {
-      _write_report_to_file(*_config.output_file_path, report);
-    } else if (_config.output_file_path) {
-      std::cout << "- Not writing JSON result as either verification or visualization are activated.\n";
-      std::cout << "  These options make the results meaningless\n";
-    }
-
     // For the Ordered mode, results have already been printed to the console.
     if (_config.benchmark_mode == BenchmarkMode::Shuffled && !_config.verify && !_config.enable_visualization) {
       for (const auto& item_id : items) {
@@ -248,6 +226,28 @@ void BenchmarkRunner::run() {
     system_utilization_tracker.join();
   } else {
     std::cout << "Skipped running queries because benchmark was configured to only load data!\n";
+  }
+
+  // Create report.
+  const auto write_report = _config.output_file_path && (!_config.verify && !_config.enable_visualization);
+  auto report = write_report ? _create_report() : nlohmann::json{};
+
+  // Write report to file.
+  if (write_report) {
+    _write_report_to_file(*_config.output_file_path, report);
+  } else if (_config.output_file_path) {
+    std::cout << "- Not writing JSON result as either verification or visualization are activated.\n";
+    std::cout << "  These options make the results meaningless\n";
+  }
+
+  // Execute post-benchmark hooks of plugins required by the user.
+  for (const auto& plugin : _loaded_plugins) {
+    if (!Hyrise::get().plugin_manager.has_post_benchmark_hook(plugin)) {
+      continue;
+    }
+
+    std::cout << "- Run post-benchmark hook of '" << plugin << "'\n";
+    Hyrise::get().plugin_manager.exec_post_benchmark_hook(plugin, report);
   }
 
   // Regardless of whether we have run any queries, we need to teardown the scheduler.
@@ -453,68 +453,70 @@ nlohmann::json BenchmarkRunner::_create_report() const {
 
   auto benchmarks = nlohmann::json{};
 
-  for (const auto& item_id : _benchmark_item_runner->items()) {
-    const auto& name = _benchmark_item_runner->item_name(item_id);
-    const auto& result = _results.at(item_id);
+  if (!_config.only_load_data) {
+    for (const auto& item_id : _benchmark_item_runner->items()) {
+      const auto& name = _benchmark_item_runner->item_name(item_id);
+      const auto& result = _results.at(item_id);
 
-    const auto runs_to_json = [](auto runs) {
-      auto runs_json = nlohmann::json::array();
-      for (const auto& run_result : runs) {
-        // Convert the SQLPipelineMetrics for each run of the BenchmarkItem into JSON.
-        auto all_pipeline_metrics_json = nlohmann::json::array();
-        // metrics can be empty if _config.pipeline_metrics is false.
-        for (const auto& pipeline_metrics : run_result.metrics) {
-          auto pipeline_metrics_json = nlohmann::json{{"parse_duration", pipeline_metrics.parse_time_nanos.count()},
-                                                      {"statements", nlohmann::json::array()}};
+      const auto runs_to_json = [](auto runs) {
+        auto runs_json = nlohmann::json::array();
+        for (const auto& run_result : runs) {
+          // Convert the SQLPipelineMetrics for each run of the BenchmarkItem into JSON.
+          auto all_pipeline_metrics_json = nlohmann::json::array();
+          // metrics can be empty if _config.pipeline_metrics is false.
+          for (const auto& pipeline_metrics : run_result.metrics) {
+            auto pipeline_metrics_json = nlohmann::json{{"parse_duration", pipeline_metrics.parse_time_nanos.count()},
+                                                        {"statements", nlohmann::json::array()}};
 
-          for (const auto& sql_statement_metrics : pipeline_metrics.statement_metrics) {
-            nlohmann::json rule_metrics_json;
-            for (const auto& rule_duration : sql_statement_metrics->optimizer_rule_durations) {
-              rule_metrics_json[rule_duration.rule_name] += rule_duration.duration.count();
+            for (const auto& sql_statement_metrics : pipeline_metrics.statement_metrics) {
+              nlohmann::json rule_metrics_json;
+              for (const auto& rule_duration : sql_statement_metrics->optimizer_rule_durations) {
+                rule_metrics_json[rule_duration.rule_name] += rule_duration.duration.count();
+              }
+
+              auto sql_statement_metrics_json =
+                  nlohmann::json{{"sql_translation_duration", sql_statement_metrics->sql_translation_duration.count()},
+                                 {"optimization_duration", sql_statement_metrics->optimization_duration.count()},
+                                 {"optimizer_rule_durations", rule_metrics_json},
+                                 {"lqp_translation_duration", sql_statement_metrics->lqp_translation_duration.count()},
+                                 {"plan_execution_duration", sql_statement_metrics->plan_execution_duration.count()},
+                                 {"query_plan_cache_hit", sql_statement_metrics->query_plan_cache_hit}};
+
+              pipeline_metrics_json["statements"].push_back(sql_statement_metrics_json);
             }
 
-            auto sql_statement_metrics_json =
-                nlohmann::json{{"sql_translation_duration", sql_statement_metrics->sql_translation_duration.count()},
-                               {"optimization_duration", sql_statement_metrics->optimization_duration.count()},
-                               {"optimizer_rule_durations", rule_metrics_json},
-                               {"lqp_translation_duration", sql_statement_metrics->lqp_translation_duration.count()},
-                               {"plan_execution_duration", sql_statement_metrics->plan_execution_duration.count()},
-                               {"query_plan_cache_hit", sql_statement_metrics->query_plan_cache_hit}};
-
-            pipeline_metrics_json["statements"].push_back(sql_statement_metrics_json);
+            all_pipeline_metrics_json.push_back(pipeline_metrics_json);
           }
 
-          all_pipeline_metrics_json.push_back(pipeline_metrics_json);
+          runs_json.push_back(nlohmann::json{{"begin", run_result.begin.count()},
+                                             {"duration", run_result.duration.count()},
+                                             {"pipeline_metrics", all_pipeline_metrics_json}});
         }
+        return runs_json;
+      };
 
-        runs_json.push_back(nlohmann::json{{"begin", run_result.begin.count()},
-                                           {"duration", run_result.duration.count()},
-                                           {"pipeline_metrics", all_pipeline_metrics_json}});
-      }
-      return runs_json;
-    };
+      auto benchmark = nlohmann::json{{"name", name},
+                                      {"duration", result.duration.count()},
+                                      {"successful_runs", runs_to_json(result.successful_runs)},
+                                      {"unsuccessful_runs", runs_to_json(result.unsuccessful_runs)}};
 
-    auto benchmark = nlohmann::json{{"name", name},
-                                    {"duration", result.duration.count()},
-                                    {"successful_runs", runs_to_json(result.successful_runs)},
-                                    {"unsuccessful_runs", runs_to_json(result.unsuccessful_runs)}};
+      // For ordered benchmarks, report the time that this individual item ran. For shuffled benchmarks, return the
+      // duration of the entire benchmark. This means that items_per_second of ordered and shuffled runs are not
+      // comparable.
+      const auto reported_item_duration =
+          _config.benchmark_mode == BenchmarkMode::Shuffled ? total_duration : result.duration;
+      // chrono::seconds uses an integer precision duration type, but we need a floating-point value.
+      const auto duration_seconds = std::chrono::duration<double>(reported_item_duration).count();
+      const auto items_per_second =
+          duration_seconds > 0 ? (static_cast<double>(result.successful_runs.size()) / duration_seconds) : 0;
 
-    // For ordered benchmarks, report the time that this individual item ran. For shuffled benchmarks, return the
-    // duration of the entire benchmark. This means that items_per_second of ordered and shuffled runs are not
-    // comparable.
-    const auto reported_item_duration =
-        _config.benchmark_mode == BenchmarkMode::Shuffled ? total_duration : result.duration;
-    // chrono::seconds uses an integer precision duration type, but we need a floating-point value.
-    const auto duration_seconds = std::chrono::duration<double>(reported_item_duration).count();
-    const auto items_per_second =
-        duration_seconds > 0 ? (static_cast<double>(result.successful_runs.size()) / duration_seconds) : 0;
+      // The field items_per_second is relied upon by a number of visualization scripts. Carefully consider if you really
+      // want to touch this and potentially break the comparability across commits. Note that items_per_second only
+      // includes successful iterations.
+      benchmark["items_per_second"] = items_per_second;
 
-    // The field items_per_second is relied upon by a number of visualization scripts. Carefully consider if you really
-    // want to touch this and potentially break the comparability across commits. Note that items_per_second only
-    // includes successful iterations.
-    benchmark["items_per_second"] = items_per_second;
-
-    benchmarks.push_back(benchmark);
+      benchmarks.push_back(benchmark);
+    }
   }
 
   // Gather information on the table size.
