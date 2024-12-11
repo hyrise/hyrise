@@ -250,6 +250,7 @@ set(
     lib/utils/singleton_test.cpp
     lib/utils/size_estimation_utils_test.cpp
     lib/utils/string_utils_test.cpp
+    lib/utils/string_heap_test.cpp
     plugins/mvcc_delete_plugin_test.cpp
     plugins/ucc_discovery_plugin_test.cpp
     testing_assert.cpp
