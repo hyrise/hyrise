@@ -55,23 +55,6 @@ HistogramDomain<pmr_string>::IntegralType HistogramDomain<pmr_string>::string_to
   return value;
 }
 
-pmr_string HistogramDomain<pmr_string>::string_to_domain(const pmr_string& string_value) const {
-  auto converted = string_value;
-  for (auto pos = size_t{0}; pos < converted.size(); ++pos) {
-    converted[pos] = std::min(max_char, std::max(min_char, converted[pos]));
-  }
-  return converted;
-}
-
-bool HistogramDomain<pmr_string>::contains(const pmr_string& string_value) const {
-  for (const auto char_value : string_value) {
-    if (char_value > max_char || char_value < min_char) {
-      return false;
-    }
-  }
-  return true;
-}
-
 pmr_string HistogramDomain<pmr_string>::next_value_clamped(const pmr_string& string_in_domain) const {
   DebugAssert(contains(string_in_domain), "Unsupported character, cannot compute next_value()");
 

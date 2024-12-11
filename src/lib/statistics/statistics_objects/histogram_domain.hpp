@@ -73,7 +73,15 @@ class HistogramDomain<pmr_string> {
   /**
    * @return whether @param string_value consists exclusively of characters between `min_char` and `max_char`
    */
-  bool contains(const pmr_string& string_value) const;
+  template <typename T>
+  bool contains(const T& string_value) const {
+    for (const auto char_value : string_value) {
+      if (char_value > max_char || char_value < min_char) {
+        return false;
+      }
+    }
+    return true;
+  }
 
   /**
    * @return max_char - min_char + 1
@@ -89,7 +97,14 @@ class HistogramDomain<pmr_string> {
   /**
    * @return a copy of @param string_value with all characters capped by [min_char, max_char]
    */
-  pmr_string string_to_domain(const pmr_string& string_value) const;
+  template <typename T>
+  pmr_string string_to_domain(const T& string_value) const {
+    auto converted = pmr_string{string_value};
+    for (auto pos = size_t{0}; pos < converted.size(); ++pos) {
+      converted[pos] = std::min(max_char, std::max(min_char, converted[pos]));
+    }
+    return converted;
+  }
 
   /**
    * @param string_in_domain    A string for which contains(string_in_domain) holds
