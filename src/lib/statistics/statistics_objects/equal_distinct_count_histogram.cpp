@@ -4,6 +4,7 @@
 #include <memory>
 #include <numeric>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -17,6 +18,7 @@
 #include "storage/segment_iterate.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
+#include "utils/string_heap.hpp"
 
 namespace {
 
@@ -27,22 +29,24 @@ using namespace hyrise;  // NOLINT
 // so reduces the cost of rehashing at the cost of slightly higher memory consumption. We only do it for strings,
 // where hashing is somewhat expensive.
 template <typename T>
-using ValueDistributionMap = boost::unordered_flat_map<T, HistogramCountType>;
+using ValueDistributionMap = std::conditional_t<std::is_same_v<T, pmr_string>, boost::unordered_flat_map<std::string_view, HistogramCountType>, boost::unordered_flat_map<T, HistogramCountType>>;
 
 template <typename T>
 void add_segment_to_value_distribution(const AbstractSegment& segment, ValueDistributionMap<T>& value_distribution,
                                        const HistogramDomain<T>& domain) {
+  auto string_heap = StringHeap{};
   segment_iterate<T>(segment, [&](const auto& iterator_value) {
     if (iterator_value.is_null()) {
       return;
     }
 
     if constexpr (std::is_same_v<T, pmr_string>) {
+      const auto current_string = string_heap.add_string(iterator_value.value());
       // Do "contains()" check first to avoid the string copy incurred by string_to_domain() where possible
-      if (domain.contains(iterator_value.value())) {
-        ++value_distribution[iterator_value.value()];
+      if (domain.contains(current_string)) {
+        ++value_distribution[current_string];
       } else {
-        ++value_distribution[domain.string_to_domain(iterator_value.value())];
+        ++value_distribution[domain.string_to_domain(current_string)];
       }
     } else {
       ++value_distribution[iterator_value.value()];
