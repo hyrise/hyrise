@@ -153,6 +153,10 @@ void TPCHPDGFTableGenerator::_collect_columns(const std::string& sql, bool whole
       return LQPVisitation::DoNotVisitInputs;
     });
   }
+
+  // We do not want the LQP to be still present when running the benchmark, as, at this point,
+  // the tables have no data and the optimizer was therefore not able to work at its fullest capacity.
+  pipeline.lqp_cache->clear();
 }
 
 AbstractTableGenerator::IndexesByTable TPCHPDGFTableGenerator::_indexes_by_table() const {
