@@ -51,7 +51,7 @@ void ColumnIsNullTableScanImpl::_scan_non_reference_segment(
 void ColumnIsNullTableScanImpl::_scan_generic_segment(
     const AbstractSegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
     const std::shared_ptr<const AbstractPosList>& position_filter) const {
-  segment_with_iterators(segment, [&](auto iter, [[maybe_unused]] const auto end) {
+  segment_with_iterators_filtered(segment, position_filter, [&](auto iter, [[maybe_unused]] const auto end) {
     // This may also be called for a ValueSegment if `segment` is a ReferenceSegment pointing to a single ValueSegment.
     const auto invert = predicate_condition == PredicateCondition::IsNotNull;
     const auto functor = [&](const auto& value) {
@@ -67,7 +67,7 @@ void ColumnIsNullTableScanImpl::_scan_generic_sorted_segment(
     const std::shared_ptr<const AbstractPosList>& position_filter, const SortMode sorted_by) const {
   const bool is_nulls_first = sorted_by == SortMode::Ascending || sorted_by == SortMode::Descending;
   const bool predicate_is_null = predicate_condition == PredicateCondition::IsNull;
-  segment_with_iterators(segment, [&](auto begin, auto end) {
+  segment_with_iterators_filtered(segment, position_filter, [&](auto begin, auto end) {
     if (is_nulls_first) {
       const auto first_not_null =
           std::lower_bound(begin, end, bool{}, [](const auto& segment_position, const auto& /*end*/) {
@@ -103,7 +103,7 @@ void ColumnIsNullTableScanImpl::_scan_value_segment(const BaseValueSegment& segm
                                                     RowIDPosList& matches,
                                                     const std::shared_ptr<const AbstractPosList>& position_filter) {
   if (_matches_all(segment)) {
-    _add_all(chunk_id, matches, segment.size());
+    _add_all(chunk_id, matches, position_filter ? position_filter->size() : segment.size());
     return;
   }
 
@@ -120,7 +120,7 @@ void ColumnIsNullTableScanImpl::_scan_value_segment(const BaseValueSegment& segm
   const auto functor = [&](const auto& value) {
     return invert ^ value.is_null();
   };
-  iterable.with_iterators([&](auto iter, auto end) {
+  iterable.with_iterators(position_filter, [&](auto iter, auto end) {
     _scan_with_iterators<false>(functor, iter, end, chunk_id, matches);
   });
 }
@@ -129,7 +129,7 @@ void ColumnIsNullTableScanImpl::_scan_dictionary_segment(
     const BaseDictionarySegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
     const std::shared_ptr<const AbstractPosList>& position_filter) {
   if (_matches_all(segment)) {
-    _add_all(chunk_id, matches, segment.size());
+    _add_all(chunk_id, matches, position_filter ? position_filter->size() : segment.size());
     return;
   }
 
@@ -144,7 +144,7 @@ void ColumnIsNullTableScanImpl::_scan_dictionary_segment(
   const auto functor = [&](const auto& value) {
     return invert ^ value.is_null();
   };
-  iterable.with_iterators([&](auto iter, auto end) {
+  iterable.with_iterators(position_filter, [&](auto iter, auto end) {
     _scan_with_iterators<false>(functor, iter, end, chunk_id, matches);
   });
 }
