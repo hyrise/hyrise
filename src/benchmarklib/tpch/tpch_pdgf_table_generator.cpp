@@ -11,12 +11,13 @@
 #include "hyrise.hpp"
 #include "import_export/data_generation/pdgf_process.hpp"
 #include "import_export/data_generation/shared_memory_reader.hpp"
-#include "operators/pqp_utils.hpp"
+#include "logical_query_plan/lqp_utils.hpp"
 #include "operators/get_table.hpp"
 #include "storage/constraints/constraint_utils.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "tpch/tpch_constants.hpp"
 #include "types.hpp"
+#include "logical_query_plan/stored_table_node.hpp"
 #include "utils/assert.hpp"
 #include "utils/timer.hpp"
 
@@ -121,36 +122,37 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHPDGFTableGenerator::gene
 void TPCHPDGFTableGenerator::_collect_columns(const std::string& sql, bool whole_table) {
   auto pipeline_builder = SQLPipelineBuilder{sql};
   auto pipeline = pipeline_builder.create_pipeline();
-  auto& pqps = pipeline.get_physical_plans();
-    for (const auto& pqp_root : pqps) {
-      visit_pqp(pqp_root, [&](const auto& node) {
-        if (node->type() != OperatorType::GetTable) {
-          return PQPVisitation::VisitInputs;
-        }
 
-        auto table_node = std::dynamic_pointer_cast<GetTable>(node);
-        auto stored_table = Hyrise::get().storage_manager.get_table(table_node->table_name());
+  auto& lqps = pipeline.get_optimized_logical_plans();
+  for (const auto& lqp_root : lqps) {
+    visit_lqp(lqp_root, [&](const auto& node) {
+      if (node->type != LQPNodeType::StoredTable) {
+        return LQPVisitation::VisitInputs;
+      }
 
-        auto pruned_column_ids_iter = table_node->pruned_column_ids().begin();
-        for (auto stored_column_id = ColumnID{0}, output_column_id = ColumnID{0};
-             stored_column_id < stored_table->column_count(); ++stored_column_id) {
-          if (!whole_table) {
-            // Only prune columns if we do not want to generate the whole table
-            if (pruned_column_ids_iter != table_node->pruned_column_ids().end() && stored_column_id == *pruned_column_ids_iter) {
-              ++pruned_column_ids_iter;
-              continue;
-            }
+      auto table_node = std::dynamic_pointer_cast<StoredTableNode>(node);
+      auto stored_table = Hyrise::get().storage_manager.get_table(table_node->table_name);
+
+      auto pruned_column_ids_iter = table_node->pruned_column_ids().begin();
+      for (auto stored_column_id = ColumnID{0}, output_column_id = ColumnID{0};
+           stored_column_id < stored_table->column_count(); ++stored_column_id) {
+        if (!whole_table) {
+          // Only prune columns if we do not want to generate the whole table
+          if (pruned_column_ids_iter != table_node->pruned_column_ids().end() && stored_column_id == *pruned_column_ids_iter) {
+            ++pruned_column_ids_iter;
+            continue;
           }
-
-          // non-pruned column
-          auto column_info = stored_table->column_definitions()[stored_column_id];
-          auto full_name = table_node->table_name() + ":" + column_info.name;
-          _columns_to_generate->insert(full_name);
-          ++output_column_id;
         }
-        return PQPVisitation::DoNotVisitInputs;
-      });
-    }
+
+        // non-pruned column
+        auto column_info = stored_table->column_definitions()[stored_column_id];
+        auto full_name = table_node->table_name + ":" + column_info.name;
+        _columns_to_generate->insert(full_name);
+        ++output_column_id;
+      }
+      return LQPVisitation::DoNotVisitInputs;
+    });
+  }
 }
 
 AbstractTableGenerator::IndexesByTable TPCHPDGFTableGenerator::_indexes_by_table() const {
