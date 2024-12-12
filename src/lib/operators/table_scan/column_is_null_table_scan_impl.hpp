@@ -17,25 +17,27 @@ class BaseValueSegment;
 // Scans for the presence or absence of NULL values in a given column. This is not a
 // AbstractDereferencedColumnTableScanImpl because that super class drops NULL values in the referencing column, which
 // would break the `NOT NULL` scan.
-class ColumnIsNullTableScanImpl : public AbstractTableScanImpl {
+class ColumnIsNullTableScanImpl : public AbstractDereferencedColumnTableScanImpl {
  public:
   ColumnIsNullTableScanImpl(const std::shared_ptr<const Table>& in_table, const ColumnID column_id,
-                            const PredicateCondition& predicate_condition);
+                            const PredicateCondition& init_predicate_condition);
 
   std::string description() const override;
 
-  std::shared_ptr<RowIDPosList> scan_chunk(const ChunkID chunk_id) override;
-
  protected:
-  void _scan_generic_segment(const AbstractSegment& segment, const ChunkID chunk_id, RowIDPosList& matches) const;
+  void _scan_non_reference_segment(const AbstractSegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
+                                   const std::shared_ptr<const AbstractPosList>& position_filter) override;
+
+  void _scan_generic_segment(const AbstractSegment& segment, const ChunkID chunk_id, RowIDPosList& matches, const std::shared_ptr<const AbstractPosList>& position_filter) const;
+  
   void _scan_generic_sorted_segment(const AbstractSegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
-                                    const SortMode sorted_by) const;
+                                    const std::shared_ptr<const AbstractPosList>& position_filter, const SortMode sorted_by) const;
 
   // Optimized scan on ValueSegments
-  void _scan_value_segment(const BaseValueSegment& segment, const ChunkID chunk_id, RowIDPosList& matches);
+  void _scan_value_segment(const BaseValueSegment& segment, const ChunkID chunk_id, RowIDPosList& matches, const std::shared_ptr<const AbstractPosList>& position_filter);
 
   // Optimized scan on DictionarySegments
-  void _scan_dictionary_segment(const BaseDictionarySegment& segment, const ChunkID chunk_id, RowIDPosList& matches);
+  void _scan_dictionary_segment(const BaseDictionarySegment& segment, const ChunkID chunk_id, RowIDPosList& matches, const std::shared_ptr<const AbstractPosList>& position_filter);
 
   /**
    * @defgroup Methods used for handling value segments
@@ -53,10 +55,6 @@ class ColumnIsNullTableScanImpl : public AbstractTableScanImpl {
   static void _add_all(const ChunkID chunk_id, RowIDPosList& matches, const size_t segment_size);
 
   /**@}*/
-
-  const std::shared_ptr<const Table> _in_table;
-  const ColumnID _column_id;
-  const PredicateCondition _predicate_condition;
 };
 
 }  // namespace hyrise
