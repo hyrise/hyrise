@@ -30,10 +30,9 @@ std::string ColumnIsNullTableScanImpl::description() const {
 void ColumnIsNullTableScanImpl::_scan_non_reference_segment(
     const AbstractSegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
     const std::shared_ptr<const AbstractPosList>& position_filter) {
-
   if (const auto value_segment = dynamic_cast<const BaseValueSegment*>(&segment)) {
     _scan_value_segment(*value_segment, chunk_id, matches, position_filter);
-  }  else if (const auto dictionary_segment = dynamic_cast<const BaseDictionarySegment*>(&segment)) {
+  } else if (const auto dictionary_segment = dynamic_cast<const BaseDictionarySegment*>(&segment)) {
     _scan_dictionary_segment(*dictionary_segment, chunk_id, matches, position_filter);
   } else {
     const auto& chunk_sorted_by = _in_table->get_chunk(chunk_id)->individually_sorted_by();
@@ -49,8 +48,9 @@ void ColumnIsNullTableScanImpl::_scan_non_reference_segment(
   }
 }
 
-void ColumnIsNullTableScanImpl::_scan_generic_segment(const AbstractSegment& segment, const ChunkID chunk_id,
-                                                      RowIDPosList& matches, const std::shared_ptr<const AbstractPosList>& position_filter) const {
+void ColumnIsNullTableScanImpl::_scan_generic_segment(
+    const AbstractSegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
+    const std::shared_ptr<const AbstractPosList>& position_filter) const {
   segment_with_iterators(segment, [&](auto iter, [[maybe_unused]] const auto end) {
     // This may also be called for a ValueSegment if `segment` is a ReferenceSegment pointing to a single ValueSegment.
     const auto invert = predicate_condition == PredicateCondition::IsNotNull;
@@ -62,8 +62,9 @@ void ColumnIsNullTableScanImpl::_scan_generic_segment(const AbstractSegment& seg
   });
 }
 
-void ColumnIsNullTableScanImpl::_scan_generic_sorted_segment(const AbstractSegment& segment, const ChunkID chunk_id,
-                                                             RowIDPosList& matches, const std::shared_ptr<const AbstractPosList>& position_filter, const SortMode sorted_by) const {
+void ColumnIsNullTableScanImpl::_scan_generic_sorted_segment(
+    const AbstractSegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
+    const std::shared_ptr<const AbstractPosList>& position_filter, const SortMode sorted_by) const {
   const bool is_nulls_first = sorted_by == SortMode::Ascending || sorted_by == SortMode::Descending;
   const bool predicate_is_null = predicate_condition == PredicateCondition::IsNull;
   segment_with_iterators(segment, [&](auto begin, auto end) {
@@ -99,7 +100,8 @@ void ColumnIsNullTableScanImpl::_scan_generic_sorted_segment(const AbstractSegme
 }
 
 void ColumnIsNullTableScanImpl::_scan_value_segment(const BaseValueSegment& segment, const ChunkID chunk_id,
-                                                    RowIDPosList& matches, const std::shared_ptr<const AbstractPosList>& position_filter) {
+                                                    RowIDPosList& matches,
+                                                    const std::shared_ptr<const AbstractPosList>& position_filter) {
   if (_matches_all(segment)) {
     _add_all(chunk_id, matches, segment.size());
     return;
@@ -123,8 +125,9 @@ void ColumnIsNullTableScanImpl::_scan_value_segment(const BaseValueSegment& segm
   });
 }
 
-void ColumnIsNullTableScanImpl::_scan_dictionary_segment(const BaseDictionarySegment& segment, const ChunkID chunk_id,
-                                                         RowIDPosList& matches, const std::shared_ptr<const AbstractPosList>& position_filter) {
+void ColumnIsNullTableScanImpl::_scan_dictionary_segment(
+    const BaseDictionarySegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
+    const std::shared_ptr<const AbstractPosList>& position_filter) {
   if (_matches_all(segment)) {
     _add_all(chunk_id, matches, segment.size());
     return;
