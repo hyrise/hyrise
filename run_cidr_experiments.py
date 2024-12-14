@@ -41,9 +41,12 @@ avg_idling_joules_per_second = 0.0
 if not args.per_socket:
     print(" == Idle Measurements when no measurements per socket work")
     idle_runs = 5
-    idle_duration = 2
+    idle_duration = 60
+    #idle_duration = 2
     joules = []
     for idle_run in range(idle_runs):
+        if idle_duration < 60:
+            print(f"WWWWAARNING!! idle duration is {idle_duration} s")
         stop_command = f"perf stat {perf_sockets} {perf_metrics} sleep {idle_duration}"
         start = time.time()
         result = subprocess.run(shlex.split(stop_command), capture_output=True, text=True, check=True, env=env_vars)
@@ -51,23 +54,23 @@ if not args.per_socket:
         for line in result.stderr.splitlines():
             if "Joules" in line and "power/energy-pkg" in line:
                 splitted = line.split()
-                print(f"Idling for {idle_duration} s: {splitted[2]} Joules\t\t({line.strip()})")
-                assert "Joules" in splitted[2]
-                joules.append(float(splitted[3]))
+                print(f"Idling for {idle_duration} s: {splitted[0]} Joules\t\t({line.strip()})")
+                assert "Joules" in splitted[1]
+                joules.append(float(splitted[0]))
  
     avg_idling_joules_per_second = sum(joules) / idle_duration / idle_runs
     print(f"Avg. Joules per second idling: {avg_idling_joules_per_second}")
 
 
 scale_factor = 10
-scale_factor = 1
+#scale_factor = 1
 data_loading_runs = 5
 data_loading_joules = []
 data_loading_runtimes = []
 print(" == Data Loading")
 for load_run in range(data_loading_runs):
     if scale_factor != 10:
-        print("WWWWAARNING!! scale factor is ", scale_factor)
+        print(f"WWWWAARNING!! scale factor is {scale_factor}")
     load_command = f"perf stat {perf_sockets} {perf_metrics} numactl -N 0 -m 0 ./rel_gcc13/hyriseBenchmarkTPCH --scheduler --clients 25 -s {scale_factor} -q 2 -r 1"
     start = time.time()
     result = subprocess.run(shlex.split(load_command), capture_output=True, text=True, check=True, env=env_vars)
@@ -78,9 +81,9 @@ for load_run in range(data_loading_runs):
             if "S0" in line or not args.per_socket:
                 #print(line)
                 line_split = line.split()
-                joules_result = float(line_split[2 - int(not args.per_socket)])
+                joules_result = float(line_split[2 - 2*int(not args.per_socket)])
                 print(f"Data Loading: {joules_result} Joules\t\t({line.strip()})")
-                assert "Joules" in line_split[3 - int(not args.per_socket)]
+                assert "Joules" in line_split[3 - 2*int(not args.per_socket)]
                 data_loading_joules.append(joules_result)
 
     for line in result.stderr.splitlines():
@@ -100,7 +103,7 @@ print(f"Avg. runtime data loading: {avg_data_loading_runtime}")
 
 time.sleep(5)
 tpch_runtime = 1800
-tpch_runtime = 30
+#tpch_runtime = 30
 tpch_runs = 5
 tpch_joules = []
 tpch_runtimes = []
@@ -122,9 +125,9 @@ for run in range(tpch_runs):
             if "S0" in line or not args.per_socket:
                 #print(line)
                 line_split = line.split()
-                joules_result = float(line_split[2 - int(not args.per_socket)])
+                joules_result = float(line_split[2 - 2*int(not args.per_socket)])
                 print(f"TPC-H: {joules_result} Joules\t\t({line})")
-                assert "Joules" in line_split[3 - int(not args.per_socket)]
+                assert "Joules" in line_split[3 - 2*int(not args.per_socket)]
                 tpch_joules.append(joules_result)
             line_split = line.split
 
@@ -147,8 +150,8 @@ if args.per_socket:
 else:
     print(f"Assuming two sockets.")
     assert avg_idling_joules_per_second > 0.0
-    idling_socket_joules_data_loading = avg_data_loading_runtime * avg_idling_joules_per_second
-    idling_socket_joules_tpch = avg_tpch_runtime * avg_idling_joules_per_second
+    idling_socket_joules_data_loading = avg_data_loading_runtime * avg_idling_joules_per_second / 2
+    idling_socket_joules_tpch = avg_tpch_runtime * avg_idling_joules_per_second / 2
     print(f"Joules for TPC-H: {(avg_tpch_joules - idling_socket_joules_tpch) - (avg_data_loading_joules - idling_socket_joules_data_loading)} (({avg_tpch_joules} - {idling_socket_joules_tpch}) - ({avg_data_loading_joules} - {idling_socket_joules_data_loading}))")
 
 avg_runtimes = []
