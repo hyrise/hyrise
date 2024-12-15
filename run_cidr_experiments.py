@@ -129,7 +129,7 @@ for run in range(tpch_runs):
                 #print(line)
                 line_split = line.split()
                 joules_result = float(line_split[2 - 2*int(not args.per_socket)])
-                print(f"TPC-H: {joules_result} Joules\t\t({line})")
+                print(f"TPC-H: {joules_result} Joules\t\t({line.strip()})")
                 assert "Joules" in line_split[3 - 2*int(not args.per_socket)]
                 tpch_joules.append(joules_result)
             line_split = line.split
