@@ -125,7 +125,8 @@ void PdgfProcess::_monitor_liveliness() {
 }
 
 void PdgfProcess::_configure_numa() {
-  _arguments.insert(_arguments.end(), {"-N", "0", "-m", "0"});
+  // Allow memory to also use the other node if needed.
+  _arguments.insert(_arguments.end(), {"-N", "0", "--preferred", "0"});
 }
 
 void PdgfProcess::_configure_jvm() {
