@@ -7,6 +7,7 @@
 #include "hyrise.hpp"
 #include "operators/get_table.hpp"
 #include "operators/progressive/shuffle.hpp"
+#include "operators/progressive/chunk_select.hpp"
 #include "operators/print.hpp"
 #include "operators/projection.hpp"
 #include "operators/table_wrapper.hpp"
@@ -200,6 +201,25 @@ TEST_F(OperatorsShuffleTest, ThreeColumns) {
       });
     });
     all_values.merge(segment_values);
+  }
+
+  const auto selections = std::vector<std::vector<std::optional<uint16_t>>>{{std::nullopt, 5, 3},
+                                                                            {0, 5, 3},
+                                                                            {5, 0, 3},
+                                                                            {5, std::nullopt, 3},
+                                                                            {5, std::nullopt, std::nullopt},
+                                                                            {0, 0, 0}};
+  for (auto selection : selections) {
+    const auto chunk_select = std::make_shared<ChunkSelect>(shuffle, std::move(selection));
+    chunk_select->execute();
+    const auto chunk_select_result = chunk_select->get_output();
+    std::cerr << chunk_select_result->row_count() << std::endl;
+  }
+
+  const auto failing_selections = std::vector<std::vector<std::optional<uint16_t>>>{{std::nullopt, std::nullopt, std::nullopt},
+                                                                                    {std::nullopt, 5, 17}};
+  for (auto selection : failing_selections) {
+    EXPECT_ANY_THROW(std::make_shared<ChunkSelect>(shuffle, std::move(selection)));
   }
 }
 

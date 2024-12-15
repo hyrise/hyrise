@@ -22,6 +22,8 @@ class Shuffle : public AbstractReadOnlyOperator {
   Shuffle(const std::shared_ptr<const AbstractOperator>& input_operator, std::vector<ColumnID>&& column_ids,
           std::vector<uint8_t>&& partition_counts);
   const std::string& name() const override;
+  const std::vector<ColumnID>& column_ids() const;
+  const std::vector<uint8_t>& partition_counts() const;
 
  protected:
   std::shared_ptr<const Table> _on_execute() override;

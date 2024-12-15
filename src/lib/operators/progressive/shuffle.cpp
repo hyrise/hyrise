@@ -37,6 +37,7 @@ Shuffle::Shuffle(const std::shared_ptr<const AbstractOperator>& input_operator, 
     : AbstractReadOnlyOperator(OperatorType::Shuffle, input_operator, nullptr),
       _column_ids{std::move(column_ids)},
       _partition_counts{std::move(partition_counts)} {
+  Assert(!_column_ids.empty(), "Shuffle columns cannot be empty.");
   Assert(_column_ids.size() == _partition_counts.size(), "Unexpected shuffle configuration.");
   Assert(_column_ids.size() <= MAX_SHUFFLE_COLUMNS, "We only support up to " + std::to_string(MAX_SHUFFLE_COLUMNS) + 
                                                     " columns for shuffling.");
@@ -49,6 +50,14 @@ Shuffle::Shuffle(const std::shared_ptr<const AbstractOperator>& input_operator, 
 const std::string& Shuffle::name() const {
   static const auto name = std::string{"Shuffle"};
   return name;
+}
+
+const std::vector<ColumnID>& Shuffle::column_ids() const {
+  return _column_ids;
+}
+
+const std::vector<uint8_t>& Shuffle::partition_counts() const {
+  return _partition_counts;
 }
 
 std::shared_ptr<AbstractOperator> Shuffle::_on_deep_copy(

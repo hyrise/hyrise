@@ -10,6 +10,7 @@
 #include "operators/abstract_operator.hpp"
 #include "operators/table_wrapper.hpp"
 #include "operators/print.hpp"
+#include "operators/progressive/shuffle.hpp"
 #include "operators/projection.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
@@ -25,18 +26,28 @@
 
 namespace hyrise {
 
-ChunkSelect::ChunkSelect(const std::shared_ptr<const AbstractOperator>& input_operator, std::vector<ColumnID>&& column_ids,
-                         std::vector<uint8_t>&& partition_counts, std::vector<uint16_t>&& hash_values)
+ChunkSelect::ChunkSelect(const std::shared_ptr<const AbstractOperator>& input_operator, std::vector<std::optional<uint16_t>>&& radix_values)
     : AbstractReadOnlyOperator(OperatorType::ChunkSelect, input_operator, nullptr),
-      _column_ids{std::move(column_ids)},
-      _partition_counts{std::move(partition_counts)},
-      _hash_values{std::move(hash_values)} {
-  Assert(_column_ids.size() == _partition_counts.size(), "Unexpected configuration.");
-  Assert(_column_ids.size() == _hash_values.size(), "Unexpected configuration.");
+      _radix_values{std::move(radix_values)} {
+  Assert(input_operator->type() == OperatorType::Shuffle, "Expecting Shuffle as input operator.");
 
-  for (const auto& partition_count : _partition_counts) {
-    Assert(std::log2(partition_count) == std::ceil(std::log2(partition_count)), "Partition sizes must be a power of two.");
+  const auto& shuffle_operator = static_cast<const Shuffle&>(*input_operator);
+  _column_ids = shuffle_operator.column_ids();
+  _partition_counts = shuffle_operator.partition_counts();
+
+  if (HYRISE_DEBUG) {
+    Assert(std::any_of(_radix_values.cbegin(), _radix_values.cend(), [](const auto& item) {
+      return item.has_value();
+    }), "At least one radix needs to be set.");
+
+    for (auto partition_id = size_t{0}; partition_id < _partition_counts.size(); ++partition_id) {
+      if (!_radix_values[partition_id]) {
+        continue;
+      }
+      Assert(_radix_values[partition_id] < _partition_counts[partition_id], "Radix value is too large.");
+    }
   }
+
 }
 
 const std::string& ChunkSelect::name() const {
@@ -50,8 +61,8 @@ std::shared_ptr<AbstractOperator> ChunkSelect::_on_deep_copy(
     std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& /*copied_ops*/) const {
   auto copy_column_ids = _column_ids;
   auto copy_partition_counts = _partition_counts;
-  auto copy_hash_values = _hash_values;
-  auto copy = std::make_shared<ChunkSelect>(copied_left_input, std::move(copy_column_ids), std::move(copy_partition_counts), std::move(copy_hash_values));
+  auto copy_radix_values = _radix_values;
+  auto copy = std::make_shared<ChunkSelect>(copied_left_input, std::move(copy_radix_values));
   return copy;
 }
 
@@ -60,11 +71,26 @@ void ChunkSelect::_on_set_parameters(const std::unordered_map<ParameterID, AllTy
 std::shared_ptr<const Table> ChunkSelect::_on_execute() {
   auto timer = Timer{};
   const auto& input_table = left_input_table();
-  // const auto input_table_chunk_count = input_table->chunk_count();
-  // const auto partition_column_count = _column_ids.size();
   Assert(input_table->type() == TableType::References, "ChunkSelect cannot be executed on data tables.");
 
-  return input_table;
+  const auto chunk_count = input_table->chunk_count();
+  auto chunk_ids_to_emit = std::vector<ChunkID>{};
+  chunk_ids_to_emit.reserve(chunk_count / 2);
+
+  for ()
+
+  
+  auto chunks = std::vector<std::shared_ptr<Chunk>>{};
+  chunks.reserve(chunk_count / 2);
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+    const auto& chunk = input_table->get_chunk(chunk_id);
+    if (!chunk) {
+      continue;
+    }
+    chunks.emplace_back(progressive::recreate_non_const_chunk(chunk));
+  }
+
+  return std::make_shared<Table>(input_table->column_definitions(), TableType::References, chunks);
 }
 
 }  // namespace hyrise

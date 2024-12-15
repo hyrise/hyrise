@@ -19,8 +19,7 @@ namespace hyrise {
 
 class ChunkSelect : public AbstractReadOnlyOperator {
  public:
-  ChunkSelect(const std::shared_ptr<const AbstractOperator>& input_operator, std::vector<ColumnID>&& column_ids,
-              std::vector<uint8_t>&& partition_counts, std::vector<uint16_t>&& hash_values);
+  ChunkSelect(const std::shared_ptr<const AbstractOperator>& input_operator, std::vector<std::optional<uint16_t>>&& radix_values);
   const std::string& name() const override;
 
  protected:
@@ -34,7 +33,7 @@ class ChunkSelect : public AbstractReadOnlyOperator {
  private:
   std::vector<ColumnID> _column_ids{};
   std::vector<uint8_t> _partition_counts{};
-  std::vector<uint16_t> _hash_values{};
+  std::vector<std::optional<uint16_t>> _radix_values{};
 };
 
 }  // namespace hyrise
