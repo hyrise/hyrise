@@ -30,9 +30,9 @@ std::string ColumnIsNullTableScanImpl::description() const {
 void ColumnIsNullTableScanImpl::_scan_non_reference_segment(
     const AbstractSegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
     const std::shared_ptr<const AbstractPosList>& position_filter) {
-  if (const auto value_segment = dynamic_cast<const BaseValueSegment*>(&segment)) {
+  if (const auto* const value_segment = dynamic_cast<const BaseValueSegment*>(&segment)) {
     _scan_value_segment(*value_segment, chunk_id, matches, position_filter);
-  } else if (const auto dictionary_segment = dynamic_cast<const BaseDictionarySegment*>(&segment)) {
+  } else if (const auto* const dictionary_segment = dynamic_cast<const BaseDictionarySegment*>(&segment)) {
     _scan_dictionary_segment(*dictionary_segment, chunk_id, matches, position_filter);
   } else {
     const auto& chunk_sorted_by = _in_table->get_chunk(chunk_id)->individually_sorted_by();
