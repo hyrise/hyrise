@@ -12,6 +12,7 @@
 #include "storage/value_segment/null_value_vector_iterable.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
+#include "utils/performance_warning.hpp"
 
 namespace hyrise {
 
@@ -30,6 +31,33 @@ std::string ColumnIsNullTableScanImpl::description() const {
 void ColumnIsNullTableScanImpl::_scan_non_reference_segment(
     const AbstractSegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
     const std::shared_ptr<const AbstractPosList>& position_filter) {
+  const auto data_type = segment.data_type();
+
+  resolve_data_type(data_type, [&](const auto data_type_t) {
+    using DataType = typename decltype(data_type_t)::type;
+
+    if (const auto* const value_segment = dynamic_cast<const BaseValueSegment*>(&segment)) {
+      _scan_value_segment(*value_segment, chunk_id, matches, position_filter);
+    } else if (const auto* const dictionary_segment = dynamic_cast<const BaseDictionarySegment*>(&segment)) {
+      _scan_dictionary_segment(*dictionary_segment, chunk_id, matches, position_filter);
+    } else if (const auto* const run_length_segment = dynamic_cast<const RunLengthSegment<DataType>*>(&segment)) {
+      _scan_run_length_segment(*run_length_segment, chunk_id, matches, position_filter);
+    } else if (const auto* const lz4_segment = dynamic_cast<const LZ4Segment<DataType>*>(&segment)) {
+      _scan_LZ4_segment(*lz4_segment, chunk_id, matches, position_filter);
+    } else {
+      const auto& chunk_sorted_by = _in_table->get_chunk(chunk_id)->individually_sorted_by();
+      if (!chunk_sorted_by.empty()) {
+        for (const auto& sorted_by : chunk_sorted_by) {
+          if (sorted_by.column == _column_id) {
+            _scan_generic_sorted_segment(segment, chunk_id, matches, position_filter, sorted_by.sort_mode);
+            ++num_chunks_with_binary_search;
+          }
+        }
+      }
+      _scan_generic_segment(segment, chunk_id, matches, position_filter);
+    }
+  });
+
   if (const auto* const value_segment = dynamic_cast<const BaseValueSegment*>(&segment)) {
     _scan_value_segment(*value_segment, chunk_id, matches, position_filter);
   } else if (const auto* const dictionary_segment = dynamic_cast<const BaseDictionarySegment*>(&segment)) {
@@ -144,9 +172,43 @@ void ColumnIsNullTableScanImpl::_scan_dictionary_segment(
   const auto functor = [&](const auto& value) {
     return invert ^ value.is_null();
   };
+  
   iterable.with_iterators(position_filter, [&](auto iter, auto end) {
     _scan_with_iterators<false>(functor, iter, end, chunk_id, matches);
   });
+}
+
+template <typename T>
+void ColumnIsNullTableScanImpl::_scan_run_length_segment(
+    const RunLengthSegment<T>& segment, const ChunkID chunk_id, RowIDPosList& matches,
+    const std::shared_ptr<const AbstractPosList>& position_filter) {
+  auto iterable = NullValueVectorIterable{*segment.null_values()};
+
+  const auto invert = predicate_condition == PredicateCondition::IsNotNull;
+  const auto functor = [&](const auto& value) {
+    return invert ^ value.is_null();
+  };
+
+  iterable.with_iterators(position_filter, [&](auto iter, auto end) {
+    _scan_with_iterators<false>(functor, iter, end, chunk_id, matches);
+  });
+}
+
+template <typename T>
+void ColumnIsNullTableScanImpl::_scan_LZ4_segment(
+    const LZ4Segment<T>& segment, const ChunkID chunk_id, RowIDPosList& matches,
+    const std::shared_ptr<const AbstractPosList>& position_filter) {
+  auto iterable = NullValueVectorIterable{*segment.null_values()};
+
+  const auto invert = predicate_condition == PredicateCondition::IsNotNull;
+  const auto functor = [&](const auto& value) {
+    return invert ^ value.is_null();
+  };
+
+  iterable.with_iterators(position_filter, [&](auto iter, auto end) {
+    _scan_with_iterators<false>(functor, iter, end, chunk_id, matches);
+  });
+  PerformanceWarning("asjaoisfhaosifh");
 }
 
 bool ColumnIsNullTableScanImpl::_matches_all(const BaseValueSegment& segment) const {
