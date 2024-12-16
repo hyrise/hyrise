@@ -16,7 +16,10 @@ hostname = socket.gethostname()
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--gcc_path', required=True)
-parser.add_argument('--per_socket', action=argparse.BooleanOptionalAction, required=True)
+#@parser.add_argument('--per_socket', action=argparse.BooleanOptionalAction, required=True)
+parser.add_argument('--per_socket', action='store_true')
+parser.add_argument('--no-per_socket', dest='per_socket', action='store_false')
+parser.set_defaults(per_socket=True)
 parser.add_argument('--oneapi_path', required=True)
 args = parser.parse_args()
 
@@ -40,7 +43,7 @@ avg_idling_joules_per_second = 0.0
 if not args.per_socket:
     print(" == Idle Measurements when no measurements per socket work")
     idle_runs = 5
-    #idle_duration = 120
+    idle_duration = 60
     idle_duration = 2
     joules = []
     for idle_run in range(idle_runs):
