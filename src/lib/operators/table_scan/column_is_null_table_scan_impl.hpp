@@ -49,11 +49,12 @@ class ColumnIsNullTableScanImpl : public AbstractDereferencedColumnTableScanImpl
 
   template <typename T>
   void _scan_LZ4_segment(const LZ4Segment<T>& segment, const ChunkID chunk_id, RowIDPosList& matches,
-                                const std::shared_ptr<const AbstractPosList>& position_filter);
+                         const std::shared_ptr<const AbstractPosList>& position_filter);
 
   template <typename T>
-  void _scan_frame_of_reference_segment(const FrameOfReferenceSegment<T>& segment, const ChunkID chunk_id, RowIDPosList& matches,
-                                const std::shared_ptr<const AbstractPosList>& position_filter);
+  void _scan_frame_of_reference_segment(const FrameOfReferenceSegment<T>& segment, const ChunkID chunk_id,
+                                        RowIDPosList& matches,
+                                        const std::shared_ptr<const AbstractPosList>& position_filter);
 
   /**
    * @defgroup Methods used for handling value segments

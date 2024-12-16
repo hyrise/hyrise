@@ -44,7 +44,8 @@ void ColumnIsNullTableScanImpl::_scan_non_reference_segment(
       _scan_run_length_segment(*run_length_segment, chunk_id, matches, position_filter);
     } else if (const auto* const lz4_segment = dynamic_cast<const LZ4Segment<DataType>*>(&segment)) {
       _scan_LZ4_segment(*lz4_segment, chunk_id, matches, position_filter);
-    }  else if (const auto* const frame_of_reference_segment = dynamic_cast<const FrameOfReferenceSegment<int32_t>*>(&segment)) {
+    } else if (const auto* const frame_of_reference_segment =
+                   dynamic_cast<const FrameOfReferenceSegment<int32_t>*>(&segment)) {
       _scan_frame_of_reference_segment(*frame_of_reference_segment, chunk_id, matches, position_filter);
     } else {
       const auto& chunk_sorted_by = _in_table->get_chunk(chunk_id)->individually_sorted_by();
@@ -174,7 +175,7 @@ void ColumnIsNullTableScanImpl::_scan_dictionary_segment(
   const auto functor = [&](const auto& value) {
     return invert ^ value.is_null();
   };
-  
+
   iterable.with_iterators(position_filter, [&](auto iter, auto end) {
     _scan_with_iterators<false>(functor, iter, end, chunk_id, matches);
   });
@@ -197,9 +198,9 @@ void ColumnIsNullTableScanImpl::_scan_run_length_segment(
 }
 
 template <typename T>
-void ColumnIsNullTableScanImpl::_scan_LZ4_segment(
-    const LZ4Segment<T>& segment, const ChunkID chunk_id, RowIDPosList& matches,
-    const std::shared_ptr<const AbstractPosList>& position_filter) {
+void ColumnIsNullTableScanImpl::_scan_LZ4_segment(const LZ4Segment<T>& segment, const ChunkID chunk_id,
+                                                  RowIDPosList& matches,
+                                                  const std::shared_ptr<const AbstractPosList>& position_filter) {
   auto iterable = NullValueVectorIterable{*segment.null_values()};
 
   const auto invert = predicate_condition == PredicateCondition::IsNotNull;
