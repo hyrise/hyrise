@@ -130,7 +130,7 @@ except Exception:
     sys.exit(3)
 
 if not is_setup():
-    print("  Aborting. Unzipping did not result in a correct imdb_files-setup. Cleaning up.")
+    print("- Aborting. Unzipping did not result in a correct imdb_data setup. Cleaning up.")
     clean_up(including_table_dir=True)
     sys.exit(4)
 
