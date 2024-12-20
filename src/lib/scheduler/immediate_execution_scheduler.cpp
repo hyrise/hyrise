@@ -34,11 +34,15 @@ void ImmediateExecutionScheduler::schedule(std::shared_ptr<AbstractTask> task, N
   } else {
     // If a task is not yet ready, its predecessors must be executed first.
     for (const auto& predecessor_task : task->predecessors()) {
-      predecessor_task.lock()->schedule();
+      predecessor_task.get().schedule();
     }
   }
 
   Assert(task->is_done(), "Task should have been executed by now.");
+}
+
+void ImmediateExecutionScheduler::_group_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const {
+  // Nothing to do in this scheduler.
 }
 
 }  // namespace hyrise
