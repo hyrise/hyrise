@@ -3,6 +3,7 @@
 #include <cstddef>
 #include <memory>
 #include <numeric>
+#include <random>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -12,6 +13,8 @@
 #include <boost/unordered/unordered_flat_map.hpp>
 
 #include "all_type_variant.hpp"
+#include "hyrise.hpp"
+#include "scheduler/job_task.hpp"
 #include "statistics/statistics_objects/abstract_histogram.hpp"
 #include "statistics/statistics_objects/histogram_domain.hpp"
 #include "storage/abstract_segment.hpp"
@@ -24,17 +27,142 @@ namespace {
 
 using namespace hyrise;  // NOLINT
 
+// constexpr auto MIN_CHUNK_COUNT_TO_INCLUDE = ChunkID{1'000};
+constexpr auto MIN_CHUNK_COUNT_TO_INCLUDE = ChunkID{10000000};
+
 // Think of this as an unordered_map<T, HistogramCountType>. The hash, equals, and allocator template parameter are
 // defaults so that we can set the last parameter. It controls whether the hash for a value should be cached. Doing
 // so reduces the cost of rehashing at the cost of slightly higher memory consumption. We only do it for strings,
 // where hashing is somewhat expensive.
-template <typename T>
-using ValueDistributionMap = std::conditional_t<std::is_same_v<T, pmr_string>, boost::unordered_flat_map<std::string_view, HistogramCountType>, boost::unordered_flat_map<T, HistogramCountType>>;
 
 template <typename T>
-void add_segment_to_value_distribution(const AbstractSegment& segment, ValueDistributionMap<T>& value_distribution,
+using ValueDistributionType = std::conditional_t<std::is_same_v<T, pmr_string>, std::string_view, T>;
+ 
+template <typename T>
+using ValueDistributionMap = boost::unordered_flat_map<ValueDistributionType<T>, HistogramCountType>;
+
+template <typename T>
+using ValueDistributionVector = std::vector<std::pair<ValueDistributionType<T>, size_t>>;
+
+template <typename T>
+std::vector<std::pair<ValueDistributionType<T>, size_t>> add_segment_to_value_distribution2(std::vector<std::unique_ptr<StringHeap>>& string_heaps,
+                                                                                            auto segment_iterator_begin, auto segment_iterator_end,
+                                                                                            const HistogramDomain<T>& domain) {
+  DebugAssert(segment_iterator_begin != segment_iterator_end, "Wrong call");
+  // std::cout << "called with " << std::distance(segment_iterator_begin, segment_iterator_end) << std::endl;
+  if (std::distance(segment_iterator_begin, segment_iterator_end) == 1) {
+    const auto [chunk_id, segment] = *segment_iterator_begin;
+
+    string_heaps[chunk_id] = std::make_unique<StringHeap>();
+    auto& string_heap = *string_heaps[chunk_id];
+
+    auto value_distribution_map = ValueDistributionMap<T>{};
+
+    segment_iterate<T>(*segment, [&](const auto& iterator_value) {
+      if (iterator_value.is_null()) {
+        return;
+      }
+
+      if constexpr (std::is_same_v<T, pmr_string>) {
+        const auto current_string = string_heap.add_string(iterator_value.value());
+        // Do "contains()" check first to avoid the string copy incurred by string_to_domain() where possible
+        if (domain.contains(current_string)) {
+          ++value_distribution_map[current_string];
+        } else {
+          ++value_distribution_map[domain.string_to_domain(current_string)];
+        }
+      } else {
+        ++value_distribution_map[iterator_value.value()];
+      }
+    });
+
+    auto result = ValueDistributionVector<T>(value_distribution_map.cbegin(), value_distribution_map.cend());
+    std::ranges::sort(result, [](const auto& lhs, const auto& rhs) {
+      return lhs.first < rhs.first;
+    });
+
+    return result;
+  }
+
+  auto left = ValueDistributionVector<T>{};
+  auto right = ValueDistributionVector<T>{};
+
+  auto middle = segment_iterator_begin + (std::distance(segment_iterator_begin, segment_iterator_end) / 2);
+  // auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
+  // tasks.emplace_back(std::make_shared<JobTask>([&]() {
+    left = add_segment_to_value_distribution2(string_heaps, segment_iterator_begin, middle, domain);
+  // }));
+  // tasks.emplace_back(std::make_shared<JobTask>([&]() {
+    right = add_segment_to_value_distribution2(string_heaps, middle, segment_iterator_end, domain);
+  // }));
+
+  // Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
+
+  // std::cout << "left size " << left.size() << " and right size " << right.size() << std::endl;
+
+  auto result = ValueDistributionVector<T>{};
+  result.reserve(left.size());
+
+  auto left_iter = left.begin();
+  auto right_iter = right.begin();
+  // if (left_iter == left.end()) {
+  //   while (right_iter != right.end()) {
+  //     result.emplace_back(*right_iter);
+  //     ++right_iter;
+  //   }
+
+  // } else if (right_iter == right.end()) {
+  //   while (left_iter != left.end()) {
+  //     result.emplace_back(*left_iter);
+  //     ++left_iter;
+  //   }
+  // }
+
+  while (left_iter != left.end() || right_iter != right.end()) {
+    // std::cout << ".";
+    if (left_iter == left.end()) {
+      result.emplace_back(*right_iter);
+      ++right_iter;
+      continue;
+    } else if (right_iter == right.end()) {
+      result.emplace_back(*left_iter);
+      ++left_iter;
+      continue;
+    }
+
+    if (left_iter->first == right_iter->first) {
+      result.emplace_back(left_iter->first, left_iter->second + right_iter->second);
+      ++left_iter;
+      ++right_iter;
+    } else if (left_iter->first < right_iter->first) {
+      result.emplace_back(*left_iter);
+      ++left_iter;
+    } else {
+      result.emplace_back(*right_iter);
+      ++right_iter;
+    }
+  }
+
+  // auto ss = std::stringstream{};
+  // ss << "\n\n\nMerging:\n";
+  // for (auto el : left) { ss << " | " << el.first << ":" << el.second; }
+  // ss << "\nand\n";
+  // for (auto el : right) { ss << " | " << el.first << ":" << el.second; }
+  // ss << "\ninto\n";
+  // for (auto el : result) { ss << " | " << el.first << ":" << el.second; }
+  // ss << "\n\n" << std::endl;
+  // std::cout << ss.str();
+
+  Assert(std::is_sorted(result.begin(), result.end()), "Not sorted.");
+  return result;
+}
+
+template <typename T>
+void add_segment_to_value_distribution(std::vector<std::unique_ptr<StringHeap>>& string_heaps, const ChunkID chunk_id, const AbstractSegment& segment, ValueDistributionMap<T>& value_distribution,
                                        const HistogramDomain<T>& domain) {
-  auto string_heap = StringHeap{};
+  string_heaps[chunk_id] = std::make_unique<StringHeap>();
+  auto& string_heap = *string_heaps[chunk_id];
+
   segment_iterate<T>(segment, [&](const auto& iterator_value) {
     if (iterator_value.is_null()) {
       return;
@@ -60,13 +188,53 @@ std::vector<std::pair<T, HistogramCountType>> value_distribution_from_column(con
                                                                              const HistogramDomain<T>& domain) {
   auto value_distribution_map = ValueDistributionMap<T>{};
   const auto chunk_count = table.chunk_count();
+  auto segments_to_process = std::vector<std::pair<ChunkID, std::shared_ptr<AbstractSegment>>>{};
+  segments_to_process.reserve(MIN_CHUNK_COUNT_TO_INCLUDE);
+
+  // In average, we sample every 2.5th segment. Previous analyses of Hyrise histograms showed that the accuracy of
+  // sample histograms quickly deteriogates when sampling below 33 %. We thus choose a safer rate of ~50%.
+  auto random_engine = std::ranlux24_base{17};  // Fast random engine. Sufficient for our case.
+  auto skip_lengths = std::uniform_int_distribution<>{0, 4};
+
+  auto current_chunk_id = ChunkID{0};
+  while (current_chunk_id < chunk_count) {
+    const auto chunk = table.get_chunk(current_chunk_id);
+    if (!chunk) {
+      continue;
+    }
+
+    segments_to_process.emplace_back(current_chunk_id, chunk->get_segment(column_id));
+
+    if (current_chunk_id < MIN_CHUNK_COUNT_TO_INCLUDE / 2 || current_chunk_id >= (chunk_count - (MIN_CHUNK_COUNT_TO_INCLUDE / 2))) {
+      ++current_chunk_id;
+      continue;
+    }
+
+    current_chunk_id += (skip_lengths(random_engine) % 4) + 1;
+  }
+
+  auto string_heaps = std::vector<std::unique_ptr<StringHeap>>{};
+  string_heaps.resize(chunk_count);
+
+  if (segments_to_process.size() > 100) {
+    std::cout << "For column with " << chunk_count << " segments, we are sampling " << segments_to_process.size() << std::endl;  
+  }
+
+  auto result = ValueDistributionVector<T>{};
+  if (chunk_count > 0) {
+    result = add_segment_to_value_distribution2<T>(string_heaps, segments_to_process.begin(), segments_to_process.end(), domain);
+  }
+
+  auto string_heaps2 = std::vector<std::unique_ptr<StringHeap>>{};
+  string_heaps2.resize(chunk_count);
+
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk = table.get_chunk(chunk_id);
     if (!chunk) {
       continue;
     }
 
-    add_segment_to_value_distribution<T>(*chunk->get_segment(column_id), value_distribution_map, domain);
+    add_segment_to_value_distribution<T>(string_heaps2, chunk_id, *chunk->get_segment(column_id), value_distribution_map, domain);
   }
 
   auto value_distribution =
@@ -75,6 +243,39 @@ std::vector<std::pair<T, HistogramCountType>> value_distribution_from_column(con
   boost::sort::pdqsort(value_distribution.begin(), value_distribution.end(), [&](const auto& lhs, const auto& rhs) {
     return lhs.first < rhs.first;
   });
+
+  std::stringstream ss;
+  // ss << "Column ID " << column_id << "(" << table.column_data_type(column_id) << ", table_size: " << table.row_count() << "): uniques " << value_distribution.size() << "\n\n";
+
+  auto differ = false;
+  differ = result.size() != value_distribution.size();
+  if (!differ) {
+    for (auto i = size_t{0}; i < result.size(); ++i) {
+      if (result[i].first != value_distribution[i].first || float(result[i].second) != value_distribution[i].second) {
+        differ = true;
+        break;
+      }
+    }
+  }
+
+  if (differ) {
+    auto sum = double{};
+    ss << "new >>> (table size: " << table.row_count() << ")" << std::endl;
+    for (const auto el : result) {
+      ss << "|" << el.first << ":" << el.second;
+      sum += static_cast<double>(el.second);
+    }
+    ss << "\nsum:" << sum << "\nold >>>" << std::endl;
+    sum = 0.0;
+    for (const auto el : value_distribution) {
+      ss << "|" << el.first << ":" << el.second;
+      sum += el.second;
+    }
+    ss << "\nsum: " << sum << "\n\n";
+  }
+  
+  if(differ) { ss << "OH SHIT\n\n"; }
+  std::cout << ss.str();
 
   return value_distribution;
 }
@@ -125,9 +326,9 @@ std::shared_ptr<EqualDistinctCountHistogram<T>> EqualDistinctCountHistogram<T>::
   const auto distinct_count_per_bin = static_cast<size_t>(value_distribution.size() / bin_count);
   const BinID bin_count_with_extra_value = value_distribution.size() % bin_count;
 
-  std::vector<T> bin_minima(bin_count);
-  std::vector<T> bin_maxima(bin_count);
-  std::vector<HistogramCountType> bin_heights(bin_count);
+  auto bin_minima = std::vector<T>(bin_count);
+  auto bin_maxima = std::vector<T>(bin_count);
+  auto bin_heights = std::vector<HistogramCountType>(bin_count);
 
   // `min_value_idx` and `max_value_idx` are indices into the sorted vector `value_distribution`
   // describing which range of distinct values goes into a bin

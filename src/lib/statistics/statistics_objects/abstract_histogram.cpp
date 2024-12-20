@@ -843,7 +843,7 @@ std::shared_ptr<AbstractHistogram<T>> AbstractHistogram<T>::split_at_bin_bounds(
 
 template <typename T>
 std::vector<std::pair<T, T>> AbstractHistogram<T>::bin_bounds() const {
-  std::vector<std::pair<T, T>> bin_edges(bin_count());
+  auto bin_edges = std::vector<std::pair<T, T>>(bin_count());
 
   for (auto bin_id = BinID{0}; bin_id < bin_edges.size(); ++bin_id) {
     bin_edges[bin_id] = std::make_pair(bin_minimum(bin_id), bin_maximum(bin_id));

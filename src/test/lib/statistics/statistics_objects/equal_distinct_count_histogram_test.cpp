@@ -32,6 +32,7 @@ TEST_F(EqualDistinctCountHistogramTest, FromColumnString) {
   const auto default_domain_histogram =
       EqualDistinctCountHistogram<pmr_string>::from_column(*_string2, ColumnID{0}, 4, default_domain);
 
+  ASSERT_TRUE(default_domain_histogram);
   ASSERT_EQ(default_domain_histogram->bin_count(), 4);
   EXPECT_EQ(default_domain_histogram->bin(BinID{0}), HistogramBin<pmr_string>("aa", "birne", 3, 3));
   EXPECT_EQ(default_domain_histogram->bin(BinID{1}), HistogramBin<pmr_string>("bla", "ttt", 4, 3));

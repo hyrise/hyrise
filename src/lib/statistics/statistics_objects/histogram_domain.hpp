@@ -73,7 +73,10 @@ class HistogramDomain<pmr_string> {
   /**
    * @return whether @param string_value consists exclusively of characters between `min_char` and `max_char`
    */
+  
+
   template <typename T>
+    requires (std::is_convertible_v<T, pmr_string> || std::is_convertible_v<T, std::string_view>)
   bool contains(const T& string_value) const {
     for (const auto char_value : string_value) {
       if (char_value > max_char || char_value < min_char) {
@@ -98,6 +101,7 @@ class HistogramDomain<pmr_string> {
    * @return a copy of @param string_value with all characters capped by [min_char, max_char]
    */
   template <typename T>
+    requires (std::is_convertible_v<T, pmr_string> || std::is_convertible_v<T, std::string_view>)
   pmr_string string_to_domain(const T& string_value) const {
     auto converted = pmr_string{string_value};
     for (auto pos = size_t{0}; pos < converted.size(); ++pos) {
