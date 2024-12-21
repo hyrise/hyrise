@@ -740,6 +740,9 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_ref(const hsql::
       if (hsql_table_ref.join->type == hsql::kJoinNatural) {
         return _translate_natural_join(*hsql_table_ref.join);
       } else {
+        if (hsql_table_ref.join->namedColumns && !hsql_table_ref.join->namedColumns->empty()) {
+          return _translate_namedColumns_join(*hsql_table_ref.join);
+        }
         return _translate_predicated_join(*hsql_table_ref.join);
       }
 
@@ -1046,6 +1049,65 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_predicated_join(const 
       lqp = _translate_predicate_expression(join_predicate, lqp);
     }
   }
+
+  result_state.lqp = lqp;
+  return result_state;
+}
+
+SQLTranslator::TableSourceState SQLTranslator::_translate_namedColumns_join(const hsql::JoinDefinition& join) {
+  const auto join_mode = translate_join_mode(join.type);
+
+  auto left_state = _translate_table_ref(*join.left);
+  auto right_state = _translate_table_ref(*join.right);
+
+  auto left_input_lqp = left_state.lqp;
+  auto right_input_lqp = right_state.lqp;
+
+  AssertInput(!join.condition, "Specify either a condition or namedColums for JOIN not both!");
+
+  const auto& named_columns_set = std::set<std::string>{join.namedColumns->begin(), join.namedColumns->end()};
+  const auto left_sql_identifier_resolver = left_state.sql_identifier_resolver;
+
+  Assert(left_sql_identifier_resolver, "Could not find valid sql_identifier resolver");
+
+  // left_state becomes the result state
+  auto result_state = std::move(left_state);
+
+  // go through right input and find the columns that are named in the join and present in the left input
+  auto join_predicates = std::vector<std::shared_ptr<AbstractExpression>>{};
+
+  for (const auto& right_element : right_state.elements_in_order) {
+    const auto& right_expression = right_element.expression;
+    const auto& right_identifiers = right_element.identifiers;
+
+    if (!right_identifiers.empty()) {
+      // Ignore previous names if there is an alias
+      const auto right_identifier = right_identifiers.back();
+
+      const auto left_expression =
+          left_sql_identifier_resolver->resolve_identifier_relaxed({right_identifier.column_name});
+
+      if (left_expression && named_columns_set.contains(right_identifier.column_name)) {
+        // Two columns match and are named, create a join predicate
+        join_predicates.emplace_back(equals_(left_expression, right_expression));
+        continue;
+      }
+
+      // No matching column in the left input found or the column was not one of the named_columns:
+      //   Add the column from the right input to the output
+      result_state.elements_in_order.emplace_back(right_element);
+      result_state.sql_identifier_resolver->add_column_name(right_expression, right_identifier.column_name);
+      if (right_identifier.table_name) {
+        result_state.elements_by_table_name[*right_identifier.table_name].emplace_back(right_element);
+        result_state.sql_identifier_resolver->set_table_name(right_expression, *right_identifier.table_name);
+      }
+    }
+  }
+
+  AssertInput(join_predicates.size() == named_columns_set.size(), "Could not find all named columns in input tables");
+
+  // create the join node
+  auto lqp = JoinNode::make(join_mode, join_predicates, left_input_lqp, right_input_lqp);
 
   result_state.lqp = lqp;
   return result_state;
