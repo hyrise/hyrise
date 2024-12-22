@@ -1063,13 +1063,13 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_namedColumns_join(cons
   auto left_input_lqp = left_state.lqp;
   auto right_input_lqp = right_state.lqp;
 
-  AssertInput(!join.condition, "Specify either a condition or namedColums for JOIN not both!");
+  AssertInput(!join.condition, "Specify either a condition or namedColums for JOIN not both");
 
   const auto left_sql_identifier_resolver = left_state.sql_identifier_resolver;
 
   Assert(left_sql_identifier_resolver, "Could not find valid sql_identifier resolver");
 
-  // left_state becomes the result state
+  // left_state becomes the result state.
   auto result_state = std::move(left_state);
 
   auto join_predicates = std::vector<std::shared_ptr<AbstractExpression>>{};
@@ -1080,7 +1080,7 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_namedColumns_join(cons
     const auto& right_identifiers = right_element.identifiers;
 
     if (!right_identifiers.empty()) {
-      // Ignore previous names if there is an alias
+      // Ignore previous names if there is an alias.
       const auto right_identifier = right_identifiers.back();
 
       const auto left_expression =
@@ -1088,13 +1088,13 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_namedColumns_join(cons
 
       if (left_expression && std::find(join.namedColumns->begin(), join.namedColumns->end(),
                                        right_identifier.column_name) != join.namedColumns->end()) {
-        // Two columns match and are named, create a join predicate
+        // Two columns match and are named. Create a join predicate.
         join_predicates.emplace_back(equals_(left_expression, right_expression));
         continue;
       }
 
-      // No matching column in the left input found or the column was not one of the named_columns:
-      //   Add the column from the right input to the output.
+      // No matching column in the left input found or the column was not one of the named_columns.
+      // Add the column from the right input to the output.
       result_state.elements_in_order.emplace_back(right_element);
       result_state.sql_identifier_resolver->add_column_name(right_expression, right_identifier.column_name);
       if (right_identifier.table_name) {
@@ -1104,7 +1104,7 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_namedColumns_join(cons
     }
   }
 
-  AssertInput(join_predicates.size() == join.namedColumns->size(), "Could not find all named columns in input tables!");
+  AssertInput(join_predicates.size() == join.namedColumns->size(), "Could not find all named columns in input tables");
 
   auto lqp = JoinNode::make(join_mode, join_predicates, left_input_lqp, right_input_lqp);
   result_state.lqp = lqp;
