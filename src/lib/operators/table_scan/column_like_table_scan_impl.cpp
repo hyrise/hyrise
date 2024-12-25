@@ -49,8 +49,8 @@ void ColumnLikeTableScanImpl::_scan_generic_segment(
     const AbstractSegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
     const std::shared_ptr<const AbstractPosList>& position_filter) const {
   segment_with_iterators_filtered(segment, position_filter, [&](auto iter, [[maybe_unused]] const auto end) {
-    // Don't instantiate this for ReferenceSegments to save compile time as ReferenceSegments are handled
-    // via position_filter
+    // Do not instantiate this for ReferenceSegments to save compile time as ReferenceSegments are handled via
+    // position_filter.
     if constexpr (!is_reference_segment_iterable_v<typename decltype(iter)::IterableType>) {
       using ColumnDataType = typename decltype(iter)::ValueType;
 

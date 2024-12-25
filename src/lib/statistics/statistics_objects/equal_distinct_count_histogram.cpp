@@ -14,6 +14,7 @@
 
 #include "all_type_variant.hpp"
 #include "hyrise.hpp"
+#include "resolve_type.hpp"
 #include "scheduler/job_task.hpp"
 #include "statistics/statistics_objects/abstract_histogram.hpp"
 #include "statistics/statistics_objects/histogram_domain.hpp"
@@ -42,10 +43,33 @@ template <typename T>
 using ValueDistributionMap = boost::unordered_flat_map<ValueDistributionType<T>, HistogramCountType>;
 
 template <typename T>
-using ValueDistributionVector = std::vector<std::pair<ValueDistributionType<T>, size_t>>;
+using ValueDistributionVector = std::vector<std::pair<ValueDistributionType<T>, HistogramCountType>>;
 
 template <typename T>
-std::vector<std::pair<ValueDistributionType<T>, size_t>> add_segment_to_value_distribution2(std::vector<std::unique_ptr<StringHeap>>& string_heaps,
+void process_segment_unspecialized(AbstractSegment& segment, ValueDistributionMap<T>& value_distribution_map, StringHeap& string_heap, const HistogramDomain<T>& domain) {
+  // segment_with_iterators<T>(abstract_segment, functor);
+
+  segment_iterate<T>(segment, [&](const auto& iterator_value) {
+    if (iterator_value.is_null()) {
+      return;
+    }
+
+    if constexpr (std::is_same_v<T, pmr_string>) {
+      const auto current_string = string_heap.add_string(iterator_value.value());
+      // Do "contains()" check first to avoid the string copy incurred by string_to_domain() where possible
+      if (domain.contains(current_string)) {
+        ++value_distribution_map[current_string];
+      } else {
+        ++value_distribution_map[domain.string_to_domain(current_string)];
+      }
+    } else {
+      ++value_distribution_map[iterator_value.value()];
+    }
+  });
+}
+
+template <typename T>
+ValueDistributionVector<T> add_segment_to_value_distribution2(std::vector<std::unique_ptr<StringHeap>>& string_heaps,
                                                                                             auto segment_iterator_begin, auto segment_iterator_end,
                                                                                             const HistogramDomain<T>& domain) {
   DebugAssert(segment_iterator_begin != segment_iterator_end, "Wrong call");
@@ -58,22 +82,15 @@ std::vector<std::pair<ValueDistributionType<T>, size_t>> add_segment_to_value_di
 
     auto value_distribution_map = ValueDistributionMap<T>{};
 
-    segment_iterate<T>(*segment, [&](const auto& iterator_value) {
-      if (iterator_value.is_null()) {
-        return;
+    resolve_segment_type<T>(*segment, [&](const auto& typed_segment) {
+      using SegmentType = std::decay_t<decltype(typed_segment)>;
+      if constexpr (std::is_same_v<SegmentType, ReferenceSegment>) {
+        Fail("Unexpected reference segment.");
+      } else if (std::is_same_v<SegmentType, ReferenceSegment>) {
+
       }
 
-      if constexpr (std::is_same_v<T, pmr_string>) {
-        const auto current_string = string_heap.add_string(iterator_value.value());
-        // Do "contains()" check first to avoid the string copy incurred by string_to_domain() where possible
-        if (domain.contains(current_string)) {
-          ++value_distribution_map[current_string];
-        } else {
-          ++value_distribution_map[domain.string_to_domain(current_string)];
-        }
-      } else {
-        ++value_distribution_map[iterator_value.value()];
-      }
+      process_segment_unspecialized<T>(*segment, value_distribution_map, string_heap, domain);
     });
 
     auto result = ValueDistributionVector<T>(value_distribution_map.cbegin(), value_distribution_map.cend());
@@ -153,39 +170,40 @@ std::vector<std::pair<ValueDistributionType<T>, size_t>> add_segment_to_value_di
   // ss << "\n\n" << std::endl;
   // std::cout << ss.str();
 
-  Assert(std::is_sorted(result.begin(), result.end()), "Not sorted.");
+  // DebugAssert(std::is_sorted(result.begin(), result.end()), "Not sorted.");
   return result;
 }
 
+// template <typename T>
+// void add_segment_to_value_distribution(std::vector<std::unique_ptr<StringHeap>>& string_heaps, const ChunkID chunk_id, const AbstractSegment& segment, ValueDistributionMap<T>& value_distribution,
+//                                        const HistogramDomain<T>& domain) {
+//   string_heaps[chunk_id] = std::make_unique<StringHeap>();
+//   auto& string_heap = *string_heaps[chunk_id];
+
+//   segment_iterate<T>(segment, [&](const auto& iterator_value) {
+//     if (iterator_value.is_null()) {
+//       return;
+//     }
+
+//     if constexpr (std::is_same_v<T, pmr_string>) {
+//       const auto current_string = string_heap.add_string(iterator_value.value());
+//       // Do "contains()" check first to avoid the string copy incurred by string_to_domain() where possible
+//       if (domain.contains(current_string)) {
+//         ++value_distribution[current_string];
+//       } else {
+//         ++value_distribution[domain.string_to_domain(current_string)];
+//       }
+//     } else {
+//       ++value_distribution[iterator_value.value()];
+//     }
+//   });
+// }
+
 template <typename T>
-void add_segment_to_value_distribution(std::vector<std::unique_ptr<StringHeap>>& string_heaps, const ChunkID chunk_id, const AbstractSegment& segment, ValueDistributionMap<T>& value_distribution,
-                                       const HistogramDomain<T>& domain) {
-  string_heaps[chunk_id] = std::make_unique<StringHeap>();
-  auto& string_heap = *string_heaps[chunk_id];
-
-  segment_iterate<T>(segment, [&](const auto& iterator_value) {
-    if (iterator_value.is_null()) {
-      return;
-    }
-
-    if constexpr (std::is_same_v<T, pmr_string>) {
-      const auto current_string = string_heap.add_string(iterator_value.value());
-      // Do "contains()" check first to avoid the string copy incurred by string_to_domain() where possible
-      if (domain.contains(current_string)) {
-        ++value_distribution[current_string];
-      } else {
-        ++value_distribution[domain.string_to_domain(current_string)];
-      }
-    } else {
-      ++value_distribution[iterator_value.value()];
-    }
-  });
-}
-
-template <typename T>
-std::vector<std::pair<T, HistogramCountType>> value_distribution_from_column(const Table& table,
-                                                                             const ColumnID column_id,
-                                                                             const HistogramDomain<T>& domain) {
+std::pair<std::vector<std::unique_ptr<StringHeap>>,
+          ValueDistributionVector<T>> value_distribution_from_column(const Table& table,
+                                                                     const ColumnID column_id,
+                                                                     const HistogramDomain<T>& domain) {
   auto value_distribution_map = ValueDistributionMap<T>{};
   const auto chunk_count = table.chunk_count();
   auto segments_to_process = std::vector<std::pair<ChunkID, std::shared_ptr<AbstractSegment>>>{};
@@ -217,7 +235,7 @@ std::vector<std::pair<T, HistogramCountType>> value_distribution_from_column(con
   string_heaps.resize(chunk_count);
 
   if (segments_to_process.size() > 100) {
-    std::cout << "For column with " << chunk_count << " segments, we are sampling " << segments_to_process.size() << std::endl;  
+    // std::cout << "For column with " << chunk_count << " segments, we are sampling " << segments_to_process.size() << std::endl;  
   }
 
   auto result = ValueDistributionVector<T>{};
@@ -225,59 +243,61 @@ std::vector<std::pair<T, HistogramCountType>> value_distribution_from_column(con
     result = add_segment_to_value_distribution2<T>(string_heaps, segments_to_process.begin(), segments_to_process.end(), domain);
   }
 
-  auto string_heaps2 = std::vector<std::unique_ptr<StringHeap>>{};
-  string_heaps2.resize(chunk_count);
+  // auto string_heaps2 = std::vector<std::unique_ptr<StringHeap>>{};
+  // string_heaps2.resize(chunk_count);
 
-  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-    const auto chunk = table.get_chunk(chunk_id);
-    if (!chunk) {
-      continue;
-    }
+  // for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+  //   const auto chunk = table.get_chunk(chunk_id);
+  //   if (!chunk) {
+  //     continue;
+  //   }
 
-    add_segment_to_value_distribution<T>(string_heaps2, chunk_id, *chunk->get_segment(column_id), value_distribution_map, domain);
-  }
+  //   add_segment_to_value_distribution<T>(string_heaps2, chunk_id, *chunk->get_segment(column_id), value_distribution_map, domain);
+  // }
 
-  auto value_distribution =
-      std::vector<std::pair<T, HistogramCountType>>{value_distribution_map.begin(), value_distribution_map.end()};
-  value_distribution_map.clear();  // Maps can be large and sorting slow. Free space early.
-  boost::sort::pdqsort(value_distribution.begin(), value_distribution.end(), [&](const auto& lhs, const auto& rhs) {
-    return lhs.first < rhs.first;
-  });
+  // auto value_distribution =
+  //     std::vector<std::pair<T, HistogramCountType>>{value_distribution_map.begin(), value_distribution_map.end()};
+  // value_distribution_map.clear();  // Maps can be large and sorting slow. Free space early.
+  // boost::sort::pdqsort(value_distribution.begin(), value_distribution.end(), [&](const auto& lhs, const auto& rhs) {
+  //   return lhs.first < rhs.first;
+  // });
 
-  std::stringstream ss;
-  // ss << "Column ID " << column_id << "(" << table.column_data_type(column_id) << ", table_size: " << table.row_count() << "): uniques " << value_distribution.size() << "\n\n";
+  // std::stringstream ss;
+  // // ss << "Column ID " << column_id << "(" << table.column_data_type(column_id) << ", table_size: " << table.row_count() << "): uniques " << value_distribution.size() << "\n\n";
 
-  auto differ = false;
-  differ = result.size() != value_distribution.size();
-  if (!differ) {
-    for (auto i = size_t{0}; i < result.size(); ++i) {
-      if (result[i].first != value_distribution[i].first || float(result[i].second) != value_distribution[i].second) {
-        differ = true;
-        break;
-      }
-    }
-  }
+  // auto differ = false;
+  // differ = result.size() != value_distribution.size();
+  // if (!differ) {
+  //   for (auto i = size_t{0}; i < result.size(); ++i) {
+  //     if (result[i].first != value_distribution[i].first || float(result[i].second) != value_distribution[i].second) {
+  //       differ = true;
+  //       break;
+  //     }
+  //   }
+  // }
 
-  if (differ) {
-    auto sum = double{};
-    ss << "new >>> (table size: " << table.row_count() << ")" << std::endl;
-    for (const auto el : result) {
-      ss << "|" << el.first << ":" << el.second;
-      sum += static_cast<double>(el.second);
-    }
-    ss << "\nsum:" << sum << "\nold >>>" << std::endl;
-    sum = 0.0;
-    for (const auto el : value_distribution) {
-      ss << "|" << el.first << ":" << el.second;
-      sum += el.second;
-    }
-    ss << "\nsum: " << sum << "\n\n";
-  }
+  // if (differ) {
+  //   auto sum = double{};
+  //   ss << "new >>> (table size: " << table.row_count() << ")" << std::endl;
+  //   for (const auto el : result) {
+  //     ss << "|" << el.first << ":" << el.second;
+  //     sum += static_cast<double>(el.second);
+  //   }
+  //   ss << "\nsum:" << sum << "\nold >>>" << std::endl;
+  //   sum = 0.0;
+  //   for (const auto el : value_distribution) {
+  //     ss << "|" << el.first << ":" << el.second;
+  //     sum += el.second;
+  //   }
+  //   ss << "\nsum: " << sum << "\n\n";
+  // }
   
-  if(differ) { ss << "OH SHIT\n\n"; }
-  std::cout << ss.str();
+  // if(differ) { ss << "OH SHIT\n\n"; }
+  // std::cout << ss.str();
 
-  return value_distribution;
+  // auto ret = std::vector<std::pair<T, HistogramCountType>>(result.begin(), result.end());
+  return {std::move(string_heaps), std::move(result)};
+  // return value_distribution;
 }
 }  // namespace
 
@@ -312,7 +332,7 @@ std::shared_ptr<EqualDistinctCountHistogram<T>> EqualDistinctCountHistogram<T>::
     const Table& table, const ColumnID column_id, const BinID max_bin_count, const HistogramDomain<T>& domain) {
   Assert(max_bin_count > 0, "max_bin_count must be greater than zero ");
 
-  const auto value_distribution = value_distribution_from_column(table, column_id, domain);
+  const auto& [string_heaps, value_distribution] = value_distribution_from_column(table, column_id, domain);
 
   if (value_distribution.empty()) {
     return nullptr;
@@ -330,8 +350,8 @@ std::shared_ptr<EqualDistinctCountHistogram<T>> EqualDistinctCountHistogram<T>::
   auto bin_maxima = std::vector<T>(bin_count);
   auto bin_heights = std::vector<HistogramCountType>(bin_count);
 
-  // `min_value_idx` and `max_value_idx` are indices into the sorted vector `value_distribution`
-  // describing which range of distinct values goes into a bin
+  // `min_value_idx` and `max_value_idx` are indices into the sorted vector `value_distribution` describing which range
+  // of distinct values goes into a bin.
   auto min_value_idx = BinID{0};
   for (BinID bin_idx = 0; bin_idx < bin_count; bin_idx++) {
     auto max_value_idx = min_value_idx + distinct_count_per_bin - 1;
@@ -339,24 +359,30 @@ std::shared_ptr<EqualDistinctCountHistogram<T>> EqualDistinctCountHistogram<T>::
       max_value_idx++;
     }
 
-    // We'd like to move strings, but have to copy if we need the same string for the bin_maximum
-    if (std::is_same_v<T, std::string> && min_value_idx != max_value_idx) {
-      bin_minima[bin_idx] = std::move(value_distribution[min_value_idx].first);
-    } else {
-      bin_minima[bin_idx] = value_distribution[min_value_idx].first;
-    }
-
-    bin_maxima[bin_idx] = std::move(value_distribution[max_value_idx].first);
+    bin_minima[bin_idx] = T{value_distribution[min_value_idx].first};
+    bin_maxima[bin_idx] = T{value_distribution[max_value_idx].first};
 
     bin_heights[bin_idx] =
         std::accumulate(value_distribution.cbegin() + min_value_idx, value_distribution.cbegin() + max_value_idx + 1,
                         HistogramCountType{0},
-                        [](HistogramCountType bin_height, const std::pair<T, HistogramCountType>& value_and_count) {
+                        [](HistogramCountType bin_height, const auto& value_and_count) {
                           return bin_height + value_and_count.second;
                         });
 
     min_value_idx = max_value_idx + 1;
   }
+
+  // auto ss = std::stringstream{};
+  // ss << "\nminima: ";
+  // for (auto bin_id = BinID{0}; bin_id < bin_count; ++bin_id) {
+  //   ss << bin_minima[bin_id];
+  // }
+  // ss << "\n\nmaxima: ";
+  // for (auto bin_id = BinID{0}; bin_id < bin_count; ++bin_id) {
+  //   ss << bin_maxima[bin_id];
+  // }
+  // ss << "\n\n";
+  // std::cerr << ss.str();
 
   return std::make_shared<EqualDistinctCountHistogram<T>>(
       std::move(bin_minima), std::move(bin_maxima), std::move(bin_heights),
@@ -440,6 +466,15 @@ HistogramCountType EqualDistinctCountHistogram<T>::total_count() const {
 template <typename T>
 HistogramCountType EqualDistinctCountHistogram<T>::total_distinct_count() const {
   return _total_distinct_count;
+}
+
+template <typename T>
+uint16_t EqualDistinctCountHistogram<T>::determine_bin_count(size_t table_row_count) {
+  // Determine bin count, within mostly arbitrarily chosen bounds: 8 (for tables with <= 16000 rows) up to 100 bins (for
+  // tables with >= 256 000 rows) are created.
+  // If the table does not have a high number of distinct values, the EqualDistinctCountHistogram automatically uses
+  // fewer bins.
+  return static_cast<uint16_t>(std::min<size_t>(128, std::max<size_t>(8, table_row_count / 2'000)));
 }
 
 EXPLICITLY_INSTANTIATE_DATA_TYPES(EqualDistinctCountHistogram);

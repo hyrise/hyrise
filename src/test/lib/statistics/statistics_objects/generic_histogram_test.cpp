@@ -5,8 +5,11 @@
 #include <vector>
 
 #include "base_test.hpp"
+#include "benchmark_config.hpp"
 #include "statistics/statistics_objects/generic_histogram.hpp"
+#include "statistics/statistics_objects/equal_distinct_count_histogram.hpp"
 #include "utils/load_table.hpp"
+#include "tpch/tpch_table_generator.hpp"
 
 /**
  * As well as testing GenericHistogram, we also test a lot of the functionally implemented in AbstractHistogram here.
@@ -1191,6 +1194,26 @@ TEST_F(GenericHistogramTest, ScaledWithSelectivity) {
   EXPECT_FLOAT_EQ(scaled_histogram_10->bin_distinct_count(BinID{0}), 10.0f);
   EXPECT_FLOAT_EQ(scaled_histogram_10->bin_height(BinID{3}), 100.0f);
   EXPECT_FLOAT_EQ(scaled_histogram_10->bin_distinct_count(BinID{3}), 5.0f);
+}
+
+TEST_F(GenericHistogramTest, TpchTemporaryTest) {
+  const auto benchmark_config = std::make_shared<BenchmarkConfig>();
+  benchmark_config->cache_binary_tables = true;
+
+  auto table_generator = TPCHTableGenerator(10.0, ClusteringConfiguration::None, benchmark_config);
+  auto generated_tables = table_generator.generate();
+  ASSERT_TRUE(generated_tables.contains("lineitem"));
+  const auto& lineitem_table = generated_tables["lineitem"].table;
+
+  for (auto column_id = ColumnID{0}; column_id < lineitem_table->column_count(); ++column_id) {
+    const auto column_data_type = lineitem_table->column_data_type(column_id);
+    resolve_data_type(column_data_type, [&](auto type) {
+      using ColumnDataType = typename decltype(type)::type;
+      const auto histogram = EqualDistinctCountHistogram<ColumnDataType>::from_column(*lineitem_table, column_id, EqualDistinctCountHistogram<ColumnDataType>::determine_bin_count(lineitem_table->row_count()));
+      std::cout << "lineitem size: " << lineitem_table->row_count() << " (column id: " << column_id << ") total count: " << static_cast<size_t>(histogram->total_count()) << " total distinct count: " << static_cast<size_t>(histogram->total_distinct_count()) << std::endl;
+      // std::cout << "lineitem: " << histogram->description() << std::endl;
+    });
+  }
 }
 
 }  // namespace hyrise

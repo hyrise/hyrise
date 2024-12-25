@@ -317,14 +317,13 @@ BENCHMARK_DEFINE_F(TPCHDataMicroBenchmarkFixture, BM_LineitemHistogramCreation)(
   const auto& sm = Hyrise::get().storage_manager;
   const auto& lineitem_table = sm.get_table("lineitem");
 
-  const auto histogram_bin_count = std::min<size_t>(100, std::max<size_t>(5, lineitem_table->row_count() / 2'000));
-
   const auto column_data_type = lineitem_table->column_data_type(column_id);
 
   resolve_data_type(column_data_type, [&](auto type) {
     using ColumnDataType = typename decltype(type)::type;
     for (auto _ : state) {
-      EqualDistinctCountHistogram<ColumnDataType>::from_column(*lineitem_table, column_id, histogram_bin_count);
+      const auto histogram = EqualDistinctCountHistogram<ColumnDataType>::from_column(*lineitem_table, column_id, EqualDistinctCountHistogram<ColumnDataType>::determine_bin_count(lineitem_table->row_count()));
+      std::cout << histogram->description() << std::endl;
     }
   });
 }

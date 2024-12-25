@@ -160,7 +160,7 @@ class AbstractHistogram : public AbstractStatisticsObject, public std::enable_sh
 
   /**
    * Returns the number of values represented in the histogram.
-   * This is equal to the number of rows in the segment during the generation of the bins for the histogram,
+   * This is equal to the number of rows in the segments during the generation of the bins for the histogram,
    * without null values.
    */
   virtual HistogramCountType total_count() const = 0;
