@@ -1,6 +1,3 @@
-#include <memory>
-#include <vector>
-
 #include "base_test.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/binary_predicate_expression.hpp"
@@ -1572,21 +1569,6 @@ TEST_F(SQLTranslatorTest, JoinNaturalColumnAlias) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-TEST_F(SQLTranslatorTest, JoinInnerUsingSimple) {
-  const auto [actual_lqp, translation_info] = sql_to_lqp_helper(
-      "SELECT "
-      " * "
-      "FROM "
-      "  int_float INNER JOIN int_float2 USING (a)");
-
-  const auto expected_lqp =
-      ProjectionNode::make(expression_vector(int_float_a, int_float_b, int_float2_b),
-                           JoinNode::make(JoinMode::Inner, equals_(int_float_a, int_float2_a),
-                                          stored_table_node_int_float, stored_table_node_int_float2));
-
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
-}
-
 TEST_F(SQLTranslatorTest, JoinInnerComplexPredicateA) {
   const auto [actual_lqp, translation_info] = sql_to_lqp_helper(
       "SELECT * FROM int_float JOIN int_float2 ON int_float.a + int_float2.a = int_float2.b * int_float.a;");
@@ -1604,9 +1586,22 @@ TEST_F(SQLTranslatorTest, JoinInnerComplexPredicateA) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-TEST_F(SQLTranslatorTest, JoinInnerUsingColumnAlias) {
-  // Test that the USING statement works with a column alias and multiple columns
+TEST_F(SQLTranslatorTest, JoinInnerUsingNamedColumnsSimple) {
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper(
+      "SELECT "
+      " * "
+      "FROM "
+      "  int_float INNER JOIN int_float2 USING (a)");
 
+  const auto expected_lqp =
+      ProjectionNode::make(expression_vector(int_float_a, int_float_b, int_float2_b),
+                           JoinNode::make(JoinMode::Inner, equals_(int_float_a, int_float2_a),
+                                          stored_table_node_int_float, stored_table_node_int_float2));
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, JoinInnerUsingNamedColumnsColumnAlias) {
   const auto [actual_lqp, translation_info] = sql_to_lqp_helper(
       "SELECT "
       " * "
@@ -1622,10 +1617,8 @@ TEST_F(SQLTranslatorTest, JoinInnerUsingColumnAlias) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-TEST_F(SQLTranslatorTest, JoinInnerUsingBadNamedColumn) {
-  // Test that the USING statement also fails if column names are not existing or ambiguous
-
-  // int_float2 alias (c,b) does contain a column named d
+TEST_F(SQLTranslatorTest, JoinInnerUsingNamedColumnsBadNamedColumn) {
+  // int_float2 alias (c,b) does not contain a column named d
   EXPECT_THROW(sql_to_lqp_helper("SELECT "
                                  " * "
                                  "FROM "
@@ -1654,9 +1647,7 @@ TEST_F(SQLTranslatorTest, JoinInnerUsingBadNamedColumn) {
                InvalidInputException);
 }
 
-TEST_F(SQLTranslatorTest, JoinInnerUsingMultipleColumns) {
-  // Test that the USING statement works with multiple columns
-
+TEST_F(SQLTranslatorTest, JoinInnerUsingNamedColumnsMultipleColumns) {
   const auto [actual_lqp, translation_info] = sql_to_lqp_helper(
       "SELECT "
       " * "
@@ -1674,9 +1665,7 @@ TEST_F(SQLTranslatorTest, JoinInnerUsingMultipleColumns) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-TEST_F(SQLTranslatorTest, JoinInnerUsingNested) {
-  // Test that the USING statement works with nested SELECT statements
-
+TEST_F(SQLTranslatorTest, JoinInnerUsingNamedColumnsNested) {
   const auto [actual_lqp, translation_info] = sql_to_lqp_helper(
       "SELECT "
       " * "

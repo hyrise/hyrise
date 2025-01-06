@@ -149,7 +149,7 @@ class SQLTranslator final {
       const std::string& name, const std::shared_ptr<SQLIdentifierResolver>& sql_identifier_resolver);
   TableSourceState _translate_predicated_join(const hsql::JoinDefinition& join);
   TableSourceState _translate_natural_join(const hsql::JoinDefinition& join);
-  TableSourceState _translate_namedColumns_join(const hsql::JoinDefinition& join);
+  TableSourceState _translate_named_columns_join(const hsql::JoinDefinition& join);
   TableSourceState _translate_cross_product(const std::vector<hsql::TableRef*>& tables);
 
   std::vector<SelectListElement> _translate_select_list(const std::vector<hsql::Expr*>& select_list);
@@ -194,7 +194,6 @@ class SQLTranslator final {
   std::shared_ptr<AbstractExpression> _translate_hsql_case(
       const hsql::Expr& expr, const std::shared_ptr<SQLIdentifierResolver>& sql_identifier_resolver);
 
- private:
   const UseMvcc _use_mvcc;
 
   std::shared_ptr<AbstractLQPNode> _current_lqp;

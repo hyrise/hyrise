@@ -741,7 +741,7 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_ref(const hsql::
         return _translate_natural_join(*hsql_table_ref.join);
       } else {
         if (hsql_table_ref.join->namedColumns && !hsql_table_ref.join->namedColumns->empty()) {
-          return _translate_namedColumns_join(*hsql_table_ref.join);
+          return _translate_named_columns_join(*hsql_table_ref.join);
         }
         return _translate_predicated_join(*hsql_table_ref.join);
       }
@@ -1054,7 +1054,7 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_predicated_join(const 
   return result_state;
 }
 
-SQLTranslator::TableSourceState SQLTranslator::_translate_namedColumns_join(const hsql::JoinDefinition& join) {
+SQLTranslator::TableSourceState SQLTranslator::_translate_named_columns_join(const hsql::JoinDefinition& join) {
   const auto join_mode = translate_join_mode(join.type);
 
   auto left_state = _translate_table_ref(*join.left);
