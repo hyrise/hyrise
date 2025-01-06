@@ -130,15 +130,7 @@ void ColumnIsNullTableScanImpl::_scan_value_segment(const BaseValueSegment& segm
 
   DebugAssert(segment.is_nullable(), "Columns that are not nullable should have been caught by edge case handling.");
 
-  auto iterable = NullValueVectorIterable{segment.null_values()};
-
-  const auto invert = predicate_condition == PredicateCondition::IsNotNull;
-  const auto functor = [&](const auto& value) {
-    return invert ^ value.is_null();
-  };
-  iterable.with_iterators(position_filter, [&](auto iter, auto end) {
-    _scan_with_iterators<false>(functor, iter, end, chunk_id, matches);
-  });
+  _scan_null_value_vector(segment.null_values(), chunk_id, matches, position_filter);
 }
 
 void ColumnIsNullTableScanImpl::_scan_dictionary_segment(
@@ -153,6 +145,8 @@ void ColumnIsNullTableScanImpl::_scan_dictionary_segment(
     ++num_chunks_with_early_out;
     return;
   }
+
+  DebugAssert(segment.unique_values_count() != 0 && segment.unique_values_count() != segment.size(), "Columns without or with exclusivly NULLs should have been caught by edge case handling.");
 
   auto iterable = create_iterable_from_attribute_vector(segment);
 
@@ -170,39 +164,47 @@ template <typename T>
 void ColumnIsNullTableScanImpl::_scan_LZ4_segment(const LZ4Segment<T>& segment, const ChunkID chunk_id,
                                                   RowIDPosList& matches,
                                                   const std::shared_ptr<const AbstractPosList>& position_filter) {
-  auto iterable = NullValueVectorIterable{*segment.null_values()};
+  const auto null_values = segment.null_values();
+  if (_matches_all(null_values)) {
+    _add_all(chunk_id, matches, position_filter ? position_filter->size() : segment.size());
+    return;
+  }
 
-  const auto invert = predicate_condition == PredicateCondition::IsNotNull;
-  const auto functor = [&](const auto& value) {
-    return invert ^ value.is_null();
-  };
+  if (_matches_none(null_values)) {
+    ++num_chunks_with_early_out;
+    return;
+  }
 
-  iterable.with_iterators(position_filter, [&](auto iter, auto end) {
-    _scan_with_iterators<false>(functor, iter, end, chunk_id, matches);
-  });
+  _scan_null_value_vector(*null_values, chunk_id, matches, position_filter);
 }
 
 template <typename T>
 void ColumnIsNullTableScanImpl::_scan_frame_of_reference_segment(
     const FrameOfReferenceSegment<T>& segment, const ChunkID chunk_id, RowIDPosList& matches,
     const std::shared_ptr<const AbstractPosList>& position_filter) {
-  if (_matches_all(segment)) {
+  const auto null_values = segment.null_values();
+  if (_matches_all(null_values)) {
     _add_all(chunk_id, matches, position_filter ? position_filter->size() : segment.size());
     return;
   }
 
-  if (_matches_none(segment)) {
+  if (_matches_none(null_values)) {
     ++num_chunks_with_early_out;
     return;
   }
 
-  auto iterable = NullValueVectorIterable{*segment.null_values()};
+  _scan_null_value_vector(*null_values, chunk_id, matches, position_filter);
+}
+
+void ColumnIsNullTableScanImpl::_scan_null_value_vector(const pmr_vector<bool>& null_values, const ChunkID chunk_id,
+                                        RowIDPosList& matches,
+                                        const std::shared_ptr<const AbstractPosList>& position_filter) {
+  auto iterable = NullValueVectorIterable{null_values};
 
   const auto invert = predicate_condition == PredicateCondition::IsNotNull;
   const auto functor = [&](const auto& value) {
     return invert ^ value.is_null();
   };
-
   iterable.with_iterators(position_filter, [&](auto iter, auto end) {
     _scan_with_iterators<false>(functor, iter, end, chunk_id, matches);
   });
@@ -260,25 +262,23 @@ bool ColumnIsNullTableScanImpl::_matches_none(const BaseDictionarySegment& segme
   }
 }
 
-template <typename T>
-bool ColumnIsNullTableScanImpl::_matches_all(const FrameOfReferenceSegment<T>& segment) const {
+bool ColumnIsNullTableScanImpl::_matches_all(const std::optional<pmr_vector<bool>> null_values) const {
   switch (predicate_condition) {
     case PredicateCondition::IsNull:
       return false;
 
     case PredicateCondition::IsNotNull:
-      return segment.null_values() == std::nullopt;
+      return null_values == std::nullopt;
 
     default:
       Fail("Unsupported comparison type encountered");
   }
 }
 
-template <typename T>
-bool ColumnIsNullTableScanImpl::_matches_none(const FrameOfReferenceSegment<T>& segment) const {
+bool ColumnIsNullTableScanImpl::_matches_none(const std::optional<pmr_vector<bool>> null_values) const {
   switch (predicate_condition) {
     case PredicateCondition::IsNull:
-      return segment.null_values() == std::nullopt;
+      return null_values == std::nullopt;
 
     case PredicateCondition::IsNotNull:
       return false;

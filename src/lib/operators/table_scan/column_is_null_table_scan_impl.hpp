@@ -53,9 +53,13 @@ class ColumnIsNullTableScanImpl : public AbstractDereferencedColumnTableScanImpl
                                         const std::shared_ptr<const AbstractPosList>& position_filter);
 
   /**
-   * @defgroup Methods used for handling value segments
+   * @defgroup Methods used for handling different segments
    * @{
    */
+
+  void _scan_null_value_vector(const pmr_vector<bool>& null_values, const ChunkID chunk_id,
+                                        RowIDPosList& matches,
+                                        const std::shared_ptr<const AbstractPosList>& position_filter);
 
   bool _matches_all(const BaseValueSegment& segment) const;
 
@@ -65,11 +69,9 @@ class ColumnIsNullTableScanImpl : public AbstractDereferencedColumnTableScanImpl
 
   bool _matches_none(const BaseDictionarySegment& segment) const;
 
-  template <typename T>
-  bool _matches_all(const FrameOfReferenceSegment<T>& segment) const;
+  bool _matches_all(const std::optional<pmr_vector<bool>> null_values) const;
 
-  template <typename T>
-  bool _matches_none(const FrameOfReferenceSegment<T>& segment) const;
+  bool _matches_none(const std::optional<pmr_vector<bool>> null_values) const;
 
   static void _add_all(const ChunkID chunk_id, RowIDPosList& matches, const size_t segment_size);
 
