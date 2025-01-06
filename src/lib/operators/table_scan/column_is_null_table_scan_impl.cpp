@@ -117,6 +117,7 @@ void ColumnIsNullTableScanImpl::_scan_value_segment(const BaseValueSegment& segm
                                                     const std::shared_ptr<const AbstractPosList>& position_filter) {
   if (_matches_all(segment)) {
     _add_all(chunk_id, matches, position_filter ? position_filter->size() : segment.size());
+    ++num_chunks_with_all_rows_matching;
     return;
   }
 
@@ -135,6 +136,7 @@ void ColumnIsNullTableScanImpl::_scan_dictionary_segment(
     const std::shared_ptr<const AbstractPosList>& position_filter) {
   if (_matches_all(segment)) {
     _add_all(chunk_id, matches, position_filter ? position_filter->size() : segment.size());
+    ++num_chunks_with_all_rows_matching;
     return;
   }
 
@@ -165,6 +167,7 @@ void ColumnIsNullTableScanImpl::_scan_LZ4_segment(const LZ4Segment<T>& segment, 
   const auto null_values = segment.null_values();
   if (_matches_all(null_values)) {
     _add_all(chunk_id, matches, position_filter ? position_filter->size() : segment.size());
+    ++num_chunks_with_all_rows_matching;
     return;
   }
 
@@ -172,6 +175,8 @@ void ColumnIsNullTableScanImpl::_scan_LZ4_segment(const LZ4Segment<T>& segment, 
     ++num_chunks_with_early_out;
     return;
   }
+
+  DebugAssert(null_values, "Segments without null_values vector should have been caught by edge case handling.");
 
   _scan_null_value_vector(*null_values, chunk_id, matches, position_filter);
 }
@@ -183,6 +188,7 @@ void ColumnIsNullTableScanImpl::_scan_frame_of_reference_segment(
   const auto null_values = segment.null_values();
   if (_matches_all(null_values)) {
     _add_all(chunk_id, matches, position_filter ? position_filter->size() : segment.size());
+    ++num_chunks_with_all_rows_matching;
     return;
   }
 
@@ -190,6 +196,8 @@ void ColumnIsNullTableScanImpl::_scan_frame_of_reference_segment(
     ++num_chunks_with_early_out;
     return;
   }
+
+  DebugAssert(null_values, "Segments without null_values vector should have been caught by edge case handling.");
 
   _scan_null_value_vector(*null_values, chunk_id, matches, position_filter);
 }
