@@ -44,10 +44,6 @@ class ColumnIsNullTableScanImpl : public AbstractDereferencedColumnTableScanImpl
                                 const std::shared_ptr<const AbstractPosList>& position_filter);
 
   template <typename T>
-  void _scan_run_length_segment(const RunLengthSegment<T>& segment, const ChunkID chunk_id, RowIDPosList& matches,
-                                const std::shared_ptr<const AbstractPosList>& position_filter);
-
-  template <typename T>
   void _scan_LZ4_segment(const LZ4Segment<T>& segment, const ChunkID chunk_id, RowIDPosList& matches,
                          const std::shared_ptr<const AbstractPosList>& position_filter);
 

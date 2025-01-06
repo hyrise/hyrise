@@ -42,8 +42,6 @@ void ColumnIsNullTableScanImpl::_scan_non_reference_segment(
       _scan_value_segment(*value_segment, chunk_id, matches, position_filter);
     } else if (const auto* const dictionary_segment = dynamic_cast<const BaseDictionarySegment*>(&segment)) {
       _scan_dictionary_segment(*dictionary_segment, chunk_id, matches, position_filter);
-    // } else if (const auto* const run_length_segment = dynamic_cast<const RunLengthSegment<DataType>*>(&segment)) {
-    //   _scan_run_length_segment(*run_length_segment, chunk_id, matches, position_filter);
     } else if (const auto* const lz4_segment = dynamic_cast<const LZ4Segment<DataType>*>(&segment)) {
       _scan_LZ4_segment(*lz4_segment, chunk_id, matches, position_filter);
     } else if (const auto* const frame_of_reference_segment =
@@ -157,22 +155,6 @@ void ColumnIsNullTableScanImpl::_scan_dictionary_segment(
   }
 
   auto iterable = create_iterable_from_attribute_vector(segment);
-
-  const auto invert = predicate_condition == PredicateCondition::IsNotNull;
-  const auto functor = [&](const auto& value) {
-    return invert ^ value.is_null();
-  };
-
-  iterable.with_iterators(position_filter, [&](auto iter, auto end) {
-    _scan_with_iterators<false>(functor, iter, end, chunk_id, matches);
-  });
-}
-
-template <typename T>
-void ColumnIsNullTableScanImpl::_scan_run_length_segment(
-    const RunLengthSegment<T>& segment, const ChunkID chunk_id, RowIDPosList& matches,
-    const std::shared_ptr<const AbstractPosList>& position_filter) {
-  auto iterable = NullValueVectorIterable{*segment.null_values()};
 
   const auto invert = predicate_condition == PredicateCondition::IsNotNull;
   const auto functor = [&](const auto& value) {
