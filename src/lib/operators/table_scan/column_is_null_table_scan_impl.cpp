@@ -33,10 +33,9 @@ std::string ColumnIsNullTableScanImpl::description() const {
 void ColumnIsNullTableScanImpl::_scan_non_reference_segment(
     const AbstractSegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
     const std::shared_ptr<const AbstractPosList>& position_filter) {
-  const auto data_type = segment.data_type();
 
-  resolve_data_type(data_type, [&](const auto data_type_t) {
-    using DataType = typename decltype(data_type_t)::type;
+  resolve_data_and_segment_type(segment, [&](auto type, auto& typed_segment) {
+    using DataType = typename decltype(type)::type;
 
     if (const auto* const value_segment = dynamic_cast<const BaseValueSegment*>(&segment)) {
       _scan_value_segment(*value_segment, chunk_id, matches, position_filter);
