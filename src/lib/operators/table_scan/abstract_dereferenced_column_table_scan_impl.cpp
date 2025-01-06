@@ -75,19 +75,16 @@ void AbstractDereferencedColumnTableScanImpl::_scan_reference_segment(const Refe
   if (predicate_condition != PredicateCondition::IsNull) {
     return;
   }
-  
+
   const auto& sub_pos_list = chunk_offsets_by_chunk_id[referenced_chunk_count];
   const auto& position_filter = sub_pos_list.row_ids;
 
   if (!position_filter || position_filter->empty()) {
-      return;
+    return;
   }
   for (auto& pos : *position_filter) {
-      matches.emplace_back(chunk_id, pos.chunk_offset);
+    matches.emplace_back(chunk_id, pos.chunk_offset);
   }
-  
-
-
 }
 
 }  // namespace hyrise

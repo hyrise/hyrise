@@ -33,7 +33,6 @@ std::string ColumnIsNullTableScanImpl::description() const {
 void ColumnIsNullTableScanImpl::_scan_non_reference_segment(
     const AbstractSegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
     const std::shared_ptr<const AbstractPosList>& position_filter) {
-
   resolve_data_and_segment_type(segment, [&](auto type, auto& typed_segment) {
     using DataType = typename decltype(type)::type;
 
@@ -60,7 +59,6 @@ void ColumnIsNullTableScanImpl::_scan_non_reference_segment(
       }
     }
   });
-
 }
 
 void ColumnIsNullTableScanImpl::_scan_generic_segment(
@@ -145,7 +143,8 @@ void ColumnIsNullTableScanImpl::_scan_dictionary_segment(
     return;
   }
 
-  DebugAssert(segment.unique_values_count() != 0 && segment.unique_values_count() != segment.size(), "Columns without or with exclusivly NULLs should have been caught by edge case handling.");
+  DebugAssert(segment.unique_values_count() != 0 && segment.unique_values_count() != segment.size(),
+              "Columns without or with exclusivly NULLs should have been caught by edge case handling.");
 
   auto iterable = create_iterable_from_attribute_vector(segment);
 
@@ -196,8 +195,8 @@ void ColumnIsNullTableScanImpl::_scan_frame_of_reference_segment(
 }
 
 void ColumnIsNullTableScanImpl::_scan_null_value_vector(const pmr_vector<bool>& null_values, const ChunkID chunk_id,
-                                        RowIDPosList& matches,
-                                        const std::shared_ptr<const AbstractPosList>& position_filter) {
+                                                        RowIDPosList& matches,
+                                                        const std::shared_ptr<const AbstractPosList>& position_filter) {
   auto iterable = NullValueVectorIterable{null_values};
 
   const auto invert = predicate_condition == PredicateCondition::IsNotNull;
