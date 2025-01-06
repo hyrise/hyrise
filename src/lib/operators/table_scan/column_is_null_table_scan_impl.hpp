@@ -69,6 +69,12 @@ class ColumnIsNullTableScanImpl : public AbstractDereferencedColumnTableScanImpl
 
   bool _matches_none(const BaseDictionarySegment& segment) const;
 
+  template <typename T>
+  bool _matches_all(const FrameOfReferenceSegment<T>& segment) const;
+
+  template <typename T>
+  bool _matches_none(const FrameOfReferenceSegment<T>& segment) const;
+
   static void _add_all(const ChunkID chunk_id, RowIDPosList& matches, const size_t segment_size);
 
   /**@}*/

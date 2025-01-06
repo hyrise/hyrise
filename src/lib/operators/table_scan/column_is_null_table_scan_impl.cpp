@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <memory>
+#include <optional>
 #include <string>
 
 #include "all_type_variant.hpp"
@@ -45,9 +46,9 @@ void ColumnIsNullTableScanImpl::_scan_non_reference_segment(
     //   _scan_run_length_segment(*run_length_segment, chunk_id, matches, position_filter);
     } else if (const auto* const lz4_segment = dynamic_cast<const LZ4Segment<DataType>*>(&segment)) {
       _scan_LZ4_segment(*lz4_segment, chunk_id, matches, position_filter);
-    // } else if (const auto* const frame_of_reference_segment =
-    //                dynamic_cast<const FrameOfReferenceSegment<int32_t>*>(&segment)) {
-      // _scan_frame_of_reference_segment(*frame_of_reference_segment, chunk_id, matches, position_filter);
+    } else if (const auto* const frame_of_reference_segment =
+                   dynamic_cast<const FrameOfReferenceSegment<int32_t>*>(&segment)) {
+      _scan_frame_of_reference_segment(*frame_of_reference_segment, chunk_id, matches, position_filter);
     } else {
       const auto& chunk_sorted_by = _in_table->get_chunk(chunk_id)->individually_sorted_by();
       if (!chunk_sorted_by.empty()) {
@@ -203,6 +204,16 @@ template <typename T>
 void ColumnIsNullTableScanImpl::_scan_frame_of_reference_segment(
     const FrameOfReferenceSegment<T>& segment, const ChunkID chunk_id, RowIDPosList& matches,
     const std::shared_ptr<const AbstractPosList>& position_filter) {
+  if (_matches_all(segment)) {
+    _add_all(chunk_id, matches, position_filter ? position_filter->size() : segment.size());
+    return;
+  }
+
+  if (_matches_none(segment)) {
+    ++num_chunks_with_early_out;
+    return;
+  }
+
   auto iterable = NullValueVectorIterable{*segment.null_values()};
 
   const auto invert = predicate_condition == PredicateCondition::IsNotNull;
@@ -261,6 +272,34 @@ bool ColumnIsNullTableScanImpl::_matches_none(const BaseDictionarySegment& segme
 
     case PredicateCondition::IsNotNull:
       return segment.unique_values_count() == 0;
+
+    default:
+      Fail("Unsupported comparison type encountered");
+  }
+}
+
+template <typename T>
+bool ColumnIsNullTableScanImpl::_matches_all(const FrameOfReferenceSegment<T>& segment) const {
+  switch (predicate_condition) {
+    case PredicateCondition::IsNull:
+      return false;
+
+    case PredicateCondition::IsNotNull:
+      return segment.null_values() == std::nullopt;
+
+    default:
+      Fail("Unsupported comparison type encountered");
+  }
+}
+
+template <typename T>
+bool ColumnIsNullTableScanImpl::_matches_none(const FrameOfReferenceSegment<T>& segment) const {
+  switch (predicate_condition) {
+    case PredicateCondition::IsNull:
+      return segment.null_values() == std::nullopt;
+
+    case PredicateCondition::IsNotNull:
+      return false;
 
     default:
       Fail("Unsupported comparison type encountered");
