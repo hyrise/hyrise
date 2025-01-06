@@ -61,16 +61,15 @@ std::shared_ptr<Table> PDGFTableBuilder<work_unit_size, num_columns>::build_tabl
   // Assemble table data
   // Note that we have already generated empty chunks when loading the schema, so we just replace the segments now
   // instead of creating new ones.
-  auto chunk_index = ChunkID{0};
-  while (_generated_columns[0]->has_another_segment()) {
+  auto num_chunks = _generated_columns[0]->num_segments();
+  for (auto chunk_index = ChunkID{0}; chunk_index < num_chunks; chunk_index++) {
     auto chunk = table->get_chunk(chunk_index);
     for (auto i = size_t{0}; i < _num_generated_columns; ++i) {
       auto& column = _generated_columns[i];
       auto table_column_index = _generated_column_mappings[i];
-      Assert(column->has_another_segment(), "All table columns should have the same number of segments!");
-      chunk->put_segment(table_column_index, column->build_next_segment());
+      Assert(column->num_segments() == num_chunks, "All table columns should have the same number of segments!");
+      chunk->put_segment(table_column_index, column->obtain_segment(chunk_index));
     }
-    chunk_index++;
   }
 
   return table;
@@ -131,13 +130,16 @@ void PDGFTableBuilder<work_unit_size, num_columns>::read_data(uint32_t table_id,
       _generated_columns[col]->virtual_add((sorting_id * work_unit_size) + row, data_cell->data[row][col]);
     }
   }
+  for (auto col = uint8_t{0}; col < _num_generated_columns; ++col) {
+    _generated_columns[col]->values_added(sorting_id * work_unit_size, cell_rows);
+  }
 }
 
 template <uint32_t work_unit_size, uint32_t num_columns>
 void PDGFTableBuilder<work_unit_size, num_columns>::_new_column_with_data_type(uint8_t target_index, SegmentEncodingSpec segment_encoding_spec, DataType data_type) {
   resolve_data_type(data_type, [&](auto type) {
     using ColumnDataType = typename decltype(type)::type;
-    _generated_columns[target_index] = std::make_shared<PDGFColumn<ColumnDataType>>(segment_encoding_spec, _table_num_rows, _hyrise_table_chunk_size);
+    _generated_columns[target_index] = std::make_shared<PDGFColumn<ColumnDataType>>(data_type, segment_encoding_spec, _table_num_rows, _hyrise_table_chunk_size);
   });
 }
 

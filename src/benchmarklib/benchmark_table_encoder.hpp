@@ -12,7 +12,7 @@ class Table;
 
 class BenchmarkTableEncoder {
  public:
-  static ChunkEncodingSpec BenchmarkTableEncoder::get_required_chunk_encoding_spec(const std::string& table_name, const std::shared_ptr<Table>& table,
+  static ChunkEncodingSpec get_required_chunk_encoding_spec(const std::string& table_name, const std::shared_ptr<Table>& table,
                                           const EncodingConfig& encoding_config);
 
   // @return      true, if any encoding operation was performed.
