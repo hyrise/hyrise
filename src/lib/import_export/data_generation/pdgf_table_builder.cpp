@@ -9,12 +9,15 @@
 #include "boost/algorithm/string.hpp"
 
 #include "abstract_pdgf_column.hpp"
+#include "benchmark_table_encoder.hpp"
+#include "encoding_config.hpp"
 #include "hyrise.hpp"
 #include "non_generated_pdgf_column.hpp"
 #include "pdgf_table_builder.hpp"
 #include "pdgf_column.hpp"
 #include "resolve_type.hpp"
 #include "shared_memory_dto.hpp"
+#include "storage/encoding_type.hpp"
 #include "storage/mvcc_data.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
@@ -74,7 +77,7 @@ std::shared_ptr<Table> PDGFTableBuilder<work_unit_size, num_columns>::build_tabl
 }
 
 template <uint32_t work_unit_size, uint32_t num_columns>
-void PDGFTableBuilder<work_unit_size, num_columns>::read_generation_info(SharedMemoryDataCell<work_unit_size, num_columns>* info_cell) {
+void PDGFTableBuilder<work_unit_size, num_columns>::read_generation_info(SharedMemoryDataCell<work_unit_size, num_columns>* info_cell, const EncodingConfig& encoding_config) {
   auto table_id = * reinterpret_cast<uint32_t*>(info_cell->data[1][0]);
   Assert(table_id == _table_id, "Trying to read generation info for a different table!");
   std::cerr << "--- READING GENERATION INFO\n";
@@ -89,6 +92,9 @@ void PDGFTableBuilder<work_unit_size, num_columns>::read_generation_info(SharedM
   auto table = Hyrise::get().storage_manager.get_table(_table_name);
   const auto table_column_names = table->column_names();
 
+  // Determine required encoding spec
+  _encoding_spec = BenchmarkTableEncoder::get_required_chunk_encoding_spec(_table_name, table, encoding_config);
+
   // Setup generation
    auto num_generated_columns = * reinterpret_cast<uint32_t*>(info_cell->data[4][0]);
   _num_generated_columns = static_cast<uint8_t>(num_generated_columns);
@@ -101,7 +107,7 @@ void PDGFTableBuilder<work_unit_size, num_columns>::read_generation_info(SharedM
     auto mapping_index = std::distance(table_column_names.begin(), find);
     auto generated_column_type = table->column_data_type(static_cast<ColumnID>(mapping_index));
     std::cerr << static_cast<uint32_t>(i) << " " << column_name << " corresponds to index " << mapping_index << " (type " << generated_column_type << ")\n";
-    _new_column_with_data_type(i, generated_column_type);
+    _new_column_with_data_type(i, _encoding_spec[mapping_index], generated_column_type);
     _generated_column_mappings[i] = mapping_index;
   }
 }
@@ -128,10 +134,10 @@ void PDGFTableBuilder<work_unit_size, num_columns>::read_data(uint32_t table_id,
 }
 
 template <uint32_t work_unit_size, uint32_t num_columns>
-void PDGFTableBuilder<work_unit_size, num_columns>::_new_column_with_data_type(uint8_t target_index, DataType data_type) {
+void PDGFTableBuilder<work_unit_size, num_columns>::_new_column_with_data_type(uint8_t target_index, SegmentEncodingSpec segment_encoding_spec, DataType data_type) {
   resolve_data_type(data_type, [&](auto type) {
     using ColumnDataType = typename decltype(type)::type;
-    _generated_columns[target_index] = std::make_shared<PDGFColumn<ColumnDataType>>(_table_num_rows, _hyrise_table_chunk_size);
+    _generated_columns[target_index] = std::make_shared<PDGFColumn<ColumnDataType>>(segment_encoding_spec, _table_num_rows, _hyrise_table_chunk_size);
   });
 }
 

@@ -2,6 +2,7 @@
 
 #include <cstdint>
 
+#include "encoding_config.hpp"
 #include "multi_process_ring_buffer.hpp"
 #include "pdgf_table_builder.hpp"
 #include "pdgf_table_schema_builder.hpp"
@@ -15,7 +16,7 @@ class BaseSharedMemoryReader : Noncopyable {
 
   virtual bool has_next_table() const = 0;
   virtual std::unique_ptr<BasePDGFTableSchemaBuilder> read_next_schema() = 0;
-  virtual std::shared_ptr<BasePDGFTableBuilder> read_next_table(uint32_t num_workers) = 0;
+  virtual std::shared_ptr<BasePDGFTableBuilder> read_next_table(const EncodingConfig& encoding_config, uint32_t num_workers) = 0;
   virtual void reset() = 0;
 };
 
@@ -33,7 +34,7 @@ class SharedMemoryReader : public BaseSharedMemoryReader {
 
   bool has_next_table() const override;
   std::unique_ptr<BasePDGFTableSchemaBuilder> read_next_schema() override;
-  std::shared_ptr<BasePDGFTableBuilder> read_next_table(uint32_t num_workers) override;
+  std::shared_ptr<BasePDGFTableBuilder> read_next_table(const EncodingConfig& encoding_config, uint32_t num_workers) override;
   void reset() override;
 
  protected:

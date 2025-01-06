@@ -6,6 +6,7 @@
 #include <sys/mman.h>
 #include <vector>
 
+#include "encoding_config.hpp"
 #include "hyrise.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
@@ -115,7 +116,7 @@ std::unique_ptr<BasePDGFTableSchemaBuilder> SharedMemoryReader<work_unit_size, n
 }
 
 template <uint32_t work_unit_size, uint32_t num_columns>
-std::shared_ptr<BasePDGFTableBuilder> SharedMemoryReader<work_unit_size, num_columns>::read_next_table(uint32_t num_workers) {
+std::shared_ptr<BasePDGFTableBuilder> SharedMemoryReader<work_unit_size, num_columns>::read_next_table(const EncodingConfig& encoding_config, uint32_t num_workers) {
   // Generation info
   auto ring_cell = _ring_buffer->prepare_retrieval();
   Assert(ring_cell->cell_type == RingBufferCellType::TableGenerationInfo, "Did not receive table generation info, was " + std::to_string(ring_cell->cell_type));
@@ -124,7 +125,7 @@ std::shared_ptr<BasePDGFTableBuilder> SharedMemoryReader<work_unit_size, num_col
   auto addressed_data = _data_buffer->get_addressed_by(ring_cell);
   _ring_buffer->retrieval_finished();
   _num_tables_to_read = * reinterpret_cast<uint32_t*>(addressed_data->data[0][0]);
-  table_builder->read_generation_info(addressed_data);
+  table_builder->read_generation_info(addressed_data, encoding_config);
   _return_data_slot(data_slot);
 
   // TODO(JEH): parallelize. adaptively use different number of workers here (only use a large number if table actually has a lot of chunks)

@@ -6,6 +6,7 @@
 
 #include "abstract_pdgf_column.hpp"
 #include "all_type_variant.hpp"
+#include "storage/encoding_type.hpp"
 #include "types.hpp"
 
 namespace hyrise {
@@ -25,12 +26,13 @@ class BasePDGFColumn {
 template <typename T>
 class PDGFColumn : public BasePDGFColumn {
  public:
-  explicit PDGFColumn(int64_t num_rows, ChunkOffset chunk_size);
+  explicit PDGFColumn(SegmentEncodingSpec encoding_spec, int64_t num_rows, ChunkOffset chunk_size);
   void virtual_add(int64_t row, char* data) override;
   bool has_another_segment() override;
   std::shared_ptr<AbstractSegment> build_next_segment() override;
 
  protected:
+  SegmentEncodingSpec _encoding_spec;
   uint32_t _num_built_segments = 0;
   std::vector<pmr_vector<T>> _data_segments;
 };

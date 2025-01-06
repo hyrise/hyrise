@@ -9,8 +9,10 @@
 #include <functional>
 
 #include "all_type_variant.hpp"
+#include "encoding_config.hpp"
 #include "shared_memory_dto.hpp"
 #include "pdgf_column.hpp"
+#include "storage/encoding_type.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
 
@@ -35,12 +37,13 @@ class PDGFTableBuilder : public BasePDGFTableBuilder {
   std::string table_name() const override;
   std::shared_ptr<Table> build_table() override;
 
-  void read_generation_info(SharedMemoryDataCell<work_unit_size, num_columns>* info_cell);
+  void read_generation_info(SharedMemoryDataCell<work_unit_size, num_columns>* info_cell, const EncodingConfig &encoding_config);
   void read_data(uint32_t table_id, int64_t sorting_id, SharedMemoryDataCell<work_unit_size, num_columns>* data_cell);
 
  protected:
-  void _new_column_with_data_type(uint8_t target_index, DataType data_type);
+  void _new_column_with_data_type(uint8_t target_index, SegmentEncodingSpec segment_encoding_spec, DataType data_type);
 
+  ChunkEncodingSpec _encoding_spec;
   ChunkOffset _hyrise_table_chunk_size;
 
   uint32_t _table_id;

@@ -61,18 +61,15 @@ bool is_chunk_encoding_spec_satisfied(const ChunkEncodingSpec& expected_chunk_en
 }  // namespace
 
 namespace hyrise {
-
-bool BenchmarkTableEncoder::encode(const std::string& table_name, const std::shared_ptr<Table>& table,
-                                   const EncodingConfig& encoding_config) {
-  /**
-   * 1. Build the ChunkEncodingSpec, i.e. the Encoding to be used
-   */
+  ChunkEncodingSpec BenchmarkTableEncoder::get_required_chunk_encoding_spec(const std::string& table_name, const std::shared_ptr<Table>& table,
+                                            const EncodingConfig& encoding_config) {
   const auto& type_mapping = encoding_config.type_encoding_mapping;
   const auto& custom_mapping = encoding_config.custom_encoding_mapping;
 
   const auto& column_mapping_it = custom_mapping.find(table_name);
   const auto table_has_custom_encoding = column_mapping_it != custom_mapping.end();
 
+  // TODO: obtain SegmentEncodingSpec for on-the-fly encoding in PDGF generation
   ChunkEncodingSpec chunk_encoding_spec;
 
   for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
@@ -112,6 +109,15 @@ bool BenchmarkTableEncoder::encode(const std::string& table_name, const std::sha
       chunk_encoding_spec.emplace_back(EncodingType::Unencoded);
     }
   }
+  return chunk_encoding_spec;
+}
+
+bool BenchmarkTableEncoder::encode(const std::string& table_name, const std::shared_ptr<Table>& table,
+                                   const EncodingConfig& encoding_config) {
+  /**
+   * 1. Build the ChunkEncodingSpec, i.e. the Encoding to be used
+   */
+  auto chunk_encoding_spec = get_required_chunk_encoding_spec(table_name, table, encoding_config);
 
   /**
    * 2. Actually encode chunks

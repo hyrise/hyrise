@@ -1,3 +1,4 @@
+#include <cstdint>
 #include <vector>
 #include <memory>
 #include <mutex>
@@ -7,15 +8,16 @@
 #include "pdgf_column.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
+#include "storage/encoding_type.hpp"
 
 
 namespace hyrise {
-BasePDGFColumn::BasePDGFColumn(int64_t num_rows, hyrise::ChunkOffset chunk_size) : _num_rows(num_rows), _chunk_size(chunk_size) {}
+BasePDGFColumn::BasePDGFColumn(int64_t num_rows, ChunkOffset chunk_size) : _num_rows(num_rows), _chunk_size(chunk_size) {}
 
 BasePDGFColumn::BasePDGFColumn() : BasePDGFColumn(1, ChunkOffset{1}) {}
 
 template <typename T>
-PDGFColumn<T>::PDGFColumn(int64_t num_rows, ChunkOffset chunk_size) : BasePDGFColumn( num_rows, chunk_size) {
+PDGFColumn<T>::PDGFColumn(SegmentEncodingSpec encoding_spec, int64_t num_rows, ChunkOffset chunk_size) : BasePDGFColumn( num_rows, chunk_size), _encoding_spec(encoding_spec) {
   auto req_chunks = std::div(_num_rows, _chunk_size);
 
   auto remaining_chunks_to_generate = std::atomic_int64_t{req_chunks.quot};
