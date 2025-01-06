@@ -9,9 +9,10 @@ class Chunk;
 class Table;
 
 /**
- * Check whether we need to generate pruning statistics for a chunk.
+ * Check whether a chunk is immutable and has no pruning statistics (we only want to generate statistics if both
+ * conditions are true).
  */
-bool pruning_statistics_should_be_generated_for_chunk(const std::shared_ptr<Chunk>& chunk);
+bool is_immutable_chunk_without_pruning_statistics(const std::shared_ptr<Chunk>& chunk);
 
 /**
  * Generate Pruning Filters for an immutable Chunk

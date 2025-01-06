@@ -112,7 +112,7 @@ void ChunkEncoder::encode_chunk(const std::shared_ptr<Chunk>& chunk, const std::
     chunk->replace_segment(column_id, encoded_segment);
   }
 
-  if (pruning_statistics_should_be_generated_for_chunk(chunk)) {
+  if (is_immutable_chunk_without_pruning_statistics(chunk)) {
     generate_chunk_pruning_statistics(chunk);
   }
 }

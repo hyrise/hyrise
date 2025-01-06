@@ -44,7 +44,7 @@ void create_pruning_statistics_for_segment(AttributeStatistics<T>& segment_stati
 }  // namespace
 
 namespace hyrise {
-bool pruning_statistics_should_be_generated_for_chunk(const std::shared_ptr<Chunk>& chunk) {
+bool is_immutable_chunk_without_pruning_statistics(const std::shared_ptr<Chunk>& chunk) {
   // We do not generate statistics for chunks as long as they are mutable.
   // Also, pruning statistics should be stable no matter what encoding or sort order is used.
   // Hence, when they are present they are up to date, and we can skip the recreation.
@@ -52,8 +52,8 @@ bool pruning_statistics_should_be_generated_for_chunk(const std::shared_ptr<Chun
 }
 
 void generate_chunk_pruning_statistics(const std::shared_ptr<Chunk>& chunk) {
-  DebugAssert(pruning_statistics_should_be_generated_for_chunk(chunk),
-              "Method should only be called for chunks that need it.");
+  DebugAssert(is_immutable_chunk_without_pruning_statistics(chunk),
+              "Method should only be called for qualifying chunks.");
 
   auto chunk_statistics = ChunkPruningStatistics{chunk->column_count()};
 
@@ -66,16 +66,17 @@ void generate_chunk_pruning_statistics(const std::shared_ptr<Chunk>& chunk) {
 
       const auto segment_statistics = std::make_shared<AttributeStatistics<ColumnDataType>>();
 
+      // TODO(anyone): use dictionary-optimized path for FixedStringDictionarySegments as well.
       if constexpr (std::is_same_v<SegmentType, DictionarySegment<ColumnDataType>>) {
-        // we can use the fact that dictionary segments have an accessor for the dictionary
+        // We can use the fact that dictionary segments have an accessor for the dictionary.
         const auto& dictionary = *typed_segment.dictionary();
         create_pruning_statistics_for_segment(*segment_statistics, dictionary);
       } else {
-        // if we have a generic segment we create the dictionary ourselves
+        // If we have a generic segment, we create the dictionary ourselves.
         auto iterable = create_iterable_from_segment<ColumnDataType>(typed_segment);
         auto values = std::unordered_set<ColumnDataType>{};
         iterable.for_each([&](const auto& value) {
-          // we are only interested in non-null values
+          // We are only interested in non-null values.
           if (!value.is_null()) {
             values.insert(value.value());
           }
@@ -100,7 +101,7 @@ void generate_chunk_pruning_statistics(const std::shared_ptr<Table>& table) {
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk = table->get_chunk(chunk_id);
 
-    if (!pruning_statistics_should_be_generated_for_chunk(chunk)) {
+    if (!is_immutable_chunk_without_pruning_statistics(chunk)) {
       continue;
     }
 
