@@ -36,7 +36,7 @@ PosListsByChunkID split_pos_list_by_chunk_id(const std::shared_ptr<const Abstrac
     if (row_id.is_null()) {
       auto& mapping = pos_lists_by_chunk_id[number_of_chunks];
 
-      mapping.row_ids->emplace_back(RowID{ChunkID{0}, ChunkOffset{original_position++}});
+      mapping.row_ids->emplace_back(ChunkID{0}, ChunkOffset{original_position++});
       continue;
     }
 

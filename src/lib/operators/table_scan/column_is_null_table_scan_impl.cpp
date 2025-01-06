@@ -4,6 +4,7 @@
 #include <memory>
 #include <string>
 
+#include "all_type_variant.hpp"
 #include "storage/abstract_segment.hpp"
 #include "storage/base_value_segment.hpp"
 #include "storage/pos_lists/row_id_pos_list.hpp"
@@ -31,52 +32,37 @@ std::string ColumnIsNullTableScanImpl::description() const {
 void ColumnIsNullTableScanImpl::_scan_non_reference_segment(
     const AbstractSegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
     const std::shared_ptr<const AbstractPosList>& position_filter) {
-  // const auto data_type = segment.data_type();
+  const auto data_type = segment.data_type();
 
-  // resolve_data_type(data_type, [&](const auto data_type_t) {
-  //   using DataType = typename decltype(data_type_t)::type;
+  resolve_data_type(data_type, [&](const auto data_type_t) {
+    // using DataType = typename decltype(data_type_t)::type;
 
-  //   if (const auto* const value_segment = dynamic_cast<const BaseValueSegment*>(&segment)) {
-  //     _scan_value_segment(*value_segment, chunk_id, matches, position_filter);
-  //   } else if (const auto* const dictionary_segment = dynamic_cast<const BaseDictionarySegment*>(&segment)) {
-  //     _scan_dictionary_segment(*dictionary_segment, chunk_id, matches, position_filter);
-  //   } else if (const auto* const run_length_segment = dynamic_cast<const RunLengthSegment<DataType>*>(&segment)) {
-  //     _scan_run_length_segment(*run_length_segment, chunk_id, matches, position_filter);
-  //   } else if (const auto* const lz4_segment = dynamic_cast<const LZ4Segment<DataType>*>(&segment)) {
-  //     _scan_LZ4_segment(*lz4_segment, chunk_id, matches, position_filter);
-  //   } else if (const auto* const frame_of_reference_segment =
-  //                  dynamic_cast<const FrameOfReferenceSegment<int32_t>*>(&segment)) {
-  //     _scan_frame_of_reference_segment(*frame_of_reference_segment, chunk_id, matches, position_filter);
-  //   } else {
-  //     const auto& chunk_sorted_by = _in_table->get_chunk(chunk_id)->individually_sorted_by();
-  //     if (!chunk_sorted_by.empty()) {
-  //       for (const auto& sorted_by : chunk_sorted_by) {
-  //         if (sorted_by.column == _column_id) {
-  //           _scan_generic_sorted_segment(segment, chunk_id, matches, position_filter, sorted_by.sort_mode);
-  //           ++num_chunks_with_binary_search;
-  //         }
-  //       }
-  //     }
-  //     _scan_generic_segment(segment, chunk_id, matches, position_filter);
-  //   }
-  // });
+    if (const auto* const value_segment = dynamic_cast<const BaseValueSegment*>(&segment)) {
+      _scan_value_segment(*value_segment, chunk_id, matches, position_filter);
+    } else if (const auto* const dictionary_segment = dynamic_cast<const BaseDictionarySegment*>(&segment)) {
+      _scan_dictionary_segment(*dictionary_segment, chunk_id, matches, position_filter);
+    // } else if (const auto* const run_length_segment = dynamic_cast<const RunLengthSegment<DataType>*>(&segment)) {
+    //   _scan_run_length_segment(*run_length_segment, chunk_id, matches, position_filter);
+    // } else if (const auto* const lz4_segment = dynamic_cast<const LZ4Segment<DataType>*>(&segment)) {
+    //   _scan_LZ4_segment(*lz4_segment, chunk_id, matches, position_filter);
+    // } else if (const auto* const frame_of_reference_segment =
+    //                dynamic_cast<const FrameOfReferenceSegment<int32_t>*>(&segment)) {
+      // _scan_frame_of_reference_segment(*frame_of_reference_segment, chunk_id, matches, position_filter);
+    } else {
+      const auto& chunk_sorted_by = _in_table->get_chunk(chunk_id)->individually_sorted_by();
+      if (!chunk_sorted_by.empty()) {
+        for (const auto& sorted_by : chunk_sorted_by) {
+          if (sorted_by.column == _column_id) {
+            _scan_generic_sorted_segment(segment, chunk_id, matches, position_filter, sorted_by.sort_mode);
+            ++num_chunks_with_binary_search;
+          }
+        }
+      } else {
+        _scan_generic_segment(segment, chunk_id, matches, position_filter);
+      }
+    }
+  });
 
-  // if (const auto* const value_segment = dynamic_cast<const BaseValueSegment*>(&segment)) {
-  //   _scan_value_segment(*value_segment, chunk_id, matches, position_filter);
-  // } else if (const auto* const dictionary_segment = dynamic_cast<const BaseDictionarySegment*>(&segment)) {
-  //   _scan_dictionary_segment(*dictionary_segment, chunk_id, matches, position_filter);
-  // } else {
-  //   const auto& chunk_sorted_by = _in_table->get_chunk(chunk_id)->individually_sorted_by();
-  //   if (!chunk_sorted_by.empty()) {
-  //     for (const auto& sorted_by : chunk_sorted_by) {
-  //       if (sorted_by.column == _column_id) {
-  //         _scan_generic_sorted_segment(segment, chunk_id, matches, position_filter, sorted_by.sort_mode);
-  //         ++num_chunks_with_binary_search;
-  //       }
-  //     }
-  //   }
-    _scan_generic_segment(segment, chunk_id, matches, position_filter);
-  // }
 }
 
 void ColumnIsNullTableScanImpl::_scan_generic_segment(
