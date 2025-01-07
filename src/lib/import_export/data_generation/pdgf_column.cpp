@@ -19,35 +19,17 @@ BasePDGFColumn::BasePDGFColumn(DataType data_type) : BasePDGFColumn(data_type, 1
 
 template <typename T>
 PDGFColumn<T>::PDGFColumn(DataType data_type, SegmentEncodingSpec encoding_spec, int64_t num_rows, ChunkOffset chunk_size) : BasePDGFColumn(data_type, num_rows, chunk_size), _encoding_spec(encoding_spec) {
-  auto req_chunks = std::div(_num_rows, _chunk_size);
-
-  auto remaining_chunks_to_generate = std::atomic_int64_t{req_chunks.quot};
-  auto num_smaller_chunks = req_chunks.rem > 0 ? 1: 0;
-  auto segment_access_mutex = std::mutex{};
+  auto req_chunks = (_num_rows + _chunk_size - 1) / _chunk_size; // compute ceiling of division.
 
   auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
-  auto num_tasks = Hyrise::get().scheduler()->num_workers(); // this is a bit of a abstraction breaker, but it should do for now
-  for (auto worker_index = uint32_t{0}; worker_index < num_tasks; worker_index++) {
-    tasks.emplace_back(std::make_shared<JobTask>([this, &segment_access_mutex, &remaining_chunks_to_generate] {
-      while (remaining_chunks_to_generate.fetch_sub(1) > 0) {
-        auto chunk_vector = pmr_vector<T>(_chunk_size);
-        segment_access_mutex.lock();
-        _data_segments.emplace_back(std::move(chunk_vector));
-        _finished_segments.emplace_back(nullptr);
-        _encoding_tasks.emplace_back(nullptr);
-        _segment_fullness.push_back(std::make_shared<std::atomic_uint32_t>(0));
-        segment_access_mutex.unlock();
-      }
-    }));
-  }
-  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
-  // Add remaining smaller vector
-  if (num_smaller_chunks > 0) {
-    auto chunk_vector = pmr_vector<T>(req_chunks.rem);
-    _data_segments.emplace_back(std::move(chunk_vector));
-    _finished_segments.emplace_back(nullptr);
-    _encoding_tasks.emplace_back(nullptr);
-    _segment_fullness.push_back(std::make_shared<std::atomic_uint32_t>(0));
+  _data_segments.resize(req_chunks);
+  _encoding_tasks.resize(req_chunks);
+  _finished_segments.resize(req_chunks);
+  _segment_initialization_locks.reserve(req_chunks);
+  _segment_fullness.reserve(req_chunks);
+  for (auto chunk_index = uint32_t{0}; chunk_index < req_chunks; chunk_index++) {
+      _segment_initialization_locks.push_back(std::make_shared<std::mutex>());
+      _segment_fullness.push_back(std::make_shared<std::atomic_uint32_t>(0));
   }
 
   // Directly assigning to vector is not possible (undefined behavior) -- moving uninitialized vector to normal vector appears to be not possible
@@ -57,10 +39,25 @@ PDGFColumn<T>::PDGFColumn(DataType data_type, SegmentEncodingSpec encoding_spec,
   // uninitialized vector?
 }
 
+template<typename T>
+void PDGFColumn<T>::initialize_segment(ChunkID chunk_id) {
+  // If the lock is gone, we know that the segment is already initialized.
+  if (const auto lock = _segment_initialization_locks[chunk_id]) {
+    lock->lock();
+    if (_data_segments[chunk_id].size() == 0) {
+      _data_segments[chunk_id].resize(std::min(static_cast<int64_t>(_chunk_size), _num_rows - chunk_id * _chunk_size));
+    }
+    _segment_initialization_locks[chunk_id] = nullptr; // no need for locking anymore once we have initialize the vector.
+    lock->unlock();
+  }
+}
+
+
 template <typename T>
 void PDGFColumn<T>::virtual_add(int64_t row, char* data) {
   auto segment_index = row / _chunk_size;
   auto segment_position = row % _chunk_size;
+  initialize_segment(static_cast<ChunkID>(segment_index));
   _data_segments[segment_index][segment_position] = * reinterpret_cast<T*>(data);
 }
 
@@ -68,6 +65,7 @@ template<>
 void PDGFColumn<pmr_string>::virtual_add(int64_t row, char* data) {
   auto segment_index = row / _chunk_size;
   auto segment_position = row % _chunk_size;
+  initialize_segment(static_cast<ChunkID>(segment_index));
   _data_segments[segment_index][segment_position] = pmr_string(data);
 }
 

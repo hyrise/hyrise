@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <vector>
 #include <memory>
+#include <mutex>
 
 #include "abstract_pdgf_column.hpp"
 #include "all_type_variant.hpp"
@@ -41,11 +42,13 @@ class PDGFColumn : public BasePDGFColumn {
   void virtual_add(int64_t row, char* data) override;
   void values_added(int64_t start_row, size_t num_values) override;
   ChunkID num_segments() override;
+  void initialize_segment(ChunkID chunk_id);
   void build_segment(ChunkID chunk_id);
   std::shared_ptr<AbstractSegment> obtain_segment(ChunkID chunk_id) override;
 
  protected:
   SegmentEncodingSpec _encoding_spec;
+  std::vector<std::shared_ptr<std::mutex>> _segment_initialization_locks;
   std::vector<pmr_vector<T>> _data_segments;
   std::vector<std::shared_ptr<JobTask>> _encoding_tasks;
   std::vector<std::shared_ptr<AbstractSegment>> _finished_segments;
