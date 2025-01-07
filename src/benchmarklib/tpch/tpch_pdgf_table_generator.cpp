@@ -100,7 +100,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHPDGFTableGenerator::gene
   pdgf_data.run();
   auto table_builders = std::vector<std::shared_ptr<BasePDGFTableBuilder>>{};
   while (reader->has_next_table()) {
-    table_builders.emplace_back(reader->read_next_table(_benchmark_config->encoding_config, _num_cores / 3 + 1));
+    table_builders.emplace_back(reader->read_next_table(_benchmark_config->encoding_config, _num_cores));
   }
   std::cerr << "Awaiting PDGF teardown\n";
   pdgf_data.await_teardown();

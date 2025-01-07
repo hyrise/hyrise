@@ -103,20 +103,20 @@ template <typename T>
 void PDGFColumn<T>::build_segment(ChunkID segment_index) {
   Assert(segment_index < _finished_segments.size(), "Accessed segment out of range!");
   Assert(!_finished_segments[segment_index], "Segment already finished!");
-  _encoding_tasks[segment_index] = std::make_shared<JobTask>([this, segment_index] {
-    auto segment = std::make_shared<ValueSegment<T>>(std::move(_data_segments[segment_index]));
-    _finished_segments[segment_index] = ChunkEncoder::encode_segment(segment, _data_type, _encoding_spec);
-  });
-  _encoding_tasks[segment_index]->schedule();
+  // _encoding_tasks[segment_index] = std::make_shared<JobTask>([this, segment_index] {
+  auto segment = std::make_shared<ValueSegment<T>>(std::move(_data_segments[segment_index]));
+  _finished_segments[segment_index] = ChunkEncoder::encode_segment(segment, _data_type, _encoding_spec);
+  // });
+  // _encoding_tasks[segment_index]->schedule();
 }
 
 template <typename T>
 std::shared_ptr<AbstractSegment> PDGFColumn<T>::obtain_segment(ChunkID segment_index) {
   Assert(segment_index < _finished_segments.size(), "Accessed segment out of range!");
-  if (!_encoding_tasks[segment_index]) {
+  if (!_finished_segments[segment_index]) {
     build_segment(segment_index);
   }
-  Hyrise::get().scheduler()->wait_for_tasks({_encoding_tasks[segment_index]});
+  // Hyrise::get().scheduler()->wait_for_tasks({_encoding_tasks[segment_index]});
   return _finished_segments[segment_index];
 }
 
