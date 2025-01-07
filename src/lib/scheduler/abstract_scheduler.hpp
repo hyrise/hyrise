@@ -72,7 +72,7 @@ class AbstractScheduler : public Noncopyable {
   virtual const std::vector<std::shared_ptr<TaskQueue>>& queues() const = 0;
 
   /**
-   * If task is executed immediately or only registered for execution depends on the scheduler used.
+   * Executes the task immediately or only registers it for execution, depending on the scheduler implementation.
    */
   virtual void schedule(std::shared_ptr<AbstractTask> task, NodeID preferred_node_id = CURRENT_NODE_ID,
                         SchedulePriority priority = SchedulePriority::Default) = 0;
