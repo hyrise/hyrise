@@ -2,6 +2,9 @@
 #include <string>
 
 #include "pdgf_process.hpp"
+
+#include <numa.h>
+
 #include "utils/assert.hpp"
 
 
@@ -125,8 +128,10 @@ void PdgfProcess::_monitor_liveliness() {
 }
 
 void PdgfProcess::_configure_numa() {
-  // Allow memory to also use the other node if needed.
-  _arguments.insert(_arguments.end(), {"-N", "0", "--preferred", "0"});
+  if (numa_max_node() > 0) {
+    // Allow memory to also use the other node if needed.
+    _arguments.insert(_arguments.end(), {"-N", "1", "--preferred", "1"});
+  }
 }
 
 void PdgfProcess::_configure_jvm() {
