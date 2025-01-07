@@ -22,7 +22,7 @@ struct BenchmarkState {
 
   std::atomic<State> state{State::NotStarted};
   TimePoint benchmark_begin = TimePoint{};
-  Duration benchmark_duration = Duration{};
+  // Duration benchmark_duration = Duration{};
 
   Duration max_duration;
 };

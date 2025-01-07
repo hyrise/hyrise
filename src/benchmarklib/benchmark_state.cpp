@@ -14,7 +14,7 @@ BenchmarkState& BenchmarkState::operator=(const BenchmarkState& other) {
   Assert(state != State::Running && other.state != State::Running, "Cannot assign to or from a running benchmark.");
   state = other.state.load();
   benchmark_begin = other.benchmark_begin;
-  benchmark_duration = other.benchmark_duration;
+  // benchmark_duration = other.benchmark_duration;
   max_duration = other.max_duration;
 
   return *this;
@@ -32,7 +32,7 @@ bool BenchmarkState::keep_running() {
     }
   }
 
-  benchmark_duration = std::chrono::steady_clock::now() - benchmark_begin;
+  const auto benchmark_duration = std::chrono::steady_clock::now() - benchmark_begin;
 
   // Stop execution if we reached the time limit
   if (benchmark_duration >= max_duration) {

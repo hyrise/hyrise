@@ -115,7 +115,7 @@ class BenchmarkRunner : public Noncopyable {
 
   // For BenchmarkMode::Shuffled, we count the number of runs executed across all items. This also includes items that
   // were unsuccessful (e.g., because of transaction aborts).
-  std::atomic_uint32_t _total_finished_runs{0};
+  // std::atomic_uint32_t _total_finished_runs{0};
 
   BenchmarkState _state{Duration{0}};
 

@@ -281,8 +281,8 @@ void BenchmarkRunner::_benchmark_shuffled() {
   Assert(_currently_running_clients == 0, "Did not expect any clients to run at this time.");
 
   _state = BenchmarkState{_config.max_duration};
-  while (_state.keep_running() && (_config.max_runs < 0 || _total_finished_runs.load(std::memory_order_relaxed) <
-                                                               static_cast<size_t>(_config.max_runs))) {
+  auto scheduled_runs = int64_t{0};
+  while (_state.keep_running() && (_config.max_runs < 0 || scheduled_runs < _config.max_runs)) {
     if (item_id_counter == benchmark_item_count) {
       std::shuffle(item_ids.begin(), item_ids.end(), random_generator);
       item_id_counter = 0;
@@ -291,6 +291,7 @@ void BenchmarkRunner::_benchmark_shuffled() {
     const auto item_id = item_ids[item_id_counter];
     _schedule_item_run(item_id);
     ++item_id_counter;
+    ++scheduled_runs;
   }
   _state.set_done();
 
@@ -328,10 +329,11 @@ void BenchmarkRunner::_benchmark_ordered() {
     }
 
     _state = BenchmarkState{_config.max_duration};
+    auto scheduled_runs = int64_t{0};
     while (_state.keep_running() &&
-           (_config.max_runs < 0 || (result.successful_runs.size() + result.unsuccessful_runs.size()) <
-                                        static_cast<size_t>(_config.max_runs))) {
+           (_config.max_runs < 0 || scheduled_runs < _config.max_runs)) {
       _schedule_item_run(item_id);
+      ++scheduled_runs;
     }
     _state.set_done();
 
@@ -391,13 +393,13 @@ void BenchmarkRunner::_schedule_item_run(const BenchmarkItemID item_id) {
 
         --_currently_running_clients;
         _running_clients_semaphore.signal();
-        ++_total_finished_runs;
+        // ++_total_finished_runs;
 
         // If result.verification_passed was previously unset, set it; otherwise only invalidate it if the run failed.
         result.verification_passed = result.verification_passed.load().value_or(true) && !any_run_verification_failed;
 
         // Prevent items from adding their result after the time is up.
-        if (!_state.is_done()) {
+        if (run_end <= _state.benchmark_begin + _state.max_duration) {
           if (!_config.pipeline_metrics) {
             metrics.clear();
           }
