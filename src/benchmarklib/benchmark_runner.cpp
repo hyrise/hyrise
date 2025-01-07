@@ -280,9 +280,8 @@ void BenchmarkRunner::_benchmark_shuffled() {
 
   Assert(_currently_running_clients == 0, "Did not expect any clients to run at this time.");
 
-  _state = BenchmarkState{_config.max_duration};
-  auto scheduled_runs = int64_t{0};
-  while (_state.keep_running() && (_config.max_runs < 0 || scheduled_runs < _config.max_runs)) {
+  _state = BenchmarkState{_config.max_duration, _config.max_runs};
+  while (_state.keep_running()) {
     if (item_id_counter == benchmark_item_count) {
       std::shuffle(item_ids.begin(), item_ids.end(), random_generator);
       item_id_counter = 0;
@@ -291,13 +290,16 @@ void BenchmarkRunner::_benchmark_shuffled() {
     const auto item_id = item_ids[item_id_counter];
     _schedule_item_run(item_id);
     ++item_id_counter;
-    ++scheduled_runs;
   }
-  _state.set_done();
+
+  auto benchmark_duration = Duration{0};
+  for (const auto& result : _results) {
+    benchmark_duration = std::max(benchmark_duration, _calculate_benchmark_duration(result));
+  }
 
   for (auto& result : _results) {
     // As the execution of benchmark items is intermingled, we use the total duration for all items.
-    result.duration = _state.benchmark_duration;
+    result.duration = benchmark_duration;
   }
 
   // Wait for the rest of the tasks that didn't make it in time - they will not count towards the results.
@@ -328,14 +330,10 @@ void BenchmarkRunner::_benchmark_ordered() {
       _running_clients_semaphore.signal(_config.clients);
     }
 
-    _state = BenchmarkState{_config.max_duration};
-    auto scheduled_runs = int64_t{0};
-    while (_state.keep_running() &&
-           (_config.max_runs < 0 || scheduled_runs < _config.max_runs)) {
+    _state = BenchmarkState{_config.max_duration, _config.max_runs};
+    while (_state.keep_running()) {
       _schedule_item_run(item_id);
-      ++scheduled_runs;
     }
-    _state.set_done();
 
     // Wait for the rest of the tasks that didn't make it in time - they will not count toward the results.
     if (_currently_running_clients > 0) {
@@ -345,9 +343,9 @@ void BenchmarkRunner::_benchmark_ordered() {
 
     Assert(_currently_running_clients == 0, "All runs must be finished at this point.");
 
-    result.duration = _state.benchmark_duration;
+    result.duration = _calculate_benchmark_duration(result);
     // chrono::seconds uses an integer precision duration type, but we need a floating-point value.
-    const auto duration_seconds = std::chrono::duration<double>{_state.benchmark_duration}.count();
+    const auto duration_seconds = std::chrono::duration<double>{result.duration}.count();
     const auto items_per_second = static_cast<double>(result.successful_runs.size()) / duration_seconds;
 
     // Compute mean by using accumulators.
@@ -427,7 +425,7 @@ void BenchmarkRunner::_warmup(const BenchmarkItemID item_id) {
 
   Assert(_currently_running_clients == 0, "Did not expect any clients to run at this time.");
 
-  _state = BenchmarkState{_config.warmup_duration};
+  _state = BenchmarkState{_config.warmup_duration, -1};
 
   while (_state.keep_running()) {
     _schedule_item_run(item_id);
@@ -437,8 +435,6 @@ void BenchmarkRunner::_warmup(const BenchmarkItemID item_id) {
   _results[item_id].successful_runs = {};
   _results[item_id].unsuccessful_runs = {};
   _results[item_id].duration = {};
-
-  _state.set_done();
 
   // Wait for the rest of the tasks that didn't make it in time.
   Hyrise::get().scheduler()->wait_for_all_tasks();
@@ -686,6 +682,18 @@ void BenchmarkRunner::_snapshot_segment_access_counters(const std::string& momen
               << ", * FROM meta_segments WHERE table_name NOT LIKE 'benchmark%'";
 
   SQLPipelineBuilder{sql_builder.str()}.create_pipeline().get_result_table();
+}
+
+Duration BenchmarkRunner::_calculate_benchmark_duration(const BenchmarkItemResult& result) const {
+  const auto run_max = [&](const auto& runs) {
+    auto max_duration = Duration{0};
+    for (const auto& run : runs) {
+      max_duration = std::max(max_duration, run.begin + run.duration - (_state.benchmark_begin - _benchmark_start));
+    }
+    return max_duration;
+  };
+
+  return std::max(run_max(result.successful_runs), run_max(result.unsuccessful_runs));
 }
 
 }  // namespace hyrise

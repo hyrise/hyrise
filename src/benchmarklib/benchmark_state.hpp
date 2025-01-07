@@ -13,18 +13,17 @@ namespace hyrise {
 struct BenchmarkState {
   enum class State { NotStarted, Running, Over };
 
-  explicit BenchmarkState(const Duration max_duration);
+  explicit BenchmarkState(const Duration init_max_duration, const int64_t init_max_runs);
   BenchmarkState& operator=(const BenchmarkState& other);
 
   bool keep_running();
-  void set_done();
-  bool is_done() const;
 
   std::atomic<State> state{State::NotStarted};
   TimePoint benchmark_begin = TimePoint{};
-  // Duration benchmark_duration = Duration{};
+  int64_t runs{0};
 
   Duration max_duration;
+  int64_t max_runs;
 };
 
 }  // namespace hyrise
