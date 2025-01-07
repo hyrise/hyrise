@@ -52,7 +52,7 @@ TEST_F(StorageChunkTest, AddValuesToChunk) {
   chunk->append({2, "two"});
   EXPECT_EQ(chunk->size(), 4);
 
-  if (HYRISE_DEBUG) {
+  if constexpr (HYRISE_DEBUG) {
     EXPECT_THROW(chunk->append({}), std::exception);
     EXPECT_THROW(chunk->append({4, "val", 3}), std::exception);
     EXPECT_EQ(chunk->size(), 4);
