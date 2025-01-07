@@ -391,7 +391,6 @@ void BenchmarkRunner::_schedule_item_run(const BenchmarkItemID item_id) {
 
         --_currently_running_clients;
         _running_clients_semaphore.signal();
-        // ++_total_finished_runs;
 
         // If result.verification_passed was previously unset, set it; otherwise only invalidate it if the run failed.
         result.verification_passed = result.verification_passed.load().value_or(true) && !any_run_verification_failed;
@@ -685,6 +684,10 @@ void BenchmarkRunner::_snapshot_segment_access_counters(const std::string& momen
 }
 
 Duration BenchmarkRunner::_calculate_benchmark_duration(const BenchmarkItemResult& result) const {
+  if (_state.max_runs > 0 && _state.runs <= _state.max_runs) {
+    return _state.max_duration;
+  }
+
   const auto run_max = [&](const auto& runs) {
     auto max_duration = Duration{0};
     for (const auto& run : runs) {

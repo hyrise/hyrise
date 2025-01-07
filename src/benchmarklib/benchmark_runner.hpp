@@ -115,10 +115,6 @@ class BenchmarkRunner : public Noncopyable {
   // issues (see https://reviews.llvm.org/D114119).
   moodycamel::LightweightSemaphore _running_clients_semaphore{0};
 
-  // For BenchmarkMode::Shuffled, we count the number of runs executed across all items. This also includes items that
-  // were unsuccessful (e.g., because of transaction aborts).
-  // std::atomic_uint32_t _total_finished_runs{0};
-
   BenchmarkState _state{Duration{0}, 0};
 
   int _snapshot_id{0};
