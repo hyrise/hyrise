@@ -684,7 +684,8 @@ void BenchmarkRunner::_snapshot_segment_access_counters(const std::string& momen
 }
 
 Duration BenchmarkRunner::_calculate_benchmark_duration(const BenchmarkItemResult& result) const {
-  if (_state.max_runs > 0 && _state.runs <= _state.max_runs) {
+  // If the time limit was reached, just use it.
+  if (_state.max_runs > 0 && _state.runs < _state.max_runs) {
     return _state.max_duration;
   }
 

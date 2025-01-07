@@ -36,12 +36,13 @@ bool BenchmarkState::keep_running() {
 
   const auto benchmark_duration = std::chrono::steady_clock::now() - benchmark_begin;
 
-  // Stop execution if we reached the time limit
-  if (benchmark_duration >= max_duration || (max_runs >= 0 && ++runs > max_runs)) {
+  // Stop execution if we reached the time or execution limit.
+  if (benchmark_duration >= max_duration || (max_runs >= 0 && runs >= max_runs)) {
     state = State::Over;
     return false;
   }
 
+  ++runs;
   return true;
 }
 
