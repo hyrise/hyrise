@@ -34,6 +34,7 @@ PDGFColumn<T>::PDGFColumn(DataType data_type, SegmentEncodingSpec encoding_spec,
         segment_access_mutex.lock();
         _data_segments.emplace_back(std::move(chunk_vector));
         _finished_segments.emplace_back(nullptr);
+        _encoding_tasks.emplace_back(nullptr);
         _segment_fullness.push_back(std::make_shared<std::atomic_uint32_t>(0));
         segment_access_mutex.unlock();
       }
@@ -45,6 +46,7 @@ PDGFColumn<T>::PDGFColumn(DataType data_type, SegmentEncodingSpec encoding_spec,
     auto chunk_vector = pmr_vector<T>(req_chunks.rem);
     _data_segments.emplace_back(std::move(chunk_vector));
     _finished_segments.emplace_back(nullptr);
+    _encoding_tasks.emplace_back(nullptr);
     _segment_fullness.push_back(std::make_shared<std::atomic_uint32_t>(0));
   }
 
@@ -101,16 +103,20 @@ template <typename T>
 void PDGFColumn<T>::build_segment(ChunkID segment_index) {
   Assert(segment_index < _finished_segments.size(), "Accessed segment out of range!");
   Assert(!_finished_segments[segment_index], "Segment already finished!");
-  auto segment = std::make_shared<ValueSegment<T>>(std::move(_data_segments[segment_index]));
-  _finished_segments[segment_index] = ChunkEncoder::encode_segment(segment, _data_type, _encoding_spec);
+  _encoding_tasks[segment_index] = std::make_shared<JobTask>([this, segment_index] {
+    auto segment = std::make_shared<ValueSegment<T>>(std::move(_data_segments[segment_index]));
+    _finished_segments[segment_index] = ChunkEncoder::encode_segment(segment, _data_type, _encoding_spec);
+  });
+  _encoding_tasks[segment_index]->schedule();
 }
 
 template <typename T>
 std::shared_ptr<AbstractSegment> PDGFColumn<T>::obtain_segment(ChunkID segment_index) {
   Assert(segment_index < _finished_segments.size(), "Accessed segment out of range!");
-  if (!_finished_segments[segment_index]) {
+  if (!_encoding_tasks[segment_index]) {
     build_segment(segment_index);
   }
+  Hyrise::get().scheduler()->wait_for_tasks({_encoding_tasks[segment_index]});
   return _finished_segments[segment_index];
 }
 
