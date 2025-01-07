@@ -40,15 +40,27 @@ PDGFColumn<T>::PDGFColumn(DataType data_type, SegmentEncodingSpec encoding_spec,
 }
 
 template<typename T>
-void PDGFColumn<T>::initialize_segment(ChunkID chunk_id) {
+void PDGFColumn<T>::initialize_segment(ChunkID chunk_id, bool should_try_continue_initialization) {
   // If the lock is gone, we know that the segment is already initialized.
   if (const auto lock = _segment_initialization_locks[chunk_id]) {
-    lock->lock();
+    auto locked = lock->try_lock();
+    if (!locked) {
+      if (chunk_id + 1 < _data_segments.size()) {
+        // when multiple workers use this point at once and would have to stall, might as well already do useful work
+        // and initialize next segment.
+        initialize_segment(ChunkID{chunk_id + 1}, true);
+        initialize_segment(chunk_id, false);
+        return;
+      }
+      lock->lock();
+    }
     if (_data_segments[chunk_id].size() == 0) {
       _data_segments[chunk_id].resize(std::min(static_cast<int64_t>(_chunk_size), _num_rows - chunk_id * _chunk_size));
     }
     _segment_initialization_locks[chunk_id] = nullptr; // no need for locking anymore once we have initialize the vector.
     lock->unlock();
+  } else if (should_try_continue_initialization && chunk_id + 1 < _data_segments.size()) {
+    initialize_segment(ChunkID{chunk_id + 1}, true);
   }
 }
 
@@ -57,7 +69,7 @@ template <typename T>
 void PDGFColumn<T>::virtual_add(int64_t row, char* data) {
   auto segment_index = row / _chunk_size;
   auto segment_position = row % _chunk_size;
-  initialize_segment(static_cast<ChunkID>(segment_index));
+  initialize_segment(static_cast<ChunkID>(segment_index), false);
   _data_segments[segment_index][segment_position] = * reinterpret_cast<T*>(data);
 }
 
@@ -65,7 +77,7 @@ template<>
 void PDGFColumn<pmr_string>::virtual_add(int64_t row, char* data) {
   auto segment_index = row / _chunk_size;
   auto segment_position = row % _chunk_size;
-  initialize_segment(static_cast<ChunkID>(segment_index));
+  initialize_segment(static_cast<ChunkID>(segment_index), false);
   _data_segments[segment_index][segment_position] = pmr_string(data);
 }
 

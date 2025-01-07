@@ -42,7 +42,7 @@ class PDGFColumn : public BasePDGFColumn {
   void virtual_add(int64_t row, char* data) override;
   void values_added(int64_t start_row, size_t num_values) override;
   ChunkID num_segments() override;
-  void initialize_segment(ChunkID chunk_id);
+  void initialize_segment(ChunkID chunk_id, bool should_try_continue_initialization);
   void build_segment(ChunkID chunk_id);
   std::shared_ptr<AbstractSegment> obtain_segment(ChunkID chunk_id) override;
 
