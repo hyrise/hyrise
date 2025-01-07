@@ -60,7 +60,7 @@ void AbstractTableGenerator::generate_and_store() {
   // a single-threaded scheduler is used. After data preparation, we switch back to the initially used scheduler.
   const auto initial_scheduler = Hyrise::get().scheduler();
   Hyrise::get().topology.use_default_topology(_benchmark_config->data_preparation_cores);
-  Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>(_benchmark_config->data_preparation_cores));
+  Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>(_benchmark_config->data_preparation_cores * 4));
 
   std::cout << "- Loading/Generating tables\n" << std::flush;
   auto table_info_by_name = generate();

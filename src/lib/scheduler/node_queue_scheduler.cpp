@@ -25,8 +25,8 @@ namespace hyrise {
 
 NodeQueueScheduler::NodeQueueScheduler() : NodeQueueScheduler(DEFAULT_NUM_GROUPS) {}
 
-NodeQueueScheduler::NodeQueueScheduler(uint8_t min_num_groups) {
-  _num_groups = std::max(min_num_groups, static_cast<uint8_t>(DEFAULT_NUM_GROUPS));
+NodeQueueScheduler::NodeQueueScheduler(uint16_t min_num_groups) {
+  _num_groups = std::max(min_num_groups, static_cast<uint16_t>(DEFAULT_NUM_GROUPS));
   _worker_id_allocator = std::make_shared<UidAllocator>();
 }
 
