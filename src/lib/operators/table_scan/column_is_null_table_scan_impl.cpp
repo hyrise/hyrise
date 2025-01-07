@@ -7,6 +7,7 @@
 #include "storage/abstract_segment.hpp"
 #include "storage/base_value_segment.hpp"
 #include "storage/pos_lists/row_id_pos_list.hpp"
+#include "storage/segment_iterables/create_iterable_from_attribute_vector.hpp"
 #include "storage/segment_iterate.hpp"
 #include "storage/value_segment/null_value_vector_iterable.hpp"
 #include "types.hpp"
