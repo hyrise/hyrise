@@ -1088,7 +1088,7 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_named_columns_join(con
 
       if (left_expression && std::find(join.namedColumns->begin(), join.namedColumns->end(),
                                        right_identifier.column_name) != join.namedColumns->end()) {
-        // Two columns match and are named. Create a join predicate.
+        // Two columns match and are named. Therefore create a join predicate.
         join_predicates.emplace_back(equals_(left_expression, right_expression));
         continue;
       }
