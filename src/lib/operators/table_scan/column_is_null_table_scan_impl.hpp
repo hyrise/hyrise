@@ -35,22 +35,9 @@ class ColumnIsNullTableScanImpl : public AbstractDereferencedColumnTableScanImpl
                                     const std::shared_ptr<const AbstractPosList>& position_filter,
                                     const SortMode sorted_by) const;
 
-  // Optimized scan on ValueSegments
-  void _scan_value_segment(const BaseValueSegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
-                           const std::shared_ptr<const AbstractPosList>& position_filter);
-
   // Optimized scan on DictionarySegments
   void _scan_dictionary_segment(const BaseDictionarySegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
                                 const std::shared_ptr<const AbstractPosList>& position_filter);
-
-  template <typename T>
-  void _scan_LZ4_segment(const LZ4Segment<T>& segment, const ChunkID chunk_id, RowIDPosList& matches,
-                         const std::shared_ptr<const AbstractPosList>& position_filter);
-
-  template <typename T>
-  void _scan_frame_of_reference_segment(const FrameOfReferenceSegment<T>& segment, const ChunkID chunk_id,
-                                        RowIDPosList& matches,
-                                        const std::shared_ptr<const AbstractPosList>& position_filter);
 
   /**
    * @defgroup Methods used for handling different segments
@@ -60,10 +47,6 @@ class ColumnIsNullTableScanImpl : public AbstractDereferencedColumnTableScanImpl
   void _scan_null_value_vector(const std::optional<pmr_vector<bool>>& null_values, const ChunkID chunk_id,
                                RowIDPosList& matches, const std::shared_ptr<const AbstractPosList>& position_filter,
                                const ChunkOffset segment_size);
-
-  bool _matches_all(const BaseValueSegment& segment) const;
-
-  bool _matches_none(const BaseValueSegment& segment) const;
 
   bool _matches_all(const BaseDictionarySegment& segment) const;
 
