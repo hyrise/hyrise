@@ -59,7 +59,7 @@ class ValueSegment : public BaseValueSegment {
   // Throws exception if is_nullable() returns false
   // This is the preferred method to check a for a null value at a certain index.
   // Usually you need to access more than a single value anyway.
-  const pmr_vector<bool>& null_values() const final;
+  const std::optional<pmr_vector<bool>>& null_values() const final;
 
   // Writing a vector<bool> is not thread-safe. By only exposing the vector as a const reference, we force people to go
   // through this thread-safe method. By design, this does not take a bool argument. All entries are false (i.e., not

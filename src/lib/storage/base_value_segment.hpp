@@ -25,6 +25,6 @@ class BaseValueSegment : public AbstractSegment {
    *
    * Throws exception if is_nullable() returns false
    */
-  virtual const pmr_vector<bool>& null_values() const = 0;
+  virtual const std::optional<pmr_vector<bool>>& null_values() const = 0;
 };
 }  // namespace hyrise

@@ -125,7 +125,7 @@ void ColumnIsNullTableScanImpl::_scan_value_segment(const BaseValueSegment& segm
 
   DebugAssert(segment.is_nullable(), "Columns that are not nullable should have been caught by edge case handling.");
 
-  _scan_null_value_vector(segment.null_values(), chunk_id, matches, position_filter);
+  _scan_null_value_vector(*segment.null_values(), chunk_id, matches, position_filter);
 }
 
 void ColumnIsNullTableScanImpl::_scan_dictionary_segment(

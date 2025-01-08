@@ -1518,7 +1518,7 @@ void ExpressionEvaluator::_materialize_segment_if_not_yet_materialized(const Col
       // Shortcut
       values = pmr_vector<ColumnDataType>{value_segment->values()};
       if (_table->column_is_nullable(column_id)) {
-        nulls = pmr_vector<bool>{value_segment->null_values()};
+        nulls = pmr_vector<bool>{*value_segment->null_values()};
       }
     } else {
       const auto segment_size = segment.size();
