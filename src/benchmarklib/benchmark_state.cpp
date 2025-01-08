@@ -1,6 +1,7 @@
 #include "benchmark_state.hpp"
 
 #include <chrono>
+#include <cstdint>
 
 #include "benchmark_config.hpp"
 #include "utils/assert.hpp"
