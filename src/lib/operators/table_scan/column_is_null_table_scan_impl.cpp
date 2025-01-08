@@ -30,32 +30,39 @@ std::string ColumnIsNullTableScanImpl::description() const {
 void ColumnIsNullTableScanImpl::_scan_non_reference_segment(
     const AbstractSegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
     const std::shared_ptr<const AbstractPosList>& position_filter) {
-  resolve_data_and_segment_type(segment, [&](auto type, auto& typed_segment) {
+  resolve_data_type(segment.data_type(), [&](auto type) {
     using DataType = typename decltype(type)::type;
 
     if (const auto* const value_segment = dynamic_cast<const BaseValueSegment*>(&segment)) {
       _scan_null_value_vector(value_segment->null_values(), chunk_id, matches, position_filter, value_segment->size());
-    } else if (const auto* const dictionary_segment = dynamic_cast<const BaseDictionarySegment*>(&segment)) {
+      return;
+    }
+    if (const auto* const dictionary_segment = dynamic_cast<const BaseDictionarySegment*>(&segment)) {
       _scan_dictionary_segment(*dictionary_segment, chunk_id, matches, position_filter);
-    } else if (const auto* const lz4_segment = dynamic_cast<const LZ4Segment<DataType>*>(&segment)) {
+      return;
+    } 
+    if (const auto* const lz4_segment = dynamic_cast<const LZ4Segment<DataType>*>(&segment)) {
       _scan_null_value_vector(lz4_segment->null_values(), chunk_id, matches, position_filter, lz4_segment->size());
-    } else if (const auto* const frame_of_reference_segment =
+      return;
+    } if (const auto* const frame_of_reference_segment =
                    dynamic_cast<const FrameOfReferenceSegment<int32_t>*>(&segment)) {
       _scan_null_value_vector(frame_of_reference_segment->null_values(), chunk_id, matches, position_filter, frame_of_reference_segment->size());
-    } else {
-      const auto& chunk_sorted_by = _in_table->get_chunk(chunk_id)->individually_sorted_by();
-      if (!chunk_sorted_by.empty()) {
-        for (const auto& sorted_by : chunk_sorted_by) {
-          if (sorted_by.column == _column_id) {
-            _scan_generic_sorted_segment(segment, chunk_id, matches, position_filter, sorted_by.sort_mode);
-            ++num_chunks_with_binary_search;
-          }
-        }
-      } else {
-        _scan_generic_segment(segment, chunk_id, matches, position_filter);
+      return;
+    } 
+  });
+
+  const auto& chunk_sorted_by = _in_table->get_chunk(chunk_id)->individually_sorted_by();
+  if (!chunk_sorted_by.empty()) {
+    for (const auto& sorted_by : chunk_sorted_by) {
+      if (sorted_by.column == _column_id) {
+        _scan_generic_sorted_segment(segment, chunk_id, matches, position_filter, sorted_by.sort_mode);
+        ++num_chunks_with_binary_search;
       }
     }
-  });
+    return;
+  }
+
+  _scan_generic_segment(segment, chunk_id, matches, position_filter);
 }
 
 void ColumnIsNullTableScanImpl::_scan_generic_segment(
