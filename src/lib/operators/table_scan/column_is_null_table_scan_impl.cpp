@@ -65,7 +65,7 @@ void ColumnIsNullTableScanImpl::_scan_non_reference_segment(
       }
       return;
     }
-    
+
     _scan_generic_segment(segment, chunk_id, matches, position_filter);
   });
 }
