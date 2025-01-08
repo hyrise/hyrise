@@ -77,6 +77,11 @@ std::optional<T> LZ4Segment<T>::get_typed_value(const ChunkOffset chunk_offset) 
 }
 
 template <typename T>
+bool LZ4Segment<T>::is_nullable() const {
+  return _null_values.has_value();
+}
+
+template <typename T>
 const std::optional<pmr_vector<bool>>& LZ4Segment<T>::null_values() const {
   return _null_values;
 }

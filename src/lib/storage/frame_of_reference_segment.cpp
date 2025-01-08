@@ -35,6 +35,11 @@ const pmr_vector<T>& FrameOfReferenceSegment<T, U>::block_minima() const {
 }
 
 template <typename T, typename U>
+bool FrameOfReferenceSegment<T, U>::is_nullable() const {
+  return _null_values.has_value();
+}
+
+template <typename T, typename U>
 const std::optional<pmr_vector<bool>>& FrameOfReferenceSegment<T, U>::null_values() const {
   return _null_values;
 }

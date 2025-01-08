@@ -200,7 +200,7 @@ bool ColumnIsNullTableScanImpl::_matches_all(const std::optional<pmr_vector<bool
       return false;
 
     case PredicateCondition::IsNotNull:
-      return null_values == std::nullopt;
+      return !null_values.has_value();
 
     default:
       Fail("Unsupported comparison type encountered");
@@ -210,7 +210,7 @@ bool ColumnIsNullTableScanImpl::_matches_all(const std::optional<pmr_vector<bool
 bool ColumnIsNullTableScanImpl::_matches_none(const std::optional<pmr_vector<bool>>& null_values) const {
   switch (predicate_condition) {
     case PredicateCondition::IsNull:
-      return null_values == std::nullopt;
+      return !null_values.has_value();
 
     case PredicateCondition::IsNotNull:
       return false;

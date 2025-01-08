@@ -101,7 +101,7 @@ pmr_vector<T>& ValueSegment<T>::values() {
 
 template <typename T>
 bool ValueSegment<T>::is_nullable() const {
-  return static_cast<bool>(_null_values);
+  return _null_values.has_value();
 }
 
 template <typename T>

@@ -97,6 +97,7 @@ class LZ4Segment : public AbstractEncodedSegment {
                       const size_t block_size, const size_t last_block_size, const size_t compressed_size,
                       const size_t num_elements);
 
+  bool is_nullable() const;
   const std::optional<pmr_vector<bool>>& null_values() const;
   std::unique_ptr<BaseVectorDecompressor> string_offset_decompressor() const;
   const pmr_vector<char>& dictionary() const;
