@@ -294,7 +294,7 @@ void BenchmarkRunner::_benchmark_shuffled() {
 
   auto benchmark_duration = Duration{0};
   for (const auto& result : _results) {
-    benchmark_duration = std::max(benchmark_duration, _calculate_benchmark_duration(result));
+    benchmark_duration = std::max(benchmark_duration, _calculate_item_duration(result));
   }
 
   for (auto& result : _results) {
@@ -343,7 +343,7 @@ void BenchmarkRunner::_benchmark_ordered() {
 
     Assert(_currently_running_clients == 0, "All runs must be finished at this point.");
 
-    result.duration = _calculate_benchmark_duration(result);
+    result.duration = _calculate_item_duration(result);
     // chrono::seconds uses an integer precision duration type, but we need a floating-point value.
     const auto duration_seconds = std::chrono::duration<double>{result.duration}.count();
     const auto items_per_second = static_cast<double>(result.successful_runs.size()) / duration_seconds;
@@ -392,7 +392,7 @@ void BenchmarkRunner::_schedule_item_run(const BenchmarkItemID item_id) {
         --_currently_running_clients;
         _running_clients_semaphore.signal();
 
-        // If result.verification_passed was previously unset, set it; otherwise only invalidate it if the run failed.
+        // If `result.verification_passed` was previously unset, set it; otherwise only invalidate it if the run failed.
         result.verification_passed = result.verification_passed.load().value_or(true) && !any_run_verification_failed;
 
         // Prevent items from adding their result after the time is up.
@@ -683,21 +683,30 @@ void BenchmarkRunner::_snapshot_segment_access_counters(const std::string& momen
   SQLPipelineBuilder{sql_builder.str()}.create_pipeline().get_result_table();
 }
 
-Duration BenchmarkRunner::_calculate_benchmark_duration(const BenchmarkItemResult& result) const {
-  // If the time limit was reached, just use it.
-  if (_state.max_runs > 0 && _state.runs < _state.max_runs) {
+Duration BenchmarkRunner::_calculate_item_duration(const BenchmarkItemResult& result) const {
+  // Our scripts use the overall item time only to calculate the throughput (overall time / successful runs). Latencies
+  // are calculated from the individual runs. Thus, we use the available time limit if we reached it.
+  // We cannot simply use `_state.scheduled_runs` because some of the runs might not have finished in time. Thus, we
+  // check how many runs were actually reported.
+  const auto executed_runs = result.successful_runs.size() + result.unsuccessful_runs.size();
+  if (_state.max_runs > 0 && static_cast<int64_t>(executed_runs) < _state.max_runs) {
     return _state.max_duration;
   }
 
-  const auto run_max = [&](const auto& runs) {
+  // If we stopped because of the run limit, we calculate the time frome the item's benchmark start until the last run
+  // finished.
+  const auto last_run_duration = [&](const auto& runs) {
     auto max_duration = Duration{0};
     for (const auto& run : runs) {
-      max_duration = std::max(max_duration, run.begin + run.duration - (_state.benchmark_begin - _benchmark_start));
+      // The run's begin is relative to the overall benchmark start. Thus, we have to substract the period from the
+      // benchmark start to the start of the item.
+      const auto run_duration = run.begin + run.duration - (_state.benchmark_begin - _benchmark_start);
+      max_duration = std::max(max_duration, run_duration);
     }
     return max_duration;
   };
 
-  return std::max(run_max(result.successful_runs), run_max(result.unsuccessful_runs));
+  return std::max(last_run_duration(result.successful_runs), last_run_duration(result.unsuccessful_runs));
 }
 
 }  // namespace hyrise

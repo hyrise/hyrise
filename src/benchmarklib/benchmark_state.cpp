@@ -17,7 +17,7 @@ BenchmarkState& BenchmarkState::operator=(const BenchmarkState& other) {
   benchmark_begin = other.benchmark_begin;
   max_duration = other.max_duration;
   max_runs = other.max_runs;
-  runs = other.runs;
+  scheduled_runs = other.scheduled_runs;
 
   return *this;
 }
@@ -37,12 +37,12 @@ bool BenchmarkState::keep_running() {
   const auto benchmark_duration = std::chrono::steady_clock::now() - benchmark_begin;
 
   // Stop execution if we reached the time or execution limit.
-  if (benchmark_duration >= max_duration || (max_runs >= 0 && runs >= max_runs)) {
+  if (benchmark_duration >= max_duration || (max_runs >= 0 && scheduled_runs >= max_runs)) {
     state = State::Over;
     return false;
   }
 
-  ++runs;
+  ++scheduled_runs;
   return true;
 }
 

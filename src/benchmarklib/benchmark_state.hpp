@@ -20,7 +20,7 @@ struct BenchmarkState {
 
   std::atomic<State> state{State::NotStarted};
   TimePoint benchmark_begin = TimePoint{};
-  int64_t runs{0};
+  int64_t scheduled_runs{0};
 
   Duration max_duration;
   int64_t max_runs;
