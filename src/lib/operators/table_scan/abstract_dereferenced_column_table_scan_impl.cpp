@@ -47,7 +47,12 @@ void AbstractDereferencedColumnTableScanImpl::_scan_reference_segment(const Refe
 
   // Slow path - we are looking at multiple referenced chunks and need to split the pos list first
   auto referenced_chunk_count = segment.referenced_table()->chunk_count();
-  auto chunk_offsets_by_chunk_id = split_pos_list_by_chunk_id(pos_list, referenced_chunk_count);
+  auto chunk_offsets_by_chunk_id = PosListsByChunkID{};
+  if (predicate_condition == PredicateCondition::IsNull) {
+    chunk_offsets_by_chunk_id = split_pos_list_by_chunk_id<true>(pos_list, referenced_chunk_count);
+  } else {
+    chunk_offsets_by_chunk_id = split_pos_list_by_chunk_id<false>(pos_list, referenced_chunk_count);
+  }
 
   // Visit each referenced segment
   for (auto referenced_chunk_id = ChunkID{0}; referenced_chunk_id < referenced_chunk_count; ++referenced_chunk_id) {

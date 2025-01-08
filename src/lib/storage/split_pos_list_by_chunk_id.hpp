@@ -27,7 +27,8 @@ using PosListsByChunkID = std::vector<SubPosList>;
 // original positions [1] and [0, 2]. These original positions are needed to reassemble the result.
 // The returned PosListsByChunkID has a guaranteed size of `number_of_chunks`, but the entries might be empty.
 
+template <bool IncludeNullRowIDs>
 PosListsByChunkID split_pos_list_by_chunk_id(const std::shared_ptr<const AbstractPosList>& input_pos_list,
-                                             const size_t number_of_chunks);
+                                             size_t number_of_chunks);
 
 }  // namespace hyrise

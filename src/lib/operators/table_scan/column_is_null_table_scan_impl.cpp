@@ -39,8 +39,8 @@ void ColumnIsNullTableScanImpl::_scan_non_reference_segment(
       _scan_dictionary_segment(*dictionary_segment, chunk_id, matches, position_filter);
     } else if (const auto* const lz4_segment = dynamic_cast<const LZ4Segment<DataType>*>(&segment)) {
       _scan_null_value_vector(lz4_segment->null_values(), chunk_id, matches, position_filter, lz4_segment->size());
-    }else if (const auto* const frame_of_reference_segment =
-            dynamic_cast<const FrameOfReferenceSegment<int32_t>*>(&segment)) {
+    } else if (const auto* const frame_of_reference_segment =
+                   dynamic_cast<const FrameOfReferenceSegment<int32_t>*>(&segment)) {
       _scan_null_value_vector(frame_of_reference_segment->null_values(), chunk_id, matches, position_filter,
                               frame_of_reference_segment->size());
     } else {
