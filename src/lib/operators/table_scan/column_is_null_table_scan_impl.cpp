@@ -37,34 +37,37 @@ void ColumnIsNullTableScanImpl::_scan_non_reference_segment(
       _scan_null_value_vector(value_segment->null_values(), chunk_id, matches, position_filter, value_segment->size());
       return;
     }
+
     if (const auto* const dictionary_segment = dynamic_cast<const BaseDictionarySegment*>(&segment)) {
       _scan_dictionary_segment(*dictionary_segment, chunk_id, matches, position_filter);
       return;
     }
+
     if (const auto* const lz4_segment = dynamic_cast<const LZ4Segment<DataType>*>(&segment)) {
       _scan_null_value_vector(lz4_segment->null_values(), chunk_id, matches, position_filter, lz4_segment->size());
       return;
     }
+
     if (const auto* const frame_of_reference_segment =
             dynamic_cast<const FrameOfReferenceSegment<int32_t>*>(&segment)) {
       _scan_null_value_vector(frame_of_reference_segment->null_values(), chunk_id, matches, position_filter,
                               frame_of_reference_segment->size());
       return;
     }
-  });
 
-  const auto& chunk_sorted_by = _in_table->get_chunk(chunk_id)->individually_sorted_by();
-  if (!chunk_sorted_by.empty()) {
-    for (const auto& sorted_by : chunk_sorted_by) {
-      if (sorted_by.column == _column_id) {
-        _scan_generic_sorted_segment(segment, chunk_id, matches, position_filter, sorted_by.sort_mode);
-        ++num_chunks_with_binary_search;
+    const auto& chunk_sorted_by = _in_table->get_chunk(chunk_id)->individually_sorted_by();
+    if (!chunk_sorted_by.empty()) {
+      for (const auto& sorted_by : chunk_sorted_by) {
+        if (sorted_by.column == _column_id) {
+          _scan_generic_sorted_segment(segment, chunk_id, matches, position_filter, sorted_by.sort_mode);
+          ++num_chunks_with_binary_search;
+        }
       }
+      return;
     }
-    return;
-  }
-
-  _scan_generic_segment(segment, chunk_id, matches, position_filter);
+    
+    _scan_generic_segment(segment, chunk_id, matches, position_filter);
+  });
 }
 
 void ColumnIsNullTableScanImpl::_scan_generic_segment(
