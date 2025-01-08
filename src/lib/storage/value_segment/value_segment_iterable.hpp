@@ -38,8 +38,9 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
     using PosListIteratorType = std::decay_t<decltype(position_filter->cbegin())>;
 
     if (_segment.is_nullable()) {
-      auto begin = PointAccessIterator<PosListIteratorType>{_segment.values().cbegin(), _segment.null_values()->cbegin(),
-                                                            position_filter->cbegin(), position_filter->cbegin()};
+      auto begin =
+          PointAccessIterator<PosListIteratorType>{_segment.values().cbegin(), _segment.null_values()->cbegin(),
+                                                   position_filter->cbegin(), position_filter->cbegin()};
       auto end = PointAccessIterator<PosListIteratorType>{_segment.values().cbegin(), _segment.null_values()->cbegin(),
                                                           position_filter->cbegin(), position_filter->cend()};
       functor(begin, end);

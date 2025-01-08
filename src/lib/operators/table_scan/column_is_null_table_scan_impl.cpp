@@ -40,15 +40,17 @@ void ColumnIsNullTableScanImpl::_scan_non_reference_segment(
     if (const auto* const dictionary_segment = dynamic_cast<const BaseDictionarySegment*>(&segment)) {
       _scan_dictionary_segment(*dictionary_segment, chunk_id, matches, position_filter);
       return;
-    } 
+    }
     if (const auto* const lz4_segment = dynamic_cast<const LZ4Segment<DataType>*>(&segment)) {
       _scan_null_value_vector(lz4_segment->null_values(), chunk_id, matches, position_filter, lz4_segment->size());
       return;
-    } if (const auto* const frame_of_reference_segment =
-                   dynamic_cast<const FrameOfReferenceSegment<int32_t>*>(&segment)) {
-      _scan_null_value_vector(frame_of_reference_segment->null_values(), chunk_id, matches, position_filter, frame_of_reference_segment->size());
+    }
+    if (const auto* const frame_of_reference_segment =
+            dynamic_cast<const FrameOfReferenceSegment<int32_t>*>(&segment)) {
+      _scan_null_value_vector(frame_of_reference_segment->null_values(), chunk_id, matches, position_filter,
+                              frame_of_reference_segment->size());
       return;
-    } 
+    }
   });
 
   const auto& chunk_sorted_by = _in_table->get_chunk(chunk_id)->individually_sorted_by();
@@ -145,9 +147,10 @@ void ColumnIsNullTableScanImpl::_scan_dictionary_segment(
   });
 }
 
-void ColumnIsNullTableScanImpl::_scan_null_value_vector(const std::optional<pmr_vector<bool>>& null_values, const ChunkID chunk_id,
-                                                        RowIDPosList& matches,
-                                                        const std::shared_ptr<const AbstractPosList>& position_filter, const ChunkOffset segment_size) {
+void ColumnIsNullTableScanImpl::_scan_null_value_vector(const std::optional<pmr_vector<bool>>& null_values,
+                                                        const ChunkID chunk_id, RowIDPosList& matches,
+                                                        const std::shared_ptr<const AbstractPosList>& position_filter,
+                                                        const ChunkOffset segment_size) {
   if (_matches_all(null_values)) {
     _add_all(chunk_id, matches, position_filter ? position_filter->size() : segment_size);
     ++num_chunks_with_all_rows_matching;
