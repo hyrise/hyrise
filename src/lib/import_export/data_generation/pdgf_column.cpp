@@ -49,9 +49,9 @@ void PDGFColumn<T>::initialize_segment(ChunkID chunk_id, bool should_try_continu
         // when multiple workers use this point at once and would have to stall, might as well already do useful work
         // and initialize next segment.
         initialize_segment(ChunkID{chunk_id + 1}, true);
-        initialize_segment(chunk_id, false);
-        return;
       }
+      // Now that we have spent our stalling time initializing a segment of ourselves (or not finding one to do so),
+      // let's now wait for access to the segment we were intending to access.
       lock->lock();
     }
     if (_data_segments[chunk_id].size() == 0) {
@@ -60,6 +60,9 @@ void PDGFColumn<T>::initialize_segment(ChunkID chunk_id, bool should_try_continu
     _segment_initialization_locks[chunk_id] = nullptr; // no need for locking anymore once we have initialize the vector.
     lock->unlock();
   } else if (should_try_continue_initialization && chunk_id + 1 < _data_segments.size()) {
+    // We are in a stall situation; other threads were as well, apparently, and already initialized the current segment.
+    // However, since this does not change the fact that we are stalling, might as well continue searching for a segment
+    // for us to initialize.
     initialize_segment(ChunkID{chunk_id + 1}, true);
   }
 }
