@@ -52,7 +52,6 @@ class FrameOfReferenceSegment : public AbstractEncodedSegment {
                                    std::unique_ptr<const BaseCompressedVector> offset_values);
 
   const pmr_vector<T>& block_minima() const;
-  bool is_nullable() const;
   const std::optional<pmr_vector<bool>>& null_values() const;
   const BaseCompressedVector& offset_values() const;
 
