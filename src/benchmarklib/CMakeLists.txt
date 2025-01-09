@@ -51,6 +51,8 @@ set(
     ssb/ssb_table_generator.cpp
     ssb/ssb_table_generator.hpp
 
+    abstract_pdgf_table_generator.cpp
+    abstract_pdgf_table_generator.hpp
     abstract_table_generator.cpp
     abstract_table_generator.hpp
     abstract_benchmark_item_runner.hpp

@@ -6,6 +6,7 @@
 #include <vector>
 #include <set>
 
+#include "abstract_pdgf_table_generator.hpp"
 #include "abstract_table_generator.hpp"
 #include "storage/chunk.hpp"
 #include "tpch/tpch_constants.hpp"
@@ -20,7 +21,7 @@ class Table;
 /**
  * Generating table by invoking the external PDGF data generator and pulling the results into Hyrise via shared memory.
  */
-class TPCHPDGFTableGenerator : virtual public AbstractTableGenerator {
+class TPCHPDGFTableGenerator : virtual public AbstractPDGFTableGenerator {
  public:
   // Convenience constructor for creating a TPCHPDGFTableGenerator without a benchmarking context
   explicit TPCHPDGFTableGenerator(float scale_factor, ClusteringConfiguration clustering_configuration,
@@ -34,18 +35,10 @@ class TPCHPDGFTableGenerator : virtual public AbstractTableGenerator {
   std::unordered_map<std::string, BenchmarkTableInfo> generate() override;
 
  protected:
-  void _collect_columns(const std::string& sql, bool whole_table);
   IndexesByTable _indexes_by_table() const override;
   SortOrderByTable _sort_order_by_table() const override;
   void _add_constraints(std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) const override;
 
-  float _scale_factor;
-  uint32_t _pdgf_work_unit_size;
-  uint32_t _num_cores;
-  bool _only_generate_partial_data;
-  bool _partial_data_generate_whole_tables;
-  std::vector<std::string> _queries_to_run;
-  std::shared_ptr<std::set<std::string>> _columns_to_generate;
   ClusteringConfiguration _clustering_configuration;
 };
 }  // namespace hyrise
