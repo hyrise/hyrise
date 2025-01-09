@@ -105,8 +105,9 @@ bool ValueSegment<T>::is_nullable() const {
 }
 
 template <typename T>
-const std::optional<pmr_vector<bool>>& ValueSegment<T>::null_values() const {
-  return _null_values;
+const pmr_vector<bool>& ValueSegment<T>::null_values() const {
+  DebugAssert(is_nullable(), "This ValueSegment does not support null values.");
+  return *_null_values;
 }
 
 template <typename T>

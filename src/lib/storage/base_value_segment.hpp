@@ -23,6 +23,6 @@ class BaseValueSegment : public AbstractSegment {
    * @brief Returns vector of NULL values (which is true for offsets where the segment's value is NULL).
    *        Cannot be written to, see value_segment.hpp for details.
    */
-  virtual const std::optional<pmr_vector<bool>>& null_values() const = 0;
+  virtual const pmr_vector<bool>& null_values() const = 0;
 };
 }  // namespace hyrise

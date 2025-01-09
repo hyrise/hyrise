@@ -45,7 +45,7 @@ void copy_value_range(const std::shared_ptr<const AbstractSegment>& source_abstr
                 target_values.begin() + target_begin_offset);
 
     if (source_value_segment->is_nullable()) {
-      const auto nulls_begin_iter = source_value_segment->null_values()->begin() + source_begin_offset;
+      const auto nulls_begin_iter = source_value_segment->null_values().begin() + source_begin_offset;
       const auto nulls_end_iter = nulls_begin_iter + length;
 
       auto nulls_target_offset = target_begin_offset;

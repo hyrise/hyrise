@@ -13,6 +13,20 @@
 #include "types.hpp"
 #include "utils/assert.hpp"
 
+namespace {
+
+template <typename BaseSegmentType>
+hyrise::NullValueVectorIterable null_value_iterable_from_segment(const BaseSegmentType& segment) {
+  return hyrise::NullValueVectorIterable{*segment.null_values()};
+}
+
+template <>
+hyrise::NullValueVectorIterable null_value_iterable_from_segment(const hyrise::BaseValueSegment& segment) {
+  return hyrise::NullValueVectorIterable{segment.null_values()};
+}
+
+}  // namespace
+
 namespace hyrise {
 
 ColumnIsNullTableScanImpl::ColumnIsNullTableScanImpl(const std::shared_ptr<const Table>& in_table,
@@ -34,15 +48,14 @@ void ColumnIsNullTableScanImpl::_scan_non_reference_segment(
     using DataType = typename decltype(type)::type;
 
     if (const auto* const value_segment = dynamic_cast<const BaseValueSegment*>(&segment)) {
-      _scan_null_value_vector(value_segment->null_values(), chunk_id, matches, position_filter, value_segment->size());
+      _scan_null_value_vector(*value_segment, chunk_id, matches, position_filter);
     } else if (const auto* const dictionary_segment = dynamic_cast<const BaseDictionarySegment*>(&segment)) {
       _scan_dictionary_segment(*dictionary_segment, chunk_id, matches, position_filter);
     } else if (const auto* const lz4_segment = dynamic_cast<const LZ4Segment<DataType>*>(&segment)) {
-      _scan_null_value_vector(lz4_segment->null_values(), chunk_id, matches, position_filter, lz4_segment->size());
+      _scan_null_value_vector(*lz4_segment, chunk_id, matches, position_filter);
     } else if (const auto* const frame_of_reference_segment =
                    dynamic_cast<const FrameOfReferenceSegment<int32_t>*>(&segment)) {
-      _scan_null_value_vector(frame_of_reference_segment->null_values(), chunk_id, matches, position_filter,
-                              frame_of_reference_segment->size());
+      _scan_null_value_vector(*frame_of_reference_segment, chunk_id, matches, position_filter);
     } else {
       const auto& chunk_sorted_by = _in_table->get_chunk(chunk_id)->individually_sorted_by();
       if (!chunk_sorted_by.empty()) {
@@ -110,6 +123,90 @@ void ColumnIsNullTableScanImpl::_scan_generic_sorted_segment(
   });
 }
 
+template <>
+bool ColumnIsNullTableScanImpl::_matches_all(const BaseDictionarySegment& segment) const {
+  switch (predicate_condition) {
+    case PredicateCondition::IsNull:
+      return segment.unique_values_count() == 0;
+
+    case PredicateCondition::IsNotNull:
+      return segment.unique_values_count() == segment.size();
+
+    default:
+      Fail("Unsupported comparison type encountered");
+  }
+}
+
+template <>
+bool ColumnIsNullTableScanImpl::_matches_none(const BaseDictionarySegment& segment) const {
+  switch (predicate_condition) {
+    case PredicateCondition::IsNull:
+      return segment.unique_values_count() == segment.size();
+
+    case PredicateCondition::IsNotNull:
+      return segment.unique_values_count() == 0;
+
+    default:
+      Fail("Unsupported comparison type encountered");
+  }
+}
+
+template <>
+bool ColumnIsNullTableScanImpl::_matches_all(const BaseValueSegment& segment) const {
+  switch (predicate_condition) {
+    case PredicateCondition::IsNull:
+      return false;
+
+    case PredicateCondition::IsNotNull:
+      return !segment.is_nullable();
+
+    default:
+      Fail("Unsupported comparison type encountered");
+  }
+}
+
+template <>
+bool ColumnIsNullTableScanImpl::_matches_none(const BaseValueSegment& segment) const {
+  switch (predicate_condition) {
+    case PredicateCondition::IsNull:
+      return !segment.is_nullable();
+
+    case PredicateCondition::IsNotNull:
+      return false;
+
+    default:
+      Fail("Unsupported comparison type encountered");
+  }
+}
+
+template <typename BaseSegmentType>
+bool ColumnIsNullTableScanImpl::_matches_all(const BaseSegmentType& segment) const {
+  switch (predicate_condition) {
+    case PredicateCondition::IsNull:
+      return false;
+
+    case PredicateCondition::IsNotNull:
+      return !segment.null_values().has_value();
+
+    default:
+      Fail("Unsupported comparison type encountered");
+  }
+}
+
+template <typename BaseSegmentType>
+bool ColumnIsNullTableScanImpl::_matches_none(const BaseSegmentType& segment) const {
+  switch (predicate_condition) {
+    case PredicateCondition::IsNull:
+      return !segment.null_values().has_value();
+
+    case PredicateCondition::IsNotNull:
+      return false;
+
+    default:
+      Fail("Unsupported comparison type encountered");
+  }
+}
+
 void ColumnIsNullTableScanImpl::_scan_dictionary_segment(
     const BaseDictionarySegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
     const std::shared_ptr<const AbstractPosList>& position_filter) {
@@ -139,24 +236,22 @@ void ColumnIsNullTableScanImpl::_scan_dictionary_segment(
   });
 }
 
-void ColumnIsNullTableScanImpl::_scan_null_value_vector(const std::optional<pmr_vector<bool>>& null_values,
+template <typename BaseSegmentType>
+void ColumnIsNullTableScanImpl::_scan_null_value_vector(const BaseSegmentType& segment,
                                                         const ChunkID chunk_id, RowIDPosList& matches,
-                                                        const std::shared_ptr<const AbstractPosList>& position_filter,
-                                                        const ChunkOffset segment_size) {
-  if (_matches_all(null_values)) {
-    _add_all(chunk_id, matches, position_filter ? position_filter->size() : segment_size);
+                                                        const std::shared_ptr<const AbstractPosList>& position_filter) {
+  if (_matches_all(segment)) {
+    _add_all(chunk_id, matches, position_filter ? position_filter->size() : segment.size());
     ++num_chunks_with_all_rows_matching;
     return;
   }
 
-  if (_matches_none(null_values)) {
+  if (_matches_none(segment)) {
     ++num_chunks_with_early_out;
     return;
   }
 
-  DebugAssert(null_values, "Not-nullable segments should have been caught by edge case handling.");
-
-  auto iterable = NullValueVectorIterable{*null_values};
+  auto iterable = null_value_iterable_from_segment(segment);
 
   const auto invert = predicate_condition == PredicateCondition::IsNotNull;
   const auto functor = [&](const auto& value) {
@@ -166,58 +261,6 @@ void ColumnIsNullTableScanImpl::_scan_null_value_vector(const std::optional<pmr_
   iterable.with_iterators(position_filter, [&](auto iter, auto end) {
     _scan_with_iterators<false>(functor, iter, end, chunk_id, matches);
   });
-}
-
-bool ColumnIsNullTableScanImpl::_matches_all(const BaseDictionarySegment& segment) const {
-  switch (predicate_condition) {
-    case PredicateCondition::IsNull:
-      return segment.unique_values_count() == 0;
-
-    case PredicateCondition::IsNotNull:
-      return segment.unique_values_count() == segment.size();
-
-    default:
-      Fail("Unsupported comparison type encountered");
-  }
-}
-
-bool ColumnIsNullTableScanImpl::_matches_none(const BaseDictionarySegment& segment) const {
-  switch (predicate_condition) {
-    case PredicateCondition::IsNull:
-      return segment.unique_values_count() == segment.size();
-
-    case PredicateCondition::IsNotNull:
-      return segment.unique_values_count() == 0;
-
-    default:
-      Fail("Unsupported comparison type encountered");
-  }
-}
-
-bool ColumnIsNullTableScanImpl::_matches_all(const std::optional<pmr_vector<bool>>& null_values) const {
-  switch (predicate_condition) {
-    case PredicateCondition::IsNull:
-      return false;
-
-    case PredicateCondition::IsNotNull:
-      return !null_values.has_value();
-
-    default:
-      Fail("Unsupported comparison type encountered");
-  }
-}
-
-bool ColumnIsNullTableScanImpl::_matches_none(const std::optional<pmr_vector<bool>>& null_values) const {
-  switch (predicate_condition) {
-    case PredicateCondition::IsNull:
-      return !null_values.has_value();
-
-    case PredicateCondition::IsNotNull:
-      return false;
-
-    default:
-      Fail("Unsupported comparison type encountered");
-  }
 }
 
 void ColumnIsNullTableScanImpl::_add_all(const ChunkID chunk_id, RowIDPosList& matches, const size_t segment_size) {

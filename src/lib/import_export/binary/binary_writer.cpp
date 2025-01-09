@@ -180,7 +180,7 @@ void BinaryWriter::_write_segment(const ValueSegment<T>& value_segment, bool col
   }
 
   if (value_segment.is_nullable()) {
-    export_values(ofstream, *value_segment.null_values());
+    export_values(ofstream, value_segment.null_values());
   }
 
   export_values(ofstream, value_segment.values());

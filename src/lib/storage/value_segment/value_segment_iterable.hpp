@@ -21,8 +21,8 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
   void _on_with_iterators(const Functor& functor) const {
     _segment.access_counter[SegmentAccessCounter::AccessType::Sequential] += _segment.size();
     if (_segment.is_nullable()) {
-      auto begin = Iterator{_segment.values().cbegin(), _segment.values().cbegin(), _segment.null_values()->cbegin()};
-      auto end = Iterator{_segment.values().cbegin(), _segment.values().cend(), _segment.null_values()->cend()};
+      auto begin = Iterator{_segment.values().cbegin(), _segment.values().cbegin(), _segment.null_values().cbegin()};
+      auto end = Iterator{_segment.values().cbegin(), _segment.values().cend(), _segment.null_values().cend()};
       functor(begin, end);
     } else {
       auto begin = NonNullIterator{_segment.values().cbegin(), _segment.values().cbegin()};
@@ -39,9 +39,9 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
 
     if (_segment.is_nullable()) {
       auto begin =
-          PointAccessIterator<PosListIteratorType>{_segment.values().cbegin(), _segment.null_values()->cbegin(),
+          PointAccessIterator<PosListIteratorType>{_segment.values().cbegin(), _segment.null_values().cbegin(),
                                                    position_filter->cbegin(), position_filter->cbegin()};
-      auto end = PointAccessIterator<PosListIteratorType>{_segment.values().cbegin(), _segment.null_values()->cbegin(),
+      auto end = PointAccessIterator<PosListIteratorType>{_segment.values().cbegin(), _segment.null_values().cbegin(),
                                                           position_filter->cbegin(), position_filter->cend()};
       functor(begin, end);
     } else {
