@@ -1,12 +1,19 @@
 #include "column_is_null_table_scan_impl.hpp"
 
 #include <cstddef>
+#include <cstdint>
 #include <memory>
 #include <string>
 
+#include "abstract_dereferenced_column_table_scan_impl.hpp"
+#include "all_type_variant.hpp"
+#include "resolve_type.hpp"
 #include "storage/abstract_segment.hpp"
 #include "storage/base_dictionary_segment.hpp"
 #include "storage/base_value_segment.hpp"
+#include "storage/frame_of_reference_segment.hpp"
+#include "storage/lz4_segment.hpp"
+#include "storage/pos_lists/abstract_pos_list.hpp"
 #include "storage/pos_lists/row_id_pos_list.hpp"
 #include "storage/segment_iterables/create_iterable_from_attribute_vector.hpp"
 #include "storage/segment_iterate.hpp"
@@ -32,13 +39,13 @@ void ColumnIsNullTableScanImpl::_scan_non_reference_segment(
     const AbstractSegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
     const std::shared_ptr<const AbstractPosList>& position_filter) {
   resolve_data_type(segment.data_type(), [&](auto type) {
-    using DataType = typename decltype(type)::type;
+    using SegmentDataType = typename decltype(type)::type;
 
     if (const auto* const value_segment = dynamic_cast<const BaseValueSegment*>(&segment)) {
       _scan_encoded_segment(*value_segment, chunk_id, matches, position_filter);
     } else if (const auto* const dictionary_segment = dynamic_cast<const BaseDictionarySegment*>(&segment)) {
       _scan_encoded_segment(*dictionary_segment, chunk_id, matches, position_filter);
-    } else if (const auto* const lz4_segment = dynamic_cast<const LZ4Segment<DataType>*>(&segment)) {
+    } else if (const auto* const lz4_segment = dynamic_cast<const LZ4Segment<SegmentDataType>*>(&segment)) {
       _scan_encoded_segment(*lz4_segment, chunk_id, matches, position_filter);
     } else if (const auto* const frame_of_reference_segment =
                    dynamic_cast<const FrameOfReferenceSegment<int32_t>*>(&segment)) {

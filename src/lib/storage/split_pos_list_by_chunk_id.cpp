@@ -10,13 +10,13 @@
 
 namespace hyrise {
 
-template <bool IncludeNullRowIDs>
+template <bool include_null_row_i_ds>
 PosListsByChunkID split_pos_list_by_chunk_id(const std::shared_ptr<const AbstractPosList>& input_pos_list,
                                              size_t number_of_chunks) {
   DebugAssert(!input_pos_list->references_single_chunk() || input_pos_list->empty(),
               "No need to split a reference segment that references a single chunk");
 
-  if (IncludeNullRowIDs) {
+  if (include_null_row_i_ds) {
     ++number_of_chunks;
   }
   // The input_pos_list references multiple chunks and we actually need to split it. Because we are supposed to return
@@ -38,7 +38,7 @@ PosListsByChunkID split_pos_list_by_chunk_id(const std::shared_ptr<const Abstrac
   auto original_position = ChunkOffset{0};
   for (const auto row_id : *input_pos_list) {
     if (row_id.is_null()) {
-      if (IncludeNullRowIDs) {
+      if (include_null_row_i_ds) {
         auto& mapping = pos_lists_by_chunk_id[number_of_chunks - 1];
         mapping.row_ids->emplace_back(ChunkID{0}, ChunkOffset{original_position});
       }
