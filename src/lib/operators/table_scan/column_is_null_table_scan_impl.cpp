@@ -41,6 +41,10 @@ void ColumnIsNullTableScanImpl::_scan_non_reference_segment(
   resolve_data_type(segment.data_type(), [&](auto type) {
     using SegmentDataType = typename decltype(type)::type;
 
+    // The ColumnIsNullTableScan is optimized for Value, Dictionary, LZ4, and FrameofReference segments since their
+    // NULL values can be efficiently iterated through their null_values or attribute vector. RunLength segments use
+    // the _scan_generic_segment() method because their NULL values are stored in runs, making iteration less easy.
+
     if (const auto* const value_segment = dynamic_cast<const BaseValueSegment*>(&segment)) {
       _scan_encoded_segment(*value_segment, chunk_id, matches, position_filter);
     } else if (const auto* const dictionary_segment = dynamic_cast<const BaseDictionarySegment*>(&segment)) {
