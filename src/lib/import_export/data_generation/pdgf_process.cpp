@@ -135,7 +135,7 @@ void PdgfProcess::_configure_numa() {
 }
 
 void PdgfProcess::_configure_jvm() {
-  _arguments.insert(_arguments.end(), {"-Xms20g", "-Xmx20g", "-XX:TLABSize=4000k"});
+  _arguments.insert(_arguments.end(), {"-Xms20g", "-Xmx20g", "-XX:TLABSize=4m"});
 }
 
 void PdgfProcess::_configure_pdgf_properties() {
