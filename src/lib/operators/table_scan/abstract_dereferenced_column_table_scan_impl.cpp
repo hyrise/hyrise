@@ -81,13 +81,14 @@ void AbstractDereferencedColumnTableScanImpl::_scan_reference_segment(const Refe
     return;
   }
 
-  const auto& sub_pos_list = chunk_offsets_by_chunk_id[referenced_chunk_count];
-  const auto& position_filter = sub_pos_list.row_ids;
+  // For PredicateCondition::IsNull, split_pos_list_by_chunk_id() stores all NULL_ROW_IDs in an extra SubPosList at the
+  // end of chunk_offsets_by_chunk_id. These are then retrieved and written to the matches.
 
-  if (!position_filter || position_filter->empty()) {
-    return;
-  }
-  for (const auto& pos : *position_filter) {
+  const auto& sub_pos_list = chunk_offsets_by_chunk_id[referenced_chunk_count];
+  const auto& remaining_null_row_id_positions = *sub_pos_list.row_ids;
+
+  matches.reserve(matches.size() + remaining_null_row_id_positions.size());
+  for (const auto& pos : remaining_null_row_id_positions) {
     matches.emplace_back(chunk_id, pos.chunk_offset);
   }
 }
