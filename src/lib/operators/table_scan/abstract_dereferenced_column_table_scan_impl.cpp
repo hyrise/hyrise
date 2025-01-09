@@ -87,7 +87,7 @@ void AbstractDereferencedColumnTableScanImpl::_scan_reference_segment(const Refe
   if (!position_filter || position_filter->empty()) {
     return;
   }
-  for (auto& pos : *position_filter) {
+  for (const auto& pos : *position_filter) {
     matches.emplace_back(chunk_id, pos.chunk_offset);
   }
 }

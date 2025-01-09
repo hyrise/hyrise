@@ -238,7 +238,7 @@ void ColumnIsNullTableScanImpl::_scan_encoded_segment(const BaseSegmentType& seg
 template <typename BaseIterableType>
 void ColumnIsNullTableScanImpl::_scan_iterable_for_null_values(
     const BaseIterableType& iterable, const ChunkID chunk_id, RowIDPosList& matches,
-    const std::shared_ptr<const AbstractPosList>& position_filter) {
+    const std::shared_ptr<const AbstractPosList>& position_filter) const {
   const auto invert = predicate_condition == PredicateCondition::IsNotNull;
   const auto functor = [&](const auto& value) {
     return invert ^ value.is_null();
