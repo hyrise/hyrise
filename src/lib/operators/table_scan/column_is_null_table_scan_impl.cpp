@@ -5,6 +5,7 @@
 #include <string>
 
 #include "storage/abstract_segment.hpp"
+#include "storage/base_dictionary_segment.hpp"
 #include "storage/base_value_segment.hpp"
 #include "storage/pos_lists/row_id_pos_list.hpp"
 #include "storage/segment_iterables/create_iterable_from_attribute_vector.hpp"
@@ -12,20 +13,6 @@
 #include "storage/value_segment/null_value_vector_iterable.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
-
-namespace {
-
-template <typename BaseSegmentType>
-hyrise::NullValueVectorIterable null_value_iterable_from_segment(const BaseSegmentType& segment) {
-  return hyrise::NullValueVectorIterable{*segment.null_values()};
-}
-
-template <>
-hyrise::NullValueVectorIterable null_value_iterable_from_segment(const hyrise::BaseValueSegment& segment) {
-  return hyrise::NullValueVectorIterable{segment.null_values()};
-}
-
-}  // namespace
 
 namespace hyrise {
 
@@ -48,14 +35,14 @@ void ColumnIsNullTableScanImpl::_scan_non_reference_segment(
     using DataType = typename decltype(type)::type;
 
     if (const auto* const value_segment = dynamic_cast<const BaseValueSegment*>(&segment)) {
-      _scan_null_value_vector(*value_segment, chunk_id, matches, position_filter);
+      _scan_encoded_segment(*value_segment, chunk_id, matches, position_filter);
     } else if (const auto* const dictionary_segment = dynamic_cast<const BaseDictionarySegment*>(&segment)) {
-      _scan_dictionary_segment(*dictionary_segment, chunk_id, matches, position_filter);
+      _scan_encoded_segment(*dictionary_segment, chunk_id, matches, position_filter);
     } else if (const auto* const lz4_segment = dynamic_cast<const LZ4Segment<DataType>*>(&segment)) {
-      _scan_null_value_vector(*lz4_segment, chunk_id, matches, position_filter);
+      _scan_encoded_segment(*lz4_segment, chunk_id, matches, position_filter);
     } else if (const auto* const frame_of_reference_segment =
                    dynamic_cast<const FrameOfReferenceSegment<int32_t>*>(&segment)) {
-      _scan_null_value_vector(*frame_of_reference_segment, chunk_id, matches, position_filter);
+      _scan_encoded_segment(*frame_of_reference_segment, chunk_id, matches, position_filter);
     } else {
       const auto& chunk_sorted_by = _in_table->get_chunk(chunk_id)->individually_sorted_by();
       if (!chunk_sorted_by.empty()) {
@@ -207,9 +194,10 @@ bool ColumnIsNullTableScanImpl::_matches_none(const BaseSegmentType& segment) co
   }
 }
 
-void ColumnIsNullTableScanImpl::_scan_dictionary_segment(
-    const BaseDictionarySegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
-    const std::shared_ptr<const AbstractPosList>& position_filter) {
+template <typename BaseSegmentType>
+void ColumnIsNullTableScanImpl::_scan_encoded_segment(const BaseSegmentType& segment, const ChunkID chunk_id,
+                                                      RowIDPosList& matches,
+                                                      const std::shared_ptr<const AbstractPosList>& position_filter) {
   if (_matches_all(segment)) {
     _add_all(chunk_id, matches, position_filter ? position_filter->size() : segment.size());
     ++num_chunks_with_all_rows_matching;
@@ -221,38 +209,25 @@ void ColumnIsNullTableScanImpl::_scan_dictionary_segment(
     return;
   }
 
-  DebugAssert(segment.unique_values_count() != 0 && segment.unique_values_count() != segment.size(),
-              "Columns without or with exclusivly NULLs should have been caught by edge case handling.");
-
-  auto iterable = create_iterable_from_attribute_vector(segment);
-
-  const auto invert = predicate_condition == PredicateCondition::IsNotNull;
-  const auto functor = [&](const auto& value) {
-    return invert ^ value.is_null();
-  };
-
-  iterable.with_iterators(position_filter, [&](auto iter, auto end) {
-    _scan_with_iterators<false>(functor, iter, end, chunk_id, matches);
-  });
+  if constexpr (std::is_same_v<BaseSegmentType, hyrise::BaseValueSegment>) {
+    DebugAssert(segment.is_nullable(), "Columns that are not nullable should have been caught by edge case handling.");
+    _scan_iterable_for_null_values(NullValueVectorIterable{segment.null_values()}, chunk_id, matches, position_filter);
+  } else if constexpr (std::is_same_v<BaseSegmentType, hyrise::BaseDictionarySegment>) {
+    DebugAssert(segment.unique_values_count() != 0 && segment.unique_values_count() != segment.size(),
+                "DictionarySegments without or with exclusivly NULLs should have been caught by edge case handling.");
+    _scan_iterable_for_null_values(create_iterable_from_attribute_vector(segment), chunk_id, matches, position_filter);
+  } else {
+    const auto& null_values = segment.null_values();
+    DebugAssert(null_values.has_value(),
+                "Segment without null_values vector should have been caught by edge case handling.");
+    _scan_iterable_for_null_values(NullValueVectorIterable{*null_values}, chunk_id, matches, position_filter);
+  }
 }
 
-template <typename BaseSegmentType>
-void ColumnIsNullTableScanImpl::_scan_null_value_vector(const BaseSegmentType& segment, const ChunkID chunk_id,
-                                                        RowIDPosList& matches,
-                                                        const std::shared_ptr<const AbstractPosList>& position_filter) {
-  if (_matches_all(segment)) {
-    _add_all(chunk_id, matches, position_filter ? position_filter->size() : segment.size());
-    ++num_chunks_with_all_rows_matching;
-    return;
-  }
-
-  if (_matches_none(segment)) {
-    ++num_chunks_with_early_out;
-    return;
-  }
-
-  auto iterable = null_value_iterable_from_segment(segment);
-
+template <typename BaseIterableType>
+void ColumnIsNullTableScanImpl::_scan_iterable_for_null_values(
+    const BaseIterableType& iterable, const ChunkID chunk_id, RowIDPosList& matches,
+    const std::shared_ptr<const AbstractPosList>& position_filter) {
   const auto invert = predicate_condition == PredicateCondition::IsNotNull;
   const auto functor = [&](const auto& value) {
     return invert ^ value.is_null();

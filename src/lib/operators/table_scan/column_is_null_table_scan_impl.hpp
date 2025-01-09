@@ -35,18 +35,18 @@ class ColumnIsNullTableScanImpl : public AbstractDereferencedColumnTableScanImpl
                                     const std::shared_ptr<const AbstractPosList>& position_filter,
                                     const SortMode sorted_by) const;
 
-  // Optimized scan on DictionarySegments
-  void _scan_dictionary_segment(const BaseDictionarySegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
-                                const std::shared_ptr<const AbstractPosList>& position_filter);
+  template <typename BaseSegmentType>
+  void _scan_encoded_segment(const BaseSegmentType& segment, const ChunkID chunk_id, RowIDPosList& matches,
+                             const std::shared_ptr<const AbstractPosList>& position_filter);
 
   /**
    * @defgroup Methods used for handling different segments
    * @{
    */
 
-  template <typename BaseSegmentType>
-  void _scan_null_value_vector(const BaseSegmentType& segment, const ChunkID chunk_id, RowIDPosList& matches,
-                               const std::shared_ptr<const AbstractPosList>& position_filter);
+  template <typename BaseIterableType>
+  void _scan_iterable_for_null_values(const BaseIterableType& iterable, const ChunkID chunk_id, RowIDPosList& matches,
+                                      const std::shared_ptr<const AbstractPosList>& position_filter);
 
   template <typename BaseSegmentType>
   bool _matches_all(const BaseSegmentType& segment) const;
