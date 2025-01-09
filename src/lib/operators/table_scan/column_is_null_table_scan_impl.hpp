@@ -45,8 +45,8 @@ class ColumnIsNullTableScanImpl : public AbstractDereferencedColumnTableScanImpl
    */
 
   template <typename BaseSegmentType>
-  void _scan_null_value_vector(const BaseSegmentType& segment, const ChunkID chunk_id,
-                               RowIDPosList& matches, const std::shared_ptr<const AbstractPosList>& position_filter);
+  void _scan_null_value_vector(const BaseSegmentType& segment, const ChunkID chunk_id, RowIDPosList& matches,
+                               const std::shared_ptr<const AbstractPosList>& position_filter);
 
   template <typename BaseSegmentType>
   bool _matches_all(const BaseSegmentType& segment) const;

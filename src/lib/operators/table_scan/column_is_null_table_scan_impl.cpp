@@ -237,8 +237,8 @@ void ColumnIsNullTableScanImpl::_scan_dictionary_segment(
 }
 
 template <typename BaseSegmentType>
-void ColumnIsNullTableScanImpl::_scan_null_value_vector(const BaseSegmentType& segment,
-                                                        const ChunkID chunk_id, RowIDPosList& matches,
+void ColumnIsNullTableScanImpl::_scan_null_value_vector(const BaseSegmentType& segment, const ChunkID chunk_id,
+                                                        RowIDPosList& matches,
                                                         const std::shared_ptr<const AbstractPosList>& position_filter) {
   if (_matches_all(segment)) {
     _add_all(chunk_id, matches, position_filter ? position_filter->size() : segment.size());
