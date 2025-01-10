@@ -34,7 +34,7 @@ class TPCHPDGFTableGenerator : virtual public AbstractPDGFTableGenerator {
   std::unordered_map<std::string, BenchmarkTableInfo> generate() override;
 
  protected:
-  const std::string _pdgf_schema_config_file() const override;
+  std::string _pdgf_schema_config_file() const override;
   IndexesByTable _indexes_by_table() const override;
   SortOrderByTable _sort_order_by_table() const override;
   void _add_constraints(std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) const override;

@@ -18,8 +18,12 @@ const auto ssb_table_names = std::vector<std::string>{"part", "customer", "suppl
 SSBPDGFTableGenerator::SSBPDGFTableGenerator(float scale_factor, const std::shared_ptr<BenchmarkConfig>& benchmark_config, std::vector<std::string> queries_to_run)
     : AbstractPDGFTableGenerator(scale_factor, benchmark_config, queries_to_run) {}
 
-const std::string SSBPDGFTableGenerator::_pdgf_schema_config_file() const {
+std::string SSBPDGFTableGenerator::_pdgf_schema_config_file() const {
   return "ssb-schema.xml";
+}
+
+std::string SSBPDGFTableGenerator::_pdgf_schema_generation_file() const {
+  return "ssb-shm-reflective-generation.xml";
 }
 
 void SSBPDGFTableGenerator::_add_constraints(

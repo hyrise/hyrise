@@ -19,7 +19,9 @@ class SSBPDGFTableGenerator : virtual public AbstractPDGFTableGenerator {
                                  std::vector<std::string> queries_to_run);
 
  protected:
-  const std::string _pdgf_schema_config_file() const override;
+  std::string _pdgf_schema_config_file() const override;
+  std::string _pdgf_schema_generation_file() const override;
+
   void _add_constraints(std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) const final;
 };
 

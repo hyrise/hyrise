@@ -44,7 +44,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> AbstractPDGFTableGenerator::
   auto timer = Timer{};
   std::cerr << "Receiving table schemas from PDGF!\n";
   auto pdgf_schema = PdgfProcess::for_schema_generation(
-    _pdgf_schema_config_file(), PDGF_DIRECTORY_ROOT,
+    _pdgf_schema_config_file(), _pdgf_schema_generation_file(), PDGF_DIRECTORY_ROOT,
     _benchmark_config->pdgf_work_unit_size, _benchmark_config->data_preparation_cores,
     _scale_factor);
   pdgf_schema.run();
@@ -81,7 +81,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> AbstractPDGFTableGenerator::
    */
   std::cerr << "Generating tables with PDGF\n";
   auto pdgf_data = PdgfProcess::for_data_generation(
-    _pdgf_schema_config_file(), PDGF_DIRECTORY_ROOT,
+    _pdgf_schema_config_file(), _pdgf_schema_generation_file(), PDGF_DIRECTORY_ROOT,
     _benchmark_config->pdgf_work_unit_size, _benchmark_config->data_preparation_cores,
     _scale_factor);
   if (_benchmark_config->columns_to_generate != ColumnsToGenerate::All) {
