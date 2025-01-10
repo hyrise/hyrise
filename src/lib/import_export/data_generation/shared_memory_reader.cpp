@@ -177,10 +177,11 @@ void SharedMemoryReader<work_unit_size, num_columns>::_worker_read_data(uint32_t
     auto data_slot = ring_cell->data_buffer_offset;
     auto table_id = ring_cell->table_id;
     auto sorting_id = ring_cell->sorting_id;
+    auto contained_rows = ring_cell->contained_rows;
     auto addressed_data = _data_buffer->get_addressed_by(ring_cell);
     _ring_buffer->retrieval_finished();
     timer.lap();
-    table_builder->read_data(table_id, sorting_id, addressed_data);
+    table_builder->read_data(table_id, sorting_id, addressed_data, contained_rows);
     appending_time += timer.lap().count();
     _return_data_slot(data_slot);
   }

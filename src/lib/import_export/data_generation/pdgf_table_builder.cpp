@@ -113,25 +113,16 @@ void PDGFTableBuilder<work_unit_size, num_columns>::read_generation_info(SharedM
 
 template <uint32_t work_unit_size, uint32_t num_columns>
 void PDGFTableBuilder<work_unit_size, num_columns>::read_data(uint32_t table_id, int64_t sorting_id,
-                                              SharedMemoryDataCell<work_unit_size, num_columns>* data_cell) {
-  Assert(table_id == _table_id, "Trying to append data to a table it does not belong to!");
-  // std::cout << "Reading #" << sorting_id << "\n";
-  auto cell_rows = static_cast<size_t>(std::min(
-      // We cannot use received rows here in case we receive entries out of order from PDGF
-      // The problem is that the last data_cell might contain fewer data than the previous ones, but if we
-      // determine the rows in this cell depending on the rows we have received so far, we might think that the last cell
-      // still has work_unit_size rows if we receive it before a cell with a lower sorting_id.
-      // Using the sorting_id allows us to reliably determine this.
-      _table_num_rows - (sorting_id * work_unit_size),
-      static_cast<int64_t>(work_unit_size)
-      ));
-  for (auto row = size_t{0}; row < cell_rows; ++row) {
+                                              SharedMemoryDataCell<work_unit_size, num_columns>* data_cell, uint32_t num_contained_rows) {
+  DebugAssert(table_id == _table_id, "Trying to append data to a table it does not belong to!");
+  DebugAssert(num_contained_rows <= work_unit_size, "Reported cells in rows is too large!");
+  for (auto row = size_t{0}; row < num_contained_rows; ++row) {
     for (auto col = uint8_t{0}; col < _num_generated_columns; ++col) {
       _generated_columns[col]->virtual_add((sorting_id * work_unit_size) + row, data_cell->data[row][col]);
     }
   }
   for (auto col = uint8_t{0}; col < _num_generated_columns; ++col) {
-    _generated_columns[col]->values_added(sorting_id * work_unit_size, cell_rows);
+    _generated_columns[col]->values_added(sorting_id * work_unit_size, num_contained_rows);
   }
 }
 

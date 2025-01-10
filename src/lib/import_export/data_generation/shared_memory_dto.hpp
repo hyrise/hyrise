@@ -13,7 +13,7 @@ struct RingBufferCell {
   RingBufferCellType cell_type;  // TODO(JEH): using uints might break
   uint32_t data_buffer_offset;
   uint32_t table_id;
-  uint32_t pad;
+  uint32_t contained_rows;
   int64_t sorting_id;
   uint32_t padding[10];
 };
