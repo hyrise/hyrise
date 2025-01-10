@@ -3,9 +3,11 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 #include "abstract_pdgf_table_generator.hpp"
-#include "file_based_table_generator.hpp"
+#include "abstract_table_generator.hpp"
+#include "benchmark_config.hpp"
 
 namespace hyrise {
 
@@ -15,8 +17,6 @@ class SSBPDGFTableGenerator : virtual public AbstractPDGFTableGenerator {
   // Constructor for creating a SSBPDGFTableGenerator in a benchmark.
   explicit SSBPDGFTableGenerator(float scale_factor, const std::shared_ptr<BenchmarkConfig>& benchmark_config,
                                  std::vector<std::string> queries_to_run);
-
-  std::unordered_map<std::string, BenchmarkTableInfo> generate() override;
 
  protected:
   const std::string _pdgf_schema_config_file() const override;

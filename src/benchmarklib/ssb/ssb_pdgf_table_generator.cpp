@@ -5,13 +5,11 @@
 #include <unordered_map>
 #include <vector>
 
+#include "abstract_pdgf_table_generator.hpp"
 #include "abstract_table_generator.hpp"
 #include "benchmark_config.hpp"
-#include "external_dbgen_utils.hpp"
-#include "file_based_table_generator.hpp"
 #include "storage/constraints/constraint_utils.hpp"
 #include "storage/table.hpp"  // IWYU pragma: keep
-#include "types.hpp"
 
 namespace hyrise {
 
@@ -21,7 +19,7 @@ SSBPDGFTableGenerator::SSBPDGFTableGenerator(float scale_factor, const std::shar
     : AbstractPDGFTableGenerator(scale_factor, benchmark_config, queries_to_run) {}
 
 const std::string SSBPDGFTableGenerator::_pdgf_schema_config_file() const {
-  return "NOTFOUND";
+  return "ssb-schema.xml";
 }
 
 void SSBPDGFTableGenerator::_add_constraints(

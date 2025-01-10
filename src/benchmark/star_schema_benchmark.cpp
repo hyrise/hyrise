@@ -103,7 +103,7 @@ int main(int argc, char* argv[]) {
     std::cout << "- Storing SSB tables in " << ssb_data_path << '\n';
 
     // Create the table generator and item runner.
-    auto table_generator =
+    table_generator =
         std::make_unique<SSBTableGenerator>(ssb_dbgen_path, csv_meta_path, ssb_data_path, scale_factor, config);
   }
 
